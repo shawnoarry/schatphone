@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-07-24
+Updated: 2026-07-25
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -70,6 +70,18 @@ The first Food Delivery shop is Moon Bistro.
 - World Pack explainer banners are not user-facing UI. World Pack context should appear through app wording, defaults, visual treatment, and flow behavior; boundary explanations stay in docs/tests instead of rendering as an in-app card.
 - Food Delivery now requires an explicit World Pack `uiThemePackage.enabled=true` before consuming a World Pack UI/UX override. If a world app binding only maps a route or entry, Food Delivery falls back to the original app UI and defaults.
 
+The second built-in shop app is Peach Cloud.
+
+- Peach Cloud is a peer entry inside the Food Delivery pseudo-folder, not a Food Platform merchant and not a new runtime owner.
+- Its stable restaurant identity is `food_seed_peach_cloud`; its default template is the existing `dessert_window` facade option.
+- The original Figma node `361:2286` is only a flattened cover, but the later prototype link exposes exact home node `47:23` (`3 - A - Home Page`). `get_design_context` confirms the yellow search/greeting header, five circular categories, horizontal Best Seller rail, orange photographic promotion, two-column Recommend grid, and orange five-action footer used by the current implementation.
+- Peach Cloud now has a dedicated Vue home branch instead of conditional styling on the shared shop template. Its full-width yellow/orange app frame, functional search, five category shortcuts, product rails, promotion, fixed bottom navigation, and compact bag treatment deliberately contrast with Moon Bistro's dark side-rail tray menu.
+- Twelve menu items cover cloud tea, fruit fizz, frozen desserts, baked sweets, and one seasonal pairing. Product copy now follows the imported Figma photography, including Cocoa Cloud Brownie, Peach Macaron Parade, Crepe Gelato Cloud, and Strawberry Sunbeam Slice.
+- Menu cards, quantity detail, add-to-bag, shop-local cart, confirmation checkout, order creation, delivery support, Wallet suggestions, and later service notifications continue to use the shared Food Delivery store and order runtime.
+- Empty Bag and Orders navigation actions produce visible feedback; once an order exists, Orders opens the existing shop-scoped support drawer. The five-action footer remains available after adding items, while Bag scrolls to the normal shop-local checkout surface.
+- Fresh saves receive the shop and menu through normal seeds. Existing local saves receive missing Peach Cloud records plus missing built-in menu IDs; legacy built-in titles are refreshed only when they still equal the old seed title, so user-renamed items remain untouched. Explicit backup restore remains snapshot-faithful and does not inject the seed migration.
+- Peach Cloud now uses one milkshake promotion PNG, one SVG brand mark, five SVG category icons, and twelve product PNGs under `public/images/ui-assets/apps/food-delivery/peach-cloud/`. Image failures still show the shared high-contrast diagnostic placeholder and retain exact `data-required-asset` paths.
+
 ## Important Ownership Boundaries
 
 Food Delivery owns:
@@ -114,7 +126,7 @@ Food Platform's first consumer-homepage pass is done, including the Baemin-like 
 
 The checkout, order-card, and order-detail visual slice is now done. Its PNG positions and fallbacks are stable; the next art pass should deliver the core order-state pack before optional merchant marks. The deferred cross-module plan must not block this work, and no Map, Chat, Wallet, notification, or relationship writes should be added during asset replacement.
 
-Focus shop-template work on Moon Bistro before expanding to other shops.
+Moon Bistro and Peach Cloud now establish two intentionally different shop-template directions. Do not normalize them into one visual system; the next shop-template pass should begin only from a named shop identity and its own content needs.
 
 Recommended direction: late-night bistro with a dark tray menu.
 

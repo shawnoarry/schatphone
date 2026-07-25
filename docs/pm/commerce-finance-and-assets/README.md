@@ -14,6 +14,8 @@ Optional capability Pack note: `survival_city` can open Shopping as `补给站` 
 
 Current Food Delivery pseudo-folder note: Food Platform and shop mini apps are peer entries. Food Platform may own discovery plus checkout and order history for its own platform-internal merchants, while independent shop mini apps present their own cart, checkout confirmation, order status, delivery events, and Wallet suggestions. Platform orders must never aggregate peer shop-app orders.
 
+Current independent-shop note: Moon Bistro uses the dark `dark_tray_menu` treatment, while Peach Cloud uses a dedicated yellow/orange `dessert_window` home adapted from exact Figma node `47:23`, with functional search, five illustrated categories, Best Seller, promotion, Recommend, and fixed app navigation. Both remain facades over the same Food Delivery-owned cart/order runtime; Peach Cloud's imported local asset contract is recorded in `FOOD_DELIVERY_IMAGE2_ASSET_PROMPTS.md`.
+
 Current Wallet currency note: WorldBook's optional capability Packs can declare and inject custom world currencies. Wallet owns the user-facing primary currency, the USD/CNY reference coordinate, and editable exchange rates; Chat transfers and Food Delivery prices should consume Wallet currency settings instead of owning separate currency rules.
 
 ## Read This Package In This Order

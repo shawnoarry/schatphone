@@ -1,6 +1,6 @@
 # Food Delivery Image2 Asset Prompts / 外卖 Image2 素材提示词
 
-Updated: 2026-07-24
+Updated: 2026-07-25
 
 这份文档用于生成外卖 UI 美化需要的 PNG 素材。所有提示词都做成中英双语，方便直接复制到 image2 / 生图工具中使用。
 
@@ -446,6 +446,81 @@ platform-merchant-mark-coconut-curry-01.png
 ```
 
 当前订单列表会在这些素材缺失时显示诊断占位图。莓果晨光、青禾鲜食补给站、早安贝果咖啡和榆树里蒸点铺的订单身份图改为复用 `platform/merchants/logos/` 下的四张 Logo，避免为同一品牌重复准备两套标志。
+
+## 5. Peach Cloud Independent App / Peach Cloud 独立店 App
+
+Peach Cloud 使用暖橙、珊瑚红、奶油黄和明亮白色建立独立品牌感。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 的素材已落到下列 `19` 个本地文件：`13` 张 PNG 和 `6` 个 SVG。页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
+
+### Asset Contract / 素材合同
+
+```text
+public/images/ui-assets/apps/food-delivery/peach-cloud/
+├─ cover/peach-cloud-hero-01.png
+├─ brand/peach-cloud-mark-01.svg
+├─ categories/
+│  ├─ drinks.svg
+│  ├─ vegan.svg
+│  ├─ dessert.svg
+│  ├─ snacks.svg
+│  └─ meal.svg
+└─ products/
+   ├─ peach-cloud-item-01.png
+   ├─ peach-cloud-item-02.png
+   ├─ peach-cloud-item-03.png
+   ├─ peach-cloud-item-04.png
+   ├─ peach-cloud-item-05.png
+   ├─ peach-cloud-item-06.png
+   ├─ peach-cloud-item-07.png
+   ├─ peach-cloud-item-08.png
+   ├─ peach-cloud-item-09.png
+   ├─ peach-cloud-item-10.png
+   ├─ peach-cloud-item-11.png
+   └─ peach-cloud-item-12.png
+```
+
+| 文件 | 内容 | 建议源尺寸 / 裁切 |
+| --- | --- | --- |
+| `cover/peach-cloud-hero-01.png` | 三杯奶昔摄影，用于 Figma 风格 `30% OFF` 促销 | 横向摄影，右侧主体清晰，适合促销位裁切 |
+| `brand/peach-cloud-mark-01.svg` | Figma 甜点线稿，用作顶部品牌/资料入口 | 矢量，适合 `20px` 到 `48px` 显示 |
+| `categories/*.svg` | Drinks、Vegan/Fruit、Dessert、Snacks/Bakes、Meal/Seasonal 五个 Figma 分类线稿 | 矢量，使用设计原始珊瑚橙描边 |
+| `products/peach-cloud-item-01.png` | Peach Oolong Cloud | `768x768` |
+| `products/peach-cloud-item-02.png` | Brown Sugar Creme No. 7 | `768x768` |
+| `products/peach-cloud-item-03.png` | Cocoa Cloud Brownie | Figma 产品摄影 |
+| `products/peach-cloud-item-04.png` | Peach Macaron Parade | Figma 产品摄影 |
+| `products/peach-cloud-item-05.png` | Yuzu Spark Pop | `768x768` |
+| `products/peach-cloud-item-06.png` | Crepe Gelato Cloud | Figma 产品摄影 |
+| `products/peach-cloud-item-07.png` | Macaron Milk Drift | Figma 产品摄影 |
+| `products/peach-cloud-item-08.png` | Hojicha Cloud Float | Figma 产品摄影 |
+| `products/peach-cloud-item-09.png` | Strawberry Sunbeam Slice | Figma 产品摄影 |
+| `products/peach-cloud-item-10.png` | Cloud Nine Cocoa Crepes | Figma 产品摄影 |
+| `products/peach-cloud-item-11.png` | Midnight Creme No. 11 | Figma 产品摄影 |
+| `products/peach-cloud-item-12.png` | Golden Hour Pairing，气泡饮与迷你巴斯克组合 | `768x768` |
+
+### Hero Prompt / 主图提示词
+
+```text
+中文：用于虚拟手机外卖独立甜饮 App 的品牌主图，明亮真实的商业饮品与甜点摄影，白桃乌龙奶盖、橙红渐层鲜果气泡饮、芒果牛奶冰、巴斯克芝士蛋糕和一份黄油华夫饼陈列在清爽的现代甜饮柜台上，珊瑚橙、暖黄色、奶油白配色，阳光般明快但不过度儿童化，食物清晰诱人，主体集中在画面右侧和中部，左侧保留稳定的深浅对比区域给代码渲染标题，适合横向 8:5 裁切，不要可读文字，不要 logo，不要价格，不要 UI，不要手机边框，不要水印，PNG。
+
+English: Brand hero for an independent dessert-and-drinks delivery app inside a virtual phone, bright realistic commercial food photography of white-peach oolong milk tea, coral-orange layered fruit fizz, mango milk snow, Basque cheesecake, and a butter waffle on a clean contemporary dessert counter, coral orange, warm yellow, and creamy white palette, sunny and polished without looking childish, crisp appetizing food, subjects concentrated in the center and right with stable contrast-safe space on the left for code-rendered copy, composed for a horizontal 8:5 crop, no readable text, no logo, no price, no UI, no phone frame, no watermark, PNG.
+```
+
+### Product Pack Prompt / 产品图组提示词
+
+每张图只生成表格中对应的一项产品，保持同一套浅珊瑚背景、奶油白台面、柔和短投影和明亮自然光。
+
+```text
+中文：Peach Cloud 虚拟甜饮品牌的方形产品摄影，用于手机外卖 App 双列商品卡片。单份指定饮品或甜点清晰居中，占画面约 78%，浅珊瑚色到奶油白的干净背景，明亮自然的甜品店光线，真实食物质感，柔和短投影，边缘保留裁切安全区，整体精致、轻快、有品牌一致性，适合在 150px 卡片和大图详情中显示，不要可读文字，不要价格，不要 logo，不要 UI 卡片，不要餐具杂物，不要人物，不要水印，768x768 PNG。
+
+English: Square product photography for the virtual Peach Cloud drinks-and-desserts brand, used in a two-column mobile delivery menu. Show only the specified drink or dessert, clearly centered and filling about 78% of the frame, clean pale-coral to creamy-white backdrop, bright natural dessert-counter lighting, realistic appetizing texture, soft compact shadow, safe crop padding, polished cheerful and consistent across the set, readable both in a 150px card and a large detail view, no readable text, no price, no logo, no UI card, no cluttered tableware, no people, no watermark, 768x768 PNG.
+```
+
+### Brand Mark Prompt / 品牌图形提示词
+
+```text
+中文：Peach Cloud 甜饮品牌的独立图形标志，不含文字，将简化白桃轮廓、柔软云朵和一只带吸管的冷饮杯组合成一个清晰轮廓，珊瑚橙与暖黄色为主，少量奶油白高光，友好但不过度卡通，适合在 48px 仍可识别，透明背景，无投影或仅极短柔和投影，不要字母，不要店名，不要价格，不要 UI 卡片，不要水印，带 alpha 通道的 768x768 PNG。
+
+English: Standalone symbol for the Peach Cloud dessert-drinks brand with no text, combining a simplified white-peach outline, soft cloud, and cold drink cup with straw into one clear silhouette, coral orange and warm yellow with small creamy-white highlights, friendly without becoming overly cartoonish, recognizable at 48px, transparent background, no shadow or only a very compact soft shadow, no letters, no shop name, no price, no UI card, no watermark, 768x768 PNG with alpha.
+```
 
 ## Naming Suggestion / 文件命名建议
 

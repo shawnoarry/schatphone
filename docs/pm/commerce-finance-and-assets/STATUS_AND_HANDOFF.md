@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Status And Handoff
 
-Updated: 2026-07-24
+Updated: 2026-07-25
 
 This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, Assets, and Stock work.
 
@@ -31,6 +31,7 @@ What is already landed:
 19. Wallet now has a persisted primary-currency setting, and Food Delivery active pricing follows that finance setting instead of hard-coded UI currency text. Current restaurant/menu display, platform demo merchant fees, cart totals, checkout, and new food orders use the Wallet primary currency. Existing food orders and Wallet transactions keep the currency they were created with, so changing the finance setting does not silently rewrite historical ledger records.
 20. Wallet now also owns the shared currency registry and editable reference exchange-rate table. The default financial coordinate is USD/CNY, system currencies are available by default, and WorldBook's optional capability Packs can inject custom world currencies into Wallet. Wallet keeps the primary-currency choice and per-currency CNY reference rates; World Pack stores only the world-specific currency declarations. Chat transfer cards and sourced Chat ledger records now use the Wallet currency options instead of a hard-coded CNY text field.
 21. Shopping can now be represented in Chat through source-owned `share_card` objects. The active Chat `+` Shopping send path converts ordinary products into `product_link` cards and reserves direct gift wording for gift-card / voucher / virtual-gift-like products. This removes the earlier implication that every product card is an instant user-owned gift while keeping Shopping as the owner of products, checkout, orders, Wallet handoff, Assets suggestions, and later gift/redeem state.
+22. Peach Cloud is now the second built-in independent Food Delivery shop app and the first dedicated `dessert_window` implementation. Exact Figma home node `47:23` is adapted into a yellow search/greeting header, five SVG category shortcuts, Best Seller rail, milkshake promotion, two-column Recommend grid, and fixed five-action navigation rather than another shared shop-home template. Twelve brand-voiced items still use Food Delivery-owned detail, quantity, bag, checkout, order, and support runtime. The 19 imported local assets are wired to diagnostics, and old saves update legacy built-in copy only when the old seed title is unchanged.
 
 Coordination note: `FOOD_DELIVERY_PLATFORM_CROSS_MODULE_UI_UX_PLAN.md` preserves the future UI/UX and ownership direction for platform-order lifecycle, Map, Chat, Wallet, notification, and relationship integration. It is a deferred reference rather than an active slice; current Food Delivery attention remains on visual polish, responsive density, microcopy, and distinct shop presentation.
 
@@ -39,7 +40,7 @@ Still incomplete:
 1. Assets and Stock still need deeper product loops;
 2. future ownership links from Shopping to Assets and from Stock to cue systems still need clearer rollout order.
 3. service-account pushes are functional and boundary-safe, but later visual/copy polish can make them feel more brand-specific.
-4. Food Delivery store surfaces have the first route and IA baseline plus Moon Bistro's local-asset/category-rail/finance-currency polish, but still need more visual/UX passes for responsive density, checkout microcopy, detail-sheet polish, and more distinct shop templates.
+4. Food Delivery store surfaces now have two structurally distinct built-in templates: Moon Bistro's dark tray menu and Peach Cloud's Figma-adapted bright dessert app. Peach Cloud has completed desktop and simulated `393x852` layout/interaction review; true-device review and later template diversity remain future work only when a named shop requires them.
 5. App Store mini-app editing now has the generalized binding-target baseline, Shopping-bound generated entry support, cover facade management, installed/not-installed target-folder placement, and create-shop V0 owner handoff. A true custom Shopping store/service record model remains a Shopping-owned product decision if user-created Shopping shops need more than preset platform services.
 6. Logistics/tracking share UI is reserved by the shared object contract but does not yet have a full source-app send surface. Future order/tracking screens should create `tracking_share` or `order_share` objects rather than asking Chat to infer physical-gift state.
 

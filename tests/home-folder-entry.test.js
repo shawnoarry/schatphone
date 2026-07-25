@@ -64,13 +64,27 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="app_assets"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_reminders"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
-    expect(wrapper.find('[data-home-tile-id="weather"] .home-widget-card').classes()).toContain('is-weather')
-    expect(wrapper.find('[data-home-tile-id="calendar"] .home-widget-card').classes()).toContain('is-calendar')
-    expect(wrapper.find('[data-home-tile-id="music"] .home-widget-card').classes()).toContain('is-music')
-    expect(wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('type')).toBe('button')
-    expect(wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('aria-label')).toBeTruthy()
-    expect(wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('type')).toBe('button')
-    expect(wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('aria-label')).toBeTruthy()
+    expect(wrapper.find('[data-home-tile-id="weather"] .home-widget-card').classes()).toContain(
+      'is-weather',
+    )
+    expect(wrapper.find('[data-home-tile-id="calendar"] .home-widget-card').classes()).toContain(
+      'is-calendar',
+    )
+    expect(wrapper.find('[data-home-tile-id="music"] .home-widget-card').classes()).toContain(
+      'is-music',
+    )
+    expect(
+      wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('type'),
+    ).toBe('button')
+    expect(
+      wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('aria-label'),
+    ).toBeTruthy()
+    expect(
+      wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('type'),
+    ).toBe('button')
+    expect(
+      wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('aria-label'),
+    ).toBeTruthy()
     expect(wrapper.text()).toContain('购物')
     expect(wrapper.text()).toContain('提醒事项')
     expect(wrapper.text()).toContain('资产')
@@ -96,13 +110,7 @@ describe('Home folder entries', () => {
     await wrapper.findAll('.home-dot')[1].trigger('click')
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
 
-    store.setHomeWidgetPages([
-      [],
-      ['app_control_center'],
-      [],
-      [],
-      [],
-    ])
+    store.setHomeWidgetPages([[], ['app_control_center'], [], [], []])
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(true)
@@ -129,12 +137,22 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-testid="home-left-page"]').exists()).toBe(true)
     expect(wrapper.findAll('.home-dot')).toHaveLength(5)
     expect(wrapper.find('[data-testid="home-left-utility-panel"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain('is-installed')
-    expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain('is-fixed')
-    expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').classes()).toContain('is-locked')
-    expect(wrapper.find('[data-testid="home-left-shortcut-cheats"]').classes()).toContain('is-locked')
+    expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain(
+      'is-installed',
+    )
+    expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain(
+      'is-fixed',
+    )
+    expect(wrapper.find('[data-testid="home-left-shortcut-world-hub"]').classes()).toContain(
+      'is-locked',
+    )
+    expect(wrapper.find('[data-testid="home-left-shortcut-cheats"]').classes()).toContain(
+      'is-locked',
+    )
     expect(wrapper.findAll('[data-testid^="home-left-slot-reserved-"]')).toHaveLength(3)
-    expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(
+      false,
+    )
     expect(wrapper.find('[data-testid="home-left-page"]').text()).toContain('Fixed Entries')
     expect(wrapper.find('[data-testid="home-left-page"]').text()).toContain('1x1 Slots')
     expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('Apps to Install')
@@ -164,7 +182,9 @@ describe('Home folder entries', () => {
     expect(shortcut.exists()).toBe(true)
     expect(shortcut.classes()).toContain('is-installed')
     expect(shortcut.text()).toContain('App Store')
-    expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-left-page"] [data-home-grid-page]').exists()).toBe(
+      false,
+    )
 
     await shortcut.trigger('click')
     await flushPromises()
@@ -232,7 +252,9 @@ describe('Home folder entries', () => {
 
     await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
     await wrapper.vm.$nextTick()
-    expect(wrapper.find(`[data-testid="home-library-candidate-${worldAppId}"]`).exists()).toBe(false)
+    expect(wrapper.find(`[data-testid="home-library-candidate-${worldAppId}"]`).exists()).toBe(
+      false,
+    )
 
     await wrapper.get('[data-testid="home-edit-done"]').trigger('click')
     vi.advanceTimersByTime(450)
@@ -278,16 +300,30 @@ describe('Home folder entries', () => {
     expect(wrapper.findAll('.home-template-card')).toHaveLength(7)
     expect(wrapper.findAll('.home-template-preview-slot').length).toBeGreaterThan(0)
     expect(wrapper.find('.home-template-slot small').text()).toMatch(/x/)
-    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').attributes('data-home-slot-id')).toBeTruthy()
-    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').attributes('data-home-slot-size')).toBe('1x1')
-    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_reminders"]').attributes('data-home-slot-size')).toBe('1x1')
+    expect(
+      wrapper
+        .find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]')
+        .attributes('data-home-slot-id'),
+    ).toBeTruthy()
+    expect(
+      wrapper
+        .find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]')
+        .attributes('data-home-slot-size'),
+    ).toBe('1x1')
+    expect(
+      wrapper
+        .find('[data-home-grid-page="1"] [data-home-tile-id="app_reminders"]')
+        .attributes('data-home-slot-size'),
+    ).toBe('1x1')
 
     await wrapper.findAll('.home-template-card')[4].trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(store.settings.appearance.homeLayoutTemplateIds[1]).toBe('layout-e')
     expect(wrapper.find('.home-template-picker').exists()).toBe(false)
-    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-grid-page="1"] [data-home-tile-id="app_phone"]').exists()).toBe(
+      false,
+    )
 
     await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
     await wrapper.vm.$nextTick()
@@ -387,7 +423,9 @@ describe('Home folder entries', () => {
     })
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').classes()).toContain('is-active')
+    expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').classes()).toContain(
+      'is-active',
+    )
 
     await wrapper.get('[data-testid="home-page-dot-4"]').trigger('click')
     await wrapper.vm.$nextTick()
@@ -507,9 +545,17 @@ describe('Home folder entries', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('.home-slot-content-sheet').exists()).toBe(true)
-    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).exists()).toBe(true)
-    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).classes()).toContain('is-widget-like')
-    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"] iframe`).attributes('srcdoc')).toContain('Poster')
+    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).exists()).toBe(
+      true,
+    )
+    expect(
+      wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).classes(),
+    ).toContain('is-widget-like')
+    expect(
+      wrapper
+        .find(`[data-testid="home-slot-candidate-${posterWidgetId}"] iframe`)
+        .attributes('srcdoc'),
+    ).toContain('Poster')
     expect(wrapper.find('[data-testid="home-slot-candidate-app_gallery"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="home-slot-candidate-weather"]').exists()).toBe(false)
     wrapper.unmount()
@@ -628,8 +674,12 @@ describe('Home folder entries', () => {
     await wrapper.vm.$nextTick()
 
     expect(store.settings.appearance.homeLayoutTemplateIds[4]).toBe('layout-d')
-    expect(wrapper.find('[data-home-grid-page="4"] [data-home-tile-id="app_gallery"]').exists()).toBe(false)
-    expect(wrapper.find('[data-home-grid-page="4"] [data-home-tile-id="app_network"]').exists()).toBe(false)
+    expect(
+      wrapper.find('[data-home-grid-page="4"] [data-home-tile-id="app_gallery"]').exists(),
+    ).toBe(false)
+    expect(
+      wrapper.find('[data-home-grid-page="4"] [data-home-tile-id="app_network"]').exists(),
+    ).toBe(false)
 
     await wrapper.find('[data-testid="home-library-toggle"]').trigger('click')
     await wrapper.vm.$nextTick()
@@ -669,7 +719,9 @@ describe('Home folder entries', () => {
     await wrapper.vm.$nextTick()
 
     expect(galleryCandidate.classes()).toContain('is-active')
-    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain('is-compatible')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain(
+      'is-compatible',
+    )
 
     await wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').trigger('click')
     await wrapper.vm.$nextTick()
@@ -713,16 +765,26 @@ describe('Home folder entries', () => {
 
     expect(wrapper.find('.home-content-library').exists()).toBe(true)
     expect(wrapper.find('.home-content-library-hint').exists()).toBe(true)
-    expect(wrapper.find('.home-content-library-hint').text()).toContain('Items are waiting in the library')
-    expect(wrapper.find('[data-testid="home-library-candidate-app_gallery"]').classes()).not.toContain('is-active')
-    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain('is-awaiting-selection')
-    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).not.toContain('is-compatible')
+    expect(wrapper.find('.home-content-library-hint').text()).toContain(
+      'Items are waiting in the library',
+    )
+    expect(
+      wrapper.find('[data-testid="home-library-candidate-app_gallery"]').classes(),
+    ).not.toContain('is-active')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain(
+      'is-awaiting-selection',
+    )
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).not.toContain(
+      'is-compatible',
+    )
 
     await wrapper.find('[data-testid="home-library-candidate-app_gallery"]').trigger('click')
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('.home-content-library-hint').text()).toContain('Fits 1x1 slots')
-    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain('is-compatible')
+    expect(wrapper.find('[data-testid="home-empty-slot-4-b-small-1"]').classes()).toContain(
+      'is-compatible',
+    )
 
     await wrapper.find('[data-testid="home-library-candidate-app_gallery"]').trigger('click')
     await wrapper.vm.$nextTick()
@@ -767,7 +829,9 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-testid="home-slot-filter-custom"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-slot-filter-apps"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="home-slot-filter-folders"]').exists()).toBe(false)
-    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="home-slot-candidate-${posterWidgetId}"]`).exists()).toBe(
+      true,
+    )
     wrapper.unmount()
   })
 
@@ -888,13 +952,7 @@ describe('Home folder entries', () => {
     await router.push('/home')
     await router.isReady()
     const store = useSystemStore()
-    store.setHomeWidgetPages([
-      [],
-      [],
-      ['app_control_center'],
-      [],
-      [],
-    ])
+    store.setHomeWidgetPages([[], [], ['app_control_center'], [], []])
 
     const wrapper = mount(HomeView, {
       props: {
@@ -937,16 +995,25 @@ describe('Home folder entries', () => {
     await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
     expect(wrapper.find('[data-testid="home-folder-overlay"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-entry-nearby"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="home-folder-entry-food_delivery_platform"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-folder-entry-food_delivery_platform"]').exists()).toBe(
+      true,
+    )
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists(),
+    ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_peach_cloud"]').exists(),
+    ).toBe(true)
 
-    await wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').trigger('click')
+    await wrapper
+      .find('[data-testid="home-folder-entry-shop_app_food_seed_peach_cloud"]')
+      .trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
-    expect(router.currentRoute.value.query.restaurantId).toBe('food_seed_moon_bistro')
+    expect(router.currentRoute.value.query.restaurantId).toBe('food_seed_peach_cloud')
     expect(router.currentRoute.value.query.entry).toBe('shop')
-    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_moon_bistro')
+    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_peach_cloud')
     expect(router.currentRoute.value.query.from).toBe('home')
     expect(router.currentRoute.value.query.homePage).toBe('1')
     wrapper.unmount()
@@ -973,8 +1040,12 @@ describe('Home folder entries', () => {
     await wrapper.findAll('.home-dot')[1].trigger('click')
     await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
 
-    expect(wrapper.find('[data-testid="home-folder-entry-food_delivery_platform"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-folder-entry-food_delivery_platform"]').exists()).toBe(
+      true,
+    )
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists(),
+    ).toBe(false)
     expect(foodDeliveryStore.findRestaurantById('food_seed_moon_bistro')).toBeTruthy()
     wrapper.unmount()
   })
@@ -997,9 +1068,13 @@ describe('Home folder entries', () => {
     await wrapper.findAll('.home-dot')[1].trigger('click')
     await wrapper.find('[data-testid="home-folder-app_shopping"]').trigger('click')
     expect(wrapper.find('[data-testid="home-folder-overlay"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]').exists()).toBe(true)
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]').exists(),
+    ).toBe(true)
 
-    await wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]').trigger('click')
+    await wrapper
+      .find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]')
+      .trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/shopping')

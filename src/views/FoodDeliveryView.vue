@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
@@ -33,7 +33,10 @@ import {
 import { pushReturnTarget } from '../lib/navigation-return'
 import { runFoodDeliveryRandomOrderEventPilot } from '../lib/simulation/adapters/food-delivery-events'
 import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
-import { SHOP_ENTRY_BINDING_TARGET, resolveEntryPresentationMeta } from '../lib/app-entry-presentation'
+import {
+  SHOP_ENTRY_BINDING_TARGET,
+  resolveEntryPresentationMeta,
+} from '../lib/app-entry-presentation'
 import {
   isMiniAppEntryInstalled,
   normalizeAppStoreMiniAppPlacements,
@@ -130,7 +133,9 @@ const platformCheckoutFeedback = ref('')
 const platformOrderCopyFeedback = ref('')
 const platformPageKey = computed(() => {
   const key = typeof route.query.platformView === 'string' ? route.query.platformView : ''
-  return ['campaign', 'search', 'saved', 'profile', 'checkout', 'orders', 'order'].includes(key) ? key : 'home'
+  return ['campaign', 'search', 'saved', 'profile', 'checkout', 'orders', 'order'].includes(key)
+    ? key
+    : 'home'
 })
 const platformCampaignKey = computed(() =>
   typeof route.query.platformCampaign === 'string' ? route.query.platformCampaign.trim() : '',
@@ -144,12 +149,24 @@ let platformBannerAutoplayTimerId = null
 let platformBannerInteractionPauseUntil = 0
 let platformBannerProgrammaticScrollUntil = 0
 const activeStoreMenuSectionKey = ref('all')
+const storeNavigationFeedback = ref('')
+const peachCloudSearchQuery = ref('')
+const peachCloudSearchInputRef = ref(null)
 const uiAssetUrl = (path) => `${import.meta.env.BASE_URL || '/'}images/ui-assets/${path}`
 const foodDeliveryUiAsset = (path) => uiAssetUrl(`apps/food-delivery/${path}`)
 const platformMissingAssetPlaceholderUrl = foodDeliveryUiAsset(
   'platform/diagnostics/missing-asset-placeholder.svg',
 )
-const displayMoney = (amount = '0.00', currency = '') => `${amount} ${currency || activeCurrency.value}`
+const peachCloudBrandImageUrl = foodDeliveryUiAsset('peach-cloud/brand/peach-cloud-mark-01.svg')
+const PEACH_CLOUD_MENU_SHORTCUTS = Object.freeze([
+  { key: 'cloud_tea', labelZh: '云顶茶', labelEn: 'Cloud Tea', asset: 'drinks.svg' },
+  { key: 'fruit_sparkle', labelZh: '果气闪饮', labelEn: 'Fruit Fizz', asset: 'vegan.svg' },
+  { key: 'frozen_clouds', labelZh: '冰雪甜品', labelEn: 'Frozen', asset: 'dessert.svg' },
+  { key: 'oven_sweets', labelZh: '暖炉烘焙', labelEn: 'Bakes', asset: 'snacks.svg' },
+  { key: 'seasonal_drop', labelZh: '季节限定', labelEn: 'Seasonal', asset: 'meal.svg' },
+])
+const displayMoney = (amount = '0.00', currency = '') =>
+  `${amount} ${currency || activeCurrency.value}`
 const platformRiderImageUrl = foodDeliveryUiAsset(
   'platform/decorations/mascot/delivery-rider-mascot-01.png',
 )
@@ -178,11 +195,13 @@ const defaultFoodDeliveryCategoryKey = computed(() =>
   worldAppUxContext.value ? 'nearby' : 'restaurants',
 )
 const activeCategoryKey = computed(() =>
-  typeof route.query.category === 'string' ? route.query.category : defaultFoodDeliveryCategoryKey.value,
+  typeof route.query.category === 'string'
+    ? route.query.category
+    : defaultFoodDeliveryCategoryKey.value,
 )
 const activeCategory = computed(() => findFoodDeliveryCategory(activeCategoryKey.value))
-const foodDeliveryTitle = computed(() =>
-  worldAppUxContext.value?.bindingTitle || t('外卖', 'Food Delivery'),
+const foodDeliveryTitle = computed(
+  () => worldAppUxContext.value?.bindingTitle || t('外卖', 'Food Delivery'),
 )
 const categoryCards = computed(() =>
   FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => ({
@@ -274,9 +293,13 @@ const FOOD_STORE_VISUALS = {
 }
 const activeRestaurants = computed(() => {
   const restaurants = foodDeliveryStore.listRestaurantsByCategory(activeCategory.value?.key)
-  const installedRestaurants = restaurants.filter((restaurant) => restaurantMiniAppInstalled(restaurant))
+  const installedRestaurants = restaurants.filter((restaurant) =>
+    restaurantMiniAppInstalled(restaurant),
+  )
   if (restaurants.length > 0) return installedRestaurants
-  return foodDeliveryStore.restaurants.filter((restaurant) => restaurantMiniAppInstalled(restaurant)).slice(0, 4)
+  return foodDeliveryStore.restaurants
+    .filter((restaurant) => restaurantMiniAppInstalled(restaurant))
+    .slice(0, 4)
 })
 const platformRestaurantCount = computed(() => foodDeliveryStore.restaurantCount)
 const platformMenuItemCount = computed(() => foodDeliveryStore.menuItemCount)
@@ -327,22 +350,83 @@ const FOOD_PLATFORM_CATEGORY_VISUALS = Object.freeze({
   },
 })
 const FOOD_PLATFORM_CATEGORY_DEFINITIONS = Object.freeze([
-  { key: 'all', categoryKey: 'nearby', labelZh: '全部', labelEn: 'All', requiredAsset: 'platform/categories/icons/category-all-01.png' },
-  { key: 'restaurants', categoryKey: 'restaurants', labelZh: '正餐', labelEn: 'Restaurants', requiredAsset: 'platform/categories/icons/category-meal-01.png' },
-  { key: 'fast_food', categoryKey: 'fast_food', labelZh: '快餐', labelEn: 'Fast', requiredAsset: 'platform/categories/icons/category-fast-food-01.png' },
-  { key: 'chicken', categoryKey: 'fast_food', labelZh: '炸鸡', labelEn: 'Chicken', requiredAsset: 'platform/categories/icons/category-fried-chicken-01.png' },
-  { key: 'pizza', categoryKey: 'fast_food', labelZh: '披萨', labelEn: 'Pizza', requiredAsset: 'platform/categories/icons/category-pizza-01.png' },
-  { key: 'cafe', categoryKey: 'cafe', labelZh: '咖啡轻食', labelEn: 'Cafe', requiredAsset: 'platform/categories/icons/category-cafe-01.png' },
-  { key: 'dessert', categoryKey: 'dessert', labelZh: '甜品', labelEn: 'Dessert', requiredAsset: 'platform/categories/icons/category-dessert-01.png' },
-  { key: 'grocery_delivery', categoryKey: 'grocery_delivery', labelZh: '生鲜', labelEn: 'Grocery', requiredAsset: 'platform/categories/icons/category-grocery-01.png' },
-  { key: 'noodles', categoryKey: 'restaurants', labelZh: '面食', labelEn: 'Noodles', requiredAsset: 'platform/categories/icons/category-noodles-01.png' },
-  { key: 'sushi', categoryKey: 'restaurants', labelZh: '寿司', labelEn: 'Sushi', requiredAsset: 'platform/categories/icons/category-sushi-01.png' },
+  {
+    key: 'all',
+    categoryKey: 'nearby',
+    labelZh: '全部',
+    labelEn: 'All',
+    requiredAsset: 'platform/categories/icons/category-all-01.png',
+  },
+  {
+    key: 'restaurants',
+    categoryKey: 'restaurants',
+    labelZh: '正餐',
+    labelEn: 'Restaurants',
+    requiredAsset: 'platform/categories/icons/category-meal-01.png',
+  },
+  {
+    key: 'fast_food',
+    categoryKey: 'fast_food',
+    labelZh: '快餐',
+    labelEn: 'Fast',
+    requiredAsset: 'platform/categories/icons/category-fast-food-01.png',
+  },
+  {
+    key: 'chicken',
+    categoryKey: 'fast_food',
+    labelZh: '炸鸡',
+    labelEn: 'Chicken',
+    requiredAsset: 'platform/categories/icons/category-fried-chicken-01.png',
+  },
+  {
+    key: 'pizza',
+    categoryKey: 'fast_food',
+    labelZh: '披萨',
+    labelEn: 'Pizza',
+    requiredAsset: 'platform/categories/icons/category-pizza-01.png',
+  },
+  {
+    key: 'cafe',
+    categoryKey: 'cafe',
+    labelZh: '咖啡轻食',
+    labelEn: 'Cafe',
+    requiredAsset: 'platform/categories/icons/category-cafe-01.png',
+  },
+  {
+    key: 'dessert',
+    categoryKey: 'dessert',
+    labelZh: '甜品',
+    labelEn: 'Dessert',
+    requiredAsset: 'platform/categories/icons/category-dessert-01.png',
+  },
+  {
+    key: 'grocery_delivery',
+    categoryKey: 'grocery_delivery',
+    labelZh: '生鲜',
+    labelEn: 'Grocery',
+    requiredAsset: 'platform/categories/icons/category-grocery-01.png',
+  },
+  {
+    key: 'noodles',
+    categoryKey: 'restaurants',
+    labelZh: '面食',
+    labelEn: 'Noodles',
+    requiredAsset: 'platform/categories/icons/category-noodles-01.png',
+  },
+  {
+    key: 'sushi',
+    categoryKey: 'restaurants',
+    labelZh: '寿司',
+    labelEn: 'Sushi',
+    requiredAsset: 'platform/categories/icons/category-sushi-01.png',
+  },
 ])
 const FOOD_PLATFORM_CATEGORY_KEYS = new Set(
   FOOD_PLATFORM_CATEGORY_DEFINITIONS.map((category) => category.key),
 )
 const activePlatformFilterKey = computed(() => {
-  const queryKey = typeof route.query.platformFilter === 'string' ? route.query.platformFilter.trim() : ''
+  const queryKey =
+    typeof route.query.platformFilter === 'string' ? route.query.platformFilter.trim() : ''
   if (FOOD_PLATFORM_CATEGORY_KEYS.has(queryKey)) return queryKey
   return activeCategory.value?.key === 'nearby' ? 'all' : activeCategory.value?.key || 'all'
 })
@@ -372,15 +456,33 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     pageDescZh: '本周平台会员可领取一次免配送权益，适用于下方标注免配送的小店。',
     pageDescEn: 'Claim one free-delivery perk this week for the eligible platform shops below.',
     primaryZh: '领取本周权益',
-    primaryEn: 'Claim this week\'s perk',
+    primaryEn: "Claim this week's perk",
     claimedPrimaryZh: '挑一家免配送小店',
     claimedPrimaryEn: 'Choose an eligible shop',
     targetCategory: 'nearby',
     merchantIds: ['platform_hanwoo_gukbap', 'platform_chicken_crisp', 'platform_green_basket'],
     highlights: [
-      { icon: 'fas fa-truck-fast', titleZh: '配送费减免', titleEn: 'Free delivery', descZh: '符合条件的小店自动使用', descEn: 'Applied at eligible shops' },
-      { icon: 'fas fa-calendar-check', titleZh: '本周有效', titleEn: 'Valid this week', descZh: '领取后即可开始选餐', descEn: 'Ready after claiming' },
-      { icon: 'fas fa-heart', titleZh: '常点优先', titleEn: 'Favorites first', descZh: '收藏小店更容易找到', descEn: 'Saved shops stay close' },
+      {
+        icon: 'fas fa-truck-fast',
+        titleZh: '配送费减免',
+        titleEn: 'Free delivery',
+        descZh: '符合条件的小店自动使用',
+        descEn: 'Applied at eligible shops',
+      },
+      {
+        icon: 'fas fa-calendar-check',
+        titleZh: '本周有效',
+        titleEn: 'Valid this week',
+        descZh: '领取后即可开始选餐',
+        descEn: 'Ready after claiming',
+      },
+      {
+        icon: 'fas fa-heart',
+        titleZh: '常点优先',
+        titleEn: 'Favorites first',
+        descZh: '收藏小店更容易找到',
+        descEn: 'Saved shops stay close',
+      },
     ],
   },
   {
@@ -391,7 +493,7 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     titleZh: '周末好运，开袋有礼',
     titleEn: 'Unpack a little weekend luck',
     descZh: '下单前先抽一次，把今天的惊喜装进外卖袋。',
-    descEn: 'Draw once before ordering and add a surprise to today\'s delivery bag.',
+    descEn: "Draw once before ordering and add a surprise to today's delivery bag.",
     ctaZh: '去抽福利',
     ctaEn: 'Draw a perk',
     icon: 'fas fa-gift',
@@ -403,7 +505,8 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     posterEyebrowZh: '周末好运放送中',
     posterEyebrowEn: 'Weekend luck is live',
     pageDescZh: '每次活动可抽一次站内周末福利。抽奖结果只用于这次平台体验，不会改动钱包或资产。',
-    pageDescEn: 'Draw one in-app weekend perk per event. Results stay inside this platform experience and do not affect Wallet or Assets.',
+    pageDescEn:
+      'Draw one in-app weekend perk per event. Results stay inside this platform experience and do not affect Wallet or Assets.',
     primaryZh: '抽一次周末福利',
     primaryEn: 'Draw a weekend perk',
     drawnPrimaryZh: '本次福利已揭晓',
@@ -412,14 +515,53 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     scheduleZh: '7 月周末限定 · 每次活动 1 次机会',
     scheduleEn: 'July weekends · One draw per event',
     benefits: [
-      { icon: 'fas fa-ticket', titleZh: '满 49 减 8', titleEn: '8 off 49', descZh: '适合一人份正餐', descEn: 'Made for a solo meal' },
-      { icon: 'fas fa-motorcycle', titleZh: '0 元配送', titleEn: 'Free delivery', descZh: '本次平台订单可用', descEn: 'For this platform order' },
-      { icon: 'fas fa-ice-cream', titleZh: '甜品加赠', titleEn: 'Dessert treat', descZh: '为周末加一份甜', descEn: 'A sweet weekend extra' },
+      {
+        icon: 'fas fa-ticket',
+        titleZh: '满 49 减 8',
+        titleEn: '8 off 49',
+        descZh: '适合一人份正餐',
+        descEn: 'Made for a solo meal',
+      },
+      {
+        icon: 'fas fa-motorcycle',
+        titleZh: '0 元配送',
+        titleEn: 'Free delivery',
+        descZh: '本次平台订单可用',
+        descEn: 'For this platform order',
+      },
+      {
+        icon: 'fas fa-ice-cream',
+        titleZh: '甜品加赠',
+        titleEn: 'Dessert treat',
+        descZh: '为周末加一份甜',
+        descEn: 'A sweet weekend extra',
+      },
     ],
     prizes: [
-      { id: 'discount_8', icon: 'fas fa-ticket', titleZh: '满 49 减 8', titleEn: '8 off 49', descZh: '今天的周末餐更轻松一点', descEn: 'A lighter total for today\'s weekend meal' },
-      { id: 'free_delivery', icon: 'fas fa-motorcycle', titleZh: '0 元配送券', titleEn: 'Free delivery', descZh: '这一单把配送费留给平台', descEn: 'Delivery is on the platform this time' },
-      { id: 'dessert_treat', icon: 'fas fa-ice-cream', titleZh: '甜品加赠签', titleEn: 'Dessert treat', descZh: '为本次外卖添一份随机甜品', descEn: 'Add one surprise dessert to this delivery' },
+      {
+        id: 'discount_8',
+        icon: 'fas fa-ticket',
+        titleZh: '满 49 减 8',
+        titleEn: '8 off 49',
+        descZh: '今天的周末餐更轻松一点',
+        descEn: "A lighter total for today's weekend meal",
+      },
+      {
+        id: 'free_delivery',
+        icon: 'fas fa-motorcycle',
+        titleZh: '0 元配送券',
+        titleEn: 'Free delivery',
+        descZh: '这一单把配送费留给平台',
+        descEn: 'Delivery is on the platform this time',
+      },
+      {
+        id: 'dessert_treat',
+        icon: 'fas fa-ice-cream',
+        titleZh: '甜品加赠签',
+        titleEn: 'Dessert treat',
+        descZh: '为本次外卖添一份随机甜品',
+        descEn: 'Add one surprise dessert to this delivery',
+      },
     ],
   },
   {
@@ -442,19 +584,62 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     primaryZh: '进入午餐快捷分类',
     primaryEn: 'Open quick lunch picks',
     targetCategory: 'fast_food',
-    merchantIds: ['platform_salad_day', 'platform_golden_chicken', 'platform_nori_table', 'platform_hanwoo_gukbap'],
+    merchantIds: [
+      'platform_salad_day',
+      'platform_golden_chicken',
+      'platform_nori_table',
+      'platform_hanwoo_gukbap',
+    ],
     editorZh: '平台午餐编辑部 · 本周 4 选',
     editorEn: 'Platform lunch desk · Four picks this week',
     menuPicks: [
-      { merchantId: 'platform_salad_day', itemIndex: 0, tagZh: '清爽工作餐', tagEn: 'Fresh desk lunch' },
-      { merchantId: 'platform_golden_chicken', itemIndex: 0, tagZh: '早餐也能当午餐', tagEn: 'Brunch-ready' },
-      { merchantId: 'platform_nori_table', itemIndex: 1, tagZh: '热乎快手', tagEn: 'Hot and quick' },
-      { merchantId: 'platform_hanwoo_gukbap', itemIndex: 0, tagZh: '稳妥正餐', tagEn: 'Hearty classic' },
+      {
+        merchantId: 'platform_salad_day',
+        itemIndex: 0,
+        tagZh: '清爽工作餐',
+        tagEn: 'Fresh desk lunch',
+      },
+      {
+        merchantId: 'platform_golden_chicken',
+        itemIndex: 0,
+        tagZh: '早餐也能当午餐',
+        tagEn: 'Brunch-ready',
+      },
+      {
+        merchantId: 'platform_nori_table',
+        itemIndex: 1,
+        tagZh: '热乎快手',
+        tagEn: 'Hot and quick',
+      },
+      {
+        merchantId: 'platform_hanwoo_gukbap',
+        itemIndex: 0,
+        tagZh: '稳妥正餐',
+        tagEn: 'Hearty classic',
+      },
     ],
     highlights: [
-      { icon: 'fas fa-bolt', titleZh: '选择更快', titleEn: 'Faster choice', descZh: '精简到午餐常点类型', descEn: 'Focused lunch categories' },
-      { icon: 'fas fa-leaf', titleZh: '轻重都有', titleEn: 'Light or hearty', descZh: '轻食与热饭同页可选', descEn: 'Light bites and hot meals' },
-      { icon: 'fas fa-mug-hot', titleZh: '咖啡顺带', titleEn: 'Coffee included', descZh: '午后饮品不用再搜索', descEn: 'Drinks stay within reach' },
+      {
+        icon: 'fas fa-bolt',
+        titleZh: '选择更快',
+        titleEn: 'Faster choice',
+        descZh: '精简到午餐常点类型',
+        descEn: 'Focused lunch categories',
+      },
+      {
+        icon: 'fas fa-leaf',
+        titleZh: '轻重都有',
+        titleEn: 'Light or hearty',
+        descZh: '轻食与热饭同页可选',
+        descEn: 'Light bites and hot meals',
+      },
+      {
+        icon: 'fas fa-mug-hot',
+        titleZh: '咖啡顺带',
+        titleEn: 'Coffee included',
+        descZh: '午后饮品不用再搜索',
+        descEn: 'Drinks stay within reach',
+      },
     ],
   },
 ])
@@ -479,8 +664,16 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     fallbackClass: 'from-[#fff2cf] via-[#f6c34d] to-[#e66d4d] text-[#78350f]',
     desc: '逆站洞老派汤饭铺，主打慢熬牛骨汤、韩牛与一桌热乎小菜。',
     menu: [
-      { title: '逆站洞一号韩牛汤饭', price: '58.00', desc: '24 小时牛骨汤、薄切韩牛、白饭与三样小菜' },
-      { title: '泡菜红锅·双人份', price: '64.00', desc: '熟成泡菜、牛肉片与豆腐，酸辣浓郁适合分享' },
+      {
+        title: '逆站洞一号韩牛汤饭',
+        price: '58.00',
+        desc: '24 小时牛骨汤、薄切韩牛、白饭与三样小菜',
+      },
+      {
+        title: '泡菜红锅·双人份',
+        price: '64.00',
+        desc: '熟成泡菜、牛肉片与豆腐，酸辣浓郁适合分享',
+      },
       { title: '清晨雪浓汤定食', price: '46.00', desc: '清亮牛骨汤、手撕牛肉、米饭与萝卜泡菜' },
       { title: '逆站洞醒酒辣汤', price: '52.00', desc: '牛肉丝、豆芽和蕨菜，辣香汤底醒胃不发腻' },
       { title: '海风泡菜煎饼', price: '32.00', desc: '虾仁与鱿鱼铺满薄脆饼边，配店制蘸酱' },
@@ -533,7 +726,11 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     fallbackClass: 'from-[#fff1e6] via-[#ffb86b] to-[#f24f35] text-[#7f1d1d]',
     desc: '花德炉边薄底披萨与分享小食，饼边焦香、酱料大胆。',
     menu: [
-      { title: '花德蜂蜜双芝士', price: '68.00', desc: '马苏里拉与蓝纹双芝士，出炉后淋蜂蜜和坚果碎' },
+      {
+        title: '花德蜂蜜双芝士',
+        price: '68.00',
+        desc: '马苏里拉与蓝纹双芝士，出炉后淋蜂蜜和坚果碎',
+      },
       { title: '周五半半鸡翅篮', price: '42.00', desc: '海盐原味与韩式甜辣各半，配酸黄瓜' },
       { title: '炉边番茄罗勒', price: '62.00', desc: '店制番茄酱、新鲜罗勒与焦边薄底' },
       { title: '红椒烟熏辣肠', price: '72.00', desc: '意式辣肠、烤彩椒与烟熏芝士，微辣有层次' },
@@ -560,7 +757,11 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     fallbackClass: 'from-[#ecfff4] via-[#9ae6b4] to-[#34c2a1] text-[#064e3b]',
     desc: '把每日状态写进一只碗里，主打谷物、蔬菜与不甜腻饮品。',
     menu: [
-      { title: '日记 No.1 牛油果鸡胸碗', price: '39.00', desc: '香草鸡胸、牛油果、藜麦和柚香油醋汁' },
+      {
+        title: '日记 No.1 牛油果鸡胸碗',
+        price: '39.00',
+        desc: '香草鸡胸、牛油果、藜麦和柚香油醋汁',
+      },
       { title: '今日莓果酸奶罐', price: '24.00', desc: '无糖酸奶、当日莓果与海盐坚果麦片' },
       { title: '海岸线三文鱼谷物碗', price: '46.00', desc: '烟熏三文鱼、糙米、羽衣甘蓝与溏心蛋' },
       { title: '烤南瓜暖汤午餐组', price: '29.00', desc: '烤南瓜浓汤、全麦小餐包与一份嫩叶菜' },
@@ -587,7 +788,11 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     fallbackClass: 'from-[#fff7d6] via-[#f6bf55] to-[#d95f35] text-[#78350f]',
     desc: '以脆度和酱料编号的街区炸鸡店，适合夜宵与多人分享。',
     menu: [
-      { title: '脆脆 50/50 半半鸡', price: '66.00', desc: '海盐原味与 2 号甜辣酱各半，附双份腌萝卜' },
+      {
+        title: '脆脆 50/50 半半鸡',
+        price: '66.00',
+        desc: '海盐原味与 2 号甜辣酱各半，附双份腌萝卜',
+      },
       { title: '金瀑芝士厚切薯', price: '26.00', desc: '现炸厚薯条淋切达芝士与香葱碎' },
       { title: '黑蒜无骨鸡块', price: '48.00', desc: '去骨鸡腿裹黑蒜酱，咸甜焦香不黏腻' },
       { title: '辣年糕串串', price: '22.00', desc: '米年糕、鱼饼和脆肠刷 3 号甜辣酱' },
@@ -705,7 +910,11 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     fallbackClass: 'from-[#eff6ff] via-[#7dd3fc] to-[#fbbf24] text-[#0c4a6e]',
     desc: 'GOOD AM 系列贝果与咖啡，以一天中的光线和时刻为菜单命名。',
     menu: [
-      { title: 'GOOD AM 烟熏鸡贝果', price: '33.00', desc: '现烤芝麻贝果、烟熏鸡肉、奶油奶酪与芝麻菜' },
+      {
+        title: 'GOOD AM 烟熏鸡贝果',
+        price: '33.00',
+        desc: '现烤芝麻贝果、烟熏鸡肉、奶油奶酪与芝麻菜',
+      },
       { title: '晨盐焦糖拿铁', price: '24.00', desc: '双份浓缩、鲜奶与自制海盐焦糖' },
       { title: '绿意煎蛋贝果', price: '35.00', desc: '牛油果、流心煎蛋、芝麻菜与原味贝果' },
       { title: '早安苹果肉桂司康', price: '22.00', desc: '苹果丁、肉桂糖与当天现烤黄油司康' },
@@ -763,7 +972,11 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     fallbackClass: 'from-[#fefce8] via-[#facc15] to-[#22c55e] text-[#713f12]',
     desc: '南风把东南亚城市和香料写进菜单，咖喱可选柔和、标准或热辣。',
     menu: [
-      { title: '南风一号椰香鸡', price: '45.00', desc: '嫩鸡腿、椰奶黄咖喱与茉莉香米，默认柔和辣度' },
+      {
+        title: '南风一号椰香鸡',
+        price: '45.00',
+        desc: '嫩鸡腿、椰奶黄咖喱与茉莉香米，默认柔和辣度',
+      },
       { title: '槟城咖喱虾饭', price: '52.00', desc: '鲜虾、秋葵、豆卜与浓香咖喱汁' },
       { title: '青罗勒绿咖喱牛', price: '49.00', desc: '牛肉片、泰茄、青罗勒与椰香绿咖喱' },
       { title: '南风冬阴功海鲜汤', price: '38.00', desc: '鲜虾、鱿鱼、菌菇与香茅酸辣汤，辣度偏高' },
@@ -772,30 +985,41 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
   },
 ])
 const FOOD_PLATFORM_RECOMMENDATION_COUNT = 3
-const platformRecommendedMerchantIds = Object.freeze((() => {
-  const merchantIds = FOOD_PLATFORM_MERCHANTS.map((merchant) => merchant.id)
-  for (let index = merchantIds.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1))
-    ;[merchantIds[index], merchantIds[randomIndex]] = [merchantIds[randomIndex], merchantIds[index]]
-  }
-  return merchantIds.slice(0, FOOD_PLATFORM_RECOMMENDATION_COUNT)
-})())
-const activePlatformCampaign = computed(() =>
-  FOOD_PLATFORM_AD_BANNERS.find((campaign) => campaign.id === platformCampaignKey.value) || null,
+const platformRecommendedMerchantIds = Object.freeze(
+  (() => {
+    const merchantIds = FOOD_PLATFORM_MERCHANTS.map((merchant) => merchant.id)
+    for (let index = merchantIds.length - 1; index > 0; index -= 1) {
+      const randomIndex = Math.floor(Math.random() * (index + 1))
+      ;[merchantIds[index], merchantIds[randomIndex]] = [
+        merchantIds[randomIndex],
+        merchantIds[index],
+      ]
+    }
+    return merchantIds.slice(0, FOOD_PLATFORM_RECOMMENDATION_COUNT)
+  })(),
+)
+const activePlatformCampaign = computed(
+  () =>
+    FOOD_PLATFORM_AD_BANNERS.find((campaign) => campaign.id === platformCampaignKey.value) || null,
 )
 const platformCampaignMerchants = computed(() => {
   const merchantIds = new Set(activePlatformCampaign.value?.merchantIds || [])
   return FOOD_PLATFORM_MERCHANTS.filter((merchant) => merchantIds.has(merchant.id))
 })
 const platformCampaignMenuPicks = computed(() =>
-  (activePlatformCampaign.value?.menuPicks || []).map((pick) => {
-    const merchant = FOOD_PLATFORM_MERCHANTS.find((entry) => entry.id === pick.merchantId)
-    const item = merchant?.menu?.[pick.itemIndex]
-    return merchant && item ? { ...pick, merchant, item } : null
-  }).filter(Boolean),
+  (activePlatformCampaign.value?.menuPicks || [])
+    .map((pick) => {
+      const merchant = FOOD_PLATFORM_MERCHANTS.find((entry) => entry.id === pick.merchantId)
+      const item = merchant?.menu?.[pick.itemIndex]
+      return merchant && item ? { ...pick, merchant, item } : null
+    })
+    .filter(Boolean),
 )
-const platformCampaignPrize = computed(() =>
-  (activePlatformCampaign.value?.prizes || []).find((prize) => prize.id === platformCampaignPrizeId.value) || null,
+const platformCampaignPrize = computed(
+  () =>
+    (activePlatformCampaign.value?.prizes || []).find(
+      (prize) => prize.id === platformCampaignPrizeId.value,
+    ) || null,
 )
 const platformMerchantMatchesFilter = (merchant = {}, filterKey = 'all') => {
   if (filterKey === 'all') return true
@@ -807,6 +1031,11 @@ const platformMerchantMatchesFilter = (merchant = {}, filterKey = 'all') => {
 }
 const STORE_MENU_SECTION_ORDER = Object.freeze([
   'signature',
+  'cloud_tea',
+  'fruit_sparkle',
+  'frozen_clouds',
+  'oven_sweets',
+  'seasonal_drop',
   'warm_soup',
   'rice_set',
   'grill',
@@ -816,19 +1045,75 @@ const STORE_MENU_SECTION_ORDER = Object.freeze([
   'dessert',
 ])
 const STORE_MENU_SECTION_META = Object.freeze({
+  cloud_tea: {
+    zh: '云顶茶',
+    en: 'Cloud tea',
+    shortZh: '云顶茶',
+    shortEn: 'Tea',
+    icon: 'fas fa-mug-hot',
+  },
+  fruit_sparkle: {
+    zh: '鲜果气泡',
+    en: 'Fruit fizz',
+    shortZh: '气泡',
+    shortEn: 'Fizz',
+    icon: 'fas fa-lemon',
+  },
+  frozen_clouds: {
+    zh: '冰雪甜品',
+    en: 'Frozen',
+    shortZh: '冰雪',
+    shortEn: 'Ice',
+    icon: 'fas fa-snowflake',
+  },
+  oven_sweets: {
+    zh: '烤箱甜点',
+    en: 'Baked',
+    shortZh: '烘焙',
+    shortEn: 'Bake',
+    icon: 'fas fa-cookie-bite',
+  },
+  seasonal_drop: {
+    zh: '季节限定',
+    en: 'Seasonal',
+    shortZh: '限定',
+    shortEn: 'New',
+    icon: 'fas fa-sun',
+  },
   signature: { zh: '招牌', en: 'Signature', shortZh: '招牌', shortEn: 'Sign', icon: 'fas fa-star' },
-  warm_soup: { zh: '暖汤', en: 'Soups', shortZh: '暖汤', shortEn: 'Soup', icon: 'fas fa-bowl-food' },
+  warm_soup: {
+    zh: '暖汤',
+    en: 'Soups',
+    shortZh: '暖汤',
+    shortEn: 'Soup',
+    icon: 'fas fa-bowl-food',
+  },
   rice_set: { zh: '套餐', en: 'Sets', shortZh: '套餐', shortEn: 'Sets', icon: 'fas fa-bowl-rice' },
-  grill: { zh: '主菜', en: 'Grill', shortZh: '主菜', shortEn: 'Grill', icon: 'fas fa-drumstick-bite' },
+  grill: {
+    zh: '主菜',
+    en: 'Grill',
+    shortZh: '主菜',
+    shortEn: 'Grill',
+    icon: 'fas fa-drumstick-bite',
+  },
   seafood: { zh: '海鲜', en: 'Seafood', shortZh: '海鲜', shortEn: 'Sea', icon: 'fas fa-fish' },
   greens: { zh: '轻食', en: 'Greens', shortZh: '轻食', shortEn: 'Fresh', icon: 'fas fa-seedling' },
   pasta: { zh: '意面', en: 'Pasta', shortZh: '意面', shortEn: 'Pasta', icon: 'fas fa-utensils' },
-  dessert: { zh: '甜品', en: 'Dessert', shortZh: '甜品', shortEn: 'Sweet', icon: 'fas fa-ice-cream' },
+  dessert: {
+    zh: '甜品',
+    en: 'Dessert',
+    shortZh: '甜品',
+    shortEn: 'Sweet',
+    icon: 'fas fa-ice-cream',
+  },
 })
 const platformCategoryTiles = computed(() =>
   FOOD_PLATFORM_CATEGORY_DEFINITIONS.map((category) => {
     const categoryKey = category.categoryKey || category.key
-    const visual = FOOD_PLATFORM_CATEGORY_VISUALS[category.key] || FOOD_PLATFORM_CATEGORY_VISUALS[categoryKey] || FOOD_PLATFORM_CATEGORY_VISUALS.all
+    const visual =
+      FOOD_PLATFORM_CATEGORY_VISUALS[category.key] ||
+      FOOD_PLATFORM_CATEGORY_VISUALS[categoryKey] ||
+      FOOD_PLATFORM_CATEGORY_VISUALS.all
     return {
       ...category,
       categoryKey,
@@ -874,25 +1159,35 @@ const merchantMatchesPlatformSearch = (merchant = {}) => {
     merchant.category,
     merchant.badge,
     menuText,
-  ].some((value) => String(value || '').toLowerCase().includes(query))
+  ].some((value) =>
+    String(value || '')
+      .toLowerCase()
+      .includes(query),
+  )
 }
 const platformMatchingMerchants = computed(() => {
-  const merchants = platformPageKey.value === 'saved'
-    ? platformMerchantsByCategory.value
-    : platformMerchantsByCategory.value.filter((merchant) => merchantMatchesPlatformSearch(merchant))
+  const merchants =
+    platformPageKey.value === 'saved'
+      ? platformMerchantsByCategory.value
+      : platformMerchantsByCategory.value.filter((merchant) =>
+          merchantMatchesPlatformSearch(merchant),
+        )
   return platformPageKey.value === 'saved'
     ? merchants.filter((merchant) => platformSavedMerchantIds.value.includes(merchant.id))
     : merchants
 })
-const platformRecommendationMode = computed(() =>
-  platformPageKey.value === 'home'
-  && activePlatformFilterKey.value === 'all'
-  && !platformMerchantListExpanded.value,
+const platformRecommendationMode = computed(
+  () =>
+    platformPageKey.value === 'home' &&
+    activePlatformFilterKey.value === 'all' &&
+    !platformMerchantListExpanded.value,
 )
 const platformFeaturedMerchants = computed(() => {
   if (!platformRecommendationMode.value) return platformMatchingMerchants.value
   return platformRecommendedMerchantIds
-    .map((merchantId) => platformMatchingMerchants.value.find((merchant) => merchant.id === merchantId))
+    .map((merchantId) =>
+      platformMatchingMerchants.value.find((merchant) => merchant.id === merchantId),
+    )
     .filter(Boolean)
 })
 const platformMerchantSectionTitle = computed(() =>
@@ -905,14 +1200,17 @@ const platformMerchantSectionTitle = computed(() =>
 const platformMerchantSectionMeta = computed(() =>
   platformRecommendationMode.value
     ? t(
-      `随机推荐 ${platformFeaturedMerchants.value.length} 家 · 共 ${platformMatchingMerchants.value.length} 家`,
-      `${platformFeaturedMerchants.value.length} random picks · ${platformMatchingMerchants.value.length} shops total`,
-    )
+        `随机推荐 ${platformFeaturedMerchants.value.length} 家 · 共 ${platformMatchingMerchants.value.length} 家`,
+        `${platformFeaturedMerchants.value.length} random picks · ${platformMatchingMerchants.value.length} shops total`,
+      )
     : `${platformActiveCategoryLabel.value} · ${platformMatchingMerchants.value.length} ${t('家平台小店', 'platform shops')}`,
 )
 const platformMerchantEmptyLabel = computed(() =>
   platformPageKey.value === 'saved'
-    ? t('还没有收藏平台小店，点卡片右上角的爱心即可加入。', 'No saved platform shops yet. Use the heart on a shop card to add one.')
+    ? t(
+        '还没有收藏平台小店，点卡片右上角的爱心即可加入。',
+        'No saved platform shops yet. Use the heart on a shop card to add one.',
+      )
     : t('平台内暂时没有匹配的小店。', 'No matching platform merchants right now.'),
 )
 const platformDeliveryFeeLabel = (merchant = {}) =>
@@ -920,11 +1218,14 @@ const platformDeliveryFeeLabel = (merchant = {}) =>
     ? t('免配送费', 'Free')
     : displayMoney(merchant.deliveryFee, merchant.currency)
 const selectedPlatformMerchant = computed(() => {
-  const selectedMerchant = FOOD_PLATFORM_MERCHANTS.find((merchant) => merchant.id === selectedPlatformMerchantId.value)
+  const selectedMerchant = FOOD_PLATFORM_MERCHANTS.find(
+    (merchant) => merchant.id === selectedPlatformMerchantId.value,
+  )
   return selectedMerchant || platformFeaturedMerchants.value[0] || null
 })
 const isPlatformLogoMerchant = (merchant = {}) => merchant.visualType === 'logo'
-const platformMerchantLogoMark = (merchant = {}) => merchant.logoMark || String(merchant.name || '').slice(0, 3)
+const platformMerchantLogoMark = (merchant = {}) =>
+  merchant.logoMark || String(merchant.name || '').slice(0, 3)
 const platformMerchantIdentityAssetPath = (merchantId = '') => {
   const merchant = FOOD_PLATFORM_MERCHANTS.find((entry) => entry.id === merchantId)
   if (merchant?.visualType === 'logo' && merchant.requiredAsset) return merchant.requiredAsset
@@ -934,12 +1235,13 @@ const platformHeroImageUrl = computed(() => selectedPlatformMerchant.value?.imag
 const platformHeroRestaurant = selectedPlatformMerchant
 const platformHeroMenuItem = computed(() => selectedPlatformMerchant.value?.menu?.[0] || null)
 const platformFeaturedRestaurants = platformFeaturedMerchants
-const defaultPlatformLocationLabel = computed(() =>
-  activeMapHandoff.value?.deliveryAddress ||
-  t('首尔市江南区清潭洞 88-1', '88-1 Cheongdam-dong, Gangnam-gu, Seoul'),
+const defaultPlatformLocationLabel = computed(
+  () =>
+    activeMapHandoff.value?.deliveryAddress ||
+    t('首尔市江南区清潭洞 88-1', '88-1 Cheongdam-dong, Gangnam-gu, Seoul'),
 )
-const platformLocationLabel = computed(() =>
-  selectedPlatformDeliveryAddress.value || defaultPlatformLocationLabel.value,
+const platformLocationLabel = computed(
+  () => selectedPlatformDeliveryAddress.value || defaultPlatformLocationLabel.value,
 )
 const platformDeliveryAddressOptions = computed(() => [
   defaultPlatformLocationLabel.value,
@@ -967,7 +1269,10 @@ const platformCheckoutPaymentOptions = computed(() => [
     key: 'app_pay',
     icon: 'fas fa-mobile-screen-button',
     label: t('平台支付', 'Platform pay'),
-    desc: t('快捷确认本次订单，提交后可随时查看进度。', 'Confirm quickly and follow the order after placing it.'),
+    desc: t(
+      '快捷确认本次订单，提交后可随时查看进度。',
+      'Confirm quickly and follow the order after placing it.',
+    ),
   },
   {
     key: 'pay_on_delivery',
@@ -979,18 +1284,26 @@ const platformCheckoutPaymentOptions = computed(() => [
 const activePlatformOrder = computed(() =>
   platformOrderId.value ? foodDeliveryStore.findPlatformOrderById(platformOrderId.value) : null,
 )
-const platformMerchantMarkFileName = (merchantId = '') => ({
-  platform_hanwoo_gukbap: 'platform-merchant-mark-hanwoo-01.png',
-  platform_sushi_hana: 'platform-merchant-mark-sushi-hana-01.png',
-  platform_hwadeok_pizza: 'platform-merchant-mark-hwadeok-pizza-01.png',
-  platform_salad_day: 'platform-merchant-mark-salad-day-01.png',
-  platform_chicken_crisp: 'platform-merchant-mark-chicken-crisp-01.png',
-  platform_neighborhood_soup: 'platform-merchant-mark-camellia-noodles-01.png',
-  platform_corner_pizza: 'platform-merchant-mark-coconut-curry-01.png',
-}[merchantId] || 'platform-merchant-mark-pending.png')
+const platformMerchantMarkFileName = (merchantId = '') =>
+  ({
+    platform_hanwoo_gukbap: 'platform-merchant-mark-hanwoo-01.png',
+    platform_sushi_hana: 'platform-merchant-mark-sushi-hana-01.png',
+    platform_hwadeok_pizza: 'platform-merchant-mark-hwadeok-pizza-01.png',
+    platform_salad_day: 'platform-merchant-mark-salad-day-01.png',
+    platform_chicken_crisp: 'platform-merchant-mark-chicken-crisp-01.png',
+    platform_neighborhood_soup: 'platform-merchant-mark-camellia-noodles-01.png',
+    platform_corner_pizza: 'platform-merchant-mark-coconut-curry-01.png',
+  })[merchantId] || 'platform-merchant-mark-pending.png'
 const platformOrderNumber = (order = {}) => {
-  const createdAtPart = String(order.createdAt || '').slice(-6).padStart(6, '0')
-  const idPart = String(order.id || '').split('_').pop().slice(-4).toUpperCase().padStart(4, '0')
+  const createdAtPart = String(order.createdAt || '')
+    .slice(-6)
+    .padStart(6, '0')
+  const idPart = String(order.id || '')
+    .split('_')
+    .pop()
+    .slice(-4)
+    .toUpperCase()
+    .padStart(4, '0')
   return `FD${createdAtPart}-${idPart}`
 }
 const resolvePlatformOrderStatus = (status = FOOD_DELIVERY_ORDER_STATUS.PLACED) => {
@@ -1001,7 +1314,10 @@ const resolvePlatformOrderStatus = (status = FOOD_DELIVERY_ORDER_STATUS.PLACED) 
       label: t('已下单', 'Placed'),
       eyebrow: t('商家确认中', 'Awaiting confirmation'),
       title: t('下单成功', 'Order placed'),
-      desc: t('小店已收到订单，正在确认餐品。', 'The shop received your order and is checking the items.'),
+      desc: t(
+        '小店已收到订单，正在确认餐品。',
+        'The shop received your order and is checking the items.',
+      ),
       icon: 'fas fa-receipt',
       stepIndex: 0,
       badgeClass: 'bg-[#e5fbfa] text-[#128e89]',
@@ -1025,7 +1341,10 @@ const resolvePlatformOrderStatus = (status = FOOD_DELIVERY_ORDER_STATUS.PLACED) 
       label: t('制作中', 'Preparing'),
       eyebrow: t('厨房进行中', 'In the kitchen'),
       title: t('餐点制作中', 'Meal in preparation'),
-      desc: t('小店正在准备餐品，完成后会交给骑手。', 'The shop is preparing your meal before rider pickup.'),
+      desc: t(
+        '小店正在准备餐品，完成后会交给骑手。',
+        'The shop is preparing your meal before rider pickup.',
+      ),
       icon: 'fas fa-fire-burner',
       stepIndex: 1,
       badgeClass: 'bg-amber-50 text-amber-700',
@@ -1037,7 +1356,10 @@ const resolvePlatformOrderStatus = (status = FOOD_DELIVERY_ORDER_STATUS.PLACED) 
       label: t('配送中', 'Delivering'),
       eyebrow: t('骑手已取餐', 'Picked up by rider'),
       title: t('正在送往你这里', 'On the way to you'),
-      desc: t('餐品已经离店，请留意预计送达时间。', 'Your meal has left the shop. Keep an eye on the ETA.'),
+      desc: t(
+        '餐品已经离店，请留意预计送达时间。',
+        'Your meal has left the shop. Keep an eye on the ETA.',
+      ),
       icon: 'fas fa-motorcycle',
       stepIndex: 2,
       badgeClass: 'bg-sky-50 text-sky-700',
@@ -1049,7 +1371,10 @@ const resolvePlatformOrderStatus = (status = FOOD_DELIVERY_ORDER_STATUS.PLACED) 
       label: t('已送达', 'Delivered'),
       eyebrow: t('本次配送完成', 'Delivery complete'),
       title: t('餐点已经送达', 'Your meal has arrived'),
-      desc: t('订单已完成，愿这一餐正合心意。', 'The order is complete. Hope the meal hits the spot.'),
+      desc: t(
+        '订单已完成，愿这一餐正合心意。',
+        'The order is complete. Hope the meal hits the spot.',
+      ),
       icon: 'fas fa-house-circle-check',
       stepIndex: 3,
       badgeClass: 'bg-gray-100 text-gray-700',
@@ -1061,7 +1386,10 @@ const resolvePlatformOrderStatus = (status = FOOD_DELIVERY_ORDER_STATUS.PLACED) 
       label: t('已取消', 'Cancelled'),
       eyebrow: t('订单已结束', 'Order closed'),
       title: t('订单已取消', 'Order cancelled'),
-      desc: t('这笔订单没有继续配送，可返回首页重新选择。', 'This order will not be delivered. Return home to choose again.'),
+      desc: t(
+        '这笔订单没有继续配送，可返回首页重新选择。',
+        'This order will not be delivered. Return home to choose again.',
+      ),
       icon: 'fas fa-circle-xmark',
       stepIndex: -1,
       badgeClass: 'bg-rose-50 text-rose-700',
@@ -1083,21 +1411,30 @@ const platformBenefitCards = computed(() => [
   {
     key: 'club',
     title: t('外卖会员免配送权益', 'Delivery club free-delivery perks'),
-    desc: t('常点小店、收藏小店和附近好店都会优先被发现。', 'Favorite, saved, and nearby shops stay easy to reach.'),
+    desc: t(
+      '常点小店、收藏小店和附近好店都会优先被发现。',
+      'Favorite, saved, and nearby shops stay easy to reach.',
+    ),
     icon: 'fas fa-ticket',
     className: 'from-[#e7fbfa] to-white text-gray-950',
   },
   {
     key: 'pickup',
     title: t('附近自取', 'Nearby pickup'),
-    desc: t('不想等骑手时，可以先看附近可自取的小店。', 'When delivery can wait, nearby pickup shops are easy to find.'),
+    desc: t(
+      '不想等骑手时，可以先看附近可自取的小店。',
+      'When delivery can wait, nearby pickup shops are easy to find.',
+    ),
     icon: 'fas fa-bag-shopping',
     className: 'from-orange-50 to-white text-orange-900',
   },
   {
     key: 'gift',
     title: t('送给关系人', 'Send a meal'),
-    desc: t('为重要的人选一顿合口味的餐，分享这次用餐心意。', 'Choose a fitting meal for someone important and share the moment.'),
+    desc: t(
+      '为重要的人选一顿合口味的餐，分享这次用餐心意。',
+      'Choose a fitting meal for someone important and share the moment.',
+    ),
     icon: 'fas fa-gift',
     className: 'from-violet-50 to-white text-violet-900',
   },
@@ -1110,25 +1447,56 @@ const activePlatformNavItemKey = computed(() =>
       : platformPageKey.value,
 )
 const platformBottomNavItems = computed(() => [
-  { key: 'home', label: t('首页', 'Home'), icon: 'fas fa-house', active: activePlatformNavItemKey.value === 'home' },
-  { key: 'search', label: t('搜索', 'Search'), icon: 'fas fa-magnifying-glass', active: activePlatformNavItemKey.value === 'search' },
-  { key: 'orders', label: t('订单', 'Orders'), icon: 'fas fa-receipt', active: activePlatformNavItemKey.value === 'orders' },
-  { key: 'saved', label: t('收藏', 'Saved'), icon: 'fas fa-heart', active: activePlatformNavItemKey.value === 'saved' },
-  { key: 'profile', label: t('我的', 'Mine'), icon: 'fas fa-face-smile', active: activePlatformNavItemKey.value === 'profile' },
+  {
+    key: 'home',
+    label: t('首页', 'Home'),
+    icon: 'fas fa-house',
+    active: activePlatformNavItemKey.value === 'home',
+  },
+  {
+    key: 'search',
+    label: t('搜索', 'Search'),
+    icon: 'fas fa-magnifying-glass',
+    active: activePlatformNavItemKey.value === 'search',
+  },
+  {
+    key: 'orders',
+    label: t('订单', 'Orders'),
+    icon: 'fas fa-receipt',
+    active: activePlatformNavItemKey.value === 'orders',
+  },
+  {
+    key: 'saved',
+    label: t('收藏', 'Saved'),
+    icon: 'fas fa-heart',
+    active: activePlatformNavItemKey.value === 'saved',
+  },
+  {
+    key: 'profile',
+    label: t('我的', 'Mine'),
+    icon: 'fas fa-face-smile',
+    active: activePlatformNavItemKey.value === 'profile',
+  },
 ])
 const platformUtilitySheetContent = computed(() => {
   if (platformUtilitySheetKey.value === 'notifications') {
     return {
       icon: 'fas fa-bell',
       title: t('平台消息', 'Platform updates'),
-      desc: t('优惠、营业状态和配送提醒会出现在这里。', 'Offers, opening updates, and delivery notices appear here.'),
+      desc: t(
+        '优惠、营业状态和配送提醒会出现在这里。',
+        'Offers, opening updates, and delivery notices appear here.',
+      ),
     }
   }
   if (platformUtilitySheetKey.value === 'cart') {
     return {
       icon: 'fas fa-cart-shopping',
       title: t('平台小店购物车', 'Platform shop cart'),
-      desc: t('先进入一家小店选择菜品，同一家店的餐品可以一起结算。', 'Choose a shop first, then review its items together at checkout.'),
+      desc: t(
+        '先进入一家小店选择菜品，同一家店的餐品可以一起结算。',
+        'Choose a shop first, then review its items together at checkout.',
+      ),
     }
   }
   return null
@@ -1137,24 +1505,28 @@ const selectedRestaurantId = computed(() =>
   typeof route.query.restaurantId === 'string' ? route.query.restaurantId.trim() : '',
 )
 const selectedRestaurant = computed(() =>
-  selectedRestaurantId.value ? foodDeliveryStore.findRestaurantById(selectedRestaurantId.value) : null,
+  selectedRestaurantId.value
+    ? foodDeliveryStore.findRestaurantById(selectedRestaurantId.value)
+    : null,
 )
 const isStoreMode = computed(() => Boolean(selectedRestaurant.value))
-const activeRestaurant = computed(() =>
-  selectedRestaurant.value || activeRestaurants.value[0] || null,
+const activeRestaurant = computed(
+  () => selectedRestaurant.value || activeRestaurants.value[0] || null,
 )
 const activeMenuItems = computed(() =>
   activeRestaurant.value ? foodDeliveryStore.listMenuByRestaurant(activeRestaurant.value.id) : [],
 )
 const resolveStoreMenuSectionMeta = (sectionKey = '') => {
   const key = sectionKey || 'signature'
-  return STORE_MENU_SECTION_META[key] || {
-    zh: key,
-    en: key,
-    shortZh: key,
-    shortEn: key,
-    icon: 'fas fa-utensils',
-  }
+  return (
+    STORE_MENU_SECTION_META[key] || {
+      zh: key,
+      en: key,
+      shortZh: key,
+      shortEn: key,
+      icon: 'fas fa-utensils',
+    }
+  )
 }
 const activeStoreMenuSections = computed(() => {
   const sections = new Map()
@@ -1192,7 +1564,9 @@ const activeStoreMenuSections = computed(() => {
 })
 const activeStoreMenuSection = computed(
   () =>
-    activeStoreMenuSections.value.find((section) => section.key === activeStoreMenuSectionKey.value) ||
+    activeStoreMenuSections.value.find(
+      (section) => section.key === activeStoreMenuSectionKey.value,
+    ) ||
     activeStoreMenuSections.value[0] ||
     null,
 )
@@ -1218,7 +1592,9 @@ const activeStoreRestaurantImageUrl = computed(() =>
 const activeStoreCoverImageUrl = computed(() => {
   const assetId = activeStorePresentation.value?.coverGalleryAssetId || ''
   if (assetId) return foodImagePreviewMap[assetId] || ''
-  return isDarkTrayStore.value ? activeStoreRestaurantImageUrl.value : ''
+  return isDarkTrayStore.value || isDessertWindowStore.value
+    ? activeStoreRestaurantImageUrl.value
+    : ''
 })
 const activeStoreDisplayName = computed(
   () => activeStorePresentation.value?.displayName || activeRestaurant.value?.name || '',
@@ -1233,20 +1609,57 @@ const activeStoreShortDescription = computed(
 const activeStoreTags = computed(() => activeStorePresentation.value?.tags || [])
 const activeStoreTemplate = computed(
   () =>
-    (activeStorePresentation.value?.hasTemplateOverride ? activeStorePresentation.value.templateId : '') ||
-    resolveFoodShopDefaultTemplateId(activeRestaurant.value?.id),
+    (activeStorePresentation.value?.hasTemplateOverride
+      ? activeStorePresentation.value.templateId
+      : '') || resolveFoodShopDefaultTemplateId(activeRestaurant.value?.id),
 )
 const isDarkTrayStore = computed(() => activeStoreTemplate.value === 'dark_tray_menu')
+const isDessertWindowStore = computed(() => activeStoreTemplate.value === 'dessert_window')
+const peachCloudFeaturedItem = computed(
+  () =>
+    activeMenuItems.value.find((item) => item.menuSection === 'seasonal_drop') ||
+    activeMenuItems.value[0] ||
+    null,
+)
+const peachCloudMenuShortcuts = computed(() =>
+  PEACH_CLOUD_MENU_SHORTCUTS.map((shortcut) => ({
+    ...shortcut,
+    label: languageBase.value === 'zh' ? shortcut.labelZh : shortcut.labelEn,
+    count:
+      activeStoreMenuSections.value.find((section) => section.key === shortcut.key)?.count || 0,
+    iconUrl: foodDeliveryUiAsset(`peach-cloud/categories/${shortcut.asset}`),
+  })).filter((shortcut) => shortcut.count > 0),
+)
+const peachCloudFilteredMenuItems = computed(() => {
+  const query = peachCloudSearchQuery.value.trim().toLocaleLowerCase()
+  const sectionItems =
+    activeStoreMenuSectionKey.value === 'all'
+      ? activeMenuItems.value
+      : activeMenuItems.value.filter(
+          (item) => (item.menuSection || 'signature') === activeStoreMenuSectionKey.value,
+        )
+  if (!query) return sectionItems
+  return sectionItems.filter((item) =>
+    [item.title, item.desc, item.ingredients]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase().includes(query)),
+  )
+})
+const peachCloudShowsCuratedHome = computed(
+  () => activeStoreMenuSectionKey.value === 'all' && !peachCloudSearchQuery.value.trim(),
+)
+const peachCloudBestSellerItems = computed(() => activeMenuItems.value.slice(0, 4))
+const peachCloudRecommendedItems = computed(() => activeMenuItems.value.slice(4))
 const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value && isDarkTrayStore.value) return 'bg-[#080a10]'
+  if (isStoreMode.value && isDessertWindowStore.value) return 'bg-[#fff4e8]'
   if (isStoreMode.value) return 'bg-[#f4fbfb]'
   return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#f4fbfb]'
 })
 const foodDeliveryShellStyle = computed(() => {
   if (isStoreMode.value) return {}
   return {
-    background:
-      'linear-gradient(180deg, #ffffff 0%, #ffffff 10rem, #f2fbfb 10rem, #ffffff 100%)',
+    background: 'linear-gradient(180deg, #ffffff 0%, #ffffff 10rem, #f2fbfb 10rem, #ffffff 100%)',
   }
 })
 const activeStoreEtaText = computed(() =>
@@ -1292,9 +1705,7 @@ const scopedFoodOrders = computed(() => {
 })
 const recentOrders = computed(() => scopedFoodOrders.value.slice(0, 5))
 const sharedMealContactOptions = computed(() =>
-  chatStore.contactsForList
-    .filter((contact) => Number(contact.id) > 0)
-    .slice(0, 60),
+  chatStore.contactsForList.filter((contact) => Number(contact.id) > 0).slice(0, 60),
 )
 
 const selectedSharedMealContact = (orderId) =>
@@ -1314,7 +1725,9 @@ const walletExpenseSuggestions = computed(() =>
     .filter((order) => order.status === FOOD_DELIVERY_ORDER_STATUS.DELIVERED)
     .map((order) => {
       const sourceId = order.id
-      const walletImported = Boolean(walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, sourceId))
+      const walletImported = Boolean(
+        walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, sourceId),
+      )
       const relationshipSuggestion = buildSharedMealSuggestion(order)
       return {
         order,
@@ -1328,21 +1741,27 @@ const walletExpenseSuggestions = computed(() =>
         relationshipAvailable: relationshipSuggestion.available,
         relationshipImported: relationshipSuggestion.imported,
         relationshipTargetName: relationshipSuggestion.targetName,
-        imported: walletImported && (!relationshipSuggestion.available || relationshipSuggestion.imported),
+        imported:
+          walletImported && (!relationshipSuggestion.available || relationshipSuggestion.imported),
         walletImported,
       }
     })
     .filter((suggestion) => Number(suggestion.amount) > 0)
     .slice(0, 6),
 )
-const hasStoreSupportContent = computed(() =>
-  isStoreMode.value && (scopedFoodOrders.value.length > 0 || walletExpenseSuggestions.value.length > 0),
+const hasStoreSupportContent = computed(
+  () =>
+    isStoreMode.value &&
+    (scopedFoodOrders.value.length > 0 || walletExpenseSuggestions.value.length > 0),
 )
 const chatSourceOrderId = computed(() =>
   typeof route.query.orderId === 'string' ? route.query.orderId.trim() : '',
 )
-const isChatFoodDeliverySource = computed(() =>
-  route.query.source === 'chat' && route.query.intent === 'food_delivery_order' && Boolean(chatSourceOrderId.value),
+const isChatFoodDeliverySource = computed(
+  () =>
+    route.query.source === 'chat' &&
+    route.query.intent === 'food_delivery_order' &&
+    Boolean(chatSourceOrderId.value),
 )
 const openedFromAppStoreShopCreate = computed(
   () =>
@@ -1365,7 +1784,11 @@ watch(
       path: '/food-delivery',
       query: {
         ...route.query,
-        category: restaurant?.category || order.items?.[0]?.category || activeCategory.value?.key || 'restaurants',
+        category:
+          restaurant?.category ||
+          order.items?.[0]?.category ||
+          activeCategory.value?.key ||
+          'restaurants',
         restaurantId: order.restaurantId,
       },
     })
@@ -1373,7 +1796,8 @@ watch(
   { immediate: true },
 )
 
-const isHighlightedOrder = (orderId) => isChatFoodDeliverySource.value && orderId === chatSourceOrderId.value
+const isHighlightedOrder = (orderId) =>
+  isChatFoodDeliverySource.value && orderId === chatSourceOrderId.value
 
 const buildFoodDeliveryEventMapContext = (order, event) =>
   mapStore.buildDeliveryEventMapHandoff({
@@ -1384,8 +1808,10 @@ const buildFoodDeliveryEventMapContext = (order, event) =>
 
 const foodDeliveryEventTypeLabel = (type) => {
   if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY) return t('骑手延迟', 'Rider delay')
-  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED) return t('商家取消', 'Restaurant cancelled')
-  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE) return t('地址变更', 'Address changed')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED)
+    return t('商家取消', 'Restaurant cancelled')
+  if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE)
+    return t('地址变更', 'Address changed')
   if (type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE) return t('ETA 更新', 'ETA update')
   return t('状态更新', 'Status update')
 }
@@ -1411,7 +1837,10 @@ const orderEventRows = (order) =>
     detail:
       event.summary ||
       (event.deliveryAddress
-        ? t(`配送地址更新为 ${event.deliveryAddress}`, `Delivery address changed to ${event.deliveryAddress}`)
+        ? t(
+            `配送地址更新为 ${event.deliveryAddress}`,
+            `Delivery address changed to ${event.deliveryAddress}`,
+          )
         : event.etaMinutes !== null && event.etaMinutes !== undefined
           ? t(`预计 ${event.etaMinutes} 分钟送达`, `ETA ${event.etaMinutes} min`)
           : t('外卖履约状态有新变化。', 'Food delivery status changed.')),
@@ -1434,7 +1863,10 @@ const triggerOrderSurpriseEvent = (order) => {
   })
 
   if (result.ok) {
-    eventFeedback.value = t('Delivery event added to this order.', 'Delivery event added to this order.')
+    eventFeedback.value = t(
+      'Delivery event added to this order.',
+      'Delivery event added to this order.',
+    )
     return
   }
 
@@ -1482,7 +1914,8 @@ const resetRestaurantDraft = () => {
 const resetMenuDraft = (restaurantId = activeRestaurant.value?.id || '') => {
   menuDraft.restaurantId = restaurantId
   menuDraft.title = ''
-  menuDraft.category = activeCategory.value?.key || activeRestaurant.value?.category || 'restaurants'
+  menuDraft.category =
+    activeCategory.value?.key || activeRestaurant.value?.category || 'restaurants'
   menuDraft.menuSection = 'signature'
   menuDraft.price = ''
   menuDraft.desc = ''
@@ -1497,7 +1930,8 @@ const fillMenuItemEditDraft = (item) => {
   menuItemEditDraft.ingredients = item?.ingredients || ''
   menuItemEditDraft.imageSourceType = item?.image?.sourceType || 'none'
   menuItemEditDraft.imageUrl = item?.image?.sourceType === 'url' ? item.image.url || '' : ''
-  menuItemEditDraft.imageGalleryAssetId = item?.image?.sourceType === 'gallery' ? item.image.galleryAssetId || '' : ''
+  menuItemEditDraft.imageGalleryAssetId =
+    item?.image?.sourceType === 'gallery' ? item.image.galleryAssetId || '' : ''
 }
 
 const createCustomRestaurant = () => {
@@ -1520,7 +1954,10 @@ const createCustomRestaurant = () => {
     customFeedback.value = t('请输入有效餐厅名称。', 'Please enter a valid restaurant name.')
     return
   }
-  customFeedback.value = t('自定义餐厅已加入外卖列表。', 'Custom restaurant added to Food Delivery.')
+  customFeedback.value = t(
+    '自定义餐厅已加入外卖列表。',
+    'Custom restaurant added to Food Delivery.',
+  )
   resetRestaurantDraft()
   resetMenuDraft(restaurant.id)
   router.push({
@@ -1558,10 +1995,16 @@ const createCustomMenuItem = () => {
     imageGalleryAssetId: imageSourceType === 'gallery' ? menuDraft.imageGalleryAssetId : '',
   })
   if (!item) {
-    customFeedback.value = t('请输入有效菜单名称、餐厅和价格。', 'Please enter a valid menu name, restaurant, and price.')
+    customFeedback.value = t(
+      '请输入有效菜单名称、餐厅和价格。',
+      'Please enter a valid menu name, restaurant, and price.',
+    )
     return
   }
-  customFeedback.value = t('自定义菜单项已加入当前餐厅。', 'Custom menu item added to the restaurant.')
+  customFeedback.value = t(
+    '自定义菜单项已加入当前餐厅。',
+    'Custom menu item added to the restaurant.',
+  )
   resetMenuDraft(item.restaurantId)
 }
 
@@ -1677,7 +2120,7 @@ const scrollPlatformBannerTo = (index, { behavior = 'smooth', pause = false } = 
   const rail = platformBannerRailRef.value
   const slides = platformBannerSlides()
   if (!rail || slides.length === 0) return false
-  const normalizedIndex = ((Number(index) || 0) % slides.length + slides.length) % slides.length
+  const normalizedIndex = (((Number(index) || 0) % slides.length) + slides.length) % slides.length
   const firstOffset = slides[0]?.offsetLeft || 0
   const targetLeft = Math.max(0, (slides[normalizedIndex]?.offsetLeft || 0) - firstOffset)
   platformActiveBannerIndex.value = normalizedIndex
@@ -1722,13 +2165,20 @@ const advancePlatformBanner = () => {
   if (platformPageKey.value !== 'home' || isStoreMode.value) return
   if (platformBannerAutoplayPaused.value || Date.now() < platformBannerInteractionPauseUntil) return
   if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
-  if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  )
+    return
   scrollPlatformBannerTo(platformActiveBannerIndex.value + 1)
 }
 
 const startPlatformBannerAutoplay = () => {
   if (platformBannerAutoplayTimerId || typeof window === 'undefined') return
-  platformBannerAutoplayTimerId = window.setInterval(advancePlatformBanner, PLATFORM_BANNER_AUTOPLAY_MS)
+  platformBannerAutoplayTimerId = window.setInterval(
+    advancePlatformBanner,
+    PLATFORM_BANNER_AUTOPLAY_MS,
+  )
 }
 
 const stopPlatformBannerAutoplay = () => {
@@ -1871,7 +2321,17 @@ const openCategory = (key) => {
 }
 
 const openPlatformPage = (key) => {
-  const pageKey = ['campaign', 'search', 'saved', 'profile', 'checkout', 'orders', 'order'].includes(key) ? key : 'home'
+  const pageKey = [
+    'campaign',
+    'search',
+    'saved',
+    'profile',
+    'checkout',
+    'orders',
+    'order',
+  ].includes(key)
+    ? key
+    : 'home'
   platformAddressMenuOpen.value = false
   closePlatformUtilitySheet()
   if (pageKey === 'home') {
@@ -1881,10 +2341,15 @@ const openPlatformPage = (key) => {
     path: '/food-delivery',
     query: {
       ...worldAppRouteQuery.value,
-      category: pageKey === 'home' && key === 'home' ? 'nearby' : activeCategory.value?.key || 'nearby',
+      category:
+        pageKey === 'home' && key === 'home' ? 'nearby' : activeCategory.value?.key || 'nearby',
       ...(pageKey === 'home' ? {} : { platformView: pageKey }),
-      ...(pageKey === 'campaign' && platformCampaignKey.value ? { platformCampaign: platformCampaignKey.value } : {}),
-      ...(pageKey === 'order' && platformOrderId.value ? { platformOrderId: platformOrderId.value } : {}),
+      ...(pageKey === 'campaign' && platformCampaignKey.value
+        ? { platformCampaign: platformCampaignKey.value }
+        : {}),
+      ...(pageKey === 'order' && platformOrderId.value
+        ? { platformOrderId: platformOrderId.value }
+        : {}),
     },
   })
 }
@@ -1954,7 +2419,10 @@ const handlePlatformNavItem = (item) => {
 const openPlatformCheckout = () => {
   platformCheckoutFeedback.value = ''
   if (foodDeliveryStore.platformCartItems.length === 0) {
-    platformCartFeedback.value = t('购物车还是空的，先选择菜品。', 'Your cart is empty. Choose an item first.')
+    platformCartFeedback.value = t(
+      '购物车还是空的，先选择菜品。',
+      'Your cart is empty. Choose an item first.',
+    )
     return
   }
   closePlatformUtilitySheet()
@@ -1965,7 +2433,10 @@ const submitPlatformOrder = () => {
   platformCheckoutFeedback.value = ''
   const merchant = platformCartMerchant.value
   if (!merchant || foodDeliveryStore.platformCartItems.length === 0) {
-    platformCheckoutFeedback.value = t('购物车已清空，请返回小店重新选择。', 'The cart is empty. Return to the shop and choose items again.')
+    platformCheckoutFeedback.value = t(
+      '购物车已清空，请返回小店重新选择。',
+      'The cart is empty. Return to the shop and choose items again.',
+    )
     return
   }
   const order = foodDeliveryStore.checkoutPlatformCart({
@@ -1976,7 +2447,10 @@ const submitPlatformOrder = () => {
     etaMinutes: merchant.deliveryEtaMinutes,
   })
   if (!order) {
-    platformCheckoutFeedback.value = t('订单没有提交，请检查购物车。', 'The order was not placed. Check the cart.')
+    platformCheckoutFeedback.value = t(
+      '订单没有提交，请检查购物车。',
+      'The order was not placed. Check the cart.',
+    )
     return
   }
   platformCheckoutNote.value = ''
@@ -2002,6 +2476,7 @@ const addMenuItemToCart = (menuItemId, quantity = 1) => {
   foodDeliveryStore.addToCart(menuItemId, quantity, {
     sourceModule: FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
   })
+  storeNavigationFeedback.value = ''
 }
 
 const openCheckoutSheet = () => {
@@ -2027,8 +2502,10 @@ const checkoutFoodDelivery = () => {
     ? selectedSharedMealContact(activeRestaurant.value.id)
     : null
   const order = foodDeliveryStore.checkoutCart({
-    deliveryAddress: mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
-    note: activeMapHandoffRouteSummary.value || t('外卖模块基础订单', 'Food Delivery baseline order'),
+    deliveryAddress:
+      mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
+    note:
+      activeMapHandoffRouteSummary.value || t('外卖模块基础订单', 'Food Delivery baseline order'),
     relationshipBinding: relationshipTarget
       ? {
           contactId: Number(relationshipTarget.id) || 0,
@@ -2043,11 +2520,17 @@ const checkoutFoodDelivery = () => {
     sourceId: mapHandoff.sourceId,
   })
   if (!order) {
-    checkoutFeedback.value = t('订单没有提交，请确认购物车。', 'Order was not placed. Check the cart.')
+    checkoutFeedback.value = t(
+      '订单没有提交，请确认购物车。',
+      'Order was not placed. Check the cart.',
+    )
     return
   }
   checkoutSheetOpen.value = false
-  checkoutFeedback.value = t('订单已提交，可在本店订单里查看。', 'Order placed. You can track it in this shop.')
+  checkoutFeedback.value = t(
+    '订单已提交，可在本店订单里查看。',
+    'Order placed. You can track it in this shop.',
+  )
 }
 
 const markFoodOrderDelivered = (orderId) =>
@@ -2059,7 +2542,10 @@ const removeFoodOrder = (orderId) => {
     RELATIONSHIP_FACT_SOURCE_KEYS.FOOD_DELIVERY_SHARED_MEAL,
     orderId,
   )
-  const walletTransaction = walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, orderId)
+  const walletTransaction = walletStore.findTransactionBySource(
+    FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE,
+    orderId,
+  )
   relationshipRuntimeStore.removeRelationshipFactsForSourceRecord(
     RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT,
     walletTransaction?.id || walletTransaction?.sourceId || orderId,
@@ -2069,17 +2555,25 @@ const removeFoodOrder = (orderId) => {
 
 const transferFoodSuggestionToWallet = (suggestion) => {
   if (!suggestion || suggestion.imported) return null
-  const existing = walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, suggestion.sourceId)
-  const transaction = existing || walletStore.addTransaction({
-    type: 'expense',
-    title: 'Food Delivery order',
-    amount: suggestion.amount,
-    currency: suggestion.currency,
-    counterparty: suggestion.restaurantName || 'Food Delivery',
-    note: t('Manually imported from a Food Delivery order.', 'Manually imported from a Food Delivery order.'),
-    sourceModule: FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE,
-    sourceId: suggestion.sourceId,
-  })
+  const existing = walletStore.findTransactionBySource(
+    FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE,
+    suggestion.sourceId,
+  )
+  const transaction =
+    existing ||
+    walletStore.addTransaction({
+      type: 'expense',
+      title: 'Food Delivery order',
+      amount: suggestion.amount,
+      currency: suggestion.currency,
+      counterparty: suggestion.restaurantName || 'Food Delivery',
+      note: t(
+        'Manually imported from a Food Delivery order.',
+        'Manually imported from a Food Delivery order.',
+      ),
+      sourceModule: FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE,
+      sourceId: suggestion.sourceId,
+    })
   recordFoodDeliverySharedMealRelationshipFact({
     chatStore,
     relationshipRuntimeStore,
@@ -2113,6 +2607,87 @@ const foodImageUrl = (item) => {
   return ''
 }
 
+const foodDeliveryRequiredAssetPath = (item) => {
+  const url = foodImageUrl(item)
+  const marker = 'images/ui-assets/apps/food-delivery/'
+  const markerIndex = url.indexOf(marker)
+  return markerIndex >= 0 ? url.slice(markerIndex + marker.length) : ''
+}
+
+const handleFoodShopImageError = (event) => {
+  const image = event?.currentTarget
+  if (!image || image.dataset.fallbackApplied === 'true') return
+  image.dataset.fallbackApplied = 'true'
+  image.src = platformMissingAssetPlaceholderUrl
+}
+
+const scrollToStoreSurface = async (testId) => {
+  await nextTick()
+  if (typeof document === 'undefined') return false
+  const target = document.querySelector(`[data-testid="${testId}"]`)
+  if (!target) return false
+  if (typeof target.scrollIntoView === 'function') {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  return true
+}
+
+const focusStoreMenuSection = async (sectionKey = 'all') => {
+  const nextSection = activeStoreMenuSections.value.some((section) => section.key === sectionKey)
+    ? sectionKey
+    : 'all'
+  activeStoreMenuSectionKey.value = nextSection
+  storeNavigationFeedback.value = ''
+  await scrollToStoreSurface('food-delivery-menu-panel')
+}
+
+const openPeachCloudHome = async () => {
+  activeStoreMenuSectionKey.value = 'all'
+  peachCloudSearchQuery.value = ''
+  storeNavigationFeedback.value = ''
+  await scrollToStoreSurface('food-delivery-store-shell')
+}
+
+const focusPeachCloudSearch = async () => {
+  await nextTick()
+  peachCloudSearchInputRef.value?.focus?.()
+  await scrollToStoreSurface('food-delivery-peach-cloud-search')
+}
+
+const showPeachCloudUpdates = () => {
+  storeNavigationFeedback.value = hasStoreSupportContent.value
+    ? t('有新的配送进度，可在订单中查看。', 'Delivery updates are ready in Orders.')
+    : t('目前没有新消息。', 'You are all caught up.')
+}
+
+const openStoreCartSurface = async () => {
+  if (foodDeliveryStore.cartLineItems.length === 0) {
+    storeNavigationFeedback.value = t(
+      '购物袋还是空的，先选一杯或一份甜点。',
+      'Your bag is empty. Pick a drink or dessert first.',
+    )
+    return
+  }
+  storeNavigationFeedback.value = ''
+  await scrollToStoreSurface('food-delivery-cart-panel')
+}
+
+const openStoreOrdersSurface = async () => {
+  if (!hasStoreSupportContent.value) {
+    storeNavigationFeedback.value = t(
+      '还没有本店订单。下单后可在这里查看配送进度。',
+      'No shop orders yet. Delivery progress appears here after checkout.',
+    )
+    return
+  }
+  storeNavigationFeedback.value = ''
+  await nextTick()
+  if (typeof document === 'undefined') return
+  const drawer = document.querySelector('[data-testid="food-delivery-store-support-drawer"]')
+  if (drawer) drawer.open = true
+  await scrollToStoreSurface('food-delivery-store-support-drawer')
+}
+
 const foodImageSourceLabel = (item) => {
   const sourceType = item?.image?.sourceType || 'none'
   if (sourceType === 'url') return t('URL image', 'URL image')
@@ -2142,6 +2717,7 @@ watch(
   () => activeRestaurant.value?.id || '',
   (restaurantId) => {
     activeStoreMenuSectionKey.value = 'all'
+    storeNavigationFeedback.value = ''
     if (selectedMenuItem.value && selectedMenuItem.value.restaurantId !== restaurantId) {
       closeMenuItemDetail()
     }
@@ -2169,20 +2745,23 @@ watch(platformPageKey, () => {
 })
 
 watch(
-  () => [
-    activeStorePresentation.value?.coverGalleryAssetId || '',
-    ...activeRestaurants.value.map((restaurant) => restaurant.image?.galleryAssetId || ''),
-    ...activeMenuItems.value.map((item) => item.image?.galleryAssetId || ''),
-  ].filter(Boolean),
+  () =>
+    [
+      activeStorePresentation.value?.coverGalleryAssetId || '',
+      ...activeRestaurants.value.map((restaurant) => restaurant.image?.galleryAssetId || ''),
+      ...activeMenuItems.value.map((item) => item.image?.galleryAssetId || ''),
+    ].filter(Boolean),
   (assetIds) => {
     const activeSet = new Set(assetIds)
     assetIds.forEach((assetId) => {
       if (foodImagePreviewMap[assetId]) return
-      void galleryStore.getAssetPreviewUrl(assetId, {
-        scopeId: FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID,
-      }).then((previewUrl) => {
-        if (previewUrl) foodImagePreviewMap[assetId] = previewUrl
-      })
+      void galleryStore
+        .getAssetPreviewUrl(assetId, {
+          scopeId: FOOD_DELIVERY_IMAGE_PREVIEW_SCOPE_ID,
+        })
+        .then((previewUrl) => {
+          if (previewUrl) foodImagePreviewMap[assetId] = previewUrl
+        })
     })
     Object.keys(foodImagePreviewMap).forEach((assetId) => {
       if (!activeSet.has(assetId)) {
@@ -2209,13 +2788,21 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="h-screen min-h-screen overflow-x-hidden overflow-y-auto overscroll-contain p-4 text-gray-950"
-    :class="[foodDeliveryShellClass, isStoreMode ? 'pb-6' : '']"
+    class="h-screen min-h-screen overflow-x-hidden overflow-y-auto overscroll-contain text-gray-950"
+    :class="[
+      foodDeliveryShellClass,
+      isDessertWindowStore ? 'p-0 pb-0' : 'p-4',
+      isStoreMode && !isDessertWindowStore ? 'pb-6' : '',
+    ]"
     :style="foodDeliveryShellStyle"
     @error.capture="handleFoodDeliveryAssetError"
   >
-    <div class="mx-auto max-w-md space-y-4">
-      <section v-if="!isStoreMode && platformPageKey === 'home'" class="space-y-5 pt-1" data-testid="food-delivery-platform-top">
+    <div class="mx-auto max-w-md" :class="isDessertWindowStore ? 'space-y-0' : 'space-y-4'">
+      <section
+        v-if="!isStoreMode && platformPageKey === 'home'"
+        class="space-y-5 pt-1"
+        data-testid="food-delivery-platform-top"
+      >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <button
@@ -2240,7 +2827,9 @@ onBeforeUnmount(() => {
                 :aria-expanded="platformAddressMenuOpen"
                 @click="togglePlatformAddressMenu"
               >
-                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#24bcb7]">
+                <span
+                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#24bcb7]"
+                >
                   <i class="fas fa-location-dot text-sm"></i>
                 </span>
                 <span class="min-w-0">
@@ -2266,7 +2855,11 @@ onBeforeUnmount(() => {
                   :key="address"
                   type="button"
                   class="flex w-full items-center gap-3 rounded-[0.8rem] px-3 py-2.5 text-left text-xs font-bold"
-                  :class="platformLocationLabel === address ? 'bg-[#e5fbfa] text-[#128e89]' : 'text-gray-700 hover:bg-gray-50'"
+                  :class="
+                    platformLocationLabel === address
+                      ? 'bg-[#e5fbfa] text-[#128e89]'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  "
                   :aria-pressed="platformLocationLabel === address"
                   :data-testid="`food-delivery-platform-address-${addressIndex}`"
                   @click="selectPlatformDeliveryAddress(address)"
@@ -2387,287 +2980,1002 @@ onBeforeUnmount(() => {
               }}
             </p>
           </div>
-          <span class="shrink-0 rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-700">
+          <span
+            class="shrink-0 rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-700"
+          >
             food_delivery
           </span>
         </div>
       </section>
 
       <div v-if="!isStoreMode" class="space-y-5" data-testid="food-delivery-platform">
-      <section
-        v-if="platformPageKey === 'home'"
-        class="space-y-5 food-delivery-platform-redesign"
-        data-testid="food-delivery-pseudo-folder-home"
-      >
         <section
-          class="-mx-4 overflow-hidden"
-          :data-active-banner-index="platformActiveBannerIndex"
-          data-testid="food-delivery-platform-banner-rail"
+          v-if="platformPageKey === 'home'"
+          class="space-y-5 food-delivery-platform-redesign"
+          data-testid="food-delivery-pseudo-folder-home"
         >
-          <div
-            ref="platformBannerRailRef"
-            class="flex snap-x gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            data-testid="food-delivery-platform-banner-scroller"
-            @scroll.passive="handlePlatformBannerRailScroll"
-            @pointerdown="pausePlatformBannerAutoplay"
-            @touchstart.passive="pausePlatformBannerAutoplay"
-            @wheel.passive="pausePlatformBannerAutoplay"
-            @mouseenter="holdPlatformBannerAutoplay"
-            @mouseleave="releasePlatformBannerAutoplay"
-            @focusin="holdPlatformBannerAutoplay"
-            @focusout="releasePlatformBannerAutoplay"
+          <section
+            class="-mx-4 overflow-hidden"
+            :data-active-banner-index="platformActiveBannerIndex"
+            data-testid="food-delivery-platform-banner-rail"
           >
-            <article
-              v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
-              :key="banner.id"
-              class="relative h-[7.8rem] w-[20rem] shrink-0 snap-start overflow-hidden rounded-[1.2rem] bg-[#5edbd5] p-4 shadow-[0_16px_32px_rgba(15,118,110,0.13)] ring-1 ring-black/5"
-              :data-testid="banner.id === 'club_free_delivery' ? 'food-delivery-platform-entry' : `food-delivery-platform-banner-${banner.id}`"
-              data-platform-banner-slide
+            <div
+              ref="platformBannerRailRef"
+              class="flex snap-x gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              data-testid="food-delivery-platform-banner-scroller"
+              @scroll.passive="handlePlatformBannerRailScroll"
+              @pointerdown="pausePlatformBannerAutoplay"
+              @touchstart.passive="pausePlatformBannerAutoplay"
+              @wheel.passive="pausePlatformBannerAutoplay"
+              @mouseenter="holdPlatformBannerAutoplay"
+              @mouseleave="releasePlatformBannerAutoplay"
+              @focusin="holdPlatformBannerAutoplay"
+              @focusout="releasePlatformBannerAutoplay"
             >
-              <img
-                v-if="banner.imageUrl"
-                :src="banner.imageUrl"
-                alt=""
-                class="absolute inset-0 h-full w-full object-cover"
-                :data-testid="banner.id === 'club_free_delivery' ? 'food-delivery-platform-hero-image' : undefined"
-                draggable="false"
-              />
-              <div class="absolute inset-0 bg-gradient-to-r" :class="banner.className"></div>
-              <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(15,23,42,0.08))]"></div>
+              <article
+                v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
+                :key="banner.id"
+                class="relative h-[7.8rem] w-[20rem] shrink-0 snap-start overflow-hidden rounded-[1.2rem] bg-[#5edbd5] p-4 shadow-[0_16px_32px_rgba(15,118,110,0.13)] ring-1 ring-black/5"
+                :data-testid="
+                  banner.id === 'club_free_delivery'
+                    ? 'food-delivery-platform-entry'
+                    : `food-delivery-platform-banner-${banner.id}`
+                "
+                data-platform-banner-slide
+              >
+                <img
+                  v-if="banner.imageUrl"
+                  :src="banner.imageUrl"
+                  alt=""
+                  class="absolute inset-0 h-full w-full object-cover"
+                  :data-testid="
+                    banner.id === 'club_free_delivery'
+                      ? 'food-delivery-platform-hero-image'
+                      : undefined
+                  "
+                  draggable="false"
+                />
+                <div class="absolute inset-0 bg-gradient-to-r" :class="banner.className"></div>
+                <div
+                  class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(15,23,42,0.08))]"
+                ></div>
+                <button
+                  type="button"
+                  class="absolute inset-0 z-20"
+                  :aria-label="
+                    banner.id === 'club_free_delivery' && platformBenefitClaimed
+                      ? t('权益已领取', 'Perk claimed')
+                      : languageBase === 'zh'
+                        ? banner.ctaZh
+                        : banner.ctaEn
+                  "
+                  :data-testid="`food-delivery-platform-banner-action-${banner.id}`"
+                  @click="handlePlatformBanner(banner)"
+                ></button>
+                <div class="relative z-10 max-w-[61%]">
+                  <p class="text-[0.68rem] font-black text-gray-950/65">
+                    {{ languageBase === 'zh' ? banner.eyebrowZh : banner.eyebrowEn }}
+                  </p>
+                  <h2 class="mt-2 line-clamp-2 text-[1.14rem] font-black leading-tight">
+                    {{ languageBase === 'zh' ? banner.titleZh : banner.titleEn }}
+                  </h2>
+                  <p class="mt-2 line-clamp-2 text-[0.72rem] font-bold leading-4 text-gray-950/62">
+                    {{ languageBase === 'zh' ? banner.descZh : banner.descEn }}
+                  </p>
+                  <span
+                    class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.66rem] font-black shadow-sm"
+                    :class="banner.chipClass"
+                  >
+                    {{
+                      banner.id === 'club_free_delivery' && platformBenefitClaimed
+                        ? t('已领取', 'Claimed')
+                        : languageBase === 'zh'
+                          ? banner.ctaZh
+                          : banner.ctaEn
+                    }}
+                    <i
+                      class="fas text-[0.55rem]"
+                      :class="
+                        banner.id === 'club_free_delivery' && platformBenefitClaimed
+                          ? 'fa-check'
+                          : 'fa-chevron-right'
+                      "
+                    ></i>
+                  </span>
+                </div>
+                <div
+                  v-if="!banner.imageUrl"
+                  class="absolute -right-5 bottom-3 z-10 flex h-24 w-24 items-center justify-center rounded-full bg-white/55 p-1.5 shadow-[0_14px_30px_rgba(15,23,42,0.16)]"
+                  :data-testid="
+                    banner.id === 'club_free_delivery'
+                      ? 'food-delivery-platform-hero-image'
+                      : undefined
+                  "
+                >
+                  <template v-if="banner.id === 'club_free_delivery'">
+                    <div class="absolute inset-1.5 overflow-hidden rounded-full bg-[#fff7e8]">
+                      <span class="absolute left-4 top-4 h-8 w-8 rounded-full bg-[#f7c843]"></span>
+                      <span class="absolute right-3 top-5 h-7 w-7 rounded-full bg-[#f06f4d]"></span>
+                      <span
+                        class="absolute bottom-4 left-5 h-7 w-10 rounded-full bg-[#5fbf77]"
+                      ></span>
+                      <span class="absolute bottom-5 right-4 h-5 w-7 rounded-full bg-white"></span>
+                    </div>
+                    <img
+                      v-if="platformHeroImageUrl"
+                      :src="platformHeroImageUrl"
+                      :alt="
+                        selectedPlatformMerchant?.imageAlt ||
+                        selectedPlatformMerchant?.name ||
+                        'Food'
+                      "
+                      class="relative z-10 h-full w-full rounded-full object-cover"
+                      @error="$event.currentTarget.style.display = 'none'"
+                    />
+                    <i v-else class="fas fa-bowl-food relative z-10 text-3xl text-[#20aaa4]"></i>
+                  </template>
+                  <i v-else :class="banner.icon" class="text-3xl text-gray-950/72"></i>
+                </div>
+                <span
+                  class="absolute bottom-3 right-3 z-30 rounded-full bg-gray-950/70 px-2.5 py-1 text-[0.66rem] font-black text-white backdrop-blur"
+                >
+                  {{ index + 1 }} / {{ FOOD_PLATFORM_AD_BANNERS.length }}
+                </span>
+              </article>
+            </div>
+            <div
+              class="mt-1.5 flex h-5 items-center justify-center gap-1"
+              role="group"
+              :aria-label="t('横幅切换', 'Banner navigation')"
+              data-testid="food-delivery-platform-banner-pagination"
+            >
+              <button
+                v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
+                :key="`banner-dot-${banner.id}`"
+                type="button"
+                class="inline-flex h-5 w-6 items-center justify-center"
+                :aria-label="t(`查看第 ${index + 1} 张横幅`, `View banner ${index + 1}`)"
+                :aria-current="platformActiveBannerIndex === index ? 'true' : undefined"
+                :data-testid="`food-delivery-platform-banner-dot-${index}`"
+                @click="scrollPlatformBannerTo(index, { pause: true })"
+              >
+                <span
+                  class="h-1.5 rounded-full transition-[width,background-color] duration-200"
+                  :class="
+                    platformActiveBannerIndex === index ? 'w-4 bg-[#24bcb7]' : 'w-1.5 bg-gray-300'
+                  "
+                ></span>
+              </button>
+            </div>
+            <p
+              v-if="platformBenefitClaimed"
+              class="px-4 pt-2 text-xs font-black text-[#128e89]"
+              data-testid="food-delivery-platform-benefit-feedback"
+              aria-live="polite"
+            >
+              {{
+                t(
+                  '免配送权益已加入本周平台优惠。',
+                  'Free-delivery perks were added to this week’s platform offers.',
+                )
+              }}
+            </p>
+          </section>
+
+          <section class="space-y-2.5" data-testid="food-delivery-category-panel">
+            <div class="flex items-center justify-between gap-3 px-0.5">
+              <p class="text-xs font-black uppercase text-gray-500">
+                {{ t('快速分类', 'Quick picks') }}
+              </p>
+              <span class="truncate text-[0.68rem] font-bold text-[#159f9a]">{{
+                platformActiveCategoryLabel
+              }}</span>
+            </div>
+            <div class="grid grid-cols-5 gap-2 px-0.5" data-testid="food-delivery-category-grid">
+              <button
+                v-for="category in platformCategoryTiles"
+                :key="category.key"
+                type="button"
+                class="flex min-w-0 flex-col items-center gap-2 text-center transition active:scale-[0.97]"
+                :aria-pressed="category.active"
+                :data-testid="`food-delivery-category-${category.key}`"
+                @click="openPlatformCategory(category)"
+              >
+                <span
+                  class="inline-flex h-12 w-12 items-center justify-center rounded-[0.95rem] bg-gradient-to-br text-lg shadow-sm ring-1 transition"
+                  :class="
+                    category.active
+                      ? 'bg-none bg-[#24bcb7] text-white shadow-[0_8px_20px_rgba(36,188,183,0.24)] ring-[#24bcb7]/20'
+                      : `${category.className} ring-black/[0.04]`
+                  "
+                  :data-asset-slot="`platform-category-icon-${category.key}`"
+                  :data-required-asset="category.requiredAsset"
+                  :data-testid="`food-delivery-category-icon-${category.key}`"
+                >
+                  <i :class="category.icon"></i>
+                </span>
+                <span
+                  class="w-full break-words text-[0.68rem] font-black leading-4"
+                  :class="category.active ? 'text-[#128e89]' : 'text-gray-600'"
+                  >{{ category.label }}</span
+                >
+              </button>
+            </div>
+          </section>
+
+          <section class="space-y-3" data-testid="food-delivery-data-baseline">
+            <div class="flex items-end justify-between gap-3">
+              <div>
+                <p class="text-[1.45rem] font-black leading-tight text-gray-950">
+                  {{ platformMerchantSectionTitle }}
+                </p>
+                <span class="hidden">Local data</span>
+                <p
+                  class="mt-1 text-xs font-semibold text-gray-500"
+                  data-testid="food-delivery-platform-merchant-summary"
+                  aria-live="polite"
+                >
+                  {{ platformMerchantSectionMeta }}
+                </p>
+              </div>
               <button
                 type="button"
-                class="absolute inset-0 z-20"
-                :aria-label="
-                  banner.id === 'club_free_delivery' && platformBenefitClaimed
-                    ? t('权益已领取', 'Perk claimed')
-                    : languageBase === 'zh' ? banner.ctaZh : banner.ctaEn
-                "
-                :data-testid="`food-delivery-platform-banner-action-${banner.id}`"
-                @click="handlePlatformBanner(banner)"
-              ></button>
-              <div class="relative z-10 max-w-[61%]">
-                <p class="text-[0.68rem] font-black text-gray-950/65">
-                  {{ languageBase === 'zh' ? banner.eyebrowZh : banner.eyebrowEn }}
-                </p>
-                <h2 class="mt-2 line-clamp-2 text-[1.14rem] font-black leading-tight">
-                  {{ languageBase === 'zh' ? banner.titleZh : banner.titleEn }}
-                </h2>
-                <p class="mt-2 line-clamp-2 text-[0.72rem] font-bold leading-4 text-gray-950/62">
-                  {{ languageBase === 'zh' ? banner.descZh : banner.descEn }}
-                </p>
-                <span
-                  class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.66rem] font-black shadow-sm"
-                  :class="banner.chipClass"
+                class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
+                :aria-expanded="platformMerchantListExpanded"
+                data-testid="food-delivery-platform-view-all"
+                @click="platformMerchantListExpanded = !platformMerchantListExpanded"
+              >
+                {{
+                  platformMerchantListExpanded ? t('收起', 'Show less') : t('全部查看', 'View all')
+                }}
+                <i
+                  class="fas text-[0.62rem]"
+                  :class="platformMerchantListExpanded ? 'fa-chevron-up' : 'fa-chevron-right'"
+                ></i>
+              </button>
+            </div>
+
+            <div
+              class="-mx-4 px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              :class="
+                platformMerchantListExpanded
+                  ? 'grid grid-cols-1 gap-3'
+                  : 'flex snap-x gap-3 overflow-x-auto'
+              "
+              data-testid="food-delivery-shop-app-list"
+              :data-recommendation-mode="
+                platformRecommendationMode ? 'random-three' : 'full-results'
+              "
+            >
+              <article
+                v-for="merchant in platformFeaturedMerchants"
+                :key="merchant.id"
+                class="relative transition"
+                :class="platformMerchantListExpanded ? 'w-full' : 'w-[17rem] shrink-0 snap-start'"
+                :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
+                :data-platform-category="merchant.category"
+              >
+                <button
+                  type="button"
+                  class="group block w-full rounded-[1.1rem] bg-white p-2.5 text-left shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                  :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
+                  @click="selectPlatformMerchant(merchant)"
                 >
-                  {{
-                    banner.id === 'club_free_delivery' && platformBenefitClaimed
-                      ? t('已领取', 'Claimed')
-                      : languageBase === 'zh' ? banner.ctaZh : banner.ctaEn
-                  }}
-                  <i
-                    class="fas text-[0.55rem]"
-                    :class="banner.id === 'club_free_delivery' && platformBenefitClaimed ? 'fa-check' : 'fa-chevron-right'"
-                  ></i>
-                </span>
-              </div>
-              <div
-                v-if="!banner.imageUrl"
-                class="absolute -right-5 bottom-3 z-10 flex h-24 w-24 items-center justify-center rounded-full bg-white/55 p-1.5 shadow-[0_14px_30px_rgba(15,23,42,0.16)]"
-                :data-testid="banner.id === 'club_free_delivery' ? 'food-delivery-platform-hero-image' : undefined"
-              >
-                <template v-if="banner.id === 'club_free_delivery'">
-                  <div class="absolute inset-1.5 overflow-hidden rounded-full bg-[#fff7e8]">
-                    <span class="absolute left-4 top-4 h-8 w-8 rounded-full bg-[#f7c843]"></span>
-                    <span class="absolute right-3 top-5 h-7 w-7 rounded-full bg-[#f06f4d]"></span>
-                    <span class="absolute bottom-4 left-5 h-7 w-10 rounded-full bg-[#5fbf77]"></span>
-                    <span class="absolute bottom-5 right-4 h-5 w-7 rounded-full bg-white"></span>
+                  <div
+                    class="relative h-32 overflow-hidden rounded-[0.85rem] bg-gray-100"
+                    :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
+                    :data-required-asset="merchant.requiredAsset || undefined"
+                    :data-testid="`food-delivery-platform-merchant-card-${merchant.id}`"
+                    :data-merchant-visual-type="merchant.visualType || 'food-photo'"
+                  >
+                    <img
+                      v-if="merchant.imageUrl"
+                      :src="merchant.imageUrl"
+                      :alt="merchant.imageAlt || merchant.name"
+                      class="relative z-10 h-full w-full transition duration-300"
+                      :class="
+                        isPlatformLogoMerchant(merchant)
+                          ? 'object-contain p-5'
+                          : 'object-cover group-active:scale-[1.03]'
+                      "
+                      @error="$event.currentTarget.style.display = 'none'"
+                    />
+                    <div
+                      class="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br text-4xl"
+                      :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
+                    >
+                      <span
+                        v-if="isPlatformLogoMerchant(merchant)"
+                        class="whitespace-pre-line text-center text-xl font-black leading-tight"
+                        >{{ platformMerchantLogoMark(merchant) }}</span
+                      >
+                      <i v-else :class="merchant.icon || 'fas fa-store'"></i>
+                    </div>
+                    <span
+                      class="absolute left-2 top-2 z-20 rounded-md bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white shadow-sm"
+                    >
+                      {{ merchant.badge }}
+                    </span>
                   </div>
-                  <img
-                    v-if="platformHeroImageUrl"
-                    :src="platformHeroImageUrl"
-                    :alt="selectedPlatformMerchant?.imageAlt || selectedPlatformMerchant?.name || 'Food'"
-                    class="relative z-10 h-full w-full rounded-full object-cover"
-                    @error="$event.currentTarget.style.display = 'none'"
-                  />
-                  <i v-else class="fas fa-bowl-food relative z-10 text-3xl text-[#20aaa4]"></i>
-                </template>
-                <i v-else :class="banner.icon" class="text-3xl text-gray-950/72"></i>
+                  <p class="mt-3 truncate text-[0.98rem] font-black leading-tight text-gray-950">
+                    {{ merchant.name }}
+                  </p>
+                  <p class="mt-1 truncate text-xs font-semibold text-gray-500">
+                    {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
+                  </p>
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-black text-gray-600"
+                  >
+                    <span class="inline-flex items-center gap-1.5">
+                      <i class="fas fa-star text-amber-500"></i>
+                      {{ merchant.rating.toFixed(1) }}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                      <i class="fas fa-motorcycle text-[#24bcb7]"></i>
+                      {{ platformDeliveryFeeLabel(merchant) }}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                      <i class="far fa-clock text-[#ff7a37]"></i>
+                      {{ merchant.deliveryEtaMinutes }} min
+                    </span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  class="absolute right-4 top-4 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full shadow-sm backdrop-blur transition active:scale-95"
+                  :class="
+                    isPlatformMerchantSaved(merchant.id)
+                      ? 'bg-rose-500 text-white'
+                      : 'bg-black/35 text-white'
+                  "
+                  :aria-label="
+                    isPlatformMerchantSaved(merchant.id)
+                      ? t('取消收藏', 'Remove saved shop')
+                      : t('收藏小店', 'Save shop')
+                  "
+                  :aria-pressed="isPlatformMerchantSaved(merchant.id)"
+                  :data-testid="`food-delivery-platform-save-${merchant.id}`"
+                  @click="togglePlatformMerchantSaved(merchant)"
+                >
+                  <i class="fas fa-heart text-xs"></i>
+                </button>
+              </article>
+              <div
+                v-if="platformFeaturedMerchants.length === 0"
+                class="w-full rounded-[1.35rem] border border-dashed border-teal-200 bg-white p-5 text-center text-xs font-semibold leading-5 text-teal-700"
+                data-testid="food-delivery-shop-app-empty"
+              >
+                {{ platformMerchantEmptyLabel }}
               </div>
-              <span class="absolute bottom-3 right-3 z-30 rounded-full bg-gray-950/70 px-2.5 py-1 text-[0.66rem] font-black text-white backdrop-blur">
-                {{ index + 1 }} / {{ FOOD_PLATFORM_AD_BANNERS.length }}
-              </span>
-            </article>
-          </div>
-          <div
-            class="mt-1.5 flex h-5 items-center justify-center gap-1"
-            role="group"
-            :aria-label="t('横幅切换', 'Banner navigation')"
-            data-testid="food-delivery-platform-banner-pagination"
-          >
-            <button
-              v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
-              :key="`banner-dot-${banner.id}`"
-              type="button"
-              class="inline-flex h-5 w-6 items-center justify-center"
-              :aria-label="t(`查看第 ${index + 1} 张横幅`, `View banner ${index + 1}`)"
-              :aria-current="platformActiveBannerIndex === index ? 'true' : undefined"
-              :data-testid="`food-delivery-platform-banner-dot-${index}`"
-              @click="scrollPlatformBannerTo(index, { pause: true })"
-            >
-              <span
-                class="h-1.5 rounded-full transition-[width,background-color] duration-200"
-                :class="platformActiveBannerIndex === index ? 'w-4 bg-[#24bcb7]' : 'w-1.5 bg-gray-300'"
-              ></span>
-            </button>
-          </div>
-          <p
-            v-if="platformBenefitClaimed"
-            class="px-4 pt-2 text-xs font-black text-[#128e89]"
-            data-testid="food-delivery-platform-benefit-feedback"
-            aria-live="polite"
-          >
-            {{ t('免配送权益已加入本周平台优惠。', 'Free-delivery perks were added to this week’s platform offers.') }}
-          </p>
+            </div>
+          </section>
         </section>
 
-        <section class="space-y-2.5" data-testid="food-delivery-category-panel">
-          <div class="flex items-center justify-between gap-3 px-0.5">
-            <p class="text-xs font-black uppercase text-gray-500">{{ t('快速分类', 'Quick picks') }}</p>
-            <span class="truncate text-[0.68rem] font-bold text-[#159f9a]">{{ platformActiveCategoryLabel }}</span>
-          </div>
-          <div class="grid grid-cols-5 gap-2 px-0.5" data-testid="food-delivery-category-grid">
-            <button
-              v-for="category in platformCategoryTiles"
-              :key="category.key"
-              type="button"
-              class="flex min-w-0 flex-col items-center gap-2 text-center transition active:scale-[0.97]"
-              :aria-pressed="category.active"
-              :data-testid="`food-delivery-category-${category.key}`"
-              @click="openPlatformCategory(category)"
-            >
-              <span
-                class="inline-flex h-12 w-12 items-center justify-center rounded-[0.95rem] bg-gradient-to-br text-lg shadow-sm ring-1 transition"
-                :class="category.active
-                  ? 'bg-none bg-[#24bcb7] text-white shadow-[0_8px_20px_rgba(36,188,183,0.24)] ring-[#24bcb7]/20'
-                  : `${category.className} ring-black/[0.04]`"
-                :data-asset-slot="`platform-category-icon-${category.key}`"
-                :data-required-asset="category.requiredAsset"
-                :data-testid="`food-delivery-category-icon-${category.key}`"
+        <section
+          v-else-if="platformPageKey === 'campaign'"
+          class="space-y-5"
+          data-testid="food-delivery-platform-campaign-page"
+          :data-campaign-id="activePlatformCampaign?.id || platformCampaignKey"
+        >
+          <header class="flex items-center justify-between gap-3 pt-1">
+            <div class="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+                data-testid="food-delivery-platform-campaign-back"
+                :aria-label="t('返回首页', 'Back home')"
+                @click="openPlatformPage('home')"
               >
-                <i :class="category.icon"></i>
-              </span>
-              <span
-                class="w-full break-words text-[0.68rem] font-black leading-4"
-                :class="category.active ? 'text-[#128e89]' : 'text-gray-600'"
-              >{{ category.label }}</span>
-            </button>
-          </div>
-        </section>
-
-        <section class="space-y-3" data-testid="food-delivery-data-baseline">
-          <div class="flex items-end justify-between gap-3">
-            <div>
-              <p class="text-[1.45rem] font-black leading-tight text-gray-950">
-                {{ platformMerchantSectionTitle }}
-              </p>
-              <span class="hidden">Local data</span>
-              <p
-                class="mt-1 text-xs font-semibold text-gray-500"
-                data-testid="food-delivery-platform-merchant-summary"
-                aria-live="polite"
-              >
-                {{ platformMerchantSectionMeta }}
-              </p>
+                <i class="fas fa-chevron-left text-sm"></i>
+              </button>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                  {{ t('平台活动', 'Platform campaign') }}
+                </p>
+                <h2 class="truncate text-2xl font-black text-gray-950">
+                  {{
+                    activePlatformCampaign
+                      ? languageBase === 'zh'
+                        ? activePlatformCampaign.eyebrowZh
+                        : activePlatformCampaign.eyebrowEn
+                      : t('活动', 'Campaign')
+                  }}
+                </h2>
+              </div>
             </div>
             <button
               type="button"
-              class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
-              :aria-expanded="platformMerchantListExpanded"
-              data-testid="food-delivery-platform-view-all"
-              @click="platformMerchantListExpanded = !platformMerchantListExpanded"
+              class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
+              :aria-label="t('购物车', 'Cart')"
+              @click="openPlatformUtilitySheet('cart')"
             >
-              {{ platformMerchantListExpanded ? t('收起', 'Show less') : t('全部查看', 'View all') }}
-              <i
-                class="fas text-[0.62rem]"
-                :class="platformMerchantListExpanded ? 'fa-chevron-up' : 'fa-chevron-right'"
-              ></i>
+              <i class="fas fa-cart-shopping"></i>
+              <span
+                v-if="foodDeliveryStore.platformCartQuantity > 0"
+                class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
+              >
+                {{ foodDeliveryStore.platformCartQuantity }}
+              </span>
+            </button>
+          </header>
+
+          <template v-if="activePlatformCampaign">
+            <section
+              class="relative overflow-hidden rounded-[1.35rem] bg-[#5edbd5] p-5 shadow-[0_18px_38px_rgba(15,118,110,0.16)] ring-1 ring-black/5"
+              :class="
+                activePlatformCampaign.kind === 'lottery' ? 'min-h-[24rem]' : 'min-h-[10.5rem]'
+              "
+              data-testid="food-delivery-platform-campaign-hero"
+              :data-required-asset="activePlatformCampaign.posterRequiredAsset || undefined"
+            >
+              <img
+                :src="
+                  activePlatformCampaign.kind === 'lottery'
+                    ? activePlatformCampaign.posterImageUrl
+                    : activePlatformCampaign.imageUrl
+                "
+                alt=""
+                class="absolute inset-0 h-full w-full object-cover"
+                draggable="false"
+                @error="handlePlatformCampaignPosterImageError"
+              />
+              <div
+                class="absolute inset-0 bg-gradient-to-r"
+                :class="activePlatformCampaign.className"
+              ></div>
+              <div
+                class="absolute inset-0"
+                :class="
+                  activePlatformCampaign.kind === 'lottery'
+                    ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.5))]'
+                    : 'bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(15,23,42,0.1))]'
+                "
+              ></div>
+              <div
+                class="relative z-10"
+                :class="
+                  activePlatformCampaign.kind === 'lottery' ? 'max-w-[78%] pt-44' : 'max-w-[64%]'
+                "
+              >
+                <span
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-[#128e89] shadow-sm"
+                >
+                  <i :class="activePlatformCampaign.icon"></i>
+                </span>
+                <p
+                  v-if="activePlatformCampaign.kind === 'lottery'"
+                  class="mt-3 text-[10px] font-black uppercase text-white/75"
+                >
+                  {{
+                    languageBase === 'zh'
+                      ? activePlatformCampaign.posterEyebrowZh
+                      : activePlatformCampaign.posterEyebrowEn
+                  }}
+                </p>
+                <h3
+                  class="font-black leading-tight"
+                  :class="
+                    activePlatformCampaign.kind === 'lottery'
+                      ? 'mt-1 text-[1.8rem] text-white'
+                      : 'mt-3 text-[1.35rem] text-gray-950'
+                  "
+                >
+                  {{
+                    languageBase === 'zh'
+                      ? activePlatformCampaign.titleZh
+                      : activePlatformCampaign.titleEn
+                  }}
+                </h3>
+                <p
+                  class="mt-2 text-[0.72rem] font-bold leading-4"
+                  :class="
+                    activePlatformCampaign.kind === 'lottery' ? 'text-white/75' : 'text-gray-950/65'
+                  "
+                >
+                  {{
+                    languageBase === 'zh'
+                      ? activePlatformCampaign.descZh
+                      : activePlatformCampaign.descEn
+                  }}
+                </p>
+              </div>
+            </section>
+
+            <section
+              v-if="activePlatformCampaign.kind === 'membership'"
+              class="space-y-4"
+              data-testid="food-delivery-platform-campaign-membership"
+            >
+              <div
+                class="overflow-hidden rounded-[1.15rem] bg-gray-950 p-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.18)]"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <p class="text-[10px] font-black uppercase text-[#74e4de]">
+                      {{ t('SchatPhone 外卖会员', 'SchatPhone Delivery Club') }}
+                    </p>
+                    <p class="mt-2 text-xl font-black">
+                      {{ t('本周免配送通行证', 'Weekly free-delivery pass') }}
+                    </p>
+                  </div>
+                  <span
+                    class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#24bcb7] text-white"
+                    ><i class="fas fa-ticket"></i
+                  ></span>
+                </div>
+                <p class="mt-4 max-w-[19rem] text-xs font-semibold leading-5 text-white/65">
+                  {{
+                    languageBase === 'zh'
+                      ? activePlatformCampaign.pageDescZh
+                      : activePlatformCampaign.pageDescEn
+                  }}
+                </p>
+                <div
+                  class="mt-4 grid grid-cols-3 gap-2"
+                  data-testid="food-delivery-platform-campaign-highlights"
+                >
+                  <div
+                    v-for="highlight in activePlatformCampaign.highlights"
+                    :key="highlight.titleEn"
+                    class="border-l border-white/15 pl-2 first:border-l-0 first:pl-0"
+                  >
+                    <i :class="highlight.icon" class="text-xs text-[#74e4de]"></i>
+                    <p class="mt-1 text-[11px] font-black leading-4">
+                      {{ languageBase === 'zh' ? highlight.titleZh : highlight.titleEn }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-2" data-testid="food-delivery-platform-campaign-merchants">
+                <div class="flex items-center justify-between gap-3 px-0.5">
+                  <p class="text-base font-black text-gray-950">
+                    {{ t('本周适用小店', 'Eligible this week') }}
+                  </p>
+                  <span class="text-[0.68rem] font-black text-[#159f9a]"
+                    >{{ platformCampaignMerchants.length }} {{ t('家', 'shops') }}</span
+                  >
+                </div>
+                <button
+                  v-for="merchant in platformCampaignMerchants"
+                  :key="merchant.id"
+                  type="button"
+                  class="flex w-full items-center gap-3 rounded-[1rem] bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                  :data-testid="`food-delivery-platform-campaign-merchant-${merchant.id}`"
+                  @click="selectPlatformMerchant(merchant)"
+                >
+                  <span
+                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-[#e5fbfa] text-[#159f9a]"
+                    ><i :class="merchant.icon"></i
+                  ></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-sm font-black text-gray-950">{{
+                      merchant.name
+                    }}</span>
+                    <span class="mt-0.5 block text-[0.68rem] font-bold text-gray-500"
+                      >{{ platformDeliveryFeeLabel(merchant) }} ·
+                      {{ merchant.deliveryEtaMinutes }} min</span
+                    >
+                  </span>
+                  <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.9rem] bg-[#24bcb7] px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(36,188,183,0.2)] active:scale-[0.99]"
+                data-testid="food-delivery-platform-campaign-primary"
+                @click="handlePlatformCampaignPrimary"
+              >
+                <i :class="platformBenefitClaimed ? 'fas fa-store' : 'fas fa-ticket'"></i>
+                {{
+                  platformBenefitClaimed
+                    ? languageBase === 'zh'
+                      ? activePlatformCampaign.claimedPrimaryZh
+                      : activePlatformCampaign.claimedPrimaryEn
+                    : languageBase === 'zh'
+                      ? activePlatformCampaign.primaryZh
+                      : activePlatformCampaign.primaryEn
+                }}
+              </button>
+              <p
+                v-if="platformBenefitClaimed"
+                class="text-center text-xs font-black leading-5 text-[#128e89]"
+                data-testid="food-delivery-platform-benefit-feedback"
+                aria-live="polite"
+              >
+                {{
+                  t(
+                    '免配送权益已加入本周平台优惠，可以开始选店。',
+                    'The free-delivery perk is ready. Choose an eligible shop.',
+                  )
+                }}
+              </p>
+            </section>
+
+            <section
+              v-else-if="activePlatformCampaign.kind === 'lottery'"
+              class="space-y-5"
+              data-testid="food-delivery-platform-campaign-lottery"
+            >
+              <div class="flex items-center justify-between gap-3 border-y border-orange-200 py-3">
+                <span class="text-xs font-black text-orange-700">{{
+                  languageBase === 'zh'
+                    ? activePlatformCampaign.scheduleZh
+                    : activePlatformCampaign.scheduleEn
+                }}</span>
+                <span class="inline-flex items-center gap-1 text-[10px] font-black text-gray-500"
+                  ><i class="fas fa-gift text-rose-500"></i
+                  >{{ t('周末福利', 'Weekend rewards') }}</span
+                >
+              </div>
+
+              <div data-testid="food-delivery-platform-campaign-benefits">
+                <div class="flex items-end justify-between gap-3 pb-2">
+                  <div>
+                    <p class="text-[10px] font-black uppercase text-orange-600">
+                      {{ t('本期福利池', 'Reward pool') }}
+                    </p>
+                    <h3 class="mt-1 text-lg font-black text-gray-950">
+                      {{ t('三种好运，随机掉落一种', 'One of three perks will drop') }}
+                    </h3>
+                  </div>
+                  <span class="text-2xl font-black text-orange-200">03</span>
+                </div>
+                <div
+                  v-for="benefit in activePlatformCampaign.benefits"
+                  :key="benefit.titleEn"
+                  class="flex items-center gap-3 border-b border-gray-200 py-3 last:border-b-0"
+                >
+                  <span
+                    class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600 ring-1 ring-orange-100"
+                  >
+                    <i :class="benefit.icon"></i>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-black text-gray-950">{{
+                      languageBase === 'zh' ? benefit.titleZh : benefit.titleEn
+                    }}</span>
+                    <span class="mt-0.5 block text-xs font-semibold text-gray-500">{{
+                      languageBase === 'zh' ? benefit.descZh : benefit.descEn
+                    }}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div
+                class="-mx-4 bg-gray-950 px-4 py-6 text-center text-white"
+                data-testid="food-delivery-platform-campaign-draw-zone"
+              >
+                <p class="mx-auto max-w-[19rem] text-xs font-semibold leading-5 text-white/60">
+                  {{
+                    languageBase === 'zh'
+                      ? activePlatformCampaign.pageDescZh
+                      : activePlatformCampaign.pageDescEn
+                  }}
+                </p>
+                <button
+                  type="button"
+                  class="mx-auto mt-5 flex h-32 w-32 flex-col items-center justify-center rounded-full border-[6px] border-white/15 text-white shadow-[0_18px_42px_rgba(249,115,22,0.36)] transition active:scale-95 disabled:cursor-default disabled:active:scale-100"
+                  :class="platformCampaignPrize ? 'bg-[#159f9a]' : 'bg-[#f97316]'"
+                  :disabled="!!platformCampaignPrize"
+                  data-testid="food-delivery-platform-campaign-primary"
+                  @click="handlePlatformCampaignPrimary"
+                >
+                  <i :class="platformCampaignPrize?.icon || 'fas fa-gift'" class="text-2xl"></i>
+                  <span class="mt-2 px-3 text-xs font-black leading-4">
+                    {{
+                      platformCampaignPrize
+                        ? languageBase === 'zh'
+                          ? activePlatformCampaign.drawnPrimaryZh
+                          : activePlatformCampaign.drawnPrimaryEn
+                        : languageBase === 'zh'
+                          ? activePlatformCampaign.primaryZh
+                          : activePlatformCampaign.primaryEn
+                    }}
+                  </span>
+                </button>
+                <div
+                  v-if="platformCampaignPrize"
+                  class="mt-5"
+                  data-testid="food-delivery-platform-campaign-prize"
+                  aria-live="polite"
+                >
+                  <p class="text-[10px] font-black uppercase text-[#74e4de]">
+                    {{ t('你的周末签', 'Your weekend perk') }}
+                  </p>
+                  <p class="mt-1 text-2xl font-black">
+                    {{
+                      languageBase === 'zh'
+                        ? platformCampaignPrize.titleZh
+                        : platformCampaignPrize.titleEn
+                    }}
+                  </p>
+                  <p class="mt-2 text-xs font-semibold text-white/65">
+                    {{
+                      languageBase === 'zh'
+                        ? platformCampaignPrize.descZh
+                        : platformCampaignPrize.descEn
+                    }}
+                  </p>
+                </div>
+                <p v-else class="mt-4 text-[10px] font-bold text-white/45">
+                  {{ t('点击抽取后即锁定本次结果', 'Tap once to lock this event result') }}
+                </p>
+              </div>
+            </section>
+
+            <section
+              v-else
+              class="space-y-4"
+              data-testid="food-delivery-platform-campaign-menu-guide"
+            >
+              <div class="flex items-end justify-between gap-3 border-b-2 border-gray-950 pb-3">
+                <div>
+                  <p class="text-[10px] font-black uppercase text-sky-700">
+                    {{
+                      languageBase === 'zh'
+                        ? activePlatformCampaign.editorZh
+                        : activePlatformCampaign.editorEn
+                    }}
+                  </p>
+                  <p class="mt-1 text-lg font-black text-gray-950">
+                    {{ t('不是店铺榜，是今天值得点的菜', 'Dishes worth ordering today') }}
+                  </p>
+                </div>
+                <i class="fas fa-utensils text-xl text-sky-600"></i>
+              </div>
+              <p class="text-sm font-semibold leading-6 text-gray-600">
+                {{
+                  languageBase === 'zh'
+                    ? activePlatformCampaign.pageDescZh
+                    : activePlatformCampaign.pageDescEn
+                }}
+              </p>
+              <div class="space-y-2" data-testid="food-delivery-platform-campaign-menu-picks">
+                <button
+                  v-for="(pick, pickIndex) in platformCampaignMenuPicks"
+                  :key="`${pick.merchantId}-${pick.itemIndex}`"
+                  type="button"
+                  class="flex w-full items-center gap-3 rounded-[0.95rem] bg-white p-2.5 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                  :data-testid="`food-delivery-platform-campaign-menu-${pick.merchantId}-${pick.itemIndex}`"
+                  @click="selectPlatformMerchant(pick.merchant)"
+                >
+                  <span
+                    class="relative h-16 w-16 shrink-0 overflow-hidden rounded-[0.75rem] bg-gray-100"
+                    :data-required-asset="platformMenuItemAssetPath(pick.merchant, pick.itemIndex)"
+                  >
+                    <img
+                      :src="platformMenuItemImageUrl(pick.merchant, pick.item, pick.itemIndex)"
+                      :alt="pick.item.title"
+                      class="h-full w-full object-cover"
+                      @error="handlePlatformMenuImageError"
+                    />
+                    <span
+                      class="absolute left-1.5 top-1.5 rounded bg-gray-950/75 px-1.5 py-0.5 text-[9px] font-black text-white"
+                      >0{{ pickIndex + 1 }}</span
+                    >
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-[10px] font-black text-sky-700">{{
+                      languageBase === 'zh' ? pick.tagZh : pick.tagEn
+                    }}</span>
+                    <span class="mt-1 block truncate text-sm font-black text-gray-950">{{
+                      pick.item.title
+                    }}</span>
+                    <span class="mt-1 block truncate text-[0.68rem] font-semibold text-gray-500"
+                      >{{ pick.merchant.name }} ·
+                      {{ displayMoney(pick.item.price, pick.merchant.currency) }}</span
+                    >
+                  </span>
+                  <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+                </button>
+              </div>
+              <button
+                type="button"
+                class="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.9rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(15,23,42,0.16)] active:scale-[0.99]"
+                data-testid="food-delivery-platform-campaign-primary"
+                @click="handlePlatformCampaignPrimary"
+              >
+                <i class="fas fa-bowl-food"></i
+                >{{
+                  languageBase === 'zh'
+                    ? activePlatformCampaign.primaryZh
+                    : activePlatformCampaign.primaryEn
+                }}
+              </button>
+            </section>
+          </template>
+
+          <div
+            v-else
+            class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5"
+            data-testid="food-delivery-platform-campaign-missing"
+          >
+            <i class="fas fa-ticket text-2xl text-gray-300"></i>
+            <p class="mt-3 text-sm font-black text-gray-900">
+              {{ t('这个活动暂时不可用', 'This campaign is unavailable') }}
+            </p>
+            <button
+              type="button"
+              class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white"
+              @click="openPlatformPage('home')"
+            >
+              {{ t('返回首页', 'Back home') }}
+            </button>
+          </div>
+        </section>
+
+        <section
+          v-else-if="platformPageKey === 'search'"
+          class="space-y-5"
+          data-testid="food-delivery-platform-search-page"
+        >
+          <header class="flex items-center justify-between gap-3 pt-1">
+            <div class="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+                data-testid="food-delivery-platform-page-back"
+                :aria-label="t('返回首页', 'Back home')"
+                @click="openPlatformPage('home')"
+              >
+                <i class="fas fa-chevron-left text-sm"></i>
+              </button>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                  {{ t('全平台查找', 'Platform search') }}
+                </p>
+                <h2 class="truncate text-2xl font-black text-gray-950">
+                  {{ t('搜索', 'Search') }}
+                </h2>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-cart"
+              :aria-label="t('购物车', 'Cart')"
+              @click="openPlatformUtilitySheet('cart')"
+            >
+              <i class="fas fa-cart-shopping"></i>
+              <span
+                v-if="foodDeliveryStore.platformCartQuantity > 0"
+                class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
+              >
+                {{ foodDeliveryStore.platformCartQuantity }}
+              </span>
+            </button>
+          </header>
+
+          <div
+            class="rounded-[1.35rem] bg-[#24bcb7] p-4 text-white shadow-[0_16px_36px_rgba(36,188,183,0.2)]"
+          >
+            <label class="text-xs font-black" for="food-delivery-platform-search-page-input">
+              {{ t('今天想找什么？', 'What are you looking for?') }}
+            </label>
+            <div
+              class="mt-3 flex min-h-12 items-center gap-3 rounded-[1rem] bg-white px-4 text-gray-900 shadow-sm"
+            >
+              <i class="fas fa-magnifying-glass text-gray-400"></i>
+              <input
+                id="food-delivery-platform-search-page-input"
+                ref="platformSearchInputRef"
+                v-model="platformSearchQuery"
+                class="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-gray-400"
+                data-testid="food-delivery-platform-search-input"
+                :placeholder="t('店名、菜系或菜品', 'Shop, cuisine, or dish')"
+                @click="focusPlatformSearch"
+              />
+              <button
+                v-if="platformSearchQuery"
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500"
+                data-testid="food-delivery-platform-search-clear"
+                :aria-label="t('清空搜索', 'Clear search')"
+                @click="platformSearchQuery = ''"
+              >
+                <i class="fas fa-xmark text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2" data-testid="food-delivery-platform-search-suggestions">
+            <button
+              v-for="suggestion in [
+                t('面馆', 'Noodles'),
+                t('咖啡', 'Coffee'),
+                t('蒸点', 'Dim sum'),
+                t('咖喱', 'Curry'),
+              ]"
+              :key="suggestion"
+              type="button"
+              class="rounded-full bg-white px-3 py-2 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
+              @click="platformSearchQuery = suggestion"
+            >
+              {{ suggestion }}
             </button>
           </div>
 
-          <div
-            class="-mx-4 px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            :class="
-              platformMerchantListExpanded
-                ? 'grid grid-cols-1 gap-3'
-                : 'flex snap-x gap-3 overflow-x-auto'
-            "
-            data-testid="food-delivery-shop-app-list"
-            :data-recommendation-mode="platformRecommendationMode ? 'random-three' : 'full-results'"
-          >
+          <section class="space-y-3" data-testid="food-delivery-platform-search-results">
+            <div class="flex items-end justify-between gap-3">
+              <div>
+                <p class="text-lg font-black text-gray-950">{{ t('搜索结果', 'Results') }}</p>
+                <p class="mt-1 text-xs font-semibold text-gray-500">
+                  {{ platformMatchingMerchants.length }} {{ t('家匹配小店', 'matching shops') }}
+                </p>
+              </div>
+            </div>
             <article
               v-for="merchant in platformFeaturedMerchants"
               :key="merchant.id"
-              class="relative transition"
-              :class="platformMerchantListExpanded ? 'w-full' : 'w-[17rem] shrink-0 snap-start'"
+              class="flex items-center gap-3 rounded-[1.1rem] bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04]"
               :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
-              :data-platform-category="merchant.category"
             >
               <button
                 type="button"
-                class="group block w-full rounded-[1.1rem] bg-white p-2.5 text-left shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                class="flex min-w-0 flex-1 items-center gap-3 text-left"
                 :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
                 @click="selectPlatformMerchant(merchant)"
               >
-                <div
-                  class="relative h-32 overflow-hidden rounded-[0.85rem] bg-gray-100"
+                <span
+                  class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] bg-gradient-to-br text-2xl"
+                  :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
                   :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
                   :data-required-asset="merchant.requiredAsset || undefined"
-                  :data-testid="`food-delivery-platform-merchant-card-${merchant.id}`"
                   :data-merchant-visual-type="merchant.visualType || 'food-photo'"
                 >
                   <img
                     v-if="merchant.imageUrl"
                     :src="merchant.imageUrl"
                     :alt="merchant.imageAlt || merchant.name"
-                    class="relative z-10 h-full w-full transition duration-300"
-                    :class="isPlatformLogoMerchant(merchant) ? 'object-contain p-5' : 'object-cover group-active:scale-[1.03]'"
+                    class="absolute inset-0 z-10 h-full w-full"
+                    :class="
+                      isPlatformLogoMerchant(merchant) ? 'object-contain p-3' : 'object-cover'
+                    "
                     @error="$event.currentTarget.style.display = 'none'"
                   />
-                  <div
-                    class="absolute inset-0 flex h-full w-full items-center justify-center bg-gradient-to-br text-4xl"
-                    :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
+                  <span
+                    v-if="isPlatformLogoMerchant(merchant)"
+                    class="whitespace-pre-line text-center text-sm font-black leading-tight"
+                    >{{ platformMerchantLogoMark(merchant) }}</span
                   >
-                    <span v-if="isPlatformLogoMerchant(merchant)" class="whitespace-pre-line text-center text-xl font-black leading-tight">{{ platformMerchantLogoMark(merchant) }}</span>
-                    <i v-else :class="merchant.icon || 'fas fa-store'"></i>
-                  </div>
-                  <span class="absolute left-2 top-2 z-20 rounded-md bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white shadow-sm">
-                    {{ merchant.badge }}
+                  <i v-else :class="merchant.icon || 'fas fa-store'"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-sm font-black text-gray-950">{{
+                    merchant.name
+                  }}</span>
+                  <span class="mt-1 block truncate text-xs font-semibold text-gray-500">
+                    {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
                   </span>
-                </div>
-                <p class="mt-3 truncate text-[0.98rem] font-black leading-tight text-gray-950">{{ merchant.name }}</p>
-                <p class="mt-1 truncate text-xs font-semibold text-gray-500">
-                  {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
-                </p>
-                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-black text-gray-600">
-                  <span class="inline-flex items-center gap-1.5">
-                    <i class="fas fa-star text-amber-500"></i>
-                    {{ merchant.rating.toFixed(1) }}
+                  <span
+                    class="mt-2 flex items-center gap-3 text-[0.68rem] font-black text-gray-600"
+                  >
+                    <span
+                      ><i class="fas fa-star mr-1 text-amber-500"></i
+                      >{{ merchant.rating.toFixed(1) }}</span
+                    >
+                    <span
+                      ><i class="far fa-clock mr-1 text-[#ff7a37]"></i
+                      >{{ merchant.deliveryEtaMinutes }} min</span
+                    >
                   </span>
-                  <span class="inline-flex items-center gap-1.5">
-                    <i class="fas fa-motorcycle text-[#24bcb7]"></i>
-                    {{ platformDeliveryFeeLabel(merchant) }}
-                  </span>
-                  <span class="inline-flex items-center gap-1.5">
-                    <i class="far fa-clock text-[#ff7a37]"></i>
-                    {{ merchant.deliveryEtaMinutes }} min
-                  </span>
-                </div>
+                </span>
               </button>
               <button
                 type="button"
-                class="absolute right-4 top-4 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full shadow-sm backdrop-blur transition active:scale-95"
-                :class="isPlatformMerchantSaved(merchant.id) ? 'bg-rose-500 text-white' : 'bg-black/35 text-white'"
-                :aria-label="isPlatformMerchantSaved(merchant.id) ? t('取消收藏', 'Remove saved shop') : t('收藏小店', 'Save shop')"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                :class="
+                  isPlatformMerchantSaved(merchant.id)
+                    ? 'bg-rose-500 text-white'
+                    : 'bg-gray-100 text-gray-500'
+                "
+                :aria-label="
+                  isPlatformMerchantSaved(merchant.id)
+                    ? t('取消收藏', 'Remove saved shop')
+                    : t('收藏小店', 'Save shop')
+                "
                 :aria-pressed="isPlatformMerchantSaved(merchant.id)"
                 :data-testid="`food-delivery-platform-save-${merchant.id}`"
                 @click="togglePlatformMerchantSaved(merchant)"
@@ -2677,1044 +3985,1017 @@ onBeforeUnmount(() => {
             </article>
             <div
               v-if="platformFeaturedMerchants.length === 0"
-              class="w-full rounded-[1.35rem] border border-dashed border-teal-200 bg-white p-5 text-center text-xs font-semibold leading-5 text-teal-700"
-              data-testid="food-delivery-shop-app-empty"
+              class="rounded-[1.2rem] border border-dashed border-teal-200 bg-white p-6 text-center text-xs font-bold leading-5 text-teal-700"
             >
-              {{ platformMerchantEmptyLabel }}
-            </div>
-          </div>
-        </section>
-
-      </section>
-
-      <section
-        v-else-if="platformPageKey === 'campaign'"
-        class="space-y-5"
-        data-testid="food-delivery-platform-campaign-page"
-        :data-campaign-id="activePlatformCampaign?.id || platformCampaignKey"
-      >
-        <header class="flex items-center justify-between gap-3 pt-1">
-          <div class="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
-              data-testid="food-delivery-platform-campaign-back"
-              :aria-label="t('返回首页', 'Back home')"
-              @click="openPlatformPage('home')"
-            >
-              <i class="fas fa-chevron-left text-sm"></i>
-            </button>
-            <div class="min-w-0">
-              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('平台活动', 'Platform campaign') }}</p>
-              <h2 class="truncate text-2xl font-black text-gray-950">
-                {{ activePlatformCampaign ? (languageBase === 'zh' ? activePlatformCampaign.eyebrowZh : activePlatformCampaign.eyebrowEn) : t('活动', 'Campaign') }}
-              </h2>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
-            :aria-label="t('购物车', 'Cart')"
-            @click="openPlatformUtilitySheet('cart')"
-          >
-            <i class="fas fa-cart-shopping"></i>
-            <span
-              v-if="foodDeliveryStore.platformCartQuantity > 0"
-              class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
-            >
-              {{ foodDeliveryStore.platformCartQuantity }}
-            </span>
-          </button>
-        </header>
-
-        <template v-if="activePlatformCampaign">
-          <section
-            class="relative overflow-hidden rounded-[1.35rem] bg-[#5edbd5] p-5 shadow-[0_18px_38px_rgba(15,118,110,0.16)] ring-1 ring-black/5"
-            :class="activePlatformCampaign.kind === 'lottery' ? 'min-h-[24rem]' : 'min-h-[10.5rem]'"
-            data-testid="food-delivery-platform-campaign-hero"
-            :data-required-asset="activePlatformCampaign.posterRequiredAsset || undefined"
-          >
-            <img
-              :src="activePlatformCampaign.kind === 'lottery' ? activePlatformCampaign.posterImageUrl : activePlatformCampaign.imageUrl"
-              alt=""
-              class="absolute inset-0 h-full w-full object-cover"
-              draggable="false"
-              @error="handlePlatformCampaignPosterImageError"
-            />
-            <div class="absolute inset-0 bg-gradient-to-r" :class="activePlatformCampaign.className"></div>
-            <div
-              class="absolute inset-0"
-              :class="activePlatformCampaign.kind === 'lottery' ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.5))]' : 'bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(15,23,42,0.1))]'"
-            ></div>
-            <div
-              class="relative z-10"
-              :class="activePlatformCampaign.kind === 'lottery' ? 'max-w-[78%] pt-44' : 'max-w-[64%]'"
-            >
-              <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-[#128e89] shadow-sm">
-                <i :class="activePlatformCampaign.icon"></i>
-              </span>
-              <p v-if="activePlatformCampaign.kind === 'lottery'" class="mt-3 text-[10px] font-black uppercase text-white/75">
-                {{ languageBase === 'zh' ? activePlatformCampaign.posterEyebrowZh : activePlatformCampaign.posterEyebrowEn }}
-              </p>
-              <h3
-                class="font-black leading-tight"
-                :class="activePlatformCampaign.kind === 'lottery' ? 'mt-1 text-[1.8rem] text-white' : 'mt-3 text-[1.35rem] text-gray-950'"
-              >
-                {{ languageBase === 'zh' ? activePlatformCampaign.titleZh : activePlatformCampaign.titleEn }}
-              </h3>
-              <p
-                class="mt-2 text-[0.72rem] font-bold leading-4"
-                :class="activePlatformCampaign.kind === 'lottery' ? 'text-white/75' : 'text-gray-950/65'"
-              >
-                {{ languageBase === 'zh' ? activePlatformCampaign.descZh : activePlatformCampaign.descEn }}
-              </p>
+              {{
+                t('没有找到匹配的小店，换个关键词试试。', 'No shops matched. Try another search.')
+              }}
             </div>
           </section>
+        </section>
 
-          <section v-if="activePlatformCampaign.kind === 'membership'" class="space-y-4" data-testid="food-delivery-platform-campaign-membership">
-            <div class="overflow-hidden rounded-[1.15rem] bg-gray-950 p-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.18)]">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <p class="text-[10px] font-black uppercase text-[#74e4de]">{{ t('SchatPhone 外卖会员', 'SchatPhone Delivery Club') }}</p>
-                  <p class="mt-2 text-xl font-black">{{ t('本周免配送通行证', 'Weekly free-delivery pass') }}</p>
-                </div>
-                <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#24bcb7] text-white"><i class="fas fa-ticket"></i></span>
-              </div>
-              <p class="mt-4 max-w-[19rem] text-xs font-semibold leading-5 text-white/65">
-                {{ languageBase === 'zh' ? activePlatformCampaign.pageDescZh : activePlatformCampaign.pageDescEn }}
-              </p>
-              <div class="mt-4 grid grid-cols-3 gap-2" data-testid="food-delivery-platform-campaign-highlights">
-                <div v-for="highlight in activePlatformCampaign.highlights" :key="highlight.titleEn" class="border-l border-white/15 pl-2 first:border-l-0 first:pl-0">
-                  <i :class="highlight.icon" class="text-xs text-[#74e4de]"></i>
-                  <p class="mt-1 text-[11px] font-black leading-4">{{ languageBase === 'zh' ? highlight.titleZh : highlight.titleEn }}</p>
-                </div>
+        <section
+          v-else-if="platformPageKey === 'saved'"
+          class="space-y-5"
+          data-testid="food-delivery-platform-saved-page"
+        >
+          <header class="flex items-center justify-between gap-3 pt-1">
+            <div class="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+                data-testid="food-delivery-platform-page-back"
+                :aria-label="t('返回首页', 'Back home')"
+                @click="openPlatformPage('home')"
+              >
+                <i class="fas fa-chevron-left text-sm"></i>
+              </button>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-rose-500">
+                  {{ t('你的口味清单', 'Your shortlist') }}
+                </p>
+                <h2 class="truncate text-2xl font-black text-gray-950">
+                  {{ t('收藏小店', 'Saved shops') }}
+                </h2>
               </div>
             </div>
+            <span
+              class="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-rose-50 px-3 text-sm font-black text-rose-500"
+            >
+              {{ platformSavedMerchantIds.length }}
+            </span>
+          </header>
 
-            <div class="space-y-2" data-testid="food-delivery-platform-campaign-merchants">
-              <div class="flex items-center justify-between gap-3 px-0.5">
-                <p class="text-base font-black text-gray-950">{{ t('本周适用小店', 'Eligible this week') }}</p>
-                <span class="text-[0.68rem] font-black text-[#159f9a]">{{ platformCampaignMerchants.length }} {{ t('家', 'shops') }}</span>
-              </div>
+          <div
+            class="flex items-center gap-4 rounded-[1.25rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]"
+          >
+            <span
+              class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white"
+            >
+              <i class="fas fa-heart"></i>
+            </span>
+            <div>
+              <p class="text-sm font-black">
+                {{ t('想吃时不用重新找', 'Ready when cravings return') }}
+              </p>
+              <p class="mt-1 text-xs font-semibold leading-5 text-white/65">
+                {{
+                  t(
+                    '收藏后会整齐留在这里，想吃时一眼就能找到。',
+                    'Saved shops stay neatly within reach whenever cravings return.',
+                  )
+                }}
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-if="platformFeaturedMerchants.length > 0"
+            class="grid grid-cols-2 gap-3"
+            data-testid="food-delivery-platform-saved-grid"
+          >
+            <article
+              v-for="merchant in platformFeaturedMerchants"
+              :key="merchant.id"
+              class="relative min-w-0 rounded-[1rem] bg-white p-2 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04]"
+              :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
+            >
               <button
-                v-for="merchant in platformCampaignMerchants"
-                :key="merchant.id"
                 type="button"
-                class="flex w-full items-center gap-3 rounded-[1rem] bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
-                :data-testid="`food-delivery-platform-campaign-merchant-${merchant.id}`"
+                class="block w-full text-left"
+                :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
                 @click="selectPlatformMerchant(merchant)"
               >
-                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-[#e5fbfa] text-[#159f9a]"><i :class="merchant.icon"></i></span>
-                <span class="min-w-0 flex-1">
-                  <span class="block truncate text-sm font-black text-gray-950">{{ merchant.name }}</span>
-                  <span class="mt-0.5 block text-[0.68rem] font-bold text-gray-500">{{ platformDeliveryFeeLabel(merchant) }} · {{ merchant.deliveryEtaMinutes }} min</span>
+                <span
+                  class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[0.75rem] bg-gradient-to-br text-3xl"
+                  :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
+                  :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
+                  :data-required-asset="merchant.requiredAsset || undefined"
+                  :data-merchant-visual-type="merchant.visualType || 'food-photo'"
+                >
+                  <img
+                    v-if="merchant.imageUrl"
+                    :src="merchant.imageUrl"
+                    :alt="merchant.imageAlt || merchant.name"
+                    class="absolute inset-0 z-10 h-full w-full"
+                    :class="
+                      isPlatformLogoMerchant(merchant) ? 'object-contain p-4' : 'object-cover'
+                    "
+                    @error="$event.currentTarget.style.display = 'none'"
+                  />
+                  <span
+                    v-if="isPlatformLogoMerchant(merchant)"
+                    class="whitespace-pre-line text-center text-lg font-black leading-tight"
+                    >{{ platformMerchantLogoMark(merchant) }}</span
+                  >
+                  <i v-else :class="merchant.icon || 'fas fa-store'"></i>
                 </span>
-                <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+                <span class="mt-2 block truncate text-sm font-black text-gray-950">{{
+                  merchant.name
+                }}</span>
+                <span class="mt-1 block truncate text-[0.68rem] font-bold text-gray-500">
+                  {{ merchant.cuisine }} · {{ merchant.deliveryEtaMinutes }} min
+                </span>
               </button>
-            </div>
-
-            <button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.9rem] bg-[#24bcb7] px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(36,188,183,0.2)] active:scale-[0.99]" data-testid="food-delivery-platform-campaign-primary" @click="handlePlatformCampaignPrimary">
-              <i :class="platformBenefitClaimed ? 'fas fa-store' : 'fas fa-ticket'"></i>
-              {{ platformBenefitClaimed ? (languageBase === 'zh' ? activePlatformCampaign.claimedPrimaryZh : activePlatformCampaign.claimedPrimaryEn) : (languageBase === 'zh' ? activePlatformCampaign.primaryZh : activePlatformCampaign.primaryEn) }}
-            </button>
-            <p v-if="platformBenefitClaimed" class="text-center text-xs font-black leading-5 text-[#128e89]" data-testid="food-delivery-platform-benefit-feedback" aria-live="polite">
-              {{ t('免配送权益已加入本周平台优惠，可以开始选店。', 'The free-delivery perk is ready. Choose an eligible shop.') }}
-            </p>
-          </section>
-
-          <section v-else-if="activePlatformCampaign.kind === 'lottery'" class="space-y-5" data-testid="food-delivery-platform-campaign-lottery">
-            <div class="flex items-center justify-between gap-3 border-y border-orange-200 py-3">
-              <span class="text-xs font-black text-orange-700">{{ languageBase === 'zh' ? activePlatformCampaign.scheduleZh : activePlatformCampaign.scheduleEn }}</span>
-              <span class="inline-flex items-center gap-1 text-[10px] font-black text-gray-500"><i class="fas fa-gift text-rose-500"></i>{{ t('周末福利', 'Weekend rewards') }}</span>
-            </div>
-
-            <div data-testid="food-delivery-platform-campaign-benefits">
-              <div class="flex items-end justify-between gap-3 pb-2">
-                <div>
-                  <p class="text-[10px] font-black uppercase text-orange-600">{{ t('本期福利池', 'Reward pool') }}</p>
-                  <h3 class="mt-1 text-lg font-black text-gray-950">{{ t('三种好运，随机掉落一种', 'One of three perks will drop') }}</h3>
-                </div>
-                <span class="text-2xl font-black text-orange-200">03</span>
-              </div>
-              <div
-                v-for="benefit in activePlatformCampaign.benefits"
-                :key="benefit.titleEn"
-                class="flex items-center gap-3 border-b border-gray-200 py-3 last:border-b-0"
-              >
-                <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-50 text-orange-600 ring-1 ring-orange-100">
-                  <i :class="benefit.icon"></i>
-                </span>
-                <span class="min-w-0 flex-1">
-                  <span class="block text-sm font-black text-gray-950">{{ languageBase === 'zh' ? benefit.titleZh : benefit.titleEn }}</span>
-                  <span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ languageBase === 'zh' ? benefit.descZh : benefit.descEn }}</span>
-                </span>
-              </div>
-            </div>
-
-            <div class="-mx-4 bg-gray-950 px-4 py-6 text-center text-white" data-testid="food-delivery-platform-campaign-draw-zone">
-              <p class="mx-auto max-w-[19rem] text-xs font-semibold leading-5 text-white/60">
-                {{ languageBase === 'zh' ? activePlatformCampaign.pageDescZh : activePlatformCampaign.pageDescEn }}
-              </p>
               <button
                 type="button"
-                class="mx-auto mt-5 flex h-32 w-32 flex-col items-center justify-center rounded-full border-[6px] border-white/15 text-white shadow-[0_18px_42px_rgba(249,115,22,0.36)] transition active:scale-95 disabled:cursor-default disabled:active:scale-100"
-                :class="platformCampaignPrize ? 'bg-[#159f9a]' : 'bg-[#f97316]'"
-                :disabled="!!platformCampaignPrize"
-                data-testid="food-delivery-platform-campaign-primary"
-                @click="handlePlatformCampaignPrimary"
+                class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm"
+                :aria-label="t('取消收藏', 'Remove saved shop')"
+                aria-pressed="true"
+                :data-testid="`food-delivery-platform-save-${merchant.id}`"
+                @click="togglePlatformMerchantSaved(merchant)"
               >
-                <i :class="platformCampaignPrize?.icon || 'fas fa-gift'" class="text-2xl"></i>
-                <span class="mt-2 px-3 text-xs font-black leading-4">
-                  {{ platformCampaignPrize ? (languageBase === 'zh' ? activePlatformCampaign.drawnPrimaryZh : activePlatformCampaign.drawnPrimaryEn) : (languageBase === 'zh' ? activePlatformCampaign.primaryZh : activePlatformCampaign.primaryEn) }}
-                </span>
+                <i class="fas fa-heart text-[10px]"></i>
               </button>
-              <div v-if="platformCampaignPrize" class="mt-5" data-testid="food-delivery-platform-campaign-prize" aria-live="polite">
-                <p class="text-[10px] font-black uppercase text-[#74e4de]">{{ t('你的周末签', 'Your weekend perk') }}</p>
-                <p class="mt-1 text-2xl font-black">{{ languageBase === 'zh' ? platformCampaignPrize.titleZh : platformCampaignPrize.titleEn }}</p>
-                <p class="mt-2 text-xs font-semibold text-white/65">{{ languageBase === 'zh' ? platformCampaignPrize.descZh : platformCampaignPrize.descEn }}</p>
-              </div>
-              <p v-else class="mt-4 text-[10px] font-bold text-white/45">{{ t('点击抽取后即锁定本次结果', 'Tap once to lock this event result') }}</p>
-            </div>
-          </section>
-
-          <section v-else class="space-y-4" data-testid="food-delivery-platform-campaign-menu-guide">
-            <div class="flex items-end justify-between gap-3 border-b-2 border-gray-950 pb-3">
-              <div>
-                <p class="text-[10px] font-black uppercase text-sky-700">{{ languageBase === 'zh' ? activePlatformCampaign.editorZh : activePlatformCampaign.editorEn }}</p>
-                <p class="mt-1 text-lg font-black text-gray-950">{{ t('不是店铺榜，是今天值得点的菜', 'Dishes worth ordering today') }}</p>
-              </div>
-              <i class="fas fa-utensils text-xl text-sky-600"></i>
-            </div>
-            <p class="text-sm font-semibold leading-6 text-gray-600">{{ languageBase === 'zh' ? activePlatformCampaign.pageDescZh : activePlatformCampaign.pageDescEn }}</p>
-            <div class="space-y-2" data-testid="food-delivery-platform-campaign-menu-picks">
-              <button
-                v-for="(pick, pickIndex) in platformCampaignMenuPicks"
-                :key="`${pick.merchantId}-${pick.itemIndex}`"
-                type="button"
-                class="flex w-full items-center gap-3 rounded-[0.95rem] bg-white p-2.5 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
-                :data-testid="`food-delivery-platform-campaign-menu-${pick.merchantId}-${pick.itemIndex}`"
-                @click="selectPlatformMerchant(pick.merchant)"
-              >
-                <span class="relative h-16 w-16 shrink-0 overflow-hidden rounded-[0.75rem] bg-gray-100" :data-required-asset="platformMenuItemAssetPath(pick.merchant, pick.itemIndex)">
-                  <img :src="platformMenuItemImageUrl(pick.merchant, pick.item, pick.itemIndex)" :alt="pick.item.title" class="h-full w-full object-cover" @error="handlePlatformMenuImageError" />
-                  <span class="absolute left-1.5 top-1.5 rounded bg-gray-950/75 px-1.5 py-0.5 text-[9px] font-black text-white">0{{ pickIndex + 1 }}</span>
-                </span>
-                <span class="min-w-0 flex-1">
-                  <span class="block text-[10px] font-black text-sky-700">{{ languageBase === 'zh' ? pick.tagZh : pick.tagEn }}</span>
-                  <span class="mt-1 block truncate text-sm font-black text-gray-950">{{ pick.item.title }}</span>
-                  <span class="mt-1 block truncate text-[0.68rem] font-semibold text-gray-500">{{ pick.merchant.name }} · {{ displayMoney(pick.item.price, pick.merchant.currency) }}</span>
-                </span>
-                <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
-              </button>
-            </div>
-            <button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.9rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_24px_rgba(15,23,42,0.16)] active:scale-[0.99]" data-testid="food-delivery-platform-campaign-primary" @click="handlePlatformCampaignPrimary">
-              <i class="fas fa-bowl-food"></i>{{ languageBase === 'zh' ? activePlatformCampaign.primaryZh : activePlatformCampaign.primaryEn }}
-            </button>
-          </section>
-        </template>
-
-        <div v-else class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-campaign-missing">
-          <i class="fas fa-ticket text-2xl text-gray-300"></i>
-          <p class="mt-3 text-sm font-black text-gray-900">{{ t('这个活动暂时不可用', 'This campaign is unavailable') }}</p>
-          <button type="button" class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('home')">
-            {{ t('返回首页', 'Back home') }}
-          </button>
-        </div>
-      </section>
-
-      <section
-        v-else-if="platformPageKey === 'search'"
-        class="space-y-5"
-        data-testid="food-delivery-platform-search-page"
-      >
-        <header class="flex items-center justify-between gap-3 pt-1">
-          <div class="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
-              data-testid="food-delivery-platform-page-back"
-              :aria-label="t('返回首页', 'Back home')"
-              @click="openPlatformPage('home')"
-            >
-              <i class="fas fa-chevron-left text-sm"></i>
-            </button>
-            <div class="min-w-0">
-              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('全平台查找', 'Platform search') }}</p>
-              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('搜索', 'Search') }}</h2>
-            </div>
+            </article>
           </div>
-          <button
-            type="button"
-            class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
-            data-testid="food-delivery-platform-cart"
-            :aria-label="t('购物车', 'Cart')"
-            @click="openPlatformUtilitySheet('cart')"
-          >
-            <i class="fas fa-cart-shopping"></i>
-            <span
-              v-if="foodDeliveryStore.platformCartQuantity > 0"
-              class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
-            >
-              {{ foodDeliveryStore.platformCartQuantity }}
-            </span>
-          </button>
-        </header>
-
-        <div class="rounded-[1.35rem] bg-[#24bcb7] p-4 text-white shadow-[0_16px_36px_rgba(36,188,183,0.2)]">
-          <label class="text-xs font-black" for="food-delivery-platform-search-page-input">
-            {{ t('今天想找什么？', 'What are you looking for?') }}
-          </label>
-          <div class="mt-3 flex min-h-12 items-center gap-3 rounded-[1rem] bg-white px-4 text-gray-900 shadow-sm">
-            <i class="fas fa-magnifying-glass text-gray-400"></i>
-            <input
-              id="food-delivery-platform-search-page-input"
-              ref="platformSearchInputRef"
-              v-model="platformSearchQuery"
-              class="min-w-0 flex-1 bg-transparent text-sm font-bold outline-none placeholder:text-gray-400"
-              data-testid="food-delivery-platform-search-input"
-              :placeholder="t('店名、菜系或菜品', 'Shop, cuisine, or dish')"
-              @click="focusPlatformSearch"
-            />
-            <button
-              v-if="platformSearchQuery"
-              type="button"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500"
-              data-testid="food-delivery-platform-search-clear"
-              :aria-label="t('清空搜索', 'Clear search')"
-              @click="platformSearchQuery = ''"
-            >
-              <i class="fas fa-xmark text-xs"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2" data-testid="food-delivery-platform-search-suggestions">
-          <button
-            v-for="suggestion in [t('面馆', 'Noodles'), t('咖啡', 'Coffee'), t('蒸点', 'Dim sum'), t('咖喱', 'Curry')]"
-            :key="suggestion"
-            type="button"
-            class="rounded-full bg-white px-3 py-2 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
-            @click="platformSearchQuery = suggestion"
-          >
-            {{ suggestion }}
-          </button>
-        </div>
-
-        <section class="space-y-3" data-testid="food-delivery-platform-search-results">
-          <div class="flex items-end justify-between gap-3">
-            <div>
-              <p class="text-lg font-black text-gray-950">{{ t('搜索结果', 'Results') }}</p>
-              <p class="mt-1 text-xs font-semibold text-gray-500">
-                {{ platformMatchingMerchants.length }} {{ t('家匹配小店', 'matching shops') }}
-              </p>
-            </div>
-          </div>
-          <article
-            v-for="merchant in platformFeaturedMerchants"
-            :key="merchant.id"
-            class="flex items-center gap-3 rounded-[1.1rem] bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04]"
-            :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
-          >
-            <button
-              type="button"
-              class="flex min-w-0 flex-1 items-center gap-3 text-left"
-              :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
-              @click="selectPlatformMerchant(merchant)"
-            >
-              <span
-                class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] bg-gradient-to-br text-2xl"
-                :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
-                :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
-                :data-required-asset="merchant.requiredAsset || undefined"
-                :data-merchant-visual-type="merchant.visualType || 'food-photo'"
-              >
-                <img
-                  v-if="merchant.imageUrl"
-                  :src="merchant.imageUrl"
-                  :alt="merchant.imageAlt || merchant.name"
-                  class="absolute inset-0 z-10 h-full w-full"
-                  :class="isPlatformLogoMerchant(merchant) ? 'object-contain p-3' : 'object-cover'"
-                  @error="$event.currentTarget.style.display = 'none'"
-                />
-                <span v-if="isPlatformLogoMerchant(merchant)" class="whitespace-pre-line text-center text-sm font-black leading-tight">{{ platformMerchantLogoMark(merchant) }}</span>
-                <i v-else :class="merchant.icon || 'fas fa-store'"></i>
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-sm font-black text-gray-950">{{ merchant.name }}</span>
-                <span class="mt-1 block truncate text-xs font-semibold text-gray-500">
-                  {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
-                </span>
-                <span class="mt-2 flex items-center gap-3 text-[0.68rem] font-black text-gray-600">
-                  <span><i class="fas fa-star mr-1 text-amber-500"></i>{{ merchant.rating.toFixed(1) }}</span>
-                  <span><i class="far fa-clock mr-1 text-[#ff7a37]"></i>{{ merchant.deliveryEtaMinutes }} min</span>
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-              :class="isPlatformMerchantSaved(merchant.id) ? 'bg-rose-500 text-white' : 'bg-gray-100 text-gray-500'"
-              :aria-label="isPlatformMerchantSaved(merchant.id) ? t('取消收藏', 'Remove saved shop') : t('收藏小店', 'Save shop')"
-              :aria-pressed="isPlatformMerchantSaved(merchant.id)"
-              :data-testid="`food-delivery-platform-save-${merchant.id}`"
-              @click="togglePlatformMerchantSaved(merchant)"
-            >
-              <i class="fas fa-heart text-xs"></i>
-            </button>
-          </article>
           <div
-            v-if="platformFeaturedMerchants.length === 0"
-            class="rounded-[1.2rem] border border-dashed border-teal-200 bg-white p-6 text-center text-xs font-bold leading-5 text-teal-700"
+            v-else
+            class="rounded-[1.3rem] border border-dashed border-rose-200 bg-white p-7 text-center"
+            data-testid="food-delivery-saved-empty"
           >
-            {{ t('没有找到匹配的小店，换个关键词试试。', 'No shops matched. Try another search.') }}
-          </div>
-        </section>
-      </section>
-
-      <section v-else-if="platformPageKey === 'saved'" class="space-y-5" data-testid="food-delivery-platform-saved-page">
-        <header class="flex items-center justify-between gap-3 pt-1">
-          <div class="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
-              data-testid="food-delivery-platform-page-back"
-              :aria-label="t('返回首页', 'Back home')"
-              @click="openPlatformPage('home')"
-            >
-              <i class="fas fa-chevron-left text-sm"></i>
-            </button>
-            <div class="min-w-0">
-              <p class="text-[10px] font-black uppercase text-rose-500">{{ t('你的口味清单', 'Your shortlist') }}</p>
-              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('收藏小店', 'Saved shops') }}</h2>
-            </div>
-          </div>
-          <span class="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-rose-50 px-3 text-sm font-black text-rose-500">
-            {{ platformSavedMerchantIds.length }}
-          </span>
-        </header>
-
-        <div class="flex items-center gap-4 rounded-[1.25rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]">
-          <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white">
-            <i class="fas fa-heart"></i>
-          </span>
-          <div>
-            <p class="text-sm font-black">{{ t('想吃时不用重新找', 'Ready when cravings return') }}</p>
-            <p class="mt-1 text-xs font-semibold leading-5 text-white/65">
-              {{ t('收藏后会整齐留在这里，想吃时一眼就能找到。', 'Saved shops stay neatly within reach whenever cravings return.') }}
+            <i class="far fa-heart text-2xl text-rose-300"></i>
+            <p class="mt-3 text-sm font-black text-gray-800">
+              {{ t('还没有收藏小店', 'No saved shops yet') }}
             </p>
-          </div>
-        </div>
-
-        <div v-if="platformFeaturedMerchants.length > 0" class="grid grid-cols-2 gap-3" data-testid="food-delivery-platform-saved-grid">
-          <article
-            v-for="merchant in platformFeaturedMerchants"
-            :key="merchant.id"
-            class="relative min-w-0 rounded-[1rem] bg-white p-2 shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04]"
-            :data-testid="`food-delivery-platform-merchant-${merchant.id}`"
-          >
             <button
               type="button"
-              class="block w-full text-left"
-              :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
-              @click="selectPlatformMerchant(merchant)"
-            >
-              <span
-                class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[0.75rem] bg-gradient-to-br text-3xl"
-                :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
-                :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
-                :data-required-asset="merchant.requiredAsset || undefined"
-                :data-merchant-visual-type="merchant.visualType || 'food-photo'"
-              >
-                <img
-                  v-if="merchant.imageUrl"
-                  :src="merchant.imageUrl"
-                  :alt="merchant.imageAlt || merchant.name"
-                  class="absolute inset-0 z-10 h-full w-full"
-                  :class="isPlatformLogoMerchant(merchant) ? 'object-contain p-4' : 'object-cover'"
-                  @error="$event.currentTarget.style.display = 'none'"
-                />
-                <span v-if="isPlatformLogoMerchant(merchant)" class="whitespace-pre-line text-center text-lg font-black leading-tight">{{ platformMerchantLogoMark(merchant) }}</span>
-                <i v-else :class="merchant.icon || 'fas fa-store'"></i>
-              </span>
-              <span class="mt-2 block truncate text-sm font-black text-gray-950">{{ merchant.name }}</span>
-              <span class="mt-1 block truncate text-[0.68rem] font-bold text-gray-500">
-                {{ merchant.cuisine }} · {{ merchant.deliveryEtaMinutes }} min
-              </span>
-            </button>
-            <button
-              type="button"
-              class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm"
-              :aria-label="t('取消收藏', 'Remove saved shop')"
-              aria-pressed="true"
-              :data-testid="`food-delivery-platform-save-${merchant.id}`"
-              @click="togglePlatformMerchantSaved(merchant)"
-            >
-              <i class="fas fa-heart text-[10px]"></i>
-            </button>
-          </article>
-        </div>
-        <div
-          v-else
-          class="rounded-[1.3rem] border border-dashed border-rose-200 bg-white p-7 text-center"
-          data-testid="food-delivery-saved-empty"
-        >
-          <i class="far fa-heart text-2xl text-rose-300"></i>
-          <p class="mt-3 text-sm font-black text-gray-800">{{ t('还没有收藏小店', 'No saved shops yet') }}</p>
-          <button
-            type="button"
-            class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white"
-            data-testid="food-delivery-saved-browse"
-            @click="openPlatformPage('home')"
-          >
-            {{ t('返回首页发现', 'Discover shops') }}
-          </button>
-        </div>
-      </section>
-
-      <section v-else-if="platformPageKey === 'profile'" class="space-y-5" data-testid="food-delivery-platform-profile-page">
-        <header class="flex items-center justify-between gap-3 pt-1">
-          <div class="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
-              data-testid="food-delivery-platform-profile-back"
-              :aria-label="t('返回首页', 'Back home')"
+              class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white"
+              data-testid="food-delivery-saved-browse"
               @click="openPlatformPage('home')"
             >
-              <i class="fas fa-chevron-left text-sm"></i>
-            </button>
-            <div class="min-w-0">
-              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('平台账户', 'Platform account') }}</p>
-              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('我的外卖', 'My delivery') }}</h2>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
-            data-testid="food-delivery-platform-profile-notifications"
-            :aria-label="t('平台消息', 'Platform updates')"
-            @click="openPlatformUtilitySheet('notifications')"
-          >
-            <i class="fas fa-bell"></i>
-          </button>
-        </header>
-
-        <section class="overflow-hidden rounded-[1.25rem] bg-gray-950 p-5 text-white shadow-[0_18px_38px_rgba(15,23,42,0.2)]" data-testid="food-delivery-platform-profile-summary">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <p class="text-[10px] font-black uppercase text-[#74e4de]">{{ t('尝鲜会员', 'Taster member') }}</p>
-              <h3 class="mt-2 text-xl font-black">{{ t('今天也要好好吃饭', 'Make today a good meal') }}</h3>
-              <p class="mt-2 text-xs font-semibold leading-5 text-white/60">{{ t('订单、收藏、地址与配送服务都从这里进入。', 'Orders, saved shops, addresses, and delivery help all start here.') }}</p>
-            </div>
-            <span class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#24bcb7] text-xl"><i class="fas fa-face-smile"></i></span>
-          </div>
-          <div class="mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-4">
-            <div>
-              <p class="text-xl font-black">{{ foodDeliveryStore.platformOrderCount }}</p>
-              <p class="mt-1 text-[10px] font-bold text-white/45">{{ t('平台订单', 'Orders') }}</p>
-            </div>
-            <div>
-              <p class="text-xl font-black">{{ platformSavedMerchantIds.length }}</p>
-              <p class="mt-1 text-[10px] font-bold text-white/45">{{ t('收藏小店', 'Saved') }}</p>
-            </div>
-            <div>
-              <p class="text-xl font-black">1</p>
-              <p class="mt-1 text-[10px] font-bold text-white/45">{{ t('本周权益', 'Weekly perk') }}</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="space-y-3" data-testid="food-delivery-platform-profile-activity">
-          <div class="flex items-center justify-between gap-3 px-0.5">
-            <h3 class="text-base font-black text-gray-950">{{ t('我的活动', 'My activity') }}</h3>
-            <span class="text-[0.68rem] font-bold text-gray-400">{{ t('平台内记录', 'Platform only') }}</span>
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <button type="button" class="min-h-[6.8rem] rounded-[1rem] bg-[#e8fbfa] p-4 text-left text-[#117f7b] shadow-sm ring-1 ring-[#24bcb7]/10 transition active:scale-[0.98]" data-testid="food-delivery-platform-profile-orders" @click="openPlatformPage('orders')">
-              <i class="fas fa-receipt text-lg"></i>
-              <p class="mt-4 text-sm font-black">{{ t('过往订单', 'Past orders') }}</p>
-              <p class="mt-1 text-[10px] font-bold opacity-65">{{ t('查看进度与再次点单', 'Track and reorder') }}</p>
-            </button>
-            <button type="button" class="min-h-[6.8rem] rounded-[1rem] bg-rose-50 p-4 text-left text-rose-700 shadow-sm ring-1 ring-rose-100 transition active:scale-[0.98]" data-testid="food-delivery-platform-profile-saved" @click="openPlatformPage('saved')">
-              <i class="fas fa-heart text-lg"></i>
-              <p class="mt-4 text-sm font-black">{{ t('收藏小店', 'Saved shops') }}</p>
-              <p class="mt-1 text-[10px] font-bold opacity-65">{{ t('回到常点与想吃清单', 'Return to favorites') }}</p>
+              {{ t('返回首页发现', 'Discover shops') }}
             </button>
           </div>
         </section>
 
-        <section class="space-y-3" data-testid="food-delivery-platform-profile-addresses">
-          <div class="px-0.5">
-            <h3 class="text-base font-black text-gray-950">{{ t('常用配送地址', 'Delivery addresses') }}</h3>
-            <p class="mt-1 text-xs font-semibold text-gray-500">{{ platformLocationLabel }}</p>
-          </div>
-          <div class="space-y-2">
-            <button
-              v-for="(address, addressIndex) in platformDeliveryAddressOptions"
-              :key="address"
-              type="button"
-              class="flex w-full items-center gap-3 rounded-[0.95rem] bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
-              :class="platformLocationLabel === address ? 'text-[#128e89]' : 'text-gray-700'"
-              :aria-pressed="platformLocationLabel === address"
-              :data-testid="`food-delivery-platform-profile-address-${addressIndex}`"
-              @click="selectPlatformDeliveryAddress(address)"
-            >
-              <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full" :class="platformLocationLabel === address ? 'bg-[#e5fbfa]' : 'bg-gray-100'"><i class="fas fa-location-dot text-xs"></i></span>
-              <span class="min-w-0 flex-1 text-xs font-black leading-5">{{ address }}</span>
-              <i :class="platformLocationLabel === address ? 'fas fa-check' : 'fas fa-chevron-right'" class="text-[10px]"></i>
-            </button>
-          </div>
-        </section>
-
-        <section class="space-y-2" data-testid="food-delivery-platform-profile-services">
-          <h3 class="px-0.5 text-base font-black text-gray-950">{{ t('会员与服务', 'Membership and service') }}</h3>
-          <button type="button" class="flex w-full items-center gap-3 border-b border-gray-200 py-3 text-left" data-testid="food-delivery-platform-profile-membership" @click="openPlatformCampaign('club_free_delivery')">
-            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-amber-50 text-amber-700"><i class="fas fa-crown"></i></span>
-            <span class="min-w-0 flex-1"><span class="block text-sm font-black text-gray-950">{{ t('平台会员', 'Platform membership') }}</span><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ t('查看免配送权益和适用小店', 'See free-delivery perks and eligible shops') }}</span></span>
-            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
-          </button>
-          <button type="button" class="flex w-full items-center gap-3 border-b border-gray-200 py-3 text-left" data-testid="food-delivery-platform-profile-delivery-support" @click="openPlatformPage('orders')">
-            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-sky-50 text-sky-700"><i class="fas fa-headset"></i></span>
-            <span class="min-w-0 flex-1"><span class="block text-sm font-black text-gray-950">{{ t('配送与沟通', 'Delivery and contact') }}</span><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ t('从配送中的订单联系骑手或小店', 'Contact the rider or shop from an active order') }}</span></span>
-            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
-          </button>
-          <button type="button" class="flex w-full items-center gap-3 py-3 text-left" data-testid="food-delivery-platform-profile-updates" @click="openPlatformUtilitySheet('notifications')">
-            <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-violet-50 text-violet-700"><i class="fas fa-bell"></i></span>
-            <span class="min-w-0 flex-1"><span class="block text-sm font-black text-gray-950">{{ t('消息与优惠', 'Updates and offers') }}</span><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{ t('查看权益、营业和配送提醒', 'Review perks, openings, and delivery updates') }}</span></span>
-            <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
-          </button>
-        </section>
-      </section>
-
-      <section
-        v-else-if="platformPageKey === 'checkout'"
-        class="space-y-4"
-        data-testid="food-delivery-platform-checkout-page"
-      >
-        <header class="flex items-center gap-3 pt-1">
-          <button
-            type="button"
-            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
-            data-testid="food-delivery-platform-checkout-back"
-            :aria-label="t('返回购物车', 'Back to cart')"
-            @click="returnToPlatformCart"
-          >
-            <i class="fas fa-chevron-left text-sm"></i>
-          </button>
-          <div class="min-w-0">
-            <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('确认后下单', 'Review and place') }}</p>
-            <h2 class="truncate text-2xl font-black text-gray-950">{{ t('确认订单', 'Review order') }}</h2>
-          </div>
-        </header>
-
-        <template v-if="foodDeliveryStore.platformCartItems.length > 0 && platformCartMerchant">
-          <section class="overflow-hidden rounded-[1.35rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]">
-            <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-3">
+        <section
+          v-else-if="platformPageKey === 'profile'"
+          class="space-y-5"
+          data-testid="food-delivery-platform-profile-page"
+        >
+          <header class="flex items-center justify-between gap-3 pt-1">
+            <div class="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+                data-testid="food-delivery-platform-profile-back"
+                :aria-label="t('返回首页', 'Back home')"
+                @click="openPlatformPage('home')"
+              >
+                <i class="fas fa-chevron-left text-sm"></i>
+              </button>
               <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-[#71d9d5]">{{ t('本次用餐', 'Your order') }}</p>
-                <h3 class="mt-1 truncate text-xl font-black">{{ platformCartMerchant.name }}</h3>
+                <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                  {{ t('平台账户', 'Platform account') }}
+                </p>
+                <h2 class="truncate text-2xl font-black text-gray-950">
+                  {{ t('我的外卖', 'My delivery') }}
+                </h2>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-800 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-profile-notifications"
+              :aria-label="t('平台消息', 'Platform updates')"
+              @click="openPlatformUtilitySheet('notifications')"
+            >
+              <i class="fas fa-bell"></i>
+            </button>
+          </header>
+
+          <section
+            class="overflow-hidden rounded-[1.25rem] bg-gray-950 p-5 text-white shadow-[0_18px_38px_rgba(15,23,42,0.2)]"
+            data-testid="food-delivery-platform-profile-summary"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-[10px] font-black uppercase text-[#74e4de]">
+                  {{ t('尝鲜会员', 'Taster member') }}
+                </p>
+                <h3 class="mt-2 text-xl font-black">
+                  {{ t('今天也要好好吃饭', 'Make today a good meal') }}
+                </h3>
                 <p class="mt-2 text-xs font-semibold leading-5 text-white/60">
-                  {{ t(`共 ${foodDeliveryStore.platformCartQuantity} 件，预计 ${platformCartMerchant.deliveryEtaMinutes} 分钟送达`, `${foodDeliveryStore.platformCartQuantity} items · about ${platformCartMerchant.deliveryEtaMinutes} min`) }}
+                  {{
+                    t(
+                      '订单、收藏、地址与配送服务都从这里进入。',
+                      'Orders, saved shops, addresses, and delivery help all start here.',
+                    )
+                  }}
                 </p>
               </div>
-              <div
-                class="flex h-[6.5rem] w-[6.5rem] items-center justify-center overflow-hidden"
-                data-asset-slot="platform-checkout-takeout-bag"
-                data-required-asset="platform/orders/platform-checkout-takeout-bag-01.png"
-              >
-                <img
-                  :src="platformMissingAssetPlaceholderUrl"
-                  :alt="t('待补结算页素材', 'Checkout artwork pending')"
-                  class="h-[5.5rem] w-[5.5rem] object-contain"
-                  data-asset-placeholder
-                />
+              <span
+                class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#24bcb7] text-xl"
+                ><i class="fas fa-face-smile"></i
+              ></span>
+            </div>
+            <div class="mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-4">
+              <div>
+                <p class="text-xl font-black">{{ foodDeliveryStore.platformOrderCount }}</p>
+                <p class="mt-1 text-[10px] font-bold text-white/45">
+                  {{ t('平台订单', 'Orders') }}
+                </p>
+              </div>
+              <div>
+                <p class="text-xl font-black">{{ platformSavedMerchantIds.length }}</p>
+                <p class="mt-1 text-[10px] font-bold text-white/45">{{ t('收藏小店', 'Saved') }}</p>
+              </div>
+              <div>
+                <p class="text-xl font-black">1</p>
+                <p class="mt-1 text-[10px] font-bold text-white/45">
+                  {{ t('本周权益', 'Weekly perk') }}
+                </p>
               </div>
             </div>
           </section>
 
-          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-gray-400">{{ t('配送地址', 'Delivery address') }}</p>
-                <p class="mt-1 text-sm font-black leading-5 text-gray-950" data-testid="food-delivery-platform-checkout-address">
-                  {{ platformLocationLabel }}
-                </p>
-              </div>
-              <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#159f9a]">
-                <i class="fas fa-location-dot"></i>
-              </span>
+          <section class="space-y-3" data-testid="food-delivery-platform-profile-activity">
+            <div class="flex items-center justify-between gap-3 px-0.5">
+              <h3 class="text-base font-black text-gray-950">{{ t('我的活动', 'My activity') }}</h3>
+              <span class="text-[0.68rem] font-bold text-gray-400">{{
+                t('平台内记录', 'Platform only')
+              }}</span>
             </div>
-            <div class="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                class="min-h-[6.8rem] rounded-[1rem] bg-[#e8fbfa] p-4 text-left text-[#117f7b] shadow-sm ring-1 ring-[#24bcb7]/10 transition active:scale-[0.98]"
+                data-testid="food-delivery-platform-profile-orders"
+                @click="openPlatformPage('orders')"
+              >
+                <i class="fas fa-receipt text-lg"></i>
+                <p class="mt-4 text-sm font-black">{{ t('过往订单', 'Past orders') }}</p>
+                <p class="mt-1 text-[10px] font-bold opacity-65">
+                  {{ t('查看进度与再次点单', 'Track and reorder') }}
+                </p>
+              </button>
+              <button
+                type="button"
+                class="min-h-[6.8rem] rounded-[1rem] bg-rose-50 p-4 text-left text-rose-700 shadow-sm ring-1 ring-rose-100 transition active:scale-[0.98]"
+                data-testid="food-delivery-platform-profile-saved"
+                @click="openPlatformPage('saved')"
+              >
+                <i class="fas fa-heart text-lg"></i>
+                <p class="mt-4 text-sm font-black">{{ t('收藏小店', 'Saved shops') }}</p>
+                <p class="mt-1 text-[10px] font-bold opacity-65">
+                  {{ t('回到常点与想吃清单', 'Return to favorites') }}
+                </p>
+              </button>
+            </div>
+          </section>
+
+          <section class="space-y-3" data-testid="food-delivery-platform-profile-addresses">
+            <div class="px-0.5">
+              <h3 class="text-base font-black text-gray-950">
+                {{ t('常用配送地址', 'Delivery addresses') }}
+              </h3>
+              <p class="mt-1 text-xs font-semibold text-gray-500">{{ platformLocationLabel }}</p>
+            </div>
+            <div class="space-y-2">
               <button
                 v-for="(address, addressIndex) in platformDeliveryAddressOptions"
                 :key="address"
                 type="button"
-                class="shrink-0 rounded-full px-3 py-2 text-[11px] font-black ring-1 ring-inset"
-                :class="platformLocationLabel === address ? 'bg-[#24bcb7] text-white ring-[#24bcb7]' : 'bg-gray-50 text-gray-600 ring-gray-200'"
+                class="flex w-full items-center gap-3 rounded-[0.95rem] bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                :class="platformLocationLabel === address ? 'text-[#128e89]' : 'text-gray-700'"
                 :aria-pressed="platformLocationLabel === address"
-                :data-testid="`food-delivery-platform-checkout-address-${addressIndex}`"
+                :data-testid="`food-delivery-platform-profile-address-${addressIndex}`"
                 @click="selectPlatformDeliveryAddress(address)"
               >
-                {{ addressIndex === 0 ? t('当前地址', 'Current') : addressIndex === 1 ? t('常用地址', 'Saved') : t('公司', 'Work') }}
+                <span
+                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                  :class="platformLocationLabel === address ? 'bg-[#e5fbfa]' : 'bg-gray-100'"
+                  ><i class="fas fa-location-dot text-xs"></i
+                ></span>
+                <span class="min-w-0 flex-1 text-xs font-black leading-5">{{ address }}</span>
+                <i
+                  :class="
+                    platformLocationLabel === address ? 'fas fa-check' : 'fas fa-chevron-right'
+                  "
+                  class="text-[10px]"
+                ></i>
               </button>
             </div>
           </section>
 
-          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-checkout-items">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('餐品明细', 'Order items') }}</p>
-                <h3 class="mt-1 truncate text-lg font-black text-gray-950">{{ platformCartMerchant.name }}</h3>
-              </div>
-              <span class="rounded-full bg-[#e5fbfa] px-3 py-1.5 text-[11px] font-black text-[#128e89]">
-                {{ foodDeliveryStore.platformCartQuantity }} {{ t('件', 'items') }}
-              </span>
-            </div>
-            <div class="mt-3 space-y-2">
-              <div
-                v-for="item in foodDeliveryStore.platformCartItems"
-                :key="item.itemId"
-                class="flex items-center justify-between gap-3 rounded-[0.9rem] bg-gray-50 px-3 py-3"
-              >
-                <div class="min-w-0">
-                  <p class="truncate text-sm font-black text-gray-900">{{ item.title }}</p>
-                  <p class="mt-1 text-[11px] font-bold text-gray-500">× {{ item.quantity }}</p>
-                </div>
-                <span class="shrink-0 text-xs font-black text-gray-900">{{ platformCartLineTotal(item) }}</span>
-              </div>
-            </div>
-          </section>
-
-          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <label for="food-delivery-platform-order-note" class="text-xs font-black text-gray-900">
-              {{ t('订单备注', 'Order note') }}
-            </label>
-            <textarea
-              id="food-delivery-platform-order-note"
-              v-model="platformCheckoutNote"
-              rows="3"
-              maxlength="240"
-              class="mt-2 w-full resize-none rounded-[1rem] bg-gray-50 px-3 py-3 text-sm font-semibold text-gray-800 outline-none ring-1 ring-inset ring-gray-100 focus:ring-[#24bcb7]"
-              :placeholder="t('例如：少辣，放门口即可', 'For example: mild spice, leave at the door')"
-              data-testid="food-delivery-platform-checkout-note"
-            ></textarea>
-          </section>
-
-          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <p class="text-xs font-black text-gray-900">{{ t('支付方式', 'Payment method') }}</p>
-            <div class="mt-3 space-y-2">
-              <label
-                v-for="option in platformCheckoutPaymentOptions"
-                :key="option.key"
-                class="flex cursor-pointer items-center gap-3 rounded-[1rem] p-3 ring-1 ring-inset"
-                :class="platformCheckoutPaymentMethod === option.key ? 'bg-[#e5fbfa] ring-[#24bcb7]' : 'bg-gray-50 ring-gray-100'"
-                :data-testid="`food-delivery-platform-payment-${option.key}`"
-              >
-                <input
-                  v-model="platformCheckoutPaymentMethod"
-                  type="radio"
-                  name="food-delivery-platform-payment"
-                  :value="option.key"
-                  class="sr-only"
-                />
-                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#159f9a] shadow-sm">
-                  <i :class="option.icon"></i>
-                </span>
-                <span class="min-w-0 flex-1">
-                  <span class="block text-sm font-black text-gray-950">{{ option.label }}</span>
-                  <span class="mt-0.5 block text-[10px] font-semibold leading-4 text-gray-500">{{ option.desc }}</span>
-                </span>
-                <i v-if="platformCheckoutPaymentMethod === option.key" class="fas fa-circle-check text-[#159f9a]"></i>
-              </label>
-            </div>
-          </section>
-
-          <section class="rounded-[1.25rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]">
-            <dl class="space-y-2 text-xs font-semibold text-white/70">
-              <div class="flex items-center justify-between gap-3">
-                <dt>{{ t('商品金额', 'Items') }}</dt>
-                <dd>{{ displayMoney(foodDeliveryStore.platformCartPrimaryTotal.amount, foodDeliveryStore.platformCartPrimaryTotal.currency) }}</dd>
-              </div>
-              <div class="flex items-center justify-between gap-3">
-                <dt>{{ t('配送费', 'Delivery fee') }}</dt>
-                <dd>{{ displayMoney(platformCartMerchant.deliveryFee) }}</dd>
-              </div>
-            </dl>
-            <div class="mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
-              <div>
-                <p class="text-[10px] font-black uppercase text-white/45">{{ t('应付合计', 'Order total') }}</p>
-                <p class="mt-1 text-2xl font-black" data-testid="food-delivery-platform-checkout-total">
-                  {{ displayMoney(platformCheckoutTotal.amount, platformCheckoutTotal.currency) }}
-                </p>
-              </div>
-              <span class="text-right text-[10px] font-bold leading-4 text-white/55">
-                {{ t(`约 ${platformCartMerchant.deliveryEtaMinutes} 分钟送达`, `About ${platformCartMerchant.deliveryEtaMinutes} min`) }}
-              </span>
-            </div>
+          <section class="space-y-2" data-testid="food-delivery-platform-profile-services">
+            <h3 class="px-0.5 text-base font-black text-gray-950">
+              {{ t('会员与服务', 'Membership and service') }}
+            </h3>
             <button
               type="button"
-              class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-[1rem] bg-[#24bcb7] px-4 text-sm font-black text-white transition active:scale-[0.99]"
-              data-testid="food-delivery-platform-checkout-submit"
-              @click="submitPlatformOrder"
+              class="flex w-full items-center gap-3 border-b border-gray-200 py-3 text-left"
+              data-testid="food-delivery-platform-profile-membership"
+              @click="openPlatformCampaign('club_free_delivery')"
             >
-              {{ t('提交订单', 'Place order') }}
-              <i class="fas fa-arrow-right text-xs"></i>
+              <span
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-amber-50 text-amber-700"
+                ><i class="fas fa-crown"></i
+              ></span>
+              <span class="min-w-0 flex-1"
+                ><span class="block text-sm font-black text-gray-950">{{
+                  t('平台会员', 'Platform membership')
+                }}</span
+                ><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{
+                  t('查看免配送权益和适用小店', 'See free-delivery perks and eligible shops')
+                }}</span></span
+              >
+              <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
             </button>
-            <p v-if="platformCheckoutFeedback" class="mt-2 text-center text-xs font-bold text-rose-300" aria-live="polite">
-              {{ platformCheckoutFeedback }}
-            </p>
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 border-b border-gray-200 py-3 text-left"
+              data-testid="food-delivery-platform-profile-delivery-support"
+              @click="openPlatformPage('orders')"
+            >
+              <span
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-sky-50 text-sky-700"
+                ><i class="fas fa-headset"></i
+              ></span>
+              <span class="min-w-0 flex-1"
+                ><span class="block text-sm font-black text-gray-950">{{
+                  t('配送与沟通', 'Delivery and contact')
+                }}</span
+                ><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{
+                  t(
+                    '从配送中的订单联系骑手或小店',
+                    'Contact the rider or shop from an active order',
+                  )
+                }}</span></span
+              >
+              <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+            </button>
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 py-3 text-left"
+              data-testid="food-delivery-platform-profile-updates"
+              @click="openPlatformUtilitySheet('notifications')"
+            >
+              <span
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.8rem] bg-violet-50 text-violet-700"
+                ><i class="fas fa-bell"></i
+              ></span>
+              <span class="min-w-0 flex-1"
+                ><span class="block text-sm font-black text-gray-950">{{
+                  t('消息与优惠', 'Updates and offers')
+                }}</span
+                ><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{
+                  t('查看权益、营业和配送提醒', 'Review perks, openings, and delivery updates')
+                }}</span></span
+              >
+              <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
+            </button>
           </section>
-        </template>
+        </section>
 
-        <div v-else class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5">
-          <i class="fas fa-cart-shopping text-2xl text-[#24bcb7]"></i>
-          <p class="mt-3 text-sm font-black text-gray-900">{{ t('购物车已经空了', 'Your cart is empty') }}</p>
-          <button type="button" class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('home')">
-            {{ t('返回首页选餐', 'Browse shops') }}
-          </button>
-        </div>
-      </section>
-
-      <section
-        v-else-if="platformPageKey === 'orders'"
-        class="space-y-4"
-        data-testid="food-delivery-platform-orders-page"
-      >
-        <header class="flex items-center justify-between gap-3 pt-1">
-          <div class="flex min-w-0 items-center gap-3">
+        <section
+          v-else-if="platformPageKey === 'checkout'"
+          class="space-y-4"
+          data-testid="food-delivery-platform-checkout-page"
+        >
+          <header class="flex items-center gap-3 pt-1">
             <button
               type="button"
               class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
-              data-testid="food-delivery-platform-orders-back"
-              :aria-label="t('返回首页', 'Back home')"
-              @click="openPlatformPage('home')"
+              data-testid="food-delivery-platform-checkout-back"
+              :aria-label="t('返回购物车', 'Back to cart')"
+              @click="returnToPlatformCart"
             >
               <i class="fas fa-chevron-left text-sm"></i>
             </button>
             <div class="min-w-0">
-              <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('最近点过', 'Recent orders') }}</p>
-              <h2 class="truncate text-2xl font-black text-gray-950">{{ t('我的订单', 'My orders') }}</h2>
+              <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                {{ t('确认后下单', 'Review and place') }}
+              </p>
+              <h2 class="truncate text-2xl font-black text-gray-950">
+                {{ t('确认订单', 'Review order') }}
+              </h2>
             </div>
-          </div>
-          <span class="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-[#e5fbfa] px-3 text-sm font-black text-[#128e89]">
-            {{ foodDeliveryStore.platformOrderCount }}
-          </span>
-        </header>
+          </header>
 
-        <div v-if="foodDeliveryStore.recentPlatformOrders.length > 0" class="space-y-3" data-testid="food-delivery-platform-order-list">
-          <button
-            v-for="order in foodDeliveryStore.recentPlatformOrders"
-            :key="order.id"
-            type="button"
-            class="block w-full rounded-[1.2rem] bg-white p-4 text-left shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
-            :data-testid="`food-delivery-platform-order-card-${order.id}`"
-            @click="openPlatformOrder(order.id)"
-          >
-            <span class="flex items-start gap-3">
-              <span
-                class="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] bg-gray-100 text-[#159f9a] ring-1 ring-black/5"
-                :data-asset-slot="`platform-merchant-mark-${order.merchantId}`"
-                :data-required-asset="platformMerchantIdentityAssetPath(order.merchantId)"
-              >
-                <img
-                  :src="platformMissingAssetPlaceholderUrl"
-                  :alt="t('待补商家身份素材', 'Merchant mark pending')"
-                  class="h-full w-full object-contain p-1"
-                  data-asset-placeholder
-                />
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-base font-black text-gray-950">{{ order.merchantName }}</span>
-                <span class="mt-1 block text-[11px] font-semibold text-gray-500">
-                  {{ formatFoodDeliveryEventTime(order.createdAt) }} · {{ platformOrderNumber(order) }}
-                </span>
-              </span>
-              <span
-                class="shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black"
-                :class="resolvePlatformOrderStatus(order.status).badgeClass"
-              >
-                {{ resolvePlatformOrderStatus(order.status).label }}
-              </span>
-            </span>
-            <span class="mt-3 block truncate text-xs font-semibold text-gray-600">
-              {{ order.items.map((item) => `${item.title} × ${item.quantity}`).join(' · ') }}
-            </span>
-            <span class="mt-3 flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
-              <span class="text-[11px] font-bold text-gray-500">{{ order.itemCount }} {{ t('件', 'items') }} · {{ order.etaMinutes }} min</span>
-              <span class="text-sm font-black text-gray-950">{{ displayMoney(order.total, order.currency) }}</span>
-            </span>
-          </button>
-        </div>
+          <template v-if="foodDeliveryStore.platformCartItems.length > 0 && platformCartMerchant">
+            <section
+              class="overflow-hidden rounded-[1.35rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]"
+            >
+              <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-[#71d9d5]">
+                    {{ t('本次用餐', 'Your order') }}
+                  </p>
+                  <h3 class="mt-1 truncate text-xl font-black">{{ platformCartMerchant.name }}</h3>
+                  <p class="mt-2 text-xs font-semibold leading-5 text-white/60">
+                    {{
+                      t(
+                        `共 ${foodDeliveryStore.platformCartQuantity} 件，预计 ${platformCartMerchant.deliveryEtaMinutes} 分钟送达`,
+                        `${foodDeliveryStore.platformCartQuantity} items · about ${platformCartMerchant.deliveryEtaMinutes} min`,
+                      )
+                    }}
+                  </p>
+                </div>
+                <div
+                  class="flex h-[6.5rem] w-[6.5rem] items-center justify-center overflow-hidden"
+                  data-asset-slot="platform-checkout-takeout-bag"
+                  data-required-asset="platform/orders/platform-checkout-takeout-bag-01.png"
+                >
+                  <img
+                    :src="platformMissingAssetPlaceholderUrl"
+                    :alt="t('待补结算页素材', 'Checkout artwork pending')"
+                    class="h-[5.5rem] w-[5.5rem] object-contain"
+                    data-asset-placeholder
+                  />
+                </div>
+              </div>
+            </section>
 
-        <div v-else class="rounded-[1.3rem] border border-dashed border-teal-200 bg-white p-7 text-center" data-testid="food-delivery-platform-orders-empty">
-          <div
-            class="mx-auto flex h-28 w-32 items-center justify-center"
-            data-asset-slot="platform-orders-empty-receipt"
-            data-required-asset="platform/orders/platform-orders-empty-receipt-01.png"
-          >
-            <img
-              :src="platformMissingAssetPlaceholderUrl"
-              :alt="t('待补空订单素材', 'Empty orders artwork pending')"
-              class="h-full w-full object-contain p-1"
-              data-asset-placeholder
-            />
-          </div>
-          <p class="mt-2 text-sm font-black text-gray-900">{{ t('还没有订单', 'No orders yet') }}</p>
-          <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">{{ t('第一笔订单提交后，可以在这里查看进度和详情。', 'Place your first order to follow its progress and details here.') }}</p>
-          <button type="button" class="mt-4 rounded-full bg-[#24bcb7] px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('home')">
-            {{ t('去选小店', 'Browse shops') }}
-          </button>
-        </div>
-      </section>
-
-      <section
-        v-else-if="platformPageKey === 'order'"
-        class="space-y-4"
-        data-testid="food-delivery-platform-order-page"
-      >
-        <header class="flex items-center gap-3 pt-1">
-          <button
-            type="button"
-            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
-            data-testid="food-delivery-platform-order-back"
-            :aria-label="t('返回订单列表', 'Back to orders')"
-            @click="openPlatformPage('orders')"
-          >
-            <i class="fas fa-chevron-left text-sm"></i>
-          </button>
-          <div class="min-w-0">
-            <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('平台订单', 'Platform order') }}</p>
-            <h2 class="truncate text-2xl font-black text-gray-950">{{ t('订单详情', 'Order details') }}</h2>
-          </div>
-        </header>
-
-        <template v-if="activePlatformOrder">
-          <section
-            class="overflow-hidden rounded-[1.35rem] p-5 text-white"
-            :class="activePlatformOrderStatus.heroClass"
-            :data-order-status="activePlatformOrderStatus.key"
-            data-testid="food-delivery-platform-order-success"
-          >
-            <div class="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3">
-              <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-white/65">{{ activePlatformOrderStatus.eyebrow }}</p>
-                <h3 class="mt-1 text-2xl font-black leading-tight">{{ activePlatformOrderStatus.title }}</h3>
-                <p class="mt-2 text-xs font-semibold leading-5 text-white/75">{{ activePlatformOrderStatus.desc }}</p>
+            <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-gray-400">
+                    {{ t('配送地址', 'Delivery address') }}
+                  </p>
+                  <p
+                    class="mt-1 text-sm font-black leading-5 text-gray-950"
+                    data-testid="food-delivery-platform-checkout-address"
+                  >
+                    {{ platformLocationLabel }}
+                  </p>
+                </div>
                 <span
-                  v-if="activePlatformOrder.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED && activePlatformOrder.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED"
-                  class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gray-950/18 px-3 py-1.5 text-[10px] font-black"
+                  class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#159f9a]"
                 >
-                  <i class="far fa-clock"></i>
-                  {{ t(`约 ${activePlatformOrder.etaMinutes} 分钟`, `About ${activePlatformOrder.etaMinutes} min`) }}
+                  <i class="fas fa-location-dot"></i>
                 </span>
               </div>
               <div
-                class="flex h-28 w-28 items-center justify-center"
-                :data-asset-slot="`platform-order-status-${activePlatformOrderStatus.assetKey}`"
-                :data-required-asset="`platform/orders/platform-order-status-${activePlatformOrderStatus.assetKey}-01.png`"
+                class="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               >
-                <img
-                  :src="platformMissingAssetPlaceholderUrl"
-                  :alt="t('待补订单状态素材', 'Order status artwork pending')"
-                  class="h-24 w-24 object-contain"
-                  data-asset-placeholder
-                />
-              </div>
-            </div>
-            <div class="mt-5 grid grid-cols-4 gap-1.5 text-center">
-              <div
-                v-for="(step, stepIndex) in platformOrderSteps"
-                :key="step.key"
-                class="rounded-[0.8rem] px-1 py-2.5"
-                :class="activePlatformOrderStatus.stepIndex >= stepIndex ? 'bg-white/16 text-white' : 'bg-white/7 text-white/45'"
-              >
-                <i :class="step.icon" class="text-xs"></i>
-                <p class="mt-1 truncate text-[9px] font-black">{{ step.label }}</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-gray-400">{{ t('订单号', 'Order number') }}</p>
-                <p
-                  class="mt-1 text-sm font-black text-gray-800"
-                  :data-order-id="activePlatformOrder.id"
-                  data-testid="food-delivery-platform-order-id"
+                <button
+                  v-for="(address, addressIndex) in platformDeliveryAddressOptions"
+                  :key="address"
+                  type="button"
+                  class="shrink-0 rounded-full px-3 py-2 text-[11px] font-black ring-1 ring-inset"
+                  :class="
+                    platformLocationLabel === address
+                      ? 'bg-[#24bcb7] text-white ring-[#24bcb7]'
+                      : 'bg-gray-50 text-gray-600 ring-gray-200'
+                  "
+                  :aria-pressed="platformLocationLabel === address"
+                  :data-testid="`food-delivery-platform-checkout-address-${addressIndex}`"
+                  @click="selectPlatformDeliveryAddress(address)"
                 >
-                  {{ platformOrderNumber(activePlatformOrder) }}
-                </p>
+                  {{
+                    addressIndex === 0
+                      ? t('当前地址', 'Current')
+                      : addressIndex === 1
+                        ? t('常用地址', 'Saved')
+                        : t('公司', 'Work')
+                  }}
+                </button>
+              </div>
+            </section>
+
+            <section
+              class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-checkout-items"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                    {{ t('餐品明细', 'Order items') }}
+                  </p>
+                  <h3 class="mt-1 truncate text-lg font-black text-gray-950">
+                    {{ platformCartMerchant.name }}
+                  </h3>
+                </div>
+                <span
+                  class="rounded-full bg-[#e5fbfa] px-3 py-1.5 text-[11px] font-black text-[#128e89]"
+                >
+                  {{ foodDeliveryStore.platformCartQuantity }} {{ t('件', 'items') }}
+                </span>
+              </div>
+              <div class="mt-3 space-y-2">
+                <div
+                  v-for="item in foodDeliveryStore.platformCartItems"
+                  :key="item.itemId"
+                  class="flex items-center justify-between gap-3 rounded-[0.9rem] bg-gray-50 px-3 py-3"
+                >
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-black text-gray-900">{{ item.title }}</p>
+                    <p class="mt-1 text-[11px] font-bold text-gray-500">× {{ item.quantity }}</p>
+                  </div>
+                  <span class="shrink-0 text-xs font-black text-gray-900">{{
+                    platformCartLineTotal(item)
+                  }}</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <label
+                for="food-delivery-platform-order-note"
+                class="text-xs font-black text-gray-900"
+              >
+                {{ t('订单备注', 'Order note') }}
+              </label>
+              <textarea
+                id="food-delivery-platform-order-note"
+                v-model="platformCheckoutNote"
+                rows="3"
+                maxlength="240"
+                class="mt-2 w-full resize-none rounded-[1rem] bg-gray-50 px-3 py-3 text-sm font-semibold text-gray-800 outline-none ring-1 ring-inset ring-gray-100 focus:ring-[#24bcb7]"
+                :placeholder="
+                  t('例如：少辣，放门口即可', 'For example: mild spice, leave at the door')
+                "
+                data-testid="food-delivery-platform-checkout-note"
+              ></textarea>
+            </section>
+
+            <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <p class="text-xs font-black text-gray-900">{{ t('支付方式', 'Payment method') }}</p>
+              <div class="mt-3 space-y-2">
+                <label
+                  v-for="option in platformCheckoutPaymentOptions"
+                  :key="option.key"
+                  class="flex cursor-pointer items-center gap-3 rounded-[1rem] p-3 ring-1 ring-inset"
+                  :class="
+                    platformCheckoutPaymentMethod === option.key
+                      ? 'bg-[#e5fbfa] ring-[#24bcb7]'
+                      : 'bg-gray-50 ring-gray-100'
+                  "
+                  :data-testid="`food-delivery-platform-payment-${option.key}`"
+                >
+                  <input
+                    v-model="platformCheckoutPaymentMethod"
+                    type="radio"
+                    name="food-delivery-platform-payment"
+                    :value="option.key"
+                    class="sr-only"
+                  />
+                  <span
+                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#159f9a] shadow-sm"
+                  >
+                    <i :class="option.icon"></i>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-black text-gray-950">{{ option.label }}</span>
+                    <span class="mt-0.5 block text-[10px] font-semibold leading-4 text-gray-500">{{
+                      option.desc
+                    }}</span>
+                  </span>
+                  <i
+                    v-if="platformCheckoutPaymentMethod === option.key"
+                    class="fas fa-circle-check text-[#159f9a]"
+                  ></i>
+                </label>
+              </div>
+            </section>
+
+            <section
+              class="rounded-[1.25rem] bg-gray-950 p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.18)]"
+            >
+              <dl class="space-y-2 text-xs font-semibold text-white/70">
+                <div class="flex items-center justify-between gap-3">
+                  <dt>{{ t('商品金额', 'Items') }}</dt>
+                  <dd>
+                    {{
+                      displayMoney(
+                        foodDeliveryStore.platformCartPrimaryTotal.amount,
+                        foodDeliveryStore.platformCartPrimaryTotal.currency,
+                      )
+                    }}
+                  </dd>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <dt>{{ t('配送费', 'Delivery fee') }}</dt>
+                  <dd>{{ displayMoney(platformCartMerchant.deliveryFee) }}</dd>
+                </div>
+              </dl>
+              <div class="mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
+                <div>
+                  <p class="text-[10px] font-black uppercase text-white/45">
+                    {{ t('应付合计', 'Order total') }}
+                  </p>
+                  <p
+                    class="mt-1 text-2xl font-black"
+                    data-testid="food-delivery-platform-checkout-total"
+                  >
+                    {{ displayMoney(platformCheckoutTotal.amount, platformCheckoutTotal.currency) }}
+                  </p>
+                </div>
+                <span class="text-right text-[10px] font-bold leading-4 text-white/55">
+                  {{
+                    t(
+                      `约 ${platformCartMerchant.deliveryEtaMinutes} 分钟送达`,
+                      `About ${platformCartMerchant.deliveryEtaMinutes} min`,
+                    )
+                  }}
+                </span>
               </div>
               <button
                 type="button"
-                class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-gray-50 px-3 text-[10px] font-black text-gray-600 ring-1 ring-inset ring-gray-100 transition active:bg-gray-100"
-                data-testid="food-delivery-platform-order-copy"
-                @click="copyPlatformOrderNumber(activePlatformOrder)"
+                class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-[1rem] bg-[#24bcb7] px-4 text-sm font-black text-white transition active:scale-[0.99]"
+                data-testid="food-delivery-platform-checkout-submit"
+                @click="submitPlatformOrder"
               >
-                <i class="far fa-copy"></i>
-                {{ platformOrderCopyFeedback || t('复制', 'Copy') }}
+                {{ t('提交订单', 'Place order') }}
+                <i class="fas fa-arrow-right text-xs"></i>
               </button>
-            </div>
-            <p class="mt-1 text-[10px] font-bold text-gray-400">{{ formatFoodDeliveryEventTime(activePlatformOrder.createdAt) }}</p>
-            <div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
-              <div class="flex gap-3">
-                <i class="fas fa-location-dot mt-0.5 w-5 text-center text-[#159f9a]"></i>
-                <div>
-                  <p class="text-[10px] font-black text-gray-400">{{ t('配送到', 'Deliver to') }}</p>
-                  <p class="mt-1 text-xs font-bold leading-5 text-gray-800">{{ activePlatformOrder.deliveryAddress }}</p>
-                </div>
-              </div>
-              <div class="flex gap-3">
-                <i class="fas fa-credit-card mt-0.5 w-5 text-center text-[#159f9a]"></i>
-                <div>
-                  <p class="text-[10px] font-black text-gray-400">{{ t('支付方式', 'Payment') }}</p>
-                  <p class="mt-1 text-xs font-bold text-gray-800">{{ platformPaymentMethodLabel(activePlatformOrder.paymentMethod) }}</p>
-                </div>
-              </div>
-              <div v-if="activePlatformOrder.note" class="flex gap-3">
-                <i class="fas fa-note-sticky mt-0.5 w-5 text-center text-[#159f9a]"></i>
-                <div>
-                  <p class="text-[10px] font-black text-gray-400">{{ t('备注', 'Note') }}</p>
-                  <p class="mt-1 text-xs font-bold leading-5 text-gray-800">{{ activePlatformOrder.note }}</p>
-                </div>
-              </div>
-            </div>
-          </section>
+              <p
+                v-if="platformCheckoutFeedback"
+                class="mt-2 text-center text-xs font-bold text-rose-300"
+                aria-live="polite"
+              >
+                {{ platformCheckoutFeedback }}
+              </p>
+            </section>
+          </template>
 
-          <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-order-summary">
-            <h3 class="text-base font-black text-gray-950">{{ activePlatformOrder.merchantName }}</h3>
-            <div class="mt-3 space-y-2">
-              <div v-for="item in activePlatformOrder.items" :key="item.id" class="flex items-center justify-between gap-3 text-xs">
-                <span class="min-w-0 truncate font-bold text-gray-700">{{ item.title }} × {{ item.quantity }}</span>
-                <span class="shrink-0 font-black text-gray-900">{{ displayMoney((item.unitPriceCents * item.quantity / 100).toFixed(2), item.currency) }}</span>
-              </div>
-            </div>
-            <dl class="mt-4 space-y-2 border-t border-gray-100 pt-3 text-xs font-semibold text-gray-500">
-              <div class="flex justify-between gap-3"><dt>{{ t('商品金额', 'Items') }}</dt><dd>{{ displayMoney(activePlatformOrder.itemsTotal, activePlatformOrder.currency) }}</dd></div>
-              <div class="flex justify-between gap-3"><dt>{{ t('配送费', 'Delivery fee') }}</dt><dd>{{ displayMoney(activePlatformOrder.deliveryFee, activePlatformOrder.currency) }}</dd></div>
-              <div class="flex items-end justify-between gap-3 pt-1 text-gray-950"><dt class="font-black">{{ t('合计', 'Total') }}</dt><dd class="text-xl font-black">{{ displayMoney(activePlatformOrder.total, activePlatformOrder.currency) }}</dd></div>
-            </dl>
-          </section>
-
-          <div class="grid grid-cols-2 gap-2">
-            <button type="button" class="min-h-11 rounded-[1rem] bg-white text-xs font-black text-gray-700 shadow-sm ring-1 ring-black/5" @click="openPlatformPage('home')">
-              {{ t('返回首页', 'Back home') }}
-            </button>
-            <button type="button" class="min-h-11 rounded-[1rem] bg-gray-950 text-xs font-black text-white" data-testid="food-delivery-platform-view-orders" @click="openPlatformPage('orders')">
-              {{ t('查看全部订单', 'View all orders') }}
+          <div
+            v-else
+            class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5"
+          >
+            <i class="fas fa-cart-shopping text-2xl text-[#24bcb7]"></i>
+            <p class="mt-3 text-sm font-black text-gray-900">
+              {{ t('购物车已经空了', 'Your cart is empty') }}
+            </p>
+            <button
+              type="button"
+              class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white"
+              @click="openPlatformPage('home')"
+            >
+              {{ t('返回首页选餐', 'Browse shops') }}
             </button>
           </div>
-        </template>
+        </section>
 
-        <div v-else class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5" data-testid="food-delivery-platform-order-missing">
-          <i class="fas fa-receipt text-2xl text-gray-300"></i>
-          <p class="mt-3 text-sm font-black text-gray-900">{{ t('没有找到这笔订单', 'Order not found') }}</p>
-          <button type="button" class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white" @click="openPlatformPage('orders')">
-            {{ t('返回订单列表', 'Back to orders') }}
-          </button>
-        </div>
-      </section>
+        <section
+          v-else-if="platformPageKey === 'orders'"
+          class="space-y-4"
+          data-testid="food-delivery-platform-orders-page"
+        >
+          <header class="flex items-center justify-between gap-3 pt-1">
+            <div class="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+                data-testid="food-delivery-platform-orders-back"
+                :aria-label="t('返回首页', 'Back home')"
+                @click="openPlatformPage('home')"
+              >
+                <i class="fas fa-chevron-left text-sm"></i>
+              </button>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                  {{ t('最近点过', 'Recent orders') }}
+                </p>
+                <h2 class="truncate text-2xl font-black text-gray-950">
+                  {{ t('我的订单', 'My orders') }}
+                </h2>
+              </div>
+            </div>
+            <span
+              class="inline-flex h-11 min-w-11 items-center justify-center rounded-full bg-[#e5fbfa] px-3 text-sm font-black text-[#128e89]"
+            >
+              {{ foodDeliveryStore.platformOrderCount }}
+            </span>
+          </header>
+
+          <div
+            v-if="foodDeliveryStore.recentPlatformOrders.length > 0"
+            class="space-y-3"
+            data-testid="food-delivery-platform-order-list"
+          >
+            <button
+              v-for="order in foodDeliveryStore.recentPlatformOrders"
+              :key="order.id"
+              type="button"
+              class="block w-full rounded-[1.2rem] bg-white p-4 text-left shadow-[0_10px_26px_rgba(15,23,42,0.07)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+              :data-testid="`food-delivery-platform-order-card-${order.id}`"
+              @click="openPlatformOrder(order.id)"
+            >
+              <span class="flex items-start gap-3">
+                <span
+                  class="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] bg-gray-100 text-[#159f9a] ring-1 ring-black/5"
+                  :data-asset-slot="`platform-merchant-mark-${order.merchantId}`"
+                  :data-required-asset="platformMerchantIdentityAssetPath(order.merchantId)"
+                >
+                  <img
+                    :src="platformMissingAssetPlaceholderUrl"
+                    :alt="t('待补商家身份素材', 'Merchant mark pending')"
+                    class="h-full w-full object-contain p-1"
+                    data-asset-placeholder
+                  />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block truncate text-base font-black text-gray-950">{{
+                    order.merchantName
+                  }}</span>
+                  <span class="mt-1 block text-[11px] font-semibold text-gray-500">
+                    {{ formatFoodDeliveryEventTime(order.createdAt) }} ·
+                    {{ platformOrderNumber(order) }}
+                  </span>
+                </span>
+                <span
+                  class="shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black"
+                  :class="resolvePlatformOrderStatus(order.status).badgeClass"
+                >
+                  {{ resolvePlatformOrderStatus(order.status).label }}
+                </span>
+              </span>
+              <span class="mt-3 block truncate text-xs font-semibold text-gray-600">
+                {{ order.items.map((item) => `${item.title} × ${item.quantity}`).join(' · ') }}
+              </span>
+              <span
+                class="mt-3 flex items-center justify-between gap-3 border-t border-gray-100 pt-3"
+              >
+                <span class="text-[11px] font-bold text-gray-500"
+                  >{{ order.itemCount }} {{ t('件', 'items') }} · {{ order.etaMinutes }} min</span
+                >
+                <span class="text-sm font-black text-gray-950">{{
+                  displayMoney(order.total, order.currency)
+                }}</span>
+              </span>
+            </button>
+          </div>
+
+          <div
+            v-else
+            class="rounded-[1.3rem] border border-dashed border-teal-200 bg-white p-7 text-center"
+            data-testid="food-delivery-platform-orders-empty"
+          >
+            <div
+              class="mx-auto flex h-28 w-32 items-center justify-center"
+              data-asset-slot="platform-orders-empty-receipt"
+              data-required-asset="platform/orders/platform-orders-empty-receipt-01.png"
+            >
+              <img
+                :src="platformMissingAssetPlaceholderUrl"
+                :alt="t('待补空订单素材', 'Empty orders artwork pending')"
+                class="h-full w-full object-contain p-1"
+                data-asset-placeholder
+              />
+            </div>
+            <p class="mt-2 text-sm font-black text-gray-900">
+              {{ t('还没有订单', 'No orders yet') }}
+            </p>
+            <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">
+              {{
+                t(
+                  '第一笔订单提交后，可以在这里查看进度和详情。',
+                  'Place your first order to follow its progress and details here.',
+                )
+              }}
+            </p>
+            <button
+              type="button"
+              class="mt-4 rounded-full bg-[#24bcb7] px-4 py-2 text-xs font-black text-white"
+              @click="openPlatformPage('home')"
+            >
+              {{ t('去选小店', 'Browse shops') }}
+            </button>
+          </div>
+        </section>
+
+        <section
+          v-else-if="platformPageKey === 'order'"
+          class="space-y-4"
+          data-testid="food-delivery-platform-order-page"
+        >
+          <header class="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-order-back"
+              :aria-label="t('返回订单列表', 'Back to orders')"
+              @click="openPlatformPage('orders')"
+            >
+              <i class="fas fa-chevron-left text-sm"></i>
+            </button>
+            <div class="min-w-0">
+              <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                {{ t('平台订单', 'Platform order') }}
+              </p>
+              <h2 class="truncate text-2xl font-black text-gray-950">
+                {{ t('订单详情', 'Order details') }}
+              </h2>
+            </div>
+          </header>
+
+          <template v-if="activePlatformOrder">
+            <section
+              class="overflow-hidden rounded-[1.35rem] p-5 text-white"
+              :class="activePlatformOrderStatus.heroClass"
+              :data-order-status="activePlatformOrderStatus.key"
+              data-testid="food-delivery-platform-order-success"
+            >
+              <div class="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-white/65">
+                    {{ activePlatformOrderStatus.eyebrow }}
+                  </p>
+                  <h3 class="mt-1 text-2xl font-black leading-tight">
+                    {{ activePlatformOrderStatus.title }}
+                  </h3>
+                  <p class="mt-2 text-xs font-semibold leading-5 text-white/75">
+                    {{ activePlatformOrderStatus.desc }}
+                  </p>
+                  <span
+                    v-if="
+                      activePlatformOrder.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED &&
+                      activePlatformOrder.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED
+                    "
+                    class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-gray-950/18 px-3 py-1.5 text-[10px] font-black"
+                  >
+                    <i class="far fa-clock"></i>
+                    {{
+                      t(
+                        `约 ${activePlatformOrder.etaMinutes} 分钟`,
+                        `About ${activePlatformOrder.etaMinutes} min`,
+                      )
+                    }}
+                  </span>
+                </div>
+                <div
+                  class="flex h-28 w-28 items-center justify-center"
+                  :data-asset-slot="`platform-order-status-${activePlatformOrderStatus.assetKey}`"
+                  :data-required-asset="`platform/orders/platform-order-status-${activePlatformOrderStatus.assetKey}-01.png`"
+                >
+                  <img
+                    :src="platformMissingAssetPlaceholderUrl"
+                    :alt="t('待补订单状态素材', 'Order status artwork pending')"
+                    class="h-24 w-24 object-contain"
+                    data-asset-placeholder
+                  />
+                </div>
+              </div>
+              <div class="mt-5 grid grid-cols-4 gap-1.5 text-center">
+                <div
+                  v-for="(step, stepIndex) in platformOrderSteps"
+                  :key="step.key"
+                  class="rounded-[0.8rem] px-1 py-2.5"
+                  :class="
+                    activePlatformOrderStatus.stepIndex >= stepIndex
+                      ? 'bg-white/16 text-white'
+                      : 'bg-white/7 text-white/45'
+                  "
+                >
+                  <i :class="step.icon" class="text-xs"></i>
+                  <p class="mt-1 truncate text-[9px] font-black">{{ step.label }}</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-gray-400">
+                    {{ t('订单号', 'Order number') }}
+                  </p>
+                  <p
+                    class="mt-1 text-sm font-black text-gray-800"
+                    :data-order-id="activePlatformOrder.id"
+                    data-testid="food-delivery-platform-order-id"
+                  >
+                    {{ platformOrderNumber(activePlatformOrder) }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-gray-50 px-3 text-[10px] font-black text-gray-600 ring-1 ring-inset ring-gray-100 transition active:bg-gray-100"
+                  data-testid="food-delivery-platform-order-copy"
+                  @click="copyPlatformOrderNumber(activePlatformOrder)"
+                >
+                  <i class="far fa-copy"></i>
+                  {{ platformOrderCopyFeedback || t('复制', 'Copy') }}
+                </button>
+              </div>
+              <p class="mt-1 text-[10px] font-bold text-gray-400">
+                {{ formatFoodDeliveryEventTime(activePlatformOrder.createdAt) }}
+              </p>
+              <div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                <div class="flex gap-3">
+                  <i class="fas fa-location-dot mt-0.5 w-5 text-center text-[#159f9a]"></i>
+                  <div>
+                    <p class="text-[10px] font-black text-gray-400">
+                      {{ t('配送到', 'Deliver to') }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold leading-5 text-gray-800">
+                      {{ activePlatformOrder.deliveryAddress }}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex gap-3">
+                  <i class="fas fa-credit-card mt-0.5 w-5 text-center text-[#159f9a]"></i>
+                  <div>
+                    <p class="text-[10px] font-black text-gray-400">
+                      {{ t('支付方式', 'Payment') }}
+                    </p>
+                    <p class="mt-1 text-xs font-bold text-gray-800">
+                      {{ platformPaymentMethodLabel(activePlatformOrder.paymentMethod) }}
+                    </p>
+                  </div>
+                </div>
+                <div v-if="activePlatformOrder.note" class="flex gap-3">
+                  <i class="fas fa-note-sticky mt-0.5 w-5 text-center text-[#159f9a]"></i>
+                  <div>
+                    <p class="text-[10px] font-black text-gray-400">{{ t('备注', 'Note') }}</p>
+                    <p class="mt-1 text-xs font-bold leading-5 text-gray-800">
+                      {{ activePlatformOrder.note }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section
+              class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-order-summary"
+            >
+              <h3 class="text-base font-black text-gray-950">
+                {{ activePlatformOrder.merchantName }}
+              </h3>
+              <div class="mt-3 space-y-2">
+                <div
+                  v-for="item in activePlatformOrder.items"
+                  :key="item.id"
+                  class="flex items-center justify-between gap-3 text-xs"
+                >
+                  <span class="min-w-0 truncate font-bold text-gray-700"
+                    >{{ item.title }} × {{ item.quantity }}</span
+                  >
+                  <span class="shrink-0 font-black text-gray-900">{{
+                    displayMoney(
+                      ((item.unitPriceCents * item.quantity) / 100).toFixed(2),
+                      item.currency,
+                    )
+                  }}</span>
+                </div>
+              </div>
+              <dl
+                class="mt-4 space-y-2 border-t border-gray-100 pt-3 text-xs font-semibold text-gray-500"
+              >
+                <div class="flex justify-between gap-3">
+                  <dt>{{ t('商品金额', 'Items') }}</dt>
+                  <dd>
+                    {{ displayMoney(activePlatformOrder.itemsTotal, activePlatformOrder.currency) }}
+                  </dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <dt>{{ t('配送费', 'Delivery fee') }}</dt>
+                  <dd>
+                    {{
+                      displayMoney(activePlatformOrder.deliveryFee, activePlatformOrder.currency)
+                    }}
+                  </dd>
+                </div>
+                <div class="flex items-end justify-between gap-3 pt-1 text-gray-950">
+                  <dt class="font-black">{{ t('合计', 'Total') }}</dt>
+                  <dd class="text-xl font-black">
+                    {{ displayMoney(activePlatformOrder.total, activePlatformOrder.currency) }}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                class="min-h-11 rounded-[1rem] bg-white text-xs font-black text-gray-700 shadow-sm ring-1 ring-black/5"
+                @click="openPlatformPage('home')"
+              >
+                {{ t('返回首页', 'Back home') }}
+              </button>
+              <button
+                type="button"
+                class="min-h-11 rounded-[1rem] bg-gray-950 text-xs font-black text-white"
+                data-testid="food-delivery-platform-view-orders"
+                @click="openPlatformPage('orders')"
+              >
+                {{ t('查看全部订单', 'View all orders') }}
+              </button>
+            </div>
+          </template>
+
+          <div
+            v-else
+            class="rounded-[1.25rem] bg-white p-7 text-center shadow-sm ring-1 ring-black/5"
+            data-testid="food-delivery-platform-order-missing"
+          >
+            <i class="fas fa-receipt text-2xl text-gray-300"></i>
+            <p class="mt-3 text-sm font-black text-gray-900">
+              {{ t('没有找到这笔订单', 'Order not found') }}
+            </p>
+            <button
+              type="button"
+              class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white"
+              @click="openPlatformPage('orders')"
+            >
+              {{ t('返回订单列表', 'Back to orders') }}
+            </button>
+          </div>
+        </section>
 
         <nav
           v-if="platformPageKey !== 'checkout' && platformPageKey !== 'order'"
@@ -3737,809 +5018,1459 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </nav>
-      <div
-        v-if="platformMerchantSheetOpen && selectedPlatformMerchant"
-        class="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/42 px-4 pb-4 pt-16 backdrop-blur-sm"
-        data-testid="food-delivery-platform-merchant-dialog"
-        @click.self="closePlatformMerchantSheet"
-      >
-        <section
-          class="max-h-[84vh] w-full max-w-md overflow-y-auto rounded-[1.65rem] bg-white p-4 shadow-[0_24px_70px_rgba(15,23,42,0.28)] ring-1 ring-black/5"
-          data-testid="food-delivery-platform-merchant-detail"
+        <div
+          v-if="platformMerchantSheetOpen && selectedPlatformMerchant"
+          class="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/42 px-4 pb-4 pt-16 backdrop-blur-sm"
+          data-testid="food-delivery-platform-merchant-dialog"
+          @click.self="closePlatformMerchantSheet"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-[11px] font-black text-[#24a9a5]">{{ t('平台内小店', 'Platform merchant') }}</p>
-              <h3 class="mt-1 truncate text-2xl font-black text-gray-950">{{ selectedPlatformMerchant.name }}</h3>
-              <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">{{ selectedPlatformMerchant.desc }}</p>
-            </div>
-            <button
-              type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700"
-              data-testid="food-delivery-platform-merchant-close"
-              aria-label="Close merchant detail"
-              @click="closePlatformMerchantSheet"
-            >
-              <i class="fas fa-xmark"></i>
-            </button>
-          </div>
-
-          <div
-            class="relative mt-4 h-36 overflow-hidden rounded-[1.2rem] bg-gradient-to-br"
-            :class="selectedPlatformMerchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
-            :data-asset-slot="`platform-merchant-cover-${selectedPlatformMerchant.id}`"
-            :data-required-asset="selectedPlatformMerchant.requiredAsset || undefined"
-            :data-merchant-visual-type="selectedPlatformMerchant.visualType || 'food-photo'"
+          <section
+            class="max-h-[84vh] w-full max-w-md overflow-y-auto rounded-[1.65rem] bg-white p-4 shadow-[0_24px_70px_rgba(15,23,42,0.28)] ring-1 ring-black/5"
+            data-testid="food-delivery-platform-merchant-detail"
           >
-            <img
-              v-if="selectedPlatformMerchant.imageUrl"
-              :src="selectedPlatformMerchant.imageUrl"
-              :alt="selectedPlatformMerchant.imageAlt || selectedPlatformMerchant.name"
-              class="relative z-10 h-full w-full"
-              :class="isPlatformLogoMerchant(selectedPlatformMerchant) ? 'object-contain p-7' : 'object-cover'"
-              @error="$event.currentTarget.style.display = 'none'"
-            />
-            <span
-              v-if="isPlatformLogoMerchant(selectedPlatformMerchant)"
-              class="absolute inset-0 m-auto flex h-24 w-32 items-center justify-center whitespace-pre-line text-center text-2xl font-black leading-tight opacity-80"
-            >{{ platformMerchantLogoMark(selectedPlatformMerchant) }}</span>
-            <i v-else :class="selectedPlatformMerchant.icon || 'fas fa-store'" class="absolute inset-0 m-auto h-12 w-12 text-5xl opacity-80"></i>
-            <span class="absolute left-3 top-3 z-20 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#128e89] shadow-sm">
-              {{ selectedPlatformMerchant.badge }}
-            </span>
-          </div>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[11px] font-black text-[#24a9a5]">
+                  {{ t('平台内小店', 'Platform merchant') }}
+                </p>
+                <h3 class="mt-1 truncate text-2xl font-black text-gray-950">
+                  {{ selectedPlatformMerchant.name }}
+                </h3>
+                <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">
+                  {{ selectedPlatformMerchant.desc }}
+                </p>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700"
+                data-testid="food-delivery-platform-merchant-close"
+                aria-label="Close merchant detail"
+                @click="closePlatformMerchantSheet"
+              >
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
 
-          <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
-              <p class="text-[10px] font-black text-gray-400">{{ t('评分', 'Rating') }}</p>
-              <p class="mt-1 text-sm font-black text-gray-950">{{ selectedPlatformMerchant.rating.toFixed(1) }}</p>
-            </div>
-            <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
-              <p class="text-[10px] font-black text-gray-400">{{ t('配送费', 'Delivery') }}</p>
-              <p class="mt-1 text-sm font-black text-gray-950">
-                {{ displayMoney(selectedPlatformMerchant.deliveryFee) }}
-              </p>
-            </div>
-            <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
-              <p class="text-[10px] font-black text-gray-400">{{ t('送达', 'ETA') }}</p>
-              <p class="mt-1 text-sm font-black text-gray-950">{{ selectedPlatformMerchant.deliveryEtaMinutes }} min</p>
-            </div>
-          </div>
-
-          <div class="mt-4 space-y-2" data-testid="food-delivery-platform-merchant-menu">
-            <div class="flex items-center justify-between">
-              <p class="text-sm font-black text-gray-950">{{ t('本店菜单', 'Menu') }}</p>
-              <span class="rounded-full bg-[#e5fbfa] px-3 py-1 text-[11px] font-black text-[#128e89]">
-                {{ selectedPlatformMerchant.menu.length }} {{ t('项', 'items') }}
+            <div
+              class="relative mt-4 h-36 overflow-hidden rounded-[1.2rem] bg-gradient-to-br"
+              :class="
+                selectedPlatformMerchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'
+              "
+              :data-asset-slot="`platform-merchant-cover-${selectedPlatformMerchant.id}`"
+              :data-required-asset="selectedPlatformMerchant.requiredAsset || undefined"
+              :data-merchant-visual-type="selectedPlatformMerchant.visualType || 'food-photo'"
+            >
+              <img
+                v-if="selectedPlatformMerchant.imageUrl"
+                :src="selectedPlatformMerchant.imageUrl"
+                :alt="selectedPlatformMerchant.imageAlt || selectedPlatformMerchant.name"
+                class="relative z-10 h-full w-full"
+                :class="
+                  isPlatformLogoMerchant(selectedPlatformMerchant)
+                    ? 'object-contain p-7'
+                    : 'object-cover'
+                "
+                @error="$event.currentTarget.style.display = 'none'"
+              />
+              <span
+                v-if="isPlatformLogoMerchant(selectedPlatformMerchant)"
+                class="absolute inset-0 m-auto flex h-24 w-32 items-center justify-center whitespace-pre-line text-center text-2xl font-black leading-tight opacity-80"
+                >{{ platformMerchantLogoMark(selectedPlatformMerchant) }}</span
+              >
+              <i
+                v-else
+                :class="selectedPlatformMerchant.icon || 'fas fa-store'"
+                class="absolute inset-0 m-auto h-12 w-12 text-5xl opacity-80"
+              ></i>
+              <span
+                class="absolute left-3 top-3 z-20 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-[#128e89] shadow-sm"
+              >
+                {{ selectedPlatformMerchant.badge }}
               </span>
             </div>
-            <article
-              v-for="(item, itemIndex) in selectedPlatformMerchant.menu"
-              :key="`${selectedPlatformMerchant.id}-${item.title}`"
-              class="flex items-center gap-3 rounded-[1rem] bg-[#f7fbfb] p-2.5"
-              :data-testid="`food-delivery-platform-menu-item-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+
+            <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
+                <p class="text-[10px] font-black text-gray-400">{{ t('评分', 'Rating') }}</p>
+                <p class="mt-1 text-sm font-black text-gray-950">
+                  {{ selectedPlatformMerchant.rating.toFixed(1) }}
+                </p>
+              </div>
+              <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
+                <p class="text-[10px] font-black text-gray-400">{{ t('配送费', 'Delivery') }}</p>
+                <p class="mt-1 text-sm font-black text-gray-950">
+                  {{ displayMoney(selectedPlatformMerchant.deliveryFee) }}
+                </p>
+              </div>
+              <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
+                <p class="text-[10px] font-black text-gray-400">{{ t('送达', 'ETA') }}</p>
+                <p class="mt-1 text-sm font-black text-gray-950">
+                  {{ selectedPlatformMerchant.deliveryEtaMinutes }} min
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-2" data-testid="food-delivery-platform-merchant-menu">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-black text-gray-950">{{ t('本店菜单', 'Menu') }}</p>
+                <span
+                  class="rounded-full bg-[#e5fbfa] px-3 py-1 text-[11px] font-black text-[#128e89]"
+                >
+                  {{ selectedPlatformMerchant.menu.length }} {{ t('项', 'items') }}
+                </span>
+              </div>
+              <article
+                v-for="(item, itemIndex) in selectedPlatformMerchant.menu"
+                :key="`${selectedPlatformMerchant.id}-${item.title}`"
+                class="flex items-center gap-3 rounded-[1rem] bg-[#f7fbfb] p-2.5"
+                :data-testid="`food-delivery-platform-menu-item-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+              >
+                <div
+                  class="h-16 w-16 shrink-0 overflow-hidden rounded-[0.8rem] bg-white ring-1 ring-black/[0.04]"
+                  data-platform-menu-image
+                  :data-asset-slot="`platform-menu-image-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                  :data-required-asset="
+                    platformMenuItemAssetPath(selectedPlatformMerchant, itemIndex)
+                  "
+                >
+                  <img
+                    :src="platformMenuItemImageUrl(selectedPlatformMerchant, item, itemIndex)"
+                    :alt="item.title"
+                    class="h-full w-full object-cover"
+                  />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-black text-gray-950">{{ item.title }}</p>
+                  <p class="mt-0.5 line-clamp-2 text-[11px] font-semibold leading-4 text-gray-500">
+                    {{ item.desc }}
+                  </p>
+                </div>
+                <div class="flex shrink-0 flex-col items-end gap-2">
+                  <span class="text-xs font-black text-gray-950">{{
+                    displayMoney(item.price)
+                  }}</span>
+                  <button
+                    v-if="platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) === 0"
+                    type="button"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#24bcb7] text-white shadow-sm transition active:scale-95"
+                    :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
+                    :data-testid="`food-delivery-platform-menu-add-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                    @click="addPlatformMenuItemToCart(item, itemIndex)"
+                  >
+                    <i class="fas fa-plus text-[10px]"></i>
+                  </button>
+                  <div
+                    v-else
+                    class="flex h-8 items-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/5"
+                  >
+                    <button
+                      type="button"
+                      class="inline-flex h-8 w-8 items-center justify-center text-gray-500 transition active:bg-gray-100"
+                      :aria-label="t(`减少 ${item.title}`, `Remove one ${item.title}`)"
+                      :data-testid="`food-delivery-platform-menu-decrease-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                      @click="
+                        updatePlatformCartItemQuantity(
+                          platformMenuItemId(selectedPlatformMerchant.id, itemIndex),
+                          platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) - 1,
+                        )
+                      "
+                    >
+                      <i class="fas fa-minus text-[9px]"></i>
+                    </button>
+                    <span
+                      class="min-w-5 text-center text-xs font-black text-gray-950"
+                      :data-testid="`food-delivery-platform-menu-quantity-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                    >
+                      {{ platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) }}
+                    </span>
+                    <button
+                      type="button"
+                      class="inline-flex h-8 w-8 items-center justify-center bg-[#24bcb7] text-white transition active:bg-[#159f9a]"
+                      :aria-label="t(`增加 ${item.title}`, `Add one ${item.title}`)"
+                      :data-testid="`food-delivery-platform-menu-increase-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                      @click="addPlatformMenuItemToCart(item, itemIndex)"
+                    >
+                      <i class="fas fa-plus text-[9px]"></i>
+                    </button>
+                  </div>
+                </div>
+              </article>
+              <p
+                class="sr-only"
+                aria-live="polite"
+                data-testid="food-delivery-platform-cart-feedback"
+              >
+                {{ platformCartFeedback }}
+              </p>
+              <button
+                v-if="foodDeliveryStore.platformCartQuantity > 0"
+                type="button"
+                class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)]"
+                data-testid="food-delivery-platform-menu-view-cart"
+                @click="openPlatformCartFromMerchant"
+              >
+                <span>{{ t('查看购物车', 'View cart') }}</span>
+                <span class="flex items-center gap-2">
+                  {{ foodDeliveryStore.platformCartQuantity }} {{ t('件', 'items') }}
+                  <i class="fas fa-chevron-right text-[10px]"></i>
+                </span>
+              </button>
+            </div>
+          </section>
+        </div>
+        <div
+          v-if="platformUtilitySheetContent"
+          class="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/42 px-4 pb-4 pt-16 backdrop-blur-sm"
+          data-testid="food-delivery-platform-utility-dialog"
+          @click.self="closePlatformUtilitySheet"
+        >
+          <section
+            class="max-h-[84vh] w-full max-w-md overflow-y-auto rounded-[1.65rem] bg-white p-4 shadow-[0_24px_70px_rgba(15,23,42,0.28)] ring-1 ring-black/5"
+            :data-utility-key="platformUtilitySheetKey"
+            data-testid="food-delivery-platform-utility-sheet"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex min-w-0 items-center gap-3">
+                <span
+                  class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#159f9a]"
+                >
+                  <i :class="platformUtilitySheetContent.icon"></i>
+                </span>
+                <div class="min-w-0">
+                  <h3 class="truncate text-lg font-black text-gray-950">
+                    {{ platformUtilitySheetContent.title }}
+                  </h3>
+                  <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">
+                    {{ platformUtilitySheetContent.desc }}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700"
+                data-testid="food-delivery-platform-utility-close"
+                :aria-label="t('关闭', 'Close')"
+                @click="closePlatformUtilitySheet"
+              >
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+
+            <div v-if="platformUtilitySheetKey === 'notifications'" class="mt-4 space-y-2">
+              <div class="flex items-center gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
+                <i class="fas fa-ticket text-[#24bcb7]"></i>
+                <p class="text-xs font-bold text-gray-700">
+                  {{ t('本周免配送权益可领取。', 'Free-delivery perks are ready this week.') }}
+                </p>
+              </div>
+              <div class="flex items-center gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
+                <i class="fas fa-store text-[#ff7a37]"></i>
+                <p class="text-xs font-bold text-gray-700">
+                  {{ t('附近 11 家平台小店正在营业。', 'Eleven nearby platform shops are open.') }}
+                </p>
+              </div>
+            </div>
+
+            <div
+              v-else-if="
+                platformUtilitySheetKey === 'cart' && foodDeliveryStore.platformCartItems.length > 0
+              "
+              class="mt-4 space-y-3"
+              data-testid="food-delivery-platform-cart-content"
             >
               <div
-                class="h-16 w-16 shrink-0 overflow-hidden rounded-[0.8rem] bg-white ring-1 ring-black/[0.04]"
-                data-platform-menu-image
-                :data-asset-slot="`platform-menu-image-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
-                :data-required-asset="platformMenuItemAssetPath(selectedPlatformMerchant, itemIndex)"
+                class="flex items-center justify-between gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3"
               >
-                <img
-                  :src="platformMenuItemImageUrl(selectedPlatformMerchant, item, itemIndex)"
-                  :alt="item.title"
-                  class="h-full w-full object-cover"
-                />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-black text-gray-950">{{ item.title }}</p>
-                <p class="mt-0.5 line-clamp-2 text-[11px] font-semibold leading-4 text-gray-500">{{ item.desc }}</p>
-              </div>
-              <div class="flex shrink-0 flex-col items-end gap-2">
-                <span class="text-xs font-black text-gray-950">{{ displayMoney(item.price) }}</span>
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                    {{ t('当前小店', 'Current shop') }}
+                  </p>
+                  <p class="mt-1 truncate text-sm font-black text-gray-950">
+                    {{ foodDeliveryStore.platformCartItems[0]?.merchantName }}
+                  </p>
+                </div>
                 <button
-                  v-if="platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) === 0"
                   type="button"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#24bcb7] text-white shadow-sm transition active:scale-95"
-                  :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
-                  :data-testid="`food-delivery-platform-menu-add-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
-                  @click="addPlatformMenuItemToCart(item, itemIndex)"
+                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm"
+                  data-testid="food-delivery-platform-cart-clear"
+                  :aria-label="t('清空购物车', 'Clear cart')"
+                  @click="foodDeliveryStore.clearPlatformCart()"
                 >
-                  <i class="fas fa-plus text-[10px]"></i>
+                  <i class="fas fa-trash-can text-xs"></i>
                 </button>
+              </div>
+
+              <article
+                v-for="item in foodDeliveryStore.platformCartItems"
+                :key="item.itemId"
+                class="flex items-center justify-between gap-3 rounded-[1rem] border border-gray-100 px-3 py-3"
+                :data-testid="`food-delivery-platform-cart-line-${item.itemId}`"
+              >
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-black text-gray-950">{{ item.title }}</p>
+                  <p class="mt-1 text-xs font-bold text-gray-500">
+                    {{ platformCartLineTotal(item) }}
+                  </p>
+                </div>
                 <div
-                  v-else
-                  class="flex h-8 items-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/5"
+                  class="flex h-9 shrink-0 items-center overflow-hidden rounded-full bg-gray-100"
                 >
                   <button
                     type="button"
-                    class="inline-flex h-8 w-8 items-center justify-center text-gray-500 transition active:bg-gray-100"
+                    class="inline-flex h-9 w-9 items-center justify-center text-gray-500 transition active:bg-gray-200"
                     :aria-label="t(`减少 ${item.title}`, `Remove one ${item.title}`)"
-                    :data-testid="`food-delivery-platform-menu-decrease-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
-                    @click="updatePlatformCartItemQuantity(
-                      platformMenuItemId(selectedPlatformMerchant.id, itemIndex),
-                      platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) - 1,
-                    )"
+                    :data-testid="`food-delivery-platform-cart-decrease-${item.itemId}`"
+                    @click="updatePlatformCartItemQuantity(item.itemId, item.quantity - 1)"
                   >
                     <i class="fas fa-minus text-[9px]"></i>
                   </button>
                   <span
-                    class="min-w-5 text-center text-xs font-black text-gray-950"
-                    :data-testid="`food-delivery-platform-menu-quantity-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                    class="min-w-6 text-center text-xs font-black text-gray-950"
+                    :data-testid="`food-delivery-platform-cart-quantity-${item.itemId}`"
                   >
-                    {{ platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) }}
+                    {{ item.quantity }}
                   </span>
                   <button
                     type="button"
-                    class="inline-flex h-8 w-8 items-center justify-center bg-[#24bcb7] text-white transition active:bg-[#159f9a]"
+                    class="inline-flex h-9 w-9 items-center justify-center bg-[#24bcb7] text-white transition active:bg-[#159f9a]"
                     :aria-label="t(`增加 ${item.title}`, `Add one ${item.title}`)"
-                    :data-testid="`food-delivery-platform-menu-increase-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
-                    @click="addPlatformMenuItemToCart(item, itemIndex)"
+                    :data-testid="`food-delivery-platform-cart-increase-${item.itemId}`"
+                    @click="updatePlatformCartItemQuantity(item.itemId, item.quantity + 1)"
                   >
                     <i class="fas fa-plus text-[9px]"></i>
                   </button>
                 </div>
-              </div>
-            </article>
-            <p class="sr-only" aria-live="polite" data-testid="food-delivery-platform-cart-feedback">
-              {{ platformCartFeedback }}
-            </p>
-            <button
-              v-if="foodDeliveryStore.platformCartQuantity > 0"
-              type="button"
-              class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)]"
-              data-testid="food-delivery-platform-menu-view-cart"
-              @click="openPlatformCartFromMerchant"
-            >
-              <span>{{ t('查看购物车', 'View cart') }}</span>
-              <span class="flex items-center gap-2">
-                {{ foodDeliveryStore.platformCartQuantity }} {{ t('件', 'items') }}
-                <i class="fas fa-chevron-right text-[10px]"></i>
-              </span>
-            </button>
-          </div>
-        </section>
-      </div>
-      <div
-        v-if="platformUtilitySheetContent"
-        class="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/42 px-4 pb-4 pt-16 backdrop-blur-sm"
-        data-testid="food-delivery-platform-utility-dialog"
-        @click.self="closePlatformUtilitySheet"
-      >
-        <section
-          class="max-h-[84vh] w-full max-w-md overflow-y-auto rounded-[1.65rem] bg-white p-4 shadow-[0_24px_70px_rgba(15,23,42,0.28)] ring-1 ring-black/5"
-          :data-utility-key="platformUtilitySheetKey"
-          data-testid="food-delivery-platform-utility-sheet"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-3">
-              <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#159f9a]">
-                <i :class="platformUtilitySheetContent.icon"></i>
-              </span>
-              <div class="min-w-0">
-                <h3 class="truncate text-lg font-black text-gray-950">{{ platformUtilitySheetContent.title }}</h3>
-                <p class="mt-1 text-xs font-semibold leading-5 text-gray-500">{{ platformUtilitySheetContent.desc }}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700"
-              data-testid="food-delivery-platform-utility-close"
-              :aria-label="t('关闭', 'Close')"
-              @click="closePlatformUtilitySheet"
-            >
-              <i class="fas fa-xmark"></i>
-            </button>
-          </div>
+              </article>
 
-          <div v-if="platformUtilitySheetKey === 'notifications'" class="mt-4 space-y-2">
-            <div class="flex items-center gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
-              <i class="fas fa-ticket text-[#24bcb7]"></i>
-              <p class="text-xs font-bold text-gray-700">{{ t('本周免配送权益可领取。', 'Free-delivery perks are ready this week.') }}</p>
-            </div>
-            <div class="flex items-center gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
-              <i class="fas fa-store text-[#ff7a37]"></i>
-              <p class="text-xs font-bold text-gray-700">{{ t('附近 11 家平台小店正在营业。', 'Eleven nearby platform shops are open.') }}</p>
-            </div>
-          </div>
-
-          <div
-            v-else-if="platformUtilitySheetKey === 'cart' && foodDeliveryStore.platformCartItems.length > 0"
-            class="mt-4 space-y-3"
-            data-testid="food-delivery-platform-cart-content"
-          >
-            <div class="flex items-center justify-between gap-3 rounded-[1rem] bg-[#f3fbfb] px-3 py-3">
-              <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-[#159f9a]">{{ t('当前小店', 'Current shop') }}</p>
-                <p class="mt-1 truncate text-sm font-black text-gray-950">
-                  {{ foodDeliveryStore.platformCartItems[0]?.merchantName }}
-                </p>
-              </div>
-              <button
-                type="button"
-                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm"
-                data-testid="food-delivery-platform-cart-clear"
-                :aria-label="t('清空购物车', 'Clear cart')"
-                @click="foodDeliveryStore.clearPlatformCart()"
-              >
-                <i class="fas fa-trash-can text-xs"></i>
-              </button>
-            </div>
-
-            <article
-              v-for="item in foodDeliveryStore.platformCartItems"
-              :key="item.itemId"
-              class="flex items-center justify-between gap-3 rounded-[1rem] border border-gray-100 px-3 py-3"
-              :data-testid="`food-delivery-platform-cart-line-${item.itemId}`"
-            >
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-black text-gray-950">{{ item.title }}</p>
-                <p class="mt-1 text-xs font-bold text-gray-500">{{ platformCartLineTotal(item) }}</p>
-              </div>
-              <div class="flex h-9 shrink-0 items-center overflow-hidden rounded-full bg-gray-100">
-                <button
-                  type="button"
-                  class="inline-flex h-9 w-9 items-center justify-center text-gray-500 transition active:bg-gray-200"
-                  :aria-label="t(`减少 ${item.title}`, `Remove one ${item.title}`)"
-                  :data-testid="`food-delivery-platform-cart-decrease-${item.itemId}`"
-                  @click="updatePlatformCartItemQuantity(item.itemId, item.quantity - 1)"
-                >
-                  <i class="fas fa-minus text-[9px]"></i>
-                </button>
-                <span
-                  class="min-w-6 text-center text-xs font-black text-gray-950"
-                  :data-testid="`food-delivery-platform-cart-quantity-${item.itemId}`"
-                >
-                  {{ item.quantity }}
-                </span>
-                <button
-                  type="button"
-                  class="inline-flex h-9 w-9 items-center justify-center bg-[#24bcb7] text-white transition active:bg-[#159f9a]"
-                  :aria-label="t(`增加 ${item.title}`, `Add one ${item.title}`)"
-                  :data-testid="`food-delivery-platform-cart-increase-${item.itemId}`"
-                  @click="updatePlatformCartItemQuantity(item.itemId, item.quantity + 1)"
-                >
-                  <i class="fas fa-plus text-[9px]"></i>
-                </button>
-              </div>
-            </article>
-
-            <div class="flex items-end justify-between gap-4 border-t border-gray-100 pt-3">
-              <div>
-                <p class="text-[10px] font-black uppercase text-gray-400">{{ t('商品合计', 'Items total') }}</p>
-                <p class="mt-1 text-lg font-black text-gray-950" data-testid="food-delivery-platform-cart-total">
-                  {{ displayMoney(foodDeliveryStore.platformCartPrimaryTotal.amount, foodDeliveryStore.platformCartPrimaryTotal.currency) }}
-                </p>
-              </div>
-              <p class="max-w-[11rem] text-right text-[10px] font-semibold leading-4 text-gray-400">
-                {{ t('下单后可在订单页查看制作和配送进度。', 'Follow preparation and delivery progress after placing the order.') }}
-              </p>
-            </div>
-            <button
-              type="button"
-              class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)] transition active:scale-[0.99]"
-              data-testid="food-delivery-platform-cart-checkout"
-              @click="openPlatformCheckout"
-            >
-              <span>{{ t('去结算', 'Checkout') }}</span>
-              <span class="flex items-center gap-2">
-                {{ displayMoney(platformCheckoutTotal.amount, platformCheckoutTotal.currency) }}
-                <i class="fas fa-chevron-right text-[10px]"></i>
-              </span>
-            </button>
-          </div>
-
-          <div v-else class="mt-4 rounded-[1rem] bg-[#f3fbfb] p-4 text-center">
-            <i class="fas fa-store text-xl text-[#24bcb7]"></i>
-            <p class="mt-2 text-xs font-bold leading-5 text-gray-600">
-              {{
-                platformUtilitySheetKey === 'orders'
-                  ? t('还没有平台内小店订单。进入小店下单后再回到这里查看。', 'No platform-shop orders yet. Place an order in a shop, then return here.')
-                  : t('购物车还是空的，先选择一家平台小店。', 'Your cart is empty. Choose a platform shop first.')
-              }}
-            </p>
-            <button
-              type="button"
-              class="mt-3 inline-flex items-center gap-2 rounded-full bg-[#24bcb7] px-4 py-2 text-xs font-black text-white"
-              data-testid="food-delivery-platform-utility-browse"
-              @click="browsePlatformMerchantsFromUtilitySheet"
-            >
-              {{ t('去选小店', 'Browse shops') }}
-              <i class="fas fa-chevron-right text-[10px]"></i>
-            </button>
-          </div>
-        </section>
-      </div>
-      <section v-if="false" class="hidden space-y-5" data-testid="food-delivery-pseudo-folder-home">
-        <article
-          class="relative overflow-hidden rounded-[2rem] bg-[#65d9d5] p-5 text-gray-950 shadow-[0_20px_48px_rgba(18,126,124,0.18)]"
-          data-testid="food-delivery-platform-entry"
-        >
-          <div class="relative z-10 max-w-[62%]">
-            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-teal-900/70">
-              {{ t('外卖平台', 'Food Platform') }}
-            </p>
-            <h2 class="mt-3 text-2xl font-black leading-tight">
-              {{ t('今天也想吃点好吃的？', 'Good food for today?') }}
-            </h2>
-            <button
-              type="button"
-              class="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-gray-950 shadow-sm"
-              @click="openCategory(activeCategory.key)"
-            >
-              {{ t('现在看看', 'Browse now') }}
-              <i class="fas fa-chevron-right text-[10px]"></i>
-            </button>
-          </div>
-          <div
-            class="absolute -right-4 bottom-0 h-36 w-36 overflow-hidden rounded-full bg-white/45 p-2 shadow-[0_16px_40px_rgba(8,86,84,0.22)]"
-            data-testid="food-delivery-platform-hero-image"
-          >
-            <img
-              v-if="platformHeroImageUrl"
-              :src="platformHeroImageUrl"
-              :alt="platformHeroMenuItem?.image?.alt || platformHeroRestaurant?.name || 'Food'"
-              class="h-full w-full rounded-full object-cover"
-            />
-            <div v-else class="flex h-full w-full items-center justify-center rounded-full bg-white text-4xl text-teal-500">
-              <i class="fas fa-bowl-food"></i>
-            </div>
-          </div>
-          <span class="absolute bottom-4 left-5 rounded-full bg-black/70 px-3 py-1 text-[11px] font-black text-white">
-            {{ platformRestaurantCount }} {{ t('家小店', 'shops') }}
-          </span>
-        </article>
-
-        <section
-          class="rounded-[1.75rem] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
-          data-testid="food-delivery-category-panel"
-        >
-          <div class="grid grid-cols-5 gap-2">
-            <button
-              v-for="category in platformCategoryTiles"
-              :key="category.key"
-              type="button"
-              class="min-h-[5.6rem] rounded-[1.25rem] p-2 text-center transition"
-              :class="category.active ? 'bg-[#e6fbfa] text-gray-950 ring-1 ring-[#24bcb7]/35' : 'bg-white text-gray-800'"
-              :data-testid="`food-delivery-category-${category.key}`"
-              @click="openCategory(category.key)"
-            >
-              <span
-                class="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-2xl text-lg"
-                :class="category.active ? 'bg-[#24bcb7] text-white' : 'bg-gray-50 text-gray-950'"
-              >
-                <i :class="category.icon"></i>
-              </span>
-              <span class="mt-2 block truncate text-[11px] font-black">{{ category.label }}</span>
-              <span class="sr-only">{{ category.key }}</span>
-              <span class="mt-0.5 block text-[10px] font-semibold text-gray-400">
-                {{ category.restaurantCount }} {{ t('店', 'shops') }}
-              </span>
-            </button>
-          </div>
-        </section>
-
-        <section class="grid grid-cols-3 gap-2" data-testid="food-delivery-platform-benefits">
-          <article
-            v-for="card in platformBenefitCards"
-            :key="card.key"
-            class="rounded-[1.35rem] bg-gradient-to-br p-3 shadow-sm ring-1 ring-black/5"
-            :class="card.className"
-          >
-            <i :class="card.icon" class="text-lg"></i>
-            <p class="mt-2 text-xs font-black leading-4">{{ card.title }}</p>
-            <p class="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 opacity-70">{{ card.desc }}</p>
-          </article>
-        </section>
-
-        <section
-          class="space-y-3"
-          data-testid="food-delivery-data-baseline"
-        >
-          <div class="flex items-end justify-between gap-3">
-            <div>
-              <p class="text-xl font-black text-gray-950">{{ t('附近热门小店', 'Popular nearby') }}</p>
-              <span class="hidden">Local data</span>
-              <p class="mt-1 text-xs font-semibold text-gray-500">
-                {{ activeCategoryLabel }} · {{ platformMenuItemCount }} {{ t('个菜单项', 'menu item(s)') }}
-              </p>
-            </div>
-            <button
-              type="button"
-              class="rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
-              @click="openCategory(activeCategory.key)"
-            >
-              {{ t('全部', 'All') }}
-            </button>
-          </div>
-
-          <div class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2" data-testid="food-delivery-shop-app-list">
-            <article
-              v-for="restaurant in platformFeaturedRestaurants"
-              :key="restaurant.id"
-              class="w-[11.4rem] shrink-0"
-              :data-testid="`food-delivery-shop-app-${restaurant.id}`"
-              :data-store-tone="restaurant.visual.tone"
-            >
-              <button
-                type="button"
-                class="group block w-full text-left"
-                :data-testid="`food-delivery-open-store-${restaurant.id}`"
-                @click="openRestaurantStore(restaurant)"
-              >
-                <div
-                  class="relative h-28 overflow-hidden rounded-[1.35rem] bg-gray-100 shadow-[0_14px_30px_rgba(15,23,42,0.12)]"
-                  :data-testid="`food-delivery-restaurant-${restaurant.id}`"
-                >
-                  <img
-                    v-if="foodImageUrl(restaurant)"
-                    :src="foodImageUrl(restaurant)"
-                    :alt="restaurant.image?.alt || restaurant.name"
-                    class="h-full w-full object-cover transition duration-300 group-active:scale-[1.03]"
-                  />
-                  <div v-else class="flex h-full w-full items-center justify-center text-3xl text-[#24bcb7]">
-                    <i class="fas fa-store"></i>
-                  </div>
-                  <span class="absolute left-2 top-2 rounded-full bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white">
-                    {{ t('精选', 'Pick') }}
-                  </span>
+              <div class="flex items-end justify-between gap-4 border-t border-gray-100 pt-3">
+                <div>
+                  <p class="text-[10px] font-black uppercase text-gray-400">
+                    {{ t('商品合计', 'Items total') }}
+                  </p>
+                  <p
+                    class="mt-1 text-lg font-black text-gray-950"
+                    data-testid="food-delivery-platform-cart-total"
+                  >
+                    {{
+                      displayMoney(
+                        foodDeliveryStore.platformCartPrimaryTotal.amount,
+                        foodDeliveryStore.platformCartPrimaryTotal.currency,
+                      )
+                    }}
+                  </p>
                 </div>
-                <p class="mt-2 truncate text-sm font-black text-gray-950">{{ restaurant.displayName }}</p>
-                <p class="mt-1 text-[11px] font-semibold text-gray-500">
-                  {{ restaurant.rating.toFixed(1) }} ★ · {{ restaurant.deliveryEtaMinutes }} min ·
-                  {{ restaurant.deliveryFee }} {{ restaurant.currency }}
-                </p>
-                <p class="mt-1 truncate text-[11px] font-semibold text-gray-400">
-                  {{ restaurant.shortDescription }}
-                </p>
                 <p
-                  v-if="restaurant.entryTags.length"
-                  class="mt-1 truncate text-[10px] font-black text-[#24a9a5]"
+                  class="max-w-[11rem] text-right text-[10px] font-semibold leading-4 text-gray-400"
                 >
-                  {{ restaurant.entryTags.join(' · ') }}
+                  {{
+                    t(
+                      '下单后可在订单页查看制作和配送进度。',
+                      'Follow preparation and delivery progress after placing the order.',
+                    )
+                  }}
                 </p>
+              </div>
+              <button
+                type="button"
+                class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)] transition active:scale-[0.99]"
+                data-testid="food-delivery-platform-cart-checkout"
+                @click="openPlatformCheckout"
+              >
+                <span>{{ t('去结算', 'Checkout') }}</span>
+                <span class="flex items-center gap-2">
+                  {{ displayMoney(platformCheckoutTotal.amount, platformCheckoutTotal.currency) }}
+                  <i class="fas fa-chevron-right text-[10px]"></i>
+                </span>
               </button>
-            </article>
-            <div
-              v-if="platformFeaturedRestaurants.length === 0"
-              class="w-full rounded-[1.35rem] border border-dashed border-teal-200 bg-white p-5 text-center text-xs font-semibold leading-5 text-teal-700"
-              data-testid="food-delivery-shop-app-empty"
-            >
-              {{
-                t(
-                  'No installed shop mini apps in this folder view. Add them from App Store.',
-                  'No installed shop mini apps in this folder view. Add them from App Store.',
-                )
-              }}
             </div>
-          </div>
-        </section>
-      </section>
 
-      <section v-if="false" class="hidden space-y-4 rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-pseudo-folder-home-legacy">
-        <article class="overflow-hidden rounded-3xl bg-gray-950 p-4 text-white" data-testid="food-delivery-platform-entry">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-200">
-                {{ t('固定入口', 'Fixed entry') }}
-              </p>
-              <h2 class="mt-1 text-lg font-black">{{ t('外卖平台', 'Food Platform') }}</h2>
-              <p class="mt-2 text-xs leading-5 text-white/70">
+            <div v-else class="mt-4 rounded-[1rem] bg-[#f3fbfb] p-4 text-center">
+              <i class="fas fa-store text-xl text-[#24bcb7]"></i>
+              <p class="mt-2 text-xs font-bold leading-5 text-gray-600">
                 {{
-                  t(
-                    '搜索、附近、订单与所有店铺发现都从这里进入。',
-                    'Search, nearby, and broad discovery stay here.',
-                  )
+                  platformUtilitySheetKey === 'orders'
+                    ? t(
+                        '还没有平台内小店订单。进入小店下单后再回到这里查看。',
+                        'No platform-shop orders yet. Place an order in a shop, then return here.',
+                      )
+                    : t(
+                        '购物车还是空的，先选择一家平台小店。',
+                        'Your cart is empty. Choose a platform shop first.',
+                      )
                 }}
               </p>
+              <button
+                type="button"
+                class="mt-3 inline-flex items-center gap-2 rounded-full bg-[#24bcb7] px-4 py-2 text-xs font-black text-white"
+                data-testid="food-delivery-platform-utility-browse"
+                @click="browsePlatformMerchantsFromUtilitySheet"
+              >
+                {{ t('去选小店', 'Browse shops') }}
+                <i class="fas fa-chevron-right text-[10px]"></i>
+              </button>
             </div>
-            <span class="shrink-0 rounded-2xl bg-white/10 px-3 py-2 text-right text-[11px] font-bold">
-              {{ platformRestaurantCount }} {{ t('店', 'shops') }}
-            </span>
-          </div>
-        </article>
-      <section class="rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-category-panel">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-bold">{{ t('筛选店铺', 'Filter shops') }}</p>
-            <p class="mt-1 text-xs text-gray-500">{{ activeCategoryLabel }}</p>
-          </div>
-          <span class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600">
-            {{ activeCategory.key }}
-          </span>
+          </section>
         </div>
-        <p class="mt-3 rounded-2xl bg-orange-50 p-3 text-xs leading-5 text-orange-700">
-          {{ activeCategoryDesc }}
-        </p>
-
-        <div class="mt-3 grid grid-cols-2 gap-2">
-          <button
-            v-for="category in categoryCards"
-            :key="category.key"
-            class="rounded-2xl border p-3 text-left transition"
-            :class="category.active ? 'border-orange-300 bg-orange-50' : 'border-gray-100 bg-gray-50'"
-            :data-testid="`food-delivery-category-${category.key}`"
-            @click="openCategory(category.key)"
-          >
-            <span
-              class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white"
-              :class="category.active ? 'bg-orange-500' : 'bg-gray-900'"
-            >
-              <i :class="category.icon"></i>
-            </span>
-            <p class="mt-2 text-xs font-bold">{{ category.label }}</p>
-            <p class="mt-1 line-clamp-2 text-[10px] leading-4 text-gray-500">{{ category.desc }}</p>
-          </button>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-orange-100 bg-white p-4" data-testid="food-delivery-data-baseline">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-bold">{{ t('小店 APP', 'Shop apps') }}</p>
-            <p class="mt-1 text-xs" :class="isStoreMode ? 'text-slate-400' : 'text-gray-500'">
-              {{ platformRestaurantCount }} {{ t('家小店', 'shop(s)') }} ·
-              {{ platformMenuItemCount }} {{ t('个菜单项', 'menu item(s)') }}
-            </p>
-          </div>
-          <span class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600">
-            {{ t('本地数据', 'Local data') }}
-          </span>
-        </div>
-
-        <div class="mt-3 grid grid-cols-2 gap-3" data-testid="food-delivery-shop-app-list">
+        <section
+          v-if="false"
+          class="hidden space-y-5"
+          data-testid="food-delivery-pseudo-folder-home"
+        >
           <article
-            v-for="restaurant in shopAppEntries"
-            :key="restaurant.id"
-            class="rounded-3xl border border-orange-100 bg-orange-50/70 p-3"
-            :data-testid="`food-delivery-shop-app-${restaurant.id}`"
-            :data-store-tone="restaurant.visual.tone"
+            class="relative overflow-hidden rounded-[2rem] bg-[#65d9d5] p-5 text-gray-950 shadow-[0_20px_48px_rgba(18,126,124,0.18)]"
+            data-testid="food-delivery-platform-entry"
           >
-            <div class="flex h-full flex-col gap-3" :data-testid="`food-delivery-restaurant-${restaurant.id}`">
-              <div class="h-24 w-full overflow-hidden rounded-3xl bg-white">
-                <img
-                  v-if="foodImageUrl(restaurant)"
-                  :src="foodImageUrl(restaurant)"
-                  :alt="restaurant.image?.alt || restaurant.name"
-                  class="h-full w-full object-cover"
-                />
-                <div v-else class="flex h-full w-full items-center justify-center text-2xl text-orange-500">
-                  <i class="fas fa-utensils"></i>
-                </div>
+            <div class="relative z-10 max-w-[62%]">
+              <p class="text-[11px] font-black uppercase tracking-[0.18em] text-teal-900/70">
+                {{ t('外卖平台', 'Food Platform') }}
+              </p>
+              <h2 class="mt-3 text-2xl font-black leading-tight">
+                {{ t('今天也想吃点好吃的？', 'Good food for today?') }}
+              </h2>
+              <button
+                type="button"
+                class="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-gray-950 shadow-sm"
+                @click="openCategory(activeCategory.key)"
+              >
+                {{ t('现在看看', 'Browse now') }}
+                <i class="fas fa-chevron-right text-[10px]"></i>
+              </button>
+            </div>
+            <div
+              class="absolute -right-4 bottom-0 h-36 w-36 overflow-hidden rounded-full bg-white/45 p-2 shadow-[0_16px_40px_rgba(8,86,84,0.22)]"
+              data-testid="food-delivery-platform-hero-image"
+            >
+              <img
+                v-if="platformHeroImageUrl"
+                :src="platformHeroImageUrl"
+                :alt="platformHeroMenuItem?.image?.alt || platformHeroRestaurant?.name || 'Food'"
+                class="h-full w-full rounded-full object-cover"
+              />
+              <div
+                v-else
+                class="flex h-full w-full items-center justify-center rounded-full bg-white text-4xl text-teal-500"
+              >
+                <i class="fas fa-bowl-food"></i>
               </div>
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-bold">{{ restaurant.displayName }}</p>
-                <p class="mt-1 text-[11px] text-orange-700">
-                  {{ restaurant.shortDescription }} · {{ restaurant.rating.toFixed(1) }} ★ ·
-                  {{ restaurant.deliveryEtaMinutes }} min · {{ restaurant.distanceKm }} km
-                </p>
-                <p
-                  v-if="restaurant.entryTags.length"
-                  class="mt-1 truncate text-[10px] font-semibold text-orange-600"
+            </div>
+            <span
+              class="absolute bottom-4 left-5 rounded-full bg-black/70 px-3 py-1 text-[11px] font-black text-white"
+            >
+              {{ platformRestaurantCount }} {{ t('家小店', 'shops') }}
+            </span>
+          </article>
+
+          <section
+            class="rounded-[1.75rem] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
+            data-testid="food-delivery-category-panel"
+          >
+            <div class="grid grid-cols-5 gap-2">
+              <button
+                v-for="category in platformCategoryTiles"
+                :key="category.key"
+                type="button"
+                class="min-h-[5.6rem] rounded-[1.25rem] p-2 text-center transition"
+                :class="
+                  category.active
+                    ? 'bg-[#e6fbfa] text-gray-950 ring-1 ring-[#24bcb7]/35'
+                    : 'bg-white text-gray-800'
+                "
+                :data-testid="`food-delivery-category-${category.key}`"
+                @click="openCategory(category.key)"
+              >
+                <span
+                  class="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-2xl text-lg"
+                  :class="category.active ? 'bg-[#24bcb7] text-white' : 'bg-gray-50 text-gray-950'"
                 >
-                  {{ restaurant.entryTags.join(' · ') }}
+                  <i :class="category.icon"></i>
+                </span>
+                <span class="mt-2 block truncate text-[11px] font-black">{{ category.label }}</span>
+                <span class="sr-only">{{ category.key }}</span>
+                <span class="mt-0.5 block text-[10px] font-semibold text-gray-400">
+                  {{ category.restaurantCount }} {{ t('店', 'shops') }}
+                </span>
+              </button>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-3 gap-2" data-testid="food-delivery-platform-benefits">
+            <article
+              v-for="card in platformBenefitCards"
+              :key="card.key"
+              class="rounded-[1.35rem] bg-gradient-to-br p-3 shadow-sm ring-1 ring-black/5"
+              :class="card.className"
+            >
+              <i :class="card.icon" class="text-lg"></i>
+              <p class="mt-2 text-xs font-black leading-4">{{ card.title }}</p>
+              <p class="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 opacity-70">
+                {{ card.desc }}
+              </p>
+            </article>
+          </section>
+
+          <section class="space-y-3" data-testid="food-delivery-data-baseline">
+            <div class="flex items-end justify-between gap-3">
+              <div>
+                <p class="text-xl font-black text-gray-950">
+                  {{ t('附近热门小店', 'Popular nearby') }}
                 </p>
-                <p class="mt-1 truncate text-[10px] font-semibold text-orange-500">
-                  {{ foodImageSourceLabel(restaurant) }}
+                <span class="hidden">Local data</span>
+                <p class="mt-1 text-xs font-semibold text-gray-500">
+                  {{ activeCategoryLabel }} · {{ platformMenuItemCount }}
+                  {{ t('个菜单项', 'menu item(s)') }}
                 </p>
               </div>
-              <div class="flex items-center justify-between gap-2">
-                <span class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-orange-600">
-                  {{ restaurant.deliveryFee }} {{ restaurant.currency }}
-                </span>
+              <button
+                type="button"
+                class="rounded-full bg-white px-3 py-1.5 text-xs font-black text-gray-600 shadow-sm ring-1 ring-black/5"
+                @click="openCategory(activeCategory.key)"
+              >
+                {{ t('全部', 'All') }}
+              </button>
+            </div>
+
+            <div
+              class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2"
+              data-testid="food-delivery-shop-app-list"
+            >
+              <article
+                v-for="restaurant in platformFeaturedRestaurants"
+                :key="restaurant.id"
+                class="w-[11.4rem] shrink-0"
+                :data-testid="`food-delivery-shop-app-${restaurant.id}`"
+                :data-store-tone="restaurant.visual.tone"
+              >
                 <button
-                  class="rounded-full bg-gray-950 px-3 py-1.5 text-[10px] font-bold text-white"
+                  type="button"
+                  class="group block w-full text-left"
                   :data-testid="`food-delivery-open-store-${restaurant.id}`"
                   @click="openRestaurantStore(restaurant)"
                 >
-                  {{ t('进店', 'Open') }}
+                  <div
+                    class="relative h-28 overflow-hidden rounded-[1.35rem] bg-gray-100 shadow-[0_14px_30px_rgba(15,23,42,0.12)]"
+                    :data-testid="`food-delivery-restaurant-${restaurant.id}`"
+                  >
+                    <img
+                      v-if="foodImageUrl(restaurant)"
+                      :src="foodImageUrl(restaurant)"
+                      :alt="restaurant.image?.alt || restaurant.name"
+                      class="h-full w-full object-cover transition duration-300 group-active:scale-[1.03]"
+                    />
+                    <div
+                      v-else
+                      class="flex h-full w-full items-center justify-center text-3xl text-[#24bcb7]"
+                    >
+                      <i class="fas fa-store"></i>
+                    </div>
+                    <span
+                      class="absolute left-2 top-2 rounded-full bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white"
+                    >
+                      {{ t('精选', 'Pick') }}
+                    </span>
+                  </div>
+                  <p class="mt-2 truncate text-sm font-black text-gray-950">
+                    {{ restaurant.displayName }}
+                  </p>
+                  <p class="mt-1 text-[11px] font-semibold text-gray-500">
+                    {{ restaurant.rating.toFixed(1) }} ★ · {{ restaurant.deliveryEtaMinutes }} min ·
+                    {{ restaurant.deliveryFee }} {{ restaurant.currency }}
+                  </p>
+                  <p class="mt-1 truncate text-[11px] font-semibold text-gray-400">
+                    {{ restaurant.shortDescription }}
+                  </p>
+                  <p
+                    v-if="restaurant.entryTags.length"
+                    class="mt-1 truncate text-[10px] font-black text-[#24a9a5]"
+                  >
+                    {{ restaurant.entryTags.join(' · ') }}
+                  </p>
                 </button>
+              </article>
+              <div
+                v-if="platformFeaturedRestaurants.length === 0"
+                class="w-full rounded-[1.35rem] border border-dashed border-teal-200 bg-white p-5 text-center text-xs font-semibold leading-5 text-teal-700"
+                data-testid="food-delivery-shop-app-empty"
+              >
+                {{
+                  t(
+                    'No installed shop mini apps in this folder view. Add them from App Store.',
+                    'No installed shop mini apps in this folder view. Add them from App Store.',
+                  )
+                }}
               </div>
             </div>
-          </article>
-          <div
-            v-if="shopAppEntries.length === 0"
-            class="col-span-2 rounded-3xl border border-dashed border-orange-200 bg-orange-50/70 p-4 text-center text-xs leading-5 text-orange-700"
-            data-testid="food-delivery-shop-app-empty"
+          </section>
+        </section>
+
+        <section
+          v-if="false"
+          class="hidden space-y-4 rounded-3xl border border-orange-100 bg-white p-4"
+          data-testid="food-delivery-pseudo-folder-home-legacy"
+        >
+          <article
+            class="overflow-hidden rounded-3xl bg-gray-950 p-4 text-white"
+            data-testid="food-delivery-platform-entry"
           >
-            {{
-              t(
-                'No installed shop mini apps in this folder view. Add them from App Store.',
-                'No installed shop mini apps in this folder view. Add them from App Store.',
-              )
-            }}
-          </div>
-        </div>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-200">
+                  {{ t('固定入口', 'Fixed entry') }}
+                </p>
+                <h2 class="mt-1 text-lg font-black">{{ t('外卖平台', 'Food Platform') }}</h2>
+                <p class="mt-2 text-xs leading-5 text-white/70">
+                  {{
+                    t(
+                      '搜索、附近、订单与所有店铺发现都从这里进入。',
+                      'Search, nearby, and broad discovery stay here.',
+                    )
+                  }}
+                </p>
+              </div>
+              <span
+                class="shrink-0 rounded-2xl bg-white/10 px-3 py-2 text-right text-[11px] font-bold"
+              >
+                {{ platformRestaurantCount }} {{ t('店', 'shops') }}
+              </span>
+            </div>
+          </article>
+          <section
+            class="rounded-3xl border border-orange-100 bg-white p-4"
+            data-testid="food-delivery-category-panel"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-bold">{{ t('筛选店铺', 'Filter shops') }}</p>
+                <p class="mt-1 text-xs text-gray-500">{{ activeCategoryLabel }}</p>
+              </div>
+              <span
+                class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600"
+              >
+                {{ activeCategory.key }}
+              </span>
+            </div>
+            <p class="mt-3 rounded-2xl bg-orange-50 p-3 text-xs leading-5 text-orange-700">
+              {{ activeCategoryDesc }}
+            </p>
 
-      </section>
-      </section>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <button
+                v-for="category in categoryCards"
+                :key="category.key"
+                class="rounded-2xl border p-3 text-left transition"
+                :class="
+                  category.active ? 'border-orange-300 bg-orange-50' : 'border-gray-100 bg-gray-50'
+                "
+                :data-testid="`food-delivery-category-${category.key}`"
+                @click="openCategory(category.key)"
+              >
+                <span
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white"
+                  :class="category.active ? 'bg-orange-500' : 'bg-gray-900'"
+                >
+                  <i :class="category.icon"></i>
+                </span>
+                <p class="mt-2 text-xs font-bold">{{ category.label }}</p>
+                <p class="mt-1 line-clamp-2 text-[10px] leading-4 text-gray-500">
+                  {{ category.desc }}
+                </p>
+              </button>
+            </div>
+          </section>
 
-      <details
-        v-if="openedFromAppStoreShopCreate"
-        class="rounded-[1.75rem] bg-white p-3 shadow-sm ring-1 ring-black/5"
-        :open="openedFromAppStoreShopCreate"
-        data-testid="food-delivery-custom-form"
-      >
-        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[1.35rem] bg-gray-50 px-3 py-3">
-          <span class="min-w-0">
-            <span class="block text-sm font-black text-gray-950">
-              {{ t('店铺工作台', 'Shop workspace') }}
+          <section
+            class="rounded-3xl border border-orange-100 bg-white p-4"
+            data-testid="food-delivery-data-baseline"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-bold">{{ t('小店 APP', 'Shop apps') }}</p>
+                <p class="mt-1 text-xs" :class="isStoreMode ? 'text-slate-400' : 'text-gray-500'">
+                  {{ platformRestaurantCount }} {{ t('家小店', 'shop(s)') }} ·
+                  {{ platformMenuItemCount }} {{ t('个菜单项', 'menu item(s)') }}
+                </p>
+              </div>
+              <span
+                class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600"
+              >
+                {{ t('本地数据', 'Local data') }}
+              </span>
+            </div>
+
+            <div class="mt-3 grid grid-cols-2 gap-3" data-testid="food-delivery-shop-app-list">
+              <article
+                v-for="restaurant in shopAppEntries"
+                :key="restaurant.id"
+                class="rounded-3xl border border-orange-100 bg-orange-50/70 p-3"
+                :data-testid="`food-delivery-shop-app-${restaurant.id}`"
+                :data-store-tone="restaurant.visual.tone"
+              >
+                <div
+                  class="flex h-full flex-col gap-3"
+                  :data-testid="`food-delivery-restaurant-${restaurant.id}`"
+                >
+                  <div class="h-24 w-full overflow-hidden rounded-3xl bg-white">
+                    <img
+                      v-if="foodImageUrl(restaurant)"
+                      :src="foodImageUrl(restaurant)"
+                      :alt="restaurant.image?.alt || restaurant.name"
+                      class="h-full w-full object-cover"
+                    />
+                    <div
+                      v-else
+                      class="flex h-full w-full items-center justify-center text-2xl text-orange-500"
+                    >
+                      <i class="fas fa-utensils"></i>
+                    </div>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-bold">{{ restaurant.displayName }}</p>
+                    <p class="mt-1 text-[11px] text-orange-700">
+                      {{ restaurant.shortDescription }} · {{ restaurant.rating.toFixed(1) }} ★ ·
+                      {{ restaurant.deliveryEtaMinutes }} min · {{ restaurant.distanceKm }} km
+                    </p>
+                    <p
+                      v-if="restaurant.entryTags.length"
+                      class="mt-1 truncate text-[10px] font-semibold text-orange-600"
+                    >
+                      {{ restaurant.entryTags.join(' · ') }}
+                    </p>
+                    <p class="mt-1 truncate text-[10px] font-semibold text-orange-500">
+                      {{ foodImageSourceLabel(restaurant) }}
+                    </p>
+                  </div>
+                  <div class="flex items-center justify-between gap-2">
+                    <span
+                      class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-orange-600"
+                    >
+                      {{ restaurant.deliveryFee }} {{ restaurant.currency }}
+                    </span>
+                    <button
+                      class="rounded-full bg-gray-950 px-3 py-1.5 text-[10px] font-bold text-white"
+                      :data-testid="`food-delivery-open-store-${restaurant.id}`"
+                      @click="openRestaurantStore(restaurant)"
+                    >
+                      {{ t('进店', 'Open') }}
+                    </button>
+                  </div>
+                </div>
+              </article>
+              <div
+                v-if="shopAppEntries.length === 0"
+                class="col-span-2 rounded-3xl border border-dashed border-orange-200 bg-orange-50/70 p-4 text-center text-xs leading-5 text-orange-700"
+                data-testid="food-delivery-shop-app-empty"
+              >
+                {{
+                  t(
+                    'No installed shop mini apps in this folder view. Add them from App Store.',
+                    'No installed shop mini apps in this folder view. Add them from App Store.',
+                  )
+                }}
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <details
+          v-if="openedFromAppStoreShopCreate"
+          class="rounded-[1.75rem] bg-white p-3 shadow-sm ring-1 ring-black/5"
+          :open="openedFromAppStoreShopCreate"
+          data-testid="food-delivery-custom-form"
+        >
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[1.35rem] bg-gray-50 px-3 py-3"
+          >
+            <span class="min-w-0">
+              <span class="block text-sm font-black text-gray-950">
+                {{ t('店铺工作台', 'Shop workspace') }}
+              </span>
+              <span class="mt-1 block text-[11px] font-semibold leading-4 text-gray-500">
+                {{
+                  t(
+                    '创建小店、补菜单和换图片。',
+                    'Create shops, add menu items, and update images.',
+                  )
+                }}
+              </span>
             </span>
-            <span class="mt-1 block text-[11px] font-semibold leading-4 text-gray-500">
-              {{ t('创建小店、补菜单和换图片。', 'Create shops, add menu items, and update images.') }}
+            <span
+              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm"
+            >
+              <i class="fas fa-chevron-down text-xs"></i>
             </span>
-          </span>
-          <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 shadow-sm">
-            <i class="fas fa-chevron-down text-xs"></i>
-          </span>
-        </summary>
-        <div class="mt-3">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-bold">{{ t('自定义餐厅与菜单', 'Custom restaurants and menu') }}</p>
-            <p class="mt-1 text-[11px] leading-4 text-gray-500">
-              {{
-                t(
-                  '可自定义餐厅、餐品名称、价格和 URL/Gallery 图片。本地文件仍先进入 Gallery，再被外卖引用。',
-                  'Create restaurants and menu items with custom names, prices, and URL/Gallery images. Local files still enter Gallery first.',
-                )
-              }}
+          </summary>
+          <div class="mt-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-bold">
+                  {{ t('自定义餐厅与菜单', 'Custom restaurants and menu') }}
+                </p>
+                <p class="mt-1 text-[11px] leading-4 text-gray-500">
+                  {{
+                    t(
+                      '可自定义餐厅、餐品名称、价格和 URL/Gallery 图片。本地文件仍先进入 Gallery，再被外卖引用。',
+                      'Create restaurants and menu items with custom names, prices, and URL/Gallery images. Local files still enter Gallery first.',
+                    )
+                  }}
+                </p>
+              </div>
+              <span
+                class="rounded-full bg-orange-50 px-2 py-1 text-[10px] font-semibold text-orange-600"
+              >
+                {{ t('User origin', 'User origin') }}
+              </span>
+            </div>
+
+            <div class="mt-3 rounded-2xl bg-orange-50/60 p-3">
+              <p class="text-xs font-bold text-orange-900">{{ t('新增餐厅', 'New restaurant') }}</p>
+              <div class="mt-2 grid grid-cols-2 gap-2">
+                <input
+                  v-model="restaurantDraft.name"
+                  data-testid="food-delivery-custom-restaurant-name"
+                  class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+                  :placeholder="t('餐厅名称', 'Restaurant name')"
+                />
+                <select
+                  v-model="restaurantDraft.category"
+                  data-testid="food-delivery-custom-restaurant-category"
+                  class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+                >
+                  <option
+                    v-for="category in categoryCards"
+                    :key="category.key"
+                    :value="category.key"
+                  >
+                    {{ category.label }}
+                  </option>
+                </select>
+                <input
+                  v-model="restaurantDraft.cuisine"
+                  data-testid="food-delivery-custom-restaurant-cuisine"
+                  class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+                  :placeholder="t('菜系/类型', 'Cuisine')"
+                />
+                <input
+                  v-model="restaurantDraft.deliveryFee"
+                  data-testid="food-delivery-custom-restaurant-fee"
+                  class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+                  inputmode="decimal"
+                  :placeholder="t('配送费，例如 6.00', 'Delivery fee, e.g. 6.00')"
+                />
+                <input
+                  v-model="restaurantDraft.distanceKm"
+                  data-testid="food-delivery-custom-restaurant-distance"
+                  class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+                  inputmode="decimal"
+                  :placeholder="t('距离 km', 'Distance km')"
+                />
+                <input
+                  v-model="restaurantDraft.deliveryEtaMinutes"
+                  data-testid="food-delivery-custom-restaurant-eta"
+                  class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+                  inputmode="numeric"
+                  :placeholder="t('ETA 分钟', 'ETA minutes')"
+                />
+                <input
+                  v-model="restaurantDraft.address"
+                  data-testid="food-delivery-custom-restaurant-address"
+                  class="col-span-2 rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
+                  :placeholder="t('餐厅地址/取餐点', 'Restaurant address / pickup point')"
+                />
+                <ImageSourcePicker
+                  v-model:source-type="restaurantDraft.imageSourceType"
+                  v-model:image-url="restaurantDraft.imageUrl"
+                  v-model:gallery-asset-id="restaurantDraft.imageGalleryAssetId"
+                  :gallery-assets="galleryImageOptions"
+                  size="xs"
+                  test-id-prefix="food-delivery-custom-restaurant"
+                />
+              </div>
+              <button
+                data-testid="food-delivery-create-restaurant"
+                class="mt-3 rounded-full bg-orange-500 px-4 py-2 text-xs font-bold text-white"
+                @click="createCustomRestaurant"
+              >
+                {{ t('加入餐厅', 'Add restaurant') }}
+              </button>
+            </div>
+
+            <div class="mt-3 rounded-2xl bg-amber-50/70 p-3">
+              <p class="text-xs font-bold text-amber-900">{{ t('新增菜单项', 'New menu item') }}</p>
+              <div class="mt-2 grid grid-cols-2 gap-2">
+                <select
+                  v-model="menuDraft.restaurantId"
+                  data-testid="food-delivery-custom-menu-restaurant"
+                  class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+                >
+                  <option value="">{{ t('选择餐厅', 'Choose restaurant') }}</option>
+                  <option
+                    v-for="restaurant in foodDeliveryStore.restaurants"
+                    :key="restaurant.id"
+                    :value="restaurant.id"
+                  >
+                    {{ restaurant.name }}
+                  </option>
+                </select>
+                <input
+                  v-model="menuDraft.title"
+                  data-testid="food-delivery-custom-menu-title"
+                  class="rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+                  :placeholder="t('餐品名称', 'Menu item name')"
+                />
+                <input
+                  v-model="menuDraft.price"
+                  data-testid="food-delivery-custom-menu-price"
+                  class="rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+                  inputmode="decimal"
+                  :placeholder="t('价格，例如 28.00', 'Price, e.g. 28.00')"
+                />
+                <select
+                  v-model="menuDraft.category"
+                  data-testid="food-delivery-custom-menu-category"
+                  class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+                >
+                  <option
+                    v-for="category in categoryCards"
+                    :key="category.key"
+                    :value="category.key"
+                  >
+                    {{ category.label }}
+                  </option>
+                </select>
+                <ImageSourcePicker
+                  v-model:source-type="menuDraft.imageSourceType"
+                  v-model:image-url="menuDraft.imageUrl"
+                  v-model:gallery-asset-id="menuDraft.imageGalleryAssetId"
+                  :gallery-assets="galleryImageOptions"
+                  size="xs"
+                  test-id-prefix="food-delivery-custom-menu"
+                />
+                <textarea
+                  v-model="menuDraft.desc"
+                  data-testid="food-delivery-custom-menu-desc"
+                  class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
+                  rows="2"
+                  :placeholder="t('餐品描述', 'Menu item description')"
+                ></textarea>
+              </div>
+              <button
+                data-testid="food-delivery-create-menu"
+                class="mt-3 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white"
+                @click="createCustomMenuItem"
+              >
+                {{ t('加入菜单', 'Add menu item') }}
+              </button>
+            </div>
+            <p v-if="customFeedback" class="mt-2 text-[11px] font-semibold text-orange-600">
+              {{ customFeedback }}
             </p>
           </div>
-          <span class="rounded-full bg-orange-50 px-2 py-1 text-[10px] font-semibold text-orange-600">
-            {{ t('User origin', 'User origin') }}
-          </span>
-        </div>
-
-        <div class="mt-3 rounded-2xl bg-orange-50/60 p-3">
-          <p class="text-xs font-bold text-orange-900">{{ t('新增餐厅', 'New restaurant') }}</p>
-          <div class="mt-2 grid grid-cols-2 gap-2">
-            <input
-              v-model="restaurantDraft.name"
-              data-testid="food-delivery-custom-restaurant-name"
-              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
-              :placeholder="t('餐厅名称', 'Restaurant name')"
-            />
-            <select
-              v-model="restaurantDraft.category"
-              data-testid="food-delivery-custom-restaurant-category"
-              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
-            >
-              <option v-for="category in categoryCards" :key="category.key" :value="category.key">
-                {{ category.label }}
-              </option>
-            </select>
-            <input
-              v-model="restaurantDraft.cuisine"
-              data-testid="food-delivery-custom-restaurant-cuisine"
-              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
-              :placeholder="t('菜系/类型', 'Cuisine')"
-            />
-            <input
-              v-model="restaurantDraft.deliveryFee"
-              data-testid="food-delivery-custom-restaurant-fee"
-              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
-              inputmode="decimal"
-              :placeholder="t('配送费，例如 6.00', 'Delivery fee, e.g. 6.00')"
-            />
-            <input
-              v-model="restaurantDraft.distanceKm"
-              data-testid="food-delivery-custom-restaurant-distance"
-              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
-              inputmode="decimal"
-              :placeholder="t('距离 km', 'Distance km')"
-            />
-            <input
-              v-model="restaurantDraft.deliveryEtaMinutes"
-              data-testid="food-delivery-custom-restaurant-eta"
-              class="rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
-              inputmode="numeric"
-              :placeholder="t('ETA 分钟', 'ETA minutes')"
-            />
-            <input
-              v-model="restaurantDraft.address"
-              data-testid="food-delivery-custom-restaurant-address"
-              class="col-span-2 rounded-xl border border-orange-100 px-3 py-2 text-xs outline-none"
-              :placeholder="t('餐厅地址/取餐点', 'Restaurant address / pickup point')"
-            />
-            <ImageSourcePicker
-              v-model:source-type="restaurantDraft.imageSourceType"
-              v-model:image-url="restaurantDraft.imageUrl"
-              v-model:gallery-asset-id="restaurantDraft.imageGalleryAssetId"
-              :gallery-assets="galleryImageOptions"
-              size="xs"
-              test-id-prefix="food-delivery-custom-restaurant"
-            />
-          </div>
-          <button
-            data-testid="food-delivery-create-restaurant"
-            class="mt-3 rounded-full bg-orange-500 px-4 py-2 text-xs font-bold text-white"
-            @click="createCustomRestaurant"
-          >
-            {{ t('加入餐厅', 'Add restaurant') }}
-          </button>
-        </div>
-
-        <div class="mt-3 rounded-2xl bg-amber-50/70 p-3">
-          <p class="text-xs font-bold text-amber-900">{{ t('新增菜单项', 'New menu item') }}</p>
-          <div class="mt-2 grid grid-cols-2 gap-2">
-            <select
-              v-model="menuDraft.restaurantId"
-              data-testid="food-delivery-custom-menu-restaurant"
-              class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
-            >
-              <option value="">{{ t('选择餐厅', 'Choose restaurant') }}</option>
-              <option v-for="restaurant in foodDeliveryStore.restaurants" :key="restaurant.id" :value="restaurant.id">
-                {{ restaurant.name }}
-              </option>
-            </select>
-            <input
-              v-model="menuDraft.title"
-              data-testid="food-delivery-custom-menu-title"
-              class="rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
-              :placeholder="t('餐品名称', 'Menu item name')"
-            />
-            <input
-              v-model="menuDraft.price"
-              data-testid="food-delivery-custom-menu-price"
-              class="rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
-              inputmode="decimal"
-              :placeholder="t('价格，例如 28.00', 'Price, e.g. 28.00')"
-            />
-            <select
-              v-model="menuDraft.category"
-              data-testid="food-delivery-custom-menu-category"
-              class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
-            >
-              <option v-for="category in categoryCards" :key="category.key" :value="category.key">
-                {{ category.label }}
-              </option>
-            </select>
-            <ImageSourcePicker
-              v-model:source-type="menuDraft.imageSourceType"
-              v-model:image-url="menuDraft.imageUrl"
-              v-model:gallery-asset-id="menuDraft.imageGalleryAssetId"
-              :gallery-assets="galleryImageOptions"
-              size="xs"
-              test-id-prefix="food-delivery-custom-menu"
-            />
-            <textarea
-              v-model="menuDraft.desc"
-              data-testid="food-delivery-custom-menu-desc"
-              class="col-span-2 rounded-xl border border-amber-100 px-3 py-2 text-xs outline-none"
-              rows="2"
-              :placeholder="t('餐品描述', 'Menu item description')"
-            ></textarea>
-          </div>
-          <button
-            data-testid="food-delivery-create-menu"
-            class="mt-3 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white"
-            @click="createCustomMenuItem"
-          >
-            {{ t('加入菜单', 'Add menu item') }}
-          </button>
-        </div>
-        <p v-if="customFeedback" class="mt-2 text-[11px] font-semibold text-orange-600">
-          {{ customFeedback }}
-        </p>
-        </div>
-      </details>
-
+        </details>
       </div>
 
       <section
         v-else
         class="space-y-4"
-        :class="{ 'food-delivery-store-dark-tray': isDarkTrayStore }"
+        :class="{
+          'food-delivery-store-dark-tray': isDarkTrayStore,
+          'food-delivery-store-peach-cloud': isDessertWindowStore,
+        }"
         data-testid="food-delivery-store-app"
       >
         <article
-          v-if="activeRestaurant"
+          v-if="activeRestaurant && isDessertWindowStore"
+          class="relative min-h-screen overflow-hidden bg-[#f5f5f5] text-[#391713]"
+          data-testid="food-delivery-store-shell"
+          :data-store-id="activeRestaurant.id"
+          :data-store-tone="activeStoreVisual.tone"
+          :data-store-template="activeStoreTemplate"
+        >
+          <header class="bg-[#f5cb58] px-4 pb-7 pt-4">
+            <div class="grid grid-cols-[2rem_minmax(0,1fr)_2rem_2rem_2rem] items-center gap-1.5">
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[#f8f8f8] text-[#e95322] shadow-sm"
+                data-testid="food-delivery-store-home"
+                :aria-label="t('返回手机主屏', 'Return to Home')"
+                @click="goHome"
+              >
+                <i class="fas fa-house text-xs"></i>
+              </button>
+              <label
+                class="flex h-8 min-w-0 items-center gap-2 rounded-full bg-white px-3 text-[#676767] shadow-sm"
+                data-testid="food-delivery-peach-cloud-search"
+              >
+                <i class="fas fa-magnifying-glass text-[10px] text-[#e95322]"></i>
+                <input
+                  ref="peachCloudSearchInputRef"
+                  v-model="peachCloudSearchQuery"
+                  type="search"
+                  class="min-w-0 flex-1 bg-transparent text-xs font-semibold outline-none placeholder:text-[#91807a]"
+                  :placeholder="t('搜索饮品或甜点', 'Search drinks or desserts')"
+                  data-testid="food-delivery-peach-cloud-search-input"
+                  @focus="storeNavigationFeedback = ''"
+                />
+              </label>
+              <button
+                type="button"
+                class="relative inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[#f8f8f8] text-[#e95322] shadow-sm"
+                data-testid="food-delivery-peach-cloud-header-cart"
+                :aria-label="t('购物袋', 'Bag')"
+                @click="openStoreCartSurface"
+              >
+                <i class="fas fa-bag-shopping text-xs"></i>
+                <span
+                  v-if="foodDeliveryStore.cartQuantity"
+                  class="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#391713] px-1 text-[8px] font-black text-white"
+                >
+                  {{ foodDeliveryStore.cartQuantity }}
+                </span>
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[#f8f8f8] text-[#e95322] shadow-sm"
+                data-testid="food-delivery-peach-cloud-header-updates"
+                :aria-label="t('消息', 'Updates')"
+                @click="showPeachCloudUpdates"
+              >
+                <i class="fas fa-bell text-xs"></i>
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[#f8f8f8] p-1.5 shadow-sm"
+                data-testid="food-delivery-peach-cloud-header-profile"
+                :aria-label="activeStoreDisplayName"
+                @click="openPeachCloudHome"
+              >
+                <img
+                  :src="peachCloudBrandImageUrl"
+                  :alt="activeStoreDisplayName"
+                  class="h-full w-full object-contain"
+                  data-required-asset="peach-cloud/brand/peach-cloud-mark-01.svg"
+                  @error="handleFoodShopImageError"
+                />
+              </button>
+            </div>
+
+            <div class="mt-5">
+              <p class="text-[10px] font-black uppercase text-[#e95322]">
+                {{ activeStoreDisplayName }}
+              </p>
+              <h1 class="mt-1 text-[1.85rem] font-black leading-none text-[#f8f8f8]">
+                {{ t('早上好', 'Good Morning') }}
+              </h1>
+              <p class="mt-1 text-xs font-semibold text-[#e95322]">
+                {{ t('今天从一杯桃子云开始。', 'Rise and shine. Your peach cloud is ready.') }}
+              </p>
+            </div>
+          </header>
+
+          <main class="relative -mt-1 rounded-t-[2rem] bg-[#f5f5f5] px-4 pb-24 pt-7">
+            <nav
+              class="grid grid-cols-5 gap-2"
+              data-testid="food-delivery-store-menu-section-rail"
+              :aria-label="t('店内分类', 'Store menu sections')"
+            >
+              <button
+                v-for="shortcut in peachCloudMenuShortcuts"
+                :key="shortcut.key"
+                type="button"
+                class="flex min-w-0 flex-col items-center gap-1.5 text-center text-[10px] font-semibold leading-tight"
+                :class="
+                  shortcut.key === activeStoreMenuSectionKey ? 'text-[#e95322]' : 'text-[#391713]'
+                "
+                :data-testid="`food-delivery-store-menu-section-${shortcut.key}`"
+                @click="focusStoreMenuSection(shortcut.key)"
+              >
+                <span
+                  class="inline-flex aspect-[1/1.2] w-full max-w-[3.2rem] items-center justify-center rounded-[1.55rem] border transition active:scale-[0.96]"
+                  :class="
+                    shortcut.key === activeStoreMenuSectionKey
+                      ? 'border-[#e95322] bg-[#f5cb58] shadow-[0_9px_18px_rgba(233,83,34,0.16)]'
+                      : 'border-[#f3e9b5] bg-[#f3e9b5]'
+                  "
+                >
+                  <img
+                    :src="shortcut.iconUrl"
+                    alt=""
+                    class="h-8 w-8 object-contain"
+                    :data-required-asset="`peach-cloud/categories/${shortcut.asset}`"
+                    @error="handleFoodShopImageError"
+                  />
+                </span>
+                <span class="line-clamp-2 min-h-6">{{ shortcut.label }}</span>
+              </button>
+            </nav>
+
+            <div class="mt-3 h-px bg-[#e95322]/25"></div>
+
+            <section class="pt-3" data-testid="food-delivery-menu-panel">
+              <div
+                data-testid="food-delivery-store-menu-items"
+                :data-active-section="activeStoreMenuSection?.key"
+              >
+                <template v-if="peachCloudShowsCuratedHome">
+                  <div class="flex items-end justify-between gap-3">
+                    <h2 class="text-xl font-black leading-none">
+                      {{ t('人气必点', 'Best Seller') }}
+                    </h2>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 text-xs font-black text-[#e95322]"
+                      data-testid="food-delivery-peach-cloud-view-all"
+                      @click="focusStoreMenuSection('all')"
+                    >
+                      {{ t('查看全部', 'View All') }}
+                      <i class="fas fa-chevron-right text-[9px]"></i>
+                    </button>
+                  </div>
+
+                  <div class="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2">
+                    <article
+                      v-for="item in peachCloudBestSellerItems"
+                      :key="item.id"
+                      class="relative w-[4.75rem] shrink-0"
+                      :data-testid="`food-delivery-menu-${item.id}`"
+                      :data-menu-section="item.menuSection || 'signature'"
+                      :data-template="activeStoreTemplate"
+                    >
+                      <button
+                        type="button"
+                        class="block w-full text-left"
+                        :data-testid="`food-delivery-menu-open-${item.id}`"
+                        @click="openMenuItemDetail(item.id)"
+                      >
+                        <div
+                          class="relative aspect-[2/3] overflow-hidden rounded-[1.2rem] bg-[#f3e9b5] shadow-[0_10px_20px_rgba(57,23,19,0.12)]"
+                          :data-testid="`food-delivery-menu-dish-${item.id}`"
+                        >
+                          <img
+                            v-if="foodImageUrl(item)"
+                            :src="foodImageUrl(item)"
+                            :alt="item.image?.alt || item.title"
+                            class="h-full w-full object-cover"
+                            :data-required-asset="foodDeliveryRequiredAssetPath(item)"
+                            @error="handleFoodShopImageError"
+                          />
+                          <div
+                            v-else
+                            class="flex h-full items-center justify-center text-[#e95322]"
+                          >
+                            <i class="fas fa-ice-cream"></i>
+                          </div>
+                          <span
+                            class="absolute bottom-0 right-0 rounded-tl-2xl bg-[#e95322] px-2 py-1 text-[9px] font-black text-white"
+                          >
+                            {{ item.price }}
+                          </span>
+                        </div>
+                        <p class="mt-1.5 line-clamp-2 min-h-7 text-[10px] font-black leading-3.5">
+                          {{ item.title }}
+                        </p>
+                      </button>
+                      <button
+                        type="button"
+                        class="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-[#e95322] shadow-sm"
+                        :data-testid="`food-delivery-add-${item.id}`"
+                        :aria-label="`Add ${item.title}`"
+                        @click.stop="addMenuItemToCart(item.id)"
+                      >
+                        <i class="fas fa-plus text-[9px]"></i>
+                      </button>
+                    </article>
+                  </div>
+
+                  <section
+                    v-if="peachCloudFeaturedItem"
+                    class="mt-3 overflow-hidden rounded-[1.25rem] bg-[#e95322] text-white shadow-[0_14px_28px_rgba(233,83,34,0.2)]"
+                    data-testid="food-delivery-peach-cloud-featured"
+                  >
+                    <button
+                      type="button"
+                      class="grid min-h-32 w-full grid-cols-[47%_53%] text-left"
+                      data-testid="food-delivery-peach-cloud-featured-action"
+                      @click="focusStoreMenuSection('seasonal_drop')"
+                    >
+                      <span class="flex flex-col justify-center px-4 py-3 text-center">
+                        <span class="text-xs font-semibold leading-4">
+                          {{ t('好味道新登场', 'A new cloud has landed') }}
+                        </span>
+                        <strong class="mt-2 text-3xl font-black leading-none">30% OFF</strong>
+                        <span class="mt-2 line-clamp-1 text-[10px] font-bold text-white/80">
+                          {{ peachCloudFeaturedItem.title }}
+                        </span>
+                      </span>
+                      <span
+                        class="relative overflow-hidden"
+                        data-testid="food-delivery-store-cover"
+                      >
+                        <img
+                          :src="activeStoreCoverImageUrl"
+                          :alt="`${activeStoreDisplayName} promotion`"
+                          class="h-full w-full object-cover"
+                          :data-required-asset="foodDeliveryRequiredAssetPath(activeRestaurant)"
+                          @error="handleFoodShopImageError"
+                        />
+                      </span>
+                    </button>
+                  </section>
+
+                  <h2 class="mt-6 text-xl font-black leading-none">
+                    {{ t('为你推荐', 'Recommend') }}
+                  </h2>
+                  <div class="mt-3 grid grid-cols-2 gap-3">
+                    <article
+                      v-for="item in peachCloudRecommendedItems"
+                      :key="item.id"
+                      class="min-w-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_9px_20px_rgba(57,23,19,0.08)]"
+                      :data-testid="`food-delivery-menu-${item.id}`"
+                      :data-menu-section="item.menuSection || 'signature'"
+                      :data-template="activeStoreTemplate"
+                    >
+                      <button
+                        type="button"
+                        class="block w-full text-left"
+                        :data-testid="`food-delivery-menu-open-${item.id}`"
+                        @click="openMenuItemDetail(item.id)"
+                      >
+                        <div
+                          class="relative aspect-[1.22/1] overflow-hidden bg-[#f3e9b5]"
+                          :data-testid="`food-delivery-menu-dish-${item.id}`"
+                        >
+                          <img
+                            v-if="foodImageUrl(item)"
+                            :src="foodImageUrl(item)"
+                            :alt="item.image?.alt || item.title"
+                            class="h-full w-full object-cover"
+                            :data-required-asset="foodDeliveryRequiredAssetPath(item)"
+                            @error="handleFoodShopImageError"
+                          />
+                          <div
+                            v-else
+                            class="flex h-full items-center justify-center text-[#e95322]"
+                          >
+                            <i class="fas fa-ice-cream"></i>
+                          </div>
+                          <span
+                            class="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[9px] font-black"
+                          >
+                            {{ activeRestaurant.rating.toFixed(1) }}
+                            <i class="fas fa-star text-[#e95322]"></i>
+                          </span>
+                          <span
+                            class="absolute bottom-0 right-0 rounded-tl-2xl bg-[#e95322] px-2.5 py-1 text-[9px] font-black text-white"
+                          >
+                            {{ item.price }}
+                          </span>
+                        </div>
+                        <div class="p-2.5 pb-2">
+                          <p class="line-clamp-2 min-h-9 text-xs font-black leading-[1.1rem]">
+                            {{ item.title }}
+                          </p>
+                          <p class="mt-1 line-clamp-1 text-[9px] font-semibold text-[#8d645d]">
+                            {{ item.desc }}
+                          </p>
+                        </div>
+                      </button>
+                      <div class="flex items-center justify-between px-2.5 pb-2.5">
+                        <span class="text-[9px] font-bold text-[#8d645d]">{{
+                          activeStoreEtaText
+                        }}</span>
+                        <button
+                          type="button"
+                          class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e95322] text-white shadow-sm"
+                          :data-testid="`food-delivery-add-${item.id}`"
+                          :aria-label="`Add ${item.title}`"
+                          @click.stop="addMenuItemToCart(item.id)"
+                        >
+                          <i class="fas fa-plus text-[9px]"></i>
+                        </button>
+                      </div>
+                    </article>
+                  </div>
+                </template>
+
+                <template v-else>
+                  <div class="flex items-end justify-between gap-3">
+                    <div>
+                      <p class="text-[10px] font-black uppercase text-[#e95322]">
+                        {{ activeStoreDisplayName }}
+                      </p>
+                      <h2 class="mt-1 text-xl font-black leading-none">
+                        {{
+                          peachCloudSearchQuery.trim()
+                            ? t('搜索结果', 'Search results')
+                            : activeStoreMenuSection?.label
+                        }}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      class="text-xs font-black text-[#e95322]"
+                      data-testid="food-delivery-peach-cloud-clear-filter"
+                      @click="openPeachCloudHome"
+                    >
+                      {{ t('返回推荐', 'Home') }}
+                    </button>
+                  </div>
+
+                  <div
+                    v-if="peachCloudFilteredMenuItems.length"
+                    class="mt-3 grid grid-cols-2 gap-3"
+                  >
+                    <article
+                      v-for="item in peachCloudFilteredMenuItems"
+                      :key="item.id"
+                      class="min-w-0 overflow-hidden rounded-[1.2rem] bg-white shadow-[0_9px_20px_rgba(57,23,19,0.08)]"
+                      :data-testid="`food-delivery-menu-${item.id}`"
+                      :data-menu-section="item.menuSection || 'signature'"
+                      :data-template="activeStoreTemplate"
+                    >
+                      <button
+                        type="button"
+                        class="block w-full text-left"
+                        :data-testid="`food-delivery-menu-open-${item.id}`"
+                        @click="openMenuItemDetail(item.id)"
+                      >
+                        <div
+                          class="relative aspect-[1.22/1] overflow-hidden bg-[#f3e9b5]"
+                          :data-testid="`food-delivery-menu-dish-${item.id}`"
+                        >
+                          <img
+                            v-if="foodImageUrl(item)"
+                            :src="foodImageUrl(item)"
+                            :alt="item.image?.alt || item.title"
+                            class="h-full w-full object-cover"
+                            :data-required-asset="foodDeliveryRequiredAssetPath(item)"
+                            @error="handleFoodShopImageError"
+                          />
+                          <div
+                            v-else
+                            class="flex h-full items-center justify-center text-[#e95322]"
+                          >
+                            <i class="fas fa-ice-cream"></i>
+                          </div>
+                          <span
+                            class="absolute bottom-0 right-0 rounded-tl-2xl bg-[#e95322] px-2.5 py-1 text-[9px] font-black text-white"
+                          >
+                            {{ item.price }}
+                          </span>
+                        </div>
+                        <div class="p-2.5">
+                          <p class="line-clamp-2 min-h-9 text-xs font-black leading-[1.1rem]">
+                            {{ item.title }}
+                          </p>
+                          <p
+                            class="mt-1 line-clamp-2 min-h-7 text-[9px] font-semibold leading-3.5 text-[#8d645d]"
+                          >
+                            {{ item.desc }}
+                          </p>
+                        </div>
+                      </button>
+                      <div class="flex items-center justify-between px-2.5 pb-2.5">
+                        <span class="text-[9px] font-bold text-[#8d645d]">{{ item.currency }}</span>
+                        <button
+                          type="button"
+                          class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#e95322] text-white shadow-sm"
+                          :data-testid="`food-delivery-add-${item.id}`"
+                          :aria-label="`Add ${item.title}`"
+                          @click.stop="addMenuItemToCart(item.id)"
+                        >
+                          <i class="fas fa-plus text-[9px]"></i>
+                        </button>
+                      </div>
+                    </article>
+                  </div>
+                  <div
+                    v-else
+                    class="mt-3 rounded-[1.2rem] bg-[#f3e9b5] px-4 py-8 text-center"
+                    data-testid="food-delivery-peach-cloud-empty-results"
+                  >
+                    <i class="fas fa-magnifying-glass text-lg text-[#e95322]"></i>
+                    <p class="mt-2 text-sm font-black">
+                      {{ t('没有找到合适的甜品', 'No cloud found') }}
+                    </p>
+                  </div>
+                </template>
+              </div>
+            </section>
+
+            <p
+              v-if="storeNavigationFeedback"
+              class="mt-3 rounded-[1rem] bg-[#f3e9b5] px-3 py-2 text-center text-xs font-bold leading-5 text-[#8b402b]"
+              data-testid="food-delivery-store-nav-feedback"
+            >
+              {{ storeNavigationFeedback }}
+            </p>
+          </main>
+
+          <nav
+            class="fixed bottom-0 left-1/2 z-40 grid w-full max-w-md -translate-x-1/2 grid-cols-5 rounded-t-[2rem] bg-[#e95322] px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 text-white shadow-[0_-12px_28px_rgba(57,23,19,0.16)]"
+            data-testid="food-delivery-peach-cloud-nav"
+            :aria-label="t('店铺导航', 'Shop navigation')"
+          >
+            <button
+              type="button"
+              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              data-testid="food-delivery-peach-cloud-nav-home"
+              @click="openPeachCloudHome"
+            >
+              <i class="fas fa-house text-base"></i>
+              {{ t('首页', 'Home') }}
+            </button>
+            <button
+              type="button"
+              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              data-testid="food-delivery-peach-cloud-nav-menu"
+              @click="focusPeachCloudSearch"
+            >
+              <i class="fas fa-magnifying-glass text-base"></i>
+              {{ t('搜索', 'Search') }}
+            </button>
+            <button
+              type="button"
+              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              data-testid="food-delivery-peach-cloud-nav-seasonal"
+              @click="focusStoreMenuSection('seasonal_drop')"
+            >
+              <i class="fas fa-heart text-base"></i>
+              {{ t('上新', 'New') }}
+            </button>
+            <button
+              type="button"
+              class="relative flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              data-testid="food-delivery-peach-cloud-nav-cart"
+              @click="openStoreCartSurface"
+            >
+              <i class="fas fa-bag-shopping text-base"></i>
+              {{ t('购物袋', 'Bag') }}
+              <span
+                v-if="foodDeliveryStore.cartQuantity"
+                class="absolute right-2 top-0 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#f5cb58] px-1 text-[8px] text-[#391713]"
+              >
+                {{ foodDeliveryStore.cartQuantity }}
+              </span>
+            </button>
+            <button
+              type="button"
+              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              data-testid="food-delivery-peach-cloud-nav-orders"
+              @click="openStoreOrdersSurface"
+            >
+              <i class="fas fa-receipt text-base"></i>
+              {{ t('订单', 'Orders') }}
+            </button>
+          </nav>
+        </article>
+
+        <article
+          v-if="activeRestaurant && !isDessertWindowStore"
           class="relative overflow-hidden rounded-[2rem] shadow-sm"
           :class="
             isDarkTrayStore
               ? 'border border-white/[0.08] bg-[#10131d] shadow-[0_24px_70px_rgba(0,0,0,0.35)]'
-              : 'border border-white/70 bg-white'
+              : isDessertWindowStore
+                ? 'border border-[#ffb38e]/50 bg-[#fff9ef] shadow-[0_24px_60px_rgba(239,82,43,0.16)]'
+                : 'border border-white/70 bg-white'
           "
           data-testid="food-delivery-store-shell"
           :data-store-id="activeRestaurant.id"
@@ -4548,7 +6479,13 @@ onBeforeUnmount(() => {
         >
           <div
             class="relative overflow-hidden bg-gradient-to-br p-4 text-gray-950"
-            :class="isDarkTrayStore ? 'min-h-[19rem] from-[#2a2d3e] via-[#171a27] to-[#080a10]' : activeStoreVisual.heroClass"
+            :class="
+              isDarkTrayStore
+                ? 'min-h-[19rem] from-[#2a2d3e] via-[#171a27] to-[#080a10]'
+                : isDessertWindowStore
+                  ? 'min-h-[22rem] from-[#ef4f29] via-[#f46935] to-[#ffc54f]'
+                  : activeStoreVisual.heroClass
+            "
           >
             <div class="relative z-20 flex items-center justify-between gap-2">
               <button
@@ -4566,7 +6503,9 @@ onBeforeUnmount(() => {
               :class="
                 isDarkTrayStore
                   ? 'absolute inset-0 z-0 mt-0 h-full rounded-none border-0 bg-transparent'
-                  : 'mt-4 h-28 rounded-3xl border border-white/20 bg-white/10'
+                  : isDessertWindowStore
+                    ? 'absolute inset-0 z-0 mt-0 h-full rounded-none border-0 bg-[#ef4f29]'
+                    : 'mt-4 h-28 rounded-3xl border border-white/20 bg-white/10'
               "
               data-testid="food-delivery-store-cover"
             >
@@ -4574,21 +6513,39 @@ onBeforeUnmount(() => {
                 :src="activeStoreCoverImageUrl"
                 :alt="`${activeStoreDisplayName} cover`"
                 class="h-full w-full object-cover"
-                :class="isDarkTrayStore ? 'scale-[1.04] opacity-75' : ''"
+                :class="
+                  isDarkTrayStore
+                    ? 'scale-[1.04] opacity-75'
+                    : isDessertWindowStore
+                      ? 'scale-[1.02] opacity-80'
+                      : ''
+                "
+                :data-required-asset="
+                  isDessertWindowStore ? foodDeliveryRequiredAssetPath(activeRestaurant) : undefined
+                "
+                @error="isDessertWindowStore ? handleFoodShopImageError($event) : undefined"
               />
               <div
                 v-if="isDarkTrayStore"
                 class="absolute inset-0 bg-[radial-gradient(circle_at_78%_22%,rgba(255,187,116,0.18),transparent_28%),linear-gradient(180deg,rgba(8,10,16,0.34),rgba(8,10,16,0.88)_72%,rgba(8,10,16,0.96))]"
               ></div>
+              <div
+                v-else-if="isDessertWindowStore"
+                class="absolute inset-0 bg-[linear-gradient(90deg,rgba(154,44,15,0.78)_0%,rgba(189,53,18,0.56)_48%,rgba(239,79,41,0.12)_100%),linear-gradient(180deg,rgba(239,79,41,0.08),rgba(143,38,12,0.55))]"
+              ></div>
             </div>
             <div
               class="relative z-10 grid grid-cols-[minmax(0,1fr)_5.5rem] items-end gap-4"
-              :class="isDarkTrayStore ? 'mt-16' : 'mt-5'"
+              :class="isDarkTrayStore ? 'mt-16' : isDessertWindowStore ? 'mt-20' : 'mt-5'"
             >
               <div class="min-w-0">
                 <span
                   class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase"
-                  :class="isDarkTrayStore ? 'bg-white/12 text-emerald-100 backdrop-blur' : 'bg-emerald-400/15 text-emerald-100'"
+                  :class="
+                    isDarkTrayStore
+                      ? 'bg-white/12 text-emerald-100 backdrop-blur'
+                      : 'bg-emerald-400/15 text-emerald-100'
+                  "
                   data-testid="food-delivery-store-status"
                 >
                   <i class="fas fa-circle text-[6px]"></i>
@@ -4610,7 +6567,9 @@ onBeforeUnmount(() => {
                   class="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-100"
                   data-testid="food-delivery-store-metrics"
                 >
-                  <span class="inline-flex items-center gap-1 rounded-full bg-white/[0.1] px-2.5 py-1 backdrop-blur">
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full bg-white/[0.1] px-2.5 py-1 backdrop-blur"
+                  >
                     <i class="fas fa-star text-[10px] text-amber-300"></i>
                     {{ activeRestaurant.rating.toFixed(1) }}
                   </span>
@@ -4622,21 +6581,36 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <p class="sr-only">
-                  {{ activeRestaurant.rating.toFixed(1) }} ★ · {{ activeRestaurant.deliveryEtaMinutes }} min ·
+                  {{ activeRestaurant.rating.toFixed(1) }} ★ ·
+                  {{ activeRestaurant.deliveryEtaMinutes }} min ·
                   {{ activeRestaurant.distanceKm }} km
                 </p>
               </div>
               <div
                 class="h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-[1.65rem] shadow-[0_18px_42px_rgba(0,0,0,0.35)]"
-                :class="isDarkTrayStore ? 'border border-white/15 bg-white/12 backdrop-blur-md' : 'bg-white/90'"
+                :class="
+                  isDarkTrayStore
+                    ? 'border border-white/15 bg-white/12 backdrop-blur-md'
+                    : 'bg-white/90'
+                "
               >
                 <img
-                  v-if="activeStoreRestaurantImageUrl"
-                  :src="activeStoreRestaurantImageUrl"
+                  v-if="activeStoreRestaurantImageUrl || isDessertWindowStore"
+                  :src="
+                    isDessertWindowStore ? peachCloudBrandImageUrl : activeStoreRestaurantImageUrl
+                  "
                   :alt="activeRestaurant.image?.alt || activeRestaurant.name"
                   class="h-full w-full object-cover"
+                  :class="isDessertWindowStore ? 'bg-[#fff2c7] p-2' : ''"
+                  :data-required-asset="
+                    isDessertWindowStore ? 'peach-cloud/brand/peach-cloud-mark-01.png' : undefined
+                  "
+                  @error="isDessertWindowStore ? handleFoodShopImageError($event) : undefined"
                 />
-                <div v-else class="flex h-full w-full items-center justify-center text-2xl text-orange-500">
+                <div
+                  v-else
+                  class="flex h-full w-full items-center justify-center text-2xl text-orange-500"
+                >
                   <i class="fas fa-store"></i>
                 </div>
               </div>
@@ -4644,21 +6618,57 @@ onBeforeUnmount(() => {
           </div>
           <div
             class="grid grid-cols-3 gap-2 p-3"
-            :class="isDarkTrayStore ? 'text-slate-100' : 'text-gray-950'"
+            :class="
+              isDarkTrayStore
+                ? 'text-slate-100'
+                : isDessertWindowStore
+                  ? 'text-[#6f2717]'
+                  : 'text-gray-950'
+            "
           >
-            <div class="rounded-2xl p-3 text-center" :class="isDarkTrayStore ? 'bg-white/5' : 'bg-gray-50'">
+            <div
+              class="rounded-2xl p-3 text-center"
+              :class="
+                isDarkTrayStore
+                  ? 'bg-white/5'
+                  : isDessertWindowStore
+                    ? 'bg-[#fff0ce]'
+                    : 'bg-gray-50'
+              "
+            >
               <p
                 class="text-[10px] font-semibold"
-                :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'"
+                :class="
+                  isDarkTrayStore
+                    ? 'text-slate-400'
+                    : isDessertWindowStore
+                      ? 'text-[#a35438]'
+                      : 'text-gray-500'
+                "
               >
                 {{ t('配送费', 'Fee') }}
               </p>
               <p class="mt-1 text-xs font-black">{{ activeStoreFeeText }}</p>
             </div>
-            <div class="rounded-2xl p-3 text-center" :class="isDarkTrayStore ? 'bg-white/5' : 'bg-gray-50'">
+            <div
+              class="rounded-2xl p-3 text-center"
+              :class="
+                isDarkTrayStore
+                  ? 'bg-white/5'
+                  : isDessertWindowStore
+                    ? 'bg-[#ffe5d6]'
+                    : 'bg-gray-50'
+              "
+            >
               <p
                 class="text-[10px] font-semibold"
-                :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'"
+                :class="
+                  isDarkTrayStore
+                    ? 'text-slate-400'
+                    : isDessertWindowStore
+                      ? 'text-[#a35438]'
+                      : 'text-gray-500'
+                "
               >
                 {{ t('预计送达', 'ETA') }}
               </p>
@@ -4666,7 +6676,13 @@ onBeforeUnmount(() => {
             </div>
             <div
               class="rounded-2xl p-3 text-center"
-              :class="isDarkTrayStore ? 'bg-orange-400/15 text-orange-100' : activeStoreVisual.badgeClass"
+              :class="
+                isDarkTrayStore
+                  ? 'bg-orange-400/15 text-orange-100'
+                  : isDessertWindowStore
+                    ? 'bg-[#ef512d] text-white'
+                    : activeStoreVisual.badgeClass
+              "
             >
               <p class="text-[10px] font-semibold opacity-70">{{ t('距离', 'Distance') }}</p>
               <p class="mt-1 truncate text-xs font-black">{{ activeStoreDistanceText }}</p>
@@ -4675,12 +6691,52 @@ onBeforeUnmount(() => {
         </article>
 
         <section
-          v-if="activeRestaurant"
+          v-if="false"
+          class="relative overflow-hidden rounded-[1.75rem] border border-[#ffc48c] bg-[#ffd65a] p-4 text-[#71290f] shadow-[0_18px_44px_rgba(207,99,29,0.16)]"
+          data-testid="food-delivery-peach-cloud-featured"
+        >
+          <div class="relative z-10 max-w-[62%]">
+            <span class="inline-flex rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-black">
+              {{ t('今日限定', 'TODAY ONLY') }}
+            </span>
+            <h3 class="mt-3 text-xl font-black leading-tight">
+              {{ peachCloudFeaturedItem.title }}
+            </h3>
+            <p class="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-[#965029]">
+              {{ peachCloudFeaturedItem.desc }}
+            </p>
+            <button
+              type="button"
+              class="mt-3 inline-flex items-center gap-2 rounded-full bg-[#ef512d] px-4 py-2 text-xs font-black text-white shadow-[0_10px_22px_rgba(239,81,45,0.22)]"
+              data-testid="food-delivery-peach-cloud-featured-action"
+              @click="focusStoreMenuSection('seasonal_drop')"
+            >
+              {{ t('看看限定', 'See the drop') }}
+              <i class="fas fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+          <div
+            class="absolute -bottom-5 -right-4 h-40 w-40 overflow-hidden rounded-full border-[10px] border-white/35 bg-white/50 shadow-[0_18px_34px_rgba(166,72,21,0.18)]"
+          >
+            <img
+              :src="foodImageUrl(peachCloudFeaturedItem)"
+              :alt="peachCloudFeaturedItem.image?.alt || peachCloudFeaturedItem.title"
+              class="h-full w-full object-cover"
+              :data-required-asset="foodDeliveryRequiredAssetPath(peachCloudFeaturedItem)"
+              @error="handleFoodShopImageError"
+            />
+          </div>
+        </section>
+
+        <section
+          v-if="activeRestaurant && !isDessertWindowStore"
           class="p-4"
           :class="
             isDarkTrayStore
               ? 'rounded-[2rem] border border-white/[0.08] bg-[#10131d] text-white shadow-[0_20px_56px_rgba(0,0,0,0.28)]'
-              : 'rounded-3xl border border-orange-100 bg-white'
+              : isDessertWindowStore
+                ? 'rounded-[1.75rem] border border-[#ffd3b7] bg-[#fffaf2] text-[#612817] shadow-[0_20px_50px_rgba(203,93,38,0.12)]'
+                : 'rounded-3xl border border-orange-100 bg-white'
           "
           data-testid="food-delivery-menu-panel"
         >
@@ -4688,24 +6744,54 @@ onBeforeUnmount(() => {
             <div>
               <p
                 class="font-black"
-                :class="isDarkTrayStore ? 'text-[1.35rem] leading-tight text-white' : 'text-sm'"
+                :class="
+                  isDarkTrayStore
+                    ? 'text-[1.35rem] leading-tight text-white'
+                    : isDessertWindowStore
+                      ? 'text-xl leading-tight text-[#612817]'
+                      : 'text-sm'
+                "
               >
-                {{ t('本店菜单', 'Store menu') }}
+                {{
+                  isDessertWindowStore
+                    ? t('今天想喝什么？', 'What are you craving?')
+                    : t('本店菜单', 'Store menu')
+                }}
               </p>
-              <p class="mt-1 text-xs font-semibold" :class="isDarkTrayStore ? 'text-slate-400' : 'text-gray-500'">
-                {{ activeStoreDisplayName }}
+              <p
+                class="mt-1 text-xs font-semibold"
+                :class="
+                  isDarkTrayStore
+                    ? 'text-slate-400'
+                    : isDessertWindowStore
+                      ? 'text-[#ad6546]'
+                      : 'text-gray-500'
+                "
+              >
+                {{
+                  isDessertWindowStore
+                    ? t('饮品、冰甜和烤箱小点', 'Cloud tea, frozen sweets, and warm bakes')
+                    : activeStoreDisplayName
+                }}
               </p>
             </div>
             <span
               class="rounded-full px-3 py-1 text-[11px] font-semibold"
-              :class="isDarkTrayStore ? 'bg-orange-400/15 text-orange-100' : activeStoreVisual.badgeClass"
+              :class="
+                isDarkTrayStore
+                  ? 'bg-orange-400/15 text-orange-100'
+                  : isDessertWindowStore
+                    ? 'bg-[#ffe2ae] text-[#9a3e20]'
+                    : activeStoreVisual.badgeClass
+              "
             >
-              {{ visibleActiveMenuItems.length }} / {{ activeMenuItems.length }} {{ t('项', 'item(s)') }}
+              {{ visibleActiveMenuItems.length }} / {{ activeMenuItems.length }}
+              {{ t('项', 'item(s)') }}
             </span>
           </div>
           <div
             class="mt-4"
-            :class="isDarkTrayStore ? 'grid grid-cols-[4.85rem_minmax(0,1fr)] gap-3' : 'space-y-3'"
+            :class="isDarkTrayStore ? 'grid grid-cols-[4.85rem_minmax(0,1fr)] gap-3' : 'space-y-4'"
           >
             <nav
               v-if="isDarkTrayStore"
@@ -4730,10 +6816,41 @@ onBeforeUnmount(() => {
                 <span class="line-clamp-2">{{ section.shortLabel }}</span>
                 <span
                   class="inline-flex min-w-5 justify-center rounded-full px-1 text-[0.55rem]"
-                  :class="section.key === activeStoreMenuSectionKey ? 'bg-white/20 text-white' : 'bg-white/[0.06] text-slate-500'"
+                  :class="
+                    section.key === activeStoreMenuSectionKey
+                      ? 'bg-white/20 text-white'
+                      : 'bg-white/[0.06] text-slate-500'
+                  "
                 >
                   {{ section.count }}
                 </span>
+              </button>
+            </nav>
+            <nav
+              v-else-if="isDessertWindowStore"
+              class="grid grid-cols-5 gap-2 overflow-x-auto pb-1"
+              data-testid="food-delivery-store-menu-section-rail"
+              :aria-label="t('店内分类', 'Store menu sections')"
+            >
+              <button
+                v-for="section in activeStoreMenuSections"
+                :key="section.key"
+                type="button"
+                class="flex min-w-[3.35rem] flex-col items-center gap-1.5 text-center text-[10px] font-black leading-tight text-[#8c4b32] transition active:scale-[0.97]"
+                :data-testid="`food-delivery-store-menu-section-${section.key}`"
+                @click="activeStoreMenuSectionKey = section.key"
+              >
+                <span
+                  class="inline-flex h-12 w-12 items-center justify-center rounded-full border text-base shadow-sm"
+                  :class="
+                    section.key === activeStoreMenuSectionKey
+                      ? 'border-[#ef512d] bg-[#ef512d] text-white shadow-[0_10px_22px_rgba(239,81,45,0.24)]'
+                      : 'border-[#ffd8bd] bg-white text-[#ef512d]'
+                  "
+                >
+                  <i :class="section.icon"></i>
+                </span>
+                <span class="line-clamp-2 min-h-6">{{ section.shortLabel }}</span>
               </button>
             </nav>
             <div
@@ -4759,70 +6876,140 @@ onBeforeUnmount(() => {
             </div>
             <div
               class="min-w-0"
-              :class="isDarkTrayStore ? 'grid grid-cols-1 gap-y-10 pt-12' : 'space-y-2'"
+              :class="
+                isDarkTrayStore
+                  ? 'grid grid-cols-1 gap-y-10 pt-12'
+                  : isDessertWindowStore
+                    ? 'grid grid-cols-2 gap-3'
+                    : 'space-y-2'
+              "
               :data-active-section="activeStoreMenuSection?.key"
               data-testid="food-delivery-store-menu-items"
             >
-            <article
-              v-for="item in visibleActiveMenuItems"
-              :key="item.id"
-              class="relative"
-              :class="
-                isDarkTrayStore
-                  ? 'min-h-[11.2rem] overflow-visible rounded-[1.85rem] border border-white/[0.05] bg-[linear-gradient(180deg,#202536,#161a27)] p-4 pt-12 text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#202638]'
-                  : 'flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2'
-              "
-              :data-testid="`food-delivery-menu-${item.id}`"
-              :data-menu-section="item.menuSection || 'signature'"
-              :data-template="activeStoreTemplate"
-            >
-              <template v-if="isDarkTrayStore">
-                <button
-                  type="button"
-                  class="absolute inset-0 z-0 rounded-[1.85rem] text-left"
-                  :data-testid="`food-delivery-menu-open-${item.id}`"
-                  @click="openMenuItemDetail(item.id)"
-                >
-                  <span class="sr-only">{{ t('查看菜品详情', 'View item details') }}</span>
-                </button>
-                <div
-                  class="pointer-events-none absolute left-1/2 top-0 z-10 h-24 w-24 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-[5px] border-[#30364d] bg-[#111421] shadow-[0_18px_40px_rgba(0,0,0,0.42),inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                  :data-testid="`food-delivery-menu-dish-${item.id}`"
-                >
-                  <img
-                    v-if="foodImageUrl(item)"
-                    :src="foodImageUrl(item)"
-                    :alt="item.image?.alt || item.title"
-                    class="h-full w-full object-cover"
-                  />
-                  <div v-else class="flex h-full w-full items-center justify-center text-xl text-orange-300">
-                    <i class="fas fa-bowl-food"></i>
+              <article
+                v-for="item in visibleActiveMenuItems"
+                :key="item.id"
+                class="relative"
+                :class="
+                  isDarkTrayStore
+                    ? 'min-h-[11.2rem] overflow-visible rounded-[1.85rem] border border-white/[0.05] bg-[linear-gradient(180deg,#202536,#161a27)] p-4 pt-12 text-left shadow-[0_18px_42px_rgba(0,0,0,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#202638]'
+                    : isDessertWindowStore
+                      ? 'min-w-0 overflow-hidden rounded-[1.35rem] border border-[#ffe0cb] bg-white shadow-[0_12px_28px_rgba(191,83,36,0.1)] transition duration-200 hover:-translate-y-0.5'
+                      : 'flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-2'
+                "
+                :data-testid="`food-delivery-menu-${item.id}`"
+                :data-menu-section="item.menuSection || 'signature'"
+                :data-template="activeStoreTemplate"
+              >
+                <template v-if="isDarkTrayStore">
+                  <button
+                    type="button"
+                    class="absolute inset-0 z-0 rounded-[1.85rem] text-left"
+                    :data-testid="`food-delivery-menu-open-${item.id}`"
+                    @click="openMenuItemDetail(item.id)"
+                  >
+                    <span class="sr-only">{{ t('查看菜品详情', 'View item details') }}</span>
+                  </button>
+                  <div
+                    class="pointer-events-none absolute left-1/2 top-0 z-10 h-24 w-24 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border-[5px] border-[#30364d] bg-[#111421] shadow-[0_18px_40px_rgba(0,0,0,0.42),inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+                    :data-testid="`food-delivery-menu-dish-${item.id}`"
+                  >
+                    <img
+                      v-if="foodImageUrl(item)"
+                      :src="foodImageUrl(item)"
+                      :alt="item.image?.alt || item.title"
+                      class="h-full w-full object-cover"
+                    />
+                    <div
+                      v-else
+                      class="flex h-full w-full items-center justify-center text-xl text-orange-300"
+                    >
+                      <i class="fas fa-bowl-food"></i>
+                    </div>
                   </div>
-                </div>
-                <div
-                  class="pointer-events-none relative z-10 pt-8"
-                  :data-testid="`food-delivery-menu-tray-${item.id}`"
-                >
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                      <p class="line-clamp-2 text-[1.05rem] font-black leading-6 text-white">{{ item.title }}</p>
-                      <p class="mt-1 text-[0.66rem] font-bold uppercase tracking-[0.16em] text-orange-200/70">
-                        {{ resolveStoreMenuSectionMeta(item.menuSection).en }}
+                  <div
+                    class="pointer-events-none relative z-10 pt-8"
+                    :data-testid="`food-delivery-menu-tray-${item.id}`"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="line-clamp-2 text-[1.05rem] font-black leading-6 text-white">
+                          {{ item.title }}
+                        </p>
+                        <p
+                          class="mt-1 text-[0.66rem] font-bold uppercase tracking-[0.16em] text-orange-200/70"
+                        >
+                          {{ resolveStoreMenuSectionMeta(item.menuSection).en }}
+                        </p>
+                      </div>
+                      <p
+                        class="shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-black text-orange-100"
+                      >
+                        {{ item.price }} {{ item.currency }}
                       </p>
                     </div>
-                    <p class="shrink-0 rounded-full bg-white/[0.06] px-2.5 py-1 text-[0.68rem] font-black text-orange-100">
+                    <p class="mt-2 line-clamp-2 min-h-9 text-[0.74rem] leading-5 text-slate-400">
+                      {{ item.desc || item.ingredients || activeStoreShortDescription }}
+                    </p>
+                    <div class="mt-4 flex items-center justify-between gap-2">
+                      <p class="text-[0.72rem] font-bold text-slate-500">
+                        {{ t('点开看详情和食材', 'Tap for details and ingredients') }}
+                      </p>
+                      <button
+                        class="pointer-events-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ff806f] text-[11px] font-black text-white shadow-[0_12px_24px_rgba(255,128,111,0.2)]"
+                        :data-testid="`food-delivery-add-${item.id}`"
+                        :aria-label="`Add ${item.title}`"
+                        @click.stop="addMenuItemToCart(item.id)"
+                      >
+                        <i class="fas fa-plus text-[10px]"></i>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+                <template v-else-if="isDessertWindowStore">
+                  <button
+                    type="button"
+                    class="block w-full text-left"
+                    :data-testid="`food-delivery-menu-open-${item.id}`"
+                    @click="openMenuItemDetail(item.id)"
+                  >
+                    <div
+                      class="aspect-[6/5] w-full overflow-hidden bg-[#fff0dc]"
+                      :data-testid="`food-delivery-menu-dish-${item.id}`"
+                    >
+                      <img
+                        v-if="foodImageUrl(item)"
+                        :src="foodImageUrl(item)"
+                        :alt="item.image?.alt || item.title"
+                        class="h-full w-full object-cover"
+                        :data-required-asset="foodDeliveryRequiredAssetPath(item)"
+                        @error="handleFoodShopImageError"
+                      />
+                      <div
+                        v-else
+                        class="flex h-full w-full items-center justify-center text-2xl text-[#ef512d]"
+                      >
+                        <i class="fas fa-ice-cream"></i>
+                      </div>
+                    </div>
+                    <div class="p-3 pb-2">
+                      <p class="line-clamp-2 min-h-10 text-sm font-black leading-5 text-[#5f2919]">
+                        {{ item.title }}
+                      </p>
+                      <p
+                        class="mt-1 line-clamp-2 min-h-8 text-[10px] font-semibold leading-4 text-[#a8684e]"
+                      >
+                        {{ item.desc || item.ingredients }}
+                      </p>
+                    </div>
+                  </button>
+                  <div class="flex items-center justify-between gap-2 px-3 pb-3">
+                    <p class="min-w-0 truncate text-xs font-black text-[#d54420]">
                       {{ item.price }} {{ item.currency }}
                     </p>
-                  </div>
-                  <p class="mt-2 line-clamp-2 min-h-9 text-[0.74rem] leading-5 text-slate-400">
-                    {{ item.desc || item.ingredients || activeStoreShortDescription }}
-                  </p>
-                  <div class="mt-4 flex items-center justify-between gap-2">
-                    <p class="text-[0.72rem] font-bold text-slate-500">
-                      {{ t('点开看详情和食材', 'Tap for details and ingredients') }}
-                    </p>
                     <button
-                      class="pointer-events-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ff806f] text-[11px] font-black text-white shadow-[0_12px_24px_rgba(255,128,111,0.2)]"
+                      type="button"
+                      class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ef512d] text-white shadow-[0_10px_20px_rgba(239,81,45,0.24)] active:scale-[0.96]"
                       :data-testid="`food-delivery-add-${item.id}`"
                       :aria-label="`Add ${item.title}`"
                       @click.stop="addMenuItemToCart(item.id)"
@@ -4830,51 +7017,113 @@ onBeforeUnmount(() => {
                       <i class="fas fa-plus text-[10px]"></i>
                     </button>
                   </div>
-                </div>
-              </template>
-              <template v-else>
-                <button
-                  type="button"
-                  class="flex min-w-0 flex-1 items-center gap-3 text-left"
-                  :data-testid="`food-delivery-menu-open-${item.id}`"
-                  @click="openMenuItemDetail(item.id)"
-                >
-                  <div class="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-orange-50">
-                    <img
-                      v-if="foodImageUrl(item)"
-                      :src="foodImageUrl(item)"
-                      :alt="item.image?.alt || item.title"
-                      class="h-full w-full object-cover"
-                    />
-                    <div v-else class="flex h-full w-full items-center justify-center text-orange-500">
-                      <i class="fas fa-bowl-food"></i>
+                </template>
+                <template v-else>
+                  <button
+                    type="button"
+                    class="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    :data-testid="`food-delivery-menu-open-${item.id}`"
+                    @click="openMenuItemDetail(item.id)"
+                  >
+                    <div class="h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-orange-50">
+                      <img
+                        v-if="foodImageUrl(item)"
+                        :src="foodImageUrl(item)"
+                        :alt="item.image?.alt || item.title"
+                        class="h-full w-full object-cover"
+                      />
+                      <div
+                        v-else
+                        class="flex h-full w-full items-center justify-center text-orange-500"
+                      >
+                        <i class="fas fa-bowl-food"></i>
+                      </div>
                     </div>
-                  </div>
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-bold">{{ item.title }}</p>
-                    <p class="mt-1 text-[11px] text-gray-500">{{ item.price }} {{ item.currency }}</p>
-                    <p class="mt-0.5 text-[10px] font-semibold text-orange-500">{{ foodImageSourceLabel(item) }}</p>
-                  </div>
-                </button>
-                <button
-                  class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold"
-                  :class="activeStoreVisual.buttonClass"
-                  :data-testid="`food-delivery-add-${item.id}`"
-                  @click.stop="addMenuItemToCart(item.id)"
-                >
-                  {{ t('加入', 'Add') }}
-                </button>
-              </template>
-            </article>
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-bold">{{ item.title }}</p>
+                      <p class="mt-1 text-[11px] text-gray-500">
+                        {{ item.price }} {{ item.currency }}
+                      </p>
+                      <p class="mt-0.5 text-[10px] font-semibold text-orange-500">
+                        {{ foodImageSourceLabel(item) }}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold"
+                    :class="activeStoreVisual.buttonClass"
+                    :data-testid="`food-delivery-add-${item.id}`"
+                    @click.stop="addMenuItemToCart(item.id)"
+                  >
+                    {{ t('加入', 'Add') }}
+                  </button>
+                </template>
+              </article>
             </div>
           </div>
         </section>
+
+        <p
+          v-if="false"
+          class="rounded-2xl border border-[#ffc9a9] bg-white px-3 py-2 text-center text-xs font-bold leading-5 text-[#a34426]"
+          data-testid="food-delivery-store-nav-feedback"
+        >
+          {{ storeNavigationFeedback }}
+        </p>
+
+        <nav
+          v-if="false"
+          class="grid grid-cols-4 rounded-[1.35rem] border border-[#ffc9a9] bg-white p-1.5 text-[#8d4c33] shadow-[0_18px_45px_rgba(155,61,25,0.14)]"
+          data-testid="food-delivery-peach-cloud-nav"
+          :aria-label="t('店铺导航', 'Shop navigation')"
+        >
+          <button
+            type="button"
+            class="flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black"
+            data-testid="food-delivery-peach-cloud-nav-menu"
+            @click="focusStoreMenuSection('all')"
+          >
+            <i class="fas fa-table-cells-large text-sm text-[#ef512d]"></i>
+            {{ t('菜单', 'Menu') }}
+          </button>
+          <button
+            type="button"
+            class="flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black"
+            data-testid="food-delivery-peach-cloud-nav-seasonal"
+            @click="focusStoreMenuSection('seasonal_drop')"
+          >
+            <i class="fas fa-sun text-sm text-[#ef512d]"></i>
+            {{ t('上新', 'New') }}
+          </button>
+          <button
+            type="button"
+            class="flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black"
+            data-testid="food-delivery-peach-cloud-nav-cart"
+            @click="openStoreCartSurface"
+          >
+            <i class="fas fa-bag-shopping text-sm text-[#ef512d]"></i>
+            {{ t('购物袋', 'Bag') }}
+          </button>
+          <button
+            type="button"
+            class="flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black"
+            data-testid="food-delivery-peach-cloud-nav-orders"
+            @click="openStoreOrdersSurface"
+          >
+            <i class="fas fa-receipt text-sm text-[#ef512d]"></i>
+            {{ t('订单', 'Orders') }}
+          </button>
+        </nav>
       </section>
 
       <section
         v-if="selectedMenuItem"
         class="fixed inset-0 z-50 flex backdrop-blur-sm"
-        :class="isDarkTrayStore ? 'items-end bg-black/[0.65] p-4 sm:items-center' : 'items-end bg-black/45 p-3'"
+        :class="
+          isDarkTrayStore
+            ? 'items-end bg-black/[0.65] p-4 sm:items-center'
+            : 'items-end bg-black/45 p-3'
+        "
         data-testid="food-delivery-menu-detail-sheet"
       >
         <article
@@ -4882,7 +7131,9 @@ onBeforeUnmount(() => {
           :class="
             isDarkTrayStore && menuDetailMode === 'detail'
               ? 'relative mt-20 overflow-visible rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#151824,#0b0d13)] text-white shadow-[0_28px_80px_rgba(0,0,0,0.55)]'
-              : 'overflow-hidden rounded-[2rem] bg-white'
+              : isDessertWindowStore && menuDetailMode === 'detail'
+                ? 'overflow-hidden rounded-[1.75rem] border border-[#ffd0b4] bg-[#fffaf2] text-[#5f2919] shadow-[0_26px_70px_rgba(107,40,16,0.28)]'
+                : 'overflow-hidden rounded-[2rem] bg-white'
           "
         >
           <template v-if="isDarkTrayStore && menuDetailMode === 'detail'">
@@ -4897,7 +7148,10 @@ onBeforeUnmount(() => {
                   :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
                   class="h-full w-full object-cover"
                 />
-                <div v-else class="flex h-full w-full items-center justify-center text-4xl text-orange-300">
+                <div
+                  v-else
+                  class="flex h-full w-full items-center justify-center text-4xl text-orange-300"
+                >
                   <i class="fas fa-bowl-food"></i>
                 </div>
               </div>
@@ -4951,7 +7205,10 @@ onBeforeUnmount(() => {
                   }}
                 </p>
 
-                <div class="rounded-[1.35rem] bg-white/[0.06] p-3" data-testid="food-delivery-menu-detail-ingredients">
+                <div
+                  class="rounded-[1.35rem] bg-white/[0.06] p-3"
+                  data-testid="food-delivery-menu-detail-ingredients"
+                >
                   <p class="text-[11px] font-bold uppercase text-orange-300">
                     {{ t('基础食材', 'Base ingredients') }}
                   </p>
@@ -4981,7 +7238,9 @@ onBeforeUnmount(() => {
                     >
                       <i class="fas fa-minus"></i>
                     </button>
-                    <span class="min-w-8 text-center text-sm font-black">{{ menuDetailQuantity }}</span>
+                    <span class="min-w-8 text-center text-sm font-black">{{
+                      menuDetailQuantity
+                    }}</span>
                     <button
                       type="button"
                       class="inline-flex h-10 w-10 items-center justify-center text-sm"
@@ -5011,155 +7270,304 @@ onBeforeUnmount(() => {
             </div>
           </template>
 
-          <template v-else>
-          <div class="relative h-48 bg-gray-950">
-            <img
-              v-if="foodImageUrl(selectedMenuItem)"
-              :src="foodImageUrl(selectedMenuItem)"
-              :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
-              class="h-full w-full object-cover"
-            />
-            <div v-else class="flex h-full w-full items-center justify-center text-4xl text-orange-300">
-              <i class="fas fa-bowl-food"></i>
-            </div>
-            <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-              <button
-                type="button"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
-                data-testid="food-delivery-menu-detail-close"
-                @click="closeMenuItemDetail"
+          <template v-else-if="isDessertWindowStore && menuDetailMode === 'detail'">
+            <div class="relative aspect-[16/11] overflow-hidden bg-[#ffd458]">
+              <img
+                v-if="foodImageUrl(selectedMenuItem)"
+                :src="foodImageUrl(selectedMenuItem)"
+                :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
+                class="h-full w-full object-cover"
+                :data-required-asset="foodDeliveryRequiredAssetPath(selectedMenuItem)"
+                @error="handleFoodShopImageError"
+              />
+              <div
+                v-else
+                class="flex h-full w-full items-center justify-center text-5xl text-[#ef512d]"
               >
-                <i class="fas fa-xmark"></i>
-              </button>
-              <button
-                v-if="menuDetailMode === 'detail'"
-                type="button"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
-                data-testid="food-delivery-menu-detail-edit"
-                @click="startMenuItemEdit"
+                <i class="fas fa-ice-cream"></i>
+              </div>
+              <div
+                class="absolute inset-0 bg-[linear-gradient(180deg,rgba(80,27,8,0.08),rgba(80,27,8,0.4))]"
+              ></div>
+              <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+                <button
+                  type="button"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#5f2919] shadow-sm"
+                  data-testid="food-delivery-menu-detail-close"
+                  :aria-label="t('关闭', 'Close')"
+                  @click="closeMenuItemDetail"
+                >
+                  <i class="fas fa-xmark"></i>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#ef512d] shadow-sm"
+                  data-testid="food-delivery-menu-detail-edit"
+                  :aria-label="t('编辑商品', 'Edit item')"
+                  @click="startMenuItemEdit"
+                >
+                  <i class="fas fa-pen"></i>
+                </button>
+              </div>
+              <span
+                class="absolute bottom-3 left-3 rounded-full bg-[#ef512d] px-3 py-1 text-[11px] font-black text-white"
               >
-                <i class="fas fa-pen"></i>
-              </button>
+                {{
+                  resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).label ||
+                  resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).en
+                }}
+              </span>
             </div>
-          </div>
 
-          <div v-if="menuDetailMode === 'detail'" class="space-y-4 p-4">
-            <div>
-              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-500">
-                {{ activeRestaurant?.name || t('店铺菜品', 'Store item') }}
-              </p>
-              <div class="mt-1 flex items-start justify-between gap-3">
-                <h3 class="text-2xl font-black text-gray-950">{{ selectedMenuItem.title }}</h3>
-                <span class="shrink-0 rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700">
+            <div class="space-y-4 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black text-[#e5522c]">{{ activeStoreDisplayName }}</p>
+                  <h3 class="mt-1 text-2xl font-black leading-tight text-[#572415]">
+                    {{ selectedMenuItem.title }}
+                  </h3>
+                </div>
+                <span
+                  class="shrink-0 rounded-full bg-[#ffe2aa] px-3 py-1 text-xs font-black text-[#a63e1e]"
+                >
                   {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
                 </span>
               </div>
-            </div>
-            <p
-              class="rounded-2xl bg-gray-50 p-3 text-sm leading-6 text-gray-600"
-              data-testid="food-delivery-menu-detail-desc"
-            >
-              {{
-                selectedMenuItem.desc ||
-                t(
-                  '暂无简介，可在编辑中补充这道菜的口味、场景和亮点。',
-                  'No description yet. Edit this item to add taste, scene, and highlights.',
-                )
-              }}
-            </p>
-            <div class="rounded-2xl bg-orange-50/70 p-3" data-testid="food-delivery-menu-detail-ingredients">
-              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-500">
-                {{ t('基础食材', 'Base ingredients') }}
-              </p>
-              <p class="mt-1 text-sm font-semibold text-orange-900">
-                {{ selectedMenuItem.ingredients || t('未填写', 'Not set') }}
-              </p>
-            </div>
-            <div class="flex items-center justify-between rounded-2xl bg-gray-50 px-3 py-2 text-xs text-gray-500">
-              <span>{{ t('图片来源', 'Image source') }}</span>
-              <span class="font-semibold text-gray-900">{{ foodImageSourceLabel(selectedMenuItem) }}</span>
-            </div>
-            <p
-              v-if="menuDetailFeedback"
-              class="rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-              data-testid="food-delivery-menu-detail-feedback"
-            >
-              {{ menuDetailFeedback }}
-            </p>
-            <button
-              type="button"
-              class="w-full rounded-2xl bg-gray-950 px-4 py-3 text-sm font-black text-white"
-              data-testid="food-delivery-menu-detail-add"
-              @click="addMenuItemToCart(selectedMenuItem.id)"
-            >
-              {{ t('加入购物车', 'Add to cart') }}
-            </button>
-          </div>
 
-          <form
-            v-else
-            class="space-y-3 p-4"
-            data-testid="food-delivery-menu-edit-form"
-            @submit.prevent="saveMenuItemEdit"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-500">
-                  {{ t('编辑当前菜品', 'Edit this item') }}
+              <p
+                class="text-sm font-semibold leading-6 text-[#915238]"
+                data-testid="food-delivery-menu-detail-desc"
+              >
+                {{ selectedMenuItem.desc }}
+              </p>
+
+              <div
+                class="rounded-[1.25rem] bg-[#fff0d8] p-3"
+                data-testid="food-delivery-menu-detail-ingredients"
+              >
+                <p class="text-[10px] font-black text-[#dd542f]">
+                  {{ t('杯中风味', 'Inside the cup') }}
                 </p>
-                <h3 class="mt-1 text-xl font-black text-gray-950">{{ selectedMenuItem.title }}</h3>
+                <p class="mt-1 text-sm font-semibold leading-5 text-[#6d321f]">
+                  {{ selectedMenuItem.ingredients || t('未设置', 'Not set') }}
+                </p>
               </div>
+
+              <p
+                v-if="menuDetailFeedback"
+                class="rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                data-testid="food-delivery-menu-detail-feedback"
+              >
+                {{ menuDetailFeedback }}
+              </p>
+
+              <div class="flex items-center justify-between gap-4">
+                <div
+                  class="inline-flex h-11 items-center rounded-full border border-[#ffc09c] bg-white text-[#7c3822]"
+                  data-testid="food-delivery-menu-detail-quantity"
+                >
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center text-sm"
+                    data-testid="food-delivery-menu-detail-quantity-decrease"
+                    @click="decreaseMenuDetailQuantity"
+                  >
+                    <i class="fas fa-minus"></i>
+                  </button>
+                  <span class="min-w-8 text-center text-sm font-black">{{
+                    menuDetailQuantity
+                  }}</span>
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center text-sm"
+                    data-testid="food-delivery-menu-detail-quantity-increase"
+                    @click="increaseMenuDetailQuantity"
+                  >
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+                <p
+                  class="text-right text-lg font-black text-[#c83f1f]"
+                  data-testid="food-delivery-menu-detail-total"
+                >
+                  {{ selectedMenuItemDetailTotal }}
+                </p>
+              </div>
+
               <button
                 type="button"
-                class="rounded-full border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-600"
-                data-testid="food-delivery-menu-edit-cancel"
-                @click="cancelMenuItemEdit"
+                class="w-full rounded-2xl bg-[#ef512d] px-4 py-3 text-sm font-black text-white shadow-[0_16px_34px_rgba(239,81,45,0.24)] active:scale-[0.99]"
+                data-testid="food-delivery-menu-detail-add"
+                @click="addMenuItemToCart(selectedMenuItem.id, menuDetailQuantity)"
               >
-                {{ t('取消', 'Cancel') }}
+                {{ t('装进购物袋', 'Add to bag') }}
               </button>
             </div>
-            <input
-              v-model="menuItemEditDraft.title"
-              class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold outline-none"
-              data-testid="food-delivery-menu-edit-title"
-              :placeholder="t('菜品名称', 'Item name')"
-            />
-            <textarea
-              v-model="menuItemEditDraft.desc"
-              class="min-h-24 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none"
-              data-testid="food-delivery-menu-edit-desc"
-              :placeholder="t('简介', 'Description')"
-            ></textarea>
-            <input
-              v-model="menuItemEditDraft.ingredients"
-              class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none"
-              data-testid="food-delivery-menu-edit-ingredients"
-              :placeholder="t('基础食材', 'Base ingredients')"
-            />
-            <ImageSourcePicker
-              v-model:source-type="menuItemEditDraft.imageSourceType"
-              v-model:image-url="menuItemEditDraft.imageUrl"
-              v-model:gallery-asset-id="menuItemEditDraft.imageGalleryAssetId"
-              :gallery-assets="galleryImageOptions"
-              size="xs"
-              test-id-prefix="food-delivery-menu-edit"
-            />
-            <p
-              v-if="menuDetailFeedback"
-              class="rounded-2xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
-              data-testid="food-delivery-menu-edit-feedback"
+          </template>
+
+          <template v-else>
+            <div class="relative h-48 bg-gray-950">
+              <img
+                v-if="foodImageUrl(selectedMenuItem)"
+                :src="foodImageUrl(selectedMenuItem)"
+                :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
+                class="h-full w-full object-cover"
+              />
+              <div
+                v-else
+                class="flex h-full w-full items-center justify-center text-4xl text-orange-300"
+              >
+                <i class="fas fa-bowl-food"></i>
+              </div>
+              <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+                <button
+                  type="button"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
+                  data-testid="food-delivery-menu-detail-close"
+                  @click="closeMenuItemDetail"
+                >
+                  <i class="fas fa-xmark"></i>
+                </button>
+                <button
+                  v-if="menuDetailMode === 'detail'"
+                  type="button"
+                  class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"
+                  data-testid="food-delivery-menu-detail-edit"
+                  @click="startMenuItemEdit"
+                >
+                  <i class="fas fa-pen"></i>
+                </button>
+              </div>
+            </div>
+
+            <div v-if="menuDetailMode === 'detail'" class="space-y-4 p-4">
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-500">
+                  {{ activeRestaurant?.name || t('店铺菜品', 'Store item') }}
+                </p>
+                <div class="mt-1 flex items-start justify-between gap-3">
+                  <h3 class="text-2xl font-black text-gray-950">{{ selectedMenuItem.title }}</h3>
+                  <span
+                    class="shrink-0 rounded-full bg-orange-50 px-3 py-1 text-xs font-black text-orange-700"
+                  >
+                    {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
+                  </span>
+                </div>
+              </div>
+              <p
+                class="rounded-2xl bg-gray-50 p-3 text-sm leading-6 text-gray-600"
+                data-testid="food-delivery-menu-detail-desc"
+              >
+                {{
+                  selectedMenuItem.desc ||
+                  t(
+                    '暂无简介，可在编辑中补充这道菜的口味、场景和亮点。',
+                    'No description yet. Edit this item to add taste, scene, and highlights.',
+                  )
+                }}
+              </p>
+              <div
+                class="rounded-2xl bg-orange-50/70 p-3"
+                data-testid="food-delivery-menu-detail-ingredients"
+              >
+                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-orange-500">
+                  {{ t('基础食材', 'Base ingredients') }}
+                </p>
+                <p class="mt-1 text-sm font-semibold text-orange-900">
+                  {{ selectedMenuItem.ingredients || t('未填写', 'Not set') }}
+                </p>
+              </div>
+              <div
+                class="flex items-center justify-between rounded-2xl bg-gray-50 px-3 py-2 text-xs text-gray-500"
+              >
+                <span>{{ t('图片来源', 'Image source') }}</span>
+                <span class="font-semibold text-gray-900">{{
+                  foodImageSourceLabel(selectedMenuItem)
+                }}</span>
+              </div>
+              <p
+                v-if="menuDetailFeedback"
+                class="rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                data-testid="food-delivery-menu-detail-feedback"
+              >
+                {{ menuDetailFeedback }}
+              </p>
+              <button
+                type="button"
+                class="w-full rounded-2xl bg-gray-950 px-4 py-3 text-sm font-black text-white"
+                data-testid="food-delivery-menu-detail-add"
+                @click="addMenuItemToCart(selectedMenuItem.id)"
+              >
+                {{ t('加入购物车', 'Add to cart') }}
+              </button>
+            </div>
+
+            <form
+              v-else
+              class="space-y-3 p-4"
+              data-testid="food-delivery-menu-edit-form"
+              @submit.prevent="saveMenuItemEdit"
             >
-              {{ menuDetailFeedback }}
-            </p>
-            <button
-              type="button"
-              class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white"
-              data-testid="food-delivery-menu-edit-save"
-              @click="saveMenuItemEdit"
-            >
-              {{ t('保存当前菜品', 'Save this item') }}
-            </button>
-          </form>
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-500">
+                    {{ t('编辑当前菜品', 'Edit this item') }}
+                  </p>
+                  <h3 class="mt-1 text-xl font-black text-gray-950">
+                    {{ selectedMenuItem.title }}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  class="rounded-full border border-gray-200 px-3 py-1.5 text-[11px] font-bold text-gray-600"
+                  data-testid="food-delivery-menu-edit-cancel"
+                  @click="cancelMenuItemEdit"
+                >
+                  {{ t('取消', 'Cancel') }}
+                </button>
+              </div>
+              <input
+                v-model="menuItemEditDraft.title"
+                class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold outline-none"
+                data-testid="food-delivery-menu-edit-title"
+                :placeholder="t('菜品名称', 'Item name')"
+              />
+              <textarea
+                v-model="menuItemEditDraft.desc"
+                class="min-h-24 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-6 outline-none"
+                data-testid="food-delivery-menu-edit-desc"
+                :placeholder="t('简介', 'Description')"
+              ></textarea>
+              <input
+                v-model="menuItemEditDraft.ingredients"
+                class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none"
+                data-testid="food-delivery-menu-edit-ingredients"
+                :placeholder="t('基础食材', 'Base ingredients')"
+              />
+              <ImageSourcePicker
+                v-model:source-type="menuItemEditDraft.imageSourceType"
+                v-model:image-url="menuItemEditDraft.imageUrl"
+                v-model:gallery-asset-id="menuItemEditDraft.imageGalleryAssetId"
+                :gallery-assets="galleryImageOptions"
+                size="xs"
+                test-id-prefix="food-delivery-menu-edit"
+              />
+              <p
+                v-if="menuDetailFeedback"
+                class="rounded-2xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
+                data-testid="food-delivery-menu-edit-feedback"
+              >
+                {{ menuDetailFeedback }}
+              </p>
+              <button
+                type="button"
+                class="w-full rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white"
+                data-testid="food-delivery-menu-edit-save"
+                @click="saveMenuItemEdit"
+              >
+                {{ t('保存当前菜品', 'Save this item') }}
+              </button>
+            </form>
           </template>
         </article>
       </section>
@@ -5168,9 +7576,11 @@ onBeforeUnmount(() => {
         v-if="isStoreMode && (foodDeliveryStore.cartLineItems.length > 0 || checkoutFeedback)"
         class="rounded-3xl p-4"
         :class="
-          isStoreMode
-            ? 'sticky bottom-3 z-30 border border-orange-300/20 bg-[#0f121c]/95 text-white shadow-[0_22px_60px_rgba(0,0,0,0.45)] backdrop-blur'
-            : 'border border-amber-100 bg-white'
+          isDessertWindowStore
+            ? 'relative z-20 mx-4 mb-20 border border-[#ffb58f] bg-white text-[#5f2919] shadow-[0_18px_46px_rgba(133,48,18,0.16)]'
+            : isStoreMode
+              ? 'sticky bottom-3 z-30 border border-orange-300/20 bg-[#0f121c]/95 text-white shadow-[0_22px_60px_rgba(0,0,0,0.45)] backdrop-blur'
+              : 'border border-amber-100 bg-white'
         "
         data-testid="food-delivery-cart-panel"
       >
@@ -5178,22 +7588,43 @@ onBeforeUnmount(() => {
           <div class="flex min-w-0 items-center gap-3">
             <span
               v-if="isStoreMode"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#ff806f] text-white shadow-[0_12px_28px_rgba(255,128,111,0.25)]"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-white"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-[#ef512d] shadow-[0_12px_28px_rgba(239,81,45,0.24)]'
+                  : 'bg-[#ff806f] shadow-[0_12px_28px_rgba(255,128,111,0.25)]'
+              "
             >
               <i class="fas fa-basket-shopping"></i>
             </span>
             <div class="min-w-0">
-            <p class="text-sm font-bold">{{ t('外卖购物车', 'Food cart') }}</p>
-            <p class="mt-1 text-xs" :class="isStoreMode ? 'text-slate-400' : 'text-gray-500'">
-              {{ foodDeliveryStore.cartQuantity }} {{ t('份餐品', 'item(s)') }}
-            </p>
-          </div>
+              <p class="text-sm font-bold">{{ t('外卖购物车', 'Food cart') }}</p>
+              <p
+                class="mt-1 text-xs"
+                :class="
+                  isDessertWindowStore
+                    ? 'text-[#aa664a]'
+                    : isStoreMode
+                      ? 'text-slate-400'
+                      : 'text-gray-500'
+                "
+              >
+                {{ foodDeliveryStore.cartQuantity }} {{ t('份餐品', 'item(s)') }}
+              </p>
             </div>
+          </div>
           <span
             class="rounded-full px-3 py-1 text-[11px] font-semibold"
-            :class="isStoreMode ? 'bg-orange-400/15 text-orange-100' : 'bg-amber-50 text-amber-700'"
+            :class="
+              isDessertWindowStore
+                ? 'bg-[#ffe2ae] text-[#9a3e20]'
+                : isStoreMode
+                  ? 'bg-orange-400/15 text-orange-100'
+                  : 'bg-amber-50 text-amber-700'
+            "
           >
-            {{ t('预计合计', 'Est. total') }} {{ foodDeliveryStore.cartPrimaryTotal.amount }} {{ foodDeliveryStore.cartPrimaryTotal.currency }}
+            {{ t('预计合计', 'Est. total') }} {{ foodDeliveryStore.cartPrimaryTotal.amount }}
+            {{ foodDeliveryStore.cartPrimaryTotal.currency }}
           </span>
         </div>
         <div v-if="foodDeliveryStore.cartLineItems.length > 0" class="mt-3 space-y-2">
@@ -5201,36 +7632,74 @@ onBeforeUnmount(() => {
             v-for="line in foodDeliveryStore.cartLineItems"
             :key="line.menuItemId"
             class="rounded-2xl p-3"
-            :class="isStoreMode ? 'border border-white/[0.06] bg-white/[0.08]' : 'bg-amber-50/70'"
+            :class="
+              isDessertWindowStore
+                ? 'border border-[#ffe0ca] bg-[#fff7e8]'
+                : isStoreMode
+                  ? 'border border-white/[0.06] bg-white/[0.08]'
+                  : 'bg-amber-50/70'
+            "
             :data-testid="`food-delivery-cart-${line.menuItemId}`"
           >
             <p class="text-xs font-bold">{{ line.menuItem.title }} × {{ line.quantity }}</p>
-            <p class="mt-1 text-[11px]" :class="isStoreMode ? 'text-orange-100' : 'text-amber-700'">
+            <p
+              class="mt-1 text-[11px]"
+              :class="
+                isDessertWindowStore
+                  ? 'text-[#c54a28]'
+                  : isStoreMode
+                    ? 'text-orange-100'
+                    : 'text-amber-700'
+              "
+            >
               {{ line.subtotal }} {{ line.currency }}
             </p>
           </article>
           <button
             class="w-full rounded-2xl px-4 py-3 text-sm font-bold text-white"
-            :class="isStoreMode ? 'bg-[#ff806f] shadow-[0_14px_34px_rgba(255,128,111,0.25)]' : 'bg-gray-950'"
+            :class="
+              isDessertWindowStore
+                ? 'bg-[#ef512d] shadow-[0_14px_34px_rgba(239,81,45,0.24)]'
+                : isStoreMode
+                  ? 'bg-[#ff806f] shadow-[0_14px_34px_rgba(255,128,111,0.25)]'
+                  : 'bg-gray-950'
+            "
             data-testid="food-delivery-checkout"
             @click="openCheckoutSheet"
           >
             {{ storeCartCtaLabel }}
           </button>
-          <p class="text-[10px] font-semibold text-slate-500">
+          <p
+            class="text-[10px] font-semibold"
+            :class="isDessertWindowStore ? 'text-[#a9684d]' : 'text-slate-500'"
+          >
             {{ t('含配送费', 'Includes delivery') }} {{ activeStoreFeeText }}
           </p>
         </div>
         <p
           v-else
           class="mt-3 rounded-2xl p-3 text-xs leading-5"
-          :class="isStoreMode ? 'bg-white/[0.06] text-slate-300' : 'bg-amber-50 text-amber-700'"
+          :class="
+            isDessertWindowStore
+              ? 'bg-[#fff0dc] text-[#9b5036]'
+              : isStoreMode
+                ? 'bg-white/[0.06] text-slate-300'
+                : 'bg-amber-50 text-amber-700'
+          "
         >
-          {{ t('选一份喜欢的菜，结算条会在这里亮起。', 'Choose a dish and the checkout bar will light up here.') }}
+          {{
+            t(
+              '选一份喜欢的菜，结算条会在这里亮起。',
+              'Choose a dish and the checkout bar will light up here.',
+            )
+          }}
         </p>
         <p
           v-if="checkoutFeedback"
-          class="mt-3 rounded-2xl bg-white/[0.06] p-3 text-xs font-semibold text-orange-100"
+          class="mt-3 rounded-2xl p-3 text-xs font-semibold"
+          :class="
+            isDessertWindowStore ? 'bg-[#fff0dc] text-[#a44122]' : 'bg-white/[0.06] text-orange-100'
+          "
           data-testid="food-delivery-checkout-feedback"
         >
           {{ checkoutFeedback }}
@@ -5242,20 +7711,41 @@ onBeforeUnmount(() => {
         class="fixed inset-0 z-50 flex items-end bg-black/60 p-4 backdrop-blur-sm"
         data-testid="food-delivery-checkout-sheet"
       >
-        <article class="mx-auto w-full max-w-md rounded-[2rem] border border-white/[0.08] bg-[#11131b] p-4 text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+        <article
+          class="mx-auto w-full max-w-md rounded-[2rem] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+          :class="
+            isDessertWindowStore
+              ? 'border border-[#ffd0b4] bg-[#fffaf2] text-[#5f2919]'
+              : 'border border-white/[0.08] bg-[#11131b] text-white'
+          "
+        >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <p class="text-[11px] font-black uppercase tracking-[0.18em] text-[#ffb4a8]">
+              <p
+                class="text-[11px] font-black"
+                :class="isDessertWindowStore ? 'text-[#e44d28]' : 'text-[#ffb4a8]'"
+              >
                 {{ activeStoreDisplayName }}
               </p>
               <h3 class="mt-1 text-xl font-black">{{ t('确认本店订单', 'Confirm shop order') }}</h3>
-              <p class="mt-2 text-xs leading-5 text-slate-400">
-                {{ activeMapHandoff.deliveryAddress || t('当前 Map 配送地址', 'Current Map delivery address') }}
+              <p
+                class="mt-2 text-xs leading-5"
+                :class="isDessertWindowStore ? 'text-[#a46449]' : 'text-slate-400'"
+              >
+                {{
+                  activeMapHandoff.deliveryAddress ||
+                  t('当前 Map 配送地址', 'Current Map delivery address')
+                }}
               </p>
             </div>
             <button
               type="button"
-              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-slate-200"
+              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-[#ffe6d2] text-[#8e4027]'
+                  : 'bg-white/[0.08] text-slate-200'
+              "
               data-testid="food-delivery-checkout-close"
               aria-label="Close checkout"
               @click="closeCheckoutSheet"
@@ -5268,34 +7758,70 @@ onBeforeUnmount(() => {
             <article
               v-for="line in foodDeliveryStore.cartLineItems"
               :key="line.menuItemId"
-              class="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.07] p-3"
+              class="flex items-center justify-between gap-3 rounded-2xl p-3"
+              :class="isDessertWindowStore ? 'bg-[#fff0dc]' : 'bg-white/[0.07]'"
               :data-testid="`food-delivery-checkout-line-${line.menuItemId}`"
             >
               <div class="min-w-0">
                 <p class="truncate text-sm font-bold">{{ line.menuItem.title }}</p>
-                <p class="mt-1 text-[11px] text-slate-400">
+                <p
+                  class="mt-1 text-[11px]"
+                  :class="isDessertWindowStore ? 'text-[#aa674b]' : 'text-slate-400'"
+                >
                   x {{ line.quantity }} · {{ line.subtotal }} {{ line.currency }}
                 </p>
               </div>
-              <span class="shrink-0 rounded-full bg-[#ff806f]/15 px-2.5 py-1 text-[11px] font-bold text-[#ffb4a8]">
+              <span
+                class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
+                :class="
+                  isDessertWindowStore
+                    ? 'bg-[#ffdca3] text-[#9d3b1d]'
+                    : 'bg-[#ff806f]/15 text-[#ffb4a8]'
+                "
+              >
                 {{ line.subtotal }} {{ line.currency }}
               </span>
             </article>
           </div>
 
           <div class="mt-4 grid grid-cols-3 gap-2">
-            <div class="rounded-2xl bg-white/[0.06] p-3">
-              <p class="text-[10px] font-semibold text-slate-400">{{ t('预计送达', 'ETA') }}</p>
+            <div
+              class="rounded-2xl p-3"
+              :class="isDessertWindowStore ? 'bg-[#fff0dc]' : 'bg-white/[0.06]'"
+            >
+              <p
+                class="text-[10px] font-semibold"
+                :class="isDessertWindowStore ? 'text-[#aa674b]' : 'text-slate-400'"
+              >
+                {{ t('预计送达', 'ETA') }}
+              </p>
               <p class="mt-1 text-xs font-black">{{ activeStoreEtaText }}</p>
             </div>
-            <div class="rounded-2xl bg-white/[0.06] p-3">
-              <p class="text-[10px] font-semibold text-slate-400">{{ t('配送费', 'Fee') }}</p>
+            <div
+              class="rounded-2xl p-3"
+              :class="isDessertWindowStore ? 'bg-[#fff0dc]' : 'bg-white/[0.06]'"
+            >
+              <p
+                class="text-[10px] font-semibold"
+                :class="isDessertWindowStore ? 'text-[#aa674b]' : 'text-slate-400'"
+              >
+                {{ t('配送费', 'Fee') }}
+              </p>
               <p class="mt-1 text-xs font-black">{{ activeStoreFeeText }}</p>
             </div>
-            <div class="rounded-2xl bg-white/[0.06] p-3">
-              <p class="text-[10px] font-semibold text-slate-400">{{ t('合计', 'Total') }}</p>
+            <div
+              class="rounded-2xl p-3"
+              :class="isDessertWindowStore ? 'bg-[#ffe0aa]' : 'bg-white/[0.06]'"
+            >
+              <p
+                class="text-[10px] font-semibold"
+                :class="isDessertWindowStore ? 'text-[#a24122]' : 'text-slate-400'"
+              >
+                {{ t('合计', 'Total') }}
+              </p>
               <p class="mt-1 text-xs font-black">
-                {{ foodDeliveryStore.cartPrimaryTotal.amount }} {{ foodDeliveryStore.cartPrimaryTotal.currency }}
+                {{ foodDeliveryStore.cartPrimaryTotal.amount }}
+                {{ foodDeliveryStore.cartPrimaryTotal.currency }}
               </p>
             </div>
           </div>
@@ -5303,7 +7829,12 @@ onBeforeUnmount(() => {
           <div class="mt-4 flex items-center gap-2">
             <button
               type="button"
-              class="h-12 flex-1 rounded-2xl bg-white/[0.08] px-4 text-sm font-black text-slate-200"
+              class="h-12 flex-1 rounded-2xl px-4 text-sm font-black"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-[#ffe9d8] text-[#8d472f]'
+                  : 'bg-white/[0.08] text-slate-200'
+              "
               data-testid="food-delivery-checkout-cancel"
               @click="closeCheckoutSheet"
             >
@@ -5311,7 +7842,12 @@ onBeforeUnmount(() => {
             </button>
             <button
               type="button"
-              class="h-12 flex-[1.4] rounded-2xl bg-[#ff806f] px-4 text-sm font-black text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]"
+              class="h-12 flex-[1.4] rounded-2xl px-4 text-sm font-black text-white"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-[#ef512d] shadow-[0_14px_34px_rgba(239,81,45,0.24)]'
+                  : 'bg-[#ff806f] shadow-[0_14px_34px_rgba(255,128,111,0.26)]'
+              "
               data-testid="food-delivery-checkout-submit"
               @click="checkoutFoodDelivery"
             >
@@ -5326,235 +7862,311 @@ onBeforeUnmount(() => {
         class="food-delivery-support-stack"
         :class="
           isStoreMode
-            ? 'rounded-3xl border border-slate-800 bg-[#11131b] p-3 text-white'
+            ? isDessertWindowStore
+              ? 'mb-24 rounded-3xl border border-[#ffd2b8] bg-[#fff8ed] p-3 text-[#5f2919]'
+              : 'rounded-3xl border border-slate-800 bg-[#11131b] p-3 text-white'
             : 'contents'
         "
         data-testid="food-delivery-store-support-drawer"
       >
         <summary
           v-if="isStoreMode"
-          class="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-white/[0.06] px-3 py-2 text-sm font-black text-white"
+          class="flex scroll-mb-24 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-3 py-2 text-sm font-black"
+          :class="
+            isDessertWindowStore ? 'bg-[#ffe7d3] text-[#6e2e1a]' : 'bg-white/[0.06] text-white'
+          "
         >
           <span>{{ t('Order & delivery', 'Order & delivery') }}</span>
-          <span class="text-[11px] font-semibold text-slate-400">
-            {{ recentOrders.length }} {{ t('orders', 'orders') }} · {{ activeMapHandoff.etaMinutes }} min
+          <span
+            class="text-[11px] font-semibold"
+            :class="isDessertWindowStore ? 'text-[#a76044]' : 'text-slate-400'"
+          >
+            {{ recentOrders.length }} {{ t('orders', 'orders') }} ·
+            {{ activeMapHandoff.etaMinutes }} min
           </span>
         </summary>
         <div class="space-y-4" :class="isStoreMode ? 'mt-3' : ''">
-      <section class="rounded-3xl border border-lime-100 bg-white p-4" data-testid="food-delivery-map-handoff">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-bold">{{ t('Map 配送上下文', 'Map delivery context') }}</p>
-            <p class="mt-1 text-xs text-gray-500">
-              {{ t('只读提供位置、距离和 ETA，不创建外卖订单。', 'Read-only location, distance, and ETA. It does not create food orders.') }}
-            </p>
-          </div>
-          <span class="rounded-full bg-lime-50 px-3 py-1 text-[11px] font-semibold text-lime-700">
-            {{ activeMapHandoff.etaMinutes }} min
-          </span>
-        </div>
-        <div class="mt-3 grid gap-2 text-xs">
-          <p
-            class="rounded-2xl bg-lime-50/80 p-3 leading-5 text-lime-800"
-            data-testid="food-delivery-map-handoff-route"
-          >
-            {{ activeMapHandoffRouteSummary }}
-          </p>
-          <div class="grid grid-cols-2 gap-2">
-            <div class="rounded-2xl bg-gray-50 p-3" data-testid="food-delivery-map-handoff-address">
-              <p class="font-semibold text-gray-900">{{ t('配送地址', 'Delivery address') }}</p>
-              <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-500">
-                {{ activeMapHandoff.deliveryAddress || t('未设置', 'Not set') }}
-              </p>
-            </div>
-            <div class="rounded-2xl bg-gray-50 p-3" data-testid="food-delivery-map-handoff-distance">
-              <p class="font-semibold text-gray-900">{{ t('预计距离', 'Distance') }}</p>
-              <p class="mt-1 text-[11px] text-gray-500">
-                {{ activeMapHandoff.distanceKm }} km · {{ activeMapHandoff.etaMinutes }} min
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-gray-100 bg-white p-4" data-testid="food-delivery-orders-panel">
-        <p class="text-sm font-bold">{{ t('本店订单', 'Shop orders') }}</p>
-        <p
-          v-if="eventFeedback"
-          class="mt-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700"
-          data-testid="food-delivery-event-feedback"
-        >
-          {{ eventFeedback }}
-        </p>
-        <div v-if="recentOrders.length > 0" class="mt-3 space-y-2">
-          <article
-            v-for="order in recentOrders"
-            :key="order.id"
-            class="rounded-2xl p-3"
-            :class="isHighlightedOrder(order.id) ? 'border-2 border-orange-300 bg-orange-50 shadow-sm' : 'bg-gray-50'"
-            :data-testid="`food-delivery-order-${order.id}`"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate text-xs font-bold">{{ order.restaurantName }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">
-                  {{ order.itemCount }} {{ t('份', 'item(s)') }} · {{ order.status }}
-                </p>
-              </div>
-              <span class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-gray-700">
-                {{ order.totalCents / 100 }} {{ order.currency }}
-              </span>
-            </div>
-            <button
-              type="button"
-              class="mt-2 rounded-full border border-orange-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
-              :data-testid="`food-delivery-trigger-event-${order.id}`"
-              @click="triggerOrderSurpriseEvent(order)"
-            >
-              {{ t('触发配送事件', 'Trigger delivery event') }}
-            </button>
-            <button
-              v-if="order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED && order.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED"
-              type="button"
-              class="ml-2 mt-2 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
-              :data-testid="`food-delivery-mark-delivered-${order.id}`"
-              @click="markFoodOrderDelivered(order.id)"
-            >
-              {{ t('标记已送达', 'Mark delivered') }}
-            </button>
-            <button
-              type="button"
-              class="ml-2 mt-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
-              :data-testid="`food-delivery-delete-order-${order.id}`"
-              @click="removeFoodOrder(order.id)"
-            >
-              {{ t('删除', 'Delete') }}
-            </button>
-            <div v-if="orderEventRows(order).length > 0" class="mt-2 space-y-1.5">
-              <article
-                v-for="event in orderEventRows(order)"
-                :key="event.id"
-                class="rounded-xl border border-orange-100 bg-white px-2.5 py-2 text-[11px]"
-                :data-testid="`food-delivery-order-event-${order.id}-${event.id}`"
-              >
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0">
-                    <p class="font-semibold text-orange-900">{{ event.typeLabel }}</p>
-                    <p class="mt-1 line-clamp-2 leading-4 text-orange-700">{{ event.detail }}</p>
-                  </div>
-                  <span class="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 font-semibold text-orange-600">
-                    {{ event.timeLabel }}
-                  </span>
-                </div>
-                <DeliveryRouteContextCard
-                  :context="event.mapHandoff"
-                  :test-id="`food-delivery-event-map-context-${order.id}-${event.id}`"
-                />
-              </article>
-            </div>
-          </article>
-        </div>
-        <p v-else class="mt-3 rounded-2xl bg-gray-50 p-3 text-xs leading-5 text-gray-500">
-          {{ t('本店还没有订单。', 'No shop orders yet.') }}
-        </p>
-      </section>
-
-      <section class="rounded-3xl border border-emerald-100 bg-white p-4" data-testid="food-delivery-wallet-suggestions">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-bold">{{ t('Wallet 外卖消费建议', 'Wallet food expense suggestions') }}</p>
-            <p class="mt-1 text-xs leading-5 text-gray-500">
-              {{ t('只有已送达订单会出现在这里；点击后才会写入 Wallet。', 'Only delivered orders appear here; click to write them to Wallet.') }}
-            </p>
-          </div>
-          <span class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
-            {{ walletExpenseSuggestions.length }}
-          </span>
-        </div>
-        <div
-          v-if="walletExpenseSuggestions.length === 0"
-          class="mt-3 rounded-2xl bg-gray-50 p-3 text-center text-xs text-gray-500"
-        >
-          {{ t('暂无可写入 Wallet 的已送达外卖订单。', 'No delivered food orders are ready for Wallet yet.') }}
-        </div>
-        <div v-else class="mt-3 space-y-2">
-          <article
-            v-for="suggestion in walletExpenseSuggestions"
-            :key="suggestion.orderId"
-            class="rounded-2xl border border-emerald-50 bg-emerald-50/50 p-3"
-            :data-testid="`food-delivery-wallet-suggestion-${suggestion.orderId}`"
+          <section
+            class="rounded-3xl border border-lime-100 bg-white p-4"
+            data-testid="food-delivery-map-handoff"
           >
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-xs font-bold text-gray-900">{{ suggestion.restaurantName }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">
-                  {{ suggestion.itemCount }} {{ t('份', 'item(s)') }} / {{ suggestion.amount }} {{ suggestion.currency }}
+                <p class="text-sm font-bold">{{ t('Map 配送上下文', 'Map delivery context') }}</p>
+                <p class="mt-1 text-xs text-gray-500">
+                  {{
+                    t(
+                      '只读提供位置、距离和 ETA，不创建外卖订单。',
+                      'Read-only location, distance, and ETA. It does not create food orders.',
+                    )
+                  }}
                 </p>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <select
-                    v-model="sharedMealTargets[suggestion.orderId]"
-                    class="rounded-xl border border-emerald-100 bg-white px-2 py-1 text-[11px] text-gray-600 outline-none"
-                    :data-testid="`food-delivery-shared-meal-contact-${suggestion.orderId}`"
-                  >
-                    <option value="">{{ t('No shared-meal target', 'No shared-meal target') }}</option>
-                    <option
-                      v-for="contact in sharedMealContactOptions"
-                      :key="contact.id"
-                      :value="String(contact.id)"
-                    >
-                      {{ contact.name }}
-                    </option>
-                  </select>
-                  <span
-                    v-if="suggestion.relationshipAvailable"
-                    class="text-[11px] font-semibold"
-                    :class="suggestion.relationshipImported ? 'text-emerald-600' : 'text-amber-600'"
-                    :data-testid="`food-delivery-relationship-suggestion-${suggestion.orderId}`"
-                  >
-                    {{
-                      suggestion.relationshipImported
-                        ? t(`Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`, `Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`)
-                        : t(`Shared-meal fact ready for ${suggestion.relationshipTargetName}.`, `Shared-meal fact ready for ${suggestion.relationshipTargetName}.`)
-                    }}
-                  </span>
+              </div>
+              <span
+                class="rounded-full bg-lime-50 px-3 py-1 text-[11px] font-semibold text-lime-700"
+              >
+                {{ activeMapHandoff.etaMinutes }} min
+              </span>
+            </div>
+            <div class="mt-3 grid gap-2 text-xs">
+              <p
+                class="rounded-2xl bg-lime-50/80 p-3 leading-5 text-lime-800"
+                data-testid="food-delivery-map-handoff-route"
+              >
+                {{ activeMapHandoffRouteSummary }}
+              </p>
+              <div class="grid grid-cols-2 gap-2">
+                <div
+                  class="rounded-2xl bg-gray-50 p-3"
+                  data-testid="food-delivery-map-handoff-address"
+                >
+                  <p class="font-semibold text-gray-900">{{ t('配送地址', 'Delivery address') }}</p>
+                  <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-500">
+                    {{ activeMapHandoff.deliveryAddress || t('未设置', 'Not set') }}
+                  </p>
+                </div>
+                <div
+                  class="rounded-2xl bg-gray-50 p-3"
+                  data-testid="food-delivery-map-handoff-distance"
+                >
+                  <p class="font-semibold text-gray-900">{{ t('预计距离', 'Distance') }}</p>
+                  <p class="mt-1 text-[11px] text-gray-500">
+                    {{ activeMapHandoff.distanceKm }} km · {{ activeMapHandoff.etaMinutes }} min
+                  </p>
                 </div>
               </div>
-              <button
-                class="rounded-full px-3 py-1.5 text-[11px] font-semibold"
-                :class="suggestion.imported ? 'bg-gray-100 text-gray-400' : 'bg-emerald-600 text-white'"
-                :disabled="suggestion.imported"
-                :data-testid="`food-delivery-transfer-wallet-${suggestion.orderId}`"
-                @click="transferFoodSuggestionToWallet(suggestion)"
-              >
-                {{ suggestion.imported ? t('已记账', 'Recorded') : t('记入 Wallet', 'Record') }}
-              </button>
             </div>
-          </article>
-        </div>
-      </section>
+          </section>
 
-      <section class="rounded-3xl border border-lime-100 bg-white p-4" data-testid="food-delivery-map-boundary">
-        <p class="text-sm font-bold">{{ t('Map 对接边界', 'Map handoff boundary') }}</p>
-        <p class="mt-2 text-xs leading-5 text-gray-500">
-          {{
-            t(
-              '外卖可消费 Map 的餐厅位置、配送地址、附近筛选、骑手路线和 ETA；Map 不创建外卖订单，也不接管支付或商家状态。',
-              'Food Delivery may consume restaurant location, delivery address, nearby filters, courier route, and ETA from Map; Map does not create food orders or own payment/merchant state.',
-            )
-          }}
-        </p>
-        <div class="mt-3 space-y-2">
-          <article
-            v-for="item in sourcePlan"
-            :key="item.key"
-            class="rounded-2xl bg-lime-50/70 p-3"
-            :data-testid="`food-delivery-source-${item.key}`"
+          <section
+            class="rounded-3xl border border-gray-100 bg-white p-4"
+            data-testid="food-delivery-orders-panel"
           >
-            <p class="text-xs font-bold text-lime-800">{{ item.title }}</p>
-            <p class="mt-1 text-[11px] leading-4 text-lime-700">{{ item.desc }}</p>
-          </article>
-        </div>
-      </section>
+            <p class="text-sm font-bold">{{ t('本店订单', 'Shop orders') }}</p>
+            <p
+              v-if="eventFeedback"
+              class="mt-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700"
+              data-testid="food-delivery-event-feedback"
+            >
+              {{ eventFeedback }}
+            </p>
+            <div v-if="recentOrders.length > 0" class="mt-3 space-y-2">
+              <article
+                v-for="order in recentOrders"
+                :key="order.id"
+                class="rounded-2xl p-3"
+                :class="
+                  isHighlightedOrder(order.id)
+                    ? 'border-2 border-orange-300 bg-orange-50 shadow-sm'
+                    : 'bg-gray-50'
+                "
+                :data-testid="`food-delivery-order-${order.id}`"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="truncate text-xs font-bold">{{ order.restaurantName }}</p>
+                    <p class="mt-1 text-[11px] text-gray-500">
+                      {{ order.itemCount }} {{ t('份', 'item(s)') }} · {{ order.status }}
+                    </p>
+                  </div>
+                  <span
+                    class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-gray-700"
+                  >
+                    {{ order.totalCents / 100 }} {{ order.currency }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="mt-2 rounded-full border border-orange-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
+                  :data-testid="`food-delivery-trigger-event-${order.id}`"
+                  @click="triggerOrderSurpriseEvent(order)"
+                >
+                  {{ t('触发配送事件', 'Trigger delivery event') }}
+                </button>
+                <button
+                  v-if="
+                    order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED &&
+                    order.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED
+                  "
+                  type="button"
+                  class="ml-2 mt-2 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
+                  :data-testid="`food-delivery-mark-delivered-${order.id}`"
+                  @click="markFoodOrderDelivered(order.id)"
+                >
+                  {{ t('标记已送达', 'Mark delivered') }}
+                </button>
+                <button
+                  type="button"
+                  class="ml-2 mt-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
+                  :data-testid="`food-delivery-delete-order-${order.id}`"
+                  @click="removeFoodOrder(order.id)"
+                >
+                  {{ t('删除', 'Delete') }}
+                </button>
+                <div v-if="orderEventRows(order).length > 0" class="mt-2 space-y-1.5">
+                  <article
+                    v-for="event in orderEventRows(order)"
+                    :key="event.id"
+                    class="rounded-xl border border-orange-100 bg-white px-2.5 py-2 text-[11px]"
+                    :data-testid="`food-delivery-order-event-${order.id}-${event.id}`"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="font-semibold text-orange-900">{{ event.typeLabel }}</p>
+                        <p class="mt-1 line-clamp-2 leading-4 text-orange-700">
+                          {{ event.detail }}
+                        </p>
+                      </div>
+                      <span
+                        class="shrink-0 rounded-full bg-orange-50 px-2 py-0.5 font-semibold text-orange-600"
+                      >
+                        {{ event.timeLabel }}
+                      </span>
+                    </div>
+                    <DeliveryRouteContextCard
+                      :context="event.mapHandoff"
+                      :test-id="`food-delivery-event-map-context-${order.id}-${event.id}`"
+                    />
+                  </article>
+                </div>
+              </article>
+            </div>
+            <p v-else class="mt-3 rounded-2xl bg-gray-50 p-3 text-xs leading-5 text-gray-500">
+              {{ t('本店还没有订单。', 'No shop orders yet.') }}
+            </p>
+          </section>
+
+          <section
+            class="rounded-3xl border border-emerald-100 bg-white p-4"
+            data-testid="food-delivery-wallet-suggestions"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-bold">
+                  {{ t('Wallet 外卖消费建议', 'Wallet food expense suggestions') }}
+                </p>
+                <p class="mt-1 text-xs leading-5 text-gray-500">
+                  {{
+                    t(
+                      '只有已送达订单会出现在这里；点击后才会写入 Wallet。',
+                      'Only delivered orders appear here; click to write them to Wallet.',
+                    )
+                  }}
+                </p>
+              </div>
+              <span
+                class="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+              >
+                {{ walletExpenseSuggestions.length }}
+              </span>
+            </div>
+            <div
+              v-if="walletExpenseSuggestions.length === 0"
+              class="mt-3 rounded-2xl bg-gray-50 p-3 text-center text-xs text-gray-500"
+            >
+              {{
+                t(
+                  '暂无可写入 Wallet 的已送达外卖订单。',
+                  'No delivered food orders are ready for Wallet yet.',
+                )
+              }}
+            </div>
+            <div v-else class="mt-3 space-y-2">
+              <article
+                v-for="suggestion in walletExpenseSuggestions"
+                :key="suggestion.orderId"
+                class="rounded-2xl border border-emerald-50 bg-emerald-50/50 p-3"
+                :data-testid="`food-delivery-wallet-suggestion-${suggestion.orderId}`"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-xs font-bold text-gray-900">{{ suggestion.restaurantName }}</p>
+                    <p class="mt-1 text-[11px] text-gray-500">
+                      {{ suggestion.itemCount }} {{ t('份', 'item(s)') }} / {{ suggestion.amount }}
+                      {{ suggestion.currency }}
+                    </p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                      <select
+                        v-model="sharedMealTargets[suggestion.orderId]"
+                        class="rounded-xl border border-emerald-100 bg-white px-2 py-1 text-[11px] text-gray-600 outline-none"
+                        :data-testid="`food-delivery-shared-meal-contact-${suggestion.orderId}`"
+                      >
+                        <option value="">
+                          {{ t('No shared-meal target', 'No shared-meal target') }}
+                        </option>
+                        <option
+                          v-for="contact in sharedMealContactOptions"
+                          :key="contact.id"
+                          :value="String(contact.id)"
+                        >
+                          {{ contact.name }}
+                        </option>
+                      </select>
+                      <span
+                        v-if="suggestion.relationshipAvailable"
+                        class="text-[11px] font-semibold"
+                        :class="
+                          suggestion.relationshipImported ? 'text-emerald-600' : 'text-amber-600'
+                        "
+                        :data-testid="`food-delivery-relationship-suggestion-${suggestion.orderId}`"
+                      >
+                        {{
+                          suggestion.relationshipImported
+                            ? t(
+                                `Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`,
+                                `Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`,
+                              )
+                            : t(
+                                `Shared-meal fact ready for ${suggestion.relationshipTargetName}.`,
+                                `Shared-meal fact ready for ${suggestion.relationshipTargetName}.`,
+                              )
+                        }}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    class="rounded-full px-3 py-1.5 text-[11px] font-semibold"
+                    :class="
+                      suggestion.imported
+                        ? 'bg-gray-100 text-gray-400'
+                        : 'bg-emerald-600 text-white'
+                    "
+                    :disabled="suggestion.imported"
+                    :data-testid="`food-delivery-transfer-wallet-${suggestion.orderId}`"
+                    @click="transferFoodSuggestionToWallet(suggestion)"
+                  >
+                    {{ suggestion.imported ? t('已记账', 'Recorded') : t('记入 Wallet', 'Record') }}
+                  </button>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section
+            class="rounded-3xl border border-lime-100 bg-white p-4"
+            data-testid="food-delivery-map-boundary"
+          >
+            <p class="text-sm font-bold">{{ t('Map 对接边界', 'Map handoff boundary') }}</p>
+            <p class="mt-2 text-xs leading-5 text-gray-500">
+              {{
+                t(
+                  '外卖可消费 Map 的餐厅位置、配送地址、附近筛选、骑手路线和 ETA；Map 不创建外卖订单，也不接管支付或商家状态。',
+                  'Food Delivery may consume restaurant location, delivery address, nearby filters, courier route, and ETA from Map; Map does not create food orders or own payment/merchant state.',
+                )
+              }}
+            </p>
+            <div class="mt-3 space-y-2">
+              <article
+                v-for="item in sourcePlan"
+                :key="item.key"
+                class="rounded-2xl bg-lime-50/70 p-3"
+                :data-testid="`food-delivery-source-${item.key}`"
+              >
+                <p class="text-xs font-bold text-lime-800">{{ item.title }}</p>
+                <p class="mt-1 text-[11px] leading-4 text-lime-700">{{ item.desc }}</p>
+              </article>
+            </div>
+          </section>
         </div>
       </details>
     </div>

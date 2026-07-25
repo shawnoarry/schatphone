@@ -23,7 +23,9 @@ describe('food delivery store', () => {
     expect(store.listRestaurantsByCategory('nearby')[0]?.distanceKm).toBeLessThanOrEqual(
       store.listRestaurantsByCategory('nearby')[1]?.distanceKm || 999,
     )
-    expect(store.categorySummaries.find((item) => item.key === 'cafe')?.restaurantCount).toBeGreaterThan(0)
+    expect(
+      store.categorySummaries.find((item) => item.key === 'cafe')?.restaurantCount,
+    ).toBeGreaterThan(0)
     expect(store.findRestaurantById('food_seed_moon_bistro')?.image.url).toContain(
       '/images/ui-assets/apps/food-delivery/moon-bistro/cover/',
     )
@@ -37,6 +39,22 @@ describe('food delivery store', () => {
       restaurantId: 'food_seed_moon_bistro',
       menuSection: 'pasta',
     })
+    expect(store.findRestaurantById('food_seed_peach_cloud')).toMatchObject({
+      name: 'Peach Cloud',
+      category: 'dessert',
+      rating: 4.9,
+    })
+    expect(store.findRestaurantById('food_seed_peach_cloud')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/peach-cloud/cover/peach-cloud-hero-01.png',
+    )
+    const peachCloudMenu = store.listMenuByRestaurant('food_seed_peach_cloud')
+    expect(peachCloudMenu).toHaveLength(12)
+    expect(new Set(peachCloudMenu.map((item) => item.menuSection))).toEqual(
+      new Set(['cloud_tea', 'fruit_sparkle', 'frozen_clouds', 'oven_sweets', 'seasonal_drop']),
+    )
+    expect(store.findMenuItemById('food_menu_peach_golden_hour_set')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-12.png',
+    )
   })
 
   test('upserts restaurant and menu records with image metadata', () => {
@@ -122,7 +140,8 @@ describe('food delivery store', () => {
               category: 'restaurants',
               deliveryFee: '6.00',
               imageSourceType: 'url',
-              imageUrl: '/images/ui-assets/apps/food-delivery/moon-bistro/cover/moon-bistro-cover-02.png',
+              imageUrl:
+                '/images/ui-assets/apps/food-delivery/moon-bistro/cover/moon-bistro-cover-02.png',
             },
           ],
           menuItems: [
@@ -133,7 +152,8 @@ describe('food delivery store', () => {
               category: 'restaurants',
               price: '58.00',
               imageSourceType: 'url',
-              imageUrl: '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/moon-bistro-dish-03.png',
+              imageUrl:
+                '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/moon-bistro-dish-03.png',
             },
             {
               id: 'food_menu_moon_soup',
@@ -142,7 +162,8 @@ describe('food delivery store', () => {
               category: 'restaurants',
               price: '26.00',
               imageSourceType: 'url',
-              imageUrl: '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/moon-bistro-dish-02.png',
+              imageUrl:
+                '/images/ui-assets/apps/food-delivery/moon-bistro/dishes/moon-bistro-dish-02.png',
             },
           ],
           cartItems: [],
@@ -164,6 +185,68 @@ describe('food delivery store', () => {
       menuSection: 'pasta',
     })
     expect(moonBistroMenu.length).toBeGreaterThanOrEqual(8)
+    expect(store.findRestaurantById('food_seed_peach_cloud')?.name).toBe('Peach Cloud')
+    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(12)
+  })
+
+  test('refreshes legacy Peach Cloud copy without overwriting user-edited items', () => {
+    localStorage.setItem(
+      'schatphone:store:food-delivery',
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        data: {
+          restaurants: [
+            {
+              id: 'food_seed_peach_cloud',
+              name: 'Peach Cloud',
+              category: 'dessert',
+              deliveryFee: '4.00',
+            },
+          ],
+          menuItems: [
+            {
+              id: 'food_menu_peach_jasmine_cream',
+              restaurantId: 'food_seed_peach_cloud',
+              title: 'Jasmine Daydream',
+              category: 'dessert',
+              menuSection: 'cloud_tea',
+              price: '24.00',
+              desc: 'Cold-brew jasmine tea finished with a light vanilla cream cap.',
+              ingredients: 'jasmine tea, vanilla, cream, cane sugar',
+            },
+            {
+              id: 'food_menu_peach_sunset_fizz',
+              restaurantId: 'food_seed_peach_cloud',
+              title: 'My Edited Peach Box',
+              category: 'dessert',
+              menuSection: 'fruit_sparkle',
+              price: '30.00',
+              desc: 'My own saved description.',
+              ingredients: 'custom filling',
+            },
+          ],
+          cartItems: [],
+          orders: [],
+        },
+      }),
+    )
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findMenuItemById('food_menu_peach_jasmine_cream')).toMatchObject({
+      title: 'Cocoa Cloud Brownie',
+      menuSection: 'oven_sweets',
+      ingredients: 'dark cocoa, butter, roasted nuts, vanilla cream',
+    })
+    expect(store.findMenuItemById('food_menu_peach_sunset_fizz')).toMatchObject({
+      title: 'My Edited Peach Box',
+      menuSection: 'fruit_sparkle',
+      price: '30.00',
+      desc: 'My own saved description.',
+    })
+    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(12)
   })
 
   test('creates single-restaurant cart and local orders', () => {
@@ -312,7 +395,9 @@ describe('food delivery store', () => {
     expect(store.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.CANCELLED)
     expect(store.orders[0]?.events).toHaveLength(3)
     expect(store.addOrderEvent(order.id, { type: 'unknown' })).toBeNull()
-    expect(store.addOrderEvent('missing', { type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY })).toBeNull()
+    expect(
+      store.addOrderEvent('missing', { type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY }),
+    ).toBeNull()
   })
 
   test('pushes Food Delivery service notifications while Food Delivery keeps order state', () => {

@@ -1,6 +1,10 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import {
+  readPersistedState,
+  readPersistedStateAsync,
+  writePersistedState,
+} from '../lib/persistence'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
@@ -24,6 +28,7 @@ const FOOD_ORDER_LIMIT = 120
 const FOOD_ORDER_EVENT_LIMIT = 24
 const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
 const MOON_BISTRO_SEED_RESTAURANT_ID = 'food_seed_moon_bistro'
+const PEACH_CLOUD_SEED_RESTAURANT_ID = 'food_seed_peach_cloud'
 
 export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
   PLACED: 'placed',
@@ -81,7 +86,9 @@ const normalizeAmountCents = (value) => {
 }
 
 const formatAmount = (amountCents = 0) => {
-  const cents = Number.isFinite(Number(amountCents)) ? Math.max(0, Math.floor(Number(amountCents))) : 0
+  const cents = Number.isFinite(Number(amountCents))
+    ? Math.max(0, Math.floor(Number(amountCents)))
+    : 0
   return (cents / 100).toFixed(2)
 }
 
@@ -118,12 +125,14 @@ const normalizeDistanceKm = (value, fallback = 1.2) => {
 
 const normalizeQuantity = (value, fallback = 1) => clamp(toInt(value, fallback), 1, 99)
 
-const createRestaurantId = () => `food_restaurant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createRestaurantId = () =>
+  `food_restaurant_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createMenuItemId = () => `food_menu_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createFoodOrderId = () => `food_order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 const createPlatformOrderId = () =>
   `platform_food_order_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-const createFoodOrderEventId = () => `food_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createFoodOrderEventId = () =>
+  `food_event_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const normalizeRestaurant = (rawRestaurant, index = 0) => {
   if (!rawRestaurant || typeof rawRestaurant !== 'object') return null
@@ -134,7 +143,8 @@ const normalizeRestaurant = (rawRestaurant, index = 0) => {
   const now = Date.now()
   const updatedAt = Math.max(0, toInt(rawRestaurant.updatedAt, now))
   const deliveryFeeCents =
-    Number.isFinite(Number(rawRestaurant.deliveryFeeCents)) && Number(rawRestaurant.deliveryFeeCents) >= 0
+    Number.isFinite(Number(rawRestaurant.deliveryFeeCents)) &&
+    Number(rawRestaurant.deliveryFeeCents) >= 0
       ? Math.floor(Number(rawRestaurant.deliveryFeeCents))
       : normalizeAmountCents(rawRestaurant.deliveryFee)
 
@@ -144,7 +154,11 @@ const normalizeRestaurant = (rawRestaurant, index = 0) => {
     category: normalizeCategory(rawRestaurant.category),
     cuisine: normalizeText(rawRestaurant.cuisine, '', 80),
     rating: normalizeRating(rawRestaurant.rating),
-    deliveryEtaMinutes: clamp(toInt(rawRestaurant.deliveryEtaMinutes || rawRestaurant.etaMinutes, 28), 5, 180),
+    deliveryEtaMinutes: clamp(
+      toInt(rawRestaurant.deliveryEtaMinutes || rawRestaurant.etaMinutes, 28),
+      5,
+      180,
+    ),
     deliveryFeeCents,
     deliveryFee: formatAmount(deliveryFeeCents),
     currency: normalizeCurrency(rawRestaurant.currency),
@@ -168,9 +182,7 @@ const normalizeRestaurants = (rawRestaurants) => {
     seen.add(restaurant.id)
     normalized.push(restaurant)
   })
-  return normalized
-    .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, FOOD_RESTAURANT_LIMIT)
+  return normalized.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, FOOD_RESTAURANT_LIMIT)
 }
 
 const normalizeMenuItem = (rawItem, restaurantIds, index = 0) => {
@@ -194,7 +206,9 @@ const normalizeMenuItem = (rawItem, restaurantIds, index = 0) => {
     restaurantId,
     title,
     category: normalizeCategory(rawItem.category, 'restaurants'),
-    menuSection: normalizeMenuSection(rawItem.menuSection || rawItem.section || rawItem.menuCategory),
+    menuSection: normalizeMenuSection(
+      rawItem.menuSection || rawItem.section || rawItem.menuCategory,
+    ),
     priceCents,
     price: formatAmount(priceCents),
     currency: normalizeCurrency(rawItem.currency),
@@ -219,9 +233,7 @@ const normalizeMenuItems = (rawItems, restaurantIds) => {
     seen.add(menuItem.id)
     normalized.push(menuItem)
   })
-  return normalized
-    .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, FOOD_MENU_ITEM_LIMIT)
+  return normalized.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, FOOD_MENU_ITEM_LIMIT)
 }
 
 const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
@@ -343,10 +355,7 @@ const normalizePlatformOrder = (rawOrder, index = 0) => {
   const now = Date.now()
   const createdAt = Math.max(0, toInt(rawOrder.createdAt, now + index))
   const currency = normalizeCurrency(rawOrder.currency || items[0]?.currency)
-  const itemsTotalCents = items.reduce(
-    (sum, item) => sum + item.unitPriceCents * item.quantity,
-    0,
-  )
+  const itemsTotalCents = items.reduce((sum, item) => sum + item.unitPriceCents * item.quantity, 0)
   const deliveryFeeCents =
     Number.isFinite(Number(rawOrder.deliveryFeeCents)) && Number(rawOrder.deliveryFeeCents) >= 0
       ? Math.floor(Number(rawOrder.deliveryFeeCents))
@@ -388,9 +397,7 @@ const normalizePlatformOrders = (rawOrders) => {
     seen.add(order.id)
     normalized.push(order)
   })
-  return normalized
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, FOOD_ORDER_LIMIT)
+  return normalized.sort((a, b) => b.createdAt - a.createdAt).slice(0, FOOD_ORDER_LIMIT)
 }
 
 const normalizeOrderItem = (rawItem, index = 0) => {
@@ -429,7 +436,11 @@ const normalizeOrderEvent = (rawEvent, index = 0) => {
   return {
     id: normalizeText(rawEvent.id, `food_event_legacy_${now}_${index}`, 140),
     type,
-    title: normalizeText(rawEvent.title, FOOD_DELIVERY_ORDER_EVENT_TITLES[type] || 'Food delivery update', 120),
+    title: normalizeText(
+      rawEvent.title,
+      FOOD_DELIVERY_ORDER_EVENT_TITLES[type] || 'Food delivery update',
+      120,
+    ),
     summary: normalizeText(rawEvent.summary || rawEvent.desc || rawEvent.note, '', 280),
     etaMinutes,
     deliveryAddress: normalizeText(rawEvent.deliveryAddress || rawEvent.address, '', 160),
@@ -449,9 +460,7 @@ const normalizeOrderEvents = (rawEvents) => {
     seen.add(event.id)
     normalized.push(event)
   })
-  return normalized
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, FOOD_ORDER_EVENT_LIMIT)
+  return normalized.sort((a, b) => b.createdAt - a.createdAt).slice(0, FOOD_ORDER_EVENT_LIMIT)
 }
 
 const formatOrderAmount = (order = {}) =>
@@ -488,7 +497,8 @@ const buildFoodDeliveryOrderRoute = (order = {}) =>
 const buildFoodDeliveryEventSummary = (order = {}, event = {}) => {
   if (event.summary) return event.summary
   if (event.deliveryAddress) return `Delivery address changed to ${event.deliveryAddress}.`
-  if (event.etaMinutes !== null && event.etaMinutes !== undefined) return `ETA updated to ${event.etaMinutes} minutes.`
+  if (event.etaMinutes !== null && event.etaMinutes !== undefined)
+    return `ETA updated to ${event.etaMinutes} minutes.`
   return `Food Delivery updated ${foodOrderTitle(order)}.`
 }
 
@@ -497,9 +507,17 @@ const foodDeliveryUiAsset = (path) =>
 
 const FOOD_SEED_IMAGE_URLS = Object.freeze({
   moonBistro: foodDeliveryUiAsset('moon-bistro/cover/moon-bistro-cover-02.png'),
-  riverNoodles: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
-  daylightCafe: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
-  sugarLane: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80',
+  riverNoodles:
+    'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
+  daylightCafe:
+    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
+  sugarLane:
+    'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80',
+  peachCloud: foodDeliveryUiAsset('peach-cloud/cover/peach-cloud-hero-01.png'),
+  peachCloudProduct: (index) =>
+    foodDeliveryUiAsset(
+      `peach-cloud/products/peach-cloud-item-${String(index).padStart(2, '0')}.png`,
+    ),
   lunarRice: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-03.png'),
   signalSoup: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-02.png'),
   velvetSoup: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-01.png'),
@@ -509,9 +527,12 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   nightTagliatelle: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-29.png'),
   emberLasagna: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-50.png'),
   blueMoonBowl: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-15.png'),
-  riverBeefNoodles: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
-  daylightLatte: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
-  tinyMoonCake: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
+  riverBeefNoodles:
+    'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
+  daylightLatte:
+    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
+  tinyMoonCake:
+    'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
 })
 
 const summarizeOrderTotals = (items, deliveryFeeCents = 0, currency = DEFAULT_CURRENCY) => {
@@ -547,11 +568,12 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
       : normalizeAmountCents(rawOrder.deliveryFee)
   const currency = normalizeCurrency(rawOrder.currency || items[0]?.currency)
   const totals = summarizeOrderTotals(items, deliveryFeeCents, currency)
-  const primaryTotal = totals.find((item) => item.currency === DEFAULT_CURRENCY) || totals[0] || {
-    currency: DEFAULT_CURRENCY,
-    amountCents: 0,
-    amount: '0.00',
-  }
+  const primaryTotal = totals.find((item) => item.currency === DEFAULT_CURRENCY) ||
+    totals[0] || {
+      currency: DEFAULT_CURRENCY,
+      amountCents: 0,
+      amount: '0.00',
+    }
 
   return {
     id: normalizeText(rawOrder.id, `food_order_legacy_${now}_${index}`, 140),
@@ -586,9 +608,7 @@ const normalizeFoodOrders = (rawOrders) => {
     seen.add(order.id)
     normalized.push(order)
   })
-  return normalized
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, FOOD_ORDER_LIMIT)
+  return normalized.sort((a, b) => b.createdAt - a.createdAt).slice(0, FOOD_ORDER_LIMIT)
 }
 
 const createSeedRestaurants = () =>
@@ -660,6 +680,23 @@ const createSeedRestaurants = () =>
       sourceModule: 'seed',
       createdAt: Date.now() - 5 * 60 * 1000,
       updatedAt: Date.now() - 5 * 60 * 1000,
+    },
+    {
+      id: PEACH_CLOUD_SEED_RESTAURANT_ID,
+      name: 'Peach Cloud',
+      category: 'dessert',
+      cuisine: 'Tea, chilled drinks, and bakery sweets',
+      rating: 4.9,
+      deliveryEtaMinutes: 21,
+      deliveryFee: '4.00',
+      distanceKm: 1.1,
+      address: 'Sunset Arcade 7',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.peachCloud,
+      imageAlt: 'Peach Cloud drinks and desserts counter',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 4 * 60 * 1000,
+      updatedAt: Date.now() - 4 * 60 * 1000,
     },
   ])
 
@@ -855,13 +892,227 @@ const createSeedMenuItems = () =>
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
       },
+      {
+        id: 'food_menu_peach_oolong_cloud',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Peach Oolong Cloud',
+        category: 'dessert',
+        menuSection: 'cloud_tea',
+        price: '26.00',
+        desc: 'Fragrant oolong, white peach, and a soft salted milk cloud.',
+        ingredients: 'oolong tea, white peach, milk foam, sea salt',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(1),
+        imageAlt: 'Peach Oolong Cloud drink',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_brown_sugar_creme',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Brown Sugar Creme No. 7',
+        category: 'dessert',
+        menuSection: 'cloud_tea',
+        price: '29.00',
+        desc: 'Fresh milk tea striped with warm brown sugar and toasted creme.',
+        ingredients: 'black tea, fresh milk, brown sugar, toasted creme',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(2),
+        imageAlt: 'Brown Sugar Creme No. 7 milk tea',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_jasmine_cream',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Cocoa Cloud Brownie',
+        category: 'dessert',
+        menuSection: 'oven_sweets',
+        price: '24.00',
+        desc: 'Fudgy dark cocoa, roasted nuts, and a pale vanilla cloud.',
+        ingredients: 'dark cocoa, butter, roasted nuts, vanilla cream',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(3),
+        imageAlt: 'Cocoa Cloud Brownie',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_sunset_fizz',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Peach Macaron Parade',
+        category: 'dessert',
+        menuSection: 'oven_sweets',
+        price: '22.00',
+        desc: 'A bright box of peach, rose, vanilla, and cocoa macarons.',
+        ingredients: 'almond flour, peach cream, rose, vanilla, cocoa',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(4),
+        imageAlt: 'Peach Macaron Parade',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_yuzu_spark',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Yuzu Spark Pop',
+        category: 'dessert',
+        menuSection: 'fruit_sparkle',
+        price: '24.00',
+        desc: 'Sharp yuzu soda with honey pearls and a crisp rosemary finish.',
+        ingredients: 'yuzu, honey pearls, sparkling water, rosemary',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(5),
+        imageAlt: 'Yuzu Spark Pop soda',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_mango_snow',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Crepe Gelato Cloud',
+        category: 'dessert',
+        menuSection: 'frozen_clouds',
+        price: '34.00',
+        desc: 'Warm cocoa crepes folded around milk gelato and berry slices.',
+        ingredients: 'butter crepe, cocoa, milk gelato, strawberry',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(6),
+        imageAlt: 'Crepe Gelato Cloud',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_strawberry_ice',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Macaron Milk Drift',
+        category: 'dessert',
+        menuSection: 'frozen_clouds',
+        price: '36.00',
+        desc: 'Rose macarons with chilled milk cream and a berry ripple.',
+        ingredients: 'almond macaron, milk cream, rose, berry compote',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(7),
+        imageAlt: 'Macaron Milk Drift',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_matcha_float',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Hojicha Cloud Float',
+        category: 'dessert',
+        menuSection: 'cloud_tea',
+        price: '31.00',
+        desc: 'Roasted tea, chilled milk, vanilla cloud, and toasted rice crunch.',
+        ingredients: 'hojicha, milk, vanilla cream, toasted rice',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(8),
+        imageAlt: 'Hojicha Cloud Float',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_sunbeam_basque',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Strawberry Sunbeam Slice',
+        category: 'dessert',
+        menuSection: 'oven_sweets',
+        price: '36.00',
+        desc: 'A cold-set strawberry cheesecake with berry glaze and fresh mint.',
+        ingredients: 'cream cheese, strawberry, biscuit, berry glaze',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(9),
+        imageAlt: 'Strawberry Sunbeam cheesecake slice',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_butter_waffle',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Cloud Nine Cocoa Crepes',
+        category: 'dessert',
+        menuSection: 'oven_sweets',
+        price: '29.00',
+        desc: 'Three soft crepes with cocoa drizzle, strawberry, and milk cream.',
+        ingredients: 'butter crepe, cocoa, strawberry, milk cream',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(10),
+        imageAlt: 'Cloud Nine Cocoa Crepes',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_pocket_pie',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Midnight Creme No. 11',
+        category: 'dessert',
+        menuSection: 'cloud_tea',
+        price: '25.00',
+        desc: 'Deep iced coffee, brown sugar, and a tall toasted cream crown.',
+        ingredients: 'cold-brew coffee, milk, brown sugar, toasted cream',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(11),
+        imageAlt: 'Midnight Creme No. 11 iced coffee',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_golden_hour_set',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Golden Hour Pairing',
+        category: 'dessert',
+        menuSection: 'seasonal_drop',
+        price: '48.00',
+        desc: 'One Sunset Peach Fizz paired with a mini Sunbeam Basque slice.',
+        ingredients: 'peach fizz, mini Basque cheesecake, peach honey',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(12),
+        imageAlt: 'Golden Hour drink and cheesecake pairing',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
     ],
-    new Set(['food_seed_moon_bistro', 'food_seed_river_noodles', 'food_seed_daylight_cafe', 'food_seed_sugar_lane']),
+    new Set([
+      'food_seed_moon_bistro',
+      'food_seed_river_noodles',
+      'food_seed_daylight_cafe',
+      'food_seed_sugar_lane',
+      PEACH_CLOUD_SEED_RESTAURANT_ID,
+    ]),
   )
 
 const MOON_BISTRO_REQUIRED_MENU_ITEMS = createSeedMenuItems().filter(
   (item) => item.restaurantId === MOON_BISTRO_SEED_RESTAURANT_ID,
 )
+const PEACH_CLOUD_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === PEACH_CLOUD_SEED_RESTAURANT_ID,
+)
+const PEACH_CLOUD_REQUIRED_MENU_ITEMS = createSeedMenuItems().filter(
+  (item) => item.restaurantId === PEACH_CLOUD_SEED_RESTAURANT_ID,
+)
+const PEACH_CLOUD_LEGACY_TITLES_BY_ID = Object.freeze({
+  food_menu_peach_jasmine_cream: 'Jasmine Daydream',
+  food_menu_peach_sunset_fizz: 'Sunset Peach Fizz',
+  food_menu_peach_mango_snow: 'Mango Snow Island',
+  food_menu_peach_strawberry_ice: 'Strawberry Milk Drift',
+  food_menu_peach_matcha_float: 'Matcha Cloud Float',
+  food_menu_peach_sunbeam_basque: 'Sunbeam Basque Slice',
+  food_menu_peach_butter_waffle: 'Cloud Nine Butter Waffle',
+  food_menu_peach_pocket_pie: 'Peach Pocket 03',
+})
 
 export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const getChatStore = () => useChatStore()
@@ -874,7 +1125,9 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const orders = ref([])
   const hasFinishedStorageHydration = ref(false)
 
-  const restaurantMap = computed(() => new Map(restaurants.value.map((restaurant) => [restaurant.id, restaurant])))
+  const restaurantMap = computed(
+    () => new Map(restaurants.value.map((restaurant) => [restaurant.id, restaurant])),
+  )
   const menuItemMap = computed(() => new Map(menuItems.value.map((item) => [item.id, item])))
   const restaurantCount = computed(() => restaurants.value.length)
   const menuItemCount = computed(() => menuItems.value.length)
@@ -913,7 +1166,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       zh: entry.zh,
       en: entry.en,
       icon: entry.icon,
-      restaurantCount: restaurants.value.filter((restaurant) => restaurant.category === entry.key).length,
+      restaurantCount: restaurants.value.filter((restaurant) => restaurant.category === entry.key)
+        .length,
       menuItemCount: menuItems.value.filter((item) => item.category === entry.key).length,
     })),
   )
@@ -952,12 +1206,14 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       primaryCurrency.value,
     ),
   )
-  const cartPrimaryTotal = computed(() =>
-    cartTotals.value.find((item) => item.currency === primaryCurrency.value) || cartTotals.value[0] || {
-      currency: primaryCurrency.value,
-      amountCents: 0,
-      amount: '0.00',
-    },
+  const cartPrimaryTotal = computed(
+    () =>
+      cartTotals.value.find((item) => item.currency === primaryCurrency.value) ||
+      cartTotals.value[0] || {
+        currency: primaryCurrency.value,
+        amountCents: 0,
+        amount: '0.00',
+      },
   )
 
   const findRestaurantById = (restaurantId) => {
@@ -984,12 +1240,19 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const normalized = normalizeCategory(category, '')
     if (!normalized) return restaurants.value.map(presentRestaurant)
     if (normalized === 'nearby') {
-      return restaurants.value.slice().sort((a, b) => a.distanceKm - b.distanceKm).map(presentRestaurant)
+      return restaurants.value
+        .slice()
+        .sort((a, b) => a.distanceKm - b.distanceKm)
+        .map(presentRestaurant)
     }
     if (normalized === 'grocery_delivery') {
-      return restaurants.value.filter((restaurant) => restaurant.category === 'grocery_delivery').map(presentRestaurant)
+      return restaurants.value
+        .filter((restaurant) => restaurant.category === 'grocery_delivery')
+        .map(presentRestaurant)
     }
-    return restaurants.value.filter((restaurant) => restaurant.category === normalized).map(presentRestaurant)
+    return restaurants.value
+      .filter((restaurant) => restaurant.category === normalized)
+      .map(presentRestaurant)
   }
 
   const listMenuByRestaurant = (restaurantId = '') => {
@@ -1025,7 +1288,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
 
     restaurants.value.unshift(restaurant)
-    if (restaurants.value.length > FOOD_RESTAURANT_LIMIT) restaurants.value.splice(FOOD_RESTAURANT_LIMIT)
+    if (restaurants.value.length > FOOD_RESTAURANT_LIMIT)
+      restaurants.value.splice(FOOD_RESTAURANT_LIMIT)
     return presentRestaurant(restaurant)
   }
 
@@ -1033,9 +1297,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const now = Date.now()
     const restaurantIds = new Set(restaurants.value.map((restaurant) => restaurant.id))
     const inputId = normalizeFoodId(input.id)
-    const existingIndex = inputId
-      ? menuItems.value.findIndex((item) => item.id === inputId)
-      : -1
+    const existingIndex = inputId ? menuItems.value.findIndex((item) => item.id === inputId) : -1
     const existing = existingIndex >= 0 ? menuItems.value[existingIndex] : null
     const menuItem = normalizeMenuItem(
       {
@@ -1332,7 +1594,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     if (!event) return null
 
     const currentEvents = Array.isArray(order.events) ? order.events : []
-    order.events = [event, ...currentEvents.filter((item) => item.id !== event.id)].slice(0, FOOD_ORDER_EVENT_LIMIT)
+    order.events = [event, ...currentEvents.filter((item) => item.id !== event.id)].slice(
+      0,
+      FOOD_ORDER_EVENT_LIMIT,
+    )
 
     if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED) {
       order.status = FOOD_DELIVERY_ORDER_STATUS.CANCELLED
@@ -1353,11 +1618,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return orders.value.length !== before
   }
 
-  const neutralizeRelationshipOrder = (
-    orderId,
-    profile = {},
-    replacementName = 'Someone',
-  ) => {
+  const neutralizeRelationshipOrder = (orderId, profile = {}, replacementName = 'Someone') => {
     const order = findOrderById(orderId)
     if (!order) return false
     if (!bindingMatchesProfile(order.relationshipBinding, profile)) return false
@@ -1396,19 +1657,32 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
   }
 
-  const applySeedMenuMigrations = () => {
-    const restaurantIds = new Set(restaurants.value.map((restaurant) => restaurant.id))
-    if (!restaurantIds.has(MOON_BISTRO_SEED_RESTAURANT_ID)) return false
-
+  const applySeedContentMigrations = () => {
     let changed = false
-    const nextMenuItems = menuItems.value.map((item) => ({ ...item }))
-    const existingMenuItemIds = new Set(nextMenuItems.map((item) => item.id))
-    const existingById = new Map(nextMenuItems.map((item) => [item.id, item]))
+    if (
+      PEACH_CLOUD_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === PEACH_CLOUD_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...PEACH_CLOUD_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
 
-    MOON_BISTRO_REQUIRED_MENU_ITEMS.forEach((seedItem) => {
+    const restaurantIds = new Set(restaurants.value.map((restaurant) => restaurant.id))
+    const nextMenuItems = menuItems.value.map((item) => ({ ...item }))
+    const existingById = new Map(nextMenuItems.map((item) => [item.id, item]))
+    const requiredMenuItems = [
+      ...(restaurantIds.has(MOON_BISTRO_SEED_RESTAURANT_ID) ? MOON_BISTRO_REQUIRED_MENU_ITEMS : []),
+      ...(restaurantIds.has(PEACH_CLOUD_SEED_RESTAURANT_ID) ? PEACH_CLOUD_REQUIRED_MENU_ITEMS : []),
+    ]
+
+    requiredMenuItems.forEach((seedItem) => {
       const existing = existingById.get(seedItem.id)
       if (!existing) {
         nextMenuItems.push({ ...seedItem })
+        existingById.set(seedItem.id, seedItem)
         changed = true
         return
       }
@@ -1416,17 +1690,30 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         existing.menuSection = seedItem.menuSection
         changed = true
       }
+      const legacyPeachTitle = PEACH_CLOUD_LEGACY_TITLES_BY_ID[seedItem.id]
+      if (
+        legacyPeachTitle &&
+        existing.restaurantId === PEACH_CLOUD_SEED_RESTAURANT_ID &&
+        existing.title === legacyPeachTitle
+      ) {
+        existing.title = seedItem.title
+        existing.desc = seedItem.desc
+        existing.ingredients = seedItem.ingredients
+        existing.menuSection = seedItem.menuSection
+        existing.image = {
+          ...existing.image,
+          alt: seedItem.image?.alt || existing.image?.alt || seedItem.title,
+        }
+        changed = true
+      }
     })
 
     if (!changed) return false
-    menuItems.value = normalizeMenuItems(
-      nextMenuItems.filter((item) => item.restaurantId !== MOON_BISTRO_SEED_RESTAURANT_ID || existingMenuItemIds.has(item.id) || item.sourceModule === 'seed'),
-      restaurantIds,
-    )
+    menuItems.value = normalizeMenuItems(nextMenuItems, restaurantIds)
     return true
   }
 
-  const applyPersistedSource = (source) => {
+  const applyPersistedSource = (source, options = {}) => {
     const rawSource = source && typeof source === 'object' ? source : null
     if (!rawSource) return false
 
@@ -1444,7 +1731,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       rawSource.primaryCurrency || rawSource.defaultCurrency || rawSource.settings?.primaryCurrency,
       primaryCurrency.value,
     )
-    applySeedMenuMigrations()
+    if (options.applySeedMigrations !== false) applySeedContentMigrations()
     return true
   }
 
@@ -1487,7 +1774,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       snapshot && typeof snapshot.foodDelivery === 'object' && snapshot.foodDelivery
         ? snapshot.foodDelivery
         : snapshot
-    return applyPersistedSource(source)
+    return applyPersistedSource(source, { applySeedMigrations: false })
   }
 
   const persistToStorage = () => {
