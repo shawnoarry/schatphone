@@ -6079,6 +6079,7 @@ onBeforeUnmount(() => {
           <header
             v-if="peachCloudPageKey === 'home'"
             class="bg-[var(--peach-cloud-mist)] px-4 pb-7 pt-4"
+            data-testid="food-delivery-peach-cloud-home-header"
           >
             <div class="grid grid-cols-[2rem_minmax(0,1fr)_2rem_2rem_2rem] items-center gap-1.5">
               <button
@@ -6157,7 +6158,8 @@ onBeforeUnmount(() => {
 
           <main
             v-if="peachCloudPageKey === 'home'"
-            class="relative -mt-1 rounded-t-[2rem] bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-7"
+            class="relative bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-3"
+            data-testid="food-delivery-peach-cloud-home-main"
           >
             <nav
               class="grid grid-cols-5 gap-2"
@@ -7187,17 +7189,17 @@ onBeforeUnmount(() => {
           </template>
 
           <nav
-            class="fixed bottom-0 left-1/2 z-40 grid w-full max-w-md -translate-x-1/2 grid-cols-5 rounded-t-[2rem] bg-[var(--peach-cloud-ink)] px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 text-[var(--peach-cloud-canvas)] shadow-[0_-12px_28px_rgba(43,48,58,0.2)]"
+            class="fixed bottom-0 left-1/2 z-40 grid w-full max-w-md -translate-x-1/2 grid-cols-5 rounded-t-[1rem] border-t border-[var(--peach-cloud-accent)]/35 bg-[var(--peach-cloud-mist)] px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 text-[var(--peach-cloud-ink)] shadow-[0_-4px_14px_rgba(43,48,58,0.08)]"
             data-testid="food-delivery-peach-cloud-nav"
             :aria-label="t('店铺导航', 'Shop navigation')"
           >
             <button
               type="button"
-              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              class="flex min-h-11 flex-col items-center justify-center gap-1 rounded-[0.8rem] text-[9px] font-black transition-colors active:bg-[var(--peach-cloud-accent)]/70"
               :class="
                 activePeachCloudNavKey === 'home'
-                  ? 'text-[var(--peach-cloud-accent)]'
-                  : 'text-[var(--peach-cloud-mist)]'
+                  ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
+                  : 'text-[var(--peach-cloud-iron)]'
               "
               data-testid="food-delivery-peach-cloud-nav-home"
               :aria-current="activePeachCloudNavKey === 'home' ? 'page' : undefined"
@@ -7208,11 +7210,11 @@ onBeforeUnmount(() => {
             </button>
             <button
               type="button"
-              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              class="flex min-h-11 flex-col items-center justify-center gap-1 rounded-[0.8rem] text-[9px] font-black transition-colors active:bg-[var(--peach-cloud-accent)]/70"
               :class="
                 activePeachCloudNavKey === 'search'
-                  ? 'text-[var(--peach-cloud-accent)]'
-                  : 'text-[var(--peach-cloud-mist)]'
+                  ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
+                  : 'text-[var(--peach-cloud-iron)]'
               "
               data-testid="food-delivery-peach-cloud-nav-menu"
               :aria-current="activePeachCloudNavKey === 'search' ? 'page' : undefined"
@@ -7223,11 +7225,11 @@ onBeforeUnmount(() => {
             </button>
             <button
               type="button"
-              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              class="flex min-h-11 flex-col items-center justify-center gap-1 rounded-[0.8rem] text-[9px] font-black transition-colors active:bg-[var(--peach-cloud-accent)]/70"
               :class="
                 activePeachCloudNavKey === 'new'
-                  ? 'text-[var(--peach-cloud-accent)]'
-                  : 'text-[var(--peach-cloud-mist)]'
+                  ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
+                  : 'text-[var(--peach-cloud-iron)]'
               "
               data-testid="food-delivery-peach-cloud-nav-seasonal"
               :aria-current="activePeachCloudNavKey === 'new' ? 'page' : undefined"
@@ -7238,11 +7240,11 @@ onBeforeUnmount(() => {
             </button>
             <button
               type="button"
-              class="relative flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              class="relative flex min-h-11 flex-col items-center justify-center gap-1 rounded-[0.8rem] text-[9px] font-black transition-colors active:bg-[var(--peach-cloud-accent)]/70"
               :class="
                 activePeachCloudNavKey === 'bag'
-                  ? 'text-[var(--peach-cloud-accent)]'
-                  : 'text-[var(--peach-cloud-mist)]'
+                  ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
+                  : 'text-[var(--peach-cloud-iron)]'
               "
               data-testid="food-delivery-peach-cloud-nav-cart"
               :aria-current="activePeachCloudNavKey === 'bag' ? 'page' : undefined"
@@ -7252,18 +7254,18 @@ onBeforeUnmount(() => {
               {{ t('购物袋', 'Bag') }}
               <span
                 v-if="foodDeliveryStore.cartQuantity"
-                class="absolute right-2 top-0 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] px-1 text-[8px] text-[var(--peach-cloud-ink)]"
+                class="absolute right-2 top-0 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--peach-cloud-ink)] px-1 text-[8px] text-[var(--peach-cloud-canvas)]"
               >
                 {{ foodDeliveryStore.cartQuantity }}
               </span>
             </button>
             <button
               type="button"
-              class="flex min-h-12 flex-col items-center justify-center gap-1 text-[9px] font-black"
+              class="flex min-h-11 flex-col items-center justify-center gap-1 rounded-[0.8rem] text-[9px] font-black transition-colors active:bg-[var(--peach-cloud-accent)]/70"
               :class="
                 activePeachCloudNavKey === 'orders'
-                  ? 'text-[var(--peach-cloud-accent)]'
-                  : 'text-[var(--peach-cloud-mist)]'
+                  ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
+                  : 'text-[var(--peach-cloud-iron)]'
               "
               data-testid="food-delivery-peach-cloud-nav-orders"
               :aria-current="activePeachCloudNavKey === 'orders' ? 'page' : undefined"

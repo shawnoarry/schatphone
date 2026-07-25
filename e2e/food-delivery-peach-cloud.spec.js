@@ -30,12 +30,27 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   )
   await expect(page.getByTestId('food-delivery-peach-cloud-nav')).toHaveCSS(
     'background-color',
-    'rgb(43, 48, 58)',
+    'rgb(253, 161, 184)',
+  )
+  await expect(page.getByTestId('food-delivery-peach-cloud-nav-home')).toHaveCSS(
+    'background-color',
+    'rgb(253, 108, 147)',
   )
   await expect(page.getByTestId('food-delivery-peach-cloud-featured')).toHaveCSS(
     'background-color',
     'rgb(253, 108, 147)',
   )
+  const [homeHeaderBox, homeMainBox, categoryRailBox] = await Promise.all([
+    page.getByTestId('food-delivery-peach-cloud-home-header').boundingBox(),
+    page.getByTestId('food-delivery-peach-cloud-home-main').boundingBox(),
+    page.getByTestId('food-delivery-store-menu-section-rail').boundingBox(),
+  ])
+  expect(homeHeaderBox).not.toBeNull()
+  expect(homeMainBox).not.toBeNull()
+  expect(categoryRailBox).not.toBeNull()
+  expect(homeMainBox.y).toBeGreaterThanOrEqual(homeHeaderBox.y + homeHeaderBox.height - 1)
+  expect(categoryRailBox.y - homeMainBox.y).toBeGreaterThanOrEqual(0)
+  expect(categoryRailBox.y - homeMainBox.y).toBeLessThanOrEqual(16)
   await testInfo.attach('peach-cloud-palette-home', {
     body: await page.screenshot(),
     contentType: 'image/png',
@@ -62,6 +77,10 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await page.getByTestId('food-delivery-peach-cloud-nav-seasonal').click()
   await expect(page).toHaveURL(/shopView=new/)
   await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toBeVisible()
+  await expect(page.getByTestId('food-delivery-peach-cloud-nav-seasonal')).toHaveCSS(
+    'background-color',
+    'rgb(253, 108, 147)',
+  )
   await page.getByTestId('food-delivery-peach-cloud-nav-home').click()
   await expect(page).not.toHaveURL(/shopView=/)
 
