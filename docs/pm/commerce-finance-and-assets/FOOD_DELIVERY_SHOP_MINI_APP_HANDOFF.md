@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-07-25
+Updated: 2026-07-26
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -40,6 +40,7 @@ Food Platform now has a consumer-facing discovery homepage.
 - All eleven platform merchants now carry five menu products, for a 55-item baseline. Menu copy now follows eleven distinct naming systems rather than a shared ingredient template: neighborhood/location names for soup rice and noodles, poetic set names for sushi and dessert, numbered sauces for fried chicken, time-based packs for grocery and breakfast, craft language for dim sum, and city/spice language for curry. The merchant sheet uses stable square product-media slots; each slot still points to `platform/menus/<merchant>/menu-item-01..05.png`, automatically falls back to the shared diagnostic placeholder while missing, and keeps existing item indices stable for persisted platform carts and orders.
 - The platform cart now has a complete App-internal order flow: checkout opens a route-driven confirmation page with address selection, order note, delivery fee, total, and a simulated platform payment choice; submission creates a persisted `platformOrders` record, clears only the platform cart, and opens an order success/detail page. The bottom-nav Orders page lists only those platform-internal merchant orders and can reopen their details. This baseline deliberately does not call Wallet, Assets, Chat, rider tracking, or independent shop checkout logic.
 - The first platform order-flow visual pass is complete: checkout has a compact meal summary and a stable takeout-bag PNG slot; order cards use status-driven badges and fixed merchant-mark slots; order detail uses the existing order status to drive its Hero, icon, copy, and four-stage progress treatment; and focused checkout/order-detail pages hide the main bottom navigation. Internal architecture explanations were removed from the visible copy. Missing order-state art now uses one high-contrast diagnostic placeholder, and all real Food Delivery image failures use the same fallback, with the exact future asset list stored in `FOOD_DELIVERY_IMAGE2_ASSET_PROMPTS.md`.
+- The platform order-flow layout and fallback contract are complete, but its formal order illustration pack is not. Checkout, order-list, and order-detail paths can still expose the diagnostic placeholder when their expected artwork is absent; that visible product-finish gap must not be reported as a completed asset slice.
 - Future platform-order lifecycle, rider route, service Chat, Wallet expense, notification, and relationship integration is preserved in `FOOD_DELIVERY_PLATFORM_CROSS_MODULE_UI_UX_PLAN.md` for later architecture/execution coordination. That reference is not active implementation scope; current work remains visual polish.
 - The platform now reads from the project UI asset library under `public/images/ui-assets/apps/food-delivery/platform/`: ad carousel banners use the generated banner PNGs, platform merchant cards use generated food photos, and the rider illustration uses `decorations/mascot/delivery-rider-mascot-01.png`. This removes the remaining external Unsplash dependency from the platform homepage and keeps future visual swaps inside the project asset library.
 - Food Platform bottom navigation includes Home, route-driven Search, platform-only Orders, route-driven Saved, and a route-driven Mine account page. Orders never aggregate peer shop-app orders.
@@ -69,6 +70,8 @@ The first Food Delivery shop is Moon Bistro.
 - Active Food Delivery prices now follow Wallet's persisted primary currency. This affects current restaurant/menu display, platform demo merchant fees, cart totals, checkout, and newly created food orders. Existing orders remain in their original currency because they are historical ledger/order records rather than live menu pricing.
 - World Pack explainer banners are not user-facing UI. World Pack context should appear through app wording, defaults, visual treatment, and flow behavior; boundary explanations stay in docs/tests instead of rendering as an in-app card.
 - Food Delivery now requires an explicit World Pack `uiThemePackage.enabled=true` before consuming a World Pack UI/UX override. If a world app binding only maps a route or entry, Food Delivery falls back to the original app UI and defaults.
+- Commit `5bd7003` makes independent-shop bag ownership fail closed. The active shop can show totals and checkout only when every cart line resolves to that shop; foreign, mixed, and unknown ownership stays in an explicit recovery state, and replacement clears the old bag only after the user confirms a still-valid captured target. The same slice corrected Peach Cloud order progress so cancelled is stage 0 and placed, preparing, delivering, and delivered are stages 1 through 4. No Store or schema ownership moved.
+- Commit `7194f1c` makes Moon Bistro's `Order & delivery` surface consumer-facing and folded by default. Existing delivery events drive `Check for update`, `Confirm delivery`, and `Remove from history`; Wallet export remains an explicit `Save to Wallet` action, and route information remains a Map snapshot rather than a claim of live tracking. Delivery details use real pickup, drop-off, carrier, tracking, and positive-distance values when present, retain stable boundary/pickup/dropoff/meta hooks, and use a safe `ETA pending` fallback for missing, non-finite, or non-positive ETA values. The accepted pass also protects 44px targets, visible focus, long-copy wrapping, and reduced-motion behavior. Moon Bistro is consequently close to product-ready, subject to true-device review rather than another broad redesign.
 
 The second built-in shop app is Peach Cloud.
 
@@ -81,6 +84,7 @@ The second built-in shop app is Peach Cloud.
 - The five-action footer uses Peach Cloud-local `shopView` route state. Empty Bag and Orders actions open their own empty-state pages; Bag owns quantity review and the existing confirmation-checkout entry; Orders opens a shop-scoped order list, and submitted orders open a dedicated detail/progress page. These surfaces reuse Food Delivery state and checkout actions without rendering the generic inline cart or support drawer beneath the Peach Cloud home.
 - Fresh saves receive the shop and menu through normal seeds. Existing local saves receive missing Peach Cloud records plus missing built-in menu IDs; legacy built-in titles are refreshed only when they still equal the old seed title, so user-renamed items remain untouched. Explicit backup restore remains snapshot-faithful and does not inject the seed migration.
 - Peach Cloud now uses one milkshake promotion PNG, one SVG brand mark, five SVG category icons, and twelve product PNGs under `public/images/ui-assets/apps/food-delivery/peach-cloud/`. The existing PNG photography remains unchanged in the palette round; the brand SVG uses Petal Rouge and the category SVGs use Jet Black so they remain legible on selected pink surfaces. Image failures still show the shared high-contrast diagnostic placeholder and retain exact `data-required-asset` paths.
+- Peach Cloud's existing product PNG set remains wired, but visual review still identifies duplicate-image and product-title mismatch risk. That is a future image-identity review, not permission to change menu truth or combine Peach imagery with the pending Food Platform order-art pack.
 
 ## Important Ownership Boundaries
 
@@ -124,7 +128,11 @@ App Store must not own restaurant/menu/cart/order records.
 
 Food Platform's first consumer-homepage pass is done, including the Baemin-like reference decomposition, homepage-load reduction, and real banner autoplay/manual navigation. Keep it as discovery-first: future work can add real favorite/recent behavior for platform-internal merchants and richer platform-specific empty states. Bottom navigation should remain a discovery/navigation affordance, not a hidden aggregate controller for peer shop mini apps.
 
-The checkout, order-card, and order-detail visual slice is now done. Its PNG positions and fallbacks are stable; the next art pass should deliver the core order-state pack before optional merchant marks. The deferred cross-module plan must not block this work, and no Map, Chat, Wallet, notification, or relationship writes should be added during asset replacement.
+The checkout, order-card, and order-detail layout slice is done, but the formal order artwork is not. Its PNG positions and fallbacks are stable; any later approved art pass should deliver the core order-state pack before optional merchant marks. The deferred cross-module plan must not block that replacement, and no Map, Chat, Wallet, notification, or relationship writes should be added during asset work.
+
+Two failed ImageGen drafts were never imported into the product asset library or referenced by code. The diagnosed failure combined a Windows `.cmd` inline multiline-prompt truncation with a compatibility service that did not honor the requested square output. Any later CLI generation trial must use a UTF-8 prompt file, inspect a dry-run payload before submitting, and treat every returned image as an unaccepted candidate until dimensions, content, transparency, compression, copyright, and sensitive-information checks pass.
+
+Vistack is only a validated candidate for a semi-automatic asset workbench. It is not currently configured or approved as project tooling, does not create a second roadmap, and does not make downloaded output a formal asset. A controlled future trial may prepare a bounded asset list, generate items one at a time, download them into a temporary intake area, apply human selection and the normal quality gate, and wire accepted files in a separate reviewed slice.
 
 Moon Bistro and Peach Cloud now establish two intentionally different shop-template directions. Do not normalize them into one visual system; the next shop-template pass should begin only from a named shop identity and its own content needs.
 
@@ -156,8 +164,9 @@ Work in this order:
    - Keep the small edit icon available but low-noise.
 
 5. Order & delivery section
-   - Keep it folded by default in shop mode.
-   - Make it feel like supporting shop information, not a technical module dump.
+   - The accepted consumerization pass is landed: keep it folded by default in shop mode and preserve the consumer-facing delivery details and actions.
+   - Do not restore ownership, simulation, source-plan, or other technical-console wording.
+   - Preserve stable event/route hooks, safe ETA fallback, explicit Wallet/Map actions, 44px targets, visible focus, long-copy wrapping, and reduced-motion behavior.
 
 ## Files To Read First
 

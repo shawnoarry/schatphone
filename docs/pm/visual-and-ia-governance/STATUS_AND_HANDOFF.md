@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-07-25
+Updated: 2026-07-26
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -103,6 +103,11 @@ What is already landed:
 87. Roadmap 4.9's first successful Chat activation loop is complete at automated desktop and simulated-phone acceptance. Chat now turns incomplete provider setup into an explicit Network & API action while preserving the originating thread and draft; Network offers Continue Chat only after the current settings are saved and the same configuration passes its smoke test. Focused Playwright proves the first manual reply, bounded return context, responsive overflow, page-error, critical accessibility, and fake-credential visibility guards. Hosted-provider and true-device proof remain separate release gates.
 88. Roadmap 4.9's explicit custom role -> Chat journey is complete at desktop and simulated-phone Chromium acceptance. Contacts now offers a direct `Start Chat` action for eligible Main Role/NPC profiles, reuses existing targets, preserves bounded Contacts context through Network recovery, and returns to the same profile after the first manual reply. The focused fixture intentionally starts from an explicit empty custom-role snapshot and does not redefine or remove the seeded fresh-storage roles; zero Book sources, encyclopedia entries, and extra World Packs remain valid.
 89. Peach Cloud's installed-app navigation now has consistent page depth: its fixed Home, Search, New, Bag, and Orders entries switch mutually exclusive `shopView` pages, submitted orders open a dedicated progress detail, and empty Bag/Orders states remain real pages. The generic Food Delivery cart and support blocks no longer extend the Peach Cloud home, while Food Delivery continues to own the shared cart, checkout, order, and event state.
+90. Commit `5bd7003` landed the independent-shop cart-ownership guard and Peach Cloud progress correction. Foreign, mixed, or unknown carts fail closed instead of being rendered or checked out as the active shop's bag; replacing a bag requires explicit confirmation, and the accepted replacement writes the target item once. Peach Cloud maps cancelled to no active progress and placed, preparing, delivering, and delivered to stages 1 through 4. This work did not expand Store or schema ownership.
+91. Commit `7194f1c` landed Moon Bistro's consumer-facing `Order & delivery` pass. The surface stays folded by default and presents delivery details, `Check for update`, `Confirm delivery`, `Remove from history`, explicit `Save to Wallet`, and the Map snapshot through existing Food Delivery handoffs rather than diagnostic ownership copy. It preserves stable route-detail hooks, safe pending ETA fallback, 44px controls, visible focus, long-copy wrapping, and reduced-motion behavior.
+92. Food Delivery's current finish boundary is explicit: Moon Bistro is close to product-ready, while Food Platform checkout/order surfaces still expose diagnostic placeholders where formal order-state artwork is missing, and Peach Cloud's existing product photography still carries duplicate-image and title-to-image mismatch risk. Desktop and simulated-phone browser evidence is available, but simulated mobile is not true-device acceptance.
+93. Two failed ImageGen drafts never entered product assets or code. The generation failure was traced to a Windows `.cmd` invocation truncating a multiline prompt passed inline, while a compatibility image service also returned non-square output despite the requested square size. Any later CLI trial must pass the Chinese prompt through a UTF-8 prompt file and inspect the dry-run request payload before generation; generated output remains a candidate until normal visual review accepts it.
+94. Vistack is a validated candidate for a semi-automatic asset workbench, not a configured project capability, approved production toolchain, formal asset source, or second roadmap. A later controlled trial may send a prepared asset list to Vistack, download outputs into a temporary intake area, use human selection and quality checks, and wire only accepted files in a separate implementation slice.
 
 ### 2026-07-16 Visual Portfolio Audit
 
@@ -141,6 +146,7 @@ Still incomplete:
 6. Custom CSS ownership is now split by user meaning: Appearance keeps global CSS, Chat keeps Chat-scoped CSS, App Store owns app icon identity and standard app skins, and persisted app/world-app scoped CSS stays compatibility/runtime state until a later app/World Pack-owned authoring surface is explicitly designed.
 7. Contacts phone-like entry and the WorldBook -> Contacts value-flow both have simulated mobile coverage, but still need true-device checks for touch feel, browser chrome, keyboard behavior, and safe-area spacing.
 8. Mini Scene Settings, transform-profile editing/preview, Text Presenter, and sandboxed HTML Presenter are future roadmap 4.8 stages. Their visual work cannot begin before the corresponding shared Module and security stage is promoted.
+9. Food Delivery still needs formal Food Platform order-state artwork, a Peach Cloud product-image identity review, and true-device evidence. These are explicit remaining gates, not proof that the deferred asset slice has shipped or authorization to begin another visual slice.
 
 ## 2. Recommended Next Slice
 
