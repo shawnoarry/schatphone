@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-07-22
+Updated: 2026-07-26
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -43,6 +43,7 @@ Current active architecture slice:
 - legacy inspection returns `shapeOk` separately from `completePackageEligible`; Chat `moduleIdentity` and `moduleAvatarOverrides` remain the explicit required-but-uncovered legacy v2 gap, so structurally valid v2 output is not eligible for a future complete-package claim;
 - `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED`: it fixes the separate `schatphone-repository` v1 stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, localStorage hint allowlist, contextual quota/persist policy, fail-closed WriteCoordinator, and Book Adapter/fixture/legacy-reader/rollback contract;
 - Batch 2B completed as the exact non-active foundation, followed on 2026-07-22 by the separately approved Book-only runtime cutover: explicit Book UI confirmation, contextual persistent-storage request, atomic activation/reopen, Repository-only later writes, unchanged legacy rollback bytes, and real-Chromium rollback evidence are implemented; dual write, legacy deletion, Gallery/R2, and other owners remain unapproved;
+- the structured write-result primitive and lineage/sequence local/mirror freshness bootstrap foundation are integrated, but they do not complete current-save safety: product-level save-failed/read-only recovery, product-wide same-container writer protection, and complete backup/restore/reopen/rollback remain open;
 - `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` is `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`: `legacy_single_world` is stable compatibility identity/scope, Pack capability is separate, Book/WorldBook/Pack/template ownership is frozen, and zero-Pack/zero-encyclopedia/zero-text worlds remain valid;
 - WorldBook and Contacts now read immutable identity/narrative/encyclopedia/profile/capability/diagnostic projections through `world-interface.js`; Pack switching does not change world identity or setting selection, and new template/contact writes do not record active Pack IDs;
 - legacy Pack content references remain reviewable compatibility evidence, but missing Book, encyclopedia, or template references no longer block capability Pack activation;
@@ -55,6 +56,7 @@ Current active architecture slice:
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
 - this is a promoted architecture-decision slice; beyond the completed Book-only cutover, it does not approve migration of any additional application owner.
+- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; hosted PWA, true-device, and real-provider proof remain unverified release work.
 
 ### Product Decision Checkpoint - 2026-07-21
 
@@ -335,20 +337,19 @@ Use the live roadmap order.
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
 1. personal R2/Worker onboarding is post-release because remote transport cannot repair an unsafe local write or an incomplete local recovery package;
-2. the first architecture deliverable is a current-save safety vertical slice: structured write results, visible quota/carrier failure, newest-valid local/mirror reconciliation, and product-wide same-container read-only enforcement;
+2. structured write results and newest-valid local/mirror reconciliation are integrated foundations; the next architecture slice is product-level save-failed/read-only recovery followed by product-wide same-container writer protection;
 3. the next release deliverable is complete local backup/restore/reopen coverage, including required Chat identity/avatar state, default-on retained Gallery material, integrity, capacity, staged activation, crash journal, and rollback;
-4. remote CI/Pages, deployed PWA/install/offline, hosted-provider Chat, and true-device backup evidence close the public-release gate;
+4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages, deployed PWA/install/offline, hosted-provider Chat, and true-device backup evidence still close the public-release gate;
 5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene, and World Setting W2 remain post-preview unless a current product blocker requires a separately approved slice.
 
 ### P0: Current Save Safety And Complete Local Recovery
 
 Status: `IN_PROGRESS`; write-result and local/mirror freshness foundations are implemented, while product-level failure recovery, broader same-container read-only enforcement, and complete local recovery remain open.
 
-First coherent slice:
+Next coherent slice:
 
-- make persistence writes return structured `ok/error/carrier/retryable` results and preserve the last confirmed durable state;
 - expose one product-level save-failed/read-only state with retry, refresh-current-save, and emergency complete-backup actions;
-- select the newest valid local/mirror envelope rather than always preferring a present but stale local value;
+- consume the existing structured write and reconciliation outcomes without changing envelope, Store, Repository, or backup formats;
 - extend WriteCoordinator protection so a later same-container page cannot mutate any durable owner after timeout;
 - add failure-injection unit coverage and focused two-page Chromium coverage without beginning R2, Gallery schema, dual write, or a non-Book Repository migration.
 
@@ -414,7 +415,7 @@ Status: `STAGE_W1_DONE / STAGE_W2_NOT_APPROVED`.
 
 ### P1: One Architecture Seam
 
-With Stage W1 complete, choose one:
+With Stage W1 complete, the following remain unapproved comparison candidates, not accepted architecture and not approval for any Calendar carrier change:
 
 - a `systemStore` facade;
 - one Home edit/library seam;
