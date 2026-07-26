@@ -1,6 +1,6 @@
 # SchatPhone Worktree Integration Protocol
 
-Updated: 2026-07-17
+Updated: 2026-07-26
 
 Purpose: define how separate SchatPhone workgroups protect, hand off, review, integrate, and synchronize Git work without requiring the user to operate Git or coordinate repositories manually.
 
@@ -58,6 +58,16 @@ The integration controller is the project-control task designated by the user. I
 - remote push only after explicit user authorization.
 
 The integration controller cannot invent product approval or use technical correctness to overrule the user.
+
+### Coordination Routing
+
+A named specialist or local task conversation may implement a user- or integration-controller-approved slice directly within its frozen boundary and return `READY_FOR_INTEGRATION_REVIEW` directly to the integration controller. An intermediate workgroup-controller review is a risk-routing option, not a mandatory step for every round. Invoke it when the slice introduces new product meaning, requires cross-page or cross-package consistency, establishes a new visual rule or asset direction, expands scope, shares a worktree with concurrent activity, or cannot determine its approved boundary safely.
+
+The integration controller still owns scope, branch and concurrency control, protection, independent validation, exact commit coordination, local `main` integration, and required worktree synchronization. Specialists and workgroups must not merge, rebase, push, or synchronize branches themselves. These routing rules do not change the user-decision gate or separate push authorization.
+
+A pure synchronization notice does not require waking every idle or long-history workgroup conversation. The integration controller may record the new baseline, and the workgroup verifies its branch, HEAD, and status when its next real task begins. This reduces coordination traffic without weakening the Git synchronization requirements in this protocol.
+
+Only one writing task may be active in a physical worktree at a time. A workgroup controller and its specialist conversations must not edit that worktree concurrently. Conversation names or folders are routing conveniences only: they do not create a second roadmap or task board and do not automatically synchronize repository state.
 
 ## 3. User Decision Gates
 
