@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
-import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   buildFoodDeliverySharedMealRelationshipMemoryKey,
@@ -222,41 +221,6 @@ const categoryCards = computed(() =>
     active: entry.key === activeCategory.value?.key,
   })),
 )
-
-const sourcePlan = computed(() => [
-  {
-    key: FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
-    title: t('外卖服务号推送', 'Food delivery service pushes'),
-    desc: t(
-      '外卖通知服务号承载接单、备餐、骑手取餐、送达和异常提醒。',
-      'The food delivery service account carries accepted, cooking, rider pickup, delivered, and exception alerts.',
-    ),
-  },
-  {
-    key: FOOD_DELIVERY_SOURCE_KEYS.MAP_RESTAURANT_LOCATION,
-    title: t('Map 餐厅位置', 'Map restaurant location'),
-    desc: t(
-      'Map 提供餐厅位置、配送地址、附近筛选和距离判断，但不拥有外卖订单。',
-      'Map provides restaurant location, delivery address, nearby filters, and distance context without owning food orders.',
-    ),
-  },
-  {
-    key: FOOD_DELIVERY_SOURCE_KEYS.MAP_COURIER_ROUTE,
-    title: t('Map 骑手路线 / ETA', 'Map courier route / ETA'),
-    desc: t(
-      '后续骑手路线、预计送达和取餐点可进入 Map 行程系统。',
-      'Courier route, ETA, and pickup points can later become Map trip context.',
-    ),
-  },
-  {
-    key: FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE,
-    title: t('Wallet 外卖支出', 'Wallet food expense'),
-    desc: t(
-      'Wallet 可记录外卖消费流水，但外卖订单仍归外卖模块。',
-      'Wallet can record food-delivery expenses while food orders remain owned by Food Delivery.',
-    ),
-  },
-])
 
 const activeCategoryLabel = computed(() =>
   languageBase.value === 'zh' ? activeCategory.value.zh : activeCategory.value.en,
@@ -1806,11 +1770,35 @@ const activeMapHandoff = computed(() =>
     categoryKey: activeCategory.value?.key || '',
   }),
 )
-const activeMapHandoffRouteSummary = computed(() =>
+const deliveryMapRouteSummary = (handoff = {}) =>
   languageBase.value === 'zh'
-    ? activeMapHandoff.value.routeSummaryZh
-    : activeMapHandoff.value.routeSummaryEn,
-)
+    ? handoff.routeSummaryZh || handoff.routeSummaryEn || ''
+    : handoff.routeSummaryEn || handoff.routeSummaryZh || ''
+const deliveryMapPickup = (handoff = {}) => handoff.pickupPoint || handoff.locationHint || ''
+const deliveryMapAddress = (handoff = {}) =>
+  handoff.deliveryAddress || handoff.dropoffPoint || handoff.currentLocationDetail || ''
+const deliveryMapMetaLine = (handoff = {}) =>
+  [
+    handoff.carrierName,
+    handoff.trackingCode,
+    Number(handoff.distanceKm) > 0 ? `${handoff.distanceKm} km` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ')
+const deliveryMapEtaLabel = (handoff = {}) => {
+  const etaDays = Number(handoff.etaDays)
+  if (Number.isFinite(etaDays) && etaDays > 0) {
+    return t(`约 ${etaDays} 天`, `About ${etaDays} day(s)`)
+  }
+  const etaMinutes = Number(handoff.etaMinutes)
+  if (!Number.isFinite(etaMinutes) || etaMinutes <= 0) return t('ETA 待定', 'ETA pending')
+  if (etaMinutes >= 24 * 60) {
+    const roundedDays = Math.round(etaMinutes / (24 * 60))
+    return t(`约 ${roundedDays} 天`, `About ${roundedDays} day(s)`)
+  }
+  return `${etaMinutes} min`
+}
+const activeMapHandoffRouteSummary = computed(() => deliveryMapRouteSummary(activeMapHandoff.value))
 const scopedFoodOrders = computed(() => {
   const restaurantId = isStoreMode.value ? activeRestaurant.value?.id || '' : ''
   if (!restaurantId) return []
@@ -1962,6 +1950,16 @@ const orderEventRows = (order) =>
           : t('外卖履约状态有新变化。', 'Food delivery status changed.')),
   }))
 
+const foodOrderItemSummary = (order = {}) =>
+  (Array.isArray(order.items) ? order.items : [])
+    .map((item) => {
+      const title = String(item?.title || item?.menuItemTitle || '').trim()
+      if (!title) return ''
+      return `${title} × ${Math.max(1, Number(item?.quantity) || 1)}`
+    })
+    .filter(Boolean)
+    .join(' · ')
+
 const triggerOrderSurpriseEvent = (order) => {
   eventFeedback.value = ''
   const result = runFoodDeliveryRandomOrderEventPilot({
@@ -1980,8 +1978,8 @@ const triggerOrderSurpriseEvent = (order) => {
 
   if (result.ok) {
     eventFeedback.value = t(
-      'Delivery event added to this order.',
-      'Delivery event added to this order.',
+      '配送更新已添加。',
+      'Delivery update added.',
     )
     return
   }
@@ -1989,28 +1987,28 @@ const triggerOrderSurpriseEvent = (order) => {
   const reason = result.reason || result.log?.reason || result.evaluation?.reason || ''
   if (reason === 'cooldown_active') {
     eventFeedback.value = t(
-      'Delivery events are cooling down for this order.',
-      'Delivery events are cooling down for this order.',
+      '暂时无法获取新进度，请稍后再试。',
+      'Updates are temporarily unavailable. Try again in a moment.',
     )
     return
   }
   if (reason === 'daily_limit_reached') {
     eventFeedback.value = t(
-      'Daily delivery-event limit reached for this order.',
-      'Daily delivery-event limit reached for this order.',
+      '今天暂无更多配送更新，请稍后再试。',
+      'No more delivery updates are available today. Try again later.',
     )
     return
   }
   if (reason === 'module_events_disabled') {
     eventFeedback.value = t(
-      'Food Delivery events are disabled in Simulation settings.',
-      'Food Delivery events are disabled in Simulation settings.',
+      '配送更新当前不可用。',
+      'Delivery updates are unavailable right now.',
     )
     return
   }
   eventFeedback.value = t(
-    'No delivery surprise was triggered this time.',
-    'No delivery surprise was triggered this time.',
+    '暂时没有新的配送进度，请稍后再试。',
+    'No delivery update is available right now. Try again later.',
   )
 }
 
@@ -9120,16 +9118,17 @@ onBeforeUnmount(() => {
       >
         <summary
           v-if="isStoreMode"
-          class="flex scroll-mb-24 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-3 py-2 text-sm font-black"
+          class="flex min-h-11 min-w-0 scroll-mb-24 cursor-pointer list-none flex-wrap items-center justify-between gap-2 rounded-2xl px-3 py-2 text-sm font-black outline-none focus-visible:ring-2 focus-visible:ring-[#ff806f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#11131b]"
           :class="
             isDessertWindowStore
               ? 'bg-[var(--peach-cloud-mist)]/35 text-[var(--peach-cloud-ink)]'
               : 'bg-white/[0.06] text-white'
           "
+          data-testid="food-delivery-store-support-summary"
         >
           <span>{{ t('Order & delivery', 'Order & delivery') }}</span>
           <span
-            class="text-[11px] font-semibold"
+            class="min-w-0 break-words text-[11px] font-semibold [overflow-wrap:anywhere]"
             :class="isDessertWindowStore ? 'text-[var(--peach-cloud-iron)]' : 'text-slate-400'"
           >
             {{ recentOrders.length }} {{ t('orders', 'orders') }} ·
@@ -9138,17 +9137,19 @@ onBeforeUnmount(() => {
         </summary>
         <div class="space-y-4" :class="isStoreMode ? 'mt-3' : ''">
           <section
-            class="rounded-3xl border border-lime-100 bg-white p-4"
+            class="min-w-0 rounded-3xl border border-lime-100 bg-white p-4 text-gray-950"
             data-testid="food-delivery-map-handoff"
           >
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-sm font-bold">{{ t('Map 配送上下文', 'Map delivery context') }}</p>
-                <p class="mt-1 text-xs text-gray-500">
+            <div class="flex min-w-0 flex-wrap items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <p class="break-words text-sm font-bold [overflow-wrap:anywhere]">
+                  {{ t('配送详情', 'Delivery details') }}
+                </p>
+                <p class="mt-1 break-words text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]">
                   {{
                     t(
-                      '只读提供位置、距离和 ETA，不创建外卖订单。',
-                      'Read-only location, distance, and ETA. It does not create food orders.',
+                      '查看当前路线、送达地址、距离和预计送达时间。',
+                      'Review the current route, delivery address, distance, and estimated arrival.',
                     )
                   }}
                 </p>
@@ -9161,23 +9162,23 @@ onBeforeUnmount(() => {
             </div>
             <div class="mt-3 grid gap-2 text-xs">
               <p
-                class="rounded-2xl bg-lime-50/80 p-3 leading-5 text-lime-800"
+                class="min-w-0 break-words rounded-2xl bg-lime-50/80 p-3 leading-5 text-lime-800 [overflow-wrap:anywhere]"
                 data-testid="food-delivery-map-handoff-route"
               >
                 {{ activeMapHandoffRouteSummary }}
               </p>
-              <div class="grid grid-cols-2 gap-2">
+              <div class="grid min-w-0 gap-2 sm:grid-cols-2">
                 <div
-                  class="rounded-2xl bg-gray-50 p-3"
+                  class="min-w-0 rounded-2xl bg-gray-50 p-3"
                   data-testid="food-delivery-map-handoff-address"
                 >
                   <p class="font-semibold text-gray-900">{{ t('配送地址', 'Delivery address') }}</p>
-                  <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-500">
+                  <p class="mt-1 break-words text-[11px] leading-4 text-gray-500 [overflow-wrap:anywhere]">
                     {{ activeMapHandoff.deliveryAddress || t('未设置', 'Not set') }}
                   </p>
                 </div>
                 <div
-                  class="rounded-2xl bg-gray-50 p-3"
+                  class="min-w-0 rounded-2xl bg-gray-50 p-3"
                   data-testid="food-delivery-map-handoff-distance"
                 >
                   <p class="font-semibold text-gray-900">{{ t('预计距离', 'Distance') }}</p>
@@ -9190,14 +9191,15 @@ onBeforeUnmount(() => {
           </section>
 
           <section
-            class="rounded-3xl border border-gray-100 bg-white p-4"
+            class="min-w-0 rounded-3xl border border-gray-100 bg-white p-4 text-gray-950"
             data-testid="food-delivery-orders-panel"
           >
             <p class="text-sm font-bold">{{ t('本店订单', 'Shop orders') }}</p>
             <p
               v-if="eventFeedback"
-              class="mt-2 rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700"
+              class="mt-2 break-words rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-semibold leading-5 text-orange-700 [overflow-wrap:anywhere]"
               data-testid="food-delivery-event-feedback"
+              aria-live="polite"
             >
               {{ eventFeedback }}
             </p>
@@ -9205,7 +9207,7 @@ onBeforeUnmount(() => {
               <article
                 v-for="order in recentOrders"
                 :key="order.id"
-                class="rounded-2xl p-3"
+                class="min-w-0 rounded-2xl p-3"
                 :class="
                   isHighlightedOrder(order.id)
                     ? 'border-2 border-orange-300 bg-orange-50 shadow-sm'
@@ -9213,58 +9215,69 @@ onBeforeUnmount(() => {
                 "
                 :data-testid="`food-delivery-order-${order.id}`"
               >
-                <div class="flex items-start justify-between gap-3">
+                <div class="flex min-w-0 flex-wrap items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <p class="truncate text-xs font-bold">{{ order.restaurantName }}</p>
-                    <p class="mt-1 text-[11px] text-gray-500">
+                    <p class="break-words text-xs font-bold [overflow-wrap:anywhere]">
+                      {{ order.restaurantName }}
+                    </p>
+                    <p class="mt-1 break-words text-[11px] text-gray-500 [overflow-wrap:anywhere]">
                       {{ order.itemCount }} {{ t('份', 'item(s)') }} · {{ order.status }}
+                    </p>
+                    <p
+                      v-if="foodOrderItemSummary(order)"
+                      class="mt-1 break-words text-[11px] leading-4 text-gray-600 [overflow-wrap:anywhere]"
+                      :data-testid="`food-delivery-order-items-${order.id}`"
+                    >
+                      {{ foodOrderItemSummary(order) }}
                     </p>
                   </div>
                   <span
-                    class="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-gray-700"
+                    class="max-w-full break-words rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 [overflow-wrap:anywhere]"
                   >
                     {{ order.totalCents / 100 }} {{ order.currency }}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  class="mt-2 rounded-full border border-orange-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-50"
-                  :data-testid="`food-delivery-trigger-event-${order.id}`"
-                  @click="triggerOrderSurpriseEvent(order)"
-                >
-                  {{ t('触发配送事件', 'Trigger delivery event') }}
-                </button>
-                <button
-                  v-if="
-                    order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED &&
-                    order.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED
-                  "
-                  type="button"
-                  class="ml-2 mt-2 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
-                  :data-testid="`food-delivery-mark-delivered-${order.id}`"
-                  @click="markFoodOrderDelivered(order.id)"
-                >
-                  {{ t('标记已送达', 'Mark delivered') }}
-                </button>
-                <button
-                  type="button"
-                  class="ml-2 mt-2 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
-                  :data-testid="`food-delivery-delete-order-${order.id}`"
-                  @click="removeFoodOrder(order.id)"
-                >
-                  {{ t('删除', 'Delete') }}
-                </button>
+                <div class="mt-2 flex min-w-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-normal rounded-2xl border border-orange-200 bg-white px-3 py-2 text-center text-[11px] font-semibold leading-4 text-orange-700 shadow-sm outline-none transition hover:border-orange-300 hover:bg-orange-50 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 motion-reduce:transition-none [overflow-wrap:anywhere]"
+                    :data-testid="`food-delivery-trigger-event-${order.id}`"
+                    @click="triggerOrderSurpriseEvent(order)"
+                  >
+                    {{ t('查看配送更新', 'Check for update') }}
+                  </button>
+                  <button
+                    v-if="
+                      order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED &&
+                      order.status !== FOOD_DELIVERY_ORDER_STATUS.CANCELLED
+                    "
+                    type="button"
+                    class="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-normal rounded-2xl border border-emerald-200 bg-white px-3 py-2 text-center text-[11px] font-semibold leading-4 text-emerald-700 shadow-sm outline-none transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transition-none [overflow-wrap:anywhere]"
+                    :data-testid="`food-delivery-mark-delivered-${order.id}`"
+                    @click="markFoodOrderDelivered(order.id)"
+                  >
+                    {{ t('确认已送达', 'Confirm delivery') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-normal rounded-2xl border border-rose-200 bg-white px-3 py-2 text-center text-[11px] font-semibold leading-4 text-rose-600 shadow-sm outline-none transition hover:border-rose-300 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 motion-reduce:transition-none [overflow-wrap:anywhere]"
+                    :data-testid="`food-delivery-delete-order-${order.id}`"
+                    @click="removeFoodOrder(order.id)"
+                  >
+                    {{ t('从记录中移除', 'Remove from history') }}
+                  </button>
+                </div>
                 <div v-if="orderEventRows(order).length > 0" class="mt-2 space-y-1.5">
                   <article
                     v-for="event in orderEventRows(order)"
                     :key="event.id"
-                    class="rounded-xl border border-orange-100 bg-white px-2.5 py-2 text-[11px]"
+                    class="min-w-0 rounded-xl border border-orange-100 bg-white px-2.5 py-2 text-[11px]"
                     :data-testid="`food-delivery-order-event-${order.id}-${event.id}`"
                   >
                     <div class="flex items-start justify-between gap-2">
                       <div class="min-w-0">
                         <p class="font-semibold text-orange-900">{{ event.typeLabel }}</p>
-                        <p class="mt-1 line-clamp-2 leading-4 text-orange-700">
+                        <p class="mt-1 break-words leading-4 text-orange-700 [overflow-wrap:anywhere]">
                           {{ event.detail }}
                         </p>
                       </div>
@@ -9274,10 +9287,66 @@ onBeforeUnmount(() => {
                         {{ event.timeLabel }}
                       </span>
                     </div>
-                    <DeliveryRouteContextCard
-                      :context="event.mapHandoff"
-                      :test-id="`food-delivery-event-map-context-${order.id}-${event.id}`"
-                    />
+                    <aside
+                      v-if="event.mapHandoff"
+                      class="mt-2 min-w-0 rounded-2xl border border-lime-100 bg-lime-50/70 p-3 text-[11px]"
+                      :data-testid="`food-delivery-event-map-context-${order.id}-${event.id}`"
+                    >
+                      <div
+                        :data-testid="`food-delivery-event-map-context-${order.id}-${event.id}-boundary`"
+                      >
+                        <p class="font-bold text-lime-900">{{ t('配送路线', 'Delivery route') }}</p>
+                        <p
+                          class="mt-1 break-words leading-4 text-lime-700 [overflow-wrap:anywhere]"
+                          :data-testid="`food-delivery-event-map-context-${order.id}-${event.id}-route`"
+                        >
+                          {{ deliveryMapRouteSummary(event.mapHandoff) }}
+                        </p>
+                        <div class="mt-2 grid min-w-0 gap-2 sm:grid-cols-3">
+                          <div
+                            v-if="deliveryMapPickup(event.mapHandoff)"
+                            class="min-w-0 rounded-xl bg-white/80 px-2.5 py-2"
+                            :data-testid="`food-delivery-event-map-context-${order.id}-${event.id}-pickup`"
+                          >
+                            <p class="font-semibold text-lime-800">{{ t('取餐点', 'Pickup') }}</p>
+                            <p class="mt-0.5 break-words text-lime-700 [overflow-wrap:anywhere]">
+                              {{ deliveryMapPickup(event.mapHandoff) }}
+                            </p>
+                          </div>
+                          <div
+                            class="min-w-0 rounded-xl bg-white/80 px-2.5 py-2"
+                            :data-testid="
+                              event.mapHandoff.dropoffPoint ||
+                              event.mapHandoff.currentLocationDetail
+                                ? `food-delivery-event-map-context-${order.id}-${event.id}-dropoff`
+                                : undefined
+                            "
+                          >
+                            <p class="font-semibold text-lime-800">
+                              {{ t('配送地址', 'Delivery address') }}
+                            </p>
+                            <p class="mt-0.5 break-words text-lime-700 [overflow-wrap:anywhere]">
+                              {{ deliveryMapAddress(event.mapHandoff) || t('未设置', 'Not set') }}
+                            </p>
+                          </div>
+                          <div
+                            class="min-w-0 rounded-xl bg-white/80 px-2.5 py-2"
+                          >
+                            <p class="font-semibold text-lime-800">{{ t('预计送达', 'ETA') }}</p>
+                            <p class="mt-0.5 break-words text-lime-700 [overflow-wrap:anywhere]">
+                              {{ deliveryMapEtaLabel(event.mapHandoff) }}
+                            </p>
+                          </div>
+                        </div>
+                        <p
+                          v-if="deliveryMapMetaLine(event.mapHandoff)"
+                          class="mt-2 break-words text-[10px] font-semibold leading-4 text-lime-700 [overflow-wrap:anywhere]"
+                          :data-testid="`food-delivery-event-map-context-${order.id}-${event.id}-meta`"
+                        >
+                          {{ deliveryMapMetaLine(event.mapHandoff) }}
+                        </p>
+                      </div>
+                    </aside>
                   </article>
                 </div>
               </article>
@@ -9288,19 +9357,19 @@ onBeforeUnmount(() => {
           </section>
 
           <section
-            class="rounded-3xl border border-emerald-100 bg-white p-4"
+            class="min-w-0 rounded-3xl border border-emerald-100 bg-white p-4 text-gray-950"
             data-testid="food-delivery-wallet-suggestions"
           >
             <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-sm font-bold">
-                  {{ t('Wallet 外卖消费建议', 'Wallet food expense suggestions') }}
+              <div class="min-w-0">
+                <p class="break-words text-sm font-bold [overflow-wrap:anywhere]">
+                  {{ t('保存到 Wallet', 'Save to Wallet') }}
                 </p>
-                <p class="mt-1 text-xs leading-5 text-gray-500">
+                <p class="mt-1 break-words text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]">
                   {{
                     t(
-                      '只有已送达订单会出现在这里；点击后才会写入 Wallet。',
-                      'Only delivered orders appear here; click to write them to Wallet.',
+                      '只有已送达订单可以记录为支出；在你选择“记录”前，不会保存到 Wallet。',
+                      'Only delivered orders can be recorded as expenses. Nothing is saved to Wallet until you choose Record.',
                     )
                   }}
                 </p>
@@ -9326,20 +9395,23 @@ onBeforeUnmount(() => {
               <article
                 v-for="suggestion in walletExpenseSuggestions"
                 :key="suggestion.orderId"
-                class="rounded-2xl border border-emerald-50 bg-emerald-50/50 p-3"
+                class="min-w-0 rounded-2xl border border-emerald-50 bg-emerald-50/50 p-3"
                 :data-testid="`food-delivery-wallet-suggestion-${suggestion.orderId}`"
               >
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="text-xs font-bold text-gray-900">{{ suggestion.restaurantName }}</p>
-                    <p class="mt-1 text-[11px] text-gray-500">
+                <div class="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                  <div class="min-w-0">
+                    <p class="break-words text-xs font-bold text-gray-900 [overflow-wrap:anywhere]">
+                      {{ suggestion.restaurantName }}
+                    </p>
+                    <p class="mt-1 break-words text-[11px] text-gray-500 [overflow-wrap:anywhere]">
                       {{ suggestion.itemCount }} {{ t('份', 'item(s)') }} / {{ suggestion.amount }}
                       {{ suggestion.currency }}
                     </p>
                     <div class="mt-2 flex flex-wrap items-center gap-2">
                       <select
                         v-model="sharedMealTargets[suggestion.orderId]"
-                        class="rounded-xl border border-emerald-100 bg-white px-2 py-1 text-[11px] text-gray-600 outline-none"
+                        class="min-h-11 min-w-0 max-w-full rounded-xl border border-emerald-100 bg-white px-2 py-2 text-[11px] text-gray-600 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                        :aria-label="t('选择共享用餐联系人', 'Choose shared-meal contact')"
                         :data-testid="`food-delivery-shared-meal-contact-${suggestion.orderId}`"
                       >
                         <option value="">
@@ -9355,7 +9427,7 @@ onBeforeUnmount(() => {
                       </select>
                       <span
                         v-if="suggestion.relationshipAvailable"
-                        class="text-[11px] font-semibold"
+                        class="min-w-0 break-words text-[11px] font-semibold [overflow-wrap:anywhere]"
                         :class="
                           suggestion.relationshipImported ? 'text-emerald-600' : 'text-amber-600'
                         "
@@ -9364,19 +9436,20 @@ onBeforeUnmount(() => {
                         {{
                           suggestion.relationshipImported
                             ? t(
-                                `Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`,
-                                `Shared-meal fact recorded for ${suggestion.relationshipTargetName}.`,
+                                `已为 ${suggestion.relationshipTargetName} 保存共享用餐记录。`,
+                                `Shared meal saved for ${suggestion.relationshipTargetName}.`,
                               )
                             : t(
-                                `Shared-meal fact ready for ${suggestion.relationshipTargetName}.`,
-                                `Shared-meal fact ready for ${suggestion.relationshipTargetName}.`,
+                                `记录支出时会关联与 ${suggestion.relationshipTargetName} 的共享用餐。`,
+                                `The shared meal with ${suggestion.relationshipTargetName} will be linked when you record this expense.`,
                               )
                         }}
                       </span>
                     </div>
                   </div>
                   <button
-                    class="rounded-full px-3 py-1.5 text-[11px] font-semibold"
+                    type="button"
+                    class="inline-flex min-h-11 min-w-0 max-w-full items-center justify-center whitespace-normal rounded-2xl px-3 py-2 text-center text-[11px] font-semibold leading-4 outline-none transition focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 motion-reduce:transition-none [overflow-wrap:anywhere]"
                     :class="
                       suggestion.imported
                         ? 'bg-gray-100 text-gray-400'
@@ -9386,38 +9459,13 @@ onBeforeUnmount(() => {
                     :data-testid="`food-delivery-transfer-wallet-${suggestion.orderId}`"
                     @click="transferFoodSuggestionToWallet(suggestion)"
                   >
-                    {{ suggestion.imported ? t('已记账', 'Recorded') : t('记入 Wallet', 'Record') }}
+                    {{ suggestion.imported ? t('已记录', 'Recorded') : t('记录', 'Record') }}
                   </button>
                 </div>
               </article>
             </div>
           </section>
 
-          <section
-            class="rounded-3xl border border-lime-100 bg-white p-4"
-            data-testid="food-delivery-map-boundary"
-          >
-            <p class="text-sm font-bold">{{ t('Map 对接边界', 'Map handoff boundary') }}</p>
-            <p class="mt-2 text-xs leading-5 text-gray-500">
-              {{
-                t(
-                  '外卖可消费 Map 的餐厅位置、配送地址、附近筛选、骑手路线和 ETA；Map 不创建外卖订单，也不接管支付或商家状态。',
-                  'Food Delivery may consume restaurant location, delivery address, nearby filters, courier route, and ETA from Map; Map does not create food orders or own payment/merchant state.',
-                )
-              }}
-            </p>
-            <div class="mt-3 space-y-2">
-              <article
-                v-for="item in sourcePlan"
-                :key="item.key"
-                class="rounded-2xl bg-lime-50/70 p-3"
-                :data-testid="`food-delivery-source-${item.key}`"
-              >
-                <p class="text-xs font-bold text-lime-800">{{ item.title }}</p>
-                <p class="mt-1 text-[11px] leading-4 text-lime-700">{{ item.desc }}</p>
-              </article>
-            </div>
-          </section>
         </div>
       </details>
     </div>
