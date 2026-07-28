@@ -1,4 +1,4 @@
-const SERVICE_WORKER_VERSION = 'schatphone-pwa-v2'
+const SERVICE_WORKER_VERSION = 'schatphone-pwa-v3'
 const RUNTIME_CACHE = `${SERVICE_WORKER_VERSION}-runtime`
 const DEFAULT_ICON = 'icons/pwa-icon-192.png'
 const FALLBACK_ICON = 'icons/pwa-icon.svg'
@@ -11,6 +11,17 @@ const PRECACHE_URLS = [
   'icons/pwa-maskable-512.png',
   'icons/apple-touch-icon.png',
 ]
+
+const isViteDevelopmentRequest = (requestUrl, scopeUrl) => {
+  const relativePath = requestUrl.pathname.slice(scopeUrl.pathname.length)
+  return (
+    relativePath.startsWith('src/') ||
+    relativePath.startsWith('@vite/') ||
+    relativePath.startsWith('@id/') ||
+    relativePath.startsWith('@fs/') ||
+    relativePath.startsWith('node_modules/.vite/')
+  )
+}
 
 const normalizeAssetUrl = (url = FALLBACK_ICON) => {
   try {
@@ -163,6 +174,7 @@ self.addEventListener('fetch', (event) => {
   const scopeUrl = new URL(self.registration.scope)
   if (requestUrl.origin !== scopeUrl.origin) return
   if (!requestUrl.pathname.startsWith(scopeUrl.pathname)) return
+  if (isViteDevelopmentRequest(requestUrl, scopeUrl)) return
 
   if (request.mode === 'navigate') {
     event.respondWith(

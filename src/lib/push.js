@@ -151,6 +151,7 @@ export const ensurePushServiceWorkerRegistration = async () => {
   if (!registrationPromise) {
     registrationPromise = navigator.serviceWorker.register(SERVICE_WORKER_URL, {
       scope: BASE_URL,
+      updateViaCache: 'none',
     })
   }
 

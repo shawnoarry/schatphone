@@ -22,13 +22,15 @@ import { DEFAULT_WALLET_CURRENCY, normalizeWalletCurrency } from './wallet'
 const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
 const FOOD_DELIVERY_STORAGE_VERSION = 1
 const FOOD_RESTAURANT_LIMIT = 120
-const FOOD_MENU_ITEM_LIMIT = 360
+const FOOD_USER_MENU_ITEM_LIMIT = 360
 const FOOD_CART_LINE_LIMIT = 40
 const FOOD_ORDER_LIMIT = 120
 const FOOD_ORDER_EVENT_LIMIT = 24
 const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
 const MOON_BISTRO_SEED_RESTAURANT_ID = 'food_seed_moon_bistro'
 const PEACH_CLOUD_SEED_RESTAURANT_ID = 'food_seed_peach_cloud'
+const DASH_GRILL_SEED_RESTAURANT_ID = 'food_seed_dash_grill'
+const JADE_HEARTH_SEED_RESTAURANT_ID = 'food_seed_jade_hearth'
 
 export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
   PLACED: 'placed',
@@ -223,7 +225,7 @@ const normalizeMenuItem = (rawItem, restaurantIds, index = 0) => {
   }
 }
 
-const normalizeMenuItems = (rawItems, restaurantIds) => {
+const normalizeMenuItems = (rawItems, restaurantIds, preservedMenuItemIds = null) => {
   if (!Array.isArray(rawItems)) return []
   const seen = new Set()
   const normalized = []
@@ -233,7 +235,14 @@ const normalizeMenuItems = (rawItems, restaurantIds) => {
     seen.add(menuItem.id)
     normalized.push(menuItem)
   })
-  return normalized.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, FOOD_MENU_ITEM_LIMIT)
+  let userMenuItemCount = 0
+  return normalized
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .filter((menuItem) => {
+      if (preservedMenuItemIds?.has(menuItem.id)) return true
+      userMenuItemCount += 1
+      return userMenuItemCount <= FOOD_USER_MENU_ITEM_LIMIT
+    })
 }
 
 const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
@@ -514,6 +523,16 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   sugarLane:
     'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80',
   peachCloud: foodDeliveryUiAsset('peach-cloud/cover/peach-cloud-hero-01.png'),
+  dashGrill: foodDeliveryUiAsset('dash-grill/cover/dash-grill-cover-01.png'),
+  jadeHearth: foodDeliveryUiAsset('jade-hearth/cover/jade-hearth-cover-01.png'),
+  dashGrillProduct: (index) =>
+    foodDeliveryUiAsset(
+      `dash-grill/products/dash-grill-item-${String(index).padStart(2, '0')}.png`,
+    ),
+  jadeHearthProduct: (index) =>
+    foodDeliveryUiAsset(
+      `jade-hearth/products/jade-hearth-item-${String(index).padStart(2, '0')}.png`,
+    ),
   peachCloudProduct: (index) =>
     foodDeliveryUiAsset(
       `peach-cloud/products/peach-cloud-item-${String(index).padStart(2, '0')}.png`,
@@ -617,7 +636,7 @@ const createSeedRestaurants = () =>
       id: MOON_BISTRO_SEED_RESTAURANT_ID,
       name: 'Moon Bistro',
       category: 'restaurants',
-      cuisine: 'Fusion dinner',
+      cuisine: 'Modern fine dining',
       rating: 4.8,
       deliveryEtaMinutes: 32,
       deliveryFee: '6.00',
@@ -698,6 +717,40 @@ const createSeedRestaurants = () =>
       createdAt: Date.now() - 4 * 60 * 1000,
       updatedAt: Date.now() - 4 * 60 * 1000,
     },
+    {
+      id: DASH_GRILL_SEED_RESTAURANT_ID,
+      name: 'Dash Grill',
+      category: 'fast_food',
+      cuisine: 'Burgers, fries, and shakes',
+      rating: 4.8,
+      deliveryEtaMinutes: 19,
+      deliveryFee: '3.50',
+      distanceKm: 0.9,
+      address: 'Central Arcade 12',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.dashGrill,
+      imageAlt: 'Dash Grill burger meal',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 3 * 60 * 1000,
+      updatedAt: Date.now() - 3 * 60 * 1000,
+    },
+    {
+      id: JADE_HEARTH_SEED_RESTAURANT_ID,
+      name: 'Jade Hearth',
+      category: 'restaurants',
+      cuisine: 'Regional Chinese dishes and shared tables',
+      rating: 4.9,
+      deliveryEtaMinutes: 28,
+      deliveryFee: '5.00',
+      distanceKm: 1.6,
+      address: 'Camphor Lane 28',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearth,
+      imageAlt: 'Jade Hearth Chinese shared table',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 16 * 60 * 1000,
+      updatedAt: Date.now() - 16 * 60 * 1000,
+    },
   ])
 
 const createSeedMenuItems = () =>
@@ -710,7 +763,7 @@ const createSeedMenuItems = () =>
         category: 'restaurants',
         menuSection: 'rice_set',
         price: '58.00',
-        desc: 'Grilled slices, warm rice, and crisp pickles for a quiet late-night dinner.',
+        desc: 'Grilled slices, warm rice, and crisp pickles, composed as a balanced signature set.',
         ingredients: 'rice, grilled pork, cucumber, kimchi, herb sauce',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.lunarRice,
@@ -726,7 +779,7 @@ const createSeedMenuItems = () =>
         category: 'restaurants',
         menuSection: 'warm_soup',
         price: '26.00',
-        desc: 'Creamy mushroom soup with thyme and black pepper, made for slow evenings.',
+        desc: 'Creamy mushroom soup with thyme and black pepper, finished with cultured cream.',
         ingredients: 'mushroom, cream, thyme, black pepper, broth',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.signalSoup,
@@ -802,7 +855,7 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_moon_night_tagliatelle',
         restaurantId: MOON_BISTRO_SEED_RESTAURANT_ID,
-        title: 'Night Tagliatelle',
+        title: 'Truffle Tagliatelle',
         category: 'restaurants',
         menuSection: 'pasta',
         price: '52.00',
@@ -810,7 +863,7 @@ const createSeedMenuItems = () =>
         ingredients: 'tagliatelle, mushroom, cream, tomato, thyme, parmesan',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.nightTagliatelle,
-        imageAlt: 'Night Tagliatelle',
+        imageAlt: 'Truffle Tagliatelle',
         sourceModule: 'seed',
         createdAt: Date.now() - 13 * 60 * 1000,
         updatedAt: Date.now() - 13 * 60 * 1000,
@@ -1084,6 +1137,358 @@ const createSeedMenuItems = () =>
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
       },
+      {
+        id: 'food_menu_dash_double_stack',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Dash Double Stack',
+        category: 'fast_food',
+        menuSection: 'featured',
+        price: '39.00',
+        desc: 'Two seared beef patties, cheddar, pickles, onion, and house dash sauce.',
+        ingredients: 'beef, cheddar, pickles, onion, sesame bun, dash sauce',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(1),
+        imageAlt: 'Dash Double Stack burger',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_golden_chicken_stack',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Golden Chicken Stack',
+        category: 'fast_food',
+        menuSection: 'featured',
+        price: '36.00',
+        desc: 'Crisp chicken, shredded lettuce, pepper mayo, and a toasted potato bun.',
+        ingredients: 'chicken, lettuce, pepper mayo, potato bun',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(2),
+        imageAlt: 'Golden Chicken Stack burger',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_smoky_bbq_stack',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Smoky BBQ Stack',
+        category: 'fast_food',
+        menuSection: 'burgers',
+        price: '42.00',
+        desc: 'Beef, smoked cheese, crisp onions, pickles, and molasses barbecue glaze.',
+        ingredients: 'beef, smoked cheese, onion, pickles, barbecue glaze',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(3),
+        imageAlt: 'Smoky BBQ Stack burger',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_classic_cheeseburger',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Classic Cheeseburger',
+        category: 'fast_food',
+        menuSection: 'burgers',
+        price: '26.00',
+        desc: 'A single beef patty with cheddar, pickle, onion, ketchup, and mustard.',
+        ingredients: 'beef, cheddar, pickle, onion, ketchup, mustard',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(4),
+        imageAlt: 'Classic Cheeseburger',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_chicken_tenders',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Crisp Chicken Tenders',
+        category: 'fast_food',
+        menuSection: 'chicken',
+        price: '32.00',
+        desc: 'Five crunchy chicken strips with one choice of dipping sauce.',
+        ingredients: 'chicken, seasoned crumb, dipping sauce',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(5),
+        imageAlt: 'Crisp Chicken Tenders',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_sea_salt_fries',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Sea-Salt Fries',
+        category: 'fast_food',
+        menuSection: 'sides',
+        price: '15.00',
+        desc: 'Thin-cut golden fries finished with flaky sea salt.',
+        ingredients: 'potato, vegetable oil, sea salt',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(6),
+        imageAlt: 'Sea-Salt Fries',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_loaded_fries',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Loaded Cheese Fries',
+        category: 'fast_food',
+        menuSection: 'sides',
+        price: '24.00',
+        desc: 'Golden fries with warm cheese sauce, scallion, and smoky crumbs.',
+        ingredients: 'potato, cheese sauce, scallion, smoky crumbs',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(7),
+        imageAlt: 'Loaded Cheese Fries',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_garden_wrap',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Garden Crunch Wrap',
+        category: 'fast_food',
+        menuSection: 'chicken',
+        price: '29.00',
+        desc: 'Grilled chicken, crunchy greens, tomato, and lemon pepper dressing.',
+        ingredients: 'chicken, lettuce, tomato, tortilla, lemon pepper dressing',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(8),
+        imageAlt: 'Garden Crunch Wrap',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_vanilla_shake',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Vanilla Cloud Shake',
+        category: 'fast_food',
+        menuSection: 'drinks',
+        price: '18.00',
+        desc: 'Cold vanilla shake blended thick and finished with soft cream.',
+        ingredients: 'milk, vanilla ice cream, cream',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(9),
+        imageAlt: 'Vanilla Cloud Shake',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_dash_choco_sundae',
+        restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
+        title: 'Choco Swirl Sundae',
+        category: 'fast_food',
+        menuSection: 'treats',
+        price: '16.00',
+        desc: 'Vanilla soft serve with dark chocolate ribbons and crisp cocoa crumbs.',
+        ingredients: 'vanilla soft serve, chocolate sauce, cocoa crumbs',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(10),
+        imageAlt: 'Choco Swirl Sundae',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 3 * 60 * 1000,
+        updatedAt: Date.now() - 3 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_tea_smoked_chicken',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Tea-Smoked Half Chicken',
+        category: 'restaurants',
+        menuSection: 'house_table',
+        price: '68.00',
+        desc: 'A tender half chicken perfumed with black tea, cassia, and crisp scallion oil.',
+        ingredients: 'chicken, black tea, cassia, scallion oil, soy glaze',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(1),
+        imageAlt: 'Tea-Smoked Half Chicken',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_cinnabar_char_siu',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Cinnabar Char Siu',
+        category: 'restaurants',
+        menuSection: 'house_table',
+        price: '58.00',
+        desc: 'Lacquered pork shoulder with maltose glaze, mustard greens, and toasted sesame.',
+        ingredients: 'pork shoulder, maltose, fermented bean curd, mustard greens, sesame',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(2),
+        imageAlt: 'Cinnabar Char Siu',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_sea_bass',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Ginger-Scallion Sea Bass',
+        category: 'restaurants',
+        menuSection: 'house_table',
+        price: '88.00',
+        desc: 'Steamed sea bass finished with ginger threads, scallion, and fragrant hot oil.',
+        ingredients: 'sea bass, ginger, scallion, light soy, sesame oil',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(3),
+        imageAlt: 'Ginger-Scallion Sea Bass',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_crystal_dumplings',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Crystal Shrimp Dumplings',
+        category: 'restaurants',
+        menuSection: 'small_plates',
+        price: '36.00',
+        desc: 'Four translucent dumplings folded around springy shrimp and bamboo shoot.',
+        ingredients: 'shrimp, bamboo shoot, wheat starch, sesame oil',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(4),
+        imageAlt: 'Crystal Shrimp Dumplings',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_cucumber_ribbons',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Sesame Cucumber Ribbons',
+        category: 'restaurants',
+        menuSection: 'small_plates',
+        price: '22.00',
+        desc: 'Chilled cucumber ribbons with black vinegar, sesame paste, and roasted peanuts.',
+        ingredients: 'cucumber, sesame paste, black vinegar, garlic, peanut',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(5),
+        imageAlt: 'Sesame Cucumber Ribbons',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_pepper_lotus',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Pepper Lotus Root',
+        category: 'restaurants',
+        menuSection: 'wok_favorites',
+        price: '32.00',
+        desc: 'Crisp lotus root tossed in the wok with green pepper, celery, and fermented chili.',
+        ingredients: 'lotus root, green pepper, celery, fermented chili, garlic',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(6),
+        imageAlt: 'Pepper Lotus Root',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_mapo_tofu',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Hearth Mapo Tofu',
+        category: 'restaurants',
+        menuSection: 'wok_favorites',
+        price: '38.00',
+        desc: 'Silken tofu, beef crumble, broad-bean chili, and green Sichuan pepper oil.',
+        ingredients: 'tofu, beef, doubanjiang, Sichuan pepper, scallion',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(7),
+        imageAlt: 'Hearth Mapo Tofu',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_mushroom_claypot',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Chestnut Mushroom Claypot',
+        category: 'restaurants',
+        menuSection: 'claypot',
+        price: '46.00',
+        desc: 'Chestnuts and three mushrooms simmered with tofu skin in a warm claypot glaze.',
+        ingredients: 'chestnut, shiitake, oyster mushroom, tofu skin, soy broth',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(8),
+        imageAlt: 'Chestnut Mushroom Claypot',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_shrimp_fried_rice',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Shrimp & Scallion Fried Rice',
+        category: 'restaurants',
+        menuSection: 'rice_noodles',
+        price: '34.00',
+        desc: 'Wok-tossed jasmine rice with shrimp, egg, scallion, and crisp rice pearls.',
+        ingredients: 'jasmine rice, shrimp, egg, scallion, soy',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(9),
+        imageAlt: 'Shrimp and Scallion Fried Rice',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_beef_noodles',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Red-Braised Beef Knife Noodles',
+        category: 'restaurants',
+        menuSection: 'rice_noodles',
+        price: '42.00',
+        desc: 'Wide knife-cut noodles with slow-braised beef, tomato broth, and baby greens.',
+        ingredients: 'knife-cut noodles, beef, tomato, bok choy, star anise',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(10),
+        imageAlt: 'Red-Braised Beef Knife Noodles',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_pear_tea',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Osmanthus Snow Pear Tea',
+        category: 'restaurants',
+        menuSection: 'tea_sweets',
+        price: '18.00',
+        desc: 'A warm pear infusion with osmanthus, goji berry, and a light rock-sugar finish.',
+        ingredients: 'snow pear, osmanthus, goji berry, rock sugar',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(11),
+        imageAlt: 'Osmanthus Snow Pear Tea',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_jade_sesame_tangyuan',
+        restaurantId: JADE_HEARTH_SEED_RESTAURANT_ID,
+        title: 'Black Sesame Tangyuan',
+        category: 'restaurants',
+        menuSection: 'tea_sweets',
+        price: '24.00',
+        desc: 'Four soft rice dumplings with molten black sesame in a clear ginger syrup.',
+        ingredients: 'glutinous rice, black sesame, ginger, rock sugar',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.jadeHearthProduct(12),
+        imageAlt: 'Black Sesame Tangyuan',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 2 * 60 * 1000,
+        updatedAt: Date.now() - 2 * 60 * 1000,
+      },
     ],
     new Set([
       'food_seed_moon_bistro',
@@ -1091,18 +1496,51 @@ const createSeedMenuItems = () =>
       'food_seed_daylight_cafe',
       'food_seed_sugar_lane',
       PEACH_CLOUD_SEED_RESTAURANT_ID,
+      DASH_GRILL_SEED_RESTAURANT_ID,
+      JADE_HEARTH_SEED_RESTAURANT_ID,
     ]),
   )
 
-const MOON_BISTRO_REQUIRED_MENU_ITEMS = createSeedMenuItems().filter(
+const BUILT_IN_SEED_MENU_ITEMS = createSeedMenuItems()
+const MOON_BISTRO_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
   (item) => item.restaurantId === MOON_BISTRO_SEED_RESTAURANT_ID,
 )
 const PEACH_CLOUD_REQUIRED_RESTAURANT = createSeedRestaurants().find(
   (restaurant) => restaurant.id === PEACH_CLOUD_SEED_RESTAURANT_ID,
 )
-const PEACH_CLOUD_REQUIRED_MENU_ITEMS = createSeedMenuItems().filter(
+const PEACH_CLOUD_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
   (item) => item.restaurantId === PEACH_CLOUD_SEED_RESTAURANT_ID,
 )
+const DASH_GRILL_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === DASH_GRILL_SEED_RESTAURANT_ID,
+)
+const DASH_GRILL_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
+  (item) => item.restaurantId === DASH_GRILL_SEED_RESTAURANT_ID,
+)
+const JADE_HEARTH_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === JADE_HEARTH_SEED_RESTAURANT_ID,
+)
+const JADE_HEARTH_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
+  (item) => item.restaurantId === JADE_HEARTH_SEED_RESTAURANT_ID,
+)
+// Built-in seeds keep a catalog-sized reserve instead of consuming the user's 360 menu slots.
+const BUILT_IN_SEED_MENU_ITEM_IDS = new Set(BUILT_IN_SEED_MENU_ITEMS.map((item) => item.id))
+const normalizeStoredMenuItems = (rawItems, restaurantIds) =>
+  normalizeMenuItems(rawItems, restaurantIds, BUILT_IN_SEED_MENU_ITEM_IDS)
+const MOON_BISTRO_LEGACY_CUISINE = 'Fusion dinner'
+const MOON_BISTRO_LEGACY_MENU_COPY_BY_ID = Object.freeze({
+  food_menu_moon_rice: {
+    title: 'Lunar Rice Set',
+    desc: 'Grilled slices, warm rice, and crisp pickles for a quiet late-night dinner.',
+  },
+  food_menu_moon_soup: {
+    title: 'Signal Soup',
+    desc: 'Creamy mushroom soup with thyme and black pepper, made for slow evenings.',
+  },
+  food_menu_moon_night_tagliatelle: {
+    title: 'Night Tagliatelle',
+  },
+})
 const PEACH_CLOUD_LEGACY_TITLES_BY_ID = Object.freeze({
   food_menu_peach_jasmine_cream: 'Jasmine Daydream',
   food_menu_peach_sunset_fizz: 'Sunset Peach Fizz',
@@ -1323,7 +1761,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
 
     menuItems.value.unshift(menuItem)
-    if (menuItems.value.length > FOOD_MENU_ITEM_LIMIT) menuItems.value.splice(FOOD_MENU_ITEM_LIMIT)
+    menuItems.value = normalizeStoredMenuItems(menuItems.value, restaurantIds)
     return presentMenuItem(menuItem)
   }
 
@@ -1669,6 +2107,34 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       ])
       changed = true
     }
+    if (
+      DASH_GRILL_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === DASH_GRILL_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...DASH_GRILL_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
+    if (
+      JADE_HEARTH_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === JADE_HEARTH_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...JADE_HEARTH_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
+
+    const moonBistro = restaurants.value.find(
+      (restaurant) => restaurant.id === MOON_BISTRO_SEED_RESTAURANT_ID,
+    )
+    if (moonBistro?.cuisine === MOON_BISTRO_LEGACY_CUISINE) {
+      moonBistro.cuisine = 'Modern fine dining'
+      changed = true
+    }
 
     const restaurantIds = new Set(restaurants.value.map((restaurant) => restaurant.id))
     const nextMenuItems = menuItems.value.map((item) => ({ ...item }))
@@ -1676,6 +2142,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const requiredMenuItems = [
       ...(restaurantIds.has(MOON_BISTRO_SEED_RESTAURANT_ID) ? MOON_BISTRO_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(PEACH_CLOUD_SEED_RESTAURANT_ID) ? PEACH_CLOUD_REQUIRED_MENU_ITEMS : []),
+      ...(restaurantIds.has(DASH_GRILL_SEED_RESTAURANT_ID) ? DASH_GRILL_REQUIRED_MENU_ITEMS : []),
+      ...(restaurantIds.has(JADE_HEARTH_SEED_RESTAURANT_ID) ? JADE_HEARTH_REQUIRED_MENU_ITEMS : []),
     ]
 
     requiredMenuItems.forEach((seedItem) => {
@@ -1706,10 +2174,27 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         }
         changed = true
       }
+      const legacyMoonCopy = MOON_BISTRO_LEGACY_MENU_COPY_BY_ID[seedItem.id]
+      if (
+        legacyMoonCopy &&
+        existing.restaurantId === MOON_BISTRO_SEED_RESTAURANT_ID &&
+        existing.title === legacyMoonCopy.title &&
+        (!legacyMoonCopy.desc || existing.desc === legacyMoonCopy.desc)
+      ) {
+        existing.title = seedItem.title
+        existing.desc = seedItem.desc
+        existing.ingredients = seedItem.ingredients
+        existing.menuSection = seedItem.menuSection
+        existing.image = {
+          ...existing.image,
+          alt: seedItem.image?.alt || existing.image?.alt || seedItem.title,
+        }
+        changed = true
+      }
     })
 
     if (!changed) return false
-    menuItems.value = normalizeMenuItems(nextMenuItems, restaurantIds)
+    menuItems.value = normalizeStoredMenuItems(nextMenuItems, restaurantIds)
     return true
   }
 
@@ -1719,7 +2204,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
 
     const nextRestaurants = normalizeRestaurants(rawSource.restaurants)
     const restaurantIds = new Set(nextRestaurants.map((restaurant) => restaurant.id))
-    const nextMenuItems = normalizeMenuItems(rawSource.menuItems || rawSource.menu, restaurantIds)
+    const nextMenuItems = normalizeStoredMenuItems(
+      rawSource.menuItems || rawSource.menu,
+      restaurantIds,
+    )
     const menuItemIds = new Set(nextMenuItems.map((item) => item.id))
     restaurants.value = nextRestaurants
     menuItems.value = nextMenuItems

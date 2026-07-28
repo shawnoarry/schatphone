@@ -638,7 +638,9 @@ describe('App Store entry management UI', () => {
     expect(wrapper.get('[data-testid="app-store-detail"]').text()).toContain('Folder mini app')
     expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Food Delivery owns restaurants')
     expect(wrapper.get('[data-testid="app-store-entry-info"]').text()).toContain('Food Delivery')
-    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Fusion dinner')
+    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain(
+      'Modern fine dining',
+    )
     expect(wrapper.find('[data-testid="app-store-add-home"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Installed')
     expect(wrapper.get('[data-testid="app-store-shop-folder-toggle"]').text()).toContain('Remove from folder')

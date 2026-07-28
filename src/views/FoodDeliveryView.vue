@@ -3,6 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
+import FoodDeliveryDashGrillApp from '../components/FoodDeliveryDashGrillApp.vue'
+import FoodDeliveryJadeHearthApp from '../components/FoodDeliveryJadeHearthApp.vue'
 import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   buildFoodDeliverySharedMealRelationshipMemoryKey,
@@ -78,6 +80,13 @@ const resolveShopEntryPresentation = (restaurant = {}) => {
       runtimeIdentity: restaurant.id,
     },
     systemStore.settings.appearance?.entryPresentationOverrides || {},
+  )
+}
+const resolveStoreTemplateForRestaurant = (restaurant = {}) => {
+  const presentation = resolveShopEntryPresentation(restaurant)
+  return (
+    (presentation?.hasTemplateOverride ? presentation.templateId : '') ||
+    resolveFoodShopDefaultTemplateId(restaurant.id)
   )
 }
 
@@ -1011,6 +1020,18 @@ const STORE_MENU_SECTION_ORDER = Object.freeze([
   'frozen_clouds',
   'oven_sweets',
   'seasonal_drop',
+  'featured',
+  'burgers',
+  'chicken',
+  'sides',
+  'drinks',
+  'treats',
+  'house_table',
+  'small_plates',
+  'wok_favorites',
+  'claypot',
+  'rice_noodles',
+  'tea_sweets',
   'warm_soup',
   'rice_set',
   'grill',
@@ -1054,6 +1075,90 @@ const STORE_MENU_SECTION_META = Object.freeze({
     shortZh: '限定',
     shortEn: 'New',
     icon: 'fas fa-sun',
+  },
+  featured: {
+    zh: '人气套餐',
+    en: 'Combos',
+    shortZh: '套餐',
+    shortEn: 'Combo',
+    icon: 'fas fa-burger',
+  },
+  burgers: {
+    zh: '汉堡',
+    en: 'Burgers',
+    shortZh: '汉堡',
+    shortEn: 'Burger',
+    icon: 'fas fa-burger',
+  },
+  chicken: {
+    zh: '鸡肉',
+    en: 'Chicken',
+    shortZh: '鸡肉',
+    shortEn: 'Chicken',
+    icon: 'fas fa-drumstick-bite',
+  },
+  sides: {
+    zh: '小食',
+    en: 'Sides',
+    shortZh: '小食',
+    shortEn: 'Sides',
+    icon: 'fas fa-box-open',
+  },
+  drinks: {
+    zh: '饮品',
+    en: 'Drinks',
+    shortZh: '饮品',
+    shortEn: 'Drinks',
+    icon: 'fas fa-glass-water',
+  },
+  treats: {
+    zh: '甜点',
+    en: 'Treats',
+    shortZh: '甜点',
+    shortEn: 'Treats',
+    icon: 'fas fa-ice-cream',
+  },
+  house_table: {
+    zh: '招牌桌菜',
+    en: 'House table',
+    shortZh: '桌菜',
+    shortEn: 'House',
+    icon: 'fas fa-utensils',
+  },
+  small_plates: {
+    zh: '茶点小碟',
+    en: 'Small plates',
+    shortZh: '小碟',
+    shortEn: 'Small',
+    icon: 'fas fa-plate-wheat',
+  },
+  wok_favorites: {
+    zh: '锅气小炒',
+    en: 'From the wok',
+    shortZh: '小炒',
+    shortEn: 'Wok',
+    icon: 'fas fa-fire-burner',
+  },
+  claypot: {
+    zh: '暖煲',
+    en: 'Claypot',
+    shortZh: '煲',
+    shortEn: 'Pot',
+    icon: 'fas fa-bowl-food',
+  },
+  rice_noodles: {
+    zh: '饭面',
+    en: 'Rice & noodles',
+    shortZh: '饭面',
+    shortEn: 'Staples',
+    icon: 'fas fa-bowl-rice',
+  },
+  tea_sweets: {
+    zh: '茶与甜汤',
+    en: 'Tea & sweets',
+    shortZh: '茶甜',
+    shortEn: 'Tea',
+    icon: 'fas fa-mug-hot',
   },
   signature: { zh: '招牌', en: 'Signature', shortZh: '招牌', shortEn: 'Sign', icon: 'fas fa-star' },
   warm_soup: {
@@ -1650,13 +1755,12 @@ const activeStoreShortDescription = computed(
 )
 const activeStoreTags = computed(() => activeStorePresentation.value?.tags || [])
 const activeStoreTemplate = computed(
-  () =>
-    (activeStorePresentation.value?.hasTemplateOverride
-      ? activeStorePresentation.value.templateId
-      : '') || resolveFoodShopDefaultTemplateId(activeRestaurant.value?.id),
+  () => resolveStoreTemplateForRestaurant(activeRestaurant.value || {}),
 )
 const isDarkTrayStore = computed(() => activeStoreTemplate.value === 'dark_tray_menu')
 const isDessertWindowStore = computed(() => activeStoreTemplate.value === 'dessert_window')
+const isQuickServiceStore = computed(() => activeStoreTemplate.value === 'quick_service_chain')
+const isJadeTableStore = computed(() => activeStoreTemplate.value === 'jade_table_menu')
 const PEACH_CLOUD_PAGE_KEYS = new Set(['search', 'new', 'bag', 'orders', 'order'])
 const peachCloudPageKey = computed(() => {
   if (!isDessertWindowStore.value) return 'home'
@@ -1668,6 +1772,24 @@ const peachCloudOrderId = computed(() =>
 )
 const activePeachCloudNavKey = computed(() =>
   peachCloudPageKey.value === 'order' ? 'orders' : peachCloudPageKey.value,
+)
+const QUICK_SERVICE_PAGE_KEYS = new Set(['menu', 'deals', 'bag', 'orders', 'order'])
+const quickServicePageKey = computed(() => {
+  if (!isQuickServiceStore.value) return 'home'
+  const key = typeof route.query.shopView === 'string' ? route.query.shopView.trim() : ''
+  return QUICK_SERVICE_PAGE_KEYS.has(key) ? key : 'home'
+})
+const quickServiceOrderId = computed(() =>
+  typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
+)
+const JADE_TABLE_PAGE_KEYS = new Set(['menu', 'feast', 'bag', 'orders', 'order'])
+const jadeTablePageKey = computed(() => {
+  if (!isJadeTableStore.value) return 'home'
+  const key = typeof route.query.shopView === 'string' ? route.query.shopView.trim() : ''
+  return JADE_TABLE_PAGE_KEYS.has(key) ? key : 'home'
+})
+const jadeTableOrderId = computed(() =>
+  typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
 )
 const peachCloudFeaturedItem = computed(
   () =>
@@ -1729,6 +1851,8 @@ const peachCloudRecommendedItems = computed(() => activeMenuItems.value.slice(4)
 const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value && isDarkTrayStore.value) return 'bg-[#080a10]'
   if (isStoreMode.value && isDessertWindowStore.value) return 'bg-[#f2fbe0]'
+  if (isStoreMode.value && isQuickServiceStore.value) return 'bg-[#fff9ec]'
+  if (isStoreMode.value && isJadeTableStore.value) return 'bg-[#f5efe2]'
   if (isStoreMode.value) return 'bg-[#f4fbfb]'
   return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#f4fbfb]'
 })
@@ -1808,6 +1932,12 @@ const recentOrders = computed(() => scopedFoodOrders.value.slice(0, 5))
 const activePeachCloudOrder = computed(
   () => scopedFoodOrders.value.find((order) => order.id === peachCloudOrderId.value) || null,
 )
+const activeQuickServiceOrder = computed(
+  () => scopedFoodOrders.value.find((order) => order.id === quickServiceOrderId.value) || null,
+)
+const activeJadeTableOrder = computed(
+  () => scopedFoodOrders.value.find((order) => order.id === jadeTableOrderId.value) || null,
+)
 const sharedMealContactOptions = computed(() =>
   chatStore.contactsForList.filter((contact) => Number(contact.id) > 0).slice(0, 60),
 )
@@ -1882,19 +2012,41 @@ const chatSourceOrder = computed(() => {
 watch(
   chatSourceOrder,
   (order) => {
-    if (!order?.restaurantId || selectedRestaurantId.value === order.restaurantId) return
+    if (!order?.restaurantId) return
     const restaurant = foodDeliveryStore.findRestaurantById(order.restaurantId)
+    if (!restaurant) return
+    const targetTemplate = resolveStoreTemplateForRestaurant(restaurant)
+    const usesDedicatedOrderPage = [
+      'dessert_window',
+      'quick_service_chain',
+      'jade_table_menu',
+    ].includes(targetTemplate)
+    const nextQuery = {
+      ...route.query,
+      category:
+        restaurant.category ||
+        order.items?.[0]?.category ||
+        activeCategory.value?.key ||
+        'restaurants',
+      restaurantId: order.restaurantId,
+      entry: 'shop',
+    }
+    if (usesDedicatedOrderPage) {
+      nextQuery.shopView = 'order'
+      nextQuery.shopOrderId = order.id
+    } else {
+      delete nextQuery.shopView
+      delete nextQuery.shopOrderId
+    }
+
+    const routeAlreadyTargetsOrder =
+      selectedRestaurantId.value === order.restaurantId &&
+      String(route.query.shopView || '') === String(nextQuery.shopView || '') &&
+      String(route.query.shopOrderId || '') === String(nextQuery.shopOrderId || '')
+    if (routeAlreadyTargetsOrder) return
     router.replace({
       path: '/food-delivery',
-      query: {
-        ...route.query,
-        category:
-          restaurant?.category ||
-          order.items?.[0]?.category ||
-          activeCategory.value?.key ||
-          'restaurants',
-        restaurantId: order.restaurantId,
-      },
+      query: nextQuery,
     })
   },
   { immediate: true },
@@ -1950,6 +2102,14 @@ const orderEventRows = (order) =>
           : t('外卖履约状态有新变化。', 'Food delivery status changed.')),
   }))
 
+const activeJadeTableEventRows = computed(() => orderEventRows(activeJadeTableOrder.value))
+const activeJadeWalletSuggestion = computed(
+  () =>
+    walletExpenseSuggestions.value.find(
+      (suggestion) => suggestion.orderId === activeJadeTableOrder.value?.id,
+    ) || null,
+)
+
 const foodOrderItemSummary = (order = {}) =>
   (Array.isArray(order.items) ? order.items : [])
     .map((item) => {
@@ -1977,10 +2137,7 @@ const triggerOrderSurpriseEvent = (order) => {
   })
 
   if (result.ok) {
-    eventFeedback.value = t(
-      '配送更新已添加。',
-      'Delivery update added.',
-    )
+    eventFeedback.value = t('配送更新已添加。', 'Delivery update added.')
     return
   }
 
@@ -2000,10 +2157,7 @@ const triggerOrderSurpriseEvent = (order) => {
     return
   }
   if (reason === 'module_events_disabled') {
-    eventFeedback.value = t(
-      '配送更新当前不可用。',
-      'Delivery updates are unavailable right now.',
-    )
+    eventFeedback.value = t('配送更新当前不可用。', 'Delivery updates are unavailable right now.')
     return
   }
   eventFeedback.value = t(
@@ -2763,6 +2917,12 @@ const checkoutFoodDelivery = () => {
   if (isDessertWindowStore.value) {
     void openPeachCloudPage('order', { shopOrderId: order.id })
   }
+  if (isQuickServiceStore.value) {
+    void openQuickServicePage('order', { shopOrderId: order.id })
+  }
+  if (isJadeTableStore.value) {
+    void openJadeTablePage('order', { shopOrderId: order.id })
+  }
 }
 
 const markFoodOrderDelivered = (orderId) =>
@@ -2915,6 +3075,38 @@ const openPeachCloudOrder = async (orderId) => {
   await openPeachCloudPage('order', { shopOrderId: orderId })
 }
 
+const openQuickServicePage = async (pageKey = 'home', extraQuery = {}) => {
+  const nextPageKey = QUICK_SERVICE_PAGE_KEYS.has(pageKey) ? pageKey : 'home'
+  const nextQuery = { ...route.query, ...extraQuery }
+  if (nextPageKey === 'home') delete nextQuery.shopView
+  else nextQuery.shopView = nextPageKey
+  if (nextPageKey !== 'order') delete nextQuery.shopOrderId
+
+  const routeChanged =
+    quickServicePageKey.value !== nextPageKey ||
+    String(route.query.shopOrderId || '') !== String(nextQuery.shopOrderId || '')
+  if (routeChanged) {
+    await router.push({ path: route.path, query: nextQuery })
+  }
+  await scrollToStoreSurface('food-delivery-store-shell')
+}
+
+const openJadeTablePage = async (pageKey = 'home', extraQuery = {}) => {
+  const nextPageKey = JADE_TABLE_PAGE_KEYS.has(pageKey) ? pageKey : 'home'
+  const nextQuery = { ...route.query, ...extraQuery }
+  if (nextPageKey === 'home') delete nextQuery.shopView
+  else nextQuery.shopView = nextPageKey
+  if (nextPageKey !== 'order') delete nextQuery.shopOrderId
+
+  const routeChanged =
+    jadeTablePageKey.value !== nextPageKey ||
+    String(route.query.shopOrderId || '') !== String(nextQuery.shopOrderId || '')
+  if (routeChanged) {
+    await router.push({ path: route.path, query: nextQuery })
+  }
+  await scrollToStoreSurface('food-delivery-store-shell')
+}
+
 const openForeignCartShop = async () => {
   const restaurant = foreignCartRestaurant.value
   if (!restaurant?.id) return
@@ -2926,20 +3118,35 @@ const openForeignCartShop = async () => {
     entry: 'shop',
   }
   delete nextQuery.shopOrderId
-  if (resolveFoodShopDefaultTemplateId(restaurant.id) === 'dessert_window') {
+  const targetTemplate = resolveStoreTemplateForRestaurant(restaurant)
+  if (
+    targetTemplate === 'dessert_window' ||
+    targetTemplate === 'quick_service_chain' ||
+    targetTemplate === 'jade_table_menu'
+  ) {
     nextQuery.shopView = 'bag'
   } else {
     delete nextQuery.shopView
   }
   await router.push({ path: route.path, query: nextQuery })
   await nextTick()
-  if (!isDessertWindowStore.value) await scrollToStoreSurface('food-delivery-cart-panel')
+  if (!isDessertWindowStore.value && !isQuickServiceStore.value && !isJadeTableStore.value) {
+    await scrollToStoreSurface('food-delivery-cart-panel')
+  }
 }
 
 const browseActiveStoreFromForeignCart = async () => {
   checkoutFeedback.value = ''
   if (isDessertWindowStore.value) {
     await openPeachCloudHome()
+    return
+  }
+  if (isQuickServiceStore.value) {
+    await openQuickServicePage('menu')
+    return
+  }
+  if (isJadeTableStore.value) {
+    await openJadeTablePage('menu')
     return
   }
   await scrollToStoreSurface('food-delivery-menu-panel')
@@ -3096,14 +3303,21 @@ onBeforeUnmount(() => {
     class="h-screen min-h-screen overflow-x-hidden overflow-y-auto overscroll-contain text-gray-950"
     :class="[
       foodDeliveryShellClass,
-      isDessertWindowStore ? 'p-0 pb-0' : 'p-4',
-      isStoreMode && !isDessertWindowStore ? 'pb-6' : '',
+      isDessertWindowStore || isQuickServiceStore || isJadeTableStore ? 'p-0 pb-0' : 'p-4',
+      isStoreMode && !isDessertWindowStore && !isQuickServiceStore && !isJadeTableStore
+        ? 'pb-6'
+        : '',
     ]"
     :style="foodDeliveryShellStyle"
     data-testid="food-delivery-view"
     @error.capture="handleFoodDeliveryAssetError"
   >
-    <div class="mx-auto max-w-md" :class="isDessertWindowStore ? 'space-y-0' : 'space-y-4'">
+    <div
+      class="mx-auto max-w-md"
+      :class="
+        isDessertWindowStore || isQuickServiceStore || isJadeTableStore ? 'space-y-0' : 'space-y-4'
+      "
+    >
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
         class="space-y-5 pt-1"
@@ -6279,11 +6493,88 @@ onBeforeUnmount(() => {
         :class="{
           'food-delivery-store-dark-tray': isDarkTrayStore,
           'food-delivery-store-peach-cloud': isDessertWindowStore,
+          'food-delivery-store-quick-service': isQuickServiceStore,
+          'food-delivery-store-jade-table': isJadeTableStore,
         }"
         data-testid="food-delivery-store-app"
       >
+        <FoodDeliveryJadeHearthApp
+          v-if="activeRestaurant && isJadeTableStore"
+          :restaurant="activeRestaurant"
+          :display-name="activeStoreDisplayName"
+          :short-description="activeStoreShortDescription"
+          :menu-items="activeMenuItems"
+          :cart-lines="activeStoreCartLineItems"
+          :cart-quantity="activeStoreCartQuantity"
+          :cart-total="activeStoreCartPrimaryTotal"
+          :orders="scopedFoodOrders"
+          :active-order="activeJadeTableOrder"
+          :active-order-events="activeJadeTableEventRows"
+          :active-wallet-suggestion="activeJadeWalletSuggestion"
+          :event-feedback="eventFeedback"
+          :page="jadeTablePageKey"
+          :cart-conflict="hasCartOwnershipConflict"
+          :foreign-cart-name="foreignCartRestaurant?.name || ''"
+          :eta-text="activeStoreEtaText"
+          :fee-text="activeStoreFeeText"
+          :distance-text="activeStoreDistanceText"
+          :delivery-address="
+            activeMapHandoff.deliveryAddress || t('当前配送地址', 'Current delivery address')
+          "
+          :missing-asset-url="platformMissingAssetPlaceholderUrl"
+          @go-home="goHome"
+          @navigate="
+            (pageKey, orderId) =>
+              openJadeTablePage(pageKey, orderId ? { shopOrderId: orderId } : {})
+          "
+          @open-item="openMenuItemDetail"
+          @add-item="addMenuItemToCart"
+          @update-cart="foodDeliveryStore.updateCartQuantity"
+          @checkout="openCheckoutSheet"
+          @open-foreign-cart="openForeignCartShop"
+          @check-update="triggerOrderSurpriseEvent(activeJadeTableOrder)"
+          @mark-delivered="markFoodOrderDelivered"
+          @record-wallet="
+            activeJadeWalletSuggestion &&
+            transferFoodSuggestionToWallet(activeJadeWalletSuggestion)
+          "
+        />
+
+        <FoodDeliveryDashGrillApp
+          v-else-if="activeRestaurant && isQuickServiceStore"
+          :restaurant="activeRestaurant"
+          :display-name="activeStoreDisplayName"
+          :short-description="activeStoreShortDescription"
+          :menu-items="activeMenuItems"
+          :cart-lines="activeStoreCartLineItems"
+          :cart-quantity="activeStoreCartQuantity"
+          :cart-total="activeStoreCartPrimaryTotal"
+          :orders="scopedFoodOrders"
+          :active-order="activeQuickServiceOrder"
+          :page="quickServicePageKey"
+          :cart-conflict="hasCartOwnershipConflict"
+          :foreign-cart-name="foreignCartRestaurant?.name || ''"
+          :eta-text="activeStoreEtaText"
+          :fee-text="activeStoreFeeText"
+          :distance-text="activeStoreDistanceText"
+          :delivery-address="
+            activeMapHandoff.deliveryAddress || t('当前配送地址', 'Current delivery address')
+          "
+          :missing-asset-url="platformMissingAssetPlaceholderUrl"
+          @go-home="goHome"
+          @navigate="
+            (pageKey, orderId) =>
+              openQuickServicePage(pageKey, orderId ? { shopOrderId: orderId } : {})
+          "
+          @open-item="openMenuItemDetail"
+          @add-item="addMenuItemToCart"
+          @update-cart="foodDeliveryStore.updateCartQuantity"
+          @checkout="openCheckoutSheet"
+          @open-foreign-cart="openForeignCartShop"
+        />
+
         <article
-          v-if="activeRestaurant && isDessertWindowStore"
+          v-else-if="activeRestaurant && isDessertWindowStore"
           class="relative min-h-screen overflow-hidden bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)]"
           data-testid="food-delivery-store-shell"
           :data-store-id="activeRestaurant.id"
@@ -7267,12 +7558,12 @@ onBeforeUnmount(() => {
               data-testid="food-delivery-peach-cloud-orders-page"
             >
               <div
-                v-if="recentOrders.length"
+                v-if="scopedFoodOrders.length"
                 class="space-y-3"
                 data-testid="food-delivery-orders-panel"
               >
                 <button
-                  v-for="order in recentOrders"
+                  v-for="order in scopedFoodOrders"
                   :key="order.id"
                   type="button"
                   class="w-full border-b border-[var(--peach-cloud-mist)]/45 py-3 text-left"
@@ -7577,7 +7868,9 @@ onBeforeUnmount(() => {
         </article>
 
         <article
-          v-if="activeRestaurant && !isDessertWindowStore"
+          v-if="
+            activeRestaurant && !isDessertWindowStore && !isQuickServiceStore && !isJadeTableStore
+          "
           class="relative overflow-hidden rounded-[2rem] shadow-sm"
           :class="
             isDarkTrayStore
@@ -7843,7 +8136,9 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-if="activeRestaurant && !isDessertWindowStore"
+          v-if="
+            activeRestaurant && !isDessertWindowStore && !isQuickServiceStore && !isJadeTableStore
+          "
           class="p-4"
           :class="
             isDarkTrayStore
@@ -8247,7 +8542,11 @@ onBeforeUnmount(() => {
               ? 'relative mt-20 overflow-visible rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,#151824,#0b0d13)] text-white shadow-[0_28px_80px_rgba(0,0,0,0.55)]'
               : isDessertWindowStore && menuDetailMode === 'detail'
                 ? 'overflow-hidden rounded-[1.75rem] border border-[var(--peach-cloud-mist)] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)] shadow-[0_26px_70px_rgba(43,48,58,0.28)]'
-                : 'overflow-hidden rounded-[2rem] bg-white'
+                : isQuickServiceStore && menuDetailMode === 'detail'
+                  ? 'overflow-hidden rounded-lg border border-black/10 bg-[#fff9ec] text-[#201a17] shadow-[0_26px_70px_rgba(32,26,23,0.28)]'
+                  : isJadeTableStore && menuDetailMode === 'detail'
+                    ? 'overflow-hidden rounded-sm border border-[#cfc2ad] bg-[#f5efe2] text-[#211e19] shadow-[0_26px_70px_rgba(31,77,58,0.25)]'
+                    : 'overflow-hidden rounded-[2rem] bg-white'
           "
         >
           <template v-if="isDarkTrayStore && menuDetailMode === 'detail'">
@@ -8525,6 +8824,270 @@ onBeforeUnmount(() => {
             </div>
           </template>
 
+          <template v-else-if="isQuickServiceStore && menuDetailMode === 'detail'">
+            <div class="relative aspect-[16/10] overflow-hidden bg-[#e33d2e]">
+              <img
+                v-if="foodImageUrl(selectedMenuItem)"
+                :src="foodImageUrl(selectedMenuItem)"
+                :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
+                class="h-full w-full object-cover"
+                :data-required-asset="`dash-grill/products/dash-grill-item-${String(
+                  activeMenuItems.findIndex((item) => item.id === selectedMenuItem.id) + 1,
+                ).padStart(2, '0')}.png`"
+                @error="handleFoodShopImageError"
+              />
+              <div
+                class="absolute inset-0 bg-[linear-gradient(180deg,rgba(32,26,23,0.06),rgba(32,26,23,0.55))]"
+              ></div>
+              <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+                <button
+                  type="button"
+                  class="inline-flex h-10 w-10 items-center justify-center bg-[#fff9ec] text-[#201a17] shadow-sm"
+                  data-testid="food-delivery-menu-detail-close"
+                  :aria-label="t('关闭', 'Close')"
+                  @click="closeMenuItemDetail"
+                >
+                  <i class="fas fa-xmark"></i>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-10 w-10 items-center justify-center bg-[#ffc833] text-[#201a17] shadow-sm"
+                  data-testid="food-delivery-menu-detail-edit"
+                  :aria-label="t('编辑餐品', 'Edit item')"
+                  @click="startMenuItemEdit"
+                >
+                  <i class="fas fa-pen"></i>
+                </button>
+              </div>
+              <span
+                class="absolute bottom-3 left-3 bg-[#ffc833] px-2.5 py-1 text-[10px] font-black uppercase text-[#201a17]"
+              >
+                {{ resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).en }}
+              </span>
+            </div>
+
+            <div class="space-y-4 p-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-[9px] font-black uppercase text-[#e33d2e]">
+                    {{ activeStoreDisplayName }}
+                  </p>
+                  <h3 class="mt-1 text-2xl font-black leading-tight text-[#201a17]">
+                    {{ selectedMenuItem.title }}
+                  </h3>
+                </div>
+                <span class="shrink-0 bg-white px-2.5 py-1 text-xs font-black">
+                  {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
+                </span>
+              </div>
+
+              <p
+                class="text-sm font-semibold leading-6 text-black/60"
+                data-testid="food-delivery-menu-detail-desc"
+              >
+                {{ selectedMenuItem.desc }}
+              </p>
+
+              <div
+                class="border-l-4 border-[#ffc833] bg-white p-3"
+                data-testid="food-delivery-menu-detail-ingredients"
+              >
+                <p class="text-[9px] font-black uppercase text-black/45">
+                  {{ t('餐品内容', 'WHAT IS INSIDE') }}
+                </p>
+                <p class="mt-1 text-sm font-semibold leading-5 text-[#201a17]">
+                  {{ selectedMenuItem.ingredients || t('未设置', 'Not set') }}
+                </p>
+              </div>
+
+              <p
+                v-if="menuDetailFeedback"
+                class="bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                data-testid="food-delivery-menu-detail-feedback"
+              >
+                {{ menuDetailFeedback }}
+              </p>
+
+              <div class="flex items-center justify-between gap-4">
+                <div
+                  class="inline-flex h-11 items-center border border-black/15 bg-white"
+                  data-testid="food-delivery-menu-detail-quantity"
+                >
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center"
+                    data-testid="food-delivery-menu-detail-quantity-decrease"
+                    :aria-label="t('减少数量', 'Decrease quantity')"
+                    @click="decreaseMenuDetailQuantity"
+                  >
+                    <i class="fas fa-minus text-xs"></i>
+                  </button>
+                  <span class="min-w-8 text-center text-sm font-black">{{
+                    menuDetailQuantity
+                  }}</span>
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center"
+                    data-testid="food-delivery-menu-detail-quantity-increase"
+                    :aria-label="t('增加数量', 'Increase quantity')"
+                    @click="increaseMenuDetailQuantity"
+                  >
+                    <i class="fas fa-plus text-xs"></i>
+                  </button>
+                </div>
+                <p
+                  class="text-right text-lg font-black text-[#201a17]"
+                  data-testid="food-delivery-menu-detail-total"
+                >
+                  {{ selectedMenuItemDetailTotal }}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="min-h-12 w-full bg-[#e33d2e] px-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(227,61,46,0.25)] active:scale-[0.99]"
+                data-testid="food-delivery-menu-detail-add"
+                @click="
+                  addMenuItemToCart(selectedMenuItem.id, menuDetailQuantity, $event.currentTarget)
+                "
+              >
+                {{ t('加入购物袋', 'Add to bag') }}
+              </button>
+            </div>
+          </template>
+
+          <template v-else-if="isJadeTableStore && menuDetailMode === 'detail'">
+            <div class="relative aspect-[16/10] overflow-hidden bg-[#1f4d3a]">
+              <img
+                v-if="foodImageUrl(selectedMenuItem)"
+                :src="foodImageUrl(selectedMenuItem)"
+                :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
+                class="h-full w-full object-cover"
+                :data-required-asset="foodDeliveryRequiredAssetPath(selectedMenuItem)"
+                @error="handleFoodShopImageError"
+              />
+              <div class="absolute inset-0 bg-black/30"></div>
+              <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+                <button
+                  type="button"
+                  class="inline-flex h-11 w-11 items-center justify-center border border-white/35 bg-[#f5efe2] text-[#211e19] shadow-sm"
+                  data-testid="food-delivery-menu-detail-close"
+                  :aria-label="t('关闭', 'Close')"
+                  @click="closeMenuItemDetail"
+                >
+                  <i class="fas fa-xmark"></i>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-11 w-11 items-center justify-center border border-white/35 bg-[#bd4b35] text-white shadow-sm"
+                  data-testid="food-delivery-menu-detail-edit"
+                  :aria-label="t('编辑餐品', 'Edit item')"
+                  @click="startMenuItemEdit"
+                >
+                  <i class="fas fa-pen"></i>
+                </button>
+              </div>
+              <span
+                class="absolute bottom-3 left-3 inline-flex h-12 w-12 items-center justify-center border border-white/55 bg-[#bd4b35] text-lg font-black text-white"
+              >
+                {{ resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).zh.slice(0, 1) }}
+              </span>
+            </div>
+
+            <div class="space-y-4 p-4">
+              <div
+                class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-[#cfc2ad] pb-4"
+              >
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black text-[#bd4b35]">{{ activeStoreDisplayName }}</p>
+                  <h3
+                    class="mt-1 break-words font-serif text-2xl font-black leading-tight text-[#211e19]"
+                  >
+                    {{ selectedMenuItem.title }}
+                  </h3>
+                </div>
+                <span
+                  class="shrink-0 border border-[#cfc2ad] bg-white/55 px-2.5 py-1 text-xs font-black"
+                >
+                  {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
+                </span>
+              </div>
+
+              <p
+                class="text-sm font-semibold leading-6 text-[#746c61]"
+                data-testid="food-delivery-menu-detail-desc"
+              >
+                {{ selectedMenuItem.desc }}
+              </p>
+
+              <div
+                class="border-l-4 border-[#1f4d3a] bg-white/55 p-3"
+                data-testid="food-delivery-menu-detail-ingredients"
+              >
+                <p class="text-[10px] font-black text-[#bd4b35]">
+                  {{ t('这道菜里', 'AT THE TABLE') }}
+                </p>
+                <p class="mt-1 text-sm font-semibold leading-5 text-[#211e19]">
+                  {{ selectedMenuItem.ingredients || t('未设置', 'Not set') }}
+                </p>
+              </div>
+
+              <p
+                v-if="menuDetailFeedback"
+                class="border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                data-testid="food-delivery-menu-detail-feedback"
+              >
+                {{ menuDetailFeedback }}
+              </p>
+
+              <div class="flex items-center justify-between gap-4">
+                <div
+                  class="inline-flex h-11 items-center border border-[#cfc2ad] bg-white/55"
+                  data-testid="food-delivery-menu-detail-quantity"
+                >
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center"
+                    data-testid="food-delivery-menu-detail-quantity-decrease"
+                    :aria-label="t('减少数量', 'Decrease quantity')"
+                    @click="decreaseMenuDetailQuantity"
+                  >
+                    <i class="fas fa-minus text-xs"></i>
+                  </button>
+                  <span class="min-w-8 text-center text-sm font-black">{{
+                    menuDetailQuantity
+                  }}</span>
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center"
+                    data-testid="food-delivery-menu-detail-quantity-increase"
+                    :aria-label="t('增加数量', 'Increase quantity')"
+                    @click="increaseMenuDetailQuantity"
+                  >
+                    <i class="fas fa-plus text-xs"></i>
+                  </button>
+                </div>
+                <p
+                  class="text-right text-lg font-black text-[#211e19]"
+                  data-testid="food-delivery-menu-detail-total"
+                >
+                  {{ selectedMenuItemDetailTotal }}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                class="min-h-12 w-full bg-[#bd4b35] px-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(189,75,53,0.22)] active:scale-[0.99]"
+                data-testid="food-delivery-menu-detail-add"
+                @click="
+                  addMenuItemToCart(selectedMenuItem.id, menuDetailQuantity, $event.currentTarget)
+                "
+              >
+                {{ t('添到餐桌', 'Add to table') }}
+              </button>
+            </div>
+          </template>
+
           <template v-else>
             <div class="relative h-48 bg-gray-950">
               <img
@@ -8758,6 +9321,8 @@ onBeforeUnmount(() => {
         v-if="
           isStoreMode &&
           !isDessertWindowStore &&
+          !isQuickServiceStore &&
+          !isJadeTableStore &&
           (activeStoreCartLineItems.length > 0 || hasCartOwnershipConflict || checkoutFeedback)
         "
         class="rounded-3xl p-4"
@@ -8961,21 +9526,41 @@ onBeforeUnmount(() => {
           :class="
             isDessertWindowStore
               ? 'border border-[var(--peach-cloud-mist)] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)]'
-              : 'border border-white/[0.08] bg-[#11131b] text-white'
+              : isQuickServiceStore
+                ? 'border border-black/10 bg-[#fff9ec] text-[#201a17]'
+                : isJadeTableStore
+                  ? '!rounded-sm border border-[#cfc2ad] bg-[#f5efe2] text-[#211e19]'
+                  : 'border border-white/[0.08] bg-[#11131b] text-white'
           "
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p
                 class="text-[11px] font-black"
-                :class="isDessertWindowStore ? 'text-[var(--peach-cloud-iron)]' : 'text-[#ffb4a8]'"
+                :class="
+                  isDessertWindowStore
+                    ? 'text-[var(--peach-cloud-iron)]'
+                    : isQuickServiceStore
+                      ? 'text-[#e33d2e]'
+                      : isJadeTableStore
+                        ? 'text-[#bd4b35]'
+                        : 'text-[#ffb4a8]'
+                "
               >
                 {{ activeStoreDisplayName }}
               </p>
               <h3 class="mt-1 text-xl font-black">{{ t('确认本店订单', 'Confirm shop order') }}</h3>
               <p
                 class="mt-2 text-xs leading-5"
-                :class="isDessertWindowStore ? 'text-[var(--peach-cloud-iron)]' : 'text-slate-400'"
+                :class="
+                  isDessertWindowStore
+                    ? 'text-[var(--peach-cloud-iron)]'
+                    : isQuickServiceStore
+                      ? 'text-black/55'
+                      : isJadeTableStore
+                        ? 'text-[#746c61]'
+                        : 'text-slate-400'
+                "
               >
                 {{
                   activeMapHandoff.deliveryAddress ||
@@ -8989,7 +9574,11 @@ onBeforeUnmount(() => {
               :class="
                 isDessertWindowStore
                   ? 'bg-[var(--peach-cloud-mist)]/35 text-[var(--peach-cloud-ink)]'
-                  : 'bg-white/[0.08] text-slate-200'
+                  : isQuickServiceStore
+                    ? 'bg-[#ffc833] text-[#201a17]'
+                    : isJadeTableStore
+                      ? '!rounded-sm bg-[#1f4d3a] text-white'
+                      : 'bg-white/[0.08] text-slate-200'
               "
               data-testid="food-delivery-checkout-close"
               aria-label="Close checkout"
@@ -9004,7 +9593,15 @@ onBeforeUnmount(() => {
               v-for="line in activeStoreCartLineItems"
               :key="line.menuItemId"
               class="flex items-center justify-between gap-3 rounded-2xl p-3"
-              :class="isDessertWindowStore ? 'bg-white/75' : 'bg-white/[0.07]'"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-white/75'
+                  : isQuickServiceStore
+                    ? 'border border-black/10 bg-white'
+                    : isJadeTableStore
+                      ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
+                      : 'bg-white/[0.07]'
+              "
               :data-testid="`food-delivery-checkout-line-${line.menuItemId}`"
             >
               <div class="min-w-0">
@@ -9012,7 +9609,13 @@ onBeforeUnmount(() => {
                 <p
                   class="mt-1 text-[11px]"
                   :class="
-                    isDessertWindowStore ? 'text-[var(--peach-cloud-iron)]' : 'text-slate-400'
+                    isDessertWindowStore
+                      ? 'text-[var(--peach-cloud-iron)]'
+                      : isQuickServiceStore
+                        ? 'text-black/50'
+                        : isJadeTableStore
+                          ? 'text-[#746c61]'
+                          : 'text-slate-400'
                   "
                 >
                   x {{ line.quantity }} · {{ line.subtotal }} {{ line.currency }}
@@ -9023,7 +9626,11 @@ onBeforeUnmount(() => {
                 :class="
                   isDessertWindowStore
                     ? 'bg-[var(--peach-cloud-mist)]/55 text-[var(--peach-cloud-ink)]'
-                    : 'bg-[#ff806f]/15 text-[#ffb4a8]'
+                    : isQuickServiceStore
+                      ? 'bg-[#ffc833] text-[#201a17]'
+                      : isJadeTableStore
+                        ? '!rounded-sm bg-[#e9deca] text-[#211e19]'
+                        : 'bg-[#ff806f]/15 text-[#ffb4a8]'
                 "
               >
                 {{ line.subtotal }} {{ line.currency }}
@@ -9034,11 +9641,27 @@ onBeforeUnmount(() => {
           <div class="mt-4 grid grid-cols-3 gap-2">
             <div
               class="rounded-2xl p-3"
-              :class="isDessertWindowStore ? 'bg-white/75' : 'bg-white/[0.06]'"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-white/75'
+                  : isQuickServiceStore
+                    ? 'bg-white'
+                    : isJadeTableStore
+                      ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
+                      : 'bg-white/[0.06]'
+              "
             >
               <p
                 class="text-[10px] font-semibold"
-                :class="isDessertWindowStore ? 'text-[var(--peach-cloud-iron)]' : 'text-slate-400'"
+                :class="
+                  isDessertWindowStore
+                    ? 'text-[var(--peach-cloud-iron)]'
+                    : isQuickServiceStore
+                      ? 'text-black/50'
+                      : isJadeTableStore
+                        ? 'text-[#746c61]'
+                        : 'text-slate-400'
+                "
               >
                 {{ t('预计送达', 'ETA') }}
               </p>
@@ -9046,11 +9669,27 @@ onBeforeUnmount(() => {
             </div>
             <div
               class="rounded-2xl p-3"
-              :class="isDessertWindowStore ? 'bg-white/75' : 'bg-white/[0.06]'"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-white/75'
+                  : isQuickServiceStore
+                    ? 'bg-white'
+                    : isJadeTableStore
+                      ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
+                      : 'bg-white/[0.06]'
+              "
             >
               <p
                 class="text-[10px] font-semibold"
-                :class="isDessertWindowStore ? 'text-[var(--peach-cloud-iron)]' : 'text-slate-400'"
+                :class="
+                  isDessertWindowStore
+                    ? 'text-[var(--peach-cloud-iron)]'
+                    : isQuickServiceStore
+                      ? 'text-black/50'
+                      : isJadeTableStore
+                        ? 'text-[#746c61]'
+                        : 'text-slate-400'
+                "
               >
                 {{ t('配送费', 'Fee') }}
               </p>
@@ -9058,11 +9697,27 @@ onBeforeUnmount(() => {
             </div>
             <div
               class="rounded-2xl p-3"
-              :class="isDessertWindowStore ? 'bg-[var(--peach-cloud-mist)]/55' : 'bg-white/[0.06]'"
+              :class="
+                isDessertWindowStore
+                  ? 'bg-[var(--peach-cloud-mist)]/55'
+                  : isQuickServiceStore
+                    ? 'bg-[#ffc833]'
+                    : isJadeTableStore
+                      ? '!rounded-sm bg-[#e9deca]'
+                      : 'bg-white/[0.06]'
+              "
             >
               <p
                 class="text-[10px] font-semibold"
-                :class="isDessertWindowStore ? 'text-[var(--peach-cloud-iron)]' : 'text-slate-400'"
+                :class="
+                  isDessertWindowStore
+                    ? 'text-[var(--peach-cloud-iron)]'
+                    : isQuickServiceStore
+                      ? 'text-black/50'
+                      : isJadeTableStore
+                        ? 'text-[#746c61]'
+                        : 'text-slate-400'
+                "
               >
                 {{ t('合计', 'Total') }}
               </p>
@@ -9080,7 +9735,11 @@ onBeforeUnmount(() => {
               :class="
                 isDessertWindowStore
                   ? 'bg-[var(--peach-cloud-mist)]/30 text-[var(--peach-cloud-ink)]'
-                  : 'bg-white/[0.08] text-slate-200'
+                  : isQuickServiceStore
+                    ? 'border border-black/15 bg-white text-[#201a17]'
+                    : isJadeTableStore
+                      ? '!rounded-sm border border-[#cfc2ad] bg-white/55 text-[#211e19]'
+                      : 'bg-white/[0.08] text-slate-200'
               "
               data-testid="food-delivery-checkout-cancel"
               @click="closeCheckoutSheet"
@@ -9093,7 +9752,11 @@ onBeforeUnmount(() => {
               :class="
                 isDessertWindowStore
                   ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-[0_14px_34px_rgba(43,48,58,0.18)]'
-                  : 'bg-[#ff806f] text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]'
+                  : isQuickServiceStore
+                    ? 'bg-[#e33d2e] text-white shadow-[0_14px_34px_rgba(227,61,46,0.26)]'
+                    : isJadeTableStore
+                      ? '!rounded-sm bg-[#bd4b35] text-white shadow-[0_14px_34px_rgba(189,75,53,0.22)]'
+                      : 'bg-[#ff806f] text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]'
               "
               data-testid="food-delivery-checkout-submit"
               @click="checkoutFoodDelivery"
@@ -9105,7 +9768,12 @@ onBeforeUnmount(() => {
       </section>
 
       <details
-        v-if="hasStoreSupportContent && !isDessertWindowStore"
+        v-if="
+          hasStoreSupportContent &&
+          !isDessertWindowStore &&
+          !isQuickServiceStore &&
+          !isJadeTableStore
+        "
         class="food-delivery-support-stack"
         :class="
           isStoreMode
@@ -9145,7 +9813,9 @@ onBeforeUnmount(() => {
                 <p class="break-words text-sm font-bold [overflow-wrap:anywhere]">
                   {{ t('配送详情', 'Delivery details') }}
                 </p>
-                <p class="mt-1 break-words text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]">
+                <p
+                  class="mt-1 break-words text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]"
+                >
                   {{
                     t(
                       '查看当前路线、送达地址、距离和预计送达时间。',
@@ -9173,7 +9843,9 @@ onBeforeUnmount(() => {
                   data-testid="food-delivery-map-handoff-address"
                 >
                   <p class="font-semibold text-gray-900">{{ t('配送地址', 'Delivery address') }}</p>
-                  <p class="mt-1 break-words text-[11px] leading-4 text-gray-500 [overflow-wrap:anywhere]">
+                  <p
+                    class="mt-1 break-words text-[11px] leading-4 text-gray-500 [overflow-wrap:anywhere]"
+                  >
                     {{ activeMapHandoff.deliveryAddress || t('未设置', 'Not set') }}
                   </p>
                 </div>
@@ -9277,7 +9949,9 @@ onBeforeUnmount(() => {
                     <div class="flex items-start justify-between gap-2">
                       <div class="min-w-0">
                         <p class="font-semibold text-orange-900">{{ event.typeLabel }}</p>
-                        <p class="mt-1 break-words leading-4 text-orange-700 [overflow-wrap:anywhere]">
+                        <p
+                          class="mt-1 break-words leading-4 text-orange-700 [overflow-wrap:anywhere]"
+                        >
                           {{ event.detail }}
                         </p>
                       </div>
@@ -9329,9 +10003,7 @@ onBeforeUnmount(() => {
                               {{ deliveryMapAddress(event.mapHandoff) || t('未设置', 'Not set') }}
                             </p>
                           </div>
-                          <div
-                            class="min-w-0 rounded-xl bg-white/80 px-2.5 py-2"
-                          >
+                          <div class="min-w-0 rounded-xl bg-white/80 px-2.5 py-2">
                             <p class="font-semibold text-lime-800">{{ t('预计送达', 'ETA') }}</p>
                             <p class="mt-0.5 break-words text-lime-700 [overflow-wrap:anywhere]">
                               {{ deliveryMapEtaLabel(event.mapHandoff) }}
@@ -9365,7 +10037,9 @@ onBeforeUnmount(() => {
                 <p class="break-words text-sm font-bold [overflow-wrap:anywhere]">
                   {{ t('保存到 Wallet', 'Save to Wallet') }}
                 </p>
-                <p class="mt-1 break-words text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]">
+                <p
+                  class="mt-1 break-words text-xs leading-5 text-gray-500 [overflow-wrap:anywhere]"
+                >
                   {{
                     t(
                       '只有已送达订单可以记录为支出；在你选择“记录”前，不会保存到 Wallet。',
@@ -9465,7 +10139,6 @@ onBeforeUnmount(() => {
               </article>
             </div>
           </section>
-
         </div>
       </details>
     </div>
