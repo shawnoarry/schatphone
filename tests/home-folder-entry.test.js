@@ -1004,18 +1004,35 @@ describe('Home folder entries', () => {
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_peach_cloud"]').exists(),
     ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_dash_grill"]').exists(),
+    ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_jade_hearth"]').exists(),
+    ).toBe(true)
 
     await wrapper
-      .find('[data-testid="home-folder-entry-shop_app_food_seed_peach_cloud"]')
+      .find('[data-testid="home-folder-entry-shop_app_food_seed_dash_grill"]')
       .trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/food-delivery')
-    expect(router.currentRoute.value.query.restaurantId).toBe('food_seed_peach_cloud')
+    expect(router.currentRoute.value.query.restaurantId).toBe('food_seed_dash_grill')
     expect(router.currentRoute.value.query.entry).toBe('shop')
-    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_peach_cloud')
+    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_dash_grill')
     expect(router.currentRoute.value.query.from).toBe('home')
     expect(router.currentRoute.value.query.homePage).toBe('1')
+
+    await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
+    await wrapper
+      .find('[data-testid="home-folder-entry-shop_app_food_seed_jade_hearth"]')
+      .trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/food-delivery')
+    expect(router.currentRoute.value.query.restaurantId).toBe('food_seed_jade_hearth')
+    expect(router.currentRoute.value.query.entry).toBe('shop')
+    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_jade_hearth')
     wrapper.unmount()
   })
 

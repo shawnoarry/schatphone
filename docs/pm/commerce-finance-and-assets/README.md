@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Package
 
-Updated: 2026-06-03
+Updated: 2026-07-28
 
 Use this package for Shopping, logistics, Food Delivery, Wallet, Assets, Stock, and downstream ownership loops.
 
@@ -14,7 +14,7 @@ Optional capability Pack note: `survival_city` can open Shopping as `补给站` 
 
 Current Food Delivery pseudo-folder note: Food Platform and shop mini apps are peer entries. Food Platform may own discovery plus checkout and order history for its own platform-internal merchants, while independent shop mini apps present their own cart, checkout confirmation, order status, delivery events, and Wallet suggestions. Platform orders must never aggregate peer shop-app orders.
 
-Current independent-shop note: Moon Bistro uses the dark `dark_tray_menu` treatment, while Peach Cloud uses a dedicated petal-pink, pink-mist, pale-green, and charcoal `dessert_window` app adapted from exact Figma node `47:23`, with five illustrated home categories, Best Seller, promotion, Recommend, and route-driven Search, New, Bag, Orders, and order-detail pages behind a Pink Mist navigation bar with Petal Rouge selected states. Both remain facades over the same Food Delivery-owned cart/order runtime; Peach Cloud's imported local asset contract is recorded in `FOOD_DELIVERY_IMAGE2_ASSET_PROMPTS.md`.
+Current independent-shop note: Moon Bistro uses the dark `dark_tray_menu` treatment for modern fine dining; Peach Cloud uses a dedicated petal-pink, pink-mist, pale-green, and charcoal `dessert_window` app adapted from exact Figma node `47:23`; Dash Grill uses an original red, mustard, paper, and ink `quick_service_chain` app; and Jade Hearth uses an original rice-paper, ink-green, and cinnabar `jade_table_menu` app organized around shared tables, a menu book, and feast collections. All four remain facades over the same Food Delivery-owned cart/order runtime. Peach Cloud's imported assets plus Dash Grill's eleven and Jade Hearth's thirteen pending PNG slots are recorded in `FOOD_DELIVERY_IMAGE2_ASSET_PROMPTS.md`.
 
 Current Wallet currency note: WorldBook's optional capability Packs can declare and inject custom world currencies. Wallet owns the user-facing primary currency, the USD/CNY reference coordinate, and editable exchange rates; Chat transfers and Food Delivery prices should consume Wallet currency settings instead of owning separate currency rules.
 

@@ -122,9 +122,9 @@ English: Realistic commercial food photography of crispy Korean fried chicken, g
 
 食物摄影主图：
 
-| 文件名 | 店铺 | 主体建议 |
-| --- | --- | --- |
-| `merchant-noodle-house-01.png` | 山茶牛肉面馆 | 山茶一号红烧宽面、青菜和少量店制辣油 |
+| 文件名                          | 店铺         | 主体建议                             |
+| ------------------------------- | ------------ | ------------------------------------ |
+| `merchant-noodle-house-01.png`  | 山茶牛肉面馆 | 山茶一号红烧宽面、青菜和少量店制辣油 |
 | `merchant-coconut-curry-01.png` | 南风椰香咖喱 | 南风一号椰香鸡、茉莉香米和东南亚香草 |
 
 食物摄影统一生成提示：
@@ -141,12 +141,12 @@ English: Realistic commercial food photography for a mobile delivery merchant ca
 public/images/ui-assets/apps/food-delivery/platform/merchants/logos/
 ```
 
-| 文件名 | 店铺 | 品牌图形方向 |
-| --- | --- | --- |
-| `merchant-logo-berry-morning-01.png` | 莓果晨光 | 莓果、晨光弧线与酸奶旋纹组成的轻甜标志 |
-| `merchant-logo-green-basket-01.png` | 青禾鲜食补给站 | 青禾嫩芽与补给篮结合的社区便利标志 |
-| `merchant-logo-morning-bagel-01.png` | 早安贝果咖啡 | 贝果圆环、晨日与咖啡杯负形组成的早餐标志 |
-| `merchant-logo-elm-dim-sum-01.png` | 榆树里蒸点铺 | 榆树叶、竹蒸笼与蒸汽线条组成的街坊标志 |
+| 文件名                               | 店铺           | 品牌图形方向                             |
+| ------------------------------------ | -------------- | ---------------------------------------- |
+| `merchant-logo-berry-morning-01.png` | 莓果晨光       | 莓果、晨光弧线与酸奶旋纹组成的轻甜标志   |
+| `merchant-logo-green-basket-01.png`  | 青禾鲜食补给站 | 青禾嫩芽与补给篮结合的社区便利标志       |
+| `merchant-logo-morning-bagel-01.png` | 早安贝果咖啡   | 贝果圆环、晨日与咖啡杯负形组成的早餐标志 |
+| `merchant-logo-elm-dim-sum-01.png`   | 榆树里蒸点铺   | 榆树叶、竹蒸笼与蒸汽线条组成的街坊标志   |
 
 ```text
 中文：用于手机外卖平台小店头图的独立品牌 Logo，单一清晰图形标志，透明背景，轮廓简洁但有品牌记忆点，适合横向卡片中居中留白展示，也能在 48px 尺寸识别，使用对应店铺的食物或器物意象，不要可读店名，不要英文字母，不要价格，不要 UI 卡片，不要水印，带 alpha 透明通道的 PNG，建议源图 768x768。
@@ -168,19 +168,19 @@ public/images/ui-assets/apps/food-delivery/platform/menus/
 
 建议源图 `768x768`，主体适合方形和小尺寸裁切，同一家店保持餐具、光线与背景语言一致。每个目录固定使用 `menu-item-01.png` 到 `menu-item-05.png`，顺序与页面菜单一致。
 
-| 商户目录 | 菜品 01–05 |
-| --- | --- |
-| `hanwoo-gukbap/` | 逆站洞一号韩牛汤饭；泡菜红锅·双人份；清晨雪浓汤定食；逆站洞醒酒辣汤；海风泡菜煎饼 |
-| `sushi-hana/` | 花见十二贯；小町炸猪排便当；海风亲子散寿司；暮色炙鳗牛油果卷；赤味噌蛤蜊汤 |
-| `hwadeok-pizza/` | 花德蜂蜜双芝士；周五半半鸡翅篮；炉边番茄罗勒；红椒烟熏辣肠；花德玉米焗薯 |
-| `salad-day/` | 日记 No.1 牛油果鸡胸碗；今日莓果酸奶罐；海岸线三文鱼谷物碗；烤南瓜暖汤午餐组；青柠冰摇气泡美式 |
-| `chicken-crisp/` | 脆脆 50/50 半半鸡；金瀑芝士厚切薯；黑蒜无骨鸡块；辣年糕串串；蜂蜜黄油脆薯角 |
-| `berry-morning/` | 晨光莓莓云朵杯；绿野牛油果鲜果碗；开心果晨曦巴斯克；南岛芒果椰露；草莓初光可颂 |
-| `green-basket/` | 青禾今日蔬果箱；06:30 早餐补给；绿能一日轻食箱；深夜灯火补给包；厨房 SOS 调味组 |
-| `camellia-noodles/` | 山茶一号红烧宽面；桂香番茄鸡蛋拌面；老街豌杂细面；山茶酸汤肥牛米线；秘制红油抄手 |
-| `morning-bagel/` | GOOD AM 烟熏鸡贝果；晨盐焦糖拿铁；绿意煎蛋贝果；早安苹果肉桂司康；柚光冰摇美式 |
-| `elm-dim-sum/` | 榆树里虾仁三拼；十八褶鲜肉小笼；金沙流心奶黄包；荷香腊味糯米鸡；巷口咸豆浆油条 |
-| `coconut-curry/` | 南风一号椰香鸡；槟城咖喱虾饭；青罗勒绿咖喱牛；南风冬阴功海鲜汤；斑斓椰奶小布丁 |
+| 商户目录            | 菜品 01–05                                                                                     |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| `hanwoo-gukbap/`    | 逆站洞一号韩牛汤饭；泡菜红锅·双人份；清晨雪浓汤定食；逆站洞醒酒辣汤；海风泡菜煎饼              |
+| `sushi-hana/`       | 花见十二贯；小町炸猪排便当；海风亲子散寿司；暮色炙鳗牛油果卷；赤味噌蛤蜊汤                     |
+| `hwadeok-pizza/`    | 花德蜂蜜双芝士；周五半半鸡翅篮；炉边番茄罗勒；红椒烟熏辣肠；花德玉米焗薯                       |
+| `salad-day/`        | 日记 No.1 牛油果鸡胸碗；今日莓果酸奶罐；海岸线三文鱼谷物碗；烤南瓜暖汤午餐组；青柠冰摇气泡美式 |
+| `chicken-crisp/`    | 脆脆 50/50 半半鸡；金瀑芝士厚切薯；黑蒜无骨鸡块；辣年糕串串；蜂蜜黄油脆薯角                    |
+| `berry-morning/`    | 晨光莓莓云朵杯；绿野牛油果鲜果碗；开心果晨曦巴斯克；南岛芒果椰露；草莓初光可颂                 |
+| `green-basket/`     | 青禾今日蔬果箱；06:30 早餐补给；绿能一日轻食箱；深夜灯火补给包；厨房 SOS 调味组                |
+| `camellia-noodles/` | 山茶一号红烧宽面；桂香番茄鸡蛋拌面；老街豌杂细面；山茶酸汤肥牛米线；秘制红油抄手               |
+| `morning-bagel/`    | GOOD AM 烟熏鸡贝果；晨盐焦糖拿铁；绿意煎蛋贝果；早安苹果肉桂司康；柚光冰摇美式                 |
+| `elm-dim-sum/`      | 榆树里虾仁三拼；十八褶鲜肉小笼；金沙流心奶黄包；荷香腊味糯米鸡；巷口咸豆浆油条                 |
+| `coconut-curry/`    | 南风一号椰香鸡；槟城咖喱虾饭；青罗勒绿咖喱牛；南风冬阴功海鲜汤；斑斓椰奶小布丁                 |
 
 统一生成提示：
 
@@ -192,16 +192,16 @@ English: Square realistic commercial food photography for a mobile delivery menu
 
 ## 3. Moon Bistro Assets / Moon Bistro 素材
 
-Moon Bistro 是第一个特色小店 mini app。它的气质比平台首页更暗、更有夜间小酒馆氛围，但食物仍然要清楚、好吃、可识别。
+Moon Bistro 是第一个特色小店 mini app，定位为现代高端餐厅。它可以保留比平台首页更暗、带烛光层次的视觉气质，但不要表达深夜营业、夜宵或夜间小酒馆；食物必须清楚、精致、好吃且可识别。
 
 ### Moon Bistro Shop Cover / 店铺封面
 
 建议尺寸：`1200x600`。
 
 ```text
-中文：夜间融合小酒馆店铺封面，深色优雅餐桌布景，温暖低照度餐厅灯光，黑色陶瓷餐盘，微弱月光蓝色高光，舒适高级的晚餐氛围，可以看到几道摆盘精致的舒心料理但不要拥挤，电影感但清晰，外卖店铺封面图，不要文字，不要 logo，不要水印，PNG。
+中文：现代高端餐厅店铺封面，深色优雅餐桌布景，温暖烛光层次，黑色陶瓷餐盘，克制的月光蓝色高光，精致从容的主厨晚餐氛围，可以看到几道摆盘考究的料理但不要拥挤，电影感但清晰，不表现深夜、夜宵或酒馆标签，外卖店铺封面图，不要文字，不要 logo，不要水印，PNG。
 
-English: Late-night fusion bistro shop cover photo, dark elegant table setting, warm low restaurant light, black ceramic plates, subtle moonlit blue highlights, cozy premium dinner atmosphere, a few plated comfort dishes visible but not crowded, cinematic but clear, delivery app shop cover image, no text, no logo, no watermark, PNG.
+English: Modern fine-dining shop cover photo, dark elegant table setting, layered warm candlelight, black ceramic plates, restrained moonlit-blue highlights, composed chef-led dinner atmosphere, a few precisely plated dishes visible but not crowded, cinematic but clear, no late-night, night-snack, or pub cues, delivery app shop cover image, no text, no logo, no watermark, PNG.
 ```
 
 ### Moon Bistro Dish: Signal Soup / 菜品：Signal Soup
@@ -225,17 +225,17 @@ English: Square realistic food photo for a dark bistro menu card, elegant rice s
 ### Moon Bistro Dish: Orbit Pasta / 菜品：Orbit Pasta
 
 ```text
-中文：方形真实食物照片，用于深色小酒馆菜单卡片，浅口黑碗里的奶油意面，面条呈轻微旋涡状，蘑菇、香草、帕玛森芝士点缀，带一点圆形摆盘感，夜间小酒馆灯光，居中构图，适合圆形裁切，不要文字，不要 logo，不要水印，PNG。
+中文：方形真实食物照片，用于现代高端餐厅的深色菜单卡片，浅口黑碗里的松露奶油意面，面条呈轻微旋涡状，蘑菇、香草、帕玛森芝士点缀，精致圆形摆盘，柔和烛光餐厅照明，居中构图，适合圆形裁切，不要文字，不要 logo，不要水印，PNG。
 
-English: Square realistic food photo for a dark bistro menu card, creamy pasta twirled in a shallow black bowl, mushrooms, herbs, parmesan, subtle circular plating, late-night bistro lighting, centered for circular crop, no text, no logo, no watermark, PNG.
+English: Square realistic food photo for a modern fine-dining dark menu card, truffle cream pasta twirled in a shallow black bowl, mushrooms, herbs, parmesan, precise circular plating, soft candlelit restaurant lighting, centered for circular crop, no text, no logo, no watermark, PNG.
 ```
 
 ### Moon Bistro Dish: Midnight Dessert / 菜品：Midnight Dessert
 
 ```text
-中文：方形真实食物照片，用于深色小酒馆菜单卡片，小份巧克力甜点，莓果酱和奶油点缀，黑色餐盘，柔和烛光般高光，高级夜间小酒馆氛围，居中构图，适合圆形裁切，不要文字，不要 logo，不要水印，PNG。
+中文：方形真实食物照片，用于现代高端餐厅的深色菜单卡片，小份巧克力甜点，莓果酱和奶油点缀，黑色餐盘，柔和烛光高光，克制精致的主厨甜点氛围，居中构图，适合圆形裁切，不要文字，不要 logo，不要水印，PNG。
 
-English: Square realistic food photo for a dark bistro menu card, small chocolate dessert with berry sauce and cream, black plate, soft candle-like highlight, premium late-night bistro mood, centered for circular crop, no text, no logo, no watermark, PNG.
+English: Square realistic food photo for a modern fine-dining dark menu card, small chocolate dessert with berry sauce and cream, black plate, soft candle-like highlight, restrained chef-dessert mood, centered for circular crop, no text, no logo, no watermark, PNG.
 ```
 
 ## 4. Category Icon PNGs / 分类图标 PNG
@@ -406,16 +406,16 @@ public/images/ui-assets/apps/food-delivery/platform/orders/
 
 ### Required Core Assets / 必须准备
 
-| 文件名 | 对应素材位 | 内容建议 | 当前回退 |
-| --- | --- | --- | --- |
-| `platform-checkout-takeout-bag-01.png` | `platform-checkout-takeout-bag` | 封好的外卖袋、餐盒与小票，主体偏右，轮廓简洁 | 诊断占位图 |
-| `platform-order-status-placed-01.png` | `platform-order-status-placed` | 小票、确认勾和刚封好的餐袋 | 诊断占位图 |
-| `platform-order-status-preparing-01.png` | `platform-order-status-preparing` | 厨房出餐台、蒸汽餐盒或厨师帽，不出现真人品牌制服 | 诊断占位图 |
-| `platform-order-status-delivering-01.png` | `platform-order-status-delivering` | 骑手与青绿色电动车，方向朝右 | 诊断占位图 |
-| `platform-order-status-delivered-01.png` | `platform-order-status-delivered` | 门口餐袋、完成勾与温和庆祝元素 | 诊断占位图 |
-| `platform-order-status-cancelled-01.png` | `platform-order-status-cancelled` | 收起的餐袋、小票与克制取消符号 | 诊断占位图 |
-| `platform-order-status-delayed-01.png` | 未来延误状态位 | 骑手、时钟和小范围琥珀色提醒 | 暂未显示，留给后续订单事件 |
-| `platform-orders-empty-receipt-01.png` | `platform-orders-empty-receipt` | 空白小票、餐叉和轻微爱心点缀 | 诊断占位图 |
+| 文件名                                    | 对应素材位                         | 内容建议                                         | 当前回退                   |
+| ----------------------------------------- | ---------------------------------- | ------------------------------------------------ | -------------------------- |
+| `platform-checkout-takeout-bag-01.png`    | `platform-checkout-takeout-bag`    | 封好的外卖袋、餐盒与小票，主体偏右，轮廓简洁     | 诊断占位图                 |
+| `platform-order-status-placed-01.png`     | `platform-order-status-placed`     | 小票、确认勾和刚封好的餐袋                       | 诊断占位图                 |
+| `platform-order-status-preparing-01.png`  | `platform-order-status-preparing`  | 厨房出餐台、蒸汽餐盒或厨师帽，不出现真人品牌制服 | 诊断占位图                 |
+| `platform-order-status-delivering-01.png` | `platform-order-status-delivering` | 骑手与青绿色电动车，方向朝右                     | 诊断占位图                 |
+| `platform-order-status-delivered-01.png`  | `platform-order-status-delivered`  | 门口餐袋、完成勾与温和庆祝元素                   | 诊断占位图                 |
+| `platform-order-status-cancelled-01.png`  | `platform-order-status-cancelled`  | 收起的餐袋、小票与克制取消符号                   | 诊断占位图                 |
+| `platform-order-status-delayed-01.png`    | 未来延误状态位                     | 骑手、时钟和小范围琥珀色提醒                     | 暂未显示，留给后续订单事件 |
+| `platform-orders-empty-receipt-01.png`    | `platform-orders-empty-receipt`    | 空白小票、餐叉和轻微爱心点缀                     | 诊断占位图                 |
 
 统一生成提示：
 
@@ -478,23 +478,23 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
    └─ peach-cloud-item-12.png
 ```
 
-| 文件 | 内容 | 建议源尺寸 / 裁切 |
-| --- | --- | --- |
-| `cover/peach-cloud-hero-01.png` | 三杯奶昔摄影，用于 Figma 风格 `30% OFF` 促销 | 横向摄影，右侧主体清晰，适合促销位裁切 |
-| `brand/peach-cloud-mark-01.svg` | Figma 甜点线稿，用作顶部品牌/资料入口 | 矢量，适合 `20px` 到 `48px` 显示 |
-| `categories/*.svg` | Drinks、Vegan/Fruit、Dessert、Snacks/Bakes、Meal/Seasonal 五个 Figma 分类线稿 | 矢量，使用 Jet Black `#2B303A` 描边；Snacks 底色使用 Pink Mist `#FDA1B8` |
-| `products/peach-cloud-item-01.png` | Peach Oolong Cloud | `768x768` |
-| `products/peach-cloud-item-02.png` | Brown Sugar Creme No. 7 | `768x768` |
-| `products/peach-cloud-item-03.png` | Cocoa Cloud Brownie | Figma 产品摄影 |
-| `products/peach-cloud-item-04.png` | Peach Macaron Parade | Figma 产品摄影 |
-| `products/peach-cloud-item-05.png` | Yuzu Spark Pop | `768x768` |
-| `products/peach-cloud-item-06.png` | Crepe Gelato Cloud | Figma 产品摄影 |
-| `products/peach-cloud-item-07.png` | Macaron Milk Drift | Figma 产品摄影 |
-| `products/peach-cloud-item-08.png` | Hojicha Cloud Float | Figma 产品摄影 |
-| `products/peach-cloud-item-09.png` | Strawberry Sunbeam Slice | Figma 产品摄影 |
-| `products/peach-cloud-item-10.png` | Cloud Nine Cocoa Crepes | Figma 产品摄影 |
-| `products/peach-cloud-item-11.png` | Midnight Creme No. 11 | Figma 产品摄影 |
-| `products/peach-cloud-item-12.png` | Golden Hour Pairing，气泡饮与迷你巴斯克组合 | `768x768` |
+| 文件                               | 内容                                                                          | 建议源尺寸 / 裁切                                                        |
+| ---------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `cover/peach-cloud-hero-01.png`    | 三杯奶昔摄影，用于 Figma 风格 `30% OFF` 促销                                  | 横向摄影，右侧主体清晰，适合促销位裁切                                   |
+| `brand/peach-cloud-mark-01.svg`    | Figma 甜点线稿，用作顶部品牌/资料入口                                         | 矢量，适合 `20px` 到 `48px` 显示                                         |
+| `categories/*.svg`                 | Drinks、Vegan/Fruit、Dessert、Snacks/Bakes、Meal/Seasonal 五个 Figma 分类线稿 | 矢量，使用 Jet Black `#2B303A` 描边；Snacks 底色使用 Pink Mist `#FDA1B8` |
+| `products/peach-cloud-item-01.png` | Peach Oolong Cloud                                                            | `768x768`                                                                |
+| `products/peach-cloud-item-02.png` | Brown Sugar Creme No. 7                                                       | `768x768`                                                                |
+| `products/peach-cloud-item-03.png` | Cocoa Cloud Brownie                                                           | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-04.png` | Peach Macaron Parade                                                          | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-05.png` | Yuzu Spark Pop                                                                | `768x768`                                                                |
+| `products/peach-cloud-item-06.png` | Crepe Gelato Cloud                                                            | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-07.png` | Macaron Milk Drift                                                            | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-08.png` | Hojicha Cloud Float                                                           | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-09.png` | Strawberry Sunbeam Slice                                                      | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-10.png` | Cloud Nine Cocoa Crepes                                                       | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-11.png` | Midnight Creme No. 11                                                         | Figma 产品摄影                                                           |
+| `products/peach-cloud-item-12.png` | Golden Hour Pairing，气泡饮与迷你巴斯克组合                                   | `768x768`                                                                |
 
 ### Hero Prompt / 主图提示词
 
@@ -520,6 +520,122 @@ English: Square product photography for the virtual Peach Cloud drinks-and-desse
 中文：Peach Cloud 甜饮品牌的独立图形标志，不含文字，将简化白桃轮廓、柔软云朵和一只带吸管的冷饮杯组合成一个清晰轮廓，以 Petal Rouge `#FD6C93` 为主，搭配 Jet Black `#2B303A` 结构线和少量浅绿 `#F2FBE0` 高光，友好但不过度卡通，适合在 48px 仍可识别，透明背景，无投影或仅极短柔和投影，不要字母，不要店名，不要价格，不要 UI 卡片，不要水印，带 alpha 通道的 768x768 PNG。
 
 English: Standalone symbol for the Peach Cloud dessert-drinks brand with no text, combining a simplified white-peach outline, soft cloud, and cold drink cup with straw into one clear silhouette, primarily Petal Rouge #FD6C93 with Jet Black #2B303A structure and small pale-green #F2FBE0 highlights, friendly without becoming overly cartoonish, recognizable at 48px, transparent background, no shadow or only a very compact soft shadow, no letters, no shop name, no price, no UI card, no watermark, 768x768 PNG with alpha.
+```
+
+## 7. Dash Grill Independent App / Dash Grill 独立快餐 App
+
+Dash Grill 是原创连锁快餐概念，视觉使用 Tomato Red `#E33D2E`、Mustard Yellow `#FFC833`、Paper `#FFF9EC` 和 Ink `#201A17`。它可以传达高频套餐、汉堡、炸鸡和奶昔的快节奏消费感，但不得使用麦当劳或其他现实品牌的名称、拱门、吉祥物、制服、包装、门店照片或可识别商标。
+
+当前 UI 已为下列 `11` 张 PNG 接好稳定路径。文件未交付时统一显示共享诊断占位图，这些占位图不是正式素材。
+
+### Asset Contract / 素材合同
+
+```text
+public/images/ui-assets/apps/food-delivery/dash-grill/
+├─ cover/dash-grill-cover-01.png
+└─ products/
+   ├─ dash-grill-item-01.png
+   ├─ dash-grill-item-02.png
+   ├─ dash-grill-item-03.png
+   ├─ dash-grill-item-04.png
+   ├─ dash-grill-item-05.png
+   ├─ dash-grill-item-06.png
+   ├─ dash-grill-item-07.png
+   ├─ dash-grill-item-08.png
+   ├─ dash-grill-item-09.png
+   └─ dash-grill-item-10.png
+```
+
+| 文件                              | 菜品 / 用途                         | 建议尺寸与构图                                 |
+| --------------------------------- | ----------------------------------- | ---------------------------------------------- |
+| `cover/dash-grill-cover-01.png`   | 品牌首页 Hero，汉堡、薯条与饮品组合 | `1200x750`；主体在中右侧，左侧留深色文案安全区 |
+| `products/dash-grill-item-01.png` | Dash Double Stack                   | `768x768`；双层牛肉汉堡                        |
+| `products/dash-grill-item-02.png` | Golden Chicken Stack                | `768x768`；金黄脆鸡汉堡                        |
+| `products/dash-grill-item-03.png` | Smoky BBQ Stack                     | `768x768`；烟熏芝士烧烤汉堡                    |
+| `products/dash-grill-item-04.png` | Classic Cheeseburger                | `768x768`；经典单层芝士汉堡                    |
+| `products/dash-grill-item-05.png` | Crisp Chicken Tenders               | `768x768`；五条脆鸡与一份蘸酱                  |
+| `products/dash-grill-item-06.png` | Sea-Salt Fries                      | `768x768`；细切海盐薯条                        |
+| `products/dash-grill-item-07.png` | Loaded Cheese Fries                 | `768x768`；芝士酱、葱与烟熏碎料薯条            |
+| `products/dash-grill-item-08.png` | Garden Crunch Wrap                  | `768x768`；烤鸡蔬菜卷饼                        |
+| `products/dash-grill-item-09.png` | Vanilla Cloud Shake                 | `768x768`；香草奶昔与柔软奶油顶                |
+| `products/dash-grill-item-10.png` | Choco Swirl Sundae                  | `768x768`；巧克力旋纹香草圣代                  |
+
+### Cover Prompt / 封面提示词
+
+```text
+中文：原创虚拟连锁快餐品牌 Dash Grill 的横向商业食物摄影，用于手机外卖 App 首页 Hero，一份层次清楚的双层牛肉汉堡、金黄细薯条、脆鸡和一杯冷饮组合，Tomato Red #E33D2E、Mustard Yellow #FFC833、Paper #FFF9EC 与少量 Ink #201A17 的纸质托盘和背景点缀，明亮、快速、有食欲但不过度玩具化，主体集中在画面中部和右侧，左侧保留稳定深色区域给代码文案，适合 8:5 裁切，不要可读文字，不要价格，不要 logo，不要拱门符号，不要吉祥物，不要现实品牌包装，不要 UI，不要人物，不要水印，1200x750 PNG。
+
+English: Horizontal commercial food photography for the original virtual quick-service brand Dash Grill, used as a mobile delivery-app hero, a clearly layered double beef burger with golden thin fries, crispy chicken, and a cold drink, paper tray and background accents in Tomato Red #E33D2E, Mustard Yellow #FFC833, Paper #FFF9EC, and small Ink #201A17, bright, fast, and appetizing without looking toy-like, subjects concentrated in the center and right with a stable dark area on the left for code-rendered copy, composed for an 8:5 crop, no readable text, no price, no logo, no arch symbol, no mascot, no real-brand packaging, no UI, no people, no watermark, 1200x750 PNG.
+```
+
+### Product Pack Prompt / 产品图组提示词
+
+每次只生成表格中的一个产品，保持相同台面高度、镜头距离、自然高光和短投影，便于商品列表与详情页复用。
+
+```text
+中文：原创虚拟连锁快餐品牌 Dash Grill 的方形商业产品摄影，用于手机外卖 App。只展示指定的一份餐品，主体清晰居中并占画面约 78%，真实酥脆、煎烤和酱汁质感，Paper #FFF9EC 干净背景，允许 Tomato Red #E33D2E 与 Mustard Yellow #FFC833 的无字纸托盘或餐纸点缀，柔和短投影，边缘保留裁切安全区，在 100px 缩略图中仍可识别，不要可读文字，不要价格，不要 logo，不要拱门符号，不要吉祥物，不要现实品牌包装，不要 UI 卡片，不要人物，不要水印，768x768 PNG。
+
+English: Square commercial product photography for the original virtual quick-service brand Dash Grill, used in a mobile delivery app. Show only the specified item, clearly centered and filling about 78% of the frame, realistic crisp, grilled, and sauced texture, clean Paper #FFF9EC background with optional unbranded paper-tray or liner accents in Tomato Red #E33D2E and Mustard Yellow #FFC833, compact soft shadow, safe crop padding, recognizable at a 100px thumbnail, no readable text, no price, no logo, no arch symbol, no mascot, no real-brand packaging, no UI card, no people, no watermark, 768x768 PNG.
+```
+
+## 8. Jade Hearth Independent App / Jade Hearth 独立中餐 App
+
+Jade Hearth 是原创中式合菜概念，视觉使用 Ink Green `#1F4D3A`、Cinnabar `#BD4B35`、Rice Paper `#F5EFE2`、Warm Paper `#E9DECA` 和 Ink `#211E19`。素材应呈现温润、克制、适合共同分食的当代中餐，不使用现实餐厅品牌、可识别包装、仿古招牌或过度节庆化的装饰。
+
+当前 UI 已为下列 `13` 张 PNG 接好稳定路径。文件未交付时统一显示共享诊断占位图，这些占位图不是正式素材。
+
+### Asset Contract / 素材合同
+
+```text
+public/images/ui-assets/apps/food-delivery/jade-hearth/
+├─ cover/jade-hearth-cover-01.png
+└─ products/
+   ├─ jade-hearth-item-01.png
+   ├─ jade-hearth-item-02.png
+   ├─ jade-hearth-item-03.png
+   ├─ jade-hearth-item-04.png
+   ├─ jade-hearth-item-05.png
+   ├─ jade-hearth-item-06.png
+   ├─ jade-hearth-item-07.png
+   ├─ jade-hearth-item-08.png
+   ├─ jade-hearth-item-09.png
+   ├─ jade-hearth-item-10.png
+   ├─ jade-hearth-item-11.png
+   └─ jade-hearth-item-12.png
+```
+
+| 文件                               | 菜品 / 用途                         | 建议尺寸与构图                                                   |
+| ---------------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
+| `cover/jade-hearth-cover-01.png`   | 品牌首页 Hero，中式合菜桌面         | `1200x750`；桌面由左下延伸到右侧，上部与左侧保留深绿文案安全区   |
+| `products/jade-hearth-item-01.png` | Tea-Smoked Half Chicken             | `768x768`；茶香半鸡、葱油与深色陶盘                              |
+| `products/jade-hearth-item-02.png` | Cinnabar Char Siu                   | `768x768`；晶亮叉烧、芥菜与芝麻                                  |
+| `products/jade-hearth-item-03.png` | Ginger-Scallion Sea Bass            | `768x768`；清蒸鲈鱼、姜丝、葱丝与热油光泽                        |
+| `products/jade-hearth-item-04.png` | Crystal Shrimp Dumplings            | `768x768`；四只透明虾饺与浅色蒸笼                                |
+| `products/jade-hearth-item-05.png` | Sesame Cucumber Ribbons             | `768x768`；卷叠黄瓜、芝麻酱、黑醋与花生碎                        |
+| `products/jade-hearth-item-06.png` | Pepper Lotus Root                   | `768x768`；脆藕片、青椒、芹菜与发酵辣椒                          |
+| `products/jade-hearth-item-07.png` | Hearth Mapo Tofu                    | `768x768`；麻婆豆腐、牛肉碎与青花椒油                            |
+| `products/jade-hearth-item-08.png` | Chestnut Mushroom Claypot           | `768x768`；栗子、三种菌菇、腐竹与小砂锅                          |
+| `products/jade-hearth-item-09.png` | Shrimp & Scallion Fried Rice        | `768x768`；虾仁、鸡蛋、葱花与粒粒分明的炒饭                      |
+| `products/jade-hearth-item-10.png` | Red-Braised Beef Knife Noodles      | `768x768`；宽刀削面、红烧牛肉、番茄汤与青菜                      |
+| `products/jade-hearth-item-11.png` | Osmanthus Snow Pear Tea             | `768x768`；透明热茶壶、雪梨、桂花与枸杞                          |
+| `products/jade-hearth-item-12.png` | Black Sesame Tangyuan               | `768x768`；四颗黑芝麻汤圆、清姜糖水与一颗剖面                    |
+
+### Cover Prompt / 封面提示词
+
+```text
+中文：原创虚拟中餐品牌 Jade Hearth 的横向商业食物摄影，用于手机外卖 App 首页 Hero，一张当代中式共享餐桌，摆放茶熏半鸡、清蒸鲈鱼、砂锅、两道小碟和一壶热茶，深绿釉面与米纸色桌面，少量朱砂红餐巾或筷架点缀，温暖自然侧光，精致但有人情味，菜品清楚且适合共同分食，主体由画面下方延伸到右侧，上部和左侧保留稳定深绿区域给代码文案，适合 8:5 裁切，不要可读文字，不要招牌，不要 logo，不要现实品牌包装，不要宫廷或春节布景，不要人物，不要 UI，不要水印，1200x750 PNG。
+
+English: Horizontal commercial food photography for the original virtual Chinese restaurant Jade Hearth, used as a mobile delivery-app hero, a contemporary shared table with tea-smoked half chicken, steamed sea bass, a claypot, two small plates, and a pot of warm tea, deep green glaze and rice-paper tabletop with restrained cinnabar-red napkin or chopstick-rest accents, warm natural side light, refined but welcoming, every dish clear and suitable for sharing, subjects extending from the lower frame toward the right with stable deep-green negative space above and on the left for code-rendered copy, composed for an 8:5 crop, no readable text, no signboard, no logo, no real-brand packaging, no imperial-palace or Lunar New Year staging, no people, no UI, no watermark, 1200x750 PNG.
+```
+
+### Product Pack Prompt / 产品图组提示词
+
+每次只生成表格中的一个产品。保持同一组温暖自然侧光、深绿或米纸色餐具、俯视约 `35°` 的镜头与短柔投影；主菜允许横向椭圆盘，小碟、茶和甜汤保持方形裁切中心稳定。
+
+```text
+中文：原创虚拟中餐品牌 Jade Hearth 的方形商业菜品摄影，用于手机外卖 App。只展示指定的一道菜，使用当代中式陶瓷餐具，主体清晰并占画面约 76%，真实蒸汽、酱汁、食材纤维和锅气质感，Rice Paper #F5EFE2 或 Warm Paper #E9DECA 背景，允许 Ink Green #1F4D3A 餐具与极少 Cinnabar #BD4B35 点缀，温暖自然侧光，短柔投影，边缘留裁切安全区，在 100px 缩略图中仍可识别，不要可读文字，不要价格，不要 logo，不要现实品牌包装，不要仿古牌匾，不要过度节庆装饰，不要 UI 卡片，不要人物，不要水印，768x768 PNG。
+
+English: Square commercial food photography for the original virtual Chinese restaurant Jade Hearth, used in a mobile delivery app. Show only the specified dish in contemporary Chinese ceramic tableware, clearly framed and filling about 76% of the image, with realistic steam, sauce, ingredient fibers, and wok texture, a Rice Paper #F5EFE2 or Warm Paper #E9DECA background, optional Ink Green #1F4D3A tableware and very restrained Cinnabar #BD4B35 accents, warm natural side light, compact soft shadow, safe crop padding, recognizable at a 100px thumbnail, no readable text, no price, no logo, no real-brand packaging, no antique signboard, no excessive festival decoration, no UI card, no people, no watermark, 768x768 PNG.
 ```
 
 ## Naming Suggestion / 文件命名建议
@@ -562,4 +678,17 @@ platform-order-status-delivered-01.png
 platform-order-status-cancelled-01.png
 platform-order-status-delayed-01.png
 platform-orders-empty-receipt-01.png
+jade-hearth-cover-01.png
+jade-hearth-item-01.png
+jade-hearth-item-02.png
+jade-hearth-item-03.png
+jade-hearth-item-04.png
+jade-hearth-item-05.png
+jade-hearth-item-06.png
+jade-hearth-item-07.png
+jade-hearth-item-08.png
+jade-hearth-item-09.png
+jade-hearth-item-10.png
+jade-hearth-item-11.png
+jade-hearth-item-12.png
 ```

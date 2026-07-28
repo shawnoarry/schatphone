@@ -1472,6 +1472,439 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('resolves Dash Grill as a quick-service app with route-driven menu, deals, bag, and orders pages', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push(
+      '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    expect(store.listMenuByRestaurant('food_seed_dash_grill')).toHaveLength(10)
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('quick_service_chain')
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
+      'food-delivery-store-quick-service',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-home"]').text()).toContain(
+      'BUILT FAST. SERVED HOT.',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-quick-service-nav-menu"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('menu')
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-menu-page"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="food-delivery-quick-service-nav-deals"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('deals')
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-deals-page"]').text()).toContain(
+      'MORE BITE FOR YOUR BUCK',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-quick-service-nav-bag"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('bag')
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-bag-page"]').text()).toContain(
+      'Your bag is waiting',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-quick-service-nav-orders"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('orders')
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-orders-page"]').text()).toContain(
+      'No Dash orders yet',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-quick-service-nav-home"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBeUndefined()
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-home"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  test('adds a chosen Dash Grill quantity and opens the submitted Dash order route', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push(
+      '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const dashItem = store.listMenuByRestaurant('food_seed_dash_grill')[0]
+
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${dashItem.id}"]`).trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
+      dashItem.title,
+    )
+    await wrapper
+      .get('[data-testid="food-delivery-menu-detail-quantity-increase"]')
+      .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
+
+    expect(store.cartRestaurant.id).toBe('food_seed_dash_grill')
+    expect(store.cartLineItems).toEqual([
+      expect.objectContaining({ menuItemId: dashItem.id, quantity: 2 }),
+    ])
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-quick-service-header-bag"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get(`[data-testid="food-delivery-cart-${dashItem.id}"]`).text()).toContain(
+      dashItem.title,
+    )
+
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      'Dash Grill',
+    )
+    await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    const order = store.orders[0]
+    expect(order).toMatchObject({
+      restaurantId: 'food_seed_dash_grill',
+      restaurantName: 'Dash Grill',
+      itemCount: 2,
+      items: [expect.objectContaining({ menuItemId: dashItem.id, quantity: 2 })],
+    })
+    expect(router.currentRoute.value.query).toMatchObject({
+      restaurantId: 'food_seed_dash_grill',
+      shopView: 'order',
+      shopOrderId: order.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-order-page"]').text()).toContain(
+      dashItem.title,
+    )
+    wrapper.unmount()
+  })
+
+  test('protects a foreign shop bag until Dash Grill replacement is confirmed', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const store = useFoodDeliveryStore()
+    const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
+    const dashItem = store.listMenuByRestaurant('food_seed_dash_grill')[0]
+    store.addToCart(moonItem.id)
+    const moonCartState = JSON.stringify(store.cartItems)
+
+    await router.push(
+      '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get(`[data-testid="food-delivery-add-${dashItem.id}"]`).trigger('click')
+    const replacementDialog = wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]')
+    expect(replacementDialog.text()).toContain('Moon Bistro')
+    expect(replacementDialog.text()).toContain('Dash Grill')
+    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
+
+    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
+    await flushPromises()
+    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
+    expect(store.cartRestaurant.id).toBe('food_seed_moon_bistro')
+
+    await wrapper.get(`[data-testid="food-delivery-add-${dashItem.id}"]`).trigger('click')
+    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(store.cartRestaurant.id).toBe('food_seed_dash_grill')
+    expect(store.cartLineItems).toEqual([
+      expect.objectContaining({ menuItemId: dashItem.id, quantity: 1 }),
+    ])
+    wrapper.unmount()
+  })
+
+  test('resolves Jade Hearth as a Chinese table app with route-driven menu, feast, bag, and orders pages', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('jade_table_menu')
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
+      'food-delivery-store-jade-table',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-jade-home"]').text()).toContain(
+      'Gather around something warm.',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-jade-nav-menu"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('menu')
+    expect(wrapper.get('[data-testid="food-delivery-jade-menu-page"]').text()).toContain(
+      'From small plates to the wok',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-jade-nav-feast"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('feast')
+    expect(wrapper.get('[data-testid="food-delivery-jade-feast-page"]').text()).toContain(
+      'A table for every kind of gathering',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-jade-nav-bag"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('bag')
+    expect(wrapper.get('[data-testid="food-delivery-jade-bag-page"]').text()).toContain(
+      'Your table is empty',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-jade-nav-orders"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('orders')
+    expect(wrapper.get('[data-testid="food-delivery-jade-orders-page"]').text()).toContain(
+      'No Jade Hearth orders yet',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-jade-nav-home"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBeUndefined()
+    expect(wrapper.get('[data-testid="food-delivery-jade-home"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  test('adds a chosen Jade Hearth quantity and opens the submitted Jade order route', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const jadeItem = store.findMenuItemById('food_menu_jade_tea_smoked_chicken')
+
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${jadeItem.id}"]`).trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
+      jadeItem.title,
+    )
+    await wrapper
+      .get('[data-testid="food-delivery-menu-detail-quantity-increase"]')
+      .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
+
+    expect(store.cartRestaurant.id).toBe('food_seed_jade_hearth')
+    expect(store.cartLineItems).toEqual([
+      expect.objectContaining({ menuItemId: jadeItem.id, quantity: 2 }),
+    ])
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-jade-header-bag"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get(`[data-testid="food-delivery-cart-${jadeItem.id}"]`).text()).toContain(
+      jadeItem.title,
+    )
+
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      'Jade Hearth',
+    )
+    await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    const order = store.orders[0]
+    expect(order).toMatchObject({
+      restaurantId: 'food_seed_jade_hearth',
+      restaurantName: 'Jade Hearth',
+      itemCount: 2,
+      items: [expect.objectContaining({ menuItemId: jadeItem.id, quantity: 2 })],
+    })
+    expect(router.currentRoute.value.query).toMatchObject({
+      restaurantId: 'food_seed_jade_hearth',
+      shopView: 'order',
+      shopOrderId: order.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-jade-order-page"]').text()).toContain(
+      jadeItem.title,
+    )
+    wrapper.unmount()
+  })
+
+  test('opens a Chat-linked Jade order on its detail page with delivery and Wallet actions', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
+    const jadeItem = store.findMenuItemById('food_menu_jade_tea_smoked_chicken')
+    store.addToCart(jadeItem.id)
+    const order = store.checkoutCart({
+      deliveryAddress: 'Camphor Court 8',
+      note: 'Open from Chat.',
+    })
+    const event = store.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
+      summary: 'The rider is taking the covered lane.',
+      etaMinutes: 34,
+    })
+
+    await router.push(
+      `/food-delivery?source=chat&intent=food_delivery_order&orderId=${order.id}`,
+    )
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(router.currentRoute.value.query).toMatchObject({
+      restaurantId: 'food_seed_jade_hearth',
+      entry: 'shop',
+      shopView: 'order',
+      shopOrderId: order.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-jade-order-page"]').text()).toContain(
+      jadeItem.title,
+    )
+    expect(
+      wrapper.get(`[data-testid="food-delivery-jade-order-event-${event.id}"]`).text(),
+    ).toContain('The rider is taking the covered lane.')
+    expect(
+      walletStore.findTransactionBySource('food_delivery_wallet_expense', order.id),
+    ).toBeNull()
+
+    await wrapper
+      .get(`[data-testid="food-delivery-jade-mark-delivered-${order.id}"]`)
+      .trigger('click')
+    await flushPromises()
+    expect(store.findOrderById(order.id).status).toBe(FOOD_DELIVERY_ORDER_STATUS.DELIVERED)
+
+    await wrapper
+      .get(`[data-testid="food-delivery-jade-record-wallet-${order.id}"]`)
+      .trigger('click')
+    await flushPromises()
+    expect(
+      walletStore.findTransactionBySource('food_delivery_wallet_expense', order.id),
+    ).toBeTruthy()
+    expect(
+      wrapper
+        .get(`[data-testid="food-delivery-jade-record-wallet-${order.id}"]`)
+        .attributes('disabled'),
+    ).toBeDefined()
+    wrapper.unmount()
+  })
+
+  test('keeps more than five Jade Hearth orders available from the shop order page', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const store = useFoodDeliveryStore()
+    const jadeItem = store.findMenuItemById('food_menu_jade_tea_smoked_chicken')
+
+    for (let index = 0; index < 7; index += 1) {
+      store.addToCart(jadeItem.id)
+      store.checkoutCart({
+        deliveryAddress: `Camphor Court ${index + 1}`,
+        note: `History order ${index + 1}`,
+      })
+    }
+
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop&shopView=orders',
+    )
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    expect(store.orders).toHaveLength(7)
+    store.orders.forEach((order) => {
+      expect(wrapper.find(`[data-testid="food-delivery-order-${order.id}"]`).exists()).toBe(true)
+    })
+    wrapper.unmount()
+  })
+
+  test('protects a foreign shop bag until Jade Hearth replacement is confirmed', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const store = useFoodDeliveryStore()
+    const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
+    const jadeItem = store.findMenuItemById('food_menu_jade_tea_smoked_chicken')
+    store.addToCart(moonItem.id)
+    const moonCartState = JSON.stringify(store.cartItems)
+
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get(`[data-testid="food-delivery-add-${jadeItem.id}"]`).trigger('click')
+    const replacementDialog = wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]')
+    expect(replacementDialog.text()).toContain('Moon Bistro')
+    expect(replacementDialog.text()).toContain('Jade Hearth')
+    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
+
+    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
+    await flushPromises()
+    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
+
+    await wrapper.get(`[data-testid="food-delivery-add-${jadeItem.id}"]`).trigger('click')
+    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(store.cartRestaurant.id).toBe('food_seed_jade_hearth')
+    expect(store.cartLineItems).toEqual([
+      expect.objectContaining({ menuItemId: jadeItem.id, quantity: 1 }),
+    ])
+    wrapper.unmount()
+  })
+
   test('adds same-shop items without opening the replacement dialog', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
@@ -2123,9 +2556,9 @@ describe('FoodDeliveryView', () => {
     for (const hook of [boundaryHook, pickupHook, dropoffHook, metaHook]) {
       expect(hook.text()).not.toMatch(INTERNAL_DELIVERY_DIAGNOSTIC_COPY)
     }
-    expect(
-      wrapper.get('[data-testid="food-delivery-store-support-drawer"]').text(),
-    ).not.toMatch(INTERNAL_DELIVERY_DIAGNOSTIC_COPY)
+    expect(wrapper.get('[data-testid="food-delivery-store-support-drawer"]').text()).not.toMatch(
+      INTERNAL_DELIVERY_DIAGNOSTIC_COPY,
+    )
     expect(mapStore.tripState.status).toBe('idle')
     expect(mapStore.tripHistory).toHaveLength(0)
     expect(store.orderCount).toBe(1)
@@ -2278,9 +2711,9 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get(`[data-testid="food-delivery-order-items-${order.id}"]`).text()).toContain(
       menuItem.title,
     )
-    expect(wrapper.get(`[data-testid="food-delivery-order-items-${order.id}"]`).classes()).toContain(
-      '[overflow-wrap:anywhere]',
-    )
+    expect(
+      wrapper.get(`[data-testid="food-delivery-order-items-${order.id}"]`).classes(),
+    ).toContain('[overflow-wrap:anywhere]')
     expect(drawerText).not.toMatch(INTERNAL_DELIVERY_DIAGNOSTIC_COPY)
     expect(wrapper.find('[data-testid="food-delivery-map-boundary"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-map-handoff-address"]').classes()).toContain(
@@ -2291,12 +2724,8 @@ describe('FoodDeliveryView', () => {
     )
 
     const checkForUpdate = wrapper.get(`[data-testid="food-delivery-trigger-event-${order.id}"]`)
-    const confirmDelivery = wrapper.get(
-      `[data-testid="food-delivery-mark-delivered-${order.id}"]`,
-    )
-    const removeFromHistory = wrapper.get(
-      `[data-testid="food-delivery-delete-order-${order.id}"]`,
-    )
+    const confirmDelivery = wrapper.get(`[data-testid="food-delivery-mark-delivered-${order.id}"]`)
+    const removeFromHistory = wrapper.get(`[data-testid="food-delivery-delete-order-${order.id}"]`)
     for (const control of [checkForUpdate, confirmDelivery, removeFromHistory]) {
       expect(control.classes()).toContain('min-h-11')
       expect(control.classes()).toContain('focus-visible:ring-2')
@@ -2311,9 +2740,9 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-event-feedback"]').text()).toMatch(
       /Delivery updates are unavailable right now\.|配送更新当前不可用。/,
     )
-    expect(wrapper.get('[data-testid="food-delivery-event-feedback"]').attributes('aria-live')).toBe(
-      'polite',
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-event-feedback"]').attributes('aria-live'),
+    ).toBe('polite')
 
     wrapper.unmount()
   })
@@ -2425,7 +2854,9 @@ describe('FoodDeliveryView', () => {
     ).toBeDefined()
     expect(
       wrapper.get(`[data-testid="food-delivery-transfer-wallet-${order.id}"]`).classes(),
-    ).toEqual(expect.arrayContaining(['min-h-11', 'focus-visible:ring-2', 'motion-reduce:transition-none']))
+    ).toEqual(
+      expect.arrayContaining(['min-h-11', 'focus-visible:ring-2', 'motion-reduce:transition-none']),
+    )
     await wrapper.get(`[data-testid="food-delivery-transfer-wallet-${order.id}"]`).trigger('click')
     await flushPromises()
     expect(walletStore.transactionCount).toBe(1)

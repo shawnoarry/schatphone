@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-07-26
+Updated: 2026-07-28
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -53,6 +53,7 @@ Food Platform now has a consumer-facing discovery homepage.
 The first Food Delivery shop is Moon Bistro.
 
 - Moon Bistro is opened by restaurant context and renders as a shop-first mini app.
+- Its product position is modern fine dining. The dark and candlelit palette is an atmosphere choice, not a late-night or night-snack category claim.
 - The platform hero and platform list chrome are hidden in shop mode.
 - The shop owns the first screen: shop header, dark tray menu, dish cards, item details, and cart.
 - Dish cards use the dark tray treatment: food imagery is embedded as a raised circular image over each card.
@@ -85,6 +86,28 @@ The second built-in shop app is Peach Cloud.
 - Fresh saves receive the shop and menu through normal seeds. Existing local saves receive missing Peach Cloud records plus missing built-in menu IDs; legacy built-in titles are refreshed only when they still equal the old seed title, so user-renamed items remain untouched. Explicit backup restore remains snapshot-faithful and does not inject the seed migration.
 - Peach Cloud now uses one milkshake promotion PNG, one SVG brand mark, five SVG category icons, and twelve product PNGs under `public/images/ui-assets/apps/food-delivery/peach-cloud/`. The existing PNG photography remains unchanged in the palette round; the brand SVG uses Petal Rouge and the category SVGs use Jet Black so they remain legible on selected pink surfaces. Image failures still show the shared high-contrast diagnostic placeholder and retain exact `data-required-asset` paths.
 - Peach Cloud's existing product PNG set remains wired, but visual review still identifies duplicate-image and product-title mismatch risk. That is a future image-identity review, not permission to change menu truth or combine Peach imagery with the pending Food Platform order-art pack.
+
+The third built-in shop app is Dash Grill.
+
+- Dash Grill is an original McDonald's-like quick-service category concept without copied names, arches, mascots, uniforms, packaging, or other brand assets.
+- Its stable restaurant identity is `food_seed_dash_grill`; its default template is `quick_service_chain`.
+- The first screen uses a tomato-red, mustard-yellow, paper, and ink system with a large promotion hero, delivery-address disclosure, service metrics, horizontal quick picks, a deal block, and a two-column popular-product grid. It is structurally different from Moon Bistro and Peach Cloud.
+- The fixed footer opens real `shopView=menu|deals|bag|orders|order` pages. It does not append generic shop panels beneath Home.
+- Ten menu records cover featured combos, burgers, chicken, sides, drinks, and treats. Product detail, quantity, safe cross-shop replacement, checkout confirmation, and order creation continue through the Food Delivery-owned runtime.
+- Fresh saves receive the normal seed. Existing saves receive only missing Dash Grill restaurant/menu IDs, preserving same-ID user edits; explicit backup restore still skips seed-content migration.
+- The one cover and ten product image paths under `dash-grill/` intentionally resolve to the shared diagnostic placeholder until their PNG pack is delivered. `data-required-asset` keeps each missing slot identifiable in the rendered UI.
+
+The fourth built-in shop app is Jade Hearth.
+
+- Jade Hearth is an original Chinese shared-table concept. It is not assigned to, or claimed as a reproduction of, any Figma reference that has not been read through exact-node design context.
+- Its stable restaurant identity is `food_seed_jade_hearth`; its default template is `jade_table_menu`.
+- The visual system uses rice-paper neutrals, ink green, cinnabar accents, ruled dividers, and an editorial menu-book rhythm. The full-width hero, shared/solo selector, feast collections, and restrained bottom navigation deliberately avoid Moon Bistro's tray cards, Peach Cloud's dessert grid, and Dash Grill's chain promotion layout.
+- The footer opens real `shopView=menu|feast|bag|orders|order` pages. Home remains a browse surface instead of growing generic cart and order panels beneath itself.
+- Twelve dishes cover house-table signatures, small plates, wok favorites, claypot, rice/noodles, and tea/sweets. Product detail, selected quantity, safe cross-shop replacement, checkout confirmation, order creation, and order progress continue through the Food Delivery-owned runtime.
+- Jade Hearth's order list receives the complete shop-scoped history, and Chat order links resolve directly to its dedicated `shopView=order&shopOrderId=...` detail. That page presents persisted delivery events, check-update and confirm-delivery actions, plus the existing explicit Wallet-record adapter without moving order or ledger ownership into the facade.
+- Fresh saves receive the normal seed. Existing saves receive only missing Jade Hearth restaurant/menu IDs and preserve same-ID user edits; explicit backup restore still skips seed-content migration.
+- Seed migration reserves capacity for current built-in menu IDs in addition to the 360 user-menu limit, so adding Jade Hearth cannot evict older user-created dishes. Explicit backup restore remains a faithful snapshot and does not silently add seeds.
+- One cover and twelve product image paths under `jade-hearth/` intentionally resolve to the shared diagnostic placeholder until their PNG pack is delivered. Each rendered image retains its exact `data-required-asset` path.
 
 ## Important Ownership Boundaries
 
@@ -134,9 +157,11 @@ Two failed ImageGen drafts were never imported into the product asset library or
 
 Vistack is only a validated candidate for a semi-automatic asset workbench. It is not currently configured or approved as project tooling, does not create a second roadmap, and does not make downloaded output a formal asset. A controlled future trial may prepare a bounded asset list, generate items one at a time, download them into a temporary intake area, apply human selection and the normal quality gate, and wire accepted files in a separate reviewed slice.
 
-Moon Bistro and Peach Cloud now establish two intentionally different shop-template directions. Do not normalize them into one visual system; the next shop-template pass should begin only from a named shop identity and its own content needs.
+Moon Bistro, Peach Cloud, Dash Grill, and Jade Hearth now establish four intentionally different shop-template directions. Do not normalize them into one visual system; each new shop-template pass must begin from a named shop identity and its own content needs.
 
-Recommended direction: late-night bistro with a dark tray menu.
+The remaining approved framework queue is light food, Korean fried chicken, Southeast Asian food, and Korean soup. The user also accepts an additional pizza app; the Chinese-food slot is now represented by Jade Hearth. Four Figma references are reserved for later evaluation: minimalist light food `IU2qDGgi9weqgHcDO0niWV` node `1:73`, general food ordering `YCNJqicXdksq2gdaKqINQc` node `0:1`, coffee `JJi7C0USRtDL3QKVFcaMnh` node `2:2`, and pizza `M3EEtlpk26gLRtDifyGCcV` node `0:1`. The current Figma Starter tool quota blocked complete context retrieval with `You've reached the Figma MCP tool call limit on the Starter plan.` No uninspected reference is assigned to a shop or claimed as implemented; retry exact-node `get_design_context` after quota reset.
+
+Moon Bistro polish direction: modern fine dining with a dark tray menu. Preserve its candlelit atmosphere without presenting it as a late-night restaurant.
 
 Work in this order:
 

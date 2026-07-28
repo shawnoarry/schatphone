@@ -7,6 +7,37 @@ import {
   useFoodDeliveryStore,
 } from '../src/stores/foodDelivery'
 
+const FOOD_DELIVERY_STORAGE_KEY = 'schatphone:store:food-delivery'
+
+const persistLegacyFoodDeliveryState = ({ restaurants = [], menuItems = [] } = {}) => {
+  localStorage.setItem(
+    FOOD_DELIVERY_STORAGE_KEY,
+    JSON.stringify({
+      version: 1,
+      savedAt: Date.now(),
+      data: {
+        restaurants,
+        menuItems,
+        cartItems: [],
+        orders: [],
+      },
+    }),
+  )
+}
+
+const createCapacityMenuItems = (count) =>
+  Array.from({ length: count }, (_, index) => ({
+    id: `food_menu_user_capacity_${String(index).padStart(3, '0')}`,
+    restaurantId: 'food_user_capacity_shop',
+    title: `User Capacity Dish ${index + 1}`,
+    category: 'restaurants',
+    menuSection: 'user_menu',
+    price: '18.00',
+    desc: `User-authored menu record ${index + 1}.`,
+    createdAt: index + 1,
+    updatedAt: index + 1,
+  }))
+
 describe('food delivery store', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -55,6 +86,384 @@ describe('food delivery store', () => {
     expect(store.findMenuItemById('food_menu_peach_golden_hour_set')?.image.url).toContain(
       '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-12.png',
     )
+  })
+
+  test('seeds Dash Grill with ten items across six quick-service menu sections', () => {
+    const store = useFoodDeliveryStore()
+    const dashGrill = store.findRestaurantById('food_seed_dash_grill')
+    const dashGrillMenu = store.listMenuByRestaurant('food_seed_dash_grill')
+
+    expect(dashGrill).toMatchObject({
+      name: 'Dash Grill',
+      category: 'fast_food',
+    })
+    expect(dashGrillMenu).toHaveLength(10)
+    expect(new Set(dashGrillMenu.map((item) => item.menuSection))).toEqual(
+      new Set(['featured', 'burgers', 'chicken', 'sides', 'drinks', 'treats']),
+    )
+  })
+
+  test('seeds Jade Hearth with twelve items across six Chinese table sections', () => {
+    const store = useFoodDeliveryStore()
+    const jadeHearth = store.findRestaurantById('food_seed_jade_hearth')
+    const jadeMenu = store.listMenuByRestaurant('food_seed_jade_hearth')
+
+    expect(jadeHearth).toMatchObject({
+      name: 'Jade Hearth',
+      category: 'restaurants',
+      rating: 4.9,
+    })
+    expect(jadeHearth?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/jade-hearth/cover/jade-hearth-cover-01.png',
+    )
+    expect(jadeMenu).toHaveLength(12)
+    expect(new Set(jadeMenu.map((item) => item.menuSection))).toEqual(
+      new Set([
+        'house_table',
+        'small_plates',
+        'wok_favorites',
+        'claypot',
+        'rice_noodles',
+        'tea_sweets',
+      ]),
+    )
+    expect(store.findMenuItemById('food_menu_jade_sesame_tangyuan')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/jade-hearth/products/jade-hearth-item-12.png',
+    )
+  })
+
+  test('adds a missing Dash Grill shop and menu to older saves without removing saved records', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_saved_corner_cafe',
+          name: 'Saved Corner Cafe',
+          category: 'cafe',
+          cuisine: 'User saved brunch',
+          deliveryFee: '2.50',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_saved_toast',
+          restaurantId: 'food_saved_corner_cafe',
+          title: 'Saved Toast',
+          category: 'cafe',
+          menuSection: 'breakfast',
+          price: '22.00',
+          desc: 'A record that predates Dash Grill.',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findRestaurantById('food_saved_corner_cafe')).toMatchObject({
+      name: 'Saved Corner Cafe',
+      cuisine: 'User saved brunch',
+      deliveryFee: '2.50',
+    })
+    expect(store.findMenuItemById('food_menu_saved_toast')).toMatchObject({
+      title: 'Saved Toast',
+      menuSection: 'breakfast',
+      desc: 'A record that predates Dash Grill.',
+    })
+    expect(store.findRestaurantById('food_seed_dash_grill')).toMatchObject({
+      name: 'Dash Grill',
+      category: 'fast_food',
+    })
+    expect(store.listMenuByRestaurant('food_seed_dash_grill')).toHaveLength(10)
+    expect(store.findRestaurantById('food_seed_jade_hearth')).toMatchObject({
+      name: 'Jade Hearth',
+      category: 'restaurants',
+    })
+    expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
+  })
+
+  test('preserves a full saved user menu while adding required built-in seed menus', () => {
+    const savedMenuItems = createCapacityMenuItems(360)
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_user_capacity_shop',
+          name: 'User Capacity Shop',
+          category: 'restaurants',
+        },
+        {
+          id: 'food_seed_moon_bistro',
+          name: 'Moon Bistro',
+          category: 'restaurants',
+          cuisine: 'Modern fine dining',
+        },
+      ],
+      menuItems: savedMenuItems,
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+    const migratedMenuIds = new Set(store.menuItems.map((item) => item.id))
+
+    expect(savedMenuItems.every((item) => migratedMenuIds.has(item.id))).toBe(true)
+    expect(store.listMenuByRestaurant('food_seed_moon_bistro')).toHaveLength(9)
+    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(12)
+    expect(store.listMenuByRestaurant('food_seed_dash_grill')).toHaveLength(10)
+    expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
+    expect(store.menuItemCount).toBe(403)
+
+    const migratedSnapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(migratedSnapshot)).toBe(true)
+    expect(new Set(store.menuItems.map((item) => item.id))).toEqual(migratedMenuIds)
+  })
+
+  test('keeps explicit backup restore seed-free and bounded to the user menu limit', () => {
+    const store = useFoodDeliveryStore()
+    const backupMenuItems = createCapacityMenuItems(370)
+
+    expect(
+      store.restoreFromBackup({
+        foodDelivery: {
+          restaurants: [
+            {
+              id: 'food_user_capacity_shop',
+              name: 'User Capacity Shop',
+              category: 'restaurants',
+            },
+          ],
+          menuItems: backupMenuItems,
+          cartItems: [],
+          orders: [],
+        },
+      }),
+    ).toBe(true)
+
+    expect(store.menuItemCount).toBe(360)
+    expect(store.findMenuItemById('food_menu_user_capacity_000')).toBeNull()
+    expect(store.findMenuItemById('food_menu_user_capacity_369')).toMatchObject({
+      title: 'User Capacity Dish 370',
+      desc: 'User-authored menu record 370.',
+    })
+    expect(store.findRestaurantById('food_seed_peach_cloud')).toBeNull()
+    expect(store.findRestaurantById('food_seed_dash_grill')).toBeNull()
+    expect(store.findRestaurantById('food_seed_jade_hearth')).toBeNull()
+  })
+
+  test('preserves same-id Dash Grill edits while filling the rest of its seeded menu', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_dash_grill',
+          name: 'Dash Grill Test Kitchen',
+          category: 'restaurants',
+          cuisine: 'A user-authored tasting menu',
+          rating: 4.2,
+          deliveryFee: '9.90',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_dash_double_stack',
+          restaurantId: 'food_seed_dash_grill',
+          title: 'My Double Stack',
+          category: 'restaurants',
+          menuSection: 'members_only',
+          price: '88.00',
+          desc: 'A user-edited burger description.',
+          ingredients: 'custom patty, custom sauce',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+    const dashGrillMenu = store.listMenuByRestaurant('food_seed_dash_grill')
+
+    expect(store.findRestaurantById('food_seed_dash_grill')).toMatchObject({
+      name: 'Dash Grill Test Kitchen',
+      category: 'restaurants',
+      cuisine: 'A user-authored tasting menu',
+      rating: 4.2,
+      deliveryFee: '9.90',
+    })
+    expect(store.findMenuItemById('food_menu_dash_double_stack')).toMatchObject({
+      title: 'My Double Stack',
+      category: 'restaurants',
+      menuSection: 'members_only',
+      price: '88.00',
+      desc: 'A user-edited burger description.',
+      ingredients: 'custom patty, custom sauce',
+    })
+    expect(dashGrillMenu).toHaveLength(10)
+    expect(dashGrillMenu.map((item) => item.id)).toEqual(
+      expect.arrayContaining([
+        'food_menu_dash_double_stack',
+        'food_menu_dash_golden_chicken_stack',
+        'food_menu_dash_choco_sundae',
+      ]),
+    )
+  })
+
+  test('preserves same-id Jade Hearth edits while filling the rest of its seeded menu', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_jade_hearth',
+          name: 'My Family Table',
+          category: 'restaurants',
+          cuisine: 'A user-authored regional menu',
+          rating: 4.3,
+          deliveryFee: '8.80',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_jade_tea_smoked_chicken',
+          restaurantId: 'food_seed_jade_hearth',
+          title: 'My Tea Chicken',
+          category: 'restaurants',
+          menuSection: 'family_recipe',
+          price: '108.00',
+          desc: 'A user-edited family recipe.',
+          ingredients: 'custom tea, custom spice',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+    const jadeMenu = store.listMenuByRestaurant('food_seed_jade_hearth')
+
+    expect(store.findRestaurantById('food_seed_jade_hearth')).toMatchObject({
+      name: 'My Family Table',
+      cuisine: 'A user-authored regional menu',
+      rating: 4.3,
+      deliveryFee: '8.80',
+    })
+    expect(store.findMenuItemById('food_menu_jade_tea_smoked_chicken')).toMatchObject({
+      title: 'My Tea Chicken',
+      menuSection: 'family_recipe',
+      price: '108.00',
+      desc: 'A user-edited family recipe.',
+      ingredients: 'custom tea, custom spice',
+    })
+    expect(jadeMenu).toHaveLength(12)
+    expect(jadeMenu.map((item) => item.id)).toEqual(
+      expect.arrayContaining([
+        'food_menu_jade_tea_smoked_chicken',
+        'food_menu_jade_mushroom_claypot',
+        'food_menu_jade_sesame_tangyuan',
+      ]),
+    )
+  })
+
+  test('refreshes unchanged Moon Bistro late-night seed copy for fine dining', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_moon_bistro',
+          name: 'Moon Bistro',
+          category: 'restaurants',
+          cuisine: 'Fusion dinner',
+          deliveryFee: '6.00',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_moon_rice',
+          restaurantId: 'food_seed_moon_bistro',
+          title: 'Lunar Rice Set',
+          category: 'restaurants',
+          price: '58.00',
+          desc: 'Grilled slices, warm rice, and crisp pickles for a quiet late-night dinner.',
+        },
+        {
+          id: 'food_menu_moon_soup',
+          restaurantId: 'food_seed_moon_bistro',
+          title: 'Signal Soup',
+          category: 'restaurants',
+          price: '26.00',
+          desc: 'Creamy mushroom soup with thyme and black pepper, made for slow evenings.',
+        },
+        {
+          id: 'food_menu_moon_night_tagliatelle',
+          restaurantId: 'food_seed_moon_bistro',
+          title: 'Night Tagliatelle',
+          category: 'restaurants',
+          price: '52.00',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findRestaurantById('food_seed_moon_bistro')?.cuisine).toBe('Modern fine dining')
+    expect(store.findMenuItemById('food_menu_moon_rice')?.desc).toBe(
+      'Grilled slices, warm rice, and crisp pickles, composed as a balanced signature set.',
+    )
+    expect(store.findMenuItemById('food_menu_moon_soup')?.desc).toBe(
+      'Creamy mushroom soup with thyme and black pepper, finished with cultured cream.',
+    )
+    expect(store.findMenuItemById('food_menu_moon_night_tagliatelle')?.title).toBe(
+      'Truffle Tagliatelle',
+    )
+  })
+
+  test('keeps user-authored Moon Bistro positioning and menu copy during seed migration', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_moon_bistro',
+          name: 'Moon Bistro',
+          category: 'restaurants',
+          cuisine: 'Chef tasting room',
+          deliveryFee: '6.00',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_moon_rice',
+          restaurantId: 'food_seed_moon_bistro',
+          title: 'Lunar Rice Set',
+          category: 'restaurants',
+          menuSection: 'private_menu',
+          price: '68.00',
+          desc: 'A user-authored rice course.',
+          ingredients: 'custom rice, seasonal garnish',
+        },
+        {
+          id: 'food_menu_moon_night_tagliatelle',
+          restaurantId: 'food_seed_moon_bistro',
+          title: 'Family Tagliatelle',
+          category: 'restaurants',
+          menuSection: 'house_pasta',
+          price: '62.00',
+          desc: 'A user-authored pasta course.',
+          ingredients: 'fresh pasta, family sauce',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findRestaurantById('food_seed_moon_bistro')?.cuisine).toBe('Chef tasting room')
+    expect(store.findMenuItemById('food_menu_moon_rice')).toMatchObject({
+      title: 'Lunar Rice Set',
+      menuSection: 'private_menu',
+      price: '68.00',
+      desc: 'A user-authored rice course.',
+      ingredients: 'custom rice, seasonal garnish',
+    })
+    expect(store.findMenuItemById('food_menu_moon_night_tagliatelle')).toMatchObject({
+      title: 'Family Tagliatelle',
+      menuSection: 'house_pasta',
+      price: '62.00',
+      desc: 'A user-authored pasta course.',
+      ingredients: 'fresh pasta, family sauce',
+    })
+    expect(store.listMenuByRestaurant('food_seed_moon_bistro').length).toBeGreaterThanOrEqual(8)
   })
 
   test('upserts restaurant and menu records with image metadata', () => {

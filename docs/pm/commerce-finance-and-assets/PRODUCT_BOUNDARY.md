@@ -57,6 +57,8 @@ Food Delivery owns:
 
 Within the Food Delivery pseudo-folder, Food Platform and shop mini apps are peer user-facing entries. Food Platform may provide discovery, filters, creation handoff, and a Food Platform-scoped cart/order flow for merchants that exist only inside the platform. Independent shop mini apps should present their own cart, checkout confirmation, order status, delivery events, and Wallet expense suggestions; Food Platform must not aggregate those peer shop-app orders.
 
+Built-in independent-shop facades currently include Moon Bistro `food_seed_moon_bistro` / `dark_tray_menu`, Peach Cloud `food_seed_peach_cloud` / `dessert_window`, Dash Grill `food_seed_dash_grill` / `quick_service_chain`, and Jade Hearth `food_seed_jade_hearth` / `jade_table_menu`. Their page composition and route-driven in-app views may differ by brand. Jade Hearth currently owns presentation for `shopView=menu|feast|bag|orders|order`, but those views remain facades over Food Delivery-owned restaurant, menu, cart, checkout, order, and event records rather than separate runtime owners.
+
 Food Delivery does not own:
 
 - Wallet ledger truth

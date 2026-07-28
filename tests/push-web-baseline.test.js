@@ -1,8 +1,9 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import {
   buildPushNotificationPayload,
   cancelScheduledPushNotification,
   checkPushServerHealth,
+  ensurePushServiceWorkerRegistration,
   normalizePushPermission,
   normalizePushServerUrl,
   schedulePushNotification,
@@ -21,6 +22,49 @@ describe('push web baseline helpers', () => {
     expect(normalizePushPermission('denied')).toBe('denied')
     expect(normalizePushPermission('unsupported')).toBe('unsupported')
     expect(normalizePushPermission('other')).toBe('default')
+  })
+
+  test('checks the service worker script without reusing the HTTP cache', async () => {
+    const secureContextDescriptor = Object.getOwnPropertyDescriptor(window, 'isSecureContext')
+    const pushManagerDescriptor = Object.getOwnPropertyDescriptor(window, 'PushManager')
+    const serviceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker')
+    const notificationDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'Notification')
+    const registration = {}
+    const register = vi.fn().mockResolvedValue(registration)
+
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true })
+    Object.defineProperty(window, 'PushManager', {
+      configurable: true,
+      value: class PushManager {},
+    })
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: {
+        ready: Promise.resolve(registration),
+        register,
+      },
+    })
+    Object.defineProperty(globalThis, 'Notification', {
+      configurable: true,
+      value: { permission: 'default' },
+    })
+
+    try {
+      await expect(ensurePushServiceWorkerRegistration()).resolves.toBe(registration)
+      expect(register).toHaveBeenCalledWith(expect.stringContaining('service-worker.js'), {
+        scope: expect.any(String),
+        updateViaCache: 'none',
+      })
+    } finally {
+      const restore = (target, key, descriptor) => {
+        if (descriptor) Object.defineProperty(target, key, descriptor)
+        else delete target[key]
+      }
+      restore(window, 'isSecureContext', secureContextDescriptor)
+      restore(window, 'PushManager', pushManagerDescriptor)
+      restore(navigator, 'serviceWorker', serviceWorkerDescriptor)
+      restore(globalThis, 'Notification', notificationDescriptor)
+    }
   })
 
   test('builds stable push payload with minimal external fallback by default', () => {

@@ -29,11 +29,14 @@ export const SHOP_ENTRY_BINDING_TARGET_OPTIONS = Object.freeze([
     labelZh: '购物',
     labelEn: 'Shopping',
     ownerZh: 'Shopping 拥有商品、购物车、结账、购物订单、物流线索和服务号通知。',
-    ownerEn: 'Shopping owns products, cart, checkout, shopping orders, logistics links, and service notifications.',
+    ownerEn:
+      'Shopping owns products, cart, checkout, shopping orders, logistics links, and service notifications.',
   },
 ])
 
-const SHOP_ENTRY_BINDING_TARGET_SET = new Set(SHOP_ENTRY_BINDING_TARGET_OPTIONS.map((option) => option.id))
+const SHOP_ENTRY_BINDING_TARGET_SET = new Set(
+  SHOP_ENTRY_BINDING_TARGET_OPTIONS.map((option) => option.id),
+)
 
 export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   {
@@ -47,8 +50,22 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
     id: 'dark_tray_menu',
     labelZh: '深色托盘菜单',
     labelEn: 'Dark tray menu',
-    descZh: '适合夜间餐厅、酒馆、深色质感小店。',
-    descEn: 'For night restaurants, bistros, and dark premium shops.',
+    descZh: '适合主厨餐厅、现代高端餐饮与深色质感店铺。',
+    descEn: 'For chef-led restaurants, modern fine dining, and dark premium shops.',
+  },
+  {
+    id: 'quick_service_chain',
+    labelZh: '连锁快餐',
+    labelEn: 'Quick-service chain',
+    descZh: '适合汉堡、炸鸡、套餐与高频优惠型快餐店。',
+    descEn: 'For burgers, chicken, combo meals, and promotion-led quick service.',
+  },
+  {
+    id: 'jade_table_menu',
+    labelZh: '中式桌宴',
+    labelEn: 'Chinese table menu',
+    descZh: '适合中式单点、合菜、茶点与家庭桌宴。',
+    descEn: 'For Chinese a la carte dishes, shared tables, tea, and family feasts.',
   },
   {
     id: 'cafe_counter',
@@ -117,7 +134,10 @@ export const normalizeShopEntryTemplateId = (value) => {
 
 export const resolveShopEntryTemplateOption = (value) => {
   const templateId = normalizeShopEntryTemplateId(value)
-  return SHOP_ENTRY_TEMPLATE_OPTIONS.find((option) => option.id === templateId) || SHOP_ENTRY_TEMPLATE_OPTIONS[0]
+  return (
+    SHOP_ENTRY_TEMPLATE_OPTIONS.find((option) => option.id === templateId) ||
+    SHOP_ENTRY_TEMPLATE_OPTIONS[0]
+  )
 }
 
 export const normalizeShopEntryBindingTarget = (value, fallback = '') => {
@@ -174,7 +194,9 @@ export const normalizeEntryPresentationOverride = (value = {}, fallback = {}, op
   const displayName = normalizeAppDisplayName(value.displayName)
   const icon = normalizeText(value.icon, '', 80)
   const accent = normalizeText(value.accent, '', 30)
-  const shortDescription = normalizeEntryShortDescription(value.shortDescription || value.description)
+  const shortDescription = normalizeEntryShortDescription(
+    value.shortDescription || value.description,
+  )
   const tags = normalizeEntryTags(value.tags)
   const hasTemplateId = Object.prototype.hasOwnProperty.call(value, 'templateId')
   const templateId = hasTemplateId ? normalizeShopEntryTemplateId(value.templateId) : ''
@@ -228,10 +250,14 @@ export const normalizeEntryPresentationOverrides = (input = {}) => {
   return Object.entries(input).reduce((acc, [rawId, rawOverride]) => {
     const id = normalizeEntryOverrideId(rawId)
     if (!id) return acc
-    const normalized = normalizeEntryPresentationOverride(rawOverride, {}, {
-      allowBindingTarget: id.startsWith('shop_app_'),
-      bindingTargetFallback: inferShopEntryBindingTargetFromId(id),
-    })
+    const normalized = normalizeEntryPresentationOverride(
+      rawOverride,
+      {},
+      {
+        allowBindingTarget: id.startsWith('shop_app_'),
+        bindingTargetFallback: inferShopEntryBindingTargetFromId(id),
+      },
+    )
     if (normalized) acc[id] = normalized
     return acc
   }, {})
@@ -241,10 +267,15 @@ export const resolveEntryPresentationMeta = (entry = {}, overrides = {}) => {
   const normalizedOverrides = normalizeEntryPresentationOverrides(overrides)
   const normalizedEntryId = normalizeEntryOverrideId(entry.id)
   const override = normalizedOverrides[normalizedEntryId] || null
-  const isShopEntry = entry.shopAppEntry || entry.entryKind === 'shop_app' || normalizedEntryId.startsWith('shop_app_')
+  const isShopEntry =
+    entry.shopAppEntry ||
+    entry.entryKind === 'shop_app' ||
+    normalizedEntryId.startsWith('shop_app_')
   const fallbackBindingTarget = isShopEntry
     ? normalizeShopEntryBindingTarget(
-        entry.bindingTarget || entry.sourceModule || inferShopEntryBindingTargetFromId(normalizedEntryId),
+        entry.bindingTarget ||
+          entry.sourceModule ||
+          inferShopEntryBindingTargetFromId(normalizedEntryId),
         SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
       )
     : ''

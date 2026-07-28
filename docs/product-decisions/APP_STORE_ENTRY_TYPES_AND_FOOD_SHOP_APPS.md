@@ -1,6 +1,6 @@
 # App Store Entry Types And Food Shop Apps
 
-Updated: 2026-06-02
+Updated: 2026-07-28
 
 This note defines how App Store, Home pseudo-folders, World Pack app entries, and reusable shop mini-app entries should relate to each other.
 
@@ -174,9 +174,9 @@ Recommended first screen:
 Initial shop templates can include:
 
 1. `dark_tray_menu`
-   - Inspired by dark POS food menu layouts.
+   - Dark editorial tray composition for modern fine dining.
    - Food photos sit in a raised or embedded tray/card composition.
-   - Best for late-night food, ramen, barbecue, cyber-style restaurants.
+   - The palette may be candlelit without implying late-night service or a night-snack category.
 2. `cafe_counter`
    - Light drink-focused layout with menu groups and gentle product imagery.
 3. `dessert_window`
@@ -185,6 +185,10 @@ Initial shop templates can include:
    - Shelf/grid layout for grocery and convenience-store delivery.
 5. `street_food_stall`
    - Warmer, denser, quick-order layout for snacks and local food stalls.
+6. `quick_service_chain`
+   - Promotion-led home, fast category scanning, deals, bag, and shop-scoped order pages for an original quick-service brand.
+7. `jade_table_menu`
+   - Rice-paper editorial menu, shared/solo table choices, feast collections, and shop-scoped order pages for a Chinese shared-table brand.
 
 Templates are visual and UX presets. They must not create separate order systems.
 
@@ -212,6 +216,7 @@ Current implementation status:
 - App Store now manages installed/not-installed placement for folder mini apps. Removing a mini app from its target folder hides it from the Food Delivery or Shopping folder list, but does not delete the restaurant, service preset, menu/product data, cart/order truth, or direct source-owned route.
 - Home pseudo-folders now read the same installed/not-installed placement. Food Delivery's folder first layer is the fixed Food platform entry plus installed restaurant shop mini apps; category entries such as nearby, fast food, cafe, dessert, and grocery stay inside Food Delivery as filters/tags, not folder-level apps. Shopping uses the same reusable folder mini-app builder for its installed shop entries.
 - Food Delivery shop entries opened with restaurant context now render shop-first: platform hero/list chrome is hidden, the shop owns the first screen, the cart becomes the ordering anchor, and Map/order/Wallet support panels are folded behind an order-and-delivery section.
+- Four built-in Food Delivery shop facades now demonstrate distinct template directions without splitting runtime ownership: Moon Bistro `dark_tray_menu`, Peach Cloud `dessert_window`, Dash Grill `quick_service_chain`, and Jade Hearth `jade_table_menu`.
 - Template selection is a visual/UX preset only. It can change the shop surface treatment, but it must not create a separate cart, checkout, order lifecycle, Wallet handoff, Map route, or Chat service channel.
 - Shop entries are not treated as independent apps in V1/V2: App Store does not place them on Home and does not edit their runtime state, menus, carts, orders, or service notifications.
 - App Store detail panels show entry type, original category, open target, runtime identity, phone-facing display name, default name, and ownership boundary copy.
