@@ -132,6 +132,28 @@ describe('food delivery store', () => {
     )
   })
 
+  test('seeds Verdant Day with twelve items across five light-food menu sections', () => {
+    const store = useFoodDeliveryStore()
+    const verdantDay = store.findRestaurantById('food_seed_verdant_day')
+    const verdantMenu = store.listMenuByRestaurant('food_seed_verdant_day')
+
+    expect(verdantDay).toMatchObject({
+      name: 'Verdant Day',
+      category: 'restaurants',
+      rating: 4.8,
+    })
+    expect(verdantDay?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/verdant-day/cover/verdant-day-cover-01.png',
+    )
+    expect(verdantMenu).toHaveLength(12)
+    expect(new Set(verdantMenu.map((item) => item.menuSection))).toEqual(
+      new Set(['salads', 'warm_bowls', 'wraps_toasts', 'drinks', 'small_sweets']),
+    )
+    expect(store.findMenuItemById('food_menu_verdant_citrus_loaf')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/verdant-day/products/verdant-day-item-12.png',
+    )
+  })
+
   test('adds a missing Dash Grill shop and menu to older saves without removing saved records', () => {
     persistLegacyFoodDeliveryState({
       restaurants: [
@@ -179,6 +201,11 @@ describe('food delivery store', () => {
       category: 'restaurants',
     })
     expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
+    expect(store.findRestaurantById('food_seed_verdant_day')).toMatchObject({
+      name: 'Verdant Day',
+      category: 'restaurants',
+    })
+    expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
   })
 
   test('preserves a full saved user menu while adding required built-in seed menus', () => {
@@ -209,7 +236,8 @@ describe('food delivery store', () => {
     expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(12)
     expect(store.listMenuByRestaurant('food_seed_dash_grill')).toHaveLength(10)
     expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
-    expect(store.menuItemCount).toBe(403)
+    expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
+    expect(store.menuItemCount).toBe(415)
 
     const migratedSnapshot = store.createBackupSnapshot()
     store.resetForTesting()
@@ -247,6 +275,7 @@ describe('food delivery store', () => {
     expect(store.findRestaurantById('food_seed_peach_cloud')).toBeNull()
     expect(store.findRestaurantById('food_seed_dash_grill')).toBeNull()
     expect(store.findRestaurantById('food_seed_jade_hearth')).toBeNull()
+    expect(store.findRestaurantById('food_seed_verdant_day')).toBeNull()
   })
 
   test('preserves same-id Dash Grill edits while filling the rest of its seeded menu', () => {
@@ -354,6 +383,162 @@ describe('food delivery store', () => {
         'food_menu_jade_mushroom_claypot',
         'food_menu_jade_sesame_tangyuan',
       ]),
+    )
+  })
+
+  test('preserves same-id Verdant Day edits while filling the rest of its seeded menu', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_verdant_day',
+          name: 'Verdant Test Kitchen',
+          category: 'cafe',
+          cuisine: 'A user-authored light menu',
+          rating: 4.4,
+          deliveryFee: '7.20',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_verdant_aegean_garden',
+          restaurantId: 'food_seed_verdant_day',
+          title: 'My Garden Plate',
+          category: 'cafe',
+          menuSection: 'daily_special',
+          price: '66.00',
+          desc: 'A user-edited garden plate.',
+          ingredients: 'custom greens, custom dressing',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+    const verdantMenu = store.listMenuByRestaurant('food_seed_verdant_day')
+
+    expect(store.findRestaurantById('food_seed_verdant_day')).toMatchObject({
+      name: 'Verdant Test Kitchen',
+      category: 'cafe',
+      cuisine: 'A user-authored light menu',
+      rating: 4.4,
+      deliveryFee: '7.20',
+    })
+    expect(store.findMenuItemById('food_menu_verdant_aegean_garden')).toMatchObject({
+      title: 'My Garden Plate',
+      category: 'cafe',
+      menuSection: 'daily_special',
+      price: '66.00',
+      desc: 'A user-edited garden plate.',
+      ingredients: 'custom greens, custom dressing',
+    })
+    expect(verdantMenu).toHaveLength(12)
+    expect(verdantMenu.map((item) => item.id)).toEqual(
+      expect.arrayContaining([
+        'food_menu_verdant_aegean_garden',
+        'food_menu_verdant_golden_grain',
+        'food_menu_verdant_citrus_loaf',
+      ]),
+    )
+  })
+
+  test('migrates legacy Verdant Day built-in image paths to the configured app base', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_verdant_day',
+          name: 'Verdant Day',
+          category: 'restaurants',
+          imageSourceType: 'url',
+          imageUrl:
+            '/images/ui-assets/apps/food-delivery/verdant-day/cover/verdant-day-cover-01.png',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_verdant_aegean_garden',
+          restaurantId: 'food_seed_verdant_day',
+          title: 'Aegean Garden Salad',
+          category: 'restaurants',
+          menuSection: 'salads',
+          price: '34.00',
+          imageSourceType: 'url',
+          imageUrl: `${window.location.origin}/images/ui-assets/apps/food-delivery/verdant-day/products/verdant-day-item-01.png`,
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findRestaurantById('food_seed_verdant_day')?.image.url).toBe(
+      '/schatphone/images/ui-assets/apps/food-delivery/verdant-day/cover/verdant-day-cover-01.png',
+    )
+    expect(store.findMenuItemById('food_menu_verdant_aegean_garden')?.image.url).toBe(
+      '/schatphone/images/ui-assets/apps/food-delivery/verdant-day/products/verdant-day-item-01.png',
+    )
+  })
+
+  test('preserves user-selected images while applying Verdant Day seed migrations', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_verdant_day',
+          name: 'Verdant Day',
+          category: 'restaurants',
+          imageSourceType: 'url',
+          imageUrl: 'https://example.com/my-verdant-cover.png',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_verdant_aegean_garden',
+          restaurantId: 'food_seed_verdant_day',
+          title: 'Aegean Garden Salad',
+          category: 'restaurants',
+          menuSection: 'salads',
+          price: '34.00',
+          imageSourceType: 'url',
+          imageUrl: 'https://example.com/my-garden-salad.png',
+        },
+        {
+          id: 'food_menu_verdant_golden_grain',
+          restaurantId: 'food_seed_verdant_day',
+          title: 'Golden Grain Bowl',
+          category: 'restaurants',
+          menuSection: 'warm_bowls',
+          price: '42.00',
+          imageSourceType: 'gallery',
+          imageGalleryAssetId: 'gallery_custom_golden_grain',
+        },
+        {
+          id: 'food_menu_verdant_avocado_herb_fold',
+          restaurantId: 'food_seed_verdant_day',
+          title: 'Avocado Herb Fold',
+          category: 'restaurants',
+          menuSection: 'wraps_toasts',
+          price: '32.00',
+          imageSourceType: 'url',
+          imageUrl:
+            '/images/ui-assets/apps/food-delivery/verdant-day/products/custom-edited-wrap.png',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findRestaurantById('food_seed_verdant_day')?.image.url).toBe(
+      'https://example.com/my-verdant-cover.png',
+    )
+    expect(store.findMenuItemById('food_menu_verdant_aegean_garden')?.image.url).toBe(
+      'https://example.com/my-garden-salad.png',
+    )
+    expect(store.findMenuItemById('food_menu_verdant_golden_grain')?.image).toMatchObject({
+      sourceType: 'gallery',
+      galleryAssetId: 'gallery_custom_golden_grain',
+    })
+    expect(store.findMenuItemById('food_menu_verdant_avocado_herb_fold')?.image.url).toBe(
+      '/images/ui-assets/apps/food-delivery/verdant-day/products/custom-edited-wrap.png',
     )
   })
 

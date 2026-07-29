@@ -68,6 +68,13 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
     descEn: 'For Chinese a la carte dishes, shared tables, tea, and family feasts.',
   },
   {
+    id: 'minimal_light_food',
+    labelZh: '极简轻食',
+    labelEn: 'Minimal light food',
+    descZh: '适合沙拉、谷物碗、卷饼与轻盈日常餐。',
+    descEn: 'For salads, grain bowls, wraps, and quiet everyday meals.',
+  },
+  {
     id: 'cafe_counter',
     labelZh: '咖啡柜台',
     labelEn: 'Cafe counter',

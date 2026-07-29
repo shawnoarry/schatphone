@@ -69,13 +69,13 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 
 ## 3. Measured Engineering Baseline
 
-Verified on 2026-07-10:
+Measured on 2026-07-29:
 
-- 30 route views;
-- 16 Pinia stores;
-- 36 components;
-- 36 composables;
-- 133 JavaScript files and 67 Vue files under `src`;
+- 38 route views;
+- 17 Pinia stores;
+- 41 components;
+- 37 composables;
+- 151 JavaScript files and 80 Vue files under `src`;
 - zero TypeScript source files;
 - about 104k source lines;
 - 182 unit-test files / 1129 tests;

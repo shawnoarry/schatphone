@@ -10,6 +10,7 @@ import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
 } from '../lib/planned-module-registry'
+import { resolveFoodDeliveryAssetUrl } from '../lib/food-shop-presentation'
 import {
   anonymizeRelationshipText,
   bindingMatchesProfile,
@@ -31,6 +32,7 @@ const MOON_BISTRO_SEED_RESTAURANT_ID = 'food_seed_moon_bistro'
 const PEACH_CLOUD_SEED_RESTAURANT_ID = 'food_seed_peach_cloud'
 const DASH_GRILL_SEED_RESTAURANT_ID = 'food_seed_dash_grill'
 const JADE_HEARTH_SEED_RESTAURANT_ID = 'food_seed_jade_hearth'
+const VERDANT_DAY_SEED_RESTAURANT_ID = 'food_seed_verdant_day'
 
 export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
   PLACED: 'placed',
@@ -511,8 +513,20 @@ const buildFoodDeliveryEventSummary = (order = {}, event = {}) => {
   return `Food Delivery updated ${foodOrderTitle(order)}.`
 }
 
+const FOOD_DELIVERY_UI_ASSET_ROOT = 'images/ui-assets/apps/food-delivery/'
 const foodDeliveryUiAsset = (path) =>
-  `${import.meta.env.BASE_URL || '/'}images/ui-assets/apps/food-delivery/${path}`
+  `${import.meta.env.BASE_URL || '/'}${FOOD_DELIVERY_UI_ASSET_ROOT}${path}`
+
+const migrateLegacySeedImage = (existingRecord, seedRecord) => {
+  const existingImage = existingRecord?.image
+  const seedImage = seedRecord?.image
+  if (existingImage?.sourceType !== 'url' || seedImage?.sourceType !== 'url') return false
+  const migratedUrl = resolveFoodDeliveryAssetUrl(existingImage.url)
+  if (migratedUrl === existingImage.url || migratedUrl !== seedImage.url) return false
+
+  existingRecord.image = { ...existingImage, url: seedImage.url }
+  return true
+}
 
 const FOOD_SEED_IMAGE_URLS = Object.freeze({
   moonBistro: foodDeliveryUiAsset('moon-bistro/cover/moon-bistro-cover-02.png'),
@@ -525,6 +539,7 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   peachCloud: foodDeliveryUiAsset('peach-cloud/cover/peach-cloud-hero-01.png'),
   dashGrill: foodDeliveryUiAsset('dash-grill/cover/dash-grill-cover-01.png'),
   jadeHearth: foodDeliveryUiAsset('jade-hearth/cover/jade-hearth-cover-01.png'),
+  verdantDay: foodDeliveryUiAsset('verdant-day/cover/verdant-day-cover-01.png'),
   dashGrillProduct: (index) =>
     foodDeliveryUiAsset(
       `dash-grill/products/dash-grill-item-${String(index).padStart(2, '0')}.png`,
@@ -532,6 +547,10 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   jadeHearthProduct: (index) =>
     foodDeliveryUiAsset(
       `jade-hearth/products/jade-hearth-item-${String(index).padStart(2, '0')}.png`,
+    ),
+  verdantDayProduct: (index) =>
+    foodDeliveryUiAsset(
+      `verdant-day/products/verdant-day-item-${String(index).padStart(2, '0')}.png`,
     ),
   peachCloudProduct: (index) =>
     foodDeliveryUiAsset(
@@ -750,6 +769,23 @@ const createSeedRestaurants = () =>
       sourceModule: 'seed',
       createdAt: Date.now() - 16 * 60 * 1000,
       updatedAt: Date.now() - 16 * 60 * 1000,
+    },
+    {
+      id: VERDANT_DAY_SEED_RESTAURANT_ID,
+      name: 'Verdant Day',
+      category: 'restaurants',
+      cuisine: 'Salads, grain bowls, wraps, and bright sips',
+      rating: 4.8,
+      deliveryEtaMinutes: 22,
+      deliveryFee: '3.50',
+      distanceKm: 1.2,
+      address: 'Willow Walk 9',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.verdantDay,
+      imageAlt: 'Verdant Day fresh salad and grain bowl table',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 17 * 60 * 1000,
+      updatedAt: Date.now() - 17 * 60 * 1000,
     },
   ])
 
@@ -1489,6 +1525,198 @@ const createSeedMenuItems = () =>
         createdAt: Date.now() - 2 * 60 * 1000,
         updatedAt: Date.now() - 2 * 60 * 1000,
       },
+      {
+        id: 'food_menu_verdant_aegean_garden',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Aegean Garden Salad',
+        category: 'restaurants',
+        menuSection: 'salads',
+        price: '34.00',
+        desc: 'Crisp leaves, cucumber, tomato, feta, olives, and lemon oregano dressing.',
+        ingredients: 'romaine, cucumber, tomato, feta, olives, red onion, lemon oregano dressing',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(1),
+        imageAlt: 'Aegean Garden Salad',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_greenhouse_caesar',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Greenhouse Caesar',
+        category: 'restaurants',
+        menuSection: 'salads',
+        price: '38.00',
+        desc: 'Charred chicken, baby romaine, sourdough crunch, and a light caper dressing.',
+        ingredients: 'chicken, baby romaine, sourdough, parmesan, caper yogurt dressing',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(2),
+        imageAlt: 'Greenhouse Caesar salad',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_miso_crunch',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Miso Sesame Crunch',
+        category: 'restaurants',
+        menuSection: 'salads',
+        price: '36.00',
+        desc: 'Cabbage, edamame, carrot ribbons, avocado, and toasted sesame miso.',
+        ingredients: 'cabbage, edamame, carrot, avocado, sesame, white miso dressing',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(3),
+        imageAlt: 'Miso Sesame Crunch salad',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_golden_grain',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Golden Grain Bowl',
+        category: 'restaurants',
+        menuSection: 'warm_bowls',
+        price: '42.00',
+        desc: 'Warm quinoa, roasted squash, chickpeas, greens, and turmeric tahini.',
+        ingredients: 'quinoa, squash, chickpeas, kale, pumpkin seed, turmeric tahini',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(4),
+        imageAlt: 'Golden Grain Bowl',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_charred_corn_chicken',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Charred Corn Chicken Bowl',
+        category: 'restaurants',
+        menuSection: 'warm_bowls',
+        price: '46.00',
+        desc: 'Pepper chicken, charred corn, brown rice, black beans, and lime crema.',
+        ingredients: 'chicken, corn, brown rice, black bean, tomato salsa, lime crema',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(5),
+        imageAlt: 'Charred Corn Chicken Bowl',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_forest_farro',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Forest Mushroom Farro',
+        category: 'restaurants',
+        menuSection: 'warm_bowls',
+        price: '44.00',
+        desc: 'Roasted mushrooms, farro, spinach, soft egg, and rosemary walnut pesto.',
+        ingredients: 'farro, mushrooms, spinach, egg, walnut, rosemary pesto',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(6),
+        imageAlt: 'Forest Mushroom Farro bowl',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_avocado_herb_fold',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Avocado Herb Fold',
+        category: 'restaurants',
+        menuSection: 'wraps_toasts',
+        price: '32.00',
+        desc: 'Avocado, cucumber, sprouts, feta, herbs, and green tahini in a soft flatbread.',
+        ingredients: 'flatbread, avocado, cucumber, sprouts, feta, herbs, green tahini',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(7),
+        imageAlt: 'Avocado Herb Fold wrap',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_lemon_chicken_wrap',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Lemon Pepper Chicken Wrap',
+        category: 'restaurants',
+        menuSection: 'wraps_toasts',
+        price: '37.00',
+        desc: 'Lemon chicken, crunchy lettuce, tomato, pickled onion, and pepper yogurt.',
+        ingredients: 'flatbread, chicken, lettuce, tomato, pickled onion, pepper yogurt',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(8),
+        imageAlt: 'Lemon Pepper Chicken Wrap',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_ricotta_fig_toast',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Ricotta Fig Toast',
+        category: 'restaurants',
+        menuSection: 'wraps_toasts',
+        price: '29.00',
+        desc: 'Whipped ricotta, fresh fig, arugula, toasted seeds, and thyme honey.',
+        ingredients: 'sourdough, ricotta, fig, arugula, seed mix, thyme honey',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(9),
+        imageAlt: 'Ricotta Fig Toast',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_cucumber_mint',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Cucumber Mint Cooler',
+        category: 'restaurants',
+        menuSection: 'drinks',
+        price: '16.00',
+        desc: 'Cold cucumber, mint, lime, and sparkling water with no added syrup.',
+        ingredients: 'cucumber, mint, lime, sparkling water',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(10),
+        imageAlt: 'Cucumber Mint Cooler',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_berry_kefir',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Berry Kefir Sip',
+        category: 'restaurants',
+        menuSection: 'drinks',
+        price: '19.00',
+        desc: 'Tart cultured milk blended with strawberry, blueberry, and a touch of honey.',
+        ingredients: 'kefir, strawberry, blueberry, honey',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(11),
+        imageAlt: 'Berry Kefir Sip',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
+      {
+        id: 'food_menu_verdant_citrus_loaf',
+        restaurantId: VERDANT_DAY_SEED_RESTAURANT_ID,
+        title: 'Olive Oil Citrus Loaf',
+        category: 'restaurants',
+        menuSection: 'small_sweets',
+        price: '21.00',
+        desc: 'A small orange and olive-oil loaf with yogurt glaze and pistachio dust.',
+        ingredients: 'orange, olive oil, yogurt, pistachio, flour, egg',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.verdantDayProduct(12),
+        imageAlt: 'Olive Oil Citrus Loaf',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 60 * 1000,
+        updatedAt: Date.now() - 60 * 1000,
+      },
     ],
     new Set([
       'food_seed_moon_bistro',
@@ -1498,10 +1726,14 @@ const createSeedMenuItems = () =>
       PEACH_CLOUD_SEED_RESTAURANT_ID,
       DASH_GRILL_SEED_RESTAURANT_ID,
       JADE_HEARTH_SEED_RESTAURANT_ID,
+      VERDANT_DAY_SEED_RESTAURANT_ID,
     ]),
   )
 
 const BUILT_IN_SEED_MENU_ITEMS = createSeedMenuItems()
+const BUILT_IN_SEED_RESTAURANTS_BY_ID = new Map(
+  createSeedRestaurants().map((restaurant) => [restaurant.id, restaurant]),
+)
 const MOON_BISTRO_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
   (item) => item.restaurantId === MOON_BISTRO_SEED_RESTAURANT_ID,
 )
@@ -1522,6 +1754,12 @@ const JADE_HEARTH_REQUIRED_RESTAURANT = createSeedRestaurants().find(
 )
 const JADE_HEARTH_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
   (item) => item.restaurantId === JADE_HEARTH_SEED_RESTAURANT_ID,
+)
+const VERDANT_DAY_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === VERDANT_DAY_SEED_RESTAURANT_ID,
+)
+const VERDANT_DAY_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
+  (item) => item.restaurantId === VERDANT_DAY_SEED_RESTAURANT_ID,
 )
 // Built-in seeds keep a catalog-sized reserve instead of consuming the user's 360 menu slots.
 const BUILT_IN_SEED_MENU_ITEM_IDS = new Set(BUILT_IN_SEED_MENU_ITEMS.map((item) => item.id))
@@ -2127,6 +2365,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       ])
       changed = true
     }
+    if (
+      VERDANT_DAY_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === VERDANT_DAY_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...VERDANT_DAY_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
 
     const moonBistro = restaurants.value.find(
       (restaurant) => restaurant.id === MOON_BISTRO_SEED_RESTAURANT_ID,
@@ -2136,6 +2384,12 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       changed = true
     }
 
+    restaurants.value.forEach((restaurant) => {
+      if (migrateLegacySeedImage(restaurant, BUILT_IN_SEED_RESTAURANTS_BY_ID.get(restaurant.id))) {
+        changed = true
+      }
+    })
+
     const restaurantIds = new Set(restaurants.value.map((restaurant) => restaurant.id))
     const nextMenuItems = menuItems.value.map((item) => ({ ...item }))
     const existingById = new Map(nextMenuItems.map((item) => [item.id, item]))
@@ -2144,6 +2398,9 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       ...(restaurantIds.has(PEACH_CLOUD_SEED_RESTAURANT_ID) ? PEACH_CLOUD_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(DASH_GRILL_SEED_RESTAURANT_ID) ? DASH_GRILL_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(JADE_HEARTH_SEED_RESTAURANT_ID) ? JADE_HEARTH_REQUIRED_MENU_ITEMS : []),
+      ...(restaurantIds.has(VERDANT_DAY_SEED_RESTAURANT_ID)
+        ? VERDANT_DAY_REQUIRED_MENU_ITEMS
+        : []),
     ]
 
     requiredMenuItems.forEach((seedItem) => {
@@ -2154,6 +2411,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         changed = true
         return
       }
+      if (migrateLegacySeedImage(existing, seedItem)) changed = true
       if (!existing.menuSection || existing.menuSection === 'signature') {
         existing.menuSection = seedItem.menuSection
         changed = true

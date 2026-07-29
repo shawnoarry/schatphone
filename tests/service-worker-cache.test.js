@@ -87,6 +87,29 @@ describe('service worker cache policy', () => {
     expect(caches.match).toHaveBeenCalledTimes(1)
   })
 
+  test('refreshes app images from the network before using the offline cache', async () => {
+    const { cache, caches, fetch, listeners } = createServiceWorkerHarness()
+    let responsePromise
+
+    listeners.fetch({
+      request: {
+        destination: 'image',
+        method: 'GET',
+        mode: 'no-cors',
+        url: 'http://localhost/schatphone/images/ui-assets/apps/food-delivery/verdant-day/item.png',
+      },
+      respondWith: (promise) => {
+        responsePromise = promise
+      },
+    })
+    await responsePromise
+    await Promise.resolve()
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(caches.match).not.toHaveBeenCalled()
+    expect(cache.put).toHaveBeenCalledTimes(1)
+  })
+
   test('removes prior SchatPhone caches when the worker activates', async () => {
     const { caches, listeners } = createServiceWorkerHarness()
     caches.keys.mockResolvedValue([
@@ -103,7 +126,8 @@ describe('service worker cache policy', () => {
     })
     await activation
 
-    expect(caches.delete).toHaveBeenCalledTimes(1)
+    expect(caches.delete).toHaveBeenCalledTimes(2)
     expect(caches.delete).toHaveBeenCalledWith('schatphone-pwa-v2-runtime')
+    expect(caches.delete).toHaveBeenCalledWith('schatphone-pwa-v3-runtime')
   })
 })

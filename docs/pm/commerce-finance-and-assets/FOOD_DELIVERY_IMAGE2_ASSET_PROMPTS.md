@@ -1,6 +1,6 @@
 # Food Delivery Image2 Asset Prompts / 外卖 Image2 素材提示词
 
-Updated: 2026-07-25
+Updated: 2026-07-29
 
 这份文档用于生成外卖 UI 美化需要的 PNG 素材。所有提示词都做成中英双语，方便直接复制到 image2 / 生图工具中使用。
 
@@ -638,6 +638,51 @@ English: Horizontal commercial food photography for the original virtual Chinese
 English: Square commercial food photography for the original virtual Chinese restaurant Jade Hearth, used in a mobile delivery app. Show only the specified dish in contemporary Chinese ceramic tableware, clearly framed and filling about 76% of the image, with realistic steam, sauce, ingredient fibers, and wok texture, a Rice Paper #F5EFE2 or Warm Paper #E9DECA background, optional Ink Green #1F4D3A tableware and very restrained Cinnabar #BD4B35 accents, warm natural side light, compact soft shadow, safe crop padding, recognizable at a 100px thumbnail, no readable text, no price, no logo, no real-brand packaging, no antique signboard, no excessive festival decoration, no UI card, no people, no watermark, 768x768 PNG.
 ```
 
+## 9. Verdant Day Independent App / Verdant Day 独立轻食 App
+
+Verdant Day 使用 Ink `#1D241F`、Canvas `#F2F4EF`、Soft Green `#E4EADF`、Leaf `#496B4A`、Coral `#E96F64` 和少量 Gold `#D7A932`。品牌 Hero 以主题色、嫩芽吉祥物、品牌字标和 slogan 为核心，产品图则保持明亮、真实、有食欲，并以圆形裁切仍可识别为硬要求。当前全宽 Hero 直接使用带英文品牌字标与 slogan 的批准成图，无文字版本保留为人工修图母版；两张生活方式摄影保留为后续弹窗或店内推广素材。`01` 至 `12` 的完整产品摄影包已按稳定路径交付为 `768x768` PNG。
+
+### Asset Contract / 素材合同
+
+| Stable path                                                    | Subject                                       | Delivery requirement                                                                                                       |
+| -------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `verdant-day/brand/verdant-day-brand-hero-art-01.png`          | Verdant Day brand Hero edit master, delivered | `1792x896`; text-free 2:1 artwork retained for later manual localization or retouching                                     |
+| `verdant-day/brand/verdant-day-brand-hero-preview-02.png`      | Active Verdant Day brand Hero, delivered      | `1792x896`; fixed English wordmark and slogan are part of the approved composition and are not replaced by runtime UI copy |
+| `verdant-day/promotions/verdant-day-promo-meal-spread-01.png`  | Meal-spread lifestyle photography, delivered  | Reserved for an in-app promotion, popup, or future campaign surface                                                        |
+| `verdant-day/promotions/verdant-day-promo-lunch-moment-01.png` | Lunch-moment lifestyle photography, delivered | Reserved for an in-app promotion, popup, or future campaign surface                                                        |
+| `verdant-day/products/verdant-day-item-01.png`                 | Aegean Garden Salad                           | Delivered; `768x768`; cucumber, tomato, feta, olives, lemon-herb dressing                                                  |
+| `verdant-day/products/verdant-day-item-02.png`                 | Greenhouse Caesar                             | Delivered; `768x768`; charred chicken, baby romaine, sourdough crunch, light caper dressing                                |
+| `verdant-day/products/verdant-day-item-03.png`                 | Miso Sesame Crunch                            | Delivered; `768x768`; cabbage, edamame, carrot ribbons, avocado, toasted sesame                                            |
+| `verdant-day/products/verdant-day-item-04.png`                 | Golden Grain Bowl                             | Delivered; `768x768`; quinoa, roasted squash, chickpeas, kale, turmeric tahini                                             |
+| `verdant-day/products/verdant-day-item-05.png`                 | Charred Corn Chicken Bowl                     | Delivered; `768x768`; pepper chicken, corn, brown rice, black beans, lime crema                                            |
+| `verdant-day/products/verdant-day-item-06.png`                 | Forest Mushroom Farro                         | Delivered; `768x768`; roasted mushrooms, farro, spinach, soft egg, walnut pesto                                            |
+| `verdant-day/products/verdant-day-item-07.png`                 | Avocado Herb Fold                             | Delivered; `768x768`; soft flatbread, avocado, cucumber, sprouts, feta, green tahini                                       |
+| `verdant-day/products/verdant-day-item-08.png`                 | Lemon Pepper Chicken Wrap                     | Delivered; `768x768`; sliced wrap with lemon chicken, lettuce, tomato, pickled onion                                       |
+| `verdant-day/products/verdant-day-item-09.png`                 | Ricotta Fig Toast                             | Delivered; `768x768`; sourdough, whipped ricotta, fresh fig, arugula, thyme honey                                          |
+| `verdant-day/products/verdant-day-item-10.png`                 | Cucumber Mint Cooler                          | Delivered; `768x768`; clear sparkling cucumber, mint, and lime drink                                                       |
+| `verdant-day/products/verdant-day-item-11.png`                 | Berry Kefir Sip                               | Delivered; `768x768`; strawberry-blueberry cultured drink in a clear glass                                                 |
+| `verdant-day/products/verdant-day-item-12.png`                 | Olive Oil Citrus Loaf                         | Delivered; `768x768`; small citrus loaf, yogurt glaze, pistachio dust                                                      |
+
+### Legacy Product-Photography Cover Prompt / 旧版产品摄影封面提示词
+
+下列提示词保留为未来商品摄影或弹窗广告参考，不再作为当前顶部品牌 Hero 的生成合同。当前 Hero 使用已交付的 `verdant-day/brand/verdant-day-brand-hero-preview-02.png`；英文品牌字标与 slogan 属于画面构图，不由运行时本地化文案覆盖。无文字 `verdant-day-brand-hero-art-01.png` 保留为后续人工修图底稿。
+
+```text
+中文：原创虚拟轻食品牌 Verdant Day 的方形商业食物摄影，用于手机外卖 App 首页圆形 Hero 裁切。一份清爽沙拉、一份暖谷物碗、切开的香草卷饼和一杯黄瓜薄荷气泡饮围绕画面中心自然排列，真实蔬菜、谷物和蛋白质纹理，灰白 #F2F4EF 桌面，柔和绿 #E4EADF 与叶绿 #496B4A 餐具点缀，少量珊瑚红 #E96F64 食材提色，明亮自然侧光，中心主体在圆形裁切内完整可识别，四周留 12% 安全区，不要可读文字，不要价格，不要 logo，不要人物，不要现实品牌包装，不要 UI，不要水印，1024x1024 PNG。
+
+English: Square commercial food photography for the original virtual light-food brand Verdant Day, used as a circular-cropped mobile app hero. Arrange one fresh salad, one warm grain bowl, a sliced herb wrap, and a cucumber-mint sparkling drink naturally around the center, with realistic vegetable, grain, and protein textures, a grey-white #F2F4EF tabletop, soft-green #E4EADF and leaf-green #496B4A tableware accents, and restrained coral #E96F64 ingredient highlights. Use bright natural side light, keep every main subject readable inside a central circular crop, preserve 12% safe padding, no readable text, no price, no logo, no people, no real-brand packaging, no UI, no watermark, 1024x1024 PNG.
+```
+
+### Product Pack Prompt / 产品图组提示词
+
+每次只生成表格中的一个产品。允许不同餐盘与轻微不同角度，避免十二张图像同一套模板换菜；但保持明亮自然光、灰白或柔和绿背景、真实食物质感、中心安全区和短柔投影，确保圆形缩略图与详情大图都清楚。
+
+```text
+中文：原创虚拟轻食品牌 Verdant Day 的方形商业产品摄影。只展示表格指定的一份餐品或饮品，主体占画面约 74%，真实、新鲜、有食欲，灰白 #F2F4EF 或柔和绿 #E4EADF 背景，叶绿 #496B4A 餐具或布面点缀，允许少量珊瑚红 #E96F64 与金色 #D7A932 食材高光，明亮自然侧光，短柔投影，中心构图适合圆形裁切，边缘保留安全区，不要可读文字，不要价格，不要 logo，不要人物，不要现实品牌包装，不要 UI 卡片，不要水印，768x768 PNG。
+
+English: Square commercial product photography for the original virtual light-food brand Verdant Day. Show only the specified dish or drink, filling about 74% of the frame with realistic fresh appetizing texture, on a grey-white #F2F4EF or soft-green #E4EADF background with leaf-green #496B4A tableware or textile accents and restrained coral #E96F64 and gold #D7A932 ingredient highlights. Use bright natural side light, a compact soft shadow, center-safe composition for circular cropping, and safe edge padding. No readable text, no price, no logo, no people, no real-brand packaging, no UI card, no watermark, 768x768 PNG.
+```
+
 ## Naming Suggestion / 文件命名建议
 
 建议使用稳定文件名，之后接入代码会更清楚：
@@ -691,4 +736,20 @@ jade-hearth-item-09.png
 jade-hearth-item-10.png
 jade-hearth-item-11.png
 jade-hearth-item-12.png
+verdant-day-brand-hero-art-01.png
+verdant-day-brand-hero-preview-02.png
+verdant-day-promo-meal-spread-01.png
+verdant-day-promo-lunch-moment-01.png
+verdant-day-item-01.png
+verdant-day-item-02.png
+verdant-day-item-03.png
+verdant-day-item-04.png
+verdant-day-item-05.png
+verdant-day-item-06.png
+verdant-day-item-07.png
+verdant-day-item-08.png
+verdant-day-item-09.png
+verdant-day-item-10.png
+verdant-day-item-11.png
+verdant-day-item-12.png
 ```

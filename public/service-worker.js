@@ -1,4 +1,4 @@
-const SERVICE_WORKER_VERSION = 'schatphone-pwa-v3'
+const SERVICE_WORKER_VERSION = 'schatphone-pwa-v4'
 const RUNTIME_CACHE = `${SERVICE_WORKER_VERSION}-runtime`
 const DEFAULT_ICON = 'icons/pwa-icon-192.png'
 const FALLBACK_ICON = 'icons/pwa-icon.svg'
@@ -199,6 +199,21 @@ self.addEventListener('fetch', (event) => {
     requestUrl.pathname.endsWith('/manifest.webmanifest')
 
   if (!isStaticAsset) return
+
+  if (request.destination === 'image') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const responseCopy = response.clone()
+            caches.open(RUNTIME_CACHE).then((cache) => cache.put(request, responseCopy))
+          }
+          return response
+        })
+        .catch(() => caches.match(request)),
+    )
+    return
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {

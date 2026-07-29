@@ -5,6 +5,7 @@ import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import FoodDeliveryDashGrillApp from '../components/FoodDeliveryDashGrillApp.vue'
 import FoodDeliveryJadeHearthApp from '../components/FoodDeliveryJadeHearthApp.vue'
+import FoodDeliveryVerdantDayApp from '../components/FoodDeliveryVerdantDayApp.vue'
 import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   buildFoodDeliverySharedMealRelationshipMemoryKey,
@@ -1761,6 +1762,14 @@ const isDarkTrayStore = computed(() => activeStoreTemplate.value === 'dark_tray_
 const isDessertWindowStore = computed(() => activeStoreTemplate.value === 'dessert_window')
 const isQuickServiceStore = computed(() => activeStoreTemplate.value === 'quick_service_chain')
 const isJadeTableStore = computed(() => activeStoreTemplate.value === 'jade_table_menu')
+const isLightFoodStore = computed(() => activeStoreTemplate.value === 'minimal_light_food')
+const isDedicatedStoreApp = computed(
+  () =>
+    isDessertWindowStore.value ||
+    isQuickServiceStore.value ||
+    isJadeTableStore.value ||
+    isLightFoodStore.value,
+)
 const PEACH_CLOUD_PAGE_KEYS = new Set(['search', 'new', 'bag', 'orders', 'order'])
 const peachCloudPageKey = computed(() => {
   if (!isDessertWindowStore.value) return 'home'
@@ -1789,6 +1798,18 @@ const jadeTablePageKey = computed(() => {
   return JADE_TABLE_PAGE_KEYS.has(key) ? key : 'home'
 })
 const jadeTableOrderId = computed(() =>
+  typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
+)
+const LIGHT_FOOD_PAGE_KEYS = new Set(['menu', 'detail', 'bag', 'orders', 'order'])
+const lightFoodPageKey = computed(() => {
+  if (!isLightFoodStore.value) return 'home'
+  const key = typeof route.query.shopView === 'string' ? route.query.shopView.trim() : ''
+  return LIGHT_FOOD_PAGE_KEYS.has(key) ? key : 'home'
+})
+const lightFoodItemId = computed(() =>
+  typeof route.query.shopItemId === 'string' ? route.query.shopItemId.trim() : '',
+)
+const lightFoodOrderId = computed(() =>
   typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
 )
 const peachCloudFeaturedItem = computed(
@@ -1853,6 +1874,7 @@ const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value && isDessertWindowStore.value) return 'bg-[#f2fbe0]'
   if (isStoreMode.value && isQuickServiceStore.value) return 'bg-[#fff9ec]'
   if (isStoreMode.value && isJadeTableStore.value) return 'bg-[#f5efe2]'
+  if (isStoreMode.value && isLightFoodStore.value) return 'bg-[#f2f4ef]'
   if (isStoreMode.value) return 'bg-[#f4fbfb]'
   return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#f4fbfb]'
 })
@@ -1938,6 +1960,12 @@ const activeQuickServiceOrder = computed(
 const activeJadeTableOrder = computed(
   () => scopedFoodOrders.value.find((order) => order.id === jadeTableOrderId.value) || null,
 )
+const activeLightFoodItem = computed(
+  () => activeMenuItems.value.find((item) => item.id === lightFoodItemId.value) || null,
+)
+const activeLightFoodOrder = computed(
+  () => scopedFoodOrders.value.find((order) => order.id === lightFoodOrderId.value) || null,
+)
 const sharedMealContactOptions = computed(() =>
   chatStore.contactsForList.filter((contact) => Number(contact.id) > 0).slice(0, 60),
 )
@@ -2020,6 +2048,7 @@ watch(
       'dessert_window',
       'quick_service_chain',
       'jade_table_menu',
+      'minimal_light_food',
     ].includes(targetTemplate)
     const nextQuery = {
       ...route.query,
@@ -2923,6 +2952,9 @@ const checkoutFoodDelivery = () => {
   if (isJadeTableStore.value) {
     void openJadeTablePage('order', { shopOrderId: order.id })
   }
+  if (isLightFoodStore.value) {
+    void openLightFoodPage('order', { shopOrderId: order.id })
+  }
 }
 
 const markFoodOrderDelivered = (orderId) =>
@@ -3107,6 +3139,29 @@ const openJadeTablePage = async (pageKey = 'home', extraQuery = {}) => {
   await scrollToStoreSurface('food-delivery-store-shell')
 }
 
+const openLightFoodPage = async (pageKey = 'home', extraQuery = {}) => {
+  const nextPageKey = LIGHT_FOOD_PAGE_KEYS.has(pageKey) ? pageKey : 'home'
+  const nextQuery = { ...route.query, ...extraQuery }
+  if (nextPageKey === 'home') delete nextQuery.shopView
+  else nextQuery.shopView = nextPageKey
+  if (nextPageKey !== 'detail') delete nextQuery.shopItemId
+  if (nextPageKey !== 'order') delete nextQuery.shopOrderId
+
+  const routeChanged =
+    lightFoodPageKey.value !== nextPageKey ||
+    String(route.query.shopItemId || '') !== String(nextQuery.shopItemId || '') ||
+    String(route.query.shopOrderId || '') !== String(nextQuery.shopOrderId || '')
+  if (routeChanged) {
+    await router.push({ path: route.path, query: nextQuery })
+  }
+  await scrollToStoreSurface('food-delivery-store-shell')
+}
+
+const openLightFoodItem = async (itemId) => {
+  if (!itemId) return
+  await openLightFoodPage('detail', { shopItemId: itemId })
+}
+
 const openForeignCartShop = async () => {
   const restaurant = foreignCartRestaurant.value
   if (!restaurant?.id) return
@@ -3122,7 +3177,8 @@ const openForeignCartShop = async () => {
   if (
     targetTemplate === 'dessert_window' ||
     targetTemplate === 'quick_service_chain' ||
-    targetTemplate === 'jade_table_menu'
+    targetTemplate === 'jade_table_menu' ||
+    targetTemplate === 'minimal_light_food'
   ) {
     nextQuery.shopView = 'bag'
   } else {
@@ -3130,7 +3186,12 @@ const openForeignCartShop = async () => {
   }
   await router.push({ path: route.path, query: nextQuery })
   await nextTick()
-  if (!isDessertWindowStore.value && !isQuickServiceStore.value && !isJadeTableStore.value) {
+  if (
+    !isDessertWindowStore.value &&
+    !isQuickServiceStore.value &&
+    !isJadeTableStore.value &&
+    !isLightFoodStore.value
+  ) {
     await scrollToStoreSurface('food-delivery-cart-panel')
   }
 }
@@ -3147,6 +3208,10 @@ const browseActiveStoreFromForeignCart = async () => {
   }
   if (isJadeTableStore.value) {
     await openJadeTablePage('menu')
+    return
+  }
+  if (isLightFoodStore.value) {
+    await openLightFoodPage('menu')
     return
   }
   await scrollToStoreSurface('food-delivery-menu-panel')
@@ -3303,10 +3368,8 @@ onBeforeUnmount(() => {
     class="h-screen min-h-screen overflow-x-hidden overflow-y-auto overscroll-contain text-gray-950"
     :class="[
       foodDeliveryShellClass,
-      isDessertWindowStore || isQuickServiceStore || isJadeTableStore ? 'p-0 pb-0' : 'p-4',
-      isStoreMode && !isDessertWindowStore && !isQuickServiceStore && !isJadeTableStore
-        ? 'pb-6'
-        : '',
+      isDedicatedStoreApp ? 'p-0 pb-0' : 'p-4',
+      isStoreMode && !isDedicatedStoreApp ? 'pb-6' : '',
     ]"
     :style="foodDeliveryShellStyle"
     data-testid="food-delivery-view"
@@ -3314,9 +3377,7 @@ onBeforeUnmount(() => {
   >
     <div
       class="mx-auto max-w-md"
-      :class="
-        isDessertWindowStore || isQuickServiceStore || isJadeTableStore ? 'space-y-0' : 'space-y-4'
-      "
+      :class="isDedicatedStoreApp ? 'space-y-0' : 'space-y-4'"
     >
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
@@ -6495,11 +6556,47 @@ onBeforeUnmount(() => {
           'food-delivery-store-peach-cloud': isDessertWindowStore,
           'food-delivery-store-quick-service': isQuickServiceStore,
           'food-delivery-store-jade-table': isJadeTableStore,
+          'food-delivery-store-light-food': isLightFoodStore,
         }"
         data-testid="food-delivery-store-app"
       >
+        <FoodDeliveryVerdantDayApp
+          v-if="activeRestaurant && isLightFoodStore"
+          :restaurant="activeRestaurant"
+          :display-name="activeStoreDisplayName"
+          :short-description="activeStoreShortDescription"
+          :menu-items="activeMenuItems"
+          :active-item="activeLightFoodItem"
+          :cart-lines="activeStoreCartLineItems"
+          :cart-quantity="activeStoreCartQuantity"
+          :cart-total="activeStoreCartPrimaryTotal"
+          :orders="scopedFoodOrders"
+          :active-order="activeLightFoodOrder"
+          :page="lightFoodPageKey"
+          :cart-conflict="hasCartOwnershipConflict"
+          :foreign-cart-name="foreignCartRestaurant?.name || ''"
+          :eta-text="activeStoreEtaText"
+          :fee-text="activeStoreFeeText"
+          :distance-text="activeStoreDistanceText"
+          :delivery-address="
+            activeMapHandoff.deliveryAddress || t('当前配送地址', 'Current delivery address')
+          "
+          :missing-asset-url="platformMissingAssetPlaceholderUrl"
+          @go-home="goHome"
+          @navigate="
+            (pageKey, orderId) =>
+              openLightFoodPage(pageKey, orderId ? { shopOrderId: orderId } : {})
+          "
+          @open-item="openLightFoodItem"
+          @edit-item="openMenuItemDetail"
+          @add-item="addMenuItemToCart"
+          @update-cart="foodDeliveryStore.updateCartQuantity"
+          @checkout="openCheckoutSheet"
+          @open-foreign-cart="openForeignCartShop"
+        />
+
         <FoodDeliveryJadeHearthApp
-          v-if="activeRestaurant && isJadeTableStore"
+          v-else-if="activeRestaurant && isJadeTableStore"
           :restaurant="activeRestaurant"
           :display-name="activeStoreDisplayName"
           :short-description="activeStoreShortDescription"
@@ -7868,9 +7965,7 @@ onBeforeUnmount(() => {
         </article>
 
         <article
-          v-if="
-            activeRestaurant && !isDessertWindowStore && !isQuickServiceStore && !isJadeTableStore
-          "
+          v-if="activeRestaurant && !isDedicatedStoreApp"
           class="relative overflow-hidden rounded-[2rem] shadow-sm"
           :class="
             isDarkTrayStore
@@ -8136,9 +8231,7 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-if="
-            activeRestaurant && !isDessertWindowStore && !isQuickServiceStore && !isJadeTableStore
-          "
+          v-if="activeRestaurant && !isDedicatedStoreApp"
           class="p-4"
           :class="
             isDarkTrayStore
@@ -9320,9 +9413,7 @@ onBeforeUnmount(() => {
       <section
         v-if="
           isStoreMode &&
-          !isDessertWindowStore &&
-          !isQuickServiceStore &&
-          !isJadeTableStore &&
+          !isDedicatedStoreApp &&
           (activeStoreCartLineItems.length > 0 || hasCartOwnershipConflict || checkoutFeedback)
         "
         class="rounded-3xl p-4"
@@ -9530,6 +9621,8 @@ onBeforeUnmount(() => {
                 ? 'border border-black/10 bg-[#fff9ec] text-[#201a17]'
                 : isJadeTableStore
                   ? '!rounded-sm border border-[#cfc2ad] bg-[#f5efe2] text-[#211e19]'
+                  : isLightFoodStore
+                    ? '!rounded-lg border border-[#d8ddd5] bg-[#f2f4ef] text-[#1d241f]'
                   : 'border border-white/[0.08] bg-[#11131b] text-white'
           "
         >
@@ -9544,6 +9637,8 @@ onBeforeUnmount(() => {
                       ? 'text-[#e33d2e]'
                       : isJadeTableStore
                         ? 'text-[#bd4b35]'
+                        : isLightFoodStore
+                          ? 'text-[#496b4a]'
                         : 'text-[#ffb4a8]'
                 "
               >
@@ -9559,6 +9654,8 @@ onBeforeUnmount(() => {
                       ? 'text-black/55'
                       : isJadeTableStore
                         ? 'text-[#746c61]'
+                        : isLightFoodStore
+                          ? 'text-[#6c756e]'
                         : 'text-slate-400'
                 "
               >
@@ -9578,6 +9675,8 @@ onBeforeUnmount(() => {
                     ? 'bg-[#ffc833] text-[#201a17]'
                     : isJadeTableStore
                       ? '!rounded-sm bg-[#1f4d3a] text-white'
+                      : isLightFoodStore
+                        ? '!rounded-lg border border-[#d8ddd5] bg-white text-[#1d241f]'
                       : 'bg-white/[0.08] text-slate-200'
               "
               data-testid="food-delivery-checkout-close"
@@ -9600,6 +9699,8 @@ onBeforeUnmount(() => {
                     ? 'border border-black/10 bg-white'
                     : isJadeTableStore
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
+                      : isLightFoodStore
+                        ? '!rounded-lg border border-[#d8ddd5] bg-white'
                       : 'bg-white/[0.07]'
               "
               :data-testid="`food-delivery-checkout-line-${line.menuItemId}`"
@@ -9615,6 +9716,8 @@ onBeforeUnmount(() => {
                         ? 'text-black/50'
                         : isJadeTableStore
                           ? 'text-[#746c61]'
+                          : isLightFoodStore
+                            ? 'text-[#6c756e]'
                           : 'text-slate-400'
                   "
                 >
@@ -9630,6 +9733,8 @@ onBeforeUnmount(() => {
                       ? 'bg-[#ffc833] text-[#201a17]'
                       : isJadeTableStore
                         ? '!rounded-sm bg-[#e9deca] text-[#211e19]'
+                        : isLightFoodStore
+                          ? '!rounded-lg bg-[#e4eadf] text-[#496b4a]'
                         : 'bg-[#ff806f]/15 text-[#ffb4a8]'
                 "
               >
@@ -9648,6 +9753,8 @@ onBeforeUnmount(() => {
                     ? 'bg-white'
                     : isJadeTableStore
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
+                      : isLightFoodStore
+                        ? '!rounded-lg border border-[#d8ddd5] bg-white'
                       : 'bg-white/[0.06]'
               "
             >
@@ -9658,9 +9765,11 @@ onBeforeUnmount(() => {
                     ? 'text-[var(--peach-cloud-iron)]'
                     : isQuickServiceStore
                       ? 'text-black/50'
-                      : isJadeTableStore
-                        ? 'text-[#746c61]'
-                        : 'text-slate-400'
+                        : isJadeTableStore
+                          ? 'text-[#746c61]'
+                          : isLightFoodStore
+                            ? 'text-[#6c756e]'
+                          : 'text-slate-400'
                 "
               >
                 {{ t('预计送达', 'ETA') }}
@@ -9676,6 +9785,8 @@ onBeforeUnmount(() => {
                     ? 'bg-white'
                     : isJadeTableStore
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
+                      : isLightFoodStore
+                        ? '!rounded-lg border border-[#d8ddd5] bg-white'
                       : 'bg-white/[0.06]'
               "
             >
@@ -9686,9 +9797,11 @@ onBeforeUnmount(() => {
                     ? 'text-[var(--peach-cloud-iron)]'
                     : isQuickServiceStore
                       ? 'text-black/50'
-                      : isJadeTableStore
-                        ? 'text-[#746c61]'
-                        : 'text-slate-400'
+                        : isJadeTableStore
+                          ? 'text-[#746c61]'
+                          : isLightFoodStore
+                            ? 'text-[#6c756e]'
+                          : 'text-slate-400'
                 "
               >
                 {{ t('配送费', 'Fee') }}
@@ -9704,6 +9817,8 @@ onBeforeUnmount(() => {
                     ? 'bg-[#ffc833]'
                     : isJadeTableStore
                       ? '!rounded-sm bg-[#e9deca]'
+                      : isLightFoodStore
+                        ? '!rounded-lg bg-[#e4eadf]'
                       : 'bg-white/[0.06]'
               "
             >
@@ -9714,9 +9829,11 @@ onBeforeUnmount(() => {
                     ? 'text-[var(--peach-cloud-iron)]'
                     : isQuickServiceStore
                       ? 'text-black/50'
-                      : isJadeTableStore
-                        ? 'text-[#746c61]'
-                        : 'text-slate-400'
+                        : isJadeTableStore
+                          ? 'text-[#746c61]'
+                          : isLightFoodStore
+                            ? 'text-[#496b4a]'
+                          : 'text-slate-400'
                 "
               >
                 {{ t('合计', 'Total') }}
@@ -9739,6 +9856,8 @@ onBeforeUnmount(() => {
                     ? 'border border-black/15 bg-white text-[#201a17]'
                     : isJadeTableStore
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55 text-[#211e19]'
+                      : isLightFoodStore
+                        ? '!rounded-lg border border-[#d8ddd5] bg-white text-[#1d241f]'
                       : 'bg-white/[0.08] text-slate-200'
               "
               data-testid="food-delivery-checkout-cancel"
@@ -9756,6 +9875,8 @@ onBeforeUnmount(() => {
                     ? 'bg-[#e33d2e] text-white shadow-[0_14px_34px_rgba(227,61,46,0.26)]'
                     : isJadeTableStore
                       ? '!rounded-sm bg-[#bd4b35] text-white shadow-[0_14px_34px_rgba(189,75,53,0.22)]'
+                      : isLightFoodStore
+                        ? '!rounded-lg bg-[#1d241f] text-white shadow-[0_14px_34px_rgba(29,36,31,0.2)]'
                       : 'bg-[#ff806f] text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]'
               "
               data-testid="food-delivery-checkout-submit"
@@ -9768,12 +9889,7 @@ onBeforeUnmount(() => {
       </section>
 
       <details
-        v-if="
-          hasStoreSupportContent &&
-          !isDessertWindowStore &&
-          !isQuickServiceStore &&
-          !isJadeTableStore
-        "
+        v-if="hasStoreSupportContent && !isDedicatedStoreApp"
         class="food-delivery-support-stack"
         :class="
           isStoreMode

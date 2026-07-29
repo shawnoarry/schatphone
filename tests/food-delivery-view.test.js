@@ -1784,9 +1784,7 @@ describe('FoodDeliveryView', () => {
       etaMinutes: 34,
     })
 
-    await router.push(
-      `/food-delivery?source=chat&intent=food_delivery_order&orderId=${order.id}`,
-    )
+    await router.push(`/food-delivery?source=chat&intent=food_delivery_order&orderId=${order.id}`)
     await router.isReady()
     const wrapper = mount(FoodDeliveryView, {
       global: {
@@ -1807,9 +1805,7 @@ describe('FoodDeliveryView', () => {
     expect(
       wrapper.get(`[data-testid="food-delivery-jade-order-event-${event.id}"]`).text(),
     ).toContain('The rider is taking the covered lane.')
-    expect(
-      walletStore.findTransactionBySource('food_delivery_wallet_expense', order.id),
-    ).toBeNull()
+    expect(walletStore.findTransactionBySource('food_delivery_wallet_expense', order.id)).toBeNull()
 
     await wrapper
       .get(`[data-testid="food-delivery-jade-mark-delivered-${order.id}"]`)
@@ -1901,6 +1897,257 @@ describe('FoodDeliveryView', () => {
     expect(store.cartRestaurant.id).toBe('food_seed_jade_hearth')
     expect(store.cartLineItems).toEqual([
       expect.objectContaining({ menuItemId: jadeItem.id, quantity: 1 }),
+    ])
+    wrapper.unmount()
+  })
+
+  test('resolves Verdant Day as a minimalist light-food app with route-driven detail, bag, and order pages', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_verdant_day&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const verdantItem = store.findMenuItemById('food_menu_verdant_aegean_garden')
+
+    expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('minimal_light_food')
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
+      'food-delivery-store-light-food',
+    )
+    const hero = wrapper.get('[data-testid="food-delivery-light-brand-hero"]')
+    expect(hero.text()).toBe('')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-light-hero-image"]')
+        .attributes('data-required-asset'),
+    ).toBe('verdant-day/brand/verdant-day-brand-hero-preview-02.png')
+    expect(
+      wrapper
+        .findAll('[data-testid="food-delivery-light-featured"] [data-required-asset]')
+        .map((image) => image.attributes('data-required-asset')),
+    ).toEqual([
+      'verdant-day/products/verdant-day-item-01.png',
+      'verdant-day/products/verdant-day-item-04.png',
+      'verdant-day/products/verdant-day-item-07.png',
+    ])
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-light-campaign"] [data-required-asset]')
+        .attributes('data-required-asset'),
+    ).toBe('verdant-day/promotions/verdant-day-promo-lunch-moment-01.png')
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-store-menu-section-salads"]')
+        .attributes('aria-pressed'),
+    ).toBeUndefined()
+    expect(wrapper.find('[data-testid="food-delivery-menu-detail-sheet"]').exists()).toBe(false)
+
+    const addressButton = wrapper.get('[data-testid="food-delivery-light-address"]')
+    expect(addressButton.attributes('aria-expanded')).toBe('false')
+    await addressButton.trigger('click')
+    expect(addressButton.attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('[data-testid="food-delivery-light-address-panel"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="food-delivery-light-campaign-open"]').trigger('click')
+    const promotionDialog = wrapper.get('[data-testid="food-delivery-light-promotion-dialog"]')
+    expect(promotionDialog.text()).toContain('A brighter lunch break.')
+    expect(promotionDialog.get('img').attributes('data-required-asset')).toBe(
+      'verdant-day/promotions/verdant-day-promo-meal-spread-01.png',
+    )
+    await wrapper.get('[data-testid="food-delivery-light-promotion-close"]').trigger('click')
+    expect(wrapper.find('[data-testid="food-delivery-light-promotion-dialog"]').exists()).toBe(
+      false,
+    )
+
+    await wrapper.get('[data-testid="food-delivery-light-nav-menu"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('menu')
+    expect(wrapper.get('[data-testid="food-delivery-light-menu-page"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-store-menu-section-salads"]')
+        .attributes('aria-pressed'),
+    ).toBe('true')
+    const initialMenuItems = wrapper.findAll(
+      '[data-testid^="food-delivery-menu-"][data-menu-section]',
+    )
+    expect(initialMenuItems).toHaveLength(3)
+    initialMenuItems.forEach((item) => {
+      expect(item.attributes('data-menu-section')).toBe('salads')
+    })
+
+    await wrapper.get('[data-testid="food-delivery-light-menu-search"]').setValue('Golden Grain')
+    expect(wrapper.get('[data-testid="food-delivery-menu-group-warm_bowls"]').exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="food-delivery-menu-open-${verdantItem.id}"]`).exists()).toBe(
+      false,
+    )
+    await wrapper.get('[data-testid="food-delivery-light-menu-search"]').setValue('')
+
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${verdantItem.id}"]`).trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      shopView: 'detail',
+      shopItemId: verdantItem.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-light-detail-page"]').text()).toContain(
+      verdantItem.title,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-light-detail-quantity"]').text()).toContain('1')
+
+    await wrapper
+      .get('[data-testid="food-delivery-light-detail-quantity-increase"]')
+      .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-light-detail-add"]').trigger('click')
+    expect(store.cartQuantity).toBe(2)
+
+    await wrapper.get('[data-testid="food-delivery-light-header-bag"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('bag')
+    expect(wrapper.get('[data-testid="food-delivery-light-bag-page"]').text()).toContain(
+      verdantItem.title,
+    )
+
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      'Verdant Day',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"] article').classes()).toContain(
+      'bg-[#f2f4ef]',
+    )
+    await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    const order = store.orders[0]
+    expect(order).toMatchObject({
+      restaurantId: 'food_seed_verdant_day',
+      restaurantName: 'Verdant Day',
+    })
+    expect(order.items).toEqual([
+      expect.objectContaining({ menuItemId: verdantItem.id, quantity: 2 }),
+    ])
+    expect(router.currentRoute.value.query).toMatchObject({
+      shopView: 'order',
+      shopOrderId: order.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-light-order-page"]').text()).toContain(
+      verdantItem.title,
+    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-light-nav-orders"]').attributes('aria-current'),
+    ).toBe('page')
+    wrapper.unmount()
+  })
+
+  test('keeps Verdant Day back navigation inside the shop until its home page', async () => {
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const routeCases = [
+      { page: 'menu', expectedPage: undefined },
+      {
+        page: 'detail',
+        extraQuery: '&shopItemId=food_menu_verdant_aegean_garden',
+        expectedPage: 'menu',
+      },
+      { page: 'bag', expectedPage: undefined },
+      { page: 'orders', expectedPage: undefined },
+      { page: 'order', extraQuery: '&shopOrderId=verdant-order', expectedPage: 'orders' },
+    ]
+
+    for (const { page, extraQuery = '', expectedPage } of routeCases) {
+      const router = createTestRouter()
+      await router.push(
+        `/food-delivery?category=restaurants&restaurantId=food_seed_verdant_day&entry=shop&shopView=${page}${extraQuery}`,
+      )
+      await router.isReady()
+      const wrapper = mount(FoodDeliveryView, {
+        global: { plugins: [router] },
+      })
+
+      const backButton = wrapper.get('[data-testid="food-delivery-store-home"]')
+      expect(backButton.attributes('aria-label')).toBe('Back')
+      await backButton.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.path).toBe('/food-delivery')
+      expect(router.currentRoute.value.query.shopView).toBe(expectedPage)
+      expect(router.currentRoute.value.query.shopItemId).toBeUndefined()
+      expect(router.currentRoute.value.query.shopOrderId).toBeUndefined()
+      wrapper.unmount()
+    }
+
+    const router = createTestRouter()
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_verdant_day&entry=shop&from=home&homePage=1',
+    )
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: { plugins: [router] },
+    })
+
+    const homeButton = wrapper.get('[data-testid="food-delivery-store-home"]')
+    expect(homeButton.attributes('aria-label')).toBe('Return to Home')
+    await homeButton.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/home')
+    expect(router.currentRoute.value.query.homePage).toBe('1')
+    wrapper.unmount()
+  })
+
+  test('protects a foreign shop bag until Verdant Day replacement is confirmed', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    const store = useFoodDeliveryStore()
+    const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
+    const verdantItem = store.findMenuItemById('food_menu_verdant_aegean_garden')
+    store.addToCart(moonItem.id)
+    const moonCartState = JSON.stringify(store.cartItems)
+
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_verdant_day&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get(`[data-testid="food-delivery-add-${verdantItem.id}"]`).trigger('click')
+    const replacementDialog = wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]')
+    expect(replacementDialog.text()).toContain('Moon Bistro')
+    expect(replacementDialog.text()).toContain('Verdant Day')
+    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
+
+    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
+    await flushPromises()
+    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
+
+    await wrapper.get(`[data-testid="food-delivery-add-${verdantItem.id}"]`).trigger('click')
+    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(store.cartRestaurant.id).toBe('food_seed_verdant_day')
+    expect(store.cartLineItems).toEqual([
+      expect.objectContaining({ menuItemId: verdantItem.id, quantity: 1 }),
     ])
     wrapper.unmount()
   })

@@ -19,6 +19,10 @@ export const buildShoppingShopEntryId = (serviceKey = '') =>
 
 const normalizeList = (value = []) => (Array.isArray(value) ? value : [])
 
+const FOOD_SHOP_FOLDER_ENTRY_DEFAULTS = Object.freeze({
+  food_seed_verdant_day: Object.freeze({ icon: 'fas fa-leaf', accent: 'light' }),
+})
+
 const formatFoodShopDescription = (restaurant = {}) => {
   const parts = [
     restaurant.cuisine || restaurant.category || '',
@@ -54,11 +58,12 @@ export const buildFoodDeliveryFolderEntries = ({
     .map((restaurant) => {
       const entryId = buildFoodDeliveryShopEntryId(restaurant?.id || '')
       if (!entryId || !isMiniAppEntryInstalled(normalizedPlacements, entryId)) return null
+      const entryDefaults = FOOD_SHOP_FOLDER_ENTRY_DEFAULTS[restaurant.id] || {}
       const presentation = resolveEntryPresentationMeta(
         {
           id: entryId,
-          icon: 'fas fa-store',
-          accent: 'warm',
+          icon: entryDefaults.icon || 'fas fa-store',
+          accent: entryDefaults.accent || 'warm',
           entryKind: 'shop_app',
           shopAppEntry: true,
           sourceModule: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
@@ -76,8 +81,8 @@ export const buildFoodDeliveryFolderEntries = ({
         en: displayName,
         descZh: shortDescription,
         descEn: shortDescription,
-        icon: presentation.icon || 'fas fa-store',
-        accent: presentation.accent || 'warm',
+        icon: presentation.icon || entryDefaults.icon || 'fas fa-store',
+        accent: presentation.accent || entryDefaults.accent || 'warm',
         route: FOOD_DELIVERY_ROUTE,
         folderQuery: {
           restaurantId: restaurant.id,

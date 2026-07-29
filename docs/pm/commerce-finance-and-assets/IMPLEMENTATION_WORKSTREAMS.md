@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Implementation Workstreams / 消费金融资产实施工作流
 
-Updated: 2026-06-03
+Updated: 2026-07-29
 
 ## 1. Workstream A: Shopping And Logistics
 
@@ -25,6 +25,7 @@ Updated: 2026-06-03
 - App Store can expose Food Delivery restaurants as `food_delivery`-bound folder mini-app facades and control whether they appear in the Food Delivery folder list, but Food Delivery still owns restaurants, menus, cart, checkout, orders, delivery events, browsing filters, favorites/recent lists, and service notifications
 - App Store `Add mini app` can hand off to Food Delivery with `createShop=1`; the real restaurant record is created by Food Delivery's custom restaurant flow
 - Food Platform is a peer mini app inside the Food Delivery pseudo-folder. Merchants that exist only inside Food Platform may use a platform-scoped cart, checkout confirmation, and platform order history. Independent shop mini apps keep their own cart, checkout confirmation, order cards, delivery events, and Wallet suggestions instead of being aggregated into Food Platform.
+- Built-in shop facades may use brand-specific route-driven page composition while sharing Food Delivery runtime ownership. The current five directions are `dark_tray_menu`, `dessert_window`, `quick_service_chain`, `jade_table_menu`, and `minimal_light_food`; the Verdant Day light-food facade owns only presentation for Home, Menu, Detail, Bag, Orders, and Order.
 
 ## 3. Workstream C: Wallet And Downstream Records
 

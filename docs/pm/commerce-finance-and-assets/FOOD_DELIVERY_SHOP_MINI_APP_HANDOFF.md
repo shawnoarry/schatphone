@@ -1,6 +1,6 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-07-28
+Updated: 2026-07-29
 
 This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
 
@@ -109,6 +109,16 @@ The fourth built-in shop app is Jade Hearth.
 - Seed migration reserves capacity for current built-in menu IDs in addition to the 360 user-menu limit, so adding Jade Hearth cannot evict older user-created dishes. Explicit backup restore remains a faithful snapshot and does not silently add seeds.
 - One cover and twelve product image paths under `jade-hearth/` intentionally resolve to the shared diagnostic placeholder until their PNG pack is delivered. Each rendered image retains its exact `data-required-asset` path.
 
+The fifth built-in shop app is Verdant Day.
+
+- Its stable restaurant identity is `food_seed_verdant_day`; its default template is `minimal_light_food`.
+- Verdant Day is a peer entry in the Food Delivery pseudo-folder, not a Food Platform merchant. Its grey-white canvas, full-width brand Hero, circular product-photo treatment, icon-led Home category shortcuts, focused Menu tabs, spacious rows, and low-noise bottom navigation deliberately avoid the other four shops' tray, dessert-grid, chain-promotion, and Chinese menu-book structures.
+- The footer and header open real `shopView=menu|detail|bag|orders|order` pages. Search opens the full menu, product taps open a dedicated image-led detail page, Bag opens a branded quantity and checkout surface, and submitted orders open a dedicated progress page instead of extending Home.
+- Twelve menu records cover salads, warm bowls, wraps/toasts, drinks, and light sweets. Food Delivery still owns item edits, quantities, safe cross-shop replacement, checkout, orders, and delivery-event state.
+- Fresh and existing saves receive only missing stable Verdant Day restaurant/menu IDs. Same-ID user edits are preserved, built-in menu capacity remains reserved beyond the 360 user-menu limit, and explicit backup restore stays snapshot-faithful.
+- The active Hero uses `verdant-day/brand/verdant-day-brand-hero-preview-02.png`; its English wordmark and slogan remain part of the approved artwork instead of being replaced by runtime translations. The text-free `verdant-day-brand-hero-art-01.png` remains the manual-edit master. Home categories are destination shortcuts with no false selected state. Menu removes the overlapping `All` category, defaults to the first real non-empty category, searches across the whole shop with grouped results, and exposes unknown user-authored sections through a conditional `More` fallback. Two generated photography assets live under `verdant-day/promotions/` for the active popup and in-app campaign surfaces. The complete `verdant-day-item-01.png` through `verdant-day-item-12.png` product pack is delivered as full-square `768x768` photography with center-safe circular cropping; the shared diagnostic placeholder remains only as load-failure protection.
+- Exact `get_design_context` was called for Figma file `IU2qDGgi9weqgHcDO0niWV`, node `1:73`, before implementation, but Figma returned `You've reached the Figma MCP tool call limit on the Starter plan.` The user had already approved using the visible canvas as a non-pixel-exact style reference, so the current UI adapts those visible traits without claiming exact-node reproduction.
+
 ## Important Ownership Boundaries
 
 Food Delivery owns:
@@ -157,9 +167,9 @@ Two failed ImageGen drafts were never imported into the product asset library or
 
 Vistack is only a validated candidate for a semi-automatic asset workbench. It is not currently configured or approved as project tooling, does not create a second roadmap, and does not make downloaded output a formal asset. A controlled future trial may prepare a bounded asset list, generate items one at a time, download them into a temporary intake area, apply human selection and the normal quality gate, and wire accepted files in a separate reviewed slice.
 
-Moon Bistro, Peach Cloud, Dash Grill, and Jade Hearth now establish four intentionally different shop-template directions. Do not normalize them into one visual system; each new shop-template pass must begin from a named shop identity and its own content needs.
+Moon Bistro, Peach Cloud, Dash Grill, Jade Hearth, and Verdant Day now establish five intentionally different shop-template directions. Do not normalize them into one visual system; each new shop-template pass must begin from a named shop identity and its own content needs.
 
-The remaining approved framework queue is light food, Korean fried chicken, Southeast Asian food, and Korean soup. The user also accepts an additional pizza app; the Chinese-food slot is now represented by Jade Hearth. Four Figma references are reserved for later evaluation: minimalist light food `IU2qDGgi9weqgHcDO0niWV` node `1:73`, general food ordering `YCNJqicXdksq2gdaKqINQc` node `0:1`, coffee `JJi7C0USRtDL3QKVFcaMnh` node `2:2`, and pizza `M3EEtlpk26gLRtDifyGCcV` node `0:1`. The current Figma Starter tool quota blocked complete context retrieval with `You've reached the Figma MCP tool call limit on the Starter plan.` No uninspected reference is assigned to a shop or claimed as implemented; retry exact-node `get_design_context` after quota reset.
+The remaining approved framework queue is Korean fried chicken, Southeast Asian food, and Korean soup. The user also accepts an additional pizza app; the Chinese-food slot is represented by Jade Hearth and the light-food slot by Verdant Day. The general food ordering `YCNJqicXdksq2gdaKqINQc` node `0:1`, coffee `JJi7C0USRtDL3QKVFcaMnh` node `2:2`, and pizza `M3EEtlpk26gLRtDifyGCcV` node `0:1` references remain reserved for later evaluation. The minimalist light-food reference `IU2qDGgi9weqgHcDO0niWV` node `1:73` informed Verdant Day only through its visible canvas because the required exact-node context call hit the current Figma Starter quota. Retry `get_design_context` after quota reset before claiming closer node-level fidelity.
 
 Moon Bistro polish direction: modern fine dining with a dark tray menu. Preserve its candlelit atmosphere without presenting it as a late-night restaurant.
 

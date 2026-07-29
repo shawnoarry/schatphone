@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-22
+Updated: 2026-07-29
 
 This is the only live execution board for implementation order.
 
@@ -349,6 +349,7 @@ Delivery stages:
 3. `P1 Core personal-life vertical slice` - `IN_PROGRESS`
    - `DONE 2026-07-22`: prove one explicit custom role -> Chat journey without changing the valid zero-Book/zero-encyclopedia/zero-Pack boundary; Contacts starts the explicit action, Chat owns idempotent binding/conversation execution, and Chat Directory remains the management surface;
    - focused Playwright proves create/select -> Start Chat -> missing-provider recovery -> first manual reply -> return to the same Contacts profile in desktop and simulated Pixel 5 Chromium, while an explicit empty custom-role fixture leaves seeded fresh-storage roles unchanged;
+   - `DONE 2026-07-29`: Verdant Day is the fifth independent Food Delivery shop app, with a route-driven Home/Menu/Detail/Bag/Orders/Order UI, complete twelve-photo product pack, corrected hierarchical back navigation, and focused desktop/mobile Playwright coverage; this shop-app milestone does not complete the remaining ordinary Food Delivery/Shopping cross-module life-consequence proof;
    - still TODO: prove one ordinary Food Delivery or Shopping action through its existing Wallet, Calendar, Chat service-notification, and relationship-memory consequences;
    - curate the default Home release surface so partial utilities do not appear equally mature; hiding or demoting an entry changes discoverability and requires a focused product review.
 4. `P1 Hosted product proof` - `TODO`
