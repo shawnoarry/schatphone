@@ -55,6 +55,7 @@ These routes should feel like apps when opened as full-screen destinations.
 | Contacts icon / Dock Contacts | `/contacts` | Installed App: Contacts / Role Archive | Contacts and role-profile archive. It may feel native-utility-like, but should not become Settings. |
 | Book icon / App Store open action | `/book` | Installed App: Book | Text-library workspace for reusable worldbook and knowledge-source documents. |
 | Gallery icon / Dock Gallery | `/gallery` | Installed App: Gallery | Photo/asset hub app. |
+| Camera icon / App Store Camera | `/camera`, `/camera/tasks`, `/camera/settings/**` | Installed App: Camera | AI camera and its app-owned provider/model workflow. Configuration uses push-navigation subpages instead of becoming a Settings form. |
 | Map icon | `/map` | Installed App: Map | Simulation/travel/exploration app. |
 | Calendar icon | `/calendar` | Installed App: Calendar | Schedule/reminder app. |
 | Phone icon | `/phone` | Installed App: Phone | Phone app placeholder/MVP. |
@@ -121,6 +122,18 @@ Gallery owns the full asset hub. Embedded thumbnails elsewhere do not automatica
 | Contacts -> asset/folder binding | Role asset binding panel | Host-App Embedded: Contacts | Gallery assets/folders | Contacts owns the editor. |
 | Map -> map visual thumbnail picker | Map visual setting panel | Host-App Embedded: Map | Gallery assets | Map owns the visual setting; thumbnails can look gallery-like. |
 | System Appearance -> wallpaper/gallery asset use | Appearance controls | Native System | Gallery assets | Appearance owns system customization frame. |
+| Camera -> person reference picker | Camera reference sheet | Host-App Embedded: Camera | Gallery `reference` assets | Camera owns the compact picker container; opening the full Gallery route changes ownership to Gallery. |
+
+## 6A. Camera-Owned Surfaces
+
+Camera is an installed app even when it manages shared image-generation configuration. Its main screen stays capture-first, while configuration appears through Camera-owned push-navigation pages.
+
+| User Path | Surface / Data | Visual Owner | Data Sources | Styling Guidance |
+| --- | --- | --- | --- | --- |
+| Home/App Store -> Camera | `/camera` capture surface | Installed App: Camera | Shared Image Generation Module, bounded candidates, Gallery references | Use the restrained dark camera identity. Keep provider forms, diagnostics, and long parameter lists off this screen. |
+| Camera -> reference picker | Embedded bottom sheet | Host-App Embedded: Camera | Gallery reference assets | Use Camera sheet mechanics and compact thumbnails; do not reproduce the full Gallery app. |
+| Camera -> Camera Settings | `/camera/settings/**` | Installed App: Camera | Public provider profiles, device-local credentials, defaults, routing, diagnostics | Use app-owned native push navigation. This does not make the destination a second system Settings registry. |
+| Camera candidate -> Keep in Gallery | Explicit retention action | Camera until commit; Gallery owns retained asset afterward | Temporary candidate, Gallery asset metadata/binary | Keep, Download, and Discard must remain visibly distinct. Keeping does not automatically make an image a person reference or enroll it in backup. |
 
 ## 7. Map-Owned Surfaces
 

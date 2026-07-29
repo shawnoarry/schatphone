@@ -16,6 +16,14 @@ const ChatMeView = () => import('../views/ChatMeView.vue')
 const ChatAppearanceView = () => import('../views/ChatAppearanceView.vue')
 const ContactsView = () => import('../views/ContactsView.vue')
 const GalleryView = () => import('../views/GalleryView.vue')
+const CameraView = () => import('../views/CameraView.vue')
+const CameraTasksView = () => import('../views/CameraTasksView.vue')
+const CameraSettingsView = () => import('../views/CameraSettingsView.vue')
+const CameraProvidersView = () => import('../views/CameraProvidersView.vue')
+const CameraProviderView = () => import('../views/CameraProviderView.vue')
+const CameraDefaultsView = () => import('../views/CameraDefaultsView.vue')
+const CameraRoutingView = () => import('../views/CameraRoutingView.vue')
+const CameraDiagnosticsView = () => import('../views/CameraDiagnosticsView.vue')
 const PhoneView = () => import('../views/PhoneView.vue')
 const MapView = () => import('../views/MapView.vue')
 const CalendarView = () => import('../views/CalendarView.vue')
@@ -56,6 +64,14 @@ const router = createRouter({
     { path: '/chat/:id', component: ChatView },
     { path: '/contacts', component: ContactsView },
     { path: '/gallery', component: GalleryView },
+    { path: '/camera', component: CameraView },
+    { path: '/camera/tasks', component: CameraTasksView },
+    { path: '/camera/settings', component: CameraSettingsView },
+    { path: '/camera/settings/providers', component: CameraProvidersView },
+    { path: '/camera/settings/providers/:profileId', component: CameraProviderView },
+    { path: '/camera/settings/defaults', component: CameraDefaultsView },
+    { path: '/camera/settings/app-routing', component: CameraRoutingView },
+    { path: '/camera/settings/diagnostics', component: CameraDiagnosticsView },
     { path: '/phone', component: PhoneView },
     { path: '/map', component: MapView },
     { path: '/calendar', component: CalendarView },

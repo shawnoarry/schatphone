@@ -1,6 +1,8 @@
 import {
   ASSETS_HOME_APP_ID,
   ASSETS_ROUTE,
+  CAMERA_HOME_APP_ID,
+  CAMERA_ROUTE,
   CONTROL_CENTER_HOME_APP_ID,
   CONTROL_CENTER_ROUTE,
   FOOD_DELIVERY_HOME_APP_ID,
@@ -45,6 +47,13 @@ export const HOME_FOLDER_REGISTRY = Object.freeze({
 })
 
 export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
+  [CAMERA_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-camera',
+    label: 'Camera',
+    accent: 'dark',
+    route: CAMERA_ROUTE,
+  }),
   [ASSETS_HOME_APP_ID]: Object.freeze({
     kind: 'app',
     icon: 'fas fa-vault',
@@ -62,6 +71,7 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
 })
 
 export const HOME_PLANNED_TILE_IDS = Object.freeze([
+  CAMERA_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   ASSETS_HOME_APP_ID,

@@ -377,6 +377,38 @@ Secondary packages:
 - `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md` for first-reply and Chat continuity;
 - `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md`, `docs/pm/commerce-finance-and-assets/STATUS_AND_HANDOFF.md`, and `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md` only when the named life vertical slice starts.
 
+### 4.10 Camera And Shared Image Generation
+
+Status: `PARTIAL_DONE`
+
+Promoted first slice completed on 2026-07-29:
+
+- added a dedicated shared Image Generation Module instead of expanding text reply behavior in `src/lib/ai.js`;
+- implemented OpenAI-compatible Images/Edit, OpenAI-compatible Chat image output, and Grsai asynchronous adapters for the confirmed LJQ Club, Aixoras, and Grsai targets;
+- added Camera as an installed Home/App Store app with a concise iOS-like capture surface and separate provider, default, routing, diagnostics, and task pages;
+- kept URL, API key, proxy, model discovery, and module routing off the main capture surface;
+- added Gallery reference selection plus distinct Download, Keep in Gallery, and Discard outcomes; only explicit Keep creates a durable Gallery asset;
+- persisted public provider/default/routing configuration separately from device-local credentials and bounded candidates;
+- added public image-generation configuration to ordinary backup/restore/rollback while excluding API keys, proxy tokens, and temporary candidates;
+- proved the promoted flow with focused unit tests plus desktop and simulated-mobile Chromium checks for Home entry, Camera layout, reference selection, explicit retention, provider fields, routing pages, page errors, and overflow.
+
+Remaining stages are not implied by this completed slice:
+
+- Gallery `People / 人物` smart views and user/role reference curation;
+- automatic person/intent reference resolution and separate confirmation before a kept image becomes a person reference;
+- Chat, Community, Map, and other source-module callers;
+- prompt-assistant management UI, hosted proxy security/deployment, true-device validation, and opt-in hosted-provider smoke.
+
+Primary packages:
+
+- `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` for shared contracts, persistence, credentials, backup, and adapters;
+- `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` for Camera entry ownership, capture IA, settings hierarchy, and responsive acceptance.
+
+Focused contract and remaining inventory:
+
+- `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_ARCHITECTURE_PLAN.md`;
+- `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_TODO.md`.
+
 ## 5. Guarded Or Deferred Directions
 
 ### Gallery-Driven Relationship Memory
@@ -407,11 +439,12 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 1. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 2. `P0 CURRENT`: 4.9 current-save write/conflict safety followed by complete local recovery; architecture work proceeds only as separately reviewable slices.
-3. `P1 IN_PROGRESS`: the explicit custom role -> Chat half is done; next prove one ordinary life-consequence flow, with default Home release curation reviewed as a product choice.
-4. `P1` 4.9/4.5 hosted release proof: remote gates, deployed base-path/PWA/install/relaunch, real-provider Chat, backup round trip, and named true-device evidence.
-5. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
-6. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
-7. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
+3. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; Gallery People curation and source-module callers require separately promoted follow-ups.
+4. `P1 IN_PROGRESS`: the explicit custom role -> Chat half is done; next prove one ordinary life-consequence flow, with default Home release curation reviewed as a product choice.
+5. `P1` 4.9/4.5 hosted release proof: remote gates, deployed base-path/PWA/install/relaunch, real-provider Chat, backup round trip, and named true-device evidence.
+6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
+7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
+8. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
 
 ## 7. Validation Rule
 

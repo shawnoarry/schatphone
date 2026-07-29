@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-07-22
+Updated: 2026-07-29
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -13,7 +13,7 @@ SchatPhone is in an internal personal-development phase: product definition, cor
 The core product can already support meaningful use and continued development:
 
 - Lock -> Home -> app navigation is stable;
-- Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
+- Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
 - the current repository baseline is green across lint, 185 unit-test files / 1170 tests, build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips; CI and Pages definitions include the full suite, but remote execution and deployed-artifact proof remain open.
 
@@ -26,7 +26,7 @@ The current work is concentrated in four areas:
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, and 4.9 now owns the usable-product-preview sequence.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, and 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred.
 
 ## 2. Product Positioning
 
@@ -54,6 +54,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Map / Calendar / Reminders / Phone | `Stable MVP` | product boundaries and cross-module handoffs are real; visual/depth polish remains |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | order and notification loops are strong; store/detail/tracking polish remains |
 | Wallet / Gallery | `Stable support platforms` | useful shared owners; deeper economy/Photos ambitions remain controlled |
+| Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
@@ -69,6 +70,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - back up and restore local product state;
 - inspect and repair localStorage/IndexedDB mirror drift;
 - configure AI endpoints, models, and push delivery.
+- configure image providers/models inside Camera, choose Gallery references, review generated candidates, and explicitly download, keep, or discard them.
 
 ### Communication And Roles
 

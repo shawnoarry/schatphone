@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useSettingsBackupWorkflow } from '../src/composables/useSettingsBackupWorkflow'
 import { useChatStore } from '../src/stores/chat'
 import { useSystemStore } from '../src/stores/system'
+import { useImageGenerationStore } from '../src/stores/imageGeneration'
 
 const t = (zh, en) => en || zh
 
@@ -55,6 +56,7 @@ describe('Settings backup workflow interface', () => {
   test('exports the existing metadata backup shape and writes a storage report', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
+    const imageGenerationStore = useImageGenerationStore()
     systemStore.settings.system.language = 'en-US'
     systemStore.settings.api.key = 'seeded-api-key'
     systemStore.addApiReport({
@@ -69,6 +71,16 @@ describe('Settings backup workflow interface', () => {
       roleId: '901A',
       name: 'Backup Role',
       role: 'Archivist',
+    })
+    imageGenerationStore.setCredentials(imageGenerationStore.profiles[0].id, {
+      apiKey: 'image-secret',
+      proxyToken: 'proxy-secret',
+    })
+    imageGenerationStore.updateDefaults({ aspectRatio: '4:5' })
+    imageGenerationStore.addCandidates({
+      imageUrls: ['https://example.com/temporary-candidate.png'],
+      request: { prompt: 'temporary candidate' },
+      profile: imageGenerationStore.profiles[0],
     })
 
     const { createObjectURL, revokeObjectURL, clickSpy } = installDownloadHarness()
@@ -114,6 +126,7 @@ describe('Settings backup workflow interface', () => {
       'phone',
       'stock',
       'relationshipRuntime',
+      'imageGeneration',
     ])
     expect(exported.backupMeta).toMatchObject({
       schemaVersion: 2,
@@ -124,6 +137,10 @@ describe('Settings backup workflow interface', () => {
       included: false,
     })
     expect(exported.settings.api.key).toBe('seeded-api-key')
+    expect(exported.imageGeneration.defaults.aspectRatio).toBe('4:5')
+    expect(JSON.stringify(exported.imageGeneration)).not.toContain('image-secret')
+    expect(JSON.stringify(exported.imageGeneration)).not.toContain('proxy-secret')
+    expect(JSON.stringify(exported.imageGeneration)).not.toContain('temporary-candidate')
     expect(exported.roleProfiles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -318,5 +335,55 @@ describe('Settings backup workflow interface', () => {
       action: 'export_backup',
       code: 'BACKUP_EXPORT_FAILED',
     })
+  })
+
+  test('imports public image configuration without replacing device credentials or candidates', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const imageGenerationStore = useImageGenerationStore()
+    const profileId = imageGenerationStore.profiles[0].id
+    imageGenerationStore.setCredentials(profileId, { apiKey: 'device-secret' })
+    imageGenerationStore.updateDefaults({ aspectRatio: '4:5' })
+    imageGenerationStore.addCandidates({
+      imageUrls: ['https://example.com/local-candidate.png'],
+      request: { prompt: 'local candidate' },
+      profile: imageGenerationStore.profiles[0],
+    })
+
+    const { createObjectURL } = installDownloadHarness()
+    const workflow = useSettingsBackupWorkflow({
+      systemStore,
+      chatStore,
+      imageGenerationStore,
+      t,
+      confirmDialog: vi.fn(async () => true),
+    })
+    await workflow.exportData()
+    const exported = JSON.parse(createObjectURL.mock.calls[0][0].parts.join(''))
+    imageGenerationStore.updateDefaults({ aspectRatio: '1:1' })
+
+    await workflow.importData({
+      target: {
+        files: [{ name: 'camera-public-config.json', text: vi.fn(async () => JSON.stringify(exported)) }],
+        value: 'camera-public-config.json',
+      },
+    })
+
+    expect(imageGenerationStore.defaults.aspectRatio).toBe('4:5')
+    expect(imageGenerationStore.getCredentials(profileId).apiKey).toBe('device-secret')
+    expect(imageGenerationStore.recentCandidates[0].imageUrl).toBe(
+      'https://example.com/local-candidate.png',
+    )
+
+    const legacyWithoutImageConfig = { ...exported }
+    delete legacyWithoutImageConfig.imageGeneration
+    imageGenerationStore.updateDefaults({ aspectRatio: '3:2' })
+    await workflow.importData({
+      target: {
+        files: [{ name: 'older-v2.json', text: vi.fn(async () => JSON.stringify(legacyWithoutImageConfig)) }],
+        value: 'older-v2.json',
+      },
+    })
+    expect(imageGenerationStore.defaults.aspectRatio).toBe('3:2')
   })
 })

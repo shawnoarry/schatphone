@@ -46,6 +46,8 @@ import {
   APP_STORE_ROUTE,
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
+  CAMERA_HOME_APP_ID,
+  CAMERA_ROUTE,
   SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_ROUTE,
 } from '../lib/planned-module-registry'
@@ -179,6 +181,16 @@ const APP_STORE_ENTRIES = [
     categoryEn: 'Media',
     descZh: '图片素材、壁纸与角色媒体。',
     descEn: 'Images, wallpapers, and role media.',
+  },
+  {
+    id: CAMERA_HOME_APP_ID,
+    route: CAMERA_ROUTE,
+    labelZh: '相机',
+    labelEn: 'Camera',
+    categoryZh: '媒体',
+    categoryEn: 'Media',
+    descZh: '共享生图接口、参考图创作与候选图确认。',
+    descEn: 'Shared image providers, reference-led creation, and candidate review.',
   },
   {
     id: 'app_map',

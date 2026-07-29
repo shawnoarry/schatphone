@@ -57,6 +57,8 @@ Confirmed product boundary:
 - IndexedDB-first structured persistence is the target direction;
 - complete migration backup includes configured credentials and now presents a fixed danger warning before every local JSON export; cancellation creates no payload, download, or storage report;
 - Gallery is the reusable local material library; generated image/media results require explicit user retention before durability, and `keep` never uploads or automatically enrolls material in backup;
+- Camera is the visible owner of shared image-generation management, while provider protocols, public profiles/defaults/routing, device-local credentials, and bounded candidates remain separated behind the Image Generation Module;
+- ordinary backup includes image-generation public configuration but excludes API keys, proxy tokens, and temporary candidates; older backups may omit the section without clearing current device-local secrets or review state;
 - core data is always complete, while one default-on whole-Gallery choice includes all retained local binaries without per-item reselection; URL-backed items always preserve their original URL and minimum metadata rather than exact bytes;
 - backup is for rollback/recovery rather than sync or local-space offload; manual backup is always available, automatic backup defaults off, and successful remote backup never releases local originals;
 - keep multiple versions, but every local file and remote object must be a complete independently importable package; local export uses a user-editable product-name-plus-date default and the platform save/share flow;
@@ -158,6 +160,7 @@ Do not add regex execution, a Store, route, Settings UI, popup, iframe, AI call,
 
 ## 9. Later Product Candidates
 
+- Gallery People curation plus one separately promoted image-generation source caller;
 - explicit group multi-speaker orchestration;
 - tracking/order share surfaces from source apps;
 - deeper Assets and Stock loops;

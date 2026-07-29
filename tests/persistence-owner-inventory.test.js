@@ -249,12 +249,12 @@ const inspectIndexedDbDefinitionCoverage = (actual, expectedCarriers) => {
 }
 
 describe('canonical persistence-owner inventory', () => {
-  test('classifies every persisted store key found in source and keeps the 16-target audit order stable', () => {
+  test('classifies every persisted store key found in source and keeps the 17-target audit order stable', () => {
     const sourceStoreKeys = collectMatches(/["'`](store:[a-z0-9-]+)["'`]/g)
     const inventoriedStoreKeys = PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey).sort()
 
     expect(sourceStoreKeys).toEqual(inventoriedStoreKeys)
-    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(16)
+    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(17)
     expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toEqual(
       PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey),
     )

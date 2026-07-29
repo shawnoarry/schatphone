@@ -39,6 +39,7 @@ Priority meanings:
 | Contacts | stable V2 baseline with ten read models | template-adaptation diff/richer authoring | destructive and relationship semantics | visual diff only after focused acceptance | P1 |
 | Relationship Runtime | usable truth layer | 500-event truncation conflicts with long-term audit continuity | copied metrics/memories or lost evidence | define authoritative/audit retention before persistence migration | P0 decision |
 | Gallery | stable media owner | Photos-like collections/visual finish | forced memory/admin role | keep asset-first | P2 |
+| Camera / Image Generation | focused V1 with shared adapters, routing, candidates, and explicit Gallery keep | Gallery People truth, source callers, hosted proxy/provider and true-device proof | duplicated endpoint/credential fields, secret leakage, or automatic Gallery admission | preserve shared module and promote each caller separately | P1 partial |
 | Appearance | strong split ownership baseline | product-wide visual consistency | global pack absorbing app-owned layers | real-device authoring/recovery QA | P1 |
 | App Store | integrated app/world/mini-app manager | growing catalog density | owning target-app business state | search/detail density review after phone test | P1 |
 | Book | integrated V1 long-text library; K-pop 2 + 6 + 1 landed | phone hardening and structured Mini Scene profile authoring | becoming Files/reader/runtime-activation owner | validate separate structured transform profiles only through the shared Mini Scene contract | P1 staged |

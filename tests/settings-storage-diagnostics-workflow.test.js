@@ -47,7 +47,7 @@ describe('Settings storage diagnostics workflow interface', () => {
 
     await workflow.runStorageAudit()
 
-    expect(inspectPersistedStateLayers).toHaveBeenCalledTimes(16)
+    expect(inspectPersistedStateLayers).toHaveBeenCalledTimes(17)
     expect(inspectPersistedStateLayers.mock.calls.map(([key]) => key)).toEqual([
       'store:system',
       'store:chat',
@@ -65,8 +65,9 @@ describe('Settings storage diagnostics workflow interface', () => {
       'store:phone',
       'store:stock',
       'store:relationship-runtime',
+      'store:image-generation',
     ])
-    expect(workflow.storageAuditResults.value).toHaveLength(16)
+    expect(workflow.storageAuditResults.value).toHaveLength(17)
     expect(workflow.storageAuditResults.value).toContainEqual(
       expect.objectContaining({ key: 'store:book', labelEn: 'Book library' }),
     )
@@ -122,7 +123,7 @@ describe('Settings storage diagnostics workflow interface', () => {
 
     await workflow.repairStorageDrift()
 
-    expect(reconcilePersistedStateLayers).toHaveBeenCalledTimes(16)
+    expect(reconcilePersistedStateLayers).toHaveBeenCalledTimes(17)
     expect(reconcilePersistedStateLayers).toHaveBeenCalledWith('store:chat', {
       version: 2,
       strategy: 'newest_valid',

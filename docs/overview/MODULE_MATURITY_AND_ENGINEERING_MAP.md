@@ -14,7 +14,7 @@ SchatPhone is in:
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The browser/PWA-first persistence foundation, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete, while broader backup/data-lifecycle work remains active. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation first slice, browser/PWA-first persistence foundation, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete, while Gallery People/source callers and broader backup/data-lifecycle work remain active or deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
 
 ## 2. Maturity Tiers
 
@@ -27,6 +27,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Chat core | stable but very heavy | extract named seams before adding another side system |
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
+| Image Generation | shared first slice implemented; Camera is the visible owner | keep provider protocols behind the shared module, back up public configuration only, keep credentials/candidates device-local, and require explicit Gallery retention |
 | persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contracts accepted; non-active foundation and Book-only Repository cutover implemented and browser-tested | keep one-container/one-save, complete versions, no sync/merge, and all non-Book runtime cutover/activation gates; preserve the unchanged legacy Book fallback |
 
 ### Tier B: Integrated V1
@@ -40,6 +41,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Wallet | stable support | cleanup/explainability and later economy decisions |
 | Appearance / Widgets / app identity | strong but split across owners | consistency and real-device authoring/recovery QA |
 | Network | strong MVP | security guidance and provider-environment QA |
+| Camera | focused installed-app V1 | Gallery People curation, source-module callers, hosted-provider smoke, and true-device QA |
 
 ### Tier C: Partial Or Guarded
 

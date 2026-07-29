@@ -30,6 +30,10 @@ It also owns:
   - Chat `Me` owns user identity, anonymity, recent interaction data, and lightweight derived social feed;
   - Chat Settings owns Chat appearance, default-behavior entry points, and diagnostics;
   - global `Appearance` still owns system-wide theme, wallpaper, font, icon, and global custom CSS.
+- how Camera and Gallery divide the generation flow:
+  - Camera is an installed app and owns capture, candidate review, provider/default/routing pages, diagnostics, and its embedded Gallery reference picker;
+  - Gallery owns only media the user explicitly keeps and later curation; selecting a reference does not transfer the picker container to Gallery styling;
+  - Camera Download, Keep in Gallery, and Discard are distinct outcomes, and Keep does not automatically classify an image as a person reference.
 - how user customization should layer with world-driven presentation:
   - user-controlled Appearance CSS is an explicit override layer above system defaults and World Pack defaults;
   - Chat-scoped CSS remains Chat-owned and should not be moved into global Appearance CSS;

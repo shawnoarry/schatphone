@@ -45,6 +45,7 @@ export const LEGACY_V2_BACKUP_SECTION_REGISTRY = freezeRegistry([
   { id: 'phone', owner: 'Phone', coverage: 'required', dataClassIds: ['phone.call-records'], payloadFields: [{ path: 'phone', shape: 'object' }] },
   { id: 'stock', owner: 'Stock', coverage: 'required', dataClassIds: ['stock.simulated-market'], payloadFields: [{ path: 'stock', shape: 'object' }] },
   { id: 'relationship-runtime', owner: 'Relationship Runtime', coverage: 'required', dataClassIds: ['relationship-runtime.relationship-truth'], payloadFields: [{ path: 'relationshipRuntime', shape: 'object' }] },
+  { id: 'image-generation', owner: 'Image Generation', coverage: 'required', dataClassIds: ['image-generation.public-configuration'], payloadFields: [{ path: 'imageGeneration', shape: 'object' }] },
 ])
 
 const readPath = (value, path) => {

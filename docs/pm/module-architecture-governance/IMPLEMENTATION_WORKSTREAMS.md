@@ -28,6 +28,7 @@ Updated: 2026-07-22
 - treat Batch 2B as the completed foundation and the 2026-07-22 Book-only cutover as the first active reference migration; preserve explicit user initiation, legacy rollback bytes, atomic pointer/journal verification, and fail-closed conflicts, while keeping Gallery schema, provider code, other owners, dual write, and legacy deletion separately unapproved
 - preserve one save per isolated storage container; same-container write coordination cannot become cross-container sync, silent merge, force takeover, or last-write-wins
 - stage and verify Book assets plus WorldBook identity/activation references as one complete-backup graph; a failed or unresolved owner section cannot leave a partially activated world setting
+- preserve the Image Generation Module's separate public-config, credential, and candidate carriers; ordinary backup restores only public profiles/defaults/routing and must not clear or export local secrets/candidates
 
 ## 4. Workstream D: Cleanup Debt
 
@@ -44,6 +45,7 @@ Updated: 2026-07-22
 - treat the current push relay as development/single-operator infrastructure
 - separate production dependency results from development-tool audit results
 - isolate security/toolchain updates from product features
+- keep provider errors and diagnostics redacted, and keep optional proxy deployment/security approval separate from direct-browser Camera availability
 
 ## 6. Workstream F: CI And Release Confidence
 

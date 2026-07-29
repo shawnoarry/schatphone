@@ -16,6 +16,7 @@ const routeScopeFromPath = (routePath) => {
 
 const routeReadySelectors = {
   '/app-store': '[data-testid="app-store-search"]',
+  '/camera': '[data-testid="camera-view"]',
   '/chat-contacts': '[data-testid="chat-directory-section-service"]',
   '/contacts': '[data-testid="contacts-search-input"]',
   '/food-delivery':

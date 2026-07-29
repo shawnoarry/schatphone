@@ -17,6 +17,8 @@ The left-side Today View is a fixed native-system entry layer, not a selectable 
 
 Current visual pass:
 
+- `相机 / Camera` now has an installed-app identity: a restrained dark capture surface keeps prompt, mode, references, preview, and shutter together, while provider/model/default/routing/diagnostic work uses separate Camera-owned push-navigation pages. Gallery reference selection stays an embedded Camera sheet, and generated candidates expose separate Download, Keep in Gallery, and Discard outcomes.
+
 - `应用商城 / App Store` is now a standalone native-system app with search, category filters, selected app detail, and Home-entry actions.
 - `外观 / Appearance` has a first native-system control surface and first token-coverage pass for deeper subpages.
 - Home Today View user-facing copy has been cleaned up for native-system language.

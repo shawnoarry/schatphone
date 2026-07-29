@@ -18,8 +18,11 @@ Behavior extraction is not product expansion. A governance slice can move workfl
 - complete-package, integrity, capacity, staged-restore, migration, and rollback acceptance
 - shared Mini Scene ownership, request/artifact Interfaces, world-profile resolution, transform safety, presenter seams, and persistence prerequisites
 - the World Setting Module Interface, canonical world identity, owner/reference rules, consumer projections, and migration stop conditions
+- the shared Image Generation Module contract, adapter boundary, public-configuration persistence, device-local credential/candidate classification, and backup exclusion rules
 
 Storage recovery preserves owner meaning: an older backup may restore valid core state without treating currently retained local Gallery material as disposable. Missing media remains an unresolved owner reference rendered through a derived fallback; it does not become fake recovered content or move media truth into Settings.
+
+Camera is the visible configuration owner, but shared provider profiles and module routing are not view-local state. API keys and proxy tokens remain device-local secrets, temporary candidates remain bounded review state, and only explicit Gallery keep creates durable reusable media.
 
 ## 3. What It Does Not Own
 

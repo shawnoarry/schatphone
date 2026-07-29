@@ -36,6 +36,7 @@ import {
   APP_STORE_ROUTE,
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
+  CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
@@ -212,6 +213,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_network') return t('网络', 'Network')
   if (tileId === 'app_wallet') return t('钱包', 'Wallet')
   if (tileId === 'app_gallery') return t('相册', 'Photos')
+  if (tileId === CAMERA_HOME_APP_ID) return t('相机', 'Camera')
   if (tileId === 'app_themes') return t('外观', 'Themes')
   if (tileId === 'app_widgets') return t('组件', 'Widgets')
   if (tileId === 'app_phone') return t('电话', 'Phone')

@@ -5,12 +5,14 @@ const SOURCE_RETURN_TARGETS = Object.freeze({
   calendar: '/calendar',
   map: '/map',
   worldbook: '/worldbook',
+  camera: '/camera',
 })
 const SOURCE_RETURN_LABELS = Object.freeze({
   chat: 'Chat',
   calendar: 'Calendar',
   map: 'Map',
   worldbook: 'WorldBook',
+  camera: 'Camera',
 })
 
 const normalizeReturnSource = (source) => {

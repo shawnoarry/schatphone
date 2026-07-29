@@ -15,6 +15,7 @@ Updated: 2026-07-22
 - App Library / App Store-like surface as app-entry visibility management only
 - World Pack global app-entry unlocks now have a first seam through the same Home/App Store/App Library ownership rules; Optional capability Packs may tell users that entries live in App Store's `World` section, but must not regress into Settings -> WorldBook-only launch links or App Store jump buttons
 - App Store folder mini-app entries now use explicit target-folder bindings. App Store owns install identity/facade/open context, installed/not-installed target-folder placement, and an `Add mini app` owner handoff sheet, while `food_delivery` and `shopping` targets own menu/product/cart/order/service-notification runtime state plus consumer shop browsing organization such as filters, favorites, and recent lists.
+- Camera is a direct installed-app entry in Home and App Store. Its main surface stays capture-first, and its provider/default/routing/diagnostic pages remain Camera-owned rather than becoming another system Settings registry.
 
 ## 2. Workstream B: Module IA
 
@@ -35,6 +36,7 @@ Updated: 2026-07-22
 - Pure Book/encyclopedia content does not create a World Pack. A future pack must be justified by separately approved grouped app, service, runtime, or similar capability behavior.
 - Mini Scene Settings and presenters follow `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`: registered modules expose unconfigured/off, text, or interactive modes; profile binding is separate from WorldBook activation; interactive failure visibly falls back to text.
 - Book may later edit structured Mini Scene transform profiles as `structured_json`, but the editor must validate profile scope/rules and preview through the shared Module rather than executing regex or HTML inside Book/WorldBook.
+- Camera's embedded Gallery picker remains a host-owned sheet. Candidate Download, Keep in Gallery, and Discard actions must stay distinct, and Gallery People curation must be promoted separately from the completed capture/settings shell.
 
 ## 3. Workstream C: Visual Rebuild Queue
 

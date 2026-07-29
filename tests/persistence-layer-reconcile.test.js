@@ -536,16 +536,16 @@ describe('persistence layer freshness reconciliation', () => {
 })
 
 describe('persistence bootstrap ordering', () => {
-  test('prepares the 16 inventory targets with Book inspect-only before app creation and mount', async () => {
+  test('prepares the 17 inventory targets with Book inspect-only before app creation and mount', async () => {
     vi.resetModules()
     const events = []
     const prepare = vi.fn(async (targets) => {
       events.push('prepare')
-      expect(targets).toHaveLength(16)
+      expect(targets).toHaveLength(17)
       expect(targets.filter((target) => target.inspectOnly)).toEqual([
         expect.objectContaining({ key: 'store:book' }),
       ])
-      expect(targets.filter((target) => !target.inspectOnly)).toHaveLength(15)
+      expect(targets.filter((target) => !target.inspectOnly)).toHaveLength(16)
       return { ok: true }
     })
     vi.doMock('../src/lib/persistence', () => ({ preparePersistedStateLayers: prepare }))

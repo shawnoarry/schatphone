@@ -16,6 +16,7 @@ import { useSimulationStore } from '../stores/simulation'
 import { useStockStore } from '../stores/stock'
 import { useWalletStore } from '../stores/wallet'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
+import { useImageGenerationStore } from '../stores/imageGeneration'
 import { useDialog } from './useDialog'
 import { useI18n } from './useI18n'
 import { useSystemApiReports } from './useSystemApiReports'
@@ -108,6 +109,7 @@ const hasRecognizableBackupSections = (payload) => {
   if (payload.phone && typeof payload.phone === 'object') return true
   if (payload.stock && typeof payload.stock === 'object') return true
   if (payload.relationshipRuntime && typeof payload.relationshipRuntime === 'object') return true
+  if (payload.imageGeneration && typeof payload.imageGeneration === 'object') return true
   return false
 }
 
@@ -146,6 +148,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
   const walletStore = options.walletStore || useWalletStore()
   const relationshipRuntimeStore =
     options.relationshipRuntimeStore || useRelationshipRuntimeStore()
+  const imageGenerationStore = options.imageGenerationStore || useImageGenerationStore()
   const systemApiReports = options.systemApiReports || useSystemApiReports({ systemStore })
   const { t } = options.t ? { t: options.t } : useI18n()
   const { confirmDialog } = options.confirmDialog
@@ -397,6 +400,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       phone: phoneStore.createBackupSnapshot(),
       stock: stockStore.createBackupSnapshot(),
       relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
+      imageGeneration: imageGenerationStore.exportForBackup(),
     }
     return assertLegacyV2BackupPayloadShape(payload)
   }
@@ -591,6 +595,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       phone: phoneStore.createBackupSnapshot(),
       stock: stockStore.createBackupSnapshot(),
       relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
+      imageGeneration: imageGenerationStore.exportForBackup(),
     }
   }
 
@@ -622,6 +627,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       ['phone', phoneStore, rollback.phone],
       ['stock', stockStore, rollback.stock],
       ['relationshipRuntime', relationshipRuntimeStore, rollback.relationshipRuntime],
+      ['imageGeneration', imageGenerationStore, rollback.imageGeneration],
     ]
     const results = []
 
@@ -673,6 +679,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     phoneStore,
     stockStore,
     relationshipRuntimeStore,
+    imageGenerationStore,
   ]
 
   const importData = async (event) => {
@@ -743,6 +750,10 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         relationshipRuntimeStore,
         parsed.relationshipRuntime,
       )
+      const imageGenerationOk = restoreOptionalBackupSection(
+        imageGenerationStore,
+        parsed.imageGeneration,
+      )
       if (
         !systemOk ||
         !chatOk ||
@@ -759,7 +770,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         !walletOk ||
         !phoneOk ||
         !stockOk ||
-        !relationshipRuntimeOk
+        !relationshipRuntimeOk ||
+        !imageGenerationOk
       ) {
         throw createBackupImportError(
           'BACKUP_IMPORT_STRUCTURE_UNSUPPORTED',

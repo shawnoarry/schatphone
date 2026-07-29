@@ -9,6 +9,7 @@ const APP_ICON_LABELS = {
   app_network: { zh: '网络', en: 'Network', ko: '네트워크' },
   app_wallet: { zh: '钱包', en: 'Wallet', ko: '지갑' },
   app_gallery: { zh: '相册', en: 'Photos', ko: '사진' },
+  app_camera: { zh: '相机', en: 'Camera', ko: 'Camera' },
   app_themes: { zh: '外观', en: 'Themes', ko: '테마' },
   app_widgets: { zh: '组件', en: 'Widgets', ko: '위젯' },
   app_phone: { zh: '电话', en: 'Phone', ko: '전화' },
@@ -30,6 +31,7 @@ const BUILT_IN_APP_ICON_META = {
   app_network: { icon: 'fas fa-network-wired', accent: 'cool' },
   app_wallet: { icon: 'fas fa-wallet', accent: 'warm' },
   app_gallery: { icon: 'fas fa-images', accent: 'light' },
+  app_camera: { icon: 'fas fa-camera', accent: 'dark' },
   app_themes: { icon: 'fas fa-palette', accent: 'default' },
   app_widgets: { icon: 'fas fa-table-cells-large', accent: 'light' },
   app_phone: { icon: 'fas fa-phone', accent: 'default' },
@@ -61,6 +63,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
   'app_wallet',
   'app_gallery',
+  'app_camera',
   'app_themes',
   'app_widgets',
   'app_phone',
@@ -238,6 +241,7 @@ export const resolveNotificationModuleAppId = (moduleKey) => {
   if (moduleKey === 'map') return 'app_map'
   if (moduleKey === 'reminders') return 'app_reminders'
   if (moduleKey === 'gallery') return 'app_gallery'
+  if (moduleKey === 'camera') return 'app_camera'
   if (moduleKey === 'shopping') return 'app_shopping'
   if (moduleKey === 'food_delivery') return 'app_food_delivery'
   if (moduleKey === 'assets') return 'app_assets'

@@ -28,6 +28,7 @@ import {
   APP_STORE_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
   BOOK_HOME_APP_ID,
+  CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
@@ -116,7 +117,7 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
-  ['weather', 'calendar', 'music', 'app_network', 'app_wallet', 'app_themes', 'app_gallery'],
+  ['weather', 'calendar', 'music', 'app_network', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
   [
     'app_phone',
     'app_map',
@@ -189,6 +190,7 @@ const CORE_HOME_TILE_IDS = [
   'app_contacts',
   'app_settings',
   'app_gallery',
+  CAMERA_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
   ASSETS_HOME_APP_ID,

@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-07-22
+Updated: 2026-07-29
 
 ## 1. Architecture Goals
 
@@ -223,7 +223,7 @@ Ordered envelopes use a stable non-empty lineage plus a positive safe-integer se
 
 A disabled mirror is `not_applicable` and does not cause degraded/fork behavior. When the mirror feature is enabled, a missing, inaccessible, blocked, or failed IndexedDB carrier is applicable but `unavailable`: bounded degraded local service is allowed, the state is not fully reconciled, asynchronous writes report the failed mirror separately, and the next local write forks a fresh lineage. `fullyReconciled` requires empty applicable layers or a valid equivalent operational candidate; byte-identical corrupt heads are not sufficient. Deferred mirror precondition conflicts block later writes until reconciliation rather than being reduced to carrier warnings.
 
-`src/main.js` prepares the independent 16-store audit inventory before any Pinia Store is instantiated or mounted. The legacy `store:book` carrier is explicitly repository-owned inspect-only, so its local and mirror bytes are never re-encoded or repaired; only the other 15 layered legacy owners are mutable in this bootstrap pass.
+`src/main.js` prepares the independent 17-store audit inventory before any Pinia Store is instantiated or mounted. The legacy `store:book` carrier is explicitly repository-owned inspect-only, so its local and mirror bytes are never re-encoded or repaired; the other 16 layered owners are mutable in this bootstrap pass.
 
 Each store supplies its own normalization, hydration, migration, and snapshot logic. This keeps legacy data handling close to the domain owner.
 
@@ -248,8 +248,8 @@ Confirmed target direction and current non-active foundation:
 - in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
 - complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`: required-section manifests, integrity evidence, capacity preflight, staged generations, atomic activation, crash journals, migration, failure taxonomy, and metadata/binary rollback are frozen before implementation;
-- `src/lib/persistence-owner-inventory.js` now independently classifies the 16 persisted stores, serialized mirror, Gallery binary carrier, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 16-store audit projection, including Book;
-- `src/lib/backup-section-registry.js` is consumed by legacy v2 export shape validation and separately audits the existing Chat module-identity backup gap without changing the v2 payload; a shape-valid legacy file is still ineligible for a future complete-package claim while that gap exists; `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is now `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
+- `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted stores, serialized mirror, Gallery binary carrier, image-generation credential/candidate/legacy carriers, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
+- `src/lib/backup-section-registry.js` is consumed by legacy v2 export shape validation and separately audits the existing Chat module-identity backup gap; the v2 payload now includes public `imageGeneration` configuration while device-local credentials and temporary candidates remain excluded, and old backups may omit that optional import section; a shape-valid legacy file is still ineligible for a future complete-package claim while the Chat gap exists; `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is now `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container conflicts become read-only with retry/refresh rather than force takeover or last-write-wins;
@@ -439,3 +439,10 @@ Recommended order:
 - `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
 - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
 - `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`
+
+### Unpromoted Proposals
+
+The following documents are review inputs, not accepted contracts or execution boards. They do not change `docs/roadmap/TODO_ROADMAP.md` until a named slice is explicitly promoted:
+
+- `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_ARCHITECTURE_PLAN.md`
+- `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_TODO.md`

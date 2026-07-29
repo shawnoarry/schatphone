@@ -12,6 +12,7 @@ import { useChatStore } from '../src/stores/chat'
 import { useFilesStore } from '../src/stores/files'
 import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
 import { useGalleryStore } from '../src/stores/gallery'
+import { useImageGenerationStore } from '../src/stores/imageGeneration'
 import { useMapStore } from '../src/stores/map'
 import { usePhoneStore } from '../src/stores/phone'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
@@ -73,6 +74,7 @@ const createValidModuleSnapshots = () => ({
   wallet: clone(useWalletStore().createBackupSnapshot()),
   phone: clone(usePhoneStore().createBackupSnapshot()),
   stock: clone(useStockStore().createBackupSnapshot()),
+  imageGeneration: clone(useImageGenerationStore().exportForBackup()),
 })
 
 describe('Settings Contacts relationship import rollback', () => {
@@ -89,8 +91,10 @@ describe('Settings Contacts relationship import rollback', () => {
     const chatStore = useChatStore()
     const bookStore = useBookStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const imageGenerationStore = useImageGenerationStore()
     systemStore.settings.system.language = 'en-US'
     relationshipRuntimeStore.resetForTesting()
+    imageGenerationStore.updateDefaults({ aspectRatio: '4:5' })
 
     const originalProfile = chatStore.addRoleProfile({
       roleId: '801A',
@@ -190,6 +194,13 @@ describe('Settings Contacts relationship import rollback', () => {
       relationshipRuntime: {
         forceFailureForTest: true,
       },
+      imageGeneration: {
+        ...clone(imageGenerationStore.exportForBackup()),
+        defaults: {
+          ...clone(imageGenerationStore.exportForBackup().defaults),
+          aspectRatio: '9:16',
+        },
+      },
     }
 
     const wrapper = await mountSettingsView()
@@ -237,6 +248,7 @@ describe('Settings Contacts relationship import rollback', () => {
       title: 'Original Book Source',
     })
     expect(bookStore.findAssetById('asset_imported_book')).toBeNull()
+    expect(imageGenerationStore.defaults.aspectRatio).toBe('4:5')
     expect(wrapper.text()).toContain('Import failed and rolled back automatically')
 
     wrapper.unmount()
