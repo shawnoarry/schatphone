@@ -35,7 +35,7 @@ Roadmap interpretation:
 - 4.7 has a promoted Book/WorldBook content-carrier slice; its focused K-pop rule is the first planned content input for the separately staged Mini Scene Module;
 - 4.8 has an architecture-accepted cross-module Mini Scene direction, but no runtime, popup, regex execution, or source-module trigger is implemented yet.
 - 4.9 is now the product-control lane: turn the integrated modules into a usable product preview by closing first-value activation, current-save safety, one ordinary life loop, and deployed PWA proof before more infrastructure or feature breadth.
-- 4.11 has a user-promoted local narrative-map baseline: real Seoul and a faction-based cyber wasteland share one place, pin, and trip surface; per-world binding plus lightweight image import/generation are landed. The OpenFreeMap + MapLibre geographic renderer, deterministic fallback, lazy loading, and canonical-coordinate coverage are complete in the integration-review candidate. Full package authoring, PMTiles, additional cities, and true-device validation remain later separate work.
+- 4.11 is `P2 PARTIAL_DONE`: real Seoul and a faction-based cyber wasteland share one place, pin, and trip surface; per-world binding, lightweight image import/generation, and the OpenFreeMap + MapLibre geographic renderer are landed. Seoul V1 now includes 35 versioned read-only real places. Full package authoring, PMTiles, public-transit data adapters, additional cities, and true-device validation remain later separate work.
 
 ## 3. Completed Baselines
 
@@ -427,12 +427,14 @@ Promoted baseline completed on 2026-07-30:
 8. proved desktop and simulated-mobile world activation, correct map resolution, local search, explicit pin placement, Settings dialogs, layout containment, and zero commercial-map requests with focused Playwright coverage.
 9. separated everyday place use from detailed pin administration: Map Settings now edits seed/player pin metadata and coordinates through explicit reselection, keeps built-in pack places read-only, allows pin placement during trips, and preserves the Map parent across nested settings returns.
 10. completed the OpenFreeMap + MapLibre geographic runtime with keyless public styling, visible attribution, lazy loading, canonical marker/click coordinates, fictional/custom zero-request containment, and a local fallback that preserves Map state and interactions.
+11. expanded Seoul V1 to 35 versioned read-only real places across entertainment agencies, broadcasters/media buildings, company headquarters, civic/cultural/event landmarks, and named beauty-salon branches.
 
 Remaining work is separately gated:
 
 - full package-manifest import/export, topology and coordinate validation, calibrated scale tools, editable faction regions, seed-place authoring, and migration preview;
 - a building-level georeferenced Seoul package, such as local PMTiles, if city-scale image calibration proves insufficient;
 - broader real-city pack catalog and reviewed world recommendation policy;
+- separately reviewed public-transit topology/data adapters, without implying realtime arrival or route planning;
 - true-device map gesture and large-package/offline-cache validation.
 
 These remaining items do not authorize live navigation, traffic, device location, paid POI search, or a provider-specific canonical place model.
@@ -481,7 +483,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
 8. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
-9. `P2 READY_FOR_INTEGRATION_REVIEW`: 4.11 local narrative-map baseline, per-world binding, lightweight image import/generation, and the OpenFreeMap + MapLibre geographic renderer are complete in the isolated map continuation worktree. Full package authoring, PMTiles, broader catalogs, and true-device gesture/offline-cache validation remain separately gated and are not started.
+9. `P2 PARTIAL_DONE`: 4.11 local narrative-map baseline, per-world binding, lightweight image import/generation, and the OpenFreeMap + MapLibre geographic renderer are landed; Seoul V1 now includes 35 versioned read-only real places. Full package authoring, PMTiles, public-transit data adapters, broader city catalogs, and true-device gesture/offline-cache validation remain separately gated and are not started.
 
 ## 7. Validation Rule
 

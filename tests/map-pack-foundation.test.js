@@ -32,6 +32,66 @@ describe('local map pack foundation', () => {
     expect(new Set(wasteland.places.map((place) => place.factionId).filter(Boolean)).size).toBe(4)
   })
 
+  test('ships a unique, geocoded Seoul landmark catalog across requested place families', () => {
+    const seoul = getMapPackById(DEFAULT_MAP_PACK_ID)
+    const placeIds = seoul.places.map((place) => place.id)
+
+    expect(seoul.places).toHaveLength(35)
+    expect(new Set(placeIds).size).toBe(placeIds.length)
+    expect(placeIds).toEqual(
+      expect.arrayContaining([
+        'seoul-jyp-hq',
+        'seoul-yg-hq',
+        'seoul-kbs-hq',
+        'seoul-mbc-hq',
+        'seoul-cj-enm-center',
+        'seoul-amorepacific-hq',
+        'seoul-gyeongbokgung',
+        'seoul-kspo-dome',
+        'seoul-jennyhouse-cheongdam-hill',
+      ]),
+    )
+
+    seoul.places.forEach((place) => {
+      expect(place.nameZh).toBeTruthy()
+      expect(place.nameEn).toBeTruthy()
+      expect(place.detailZh).toBeTruthy()
+      expect(place.detailEn).toBeTruthy()
+      expect(place.aliases.length).toBeGreaterThan(0)
+      expect(place.position.kind).toBe('geo')
+      expect(place.position.lat).toBeGreaterThanOrEqual(seoul.bounds.south)
+      expect(place.position.lat).toBeLessThanOrEqual(seoul.bounds.north)
+      expect(place.position.lng).toBeGreaterThanOrEqual(seoul.bounds.west)
+      expect(place.position.lng).toBeLessThanOrEqual(seoul.bounds.east)
+    })
+
+    const canonicalNames = new Set(
+      seoul.places.flatMap((place) => [place.nameZh, place.nameEn].map((name) => name.toLowerCase())),
+    )
+    seoul.places.forEach((place) => {
+      place.aliases.forEach((alias) => {
+        const normalizedAlias = alias.toLowerCase()
+        if (normalizedAlias === place.nameZh.toLowerCase()) return
+        if (normalizedAlias === place.nameEn.toLowerCase()) return
+        expect(canonicalNames.has(normalizedAlias)).toBe(false)
+      })
+    })
+
+    expect(seoul.places.find((place) => place.id === 'seoul-jyp-hq').position).toEqual({
+      kind: 'geo',
+      lat: 37.524,
+      lng: 127.1291,
+    })
+    expect(seoul.places.find((place) => place.id === 'seoul-kbs-hq').position).toEqual({
+      kind: 'geo',
+      lat: 37.5247,
+      lng: 126.9168,
+    })
+    expect(
+      seoul.places.find((place) => place.id === 'seoul-jennyhouse-cheongdam-hill').position,
+    ).toEqual({ kind: 'geo', lat: 37.5213, lng: 127.0443 })
+  })
+
   test('round-trips real coordinates through the versioned map image plane', () => {
     const seoul = getMapPackById(DEFAULT_MAP_PACK_ID)
     const source = { kind: 'geo', lat: 37.5444, lng: 127.0441 }

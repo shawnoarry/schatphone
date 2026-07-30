@@ -8,11 +8,11 @@ This file is the handoff page for Map, Calendar, and Reminders work.
 
 Status: `PARTIAL_DONE`
 
-## Immediate OpenFreeMap Migration Handoff
+## Integrated OpenFreeMap Baseline
 
-Status: `COMPLETE / READY_FOR_INTEGRATION_REVIEW`
+Status: `COMPLETE / INTEGRATED_LOCAL`
 
-Active queue = Map only. Other feature work = Not authorized / Not started.
+Current candidate = Seoul V1 static place-catalog expansion only. Other feature work = Not authorized / Not started.
 
 OpenFreeMap + MapLibre now replaces the retired Kakao comparison as the real-world renderer:
 
@@ -25,7 +25,7 @@ OpenFreeMap + MapLibre now replaces the retired Kakao comparison as the real-wor
 7. the old Kakao components, configuration, and tests are removed; `/map/labs/kakao-compare` remains only as an inert compatibility redirect to `/map`;
 8. the renderer decision and ownership boundary are synchronized across the active map package, PM mirror, roadmap, and local-map product decision.
 
-Validation evidence from the isolated continuation worktree:
+Validation evidence for the integrated renderer baseline:
 
 - lint passed;
 - full unit suite passed: 197 files / 1318 tests;
@@ -66,6 +66,7 @@ What is already landed:
 15. Map Settings now has a dedicated Places and Pins manager. Seed and player-created pins can edit label, category, description, and coordinates through explicit click-to-reselect; built-in pack places remain read-only, everyday place details do not drag markers, and pin placement remains usable during active trips.
 16. Map Settings, Places and Pins, WorldBook pack settings, image-provider settings, and visual settings now use explicit parent return targets instead of forwarding the Map route's `from=home` query into every child.
 17. The earlier Kakao spike is retired. OpenFreeMap + MapLibre is the validated real-world renderer, with canonical SchatPhone coordinates, lazy loading, visible attribution, deterministic tests, and a local-image fallback.
+18. The current Seoul V1 catalog candidate expands the pack to 35 versioned read-only places. The 28-place expansion adds major entertainment agencies, broadcasters/media buildings, company headquarters, civic/cultural/event landmarks, and three named Cheongdam beauty-salon branches; each entry has stable Map identity, bilingual address/search metadata, and a locally maintained geographic coordinate.
 
 Still incomplete:
 
@@ -78,6 +79,7 @@ Still incomplete:
 7. the Calendar-owned carrier described below is a read-only design candidate. No field, migration, Adapter, or schema implementation is approved or landed.
 8. Seoul V1 keeps its fixed CC0 city street-map image as the local fallback. Building-level georeferencing or a local PMTiles upgrade remains a separate slice and must preserve existing place IDs and coordinates.
 9. additional real-city packs, true-device gesture/weak-network proof, and large-package/offline-cache validation remain separate and are not started.
+10. public-transit lines, stations, schedules, realtime arrivals, fares, and transfer routing are not implemented. A later slice must separately choose a licensed/versioned static topology source and decide whether any keyed realtime adapter is justified without turning provider IDs into Map identity.
 
 ### Read-Only Calendar Carrier Candidate
 

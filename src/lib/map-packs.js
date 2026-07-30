@@ -1,3 +1,5 @@
+import { SEOUL_ADDITIONAL_PLACES } from './seoul-map-places'
+
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0))
 const localAssetUrl = (relativePath) =>
   `${import.meta.env.BASE_URL || '/'}${String(relativePath || '').replace(/^\/+/, '')}`
@@ -96,7 +98,7 @@ const MAP_PACKS = Object.freeze([
         category: 'culture',
         icon: 'fas fa-landmark',
         position: { kind: 'geo', lat: 37.5759, lng: 126.9768 },
-        aliases: ['Gwanghwamun', '景福宫'],
+        aliases: ['Gwanghwamun', '世宗大路'],
       },
       {
         id: 'seoul-hongdae',
@@ -118,8 +120,9 @@ const MAP_PACKS = Object.freeze([
         category: 'leisure',
         icon: 'fas fa-ticket',
         position: { kind: 'geo', lat: 37.5112, lng: 127.098 },
-        aliases: ['Lotte', '蚌室'],
+        aliases: ['Lotte', '蚕室'],
       },
+      ...SEOUL_ADDITIONAL_PLACES,
     ]),
     factions: Object.freeze([]),
   }),

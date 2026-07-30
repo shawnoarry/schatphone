@@ -15,6 +15,12 @@ The first two packs are:
 
 Both packs share local place search, player pins, trip state, ETA, history, Map-to-Calendar handoff, and downstream `placeId` ownership.
 
+## Seoul Place Catalog
+
+Seoul V1 includes 35 versioned read-only places. The catalog covers major entertainment agencies, broadcasters and media buildings, company headquarters, civic/cultural/event landmarks, and three named Cheongdam beauty-salon branches. The 2026-07-31 coordinate snapshot was checked against public organization addresses and OpenStreetMap/Nominatim geography.
+
+These records are Map-owned content with stable IDs, bilingual address/search metadata, and provider-neutral geographic coordinates. They are not a live POI mirror, do not retain provider place IDs, and do not update silently when an organization moves. A future correction updates the reviewed catalog explicitly; topology changes still follow the separate map-pack versioning rule.
+
 ## World Binding
 
 One active world resolves to exactly one map pack. Map does not expose a real/fantasy pack switcher on its everyday surface.
@@ -91,4 +97,4 @@ The retired Kakao comparison is not a current runtime, configuration, or product
 
 ## Next Separate Slice
 
-A later, separately approved full authoring slice may add a versioned package manifest, topology and coordinate validation, calibrated scale tools, editable faction regions and seed places, migration preview, and package export. Local PMTiles, additional cities/catalog policy, and true-device gesture/offline-cache validation are also separate and not started. None of these directions authorizes route planning, live POI, or Mini Scene work.
+A later, separately approved full authoring slice may add a versioned package manifest, topology and coordinate validation, calibrated scale tools, editable faction regions and seed places, migration preview, and package export. Local PMTiles, additional cities/catalog policy, public-transit topology/data adapters, and true-device gesture/offline-cache validation are also separate and not started. Static lines/stations and keyed realtime arrivals have different licensing and update boundaries and must not be combined implicitly. None of these directions authorizes route planning, live POI, or Mini Scene work.

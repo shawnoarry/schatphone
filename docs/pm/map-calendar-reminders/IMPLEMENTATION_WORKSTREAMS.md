@@ -11,11 +11,13 @@ Updated: 2026-07-31
 - Map Settings ownership for binding, detailed player-pin administration, local-image intake, generated-map acceptance, and presentation controls
 - Gallery-owned source images referenced by Map-owned custom-pack metadata
 - geographic coordinates for real packs and normalized canvas coordinates for fictional packs
+- dated, versioned real-place catalogs with stable Map IDs, bilingual address/search metadata, and locally maintained coordinates
 - local pack/player-place search and deterministic distance calculation
 - explicit click-to-reselect player coordinates without draggable everyday markers; active trips lock map replacement, not map interaction
 - `MapSceneCanvas` as the stable renderer seam: lazy-loaded OpenFreeMap + MapLibre for geographic packs, and `LocalMapCanvas` for fictional/custom packs plus geographic failure fallback
 - canonical provider-neutral coordinates and Map-owned pins/trips/world bindings remain usable when external style, tile, or WebGL startup fails; `/map/labs/kakao-compare` is an inert compatibility redirect
 - no device location, live routing, or commercial POI dependency in the baseline
+- no public-transit topology, schedule, realtime-arrival, fare, or transfer-routing dependency in the baseline
 
 ## 2. Workstream B: Calendar Real Schedule Meaning
 
