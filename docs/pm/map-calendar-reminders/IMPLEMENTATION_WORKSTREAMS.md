@@ -1,12 +1,20 @@
 # Map Calendar Reminders Implementation Workstreams / 地图日历提醒事项实施工作流
 
-Updated: 2026-05-31
+Updated: 2026-07-30
 
 ## 1. Workstream A: Map Travel Core
 
 - trip lifecycle
 - route context
 - ETA and location state
+- versioned local map packs, reviewed world recommendations, and per-world overrides
+- Map Settings ownership for binding, detailed player-pin administration, local-image intake, generated-map acceptance, and presentation controls
+- Gallery-owned source images referenced by Map-owned custom-pack metadata
+- geographic coordinates for real packs and normalized canvas coordinates for fictional packs
+- local pack/player-place search and deterministic distance calculation
+- explicit click-to-reselect player coordinates without draggable everyday markers; active trips lock map replacement, not map interaction
+- a removable development-only Kakao visual comparison that lazy-loads the plain SDK, consumes canonical coordinates without persisting provider identity, and contains provider failure to its own panel
+- no device location, live routing, or commercial POI dependency in the baseline
 
 ## 2. Workstream B: Calendar Real Schedule Meaning
 
@@ -41,3 +49,7 @@ Treat these as bugs:
 3. Map starts owning business records that only need route context
 4. World Pack reservation context becomes a hidden event-rule owner instead of presentation context
 5. Calendar or Map copies Mini Scene profile/regex/presenter logic or lets a scene interaction mutate source truth without owner validation
+6. a map background is replaced in place and invalidates existing player-pin coordinates
+7. a provider-specific POI or map ID becomes canonical downstream location identity
+8. the everyday Map page exposes a real/fantasy system switch instead of resolving the active world's binding
+9. Map starts owning Gallery binaries or image-generation credentials because Map Settings can initiate intake

@@ -26,6 +26,8 @@ const CameraRoutingView = () => import('../views/CameraRoutingView.vue')
 const CameraDiagnosticsView = () => import('../views/CameraDiagnosticsView.vue')
 const PhoneView = () => import('../views/PhoneView.vue')
 const MapView = () => import('../views/MapView.vue')
+const MapSettingsView = () => import('../views/MapSettingsView.vue')
+const MapSettingsPlacesView = () => import('../views/MapSettingsPlacesView.vue')
 const CalendarView = () => import('../views/CalendarView.vue')
 const RemindersView = () => import('../views/RemindersView.vue')
 const WalletView = () => import('../views/WalletView.vue')
@@ -74,6 +76,9 @@ const router = createRouter({
     { path: '/camera/settings/diagnostics', component: CameraDiagnosticsView },
     { path: '/phone', component: PhoneView },
     { path: '/map', component: MapView },
+    { path: '/map/settings', component: MapSettingsView },
+    { path: '/map/settings/places', component: MapSettingsPlacesView },
+    { path: '/map/labs/kakao-compare', redirect: (to) => ({ path: '/map', query: to.query }) },
     { path: '/calendar', component: CalendarView },
     { path: '/reminders', component: RemindersView },
     { path: '/wallet', component: WalletView },

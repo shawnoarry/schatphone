@@ -10,6 +10,10 @@ const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
 const imageStore = useImageGenerationStore()
+const returnsToMapSettings = computed(() => {
+  const source = Array.isArray(route.query.source) ? route.query.source[0] : route.query.source
+  return source === 'map-settings'
+})
 
 const profiles = computed(() => imageStore.profiles)
 
@@ -29,7 +33,8 @@ const openProfile = (profileId) => router.push({
 <template>
   <CameraSettingsShell
     :title="t('接口与模型', 'Providers & Models')"
-    :back-label="t('设置', 'Settings')"
+    :back-label="returnsToMapSettings ? t('地图设置', 'Map settings') : t('设置', 'Settings')"
+    :back-to="returnsToMapSettings ? '/map/settings' : '/camera/settings'"
   >
     <template #actions>
       <button

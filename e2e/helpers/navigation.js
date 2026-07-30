@@ -21,6 +21,9 @@ const routeReadySelectors = {
   '/contacts': '[data-testid="contacts-search-input"]',
   '/food-delivery':
     '[data-testid="food-delivery-platform"], [data-testid="food-delivery-store-shell"]',
+  '/map': '[data-testid="map-scene-surface"], [data-testid="map-scene-leaflet"]',
+  '/map/settings': '[data-testid="map-settings-view"]',
+  '/map/settings/places': '[data-testid="map-pin-settings-view"]',
   '/settings': '[data-settings-menu-title="World Book"]',
   '/shopping': '[data-testid="shopping-service-filter-panel"]',
   '/worldbook': '[data-testid="worldbook-overview"]',

@@ -4,6 +4,7 @@ const SOURCE_RETURN_TARGETS = Object.freeze({
   chat: '/chat',
   calendar: '/calendar',
   map: '/map',
+  'map-settings': '/map/settings',
   worldbook: '/worldbook',
   camera: '/camera',
 })
@@ -11,6 +12,7 @@ const SOURCE_RETURN_LABELS = Object.freeze({
   chat: 'Chat',
   calendar: 'Calendar',
   map: 'Map',
+  'map-settings': 'Map settings',
   worldbook: 'WorldBook',
   camera: 'Camera',
 })

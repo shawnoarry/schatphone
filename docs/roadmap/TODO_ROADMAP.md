@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-29
+Updated: 2026-07-30
 
 This is the only live execution board for implementation order.
 
@@ -35,6 +35,7 @@ Roadmap interpretation:
 - 4.7 has a promoted Book/WorldBook content-carrier slice; its focused K-pop rule is the first planned content input for the separately staged Mini Scene Module;
 - 4.8 has an architecture-accepted cross-module Mini Scene direction, but no runtime, popup, regex execution, or source-module trigger is implemented yet.
 - 4.9 is now the product-control lane: turn the integrated modules into a usable product preview by closing first-value activation, current-save safety, one ordinary life loop, and deployed PWA proof before more infrastructure or feature breadth.
+- 4.11 has a user-promoted local narrative-map baseline: real Seoul and a faction-based cyber wasteland share one place, pin, and trip surface; per-world binding plus lightweight image import/generation are landed. The user has selected OpenFreeMap + MapLibre for real-world rendering with local fallback, but the migration is currently `IN_PROGRESS_UNVALIDATED`; see the map package handoff. Full package authoring remains later separate work.
 
 ## 3. Completed Baselines
 
@@ -410,6 +411,40 @@ Focused contract and remaining inventory:
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_ARCHITECTURE_PLAN.md`;
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_TODO.md`.
 
+### 4.11 Local Narrative Map Packs
+
+Status: `PARTIAL_DONE`
+
+Promoted baseline completed on 2026-07-30:
+
+1. added a versioned local map-pack contract without device location, route planning, paid POI lookup, or commercial map runtime calls;
+2. added `real-seoul-v1` with a locally hosted CC0 real-city street-map asset, curated real places, and geographic coordinates;
+3. added `cyber-wasteland-v1` with a fixed cyber-wasteland asset, four explicit factions, curated fictional places, and normalized canvas coordinates;
+4. added Map pan/zoom, local pack/player-place search, categorized click-to-place player pins, consistent place details, deterministic geographic/fictional distance, persistence, and active-trip map-change protection;
+5. preserved legacy text-only addresses and existing Map trip, reminder, relationship, World Pack context, backup, and visual-background behavior;
+6. bound one recommended or overridden map to each world, with `survival_city` resolving to the cyber wasteland and current modern presets resolving to Seoul; the everyday Map route has no real/fantasy switch;
+7. added a dedicated Map Settings route for world binding, Gallery-backed local-image import, shared-image-service fictional-map generation, explicit candidate acceptance, and visual presentation controls;
+8. proved desktop and simulated-mobile world activation, correct map resolution, local search, explicit pin placement, Settings dialogs, layout containment, and zero commercial-map requests with focused Playwright coverage.
+9. separated everyday place use from detailed pin administration: Map Settings now edits seed/player pin metadata and coordinates through explicit reselection, keeps built-in pack places read-only, allows pin placement during trips, and preserves the Map parent across nested settings returns.
+
+Remaining work is separately gated:
+
+- full package-manifest import/export, topology and coordinate validation, calibrated scale tools, editable faction regions, seed-place authoring, and migration preview;
+- a building-level georeferenced Seoul package, such as local PMTiles, if city-scale image calibration proves insufficient;
+- finish and validate the selected OpenFreeMap + MapLibre real-world renderer, including deterministic external-service tests, local fallback, lazy bundle measurement, attribution, privacy/network review, and no provider POI or production-data ownership;
+- broader real-city pack catalog and reviewed world recommendation policy;
+- true-device map gesture and large-package/offline-cache validation.
+
+These remaining items do not authorize live navigation, traffic, device location, paid POI search, or a provider-specific canonical place model.
+
+Primary package:
+
+- `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md`
+
+Focused decision:
+
+- `docs/product-decisions/LOCAL_NARRATIVE_MAP_PACKS.md`
+
 ## 5. Guarded Or Deferred Directions
 
 ### Gallery-Driven Relationship Memory
@@ -446,6 +481,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
 8. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
+9. `P2 IN_PROGRESS_UNVALIDATED`: 4.11 local narrative-map baseline, per-world binding, and lightweight image import/generation are complete; the selected OpenFreeMap + MapLibre real-world renderer is partially edited and must resume from the map package handoff before full package authoring or broader catalogs.
 
 ## 7. Validation Rule
 

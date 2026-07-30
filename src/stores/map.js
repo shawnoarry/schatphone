@@ -14,6 +14,16 @@ import {
   clearRelationshipBinding,
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
+import {
+  DEFAULT_MAP_PACK_ID,
+  calculateMapDistanceKm,
+  getMapPackById,
+  getRecommendedMapPackIdForWorldPack,
+  listMapPacks,
+  normalizeCustomMapPack,
+  normalizeCustomMapPacks,
+  normalizeMapPosition,
+} from '../lib/map-packs'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useSystemStore } from './system'
@@ -162,9 +172,30 @@ const MAP_AREA_FEEDBACK_RULES = {
 }
 
 const SEED_ADDRESSES = [
-  { id: 1, label: '家', detail: '首尔市江南区清潭洞 88-1' },
-  { id: 2, label: '公司', detail: '首尔市麻浦区世界杯北路 400' },
-  { id: 3, label: '练习室', detail: '首尔市龙山区汉江大路 120' },
+  {
+    id: 1,
+    label: '家',
+    detail: '首尔市江南区清潭洞 88-1',
+    category: 'home',
+    mapPackId: DEFAULT_MAP_PACK_ID,
+    position: { kind: 'geo', lat: 37.524, lng: 127.049 },
+  },
+  {
+    id: 2,
+    label: '公司',
+    detail: '首尔市麻浦区世界杯北路 400',
+    category: 'work',
+    mapPackId: DEFAULT_MAP_PACK_ID,
+    position: { kind: 'geo', lat: 37.5801, lng: 126.8896 },
+  },
+  {
+    id: 3,
+    label: '练习室',
+    detail: '首尔市龙山区汉江大路 120',
+    category: 'work',
+    mapPackId: DEFAULT_MAP_PACK_ID,
+    position: { kind: 'geo', lat: 37.5312, lng: 126.9726 },
+  },
 ]
 
 const toInt = (value, fallback = 0) => {
@@ -176,6 +207,8 @@ const createDefaultCurrentLocation = () => ({
   source: 'saved',
   label: SEED_ADDRESSES[0].label,
   detail: SEED_ADDRESSES[0].detail,
+  mapPackId: SEED_ADDRESSES[0].mapPackId,
+  position: { ...SEED_ADDRESSES[0].position },
 })
 
 const createDefaultTripForm = () => ({
@@ -222,12 +255,15 @@ const createDefaultMapAutomationRuntime = () => ({
   lastProviderImageUrl: '',
 })
 
-const computeTripEstimate = (fromText = '', toText = '') => {
+const computeTripEstimate = (fromText = '', toText = '', measuredDistanceKm = null) => {
   const from = typeof fromText === 'string' ? fromText.trim() : ''
   const to = typeof toText === 'string' ? toText.trim() : ''
-  const baseKm = Math.max(3, Math.abs(from.length - to.length) % 18 + 3)
-  const minutes = Math.round(baseKm * 3.5)
-  const fare = 4800 + baseKm * 900
+  const measured = Number(measuredDistanceKm)
+  const baseKm = Number.isFinite(measured) && measured > 0
+    ? Math.max(0.3, Math.round(measured * 10) / 10)
+    : Math.max(3, Math.abs(from.length - to.length) % 18 + 3)
+  const minutes = Math.max(3, Math.round(baseKm * 3.5))
+  const fare = Math.round(4800 + baseKm * 900)
   return {
     distanceKm: baseKm,
     minutes,
@@ -236,20 +272,47 @@ const computeTripEstimate = (fromText = '', toText = '') => {
   }
 }
 
-const normalizeAddressRecord = (item, index = 0) => {
+const findMapPackInList = (mapPacks, packId) =>
+  (Array.isArray(mapPacks) ? mapPacks : []).find((pack) => pack.id === packId) ||
+  getMapPackById(DEFAULT_MAP_PACK_ID)
+
+const MAP_ADDRESS_CATEGORY_ICONS = Object.freeze({
+  home: 'fas fa-house',
+  work: 'fas fa-building',
+  school: 'fas fa-graduation-cap',
+  shop: 'fas fa-store',
+  leisure: 'fas fa-mug-hot',
+  other: 'fas fa-location-dot',
+})
+
+const normalizeAddressCategory = (value) => {
+  if (typeof value !== 'string' || !value.trim()) return 'home'
+  const category = value.trim().toLowerCase()
+  return Object.hasOwn(MAP_ADDRESS_CATEGORY_ICONS, category) ? category : 'other'
+}
+
+const normalizeAddressRecord = (item, index = 0, mapPacks = listMapPacks()) => {
   if (!item || typeof item !== 'object') return null
   const label = typeof item.label === 'string' ? item.label.trim() : ''
   const detail = typeof item.detail === 'string' ? item.detail.trim() : ''
   if (!label || !detail) return null
   const rawId = Number(item.id)
+  const mapPackId =
+    typeof item.mapPackId === 'string' && item.mapPackId.trim()
+      ? findMapPackInList(mapPacks, item.mapPackId.trim()).id
+      : DEFAULT_MAP_PACK_ID
+  const position = normalizeMapPosition(item.position, findMapPackInList(mapPacks, mapPackId).coordinateKind)
   return {
     id: Number.isFinite(rawId) ? Math.trunc(rawId) : Date.now() + index,
     label,
     detail,
+    category: normalizeAddressCategory(item.category),
+    mapPackId,
+    position,
   }
 }
 
-const normalizeCurrentLocation = (raw) => {
+const normalizeCurrentLocation = (raw, mapPacks = listMapPacks()) => {
   const fallback = createDefaultCurrentLocation()
   if (!raw || typeof raw !== 'object') return fallback
   const detail = typeof raw.detail === 'string' ? raw.detail.trim() : ''
@@ -261,7 +324,29 @@ const normalizeCurrentLocation = (raw) => {
         ? raw.label.trim()
         : fallback.label,
     detail,
+    mapPackId:
+      typeof raw.mapPackId === 'string' && raw.mapPackId.trim()
+        ? findMapPackInList(mapPacks, raw.mapPackId.trim()).id
+        : fallback.mapPackId,
+    position:
+      normalizeMapPosition(
+        raw.position,
+        findMapPackInList(mapPacks, raw.mapPackId || fallback.mapPackId).coordinateKind,
+      ) || null,
   }
+}
+
+const normalizeWorldMapPackBindings = (raw, mapPacks = listMapPacks()) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const availableIds = new Set(mapPacks.map((pack) => pack.id))
+  return Object.fromEntries(
+    Object.entries(raw)
+      .map(([worldPackId, mapPackId]) => [
+        typeof worldPackId === 'string' ? worldPackId.trim().slice(0, 120) : '',
+        typeof mapPackId === 'string' ? mapPackId.trim().slice(0, 120) : '',
+      ])
+      .filter(([worldPackId, mapPackId]) => worldPackId && availableIds.has(mapPackId)),
+  )
 }
 
 const normalizeTripForm = (raw) => {
@@ -822,6 +907,10 @@ export const useMapStore = defineStore('map', () => {
   const getSystemStore = () => useSystemStore()
   const getSystemApiReports = () => useSystemApiReports({ systemStore: getSystemStore() })
   const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
+  const customMapPacks = ref([])
+  const worldMapPackBindings = ref({})
+  const mapPacks = computed(() => listMapPacks(customMapPacks.value))
+  const activeMapPackId = ref(DEFAULT_MAP_PACK_ID)
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
 
   const currentLocation = ref(createDefaultCurrentLocation())
@@ -840,8 +929,71 @@ export const useMapStore = defineStore('map', () => {
   let mapProviderRunnerOverride = null
   const hasFinishedStorageHydration = ref(false)
 
+  const activeMapPack = computed(() => findMapPackInList(mapPacks.value, activeMapPackId.value))
+
+  const getAvailableMapPackById = (packId) => findMapPackInList(mapPacks.value, packId)
+
+  const activeMapPlaces = computed(() => {
+    const pack = activeMapPack.value
+    const builtInPlaces = (pack.places || []).map((place) => ({
+      ...place,
+      placeId: place.id,
+      source: 'map_pack',
+      mapPackId: pack.id,
+    }))
+    const userPlaces = addresses
+      .filter((address) => address.mapPackId === pack.id)
+      .map((address) => {
+        const category = normalizeAddressCategory(address.category)
+        return {
+          ...address,
+          category,
+          placeId: `address:${address.id}`,
+          source: 'user',
+          nameZh: address.label,
+          nameEn: address.label,
+          detailZh: address.detail,
+          detailEn: address.detail,
+          icon: MAP_ADDRESS_CATEGORY_ICONS[category],
+        }
+      })
+    return [...builtInPlaces, ...userPlaces]
+  })
+
+  const findActivePlaceByText = (textInput) => {
+    const text = typeof textInput === 'string' ? textInput.trim().toLocaleLowerCase() : ''
+    if (!text) return null
+    return (
+      activeMapPlaces.value.find((place) => {
+        const candidates = [
+          place.label,
+          place.detail,
+          place.nameZh,
+          place.nameEn,
+          place.detailZh,
+          place.detailEn,
+          ...(Array.isArray(place.aliases) ? place.aliases : []),
+        ]
+        return candidates.some(
+          (candidate) =>
+            typeof candidate === 'string' && candidate.trim().toLocaleLowerCase() === text,
+        )
+      }) || null
+    )
+  }
+
+  const computeActiveTripEstimate = (fromText, toText) => {
+    const fromPlace = findActivePlaceByText(fromText)
+    const toPlace = findActivePlaceByText(toText)
+    const measuredDistanceKm =
+      fromPlace?.position && toPlace?.position
+        ? calculateMapDistanceKm(activeMapPack.value, fromPlace.position, toPlace.position)
+        : null
+    return computeTripEstimate(fromText, toText, measuredDistanceKm)
+  }
+
   const tripEstimate = computed(() => {
-    const { distanceKm, minutes, fare } = computeTripEstimate(tripForm.from, tripForm.to)
+    const { distanceKm, minutes, fare } = computeActiveTripEstimate(tripForm.from, tripForm.to)
     return { distanceKm, minutes, fare }
   })
 
@@ -1212,6 +1364,10 @@ export const useMapStore = defineStore('map', () => {
   const resolveAddressLabel = (detailText, fallbackLabel) => {
     const detail = typeof detailText === 'string' ? detailText.trim() : ''
     if (!detail) return fallbackLabel
+    const activePlace = findActivePlaceByText(detail)
+    if (activePlace) {
+      return activePlace.label || activePlace.nameZh || activePlace.nameEn || fallbackLabel
+    }
     const exact = addresses.find((item) => item.detail === detail)
     if (exact) return exact.label
     const byLabel = addresses.find((item) => item.label === detail)
@@ -1329,11 +1485,14 @@ export const useMapStore = defineStore('map', () => {
       arrivedAt,
       scheduledPushId: '',
     }
-    currentLocation.value = {
+    const destinationPlace = findActivePlaceByText(state.to)
+    setCurrentLocation({
       source: 'trip_arrived',
       label: state.toLabel || resolveAddressLabel(state.to, '目的地'),
       detail: state.to,
-    }
+      mapPackId: activeMapPackId.value,
+      position: destinationPlace?.position || null,
+    })
     const reward = buildTripArrivalReward(state)
     appendTripHistory({
       id: `trip_hist_${arrivedAt}`,
@@ -1793,19 +1952,138 @@ export const useMapStore = defineStore('map', () => {
     return true
   }
 
-  const setCurrentLocation = ({ label, detail, source = 'manual' }) => {
+  const resolveMapPackIdForWorld = (worldPack = {}) => {
+    const worldPackId =
+      typeof worldPack === 'string'
+        ? worldPack.trim()
+        : typeof worldPack?.id === 'string'
+          ? worldPack.id.trim()
+          : 'default_world'
+    const boundMapPackId = worldMapPackBindings.value[worldPackId]
+    if (boundMapPackId && mapPacks.value.some((pack) => pack.id === boundMapPackId)) {
+      return boundMapPackId
+    }
+    return getRecommendedMapPackIdForWorldPack(worldPackId)
+  }
+
+  const createCustomMapPack = (input = {}) => {
+    const id =
+      typeof input.id === 'string' && input.id.trim()
+        ? input.id.trim()
+        : `custom-map-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+    if (mapPacks.value.some((pack) => pack.id === id)) return null
+    const pack = normalizeCustomMapPack({ ...input, id }, customMapPacks.value.length)
+    if (!pack) return null
+    customMapPacks.value = normalizeCustomMapPacks([...customMapPacks.value, pack])
+    return customMapPacks.value.find((item) => item.id === pack.id) || null
+  }
+
+  const removeCustomMapPack = (packId) => {
+    const id = typeof packId === 'string' ? packId.trim() : ''
+    if (!id || !customMapPacks.value.some((pack) => pack.id === id)) return false
+    const isReferenced =
+      activeMapPackId.value === id ||
+      addresses.some((address) => address.mapPackId === id) ||
+      Object.values(worldMapPackBindings.value).includes(id)
+    if (isReferenced) return false
+    customMapPacks.value = customMapPacks.value.filter((pack) => pack.id !== id)
+    return true
+  }
+
+  const setActiveMapPack = (packId) => {
+    const requestedId = typeof packId === 'string' ? packId.trim() : ''
+    const pack = mapPacks.value.find((item) => item.id === requestedId)
+    if (!pack || normalizeTripState(tripState.value).status === TRIP_STATUS_TRAVELING) {
+      return false
+    }
+    if (pack.id === activeMapPackId.value) return true
+
+    activeMapPackId.value = pack.id
+    const savedAddress = addresses.find((address) => address.mapPackId === pack.id)
+    const firstPlace = savedAddress || pack.places?.[0]
+    const secondPlace = pack.places?.[1] || firstPlace
+    if (firstPlace) {
+      setCurrentLocation({
+        label: firstPlace.label || firstPlace.nameZh || firstPlace.nameEn,
+        detail: firstPlace.detail || firstPlace.detailZh || firstPlace.detailEn,
+        source: savedAddress ? 'saved' : 'map_pack',
+        mapPackId: pack.id,
+        position: firstPlace.position,
+      })
+      tripForm.from = firstPlace.detail || firstPlace.detailZh || firstPlace.detailEn || ''
+    }
+    tripForm.to = secondPlace?.detail || secondPlace?.detailZh || secondPlace?.detailEn || ''
+    return true
+  }
+
+  const bindMapPackToWorld = (worldPack, mapPackId) => {
+    const worldPackId =
+      typeof worldPack === 'string'
+        ? worldPack.trim()
+        : typeof worldPack?.id === 'string'
+          ? worldPack.id.trim()
+          : ''
+    const pack = mapPacks.value.find((item) => item.id === mapPackId)
+    if (!worldPackId || !pack || normalizeTripState(tripState.value).status === TRIP_STATUS_TRAVELING) {
+      return false
+    }
+    if (!setActiveMapPack(pack.id)) return false
+    worldMapPackBindings.value = {
+      ...worldMapPackBindings.value,
+      [worldPackId]: pack.id,
+    }
+    return true
+  }
+
+  const resetWorldMapPackBinding = (worldPack = {}) => {
+    const worldPackId =
+      typeof worldPack === 'string'
+        ? worldPack.trim()
+        : typeof worldPack?.id === 'string'
+          ? worldPack.id.trim()
+          : 'default_world'
+    const recommendedId = getRecommendedMapPackIdForWorldPack(worldPack)
+    if (!setActiveMapPack(recommendedId)) return false
+    const next = { ...worldMapPackBindings.value }
+    delete next[worldPackId]
+    worldMapPackBindings.value = next
+    return true
+  }
+
+  const syncMapPackForWorld = (worldPack = {}) => {
+    const mapPackId = resolveMapPackIdForWorld(worldPack)
+    if (mapPackId === activeMapPackId.value) return true
+    return setActiveMapPack(mapPackId)
+  }
+
+  const setCurrentLocation = ({
+    label,
+    detail,
+    source = 'manual',
+    mapPackId = activeMapPackId.value,
+    position = null,
+  }) => {
     if (!detail?.trim()) return
+    const pack = getAvailableMapPackById(mapPackId)
     currentLocation.value = {
       source,
       label: label?.trim() || '当前位置',
       detail: detail.trim(),
+      mapPackId: pack.id,
+      position: normalizeMapPosition(position, pack.coordinateKind),
     }
   }
 
   const setCurrentLocationByAddressId = (addressId) => {
     const match = addresses.find((item) => item.id === Number(addressId))
     if (!match) return
-    setCurrentLocation({ label: match.label, detail: match.detail, source: 'saved' })
+    setCurrentLocation({
+      label: match.label,
+      detail: match.detail,
+      source: 'saved',
+      mapPackId: match.mapPackId,
+      position: match.position,
+    })
   }
 
   const setTripEndpoint = (endpoint, detail) => {
@@ -1821,13 +2099,57 @@ export const useMapStore = defineStore('map', () => {
     return true
   }
 
-  const addAddress = ({ label, detail }) => {
+  const addAddress = ({
+    label,
+    detail,
+    category = 'home',
+    mapPackId = activeMapPackId.value,
+    position = null,
+  }) => {
     if (!label?.trim() || !detail?.trim()) return false
+    const pack = getAvailableMapPackById(mapPackId)
     addresses.push({
       id: Date.now(),
       label: label.trim(),
       detail: detail.trim(),
+      category: normalizeAddressCategory(category),
+      mapPackId: pack.id,
+      position: normalizeMapPosition(position, pack.coordinateKind),
     })
+    return true
+  }
+
+  const updateAddress = (addressId, updates = {}) => {
+    const match = addresses.find((item) => item.id === Number(addressId))
+    if (!match || !updates || typeof updates !== 'object') return false
+
+    const pack = getAvailableMapPackById(updates.mapPackId || match.mapPackId)
+    const label = typeof updates.label === 'string' ? updates.label.trim() : match.label
+    const detail = typeof updates.detail === 'string' ? updates.detail.trim() : match.detail
+    if (!label || !detail) return false
+
+    const previousDetail = match.detail
+    const nextPosition = Object.hasOwn(updates, 'position')
+      ? normalizeMapPosition(updates.position, pack.coordinateKind)
+      : normalizeMapPosition(match.position, pack.coordinateKind)
+
+    Object.assign(match, {
+      label,
+      detail,
+      category: normalizeAddressCategory(updates.category ?? match.category),
+      mapPackId: pack.id,
+      position: nextPosition,
+    })
+
+    if (currentLocation.value.source === 'saved' && currentLocation.value.detail === previousDetail) {
+      setCurrentLocation({
+        label,
+        detail,
+        source: 'saved',
+        mapPackId: pack.id,
+        position: nextPosition,
+      })
+    }
     return true
   }
 
@@ -1838,7 +2160,7 @@ export const useMapStore = defineStore('map', () => {
   }
 
   const buildFoodDeliveryMapHandoff = ({ restaurant = {}, categoryKey = '' } = {}) => {
-    const current = normalizeCurrentLocation(currentLocation.value)
+    const current = normalizeCurrentLocation(currentLocation.value, mapPacks.value)
     const restaurantContext = normalizeFoodDeliveryRestaurantContext(restaurant)
     const normalizedCategory = trimLine(categoryKey, 40)
     const pickupPoint = restaurantContext.address || restaurantContext.name
@@ -1888,7 +2210,7 @@ export const useMapStore = defineStore('map', () => {
     order = {},
     event = {},
   } = {}) => {
-    const current = normalizeCurrentLocation(currentLocation.value)
+    const current = normalizeCurrentLocation(currentLocation.value, mapPacks.value)
     const context = normalizeDeliveryEventLocationContext({
       ownerModule,
       order,
@@ -1952,7 +2274,7 @@ export const useMapStore = defineStore('map', () => {
     if (!from || !to) return { ok: false, code: 'TRIP_ENDPOINT_EMPTY' }
     if (from === to) return { ok: false, code: 'TRIP_ENDPOINT_SAME' }
 
-    const estimate = computeTripEstimate(from, to)
+    const estimate = computeActiveTripEstimate(from, to)
     const startedAt = Date.now()
     const etaAt = startedAt + estimate.durationSeconds * 1000
 
@@ -2106,16 +2428,23 @@ export const useMapStore = defineStore('map', () => {
   const applyPersistedSource = (source) => {
     if (!source || typeof source !== 'object') return false
 
+    customMapPacks.value = normalizeCustomMapPacks(source.customMapPacks)
+    worldMapPackBindings.value = normalizeWorldMapPackBindings(
+      source.worldMapPackBindings,
+      mapPacks.value,
+    )
+    activeMapPackId.value = getAvailableMapPackById(source.activeMapPackId).id
+
     if (Array.isArray(source.addresses)) {
       const normalizedAddresses = source.addresses
-        .map((item, index) => normalizeAddressRecord(item, index))
+        .map((item, index) => normalizeAddressRecord(item, index, mapPacks.value))
         .filter(Boolean)
       if (normalizedAddresses.length > 0) {
         addresses.splice(0, addresses.length, ...normalizedAddresses)
       }
     }
 
-    currentLocation.value = normalizeCurrentLocation(source.currentLocation)
+    currentLocation.value = normalizeCurrentLocation(source.currentLocation, mapPacks.value)
 
     const normalizedTripForm = normalizeTripForm(source.tripForm)
     tripForm.from = normalizedTripForm.from
@@ -2169,6 +2498,13 @@ export const useMapStore = defineStore('map', () => {
   }
 
   const createBackupSnapshot = () => ({
+    activeMapPackId: activeMapPackId.value,
+    customMapPacks: customMapPacks.value.map((pack) => ({
+      ...pack,
+      factions: pack.factions.map((faction) => ({ ...faction, position: { ...faction.position } })),
+      places: [],
+    })),
+    worldMapPackBindings: { ...worldMapPackBindings.value },
     addresses: addresses.map((item) => ({ ...item })),
     currentLocation: { ...currentLocation.value },
     tripForm: { ...tripForm },
@@ -2187,6 +2523,7 @@ export const useMapStore = defineStore('map', () => {
     tripState.value = createIdleTripState()
     tripHistory.value = []
     mapCalendarReminderPreferences.value = {}
+    activeMapPackId.value = DEFAULT_MAP_PACK_ID
     mapVisualSettings.value = createDefaultMapVisualSettings()
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
     runtimeNow.value = Date.now()
@@ -2221,6 +2558,9 @@ export const useMapStore = defineStore('map', () => {
 
   watch(
     [
+      activeMapPackId,
+      customMapPacks,
+      worldMapPackBindings,
       addresses,
       currentLocation,
       tripForm,
@@ -2273,6 +2613,12 @@ export const useMapStore = defineStore('map', () => {
   ensureMapAutomationHandlerRegistered()
 
   return {
+    mapPacks,
+    customMapPacks,
+    worldMapPackBindings,
+    activeMapPackId,
+    activeMapPack,
+    activeMapPlaces,
     addresses,
     currentLocation,
     currentLocationText,
@@ -2289,11 +2635,19 @@ export const useMapStore = defineStore('map', () => {
     mapVisualSettings,
     mapAutomationRuntime,
     mapAiVisualAutomationPolicy,
+    resolveMapPackIdForWorld,
+    createCustomMapPack,
+    removeCustomMapPack,
+    setActiveMapPack,
+    bindMapPackToWorld,
+    resetWorldMapPackBinding,
+    syncMapPackForWorld,
     setCurrentLocation,
     setCurrentLocationByAddressId,
     setTripEndpoint,
     applyAddressToTripEndpoint,
     addAddress,
+    updateAddress,
     removeAddress,
     buildFoodDeliveryMapHandoff,
     buildDeliveryEventMapHandoff,

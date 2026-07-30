@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-07-29
+Updated: 2026-07-30
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -15,7 +15,7 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current repository baseline is green across lint, 185 unit-test files / 1170 tests, build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips; CI and Pages definitions include the full suite, but remote execution and deployed-artifact proof remain open.
+- the current repository baseline is green across lint, 195 unit-test files / 1311 tests, build, and the focused Map desktop/Pixel 5 Playwright flow; CI and Pages definitions include the full suite, but remote execution and deployed-artifact proof remain open.
 
 The current work is concentrated in four areas:
 
@@ -26,7 +26,7 @@ The current work is concentrated in four areas:
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, and 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, and 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus lightweight custom-map intake.
 
 ## 2. Product Positioning
 
@@ -51,7 +51,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; optional Book/encyclopedia/template references are non-binding diagnostics, while broader hardening is pending |
 | Mini Scene | `Pure foundation landed, no runtime` | schemas, empty caller registry, Book profile/regex validation, and world resolution are tested; persistence, Settings, presenters, and source triggers remain separate |
-| Map / Calendar / Reminders / Phone | `Stable MVP` | product boundaries and cross-module handoffs are real; visual/depth polish remains |
+| Map / Calendar / Reminders / Phone | `World-bound Map baseline, stable schedule/phone MVPs` | Map now resolves one local map per world, supports Seoul and a faction-based cyber wasteland, local search, trips, image import/generation, and dedicated settings with detailed editable player pins and read-only pack places. A development-only Kakao comparison is isolated from the production runtime and canonical data; keyed measurement, true-device gesture proof, and full package authoring remain |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | order and notification loops are strong; store/detail/tracking polish remains |
 | Wallet / Gallery | `Stable support platforms` | useful shared owners; deeper economy/Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
@@ -91,7 +91,9 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### Life And Commerce Apps
 
-- manage trips/routes, confirmed Calendar events, raw Reminders cues, and Phone callbacks;
+- use a world-bound real Seoul or cyber-wasteland map, search local places, add categorized pins, explicitly edit their coordinates in Map Settings, and manage trips without device location or live routing;
+- bind another local map image or an explicitly accepted generated fictional map to the current world from Map Settings;
+- manage confirmed Calendar events, raw Reminders cues, and Phone callbacks;
 - browse and create Shopping/Food Delivery records, checkout, track updates, and produce downstream Wallet/relationship continuity;
 - use Gallery assets across modules;
 - use Wallet currencies and source-linked transactions;
@@ -104,6 +106,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - the shell and several large modules do not yet share final production-level visual consistency;
 - current mobile E2E uses browser emulation; keyboard, safe areas, touch feel, browser chrome, permissions, media picker, and weak network still need real-device review;
 - World Pack setup and target-app handoffs need true phone testing;
+- Map gestures and large custom-map/offline behavior still need true-device testing; complete map-package validation, editing, georeferencing, and export are not implemented;
 - group chat has target/member/reply-mode V1, not full multi-speaker orchestration;
 - Assets and Stock remain less deep than core modules;
 - Cheats has no frozen product contract.
@@ -119,7 +122,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 - Settings backup currently includes the configured AI API key because it exports the full settings snapshot;
 - the local push relay has no authentication and permissive CORS;
-- production and full dependency audits both report 0 after a compatible transitive lock refresh with no direct, override/resolution, or major changes;
+- the production dependency audit reports 0; the full audit reports 10 high findings through the development-only `brace-expansion` / ESLint and Vue Test Utils toolchain, and the available automatic fix requires a breaking ESLint 10 upgrade, so no force fix is applied in this slice;
 - PR CI and main Pages build definitions now fail closed on both audits, lint, unit, build, and one full E2E run that includes focused visual coverage; remote execution, external protections, and a deployed base-path smoke are still pending;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 

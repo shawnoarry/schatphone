@@ -8,15 +8,17 @@ import { useSystemStore } from '../stores/system'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
-import { pushReturnTarget } from '../lib/navigation-return'
+import { normalizeHomePageQuery, pushReturnTarget } from '../lib/navigation-return'
 import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   recordMapSharedRouteRelationshipFact,
 } from '../lib/relationship-fact-adapters'
 import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
+import { formatMapPosition } from '../lib/map-packs'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
 import MapRouteFamiliarityPanel from '../components/map/MapRouteFamiliarityPanel.vue'
+import MapSceneCanvas from '../components/map/MapSceneCanvas.vue'
 import MapTripControlPanel from '../components/map/MapTripControlPanel.vue'
 import MapTripHistoryPanel from '../components/map/MapTripHistoryPanel.vue'
 import MapVisualSettingsPanel from '../components/map/MapVisualSettingsPanel.vue'
@@ -41,7 +43,9 @@ const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
 const {
-  addresses,
+  activeMapPackId,
+  activeMapPack,
+  activeMapPlaces,
   currentLocation,
   currentLocationText,
   tripForm,
@@ -60,7 +64,15 @@ const {
 const addressForm = reactive({
   label: '',
   detail: '',
+  position: null,
+  category: 'home',
 })
+const pendingMapPosition = ref(null)
+const mapSearchSuggestionsOpen = ref(false)
+const placeCreatorOpen = ref(false)
+const placePinMode = ref(false)
+const selectedMapPlace = ref(null)
+const activeCustomMapPreviewUrl = ref('')
 const tripActionHint = ref({
   tone: '',
   message: '',
@@ -82,19 +94,51 @@ const mapDrawerFocus = ref('trip')
 const sharedRouteContactId = ref('')
 let runtimeTimer = null
 
+const MAP_PACK_PREVIEW_SCOPE_ID = 'map-runtime-pack'
+
 const MAP_DRAWER_SECTIONS = Object.freeze([
   { key: 'trip', icon: 'fas fa-route', labelZh: '行程', labelEn: 'Trip' },
   { key: 'places', icon: 'fas fa-map-location-dot', labelZh: '地点', labelEn: 'Places' },
   { key: 'progress', icon: 'fas fa-layer-group', labelZh: '探索', labelEn: 'Progress' },
   { key: 'visual', icon: 'fas fa-map', labelZh: '图层', labelEn: 'Layers' },
 ])
-
-const MAP_CANVAS_PIN_POSITIONS = Object.freeze([
-  { top: '34%', left: '24%' },
-  { top: '46%', left: '70%' },
-  { top: '60%', left: '42%' },
-  { top: '25%', left: '58%' },
+const MAP_PRIMARY_SECTIONS = MAP_DRAWER_SECTIONS.filter((section) => section.key !== 'visual')
+const MAP_PLACE_CATEGORIES = Object.freeze([
+  { id: 'home', icon: 'fas fa-house', labelZh: '居住', labelEn: 'Home' },
+  { id: 'work', icon: 'fas fa-building', labelZh: '工作', labelEn: 'Work' },
+  { id: 'school', icon: 'fas fa-graduation-cap', labelZh: '学校', labelEn: 'School' },
+  { id: 'shop', icon: 'fas fa-store', labelZh: '商店', labelEn: 'Shop' },
+  { id: 'leisure', icon: 'fas fa-mug-hot', labelZh: '休闲', labelEn: 'Leisure' },
+  { id: 'other', icon: 'fas fa-location-dot', labelZh: '其他', labelEn: 'Other' },
 ])
+
+const activeWorldPack = computed(() => systemStore.getActiveWorldPack?.() || {
+  id: 'default_world',
+  title: '默认世界',
+  name: 'Default world',
+})
+const activeWorldName = computed(() =>
+  t(
+    activeWorldPack.value?.title || activeWorldPack.value?.name || '默认世界',
+    activeWorldPack.value?.name || activeWorldPack.value?.title || 'Default world',
+  ),
+)
+const renderedActiveMapPack = computed(() => ({
+  ...activeMapPack.value,
+  assetUrl:
+    activeMapPack.value?.source === 'custom'
+      ? activeCustomMapPreviewUrl.value
+      : activeMapPack.value?.assetUrl,
+}))
+const mapFocusPosition = computed(() =>
+  currentLocation.value?.mapPackId === activeMapPackId.value
+    ? currentLocation.value.position
+    : null,
+)
+const mapDrawerTitle = computed(() => {
+  const section = MAP_DRAWER_SECTIONS.find((item) => item.key === mapDrawerFocus.value)
+  return section ? t(section.labelZh, section.labelEn) : t('地图', 'Map')
+})
 
 const mapWorldAppContext = computed(() =>
   resolveWorldAppUxContext({
@@ -110,6 +154,10 @@ const mapRouteEyebrow = computed(() =>
     ? t(mapWorldAppContext.value.packTitle, mapWorldAppContext.value.packName)
     : t('路线', 'Route'),
 )
+const returnsToMapSettings = computed(() => {
+  const source = Array.isArray(route.query.source) ? route.query.source[0] : route.query.source
+  return source === 'map-settings'
+})
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -139,35 +187,79 @@ const closeMapDrawer = () => {
   mapDrawerOpen.value = false
 }
 
-const useAddressAsCurrent = (addressId) => {
-  mapStore.setCurrentLocationByAddressId(addressId)
-  tripActionHint.value = { tone: '', message: '' }
+const buildMapSettingsQuery = () => {
+  const homePage = normalizeHomePageQuery(route.query.homePage)
+  return {
+    ...(route.query.from === 'home' ? { from: 'home' } : {}),
+    ...(homePage ? { homePage } : {}),
+  }
 }
 
-const applyManualLocation = () => {
-  mapStore.setCurrentLocation({
-    label: addressForm.label || t('自定义位置', 'Custom location'),
-    detail: addressForm.detail,
-    source: 'manual',
+const openMapSettings = () => {
+  router.push({ path: '/map/settings', query: buildMapSettingsQuery() })
+}
+
+const openSelectedPlaceManager = () => {
+  const place = selectedMapPlace.value
+  if (!place || place.source !== 'user') return
+  router.push({
+    path: '/map/settings/places',
+    query: { ...buildMapSettingsQuery(), addressId: String(place.id) },
   })
-  tripActionHint.value = { tone: '', message: '' }
+  closePlaceDetail()
+}
+
+const resetAddressDraft = () => {
+  addressForm.label = ''
+  addressForm.detail = ''
+  addressForm.position = null
+  addressForm.category = 'home'
+  pendingMapPosition.value = null
+}
+
+const openPlaceCreator = () => {
+  selectedMapPlace.value = null
+  resetAddressDraft()
+  placeCreatorOpen.value = true
+}
+
+const closePlaceCreator = () => {
+  placeCreatorOpen.value = false
+}
+
+const startPlacePinMode = () => {
+  placeCreatorOpen.value = false
+  closeMapDrawer()
+  placePinMode.value = true
+}
+
+const cancelPlacePinMode = () => {
+  placePinMode.value = false
+  pendingMapPosition.value = null
+  addressForm.position = null
+  placeCreatorOpen.value = true
+}
+
+const useCurrentPositionForDraft = () => {
+  if (!currentLocation.value?.position || currentLocation.value.mapPackId !== activeMapPackId.value) return
+  addressForm.position = { ...currentLocation.value.position }
+  pendingMapPosition.value = { ...currentLocation.value.position }
 }
 
 const addAddress = () => {
-  const ok = mapStore.addAddress(addressForm)
+  const ok = mapStore.addAddress({
+    ...addressForm,
+    mapPackId: activeMapPackId.value,
+    category: addressForm.category,
+  })
   if (!ok) return
-  addressForm.label = ''
-  addressForm.detail = ''
-}
-
-const setTripFromAddress = (addressId) => {
-  mapStore.applyAddressToTripEndpoint(addressId, 'from')
-  tripActionHint.value = { tone: '', message: '' }
-}
-
-const setTripToAddress = (addressId) => {
-  mapStore.applyAddressToTripEndpoint(addressId, 'to')
-  tripActionHint.value = { tone: '', message: '' }
+  const saved = activeMapPlaces.value.find(
+    (place) => place.source === 'user' && place.label === addressForm.label.trim(),
+  )
+  selectedMapPlace.value = saved || null
+  placeCreatorOpen.value = false
+  placePinMode.value = false
+  resetAddressDraft()
 }
 
 const updateTripFrom = (value) => {
@@ -176,6 +268,134 @@ const updateTripFrom = (value) => {
 
 const updateTripTo = (value) => {
   tripForm.value.to = value
+  mapSearchSuggestionsOpen.value = true
+}
+
+const mapPlaceName = (place) =>
+  t(place?.nameZh || place?.label || '', place?.nameEn || place?.label || '')
+
+const mapPlaceDetail = (place) =>
+  t(place?.detailZh || place?.detail || '', place?.detailEn || place?.detail || '')
+
+const mapScenePins = computed(() =>
+  activeMapPlaces.value
+    .filter((place) => place?.position)
+    .map((place) => ({
+      ...place,
+      name: mapPlaceName(place),
+      detail: mapPlaceDetail(place),
+      tone:
+        activeMapPack.value.factions?.find((faction) => faction.id === place.factionId)?.tone ||
+        (place.source === 'user' ? '#2563eb' : '#0f766e'),
+    })),
+)
+
+const mapPlaceSearchResults = computed(() => {
+  if (!mapSearchSuggestionsOpen.value) return []
+  const query = typeof tripForm.value.to === 'string' ? tripForm.value.to.trim().toLocaleLowerCase() : ''
+  if (!query) return []
+  return activeMapPlaces.value
+    .filter((place) => {
+      const searchable = [
+        mapPlaceName(place),
+        mapPlaceDetail(place),
+        place.nameZh,
+        place.nameEn,
+        place.detailZh,
+        place.detailEn,
+        place.label,
+        place.detail,
+        ...(Array.isArray(place.aliases) ? place.aliases : []),
+      ]
+      return searchable.some(
+        (value) => typeof value === 'string' && value.toLocaleLowerCase().includes(query),
+      )
+    })
+    .slice(0, 6)
+})
+
+const selectMapDestination = (place) => {
+  mapStore.setTripEndpoint('to', mapPlaceDetail(place) || mapPlaceName(place))
+  mapSearchSuggestionsOpen.value = false
+  tripActionHint.value = { tone: '', message: '' }
+}
+
+const useMapPlaceAsCurrent = (place) => {
+  mapStore.setCurrentLocation({
+    label: mapPlaceName(place),
+    detail: mapPlaceDetail(place),
+    source: place.source === 'user' ? 'saved' : 'map_pack',
+    mapPackId: activeMapPackId.value,
+    position: place.position,
+  })
+  tripActionHint.value = { tone: '', message: '' }
+}
+
+const setTripFromMapPlace = (place) => {
+  mapStore.setTripEndpoint('from', mapPlaceDetail(place) || mapPlaceName(place))
+  tripActionHint.value = { tone: '', message: '' }
+}
+
+const setTripToMapPlace = (place) => {
+  selectMapDestination(place)
+}
+
+const onMapPlacePin = ({ position }) => {
+  if (!placePinMode.value) return
+  pendingMapPosition.value = position
+  addressForm.position = position
+  if (!addressForm.detail.trim()) addressForm.detail = formatMapPosition(position)
+  placePinMode.value = false
+  placeCreatorOpen.value = true
+}
+
+const onMapPinSelected = (place) => {
+  selectedMapPlace.value = place
+  mapSearchSuggestionsOpen.value = false
+}
+
+const closePlaceDetail = () => {
+  selectedMapPlace.value = null
+}
+
+const useSelectedPlaceAsCurrent = () => {
+  if (!selectedMapPlace.value) return
+  useMapPlaceAsCurrent(selectedMapPlace.value)
+  closePlaceDetail()
+}
+
+const useSelectedPlaceAsDestination = () => {
+  if (!selectedMapPlace.value) return
+  setTripToMapPlace(selectedMapPlace.value)
+  closePlaceDetail()
+}
+
+const useSelectedPlaceAsStart = () => {
+  if (!selectedMapPlace.value) return
+  setTripFromMapPlace(selectedMapPlace.value)
+  closePlaceDetail()
+}
+
+const canSavePlace = computed(() =>
+  Boolean(addressForm.label.trim() && addressForm.detail.trim() && addressForm.position),
+)
+
+const placeCategoryIcon = (category = '') =>
+  MAP_PLACE_CATEGORIES.find((item) => item.id === category)?.icon || 'fas fa-location-dot'
+
+const removeSelectedPlace = async () => {
+  const place = selectedMapPlace.value
+  if (!place || place.source !== 'user') return
+  const confirmed = await confirmDialog({
+    title: t('删除地点', 'Delete place'),
+    message: t(`确定删除“${mapPlaceName(place)}”吗？`, `Delete “${mapPlaceName(place)}”?`),
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
+  mapStore.removeAddress(place.id)
+  closePlaceDetail()
 }
 
 const mapVisualAssetOptions = computed(() =>
@@ -759,13 +979,6 @@ const visibleMapAreaFeedback = computed(() => mapAreaFeedback.value.slice(0, 4))
 const visibleTripHistory = computed(() => tripHistory.value.slice(0, 8))
 const primaryMapAreaFeedback = computed(() => visibleMapAreaFeedback.value[0] || null)
 const primaryRouteFamiliarity = computed(() => visibleRouteFamiliarity.value[0] || null)
-const mapCanvasPins = computed(() =>
-  visibleMapAreaFeedback.value.slice(0, MAP_CANVAS_PIN_POSITIONS.length).map((item, index) => ({
-    ...item,
-    position: MAP_CANVAS_PIN_POSITIONS[index],
-  })),
-)
-
 const activeTripRouteLabel = computed(() => {
   const from =
     tripRuntime.value?.fromLabel ||
@@ -1047,6 +1260,42 @@ const tickRuntime = () => {
   mapStore.tickTripRuntime(Date.now())
 }
 
+watch(
+  () => activeWorldPack.value?.id,
+  () => {
+    const synced = mapStore.syncMapPackForWorld(activeWorldPack.value)
+    if (!synced && activeMapPackId.value !== mapStore.resolveMapPackIdForWorld(activeWorldPack.value)) {
+      tripActionHint.value = {
+        tone: 'warn',
+        message: t('行程结束后会切换到当前世界的地图。', 'This world map will become active after the trip ends.'),
+      }
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => `${activeMapPack.value?.id || ''}:${activeMapPack.value?.assetId || ''}`,
+  async () => {
+    galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCOPE_ID)
+    activeCustomMapPreviewUrl.value = ''
+    if (activeMapPack.value?.source !== 'custom' || !activeMapPack.value.assetId) return
+    activeCustomMapPreviewUrl.value = await galleryStore.getAssetPreviewUrl(
+      activeMapPack.value.assetId,
+      { scopeId: MAP_PACK_PREVIEW_SCOPE_ID },
+    )
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.query.panel,
+  (panel) => {
+    if (panel === 'visual') openMapDrawer('visual')
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
   tickRuntime()
   runtimeTimer = setInterval(() => {
@@ -1064,42 +1313,40 @@ onBeforeUnmount(() => {
     delete mapVisualQuickPreviewMap[assetId]
   })
   galleryStore.releaseAssetPreviewScope(MAP_ASSET_PREVIEW_SCOPE_ID)
+  galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCOPE_ID)
 })
 </script>
 
 <template>
-  <div class="map-immersive-root w-full h-full text-slate-100 flex flex-col">
-    <div class="map-topbar pt-12 pb-3 px-4 flex items-center justify-between gap-3">
-      <button @click="goHome" class="text-cyan-100 text-sm flex items-center gap-1">
-        <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
+  <div class="map-immersive-root" data-app="map" :data-world-pack="activeWorldPack.id">
+    <header class="map-topbar">
+      <button type="button" class="map-topbar-button" :aria-label="returnsToMapSettings ? t('返回地图设置', 'Back to Map settings') : t('返回首页', 'Back to Home')" @click="goHome">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
       </button>
-      <h1 class="min-w-0 flex-1 truncate text-center font-bold tracking-[0.28em] text-xs uppercase">{{ mapAppTitle }}</h1>
-      <span class="text-[10px] px-2 py-1 rounded-full bg-white/10 border border-white/15 text-cyan-50">
-        {{ tripStatusLabel }}
-      </span>
-    </div>
+      <div class="map-topbar-title">
+        <h1>{{ mapAppTitle }}</h1>
+        <p>{{ activeWorldName }} · {{ t(activeMapPack.shortLabelZh, activeMapPack.shortLabelEn) }}</p>
+      </div>
+      <button type="button" class="map-topbar-button" data-testid="map-open-settings" :aria-label="t('地图设置', 'Map settings')" @click="openMapSettings">
+        <i class="fas fa-gear" aria-hidden="true"></i>
+      </button>
+    </header>
 
-    <main class="map-canvas-shell flex-1" data-testid="map-primary-shell">
+    <main class="map-canvas-shell" data-testid="map-primary-shell">
       <section class="map-canvas" data-testid="map-primary-canvas">
-        <div class="map-grid-layer"></div>
-        <div class="map-road map-road-main"></div>
-        <div class="map-road map-road-cross"></div>
-        <div class="map-road map-road-ring"></div>
-        <div class="map-waterway"></div>
+        <MapSceneCanvas
+          :map-pack="renderedActiveMapPack"
+          :pins="mapScenePins"
+          :pending-position="pendingMapPosition"
+          :focus-position="mapFocusPosition"
+          :allow-pin-placement="placePinMode"
+          @place-pin="onMapPlacePin"
+          @select-pin="onMapPinSelected"
+        />
 
-        <div class="map-search-card">
-          <div class="map-search-row">
-            <i class="fas fa-location-crosshairs text-blue-500"></i>
-            <div class="min-w-0">
-              <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                {{ t('当前位置', 'Current location') }}
-              </p>
-              <p class="truncate text-sm font-semibold text-slate-900">{{ currentLocationText }}</p>
-            </div>
-          </div>
-          <div class="map-search-divider"></div>
+        <div class="map-search-card" :class="{ 'has-results': mapPlaceSearchResults.length > 0 }">
           <label class="map-search-row">
-            <i class="fas fa-magnifying-glass text-slate-400"></i>
+            <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
             <input
               :value="tripForm.to"
               class="map-destination-input"
@@ -1107,93 +1354,85 @@ onBeforeUnmount(() => {
               data-testid="map-destination-search"
               @input="updateTripTo($event.target.value)"
             />
+            <button
+              v-if="tripForm.to"
+              type="button"
+              :aria-label="t('清除搜索', 'Clear search')"
+              @click="updateTripTo('')"
+            >
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
           </label>
+          <div
+            v-if="mapPlaceSearchResults.length > 0"
+            class="map-place-results"
+            data-testid="map-local-place-results"
+          >
+            <button
+              v-for="place in mapPlaceSearchResults"
+              :key="place.placeId"
+              type="button"
+              class="map-place-result"
+              @click="onMapPinSelected(place)"
+            >
+              <span class="map-place-result-icon">
+                <i :class="place.icon || 'fas fa-location-dot'" aria-hidden="true"></i>
+              </span>
+              <span class="min-w-0 text-left">
+                <span class="block truncate text-xs font-semibold text-slate-900">{{ mapPlaceName(place) }}</span>
+                <span class="block truncate text-[10px] text-slate-500">{{ mapPlaceDetail(place) }}</span>
+              </span>
+            </button>
+          </div>
         </div>
 
-        <button
-          type="button"
-          class="map-layer-button"
-          data-testid="map-open-layers"
-          :aria-label="t('地图图层', 'Map layers')"
-          @click="openMapDrawer('visual')"
-        >
-          <i class="fas fa-layer-group" aria-hidden="true"></i>
-        </button>
-        <button
-          type="button"
-          class="map-current-location-button"
-          data-testid="map-open-places"
-          :aria-label="t('地点列表', 'Places')"
-          @click="openMapDrawer('places')"
-        >
-          <i class="fas fa-location-arrow" aria-hidden="true"></i>
+        <div class="map-context-strip" data-testid="map-world-context">
+          <span><i :class="activeMapPack.kind === 'real' ? 'fas fa-city' : 'fas fa-shield-halved'" aria-hidden="true"></i>{{ activeWorldName }}</span>
+          <button type="button" @click="openMapSettings">{{ t('地图来源', 'Map source') }}</button>
+        </div>
+
+        <div class="map-location-chip">
+          <i class="fas fa-location-crosshairs" aria-hidden="true"></i>
+          <span><small>{{ t('当前位置', 'Current location') }}</small><strong>{{ currentLocationText }}</strong></span>
+        </div>
+
+        <button type="button" class="map-current-location-button" data-testid="map-open-places" :aria-label="t('地点列表', 'Places')" @click="openMapDrawer('places')">
+          <i class="fas fa-bookmark" aria-hidden="true"></i>
         </button>
 
-        <div
-          v-for="pin in mapCanvasPins"
-          :key="pin.id"
-          class="map-canvas-pin"
-          :style="{ top: pin.position.top, left: pin.position.left }"
-          :title="t(pin.titleZh, pin.titleEn)"
-        >
-          <i :class="pin.icon || 'fas fa-location-dot'"></i>
+        <button type="button" class="map-add-place-button" data-testid="map-add-place" @click="openPlaceCreator">
+          <i class="fas fa-plus" aria-hidden="true"></i>
+          <span>{{ t('添加地点', 'Add place') }}</span>
+        </button>
+
+        <div v-if="placePinMode" class="map-placement-banner" data-testid="map-placement-mode">
+          <i class="fas fa-location-crosshairs" aria-hidden="true"></i>
+          <span>{{ t('点击地图确定地点位置', 'Tap the map to place this location') }}</span>
+          <button type="button" @click="cancelPlacePinMode">{{ t('取消', 'Cancel') }}</button>
         </div>
 
         <div class="map-route-card" data-testid="map-primary-route-card">
-          <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-            {{ mapRouteEyebrow }}
-          </p>
-          <p class="mt-1 text-lg font-bold text-slate-950">{{ mapPrimarySheetTitle }}</p>
-          <p class="mt-1 text-sm text-slate-600">{{ mapPrimarySheetDescription }}</p>
           <div
             v-if="mapWorldAppContext"
-            class="mt-3 rounded-2xl border border-cyan-100 bg-cyan-50/80 p-3 text-slate-700"
+            class="map-world-app-line"
             data-testid="map-world-app-context"
             :data-world-pack="mapWorldAppContext.packId"
             :data-world-app="mapWorldAppContext.bindingId"
           >
-            <div class="flex items-start gap-3">
-              <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-cyan-600 text-white">
-                <i :class="mapWorldAppContext.icon"></i>
-              </span>
-              <div class="min-w-0">
-                <p class="truncate text-sm font-bold text-slate-950">{{ mapWorldAppContext.bindingTitle }}</p>
-                <p class="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
-                  {{ mapWorldAppContext.targetLabel }} · {{ mapWorldAppContext.archetype }}
-                </p>
-                <p class="mt-1 text-xs leading-5 text-slate-600">
-                  {{ mapWorldAppContext.description || mapWorldAppContext.boundaryCopy }}
-                </p>
-                <p class="mt-1 text-[11px] leading-5 text-slate-500">
-                  {{ mapWorldAppContext.boundaryCopy }}
-                </p>
-              </div>
+            <i :class="mapWorldAppContext.icon" aria-hidden="true"></i>
+            <span>{{ mapWorldAppContext.bindingTitle }}</span>
+          </div>
+          <div class="map-route-summary">
+            <div class="min-w-0">
+              <p>{{ mapRouteEyebrow }}</p>
+              <h2>{{ mapPrimarySheetTitle }}</h2>
+              <span>{{ mapPrimarySheetDescription }}</span>
+            </div>
+            <div class="map-route-metrics">
+              <strong>{{ tripEstimate.minutes }}</strong>
+              <small>{{ t('分钟', 'min') }}</small>
             </div>
           </div>
-          <div class="mt-3 flex flex-wrap gap-2 text-[11px] font-medium text-slate-600">
-            <span class="map-route-pill">{{ tripEstimate.distanceKm }} km</span>
-            <span class="map-route-pill">{{ tripEstimate.minutes }} {{ t('分钟', 'min') }}</span>
-            <span class="map-route-pill">¥{{ Number(tripEstimate.fare || 0).toLocaleString() }}</span>
-          </div>
-          <label class="mt-3 block">
-            <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              {{ t('Shared route', 'Shared route') }}
-            </span>
-            <select
-              v-model="sharedRouteContactId"
-              class="map-destination-input w-full"
-              data-testid="map-relationship-contact"
-            >
-              <option value="">{{ t('Optional companion', 'Optional companion') }}</option>
-              <option
-                v-for="contact in relationshipContactOptions"
-                :key="contact.id"
-                :value="contact.optionValue"
-              >
-                {{ contact.optionLabel }}
-              </option>
-            </select>
-          </label>
           <div v-if="isTripTraveling || isTripArrived" class="mt-3">
             <div class="h-2 overflow-hidden rounded-full bg-slate-200">
               <div
@@ -1205,7 +1444,7 @@ onBeforeUnmount(() => {
               {{ tripProgressPercent }}% 路 {{ formatSeconds(tripRuntime.remainingSeconds) }}
             </p>
           </div>
-          <div class="mt-4 flex gap-2">
+          <div class="map-route-actions">
             <button
               type="button"
               class="map-primary-action"
@@ -1214,7 +1453,7 @@ onBeforeUnmount(() => {
               data-testid="map-primary-start-trip"
               @click="startTrip"
             >
-              {{ isTripArrived ? t('已到达', 'Arrived') : t('开始行程', 'Start trip') }}
+              {{ isTripTraveling ? t('进行中', 'In transit') : isTripArrived ? t('已到达', 'Arrived') : t('开始行程', 'Start trip') }}
             </button>
             <button
               type="button"
@@ -1229,7 +1468,7 @@ onBeforeUnmount(() => {
 
         <nav class="map-bottom-nav" data-testid="map-secondary-menu">
           <button
-            v-for="section in MAP_DRAWER_SECTIONS"
+            v-for="section in MAP_PRIMARY_SECTIONS"
             :key="section.key"
             type="button"
             class="map-bottom-nav-item"
@@ -1253,15 +1492,27 @@ onBeforeUnmount(() => {
         <div class="mb-4 flex items-center justify-between gap-3">
           <div>
             <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-              {{ t('地图工具', 'Map tools') }}
+              {{ activeWorldName }}
             </p>
             <h2 class="text-lg font-bold text-slate-950">
-              {{ t('二级功能', 'Secondary tools') }}
+              {{ mapDrawerTitle }}
             </h2>
           </div>
           <button
+            v-if="returnsToMapSettings && mapDrawerFocus === 'visual'"
             type="button"
             class="h-9 w-9 rounded-full bg-slate-100 text-slate-600"
+            :aria-label="t('返回地图设置', 'Back to Map settings')"
+            data-testid="map-visual-return-settings"
+            @click="goHome"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <button
+            v-else
+            type="button"
+            class="h-9 w-9 rounded-full bg-slate-100 text-slate-600"
+            :aria-label="t('关闭', 'Close')"
             @click="closeMapDrawer"
           >
             <i class="fas fa-xmark"></i>
@@ -1270,7 +1521,7 @@ onBeforeUnmount(() => {
 
         <div class="map-drawer-tabs">
           <button
-            v-for="section in MAP_DRAWER_SECTIONS"
+            v-for="section in MAP_PRIMARY_SECTIONS"
             :key="section.key"
             type="button"
             class="map-drawer-tab"
@@ -1334,32 +1585,37 @@ onBeforeUnmount(() => {
       />
 
       <section v-show="mapDrawerFocus === 'places'" class="map-glass-panel rounded-[1.75rem] p-4">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="font-semibold">{{ t('当前位置', 'Current location') }}</h2>
-          <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-            {{ currentLocation.source === 'saved' ? t('地址簿', 'Address book') : t('手动设置', 'Manual') }}
-          </span>
+        <div class="map-places-drawer-heading">
+          <div>
+            <span>{{ t('当前位置', 'Current location') }}</span>
+            <strong>{{ currentLocationText }}</strong>
+          </div>
+          <button type="button" data-testid="map-add-place-drawer" @click="openPlaceCreator">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            {{ t('添加地点', 'Add place') }}
+          </button>
         </div>
-        <p class="text-sm text-gray-600 mb-3">{{ currentLocationText }}</p>
-        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div
-            v-for="item in addresses"
-            :key="item.id"
-            class="text-left text-sm border rounded-lg px-3 py-2 bg-white"
+        <div class="map-place-list">
+          <button
+            v-for="item in activeMapPlaces"
+            :key="item.placeId"
+            type="button"
+            class="map-place-list-row"
+            @click="onMapPinSelected(item)"
           >
-            <div class="font-medium">{{ item.label }}</div>
-            <div class="text-xs text-gray-500 truncate mb-2">{{ item.detail }}</div>
-            <div class="flex flex-wrap gap-2">
-              <button @click="useAddressAsCurrent(item.id)" class="text-[11px] px-2 py-1 rounded bg-gray-900 text-white">
-                {{ t('设为当前位置', 'Set current') }}
-              </button>
-              <button @click="setTripFromAddress(item.id)" class="text-[11px] px-2 py-1 rounded border border-gray-300">
-                {{ t('设为起点', 'Use as from') }}
-              </button>
-              <button @click="setTripToAddress(item.id)" class="text-[11px] px-2 py-1 rounded border border-gray-300">
-                {{ t('设为终点', 'Use as to') }}
-              </button>
-            </div>
+            <span class="map-place-list-icon">
+              <i :class="item.icon || placeCategoryIcon(item.category)" aria-hidden="true"></i>
+            </span>
+            <span class="min-w-0 text-left">
+              <strong>{{ mapPlaceName(item) }}</strong>
+              <small>{{ mapPlaceDetail(item) }}</small>
+            </span>
+            <span class="map-place-list-source">{{ item.source === 'user' ? t('我的', 'Mine') : t('世界', 'World') }}</span>
+            <i class="fas fa-chevron-right map-place-list-chevron" aria-hidden="true"></i>
+          </button>
+          <div v-if="activeMapPlaces.length === 0" class="map-place-list-empty">
+            <i class="fas fa-map-pin" aria-hidden="true"></i>
+            <span>{{ t('还没有地点', 'No places yet') }}</span>
           </div>
         </div>
       </section>
@@ -1374,26 +1630,6 @@ onBeforeUnmount(() => {
         @open-worldbook="openWorldBook"
         @delete-trip="deleteTripHistoryItem"
       />
-
-      <section v-show="mapDrawerFocus === 'places'" class="map-glass-panel rounded-[1.75rem] p-4">
-        <h2 class="font-semibold mb-3">{{ t('新增地址 / 手动定位', 'Add address / set manually') }}</h2>
-        <div class="space-y-2">
-          <input
-            v-model="addressForm.label"
-            class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            :placeholder="t('地点名称（如：健身房）', 'Location name (e.g. Gym)')"
-          />
-          <input
-            v-model="addressForm.detail"
-            class="w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            :placeholder="t('详细地址', 'Detailed address')"
-          />
-          <div class="flex gap-2">
-            <button @click="addAddress" class="px-3 py-2 rounded-lg bg-blue-500 text-white text-sm">{{ t('保存到地址簿', 'Save to address book') }}</button>
-            <button @click="applyManualLocation" class="px-3 py-2 rounded-lg bg-gray-800 text-white text-sm">{{ t('设为当前位置', 'Set as current') }}</button>
-          </div>
-        </div>
-      </section>
 
       <MapTripControlPanel
         v-show="mapDrawerFocus === 'trip'"
@@ -1416,6 +1652,28 @@ onBeforeUnmount(() => {
         @cancel-trip="cancelTrip"
         @acknowledge-arrival="acknowledgeArrival"
       />
+
+      <section v-show="mapDrawerFocus === 'trip'" class="map-glass-panel rounded-[1.75rem] p-4">
+        <label class="block">
+          <span class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+            {{ t('同行路线', 'Shared route') }}
+          </span>
+          <select
+            v-model="sharedRouteContactId"
+            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none"
+            data-testid="map-relationship-contact"
+          >
+            <option value="">{{ t('可选同行人', 'Optional companion') }}</option>
+            <option
+              v-for="contact in relationshipContactOptions"
+              :key="contact.id"
+              :value="contact.optionValue"
+            >
+              {{ contact.optionLabel }}
+            </option>
+          </select>
+        </label>
+      </section>
 
       <MapRouteFamiliarityPanel
         v-show="mapDrawerFocus === 'progress'"
@@ -1485,20 +1743,106 @@ onBeforeUnmount(() => {
         @open-worldbook="openWorldBook"
       />
 
-      <section v-show="mapDrawerFocus === 'places'" class="map-glass-panel rounded-[1.75rem] p-4">
-        <h2 class="font-semibold mb-2">{{ t('地址簿管理', 'Address book') }}</h2>
-        <div class="space-y-2">
-          <div v-for="item in addresses" :key="`row-${item.id}`" class="flex items-center justify-between border rounded-lg p-2">
-            <div class="min-w-0">
-              <p class="text-sm font-medium">{{ item.label }}</p>
-              <p class="text-xs text-gray-500 truncate">{{ item.detail }}</p>
-            </div>
-            <button @click="mapStore.removeAddress(item.id)" class="text-xs text-red-500 px-2 py-1">{{ t('删除', 'Delete') }}</button>
-          </div>
-        </div>
-      </section>
         </div>
       </aside>
+    </div>
+
+    <div v-if="placeCreatorOpen" class="map-place-modal-backdrop" @click.self="closePlaceCreator">
+      <section class="map-place-modal" role="dialog" aria-modal="true" :aria-label="t('添加地点', 'Add place')" data-testid="map-place-creator">
+        <div class="map-place-modal-header">
+          <div>
+            <span>{{ t(activeMapPack.shortLabelZh, activeMapPack.shortLabelEn) }}</span>
+            <h2>{{ t('添加地点', 'Add place') }}</h2>
+          </div>
+          <button type="button" :aria-label="t('关闭', 'Close')" @click="closePlaceCreator">
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div class="map-place-category-grid" role="group" :aria-label="t('地点类型', 'Place type')">
+          <button
+            v-for="category in MAP_PLACE_CATEGORIES"
+            :key="category.id"
+            type="button"
+            :class="{ 'is-active': addressForm.category === category.id }"
+            :aria-pressed="addressForm.category === category.id"
+            @click="addressForm.category = category.id"
+          >
+            <i :class="category.icon" aria-hidden="true"></i>
+            <span>{{ t(category.labelZh, category.labelEn) }}</span>
+          </button>
+        </div>
+
+        <label class="map-place-field">
+          <span>{{ t('地点名称', 'Place name') }}</span>
+          <input v-model="addressForm.label" data-testid="map-place-name" :placeholder="t('例如：家、公司、练习室', 'Home, office, studio...')" />
+        </label>
+        <label class="map-place-field">
+          <span>{{ t('地址或说明', 'Address or description') }}</span>
+          <input v-model="addressForm.detail" data-testid="map-place-detail" :placeholder="t('输入真实地址或自定义描述', 'Enter an address or custom description')" />
+        </label>
+
+        <div class="map-place-position-row" :class="{ 'has-position': addressForm.position }">
+          <span class="map-place-position-icon"><i class="fas fa-map-pin" aria-hidden="true"></i></span>
+          <span class="min-w-0">
+            <strong>{{ addressForm.position ? t('位置已确定', 'Position selected') : t('尚未设置位置', 'Position not set') }}</strong>
+            <small>{{ addressForm.position ? formatMapPosition(addressForm.position) : t('在地图上选择，或使用当前位置', 'Choose on the map or use current location') }}</small>
+          </span>
+          <i v-if="addressForm.position" class="fas fa-check" aria-hidden="true"></i>
+        </div>
+        <p v-if="addressForm.position" class="sr-only" data-testid="map-pending-pin-status">{{ t('已在地图上选定图钉位置', 'Pin position selected on the map') }}</p>
+
+        <div class="map-place-position-actions">
+          <button type="button" data-testid="map-choose-pin" @click="startPlacePinMode">
+            <i class="fas fa-crosshairs" aria-hidden="true"></i>
+            {{ addressForm.position ? t('重新选点', 'Choose again') : t('在地图选点', 'Choose on map') }}
+          </button>
+          <button type="button" :disabled="!currentLocation.position || currentLocation.mapPackId !== activeMapPackId" @click="useCurrentPositionForDraft">
+            <i class="fas fa-location-arrow" aria-hidden="true"></i>
+            {{ t('使用当前位置', 'Use current') }}
+          </button>
+        </div>
+
+        <button type="button" class="map-place-save-button" :disabled="!canSavePlace" data-testid="map-save-address" @click="addAddress">
+          {{ t('保存地点', 'Save place') }}
+        </button>
+      </section>
+    </div>
+
+    <div v-if="selectedMapPlace" class="map-place-modal-backdrop" @click.self="closePlaceDetail">
+      <section class="map-place-detail-sheet" role="dialog" aria-modal="true" :aria-label="mapPlaceName(selectedMapPlace)" data-testid="map-place-detail-sheet">
+        <div class="map-place-detail-head">
+          <span class="map-place-detail-icon"><i :class="selectedMapPlace.icon || placeCategoryIcon(selectedMapPlace.category)" aria-hidden="true"></i></span>
+          <div class="min-w-0">
+            <small>{{ selectedMapPlace.source === 'user' ? t('我的地点', 'My place') : t('世界地点', 'World place') }}</small>
+            <h2>{{ mapPlaceName(selectedMapPlace) }}</h2>
+            <p>{{ mapPlaceDetail(selectedMapPlace) }}</p>
+          </div>
+          <button type="button" :aria-label="t('关闭', 'Close')" @click="closePlaceDetail"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="map-place-detail-actions">
+          <button type="button" class="is-primary" data-testid="map-place-use-destination" @click="useSelectedPlaceAsDestination">
+            <i class="fas fa-location-arrow" aria-hidden="true"></i>
+            {{ t('设为目的地', 'Set destination') }}
+          </button>
+          <button type="button" @click="useSelectedPlaceAsStart">
+            <i class="fas fa-route" aria-hidden="true"></i>
+            {{ t('设为起点', 'Set start') }}
+          </button>
+          <button type="button" @click="useSelectedPlaceAsCurrent">
+            <i class="fas fa-crosshairs" aria-hidden="true"></i>
+            {{ t('设为当前位置', 'Set current') }}
+          </button>
+        </div>
+        <button v-if="selectedMapPlace.source === 'user'" type="button" class="map-place-manage-button" data-testid="map-place-manage-pin" @click="openSelectedPlaceManager">
+          <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+          {{ t('编辑地点与图钉', 'Edit place and pin') }}
+        </button>
+        <button v-if="selectedMapPlace.source === 'user'" type="button" class="map-place-delete-button" @click="removeSelectedPlace">
+          <i class="fas fa-trash-can" aria-hidden="true"></i>
+          {{ t('删除地点', 'Delete place') }}
+        </button>
+      </section>
     </div>
   </div>
 </template>
@@ -1618,6 +1962,73 @@ onBeforeUnmount(() => {
   background: rgba(148, 163, 184, 0.24);
 }
 
+.map-pack-switcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 42px;
+  padding: 5px 8px;
+  background: rgba(241, 245, 249, 0.72);
+}
+
+.map-pack-option {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 10px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.map-pack-option-active {
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.18);
+}
+
+.map-pack-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.map-place-results {
+  max-height: 214px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 6px;
+  background: rgba(248, 250, 252, 0.98);
+}
+
+.map-place-result {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+
+.map-place-result:hover,
+.map-place-result:focus-visible {
+  background: #e2e8f0;
+}
+
+.map-place-result-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 11px;
+}
+
 .map-destination-input {
   width: 100%;
   border: 0;
@@ -1649,31 +2060,11 @@ onBeforeUnmount(() => {
 }
 
 .map-layer-button {
-  top: 148px;
+  top: 192px;
 }
 
 .map-current-location-button {
-  top: 202px;
-}
-
-.map-canvas-pin {
-  position: absolute;
-  z-index: 3;
-  display: grid;
-  height: 34px;
-  width: 34px;
-  place-items: center;
-  border: 3px solid rgba(255, 255, 255, 0.92);
-  border-radius: 999px 999px 999px 6px;
-  background: #2563eb;
-  color: #fff;
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
-  transform: rotate(-45deg);
-}
-
-.map-canvas-pin i {
-  transform: rotate(45deg);
-  font-size: 0.75rem;
+  top: 246px;
 }
 
 .map-route-card {
@@ -1685,7 +2076,7 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(226, 232, 240, 0.92);
   border-radius: 1.7rem;
   background: rgba(255, 255, 255, 0.95);
-  padding: 18px;
+  padding: 14px 16px;
   box-shadow: 0 24px 54px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(18px);
 }
@@ -1867,5 +2258,646 @@ onBeforeUnmount(() => {
 .map-glass-panel .border-gray-200,
 .map-glass-panel .border-gray-300 {
   border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* City-map information architecture */
+.map-immersive-root {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: #eef1ed;
+  color: #17211d;
+}
+
+.map-topbar {
+  z-index: 20;
+  display: grid;
+  min-height: 102px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(205, 214, 208, 0.92);
+  background: rgba(249, 250, 248, 0.97);
+  padding: 42px 14px 13px;
+  color: #17211d;
+  backdrop-filter: blur(14px);
+}
+
+.map-topbar-button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid #d9dfdb;
+  border-radius: 8px;
+  background: #fff;
+  color: #26352e;
+}
+
+.map-topbar-title {
+  min-width: 0;
+  text-align: center;
+}
+
+.map-topbar-title h1 {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-topbar-title p {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #718078;
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-canvas-shell {
+  min-height: 0;
+  flex: 1;
+  padding: 0;
+}
+
+.map-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0;
+  background: #dce4de;
+  box-shadow: none;
+  color: #17211d;
+}
+
+.map-search-card {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  left: 14px;
+  z-index: 12;
+  overflow: hidden;
+  border: 1px solid rgba(210, 219, 213, 0.95);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 10px 28px rgba(31, 48, 39, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.map-search-row {
+  display: grid;
+  min-height: 48px;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+}
+
+.map-search-row > i {
+  color: #236d58;
+  font-size: 13px;
+}
+
+.map-search-row > button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 7px;
+  color: #718078;
+}
+
+.map-destination-input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #17211d;
+  font-size: 13px;
+  font-weight: 750;
+  outline: none;
+}
+
+.map-place-results {
+  max-height: 230px;
+  overflow-y: auto;
+  border-top: 1px solid #e1e6e2;
+  background: #fff;
+  padding: 5px;
+}
+
+.map-place-result {
+  display: grid;
+  width: 100%;
+  min-height: 52px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border-radius: 7px;
+  padding: 6px 8px;
+}
+
+.map-place-result:hover,
+.map-place-result:focus-visible {
+  background: #edf3ef;
+}
+
+.map-place-result-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 7px;
+  background: #dfece5;
+  color: #17664f;
+  font-size: 11px;
+}
+
+.map-context-strip {
+  position: absolute;
+  top: 70px;
+  left: 14px;
+  z-index: 8;
+  display: inline-flex;
+  max-width: calc(100% - 28px);
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(211, 221, 214, 0.92);
+  border-radius: 7px;
+  background: rgba(247, 249, 247, 0.94);
+  padding: 3px 5px 3px 8px;
+  color: #354a40;
+  box-shadow: 0 6px 18px rgba(31, 48, 39, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.map-context-strip > span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-context-strip > button {
+  flex: 0 0 auto;
+  border-radius: 5px;
+  background: #dfe9e3;
+  padding: 4px 7px;
+  color: #17664f;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.map-location-chip {
+  position: absolute;
+  top: 108px;
+  left: 14px;
+  z-index: 8;
+  display: grid;
+  width: min(70%, 310px);
+  min-height: 44px;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(211, 221, 214, 0.9);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 6px 9px;
+  box-shadow: 0 8px 22px rgba(31, 48, 39, 0.12);
+}
+
+.map-location-chip > i {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 7px;
+  background: #17664f;
+  color: #fff;
+  font-size: 11px;
+}
+
+.map-location-chip > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.map-location-chip small {
+  color: #718078;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.map-location-chip strong {
+  overflow: hidden;
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-current-location-button,
+.map-add-place-button {
+  position: absolute;
+  right: 14px;
+  z-index: 9;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(210, 219, 213, 0.95);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #25372e;
+  box-shadow: 0 9px 24px rgba(31, 48, 39, 0.14);
+}
+
+.map-current-location-button {
+  top: 108px;
+  width: 44px;
+}
+
+.map-add-place-button {
+  top: 160px;
+  gap: 7px;
+  padding: 0 12px;
+  background: #17664f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.map-placement-banner {
+  position: absolute;
+  top: 160px;
+  right: 14px;
+  left: 14px;
+  z-index: 15;
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d7bf73;
+  border-radius: 8px;
+  background: #fff8dd;
+  padding: 7px 9px;
+  color: #5f4b11;
+  box-shadow: 0 10px 26px rgba(82, 62, 9, 0.16);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.map-placement-banner > button {
+  min-height: 30px;
+  border-radius: 6px;
+  background: #efe0a8;
+  padding: 0 8px;
+  font-size: 10px;
+}
+
+.map-route-card {
+  position: absolute;
+  right: 14px;
+  bottom: 80px;
+  left: 14px;
+  z-index: 10;
+  border: 1px solid rgba(210, 219, 213, 0.95);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 11px 12px;
+  color: #17211d;
+  box-shadow: 0 14px 38px rgba(31, 48, 39, 0.17);
+  backdrop-filter: blur(14px);
+}
+
+.map-world-app-line {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+  border-radius: 5px;
+  background: #e3eee8;
+  padding: 4px 7px;
+  color: #17664f;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.map-world-app-line span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-route-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-route-summary p {
+  color: #718078;
+  font-size: 8px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.map-route-summary h2 {
+  overflow: hidden;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-route-summary > div > span {
+  display: block;
+  overflow: hidden;
+  margin-top: 2px;
+  color: #647168;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-route-metrics {
+  display: flex;
+  min-height: 46px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid #e2e7e3;
+  color: #17664f;
+}
+
+.map-route-metrics strong { font-size: 18px; line-height: 1; }
+.map-route-metrics small { margin-top: 3px; font-size: 8px; font-weight: 800; }
+
+.map-route-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.map-primary-action,
+.map-secondary-action {
+  min-height: 38px;
+  border-radius: 7px;
+  padding: 0 13px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.map-primary-action {
+  background: #17664f;
+  color: #fff;
+  box-shadow: none;
+}
+
+.map-primary-action-disabled {
+  background: #d5ddd8;
+  color: #79847e;
+}
+
+.map-secondary-action {
+  border: 1px solid #dce2de;
+  background: #f5f7f5;
+  color: #26372f;
+}
+
+.map-bottom-nav {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  left: 14px;
+  z-index: 11;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  border: 1px solid rgba(210, 219, 213, 0.96);
+  border-radius: 8px;
+  background: rgba(250, 251, 249, 0.97);
+  padding: 5px;
+  box-shadow: 0 10px 30px rgba(31, 48, 39, 0.15);
+  backdrop-filter: blur(14px);
+}
+
+.map-bottom-nav-item {
+  display: flex;
+  min-width: 0;
+  min-height: 48px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 6px;
+  padding: 0 5px;
+  color: #526158;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.map-bottom-nav-item i { color: #17664f; font-size: 12px; }
+
+.map-drawer-backdrop,
+.map-place-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(21, 33, 27, 0.42);
+  padding: 0;
+}
+
+.map-bottom-drawer,
+.map-place-modal,
+.map-place-detail-sheet {
+  display: flex;
+  width: min(100%, 720px);
+  max-height: 86vh;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dce2de;
+  border-radius: 8px 8px 0 0;
+  background: #f8faf8;
+  padding: 10px 12px calc(14px + env(safe-area-inset-bottom));
+  color: #17211d;
+  box-shadow: 0 -20px 64px rgba(24, 38, 30, 0.24);
+  backdrop-filter: none;
+}
+
+.map-drawer-handle {
+  margin: 0 auto 10px;
+  height: 4px;
+  width: 38px;
+  border-radius: 999px;
+  background: #c9d1cc;
+}
+
+.map-drawer-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  overflow: visible;
+  padding-bottom: 9px;
+}
+
+.map-drawer-tab {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 7px;
+  background: #e8ece9;
+  padding: 0 7px;
+  color: #526158;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.map-drawer-tab-active {
+  background: #17664f;
+  color: #fff;
+}
+
+.map-drawer-content { overflow-y: auto; padding: 8px 4px 4px; }
+.map-glass-panel {
+  overflow: visible;
+  border: 1px solid #dfe5e1;
+  border-radius: 8px !important;
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.map-glass-panel::before { display: none; }
+.map-glass-panel input,
+.map-glass-panel select { border-color: #d9e0db !important; background: #fff !important; color: #17211d !important; }
+.map-glass-panel .bg-white,
+.map-glass-panel .bg-gray-50 { border-color: #dfe5e1 !important; background: #f7f9f7 !important; }
+.map-glass-panel .text-gray-500,
+.map-glass-panel .text-gray-600,
+.map-glass-panel .text-gray-700,
+.map-glass-panel .text-gray-800 { color: #647168 !important; }
+.map-glass-panel .border,
+.map-glass-panel .border-gray-200,
+.map-glass-panel .border-gray-300 { border-color: #dfe5e1 !important; }
+
+.map-places-drawer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e7e3;
+}
+.map-places-drawer-heading > div { min-width: 0; }
+.map-places-drawer-heading span { display: block; color: #718078; font-size: 9px; font-weight: 800; }
+.map-places-drawer-heading strong { display: block; overflow: hidden; margin-top: 3px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.map-places-drawer-heading button { display: inline-flex; min-height: 38px; flex: 0 0 auto; align-items: center; gap: 6px; border-radius: 7px; background: #17664f; padding: 0 10px; color: #fff; font-size: 10px; font-weight: 800; }
+.map-place-list { margin-top: 4px; }
+.map-place-list-row { display: grid; width: 100%; min-height: 58px; grid-template-columns: 36px minmax(0, 1fr) auto 12px; align-items: center; gap: 9px; border-bottom: 1px solid #e5e9e6; }
+.map-place-list-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 7px; background: #e3ece6; color: #17664f; font-size: 11px; }
+.map-place-list-row strong,
+.map-place-list-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-place-list-row strong { font-size: 11px; }
+.map-place-list-row small { margin-top: 3px; color: #758179; font-size: 9px; }
+.map-place-list-source { border-radius: 5px; background: #edf1ee; padding: 3px 5px; color: #6d7972; font-size: 8px; font-weight: 800; }
+.map-place-list-chevron { color: #9aa49e; font-size: 8px; }
+.map-place-list-empty { display: flex; min-height: 100px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #839088; font-size: 11px; }
+
+.map-place-modal,
+.map-place-detail-sheet {
+  overflow-y: auto;
+  padding: 18px 18px calc(22px + env(safe-area-inset-bottom));
+}
+
+.map-place-modal-header,
+.map-place-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.map-place-modal-header span { color: #718078; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.map-place-modal-header h2,
+.map-place-detail-head h2 { margin-top: 3px; font-size: 18px; font-weight: 850; }
+.map-place-modal-header > button,
+.map-place-detail-head > button { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border: 1px solid #dce2de; border-radius: 7px; background: #fff; color: #526158; }
+.map-place-category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 16px; }
+.map-place-category-grid button { display: flex; min-height: 52px; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid #dde4df; border-radius: 7px; background: #fff; color: #66736b; font-size: 9px; font-weight: 800; }
+.map-place-category-grid button.is-active { border-color: #17664f; background: #e3efe8; color: #17664f; box-shadow: inset 0 0 0 1px #17664f; }
+.map-place-field { display: block; margin-top: 13px; }
+.map-place-field > span { display: block; margin-bottom: 6px; color: #6c7871; font-size: 9px; font-weight: 800; }
+.map-place-field input { width: 100%; min-height: 44px; border: 1px solid #d5ddd8; border-radius: 7px; background: #fff; padding: 0 11px; color: #17211d; font-size: 12px; outline: none; }
+.map-place-field input:focus { border-color: #17664f; box-shadow: 0 0 0 3px rgba(23, 102, 79, 0.12); }
+.map-place-position-row { display: grid; min-height: 60px; grid-template-columns: 38px minmax(0, 1fr) 20px; align-items: center; gap: 9px; margin-top: 14px; border: 1px solid #dce2de; border-radius: 7px; background: #f2f5f2; padding: 8px; }
+.map-place-position-row.has-position { border-color: #a9cbbb; background: #eaf3ed; }
+.map-place-position-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 7px; background: #dfe8e2; color: #607068; }
+.map-place-position-row.has-position .map-place-position-icon { background: #17664f; color: #fff; }
+.map-place-position-row strong,
+.map-place-position-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-place-position-row strong { font-size: 11px; }
+.map-place-position-row small { margin-top: 3px; color: #748078; font-size: 9px; }
+.map-place-position-row > i { color: #17664f; }
+.map-place-position-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
+.map-place-position-actions button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; border: 1px solid #d8dfda; border-radius: 7px; background: #fff; color: #345044; font-size: 10px; font-weight: 800; }
+.map-place-position-actions button:disabled { opacity: 0.45; }
+.map-place-save-button { width: 100%; min-height: 46px; margin-top: 15px; border-radius: 7px; background: #17664f; color: #fff; font-size: 12px; font-weight: 850; }
+.map-place-save-button:disabled { background: #d1d9d4; color: #7d8982; }
+
+.map-place-detail-head { display: grid; grid-template-columns: 48px minmax(0, 1fr) 38px; }
+.map-place-detail-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 8px; background: #17664f; color: #fff; }
+.map-place-detail-head small { color: #718078; font-size: 9px; font-weight: 800; }
+.map-place-detail-head p { margin-top: 5px; color: #627067; font-size: 11px; line-height: 1.5; }
+.map-place-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 18px; }
+.map-place-detail-actions button { display: flex; min-height: 58px; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid #dae1dc; border-radius: 7px; background: #fff; color: #3a4d43; padding: 5px; font-size: 9px; font-weight: 800; }
+.map-place-detail-actions button.is-primary { border-color: #17664f; background: #17664f; color: #fff; }
+.map-place-manage-button,
+.map-place-delete-button { display: inline-flex; min-height: 40px; align-items: center; gap: 7px; margin-top: 12px; color: #a54238; font-size: 10px; font-weight: 800; }
+.map-place-manage-button { margin-right: 18px; color: #17664f; }
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #0f8061;
+  outline-offset: 2px;
+}
+
+@media (min-width: 720px) {
+  .map-canvas-shell { padding: 12px; }
+  .map-canvas { border: 1px solid #d3dcd6; border-radius: 8px; }
+  .map-bottom-drawer,
+  .map-place-modal,
+  .map-place-detail-sheet { margin-bottom: 18px; border-radius: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 </style>

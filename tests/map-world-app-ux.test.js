@@ -53,7 +53,9 @@ describe('Map world app UX package', () => {
     expect(contextBanner.attributes('data-world-pack')).toBe('survival_city')
     expect(contextBanner.attributes('data-world-app')).toBe('survival_safe_route_pass')
     expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toContain('Safe Route Pass')
-    expect(contextBanner.text()).toContain('Map keeps its own records')
+    expect(contextBanner.text()).toBe('Safe Route Pass')
+    expect(wrapper.text()).not.toContain('Map keeps its own records')
+    expect(mapStore.activeMapPackId).toBe('cyber-wasteland-v1')
     expect(mapStore.tripHistory).toHaveLength(originalTripHistoryLength)
 
     wrapper.unmount()
@@ -95,7 +97,9 @@ describe('Map world app UX package', () => {
     expect(contextBanner.attributes('data-world-pack')).toBe('modern_parallel')
     expect(contextBanner.attributes('data-world-app')).toBe(confirmed.binding.id)
     expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toContain('Metro Pass')
-    expect(contextBanner.text()).toContain('Map keeps its own records')
+    expect(contextBanner.text()).toBe('Metro Pass')
+    expect(wrapper.text()).not.toContain('Map keeps its own records')
+    expect(mapStore.activeMapPackId).toBe('real-seoul-v1')
     expect(mapStore.tripHistory).toHaveLength(originalTripHistoryLength)
 
     wrapper.unmount()

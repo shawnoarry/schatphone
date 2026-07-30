@@ -290,6 +290,8 @@ const returnButtonLabel = computed(() =>
       ? t('聊天', 'Chat')
       : returnLabelKey.value === 'Map'
         ? t('地图', 'Map')
+        : returnLabelKey.value === 'Map settings'
+          ? t('地图设置', 'Map settings')
         : returnLabelKey.value === 'Calendar'
           ? t('日历', 'Calendar')
           : t('设置', 'Settings'),

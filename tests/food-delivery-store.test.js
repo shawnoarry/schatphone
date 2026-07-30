@@ -469,12 +469,13 @@ describe('food delivery store', () => {
     setActivePinia(createPinia())
 
     const store = useFoodDeliveryStore()
+    const assetBaseUrl = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')
 
     expect(store.findRestaurantById('food_seed_verdant_day')?.image.url).toBe(
-      '/schatphone/images/ui-assets/apps/food-delivery/verdant-day/cover/verdant-day-cover-01.png',
+      `${assetBaseUrl}images/ui-assets/apps/food-delivery/verdant-day/cover/verdant-day-cover-01.png`,
     )
     expect(store.findMenuItemById('food_menu_verdant_aegean_garden')?.image.url).toBe(
-      '/schatphone/images/ui-assets/apps/food-delivery/verdant-day/products/verdant-day-item-01.png',
+      `${assetBaseUrl}images/ui-assets/apps/food-delivery/verdant-day/products/verdant-day-item-01.png`,
     )
   })
 

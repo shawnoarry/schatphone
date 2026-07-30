@@ -1,6 +1,6 @@
 # Map Calendar Reminders Product Boundary
 
-Updated: 2026-05-31
+Updated: 2026-07-30
 
 This file defines ownership boundaries for Map, Calendar, Reminders, and Phone-like callback support.
 
@@ -12,6 +12,10 @@ Map owns:
 - trip
 - location
 - ETA and travel context
+- per-world local map-pack binding, recommendation fallback, and version identity
+- custom map-pack metadata that references a Gallery-owned source image
+- player-created places, detailed player-pin administration, and canonical real/fantasy coordinates
+- deterministic local distance estimation when route planning is absent
 
 Map does not own:
 
@@ -21,8 +25,13 @@ Map does not own:
 - confirmed schedule meaning
 - relationship truth
 - Mini Scene world-profile resolution, regex execution, artifacts, or presenters
+- device-location truth, live traffic, navigation, or third-party POI truth
+- commercial map-provider billing or provider-specific place identity
+- Gallery asset bytes, image-generation credentials, or temporary generated candidates
 
 Map may later request a Mini Scene from a confirmed trip/location event using canonical Map facts. Its per-module popup mode remains a user setting, and any interaction that requests a route/location change returns to Map validation.
+
+Everyday place use does not mutate coordinates by dragging. Map Settings owns explicit coordinate reselection for player pins; map-pack places remain versioned read-only content. The development-only Kakao comparison may render canonical coordinates in an isolated preview but cannot become the owner of saved place identity, load POI or route services, or authorize a production provider dependency.
 
 ## 2. Calendar
 
@@ -80,4 +89,5 @@ Phone does not own:
 - Map-derived cues should pass explicit trip lineage into Calendar when available, while Calendar remains the owner of the confirmed event.
 - Phone can generate callback context, but callback scheduling belongs to Reminders until it becomes a real Calendar item.
 - World Pack can provide `reservation -> Calendar` labels/context for Calendar, including confirmed `reservation_board` appBindings, but it cannot move schedule records or push decisions out of Calendar.
+- the active world identifies which per-world Map binding to resolve; Map owns that binding and falls back to its reviewed recommendation table when no override exists.
 - Mini Scene request Adapters may hand canonical Map/Calendar facts to the shared Module, but popup presentation never becomes schedule/route truth and cannot bypass existing confirmation or edit rules.
