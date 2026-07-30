@@ -142,6 +142,29 @@ describe('workflow governance', () => {
     expect(protocol).toContain('Remote push is a separate action.')
   })
 
+  test('keeps routine worktree integration lightweight and risk-proportionate', () => {
+    const protocol = readProjectFile('docs/process/WORKTREE_INTEGRATION_PROTOCOL.md')
+
+    expect(protocol).toContain('The standard lane is the default.')
+    expect(protocol).toContain(
+      'create one local commit without a second controller round trip',
+    )
+    expect(protocol).toContain(
+      'Clean committed work does not require a duplicate patch, archive, pre-commit approval round',
+    )
+    expect(protocol).toContain(
+      'Do not rerun the same full lint/test/build/E2E suite in both source and target without a specific reason.',
+    )
+    expect(protocol).toContain(
+      'Close omission review with commit/tree/file comparison when the reviewed commit lands unchanged.',
+    )
+    expect(protocol).toContain('cross-worktree path reservation')
+    expect(protocol).toContain('Known Baseline Failure')
+    expect(protocol).toContain(
+      'remote push requires explicit authorization for that push',
+    )
+  })
+
   test('keeps focused visual testing local while CI runs the full E2E gate once', () => {
     const packageJson = JSON.parse(readProjectFile('package.json'))
     const ciWorkflow = readProjectFile('.github/workflows/ci.yml')

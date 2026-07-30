@@ -1,8 +1,8 @@
 # SchatPhone Worktree Integration Protocol
 
-Updated: 2026-07-26
+Updated: 2026-07-31
 
-Purpose: define how separate SchatPhone workgroups protect, hand off, review, integrate, and synchronize Git work without requiring the user to operate Git or coordinate repositories manually.
+Purpose: define a risk-proportionate way for separate SchatPhone workgroups to protect, hand off, review, integrate, and synchronize Git work without requiring the user to operate Git or coordinate repositories manually.
 
 This is a narrow cross-worktree delivery protocol. It is not a roadmap, task board, product-approval system, package workflow, or replacement for `docs/process/AI_WORK_MODE.md`.
 
@@ -28,6 +28,8 @@ This protocol does not:
 
 The protocol itself remains reviewable. A user request can pause or revise it, and its correctness must be checked against repository evidence rather than assumed from this document.
 
+The standard lane is the default. Escalate only when a named risk trigger applies; do not make low-risk, clean, committed work repeat protections designed for dirty or conflict-prone work.
+
 ## 2. Roles
 
 ### User
@@ -38,18 +40,19 @@ The user may ask the integration controller to push after local integration. No 
 
 ### Workgroup
 
-A workgroup owns only its assigned task-package slice. It may inspect, implement, validate, protect its own dirty work, and return a structured handoff.
+A workgroup owns only its assigned task-package slice. It may inspect, implement, validate, protect its own dirty work, and return a structured handoff. In the standard lane, it may stage the frozen file list and create one local commit without a second controller round trip after its required checks pass.
 
-Workgroups must not merge, rebase, push, delete worktrees, or synchronize other branches. They stop after handoff or after a protection/commit instruction from the integration controller.
+Workgroups must not merge, rebase, push, delete worktrees, or synchronize other branches. They stop after handoff and do not begin a dependent slice.
 
 ### Integration Controller
 
 The integration controller is the project-control task designated by the user. It owns:
 
 - repository and worktree relationship checks;
+- risk-lane selection and cross-worktree path reservations;
 - semantic and scope review;
 - protection refs and backup requirements;
-- exact staging and local commit coordination;
+- standard-lane commit boundary and elevated exact-staging/commit coordination;
 - conflict handling and integration strategy;
 - independent validation;
 - local `main` integration;
@@ -63,13 +66,60 @@ The integration controller cannot invent product approval or use technical corre
 
 A named specialist or local task conversation may implement a user- or integration-controller-approved slice directly within its frozen boundary and return `READY_FOR_INTEGRATION_REVIEW` directly to the integration controller. An intermediate workgroup-controller review is a risk-routing option, not a mandatory step for every round. Invoke it when the slice introduces new product meaning, requires cross-page or cross-package consistency, establishes a new visual rule or asset direction, expands scope, shares a worktree with concurrent activity, or cannot determine its approved boundary safely.
 
-The integration controller still owns scope, branch and concurrency control, protection, independent validation, exact commit coordination, local `main` integration, and required worktree synchronization. Specialists and workgroups must not merge, rebase, push, or synchronize branches themselves. These routing rules do not change the user-decision gate or separate push authorization.
+The integration controller still owns scope, branch and concurrency control, risk escalation, local `main` integration, and required worktree synchronization. Specialists and workgroups must not merge, rebase, push, or synchronize branches themselves. These routing rules do not change the user-decision gate or separate push authorization.
 
 A pure synchronization notice does not require waking every idle or long-history workgroup conversation. The integration controller may record the new baseline, and the workgroup verifies its branch, HEAD, and status when its next real task begins. This reduces coordination traffic without weakening the Git synchronization requirements in this protocol.
 
-Only one writing task may be active in a physical worktree at a time. A workgroup controller and its specialist conversations must not edit that worktree concurrently. Conversation names or folders are routing conveniences only: they do not create a second roadmap or task board and do not automatically synchronize repository state.
+Only one writing task may be active in a physical worktree at a time. A workgroup controller and its specialist conversations must not edit that worktree concurrently. The integration controller also records a cross-worktree path reservation for files or narrow ownership areas likely to overlap. Two worktrees must not edit the same active files concurrently unless the controller has deliberately serialized their integration order. Conversation names or folders are routing conveniences only: they do not create a second roadmap or task board and do not automatically synchronize repository state.
 
-## 3. User Decision Gates
+Generated candidates, model caches, virtual environments, browser profiles, and other large temporary runtimes should live in a named repository-external task-artifact directory when practical. Keeping them outside a Git worktree avoids turning routine synchronization into a large backup operation.
+
+## 3. Risk Lanes
+
+### Standard Lane
+
+Use the standard lane when all of the following are true:
+
+- the task has an approved product meaning and a frozen package/file boundary;
+- the worktree is dedicated to one writer, has no unrelated tracked changes, and has no required untracked content that will remain outside the commit;
+- no persistence/schema migration, dependency change, credential/security boundary, destructive operation, or remote push is involved;
+- no other active worktree reserves the same files;
+- the source can produce one clean commit based on the recorded base.
+
+The standard lane is intentionally short:
+
+1. The controller records the base, branch, package, reserved paths, acceptance, and required checks once.
+2. The workgroup implements the frozen slice, stages exactly the approved files, runs `git diff --cached --check` plus the required source checks, and then creates one local commit.
+3. The workgroup returns one compact `READY_FOR_INTEGRATION_REVIEW` handoff with the commit hash, exact file list, validation, and clean status.
+4. The controller reviews commit meaning and scope, reruns only risk-targeted checks when needed, integrates, and runs the required target checks once.
+5. Git tree/file comparison closes omission review automatically when the reviewed commit lands unchanged.
+
+Clean committed work does not require a duplicate patch, archive, pre-commit approval round, or a separate workgroup wake-up merely to report that identical Git trees match.
+
+### Elevated Lane
+
+Escalate from the standard lane when any of these triggers applies:
+
+- new, removed, or materially reinterpreted user-visible behavior;
+- dirty work, required untracked content, generated assets that must be preserved, or a detached/legacy worktree;
+- cross-package semantics, a new shared visual rule, persistence/schema/storage migration, dependency changes, credentials, security, or release infrastructure;
+- overlapping path reservations, target movement that requires history rewriting, conflicts, or uncertain ancestry;
+- deletion, migration, worktree retirement, remote push, or another destructive/external action;
+- validation evidence is stale, incomplete, unexpectedly different from the base, or cannot be reproduced.
+
+The elevated lane uses the applicable protection, independent validation, omission, and user-decision steps below. Escalation should add only the controls required by the actual trigger, not every possible ceremony.
+
+### Non-Negotiable Controls
+
+Risk lanes never weaken these controls:
+
+- `USER_DECISION_REQUIRED` for unapproved product meaning;
+- integration, rebase, merge, synchronization, and push remain controller-owned;
+- dirty or conflict-prone work is protected before history changes;
+- remote push requires explicit authorization for that push;
+- destructive cleanup or retirement remains separate and explicit.
+
+## 4. User Decision Gates
 
 Silence is not approval.
 
@@ -89,7 +139,7 @@ The user may reject, pause, or reopen a decision at any stage before or after in
 
 A completed stage does not automatically authorize the next stage. Workgroups stop at their assigned boundary, and the integration controller does not begin another product slice merely because the previous one is technically ready.
 
-## 4. Integration States
+## 5. Integration States
 
 Use these labels in handoffs when they help remove ambiguity:
 
@@ -105,7 +155,7 @@ Use these labels in handoffs when they help remove ambiguity:
 
 Workgroups report their current state. Only the integration controller may mark work `INTEGRATED_LOCAL` or `PUSHED`; product decisions and push authorization still require the user where specified.
 
-## 5. Workgroup Start Record
+## 6. Workgroup Start Record
 
 Before meaningful work in a separate worktree, record:
 
@@ -115,21 +165,25 @@ Before meaningful work in a separate worktree, record:
 - expected base commit;
 - `git status --short` result, including untracked files;
 - primary task package and any genuine secondary packages;
+- standard or elevated lane, including the named escalation trigger when elevated;
+- reserved files or narrow ownership area;
 - approved scope and any remaining user decision;
 - validation required by change type.
 
 An older worktree missing files that were later added to `main` is normal Git state, not evidence that files were lost. Compare commits and integrate through Git; do not manually copy a newer tree over a dirty older tree.
 
-## 6. Required Workgroup Handoff
+## 7. Required Workgroup Handoff
 
 A workgroup returning results must include:
 
 ```text
 State: READY_FOR_INTEGRATION_REVIEW or USER_DECISION_REQUIRED
 Task package:
+Risk lane:
 Worktree path:
 Branch or detached HEAD:
 Base commit and current HEAD:
+Reviewed commit, or uncommitted state when elevated protection is required:
 User-visible result:
 Confirmed decisions used:
 Files changed:
@@ -141,9 +195,11 @@ Operations not performed: merge/rebase/push/reset/clean/worktree deletion/synchr
 
 The workgroup then stops. It does not continue into a dependent slice while waiting for integration.
 
-## 7. Protecting Dirty Work
+For standard-lane work, keep this handoff compact. Command transcripts, screenshots, and repeated narrative belong only when they explain a failure, an external proof, or a material risk.
 
-When a handoff contains uncommitted work, the integration controller first reviews the reported scope and then instructs the source workgroup to protect it.
+## 8. Protecting Dirty Work
+
+Use this section only when the elevated lane contains uncommitted, required untracked, generated, detached, conflict-prone, or otherwise non-reconstructable work. Clean committed standard-lane work skips it.
 
 Protection sequence:
 
@@ -155,12 +211,12 @@ Protection sequence:
 6. List untracked files separately. Because `git diff` does not include them, preserve required untracked files in a named outside-repository archive before staging.
 7. Stage exactly the reviewed file list.
 8. Run `git diff --cached --check` and compare `git diff --cached --name-only` with the approved list.
-9. Create a local commit only after the integration controller confirms the scope and commit message.
+9. Create a local commit after the integration controller confirms the elevated protection scope and commit message.
 10. Report the commit hash, backup path and hash, exact file list, validation, and clean/dirty status.
 
-Do not use `reset`, `clean`, destructive checkout, or worktree deletion as a protection shortcut. A clean committed source branch normally needs no duplicate patch unless the controller requires one for conflict or omission review.
+Do not use `reset`, `clean`, destructive checkout, or worktree deletion as a protection shortcut. A clean committed source branch needs no duplicate patch unless a named conflict, history rewrite, or omission risk requires one.
 
-## 8. Controller Review
+## 9. Controller Review
 
 Before integration, the controller independently checks:
 
@@ -171,37 +227,45 @@ Before integration, the controller independently checks:
 5. roadmap and task-package ownership;
 6. contradictions or stale status across active documents;
 7. current official evidence for external platform claims when those claims affect the decision;
-8. required validation in the source tree;
+8. required validation in the source tree, without automatically duplicating an already current full suite;
 9. backup and recovery evidence for dirty or conflict-prone work;
 10. unrelated user changes that must remain untouched.
 
 If a review correction is needed, return `CHANGES_REQUESTED` with the smallest exact correction. Regenerate protection evidence after the correction. Do not merge first and fix the reviewed branch later.
 
-## 9. Integration Sequence
+For a standard-lane clean commit, commit ancestry, exact file scope, semantic review, current validation evidence, and a clean status are normally sufficient before integration. Independent checks should target the changed risk surface. Do not rerun the same full lint/test/build/E2E suite in both source and target without a specific reason.
+
+For an elevated lane, apply only the additional checks implied by its trigger. A dirty asset task may need backup verification but not a full architecture audit; a dependency or persistence change may need broader checks even when its file list is small.
+
+## 10. Integration Sequence
 
 The integration controller performs integration in this order:
 
 1. Confirm the integration target is the intended branch and is clean.
 2. Confirm source and target ancestry with explicit commit hashes.
-3. Re-run the required source checks when independent verification is warranted.
+3. Re-run source checks only when independent verification is warranted by risk, stale evidence, or an unexpected result.
 4. Prefer a fast-forward when the reviewed source is directly based on the target.
 5. If the target moved, preserve the source first, then choose rebase, cherry-pick, or merge according to the smallest auditable result.
-6. Use range comparison and the source backup to detect omissions after history changes.
+6. Use range/tree comparison and, when applicable, the source backup to detect omissions after history changes.
 7. If a conflict changes product meaning, enter `USER_DECISION_REQUIRED`; do not resolve it by guessing.
 8. Integrate into local `main` only after review and validation pass.
-9. Run post-merge validation in the integration target.
-10. Ask the source workgroup to compare merged `main` with its own named backup or committed result and report omissions without editing.
-11. Synchronize other active clean worktrees that should share the new base.
+9. Run the change-type target validation once. For a batch of independent standard commits, run focused checks per commit as needed and one full target gate after the batch.
+10. Close omission review with commit/tree/file comparison when the reviewed commit lands unchanged. Wake the source workgroup only for a rebase, merge conflict, backup comparison, or unexplained mismatch.
+11. Synchronize clean worktrees when they actually need the new base, normally at their next task start. Do not wake or move every idle worktree after each commit.
 12. Do not automatically synchronize a dirty worktree. Record it and plan its own protected integration.
 13. Report local/remote status clearly.
 
 Remote push is a separate action. The controller pushes only after explicit user authorization and verifies the resulting remote ref. A previous push authorization does not authorize later pushes.
 
-## 10. Failure And Change Handling
+## 11. Failure And Change Handling
 
 ### Validation Failure
 
 Do not integrate. Preserve the source, report the failed check and impact, and return `CHANGES_REQUESTED` or `USER_DECISION_REQUIRED` as appropriate.
+
+### Known Baseline Failure
+
+A failing check that reproduces unchanged on the recorded base is not evidence that the current slice caused a regression. Record the base commit, failing test identity, and comparison result. The slice still needs its targeted checks to pass, and a changed failure fingerprint or new affected behavior escalates to investigation. Do not repeatedly rerun and re-explain an unchanged baseline failure in every workgroup handoff.
 
 ### Unexpected Files Or Scope
 
@@ -213,7 +277,7 @@ Do not delete or reset it. Record its base, changes, and untracked files, create
 
 ### Parallel Workgroups
 
-Visual, architecture, and domain work may proceed independently when they have no dependency. Their branches do not receive new `main` files automatically. The controller chooses integration order from actual dependencies, protects each branch separately, and synchronizes clean worktrees after each accepted integration.
+Visual, architecture, and domain work may proceed independently when they have no dependency and no overlapping path reservation. Their branches do not receive new `main` files automatically. The controller chooses integration order from actual dependencies, serializes overlapping paths, protects dirty branches separately, and updates a clean branch when its next task requires the new base.
 
 ### User Rejection After Local Integration
 
@@ -223,15 +287,15 @@ Stop dependent work. The controller explains the current visible effect and prop
 
 Removing a worktree is a separate cleanup action after its branch, commits, untracked files, backups, and integration status are verified. Integration success alone does not authorize deletion.
 
-## 11. Completion Report
+## 12. Completion Report
 
 The controller's completion report must state:
 
 - integrated commit and target branch;
 - whether integration was fast-forward, cherry-pick, rebase, or merge;
-- protection branch and backup evidence when used;
+- protection branch and backup evidence when required, or a concise statement that clean committed standard-lane work required none;
 - independent and post-merge validation;
-- source-workgroup omission-review result;
+- automated or source-workgroup omission-review result;
 - synchronized and intentionally unsynchronized worktrees;
 - local versus remote status;
 - remaining user decision or next approved slice;
@@ -239,7 +303,9 @@ The controller's completion report must state:
 
 The user should be able to understand the outcome without reading terminal output or operating Git.
 
-## 12. Governance
+Keep standard-lane completion reports concise. Elevated-lane reports should include the additional protection, conflict, decision, or validation evidence that justified escalation.
+
+## 13. Governance
 
 Changes to this protocol are governance changes. Review it as an object of audit, keep it independent from skills, and validate with:
 
