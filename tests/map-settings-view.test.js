@@ -13,7 +13,6 @@ const createTestRouter = () =>
       { path: '/map', component: DummyView },
       { path: '/map/settings', component: MapSettingsView },
       { path: '/map/settings/places', component: DummyView },
-      { path: '/map/labs/kakao-compare', component: DummyView },
       { path: '/worldbook', component: DummyView },
       { path: '/camera/settings/providers', component: DummyView },
     ],
@@ -37,7 +36,9 @@ describe('Map settings view', () => {
     expect(wrapper.get('[data-testid="map-open-generate"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="map-open-visual-settings"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="map-open-place-settings"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-open-kakao-compare"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-real-basemap-source"]').text()).toContain(
+      'OpenFreeMap',
+    )
 
     await wrapper.get('[data-testid="map-open-import"]').trigger('click')
     expect(wrapper.get('[data-testid="map-import-dialog"]').exists()).toBe(true)
@@ -57,24 +58,7 @@ describe('Map settings view', () => {
     wrapper.unmount()
   })
 
-  test('opens the Kakao comparison without losing the Map return context', async () => {
-    const router = createTestRouter()
-    await router.push('/map/settings?from=home&homePage=1')
-    await router.isReady()
-    const wrapper = mount(MapSettingsView, { global: { plugins: [router] } })
-    await flushPromises()
-
-    await wrapper.get('[data-testid="map-open-kakao-compare"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value).toMatchObject({
-      path: '/map/labs/kakao-compare',
-      query: { from: 'home', homePage: '1' },
-    })
-
-    wrapper.unmount()
-  })
-
-  test('returns to Map instead of forwarding the Home return target', async () => {
+  test('returns to Map with its original parent return target', async () => {
     const router = createTestRouter()
     await router.push('/map/settings?from=home&homePage=1')
     await router.isReady()

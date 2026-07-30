@@ -1,6 +1,6 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
@@ -10,35 +10,32 @@ Status: `PARTIAL_DONE`
 
 ## Immediate OpenFreeMap Migration Handoff
 
-Status: `IN_PROGRESS_UNVALIDATED / CONTINUE_ON_ANOTHER_MACHINE`
+Status: `COMPLETE / READY_FOR_INTEGRATION_REVIEW`
 
-The user selected OpenFreeMap + MapLibre to replace the Kakao comparison and to become the real-world map renderer. Do not treat the current worktree as finished or validated.
+Active queue = Map only. Other feature work = Not authorized / Not started.
 
-Partial edits already present:
+OpenFreeMap + MapLibre now replaces the retired Kakao comparison as the real-world renderer:
 
-1. `maplibre-gl@6.0.0` is installed in `package.json` and `package-lock.json`;
-2. the previous Leaflet image renderer was moved to `src/components/map/LocalMapCanvas.vue`;
-3. `src/components/map/MapSceneCanvas.vue` now selects OpenFreeMap for geographic packs and the local renderer for fictional/custom packs;
-4. `src/components/map/OpenFreeMapCanvas.vue` exists with the public Liberty style, canonical geo pins, click-to-place coordinates, MapLibre controls, attribution, lazy JS import, and a local fallback event;
-5. Kakao component/loader/comparison files and focused Kakao tests were removed, the old Kakao lab route redirects to `/map`, and Map Settings now identifies OpenFreeMap as the real-map basemap;
-6. no lint, build, unit, E2E, bundle, audit, or final visual validation has been run after these partial edits;
-7. `tests/map-settings-view.test.js`, `e2e/map-local-packs.spec.js`, and several active documents still contain stale Kakao or Leaflet-only expectations and must be updated before validation.
+1. `MapSceneCanvas` retains its existing prop/event contract and selects `OpenFreeMapCanvas` only for geographic packs;
+2. fictional and imported canvas packs remain on `LocalMapCanvas` and make zero OpenFreeMap/MapLibre requests;
+3. external style, network, or WebGL startup failure before the first ready state switches to the local fallback without mutating canonical places, pins, trips, coordinates, ETA, or world binding;
+4. MapLibre JS and CSS load lazily with the geographic renderer; ready state follows the MapLibre `load` event;
+5. focused unit coverage mocks MapLibre and proves ready state, canonical markers, marker selection, exact geo placement, prop updates, and fallback containment;
+6. deterministic Map E2E proves real rendering, fictional/custom zero requests, offline fallback, active-trip coordinate editing, and parent return chains without depending on the public service;
+7. the old Kakao components, configuration, and tests are removed; `/map/labs/kakao-compare` remains only as an inert compatibility redirect to `/map`;
+8. the renderer decision and ownership boundary are synchronized across the active map package, PM mirror, roadmap, and local-map product decision.
 
-Continue in this order:
+Validation evidence from the isolated continuation worktree:
 
-- [ ] Run focused lint/build once to expose component or MapLibre v6 API errors; fix without changing Map store shapes or canonical coordinates.
-- [ ] Preserve the `MapSceneCanvas` prop/event contract (`mapPack`, `pins`, `pendingPosition`, `focusPosition`, `interactive`, `allowPinPlacement`, `place-pin`, `select-pin`) so Map and Places/ Pins callers remain unchanged.
-- [ ] Confirm geographic packs use `data-renderer="openfreemap"`; fictional and imported canvas packs must never request OpenFreeMap and must remain on `LocalMapCanvas`.
-- [ ] Confirm style/WebGL/network startup failure switches to `data-renderer="local-fallback"` and leaves all Map interactions available.
-- [ ] Add focused unit coverage for MapLibre ready state, canonical marker rendering, marker selection, exact `{ kind: 'geo', lat, lng }` placement, prop updates, and fallback containment. Mock MapLibre rather than requiring WebGL in jsdom.
-- [ ] Remove stale Kakao expectations from `tests/map-settings-view.test.js`; assert the OpenFreeMap source row and preserved Map return chain instead.
-- [ ] Rewrite `e2e/map-local-packs.spec.js`: deterministically mock the external style for CI, verify the real renderer and pin placement, verify fictional-world zero OpenFreeMap requests, verify offline fallback, and retain active-trip coordinate editing plus all parent return chains.
-- [ ] Keep one separate real-network visual check against `https://tiles.openfreemap.org/styles/liberty`; do not make the CI suite depend on public-service availability.
-- [ ] Inspect desktop and Pixel 5 screenshots plus canvas pixels. Verify useful neighborhood zoom, readable Seoul streets/buildings, nonblank WebGL output, no control/search/card overlap, no horizontal overflow, and usable marker details.
-- [ ] Measure the production MapLibre chunk and confirm it is lazy-loaded; fictional worlds should not download the MapLibre JS chunk until a geographic map is opened.
-- [ ] Run `npm.cmd audit --omit=dev` and `npm.cmd audit` separately. The install command reported 10 high advisories; determine whether they are pre-existing development-only findings or introduced by the dependency, and do not use a force fix.
-- [ ] Remove obsolete Kakao environment/configuration references and update `LOCAL_NARRATIVE_MAP_PACKS.md`, package README/boundary/workstreams, PM status, and roadmap to the final OpenFreeMap runtime decision.
-- [ ] Run final gates: `npm.cmd run lint`, `npm.cmd run test`, `npm.cmd run build`, targeted/full `npm.cmd run test:e2e`, `npm.cmd run governance:check`, and `git diff --check`.
+- lint passed;
+- full unit suite passed: 197 files / 1318 tests;
+- production build passed;
+- focused Map Playwright passed under installed Chrome: 10/10 across desktop and Pixel 5;
+- production audit reports 0 vulnerabilities;
+- full audit reports 10 high findings only through the existing development-only ESLint / Vue Test Utils / js-beautify / glob / minimatch / brace-expansion paths; no force fix was applied;
+- production MapLibre JS chunk is 974.03 kB (254.35 kB gzip) and CSS is 69.92 kB (10.04 kB gzip); fictional/custom E2E proves the JS module is not requested;
+- separate real-network desktop and mobile Chrome captures show readable Seoul streets/buildings, useful neighborhood zoom, visible attribution, marker usability, no horizontal overflow, and no add-button/attribution overlap;
+- sampled WebGL canvases are nonblank: desktop 15,300 nontransparent samples / 1,663 unique colors; mobile 13,104 / 1,517.
 
 Acceptance criteria:
 
@@ -48,7 +45,7 @@ Acceptance criteria:
 4. pin selection and explicit coordinate creation/editing work during idle and active trips;
 5. no device location, geocoding/POI lookup, routes, navigation, traffic, or provider billing is added;
 6. OpenFreeMap/OpenMapTiles/OpenStreetMap attribution remains visible;
-7. public-service failure falls back locally without losing place, trip, or world-binding state.
+7. public-service startup failure before the first ready state falls back locally without losing place, trip, or world-binding state.
 
 What is already landed:
 
@@ -68,7 +65,7 @@ What is already landed:
 14. Map Settings can import a local map image or explicitly keep a result from the shared Image Generation Module, create canvas-coordinate custom-pack metadata, bind it to the current world, and retain the source image through Gallery ownership. The main Map route separately owns search, place creation, point placement, details, and trips.
 15. Map Settings now has a dedicated Places and Pins manager. Seed and player-created pins can edit label, category, description, and coordinates through explicit click-to-reselect; built-in pack places remain read-only, everyday place details do not drag markers, and pin placement remains usable during active trips.
 16. Map Settings, Places and Pins, WorldBook pack settings, image-provider settings, and visual settings now use explicit parent return targets instead of forwarding the Map route's `from=home` query into every child.
-17. The earlier Kakao spike is being replaced by an OpenFreeMap + MapLibre real-world renderer with a local-image fallback. Implementation is currently partial and unvalidated; use the immediate handoff above.
+17. The earlier Kakao spike is retired. OpenFreeMap + MapLibre is the validated real-world renderer, with canonical SchatPhone coordinates, lazy loading, visible attribution, deterministic tests, and a local-image fallback.
 
 Still incomplete:
 
@@ -79,8 +76,8 @@ Still incomplete:
 5. Calendar's relationship adapter still knows concrete Chat/relationship stores and is a candidate for a deeper neutral interface.
 6. the first planned Mini Scene source integration is a separately gated confirmed K-pop Calendar music-show-day Adapter; Map follows only through its own later slice.
 7. the Calendar-owned carrier described below is a read-only design candidate. No field, migration, Adapter, or schema implementation is approved or landed.
-8. Seoul V1 uses a fixed CC0 city street-map image with city-scale coordinate calibration. Building-level georeferencing or a local PMTiles upgrade remains a separate slice and must preserve existing place IDs and coordinates.
-9. the OpenFreeMap migration still needs deterministic tests, real-network visual proof, lazy-chunk measurement, audit review, and full validation before it can be called complete.
+8. Seoul V1 keeps its fixed CC0 city street-map image as the local fallback. Building-level georeferencing or a local PMTiles upgrade remains a separate slice and must preserve existing place IDs and coordinates.
+9. additional real-city packs, true-device gesture/weak-network proof, and large-package/offline-cache validation remain separate and are not started.
 
 ### Read-Only Calendar Carrier Candidate
 

@@ -1,12 +1,12 @@
 # Local Narrative Map Packs
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
-Status: `WORLD_BOUND_AUTHORING_BASELINE_AND_KAKAO_SPIKE_IMPLEMENTED`
+Status: `WORLD_BOUND_BASELINE_AND_OPENFREEMAP_RUNTIME_COMPLETE`
 
 ## Decision
 
-Map is a simulation-first narrative surface, not a navigation product. Its default runtime uses versioned local map packs rather than a commercial map SDK.
+Map is a simulation-first narrative surface, not a navigation product. It uses versioned Map-owned packs and provider-neutral coordinates. Geographic packs use a keyless OpenFreeMap + MapLibre renderer; fictional/custom packs and geographic startup failure use the local renderer.
 
 The first two packs are:
 
@@ -62,7 +62,10 @@ The baseline does not use:
 - route planning or navigation;
 - live traffic;
 - paid POI search;
-- runtime Kakao, Google, Mapbox, or similar map calls.
+- Kakao, Google, Mapbox, or another keyed/commercial map SDK;
+- provider POI, geocoding, route, traffic, navigation, or canonical place identifiers.
+
+Geographic packs request the public OpenFreeMap Liberty style and its attributed OpenMapTiles/OpenStreetMap data only when a geographic map is opened. MapLibre is isolated in a lazy production chunk. Fictional and custom packs do not request OpenFreeMap or MapLibre. External style, tile, or WebGL startup failure switches to the local pack fallback without changing canonical places, pins, trips, ETA, coordinates, or world binding.
 
 Geographic distance uses local great-circle calculation. Fictional distance uses the pack scale. Text-only legacy places keep the previous deterministic fallback estimate.
 
@@ -74,26 +77,18 @@ Decorative AI refreshes may change mood, weather, or lighting only. They cannot 
 
 ## Current Accuracy
 
-Seoul V1 provides real city geography and true curated-place coordinates, but the fixed illustration is calibrated at city scale rather than building-level GIS precision. A future georeferenced PMTiles or equivalent local package is a separate upgrade and does not justify adding a live commercial provider.
+Seoul V1 provides real city geography and true curated-place coordinates. OpenFreeMap provides the normal neighborhood-scale vector rendering, while the fixed CC0 illustration remains the local fallback and is calibrated at city scale rather than building-level GIS precision. A future local PMTiles or equivalent package is a separate upgrade and does not justify adding a commercial provider.
 
-## Kakao Visual Comparison Spike
+## Geographic Runtime Decision
 
-Kakao Map is implemented only as a removable comparison experiment, not as the production map owner. The development-only `/map/labs/kakao-compare` route renders Seoul beside the existing local renderer and passes both renderers the same canonical SchatPhone pins. Map Settings exposes the entry only during development and only for a geographic map world.
+OpenFreeMap + MapLibre is the accepted real-world renderer. `MapSceneCanvas` keeps the public renderer contract and chooses `OpenFreeMapCanvas` only for geographic packs. `LocalMapCanvas` continues to own fictional/custom packs and is also the contained fallback when the external renderer cannot start.
 
-The experiment requires one user-supplied Kakao JavaScript App Key in `VITE_KAKAO_MAP_APP_KEY` and registered localhost/deployment domains. The key stays in local environment configuration and is never committed or included in backup data. The SDK is loaded lazily with `autoload=false` only after the comparison route mounts; no optional Kakao services library is requested.
+The OpenFreeMap Liberty style requires no account, API key, provider configuration, or billing integration. MapLibre and its CSS load only with a geographic pack. OpenFreeMap/OpenMapTiles/OpenStreetMap attribution remains visible. Deterministic E2E substitutes the external style so CI does not depend on public-service availability; a separate real-network visual check verifies the public renderer.
 
-The preview keeps device location, route planning, traffic, Kakao POI search, and provider place IDs disabled. It reads canonical SchatPhone coordinates only to place overlay markers. Missing credentials or SDK failure stays inside the Kakao panel while the local control remains available, and removing the preview leaves saved places, trips, world bindings, and the local runtime unchanged.
+Markers are projections of canonical SchatPhone places and pins; click-to-place returns an exact `{ kind: 'geo', lat, lng }` coordinate to Map. No renderer identifier becomes place identity. Device location, POI/geocoding, route planning, navigation, traffic, and provider billing remain disabled. External failure stays inside the renderer boundary and leaves local Map interactions and state available.
 
-Compare both renderers on:
-
-1. street/building readability and useful label density at neighborhood scale;
-2. first useful render, pan/zoom responsiveness, mobile gesture behavior, and layout stability;
-3. JavaScript transferred, request count, data transferred during a fixed five-minute session, and behavior when the provider is unavailable;
-4. attribution, domain/key setup, quota and billing conditions, privacy implications, and deployment restrictions;
-5. whether the visual benefit is large enough to justify a permanent network dependency for modern worlds.
-
-The local renderer remains the control. Kakao is not promoted unless the measured visual gain is material, the current quota and terms are documented at decision time, failure falls back cleanly, and provider identifiers never become canonical Map data. A local MapLibre plus segmented PMTiles upgrade remains the offline alternative; its cost is package size and authoring complexity rather than per-session provider requests, so a city overview and optional detailed district packages should be measured separately instead of preloading a whole high-zoom city.
+The retired Kakao comparison is not a current runtime, configuration, or product dependency. `/map/labs/kakao-compare` remains only as an inert compatibility redirect to `/map`; it does not load a Kakao SDK or request a key. Removing that redirect later cannot affect saved places, trips, world bindings, or coordinates.
 
 ## Next Separate Slice
 
-A later full authoring slice may add a versioned package manifest, topology and coordinate validation, calibrated scale tools, editable faction regions and seed places, migration preview, and package export. A building-level Seoul package remains a separate georeferencing upgrade. Neither direction authorizes route planning, live POI, or Mini Scene work.
+A later, separately approved full authoring slice may add a versioned package manifest, topology and coordinate validation, calibrated scale tools, editable faction regions and seed places, migration preview, and package export. Local PMTiles, additional cities/catalog policy, and true-device gesture/offline-cache validation are also separate and not started. None of these directions authorizes route planning, live POI, or Mini Scene work.

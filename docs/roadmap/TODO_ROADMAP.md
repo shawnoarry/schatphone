@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 This is the only live execution board for implementation order.
 
@@ -35,7 +35,7 @@ Roadmap interpretation:
 - 4.7 has a promoted Book/WorldBook content-carrier slice; its focused K-pop rule is the first planned content input for the separately staged Mini Scene Module;
 - 4.8 has an architecture-accepted cross-module Mini Scene direction, but no runtime, popup, regex execution, or source-module trigger is implemented yet.
 - 4.9 is now the product-control lane: turn the integrated modules into a usable product preview by closing first-value activation, current-save safety, one ordinary life loop, and deployed PWA proof before more infrastructure or feature breadth.
-- 4.11 has a user-promoted local narrative-map baseline: real Seoul and a faction-based cyber wasteland share one place, pin, and trip surface; per-world binding plus lightweight image import/generation are landed. The user has selected OpenFreeMap + MapLibre for real-world rendering with local fallback, but the migration is currently `IN_PROGRESS_UNVALIDATED`; see the map package handoff. Full package authoring remains later separate work.
+- 4.11 has a user-promoted local narrative-map baseline: real Seoul and a faction-based cyber wasteland share one place, pin, and trip surface; per-world binding plus lightweight image import/generation are landed. The OpenFreeMap + MapLibre geographic renderer, deterministic fallback, lazy loading, and canonical-coordinate coverage are complete in the integration-review candidate. Full package authoring, PMTiles, additional cities, and true-device validation remain later separate work.
 
 ## 3. Completed Baselines
 
@@ -426,12 +426,12 @@ Promoted baseline completed on 2026-07-30:
 7. added a dedicated Map Settings route for world binding, Gallery-backed local-image import, shared-image-service fictional-map generation, explicit candidate acceptance, and visual presentation controls;
 8. proved desktop and simulated-mobile world activation, correct map resolution, local search, explicit pin placement, Settings dialogs, layout containment, and zero commercial-map requests with focused Playwright coverage.
 9. separated everyday place use from detailed pin administration: Map Settings now edits seed/player pin metadata and coordinates through explicit reselection, keeps built-in pack places read-only, allows pin placement during trips, and preserves the Map parent across nested settings returns.
+10. completed the OpenFreeMap + MapLibre geographic runtime with keyless public styling, visible attribution, lazy loading, canonical marker/click coordinates, fictional/custom zero-request containment, and a local fallback that preserves Map state and interactions.
 
 Remaining work is separately gated:
 
 - full package-manifest import/export, topology and coordinate validation, calibrated scale tools, editable faction regions, seed-place authoring, and migration preview;
 - a building-level georeferenced Seoul package, such as local PMTiles, if city-scale image calibration proves insufficient;
-- finish and validate the selected OpenFreeMap + MapLibre real-world renderer, including deterministic external-service tests, local fallback, lazy bundle measurement, attribution, privacy/network review, and no provider POI or production-data ownership;
 - broader real-city pack catalog and reviewed world recommendation policy;
 - true-device map gesture and large-package/offline-cache validation.
 
@@ -481,7 +481,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
 8. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
-9. `P2 IN_PROGRESS_UNVALIDATED`: 4.11 local narrative-map baseline, per-world binding, and lightweight image import/generation are complete; the selected OpenFreeMap + MapLibre real-world renderer is partially edited and must resume from the map package handoff before full package authoring or broader catalogs.
+9. `P2 READY_FOR_INTEGRATION_REVIEW`: 4.11 local narrative-map baseline, per-world binding, lightweight image import/generation, and the OpenFreeMap + MapLibre geographic renderer are complete in the isolated map continuation worktree. Full package authoring, PMTiles, broader catalogs, and true-device gesture/offline-cache validation remain separately gated and are not started.
 
 ## 7. Validation Rule
 

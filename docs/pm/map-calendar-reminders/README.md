@@ -1,12 +1,12 @@
 # Map Calendar Reminders Package
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 Use this package for Map, Calendar, Reminders, route/date/callback/follow-up boundaries, and trip/schedule handoff rules.
 
 Current 4.2 reminder: Map-derived Calendar follow-ups should preserve explicit trip lineage (`sourceTripId`) when available, so confirmed schedule facts can become supporting context inside the originating shared-route memory.
 
-Current local-map baseline: Map supports two versioned, runtime-local map packs: `real-seoul-v1` for a real-world Seoul ecology and `cyber-wasteland-v1` for a faction-divided cyber wasteland. One active world resolves to one recommended or explicitly bound map. Map Settings owns world binding, detailed player-pin management, local-image import, shared-image-service generation, and visual presentation; the everyday Map surface owns search, place use, explicit pin creation, place details, and trips without draggable markers. The production runtime still uses no device location, route planning, paid POI lookup, or commercial map SDK. A removable development-only Kakao comparison now renders the same canonical Seoul pins beside the local control and fails locally when its environment key or domain setup is unavailable. See `docs/product-decisions/LOCAL_NARRATIVE_MAP_PACKS.md`.
+Current map baseline: Map supports two versioned packs: `real-seoul-v1` for real-world Seoul and `cyber-wasteland-v1` for a faction-divided cyber wasteland. Geographic packs render through lazy-loaded MapLibre using the public OpenFreeMap Liberty style; fictional, imported, and failure-fallback packs render locally through `LocalMapCanvas`. One active world resolves to one recommended or explicitly bound map. Map Settings owns world binding, detailed player-pin management, local-image import, shared-image-service generation, and visual presentation; the everyday Map surface owns search, place use, explicit pin creation, place details, and trips without draggable markers. The runtime uses no API key, device location, route planning, paid POI lookup, commercial map SDK, or provider-specific place identity. The old `/map/labs/kakao-compare` path is an inert compatibility redirect to `/map`. See `docs/product-decisions/LOCAL_NARRATIVE_MAP_PACKS.md`.
 
 Optional capability Pack reminder: Calendar may consume `reservation -> Calendar` world app context for labels, accents, and boundary presentation, including confirmed `reservation_board` nonstandard-app proposals, but Calendar still owns confirmed events, time editing, reminder promotion, relationship-fact review, and push scheduling. Map may consume `transit -> Map` world app context for title/context/boundary presentation, but Map still owns route, trip, location, ETA, shared-route facts, and Map-derived Calendar handoff.
 

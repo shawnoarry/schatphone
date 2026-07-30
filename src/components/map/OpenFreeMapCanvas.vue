@@ -1,6 +1,5 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import 'maplibre-gl/dist/maplibre-gl.css'
 import { useI18n } from '../../composables/useI18n'
 import { mapPositionToNormalized } from '../../lib/map-packs'
 
@@ -174,7 +173,10 @@ const initializeMap = async () => {
   setRendererStatus('loading')
 
   try {
-    const module = await import('maplibre-gl')
+    const [module] = await Promise.all([
+      import('maplibre-gl'),
+      import('maplibre-gl/dist/maplibre-gl.css'),
+    ])
     maplibre = module.default || module
     if (!mapRootRef.value) return
     const center = resolveInitialCenter()
@@ -205,7 +207,7 @@ const initializeMap = async () => {
         point: mapPositionToNormalized(props.mapPack, position),
       })
     })
-    mapInstance.once('style.load', () => {
+    mapInstance.once('load', () => {
       mapLoaded.value = true
       clearTimeout(startupTimer)
       startupTimer = null
@@ -367,7 +369,7 @@ onBeforeUnmount(() => {
 .openfreemap-attribution {
   position: absolute;
   right: 12px;
-  top: 194px;
+  top: 236px;
   z-index: 4;
   max-width: min(48%, 280px);
   border-radius: 4px;

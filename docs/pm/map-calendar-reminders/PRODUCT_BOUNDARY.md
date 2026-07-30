@@ -1,6 +1,6 @@
 # Map Calendar Reminders Product Boundary
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 This file defines ownership boundaries for Map, Calendar, Reminders, and Phone-like callback support.
 
@@ -31,7 +31,7 @@ Map does not own:
 
 Map may later request a Mini Scene from a confirmed trip/location event using canonical Map facts. Its per-module popup mode remains a user setting, and any interaction that requests a route/location change returns to Map validation.
 
-Everyday place use does not mutate coordinates by dragging. Map Settings owns explicit coordinate reselection for player pins; map-pack places remain versioned read-only content. The development-only Kakao comparison may render canonical coordinates in an isolated preview but cannot become the owner of saved place identity, load POI or route services, or authorize a production provider dependency.
+Everyday place use does not mutate coordinates by dragging. Map Settings owns explicit coordinate reselection for player pins; map-pack places remain versioned read-only content. `MapSceneCanvas` is the renderer seam: OpenFreeMap + MapLibre renders geographic packs, while `LocalMapCanvas` renders fictional/custom packs and the geographic fallback. External style, network, or WebGL startup failure before the first ready state cannot mutate saved place, trip, world-binding, or coordinate truth, and local interactions remain available through the fallback. The renderer cannot load POI or route services or make provider identifiers canonical Map identity. The old `/map/labs/kakao-compare` path is compatibility-only and redirects to `/map`.
 
 ## 2. Calendar
 

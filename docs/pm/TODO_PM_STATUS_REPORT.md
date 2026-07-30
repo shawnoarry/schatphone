@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -51,7 +51,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; optional Book/encyclopedia/template references are non-binding diagnostics, while broader hardening is pending |
 | Mini Scene | `Pure foundation landed, no runtime` | schemas, empty caller registry, Book profile/regex validation, and world resolution are tested; persistence, Settings, presenters, and source triggers remain separate |
-| Map / Calendar / Reminders / Phone | `World-bound Map baseline, stable schedule/phone MVPs` | Map now resolves one local map per world, supports Seoul and a faction-based cyber wasteland, local search, trips, image import/generation, and dedicated settings with detailed editable player pins and read-only pack places. A development-only Kakao comparison is isolated from the production runtime and canonical data; keyed measurement, true-device gesture proof, and full package authoring remain |
+| Map / Calendar / Reminders / Phone | `World-bound Map baseline, stable schedule/phone MVPs` | Map resolves one map per world and now renders geographic packs through keyless OpenFreeMap + MapLibre, while fictional/custom packs and external startup failure before the first ready state remain local. Canonical pins, trips, coordinates, and world bindings stay Map-owned; true-device gesture proof, additional cities, local PMTiles, and full package authoring remain separate |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | order and notification loops are strong; store/detail/tracking polish remains |
 | Wallet / Gallery | `Stable support platforms` | useful shared owners; deeper economy/Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
@@ -91,7 +91,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### Life And Commerce Apps
 
-- use a world-bound real Seoul or cyber-wasteland map, search local places, add categorized pins, explicitly edit their coordinates in Map Settings, and manage trips without device location or live routing;
+- use a world-bound real Seoul or cyber-wasteland map, render geographic Seoul through OpenFreeMap with a local fallback, search local places, add categorized pins, explicitly edit their coordinates in Map Settings, and manage trips without device location, provider POI, or live routing;
 - bind another local map image or an explicitly accepted generated fictional map to the current world from Map Settings;
 - manage confirmed Calendar events, raw Reminders cues, and Phone callbacks;
 - browse and create Shopping/Food Delivery records, checkout, track updates, and produce downstream Wallet/relationship continuity;

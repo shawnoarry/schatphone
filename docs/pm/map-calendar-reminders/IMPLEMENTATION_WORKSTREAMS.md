@@ -1,6 +1,6 @@
 # Map Calendar Reminders Implementation Workstreams / 地图日历提醒事项实施工作流
 
-Updated: 2026-07-30
+Updated: 2026-07-31
 
 ## 1. Workstream A: Map Travel Core
 
@@ -13,7 +13,8 @@ Updated: 2026-07-30
 - geographic coordinates for real packs and normalized canvas coordinates for fictional packs
 - local pack/player-place search and deterministic distance calculation
 - explicit click-to-reselect player coordinates without draggable everyday markers; active trips lock map replacement, not map interaction
-- a removable development-only Kakao visual comparison that lazy-loads the plain SDK, consumes canonical coordinates without persisting provider identity, and contains provider failure to its own panel
+- `MapSceneCanvas` as the stable renderer seam: lazy-loaded OpenFreeMap + MapLibre for geographic packs, and `LocalMapCanvas` for fictional/custom packs plus geographic failure fallback
+- canonical provider-neutral coordinates and Map-owned pins/trips/world bindings remain usable when external style, tile, or WebGL startup fails; `/map/labs/kakao-compare` is an inert compatibility redirect
 - no device location, live routing, or commercial POI dependency in the baseline
 
 ## 2. Workstream B: Calendar Real Schedule Meaning
@@ -53,3 +54,4 @@ Treat these as bugs:
 7. a provider-specific POI or map ID becomes canonical downstream location identity
 8. the everyday Map page exposes a real/fantasy system switch instead of resolving the active world's binding
 9. Map starts owning Gallery binaries or image-generation credentials because Map Settings can initiate intake
+10. fictional/custom packs request OpenFreeMap or MapLibre, or external renderer failure mutates Map truth or disables local interactions
