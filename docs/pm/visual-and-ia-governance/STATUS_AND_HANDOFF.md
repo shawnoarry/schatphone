@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-07-26
+Updated: 2026-07-31
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -109,6 +109,7 @@ What is already landed:
 93. Two failed ImageGen drafts never entered product assets or code. The generation failure was traced to a Windows `.cmd` invocation truncating a multiline prompt passed inline, while a compatibility image service also returned non-square output despite the requested square size. Any later CLI trial must pass the Chinese prompt through a UTF-8 prompt file and inspect the dry-run request payload before generation; generated output remains a candidate until normal visual review accepts it.
 94. Vistack is a validated candidate for a semi-automatic asset workbench, not a configured project capability, approved production toolchain, formal asset source, or second roadmap. A later controlled trial may send a prepared asset list to Vistack, download outputs into a temporary intake area, use human selection and quality checks, and wire only accepted files in a separate implementation slice.
 95. Roadmap 4.10's first Camera slice is implemented. Camera is a Home/App Store installed app with a restrained dark capture screen; provider URL/key/model/proxy, defaults, module routing, diagnostics, and tasks live in Camera-owned push-navigation pages. The embedded Gallery reference sheet preserves Camera visual ownership, candidates require explicit Keep before Gallery durability, Download/Keep/Discard remain distinct, and desktop plus simulated Pixel 5 Chromium checks cover route flow, overflow, page errors, and provider privacy. Gallery People curation, automatic person/intent resolution, source-module callers, true-device validation, and hosted-provider smoke remain separate work.
+96. Peach Cloud now has a persistent branded shop bar, an explicit return-to-originating-Home action, a brand-led Home, a discovery-focused Search page, and a release-timeline New page instead of three similar product grids. Its 12 built-in menu records now emphasize white-peach fruit drinks and frozen desserts while preserving user-edited same-ID items; the Food Delivery folder launcher uses a cloud mark with the Peach Cloud rose accent. In-app Browser evidence on the visual worktree's port 5176 covers 375px, 430px, and desktop widths with no horizontal overflow, broken required images, or missing Font Awesome glyphs, plus Bag, checkout, order detail, order-list, and reload persistence. The pinned Playwright executable was unavailable locally, so the targeted E2E command remains an environment gap rather than a product failure. Existing product-photo duplication and title-to-image mismatch remain a separate asset-review gate; no unapproved candidate image was wired.
 
 ### 2026-07-16 Visual Portfolio Audit
 

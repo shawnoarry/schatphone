@@ -94,6 +94,8 @@
   --home-icon-default-fg: #fff;
   --home-icon-warm-bg: linear-gradient(135deg, #ba8568 0%, #8f5f4f 100%);
   --home-icon-warm-fg: #fff;
+  --home-icon-rose-bg: #fd6c93;
+  --home-icon-rose-fg: #2b303a;
   --home-icon-cool-bg: linear-gradient(135deg, #6f949a 0%, #3d6974 100%);
   --home-icon-cool-fg: #fff;
   --home-icon-light-bg: rgba(255, 255, 255, 0.92);
@@ -216,6 +218,8 @@
   --home-icon-default-fg: #071016;
   --home-icon-warm-bg: linear-gradient(135deg, #b89478 0%, #7d6252 100%);
   --home-icon-warm-fg: #fff;
+  --home-icon-rose-bg: #fd6c93;
+  --home-icon-rose-fg: #2b303a;
   --home-icon-cool-bg: linear-gradient(135deg, #7ea1a5 0%, #486d73 100%);
   --home-icon-cool-fg: #fff;
   --home-icon-light-bg: rgba(237, 243, 245, 0.9);

@@ -20,6 +20,7 @@ export const buildShoppingShopEntryId = (serviceKey = '') =>
 const normalizeList = (value = []) => (Array.isArray(value) ? value : [])
 
 const FOOD_SHOP_FOLDER_ENTRY_DEFAULTS = Object.freeze({
+  food_seed_peach_cloud: Object.freeze({ icon: 'fas fa-cloud', accent: 'rose' }),
   food_seed_verdant_day: Object.freeze({ icon: 'fas fa-leaf', accent: 'light' }),
 })
 
@@ -74,7 +75,9 @@ export const buildFoodDeliveryFolderEntries = ({
       )
       const displayName = presentation.displayName || restaurant.name || 'Food shop'
       const shortDescription =
-        presentation.shortDescription || formatFoodShopDescription(restaurant) || 'Food Delivery mini app'
+        presentation.shortDescription ||
+        formatFoodShopDescription(restaurant) ||
+        'Food Delivery mini app'
       return {
         key: entryId,
         zh: displayName,

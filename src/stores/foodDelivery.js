@@ -984,15 +984,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_oolong_cloud',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Peach Oolong Cloud',
+        title: 'White Peach Lime Sparkler',
         category: 'dessert',
-        menuSection: 'cloud_tea',
+        menuSection: 'fruit_sparkle',
         price: '26.00',
-        desc: 'Fragrant oolong, white peach, and a soft salted milk cloud.',
-        ingredients: 'oolong tea, white peach, milk foam, sea salt',
+        desc: 'White peach, fresh lime, mint, and sparkling spring water.',
+        ingredients: 'white peach, lime, mint, sparkling water',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(1),
-        imageAlt: 'Peach Oolong Cloud drink',
+        imageAlt: 'White Peach Lime Sparkler',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1000,15 +1000,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_brown_sugar_creme',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Brown Sugar Creme No. 7',
+        title: 'Roasted Peach Oolong Cloud',
         category: 'dessert',
         menuSection: 'cloud_tea',
         price: '29.00',
-        desc: 'Fresh milk tea striped with warm brown sugar and toasted creme.',
-        ingredients: 'black tea, fresh milk, brown sugar, toasted creme',
+        desc: 'Deep roasted oolong, white-peach cream, and a brown-sugar finish.',
+        ingredients: 'roasted oolong, white peach, fresh milk, brown sugar cream',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(2),
-        imageAlt: 'Brown Sugar Creme No. 7 milk tea',
+        imageAlt: 'Roasted Peach Oolong Cloud',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1016,15 +1016,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_jasmine_cream',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Cocoa Cloud Brownie',
+        title: 'Peach Cocoa Brownie',
         category: 'dessert',
         menuSection: 'oven_sweets',
         price: '24.00',
-        desc: 'Fudgy dark cocoa, roasted nuts, and a pale vanilla cloud.',
-        ingredients: 'dark cocoa, butter, roasted nuts, vanilla cream',
+        desc: 'Fudgy dark cocoa, roasted nuts, and a white-peach cream cloud.',
+        ingredients: 'dark cocoa, butter, roasted nuts, white peach cream',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(3),
-        imageAlt: 'Cocoa Cloud Brownie',
+        imageAlt: 'Peach Cocoa Brownie',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1032,7 +1032,7 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_sunset_fizz',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Peach Macaron Parade',
+        title: 'White Peach Macaron Parade',
         category: 'dessert',
         menuSection: 'oven_sweets',
         price: '22.00',
@@ -1040,7 +1040,7 @@ const createSeedMenuItems = () =>
         ingredients: 'almond flour, peach cream, rose, vanilla, cocoa',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(4),
-        imageAlt: 'Peach Macaron Parade',
+        imageAlt: 'White Peach Macaron Parade',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1048,15 +1048,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_yuzu_spark',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Yuzu Spark Pop',
+        title: 'Yuzu Peach Spark Pop',
         category: 'dessert',
         menuSection: 'fruit_sparkle',
         price: '24.00',
-        desc: 'Sharp yuzu soda with honey pearls and a crisp rosemary finish.',
-        ingredients: 'yuzu, honey pearls, sparkling water, rosemary',
+        desc: 'White peach and sharp yuzu soda with honey pearls and rosemary.',
+        ingredients: 'white peach, yuzu, honey pearls, sparkling water, rosemary',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(5),
-        imageAlt: 'Yuzu Spark Pop soda',
+        imageAlt: 'Yuzu Peach Spark Pop soda',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1064,15 +1064,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_mango_snow',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Crepe Gelato Cloud',
+        title: 'Peach Cocoa Crepe Cloud',
         category: 'dessert',
         menuSection: 'frozen_clouds',
         price: '34.00',
-        desc: 'Warm cocoa crepes folded around milk gelato and berry slices.',
-        ingredients: 'butter crepe, cocoa, milk gelato, strawberry',
+        desc: 'Cocoa crepes folded around peach-milk gelato and berry slices.',
+        ingredients: 'butter crepe, cocoa, white peach gelato, strawberry',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(6),
-        imageAlt: 'Crepe Gelato Cloud',
+        imageAlt: 'Peach Cocoa Crepe Cloud',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1080,15 +1080,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_strawberry_ice',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Macaron Milk Drift',
+        title: 'Peach Macaron Milk Ice',
         category: 'dessert',
         menuSection: 'frozen_clouds',
         price: '36.00',
-        desc: 'Rose macarons with chilled milk cream and a berry ripple.',
-        ingredients: 'almond macaron, milk cream, rose, berry compote',
+        desc: 'White-peach milk ice with rose macarons and a berry ripple.',
+        ingredients: 'white peach, milk ice, almond macaron, rose, berry compote',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(7),
-        imageAlt: 'Macaron Milk Drift',
+        imageAlt: 'Peach Macaron Milk Ice',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1096,15 +1096,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_matcha_float',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Hojicha Cloud Float',
+        title: 'Peach Cold Brew Tonic',
         category: 'dessert',
-        menuSection: 'cloud_tea',
+        menuSection: 'fruit_sparkle',
         price: '31.00',
-        desc: 'Roasted tea, chilled milk, vanilla cloud, and toasted rice crunch.',
-        ingredients: 'hojicha, milk, vanilla cream, toasted rice',
+        desc: 'Cold brew, white peach tonic, and a light cream cloud.',
+        ingredients: 'cold brew, white peach tonic, cream cloud',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(8),
-        imageAlt: 'Hojicha Cloud Float',
+        imageAlt: 'Peach Cold Brew Tonic',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1112,15 +1112,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_sunbeam_basque',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Strawberry Sunbeam Slice',
+        title: 'Peach Strawberry Cloud Slice',
         category: 'dessert',
-        menuSection: 'oven_sweets',
+        menuSection: 'frozen_clouds',
         price: '36.00',
-        desc: 'A cold-set strawberry cheesecake with berry glaze and fresh mint.',
-        ingredients: 'cream cheese, strawberry, biscuit, berry glaze',
+        desc: 'Cold-set white-peach cheesecake with strawberry glaze and mint.',
+        ingredients: 'cream cheese, white peach, strawberry, biscuit, berry glaze',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(9),
-        imageAlt: 'Strawberry Sunbeam cheesecake slice',
+        imageAlt: 'Peach Strawberry Cloud Slice',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1128,15 +1128,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_butter_waffle',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Cloud Nine Cocoa Crepes',
+        title: 'Peach Cocoa Crepe Sundae',
         category: 'dessert',
-        menuSection: 'oven_sweets',
+        menuSection: 'frozen_clouds',
         price: '29.00',
-        desc: 'Three soft crepes with cocoa drizzle, strawberry, and milk cream.',
-        ingredients: 'butter crepe, cocoa, strawberry, milk cream',
+        desc: 'Soft cocoa crepes with white-peach gelato and strawberry.',
+        ingredients: 'butter crepe, cocoa, white peach gelato, strawberry',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(10),
-        imageAlt: 'Cloud Nine Cocoa Crepes',
+        imageAlt: 'Peach Cocoa Crepe Sundae',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1144,15 +1144,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_pocket_pie',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Midnight Creme No. 11',
+        title: 'Black Tea Peach Creme',
         category: 'dessert',
         menuSection: 'cloud_tea',
         price: '25.00',
-        desc: 'Deep iced coffee, brown sugar, and a tall toasted cream crown.',
-        ingredients: 'cold-brew coffee, milk, brown sugar, toasted cream',
+        desc: 'Strong black tea, white-peach milk, and a toasted cream crown.',
+        ingredients: 'black tea, white peach, milk, brown sugar, toasted cream',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(11),
-        imageAlt: 'Midnight Creme No. 11 iced coffee',
+        imageAlt: 'Black Tea Peach Creme',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1160,15 +1160,15 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_peach_golden_hour_set',
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
-        title: 'Golden Hour Pairing',
+        title: 'Golden Peach Cheesecake Pairing',
         category: 'dessert',
         menuSection: 'seasonal_drop',
         price: '48.00',
-        desc: 'One Sunset Peach Fizz paired with a mini Sunbeam Basque slice.',
-        ingredients: 'peach fizz, mini Basque cheesecake, peach honey',
+        desc: 'One white-peach fizz paired with a peach cheesecake slice.',
+        ingredients: 'white peach fizz, peach cheesecake, peach honey',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(12),
-        imageAlt: 'Golden Hour drink and cheesecake pairing',
+        imageAlt: 'Golden Peach Cheesecake Pairing',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1779,16 +1779,142 @@ const MOON_BISTRO_LEGACY_MENU_COPY_BY_ID = Object.freeze({
     title: 'Night Tagliatelle',
   },
 })
-const PEACH_CLOUD_LEGACY_TITLES_BY_ID = Object.freeze({
-  food_menu_peach_jasmine_cream: 'Jasmine Daydream',
-  food_menu_peach_sunset_fizz: 'Sunset Peach Fizz',
-  food_menu_peach_mango_snow: 'Mango Snow Island',
-  food_menu_peach_strawberry_ice: 'Strawberry Milk Drift',
-  food_menu_peach_matcha_float: 'Matcha Cloud Float',
-  food_menu_peach_sunbeam_basque: 'Sunbeam Basque Slice',
-  food_menu_peach_butter_waffle: 'Cloud Nine Butter Waffle',
-  food_menu_peach_pocket_pie: 'Peach Pocket 03',
+const defineLegacyPeachMenuCopy = ({
+  title,
+  desc,
+  ingredients,
+  menuSection,
+  imageAlt,
+  previousTitles = [],
+  previousDescriptions = [],
+  previousIngredients = [],
+  previousMenuSections = [],
+}) =>
+  Object.freeze({
+    title: Object.freeze([title, ...previousTitles]),
+    desc: Object.freeze([desc, ...previousDescriptions]),
+    ingredients: Object.freeze([ingredients, ...previousIngredients]),
+    menuSection: Object.freeze([menuSection, ...previousMenuSections]),
+    imageAlt: Object.freeze([imageAlt, ...previousTitles]),
+  })
+const PEACH_CLOUD_LEGACY_MENU_COPY_BY_ID = Object.freeze({
+  food_menu_peach_oolong_cloud: defineLegacyPeachMenuCopy({
+    title: 'Peach Oolong Cloud',
+    desc: 'Fragrant oolong, white peach, and a soft salted milk cloud.',
+    ingredients: 'oolong tea, white peach, milk foam, sea salt',
+    menuSection: 'cloud_tea',
+    imageAlt: 'Peach Oolong Cloud drink',
+  }),
+  food_menu_peach_brown_sugar_creme: defineLegacyPeachMenuCopy({
+    title: 'Brown Sugar Creme No. 7',
+    desc: 'Fresh milk tea striped with warm brown sugar and toasted creme.',
+    ingredients: 'black tea, fresh milk, brown sugar, toasted creme',
+    menuSection: 'cloud_tea',
+    imageAlt: 'Brown Sugar Creme No. 7 milk tea',
+  }),
+  food_menu_peach_jasmine_cream: defineLegacyPeachMenuCopy({
+    title: 'Cocoa Cloud Brownie',
+    desc: 'Fudgy dark cocoa, roasted nuts, and a pale vanilla cloud.',
+    ingredients: 'dark cocoa, butter, roasted nuts, vanilla cream',
+    menuSection: 'oven_sweets',
+    imageAlt: 'Cocoa Cloud Brownie',
+    previousTitles: ['Jasmine Daydream'],
+    previousDescriptions: ['Cold-brew jasmine tea finished with a light vanilla cream cap.'],
+    previousIngredients: ['jasmine tea, vanilla, cream, cane sugar'],
+    previousMenuSections: ['cloud_tea'],
+  }),
+  food_menu_peach_sunset_fizz: defineLegacyPeachMenuCopy({
+    title: 'Peach Macaron Parade',
+    desc: 'A bright box of peach, rose, vanilla, and cocoa macarons.',
+    ingredients: 'almond flour, peach cream, rose, vanilla, cocoa',
+    menuSection: 'oven_sweets',
+    imageAlt: 'Peach Macaron Parade',
+    previousTitles: ['Sunset Peach Fizz'],
+  }),
+  food_menu_peach_yuzu_spark: defineLegacyPeachMenuCopy({
+    title: 'Yuzu Spark Pop',
+    desc: 'Sharp yuzu soda with honey pearls and a crisp rosemary finish.',
+    ingredients: 'yuzu, honey pearls, sparkling water, rosemary',
+    menuSection: 'fruit_sparkle',
+    imageAlt: 'Yuzu Spark Pop soda',
+  }),
+  food_menu_peach_mango_snow: defineLegacyPeachMenuCopy({
+    title: 'Crepe Gelato Cloud',
+    desc: 'Warm cocoa crepes folded around milk gelato and berry slices.',
+    ingredients: 'butter crepe, cocoa, milk gelato, strawberry',
+    menuSection: 'frozen_clouds',
+    imageAlt: 'Crepe Gelato Cloud',
+    previousTitles: ['Mango Snow Island'],
+  }),
+  food_menu_peach_strawberry_ice: defineLegacyPeachMenuCopy({
+    title: 'Macaron Milk Drift',
+    desc: 'Rose macarons with chilled milk cream and a berry ripple.',
+    ingredients: 'almond macaron, milk cream, rose, berry compote',
+    menuSection: 'frozen_clouds',
+    imageAlt: 'Macaron Milk Drift',
+    previousTitles: ['Strawberry Milk Drift'],
+  }),
+  food_menu_peach_matcha_float: defineLegacyPeachMenuCopy({
+    title: 'Hojicha Cloud Float',
+    desc: 'Roasted tea, chilled milk, vanilla cloud, and toasted rice crunch.',
+    ingredients: 'hojicha, milk, vanilla cream, toasted rice',
+    menuSection: 'cloud_tea',
+    imageAlt: 'Hojicha Cloud Float',
+    previousTitles: ['Matcha Cloud Float'],
+  }),
+  food_menu_peach_sunbeam_basque: defineLegacyPeachMenuCopy({
+    title: 'Strawberry Sunbeam Slice',
+    desc: 'A cold-set strawberry cheesecake with berry glaze and fresh mint.',
+    ingredients: 'cream cheese, strawberry, biscuit, berry glaze',
+    menuSection: 'oven_sweets',
+    imageAlt: 'Strawberry Sunbeam cheesecake slice',
+    previousTitles: ['Sunbeam Basque Slice'],
+  }),
+  food_menu_peach_butter_waffle: defineLegacyPeachMenuCopy({
+    title: 'Cloud Nine Cocoa Crepes',
+    desc: 'Three soft crepes with cocoa drizzle, strawberry, and milk cream.',
+    ingredients: 'butter crepe, cocoa, strawberry, milk cream',
+    menuSection: 'oven_sweets',
+    imageAlt: 'Cloud Nine Cocoa Crepes',
+    previousTitles: ['Cloud Nine Butter Waffle'],
+  }),
+  food_menu_peach_pocket_pie: defineLegacyPeachMenuCopy({
+    title: 'Midnight Creme No. 11',
+    desc: 'Deep iced coffee, brown sugar, and a tall toasted cream crown.',
+    ingredients: 'cold-brew coffee, milk, brown sugar, toasted cream',
+    menuSection: 'cloud_tea',
+    imageAlt: 'Midnight Creme No. 11 iced coffee',
+    previousTitles: ['Peach Pocket 03'],
+  }),
+  food_menu_peach_golden_hour_set: defineLegacyPeachMenuCopy({
+    title: 'Golden Hour Pairing',
+    desc: 'One Sunset Peach Fizz paired with a mini Sunbeam Basque slice.',
+    ingredients: 'peach fizz, mini Basque cheesecake, peach honey',
+    menuSection: 'seasonal_drop',
+    imageAlt: 'Golden Hour drink and cheesecake pairing',
+  }),
 })
+
+const migrateLegacyPeachMenuCopy = (existing, seedItem) => {
+  if (existing.restaurantId !== PEACH_CLOUD_SEED_RESTAURANT_ID) return false
+  const legacyCopy = PEACH_CLOUD_LEGACY_MENU_COPY_BY_ID[seedItem.id]
+  if (!legacyCopy) return false
+
+  let changed = false
+  for (const field of ['title', 'desc', 'ingredients', 'menuSection']) {
+    if (legacyCopy[field].includes(existing[field]) && existing[field] !== seedItem[field]) {
+      existing[field] = seedItem[field]
+      changed = true
+    }
+  }
+
+  const seedImageAlt = seedItem.image?.alt || seedItem.title
+  if (legacyCopy.imageAlt.includes(existing.image?.alt) && existing.image?.alt !== seedImageAlt) {
+    existing.image = { ...existing.image, alt: seedImageAlt }
+    changed = true
+  }
+  return changed
+}
 
 export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const getChatStore = () => useChatStore()
@@ -2398,9 +2524,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       ...(restaurantIds.has(PEACH_CLOUD_SEED_RESTAURANT_ID) ? PEACH_CLOUD_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(DASH_GRILL_SEED_RESTAURANT_ID) ? DASH_GRILL_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(JADE_HEARTH_SEED_RESTAURANT_ID) ? JADE_HEARTH_REQUIRED_MENU_ITEMS : []),
-      ...(restaurantIds.has(VERDANT_DAY_SEED_RESTAURANT_ID)
-        ? VERDANT_DAY_REQUIRED_MENU_ITEMS
-        : []),
+      ...(restaurantIds.has(VERDANT_DAY_SEED_RESTAURANT_ID) ? VERDANT_DAY_REQUIRED_MENU_ITEMS : []),
     ]
 
     requiredMenuItems.forEach((seedItem) => {
@@ -2416,22 +2540,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         existing.menuSection = seedItem.menuSection
         changed = true
       }
-      const legacyPeachTitle = PEACH_CLOUD_LEGACY_TITLES_BY_ID[seedItem.id]
-      if (
-        legacyPeachTitle &&
-        existing.restaurantId === PEACH_CLOUD_SEED_RESTAURANT_ID &&
-        existing.title === legacyPeachTitle
-      ) {
-        existing.title = seedItem.title
-        existing.desc = seedItem.desc
-        existing.ingredients = seedItem.ingredients
-        existing.menuSection = seedItem.menuSection
-        existing.image = {
-          ...existing.image,
-          alt: seedItem.image?.alt || existing.image?.alt || seedItem.title,
-        }
-        changed = true
-      }
+      if (migrateLegacyPeachMenuCopy(existing, seedItem)) changed = true
       const legacyMoonCopy = MOON_BISTRO_LEGACY_MENU_COPY_BY_ID[seedItem.id]
       if (
         legacyMoonCopy &&

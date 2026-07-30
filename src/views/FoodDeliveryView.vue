@@ -179,9 +179,9 @@ const PEACH_CLOUD_THEME_STYLE = Object.freeze({
   '--peach-cloud-mist': '#fda1b8',
 })
 const PEACH_CLOUD_MENU_SHORTCUTS = Object.freeze([
-  { key: 'cloud_tea', labelZh: '云顶茶', labelEn: 'Cloud Tea', asset: 'drinks.svg' },
   { key: 'fruit_sparkle', labelZh: '果气闪饮', labelEn: 'Fruit Fizz', asset: 'vegan.svg' },
   { key: 'frozen_clouds', labelZh: '冰雪甜品', labelEn: 'Frozen', asset: 'dessert.svg' },
+  { key: 'cloud_tea', labelZh: '云顶茶', labelEn: 'Cloud Tea', asset: 'drinks.svg' },
   { key: 'oven_sweets', labelZh: '暖炉烘焙', labelEn: 'Bakes', asset: 'snacks.svg' },
   { key: 'seasonal_drop', labelZh: '季节限定', labelEn: 'Seasonal', asset: 'meal.svg' },
 ])
@@ -1755,8 +1755,8 @@ const activeStoreShortDescription = computed(
     '',
 )
 const activeStoreTags = computed(() => activeStorePresentation.value?.tags || [])
-const activeStoreTemplate = computed(
-  () => resolveStoreTemplateForRestaurant(activeRestaurant.value || {}),
+const activeStoreTemplate = computed(() =>
+  resolveStoreTemplateForRestaurant(activeRestaurant.value || {}),
 )
 const isDarkTrayStore = computed(() => activeStoreTemplate.value === 'dark_tray_menu')
 const isDessertWindowStore = computed(() => activeStoreTemplate.value === 'dessert_window')
@@ -3375,10 +3375,7 @@ onBeforeUnmount(() => {
     data-testid="food-delivery-view"
     @error.capture="handleFoodDeliveryAssetError"
   >
-    <div
-      class="mx-auto max-w-md"
-      :class="isDedicatedStoreApp ? 'space-y-0' : 'space-y-4'"
-    >
+    <div class="mx-auto max-w-md" :class="isDedicatedStoreApp ? 'space-y-0' : 'space-y-4'">
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
         class="space-y-5 pt-1"
@@ -6632,8 +6629,7 @@ onBeforeUnmount(() => {
           @check-update="triggerOrderSurpriseEvent(activeJadeTableOrder)"
           @mark-delivered="markFoodOrderDelivered"
           @record-wallet="
-            activeJadeWalletSuggestion &&
-            transferFoodSuggestionToWallet(activeJadeWalletSuggestion)
+            activeJadeWalletSuggestion && transferFoodSuggestionToWallet(activeJadeWalletSuggestion)
           "
         />
 
@@ -6672,99 +6668,167 @@ onBeforeUnmount(() => {
 
         <article
           v-else-if="activeRestaurant && isDessertWindowStore"
-          class="relative min-h-screen overflow-hidden bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)]"
+          class="peach-cloud-app relative mx-auto min-h-screen w-full max-w-md overflow-hidden bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)]"
           data-testid="food-delivery-store-shell"
           :data-store-id="activeRestaurant.id"
           :data-store-tone="activeStoreVisual.tone"
           :data-store-template="activeStoreTemplate"
         >
           <header
-            v-if="peachCloudPageKey === 'home'"
-            class="bg-[var(--peach-cloud-mist)] px-4 pb-7 pt-4"
-            data-testid="food-delivery-peach-cloud-home-header"
+            class="sticky top-0 z-40 border-b border-[var(--peach-cloud-ink)]/15 bg-[var(--peach-cloud-canvas)]/95 px-3 py-2 backdrop-blur-md"
+            :data-testid="
+              peachCloudPageKey === 'home' ? 'food-delivery-peach-cloud-home-header' : undefined
+            "
           >
-            <div class="grid grid-cols-[2rem_minmax(0,1fr)_2rem_2rem_2rem] items-center gap-1.5">
+            <div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
               <button
                 type="button"
-                class="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)] shadow-sm transition active:scale-[0.96]"
+                class="inline-flex h-11 items-center gap-1.5 border-r border-[var(--peach-cloud-ink)]/20 pr-3 text-[var(--peach-cloud-ink)] transition active:scale-[0.97]"
                 data-testid="food-delivery-store-home"
-                :aria-label="t('返回手机主屏', 'Return to Home')"
+                :aria-label="t('返回手机桌面', 'Return to phone Home')"
+                :title="t('返回手机桌面', 'Return to phone Home')"
                 @click="goHome"
               >
-                <i class="fas fa-house text-xs"></i>
+                <i class="fas fa-chevron-left text-xs"></i>
+                <span class="text-[10px] font-black">{{ t('桌面', 'Home') }}</span>
               </button>
               <button
                 type="button"
-                class="flex h-8 min-w-0 items-center gap-2 rounded-full bg-[var(--peach-cloud-canvas)] px-3 text-[var(--peach-cloud-iron)] shadow-sm"
-                data-testid="food-delivery-peach-cloud-search"
-                @click="focusPeachCloudSearch"
-              >
-                <i class="fas fa-magnifying-glass text-[10px] text-[var(--peach-cloud-ink)]"></i>
-                <span class="truncate text-xs font-semibold">
-                  {{ t('搜索饮品或甜点', 'Search drinks or desserts') }}
-                </span>
-              </button>
-              <button
-                type="button"
-                class="relative inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)] shadow-sm transition active:scale-[0.96]"
-                data-testid="food-delivery-peach-cloud-header-cart"
-                :aria-label="t('购物袋', 'Bag')"
-                @click="openStoreCartSurface"
-              >
-                <i class="fas fa-bag-shopping text-xs"></i>
-                <span
-                  v-if="activeStoreCartQuantity"
-                  class="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--peach-cloud-ink)] px-1 text-[8px] font-black text-[var(--peach-cloud-canvas)]"
-                >
-                  {{ activeStoreCartQuantity }}
-                </span>
-              </button>
-              <button
-                type="button"
-                class="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)] shadow-sm transition active:scale-[0.96]"
-                data-testid="food-delivery-peach-cloud-header-updates"
-                :aria-label="t('消息', 'Updates')"
-                @click="showPeachCloudUpdates"
-              >
-                <i class="fas fa-bell text-xs"></i>
-              </button>
-              <button
-                type="button"
-                class="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[var(--peach-cloud-canvas)] p-1.5 shadow-sm transition active:scale-[0.96]"
+                class="flex min-w-0 items-center gap-2.5 text-left"
                 data-testid="food-delivery-peach-cloud-header-profile"
-                :aria-label="activeStoreDisplayName"
                 @click="openPeachCloudHome"
               >
-                <img
-                  :src="peachCloudBrandImageUrl"
-                  :alt="activeStoreDisplayName"
-                  class="h-full w-full object-contain"
-                  data-required-asset="peach-cloud/brand/peach-cloud-mark-01.svg"
-                  @error="handleFoodShopImageError"
-                />
+                <span
+                  class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.65rem] border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-canvas)] p-1 shadow-[0_4px_0_var(--peach-cloud-ink)]"
+                >
+                  <img
+                    :src="peachCloudBrandImageUrl"
+                    alt=""
+                    class="h-full w-full object-contain"
+                    data-required-asset="peach-cloud/brand/peach-cloud-mark-01.svg"
+                    @error="handleFoodShopImageError"
+                  />
+                </span>
+                <span class="min-w-0">
+                  <strong class="block truncate text-xs font-black uppercase">{{
+                    activeStoreDisplayName
+                  }}</strong>
+                  <span class="block truncate text-[9px] font-bold text-[var(--peach-cloud-iron)]">
+                    {{ t('白桃饮品与冰甜专门店', 'WHITE PEACH DRINKS & ICE') }}
+                  </span>
+                </span>
               </button>
-            </div>
-
-            <div class="mt-5">
-              <p class="text-[10px] font-black uppercase text-[var(--peach-cloud-iron)]">
-                {{ activeStoreDisplayName }}
-              </p>
-              <h1 class="mt-1 text-[1.85rem] font-black leading-none text-[var(--peach-cloud-ink)]">
-                {{ t('早上好', 'Good Morning') }}
-              </h1>
-              <p class="mt-1 text-xs font-semibold text-[var(--peach-cloud-iron)]">
-                {{ t('今天从一杯桃子云开始。', 'Rise and shine. Your peach cloud is ready.') }}
-              </p>
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-[0.65rem] border border-[var(--peach-cloud-ink)]/15 bg-white/80 text-[var(--peach-cloud-ink)] transition active:scale-[0.96]"
+                  data-testid="food-delivery-peach-cloud-search"
+                  :aria-label="t('搜索桃子云菜单', 'Search Peach Cloud menu')"
+                  @click="focusPeachCloudSearch"
+                >
+                  <i class="fas fa-magnifying-glass text-xs"></i>
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-[0.65rem] border border-[var(--peach-cloud-ink)]/15 bg-white/80 text-[var(--peach-cloud-ink)] transition active:scale-[0.96]"
+                  data-testid="food-delivery-peach-cloud-header-updates"
+                  :aria-label="t('查看配送更新', 'View delivery updates')"
+                  @click="showPeachCloudUpdates"
+                >
+                  <i class="fas fa-bell text-xs"></i>
+                </button>
+                <button
+                  type="button"
+                  class="relative inline-flex h-10 w-10 items-center justify-center rounded-[0.65rem] bg-[var(--peach-cloud-ink)] text-[var(--peach-cloud-canvas)] transition active:scale-[0.96]"
+                  data-testid="food-delivery-peach-cloud-header-cart"
+                  :aria-label="t('打开购物袋', 'Open bag')"
+                  @click="openStoreCartSurface"
+                >
+                  <i class="fas fa-bag-shopping text-xs"></i>
+                  <span
+                    v-if="activeStoreCartQuantity"
+                    class="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] px-1 text-[8px] font-black text-[var(--peach-cloud-ink)]"
+                  >
+                    {{ activeStoreCartQuantity }}
+                  </span>
+                </button>
+              </div>
             </div>
           </header>
 
           <main
             v-if="peachCloudPageKey === 'home'"
-            class="relative bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-3"
+            class="relative bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-4"
             data-testid="food-delivery-peach-cloud-home-main"
           >
+            <section
+              class="grid min-h-[16rem] grid-cols-[minmax(0,0.9fr)_minmax(8.5rem,1.1fr)] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] shadow-[7px_7px_0_var(--peach-cloud-ink)]"
+              data-testid="food-delivery-peach-cloud-brand-hero"
+            >
+              <div class="flex min-w-0 flex-col justify-between p-4 pr-2">
+                <div>
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full bg-[var(--peach-cloud-ink)] px-2.5 py-1 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
+                  >
+                    <i class="fas fa-circle-check text-[8px]"></i>
+                    {{ t('现切白桃 · 今日营业', 'FRESH PEACH · OPEN TODAY') }}
+                  </span>
+                  <h1 class="mt-4 whitespace-pre-line text-[1.75rem] font-black leading-[0.94]">
+                    {{ t('把桃子，\n喝进云里', 'PEACH,\nPOURED INTO CLOUDS') }}
+                  </h1>
+                  <p class="mt-3 text-[11px] font-bold leading-4 text-[var(--peach-cloud-iron)]">
+                    {{
+                      t(
+                        '白桃果饮、乌龙云顶与现刨冰甜。',
+                        'White-peach fizz, oolong clouds, and freshly shaved ice.',
+                      )
+                    }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="mt-4 inline-flex w-fit items-center gap-2 border-b-2 border-[var(--peach-cloud-ink)] pb-1 text-[11px] font-black"
+                  @click="openPeachCloudNew"
+                >
+                  {{ t('看本周桃气上新', "SEE THIS WEEK'S DROP") }}
+                  <i class="fas fa-arrow-right text-[9px]"></i>
+                </button>
+              </div>
+              <button
+                type="button"
+                class="relative min-w-0 overflow-hidden border-l-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)] text-left"
+                data-testid="food-delivery-peach-cloud-hero-cover"
+                @click="openPeachCloudNew"
+              >
+                <img
+                  :src="activeStoreCoverImageUrl"
+                  :alt="`${activeStoreDisplayName} ${t('本周精选', 'weekly selection')}`"
+                  class="h-full w-full object-cover"
+                  :data-required-asset="foodDeliveryRequiredAssetPath(activeRestaurant)"
+                  @error="handleFoodShopImageError"
+                />
+                <span
+                  class="absolute bottom-0 left-0 right-0 bg-[var(--peach-cloud-ink)] px-3 py-2 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
+                >
+                  {{ t('白桃季限定 · 18-28 分钟', 'WHITE PEACH SEASON · 18-28 MIN') }}
+                </span>
+              </button>
+            </section>
+
+            <div class="mt-7 flex items-end justify-between gap-3">
+              <div>
+                <p class="text-[9px] font-black uppercase text-[var(--peach-cloud-iron)]">
+                  {{ t('先选一种桃气', 'CHOOSE YOUR PEACH MOOD') }}
+                </p>
+                <h2 class="mt-1 text-xl font-black">{{ t('果饮还是冰品？', 'Fizz or ice?') }}</h2>
+              </div>
+              <span class="text-[10px] font-bold text-[var(--peach-cloud-iron)]">
+                {{ activeStoreEtaText }}
+              </span>
+            </div>
+
             <nav
-              class="grid grid-cols-5 gap-2"
+              class="mt-3 grid grid-cols-2 gap-2.5"
               data-testid="food-delivery-store-menu-section-rail"
               :aria-label="t('店内分类', 'Store menu sections')"
             >
@@ -6772,21 +6836,22 @@ onBeforeUnmount(() => {
                 v-for="shortcut in peachCloudMenuShortcuts"
                 :key="shortcut.key"
                 type="button"
-                class="flex min-w-0 flex-col items-center gap-1.5 text-center text-[10px] font-semibold leading-tight"
-                :class="
+                class="group flex min-h-[5.75rem] min-w-0 items-center gap-3 border-2 border-[var(--peach-cloud-ink)] px-3 text-left text-[11px] font-black leading-tight shadow-[4px_4px_0_var(--peach-cloud-ink)] transition active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                :class="[
                   shortcut.key === activeStoreMenuSectionKey
-                    ? 'text-[var(--peach-cloud-ink)]'
-                    : 'text-[var(--peach-cloud-iron)]'
-                "
+                    ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
+                    : 'bg-white/75 text-[var(--peach-cloud-iron)]',
+                  shortcut.key === 'seasonal_drop' ? 'col-span-2' : '',
+                ]"
                 :data-testid="`food-delivery-store-menu-section-${shortcut.key}`"
                 @click="focusStoreMenuSection(shortcut.key)"
               >
                 <span
-                  class="inline-flex aspect-[1/1.2] w-full max-w-[3.2rem] items-center justify-center rounded-[1.55rem] border transition active:scale-[0.96]"
+                  class="inline-flex h-12 w-12 shrink-0 items-center justify-center border border-[var(--peach-cloud-ink)] transition group-active:scale-[0.96]"
                   :class="
                     shortcut.key === activeStoreMenuSectionKey
-                      ? 'border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] shadow-[0_9px_18px_rgba(43,48,58,0.14)]'
-                      : 'border-[var(--peach-cloud-mist)]/50 bg-white/70'
+                      ? 'bg-[var(--peach-cloud-ink)]'
+                      : 'bg-[var(--peach-cloud-canvas)]'
                   "
                 >
                   <img
@@ -7110,24 +7175,16 @@ onBeforeUnmount(() => {
           </main>
 
           <template v-else-if="peachCloudPageKey === 'search'">
-            <header class="bg-[var(--peach-cloud-mist)] px-4 pb-5 pt-4">
-              <div class="grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-3">
-                <button
-                  type="button"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-[0.7rem] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)] shadow-sm"
-                  :aria-label="t('返回桃子云首页', 'Back to Peach Cloud home')"
-                  @click="openPeachCloudHome"
-                >
-                  <i class="fas fa-chevron-left text-xs"></i>
-                </button>
-                <div class="min-w-0 text-center">
-                  <p class="text-[10px] font-black text-[var(--peach-cloud-iron)]">
-                    {{ activeStoreDisplayName }}
-                  </p>
-                  <h1 class="truncate text-lg font-black">{{ t('搜索', 'Search') }}</h1>
-                </div>
-                <img :src="peachCloudBrandImageUrl" alt="" class="h-8 w-8 object-contain" />
-              </div>
+            <header
+              class="border-b-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)] px-4 py-5"
+            >
+              <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">PEACH FINDER / 01</p>
+              <h1 class="mt-1 text-[1.8rem] font-black leading-none">
+                {{ t('按口味找桃子', 'Find your peach') }}
+              </h1>
+              <p class="mt-2 text-[11px] font-bold text-[var(--peach-cloud-iron)]">
+                {{ t('搜索、筛选，再进入单品详情。', 'Search, filter, then inspect one item.') }}
+              </p>
             </header>
 
             <main
@@ -7135,7 +7192,7 @@ onBeforeUnmount(() => {
               data-testid="food-delivery-peach-cloud-search-page"
             >
               <label
-                class="flex h-12 items-center gap-3 rounded-[1rem] border border-[var(--peach-cloud-mist)] bg-white/80 px-4 shadow-[0_10px_24px_rgba(43,48,58,0.08)]"
+                class="flex h-12 items-center gap-3 border-2 border-[var(--peach-cloud-ink)] bg-white/90 px-4 shadow-[4px_4px_0_var(--peach-cloud-ink)]"
               >
                 <i class="fas fa-magnifying-glass text-sm text-[var(--peach-cloud-accent)]"></i>
                 <input
@@ -7204,25 +7261,25 @@ onBeforeUnmount(() => {
 
                 <div
                   v-if="peachCloudSearchResults.length"
-                  class="mt-3 grid grid-cols-2 gap-3"
+                  class="mt-3 divide-y-2 divide-[var(--peach-cloud-ink)] border-y-2 border-[var(--peach-cloud-ink)]"
                   data-testid="food-delivery-store-menu-items"
                   :data-active-section="activeStoreMenuSectionKey"
                 >
                   <article
                     v-for="item in peachCloudSearchResults"
                     :key="item.id"
-                    class="relative min-w-0 overflow-hidden rounded-[1.2rem] border border-[var(--peach-cloud-mist)]/35 bg-white/85 shadow-[0_9px_20px_rgba(43,48,58,0.08)]"
+                    class="relative grid min-w-0 grid-cols-[5rem_minmax(0,1fr)_2.5rem] items-center gap-3 bg-white/55 py-3"
                     :data-testid="`food-delivery-menu-${item.id}`"
                     :data-menu-section="item.menuSection || 'signature'"
                   >
                     <button
                       type="button"
-                      class="block w-full text-left"
+                      class="contents text-left"
                       :data-testid="`food-delivery-menu-open-${item.id}`"
                       @click="openMenuItemDetail(item.id)"
                     >
                       <div
-                        class="relative aspect-[1.15/1] overflow-hidden bg-[var(--peach-cloud-mist)]/25"
+                        class="relative aspect-square overflow-hidden border border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)]/25"
                       >
                         <img
                           v-if="foodImageUrl(item)"
@@ -7232,26 +7289,22 @@ onBeforeUnmount(() => {
                           :data-required-asset="foodDeliveryRequiredAssetPath(item)"
                           @error="handleFoodShopImageError"
                         />
-                        <span
-                          class="absolute bottom-0 right-0 rounded-tl-2xl bg-[var(--peach-cloud-ink)] px-2.5 py-1 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
-                        >
-                          {{ item.price }}
-                        </span>
                       </div>
-                      <div class="p-3 pb-11">
-                        <p class="line-clamp-2 min-h-9 text-xs font-black leading-[1.1rem]">
+                      <div class="min-w-0 py-1">
+                        <p class="line-clamp-2 text-sm font-black leading-[1.1rem]">
                           {{ item.title }}
                         </p>
                         <p
-                          class="mt-1 line-clamp-1 text-[9px] font-semibold text-[var(--peach-cloud-iron)]"
+                          class="mt-1 line-clamp-2 text-[9px] font-semibold leading-3.5 text-[var(--peach-cloud-iron)]"
                         >
                           {{ item.desc }}
                         </p>
+                        <p class="mt-2 text-xs font-black">{{ item.price }} {{ item.currency }}</p>
                       </div>
                     </button>
                     <button
                       type="button"
-                      class="absolute bottom-2.5 right-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-sm"
+                      class="inline-flex h-10 w-10 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-[2px_2px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                       :data-testid="`food-delivery-add-${item.id}`"
                       :aria-label="`Add ${item.title}`"
                       @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
@@ -7276,26 +7329,23 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else-if="peachCloudPageKey === 'new'">
-            <header class="bg-[var(--peach-cloud-accent)] px-4 pb-6 pt-4">
+            <header
+              class="border-b-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] px-4 pb-7 pt-5"
+            >
               <div class="flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-[0.8rem] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)] shadow-sm"
-                  :aria-label="t('返回桃子云首页', 'Back to Peach Cloud home')"
-                  @click="openPeachCloudHome"
-                >
-                  <i class="fas fa-chevron-left text-xs"></i>
-                </button>
+                <span class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
+                  {{ t('每周五 10:00 更新', 'NEW EVERY FRIDAY · 10:00') }}
+                </span>
                 <span
-                  class="rounded-full bg-[var(--peach-cloud-ink)] px-3 py-1.5 text-[10px] font-black text-[var(--peach-cloud-canvas)]"
+                  class="bg-[var(--peach-cloud-ink)] px-3 py-1.5 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
                 >
-                  {{ t('本周上新', 'This week') }}
+                  {{ t('白桃季', 'PEACH SEASON') }}
                 </span>
               </div>
-              <p class="mt-8 text-[10px] font-black text-[var(--peach-cloud-iron)]">
+              <p class="mt-10 text-[10px] font-black text-[var(--peach-cloud-iron)]">
                 PEACH CLOUD DROP 07
               </p>
-              <h1 class="mt-2 max-w-[17rem] text-[2rem] font-black leading-[1.02]">
+              <h1 class="mt-2 max-w-[19rem] text-[2.35rem] font-black leading-[0.96]">
                 {{ t('桃气正盛，云朵刚好', 'Peak peach, soft clouds') }}
               </h1>
               <p
@@ -7317,7 +7367,7 @@ onBeforeUnmount(() => {
               <button
                 v-if="peachCloudFeaturedItem"
                 type="button"
-                class="grid w-full grid-cols-[44%_56%] overflow-hidden rounded-[1.4rem] bg-[var(--peach-cloud-ink)] text-left text-[var(--peach-cloud-canvas)] shadow-[0_18px_38px_rgba(43,48,58,0.2)]"
+                class="grid w-full grid-cols-[44%_56%] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-ink)] text-left text-[var(--peach-cloud-canvas)] shadow-[6px_6px_0_var(--peach-cloud-mist)]"
                 @click="openMenuItemDetail(peachCloudFeaturedItem.id)"
               >
                 <span class="flex flex-col justify-center p-4">
@@ -7350,21 +7400,46 @@ onBeforeUnmount(() => {
                   peachCloudNewArrivalItems.length
                 }}</span>
               </div>
-              <div class="mt-3 grid grid-cols-2 gap-3">
+              <div class="relative mt-4 border-l-2 border-[var(--peach-cloud-ink)] pl-4">
                 <article
-                  v-for="item in peachCloudNewArrivalItems"
+                  v-for="(item, index) in peachCloudNewArrivalItems"
                   :key="item.id"
-                  class="relative overflow-hidden rounded-[1.2rem] bg-white/85 shadow-[0_9px_20px_rgba(43,48,58,0.08)]"
+                  class="relative mb-5 grid grid-cols-[minmax(0,1fr)_7rem] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white/80 shadow-[4px_4px_0_var(--peach-cloud-ink)]"
                   :data-testid="`food-delivery-menu-${item.id}`"
                   :data-menu-section="item.menuSection || 'signature'"
                 >
                   <button
                     type="button"
-                    class="block w-full text-left"
+                    class="contents text-left"
                     :data-testid="`food-delivery-menu-open-${item.id}`"
                     @click="openMenuItemDetail(item.id)"
                   >
-                    <div class="aspect-[1.12/1] overflow-hidden bg-[var(--peach-cloud-mist)]/25">
+                    <div class="flex min-w-0 flex-col justify-between p-3 pr-2">
+                      <div>
+                        <span class="text-[9px] font-black text-[var(--peach-cloud-accent)]">
+                          DROP {{ String(index + 1).padStart(2, '0') }} ·
+                          {{
+                            item.menuSection === 'frozen_clouds'
+                              ? t('冰品', 'ICE')
+                              : item.menuSection === 'fruit_sparkle'
+                                ? t('果饮', 'FIZZ')
+                                : t('限定', 'LIMITED')
+                          }}
+                        </span>
+                        <p class="mt-2 line-clamp-2 text-sm font-black leading-[1.1rem]">
+                          {{ item.title }}
+                        </p>
+                        <p
+                          class="mt-1 line-clamp-2 text-[9px] font-semibold leading-3.5 text-[var(--peach-cloud-iron)]"
+                        >
+                          {{ item.desc }}
+                        </p>
+                      </div>
+                      <p class="mt-3 text-xs font-black">{{ item.price }} {{ item.currency }}</p>
+                    </div>
+                    <div
+                      class="aspect-square overflow-hidden border-l-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)]/25"
+                    >
                       <img
                         v-if="foodImageUrl(item)"
                         :src="foodImageUrl(item)"
@@ -7373,18 +7448,10 @@ onBeforeUnmount(() => {
                         @error="handleFoodShopImageError"
                       />
                     </div>
-                    <div class="p-3 pb-11">
-                      <p class="line-clamp-2 min-h-9 text-xs font-black leading-[1.1rem]">
-                        {{ item.title }}
-                      </p>
-                      <p class="mt-1 text-[10px] font-bold text-[var(--peach-cloud-iron)]">
-                        {{ item.price }} {{ item.currency }}
-                      </p>
-                    </div>
                   </button>
                   <button
                     type="button"
-                    class="absolute bottom-2.5 right-2.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]"
+                    class="absolute bottom-2 right-2 inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-[2px_2px_0_var(--peach-cloud-ink)]"
                     :data-testid="`food-delivery-add-${item.id}`"
                     :aria-label="`Add ${item.title}`"
                     @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
@@ -9623,7 +9690,7 @@ onBeforeUnmount(() => {
                   ? '!rounded-sm border border-[#cfc2ad] bg-[#f5efe2] text-[#211e19]'
                   : isLightFoodStore
                     ? '!rounded-lg border border-[#d8ddd5] bg-[#f2f4ef] text-[#1d241f]'
-                  : 'border border-white/[0.08] bg-[#11131b] text-white'
+                    : 'border border-white/[0.08] bg-[#11131b] text-white'
           "
         >
           <div class="flex items-start justify-between gap-3">
@@ -9639,7 +9706,7 @@ onBeforeUnmount(() => {
                         ? 'text-[#bd4b35]'
                         : isLightFoodStore
                           ? 'text-[#496b4a]'
-                        : 'text-[#ffb4a8]'
+                          : 'text-[#ffb4a8]'
                 "
               >
                 {{ activeStoreDisplayName }}
@@ -9656,7 +9723,7 @@ onBeforeUnmount(() => {
                         ? 'text-[#746c61]'
                         : isLightFoodStore
                           ? 'text-[#6c756e]'
-                        : 'text-slate-400'
+                          : 'text-slate-400'
                 "
               >
                 {{
@@ -9677,7 +9744,7 @@ onBeforeUnmount(() => {
                       ? '!rounded-sm bg-[#1f4d3a] text-white'
                       : isLightFoodStore
                         ? '!rounded-lg border border-[#d8ddd5] bg-white text-[#1d241f]'
-                      : 'bg-white/[0.08] text-slate-200'
+                        : 'bg-white/[0.08] text-slate-200'
               "
               data-testid="food-delivery-checkout-close"
               aria-label="Close checkout"
@@ -9701,7 +9768,7 @@ onBeforeUnmount(() => {
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
                       : isLightFoodStore
                         ? '!rounded-lg border border-[#d8ddd5] bg-white'
-                      : 'bg-white/[0.07]'
+                        : 'bg-white/[0.07]'
               "
               :data-testid="`food-delivery-checkout-line-${line.menuItemId}`"
             >
@@ -9718,7 +9785,7 @@ onBeforeUnmount(() => {
                           ? 'text-[#746c61]'
                           : isLightFoodStore
                             ? 'text-[#6c756e]'
-                          : 'text-slate-400'
+                            : 'text-slate-400'
                   "
                 >
                   x {{ line.quantity }} · {{ line.subtotal }} {{ line.currency }}
@@ -9735,7 +9802,7 @@ onBeforeUnmount(() => {
                         ? '!rounded-sm bg-[#e9deca] text-[#211e19]'
                         : isLightFoodStore
                           ? '!rounded-lg bg-[#e4eadf] text-[#496b4a]'
-                        : 'bg-[#ff806f]/15 text-[#ffb4a8]'
+                          : 'bg-[#ff806f]/15 text-[#ffb4a8]'
                 "
               >
                 {{ line.subtotal }} {{ line.currency }}
@@ -9755,7 +9822,7 @@ onBeforeUnmount(() => {
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
                       : isLightFoodStore
                         ? '!rounded-lg border border-[#d8ddd5] bg-white'
-                      : 'bg-white/[0.06]'
+                        : 'bg-white/[0.06]'
               "
             >
               <p
@@ -9765,10 +9832,10 @@ onBeforeUnmount(() => {
                     ? 'text-[var(--peach-cloud-iron)]'
                     : isQuickServiceStore
                       ? 'text-black/50'
-                        : isJadeTableStore
-                          ? 'text-[#746c61]'
-                          : isLightFoodStore
-                            ? 'text-[#6c756e]'
+                      : isJadeTableStore
+                        ? 'text-[#746c61]'
+                        : isLightFoodStore
+                          ? 'text-[#6c756e]'
                           : 'text-slate-400'
                 "
               >
@@ -9787,7 +9854,7 @@ onBeforeUnmount(() => {
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55'
                       : isLightFoodStore
                         ? '!rounded-lg border border-[#d8ddd5] bg-white'
-                      : 'bg-white/[0.06]'
+                        : 'bg-white/[0.06]'
               "
             >
               <p
@@ -9797,10 +9864,10 @@ onBeforeUnmount(() => {
                     ? 'text-[var(--peach-cloud-iron)]'
                     : isQuickServiceStore
                       ? 'text-black/50'
-                        : isJadeTableStore
-                          ? 'text-[#746c61]'
-                          : isLightFoodStore
-                            ? 'text-[#6c756e]'
+                      : isJadeTableStore
+                        ? 'text-[#746c61]'
+                        : isLightFoodStore
+                          ? 'text-[#6c756e]'
                           : 'text-slate-400'
                 "
               >
@@ -9819,7 +9886,7 @@ onBeforeUnmount(() => {
                       ? '!rounded-sm bg-[#e9deca]'
                       : isLightFoodStore
                         ? '!rounded-lg bg-[#e4eadf]'
-                      : 'bg-white/[0.06]'
+                        : 'bg-white/[0.06]'
               "
             >
               <p
@@ -9829,10 +9896,10 @@ onBeforeUnmount(() => {
                     ? 'text-[var(--peach-cloud-iron)]'
                     : isQuickServiceStore
                       ? 'text-black/50'
-                        : isJadeTableStore
-                          ? 'text-[#746c61]'
-                          : isLightFoodStore
-                            ? 'text-[#496b4a]'
+                      : isJadeTableStore
+                        ? 'text-[#746c61]'
+                        : isLightFoodStore
+                          ? 'text-[#496b4a]'
                           : 'text-slate-400'
                 "
               >
@@ -9858,7 +9925,7 @@ onBeforeUnmount(() => {
                       ? '!rounded-sm border border-[#cfc2ad] bg-white/55 text-[#211e19]'
                       : isLightFoodStore
                         ? '!rounded-lg border border-[#d8ddd5] bg-white text-[#1d241f]'
-                      : 'bg-white/[0.08] text-slate-200'
+                        : 'bg-white/[0.08] text-slate-200'
               "
               data-testid="food-delivery-checkout-cancel"
               @click="closeCheckoutSheet"
@@ -9877,7 +9944,7 @@ onBeforeUnmount(() => {
                       ? '!rounded-sm bg-[#bd4b35] text-white shadow-[0_14px_34px_rgba(189,75,53,0.22)]'
                       : isLightFoodStore
                         ? '!rounded-lg bg-[#1d241f] text-white shadow-[0_14px_34px_rgba(29,36,31,0.2)]'
-                      : 'bg-[#ff806f] text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]'
+                        : 'bg-[#ff806f] text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]'
               "
               data-testid="food-delivery-checkout-submit"
               @click="checkoutFoodDelivery"

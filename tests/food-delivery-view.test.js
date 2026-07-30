@@ -1397,7 +1397,7 @@ describe('FoodDeliveryView', () => {
       'food-delivery-store-peach-cloud',
     )
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
-      'Golden Hour Pairing',
+      'Golden Peach Cheesecake Pairing',
     )
     expect(
       wrapper

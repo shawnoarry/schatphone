@@ -83,6 +83,9 @@ describe('food delivery store', () => {
     expect(new Set(peachCloudMenu.map((item) => item.menuSection))).toEqual(
       new Set(['cloud_tea', 'fruit_sparkle', 'frozen_clouds', 'oven_sweets', 'seasonal_drop']),
     )
+    expect(peachCloudMenu.filter((item) => item.menuSection === 'fruit_sparkle')).toHaveLength(3)
+    expect(peachCloudMenu.filter((item) => item.menuSection === 'frozen_clouds')).toHaveLength(4)
+    expect(peachCloudMenu.filter((item) => /peach/i.test(item.title))).toHaveLength(12)
     expect(store.findMenuItemById('food_menu_peach_golden_hour_set')?.image.url).toContain(
       '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-12.png',
     )
@@ -805,10 +808,27 @@ describe('food delivery store', () => {
               restaurantId: 'food_seed_peach_cloud',
               title: 'Jasmine Daydream',
               category: 'dessert',
-              menuSection: 'cloud_tea',
+              menuSection: 'chef_notes',
               price: '24.00',
-              desc: 'Cold-brew jasmine tea finished with a light vanilla cream cap.',
-              ingredients: 'jasmine tea, vanilla, cream, cane sugar',
+              desc: 'My saved cocoa and peach description.',
+              ingredients: 'my custom cocoa blend',
+              imageSourceType: 'url',
+              imageUrl: 'https://example.com/my-peach-brownie.png',
+              imageAlt: 'My custom Peach Cloud brownie photo',
+            },
+            {
+              id: 'food_menu_peach_oolong_cloud',
+              restaurantId: 'food_seed_peach_cloud',
+              title: 'Peach Oolong Cloud',
+              category: 'dessert',
+              menuSection: 'cloud_tea',
+              price: '26.00',
+              desc: 'Fragrant oolong, white peach, and a soft salted milk cloud.',
+              ingredients: 'oolong tea, white peach, milk foam, sea salt',
+              imageSourceType: 'url',
+              imageUrl:
+                '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-01.png',
+              imageAlt: 'Peach Oolong Cloud drink',
             },
             {
               id: 'food_menu_peach_sunset_fizz',
@@ -831,9 +851,22 @@ describe('food delivery store', () => {
     const store = useFoodDeliveryStore()
 
     expect(store.findMenuItemById('food_menu_peach_jasmine_cream')).toMatchObject({
-      title: 'Cocoa Cloud Brownie',
-      menuSection: 'oven_sweets',
-      ingredients: 'dark cocoa, butter, roasted nuts, vanilla cream',
+      title: 'Peach Cocoa Brownie',
+      menuSection: 'chef_notes',
+      desc: 'My saved cocoa and peach description.',
+      ingredients: 'my custom cocoa blend',
+      image: {
+        alt: 'My custom Peach Cloud brownie photo',
+      },
+    })
+    expect(store.findMenuItemById('food_menu_peach_oolong_cloud')).toMatchObject({
+      title: 'White Peach Lime Sparkler',
+      menuSection: 'fruit_sparkle',
+      desc: 'White peach, fresh lime, mint, and sparkling spring water.',
+      ingredients: 'white peach, lime, mint, sparkling water',
+      image: {
+        alt: 'White Peach Lime Sparkler',
+      },
     })
     expect(store.findMenuItemById('food_menu_peach_sunset_fizz')).toMatchObject({
       title: 'My Edited Peach Box',
