@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-07-22
+Updated: 2026-07-31
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -32,10 +32,10 @@ Current state:
 - the cross-module Mini Scene direction is architecture-accepted and its pure Stage 1 foundation is landed: request/draft/artifact/policy schemas, an empty-by-default caller registry, Book structured-profile/regex validation, and deterministic world/profile resolution exist without runtime imports; later Settings, persistence, presenters, and source Adapters remain unimplemented;
 - Mini Scene was not added to persistence Batch 2B. Its future artifact/profile-binding/policy data classes still require a separate persistence and complete-backup approval after the completed Book foundation pilot;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
-- the remaining structural hotspots are the large route views, `systemStore`, and direct cross-store coordination;
+- the remaining structural hotspots are the large route views, especially the five-facade `FoodDeliveryView.vue`, `systemStore`, and direct cross-store coordination;
 - the isolated Vitest migration is complete at 4.1.10: it reuses root Vite 7.3.6 and removes the nested Vite 5/esbuild advisory chain and the prior critical finding;
 - every complete local JSON export now presents one fixed danger warning before payload construction, keeps configured credentials and private local data intact, and exits without export/report side effects when cancelled;
-- normal npm resolution refreshed only compatible transitive advisory nodes, kept `package.json` and all direct versions unchanged, used no override/resolution or major migration, and leaves production/full audits at 0/0 with a 185-file / 1170-test and 56-pass / 4-existing-skip Playwright baseline;
+- normal npm resolution refreshed only compatible transitive advisory nodes, kept `package.json` and all direct versions unchanged, used no override/resolution or major migration, and reported production/full audits at 0/0 in the 2026-07-22 baseline with 185 files / 1170 tests and 56 pass / 4 existing Playwright skips;
 - the CI/release workflow first slice now defines fail-closed production/full audits, lint, unit, build, and one full E2E run for PR verification and main Pages release; the full run includes the focused visual suite and enforces the four-skip/flaky baseline;
 - the active 4.5 lane remains in progress until the workflows run remotely, external required checks/environment protection are confirmed, and a deployed `dist` base-path smoke is added in a later slice;
 - the root bootstrap points to a thin cross-task execution contract, while task packages and specialist workflows own their execution detail;

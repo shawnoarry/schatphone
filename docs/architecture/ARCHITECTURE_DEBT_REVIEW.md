@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-07-22
+Updated: 2026-07-31
 
 > Scope and authority note
 >
@@ -16,7 +16,7 @@ Updated: 2026-07-22
   - `[Structural]`: large ownership or maintainability risk.
   - `[Technical Debt]`: real debt, but safer to address after the structural cuts.
   - `[Preserve]`: healthy patterns that future work should keep.
-- Measurements were re-run on 2026-07-10 against the current working tree after the Settings, Chat, Contacts, and WorldBook composable extractions listed below. File sizes and fan-out remain unchanged from the last architecture commit, so they are still current evidence rather than historical estimates.
+- Measurements were re-run on 2026-07-31 against the current integration tree after the Camera/image-generation, five-shop Food Delivery, OpenFreeMap, Seoul catalog, and Peach Cloud refresh changes.
 - Measurement hygiene: line counts are evidence, not the problem by themselves. Treat a large file as a governance issue only when size appears together with mixed responsibilities, cross-owner knowledge, weak test locality, or repeated feature pile-up.
 - The two strongest signals are still:
   - large view files;
@@ -27,8 +27,8 @@ Updated: 2026-07-22
 
 The `lib/` layer and the module-ownership philosophy are the project's strongest assets. The largest structural risks are still both "God object" patterns:
 
-1. God View Modules: the top 8 view files now average about 3881 lines each.
-2. God Store Module: `src/stores/system.js` is now 4186 lines and is directly imported by 22 of 30 view files.
+1. God View Modules: the top 8 view files now average about 5078 lines each, with `FoodDeliveryView.vue` at 10329 lines after the five independent shop facades landed.
+2. God Store Module: `src/stores/system.js` is now 4644 lines and is directly imported by 24 of 40 view files.
 
 Both risks directly work against the ownership-closure goal. The ongoing `4.5 Architecture Cleanup` lane is the right home for this work, and the current snapshot still shows debt concentrated in the same hot view files and the same store module.
 
@@ -49,18 +49,18 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 
 | File | Lines |
 | --- | ---: |
-| `src/views/ContactsView.vue` | 4754 |
-| `src/views/ChatView.vue` | 4312 |
-| `src/views/WorldBookView.vue` | 4130 |
-| `src/views/HomeView.vue` | 3920 |
-| `src/views/ChatDirectoryView.vue` | 3802 |
-| `src/views/WidgetsView.vue` | 3617 |
-| `src/views/AppStoreView.vue` | 3352 |
-| `src/views/FoodDeliveryView.vue` | 3161 |
+| `src/views/FoodDeliveryView.vue` | 10329 |
+| `src/views/ContactsView.vue` | 5232 |
+| `src/views/ChatView.vue` | 4776 |
+| `src/views/HomeView.vue` | 4373 |
+| `src/views/ChatDirectoryView.vue` | 4122 |
+| `src/views/WorldBookView.vue` | 4093 |
+| `src/views/WidgetsView.vue` | 4050 |
+| `src/views/AppStoreView.vue` | 3647 |
 
-The top 8 view files average about 3881 lines. This is still a decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination, but the recent Chat, Contacts, and WorldBook display/read-model slices have started lowering the hotspot pressure.
+The top 8 view files average about 5078 lines. This is a decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination. The five Food Delivery facades intentionally share one runtime owner, but their route-view concentration is now the clearest measured hotspot.
 
-The `src/composables/` directory now contains 36 files:
+The `src/composables/` directory now contains 37 files. The list below records the established architecture seams and is not an exhaustive inventory:
 
 - `useDialog.js`
 - `useI18n.js`
@@ -103,18 +103,9 @@ That means view-level state, computed values, and side effects are still often w
 
 ### 3.2 God Store Module: `system.js`
 
-`src/stores/system.js` is 4186 lines.
+`src/stores/system.js` is 4644 lines.
 
-It is directly imported by 22 of 30 view files. The 8 view files without a direct `useSystemStore` import are:
-
-- `AssetsView.vue`
-- `ChatGroupsView.vue`
-- `FilesView.vue`
-- `GalleryView.vue`
-- `PhoneView.vue`
-- `RemindersView.vue`
-- `StockView.vue`
-- `WalletView.vue`
+It is directly imported by 24 of 40 view files. The remaining 16 view files have no direct `useSystemStore` import.
 
 What `systemStore` currently owns or coordinates:
 
@@ -182,10 +173,10 @@ This layer is the best local model for future cleanup: focused modules, semantic
 
 Current source snapshot:
 
-- `src` contains 133 `.js` files.
-- `src` contains 67 `.vue` files.
+- `src` contains 152 `.js` files.
+- `src` contains 85 `.vue` files.
 - `src` contains 0 `.ts` / `.tsx` files.
-- Total measured `.js` + `.vue` source lines under `src`: about 102.76k.
+- Total measured `.js` + `.vue` source lines under `src`: 131,038.
 
 TypeScript is present in devDependencies, but current application source is still JavaScript. That is acceptable for now, but it increases risk when refactoring structured contracts such as:
 
@@ -210,7 +201,7 @@ Verified on 2026-07-22:
 - GitHub Pages deploy requires the verified build job and still does not deploy the push relay;
 - the repository has no coverage threshold.
 
-These findings do not mean the built static client has vulnerable production dependencies. They mean development-server/test tooling and exported/local secrets need an explicit hardening lane before the project is described as production ready.
+These findings do not establish production readiness. The most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings, while exported/local secrets, the unauthenticated push relay, remote CI/environment proof, deployed-network proof, and named physical-device evidence still require explicit hardening or verification.
 
 ## 4. Findings
 
@@ -219,7 +210,7 @@ These findings do not mean the built static client has vulnerable production dep
 - The top view files are far beyond a comfortable single-file size.
 - `ChatView.vue` alone imports 11 stores and coordinates messaging, rich messages, AI calls, service accounts, social-event review, appearance, commerce hooks, maps, calendar, wallet, and runtime state.
 - `ContactsView.vue` imports 10 stores and combines profile editing, social snapshots, relationship memory review, source audit, commerce/media context, and destructive-role flows.
-- The composable layer has grown to 36 focused files, but substantial orchestration and cross-owner knowledge still remains inline in the largest views.
+- The composable layer has grown to 37 focused files, but substantial orchestration and cross-owner knowledge still remains inline in the largest views.
 
 Why it matters:
 

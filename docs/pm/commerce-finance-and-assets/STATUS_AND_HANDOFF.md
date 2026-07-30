@@ -37,7 +37,7 @@ What is already landed:
 25. Verdant Day is now the fifth built-in independent shop app and the first `minimal_light_food` implementation. Its grey-white canvas, full-width mascot-led English brand Hero, circular food photography, icon-led Home category shortcuts, focused Menu tabs, spacious product rows, dedicated product detail, light fixed navigation, branded bag, checkout, order list, and order detail form a route-driven app instead of appending generic shop panels below Home. Its semantic palette assigns Leaf to primary actions and selected progress, Coral to promotional emphasis, Gold to restrained highlights and warnings, and calm neutral surfaces to ordinary controls. Home category controls are destination shortcuts without a false persistent selection; Menu removes the overlapping `All` filter, defaults to the first real non-empty category, keeps global search grouped by category, and conditionally exposes unknown user-authored sections as `More`. Twelve items span salads, warm bowls, wraps/toasts, drinks, and light sweets while sharing Food Delivery-owned menu, cart, safe cross-shop replacement, checkout, order, and event state. Fresh and existing saves receive only missing stable IDs without overwriting same-ID edits; explicit backup restore remains snapshot-faithful. The active English Hero and its text-free edit master are delivered under `verdant-day/brand/`; two photography concepts under `verdant-day/promotions/` now support the active campaign and popup. The complete `01` through `12` product pack is delivered as `768x768` full-square photography with center-safe compositions, while the shared diagnostic placeholder remains available for load failures. Exact Figma node `1:73` context was requested first, but the Starter plan returned `You've reached the Figma MCP tool call limit on the Starter plan.`; this implementation therefore adapts the user-approved visible canvas direction and is not claimed as an exact-node reproduction.
 26. Peach Cloud's refreshed shop presentation keeps Food Delivery ownership unchanged while making Home, Search, New, Bag, Orders, and order detail visually and structurally distinct. The 12 stable built-in menu IDs now resolve to 3 fruit drinks, 4 frozen desserts, 2 cloud teas, 2 baked sweets, and 1 seasonal pairing, with every built-in title carrying explicit peach identity. Migration updates known historical seed titles and menu sections but preserves user-authored same-ID titles and copy. Bag replacement, mixed/foreign-cart fail-closed behavior, checkout, order progress, order history, and reload persistence continue through the existing Food Delivery store; existing product PNGs remain unchanged pending a separately approved asset replacement slice.
 
-Coordination note: `FOOD_DELIVERY_PLATFORM_CROSS_MODULE_UI_UX_PLAN.md` preserves the future UI/UX and ownership direction for platform-order lifecycle, Map, Chat, Wallet, notification, and relationship integration. It is a deferred reference rather than an active slice; current Food Delivery attention remains on visual polish, responsive density, microcopy, and distinct shop presentation.
+Coordination note: `FOOD_DELIVERY_PLATFORM_CROSS_MODULE_UI_UX_PLAN.md` preserves future UI/UX and ownership direction for platform-order lifecycle, Map, Chat, Wallet, notification, and relationship integration. It is a deferred reference rather than an active slice. The live roadmap's current commerce-relevant target is one ordinary Food Delivery or Shopping action proven through existing Wallet, Calendar, Chat service-notification, and relationship-memory consequences; visual polish and additional shop concepts are unscheduled reference work.
 
 Still incomplete:
 
@@ -50,7 +50,7 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-Roadmap 4.4 service-account continuity is complete at current acceptance. Current candidates are:
+Roadmap 4.4 service-account continuity is complete at current acceptance. The next promoted commerce slice, when the P0 gate permits it, is the roadmap 4.9 ordinary-life consequence proof. Preserve these later candidates without treating them as an ordered queue:
 
 1. true-device test Shopping/Food Delivery world-app, checkout, service-notification, and return-to-source flows;
 2. continue Wallet cleanup/explainability and currency UX only as a focused slice;
@@ -59,7 +59,7 @@ Roadmap 4.4 service-account continuity is complete at current acceptance. Curren
 5. expand Assets/Stock only through a named user loop;
 6. if roadmap 4.7 approves K-pop carriers, keep marketplace/service templates separate from Calendar, Map, and Event Runtime slices.
 
-Later product candidates remain Food Delivery store-surface polish, App Store shop management, source-owned tracking/order shares, and Shopping gift/redeem records. Promote one exact slice before implementation.
+Later product candidates remain Food Delivery store-surface polish, App Store shop management, source-owned tracking/order shares, and Shopping gift/redeem records. Promote one exact slice through the live roadmap before implementation.
 
 ## 3. Do Not Do
 

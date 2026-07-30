@@ -1,6 +1,6 @@
 # Camera, Gallery, And Image Generation TODO Inventory
 
-Updated: 2026-07-29
+Updated: 2026-07-31
 
 Status: `PROMOTED_SLICE_LEDGER / REMAINING_INVENTORY / NOT_AN_EXECUTION_BOARD`
 
@@ -39,14 +39,14 @@ Confirmed on 2026-07-29:
 
 ## 3. Architecture Decision Inventory
 
-- [ ] Carry the confirmed dedicated Image Generation Module into the accepted canonical provider-transport contract.
-- [ ] Freeze the Image Generation Module Interface, Adapter Seam, error taxonomy, and idempotency rules.
-- [ ] Freeze the three confirmed first-batch Adapter families as separately testable implementation slices.
-- [ ] Define direct-browser diagnostics and optional per-profile proxy behavior without requiring a second deployment for Camera entry.
+- [x] Carry the confirmed dedicated Image Generation Module into the canonical provider-transport contract in `docs/architecture/ARCHITECTURE.md`.
+- [x] Freeze the first-slice Image Generation Module Interface, Adapter Seam, and normalized error taxonomy; request/task identity is implemented, while broader caller idempotency remains separately gated.
+- [x] Freeze the three confirmed first-batch Adapter families as separately testable implementation slices.
+- [x] Define direct-browser diagnostics and optional per-profile proxy behavior without requiring a second deployment for Camera entry.
 - [ ] Freeze proxy authentication, upstream allowlist, SSRF defense, CORS, rate limits, timeout, heartbeat, and redaction requirements.
-- [ ] Define the local credential carrier, reset, migration, diagnostics, and plaintext-backup exclusion behavior.
-- [ ] Decide whether model capability snapshots are durable records or rebuildable projections.
-- [ ] Define candidate memory/blob ownership and cleanup that enforce the confirmed seven-day/30-candidate limits.
+- [x] Define the first-slice local credential carrier, reset, diagnostics, and plaintext-backup exclusion behavior; future carrier migration still requires its own compatibility gate.
+- [x] Keep model discovery/capability state as a rebuildable projection rather than public backup configuration.
+- [x] Define Image Generation Module candidate ownership and cleanup that enforce the confirmed seven-day/30-candidate limits.
 - [ ] Decide how expiring remote image URLs become locally reviewable candidates.
 - [ ] Decide the first supported reference count and total-byte policy.
 - [ ] Decide the no-reference fallback: ask, prompt-only, or skip, globally and per module.
@@ -56,21 +56,21 @@ Confirmed on 2026-07-29:
 
 ## 4. Contract And Fixture Inventory
 
-- [ ] Define versioned `ImageProviderProfile` normalization and validation.
-- [ ] Define versioned `ImageModelCapability` normalization.
-- [ ] Define versioned `ImageGenerationPreset` and capability-gated parameters.
-- [ ] Define project default profile/preset and per-module override resolution.
+- [x] Define versioned `ImageProviderProfile` normalization and validation for the promoted first slice.
+- [x] Define `ImageModelCapability` normalization and model-aware defaults for the promoted first slice.
+- [x] Define `ImageGenerationPreset` normalization and capability-gated parameters for the promoted first slice.
+- [x] Define project default profile/preset and per-module override resolution.
 - [ ] Define versioned `SubjectRef` for at least role and current user.
 - [ ] Define versioned person reference policy and compatibility with current `referenceAssetIds`.
 - [ ] Define `ImageGenerationRequest` with source, intent, subjects, explicit references, profile, and preset.
 - [ ] Define structured intent values including `selfie`, `portrait`, `profile`, `full_body`, and `group`.
 - [ ] Define reference-resolution outcome, rejection reasons, fallback, and diagnostics.
-- [ ] Define provider-neutral task handle and normalized task states.
-- [ ] Define candidate outcome, local bytes/remote URL representation, expiry, and provenance.
-- [ ] Define explicit candidate-to-Gallery keep result with `galleryAssetId`.
+- [x] Define provider-neutral task handling and normalized task states for synchronous and asynchronous first-batch adapters.
+- [x] Define the first-slice candidate outcome, persisted remote-URL boundary, expiry, and provenance; expiring-result materialization remains open.
+- [x] Define explicit candidate-to-Gallery keep state with `galleryAssetId`.
 - [ ] Define source-module retained-result usage references.
-- [ ] Define normalized errors for credential, endpoint, CORS, proxy, model, capability, task, timeout, reference, and local-storage failures.
-- [ ] Add pure fixtures for URL/key/model profiles without storing real credentials.
+- [x] Define normalized first-slice errors for credential, endpoint, CORS/network, proxy, model, capability, task, timeout, and reference failures; later proxy deployment/storage failure taxonomy remains gated.
+- [x] Add pure provider/profile fixtures without storing real credentials.
 - [ ] Add role, user, no-reference, deleted-reference, oversized-reference, and multi-person fixtures.
 
 ## 5. Vistack Capability Extraction Inventory
@@ -217,7 +217,7 @@ Confirmed on 2026-07-29:
 
 ## 12. Documentation Promotion Inventory
 
-- [ ] Move accepted ownership and shared Interface decisions into the canonical architecture document or a focused accepted contract.
+- [x] Move accepted first-slice ownership and shared Interface decisions into the canonical architecture document; later Gallery People/caller decisions remain separately gated.
 - [x] Update `VISUAL_ENTRY_OWNERSHIP_MAP.md` for the approved Camera entry; Gallery People remains deferred.
 - [x] Update module-architecture-governance handoff for the first shared Module slice.
 - [x] Update visual-and-IA handoff for the promoted Camera surface.

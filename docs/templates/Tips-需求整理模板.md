@@ -29,7 +29,7 @@ Use this when you want to sanity-check your own task before implementation.
 ## D. Data And API
 
 - AI call involved? Yes / No
-- If yes, use `src/lib/ai.js` only
+- If yes, route text/conversation calls through `src/lib/ai.js` and image-generation calls through the shared Image Generation Module; do not add provider HTTP calls inside views or domain stores
 - Persistence schema change? Yes / No
 - Legacy migration needed? Yes / No
 

@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-07-14
+Updated: 2026-07-31
 
 ## 1. Purpose And Status Method
 
@@ -77,18 +77,16 @@ The product is no longer a prototype shell. It is an integrated local-first V1 w
 
 ## 4. Verified Repository Baseline
 
-Audit date: 2026-07-10.
+Inventory date: 2026-07-31. Validation rows distinguish current local integration evidence from remaining remote and physical-device proof.
 
 | Evidence | Result |
 | --- | --- |
-| Git baseline | `main`, clean before this documentation round, latest prior commit `47b8c35` from 2026-06-25 |
-| Source scale | 201 files / about 104k lines under `src` |
-| Application shape | 30 Vue route views, 16 Pinia stores, 36 components, 36 composables |
-| Unit tests | 172 files / 1054 tests, all passing |
-| E2E | 30 Playwright tests, all passing across desktop Chromium and Pixel 5 mobile emulation |
-| Lint | ESLint pass |
-| Production build | Vite pass, 252 modules transformed, no build warning |
-| Dependency audit | production dependencies: 0 known vulnerabilities; full tree: 15 development/tooling advisories |
+| Git baseline | local `main` at `f36dc9fd20fe22f1ff0be145fe2b672c54d1b4e3` before this architecture documentation commit |
+| Source scale | 238 JavaScript/Vue files / 131,038 lines under `src` |
+| Application shape | 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables |
+| Unit-test inventory | 197 static `*.test.js` files |
+| Validation posture | current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and full audit proof remain open |
+| Dependency audit | most recent Map source evidence: production 0, full 10 high development-only findings; current controller rerun blocked by the configured npm mirror's missing audit endpoint |
 
 Build-size signals:
 
@@ -100,7 +98,7 @@ Build-size signals:
 Test limitations:
 
 - there is no coverage threshold or published branch/statement coverage metric;
-- CI runs lint, unit tests, and build, but not Playwright;
+- CI definitions run lint, unit, build, both audit scopes, and full Playwright, but remote execution and external enforcement remain unverified;
 - current E2E is browser emulation, not real-device QA;
 - push delivery, browser permission behavior, weak-network recovery, and provider-specific AI behavior still require environment/manual testing.
 
@@ -119,7 +117,8 @@ Active or incomplete:
 
 - architecture, security, CI, and documentation maintenance is active;
 - World Pack/App Archetype/Service Template is an integrated V1 with phone QA and hardening remaining;
-- Modern Seoul K-pop carrier governance is a decision item, not approved implementation work.
+- the K-pop 2 + 6 + 1 Book/WorldBook content carrier is landed while Mini Scene runtime remains separately staged;
+- Camera/shared image generation has a focused V1, Food Delivery has five independent shop facades, and the world-bound Map baseline includes the integrated OpenFreeMap renderer plus 35 versioned Seoul places.
 
 ### 5.2 Module Completion Matrix
 
@@ -129,12 +128,13 @@ Active or incomplete:
 | Settings / Network | `Stable` | URL-first AI provider setup, backup/restore, storage diagnostics, automation, push, appearance, software update shell | credential-export policy, production security guidance, push/provider environment QA |
 | Chat | `Stable, heavy` | role/service/group threads, AI replies, rich messages, message edit/delete/recall/save, Chat appearance, service subscriptions, social-event review | deeper group speaker orchestration, real-device media flows, large-view/store maintainability |
 | Contacts / relationship | `Stable V2 baseline` | role archive, role IDs, Self/Main/NPC, WorldBook fields, relationship snapshot/classification, memory review/source audit, guarded cleanup | template-adaptation visual diff, richer template authoring, later polish; high-impact automation remains deferred |
-| Book / WorldBook | `Integrated V1` | Book source library, section activation, changed-source review, active-world context, knowledge/profile templates | phone trial hardening; built-in K-pop registration still points to old small drafts |
+| Book / WorldBook | `Integrated V1` | Book source library, section activation, changed-source review, active-world context, knowledge/profile templates, K-pop 2 + 6 + 1 carrier | phone trial hardening and separately staged Mini Scene profile work |
 | World Pack / App Store | `Integrated V1` | compatible packs, world app entries, guarded app/service proposals, target-app context, currencies | true-device end-to-end testing, broader target-app hardening, next archetype decision |
-| Map / Calendar / Reminders / Phone | `Stable MVP` | trip/route context, confirmed schedule, raw cue inbox, push handoff, callback/relationship adapters | Map visual/interaction pass, richer cue/task semantics, broader real-world route/date coverage |
-| Shopping / Food Delivery / Logistics | `Integrated V1` | product/menu/order flows, mini-app facades, Wallet/Map/Chat handoffs, service notifications, Moon Bistro asset pass | responsive/detail/checkout polish, tracking share UI, broader shop differentiation |
+| Map / Calendar / Reminders / Phone | `Map partial; schedule/phone stable MVP` | world-bound Seoul/cyber-wasteland packs, integrated OpenFreeMap with local fallback, 35 versioned Seoul places, custom image intake/generation, pins/trips, confirmed schedule, raw cue inbox, push and callback adapters | true-device gestures/offline-cache proof, package authoring, PMTiles/transit decisions, and richer cue/task semantics |
+| Shopping / Food Delivery / Logistics | `Integrated V1` | product/menu/order flows, five independent Food Delivery shop facades over one runtime, Wallet/Map/Chat handoffs, service notifications | prove one ordinary cross-module consequence flow; tracking share and later polish remain separate |
 | Wallet | `Stable support` | sourced ledger, currencies, primary currency, exchange rates, Chat/commerce integration | cleanup/explainability polish; deeper economy remains a product decision |
 | Gallery | `Stable platform service` | shared media assets, binary storage, image-source contracts, cross-module references | stronger Photos-like collections/visual polish; relationship-memory authoring stays deferred |
+| Camera / Image Generation | `Focused V1` | Camera capture/settings, shared provider adapters, bounded candidates, explicit Gallery keep, public-config backup | Gallery People/reference curation, source callers, hosted-provider and true-device proof |
 | Assets / Stock | `Usable but shallow` | persisted MVP records and supporting connectors | deeper user-facing loops and clearer rollout value |
 | Event Runtime / World Hub | `Partial / Guarded` | logs, cooldowns, caps, foreground tick, safe Food Delivery pilot, Chat social proposal audit/review | richer scheduling and adapters, stronger controls only after safety decisions; no closed-page backend autonomy |
 | Appearance / visual system | `Partial` | themes, wallpaper, widgets, app icons, app skins, Chat appearance, global/scoped CSS ownership | cross-module visual consistency and real-device polish remain unfinished |
@@ -149,16 +149,16 @@ Current installed baseline:
 | UI | Vue 3.5.27 with Composition API and `<script setup>` |
 | Routing | Vue Router 5.0.2, hash history |
 | State | Pinia 3.0.4 |
-| Build | Vite 7.3.1 and `@vitejs/plugin-vue` 6.0.4 |
+| Build | Vite 7.3.6 and `@vitejs/plugin-vue` 6.0.4 |
 | Styling | Tailwind CSS 4.1.18 plus project CSS/tokens and Font Awesome 7.1.0 |
 | Text rendering | Marked 17.0.1 |
-| Unit/component tests | Vitest 1.6.1, jsdom 24.1.3, Vue Test Utils 2.4.6 |
+| Unit/component tests | Vitest 4.1.10, jsdom, Vue Test Utils |
 | E2E | Playwright 1.60.0 |
 | Quality | ESLint 9, Prettier 3 |
 | Push relay | Node HTTP server plus `web-push` 3.6.7 |
 | Language | application source is JavaScript/Vue; TypeScript is installed but there are zero `.ts/.tsx` source files |
 
-The stack is appropriate for the current product. No framework rewrite is recommended. Toolchain maintenance is required because the full dependency audit currently reports development-time advisories, including direct Vite/Vitest findings.
+The stack is appropriate for the current product. No framework rewrite is recommended. The most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings in existing ESLint/Vue Test Utils tooling paths; the controller's current rerun was blocked because the configured npm mirror does not implement the audit endpoint.
 
 ## 7. Architecture
 
@@ -201,7 +201,8 @@ Domain-store separation is sound overall. The main exception is `systemStore`, w
 
 Important seams include:
 
-- `src/lib/ai.js`: the only approved AI transport entry;
+- `src/lib/ai.js`: approved text/conversation AI transport entry;
+- `src/lib/image-generation-contract.js`, `src/lib/image-generation-api.js`, and `src/stores/imageGeneration.js`: dedicated shared image-generation transport, configuration, task, and candidate boundary;
 - `src/lib/persistence.js`: version envelopes, local writes, IndexedDB mirroring, inspection, and reconciliation;
 - `src/lib/relationship-fact-adapters.js`: low-impact cross-module facts;
 - `src/lib/role-binding-contract.js`: Contacts/Chat role context;
@@ -222,7 +223,7 @@ Security implication: backup currently exports `settings` wholesale, which inclu
 
 ### 7.5 AI And Runtime
 
-- browser-side AI requests go through `src/lib/ai.js`;
+- browser-side text/conversation AI requests go through `src/lib/ai.js`, while image requests go through the dedicated Image Generation Module;
 - URL detection supports Gemini native, OpenAI-compatible chat, OpenAI Responses, Anthropic Messages, Azure OpenAI, and local/server-auth gateways;
 - prompt assembly consumes WorldBook, role profile, self profile, relationship, and thread context through explicit helpers/composables;
 - foreground automation is opt-in and local-session based;
@@ -253,7 +254,7 @@ Global Appearance pack export/import includes only global portable fields such a
 ### P0: Security And Toolchain
 
 1. backup JSON includes locally stored AI credentials through the full settings snapshot;
-2. the full dependency audit reports 15 development/tool advisories: 1 critical, 9 high, and 5 moderate; production dependencies report zero;
+2. the most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings; the configured npm mirror currently blocks an independent controller rerun;
 3. the push relay is not authenticated or production hardened;
 4. local AI keys and world/chat data rely on the browser/profile security boundary, not encryption at rest.
 
@@ -261,19 +262,20 @@ Global Appearance pack export/import includes only global portable fields such a
 
 Largest current files:
 
-- `ContactsView.vue`: 4754 lines;
-- `ChatView.vue`: 4312 lines;
-- `system.js`: 4186 lines;
-- `WorldBookView.vue`: 4130 lines;
-- `HomeView.vue`: 3920 lines;
-- `ChatDirectoryView.vue`: 3802 lines.
+- `FoodDeliveryView.vue`: 10329 lines;
+- `ContactsView.vue`: 5232 lines;
+- `ChatView.vue`: 4776 lines;
+- `system.js`: 4644 lines;
+- `HomeView.vue`: 4373 lines;
+- `ChatDirectoryView.vue`: 4122 lines;
+- `WorldBookView.vue`: 4093 lines.
 
-`systemStore` is imported by 22 of 30 route views. Focused composables have reduced inline logic, but the files remain mixed-responsibility hotspots.
+`systemStore` is imported by 24 of 40 route views. Focused composables have reduced inline logic, but the files remain mixed-responsibility hotspots.
 
 ### P1: Release Confidence
 
-- CI does not run E2E or dependency audit;
-- the Pages workflow performs only install/build and is not directly gated by CI success;
+- CI and Pages workflow definitions include E2E and both dependency-audit scopes, but remote runs and external required-check/environment protection remain unverified;
+- OpenFreeMap local integration and focused desktop/Pixel 5 interaction proof are complete; named physical-device gestures/offline-cache, deployed-network, remote CI, and independently rerunnable audit proof remain;
 - no coverage threshold exists;
 - mobile checks are emulated, not true-device checks.
 

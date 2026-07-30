@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-07-22
+Updated: 2026-07-31
 
 > **Candidate pool only / 仅候选池**
 >
@@ -45,12 +45,12 @@ Priority meanings:
 | Book | integrated V1 long-text library; K-pop 2 + 6 + 1 landed | phone hardening and structured Mini Scene profile authoring | becoming Files/reader/runtime-activation owner | validate separate structured transform profiles only through the shared Mini Scene contract | P1 staged |
 | WorldBook | integrated V1, very large | Optional capability Packs panel density | universal control-console drift | extract one unrepeated pack display seam | P1 |
 | World Pack | partial V1 acceptance | true-device product loop | generating arbitrary apps/rules | harden current four paths before another archetype | P1 |
-| Map | stable MVP, broad store/view | final interaction/visual pass | absorbing schedule/order truth | true-device route/context polish | P1 |
+| Map | world-bound local-pack baseline; OpenFreeMap renderer integrated | true-device gestures/offline-cache proof, then later package authoring, PMTiles, transit adapters, and additional cities | provider identity or network renderer becoming canonical place truth | continue only from the Map handoff; preserve `MapSceneCanvas` and local fallback contracts | P1 partial |
 | Calendar | stable confirmed-event owner | adapter depth and event-management polish | direct cross-store knowledge | deeper confirmed-event relationship interface | P1 |
 | Reminders | stable raw-cue owner | future objective/task clarity | collapsing back into Calendar | refine only when a real cue family needs it | P2 |
 | Phone | working callback support | shallow standalone fantasy | premature expansion | preserve as connector | Watch |
 | Shopping | integrated commerce V1 | tracking/order share and polish | Chat/Wallet ownership leakage | source-owned share surface | P1 |
-| Food Delivery | integrated commerce/event V1 | responsive/detail/template polish | platform aggregating peer-shop truth | true-device shop/order polish | P1 |
+| Food Delivery | integrated commerce/event V1 with five independent shop facades | ordinary Wallet/Calendar/Chat/relationship consequence proof; later tracking/polish | platform aggregating peer-shop truth or facade work becoming a shadow queue | prove the roadmap-owned ordinary consequence flow before another shop framework | P1 |
 | Logistics | contextual tracking lane | full source-app share UI | becoming storefront | tracking share from source records | P2 |
 | Wallet | stable downstream ledger | cleanup/rate UX | owning source orders | improve explainability only | P2 |
 | Assets | persisted support MVP | convincing owned-object loop | overlap with Gallery/Wallet | one clearly owned use case | P2 |
@@ -61,7 +61,7 @@ Priority meanings:
 | Cheats | concept only | unlock/route/editor contract | duplicating World Hub | explicit product decision | Decision |
 | Files | internal compatibility component | none for ordinary users | public file-manager drift | expand only for an internal consumer | Watch |
 | Push relay | working local delivery helper | auth/tenancy/operations | being mistaken for backend autonomy | production-backend decision | Decision |
-| QA / CI | strong local tests and workflow-defined full gates | remote/external gate proof, base-path smoke, and coverage floor remain | treating local YAML as deployed release confidence | prove GitHub checks and deployed artifact behavior | P0 |
+| QA / CI | current local lint/unit/build/governance and focused Map/Peach desktop-mobile evidence pass; remote/external, named physical-device, deployed artifact, and independent audit proof remain | prove GitHub/deployed artifact behavior, true-device flows, audit availability, base-path smoke, and a coverage floor | treating local gates or workflow YAML as complete release confidence | preserve current local gates and add the missing external proof | P0 |
 
 ## 3. Cross-Cutting Candidates
 

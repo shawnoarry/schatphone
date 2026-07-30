@@ -1,6 +1,6 @@
 # Visual Entry Ownership Map
 
-Updated: 2026-05-29
+Updated: 2026-07-31
 
 This document maps SchatPhone surfaces by **where the user enters from**, not only by route, file name, or data source.
 
@@ -141,8 +141,9 @@ Map should keep a simulation/travel/exploration identity. It can surface Calenda
 
 | User Path | Surface / Data | Visual Owner | Data Sources | Styling Guidance |
 | --- | --- | --- | --- | --- |
-| Home -> Map | Full Map app | Installed App: Map | Map state, Gallery visuals, automation settings | Map app identity. |
-| Map -> Map visual panel | Background/visual controls | Host-App Embedded: Map | Gallery assets, uploaded images, AI visual state | Keep Map visual language; "Open Gallery" navigates away to Gallery. |
+| Home -> Map | Full Map app | Installed App: Map | Map state, world-bound pack, `MapSceneCanvas` renderer | Keep one Map identity whether geographic content uses OpenFreeMap or fictional/custom content uses the local renderer. Provider chrome must not replace Map ownership. |
+| Map -> Map Settings | `/map/settings`, binding/import/generation/presentation | Installed App: Map | Map bindings/pins, Gallery assets, shared Image Generation Module | Preserve the Map parent and push-navigation return chain. Settings here is app-owned, not Native System Settings. |
+| Map Settings -> Places and pins | Detailed player-pin administration | Host-App Embedded: Map | Map-owned player pins and read-only pack places | Coordinate reselection is explicit; do not make everyday Map markers draggable or provider-owned. |
 | Map -> Related WorldBook chips | Knowledge references on area/route/trip cards | Host-App Embedded: Map | WorldBook knowledge points | Show as Map clue/context chips, not WorldBook management. |
 | Map -> WorldBook button | Full `/worldbook` route with query | Native System after navigation | WorldBook with scoped query | Once full WorldBook opens, system management style is acceptable. Consider future app-local preview if jump feels disruptive. |
 | Map -> Settings automation | `/settings?menu=automation` | Native System after navigation | System automation settings | Navigation intentionally leaves Map. |

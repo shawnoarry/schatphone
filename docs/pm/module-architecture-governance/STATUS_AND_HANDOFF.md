@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-07-26
+Updated: 2026-07-31
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -95,14 +95,13 @@ Current active architecture slice:
 | Cross-module Mini Scene | `FOUNDATION_DONE` | Pure request/draft/artifact/policy schemas, empty-by-default caller registry, Book structured-profile/regex validation, and deterministic profile resolution are landed and tested. No caller or runtime path imports them yet. |
 | Mini Scene persistence/runtime | `NOT_STARTED / SEPARATE_APPROVAL` | Artifact/profile-binding/policy data classes, popup UI, safe regex engine, HTML sandbox, and each source Adapter remain staged work outside persistence Batch 2B. |
 
-Verified baseline:
+Current inventory and validation posture:
 
-- 30 route views, 16 Pinia stores, 36 components, 36 composables;
-- about 104k source lines;
-- 185 Vitest files / 1170 tests pass;
-- the full Playwright collection has 60 cases: 56 pass and 4 existing project-specific cases remain intentionally skipped;
-- lint and production build pass;
-- production and full dependency audits both report 0 vulnerabilities.
+- 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, and 37 JavaScript composables;
+- 153 JavaScript files, 85 Vue files, and 131,038 source lines under `src`;
+- 197 static unit-test files;
+- the 2026-07-22 architecture baseline passed 185 Vitest files / 1170 tests, lint, production build, both audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
+- the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and independently rerunnable audit proof remain open.
 
 ## 2. Landed Architecture Baselines
 
@@ -117,7 +116,7 @@ Verified baseline:
 
 ### Shared Interfaces
 
-- `src/lib/ai.js` is the only provider transport entry;
+- `src/lib/ai.js` is the approved text/conversation provider transport entry, while `src/lib/image-generation-contract.js`, `src/lib/image-generation-api.js`, and `src/stores/imageGeneration.js` own the dedicated shared image-generation transport/configuration/task boundary;
 - `src/lib/world-interface.js` now exposes stable compatibility identity separately from narrative, encyclopedia, profile-template, Pack-capability, and diagnostic projections;
 - `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` defines the accepted Interface and the separately gated W2 migration from compatibility scope to persisted WorldBook-owned identity;
 - relationship facts, role bindings, source cleanup, app bindings, service templates, shareable objects, image sources, and persistence use named helper contracts;
@@ -177,18 +176,18 @@ Settings has focused workflows for:
 
 | File | Lines |
 | --- | ---: |
-| `ContactsView.vue` | 4754 |
-| `ChatView.vue` | 4312 |
-| `WorldBookView.vue` | 4130 |
-| `HomeView.vue` | 3920 |
-| `ChatDirectoryView.vue` | 3802 |
-| `WidgetsView.vue` | 3617 |
-| `AppStoreView.vue` | 3352 |
-| `FoodDeliveryView.vue` | 3161 |
+| `FoodDeliveryView.vue` | 10329 |
+| `ContactsView.vue` | 5232 |
+| `ChatView.vue` | 4776 |
+| `HomeView.vue` | 4373 |
+| `ChatDirectoryView.vue` | 4122 |
+| `WorldBookView.vue` | 4093 |
+| `WidgetsView.vue` | 4050 |
+| `AppStoreView.vue` | 3647 |
 
 ### Central Store
 
-`src/stores/system.js` is 4186 lines and directly imported by 22 of 30 route views. It coordinates settings, appearance, Home, app placement, notifications, API/network, push, world compatibility, automation, reports, and backup-reminder state.
+`src/stores/system.js` is 4644 lines and directly imported by 24 of 40 route views. It coordinates settings, appearance, Home, app placement, notifications, API/network, push, world compatibility, automation, reports, and backup-reminder state.
 
 Preferred response: add one stable facade at a time while preserving storage/backup compatibility. Do not split the store wholesale.
 

@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-07-22
+Updated: 2026-07-31
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -36,8 +36,8 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | --- | --- | --- |
 | Book / WorldBook | integrated V1, K-pop 2 + 6 + 1 content landed | phone hardening and later separate Mini Scene transform-profile authoring |
 | World Pack / App Store | integrated V1, partial acceptance | true-device loop, target-app hardening, next archetype decision |
-| Map / Calendar / Reminders | stable MVP | visual/detail polish and broader real-life handoff coverage |
-| Shopping / Food Delivery / Logistics | integrated V1 | responsive/detail/checkout/tracking polish |
+| Map / Calendar / Reminders | world-bound local-map baseline; OpenFreeMap renderer integrated | preserve local fictional/custom rendering while adding only separately approved true-device, offline-cache, authoring, PMTiles, transit, or broader real-life handoff slices |
+| Shopping / Food Delivery / Logistics | integrated V1 with five independent shop facades | prove the ordinary cross-module consequence flow; keep facade polish subordinate to the live roadmap |
 | Wallet | stable support | cleanup/explainability and later economy decisions |
 | Appearance / Widgets / app identity | strong but split across owners | consistency and real-device authoring/recovery QA |
 | Network | strong MVP | security guidance and provider-environment QA |
@@ -69,43 +69,43 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 
 ## 3. Measured Engineering Baseline
 
-Measured on 2026-07-29:
+Measured on 2026-07-30:
 
-- 38 route views;
+- 40 route views;
 - 17 Pinia stores;
-- 41 components;
+- 44 components;
 - 37 composables;
-- 151 JavaScript files and 80 Vue files under `src`;
+- 153 JavaScript files and 85 Vue files under `src`;
 - zero TypeScript source files;
-- about 104k source lines;
-- 182 unit-test files / 1129 tests;
-- 30 Playwright scenarios across desktop/mobile projects.
+- 131,038 source lines;
+- 197 static unit-test files;
+- current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks.
 
 ### Largest Views
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `ContactsView.vue` | 4754 | role/profile/memory/destructive-flow concentration |
-| `ChatView.vue` | 4312 | messaging/AI/rich-card/service/runtime coordination |
-| `WorldBookView.vue` | 4130 | source/pack/template/knowledge control density |
-| `HomeView.vue` | 3920 | layout/edit/library/shell sensitivity |
-| `ChatDirectoryView.vue` | 3802 | role/group/service/template concept density |
-| `WidgetsView.vue` | 3617 | authoring/import/preview breadth |
-| `AppStoreView.vue` | 3352 | app/world/mini-app/placement ownership |
-| `FoodDeliveryView.vue` | 3161 | platform/shop/order/commerce presentation |
+| `FoodDeliveryView.vue` | 10329 | platform/five-shop/order/commerce presentation |
+| `ContactsView.vue` | 5232 | role/profile/memory/destructive-flow concentration |
+| `ChatView.vue` | 4776 | messaging/AI/rich-card/service/runtime coordination |
+| `HomeView.vue` | 4373 | layout/edit/library/shell sensitivity |
+| `ChatDirectoryView.vue` | 4122 | role/group/service/template concept density |
+| `WorldBookView.vue` | 4093 | source/pack/template/knowledge control density |
+| `WidgetsView.vue` | 4050 | authoring/import/preview breadth |
+| `AppStoreView.vue` | 3647 | app/world/mini-app/placement ownership |
 
 ### Largest Stores
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `system.js` | 4186 | broad infrastructure/compatibility owner; 22/30 view imports |
-| `chat.js` | 3062 | rich communication/profile domain |
-| `map.js` | 2146 | broad simulation and route responsibilities |
-| `gallery.js` | 1325 | asset ownership and binary lifecycle |
-| `relationshipRuntime.js` | 1287 | cross-module truth layer |
-| `foodDelivery.js` | 1222 | active commerce/event lane |
-| `calendar.js` | 1014 | confirmed schedule, push, compatibility, relationship handoff |
-| `shopping.js` | 943 | commerce/logistics/service handoff |
+| `system.js` | 4644 | broad infrastructure/compatibility owner; 24/40 view imports |
+| `chat.js` | 3411 | rich communication/profile domain |
+| `map.js` | 2686 | map packs, pins, trips, renderer-facing state, and route responsibilities |
+| `foodDelivery.js` | 2627 | shared platform/shop commerce and event runtime |
+| `gallery.js` | 1471 | asset ownership and binary lifecycle |
+| `relationshipRuntime.js` | 1397 | cross-module truth layer |
+| `calendar.js` | 1116 | confirmed schedule, push, compatibility, relationship handoff |
+| `shopping.js` | 1043 | commerce/logistics/service handoff |
 
 Line counts are signals, not goals. A file becomes a priority when size combines with mixed responsibilities, frequent feature growth, cross-owner knowledge, or weak test locality.
 
@@ -155,11 +155,13 @@ Three WorldBook display models already exist. Current risks are Optional capabil
 
 Preserve confirmed-event versus raw-cue ownership. The best architecture candidate is a deeper Calendar relationship-fact interface that hides concrete Chat/relationship store coordination.
 
+Map geographic packs route through `MapSceneCanvas.vue` to the integrated `OpenFreeMapCanvas.vue`, while fictional/custom canvas packs and geographic startup failure use `LocalMapCanvas.vue`. Focused unit/E2E, fallback, bundle, attribution, real-network desktop/mobile visual, and controller interaction checks are complete; named physical-device gestures/offline-cache and deployed-network proof remain separate release evidence.
+
 Calendar and Map are also future Mini Scene callers, but each must use a focused request Adapter after the shared Module exists. They retain source truth and never copy world-profile, regex, artifact, or presenter logic.
 
 ### Commerce / Finance
 
-Preserve source records and use Chat/Wallet/Map only through explicit handoffs. Product polish is more valuable than new cross-owner data copying. Assets/Stock should deepen only through named user loops.
+Preserve source records and use Chat/Wallet/Map only through explicit handoffs. Food Delivery now has five independent shop facades over one shared runtime; the live roadmap's next commerce-relevant target is the ordinary Food Delivery/Shopping consequence proof, not an implicit asset or facade queue. Assets/Stock should deepen only through named user loops.
 
 ### Runtime / World Hub / Push
 

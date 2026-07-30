@@ -1,6 +1,6 @@
 # Camera, Gallery, And Image Generation Architecture Plan
 
-Updated: 2026-07-29
+Updated: 2026-07-31
 
 Status: `FIRST_IMPLEMENTATION_SLICE_DONE / GALLERY_PEOPLE_AND_SOURCE_CALLERS_DEFERRED`
 
@@ -56,7 +56,7 @@ Settings may expose a shortcut/status row but does not duplicate image-generatio
 ### 2.1 SchatPhone
 
 1. `src/stores/system.js` currently owns one global text-AI configuration. Network & API is its full management surface; Settings provides an entry rather than duplicating the form.
-2. `src/lib/ai.js` is currently the only approved provider transport entry. This plan does not silently bypass that contract. A promoted implementation must explicitly choose whether to generalize that Module or approve a dedicated image-generation transport Seam.
+2. `src/lib/ai.js` remains the approved text/conversation provider transport entry. The promoted first slice explicitly approved a separate shared Image Generation Module in `src/lib/image-generation-contract.js`, `src/lib/image-generation-api.js`, and `src/stores/imageGeneration.js`; source modules must not bypass either shared transport boundary.
 3. Gallery currently owns retained image metadata and local binaries. Its public asset categories are `wallpaper`, `emoji`, `reference`, and `scenario`; `People` is not an existing storage category.
 4. Contacts role profiles already support `referenceAssetIds` and role asset-folder bindings, including an `imageReference` slot.
 5. `useChatAiImageReferenceModel.js` already resolves role-bound Gallery references and limits the current Chat request to three references. The current path supplies visual context to the text-AI call; it is not a true image-generation call.
@@ -454,23 +454,21 @@ When implementation is promoted, validation should scale by slice:
 
 ## 12. Remaining Engineering And Product Decisions
 
-The user-facing direction is confirmed. These lower-level decisions remain for architecture review or the later source-module slice named by each item:
+The first slice resolved the provider-profile, credential-reference, capability, task, candidate, routing, local-secret, and ordinary-backup boundaries now implemented in the shared Module. These decisions still belong to later separately promoted stages:
 
-1. exact provider-profile, credential-reference, capability, task, candidate, and routing schemas and versions;
-2. the local credential carrier and reset/migration behavior that enforce exclusion from ordinary plaintext backup/export;
-3. exact security and deployment requirements if SchatPhone later ships or officially guides an optional proxy/gateway;
-4. when expiring provider URLs are copied into local candidate bytes and how partial materialization failure is shown;
-5. exact person-reference persistence schema and compatibility migration from current role reference ids/folder bindings;
-6. whether Gallery stores asset-level suitability metadata or all per-person suitability stays with the person profile;
-7. default behavior when automatic generation has no usable reference: ask, prompt-only, or skip, per source module;
-8. multi-person reference limits and behavior when a provider cannot represent every subject;
-9. Community's exact source record and structured generation-action contract;
-10. whether face recognition is ever introduced; it remains outside the first version;
-11. the product policy for real-person reference images, consent, and sensitive use.
+1. exact security and deployment requirements if SchatPhone later ships or officially guides an optional proxy/gateway;
+2. when expiring provider URLs are copied into local candidate bytes and how partial materialization failure is shown;
+3. exact person-reference persistence schema and compatibility migration from current role reference ids/folder bindings;
+4. whether Gallery stores asset-level suitability metadata or all per-person suitability stays with the person profile;
+5. default behavior when automatic generation has no usable reference: ask, prompt-only, or skip, per source module;
+6. multi-person reference limits and behavior when a provider cannot represent every subject;
+7. Community's exact source record and structured generation-action contract;
+8. whether face recognition is ever introduced; it remains outside the first version;
+9. the product policy for real-person reference images, consent, and sensitive use.
 
 ## 13. Promotion Rule
 
-To move any part of this proposal into execution:
+To move any remaining stage into execution:
 
 1. the architecture group resolves the relevant open decisions;
 2. one smallest coherent slice is added to `docs/roadmap/TODO_ROADMAP.md` with an owner and acceptance;

@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-07-29
+Updated: 2026-07-31
 
 ## 1. Architecture Goals
 
@@ -97,11 +97,11 @@ Owns:
 - compatibility redirects;
 - the global lock guard.
 
-There are 30 route views. Normal user-facing modules are lazy-loaded. `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
+There are 40 route-view files. Normal user-facing modules are lazy-loaded. `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
 
 ## 5. State Layer
 
-SchatPhone has 16 Pinia stores.
+SchatPhone has 17 Pinia stores.
 
 | Store | Owned records and responsibility |
 | --- | --- |
@@ -111,6 +111,7 @@ SchatPhone has 16 Pinia stores.
 | `simulation` | event/runtime logs, cooldowns, caps, permissions, Surprise Mode, execution metadata |
 | `book` | reusable long-form text assets |
 | `gallery` | media metadata, binary references, categories, cross-module asset operations |
+| `imageGeneration` | public image-provider profiles/defaults/routing, device-local credential references, bounded candidates, and generation tasks |
 | `map` | location, destination, route, trip, ETA, familiarity, travel context |
 | `calendar` | confirmed events, event time changes, push schedule state, confirmed relationship handoff |
 | `reminders` | raw cross-module cue queue and handling state |
@@ -132,7 +133,7 @@ SchatPhone has 16 Pinia stores.
 
 ### `systemStore` Concentration
 
-`src/stores/system.js` is about 4186 lines and is imported by 22 of 30 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, and user/system settings.
+`src/stores/system.js` is 4644 lines and is imported by 24 of 40 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, and user/system settings.
 
 The preferred strategy is stable facades, not a big-bang store split:
 
@@ -142,11 +143,14 @@ The preferred strategy is stable facades, not a big-bang store split:
 
 ## 6. Shared Contract Layer
 
-### AI
+### AI And Image Generation
 
-`src/lib/ai.js` is the only approved provider transport entry.
+Provider transport is split by product meaning:
 
-It supports:
+- `src/lib/ai.js` is the approved text/conversation AI transport entry;
+- `src/lib/image-generation-contract.js`, `src/lib/image-generation-api.js`, and `src/stores/imageGeneration.js` form the dedicated shared Image Generation Module for Camera and separately promoted callers.
+
+The text/conversation transport supports:
 
 - Gemini native;
 - OpenAI-compatible chat;
@@ -155,7 +159,9 @@ It supports:
 - Azure OpenAI;
 - local/server-auth gateway URL shapes.
 
-Views and stores may build domain prompts/context, but they must not implement provider HTTP calls independently.
+The Image Generation Module normalizes OpenAI-compatible Images/Edit, OpenAI-compatible Chat image output, and Grsai asynchronous generation behind one request/task/candidate boundary. Public provider/default/routing configuration participates in backup and rollback; API keys, proxy tokens, and temporary candidates remain device-local and excluded from ordinary backup.
+
+Views and source stores may build domain prompts/context and decide why a request exists, but they must not implement provider HTTP calls independently of the matching shared transport module.
 
 Full assembled prompts, raw provider responses, headers, and transport payloads are transient transport/diagnostic material rather than persistent product truth. Any artifact that an owning module formally publishes, confirms, applies, or admits into revisitable/continuity-bearing history becomes that module's durable canonical content regardless of user/AI/system origin. Durable storage therefore includes committed module content, authoritative state/facts, cross-module references, validated structured proposals/effects, and minimum provenance. Full-payload capture requires an explicit temporary diagnostic mode with hard limits and user clearing.
 
@@ -191,6 +197,7 @@ Full assembled prompts, raw provider responses, headers, and transport payloads 
 
 - `image-source-contract.js` normalizes URL/Gallery/project asset sources;
 - Gallery owns user media and preview lifecycle;
+- generated images remain bounded Image Generation Module candidates until an explicit Keep action creates a durable Gallery asset;
 - `shareable-object.js` carries source-owned share cards into Chat;
 - cards keep source ids/routes and a display snapshot, not editable source business state.
 
@@ -380,13 +387,12 @@ Its boundary is important:
 
 ## 10. Testing, CI, And Deployment
 
-### Local Baseline
+### Validation Posture
 
-- ESLint;
-- 187 Vitest files / 1217 tests;
-- Vite production build;
-- the prior full Playwright baseline collected 60 desktop/mobile cases: 56 passed and 4 project-specific cases were intentionally skipped; this foundation adds 4 focused Chromium reconciliation cases, all passing, without requiring a full E2E rerun;
-- production and full npm audits both report 0 after a normal-resolver compatible transitive lock refresh with no direct, override/resolution, or major changes.
+- the 2026-07-22 architecture baseline passed ESLint, 185 Vitest files / 1170 tests, Vite production build, both npm audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
+- the current tree contains 197 static Vitest test files;
+- later promoted Camera, Food Delivery, and local-map slices have focused desktop/mobile evidence;
+- the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and independently rerunnable audit proof remain open.
 
 ### CI
 
@@ -408,12 +414,13 @@ It does not deploy the push relay. Remote execution, external `github-pages` pro
 
 Highest-risk files:
 
-- `ContactsView.vue` 4754 lines;
-- `ChatView.vue` 4312 lines;
-- `system.js` 4186 lines;
-- `WorldBookView.vue` 4130 lines;
-- `HomeView.vue` 3920 lines;
-- `ChatDirectoryView.vue` 3802 lines.
+- `FoodDeliveryView.vue` 10329 lines;
+- `ContactsView.vue` 5232 lines;
+- `ChatView.vue` 4776 lines;
+- `system.js` 4644 lines;
+- `HomeView.vue` 4373 lines;
+- `ChatDirectoryView.vue` 4122 lines;
+- `WorldBookView.vue` 4093 lines.
 
 Other debt:
 
@@ -439,10 +446,7 @@ Recommended order:
 - `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
 - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
 - `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`
-
-### Unpromoted Proposals
-
-The following documents are review inputs, not accepted contracts or execution boards. They do not change `docs/roadmap/TODO_ROADMAP.md` until a named slice is explicitly promoted:
-
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_ARCHITECTURE_PLAN.md`
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_TODO.md`
+
+The Camera documents record the promoted first slice plus deferred inventory. They are supporting contracts, not execution boards; roadmap 4.10 remains authoritative for status and promotion.

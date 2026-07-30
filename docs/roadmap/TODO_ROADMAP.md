@@ -19,13 +19,13 @@ If an older plan, package note, PM brief, or `docs/superpowers/**` artifact conf
 
 SchatPhone is past prototype viability and now has a stable local-first product baseline.
 
-Verified on 2026-07-10:
+Inventory refreshed on 2026-07-30; validation state is tracked separately below:
 
-1. the worktree baseline passes lint, 172 Vitest files / 1054 tests, production build, and 30 Playwright desktop/mobile scenarios;
-2. 30 route views and 16 Pinia domain stores implement the phone shell plus communication, world, relationship, map/date, media, commerce, finance, and runtime lanes;
-3. the production dependency audit is clean;
+1. the current tree contains 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables, and 197 static unit-test files;
+2. Camera/shared image generation, five independent Food Delivery shop facades, and world-bound local Map packs are implemented at their named partial baselines;
+3. the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and full audit proof remain separate;
 4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
-5. the largest engineering risk remains concentrated in oversized views and `systemStore` fan-out.
+5. the largest engineering risk remains concentrated in oversized views, especially Food Delivery, and `systemStore` fan-out.
 
 Roadmap interpretation:
 
@@ -177,7 +177,7 @@ Completed in the 2026-07-16 workflow-layering round:
    - `DONE 2026-07-22`: every complete local JSON export now requires an explicit danger confirmation before payload construction or download; the warning names configured API credentials plus private chat/role/world data, cancellation has no export/report side effects, and the full credential-bearing payload remains unchanged;
    - any redacted/shareable export remains a separate future contract and cannot silently replace the complete migration backup;
    - `DONE 2026-07-22`: normal npm resolution refreshed only the approved compatible transitive advisory nodes and required `hasown` child closure; production and full audits are both 0, with `package.json`, direct dependency versions, overrides/resolutions, and major versions unchanged;
-   - current validation passes 185 Vitest files / 1170 tests, production build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips.
+   - the 2026-07-22 architecture baseline passed 185 Vitest files / 1170 tests, production build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips; this is historical evidence, not validation of the later OpenFreeMap checkpoint.
 3. `P1 CI and release gating` - `PARTIAL_DONE`
    - `WORKFLOW_IMPLEMENTED 2026-07-22`: PR/manual CI and main-only Pages release definitions now fail closed on separate production/full audits, lint, unit, build, and one full Playwright collection that already includes the focused visual-quality cases;
    - both paths reject flaky recovery, cap intentional skips at four, retain failure-only Playwright diagnostics for seven days, and avoid a duplicate `test:visual` run;

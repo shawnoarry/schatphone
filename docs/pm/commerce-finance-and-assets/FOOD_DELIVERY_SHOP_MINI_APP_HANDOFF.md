@@ -1,8 +1,8 @@
 # Food Delivery Shop Mini App Handoff
 
-Updated: 2026-07-29
+Updated: 2026-07-31
 
-This note captures the current product direction, implemented progress, next visual work, and startup instructions for continuing the Food Delivery shop mini app work on another device or thread.
+This note captures the current product direction, implemented progress, and unscheduled visual reference for Food Delivery shop mini apps. It is not an execution board; the live roadmap and package status handoff own promotion and sequencing.
 
 ## Product Model
 
@@ -41,7 +41,7 @@ Food Platform now has a consumer-facing discovery homepage.
 - The platform cart now has a complete App-internal order flow: checkout opens a route-driven confirmation page with address selection, order note, delivery fee, total, and a simulated platform payment choice; submission creates a persisted `platformOrders` record, clears only the platform cart, and opens an order success/detail page. The bottom-nav Orders page lists only those platform-internal merchant orders and can reopen their details. This baseline deliberately does not call Wallet, Assets, Chat, rider tracking, or independent shop checkout logic.
 - The first platform order-flow visual pass is complete: checkout has a compact meal summary and a stable takeout-bag PNG slot; order cards use status-driven badges and fixed merchant-mark slots; order detail uses the existing order status to drive its Hero, icon, copy, and four-stage progress treatment; and focused checkout/order-detail pages hide the main bottom navigation. Internal architecture explanations were removed from the visible copy. Missing order-state art now uses one high-contrast diagnostic placeholder, and all real Food Delivery image failures use the same fallback, with the exact future asset list stored in `FOOD_DELIVERY_IMAGE2_ASSET_PROMPTS.md`.
 - The platform order-flow layout and fallback contract are complete, but its formal order illustration pack is not. Checkout, order-list, and order-detail paths can still expose the diagnostic placeholder when their expected artwork is absent; that visible product-finish gap must not be reported as a completed asset slice.
-- Future platform-order lifecycle, rider route, service Chat, Wallet expense, notification, and relationship integration is preserved in `FOOD_DELIVERY_PLATFORM_CROSS_MODULE_UI_UX_PLAN.md` for later architecture/execution coordination. That reference is not active implementation scope; current work remains visual polish.
+- Future platform-order lifecycle, rider route, service Chat, Wallet expense, notification, and relationship integration is preserved in `FOOD_DELIVERY_PLATFORM_CROSS_MODULE_UI_UX_PLAN.md` for later architecture/execution coordination. That reference is not active implementation scope. Roadmap 4.9 owns the next commerce-relevant proof; no visual item in this handoff is automatically current work.
 - The platform now reads from the project UI asset library under `public/images/ui-assets/apps/food-delivery/platform/`: ad carousel banners use the generated banner PNGs, platform merchant cards use generated food photos, and the rider illustration uses `decorations/mascot/delivery-rider-mascot-01.png`. This removes the remaining external Unsplash dependency from the platform homepage and keeps future visual swaps inside the project asset library.
 - Food Platform bottom navigation includes Home, route-driven Search, platform-only Orders, route-driven Saved, and a route-driven Mine account page. Orders never aggregate peer shop-app orders.
 - Platform search filters platform-internal merchants by shop name, cuisine, category, badge, and menu text. It does not search, open, or re-skin same-level shop mini apps such as Moon Bistro.
@@ -157,7 +157,7 @@ App Store manages:
 
 App Store must not own restaurant/menu/cart/order records.
 
-## Next Visual Plan
+## Unscheduled Visual Reference
 
 Food Platform's first consumer-homepage pass is done, including the Baemin-like reference decomposition, homepage-load reduction, and real banner autoplay/manual navigation. Keep it as discovery-first: future work can add real favorite/recent behavior for platform-internal merchants and richer platform-specific empty states. Bottom navigation should remain a discovery/navigation affordance, not a hidden aggregate controller for peer shop mini apps.
 
@@ -169,11 +169,11 @@ Vistack is only a validated candidate for a semi-automatic asset workbench. It i
 
 Moon Bistro, Peach Cloud, Dash Grill, Jade Hearth, and Verdant Day now establish five intentionally different shop-template directions. Do not normalize them into one visual system; each new shop-template pass must begin from a named shop identity and its own content needs.
 
-The remaining approved framework queue is Korean fried chicken, Southeast Asian food, and Korean soup. The user also accepts an additional pizza app; the Chinese-food slot is represented by Jade Hearth and the light-food slot by Verdant Day. The general food ordering `YCNJqicXdksq2gdaKqINQc` node `0:1`, coffee `JJi7C0USRtDL3QKVFcaMnh` node `2:2`, and pizza `M3EEtlpk26gLRtDifyGCcV` node `0:1` references remain reserved for later evaluation. The minimalist light-food reference `IU2qDGgi9weqgHcDO0niWV` node `1:73` informed Verdant Day only through its visible canvas because the required exact-node context call hit the current Figma Starter quota. Retry `get_design_context` after quota reset before claiming closer node-level fidelity.
+Unscheduled framework candidates include Korean fried chicken, Southeast Asian food, Korean soup, and an additional pizza app. They are accepted reference directions, not a remaining approved execution queue. The Chinese-food slot is represented by Jade Hearth and the light-food slot by Verdant Day. The general food ordering `YCNJqicXdksq2gdaKqINQc` node `0:1`, coffee `JJi7C0USRtDL3QKVFcaMnh` node `2:2`, and pizza `M3EEtlpk26gLRtDifyGCcV` node `0:1` references remain reserved for later evaluation. The minimalist light-food reference `IU2qDGgi9weqgHcDO0niWV` node `1:73` informed Verdant Day only through its visible canvas because the required exact-node context call hit the current Figma Starter quota. Retry `get_design_context` after quota reset before claiming closer node-level fidelity.
 
 Moon Bistro polish direction: modern fine dining with a dark tray menu. Preserve its candlelit atmosphere without presenting it as a late-night restaurant.
 
-Work in this order:
+Moon Bistro reference checklist, with no implied execution order:
 
 1. Shop header
    - First polish pass is done: the first screen now has shop status, rating, ETA, delivery fee, distance, short shop identity, and a project-local Moon Bistro cover image.
@@ -249,9 +249,9 @@ After starting the dev server, use the URL printed by Vite. Do not assume a fixe
 
 If a known old preview is still open in the browser, close it and refresh from the newly printed Vite URL. If the page looks like the early legacy Home layout, it is not a valid reference for this work.
 
-## Prompt For A New Thread Or Device
+## Historical Prompt (Do Not Use As Current Scope)
 
-Use this as the first message when continuing with another assistant session:
+The text below is retained only as historical handoff evidence. It predates the live roadmap's ordinary consequence priority and must not be used to start work without a new roadmap promotion:
 
 ```text
 继续 SchatPhone 外卖 mini app 工作。先阅读 docs/pm/commerce-finance-and-assets/FOOD_DELIVERY_SHOP_MINI_APP_HANDOFF.md 和 docs/product-decisions/APP_STORE_ENTRY_TYPES_AND_FOOD_SHOP_APPS.md。

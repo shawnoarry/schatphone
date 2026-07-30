@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-07-21
+Updated: 2026-07-31
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -17,6 +17,9 @@ Current routing note:
 - roadmap 4.6 World Pack hardening can span visual/IA, Chat/service accounts, commerce, and map/date packages, but the live roadmap owns priority;
 - roadmap 4.7 Modern Seoul K-pop carrier governance is `PARTIAL_DONE`: the independent Book/WorldBook 2 + 6 + 1 content slice belongs to `visual-and-ia-governance`; its prose rule is a future input, not an implemented popup or executable profile;
 - roadmap 4.8 cross-module Mini Scene architecture belongs primarily to `module-architecture-governance`. Engage `visual-and-ia-governance` for Settings/Book/presenters, `event-runtime-and-world-hub` for runtime-trigger policy, `map-calendar-reminders` for Calendar/Map request Adapters, and `chat-and-chat-directory` for Chat compatibility only when the corresponding stage is promoted.
+- roadmap 4.9 remains product-control work led by `visual-and-ia-governance`; engage `commerce-finance-and-assets` only for the named ordinary Food Delivery/Shopping consequence proof, not for an open-ended shop-polish queue;
+- roadmap 4.10 shared image-generation contracts, persistence, credentials, backup, and adapters belong to `module-architecture-governance`, while Camera entry/capture/settings IA belongs to `visual-and-ia-governance`; Gallery People and source callers remain separately gated;
+- roadmap 4.11 Map renderer, packs, places, pins, trips, and validation belong only to `map-calendar-reminders`; the functional group remains Map-only.
 
 ## 1. Standard Package Structure
 

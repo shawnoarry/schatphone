@@ -15,13 +15,13 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current repository baseline is green across lint, 195 unit-test files / 1311 tests, build, and the focused Map desktop/Pixel 5 Playwright flow; CI and Pages definitions include the full suite, but remote execution and deployed-artifact proof remain open.
+- the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; CI and Pages definitions include the full suite, while remote execution, deployed-artifact, and named physical-device proof remain open.
 
 The current work is concentrated in four areas:
 
-1. first-value activation from a clean browser to the first successful Chat reply;
+1. preserving the completed first-value Chat activation and custom-role journey;
 2. current-save write/conflict safety and a complete local recovery point;
-3. one world/role journey and one ordinary daily-life cross-module loop;
+3. one ordinary daily-life cross-module loop;
 4. deployed PWA, hosted-provider, backup, and true-device release proof.
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
@@ -52,7 +52,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; optional Book/encyclopedia/template references are non-binding diagnostics, while broader hardening is pending |
 | Mini Scene | `Pure foundation landed, no runtime` | schemas, empty caller registry, Book profile/regex validation, and world resolution are tested; persistence, Settings, presenters, and source triggers remain separate |
 | Map / Calendar / Reminders / Phone | `World-bound Map baseline, stable schedule/phone MVPs` | Map resolves one map per world and now renders geographic packs through keyless OpenFreeMap + MapLibre, while fictional/custom packs and external startup failure before the first ready state remain local. Seoul V1 includes 35 versioned read-only real places; canonical pins, trips, coordinates, and world bindings stay Map-owned. Public transit is not implemented, and true-device gesture proof, additional cities, local PMTiles, and full package authoring remain separate |
-| Shopping / Food Delivery / Logistics | `Integrated V1` | order and notification loops are strong; store/detail/tracking polish remains |
+| Shopping / Food Delivery / Logistics | `Integrated V1` | five independent Food Delivery shop facades share one Food Delivery runtime; the next roadmap-owned gap is one ordinary Food Delivery/Shopping consequence flow, while tracking and polish remain separate |
 | Wallet / Gallery | `Stable support platforms` | useful shared owners; deeper economy/Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
@@ -122,7 +122,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 - Settings backup currently includes the configured AI API key because it exports the full settings snapshot;
 - the local push relay has no authentication and permissive CORS;
-- the production dependency audit reports 0; the full audit reports 10 high findings through the development-only `brace-expansion` / ESLint and Vue Test Utils toolchain, and the available automatic fix requires a breaking ESLint 10 upgrade, so no force fix is applied in this slice;
+- the most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings in existing tooling paths; the controller's current rerun was blocked because the configured npm mirror does not implement the audit endpoint;
 - PR CI and main Pages build definitions now fail closed on both audits, lint, unit, build, and one full E2E run that includes focused visual coverage; remote execution, external protections, and a deployed base-path smoke are still pending;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 
@@ -155,8 +155,8 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 ### Engineering
 
-- the largest route views remain between roughly 3.1k and 4.8k lines;
-- `systemStore` is 4186 lines and imported by 22 of 30 route views;
+- the largest route view is now `FoodDeliveryView.vue` at 10329 lines after five distinct shop facades landed;
+- `systemStore` is 4644 lines and imported by 24 of 40 route views;
 - source contracts are JavaScript-only;
 - some cross-domain adapters still receive concrete store instances.
 
@@ -166,7 +166,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 1. `DONE 2026-07-22`: close the first successful Chat activation loop through the existing Network flow with originating thread/draft continuity and desktop plus simulated-mobile first-reply evidence;
 2. make current-save writes fail visibly, prevent unsafe same-container writers, and complete the local export/restore/reopen recovery boundary;
-3. then prove one explicit world/role -> Chat path and one ordinary Food Delivery or Shopping consequence through existing Calendar, Wallet, Chat, and relationship continuity;
+3. preserve the completed custom role -> Chat path, then prove one ordinary Food Delivery or Shopping consequence through existing Calendar, Wallet, Chat, and relationship continuity;
 4. finish with remote CI/Pages, deployed PWA/install/relaunch, hosted-provider, backup round-trip, and named true-device evidence.
 
 This is the only current product-completion sequence. It does not require a broad onboarding wizard, mandatory built-in content, another World Pack archetype, Mini Scene runtime, or a general visual rebuild.
@@ -235,12 +235,11 @@ Stage 1 landed on 2026-07-21 with five pure library modules and 22 focused tests
 
 ## 7. PM Decisions Still Needed
 
-1. first reference domain for the later IndexedDB-first migration;
-2. production intent for the push relay versus a real authenticated backend;
-3. the exact first-release device matrix and which immature Home entries should be demoted from the default shipping surface;
-4. next World Pack archetype after marketplace, dispatch, reservation, and transit;
-5. whether closed-page autonomy is worth its identity/privacy/server complexity;
-6. when Cheats should become a real product surface, if ever.
+1. production intent for the push relay versus a real authenticated backend;
+2. the exact first-release device matrix and which immature Home entries should be demoted from the default shipping surface;
+3. next World Pack archetype after marketplace, dispatch, reservation, and transit;
+4. whether closed-page autonomy is worth its identity/privacy/server complexity;
+5. when Cheats should become a real product surface, if ever.
 
 Mini Scene Stage 1 is complete. Later persistence, safe-regex dependency, HTML security, and each source-module Adapter require their named technical/implementation gates, not a return to the rejected prose-only or mandatory-World-Pack design.
 
@@ -288,6 +287,11 @@ CI/release workflow first-slice validation on 2026-07-22:
 - both workflow files parse through the existing `js-yaml` dependency and retain explicit triggers, permissions, concurrency/timeout, failure artifacts, and `deploy.needs: build`;
 - local CI-mode full E2E simulation on strict port 5181 collected 60 cases: 56 expected, 4 skipped, 0 unexpected, and 0 flaky; the inline JSON guard passed;
 - remote GitHub execution, branch/environment protection, and deployed `dist` base-path behavior were not tested and remain release blockers.
+
+Current checkpoint note on 2026-07-31:
+
+- Camera/shared image generation, five-shop Food Delivery, and the world-bound local-map baseline have their named focused evidence;
+- OpenFreeMap + MapLibre is integrated locally with focused unit/E2E, bundle, fallback, attribution, real-network desktop/mobile visual, and controller interaction evidence; named physical-device gestures/offline-cache and deployed-network proof remain separate.
 
 ## 9. Read Next
 
