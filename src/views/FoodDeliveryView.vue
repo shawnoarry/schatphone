@@ -6828,7 +6828,7 @@ onBeforeUnmount(() => {
             </div>
 
             <nav
-              class="mt-3 grid grid-cols-2 gap-2.5"
+              class="mt-3 grid grid-cols-5 gap-2"
               data-testid="food-delivery-store-menu-section-rail"
               :aria-label="t('店内分类', 'Store menu sections')"
             >
@@ -6836,22 +6836,21 @@ onBeforeUnmount(() => {
                 v-for="shortcut in peachCloudMenuShortcuts"
                 :key="shortcut.key"
                 type="button"
-                class="group flex min-h-[5.75rem] min-w-0 items-center gap-3 border-2 border-[var(--peach-cloud-ink)] px-3 text-left text-[11px] font-black leading-tight shadow-[4px_4px_0_var(--peach-cloud-ink)] transition active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                :class="[
+                class="flex min-w-0 flex-col items-center gap-1.5 text-center text-[10px] font-semibold leading-tight"
+                :class="
                   shortcut.key === activeStoreMenuSectionKey
-                    ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
-                    : 'bg-white/75 text-[var(--peach-cloud-iron)]',
-                  shortcut.key === 'seasonal_drop' ? 'col-span-2' : '',
-                ]"
+                    ? 'text-[var(--peach-cloud-ink)]'
+                    : 'text-[var(--peach-cloud-iron)]'
+                "
                 :data-testid="`food-delivery-store-menu-section-${shortcut.key}`"
                 @click="focusStoreMenuSection(shortcut.key)"
               >
                 <span
-                  class="inline-flex h-12 w-12 shrink-0 items-center justify-center border border-[var(--peach-cloud-ink)] transition group-active:scale-[0.96]"
+                  class="inline-flex aspect-[1/1.2] w-full max-w-[3.2rem] items-center justify-center rounded-[1.55rem] border transition active:scale-[0.96]"
                   :class="
                     shortcut.key === activeStoreMenuSectionKey
-                      ? 'bg-[var(--peach-cloud-ink)]'
-                      : 'bg-[var(--peach-cloud-canvas)]'
+                      ? 'border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] shadow-[0_9px_18px_rgba(43,48,58,0.14)]'
+                      : 'border-[var(--peach-cloud-mist)]/50 bg-white/70'
                   "
                 >
                   <img

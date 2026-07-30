@@ -53,6 +53,18 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   expect(homeMainBox.y).toBeGreaterThanOrEqual(homeHeaderBox.y + homeHeaderBox.height - 1)
   expect(brandHeroBox.y).toBeGreaterThanOrEqual(homeMainBox.y)
   expect(categoryRailBox.y).toBeGreaterThan(brandHeroBox.y + brandHeroBox.height)
+  const categoryShortcutBoxes = await page
+    .getByTestId('food-delivery-store-menu-section-rail')
+    .getByRole('button')
+    .evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const box = button.getBoundingClientRect()
+        return { height: box.height, width: box.width, y: box.y }
+      }),
+    )
+  expect(categoryShortcutBoxes).toHaveLength(5)
+  expect(new Set(categoryShortcutBoxes.map((box) => Math.round(box.y))).size).toBe(1)
+  expect(categoryRailBox.height).toBeLessThanOrEqual(112)
   await testInfo.attach('peach-cloud-palette-home', {
     body: await page.screenshot(),
     contentType: 'image/png',
@@ -90,13 +102,13 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await page.getByTestId('food-delivery-peach-cloud-nav-home').click()
   await expect(page).not.toHaveURL(/shopView=/)
 
-  await page.getByTestId('food-delivery-store-menu-section-cloud_tea').click()
+  await page.getByTestId('food-delivery-store-menu-section-fruit_sparkle').click()
   await expect(page.getByTestId('food-delivery-store-menu-items')).toHaveAttribute(
     'data-active-section',
-    'cloud_tea',
+    'fruit_sparkle',
   )
   await expect(page.locator('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveCount(
-    4,
+    3,
   )
 
   await page.getByTestId('food-delivery-menu-open-food_menu_peach_oolong_cloud').click()
