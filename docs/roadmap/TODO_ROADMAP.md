@@ -23,7 +23,7 @@ Inventory refreshed on 2026-07-30; validation state is tracked separately below:
 
 1. the current tree contains 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables, and 197 static unit-test files;
 2. Camera/shared image generation, five independent Food Delivery shop facades, and world-bound local Map packs are implemented at their named partial baselines;
-3. the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and full audit proof remain separate;
+3. the current local integration passes lint, 197 Vitest files / 1321 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and full audit proof remain separate;
 4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
 5. the largest engineering risk remains concentrated in oversized views, especially Food Delivery, and `systemStore` fan-out.
 
@@ -35,7 +35,8 @@ Roadmap interpretation:
 - 4.7 has a promoted Book/WorldBook content-carrier slice; its focused K-pop rule is the first planned content input for the separately staged Mini Scene Module;
 - 4.8 has an architecture-accepted cross-module Mini Scene direction, but no runtime, popup, regex execution, or source-module trigger is implemented yet.
 - 4.9 is now the product-control lane: turn the integrated modules into a usable product preview by closing first-value activation, current-save safety, one ordinary life loop, and deployed PWA proof before more infrastructure or feature breadth.
-- 4.11 is `P2 PARTIAL_DONE`: real Seoul and a faction-based cyber wasteland share one place, pin, and trip surface; per-world binding, lightweight image import/generation, and the OpenFreeMap + MapLibre geographic renderer are landed. Seoul V1 now includes 35 versioned read-only real places. Full package authoring, PMTiles, public-transit data adapters, additional cities, and true-device validation remain later separate work.
+- 4.11 is `P2 PARTIAL_DONE / MJE-3 READY_FOR_USER_REVIEW`: real Seoul and a faction-based cyber wasteland share one map-first place, pin, and trip surface; per-world binding, lightweight image import/generation, the OpenFreeMap + MapLibre geographic renderer, intent-gated trip UI, and collision-safe coordinate reselection are landed. MJE-1 transport-aware planning and MJE-2 Map-owned lifecycle/checkpoints are user-accepted and implemented in the current uncommitted tree without claiming an integrated commit. MJE-3 adds the first low-impact, world-aware checkpoint Event Runtime adapter in that tree and stops for user review.
+- 4.12 is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY / NOT_STARTED`: the visible Calendar remains the long-range confirmed-plan app, its future Month/Week/Agenda views are distinct from a future short-range Agenda Journey app, and a hidden Schedule Orchestrator will link them without taking ownership of Map Journey, Event Runtime, Activity Session, or downstream values. No route, store, timer, popup, narrative projection, persistence field, or migration is implemented by this decision.
 
 ## 3. Completed Baselines
 
@@ -287,7 +288,7 @@ Status: `TODO`
 
 Architecture accepted on 2026-07-21:
 
-1. one shared Mini Scene Module will serve explicitly registered callers such as Calendar, Map, Chat, and future streaming modules;
+1. one shared Mini Scene Module will serve explicitly registered callers such as Calendar, Map, Chat, a future Agenda Journey app, and future streaming modules;
 2. each registered module has an explicit user mode: unconfigured/off, plain text, or interactive HTML; unconfigured behaves as off, and no Book, WorldBook, World Pack, caller, or world profile may silently change the user's choice;
 3. calling modules and Event Runtime own trigger intent, source truth, eligibility, and provenance; the Mini Scene Module owns request validation, world-profile resolution, artifact creation, transforms, presentation, fallback, and interaction audit;
 4. Book will keep narrative rules and separate `structured_json` Mini Scene transform-profile assets. WorldBook narrative activation and Mini Scene profile binding remain separate choices;
@@ -413,9 +414,9 @@ Focused contract and remaining inventory:
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_ARCHITECTURE_PLAN.md`;
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_TODO.md`.
 
-### 4.11 Local Narrative Map Packs
+### 4.11 Local Narrative Map Packs And Journey Exploration
 
-Status: `PARTIAL_DONE`
+Status: `PARTIAL_DONE / MJE-1_USER_ACCEPTED_IMPLEMENTED_IN_CURRENT_TREE / MJE-2_USER_ACCEPTED_IMPLEMENTED_IN_CURRENT_TREE / MJE-3_READY_FOR_USER_REVIEW`
 
 Promoted baseline completed on 2026-07-30:
 
@@ -430,6 +431,29 @@ Promoted baseline completed on 2026-07-30:
 9. separated everyday place use from detailed pin administration: Map Settings now edits seed/player pin metadata and coordinates through explicit reselection, keeps built-in pack places read-only, allows pin placement during trips, and preserves the Map parent across nested settings returns.
 10. completed the OpenFreeMap + MapLibre geographic runtime with keyless public styling, visible attribution, lazy loading, canonical marker/click coordinates, fictional/custom zero-request containment, and a local fallback that preserves Map state and interactions.
 11. expanded Seoul V1 to 35 versioned read-only real places across entertainment agencies, broadcasters/media buildings, company headquarters, civic/cultural/event landmarks, and named beauty-salon branches.
+12. made coordinate placement exclusive across MapLibre and local Leaflet renderers so saved markers cannot intercept the tap or replace an editor draft, including active-trip Pixel 5 coverage.
+13. refactored the everyday Map idle state around progressive disclosure: compact map controls remain primary, route/place-detail surfaces require explicit context, and fictional faction legends start collapsed.
+
+Approved Journey / Footprints / Exploration direction:
+
+- Map remains the player entry and source owner for known-destination journeys and active area exploration; the Map Journey Runtime is a Map-owned domain service, not a separate app.
+- transport choice belongs to journey planning. A separate Transit app is deferred until a static or live network has meaningful independent browsing, schedule/ticket/vehicle, authoring, or progression use.
+- the current `Explore` points, route familiarity, area unlocks, and static feedback are the passive `Footprints` foundation. They are not yet active exploration and must not be deleted when the IA is corrected.
+- journey events are checkpoint-driven. MJE-3 keeps a triggered route update pending while the journey timer continues; only the reviewed bounded two-minute delay changes ETA. Event Runtime owns eligibility, cooldown/cap, proposal/review, and audit, while Map validates every result and remains the journey source of truth. Destination change and event-driven cancellation remain later decisions.
+- an ordinary journey with no event remains a supported outcome.
+
+Execution order and live status:
+
+1. `MJE-1 USER_ACCEPTED / IMPLEMENTED_IN_CURRENT_TREE`: explicit transport selection, mode-aware estimates, active/history transport snapshots, backup/restore, and legacy compatibility are implemented and user-accepted. The current physical tree remains uncommitted and this status does not claim an integrated commit.
+2. `MJE-2 USER_ACCEPTED / IMPLEMENTED_IN_CURRENT_TREE`: the user accepted the versioned Map-owned active-journey lifecycle, small deterministic duration-based checkpoint plan, and safe pause/resume with timer and arrival-push correction by explicitly authorizing MJE-3. The ordinary uneventful completion path, existing `idle` / `traveling` / `arrived` compatibility, transport snapshots, reminders, familiarity, rewards, relationship lineage, and backup/restore remain covered. This does not claim an integrated commit.
+3. `MJE-3 READY_FOR_USER_REVIEW`: implemented the first low-impact, world-aware Map checkpoint Event Runtime adapter in the current uncommitted tree. Only completed `en_route` and `near_arrival` checkpoints are evaluated while Map is mounted; permission, Surprise Mode, deterministic random selection, cooldown, daily cap, proposal persistence, provenance, and audit remain Event Runtime-owned. A proposal stays pending without pausing time or automatically opening detail; Map validates exact journey/checkpoint lineage, leaves ETA unchanged for `continue`, and adds only the reviewed bounded 120-second delay. Schema V3 safely returns V2 event-blocked journeys to active timing while retaining proposal lineage. Missing, stale, non-pending, or arrival-expired proposals clear safely, and ordinary no-event completion remains covered. The current acceptance revision promotes traveling/pending/arrived state into a persistent primary map journey card, replaces GPS-like recenter wording with canonical role position, groups place creation and management inside Places, and limits the optional shared-route relationship record to arrived-journey acknowledgement without creating companion truth. Validation evidence is refreshed in the package handoff. This is not `DONE` or an integrated commit.
+4. `MJE-4 TODO / USER_ACCEPTANCE_REQUIRED`: relabel and restructure the current passive progression as `Footprints`, preserving exploration points, route familiarity, area unlocks, feedback, and history while making Journey and active Exploration distinct actions.
+5. `MJE-5 TODO / USER_ACCEPTANCE_REQUIRED`: add active area exploration with time/approach choices, exploration checkpoints, and explicit keep/discard ownership for discovered places or knowledge.
+6. `MJE-6 TODO / SEPARATE_DECISION`: add reviewed static transport modes/lines/stations/topology to versioned map packs, then reconsider a Transit app only against its independent-use threshold; realtime, routing, traffic, and provider licensing remain separate decisions.
+
+Focused architecture and acceptance boundaries:
+
+- `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`
 
 Remaining work is separately gated:
 
@@ -448,6 +472,38 @@ Primary package:
 Focused decision:
 
 - `docs/product-decisions/LOCAL_NARRATIVE_MAP_PACKS.md`
+
+### 4.12 Calendar, Agenda Journey, Activity Session, And Event Orchestration
+
+Status: `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY / NOT_STARTED`
+
+Accepted product and ownership direction:
+
+- `日历 / Calendar` remains a visible Home app and the canonical owner of confirmed long-range schedule/date facts. Its current frontend is a list-first confirmed-event baseline, not yet a conventional month/week/date-grid calendar.
+- Calendar's future visible views are `Month`, `Week`, and `Agenda / 日程`; `日程` is a view of Calendar events, not another long-range planning app.
+- the future user-facing `行程 / Agenda Journey` app owns today's and the near-term execution plan, activity steps, completion/miss state, performance, and outcome references. It is distinct from Map Journey.
+- the hidden `Schedule Orchestrator / 时间编排模块` materializes confirmed near-term Calendar commitments into Agenda Journey instances and reconciles deadlines. It links stable IDs and cannot become a Home app or a new owner of copied downstream records.
+- an Agenda Journey step may request a Map Journey or an Activity Session. Map arrival is valid travel/presence evidence but cannot prove that a rehearsal, broadcast, performance, class, or meeting was completed.
+- Activity Session uses absolute timestamps and explicit checkpoints. Minimizing or navigating inside SchatPhone does not stop it; application suspension is reconciled on resume. A closed or OS-suspended browser/PWA cannot promise an exact interactive popup.
+- Event Runtime owns eligibility, deterministic/random gates, cooldown/cap, proposal/review, and audit. Turning Mini Scene presentation `off` suppresses the popup but does not disable event eligibility; only policy-approved low-impact outcomes may auto-resolve, while high-impact effects retain owner confirmation/review.
+- a future Story/Diary/Journal surface may consume a bounded `Narrative Timeline` projection, but its product name, route, persistence owner, retention policy, and AI-context Interface are not approved yet.
+
+Execution order and live status:
+
+1. `CJA-0 DONE / DOCUMENTATION_ONLY`: freeze terminology, ownership, frontend reality/target, cross-module references, background timing limits, automatic-resolution policy, and stop conditions.
+2. `CJA-1 TODO / USER_ACCEPTANCE_REQUIRED`: freeze Calendar Month/Week/Agenda information architecture, selected-day detail, multi-day spans, and event authoring before modifying `/calendar`.
+3. `CJA-2 TODO / USER_ACCEPTANCE_REQUIRED`: define a pure Schedule Orchestrator Interface, idempotent materialization fixtures, deadline reconciliation, persistence owner, backup/restore, and legacy compatibility without adding a visible app.
+4. `CJA-3 TODO / USER_ACCEPTANCE_REQUIRED`: add an Agenda Journey V1 around one manual or Calendar-derived day plan without requiring random events.
+5. `CJA-4 TODO / USER_ACCEPTANCE_REQUIRED`: add one Activity Session with minimize/navigation/reopen reconciliation and no claim of exact closed-app popup delivery.
+6. `CJA-5 TODO / USER_ACCEPTANCE_REQUIRED`: add one low-impact Event Runtime Adapter with automatic resolution when presentation is off and a text interaction path; interactive HTML remains gated by Mini Scene security.
+7. `CJA-6 TODO / SEPARATE_DECISION`: add a Narrative Timeline projection and bounded Forum/Chat AI-context Interface only after owner, retention, permission, review, and backup contracts are approved.
+
+Focused architecture and product decision:
+
+- `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`
+- `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
+
+This lane does not modify or block roadmap 4.11 Map Journey work. MJE stages remain owned and reviewed separately.
 
 ## 5. Guarded Or Deferred Directions
 
@@ -485,7 +541,8 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
 8. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
-9. `P2 PARTIAL_DONE`: 4.11 local narrative-map baseline, per-world binding, lightweight image import/generation, and the OpenFreeMap + MapLibre geographic renderer are landed; Seoul V1 now includes 35 versioned read-only real places. Full package authoring, PMTiles, public-transit data adapters, broader city catalogs, and true-device gesture/offline-cache validation remain separately gated and are not started.
+9. `P2 PARTIAL_DONE / MJE-3 READY_FOR_USER_REVIEW`: 4.11 local narrative-map baseline, per-world binding, lightweight image import/generation, and the OpenFreeMap + MapLibre geographic renderer are landed. MJE-1 transport-aware planning and MJE-2 lifecycle/checkpoints are user-accepted in the current uncommitted tree. MJE-3's first low-impact checkpoint Event Runtime adapter is implemented and validated there but awaits user review. Footprints IA, active exploration, transit topology, broader-city, and true-device stages remain gated by the explicit order above.
+10. `P2 ARCHITECTURE_ACCEPTED / NOT_STARTED`: 4.12 Calendar/Agenda Journey orchestration is documented only. CJA-1 Calendar information architecture requires a separate user acceptance decision; no Agenda Journey, Schedule Orchestrator, Activity Session, event popup, Narrative Timeline, or persistence implementation has started.
 
 ## 7. Validation Rule
 

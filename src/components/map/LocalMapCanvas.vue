@@ -28,7 +28,7 @@ const props = defineProps({
   },
   allowPinPlacement: {
     type: Boolean,
-    default: true,
+    default: false,
   },
   providerState: {
     type: String,
@@ -40,6 +40,7 @@ const emit = defineEmits(['place-pin', 'select-pin'])
 const { t } = useI18n()
 const sceneRootRef = ref(null)
 const mapAssetReady = computed(() => Boolean(props.mapPack?.assetUrl))
+const factionLegendOpen = ref(false)
 
 let mapInstance = null
 let imageLayer = null
@@ -129,7 +130,8 @@ const renderMarkers = () => {
     if (!point) return
     const marker = L.marker(normalizedToLatLng(point), {
       icon: createPinIcon(pin),
-      keyboard: true,
+      interactive: !props.allowPinPlacement,
+      keyboard: !props.allowPinPlacement,
       riseOnHover: true,
       title: t(pin.nameZh || pin.labelZh || pin.name, pin.nameEn || pin.labelEn || pin.name),
     })
@@ -138,7 +140,7 @@ const renderMarkers = () => {
       direction: 'top',
       opacity: 1,
     })
-    marker.on('click', () => emit('select-pin', pin))
+    if (!props.allowPinPlacement) marker.on('click', () => emit('select-pin', pin))
     marker.addTo(markerLayer)
   })
 
@@ -240,13 +242,18 @@ watch(
   () => props.focusPosition,
   () => {
     const focus = resolveFocusLatLng()
-    if (mapInstance && focus) mapInstance.panTo(focus, { animate: true, duration: 0.35 })
+    if (!mapInstance || !focus) return
+    const focusZoom = Math.min(
+      mapInstance.getMaxZoom(),
+      Math.max(mapInstance.getZoom(), mapInstance.getMinZoom() + 2),
+    )
+    mapInstance.flyTo(focus, focusZoom, { animate: true, duration: 0.35 })
   },
   { deep: true },
 )
 
 watch(
-  () => [props.pins, props.pendingPosition, props.mapPack?.factions],
+  () => [props.pins, props.pendingPosition, props.mapPack?.factions, props.allowPinPlacement],
   () => renderMarkers(),
   { deep: true },
 )
@@ -259,6 +266,13 @@ watch(
     mapInstance.dragging?.[method]()
     mapInstance.doubleClickZoom?.[method]()
     mapInstance.keyboard?.[method]()
+  },
+)
+
+watch(
+  () => props.mapPack?.id,
+  () => {
+    factionLegendOpen.value = false
   },
 )
 
@@ -290,11 +304,24 @@ onBeforeUnmount(() => {
       <span>{{ t(mapPack.shortLabelZh, mapPack.shortLabelEn) }}</span>
       <small v-if="providerState === 'fallback'">{{ t('离线', 'Offline') }}</small>
     </div>
-    <div v-if="mapPack.factions?.length" class="map-scene-faction-legend">
-      <span v-for="faction in mapPack.factions" :key="faction.id" class="map-scene-faction-key">
-        <i :style="{ backgroundColor: faction.tone }" aria-hidden="true"></i>
-        <span>{{ t(faction.labelZh, faction.labelEn) }}</span>
-      </span>
+    <div v-if="mapPack.factions?.length" class="map-scene-faction-control">
+      <button
+        type="button"
+        class="map-scene-faction-toggle"
+        data-testid="map-faction-legend-toggle"
+        :aria-expanded="factionLegendOpen"
+        @click="factionLegendOpen = !factionLegendOpen"
+      >
+        <i class="fas fa-shield-halved" aria-hidden="true"></i>
+        <span>{{ t('阵营', 'Factions') }}</span>
+        <i :class="factionLegendOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" aria-hidden="true"></i>
+      </button>
+      <div v-if="factionLegendOpen" class="map-scene-faction-legend" data-testid="map-faction-legend">
+        <span v-for="faction in mapPack.factions" :key="faction.id" class="map-scene-faction-key">
+          <i :style="{ backgroundColor: faction.tone }" aria-hidden="true"></i>
+          <span>{{ t(faction.labelZh, faction.labelEn) }}</span>
+        </span>
+      </div>
     </div>
     <p class="map-scene-attribution">{{ t(mapPack.attributionZh, mapPack.attributionEn) }}</p>
   </div>
@@ -370,14 +397,37 @@ onBeforeUnmount(() => {
   font-size: 8px;
 }
 
-.map-scene-faction-legend {
+.map-scene-faction-control {
   position: absolute;
   left: 18px;
   top: 236px;
   z-index: 3;
+  width: min(152px, calc(100% - 92px));
+}
+
+.map-scene-faction-toggle {
+  display: grid;
+  width: 100%;
+  min-height: 32px;
+  grid-template-columns: 18px minmax(0, 1fr) 12px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.8);
+  padding: 5px 8px;
+  color: #f8fafc;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: left;
+  backdrop-filter: blur(8px);
+}
+
+.map-scene-faction-legend {
   display: grid;
   gap: 4px;
-  width: min(152px, calc(100% - 92px));
+  margin-top: 4px;
+  width: 100%;
 }
 
 .map-scene-faction-key {
@@ -529,10 +579,11 @@ onBeforeUnmount(() => {
 }
 
 @media (min-width: 768px) {
-  .map-scene-faction-legend {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .map-scene-faction-control {
     width: 304px;
   }
+
+  .map-scene-faction-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .map-scene-canvas[data-map-kind='fictional'] :deep(.leaflet-control-zoom) {
     display: flex;

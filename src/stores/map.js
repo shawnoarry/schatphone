@@ -24,8 +24,35 @@ import {
   normalizeCustomMapPacks,
   normalizeMapPosition,
 } from '../lib/map-packs'
+import {
+  getMapPlaceCategoryVisual,
+  normalizeUserMapPlaceCategory,
+} from '../lib/map-place-categories'
+import {
+  LEGACY_MAP_TRANSPORT_MODE,
+  MAP_JOURNEY_PHASE,
+  MAP_JOURNEY_SCHEMA_VERSION,
+  MAP_TRIP_ESTIMATE_VERSION,
+  advanceMapJourneyCheckpoints,
+  calculateMapJourneyRuntime,
+  createMapJourneyCheckpointPlan,
+  createMapJourneyId,
+  estimateMapJourney,
+  isMapTransportMode,
+  normalizeMapJourneyCheckpoints,
+  normalizeMapTransportMode,
+  resolveMapJourneyPhase,
+} from '../lib/map-journey'
+import {
+  MAP_JOURNEY_EVENT_DELAY_SECONDS,
+  MAP_JOURNEY_EVENT_ELIGIBLE_CHECKPOINT_IDS,
+  MAP_JOURNEY_EVENT_OUTCOME,
+  runMapJourneyCheckpointEvent,
+} from '../lib/simulation/adapters/map-journey-events'
+import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
+import { useSimulationStore } from './simulation'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
@@ -214,20 +241,34 @@ const createDefaultCurrentLocation = () => ({
 const createDefaultTripForm = () => ({
   from: SEED_ADDRESSES[0].detail,
   to: SEED_ADDRESSES[1].detail,
+  transportMode: '',
 })
 
 const createIdleTripState = () => ({
   status: TRIP_STATUS_IDLE,
+  journeySchemaVersion: 0,
+  journeyId: '',
+  phase: '',
+  checkpoints: [],
+  eventCheckpointIds: [],
+  activeInterruption: null,
+  eventDelaySeconds: 0,
   from: '',
   to: '',
   fromLabel: '',
   toLabel: '',
+  transportMode: '',
+  estimateVersion: 0,
   distanceKm: 0,
   fare: 0,
   durationSeconds: 0,
   startedAt: 0,
   etaAt: 0,
   arrivedAt: 0,
+  pausedAt: 0,
+  remainingSecondsAtPause: 0,
+  totalPausedSeconds: 0,
+  pushScheduleRevision: 0,
   scheduledPushId: '',
 })
 
@@ -255,41 +296,11 @@ const createDefaultMapAutomationRuntime = () => ({
   lastProviderImageUrl: '',
 })
 
-const computeTripEstimate = (fromText = '', toText = '', measuredDistanceKm = null) => {
-  const from = typeof fromText === 'string' ? fromText.trim() : ''
-  const to = typeof toText === 'string' ? toText.trim() : ''
-  const measured = Number(measuredDistanceKm)
-  const baseKm = Number.isFinite(measured) && measured > 0
-    ? Math.max(0.3, Math.round(measured * 10) / 10)
-    : Math.max(3, Math.abs(from.length - to.length) % 18 + 3)
-  const minutes = Math.max(3, Math.round(baseKm * 3.5))
-  const fare = Math.round(4800 + baseKm * 900)
-  return {
-    distanceKm: baseKm,
-    minutes,
-    durationSeconds: Math.max(60, minutes * 60),
-    fare,
-  }
-}
-
 const findMapPackInList = (mapPacks, packId) =>
   (Array.isArray(mapPacks) ? mapPacks : []).find((pack) => pack.id === packId) ||
   getMapPackById(DEFAULT_MAP_PACK_ID)
 
-const MAP_ADDRESS_CATEGORY_ICONS = Object.freeze({
-  home: 'fas fa-house',
-  work: 'fas fa-building',
-  school: 'fas fa-graduation-cap',
-  shop: 'fas fa-store',
-  leisure: 'fas fa-mug-hot',
-  other: 'fas fa-location-dot',
-})
-
-const normalizeAddressCategory = (value) => {
-  if (typeof value !== 'string' || !value.trim()) return 'home'
-  const category = value.trim().toLowerCase()
-  return Object.hasOwn(MAP_ADDRESS_CATEGORY_ICONS, category) ? category : 'other'
-}
+const normalizeAddressCategory = (value) => normalizeUserMapPlaceCategory(value)
 
 const normalizeAddressRecord = (item, index = 0, mapPacks = listMapPacks()) => {
   if (!item || typeof item !== 'object') return null
@@ -361,6 +372,40 @@ const normalizeTripForm = (raw) => {
       typeof raw.to === 'string' && raw.to.trim()
         ? raw.to.trim()
         : fallback.to,
+    transportMode: normalizeMapTransportMode(raw.transportMode),
+  }
+}
+
+const normalizeTripEventCheckpointIds = (rawIds) => {
+  if (!Array.isArray(rawIds)) return []
+  const allowedIds = new Set(MAP_JOURNEY_EVENT_ELIGIBLE_CHECKPOINT_IDS)
+  return [...new Set(rawIds)]
+    .filter((id) => typeof id === 'string' && allowedIds.has(id.trim()))
+    .map((id) => id.trim())
+}
+
+const normalizeTripActiveInterruption = (raw, journeyId) => {
+  if (!raw || typeof raw !== 'object') return null
+  const proposalId = typeof raw.proposalId === 'string' ? raw.proposalId.trim().slice(0, 180) : ''
+  const eventId = typeof raw.eventId === 'string' ? raw.eventId.trim().slice(0, 160) : ''
+  const checkpointId =
+    typeof raw.checkpointId === 'string' ? raw.checkpointId.trim().slice(0, 80) : ''
+  const sourceJourneyId =
+    typeof raw.journeyId === 'string' ? raw.journeyId.trim().slice(0, 140) : journeyId
+  if (
+    !proposalId ||
+    !eventId ||
+    sourceJourneyId !== journeyId ||
+    !MAP_JOURNEY_EVENT_ELIGIBLE_CHECKPOINT_IDS.includes(checkpointId)
+  ) {
+    return null
+  }
+  return {
+    proposalId,
+    eventId,
+    journeyId,
+    checkpointId,
+    requestedAt: Math.max(0, toInt(raw.requestedAt, 0)),
   }
 }
 
@@ -371,20 +416,81 @@ const normalizeTripState = (raw) => {
       ? raw.status
       : TRIP_STATUS_IDLE
   if (status === TRIP_STATUS_IDLE) return createIdleTripState()
+  const startedAt = Math.max(0, toInt(raw.startedAt, 0))
+  const durationSeconds = Math.max(0, toInt(raw.durationSeconds, 0))
+  const arrivedAt = Math.max(0, toInt(raw.arrivedAt, 0))
+  const isArrived = status === TRIP_STATUS_ARRIVED
+  const rawJourneySchemaVersion = Math.max(0, toInt(raw.journeySchemaVersion, 0))
+  const isPaused = status === TRIP_STATUS_TRAVELING && raw.phase === MAP_JOURNEY_PHASE.PAUSED
+  const journeyId =
+    typeof raw.journeyId === 'string' && raw.journeyId.trim()
+      ? raw.journeyId.trim().slice(0, 140)
+      : createMapJourneyId(startedAt)
+  const checkpoints = normalizeMapJourneyCheckpoints(raw.checkpoints, {
+    startedAt,
+    durationSeconds,
+    arrivedAt,
+    isArrived,
+  })
+  const activeInterruption =
+    status === TRIP_STATUS_TRAVELING
+      ? normalizeTripActiveInterruption(raw.activeInterruption, journeyId)
+      : null
+  const pausedAt = isPaused ? Math.max(0, toInt(raw.pausedAt, startedAt)) : 0
+  const remainingSecondsAtPause = isPaused
+    ? Math.min(durationSeconds, Math.max(0, toInt(raw.remainingSecondsAtPause, durationSeconds)))
+    : 0
+  const migratesBlockingJourneyEvent =
+    isPaused &&
+    Boolean(activeInterruption) &&
+    rawJourneySchemaVersion > 0 &&
+    rawJourneySchemaVersion < MAP_JOURNEY_SCHEMA_VERSION
+  const migratedAt = migratesBlockingJourneyEvent ? Date.now() : 0
+  const migratedPauseDurationMs = migratesBlockingJourneyEvent
+    ? Math.max(0, migratedAt - pausedAt)
+    : 0
+  const rawEtaAt = Math.max(0, toInt(raw.etaAt, 0))
   return {
     status,
+    journeySchemaVersion: migratesBlockingJourneyEvent
+      ? MAP_JOURNEY_SCHEMA_VERSION
+      : rawJourneySchemaVersion,
+    journeyId,
+    phase: resolveMapJourneyPhase(checkpoints, {
+      paused: isPaused && !migratesBlockingJourneyEvent,
+      arrived: isArrived,
+    }),
+    checkpoints,
+    eventCheckpointIds: normalizeTripEventCheckpointIds(raw.eventCheckpointIds),
+    activeInterruption,
+    eventDelaySeconds: Math.max(0, toInt(raw.eventDelaySeconds, 0)),
     from: typeof raw.from === 'string' ? raw.from.trim() : '',
     to: typeof raw.to === 'string' ? raw.to.trim() : '',
     fromLabel: typeof raw.fromLabel === 'string' ? raw.fromLabel.trim() : '',
     toLabel: typeof raw.toLabel === 'string' ? raw.toLabel.trim() : '',
-    distanceKm: Math.max(0, toInt(raw.distanceKm, 0)),
+    transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
+    estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
+    distanceKm: Math.max(0, Number(raw.distanceKm) || 0),
     fare: Math.max(0, toInt(raw.fare, 0)),
-    durationSeconds: Math.max(0, toInt(raw.durationSeconds, 0)),
-    startedAt: Math.max(0, toInt(raw.startedAt, 0)),
-    etaAt: Math.max(0, toInt(raw.etaAt, 0)),
-    arrivedAt: Math.max(0, toInt(raw.arrivedAt, 0)),
+    durationSeconds,
+    startedAt,
+    etaAt: migratesBlockingJourneyEvent
+      ? rawEtaAt > 0
+        ? rawEtaAt + migratedPauseDurationMs
+        : migratedAt + remainingSecondsAtPause * 1000
+      : rawEtaAt,
+    arrivedAt,
+    pausedAt: isPaused && !migratesBlockingJourneyEvent ? pausedAt : 0,
+    remainingSecondsAtPause:
+      isPaused && !migratesBlockingJourneyEvent ? remainingSecondsAtPause : 0,
+    totalPausedSeconds:
+      Math.max(0, toInt(raw.totalPausedSeconds, 0)) +
+      Math.floor(migratedPauseDurationMs / 1000),
+    pushScheduleRevision:
+      Math.max(0, toInt(raw.pushScheduleRevision, 0)) +
+      (migratesBlockingJourneyEvent ? 1 : 0),
     scheduledPushId:
-      typeof raw.scheduledPushId === 'string' && raw.scheduledPushId.trim()
+      !isPaused && typeof raw.scheduledPushId === 'string' && raw.scheduledPushId.trim()
         ? raw.scheduledPushId.trim().slice(0, 120)
         : '',
   }
@@ -398,20 +504,44 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
   if (!from || !to) return null
   const endedAt = Math.max(0, toInt(raw.endedAt, 0))
   if (!endedAt) return null
+  const id =
+    typeof raw.id === 'string' && raw.id.trim()
+      ? raw.id.trim()
+      : `trip_hist_${endedAt}_${index}`
+  const startedAt = Math.max(0, toInt(raw.startedAt, 0))
+  const durationSeconds = Math.max(0, toInt(raw.durationSeconds, 0))
+  const checkpoints = normalizeMapJourneyCheckpoints(raw.checkpoints, {
+    startedAt,
+    durationSeconds,
+    arrivedAt: status === 'arrived' ? endedAt : 0,
+    isArrived: status === 'arrived',
+  })
   return {
-    id:
-      typeof raw.id === 'string' && raw.id.trim()
-        ? raw.id.trim()
-        : `trip_hist_${endedAt}_${index}`,
+    id,
     status,
+    journeySchemaVersion: Math.max(0, toInt(raw.journeySchemaVersion, 0)),
+    journeyId:
+      typeof raw.journeyId === 'string' && raw.journeyId.trim()
+        ? raw.journeyId.trim().slice(0, 140)
+        : createMapJourneyId(startedAt || endedAt),
+    phase:
+      status === 'arrived'
+        ? MAP_JOURNEY_PHASE.ARRIVED
+        : MAP_JOURNEY_PHASE.CANCELLED,
+    checkpoints,
+    eventCheckpointIds: normalizeTripEventCheckpointIds(raw.eventCheckpointIds),
+    eventDelaySeconds: Math.max(0, toInt(raw.eventDelaySeconds, 0)),
+    totalPausedSeconds: Math.max(0, toInt(raw.totalPausedSeconds, 0)),
     from,
     to,
     fromLabel: typeof raw.fromLabel === 'string' ? raw.fromLabel.trim() : '',
     toLabel: typeof raw.toLabel === 'string' ? raw.toLabel.trim() : '',
-    distanceKm: Math.max(0, toInt(raw.distanceKm, 0)),
+    transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
+    estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
+    distanceKm: Math.max(0, Number(raw.distanceKm) || 0),
     fare: Math.max(0, toInt(raw.fare, 0)),
-    durationSeconds: Math.max(0, toInt(raw.durationSeconds, 0)),
-    startedAt: Math.max(0, toInt(raw.startedAt, 0)),
+    durationSeconds,
+    startedAt,
     endedAt,
     rewardPoints:
       status === 'arrived'
@@ -773,12 +903,13 @@ const normalizeMapVisualSettings = (raw) => {
   }
 }
 
-const createMapTripScheduleId = (startedAt = 0) => {
+const createMapTripScheduleId = (startedAt = 0, revision = 0) => {
   const normalizedStartedAt = Math.max(0, toInt(startedAt, 0))
+  const normalizedRevision = Math.max(0, toInt(revision, 0))
   if (!normalizedStartedAt) {
-    return `map_trip_${Date.now()}`
+    return `map_trip_${Date.now()}_r${normalizedRevision}`
   }
-  return `map_trip_${normalizedStartedAt}`
+  return `map_trip_${normalizedStartedAt}_r${normalizedRevision}`
 }
 
 const sanitizeHttpUrl = (value) => {
@@ -905,6 +1036,7 @@ const normalizeMapProviderVisualResult = (rawText) => {
 
 export const useMapStore = defineStore('map', () => {
   const getSystemStore = () => useSystemStore()
+  const getSimulationStore = () => useSimulationStore()
   const getSystemApiReports = () => useSystemApiReports({ systemStore: getSystemStore() })
   const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
   const customMapPacks = ref([])
@@ -924,9 +1056,12 @@ export const useMapStore = defineStore('map', () => {
   const runtimeNow = ref(Date.now())
   let tripArrivalTimer = null
   let tripPushSchedulePromise = null
-  let tripPushCancelPromise = null
+  let tripPushPausePromise = null
+  const tripPushCancelPromises = new Map()
   let mapAutomationHandlerRegistered = false
   let mapProviderRunnerOverride = null
+  let journeyCheckpointEventEvaluationEnabled = false
+  let journeyEventRandomValueOverride
   const hasFinishedStorageHydration = ref(false)
 
   const activeMapPack = computed(() => findMapPackInList(mapPacks.value, activeMapPackId.value))
@@ -954,7 +1089,7 @@ export const useMapStore = defineStore('map', () => {
           nameEn: address.label,
           detailZh: address.detail,
           detailEn: address.detail,
-          icon: MAP_ADDRESS_CATEGORY_ICONS[category],
+          icon: getMapPlaceCategoryVisual(category).icon,
         }
       })
     return [...builtInPlaces, ...userPlaces]
@@ -982,19 +1117,38 @@ export const useMapStore = defineStore('map', () => {
     )
   }
 
-  const computeActiveTripEstimate = (fromText, toText) => {
+  const computeActiveTripEstimate = (fromText, toText, transportMode = tripForm.transportMode) => {
     const fromPlace = findActivePlaceByText(fromText)
     const toPlace = findActivePlaceByText(toText)
     const measuredDistanceKm =
       fromPlace?.position && toPlace?.position
         ? calculateMapDistanceKm(activeMapPack.value, fromPlace.position, toPlace.position)
         : null
-    return computeTripEstimate(fromText, toText, measuredDistanceKm)
+    return estimateMapJourney({
+      fromText,
+      toText,
+      measuredDistanceKm,
+      transportMode,
+    })
   }
 
   const tripEstimate = computed(() => {
-    const { distanceKm, minutes, fare } = computeActiveTripEstimate(tripForm.from, tripForm.to)
-    return { distanceKm, minutes, fare }
+    const state = normalizeTripState(tripState.value)
+    if (state.status !== TRIP_STATUS_IDLE) {
+      const derived = estimateMapJourney({
+        measuredDistanceKm: state.distanceKm,
+        transportMode: state.transportMode,
+      })
+      return {
+        ...derived,
+        estimateVersion: state.estimateVersion,
+        distanceKm: state.distanceKm,
+        minutes: Math.max(0, Math.round(state.durationSeconds / 60)),
+        durationSeconds: state.durationSeconds,
+        fare: state.fare,
+      }
+    }
+    return computeActiveTripEstimate(tripForm.from, tripForm.to)
   })
 
   const currentLocationText = computed(() => {
@@ -1013,27 +1167,9 @@ export const useMapStore = defineStore('map', () => {
       }
     }
 
-    if (state.status === TRIP_STATUS_ARRIVED) {
-      return {
-        ...state,
-        progress: 1,
-        elapsedSeconds: state.durationSeconds,
-        remainingSeconds: 0,
-      }
-    }
-
-    const now = runtimeNow.value
-    const durationSeconds = Math.max(1, state.durationSeconds)
-    const elapsedSeconds = Math.max(
-      0,
-      Math.min(durationSeconds, Math.floor((now - state.startedAt) / 1000)),
-    )
-    const remainingSeconds = Math.max(0, durationSeconds - elapsedSeconds)
     return {
       ...state,
-      progress: Math.min(1, elapsedSeconds / durationSeconds),
-      elapsedSeconds,
-      remainingSeconds,
+      ...calculateMapJourneyRuntime(state, runtimeNow.value),
     }
   })
 
@@ -1214,15 +1350,19 @@ export const useMapStore = defineStore('map', () => {
     const nextScheduleId =
       (typeof scheduleId === 'string' && scheduleId.trim()) ||
       state.scheduledPushId ||
-      (state.startedAt ? createMapTripScheduleId(state.startedAt) : '')
+      (state.startedAt
+        ? createMapTripScheduleId(state.startedAt, state.pushScheduleRevision)
+        : '')
 
     if (!nextScheduleId) {
       return { ok: false, reason: 'schedule_missing' }
     }
 
-    if (tripPushCancelPromise) return tripPushCancelPromise
+    if (tripPushCancelPromises.has(nextScheduleId)) {
+      return tripPushCancelPromises.get(nextScheduleId)
+    }
 
-    tripPushCancelPromise = (async () => {
+    const cancelPromise = (async () => {
       try {
         const serverUrl = systemStore.settings?.system?.pushServerUrl || ''
         if (!serverUrl) {
@@ -1266,18 +1406,37 @@ export const useMapStore = defineStore('map', () => {
           removed: result.removed === true,
           scheduleId: nextScheduleId,
         }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to cancel scheduled push notification.'
+        getSystemApiReports().addReport({
+          level: 'error',
+          module: 'push',
+          action: 'cancel_schedule',
+          provider: 'push_relay',
+          model: source || 'map_trip_arrival',
+          code: 'cancel_schedule_failed',
+          message,
+          createdAt: Date.now(),
+        })
+        return { ok: false, reason: 'cancel_schedule_failed', message }
       } finally {
-        tripPushCancelPromise = null
+        tripPushCancelPromises.delete(nextScheduleId)
       }
     })()
 
-    return tripPushCancelPromise
+    tripPushCancelPromises.set(nextScheduleId, cancelPromise)
+    return cancelPromise
   }
 
   const ensureTripArrivalPushScheduled = async ({ force = false, source = '' } = {}) => {
     const systemStore = getSystemStore()
     const state = normalizeTripState(tripState.value)
-    if (state.status !== TRIP_STATUS_TRAVELING || !state.etaAt) {
+    if (
+      state.status !== TRIP_STATUS_TRAVELING ||
+      state.phase === MAP_JOURNEY_PHASE.PAUSED ||
+      !state.etaAt
+    ) {
       return { ok: false, reason: 'no_active_trip' }
     }
 
@@ -1295,7 +1454,9 @@ export const useMapStore = defineStore('map', () => {
       }
     }
 
-    const scheduleId = state.scheduledPushId || createMapTripScheduleId(state.startedAt)
+    const scheduleRevision = state.pushScheduleRevision
+    const scheduleId =
+      state.scheduledPushId || createMapTripScheduleId(state.startedAt, scheduleRevision)
     const notification = {
       ...buildTripArrivalNotification(state),
       pushDisplayMode: systemStore.settings.system.pushDisplayMode || 'minimal',
@@ -1330,7 +1491,9 @@ export const useMapStore = defineStore('map', () => {
         const latestState = normalizeTripState(tripState.value)
         if (
           latestState.status === TRIP_STATUS_TRAVELING &&
-          latestState.startedAt === state.startedAt
+          latestState.phase !== MAP_JOURNEY_PHASE.PAUSED &&
+          latestState.startedAt === state.startedAt &&
+          latestState.pushScheduleRevision === scheduleRevision
         ) {
           tripState.value = {
             ...latestState,
@@ -1359,6 +1522,28 @@ export const useMapStore = defineStore('map', () => {
     })()
 
     return tripPushSchedulePromise
+  }
+
+  const cancelTripArrivalPushAfterPending = async ({
+    pendingSchedulePromise = null,
+    scheduleId = '',
+    source = '',
+  } = {}) => {
+    let nextScheduleId = scheduleId
+    if (pendingSchedulePromise) {
+      try {
+        const scheduleResult = await pendingSchedulePromise
+        if (scheduleResult?.ok && scheduleResult.scheduleId) {
+          nextScheduleId = scheduleResult.scheduleId
+        }
+      } catch {
+        // A failed schedule has nothing remote to cancel; the fallback ID is still safe to try.
+      }
+    }
+    return cancelTripArrivalPushScheduled({
+      scheduleId: nextScheduleId,
+      source,
+    })
   }
 
   const resolveAddressLabel = (detailText, fallbackLabel) => {
@@ -1471,18 +1656,159 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
+  const setJourneyCheckpointEventEvaluationEnabled = (enabled = true) => {
+    journeyCheckpointEventEvaluationEnabled = enabled === true
+    return journeyCheckpointEventEvaluationEnabled
+  }
+
+  const setJourneyEventRandomValueForTesting = (value) => {
+    journeyEventRandomValueOverride = value === undefined ? undefined : Number(value)
+  }
+
+  const evaluateReachedJourneyEventCheckpoints = (state, now) => {
+    if (
+      !journeyCheckpointEventEvaluationEnabled ||
+      state.status !== TRIP_STATUS_TRAVELING ||
+      state.phase === MAP_JOURNEY_PHASE.PAUSED ||
+      state.activeInterruption
+    ) {
+      return { state, changed: false }
+    }
+
+    const evaluatedIds = new Set(state.eventCheckpointIds)
+    const candidates = state.checkpoints.filter(
+      (checkpoint) =>
+        checkpoint?.status === 'completed' &&
+        MAP_JOURNEY_EVENT_ELIGIBLE_CHECKPOINT_IDS.includes(checkpoint.id) &&
+        !evaluatedIds.has(checkpoint.id),
+    )
+    if (candidates.length === 0) return { state, changed: false }
+
+    const simulationStore = getSimulationStore()
+    const systemStore = getSystemStore()
+    const activeWorldPack = systemStore.getActiveWorldPack?.() || {}
+    const worldContext = resolveWorldContextFromSystemStore(systemStore)
+    let nextState = state
+
+    for (const checkpoint of candidates) {
+      evaluatedIds.add(checkpoint.id)
+      nextState = {
+        ...nextState,
+        eventCheckpointIds: [...evaluatedIds],
+      }
+
+      let result
+      try {
+        result = runMapJourneyCheckpointEvent({
+          simulationStore,
+          snapshot: {
+            journeyId: nextState.journeyId,
+            journeySchemaVersion: nextState.journeySchemaVersion,
+            status: nextState.status,
+            phase: nextState.phase,
+            checkpointId: checkpoint.id,
+            checkpointReachedAt: checkpoint.reachedAt,
+            checkpoints: nextState.checkpoints,
+            mapPackId: activeMapPackId.value,
+            worldPackId: activeWorldPack.id || '',
+            fromLabel: nextState.fromLabel || nextState.from,
+            toLabel: nextState.toLabel || nextState.to,
+            transportMode: nextState.transportMode,
+          },
+          worldContext,
+          randomValue: journeyEventRandomValueOverride,
+          now,
+        })
+      } catch {
+        simulationStore.recordEventLog({
+          eventId: 'map.journey.route_condition.v1',
+          moduleKey: 'map',
+          targetId: nextState.journeyId,
+          adapterKey: 'map.journey.propose_interruption',
+          triggerSource: 'random',
+          status: 'failed',
+          reason: 'map_journey_adapter_threw',
+          at: now,
+        })
+        continue
+      }
+
+      const proposal = result?.ok ? result.adapterResult : null
+      if (!proposal?.id) continue
+      nextState = {
+        ...nextState,
+        activeInterruption: {
+          proposalId: proposal.id,
+          eventId: proposal.eventId,
+          journeyId: nextState.journeyId,
+          checkpointId: checkpoint.id,
+          requestedAt: now,
+        },
+      }
+      return { state: nextState, changed: true }
+    }
+
+    return { state: nextState, changed: true }
+  }
+
   const refreshTripState = (nowInput = Date.now()) => {
     runtimeNow.value = Math.max(0, toInt(nowInput, Date.now()))
     const state = normalizeTripState(tripState.value)
     if (state.status !== TRIP_STATUS_TRAVELING) return false
-    if (!state.etaAt || runtimeNow.value < state.etaAt) return false
+    if (state.phase === MAP_JOURNEY_PHASE.PAUSED) return false
+
+    const runtime = calculateMapJourneyRuntime(state, runtimeNow.value)
+    const advanced = advanceMapJourneyCheckpoints({
+      checkpoints: state.checkpoints,
+      progress: runtime.progress,
+      startedAt: state.startedAt,
+      durationSeconds: state.durationSeconds,
+      totalPausedSeconds: state.totalPausedSeconds,
+      reachedAt: runtimeNow.value,
+    })
+    if (runtime.remainingSeconds > 0) {
+      const checkpointState = {
+        ...state,
+        phase: advanced.phase,
+        checkpoints: advanced.checkpoints,
+      }
+      const eventEvaluation = evaluateReachedJourneyEventCheckpoints(
+        checkpointState,
+        runtimeNow.value,
+      )
+      if (
+        !advanced.changed &&
+        state.phase === advanced.phase &&
+        !eventEvaluation.changed
+      ) return false
+      tripState.value = eventEvaluation.state
+      return true
+    }
 
     const arrivedAt = runtimeNow.value
-    const scheduleId = state.scheduledPushId || (state.startedAt ? createMapTripScheduleId(state.startedAt) : '')
+    const scheduleId =
+      state.scheduledPushId ||
+      (state.startedAt
+        ? createMapTripScheduleId(state.startedAt, state.pushScheduleRevision)
+        : '')
+    const pendingSchedulePromise = tripPushSchedulePromise
+    if (state.activeInterruption?.proposalId) {
+      getSimulationStore().dismissMapJourneyEventProposal(state.activeInterruption.proposalId, {
+        reason: 'map_journey_arrived_before_review',
+        at: arrivedAt,
+      })
+    }
     tripState.value = {
       ...state,
       status: TRIP_STATUS_ARRIVED,
+      phase: MAP_JOURNEY_PHASE.ARRIVED,
+      checkpoints: advanced.checkpoints,
+      eventCheckpointIds: state.eventCheckpointIds,
+      activeInterruption: null,
+      eventDelaySeconds: state.eventDelaySeconds,
       arrivedAt,
+      pausedAt: 0,
+      remainingSecondsAtPause: 0,
       scheduledPushId: '',
     }
     const destinationPlace = findActivePlaceByText(state.to)
@@ -1497,10 +1823,19 @@ export const useMapStore = defineStore('map', () => {
     appendTripHistory({
       id: `trip_hist_${arrivedAt}`,
       status: 'arrived',
+      journeySchemaVersion: state.journeySchemaVersion,
+      journeyId: state.journeyId,
+      phase: MAP_JOURNEY_PHASE.ARRIVED,
+      checkpoints: advanced.checkpoints,
+      eventCheckpointIds: state.eventCheckpointIds,
+      eventDelaySeconds: state.eventDelaySeconds,
+      totalPausedSeconds: state.totalPausedSeconds,
       from: state.from,
       to: state.to,
       fromLabel: state.fromLabel,
       toLabel: state.toLabel,
+      transportMode: state.transportMode,
+      estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,
       fare: state.fare,
       durationSeconds: state.durationSeconds,
@@ -1510,7 +1845,8 @@ export const useMapStore = defineStore('map', () => {
     })
     clearTripArrivalTimer()
     if (scheduleId) {
-      void cancelTripArrivalPushScheduled({
+      void cancelTripArrivalPushAfterPending({
+        pendingSchedulePromise,
         scheduleId,
         source: 'map_trip_arrived',
       })
@@ -1521,7 +1857,11 @@ export const useMapStore = defineStore('map', () => {
   const scheduleTripArrivalCheck = () => {
     clearTripArrivalTimer()
     const state = normalizeTripState(tripState.value)
-    if (state.status !== TRIP_STATUS_TRAVELING || !state.etaAt) return
+    if (
+      state.status !== TRIP_STATUS_TRAVELING ||
+      state.phase === MAP_JOURNEY_PHASE.PAUSED ||
+      !state.etaAt
+    ) return
     const delayMs = Math.max(250, state.etaAt - Date.now())
     tripArrivalTimer = setTimeout(() => {
       refreshTripState(Date.now())
@@ -2091,6 +2431,23 @@ export const useMapStore = defineStore('map', () => {
     tripForm[endpoint] = typeof detail === 'string' ? detail.trim() : ''
   }
 
+  const setTripTransportMode = (transportMode) => {
+    refreshTripState(Date.now())
+    const state = normalizeTripState(tripState.value)
+    if (state.status !== TRIP_STATUS_IDLE) {
+      return {
+        ok: false,
+        code: 'TRIP_TRANSPORT_LOCKED',
+        transportMode: state.transportMode,
+      }
+    }
+    if (!isMapTransportMode(transportMode)) {
+      return { ok: false, code: 'TRIP_TRANSPORT_INVALID', transportMode: '' }
+    }
+    tripForm.transportMode = normalizeMapTransportMode(transportMode)
+    return { ok: true, transportMode: tripForm.transportMode }
+  }
+
   const applyAddressToTripEndpoint = (addressId, endpoint) => {
     if (endpoint !== 'from' && endpoint !== 'to') return false
     const match = addresses.find((item) => item.id === Number(addressId))
@@ -2166,7 +2523,11 @@ export const useMapStore = defineStore('map', () => {
     const pickupPoint = restaurantContext.address || restaurantContext.name
     const dropoffPoint = current.detail || ''
     const estimate = pickupPoint && dropoffPoint
-      ? computeTripEstimate(pickupPoint, dropoffPoint)
+      ? estimateMapJourney({
+          fromText: pickupPoint,
+          toText: dropoffPoint,
+          transportMode: LEGACY_MAP_TRANSPORT_MODE,
+        })
       : { distanceKm: 0, minutes: 0, fare: 0 }
     const distanceKm = Number.isFinite(restaurantContext.distanceKm) && restaurantContext.distanceKm > 0
       ? Math.round(restaurantContext.distanceKm * 10) / 10
@@ -2219,7 +2580,11 @@ export const useMapStore = defineStore('map', () => {
     const dropoffPoint = context.dropoffPoint || current.detail || ''
     const pickupPoint = context.pickupPoint || context.locationHint || ''
     const estimate = pickupPoint && dropoffPoint
-      ? computeTripEstimate(pickupPoint, dropoffPoint)
+      ? estimateMapJourney({
+          fromText: pickupPoint,
+          toText: dropoffPoint,
+          transportMode: LEGACY_MAP_TRANSPORT_MODE,
+        })
       : { distanceKm: 0, minutes: 0, fare: 0 }
     const etaMinutes = context.etaMinutes > 0
       ? Math.max(1, context.etaMinutes)
@@ -2268,20 +2633,35 @@ export const useMapStore = defineStore('map', () => {
     if (tripState.value.status === TRIP_STATUS_TRAVELING) {
       return { ok: false, code: 'TRIP_ALREADY_IN_PROGRESS' }
     }
+    if (tripState.value.status === TRIP_STATUS_ARRIVED) {
+      return { ok: false, code: 'TRIP_ARRIVAL_PENDING' }
+    }
 
     const from = typeof tripForm.from === 'string' ? tripForm.from.trim() : ''
     const to = typeof tripForm.to === 'string' ? tripForm.to.trim() : ''
     if (!from || !to) return { ok: false, code: 'TRIP_ENDPOINT_EMPTY' }
     if (from === to) return { ok: false, code: 'TRIP_ENDPOINT_SAME' }
+    const transportMode = normalizeMapTransportMode(tripForm.transportMode)
+    if (!transportMode) return { ok: false, code: 'TRIP_TRANSPORT_REQUIRED' }
 
-    const estimate = computeActiveTripEstimate(from, to)
+    const estimate = computeActiveTripEstimate(from, to, transportMode)
     const startedAt = Date.now()
     const etaAt = startedAt + estimate.durationSeconds * 1000
+    const journeyId = createMapJourneyId(startedAt)
 
     tripState.value = {
       status: TRIP_STATUS_TRAVELING,
+      journeySchemaVersion: MAP_JOURNEY_SCHEMA_VERSION,
+      journeyId,
+      phase: MAP_JOURNEY_PHASE.DEPARTED,
+      checkpoints: createMapJourneyCheckpointPlan({ startedAt }),
+      eventCheckpointIds: [],
+      activeInterruption: null,
+      eventDelaySeconds: 0,
       from,
       to,
+      transportMode,
+      estimateVersion: MAP_TRIP_ESTIMATE_VERSION,
       fromLabel: resolveAddressLabel(from, '起点'),
       toLabel: resolveAddressLabel(to, '目的地'),
       distanceKm: estimate.distanceKm,
@@ -2290,6 +2670,10 @@ export const useMapStore = defineStore('map', () => {
       startedAt,
       etaAt,
       arrivedAt: 0,
+      pausedAt: 0,
+      remainingSecondsAtPause: 0,
+      totalPausedSeconds: 0,
+      pushScheduleRevision: 0,
       scheduledPushId: '',
     }
     runtimeNow.value = startedAt
@@ -2301,42 +2685,319 @@ export const useMapStore = defineStore('map', () => {
       ok: true,
       etaAt,
       durationSeconds: estimate.durationSeconds,
+      transportMode,
+      journeyId,
       remotePushPromise,
     }
   }
 
   const cancelTrip = () => {
-    refreshTripState(Date.now())
+    const endedAt = Date.now()
+    refreshTripState(endedAt)
     const state = normalizeTripState(tripState.value)
     if (state.status !== TRIP_STATUS_TRAVELING) return false
-    const endedAt = Date.now()
-    const scheduleId = state.scheduledPushId || (state.startedAt ? createMapTripScheduleId(state.startedAt) : '')
+    const runtime = calculateMapJourneyRuntime(state, endedAt)
+    const pendingSchedulePromise = tripPushSchedulePromise
+    const scheduleId =
+      state.scheduledPushId ||
+      (state.startedAt
+        ? createMapTripScheduleId(state.startedAt, state.pushScheduleRevision)
+        : '')
     appendTripHistory({
       id: `trip_hist_${endedAt}`,
       status: 'cancelled',
+      journeySchemaVersion: state.journeySchemaVersion,
+      journeyId: state.journeyId,
+      phase: MAP_JOURNEY_PHASE.CANCELLED,
+      checkpoints: state.checkpoints,
+      eventCheckpointIds: state.eventCheckpointIds,
+      eventDelaySeconds: state.eventDelaySeconds,
+      totalPausedSeconds: state.totalPausedSeconds,
       from: state.from,
       to: state.to,
       fromLabel: state.fromLabel,
       toLabel: state.toLabel,
+      transportMode: state.transportMode,
+      estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,
       fare: state.fare,
-      durationSeconds: Math.max(
-        1,
-        Math.floor((endedAt - state.startedAt) / 1000),
-      ),
+      durationSeconds: Math.max(1, runtime.elapsedSeconds),
       startedAt: state.startedAt,
       endedAt,
     })
+    if (state.activeInterruption?.proposalId) {
+      getSimulationStore().dismissMapJourneyEventProposal(state.activeInterruption.proposalId, {
+        reason: 'map_journey_cancelled',
+        at: endedAt,
+      })
+    }
     tripState.value = createIdleTripState()
     runtimeNow.value = endedAt
     clearTripArrivalTimer()
     if (scheduleId) {
-      void cancelTripArrivalPushScheduled({
+      void cancelTripArrivalPushAfterPending({
+        pendingSchedulePromise,
         scheduleId,
         source: 'map_trip_cancel',
       })
     }
     return true
+  }
+
+  const pauseTrip = async ({ now = Date.now() } = {}) => {
+    const pausedAt = Math.max(0, toInt(now, Date.now()))
+    refreshTripState(pausedAt)
+    const state = normalizeTripState(tripState.value)
+    if (state.status !== TRIP_STATUS_TRAVELING) {
+      return {
+        ok: false,
+        code:
+          state.status === TRIP_STATUS_ARRIVED
+            ? 'TRIP_ALREADY_ARRIVED'
+            : 'TRIP_NOT_ACTIVE',
+      }
+    }
+    if (state.phase === MAP_JOURNEY_PHASE.PAUSED) {
+      return { ok: false, code: 'TRIP_ALREADY_PAUSED' }
+    }
+
+    const runtime = calculateMapJourneyRuntime(state, pausedAt)
+    if (runtime.remainingSeconds <= 0) {
+      refreshTripState(pausedAt)
+      return { ok: false, code: 'TRIP_ALREADY_ARRIVED' }
+    }
+    const advanced = advanceMapJourneyCheckpoints({
+      checkpoints: state.checkpoints,
+      progress: runtime.progress,
+      startedAt: state.startedAt,
+      durationSeconds: state.durationSeconds,
+      totalPausedSeconds: state.totalPausedSeconds,
+      reachedAt: pausedAt,
+    })
+    const pendingSchedulePromise = tripPushSchedulePromise
+    const scheduleId =
+      state.scheduledPushId ||
+      createMapTripScheduleId(state.startedAt, state.pushScheduleRevision)
+
+    tripState.value = {
+      ...state,
+      phase: MAP_JOURNEY_PHASE.PAUSED,
+      checkpoints: advanced.checkpoints,
+      pausedAt,
+      remainingSecondsAtPause: runtime.remainingSeconds,
+      pushScheduleRevision: state.pushScheduleRevision + 1,
+      scheduledPushId: '',
+    }
+    runtimeNow.value = pausedAt
+    clearTripArrivalTimer()
+
+    const pausePushPromise = cancelTripArrivalPushAfterPending({
+      pendingSchedulePromise,
+      scheduleId,
+      source: 'map_trip_pause',
+    })
+    tripPushPausePromise = pausePushPromise
+    let pushResult
+    try {
+      pushResult = await pausePushPromise
+    } finally {
+      if (tripPushPausePromise === pausePushPromise) tripPushPausePromise = null
+    }
+    return {
+      ok: true,
+      code: 'TRIP_PAUSED',
+      remainingSeconds: runtime.remainingSeconds,
+      pushResult,
+    }
+  }
+
+  const resumeTrip = async ({ now = Date.now() } = {}) => {
+    if (tripPushPausePromise) await tripPushPausePromise
+    const resumedAt = Math.max(0, toInt(now, Date.now()))
+    const state = normalizeTripState(tripState.value)
+    if (state.status !== TRIP_STATUS_TRAVELING) {
+      return {
+        ok: false,
+        code:
+          state.status === TRIP_STATUS_ARRIVED
+            ? 'TRIP_ALREADY_ARRIVED'
+            : 'TRIP_NOT_ACTIVE',
+      }
+    }
+    if (state.phase !== MAP_JOURNEY_PHASE.PAUSED) {
+      return { ok: false, code: 'TRIP_NOT_PAUSED' }
+    }
+
+    const pausedDurationMs = Math.max(0, resumedAt - state.pausedAt)
+    const etaAt = state.etaAt + pausedDurationMs
+    tripState.value = {
+      ...state,
+      phase: resolveMapJourneyPhase(state.checkpoints),
+      etaAt,
+      pausedAt: 0,
+      remainingSecondsAtPause: 0,
+      totalPausedSeconds:
+        state.totalPausedSeconds + Math.floor(pausedDurationMs / 1000),
+      scheduledPushId: '',
+    }
+    runtimeNow.value = resumedAt
+    scheduleTripArrivalCheck()
+    const remotePushPromise = ensureTripArrivalPushScheduled({
+      force: true,
+      source: 'map_trip_resume',
+    })
+    return {
+      ok: true,
+      code: 'TRIP_RESUMED',
+      etaAt,
+      remotePushPromise,
+    }
+  }
+
+  const validateJourneyEventOutcome = (result = {}) => {
+    const state = normalizeTripState(tripState.value)
+    if (state.status !== TRIP_STATUS_TRAVELING) {
+      return { ok: false, code: 'JOURNEY_EVENT_TRIP_NOT_ACTIVE' }
+    }
+    if (!state.activeInterruption) {
+      return { ok: false, code: 'JOURNEY_EVENT_NOT_PENDING' }
+    }
+    if (result.authorization !== 'event_runtime_reviewed') {
+      return { ok: false, code: 'JOURNEY_EVENT_AUTHORIZATION_INVALID' }
+    }
+    if (
+      result.proposalId !== state.activeInterruption.proposalId ||
+      result.eventId !== state.activeInterruption.eventId ||
+      result.journeyId !== state.journeyId ||
+      result.checkpointId !== state.activeInterruption.checkpointId
+    ) {
+      return { ok: false, code: 'JOURNEY_EVENT_SOURCE_STALE' }
+    }
+    if (!Object.values(MAP_JOURNEY_EVENT_OUTCOME).includes(result.outcome)) {
+      return { ok: false, code: 'JOURNEY_EVENT_OUTCOME_UNSUPPORTED' }
+    }
+    const delaySeconds = Math.max(0, toInt(result.delaySeconds, 0))
+    if (
+      (result.outcome === MAP_JOURNEY_EVENT_OUTCOME.CONTINUE && delaySeconds !== 0) ||
+      (result.outcome === MAP_JOURNEY_EVENT_OUTCOME.DELAY &&
+        (delaySeconds <= 0 || delaySeconds > MAP_JOURNEY_EVENT_DELAY_SECONDS))
+    ) {
+      return { ok: false, code: 'JOURNEY_EVENT_DELAY_INVALID' }
+    }
+    return { ok: true, code: 'JOURNEY_EVENT_OUTCOME_VALID', delaySeconds }
+  }
+
+  const applyJourneyEventOutcome = async (result = {}, { now = Date.now() } = {}) => {
+    const appliedAt = Math.max(0, toInt(now, Date.now()))
+    refreshTripState(appliedAt)
+    let validation = validateJourneyEventOutcome(result)
+    if (!validation.ok) return validation
+    const state = normalizeTripState(tripState.value)
+    const delaySeconds = validation.delaySeconds
+    const isPaused = state.phase === MAP_JOURNEY_PHASE.PAUSED
+    const pendingSchedulePromise = tripPushSchedulePromise
+    const scheduleId =
+      state.scheduledPushId ||
+      (state.startedAt
+        ? createMapTripScheduleId(state.startedAt, state.pushScheduleRevision)
+        : '')
+    tripState.value = {
+      ...state,
+      durationSeconds: state.durationSeconds + delaySeconds,
+      etaAt: state.etaAt + delaySeconds * 1000,
+      remainingSecondsAtPause: isPaused
+        ? state.remainingSecondsAtPause + delaySeconds
+        : 0,
+      eventDelaySeconds: state.eventDelaySeconds + delaySeconds,
+      activeInterruption: null,
+    }
+    runtimeNow.value = appliedAt
+    if (!isPaused) scheduleTripArrivalCheck()
+
+    const remotePushPromise =
+      delaySeconds > 0 && !isPaused
+        ? (async () => {
+            await cancelTripArrivalPushAfterPending({
+              pendingSchedulePromise,
+              scheduleId,
+              source: 'map_journey_event_delay',
+            })
+            const latestState = normalizeTripState(tripState.value)
+            if (
+              latestState.status !== TRIP_STATUS_TRAVELING ||
+              latestState.phase === MAP_JOURNEY_PHASE.PAUSED ||
+              latestState.journeyId !== state.journeyId
+            ) {
+              return { ok: false, reason: 'no_active_trip' }
+            }
+            tripState.value = {
+              ...latestState,
+              pushScheduleRevision: latestState.pushScheduleRevision + 1,
+              scheduledPushId: '',
+            }
+            return ensureTripArrivalPushScheduled({
+              force: true,
+              source: 'map_journey_event_delay',
+            })
+          })()
+        : null
+    return {
+      ok: true,
+      code:
+        delaySeconds > 0
+          ? 'JOURNEY_EVENT_DELAY_APPLIED'
+          : 'JOURNEY_EVENT_NO_CHANGE_APPLIED',
+      proposalId: result.proposalId,
+      outcome: result.outcome,
+      delaySeconds,
+      etaAt: tripState.value.etaAt,
+      remotePushPromise,
+    }
+  }
+
+  const recoverJourneyEventInterruption = async ({ now = Date.now() } = {}) => {
+    const recoveredAt = Math.max(0, toInt(now, Date.now()))
+    refreshTripState(recoveredAt)
+    const state = normalizeTripState(tripState.value)
+    if (
+      state.status !== TRIP_STATUS_TRAVELING ||
+      !state.activeInterruption
+    ) {
+      return { ok: false, code: 'JOURNEY_EVENT_NOT_PENDING' }
+    }
+    getSimulationStore().dismissMapJourneyEventProposal(
+      state.activeInterruption.proposalId,
+      {
+        reason: 'map_journey_event_source_unavailable',
+        at: recoveredAt,
+      },
+    )
+    tripState.value = {
+      ...state,
+      activeInterruption: null,
+    }
+    return { ok: true, code: 'JOURNEY_EVENT_NOTICE_CLEARED' }
+  }
+
+  const requestTripTransition = async (transition, options = {}) => {
+    if (transition === 'pause') return pauseTrip(options)
+    if (transition === 'resume') return resumeTrip(options)
+    if (transition === 'cancel') {
+      const state = normalizeTripState(tripState.value)
+      if (state.status !== TRIP_STATUS_TRAVELING) {
+        return {
+          ok: false,
+          code:
+            state.status === TRIP_STATUS_ARRIVED
+              ? 'TRIP_ALREADY_ARRIVED'
+              : 'TRIP_NOT_ACTIVE',
+        }
+      }
+      return cancelTrip()
+        ? { ok: true, code: 'TRIP_CANCELLED' }
+        : { ok: false, code: 'TRIP_TRANSITION_REJECTED' }
+    }
+    return { ok: false, code: 'TRIP_TRANSITION_UNSUPPORTED' }
   }
 
   const acknowledgeTripArrival = () => {
@@ -2449,6 +3110,7 @@ export const useMapStore = defineStore('map', () => {
     const normalizedTripForm = normalizeTripForm(source.tripForm)
     tripForm.from = normalizedTripForm.from
     tripForm.to = normalizedTripForm.to
+    tripForm.transportMode = normalizedTripForm.transportMode
 
     tripState.value = normalizeTripState(source.tripState)
 
@@ -2467,7 +3129,11 @@ export const useMapStore = defineStore('map', () => {
     runtimeNow.value = Date.now()
     refreshTripState(runtimeNow.value)
     scheduleTripArrivalCheck()
-    if (normalizeTripState(tripState.value).status === TRIP_STATUS_TRAVELING) {
+    const restoredTripState = normalizeTripState(tripState.value)
+    if (
+      restoredTripState.status === TRIP_STATUS_TRAVELING &&
+      restoredTripState.phase !== MAP_JOURNEY_PHASE.PAUSED
+    ) {
       void ensureTripArrivalPushScheduled({
         source: 'map_trip_restore',
       })
@@ -2508,8 +3174,27 @@ export const useMapStore = defineStore('map', () => {
     addresses: addresses.map((item) => ({ ...item })),
     currentLocation: { ...currentLocation.value },
     tripForm: { ...tripForm },
-    tripState: { ...tripState.value },
-    tripHistory: tripHistory.value.map((item) => ({ ...item })),
+    tripState: {
+      ...tripState.value,
+      checkpoints: Array.isArray(tripState.value.checkpoints)
+        ? tripState.value.checkpoints.map((checkpoint) => ({ ...checkpoint }))
+        : [],
+      eventCheckpointIds: Array.isArray(tripState.value.eventCheckpointIds)
+        ? [...tripState.value.eventCheckpointIds]
+        : [],
+      activeInterruption: tripState.value.activeInterruption
+        ? { ...tripState.value.activeInterruption }
+        : null,
+    },
+    tripHistory: tripHistory.value.map((item) => ({
+      ...item,
+      checkpoints: Array.isArray(item.checkpoints)
+        ? item.checkpoints.map((checkpoint) => ({ ...checkpoint }))
+        : [],
+      eventCheckpointIds: Array.isArray(item.eventCheckpointIds)
+        ? [...item.eventCheckpointIds]
+        : [],
+    })),
     mapCalendarReminderPreferences: normalizeMapCalendarReminderPreferences(
       mapCalendarReminderPreferences.value,
     ),
@@ -2526,6 +3211,8 @@ export const useMapStore = defineStore('map', () => {
     activeMapPackId.value = DEFAULT_MAP_PACK_ID
     mapVisualSettings.value = createDefaultMapVisualSettings()
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
+    journeyCheckpointEventEvaluationEnabled = false
+    journeyEventRandomValueOverride = undefined
     runtimeNow.value = Date.now()
   }
 
@@ -2586,14 +3273,25 @@ export const useMapStore = defineStore('map', () => {
         typeof systemSettings.pushServerUrl === 'string' ? systemSettings.pushServerUrl : '',
         typeof systemSettings.pushDeviceId === 'string' ? systemSettings.pushDeviceId : '',
         normalizeTripState(tripState.value).status,
+        normalizeTripState(tripState.value).phase,
         normalizeTripState(tripState.value).startedAt,
         normalizeTripState(tripState.value).etaAt,
+        normalizeTripState(tripState.value).pushScheduleRevision,
       ]
     },
     () => {
       if (!hasFinishedStorageHydration.value) return
       const state = normalizeTripState(tripState.value)
       if (state.status !== TRIP_STATUS_TRAVELING) return
+      if (state.phase === MAP_JOURNEY_PHASE.PAUSED) {
+        if (state.scheduledPushId) {
+          void cancelTripArrivalPushScheduled({
+            scheduleId: state.scheduledPushId,
+            source: 'map_trip_paused_sync',
+          })
+        }
+        return
+      }
       if (canUseTripArrivalRealPush()) {
         void ensureTripArrivalPushScheduled({
           source: 'map_trip_runtime_sync',
@@ -2645,6 +3343,7 @@ export const useMapStore = defineStore('map', () => {
     setCurrentLocation,
     setCurrentLocationByAddressId,
     setTripEndpoint,
+    setTripTransportMode,
     applyAddressToTripEndpoint,
     addAddress,
     updateAddress,
@@ -2653,6 +3352,12 @@ export const useMapStore = defineStore('map', () => {
     buildDeliveryEventMapHandoff,
     startTrip,
     cancelTrip,
+    pauseTrip,
+    resumeTrip,
+    validateJourneyEventOutcome,
+    applyJourneyEventOutcome,
+    recoverJourneyEventInterruption,
+    requestTripTransition,
     acknowledgeTripArrival,
     confirmMapCalendarReminder,
     setMapCalendarReminderPinned,
@@ -2681,6 +3386,8 @@ export const useMapStore = defineStore('map', () => {
     createBackupSnapshotAsync,
     resetTripRuntimeForTesting,
     setMapAiProviderRunnerForTesting,
+    setJourneyCheckpointEventEvaluationEnabled,
+    setJourneyEventRandomValueForTesting,
     saveNow,
   }
 })

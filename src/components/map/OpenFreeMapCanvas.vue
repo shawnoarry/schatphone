@@ -29,7 +29,7 @@ const props = defineProps({
   },
   allowPinPlacement: {
     type: Boolean,
-    default: true,
+    default: false,
   },
 })
 
@@ -110,7 +110,11 @@ const createMarkerElement = (pin, pending = false) => {
   label.className = 'openfreemap-marker-label'
   label.textContent = labelText
   button.append(marker, label)
-  if (!pending) {
+  if (!pending && props.allowPinPlacement) {
+    button.classList.add('is-placement-pass-through')
+    button.tabIndex = -1
+    button.setAttribute('aria-hidden', 'true')
+  } else if (!pending) {
     button.addEventListener('click', (event) => {
       event.stopPropagation()
       emit('select-pin', pin)
@@ -233,7 +237,7 @@ const initializeMap = async () => {
 onMounted(initializeMap)
 
 watch(
-  () => [props.pins, props.pendingPosition],
+  () => [props.pins, props.pendingPosition, props.allowPinPlacement],
   () => renderMarkers(),
   { deep: true },
 )
@@ -457,6 +461,7 @@ onBeforeUnmount(() => {
 }
 
 :global(.openfreemap-marker-button.is-pending) { --map-marker-tone: #d9a514; pointer-events: none; }
+:global(.openfreemap-marker-button.is-placement-pass-through) { pointer-events: none; }
 :global(.openfreemap-marker-button.is-pending .openfreemap-marker-shape) { animation: openfreemap-pin-pulse 1.4s ease-in-out infinite; }
 
 @keyframes openfreemap-pin-pulse {

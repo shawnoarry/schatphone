@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-07-15
+Updated: 2026-07-31
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -79,6 +79,18 @@ Possible sources:
 - `ai_assisted`
 - `system`
 
+### Map Journey Checkpoint Source
+
+Map journey/exploration events use a module-owned checkpoint as their trigger boundary. Map submits a bounded canonical snapshot only when the Map Journey Runtime reaches an explicit checkpoint. Event Runtime evaluates templates, deterministic/random gates, cooldowns, caps, permissions, and review policy, then returns a requested outcome through the Map adapter.
+
+The checkpoint source is not a timer tick. Event Runtime cannot mutate the journey, transport snapshot, place, pin, arrival, or cancellation record directly, and a journey must remain able to complete without an event. MJE-3 implements the first narrow adapter for completed `en_route` and `near_arrival` checkpoints while Map is mounted; a pending proposal never pauses Map Journey, Map validates the reviewed result, and only the bounded 120-second delay changes ETA. The staged source contract is defined in `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`.
+
+### Agenda Journey And Activity Session Checkpoint Source
+
+Future Agenda Journey and Activity Session events use explicit execution checkpoints such as step start, a duration milestone, near completion, completion, or deadline reconciliation. The source owner submits only a bounded snapshot with stable Calendar, Agenda Journey step, Activity Session, and optional Map evidence references. Event Runtime evaluates eligibility, deterministic/random gates, cooldowns, caps, permissions, interaction policy, and provenance; Agenda Journey and every downstream domain owner validate the requested result before changing their own truth.
+
+An Activity Session's canonical progress comes from absolute timestamps rather than accumulated timer ticks. Event Runtime must not evaluate on each visual countdown tick, and elapsed time or Map arrival alone cannot prove completion of a rehearsal, broadcast, performance, class, meeting, or other non-travel activity. This collaboration is architecture-only under `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`; no Agenda Journey or Activity Session adapter is implemented.
+
 ### Event Engine
 
 The shared module that:
@@ -147,9 +159,21 @@ Module event permissions decide which app lanes may receive runtime events. They
 Current visible pilot lanes in Settings:
 
 - `Chat 角色主动联系 / Chat role contact events`;
-- `外卖安全事件 / Food Delivery safety events`.
+- `外卖安全事件 / Food Delivery safety events`;
+- `地图行程途中事件 / Map journey events`.
 
 Adding a new event-enabled module must update both the runtime registry and the Settings copy so users are not surprised by an invisible event lane.
+
+### Interaction And Automatic Resolution
+
+Event eligibility and event presentation are separate decisions. The shared Mini Scene mode controls how an eligible event is presented:
+
+- `off` suppresses the popup but does not disable eligible deterministic or random simulation; only an owner-approved low-impact outcome may resolve automatically;
+- `text` presents an accessible text event and bounded choices where allowed;
+- `interactive_html` uses the reviewed sandboxed Presenter with mandatory text fallback;
+- `unconfigured` behaves as `off` until the user chooses a mode.
+
+High-impact money, asset, relationship, identity, communication, or schedule changes keep their existing confirmation or World Hub review boundary in every mode. Browser/PWA suspension may reconcile overdue checkpoints idempotently after resume, but the runtime must not promise an exact interactive popup while the app is fully closed or OS-suspended.
 
 ## 4. Proposed File Layout
 
@@ -259,8 +283,11 @@ Example engine result:
 
 ### Map
 
-- owns location, route, distance, ETA, area context, and trip simulation
+- owns location, route, distance, ETA, area context, canonical journey/exploration records, checkpoint transitions, and trip presentation
 - may provide context to Food Delivery, Shopping logistics, Assets, and Calendar
+- submits a bounded snapshot only at completed MJE-2 checkpoints while Map is mounted and validates the reviewed Event Runtime result
+- currently applies only no ETA change or a bounded 120-second delay; pending review remains non-blocking, and destination change plus event-driven cancellation remain unimplemented
+- keeps a valid no-event journey path; checkpoint eligibility never runs on every animation tick
 - must not own orders, Wallet ledgers, or asset records
 
 ### Chat
@@ -274,6 +301,14 @@ Example engine result:
 - Calendar owns confirmed schedule meaning
 - Reminders owns raw cue and follow-up intake
 - the event engine may create candidates or reminder-type cues later, but schedule confirmation stays in the proper owner
+
+### Agenda Journey / Activity Session
+
+- Agenda Journey owns today/near-term execution steps, their state, completion evidence references, and outcome summaries
+- Activity Session owns canonical activity timing and session checkpoint truth through absolute timestamps
+- Event Runtime may evaluate bounded snapshots only at explicit checkpoints and owns eligibility, cooldown/cap, proposal/review, automatic-resolution policy, provenance, and event logs
+- Agenda Journey and downstream owners validate requested results; Event Runtime does not write journey state, Calendar history, Map arrival, relationship truth, Wallet ledgers, Assets, identity, or world state directly
+- no Agenda Journey or Activity Session runtime is implemented by this architecture contract
 
 ### Wallet And Assets
 
@@ -397,6 +432,7 @@ Already landed:
 - `src/lib/simulation/event-engine.js` handles eligibility, random gates, cooldowns, daily caps, adapter execution, and event logging
 - `src/lib/simulation/event-tick-runner.js` can now run both the Food Delivery random pilot and the Chat runtime greeting pilot, with tick-level cooldown/daily caps
 - `src/lib/simulation/adapters/food-delivery-events.js` is the first real module adapter
+- `src/lib/simulation/adapters/map-journey-events.js` provides the first Map journey checkpoint adapter: local daily/sci-fi/apocalypse variants, permission and Surprise Mode checks, deterministic random selection, cooldown/cap, persistent proposal provenance, and a Map-owned validated return path
 - World Hub's Chat social proposal panel explains source, trigger policy, and ownership boundaries for AI output and foreground/session runtime proposals
 - Settings backup/import/rollback and storage diagnostics include `store:simulation`
 

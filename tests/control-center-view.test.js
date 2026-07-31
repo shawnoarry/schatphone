@@ -194,6 +194,18 @@ describe('ControlCenterView', () => {
       reason: 'cooldown_active',
       at: Date.now() - 1000,
     })
+    simulationStore.recordEventLog({
+      eventId: 'map.journey.route_condition.v1',
+      moduleKey: 'map',
+      targetId: 'map_journey_review_1',
+      adapterKey: 'map.journey.propose_interruption',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.RANDOM,
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      reason: 'eligible_random_passed',
+      variantId: 'map.journey.route_condition.daily.brief_slowdown.v1',
+      worldContextId: 'world_context_daily',
+      at: Date.now() - 500,
+    })
 
     const eventLogCountBeforeMount = simulationStore.eventLogCount
     const { wrapper } = await mountControlCenterView()
@@ -212,6 +224,15 @@ describe('ControlCenterView', () => {
       'Adapter boundary: shopping.add_logistics_event',
     )
     expect(simulationStore.eventLogCount).toBe(eventLogCountBeforeMount)
+
+    await wrapper.get('[data-testid="control-center-event-log-module-filter"]').setValue('map')
+    await flushUi()
+    expect(wrapper.get('[data-testid="control-center-event-log-panel"]').text()).toContain(
+      'Map journey route update',
+    )
+    expect(wrapper.get('[data-testid="control-center-event-log-detail"]').text()).toContain(
+      'Adapter boundary: map.journey.propose_interruption',
+    )
 
     wrapper.unmount()
   })

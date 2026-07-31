@@ -93,7 +93,7 @@ const WORLD_HUB_RUNTIME_MODULES = Object.freeze([
   {
     key: 'map',
     label: 'Map',
-    description: 'Reads delivery location and ETA context without auto trips.',
+    description: 'Audits low-impact journey proposals at explicit Map checkpoints.',
   },
   {
     key: 'chat',
@@ -248,6 +248,9 @@ const simulationEventReasonLabel = (reason = '') => {
   if (reason === 'adapter_missing') return t('Event adapter is missing', 'Event adapter is missing')
   if (reason === 'adapter_threw') return t('Event adapter threw an error', 'Event adapter threw an error')
   if (reason === 'adapter_returned_empty') return t('Adapter returned no result', 'Adapter returned no result')
+  if (reason === 'checkpoint_not_eligible') return t('Journey checkpoint is not eligible', 'Journey checkpoint is not eligible')
+  if (reason === 'checkpoint_already_evaluated') return t('Journey checkpoint already evaluated', 'Journey checkpoint already evaluated')
+  if (reason === 'map_journey_outcome_applied') return t('Map applied the reviewed journey outcome', 'Map applied the reviewed journey outcome')
   return reason || t('No reason recorded', 'No reason recorded')
 }
 
@@ -271,6 +274,8 @@ const simulationEventLabel = (eventId = '') => {
     return t('Shopping pickup point changed', 'Shopping pickup point changed')
   if (eventId === 'shopping.logistics.international_delay.v1')
     return t('International logistics delay', 'International logistics delay')
+  if (eventId === 'map.journey.route_condition.v1')
+    return t('Map journey route update', 'Map journey route update')
   return eventId || t('Unknown event', 'Unknown event')
 }
 

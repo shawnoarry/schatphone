@@ -2,7 +2,7 @@
 
 Updated: 2026-07-31
 
-This file defines ownership boundaries for Map, Calendar, Reminders, and Phone-like callback support.
+This file defines ownership boundaries for Map, Calendar, future Agenda Journey/Activity Session, Reminders, and Phone-like callback support.
 
 ## 1. Map
 
@@ -10,12 +10,14 @@ Map owns:
 
 - route
 - trip
+- Map-owned journey planning, transport snapshot, lifecycle, and checkpoint transitions as their staged runtime lands
 - location
 - ETA and travel context
 - per-world local map-pack binding, recommendation fallback, and version identity
 - custom map-pack metadata that references a Gallery-owned source image
 - player-created places, detailed player-pin administration, and canonical real/fantasy coordinates
 - deterministic local distance estimation when route planning is absent
+- passive Footprints progression and later confirmed exploration/discovery records
 
 Map does not own:
 
@@ -24,6 +26,7 @@ Map does not own:
 - wallet ledgers
 - confirmed schedule meaning
 - relationship truth
+- journey-event eligibility, random selection, cooldowns, caps, proposal review, or Event Runtime logs
 - Mini Scene world-profile resolution, regex execution, artifacts, or presenters
 - device-location truth, live traffic, navigation, or third-party POI truth
 - commercial map-provider billing or provider-specific place identity
@@ -31,7 +34,13 @@ Map does not own:
 
 Map may later request a Mini Scene from a confirmed trip/location event using canonical Map facts. Its per-module popup mode remains a user setting, and any interaction that requests a route/location change returns to Map validation.
 
-Everyday place use does not mutate coordinates by dragging. Map Settings owns explicit coordinate reselection for player pins; map-pack places remain versioned read-only content. Seoul V1's curated real-place catalog is a dated local snapshot with stable Map IDs and provider-neutral coordinates, not a live POI mirror. `MapSceneCanvas` is the renderer seam: OpenFreeMap + MapLibre renders geographic packs, while `LocalMapCanvas` renders fictional/custom packs and the geographic fallback. External style, network, or WebGL startup failure before the first ready state cannot mutate saved place, trip, world-binding, or coordinate truth, and local interactions remain available through the fallback. The renderer cannot load POI, public-transit, or route services or make provider identifiers canonical Map identity. The old `/map/labs/kakao-compare` path is compatibility-only and redirects to `/map`.
+Everyday place use does not mutate coordinates by dragging. Map Settings owns explicit coordinate reselection for player pins; map-pack places remain versioned read-only content. Coordinate creation/reselection is an exclusive interaction mode: saved markers become pointer-transparent until the new coordinate is accepted or cancelled, and label, description, category, and existing coordinate drafts remain editor-owned throughout the round trip. Seoul V1's curated real-place catalog is a dated local snapshot with stable Map IDs and provider-neutral coordinates, not a live POI mirror. `MapSceneCanvas` is the renderer seam: OpenFreeMap + MapLibre renders geographic packs, while `LocalMapCanvas` renders fictional/custom packs and the geographic fallback. External style, network, or WebGL startup failure before the first ready state cannot mutate saved place, trip, world-binding, or coordinate truth, and local interactions remain available through the fallback. The renderer cannot load POI, public-transit, or route services or make provider identifiers canonical Map identity. The old `/map/labs/kakao-compare` path is compatibility-only and redirects to `/map`.
+
+The everyday Map surface uses progressive disclosure. The idle state keeps the map, destination search, a non-GPS canonical role-position focus when available, and Places primary; explicit place creation and the full Places-and-Pins manager are grouped inside Places rather than duplicated as outer controls. While traveling, role-position focus hides and a persistent primary journey card shows route, phase, progress, remaining time, ETA, and pending route updates; arrived journeys retain the card for settlement. This journey state does not live in the compact map-tool stack. A route card requires explicit destination intent, an active/arrived trip, or an explicit transit-app context. Search is a current-world local-pin index: only positioned pack/player places can appear as matches, selecting a result focuses its canonical coordinate and opens place detail, and unmatched text remains a free-form destination without invoking POI/geocoding services. Place details require an explicit marker or search-result selection, and fictional faction legends start collapsed. Player-pin category identity uses one shared icon/tone contract across renderers and Map surfaces; Map Settings exposes the guide for the six editable categories while map-pack-only categories and faction tones remain package-owned. Store-level seeded trip defaults remain compatible but do not create visible destination intent by themselves.
+
+Map Journey, Footprints, and Exploration have distinct meanings. A Map Journey goes to a known destination. Footprints passively summarize completed travel/exploration through history, familiarity, points, and area activity. Active Exploration spends time in an area and may produce an explicitly accepted discovery. The current Explore dashboard implements only the Footprints foundation; unlocking an area cannot imply that active exploration or generated discoveries already exist.
+
+The Map Journey Runtime is a Map-owned domain Module, not the future Agenda Journey app. Transport choice belongs to Map Journey planning, and Map Settings may later own versioned static transport modes/lines/stations/topology. MJE-2 keeps planning form state separate from persisted active-journey truth, adds only deterministic duration-based checkpoints, and keeps pause/resume/cancel validation in Map; it is user-accepted in the current uncommitted tree. MJE-3 evaluates a bounded Map snapshot only when a completed `en_route` or `near_arrival` checkpoint is observed while Map is mounted. Event Runtime owns eligibility, cooldown/cap, proposal/review, provenance, and logs; Map validates exact result lineage and currently applies only no ETA change or a bounded 120-second delay. A pending proposal is reviewable but never pauses Map Journey, stops automatic arrival, or opens detail automatically. Map persists only evaluated checkpoint IDs, one pending-review compatibility reference, and cumulative event-delay seconds; Event Runtime proposal copy/audit do not become Map truth. Journey schema V3 migrates V2 event-blocked journeys back to active timing without losing remaining time or proposal lineage. A future Agenda Journey step may request Map travel and retain stable evidence, but cannot write Map Journey truth or make arrival prove completion of a non-travel activity. Destination change, event-driven cancellation, high-impact owner mutation, and active exploration remain unimplemented. A future Transit app may present the same static or live network only after it has independent utility and must consume, not duplicate, Map Journey truth.
 
 ## 2. Calendar
 
@@ -43,6 +52,8 @@ Calendar owns:
 - real push scheduling and event-time edits
 - relationship-fact review for confirmed schedule events
 
+Calendar is a visible Home app, not only an internal scheduling concept. Its current frontend is a list-first confirmed-event surface. The accepted target adds Month, Week, Agenda, selected-day, multi-day-span, and event-authoring information architecture only through a later user-approved CJA-1 slice. `日程 / Agenda` is a Calendar view, not another long-range planning app.
+
 Calendar does not own:
 
 - all cue queues
@@ -51,10 +62,24 @@ Calendar does not own:
 - runtime-control semantics
 - World Pack reservation rules or event judgment
 - Mini Scene world-profile resolution, regex execution, artifacts, or presenters
+- Agenda Journey execution state
+- Map Journey or Activity Session truth
+- Schedule Orchestrator materialization state
+- generic Event Runtime or Narrative Timeline records
 
 Calendar may later request a Mini Scene from a confirmed event using canonical schedule, time, place, participant, and push-state facts. Generation or presentation failure cannot change the confirmed event, and an interaction that requests an event edit returns to Calendar validation.
 
-## 3. Reminders
+## 3. Agenda Journey, Schedule Orchestrator, And Activity Session
+
+Agenda Journey later owns short-range day/near-term journey instances, ordered or flexible activity steps, execution state, completion/miss/skip/cancel state, evidence references, and outcome summaries.
+
+The hidden Schedule Orchestrator later owns only idempotent Calendar-to-Agenda materialization and deadline coordination. It does not become a Home app and cannot copy or mutate Calendar, Map, Event Runtime, relationship, Wallet, Assets, profile, or world truth.
+
+Activity Session later owns timestamp-based duration, pause policy, session checkpoints, and suspend/reopen reconciliation for one Agenda Journey step. It does not select events or write broad values. A minimized session continues; an OS-suspended or closed browser/PWA cannot promise an exact interactive popup.
+
+No Agenda Journey route/store, Schedule Orchestrator implementation, Activity Session, Narrative Timeline store, persistence field, or migration is implemented by this accepted documentation direction.
+
+## 4. Reminders
 
 Reminders owns:
 
@@ -69,7 +94,7 @@ Reminders does not own:
 - confirmed schedule/date identity
 - runtime-control semantics
 
-## 4. Phone
+## 5. Phone
 
 Phone owns:
 
@@ -82,7 +107,7 @@ Phone does not own:
 - Calendar schedule truth
 - relationship truth
 
-## 5. Handoff Rule
+## 6. Handoff Rule
 
 - Reminders can promote something into Calendar when it becomes a real confirmed schedule/date item.
 - Map can provide route/location context, but does not absorb schedule ownership.
@@ -91,3 +116,6 @@ Phone does not own:
 - World Pack can provide `reservation -> Calendar` labels/context for Calendar, including confirmed `reservation_board` appBindings, but it cannot move schedule records or push decisions out of Calendar.
 - the active world identifies which per-world Map binding to resolve; Map owns that binding and falls back to its reviewed recommendation table when no override exists.
 - Mini Scene request Adapters may hand canonical Map/Calendar facts to the shared Module, but popup presentation never becomes schedule/route truth and cannot bypass existing confirmation or edit rules.
+- the Schedule Orchestrator may later link a confirmed Calendar event to an Agenda Journey by stable IDs; Calendar remains planned truth and Agenda Journey remains execution truth.
+- an Agenda Journey may consume Map arrival/cancellation as evidence and Activity Session duration as time evidence; it must validate completion through its own step contract.
+- Event Runtime owns event eligibility and audit, while Agenda Journey, Map, Calendar, and downstream owners validate their own requested transitions or effects.

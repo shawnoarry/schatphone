@@ -4,6 +4,14 @@ import { useMapStore } from '../src/stores/map'
 import { useSystemStore } from '../src/stores/system'
 import * as pushLib from '../src/lib/push'
 
+const startTripWithMode = (store, transportMode = 'hired_vehicle') => {
+  expect(store.setTripTransportMode(transportMode)).toMatchObject({
+    ok: true,
+    transportMode,
+  })
+  return store.startTrip()
+}
+
 describe('map trip baseline loop', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -17,14 +25,40 @@ describe('map trip baseline loop', () => {
     vi.restoreAllMocks()
   })
 
+  test('requires transport before departure', () => {
+    const store = useMapStore()
+    store.setTripEndpoint('from', 'Home')
+    store.setTripEndpoint('to', 'Office')
+
+    expect(store.startTrip()).toMatchObject({
+      ok: false,
+      code: 'TRIP_TRANSPORT_REQUIRED',
+    })
+    expect(store.tripState.status).toBe('idle')
+    expect(store.tripHistory).toHaveLength(0)
+  })
+
   test('starts trip and auto-arrives by system time timer', () => {
     const store = useMapStore()
     store.setTripEndpoint('from', '首尔站')
     store.setTripEndpoint('to', '清潭洞')
 
-    const started = store.startTrip()
+    const started = startTripWithMode(store, 'walk')
     expect(started.ok).toBe(true)
     expect(store.tripState.status).toBe('traveling')
+    expect(store.tripState).toMatchObject({
+      transportMode: 'walk',
+      estimateVersion: 1,
+      journeySchemaVersion: 3,
+      phase: 'departed',
+    })
+    expect(store.tripState.journeyId).toMatch(/^map_journey_/)
+    expect(store.tripState.checkpoints.map((checkpoint) => checkpoint.id)).toEqual([
+      'departure',
+      'en_route',
+      'near_arrival',
+      'arrival',
+    ])
 
     const durationMs = Math.max(1, Number(store.tripState.durationSeconds || 0)) * 1000
     vi.advanceTimersByTime(durationMs + 1000)
@@ -32,6 +66,14 @@ describe('map trip baseline loop', () => {
     expect(store.tripState.status).toBe('arrived')
     expect(store.currentLocation.detail).toBe('清潭洞')
     expect(store.tripHistory[0]?.status).toBe('arrived')
+    expect(store.tripHistory[0]).toMatchObject({
+      transportMode: 'walk',
+      estimateVersion: 1,
+      journeySchemaVersion: 3,
+      journeyId: store.tripState.journeyId,
+      phase: 'arrived',
+    })
+    expect(store.tripHistory[0]?.checkpoints.every((checkpoint) => checkpoint.status === 'completed')).toBe(true)
     expect(store.tripHistory[0]?.rewardPoints).toBeGreaterThan(0)
     expect(store.tripHistory[0]?.eventKind).toBeTruthy()
     expect(store.routeFamiliarity[0]?.completedCount).toBe(1)
@@ -48,6 +90,138 @@ describe('map trip baseline loop', () => {
     expect(store.tripState.status).toBe('idle')
   })
 
+  test('advances ordered checkpoints across a large runtime step without repeating them', () => {
+    const store = useMapStore()
+    store.setTripEndpoint('from', 'Home')
+    store.setTripEndpoint('to', 'Office')
+    expect(startTripWithMode(store, 'private_vehicle').ok).toBe(true)
+
+    const startedAt = store.tripState.startedAt
+    const durationSeconds = store.tripState.durationSeconds
+    store.tickTripRuntime(startedAt + Math.ceil(durationSeconds * 0.85) * 1000)
+
+    expect(store.tripState.phase).toBe('near_arrival')
+    expect(store.tripState.checkpoints.map((checkpoint) => checkpoint.status)).toEqual([
+      'completed',
+      'completed',
+      'completed',
+      'pending',
+    ])
+    const reachedAt = store.tripState.checkpoints.map((checkpoint) => checkpoint.reachedAt)
+
+    store.tickTripRuntime(startedAt + Math.ceil(durationSeconds * 0.9) * 1000)
+    expect(store.tripState.checkpoints.map((checkpoint) => checkpoint.reachedAt)).toEqual(reachedAt)
+  })
+
+  test('pauses elapsed time, restores the ETA on resume, and then arrives normally', async () => {
+    const store = useMapStore()
+    store.setTripEndpoint('from', 'Home')
+    store.setTripEndpoint('to', 'Office')
+    expect(startTripWithMode(store, 'public_transit').ok).toBe(true)
+
+    const elapsedSeconds = Math.max(1, Math.floor(store.tripState.durationSeconds * 0.45))
+    vi.advanceTimersByTime(elapsedSeconds * 1000)
+    const etaBeforePause = store.tripState.etaAt
+    const paused = await store.pauseTrip()
+    const frozenRemaining = store.tripRuntime.remainingSeconds
+
+    expect(paused).toMatchObject({ ok: true, code: 'TRIP_PAUSED' })
+    expect(store.tripState).toMatchObject({
+      status: 'traveling',
+      phase: 'paused',
+      remainingSecondsAtPause: frozenRemaining,
+      scheduledPushId: '',
+    })
+
+    vi.advanceTimersByTime(10 * 60 * 1000)
+    store.tickTripRuntime(Date.now())
+    expect(store.tripState.status).toBe('traveling')
+    expect(store.tripState.phase).toBe('paused')
+    expect(store.tripRuntime.remainingSeconds).toBe(frozenRemaining)
+
+    const resumed = await store.resumeTrip()
+    await resumed.remotePushPromise
+    expect(resumed).toMatchObject({ ok: true, code: 'TRIP_RESUMED' })
+    expect(store.tripState.phase).not.toBe('paused')
+    expect(store.tripState.etaAt).toBe(etaBeforePause + 10 * 60 * 1000)
+    expect(store.tripState.totalPausedSeconds).toBe(10 * 60)
+
+    vi.advanceTimersByTime(Math.max(1, frozenRemaining - 1) * 1000)
+    expect(store.tripState.status).toBe('traveling')
+    vi.advanceTimersByTime(2000)
+    expect(store.tripState.status).toBe('arrived')
+    expect(store.tripHistory[0]?.phase).toBe('arrived')
+  })
+
+  test('restores a paused journey without auto-arrival and allows cancellation', async () => {
+    const storeA = useMapStore()
+    storeA.setTripEndpoint('from', 'Home')
+    storeA.setTripEndpoint('to', 'Studio')
+    expect(startTripWithMode(storeA, 'walk').ok).toBe(true)
+    vi.advanceTimersByTime(60_000)
+    expect((await storeA.pauseTrip()).ok).toBe(true)
+
+    const snapshot = storeA.createBackupSnapshot()
+    const journeyId = snapshot.tripState.journeyId
+    const frozenRemaining = snapshot.tripState.remainingSecondsAtPause
+    setActivePinia(createPinia())
+    const storeB = useMapStore()
+    expect(storeB.restoreFromBackup({ map: snapshot })).toBe(true)
+
+    expect(storeB.tripState).toMatchObject({
+      status: 'traveling',
+      phase: 'paused',
+      journeyId,
+      remainingSecondsAtPause: frozenRemaining,
+      scheduledPushId: '',
+    })
+    vi.advanceTimersByTime((frozenRemaining + 600) * 1000)
+    storeB.tickTripRuntime(Date.now())
+    expect(storeB.tripState.status).toBe('traveling')
+    expect(storeB.tripRuntime.remainingSeconds).toBe(frozenRemaining)
+
+    expect(storeB.cancelTrip()).toBe(true)
+    expect(storeB.tripState.status).toBe('idle')
+    expect(storeB.tripHistory[0]).toMatchObject({
+      status: 'cancelled',
+      phase: 'cancelled',
+      journeySchemaVersion: 3,
+      journeyId,
+      rewardPoints: 0,
+    })
+    expect(storeB.mapAreaFeedback).toHaveLength(0)
+    expect(storeB.mapCalendarReminders).toHaveLength(0)
+  })
+
+  test('fails closed for illegal journey transitions', async () => {
+    const store = useMapStore()
+    expect(await store.requestTripTransition('pause')).toEqual({
+      ok: false,
+      code: 'TRIP_NOT_ACTIVE',
+    })
+    expect(await store.requestTripTransition('warp')).toEqual({
+      ok: false,
+      code: 'TRIP_TRANSITION_UNSUPPORTED',
+    })
+
+    store.setTripEndpoint('from', 'Home')
+    store.setTripEndpoint('to', 'Office')
+    expect(startTripWithMode(store).ok).toBe(true)
+    expect(await store.requestTripTransition('resume')).toEqual({
+      ok: false,
+      code: 'TRIP_NOT_PAUSED',
+    })
+    expect((await store.requestTripTransition('pause')).code).toBe('TRIP_PAUSED')
+    expect(await store.requestTripTransition('pause')).toEqual({
+      ok: false,
+      code: 'TRIP_ALREADY_PAUSED',
+    })
+    expect(await store.requestTripTransition('cancel')).toEqual({
+      ok: true,
+      code: 'TRIP_CANCELLED',
+    })
+  })
+
   test('builds route familiarity from repeated completed trips', () => {
     const store = useMapStore()
     const completeCurrentTrip = () => {
@@ -58,13 +232,13 @@ describe('map trip baseline loop', () => {
 
     store.setTripEndpoint('from', 'Home')
     store.setTripEndpoint('to', 'Office')
-    expect(store.startTrip().ok).toBe(true)
+    expect(startTripWithMode(store).ok).toBe(true)
     completeCurrentTrip()
     expect(store.acknowledgeTripArrival()).toBe(true)
 
     store.setTripEndpoint('from', 'Home')
     store.setTripEndpoint('to', 'Office')
-    expect(store.startTrip().ok).toBe(true)
+    expect(startTripWithMode(store).ok).toBe(true)
     completeCurrentTrip()
 
     const route = store.routeFamiliarity.find((item) => item.from === 'Home' && item.to === 'Office')
@@ -175,16 +349,27 @@ describe('map trip baseline loop', () => {
     const store = useMapStore()
     store.setTripEndpoint('from', '公司')
     store.setTripEndpoint('to', '练习室')
-    expect(store.startTrip().ok).toBe(true)
+    expect(startTripWithMode(store).ok).toBe(true)
 
     const cancelled = store.cancelTrip()
     expect(cancelled).toBe(true)
     expect(store.tripState.status).toBe('idle')
     expect(store.tripHistory[0]?.status).toBe('cancelled')
+    expect(store.tripHistory[0]?.transportMode).toBe('hired_vehicle')
     expect(store.tripHistory[0]?.rewardPoints).toBe(0)
     expect(store.mapAreaUnlocks.find((area) => area.id === 'city_core')?.unlocked).toBe(false)
     expect(store.mapAreaFeedback.length).toBe(0)
     expect(store.mapCalendarReminders.length).toBe(0)
+
+    const snapshot = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredStore = useMapStore()
+    expect(restoredStore.restoreFromBackup({ map: snapshot })).toBe(true)
+    expect(restoredStore.tripHistory[0]).toMatchObject({
+      status: 'cancelled',
+      transportMode: 'hired_vehicle',
+      estimateVersion: 1,
+    })
 
     vi.advanceTimersByTime(60 * 60 * 1000)
     expect(store.tripState.status).toBe('idle')
@@ -194,7 +379,7 @@ describe('map trip baseline loop', () => {
     const storeA = useMapStore()
     storeA.setTripEndpoint('from', '家')
     storeA.setTripEndpoint('to', '公司')
-    expect(storeA.startTrip().ok).toBe(true)
+    expect(startTripWithMode(storeA, 'public_transit').ok).toBe(true)
 
     const snapshot = storeA.createBackupSnapshot()
     setActivePinia(createPinia())
@@ -203,6 +388,8 @@ describe('map trip baseline loop', () => {
 
     expect(restored).toBe(true)
     expect(storeB.tripState.status).toBe('traveling')
+    expect(storeB.tripState.transportMode).toBe('public_transit')
+    expect(storeB.createBackupSnapshot().tripState.transportMode).toBe('public_transit')
 
     const remainingMs = Math.max(1, Number(storeB.tripRuntime.remainingSeconds || 0)) * 1000
     vi.advanceTimersByTime(remainingMs + 1000)
@@ -210,6 +397,132 @@ describe('map trip baseline loop', () => {
     expect(storeB.tripState.status).toBe('arrived')
     expect(storeB.currentLocation.detail).toBe('公司')
     expect(storeB.tripHistory[0]?.rewardPoints).toBeGreaterThan(0)
+    expect(storeB.tripHistory[0]?.transportMode).toBe('public_transit')
+  })
+
+  test('locks transport while traveling and after arrival', () => {
+    const store = useMapStore()
+    store.setTripEndpoint('from', 'Home')
+    store.setTripEndpoint('to', 'Office')
+    expect(startTripWithMode(store, 'private_vehicle').ok).toBe(true)
+
+    expect(store.setTripTransportMode('walk')).toMatchObject({
+      ok: false,
+      code: 'TRIP_TRANSPORT_LOCKED',
+      transportMode: 'private_vehicle',
+    })
+    expect(store.tripState.transportMode).toBe('private_vehicle')
+
+    vi.advanceTimersByTime(store.tripState.durationSeconds * 1000 + 1000)
+    expect(store.tripState.status).toBe('arrived')
+    expect(store.setTripTransportMode('public_transit')).toMatchObject({
+      ok: false,
+      code: 'TRIP_TRANSPORT_LOCKED',
+      transportMode: 'private_vehicle',
+    })
+    expect(store.startTrip()).toMatchObject({
+      ok: false,
+      code: 'TRIP_ARRIVAL_PENDING',
+    })
+  })
+
+  test('normalizes legacy active and historical trips without changing their snapshots', () => {
+    const store = useMapStore()
+    const now = Date.now()
+
+    expect(
+      store.restoreFromBackup({
+        map: {
+          tripState: {
+            status: 'traveling',
+            from: 'Old home',
+            to: 'Old office',
+            distanceKm: 3.7,
+            fare: 8123,
+            durationSeconds: 777,
+            startedAt: now,
+            etaAt: now + 777_000,
+          },
+          tripHistory: [
+            {
+              id: 'legacy_trip_1',
+              status: 'arrived',
+              from: 'Old stop',
+              to: 'Old square',
+              distanceKm: 4.6,
+              fare: 4321,
+              durationSeconds: 654,
+              startedAt: now - 800_000,
+              endedAt: now - 100_000,
+              rewardPoints: 17,
+            },
+          ],
+        },
+      }),
+    ).toBe(true)
+
+    expect(store.tripState).toMatchObject({
+      status: 'traveling',
+      transportMode: 'hired_vehicle',
+      estimateVersion: 0,
+      journeySchemaVersion: 0,
+      phase: 'departed',
+      distanceKm: 3.7,
+      fare: 8123,
+      durationSeconds: 777,
+    })
+    expect(store.tripHistory[0]).toMatchObject({
+      id: 'legacy_trip_1',
+      transportMode: 'hired_vehicle',
+      estimateVersion: 0,
+      journeySchemaVersion: 0,
+      phase: 'arrived',
+      distanceKm: 4.6,
+      fare: 4321,
+      durationSeconds: 654,
+      rewardPoints: 17,
+    })
+    expect(store.routeFamiliarity[0]?.points).toBe(17)
+    expect(store.tripState.checkpoints[0]).toMatchObject({
+      id: 'departure',
+      status: 'completed',
+    })
+    expect(store.tripHistory[0]?.checkpoints.every((checkpoint) => checkpoint.status === 'completed')).toBe(true)
+
+    const snapshot = store.createBackupSnapshot()
+    expect(snapshot.tripState.transportMode).toBe('hired_vehicle')
+    expect(snapshot.tripHistory[0]?.transportMode).toBe('hired_vehicle')
+
+    setActivePinia(createPinia())
+    const arrivedStore = useMapStore()
+    expect(
+      arrivedStore.restoreFromBackup({
+        map: {
+          tripState: {
+            status: 'arrived',
+            from: 'Old home',
+            to: 'Old office',
+            distanceKm: 3.7,
+            fare: 8123,
+            durationSeconds: 777,
+            startedAt: now - 777_000,
+            etaAt: now,
+            arrivedAt: now,
+          },
+        },
+      }),
+    ).toBe(true)
+    expect(arrivedStore.tripState).toMatchObject({
+      status: 'arrived',
+      journeySchemaVersion: 0,
+      phase: 'arrived',
+      estimateVersion: 0,
+      durationSeconds: 777,
+      fare: 8123,
+      etaAt: now,
+      arrivedAt: now,
+    })
+    expect(arrivedStore.tripState.checkpoints.every((checkpoint) => checkpoint.status === 'completed')).toBe(true)
   })
 
   test('map visual falls back to default when gallery asset is unavailable', () => {
@@ -532,7 +845,7 @@ describe('map trip baseline loop', () => {
 
     mapStore.setTripEndpoint('from', 'Home')
     mapStore.setTripEndpoint('to', 'Office')
-    const started = mapStore.startTrip()
+    const started = startTripWithMode(mapStore)
     await started.remotePushPromise
 
     expect(started.ok).toBe(true)
@@ -566,7 +879,7 @@ describe('map trip baseline loop', () => {
 
     mapStore.setTripEndpoint('from', 'Home')
     mapStore.setTripEndpoint('to', 'Office')
-    const started = mapStore.startTrip()
+    const started = startTripWithMode(mapStore)
     const pushResult = await started.remotePushPromise
 
     expect(started.ok).toBe(true)
@@ -598,7 +911,7 @@ describe('map trip baseline loop', () => {
 
     mapStore.setTripEndpoint('from', 'Home')
     mapStore.setTripEndpoint('to', 'Cafe')
-    const started = mapStore.startTrip()
+    const started = startTripWithMode(mapStore)
     await started.remotePushPromise
 
     const cancelled = mapStore.cancelTrip()
@@ -608,6 +921,64 @@ describe('map trip baseline loop', () => {
     expect(cancelSpy).toHaveBeenCalledTimes(1)
     expect(mapStore.tripState.status).toBe('idle')
     expect(systemStore.apiReports.some((item) => item.action === 'cancel_schedule')).toBe(false)
+  })
+
+  test('pause waits for an in-flight push schedule and resume uses a new schedule identity', async () => {
+    const mapStore = useMapStore()
+    const systemStore = useSystemStore()
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787',
+      pushDeviceId: 'push_device_pause',
+      pushSubscriptionActive: true,
+    })
+
+    let resolveInitialSchedule
+    const scheduleSpy = vi
+      .spyOn(pushLib, 'schedulePushNotification')
+      .mockImplementationOnce(
+        (request) =>
+          new Promise((resolve) => {
+            resolveInitialSchedule = () =>
+              resolve({
+                ok: true,
+                scheduleId: request.scheduleId,
+                deliverAt: request.deliverAt,
+              })
+          }),
+      )
+      .mockImplementationOnce(async (request) => ({
+        ok: true,
+        scheduleId: request.scheduleId,
+        deliverAt: request.deliverAt,
+      }))
+    const cancelSpy = vi.spyOn(pushLib, 'cancelScheduledPushNotification').mockResolvedValue({
+      ok: true,
+      removed: true,
+    })
+
+    mapStore.setTripEndpoint('from', 'Home')
+    mapStore.setTripEndpoint('to', 'Office')
+    const started = startTripWithMode(mapStore)
+    const initialScheduleId = scheduleSpy.mock.calls[0][0].scheduleId
+    const etaBeforePause = mapStore.tripState.etaAt
+    const pausePromise = mapStore.pauseTrip()
+
+    expect(mapStore.tripState.phase).toBe('paused')
+    resolveInitialSchedule()
+    expect((await pausePromise).ok).toBe(true)
+    await started.remotePushPromise
+    expect(cancelSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduleId: initialScheduleId }),
+    )
+
+    vi.advanceTimersByTime(5 * 60 * 1000)
+    const resumed = await mapStore.resumeTrip()
+    await resumed.remotePushPromise
+    const resumedRequest = scheduleSpy.mock.calls[1][0]
+    expect(resumedRequest.scheduleId).not.toBe(initialScheduleId)
+    expect(resumedRequest.deliverAt).toBe(etaBeforePause + 5 * 60 * 1000)
+    expect(mapStore.tripState.scheduledPushId).toBe(resumedRequest.scheduleId)
   })
 
   test('can bind and later neutralize a shared-route trip record for relationship cleanup', () => {

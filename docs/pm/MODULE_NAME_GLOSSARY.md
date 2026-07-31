@@ -1,6 +1,6 @@
 # SchatPhone Module Name Glossary
 
-Updated: 2026-06-03
+Updated: 2026-07-31
 
 This file is the naming source for SchatPhone modules and runtime surfaces.
 
@@ -37,6 +37,7 @@ Use it when the team needs to confirm:
 | 电话 | Phone | `/phone` | `app_phone` | Home app | calls and call history |
 | 地图 | Map | `/map` | `app_map` | Home app | route, trip, and location context |
 | 日历 | Calendar | `/calendar` | `app_calendar` | Home app | confirmed schedule and date lane |
+| 行程 | Agenda Journey | not frozen | future app id not frozen | future Home app | today/near-term activity execution; distinct from Map Journey |
 | 提醒事项 | Reminders | `/reminders` | `app_reminders` | Home app | cross-module cue surface |
 | 钱包 | Wallet | `/wallet` | `app_wallet` | Home app | ledger, transfer, and expense records |
 | 股票 | Stock | `/stock` | `app_stock` | Home app | market and holdings lane |
@@ -56,6 +57,10 @@ Use it when the team needs to confirm:
 | --- | --- | --- | --- |
 | 事件运行时 | Event Runtime | `simulationStore` and simulation engine | shared event logs, cooldowns, caps, and trigger policy |
 | 关系运行时 | Relationship Runtime | `relationshipRuntimeStore` | relationship truth layer |
+| 时间编排模块 | Schedule Orchestrator | future internal Module | links confirmed Calendar commitments to Agenda Journey materialization and deadline reconciliation; never a Home app |
+| 地图行程 | Map Journey | Map-owned journey runtime | known-destination travel, transport, checkpoints, and arrival/cancellation truth |
+| 活动计时 | Activity Session | future Agenda Journey runtime record | timestamp-based duration and explicit activity checkpoints; not a required 25/5 Pomodoro cycle |
+| 叙事时间线 | Narrative Timeline | future projection; route and owner not approved | bounded source-linked summaries for a later Story/Diary/Journal surface and AI context |
 | 前台滴答 | Foreground Tick | foreground session tick lifecycle | optional while-app-is-open event ticking |
 | 真推送 | Real Push | browser/system push integration | scheduled or immediate notification delivery |
 | 素材引用 | Asset References | Gallery/media contracts | structured media references across modules |
@@ -68,5 +73,9 @@ Use it when the team needs to confirm:
 - Keep `Control Center`, `control_center`, and `/control-center` as technical compatibility names only.
 - Use `相册 / Photos` as the user-facing gallery label even if some code still says `Gallery`.
 - Use `提醒事项 / Reminders` for cross-module cues rather than calling every cue queue `Calendar`.
+- Use `日历 / Calendar` for the visible long-range date app. `日程 / Agenda` is one Calendar view, not another long-range app.
+- Use `行程 / Agenda Journey` for the future short-range execution app and always use `地图行程 / Map Journey` in architecture, persistence, event, and audit text where the Map meaning could be ambiguous.
+- Use `时间编排模块 / Schedule Orchestrator` for the hidden cross-module materialization logic; do not call that internal Module `Calendar` or expose it as a Home app.
+- Keep Story/Diary/Journal product naming undecided; use `叙事时间线 / Narrative Timeline` only for the future source-linked projection concept.
 - Use `文件 / Files` only when discussing the hidden/internal storage component.
 - Use `文本库 / Book` for the reusable text library. It is not the novel/fanfic reader, not Files, and not WorldBook activation itself.

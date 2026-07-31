@@ -26,7 +26,7 @@ const props = defineProps({
   },
   allowPinPlacement: {
     type: Boolean,
-    default: true,
+    default: false,
   },
 })
 

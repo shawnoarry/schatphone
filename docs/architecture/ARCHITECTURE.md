@@ -123,6 +123,8 @@ SchatPhone has 17 Pinia stores.
 | `phone` | call log and callback records |
 | `files` | internal metadata/index bridge |
 
+The accepted Calendar/Agenda Journey direction does not add another landed store to this table. A future `Schedule Orchestrator`, `Agenda Journey`, `Activity Session`, and `Narrative Timeline` require separately approved Interfaces, persistence owners, backup contracts, and migrations before implementation. Their ownership contract lives in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`.
+
 ### State Ownership Rules
 
 1. domain stores own domain records;
@@ -343,10 +345,24 @@ WorldBook reviewed World Pack
   -> target store remains record owner
 ```
 
+### Calendar To Agenda Journey
+
+```text
+confirmed Calendar event
+  -> hidden Schedule Orchestrator reaches the materialization window
+  -> future Agenda Journey instance and activity steps
+  -> optional Map Journey and/or Activity Session evidence
+  -> Event Runtime eligibility, outcome, and audit
+  -> owning modules validate effects
+  -> future bounded Narrative Timeline projection
+```
+
+Calendar remains the long-range planned truth; Agenda Journey is short-range execution truth; Map remains travel truth. The orchestrator links records and reconciles time but does not become another owner of them.
+
 ### Mini Scene Request
 
 ```text
-Calendar / Map / Chat / future registered caller
+Calendar / Map / Chat / future Agenda Journey / future registered caller
   -> source-owned eligibility and canonical facts
   -> optional Event Runtime trigger policy/provenance
   -> Mini Scene request Interface

@@ -1,6 +1,6 @@
 # Calendar And Reminders Split
 
-Updated: 2026-05-31
+Updated: 2026-07-31
 
 Audience: product managers, designers, engineers, QA, and future AI assistants.
 
@@ -14,13 +14,17 @@ SchatPhone splits the old combined cue-and-calendar surface into two product con
 | --- | --- |
 | `Calendar` | the schedule/date app for confirmed plans, dates, anniversaries, and timed life events |
 | `Reminders` | the follow-up and cue queue for callbacks, logistics updates, low-commitment prompts, and cross-module attention items |
+| `Agenda Journey` | the future short-range execution app for today's or the near-term plan, activity progress, performance, and outcomes |
 
 Short version:
 
 - `Calendar` answers: what is actually on my schedule?
 - `Reminders` answers: what still needs my attention or confirmation?
+- `Agenda Journey` answers: what should I execute now or soon, and what actually happened?
 - `World Hub` remains the optional runtime/control app, not the normal place for everyday reminders.
 - `World Pack` may change Calendar labels/context through a reservation app binding and Map labels/context through a transit app binding, but it does not own Calendar records, Map trip truth, or event judgment.
+
+`Calendar` is the English product name for the visible `日历` app. It is not the name of the hidden cross-module orchestration layer. That internal role is `Schedule Orchestrator / 时间编排模块` under `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`.
 
 ## 2. Why This Split Exists
 
@@ -54,6 +58,8 @@ Current project state:
 
 This document records the target meaning and the refactor direction. It is not claiming that every historical compatibility seam has been deleted.
 
+The current Calendar frontend is a real Home app, but it is a list-first baseline rather than a conventional visual calendar. It presents summary metrics, confirmed-event cards, push state, a Reminders handoff, and related Map context. It does not yet provide month/week/date-grid navigation, multi-day event spans, or a selected-day planner.
+
 ## 4. Target Responsibilities
 
 ### Calendar
@@ -67,6 +73,15 @@ Calendar should own:
 - timed push scheduling for confirmed events
 - relationship facts only when the event is truly schedule-like
 
+Calendar's target visible views are:
+
+- `Month`: date grid and multi-day event spans;
+- `Week`: time blocks and conflict review;
+- `Agenda / 日程`: a chronological list of the same Calendar events;
+- selected-day event detail and event authoring.
+
+`日程` is a Calendar view, not a second long-range planning app.
+
 Calendar should not own:
 
 - raw cross-module cue queues
@@ -74,6 +89,17 @@ Calendar should not own:
 - stock review prompts before user confirmation
 - World Hub control state
 - generic event logs
+- short-range Agenda Journey execution state
+- Map Journey truth or Activity Session timing
+- Event Runtime eligibility, randomness, choices, or effect application
+
+### Agenda Journey
+
+Agenda Journey is a separately planned short-range execution app. It may materialize confirmed Calendar commitments into a day or near-term plan, add occupation/world-aware steps, request Map travel or an Activity Session, and record completed, missed, skipped, or cancelled execution.
+
+It does not replace Calendar's long-range planning. A multi-day Calendar event such as an August 4-7 concert may create separate linked Agenda Journeys for each day while Calendar preserves the original four-day commitment.
+
+The hidden Schedule Orchestrator coordinates this handoff. It is not a Home app and cannot copy or take ownership of Calendar, Journey, Map, Event Runtime, relationship, Wallet, or profile records.
 
 ### Reminders
 
@@ -125,6 +151,8 @@ Intended flow:
 2. World Hub may review/control them when that optional lane is enabled
 3. Reminders shows the user-facing actionable subset
 4. Calendar receives only the items that have schedule/date meaning
+5. the Schedule Orchestrator may materialize confirmed near-term Calendar commitments into Agenda Journey instances
+6. Agenda Journey may request Map Journey, Activity Session, and Event Runtime collaboration while every source owner keeps its own truth
 
 This preserves the main product principle:
 
@@ -145,6 +173,9 @@ Recommended sequence and current status:
 | 7 | Give Reminders a visible Home-level entry direction | DONE |
 | 8 | Keep regression coverage for Map/Phone/Shopping/Stock cue behavior | PARTIAL_DONE |
 | 9 | Allow Calendar confirmed events to write low-impact relationship facts | DONE |
+| 10 | Record Calendar versus Agenda Journey versus hidden Schedule Orchestrator ownership | DONE |
+| 11 | Rebuild the list-first Calendar surface into month/week/Agenda views with selected-day authoring | TODO / SEPARATE_USER_ACCEPTANCE_REQUIRED |
+| 12 | Implement Agenda Journey, Activity Session, or Calendar-to-Journey materialization | TODO / STAGED_IN_LIVE_ROADMAP_ONLY |
 
 Implementation notes:
 
@@ -162,6 +193,10 @@ Implementation notes:
 - Do not make World Hub mandatory for users who prefer a light phone-life simulation.
 - Do not auto-schedule every cue into push.
 - Do not add high-impact relationship/world effects from reminders until runtime review is stronger.
+- Do not present the current list-first Calendar baseline as if a month/week grid already exists.
+- Do not create another long-range planner inside Agenda Journey.
+- Do not use unqualified `Journey` in architecture, persistence, or event contracts when Map Journey and Agenda Journey could both apply.
+- Do not make the Schedule Orchestrator a visible app or a new owner of downstream records.
 
 ## 8. Acceptance Criteria
 
@@ -173,3 +208,5 @@ The split is considered product-complete when:
 - push scheduling still works for confirmed timed events;
 - World Hub remains optional and hidden unless enabled;
 - Chat and relationship runtime read meaningful confirmed facts instead of noisy raw cue drafts.
+
+Future Calendar/Agenda Journey orchestration acceptance is separate. Its dependency order, timer limits, event interaction policy, narrative projection, and owner Interfaces are defined in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`; this product-decision file is not a second implementation backlog.

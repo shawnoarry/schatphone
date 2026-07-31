@@ -75,6 +75,14 @@ Geographic packs request the public OpenFreeMap Liberty style and its attributed
 
 Geographic distance uses local great-circle calculation. Fictional distance uses the pack scale. Text-only legacy places keep the previous deterministic fallback estimate.
 
+## Journey, Footprints, And Transport
+
+Map remains the entry and source owner for travel. Transport mode is chosen as part of a journey and may change a local estimate, but it does not imply route planning, realtime fare accuracy, or navigation. Map Settings may later attach a versioned static mode/line/station/topology catalog to a map pack without replacing canonical Map place or journey IDs.
+
+The current exploration-point, route-familiarity, area-unlock, and feedback projections are passive Footprints. Active Exploration is a later area action with explicit outcomes; it is not created merely by renaming the current dashboard. Future journey/exploration events use explicit checkpoints and the shared Event Runtime, while Map continues to validate and own the journey record.
+
+A standalone Transit app remains deferred until transport data supports meaningful independent browsing, schedule/ticket/vehicle use, authoring, or progression. It must reuse Map journey truth. The full staged contract and user-acceptance gates live in `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md` and roadmap 4.11.
+
 ## Versioning Rule
 
 A topology asset becomes immutable once places or player pins reference it. Road, region, or faction-boundary changes require a new pack version. An upgrade must preserve existing place IDs and coordinates or provide an explicit migration.

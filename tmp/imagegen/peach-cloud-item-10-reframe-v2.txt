@@ -1,0 +1,9 @@
+Use case: precise-object-edit
+Input images: Image 1 is the approved Peach Cloud product photograph and the only edit target.
+Primary request: Reframe only. Pull the camera straight back and extend the existing studio scene so the exact same complete Peach Cocoa Crepe Sundae is smaller and fully visible.
+Subject invariants: Preserve the exact tall clear sundae glass and foot, two pale peach ice-cream scoops, pointed folded chocolate crepe ribbons, diced white peach, single strawberry, chocolate cream layers, fruit layers, proportions, textures, lighting, and shadows. Do not add, remove, duplicate, rearrange, redesign, or crop any food component.
+Scene/backdrop: Seamlessly continue the same Peach Cloud pale-green studio surface, soft leaf shadows, and pink curved panel. Keep the established colors and photographic finish unchanged.
+Composition/framing: Square product photograph. Center the entire sundae horizontally and vertically. The complete sundae, from the highest pointed chocolate tip through the entire glass foot, must occupy about 58 to 60 percent of the canvas height. Keep all parts inside the central horizontal 62 percent safe band, with generous clear background above the chocolate tip and below the glass foot. The image must remain usable with object-cover in a square card and a wide product-detail banner.
+Style/medium: Photorealistic premium dessert studio photography matching Image 1 exactly.
+Constraints: Change only framing and extended background. Preserve subject identity and camera angle. No text, logo, UI, watermark, hands, utensils, packaging, extra products, extra fruit, or extra decorations.
+Avoid: close crop; cut-off chocolate tip; cut-off glass foot; enlarged dessert; altered dessert; duplicated ingredients; distorted glass; new props; blurry product.

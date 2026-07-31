@@ -185,6 +185,7 @@ const simulationModuleLabel = (moduleKey = '') => {
   if (moduleKey === 'food_delivery') return t('外卖', 'Food Delivery')
   if (moduleKey === 'shopping') return t('购物', 'Shopping')
   if (moduleKey === 'logistics') return t('物流', 'Logistics')
+  if (moduleKey === 'map') return t('地图', 'Map')
   if (moduleKey === 'simulation') return t('事件模拟', 'Simulation')
   return moduleKey || t('未知模块', 'Unknown module')
 }
@@ -225,6 +226,9 @@ const simulationEventReasonLabel = (reason = '') => {
   if (reason === 'adapter_missing') return t('缺少事件适配器', 'Event adapter is missing')
   if (reason === 'adapter_threw') return t('事件适配器执行异常', 'Event adapter threw an error')
   if (reason === 'adapter_returned_empty') return t('适配器未返回有效结果', 'Adapter returned no result')
+  if (reason === 'checkpoint_not_eligible') return t('不是可评估的行程阶段', 'Journey stage is not eligible')
+  if (reason === 'checkpoint_already_evaluated') return t('该行程阶段已评估', 'Journey stage already evaluated')
+  if (reason === 'map_journey_outcome_applied') return t('地图已应用行程选择', 'Map applied the journey choice')
   return reason || t('未记录原因', 'No reason recorded')
 }
 
@@ -260,6 +264,8 @@ const simulationEventLabel = (eventId = '') => {
     return t('购物取件点变更', 'Shopping pickup point changed')
   if (eventId === 'shopping.logistics.international_delay.v1')
     return t('国际物流延迟', 'International logistics delay')
+  if (eventId === 'map.journey.route_condition.v1')
+    return t('地图行程途中情况', 'Map journey route update')
   return eventId || t('未知事件', 'Unknown event')
 }
 
@@ -592,8 +598,8 @@ const simulationSurpriseModeRuntimeLabel = computed(() => {
   const label = option?.label || t('低 / Low', 'Low / 低')
   if (simulationStore.settings?.surpriseMode === SIMULATION_SURPRISE_MODE.OFF) {
     return t(
-      `惊喜模式 / Surprise Mode：${label}。前台 Tick 会跳过随机和会话事件检查。`,
-      `Surprise Mode / 惊喜模式: ${label}. Foreground Tick skips random and session event checks.`,
+      `惊喜模式 / Surprise Mode：${label}。前台 Tick 会跳过随机和会话事件检查，地图行程阶段也不会触发事件。`,
+      `Surprise Mode / 惊喜模式: ${label}. Foreground Tick skips random and session event checks; Map journey stages also remain uneventful.`,
     )
   }
   return t(
@@ -633,6 +639,22 @@ const simulationModuleEventControls = computed(() => [
     detail: t(
       '允许外卖订单产生低风险进度变化，例如 ETA 更新或骑手延迟。',
       'Allows low-risk delivery order updates, such as ETA changes or rider delays.',
+    ),
+  },
+  {
+    id: 'map',
+    moduleKey: 'map',
+    label: t(
+      '地图行程途中事件 / Map journey events',
+      'Map journey events / 地图行程途中事件',
+    ),
+    enabled: simulationStore.isModuleEventsEnabled('map'),
+    status: simulationStore.isModuleEventsEnabled('map')
+      ? t('允许 / Allowed', 'Allowed / 允许')
+      : t('关闭 / Off', 'Off / 关闭'),
+    detail: t(
+      '允许地图只在明确的行程阶段检查低影响事件；地图仍会校验选择并保留无事件到达路径。',
+      'Allows low-impact checks only at explicit journey stages; Map still validates choices and preserves uneventful arrival.',
     ),
   },
 ])

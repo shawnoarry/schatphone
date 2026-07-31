@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Status And Handoff
 
-Updated: 2026-07-15
+Updated: 2026-07-31
 
 This file is the handoff page for event runtime, relationship runtime, World Hub, and future Cheats work.
 
@@ -33,8 +33,12 @@ What is already landed:
 13. Chat social-event review V1 is landed at the event/runtime seam: generated role greetings can become audited pending message requests, while role-initiated refusal, block, restore, and unblock proposals are stored as reviewable runtime proposals and require World Hub approval before Chat changes the communication state. Chat AI responses can now submit normalized `socialEvents`, and the foreground/session event tick can submit a conservative runtime greeting candidate for stranger or declined role contacts through the same review seam.
 14. World Hub now explains generated Chat social proposal source and boundaries: reviewers can see whether a proposal came from Chat AI output or the foreground/session tick, inspect trigger policy, and read why Chat, Contacts, and Relationship Runtime stay separated.
 15. Settings > AI Automation / 设置 > AI 自动响应 now explains `事件前台 Tick / Foreground event tick` in user-facing terms: users can see whether it is on, which safe checks are currently included, the latest related runtime result, and a direct review path to `世界中枢 / World Hub`.
-16. Settings > AI Automation / 设置 > AI 自动响应 now also exposes `惊喜模式 / Surprise Mode` and `模块事件权限 / Module event permissions` for the current runtime pilot lanes: Chat role-contact events and Food Delivery safety events.
+16. Settings > AI Automation / 设置 > AI 自动响应 now also exposes `惊喜模式 / Surprise Mode` and `模块事件权限 / Module event permissions` for the current runtime pilot lanes: Chat role-contact events, Food Delivery safety events, and Map journey events.
 17. Roadmap 4.8 now has an architecture-accepted Mini Scene collaboration contract. Event Runtime may later own trigger eligibility/cooldown/cap/review/provenance for a runtime-origin request, while the shared Mini Scene Module owns the artifact, world/profile transforms, presenter, fallback, and interaction audit. No runtime Mini Scene Adapter is implemented.
+18. MJE-3's first Map journey checkpoint adapter is implemented in the current uncommitted tree and is `READY_FOR_USER_REVIEW`: completed `en_route` and `near_arrival` checkpoints can request one low-impact local world variant while Map is mounted; Event Runtime owns permission, Surprise Mode, deterministic random selection, cooldown/cap, persistent proposals, provenance, and audit; Map keeps pending review non-blocking, validates exact lineage, and applies only no ETA change or a bounded 120-second delay. Uneventful arrival, arrival dismissal, legacy V2 blocked-journey recovery, and missing/stale proposal recovery remain covered.
+19. Roadmap 4.12 now accepts the documentation-only Calendar/Agenda Journey orchestration contract: Event Runtime may later evaluate bounded Agenda Journey and Activity Session snapshots at explicit checkpoints, while source owners retain journey, timer, Calendar, Map, and downstream value truth. Presentation `off` suppresses the popup without disabling eligibility, but only approved low-impact outcomes may auto-resolve. No CJA runtime, adapter, permission, timer, route, or persistence field is implemented.
+
+MJE-3 validation is complete for the non-blocking pending-update revision: the focused Journey/Event/Map-view set passes 5 files / 64 tests; the full Vitest suite passes 200 files / 1363 tests; lint, production build, governance (2 files / 12 tests), and `git diff --check` pass; and the focused Map E2E passes 12/12 across desktop Chromium and Pixel 5.
 
 Still incomplete:
 
@@ -44,6 +48,8 @@ Still incomplete:
 4. the named high-risk relationship gate presets are now consumed by the Chat social-event review policy for relationship-aware audit/review decisions; broader high-impact romance/conflict automation is still deferred.
 5. deeper generated social behavior is still incomplete: broader social-event types, richer scheduling, and relationship-stage effects should build on the landed review seam instead of writing directly to Chat or relationship runtime.
 6. Mini Scene trigger integration remains unimplemented; the shared pure foundation is ready, but a named event family and the later persistence/presenter/source-Adapter prerequisites must still be promoted.
+7. MJE-3 awaits user review and is not integrated. Destination change, event-driven cancellation, high-impact outcomes, active exploration events, generic popup infrastructure, and Agenda Journey scheduling remain unimplemented.
+8. Agenda Journey, Activity Session, Schedule Orchestrator, their Event Runtime adapters, automatic-resolution implementation, and Narrative Timeline remain unimplemented; the accepted CJA contract is documentation only.
 
 ## 2. Recommended Next Slice
 
@@ -57,6 +63,8 @@ Current safe candidates:
 4. keep Cheats and closed-page autonomy as separate decisions;
 5. do not add a new runtime feature ahead of the active 4.5 security/toolchain lane unless the user explicitly reprioritizes it.
 6. when roadmap 4.8 reaches a source-Adapter stage, keep Event Runtime limited to eligibility/provenance and call the shared Interface rather than adding runtime-owned regex or HTML.
+7. hold MJE-3 at user review; do not widen its low-impact continue/delay contract or begin MJE-4 without explicit acceptance.
+8. keep CJA work at documentation-only until the user separately accepts the matching roadmap stage; do not combine it with MJE-3 review or Map implementation.
 
 ## 3. Do Not Do
 
@@ -68,6 +76,9 @@ Current safe candidates:
 6. Do not copy high-risk romance/conflict gate rules into module adapters; use the named preset seam.
 7. Do not let generated friend/block/refusal social events mutate Chat channel state, Contacts display state, or relationship runtime facts outside the landed social-event review seam.
 8. Do not let Mini Scene interactions bypass Event Runtime review or source-module validation, and do not make Event Runtime own Mini Scene artifacts or presenters.
+9. Do not let a Map journey event run on every timer tick, mutate Map journey truth directly, or start before the roadmap MJE-2 acceptance gate.
+10. Do not let Agenda Journey or Activity Session events run on every countdown tick, infer non-travel completion from time/arrival, or bypass the source owner's result validation.
+11. Do not interpret Mini Scene mode `off` as disabling event eligibility or as permission to auto-apply a high-impact outcome.
 
 ## 4. Must Sync When Working Here
 
@@ -84,3 +95,5 @@ At the end of a meaningful round, check and update:
 9. `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
 10. `docs/process/RUNTIME_CONTROL_AND_CHEATS_PACK_PLAN.md` when Cheats scope changed
 11. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` when Mini Scene trigger/provenance meaning changes
+12. `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md` and the Map package when journey checkpoint collaboration changes
+13. `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md` and the Map/Calendar package when Calendar, Agenda Journey, Activity Session, Schedule Orchestrator, or Narrative Timeline collaboration changes

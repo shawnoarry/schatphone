@@ -4,7 +4,7 @@ Updated: 2026-07-21
 
 Status: `STAGE_1_FOUNDATION_DONE / USER_VISIBLE_IMPLEMENTATION_NOT_STARTED`
 
-This contract defines a reusable Mini Scene Module for Calendar, Map, Chat, future streaming apps, and other explicitly registered callers. It replaces the earlier incomplete assumption that a Mini Scene can be implemented only as prompt text or as a Chat-owned rich-message block.
+This contract defines a reusable Mini Scene Module for Calendar, Map, Chat, a future Agenda Journey app, future streaming apps, and other explicitly registered callers. It replaces the earlier incomplete assumption that a Mini Scene can be implemented only as prompt text or as a Chat-owned rich-message block.
 
 The first planned world-specific example is the Modern Seoul K-pop music-show day. The Module itself must remain world-neutral and support user-authored or imported worlds.
 
@@ -12,7 +12,7 @@ The first planned world-specific example is the Modern Seoul K-pop music-show da
 
 1. Mini Scene is one shared Module, not a renderer copied into each calling module.
 2. A registered calling module may let the user choose `off`, `text`, or `interactive_html`. A new unconfigured module behaves as `off` until the user chooses.
-3. Calendar, Map, Chat, future streaming apps, and other callers own why and when a Mini Scene is requested. They do not parse regex, render HTML, or select a world profile themselves.
+3. Calendar, Map, Chat, future Agenda Journey, future streaming apps, and other callers own why and when a Mini Scene is requested. They do not parse regex, render HTML, or select a world profile themselves.
 4. Different worlds may use different Mini Scene profiles, rules, templates, terminology, and scene types.
 5. Book owns independently selectable authoring assets for Mini Scene narrative rules and structured transform profiles. WorldBook narrative activation and Mini Scene profile binding are separate user choices.
 6. World Pack may reference or recommend a reviewed Mini Scene profile only when it represents a real grouped capability. It never contains arbitrary executable HTML, auto-enables a Book asset, or overrides the user's per-module mode.
@@ -86,18 +86,20 @@ Callers do not receive raw HTML and do not directly persist presenter state.
 
 ## 3. Registered Calling Modules And User Policy
 
-The registry is data-driven. V1 implementation candidates are Calendar, Map, and Chat. A future streaming module registers only when its own product contract and source records exist.
+The registry is data-driven. V1 implementation candidates are Calendar, Map, and Chat. A future Agenda Journey or streaming module registers only when its own product contract, route, source records, persistence owner, and caller Adapter exist. `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md` defines the documentation-only Agenda Journey direction but does not register a caller.
 
 Each registered module exposes this persisted policy:
 
 ```text
 unconfigured -> treated as off; Settings shows that the user has not chosen
-off          -> source event continues normally; no Mini Scene is generated or opened
+off          -> source event continues under its owning module/Event Runtime automatic-resolution policy; no Mini Scene is generated or opened
 text         -> generate and open the plain-text presenter
 interactive_html -> attempt interactive presentation; always retain text fallback
 ```
 
 Settings presents one segmented choice per registered module rather than a hardcoded set of unrelated toggles. The visible choices are `不弹出 / 纯文本 / HTML 互动`; an untouched row is labeled `未设置` and behaves as off. A calling module may expose the same shared control in its own local settings, but it reads/writes the one canonical policy record instead of creating duplicate module-local state. An optional `pauseAll` control may temporarily suppress every popup, but it must not erase per-module choices.
+
+Presentation policy is not event eligibility. Selecting `off` cannot disable an owning activity, Map Journey, Calendar event, or Event Runtime rule. If the source flow supports automatic resolution, that policy is validated before the Mini Scene request seam and its outcome is still logged by the proper owner. High-impact effects retain their existing confirmation/review requirements even when presentation is off.
 
 World/profile content dimensions use a separate explicit state:
 

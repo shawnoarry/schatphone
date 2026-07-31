@@ -101,9 +101,11 @@ describe('map worldbook context', () => {
       .find((node) => node.attributes('data-testid') === testId)
 
   const openProgressDrawer = async () => {
+    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
+    await nextTick()
     const progressButton = wrapper
-      .get('[data-testid="map-secondary-menu"]')
-      .findAll('button')
+      .get('[data-testid="map-secondary-drawer"]')
+      .findAll('.map-drawer-tab')
       .find((button) => button.text().includes('探索') || button.text().includes('Progress'))
     expect(progressButton?.exists()).toBe(true)
     await progressButton.trigger('click')

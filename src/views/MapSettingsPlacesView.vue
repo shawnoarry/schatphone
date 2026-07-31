@@ -2,10 +2,15 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
+import MapPinCategoryGuide from '../components/map/MapPinCategoryGuide.vue'
 import MapSceneCanvas from '../components/map/MapSceneCanvas.vue'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { formatMapPosition } from '../lib/map-packs'
+import {
+  MAP_USER_PLACE_CATEGORIES,
+  resolveMapPlaceVisual,
+} from '../lib/map-place-categories'
 import { normalizeHomePageQuery } from '../lib/navigation-return'
 import { useGalleryStore } from '../stores/gallery'
 import { useMapStore } from '../stores/map'
@@ -26,6 +31,7 @@ const customMapPreviewUrl = ref('')
 const editorOpen = ref(false)
 const coordinateMode = ref(false)
 const editingAddressId = ref(null)
+const categoryGuideOpen = ref(false)
 const feedback = ref({ tone: '', text: '' })
 
 const placeForm = reactive({
@@ -34,15 +40,6 @@ const placeForm = reactive({
   category: 'home',
   position: null,
 })
-
-const categories = Object.freeze([
-  { id: 'home', icon: 'fas fa-house', labelZh: '居住', labelEn: 'Home' },
-  { id: 'work', icon: 'fas fa-building', labelZh: '工作', labelEn: 'Work' },
-  { id: 'school', icon: 'fas fa-graduation-cap', labelZh: '学校', labelEn: 'School' },
-  { id: 'shop', icon: 'fas fa-store', labelZh: '商店', labelEn: 'Shop' },
-  { id: 'leisure', icon: 'fas fa-mug-hot', labelZh: '休闲', labelEn: 'Leisure' },
-  { id: 'other', icon: 'fas fa-location-dot', labelZh: '其他', labelEn: 'Other' },
-])
 
 const activeWorldPack = computed(() => systemStore.getActiveWorldPack?.() || { id: 'default_world' })
 const renderedMapPack = computed(() => ({
@@ -56,6 +53,15 @@ const userPlaces = computed(() =>
   addresses.value.filter((item) => item.mapPackId === activeMapPackId.value),
 )
 const worldPlaces = computed(() => activeMapPack.value?.places || [])
+const mapPlaceVisual = (place) =>
+  resolveMapPlaceVisual(place, activeMapPack.value?.factions)
+const mapScenePins = computed(() =>
+  activeMapPlaces.value.map((place) => ({
+    ...place,
+    icon: mapPlaceVisual(place).icon,
+    tone: mapPlaceVisual(place).tone,
+  })),
+)
 const canSave = computed(() =>
   Boolean(placeForm.label.trim() && placeForm.detail.trim() && placeForm.position),
 )
@@ -72,9 +78,6 @@ const mapContextQuery = computed(() => {
     ...(homePage ? { homePage } : {}),
   }
 })
-
-const categoryIcon = (category = '') =>
-  categories.find((item) => item.id === category)?.icon || 'fas fa-location-dot'
 
 const mapPlaceName = (place) =>
   t(place?.nameZh || place?.labelZh || place?.label || '', place?.nameEn || place?.labelEn || place?.label || '')
@@ -128,6 +131,11 @@ const onCoordinateSelected = ({ position }) => {
   if (!placeForm.detail.trim()) placeForm.detail = formatMapPosition(position)
   coordinateMode.value = false
   editorOpen.value = true
+}
+
+const onMapPinSelected = (place) => {
+  if (coordinateMode.value || place?.source !== 'user') return
+  openEdit(place)
 }
 
 const useCurrentCoordinate = () => {
@@ -228,12 +236,12 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
       <section class="map-pin-canvas" data-testid="map-pin-management-canvas">
         <MapSceneCanvas
           :map-pack="renderedMapPack"
-          :pins="activeMapPlaces"
+          :pins="mapScenePins"
           :pending-position="coordinateMode ? placeForm.position : null"
           :focus-position="mapFocusPosition"
           :allow-pin-placement="coordinateMode"
           @place-pin="onCoordinateSelected"
-          @select-pin="(place) => place.source === 'user' && openEdit(place)"
+          @select-pin="onMapPinSelected"
         />
         <div v-if="coordinateMode" class="map-pin-placement" data-testid="map-pin-coordinate-mode">
           <i class="fas fa-location-crosshairs" aria-hidden="true"></i>
@@ -248,14 +256,19 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
             <span>{{ t(activeMapPack.shortLabelZh, activeMapPack.shortLabelEn) }}</span>
             <h2>{{ t('我的图钉', 'My pins') }}</h2>
           </div>
-          <small>{{ userPlaces.length }}</small>
+          <div class="map-pin-heading-actions">
+            <button type="button" :aria-label="t('查看图钉类型说明', 'View pin type guide')" data-testid="map-pin-category-guide-trigger" @click="categoryGuideOpen = true">
+              <i class="fas fa-circle-info" aria-hidden="true"></i>
+            </button>
+            <small>{{ userPlaces.length }}</small>
+          </div>
         </div>
 
         <p v-if="feedback.text" class="map-pin-feedback" :class="`is-${feedback.tone}`" role="status">{{ feedback.text }}</p>
 
         <div v-if="userPlaces.length" class="map-pin-list" data-testid="map-user-pin-list">
-          <button v-for="address in userPlaces" :key="address.id" type="button" class="map-pin-row" :data-testid="`map-user-pin-${address.id}`" @click="openEdit(address)">
-            <i :class="categoryIcon(address.category)" aria-hidden="true"></i>
+          <button v-for="address in userPlaces" :key="address.id" type="button" class="map-pin-row" :style="{ '--map-place-tone': mapPlaceVisual(address).tone }" :data-testid="`map-user-pin-${address.id}`" @click="openEdit(address)">
+            <i :class="mapPlaceVisual(address).icon" aria-hidden="true"></i>
             <span><strong>{{ address.label }}</strong><small>{{ address.detail }}</small></span>
             <span class="map-pin-coordinate">{{ formatMapPosition(address.position) || t('未设置', 'Not set') }}</span>
             <i class="fas fa-chevron-right" aria-hidden="true"></i>
@@ -274,8 +287,8 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
           <small><i class="fas fa-lock" aria-hidden="true"></i> {{ worldPlaces.length }}</small>
         </div>
         <div class="map-pin-list" data-testid="map-world-pin-list">
-          <div v-for="place in worldPlaces" :key="place.id" class="map-pin-row is-readonly">
-            <i :class="place.icon || 'fas fa-landmark'" aria-hidden="true"></i>
+          <div v-for="place in worldPlaces" :key="place.id" class="map-pin-row is-readonly" :style="{ '--map-place-tone': mapPlaceVisual(place).tone }">
+            <i :class="mapPlaceVisual(place).icon" aria-hidden="true"></i>
             <span><strong>{{ mapPlaceName(place) }}</strong><small>{{ mapPlaceDetail(place) }}</small></span>
             <span class="map-pin-coordinate">{{ formatMapPosition(place.position) }}</span>
             <i class="fas fa-lock" aria-hidden="true"></i>
@@ -291,11 +304,14 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
             <span>{{ editingAddressId ? t('我的图钉', 'MY PIN') : t('新图钉', 'NEW PIN') }}</span>
             <h2>{{ editingAddressId ? t('编辑地点', 'Edit place') : t('新增地点', 'Add place') }}</h2>
           </div>
-          <button type="button" :aria-label="t('关闭', 'Close')" @click="closeEditor"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+          <div class="map-pin-editor-head-actions">
+            <button type="button" :aria-label="t('查看图钉类型说明', 'View pin type guide')" data-testid="map-pin-category-guide-editor-trigger" @click="categoryGuideOpen = true"><i class="fas fa-circle-info" aria-hidden="true"></i></button>
+            <button type="button" :aria-label="t('关闭', 'Close')" @click="closeEditor"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+          </div>
         </div>
 
         <div class="map-pin-category-grid" role="group" :aria-label="t('地点类型', 'Place type')">
-          <button v-for="category in categories" :key="category.id" type="button" :class="{ 'is-active': placeForm.category === category.id }" @click="placeForm.category = category.id">
+          <button v-for="category in MAP_USER_PLACE_CATEGORIES" :key="category.id" type="button" :class="{ 'is-active': placeForm.category === category.id }" :style="{ '--map-place-tone': category.tone }" @click="placeForm.category = category.id">
             <i :class="category.icon" aria-hidden="true"></i>
             <span>{{ t(category.labelZh, category.labelEn) }}</span>
           </button>
@@ -325,6 +341,8 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
         </div>
       </section>
     </div>
+
+    <MapPinCategoryGuide v-if="categoryGuideOpen" @close="categoryGuideOpen = false" />
   </div>
 </template>
 
@@ -356,7 +374,7 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 }
 
 .map-pin-header > button,
-.map-pin-editor-head > button {
+.map-pin-editor-head-actions > button {
   display: grid;
   width: 42px;
   height: 42px;
@@ -402,7 +420,7 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 }
 
 .map-pin-canvas :deep(.map-scene-identity) { top: 14px; }
-.map-pin-canvas :deep(.map-scene-faction-legend) { top: 56px; }
+.map-pin-canvas :deep(.map-scene-faction-control) { top: 56px; }
 .map-pin-canvas :deep(.map-scene-attribution) { top: auto; bottom: 8px; }
 .map-pin-canvas :deep(.leaflet-control-zoom),
 .map-pin-canvas :deep(.map-scene-canvas[data-map-kind='real'] .leaflet-control-zoom) { margin-top: 72px; }
@@ -436,7 +454,10 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 .map-pin-list-panel { min-height: 0; overflow-y: auto; background: #f7f8f6; padding: 17px 17px calc(32px + env(safe-area-inset-bottom)); }
 .map-pin-list-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .map-pin-list-heading.is-world { margin-top: 22px; }
-.map-pin-list-heading > small { border-radius: 6px; background: #e4ebe6; padding: 4px 7px; color: #476154; font-size: 9px; font-weight: 800; }
+.map-pin-heading-actions { display: flex; align-items: center; gap: 6px; }
+.map-pin-heading-actions > button { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid var(--pin-line); border-radius: 6px; background: #fff; color: #526158; font-size: 10px; }
+.map-pin-list-heading > small,
+.map-pin-heading-actions > small { border-radius: 6px; background: #e4ebe6; padding: 4px 7px; color: #476154; font-size: 9px; font-weight: 800; }
 .map-pin-list { border-top: 1px solid var(--pin-line); }
 
 .map-pin-row {
@@ -450,7 +471,7 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
   text-align: left;
 }
 
-.map-pin-row > i:first-child { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 7px; background: #dfeae3; color: var(--pin-accent); font-size: 11px; }
+.map-pin-row > i:first-child { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 14%, white); color: var(--map-place-tone); font-size: 11px; }
 .map-pin-row > span:nth-child(2) { min-width: 0; }
 .map-pin-row strong,
 .map-pin-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -458,7 +479,6 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 .map-pin-row small { margin-top: 3px; color: var(--pin-muted); font-size: 9px; }
 .map-pin-row > i:last-child { color: #95a099; font-size: 8px; }
 .map-pin-row.is-readonly { color: #4f5b54; }
-.map-pin-row.is-readonly > i:first-child { background: #e9ece9; color: #737d77; }
 .map-pin-coordinate { color: var(--pin-muted); font-size: 8px; text-align: right; }
 .map-pin-empty { display: flex; width: 100%; min-height: 92px; flex-direction: column; align-items: center; justify-content: center; gap: 7px; border: 1px dashed #bdc8c1; border-radius: 8px; color: var(--pin-muted); font-size: 11px; }
 .map-pin-feedback { margin-bottom: 10px; border: 1px solid #c4d8cc; border-radius: 7px; background: #e9f3ed; padding: 9px 10px; color: #32644d; font-size: 11px; }
@@ -485,9 +505,10 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 }
 
 .map-pin-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.map-pin-editor-head-actions { display: flex; flex: 0 0 auto; gap: 6px; }
 .map-pin-category-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
-.map-pin-category-grid button { display: flex; min-width: 0; min-height: 52px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--pin-line); border-radius: 7px; color: #66736b; font-size: 8px; font-weight: 800; }
-.map-pin-category-grid button.is-active { border-color: var(--pin-accent); background: #e0eee7; color: var(--pin-accent); }
+.map-pin-category-grid button { display: flex; min-width: 0; min-height: 52px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--pin-line); border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 5%, white); color: var(--map-place-tone); font-size: 8px; font-weight: 800; }
+.map-pin-category-grid button.is-active { border-color: var(--map-place-tone); background: color-mix(in srgb, var(--map-place-tone) 14%, white); color: var(--map-place-tone); box-shadow: inset 0 0 0 1px var(--map-place-tone); }
 .map-pin-field { display: block; margin-top: 12px; }
 .map-pin-field > span { display: block; margin-bottom: 5px; color: var(--pin-muted); font-size: 10px; font-weight: 800; }
 .map-pin-field input { width: 100%; min-height: 42px; border: 1px solid #ced7d1; border-radius: 7px; background: #fff; padding: 0 10px; color: var(--pin-ink); font-size: 12px; outline: none; }

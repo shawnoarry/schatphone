@@ -146,7 +146,7 @@ describe('OpenFreeMap canvas', () => {
     maplibreMock.markers.length = 0
   })
 
-  test('renders canonical markers, selects them, and places exact geo coordinates after load', async () => {
+  test('selects canonical markers normally and makes them pass through during coordinate placement', async () => {
     const userPin = {
       placeId: 'address:17',
       source: 'user',
@@ -184,6 +184,16 @@ describe('OpenFreeMap canvas', () => {
 
     maplibreMock.markers[0].element.click()
     expect(wrapper.emitted('select-pin')?.[0]?.[0]).toEqual(userPin)
+
+    await wrapper.setProps({ allowPinPlacement: true })
+    await nextTick()
+    const placementMarker = maplibreMock.markers.find(
+      (marker) => !marker.removed && !marker.element.classList.contains('is-pending'),
+    )
+    expect(placementMarker.element.classList.contains('is-placement-pass-through')).toBe(true)
+    expect(placementMarker.element.tabIndex).toBe(-1)
+    placementMarker.element.click()
+    expect(wrapper.emitted('select-pin')).toHaveLength(1)
 
     const placedPosition = { kind: 'geo', lat: 37.5712, lng: 126.9918 }
     map.emit('click', { lngLat: placedPosition })

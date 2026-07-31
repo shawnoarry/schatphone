@@ -13,6 +13,12 @@ import {
   CHAT_SOCIAL_RUNTIME_REASON,
   buildChatSocialRuntimeGreetingProposal,
 } from '../lib/chat-social-runtime-source'
+import {
+  MAP_JOURNEY_EVENT_PROPOSAL_STATUS,
+  buildMapJourneyEventReviewResult,
+  normalizeMapJourneyEventProposal,
+  normalizeMapJourneyEventProposals,
+} from '../lib/simulation/adapters/map-journey-events'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
@@ -20,6 +26,7 @@ const SIMULATION_STORAGE_VERSION = 1
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
 const SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT = 120
+const SIMULATION_MAP_JOURNEY_PROPOSAL_LIMIT = 120
 export const SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS = 10 * 60 * 1000
 export const SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS = 60 * 1000
 
@@ -381,6 +388,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const cooldownsByEvent = ref({})
   const dailyCounters = ref({})
   const chatSocialEventProposals = ref([])
+  const mapJourneyEventProposals = ref([])
   const settings = ref(normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS))
   const hasFinishedStorageHydration = ref(false)
 
@@ -398,6 +406,14 @@ export const useSimulationStore = defineStore('simulation', () => {
   )
   const pendingChatSocialEventProposalCount = computed(
     () => pendingChatSocialEventProposals.value.length,
+  )
+  const pendingMapJourneyEventProposals = computed(() =>
+    mapJourneyEventProposals.value.filter(
+      (item) => item.status === MAP_JOURNEY_EVENT_PROPOSAL_STATUS.PENDING_REVIEW,
+    ),
+  )
+  const pendingMapJourneyEventProposalCount = computed(
+    () => pendingMapJourneyEventProposals.value.length,
   )
 
   const isModuleEventsEnabled = (moduleKey) => {
@@ -587,6 +603,104 @@ export const useSimulationStore = defineStore('simulation', () => {
     return log
   }
 
+  const upsertMapJourneyEventProposal = (proposal = {}) => {
+    const normalized = normalizeMapJourneyEventProposal(proposal, 0)
+    if (!normalized) return null
+    mapJourneyEventProposals.value = [
+      normalized,
+      ...mapJourneyEventProposals.value.filter((item) => item.id !== normalized.id),
+    ].slice(0, SIMULATION_MAP_JOURNEY_PROPOSAL_LIMIT)
+    return normalized
+  }
+
+  const getMapJourneyEventProposal = (proposalId) => {
+    const id = normalizeText(proposalId, '', 180)
+    if (!id) return null
+    return mapJourneyEventProposals.value.find((item) => item.id === id) || null
+  }
+
+  const reviewMapJourneyEventProposal = (proposalId, outcome, { at = Date.now() } = {}) =>
+    buildMapJourneyEventReviewResult(getMapJourneyEventProposal(proposalId), outcome, at)
+
+  const finalizeMapJourneyEventProposal = (
+    proposalId,
+    {
+      outcome = '',
+      applied = false,
+      reason = '',
+      at = Date.now(),
+    } = {},
+  ) => {
+    const existing = getMapJourneyEventProposal(proposalId)
+    if (!existing || existing.status !== MAP_JOURNEY_EVENT_PROPOSAL_STATUS.PENDING_REVIEW) {
+      return null
+    }
+    const review = buildMapJourneyEventReviewResult(existing, outcome, at)
+    if (!review.ok) return null
+    const normalizedAt = normalizeTimestamp(at)
+    const nextProposal = upsertMapJourneyEventProposal({
+      ...existing,
+      status: applied
+        ? MAP_JOURNEY_EVENT_PROPOSAL_STATUS.APPLIED
+        : MAP_JOURNEY_EVENT_PROPOSAL_STATUS.FAILED,
+      selectedOutcome: review.outcome,
+      resolutionReason: normalizeText(
+        reason,
+        applied ? 'map_journey_outcome_applied' : 'map_journey_outcome_rejected',
+        160,
+      ),
+      reviewedAt: normalizedAt,
+      appliedAt: applied ? normalizedAt : 0,
+    })
+    recordEventLog({
+      eventId: existing.eventId,
+      moduleKey: existing.moduleKey,
+      targetId: existing.journeyId,
+      adapterKey: 'map.journey.apply_reviewed_outcome',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.MANUAL,
+      status: applied ? SIMULATION_EVENT_STATUS.TRIGGERED : SIMULATION_EVENT_STATUS.FAILED,
+      reason: nextProposal?.resolutionReason,
+      variantId: existing.provenance?.variantId,
+      variantPackId: existing.provenance?.variantPackId,
+      worldContextId: existing.provenance?.worldContextId,
+      activeWorldBookIds: existing.provenance?.activeWorldBookIds,
+      at: normalizedAt,
+    })
+    return nextProposal
+  }
+
+  const dismissMapJourneyEventProposal = (
+    proposalId,
+    { reason = 'map_journey_source_closed', at = Date.now() } = {},
+  ) => {
+    const existing = getMapJourneyEventProposal(proposalId)
+    if (!existing || existing.status !== MAP_JOURNEY_EVENT_PROPOSAL_STATUS.PENDING_REVIEW) {
+      return null
+    }
+    const normalizedAt = normalizeTimestamp(at)
+    const nextProposal = upsertMapJourneyEventProposal({
+      ...existing,
+      status: MAP_JOURNEY_EVENT_PROPOSAL_STATUS.DISMISSED,
+      resolutionReason: normalizeText(reason, 'map_journey_source_closed', 160),
+      reviewedAt: normalizedAt,
+    })
+    recordEventLog({
+      eventId: existing.eventId,
+      moduleKey: existing.moduleKey,
+      targetId: existing.journeyId,
+      adapterKey: 'map.journey.dismiss_interruption',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.SYSTEM,
+      status: SIMULATION_EVENT_STATUS.SKIPPED,
+      reason: nextProposal?.resolutionReason,
+      variantId: existing.provenance?.variantId,
+      variantPackId: existing.provenance?.variantPackId,
+      worldContextId: existing.provenance?.worldContextId,
+      activeWorldBookIds: existing.provenance?.activeWorldBookIds,
+      at: normalizedAt,
+    })
+    return nextProposal
+  }
+
   const upsertChatSocialEventProposal = (proposal = {}) => {
     const normalized = normalizeChatSocialEventProposal(proposal, 0)
     if (!normalized) return null
@@ -767,6 +881,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     chatSocialEventProposals.value = normalizeChatSocialEventProposals(
       rawSource.chatSocialEventProposals,
     )
+    mapJourneyEventProposals.value = normalizeMapJourneyEventProposals(
+      rawSource.mapJourneyEventProposals,
+    )
     settings.value = normalizeSimulationSettings(rawSource.settings)
     return true
   }
@@ -799,6 +916,15 @@ export const useSimulationStore = defineStore('simulation', () => {
       policySnapshot: { ...item.policySnapshot },
       source: { ...item.source },
     })),
+    mapJourneyEventProposals: mapJourneyEventProposals.value.map((item) => ({
+      ...item,
+      allowedOutcomes: [...item.allowedOutcomes],
+      source: { ...item.source },
+      provenance: {
+        ...item.provenance,
+        activeWorldBookIds: [...item.provenance.activeWorldBookIds],
+      },
+    })),
     settings: {
       surpriseMode: settings.value.surpriseMode,
       enabledModules: { ...settings.value.enabledModules },
@@ -826,6 +952,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     cooldownsByEvent.value = {}
     dailyCounters.value = {}
     chatSocialEventProposals.value = []
+    mapJourneyEventProposals.value = []
     settings.value = normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS)
   }
 
@@ -840,7 +967,14 @@ export const useSimulationStore = defineStore('simulation', () => {
   })()
 
   watch(
-    [eventLogs, cooldownsByEvent, dailyCounters, chatSocialEventProposals, settings],
+    [
+      eventLogs,
+      cooldownsByEvent,
+      dailyCounters,
+      chatSocialEventProposals,
+      mapJourneyEventProposals,
+      settings,
+    ],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -853,6 +987,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     cooldownsByEvent,
     dailyCounters,
     chatSocialEventProposals,
+    mapJourneyEventProposals,
     settings,
     eventLogCount,
     recentEventLogs,
@@ -860,6 +995,8 @@ export const useSimulationStore = defineStore('simulation', () => {
     surpriseMode,
     pendingChatSocialEventProposals,
     pendingChatSocialEventProposalCount,
+    pendingMapJourneyEventProposals,
+    pendingMapJourneyEventProposalCount,
     hasFinishedStorageHydration,
     isModuleEventsEnabled,
     setModuleEventsEnabled,
@@ -874,6 +1011,11 @@ export const useSimulationStore = defineStore('simulation', () => {
     incrementDailyCounter,
     getDailyCounterState,
     canUseDailyQuota,
+    upsertMapJourneyEventProposal,
+    getMapJourneyEventProposal,
+    reviewMapJourneyEventProposal,
+    finalizeMapJourneyEventProposal,
+    dismissMapJourneyEventProposal,
     submitChatSocialEventProposal,
     runChatSocialRuntimeProposal,
     approveChatSocialEventProposal,

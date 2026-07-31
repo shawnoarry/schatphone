@@ -11,6 +11,11 @@ import {
   normalizedToMapPosition,
 } from '../src/lib/map-packs'
 import { useMapStore } from '../src/stores/map'
+import {
+  MAP_USER_PLACE_CATEGORIES,
+  normalizeUserMapPlaceCategory,
+  resolveMapPlaceVisual,
+} from '../src/lib/map-place-categories'
 
 describe('local map pack foundation', () => {
   beforeEach(() => {
@@ -30,6 +35,29 @@ describe('local map pack foundation', () => {
     expect(wasteland.coordinateKind).toBe('canvas')
     expect(wasteland.factions).toHaveLength(4)
     expect(new Set(wasteland.places.map((place) => place.factionId).filter(Boolean)).size).toBe(4)
+  })
+
+  test('keeps one normalized visual contract for editable pin categories', () => {
+    expect(MAP_USER_PLACE_CATEGORIES.map((category) => category.id)).toEqual([
+      'home',
+      'work',
+      'school',
+      'shop',
+      'leisure',
+      'other',
+    ])
+    expect(normalizeUserMapPlaceCategory(' WORK ')).toBe('work')
+    expect(normalizeUserMapPlaceCategory('unknown')).toBe('other')
+    expect(resolveMapPlaceVisual({ category: 'home' }).icon).toBe('fas fa-house')
+    expect(resolveMapPlaceVisual({ category: 'home' }).tone).not.toBe(
+      resolveMapPlaceVisual({ category: 'work' }).tone,
+    )
+    expect(
+      resolveMapPlaceVisual(
+        { category: 'faction', factionId: 'north' },
+        [{ id: 'north', tone: '#123456' }],
+      ).tone,
+    ).toBe('#123456')
   })
 
   test('ships a unique, geocoded Seoul landmark catalog across requested place families', () => {
@@ -134,6 +162,7 @@ describe('local map pack foundation', () => {
       expect(store.currentLocation.mapPackId).toBe('cyber-wasteland-v1')
       expect(store.activeMapPlaces.some((place) => place.factionId === 'helix-covenant')).toBe(true)
 
+      expect(store.setTripTransportMode('private_vehicle').ok).toBe(true)
       const started = store.startTrip()
       expect(started.ok).toBe(true)
       expect(store.tripEstimate.distanceKm).toBeGreaterThan(0)

@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-06-01
+Updated: 2026-07-31
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -56,7 +56,26 @@ Current landed guardrail:
 - call the shared Mini Scene Interface with canonical source facts; do not copy world-profile, regex, artifact, or presenter logic into runtime adapters
 - treat interaction commands as requests that still pass the owning module's validation and any required runtime review
 
-## 6. Semantic Guardrails
+## 6. Workstream F: Map Journey Checkpoint Collaboration
+
+- MJE-3's first adapter is implemented in the current uncommitted tree and awaits user review; do not widen it or begin MJE-4
+- receive bounded canonical Map facts only for completed `en_route` and `near_arrival` checkpoints while Map is mounted; do not evaluate on each animation tick
+- keep permission, Surprise Mode, eligibility, deterministic/random gate, cooldown/cap, persistent proposal review, provenance, and logs in Event Runtime
+- return only no ETA change or a bounded 120-second delay through the Map adapter and let Map validate exact proposal/event/journey/checkpoint lineage
+- keep proposals pending without pausing Map Journey or opening detail automatically; preserve tested no-event, adapter-failure, legacy blocked-journey recovery, arrival dismissal, and missing/stale-proposal paths
+- keep destination change, event-driven cancellation, relationship, money, asset, identity, schedule, active exploration, and Agenda Journey effects unimplemented
+
+## 7. Workstream G: Agenda Journey And Activity Session Collaboration
+
+- status is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY`; follow roadmap 4.12 CJA gates and do not infer implementation authorization from this package
+- receive bounded canonical Agenda Journey or Activity Session facts only at explicit start, milestone, completion, or deadline checkpoints; never evaluate on each countdown tick
+- keep eligibility, deterministic/random gate, cooldown/cap, module permission, presentation mode, automatic-resolution policy, proposal/review, provenance, and logs in Event Runtime
+- keep Agenda Journey state, Activity Session timestamps, Calendar commitments, Map arrival, and all downstream domain truth in their owning modules
+- treat `off` as popup suppression rather than event-system disablement, while allowing only owner-approved low-impact automatic outcomes
+- reconcile overdue checkpoints idempotently after resume and do not promise exact interactive delivery while a browser/PWA is fully closed or OS-suspended
+- implement nothing until the matching CJA stage receives separate user acceptance and persistence/compatibility review
+
+## 8. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -69,3 +88,10 @@ Treat these as bugs:
 7. generated friend/block/refusal social events directly mutate Chat, Contacts, or relationship runtime without the event-runtime audit/review path
 8. World Pack app proposal review creates event rules or runtime mutations instead of confirmed appBindings
 9. Event Runtime starts owning Mini Scene artifacts/presenters or lets a scene interaction bypass source-module validation/review
+10. a Map checkpoint adapter mutates journey, transport, pin, place, arrival, or cancellation truth directly
+11. journey eligibility runs on every animation tick or makes an event mandatory for completion
+12. MJE-1 transport planning is treated as authorization for the later Map event adapter
+13. Agenda Journey or Activity Session eligibility runs on every countdown tick
+14. elapsed time or Map arrival is treated as proof that a non-travel activity completed
+15. popup mode `off` disables event eligibility or silently auto-applies a high-impact outcome
+16. CJA documentation acceptance is treated as authorization to add a route, store, timer, adapter, permission, persistence field, or migration

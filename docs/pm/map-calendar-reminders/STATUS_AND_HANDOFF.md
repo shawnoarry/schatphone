@@ -8,11 +8,47 @@ This file is the handoff page for Map, Calendar, and Reminders work.
 
 Status: `PARTIAL_DONE`
 
+## Calendar, Agenda Journey, And Event Orchestration Direction
+
+Status: `CJA-0_DONE_DOCUMENTATION_ONLY / CJA-1_USER_ACCEPTANCE_REQUIRED`
+
+The accepted direction is recorded in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md` and roadmap 4.12:
+
+1. Calendar is already a real Home app, but its current frontend is list-first: confirmed-event cards, push state, and a Reminders summary rather than a conventional date grid;
+2. the target Calendar frontend may later add Month, Week, and Agenda views over the same Calendar-owned confirmed events; `Agenda / 日程` is a Calendar view, not another planning app;
+3. `Agenda Journey / 行程` is a future separate Home app for today and near-term execution, while `Map Journey / 地图行程` remains the Map-owned city-travel flow;
+4. a hidden Schedule Orchestrator may later materialize confirmed Calendar commitments into linked Agenda Journey instances without copying or taking ownership of Calendar, Map, Event Runtime, or downstream value truth;
+5. Activity Session, event checkpoints, automatic resolution, and a future Narrative Timeline are architecture contracts only. No route, store, timer, popup, persistence field, migration, or visible Story/Diary surface is implemented or authorized;
+6. CJA-0 documentation is complete. CJA-1 Calendar information architecture requires a separate user acceptance decision before `/calendar` changes.
+
+This documentation lane does not modify, replace, or block the current Map implementation or roadmap 4.11 MJE work. Cross-module terms must qualify `Agenda Journey` and `Map Journey`; user-facing copy may use `行程` where the containing app makes the meaning clear.
+
+## Journey, Footprints, And Exploration Direction
+
+Status: `APPROVED / MJE-1_USER_ACCEPTED_IMPLEMENTED_IN_CURRENT_TREE / MJE-2_USER_ACCEPTED_IMPLEMENTED_IN_CURRENT_TREE / MJE-3_READY_FOR_USER_REVIEW`
+
+The approved direction is recorded in `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md` and promoted in roadmap 4.11:
+
+1. Map remains the player entry and canonical source owner for journeys and later active area exploration;
+2. transport selection belongs to journey planning, while a separate Transit app stays deferred until it has independent network utility;
+3. the current Explore points, route familiarity, area unlocks, and static feedback are the passive Footprints foundation rather than active spatial exploration;
+4. the first journey event family runs only at completed `en_route` and `near_arrival` checkpoints while Map is mounted, with Event Runtime owning eligibility/audit and Map validating every reviewed result;
+5. ordinary journeys may complete without an event;
+6. MJE-1 transport-aware estimates plus compatible active/history journey snapshots are user-accepted and implemented in the current uncommitted tree;
+7. MJE-2 implemented a versioned Map-owned active lifecycle, deterministic duration-based checkpoints, safe pause/resume, and the ordinary uneventful completion path. The user accepted it by explicitly authorizing MJE-3; it still does not authorize companions, transit topology, or active exploration.
+8. MJE-3 implements one low-impact, world-aware route-condition family. Event Runtime owns Map permission, Surprise Mode, random gate, cooldown/cap, persistent proposals, provenance, and audit; Map accepts only no ETA change or a bounded 120-second delay after validating exact source lineage. Pending review does not pause timing or automatic arrival, and missing, stale, non-pending, or arrival-expired proposals clear safely.
+9. The MJE-3 acceptance revision makes journey state visible through a persistent primary map card with route, phase, progress, remaining time, ETA, and an on-demand pending-update entry. It removes the duplicate journey pill from map tools, replaces GPS-like recenter wording with canonical role position, groups add/manage actions inside Places, and exposes the optional shared-route relationship record only at arrived-journey acknowledgement. It does not add companion truth to the active journey.
+10. Journey schema V3 safely migrates V2 active journeys that were paused by the earlier MJE-3 proposal behavior back to active timing while preserving remaining duration, proposal lineage, checkpoints, delay totals, and reminder rescheduling.
+
+MJE-1 was independently reviewed and accepted by the user. Its implementation remains in the current dirty physical tree without a dedicated commit, so this handoff does not claim `INTEGRATED_LOCAL`. The user accepted MJE-2 by explicitly authorizing the next stage. MJE-3 is now `READY_FOR_USER_REVIEW` in the same uncommitted tree; technical validation does not authorize MJE-4.
+
+MJE-3 validation is complete for the non-blocking pending-update revision: the focused Journey/Event/Map-view set passes 5 files / 64 tests; the full Vitest suite passes 200 files / 1363 tests; lint, production build, governance (2 files / 12 tests), and `git diff --check` pass; and the focused Map E2E passes 12/12 across desktop Chromium and Pixel 5.
+
 ## Integrated OpenFreeMap Baseline
 
 Status: `COMPLETE / INTEGRATED_LOCAL`
 
-Current candidate = Seoul V1 static place-catalog expansion only. Other feature work = Not authorized / Not started.
+Current integrated slice = Seoul V1 static place-catalog expansion plus the approved coordinate-placement and everyday Map information-architecture corrections. Other feature work remains separately gated.
 
 OpenFreeMap + MapLibre now replaces the retired Kakao comparison as the real-world renderer:
 
@@ -24,11 +60,13 @@ OpenFreeMap + MapLibre now replaces the retired Kakao comparison as the real-wor
 6. deterministic Map E2E proves real rendering, fictional/custom zero requests, offline fallback, active-trip coordinate editing, and parent return chains without depending on the public service;
 7. the old Kakao components, configuration, and tests are removed; `/map/labs/kakao-compare` remains only as an inert compatibility redirect to `/map`;
 8. the renderer decision and ownership boundary are synchronized across the active map package, PM mirror, roadmap, and local-map product decision.
+9. coordinate placement is exclusive in both renderers: existing markers become pointer-transparent, editor drafts survive coordinate reselection, and active-trip editing is covered on Pixel 5;
+10. the everyday Map UI is map-first at idle, with compact canonical role-position and Places controls; add/manage actions live inside Places, active journey state uses a persistent primary card outside the map-tool stack, trip detail remains on demand, place details stay on demand, and fictional faction legends start collapsed.
 
 Validation evidence for the integrated renderer baseline:
 
 - lint passed;
-- full unit suite passed: 197 files / 1318 tests;
+- full unit suite passed: 197 files / 1321 tests;
 - production build passed;
 - focused Map Playwright passed under installed Chrome: 10/10 across desktop and Pixel 5;
 - production audit reports 0 vulnerabilities;
@@ -67,19 +105,26 @@ What is already landed:
 16. Map Settings, Places and Pins, WorldBook pack settings, image-provider settings, and visual settings now use explicit parent return targets instead of forwarding the Map route's `from=home` query into every child.
 17. The earlier Kakao spike is retired. OpenFreeMap + MapLibre is the validated real-world renderer, with canonical SchatPhone coordinates, lazy loading, visible attribution, deterministic tests, and a local-image fallback.
 18. The current Seoul V1 catalog candidate expands the pack to 35 versioned read-only places. The 28-place expansion adds major entertainment agencies, broadcasters/media buildings, company headquarters, civic/cultural/event landmarks, and three named Cheongdam beauty-salon branches; each entry has stable Map identity, bilingual address/search metadata, and a locally maintained geographic coordinate.
+19. Map's default surface now uses progressive disclosure: store-seeded destination defaults no longer expose a route card on idle entry, secondary tools remain reachable through the Places drawer tabs, a canonical role-position control replaces GPS-like recenter wording and hides during travel, add/manage actions are grouped inside Places, active/paused/arrived journeys use a persistent primary status card rather than a map-tool pill, and selected-place/trip surfaces appear only when their context exists.
+20. Existing real and fictional markers cannot intercept coordinate-placement taps. Page-level guards also prevent stale marker events from replacing an in-progress create/edit draft.
+21. Map search now acts as a current-world local-pin index: it reports the searchable scope, matches only positioned pack/player places, and focuses plus opens the selected result without any POI/geocoding call. The same shared category icon/tone contract now styles both renderers, search, place lists, details, and Places and Pins Settings; Settings includes a focused six-category player-pin guide while faction tones and map-pack-only categories remain package-owned.
 
 Still incomplete:
 
-1. Reminders can still use stronger product clarity when a real objective/task cue family is promoted;
-2. Full map-package manifest import/export, topology validation, georeferencing, calibrated scale tools, editable faction polygons, and seed-place authoring are not implemented; current import/generation accepts one image plus lightweight pack metadata;
-3. route/date/follow-up handoff rules will need more real-world coverage as modules deepen;
-4. Calendar and Map world-app presentation contexts need true-device testing together with WorldBook/App Store/Home entry flows;
-5. Calendar's relationship adapter still knows concrete Chat/relationship stores and is a candidate for a deeper neutral interface.
-6. the first planned Mini Scene source integration is a separately gated confirmed K-pop Calendar music-show-day Adapter; Map follows only through its own later slice.
-7. the Calendar-owned carrier described below is a read-only design candidate. No field, migration, Adapter, or schema implementation is approved or landed.
-8. Seoul V1 keeps its fixed CC0 city street-map image as the local fallback. Building-level georeferencing or a local PMTiles upgrade remains a separate slice and must preserve existing place IDs and coordinates.
-9. additional real-city packs, true-device gesture/weak-network proof, and large-package/offline-cache validation remain separate and are not started.
-10. public-transit lines, stations, schedules, realtime arrivals, fares, and transfer routing are not implemented. A later slice must separately choose a licensed/versioned static topology source and decide whether any keyed realtime adapter is justified without turning provider IDs into Map identity.
+1. Calendar still lacks conventional Month/Week/Agenda views, selected-day detail, multi-day visual spans, and the fuller event-authoring contract described by CJA-1;
+2. Reminders can still use stronger product clarity when a real objective/task cue family is promoted;
+3. Full map-package manifest import/export, topology validation, georeferencing, calibrated scale tools, editable faction polygons, and seed-place authoring are not implemented; current import/generation accepts one image plus lightweight pack metadata;
+4. route/date/follow-up handoff rules will need more real-world coverage as modules deepen;
+5. Calendar and Map world-app presentation contexts need true-device testing together with WorldBook/App Store/Home entry flows;
+6. Calendar's relationship adapter still knows concrete Chat/relationship stores and is a candidate for a deeper neutral interface.
+7. the first planned Mini Scene source integration is a separately gated confirmed K-pop Calendar music-show-day Adapter; Map follows only through its own later slice.
+8. the Calendar-owned carrier described below is a read-only design candidate. No field, migration, Adapter, or schema implementation is approved or landed.
+9. Seoul V1 keeps its fixed CC0 city street-map image as the local fallback. Building-level georeferencing or a local PMTiles upgrade remains a separate slice and must preserve existing place IDs and coordinates.
+10. additional real-city packs, true-device gesture/weak-network proof, and large-package/offline-cache validation remain separate and are not started.
+11. public-transit lines, stations, schedules, realtime arrivals, fares, and transfer routing are not implemented. A later slice must separately choose a licensed/versioned static topology source and decide whether any keyed realtime adapter is justified without turning provider IDs into Map identity.
+12. the current Explore dashboard remains passive progression; no active area exploration or discovery candidate exists yet.
+13. MJE-1 transport planning and MJE-2 lifecycle/checkpoints are user-accepted in the current uncommitted tree. MJE-3's first checkpoint Event Runtime adapter is implemented and validated there but remains `READY_FOR_USER_REVIEW`, not complete or integrated.
+14. Agenda Journey, Schedule Orchestrator, Activity Session, their event adapters, and Narrative Timeline are not implemented; roadmap 4.12 is architecture-only.
 
 ### Read-Only Calendar Carrier Candidate
 
@@ -95,14 +140,17 @@ The carrier could be reviewed independently from Mini Scene runtime because fiel
 
 Calendar relationship review and memory-lineage detail have reached the current 4.2 acceptance.
 
+MJE-3 remains `READY_FOR_USER_REVIEW` with one low-impact world-aware checkpoint event family, a non-blocking pending update on the primary journey card, on-demand inline detail, Event Runtime permission/provenance/audit, Map-owned result validation, compatible V2-to-V3 recovery, and a tested ordinary-arrival path. Do not begin MJE-4 without a new user acceptance decision.
+
 Current safe candidates:
 
-1. user-test Calendar reservation and Map transit world context on a real phone as presentation only;
-2. deepen the confirmed-event relationship adapter without changing Calendar, Chat, or relationship-runtime ownership;
-3. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family;
-4. decide whether to approve, revise, or reject the read-only Calendar carrier candidate before any schema or migration work; keep Calendar and Map changes in separate owner slices.
-5. after roadmap 4.8 shared foundation and persistence/presenter prerequisites are complete, add only one Calendar request Adapter for the confirmed music-show-day scene; do not combine Map or new schedule schema in that slice.
-6. after the usable-product preview gates, consider one separately reviewed full map-package authoring/validation/export slice; keep provider-backed POI search and route planning outside that slice.
+1. after separate user acceptance, define CJA-1 Calendar Month/Week/Agenda information architecture without implementing Agenda Journey or changing Map;
+2. user-test Calendar reservation and Map transit world context on a real phone as presentation only;
+3. deepen the confirmed-event relationship adapter without changing Calendar, Chat, or relationship-runtime ownership;
+4. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family;
+5. decide whether to approve, revise, or reject the read-only Calendar carrier candidate before any schema or migration work; keep Calendar and Map changes in separate owner slices.
+6. after roadmap 4.8 shared foundation and persistence/presenter prerequisites are complete, add only one Calendar request Adapter for the confirmed music-show-day scene; do not combine Map or new schedule schema in that slice.
+7. after the usable-product preview gates, consider one separately reviewed full map-package authoring/validation/export slice; keep provider-backed POI search and route planning outside that slice.
 
 ## 3. Do Not Do
 
@@ -115,6 +163,12 @@ Current safe candidates:
 7. Do not move WorldBook content, Mini Scene profiles, Pack state, sensitive choices, Map coordinates, Contacts identity, or Event Runtime provenance into Calendar-owned fields.
 8. Do not replace a versioned topology asset in place after player pins exist; publish a new map-pack version and preserve or explicitly migrate coordinates.
 9. Do not add a paid/live map SDK to provide visual atmosphere that a local map pack already owns.
+10. Do not describe the current passive Explore progression as active spatial exploration.
+11. Do not let Event Runtime mutate journey state directly or evaluate journey events on every animation tick.
+12. Do not create a separate Transit app before it has independent network utility, and never let it create a second journey runtime.
+13. Do not start the next MJE stage before the current stage is user-accepted and the roadmap status is updated.
+14. Do not merge Calendar's `Agenda / 日程` view, the future `Agenda Journey / 行程` app, and Map Journey into one owner or infer activity completion from Map arrival alone.
+15. Do not treat CJA-0 documentation acceptance as authorization to implement CJA-1 or any later CJA stage.
 
 ## 4. Must Sync When Working Here
 
@@ -127,3 +181,6 @@ At the end of a meaningful round, check and update:
 5. `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 6. `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` when relationship-fact semantics changed
 7. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` when Calendar/Map Mini Scene request meaning changes
+8. `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md` when Journey, Footprints, Exploration, or transport ownership changes
+9. `docs/architecture/SIMULATION_EVENT_ENGINE.md` and the event-runtime package when journey checkpoint event collaboration changes
+10. `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md` when Calendar, Agenda Journey, Activity Session, Schedule Orchestrator, or Narrative Timeline meaning changes
