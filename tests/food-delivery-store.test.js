@@ -79,15 +79,175 @@ describe('food delivery store', () => {
       '/images/ui-assets/apps/food-delivery/peach-cloud/cover/peach-cloud-hero-01.png',
     )
     const peachCloudMenu = store.listMenuByRestaurant('food_seed_peach_cloud')
-    expect(peachCloudMenu).toHaveLength(12)
+    expect(peachCloudMenu).toHaveLength(17)
     expect(new Set(peachCloudMenu.map((item) => item.menuSection))).toEqual(
       new Set(['cloud_tea', 'fruit_sparkle', 'frozen_clouds', 'oven_sweets', 'seasonal_drop']),
     )
-    expect(peachCloudMenu.filter((item) => item.menuSection === 'fruit_sparkle')).toHaveLength(3)
+    expect(peachCloudMenu.filter((item) => item.menuSection === 'fruit_sparkle')).toHaveLength(5)
+    expect(peachCloudMenu.filter((item) => item.menuSection === 'cloud_tea')).toHaveLength(3)
     expect(peachCloudMenu.filter((item) => item.menuSection === 'frozen_clouds')).toHaveLength(4)
-    expect(peachCloudMenu.filter((item) => /peach/i.test(item.title))).toHaveLength(12)
+    expect(peachCloudMenu.filter((item) => item.menuSection === 'oven_sweets')).toHaveLength(2)
+    expect(peachCloudMenu.filter((item) => item.menuSection === 'seasonal_drop')).toHaveLength(3)
+    expect(store.findMenuItemById('food_menu_peach_grape_jasmine_tea')).toMatchObject({
+      title: 'Green Grape Jasmine Fruit Tea',
+      menuSection: 'fruit_sparkle',
+      price: '28.00',
+    })
+    expect(store.findMenuItemById('food_menu_peach_grape_jasmine_tea')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-13.png',
+    )
+    expect(store.findMenuItemById('food_menu_peach_osmanthus_pear_warm')).toMatchObject({
+      title: 'Osmanthus Pear Warm Infusion',
+      menuSection: 'seasonal_drop',
+      price: '27.00',
+    })
+    expect(store.findMenuItemById('food_menu_peach_osmanthus_pear_warm')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-17.png',
+    )
     expect(store.findMenuItemById('food_menu_peach_golden_hour_set')?.image.url).toContain(
       '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-12.png',
+    )
+  })
+
+  test('seeds River Noodles, Daylight Cafe, and Sugar Lane with complete distinct menus', () => {
+    const store = useFoodDeliveryStore()
+    const riverMenu = store.listMenuByRestaurant('food_seed_river_noodles')
+    const daylightMenu = store.listMenuByRestaurant('food_seed_daylight_cafe')
+    const sugarMenu = store.listMenuByRestaurant('food_seed_sugar_lane')
+
+    expect(store.findRestaurantById('food_seed_river_noodles')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/river-noodles/cover/river-noodles-cover-01.png',
+    )
+    expect(riverMenu).toHaveLength(9)
+    expect(new Set(riverMenu.map((item) => item.menuSection))).toEqual(
+      new Set(['broth_noodles', 'dry_noodles', 'noodle_sides', 'coolers']),
+    )
+    expect(store.findMenuItemById('food_menu_river_pickled_fish')).toMatchObject({
+      title: 'Pickled Mustard Fish Noodles',
+      ingredients: expect.stringContaining('pickled mustard greens'),
+    })
+    expect(store.findMenuItemById('food_menu_river_plum_cooler')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/river-noodles/products/river-noodles-item-09.png',
+    )
+
+    expect(store.findRestaurantById('food_seed_daylight_cafe')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/daylight-cafe/cover/daylight-cafe-cover-01.png',
+    )
+    expect(daylightMenu).toHaveLength(9)
+    expect(new Set(daylightMenu.map((item) => item.menuSection))).toEqual(
+      new Set(['espresso_bar', 'brunch_plates', 'bakery', 'cold_drinks']),
+    )
+    expect(store.findMenuItemById('food_menu_daylight_egg_croissant')).toMatchObject({
+      title: 'Sunrise Egg Croissant',
+      ingredients: expect.stringContaining('cheddar'),
+    })
+    expect(store.findMenuItemById('food_menu_daylight_vanilla_cold_brew')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/daylight-cafe/products/daylight-cafe-item-09.png',
+    )
+
+    expect(store.findRestaurantById('food_seed_sugar_lane')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/sugar-lane/cover/sugar-lane-cover-01.png',
+    )
+    expect(sugarMenu).toHaveLength(9)
+    expect(new Set(sugarMenu.map((item) => item.menuSection))).toEqual(
+      new Set(['layer_cakes', 'pastry_case', 'chilled_sweets', 'sweet_drinks']),
+    )
+    expect(store.findMenuItemById('food_menu_sugar_cake')).toMatchObject({
+      title: 'Tiny Moon Cake',
+      ingredients: expect.stringContaining('pear compote'),
+    })
+    expect(store.findMenuItemById('food_menu_sugar_cocoa_cloud_milk')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/sugar-lane/products/sugar-lane-item-09.png',
+    )
+  })
+
+  test('migrates the three known remote seed images without replacing custom URLs', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_river_noodles',
+          name: 'River Noodles',
+          category: 'fast_food',
+          imageSourceType: 'url',
+          imageUrl:
+            'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
+        },
+        {
+          id: 'food_seed_daylight_cafe',
+          name: 'Daylight Cafe',
+          category: 'cafe',
+          imageSourceType: 'url',
+          imageUrl:
+            'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
+        },
+        {
+          id: 'food_seed_sugar_lane',
+          name: 'Sugar Lane',
+          category: 'dessert',
+          imageSourceType: 'url',
+          imageUrl: 'https://example.com/my-sugar-lane-cover.png',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_river_noodles',
+          restaurantId: 'food_seed_river_noodles',
+          title: 'River Beef Noodles',
+          category: 'fast_food',
+          price: '36.00',
+          imageSourceType: 'url',
+          imageUrl:
+            'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
+        },
+        {
+          id: 'food_menu_cafe_latte',
+          restaurantId: 'food_seed_daylight_cafe',
+          title: 'Daylight Latte',
+          category: 'cafe',
+          price: '22.00',
+          imageSourceType: 'url',
+          imageUrl:
+            'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
+        },
+        {
+          id: 'food_menu_sugar_cake',
+          restaurantId: 'food_seed_sugar_lane',
+          title: 'Tiny Moon Cake',
+          category: 'dessert',
+          price: '32.00',
+          desc: 'Small dessert with a sweet moonlit finish.',
+          ingredients: 'cake, cream, sugar',
+          imageSourceType: 'url',
+          imageUrl:
+            'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findRestaurantById('food_seed_river_noodles')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/river-noodles/cover/river-noodles-cover-01.png',
+    )
+    expect(store.findRestaurantById('food_seed_daylight_cafe')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/daylight-cafe/cover/daylight-cafe-cover-01.png',
+    )
+    expect(store.findMenuItemById('food_menu_river_noodles')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/river-noodles/products/river-noodles-item-01.png',
+    )
+    expect(store.findMenuItemById('food_menu_cafe_latte')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/daylight-cafe/products/daylight-cafe-item-01.png',
+    )
+    expect(store.findMenuItemById('food_menu_sugar_cake')).toMatchObject({
+      desc: expect.stringContaining('pear compote'),
+      ingredients: expect.stringContaining('vanilla mousse'),
+    })
+    expect(store.findMenuItemById('food_menu_sugar_cake')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/sugar-lane/products/sugar-lane-item-01.png',
+    )
+    expect(store.findRestaurantById('food_seed_sugar_lane')?.image.url).toBe(
+      'https://example.com/my-sugar-lane-cover.png',
     )
   })
 
@@ -194,6 +354,21 @@ describe('food delivery store', () => {
       menuSection: 'breakfast',
       desc: 'A record that predates Dash Grill.',
     })
+    expect(store.findRestaurantById('food_seed_river_noodles')).toMatchObject({
+      name: 'River Noodles',
+      category: 'fast_food',
+    })
+    expect(store.listMenuByRestaurant('food_seed_river_noodles')).toHaveLength(9)
+    expect(store.findRestaurantById('food_seed_daylight_cafe')).toMatchObject({
+      name: 'Daylight Cafe',
+      category: 'cafe',
+    })
+    expect(store.listMenuByRestaurant('food_seed_daylight_cafe')).toHaveLength(9)
+    expect(store.findRestaurantById('food_seed_sugar_lane')).toMatchObject({
+      name: 'Sugar Lane',
+      category: 'dessert',
+    })
+    expect(store.listMenuByRestaurant('food_seed_sugar_lane')).toHaveLength(9)
     expect(store.findRestaurantById('food_seed_dash_grill')).toMatchObject({
       name: 'Dash Grill',
       category: 'fast_food',
@@ -209,6 +384,77 @@ describe('food delivery store', () => {
       category: 'restaurants',
     })
     expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
+  })
+
+  test('preserves same-id edits while filling the three newly expanded shop menus', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        { id: 'food_seed_river_noodles', name: 'My River Kitchen', category: 'fast_food' },
+        { id: 'food_seed_daylight_cafe', name: 'My Daylight Counter', category: 'cafe' },
+        { id: 'food_seed_sugar_lane', name: 'My Sugar Studio', category: 'dessert' },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_river_noodles',
+          restaurantId: 'food_seed_river_noodles',
+          title: 'My River Bowl',
+          category: 'fast_food',
+          menuSection: 'family_noodles',
+          price: '88.00',
+          desc: 'My saved beef noodle copy.',
+          ingredients: 'custom noodles, custom beef',
+          imageSourceType: 'url',
+          imageUrl: 'https://example.com/my-river-bowl.png',
+        },
+        {
+          id: 'food_menu_cafe_latte',
+          restaurantId: 'food_seed_daylight_cafe',
+          title: 'My Morning Coffee',
+          category: 'cafe',
+          menuSection: 'owners_coffee',
+          price: '66.00',
+          desc: 'My saved latte copy.',
+          ingredients: 'custom coffee, custom milk',
+        },
+        {
+          id: 'food_menu_sugar_cake',
+          restaurantId: 'food_seed_sugar_lane',
+          title: 'My Little Cake',
+          category: 'dessert',
+          menuSection: 'owners_cakes',
+          price: '77.00',
+          desc: 'My saved cake copy.',
+          ingredients: 'custom cake, custom cream',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findMenuItemById('food_menu_river_noodles')).toMatchObject({
+      title: 'My River Bowl',
+      menuSection: 'family_noodles',
+      price: '88.00',
+      desc: 'My saved beef noodle copy.',
+      ingredients: 'custom noodles, custom beef',
+      image: { url: 'https://example.com/my-river-bowl.png' },
+    })
+    expect(store.findMenuItemById('food_menu_cafe_latte')).toMatchObject({
+      title: 'My Morning Coffee',
+      menuSection: 'owners_coffee',
+      price: '66.00',
+      desc: 'My saved latte copy.',
+    })
+    expect(store.findMenuItemById('food_menu_sugar_cake')).toMatchObject({
+      title: 'My Little Cake',
+      menuSection: 'owners_cakes',
+      price: '77.00',
+      desc: 'My saved cake copy.',
+    })
+    expect(store.listMenuByRestaurant('food_seed_river_noodles')).toHaveLength(9)
+    expect(store.listMenuByRestaurant('food_seed_daylight_cafe')).toHaveLength(9)
+    expect(store.listMenuByRestaurant('food_seed_sugar_lane')).toHaveLength(9)
   })
 
   test('preserves a full saved user menu while adding required built-in seed menus', () => {
@@ -236,11 +482,11 @@ describe('food delivery store', () => {
 
     expect(savedMenuItems.every((item) => migratedMenuIds.has(item.id))).toBe(true)
     expect(store.listMenuByRestaurant('food_seed_moon_bistro')).toHaveLength(9)
-    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(12)
+    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(17)
     expect(store.listMenuByRestaurant('food_seed_dash_grill')).toHaveLength(10)
     expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
     expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
-    expect(store.menuItemCount).toBe(415)
+    expect(store.menuItemCount).toBe(447)
 
     const migratedSnapshot = store.createBackupSnapshot()
     store.resetForTesting()
@@ -276,6 +522,9 @@ describe('food delivery store', () => {
       desc: 'User-authored menu record 370.',
     })
     expect(store.findRestaurantById('food_seed_peach_cloud')).toBeNull()
+    expect(store.findRestaurantById('food_seed_river_noodles')).toBeNull()
+    expect(store.findRestaurantById('food_seed_daylight_cafe')).toBeNull()
+    expect(store.findRestaurantById('food_seed_sugar_lane')).toBeNull()
     expect(store.findRestaurantById('food_seed_dash_grill')).toBeNull()
     expect(store.findRestaurantById('food_seed_jade_hearth')).toBeNull()
     expect(store.findRestaurantById('food_seed_verdant_day')).toBeNull()
@@ -784,7 +1033,7 @@ describe('food delivery store', () => {
     })
     expect(moonBistroMenu.length).toBeGreaterThanOrEqual(8)
     expect(store.findRestaurantById('food_seed_peach_cloud')?.name).toBe('Peach Cloud')
-    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(12)
+    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(17)
   })
 
   test('refreshes legacy Peach Cloud copy without overwriting user-edited items', () => {
@@ -840,6 +1089,33 @@ describe('food delivery store', () => {
               desc: 'My own saved description.',
               ingredients: 'custom filling',
             },
+            {
+              id: 'food_menu_peach_matcha_float',
+              restaurantId: 'food_seed_peach_cloud',
+              title: 'Peach Cold Brew Tonic',
+              category: 'dessert',
+              menuSection: 'fruit_sparkle',
+              price: '31.00',
+              desc: 'Cold brew, white peach tonic, and a light cream cloud.',
+              ingredients: 'cold brew, white peach tonic, cream cloud',
+              imageSourceType: 'url',
+              imageUrl:
+                '/images/ui-assets/apps/food-delivery/peach-cloud/products/peach-cloud-item-08.png',
+              imageAlt: 'Peach Cold Brew Tonic',
+            },
+            {
+              id: 'food_menu_peach_grape_jasmine_tea',
+              restaurantId: 'food_seed_peach_cloud',
+              title: 'My Saved Grape Tea',
+              category: 'dessert',
+              menuSection: 'fruit_sparkle',
+              price: '99.00',
+              desc: 'My own grape recipe.',
+              ingredients: 'private grape blend',
+              imageSourceType: 'url',
+              imageUrl: 'https://example.com/my-grape-tea.png',
+              imageAlt: 'My saved grape tea photo',
+            },
           ],
           cartItems: [],
           orders: [],
@@ -874,7 +1150,30 @@ describe('food delivery store', () => {
       price: '30.00',
       desc: 'My own saved description.',
     })
-    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(12)
+    expect(store.findMenuItemById('food_menu_peach_matcha_float')).toMatchObject({
+      title: 'Peach Cold Brew Tonic',
+      menuSection: 'cloud_tea',
+    })
+    expect(store.findMenuItemById('food_menu_peach_grape_jasmine_tea')).toMatchObject({
+      title: 'My Saved Grape Tea',
+      menuSection: 'fruit_sparkle',
+      price: '99.00',
+      desc: 'My own grape recipe.',
+      ingredients: 'private grape blend',
+      image: {
+        url: 'https://example.com/my-grape-tea.png',
+        alt: 'My saved grape tea photo',
+      },
+    })
+    expect(store.findMenuItemById('food_menu_peach_mango_passion_yogurt')).toMatchObject({
+      title: 'Mango Passionfruit Yogurt',
+      menuSection: 'fruit_sparkle',
+    })
+    expect(store.findMenuItemById('food_menu_peach_osmanthus_pear_warm')).toMatchObject({
+      title: 'Osmanthus Pear Warm Infusion',
+      menuSection: 'seasonal_drop',
+    })
+    expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(17)
   })
 
   test('creates single-restaurant cart and local orders', () => {

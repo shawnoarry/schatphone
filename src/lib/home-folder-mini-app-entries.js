@@ -19,8 +19,15 @@ export const buildShoppingShopEntryId = (serviceKey = '') =>
 
 const normalizeList = (value = []) => (Array.isArray(value) ? value : [])
 
+const uiAssetUrl = (path = '') =>
+  `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
+
 const FOOD_SHOP_FOLDER_ENTRY_DEFAULTS = Object.freeze({
-  food_seed_peach_cloud: Object.freeze({ icon: 'fas fa-cloud', accent: 'rose' }),
+  food_seed_peach_cloud: Object.freeze({
+    icon: 'fas fa-cloud',
+    iconAsset: uiAssetUrl('apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg'),
+    accent: 'rose',
+  }),
   food_seed_verdant_day: Object.freeze({ icon: 'fas fa-leaf', accent: 'light' }),
 })
 
@@ -85,6 +92,7 @@ export const buildFoodDeliveryFolderEntries = ({
         descZh: shortDescription,
         descEn: shortDescription,
         icon: presentation.icon || entryDefaults.icon || 'fas fa-store',
+        iconAsset: presentation.hasOverride ? '' : entryDefaults.iconAsset || '',
         accent: presentation.accent || entryDefaults.accent || 'warm',
         route: FOOD_DELIVERY_ROUTE,
         folderQuery: {

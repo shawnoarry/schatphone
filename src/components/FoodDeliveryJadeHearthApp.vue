@@ -472,7 +472,10 @@ watch(
                   v-if="imageUrl(item)"
                   :src="imageUrl(item)"
                   :alt="item.image?.alt || item.title"
-                  class="h-full w-full object-cover"
+                  class="h-full w-full"
+                  :class="
+                    item.id === 'food_menu_jade_sea_bass' ? 'object-contain' : 'object-cover'
+                  "
                   :data-required-asset="requiredAssetPath(item)"
                   @error="handleImageError"
                 />

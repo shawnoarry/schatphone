@@ -1,8 +1,67 @@
 # Food Delivery Image2 Asset Prompts / 外卖 Image2 素材提示词
 
-Updated: 2026-07-29
+Updated: 2026-07-31
 
 这份文档用于生成外卖 UI 美化需要的 PNG 素材。所有提示词都做成中英双语，方便直接复制到 image2 / 生图工具中使用。
+
+## Portable Shop Asset Generation Playbook / 跨机器店铺素材生成方法
+
+这套方法用于提高同一店铺在不同机器、模型或生成批次中的一致性，但它不是唯一画风模板。每家店可以保留自己的摄影、插画、IP、材质与构图语言；需要稳定的是品牌识别和 UI 适配条件，而不是让所有图片看起来完全相同。
+
+### Why Results Drift / 为什么换机器后容易跑偏
+
+一致性通常不只取决于提示词。模型与版本、输出尺寸、参考图支持、随机种子、质量参数、提示词编码、后处理方式，以及图片最终在 UI 中的裁切比例都会影响结果。只描述“粉色、可爱、甜品摄影”之类的宽泛气质，并把每张图当作独立任务生成，通常只能得到同类图片，不能得到同一品牌的素材组。
+
+### Recommended Generation Stack / 推荐生成层次
+
+1. **Brand capsule / 品牌胶囊**：先冻结店铺定位、受众、3 到 5 个气质词、主辅色职责、标志性物件、允许的材质与明确禁用项。颜色应写出色值和用途，不只写颜色名称。
+2. **Asset map / 素材地图**：区分品牌 Hero、活动广告、商品图、分类图标、Logo/吉祥物和空状态插画。不同角色不应复用同一构图；Hero 负责品牌识别，活动图负责具体主题，商品图负责准确展示产品。
+3. **Slot contract / 槽位合同**：按真实 UI 容器记录宽高比、`object-fit`、可见裁切、文字压盖方向、主体安全区和最小显示尺寸。先决定图片将如何被页面使用，再决定画面如何构图。
+4. **Style anchors / 风格锚点**：从已验收素材中选择 3 到 5 张参考图，通常包含品牌 Hero、Logo/吉祥物、代表性商品图和一张活动图。工具支持参考图时直接传入；不支持时，把锚点中稳定的光线、镜头、材质、背景、色彩职责和主体比例写回品牌胶囊。
+5. **Shared prompt + subject delta / 固定母提示词加单图变量**：同一批次锁定品牌胶囊、镜头距离、光线、背景语法、负面提示、尺寸和质量参数，每张图只替换产品主体、配料、器皿和允许的小范围构图变化。
+6. **Controlled variation / 受控变化**：一致不等于复制。可以在约定范围内变化镜头角度、器皿、道具、背景形状和主体朝向，避免整套素材像同一个模板换菜；不可变化的是品牌色职责、光线逻辑、材质气质、主体识别和 UI 安全区。
+7. **Candidate gate / 候选验收**：生成结果先作为候选，不直接进入运行时目录。依次检查语义准确、品牌一致、主体完整、缩略图识别、详情大图质量、文字安全区、重复构图、尺寸/透明度、版权和敏感信息。
+8. **Deterministic delivery / 确定性交付**：使用可重复的裁切、缩放和 PNG 导出步骤。运行时文件放在 `public/images/ui-assets/apps/food-delivery/<shop>/`，可编辑母版放在 `output/imagegen/<shop-or-round>/`；页面不得依赖母版或临时请求文件。
+
+### Portable Request Record / 可迁移请求记录
+
+为了让另一台机器能继续同一批次，建议在对应母版目录保留一个请求记录，格式可以是 JSON、JSONL 或 Markdown，不强制唯一。至少记录：
+
+- 生成服务、模型和版本（能够取得时）；
+- 完整母提示词、单图变量和负面提示；
+- 输出尺寸、质量、背景/透明度和随机种子（工具支持时）；
+- 参考图的项目相对路径，不记录只在某台机器存在的临时绝对路径；
+- 原始候选、最终裁切、运行时目标路径和接受/拒绝原因；
+- 对应 UI 槽位的宽高比、文字压盖方向和缩略图验收尺寸。
+
+Windows CLI 应使用 UTF-8 提示词文件或结构化请求文件，先检查 dry-run 请求体，再提交生成，避免 `.cmd` 内联多行提示被截断。随机种子只能辅助复现，不能替代参考图、模型版本和槽位合同。
+
+### Reusable Prompt Skeleton / 可复用提示词骨架
+
+```text
+[Brand capsule]
+Fictional shop identity, audience, mood words, palette roles with color values,
+signature mascot/object, lighting, camera/material language, prohibited cues.
+
+[Asset role]
+Hero / campaign / product / category / logo, and what this asset must communicate.
+
+[Slot contract]
+Target aspect ratio, subject position and scale, text-safe area, crop-safe margins,
+object-fit behavior, smallest rendered size, thumbnail and detail-view requirements.
+
+[Subject delta]
+Exact product, ingredients, vessel, garnish, temperature/texture, allowed variation.
+
+[Negative constraints]
+No unrelated product, unreadable or random text, real brand, watermark, UI frame,
+distorted food, clipped key silhouette, duplicated hero composition, or unsafe crop.
+
+[Output]
+Pixel dimensions, PNG/alpha requirement, candidate only until visual QA passes.
+```
+
+同一店铺的下一批素材应先读取已验收锚点和请求记录；新店铺则先建立自己的品牌胶囊，不继承桃子云、Verdant Day 或平台素材的默认画风。允许探索多个候选方向，最终只把通过实际页面裁切检查的一组接入运行时。
 
 核心原则：图片里不要烘入 UI 文案、价格或按钮。食物摄影不放品牌字样；明确标记为“店铺 Logo”的素材允许有独立品牌图形，但仍不放可读店名，店名继续由代码渲染。
 
@@ -449,7 +508,9 @@ platform-merchant-mark-coconut-curry-01.png
 
 ## 5. Peach Cloud Independent App / Peach Cloud 独立店 App
 
-Peach Cloud 使用 Iron Grey `#444545`、Jet Black `#2B303A`、浅绿 `#F2FBE0`、Petal Rouge `#FD6C93` 和 Pink Mist `#FDA1B8` 建立独立品牌感。浅绿承担大面积背景，深灰承担正文与固定导航，高饱和粉只用于主要操作和选中状态，粉雾用于顶栏与辅助层；`#FD6C93` 上使用 Jet Black 文字，不使用小号白字。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 的素材已落到下列 `19` 个本地文件：`13` 张 PNG 和 `6` 个 SVG。现有 PNG 在本轮保持不变，页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
+Peach Cloud 使用 Iron Grey `#444545`、Jet Black `#2B303A`、浅绿 `#F2FBE0`、Petal Rouge `#FD6C93` 和 Pink Mist `#FDA1B8` 建立独立品牌感。浅绿承担大面积背景，深灰承担正文与固定导航，高饱和粉只用于主要操作和选中状态，粉雾用于顶栏与辅助层；`#FD6C93` 上使用 Jet Black 文字，不使用小号白字。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 提供原始信息架构依据，当前视觉在该结构上完成桃子云自己的品牌刷新。运行时正式素材共 `26` 个：`20` 张 PNG 和 `6` 个 SVG；目录额外保留 `5` 个未被桃子云引用的原版分类 SVG，便于其他店铺复用。页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
+
+可供人工修图的生成母版保存在 `output/imagegen/peach-cloud-refresh/ads/` 与 `output/imagegen/peach-cloud-refresh/products/`；产品目录同时保留高分辨率原图、正式 `768x768` 版本和一张套图预览。页面运行只依赖 `public/images/ui-assets/apps/food-delivery/peach-cloud/` 中的正式资源，不依赖 `output/` 母版或 `tmp/imagegen/` 中的 CLI 请求清单。
 
 ### Asset Contract / 素材合同
 
@@ -458,11 +519,19 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
 ├─ cover/peach-cloud-hero-01.png
 ├─ brand/peach-cloud-mark-01.svg
 ├─ categories/
-│  ├─ drinks.svg
+│  ├─ peach-cloud-fresh-fruit.svg
+│  ├─ peach-cloud-frozen-treat.svg
+│  ├─ peach-cloud-tea-coffee.svg
+│  ├─ peach-cloud-warm-bakes.svg
+│  ├─ peach-cloud-seasonal-pick.svg
 │  ├─ vegan.svg
 │  ├─ dessert.svg
+│  ├─ drinks.svg
 │  ├─ snacks.svg
 │  └─ meal.svg
+├─ promotions/
+│  ├─ peach-cloud-golden-pairing-01.png
+│  └─ peach-cloud-weekly-drop-01.png
 └─ products/
    ├─ peach-cloud-item-01.png
    ├─ peach-cloud-item-02.png
@@ -475,34 +544,67 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
    ├─ peach-cloud-item-09.png
    ├─ peach-cloud-item-10.png
    ├─ peach-cloud-item-11.png
-   └─ peach-cloud-item-12.png
+   ├─ peach-cloud-item-12.png
+   ├─ peach-cloud-item-13.png
+   ├─ peach-cloud-item-14.png
+   ├─ peach-cloud-item-15.png
+   ├─ peach-cloud-item-16.png
+   └─ peach-cloud-item-17.png
 ```
 
-| 文件                               | 内容                                                                          | 建议源尺寸 / 裁切                                                        |
-| ---------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `cover/peach-cloud-hero-01.png`    | 三杯奶昔摄影，用于 Figma 风格 `30% OFF` 促销                                  | 横向摄影，右侧主体清晰，适合促销位裁切                                   |
-| `brand/peach-cloud-mark-01.svg`    | Figma 甜点线稿，用作顶部品牌/资料入口                                         | 矢量，适合 `20px` 到 `48px` 显示                                         |
-| `categories/*.svg`                 | Drinks、Vegan/Fruit、Dessert、Snacks/Bakes、Meal/Seasonal 五个 Figma 分类线稿 | 矢量，使用 Jet Black `#2B303A` 描边；Snacks 底色使用 Pink Mist `#FDA1B8` |
-| `products/peach-cloud-item-01.png` | Peach Oolong Cloud                                                            | `768x768`                                                                |
-| `products/peach-cloud-item-02.png` | Brown Sugar Creme No. 7                                                       | `768x768`                                                                |
-| `products/peach-cloud-item-03.png` | Cocoa Cloud Brownie                                                           | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-04.png` | Peach Macaron Parade                                                          | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-05.png` | Yuzu Spark Pop                                                                | `768x768`                                                                |
-| `products/peach-cloud-item-06.png` | Crepe Gelato Cloud                                                            | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-07.png` | Macaron Milk Drift                                                            | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-08.png` | Hojicha Cloud Float                                                           | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-09.png` | Strawberry Sunbeam Slice                                                      | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-10.png` | Cloud Nine Cocoa Crepes                                                       | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-11.png` | Midnight Creme No. 11                                                         | Figma 产品摄影                                                           |
-| `products/peach-cloud-item-12.png` | Golden Hour Pairing，气泡饮与迷你巴斯克组合                                   | `768x768`                                                                |
+| 文件                                                | 内容                                                                          | 建议源尺寸 / 裁切                                                                                       |
+| --------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `cover/peach-cloud-hero-01.png`                     | 白桃气泡饮、桃子云吉祥物与云朵场景，用于全宽品牌 Hero                         | `1536x1024`；右侧主体清晰，左侧保留英文品牌文案安全区                                                   |
+| `promotions/peach-cloud-golden-pairing-01.png`      | 白桃气泡饮与桃子芝士蛋糕，用于 `30% OFF` 活动                                 | `1536x1024`；主体居中偏右，左侧适配半透明促销文案压盖                                                   |
+| `promotions/peach-cloud-weekly-drop-01.png`         | 白桃饮品、甜点与云桃吉祥物，用于 New 页周更品牌画面                           | `1536x1024`；主体集中在右半区，左侧保留大标题安全区                                                     |
+| `brand/peach-cloud-mark-01.svg`                     | 白桃、云顶、绿色叶片与表情组成的独立品牌标志                                  | 原生 `48x48` 矢量，适合小尺寸店铺栏与文件夹入口                                                         |
+| `categories/peach-cloud-*.svg`                      | Fresh Fruit、Frozen、Tea & Coffee、Bakes、Seasonal 五个桃子云专属 IP 分类插画 | 统一 `38x38` 画布、透明背景和圆润彩色线稿；Fresh Fruit 同时表达桃子、柑橘与果实，不绑定单一果味或气泡水 |
+| `categories/{vegan,dessert,drinks,snacks,meal}.svg` | 原版五枚通用分类标记，桃子云不再引用，保留给其他店铺复用                      | 保持原文件内容与原路径，不纳入桃子云 `26` 个运行时正式素材计数                                          |
+| `products/peach-cloud-item-01.png`                  | White Peach Lime Sparkler                                                     | `768x768`；白桃、青柠与薄荷气泡饮                                                                       |
+| `products/peach-cloud-item-02.png`                  | Roasted Peach Oolong Cloud                                                    | `768x768`；白桃烘焙乌龙与厚云顶                                                                         |
+| `products/peach-cloud-item-03.png`                  | Peach Cocoa Brownie                                                           | `768x768`；桃片奶油可可布朗尼                                                                           |
+| `products/peach-cloud-item-04.png`                  | White Peach Macaron Parade                                                    | `768x768`；多色白桃马卡龙拼盘                                                                           |
+| `products/peach-cloud-item-05.png`                  | Yuzu Peach Spark Pop                                                          | `768x768`；柚子白桃气泡饮                                                                               |
+| `products/peach-cloud-item-06.png`                  | Peach Cocoa Crepe Cloud                                                       | `768x768`；可可薄饼与白桃奶油                                                                           |
+| `products/peach-cloud-item-07.png`                  | Peach Macaron Milk Ice                                                        | `768x768`；白桃酱牛奶冰与马卡龙                                                                         |
+| `products/peach-cloud-item-08.png`                  | Peach Cold Brew Tonic                                                         | `768x768`；白桃冷萃汤力饮                                                                               |
+| `products/peach-cloud-item-09.png`                  | Peach Strawberry Cloud Slice                                                  | `768x768`；白桃草莓云朵芝士蛋糕                                                                         |
+| `products/peach-cloud-item-10.png`                  | Peach Cocoa Crepe Sundae                                                      | `768x768`；白桃可可薄饼圣代                                                                             |
+| `products/peach-cloud-item-11.png`                  | Black Tea Peach Creme                                                         | `768x768`；红茶白桃奶油饮                                                                               |
+| `products/peach-cloud-item-12.png`                  | Golden Peach Cheesecake Pairing                                               | `768x768`；白桃气泡饮与桃子芝士蛋糕组合                                                                 |
+| `products/peach-cloud-item-13.png`                  | Green Grape Jasmine Fruit Tea                                                 | `768x768`；青提、茉莉花与清透茉莉鲜果茶                                                                 |
+| `products/peach-cloud-item-14.png`                  | Mango Passionfruit Yogurt                                                     | `768x768`；芒果厚酸奶与百香果果肉旋纹                                                                   |
+| `products/peach-cloud-item-15.png`                  | Strawberry Peach Fruit Milk                                                   | `768x768`；草莓、白桃果肉与柔滑鲜果乳                                                                   |
+| `products/peach-cloud-item-16.png`                  | Waxberry Lychee Iced Tea                                                      | `768x768`；杨梅、去壳荔枝与红宝石色冰茶                                                                 |
+| `products/peach-cloud-item-17.png`                  | Osmanthus Pear Warm Infusion                                                  | `768x768`；桂花、雪梨片与清透暖饮                                                                       |
+
+Visible product copy is locale-aware even though these stable asset filenames and English generation subjects remain unchanged. Built-in UX defaults to Chinese and retains accurate English; approved English brand-advertising copy can remain fixed. Every future retouch or replacement must keep category, product copy, ingredients, image subject, and alternative text semantically aligned in both languages.
+
+### Delivered Menu Expansion / 已交付菜单扩展
+
+The formal pack and runtime now contain 17 items. Fresh Fruit expands from `2` to `5` and Seasonal from `1` to `3` through these delivered bilingual products and stable asset paths:
+
+- `peach-cloud-item-13.png`: `青提茉莉鲜果茶 / Green Grape Jasmine Fruit Tea`, `¥28.00`
+- `peach-cloud-item-14.png`: `芒果百香厚酸奶 / Mango Passionfruit Yogurt`, `¥32.00`
+- `peach-cloud-item-15.png`: `草莓白桃鲜果乳 / Strawberry Peach Fruit Milk`, `¥30.00`
+- `peach-cloud-item-16.png`: `杨梅荔枝冰茶 / Waxberry Lychee Iced Tea`, `¥29.00`
+- `peach-cloud-item-17.png`: `桂花雪梨暖饮 / Osmanthus Pear Warm Infusion`, `¥27.00`
+
+The high-resolution editable masters and `768x768` accepted copies stay under `output/imagegen/peach-cloud-refresh/products/`; runtime uses only the corresponding files under `public/`. The reproducible CLI requests are recorded in `tmp/imagegen/peach-cloud-menu-expansion.jsonl`. This delivered content slice does not introduce automatic seasonal dates or availability rules.
 
 ### Hero Prompt / 主图提示词
 
 ```text
-中文：用于虚拟手机外卖独立甜饮 App 的品牌主图，明亮真实的商业饮品与甜点摄影，白桃乌龙奶盖、粉红渐层鲜果气泡饮、芒果牛奶冰、巴斯克芝士蛋糕和一份黄油华夫饼陈列在清爽的现代甜饮柜台上，Petal Rouge `#FD6C93`、Pink Mist `#FDA1B8`、浅绿 `#F2FBE0` 与少量 Jet Black `#2B303A` 配色，明快但不过度儿童化，食物清晰诱人，主体集中在画面右侧和中部，左侧保留稳定的深浅对比区域给代码渲染标题，适合横向 8:5 裁切，不要可读文字，不要 logo，不要价格，不要 UI，不要手机边框，不要水印，PNG。
+中文：为虚构甜饮品牌 Peach Cloud 创作精致的横向品牌广告画面。主体是一个圆润的白桃 IP：清晰桃形与中央桃缝、柔软云朵奶油帽、两颗深灰圆点眼睛、温和微笑和一片深绿色桃叶；旁边只搭配一杯浅粉白桃气泡饮和柔软云顶。场景使用浅绿、花瓣粉、粉雾、白色与少量深灰的抽象圆弧、云朵纸艺和气泡，明亮高调、触感精致、友好但不过度儿童化。3:2 横向构图，吉祥物和饮品集中在中部偏右，左侧保留稳定的英文品牌文案安全区；不要可读文字、字母、价格、UI、水印或现实品牌标志。
 
-English: Brand hero for an independent dessert-and-drinks delivery app inside a virtual phone, bright realistic commercial food photography of white-peach oolong milk tea, pink layered fruit fizz, mango milk snow, Basque cheesecake, and a butter waffle on a clean contemporary dessert counter, Petal Rouge #FD6C93, Pink Mist #FDA1B8, pale green #F2FBE0, and small Jet Black #2B303A accents, bright and polished without looking childish, crisp appetizing food, subjects concentrated in the center and right with stable contrast-safe space on the left for code-rendered copy, composed for a horizontal 8:5 crop, no readable text, no logo, no price, no UI, no phone frame, no watermark, PNG.
+English: Create a polished 3:2 landscape brand campaign image for the fictional Peach Cloud dessert-drinks shop. Show its signature IP character: a small plump white-peach mascot with a rounded peach silhouette and central cleft, soft cloud-cream cap, two tiny charcoal dot eyes, gentle smile, and one dark-green peach leaf. Pair it with one elegant pale-blush white-peach sparkling drink topped with a soft cream cloud. Use an airy dessert-studio set with pale green #F2FBE0, petal rouge #FD6C93, pink mist #FDA1B8, fresh white, restrained charcoal #2B303A, abstract peach arcs, rounded cloud forms, bubbles, and tactile paper-cut depth. Keep the mascot and drink in the middle-right and preserve stable space on the left for code-rendered English brand copy. No readable text, letters, prices, UI, watermark, or real brand marks.
 ```
+
+### Campaign Prompts / 活动图提示词
+
+`peach-cloud-golden-pairing-01.png`：只展示一杯浅金白桃气泡饮和一块带饼干底、桃蜜淋面的白桃芝士蛋糕，桃子云吉祥物仅作为小型陪衬。主体集中在中部偏右，左侧必须在半透明粉色文案层压盖后仍保留清晰产品露出；不要文字、折扣数字、价格或额外甜点。
+
+`peach-cloud-weekly-drop-01.png`：让桃子云吉祥物从云朵后探出，与新鲜白桃、一杯粉色桃子气泡饮和一份小型桃子奶油甜点组成季节上新画面。主体集中在右半区，左侧保留大标题安全区；强调周更与新鲜感，不表现折扣，不要文字、价格、UI 或现实品牌。
 
 ### Product Pack Prompt / 产品图组提示词
 
@@ -517,16 +619,16 @@ English: Square product photography for the virtual Peach Cloud drinks-and-desse
 ### Brand Mark Prompt / 品牌图形提示词
 
 ```text
-中文：Peach Cloud 甜饮品牌的独立图形标志，不含文字，将简化白桃轮廓、柔软云朵和一只带吸管的冷饮杯组合成一个清晰轮廓，以 Petal Rouge `#FD6C93` 为主，搭配 Jet Black `#2B303A` 结构线和少量浅绿 `#F2FBE0` 高光，友好但不过度卡通，适合在 48px 仍可识别，透明背景，无投影或仅极短柔和投影，不要字母，不要店名，不要价格，不要 UI 卡片，不要水印，带 alpha 通道的 768x768 PNG。
+中文：Peach Cloud 甜饮品牌的独立 48px 矢量标志，不含文字。用 Pink Mist `#FDA1B8` 白桃外形作为主体，顶部叠加浅绿 `#F2FBE0` 云朵奶油帽和一片绿色桃叶，以 Jet Black `#2B303A` 描边、圆点眼睛和温和微笑建立清晰表情，并用 Petal Rouge `#FD6C93` 中线强化桃形。轮廓在 20px 到 48px 仍需清楚，不加入杯子、吸管、字母、店名、价格、投影、UI 卡片或水印。
 
-English: Standalone symbol for the Peach Cloud dessert-drinks brand with no text, combining a simplified white-peach outline, soft cloud, and cold drink cup with straw into one clear silhouette, primarily Petal Rouge #FD6C93 with Jet Black #2B303A structure and small pale-green #F2FBE0 highlights, friendly without becoming overly cartoonish, recognizable at 48px, transparent background, no shadow or only a very compact soft shadow, no letters, no shop name, no price, no UI card, no watermark, 768x768 PNG with alpha.
+English: Standalone 48px vector mark for the Peach Cloud dessert-drinks brand with no text. Use a Pink Mist #FDA1B8 white-peach silhouette as the body, topped with a pale-green #F2FBE0 cloud-cream cap and one green peach leaf. Jet Black #2B303A outlines, dot eyes, and a gentle smile create the face; a Petal Rouge #FD6C93 center seam reinforces the peach silhouette. Keep it legible from 20px to 48px. No cup, straw, letters, shop name, price, shadow, UI card, or watermark.
 ```
 
 ## 7. Dash Grill Independent App / Dash Grill 独立快餐 App
 
 Dash Grill 是原创连锁快餐概念，视觉使用 Tomato Red `#E33D2E`、Mustard Yellow `#FFC833`、Paper `#FFF9EC` 和 Ink `#201A17`。它可以传达高频套餐、汉堡、炸鸡和奶昔的快节奏消费感，但不得使用麦当劳或其他现实品牌的名称、拱门、吉祥物、制服、包装、门店照片或可识别商标。
 
-当前 UI 已为下列 `11` 张 PNG 接好稳定路径。文件未交付时统一显示共享诊断占位图，这些占位图不是正式素材。
+下列 `11` 张正式 PNG 已交付到稳定运行时路径，并完成桌面 Chromium 与模拟 Pixel 5 的 Home、Menu、Bag 和 Detail 页面验收；未发现诊断占位、横向溢出或页面错误。CLI 请求、候选母版、联系表和接受记录保存在 `output/imagegen/dash-grill/`，运行时只依赖 `public/images/ui-assets/apps/food-delivery/dash-grill/`。
 
 ### Asset Contract / 素材合同
 
@@ -582,7 +684,7 @@ English: Square commercial product photography for the original virtual quick-se
 
 Jade Hearth 是原创中式合菜概念，视觉使用 Ink Green `#1F4D3A`、Cinnabar `#BD4B35`、Rice Paper `#F5EFE2`、Warm Paper `#E9DECA` 和 Ink `#211E19`。素材应呈现温润、克制、适合共同分食的当代中餐，不使用现实餐厅品牌、可识别包装、仿古招牌或过度节庆化的装饰。
 
-当前 UI 已为下列 `13` 张 PNG 接好稳定路径。文件未交付时统一显示共享诊断占位图，这些占位图不是正式素材。
+下列 `13` 张正式 PNG 已交付到稳定运行时路径，并完成桌面 Chromium 与模拟 Pixel 5 的 Home、Menu、Feast、Bag、Order 和 Detail 页面验收；未发现诊断占位、横向溢出或页面错误。CLI 首轮/重试请求、候选母版、联系表和接受记录保存在 `output/imagegen/jade-hearth/`，运行时只依赖 `public/images/ui-assets/apps/food-delivery/jade-hearth/`。首轮 `item-03` 因非方形画布、首轮 `item-12` 因汤圆数量错误被拒绝，运行时使用通过验收的 v2 母版；首页整鱼 `4:5` 卡片单独使用 `object-contain` 保全鱼尾与器皿，菜单与详情裁切不变。
 
 ### Asset Contract / 素材合同
 
@@ -604,21 +706,21 @@ public/images/ui-assets/apps/food-delivery/jade-hearth/
    └─ jade-hearth-item-12.png
 ```
 
-| 文件                               | 菜品 / 用途                         | 建议尺寸与构图                                                   |
-| ---------------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
-| `cover/jade-hearth-cover-01.png`   | 品牌首页 Hero，中式合菜桌面         | `1200x750`；桌面由左下延伸到右侧，上部与左侧保留深绿文案安全区   |
-| `products/jade-hearth-item-01.png` | Tea-Smoked Half Chicken             | `768x768`；茶香半鸡、葱油与深色陶盘                              |
-| `products/jade-hearth-item-02.png` | Cinnabar Char Siu                   | `768x768`；晶亮叉烧、芥菜与芝麻                                  |
-| `products/jade-hearth-item-03.png` | Ginger-Scallion Sea Bass            | `768x768`；清蒸鲈鱼、姜丝、葱丝与热油光泽                        |
-| `products/jade-hearth-item-04.png` | Crystal Shrimp Dumplings            | `768x768`；四只透明虾饺与浅色蒸笼                                |
-| `products/jade-hearth-item-05.png` | Sesame Cucumber Ribbons             | `768x768`；卷叠黄瓜、芝麻酱、黑醋与花生碎                        |
-| `products/jade-hearth-item-06.png` | Pepper Lotus Root                   | `768x768`；脆藕片、青椒、芹菜与发酵辣椒                          |
-| `products/jade-hearth-item-07.png` | Hearth Mapo Tofu                    | `768x768`；麻婆豆腐、牛肉碎与青花椒油                            |
-| `products/jade-hearth-item-08.png` | Chestnut Mushroom Claypot           | `768x768`；栗子、三种菌菇、腐竹与小砂锅                          |
-| `products/jade-hearth-item-09.png` | Shrimp & Scallion Fried Rice        | `768x768`；虾仁、鸡蛋、葱花与粒粒分明的炒饭                      |
-| `products/jade-hearth-item-10.png` | Red-Braised Beef Knife Noodles      | `768x768`；宽刀削面、红烧牛肉、番茄汤与青菜                      |
-| `products/jade-hearth-item-11.png` | Osmanthus Snow Pear Tea             | `768x768`；透明热茶壶、雪梨、桂花与枸杞                          |
-| `products/jade-hearth-item-12.png` | Black Sesame Tangyuan               | `768x768`；四颗黑芝麻汤圆、清姜糖水与一颗剖面                    |
+| 文件                               | 菜品 / 用途                    | 建议尺寸与构图                                                 |
+| ---------------------------------- | ------------------------------ | -------------------------------------------------------------- |
+| `cover/jade-hearth-cover-01.png`   | 品牌首页 Hero，中式合菜桌面    | `1200x750`；桌面由左下延伸到右侧，上部与左侧保留深绿文案安全区 |
+| `products/jade-hearth-item-01.png` | Tea-Smoked Half Chicken        | `768x768`；茶香半鸡、葱油与深色陶盘                            |
+| `products/jade-hearth-item-02.png` | Cinnabar Char Siu              | `768x768`；晶亮叉烧、芥菜与芝麻                                |
+| `products/jade-hearth-item-03.png` | Ginger-Scallion Sea Bass       | `768x768`；清蒸鲈鱼、姜丝、葱丝与热油光泽                      |
+| `products/jade-hearth-item-04.png` | Crystal Shrimp Dumplings       | `768x768`；四只透明虾饺与浅色蒸笼                              |
+| `products/jade-hearth-item-05.png` | Sesame Cucumber Ribbons        | `768x768`；卷叠黄瓜、芝麻酱、黑醋与花生碎                      |
+| `products/jade-hearth-item-06.png` | Pepper Lotus Root              | `768x768`；脆藕片、青椒、芹菜与发酵辣椒                        |
+| `products/jade-hearth-item-07.png` | Hearth Mapo Tofu               | `768x768`；麻婆豆腐、牛肉碎与青花椒油                          |
+| `products/jade-hearth-item-08.png` | Chestnut Mushroom Claypot      | `768x768`；栗子、三种菌菇、腐竹与小砂锅                        |
+| `products/jade-hearth-item-09.png` | Shrimp & Scallion Fried Rice   | `768x768`；虾仁、鸡蛋、葱花与粒粒分明的炒饭                    |
+| `products/jade-hearth-item-10.png` | Red-Braised Beef Knife Noodles | `768x768`；宽刀削面、红烧牛肉、番茄汤与青菜                    |
+| `products/jade-hearth-item-11.png` | Osmanthus Snow Pear Tea        | `768x768`；透明热茶壶、雪梨、桂花与枸杞                        |
+| `products/jade-hearth-item-12.png` | Black Sesame Tangyuan          | `768x768`；四颗黑芝麻汤圆、清姜糖水与一颗剖面                  |
 
 ### Cover Prompt / 封面提示词
 
@@ -681,6 +783,99 @@ English: Square commercial food photography for the original virtual light-food 
 中文：原创虚拟轻食品牌 Verdant Day 的方形商业产品摄影。只展示表格指定的一份餐品或饮品，主体占画面约 74%，真实、新鲜、有食欲，灰白 #F2F4EF 或柔和绿 #E4EADF 背景，叶绿 #496B4A 餐具或布面点缀，允许少量珊瑚红 #E96F64 与金色 #D7A932 食材高光，明亮自然侧光，短柔投影，中心构图适合圆形裁切，边缘保留安全区，不要可读文字，不要价格，不要 logo，不要人物，不要现实品牌包装，不要 UI 卡片，不要水印，768x768 PNG。
 
 English: Square commercial product photography for the original virtual light-food brand Verdant Day. Show only the specified dish or drink, filling about 74% of the frame with realistic fresh appetizing texture, on a grey-white #F2F4EF or soft-green #E4EADF background with leaf-green #496B4A tableware or textile accents and restrained coral #E96F64 and gold #D7A932 ingredient highlights. Use bright natural side light, a compact soft shadow, center-safe composition for circular cropping, and safe edge padding. No readable text, no price, no logo, no people, no real-brand packaging, no UI card, no watermark, 768x768 PNG.
+```
+
+## 10. River Noodles Independent Shop / River Noodles 独立面馆
+
+River Noodles 是河岸市集里的当代面馆，不是 Jade Hearth 的中式合菜分支。摄影胶囊使用 River Teal `#1F6B68`、Porcelain `#F3F0E8`、Lacquer Red `#A84A3E`、Broth Amber `#C9883C` 与 Ink `#1B2525`；保持约 `35°` 俯视、自然窗侧光、深浅青釉石器、真实汤汽和湿润面条质感。汤面允许宽口深碗，拌面改用浅碗，小碟与高杯受控变化，不能把九张商品图做成同一只碗换配料。
+
+状态：菜单与稳定运行时路径已接入；下列 `10` 张正式 PNG 尚未生成、接入或视觉验收。候选母版后续只能写入 `output/imagegen/river-noodles/`，运行时只能读取 `public/images/ui-assets/apps/food-delivery/river-noodles/`。
+
+| 稳定路径                             | 菜品 / 用途                                  | 语义与构图要求                                                                             |
+| ------------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `cover/river-noodles-cover-01.png`   | River Noodles Hero / 面馆首页主图            | `1200x750`；牛肉汤面、番茄牛肉面、拌面和小碟形成河岸餐桌，主体在中右，左侧留深青文案安全区 |
+| `products/river-noodles-item-01.png` | River Beef Noodles / 河岸牛肉面              | `768x768`；手工面、卤牛肉片、清亮牛骨汤、青菜、葱花                                        |
+| `products/river-noodles-item-02.png` | Tomato Braised Beef Noodles / 番茄红烧牛肉面 | `768x768`；番茄牛肉汤、牛肉块、手工面、青菜                                                |
+| `products/river-noodles-item-03.png` | Chicken Shiitake Noodles / 香菇鸡肉面        | `768x768`；清鸡汤、鸡肉片、香菇、幼嫩青菜                                                  |
+| `products/river-noodles-item-04.png` | Pickled Mustard Fish Noodles / 酸菜鱼面      | `768x768`；白身鱼片、酸菜、辣椒、花椒与金色酸汤                                            |
+| `products/river-noodles-item-05.png` | Sesame Scallion Dry Noodles / 麻酱葱油拌面   | `768x768`；麻酱包裹的拌面、黄瓜丝、葱油、芝麻，使用浅碗                                    |
+| `products/river-noodles-item-06.png` | Chili Crisp Pork Noodles / 香辣肉末拌面      | `768x768`；肉末、红油辣酱、花生碎、葱花，酱汁与面条清楚分辨                                |
+| `products/river-noodles-item-07.png` | Cucumber Sesame Salad / 芝麻拍黄瓜           | `768x768`；拍黄瓜、黑醋、蒜、芝麻和少量红油，使用小碟                                      |
+| `products/river-noodles-item-08.png` | Crispy Pepper Lotus Root / 青椒脆藕片        | `768x768`；薄脆藕片、青椒、芝麻与片盐，不能生成炖藕                                        |
+| `products/river-noodles-item-09.png` | Osmanthus Plum Cooler / 桂花酸梅饮           | `768x768`；透明高杯、深梅红冷饮、桂花、柑橘片和清楚冰块                                    |
+
+### River Noodles Prompt Capsule / River Noodles 提示词胶囊
+
+```text
+中文 Hero：原创虚拟面馆品牌 River Noodles 的横向商业食物摄影，用于手机外卖 App 首页 Hero。展示一份清亮卤牛肉汤面、一份番茄红烧牛肉面、一份麻酱葱油拌面和两道清爽小碟，深浅青釉石器、Porcelain #F3F0E8 桌面、River Teal #1F6B68 背景与极少 Lacquer Red #A84A3E 点缀，自然窗侧光，真实汤汽、肉纹和湿润面条，主体集中在画面中部和右侧，左侧保留稳定深青文案安全区，适合 8:5 裁切，不要可读文字、价格、logo、人物、现实品牌包装、仿古牌匾、UI 或水印，1200x750 PNG。
+
+English Hero: Horizontal commercial food photography for the original virtual noodle shop River Noodles, used as a mobile delivery-app hero. Show one clear-broth braised-beef noodle bowl, one tomato beef noodle bowl, one sesame-scallion dry noodle bowl, and two fresh side plates in varied deep and shallow teal-glazed stoneware on a Porcelain #F3F0E8 tabletop, with a River Teal #1F6B68 background and very restrained Lacquer Red #A84A3E accents. Use natural window side light and realistic steam, meat fibers, broth, and moist noodles. Keep the food clustered in the center and right with stable deep-teal negative space on the left for code-rendered copy, composed for an 8:5 crop. No readable text, price, logo, people, real-brand packaging, antique signboard, UI, or watermark, 1200x750 PNG.
+
+中文商品：原创虚拟面馆 River Noodles 的方形商业菜品摄影。只展示表格指定的一道面、一道小碟或一杯饮品；汤面使用宽口深青釉碗，拌面使用浅青或米白碗，小碟与高杯按商品语义变化。约 35° 俯视，自然窗侧光，River Teal #1F6B68、Porcelain #F3F0E8、少量 Lacquer Red #A84A3E 与 Broth Amber #C9883C，主体占画面约 76%，汤汽、面条、肉片、蔬菜与酱汁真实清楚，短柔投影，边缘留裁切安全区，不要可读文字、价格、logo、人物、现实品牌包装、UI 卡片或水印，768x768 PNG。
+
+English product: Square commercial product photography for the original virtual noodle shop River Noodles. Show only the specified noodle bowl, side plate, or drink. Use wide deep teal-glazed bowls for soup noodles, shallow teal or porcelain bowls for dry noodles, and semantically appropriate small plates or tall glasses for sides and drinks. Use an approximately 35-degree overhead angle, natural window side light, River Teal #1F6B68 and Porcelain #F3F0E8 with restrained Lacquer Red #A84A3E and Broth Amber #C9883C accents. The subject fills about 76% of the frame with realistic steam, noodles, meat, vegetables, and sauce, plus a compact soft shadow and safe crop padding. No readable text, price, logo, people, real-brand packaging, UI card, or watermark, 768x768 PNG.
+```
+
+## 11. Daylight Cafe Independent Shop / Daylight Cafe 独立咖啡馆
+
+Daylight Cafe 是明亮的街角咖啡与早午餐店，不复用 Verdant Day 的圆形轻食摄影，也不使用 Sugar Lane 的珠宝盒甜点光。摄影胶囊使用 Sun Yellow `#F4C95D`、Sky `#B8DCE8`、Cream `#FFF7E8`、Leaf `#4E725F` 与 Espresso `#4B2E25`；保持早晨窗光、浅色水磨石桌面、约 `40°` 镜头与通透阴影。咖啡、玻璃冷饮、整盘早午餐和烘焙纸袋可以受控变化，但每张都要像同一个上午拍摄。
+
+状态：菜单与稳定运行时路径已接入；下列 `10` 张正式 PNG 尚未生成、接入或视觉验收。候选母版后续只能写入 `output/imagegen/daylight-cafe/`，运行时只能读取 `public/images/ui-assets/apps/food-delivery/daylight-cafe/`。
+
+| 稳定路径                             | 菜品 / 用途                             | 语义与构图要求                                                                     |
+| ------------------------------------ | --------------------------------------- | ---------------------------------------------------------------------------------- |
+| `cover/daylight-cafe-cover-01.png`   | Daylight Cafe Hero / 咖啡馆首页主图     | `1200x750`；拿铁、可颂早午餐、牛油果吐司和冷饮，主体在中右，左侧留奶油色文案安全区 |
+| `products/daylight-cafe-item-01.png` | Daylight Latte / 日光拿铁               | `768x768`；陶瓷杯双份浓缩拿铁、细腻奶泡与少量可可粉                                |
+| `products/daylight-cafe-item-02.png` | Honey Oat Flat White / 蜂蜜燕麦馥芮白   | `768x768`；矮陶瓷杯、燕麦奶咖啡、细蜂蜜纹，不生成厚奶油顶                          |
+| `products/daylight-cafe-item-03.png` | Orange Espresso Tonic / 橙香浓缩汤力    | `768x768`；透明高杯、浓缩分层、橙片、迷迭香与冰块                                  |
+| `products/daylight-cafe-item-04.png` | Sunrise Egg Croissant / 日出鸡蛋可颂    | `768x768`；剖开的层酥可颂、嫩炒蛋、切达、番茄和菠菜                                |
+| `products/daylight-cafe-item-05.png` | Avocado Ricotta Toast / 牛油果乳清吐司  | `768x768`；酸种面包、乳清奶酪、牛油果扇、溏心蛋、香草和柠檬                        |
+| `products/daylight-cafe-item-06.png` | Mushroom Egg Melt / 蘑菇鸡蛋芝士吐司    | `768x768`；乡村面包、烤蘑菇、折叠蛋、融化奶酪和百里香                              |
+| `products/daylight-cafe-item-07.png` | Morning Butter Croissant / 晨光黄油可颂 | `768x768`；单只金黄层酥可颂，完整轮廓与明显蜂窝层次                                |
+| `products/daylight-cafe-item-08.png` | Lemon Poppy Loaf / 柠檬罂粟籽蛋糕       | `768x768`；单片柠檬蛋糕、薄酸奶糖霜、柠檬屑和罂粟籽                                |
+| `products/daylight-cafe-item-09.png` | Vanilla Cream Cold Brew / 香草奶盖冷萃  | `768x768`；透明杯冷萃、清楚冰块与轻薄香草奶油顶                                    |
+
+### Daylight Cafe Prompt Capsule / Daylight Cafe 提示词胶囊
+
+```text
+中文 Hero：原创虚拟街角咖啡品牌 Daylight Cafe 的横向商业摄影，用于手机外卖 App 首页 Hero。展示一杯陶瓷杯拿铁、一份剖开的鸡蛋可颂、一份牛油果乳清吐司和一杯透明橙香浓缩汤力，Cream #FFF7E8 浅色水磨石桌面，Sun Yellow #F4C95D、Sky #B8DCE8、Leaf #4E725F 小面积器皿或布面点缀，清透明亮的早晨窗光，食物和咖啡真实但不过度造型，主体集中在中部和右侧，左侧保留稳定奶油色文案安全区，适合 8:5 裁切，不要可读文字、价格、logo、人物、现实品牌杯套或包装、UI 或水印，1200x750 PNG。
+
+English Hero: Horizontal commercial photography for the original virtual corner cafe Daylight Cafe, used as a mobile delivery-app hero. Show a ceramic latte, a sliced egg croissant, avocado-ricotta toast, and a clear orange espresso tonic on a light Cream #FFF7E8 terrazzo table, with small Sun Yellow #F4C95D, Sky #B8DCE8, and Leaf #4E725F tableware or textile accents. Use clear bright morning window light and realistic food and coffee styling. Keep subjects in the center and right with stable cream negative space on the left for code-rendered copy, composed for an 8:5 crop. No readable text, price, logo, people, real-brand cup sleeve or packaging, UI, or watermark, 1200x750 PNG.
+
+中文商品：原创虚拟咖啡馆 Daylight Cafe 的方形商业产品摄影。只展示表格指定的一杯咖啡、一份早午餐或一件烘焙，主体占画面约 74%，浅色水磨石与 Cream #FFF7E8 背景，Sun Yellow #F4C95D、Sky #B8DCE8、Leaf #4E725F 受控点缀，约 40° 镜头，明亮早晨窗光与通透短影。陶瓷杯、透明高杯、白色餐盘和无字烘焙纸可按商品变化，保持同一上午与同一镜头距离，不要可读文字、价格、logo、人物、现实品牌包装、UI 卡片或水印，768x768 PNG。
+
+English product: Square commercial product photography for the original virtual cafe Daylight Cafe. Show only the specified coffee, brunch plate, or bake, filling about 74% of the frame on light terrazzo and Cream #FFF7E8 with controlled Sun Yellow #F4C95D, Sky #B8DCE8, and Leaf #4E725F accents. Use an approximately 40-degree camera angle, bright morning window light, and a clean compact shadow. Ceramic cups, clear tall glasses, white plates, and unbranded bakery paper may vary with the product while retaining the same morning and camera distance. No readable text, price, logo, people, real-brand packaging, UI card, or watermark, 768x768 PNG.
+```
+
+## 12. Sugar Lane Independent Shop / Sugar Lane 独立甜点店
+
+Sugar Lane 是精致但轻松的街巷甜点柜，不是 Peach Cloud 的粉色云朵饮品品牌。摄影胶囊使用 Berry `#C84F72`、Butter `#F4D58D`、Mint `#B8D8C0`、Porcelain `#FFF8F2` 与 Cocoa `#4A2D2B`；以柔和橱窗侧光、白瓷和浅石台面、约 `30°` 俯视呈现清楚切面与真实奶油质感。蛋糕、塔、泡芙、杯装冰甜和饮品要使用不同器皿与轮廓，避免九张图都变成相同圆形小蛋糕。
+
+状态：菜单与稳定运行时路径已接入；下列 `10` 张正式 PNG 尚未生成、接入或视觉验收。候选母版后续只能写入 `output/imagegen/sugar-lane/`，运行时只能读取 `public/images/ui-assets/apps/food-delivery/sugar-lane/`。
+
+| 稳定路径                          | 菜品 / 用途                                 | 语义与构图要求                                                                             |
+| --------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `cover/sugar-lane-cover-01.png`   | Sugar Lane Hero / 甜点店首页主图            | `1200x750`；月形慕斯、草莓蛋糕、开心果塔、泡芙与一杯气泡饮，主体中右，左侧留莓红文案安全区 |
+| `products/sugar-lane-item-01.png` | Tiny Moon Cake / 小月亮慕斯                 | `768x768`；月形香草慕斯、梨果酱夹心、杏仁海绵与浅色可可脂淋面                              |
+| `products/sugar-lane-item-02.png` | Strawberry Ribbon Shortcake / 草莓缎带蛋糕  | `768x768`；香草戚风切片、鲜草莓、轻奶油和卷曲草莓薄片                                      |
+| `products/sugar-lane-item-03.png` | Burnt Honey Cheesecake / 焦香蜂蜜芝士蛋糕   | `768x768`；焦色烘烤表面、奶油芝士切面、咸蜂蜜和燕麦酥粒                                    |
+| `products/sugar-lane-item-04.png` | Pistachio Raspberry Tart / 开心果覆盆子塔   | `768x768`；酥脆塔壳、开心果奶油、覆盆子中心和烤开心果碎                                    |
+| `products/sugar-lane-item-05.png` | Salted Caramel Choux / 海盐焦糖泡芙         | `768x768`；单只脆皮泡芙、焦糖卡仕达夹心和深焦糖圆片                                        |
+| `products/sugar-lane-item-06.png` | Mango Coconut Panna Cotta / 芒果椰香奶冻    | `768x768`；透明杯椰奶冻、芒果块、百香果酱和烤椰片                                          |
+| `products/sugar-lane-item-07.png` | Black Sesame Mochi Parfait / 黑芝麻麻薯芭菲 | `768x768`；透明甜品杯、黑芝麻奶油、牛奶冰淇淋、麻薯和芝麻酥粒                              |
+| `products/sugar-lane-item-08.png` | Rose Lychee Fizz / 玫瑰荔枝气泡饮           | `768x768`；透明高杯、荔枝、玫瑰、覆盆子、柠檬和冰块                                        |
+| `products/sugar-lane-item-09.png` | Cocoa Cloud Milk / 可可云顶牛奶             | `768x768`；冷可可牛奶、轻薄香草奶油顶、可可粉和黑巧克力卷                                  |
+
+### Sugar Lane Prompt Capsule / Sugar Lane 提示词胶囊
+
+```text
+中文 Hero：原创虚拟甜点品牌 Sugar Lane 的横向商业甜点摄影，用于手机外卖 App 首页 Hero。展示一只月形香草慕斯、一片草莓缎带蛋糕、一只开心果覆盆子塔、一只海盐焦糖泡芙和一杯透明玫瑰荔枝气泡饮，Porcelain #FFF8F2 浅石台面与白瓷器皿，Berry #C84F72、Butter #F4D58D、Mint #B8D8C0 和少量 Cocoa #4A2D2B 点缀，柔和橱窗侧光，切面、淋面、酥皮和奶油真实精致，主体集中在中部和右侧，左侧保留稳定莓红文案安全区，适合 8:5 裁切，不要可读文字、价格、logo、云朵或白桃吉祥物、人物、现实品牌包装、UI 或水印，1200x750 PNG。
+
+English Hero: Horizontal commercial dessert photography for the original virtual patisserie Sugar Lane, used as a mobile delivery-app hero. Show one moon-shaped vanilla mousse, one strawberry ribbon shortcake slice, one pistachio raspberry tart, one salted caramel choux, and one clear rose lychee fizz on a Porcelain #FFF8F2 light-stone counter with white porcelain, Berry #C84F72, Butter #F4D58D, Mint #B8D8C0, and restrained Cocoa #4A2D2B accents. Use soft display-window side light and realistic refined cake layers, glaze, pastry, and cream. Keep subjects in the center and right with stable berry negative space on the left for code-rendered copy, composed for an 8:5 crop. No readable text, price, logo, cloud or peach mascot, people, real-brand packaging, UI, or watermark, 1200x750 PNG.
+
+中文商品：原创虚拟甜点品牌 Sugar Lane 的方形商业产品摄影。只展示表格指定的一件蛋糕、酥点、杯装冰甜或饮品，主体占画面约 72%，Porcelain #FFF8F2 浅石背景、白瓷或透明玻璃器皿，Berry #C84F72、Butter #F4D58D、Mint #B8D8C0 与 Cocoa #4A2D2B 只承担局部色彩职责，约 30° 俯视，柔和橱窗侧光与短影，切面和主体轮廓完整，器皿按商品受控变化，不要可读文字、价格、logo、云朵或白桃吉祥物、人物、现实品牌包装、UI 卡片或水印，768x768 PNG。
+
+English product: Square commercial product photography for the original virtual patisserie Sugar Lane. Show only the specified cake, pastry, chilled glass dessert, or drink, filling about 72% of the frame on a Porcelain #FFF8F2 light-stone surface with white porcelain or clear glass. Berry #C84F72, Butter #F4D58D, Mint #B8D8C0, and Cocoa #4A2D2B each carry restrained accent roles. Use an approximately 30-degree overhead angle, soft display-window side light, a compact shadow, and a complete readable cross-section or silhouette. Vary tableware in a controlled, product-appropriate way. No readable text, price, logo, cloud or peach mascot, people, real-brand packaging, UI card, or watermark, 768x768 PNG.
 ```
 
 ## Naming Suggestion / 文件命名建议

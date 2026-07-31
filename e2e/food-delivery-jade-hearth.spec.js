@@ -38,7 +38,45 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
     'data-required-asset',
     'jade-hearth/cover/jade-hearth-cover-01.png',
   )
-  await expect(heroImage).toHaveAttribute('data-asset-missing', 'true')
+  await expect(heroImage).not.toHaveAttribute('data-asset-missing', 'true')
+  await expect
+    .poll(() =>
+      heroImage.evaluate(
+        (image) =>
+          image.complete && image.naturalWidth > 0 && image.dataset.fallbackApplied !== 'true',
+      ),
+    )
+    .toBe(true)
+
+  const deliveredProductAssets = Array.from(
+    { length: 12 },
+    (_, index) => `jade-hearth/products/jade-hearth-item-${String(index + 1).padStart(2, '0')}.png`,
+  )
+  const deliveredProductAssetResults = await page.evaluate(async (assetPaths) => {
+    return Promise.all(
+      assetPaths.map(
+        (assetPath) =>
+          new Promise((resolve) => {
+            const image = new Image()
+            image.onload = () =>
+              resolve({ assetPath, loaded: image.naturalWidth > 0 && image.naturalHeight > 0 })
+            image.onerror = () => resolve({ assetPath, loaded: false })
+            image.src = new URL(
+              `images/ui-assets/apps/food-delivery/${assetPath}`,
+              document.baseURI,
+            ).href
+          }),
+      ),
+    )
+  }, deliveredProductAssets)
+  expect(deliveredProductAssetResults).toEqual(
+    deliveredProductAssets.map((assetPath) => ({ assetPath, loaded: true })),
+  )
+  await expect(
+    page
+      .getByTestId('food-delivery-menu-food_menu_jade_sea_bass')
+      .locator('[data-required-asset="jade-hearth/products/jade-hearth-item-03.png"]'),
+  ).toHaveCSS('object-fit', 'contain')
 
   const addressButton = page.getByTestId('food-delivery-jade-address')
   await expect(addressButton).toHaveAttribute('aria-expanded', 'false')
@@ -49,7 +87,23 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
     body: await page.screenshot(),
     contentType: 'image/png',
   })
+  await testInfo.attach(`jade-hearth-home-table-${testInfo.project.name}`, {
+    body: await page.getByTestId('food-delivery-store-menu-section-rail').screenshot(),
+    contentType: 'image/png',
+  })
   await expectNoHorizontalOverflow(page)
+
+  await page.getByTestId('food-delivery-menu-open-food_menu_jade_sea_bass').click()
+  const seaBassDetailImage = page
+    .getByTestId('food-delivery-menu-detail-sheet')
+    .locator('[data-required-asset="jade-hearth/products/jade-hearth-item-03.png"]')
+  await expect(seaBassDetailImage).toBeVisible()
+  await expect(seaBassDetailImage).not.toHaveAttribute('data-asset-missing', 'true')
+  await testInfo.attach(`jade-hearth-sea-bass-detail-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await page.getByTestId('food-delivery-menu-detail-close').click()
 
   await page.getByTestId('food-delivery-jade-nav-feast').click()
   await expect(page).toHaveURL(/shopView=feast/)
@@ -64,6 +118,11 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
   await page.getByTestId('food-delivery-jade-nav-menu').click()
   await expect(page).toHaveURL(/shopView=menu/)
   await expect(page.getByTestId('food-delivery-jade-menu-page')).toBeVisible()
+  await testInfo.attach(`jade-hearth-menu-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await expectNoHorizontalOverflow(page)
 
   await page.getByTestId('food-delivery-menu-open-food_menu_jade_tea_smoked_chicken').click()
   await expect(page.getByTestId('food-delivery-menu-detail-sheet')).toContainText(

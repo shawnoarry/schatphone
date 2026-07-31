@@ -1005,6 +1005,13 @@ describe('Home folder entries', () => {
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_peach_cloud"]').exists(),
     ).toBe(true)
     expect(
+      wrapper
+        .get('[data-testid="home-folder-entry-image-shop_app_food_seed_peach_cloud"]')
+        .attributes('src'),
+    ).toContain(
+      '/images/ui-assets/apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg',
+    )
+    expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_dash_grill"]').exists(),
     ).toBe(true)
     expect(

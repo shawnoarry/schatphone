@@ -29,6 +29,9 @@ const FOOD_ORDER_LIMIT = 120
 const FOOD_ORDER_EVENT_LIMIT = 24
 const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
 const MOON_BISTRO_SEED_RESTAURANT_ID = 'food_seed_moon_bistro'
+const RIVER_NOODLES_SEED_RESTAURANT_ID = 'food_seed_river_noodles'
+const DAYLIGHT_CAFE_SEED_RESTAURANT_ID = 'food_seed_daylight_cafe'
+const SUGAR_LANE_SEED_RESTAURANT_ID = 'food_seed_sugar_lane'
 const PEACH_CLOUD_SEED_RESTAURANT_ID = 'food_seed_peach_cloud'
 const DASH_GRILL_SEED_RESTAURANT_ID = 'food_seed_dash_grill'
 const JADE_HEARTH_SEED_RESTAURANT_ID = 'food_seed_jade_hearth'
@@ -517,12 +520,30 @@ const FOOD_DELIVERY_UI_ASSET_ROOT = 'images/ui-assets/apps/food-delivery/'
 const foodDeliveryUiAsset = (path) =>
   `${import.meta.env.BASE_URL || '/'}${FOOD_DELIVERY_UI_ASSET_ROOT}${path}`
 
+const LEGACY_REMOTE_SEED_IMAGE_BY_ID = Object.freeze({
+  [RIVER_NOODLES_SEED_RESTAURANT_ID]:
+    'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
+  [DAYLIGHT_CAFE_SEED_RESTAURANT_ID]:
+    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
+  [SUGAR_LANE_SEED_RESTAURANT_ID]:
+    'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80',
+  food_menu_river_noodles:
+    'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
+  food_menu_cafe_latte:
+    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
+  food_menu_sugar_cake:
+    'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
+})
+
 const migrateLegacySeedImage = (existingRecord, seedRecord) => {
   const existingImage = existingRecord?.image
   const seedImage = seedRecord?.image
   if (existingImage?.sourceType !== 'url' || seedImage?.sourceType !== 'url') return false
   const migratedUrl = resolveFoodDeliveryAssetUrl(existingImage.url)
-  if (migratedUrl === existingImage.url || migratedUrl !== seedImage.url) return false
+  const isConfiguredLocalPath = migratedUrl !== existingImage.url && migratedUrl === seedImage.url
+  const isKnownLegacyRemote =
+    LEGACY_REMOTE_SEED_IMAGE_BY_ID[existingRecord.id] === existingImage.url
+  if (!isConfiguredLocalPath && !isKnownLegacyRemote) return false
 
   existingRecord.image = { ...existingImage, url: seedImage.url }
   return true
@@ -530,12 +551,9 @@ const migrateLegacySeedImage = (existingRecord, seedRecord) => {
 
 const FOOD_SEED_IMAGE_URLS = Object.freeze({
   moonBistro: foodDeliveryUiAsset('moon-bistro/cover/moon-bistro-cover-02.png'),
-  riverNoodles:
-    'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
-  daylightCafe:
-    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
-  sugarLane:
-    'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=900&q=80',
+  riverNoodles: foodDeliveryUiAsset('river-noodles/cover/river-noodles-cover-01.png'),
+  daylightCafe: foodDeliveryUiAsset('daylight-cafe/cover/daylight-cafe-cover-01.png'),
+  sugarLane: foodDeliveryUiAsset('sugar-lane/cover/sugar-lane-cover-01.png'),
   peachCloud: foodDeliveryUiAsset('peach-cloud/cover/peach-cloud-hero-01.png'),
   dashGrill: foodDeliveryUiAsset('dash-grill/cover/dash-grill-cover-01.png'),
   jadeHearth: foodDeliveryUiAsset('jade-hearth/cover/jade-hearth-cover-01.png'),
@@ -556,6 +574,18 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
     foodDeliveryUiAsset(
       `peach-cloud/products/peach-cloud-item-${String(index).padStart(2, '0')}.png`,
     ),
+  riverNoodlesProduct: (index) =>
+    foodDeliveryUiAsset(
+      `river-noodles/products/river-noodles-item-${String(index).padStart(2, '0')}.png`,
+    ),
+  daylightCafeProduct: (index) =>
+    foodDeliveryUiAsset(
+      `daylight-cafe/products/daylight-cafe-item-${String(index).padStart(2, '0')}.png`,
+    ),
+  sugarLaneProduct: (index) =>
+    foodDeliveryUiAsset(
+      `sugar-lane/products/sugar-lane-item-${String(index).padStart(2, '0')}.png`,
+    ),
   lunarRice: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-03.png'),
   signalSoup: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-02.png'),
   velvetSoup: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-01.png'),
@@ -565,12 +595,6 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   nightTagliatelle: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-29.png'),
   emberLasagna: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-50.png'),
   blueMoonBowl: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-15.png'),
-  riverBeefNoodles:
-    'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=80',
-  daylightLatte:
-    'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80',
-  tinyMoonCake:
-    'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=80',
 })
 
 const summarizeOrderTotals = (items, deliveryFeeCents = 0, currency = DEFAULT_CURRENCY) => {
@@ -669,7 +693,7 @@ const createSeedRestaurants = () =>
       updatedAt: Date.now() - 8 * 60 * 1000,
     },
     {
-      id: 'food_seed_river_noodles',
+      id: RIVER_NOODLES_SEED_RESTAURANT_ID,
       name: 'River Noodles',
       category: 'fast_food',
       cuisine: 'Noodles',
@@ -686,7 +710,7 @@ const createSeedRestaurants = () =>
       updatedAt: Date.now() - 7 * 60 * 1000,
     },
     {
-      id: 'food_seed_daylight_cafe',
+      id: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
       name: 'Daylight Cafe',
       category: 'cafe',
       cuisine: 'Coffee and brunch',
@@ -703,7 +727,7 @@ const createSeedRestaurants = () =>
       updatedAt: Date.now() - 6 * 60 * 1000,
     },
     {
-      id: 'food_seed_sugar_lane',
+      id: SUGAR_LANE_SEED_RESTAURANT_ID,
       name: 'Sugar Lane',
       category: 'dessert',
       cuisine: 'Dessert',
@@ -938,48 +962,435 @@ const createSeedMenuItems = () =>
       },
       {
         id: 'food_menu_river_noodles',
-        restaurantId: 'food_seed_river_noodles',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
         title: 'River Beef Noodles',
         category: 'fast_food',
+        menuSection: 'broth_noodles',
         price: '36.00',
-        desc: 'Fast noodles with warm broth and beef slices.',
-        ingredients: 'noodles, beef, broth',
+        desc: 'Hand-pulled noodles with slow-braised beef, clear aromatic broth, greens, and scallion.',
+        ingredients: 'hand-pulled noodles, braised beef, beef broth, bok choy, scallion',
         imageSourceType: 'url',
-        imageUrl: FOOD_SEED_IMAGE_URLS.riverBeefNoodles,
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(1),
         imageAlt: 'River Beef Noodles',
         sourceModule: 'seed',
         createdAt: Date.now() - 6 * 60 * 1000,
         updatedAt: Date.now() - 6 * 60 * 1000,
       },
       {
+        id: 'food_menu_river_tomato_beef',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Tomato Braised Beef Noodles',
+        category: 'fast_food',
+        menuSection: 'broth_noodles',
+        price: '39.00',
+        desc: 'Hand-pulled noodles in a bright tomato-beef broth with tender beef chunks and greens.',
+        ingredients: 'hand-pulled noodles, braised beef, tomato, beef broth, bok choy',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(2),
+        imageAlt: 'Tomato Braised Beef Noodles',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 7 * 60 * 1000,
+        updatedAt: Date.now() - 7 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_chicken_shiitake',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Chicken Shiitake Noodles',
+        category: 'fast_food',
+        menuSection: 'broth_noodles',
+        price: '34.00',
+        desc: 'Silky noodles with poached chicken, shiitake mushrooms, baby greens, and a light chicken broth.',
+        ingredients: 'noodles, chicken, shiitake mushroom, chicken broth, baby greens',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(3),
+        imageAlt: 'Chicken Shiitake Noodles',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 8 * 60 * 1000,
+        updatedAt: Date.now() - 8 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_pickled_fish',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Pickled Mustard Fish Noodles',
+        category: 'fast_food',
+        menuSection: 'broth_noodles',
+        price: '42.00',
+        desc: 'White fish, pickled mustard greens, chili, and peppercorn in a tangy golden noodle broth.',
+        ingredients: 'noodles, white fish, pickled mustard greens, chili, Sichuan peppercorn',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(4),
+        imageAlt: 'Pickled Mustard Fish Noodles',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 9 * 60 * 1000,
+        updatedAt: Date.now() - 9 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_sesame_scallion',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Sesame Scallion Dry Noodles',
+        category: 'fast_food',
+        menuSection: 'dry_noodles',
+        price: '27.00',
+        desc: 'Springy noodles tossed with sesame paste, scallion oil, cucumber ribbons, and toasted sesame.',
+        ingredients: 'noodles, sesame paste, scallion oil, cucumber, toasted sesame',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(5),
+        imageAlt: 'Sesame Scallion Dry Noodles',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 10 * 60 * 1000,
+        updatedAt: Date.now() - 10 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_chili_pork',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Chili Crisp Pork Noodles',
+        category: 'fast_food',
+        menuSection: 'dry_noodles',
+        price: '32.00',
+        desc: 'Dry noodles with savory minced pork, house chili crisp, crushed peanut, and fresh scallion.',
+        ingredients: 'noodles, minced pork, chili crisp, peanut, scallion',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(6),
+        imageAlt: 'Chili Crisp Pork Noodles',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 11 * 60 * 1000,
+        updatedAt: Date.now() - 11 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_cucumber',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Cucumber Sesame Salad',
+        category: 'fast_food',
+        menuSection: 'noodle_sides',
+        price: '16.00',
+        desc: 'Crushed cucumber with black vinegar, sesame, garlic, and a restrained chili-oil finish.',
+        ingredients: 'cucumber, black vinegar, sesame, garlic, chili oil',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(7),
+        imageAlt: 'Cucumber Sesame Salad',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 12 * 60 * 1000,
+        updatedAt: Date.now() - 12 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_lotus_root',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Crispy Pepper Lotus Root',
+        category: 'fast_food',
+        menuSection: 'noodle_sides',
+        price: '19.00',
+        desc: 'Thin lotus-root slices fried crisp with green pepper, sesame, and flaky salt.',
+        ingredients: 'lotus root, green pepper, sesame, flaky salt, rice flour',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(8),
+        imageAlt: 'Crispy Pepper Lotus Root',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 13 * 60 * 1000,
+        updatedAt: Date.now() - 13 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_river_plum_cooler',
+        restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+        title: 'Osmanthus Plum Cooler',
+        category: 'fast_food',
+        menuSection: 'coolers',
+        price: '14.00',
+        desc: 'A chilled sweet-sour smoked plum drink finished with osmanthus and a slice of citrus.',
+        ingredients: 'smoked plum, osmanthus, rock sugar, citrus, water',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(9),
+        imageAlt: 'Osmanthus Plum Cooler',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 14 * 60 * 1000,
+        updatedAt: Date.now() - 14 * 60 * 1000,
+      },
+      {
         id: 'food_menu_cafe_latte',
-        restaurantId: 'food_seed_daylight_cafe',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
         title: 'Daylight Latte',
         category: 'cafe',
+        menuSection: 'espresso_bar',
         price: '22.00',
-        desc: 'Soft latte for a bright cafe stop.',
-        ingredients: 'espresso, milk',
+        desc: 'A balanced double espresso with silky steamed milk and a soft cocoa finish.',
+        ingredients: 'double espresso, whole milk, cocoa',
         imageSourceType: 'url',
-        imageUrl: FOOD_SEED_IMAGE_URLS.daylightLatte,
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(1),
         imageAlt: 'Daylight Latte',
         sourceModule: 'seed',
         createdAt: Date.now() - 5 * 60 * 1000,
         updatedAt: Date.now() - 5 * 60 * 1000,
       },
       {
+        id: 'food_menu_daylight_honey_oat_flat_white',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Honey Oat Flat White',
+        category: 'cafe',
+        menuSection: 'espresso_bar',
+        price: '25.00',
+        desc: 'Ristretto coffee with oat milk and a small ribbon of wildflower honey.',
+        ingredients: 'ristretto, oat milk, wildflower honey',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(2),
+        imageAlt: 'Honey Oat Flat White',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 6 * 60 * 1000,
+        updatedAt: Date.now() - 6 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_daylight_orange_tonic',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Orange Espresso Tonic',
+        category: 'cafe',
+        menuSection: 'espresso_bar',
+        price: '27.00',
+        desc: 'Espresso poured over citrus tonic with fresh orange and a rosemary sprig.',
+        ingredients: 'espresso, tonic water, orange, rosemary, ice',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(3),
+        imageAlt: 'Orange Espresso Tonic',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 7 * 60 * 1000,
+        updatedAt: Date.now() - 7 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_daylight_egg_croissant',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Sunrise Egg Croissant',
+        category: 'cafe',
+        menuSection: 'brunch_plates',
+        price: '34.00',
+        desc: 'A flaky croissant filled with soft scrambled egg, cheddar, tomato, and baby spinach.',
+        ingredients: 'croissant, egg, cheddar, tomato, baby spinach',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(4),
+        imageAlt: 'Sunrise Egg Croissant',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 8 * 60 * 1000,
+        updatedAt: Date.now() - 8 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_daylight_avocado_ricotta',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Avocado Ricotta Toast',
+        category: 'cafe',
+        menuSection: 'brunch_plates',
+        price: '38.00',
+        desc: 'Sourdough with whipped ricotta, avocado fan, soft egg, herbs, and lemon.',
+        ingredients: 'sourdough, avocado, ricotta, egg, herbs, lemon',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(5),
+        imageAlt: 'Avocado Ricotta Toast',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 9 * 60 * 1000,
+        updatedAt: Date.now() - 9 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_daylight_mushroom_melt',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Mushroom Egg Melt',
+        category: 'cafe',
+        menuSection: 'brunch_plates',
+        price: '36.00',
+        desc: 'Toasted country bread with roasted mushrooms, folded egg, alpine cheese, and thyme.',
+        ingredients: 'country bread, mushroom, egg, alpine cheese, thyme',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(6),
+        imageAlt: 'Mushroom Egg Melt',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 10 * 60 * 1000,
+        updatedAt: Date.now() - 10 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_daylight_butter_croissant',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Morning Butter Croissant',
+        category: 'cafe',
+        menuSection: 'bakery',
+        price: '18.00',
+        desc: 'A deeply layered cultured-butter croissant baked until crisp and golden.',
+        ingredients: 'wheat flour, cultured butter, milk, yeast, egg',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(7),
+        imageAlt: 'Morning Butter Croissant',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 11 * 60 * 1000,
+        updatedAt: Date.now() - 11 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_daylight_lemon_loaf',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Lemon Poppy Loaf',
+        category: 'cafe',
+        menuSection: 'bakery',
+        price: '21.00',
+        desc: 'A tender lemon-poppy slice with a thin yogurt glaze and fresh lemon zest.',
+        ingredients: 'lemon, poppy seed, flour, egg, yogurt glaze',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(8),
+        imageAlt: 'Lemon Poppy Loaf',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 12 * 60 * 1000,
+        updatedAt: Date.now() - 12 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_daylight_vanilla_cold_brew',
+        restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+        title: 'Vanilla Cream Cold Brew',
+        category: 'cafe',
+        menuSection: 'cold_drinks',
+        price: '26.00',
+        desc: 'Slow-steeped cold brew topped with lightly whipped vanilla cream over clear ice.',
+        ingredients: 'cold brew coffee, vanilla, cream, ice',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(9),
+        imageAlt: 'Vanilla Cream Cold Brew',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 13 * 60 * 1000,
+        updatedAt: Date.now() - 13 * 60 * 1000,
+      },
+      {
         id: 'food_menu_sugar_cake',
-        restaurantId: 'food_seed_sugar_lane',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
         title: 'Tiny Moon Cake',
         category: 'dessert',
+        menuSection: 'layer_cakes',
         price: '32.00',
-        desc: 'Small dessert with a sweet moonlit finish.',
-        ingredients: 'cake, cream, sugar',
+        desc: 'A small moon-shaped vanilla mousse cake with pear compote and a pale cocoa-butter glaze.',
+        ingredients: 'vanilla mousse, pear compote, almond sponge, cocoa-butter glaze',
         imageSourceType: 'url',
-        imageUrl: FOOD_SEED_IMAGE_URLS.tinyMoonCake,
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(1),
         imageAlt: 'Tiny Moon Cake',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_strawberry_shortcake',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Strawberry Ribbon Shortcake',
+        category: 'dessert',
+        menuSection: 'layer_cakes',
+        price: '36.00',
+        desc: 'Vanilla chiffon layered with fresh strawberry, light cream, and a curled strawberry ribbon.',
+        ingredients: 'vanilla chiffon, strawberry, cream, sugar',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(2),
+        imageAlt: 'Strawberry Ribbon Shortcake',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 5 * 60 * 1000,
+        updatedAt: Date.now() - 5 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_burnt_honey_cheesecake',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Burnt Honey Cheesecake',
+        category: 'dessert',
+        menuSection: 'layer_cakes',
+        price: '34.00',
+        desc: 'Creamy baked cheesecake with a burnished top, salted honey, and a crisp oat crumb.',
+        ingredients: 'cream cheese, egg, cream, salted honey, oat crumb',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(3),
+        imageAlt: 'Burnt Honey Cheesecake',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 6 * 60 * 1000,
+        updatedAt: Date.now() - 6 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_pistachio_tart',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Pistachio Raspberry Tart',
+        category: 'dessert',
+        menuSection: 'pastry_case',
+        price: '35.00',
+        desc: 'A crisp tart shell with pistachio cream, raspberry center, and chopped roasted pistachio.',
+        ingredients: 'tart shell, pistachio cream, raspberry, roasted pistachio',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(4),
+        imageAlt: 'Pistachio Raspberry Tart',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 7 * 60 * 1000,
+        updatedAt: Date.now() - 7 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_caramel_choux',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Salted Caramel Choux',
+        category: 'dessert',
+        menuSection: 'pastry_case',
+        price: '26.00',
+        desc: 'Craquelin choux filled with caramel custard and finished with a small dark-caramel disc.',
+        ingredients: 'choux pastry, caramel custard, cream, sea salt',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(5),
+        imageAlt: 'Salted Caramel Choux',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 8 * 60 * 1000,
+        updatedAt: Date.now() - 8 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_mango_panna_cotta',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Mango Coconut Panna Cotta',
+        category: 'dessert',
+        menuSection: 'chilled_sweets',
+        price: '29.00',
+        desc: 'Coconut panna cotta with fresh mango cubes, passion-fruit sauce, and toasted coconut.',
+        ingredients: 'coconut panna cotta, mango, passion fruit, toasted coconut',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(6),
+        imageAlt: 'Mango Coconut Panna Cotta',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 9 * 60 * 1000,
+        updatedAt: Date.now() - 9 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_sesame_mochi_parfait',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Black Sesame Mochi Parfait',
+        category: 'dessert',
+        menuSection: 'chilled_sweets',
+        price: '31.00',
+        desc: 'Black sesame cream, milk gelato, soft mochi, and sesame crumble in a clear dessert glass.',
+        ingredients: 'black sesame cream, milk gelato, mochi, sesame crumble',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(7),
+        imageAlt: 'Black Sesame Mochi Parfait',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 10 * 60 * 1000,
+        updatedAt: Date.now() - 10 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_rose_lychee_fizz',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Rose Lychee Fizz',
+        category: 'dessert',
+        menuSection: 'sweet_drinks',
+        price: '24.00',
+        desc: 'A clear sparkling lychee drink with rose, raspberry, lemon, and translucent ice.',
+        ingredients: 'lychee, rose, raspberry, lemon, sparkling water',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(8),
+        imageAlt: 'Rose Lychee Fizz',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 11 * 60 * 1000,
+        updatedAt: Date.now() - 11 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_sugar_cocoa_cloud_milk',
+        restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+        title: 'Cocoa Cloud Milk',
+        category: 'dessert',
+        menuSection: 'sweet_drinks',
+        price: '25.00',
+        desc: 'Cold cocoa milk with a light vanilla cream cap, cocoa dust, and dark chocolate curls.',
+        ingredients: 'cocoa, milk, vanilla cream, dark chocolate',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(9),
+        imageAlt: 'Cocoa Cloud Milk',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 12 * 60 * 1000,
+        updatedAt: Date.now() - 12 * 60 * 1000,
       },
       {
         id: 'food_menu_peach_oolong_cloud',
@@ -1098,7 +1509,7 @@ const createSeedMenuItems = () =>
         restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
         title: 'Peach Cold Brew Tonic',
         category: 'dessert',
-        menuSection: 'fruit_sparkle',
+        menuSection: 'cloud_tea',
         price: '31.00',
         desc: 'Cold brew, white peach tonic, and a light cream cloud.',
         ingredients: 'cold brew, white peach tonic, cream cloud',
@@ -1169,6 +1580,86 @@ const createSeedMenuItems = () =>
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(12),
         imageAlt: 'Golden Peach Cheesecake Pairing',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_grape_jasmine_tea',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Green Grape Jasmine Fruit Tea',
+        category: 'dessert',
+        menuSection: 'fruit_sparkle',
+        price: '28.00',
+        desc: 'Crisp green grapes, cold-brewed jasmine tea, and a clean floral finish.',
+        ingredients: 'green grape, jasmine tea, jasmine blossoms',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(13),
+        imageAlt: 'Green Grape Jasmine Fruit Tea',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_mango_passion_yogurt',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Mango Passionfruit Yogurt',
+        category: 'dessert',
+        menuSection: 'fruit_sparkle',
+        price: '32.00',
+        desc: 'Ripe mango and passionfruit folded through thick cultured yogurt.',
+        ingredients: 'mango, passionfruit, cultured yogurt',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(14),
+        imageAlt: 'Mango Passionfruit Yogurt',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_strawberry_fruit_milk',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Strawberry Peach Fruit Milk',
+        category: 'dessert',
+        menuSection: 'fruit_sparkle',
+        price: '30.00',
+        desc: 'Fresh strawberries and white peach blended with silky fresh milk.',
+        ingredients: 'strawberry, white peach, fresh milk',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(15),
+        imageAlt: 'Strawberry Peach Fruit Milk',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_waxberry_lychee_tea',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Waxberry Lychee Iced Tea',
+        category: 'dessert',
+        menuSection: 'seasonal_drop',
+        price: '29.00',
+        desc: 'Tart waxberry and juicy lychee steeped into ruby fruit tea over clear ice.',
+        ingredients: 'waxberry, lychee, fruit tea, ice',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(16),
+        imageAlt: 'Waxberry Lychee Iced Tea',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 4 * 60 * 1000,
+        updatedAt: Date.now() - 4 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_peach_osmanthus_pear_warm',
+        restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+        title: 'Osmanthus Pear Warm Infusion',
+        category: 'dessert',
+        menuSection: 'seasonal_drop',
+        price: '27.00',
+        desc: 'Fresh pear gently steeped with fragrant osmanthus for a clear warm infusion.',
+        ingredients: 'snow pear, osmanthus, spring water',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(17),
+        imageAlt: 'Osmanthus Pear Warm Infusion',
         sourceModule: 'seed',
         createdAt: Date.now() - 4 * 60 * 1000,
         updatedAt: Date.now() - 4 * 60 * 1000,
@@ -1720,9 +2211,9 @@ const createSeedMenuItems = () =>
     ],
     new Set([
       'food_seed_moon_bistro',
-      'food_seed_river_noodles',
-      'food_seed_daylight_cafe',
-      'food_seed_sugar_lane',
+      RIVER_NOODLES_SEED_RESTAURANT_ID,
+      DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+      SUGAR_LANE_SEED_RESTAURANT_ID,
       PEACH_CLOUD_SEED_RESTAURANT_ID,
       DASH_GRILL_SEED_RESTAURANT_ID,
       JADE_HEARTH_SEED_RESTAURANT_ID,
@@ -1736,6 +2227,24 @@ const BUILT_IN_SEED_RESTAURANTS_BY_ID = new Map(
 )
 const MOON_BISTRO_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
   (item) => item.restaurantId === MOON_BISTRO_SEED_RESTAURANT_ID,
+)
+const RIVER_NOODLES_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === RIVER_NOODLES_SEED_RESTAURANT_ID,
+)
+const RIVER_NOODLES_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
+  (item) => item.restaurantId === RIVER_NOODLES_SEED_RESTAURANT_ID,
+)
+const DAYLIGHT_CAFE_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+)
+const DAYLIGHT_CAFE_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
+  (item) => item.restaurantId === DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+)
+const SUGAR_LANE_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === SUGAR_LANE_SEED_RESTAURANT_ID,
+)
+const SUGAR_LANE_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
+  (item) => item.restaurantId === SUGAR_LANE_SEED_RESTAURANT_ID,
 )
 const PEACH_CLOUD_REQUIRED_RESTAURANT = createSeedRestaurants().find(
   (restaurant) => restaurant.id === PEACH_CLOUD_SEED_RESTAURANT_ID,
@@ -1777,6 +2286,29 @@ const MOON_BISTRO_LEGACY_MENU_COPY_BY_ID = Object.freeze({
   },
   food_menu_moon_night_tagliatelle: {
     title: 'Night Tagliatelle',
+  },
+})
+const EXPANDED_SHOP_LEGACY_MENU_COPY_BY_ID = Object.freeze({
+  food_menu_river_noodles: {
+    restaurantId: RIVER_NOODLES_SEED_RESTAURANT_ID,
+    title: 'River Beef Noodles',
+    desc: 'Fast noodles with warm broth and beef slices.',
+    ingredients: 'noodles, beef, broth',
+    imageAlt: 'River Beef Noodles',
+  },
+  food_menu_cafe_latte: {
+    restaurantId: DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+    title: 'Daylight Latte',
+    desc: 'Soft latte for a bright cafe stop.',
+    ingredients: 'espresso, milk',
+    imageAlt: 'Daylight Latte',
+  },
+  food_menu_sugar_cake: {
+    restaurantId: SUGAR_LANE_SEED_RESTAURANT_ID,
+    title: 'Tiny Moon Cake',
+    desc: 'Small dessert with a sweet moonlit finish.',
+    ingredients: 'cake, cream, sugar',
+    imageAlt: 'Tiny Moon Cake',
   },
 })
 const defineLegacyPeachMenuCopy = ({
@@ -1861,6 +2393,7 @@ const PEACH_CLOUD_LEGACY_MENU_COPY_BY_ID = Object.freeze({
     menuSection: 'cloud_tea',
     imageAlt: 'Hojicha Cloud Float',
     previousTitles: ['Matcha Cloud Float'],
+    previousMenuSections: ['fruit_sparkle'],
   }),
   food_menu_peach_sunbeam_basque: defineLegacyPeachMenuCopy({
     title: 'Strawberry Sunbeam Slice',
@@ -1910,6 +2443,26 @@ const migrateLegacyPeachMenuCopy = (existing, seedItem) => {
 
   const seedImageAlt = seedItem.image?.alt || seedItem.title
   if (legacyCopy.imageAlt.includes(existing.image?.alt) && existing.image?.alt !== seedImageAlt) {
+    existing.image = { ...existing.image, alt: seedImageAlt }
+    changed = true
+  }
+  return changed
+}
+
+const migrateLegacyExpandedShopMenuCopy = (existing, seedItem) => {
+  const legacyCopy = EXPANDED_SHOP_LEGACY_MENU_COPY_BY_ID[seedItem.id]
+  if (!legacyCopy || existing.restaurantId !== legacyCopy.restaurantId) return false
+
+  let changed = false
+  for (const field of ['title', 'desc', 'ingredients']) {
+    if (existing[field] === legacyCopy[field] && existing[field] !== seedItem[field]) {
+      existing[field] = seedItem[field]
+      changed = true
+    }
+  }
+
+  const seedImageAlt = seedItem.image?.alt || seedItem.title
+  if (existing.image?.alt === legacyCopy.imageAlt && existing.image.alt !== seedImageAlt) {
     existing.image = { ...existing.image, alt: seedImageAlt }
     changed = true
   }
@@ -2462,6 +3015,36 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const applySeedContentMigrations = () => {
     let changed = false
     if (
+      RIVER_NOODLES_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === RIVER_NOODLES_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...RIVER_NOODLES_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
+    if (
+      DAYLIGHT_CAFE_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === DAYLIGHT_CAFE_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...DAYLIGHT_CAFE_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
+    if (
+      SUGAR_LANE_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === SUGAR_LANE_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...SUGAR_LANE_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
+    if (
       PEACH_CLOUD_REQUIRED_RESTAURANT &&
       !restaurants.value.some((restaurant) => restaurant.id === PEACH_CLOUD_SEED_RESTAURANT_ID)
     ) {
@@ -2521,6 +3104,13 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const existingById = new Map(nextMenuItems.map((item) => [item.id, item]))
     const requiredMenuItems = [
       ...(restaurantIds.has(MOON_BISTRO_SEED_RESTAURANT_ID) ? MOON_BISTRO_REQUIRED_MENU_ITEMS : []),
+      ...(restaurantIds.has(RIVER_NOODLES_SEED_RESTAURANT_ID)
+        ? RIVER_NOODLES_REQUIRED_MENU_ITEMS
+        : []),
+      ...(restaurantIds.has(DAYLIGHT_CAFE_SEED_RESTAURANT_ID)
+        ? DAYLIGHT_CAFE_REQUIRED_MENU_ITEMS
+        : []),
+      ...(restaurantIds.has(SUGAR_LANE_SEED_RESTAURANT_ID) ? SUGAR_LANE_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(PEACH_CLOUD_SEED_RESTAURANT_ID) ? PEACH_CLOUD_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(DASH_GRILL_SEED_RESTAURANT_ID) ? DASH_GRILL_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(JADE_HEARTH_SEED_RESTAURANT_ID) ? JADE_HEARTH_REQUIRED_MENU_ITEMS : []),
@@ -2540,6 +3130,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         existing.menuSection = seedItem.menuSection
         changed = true
       }
+      if (migrateLegacyExpandedShopMenuCopy(existing, seedItem)) changed = true
       if (migrateLegacyPeachMenuCopy(existing, seedItem)) changed = true
       const legacyMoonCopy = MOON_BISTRO_LEGACY_MENU_COPY_BY_ID[seedItem.id]
       if (

@@ -1063,7 +1063,9 @@ describe('FoodDeliveryView', () => {
 
   test('returns to the originating Home page when opened from a Home folder', async () => {
     const router = createTestRouter()
-    await router.push('/food-delivery?category=nearby&from=home&homePage=1')
+    await router.push(
+      '/food-delivery?restaurantId=food_seed_peach_cloud&entry=shop&from=home&homePage=1',
+    )
     await router.isReady()
 
     const wrapper = mount(FoodDeliveryView, {
@@ -1072,11 +1074,199 @@ describe('FoodDeliveryView', () => {
       },
     })
 
-    await wrapper.get('[data-testid="food-delivery-go-home"]').trigger('click')
+    const backButton = wrapper.get('[data-testid="food-delivery-store-home"]')
+    expect(backButton.text().trim()).toBe('')
+    expect(backButton.attributes('aria-label')).toBe('返回手机桌面')
+    await backButton.trigger('click')
     await flushPromises()
 
     expect(router.currentRoute.value.path).toBe('/home')
     expect(router.currentRoute.value.query.homePage).toBe('1')
+    wrapper.unmount()
+  })
+
+  test('defaults Peach Cloud product details and order surfaces to Chinese, then follows system English', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    await router.push(
+      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const itemId = 'food_menu_peach_oolong_cloud'
+
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
+      '金桃芝士蛋糕双享',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toContain(
+      '鲜果特饮',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toContain(
+      '云顶茶咖',
+    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-store-menu-section-fruit_sparkle"] img')
+        .attributes('data-required-asset'),
+    ).toBe('peach-cloud/categories/peach-cloud-fresh-fruit.svg')
+
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-menu"]').trigger('click')
+    await flushPromises()
+    const searchCategories = wrapper.get(
+      '[data-testid="food-delivery-peach-cloud-search-categories"]',
+    )
+    expect(searchCategories.text()).not.toContain('全部')
+    expect(searchCategories.findAll('button')).toHaveLength(5)
+    expect(searchCategories.classes()).toContain('grid')
+    expect(searchCategories.classes()).toContain('grid-cols-5')
+    expect(searchCategories.classes()).not.toContain('overflow-x-auto')
+    const fruitCategory = wrapper.get(
+      '[data-testid="food-delivery-peach-cloud-search-category-fruit_sparkle"]',
+    )
+    expect(fruitCategory.text()).toBe('鲜果')
+    expect(fruitCategory.attributes('aria-label')).toBe('鲜果特饮')
+    expect(
+      wrapper.get('[data-testid="food-delivery-peach-cloud-search-category-seasonal_drop"]').text(),
+    ).toBe('限定')
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-search-input"]')
+      .setValue('Green Grape Jasmine Fruit Tea')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-search-page"]').text()).toContain(
+      '青提茉莉鲜果茶',
+    )
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-search-input"]')
+      .setValue('桂花雪梨暖饮')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-search-page"]').text()).toContain(
+      '桂花雪梨暖饮',
+    )
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${itemId}"]`).trigger('click')
+    await flushPromises()
+    const detail = wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]')
+    expect(detail.text()).toContain('白桃青柠气泡')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-desc"]').text()).toContain(
+      '天然气泡水',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-ingredients"]').text()).toContain(
+      '白桃、青柠、薄荷、气泡水',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get(`[data-testid="food-delivery-cart-${itemId}"]`).text()).toContain(
+      '白桃青柠气泡',
+    )
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      '白桃青柠气泡',
+    )
+    await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-order-page"]').text()).toContain(
+      '白桃青柠气泡',
+    )
+    expect(store.orders[0].items[0].title).toBe('White Peach Lime Sparkler')
+
+    systemStore.settings.system.language = 'en-US'
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-order-page"]').text()).toContain(
+      'White Peach Lime Sparkler',
+    )
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toContain(
+      'Fresh Fruit',
+    )
+    expect(wrapper.text()).toContain('Green Grape Jasmine Fruit Tea')
+    wrapper.unmount()
+  })
+
+  test('keeps user-edited Peach Cloud product fields unchanged in every system language', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    const store = useFoodDeliveryStore()
+    const source = store.findMenuItemById('food_menu_peach_oolong_cloud')
+    store.upsertMenuItem({
+      ...source,
+      title: '桃云私房特调',
+      desc: '店主手写的自定义说明。',
+    })
+    await router.push(
+      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    expect(wrapper.text()).toContain('桃云私房特调')
+    await wrapper
+      .get('[data-testid="food-delivery-menu-open-food_menu_peach_oolong_cloud"]')
+      .trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
+      '店主手写的自定义说明。',
+    )
+
+    systemStore.settings.system.language = 'en-US'
+    await flushPromises()
+    const detail = wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]')
+    expect(detail.text()).toContain('桃云私房特调')
+    expect(detail.text()).toContain('店主手写的自定义说明。')
+    wrapper.unmount()
+  })
+
+  test('renders distinct menu sections for River Noodles, Daylight Cafe, and Sugar Lane', async () => {
+    const router = createTestRouter()
+    await router.push(
+      '/food-delivery?category=fast_food&restaurantId=food_seed_river_noodles&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toMatch(
+      /汤面.*拌面.*河岸小碟.*清凉饮/s,
+    )
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-dry_noodles"]')
+      .trigger('click')
+    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(
+      2,
+    )
+
+    await router.push(
+      '/food-delivery?category=cafe&restaurantId=food_seed_daylight_cafe&entry=shop',
+    )
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toMatch(
+      /咖啡吧.*日光早午餐.*烘焙柜.*冰饮/s,
+    )
+
+    await router.push(
+      '/food-delivery?category=dessert&restaurantId=food_seed_sugar_lane&entry=shop',
+    )
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toMatch(
+      /切片蛋糕.*酥点柜.*冰甜.*甜饮/s,
+    )
     wrapper.unmount()
   })
 
@@ -1399,19 +1589,33 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
       'Golden Peach Cheesecake Pairing',
     )
-    expect(
-      wrapper
-        .get('[data-testid="food-delivery-store-cover"] img')
-        .attributes('data-required-asset'),
-    ).toBe('peach-cloud/cover/peach-cloud-hero-01.png')
+    const heroImage = wrapper.get('[data-testid="food-delivery-peach-cloud-hero-cover"] img')
+    const promotionImage = wrapper.get('[data-testid="food-delivery-peach-cloud-promotion-image"]')
+    expect(heroImage.attributes('data-required-asset')).toBe(
+      'peach-cloud/cover/peach-cloud-hero-01.png',
+    )
+    expect(promotionImage.attributes('data-required-asset')).toBe(
+      'peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
+    )
+    expect(promotionImage.classes()).toContain('object-contain')
+    expect(heroImage.attributes('src')).not.toBe(promotionImage.attributes('src'))
     expect(
       wrapper
         .get('[data-testid="food-delivery-peach-cloud-header-profile"] img')
         .attributes('data-required-asset'),
     ).toBe('peach-cloud/brand/peach-cloud-mark-01.svg')
     expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(
-      12,
+      17,
     )
+    const productAssetPaths = wrapper
+      .findAll('img[data-required-asset^="peach-cloud/products/peach-cloud-item-"]')
+      .map((image) => image.attributes('data-required-asset'))
+    expect(productAssetPaths).toHaveLength(17)
+    expect(new Set(productAssetPaths).size).toBe(17)
+    expect(
+      wrapper.get('[data-testid="food-delivery-menu-dish-food_menu_peach_butter_waffle"] img')
+        .element.style.transform,
+    ).toBe('translateY(-0.25rem) scale(1.55)')
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-nav"]').exists()).toBe(true)
 
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
@@ -1441,6 +1645,34 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
       'Fresh arrivals',
     )
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
+      'Waxberry Lychee Iced Tea',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
+      'Osmanthus Pear Warm Infusion',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
+      'DROP 04 · TEA',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
+      'DROP 05 · BAKE',
+    )
+    expect(
+      wrapper.find('[data-testid="food-delivery-menu-food_menu_peach_golden_hour_set"]').exists(),
+    ).toBe(false)
+    expect(
+      wrapper.findAll(
+        '[data-testid="food-delivery-peach-cloud-new-page"] [data-testid^="food-delivery-menu-"][data-menu-section]',
+      ),
+    ).toHaveLength(6)
+    const weeklyDropImage = wrapper.get(
+      '[data-testid="food-delivery-peach-cloud-weekly-drop-image"]',
+    )
+    expect(weeklyDropImage.attributes('data-required-asset')).toBe(
+      'peach-cloud/promotions/peach-cloud-weekly-drop-01.png',
+    )
+    expect(weeklyDropImage.attributes('src')).not.toBe(heroImage.attributes('src'))
+    expect(weeklyDropImage.attributes('src')).not.toBe(promotionImage.attributes('src'))
 
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
     await flushPromises()

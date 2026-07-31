@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-07-14
+Updated: 2026-07-31
 
 This document defines the `视觉专项` workflow.
 
@@ -159,6 +159,14 @@ Do not render:
 - text that explains the design implementation itself, such as "glass effect" or "new visual style", unless the user-facing feature genuinely needs that term.
 
 If temporary copy is needed, write product copy, not developer copy.
+
+System-language rules for visible UX:
+
+1. User-facing navigation, labels, product details, cart/checkout copy, order details, empty states, and accessibility names follow the system language setting. The product default is Simplified Chinese (`zh-CN`).
+2. Keep an accurate English (`en-US`) version for every touched built-in UX surface. A language switch changes presentation; it must not overwrite user-authored records or delete another locale's source copy.
+3. Fixed words embedded in approved brand artwork or an explicitly brand-owned campaign can remain in their approved language. Dynamic product and workflow copy around that artwork still follows the system language.
+4. Review text and media as one semantic unit in every supported language. Category names, product names, descriptions, ingredients, icons, and photography must describe the same subject; do not place coffee under a fruit-only label or pair unrelated food copy with an asset.
+5. When a locale has no authored translation yet, use the product's documented fallback instead of exposing translation keys, empty copy, or implementation labels.
 
 ## 6. Installed Skills
 

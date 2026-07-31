@@ -38,7 +38,40 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
     'data-required-asset',
     'dash-grill/cover/dash-grill-cover-01.png',
   )
-  await expect(heroImage).toHaveAttribute('data-asset-missing', 'true')
+  await expect(heroImage).not.toHaveAttribute('data-asset-missing', 'true')
+  await expect
+    .poll(() =>
+      heroImage.evaluate(
+        (image) =>
+          image.complete && image.naturalWidth > 0 && image.dataset.fallbackApplied !== 'true',
+      ),
+    )
+    .toBe(true)
+
+  const deliveredProductAssets = Array.from(
+    { length: 10 },
+    (_, index) => `dash-grill/products/dash-grill-item-${String(index + 1).padStart(2, '0')}.png`,
+  )
+  const deliveredProductAssetResults = await page.evaluate(async (assetPaths) => {
+    return Promise.all(
+      assetPaths.map(
+        (assetPath) =>
+          new Promise((resolve) => {
+            const image = new Image()
+            image.onload = () =>
+              resolve({ assetPath, loaded: image.naturalWidth > 0 && image.naturalHeight > 0 })
+            image.onerror = () => resolve({ assetPath, loaded: false })
+            image.src = new URL(
+              `images/ui-assets/apps/food-delivery/${assetPath}`,
+              document.baseURI,
+            ).href
+          }),
+      ),
+    )
+  }, deliveredProductAssets)
+  expect(deliveredProductAssetResults).toEqual(
+    deliveredProductAssets.map((assetPath) => ({ assetPath, loaded: true })),
+  )
 
   const addressButton = page.getByTestId('food-delivery-quick-service-address')
   await expect(addressButton).toHaveAttribute('aria-expanded', 'false')
@@ -65,11 +98,26 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
     'aria-pressed',
     'true',
   )
+  await testInfo.attach(`dash-grill-menu-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await expectNoHorizontalOverflow(page)
 
   await page.getByTestId('food-delivery-menu-open-food_menu_dash_double_stack').click()
   await expect(page.getByTestId('food-delivery-menu-detail-sheet')).toContainText(
     'Dash Double Stack',
   )
+  const detailImage = page
+    .getByTestId('food-delivery-menu-detail-sheet')
+    .locator('[data-required-asset="dash-grill/products/dash-grill-item-01.png"]')
+  await expect(detailImage).toBeVisible()
+  await expect(detailImage).not.toHaveAttribute('data-asset-missing', 'true')
+  await testInfo.attach(`dash-grill-detail-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await expectNoHorizontalOverflow(page)
   await page.getByTestId('food-delivery-menu-detail-quantity-increase').click()
   await expect(page.getByTestId('food-delivery-menu-detail-quantity')).toContainText('2')
   await page.getByTestId('food-delivery-menu-detail-add').click()

@@ -17,6 +17,17 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   })
 
   await unlockToHome(page)
+  await page.locator('.home-dot').nth(1).click()
+  await page.getByTestId('home-folder-app_food_delivery').click()
+  const folderBrandMark = page.getByTestId(
+    'home-folder-entry-image-shop_app_food_seed_peach_cloud',
+  )
+  await expect(folderBrandMark).toBeVisible()
+  await expect(folderBrandMark).toHaveAttribute(
+    'src',
+    /peach-cloud\/brand\/peach-cloud-mark-01\.svg/,
+  )
+  await expect.poll(() => folderBrandMark.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0)
   await navigateInsideUnlockedApp(
     page,
     '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
@@ -65,16 +76,58 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   expect(categoryShortcutBoxes).toHaveLength(5)
   expect(new Set(categoryShortcutBoxes.map((box) => Math.round(box.y))).size).toBe(1)
   expect(categoryRailBox.height).toBeLessThanOrEqual(112)
+  const heroImage = page.getByTestId('food-delivery-peach-cloud-hero-cover').locator('img')
+  const promotionImage = page.getByTestId('food-delivery-peach-cloud-promotion-image')
+  await expect(heroImage).toHaveAttribute(
+    'data-required-asset',
+    'peach-cloud/cover/peach-cloud-hero-01.png',
+  )
+  await expect(promotionImage).toHaveAttribute(
+    'data-required-asset',
+    'peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
+  )
+  const [heroImageSrc, promotionImageSrc] = await Promise.all([
+    heroImage.getAttribute('src'),
+    promotionImage.getAttribute('src'),
+  ])
+  expect(heroImageSrc).not.toBe(promotionImageSrc)
+  await expect
+    .poll(() => heroImage.evaluate((image) => image.complete && image.naturalWidth > 0))
+    .toBe(true)
+  await expect
+    .poll(() => promotionImage.evaluate((image) => image.complete && image.naturalWidth > 0))
+    .toBe(true)
+  await expect(promotionImage).toHaveCSS('object-fit', 'contain')
+  const productImages = page.locator(
+    'img[data-required-asset^="peach-cloud/products/peach-cloud-item-"]',
+  )
+  await expect(productImages).toHaveCount(17)
+  const productAssetPaths = await productImages.evaluateAll((images) =>
+    images.map((image) => image.getAttribute('data-required-asset')),
+  )
+  expect(new Set(productAssetPaths).size).toBe(17)
+  await expect
+    .poll(
+      () =>
+        productImages.evaluateAll((images) =>
+          images.every((image) => image.complete && image.naturalWidth > 0),
+        ),
+      { timeout: 20_000 },
+    )
+    .toBe(true)
   await testInfo.attach('peach-cloud-palette-home', {
     body: await page.screenshot(),
     contentType: 'image/png',
   })
   await expect(storeShell).toContainText('Peach Cloud')
+  await expect(page.getByTestId('food-delivery-peach-cloud-brand-hero')).toContainText(
+    /PEACH,\s*POURED INTO\s*CLOUDS/,
+  )
   await expect(page.getByTestId('food-delivery-peach-cloud-featured')).toContainText(
-    'Golden Peach Cheesecake Pairing',
+    '金桃芝士蛋糕双享',
   )
   await expect(page.locator('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveCount(
-    12,
+    17,
   )
   await expectNoHorizontalOverflow(page)
 
@@ -88,11 +141,72 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await page.getByTestId('food-delivery-peach-cloud-nav-menu').click()
   await expect(page).toHaveURL(/shopView=search/)
   await expect(page.getByTestId('food-delivery-peach-cloud-search-page')).toBeVisible()
+  const searchCategories = page.getByTestId('food-delivery-peach-cloud-search-categories')
+  await expect(searchCategories).not.toContainText('全部')
+  await expect(searchCategories).toContainText('鲜果')
+  await expect(
+    page.getByTestId('food-delivery-peach-cloud-search-category-fruit_sparkle'),
+  ).toHaveAccessibleName('鲜果特饮')
+  const searchCategoryButtons = searchCategories.getByRole('button')
+  await expect(searchCategoryButtons).toHaveCount(5)
+  const searchCategoryBoxes = await searchCategoryButtons.evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const box = button.getBoundingClientRect()
+      return { width: box.width, y: box.y }
+    }),
+  )
+  expect(new Set(searchCategoryBoxes.map((box) => Math.round(box.y))).size).toBe(1)
+  expect(
+    await searchCategories.evaluate((container) => container.scrollWidth <= container.clientWidth),
+  ).toBe(true)
+  const categoryImages = searchCategories.locator('img[data-required-asset]')
+  await expect(categoryImages).toHaveCount(5)
+  expect(
+    await categoryImages.evaluateAll((images) =>
+      images.every(
+        (image) =>
+          image.getAttribute('data-required-asset')?.startsWith('peach-cloud/categories/peach-cloud-') &&
+          image.complete &&
+          image.naturalWidth > 0,
+      ),
+    ),
+  ).toBe(true)
+  await expectNoHorizontalOverflow(page)
   await expect(page.getByTestId('food-delivery-peach-cloud-brand-hero')).toHaveCount(0)
   await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toHaveCount(0)
   await page.getByTestId('food-delivery-peach-cloud-nav-seasonal').click()
   await expect(page).toHaveURL(/shopView=new/)
   await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toBeVisible()
+  await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toContainText(
+    '杨梅荔枝冰茶',
+  )
+  await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toContainText(
+    '桂花雪梨暖饮',
+  )
+  await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toContainText(
+    'DROP 04 · 茶咖',
+  )
+  await expect(page.getByTestId('food-delivery-peach-cloud-new-page')).toContainText(
+    'DROP 05 · 烘焙',
+  )
+  await expect(page.getByTestId('food-delivery-menu-food_menu_peach_golden_hour_set')).toHaveCount(
+    0,
+  )
+  await expect(
+    page
+      .getByTestId('food-delivery-peach-cloud-new-page')
+      .locator('[data-testid^="food-delivery-menu-"][data-menu-section]'),
+  ).toHaveCount(6)
+  const weeklyDropImage = page.getByTestId('food-delivery-peach-cloud-weekly-drop-image')
+  await expect(weeklyDropImage).toHaveAttribute(
+    'data-required-asset',
+    'peach-cloud/promotions/peach-cloud-weekly-drop-01.png',
+  )
+  await expect
+    .poll(() => weeklyDropImage.evaluate((image) => image.complete && image.naturalWidth > 0))
+    .toBe(true)
+  expect(await weeklyDropImage.getAttribute('src')).not.toBe(heroImageSrc)
+  expect(await weeklyDropImage.getAttribute('src')).not.toBe(promotionImageSrc)
   await expect(page.getByTestId('food-delivery-peach-cloud-brand-hero')).toHaveCount(0)
   await expect(page.getByTestId('food-delivery-peach-cloud-search-page')).toHaveCount(0)
   await expect(page.getByTestId('food-delivery-peach-cloud-nav-seasonal')).toHaveCSS(
@@ -108,12 +222,12 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
     'fruit_sparkle',
   )
   await expect(page.locator('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveCount(
-    3,
+    5,
   )
 
   await page.getByTestId('food-delivery-menu-open-food_menu_peach_oolong_cloud').click()
   await expect(page.getByTestId('food-delivery-menu-detail-sheet')).toContainText(
-    'White Peach Lime Sparkler',
+    '白桃青柠气泡',
   )
   await page.getByTestId('food-delivery-menu-detail-quantity-increase').click()
   await expect(page.getByTestId('food-delivery-menu-detail-quantity')).toContainText('2')
@@ -123,13 +237,13 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await page.getByTestId('food-delivery-peach-cloud-nav-cart').click()
   await expect(page).toHaveURL(/shopView=bag/)
   await expect(page.getByTestId('food-delivery-cart-panel')).toContainText(
-    'White Peach Lime Sparkler',
+    '白桃青柠气泡',
   )
   await expect(page.getByTestId('food-delivery-peach-cloud-nav')).toBeVisible()
   await page.getByTestId('food-delivery-checkout').click()
   await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText('Peach Cloud')
   await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText(
-    'White Peach Lime Sparkler',
+    '白桃青柠气泡',
   )
   await page.getByTestId('food-delivery-checkout-submit').click()
 
@@ -141,7 +255,7 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await page.getByTestId('food-delivery-peach-cloud-nav-orders').click()
   await expect(page).toHaveURL(/shopView=orders/)
   await expect(page.getByTestId('food-delivery-orders-panel')).toContainText(
-    'White Peach Lime Sparkler',
+    '白桃青柠气泡',
   )
   await expectNoHorizontalOverflow(page)
 

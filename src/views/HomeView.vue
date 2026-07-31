@@ -2193,7 +2193,13 @@ onBeforeUnmount(() => {
                         :key="entry.key"
                         class="home-folder-preview-cell"
                       >
-                        <i :class="entry.icon"></i>
+                        <img
+                          v-if="entry.iconAsset"
+                          :src="entry.iconAsset"
+                          :alt="entry.label"
+                          class="home-folder-preview-image"
+                        />
+                        <i v-else :class="entry.icon"></i>
                       </span>
                     </span>
                   </span>
@@ -2428,8 +2434,19 @@ onBeforeUnmount(() => {
             :data-testid="`home-folder-entry-${entry.key}`"
             @click="openFolderChildEntry(entry)"
           >
-            <span class="home-folder-entry-icon" :style="iconStyle(entry.accent)">
-              <i :class="entry.icon"></i>
+            <span
+              class="home-folder-entry-icon"
+              :class="{ 'has-brand-image': entry.iconAsset }"
+              :style="iconStyle(entry.accent)"
+            >
+              <img
+                v-if="entry.iconAsset"
+                :src="entry.iconAsset"
+                :alt="entry.label"
+                class="home-folder-entry-image"
+                :data-testid="`home-folder-entry-image-${entry.key}`"
+              />
+              <i v-else :class="entry.icon"></i>
             </span>
             <span class="home-folder-entry-label">{{ entry.label }}</span>
             <span class="home-folder-entry-desc">{{ entry.desc }}</span>
@@ -4061,6 +4078,13 @@ onBeforeUnmount(() => {
     0 2px 5px rgba(10, 16, 24, 0.08);
 }
 
+.home-folder-preview-image {
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  object-fit: contain;
+}
+
 .home-app-icon {
   transition: transform 120ms ease, filter 120ms ease;
 }
@@ -4299,6 +4323,18 @@ onBeforeUnmount(() => {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
     0 10px 18px rgba(9, 15, 24, 0.2);
+}
+
+.home-folder-entry-icon.has-brand-image {
+  overflow: hidden;
+  background: #fd6c93 !important;
+}
+
+.home-folder-entry-image {
+  width: 100%;
+  height: 100%;
+  padding: 7px;
+  object-fit: contain;
 }
 
 .home-folder-entry-label {
