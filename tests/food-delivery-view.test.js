@@ -1259,6 +1259,21 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toMatch(
       /咖啡吧.*日光早午餐.*烘焙柜.*冰饮/s,
     )
+    expect(wrapper.get('img[alt="Daylight Cafe coffee"]').classes()).toContain(
+      'object-[68%_center]',
+    )
+
+    await wrapper
+      .get('[data-testid="food-delivery-menu-open-food_menu_cafe_latte"]')
+      .trigger('click')
+    const daylightDetailImage = wrapper
+      .get('[data-testid="food-delivery-menu-detail-sheet"]')
+      .get('img')
+    expect(daylightDetailImage.attributes('src')).toContain(
+      'daylight-cafe/products/daylight-cafe-item-01.png',
+    )
+    expect(daylightDetailImage.classes()).toContain('object-contain')
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
 
     await router.push(
       '/food-delivery?category=dessert&restaurantId=food_seed_sugar_lane&entry=shop',

@@ -1925,6 +1925,9 @@ const isDessertWindowStore = computed(() => activeStoreTemplate.value === 'desse
 const isQuickServiceStore = computed(() => activeStoreTemplate.value === 'quick_service_chain')
 const isJadeTableStore = computed(() => activeStoreTemplate.value === 'jade_table_menu')
 const isLightFoodStore = computed(() => activeStoreTemplate.value === 'minimal_light_food')
+const isDaylightCafeStore = computed(
+  () => activeRestaurant.value?.id === 'food_seed_daylight_cafe',
+)
 const isDedicatedStoreApp = computed(
   () =>
     isDessertWindowStore.value ||
@@ -8372,7 +8375,13 @@ onBeforeUnmount(() => {
                   "
                   :alt="activeRestaurant.image?.alt || activeRestaurant.name"
                   class="h-full w-full object-cover"
-                  :class="isDessertWindowStore ? 'bg-[#fff2c7] p-2' : ''"
+                  :class="
+                    isDessertWindowStore
+                      ? 'bg-[#fff2c7] p-2'
+                      : isDaylightCafeStore
+                        ? 'object-[68%_center]'
+                        : ''
+                  "
                   :data-required-asset="
                     isDessertWindowStore ? 'peach-cloud/brand/peach-cloud-mark-01.png' : undefined
                   "
@@ -9451,12 +9460,16 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else>
-            <div class="relative h-48 bg-gray-950">
+            <div
+              class="relative h-48"
+              :class="isDaylightCafeStore ? 'bg-[#fff7e8]' : 'bg-gray-950'"
+            >
               <img
                 v-if="foodImageUrl(selectedMenuItem)"
                 :src="foodImageUrl(selectedMenuItem)"
                 :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
-                class="h-full w-full object-cover"
+                class="h-full w-full"
+                :class="isDaylightCafeStore ? 'object-contain' : 'object-cover'"
               />
               <div
                 v-else

@@ -820,7 +820,7 @@ English product: Square commercial product photography for the original virtual 
 
 Daylight Cafe 是明亮的街角咖啡与早午餐店，不复用 Verdant Day 的圆形轻食摄影，也不使用 Sugar Lane 的珠宝盒甜点光。摄影胶囊使用 Sun Yellow `#F4C95D`、Sky `#B8DCE8`、Cream `#FFF7E8`、Leaf `#4E725F` 与 Espresso `#4B2E25`；保持早晨窗光、浅色水磨石桌面、约 `40°` 镜头与通透阴影。咖啡、玻璃冷饮、整盘早午餐和烘焙纸袋可以受控变化，但每张都要像同一个上午拍摄。
 
-状态：菜单与稳定运行时路径已接入；下列 `10` 张正式 PNG 尚未生成、接入或视觉验收。候选母版后续只能写入 `output/imagegen/daylight-cafe/`，运行时只能读取 `public/images/ui-assets/apps/food-delivery/daylight-cafe/`。
+状态：下列 `10` 张正式 PNG 已由 Daylight Cafe 自有的 bright-morning terrazzo/cafe 胶囊生成并接入稳定运行时路径，候选母版、CLI 请求记录、联系表与接受理由保留在 `output/imagegen/daylight-cafe/`，运行时只读取 `public/images/ui-assets/apps/food-delivery/daylight-cafe/`。桌面 Chromium 与 `393x851` 移动视觉验收已覆盖店头构图、九张缩略图、详情完整主体、横向溢出与控制台错误；店头图使用 `68%` 横向焦点，Daylight Cafe 详情图单独使用 Cream 底 `object-contain`，不为浅详情槽破坏方形正式素材。
 
 | 稳定路径                             | 菜品 / 用途                             | 语义与构图要求                                                                     |
 | ------------------------------------ | --------------------------------------- | ---------------------------------------------------------------------------------- |
