@@ -356,7 +356,7 @@ const mapPlaceCategoryOptions = computed(() => {
     .map((category) => categories.get(category.id))
   const worldCategories = Array.from(categories.values())
     .filter((category) => !userCategoryIds.has(category.id))
-    .sort((left, right) => left.id.localeCompare(right.id))
+    .sort((left, right) => (left.order || 999) - (right.order || 999) || left.id.localeCompare(right.id))
 
   return [
     {
@@ -369,7 +369,10 @@ const mapPlaceCategoryOptions = computed(() => {
     },
     ...userCategories,
     ...worldCategories,
-  ]
+  ].map((category) => ({
+    ...category,
+    ...mapStore.getMapPlaceCategoryVisibility(category.id),
+  }))
 })
 
 const visibleMapPlaces = computed(() =>
@@ -382,7 +385,11 @@ const visibleMapPlaces = computed(() =>
 
 const mapScenePins = computed(() =>
   activeMapPlaces.value
-    .filter((place) => place?.position)
+    .filter(
+      (place) =>
+        place?.position &&
+        (mapStore.isMapPlaceVisible(place) || selectedMapPlace.value?.placeId === place.placeId),
+    )
     .map((place) => ({
       ...place,
       name: mapPlaceName(place),
@@ -391,6 +398,24 @@ const mapScenePins = computed(() =>
       tone: mapPlaceVisual(place).tone,
     })),
 )
+
+const mapPinVisibilitySummary = computed(() => mapStore.getMapPlaceCategoryVisibility('all'))
+
+const isMapPlacePinVisible = (place) => mapStore.isMapPlaceVisible(place)
+
+const toggleMapPlaceCategoryVisibility = (category) => {
+  if (!category) return
+  mapStore.setMapPlaceCategoryVisibility(category.id, category.state !== 'visible')
+}
+
+const toggleMapPlaceVisibility = (place) => {
+  if (!place?.placeId) return
+  mapStore.setMapPlaceVisibility(place.placeId, !mapStore.isMapPlaceVisible(place))
+}
+
+const setAllMapPlaceVisibility = (visible) => {
+  mapStore.setMapPlaceCategoryVisibility('all', visible)
+}
 
 const mapSearchQuery = computed(() =>
   destinationIntentActive.value && typeof tripForm.value.to === 'string'
@@ -2064,26 +2089,86 @@ onBeforeUnmount(() => {
             {{ t('添加地点', 'Add place') }}
           </button>
         </div>
+        <div class="map-pin-visibility-toolbar" data-testid="map-pin-visibility-toolbar">
+          <div>
+            <span>{{ t('地图图钉', 'Map pins') }}</span>
+            <strong>
+              {{ mapPinVisibilitySummary.visibleCount }}/{{ mapPinVisibilitySummary.totalCount }}
+              {{ t('已显示', 'shown') }}
+            </strong>
+          </div>
+          <div>
+            <button
+              type="button"
+              data-testid="map-pin-show-all"
+              :aria-label="t('显示全部图钉', 'Show all pins')"
+              :title="t('显示全部图钉', 'Show all pins')"
+              @click="setAllMapPlaceVisibility(true)"
+            >
+              <i class="fas fa-eye" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              data-testid="map-pin-hide-all"
+              :aria-label="t('隐藏全部图钉', 'Hide all pins')"
+              :title="t('隐藏全部图钉', 'Hide all pins')"
+              @click="setAllMapPlaceVisibility(false)"
+            >
+              <i class="fas fa-eye-slash" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
         <div
           class="map-place-category-filter"
           role="group"
           :aria-label="t('地点分类', 'Place categories')"
           data-testid="map-place-category-filter"
         >
-          <button
+          <div
             v-for="category in mapPlaceCategoryOptions"
             :key="category.id"
-            type="button"
-            :class="{ 'is-active': selectedPlaceCategory === category.id }"
+            class="map-place-category-control"
+            :class="{
+              'is-active': selectedPlaceCategory === category.id,
+              'is-hidden': category.state === 'hidden',
+              'is-mixed': category.state === 'mixed',
+            }"
             :style="{ '--map-place-tone': category.tone }"
-            :data-testid="`map-place-filter-${category.id}`"
-            :aria-pressed="selectedPlaceCategory === category.id"
-            @click="selectedPlaceCategory = category.id"
           >
-            <i :class="category.icon" aria-hidden="true"></i>
-            <span>{{ t(category.labelZh, category.labelEn) }}</span>
-            <small>{{ category.count }}</small>
-          </button>
+            <button
+              type="button"
+              class="map-place-category-select"
+              :data-testid="`map-place-filter-${category.id}`"
+              :aria-pressed="selectedPlaceCategory === category.id"
+              @click="selectedPlaceCategory = category.id"
+            >
+              <i :class="category.icon" aria-hidden="true"></i>
+              <span>{{ t(category.labelZh, category.labelEn) }}</span>
+              <small>{{ category.visibleCount }}/{{ category.count }}</small>
+            </button>
+            <button
+              type="button"
+              class="map-place-category-visibility"
+              :data-testid="`map-place-category-visibility-${category.id}`"
+              :aria-label="category.state === 'visible'
+                ? t(`隐藏${t(category.labelZh, category.labelEn)}图钉`, `Hide ${t(category.labelZh, category.labelEn)} pins`)
+                : t(`显示${t(category.labelZh, category.labelEn)}图钉`, `Show ${t(category.labelZh, category.labelEn)} pins`)"
+              :title="category.state === 'visible'
+                ? t('隐藏此类图钉', 'Hide this category')
+                : t('显示此类图钉', 'Show this category')"
+              :aria-pressed="category.state === 'visible'"
+              @click="toggleMapPlaceCategoryVisibility(category)"
+            >
+              <i
+                :class="category.state === 'visible'
+                  ? 'fas fa-eye'
+                  : category.state === 'mixed'
+                    ? 'fas fa-eye-low-vision'
+                    : 'fas fa-eye-slash'"
+                aria-hidden="true"
+              ></i>
+            </button>
+          </div>
         </div>
         <button
           type="button"
@@ -2099,24 +2184,38 @@ onBeforeUnmount(() => {
           <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </button>
         <div class="map-place-list" data-testid="map-filtered-place-list">
-          <button
+          <div
             v-for="item in visibleMapPlaces"
             :key="item.placeId"
-            type="button"
             class="map-place-list-row"
+            :class="{ 'is-pin-hidden': !isMapPlacePinVisible(item) }"
             :style="{ '--map-place-tone': mapPlaceVisual(item).tone }"
-            @click="onMapPinSelected(item)"
           >
-            <span class="map-place-list-icon">
-              <i :class="mapPlaceVisual(item).icon" aria-hidden="true"></i>
-            </span>
-            <span class="min-w-0 text-left">
-              <strong>{{ mapPlaceName(item) }}</strong>
-              <small>{{ mapPlaceDetail(item) }}</small>
-            </span>
-            <span class="map-place-list-source">{{ item.source === 'user' ? t('我的', 'Mine') : t('世界', 'World') }}</span>
-            <i class="fas fa-chevron-right map-place-list-chevron" aria-hidden="true"></i>
-          </button>
+            <button type="button" class="map-place-list-main" @click="onMapPinSelected(item)">
+              <span class="map-place-list-icon">
+                <i :class="mapPlaceVisual(item).icon" aria-hidden="true"></i>
+              </span>
+              <span class="min-w-0 text-left">
+                <strong>{{ mapPlaceName(item) }}</strong>
+                <small>{{ mapPlaceDetail(item) }}</small>
+              </span>
+              <span class="map-place-list-source">{{ item.source === 'user' ? t('我的', 'Mine') : t('世界', 'World') }}</span>
+              <i class="fas fa-chevron-right map-place-list-chevron" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="map-place-pin-visibility"
+              :data-testid="`map-place-visibility-${item.placeId}`"
+              :aria-label="isMapPlacePinVisible(item)
+                ? t(`隐藏${mapPlaceName(item)}图钉`, `Hide ${mapPlaceName(item)} pin`)
+                : t(`显示${mapPlaceName(item)}图钉`, `Show ${mapPlaceName(item)} pin`)"
+              :title="isMapPlacePinVisible(item) ? t('隐藏图钉', 'Hide pin') : t('显示图钉', 'Show pin')"
+              :aria-pressed="isMapPlacePinVisible(item)"
+              @click="toggleMapPlaceVisibility(item)"
+            >
+              <i :class="isMapPlacePinVisible(item) ? 'fas fa-eye' : 'fas fa-eye-slash'" aria-hidden="true"></i>
+            </button>
+          </div>
           <div v-if="visibleMapPlaces.length === 0" class="map-place-list-empty">
             <i class="fas fa-map-pin" aria-hidden="true"></i>
             <span>{{ t('还没有地点', 'No places yet') }}</span>
@@ -3479,20 +3578,35 @@ onBeforeUnmount(() => {
 .map-places-drawer-heading span { display: block; color: #718078; font-size: 9px; font-weight: 800; }
 .map-places-drawer-heading strong { display: block; overflow: hidden; margin-top: 3px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .map-places-drawer-heading button { display: inline-flex; min-height: 38px; flex: 0 0 auto; align-items: center; gap: 6px; border-radius: 7px; background: #17664f; padding: 0 10px; color: #fff; font-size: 10px; font-weight: 800; }
+.map-pin-visibility-toolbar { display: flex; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #e2e7e3; }
+.map-pin-visibility-toolbar span { display: block; color: #718078; font-size: 9px; font-weight: 800; }
+.map-pin-visibility-toolbar strong { display: block; margin-top: 2px; color: #273a31; font-size: 10px; }
+.map-pin-visibility-toolbar > div:last-child { display: flex; gap: 5px; }
+.map-pin-visibility-toolbar button { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #d9e1dc; border-radius: 7px; background: #f7f9f7; color: #456154; }
 .map-place-category-filter { display: flex; overflow-x: auto; gap: 6px; margin: 12px -4px 0; padding: 0 4px 4px; scrollbar-width: none; }
 .map-place-category-filter::-webkit-scrollbar { display: none; }
-.map-place-category-filter button { display: inline-flex; min-height: 34px; flex: 0 0 auto; align-items: center; gap: 5px; border: 1px solid #dfe5e1; border-radius: 7px; background: #f4f6f4; padding: 0 8px; color: #56635c; font-size: 9px; font-weight: 800; }
-.map-place-category-filter button i { color: var(--map-place-tone); }
-.map-place-category-filter button small { min-width: 17px; border-radius: 5px; background: #e6ebe7; padding: 2px 4px; color: #6f7b74; font-size: 8px; text-align: center; }
-.map-place-category-filter button.is-active { border-color: var(--map-place-tone); background: color-mix(in srgb, var(--map-place-tone) 10%, white); color: var(--map-place-tone); box-shadow: inset 0 0 0 1px var(--map-place-tone); }
-.map-place-category-filter button.is-active small { background: color-mix(in srgb, var(--map-place-tone) 16%, white); color: var(--map-place-tone); }
+.map-place-category-control { display: inline-flex; min-height: 34px; flex: 0 0 auto; overflow: hidden; border: 1px solid #dfe5e1; border-radius: 7px; background: #f4f6f4; }
+.map-place-category-control.is-active { border-color: var(--map-place-tone); background: color-mix(in srgb, var(--map-place-tone) 10%, white); box-shadow: inset 0 0 0 1px var(--map-place-tone); }
+.map-place-category-control.is-hidden { opacity: 0.66; }
+.map-place-category-control.is-mixed { border-style: dashed; }
+.map-place-category-select { display: inline-flex; min-height: 32px; min-width: 0; align-items: center; gap: 5px; padding: 0 7px; color: #56635c; font-size: 9px; font-weight: 800; }
+.map-place-category-select > i { color: var(--map-place-tone); }
+.map-place-category-select small { min-width: 26px; border-radius: 5px; background: #e6ebe7; padding: 2px 4px; color: #6f7b74; font-size: 8px; text-align: center; }
+.map-place-category-control.is-active .map-place-category-select { color: var(--map-place-tone); }
+.map-place-category-control.is-active .map-place-category-select small { background: color-mix(in srgb, var(--map-place-tone) 16%, white); color: var(--map-place-tone); }
+.map-place-category-visibility { display: grid; width: 32px; min-height: 32px; flex: 0 0 auto; place-items: center; border-left: 1px solid #dce3de; color: #607068; font-size: 9px; }
+.map-place-category-control.is-hidden .map-place-category-visibility { color: #929d96; }
 .map-place-list { margin-top: 4px; }
-.map-place-list-row { display: grid; width: 100%; min-height: 58px; grid-template-columns: 36px minmax(0, 1fr) auto 12px; align-items: center; gap: 9px; border-bottom: 1px solid #e5e9e6; }
+.map-place-list-row { display: grid; width: 100%; min-height: 58px; grid-template-columns: minmax(0, 1fr) 34px; align-items: center; gap: 4px; border-bottom: 1px solid #e5e9e6; }
+.map-place-list-main { display: grid; min-width: 0; min-height: 58px; grid-template-columns: 36px minmax(0, 1fr) auto 12px; align-items: center; gap: 9px; text-align: left; }
 .map-place-list-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 14%, white); color: var(--map-place-tone); font-size: 11px; }
 .map-place-list-row strong,
 .map-place-list-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-place-list-row strong { font-size: 11px; }
 .map-place-list-row small { margin-top: 3px; color: #758179; font-size: 9px; }
+.map-place-list-row.is-pin-hidden .map-place-list-main { opacity: 0.62; }
+.map-place-pin-visibility { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #dce3de; border-radius: 7px; background: #f8faf8; color: #436153; font-size: 9px; }
+.map-place-list-row.is-pin-hidden .map-place-pin-visibility { color: #929d96; }
 .map-place-list-source { border-radius: 5px; background: #edf1ee; padding: 3px 5px; color: #6d7972; font-size: 8px; font-weight: 800; }
 .map-place-list-chevron { color: #9aa49e; font-size: 8px; }
 .map-place-list-empty { display: flex; min-height: 100px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #839088; font-size: 11px; }

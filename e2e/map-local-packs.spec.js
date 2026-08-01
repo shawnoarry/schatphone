@@ -85,11 +85,22 @@ test.describe('world-bound narrative maps', () => {
     await expect(searchPanel).toBeVisible()
     await expect(page.getByTestId('map-search-categories')).toBeVisible()
     await expect(searchPanel.locator('.map-place-result')).not.toHaveCount(0)
+    await expect(searchPanel).not.toContainText(/CU BGF|GS25|7-Eleven/)
 
     await clickMapLibreCanvas(mapCanvas, 0.006, 0.5)
     await expect(searchPanel).toHaveCount(0)
     await destination.focus()
     await expect(searchPanel).toBeVisible()
+
+    await page.getByTestId('map-search-category-convenience_store').click()
+    await expect(searchPanel.locator('.map-place-result')).toHaveCount(3)
+    await expect(searchPanel).toContainText(/CU BGF|GS25|7-Eleven/)
+    await page.getByTestId('map-search-category-all').click()
+
+    await page.getByTestId('map-search-category-cinema').click()
+    await expect(searchPanel.locator('.map-place-result')).toHaveCount(4)
+    await expect(searchPanel).toContainText(/CGV|Megabox|Lotte Cinema|乐天影院/)
+    await page.getByTestId('map-search-category-all').click()
 
     await page.getByTestId('map-search-category-shop').click()
     await expect(page.getByTestId('map-search-category-shop')).toHaveAttribute('aria-pressed', 'true')
@@ -127,6 +138,18 @@ test.describe('world-bound narrative maps', () => {
     await page.getByTestId('map-open-places').click()
     await expect(page.getByTestId('map-add-place-drawer')).toBeVisible()
     await expect(page.getByTestId('map-place-category-filter')).toBeVisible()
+    await page.getByTestId('map-place-filter-convenience_store').click()
+    await expect(page.getByTestId('map-filtered-place-list').locator('.map-place-list-row')).toHaveCount(3)
+    await expect(renderer.locator('.openfreemap-marker-button[title="CU BGF 总部店"]')).toHaveCount(0)
+    await page.getByTestId('map-place-category-visibility-convenience_store').click()
+    await expect(renderer.locator('.openfreemap-marker-button[title="CU BGF 总部店"]')).toHaveCount(1)
+    await page.getByTestId('map-place-visibility-seoul-cu-bgf-hq').click()
+    await expect(renderer.locator('.openfreemap-marker-button[title="CU BGF 总部店"]')).toHaveCount(0)
+
+    await page.getByTestId('map-place-filter-public_safety').click()
+    await expect(page.getByTestId('map-filtered-place-list').locator('.map-place-list-row')).toHaveCount(4)
+    await expect(page.getByTestId('map-filtered-place-list')).toContainText(/警察|消防|Police|Fire/)
+
     await page.getByTestId('map-place-filter-transit').click()
     await expect(page.getByTestId('map-filtered-place-list').locator('.map-place-list-row')).toHaveCount(1)
     await expect(page.getByTestId('map-filtered-place-list')).toContainText(

@@ -62,6 +62,18 @@ const PLACES = [
     source: 'user',
     position: { kind: 'geo', lat: 37.54, lng: 127.03 },
   },
+  {
+    id: 'convenience',
+    placeId: 'convenience',
+    nameZh: 'CU BGF 总部店',
+    nameEn: 'CU BGF Headquarters Store',
+    detailZh: '首尔特别市江南区德黑兰路',
+    detailEn: 'Teheran-ro, Gangnam-gu, Seoul',
+    aliases: ['CU'],
+    category: 'convenience_store',
+    source: 'map_pack',
+    position: { kind: 'geo', lat: 37.5, lng: 127.05 },
+  },
 ]
 
 describe('map place search', () => {
@@ -119,5 +131,15 @@ describe('map place search', () => {
     expect(suggestions[0].place.id).toBe('hongdae')
     expect(suggestions[1].place.id).toBe('saved-home')
     expect(new Set(suggestions.map((result) => result.place.category)).size).toBeGreaterThan(2)
+  })
+
+  test('keeps convenience stores out of broad suggestions but available by search or category', () => {
+    expect(suggestMapPlaces(PLACES, { limit: 20 }).map((result) => result.place.id)).not.toContain(
+      'convenience',
+    )
+    expect(searchMapPlaces(PLACES, 'CU')[0].place.id).toBe('convenience')
+    expect(
+      suggestMapPlaces(PLACES, { categoryId: 'convenience_store' })[0].place.id,
+    ).toBe('convenience')
   })
 })

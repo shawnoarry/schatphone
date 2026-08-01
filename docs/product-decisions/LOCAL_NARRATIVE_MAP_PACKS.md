@@ -1,6 +1,6 @@
 # Local Narrative Map Packs
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 Status: `WORLD_BOUND_BASELINE_AND_OPENFREEMAP_RUNTIME_COMPLETE`
 
@@ -17,9 +17,11 @@ Both packs share local place search, player pins, trip state, ETA, history, Map-
 
 ## Seoul Place Catalog
 
-Seoul V1 includes 35 versioned read-only places. The catalog covers major entertainment agencies, broadcasters and media buildings, company headquarters, civic/cultural/event landmarks, and three named Cheongdam beauty-salon branches. The 2026-07-31 coordinate snapshot was checked against public organization addresses and OpenStreetMap/Nominatim geography.
+Seoul V1 includes 101 versioned read-only places. The catalog covers major entertainment agencies, broadcasters and media buildings, company headquarters, civic/cultural/event landmarks, named Cheongdam beauty-salon branches, general and luxury shopping, supermarkets, a deliberately small convenience-store set, nightlife, general and plastic-surgery hospitals, four housing tiers, major transport hubs, parks, universities, landmark hotels, pharmacy districts, sports facilities, cinemas, bank headquarters, and public-safety institutions. The original 2026-07-31 coordinate snapshot and the 2026-08-01 everyday/community-city expansions use public organization addresses and provider-neutral geographic coordinates reviewed against public map geography. Pharmacy records intentionally represent established discovery districts rather than asserting that one frequently changing branch is permanent Map truth.
 
 These records are Map-owned content with stable IDs, bilingual address/search metadata, and provider-neutral geographic coordinates. They are not a live POI mirror, do not retain provider place IDs, and do not update silently when an organization moves. A future correction updates the reviewed catalog explicitly; topology changes still follow the separate map-pack versioning rule.
+
+Map pin visibility is a per-pack persisted presentation preference. A category override changes the default for that category, and an individual-place override takes precedence. The preference never deletes or mutates a canonical place: hidden places remain available to local search, details, Map Settings, and trip selection, and a selected hidden place may be projected temporarily while its detail is active. Category filtering in Places is independent from marker visibility. Dense everyday categories default hidden to keep the main map readable; `convenience_store` is also discovery-only, so its three reviewed seed places are omitted from empty-query suggestions until the user selects that category or enters a matching query.
 
 ## World Binding
 

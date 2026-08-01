@@ -1,4 +1,7 @@
-import { getMapPlaceCategoryVisual } from './map-place-categories'
+import {
+  getMapPlaceCategoryVisual,
+  isMapPlaceCategoryDiscoveryOnly,
+} from './map-place-categories'
 
 const DEFAULT_RESULT_LIMIT = 6
 const LATIN_TOKEN_PATTERN = /^[a-z0-9]+$/
@@ -197,7 +200,10 @@ export const suggestMapPlaces = (
   places,
   { recentDestinationTexts = [], categoryId = 'all', limit = DEFAULT_RESULT_LIMIT } = {},
 ) => {
+  const categorySelected =
+    typeof categoryId === 'string' && categoryId.trim() && categoryId.trim().toLowerCase() !== 'all'
   const available = filterPlacesByCategory(Array.isArray(places) ? places : [], categoryId)
+    .filter((place) => categorySelected || !isMapPlaceCategoryDiscoveryOnly(place.category))
   const suggestions = []
   const seenIds = new Set()
   const addPlace = (place) => {

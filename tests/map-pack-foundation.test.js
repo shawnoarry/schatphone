@@ -13,6 +13,8 @@ import {
 import { useMapStore } from '../src/stores/map'
 import {
   MAP_USER_PLACE_CATEGORIES,
+  isMapPlaceCategoryDefaultVisible,
+  isMapPlaceCategoryDiscoveryOnly,
   normalizeUserMapPlaceCategory,
   resolveMapPlaceVisual,
 } from '../src/lib/map-place-categories'
@@ -64,7 +66,7 @@ describe('local map pack foundation', () => {
     const seoul = getMapPackById(DEFAULT_MAP_PACK_ID)
     const placeIds = seoul.places.map((place) => place.id)
 
-    expect(seoul.places).toHaveLength(35)
+    expect(seoul.places).toHaveLength(101)
     expect(new Set(placeIds).size).toBe(placeIds.length)
     expect(placeIds).toEqual(
       expect.arrayContaining([
@@ -77,8 +79,31 @@ describe('local map pack foundation', () => {
         'seoul-gyeongbokgung',
         'seoul-kspo-dome',
         'seoul-jennyhouse-cheongdam-hill',
+        'seoul-starfield-coex-mall',
+        'seoul-galleria-luxury-hall',
+        'seoul-cu-bgf-hq',
+        'seoul-cakeshop',
+        'seoul-national-university-hospital',
+        'seoul-id-hospital',
+        'seoul-hannam-the-hill',
+        'seoul-incheon-airport-t1',
+        'seoul-forest',
+        'seoul-national-university',
+        'seoul-signiel',
+        'seoul-jongno-five-pharmacy-street',
+        'seoul-jamsil-sports-complex',
+        'seoul-cgv-yongsan-ipark',
+        'seoul-bank-of-korea-main',
+        'seoul-national-police-agency',
+        'seoul-gangnam-fire-station',
       ]),
     )
+
+    expect(seoul.places.filter((place) => place.category === 'pharmacy')).toHaveLength(3)
+    expect(seoul.places.filter((place) => place.category === 'fitness')).toHaveLength(3)
+    expect(seoul.places.filter((place) => place.category === 'cinema')).toHaveLength(4)
+    expect(seoul.places.filter((place) => place.category === 'bank')).toHaveLength(4)
+    expect(seoul.places.filter((place) => place.category === 'public_safety')).toHaveLength(4)
 
     seoul.places.forEach((place) => {
       expect(place.nameZh).toBeTruthy()
@@ -118,6 +143,65 @@ describe('local map pack foundation', () => {
     expect(
       seoul.places.find((place) => place.id === 'seoul-jennyhouse-cheongdam-hill').position,
     ).toEqual({ kind: 'geo', lat: 37.5213, lng: 127.0443 })
+    expect(isMapPlaceCategoryDefaultVisible('convenience_store')).toBe(false)
+    expect(isMapPlaceCategoryDiscoveryOnly('convenience_store')).toBe(true)
+    expect(isMapPlaceCategoryDefaultVisible('pharmacy')).toBe(false)
+    expect(isMapPlaceCategoryDefaultVisible('fitness')).toBe(false)
+    expect(isMapPlaceCategoryDefaultVisible('cinema')).toBe(false)
+    expect(isMapPlaceCategoryDefaultVisible('bank')).toBe(false)
+    expect(isMapPlaceCategoryDefaultVisible('public_safety')).toBe(false)
+    expect(isMapPlaceCategoryDefaultVisible('transit_hub')).toBe(true)
+  })
+
+  test('persists category and individual marker visibility without hiding places from Map truth', () => {
+    const store = useMapStore()
+    const conveniencePlaces = store.activeMapPlaces.filter(
+      (place) => place.category === 'convenience_store',
+    )
+    const firstConvenience = conveniencePlaces[0]
+
+    expect(store.activeMapPlaces).toHaveLength(104)
+    expect(store.activeMapVisiblePlaces).toHaveLength(47)
+    expect(conveniencePlaces).toHaveLength(3)
+    expect(store.isMapPlaceVisible(firstConvenience)).toBe(false)
+    expect(store.activeMapVisiblePlaces).not.toContainEqual(firstConvenience)
+    expect(store.getMapPlaceCategoryVisibility('convenience_store')).toEqual({
+      visibleCount: 0,
+      totalCount: 3,
+      state: 'hidden',
+    })
+
+    expect(store.setMapPlaceCategoryVisibility('convenience_store', true)).toBe(true)
+    expect(store.getMapPlaceCategoryVisibility('convenience_store')).toMatchObject({
+      visibleCount: 3,
+      state: 'visible',
+    })
+    expect(store.setMapPlaceVisibility(firstConvenience.placeId, false)).toBe(true)
+    expect(store.getMapPlaceCategoryVisibility('convenience_store')).toMatchObject({
+      visibleCount: 2,
+      state: 'mixed',
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    expect(snapshot.mapPinVisibilityByPack['real-seoul-v1']).toMatchObject({
+      categoryVisibility: { convenience_store: true },
+      placeVisibility: { [firstConvenience.placeId]: false },
+    })
+
+    setActivePinia(createPinia())
+    const restored = useMapStore()
+    expect(restored.restoreFromBackup({ map: snapshot })).toBe(true)
+    expect(restored.getMapPlaceCategoryVisibility('convenience_store')).toMatchObject({
+      visibleCount: 2,
+      state: 'mixed',
+    })
+
+    expect(restored.restoreFromBackup({ map: { mapPinVisibilityByPack: null } })).toBe(true)
+    expect(restored.getMapPlaceCategoryVisibility('convenience_store')).toMatchObject({
+      visibleCount: 0,
+      state: 'hidden',
+    })
+    expect(restored.activeMapPlaces).toHaveLength(104)
   })
 
   test('round-trips real coordinates through the versioned map image plane', () => {

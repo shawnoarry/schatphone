@@ -102,6 +102,17 @@ describe('MapView information architecture', () => {
     )
     expect(wrapper.get('[data-testid="map-place-filter-work"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="map-place-filter-transit"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-convenience_store"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-pharmacy"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-fitness"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-cinema"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-bank"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-public_safety"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="map-place-filter-cinema"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-filtered-place-list"]').findAll('.map-place-list-row')).toHaveLength(4)
+    expect(wrapper.get('[data-testid="map-filtered-place-list"]').text()).toContain('CGV')
 
     await wrapper.get('[data-testid="map-place-filter-transit"]').trigger('click')
     await nextTick()
@@ -120,6 +131,45 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-filtered-place-list"]').findAll('.map-place-list-row')).toHaveLength(
       mapStore.activeMapPlaces.length,
     )
+  })
+
+  test('controls category and individual map markers without removing hidden places from search', async () => {
+    const mapStore = useMapStore()
+    const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
+    const conveniencePlaces = mapStore.activeMapPlaces.filter(
+      (place) => place.category === 'convenience_store',
+    )
+    const firstConvenience = conveniencePlaces[0]
+
+    expect(conveniencePlaces).toHaveLength(3)
+    expect(mapScene.props('pins').some((pin) => pin.placeId === firstConvenience.placeId)).toBe(false)
+
+    await wrapper.get('[data-testid="map-destination-search"]').setValue('CU BGF')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-local-place-results"]').text()).toContain('CU BGF')
+    await wrapper.get('[data-testid="map-local-place-results"]').get('.map-place-result').trigger('click')
+    await nextTick()
+    expect(mapScene.props('pins').some((pin) => pin.placeId === firstConvenience.placeId)).toBe(true)
+
+    await wrapper.get('[data-testid="map-place-detail-sheet"]').get('button[aria-label="关闭"]').trigger('click')
+    await nextTick()
+    expect(mapScene.props('pins').some((pin) => pin.placeId === firstConvenience.placeId)).toBe(false)
+
+    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="map-place-filter-convenience_store"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-filtered-place-list"]').findAll('.map-place-list-row')).toHaveLength(3)
+
+    await wrapper.get('[data-testid="map-place-category-visibility-convenience_store"]').trigger('click')
+    await nextTick()
+    expect(mapScene.props('pins').filter((pin) => pin.category === 'convenience_store')).toHaveLength(3)
+
+    await wrapper.get(`[data-testid="map-place-visibility-${firstConvenience.placeId}"]`).trigger('click')
+    await nextTick()
+    expect(mapScene.props('pins').some((pin) => pin.placeId === firstConvenience.placeId)).toBe(false)
+    expect(mapStore.activeMapPlaces.some((place) => place.placeId === firstConvenience.placeId)).toBe(true)
+    expect(wrapper.get('[data-testid="map-pin-visibility-toolbar"]').text()).toMatch(/shown|已显示/)
   })
 
   test('connects the visible trip-history delete action to Map ownership', async () => {

@@ -26,6 +26,7 @@ import {
 } from '../lib/map-packs'
 import {
   getMapPlaceCategoryVisual,
+  isMapPlaceCategoryDefaultVisible,
   normalizeUserMapPlaceCategory,
 } from '../lib/map-place-categories'
 import {
@@ -57,6 +58,8 @@ import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
 const MAP_STORAGE_VERSION = 2
+const MAP_PIN_VISIBILITY_CATEGORY_LIMIT = 80
+const MAP_PIN_VISIBILITY_PLACE_LIMIT = 500
 const TRIP_STATUS_IDLE = 'idle'
 const TRIP_STATUS_TRAVELING = 'traveling'
 const TRIP_STATUS_ARRIVED = 'arrived'
@@ -357,6 +360,41 @@ const normalizeWorldMapPackBindings = (raw, mapPacks = listMapPacks()) => {
         typeof mapPackId === 'string' ? mapPackId.trim().slice(0, 120) : '',
       ])
       .filter(([worldPackId, mapPackId]) => worldPackId && availableIds.has(mapPackId)),
+  )
+}
+
+const normalizeMapPinVisibilityOverrides = (raw, limit) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  return Object.fromEntries(
+    Object.entries(raw)
+      .map(([id, visible]) => [
+        typeof id === 'string' ? id.trim().slice(0, 180) : '',
+        visible,
+      ])
+      .filter(([id, visible]) => id && typeof visible === 'boolean')
+      .slice(0, limit),
+  )
+}
+
+const normalizeMapPinVisibilityByPack = (raw, mapPacks = listMapPacks()) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {}
+  const availablePackIds = new Set(mapPacks.map((pack) => pack.id))
+  return Object.fromEntries(
+    Object.entries(raw)
+      .filter(([mapPackId, state]) => availablePackIds.has(mapPackId) && state && typeof state === 'object')
+      .map(([mapPackId, state]) => [
+        mapPackId,
+        {
+          categoryVisibility: normalizeMapPinVisibilityOverrides(
+            state.categoryVisibility,
+            MAP_PIN_VISIBILITY_CATEGORY_LIMIT,
+          ),
+          placeVisibility: normalizeMapPinVisibilityOverrides(
+            state.placeVisibility,
+            MAP_PIN_VISIBILITY_PLACE_LIMIT,
+          ),
+        },
+      ]),
   )
 }
 
@@ -1041,6 +1079,7 @@ export const useMapStore = defineStore('map', () => {
   const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
   const customMapPacks = ref([])
   const worldMapPackBindings = ref({})
+  const mapPinVisibilityByPack = ref({})
   const mapPacks = computed(() => listMapPacks(customMapPacks.value))
   const activeMapPackId = ref(DEFAULT_MAP_PACK_ID)
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
@@ -1094,6 +1133,99 @@ export const useMapStore = defineStore('map', () => {
       })
     return [...builtInPlaces, ...userPlaces]
   })
+
+  const getMapPinVisibilityState = (mapPackId = activeMapPackId.value) =>
+    mapPinVisibilityByPack.value[mapPackId] || {
+      categoryVisibility: {},
+      placeVisibility: {},
+    }
+
+  const isMapPlaceVisible = (placeInput) => {
+    const place =
+      typeof placeInput === 'string'
+        ? activeMapPlaces.value.find((candidate) => candidate.placeId === placeInput)
+        : placeInput
+    if (!place) return false
+    const mapPackId = place.mapPackId || activeMapPackId.value
+    const state = getMapPinVisibilityState(mapPackId)
+    const placeId = place.placeId || place.id
+    if (typeof state.placeVisibility?.[placeId] === 'boolean') {
+      return state.placeVisibility[placeId]
+    }
+    if (typeof state.categoryVisibility?.[place.category] === 'boolean') {
+      return state.categoryVisibility[place.category]
+    }
+    return isMapPlaceCategoryDefaultVisible(place.category)
+  }
+
+  const activeMapVisiblePlaces = computed(() =>
+    activeMapPlaces.value.filter((place) => isMapPlaceVisible(place)),
+  )
+
+  const getMapPlaceCategoryVisibility = (categoryId = 'all') => {
+    const places =
+      categoryId === 'all'
+        ? activeMapPlaces.value
+        : activeMapPlaces.value.filter((place) => place.category === categoryId)
+    const visibleCount = places.filter((place) => isMapPlaceVisible(place)).length
+    return {
+      visibleCount,
+      totalCount: places.length,
+      state:
+        visibleCount === 0
+          ? 'hidden'
+          : visibleCount === places.length
+            ? 'visible'
+            : 'mixed',
+    }
+  }
+
+  const setMapPlaceVisibility = (placeId, visible) => {
+    const place = activeMapPlaces.value.find((candidate) => candidate.placeId === placeId)
+    if (!place || typeof visible !== 'boolean') return false
+    const mapPackId = place.mapPackId || activeMapPackId.value
+    const current = getMapPinVisibilityState(mapPackId)
+    mapPinVisibilityByPack.value = {
+      ...mapPinVisibilityByPack.value,
+      [mapPackId]: {
+        categoryVisibility: { ...current.categoryVisibility },
+        placeVisibility: {
+          ...current.placeVisibility,
+          [place.placeId]: visible,
+        },
+      },
+    }
+    return true
+  }
+
+  const setMapPlaceCategoryVisibility = (categoryId, visible) => {
+    if (typeof visible !== 'boolean') return false
+    const places =
+      categoryId === 'all'
+        ? activeMapPlaces.value
+        : activeMapPlaces.value.filter((place) => place.category === categoryId)
+    if (places.length === 0) return false
+    const mapPackId = activeMapPackId.value
+    const current = getMapPinVisibilityState(mapPackId)
+    const categoryVisibility = { ...current.categoryVisibility }
+    const placeVisibility = { ...current.placeVisibility }
+    const categoryIds = new Set(places.map((place) => place.category))
+    categoryIds.forEach((id) => { categoryVisibility[id] = visible })
+    places.forEach((place) => { delete placeVisibility[place.placeId] })
+    mapPinVisibilityByPack.value = {
+      ...mapPinVisibilityByPack.value,
+      [mapPackId]: { categoryVisibility, placeVisibility },
+    }
+    return true
+  }
+
+  const resetActiveMapPinVisibility = () => {
+    if (!mapPinVisibilityByPack.value[activeMapPackId.value]) return false
+    const next = { ...mapPinVisibilityByPack.value }
+    delete next[activeMapPackId.value]
+    mapPinVisibilityByPack.value = next
+    return true
+  }
 
   const findActivePlaceByText = (textInput) => {
     const text = typeof textInput === 'string' ? textInput.trim().toLocaleLowerCase() : ''
@@ -3094,6 +3226,10 @@ export const useMapStore = defineStore('map', () => {
       source.worldMapPackBindings,
       mapPacks.value,
     )
+    mapPinVisibilityByPack.value = normalizeMapPinVisibilityByPack(
+      source.mapPinVisibilityByPack,
+      mapPacks.value,
+    )
     activeMapPackId.value = getAvailableMapPackById(source.activeMapPackId).id
 
     if (Array.isArray(source.addresses)) {
@@ -3171,6 +3307,15 @@ export const useMapStore = defineStore('map', () => {
       places: [],
     })),
     worldMapPackBindings: { ...worldMapPackBindings.value },
+    mapPinVisibilityByPack: Object.fromEntries(
+      Object.entries(mapPinVisibilityByPack.value).map(([mapPackId, state]) => [
+        mapPackId,
+        {
+          categoryVisibility: { ...state.categoryVisibility },
+          placeVisibility: { ...state.placeVisibility },
+        },
+      ]),
+    ),
     addresses: addresses.map((item) => ({ ...item })),
     currentLocation: { ...currentLocation.value },
     tripForm: { ...tripForm },
@@ -3209,6 +3354,7 @@ export const useMapStore = defineStore('map', () => {
     tripHistory.value = []
     mapCalendarReminderPreferences.value = {}
     activeMapPackId.value = DEFAULT_MAP_PACK_ID
+    mapPinVisibilityByPack.value = {}
     mapVisualSettings.value = createDefaultMapVisualSettings()
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
     journeyCheckpointEventEvaluationEnabled = false
@@ -3248,6 +3394,7 @@ export const useMapStore = defineStore('map', () => {
       activeMapPackId,
       customMapPacks,
       worldMapPackBindings,
+      mapPinVisibilityByPack,
       addresses,
       currentLocation,
       tripForm,
@@ -3314,9 +3461,11 @@ export const useMapStore = defineStore('map', () => {
     mapPacks,
     customMapPacks,
     worldMapPackBindings,
+    mapPinVisibilityByPack,
     activeMapPackId,
     activeMapPack,
     activeMapPlaces,
+    activeMapVisiblePlaces,
     addresses,
     currentLocation,
     currentLocationText,
@@ -3340,6 +3489,11 @@ export const useMapStore = defineStore('map', () => {
     bindMapPackToWorld,
     resetWorldMapPackBinding,
     syncMapPackForWorld,
+    isMapPlaceVisible,
+    getMapPlaceCategoryVisibility,
+    setMapPlaceVisibility,
+    setMapPlaceCategoryVisibility,
+    resetActiveMapPinVisibility,
     setCurrentLocation,
     setCurrentLocationByAddressId,
     setTripEndpoint,

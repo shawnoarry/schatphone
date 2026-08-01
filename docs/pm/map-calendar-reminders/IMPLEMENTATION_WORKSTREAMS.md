@@ -13,6 +13,7 @@ Updated: 2026-08-01
 - geographic coordinates for real packs and normalized canvas coordinates for fictional packs
 - dated, versioned real-place catalogs with stable Map IDs, bilingual address/search metadata, and locally maintained coordinates
 - current-world positioned pack/player-pin search with empty-focus discovery, category filters, normalized ranked multi-term matching, optional aliases/search terms, and bounded Latin typo tolerance; new places inherit standard name/address/category search, selected matches retain coordinate focus, and unmatched text remains an explicit free-form destination without online POI/geocoding
+- persisted per-map marker visibility with separate category and individual-place overrides; catalog filtering remains independent, hidden places remain searchable/usable, selected hidden places may appear in detail context, and discovery-only categories stay out of empty-query suggestions until explicitly requested
 - one shared category icon/tone contract across renderers, search, lists, details, and Settings, with an in-context guide for the six editable player-pin categories
 - explicit click-to-reselect player coordinates without draggable everyday markers; active trips lock map replacement, not map interaction
 - exclusive coordinate-placement interaction in both renderers: existing markers are pointer-transparent and cannot replace the active place draft
