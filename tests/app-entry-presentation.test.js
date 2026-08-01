@@ -13,7 +13,14 @@ describe('app entry presentation helpers', () => {
       SHOP_ENTRY_TEMPLATE_OPTIONS.filter((option) => option.userSelectable).map(
         (option) => option.id,
       ),
-    ).toEqual(['standard', 'cafe_counter', 'convenience_shelf', 'street_food_stall'])
+    ).toEqual([
+      'standard',
+      'cafe_counter',
+      'convenience_shelf',
+      'street_food_stall',
+      'daypart_journal',
+      'menu_mosaic',
+    ])
   })
 
   test('normalizes dynamic entry overrides for shop and world entries only', () => {

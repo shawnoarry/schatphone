@@ -25,7 +25,7 @@ test('Daylight Cafe loads its complete bright-morning asset pack without destruc
   )
 
   const storeShell = page.getByTestId('food-delivery-store-shell')
-  await expect(storeShell).toHaveAttribute('data-store-template', 'cafe_counter')
+  await expect(storeShell).toHaveAttribute('data-store-template', 'daypart_journal')
   await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveCount(0)
 
   const identityImage = storeShell.locator('img[alt="Daylight Cafe coffee"]')

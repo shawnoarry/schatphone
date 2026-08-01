@@ -811,6 +811,8 @@ describe('App Store entry management UI', () => {
       'cafe_counter',
       'convenience_shelf',
       'street_food_stall',
+      'daypart_journal',
+      'menu_mosaic',
     ])
     await templateSelect.setValue('cafe_counter')
     await wrapper.get('[data-testid="app-store-identity-shop-cover"]').setValue(importedCover.assetId)

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
-test('Harbor Roast opens a complete base storefront and App Store identity entry', async ({
+test('Harbor Roast opens its chain-coffee counter and App Store identity entry', async ({
   page,
 }) => {
   await unlockToHome(page)
@@ -11,14 +11,16 @@ test('Harbor Roast opens a complete base storefront and App Store identity entry
   )
 
   const storeShell = page.getByTestId('food-delivery-store-shell')
-  await expect(storeShell).toHaveAttribute('data-store-template', 'standard')
+  await expect(storeShell).toHaveAttribute('data-store-template', 'cafe_counter')
   await expect(storeShell).toContainText('Harbor Roast')
-  await expect(page.locator('[data-testid^="food-delivery-menu-open-"]')).toHaveCount(12)
+  await expect(page.locator('[data-testid^="food-delivery-menu-open-"]')).toHaveCount(3)
+  await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveCount(0)
   await expect(page.getByTestId('food-delivery-store-menu-section-espresso_classics')).toBeVisible()
   await expect(page.getByTestId('food-delivery-store-menu-section-harbor_signatures')).toBeVisible()
   await expect(page.getByTestId('food-delivery-store-menu-section-cold_blended')).toBeVisible()
   await expect(page.getByTestId('food-delivery-store-menu-section-tea_counter_bakes')).toBeVisible()
 
+  await page.getByTestId('food-delivery-store-menu-section-harbor_signatures').click()
   await page.getByTestId('food-delivery-menu-open-food_menu_harbor_sea_salt_caramel_latte').click()
   await expect(page.getByTestId('food-delivery-menu-detail-sheet')).toContainText(
     'Sea-Salt Caramel Latte',

@@ -32,13 +32,13 @@ Food Delivery continues to own restaurant, menu, cart, checkout, order, and deli
 | Food Platform | `food_delivery_platform` | Dedicated platform discovery UI | Keep platform structure; add a formal platform Logo |
 | Moon Bistro | `food_seed_moon_bistro` | Dedicated `dark_tray_menu` baseline | Deepen celestial fine-dining identity |
 | River Noodles | `food_seed_river_noodles` | Reusable `street_food_stall` route; nine menu items | Deepen the noodle-shop App after formal media delivery |
-| Daylight Cafe | `food_seed_daylight_cafe` | Reusable `cafe_counter` route; nine-item accepted media pack | Deepen daypart behavior without restoring a generic Hero |
+| Daylight Cafe | `food_seed_daylight_cafe` | Reusable `daypart_journal` route; nine-item accepted media pack | Deepen daypart behavior without restoring a generic Hero |
 | Sugar Lane | `food_seed_sugar_lane` | Reusable `convenience_shelf` route; nine menu items | Deepen the patisserie App after formal media delivery |
 | Peach Cloud | `food_seed_peach_cloud` | Dedicated `dessert_window` App | Preserve current internal UI; pause fine-detail work |
 | Dash Grill | `food_seed_dash_grill` | Dedicated `quick_service_chain` App | Rebalance color and deepen print/kitchen-ticket identity |
 | Jade Hearth | `food_seed_jade_hearth` | Dedicated `jade_table_menu` App | Rebalance color and deepen book/celadon identity |
 | Verdant Day | `food_seed_verdant_day` | Dedicated `minimal_light_food` App | Preserve current internal UI; pause fine-detail work |
-| Harbor Roast | `food_seed_harbor_roast` | Generic `standard` shop; twelve-item asset contract | Keep as the next prepared brand/template integration slice |
+| Harbor Roast | `food_seed_harbor_roast` | Reusable `cafe_counter` route; twelve-item asset contract | Generate and review its formal media pack before claiming visual completion |
 
 Only Peach Cloud currently has an active formal shop mark in the Home folder. Food Platform uses a generic utensils icon; Verdant Day uses a generic leaf; the other shops fall back to shared symbols or cover-image crops. Those fallbacks are temporary and do not satisfy this design direction.
 
@@ -120,17 +120,19 @@ The App Store template selector must distinguish generic structure templates fro
 
 | Template ID | User-selectable | Structural job | Current built-in proof |
 | --- | --- | --- | --- |
-| `standard` | yes | legacy Hero, metrics, category rail, and compact list | Harbor Roast and unassigned shops |
-| `cafe_counter` | yes | no Hero; vertical daypart/counter track beside an order board | Daylight Cafe |
+| `standard` | yes | legacy Hero, metrics, category rail, and compact list | Unassigned shops |
+| `cafe_counter` | yes | no Hero; vertical category/counter track beside a dense order board | Harbor Roast |
 | `convenience_shelf` | yes | no Hero; shelf labels, two-column display case, and price lips | Sugar Lane |
 | `street_food_stall` | yes | no Hero; horizontal stop selector and alternating vertical route | River Noodles |
+| `daypart_journal` | yes | editorial masthead, time-indexed section grid, lead feature, and supporting notes | Daylight Cafe |
+| `menu_mosaic` | yes | color-block category atlas and asymmetric product mosaic | Cross-restaurant customization coverage |
 | `dark_tray_menu` | current brand only | celestial dark tray facade | Moon Bistro |
 | `dessert_window` | current brand only | Peach Cloud route-driven dessert app | Peach Cloud |
 | `quick_service_chain` | current brand only | Dash Grill route-driven kiosk app | Dash Grill |
 | `jade_table_menu` | current brand only | Jade Hearth route-driven table-menu app | Jade Hearth |
 | `minimal_light_food` | current brand only | Verdant Day route-driven light-food app | Verdant Day |
 
-Generic templates share restaurant/menu input, item detail, add-to-bag, cart ownership, checkout, order, and delivery support with Food Delivery. They own only browsing composition. Each generic template opens the first real non-empty category, never synthesizes `All`, accepts App Store display/cover overrides, and uses a template-native symbolic fallback while formal product media is unavailable. Brand-owned facades remain visible when editing their current built-in shop, but they are not offered as general replacements until their brand-specific routes and assets have been extracted.
+Generic templates share restaurant/menu input, item detail, add-to-bag, cart ownership, checkout, order, and delivery support with Food Delivery. They own only browsing composition. Each generic template opens the first real non-empty category, never synthesizes `All`, accepts App Store display/cover overrides, and uses a template-native symbolic fallback while formal product media is unavailable. The six general options must remain restaurant-agnostic: `menu_mosaic` intentionally has no fixed built-in brand proof, and regression coverage applies it to a different restaurant to prevent copied names, slogans, or source-shop assets. Brand-owned facades remain visible when editing their current built-in shop, but they are not offered as general replacements until their brand-specific routes and assets have been extracted.
 
 ## 6. Page Configuration By Shop
 
@@ -160,8 +162,8 @@ Generic templates share restaurant/menu input, item detail, add-to-bag, cart own
 
 ### 6.4 Daylight Cafe
 
-- The implemented `cafe_counter` structure organizes the menu as a counter track and order board around morning, midday, and afternoon dayparts.
-- Browsing uses sunlit counter bands rather than a generic product-card Hero.
+- The implemented `daypart_journal` structure organizes the menu as a time-indexed daily edition rather than a chain-coffee counter.
+- Browsing uses an editorial masthead, four daypart cells, one lead feature, and compact supporting notes rather than a generic product-card Hero.
 - Menu categories: coffee, cold drinks, brunch, bakery. No `All`.
 - A dedicated Day Timeline page highlights products appropriate to the current visual daypart without changing availability truth automatically.
 - Product detail uses clear glass, white ceramic, and hard daylight with strong ingredient legibility.
@@ -211,8 +213,8 @@ Generic templates share restaurant/menu input, item detail, add-to-bag, cart own
 
 ### 6.10 Harbor Roast
 
-- Keep the prepared twelve-item drinks-first menu on `standard` until a distinct brand structure is approved.
-- Its future template must separate premium coffee-chain rhythm from Daylight Cafe's bright counter and should use the prepared petrol, copper, warm-ivory, cranberry, and espresso capsule.
+- The prepared twelve-item drinks-first menu now uses `cafe_counter`: a compact vertical category track and high-density order board suited to a globally repeatable coffee-chain rhythm.
+- Keep its future media separate from Daylight Cafe's bright journal/brunch language by using the prepared petrol, copper, warm-ivory, cranberry, and espresso capsule.
 - Do not claim visual completion until the one-cover/twelve-product runtime pack is generated and reviewed.
 
 ## 7. Menu Depth For The Three Reusable-Template Shops
@@ -231,7 +233,7 @@ Exact menu names, ingredients, prices, seed IDs, migration behavior, photography
 
 ## 8. Suggested Design Sequence
 
-This sequence is a design recommendation only. It does not modify roadmap priority or authorize implementation by itself. The three reusable browsing structures are already implemented; the remaining items below describe further brand completion.
+This sequence is a design recommendation only. It does not modify roadmap priority or authorize implementation by itself. Five specialized reusable browsing structures plus `standard` are implemented as general choices; the remaining items below describe further brand completion.
 
 1. Establish the nine stable Logo assets and connect each one to the Home folder entry plus app-local brand surfaces.
 2. Separate Dash Grill and Jade Hearth internally through palette proportions, navigation treatment, card geometry, and special-page styling.

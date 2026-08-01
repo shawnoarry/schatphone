@@ -28,7 +28,7 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(overflow.body).toBeLessThanOrEqual(1)
 }
 
-test('River Noodles and Sugar Lane use structurally distinct reusable discovery templates', async ({
+test('reusable discovery templates stay distinct and menu mosaic can be reassigned', async ({
   page,
 }, testInfo) => {
   const pageErrors = []
@@ -84,6 +84,35 @@ test('River Noodles and Sugar Lane use structurally distinct reusable discovery 
       contentType: 'image/png',
     })
   }
+
+  await navigateInsideUnlockedApp(page, '/app-store?section=shops')
+  await page.getByTestId('app-store-item-shop_app_food_seed_moon_bistro').click()
+  await page.locator(
+    '[data-testid="app-store-open-identity"]:visible, [data-testid="app-store-open-identity-sheet"]:visible',
+  ).click()
+  await page.getByTestId('app-store-identity-shop-template').selectOption('menu_mosaic')
+  await page.getByTestId('app-store-identity-save').click()
+
+  await navigateInsideUnlockedApp(
+    page,
+    '/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop',
+  )
+  const mosaicShell = page.getByTestId('food-delivery-store-shell')
+  await expect(mosaicShell).toHaveAttribute('data-store-template', 'menu_mosaic')
+  await expect(mosaicShell).toContainText('Moon Bistro')
+  await expect(mosaicShell).not.toContainText('Daylight Cafe')
+  await expect(mosaicShell).not.toContainText('Harbor Roast')
+  await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-store-menu-items')).not.toHaveAttribute(
+    'data-active-section',
+    'all',
+  )
+  await expectNoHorizontalOverflow(page)
+
+  await testInfo.attach(`menu-mosaic-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
 
   expect(pageErrors).toEqual([])
   expect(consoleErrors).toEqual([])

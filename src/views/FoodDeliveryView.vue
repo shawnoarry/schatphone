@@ -5,6 +5,7 @@ import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import FoodDeliveryDashGrillApp from '../components/FoodDeliveryDashGrillApp.vue'
 import FoodDeliveryDiscoveryTemplate from '../components/FoodDeliveryDiscoveryTemplate.vue'
+import FoodDeliveryEditorialTemplate from '../components/FoodDeliveryEditorialTemplate.vue'
 import FoodDeliveryJadeHearthApp from '../components/FoodDeliveryJadeHearthApp.vue'
 import FoodDeliveryVerdantDayApp from '../components/FoodDeliveryVerdantDayApp.vue'
 import {
@@ -1904,6 +1905,9 @@ const isLightFoodStore = computed(() => activeStoreTemplate.value === 'minimal_l
 const isReusableDiscoveryTemplate = computed(() =>
   ['cafe_counter', 'convenience_shelf', 'street_food_stall'].includes(activeStoreTemplate.value),
 )
+const isReusableEditorialTemplate = computed(() =>
+  ['daypart_journal', 'menu_mosaic'].includes(activeStoreTemplate.value),
+)
 const isDaylightCafeStore = computed(
   () => activeRestaurant.value?.id === 'food_seed_daylight_cafe',
 )
@@ -1915,7 +1919,10 @@ const isDedicatedStoreApp = computed(
     isLightFoodStore.value,
 )
 const usesFullBleedStoreShell = computed(
-  () => isDedicatedStoreApp.value || isReusableDiscoveryTemplate.value,
+  () =>
+    isDedicatedStoreApp.value ||
+    isReusableDiscoveryTemplate.value ||
+    isReusableEditorialTemplate.value,
 )
 const PEACH_CLOUD_PAGE_KEYS = new Set(['search', 'new', 'bag', 'orders', 'order'])
 const peachCloudPageKey = computed(() => {
@@ -2038,6 +2045,8 @@ const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value && activeStoreTemplate.value === 'cafe_counter') return 'bg-[#f3efe7]'
   if (isStoreMode.value && activeStoreTemplate.value === 'convenience_shelf') return 'bg-[#f6f1ed]'
   if (isStoreMode.value && activeStoreTemplate.value === 'street_food_stall') return 'bg-[#eef0e6]'
+  if (isStoreMode.value && activeStoreTemplate.value === 'daypart_journal') return 'bg-[#f7f5ed]'
+  if (isStoreMode.value && activeStoreTemplate.value === 'menu_mosaic') return 'bg-[#f1eee8]'
   if (isStoreMode.value) return 'bg-[#f4fbfb]'
   return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#f4fbfb]'
 })
@@ -6713,6 +6722,26 @@ onBeforeUnmount(() => {
           @open-cart="openStoreCartSurface"
         />
 
+        <FoodDeliveryEditorialTemplate
+          v-else-if="activeRestaurant && isReusableEditorialTemplate"
+          :template-id="activeStoreTemplate"
+          :restaurant="activeRestaurant"
+          :display-name="activeStoreDisplayName"
+          :short-description="activeStoreShortDescription"
+          :menu-items="activeMenuItems"
+          :menu-sections="reusableDiscoveryMenuSections"
+          :cover-image-url="activeStoreCoverImageUrl || activeStoreRestaurantImageUrl"
+          :image-url="foodImageUrl"
+          :cart-quantity="activeStoreCartQuantity"
+          :eta-text="activeStoreEtaText"
+          :fee-text="activeStoreFeeText"
+          :distance-text="activeStoreDistanceText"
+          @go-home="goHome"
+          @open-item="openMenuItemDetail"
+          @add-item="addMenuItemToCart"
+          @open-cart="openStoreCartSurface"
+        />
+
         <article
           v-else-if="activeRestaurant && isDessertWindowStore"
           class="peach-cloud-app relative mx-auto min-h-screen w-full max-w-md overflow-hidden bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)]"
@@ -8009,7 +8038,12 @@ onBeforeUnmount(() => {
         </article>
 
         <article
-          v-if="activeRestaurant && !isDedicatedStoreApp && !isReusableDiscoveryTemplate"
+          v-if="
+            activeRestaurant &&
+            !isDedicatedStoreApp &&
+            !isReusableDiscoveryTemplate &&
+            !isReusableEditorialTemplate
+          "
           class="relative overflow-hidden rounded-[2rem] shadow-sm"
           :class="
             isDarkTrayStore
@@ -8281,7 +8315,12 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-if="activeRestaurant && !isDedicatedStoreApp && !isReusableDiscoveryTemplate"
+          v-if="
+            activeRestaurant &&
+            !isDedicatedStoreApp &&
+            !isReusableDiscoveryTemplate &&
+            !isReusableEditorialTemplate
+          "
           class="p-4"
           :class="
             isDarkTrayStore

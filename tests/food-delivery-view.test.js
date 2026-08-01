@@ -1228,7 +1228,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('renders reusable street, cafe, and shelf discovery structures without an All section', async () => {
+  test('renders reusable street, journal, cafe, and shelf structures without an All section', async () => {
     const router = createTestRouter()
     await router.push(
       '/food-delivery?category=fast_food&restaurantId=food_seed_river_noodles&entry=shop',
@@ -1266,7 +1266,7 @@ describe('FoodDeliveryView', () => {
     )
     await flushPromises()
     expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
-      'cafe_counter',
+      'daypart_journal',
     )
     expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
       false,
@@ -1277,7 +1277,7 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-menu-section-bakery"]').exists()).toBe(
       true,
     )
-    expect(wrapper.get('img[alt="Daylight Cafe coffee"]').classes()).toContain(
+    expect(wrapper.get('img[alt="Daylight Cafe coffee"]').classes()).not.toContain(
       'object-[68%_center]',
     )
 
@@ -1292,6 +1292,23 @@ describe('FoodDeliveryView', () => {
     )
     expect(daylightDetailImage.classes()).toContain('object-contain')
     await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
+
+    await router.push(
+      '/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop',
+    )
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
+      'cafe_counter',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-espresso_classics"]').exists()).toBe(
+      true,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-tea_counter_bakes"]').exists()).toBe(
+      true,
+    )
 
     await router.push(
       '/food-delivery?category=dessert&restaurantId=food_seed_sugar_lane&entry=shop',
@@ -1315,12 +1332,12 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('applies a reusable discovery template override to another restaurant without brand leakage', async () => {
+  test('applies the reusable mosaic template to another restaurant without brand leakage', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     expect(
       systemStore.setEntryPresentationOverride('shop_app_food_seed_moon_bistro', {
-        templateId: 'cafe_counter',
+        templateId: 'menu_mosaic',
       }),
     ).toBe(true)
     await router.push(
@@ -1336,9 +1353,10 @@ describe('FoodDeliveryView', () => {
     await flushPromises()
 
     const shell = wrapper.get('[data-testid="food-delivery-store-shell"]')
-    expect(shell.attributes('data-store-template')).toBe('cafe_counter')
+    expect(shell.attributes('data-store-template')).toBe('menu_mosaic')
     expect(shell.text()).toContain('Moon Bistro')
     expect(shell.text()).not.toContain('Daylight Cafe')
+    expect(shell.text()).not.toContain('Harbor Roast')
     expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
       false,
     )

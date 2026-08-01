@@ -111,6 +111,22 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
     descZh: '适合小吃摊、夜市、路边快餐。',
     descEn: 'For snacks, night markets, and street food.',
   },
+  {
+    id: 'daypart_journal',
+    userSelectable: true,
+    labelZh: '时段手帐',
+    labelEn: 'Daypart journal',
+    descZh: '适合早餐、早午餐与全天候咖啡店。',
+    descEn: 'For breakfast, brunch, and all-day cafes.',
+  },
+  {
+    id: 'menu_mosaic',
+    userSelectable: true,
+    labelZh: '菜单拼贴',
+    labelEn: 'Menu mosaic',
+    descZh: '适合品类丰富、视觉活跃的混合菜单店铺。',
+    descEn: 'For varied, visually expressive mixed menus.',
+  },
 ])
 
 const SHOP_ENTRY_TEMPLATE_SET = new Set(SHOP_ENTRY_TEMPLATE_OPTIONS.map((option) => option.id))
