@@ -65,9 +65,11 @@ Pixel dimensions, PNG/alpha requirement, candidate only until visual QA passes.
 
 核心原则：图片里不要烘入 UI 文案、价格或按钮。食物摄影不放品牌字样；明确标记为“店铺 Logo”的素材允许有独立品牌图形，但仍不放可读店名，店名继续由代码渲染。
 
-## Shared Style Direction / 统一视觉方向
+## Platform-Level Shared Style Direction / 平台层统一视觉方向
 
-除非单条提示另有说明，所有素材都尽量遵循这个方向：
+本节只定义 Food Platform 自己拥有的横幅、活动、分类、订单状态和装饰素材。它不定义平台内部 11 家商户的统一画风。商户食物图必须读取下方各自的摄影胶囊；不得因为它们共用一个平台、素材目录或支付流程，就把它们做成同一套青绿色商业棚拍。
+
+除非单条提示另有说明，平台层素材尽量遵循这个方向：
 
 ```text
 中文：清爽韩系外卖 App 视觉，干净的商业食物摄影，结合柔和可爱的 3D 外卖应用装饰，明亮白色或轻盈青绿色背景，食物真实诱人，移动端外卖广告质感，柔和自然阴影，细节清晰，高级但亲切，不要文字，不要品牌 logo，不要水印，不要 UI 界面，不要手机样机，输出 PNG。
@@ -75,13 +77,124 @@ Pixel dimensions, PNG/alpha requirement, candidate only until visual QA passes.
 English: Fresh Korean-style food delivery app visual, clean commercial product photography mixed with soft playful 3D delivery-app accents, bright white or airy teal background, appetizing real food, polished mobile app advertising look, soft natural shadows, high detail, premium but friendly, no text, no brand logo, no watermark, no UI frame, no phone mockup, PNG output.
 ```
 
-统一负面提示词：
+平台层统一负面提示词：
 
 ```text
 中文：不要可读文字，不要品牌 logo，不要水印，不要假 App 界面，不要手机边框，不要手持手机，不要变形食物，不要凌乱桌面，不要阴暗压抑光线，不要过度模糊，不要低清晰度，不要额外标签，不要二维码，不要随机字体。
 
 English: no readable text, no brand logo, no watermark, no fake app screen, no phone frame, no hands holding phone, no distorted food, no messy table, no dark gloomy lighting, no excessive blur, no low resolution, no extra labels, no QR code, no random typography.
 ```
+
+商户摄影不自动继承“不要凌乱桌面”或“必须高级商业棚拍”这两项。明确采用小吃摊或手机实拍语言的商户可以保留受控环境杂物、混合色温、轻微广角感、普通器皿和不完全居中的构图；但仍禁止食物变形、主体残缺、严重失焦、无法辨认配料、随机文字和现实品牌包装。
+
+## Food Platform Multi-Merchant Photography Requirement Freeze / Baemin 多商户摄影需求冻结
+
+### Status And Naming / 状态与命名
+
+- 冻结日期：`2026-08-01`。
+- 当前代码入口仍显示 `外卖平台 / Food Platform`，入口键仍为 `food_delivery_platform`，路由仍使用 `entry=platform`。
+- 用户选择的沉浸式平台名为 `Baemin`，中文和英文界面均使用这一英文名称，不使用韩文。该名称是有意采用的现实平台指向，不再使用此前提议的虚构名 `Minto / 敏途`。
+- `Baemin` 品牌名必须由代码渲染。生图只生成无文字场景和食物，不把 `Baemin`、价格、按钮或活动文案烘入图片。不要让生成模型凭空重画、近似或变形官方 Logo、字标或吉祥物；如果后续确需官方品牌图形，应接入来源明确的正式文件并记录来源，而不是把它列为生成任务。
+- 本节是需求与跨机器续接合同，不代表已经开始生成。当前没有属于本轮冻结要求的新请求记录、候选母版、正式运行时副本或桌面/移动视觉验收。
+- 仓库中已经存在的横幅、装饰和五张商户摄影封面只是既有运行时文件。平台层素材可在实际页面复核后继续使用；五张商户封面必须按本节新的店铺摄影胶囊重新评估，不能仅因路径存在就标记为已接受。
+
+### Product Boundary / 产品边界
+
+Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台 App，不是整个 Food Delivery 功能的品牌名。它可以聚合自己的 11 家平台内部商户，但不得纳入 Moon Bistro、Peach Cloud、Dash Grill、Jade Hearth、Verdant Day、River Noodles、Daylight Cafe、Sugar Lane、Harbor Roast 或其他同级独立店铺 App 的购物袋、订单和素材身份。
+
+视觉上也分为两层：
+
+1. **Baemin 平台层**：可以统一使用当前薄荷青、白色、少量珊瑚橙或暖黄，以及克制友好的 3D 配送装饰。
+2. **平台内部商户层**：11 家店各自拥有摄影语言、品牌道具、器皿、背景、镜头、光线和制作档次。平台配色不得覆盖商户身份。
+
+### Food Must Remain Photographic / 食物必须保持摄影质感
+
+所有商户封面和 55 张菜单商品图中的食物主体必须保持真实摄影或可信实拍质感。不得把主要食物替换成黏土模型、纸艺、平面插画、绘画或明显的纯 3D 食物。
+
+场景不要求都是现实餐厅实景，可以使用：
+
+- 纯色无缝背景、色纸、亚克力台面、几何展台或广告棚拍布景；
+- 真实食物搭配原创品牌卡通 IP、公仔、无字贴纸、餐纸或包装；
+- 俯拍目录、包装陈列、柜台自然光或橱窗静物；
+- 小吃摊、市场档口、街坊店和普通手机镜头的日常实拍语言。
+
+“真实摄影”不等于“全部精致”。部分店铺可以刻意保留手机自动白平衡、轻微颗粒、混合灯光、普通塑料或不锈钢器皿、略显拥挤的台面和不完全规整的裁切。目标是可信的普通实拍，而不是模糊、低分辨率、食物变形或生成失败。
+
+### Merchant Photography Capsules / 11 家商户摄影胶囊
+
+| 商户 | 画面与场景语言 | 镜头、光线与材质控制 | 明确禁用 |
+| --- | --- | --- | --- |
+| 逆站洞韩牛汤饭 | 老派汤饭铺的温暖纪实摄影，真实木桌、汤碗和小菜，蒸汽明显 | 约 `40°` 就餐视角，暖窗光与室内灯混合，陶碗、不锈钢筷勺 | 纯色棚拍、冷白高级餐厅、与面馆共用器皿 |
+| 寿司花 | 冷净克制的日式编辑摄影，大面积留白，食材切面清楚 | 约 `30°` 至 `45°`，柔和自然侧光，浅色陶瓷、木托盘、少量蓝灰 | 暖黄油腻光、霓虹夜店、拥挤居酒屋背景 |
+| 花德披萨味店 | 炉火、焦香和分享感的真实披萨店摄影 | 约 `35°`，暖炉火侧光，深木、烤盘、粗陶，允许面粉和焦边 | 极简白棚、玩具化芝士、快餐连锁纸盒模板 |
+| 沙拉日记 | 纯色无缝背景加真实食物的健康编辑棚拍，场景可以明显非现实 | `55°` 至俯拍，明亮高显色光，薄荷、浅蓝或暖白色块，短而清楚的影子 | 咖啡馆实景模板、木桌乡村风、把食物做成 3D 模型 |
+| 脆脆炸鸡屋 | 真实炸鸡加原创卡通鸡 IP 道具的品牌摄影，食物仍是绝对主角 | 轻微直接闪光或强侧光，无字纸盒、餐纸、贴纸和小公仔；IP 在五张图中保持同一造型与比例 | 现实炸鸡品牌、IP 遮挡食物、卡通炸鸡替代真实炸鸡 |
+| 莓果晨光 | 粉彩产品展台上的真实酸奶、鲜果与烘焙，甜品广告棚拍而非真实店景 | 柔光箱、圆形或阶梯展台、浅粉与晨光黄，玻璃和白瓷受控变化 | 黏土甜品、Peach Cloud 的桃子/云朵符号、过度儿童化 |
+| 青禾鲜食补给站 | 真实蔬果、早餐包和调味品的俯拍目录摄影，突出社区补给与包装组合 | 接近 `90°`，均匀日光，色纸分区、牛皮纸袋、网篮和透明盒 | 高级餐厅摆盘、虚假进口标签、所有商品散装无包装 |
+| 山茶牛肉面馆 | 街坊档口或市场面摊的手机实拍，普通但可信，不做精致商业棚拍 | 手机轻微广角、自动白平衡、混合灯光，搪瓷/密胺碗、不锈钢台面，允许受控环境杂物 | 玉石中餐厅、统一纯色棚拍、严重虚化和脏乱卫生问题 |
+| 早安贝果咖啡 | 清晨柜台自然光的日常摄影，介于手机随手拍与小型品牌编辑之间 | 约 `40°`，窗光、普通木柜台、烘焙纸和无字外带杯，允许轻微颗粒 | Harbor Roast 的深石台/铜色连锁语言、现实咖啡品牌杯套 |
+| 榆树里蒸点铺 | 早市蒸点摊的手机实拍，蒸汽、塑料托盘和不锈钢蒸笼形成生活感 | 手机镜头、顶灯与晨光混合，略紧裁切，普通白盘、蒸笼、外带袋 | 古典酒楼精致摆盘、宫廷布景、把点心做成黏土模型 |
+| 南风椰香咖喱 | 热带色块广告布景中的真实咖喱与米饭，场景大胆但食物真实 | `35°` 至 `45°`，饱和侧光，蕉叶、色纸、搪瓷盘与玻璃杯，黄绿和珊瑚色分工 | 暗棕印度餐厅模板、插画咖喱、随机热带品牌文字 |
+
+同一家店的五张菜单图要像同一拍摄体系，但不要求复制同一构图：允许在器皿、拍摄角度、配菜位置和背景道具上受控变化。跨店不得复用同一餐具、同一背景、同一 IP、同一纸包装、同一灯光预设或只换菜品的模板。
+
+脆脆炸鸡屋在批量生成前应先制作一张无文字原创 IP 参考锚点，只供本店候选图保持角色一致。该锚点默认保存在 `output/imagegen/baemin-platform/references/chicken-crisp-ip-anchor-01.png`，在页面没有独立使用需求前不计入正式运行时素材数量。
+
+### Small-Stall Expansion / 小吃摊扩展方向
+
+当前 55 张菜单图只覆盖已经存在的 11 家商户，不因本节自动增加商户或产品数量。山茶牛肉面馆和榆树里蒸点铺先承担小店/档口摄影语言。
+
+未来若扩展平台商户，可以另行设计烤串摊、辣炒年糕摊、鸡蛋吐司档、鱼饼汤摊等小型商户。它们当前状态均为 `IDEA_ONLY`；必须先补菜单语义、稳定 ID、运行时路径和 UI 槽位，再建立各自摄影胶囊，禁止提前把图片混入现有 11 家目录。
+
+### Asset Inventory At Freeze / 冻结时素材盘点
+
+| 分组 | 合同数量 | 冻结时状态 |
+| --- | ---: | --- |
+| 平台首页横幅 | 3 | 运行时已有 3；按 Baemin 页面裁切复核后可继续使用 |
+| 周末活动海报 | 1 | 缺 1 |
+| 商户封面或 Logo | 11 | 运行时已有 5 张摄影封面，但须按新胶囊复核；另缺 2 张摄影封面和 4 张透明 Logo |
+| 商户菜单商品图 | 55 | 缺 55，必须按 `11 家 x 每家 5 张` 分组生成 |
+| 平台分类图标 | 10 | 缺 10 个真正透明 PNG；现有烘入棋盘格的 RGB 图不能交付 |
+| 平台装饰 | 4 | 骑手、优惠券、外卖袋和小票类运行时素材已有可复核版本 |
+| 当前页面订单流程图 | 7 | 缺 7：结算、空订单和五个当前状态 |
+| 未来延误状态图 | 1 | 缺 1，当前不显示，可后置 |
+| 摄影型商户订单标记 | 7 | 缺 7；四家 Logo 型商户直接复用店铺 Logo |
+| Baemin 官方品牌图形 | 0 个生成目标 | 不由生图模型重画；如后续使用，必须接入来源明确的正式文件并单独记录来源 |
+
+按当前页面缺口计算，需要生成 `86` 张当前正式素材，另有 1 张未来延误状态图可后置。如果五张既有商户封面未通过新摄影胶囊复核，其重做数量在验收时另加，不得用“文件已存在”掩盖风格不符。
+
+### Resume Paths And Generation Order / 续接路径与生成顺序
+
+所有生成、请求记录、参考锚点、候选母版和正式素材都必须保存在 SchatPhone 项目目录内。默认使用已授权的 CLI 生图方案。
+
+```text
+候选与母版：output/imagegen/baemin-platform/
+正式运行时：public/images/ui-assets/apps/food-delivery/platform/
+请求记录：output/imagegen/baemin-platform/requests.jsonl
+接受记录：output/imagegen/baemin-platform/REQUEST_AND_ACCEPTANCE.md
+```
+
+运行时不得读取 `output/` 或 `tmp/`，也不得把任何候选或母版写到项目外的系统盘临时目录。
+
+续接时按以下顺序执行：
+
+1. 从当前代码重新核对 11 家店名、五道菜顺序、稳定路径、卡片裁切和详情槽位，不只依赖本文的历史快照。
+2. 为 11 家商户各生成 1 张代表性菜单试片，共 11 张；先验证商户之间确实不同，再批量生成剩余 44 张。
+3. 脆脆炸鸡屋先冻结原创 IP 锚点；任何带 IP 的商品图都要引用同一锚点。
+4. 生成缺失活动海报、六个商户封面/Logo 和十个分类图标；Baemin 名称由代码渲染，官方品牌图形不进入生图队列。
+5. 按商户逐店完成五张菜单图；每完成一家就记录请求参数、候选比较和接受理由，不跨店混用参考图。
+6. 最后生成当前订单流程图和七个商户订单标记；未来延误状态单独标为可后置。
+7. 只有正式副本接入 `public/` 并完成实际桌面与移动页面检查后，才能把状态从“已生成候选”更新为“已接入正式素材”，再更新为“已完成视觉验收”。
+
+### Acceptance Gate / 验收门槛
+
+- 食物主体保持可信摄影质感，配料、数量、器皿和中英文菜单语义一致。
+- 纯色或图形布景不能让食物看起来像 3D 模型；品牌 IP 只能作为次要道具，不能替代或遮挡食物。
+- 小吃摊/手机实拍允许普通和不规整，但必须清楚、卫生可信、主体完整，在 `64x64px` 缩略图仍能识别。
+- 同店五张图的镜头、光线、材料和品牌道具形成家族感；跨店一眼可区分，不能只靠文件名或菜品内容判断。
+- 商户封面需要检查横向卡片裁切；菜单图同时检查 `64x64px` 缩略图和详情大图，不能为了卡片裁切破坏详情主体。
+- 检查重复素材、加载失败、诊断占位图、横向溢出、控制台错误，以及桌面和移动视口的主体完整度。
+- 未完成上述检查时，文档只能写“需求已记录”或“已生成候选”，不得声称正式交付或视觉验收。
 
 ## 1. Platform Homepage Banner PNGs / 平台首页横幅图
 
@@ -94,7 +207,7 @@ English: no readable text, no brand logo, no watermark, no fake app screen, no p
 ```text
 中文：横向外卖会员活动横幅，青绿色和白色的轻盈背景，可爱的 3D 外卖优惠券和小外卖袋，右侧带一个轻微的食物碗装饰，干净的韩系外卖 App 氛围，高级亲切的商业插画质感，柔和阴影，左侧预留充足空白给可编辑 UI 文案，不要文字，不要 logo，不要水印，PNG。
 
-English: Horizontal food delivery membership campaign banner, teal and white airy background, cute 3D delivery coupon and small delivery bag, subtle food bowl accent on the right, clean Baemin-like Korean delivery app mood, premium friendly commercial illustration, soft shadows, generous empty space on the left for editable UI text, no text, no logo, no watermark, PNG.
+English: Horizontal food delivery membership campaign banner, teal and white airy background, cute 3D delivery coupon and small delivery bag, subtle food bowl accent on the right, clean Korean delivery-app mood, premium friendly commercial illustration, soft shadows, generous empty space on the left for editable UI text, no text, no logo, no watermark, PNG.
 ```
 
 ### Banner 2: Weekend Food Picks / 周末美食推荐
