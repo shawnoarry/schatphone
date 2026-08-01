@@ -1228,7 +1228,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('renders distinct menu sections for River Noodles, Daylight Cafe, and Sugar Lane', async () => {
+  test('renders reusable street, cafe, and shelf discovery structures without an All section', async () => {
     const router = createTestRouter()
     await router.push(
       '/food-delivery?category=fast_food&restaurantId=food_seed_river_noodles&entry=shop',
@@ -1242,8 +1242,17 @@ describe('FoodDeliveryView', () => {
     })
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toMatch(
-      /汤面.*拌面.*河岸小碟.*清凉饮/s,
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
+      'street_food_stall',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-broth_noodles"]').exists()).toBe(
+      true,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-coolers"]').exists()).toBe(
+      true,
     )
     await wrapper
       .get('[data-testid="food-delivery-store-menu-section-dry_noodles"]')
@@ -1256,8 +1265,17 @@ describe('FoodDeliveryView', () => {
       '/food-delivery?category=cafe&restaurantId=food_seed_daylight_cafe&entry=shop',
     )
     await flushPromises()
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toMatch(
-      /咖啡吧.*日光早午餐.*烘焙柜.*冰饮/s,
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
+      'cafe_counter',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-espresso_bar"]').exists()).toBe(
+      true,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-bakery"]').exists()).toBe(
+      true,
     )
     expect(wrapper.get('img[alt="Daylight Cafe coffee"]').classes()).toContain(
       'object-[68%_center]',
@@ -1279,8 +1297,53 @@ describe('FoodDeliveryView', () => {
       '/food-delivery?category=dessert&restaurantId=food_seed_sugar_lane&entry=shop',
     )
     await flushPromises()
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toMatch(
-      /切片蛋糕.*酥点柜.*冰甜.*甜饮/s,
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
+      'convenience_shelf',
+    )
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-layer_cakes"]').exists()).toBe(
+      true,
+    )
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-pastry_case"]')
+      .trigger('click')
+    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(
+      2,
+    )
+    wrapper.unmount()
+  })
+
+  test('applies a reusable discovery template override to another restaurant without brand leakage', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    expect(
+      systemStore.setEntryPresentationOverride('shop_app_food_seed_moon_bistro', {
+        templateId: 'cafe_counter',
+      }),
+    ).toBe(true)
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const shell = wrapper.get('[data-testid="food-delivery-store-shell"]')
+    expect(shell.attributes('data-store-template')).toBe('cafe_counter')
+    expect(shell.text()).toContain('Moon Bistro')
+    expect(shell.text()).not.toContain('Daylight Cafe')
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-store-menu-items"]').attributes('data-active-section')).not.toBe(
+      'all',
     )
     wrapper.unmount()
   })
@@ -1844,7 +1907,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('protects a foreign shop bag until Dash Grill replacement is confirmed', async () => {
+  test('keeps Dash Grill and Moon Bistro carts independent', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -1852,8 +1915,6 @@ describe('FoodDeliveryView', () => {
     const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
     const dashItem = store.listMenuByRestaurant('food_seed_dash_grill')[0]
     store.addToCart(moonItem.id)
-    const moonCartState = JSON.stringify(store.cartItems)
-
     await router.push(
       '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop&shopView=menu',
     )
@@ -1865,24 +1926,17 @@ describe('FoodDeliveryView', () => {
     })
 
     await wrapper.get(`[data-testid="food-delivery-add-${dashItem.id}"]`).trigger('click')
-    const replacementDialog = wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]')
-    expect(replacementDialog.text()).toContain('Moon Bistro')
-    expect(replacementDialog.text()).toContain('Dash Grill')
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
     await flushPromises()
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-    expect(store.cartRestaurant.id).toBe('food_seed_moon_bistro')
-
-    await wrapper.get(`[data-testid="food-delivery-add-${dashItem.id}"]`).trigger('click')
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(store.cartRestaurant.id).toBe('food_seed_dash_grill')
-    expect(store.cartLineItems).toEqual([
+    expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
+      false,
+    )
+    expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
+      expect.objectContaining({ menuItemId: moonItem.id, quantity: 1 }),
+    ])
+    expect(store.listCartLineItemsByRestaurant('food_seed_dash_grill')).toEqual([
       expect.objectContaining({ menuItemId: dashItem.id, quantity: 1 }),
     ])
+    expect(wrapper.text()).not.toContain('Moon Bistro')
     wrapper.unmount()
   })
 
@@ -2107,7 +2161,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('protects a foreign shop bag until Jade Hearth replacement is confirmed', async () => {
+  test('keeps Jade Hearth and Moon Bistro carts independent', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -2115,8 +2169,6 @@ describe('FoodDeliveryView', () => {
     const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
     const jadeItem = store.findMenuItemById('food_menu_jade_tea_smoked_chicken')
     store.addToCart(moonItem.id)
-    const moonCartState = JSON.stringify(store.cartItems)
-
     await router.push(
       '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop&shopView=menu',
     )
@@ -2128,23 +2180,17 @@ describe('FoodDeliveryView', () => {
     })
 
     await wrapper.get(`[data-testid="food-delivery-add-${jadeItem.id}"]`).trigger('click')
-    const replacementDialog = wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]')
-    expect(replacementDialog.text()).toContain('Moon Bistro')
-    expect(replacementDialog.text()).toContain('Jade Hearth')
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
     await flushPromises()
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-
-    await wrapper.get(`[data-testid="food-delivery-add-${jadeItem.id}"]`).trigger('click')
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(store.cartRestaurant.id).toBe('food_seed_jade_hearth')
-    expect(store.cartLineItems).toEqual([
+    expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
+      false,
+    )
+    expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
+      expect.objectContaining({ menuItemId: moonItem.id, quantity: 1 }),
+    ])
+    expect(store.listCartLineItemsByRestaurant('food_seed_jade_hearth')).toEqual([
       expect.objectContaining({ menuItemId: jadeItem.id, quantity: 1 }),
     ])
+    expect(wrapper.text()).not.toContain('Moon Bistro')
     wrapper.unmount()
   })
 
@@ -2358,7 +2404,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('protects a foreign shop bag until Verdant Day replacement is confirmed', async () => {
+  test('adds to Verdant Day without changing the existing Moon Bistro cart', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -2379,23 +2425,18 @@ describe('FoodDeliveryView', () => {
     })
 
     await wrapper.get(`[data-testid="food-delivery-add-${verdantItem.id}"]`).trigger('click')
-    const replacementDialog = wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]')
-    expect(replacementDialog.text()).toContain('Moon Bistro')
-    expect(replacementDialog.text()).toContain('Verdant Day')
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
     await flushPromises()
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-
-    await wrapper.get(`[data-testid="food-delivery-add-${verdantItem.id}"]`).trigger('click')
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(store.cartRestaurant.id).toBe('food_seed_verdant_day')
-    expect(store.cartLineItems).toEqual([
+    expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
+      false,
+    )
+    expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
+      expect.objectContaining({ menuItemId: moonItem.id, quantity: 1 }),
+    ])
+    expect(store.listCartLineItemsByRestaurant('food_seed_verdant_day')).toEqual([
       expect.objectContaining({ menuItemId: verdantItem.id, quantity: 1 }),
     ])
+    expect(JSON.stringify(store.cartItems)).not.toBe(moonCartState)
+    expect(wrapper.text()).not.toContain('Moon Bistro')
     wrapper.unmount()
   })
 
@@ -2432,7 +2473,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('keeps Moon cart byte-for-state on cancel and replaces it once for Peach Cloud', async () => {
+  test('shows and checks out only the Peach Cloud cart while preserving Moon Bistro', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -2451,46 +2492,63 @@ describe('FoodDeliveryView', () => {
     const peachItem = store.listMenuByRestaurant('food_seed_peach_cloud')[0]
 
     await wrapper.get(`[data-testid="food-delivery-add-${moonItem.id}"]`).trigger('click')
-    const moonCartState = JSON.stringify(store.cartItems)
-
     await router.push(
       '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop&shopView=bag&from=home&homePage=2',
     )
     await flushPromises()
 
-    const foreignNotice = wrapper.get('[data-testid="food-delivery-foreign-cart-notice"]')
-    expect(foreignNotice.text()).toContain("Another shop's bag")
-    expect(foreignNotice.text()).toContain('Moon Bistro')
-    expect(foreignNotice.text()).not.toContain(moonItem.title)
+    expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).toContain(
+      'Your bag feels light',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).not.toContain(
+      moonItem.title,
+    )
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).not.toContain(
       peachItem.title,
     )
 
-    await wrapper.get('[data-testid="food-delivery-browse-active-store"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-menu"]').trigger('click')
     await flushPromises()
     const peachAddButton = wrapper.get(`[data-testid="food-delivery-add-${peachItem.id}"]`)
     await peachAddButton.trigger('click')
+    await flushPromises()
 
-    const replacementDialog = wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]')
-    expect(replacementDialog.attributes('role')).toBe('alertdialog')
-    expect(replacementDialog.attributes('aria-labelledby')).toBe(
-      'food-delivery-cart-replacement-title',
+    expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
+      false,
     )
-    expect(replacementDialog.text()).toContain('Moon Bistro')
-    expect(replacementDialog.text()).toContain('Peach Cloud')
-
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
+    expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
+      expect.objectContaining({ menuItemId: moonItem.id, quantity: 1 }),
+    ])
+    expect(store.listCartLineItemsByRestaurant('food_seed_peach_cloud')).toEqual([
+      expect.objectContaining({ menuItemId: peachItem.id, quantity: 1 }),
+    ])
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
     await flushPromises()
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-    expect(store.cartRestaurant.id).toBe('food_seed_moon_bistro')
-
-    await peachAddButton.trigger('click')
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).toContain(
+      peachItem.title,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).not.toContain(
+      moonItem.title,
+    )
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
     await flushPromises()
 
-    expect(store.cartRestaurant.id).toBe('food_seed_peach_cloud')
-    expect(store.cartLineItems).toHaveLength(1)
-    expect(store.cartLineItems[0]).toMatchObject({
+    expect(store.listCartLineItemsByRestaurant('food_seed_peach_cloud')).toEqual([])
+    expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
+      expect.objectContaining({ menuItemId: moonItem.id, quantity: 1 }),
+    ])
+    expect(store.orders[0]).toMatchObject({
+      restaurantId: 'food_seed_peach_cloud',
+      items: [expect.objectContaining({ menuItemId: peachItem.id, quantity: 1 })],
+    })
+    expect(store.cartLineItems.find((line) => line.menuItemId === peachItem.id)).toBeUndefined()
+    expect(store.cartLineItems.find((line) => line.menuItemId === moonItem.id)).toMatchObject({
+      menuItemId: moonItem.id,
+      quantity: 1,
+    })
+    expect(store.orders[0].items[0]).toMatchObject({
       menuItemId: peachItem.id,
       quantity: 1,
     })
@@ -2498,7 +2556,7 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
-  test('keeps Peach cart on cancel and replaces it once with the requested Moon quantity', async () => {
+  test('adds the requested Moon Bistro detail quantity without changing Peach Cloud', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -2517,15 +2575,12 @@ describe('FoodDeliveryView', () => {
     const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
 
     await wrapper.get(`[data-testid="food-delivery-add-${peachItem.id}"]`).trigger('click')
-    const peachCartState = JSON.stringify(store.cartItems)
-
     await router.push(
       '/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop',
     )
     await flushPromises()
-    expect(wrapper.get('[data-testid="food-delivery-foreign-cart-notice"]').text()).toContain(
-      'Peach Cloud',
-    )
+    expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="food-delivery-cart-panel"]').exists()).toBe(false)
 
     await wrapper.get(`[data-testid="food-delivery-menu-open-${moonItem.id}"]`).trigger('click')
     await wrapper
@@ -2533,26 +2588,24 @@ describe('FoodDeliveryView', () => {
       .trigger('click')
     const moonDetailAdd = wrapper.get('[data-testid="food-delivery-menu-detail-add"]')
     await moonDetailAdd.trigger('click')
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-cancel"]').trigger('click')
     await flushPromises()
 
-    expect(JSON.stringify(store.cartItems)).toBe(peachCartState)
-    expect(store.cartRestaurant.id).toBe('food_seed_peach_cloud')
-
-    await moonDetailAdd.trigger('click')
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(store.cartRestaurant.id).toBe('food_seed_moon_bistro')
-    expect(store.cartLineItems).toHaveLength(1)
-    expect(store.cartLineItems[0]).toMatchObject({
+    expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
+      false,
+    )
+    expect(store.listCartLineItemsByRestaurant('food_seed_peach_cloud')).toEqual([
+      expect.objectContaining({ menuItemId: peachItem.id, quantity: 1 }),
+    ])
+    expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
+      expect.objectContaining({
       menuItemId: moonItem.id,
       quantity: 2,
-    })
+      }),
+    ])
     wrapper.unmount()
   })
 
-  test('blocks checkout when the active shop no longer owns the cart', async () => {
+  test('does not submit another shop cart after the active shop changes', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -2584,22 +2637,15 @@ describe('FoodDeliveryView', () => {
     expect(store.orderCount).toBe(0)
     expect(store.cartRestaurant.id).toBe('food_seed_moon_bistro')
     expect(wrapper.find('[data-testid="food-delivery-checkout-sheet"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="food-delivery-checkout-feedback"]').text()).toContain(
-      'Moon Bistro',
+    expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).toContain(
+      'Your bag feels light',
     )
     expect(router.currentRoute.value.query).toMatchObject({ from: 'home', homePage: '1' })
-
-    await wrapper.get('[data-testid="food-delivery-open-foreign-cart-shop"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.query).toMatchObject({
-      restaurantId: 'food_seed_moon_bistro',
-      from: 'home',
-      homePage: '1',
-    })
     wrapper.unmount()
   })
 
-  test('fails closed for mixed restored carts regardless of line order', async () => {
+  test('renders and checks out only active-shop lines from a restored multi-shop cart', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -2635,250 +2681,54 @@ describe('FoodDeliveryView', () => {
       },
     })
 
-    const expectMixedRecovery = () => {
-      const notice = wrapper.get('[data-testid="food-delivery-foreign-cart-notice"]')
-      expect(notice.attributes('data-cart-ownership-state')).toBe('mixed')
-      expect(notice.text()).toContain('Restored bag ownership mismatch')
-      expect(notice.text()).toContain('Moon Bistro')
-      expect(notice.text()).toContain('Peach Cloud')
-      expect(wrapper.get('[data-testid="food-delivery-active-cart-quantity"]').text()).toBe('0')
-      expect(wrapper.find('[data-testid="food-delivery-active-cart-total"]').exists()).toBe(false)
-      expect(wrapper.find('[data-testid="food-delivery-checkout"]').exists()).toBe(false)
-      expect(wrapper.find(`[data-testid="food-delivery-cart-${peachItem.id}"]`).exists()).toBe(
+    const expectPeachCartIsolation = () => {
+      expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(
         false,
       )
+      expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).not.toContain(
+        moonItem.title,
+      )
+      expect(wrapper.get('[data-testid="food-delivery-active-cart-quantity"]').text()).toBe('2')
+      expect(wrapper.find('[data-testid="food-delivery-active-cart-total"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="food-delivery-checkout"]').exists()).toBe(true)
+      expect(wrapper.find(`[data-testid="food-delivery-cart-${peachItem.id}"]`).exists()).toBe(true)
       expect(wrapper.find(`[data-testid="food-delivery-cart-${moonItem.id}"]`).exists()).toBe(false)
     }
 
-    expectMixedRecovery()
+    expectPeachCartIsolation()
     expect(JSON.stringify(store.cartItems)).toBe(activeFirstState)
     expect(store.orderCount).toBe(0)
 
     store.$patch({ cartItems: [moonLine, peachLine] })
     await flushPromises()
-    expectMixedRecovery()
+    expectPeachCartIsolation()
     expect(store.orderCount).toBe(0)
 
-    store.$patch({ cartItems: [peachLine] })
-    await flushPromises()
     await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
     expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').exists()).toBe(true)
-
-    store.$patch({ cartItems: [peachLine, moonLine] })
-    await flushPromises()
-    const mixedStateBeforeSubmit = JSON.stringify(store.cartItems)
     await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
     await flushPromises()
 
-    expect(store.orderCount).toBe(0)
-    expect(JSON.stringify(store.cartItems)).toBe(mixedStateBeforeSubmit)
+    expect(store.orderCount).toBe(1)
+    expect(store.orders[0]).toMatchObject({
+      restaurantId: 'food_seed_peach_cloud',
+      itemCount: 2,
+      items: [expect.objectContaining({ menuItemId: peachItem.id, quantity: 2 })],
+    })
+    expect(store.listCartLineItemsByRestaurant('food_seed_peach_cloud')).toEqual([])
+    expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
+      expect.objectContaining({ menuItemId: moonItem.id, quantity: 3 }),
+    ])
     expect(wrapper.find('[data-testid="food-delivery-checkout-sheet"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="food-delivery-checkout-feedback"]').text()).toContain(
-      'multiple shops',
-    )
-
-    await wrapper.get('[data-testid="food-delivery-browse-active-store"]').trigger('click')
-    await flushPromises()
-    await wrapper.get(`[data-testid="food-delivery-add-${peachItem.id}"]`).trigger('click')
-    expect(wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]').text()).toContain(
-      'Multiple shops',
-    )
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-    expect(store.cartRestaurant.id).toBe('food_seed_peach_cloud')
-    expect(store.cartLineItems).toHaveLength(1)
-    expect(store.cartLineItems[0]).toMatchObject({ menuItemId: peachItem.id, quantity: 1 })
-    wrapper.unmount()
-  })
-
-  test('revalidates the pending menu item before mutating a mixed cart', async () => {
-    const router = createTestRouter()
-    const systemStore = useSystemStore()
-    systemStore.settings.system.language = 'en-US'
-    const store = useFoodDeliveryStore()
-    const peachItem = store.listMenuByRestaurant('food_seed_peach_cloud')[0]
-    const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
-    store.$patch({
-      cartItems: [
-        {
-          menuItemId: peachItem.id,
-          quantity: 2,
-          sourceModule: 'restore_test',
-          sourceId: 'target_revalidation_active',
-          addedAt: 201,
-          updatedAt: 201,
-        },
-        {
-          menuItemId: moonItem.id,
-          quantity: 1,
-          sourceModule: 'restore_test',
-          sourceId: 'target_revalidation_foreign',
-          addedAt: 202,
-          updatedAt: 202,
-        },
-      ],
-    })
-    const mixedCartState = JSON.stringify(store.cartItems)
-    await router.push(
-      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
-    )
-    await router.isReady()
-
-    const wrapper = mount(FoodDeliveryView, {
-      global: {
-        plugins: [router],
-      },
-    })
-    const clearCartSpy = vi.spyOn(store, 'clearCart')
-    const addToCartSpy = vi.spyOn(store, 'addToCart')
-    const openReplacementDialog = async () => {
-      await wrapper.get(`[data-testid="food-delivery-add-${peachItem.id}"]`).trigger('click')
-      expect(wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
-        true,
-      )
-    }
-    const expectRejectedWithoutCartMutation = () => {
-      expect(JSON.stringify(store.cartItems)).toBe(mixedCartState)
-      expect(store.orderCount).toBe(0)
-      expect(clearCartSpy).not.toHaveBeenCalled()
-      expect(addToCartSpy).not.toHaveBeenCalled()
-      expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
-        false,
-      )
-      expect(wrapper.get('[data-testid="food-delivery-store-nav-feedback"]').text()).toContain(
-        'shop or bag changed',
-      )
-    }
-
-    await openReplacementDialog()
-    store.upsertMenuItem({ ...peachItem, available: false })
-    await flushPromises()
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-    expectRejectedWithoutCartMutation()
-
-    store.upsertMenuItem({ ...peachItem, available: true })
-    await flushPromises()
-    await openReplacementDialog()
-    store.upsertMenuItem({
-      ...peachItem,
-      restaurantId: 'food_seed_moon_bistro',
-      available: true,
-    })
-    await flushPromises()
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-    expectRejectedWithoutCartMutation()
-    wrapper.unmount()
-  })
-
-  test('rejects a pending replacement after the active restaurant changes', async () => {
-    const router = createTestRouter()
-    const systemStore = useSystemStore()
-    systemStore.settings.system.language = 'en-US'
-    await router.push(
-      '/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop',
-    )
-    await router.isReady()
-
-    const wrapper = mount(FoodDeliveryView, {
-      global: {
-        plugins: [router],
-      },
-    })
-    const store = useFoodDeliveryStore()
-    const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
-    const peachItem = store.listMenuByRestaurant('food_seed_peach_cloud')[0]
-    store.addToCart(moonItem.id)
-    const moonCartState = JSON.stringify(store.cartItems)
-
-    await router.push(
-      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
-    )
-    await flushPromises()
-    await wrapper.get(`[data-testid="food-delivery-add-${peachItem.id}"]`).trigger('click')
-    expect(wrapper.get('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(true)
-
-    await router.push(
-      '/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop',
-    )
-    await flushPromises()
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(JSON.stringify(store.cartItems)).toBe(moonCartState)
-    expect(store.cartRestaurant.id).toBe('food_seed_moon_bistro')
-    expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
-      false,
-    )
-    expect(wrapper.get('[data-testid="food-delivery-checkout-feedback"]').text()).toContain(
-      'shop or bag changed',
-    )
-    wrapper.unmount()
-  })
-
-  test('rejects a pending replacement after the cart owner changes', async () => {
-    const router = createTestRouter()
-    const systemStore = useSystemStore()
-    systemStore.settings.system.language = 'en-US'
-    await router.push(
-      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
-    )
-    await router.isReady()
-
-    const wrapper = mount(FoodDeliveryView, {
-      global: {
-        plugins: [router],
-      },
-    })
-    const store = useFoodDeliveryStore()
-    const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
-    const peachItem = store.listMenuByRestaurant('food_seed_peach_cloud')[0]
-    store.addToCart(moonItem.id)
-
-    await wrapper.get(`[data-testid="food-delivery-add-${peachItem.id}"]`).trigger('click')
-    const thirdRestaurant = store.upsertRestaurant({
-      id: 'food_stale_owner_shop',
-      name: 'Third Cart Owner',
-      category: 'restaurants',
-      cuisine: 'Recovery test kitchen',
-      deliveryFee: '4.00',
-      distanceKm: 1.2,
-      deliveryEtaMinutes: 18,
-    })
-    const thirdItem = store.upsertMenuItem({
-      id: 'food_stale_owner_item',
-      restaurantId: thirdRestaurant.id,
-      title: 'Third Owner Bowl',
-      category: 'restaurants',
-      price: '18.00',
-    })
-    store.addToCart(thirdItem.id)
-    const thirdOwnerCartState = JSON.stringify(store.cartItems)
-
-    await wrapper.get('[data-testid="food-delivery-cart-replacement-confirm"]').trigger('click')
-    await flushPromises()
-
-    expect(JSON.stringify(store.cartItems)).toBe(thirdOwnerCartState)
-    expect(store.cartRestaurant.id).toBe(thirdRestaurant.id)
-    expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(
-      false,
-    )
-    expect(wrapper.get('[data-testid="food-delivery-store-nav-feedback"]').text()).toContain(
-      'shop or bag changed',
-    )
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
     await flushPromises()
-    expect(wrapper.get('[data-testid="food-delivery-foreign-cart-notice"]').text()).toContain(
-      'Third Cart Owner',
-    )
-    expect(wrapper.get('[data-testid="food-delivery-checkout-feedback"]').text()).toContain(
-      'shop or bag changed',
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).toContain(
+      'Your bag feels light',
     )
     wrapper.unmount()
   })
 
-  test('keeps long unbroken foreign shop names inside recovery controls', async () => {
+  test('keeps a foreign bag private across standard and dedicated shop surfaces', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     systemStore.settings.system.language = 'en-US'
@@ -2901,9 +2751,8 @@ describe('FoodDeliveryView', () => {
       price: '20.00',
     })
     store.addToCart(longNameItem.id)
-    await router.push(
-      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop&shopView=bag',
-    )
+    const foreignCartState = JSON.stringify(store.cartItems)
+    await router.push('/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop')
     await router.isReady()
 
     const wrapper = mount(FoodDeliveryView, {
@@ -2911,18 +2760,28 @@ describe('FoodDeliveryView', () => {
         plugins: [router],
       },
     })
-    const ownerNames = wrapper.get('[data-testid="food-delivery-cart-owner-names"]')
-    const openForeignShop = wrapper.get('[data-testid="food-delivery-open-foreign-cart-shop"]')
-    const browseActiveShop = wrapper.get('[data-testid="food-delivery-browse-active-store"]')
+    const shopRoutes = [
+      '/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop',
+      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop&shopView=bag',
+      '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop&shopView=bag',
+      '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop&shopView=bag',
+      '/food-delivery?category=restaurants&restaurantId=food_seed_verdant_day&entry=shop&shopView=bag',
+    ]
 
-    expect(ownerNames.text()).toBe(longShopName)
-    expect(ownerNames.classes()).toContain('min-w-0')
-    expect(ownerNames.classes()).toContain('[overflow-wrap:anywhere]')
-    expect(openForeignShop.classes()).toContain('min-w-0')
-    expect(openForeignShop.classes()).toContain('whitespace-normal')
-    expect(openForeignShop.classes()).toContain('[overflow-wrap:anywhere]')
-    expect(browseActiveShop.classes()).toContain('min-w-0')
-    expect(browseActiveShop.classes()).toContain('[overflow-wrap:anywhere]')
+    for (const shopRoute of shopRoutes) {
+      await router.push(shopRoute)
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(
+        false,
+      )
+      expect(wrapper.find('[data-testid="food-delivery-open-foreign-cart-shop"]').exists()).toBe(
+        false,
+      )
+      expect(wrapper.find('[data-testid="food-delivery-checkout"]').exists()).toBe(false)
+      expect(wrapper.text()).not.toContain(longShopName)
+      expect(JSON.stringify(store.cartItems)).toBe(foreignCartState)
+    }
     wrapper.unmount()
   })
 

@@ -25,7 +25,8 @@ test('Daylight Cafe loads its complete bright-morning asset pack without destruc
   )
 
   const storeShell = page.getByTestId('food-delivery-store-shell')
-  await expect(storeShell).toHaveAttribute('data-store-template', 'standard')
+  await expect(storeShell).toHaveAttribute('data-store-template', 'cafe_counter')
+  await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveCount(0)
 
   const identityImage = storeShell.locator('img[alt="Daylight Cafe coffee"]')
   await expect(identityImage).toHaveAttribute(
@@ -44,7 +45,7 @@ test('Daylight Cafe loads its complete bright-morning asset pack without destruc
     .toEqual({ complete: true, width: 1200, height: 750 })
 
   const productImages = page.locator('[data-testid^="food-delivery-menu-open-"] img')
-  await expect(productImages).toHaveCount(9)
+  await expect(productImages).toHaveCount(3)
   const productResults = await productImages.evaluateAll((images) =>
     images.map((image) => ({
       complete: image.complete,
@@ -60,7 +61,7 @@ test('Daylight Cafe loads its complete bright-morning asset pack without destruc
       image.src?.includes('/images/ui-assets/apps/food-delivery/daylight-cafe/products/'),
     ),
   ).toBe(true)
-  expect(new Set(productResults.map((image) => image.src)).size).toBe(9)
+  expect(new Set(productResults.map((image) => image.src)).size).toBe(3)
 
   await testInfo.attach(`daylight-cafe-menu-${testInfo.project.name}`, {
     body: await page.screenshot(),
@@ -68,6 +69,7 @@ test('Daylight Cafe loads its complete bright-morning asset pack without destruc
   })
   await expectNoHorizontalOverflow(page)
 
+  await page.getByTestId('food-delivery-store-menu-section-cold_drinks').click()
   await page
     .getByTestId('food-delivery-menu-open-food_menu_daylight_vanilla_cold_brew')
     .click()

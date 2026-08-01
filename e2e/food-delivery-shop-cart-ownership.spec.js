@@ -34,7 +34,7 @@ const openFoodDeliveryFolderEntry = async (page, entryId) => {
   await page.getByTestId(`home-folder-entry-${entryId}`).click()
 }
 
-test('independent shops preserve cart ownership from Home through Peach order detail', async ({
+test('independent shops keep separate carts from Home through Peach order detail', async ({
   page,
 }, testInfo) => {
   const pageErrors = []
@@ -66,9 +66,28 @@ test('independent shops preserve cart ownership from Home through Peach order de
 
   const moonAdd = page.locator('[data-testid^="food-delivery-add-"]').first()
   const moonItemTitle = (await moonAdd.getAttribute('aria-label')).replace(/^Add /, '')
+  const moonItemId = (await moonAdd.getAttribute('data-testid')).replace('food-delivery-add-', '')
   await moonAdd.click()
   await expect(page.getByTestId('food-delivery-cart-panel')).toContainText(moonItemTitle)
-  const moonCartStorage = await readPersistedFoodDelivery(page)
+
+  await page.getByTestId('food-delivery-store-home').click()
+  await expect(page).toHaveURL(/#\/home\?homePage=1$/)
+  await openFoodDeliveryFolderEntry(page, 'shop_app_food_seed_harbor_roast')
+  await expect(page).toHaveURL(/restaurantId=food_seed_harbor_roast/)
+  await expect(page.getByTestId('food-delivery-foreign-cart-notice')).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-cart-panel')).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-store-shell')).not.toContainText(moonItemTitle)
+
+  const harborAdd = page.locator('[data-testid^="food-delivery-add-"]').first()
+  const harborItemTitle = (await harborAdd.getAttribute('aria-label')).replace(/^Add /, '')
+  const harborItemId = (await harborAdd.getAttribute('data-testid')).replace(
+    'food-delivery-add-',
+    '',
+  )
+  await harborAdd.click()
+  await expect(page.getByTestId('food-delivery-cart-replacement-dialog')).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-cart-panel')).toContainText(harborItemTitle)
+  await expect(page.getByTestId('food-delivery-store-shell')).not.toContainText(moonItemTitle)
 
   await page.getByTestId('food-delivery-store-home').click()
   await expect(page).toHaveURL(/#\/home\?homePage=1$/)
@@ -76,55 +95,36 @@ test('independent shops preserve cart ownership from Home through Peach order de
   await expect(page).toHaveURL(/restaurantId=food_seed_peach_cloud/)
   await page.getByTestId('food-delivery-peach-cloud-nav-cart').click()
 
-  const foreignNotice = page.getByTestId('food-delivery-foreign-cart-notice')
-  await expect(foreignNotice).toContainText("Another shop's bag")
-  await expect(foreignNotice).toContainText('Moon Bistro')
-  await expect(foreignNotice).toContainText('1 item(s)')
-  await expect(foreignNotice).not.toContainText(moonItemTitle)
+  await expect(page.getByTestId('food-delivery-foreign-cart-notice')).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-peach-cloud-bag-page')).toContainText(
+    'Your bag feels light',
+  )
   await expect(page.getByTestId('food-delivery-peach-cloud-bag-page')).not.toContainText(
     moonItemTitle,
   )
+  await expect(page.getByTestId('food-delivery-peach-cloud-bag-page')).not.toContainText(
+    harborItemTitle,
+  )
   await expectNoHorizontalOverflow(page)
 
-  await page.getByTestId('food-delivery-browse-active-store').click()
+  await page.getByTestId('food-delivery-peach-cloud-nav-menu').click()
   const peachAdd = page.locator('[data-testid^="food-delivery-add-"]').first()
   const peachItemTitle = (await peachAdd.getAttribute('aria-label')).replace(/^Add /, '')
-  await peachAdd.click()
-
-  const replacementDialog = page.getByTestId('food-delivery-cart-replacement-dialog')
-  const cancelReplacement = page.getByTestId('food-delivery-cart-replacement-cancel')
-  await expect(replacementDialog).toHaveAttribute('role', 'alertdialog')
-  await expect(replacementDialog).toHaveAttribute(
-    'aria-labelledby',
-    'food-delivery-cart-replacement-title',
+  const peachItemId = (await peachAdd.getAttribute('data-testid')).replace(
+    'food-delivery-add-',
+    '',
   )
-  await expect(replacementDialog).toContainText('Moon Bistro')
-  await expect(replacementDialog).toContainText('Peach Cloud')
-  await expect(cancelReplacement).toBeFocused()
-  await expectNoCriticalAxeViolations(page)
-  await expectNoHorizontalOverflow(page)
-
-  await page.keyboard.press('Escape')
-  await expect(replacementDialog).toHaveCount(0)
-  await expect(peachAdd).toBeFocused()
-  expect(await readPersistedFoodDelivery(page)).toBe(moonCartStorage)
-
   await peachAdd.click()
-  await cancelReplacement.click()
-  await expect(replacementDialog).toHaveCount(0)
-  await expect(peachAdd).toBeFocused()
-  expect(await readPersistedFoodDelivery(page)).toBe(moonCartStorage)
-
-  await peachAdd.click()
-  await page.getByTestId('food-delivery-cart-replacement-confirm').click()
-  await expect(replacementDialog).toHaveCount(0)
-  await expect(peachAdd).toBeFocused()
+  await expect(page.getByTestId('food-delivery-cart-replacement-dialog')).toHaveCount(0)
 
   await page.getByTestId('food-delivery-peach-cloud-nav-cart').click()
   await expect(page.getByTestId('food-delivery-foreign-cart-notice')).toHaveCount(0)
   await expect(page.getByTestId('food-delivery-cart-panel')).toContainText(peachItemTitle)
   await expect(page.getByTestId('food-delivery-cart-panel')).not.toContainText(moonItemTitle)
+  await expect(page.getByTestId('food-delivery-cart-panel')).not.toContainText(harborItemTitle)
   await expect(page.getByTestId('food-delivery-peach-cloud-bag-page')).toContainText('1')
+  await expectNoCriticalAxeViolations(page)
+  await expectNoHorizontalOverflow(page)
 
   await page.getByTestId('food-delivery-checkout').click()
   await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText('Peach Cloud')
@@ -146,6 +146,13 @@ test('independent shops preserve cart ownership from Home through Peach order de
     'data-active',
     'false',
   )
+  const persistedAfterPeachCheckout = JSON.parse(await readPersistedFoodDelivery(page))
+  const remainingCartIds = persistedAfterPeachCheckout.data.cartItems.map(
+    (item) => item.menuItemId,
+  )
+  expect(remainingCartIds).toContain(moonItemId)
+  expect(remainingCartIds).toContain(harborItemId)
+  expect(remainingCartIds).not.toContain(peachItemId)
   await expectNoCriticalAxeViolations(page)
   await expectNoHorizontalOverflow(page)
 

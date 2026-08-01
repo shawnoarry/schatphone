@@ -1,10 +1,10 @@
 # Food Delivery Shop Brand And UI Direction
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 Status: `PROVISIONAL USER-APPROVED DESIGN DIRECTION / PARTIALLY IMPLEMENTED`
 
-This document records the provisional brand and internal-UI direction for Food Platform and the eight built-in Food Delivery shops. It is a design reference, not a second roadmap, implementation board, or claim that every surface below is already complete. `docs/roadmap/TODO_ROADMAP.md` remains the only live execution board; the commerce package handoff remains the authority for current implementation status.
+This document records the provisional brand and internal-UI direction for Food Platform and the built-in Food Delivery shops. It is a design reference, not a second roadmap, implementation board, or claim that every surface below is already complete. `docs/roadmap/TODO_ROADMAP.md` remains the only live execution board; the commerce package handoff remains the authority for current implementation status.
 
 ## 1. Scope And Visual Ownership
 
@@ -19,6 +19,7 @@ The Food Delivery Home folder contains one platform entry and eight shop entries
 7. Dash Grill
 8. Jade Hearth
 9. Verdant Day
+10. Harbor Roast
 
 The Home folder container remains a Native System surface. It owns the folder material, spacing, close control, and grid. Each child entry contributes its real brand Logo, shop name, and short description. After a shop opens, that shop becomes the visual owner of the complete in-app surface, including navigation, product detail, bag, checkout, orders, order detail, empty states, and app-local overlays.
 
@@ -30,15 +31,16 @@ Food Delivery continues to own restaurant, menu, cart, checkout, order, and deli
 | --- | --- | --- | --- |
 | Food Platform | `food_delivery_platform` | Dedicated platform discovery UI | Keep platform structure; add a formal platform Logo |
 | Moon Bistro | `food_seed_moon_bistro` | Dedicated `dark_tray_menu` baseline | Deepen celestial fine-dining identity |
-| River Noodles | `food_seed_river_noodles` | Generic `standard` shop; one seed item | Build a complete independent noodle-shop App |
-| Daylight Cafe | `food_seed_daylight_cafe` | Generic `standard` shop; one seed item | Build a complete independent cafe App |
-| Sugar Lane | `food_seed_sugar_lane` | Generic `standard` shop; one seed item | Build a complete independent patisserie App |
+| River Noodles | `food_seed_river_noodles` | Reusable `street_food_stall` route; nine menu items | Deepen the noodle-shop App after formal media delivery |
+| Daylight Cafe | `food_seed_daylight_cafe` | Reusable `cafe_counter` route; nine-item accepted media pack | Deepen daypart behavior without restoring a generic Hero |
+| Sugar Lane | `food_seed_sugar_lane` | Reusable `convenience_shelf` route; nine menu items | Deepen the patisserie App after formal media delivery |
 | Peach Cloud | `food_seed_peach_cloud` | Dedicated `dessert_window` App | Preserve current internal UI; pause fine-detail work |
 | Dash Grill | `food_seed_dash_grill` | Dedicated `quick_service_chain` App | Rebalance color and deepen print/kitchen-ticket identity |
 | Jade Hearth | `food_seed_jade_hearth` | Dedicated `jade_table_menu` App | Rebalance color and deepen book/celadon identity |
 | Verdant Day | `food_seed_verdant_day` | Dedicated `minimal_light_food` App | Preserve current internal UI; pause fine-detail work |
+| Harbor Roast | `food_seed_harbor_roast` | Generic `standard` shop; twelve-item asset contract | Keep as the next prepared brand/template integration slice |
 
-Only Peach Cloud currently has an active formal shop mark in the Home folder. Food Platform uses a generic utensils icon; Verdant Day uses a generic leaf; the other shops fall back to a shared store icon. Those fallbacks are temporary and do not satisfy this design direction.
+Only Peach Cloud currently has an active formal shop mark in the Home folder. Food Platform uses a generic utensils icon; Verdant Day uses a generic leaf; the other shops fall back to shared symbols or cover-image crops. Those fallbacks are temporary and do not satisfy this design direction.
 
 ## 3. Shared Brand Rules
 
@@ -112,6 +114,24 @@ If a raster treatment is required, keep the same basename with `.png`, use a tra
 
 Color proportions matter. Dash Grill should read primarily yellow, paper, and ink with red as a concentrated action signal. Jade Hearth should read primarily rice paper, deep green, and celadon with cinnabar as a small seal-like signal. They must not both collapse into a large warm clay/brown field.
 
+### 5.1 Reusable Structure Template Library
+
+The App Store template selector must distinguish generic structure templates from brand-owned facades. A generic template may be applied to another Food Delivery restaurant without leaking the source shop's name, slogan, assets, special routes, or menu semantics.
+
+| Template ID | User-selectable | Structural job | Current built-in proof |
+| --- | --- | --- | --- |
+| `standard` | yes | legacy Hero, metrics, category rail, and compact list | Harbor Roast and unassigned shops |
+| `cafe_counter` | yes | no Hero; vertical daypart/counter track beside an order board | Daylight Cafe |
+| `convenience_shelf` | yes | no Hero; shelf labels, two-column display case, and price lips | Sugar Lane |
+| `street_food_stall` | yes | no Hero; horizontal stop selector and alternating vertical route | River Noodles |
+| `dark_tray_menu` | current brand only | celestial dark tray facade | Moon Bistro |
+| `dessert_window` | current brand only | Peach Cloud route-driven dessert app | Peach Cloud |
+| `quick_service_chain` | current brand only | Dash Grill route-driven kiosk app | Dash Grill |
+| `jade_table_menu` | current brand only | Jade Hearth route-driven table-menu app | Jade Hearth |
+| `minimal_light_food` | current brand only | Verdant Day route-driven light-food app | Verdant Day |
+
+Generic templates share restaurant/menu input, item detail, add-to-bag, cart ownership, checkout, order, and delivery support with Food Delivery. They own only browsing composition. Each generic template opens the first real non-empty category, never synthesizes `All`, accepts App Store display/cover overrides, and uses a template-native symbolic fallback while formal product media is unavailable. Brand-owned facades remain visible when editing their current built-in shop, but they are not offered as general replacements until their brand-specific routes and assets have been extracted.
+
 ## 6. Page Configuration By Shop
 
 ### 6.1 Food Platform
@@ -131,8 +151,8 @@ Color proportions matter. Dash Grill should read primarily yellow, paper, and in
 
 ### 6.3 River Noodles
 
-- Build a dedicated route-driven App instead of extending the generic standard shop.
-- Home follows a vertical river course through signature broth noodles, dry noodles, sides, and drinks.
+- The implemented `street_food_stall` structure replaces the generic standard shop without creating a second runtime owner.
+- Browsing follows an alternating vertical route through broth noodles, dry noodles, sides, and drinks, with the selected stop controlling the visible items.
 - Menu categories: broth noodles, dry noodles, toppings, sides, drinks. No `All`.
 - Product detail emphasizes broth, noodle type, toppings, heat, and texture without requiring a new customization schema in the first slice.
 - Bag becomes a noodle-shop order ticket; Orders uses a flowing route line for progress.
@@ -140,8 +160,8 @@ Color proportions matter. Dash Grill should read primarily yellow, paper, and in
 
 ### 6.4 Daylight Cafe
 
-- Build a dedicated route-driven App around morning, midday, and afternoon dayparts.
-- Home uses sunlit window bands rather than a generic product-card hero.
+- The implemented `cafe_counter` structure organizes the menu as a counter track and order board around morning, midday, and afternoon dayparts.
+- Browsing uses sunlit counter bands rather than a generic product-card Hero.
 - Menu categories: coffee, cold drinks, brunch, bakery. No `All`.
 - A dedicated Day Timeline page highlights products appropriate to the current visual daypart without changing availability truth automatically.
 - Product detail uses clear glass, white ceramic, and hard daylight with strong ingredient legibility.
@@ -149,8 +169,8 @@ Color proportions matter. Dash Grill should read primarily yellow, paper, and in
 
 ### 6.5 Sugar Lane
 
-- Build a dedicated route-driven patisserie App that does not reuse Peach Cloud's mascot, pastel cloud shapes, or two-column dessert-window composition.
-- Home behaves like a vertical glass display case with editorial shelf groupings.
+- The implemented `convenience_shelf` structure creates a patisserie display that does not reuse Peach Cloud's mascot, cloud shapes, or branded route composition.
+- Browsing behaves like a glass display case with shelf labels, product bays, and price lips.
 - Menu categories: cakes, tarts, baked sweets, gift boxes, drinks. No `All`.
 - A Today's Case page highlights the current authored collection; it must not invent automatic stock or sell-out behavior without a later data contract.
 - Product detail uses large pastry photography, fine ornamental dividers, and compact provenance/ingredient text.
@@ -189,9 +209,15 @@ Color proportions matter. Dash Grill should read primarily yellow, paper, and in
 - Add a formal reusable Verdant Day mark derived from its botanical identity; do not reuse a generic Font Awesome leaf.
 - Internal fine-detail work is paused. Future fixes should be limited to defects, semantic mismatches, or true-device findings until the direction is reopened.
 
-## 7. Menu Depth For The Three Generic Shops
+### 6.10 Harbor Roast
 
-River Noodles, Daylight Cafe, and Sugar Lane currently have one seed item each. A dedicated UI should not be declared complete around a one-item demo. Their first content-and-UI slice should target approximately twelve stable built-in items per shop while preserving user-authored same-ID data and backup fidelity.
+- Keep the prepared twelve-item drinks-first menu on `standard` until a distinct brand structure is approved.
+- Its future template must separate premium coffee-chain rhythm from Daylight Cafe's bright counter and should use the prepared petrol, copper, warm-ivory, cranberry, and espresso capsule.
+- Do not claim visual completion until the one-cover/twelve-product runtime pack is generated and reviewed.
+
+## 7. Menu Depth For The Three Reusable-Template Shops
+
+River Noodles, Daylight Cafe, and Sugar Lane now each have nine stable built-in items across four real sections. Their reusable structure templates are implemented, but River Noodles and Sugar Lane still await their formal one-cover/nine-product PNG packs. A later content expansion may move toward approximately twelve items when it adds real menu depth rather than padding the first category. Same-ID user edits and backup fidelity remain protected.
 
 Suggested distribution:
 
@@ -205,13 +231,13 @@ Exact menu names, ingredients, prices, seed IDs, migration behavior, photography
 
 ## 8. Suggested Design Sequence
 
-This sequence is a design recommendation only. It does not modify roadmap priority or authorize implementation by itself.
+This sequence is a design recommendation only. It does not modify roadmap priority or authorize implementation by itself. The three reusable browsing structures are already implemented; the remaining items below describe further brand completion.
 
 1. Establish the nine stable Logo assets and connect each one to the Home folder entry plus app-local brand surfaces.
 2. Separate Dash Grill and Jade Hearth internally through palette proportions, navigation treatment, card geometry, and special-page styling.
-3. Define and implement River Noodles content plus its dedicated river/woodcut App.
-4. Define and implement Daylight Cafe content plus its dedicated daypart App.
-5. Define and implement Sugar Lane content plus its dedicated patisserie App.
+3. Generate and accept River Noodles media, then deepen its route/ticket treatment across detail, bag, and orders.
+4. Deepen Daylight Cafe daypart behavior across detail, bag, and orders without restoring a generic Hero.
+5. Generate and accept Sugar Lane media, then deepen its case/packing treatment across detail, bag, and orders.
 6. Deepen Moon Bistro's celestial fine-dining identity without replacing its useful single-scroll structure.
 7. Keep Peach Cloud and Verdant Day paused except for Logo completion, defects, semantic corrections, and true-device findings.
 

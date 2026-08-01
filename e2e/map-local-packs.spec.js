@@ -80,9 +80,45 @@ test.describe('world-bound narrative maps', () => {
     )
 
     const destination = page.getByTestId('map-destination-search')
+    await destination.focus()
+    const searchPanel = page.getByTestId('map-local-place-results')
+    await expect(searchPanel).toBeVisible()
+    await expect(page.getByTestId('map-search-categories')).toBeVisible()
+    await expect(searchPanel.locator('.map-place-result')).not.toHaveCount(0)
+
+    await clickMapLibreCanvas(mapCanvas, 0.006, 0.5)
+    await expect(searchPanel).toHaveCount(0)
+    await destination.focus()
+    await expect(searchPanel).toBeVisible()
+
+    await page.getByTestId('map-search-category-shop').click()
+    await expect(page.getByTestId('map-search-category-shop')).toHaveAttribute('aria-pressed', 'true')
+    await expect(searchPanel).toContainText(/Jenny House|Soonsoo|A by BOM/)
+    await page.getByTestId('map-search-category-all').click()
+
+    await destination.fill('江南 美容')
+    await expect(searchPanel).toContainText('Jenny House')
+    await expect(searchPanel).not.toContainText('Starship')
+    await expect(searchPanel).toContainText(/Alias: 美容室|别名：美容室/)
+
+    await destination.fill('Hongde')
+    await expect(searchPanel).toContainText(/Hongik University Street|弘大入口/)
+    await expect(searchPanel).toContainText(/Close spelling|拼写接近/)
+
+    await destination.fill('North river rendezvous')
+    await expect(page.getByTestId('map-use-freeform-destination')).toBeVisible()
+    await expect(page.getByTestId('map-search-browse-places')).toBeVisible()
+    await page.getByTestId('map-use-freeform-destination').click()
+    await expect(searchPanel).toHaveCount(0)
+
+    const searchOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    )
+    expect(searchOverflow).toBeLessThanOrEqual(1)
+
     await destination.fill('SM')
-    await expect(page.getByTestId('map-local-place-results')).toBeVisible()
-    await page.getByTestId('map-local-place-results').locator('button').first().click()
+    await expect(searchPanel).toBeVisible()
+    await searchPanel.locator('.map-place-result').first().click()
     await expect(page.getByTestId('map-place-detail-sheet')).toContainText(
       /SM Entertainment|SM 娱乐/,
     )
@@ -161,8 +197,21 @@ test.describe('world-bound narrative maps', () => {
     await page.getByTestId('map-faction-legend-toggle').click()
     await expect(page.getByTestId('map-faction-legend')).toBeVisible()
 
-    await page.getByTestId('map-destination-search').fill('Ash')
-    await page.getByTestId('map-local-place-results').locator('button').first().click()
+    const destination = page.getByTestId('map-destination-search')
+    const searchPanel = page.getByTestId('map-local-place-results')
+    await destination.focus()
+    await expect(searchPanel).toBeVisible()
+    const localCanvas = mapCanvas.getByTestId('map-scene-leaflet')
+    const localBounds = await localCanvas.boundingBox()
+    expect(localBounds).toBeTruthy()
+    await localCanvas.click({
+      force: true,
+      position: { x: 5, y: localBounds.height * 0.5 },
+    })
+    await expect(searchPanel).toHaveCount(0)
+
+    await destination.fill('Ash')
+    await searchPanel.locator('.map-place-result').click()
     await expect(page.getByTestId('map-place-detail-sheet')).toContainText(
       /Ash Market|灰烬集市/,
     )

@@ -36,7 +36,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['place-pin', 'select-pin'])
+const emit = defineEmits(['place-pin', 'select-pin', 'map-interact'])
 const { t } = useI18n()
 const sceneRootRef = ref(null)
 const mapAssetReady = computed(() => Boolean(props.mapPack?.assetUrl))
@@ -214,7 +214,9 @@ const initializeMap = async () => {
     maxZoom: 6,
   })
   mapInstance.on('click', (event) => {
-    if (!props.interactive || !props.allowPinPlacement) return
+    if (!props.interactive) return
+    emit('map-interact')
+    if (!props.allowPinPlacement) return
     const point = latLngToNormalized(event.latlng)
     const position = normalizedToMapPosition(props.mapPack, point)
     if (!position) return

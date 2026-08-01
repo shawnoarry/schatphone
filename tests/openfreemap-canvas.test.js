@@ -185,6 +185,10 @@ describe('OpenFreeMap canvas', () => {
     maplibreMock.markers[0].element.click()
     expect(wrapper.emitted('select-pin')?.[0]?.[0]).toEqual(userPin)
 
+    map.emit('click', { lngLat: { lat: 37.56, lng: 126.98 } })
+    expect(wrapper.emitted('map-interact')).toHaveLength(1)
+    expect(wrapper.emitted('place-pin')).toBeUndefined()
+
     await wrapper.setProps({ allowPinPlacement: true })
     await nextTick()
     const placementMarker = maplibreMock.markers.find(
@@ -197,6 +201,7 @@ describe('OpenFreeMap canvas', () => {
 
     const placedPosition = { kind: 'geo', lat: 37.5712, lng: 126.9918 }
     map.emit('click', { lngLat: placedPosition })
+    expect(wrapper.emitted('map-interact')).toHaveLength(2)
     const placedPayload = wrapper.emitted('place-pin')?.[0]?.[0]
     expect(placedPayload.position).toEqual(placedPosition)
     expect(placedPayload.point).toEqual(mapPositionToNormalized(seoulPack, placedPosition))

@@ -20,6 +20,7 @@ import {
   MAP_USER_PLACE_CATEGORIES,
   resolveMapPlaceVisual,
 } from '../lib/map-place-categories'
+import { searchMapPlaces, suggestMapPlaces } from '../lib/map-place-search'
 import {
   MAP_JOURNEY_CHECKPOINT_DEFINITIONS,
   MAP_JOURNEY_PHASE,
@@ -86,6 +87,7 @@ const placeCreatorOpen = ref(false)
 const placePinMode = ref(false)
 const selectedMapPlace = ref(null)
 const selectedPlaceCategory = ref('all')
+const selectedSearchCategory = ref('all')
 const destinationIntentActive = ref(false)
 const mapFocusRequestId = ref(0)
 const mapFocusTarget = ref(null)
@@ -285,10 +287,31 @@ const updateTripFrom = (value) => {
 }
 
 const updateTripTo = (value) => {
+  if (tripRuntime.value.status === 'traveling' || tripRuntime.value.status === 'arrived') return
   const nextValue = typeof value === 'string' ? value : ''
   tripForm.value.to = nextValue
   destinationIntentActive.value = Boolean(nextValue.trim())
   mapSearchSuggestionsOpen.value = destinationIntentActive.value
+}
+
+const openMapSearch = () => {
+  if (tripRuntime.value.status === 'traveling' || tripRuntime.value.status === 'arrived') return
+  mapSearchSuggestionsOpen.value = true
+}
+
+const closeMapSearch = () => {
+  mapSearchSuggestionsOpen.value = false
+}
+
+const clearMapSearch = () => {
+  updateTripTo('')
+  selectedSearchCategory.value = 'all'
+  mapSearchSuggestionsOpen.value = true
+}
+
+const setMapSearchCategory = (categoryId) => {
+  selectedSearchCategory.value = categoryId
+  mapSearchSuggestionsOpen.value = true
 }
 
 const updateTripTransportMode = (value) => {
@@ -370,38 +393,71 @@ const mapScenePins = computed(() =>
 )
 
 const mapSearchQuery = computed(() =>
-  typeof tripForm.value.to === 'string' ? tripForm.value.to.trim().toLocaleLowerCase() : '',
+  destinationIntentActive.value && typeof tripForm.value.to === 'string'
+    ? tripForm.value.to.trim()
+    : '',
 )
 const mapSearchPanelOpen = computed(
-  () => mapSearchSuggestionsOpen.value && Boolean(mapSearchQuery.value),
+  () =>
+    mapSearchSuggestionsOpen.value &&
+    tripRuntime.value.status !== 'traveling' &&
+    tripRuntime.value.status !== 'arrived',
 )
 const searchableMapPlaces = computed(() =>
   activeMapPlaces.value.filter((place) => place?.position),
 )
 
+const recentMapDestinationTexts = computed(() =>
+  [...tripHistory.value]
+    .reverse()
+    .flatMap((trip) => [trip?.toLabel, trip?.to])
+    .filter((value) => typeof value === 'string' && value.trim()),
+)
+
 const mapPlaceSearchResults = computed(() => {
   if (!mapSearchPanelOpen.value) return []
-  const query = mapSearchQuery.value
-  if (!query) return []
-  return searchableMapPlaces.value
-    .filter((place) => {
-      const searchable = [
-        mapPlaceName(place),
-        mapPlaceDetail(place),
-        place.nameZh,
-        place.nameEn,
-        place.detailZh,
-        place.detailEn,
-        place.label,
-        place.detail,
-        ...(Array.isArray(place.aliases) ? place.aliases : []),
-      ]
-      return searchable.some(
-        (value) => typeof value === 'string' && value.toLocaleLowerCase().includes(query),
-      )
+  if (mapSearchQuery.value) {
+    return searchMapPlaces(searchableMapPlaces.value, mapSearchQuery.value, {
+      categoryId: selectedSearchCategory.value,
     })
-    .slice(0, 6)
+  }
+  return suggestMapPlaces(searchableMapPlaces.value, {
+    recentDestinationTexts: recentMapDestinationTexts.value,
+    categoryId: selectedSearchCategory.value,
+  })
 })
+
+const mapSearchScopeLabel = computed(() =>
+  mapSearchQuery.value
+    ? t('匹配地点', 'Matching places')
+    : t('最近与推荐', 'Recent and suggested'),
+)
+
+const mapSearchMatchHint = (result) => {
+  const match = result?.match
+  if (!match) return ''
+  if (match.quality === 'fuzzy') return t('拼写接近', 'Close spelling')
+  if (match.kind === 'alias') return t(`别名：${match.value}`, `Alias: ${match.value}`)
+  if (match.kind === 'detail') return t('区域或地址匹配', 'Area or address match')
+  if (match.kind === 'category') {
+    const category = mapPlaceVisual(result.place)
+    return t(`类型：${category.labelZh}`, `Type: ${category.labelEn}`)
+  }
+  if (match.kind === 'keyword') return t('相关地点', 'Related place')
+  return ''
+}
+
+const useFreeformDestination = () => {
+  if (!mapSearchQuery.value) return
+  selectedSearchCategory.value = 'all'
+  closeMapSearch()
+}
+
+const browsePlacesFromSearch = () => {
+  selectedSearchCategory.value = 'all'
+  closeMapSearch()
+  openMapDrawer('places')
+}
 
 const focusMapPlace = (place) => {
   if (!place?.position || place.mapPackId !== activeMapPackId.value) return
@@ -409,7 +465,9 @@ const focusMapPlace = (place) => {
   mapFocusRequestId.value += 1
 }
 
-const onMapSearchResultSelected = (place) => {
+const onMapSearchResultSelected = (result) => {
+  const place = result?.place
+  if (!place) return
   focusMapPlace(place)
   onMapPinSelected(place)
 }
@@ -1659,6 +1717,7 @@ onBeforeUnmount(() => {
           :allow-pin-placement="placePinMode"
           @place-pin="onMapPlacePin"
           @select-pin="onMapPinSelected"
+          @map-interact="closeMapSearch"
         />
 
         <div class="map-search-card" :class="{ 'has-results': mapSearchPanelOpen }">
@@ -1667,43 +1726,80 @@ onBeforeUnmount(() => {
             <input
               :value="mapDestinationSearchValue"
               class="map-destination-input"
-              :placeholder="t('搜索图钉或输入目的地', 'Search pins or enter destination')"
+              :placeholder="t('搜索地点、区域或类型', 'Search places, areas, or categories')"
+              :readonly="isTripTraveling || isTripArrived"
               data-testid="map-destination-search"
+              @focus="openMapSearch"
               @input="updateTripTo($event.target.value)"
+              @keydown.esc="closeMapSearch"
             />
             <button
               v-if="mapDestinationSearchValue"
               type="button"
               :aria-label="t('清除搜索', 'Clear search')"
-              @click="updateTripTo('')"
+              @click="clearMapSearch"
             >
               <i class="fas fa-xmark" aria-hidden="true"></i>
             </button>
           </label>
           <div v-if="mapSearchPanelOpen" class="map-place-results" data-testid="map-local-place-results">
             <div class="map-search-scope" data-testid="map-local-search-scope">
-              <span><i class="fas fa-map-pin" aria-hidden="true"></i>{{ t('当前世界图钉', 'Current-world pins') }}</span>
-              <small>{{ searchableMapPlaces.length }}</small>
+              <span><i class="fas fa-map-pin" aria-hidden="true"></i>{{ mapSearchScopeLabel }}</span>
+              <small>{{ mapPlaceSearchResults.length }}/{{ searchableMapPlaces.length }}</small>
+            </div>
+            <div
+              class="map-search-categories"
+              data-testid="map-search-categories"
+              role="group"
+              :aria-label="t('搜索地点分类', 'Search place categories')"
+            >
+              <button
+                v-for="category in mapPlaceCategoryOptions"
+                :key="category.id"
+                type="button"
+                class="map-search-category"
+                :class="{ 'is-active': selectedSearchCategory === category.id }"
+                :data-testid="`map-search-category-${category.id}`"
+                :aria-pressed="selectedSearchCategory === category.id"
+                @click="setMapSearchCategory(category.id)"
+              >
+                <i :class="category.icon" aria-hidden="true"></i>
+                <span>{{ t(category.labelZh, category.labelEn) }}</span>
+                <small>{{ category.count }}</small>
+              </button>
             </div>
             <button
-              v-for="place in mapPlaceSearchResults"
-              :key="place.placeId"
+              v-for="result in mapPlaceSearchResults"
+              :key="result.place.placeId"
               type="button"
               class="map-place-result"
-              :style="{ '--map-place-tone': mapPlaceVisual(place).tone }"
-              @click="onMapSearchResultSelected(place)"
+              :style="{ '--map-place-tone': mapPlaceVisual(result.place).tone }"
+              @click="onMapSearchResultSelected(result)"
             >
               <span class="map-place-result-icon">
-                <i :class="mapPlaceVisual(place).icon" aria-hidden="true"></i>
+                <i :class="mapPlaceVisual(result.place).icon" aria-hidden="true"></i>
               </span>
               <span class="min-w-0 text-left">
-                <span class="block truncate text-xs font-semibold text-slate-900">{{ mapPlaceName(place) }}</span>
-                <span class="block truncate text-[10px] text-slate-500">{{ mapPlaceDetail(place) }}</span>
+                <span class="block truncate text-xs font-semibold text-slate-900">{{ mapPlaceName(result.place) }}</span>
+                <span class="map-place-result-detail">
+                  <span v-if="mapSearchMatchHint(result)" class="map-place-result-match">{{ mapSearchMatchHint(result) }}</span>
+                  <span class="truncate">{{ mapPlaceDetail(result.place) }}</span>
+                </span>
               </span>
             </button>
-            <p v-if="mapPlaceSearchResults.length === 0" class="map-search-empty">
-              {{ t('没有匹配的已设图钉，可继续将文字作为目的地。', 'No saved pin matches. You can still use the text as a destination.') }}
-            </p>
+            <div v-if="mapPlaceSearchResults.length === 0" class="map-search-empty">
+              <p>{{ t('当前世界没有匹配的地点。', 'No matching place exists in the current world.') }}</p>
+              <div class="map-search-empty-actions">
+                <button type="button" data-testid="map-use-freeform-destination" @click="useFreeformDestination">
+                  <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                  <span>{{ t('按此文字规划', 'Use this destination') }}</span>
+                </button>
+                <button type="button" data-testid="map-search-browse-places" @click="browsePlacesFromSearch">
+                  <i class="fas fa-bookmark" aria-hidden="true"></i>
+                  <span>{{ t('浏览地点', 'Browse places') }}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2781,8 +2877,13 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
+.map-destination-input[readonly] {
+  cursor: default;
+  color: #526158;
+}
+
 .map-place-results {
-  max-height: 230px;
+  max-height: min(52vh, 360px);
   overflow-y: auto;
   border-top: 1px solid #e1e6e2;
   background: #fff;
@@ -2816,12 +2917,92 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
+.map-search-categories {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 0 7px 7px;
+  scrollbar-width: none;
+}
+
+.map-search-categories::-webkit-scrollbar {
+  display: none;
+}
+
+.map-search-category {
+  display: inline-flex;
+  min-height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #dce4de;
+  border-radius: 6px;
+  background: #f8faf8;
+  padding: 4px 7px;
+  color: #526158;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.map-search-category small {
+  color: #829087;
+  font-size: 8px;
+}
+
+.map-search-category.is-active {
+  border-color: #17664f;
+  background: #17664f;
+  color: #fff;
+}
+
+.map-search-category.is-active small {
+  color: rgba(255, 255, 255, 0.74);
+}
+
 .map-search-empty {
   margin: 0;
   padding: 10px 8px 12px;
   color: #718078;
   font-size: 10px;
   line-height: 1.5;
+}
+
+.map-search-empty p {
+  margin: 0;
+}
+
+.map-search-empty-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.map-search-empty-actions button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #d8e1db;
+  border-radius: 6px;
+  background: #f7faf8;
+  padding: 5px 7px;
+  color: #315044;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.map-search-empty-actions button:first-child {
+  border-color: #17664f;
+  background: #17664f;
+  color: #fff;
+}
+
+.map-search-empty-actions span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .map-place-result {
@@ -2849,6 +3030,31 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--map-place-tone) 14%, white);
   color: var(--map-place-tone);
   font-size: 11px;
+}
+
+.map-place-result-detail {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  color: #718078;
+  font-size: 9px;
+}
+
+.map-place-result-match {
+  max-width: 46%;
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: #17664f;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-place-result-match + span::before {
+  content: '·';
+  margin-right: 5px;
+  color: #a2aca6;
 }
 
 .map-control-stack {

@@ -7,6 +7,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     labelEn: 'Home',
     descriptionZh: '家、宿舍与长期落脚点',
     descriptionEn: 'Homes, dorms, and long-term bases',
+    searchTerms: ['住所', '住处', '公寓', 'residence', 'apartment'],
   }),
   work: Object.freeze({
     id: 'work',
@@ -16,6 +17,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     labelEn: 'Work',
     descriptionZh: '公司、办公室与工作场所',
     descriptionEn: 'Companies, offices, and workplaces',
+    searchTerms: ['总部', '职场', '办公楼', 'headquarters'],
   }),
   school: Object.freeze({
     id: 'school',
@@ -25,6 +27,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     labelEn: 'School',
     descriptionZh: '校园、教室与学习地点',
     descriptionEn: 'Campuses, classrooms, and study places',
+    searchTerms: ['大学', '学院', '学习', 'university', 'college'],
   }),
   shop: Object.freeze({
     id: 'shop',
@@ -34,6 +37,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     labelEn: 'Shop',
     descriptionZh: '购物、补给与服务场所',
     descriptionEn: 'Shopping, supplies, and services',
+    searchTerms: ['美容', '造型', '门店', 'salon', 'beauty', 'service'],
   }),
   leisure: Object.freeze({
     id: 'leisure',
@@ -43,6 +47,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     labelEn: 'Leisure',
     descriptionZh: '餐饮、娱乐与社交地点',
     descriptionEn: 'Dining, entertainment, and social places',
+    searchTerms: ['咖啡', '演出', '演唱会', '场馆', 'cafe', 'concert', 'venue'],
   }),
   other: Object.freeze({
     id: 'other',
@@ -52,6 +57,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     labelEn: 'Other',
     descriptionZh: '不属于以上类型的自定义地点',
     descriptionEn: 'Custom places outside the other types',
+    searchTerms: ['地标', '公共服务', 'landmark', 'public service'],
   }),
   transit: Object.freeze({
     id: 'transit',
@@ -59,6 +65,9 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     tone: '#0284c7',
     labelZh: '交通',
     labelEn: 'Transit',
+    descriptionZh: '车站、机场与公共交通节点',
+    descriptionEn: 'Stations, airports, and public transport nodes',
+    searchTerms: ['火车', '地铁', '公交', '机场', 'station', 'subway', 'airport'],
   }),
   culture: Object.freeze({
     id: 'culture',
@@ -66,6 +75,9 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     tone: '#92400e',
     labelZh: '文化',
     labelEn: 'Culture',
+    descriptionZh: '博物馆、宫殿、广场与文化地标',
+    descriptionEn: 'Museums, palaces, squares, and cultural landmarks',
+    searchTerms: ['博物馆', '宫殿', '广场', '展览', 'museum', 'palace', 'exhibition'],
   }),
   commerce: Object.freeze({
     id: 'commerce',
@@ -73,6 +85,9 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     tone: '#d97706',
     labelZh: '商业',
     labelEn: 'Commerce',
+    descriptionZh: '市场、交易与商业聚集地',
+    descriptionEn: 'Markets, trade, and commercial gathering places',
+    searchTerms: ['市场', '集市', '交易', '购物', 'market', 'trade', 'shopping'],
   }),
   medical: Object.freeze({
     id: 'medical',
@@ -80,6 +95,9 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     tone: '#dc2626',
     labelZh: '医疗',
     labelEn: 'Medical',
+    descriptionZh: '医院、诊所与医疗服务地点',
+    descriptionEn: 'Hospitals, clinics, and medical services',
+    searchTerms: ['医院', '诊所', '药店', 'hospital', 'clinic', 'pharmacy'],
   }),
   faction: Object.freeze({
     id: 'faction',
@@ -87,6 +105,9 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     tone: '#6d28d9',
     labelZh: '阵营',
     labelEn: 'Faction',
+    descriptionZh: '阵营总部、据点与控制区域',
+    descriptionEn: 'Faction headquarters, bases, and controlled areas',
+    searchTerms: ['总部', '据点', '领地', 'base', 'territory'],
   }),
   story: Object.freeze({
     id: 'story',
@@ -94,6 +115,9 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     tone: '#b91c1c',
     labelZh: '事件',
     labelEn: 'Story',
+    descriptionZh: '剧情、任务与高风险地点',
+    descriptionEn: 'Story, mission, and high-risk locations',
+    searchTerms: ['剧情', '任务', '危险', 'mission', 'danger', 'event'],
   }),
 })
 

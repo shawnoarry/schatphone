@@ -624,6 +624,7 @@ describe('App Store entry management UI', () => {
     expect(wrapper.find('[data-testid="app-store-shop-controls"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="app-store-shop-controls"]').text()).toContain('mini app entries')
     expect(wrapper.find('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="app-store-item-shop_app_food_seed_harbor_roast"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-item-shop_app_shopping_daily_fresh"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(false)
 
@@ -632,6 +633,12 @@ describe('App Store entry management UI', () => {
     expect(wrapper.get('[data-testid="app-store-entry-boundary"]').text()).toContain('Shopping owns products')
     expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain('Shopping')
     expect(wrapper.find('[data-testid="app-store-add-home"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="app-store-item-shop_app_food_seed_harbor_roast"]').trigger('click')
+    expect(wrapper.get('[data-testid="app-store-shop-app-meta"]').text()).toContain(
+      'Espresso, signature drinks, tea, and counter bakes',
+    )
+    expect(wrapper.find('[data-testid="app-store-open-identity"]').exists()).toBe(true)
 
     await wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').trigger('click')
 
@@ -797,7 +804,15 @@ describe('App Store entry management UI', () => {
     await wrapper.get('[data-testid="app-store-identity-accent"]').setValue('dark')
     await wrapper.get('[data-testid="app-store-identity-shop-description"]').setValue('Late night comfort menu')
     await wrapper.get('[data-testid="app-store-identity-shop-tags"]').setValue('late night, comfort, date')
-    await wrapper.get('[data-testid="app-store-identity-shop-template"]').setValue('dessert_window')
+    const templateSelect = wrapper.get('[data-testid="app-store-identity-shop-template"]')
+    expect(templateSelect.findAll('option').map((option) => option.attributes('value'))).toEqual([
+      'standard',
+      'dark_tray_menu',
+      'cafe_counter',
+      'convenience_shelf',
+      'street_food_stall',
+    ])
+    await templateSelect.setValue('cafe_counter')
     await wrapper.get('[data-testid="app-store-identity-shop-cover"]').setValue(importedCover.assetId)
     await flushPromises()
     expect(wrapper.get('[data-testid="app-store-identity-shop-cover-preview"] img').attributes('src')).toBe(
@@ -813,14 +828,14 @@ describe('App Store entry management UI', () => {
       accent: 'dark',
       shortDescription: 'Late night comfort menu',
       tags: ['late night', 'comfort', 'date'],
-      templateId: 'dessert_window',
+      templateId: 'cafe_counter',
       bindingTarget: 'food_delivery',
       coverGalleryAssetId: importedCover.assetId,
     })
     expect(systemStore.settings.appearance.appIconOverrides.shop_app_food_seed_moon_bistro).toBeUndefined()
     expect(wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').text()).toContain('Moon Kitchen')
     expect(wrapper.get('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').text()).toContain('Late night comfort menu')
-    expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Dessert window')
+    expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Cafe counter')
     expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('Set')
     expect(wrapper.get('[data-testid="app-store-entry-display"]').text()).toContain('late night · comfort · date')
     expect(wrapper.get('[data-testid="app-store-entry-info"]').text()).toContain('shop_app_food_seed_moon_bistro')

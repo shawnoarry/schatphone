@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  SHOP_ENTRY_TEMPLATE_OPTIONS,
   normalizeEntryOverrideId,
   normalizeEntryPresentationOverrides,
   resolveEntryPresentationMeta,
@@ -7,6 +8,14 @@ import {
 } from '../src/lib/app-entry-presentation'
 
 describe('app entry presentation helpers', () => {
+  test('marks only extracted shop structures as generally selectable', () => {
+    expect(
+      SHOP_ENTRY_TEMPLATE_OPTIONS.filter((option) => option.userSelectable).map(
+        (option) => option.id,
+      ),
+    ).toEqual(['standard', 'cafe_counter', 'convenience_shelf', 'street_food_stall'])
+  })
+
   test('normalizes dynamic entry overrides for shop and world entries only', () => {
     const normalized = normalizeEntryPresentationOverrides({
       shop_app_food_seed_moon_bistro: {

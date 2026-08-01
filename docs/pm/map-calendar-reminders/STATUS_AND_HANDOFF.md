@@ -1,6 +1,6 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
@@ -43,6 +43,8 @@ The approved direction is recorded in `docs/architecture/MAP_JOURNEY_FOOTPRINTS_
 MJE-1 was independently reviewed and accepted by the user. Its implementation remains in the current dirty physical tree without a dedicated commit, so this handoff does not claim `INTEGRATED_LOCAL`. The user accepted MJE-2 by explicitly authorizing the next stage. MJE-3 is now `READY_FOR_USER_REVIEW` in the same uncommitted tree; technical validation does not authorize MJE-4.
 
 MJE-3 validation is complete for the non-blocking pending-update revision: the focused Journey/Event/Map-view set passes 5 files / 64 tests; the full Vitest suite passes 200 files / 1363 tests; lint, production build, governance (2 files / 12 tests), and `git diff --check` pass; and the focused Map E2E passes 12/12 across desktop Chromium and Pixel 5.
+
+The tolerant local-search revision is also validated in the current tree: its focused pure-logic/Map-view set passes 2 files / 27 tests; the full Vitest suite passes 201 files / 1376 tests; lint, production build, governance (2 files / 12 tests), and scoped `git diff --check` pass; the complete Map E2E passes 12/12 across desktop Chromium and Pixel 5; and direct desktop/mobile visual inspection confirms zero horizontal overflow or console errors.
 
 ## Integrated OpenFreeMap Baseline
 
@@ -107,7 +109,7 @@ What is already landed:
 18. The current Seoul V1 catalog candidate expands the pack to 35 versioned read-only places. The 28-place expansion adds major entertainment agencies, broadcasters/media buildings, company headquarters, civic/cultural/event landmarks, and three named Cheongdam beauty-salon branches; each entry has stable Map identity, bilingual address/search metadata, and a locally maintained geographic coordinate.
 19. Map's default surface now uses progressive disclosure: store-seeded destination defaults no longer expose a route card on idle entry, secondary tools remain reachable through the Places drawer tabs, a canonical role-position control replaces GPS-like recenter wording and hides during travel, add/manage actions are grouped inside Places, active/paused/arrived journeys use a persistent primary status card rather than a map-tool pill, and selected-place/trip surfaces appear only when their context exists.
 20. Existing real and fictional markers cannot intercept coordinate-placement taps. Page-level guards also prevent stale marker events from replacing an in-progress create/edit draft.
-21. Map search now acts as a current-world local-pin index: it reports the searchable scope, matches only positioned pack/player places, and focuses plus opens the selected result without any POI/geocoding call. The same shared category icon/tone contract now styles both renderers, search, place lists, details, and Places and Pins Settings; Settings includes a focused six-category player-pin guide while faction tones and map-pack-only categories remain package-owned.
+21. Map search now acts as a tolerant current-world local-pin index: empty focus shows recent/diverse suggestions and categories; ranked matching covers normalized names, addresses, category semantics, optional aliases/search terms, and bounded Latin typos; new places inherit standard-field search without page-specific branches; unmatched text has explicit free-form/browse exits; and result selection still focuses plus opens the place without any POI/geocoding call. The same shared category icon/tone contract styles both renderers, search, place lists, details, and Places and Pins Settings; Settings includes a focused six-category player-pin guide while faction tones and map-pack-only categories remain package-owned.
 
 Still incomplete:
 

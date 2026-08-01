@@ -13,8 +13,6 @@ const props = defineProps({
   orders: { type: Array, default: () => [] },
   activeOrder: { type: Object, default: null },
   page: { type: String, default: 'home' },
-  cartConflict: { type: Boolean, default: false },
-  foreignCartName: { type: String, default: '' },
   etaText: { type: String, default: '' },
   feeText: { type: String, default: '' },
   distanceText: { type: String, default: '' },
@@ -29,7 +27,6 @@ const emit = defineEmits([
   'add-item',
   'update-cart',
   'checkout',
-  'open-foreign-cart',
 ])
 
 const { t } = useI18n()
@@ -578,39 +575,8 @@ watch(
           <span class="text-xs font-black">{{ cartQuantity }} {{ t('件', 'items') }}</span>
         </div>
 
-        <section v-if="cartConflict" class="mt-6 border border-[var(--dash-red)] bg-white p-4">
-          <i class="fas fa-bag-shopping text-2xl text-[var(--dash-red)]"></i>
-          <h2 class="mt-3 text-lg font-black">
-            {{ t('另一家店占用了购物袋', 'Another shop owns this bag') }}
-          </h2>
-          <p class="mt-2 text-xs font-semibold leading-5 text-black/55">
-            {{
-              t(
-                `当前购物袋属于 ${foreignCartName || '另一家店'}。`,
-                `Your current bag belongs to ${foreignCartName || 'another shop'}.`,
-              )
-            }}
-          </p>
-          <div class="mt-4 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              class="min-h-11 border border-black/15 bg-white px-3 text-xs font-black"
-              @click="emit('open-foreign-cart')"
-            >
-              {{ t('查看原购物袋', 'Open current bag') }}
-            </button>
-            <button
-              type="button"
-              class="min-h-11 bg-[var(--dash-ink)] px-3 text-xs font-black text-white"
-              @click="emit('navigate', 'menu')"
-            >
-              {{ t('继续浏览', 'Browse Dash') }}
-            </button>
-          </div>
-        </section>
-
         <section
-          v-else-if="cartLines.length"
+          v-if="cartLines.length"
           class="mt-5 divide-y divide-black/10"
           data-testid="food-delivery-cart-panel"
         >

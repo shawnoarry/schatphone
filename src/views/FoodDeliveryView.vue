@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import FoodDeliveryDashGrillApp from '../components/FoodDeliveryDashGrillApp.vue'
+import FoodDeliveryDiscoveryTemplate from '../components/FoodDeliveryDiscoveryTemplate.vue'
 import FoodDeliveryJadeHearthApp from '../components/FoodDeliveryJadeHearthApp.vue'
 import FoodDeliveryVerdantDayApp from '../components/FoodDeliveryVerdantDayApp.vue'
 import {
@@ -128,10 +129,6 @@ const menuDetailFeedback = ref('')
 const menuDetailQuantity = ref(1)
 const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
-const shopCartReplacementOpen = ref(false)
-const shopCartReplacementCancelRef = ref(null)
-const pendingShopCartAddition = ref(null)
-let shopCartReplacementTriggerElement = null
 const platformSearchQuery = ref('')
 const platformSearchInputRef = ref(null)
 const platformMerchantListExpanded = ref(false)
@@ -1080,6 +1077,10 @@ const STORE_MENU_SECTION_ORDER = Object.freeze([
   'brunch_plates',
   'bakery',
   'cold_drinks',
+  'espresso_classics',
+  'harbor_signatures',
+  'cold_blended',
+  'tea_counter_bakes',
   'layer_cakes',
   'pastry_case',
   'chilled_sweets',
@@ -1165,6 +1166,34 @@ const STORE_MENU_SECTION_META = Object.freeze({
     shortZh: '冰饮',
     shortEn: 'Cold',
     icon: 'fas fa-glass-water',
+  },
+  espresso_classics: {
+    zh: '经典咖啡',
+    en: 'Espresso classics',
+    shortZh: '经典',
+    shortEn: 'Classic',
+    icon: 'fas fa-mug-hot',
+  },
+  harbor_signatures: {
+    zh: '港湾特调',
+    en: 'Harbor signatures',
+    shortZh: '特调',
+    shortEn: 'House',
+    icon: 'fas fa-anchor',
+  },
+  cold_blended: {
+    zh: '冰咖与冰沙',
+    en: 'Cold & blended',
+    shortZh: '冰饮',
+    shortEn: 'Cold',
+    icon: 'fas fa-glass-water',
+  },
+  tea_counter_bakes: {
+    zh: '茶饮与烘焙',
+    en: 'Tea & counter bakes',
+    shortZh: '茶焙',
+    shortEn: 'Tea & bake',
+    icon: 'fas fa-bread-slice',
   },
   layer_cakes: {
     zh: '切片蛋糕',
@@ -1746,78 +1775,22 @@ const isStoreMode = computed(() => Boolean(selectedRestaurant.value))
 const activeRestaurant = computed(
   () => selectedRestaurant.value || activeRestaurants.value[0] || null,
 )
-const cartLineRestaurantIds = computed(() =>
-  foodDeliveryStore.cartItems.map(
-    (cartItem) => foodDeliveryStore.findMenuItemById(cartItem.menuItemId)?.restaurantId || '',
-  ),
-)
-const cartOwnershipState = computed(() => {
-  if (cartLineRestaurantIds.value.length === 0) return 'empty'
-  if (
-    activeRestaurant.value?.id &&
-    cartLineRestaurantIds.value.every((restaurantId) => restaurantId === activeRestaurant.value.id)
-  ) {
-    return 'active'
-  }
-  const restaurantIds = new Set(cartLineRestaurantIds.value.filter(Boolean))
-  if (
-    restaurantIds.size === 1 &&
-    cartLineRestaurantIds.value.every((restaurantId) => Boolean(restaurantId))
-  ) {
-    return 'foreign'
-  }
-  return 'mixed'
-})
-const activeStoreOwnsCart = computed(() => cartOwnershipState.value === 'active')
 const resolveLocalizedMenuItem = (item = {}) =>
   resolvePeachCloudMenuItemCopy(item, systemLanguage.value)
 const activeStoreCartLineItems = computed(() =>
-  activeStoreOwnsCart.value
-    ? foodDeliveryStore.cartLineItems
-        .filter((line) => line.restaurant?.id === activeRestaurant.value?.id)
-        .map((line) => ({
-          ...line,
-          menuItem: resolveLocalizedMenuItem(line.menuItem),
-        }))
-    : [],
+  foodDeliveryStore
+    .listCartLineItemsByRestaurant(activeRestaurant.value?.id)
+    .map((line) => ({
+      ...line,
+      menuItem: resolveLocalizedMenuItem(line.menuItem),
+    })),
 )
 const activeStoreCartQuantity = computed(() =>
-  activeStoreCartLineItems.value.reduce(
-    (total, line) => total + Math.max(0, Number(line.quantity) || 0),
-    0,
-  ),
+  foodDeliveryStore.getCartQuantityByRestaurant(activeRestaurant.value?.id),
 )
 const activeStoreCartPrimaryTotal = computed(() =>
-  activeStoreOwnsCart.value
-    ? foodDeliveryStore.cartPrimaryTotal
-    : {
-        amount: '0.00',
-        amountCents: 0,
-        currency: activeRestaurant.value?.currency || activeCurrency.value,
-      },
+  foodDeliveryStore.getCartPrimaryTotalByRestaurant(activeRestaurant.value?.id),
 )
-const cartOwnershipRestaurants = computed(() => {
-  const restaurants = new Map()
-  cartLineRestaurantIds.value.forEach((restaurantId) => {
-    if (!restaurantId || restaurants.has(restaurantId)) return
-    const restaurant = foodDeliveryStore.findRestaurantById(restaurantId)
-    if (restaurant) restaurants.set(restaurantId, restaurant)
-  })
-  return [...restaurants.values()]
-})
-const foreignCartRestaurant = computed(() =>
-  cartOwnershipState.value === 'foreign' ? cartOwnershipRestaurants.value[0] || null : null,
-)
-const hasCartOwnershipConflict = computed(() =>
-  ['foreign', 'mixed'].includes(cartOwnershipState.value),
-)
-const cartOwnershipRestaurantNames = computed(() => {
-  const names = cartOwnershipRestaurants.value.map((restaurant) => restaurant.name).filter(Boolean)
-  if (cartLineRestaurantIds.value.some((restaurantId) => !restaurantId)) {
-    names.push(t('未知店铺', 'Unknown shop'))
-  }
-  return names.join(' · ') || t('归属不明', 'Ownership unknown')
-})
 const activeMenuItems = computed(() =>
   activeRestaurant.value
     ? foodDeliveryStore
@@ -1879,6 +1852,9 @@ const activeStoreMenuSection = computed(
     activeStoreMenuSections.value[0] ||
     null,
 )
+const reusableDiscoveryMenuSections = computed(() =>
+  activeStoreMenuSections.value.filter((section) => section.key !== 'all'),
+)
 const visibleActiveMenuItems = computed(() => {
   if (activeStoreMenuSectionKey.value === 'all') return activeMenuItems.value
   return activeMenuItems.value.filter(
@@ -1925,6 +1901,9 @@ const isDessertWindowStore = computed(() => activeStoreTemplate.value === 'desse
 const isQuickServiceStore = computed(() => activeStoreTemplate.value === 'quick_service_chain')
 const isJadeTableStore = computed(() => activeStoreTemplate.value === 'jade_table_menu')
 const isLightFoodStore = computed(() => activeStoreTemplate.value === 'minimal_light_food')
+const isReusableDiscoveryTemplate = computed(() =>
+  ['cafe_counter', 'convenience_shelf', 'street_food_stall'].includes(activeStoreTemplate.value),
+)
 const isDaylightCafeStore = computed(
   () => activeRestaurant.value?.id === 'food_seed_daylight_cafe',
 )
@@ -1934,6 +1913,9 @@ const isDedicatedStoreApp = computed(
     isQuickServiceStore.value ||
     isJadeTableStore.value ||
     isLightFoodStore.value,
+)
+const usesFullBleedStoreShell = computed(
+  () => isDedicatedStoreApp.value || isReusableDiscoveryTemplate.value,
 )
 const PEACH_CLOUD_PAGE_KEYS = new Set(['search', 'new', 'bag', 'orders', 'order'])
 const peachCloudPageKey = computed(() => {
@@ -2053,6 +2035,9 @@ const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value && isQuickServiceStore.value) return 'bg-[#fff9ec]'
   if (isStoreMode.value && isJadeTableStore.value) return 'bg-[#f5efe2]'
   if (isStoreMode.value && isLightFoodStore.value) return 'bg-[#f2f4ef]'
+  if (isStoreMode.value && activeStoreTemplate.value === 'cafe_counter') return 'bg-[#f3efe7]'
+  if (isStoreMode.value && activeStoreTemplate.value === 'convenience_shelf') return 'bg-[#f6f1ed]'
+  if (isStoreMode.value && activeStoreTemplate.value === 'street_food_stall') return 'bg-[#eef0e6]'
   if (isStoreMode.value) return 'bg-[#f4fbfb]'
   return worldAppUxContext.value ? 'bg-[#eef8fb]' : 'bg-[#f4fbfb]'
 })
@@ -2955,34 +2940,6 @@ const copyPlatformOrderNumber = async (order = {}) => {
   }
 }
 
-const restoreShopCartReplacementFocus = async () => {
-  const triggerElement = shopCartReplacementTriggerElement
-  shopCartReplacementTriggerElement = null
-  await nextTick()
-  if (triggerElement?.isConnected) triggerElement.focus?.()
-}
-
-const cancelShopCartReplacement = async () => {
-  if (!shopCartReplacementOpen.value) return
-  shopCartReplacementOpen.value = false
-  pendingShopCartAddition.value = null
-  await restoreShopCartReplacementFocus()
-}
-
-const cartIntentSignature = () => JSON.stringify(foodDeliveryStore.cartItems)
-
-const rejectStaleShopCartReplacement = async () => {
-  const feedback = t(
-    '店铺或购物袋已经变化，本次替换未执行。请确认当前购物袋后重新加购。',
-    'The shop or bag changed, so replacement was not completed. Review the current bag and add again.',
-  )
-  shopCartReplacementOpen.value = false
-  pendingShopCartAddition.value = null
-  storeNavigationFeedback.value = feedback
-  checkoutFeedback.value = feedback
-  await restoreShopCartReplacementFocus()
-}
-
 const commitMenuItemToCart = (menuItemId, quantity = 1) => {
   const added = foodDeliveryStore.addToCart(menuItemId, quantity, {
     sourceModule: FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
@@ -2992,84 +2949,22 @@ const commitMenuItemToCart = (menuItemId, quantity = 1) => {
   return added
 }
 
-const addMenuItemToCart = async (menuItemId, quantity = 1, triggerElement = null) => {
+const addMenuItemToCart = (menuItemId, quantity = 1) => {
   const menuItem = foodDeliveryStore.findMenuItemById(menuItemId)
-  if (!menuItem || menuItem.available === false) return null
-  const cartHasItems = foodDeliveryStore.cartItems.length > 0
-  const cartMatchesMenuRestaurant =
-    cartHasItems &&
-    cartLineRestaurantIds.value.every((restaurantId) => restaurantId === menuItem.restaurantId)
-  if (cartHasItems && !cartMatchesMenuRestaurant) {
-    const previousOwnerLabel =
-      cartOwnershipState.value === 'mixed'
-        ? t('多个店铺', 'Multiple shops')
-        : foreignCartRestaurant.value?.name || cartOwnershipRestaurantNames.value
-    pendingShopCartAddition.value = {
-      menuItemId: menuItem.id,
-      menuItemTitle: menuItem.title,
-      quantity: Math.min(99, Math.max(1, Math.trunc(Number(quantity) || 1))),
-      nextRestaurant: foodDeliveryStore.findRestaurantById(menuItem.restaurantId),
-      nextRestaurantId: menuItem.restaurantId,
-      previousOwnerLabel,
-      capturedCartSignature: cartIntentSignature(),
-      capturedRestaurantIds: JSON.stringify(cartLineRestaurantIds.value),
-      capturedOwnershipState: cartOwnershipState.value,
-      requiresExplicitClear: cartOwnershipState.value === 'mixed',
-    }
-    shopCartReplacementTriggerElement =
-      triggerElement || (typeof document !== 'undefined' ? document.activeElement : null)
-    shopCartReplacementOpen.value = true
-    await nextTick()
-    shopCartReplacementCancelRef.value?.focus?.()
+  if (
+    !menuItem ||
+    menuItem.available === false ||
+    !activeRestaurant.value?.id ||
+    menuItem.restaurantId !== activeRestaurant.value.id
+  )
     return null
-  }
   return commitMenuItemToCart(menuItem.id, quantity)
-}
-
-const confirmShopCartReplacement = async () => {
-  const pendingAddition = pendingShopCartAddition.value
-  if (!pendingAddition || !shopCartReplacementOpen.value) return
-  const currentMenuItem = foodDeliveryStore.findMenuItemById(pendingAddition.menuItemId)
-  const intentIsCurrent =
-    Boolean(currentMenuItem) &&
-    currentMenuItem.available !== false &&
-    currentMenuItem.restaurantId === pendingAddition.nextRestaurantId &&
-    activeRestaurant.value?.id === pendingAddition.nextRestaurantId &&
-    cartIntentSignature() === pendingAddition.capturedCartSignature &&
-    JSON.stringify(cartLineRestaurantIds.value) === pendingAddition.capturedRestaurantIds &&
-    cartOwnershipState.value === pendingAddition.capturedOwnershipState
-  if (!intentIsCurrent) {
-    await rejectStaleShopCartReplacement()
-    return
-  }
-  shopCartReplacementOpen.value = false
-  pendingShopCartAddition.value = null
-  if (pendingAddition.requiresExplicitClear) foodDeliveryStore.clearCart()
-  commitMenuItemToCart(currentMenuItem.id, pendingAddition.quantity)
-  await restoreShopCartReplacementFocus()
-}
-
-const setCartOwnershipCheckoutFeedback = () => {
-  checkoutFeedback.value =
-    cartOwnershipState.value === 'mixed'
-      ? t(
-          '恢复的购物袋包含多个店铺，不能在当前店结算。请浏览当前店并通过替换确认恢复为单店购物袋。',
-          'The restored bag contains multiple shops and cannot be checked out here. Browse this shop and confirm replacement to recover a single-shop bag.',
-        )
-      : t(
-          `购物袋属于 ${foreignCartRestaurant.value?.name || '另一家店'}。请返回该店结算，或先在当前店加购并确认替换。`,
-          `This bag belongs to ${foreignCartRestaurant.value?.name || 'another shop'}. Return there to check out, or add an item here and confirm replacement.`,
-        )
 }
 
 const openCheckoutSheet = () => {
   checkoutFeedback.value = ''
   if (!isStoreMode.value) {
     checkoutFeedback.value = t('请先进入一家小店。', 'Open a shop first.')
-    return
-  }
-  if (hasCartOwnershipConflict.value) {
-    setCartOwnershipCheckoutFeedback()
     return
   }
   if (activeStoreCartLineItems.value.length === 0) {
@@ -3085,14 +2980,12 @@ const closeCheckoutSheet = () => {
 
 const checkoutFoodDelivery = () => {
   checkoutFeedback.value = ''
-  if (!activeRestaurant.value?.id || !activeStoreOwnsCart.value) {
+  if (!activeRestaurant.value?.id || activeStoreCartLineItems.value.length === 0) {
     checkoutSheetOpen.value = false
-    if (hasCartOwnershipConflict.value) setCartOwnershipCheckoutFeedback()
-    else
-      checkoutFeedback.value = t(
-        '购物袋已清空，请重新选择餐品。',
-        'Your bag is empty. Choose items again.',
-      )
+    checkoutFeedback.value = t(
+      '购物袋已清空，请重新选择餐品。',
+      'Your bag is empty. Choose items again.',
+    )
     return
   }
   const mapHandoff = activeMapHandoff.value
@@ -3100,6 +2993,7 @@ const checkoutFoodDelivery = () => {
     ? selectedSharedMealContact(activeRestaurant.value.id)
     : null
   const order = foodDeliveryStore.checkoutCart({
+    restaurantId: activeRestaurant.value.id,
     deliveryAddress:
       mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
     note:
@@ -3348,61 +3242,6 @@ const openLightFoodItem = async (itemId) => {
   await openLightFoodPage('detail', { shopItemId: itemId })
 }
 
-const openForeignCartShop = async () => {
-  const restaurant = foreignCartRestaurant.value
-  if (!restaurant?.id) return
-  checkoutFeedback.value = ''
-  const nextQuery = {
-    ...route.query,
-    category: restaurant.category || route.query.category,
-    restaurantId: restaurant.id,
-    entry: 'shop',
-  }
-  delete nextQuery.shopOrderId
-  const targetTemplate = resolveStoreTemplateForRestaurant(restaurant)
-  if (
-    targetTemplate === 'dessert_window' ||
-    targetTemplate === 'quick_service_chain' ||
-    targetTemplate === 'jade_table_menu' ||
-    targetTemplate === 'minimal_light_food'
-  ) {
-    nextQuery.shopView = 'bag'
-  } else {
-    delete nextQuery.shopView
-  }
-  await router.push({ path: route.path, query: nextQuery })
-  await nextTick()
-  if (
-    !isDessertWindowStore.value &&
-    !isQuickServiceStore.value &&
-    !isJadeTableStore.value &&
-    !isLightFoodStore.value
-  ) {
-    await scrollToStoreSurface('food-delivery-cart-panel')
-  }
-}
-
-const browseActiveStoreFromForeignCart = async () => {
-  checkoutFeedback.value = ''
-  if (isDessertWindowStore.value) {
-    await openPeachCloudHome()
-    return
-  }
-  if (isQuickServiceStore.value) {
-    await openQuickServicePage('menu')
-    return
-  }
-  if (isJadeTableStore.value) {
-    await openJadeTablePage('menu')
-    return
-  }
-  if (isLightFoodStore.value) {
-    await openLightFoodPage('menu')
-    return
-  }
-  await scrollToStoreSurface('food-delivery-menu-panel')
-}
-
 const showPeachCloudUpdates = async () => {
   if (isDessertWindowStore.value) {
     await openPeachCloudPage('orders')
@@ -3419,7 +3258,7 @@ const openStoreCartSurface = async () => {
     await openPeachCloudPage('bag')
     return
   }
-  if (foodDeliveryStore.cartLineItems.length === 0) {
+  if (activeStoreCartLineItems.value.length === 0) {
     storeNavigationFeedback.value = t(
       '购物袋还是空的，先选一杯或一份甜点。',
       'Your bag is empty. Pick a drink or dessert first.',
@@ -3564,14 +3403,14 @@ onBeforeUnmount(() => {
     class="h-screen min-h-screen overflow-x-hidden overflow-y-auto overscroll-contain text-gray-950"
     :class="[
       foodDeliveryShellClass,
-      isDedicatedStoreApp ? 'p-0 pb-0' : 'p-4',
-      isStoreMode && !isDedicatedStoreApp ? 'pb-6' : '',
+      usesFullBleedStoreShell ? 'p-0 pb-0' : 'p-4',
+      isStoreMode && !usesFullBleedStoreShell ? 'pb-6' : '',
     ]"
     :style="foodDeliveryShellStyle"
     data-testid="food-delivery-view"
     @error.capture="handleFoodDeliveryAssetError"
   >
-    <div class="mx-auto max-w-md" :class="isDedicatedStoreApp ? 'space-y-0' : 'space-y-4'">
+    <div class="mx-auto max-w-md" :class="usesFullBleedStoreShell ? 'space-y-0' : 'space-y-4'">
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
         class="space-y-5 pt-1"
@@ -6750,6 +6589,7 @@ onBeforeUnmount(() => {
           'food-delivery-store-quick-service': isQuickServiceStore,
           'food-delivery-store-jade-table': isJadeTableStore,
           'food-delivery-store-light-food': isLightFoodStore,
+          'food-delivery-store-discovery': isReusableDiscoveryTemplate,
         }"
         data-testid="food-delivery-store-app"
       >
@@ -6766,8 +6606,6 @@ onBeforeUnmount(() => {
           :orders="scopedFoodOrders"
           :active-order="activeLightFoodOrder"
           :page="lightFoodPageKey"
-          :cart-conflict="hasCartOwnershipConflict"
-          :foreign-cart-name="foreignCartRestaurant?.name || ''"
           :eta-text="activeStoreEtaText"
           :fee-text="activeStoreFeeText"
           :distance-text="activeStoreDistanceText"
@@ -6785,7 +6623,6 @@ onBeforeUnmount(() => {
           @add-item="addMenuItemToCart"
           @update-cart="foodDeliveryStore.updateCartQuantity"
           @checkout="openCheckoutSheet"
-          @open-foreign-cart="openForeignCartShop"
         />
 
         <FoodDeliveryJadeHearthApp
@@ -6803,8 +6640,6 @@ onBeforeUnmount(() => {
           :active-wallet-suggestion="activeJadeWalletSuggestion"
           :event-feedback="eventFeedback"
           :page="jadeTablePageKey"
-          :cart-conflict="hasCartOwnershipConflict"
-          :foreign-cart-name="foreignCartRestaurant?.name || ''"
           :eta-text="activeStoreEtaText"
           :fee-text="activeStoreFeeText"
           :distance-text="activeStoreDistanceText"
@@ -6821,7 +6656,6 @@ onBeforeUnmount(() => {
           @add-item="addMenuItemToCart"
           @update-cart="foodDeliveryStore.updateCartQuantity"
           @checkout="openCheckoutSheet"
-          @open-foreign-cart="openForeignCartShop"
           @check-update="triggerOrderSurpriseEvent(activeJadeTableOrder)"
           @mark-delivered="markFoodOrderDelivered"
           @record-wallet="
@@ -6841,8 +6675,6 @@ onBeforeUnmount(() => {
           :orders="scopedFoodOrders"
           :active-order="activeQuickServiceOrder"
           :page="quickServicePageKey"
-          :cart-conflict="hasCartOwnershipConflict"
-          :foreign-cart-name="foreignCartRestaurant?.name || ''"
           :eta-text="activeStoreEtaText"
           :fee-text="activeStoreFeeText"
           :distance-text="activeStoreDistanceText"
@@ -6859,7 +6691,26 @@ onBeforeUnmount(() => {
           @add-item="addMenuItemToCart"
           @update-cart="foodDeliveryStore.updateCartQuantity"
           @checkout="openCheckoutSheet"
-          @open-foreign-cart="openForeignCartShop"
+        />
+
+        <FoodDeliveryDiscoveryTemplate
+          v-else-if="activeRestaurant && isReusableDiscoveryTemplate"
+          :template-id="activeStoreTemplate"
+          :restaurant="activeRestaurant"
+          :display-name="activeStoreDisplayName"
+          :short-description="activeStoreShortDescription"
+          :menu-items="activeMenuItems"
+          :menu-sections="reusableDiscoveryMenuSections"
+          :cover-image-url="activeStoreCoverImageUrl || activeStoreRestaurantImageUrl"
+          :image-url="foodImageUrl"
+          :cart-quantity="activeStoreCartQuantity"
+          :eta-text="activeStoreEtaText"
+          :fee-text="activeStoreFeeText"
+          :distance-text="activeStoreDistanceText"
+          @go-home="goHome"
+          @open-item="openMenuItemDetail"
+          @add-item="addMenuItemToCart"
+          @open-cart="openStoreCartSurface"
         />
 
         <article
@@ -7699,86 +7550,7 @@ onBeforeUnmount(() => {
               data-testid="food-delivery-peach-cloud-bag-page"
             >
               <section data-testid="food-delivery-cart-panel">
-                <div
-                  v-if="hasCartOwnershipConflict"
-                  class="rounded-[1.25rem] border border-[var(--peach-cloud-mist)] bg-white/80 p-4 shadow-[0_14px_30px_rgba(43,48,58,0.1)]"
-                  data-testid="food-delivery-foreign-cart-notice"
-                  :data-cart-ownership-state="cartOwnershipState"
-                >
-                  <div class="flex items-start gap-3">
-                    <span
-                      class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.9rem] bg-[var(--peach-cloud-ink)] text-[var(--peach-cloud-canvas)]"
-                    >
-                      <i class="fas fa-store text-sm"></i>
-                    </span>
-                    <div class="min-w-0">
-                      <p class="text-[10px] font-black text-[var(--peach-cloud-iron)]">
-                        {{
-                          cartOwnershipState === 'mixed'
-                            ? t('恢复的购物袋归属不一致', 'Restored bag ownership mismatch')
-                            : t('另一家店的购物袋', "Another shop's bag")
-                        }}
-                      </p>
-                      <h2
-                        class="mt-1 min-w-0 break-words text-lg font-black [overflow-wrap:anywhere]"
-                        data-testid="food-delivery-cart-owner-names"
-                      >
-                        {{ cartOwnershipRestaurantNames }}
-                      </h2>
-                      <p
-                        class="mt-2 text-xs font-semibold leading-5 text-[var(--peach-cloud-iron)]"
-                      >
-                        {{
-                          cartOwnershipState === 'mixed'
-                            ? t(
-                                `恢复的购物袋包含多个店铺，共 ${foodDeliveryStore.cartQuantity} 份餐品。Peach Cloud 不会把这些餐品或合计冒充为本店购物袋，也不会结算。请浏览本店并通过替换确认恢复为单店购物袋。`,
-                                `This restored bag contains multiple shops and ${foodDeliveryStore.cartQuantity} item(s). Peach Cloud will not present its items or total as this shop's bag and will not check it out. Browse this shop and confirm replacement to recover a single-shop bag.`,
-                              )
-                            : t(
-                                `袋中有 ${foodDeliveryStore.cartQuantity} 份餐品，合计 ${foodDeliveryStore.cartPrimaryTotal.amount} ${foodDeliveryStore.cartPrimaryTotal.currency}。Peach Cloud 不会展示或结算这些餐品。`,
-                                `${foodDeliveryStore.cartQuantity} item(s), ${foodDeliveryStore.cartPrimaryTotal.amount} ${foodDeliveryStore.cartPrimaryTotal.currency} total. Peach Cloud will not show or check out these items.`,
-                              )
-                        }}
-                      </p>
-                    </div>
-                  </div>
-                  <p
-                    v-if="checkoutFeedback"
-                    class="mt-3 rounded-[0.9rem] bg-[var(--peach-cloud-mist)]/25 px-3 py-2 text-xs font-semibold leading-5 text-[var(--peach-cloud-iron)]"
-                    data-testid="food-delivery-checkout-feedback"
-                  >
-                    {{ checkoutFeedback }}
-                  </p>
-                  <div
-                    class="mt-4 grid min-w-0 gap-2"
-                    :class="foreignCartRestaurant ? 'sm:grid-cols-2' : ''"
-                  >
-                    <button
-                      v-if="foreignCartRestaurant"
-                      type="button"
-                      class="min-h-11 min-w-0 whitespace-normal rounded-[0.9rem] bg-[var(--peach-cloud-ink)] px-3 py-2.5 text-xs font-black text-[var(--peach-cloud-canvas)] [overflow-wrap:anywhere]"
-                      data-testid="food-delivery-open-foreign-cart-shop"
-                      @click="openForeignCartShop"
-                    >
-                      {{
-                        t(
-                          `返回 ${foreignCartRestaurant.name}`,
-                          `Open ${foreignCartRestaurant.name}`,
-                        )
-                      }}
-                    </button>
-                    <button
-                      type="button"
-                      class="min-h-11 min-w-0 whitespace-normal rounded-[0.9rem] bg-[var(--peach-cloud-mist)]/35 px-3 py-2.5 text-xs font-black [overflow-wrap:anywhere]"
-                      data-testid="food-delivery-browse-active-store"
-                      @click="browseActiveStoreFromForeignCart"
-                    >
-                      {{ t('浏览 Peach Cloud', 'Browse Peach Cloud') }}
-                    </button>
-                  </div>
-                </div>
-
-                <div v-else-if="activeStoreCartLineItems.length" class="space-y-3">
+                <div v-if="activeStoreCartLineItems.length" class="space-y-3">
                   <article
                     v-for="line in activeStoreCartLineItems"
                     :key="line.menuItemId"
@@ -8237,7 +8009,7 @@ onBeforeUnmount(() => {
         </article>
 
         <article
-          v-if="activeRestaurant && !isDedicatedStoreApp"
+          v-if="activeRestaurant && !isDedicatedStoreApp && !isReusableDiscoveryTemplate"
           class="relative overflow-hidden rounded-[2rem] shadow-sm"
           :class="
             isDarkTrayStore
@@ -8509,7 +8281,7 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-if="activeRestaurant && !isDedicatedStoreApp"
+          v-if="activeRestaurant && !isDedicatedStoreApp && !isReusableDiscoveryTemplate"
           class="p-4"
           :class="
             isDarkTrayStore
@@ -8833,6 +8605,7 @@ onBeforeUnmount(() => {
                     class="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold"
                     :class="activeStoreVisual.buttonClass"
                     :data-testid="`food-delivery-add-${item.id}`"
+                    :aria-label="`Add ${item.title}`"
                     @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
                   >
                     {{ t('加入', 'Add') }}
@@ -9631,73 +9404,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="shopCartReplacementOpen && pendingShopCartAddition"
-        class="fixed inset-0 z-[70] flex items-end justify-center bg-black/65 p-4 backdrop-blur-sm sm:items-center"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="food-delivery-cart-replacement-title"
-        aria-describedby="food-delivery-cart-replacement-description"
-        data-testid="food-delivery-cart-replacement-dialog"
-        @keydown.esc.stop.prevent="cancelShopCartReplacement"
-      >
-        <div
-          class="w-full max-w-sm rounded-[1.5rem] border border-white/10 bg-white p-4 text-gray-950 shadow-[0_28px_90px_rgba(0,0,0,0.45)]"
-        >
-          <div class="flex items-start gap-3">
-            <span
-              class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"
-              aria-hidden="true"
-            >
-              <i class="fas fa-bag-shopping"></i>
-            </span>
-            <div class="min-w-0">
-              <h2
-                id="food-delivery-cart-replacement-title"
-                class="min-w-0 break-words text-lg font-black leading-6 [overflow-wrap:anywhere]"
-              >
-                {{ t('替换另一家店的购物袋？', "Replace another shop's bag?") }}
-              </h2>
-              <p
-                id="food-delivery-cart-replacement-description"
-                class="mt-2 min-w-0 break-words text-sm font-semibold leading-6 text-gray-600 [overflow-wrap:anywhere]"
-              >
-                {{
-                  t(
-                    `${pendingShopCartAddition.previousOwnerLabel} 的餐品仍在购物袋中。确认后会清空旧购物袋，并只加入 ${pendingShopCartAddition.quantity} 份 ${pendingShopCartAddition.menuItemTitle} 到 ${pendingShopCartAddition.nextRestaurant?.name || activeStoreDisplayName}。`,
-                    `Your ${pendingShopCartAddition.previousOwnerLabel} items are still in the bag. Confirming clears that bag and adds ${pendingShopCartAddition.quantity} x ${pendingShopCartAddition.menuItemTitle} to ${pendingShopCartAddition.nextRestaurant?.name || activeStoreDisplayName}.`,
-                  )
-                }}
-              </p>
-            </div>
-          </div>
-          <div class="mt-5 grid gap-2 sm:grid-cols-2">
-            <button
-              ref="shopCartReplacementCancelRef"
-              type="button"
-              class="min-h-12 rounded-xl bg-gray-100 px-4 py-3 text-sm font-black text-gray-800"
-              data-testid="food-delivery-cart-replacement-cancel"
-              @click="cancelShopCartReplacement"
-            >
-              {{ t('保留原购物袋', 'Keep old bag') }}
-            </button>
-            <button
-              type="button"
-              class="min-h-12 rounded-xl bg-gray-950 px-4 py-3 text-sm font-black text-white"
-              data-testid="food-delivery-cart-replacement-confirm"
-              @click="confirmShopCartReplacement"
-            >
-              {{ t('替换并加入', 'Replace and add') }}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section
-        v-if="
-          isStoreMode &&
-          !isDedicatedStoreApp &&
-          (activeStoreCartLineItems.length > 0 || hasCartOwnershipConflict || checkoutFeedback)
-        "
+        v-if="isStoreMode && !isDedicatedStoreApp && activeStoreCartLineItems.length > 0"
         class="rounded-3xl p-4"
         :class="
           isDessertWindowStore
@@ -9753,62 +9460,7 @@ onBeforeUnmount(() => {
             {{ activeStoreCartPrimaryTotal.currency }}
           </span>
         </div>
-        <div
-          v-if="hasCartOwnershipConflict"
-          class="mt-3 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-3"
-          data-testid="food-delivery-foreign-cart-notice"
-          :data-cart-ownership-state="cartOwnershipState"
-        >
-          <p class="text-[11px] font-black uppercase text-amber-200">
-            {{
-              cartOwnershipState === 'mixed'
-                ? t('恢复的购物袋归属不一致', 'Restored bag ownership mismatch')
-                : t('另一家店的购物袋', "Another shop's bag")
-            }}
-          </p>
-          <p
-            class="mt-1 min-w-0 break-words text-base font-black text-white [overflow-wrap:anywhere]"
-            data-testid="food-delivery-cart-owner-names"
-          >
-            {{ cartOwnershipRestaurantNames }}
-          </p>
-          <p class="mt-2 text-xs font-semibold leading-5 text-slate-300">
-            {{
-              cartOwnershipState === 'mixed'
-                ? t(
-                    `恢复的购物袋包含多个店铺，共 ${foodDeliveryStore.cartQuantity} 份餐品。${activeStoreDisplayName} 不会把这些餐品或合计冒充为本店购物袋，也不会结算。请浏览本店并通过替换确认恢复为单店购物袋。`,
-                    `This restored bag contains multiple shops and ${foodDeliveryStore.cartQuantity} item(s). ${activeStoreDisplayName} will not present its items or total as this shop's bag and will not check it out. Browse this shop and confirm replacement to recover a single-shop bag.`,
-                  )
-                : t(
-                    `袋中有 ${foodDeliveryStore.cartQuantity} 份餐品，合计 ${foodDeliveryStore.cartPrimaryTotal.amount} ${foodDeliveryStore.cartPrimaryTotal.currency}。${activeStoreDisplayName} 不会展示或结算这些餐品。`,
-                    `${foodDeliveryStore.cartQuantity} item(s), ${foodDeliveryStore.cartPrimaryTotal.amount} ${foodDeliveryStore.cartPrimaryTotal.currency} total. ${activeStoreDisplayName} will not show or check out these items.`,
-                  )
-            }}
-          </p>
-          <div
-            class="mt-3 grid min-w-0 gap-2"
-            :class="foreignCartRestaurant ? 'sm:grid-cols-2' : ''"
-          >
-            <button
-              v-if="foreignCartRestaurant"
-              type="button"
-              class="min-h-11 min-w-0 whitespace-normal rounded-xl bg-white px-3 py-2.5 text-xs font-black text-slate-950 [overflow-wrap:anywhere]"
-              data-testid="food-delivery-open-foreign-cart-shop"
-              @click="openForeignCartShop"
-            >
-              {{ t(`返回 ${foreignCartRestaurant.name}`, `Open ${foreignCartRestaurant.name}`) }}
-            </button>
-            <button
-              type="button"
-              class="min-h-11 min-w-0 whitespace-normal rounded-xl bg-white/10 px-3 py-2.5 text-xs font-black text-white [overflow-wrap:anywhere]"
-              data-testid="food-delivery-browse-active-store"
-              @click="browseActiveStoreFromForeignCart"
-            >
-              {{ t(`浏览 ${activeStoreDisplayName}`, `Browse ${activeStoreDisplayName}`) }}
-            </button>
-          </div>
-        </div>
-        <div v-else-if="activeStoreCartLineItems.length > 0" class="mt-3 space-y-2">
+        <div class="mt-3 space-y-2">
           <article
             v-for="line in activeStoreCartLineItems"
             :key="line.menuItemId"
@@ -9857,24 +9509,6 @@ onBeforeUnmount(() => {
             {{ t('含配送费', 'Includes delivery') }} {{ activeStoreFeeText }}
           </p>
         </div>
-        <p
-          v-else
-          class="mt-3 rounded-2xl p-3 text-xs leading-5"
-          :class="
-            isDessertWindowStore
-              ? 'bg-[var(--peach-cloud-mist)]/25 text-[var(--peach-cloud-iron)]'
-              : isStoreMode
-                ? 'bg-white/[0.06] text-slate-300'
-                : 'bg-amber-50 text-amber-700'
-          "
-        >
-          {{
-            t(
-              '选一份喜欢的菜，结算条会在这里亮起。',
-              'Choose a dish and the checkout bar will light up here.',
-            )
-          }}
-        </p>
         <p
           v-if="checkoutFeedback"
           class="mt-3 rounded-2xl p-3 text-xs font-semibold"

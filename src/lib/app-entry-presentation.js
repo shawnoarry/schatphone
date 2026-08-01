@@ -41,6 +41,7 @@ const SHOP_ENTRY_BINDING_TARGET_SET = new Set(
 export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   {
     id: 'standard',
+    userSelectable: true,
     labelZh: '标准店铺',
     labelEn: 'Standard shop',
     descZh: '默认通用店铺入口。',
@@ -48,6 +49,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'dark_tray_menu',
+    userSelectable: false,
     labelZh: '深色托盘菜单',
     labelEn: 'Dark tray menu',
     descZh: '适合主厨餐厅、现代高端餐饮与深色质感店铺。',
@@ -55,6 +57,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'quick_service_chain',
+    userSelectable: false,
     labelZh: '连锁快餐',
     labelEn: 'Quick-service chain',
     descZh: '适合汉堡、炸鸡、套餐与高频优惠型快餐店。',
@@ -62,6 +65,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'jade_table_menu',
+    userSelectable: false,
     labelZh: '中式桌宴',
     labelEn: 'Chinese table menu',
     descZh: '适合中式单点、合菜、茶点与家庭桌宴。',
@@ -69,6 +73,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'minimal_light_food',
+    userSelectable: false,
     labelZh: '极简轻食',
     labelEn: 'Minimal light food',
     descZh: '适合沙拉、谷物碗、卷饼与轻盈日常餐。',
@@ -76,6 +81,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'cafe_counter',
+    userSelectable: true,
     labelZh: '咖啡柜台',
     labelEn: 'Cafe counter',
     descZh: '适合咖啡、面包、轻食类店铺。',
@@ -83,6 +89,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'dessert_window',
+    userSelectable: false,
     labelZh: '甜品橱窗',
     labelEn: 'Dessert window',
     descZh: '适合甜品、冰品、下午茶类店铺。',
@@ -90,6 +97,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'convenience_shelf',
+    userSelectable: true,
     labelZh: '便利货架',
     labelEn: 'Convenience shelf',
     descZh: '适合便利店、杂货、生鲜快送。',
@@ -97,6 +105,7 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
   },
   {
     id: 'street_food_stall',
+    userSelectable: true,
     labelZh: '街边摊位',
     labelEn: 'Street food stall',
     descZh: '适合小吃摊、夜市、路边快餐。',

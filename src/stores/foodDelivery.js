@@ -31,6 +31,7 @@ const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
 const MOON_BISTRO_SEED_RESTAURANT_ID = 'food_seed_moon_bistro'
 const RIVER_NOODLES_SEED_RESTAURANT_ID = 'food_seed_river_noodles'
 const DAYLIGHT_CAFE_SEED_RESTAURANT_ID = 'food_seed_daylight_cafe'
+const HARBOR_ROAST_SEED_RESTAURANT_ID = 'food_seed_harbor_roast'
 const SUGAR_LANE_SEED_RESTAURANT_ID = 'food_seed_sugar_lane'
 const PEACH_CLOUD_SEED_RESTAURANT_ID = 'food_seed_peach_cloud'
 const DASH_GRILL_SEED_RESTAURANT_ID = 'food_seed_dash_grill'
@@ -267,8 +268,9 @@ const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
   }
 }
 
-const normalizeCartItems = (rawItems, menuItemIds) => {
+const normalizeCartItems = (rawItems, menuItemsById) => {
   if (!Array.isArray(rawItems)) return []
+  const menuItemIds = new Set(menuItemsById.keys())
   const byMenuItemId = new Map()
   rawItems.forEach((item, index) => {
     const cartItem = normalizeCartItem(item, menuItemIds, index)
@@ -281,9 +283,16 @@ const normalizeCartItems = (rawItems, menuItemIds) => {
     }
     byMenuItemId.set(cartItem.menuItemId, cartItem)
   })
+  const restaurantLineCounts = new Map()
   return [...byMenuItemId.values()]
     .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, FOOD_CART_LINE_LIMIT)
+    .filter((cartItem) => {
+      const restaurantId = menuItemsById.get(cartItem.menuItemId)?.restaurantId || ''
+      if (!restaurantId) return false
+      const nextCount = (restaurantLineCounts.get(restaurantId) || 0) + 1
+      restaurantLineCounts.set(restaurantId, nextCount)
+      return nextCount <= FOOD_CART_LINE_LIMIT
+    })
 }
 
 const normalizePlatformCartItem = (rawItem, index = 0) => {
@@ -553,6 +562,7 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   moonBistro: foodDeliveryUiAsset('moon-bistro/cover/moon-bistro-cover-02.png'),
   riverNoodles: foodDeliveryUiAsset('river-noodles/cover/river-noodles-cover-01.png'),
   daylightCafe: foodDeliveryUiAsset('daylight-cafe/cover/daylight-cafe-cover-01.png'),
+  harborRoast: foodDeliveryUiAsset('harbor-roast/cover/harbor-roast-cover-01.png'),
   sugarLane: foodDeliveryUiAsset('sugar-lane/cover/sugar-lane-cover-01.png'),
   peachCloud: foodDeliveryUiAsset('peach-cloud/cover/peach-cloud-hero-01.png'),
   dashGrill: foodDeliveryUiAsset('dash-grill/cover/dash-grill-cover-01.png'),
@@ -581,6 +591,10 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   daylightCafeProduct: (index) =>
     foodDeliveryUiAsset(
       `daylight-cafe/products/daylight-cafe-item-${String(index).padStart(2, '0')}.png`,
+    ),
+  harborRoastProduct: (index) =>
+    foodDeliveryUiAsset(
+      `harbor-roast/products/harbor-roast-item-${String(index).padStart(2, '0')}.png`,
     ),
   sugarLaneProduct: (index) =>
     foodDeliveryUiAsset(
@@ -725,6 +739,23 @@ const createSeedRestaurants = () =>
       sourceModule: 'seed',
       createdAt: Date.now() - 6 * 60 * 1000,
       updatedAt: Date.now() - 6 * 60 * 1000,
+    },
+    {
+      id: HARBOR_ROAST_SEED_RESTAURANT_ID,
+      name: 'Harbor Roast',
+      category: 'cafe',
+      cuisine: 'Espresso, signature drinks, tea, and counter bakes',
+      rating: 4.8,
+      deliveryEtaMinutes: 20,
+      deliveryFee: '3.50',
+      distanceKm: 1.3,
+      address: 'Pier Exchange 16',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.harborRoast,
+      imageAlt: 'Harbor Roast coffee drinks and counter bakes',
+      sourceModule: 'seed',
+      createdAt: Date.now() - 18 * 60 * 1000,
+      updatedAt: Date.now() - 18 * 60 * 1000,
     },
     {
       id: SUGAR_LANE_SEED_RESTAURANT_ID,
@@ -1247,6 +1278,198 @@ const createSeedMenuItems = () =>
         sourceModule: 'seed',
         createdAt: Date.now() - 13 * 60 * 1000,
         updatedAt: Date.now() - 13 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_house_americano',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Harbor House Americano',
+        category: 'cafe',
+        menuSection: 'espresso_classics',
+        price: '22.00',
+        desc: 'A clean double espresso lengthened with hot water for a dark-caramel finish.',
+        ingredients: 'double espresso, filtered water',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(1),
+        imageAlt: 'Harbor House Americano in a dark ceramic cup',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 18 * 60 * 1000,
+        updatedAt: Date.now() - 18 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_copper_flat_white',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Copper Flat White',
+        category: 'cafe',
+        menuSection: 'espresso_classics',
+        price: '28.00',
+        desc: 'Two ristretto shots with velvety steamed milk and a compact microfoam cap.',
+        ingredients: 'ristretto, whole milk',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(2),
+        imageAlt: 'Copper Flat White with fine latte art',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 19 * 60 * 1000,
+        updatedAt: Date.now() - 19 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_vanilla_bean_latte',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Vanilla Bean Latte',
+        category: 'cafe',
+        menuSection: 'espresso_classics',
+        price: '30.00',
+        desc: 'Espresso and steamed milk scented with real vanilla bean and restrained sweetness.',
+        ingredients: 'espresso, whole milk, vanilla bean syrup',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(3),
+        imageAlt: 'Vanilla Bean Latte in a warm ivory cup',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 20 * 60 * 1000,
+        updatedAt: Date.now() - 20 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_sea_salt_caramel_latte',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Sea-Salt Caramel Latte',
+        category: 'cafe',
+        menuSection: 'harbor_signatures',
+        price: '33.00',
+        desc: 'A silky latte with copper caramel, sea salt, and a thin caramelized sugar finish.',
+        ingredients: 'espresso, milk, caramel, sea salt, caramelized sugar',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(4),
+        imageAlt: 'Sea-Salt Caramel Latte with caramelized sugar',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 21 * 60 * 1000,
+        updatedAt: Date.now() - 21 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_pistachio_oat_latte',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Pistachio Oat Latte',
+        category: 'cafe',
+        menuSection: 'harbor_signatures',
+        price: '35.00',
+        desc: 'Espresso, oat milk, and roasted pistachio with a softly nutty foam.',
+        ingredients: 'espresso, oat milk, roasted pistachio, cane sugar',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(5),
+        imageAlt: 'Pistachio Oat Latte with pale pistachio foam',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 22 * 60 * 1000,
+        updatedAt: Date.now() - 22 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_cranberry_cocoa_mocha',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Cranberry Cocoa Mocha',
+        category: 'cafe',
+        menuSection: 'harbor_signatures',
+        price: '34.00',
+        desc: 'Dark cocoa mocha lifted with tart cranberry and a light milk-foam crown.',
+        ingredients: 'espresso, milk, dark cocoa, cranberry sauce',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(6),
+        imageAlt: 'Cranberry Cocoa Mocha with a cranberry accent',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 23 * 60 * 1000,
+        updatedAt: Date.now() - 23 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_velvet_cold_brew',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Velvet Cold Brew',
+        category: 'cafe',
+        menuSection: 'cold_blended',
+        price: '29.00',
+        desc: 'Slow-steeped coffee over clear ice with a smooth malted cream float.',
+        ingredients: 'cold brew coffee, malted cream, ice',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(7),
+        imageAlt: 'Velvet Cold Brew in a ribbed glass',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 24 * 60 * 1000,
+        updatedAt: Date.now() - 24 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_citrus_espresso_sparkler',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Citrus Espresso Sparkler',
+        category: 'cafe',
+        menuSection: 'cold_blended',
+        price: '31.00',
+        desc: 'Bright espresso layered over grapefruit soda, orange peel, and clear ice.',
+        ingredients: 'espresso, grapefruit soda, orange peel, ice',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(8),
+        imageAlt: 'Citrus Espresso Sparkler with grapefruit soda',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 25 * 60 * 1000,
+        updatedAt: Date.now() - 25 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_dark_cocoa_coffee_blend',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Dark Cocoa Coffee Blend',
+        category: 'cafe',
+        menuSection: 'cold_blended',
+        price: '34.00',
+        desc: 'A thick blended espresso drink with dark cocoa, milk, and cocoa nib crunch.',
+        ingredients: 'espresso, milk, dark cocoa, ice, cocoa nibs',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(9),
+        imageAlt: 'Dark Cocoa Coffee Blend with cocoa nibs',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 26 * 60 * 1000,
+        updatedAt: Date.now() - 26 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_apricot_earl_grey',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Apricot Earl Grey Iced Tea',
+        category: 'cafe',
+        menuSection: 'tea_counter_bakes',
+        price: '28.00',
+        desc: 'Cold Earl Grey tea with ripe apricot, bergamot, lemon, and clear ice.',
+        ingredients: 'Earl Grey tea, apricot, lemon, cane sugar, ice',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(10),
+        imageAlt: 'Apricot Earl Grey Iced Tea with apricot slices',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 27 * 60 * 1000,
+        updatedAt: Date.now() - 27 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_copper_sugar_scone',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Copper Sugar Scone',
+        category: 'cafe',
+        menuSection: 'tea_counter_bakes',
+        price: '18.00',
+        desc: 'A tender cultured-butter scone with copper sugar crust and orange zest.',
+        ingredients: 'wheat flour, cultured butter, cream, raw sugar, orange zest',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(11),
+        imageAlt: 'Copper Sugar Scone with a crisp sugar crust',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 28 * 60 * 1000,
+        updatedAt: Date.now() - 28 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_almond_butter_croissant',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Almond Butter Croissant',
+        category: 'cafe',
+        menuSection: 'tea_counter_bakes',
+        price: '22.00',
+        desc: 'A flaky twice-baked croissant filled with almond butter and toasted almond flakes.',
+        ingredients: 'croissant, almond butter, toasted almond, powdered sugar',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(12),
+        imageAlt: 'Almond Butter Croissant with toasted almond flakes',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 29 * 60 * 1000,
+        updatedAt: Date.now() - 29 * 60 * 1000,
       },
       {
         id: 'food_menu_sugar_cake',
@@ -2213,6 +2436,7 @@ const createSeedMenuItems = () =>
       'food_seed_moon_bistro',
       RIVER_NOODLES_SEED_RESTAURANT_ID,
       DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+      HARBOR_ROAST_SEED_RESTAURANT_ID,
       SUGAR_LANE_SEED_RESTAURANT_ID,
       PEACH_CLOUD_SEED_RESTAURANT_ID,
       DASH_GRILL_SEED_RESTAURANT_ID,
@@ -2239,6 +2463,12 @@ const DAYLIGHT_CAFE_REQUIRED_RESTAURANT = createSeedRestaurants().find(
 )
 const DAYLIGHT_CAFE_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
   (item) => item.restaurantId === DAYLIGHT_CAFE_SEED_RESTAURANT_ID,
+)
+const HARBOR_ROAST_REQUIRED_RESTAURANT = createSeedRestaurants().find(
+  (restaurant) => restaurant.id === HARBOR_ROAST_SEED_RESTAURANT_ID,
+)
+const HARBOR_ROAST_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
+  (item) => item.restaurantId === HARBOR_ROAST_SEED_RESTAURANT_ID,
 )
 const SUGAR_LANE_REQUIRED_RESTAURANT = createSeedRestaurants().find(
   (restaurant) => restaurant.id === SUGAR_LANE_SEED_RESTAURANT_ID,
@@ -2546,6 +2776,45 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       })
       .filter(Boolean),
   )
+  const listCartLineItemsByRestaurant = (restaurantId) => {
+    const id = normalizeFoodId(restaurantId)
+    if (!id) return []
+    return cartLineItems.value.filter((line) => line.restaurant?.id === id)
+  }
+  const getCartQuantityByRestaurant = (restaurantId) =>
+    listCartLineItemsByRestaurant(restaurantId).reduce(
+      (sum, line) => sum + Math.max(0, Number(line.quantity) || 0),
+      0,
+    )
+  const getCartTotalsByRestaurant = (restaurantId) => {
+    const restaurant = findRestaurantById(restaurantId)
+    if (!restaurant) return []
+    const lines = listCartLineItemsByRestaurant(restaurant.id)
+    if (lines.length === 0) return []
+    return summarizeOrderTotals(
+      lines.map((line) => ({
+        menuItemId: line.menuItemId,
+        title: line.menuItem.title,
+        category: line.menuItem.category,
+        quantity: line.quantity,
+        unitPriceCents: line.menuItem.priceCents,
+        currency: line.menuItem.currency,
+      })),
+      restaurant.deliveryFeeCents || 0,
+      primaryCurrency.value,
+    )
+  }
+  const getCartPrimaryTotalByRestaurant = (restaurantId) => {
+    const totals = getCartTotalsByRestaurant(restaurantId)
+    return (
+      totals.find((item) => item.currency === primaryCurrency.value) ||
+      totals[0] || {
+        currency: primaryCurrency.value,
+        amountCents: 0,
+        amount: '0.00',
+      }
+    )
+  }
   const cartRestaurant = computed(() => cartLineItems.value[0]?.restaurant || null)
   const cartTotals = computed(() =>
     summarizeOrderTotals(
@@ -2685,10 +2954,6 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const addToCart = (menuItemId, quantity = 1, options = {}) => {
     const menuItem = findMenuItemById(menuItemId)
     if (!menuItem || menuItem.available === false) return null
-    const currentRestaurantId = cartLineItems.value[0]?.menuItem?.restaurantId || ''
-    if (currentRestaurantId && currentRestaurantId !== menuItem.restaurantId) {
-      cartItems.value = []
-    }
     const normalizedQuantity = normalizeQuantity(quantity)
     const now = Date.now()
     const existing = cartItems.value.find((item) => item.menuItemId === menuItem.id)
@@ -2706,7 +2971,17 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       updatedAt: now,
     }
     cartItems.value.unshift(item)
-    if (cartItems.value.length > FOOD_CART_LINE_LIMIT) cartItems.value.splice(FOOD_CART_LINE_LIMIT)
+    const restaurantLines = cartItems.value.filter(
+      (line) => menuItemMap.value.get(line.menuItemId)?.restaurantId === menuItem.restaurantId,
+    )
+    if (restaurantLines.length > FOOD_CART_LINE_LIMIT) {
+      const overflowMenuItemIds = new Set(
+        restaurantLines.slice(FOOD_CART_LINE_LIMIT).map((line) => line.menuItemId),
+      )
+      cartItems.value = cartItems.value.filter(
+        (line) => !overflowMenuItemIds.has(line.menuItemId),
+      )
+    }
     return item
   }
 
@@ -2728,6 +3003,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const removed = cartItems.value.length
     cartItems.value = []
     return removed
+  }
+
+  const clearCartByRestaurant = (restaurantId) => {
+    const id = normalizeFoodId(restaurantId)
+    if (!id) return 0
+    const before = cartItems.value.length
+    cartItems.value = cartItems.value.filter(
+      (line) => menuItemMap.value.get(line.menuItemId)?.restaurantId !== id,
+    )
+    return before - cartItems.value.length
   }
 
   const addPlatformCartItem = (input = {}, quantity = 1) => {
@@ -2877,15 +3162,18 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   }
 
   const checkoutCart = ({
+    restaurantId = '',
     deliveryAddress = '',
     note = '',
     relationshipBinding = null,
     sourceModule = FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
     sourceId = '',
   } = {}) => {
-    const lines = cartLineItems.value
+    const targetRestaurantId =
+      normalizeFoodId(restaurantId) || cartLineItems.value[0]?.restaurant?.id || ''
+    const lines = listCartLineItemsByRestaurant(targetRestaurantId)
     if (lines.length === 0) return null
-    const restaurant = lines[0]?.restaurant
+    const restaurant = findRestaurantById(targetRestaurantId)
     if (!restaurant) return null
     const now = Date.now()
     const order = normalizeFoodOrder({
@@ -2916,7 +3204,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     orders.value.unshift(order)
     if (orders.value.length > FOOD_ORDER_LIMIT) orders.value.splice(FOOD_ORDER_LIMIT)
     pushFoodDeliveryOrderServiceMessage(order)
-    clearCart()
+    clearCartByRestaurant(restaurant.id)
     return order
   }
 
@@ -3045,6 +3333,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       changed = true
     }
     if (
+      HARBOR_ROAST_REQUIRED_RESTAURANT &&
+      !restaurants.value.some((restaurant) => restaurant.id === HARBOR_ROAST_SEED_RESTAURANT_ID)
+    ) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        { ...HARBOR_ROAST_REQUIRED_RESTAURANT },
+      ])
+      changed = true
+    }
+    if (
       PEACH_CLOUD_REQUIRED_RESTAURANT &&
       !restaurants.value.some((restaurant) => restaurant.id === PEACH_CLOUD_SEED_RESTAURANT_ID)
     ) {
@@ -3110,6 +3408,9 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       ...(restaurantIds.has(DAYLIGHT_CAFE_SEED_RESTAURANT_ID)
         ? DAYLIGHT_CAFE_REQUIRED_MENU_ITEMS
         : []),
+      ...(restaurantIds.has(HARBOR_ROAST_SEED_RESTAURANT_ID)
+        ? HARBOR_ROAST_REQUIRED_MENU_ITEMS
+        : []),
       ...(restaurantIds.has(SUGAR_LANE_SEED_RESTAURANT_ID) ? SUGAR_LANE_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(PEACH_CLOUD_SEED_RESTAURANT_ID) ? PEACH_CLOUD_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(DASH_GRILL_SEED_RESTAURANT_ID) ? DASH_GRILL_REQUIRED_MENU_ITEMS : []),
@@ -3166,10 +3467,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       rawSource.menuItems || rawSource.menu,
       restaurantIds,
     )
-    const menuItemIds = new Set(nextMenuItems.map((item) => item.id))
+    const menuItemsById = new Map(nextMenuItems.map((item) => [item.id, item]))
     restaurants.value = nextRestaurants
     menuItems.value = nextMenuItems
-    cartItems.value = normalizeCartItems(rawSource.cartItems || rawSource.cart, menuItemIds)
+    cartItems.value = normalizeCartItems(rawSource.cartItems || rawSource.cart, menuItemsById)
     platformCartItems.value = normalizePlatformCartItems(rawSource.platformCartItems)
     platformOrders.value = normalizePlatformOrders(rawSource.platformOrders)
     orders.value = normalizeFoodOrders(rawSource.orders)
@@ -3292,6 +3593,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     recentOrders,
     categorySummaries,
     cartLineItems,
+    listCartLineItemsByRestaurant,
+    getCartQuantityByRestaurant,
+    getCartTotalsByRestaurant,
+    getCartPrimaryTotalByRestaurant,
     cartRestaurant,
     cartTotals,
     cartPrimaryTotal,
@@ -3306,6 +3611,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     addToCart,
     updateCartQuantity,
     clearCart,
+    clearCartByRestaurant,
     addPlatformCartItem,
     updatePlatformCartQuantity,
     clearPlatformCart,

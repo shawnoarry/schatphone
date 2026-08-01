@@ -1,6 +1,6 @@
 # Food Delivery Image2 Asset Prompts / 外卖 Image2 素材提示词
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 这份文档用于生成外卖 UI 美化需要的 PNG 素材。所有提示词都做成中英双语，方便直接复制到 image2 / 生图工具中使用。
 
@@ -876,6 +876,40 @@ English Hero: Horizontal commercial dessert photography for the original virtual
 中文商品：原创虚拟甜点品牌 Sugar Lane 的方形商业产品摄影。只展示表格指定的一件蛋糕、酥点、杯装冰甜或饮品，主体占画面约 72%，Porcelain #FFF8F2 浅石背景、白瓷或透明玻璃器皿，Berry #C84F72、Butter #F4D58D、Mint #B8D8C0 与 Cocoa #4A2D2B 只承担局部色彩职责，约 30° 俯视，柔和橱窗侧光与短影，切面和主体轮廓完整，器皿按商品受控变化，不要可读文字、价格、logo、云朵或白桃吉祥物、人物、现实品牌包装、UI 卡片或水印，768x768 PNG。
 
 English product: Square commercial product photography for the original virtual patisserie Sugar Lane. Show only the specified cake, pastry, chilled glass dessert, or drink, filling about 72% of the frame on a Porcelain #FFF8F2 light-stone surface with white porcelain or clear glass. Berry #C84F72, Butter #F4D58D, Mint #B8D8C0, and Cocoa #4A2D2B each carry restrained accent roles. Use an approximately 30-degree overhead angle, soft display-window side light, a compact shadow, and a complete readable cross-section or silhouette. Vary tableware in a controlled, product-appropriate way. No readable text, price, logo, cloud or peach mascot, people, real-brand packaging, UI card, or watermark, 768x768 PNG.
+
+## 13. Harbor Roast Independent Coffee Chain / Harbor Roast 独立咖啡饮品连锁
+
+Harbor Roast 是原创的都市精品咖啡连锁概念，只借鉴成熟咖啡连锁的品类完整度与点单认知，不复制任何现实品牌。不得使用 Starbucks 名称、海妖或相似圆形徽章、绿色围裙、现实品牌杯套、产品名或门店装潢。品牌摄影胶囊使用 Petrol `#123F3A`、Copper `#B56A3B`、Warm Ivory `#F4EFE5`、Cranberry `#A83E4B` 与 Espresso `#2B1C18`；以深色石台、拉丝金属、棱纹玻璃和温暖定向侧光建立更成熟的连锁咖啡气质，与 Daylight Cafe 的明亮早晨水磨石和早午餐摄影保持清晰差异。
+
+状态：菜单、四个店内栏目、App Store 店面身份设置入口和下列 `13` 张 PNG 稳定路径已经接入。尚未生成候选母版，尚未接入正式素材，也尚未完成桌面或移动视觉验收。后续候选、请求记录、参考锚点与接受理由只能写入 `output/imagegen/harbor-roast/`；正式运行时副本只能写入并读取 `public/images/ui-assets/apps/food-delivery/harbor-roast/`，运行时不得依赖 `output/` 或 `tmp/`。
+
+### Asset Contract / 素材合同
+
+| 稳定运行时路径 | 菜单语义 | 规格与构图要求 |
+| --- | --- | --- |
+| `cover/harbor-roast-cover-01.png` | Harbor Roast Hero / 港湾咖啡店头主图 | `1200x750`；经典热咖、两杯招牌特调、冷萃与两件柜台烘焙形成完整产品家族，主体集中在中右，左侧保留深海绿文案安全区 |
+| `products/harbor-roast-item-01.png` | Harbor House Americano / 港湾美式 | `768x768`；深色陶瓷杯中的清澈美式，薄油脂层，不出现奶泡 |
+| `products/harbor-roast-item-02.png` | Copper Flat White / 铜韵馥芮白 | `768x768`；矮陶瓷杯、紧实微奶泡与细致拉花，体量明显小于拿铁 |
+| `products/harbor-roast-item-03.png` | Vanilla Bean Latte / 香草籽拿铁 | `768x768`；暖象牙高杯拿铁，可见香草籽点，不使用焦糖淋酱 |
+| `products/harbor-roast-item-04.png` | Sea-Salt Caramel Latte / 海盐焦糖拿铁 | `768x768`；铜色焦糖、轻薄奶泡与少量焦糖脆片，保持咖啡主体可见 |
+| `products/harbor-roast-item-05.png` | Pistachio Oat Latte / 开心果燕麦拿铁 | `768x768`；淡开心果泡沫与碎开心果，颜色克制，不做荧光绿色 |
+| `products/harbor-roast-item-06.png` | Cranberry Cocoa Mocha / 蔓越莓可可摩卡 | `768x768`；深可可咖啡、轻奶泡与小面积蔓越莓红点色，不变成水果奶昔 |
+| `products/harbor-roast-item-07.png` | Velvet Cold Brew / 丝绒冷萃 | `768x768`；棱纹高玻璃、清晰冰块、深色冷萃与平整麦芽奶盖分层 |
+| `products/harbor-roast-item-08.png` | Citrus Espresso Sparkler / 柑橘浓缩气泡 | `768x768`；透明高杯，葡萄柚气泡与浓缩咖啡分层，橙皮点明风味 |
+| `products/harbor-roast-item-09.png` | Dark Cocoa Coffee Blend / 黑可可咖啡冰沙 | `768x768`；厚实深可可冰沙、少量可可碎，不使用夸张奶油山或糖果 |
+| `products/harbor-roast-item-10.png` | Apricot Earl Grey Iced Tea / 杏桃伯爵冰茶 | `768x768`；琥珀茶汤、杏桃片、柠檬和透明冰块，不出现咖啡分层 |
+| `products/harbor-roast-item-11.png` | Copper Sugar Scone / 铜糖司康 | `768x768`；单只完整司康，粗糖脆壳与橙皮屑清楚，配无字烘焙纸 |
+| `products/harbor-roast-item-12.png` | Almond Butter Croissant / 杏仁黄油可颂 | `768x768`；单只二次烘焙可颂，杏仁片和少量糖粉，层次与完整两端可见 |
+
+### Harbor Roast Prompt Capsule / Harbor Roast 提示词胶囊
+
+中文 Hero：原创虚拟都市咖啡连锁 Harbor Roast 的横向商业摄影，用于手机外卖 App 店铺 Hero。展示一杯经典热美式、一杯海盐焦糖拿铁、一杯开心果燕麦拿铁、一杯棱纹玻璃冷萃、一个司康和一个杏仁黄油可颂；深色石台、拉丝铜色金属、Petrol #123F3A 背景、Warm Ivory #F4EFE5 器皿、少量 Cranberry #A83E4B 点色，温暖定向咖啡馆侧光，真实咖啡油脂、奶泡、冰块和酥皮纹理。主体集中在中部和右侧，左侧保留稳定深海绿文案安全区，适合 8:5 裁切。不要可读文字、价格、logo、人物、海妖或相似圆形徽章、绿色围裙、现实品牌杯套或包装、UI 或水印，1200x750 PNG。
+
+English Hero: Horizontal commercial photography for the original fictional urban coffee chain Harbor Roast, used as a mobile delivery-app shop hero. Show one classic hot Americano, one sea-salt caramel latte, one pistachio oat latte, one ribbed-glass cold brew, one sugar-crusted scone, and one almond-butter croissant on a dark stone counter with brushed-copper metal, a Petrol #123F3A background, Warm Ivory #F4EFE5 tableware, and restrained Cranberry #A83E4B accents. Use warm directional cafe side light with realistic crema, microfoam, clear ice, and pastry layers. Keep the subjects clustered in the center and right with stable deep-petrol negative space on the left for code-rendered copy, composed for an 8:5 crop. No readable text, prices, logos, people, siren or similar circular emblem, green apron, real-brand cup sleeve or packaging, UI, or watermark, 1200x750 PNG.
+
+中文商品：原创虚拟咖啡连锁 Harbor Roast 的方形商业产品摄影。只展示表格指定的一杯饮品或一件烘焙，主体占画面约 `74%`，深色石台与 Warm Ivory #F4EFE5 背景，Petrol #123F3A、Copper #B56A3B、Cranberry #A83E4B 和 Espresso #2B1C18 各自承担克制的色彩职责。使用约 `35°` 镜头、温暖定向侧光、紧凑柔影和稳定裁切留白；热饮陶瓷杯、冷饮棱纹玻璃与无字烘焙纸按商品语义受控变化，但保持同一门店、同一光线和接近的主体体量。不要可读文字、价格、logo、人物、海妖或相似圆形徽章、绿色围裙、现实品牌杯套或包装、UI 卡片或水印，768x768 PNG。
+
+English product: Square commercial product photography for the original fictional coffee chain Harbor Roast. Show only the specified drink or bake, filling about 74% of the frame on dark stone and Warm Ivory #F4EFE5, with Petrol #123F3A, Copper #B56A3B, Cranberry #A83E4B, and Espresso #2B1C18 assigned restrained color roles. Use an approximately 35-degree camera angle, warm directional side light, a compact soft shadow, and stable crop padding. Vary ceramic cups for hot drinks, ribbed glassware for cold drinks, and unbranded bakery paper for bakes while retaining the same shop, light, lens distance, and comparable subject volume. No readable text, price, logo, people, siren or similar circular emblem, green apron, real-brand cup sleeve or packaging, UI card, or watermark, 768x768 PNG.
 ```
 
 ## Naming Suggestion / 文件命名建议

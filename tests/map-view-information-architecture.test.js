@@ -202,6 +202,7 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-transport-mode-walk"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="map-transport-mode-public_transit"]').attributes('aria-checked')).toBe('true')
     expect(wrapper.find('[data-testid="map-local-place-results"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-destination-search"]').attributes('readonly')).toBeDefined()
     expect(wrapper.find('[data-testid="map-current-location"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="map-active-journey"]').text()).toMatch(/In transit|行程中/)
     expect(wrapper.get('[data-testid="map-primary-journey-status"]').text()).toMatch(/In transit|行程中/)
@@ -397,7 +398,10 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-local-search-scope"]').text()).toContain(
       String(mapStore.activeMapPlaces.filter((place) => place.position).length),
     )
-    await wrapper.get('[data-testid="map-local-place-results"]').find('button').trigger('click')
+    await wrapper
+      .get('[data-testid="map-local-place-results"]')
+      .get('.map-place-result')
+      .trigger('click')
     await nextTick()
 
     expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('SM')
@@ -405,6 +409,90 @@ describe('MapView information architecture', () => {
       ...smPlace.position,
       focusRequestId: initialRequestId + 1,
     })
+  })
+
+  test('opens local discovery on focus and filters suggestions by category', async () => {
+    const mapStore = useMapStore()
+    const input = wrapper.get('[data-testid="map-destination-search"]')
+
+    await input.trigger('focus')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-local-place-results"]').text()).toMatch(
+      /Recent and suggested|最近与推荐/,
+    )
+    expect(wrapper.get('[data-testid="map-search-categories"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-local-place-results"]').findAll('.map-place-result').length).toBeGreaterThan(0)
+
+    await wrapper.get('[data-testid="map-search-category-transit"]').trigger('click')
+    await nextTick()
+
+    const expectedTransitCount = mapStore.activeMapPlaces.filter(
+      (place) => place.position && place.category === 'transit',
+    ).length
+    expect(wrapper.get('[data-testid="map-search-category-transit"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-testid="map-local-place-results"]').findAll('.map-place-result')).toHaveLength(
+      Math.min(6, expectedTransitCount),
+    )
+  })
+
+  test('closes local discovery when the map itself is clicked', async () => {
+    const input = wrapper.get('[data-testid="map-destination-search"]')
+
+    await input.trigger('focus')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-local-place-results"]').exists()).toBe(true)
+
+    wrapper.findComponent({ name: 'MapSceneCanvas' }).vm.$emit('map-interact')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="map-local-place-results"]').exists()).toBe(false)
+  })
+
+  test('supports multi-term and typo-tolerant place discovery with visible match reasons', async () => {
+    const input = wrapper.get('[data-testid="map-destination-search"]')
+
+    await input.setValue('江南 美容')
+    await nextTick()
+
+    const salonResults = wrapper.get('[data-testid="map-local-place-results"]')
+    expect(salonResults.text()).toContain('Jenny House')
+    expect(salonResults.text()).not.toContain('Starship')
+    expect(salonResults.text()).toMatch(/Alias: 美容室|别名：美容室/)
+
+    await input.setValue('Hongde')
+    await nextTick()
+
+    const typoResults = wrapper.get('[data-testid="map-local-place-results"]')
+    expect(typoResults.text()).toMatch(/Hongik University Street|弘大入口/)
+    expect(typoResults.text()).toMatch(/Close spelling|拼写接近/)
+  })
+
+  test('keeps free-form destinations explicit and offers Places when nothing matches', async () => {
+    const input = wrapper.get('[data-testid="map-destination-search"]')
+
+    await input.setValue('North river rendezvous')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-use-freeform-destination"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-search-browse-places"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="map-use-freeform-destination"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="map-local-place-results"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toContain(
+      'North river rendezvous',
+    )
+
+    await input.trigger('focus')
+    await nextTick()
+    await wrapper.get('[data-testid="map-search-browse-places"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-secondary-drawer"]').text()).toMatch(
+      /Manage places and pins|管理地点与图钉/,
+    )
   })
 
   test('uses distinct shared category visuals for map pins', () => {

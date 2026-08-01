@@ -33,7 +33,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['place-pin', 'select-pin', 'renderer-status', 'fallback'])
+const emit = defineEmits(['place-pin', 'select-pin', 'map-interact', 'renderer-status', 'fallback'])
 const { t } = useI18n()
 const mapRootRef = ref(null)
 const rendererStatus = ref('loading')
@@ -200,7 +200,9 @@ const initializeMap = async () => {
     mapInstance.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-left')
     setInteractionEnabled(props.interactive)
     mapInstance.on('click', (event) => {
-      if (!props.interactive || !props.allowPinPlacement) return
+      if (!props.interactive) return
+      emit('map-interact')
+      if (!props.allowPinPlacement) return
       const position = {
         kind: 'geo',
         lat: event.lngLat.lat,

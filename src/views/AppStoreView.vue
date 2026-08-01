@@ -908,6 +908,14 @@ const identityDraft = reactive({
   templateId: 'standard',
   bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
 })
+const identityShopTemplateOptions = computed(() =>
+  SHOP_ENTRY_TEMPLATE_OPTIONS.filter(
+    (option) =>
+      option.userSelectable !== false ||
+      option.id === identityDraft.templateId ||
+      option.id === selectedApp.value?.templateId,
+  ),
+)
 let identityDraftPreviewVersion = 0
 const skinEditorOpen = ref(false)
 const skinFeedback = ref('')
@@ -2192,7 +2200,7 @@ onBeforeUnmount(() => {
           <span>{{ t('店铺模板', 'Shop template') }}</span>
           <select v-model="identityDraft.templateId" data-testid="app-store-identity-shop-template">
             <option
-              v-for="option in SHOP_ENTRY_TEMPLATE_OPTIONS"
+              v-for="option in identityShopTemplateOptions"
               :key="option.id"
               :value="option.id"
             >

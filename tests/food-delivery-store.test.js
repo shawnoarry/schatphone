@@ -161,6 +161,85 @@ describe('food delivery store', () => {
     )
   })
 
+  test('seeds Harbor Roast with a drinks-first coffee-chain menu and stable asset paths', () => {
+    const store = useFoodDeliveryStore()
+    const harborRoast = store.findRestaurantById('food_seed_harbor_roast')
+    const harborMenu = store.listMenuByRestaurant('food_seed_harbor_roast')
+
+    expect(harborRoast).toMatchObject({
+      name: 'Harbor Roast',
+      category: 'cafe',
+      rating: 4.8,
+    })
+    expect(harborRoast?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/harbor-roast/cover/harbor-roast-cover-01.png',
+    )
+    expect(harborMenu).toHaveLength(12)
+    expect(new Set(harborMenu.map((item) => item.menuSection))).toEqual(
+      new Set(['espresso_classics', 'harbor_signatures', 'cold_blended', 'tea_counter_bakes']),
+    )
+    expect(harborMenu.filter((item) => item.menuSection !== 'tea_counter_bakes')).toHaveLength(9)
+    expect(store.findMenuItemById('food_menu_harbor_sea_salt_caramel_latte')).toMatchObject({
+      title: 'Sea-Salt Caramel Latte',
+      ingredients: expect.stringContaining('sea salt'),
+    })
+    expect(store.findMenuItemById('food_menu_harbor_almond_butter_croissant')?.image.url).toContain(
+      '/images/ui-assets/apps/food-delivery/harbor-roast/products/harbor-roast-item-12.png',
+    )
+  })
+
+  test('adds Harbor Roast to older saves while preserving same-id user edits', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_saved_corner_cafe',
+          name: 'Saved Corner Cafe',
+          category: 'cafe',
+        },
+        {
+          id: 'food_seed_harbor_roast',
+          name: 'My Harbor Counter',
+          category: 'cafe',
+          cuisine: 'My saved coffee concept',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_harbor_house_americano',
+          restaurantId: 'food_seed_harbor_roast',
+          title: 'My Saved Americano',
+          category: 'cafe',
+          menuSection: 'owners_coffee',
+          price: '88.00',
+          desc: 'My saved coffee recipe.',
+          imageSourceType: 'url',
+          imageUrl: 'https://example.com/my-saved-americano.png',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+
+    expect(store.findRestaurantById('food_seed_harbor_roast')).toMatchObject({
+      name: 'My Harbor Counter',
+      category: 'cafe',
+      cuisine: 'My saved coffee concept',
+    })
+    expect(store.findRestaurantById('food_saved_corner_cafe')).toMatchObject({
+      name: 'Saved Corner Cafe',
+    })
+    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(12)
+    expect(store.findMenuItemById('food_menu_harbor_house_americano')).toMatchObject({
+      restaurantId: 'food_seed_harbor_roast',
+      title: 'My Saved Americano',
+      menuSection: 'owners_coffee',
+      price: '88.00',
+      desc: 'My saved coffee recipe.',
+      image: { url: 'https://example.com/my-saved-americano.png' },
+    })
+  })
+
   test('migrates the three known remote seed images without replacing custom URLs', () => {
     persistLegacyFoodDeliveryState({
       restaurants: [
@@ -486,7 +565,8 @@ describe('food delivery store', () => {
     expect(store.listMenuByRestaurant('food_seed_dash_grill')).toHaveLength(10)
     expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
     expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
-    expect(store.menuItemCount).toBe(447)
+    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(12)
+    expect(store.menuItemCount).toBe(459)
 
     const migratedSnapshot = store.createBackupSnapshot()
     store.resetForTesting()
@@ -1176,7 +1256,7 @@ describe('food delivery store', () => {
     expect(store.listMenuByRestaurant('food_seed_peach_cloud')).toHaveLength(17)
   })
 
-  test('creates single-restaurant cart and local orders', () => {
+  test('keeps restaurant carts independent and checks out only the requested restaurant', () => {
     const store = useFoodDeliveryStore()
     store.resetForTesting()
     const firstRestaurant = store.upsertRestaurant({
@@ -1216,10 +1296,24 @@ describe('food delivery store', () => {
     })
 
     store.addToCart(secondItem.id)
-    expect(store.cartQuantity).toBe(1)
+    expect(store.cartQuantity).toBe(3)
     expect(store.cartLineItems[0]?.restaurant?.id).toBe(secondRestaurant.id)
+    expect(store.getCartQuantityByRestaurant(firstRestaurant.id)).toBe(2)
+    expect(store.getCartQuantityByRestaurant(secondRestaurant.id)).toBe(1)
+    expect(store.getCartPrimaryTotalByRestaurant(firstRestaurant.id)).toEqual({
+      currency: 'CNY',
+      amountCents: 4300,
+      amount: '43.00',
+    })
+    expect(store.getCartPrimaryTotalByRestaurant(secondRestaurant.id)).toEqual({
+      currency: 'CNY',
+      amountCents: 3800,
+      amount: '38.00',
+    })
+    const multiCartSnapshot = store.createBackupSnapshot()
 
     const order = store.checkoutCart({
+      restaurantId: secondRestaurant.id,
       deliveryAddress: 'Map Pin A',
       note: 'Testing order',
     })
@@ -1231,10 +1325,22 @@ describe('food delivery store', () => {
       deliveryAddress: 'Map Pin A',
       status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
     })
-    expect(store.cartQuantity).toBe(0)
+    expect(store.getCartQuantityByRestaurant(secondRestaurant.id)).toBe(0)
+    expect(store.getCartPrimaryTotalByRestaurant(secondRestaurant.id)).toEqual({
+      currency: 'CNY',
+      amountCents: 0,
+      amount: '0.00',
+    })
+    expect(store.getCartQuantityByRestaurant(firstRestaurant.id)).toBe(2)
+    expect(store.cartQuantity).toBe(2)
     expect(store.orderCount).toBe(1)
     expect(store.updateOrderStatus(order.id, FOOD_DELIVERY_ORDER_STATUS.COOKING)).toBe(true)
     expect(store.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.COOKING)
+
+    store.resetForTesting()
+    expect(store.restoreFromBackup(multiCartSnapshot)).toBe(true)
+    expect(store.getCartQuantityByRestaurant(firstRestaurant.id)).toBe(2)
+    expect(store.getCartQuantityByRestaurant(secondRestaurant.id)).toBe(1)
   })
 
   test('uses the finance primary currency for active food pricing without rewriting historic orders', () => {

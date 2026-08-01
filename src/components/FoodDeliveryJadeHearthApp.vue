@@ -16,8 +16,6 @@ const props = defineProps({
   activeWalletSuggestion: { type: Object, default: null },
   eventFeedback: { type: String, default: '' },
   page: { type: String, default: 'home' },
-  cartConflict: { type: Boolean, default: false },
-  foreignCartName: { type: String, default: '' },
   etaText: { type: String, default: '' },
   feeText: { type: String, default: '' },
   distanceText: { type: String, default: '' },
@@ -32,7 +30,6 @@ const emit = defineEmits([
   'add-item',
   'update-cart',
   'checkout',
-  'open-foreign-cart',
   'check-update',
   'mark-delivered',
   'record-wallet',
@@ -753,44 +750,7 @@ watch(
           <span class="text-xs font-black">{{ cartQuantity }} {{ t('份', 'items') }}</span>
         </div>
 
-        <section
-          v-if="cartConflict"
-          class="mt-6 border border-[var(--jade-cinnabar)] bg-white/55 p-4"
-        >
-          <span
-            class="inline-flex h-11 w-11 items-center justify-center bg-[var(--jade-cinnabar)] text-white"
-            ><i class="fas fa-basket-shopping"></i
-          ></span>
-          <h2 class="mt-4 text-lg font-black">
-            {{ t('购物袋属于另一家店', 'Another shop owns this bag') }}
-          </h2>
-          <p class="mt-2 text-xs font-semibold leading-5 text-[var(--jade-muted)]">
-            {{
-              t(
-                `当前购物袋属于 ${foreignCartName || '另一家店'}。`,
-                `Your current bag belongs to ${foreignCartName || 'another shop'}.`,
-              )
-            }}
-          </p>
-          <div class="mt-4 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              class="min-h-11 border border-[var(--jade-line)] bg-white px-3 text-xs font-black"
-              @click="emit('open-foreign-cart')"
-            >
-              {{ t('查看原购物袋', 'Open current bag') }}
-            </button>
-            <button
-              type="button"
-              class="min-h-11 bg-[var(--jade-green)] px-3 text-xs font-black text-white"
-              @click="emit('navigate', 'menu')"
-            >
-              {{ t('继续看菜单', 'Browse menu') }}
-            </button>
-          </div>
-        </section>
-
-        <section v-else-if="cartLines.length" class="mt-2" data-testid="food-delivery-cart-panel">
+        <section v-if="cartLines.length" class="mt-2" data-testid="food-delivery-cart-panel">
           <article
             v-for="(line, index) in cartLines"
             :key="line.menuItemId"

@@ -1,6 +1,6 @@
 # Map Calendar Reminders Implementation Workstreams / 地图日历提醒事项实施工作流
 
-Updated: 2026-07-31
+Updated: 2026-08-01
 
 ## 1. Workstream A: Map Travel Core
 
@@ -12,7 +12,7 @@ Updated: 2026-07-31
 - Gallery-owned source images referenced by Map-owned custom-pack metadata
 - geographic coordinates for real packs and normalized canvas coordinates for fictional packs
 - dated, versioned real-place catalogs with stable Map IDs, bilingual address/search metadata, and locally maintained coordinates
-- current-world positioned pack/player-pin search, coordinate focus, and deterministic distance calculation; unmatched text remains a free-form destination without online POI/geocoding
+- current-world positioned pack/player-pin search with empty-focus discovery, category filters, normalized ranked multi-term matching, optional aliases/search terms, and bounded Latin typo tolerance; new places inherit standard name/address/category search, selected matches retain coordinate focus, and unmatched text remains an explicit free-form destination without online POI/geocoding
 - one shared category icon/tone contract across renderers, search, lists, details, and Settings, with an in-context guide for the six editable player-pin categories
 - explicit click-to-reselect player coordinates without draggable everyday markers; active trips lock map replacement, not map interaction
 - exclusive coordinate-placement interaction in both renderers: existing markers are pointer-transparent and cannot replace the active place draft

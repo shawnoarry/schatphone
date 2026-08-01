@@ -15,8 +15,6 @@ const props = defineProps({
   orders: { type: Array, default: () => [] },
   activeOrder: { type: Object, default: null },
   page: { type: String, default: 'home' },
-  cartConflict: { type: Boolean, default: false },
-  foreignCartName: { type: String, default: '' },
   etaText: { type: String, default: '' },
   feeText: { type: String, default: '' },
   distanceText: { type: String, default: '' },
@@ -32,7 +30,6 @@ const emit = defineEmits([
   'add-item',
   'update-cart',
   'checkout',
-  'open-foreign-cart',
 ])
 
 const { t } = useI18n()
@@ -870,34 +867,7 @@ watch(
           {{ t('一餐，准备好了', 'Ready when you are') }}
         </h1>
 
-        <section v-if="cartConflict" class="verdant-warning-panel mt-6 rounded-md p-4">
-          <i class="fas fa-bag-shopping text-2xl text-[var(--verdant-warning)]"></i>
-          <h2 class="mt-3 text-base font-black">
-            {{ t('购物袋来自另一家店', 'Another shop owns this bag') }}
-          </h2>
-          <p class="mt-2 text-xs font-semibold leading-5 text-[var(--verdant-muted)]">
-            {{
-              foreignCartName
-                ? t(
-                    `当前购物袋属于 ${foreignCartName}。`,
-                    `This bag belongs to ${foreignCartName}.`,
-                  )
-                : t(
-                    '当前购物袋中包含其他店铺的餐品。',
-                    'This bag contains items from another shop.',
-                  )
-            }}
-          </p>
-          <button
-            type="button"
-            class="verdant-secondary-action mt-4 min-h-11 rounded-md px-4 text-xs font-black"
-            @click="emit('open-foreign-cart')"
-          >
-            {{ t('查看原购物袋', 'Open that bag') }}
-          </button>
-        </section>
-
-        <section v-else-if="cartLines.length" class="mt-6" data-testid="food-delivery-cart-panel">
+        <section v-if="cartLines.length" class="mt-6" data-testid="food-delivery-cart-panel">
           <div class="divide-y divide-[var(--verdant-line)] border-y border-[var(--verdant-line)]">
             <article
               v-for="line in cartLines"

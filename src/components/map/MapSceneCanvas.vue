@@ -30,7 +30,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['place-pin', 'select-pin', 'renderer-status'])
+const emit = defineEmits(['place-pin', 'select-pin', 'map-interact', 'renderer-status'])
 const forceLocalFallback = ref(false)
 const usesOnlineBasemap = computed(
   () => props.mapPack?.coordinateKind === 'geo' && !forceLocalFallback.value,
@@ -43,6 +43,7 @@ watch(
 
 const forwardPlacePin = (payload) => emit('place-pin', payload)
 const forwardSelectedPin = (pin) => emit('select-pin', pin)
+const forwardMapInteraction = () => emit('map-interact')
 const forwardRendererStatus = (payload) => emit('renderer-status', payload)
 const useLocalFallback = (payload) => {
   forceLocalFallback.value = true
@@ -61,6 +62,7 @@ const useLocalFallback = (payload) => {
     :allow-pin-placement="allowPinPlacement"
     @place-pin="forwardPlacePin"
     @select-pin="forwardSelectedPin"
+    @map-interact="forwardMapInteraction"
     @renderer-status="forwardRendererStatus"
     @fallback="useLocalFallback"
   />
@@ -75,5 +77,6 @@ const useLocalFallback = (payload) => {
     :provider-state="forceLocalFallback ? 'fallback' : 'local'"
     @place-pin="forwardPlacePin"
     @select-pin="forwardSelectedPin"
+    @map-interact="forwardMapInteraction"
   />
 </template>
