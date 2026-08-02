@@ -165,27 +165,6 @@ describe('workflow governance', () => {
     )
   })
 
-  test('defaults local standard work to one controller conversation and one writer', () => {
-    const protocol = readProjectFile('docs/process/WORKTREE_INTEGRATION_PROTOCOL.md')
-
-    expect(protocol).toContain('### Local-First Route')
-    expect(protocol).toContain(
-      'the default route is one integration-controller conversation plus one dedicated writing worktree',
-    )
-    expect(protocol).toContain(
-      'A standing workgroup-controller conversation is not a mandatory relay.',
-    )
-    expect(protocol).toContain(
-      '`READY_FOR_INTEGRATION_REVIEW` is an internal freeze point',
-    )
-    expect(protocol).toContain(
-      'Do not request a separate post-integration omission message.',
-    )
-    expect(protocol).toContain(
-      'Current repository and task state must be read from Git, the physical worktree, and the active task status.',
-    )
-  })
-
   test('keeps focused visual testing local while CI runs the full E2E gate once', () => {
     const packageJson = JSON.parse(readProjectFile('package.json'))
     const ciWorkflow = readProjectFile('.github/workflows/ci.yml')

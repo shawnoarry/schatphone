@@ -1,6 +1,6 @@
 # SchatPhone Worktree Integration Protocol
 
-Updated: 2026-08-02
+Updated: 2026-07-31
 
 Purpose: define a risk-proportionate way for separate SchatPhone workgroups to protect, hand off, review, integrate, and synchronize Git work without requiring the user to operate Git or coordinate repositories manually.
 
@@ -74,21 +74,6 @@ Only one writing task may be active in a physical worktree at a time. A workgrou
 
 Generated candidates, model caches, virtual environments, browser profiles, and other large temporary runtimes should live in a named repository-external task-artifact directory when practical. Keeping them outside a Git worktree avoids turning routine synchronization into a large backup operation.
 
-### Local-First Route
-
-For one local machine with one active, approved slice, the default route is one integration-controller conversation plus one dedicated writing worktree. The integration controller may execute a standard-lane slice directly in that worktree or dispatch it once to a specialist. A standing workgroup-controller conversation is not a mandatory relay. Direct execution still keeps local `main` as the clean integration target rather than using it as the writing tree.
-
-Standing visual, architecture, story, governance, and feature controllers are on-demand reviewers. Invoke one only when its specialist judgment is required by an elevated-lane trigger: new product meaning, cross-package architecture, a new shared visual rule or asset direction, overlapping paths, dirty protected content, uncertain scope, or a failed validation whose ownership is unclear. Do not wake a standing controller merely to repeat repository state, acknowledge a clean commit, forward another conversation's handoff, or confirm an unchanged omission result.
-
-The local-first lifecycle is:
-
-1. The integration controller inspects current Git and task state, selects one clean dedicated writing worktree, and records the base, scope, reservation, acceptance, and checks once.
-2. One writer carries the slice to a frozen commit. Progress stays in the active execution conversation; other conversations receive a message only for a blocker, required decision, conflict, or completed handoff.
-3. When the integration controller is also the writer, `READY_FOR_INTEGRATION_REVIEW` is an internal freeze point backed by the commit and validation evidence, not a message round trip to another controller.
-4. The integration controller reviews the frozen commit, integrates it into local `main`, runs the target gate once, and reports the result to the user.
-
-Current repository and task state must be read from Git, the physical worktree, and the active task status. Old conversation summaries and standing-controller memory are routing hints only and must not be polled or synchronized as a substitute for that evidence.
-
 ## 3. Risk Lanes
 
 ### Standard Lane
@@ -110,8 +95,6 @@ The standard lane is intentionally short:
 5. Git tree/file comparison closes omission review automatically when the reviewed commit lands unchanged.
 
 Clean committed work does not require a duplicate patch, archive, pre-commit approval round, or a separate workgroup wake-up merely to report that identical Git trees match.
-
-In the local-first route, the same standard-lane evidence is recorded once by the integration controller. Do not manufacture a self-handoff or a second review conversation when no specialist judgment or independent writer is involved.
 
 ### Elevated Lane
 
@@ -187,8 +170,6 @@ Before meaningful work in a separate worktree, record:
 - approved scope and any remaining user decision;
 - validation required by change type.
 
-The integration controller may collect this record directly from the repository without asking an idle workgroup to echo it. When resuming the same frozen slice, re-check changing facts such as HEAD, status, reservations, and validation freshness; do not repeat unchanged bootstrap narration or broad document reads.
-
 An older worktree missing files that were later added to `main` is normal Git state, not evidence that files were lost. Compare commits and integrate through Git; do not manually copy a newer tree over a dirty older tree.
 
 ## 7. Required Workgroup Handoff
@@ -215,8 +196,6 @@ Operations not performed: merge/rebase/push/reset/clean/worktree deletion/synchr
 The workgroup then stops. It does not continue into a dependent slice while waiting for integration.
 
 For standard-lane work, keep this handoff compact. Command transcripts, screenshots, and repeated narrative belong only when they explain a failure, an external proof, or a material risk.
-
-When the integration controller executed the slice directly, fold this evidence into the final integration report instead of sending the template to another conversation.
 
 ## 8. Protecting Dirty Work
 
@@ -271,7 +250,7 @@ The integration controller performs integration in this order:
 7. If a conflict changes product meaning, enter `USER_DECISION_REQUIRED`; do not resolve it by guessing.
 8. Integrate into local `main` only after review and validation pass.
 9. Run the change-type target validation once. For a batch of independent standard commits, run focused checks per commit as needed and one full target gate after the batch.
-10. Close omission review with commit/tree/file comparison when the reviewed commit lands unchanged. Do not request a separate post-integration omission message. Wake the source workgroup only for a rebase, merge conflict, backup comparison, or unexplained mismatch.
+10. Close omission review with commit/tree/file comparison when the reviewed commit lands unchanged. Wake the source workgroup only for a rebase, merge conflict, backup comparison, or unexplained mismatch.
 11. Synchronize clean worktrees when they actually need the new base, normally at their next task start. Do not wake or move every idle worktree after each commit.
 12. Do not automatically synchronize a dirty worktree. Record it and plan its own protected integration.
 13. Report local/remote status clearly.
