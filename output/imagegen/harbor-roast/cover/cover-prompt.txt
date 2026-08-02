@@ -1,0 +1,11 @@
+Use case: product-mockup
+Asset type: Harbor Roast mobile App Store shop cover, text-free commercial food photograph
+Primary request: Create a premium original product-family photograph for the fictional urban coffee chain Harbor Roast.
+Scene/backdrop: warm copper-toned cafe counter with a light Cream #F9F2ED backdrop, restrained Blush #EDD6C8 set detail, charcoal Ink #313131 tableware, a faint neutral Line #E3E3E3 architectural detail, no visible shop branding.
+Subject: one clear hot Americano in a charcoal ceramic cup, one sea-salt caramel latte, one pistachio oat latte with restrained natural pale green foam, one ribbed-glass cold brew with clear ice, one complete sugar-crusted scone, and one complete almond-butter croissant. The six products must remain distinct and appetizing with realistic crema, microfoam, clear ice, and pastry layers.
+Style/medium: polished photorealistic commercial cafe photography, mature and approachable premium chain quality, real food texture, not illustration.
+Composition/framing: horizontal frame with extra vertical crop margin. Cluster all products in the center and right, keep the left 38% as calm low-detail Cream/Ink negative space for code-rendered copy. Preserve complete cup rims, handles, glass edges, scone, and both croissant tips inside the central 8:5 safe frame. Camera about 35 degrees, medium depth of field.
+Lighting/mood: soft warm directional cafe side light, controlled compact shadows, clean highlights without glare.
+Color palette: Copper #C67C4E, Blush #EDD6C8, Ink #313131, Line #E3E3E3, Cream #F9F2ED. Do not introduce petrol green or a dark teal backdrop.
+Constraints: no readable text, no prices, no logos, no people, no mascot, no UI, no watermark, no duplicate products.
+Avoid: Starbucks, siren or circular emblem, green apron, real-brand cups or packaging, dark moody bar scene, excessive steam, plastic-looking food, labels or packaging.

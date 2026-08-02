@@ -242,7 +242,10 @@ export const resolvePeachCloudMenuItemCopy = (item = {}, language = 'zh-CN') => 
 
 export const resolvePeachCloudOrderItemTitle = (item = {}, language = 'zh-CN') => {
   const copy = PEACH_CLOUD_MENU_COPY_BY_ID[item?.menuItemId]
-  return copy ? resolveStandardField(item.title, copy.title, language) : item?.title || ''
+  if (copy) return resolveStandardField(item.title, copy.title, language)
+  return getLanguageBase(language) === 'en'
+    ? item?.titleEn || item?.titleZh || item?.title || ''
+    : item?.titleZh || item?.titleEn || item?.title || ''
 }
 
 export const getPeachCloudMenuSearchValues = (item = {}) => {

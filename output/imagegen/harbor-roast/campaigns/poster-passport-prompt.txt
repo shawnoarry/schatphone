@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: text-free Harbor Roast Roast Passport campaign landing poster
+Input images: the supplied Captain Roast PNG is the exact character identity reference
+Primary request: Create a premium vertical reward-journey poster using the same Captain Roast character without redesigning the face, cup body, copper captain cap, cream-and-copper palette, or anchor accessory.
+Scene/backdrop: refined abstract harbor journey built from layered Cream #F9F2ED, Blush #EDD6C8 and Copper #C67C4E platforms with restrained Ink #313131 depth.
+Subject: Captain Roast completing a gentle six-stop route toward a premium reusable captain mug. Six abstract bean-shaped port markers may appear but must contain no readable text or numbers. Exactly one mascot.
+Style/medium: dimensional editorial brand illustration matching the supplied mascot, sophisticated loyalty poster, not a pirate or children's map.
+Composition/framing: portrait 2:3 source designed for a later 4:5 crop. Keep the top 30% and upper-left area calm for code-rendered title. Place Captain Roast, route markers and reward mug from middle to lower area within the central 4:5 safe frame.
+Color palette: Copper #C67C4E, Blush #EDD6C8, Ink #313131, Line #E3E3E3, Cream #F9F2ED.
+Constraints: no text, no letters, no numbers, no prices, no UI cards, no readable stamps, no watermark, no duplicate mascot.
+Avoid: Starbucks, siren or similar circular emblem, green apron, treasure chest, pirate costume, childish map graphics.

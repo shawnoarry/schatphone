@@ -1,0 +1,9 @@
+Use case: product-mockup
+Asset type: Peach Cloud mobile shop merchandise product image
+Primary request: Use the input image as the visual identity reference for Peach Cloud. Create one premium pale-green canvas tote bag for the brand, using the same peach-and-cloud mascot as a small tasteful embroidered applique.
+Scene/backdrop: clean square product studio with pink mist #FDA1B8 and fresh-white curved panels, plus one restrained petal-rouge accent.
+Subject: one structured pale-green #F2FBE0 canvas tote with sturdy pink handles, visible woven texture, one inner cup pocket suggested by the open top, and a small embroidered applique of the exact plump white-peach mascot with cloud cap, face, and green leaf; show the complete bag.
+Style/medium: photoreal premium retail catalog photography, refined everyday merchandise rather than novelty costume styling.
+Composition/framing: centered square composition at a slight three-quarter angle, bag fills about 76% of frame, generous crop-safe padding, no props.
+Lighting/mood: bright softbox daylight with a compact natural contact shadow.
+Constraints: no readable text, no letters, no price, no packaging, no UI, no watermark, no people, no drinks, no food, no extra products.

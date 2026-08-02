@@ -48,12 +48,8 @@ describe('FoodDeliveryView', () => {
       },
     })
 
-    expect(wrapper.get('[data-testid="food-delivery-pseudo-folder-home"]').text()).toMatch(
-      /Platform|平台/,
-    )
-    expect(wrapper.get('[data-testid="food-delivery-platform-entry"]').text()).toMatch(
-      /Platform|平台/,
-    )
+    expect(wrapper.get('[data-testid="food-delivery-pseudo-folder-home"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-platform-entry"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="food-delivery-platform-search"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="food-delivery-platform-location"]').text()).toContain(
       '配送到',
@@ -64,9 +60,14 @@ describe('FoodDeliveryView', () => {
     expect(
       wrapper.get('[data-testid="food-delivery-platform-rider"] img').attributes('src'),
     ).toContain('delivery-rider-mascot-01.png')
-    expect(wrapper.get('[data-testid="food-delivery-platform-banner-rail"]').text()).toContain(
+    expect(wrapper.get('[data-testid="food-delivery-platform-banner-rail"]').text()).not.toContain(
       '免配送权益',
     )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-platform-banner-action-club_free_delivery"]')
+        .attributes('aria-label'),
+    ).toContain('免配送权益')
     expect(wrapper.find('[data-testid="food-delivery-platform-benefits"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-platform-hero-image"]').exists()).toBe(true)
     const recommendedMerchantIds = wrapper
@@ -97,6 +98,9 @@ describe('FoodDeliveryView', () => {
         .get('[data-testid="food-delivery-category-icon-pizza"]')
         .attributes('data-required-asset'),
     ).toBe('platform/categories/icons/category-pizza-01.png')
+    expect(
+      wrapper.get('[data-testid="food-delivery-category-image-pizza"]').attributes('src'),
+    ).toContain('platform/categories/icons/category-pizza-01.png')
     expect(wrapper.find('[data-testid="food-delivery-category-nearby"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-category-grocery_delivery"]').exists()).toBe(
       true,
@@ -138,17 +142,21 @@ describe('FoodDeliveryView', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.query.restaurantId).toBeUndefined()
-    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-dialog"]').exists()).toBe(
-      true,
-    )
-    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-detail"]').text()).toContain(
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'merchant',
+      platformMerchant: 'platform_sushi_hana',
+      platformReturn: 'search',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-page"]').text()).toContain(
       '寿司花',
     )
     expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain(
       '花见十二贯',
     )
 
-    await wrapper.get('[data-testid="food-delivery-platform-merchant-close"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-platform-merchant-back"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBe('search')
     await wrapper.get('[data-testid="food-delivery-platform-page-back"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.platformView).toBeUndefined()
@@ -178,6 +186,57 @@ describe('FoodDeliveryView', () => {
     expect(router.currentRoute.value.path).toBe('/food-delivery')
     expect(router.currentRoute.value.query.category).toBe('cafe')
     expect(router.currentRoute.value.query.platformFilter).toBe('cafe')
+    wrapper.unmount()
+  })
+
+  test('preserves the originating Home page through platform and merchant navigation', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=nearby&from=home&homePage=3')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper.get('[data-testid="food-delivery-platform-search"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'search',
+      from: 'home',
+      homePage: '3',
+    })
+
+    await wrapper.get('[data-testid="food-delivery-platform-search-input"]').setValue('寿司')
+    await wrapper
+      .get('[data-testid="food-delivery-select-platform-merchant-platform_sushi_hana"]')
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'merchant',
+      platformMerchant: 'platform_sushi_hana',
+      platformReturn: 'search',
+      from: 'home',
+      homePage: '3',
+    })
+
+    await wrapper.get('[data-testid="food-delivery-platform-merchant-back"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'search',
+      from: 'home',
+      homePage: '3',
+    })
+
+    await wrapper.get('[data-testid="food-delivery-platform-page-back"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="food-delivery-go-home"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/home',
+      query: { homePage: '3' },
+    })
     wrapper.unmount()
   })
 
@@ -220,22 +279,33 @@ describe('FoodDeliveryView', () => {
       '[data-testid="food-delivery-platform-merchant-card-platform_golden_chicken"]',
     )
     expect(bagelCover.attributes('data-required-asset')).toContain(
-      'merchant-logo-morning-bagel-01.png',
+      'merchant-ad-morning-bagel-01.webp',
     )
-    expect(bagelCover.attributes('data-merchant-visual-type')).toBe('logo')
-    expect(bagelCover.get('img').attributes('src')).toContain('merchant-logo-morning-bagel-01.png')
-    const logoMerchantContracts = [
-      ['platform_berry_morning', 'merchant-logo-berry-morning-01.png'],
-      ['platform_green_basket', 'merchant-logo-green-basket-01.png'],
-      ['platform_golden_chicken', 'merchant-logo-morning-bagel-01.png'],
-      ['platform_nori_table', 'merchant-logo-elm-dim-sum-01.png'],
+    expect(bagelCover.attributes('data-merchant-visual-type')).toBe('ad-cover')
+    expect(bagelCover.get('img').attributes('src')).toContain('merchant-ad-morning-bagel-01.webp')
+    const adCoverMerchantContracts = [
+      ['platform_berry_morning', 'merchant-ad-berry-morning-01.webp'],
+      ['platform_green_basket', 'merchant-ad-green-basket-01.webp'],
+      ['platform_golden_chicken', 'merchant-ad-morning-bagel-01.webp'],
+      ['platform_nori_table', 'merchant-ad-elm-dim-sum-01.webp'],
     ]
-    for (const [merchantId, fileName] of logoMerchantContracts) {
+    for (const [merchantId, fileName] of adCoverMerchantContracts) {
       const cover = wrapper.get(
         `[data-testid="food-delivery-platform-merchant-card-${merchantId}"]`,
       )
-      expect(cover.attributes('data-merchant-visual-type')).toBe('logo')
+      expect(cover.attributes('data-merchant-visual-type')).toBe('ad-cover')
       expect(cover.attributes('data-required-asset')).toContain(fileName)
+    }
+    const photoMerchantContracts = [
+      ['platform_neighborhood_soup', 'merchant-noodle-house-01.png'],
+      ['platform_corner_pizza', 'merchant-coconut-curry-01.png'],
+    ]
+    for (const [merchantId, fileName] of photoMerchantContracts) {
+      const cover = wrapper.get(
+        `[data-testid="food-delivery-platform-merchant-card-${merchantId}"]`,
+      )
+      expect(cover.attributes('data-merchant-visual-type')).toBe('food-photo')
+      expect(cover.get('img').attributes('src')).toContain(fileName)
     }
 
     await viewAllButton.trigger('click')
@@ -276,6 +346,11 @@ describe('FoodDeliveryView', () => {
     await wrapper
       .get('[data-testid="food-delivery-select-platform-merchant-platform_berry_morning"]')
       .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'merchant',
+      platformMerchant: 'platform_berry_morning',
+    })
     expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain(
       '晨光莓莓云朵杯',
     )
@@ -319,16 +394,19 @@ describe('FoodDeliveryView', () => {
       await wrapper
         .get(`[data-testid="food-delivery-select-platform-merchant-${merchantId}"]`)
         .trigger('click')
+      await flushPromises()
       const menu = wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]')
       const imageSlots = menu.findAll('[data-platform-menu-image]')
       expect(imageSlots).toHaveLength(5)
+      expect(imageSlots[0].classes()).toEqual(expect.arrayContaining(['h-28', 'w-28']))
       expect(imageSlots[0].attributes('data-required-asset')).toBe(
         `platform/menus/${assetKey}/menu-item-01.png`,
       )
       expect(imageSlots[4].attributes('data-required-asset')).toBe(
         `platform/menus/${assetKey}/menu-item-05.png`,
       )
-      await wrapper.get('[data-testid="food-delivery-platform-merchant-close"]').trigger('click')
+      await wrapper.get('[data-testid="food-delivery-platform-merchant-back"]').trigger('click')
+      await flushPromises()
     }
 
     wrapper.unmount()
@@ -420,6 +498,7 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-platform-campaign-membership"]').exists()).toBe(
       true,
     )
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-hero"]').text()).toBe('')
     expect(
       wrapper.get('[data-testid="food-delivery-platform-campaign-merchants"]').text(),
     ).toContain('逆站洞韩牛汤饭')
@@ -449,6 +528,7 @@ describe('FoodDeliveryView', () => {
         .get('[data-testid="food-delivery-platform-campaign-hero"]')
         .attributes('data-required-asset'),
     ).toBe('platform/campaigns/weekend-lucky-draw-poster-01.png')
+    expect(wrapper.get('[data-testid="food-delivery-platform-campaign-hero"]').text()).toBe('')
     expect(
       wrapper.get('[data-testid="food-delivery-platform-campaign-benefits"]').text(),
     ).toContain('三种好运')
@@ -482,7 +562,12 @@ describe('FoodDeliveryView', () => {
     await wrapper.get('[data-testid="food-delivery-platform-campaign-primary"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.platformCampaign).toBe('quick_lunch')
-    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-detail"]').text()).toContain(
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'merchant',
+      platformMerchant: 'platform_salad_day',
+      platformReturn: 'campaign',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-page"]').text()).toContain(
       '沙拉日记',
     )
     wrapper.unmount()
@@ -506,7 +591,7 @@ describe('FoodDeliveryView', () => {
     expect(saveButton.attributes('aria-pressed')).toBe('false')
     await saveButton.trigger('click')
     expect(saveButton.attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find('[data-testid="food-delivery-platform-merchant-dialog"]').exists()).toBe(
+    expect(wrapper.find('[data-testid="food-delivery-platform-merchant-page"]').exists()).toBe(
       false,
     )
 
@@ -602,6 +687,7 @@ describe('FoodDeliveryView', () => {
     await wrapper
       .get('[data-testid="food-delivery-select-platform-merchant-platform_hanwoo_gukbap"]')
       .trigger('click')
+    await flushPromises()
     expect(wrapper.get('[data-testid="food-delivery-platform-merchant-menu"]').text()).toContain(
       '海风泡菜煎饼',
     )
@@ -627,9 +713,7 @@ describe('FoodDeliveryView', () => {
     expect(store.platformCartQuantity).toBe(2)
 
     await wrapper.get('[data-testid="food-delivery-platform-menu-view-cart"]').trigger('click')
-    expect(wrapper.find('[data-testid="food-delivery-platform-merchant-dialog"]').exists()).toBe(
-      false,
-    )
+    expect(router.currentRoute.value.query.platformView).toBe('merchant')
     expect(
       wrapper
         .get('[data-testid="food-delivery-platform-utility-sheet"]')
@@ -673,6 +757,7 @@ describe('FoodDeliveryView', () => {
     await wrapper
       .get('[data-testid="food-delivery-select-platform-merchant-platform_hanwoo_gukbap"]')
       .trigger('click')
+    await flushPromises()
     await wrapper
       .get('[data-testid="food-delivery-platform-menu-add-platform_hanwoo_gukbap_menu_1"]')
       .trigger('click')
@@ -969,7 +1054,11 @@ describe('FoodDeliveryView', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.query.restaurantId).toBeUndefined()
-    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-detail"]').text()).toContain(
+    expect(router.currentRoute.value.query).toMatchObject({
+      platformView: 'merchant',
+      platformMerchant: 'platform_hanwoo_gukbap',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-platform-merchant-page"]').text()).toContain(
       '逆站洞韩牛汤饭',
     )
 
@@ -1101,9 +1190,11 @@ describe('FoodDeliveryView', () => {
     const store = useFoodDeliveryStore()
     const itemId = 'food_menu_peach_oolong_cloud'
 
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
-      '金桃芝士蛋糕双享',
-    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-peach-cloud-poster-white-peach-lime"]')
+        .attributes('aria-label'),
+    ).toBe('白桃青柠气泡新品海报')
     expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toContain(
       '鲜果特饮',
     )
@@ -1148,6 +1239,10 @@ describe('FoodDeliveryView', () => {
     )
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
     await flushPromises()
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-fruit_sparkle"]')
+      .trigger('click')
+    await flushPromises()
 
     await wrapper.get(`[data-testid="food-delivery-menu-open-${itemId}"]`).trigger('click')
     await flushPromises()
@@ -1188,6 +1283,10 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toContain(
       'Fresh Fruit',
     )
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-fruit_sparkle"]')
+      .trigger('click')
+    await flushPromises()
     expect(wrapper.text()).toContain('Green Grape Jasmine Fruit Tea')
     wrapper.unmount()
   })
@@ -1212,6 +1311,10 @@ describe('FoodDeliveryView', () => {
         plugins: [router],
       },
     })
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-fruit_sparkle"]')
+      .trigger('click')
+    await flushPromises()
     expect(wrapper.text()).toContain('桃云私房特调')
     await wrapper
       .get('[data-testid="food-delivery-menu-open-food_menu_peach_oolong_cloud"]')
@@ -1242,15 +1345,15 @@ describe('FoodDeliveryView', () => {
     })
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
-      'street_food_stall',
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('street_food_stall')
     expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
       false,
     )
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-broth_noodles"]').exists()).toBe(
-      true,
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-broth_noodles"]').exists(),
+    ).toBe(true)
     expect(wrapper.get('[data-testid="food-delivery-store-menu-section-coolers"]').exists()).toBe(
       true,
     )
@@ -1265,15 +1368,15 @@ describe('FoodDeliveryView', () => {
       '/food-delivery?category=cafe&restaurantId=food_seed_daylight_cafe&entry=shop',
     )
     await flushPromises()
-    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
-      'daypart_journal',
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('daypart_journal')
     expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
       false,
     )
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-espresso_bar"]').exists()).toBe(
-      true,
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-espresso_bar"]').exists(),
+    ).toBe(true)
     expect(wrapper.get('[data-testid="food-delivery-store-menu-section-bakery"]').exists()).toBe(
       true,
     )
@@ -1293,36 +1396,37 @@ describe('FoodDeliveryView', () => {
     expect(daylightDetailImage.classes()).toContain('object-contain')
     await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
 
-    await router.push(
-      '/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop',
-    )
+    await router.push('/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop')
     await flushPromises()
-    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
-      'cafe_counter',
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('harbor_roast_chain')
+    expect(wrapper.get('[data-testid="food-delivery-harbor-carousel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
       false,
     )
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-espresso_classics"]').exists()).toBe(
-      true,
-    )
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-tea_counter_bakes"]').exists()).toBe(
-      true,
-    )
+    await wrapper.get('[data-testid="food-delivery-harbor-nav-menu"]').trigger('click')
+    await flushPromises()
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-espresso_classics"]').exists(),
+    ).toBe(true)
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-tea_counter_bakes"]').exists(),
+    ).toBe(true)
 
     await router.push(
       '/food-delivery?category=dessert&restaurantId=food_seed_sugar_lane&entry=shop',
     )
     await flushPromises()
-    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template')).toBe(
-      'convenience_shelf',
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('convenience_shelf')
     expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
       false,
     )
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-section-layer_cakes"]').exists()).toBe(
-      true,
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-layer_cakes"]').exists(),
+    ).toBe(true)
     await wrapper
       .get('[data-testid="food-delivery-store-menu-section-pastry_case"]')
       .trigger('click')
@@ -1360,9 +1464,11 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
       false,
     )
-    expect(wrapper.get('[data-testid="food-delivery-store-menu-items"]').attributes('data-active-section')).not.toBe(
-      'all',
-    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-store-menu-items"]')
+        .attributes('data-active-section'),
+    ).not.toBe('all')
     wrapper.unmount()
   })
 
@@ -1669,6 +1775,10 @@ describe('FoodDeliveryView', () => {
     const store = useFoodDeliveryStore()
     const peachCloudMenu = store.listMenuByRestaurant('food_seed_peach_cloud')
     const teaItem = peachCloudMenu.find((item) => item.menuSection === 'cloud_tea')
+    const posterItem = peachCloudMenu.find((item) => item.id === 'food_menu_peach_oolong_cloud')
+    const pairingItem = peachCloudMenu.find(
+      (item) => item.id === 'food_menu_peach_golden_hour_set',
+    )
     const peachCloudView = wrapper.get('[data-testid="food-delivery-view"]')
 
     expect(
@@ -1682,37 +1792,47 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
       'food-delivery-store-peach-cloud',
     )
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
-      'Golden Peach Cheesecake Pairing',
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-home-poster-stage"]').exists()).toBe(
+      true,
     )
-    const heroImage = wrapper.get('[data-testid="food-delivery-peach-cloud-hero-cover"] img')
-    const promotionImage = wrapper.get('[data-testid="food-delivery-peach-cloud-promotion-image"]')
-    expect(heroImage.attributes('data-required-asset')).toBe(
-      'peach-cloud/cover/peach-cloud-hero-01.png',
+    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-brand-hero"]').exists()).toBe(
+      false,
     )
-    expect(promotionImage.attributes('data-required-asset')).toBe(
-      'peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
+    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-hero-cover"]').exists()).toBe(
+      false,
     )
-    expect(promotionImage.classes()).toContain('object-contain')
-    expect(heroImage.attributes('src')).not.toBe(promotionImage.attributes('src'))
     expect(
       wrapper
         .get('[data-testid="food-delivery-peach-cloud-header-profile"] img')
         .attributes('data-required-asset'),
     ).toBe('peach-cloud/brand/peach-cloud-mark-01.svg')
-    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(
-      17,
-    )
+    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(0)
     const productAssetPaths = wrapper
       .findAll('img[data-required-asset^="peach-cloud/products/peach-cloud-item-"]')
       .map((image) => image.attributes('data-required-asset'))
-    expect(productAssetPaths).toHaveLength(17)
-    expect(new Set(productAssetPaths).size).toBe(17)
+    expect(productAssetPaths).toHaveLength(0)
     expect(
-      wrapper.get('[data-testid="food-delivery-menu-dish-food_menu_peach_butter_waffle"] img')
-        .element.style.transform,
-    ).toBe('translateY(-0.25rem) scale(1.55)')
+      wrapper.findAll('[data-testid="food-delivery-peach-cloud-campaigns"] button'),
+    ).toHaveLength(3)
+    const posterAssetPaths = wrapper
+      .findAll('img[data-required-asset^="peach-cloud/promotions/posters/"]')
+      .map((image) => image.attributes('data-required-asset'))
+    expect(posterAssetPaths).toEqual([
+      'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-01.png',
+      'peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
+      'peach-cloud/promotions/posters/peach-cloud-poster-mascot-plush-01.png',
+    ])
+    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-featured"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-nav"]').exists()).toBe(true)
+
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-poster-white-peach-lime"]')
+      .trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
+      posterItem.title,
+    )
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
 
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
     await flushPromises()
@@ -1733,25 +1853,18 @@ describe('FoodDeliveryView', () => {
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.shopView).toBeUndefined()
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').exists()).toBe(true)
 
-    await wrapper.get('[data-testid="food-delivery-peach-cloud-featured-action"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-discover"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.shopView).toBe('new')
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
-      'Fresh arrivals',
+      'New release gallery',
     )
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
-      'Waxberry Lychee Iced Tea',
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).not.toContain(
+      'Pick your cloud size',
     )
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
-      'Osmanthus Pear Warm Infusion',
-    )
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
-      'DROP 04 · TEA',
-    )
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-new-page"]').text()).toContain(
-      'DROP 05 · BAKE',
+    expect(wrapper.findAll('[data-testid^="food-delivery-peach-cloud-new-poster-"]')).toHaveLength(
+      3,
     )
     expect(
       wrapper.find('[data-testid="food-delivery-menu-food_menu_peach_golden_hour_set"]').exists(),
@@ -1760,15 +1873,25 @@ describe('FoodDeliveryView', () => {
       wrapper.findAll(
         '[data-testid="food-delivery-peach-cloud-new-page"] [data-testid^="food-delivery-menu-"][data-menu-section]',
       ),
-    ).toHaveLength(6)
-    const weeklyDropImage = wrapper.get(
-      '[data-testid="food-delivery-peach-cloud-weekly-drop-image"]',
+    ).toHaveLength(0)
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
+      pairingItem.title,
     )
-    expect(weeklyDropImage.attributes('data-required-asset')).toBe(
-      'peach-cloud/promotions/peach-cloud-weekly-drop-01.png',
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
+      '48.00',
     )
-    expect(weeklyDropImage.attributes('src')).not.toBe(heroImage.attributes('src'))
-    expect(weeklyDropImage.attributes('src')).not.toBe(promotionImage.attributes('src'))
+    const promotionImage = wrapper.get('[data-testid="food-delivery-peach-cloud-promotion-image"]')
+    expect(promotionImage.attributes('data-required-asset')).toBe(
+      'peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
+    )
+    expect(promotionImage.classes()).toContain('object-contain')
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-featured-action"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('new')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
+      pairingItem.title,
+    )
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
 
     await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
     await flushPromises()
@@ -1797,6 +1920,67 @@ describe('FoodDeliveryView', () => {
       false,
     )
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-nav"]').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  test('routes Peach Cloud membership and mascot goods separately from new releases', async () => {
+    const router = createTestRouter()
+    await router.push(
+      '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-home-club"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('club')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-club-page"]').text()).toContain(
+      '桃子会本月礼遇',
+    )
+
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-club-merch-action"]')
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('merch')
+    expect(wrapper.findAll('[data-testid^="food-delivery-peach-cloud-merch-peach_"]')).toHaveLength(
+      3,
+    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-peach-cloud-merch-campaign-image"]')
+        .attributes('data-required-asset'),
+    ).toBe('peach-cloud/promotions/peach-cloud-mascot-market-01.png')
+
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-add-merch-peach_merch_cloud_plush"]')
+      .trigger('click')
+    expect(store.listCartLineItemsByRestaurant('food_seed_peach_cloud')).toEqual([
+      expect.objectContaining({
+        lineKind: 'merchandise',
+        merchandiseId: 'peach_merch_cloud_plush',
+      }),
+    ])
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-cart"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).toContain(
+      '桃气云朵毛绒',
+    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-cart-peach_merch_cloud_plush__purchase"] img')
+        .attributes('data-required-asset'),
+    ).toBe('peach-cloud/merchandise/peach-cloud-merch-plush-01.png')
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      '桃气云朵毛绒',
+    )
     wrapper.unmount()
   })
 
@@ -2212,6 +2396,173 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('runs Harbor Roast campaigns, pickup choices, branded checkout, and order detail end to end', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push('/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const harborItem = store.findMenuItemById('food_menu_harbor_sea_salt_caramel_latte')
+
+    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(12)
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
+    ).toBe('harbor_roast_chain')
+    expect(wrapper.findAll('[data-testid^="food-delivery-harbor-campaign-"]')).toHaveLength(3)
+
+    for (const campaign of ['member', 'new', 'passport']) {
+      await wrapper
+        .get(`[data-testid="food-delivery-harbor-campaign-${campaign}"]`)
+        .trigger('click')
+      await flushPromises()
+      expect(router.currentRoute.value.query.shopView).toBe(campaign)
+      expect(wrapper.get(`[data-testid="food-delivery-harbor-${campaign}-page"]`).exists()).toBe(
+        true,
+      )
+      await wrapper.get('[data-testid="food-delivery-store-home"]').trigger('click')
+      await flushPromises()
+    }
+
+    await wrapper.get('[data-testid="food-delivery-harbor-supply-entry"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('supply')
+    expect(wrapper.get('[data-testid="food-delivery-harbor-supply-page"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid^="food-delivery-harbor-merchandise-"]')).toHaveLength(4)
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-harbor-redeem-harbor_merch_captain_mug"]')
+        .attributes('disabled'),
+    ).toBeDefined()
+    expect(
+      wrapper.get('[data-testid="food-delivery-harbor-redeem-harbor_merch_captain_mug"]').text(),
+    ).toContain('1 short')
+
+    await wrapper
+      .get('[data-testid="food-delivery-harbor-redeem-harbor_merch_anchor_pin"]')
+      .trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-harbor-buy-harbor_merch_canvas_tote"]')
+      .trigger('click')
+    expect(store.harborRoastBeanStamps).toBe(2)
+    expect(store.listCartLineItemsByRestaurant('food_seed_harbor_roast')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          merchandiseId: 'harbor_merch_anchor_pin',
+          acquisition: 'redeemed_gift',
+          subtotalCents: 0,
+        }),
+        expect.objectContaining({
+          merchandiseId: 'harbor_merch_canvas_tote',
+          acquisition: 'purchase',
+          unitPriceCents: 8900,
+        }),
+      ]),
+    )
+
+    await wrapper
+      .get('[data-testid="food-delivery-harbor-merchandise-harbor_merch_sticker_pack"]')
+      .find('.harbor-merch-image')
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      shopView: 'supply-detail',
+      shopMerchId: 'harbor_merch_sticker_pack',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-harbor-supply-detail-page"]').text()).toContain(
+      'Captain Stamp Sticker Pack',
+    )
+    await wrapper.get('[data-testid="food-delivery-store-home"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="food-delivery-store-home"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="food-delivery-harbor-nav-menu"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('menu')
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-harbor_signatures"]')
+      .trigger('click')
+    await wrapper.get(`[data-testid="food-delivery-menu-open-${harborItem.id}"]`).trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      shopView: 'detail',
+      shopItemId: harborItem.id,
+    })
+    await wrapper
+      .get('[data-testid="food-delivery-harbor-detail-quantity-increase"]')
+      .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-harbor-detail-add"]').trigger('click')
+    expect(store.getCartQuantityByRestaurant('food_seed_harbor_roast')).toBe(4)
+
+    await wrapper.get('[data-testid="food-delivery-harbor-header-bag"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="food-delivery-harbor-pickup-dine-in"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    expect(wrapper.find('[data-testid="food-delivery-checkout-sheet"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-harbor-checkout-sheet"]').text()).toContain(
+      'Dine in',
+    )
+    await wrapper.get('[data-testid="food-delivery-harbor-checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    const pickupOrder = store.orders[0]
+    expect(pickupOrder).toMatchObject({
+      restaurantId: 'food_seed_harbor_roast',
+      fulfillmentMode: 'pickup',
+      pickupMode: 'dine_in',
+      deliveryFeeCents: 0,
+      itemCount: 4,
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          merchandiseId: 'harbor_merch_anchor_pin',
+          acquisition: 'redeemed_gift',
+          unitPriceCents: 0,
+        }),
+        expect.objectContaining({
+          merchandiseId: 'harbor_merch_canvas_tote',
+          acquisition: 'purchase',
+          unitPriceCents: 8900,
+        }),
+      ]),
+    })
+    expect(router.currentRoute.value.query).toMatchObject({
+      shopView: 'order',
+      shopOrderId: pickupOrder.id,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-harbor-order-page"]').text()).toContain(
+      'Dine in',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-harbor-nav-menu"]').trigger('click')
+    await flushPromises()
+    await wrapper.get(`[data-testid="food-delivery-add-${harborItem.id}"]`).trigger('click')
+    await wrapper.get('[data-testid="food-delivery-harbor-nav-bag"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="food-delivery-harbor-mode-delivery"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-harbor-checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    const deliveryOrder = store.orders[0]
+    expect(deliveryOrder).toMatchObject({
+      restaurantId: 'food_seed_harbor_roast',
+      fulfillmentMode: 'delivery',
+      pickupMode: '',
+      deliveryFeeCents: 350,
+    })
+    expect(wrapper.get('[data-testid="food-delivery-harbor-order-page"]').text()).toContain(
+      'Delivery',
+    )
+    wrapper.unmount()
+  })
+
   test('resolves Verdant Day as a minimalist light-food app with route-driven detail, bag, and order pages', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
@@ -2592,6 +2943,10 @@ describe('FoodDeliveryView', () => {
     const peachItem = store.listMenuByRestaurant('food_seed_peach_cloud')[0]
     const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
 
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-fruit_sparkle"]')
+      .trigger('click')
+    await flushPromises()
     await wrapper.get(`[data-testid="food-delivery-add-${peachItem.id}"]`).trigger('click')
     await router.push(
       '/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop',
@@ -2616,8 +2971,8 @@ describe('FoodDeliveryView', () => {
     ])
     expect(store.listCartLineItemsByRestaurant('food_seed_moon_bistro')).toEqual([
       expect.objectContaining({
-      menuItemId: moonItem.id,
-      quantity: 2,
+        menuItemId: moonItem.id,
+        quantity: 2,
       }),
     ])
     wrapper.unmount()
@@ -2700,12 +3055,10 @@ describe('FoodDeliveryView', () => {
     })
 
     const expectPeachCartIsolation = () => {
-      expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(
-        false,
-      )
-      expect(wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text()).not.toContain(
-        moonItem.title,
-      )
+      expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(false)
+      expect(
+        wrapper.get('[data-testid="food-delivery-peach-cloud-bag-page"]').text(),
+      ).not.toContain(moonItem.title)
       expect(wrapper.get('[data-testid="food-delivery-active-cart-quantity"]').text()).toBe('2')
       expect(wrapper.find('[data-testid="food-delivery-active-cart-total"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="food-delivery-checkout"]').exists()).toBe(true)
@@ -2790,9 +3143,7 @@ describe('FoodDeliveryView', () => {
       await router.push(shopRoute)
       await flushPromises()
 
-      expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(
-        false,
-      )
+      expect(wrapper.find('[data-testid="food-delivery-foreign-cart-notice"]').exists()).toBe(false)
       expect(wrapper.find('[data-testid="food-delivery-open-foreign-cart-shop"]').exists()).toBe(
         false,
       )

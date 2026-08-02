@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: transparent Harbor Roast order-status illustration, ready for pickup
+Input images: the supplied Captain Roast PNG is the exact character identity reference
+Primary request: Show the same Captain Roast character presenting one sealed Cream-and-Copper handled takeout bag with a rigid two-cup carrier visible at the top. Preserve the exact face, cream cup body, copper captain cap, dark limbs and anchor identity.
+Style/medium: polished dimensional editorial brand illustration matching the reference, clean readable mobile-app status art, one mascot only.
+Composition/framing: centered full-body three-quarter pose, complete character and entire bag visible, generous padding, crisp opaque silhouette.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, one uniform color with no floor, shadow, gradient, texture or lighting variation.
+Constraints: blank bag with no text or logo, no cast shadow, reflection, extra character, UI or watermark; do not use #00ff00 in the subject.
+Avoid: delivery rider, scooter, Starbucks, siren emblem, green apron, real-brand packaging, soft transparent effects.

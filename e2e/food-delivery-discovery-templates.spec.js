@@ -77,6 +77,14 @@ test('reusable discovery templates stay distinct and menu mosaic can be reassign
         ),
       )
       .toBe(true)
+    await expect(
+      page.locator('[data-testid^="food-delivery-menu-open-"] .discovery-image-fallback'),
+    ).not.toHaveCount(0)
+    await expect(
+      page.locator(
+        '[data-testid^="food-delivery-menu-open-"].is-image-fallback, [data-testid^="food-delivery-menu-open-"] .is-image-fallback',
+      ),
+    ).not.toHaveCount(0)
     await expectNoHorizontalOverflow(page)
 
     await testInfo.attach(`${templateCase.templateId}-${testInfo.project.name}`, {

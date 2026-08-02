@@ -40,7 +40,10 @@ import {
   pushReturnTarget,
 } from '../lib/navigation-return'
 import { buildActiveWorldAppEntryRows } from '../lib/world-pack-app-bindings'
-import { resolveFoodShopDefaultTemplateId } from '../lib/food-shop-presentation'
+import {
+  resolveFoodDeliveryAssetUrl,
+  resolveFoodShopDefaultTemplateId,
+} from '../lib/food-shop-presentation'
 import {
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
@@ -77,6 +80,13 @@ const { appIconImageUrl, refreshPreviews: refreshAppStoreIconPreviews } = useApp
 })
 const DOCK_APP_IDS = new Set(['app_chat', 'app_contacts', 'app_settings', 'app_widgets'])
 const APP_STORE_PROTECTED_HOME_IDS = new Set([APP_STORE_HOME_APP_ID])
+const HARBOR_ROAST_RESTAURANT_ID = 'food_seed_harbor_roast'
+const HARBOR_ROAST_DEFAULT_ICON_URL = resolveFoodDeliveryAssetUrl(
+  '/images/ui-assets/apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png',
+)
+const HARBOR_ROAST_DEFAULT_COVER_URL = resolveFoodDeliveryAssetUrl(
+  '/images/ui-assets/apps/food-delivery/harbor-roast/cover/harbor-roast-cover-01.png',
+)
 const APP_STORE_FILTERS = [
   'all',
   'home',
@@ -457,6 +467,8 @@ const appStoreItems = computed(() =>
       : ''
     const template = entry.shopAppEntry ? resolveShopEntryTemplateOption(templateId) : null
     const coverGalleryAssetId = entry.shopAppEntry ? iconMeta.coverGalleryAssetId || '' : ''
+    const usesHarborRoastDefaultArtwork =
+      entry.restaurantId === HARBOR_ROAST_RESTAURANT_ID && iconMeta.hasOverride === false
     const folderInstalled = entry.shopAppEntry
       ? isMiniAppEntryInstalled(appStoreMiniAppPlacements.value, entry.id)
       : false
@@ -484,16 +496,24 @@ const appStoreItems = computed(() =>
       galleryAssetId: iconMeta.galleryAssetId || '',
       coverGalleryAssetId,
       hasImageIcon: iconMeta.hasImageIcon === true,
-      hasCoverImage: entry.shopAppEntry && Boolean(coverGalleryAssetId),
-      coverImageUrl: entry.shopAppEntry && coverGalleryAssetId ? entryCoverPreviewUrls[entry.id] || '' : '',
+      hasCoverImage:
+        entry.shopAppEntry && Boolean(coverGalleryAssetId || usesHarborRoastDefaultArtwork),
+      coverImageUrl:
+        entry.shopAppEntry && coverGalleryAssetId
+          ? entryCoverPreviewUrls[entry.id] || ''
+          : usesHarborRoastDefaultArtwork
+            ? HARBOR_ROAST_DEFAULT_COVER_URL
+            : '',
       iconImageUrl:
         entry.shopAppEntry && iconMeta.hasImageIcon === true && iconMeta.galleryAssetId
           ? entryImagePreviewUrls[entry.id] || ''
           : iconMeta.hasImageIcon === true && iconMeta.galleryAssetId
             ? appIconImageUrl(entry.id)
-          : entry.worldAppEntry || entry.shopAppEntry
-            ? ''
-            : appIconImageUrl(entry.id),
+          : usesHarborRoastDefaultArtwork
+            ? HARBOR_ROAST_DEFAULT_ICON_URL
+            : entry.worldAppEntry || entry.shopAppEntry
+              ? ''
+              : appIconImageUrl(entry.id),
       displayNameOverride: iconMeta.displayName || '',
       label: resolveDisplayName(baseLabel, iconMeta),
       baseLabel,

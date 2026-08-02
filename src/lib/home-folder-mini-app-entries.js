@@ -23,6 +23,14 @@ const uiAssetUrl = (path = '') =>
   `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
 
 const FOOD_SHOP_FOLDER_ENTRY_DEFAULTS = Object.freeze({
+  food_seed_harbor_roast: Object.freeze({
+    icon: 'fas fa-mug-hot',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'warm',
+  }),
   food_seed_peach_cloud: Object.freeze({
     icon: 'fas fa-cloud',
     iconAsset: uiAssetUrl('apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg'),
@@ -50,12 +58,14 @@ export const buildFoodDeliveryFolderEntries = ({
   const normalizedPlacements = normalizeAppStoreMiniAppPlacements(placements)
   const platformEntry = {
     key: FOOD_DELIVERY_PLATFORM_ENTRY_KEY,
-    zh: '外卖平台',
-    en: 'Food Platform',
+    zh: 'Baemin',
+    en: 'Baemin',
     descZh: '搜索、附近、订单和所有店铺发现。',
     descEn: 'Search, nearby shops, orders, and broad discovery.',
     icon: 'fas fa-utensils',
-    accent: 'dark',
+    iconAsset: uiAssetUrl('apps/food-delivery/platform/brand/baemin-entry-icon-01.png'),
+    iconAssetFullBleed: true,
+    accent: 'cool',
     route: FOOD_DELIVERY_ROUTE,
     folderQuery: {
       entry: 'platform',
@@ -93,6 +103,8 @@ export const buildFoodDeliveryFolderEntries = ({
         descEn: shortDescription,
         icon: presentation.icon || entryDefaults.icon || 'fas fa-store',
         iconAsset: presentation.hasOverride ? '' : entryDefaults.iconAsset || '',
+        iconAssetFullBleed:
+          presentation.hasOverride === false && Boolean(entryDefaults.iconAssetFullBleed),
         accent: presentation.accent || entryDefaults.accent || 'warm',
         route: FOOD_DELIVERY_ROUTE,
         folderQuery: {

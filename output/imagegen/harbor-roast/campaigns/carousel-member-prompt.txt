@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: text-free Harbor Roast Home carousel artwork, member welcome campaign
+Input images: the supplied Captain Roast PNG is the exact character identity reference
+Primary request: Create a polished member-welcome campaign scene using the same Captain Roast character without redesigning the face, cup body, copper captain cap, cream-and-copper palette, or anchor accessory.
+Scene/backdrop: premium modern coffee-chain counter with Cream #F9F2ED and Blush #EDD6C8 planes, restrained Copper #C67C4E details, subtle Ink #313131 depth, soft studio-cafe lighting.
+Subject: Captain Roast on the far right warmly presenting one unbranded first cup and two small abstract coffee-bean tokens. The character must remain recognizable and visually dominant; exactly one mascot.
+Style/medium: polished dimensional editorial brand illustration matching the supplied mascot, sophisticated chain-app advertising, not a children's poster.
+Composition/framing: landscape 3:2 source designed for a later 6:5 crop. Keep the left 60% calm and low detail for code-rendered copy. Keep all important art inside the right 40% and away from the outer edges. Leave generous top and bottom crop tolerance.
+Color palette: Copper #C67C4E, Blush #EDD6C8, Ink #313131, Line #E3E3E3, Cream #F9F2ED.
+Constraints: no text, no letters, no numbers, no prices, no buttons, no UI cards, no readable stamps, no watermark, no extra character, no duplicate cup.
+Avoid: Starbucks, siren or similar circular emblem, green apron, real-brand packaging, dark teal, neon green, childish confetti.

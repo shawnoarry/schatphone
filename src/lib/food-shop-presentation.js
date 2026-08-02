@@ -20,7 +20,10 @@ export const resolveFoodDeliveryAssetUrl = (
   if (!origin || !/^https?:\/\//i.test(url)) return url
   try {
     const parsed = new URL(url)
-    if (parsed.origin !== origin || !parsed.pathname.startsWith(FOOD_DELIVERY_PUBLIC_ASSET_PREFIX)) {
+    if (
+      parsed.origin !== origin ||
+      !parsed.pathname.startsWith(FOOD_DELIVERY_PUBLIC_ASSET_PREFIX)
+    ) {
       return url
     }
     return `${normalizedBaseUrl}${parsed.pathname.slice(1)}${parsed.search}${parsed.hash}`
@@ -36,7 +39,7 @@ export const FOOD_SHOP_DEFAULT_TEMPLATE_BY_RESTAURANT_ID = Object.freeze({
   food_seed_jade_hearth: 'jade_table_menu',
   food_seed_verdant_day: 'minimal_light_food',
   food_seed_daylight_cafe: 'daypart_journal',
-  food_seed_harbor_roast: 'cafe_counter',
+  food_seed_harbor_roast: 'harbor_roast_chain',
   food_seed_sugar_lane: 'convenience_shelf',
   food_seed_river_noodles: 'street_food_stall',
 })

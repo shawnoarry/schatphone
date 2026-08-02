@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: transparent Harbor Roast empty-orders illustration
+Input images: the supplied Captain Roast PNG is the exact character identity reference
+Primary request: Show the same Captain Roast character thoughtfully looking into one open blank captain's order logbook, holding a small Copper pencil above an empty page. Preserve the exact face, cream cup body, copper captain cap, dark limbs and anchor identity.
+Style/medium: polished dimensional editorial brand illustration matching the reference, clean readable mobile-app empty-state art, one mascot only.
+Composition/framing: centered full-body three-quarter pose, complete character and logbook visible, generous padding, crisp opaque silhouette.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, one uniform color with no floor, shadow, gradient, texture or lighting variation.
+Constraints: absolutely blank pages with no text, marks or lines; no cast shadow, reflection, extra character, UI or watermark; do not use #00ff00 in the subject.
+Avoid: sad tears, warning signs, Starbucks, siren emblem, green apron, soft transparent effects.

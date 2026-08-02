@@ -92,11 +92,11 @@ English: no readable text, no brand logo, no watermark, no fake app screen, no p
 ### Status And Naming / 状态与命名
 
 - 冻结日期：`2026-08-01`。
-- 当前代码入口仍显示 `外卖平台 / Food Platform`，入口键仍为 `food_delivery_platform`，路由仍使用 `entry=platform`。
+- 当前代码入口显示 `Baemin`，入口键仍为 `food_delivery_platform`，路由仍使用 `entry=platform`。
 - 用户选择的沉浸式平台名为 `Baemin`，中文和英文界面均使用这一英文名称，不使用韩文。该名称是有意采用的现实平台指向，不再使用此前提议的虚构名 `Minto / 敏途`。
-- `Baemin` 品牌名必须由代码渲染。生图只生成无文字场景和食物，不把 `Baemin`、价格、按钮或活动文案烘入图片。不要让生成模型凭空重画、近似或变形官方 Logo、字标或吉祥物；如果后续确需官方品牌图形，应接入来源明确的正式文件并记录来源，而不是把它列为生成任务。
-- 本节是需求与跨机器续接合同，不代表已经开始生成。当前没有属于本轮冻结要求的新请求记录、候选母版、正式运行时副本或桌面/移动视觉验收。
-- 仓库中已经存在的横幅、装饰和五张商户摄影封面只是既有运行时文件。平台层素材可在实际页面复核后继续使用；五张商户封面必须按本节新的店铺摄影胶囊重新评估，不能仅因路径存在就标记为已接受。
+- `Baemin` 品牌名必须由代码渲染。固定活动广告语可以按用户确认烘入横幅或活动海报，但图片不得烘入 `Baemin` 品牌名、价格、按钮或可交互 UI 文案。不要让生成模型凭空重画、近似或变形官方 Logo、字标或吉祥物；如果后续确需官方品牌图形，应接入来源明确的正式文件并记录来源，而不是把它列为生成任务。
+- 本节的多商户摄影仍是跨机器续接合同；当前已交付平台层的透明骑手返工、周末横幅文案版、周末活动海报、十一家各一张菜单试片、两张新增摄影封面、四张透明商户 Logo 和十张透明分类图标。请求、候选、正式副本与视觉验收记录位于 `output/imagegen/baemin-platform/`。
+- 仓库中五张既有商户摄影封面仍须按本节新的店铺摄影胶囊重新评估，不能仅因路径存在就标记为已接受。新增的山茶牛肉面馆与南风椰香咖喱封面已按各自胶囊接受。平台三张横幅已在取消重复 UI 叠字后的实际页面复核；骑手、四张商户 Logo 和十张分类图标均已替换为真正带 alpha 通道的版本。
 
 ### Product Boundary / 产品边界
 
@@ -132,7 +132,7 @@ Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台
 | 莓果晨光 | 粉彩产品展台上的真实酸奶、鲜果与烘焙，甜品广告棚拍而非真实店景 | 柔光箱、圆形或阶梯展台、浅粉与晨光黄，玻璃和白瓷受控变化 | 黏土甜品、Peach Cloud 的桃子/云朵符号、过度儿童化 |
 | 青禾鲜食补给站 | 真实蔬果、早餐包和调味品的俯拍目录摄影，突出社区补给与包装组合 | 接近 `90°`，均匀日光，色纸分区、牛皮纸袋、网篮和透明盒 | 高级餐厅摆盘、虚假进口标签、所有商品散装无包装 |
 | 山茶牛肉面馆 | 街坊档口或市场面摊的手机实拍，普通但可信，不做精致商业棚拍 | 手机轻微广角、自动白平衡、混合灯光，搪瓷/密胺碗、不锈钢台面，允许受控环境杂物 | 玉石中餐厅、统一纯色棚拍、严重虚化和脏乱卫生问题 |
-| 早安贝果咖啡 | 清晨柜台自然光的日常摄影，介于手机随手拍与小型品牌编辑之间 | 约 `40°`，窗光、普通木柜台、烘焙纸和无字外带杯，允许轻微颗粒 | Harbor Roast 的深石台/铜色连锁语言、现实咖啡品牌杯套 |
+| 早安贝果咖啡 | 清晨柜台自然光的日常摄影，介于手机随手拍与小型品牌编辑之间 | 约 `40°`，窗光、普通木柜台、烘焙纸和无字外带杯，允许轻微颗粒 | Harbor Roast 的暖铜/奶油/深炭连锁语言、现实咖啡品牌杯套 |
 | 榆树里蒸点铺 | 早市蒸点摊的手机实拍，蒸汽、塑料托盘和不锈钢蒸笼形成生活感 | 手机镜头、顶灯与晨光混合，略紧裁切，普通白盘、蒸笼、外带袋 | 古典酒楼精致摆盘、宫廷布景、把点心做成黏土模型 |
 | 南风椰香咖喱 | 热带色块广告布景中的真实咖喱与米饭，场景大胆但食物真实 | `35°` 至 `45°`，饱和侧光，蕉叶、色纸、搪瓷盘与玻璃杯，黄绿和珊瑚色分工 | 暗棕印度餐厅模板、插画咖喱、随机热带品牌文字 |
 
@@ -150,18 +150,19 @@ Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台
 
 | 分组 | 合同数量 | 冻结时状态 |
 | --- | ---: | --- |
-| 平台首页横幅 | 3 | 运行时已有 3；按 Baemin 页面裁切复核后可继续使用 |
-| 周末活动海报 | 1 | 缺 1 |
-| 商户封面或 Logo | 11 | 运行时已有 5 张摄影封面，但须按新胶囊复核；另缺 2 张摄影封面和 4 张透明 Logo |
-| 商户菜单商品图 | 55 | 缺 55，必须按 `11 家 x 每家 5 张` 分组生成 |
-| 平台分类图标 | 10 | 缺 10 个真正透明 PNG；现有烘入棋盘格的 RGB 图不能交付 |
-| 平台装饰 | 4 | 骑手、优惠券、外卖袋和小票类运行时素材已有可复核版本 |
+| 平台首页横幅 | 3 | 已在首页完成裁切复核；会员横幅已将全部韩文替换为中文，周末横幅已重做大标题比例与左侧广告层级，三张图不再叠加可见 UI 文案 |
+| 周末活动海报 | 1 | 已交付并接入 `900x1200`、`3:4` 固定中文广告文案版 |
+| 商户封面或 Logo | 11 | 新增 2 张摄影封面和 4 张透明 Logo 已交付并接入；原有 5 张摄影封面仍须按新胶囊复核 |
+| 平台入口图标 | 1 | 已交付原创薄荷青外卖袋与路线心形图标；不含官方 Logo、字标或吉祥物 |
+| 商户菜单商品图 | 55 | 已交付 11 家各 1 张代表性 `menu-item-01.png` 试片；剩余 44 张必须继续按店铺分组生成 |
+| 平台分类图标 | 10 | 10 个 `1024x1024` 真正透明 RGBA PNG 已交付并接入；旧棋盘格 RGB 图仅保留为历史源图 |
+| 平台装饰 | 4 | 骑手已接受为真正透明的 `1024x1024` RGBA PNG；其余优惠券、外卖袋和小票类运行时素材仍待复核 |
 | 当前页面订单流程图 | 7 | 缺 7：结算、空订单和五个当前状态 |
 | 未来延误状态图 | 1 | 缺 1，当前不显示，可后置 |
 | 摄影型商户订单标记 | 7 | 缺 7；四家 Logo 型商户直接复用店铺 Logo |
 | Baemin 官方品牌图形 | 0 个生成目标 | 不由生图模型重画；如后续使用，必须接入来源明确的正式文件并单独记录来源 |
 
-按当前页面缺口计算，需要生成 `86` 张当前正式素材，另有 1 张未来延误状态图可后置。如果五张既有商户封面未通过新摄影胶囊复核，其重做数量在验收时另加，不得用“文件已存在”掩盖风格不符。
+扣除已交付的周末活动海报、11 张菜单代表性试片、2 张新增摄影封面、4 张透明商户 Logo、10 张透明分类图标和 4 张横向商户广告封面，当前页面仍需生成 `54` 张正式素材，另有 1 张未来延误状态图可后置。新增的原创入口图标与骑手返工均不计入原 `86` 张缺失目标。如果五张既有商户封面未通过新摄影胶囊复核，其重做数量在验收时另加，不得用“文件已存在”掩盖风格不符。
 
 ### Resume Paths And Generation Order / 续接路径与生成顺序
 
@@ -179,9 +180,9 @@ Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台
 续接时按以下顺序执行：
 
 1. 从当前代码重新核对 11 家店名、五道菜顺序、稳定路径、卡片裁切和详情槽位，不只依赖本文的历史快照。
-2. 为 11 家商户各生成 1 张代表性菜单试片，共 11 张；先验证商户之间确实不同，再批量生成剩余 44 张。
-3. 脆脆炸鸡屋先冻结原创 IP 锚点；任何带 IP 的商品图都要引用同一锚点。
-4. 生成缺失活动海报、六个商户封面/Logo 和十个分类图标；Baemin 名称由代码渲染，官方品牌图形不进入生图队列。
+2. 11 家商户各 1 张代表性菜单试片已生成、接入并通过跨店差异复核；继续批量生成剩余 44 张。
+3. 脆脆炸鸡屋原创 IP 锚点已冻结在 `output/imagegen/baemin-platform/references/chicken-crisp-ip-anchor-01.png`；任何带 IP 的商品图都要引用同一锚点。
+4. 周末活动海报、两张新增摄影封面、四张透明商户 Logo 和十张透明分类图标均已完成并接入。Baemin 名称继续由代码渲染，官方品牌图形不进入生图队列。
 5. 按商户逐店完成五张菜单图；每完成一家就记录请求参数、候选比较和接受理由，不跨店混用参考图。
 6. 最后生成当前订单流程图和七个商户订单标记；未来延误状态单独标为可后置。
 7. 只有正式副本接入 `public/` 并完成实际桌面与移动页面检查后，才能把状态从“已生成候选”更新为“已接入正式素材”，再更新为“已完成视觉验收”。
@@ -190,9 +191,9 @@ Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台
 
 - 食物主体保持可信摄影质感，配料、数量、器皿和中英文菜单语义一致。
 - 纯色或图形布景不能让食物看起来像 3D 模型；品牌 IP 只能作为次要道具，不能替代或遮挡食物。
-- 小吃摊/手机实拍允许普通和不规整，但必须清楚、卫生可信、主体完整，在 `64x64px` 缩略图仍能识别。
+- 小吃摊/手机实拍允许普通和不规整，但必须清楚、卫生可信、主体完整，在 `112x112px` 商家页缩略图仍能识别。
 - 同店五张图的镜头、光线、材料和品牌道具形成家族感；跨店一眼可区分，不能只靠文件名或菜品内容判断。
-- 商户封面需要检查横向卡片裁切；菜单图同时检查 `64x64px` 缩略图和详情大图，不能为了卡片裁切破坏详情主体。
+- 商户封面需要检查横向卡片裁切；菜单图同时检查 `112x112px` 商家页缩略图和详情大图，不能为了卡片裁切破坏详情主体。
 - 检查重复素材、加载失败、诊断占位图、横向溢出、控制台错误，以及桌面和移动视口的主体完整度。
 - 未完成上述检查时，文档只能写“需求已记录”或“已生成候选”，不得声称正式交付或视觉验收。
 
@@ -201,6 +202,8 @@ Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台
 用途：外卖平台首页广告轮播。图片只做氛围和主体视觉，文字在代码里编辑。
 
 建议尺寸：`900x300` 或 `750x250`。
+
+> 2026-08-02 用户验收覆盖：三张轮播图的现有视觉风格保留，Hero 区不再叠加可见 UI 文案；固定活动广告语可以直接成为图片构图的一部分。下方无字 prompt 保留为历史生成基线，不再约束本轮已接受的成图。
 
 ### Banner 1: Membership Free Delivery / 会员免配送
 
@@ -290,7 +293,7 @@ English: Realistic commercial food photography of crispy Korean fried chicken, g
 
 ### Diverse Merchant Expansion / 多样店型扩展
 
-新增六家平台小店不再统一使用食物摄影头图。山茶牛肉面馆和南风椰香咖喱继续需要真实菜品封面；莓果晨光、青禾鲜食补给站、早安贝果咖啡、榆树里蒸点铺改为透明 PNG 店铺 Logo，以便首页同时出现食物摄影、品牌标志和店型渐变三种视觉语言。
+新增六家平台小店不再统一使用同一种摄影模板。山茶牛肉面馆和南风椰香咖喱保留真实菜品封面；莓果晨光、青禾鲜食补给站、早安贝果咖啡、榆树里蒸点铺在发现页使用横向广告封面，让综合平台中的商户在品牌文案、食物主体和原创角色上明显分开。四张透明 PNG 店铺标志不再承担封面职责，只用于订单列表等紧凑身份位置。
 
 食物摄影主图：
 
@@ -307,7 +310,26 @@ English: Realistic commercial food photography of crispy Korean fried chicken, g
 English: Realistic commercial food photography for a mobile delivery merchant card, clearly recognizable food centered in frame, bright natural restaurant light, clean lived-in tabletop, composed for a horizontal 3:2 crop, premium but not overly staged, no text, no brand logo, no watermark, PNG.
 ```
 
-店铺 Logo 统一目录：
+广告封面统一目录：
+
+```text
+public/images/ui-assets/apps/food-delivery/platform/merchants/covers/
+```
+
+| 文件名                                | 店铺           | 固定中文广告文案                         |
+| ------------------------------------- | -------------- | ---------------------------------------- |
+| `merchant-ad-berry-morning-01.webp`   | 莓果晨光       | `莓果晨光 / 把早晨装进一杯`              |
+| `merchant-ad-green-basket-01.webp`    | 青禾鲜食补给站 | `青禾鲜食补给站 / 今天的新鲜，18分钟送到` |
+| `merchant-ad-morning-bagel-01.webp`   | 早安贝果咖啡   | `早安贝果咖啡 / 咬下今天第一束光`        |
+| `merchant-ad-elm-dim-sum-01.webp`     | 榆树里蒸点铺   | `榆树里蒸点铺 / 一笼热气，刚好到家`      |
+
+```text
+中文：用于综合外卖平台商户发现卡片的横向品牌广告，1360x640。左侧约 42% 只放指定的两级简体中文广告文案，右侧约 58% 放真实食物主体和一只原创的小型商户角色。文案、食物和角色都必须在安全区内，缩小到 272x128 仍能识别。不要 UI 按钮、价格、优惠券、App 截图、官方 Baemin 标志或吉祥物、其他品牌、水印、韩文或额外英文。
+
+English: Horizontal merchant advertisement for discovery inside a multi-store delivery platform, 1360x640. Reserve roughly 42% on the left for only the specified two-level Simplified Chinese ad copy, and use the right 58% for real food plus one small original merchant character. Keep copy, food, and character inside their safe areas and recognizable at 272x128. No UI button, price, coupon, app mockup, official Baemin mark or mascot, other brand, watermark, Korean copy, or extra English.
+```
+
+店铺身份 Logo 统一目录：
 
 ```text
 public/images/ui-assets/apps/food-delivery/platform/merchants/logos/
@@ -321,16 +343,16 @@ public/images/ui-assets/apps/food-delivery/platform/merchants/logos/
 | `merchant-logo-elm-dim-sum-01.png`   | 榆树里蒸点铺   | 榆树叶、竹蒸笼与蒸汽线条组成的街坊标志   |
 
 ```text
-中文：用于手机外卖平台小店头图的独立品牌 Logo，单一清晰图形标志，透明背景，轮廓简洁但有品牌记忆点，适合横向卡片中居中留白展示，也能在 48px 尺寸识别，使用对应店铺的食物或器物意象，不要可读店名，不要英文字母，不要价格，不要 UI 卡片，不要水印，带 alpha 透明通道的 PNG，建议源图 768x768。
+中文：用于订单列表与状态页紧凑身份位置的独立商户标志，单一清晰图形、透明背景、轮廓简洁但有品牌记忆点，在 48px 尺寸仍能识别，使用对应店铺的食物或器物意象，不要可读店名、英文字母、价格、UI 卡片或水印，带 alpha 透明通道的 PNG，建议源图 768x768。
 
-English: Standalone brand logo for a mobile food-delivery merchant cover, one clear memorable symbol on a transparent background, simple distinctive silhouette, designed for centered whitespace in a horizontal card and readable at 48px, using food or object cues specific to the merchant, no readable shop name, no letters, no price, no UI card, no watermark, PNG with alpha, suggested source size 768x768.
+English: Standalone merchant identity mark for compact order and status positions, one clear memorable symbol on a transparent background, simple distinctive silhouette and readable at 48px, using food or object cues specific to the merchant, no readable shop name, no letters, no price, no UI card, no watermark, PNG with alpha, suggested source size 768x768.
 ```
 
-这四张 Logo 也作为订单列表的商家身份图使用，不再另外生成同店的订单小图。
+这四张 Logo 作为订单列表的商家身份图使用，不再作为发现页封面，也不再另外生成同店的订单小图。
 
 ### Platform Menu Product Pack / 平台菜单产品图组
 
-Food Platform 的 11 家小店各有 5 道菜，共需 `55` 张方形产品图。页面已经为每道菜预留 `64x64px` 稳定槽位；正式 PNG 缺失时显示高对比诊断占位图，并在 DOM 上保留完整 `data-required-asset` 路径。
+Food Platform 的 11 家小店各有 5 道菜，共需 `55` 张方形产品图。独立商家页已经为每道菜预留 `112x112px` 稳定槽位；正式 PNG 缺失时显示高对比诊断占位图，并在 DOM 上保留完整 `data-required-asset` 路径。
 
 统一目录：
 
@@ -357,9 +379,9 @@ public/images/ui-assets/apps/food-delivery/platform/menus/
 统一生成提示：
 
 ```text
-中文：方形真实商业食物摄影，用于手机外卖菜单产品缩略图，单份菜品清晰居中，主体占画面约 75%，边缘保留安全区，光线明亮自然，食物细节真实诱人，背景简洁且符合对应店铺气质，适合在 64px 尺寸识别，不要文字，不要价格，不要品牌 logo，不要水印，PNG。
+中文：方形真实商业食物摄影，用于手机外卖菜单产品缩略图，单份菜品清晰居中，主体占画面约 75%，边缘保留安全区，光线明亮自然，食物细节真实诱人，背景简洁且符合对应店铺气质，适合在 112px 尺寸识别，不要文字，不要价格，不要品牌 logo，不要水印，PNG。
 
-English: Square realistic commercial food photography for a mobile delivery menu thumbnail, one dish clearly centered and filling about 75% of the frame, safe padding around edges, bright natural light, realistic appetizing detail, simple background matching the merchant identity, readable at 64px, no text, no price, no brand logo, no watermark, PNG.
+English: Square realistic commercial food photography for a mobile delivery menu thumbnail, one dish clearly centered and filling about 75% of the frame, safe padding around edges, bright natural light, realistic appetizing detail, simple background matching the merchant identity, readable at 112px, no text, no price, no brand logo, no watermark, PNG.
 ```
 
 ## 3. Moon Bistro Assets / Moon Bistro 素材
@@ -414,14 +436,14 @@ English: Square realistic food photo for a modern fine-dining dark menu card, sm
 
 用途：如果想把平台分类从字体图标升级为更有质感的图片图标，可以生成这一组。
 
-建议尺寸：`512x512`，透明底。
+交付尺寸：`1024x1024`，透明底。
 
-当前素材状态（2026-07-24）：
+当前素材状态（2026-08-02）：
 
-- 仓库里已有 `source-sheets/food-category-icon-sheet-01.png`、`source-sheets/food-category-icon-sheet-02.png` 和两张 `category-rice-bowl-*.png`；
-- 这些文件都是 RGB PNG（color type 2），没有 alpha 透明通道，透明棋盘格已经烘入像素，不能直接作为首页小图标；
-- 首页当前继续使用 Font Awesome 图标兜底，并在每个图标槽位上通过 `data-required-asset` 标注下面 10 个目标文件名；
-- 后续生成或切图时必须输出真正带 alpha 的独立 PNG，不要把整张 3x5 源图直接裁成仍带棋盘底的方块。
+- 下面 10 个稳定路径均已交付独立 `1024x1024` RGBA PNG，存在真实透明像素，不含可见洋红键色或烘入棋盘格；
+- 首页优先显示新 PNG，图片加载成功后隐藏 Font Awesome 图标；加载失败时旧字体图标仍作为兜底；
+- `source-sheets/food-category-icon-sheet-01.png`、`source-sheets/food-category-icon-sheet-02.png` 和两张 `category-rice-bowl-*.png` 仍是烘入棋盘格的 RGB 历史源图，不得重新接入运行时；
+- 无损 RGBA 母版和浅色背景验收表保留在 `output/imagegen/baemin-platform/`，运行时文件保持同尺寸并做保模式压缩以降低解码开销。
 
 目标目录：`public/images/ui-assets/apps/food-delivery/platform/categories/icons/`
 
@@ -527,6 +549,8 @@ English: Cute polished 3D small sushi platter icon with salmon nigiri and one ma
 English: Cute 3D delivery rider on teal scooter, Korean food delivery app mascot style, friendly round character, teal helmet, delivery box, side view, transparent background, soft shadow, high detail, no text, no logo, no watermark, PNG with alpha.
 ```
 
+接受状态：`delivery-rider-mascot-01.png` 已于 2026-08-02 替换为 `1024x1024` RGBA PNG。配置的图片服务拒绝直接透明输出后，使用纯色键控候选进行本地 alpha 提取；运行时复核无棋盘格底，配送箱仅保留原创白色爱心图形。
+
 ### Free Delivery Coupon / 免配送优惠券
 
 ```text
@@ -621,9 +645,9 @@ platform-merchant-mark-coconut-curry-01.png
 
 ## 5. Peach Cloud Independent App / Peach Cloud 独立店 App
 
-Peach Cloud 使用 Iron Grey `#444545`、Jet Black `#2B303A`、浅绿 `#F2FBE0`、Petal Rouge `#FD6C93` 和 Pink Mist `#FDA1B8` 建立独立品牌感。浅绿承担大面积背景，深灰承担正文与固定导航，高饱和粉只用于主要操作和选中状态，粉雾用于顶栏与辅助层；`#FD6C93` 上使用 Jet Black 文字，不使用小号白字。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 提供原始信息架构依据，当前视觉在该结构上完成桃子云自己的品牌刷新。运行时正式素材共 `26` 个：`20` 张 PNG 和 `6` 个 SVG；目录额外保留 `5` 个未被桃子云引用的原版分类 SVG，便于其他店铺复用。页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
+Peach Cloud 使用 Iron Grey `#444545`、Jet Black `#2B303A`、浅绿 `#F2FBE0`、Petal Rouge `#FD6C93` 和 Pink Mist `#FDA1B8` 建立独立品牌感。浅绿承担大面积背景，深灰承担正文与固定导航，高饱和粉只用于主要操作和选中状态，粉雾用于顶栏与辅助层；`#FD6C93` 上使用 Jet Black 文字，不使用小号白字。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 提供原始信息架构依据，当前视觉在该结构上完成桃子云自己的品牌刷新。正式运行时素材包共 `33` 个：`27` 张 PNG 和 `6` 个 SVG；其中新增的三张 `2:3` 竖版海报是带完整广告文案的整图素材，页面不再在首页海报上叠加代码遮罩或分栏文案。目录额外保留 `5` 个未被桃子云引用的原版分类 SVG，便于其他店铺复用。页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
 
-可供人工修图的生成母版保存在 `output/imagegen/peach-cloud-refresh/ads/` 与 `output/imagegen/peach-cloud-refresh/products/`；产品目录同时保留高分辨率原图、正式 `768x768` 版本和一张套图预览。页面运行只依赖 `public/images/ui-assets/apps/food-delivery/peach-cloud/` 中的正式资源，不依赖 `output/` 母版或 `tmp/imagegen/` 中的 CLI 请求清单。
+可供人工修图的生成母版保存在 `output/imagegen/peach-cloud-refresh/ads/`、`output/imagegen/peach-cloud-refresh/products/`、`output/imagegen/peach-cloud-refresh/merchandise/` 与 `output/imagegen/peach-cloud-refresh/posters/`；产品目录同时保留高分辨率原图、正式 `768x768` 版本和一张套图预览，周边与海报目录保留精确提示词、验收记录与正式文件副本。页面运行只依赖 `public/images/ui-assets/apps/food-delivery/peach-cloud/` 中的正式资源，不依赖 `output/` 母版或 `tmp/imagegen/` 中的 CLI 请求清单。
 
 ### Asset Contract / 素材合同
 
@@ -644,7 +668,16 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
 │  └─ meal.svg
 ├─ promotions/
 │  ├─ peach-cloud-golden-pairing-01.png
-│  └─ peach-cloud-weekly-drop-01.png
+│  ├─ peach-cloud-weekly-drop-01.png
+│  ├─ peach-cloud-mascot-market-01.png
+│  └─ posters/
+│     ├─ peach-cloud-poster-white-peach-lime-01.png
+│     ├─ peach-cloud-poster-waxberry-lychee-01.png
+│     └─ peach-cloud-poster-mascot-plush-01.png
+├─ merchandise/
+│  ├─ peach-cloud-merch-plush-01.png
+│  ├─ peach-cloud-merch-bag-charm-01.png
+│  └─ peach-cloud-merch-tote-01.png
 └─ products/
    ├─ peach-cloud-item-01.png
    ├─ peach-cloud-item-02.png
@@ -668,11 +701,18 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
 | 文件                                                | 内容                                                                          | 建议源尺寸 / 裁切                                                                                       |
 | --------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `cover/peach-cloud-hero-01.png`                     | 白桃气泡饮、桃子云吉祥物与云朵场景，用于全宽品牌 Hero                         | `1536x1024`；右侧主体清晰，左侧保留英文品牌文案安全区                                                   |
-| `promotions/peach-cloud-golden-pairing-01.png`      | 白桃气泡饮与桃子芝士蛋糕，用于 `30% OFF` 活动                                 | `1536x1024`；主体居中偏右，左侧适配半透明促销文案压盖                                                   |
+| `promotions/peach-cloud-golden-pairing-01.png`      | 白桃气泡饮与桃子芝士蛋糕，用于固定 `48 CNY` 横向套餐广告右侧产品画面            | `1536x1024`；产品完整，左侧套餐名与价格由卡片代码独立渲染；点击广告打开标准商品详情卡                     |
 | `promotions/peach-cloud-weekly-drop-01.png`         | 白桃饮品、甜点与云桃吉祥物，用于 New 页周更品牌画面                           | `1536x1024`；主体集中在右半区，左侧保留大标题安全区                                                     |
+| `promotions/peach-cloud-mascot-market-01.png`       | 小桃子毛绒、挂件与托特包的周边活动主图                                         | `1536x1024`；三件商品集中在右半区，左侧保留代码文案安全区                                               |
+| `promotions/posters/peach-cloud-poster-white-peach-lime-01.png` | 白桃青柠气泡新品整图海报                                            | `1024x1536`、`2:3`；内含准确品名、`26 CNY` 与开售时间，不另叠 UI 文案                                   |
+| `promotions/posters/peach-cloud-poster-waxberry-lychee-01.png` | 杨梅荔枝冰茶季节整图海报                                             | `1024x1536`、`2:3`；内含准确品名、`29 CNY` 与限时信息，不另叠 UI 文案                                   |
+| `promotions/posters/peach-cloud-poster-mascot-plush-01.png` | 桃气云朵毛绒周边整图海报                                                | `1024x1536`、`2:3`；内含准确品名、`99 CNY` 与发售信息，不另叠 UI 文案                                   |
+| `merchandise/peach-cloud-merch-plush-01.png`        | 桃气云朵毛绒                                                                   | `1024x1024`；完整毛绒主体、短绒材质和裁切安全边距                                                       |
+| `merchandise/peach-cloud-merch-bag-charm-01.png`    | 桃气随行挂件                                                                   | `1024x1024`；完整挂件与粉金扣具                                                                        |
+| `merchandise/peach-cloud-merch-tote-01.png`         | 桃云野餐托特包                                                                 | `1024x1024`；完整包体、粉色提带、内袋与吉祥物刺绣                                                      |
 | `brand/peach-cloud-mark-01.svg`                     | 白桃、云顶、绿色叶片与表情组成的独立品牌标志                                  | 原生 `48x48` 矢量，适合小尺寸店铺栏与文件夹入口                                                         |
 | `categories/peach-cloud-*.svg`                      | Fresh Fruit、Frozen、Tea & Coffee、Bakes、Seasonal 五个桃子云专属 IP 分类插画 | 统一 `38x38` 画布、透明背景和圆润彩色线稿；Fresh Fruit 同时表达桃子、柑橘与果实，不绑定单一果味或气泡水 |
-| `categories/{vegan,dessert,drinks,snacks,meal}.svg` | 原版五枚通用分类标记，桃子云不再引用，保留给其他店铺复用                      | 保持原文件内容与原路径，不纳入桃子云 `26` 个运行时正式素材计数                                          |
+| `categories/{vegan,dessert,drinks,snacks,meal}.svg` | 原版五枚通用分类标记，桃子云不再引用，保留给其他店铺复用                      | 保持原文件内容与原路径，不纳入桃子云 `33` 个运行时正式素材计数                                          |
 | `products/peach-cloud-item-01.png`                  | White Peach Lime Sparkler                                                     | `768x768`；白桃、青柠与薄荷气泡饮                                                                       |
 | `products/peach-cloud-item-02.png`                  | Roasted Peach Oolong Cloud                                                    | `768x768`；白桃烘焙乌龙与厚云顶                                                                         |
 | `products/peach-cloud-item-03.png`                  | Peach Cocoa Brownie                                                           | `768x768`；桃片奶油可可布朗尼                                                                           |
@@ -715,9 +755,23 @@ English: Create a polished 3:2 landscape brand campaign image for the fictional 
 
 ### Campaign Prompts / 活动图提示词
 
-`peach-cloud-golden-pairing-01.png`：只展示一杯浅金白桃气泡饮和一块带饼干底、桃蜜淋面的白桃芝士蛋糕，桃子云吉祥物仅作为小型陪衬。主体集中在中部偏右，左侧必须在半透明粉色文案层压盖后仍保留清晰产品露出；不要文字、折扣数字、价格或额外甜点。
+`peach-cloud-golden-pairing-01.png`：只展示一杯浅金白桃气泡饮和一块带饼干底、桃蜜淋面的白桃芝士蛋糕，桃子云吉祥物仅作为小型陪衬。产品在画面内完整、清楚并保持横向广告裁切安全；套餐名与固定 `48 CNY` 价格由外层卡片单独渲染，不在图片上增加文字、色块、折扣数字或额外甜点。
 
 `peach-cloud-weekly-drop-01.png`：让桃子云吉祥物从云朵后探出，与新鲜白桃、一杯粉色桃子气泡饮和一份小型桃子奶油甜点组成季节上新画面。主体集中在右半区，左侧保留大标题安全区；强调周更与新鲜感，不表现折扣，不要文字、价格、UI 或现实品牌。
+
+`peach-cloud-mascot-market-01.png`：沿用既有小桃子的圆润白桃轮廓、中央桃缝、云朵奶油帽、深灰圆点眼睛、微笑与深绿叶片，将同一形象做成毛绒、包袋挂件和浅绿托特包。三件周边集中在右半区，左侧保留代码文案安全区；表现短绒、帆布和金属扣具的真实材质，不加入饮品、甜点、可读文字、价格、UI、水印或现实品牌。
+
+### Full-Poster Campaign Prompts / 整图海报提示词
+
+三张首页与 Discover/New 共用海报统一为 `1024x1536`、`2:3` 的完整商业广告。文字必须直接融入摄影场景的自然留白，不得出现颜色遮罩、半透明蒙层、左侧独立文案色块、卡片、按钮或手机 UI；以下指定文字各出现一次且必须准确。精确英文生成请求和输入图职责保存在 `output/imagegen/peach-cloud-refresh/posters/prompts/`，验收记录保存在同目录 `ACCEPTANCE.md`。
+
+- `peach-cloud-poster-white-peach-lime-01.png`：以完整白桃青柠气泡饮为主产品，搭配小型桃子云吉祥物；指定文字为 `PEACH CLOUD`、`白桃季上新`、`白桃青柠气泡`、`26 CNY`、`每周五 10:00`。
+- `peach-cloud-poster-waxberry-lychee-01.png`：以杨梅、荔枝、透明冰块与凝露清晰可辨的红宝石色冰茶为主产品；指定文字为 `PEACH CLOUD`、`夏日限定`、`杨梅荔枝冰茶`、`29 CNY`、`酸甜果香 限时回归`。
+- `peach-cloud-poster-mascot-plush-01.png`：以完整桃气云朵毛绒为唯一周边主体，保持既有桃形、云顶、叶片和表情；指定文字为 `PEACH CLOUD GOODS`、`把小桃子带回家`、`桃气云朵毛绒`、`99 CNY`、`本周限量发售`。
+
+### Merchandise Product Prompts / 周边产品提示词
+
+三件方形周边以现有 `cover/peach-cloud-hero-01.png` 作为高保真身份参考，分别生成单一完整的毛绒、挂件与托特包产品摄影。统一使用浅绿、Pink Mist、Petal Rouge、白色与少量深灰的明亮棚拍环境，保留完整主体和裁切安全边距；不加入可读文字、价格、包装、饮品、甜点、人物、UI 或水印。精确的四份英文生成请求保存在 `output/imagegen/peach-cloud-refresh/merchandise/prompts/`，验收记录在同目录 `ACCEPTANCE.md`。
 
 ### Product Pack Prompt / 产品图组提示词
 
@@ -989,40 +1043,84 @@ English Hero: Horizontal commercial dessert photography for the original virtual
 中文商品：原创虚拟甜点品牌 Sugar Lane 的方形商业产品摄影。只展示表格指定的一件蛋糕、酥点、杯装冰甜或饮品，主体占画面约 72%，Porcelain #FFF8F2 浅石背景、白瓷或透明玻璃器皿，Berry #C84F72、Butter #F4D58D、Mint #B8D8C0 与 Cocoa #4A2D2B 只承担局部色彩职责，约 30° 俯视，柔和橱窗侧光与短影，切面和主体轮廓完整，器皿按商品受控变化，不要可读文字、价格、logo、云朵或白桃吉祥物、人物、现实品牌包装、UI 卡片或水印，768x768 PNG。
 
 English product: Square commercial product photography for the original virtual patisserie Sugar Lane. Show only the specified cake, pastry, chilled glass dessert, or drink, filling about 72% of the frame on a Porcelain #FFF8F2 light-stone surface with white porcelain or clear glass. Berry #C84F72, Butter #F4D58D, Mint #B8D8C0, and Cocoa #4A2D2B each carry restrained accent roles. Use an approximately 30-degree overhead angle, soft display-window side light, a compact shadow, and a complete readable cross-section or silhouette. Vary tableware in a controlled, product-appropriate way. No readable text, price, logo, cloud or peach mascot, people, real-brand packaging, UI card, or watermark, 768x768 PNG.
+```
 
 ## 13. Harbor Roast Independent Coffee Chain / Harbor Roast 独立咖啡饮品连锁
 
-Harbor Roast 是原创的都市精品咖啡连锁概念，只借鉴成熟咖啡连锁的品类完整度与点单认知，不复制任何现实品牌。不得使用 Starbucks 名称、海妖或相似圆形徽章、绿色围裙、现实品牌杯套、产品名或门店装潢。品牌摄影胶囊使用 Petrol `#123F3A`、Copper `#B56A3B`、Warm Ivory `#F4EFE5`、Cranberry `#A83E4B` 与 Espresso `#2B1C18`；以深色石台、拉丝金属、棱纹玻璃和温暖定向侧光建立更成熟的连锁咖啡气质，与 Daylight Cafe 的明亮早晨水磨石和早午餐摄影保持清晰差异。
+Harbor Roast 是原创的都市咖啡连锁概念，只借鉴成熟连锁品牌的品类完整度、活动节奏和点单认知，不复制任何现实品牌。正式素材统一使用用户确认色卡：Copper `#C67C4E`、Blush `#EDD6C8`、Ink `#313131`、Line `#E3E3E3`、Cream `#F9F2ED`。摄影以暖铜色台面、浅奶油背景、深炭色器皿、棱纹玻璃和柔和定向侧光建立成熟但亲和的连锁咖啡气质；插画围绕原创 Captain Roast 杯子船长 IP 展开。不得使用 Starbucks 名称、官方 logo、海妖或相似圆形徽章、绿色围裙、现实品牌杯套、产品名或门店装潢。
 
-状态：菜单、四个店内栏目、App Store 店面身份设置入口和下列 `13` 张 PNG 稳定路径已经接入。尚未生成候选母版，尚未接入正式素材，也尚未完成桌面或移动视觉验收。后续候选、请求记录、参考锚点与接受理由只能写入 `output/imagegen/harbor-roast/`；正式运行时副本只能写入并读取 `public/images/ui-assets/apps/food-delivery/harbor-roast/`，运行时不得依赖 `output/` 或 `tmp/`。
+状态：截至 2026-08-02，当前 `harbor_roast_chain` 审计出的 `34` 张正式 PNG 已全部生成、验收并接入运行时：三张品牌/App Store 素材、六张轮播与活动素材、十二张饮品与烘焙商品图、五张船长补给站与周边商品图、六张订单状态图和两张空状态图均从下述稳定 `public/` 路径读取。首页轮播、三个活动落地页、补给站与周边详情、Menu/Detail、混合 Bag、Orders、订单详情和 App Store 默认外观已在桌面 Chromium 与 `393x851` 模拟移动端完成媒体态检查；所有图片均成功解码，页面无横向溢出，关键商品与 Captain Roast IP 未被代码文案遮挡。该结论不等同于命名实体设备验收。
+
+请求记录、提示词、候选、源图、联系表与接受证据保存在 `output/imagegen/harbor-roast/`；正式运行时副本只写入并读取 `public/images/ui-assets/apps/food-delivery/harbor-roast/`，运行时不得依赖 `output/` 或 `tmp/`。所有条目当前状态均为 `DELIVERED_ACCEPTED`。
+
+### Delivered Asset Summary / 已交付汇总
+
+| 批次 | 资产组 | 数量 | 主要页面 |
+| --- | --- | ---: | --- |
+| A | App 图标、Captain Roast 透明主形象、App Store 封面 | 3 | Home 顶栏、活动页、App Store |
+| B | 首页轮播广告、独立活动落地海报 | 6 | Home、会员、新品、Roast Passport |
+| C | 商品摄影 | 12 | Home 推荐、Menu、商品详情、Bag、订单 |
+| D | 订单状态插画、购物袋与订单空状态 | 8 | Orders、订单详情、Bag |
+| E | 船长补给站广告与周边商品摄影 | 5 | Supply、周边详情、Bag、订单 |
+| **合计** |  | **34** |  |
 
 ### Asset Contract / 素材合同
 
-| 稳定运行时路径 | 菜单语义 | 规格与构图要求 |
+| 稳定运行时路径 | 用途 / 语义 | 规格与构图要求 |
 | --- | --- | --- |
-| `cover/harbor-roast-cover-01.png` | Harbor Roast Hero / 港湾咖啡店头主图 | `1200x750`；经典热咖、两杯招牌特调、冷萃与两件柜台烘焙形成完整产品家族，主体集中在中右，左侧保留深海绿文案安全区 |
-| `products/harbor-roast-item-01.png` | Harbor House Americano / 港湾美式 | `768x768`；深色陶瓷杯中的清澈美式，薄油脂层，不出现奶泡 |
+| `brand/harbor-roast-app-icon-01.png` | Harbor Roast App 图标 | `1024x1024` RGBA PNG；Captain Roast 头像与小锚点组合，轮廓在 `48px` 仍清楚；不烘焙圆角矩形、文字或现实品牌徽章 |
+| `brand/harbor-roast-captain-mascot-01.png` | Captain Roast IP 透明主形象 | `1536x1536` RGBA PNG；原创咖啡杯船长、铜色船长帽和锚形配件，亲和而非幼儿化；完整四肢与外轮廓，不带背景、投影、文字或圆形徽章 |
+| `cover/harbor-roast-cover-01.png` | App Store 店面封面 | `1200x750`；热美式、海盐焦糖拿铁、开心果燕麦拿铁、冷萃、司康与可颂形成产品家族；主体中右，左侧保留 Cream/Ink 文案安全区 |
+| `campaigns/harbor-roast-carousel-member-01.png` | Home 会员欢迎轮播 | `1536x1280`；Captain Roast 递出会员豆章与第一杯咖啡，右侧主视觉，左侧约 `58%` 保持低细节安全区；无文字、数字、价格、按钮或 UI |
+| `campaigns/harbor-roast-carousel-new-01.png` | Home Copper Coast 新品轮播 | `1536x1280`；海盐焦糖拿铁为主，另外两杯季节特调形成层次，铜色海岸柜台语义；右侧主视觉、左侧文案安全区，无文字或 UI |
+| `campaigns/harbor-roast-carousel-passport-01.png` | Home Roast Passport 轮播 | `1536x1280`；Captain Roast、六枚抽象豆章和可兑换船长杯构成旅程感；右侧主视觉、左侧文案安全区，不生成可读章印、数字或按钮 |
+| `campaigns/harbor-roast-member-poster-01.png` | 会员活动落地页 Hero | `1200x1500`，`4:5`；Captain Roast 欢迎新会员、首杯与豆章礼遇，顶部和左侧保留标题安全区；无可读文字、价格、UI 卡片 |
+| `campaigns/harbor-roast-new-poster-01.png` | 新品活动落地页 Hero | `1200x1500`，`4:5`；三杯 Copper Coast 季节新品的编辑式组合，主杯完整、材质可辨，顶部保留标题安全区；无可读文字或 UI |
+| `campaigns/harbor-roast-passport-poster-01.png` | Roast Passport 落地页 Hero | `1200x1500`，`4:5`；Captain Roast 沿六站港口旅程抵达限定船长杯，图形章印不可读，顶部保留标题安全区；无文字或 UI |
+| `products/harbor-roast-item-01.png` | Harbor House Americano / 港湾美式 | `768x768`；深炭陶瓷杯中的清澈美式，薄油脂层，不出现奶泡 |
 | `products/harbor-roast-item-02.png` | Copper Flat White / 铜韵馥芮白 | `768x768`；矮陶瓷杯、紧实微奶泡与细致拉花，体量明显小于拿铁 |
-| `products/harbor-roast-item-03.png` | Vanilla Bean Latte / 香草籽拿铁 | `768x768`；暖象牙高杯拿铁，可见香草籽点，不使用焦糖淋酱 |
+| `products/harbor-roast-item-03.png` | Vanilla Bean Latte / 香草籽拿铁 | `768x768`；Cream 高杯拿铁，可见香草籽点，不使用焦糖淋酱 |
 | `products/harbor-roast-item-04.png` | Sea-Salt Caramel Latte / 海盐焦糖拿铁 | `768x768`；铜色焦糖、轻薄奶泡与少量焦糖脆片，保持咖啡主体可见 |
 | `products/harbor-roast-item-05.png` | Pistachio Oat Latte / 开心果燕麦拿铁 | `768x768`；淡开心果泡沫与碎开心果，颜色克制，不做荧光绿色 |
-| `products/harbor-roast-item-06.png` | Cranberry Cocoa Mocha / 蔓越莓可可摩卡 | `768x768`；深可可咖啡、轻奶泡与小面积蔓越莓红点色，不变成水果奶昔 |
+| `products/harbor-roast-item-06.png` | Cranberry Cocoa Mocha / 蔓越莓可可摩卡 | `768x768`；深可可咖啡、轻奶泡与小面积果红点色，不变成水果奶昔 |
 | `products/harbor-roast-item-07.png` | Velvet Cold Brew / 丝绒冷萃 | `768x768`；棱纹高玻璃、清晰冰块、深色冷萃与平整麦芽奶盖分层 |
 | `products/harbor-roast-item-08.png` | Citrus Espresso Sparkler / 柑橘浓缩气泡 | `768x768`；透明高杯，葡萄柚气泡与浓缩咖啡分层，橙皮点明风味 |
 | `products/harbor-roast-item-09.png` | Dark Cocoa Coffee Blend / 黑可可咖啡冰沙 | `768x768`；厚实深可可冰沙、少量可可碎，不使用夸张奶油山或糖果 |
 | `products/harbor-roast-item-10.png` | Apricot Earl Grey Iced Tea / 杏桃伯爵冰茶 | `768x768`；琥珀茶汤、杏桃片、柠檬和透明冰块，不出现咖啡分层 |
 | `products/harbor-roast-item-11.png` | Copper Sugar Scone / 铜糖司康 | `768x768`；单只完整司康，粗糖脆壳与橙皮屑清楚，配无字烘焙纸 |
 | `products/harbor-roast-item-12.png` | Almond Butter Croissant / 杏仁黄油可颂 | `768x768`；单只二次烘焙可颂，杏仁片和少量糖粉，层次与完整两端可见 |
+| `merchandise/harbor-roast-supply-hero-01.png` | Captain Supply Station / 船长补给站主广告 | `1024x1536`；Captain Roast 与船长杯、托特包、铜锚徽章、贴纸包形成完整周边家族，下方保留 Ink 文案安全区；无可读文字、价格、按钮或 UI |
+| `merchandise/harbor-roast-merch-captain-mug-01.png` | Captain Roast 船长杯 | `1024x1024`；Cream 灯塔杯身与可拆 Copper 船长帽杯盖完整可辨，商品居中，不裁切杯盖或底座 |
+| `merchandise/harbor-roast-merch-anchor-pin-01.png` | 铜锚珐琅徽章 | `1024x1024`；Captain Roast、船长帽与锚形组合为单枚真实珐琅徽章，金属与珐琅材质清楚 |
+| `merchandise/harbor-roast-merch-canvas-tote-01.png` | 港湾帆布托特包 | `1024x1024`；Cream 厚帆布、Copper 宽带、Ink 包边与小 Captain Roast 刺绣，包身和提手完整 |
+| `merchandise/harbor-roast-merch-sticker-pack-01.png` | 船长豆章贴纸包 | `1024x1024`；六款不重复港湾与 Captain Roast 防水贴纸，单枚边缘完整，无可读文字 |
+| `orders/harbor-roast-order-received-01.png` | 已接单 / 咖啡师已确认 | `1024x1024` RGBA PNG；Captain Roast 核对订单小票并轻轻致意，完整轮廓，适合订单卡和详情 Hero |
+| `orders/harbor-roast-order-crafting-01.png` | 正在制作 | `1024x1024` RGBA PNG；Captain Roast 在制作咖啡，突出手作与蒸汽，不绘制真实品牌设备或文字 |
+| `orders/harbor-roast-order-pickup-ready-01.png` | 外带或堂食可取餐 | `1024x1024` RGBA PNG；Captain Roast 在取餐台递出封口饮品袋，袋面无文字，和配送状态明显区分 |
+| `orders/harbor-roast-order-delivery-01.png` | 外卖配送中 | `1024x1024` RGBA PNG；固定好的饮品随原创铜色配送载具出发，表现移动方向，不使用现实平台骑手或 logo |
+| `orders/harbor-roast-order-completed-01.png` | 已取餐 / 已送达 | `1024x1024` RGBA PNG；Captain Roast 完成靠岸礼或举杯致意，情绪明确但不过度庆典化 |
+| `orders/harbor-roast-order-cancelled-01.png` | 订单已取消 | `1024x1024` RGBA PNG；Captain Roast 收起订单小票，使用克制中性姿态，不做警报红或负面夸张表情 |
+| `states/harbor-roast-empty-bag-01.png` | 空购物袋 | `1024x1024` RGBA PNG；打开的无字外带袋、杯托和一枚小锚吊牌，中心构图，适合 Cream 页面 |
+| `states/harbor-roast-empty-orders-01.png` | 空订单记录 | `1024x1024` RGBA PNG；Captain Roast 查看空白航海订单簿，轮廓简洁，不生成可读文字 |
+
+### Generation Rules / 生成规则
+
+1. 首页轮播与活动海报必须无文字；标题、说明、价格、按钮和进度仍由代码渲染，以支持中英文和响应式布局。轮播统一保留左侧文案安全区，活动海报统一保留顶部/左侧标题安全区。
+2. App 图标、Captain Roast、订单状态和空状态必须交付真实透明通道 RGBA PNG；不得用棋盘格或 Cream 底色伪造透明。
+3. 不生成分类图标、返回/购物袋/加减控件、Roast Passport 章印文字、价格、按钮、导航、wordmark 或 UI 卡片。这些元素继续由代码绘制。
+4. Captain Roast 只能是原创杯子船长形象；不得模仿 Starbucks、官方 logo、海妖徽章、绿色围裙或现实品牌包装。
+5. 正式图片已在 Home 轮播、三张活动页、Supply/周边详情、Menu/Detail、Bag/Orders、订单详情和 App Store 的桌面及 `393x851` 手机模拟槽位复核；首页轮播使用 Cream 阅读遮罩维持代码文案对比，补给站主广告使用 Ink 下部安全区承载代码标题，活动页和商品详情保留 IP 与产品完整露出。后续若替换任一正式图片，仍须按实际明度与主体位置复核 `#C67C4E / #EDD6C8 / #313131 / #E3E3E3 / #F9F2ED` 的页面占比、文字对比和蒙层。
 
 ### Harbor Roast Prompt Capsule / Harbor Roast 提示词胶囊
 
-中文 Hero：原创虚拟都市咖啡连锁 Harbor Roast 的横向商业摄影，用于手机外卖 App 店铺 Hero。展示一杯经典热美式、一杯海盐焦糖拿铁、一杯开心果燕麦拿铁、一杯棱纹玻璃冷萃、一个司康和一个杏仁黄油可颂；深色石台、拉丝铜色金属、Petrol #123F3A 背景、Warm Ivory #F4EFE5 器皿、少量 Cranberry #A83E4B 点色，温暖定向咖啡馆侧光，真实咖啡油脂、奶泡、冰块和酥皮纹理。主体集中在中部和右侧，左侧保留稳定深海绿文案安全区，适合 8:5 裁切。不要可读文字、价格、logo、人物、海妖或相似圆形徽章、绿色围裙、现实品牌杯套或包装、UI 或水印，1200x750 PNG。
+```text
+中文品牌摄影：原创虚拟都市咖啡连锁 Harbor Roast，使用 Copper #C67C4E、Blush #EDD6C8、Ink #313131、Line #E3E3E3、Cream #F9F2ED 色卡。暖铜色台面、浅奶油背景、深炭色器皿、棱纹玻璃和柔和定向咖啡馆侧光，真实表现咖啡油脂、微奶泡、透明冰块与酥皮层次。成熟、亲和、有连锁品牌一致性，不做深海绿或现实品牌包装。不要可读文字、价格、logo、人物、海妖或相似圆形徽章、绿色围裙、UI 或水印。
 
-English Hero: Horizontal commercial photography for the original fictional urban coffee chain Harbor Roast, used as a mobile delivery-app shop hero. Show one classic hot Americano, one sea-salt caramel latte, one pistachio oat latte, one ribbed-glass cold brew, one sugar-crusted scone, and one almond-butter croissant on a dark stone counter with brushed-copper metal, a Petrol #123F3A background, Warm Ivory #F4EFE5 tableware, and restrained Cranberry #A83E4B accents. Use warm directional cafe side light with realistic crema, microfoam, clear ice, and pastry layers. Keep the subjects clustered in the center and right with stable deep-petrol negative space on the left for code-rendered copy, composed for an 8:5 crop. No readable text, prices, logos, people, siren or similar circular emblem, green apron, real-brand cup sleeve or packaging, UI, or watermark, 1200x750 PNG.
+English brand photography: Original fictional urban coffee chain Harbor Roast using Copper #C67C4E, Blush #EDD6C8, Ink #313131, Line #E3E3E3, and Cream #F9F2ED. Use a warm copper counter, light cream backdrop, charcoal tableware, ribbed glass, soft directional cafe light, realistic crema, microfoam, clear ice, and pastry layers. The family should feel mature, friendly, and consistent with a polished chain app, without petrol green or real-brand packaging. No readable text, price, logo, people, siren or similar circular emblem, green apron, UI, or watermark.
 
-中文商品：原创虚拟咖啡连锁 Harbor Roast 的方形商业产品摄影。只展示表格指定的一杯饮品或一件烘焙，主体占画面约 `74%`，深色石台与 Warm Ivory #F4EFE5 背景，Petrol #123F3A、Copper #B56A3B、Cranberry #A83E4B 和 Espresso #2B1C18 各自承担克制的色彩职责。使用约 `35°` 镜头、温暖定向侧光、紧凑柔影和稳定裁切留白；热饮陶瓷杯、冷饮棱纹玻璃与无字烘焙纸按商品语义受控变化，但保持同一门店、同一光线和接近的主体体量。不要可读文字、价格、logo、人物、海妖或相似圆形徽章、绿色围裙、现实品牌杯套或包装、UI 卡片或水印，768x768 PNG。
+中文品牌插画：原创 Captain Roast 咖啡杯船长 IP，Copper #C67C4E 为主识别色，Blush #EDD6C8 与 Cream #F9F2ED 作浅部，Ink #313131 勾勒表情和轮廓，Line #E3E3E3 仅作低对比辅助。造型清楚、亲和但不过度幼儿化，可在 48px 图标到大幅活动海报之间保持一致。不要可读文字、现实品牌标志、圆形海妖徽章或绿色围裙。
 
-English product: Square commercial product photography for the original fictional coffee chain Harbor Roast. Show only the specified drink or bake, filling about 74% of the frame on dark stone and Warm Ivory #F4EFE5, with Petrol #123F3A, Copper #B56A3B, Cranberry #A83E4B, and Espresso #2B1C18 assigned restrained color roles. Use an approximately 35-degree camera angle, warm directional side light, a compact soft shadow, and stable crop padding. Vary ceramic cups for hot drinks, ribbed glassware for cold drinks, and unbranded bakery paper for bakes while retaining the same shop, light, lens distance, and comparable subject volume. No readable text, price, logo, people, siren or similar circular emblem, green apron, real-brand cup sleeve or packaging, UI card, or watermark, 768x768 PNG.
+English brand illustration: Original Captain Roast coffee-cup captain IP, led by Copper #C67C4E with Blush #EDD6C8 and Cream #F9F2ED light areas, Ink #313131 expressions and outlines, and restrained Line #E3E3E3 support. Keep the silhouette clear, friendly but not infantile, and consistent from a 48px icon to large campaign artwork. No readable text, real-brand marks, circular siren emblem, or green apron.
 ```
 
 ## Naming Suggestion / 文件命名建议

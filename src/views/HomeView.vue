@@ -2198,6 +2198,7 @@ onBeforeUnmount(() => {
                           :src="entry.iconAsset"
                           :alt="entry.label"
                           class="home-folder-preview-image"
+                          :class="{ 'is-full-bleed': entry.iconAssetFullBleed }"
                         />
                         <i v-else :class="entry.icon"></i>
                       </span>
@@ -2444,6 +2445,7 @@ onBeforeUnmount(() => {
                 :src="entry.iconAsset"
                 :alt="entry.label"
                 class="home-folder-entry-image"
+                :class="{ 'is-full-bleed': entry.iconAssetFullBleed }"
                 :data-testid="`home-folder-entry-image-${entry.key}`"
               />
               <i v-else :class="entry.icon"></i>
@@ -4085,6 +4087,12 @@ onBeforeUnmount(() => {
   object-fit: contain;
 }
 
+.home-folder-preview-image.is-full-bleed,
+.home-folder-entry-image.is-full-bleed {
+  padding: 0;
+  object-fit: cover;
+}
+
 .home-app-icon {
   transition: transform 120ms ease, filter 120ms ease;
 }
@@ -4327,7 +4335,6 @@ onBeforeUnmount(() => {
 
 .home-folder-entry-icon.has-brand-image {
   overflow: hidden;
-  background: #fd6c93 !important;
 }
 
 .home-folder-entry-image {

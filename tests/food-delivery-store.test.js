@@ -1381,6 +1381,184 @@ describe('food delivery store', () => {
     expect(store.findOrderById(order.id).currency).toBe('USD')
   })
 
+  test('persists Harbor pickup and dine-in choices while keeping delivery as the legacy default', () => {
+    const store = useFoodDeliveryStore()
+    const harborItem = store.findMenuItemById('food_menu_harbor_house_americano')
+
+    store.addToCart(harborItem.id)
+    const pickupOrder = store.checkoutCart({
+      restaurantId: 'food_seed_harbor_roast',
+      deliveryAddress: 'Harbor Roast · Harbor Store',
+      fulfillmentMode: 'pickup',
+      pickupMode: 'dine_in',
+    })
+    expect(pickupOrder).toMatchObject({
+      fulfillmentMode: 'pickup',
+      pickupMode: 'dine_in',
+      deliveryFeeCents: 0,
+      deliveryFee: '0.00',
+      totalCents: harborItem.priceCents,
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.findOrderById(pickupOrder.id)).toMatchObject({
+      fulfillmentMode: 'pickup',
+      pickupMode: 'dine_in',
+      deliveryFeeCents: 0,
+    })
+
+    store.addToCart(harborItem.id)
+    const legacyDefaultOrder = store.checkoutCart({
+      restaurantId: 'food_seed_harbor_roast',
+      deliveryAddress: 'Pier Exchange 16',
+    })
+    expect(legacyDefaultOrder).toMatchObject({
+      fulfillmentMode: 'delivery',
+      pickupMode: '',
+      deliveryFeeCents: 350,
+    })
+  })
+
+  test('gates Harbor merchandise redemption by bean stamps and refunds removed gifts', () => {
+    const store = useFoodDeliveryStore()
+    store.setHarborRoastBeanStamps(5)
+
+    expect(store.redeemHarborRoastMerchandise('harbor_merch_captain_mug')).toEqual({
+      ok: false,
+      reason: 'insufficient_stamps',
+      availableBeanStamps: 5,
+      requiredBeanStamps: 6,
+      missingBeanStamps: 1,
+    })
+    expect(store.harborRoastBeanStamps).toBe(5)
+
+    const redemption = store.redeemHarborRoastMerchandise('harbor_merch_anchor_pin')
+    expect(redemption).toMatchObject({
+      ok: true,
+      spentBeanStamps: 3,
+      remainingBeanStamps: 2,
+    })
+    const giftLine = store
+      .listCartLineItemsByRestaurant('food_seed_harbor_roast')
+      .find((line) => line.merchandiseId === 'harbor_merch_anchor_pin')
+    expect(giftLine).toMatchObject({
+      lineKind: 'merchandise',
+      acquisition: 'redeemed_gift',
+      isGift: true,
+      beanStampCost: 3,
+      unitPriceCents: 0,
+      subtotalCents: 0,
+      quantity: 1,
+    })
+    expect(store.updateCartQuantity(giftLine.lineId, 2)).toBe(false)
+    expect(store.harborRoastBeanStamps).toBe(2)
+    expect(store.updateCartQuantity(giftLine.lineId, 0)).toBe(true)
+    expect(store.harborRoastBeanStamps).toBe(5)
+  })
+
+  test('checks out Harbor drinks, purchased merchandise, and redeemed gifts in one order', () => {
+    const store = useFoodDeliveryStore()
+    const harborItem = store.findMenuItemById('food_menu_harbor_house_americano')
+    store.setHarborRoastBeanStamps(5)
+    store.addToCart(harborItem.id)
+    expect(store.addHarborRoastMerchandiseToCart('harbor_merch_canvas_tote')).toMatchObject({
+      ok: true,
+    })
+    expect(store.redeemHarborRoastMerchandise('harbor_merch_sticker_pack')).toMatchObject({
+      ok: true,
+      remainingBeanStamps: 3,
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.harborRoastBeanStamps).toBe(3)
+    expect(store.listCartLineItemsByRestaurant('food_seed_harbor_roast')).toHaveLength(3)
+
+    const order = store.checkoutCart({
+      restaurantId: 'food_seed_harbor_roast',
+      fulfillmentMode: 'pickup',
+      pickupMode: 'takeout',
+    })
+    expect(order).toMatchObject({
+      restaurantId: 'food_seed_harbor_roast',
+      itemCount: 3,
+      totalCents: harborItem.priceCents + 8900,
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          menuItemId: harborItem.id,
+          lineKind: 'menu',
+          unitPriceCents: harborItem.priceCents,
+        }),
+        expect.objectContaining({
+          merchandiseId: 'harbor_merch_canvas_tote',
+          lineKind: 'merchandise',
+          acquisition: 'purchase',
+          unitPriceCents: 8900,
+        }),
+        expect.objectContaining({
+          merchandiseId: 'harbor_merch_sticker_pack',
+          lineKind: 'merchandise',
+          acquisition: 'redeemed_gift',
+          unitPriceCents: 0,
+          beanStampCost: 2,
+        }),
+      ]),
+    })
+    expect(store.getCartQuantityByRestaurant('food_seed_harbor_roast')).toBe(0)
+    expect(store.harborRoastBeanStamps).toBe(3)
+  })
+
+  test('keeps Peach Cloud mascot goods in the Peach Cloud bag and order snapshot', () => {
+    const store = useFoodDeliveryStore()
+    const peachItem = store.findMenuItemById('food_menu_peach_oolong_cloud')
+
+    expect(store.peachCloudMerchandise).toHaveLength(3)
+    expect(store.addPeachCloudMerchandiseToCart('peach_merch_cloud_plush')).toMatchObject({
+      ok: true,
+    })
+    store.addToCart(peachItem.id)
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.listCartLineItemsByRestaurant('food_seed_peach_cloud')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          merchandiseId: 'peach_merch_cloud_plush',
+          restaurant: expect.objectContaining({ id: 'food_seed_peach_cloud' }),
+          lineKind: 'merchandise',
+          acquisition: 'purchase',
+          assetBase: 'peach-cloud',
+          unitPriceCents: 9900,
+        }),
+        expect.objectContaining({ menuItemId: peachItem.id }),
+      ]),
+    )
+    expect(store.listCartLineItemsByRestaurant('food_seed_harbor_roast')).toHaveLength(0)
+
+    const order = store.checkoutCart({
+      restaurantId: 'food_seed_peach_cloud',
+      deliveryAddress: 'Cloud Arcade 7',
+    })
+    expect(order).toMatchObject({
+      restaurantId: 'food_seed_peach_cloud',
+      itemCount: 2,
+      totalCents: peachItem.priceCents + 9900 + 400,
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          merchandiseId: 'peach_merch_cloud_plush',
+          lineKind: 'merchandise',
+          assetBase: 'peach-cloud',
+          unitPriceCents: 9900,
+        }),
+      ]),
+    })
+    expect(store.getCartQuantityByRestaurant('food_seed_peach_cloud')).toBe(0)
+  })
+
   test('adds normalized order events without moving ownership out of Food Delivery', () => {
     const store = useFoodDeliveryStore()
     store.resetForTesting()

@@ -37,6 +37,127 @@ const PEACH_CLOUD_SEED_RESTAURANT_ID = 'food_seed_peach_cloud'
 const DASH_GRILL_SEED_RESTAURANT_ID = 'food_seed_dash_grill'
 const JADE_HEARTH_SEED_RESTAURANT_ID = 'food_seed_jade_hearth'
 const VERDANT_DAY_SEED_RESTAURANT_ID = 'food_seed_verdant_day'
+const HARBOR_ROAST_DEFAULT_BEAN_STAMPS = 5
+
+export const HARBOR_ROAST_MERCHANDISE_CATALOG = Object.freeze([
+  Object.freeze({
+    id: 'harbor_merch_captain_mug',
+    title: 'Captain Roast 船长杯',
+    titleZh: 'Captain Roast 船长杯',
+    titleEn: 'Captain Roast Mug',
+    descZh: '铜色船帽杯盖与灯塔杯身，补给站本季限定。',
+    descEn: 'A seasonal mug with a copper captain cap and lighthouse body.',
+    detailZh: '适合热饮与冷饮，杯身采用奶油白釉面，船长帽杯盖可独立取下收藏。',
+    detailEn: 'Made for hot or cold drinks with a cream glaze and a removable captain-cap lid.',
+    purchasePriceCents: 12800,
+    beanStampCost: 6,
+    imagePath: 'merchandise/harbor-roast-merch-captain-mug-01.png',
+  }),
+  Object.freeze({
+    id: 'harbor_merch_anchor_pin',
+    title: '铜锚珐琅徽章',
+    titleZh: '铜锚珐琅徽章',
+    titleEn: 'Copper Anchor Enamel Pin',
+    descZh: 'Captain Roast 船帽与港湾铜锚组成的限定徽章。',
+    descEn: 'A limited pin pairing the Captain Roast cap with a copper anchor.',
+    detailZh: '仅开放豆章兑换，背面配双针扣，适合别在帆布包或咖啡围裙上。',
+    detailEn: 'Stamp redemption only, with two pin backs for totes or coffee aprons.',
+    purchasePriceCents: 0,
+    beanStampCost: 3,
+    imagePath: 'merchandise/harbor-roast-merch-anchor-pin-01.png',
+  }),
+  Object.freeze({
+    id: 'harbor_merch_canvas_tote',
+    title: '港湾帆布托特包',
+    titleZh: '港湾帆布托特包',
+    titleEn: 'Harbor Canvas Tote',
+    descZh: '厚实帆布与铜色宽带，装得下一整天的城市补给。',
+    descEn: 'Heavy canvas and copper straps for a full day of city supplies.',
+    detailZh: '本款为现金购买周边，内置杯袋与小物夹层，不参与豆章兑换。',
+    detailEn: 'A purchase-only item with a cup sleeve and inner pocket.',
+    purchasePriceCents: 8900,
+    beanStampCost: 0,
+    imagePath: 'merchandise/harbor-roast-merch-canvas-tote-01.png',
+  }),
+  Object.freeze({
+    id: 'harbor_merch_sticker_pack',
+    title: '船长豆章贴纸包',
+    titleZh: '船长豆章贴纸包',
+    titleEn: 'Captain Stamp Sticker Pack',
+    descZh: '六枚港口豆章与 Captain Roast 防水贴纸。',
+    descEn: 'Six port stamps and waterproof Captain Roast stickers.',
+    detailZh: '可直接购买，也可用豆章兑换；每包包含六款不重复图案。',
+    detailEn: 'Buy it or redeem stamps. Each pack contains six unique designs.',
+    purchasePriceCents: 2900,
+    beanStampCost: 2,
+    imagePath: 'merchandise/harbor-roast-merch-sticker-pack-01.png',
+  }),
+])
+
+export const PEACH_CLOUD_MERCHANDISE_CATALOG = Object.freeze([
+  Object.freeze({
+    id: 'peach_merch_cloud_plush',
+    restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+    assetBase: 'peach-cloud',
+    sourceModule: 'food_delivery_peach_cloud_merchandise',
+    title: '桃气云朵毛绒',
+    titleZh: '桃气云朵毛绒',
+    titleEn: 'Peach Cloud Plush',
+    descZh: '把桃子云招牌小桃子抱回家，柔软云顶与桃粉绒面完整还原。',
+    descEn: 'The signature Peach Cloud mascot in soft peach-pink plush with its cloud cap.',
+    detailZh: '约 28 cm 高，采用短绒面料与刺绣表情，适合抱枕、桌面陈列与礼赠。',
+    detailEn: 'About 28 cm tall with short plush fabric and embroidered features for display or gifting.',
+    purchasePriceCents: 9900,
+    beanStampCost: 0,
+    imagePath: 'merchandise/peach-cloud-merch-plush-01.png',
+  }),
+  Object.freeze({
+    id: 'peach_merch_cloud_bag_charm',
+    restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+    assetBase: 'peach-cloud',
+    sourceModule: 'food_delivery_peach_cloud_merchandise',
+    title: '桃气随行挂件',
+    titleZh: '桃气随行挂件',
+    titleEn: 'Peach Cloud Bag Charm',
+    descZh: '迷你小桃子搭配粉金登山扣，让云朵桃气跟着包袋一起出门。',
+    descEn: 'A miniature mascot with a rose-gold clip for bags and keys.',
+    detailZh: '约 9 cm 高，金属扣可拆卸，叶片与云顶使用不同触感面料。',
+    detailEn: 'About 9 cm tall with a detachable metal clip and mixed-texture leaf and cloud details.',
+    purchasePriceCents: 3900,
+    beanStampCost: 0,
+    imagePath: 'merchandise/peach-cloud-merch-bag-charm-01.png',
+  }),
+  Object.freeze({
+    id: 'peach_merch_picnic_tote',
+    restaurantId: PEACH_CLOUD_SEED_RESTAURANT_ID,
+    assetBase: 'peach-cloud',
+    sourceModule: 'food_delivery_peach_cloud_merchandise',
+    title: '桃云野餐托特包',
+    titleZh: '桃云野餐托特包',
+    titleEn: 'Peach Picnic Tote',
+    descZh: '浅绿厚帆布、粉色提带与小桃子刺绣，内置饮品杯袋。',
+    descEn: 'Pale-green canvas, pink handles, mascot embroidery, and an inner drink sleeve.',
+    detailZh: '适合日常通勤与野餐，包口保持挺括，内侧设杯袋和小物夹层。',
+    detailEn: 'A structured everyday tote with an inner cup sleeve and small-item pocket.',
+    purchasePriceCents: 7900,
+    beanStampCost: 0,
+    imagePath: 'merchandise/peach-cloud-merch-tote-01.png',
+  }),
+])
+
+const HARBOR_ROAST_MERCHANDISE_BY_ID = new Map(
+  HARBOR_ROAST_MERCHANDISE_CATALOG.map((item) => [item.id, item]),
+)
+const PEACH_CLOUD_MERCHANDISE_BY_ID = new Map(
+  PEACH_CLOUD_MERCHANDISE_CATALOG.map((item) => [item.id, item]),
+)
+const FOOD_DELIVERY_MERCHANDISE_BY_ID = new Map(
+  [...HARBOR_ROAST_MERCHANDISE_CATALOG, ...PEACH_CLOUD_MERCHANDISE_CATALOG].map((item) => [
+    item.id,
+    item,
+  ]),
+)
+const HARBOR_ROAST_MERCHANDISE_ACQUISITIONS = new Set(['purchase', 'redeemed_gift'])
 
 export const FOOD_DELIVERY_ORDER_STATUS = Object.freeze({
   PLACED: 'placed',
@@ -56,6 +177,8 @@ export const FOOD_DELIVERY_ORDER_EVENT_TYPE = Object.freeze({
 })
 
 const FOOD_DELIVERY_ORDER_STATUS_VALUES = new Set(Object.values(FOOD_DELIVERY_ORDER_STATUS))
+const FOOD_DELIVERY_FULFILLMENT_MODE_VALUES = new Set(['delivery', 'pickup'])
+const FOOD_DELIVERY_PICKUP_MODE_VALUES = new Set(['takeout', 'dine_in'])
 const FOOD_DELIVERY_ORDER_EVENT_TYPE_VALUES = new Set(Object.values(FOOD_DELIVERY_ORDER_EVENT_TYPE))
 const FOOD_DELIVERY_ORDER_EVENT_TITLES = Object.freeze({
   [FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY]: 'Rider delay',
@@ -112,6 +235,16 @@ const normalizeFoodId = (value) => normalizeText(value, '', 140)
 const normalizeStatus = (value, fallback = FOOD_DELIVERY_ORDER_STATUS.PLACED) => {
   const normalized = normalizeText(value, fallback, 40)
   return FOOD_DELIVERY_ORDER_STATUS_VALUES.has(normalized) ? normalized : fallback
+}
+
+const normalizeFulfillmentMode = (value, fallback = 'delivery') => {
+  const normalized = normalizeText(value, fallback, 24).toLowerCase()
+  return FOOD_DELIVERY_FULFILLMENT_MODE_VALUES.has(normalized) ? normalized : fallback
+}
+
+const normalizePickupMode = (value, fallback = '') => {
+  const normalized = normalizeText(value, fallback, 24).toLowerCase()
+  return FOOD_DELIVERY_PICKUP_MODE_VALUES.has(normalized) ? normalized : fallback
 }
 
 const normalizeOrderEventType = (value, fallback = '') => {
@@ -251,14 +384,60 @@ const normalizeMenuItems = (rawItems, restaurantIds, preservedMenuItemIds = null
     })
 }
 
+const normalizeHarborRoastRewards = (rawRewards) => ({
+  beanStamps: clamp(toInt(rawRewards?.beanStamps, HARBOR_ROAST_DEFAULT_BEAN_STAMPS), 0, 999),
+})
+
+const normalizeMerchandiseAcquisition = (value, fallback = 'purchase') => {
+  const normalized = normalizeText(value, fallback, 32)
+  return HARBOR_ROAST_MERCHANDISE_ACQUISITIONS.has(normalized) ? normalized : fallback
+}
+
 const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
   if (!rawItem || typeof rawItem !== 'object') return null
+
+  const merchandiseId = normalizeFoodId(rawItem.merchandiseId)
+  const merchandise = FOOD_DELIVERY_MERCHANDISE_BY_ID.get(merchandiseId)
+  if (rawItem.lineKind === 'merchandise' || merchandise) {
+    if (!merchandise) return null
+    const acquisition = normalizeMerchandiseAcquisition(rawItem.acquisition)
+    if (acquisition === 'purchase' && merchandise.purchasePriceCents <= 0) return null
+    if (acquisition === 'redeemed_gift' && merchandise.beanStampCost <= 0) return null
+    const now = Date.now()
+    const addedAt = Math.max(0, toInt(rawItem.addedAt || rawItem.createdAt, now + index))
+    return {
+      lineId: `${merchandise.id}__${acquisition}`,
+      lineKind: 'merchandise',
+      merchandiseId: merchandise.id,
+      restaurantId: merchandise.restaurantId || HARBOR_ROAST_SEED_RESTAURANT_ID,
+      acquisition,
+      title: merchandise.title,
+      titleZh: merchandise.titleZh,
+      titleEn: merchandise.titleEn,
+      imagePath: merchandise.imagePath,
+      assetBase: normalizeText(merchandise.assetBase, 'harbor-roast', 60),
+      unitPriceCents: acquisition === 'redeemed_gift' ? 0 : merchandise.purchasePriceCents,
+      beanStampCost: acquisition === 'redeemed_gift' ? merchandise.beanStampCost : 0,
+      quantity: normalizeQuantity(rawItem.quantity),
+      sourceModule: normalizeText(
+        rawItem.sourceModule,
+        merchandise.sourceModule || 'food_delivery_harbor_merchandise',
+        60,
+      ),
+      sourceId: normalizeText(rawItem.sourceId, merchandise.id, 140),
+      addedAt,
+      updatedAt: Math.max(0, toInt(rawItem.updatedAt, addedAt)),
+    }
+  }
+
   const menuItemId = normalizeFoodId(rawItem.menuItemId || rawItem.id)
   if (!menuItemId || (menuItemIds.size > 0 && !menuItemIds.has(menuItemId))) return null
   const now = Date.now()
   const addedAt = Math.max(0, toInt(rawItem.addedAt || rawItem.createdAt, now + index))
 
   return {
+    lineId: menuItemId,
+    lineKind: 'menu',
     menuItemId,
     quantity: normalizeQuantity(rawItem.quantity),
     sourceModule: normalizeText(rawItem.sourceModule, 'food_delivery_cart', 60),
@@ -271,23 +450,26 @@ const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
 const normalizeCartItems = (rawItems, menuItemsById) => {
   if (!Array.isArray(rawItems)) return []
   const menuItemIds = new Set(menuItemsById.keys())
-  const byMenuItemId = new Map()
+  const byLineId = new Map()
   rawItems.forEach((item, index) => {
     const cartItem = normalizeCartItem(item, menuItemIds, index)
     if (!cartItem) return
-    const existing = byMenuItemId.get(cartItem.menuItemId)
+    const existing = byLineId.get(cartItem.lineId)
     if (existing) {
       existing.quantity = Math.min(99, existing.quantity + cartItem.quantity)
       existing.updatedAt = Math.max(existing.updatedAt, cartItem.updatedAt)
       return
     }
-    byMenuItemId.set(cartItem.menuItemId, cartItem)
+    byLineId.set(cartItem.lineId, cartItem)
   })
   const restaurantLineCounts = new Map()
-  return [...byMenuItemId.values()]
+  return [...byLineId.values()]
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .filter((cartItem) => {
-      const restaurantId = menuItemsById.get(cartItem.menuItemId)?.restaurantId || ''
+      const restaurantId =
+        cartItem.lineKind === 'merchandise'
+          ? cartItem.restaurantId
+          : menuItemsById.get(cartItem.menuItemId)?.restaurantId || ''
       if (!restaurantId) return false
       const nextCount = (restaurantLineCounts.get(restaurantId) || 0) + 1
       restaurantLineCounts.set(restaurantId, nextCount)
@@ -425,18 +607,45 @@ const normalizePlatformOrders = (rawOrders) => {
 
 const normalizeOrderItem = (rawItem, index = 0) => {
   if (!rawItem || typeof rawItem !== 'object') return null
-  const menuItemId = normalizeFoodId(rawItem.menuItemId || rawItem.productId || rawItem.id)
+  const lineKind =
+    rawItem.lineKind === 'merchandise' || rawItem.merchandiseId ? 'merchandise' : 'menu'
+  const acquisition =
+    lineKind === 'merchandise' ? normalizeMerchandiseAcquisition(rawItem.acquisition) : 'purchase'
+  const menuItemId =
+    lineKind === 'menu'
+      ? normalizeFoodId(rawItem.menuItemId || rawItem.productId || rawItem.id)
+      : ''
+  const merchandiseId =
+    lineKind === 'merchandise'
+      ? normalizeFoodId(rawItem.merchandiseId || rawItem.productId || rawItem.id)
+      : ''
   const title = normalizeText(rawItem.title || rawItem.name, '', 90)
   const unitPriceCents =
-    Number.isFinite(Number(rawItem.unitPriceCents)) && Number(rawItem.unitPriceCents) > 0
+    Number.isFinite(Number(rawItem.unitPriceCents)) && Number(rawItem.unitPriceCents) >= 0
       ? Math.floor(Number(rawItem.unitPriceCents))
       : normalizeAmountCents(rawItem.price)
-  if (!menuItemId || !title || unitPriceCents <= 0) return null
+  const allowsZeroPrice = lineKind === 'merchandise' && acquisition === 'redeemed_gift'
+  if (
+    !(lineKind === 'merchandise' ? merchandiseId : menuItemId) ||
+    !title ||
+    (allowsZeroPrice ? unitPriceCents !== 0 : unitPriceCents <= 0)
+  )
+    return null
+  const productId = lineKind === 'merchandise' ? merchandiseId : menuItemId
 
   return {
-    id: normalizeText(rawItem.id, `${menuItemId}_${index}`, 140),
+    id: normalizeText(rawItem.id, `${productId}_${index}`, 140),
+    lineKind,
     menuItemId,
+    merchandiseId,
+    acquisition,
     title,
+    titleZh: normalizeText(rawItem.titleZh, '', 90),
+    titleEn: normalizeText(rawItem.titleEn, '', 90),
+    imagePath: normalizeText(rawItem.imagePath, '', 200),
+    assetBase: normalizeText(rawItem.assetBase, '', 60),
+    beanStampCost:
+      acquisition === 'redeemed_gift' ? clamp(toInt(rawItem.beanStampCost, 0), 0, 999) : 0,
     category: normalizeCategory(rawItem.category, 'restaurants'),
     quantity: normalizeQuantity(rawItem.quantity),
     unitPriceCents,
@@ -643,7 +852,11 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
       ? Math.floor(Number(rawOrder.deliveryFeeCents))
       : normalizeAmountCents(rawOrder.deliveryFee)
   const currency = normalizeCurrency(rawOrder.currency || items[0]?.currency)
-  const totals = summarizeOrderTotals(items, deliveryFeeCents, currency)
+  const fulfillmentMode = normalizeFulfillmentMode(rawOrder.fulfillmentMode)
+  const pickupMode =
+    fulfillmentMode === 'pickup' ? normalizePickupMode(rawOrder.pickupMode, 'takeout') : ''
+  const normalizedDeliveryFeeCents = fulfillmentMode === 'pickup' ? 0 : deliveryFeeCents
+  const totals = summarizeOrderTotals(items, normalizedDeliveryFeeCents, currency)
   const primaryTotal = totals.find((item) => item.currency === DEFAULT_CURRENCY) ||
     totals[0] || {
       currency: DEFAULT_CURRENCY,
@@ -658,13 +871,15 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
     restaurantName: normalizeText(rawOrder.restaurantName, '', 90),
     items,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
-    deliveryFeeCents,
-    deliveryFee: formatAmount(deliveryFeeCents),
+    deliveryFeeCents: normalizedDeliveryFeeCents,
+    deliveryFee: formatAmount(normalizedDeliveryFeeCents),
     totals,
     totalCents: primaryTotal.amountCents,
     currency: primaryTotal.currency,
     deliveryAddress: normalizeText(rawOrder.deliveryAddress || rawOrder.address, '', 160),
     note: normalizeText(rawOrder.note, '', 240),
+    fulfillmentMode,
+    pickupMode,
     relationshipBinding: normalizeRelationshipBinding(rawOrder.relationshipBinding),
     events: normalizeOrderEvents(rawOrder.events || rawOrder.statusEvents || rawOrder.eventCards),
     sourceModule: normalizeText(rawOrder.sourceModule, 'food_delivery_checkout', 60),
@@ -2705,6 +2920,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const restaurants = ref([])
   const menuItems = ref([])
   const cartItems = ref([])
+  const harborRoastRewards = ref(normalizeHarborRoastRewards())
   const platformCartItems = ref([])
   const platformOrders = ref([])
   const orders = ref([])
@@ -2716,6 +2932,27 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const menuItemMap = computed(() => new Map(menuItems.value.map((item) => [item.id, item])))
   const restaurantCount = computed(() => restaurants.value.length)
   const menuItemCount = computed(() => menuItems.value.length)
+  const harborRoastBeanStamps = computed(() => harborRoastRewards.value.beanStamps)
+  const harborRoastMerchandise = computed(() =>
+    HARBOR_ROAST_MERCHANDISE_CATALOG.map((item) => ({
+      ...item,
+      currency: primaryCurrency.value,
+      purchasePrice: formatAmount(item.purchasePriceCents),
+      canPurchase: item.purchasePriceCents > 0,
+      canRedeem: item.beanStampCost > 0 && harborRoastBeanStamps.value >= item.beanStampCost,
+      missingBeanStamps: Math.max(0, item.beanStampCost - harborRoastBeanStamps.value),
+    })),
+  )
+  const peachCloudMerchandise = computed(() =>
+    PEACH_CLOUD_MERCHANDISE_CATALOG.map((item) => ({
+      ...item,
+      currency: primaryCurrency.value,
+      purchasePrice: formatAmount(item.purchasePriceCents),
+      canPurchase: item.purchasePriceCents > 0,
+      canRedeem: false,
+      missingBeanStamps: 0,
+    })),
+  )
   const cartQuantity = computed(() =>
     cartItems.value.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
   )
@@ -2759,6 +2996,31 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const cartLineItems = computed(() =>
     cartItems.value
       .map((item) => {
+        if (item.lineKind === 'merchandise') {
+          const merchandise = FOOD_DELIVERY_MERCHANDISE_BY_ID.get(item.merchandiseId)
+          const sourceRestaurant = restaurantMap.value.get(item.restaurantId) || null
+          const restaurant = sourceRestaurant ? presentRestaurant(sourceRestaurant) : null
+          if (!merchandise || !restaurant) return null
+          const unitPriceCents = item.acquisition === 'redeemed_gift' ? 0 : item.unitPriceCents
+          const subtotalCents = unitPriceCents * item.quantity
+          return {
+            ...item,
+            lineId: item.lineId,
+            merchandise: { ...merchandise, currency: primaryCurrency.value },
+            menuItem: null,
+            restaurant,
+            title: merchandise.title,
+            titleZh: merchandise.titleZh,
+            titleEn: merchandise.titleEn,
+            imagePath: merchandise.imagePath,
+            assetBase: merchandise.assetBase || item.assetBase || 'harbor-roast',
+            unitPriceCents,
+            isGift: item.acquisition === 'redeemed_gift',
+            subtotalCents,
+            subtotal: formatAmount(subtotalCents),
+            currency: primaryCurrency.value,
+          }
+        }
         const sourceMenuItem = menuItemMap.value.get(item.menuItemId)
         const menuItem = sourceMenuItem ? presentMenuItem(sourceMenuItem) : null
         if (!menuItem) return null
@@ -2767,8 +3029,14 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         const subtotalCents = menuItem.priceCents * item.quantity
         return {
           ...item,
+          lineId: item.menuItemId,
           menuItem,
           restaurant,
+          title: menuItem.title,
+          image: menuItem.image,
+          unitPriceCents: menuItem.priceCents,
+          acquisition: 'purchase',
+          isGift: false,
           subtotalCents,
           subtotal: formatAmount(subtotalCents),
           currency: menuItem.currency,
@@ -2794,11 +3062,11 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return summarizeOrderTotals(
       lines.map((line) => ({
         menuItemId: line.menuItemId,
-        title: line.menuItem.title,
-        category: line.menuItem.category,
+        title: line.title,
+        category: line.menuItem?.category || restaurant.category,
         quantity: line.quantity,
-        unitPriceCents: line.menuItem.priceCents,
-        currency: line.menuItem.currency,
+        unitPriceCents: line.unitPriceCents,
+        currency: line.currency,
       })),
       restaurant.deliveryFeeCents || 0,
       primaryCurrency.value,
@@ -2820,11 +3088,11 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     summarizeOrderTotals(
       cartLineItems.value.map((line) => ({
         menuItemId: line.menuItemId,
-        title: line.menuItem.title,
-        category: line.menuItem.category,
+        title: line.title,
+        category: line.menuItem?.category || line.restaurant?.category || 'restaurants',
         quantity: line.quantity,
-        unitPriceCents: line.menuItem.priceCents,
-        currency: line.menuItem.currency,
+        unitPriceCents: line.unitPriceCents,
+        currency: line.currency,
       })),
       cartRestaurant.value?.deliveryFeeCents || 0,
       primaryCurrency.value,
@@ -2951,6 +3219,98 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return presentMenuItem(menuItem)
   }
 
+  const cartItemRestaurantId = (item = {}) =>
+    item.lineKind === 'merchandise'
+      ? item.restaurantId
+      : menuItemMap.value.get(item.menuItemId)?.restaurantId || ''
+
+  const canAddCartLineForRestaurant = (restaurantId) =>
+    cartItems.value.filter((line) => cartItemRestaurantId(line) === restaurantId).length <
+    FOOD_CART_LINE_LIMIT
+
+  const setHarborRoastBeanStamps = (value) => {
+    harborRoastRewards.value.beanStamps = clamp(toInt(value, harborRoastBeanStamps.value), 0, 999)
+    return harborRoastRewards.value.beanStamps
+  }
+
+  const addMerchandiseLine = (merchandise, acquisition, quantity = 1) => {
+    const lineId = `${merchandise.id}__${acquisition}`
+    const restaurantId = merchandise.restaurantId || HARBOR_ROAST_SEED_RESTAURANT_ID
+    const normalizedQuantity = normalizeQuantity(quantity)
+    const now = Date.now()
+    const existing = cartItems.value.find((item) => item.lineId === lineId)
+    if (existing) {
+      if (existing.quantity >= 99) return null
+      existing.quantity = Math.min(99, existing.quantity + normalizedQuantity)
+      existing.updatedAt = now
+      return existing
+    }
+    if (!canAddCartLineForRestaurant(restaurantId)) return null
+    const item = normalizeCartItem(
+      {
+        lineKind: 'merchandise',
+        merchandiseId: merchandise.id,
+        acquisition,
+        quantity: normalizedQuantity,
+        sourceModule: merchandise.sourceModule || 'food_delivery_harbor_merchandise',
+        sourceId: merchandise.id,
+        addedAt: now,
+        updatedAt: now,
+      },
+      new Set(menuItemMap.value.keys()),
+    )
+    if (!item) return null
+    cartItems.value.unshift(item)
+    return item
+  }
+
+  const addHarborRoastMerchandiseToCart = (merchandiseId, quantity = 1) => {
+    const id = normalizeFoodId(merchandiseId)
+    const merchandise = HARBOR_ROAST_MERCHANDISE_BY_ID.get(id)
+    if (!merchandise || merchandise.purchasePriceCents <= 0) {
+      return { ok: false, reason: 'not_purchasable' }
+    }
+    const line = addMerchandiseLine(merchandise, 'purchase', quantity)
+    return line ? { ok: true, line } : { ok: false, reason: 'cart_limit' }
+  }
+
+  const addPeachCloudMerchandiseToCart = (merchandiseId, quantity = 1) => {
+    const id = normalizeFoodId(merchandiseId)
+    const merchandise = PEACH_CLOUD_MERCHANDISE_BY_ID.get(id)
+    if (!merchandise || merchandise.purchasePriceCents <= 0) {
+      return { ok: false, reason: 'not_purchasable' }
+    }
+    const line = addMerchandiseLine(merchandise, 'purchase', quantity)
+    return line ? { ok: true, line } : { ok: false, reason: 'cart_limit' }
+  }
+
+  const redeemHarborRoastMerchandise = (merchandiseId) => {
+    const id = normalizeFoodId(merchandiseId)
+    const merchandise = HARBOR_ROAST_MERCHANDISE_BY_ID.get(id)
+    if (!merchandise || merchandise.beanStampCost <= 0) {
+      return { ok: false, reason: 'not_redeemable' }
+    }
+    const availableBeanStamps = harborRoastBeanStamps.value
+    if (availableBeanStamps < merchandise.beanStampCost) {
+      return {
+        ok: false,
+        reason: 'insufficient_stamps',
+        availableBeanStamps,
+        requiredBeanStamps: merchandise.beanStampCost,
+        missingBeanStamps: merchandise.beanStampCost - availableBeanStamps,
+      }
+    }
+    const line = addMerchandiseLine(merchandise, 'redeemed_gift', 1)
+    if (!line) return { ok: false, reason: 'cart_limit' }
+    harborRoastRewards.value.beanStamps -= merchandise.beanStampCost
+    return {
+      ok: true,
+      line,
+      spentBeanStamps: merchandise.beanStampCost,
+      remainingBeanStamps: harborRoastRewards.value.beanStamps,
+    }
+  }
+
   const addToCart = (menuItemId, quantity = 1, options = {}) => {
     const menuItem = findMenuItemById(menuItemId)
     if (!menuItem || menuItem.available === false) return null
@@ -2963,6 +3323,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       return existing
     }
     const item = {
+      lineId: menuItem.id,
+      lineKind: 'menu',
       menuItemId: menuItem.id,
       quantity: normalizedQuantity,
       sourceModule: normalizeText(options.sourceModule, 'food_delivery_cart', 60),
@@ -2972,26 +3334,36 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
     cartItems.value.unshift(item)
     const restaurantLines = cartItems.value.filter(
-      (line) => menuItemMap.value.get(line.menuItemId)?.restaurantId === menuItem.restaurantId,
+      (line) => cartItemRestaurantId(line) === menuItem.restaurantId,
     )
     if (restaurantLines.length > FOOD_CART_LINE_LIMIT) {
-      const overflowMenuItemIds = new Set(
-        restaurantLines.slice(FOOD_CART_LINE_LIMIT).map((line) => line.menuItemId),
+      const overflowLineIds = new Set(
+        restaurantLines.slice(FOOD_CART_LINE_LIMIT).map((line) => line.lineId || line.menuItemId),
       )
       cartItems.value = cartItems.value.filter(
-        (line) => !overflowMenuItemIds.has(line.menuItemId),
+        (line) => !overflowLineIds.has(line.lineId || line.menuItemId),
       )
     }
     return item
   }
 
-  const updateCartQuantity = (menuItemId, quantity = 1) => {
-    const id = normalizeFoodId(menuItemId)
-    const item = cartItems.value.find((line) => line.menuItemId === id)
+  const updateCartQuantity = (lineId, quantity = 1) => {
+    const id = normalizeFoodId(lineId)
+    const item = cartItems.value.find((line) => (line.lineId || line.menuItemId) === id)
     if (!item) return false
     const nextQuantity = toInt(quantity, item.quantity)
+    const isRedeemedGift = item.lineKind === 'merchandise' && item.acquisition === 'redeemed_gift'
+    if (isRedeemedGift && nextQuantity > item.quantity) return false
+    if (isRedeemedGift && nextQuantity < item.quantity) {
+      const removedQuantity = item.quantity - Math.max(0, nextQuantity)
+      harborRoastRewards.value.beanStamps = clamp(
+        harborRoastRewards.value.beanStamps + removedQuantity * item.beanStampCost,
+        0,
+        999,
+      )
+    }
     if (nextQuantity <= 0) {
-      cartItems.value = cartItems.value.filter((line) => line.menuItemId !== id)
+      cartItems.value = cartItems.value.filter((line) => (line.lineId || line.menuItemId) !== id)
       return true
     }
     item.quantity = normalizeQuantity(nextQuantity)
@@ -3009,9 +3381,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const id = normalizeFoodId(restaurantId)
     if (!id) return 0
     const before = cartItems.value.length
-    cartItems.value = cartItems.value.filter(
-      (line) => menuItemMap.value.get(line.menuItemId)?.restaurantId !== id,
-    )
+    cartItems.value = cartItems.value.filter((line) => cartItemRestaurantId(line) !== id)
     return before - cartItems.value.length
   }
 
@@ -3165,6 +3535,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurantId = '',
     deliveryAddress = '',
     note = '',
+    fulfillmentMode = 'delivery',
+    pickupMode = '',
     relationshipBinding = null,
     sourceModule = FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
     sourceId = '',
@@ -3184,16 +3556,26 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       deliveryFeeCents: restaurant.deliveryFeeCents,
       currency: primaryCurrency.value,
       items: lines.map((line) => ({
-        id: `${line.menuItemId}_${line.addedAt}`,
+        id: `${line.lineId}_${line.addedAt}`,
+        lineKind: line.lineKind,
         menuItemId: line.menuItemId,
-        title: line.menuItem.title,
-        category: line.menuItem.category,
+        merchandiseId: line.merchandiseId,
+        acquisition: line.acquisition,
+        title: line.title,
+        titleZh: line.titleZh,
+        titleEn: line.titleEn,
+        imagePath: line.imagePath,
+        assetBase: line.assetBase,
+        beanStampCost: line.beanStampCost,
+        category: line.menuItem?.category || restaurant.category,
         quantity: line.quantity,
-        unitPriceCents: line.menuItem.priceCents,
+        unitPriceCents: line.unitPriceCents,
         currency: primaryCurrency.value,
       })),
       deliveryAddress,
       note,
+      fulfillmentMode,
+      pickupMode,
       relationshipBinding,
       sourceModule,
       sourceId,
@@ -3471,6 +3853,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants.value = nextRestaurants
     menuItems.value = nextMenuItems
     cartItems.value = normalizeCartItems(rawSource.cartItems || rawSource.cart, menuItemsById)
+    harborRoastRewards.value = normalizeHarborRoastRewards(rawSource.harborRoastRewards)
     platformCartItems.value = normalizePlatformCartItems(rawSource.platformCartItems)
     platformOrders.value = normalizePlatformOrders(rawSource.platformOrders)
     orders.value = normalizeFoodOrders(rawSource.orders)
@@ -3501,6 +3884,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants: restaurants.value.map((restaurant) => ({ ...restaurant })),
     menuItems: menuItems.value.map((item) => ({ ...item })),
     cartItems: cartItems.value.map((item) => ({ ...item })),
+    harborRoastRewards: { ...harborRoastRewards.value },
     platformCartItems: platformCartItems.value.map((item) => ({ ...item })),
     platformOrders: platformOrders.value.map((order) => ({
       ...order,
@@ -3539,6 +3923,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants.value = []
     menuItems.value = []
     cartItems.value = []
+    harborRoastRewards.value = normalizeHarborRoastRewards()
     platformCartItems.value = []
     platformOrders.value = []
     orders.value = []
@@ -3566,7 +3951,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   })()
 
   watch(
-    [restaurants, menuItems, cartItems, platformCartItems, platformOrders, orders, primaryCurrency],
+    [
+      restaurants,
+      menuItems,
+      cartItems,
+      harborRoastRewards,
+      platformCartItems,
+      platformOrders,
+      orders,
+      primaryCurrency,
+    ],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -3578,12 +3972,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     restaurants,
     menuItems,
     cartItems,
+    harborRoastRewards,
     platformCartItems,
     platformOrders,
     orders,
     primaryCurrency,
     restaurantCount,
     menuItemCount,
+    harborRoastBeanStamps,
+    harborRoastMerchandise,
+    peachCloudMerchandise,
     cartQuantity,
     platformCartQuantity,
     platformCartPrimaryTotal,
@@ -3608,6 +4006,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     listMenuByRestaurant,
     upsertRestaurant,
     upsertMenuItem,
+    setHarborRoastBeanStamps,
+    addHarborRoastMerchandiseToCart,
+    addPeachCloudMerchandiseToCart,
+    redeemHarborRoastMerchandise,
     addToCart,
     updateCartQuantity,
     clearCart,

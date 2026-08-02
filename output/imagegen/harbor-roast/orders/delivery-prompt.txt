@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: transparent Harbor Roast order-status illustration, out for delivery
+Input images: the supplied Captain Roast PNG is the exact character identity reference
+Primary request: Show the same Captain Roast character riding a compact original Copper delivery bicycle with one rigid Cream drink carrier secured behind the seat, moving calmly to the right. Preserve the exact face, cream cup body, copper captain cap, dark limbs and anchor identity.
+Style/medium: polished dimensional editorial brand illustration matching the reference, clean readable mobile-app status art, one mascot only.
+Composition/framing: centered complete side three-quarter action, entire character, bicycle wheels and carrier visible, generous padding, crisp opaque silhouette.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, one uniform color with no floor, shadow, gradient, texture or lighting variation.
+Constraints: no motion blur, speed lines, cast shadow, reflection, text, logo, extra rider, UI or watermark; do not use #00ff00 in the subject.
+Avoid: real delivery-platform uniforms, motorcycles, Starbucks, siren emblem, green apron, soft transparent effects.

@@ -1,0 +1,10 @@
+Use case: ads-marketing
+Asset type: full-bleed vertical in-app product launch poster, final 2:3 composition
+Input image 1 role: Peach Cloud brand-world reference; preserve the pale green, petal pink, charcoal, soft studio daylight, rounded cloud scenery, and the same cute peach mascot identity when used.
+Input image 2 role: exact White Peach Lime Sparkler product reference; preserve the tall clear glass, white-peach wedges, lime slices, mint, sparkling bubbles, and appetizing photographic realism.
+Primary request: create one polished full-canvas Peach Cloud launch poster for the White Peach Lime Sparkler. The typography must feel designed into the photographic composition using natural negative space, not placed on a colored overlay panel.
+Composition/framing: vertical 2:3 poster, the drink is the dominant product and remains fully visible; a small Peach Cloud mascot may support the scene without covering the drink; strong commercial hierarchy and generous safe margins.
+Text (verbatim): "PEACH CLOUD"; "白桃季上新"; "白桃青柠气泡"; "26 CNY"; "每周五 10:00"
+Typography: bold charcoal editorial sans serif, crisp and highly legible, text directly on the poster scene with no text box, no translucent mask, and no split-color copy block.
+Constraints: render every quoted text string exactly once and verbatim; preserve Chinese characters accurately; the entire output is one finished poster image; no UI chrome, no buttons, no cards, no separate caption area, no watermark, no extra copy, no fake logo.
+Avoid: website mockup, app screenshot, horizontal banner, colored rectangle behind copy, left-side text panel, duplicated text, malformed Chinese, illegible tiny type, unrelated products.

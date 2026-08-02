@@ -106,6 +106,7 @@ const handleImageError = (event) => {
   const image = event?.currentTarget
   if (!image || image.dataset.fallbackApplied === 'true') return
   image.dataset.fallbackApplied = 'true'
+  image.parentElement?.classList.add('is-image-fallback')
   image.hidden = true
 }
 </script>
@@ -132,7 +133,10 @@ const handleImageError = (event) => {
 
       <div class="discovery-brand">
         <div v-if="coverImageUrl" class="discovery-brand-image">
-          <i class="fas fa-store discovery-image-fallback" aria-hidden="true"></i>
+          <span class="discovery-image-fallback" aria-hidden="true">
+            <span class="discovery-fallback-lines"></span>
+            <i class="fas fa-store"></i>
+          </span>
           <img
             :src="coverImageUrl"
             :alt="restaurant.image?.alt || displayName"
@@ -168,6 +172,24 @@ const handleImageError = (event) => {
     </header>
 
     <template v-if="isCafe">
+      <section class="cafe-counter-intro" data-testid="food-delivery-cafe-intro">
+        <div class="cafe-intro-copy">
+          <span>{{ t('沿途现烘', 'ROASTED FOR THE ROUTE') }}</span>
+          <strong>{{ displayName }}</strong>
+          <p>{{ shortDescription }}</p>
+        </div>
+        <div class="cafe-intro-scene">
+          <span>{{ t('柜台 07', 'COUNTER 07') }}</span>
+          <i class="fas fa-mug-hot" aria-hidden="true"></i>
+          <img
+            v-if="coverImageUrl"
+            :src="coverImageUrl"
+            :alt="restaurant.image?.alt || displayName"
+            @error="handleImageError"
+          />
+        </div>
+      </section>
+
       <section class="cafe-counter-status" aria-label="Store status">
         <div>
           <span class="cafe-status-dot"></span>
@@ -226,7 +248,10 @@ const handleImageError = (event) => {
                 :aria-label="t('查看商品详情', 'View item details')"
                 @click="emit('open-item', item.id)"
               >
-                <i class="fas fa-mug-hot discovery-image-fallback" aria-hidden="true"></i>
+                <span class="discovery-image-fallback" aria-hidden="true">
+                  <span class="discovery-fallback-lines"></span>
+                  <i class="fas fa-mug-hot"></i>
+                </span>
                 <img
                   v-if="imageUrl(item)"
                   :src="imageUrl(item)"
@@ -266,6 +291,9 @@ const handleImageError = (event) => {
           <span>{{ t('本日上架', 'FRESHLY STOCKED') }}</span>
           <strong>{{ activeSection?.label }}</strong>
         </div>
+        <span class="shelf-sign-art" aria-hidden="true">
+          <i class="fas fa-cake-candles"></i>
+        </span>
         <dl>
           <div><dt>{{ t('送达', 'ETA') }}</dt><dd>{{ etaText }}</dd></div>
           <div><dt>{{ t('配送', 'FEE') }}</dt><dd>{{ feeText }}</dd></div>
@@ -318,7 +346,10 @@ const handleImageError = (event) => {
             >
               <span class="shelf-product-number">{{ String(index + 1).padStart(2, '0') }}</span>
               <span class="shelf-product-image">
-                <i class="fas fa-cake-candles discovery-image-fallback" aria-hidden="true"></i>
+                <span class="discovery-image-fallback" aria-hidden="true">
+                  <span class="discovery-fallback-lines"></span>
+                  <i class="fas fa-cake-candles"></i>
+                </span>
                 <img
                   v-if="imageUrl(item)"
                   :src="imageUrl(item)"
@@ -402,7 +433,10 @@ const handleImageError = (event) => {
               :aria-label="t('查看商品详情', 'View item details')"
               @click="emit('open-item', item.id)"
             >
-              <i class="fas fa-bowl-food discovery-image-fallback" aria-hidden="true"></i>
+              <span class="discovery-image-fallback" aria-hidden="true">
+                <span class="discovery-fallback-lines"></span>
+                <i class="fas fa-bowl-food"></i>
+              </span>
               <img
                 v-if="imageUrl(item)"
                 :src="imageUrl(item)"
@@ -489,13 +523,30 @@ const handleImageError = (event) => {
 .discovery-brand { display: flex; min-width: 0; align-items: center; gap: 0.625rem; }
 .discovery-brand-image { position: relative; display: flex; width: 2.75rem; height: 2.75rem; flex: 0 0 auto; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background: white; color: var(--muted); }
 .discovery-brand-image img { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: cover; }
-.discovery-image-fallback { position: absolute; z-index: 1; inset: 0; display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; }
+.discovery-image-fallback { position: absolute; z-index: 1; inset: 0; display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; overflow: hidden; }
+.discovery-image-fallback i { position: relative; z-index: 2; }
+.discovery-fallback-lines { position: absolute; inset: 12%; border: 1px solid currentColor; opacity: 0.34; }
+.discovery-fallback-lines::before,
+.discovery-fallback-lines::after { content: ''; position: absolute; background: currentColor; opacity: 0.45; }
+.discovery-fallback-lines::before { top: 50%; right: -12%; left: -12%; height: 1px; }
+.discovery-fallback-lines::after { top: -12%; bottom: -12%; left: 50%; width: 1px; }
 .discovery-kicker { margin: 0; overflow: hidden; color: var(--muted); font-size: 0.55rem; font-weight: 900; line-height: 1rem; text-overflow: ellipsis; white-space: nowrap; }
 .discovery-brand h1 { margin: 0; overflow: hidden; font-size: 1rem; font-weight: 950; line-height: 1.25rem; text-overflow: ellipsis; white-space: nowrap; }
 .discovery-cart-count { position: absolute; top: -0.3rem; right: -0.25rem; display: inline-flex; min-width: 1.15rem; height: 1.15rem; align-items: center; justify-content: center; border-radius: 999px; padding: 0 0.25rem; background: var(--ink); color: white; font-size: 0.6rem; font-weight: 900; }
 
 .discovery-template--cafe { --ink: #2b211b; --muted: #71645d; background: #f3efe7; }
 .discovery-template--cafe .discovery-header { background: rgba(243, 239, 231, 0.93); }
+.discovery-template--cafe .discovery-brand-image,
+.cafe-item-image { background-color: #e4d2bc; background-image: repeating-linear-gradient(90deg, transparent 0 0.55rem, rgba(142,61,45,0.08) 0.55rem 0.62rem); }
+.cafe-counter-intro { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(7rem, 0.65fr); min-height: 9rem; border-bottom: 1px solid #bdb3a9; background: #26201d; color: #fff9f2; }
+.cafe-intro-copy { display: flex; min-width: 0; flex-direction: column; justify-content: center; padding: 1.2rem 1rem; }
+.cafe-intro-copy > span { color: #d38a6c; font-size: 0.55rem; font-weight: 950; letter-spacing: 0; }
+.cafe-intro-copy > strong { margin-top: 0.25rem; overflow-wrap: anywhere; font-family: Georgia, 'Times New Roman', serif; font-size: 1.7rem; font-weight: 700; line-height: 1.8rem; }
+.cafe-intro-copy > p { display: -webkit-box; overflow: hidden; margin: 0.55rem 0 0; color: #d6cdc6; font-size: 0.66rem; line-height: 0.95rem; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.cafe-intro-scene { position: relative; display: flex; min-width: 0; align-items: center; justify-content: center; overflow: hidden; border-left: 1px solid #5b4b43; background-color: #7f392c; background-image: repeating-linear-gradient(90deg, transparent 0 1.1rem, rgba(255,249,242,0.08) 1.1rem 1.2rem); color: #f5d3b4; }
+.cafe-intro-scene > span { position: absolute; z-index: 2; top: 0.65rem; right: 0.65rem; font-size: 0.5rem; font-weight: 950; }
+.cafe-intro-scene > i { position: relative; z-index: 1; font-size: 2.2rem; }
+.cafe-intro-scene > img { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cafe-counter-status { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-bottom: 1px solid #cfc5b9; background: #f9f6f0; font-size: 0.66rem; }
 .cafe-counter-status div { display: flex; align-items: center; gap: 0.35rem; color: #8e3d2d; }
 .cafe-status-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: #d6543c; box-shadow: 0 0 0 0.2rem #f0cec4; }
@@ -514,7 +565,8 @@ const handleImageError = (event) => {
 .cafe-menu-heading p { margin: 0; color: #71645d; font-size: 0.65rem; font-weight: 800; }
 .cafe-menu-list { display: grid; }
 .cafe-menu-row { display: grid; grid-template-columns: 4.25rem minmax(0, 1fr) 2rem; align-items: center; gap: 0.7rem; min-height: 6.25rem; padding: 0.85rem 0; border-bottom: 1px solid #cfc5b9; }
-.cafe-item-image { position: relative; display: flex; width: 4.25rem; height: 4.25rem; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background: #e4d2bc; color: #8e3d2d; }
+.cafe-item-image { position: relative; display: flex; width: 4.25rem; height: 4.25rem; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #c7aa91; border-radius: 50%; color: #8e3d2d; }
+.cafe-item-image.is-image-fallback .discovery-image-fallback { box-shadow: inset 0 0 0 0.3rem rgba(255,249,242,0.5); }
 .cafe-item-image img { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: cover; }
 .cafe-item-copy { display: flex; min-width: 0; flex-direction: column; text-align: left; }
 .cafe-item-copy strong { font-size: 0.78rem; line-height: 1.05rem; }
@@ -525,7 +577,11 @@ const handleImageError = (event) => {
 .discovery-template--shelf { --ink: #33302e; --muted: #746d68; background: #f6f1ed; }
 .discovery-template--shelf .discovery-header { background: rgba(253, 249, 246, 0.94); }
 .discovery-template--shelf .discovery-brand-image { border-radius: 0.25rem; border: 1px solid #d8c7bd; }
-.shelf-store-sign { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.8rem; padding: 1rem; border-bottom: 0.4rem solid #4d6871; background: #e5cdc4; }
+.discovery-template--shelf .discovery-brand-image { background-color: #ead5cd; background-image: repeating-linear-gradient(135deg, transparent 0 0.35rem, rgba(129,78,89,0.08) 0.35rem 0.42rem); }
+.shelf-store-sign { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.8rem; overflow: hidden; padding: 1rem; border-bottom: 0.4rem solid #4d6871; background-color: #e5cdc4; background-image: repeating-linear-gradient(90deg, transparent 0 2.5rem, rgba(255,255,255,0.17) 2.5rem 2.58rem); }
+.shelf-store-sign > div,
+.shelf-store-sign > dl { position: relative; z-index: 2; }
+.shelf-sign-art { position: absolute; z-index: 1; top: -1.6rem; left: 54%; display: flex; width: 6.5rem; height: 6.5rem; align-items: center; justify-content: center; border: 1px solid rgba(129,78,89,0.22); color: rgba(129,78,89,0.16); font-size: 2.8rem; transform: rotate(8deg); }
 .shelf-store-sign > div > span { display: block; color: #814e59; font-size: 0.58rem; font-weight: 950; }
 .shelf-store-sign > div > strong { display: block; margin-top: 0.2rem; font-size: 1.35rem; line-height: 1.5rem; }
 .shelf-store-sign dl { display: grid; grid-template-columns: repeat(2, auto); gap: 0.4rem; margin: 0; }
@@ -544,7 +600,9 @@ const handleImageError = (event) => {
 .shelf-product { position: relative; min-width: 0; padding: 0.55rem 0.55rem 0; border: 1px solid #e1d2c8; border-radius: 0.25rem; background: rgba(255,255,255,0.82); box-shadow: 0 0.5rem 1rem rgba(83,58,45,0.07); }
 .shelf-product-view { display: flex; width: 100%; min-width: 0; flex-direction: column; align-items: stretch; text-align: left; }
 .shelf-product-number { align-self: flex-start; color: #9b6e75; font-size: 0.52rem; font-weight: 950; }
-.shelf-product-image { position: relative; display: flex; width: 100%; aspect-ratio: 1 / 0.82; align-items: center; justify-content: center; overflow: hidden; color: #9b6e75; font-size: 1.5rem; }
+.shelf-product-image { position: relative; display: flex; width: 100%; aspect-ratio: 4 / 3; align-items: center; justify-content: center; overflow: hidden; background-color: #fffaf7; color: #9b6e75; font-size: 1.5rem; }
+.shelf-product-image.is-image-fallback { background-image: repeating-linear-gradient(135deg, transparent 0 1rem, rgba(155,110,117,0.06) 1rem 1.08rem); }
+.shelf-product-image.is-image-fallback .discovery-fallback-lines { inset: 16%; }
 .shelf-product-image img { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain; }
 .shelf-product-view strong { display: -webkit-box; overflow: hidden; min-height: 2rem; font-size: 0.72rem; line-height: 1rem; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .shelf-product-desc { display: -webkit-box; overflow: hidden; min-height: 1.8rem; margin-top: 0.25rem; color: #746d68; font-size: 0.58rem; line-height: 0.85rem; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -555,7 +613,7 @@ const handleImageError = (event) => {
 .discovery-template--stall { --ink: #1d2928; --muted: #5c6d69; background: #eef0e6; }
 .discovery-template--stall::before { content: ''; display: block; height: 0.65rem; background: repeating-linear-gradient(90deg, #cc3f2d 0 2.25rem, #f6dfaa 2.25rem 4.5rem); }
 .discovery-template--stall .discovery-header { top: 0.65rem; background: rgba(238, 240, 230, 0.94); }
-.discovery-template--stall .discovery-brand-image { border: 2px solid #cc3f2d; border-radius: 0.25rem; }
+.discovery-template--stall .discovery-brand-image { border: 2px solid #cc3f2d; border-radius: 0.25rem; background-color: #f7e6ba; background-image: repeating-linear-gradient(0deg, transparent 0 0.4rem, rgba(163,47,36,0.08) 0.4rem 0.46rem); }
 .stall-service-strip { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.65rem 1rem; border-top: 1px solid #b9c3b4; border-bottom: 1px solid #b9c3b4; background: #f7e6ba; color: #485853; font-size: 0.6rem; font-weight: 900; }
 .stall-service-strip span { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
 .stall-service-strip span:first-child { color: #a32f24; }
@@ -580,6 +638,8 @@ const handleImageError = (event) => {
 .stall-route-item.is-even .stall-route-copy > div { justify-content: flex-end; }
 .stall-route-node { position: relative; z-index: 2; display: block; width: 0.85rem; height: 0.85rem; justify-self: center; border: 3px solid #eef0e6; border-radius: 50%; background: #cc3f2d; box-shadow: 0 0 0 2px #cc3f2d; }
 .stall-route-image { position: relative; display: flex; width: 100%; aspect-ratio: 1; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #9da99d; border-radius: 0.375rem; background: #f7f4e8; color: #cc3f2d; font-size: 1.5rem; transform: rotate(-2deg); box-shadow: 0.4rem 0.4rem 0 #d9dfd3; }
+.stall-route-image.is-image-fallback { background-color: #f7f1df; background-image: repeating-linear-gradient(45deg, transparent 0 1.1rem, rgba(72,88,83,0.055) 1.1rem 1.18rem); }
+.stall-route-image.is-image-fallback .discovery-fallback-lines { inset: 14%; border-width: 2px; border-color: #cc3f2d; }
 .stall-route-item.is-even .stall-route-image { transform: rotate(2deg); box-shadow: -0.4rem 0.4rem 0 #d9dfd3; }
 .stall-route-image img { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: cover; }
 .stall-route-copy { min-width: 0; }
@@ -604,6 +664,8 @@ const handleImageError = (event) => {
   .cafe-counter-layout { grid-template-columns: 4.8rem minmax(0, 1fr); }
   .cafe-menu-row { grid-template-columns: 3.5rem minmax(0, 1fr) 1.9rem; gap: 0.5rem; }
   .cafe-item-image { width: 3.5rem; height: 3.5rem; }
+  .cafe-counter-intro { grid-template-columns: minmax(0, 1fr) 6.5rem; }
+  .cafe-intro-copy > strong { font-size: 1.4rem; line-height: 1.55rem; }
   .shelf-store-sign { grid-template-columns: 1fr; }
   .shelf-store-sign dl { justify-self: start; }
   .stall-route-title { grid-template-columns: 1fr; }

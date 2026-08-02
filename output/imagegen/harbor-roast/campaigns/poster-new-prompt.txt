@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: text-free Harbor Roast Copper Coast seasonal campaign landing poster
+Primary request: Create a premium vertical editorial coffee photograph featuring the three Copper Coast seasonal drinks.
+Scene/backdrop: sculptural warm copper cafe counter with Cream #F9F2ED and Blush #EDD6C8 planes, restrained Ink #313131 architectural detail, no visible branding.
+Subject: one large hero sea-salt caramel latte with realistic espresso, microfoam, caramel sheen and restrained salt garnish; one pistachio oat latte with natural pale pistachio foam; one darker cocoa espresso drink. All three complete, distinct, and appetizing.
+Style/medium: photorealistic polished commercial cafe photography, mature chain campaign, realistic coffee and foam texture.
+Composition/framing: portrait 2:3 source designed for a later 4:5 crop. Keep the top 30% and upper-left area calm for code-rendered title. Arrange the three drinks from middle to lower area inside the central 4:5 safe frame, preserving every rim and base.
+Lighting/mood: warm directional cafe side light with controlled highlights and compact shadows.
+Color palette: Copper #C67C4E, Blush #EDD6C8, Ink #313131, Line #E3E3E3, Cream #F9F2ED.
+Constraints: no text, no letters, no prices, no UI, no mascot, no people, no logos, no watermark.
+Avoid: Starbucks, siren or circular emblem, green apron, real-brand packaging, neon pistachio green, candy styling, dark teal background.

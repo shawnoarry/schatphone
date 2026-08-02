@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: text-free Harbor Roast member campaign landing poster
+Input images: the supplied Captain Roast PNG is the exact character identity reference
+Primary request: Create a premium vertical member-welcome poster scene using the same Captain Roast character without redesigning the face, cup body, copper captain cap, cream-and-copper palette, or anchor accessory.
+Scene/backdrop: elegant modern Harbor Roast counter scene with layered Cream #F9F2ED, Blush #EDD6C8 and Copper #C67C4E planes, restrained Ink #313131 structure, no visible branding.
+Subject: Captain Roast welcoming a new member with one unbranded first cup and two abstract coffee-bean tokens. Exactly one mascot; polished and friendly, not infantile.
+Style/medium: dimensional editorial brand illustration matching the supplied mascot, refined mobile campaign poster.
+Composition/framing: portrait 2:3 source designed for a later 4:5 crop. Keep the top 32% and upper-left area calm for code-rendered title and supporting copy. Place the complete character and gifts in the lower-right/middle, inside the central 4:5 safe frame.
+Color palette: Copper #C67C4E, Blush #EDD6C8, Ink #313131, Line #E3E3E3, Cream #F9F2ED.
+Constraints: no text, no letters, no numbers, no prices, no UI cards, no readable tokens, no watermark, no extra character.
+Avoid: Starbucks, siren or similar circular emblem, green apron, real-brand packaging, confetti explosion, children's-book layout.

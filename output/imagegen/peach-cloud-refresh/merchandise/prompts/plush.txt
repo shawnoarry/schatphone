@@ -1,0 +1,9 @@
+Use case: product-mockup
+Asset type: Peach Cloud mobile shop merchandise product image
+Primary request: Use the input image only as the exact visual identity reference for the Peach Cloud mascot. Create one premium collectible plush toy of that same character.
+Scene/backdrop: clean square product studio in pale green #F2FBE0 and pink mist #FDA1B8 with one restrained petal-rouge accent arch.
+Subject: one freestanding plump white-peach plush with a clear central peach cleft, cream cloud cap, two tiny charcoal dot eyes, a gentle smile, one dark-green felt leaf, short rounded feet, and soft velvety fibers; the whole plush must be visible.
+Style/medium: photoreal catalog product photography, tactile high-quality plush, collectible dessert-brand merchandise, cute but refined.
+Composition/framing: centered square composition, subject fills about 74% of frame, generous crop-safe padding, simple low pedestal, no props.
+Lighting/mood: bright softbox daylight with a compact natural contact shadow.
+Constraints: no readable text, no letters, no price, no packaging, no UI, no watermark, no drinks, no food, no extra character.

@@ -1,0 +1,10 @@
+Use case: ads-marketing
+Asset type: full-bleed vertical in-app mascot merchandise launch poster, final 2:3 composition
+Input image 1 role: Peach Cloud brand-world reference; preserve the pale green, petal pink, charcoal, rounded cloud scenery, soft studio daylight, and exact cute peach mascot identity.
+Input image 2 role: exact Peach Cloud plush product reference; preserve the round peach body, cream-to-peach blush fabric, small feet, black bead eyes, stitched smile, dark-green leaf, and whipped-cream-shaped top.
+Primary request: create one polished full-canvas Peach Cloud merchandise launch poster starring the plush as a desirable collectible. Integrate the copy into natural negative space like premium retail campaign art, not as a web overlay.
+Composition/framing: vertical 2:3 poster, full plush visible on a soft pink podium with subtle cloud props and generous breathing room, playful premium collectible photography.
+Text (verbatim): "PEACH CLOUD GOODS"; "把小桃子带回家"; "桃气云朵毛绒"; "99 CNY"; "本周限量发售"
+Typography: bold charcoal editorial sans serif, crisp and highly legible, text directly on the poster scene with no text box, no translucent mask, and no split-color copy block.
+Constraints: render every quoted text string exactly once and verbatim; preserve Chinese characters accurately; keep the same mascot, do not redesign it; the entire output is one finished poster image; no UI chrome, no buttons, no cards, no separate caption area, no watermark, no extra copy, no fake logo.
+Avoid: website mockup, app screenshot, horizontal banner, colored rectangle behind copy, left-side text panel, duplicated text, malformed Chinese, illegible tiny type, different character face, extra merchandise.

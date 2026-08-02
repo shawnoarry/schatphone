@@ -999,6 +999,16 @@ describe('Home folder entries', () => {
       true,
     )
     expect(
+      wrapper
+        .get('[data-testid="home-folder-entry-image-food_delivery_platform"]')
+        .attributes('src'),
+    ).toContain('/images/ui-assets/apps/food-delivery/platform/brand/baemin-entry-icon-01.png')
+    expect(
+      wrapper
+        .get('[data-testid="home-folder-entry-image-food_delivery_platform"]')
+        .classes(),
+    ).toContain('is-full-bleed')
+    expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists(),
     ).toBe(true)
     expect(
@@ -1020,6 +1030,21 @@ describe('Home folder entries', () => {
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_verdant_day"]').exists(),
     ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_harbor_roast"]').exists(),
+    ).toBe(true)
+    expect(
+      wrapper
+        .get('[data-testid="home-folder-entry-image-shop_app_food_seed_harbor_roast"]')
+        .attributes('src'),
+    ).toContain(
+      '/images/ui-assets/apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png',
+    )
+    expect(
+      wrapper
+        .get('[data-testid="home-folder-entry-image-shop_app_food_seed_harbor_roast"]')
+        .classes(),
+    ).toContain('is-full-bleed')
 
     await wrapper
       .find('[data-testid="home-folder-entry-shop_app_food_seed_dash_grill"]')

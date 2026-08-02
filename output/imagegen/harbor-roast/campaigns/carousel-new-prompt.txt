@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: text-free Harbor Roast Home carousel artwork, Copper Coast seasonal drinks
+Primary request: Create a premium seasonal coffee-chain campaign photograph led by a sea-salt caramel latte, supported by two distinct seasonal espresso drinks.
+Scene/backdrop: sculptural warm copper cafe counter, Cream #F9F2ED and restrained Blush #EDD6C8 backdrop, a small Ink #313131 architectural accent, no visible branding.
+Subject: on the far right, one clear hero sea-salt caramel latte with realistic espresso, microfoam, caramel sheen and a restrained salt garnish; behind it, one pistachio oat latte with natural pale pistachio foam and one darker cocoa espresso drink. Three drinks total, all distinct and complete.
+Style/medium: photorealistic polished commercial cafe photography, mature premium chain campaign, realistic liquid and foam texture.
+Composition/framing: landscape 3:2 source designed for a later 6:5 crop. Keep the left 60% calm and low detail for code-rendered copy. Keep all drink rims and bases inside the right 40%, with generous top and bottom crop tolerance.
+Lighting/mood: soft warm directional cafe side light, controlled compact shadows, crisp appetizing highlights.
+Color palette: Copper #C67C4E, Blush #EDD6C8, Ink #313131, Line #E3E3E3, Cream #F9F2ED.
+Constraints: no text, no letters, no prices, no buttons, no UI, no mascot, no people, no logos, no watermark.
+Avoid: Starbucks, siren or circular emblem, green apron, real-brand cup sleeve, neon pistachio green, candy styling, dark teal background.

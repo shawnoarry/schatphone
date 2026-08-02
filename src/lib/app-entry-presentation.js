@@ -88,6 +88,14 @@ export const SHOP_ENTRY_TEMPLATE_OPTIONS = Object.freeze([
     descEn: 'For cafes, bakeries, and light meals.',
   },
   {
+    id: 'harbor_roast_chain',
+    userSelectable: false,
+    labelZh: 'Harbor Roast 品牌店',
+    labelEn: 'Harbor Roast chain',
+    descZh: 'Harbor Roast 专属连锁咖啡品牌应用。',
+    descEn: 'Brand-owned chain coffee app for Harbor Roast.',
+  },
+  {
     id: 'dessert_window',
     userSelectable: false,
     labelZh: '甜品橱窗',

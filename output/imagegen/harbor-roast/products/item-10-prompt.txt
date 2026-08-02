@@ -1,0 +1,8 @@
+Use case: product-mockup
+Asset type: Harbor Roast square menu product photo
+Input images: the supplied Harbor Roast cover is a lighting, palette, counter-material and photographic-quality reference only; do not copy its multi-product arrangement
+Primary request: Photograph exactly one Apricot Earl Grey Iced Tea in one tall clear ribbed glass: translucent amber tea, clear ice, one apricot slice and one restrained lemon peel; absolutely no espresso or milk layer.
+Composition/framing: square catalog composition, about 35-degree camera angle, product centered and filling about 74% of the frame, complete rim and base visible, stable crop padding.
+Scene/backdrop: Cream #F9F2ED background and warm Copper #C67C4E counter, restrained Blush #EDD6C8 and Ink #313131 detail.
+Lighting/mood: same soft warm directional cafe side light and compact shadow as the reference cover; photorealistic premium chain quality.
+Constraints: exactly one iced tea and no other food or drink; no text, price, logo, straw, mascot, people, packaging, UI or watermark.

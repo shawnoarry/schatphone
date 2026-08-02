@@ -1,0 +1,10 @@
+Use case: ads-marketing
+Asset type: full-bleed vertical in-app seasonal product poster, final 2:3 composition
+Input image 1 role: Peach Cloud brand-world reference; preserve the pale green, petal pink, charcoal, soft studio daylight, rounded cloud scenery, and playful premium dessert-brand atmosphere.
+Input image 2 role: exact Waxberry Lychee Iced Tea product reference; preserve the ruby-red iced tea, faceted clear glass, waxberries, lychee, green leaves, clear ice, and realistic condensation.
+Primary request: create one polished full-canvas Peach Cloud seasonal poster for Waxberry Lychee Iced Tea. Integrate type into open space in the set so it reads as a finished print advertisement, never as a photo covered by a web UI overlay.
+Composition/framing: vertical 2:3 poster, dramatic ruby drink centered slightly low with airy negative space above, subtle pink blossom and pale-green cloud forms, editorial beverage advertising.
+Text (verbatim): "PEACH CLOUD"; "夏日限定"; "杨梅荔枝冰茶"; "29 CNY"; "酸甜果香 限时回归"
+Typography: bold charcoal editorial sans serif, crisp and highly legible, text printed directly into the poster composition with no text box, no translucent mask, and no split-color copy block.
+Constraints: render every quoted text string exactly once and verbatim; preserve Chinese characters accurately; the entire output is one finished poster image; no UI chrome, no buttons, no cards, no separate caption area, no watermark, no extra copy, no fake logo.
+Avoid: website mockup, app screenshot, horizontal banner, colored rectangle behind copy, left-side text panel, duplicated text, malformed Chinese, illegible tiny type, peaches replacing waxberry or lychee.

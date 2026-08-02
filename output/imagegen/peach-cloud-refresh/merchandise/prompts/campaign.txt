@@ -1,0 +1,9 @@
+Use case: ads-marketing
+Asset type: Peach Cloud mobile app merchandise campaign banner
+Primary request: Use the input image only as the exact visual identity reference for the Peach Cloud mascot, palette, tactile finish, and bright dessert-studio lighting. Create a new commercial campaign scene that presents the same small plump white-peach mascot as a collectible character beside three real merchandise products: a peach mascot plush toy, a small mascot bag charm, and a pale-green canvas tote with a tasteful peach-and-cloud emblem.
+Scene/backdrop: airy premium retail display with pale green #F2FBE0, petal rouge #FD6C93, pink mist #FDA1B8, fresh white, and restrained charcoal #2B303A; layered peach arcs and soft cloud forms.
+Subject: the mascot plush is the hero product, with the bag charm and tote arranged as a coherent retail collection; preserve the mascot's round peach silhouette, central peach cleft, cream cloud cap, tiny charcoal eyes, gentle smile, and one dark-green leaf.
+Style/medium: polished photoreal product campaign with tactile plush fibers, woven canvas, and enamel hardware; cute and collectible but premium, not childish.
+Composition/framing: 3:2 landscape, products concentrated in the middle-right, generous clean safe area on the left for code-rendered campaign copy, all products fully visible and readable at mobile-banner size.
+Lighting/mood: high-key softbox daylight, cheerful and refined, soft short shadows.
+Constraints: no readable text, no letters, no prices, no UI, no watermark, no real brand logos; do not change the Peach Cloud mascot identity; do not add drinks or food.

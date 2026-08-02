@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: original coffee-chain brand mascot master for mobile app campaigns and order illustrations
+Primary request: Create Captain Roast, an original friendly coffee-cup captain character for the fictional Harbor Roast coffee chain.
+Subject: One warm cream ceramic takeaway coffee cup character with a clean copper captain cap, a tiny abstract anchor-shaped accessory, expressive dark-ink eyes, simple gloved hands, and short booted legs. Full body visible. The silhouette must be instantly recognizable from 48px to poster size. Friendly and confident, polished premium chain-brand character, not infantile and not a generic emoji.
+Style/medium: polished dimensional editorial brand illustration, soft matte painted surfaces, restrained subtle highlights, clean professional character design, exactly one character.
+Composition/framing: centered full-body three-quarter pose, generous even padding on all sides, no cropping, crisp separable outer contour.
+Color palette: Copper #C67C4E dominant; Blush #EDD6C8 and Cream #F9F2ED light areas; Ink #313131 outlines and facial details; Line #E3E3E3 only as restrained secondary detail. Do not use green.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background for local background removal. The background must be one uniform color with no shadows, gradients, texture, reflections, floor plane, or lighting variation.
+Constraints: no cast shadow, no contact shadow, no reflection, no text, no letters, no wordmark, no watermark, no extra props, no duplicate character. Keep the subject fully separated from the background with crisp edges.
+Avoid: Starbucks, siren or circular emblem, green apron, real-brand cup sleeve, nautical realism, baby proportions, photorealistic liquid, transparent or glass parts, #00ff00 anywhere in the subject.

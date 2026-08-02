@@ -6,6 +6,7 @@ import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import FoodDeliveryDashGrillApp from '../components/FoodDeliveryDashGrillApp.vue'
 import FoodDeliveryDiscoveryTemplate from '../components/FoodDeliveryDiscoveryTemplate.vue'
 import FoodDeliveryEditorialTemplate from '../components/FoodDeliveryEditorialTemplate.vue'
+import FoodDeliveryHarborRoastApp from '../components/FoodDeliveryHarborRoastApp.vue'
 import FoodDeliveryJadeHearthApp from '../components/FoodDeliveryJadeHearthApp.vue'
 import FoodDeliveryVerdantDayApp from '../components/FoodDeliveryVerdantDayApp.vue'
 import {
@@ -149,9 +150,26 @@ const platformCheckoutFeedback = ref('')
 const platformOrderCopyFeedback = ref('')
 const platformPageKey = computed(() => {
   const key = typeof route.query.platformView === 'string' ? route.query.platformView : ''
-  return ['campaign', 'search', 'saved', 'profile', 'checkout', 'orders', 'order'].includes(key)
+  return [
+    'campaign',
+    'search',
+    'saved',
+    'profile',
+    'merchant',
+    'checkout',
+    'orders',
+    'order',
+  ].includes(key)
     ? key
     : 'home'
+})
+const platformMerchantId = computed(() =>
+  typeof route.query.platformMerchant === 'string' ? route.query.platformMerchant.trim() : '',
+)
+const platformMerchantReturnKey = computed(() => {
+  const key =
+    typeof route.query.platformReturn === 'string' ? route.query.platformReturn.trim() : ''
+  return ['home', 'campaign', 'search', 'saved'].includes(key) ? key : 'home'
 })
 const platformCampaignKey = computed(() =>
   typeof route.query.platformCampaign === 'string' ? route.query.platformCampaign.trim() : '',
@@ -168,6 +186,8 @@ const activeStoreMenuSectionKey = ref('all')
 const storeNavigationFeedback = ref('')
 const peachCloudSearchQuery = ref('')
 const peachCloudSearchInputRef = ref(null)
+const peachCloudNewCarouselRef = ref(null)
+const peachCloudNewCarouselIndex = ref(0)
 const uiAssetUrl = (path) => `${import.meta.env.BASE_URL || '/'}images/ui-assets/${path}`
 const foodDeliveryUiAsset = (path) => uiAssetUrl(`apps/food-delivery/${path}`)
 const platformMissingAssetPlaceholderUrl = foodDeliveryUiAsset(
@@ -177,8 +197,17 @@ const peachCloudBrandImageUrl = foodDeliveryUiAsset('peach-cloud/brand/peach-clo
 const peachCloudPromotionImageUrl = foodDeliveryUiAsset(
   'peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
 )
-const peachCloudWeeklyDropImageUrl = foodDeliveryUiAsset(
-  'peach-cloud/promotions/peach-cloud-weekly-drop-01.png',
+const peachCloudWhitePeachLimePosterUrl = foodDeliveryUiAsset(
+  'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-01.png',
+)
+const peachCloudWaxberryLycheePosterUrl = foodDeliveryUiAsset(
+  'peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
+)
+const peachCloudMascotPlushPosterUrl = foodDeliveryUiAsset(
+  'peach-cloud/promotions/posters/peach-cloud-poster-mascot-plush-01.png',
+)
+const peachCloudMascotMarketImageUrl = foodDeliveryUiAsset(
+  'peach-cloud/promotions/peach-cloud-mascot-market-01.png',
 )
 const PEACH_CLOUD_THEME_STYLE = Object.freeze({
   '--peach-cloud-iron': '#444545',
@@ -244,8 +273,6 @@ const displayMoney = (amount = '0.00', currency = '') =>
 const platformRiderImageUrl = foodDeliveryUiAsset(
   'platform/decorations/mascot/delivery-rider-mascot-01.png',
 )
-const selectedPlatformMerchantId = ref('')
-const platformMerchantSheetOpen = ref(false)
 const menuItemEditDraft = reactive({
   title: '',
   desc: '',
@@ -264,7 +291,22 @@ const worldAppUxContext = computed(() =>
     requireUiThemePackage: true,
   }),
 )
+const PLATFORM_RETURN_CONTEXT_QUERY_KEYS = Object.freeze([
+  'from',
+  'homePage',
+  'source',
+  'chatId',
+  'profileId',
+])
 const worldAppRouteQuery = computed(() => worldAppUxContext.value?.routeQuery || {})
+const platformRouteContextQuery = computed(() => {
+  const nextQuery = { ...worldAppRouteQuery.value }
+  PLATFORM_RETURN_CONTEXT_QUERY_KEYS.forEach((key) => {
+    const value = route.query[key]
+    if (typeof value === 'string' && value.trim()) nextQuery[key] = value.trim()
+  })
+  return nextQuery
+})
 const defaultFoodDeliveryCategoryKey = computed(() =>
   worldAppUxContext.value ? 'nearby' : 'restaurants',
 )
@@ -490,8 +532,6 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     ctaEn: 'Claim perks',
     icon: 'fas fa-ticket',
     imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-member-delivery-01.png'),
-    className: 'from-white/95 via-white/75 to-white/10 text-gray-950',
-    chipClass: 'bg-white/85 text-[#078d87]',
     pageDescZh: '本周平台会员可领取一次免配送权益，适用于下方标注免配送的小店。',
     pageDescEn: 'Claim one free-delivery perk this week for the eligible platform shops below.',
     primaryZh: '领取本周权益',
@@ -537,12 +577,8 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     ctaEn: 'Draw a perk',
     icon: 'fas fa-gift',
     imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-weekend-food-01.png'),
-    className: 'from-white/90 via-white/60 to-white/5 text-gray-950',
-    chipClass: 'bg-white/85 text-orange-700',
     posterImageUrl: foodDeliveryUiAsset('platform/campaigns/weekend-lucky-draw-poster-01.png'),
     posterRequiredAsset: 'platform/campaigns/weekend-lucky-draw-poster-01.png',
-    posterEyebrowZh: '周末好运放送中',
-    posterEyebrowEn: 'Weekend luck is live',
     pageDescZh: '每次活动可抽一次站内周末福利。抽奖结果只用于这次平台体验，不会改动钱包或资产。',
     pageDescEn:
       'Draw one in-app weekend perk per event. Results stay inside this platform experience and do not affect Wallet or Assets.',
@@ -616,8 +652,6 @@ const FOOD_PLATFORM_AD_BANNERS = Object.freeze([
     ctaEn: 'See picks',
     icon: 'fas fa-bolt',
     imageUrl: foodDeliveryUiAsset('platform/banners/platform-banner-lunch-express-01.png'),
-    className: 'from-white/95 via-white/60 to-white/5 text-gray-950',
-    chipClass: 'bg-white/85 text-sky-700',
     pageDescZh: '筛出适合工作日午餐的轻食、咖啡和快手主食，减少来回翻找。',
     pageDescEn: 'A shorter workday lunch list with light meals, coffee, and quick mains.',
     primaryZh: '进入午餐快捷分类',
@@ -852,11 +886,12 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '20.00',
     distanceKm: 0.8,
     badge: '清爽甜品',
-    visualType: 'logo',
+    visualType: 'ad-cover',
     logoMark: '莓果\n晨光',
-    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-berry-morning-01.png'),
-    requiredAsset: 'platform/merchants/logos/merchant-logo-berry-morning-01.png',
-    imageAlt: 'Berry Morning brand mark',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/covers/merchant-ad-berry-morning-01.webp'),
+    requiredAsset: 'platform/merchants/covers/merchant-ad-berry-morning-01.webp',
+    identityAsset: 'platform/merchants/logos/merchant-logo-berry-morning-01.png',
+    imageAlt: '莓果晨光酸奶杯品牌广告',
     icon: 'fas fa-ice-cream',
     fallbackClass: 'from-[#fff1f5] via-[#fecdd3] to-[#a7f3d0] text-[#9f1239]',
     desc: '莓果晨光的甜品像清晨一样轻，酸奶、鲜果与烘焙各有自己的名字。',
@@ -882,11 +917,12 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '25.00',
     distanceKm: 0.6,
     badge: '18 分钟达',
-    visualType: 'logo',
+    visualType: 'ad-cover',
     logoMark: '青禾',
-    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-green-basket-01.png'),
-    requiredAsset: 'platform/merchants/logos/merchant-logo-green-basket-01.png',
-    imageAlt: 'Green Basket brand mark',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/covers/merchant-ad-green-basket-01.webp'),
+    requiredAsset: 'platform/merchants/covers/merchant-ad-green-basket-01.webp',
+    identityAsset: 'platform/merchants/logos/merchant-logo-green-basket-01.png',
+    imageAlt: '青禾鲜食补给站生鲜品牌广告',
     icon: 'fas fa-basket-shopping',
     fallbackClass: 'from-[#f7fee7] via-[#bef264] to-[#5eead4] text-[#365314]',
     desc: '社区即时补给站，按时间和生活场景打包蔬果、早餐与厨房救急品。',
@@ -912,7 +948,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '30.00',
     distanceKm: 1.1,
     badge: '面馆新客',
-    imageUrl: '',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-noodle-house-01.png'),
     requiredAsset: 'platform/merchants/merchant-noodle-house-01.png',
     imageAlt: 'Hand-pulled beef noodles',
     icon: 'fas fa-bowl-food',
@@ -940,11 +976,12 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '28.00',
     distanceKm: 1.3,
     badge: '早餐组合',
-    visualType: 'logo',
+    visualType: 'ad-cover',
     logoMark: 'GOOD\nAM',
-    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-morning-bagel-01.png'),
-    requiredAsset: 'platform/merchants/logos/merchant-logo-morning-bagel-01.png',
-    imageAlt: 'Good Morning Bagel brand mark',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/covers/merchant-ad-morning-bagel-01.webp'),
+    requiredAsset: 'platform/merchants/covers/merchant-ad-morning-bagel-01.webp',
+    identityAsset: 'platform/merchants/logos/merchant-logo-morning-bagel-01.png',
+    imageAlt: '早安贝果咖啡早餐品牌广告',
     icon: 'fas fa-mug-hot',
     fallbackClass: 'from-[#eff6ff] via-[#7dd3fc] to-[#fbbf24] text-[#0c4a6e]',
     desc: 'GOOD AM 系列贝果与咖啡，以一天中的光线和时刻为菜单命名。',
@@ -974,11 +1011,12 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '38.00',
     distanceKm: 2.1,
     badge: '清晨开蒸',
-    visualType: 'logo',
+    visualType: 'ad-cover',
     logoMark: '榆树里',
-    imageUrl: foodDeliveryUiAsset('platform/merchants/logos/merchant-logo-elm-dim-sum-01.png'),
-    requiredAsset: 'platform/merchants/logos/merchant-logo-elm-dim-sum-01.png',
-    imageAlt: 'Elm Lane Dim Sum brand mark',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/covers/merchant-ad-elm-dim-sum-01.webp'),
+    requiredAsset: 'platform/merchants/covers/merchant-ad-elm-dim-sum-01.webp',
+    identityAsset: 'platform/merchants/logos/merchant-logo-elm-dim-sum-01.png',
+    imageAlt: '榆树里蒸点铺早餐品牌广告',
     icon: 'fas fa-bowl-rice',
     fallbackClass: 'from-[#fefce8] via-[#fde68a] to-[#fb7185] text-[#854d0e]',
     desc: '街坊蒸点铺，用褶数、蒸笼和出炉时段讲每一笼点心。',
@@ -1004,7 +1042,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     minimumOrder: '35.00',
     distanceKm: 2.0,
     badge: '下饭推荐',
-    imageUrl: '',
+    imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-coconut-curry-01.png'),
     requiredAsset: 'platform/merchants/merchant-coconut-curry-01.png',
     imageAlt: 'Coconut curry rice set',
     icon: 'fas fa-pepper-hot',
@@ -1381,6 +1419,7 @@ const platformCategoryTiles = computed(() =>
       ...category,
       categoryKey,
       label: languageBase.value === 'zh' ? category.labelZh : category.labelEn,
+      imageUrl: foodDeliveryUiAsset(category.requiredAsset),
       icon: visual.icon || category.icon,
       className: visual.className,
       restaurantCount: FOOD_PLATFORM_MERCHANTS.filter((merchant) =>
@@ -1482,15 +1521,17 @@ const platformDeliveryFeeLabel = (merchant = {}) =>
     : displayMoney(merchant.deliveryFee, merchant.currency)
 const selectedPlatformMerchant = computed(() => {
   const selectedMerchant = FOOD_PLATFORM_MERCHANTS.find(
-    (merchant) => merchant.id === selectedPlatformMerchantId.value,
+    (merchant) => merchant.id === platformMerchantId.value,
   )
-  return selectedMerchant || platformFeaturedMerchants.value[0] || null
+  if (selectedMerchant) return selectedMerchant
+  return platformPageKey.value === 'merchant' ? null : platformFeaturedMerchants.value[0] || null
 })
 const isPlatformLogoMerchant = (merchant = {}) => merchant.visualType === 'logo'
 const platformMerchantLogoMark = (merchant = {}) =>
   merchant.logoMark || String(merchant.name || '').slice(0, 3)
 const platformMerchantIdentityAssetPath = (merchantId = '') => {
   const merchant = FOOD_PLATFORM_MERCHANTS.find((entry) => entry.id === merchantId)
+  if (merchant?.identityAsset) return merchant.identityAsset
   if (merchant?.visualType === 'logo' && merchant.requiredAsset) return merchant.requiredAsset
   return `platform/orders/merchant-marks/${platformMerchantMarkFileName(merchantId)}`
 }
@@ -1779,12 +1820,10 @@ const activeRestaurant = computed(
 const resolveLocalizedMenuItem = (item = {}) =>
   resolvePeachCloudMenuItemCopy(item, systemLanguage.value)
 const activeStoreCartLineItems = computed(() =>
-  foodDeliveryStore
-    .listCartLineItemsByRestaurant(activeRestaurant.value?.id)
-    .map((line) => ({
-      ...line,
-      menuItem: resolveLocalizedMenuItem(line.menuItem),
-    })),
+  foodDeliveryStore.listCartLineItemsByRestaurant(activeRestaurant.value?.id).map((line) => ({
+    ...line,
+    menuItem: line.menuItem ? resolveLocalizedMenuItem(line.menuItem) : null,
+  })),
 )
 const activeStoreCartQuantity = computed(() =>
   foodDeliveryStore.getCartQuantityByRestaurant(activeRestaurant.value?.id),
@@ -1902,21 +1941,23 @@ const isDessertWindowStore = computed(() => activeStoreTemplate.value === 'desse
 const isQuickServiceStore = computed(() => activeStoreTemplate.value === 'quick_service_chain')
 const isJadeTableStore = computed(() => activeStoreTemplate.value === 'jade_table_menu')
 const isLightFoodStore = computed(() => activeStoreTemplate.value === 'minimal_light_food')
-const isReusableDiscoveryTemplate = computed(() =>
-  ['cafe_counter', 'convenience_shelf', 'street_food_stall'].includes(activeStoreTemplate.value),
+const isHarborRoastStore = computed(() => activeStoreTemplate.value === 'harbor_roast_chain')
+const isReusableDiscoveryTemplate = computed(
+  () =>
+    !isHarborRoastStore.value &&
+    ['cafe_counter', 'convenience_shelf', 'street_food_stall'].includes(activeStoreTemplate.value),
 )
 const isReusableEditorialTemplate = computed(() =>
   ['daypart_journal', 'menu_mosaic'].includes(activeStoreTemplate.value),
 )
-const isDaylightCafeStore = computed(
-  () => activeRestaurant.value?.id === 'food_seed_daylight_cafe',
-)
+const isDaylightCafeStore = computed(() => activeRestaurant.value?.id === 'food_seed_daylight_cafe')
 const isDedicatedStoreApp = computed(
   () =>
     isDessertWindowStore.value ||
     isQuickServiceStore.value ||
     isJadeTableStore.value ||
-    isLightFoodStore.value,
+    isLightFoodStore.value ||
+    isHarborRoastStore.value,
 )
 const usesFullBleedStoreShell = computed(
   () =>
@@ -1924,7 +1965,15 @@ const usesFullBleedStoreShell = computed(
     isReusableDiscoveryTemplate.value ||
     isReusableEditorialTemplate.value,
 )
-const PEACH_CLOUD_PAGE_KEYS = new Set(['search', 'new', 'bag', 'orders', 'order'])
+const PEACH_CLOUD_PAGE_KEYS = new Set([
+  'search',
+  'new',
+  'club',
+  'merch',
+  'bag',
+  'orders',
+  'order',
+])
 const peachCloudPageKey = computed(() => {
   if (!isDessertWindowStore.value) return 'home'
   const key = typeof route.query.shopView === 'string' ? route.query.shopView.trim() : ''
@@ -1933,9 +1982,11 @@ const peachCloudPageKey = computed(() => {
 const peachCloudOrderId = computed(() =>
   typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
 )
-const activePeachCloudNavKey = computed(() =>
-  peachCloudPageKey.value === 'order' ? 'orders' : peachCloudPageKey.value,
-)
+const activePeachCloudNavKey = computed(() => {
+  if (peachCloudPageKey.value === 'order') return 'orders'
+  if (['new', 'club', 'merch'].includes(peachCloudPageKey.value)) return 'discover'
+  return peachCloudPageKey.value
+})
 const QUICK_SERVICE_PAGE_KEYS = new Set(['menu', 'deals', 'bag', 'orders', 'order'])
 const quickServicePageKey = computed(() => {
   if (!isQuickServiceStore.value) return 'home'
@@ -1964,6 +2015,32 @@ const lightFoodItemId = computed(() =>
   typeof route.query.shopItemId === 'string' ? route.query.shopItemId.trim() : '',
 )
 const lightFoodOrderId = computed(() =>
+  typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
+)
+const HARBOR_ROAST_PAGE_KEYS = new Set([
+  'member',
+  'new',
+  'passport',
+  'supply',
+  'supply-detail',
+  'menu',
+  'detail',
+  'bag',
+  'orders',
+  'order',
+])
+const harborRoastPageKey = computed(() => {
+  if (!isHarborRoastStore.value) return 'home'
+  const key = typeof route.query.shopView === 'string' ? route.query.shopView.trim() : ''
+  return HARBOR_ROAST_PAGE_KEYS.has(key) ? key : 'home'
+})
+const harborRoastItemId = computed(() =>
+  typeof route.query.shopItemId === 'string' ? route.query.shopItemId.trim() : '',
+)
+const harborRoastMerchandiseId = computed(() =>
+  typeof route.query.shopMerchId === 'string' ? route.query.shopMerchId.trim() : '',
+)
+const harborRoastOrderId = computed(() =>
   typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
 )
 const peachCloudFeaturedItem = computed(
@@ -2013,29 +2090,42 @@ const peachCloudSearchResults = computed(() => {
     ),
   )
 })
-const peachCloudNewArrivalItems = computed(() => {
-  const featuredId = peachCloudFeaturedItem.value?.id || ''
-  const remainingSeasonalItems = activeMenuItems.value.filter(
-    (item) => item.id !== featuredId && item.menuSection === 'seasonal_drop',
-  )
-  const otherItems = activeMenuItems.value.filter(
-    (item) => item.id !== featuredId && item.menuSection !== 'seasonal_drop',
-  )
-  return [...remainingSeasonalItems, ...otherItems].slice(0, 6)
-})
-const peachCloudDropSectionLabel = (sectionKey) => {
-  if (sectionKey === 'fruit_sparkle') return t('果饮', 'FRUIT')
-  if (sectionKey === 'frozen_clouds') return t('冰品', 'ICE')
-  if (sectionKey === 'cloud_tea') return t('茶咖', 'TEA')
-  if (sectionKey === 'oven_sweets') return t('烘焙', 'BAKE')
-  if (sectionKey === 'seasonal_drop') return t('限定', 'LIMITED')
-  return t('上新', 'NEW')
-}
 const peachCloudShowsCuratedHome = computed(
   () => activeStoreMenuSectionKey.value === 'all' && !peachCloudSearchQuery.value.trim(),
 )
-const peachCloudBestSellerItems = computed(() => activeMenuItems.value.slice(0, 4))
-const peachCloudRecommendedItems = computed(() => activeMenuItems.value.slice(4))
+const peachCloudPosterCampaigns = computed(() => [
+  {
+    key: 'white-peach-lime',
+    menuItemId: 'food_menu_peach_oolong_cloud',
+    title: t('白桃青柠气泡新品海报', 'White Peach Lime Sparkler launch poster'),
+    imageUrl: peachCloudWhitePeachLimePosterUrl,
+    assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-01.png',
+  },
+  {
+    key: 'waxberry-lychee',
+    menuItemId: 'food_menu_peach_waxberry_lychee_tea',
+    title: t('杨梅荔枝冰茶季节海报', 'Waxberry Lychee Iced Tea seasonal poster'),
+    imageUrl: peachCloudWaxberryLycheePosterUrl,
+    assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
+  },
+  {
+    key: 'mascot-plush',
+    pageKey: 'merch',
+    title: t('桃气云朵毛绒周边海报', 'Peach Cloud plush merchandise poster'),
+    imageUrl: peachCloudMascotPlushPosterUrl,
+    assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-mascot-plush-01.png',
+  },
+])
+const peachCloudMerchandiseItems = computed(() =>
+  foodDeliveryStore.peachCloudMerchandise.map((item) => ({
+    ...item,
+    displayTitle: t(item.titleZh || item.title, item.titleEn || item.title),
+    displayDescription: t(item.descZh || '', item.descEn || ''),
+    displayDetail: t(item.detailZh || '', item.detailEn || ''),
+    imageUrl: foodDeliveryUiAsset(`${item.assetBase}/${item.imagePath}`),
+    requiredAsset: `${item.assetBase}/${item.imagePath}`,
+  })),
+)
 const foodDeliveryShellClass = computed(() => {
   if (isStoreMode.value && isDarkTrayStore.value) return 'bg-[#080a10]'
   if (isStoreMode.value && isDessertWindowStore.value) return 'bg-[#f2fbe0]'
@@ -2146,6 +2236,18 @@ const activeLightFoodItem = computed(
 const activeLightFoodOrder = computed(
   () => scopedFoodOrders.value.find((order) => order.id === lightFoodOrderId.value) || null,
 )
+const activeHarborRoastItem = computed(
+  () => activeMenuItems.value.find((item) => item.id === harborRoastItemId.value) || null,
+)
+const activeHarborRoastMerchandise = computed(
+  () =>
+    foodDeliveryStore.harborRoastMerchandise.find(
+      (item) => item.id === harborRoastMerchandiseId.value,
+    ) || null,
+)
+const activeHarborRoastOrder = computed(
+  () => scopedFoodOrders.value.find((order) => order.id === harborRoastOrderId.value) || null,
+)
 const sharedMealContactOptions = computed(() =>
   chatStore.contactsForList.filter((contact) => Number(contact.id) > 0).slice(0, 60),
 )
@@ -2229,6 +2331,7 @@ watch(
       'quick_service_chain',
       'jade_table_menu',
       'minimal_light_food',
+      'harbor_roast_chain',
     ].includes(targetTemplate)
     const nextQuery = {
       ...route.query,
@@ -2499,12 +2602,39 @@ const openRestaurantStore = (restaurant) => {
 
 const selectPlatformMerchant = (merchant) => {
   if (!merchant?.id) return
-  selectedPlatformMerchantId.value = merchant.id
-  platformMerchantSheetOpen.value = true
+  const sourceKey = platformPageKey.value === 'merchant' ? 'home' : platformPageKey.value
+  const platformFilter =
+    typeof route.query.platformFilter === 'string' ? route.query.platformFilter.trim() : ''
+  return router.push({
+    path: '/food-delivery',
+    query: {
+      ...platformRouteContextQuery.value,
+      category: activeCategory.value?.key || 'nearby',
+      ...(platformFilter ? { platformFilter } : {}),
+      platformView: 'merchant',
+      platformMerchant: merchant.id,
+      platformReturn: ['campaign', 'search', 'saved'].includes(sourceKey) ? sourceKey : 'home',
+      ...(sourceKey === 'campaign' && platformCampaignKey.value
+        ? { platformCampaign: platformCampaignKey.value }
+        : {}),
+    },
+  })
 }
 
-const closePlatformMerchantSheet = () => {
-  platformMerchantSheetOpen.value = false
+const returnFromPlatformMerchant = () => {
+  if (platformMerchantReturnKey.value === 'home') {
+    const platformFilter =
+      typeof route.query.platformFilter === 'string' ? route.query.platformFilter.trim() : ''
+    return router.push({
+      path: '/food-delivery',
+      query: {
+        ...platformRouteContextQuery.value,
+        category: activeCategory.value?.key || 'nearby',
+        ...(platformFilter ? { platformFilter } : {}),
+      },
+    })
+  }
+  return openPlatformPage(platformMerchantReturnKey.value)
 }
 
 const isPlatformMerchantSaved = (merchantId) => platformSavedMerchantIds.value.includes(merchantId)
@@ -2538,7 +2668,7 @@ const openPlatformCampaign = (campaignId) => {
   return router.push({
     path: '/food-delivery',
     query: {
-      ...worldAppRouteQuery.value,
+      ...platformRouteContextQuery.value,
       category: activeCategory.value?.key || 'nearby',
       platformView: 'campaign',
       platformCampaign: id,
@@ -2719,7 +2849,6 @@ const platformCartLineTotal = (item = {}) =>
   displayMoney(((Number(item.unitPriceCents) * Number(item.quantity)) / 100).toFixed(2))
 
 const openPlatformCartFromMerchant = () => {
-  closePlatformMerchantSheet()
   openPlatformUtilitySheet('cart')
 }
 
@@ -2803,6 +2932,7 @@ const openPlatformPage = (key) => {
     'search',
     'saved',
     'profile',
+    'merchant',
     'checkout',
     'orders',
     'order',
@@ -2817,7 +2947,7 @@ const openPlatformPage = (key) => {
   return router.push({
     path: '/food-delivery',
     query: {
-      ...worldAppRouteQuery.value,
+      ...platformRouteContextQuery.value,
       category:
         pageKey === 'home' && key === 'home' ? 'nearby' : activeCategory.value?.key || 'nearby',
       ...(pageKey === 'home' ? {} : { platformView: pageKey }),
@@ -2826,6 +2956,12 @@ const openPlatformPage = (key) => {
         : {}),
       ...(pageKey === 'order' && platformOrderId.value
         ? { platformOrderId: platformOrderId.value }
+        : {}),
+      ...(pageKey === 'merchant' && platformMerchantId.value
+        ? {
+            platformMerchant: platformMerchantId.value,
+            platformReturn: platformMerchantReturnKey.value,
+          }
         : {}),
     },
   })
@@ -2844,7 +2980,7 @@ const openPlatformOrder = (orderId) => {
   router.push({
     path: '/food-delivery',
     query: {
-      ...worldAppRouteQuery.value,
+      ...platformRouteContextQuery.value,
       category: activeCategory.value?.key || 'nearby',
       platformView: 'order',
       platformOrderId: id,
@@ -2857,7 +2993,7 @@ const openPlatformCategory = (category) => {
   router.push({
     path: '/food-delivery',
     query: {
-      ...worldAppRouteQuery.value,
+      ...platformRouteContextQuery.value,
       category: category?.categoryKey || 'nearby',
       platformFilter: filterKey,
     },
@@ -2987,7 +3123,7 @@ const closeCheckoutSheet = () => {
   checkoutSheetOpen.value = false
 }
 
-const checkoutFoodDelivery = () => {
+const checkoutFoodDelivery = (checkoutOptions = {}) => {
   checkoutFeedback.value = ''
   if (!activeRestaurant.value?.id || activeStoreCartLineItems.value.length === 0) {
     checkoutSheetOpen.value = false
@@ -2998,15 +3134,26 @@ const checkoutFoodDelivery = () => {
     return
   }
   const mapHandoff = activeMapHandoff.value
+  const fulfillmentMode = checkoutOptions?.fulfillmentMode === 'pickup' ? 'pickup' : 'delivery'
+  const pickupMode =
+    fulfillmentMode === 'pickup' && checkoutOptions?.pickupMode === 'dine_in'
+      ? 'dine_in'
+      : fulfillmentMode === 'pickup'
+        ? 'takeout'
+        : ''
   const relationshipTarget = activeRestaurant.value
     ? selectedSharedMealContact(activeRestaurant.value.id)
     : null
   const order = foodDeliveryStore.checkoutCart({
     restaurantId: activeRestaurant.value.id,
     deliveryAddress:
-      mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
+      fulfillmentMode === 'pickup'
+        ? t('Harbor Roast · 港湾店，滨港路 18 号', 'Harbor Roast · Harbor Store, 18 Harbor Road')
+        : mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
     note:
       activeMapHandoffRouteSummary.value || t('外卖模块基础订单', 'Food Delivery baseline order'),
+    fulfillmentMode,
+    pickupMode,
     relationshipBinding: relationshipTarget
       ? {
           contactId: Number(relationshipTarget.id) || 0,
@@ -3043,6 +3190,9 @@ const checkoutFoodDelivery = () => {
   }
   if (isLightFoodStore.value) {
     void openLightFoodPage('order', { shopOrderId: order.id })
+  }
+  if (isHarborRoastStore.value) {
+    void openHarborRoastPage('order', { shopOrderId: order.id })
   }
 }
 
@@ -3131,6 +3281,11 @@ const handleFoodShopImageError = (event) => {
   const image = event?.currentTarget
   if (!image || image.dataset.fallbackApplied === 'true') return
   image.dataset.fallbackApplied = 'true'
+  if (isReusableDiscoveryTemplate.value) {
+    image.hidden = true
+    image.parentElement?.classList.add('is-image-fallback')
+    return
+  }
   image.src = platformMissingAssetPlaceholderUrl
 }
 
@@ -3174,6 +3329,7 @@ const openPeachCloudHome = async () => {
   activeStoreMenuSectionKey.value = 'all'
   peachCloudSearchQuery.value = ''
   storeNavigationFeedback.value = ''
+  peachCloudNewCarouselIndex.value = 0
   await openPeachCloudPage('home')
 }
 
@@ -3188,8 +3344,82 @@ const focusPeachCloudSearch = async () => {
 const openPeachCloudNew = async () => {
   activeStoreMenuSectionKey.value = 'seasonal_drop'
   storeNavigationFeedback.value = ''
+  peachCloudNewCarouselIndex.value = 0
   await openPeachCloudPage('new')
 }
+
+const openPeachCloudClub = async () => {
+  storeNavigationFeedback.value = ''
+  await openPeachCloudPage('club')
+}
+
+const openPeachCloudMerch = async () => {
+  storeNavigationFeedback.value = ''
+  await openPeachCloudPage('merch')
+}
+
+const openPeachCloudPosterCampaign = async (campaign = {}) => {
+  if (campaign.menuItemId) {
+    openMenuItemDetail(campaign.menuItemId)
+    return
+  }
+  if (campaign.pageKey) await openPeachCloudPage(campaign.pageKey)
+}
+
+const addPeachCloudMerchandiseToCart = (merchandiseId) => {
+  const result = foodDeliveryStore.addPeachCloudMerchandiseToCart(merchandiseId)
+  storeNavigationFeedback.value = result.ok
+    ? t('周边已加入桃子云购物袋', 'Merchandise added to your Peach Cloud bag')
+    : t('购物袋暂时装不下更多商品', 'Your bag cannot hold another product right now')
+}
+
+const scrollPeachCloudNewCarousel = (direction = 1) => {
+  const slides = peachCloudPosterCampaigns.value.length
+  if (!slides) return
+  peachCloudNewCarouselIndex.value =
+    (peachCloudNewCarouselIndex.value + direction + slides) % slides
+  const container = peachCloudNewCarouselRef.value
+  if (!container || typeof container.scrollTo !== 'function') return
+  const target = container.children?.[peachCloudNewCarouselIndex.value]
+  container.scrollTo({
+    left: target ? target.offsetLeft - container.offsetLeft : 0,
+    behavior: 'smooth',
+  })
+}
+
+const syncPeachCloudPosterCarouselIndex = () => {
+  const container = peachCloudNewCarouselRef.value
+  if (!container?.children?.length) return
+  const left = container.scrollLeft + container.offsetLeft
+  let closestIndex = 0
+  let closestDistance = Number.POSITIVE_INFINITY
+  Array.from(container.children).forEach((slide, index) => {
+    const distance = Math.abs(slide.offsetLeft - left)
+    if (distance >= closestDistance) return
+    closestDistance = distance
+    closestIndex = index
+  })
+  peachCloudNewCarouselIndex.value = closestIndex
+}
+
+const storeCartLineTitle = (line = {}) => {
+  if (line.lineKind === 'merchandise') {
+    return t(line.titleZh || line.title, line.titleEn || line.title)
+  }
+  return line.menuItem?.title || line.title || ''
+}
+
+const peachCloudCartLineImageUrl = (line = {}) => {
+  if (line.lineKind === 'merchandise' && line.imagePath) {
+    return foodDeliveryUiAsset(`${line.assetBase || 'peach-cloud'}/${line.imagePath}`)
+  }
+  return foodImageUrl(line.menuItem)
+}
+
+const peachCloudCartLineRequiredAsset = (line = {}) =>
+  line.lineKind === 'merchandise' && line.imagePath
+    ? `${line.assetBase || 'peach-cloud'}/${line.imagePath}`
+    : foodDeliveryRequiredAssetPath(line.menuItem)
 
 const openPeachCloudOrder = async (orderId) => {
   if (!orderId) return
@@ -3234,6 +3464,7 @@ const openLightFoodPage = async (pageKey = 'home', extraQuery = {}) => {
   if (nextPageKey === 'home') delete nextQuery.shopView
   else nextQuery.shopView = nextPageKey
   if (nextPageKey !== 'detail') delete nextQuery.shopItemId
+  if (nextPageKey !== 'supply-detail') delete nextQuery.shopMerchId
   if (nextPageKey !== 'order') delete nextQuery.shopOrderId
 
   const routeChanged =
@@ -3249,6 +3480,33 @@ const openLightFoodPage = async (pageKey = 'home', extraQuery = {}) => {
 const openLightFoodItem = async (itemId) => {
   if (!itemId) return
   await openLightFoodPage('detail', { shopItemId: itemId })
+}
+
+const openHarborRoastPage = async (pageKey = 'home', extraQuery = {}) => {
+  const nextPageKey = HARBOR_ROAST_PAGE_KEYS.has(pageKey) ? pageKey : 'home'
+  const nextQuery = { ...route.query, ...extraQuery }
+  if (nextPageKey === 'home') delete nextQuery.shopView
+  else nextQuery.shopView = nextPageKey
+  if (nextPageKey !== 'detail') delete nextQuery.shopItemId
+  if (nextPageKey !== 'order') delete nextQuery.shopOrderId
+
+  const routeChanged =
+    harborRoastPageKey.value !== nextPageKey ||
+    String(route.query.shopItemId || '') !== String(nextQuery.shopItemId || '') ||
+    String(route.query.shopMerchId || '') !== String(nextQuery.shopMerchId || '') ||
+    String(route.query.shopOrderId || '') !== String(nextQuery.shopOrderId || '')
+  if (routeChanged) await router.push({ path: route.path, query: nextQuery })
+  await scrollToStoreSurface('food-delivery-store-shell')
+}
+
+const openHarborRoastItem = async (itemId) => {
+  if (!itemId) return
+  await openHarborRoastPage('detail', { shopItemId: itemId })
+}
+
+const openHarborRoastMerchandise = async (merchandiseId) => {
+  if (!merchandiseId) return
+  await openHarborRoastPage('supply-detail', { shopMerchId: merchandiseId })
 }
 
 const showPeachCloudUpdates = async () => {
@@ -3422,74 +3680,81 @@ onBeforeUnmount(() => {
     <div class="mx-auto max-w-md" :class="usesFullBleedStoreShell ? 'space-y-0' : 'space-y-4'">
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
-        class="space-y-5 pt-1"
+        class="space-y-5 pt-4"
         data-testid="food-delivery-platform-top"
       >
         <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
+          <div class="flex min-w-0 items-start gap-3">
             <button
               type="button"
-              class="block max-w-full text-left"
+              class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5 transition active:scale-95"
               data-testid="food-delivery-go-home"
-              aria-label="Home"
+              :aria-label="t('返回桌面', 'Return to Home')"
+              :title="t('返回桌面', 'Return to Home')"
               @click="goHome"
             >
+              <i class="fas fa-house text-base"></i>
+            </button>
+            <div class="min-w-0">
               <h1
                 class="max-w-full break-words text-[1.72rem] font-black leading-tight text-gray-950 [overflow-wrap:anywhere]"
                 data-testid="food-delivery-hero-title"
               >
                 {{ foodDeliveryTitle }}
               </h1>
-            </button>
-            <div class="relative mt-3">
-              <button
-                type="button"
-                class="inline-flex max-w-full items-center gap-2.5 text-left"
-                data-testid="food-delivery-platform-location"
-                :aria-expanded="platformAddressMenuOpen"
-                @click="togglePlatformAddressMenu"
-              >
-                <span
-                  class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#24bcb7]"
-                >
-                  <i class="fas fa-location-dot text-sm"></i>
-                </span>
-                <span class="min-w-0">
-                  <span class="block text-[0.62rem] font-black uppercase text-[#159f9a]">{{
-                    t('配送到', 'Deliver to')
-                  }}</span>
-                  <span class="block truncate text-[0.82rem] font-black text-gray-950">{{
-                    platformLocationLabel
-                  }}</span>
-                </span>
-                <i
-                  class="fas shrink-0 text-xs text-gray-500"
-                  :class="platformAddressMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'"
-                ></i>
-              </button>
-              <div
-                v-if="platformAddressMenuOpen"
-                class="absolute left-0 top-[calc(100%+0.55rem)] z-40 w-[min(19rem,calc(100vw-2rem))] space-y-1 rounded-[1rem] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
-                data-testid="food-delivery-platform-address-menu"
-              >
+              <div class="relative mt-3">
                 <button
-                  v-for="(address, addressIndex) in platformDeliveryAddressOptions"
-                  :key="address"
                   type="button"
-                  class="flex w-full items-center gap-3 rounded-[0.8rem] px-3 py-2.5 text-left text-xs font-bold"
-                  :class="
-                    platformLocationLabel === address
-                      ? 'bg-[#e5fbfa] text-[#128e89]'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  "
-                  :aria-pressed="platformLocationLabel === address"
-                  :data-testid="`food-delivery-platform-address-${addressIndex}`"
-                  @click="selectPlatformDeliveryAddress(address)"
+                  class="inline-flex max-w-full items-center gap-2.5 text-left"
+                  data-testid="food-delivery-platform-location"
+                  :aria-expanded="platformAddressMenuOpen"
+                  @click="togglePlatformAddressMenu"
                 >
-                  <i class="fas fa-location-dot w-4 text-center"></i>
-                  <span class="min-w-0 flex-1 leading-5">{{ address }}</span>
-                  <i v-if="platformLocationLabel === address" class="fas fa-check text-[10px]"></i>
+                  <span
+                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#24bcb7]"
+                  >
+                    <i class="fas fa-location-dot text-sm"></i>
+                  </span>
+                  <span class="min-w-0">
+                    <span class="block text-[0.62rem] font-black uppercase text-[#159f9a]">{{
+                      t('配送到', 'Deliver to')
+                    }}</span>
+                    <span class="block truncate text-[0.82rem] font-black text-gray-950">{{
+                      platformLocationLabel
+                    }}</span>
+                  </span>
+                  <i
+                    class="fas shrink-0 text-xs text-gray-500"
+                    :class="platformAddressMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'"
+                  ></i>
                 </button>
+                <div
+                  v-if="platformAddressMenuOpen"
+                  class="absolute left-0 top-[calc(100%+0.55rem)] z-40 w-[min(19rem,calc(100vw-2rem))] space-y-1 rounded-[1rem] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
+                  data-testid="food-delivery-platform-address-menu"
+                >
+                  <button
+                    v-for="(address, addressIndex) in platformDeliveryAddressOptions"
+                    :key="address"
+                    type="button"
+                    class="flex w-full items-center gap-3 rounded-[0.8rem] px-3 py-2.5 text-left text-xs font-bold"
+                    :class="
+                      platformLocationLabel === address
+                        ? 'bg-[#e5fbfa] text-[#128e89]'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    "
+                    :aria-pressed="platformLocationLabel === address"
+                    :data-testid="`food-delivery-platform-address-${addressIndex}`"
+                    @click="selectPlatformDeliveryAddress(address)"
+                  >
+                    <i class="fas fa-location-dot w-4 text-center"></i>
+                    <span class="min-w-0 flex-1 leading-5">{{ address }}</span>
+                    <i
+                      v-if="platformLocationLabel === address"
+                      class="fas fa-check text-[10px]"
+                    ></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -3635,9 +3900,9 @@ onBeforeUnmount(() => {
               @focusout="releasePlatformBannerAutoplay"
             >
               <article
-                v-for="(banner, index) in FOOD_PLATFORM_AD_BANNERS"
+                v-for="banner in FOOD_PLATFORM_AD_BANNERS"
                 :key="banner.id"
-                class="relative h-[7.8rem] w-[20rem] shrink-0 snap-start overflow-hidden rounded-[1.2rem] bg-[#5edbd5] p-4 shadow-[0_16px_32px_rgba(15,118,110,0.13)] ring-1 ring-black/5"
+                class="relative aspect-[85/31] w-[calc(100%_-_2rem)] shrink-0 snap-start overflow-hidden rounded-[1.2rem] bg-[#5edbd5] shadow-[0_16px_32px_rgba(15,118,110,0.13)] ring-1 ring-black/5"
                 :data-testid="
                   banner.id === 'club_free_delivery'
                     ? 'food-delivery-platform-entry'
@@ -3657,92 +3922,19 @@ onBeforeUnmount(() => {
                   "
                   draggable="false"
                 />
-                <div class="absolute inset-0 bg-gradient-to-r" :class="banner.className"></div>
-                <div
-                  class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),rgba(15,23,42,0.08))]"
-                ></div>
                 <button
                   type="button"
                   class="absolute inset-0 z-20"
                   :aria-label="
                     banner.id === 'club_free_delivery' && platformBenefitClaimed
-                      ? t('权益已领取', 'Perk claimed')
+                      ? t(`${banner.titleZh}，权益已领取`, `${banner.titleEn}, perk claimed`)
                       : languageBase === 'zh'
-                        ? banner.ctaZh
-                        : banner.ctaEn
+                        ? `${banner.titleZh}，${banner.ctaZh}`
+                        : `${banner.titleEn}, ${banner.ctaEn}`
                   "
                   :data-testid="`food-delivery-platform-banner-action-${banner.id}`"
                   @click="handlePlatformBanner(banner)"
                 ></button>
-                <div class="relative z-10 max-w-[61%]">
-                  <p class="text-[0.68rem] font-black text-gray-950/65">
-                    {{ languageBase === 'zh' ? banner.eyebrowZh : banner.eyebrowEn }}
-                  </p>
-                  <h2 class="mt-2 line-clamp-2 text-[1.14rem] font-black leading-tight">
-                    {{ languageBase === 'zh' ? banner.titleZh : banner.titleEn }}
-                  </h2>
-                  <p class="mt-2 line-clamp-2 text-[0.72rem] font-bold leading-4 text-gray-950/62">
-                    {{ languageBase === 'zh' ? banner.descZh : banner.descEn }}
-                  </p>
-                  <span
-                    class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.66rem] font-black shadow-sm"
-                    :class="banner.chipClass"
-                  >
-                    {{
-                      banner.id === 'club_free_delivery' && platformBenefitClaimed
-                        ? t('已领取', 'Claimed')
-                        : languageBase === 'zh'
-                          ? banner.ctaZh
-                          : banner.ctaEn
-                    }}
-                    <i
-                      class="fas text-[0.55rem]"
-                      :class="
-                        banner.id === 'club_free_delivery' && platformBenefitClaimed
-                          ? 'fa-check'
-                          : 'fa-chevron-right'
-                      "
-                    ></i>
-                  </span>
-                </div>
-                <div
-                  v-if="!banner.imageUrl"
-                  class="absolute -right-5 bottom-3 z-10 flex h-24 w-24 items-center justify-center rounded-full bg-white/55 p-1.5 shadow-[0_14px_30px_rgba(15,23,42,0.16)]"
-                  :data-testid="
-                    banner.id === 'club_free_delivery'
-                      ? 'food-delivery-platform-hero-image'
-                      : undefined
-                  "
-                >
-                  <template v-if="banner.id === 'club_free_delivery'">
-                    <div class="absolute inset-1.5 overflow-hidden rounded-full bg-[#fff7e8]">
-                      <span class="absolute left-4 top-4 h-8 w-8 rounded-full bg-[#f7c843]"></span>
-                      <span class="absolute right-3 top-5 h-7 w-7 rounded-full bg-[#f06f4d]"></span>
-                      <span
-                        class="absolute bottom-4 left-5 h-7 w-10 rounded-full bg-[#5fbf77]"
-                      ></span>
-                      <span class="absolute bottom-5 right-4 h-5 w-7 rounded-full bg-white"></span>
-                    </div>
-                    <img
-                      v-if="platformHeroImageUrl"
-                      :src="platformHeroImageUrl"
-                      :alt="
-                        selectedPlatformMerchant?.imageAlt ||
-                        selectedPlatformMerchant?.name ||
-                        'Food'
-                      "
-                      class="relative z-10 h-full w-full rounded-full object-cover"
-                      @error="$event.currentTarget.style.display = 'none'"
-                    />
-                    <i v-else class="fas fa-bowl-food relative z-10 text-3xl text-[#20aaa4]"></i>
-                  </template>
-                  <i v-else :class="banner.icon" class="text-3xl text-gray-950/72"></i>
-                </div>
-                <span
-                  class="absolute bottom-3 right-3 z-30 rounded-full bg-gray-950/70 px-2.5 py-1 text-[0.66rem] font-black text-white backdrop-blur"
-                >
-                  {{ index + 1 }} / {{ FOOD_PLATFORM_AD_BANNERS.length }}
-                </span>
               </article>
             </div>
             <div
@@ -3804,7 +3996,7 @@ onBeforeUnmount(() => {
                 @click="openPlatformCategory(category)"
               >
                 <span
-                  class="inline-flex h-12 w-12 items-center justify-center rounded-[0.95rem] bg-gradient-to-br text-lg shadow-sm ring-1 transition"
+                  class="relative inline-flex h-12 w-12 items-center justify-center rounded-[0.95rem] bg-gradient-to-br text-lg shadow-sm ring-1 transition"
                   :class="
                     category.active
                       ? 'bg-none bg-[#24bcb7] text-white shadow-[0_8px_20px_rgba(36,188,183,0.24)] ring-[#24bcb7]/20'
@@ -3815,6 +4007,16 @@ onBeforeUnmount(() => {
                   :data-testid="`food-delivery-category-icon-${category.key}`"
                 >
                   <i :class="category.icon"></i>
+                  <img
+                    :src="category.imageUrl"
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    class="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain p-0.5"
+                    :data-testid="`food-delivery-category-image-${category.key}`"
+                    @load="$event.currentTarget.previousElementSibling.style.opacity = '0'"
+                    @error="$event.currentTarget.style.display = 'none'"
+                  />
                 </span>
                 <span
                   class="w-full break-words text-[0.68rem] font-black leading-4"
@@ -3884,7 +4086,7 @@ onBeforeUnmount(() => {
                   @click="selectPlatformMerchant(merchant)"
                 >
                   <div
-                    class="relative h-32 overflow-hidden rounded-[0.85rem] bg-gray-100"
+                    class="relative aspect-[17/8] w-full overflow-hidden rounded-[0.85rem] bg-gray-100"
                     :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
                     :data-required-asset="merchant.requiredAsset || undefined"
                     :data-testid="`food-delivery-platform-merchant-card-${merchant.id}`"
@@ -3894,12 +4096,7 @@ onBeforeUnmount(() => {
                       v-if="merchant.imageUrl"
                       :src="merchant.imageUrl"
                       :alt="merchant.imageAlt || merchant.name"
-                      class="relative z-10 h-full w-full transition duration-300"
-                      :class="
-                        isPlatformLogoMerchant(merchant)
-                          ? 'object-contain p-5'
-                          : 'object-cover group-active:scale-[1.03]'
-                      "
+                      class="relative z-10 h-full w-full object-cover transition duration-300 group-active:scale-[1.03]"
                       @error="$event.currentTarget.style.display = 'none'"
                     />
                     <div
@@ -3913,20 +4110,24 @@ onBeforeUnmount(() => {
                       >
                       <i v-else :class="merchant.icon || 'fas fa-store'"></i>
                     </div>
+                  </div>
+                  <div class="mt-3 flex min-w-0 items-center gap-2 pr-12">
+                    <p
+                      class="min-w-0 flex-1 truncate text-[0.98rem] font-black leading-tight text-gray-950"
+                    >
+                      {{ merchant.name }}
+                    </p>
                     <span
-                      class="absolute left-2 top-2 z-20 rounded-md bg-[#24bcb7] px-2 py-1 text-[10px] font-black text-white shadow-sm"
+                      class="shrink-0 rounded-md bg-[#e5fbfa] px-2 py-1 text-[9px] font-black text-[#128e89]"
                     >
                       {{ merchant.badge }}
                     </span>
                   </div>
-                  <p class="mt-3 truncate text-[0.98rem] font-black leading-tight text-gray-950">
-                    {{ merchant.name }}
-                  </p>
-                  <p class="mt-1 truncate text-xs font-semibold text-gray-500">
+                  <p class="mt-1 truncate pr-12 text-xs font-semibold text-gray-500">
                     {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
                   </p>
                   <div
-                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] font-black text-gray-600"
+                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pr-12 text-[0.7rem] font-black text-gray-600"
                   >
                     <span class="inline-flex items-center gap-1.5">
                       <i class="fas fa-star text-amber-500"></i>
@@ -3944,11 +4145,11 @@ onBeforeUnmount(() => {
                 </button>
                 <button
                   type="button"
-                  class="absolute right-4 top-4 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full shadow-sm backdrop-blur transition active:scale-95"
+                  class="absolute bottom-4 right-4 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition active:scale-95"
                   :class="
                     isPlatformMerchantSaved(merchant.id)
                       ? 'bg-rose-500 text-white'
-                      : 'bg-black/35 text-white'
+                      : 'bg-gray-100 text-gray-500'
                   "
                   :aria-label="
                     isPlatformMerchantSaved(merchant.id)
@@ -3975,7 +4176,7 @@ onBeforeUnmount(() => {
 
         <section
           v-else-if="platformPageKey === 'campaign'"
-          class="space-y-5"
+          class="space-y-5 pt-4"
           data-testid="food-delivery-platform-campaign-page"
           :data-campaign-id="activePlatformCampaign?.id || platformCampaignKey"
         >
@@ -4023,10 +4224,8 @@ onBeforeUnmount(() => {
 
           <template v-if="activePlatformCampaign">
             <section
-              class="relative overflow-hidden rounded-[1.35rem] bg-[#5edbd5] p-5 shadow-[0_18px_38px_rgba(15,118,110,0.16)] ring-1 ring-black/5"
-              :class="
-                activePlatformCampaign.kind === 'lottery' ? 'min-h-[24rem]' : 'min-h-[10.5rem]'
-              "
+              class="relative overflow-hidden rounded-[1.35rem] bg-[#5edbd5] shadow-[0_18px_38px_rgba(15,118,110,0.16)] ring-1 ring-black/5"
+              :class="activePlatformCampaign.kind === 'lottery' ? 'aspect-[3/4]' : 'aspect-[85/31]'"
               data-testid="food-delivery-platform-campaign-hero"
               :data-required-asset="activePlatformCampaign.posterRequiredAsset || undefined"
             >
@@ -4041,66 +4240,6 @@ onBeforeUnmount(() => {
                 draggable="false"
                 @error="handlePlatformCampaignPosterImageError"
               />
-              <div
-                class="absolute inset-0 bg-gradient-to-r"
-                :class="activePlatformCampaign.className"
-              ></div>
-              <div
-                class="absolute inset-0"
-                :class="
-                  activePlatformCampaign.kind === 'lottery'
-                    ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(15,23,42,0.5))]'
-                    : 'bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(15,23,42,0.1))]'
-                "
-              ></div>
-              <div
-                class="relative z-10"
-                :class="
-                  activePlatformCampaign.kind === 'lottery' ? 'max-w-[78%] pt-44' : 'max-w-[64%]'
-                "
-              >
-                <span
-                  class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-[#128e89] shadow-sm"
-                >
-                  <i :class="activePlatformCampaign.icon"></i>
-                </span>
-                <p
-                  v-if="activePlatformCampaign.kind === 'lottery'"
-                  class="mt-3 text-[10px] font-black uppercase text-white/75"
-                >
-                  {{
-                    languageBase === 'zh'
-                      ? activePlatformCampaign.posterEyebrowZh
-                      : activePlatformCampaign.posterEyebrowEn
-                  }}
-                </p>
-                <h3
-                  class="font-black leading-tight"
-                  :class="
-                    activePlatformCampaign.kind === 'lottery'
-                      ? 'mt-1 text-[1.8rem] text-white'
-                      : 'mt-3 text-[1.35rem] text-gray-950'
-                  "
-                >
-                  {{
-                    languageBase === 'zh'
-                      ? activePlatformCampaign.titleZh
-                      : activePlatformCampaign.titleEn
-                  }}
-                </h3>
-                <p
-                  class="mt-2 text-[0.72rem] font-bold leading-4"
-                  :class="
-                    activePlatformCampaign.kind === 'lottery' ? 'text-white/75' : 'text-gray-950/65'
-                  "
-                >
-                  {{
-                    languageBase === 'zh'
-                      ? activePlatformCampaign.descZh
-                      : activePlatformCampaign.descEn
-                  }}
-                </p>
-              </div>
             </section>
 
             <section
@@ -4430,7 +4569,7 @@ onBeforeUnmount(() => {
 
         <section
           v-else-if="platformPageKey === 'search'"
-          class="space-y-5"
+          class="space-y-5 pt-4"
           data-testid="food-delivery-platform-search-page"
         >
           <header class="flex items-center justify-between gap-3 pt-1">
@@ -4541,7 +4680,7 @@ onBeforeUnmount(() => {
                 @click="selectPlatformMerchant(merchant)"
               >
                 <span
-                  class="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] bg-gradient-to-br text-2xl"
+                  class="relative flex h-20 w-32 shrink-0 items-center justify-center overflow-hidden rounded-[0.8rem] bg-gradient-to-br text-2xl"
                   :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
                   :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
                   :data-required-asset="merchant.requiredAsset || undefined"
@@ -4551,10 +4690,7 @@ onBeforeUnmount(() => {
                     v-if="merchant.imageUrl"
                     :src="merchant.imageUrl"
                     :alt="merchant.imageAlt || merchant.name"
-                    class="absolute inset-0 z-10 h-full w-full"
-                    :class="
-                      isPlatformLogoMerchant(merchant) ? 'object-contain p-3' : 'object-cover'
-                    "
+                    class="absolute inset-0 z-10 h-full w-full object-cover"
                     @error="$event.currentTarget.style.display = 'none'"
                   />
                   <span
@@ -4618,7 +4754,7 @@ onBeforeUnmount(() => {
 
         <section
           v-else-if="platformPageKey === 'saved'"
-          class="space-y-5"
+          class="space-y-5 pt-4"
           data-testid="food-delivery-platform-saved-page"
         >
           <header class="flex items-center justify-between gap-3 pt-1">
@@ -4689,7 +4825,7 @@ onBeforeUnmount(() => {
                 @click="selectPlatformMerchant(merchant)"
               >
                 <span
-                  class="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[0.75rem] bg-gradient-to-br text-3xl"
+                  class="relative flex aspect-[17/8] w-full items-center justify-center overflow-hidden rounded-[0.75rem] bg-gradient-to-br text-3xl"
                   :class="merchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'"
                   :data-asset-slot="`platform-merchant-cover-${merchant.id}`"
                   :data-required-asset="merchant.requiredAsset || undefined"
@@ -4699,10 +4835,7 @@ onBeforeUnmount(() => {
                     v-if="merchant.imageUrl"
                     :src="merchant.imageUrl"
                     :alt="merchant.imageAlt || merchant.name"
-                    class="absolute inset-0 z-10 h-full w-full"
-                    :class="
-                      isPlatformLogoMerchant(merchant) ? 'object-contain p-4' : 'object-cover'
-                    "
+                    class="absolute inset-0 z-10 h-full w-full object-cover"
                     @error="$event.currentTarget.style.display = 'none'"
                   />
                   <span
@@ -4712,16 +4845,16 @@ onBeforeUnmount(() => {
                   >
                   <i v-else :class="merchant.icon || 'fas fa-store'"></i>
                 </span>
-                <span class="mt-2 block truncate text-sm font-black text-gray-950">{{
+                <span class="mt-2 block truncate pr-10 text-sm font-black text-gray-950">{{
                   merchant.name
                 }}</span>
-                <span class="mt-1 block truncate text-[0.68rem] font-bold text-gray-500">
+                <span class="mt-1 block truncate pr-10 text-[0.68rem] font-bold text-gray-500">
                   {{ merchant.cuisine }} · {{ merchant.deliveryEtaMinutes }} min
                 </span>
               </button>
               <button
                 type="button"
-                class="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm"
+                class="absolute bottom-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-white shadow-sm"
                 :aria-label="t('取消收藏', 'Remove saved shop')"
                 aria-pressed="true"
                 :data-testid="`food-delivery-platform-save-${merchant.id}`"
@@ -4752,8 +4885,300 @@ onBeforeUnmount(() => {
         </section>
 
         <section
+          v-else-if="platformPageKey === 'merchant'"
+          class="-mx-4 -mt-4 min-h-screen bg-[#f3f7f7] pb-28"
+          data-testid="food-delivery-platform-merchant-page"
+          :data-merchant-id="platformMerchantId"
+        >
+          <template v-if="selectedPlatformMerchant">
+            <header
+              class="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur"
+              data-testid="food-delivery-platform-merchant-header"
+            >
+              <div class="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-800 transition active:scale-95"
+                  data-testid="food-delivery-platform-merchant-back"
+                  :aria-label="t('返回小店列表', 'Back to shops')"
+                  @click="returnFromPlatformMerchant"
+                >
+                  <i class="fas fa-chevron-left text-sm"></i>
+                </button>
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-[#159f9a]">
+                    {{ t('平台小店', 'Merchant') }}
+                  </p>
+                  <p class="truncate text-sm font-black text-gray-950">
+                    {{ selectedPlatformMerchant.name }}
+                  </p>
+                </div>
+              </div>
+              <div class="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95"
+                  :class="
+                    isPlatformMerchantSaved(selectedPlatformMerchant.id)
+                      ? 'bg-rose-500 text-white'
+                      : 'bg-gray-100 text-gray-600'
+                  "
+                  :aria-label="
+                    isPlatformMerchantSaved(selectedPlatformMerchant.id)
+                      ? t('取消收藏', 'Remove saved shop')
+                      : t('收藏小店', 'Save shop')
+                  "
+                  :aria-pressed="isPlatformMerchantSaved(selectedPlatformMerchant.id)"
+                  data-testid="food-delivery-platform-merchant-save"
+                  @click="togglePlatformMerchantSaved(selectedPlatformMerchant)"
+                >
+                  <i class="fas fa-heart text-sm"></i>
+                </button>
+                <button
+                  type="button"
+                  class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-800 transition active:scale-95"
+                  :aria-label="t('打开购物车', 'Open cart')"
+                  data-testid="food-delivery-platform-merchant-cart"
+                  @click="openPlatformCartFromMerchant"
+                >
+                  <i class="fas fa-cart-shopping text-sm"></i>
+                  <span
+                    v-if="foodDeliveryStore.platformCartQuantity > 0"
+                    class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#24bcb7] px-1 text-[10px] font-black text-white"
+                    data-testid="food-delivery-platform-cart-count"
+                  >
+                    {{ foodDeliveryStore.platformCartQuantity }}
+                  </span>
+                </button>
+              </div>
+            </header>
+
+            <div
+              class="relative aspect-[17/8] w-full overflow-hidden bg-gray-100"
+              :class="
+                selectedPlatformMerchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'
+              "
+              :data-asset-slot="`platform-merchant-cover-${selectedPlatformMerchant.id}`"
+              :data-required-asset="selectedPlatformMerchant.requiredAsset || undefined"
+              :data-merchant-visual-type="selectedPlatformMerchant.visualType || 'food-photo'"
+              data-testid="food-delivery-platform-merchant-hero"
+            >
+              <img
+                v-if="selectedPlatformMerchant.imageUrl"
+                :src="selectedPlatformMerchant.imageUrl"
+                :alt="selectedPlatformMerchant.imageAlt || selectedPlatformMerchant.name"
+                class="h-full w-full object-cover"
+              />
+              <div
+                v-else
+                class="flex h-full w-full items-center justify-center bg-gradient-to-br text-5xl"
+              >
+                <i :class="selectedPlatformMerchant.icon || 'fas fa-store'"></i>
+              </div>
+            </div>
+
+            <section class="border-b border-black/5 bg-white px-4 py-5">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <span
+                    class="inline-flex rounded-md bg-[#e5fbfa] px-2 py-1 text-[10px] font-black text-[#128e89]"
+                  >
+                    {{ selectedPlatformMerchant.badge }}
+                  </span>
+                  <h1 class="mt-2 text-[1.65rem] font-black leading-tight text-gray-950">
+                    {{ selectedPlatformMerchant.name }}
+                  </h1>
+                  <p class="mt-1 text-xs font-bold text-gray-500">
+                    {{ selectedPlatformMerchant.cuisine }} ·
+                    {{ selectedPlatformMerchant.distanceKm.toFixed(1) }} km
+                  </p>
+                </div>
+              </div>
+              <p class="mt-3 text-sm font-semibold leading-6 text-gray-600">
+                {{ selectedPlatformMerchant.desc }}
+              </p>
+              <dl
+                class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-black/5 py-3 text-xs font-black text-gray-700"
+                data-testid="food-delivery-platform-merchant-summary"
+              >
+                <div class="inline-flex items-center gap-1.5">
+                  <i class="fas fa-star text-amber-500"></i>
+                  <dt class="sr-only">{{ t('评分', 'Rating') }}</dt>
+                  <dd>
+                    {{ selectedPlatformMerchant.rating.toFixed(1) }}
+                    <span class="font-bold text-gray-400"
+                      >({{ selectedPlatformMerchant.reviewCount }})</span
+                    >
+                  </dd>
+                </div>
+                <div class="inline-flex items-center gap-1.5">
+                  <i class="far fa-clock text-[#ff7a37]"></i>
+                  <dt class="sr-only">{{ t('送达时间', 'ETA') }}</dt>
+                  <dd>{{ selectedPlatformMerchant.deliveryEtaMinutes }} min</dd>
+                </div>
+                <div class="inline-flex items-center gap-1.5">
+                  <i class="fas fa-motorcycle text-[#24bcb7]"></i>
+                  <dt class="sr-only">{{ t('配送费', 'Delivery fee') }}</dt>
+                  <dd>{{ platformDeliveryFeeLabel(selectedPlatformMerchant) }}</dd>
+                </div>
+              </dl>
+              <p class="mt-3 text-[11px] font-bold text-gray-500">
+                {{ t('最低起送', 'Minimum order') }}
+                <span class="ml-1 text-gray-900">{{ selectedPlatformMerchant.minimumOrder }}</span>
+              </p>
+            </section>
+
+            <section class="mt-2 bg-white" data-testid="food-delivery-platform-merchant-menu">
+              <div class="flex items-end justify-between gap-3 px-4 pb-2 pt-5">
+                <div>
+                  <p class="text-lg font-black text-gray-950">{{ t('本店菜单', 'Menu') }}</p>
+                  <p class="mt-1 text-xs font-semibold text-gray-500">
+                    {{ t('人气菜品与本店招牌', 'Popular picks and signatures') }}
+                  </p>
+                </div>
+                <span class="text-[11px] font-black text-[#128e89]">
+                  {{ selectedPlatformMerchant.menu.length }} {{ t('项', 'items') }}
+                </span>
+              </div>
+              <article
+                v-for="(item, itemIndex) in selectedPlatformMerchant.menu"
+                :key="`${selectedPlatformMerchant.id}-${item.title}`"
+                class="grid grid-cols-[minmax(0,1fr)_7rem] gap-4 border-b border-black/5 px-4 py-5 last:border-b-0"
+                :data-testid="`food-delivery-platform-menu-item-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+              >
+                <div class="flex min-w-0 flex-col">
+                  <h2 class="line-clamp-2 text-[0.98rem] font-black leading-5 text-gray-950">
+                    {{ item.title }}
+                  </h2>
+                  <p class="mt-1.5 line-clamp-2 text-xs font-semibold leading-5 text-gray-500">
+                    {{ item.desc }}
+                  </p>
+                  <div class="mt-auto flex items-end justify-between gap-3 pt-3">
+                    <span class="text-sm font-black text-gray-950">{{
+                      displayMoney(item.price)
+                    }}</span>
+                    <button
+                      v-if="platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) === 0"
+                      type="button"
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#24bcb7] text-white shadow-sm transition active:scale-95"
+                      :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
+                      :data-testid="`food-delivery-platform-menu-add-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                      @click="addPlatformMenuItemToCart(item, itemIndex)"
+                    >
+                      <i class="fas fa-plus text-[10px]"></i>
+                    </button>
+                    <div
+                      v-else
+                      class="flex h-9 items-center overflow-hidden rounded-full bg-gray-100 ring-1 ring-black/5"
+                    >
+                      <button
+                        type="button"
+                        class="inline-flex h-9 w-9 items-center justify-center text-gray-500 transition active:bg-gray-200"
+                        :aria-label="t(`减少 ${item.title}`, `Remove one ${item.title}`)"
+                        :data-testid="`food-delivery-platform-menu-decrease-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                        @click="
+                          updatePlatformCartItemQuantity(
+                            platformMenuItemId(selectedPlatformMerchant.id, itemIndex),
+                            platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) - 1,
+                          )
+                        "
+                      >
+                        <i class="fas fa-minus text-[9px]"></i>
+                      </button>
+                      <span
+                        class="min-w-6 text-center text-xs font-black text-gray-950"
+                        :data-testid="`food-delivery-platform-menu-quantity-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                      >
+                        {{ platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) }}
+                      </span>
+                      <button
+                        type="button"
+                        class="inline-flex h-9 w-9 items-center justify-center bg-[#24bcb7] text-white transition active:bg-[#159f9a]"
+                        :aria-label="t(`增加 ${item.title}`, `Add one ${item.title}`)"
+                        :data-testid="`food-delivery-platform-menu-increase-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                        @click="addPlatformMenuItemToCart(item, itemIndex)"
+                      >
+                        <i class="fas fa-plus text-[9px]"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="h-28 w-28 overflow-hidden rounded-[0.8rem] bg-gray-100 ring-1 ring-black/[0.04]"
+                  data-platform-menu-image
+                  :data-asset-slot="`platform-menu-image-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
+                  :data-required-asset="
+                    platformMenuItemAssetPath(selectedPlatformMerchant, itemIndex)
+                  "
+                >
+                  <img
+                    :src="platformMenuItemImageUrl(selectedPlatformMerchant, item, itemIndex)"
+                    :alt="item.title"
+                    class="h-full w-full object-cover"
+                  />
+                </div>
+              </article>
+              <p
+                class="sr-only"
+                aria-live="polite"
+                data-testid="food-delivery-platform-cart-feedback"
+              >
+                {{ platformCartFeedback }}
+              </p>
+            </section>
+
+            <button
+              v-if="foodDeliveryStore.platformCartQuantity > 0"
+              type="button"
+              class="fixed bottom-4 left-1/2 z-40 flex min-h-14 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 items-center justify-between rounded-[1rem] bg-gray-950 px-5 text-sm font-black text-white shadow-[0_18px_44px_rgba(15,23,42,0.32)]"
+              data-testid="food-delivery-platform-menu-view-cart"
+              @click="openPlatformCartFromMerchant"
+            >
+              <span class="inline-flex items-center gap-2">
+                <span
+                  class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[#24bcb7] px-1 text-[11px] text-white"
+                  >{{ foodDeliveryStore.platformCartQuantity }}</span
+                >
+                {{ t('查看购物车', 'View cart') }}
+              </span>
+              <span>
+                {{
+                  displayMoney(
+                    foodDeliveryStore.platformCartPrimaryTotal.amount,
+                    foodDeliveryStore.platformCartPrimaryTotal.currency,
+                  )
+                }}
+                <i class="fas fa-chevron-right ml-2 text-[10px]"></i>
+              </span>
+            </button>
+          </template>
+
+          <div
+            v-else
+            class="px-4 py-24 text-center"
+            data-testid="food-delivery-platform-merchant-missing"
+          >
+            <span
+              class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#24bcb7] shadow-sm"
+            >
+              <i class="fas fa-store-slash text-xl"></i>
+            </span>
+            <p class="mt-4 text-sm font-black text-gray-900">
+              {{ t('没有找到这家小店', 'Merchant not found') }}
+            </p>
+            <button
+              type="button"
+              class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-black text-white"
+              @click="openPlatformPage('home')"
+            >
+              {{ t('返回平台首页', 'Back to platform home') }}
+            </button>
+          </div>
+        </section>
+
+        <section
           v-else-if="platformPageKey === 'profile'"
-          class="space-y-5"
+          class="space-y-5 pt-4"
           data-testid="food-delivery-platform-profile-page"
         >
           <header class="flex items-center justify-between gap-3 pt-1">
@@ -4974,7 +5399,7 @@ onBeforeUnmount(() => {
 
         <section
           v-else-if="platformPageKey === 'checkout'"
-          class="space-y-4"
+          class="space-y-4 pt-4"
           data-testid="food-delivery-platform-checkout-page"
         >
           <header class="flex items-center gap-3 pt-1">
@@ -5254,7 +5679,7 @@ onBeforeUnmount(() => {
 
         <section
           v-else-if="platformPageKey === 'orders'"
-          class="space-y-4"
+          class="space-y-4 pt-4"
           data-testid="food-delivery-platform-orders-page"
         >
           <header class="flex items-center justify-between gap-3 pt-1">
@@ -5382,7 +5807,7 @@ onBeforeUnmount(() => {
 
         <section
           v-else-if="platformPageKey === 'order'"
-          class="space-y-4"
+          class="space-y-4 pt-4"
           data-testid="food-delivery-platform-order-page"
         >
           <header class="flex items-center gap-3 pt-1">
@@ -5620,7 +6045,11 @@ onBeforeUnmount(() => {
         </section>
 
         <nav
-          v-if="platformPageKey !== 'checkout' && platformPageKey !== 'order'"
+          v-if="
+            platformPageKey !== 'merchant' &&
+            platformPageKey !== 'checkout' &&
+            platformPageKey !== 'order'
+          "
           class="rounded-[1.4rem] bg-white/95 px-2 py-2 shadow-[0_16px_40px_rgba(15,23,42,0.14)] ring-1 ring-black/5 backdrop-blur"
           data-testid="food-delivery-platform-bottom-nav"
         >
@@ -5641,10 +6070,9 @@ onBeforeUnmount(() => {
           </div>
         </nav>
         <div
-          v-if="platformMerchantSheetOpen && selectedPlatformMerchant"
+          v-if="false"
           class="fixed inset-0 z-50 flex items-end justify-center bg-gray-950/42 px-4 pb-4 pt-16 backdrop-blur-sm"
           data-testid="food-delivery-platform-merchant-dialog"
-          @click.self="closePlatformMerchantSheet"
         >
           <section
             class="max-h-[84vh] w-full max-w-md overflow-y-auto rounded-[1.65rem] bg-white p-4 shadow-[0_24px_70px_rgba(15,23,42,0.28)] ring-1 ring-black/5"
@@ -5667,7 +6095,7 @@ onBeforeUnmount(() => {
                 class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700"
                 data-testid="food-delivery-platform-merchant-close"
                 aria-label="Close merchant detail"
-                @click="closePlatformMerchantSheet"
+                @click="returnFromPlatformMerchant"
               >
                 <i class="fas fa-xmark"></i>
               </button>
@@ -6101,10 +6529,19 @@ onBeforeUnmount(() => {
                 @click="openCategory(category.key)"
               >
                 <span
-                  class="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-2xl text-lg"
+                  class="relative mx-auto inline-flex h-10 w-10 items-center justify-center rounded-2xl text-lg"
                   :class="category.active ? 'bg-[#24bcb7] text-white' : 'bg-gray-50 text-gray-950'"
                 >
                   <i :class="category.icon"></i>
+                  <img
+                    :src="category.imageUrl"
+                    alt=""
+                    aria-hidden="true"
+                    decoding="async"
+                    class="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain"
+                    @load="$event.currentTarget.previousElementSibling.style.opacity = '0'"
+                    @error="$event.currentTarget.style.display = 'none'"
+                  />
                 </span>
                 <span class="mt-2 block truncate text-[11px] font-black">{{ category.label }}</span>
                 <span class="sr-only">{{ category.key }}</span>
@@ -6598,12 +7035,55 @@ onBeforeUnmount(() => {
           'food-delivery-store-quick-service': isQuickServiceStore,
           'food-delivery-store-jade-table': isJadeTableStore,
           'food-delivery-store-light-food': isLightFoodStore,
+          'food-delivery-store-harbor-roast': isHarborRoastStore,
           'food-delivery-store-discovery': isReusableDiscoveryTemplate,
         }"
         data-testid="food-delivery-store-app"
       >
+        <FoodDeliveryHarborRoastApp
+          v-if="activeRestaurant && isHarborRoastStore"
+          :restaurant="activeRestaurant"
+          :display-name="activeStoreDisplayName"
+          :short-description="activeStoreShortDescription"
+          :menu-items="activeMenuItems"
+          :active-item="activeHarborRoastItem"
+          :merchandise-items="foodDeliveryStore.harborRoastMerchandise"
+          :active-merchandise="activeHarborRoastMerchandise"
+          :bean-stamp-balance="foodDeliveryStore.harborRoastBeanStamps"
+          :cart-lines="activeStoreCartLineItems"
+          :cart-quantity="activeStoreCartQuantity"
+          :cart-total="activeStoreCartPrimaryTotal"
+          :orders="scopedFoodOrders"
+          :active-order="activeHarborRoastOrder"
+          :page="harborRoastPageKey"
+          :eta-text="activeStoreEtaText"
+          :fee-text="activeStoreFeeText"
+          :distance-text="activeStoreDistanceText"
+          :delivery-address="
+            activeMapHandoff.deliveryAddress || t('当前配送地址', 'Current delivery address')
+          "
+          @go-home="goHome"
+          @navigate="
+            (pageKey, orderId) =>
+              openHarborRoastPage(pageKey, orderId ? { shopOrderId: orderId } : {})
+          "
+          @open-item="openHarborRoastItem"
+          @open-merchandise="openHarborRoastMerchandise"
+          @add-item="addMenuItemToCart"
+          @add-merchandise="
+            (merchandiseId, done) =>
+              done?.(foodDeliveryStore.addHarborRoastMerchandiseToCart(merchandiseId))
+          "
+          @redeem-merchandise="
+            (merchandiseId, done) =>
+              done?.(foodDeliveryStore.redeemHarborRoastMerchandise(merchandiseId))
+          "
+          @update-cart="foodDeliveryStore.updateCartQuantity"
+          @checkout="checkoutFoodDelivery"
+        />
+
         <FoodDeliveryVerdantDayApp
-          v-if="activeRestaurant && isLightFoodStore"
+          v-else-if="activeRestaurant && isLightFoodStore"
           :restaurant="activeRestaurant"
           :display-name="activeStoreDisplayName"
           :short-description="activeStoreShortDescription"
@@ -6836,52 +7316,91 @@ onBeforeUnmount(() => {
             class="relative bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-4"
             data-testid="food-delivery-peach-cloud-home-main"
           >
-            <section
-              class="relative min-h-[16rem] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)] shadow-[4px_4px_0_var(--peach-cloud-ink)]"
-              data-testid="food-delivery-peach-cloud-brand-hero"
-            >
-              <button
-                type="button"
-                class="relative block min-h-[16rem] w-full overflow-hidden text-left"
-                data-testid="food-delivery-peach-cloud-hero-cover"
-                @click="openPeachCloudNew"
-              >
-                <img
-                  :src="activeStoreCoverImageUrl"
-                  :alt="`${activeStoreDisplayName} ${t('本周精选', 'weekly selection')}`"
-                  class="absolute inset-0 h-full w-full object-cover object-center"
-                  :data-required-asset="foodDeliveryRequiredAssetPath(activeRestaurant)"
-                  @error="handleFoodShopImageError"
-                />
-                <span class="relative z-10 flex min-h-[16rem] w-[48%] flex-col justify-between p-4">
-                  <span>
-                    <span
-                      class="inline-flex items-center gap-1.5 bg-[var(--peach-cloud-ink)] px-2 py-1 text-[8px] font-black text-[var(--peach-cloud-canvas)]"
-                    >
-                      <i class="fas fa-circle-check text-[8px]"></i>
-                      FRESH PEACH · OPEN TODAY
-                    </span>
-                    <strong
-                      class="mt-4 block max-w-36 text-xl font-black leading-[0.98] text-[var(--peach-cloud-ink)] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
-                    >
-                      <span class="block">PEACH,</span>
-                      <span class="block">POURED INTO</span>
-                      <span class="block">CLOUDS</span>
-                    </strong>
-                    <span
-                      class="mt-3 block max-w-36 text-[9px] font-bold leading-3.5 text-[var(--peach-cloud-iron)] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
-                    >
-                      White-peach fizz, oolong clouds, and freshly shaved ice.
-                    </span>
-                  </span>
-                  <span
-                    class="inline-flex w-fit items-center gap-2 border-b-2 border-[var(--peach-cloud-ink)] pb-1 text-[10px] font-black text-[var(--peach-cloud-ink)]"
+            <section data-testid="food-delivery-peach-cloud-home-poster-stage">
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
+                    PEACH CLOUD / POSTER DROP
+                  </p>
+                  <h1 class="mt-1 text-2xl font-black">
+                    {{ t('新品海报', 'New release posters') }}
+                  </h1>
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-white/75"
+                    :aria-label="t('上一张海报', 'Previous poster')"
+                    @click="scrollPeachCloudNewCarousel(-1)"
                   >
-                    VIEW THE DROP
-                    <i class="fas fa-arrow-right text-[9px]"></i>
-                  </span>
-                </span>
-              </button>
+                    <i class="fas fa-arrow-left text-xs"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)]"
+                    :aria-label="t('下一张海报', 'Next poster')"
+                    @click="scrollPeachCloudNewCarousel(1)"
+                  >
+                    <i class="fas fa-arrow-right text-xs"></i>
+                  </button>
+                </div>
+              </div>
+              <div
+                ref="peachCloudNewCarouselRef"
+                class="mt-4 flex snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                data-testid="food-delivery-peach-cloud-campaigns"
+                @scroll.passive="syncPeachCloudPosterCarouselIndex"
+              >
+                <button
+                  v-for="campaign in peachCloudPosterCampaigns"
+                  :key="campaign.key"
+                  type="button"
+                  class="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white transition active:scale-[0.995]"
+                  :data-testid="`food-delivery-peach-cloud-poster-${campaign.key}`"
+                  :aria-label="campaign.title"
+                  @click="openPeachCloudPosterCampaign(campaign)"
+                >
+                  <img
+                    :src="campaign.imageUrl"
+                    :alt="campaign.title"
+                    class="h-full w-full object-cover"
+                    :data-required-asset="campaign.assetPath"
+                    @error="handleFoodShopImageError"
+                  />
+                </button>
+              </div>
+              <div class="mt-1 flex items-center justify-center gap-1.5" aria-hidden="true">
+                <span
+                  v-for="(_, index) in peachCloudPosterCampaigns"
+                  :key="index"
+                  class="h-1.5 transition-all"
+                  :class="
+                    peachCloudNewCarouselIndex === index
+                      ? 'w-7 bg-[var(--peach-cloud-ink)]'
+                      : 'w-2 bg-[var(--peach-cloud-mist)]'
+                  "
+                ></span>
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  class="inline-flex h-11 items-center justify-center gap-2 border-2 border-[var(--peach-cloud-ink)] bg-white/80 text-xs font-black shadow-[3px_3px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  data-testid="food-delivery-peach-cloud-home-club"
+                  @click="openPeachCloudClub"
+                >
+                  <i class="fas fa-crown text-[var(--peach-cloud-accent)]"></i>
+                  {{ t('桃子会', 'Peach Club') }}
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-11 items-center justify-center gap-2 border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] text-xs font-black shadow-[3px_3px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  data-testid="food-delivery-peach-cloud-home-order"
+                  @click="focusPeachCloudSearch"
+                >
+                  <i class="fas fa-utensils"></i>
+                  {{ t('直接点单', 'Order menu') }}
+                </button>
+              </div>
             </section>
 
             <div class="mt-7 flex items-end justify-between gap-3">
@@ -6942,203 +7461,15 @@ onBeforeUnmount(() => {
 
             <div class="mt-3 h-px bg-[var(--peach-cloud-mist)]/70"></div>
 
-            <section class="pt-3" data-testid="food-delivery-menu-panel">
+            <section
+              v-if="!peachCloudShowsCuratedHome"
+              class="pt-3"
+              data-testid="food-delivery-menu-panel"
+            >
               <div
                 data-testid="food-delivery-store-menu-items"
                 :data-active-section="activeStoreMenuSection?.key"
               >
-                <template v-if="peachCloudShowsCuratedHome">
-                  <div class="flex items-end justify-between gap-3">
-                    <h2 class="text-xl font-black leading-none">
-                      {{ t('人气必点', 'Best Seller') }}
-                    </h2>
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-1 text-xs font-black text-[var(--peach-cloud-ink)]"
-                      data-testid="food-delivery-peach-cloud-view-all"
-                      @click="focusPeachCloudSearch"
-                    >
-                      {{ t('浏览菜单', 'Browse menu') }}
-                      <i class="fas fa-chevron-right text-[9px]"></i>
-                    </button>
-                  </div>
-
-                  <div class="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2">
-                    <article
-                      v-for="item in peachCloudBestSellerItems"
-                      :key="item.id"
-                      class="relative w-[4.75rem] shrink-0"
-                      :data-testid="`food-delivery-menu-${item.id}`"
-                      :data-menu-section="item.menuSection || 'signature'"
-                      :data-template="activeStoreTemplate"
-                    >
-                      <button
-                        type="button"
-                        class="block w-full text-left"
-                        :data-testid="`food-delivery-menu-open-${item.id}`"
-                        @click="openMenuItemDetail(item.id)"
-                      >
-                        <div
-                          class="relative aspect-[2/3] overflow-hidden rounded-[1.2rem] bg-white/80 shadow-[0_10px_20px_rgba(43,48,58,0.12)]"
-                          :data-testid="`food-delivery-menu-dish-${item.id}`"
-                        >
-                          <img
-                            v-if="foodImageUrl(item)"
-                            :src="foodImageUrl(item)"
-                            :alt="item.image?.alt || item.title"
-                            class="h-full w-full object-cover"
-                            :style="
-                              item.id === 'food_menu_peach_butter_waffle'
-                                ? { transform: 'translateY(-0.25rem) scale(1.55)' }
-                                : undefined
-                            "
-                            :data-required-asset="foodDeliveryRequiredAssetPath(item)"
-                            @error="handleFoodShopImageError"
-                          />
-                          <div
-                            v-else
-                            class="flex h-full items-center justify-center text-[var(--peach-cloud-accent)]"
-                          >
-                            <i class="fas fa-ice-cream"></i>
-                          </div>
-                          <span
-                            class="absolute bottom-0 right-0 rounded-tl-2xl bg-[var(--peach-cloud-ink)] px-2 py-1 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
-                          >
-                            {{ item.price }}
-                          </span>
-                        </div>
-                        <p class="mt-1.5 line-clamp-2 min-h-7 text-[10px] font-black leading-3.5">
-                          {{ item.title }}
-                        </p>
-                      </button>
-                      <button
-                        type="button"
-                        class="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-sm transition active:scale-[0.94]"
-                        :data-testid="`food-delivery-add-${item.id}`"
-                        :aria-label="`Add ${item.title}`"
-                        @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
-                      >
-                        <i class="fas fa-plus text-[9px]"></i>
-                      </button>
-                    </article>
-                  </div>
-
-                  <section
-                    v-if="peachCloudFeaturedItem"
-                    class="mt-3 overflow-hidden rounded-lg border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-[0_5px_0_var(--peach-cloud-ink)]"
-                    data-testid="food-delivery-peach-cloud-featured"
-                  >
-                    <button
-                      type="button"
-                      class="relative block min-h-36 w-full overflow-hidden text-left"
-                      data-testid="food-delivery-peach-cloud-featured-action"
-                      @click="openPeachCloudNew"
-                    >
-                      <img
-                        :src="peachCloudPromotionImageUrl"
-                        :alt="`${peachCloudFeaturedItem.title} promotion`"
-                        class="absolute inset-y-0 right-0 h-full w-[54%] bg-[#eaf0d8] object-contain object-center"
-                        data-testid="food-delivery-peach-cloud-promotion-image"
-                        data-required-asset="peach-cloud/promotions/peach-cloud-golden-pairing-01.png"
-                        @error="handleFoodShopImageError"
-                      />
-                      <span
-                        class="relative z-10 flex min-h-36 w-[46%] flex-col justify-center border-r-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)]/90 px-4 py-3 text-center backdrop-blur-[2px]"
-                      >
-                        <span class="text-xs font-semibold leading-4">A NEW CLOUD HAS LANDED</span>
-                        <strong class="mt-2 text-3xl font-black leading-none">30% OFF</strong>
-                        <span
-                          class="mt-2 line-clamp-2 text-[10px] font-bold leading-3.5 text-[var(--peach-cloud-iron)]"
-                        >
-                          {{ peachCloudFeaturedItem.title }}
-                        </span>
-                      </span>
-                    </button>
-                  </section>
-
-                  <h2 class="mt-6 text-xl font-black leading-none">
-                    {{ t('为你推荐', 'Recommend') }}
-                  </h2>
-                  <div class="mt-3 grid grid-cols-2 gap-3">
-                    <article
-                      v-for="item in peachCloudRecommendedItems"
-                      :key="item.id"
-                      class="min-w-0 overflow-hidden rounded-[1.2rem] border border-[var(--peach-cloud-mist)]/30 bg-white/90 shadow-[0_9px_20px_rgba(43,48,58,0.08)]"
-                      :data-testid="`food-delivery-menu-${item.id}`"
-                      :data-menu-section="item.menuSection || 'signature'"
-                      :data-template="activeStoreTemplate"
-                    >
-                      <button
-                        type="button"
-                        class="block w-full text-left"
-                        :data-testid="`food-delivery-menu-open-${item.id}`"
-                        @click="openMenuItemDetail(item.id)"
-                      >
-                        <div
-                          class="relative aspect-[1.22/1] overflow-hidden bg-[var(--peach-cloud-mist)]/25"
-                          :data-testid="`food-delivery-menu-dish-${item.id}`"
-                        >
-                          <img
-                            v-if="foodImageUrl(item)"
-                            :src="foodImageUrl(item)"
-                            :alt="item.image?.alt || item.title"
-                            class="h-full w-full object-cover"
-                            :style="
-                              item.id === 'food_menu_peach_butter_waffle'
-                                ? { transform: 'translateY(-0.25rem) scale(1.55)' }
-                                : undefined
-                            "
-                            :data-required-asset="foodDeliveryRequiredAssetPath(item)"
-                            @error="handleFoodShopImageError"
-                          />
-                          <div
-                            v-else
-                            class="flex h-full items-center justify-center text-[var(--peach-cloud-accent)]"
-                          >
-                            <i class="fas fa-ice-cream"></i>
-                          </div>
-                          <span
-                            class="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[9px] font-black"
-                          >
-                            {{ activeRestaurant.rating.toFixed(1) }}
-                            <i class="fas fa-star text-[var(--peach-cloud-accent)]"></i>
-                          </span>
-                          <span
-                            class="absolute bottom-0 right-0 rounded-tl-2xl bg-[var(--peach-cloud-ink)] px-2.5 py-1 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
-                          >
-                            {{ item.price }}
-                          </span>
-                        </div>
-                        <div class="p-2.5 pb-2">
-                          <p class="line-clamp-2 min-h-9 text-xs font-black leading-[1.1rem]">
-                            {{ item.title }}
-                          </p>
-                          <p
-                            class="mt-1 line-clamp-1 text-[9px] font-semibold text-[var(--peach-cloud-iron)]"
-                          >
-                            {{ item.desc }}
-                          </p>
-                        </div>
-                      </button>
-                      <div class="flex items-center justify-between px-2.5 pb-2.5">
-                        <span class="text-[9px] font-bold text-[var(--peach-cloud-iron)]">{{
-                          activeStoreEtaText
-                        }}</span>
-                        <button
-                          type="button"
-                          class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-sm transition active:scale-[0.94]"
-                          :data-testid="`food-delivery-add-${item.id}`"
-                          :aria-label="`Add ${item.title}`"
-                          @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
-                        >
-                          <i class="fas fa-plus text-[9px]"></i>
-                        </button>
-                      </div>
-                    </article>
-                  </div>
-                </template>
-
-                <template v-else>
                   <div class="flex items-end justify-between gap-3">
                     <div>
                       <p class="text-[10px] font-black uppercase text-[var(--peach-cloud-iron)]">
@@ -7241,7 +7572,6 @@ onBeforeUnmount(() => {
                       {{ t('没有找到合适的甜品', 'No cloud found') }}
                     </p>
                   </div>
-                </template>
               </div>
             </section>
 
@@ -7414,137 +7744,286 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else-if="peachCloudPageKey === 'new'">
-            <header
-              class="relative min-h-[18rem] overflow-hidden border-b-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)]"
-            >
-              <img
-                :src="peachCloudWeeklyDropImageUrl"
-                alt="Peach Cloud weekly seasonal collection"
-                class="absolute inset-0 h-full w-full object-cover object-center"
-                data-testid="food-delivery-peach-cloud-weekly-drop-image"
-                data-required-asset="peach-cloud/promotions/peach-cloud-weekly-drop-01.png"
-                @error="handleFoodShopImageError"
-              />
-              <div class="relative z-10 flex min-h-[18rem] w-[49%] flex-col justify-between p-4">
-                <div>
-                  <span
-                    class="inline-flex bg-[var(--peach-cloud-ink)] px-2.5 py-1.5 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
-                  >
-                    NEW EVERY FRIDAY · 10:00
-                  </span>
-                  <p
-                    class="mt-8 text-[10px] font-black text-[var(--peach-cloud-iron)] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
-                  >
-                    PEACH CLOUD DROP 07
-                  </p>
-                  <h1
-                    class="mt-2 max-w-[10.5rem] text-[2rem] font-black leading-[0.96] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
-                  >
-                    PEAK PEACH, SOFT CLOUDS
-                  </h1>
-                </div>
-                <span
-                  class="w-fit bg-[var(--peach-cloud-accent)] px-3 py-1.5 text-[9px] font-black text-[var(--peach-cloud-ink)]"
-                >
-                  PEACH SEASON
-                </span>
-              </div>
-            </header>
-
             <main
-              class="min-h-[calc(100vh-10rem)] bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-5"
+              class="min-h-[calc(100vh-5rem)] bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-5"
               data-testid="food-delivery-peach-cloud-new-page"
             >
-              <button
-                v-if="peachCloudFeaturedItem"
-                type="button"
-                class="grid w-full grid-cols-[44%_56%] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-ink)] text-left text-[var(--peach-cloud-canvas)] shadow-[6px_6px_0_var(--peach-cloud-mist)]"
-                @click="openMenuItemDetail(peachCloudFeaturedItem.id)"
-              >
-                <span class="flex flex-col justify-center p-4">
-                  <span class="text-[9px] font-black text-[var(--peach-cloud-mist)]"
-                    >LIMITED CLOUD</span
-                  >
-                  <strong class="mt-2 text-lg font-black leading-tight">{{
-                    peachCloudFeaturedItem.title
-                  }}</strong>
-                  <span class="mt-3 text-xs font-bold"
-                    >{{ peachCloudFeaturedItem.price }} {{ peachCloudFeaturedItem.currency }}</span
-                  >
-                </span>
-                <span class="aspect-square overflow-hidden bg-[var(--peach-cloud-mist)]">
-                  <img
-                    :src="foodImageUrl(peachCloudFeaturedItem) || activeStoreCoverImageUrl"
-                    :alt="peachCloudFeaturedItem.title"
-                    class="h-full w-full object-cover"
-                    @error="handleFoodShopImageError"
-                  />
-                </span>
-              </button>
-
-              <div class="mt-7 flex items-end justify-between gap-3">
-                <div>
-                  <p class="text-[10px] font-black text-[var(--peach-cloud-iron)]">NEW & NOW</p>
-                  <h2 class="mt-1 text-xl font-black">{{ t('新鲜落地', 'Fresh arrivals') }}</h2>
+              <section data-testid="food-delivery-peach-cloud-new-carousel">
+                <div class="flex items-end justify-between gap-3">
+                  <div>
+                    <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
+                      PEACH CLOUD / POSTER DROP
+                    </p>
+                    <h1 class="mt-1 text-2xl font-black">
+                      {{ t('新品放映厅', 'New release gallery') }}
+                    </h1>
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-white/75"
+                      :aria-label="t('上一张海报', 'Previous poster')"
+                      @click="scrollPeachCloudNewCarousel(-1)"
+                    >
+                      <i class="fas fa-arrow-left text-xs"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)]"
+                      :aria-label="t('下一张海报', 'Next poster')"
+                      @click="scrollPeachCloudNewCarousel(1)"
+                    >
+                      <i class="fas fa-arrow-right text-xs"></i>
+                    </button>
+                  </div>
                 </div>
-                <span class="text-xs font-black text-[var(--peach-cloud-iron)]">{{
-                  peachCloudNewArrivalItems.length
-                }}</span>
-              </div>
-              <div class="relative mt-4 border-l-2 border-[var(--peach-cloud-ink)] pl-4">
-                <article
-                  v-for="(item, index) in peachCloudNewArrivalItems"
-                  :key="item.id"
-                  class="relative mb-5 grid grid-cols-[minmax(0,1fr)_7rem] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white/80 shadow-[4px_4px_0_var(--peach-cloud-ink)]"
-                  :data-testid="`food-delivery-menu-${item.id}`"
-                  :data-menu-section="item.menuSection || 'signature'"
+                <div
+                  ref="peachCloudNewCarouselRef"
+                  class="mt-4 flex snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  @scroll.passive="syncPeachCloudPosterCarouselIndex"
                 >
                   <button
+                    v-for="campaign in peachCloudPosterCampaigns"
+                    :key="campaign.key"
                     type="button"
-                    class="contents text-left"
-                    :data-testid="`food-delivery-menu-open-${item.id}`"
-                    @click="openMenuItemDetail(item.id)"
+                    class="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white transition active:scale-[0.995]"
+                    :data-testid="`food-delivery-peach-cloud-new-poster-${campaign.key}`"
+                    :aria-label="campaign.title"
+                    @click="openPeachCloudPosterCampaign(campaign)"
                   >
-                    <div class="flex min-w-0 flex-col justify-between p-3 pr-2">
-                      <div>
-                        <span class="text-[9px] font-black text-[var(--peach-cloud-accent)]">
-                          DROP {{ String(index + 1).padStart(2, '0') }} ·
-                          {{ peachCloudDropSectionLabel(item.menuSection) }}
-                        </span>
-                        <p class="mt-2 line-clamp-2 text-sm font-black leading-[1.1rem]">
-                          {{ item.title }}
-                        </p>
-                        <p
-                          class="mt-1 line-clamp-2 text-[9px] font-semibold leading-3.5 text-[var(--peach-cloud-iron)]"
-                        >
-                          {{ item.desc }}
-                        </p>
-                      </div>
-                      <p class="mt-3 text-xs font-black">{{ item.price }} {{ item.currency }}</p>
-                    </div>
-                    <div
-                      class="aspect-square overflow-hidden border-l-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)]/25"
+                    <img
+                      :src="campaign.imageUrl"
+                      :alt="campaign.title"
+                      class="h-full w-full object-cover"
+                      :data-required-asset="campaign.assetPath"
+                      @error="handleFoodShopImageError"
+                    />
+                  </button>
+                </div>
+                <div class="mt-1 flex items-center justify-center gap-1.5" aria-hidden="true">
+                  <span
+                    v-for="(_, index) in peachCloudPosterCampaigns"
+                    :key="index"
+                    class="h-1.5 transition-all"
+                    :class="
+                      peachCloudNewCarouselIndex === index
+                        ? 'w-7 bg-[var(--peach-cloud-ink)]'
+                        : 'w-2 bg-[var(--peach-cloud-mist)]'
+                    "
+                  ></span>
+                </div>
+              </section>
+
+              <section
+                v-if="peachCloudFeaturedItem"
+                class="mt-8 overflow-hidden rounded-lg border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-ink)] text-[var(--peach-cloud-canvas)] shadow-[6px_6px_0_var(--peach-cloud-mist)]"
+                data-testid="food-delivery-peach-cloud-featured"
+              >
+                <button
+                  type="button"
+                  class="grid w-full grid-cols-[44%_56%] text-left"
+                  data-testid="food-delivery-peach-cloud-featured-action"
+                  @click="openMenuItemDetail(peachCloudFeaturedItem.id)"
+                >
+                  <span class="flex min-w-0 flex-col justify-center p-4">
+                    <span class="text-[9px] font-black text-[var(--peach-cloud-mist)]">
+                      LIMITED CLOUD
+                    </span>
+                    <strong class="mt-3 text-lg font-black leading-tight">
+                      {{ peachCloudFeaturedItem.title }}
+                    </strong>
+                    <span class="mt-4 text-sm font-black">
+                      {{ peachCloudFeaturedItem.price }} {{ peachCloudFeaturedItem.currency }}
+                    </span>
+                  </span>
+                  <span class="aspect-square overflow-hidden bg-[var(--peach-cloud-canvas)]">
+                    <img
+                      :src="peachCloudPromotionImageUrl"
+                      :alt="`${peachCloudFeaturedItem.title} promotion`"
+                      class="h-full w-full object-contain object-center"
+                      data-testid="food-delivery-peach-cloud-promotion-image"
+                      data-required-asset="peach-cloud/promotions/peach-cloud-golden-pairing-01.png"
+                      @error="handleFoodShopImageError"
+                    />
+                  </span>
+                </button>
+              </section>
+            </main>
+          </template>
+          <template v-else-if="peachCloudPageKey === 'club'">
+            <main
+              class="min-h-[calc(100vh-5rem)] bg-[var(--peach-cloud-canvas)] pb-24"
+              data-testid="food-delivery-peach-cloud-club-page"
+            >
+              <section
+                class="relative min-h-[19rem] overflow-hidden border-b-2 border-[var(--peach-cloud-ink)]"
+              >
+                <img
+                  :src="activeStoreCoverImageUrl"
+                  :alt="t('桃子会会员活动', 'Peach Club membership')"
+                  class="absolute inset-0 h-full w-full object-cover"
+                  :data-required-asset="foodDeliveryRequiredAssetPath(activeRestaurant)"
+                  @error="handleFoodShopImageError"
+                />
+                <div
+                  class="relative flex min-h-[19rem] w-[50%] flex-col justify-between bg-[var(--peach-cloud-accent)]/90 p-5 backdrop-blur-[2px]"
+                >
+                  <span
+                    class="w-fit bg-[var(--peach-cloud-ink)] px-2 py-1 text-[8px] font-black text-[var(--peach-cloud-canvas)]"
+                    >PEACH CLUB</span
+                  >
+                  <div>
+                    <h1 class="text-3xl font-black leading-[0.96]">
+                      {{ t('每一朵云，都有回礼', 'EVERY CLOUD GIVES BACK') }}
+                    </h1>
+                    <p
+                      class="mt-3 text-[10px] font-semibold leading-4 text-[var(--peach-cloud-iron)]"
                     >
-                      <img
-                        v-if="foodImageUrl(item)"
-                        :src="foodImageUrl(item)"
-                        :alt="item.image?.alt || item.title"
-                        class="h-full w-full object-cover"
-                        @error="handleFoodShopImageError"
-                      />
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    class="absolute bottom-2 right-2 inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-[2px_2px_0_var(--peach-cloud-ink)]"
-                    :data-testid="`food-delivery-add-${item.id}`"
-                    :aria-label="`Add ${item.title}`"
-                    @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
+                      {{
+                        t(
+                          '会员日优先尝鲜、生日桃气券与周边限定购买资格。',
+                          'Early drops, birthday treats, and members-first mascot goods.',
+                        )
+                      }}
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <section class="px-4 pt-7">
+                <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">MEMBER MOMENTS</p>
+                <h2 class="mt-1 text-xl font-black">
+                  {{ t('桃子会本月礼遇', 'This month in Peach Club') }}
+                </h2>
+                <div class="mt-4 grid grid-cols-3 border-y-2 border-[var(--peach-cloud-ink)]">
+                  <div class="border-r-2 border-[var(--peach-cloud-ink)] py-4 pr-3">
+                    <i class="fas fa-bolt text-[var(--peach-cloud-accent)]"></i>
+                    <p class="mt-2 text-xs font-black">{{ t('提前尝鲜', 'Early drops') }}</p>
+                  </div>
+                  <div class="border-r-2 border-[var(--peach-cloud-ink)] px-3 py-4">
+                    <i class="fas fa-cake-candles text-[var(--peach-cloud-accent)]"></i>
+                    <p class="mt-2 text-xs font-black">{{ t('生日桃礼', 'Birthday treat') }}</p>
+                  </div>
+                  <div class="py-4 pl-3">
+                    <i class="fas fa-gift text-[var(--peach-cloud-accent)]"></i>
+                    <p class="mt-2 text-xs font-black">{{ t('限定周边', 'Member goods') }}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="relative mt-7 block aspect-[1.55/1] w-full overflow-hidden border-2 border-[var(--peach-cloud-ink)] text-left shadow-[5px_5px_0_var(--peach-cloud-ink)]"
+                  data-testid="food-delivery-peach-cloud-club-merch-action"
+                  @click="openPeachCloudMerch"
+                >
+                  <img
+                    :src="peachCloudMascotMarketImageUrl"
+                    :alt="t('桃子云吉祥物周边', 'Peach Cloud mascot goods')"
+                    class="absolute inset-0 h-full w-full object-cover"
+                    data-required-asset="peach-cloud/promotions/peach-cloud-mascot-market-01.png"
+                    @error="handleFoodShopImageError"
+                  />
+                  <span
+                    class="absolute inset-y-0 left-0 flex w-[47%] flex-col justify-between bg-[var(--peach-cloud-ink)] p-4 text-[var(--peach-cloud-canvas)]"
                   >
-                    <i class="fas fa-plus text-[9px]"></i>
-                  </button>
+                    <strong class="text-xl font-black leading-[1.02]">{{
+                      t('云朵周边商店', 'Cloud Goods Shop')
+                    }}</strong>
+                    <span class="inline-flex items-center gap-2 text-[10px] font-black"
+                      >{{ t('去逛逛', 'Explore') }} <i class="fas fa-arrow-right"></i
+                    ></span>
+                  </span>
+                </button>
+              </section>
+            </main>
+          </template>
+
+          <template v-else-if="peachCloudPageKey === 'merch'">
+            <main
+              class="min-h-[calc(100vh-5rem)] bg-[var(--peach-cloud-canvas)] pb-24"
+              data-testid="food-delivery-peach-cloud-merch-page"
+            >
+              <section
+                class="relative aspect-[1.5/1] overflow-hidden border-b-2 border-[var(--peach-cloud-ink)]"
+              >
+                <img
+                  :src="peachCloudMascotMarketImageUrl"
+                  :alt="t('桃子云周边商店', 'Peach Cloud goods shop')"
+                  class="absolute inset-0 h-full w-full object-cover"
+                  data-testid="food-delivery-peach-cloud-merch-campaign-image"
+                  data-required-asset="peach-cloud/promotions/peach-cloud-mascot-market-01.png"
+                  @error="handleFoodShopImageError"
+                />
+                <div
+                  class="relative flex h-full w-[48%] flex-col justify-between bg-[var(--peach-cloud-accent)]/92 p-5 backdrop-blur-[2px]"
+                >
+                  <span class="text-[9px] font-black">PEACH CLOUD GOODS / 01</span>
+                  <h1 class="text-3xl font-black leading-[0.96]">
+                    {{ t('把小桃子带回家', 'TAKE A LITTLE CLOUD HOME') }}
+                  </h1>
+                </div>
+              </section>
+              <section class="px-4 pt-7">
+                <div class="flex items-end justify-between gap-3">
+                  <div>
+                    <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
+                      MASCOT COLLECTION
+                    </p>
+                    <h2 class="mt-1 text-xl font-black">
+                      {{ t('桃气周边', 'Peach Cloud goods') }}
+                    </h2>
+                  </div>
+                  <span class="text-xs font-black text-[var(--peach-cloud-iron)]">03 ITEMS</span>
+                </div>
+                <article
+                  v-for="item in peachCloudMerchandiseItems"
+                  :key="item.id"
+                  class="mt-5 grid grid-cols-[42%_58%] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white/80 shadow-[4px_4px_0_var(--peach-cloud-ink)]"
+                  :data-testid="`food-delivery-peach-cloud-merch-${item.id}`"
+                >
+                  <img
+                    :src="item.imageUrl"
+                    :alt="item.displayTitle"
+                    class="h-full min-h-44 w-full border-r-2 border-[var(--peach-cloud-ink)] object-cover"
+                    :data-required-asset="item.requiredAsset"
+                    @error="handleFoodShopImageError"
+                  />
+                  <div class="flex min-w-0 flex-col justify-between p-4">
+                    <div>
+                      <p class="text-[9px] font-black text-[var(--peach-cloud-accent)]">
+                        PEACH CLOUD ORIGINAL
+                      </p>
+                      <h3 class="mt-2 text-base font-black leading-tight">
+                        {{ item.displayTitle }}
+                      </h3>
+                      <p
+                        class="mt-2 text-[10px] font-semibold leading-4 text-[var(--peach-cloud-iron)]"
+                      >
+                        {{ item.displayDescription }}
+                      </p>
+                    </div>
+                    <div class="mt-4 flex items-end justify-between gap-2">
+                      <span class="text-sm font-black"
+                        >{{ item.purchasePrice }} {{ item.currency }}</span
+                      >
+                      <button
+                        type="button"
+                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center bg-[var(--peach-cloud-accent)] shadow-[2px_2px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                        :aria-label="t(`加入${item.displayTitle}`, `Add ${item.displayTitle}`)"
+                        :data-testid="`food-delivery-peach-cloud-add-merch-${item.id}`"
+                        @click="addPeachCloudMerchandiseToCart(item.id)"
+                      >
+                        <i class="fas fa-plus text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
                 </article>
-              </div>
+                <p
+                  v-if="storeNavigationFeedback"
+                  class="mt-5 bg-[var(--peach-cloud-mist)]/35 px-4 py-3 text-center text-xs font-black"
+                  data-testid="food-delivery-store-nav-feedback"
+                >
+                  {{ storeNavigationFeedback }}
+                </p>
+              </section>
             </main>
           </template>
 
@@ -7582,25 +8061,26 @@ onBeforeUnmount(() => {
                 <div v-if="activeStoreCartLineItems.length" class="space-y-3">
                   <article
                     v-for="line in activeStoreCartLineItems"
-                    :key="line.menuItemId"
+                    :key="line.lineId"
                     class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3 border-b border-[var(--peach-cloud-mist)]/45 pb-3"
-                    :data-testid="`food-delivery-cart-${line.menuItemId}`"
+                    :data-testid="`food-delivery-cart-${line.lineId}`"
                   >
                     <div
                       class="aspect-square overflow-hidden rounded-[1rem] bg-[var(--peach-cloud-mist)]/25"
                     >
                       <img
-                        v-if="foodImageUrl(line.menuItem)"
-                        :src="foodImageUrl(line.menuItem)"
-                        :alt="line.menuItem.title"
+                        v-if="peachCloudCartLineImageUrl(line)"
+                        :src="peachCloudCartLineImageUrl(line)"
+                        :alt="storeCartLineTitle(line)"
                         class="h-full w-full object-cover"
+                        :data-required-asset="peachCloudCartLineRequiredAsset(line)"
                         @error="handleFoodShopImageError"
                       />
                     </div>
                     <div class="flex min-w-0 flex-col justify-between py-0.5">
                       <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0">
-                          <p class="truncate text-sm font-black">{{ line.menuItem.title }}</p>
+                          <p class="truncate text-sm font-black">{{ storeCartLineTitle(line) }}</p>
                           <p class="mt-1 text-[10px] font-semibold text-[var(--peach-cloud-iron)]">
                             {{ line.subtotal }} {{ line.currency }}
                           </p>
@@ -7609,7 +8089,7 @@ onBeforeUnmount(() => {
                           type="button"
                           class="inline-flex h-7 w-7 shrink-0 items-center justify-center text-[var(--peach-cloud-iron)]"
                           :aria-label="t('移出购物袋', 'Remove from bag')"
-                          @click="foodDeliveryStore.updateCartQuantity(line.menuItemId, 0)"
+                          @click="foodDeliveryStore.updateCartQuantity(line.lineId, 0)"
                         >
                           <i class="fas fa-trash-can text-xs"></i>
                         </button>
@@ -7622,7 +8102,7 @@ onBeforeUnmount(() => {
                           class="inline-flex h-8 w-8 items-center justify-center"
                           :aria-label="t('减少数量', 'Decrease quantity')"
                           @click="
-                            foodDeliveryStore.updateCartQuantity(line.menuItemId, line.quantity - 1)
+                            foodDeliveryStore.updateCartQuantity(line.lineId, line.quantity - 1)
                           "
                         >
                           <i class="fas fa-minus text-[9px]"></i>
@@ -7635,7 +8115,7 @@ onBeforeUnmount(() => {
                           class="inline-flex h-8 w-8 items-center justify-center"
                           :aria-label="t('增加数量', 'Increase quantity')"
                           @click="
-                            foodDeliveryStore.updateCartQuantity(line.menuItemId, line.quantity + 1)
+                            foodDeliveryStore.updateCartQuantity(line.lineId, line.quantity + 1)
                           "
                         >
                           <i class="fas fa-plus text-[9px]"></i>
@@ -7686,7 +8166,7 @@ onBeforeUnmount(() => {
                     {{ t('购物袋轻飘飘的', 'Your bag feels light') }}
                   </h2>
                   <p class="mt-2 text-xs font-semibold leading-5 text-[var(--peach-cloud-iron)]">
-                    {{ t('先挑一杯饮品或一份甜点。', 'Add a drink or dessert to get started.') }}
+                    {{ t('先挑一杯饮品、一份甜点或一件桃气周边。', 'Add a drink, dessert, or Peach Cloud good to get started.') }}
                   </p>
                   <button
                     type="button"
@@ -7882,7 +8362,9 @@ onBeforeUnmount(() => {
                       class="flex items-start justify-between gap-3 text-xs"
                     >
                       <div class="min-w-0">
-                        <p class="font-black">{{ item.title }}</p>
+                        <p class="font-black">{{
+                          resolvePeachCloudOrderItemTitle(item, systemLanguage)
+                        }}</p>
                         <p class="mt-1 font-semibold text-[var(--peach-cloud-iron)]">
                           × {{ item.quantity }}
                         </p>
@@ -7987,16 +8469,16 @@ onBeforeUnmount(() => {
               type="button"
               class="flex min-h-11 flex-col items-center justify-center gap-1 rounded-[0.8rem] text-[9px] font-black transition-colors active:bg-[var(--peach-cloud-accent)]/70"
               :class="
-                activePeachCloudNavKey === 'new'
+                activePeachCloudNavKey === 'discover'
                   ? 'bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)]'
                   : 'text-[var(--peach-cloud-iron)]'
               "
-              data-testid="food-delivery-peach-cloud-nav-seasonal"
-              :aria-current="activePeachCloudNavKey === 'new' ? 'page' : undefined"
+              data-testid="food-delivery-peach-cloud-nav-discover"
+              :aria-current="activePeachCloudNavKey === 'discover' ? 'page' : undefined"
               @click="openPeachCloudNew"
             >
-              <i class="fas fa-heart text-base"></i>
-              {{ t('上新', 'New') }}
+              <i class="fas fa-compass text-base"></i>
+              {{ t('发现', 'Discover') }}
             </button>
             <button
               type="button"
@@ -8729,7 +9211,9 @@ onBeforeUnmount(() => {
                   ? 'overflow-hidden rounded-lg border border-black/10 bg-[#fff9ec] text-[#201a17] shadow-[0_26px_70px_rgba(32,26,23,0.28)]'
                   : isJadeTableStore && menuDetailMode === 'detail'
                     ? 'overflow-hidden rounded-sm border border-[#cfc2ad] bg-[#f5efe2] text-[#211e19] shadow-[0_26px_70px_rgba(31,77,58,0.25)]'
-                    : 'overflow-hidden rounded-[2rem] bg-white'
+                    : isReusableDiscoveryTemplate && menuDetailMode === 'detail'
+                      ? 'overflow-hidden rounded-lg border border-[#b9afa5] bg-[#f8f4ec] text-[#201c1a] shadow-[0_26px_70px_rgba(43,33,27,0.28)]'
+                      : 'overflow-hidden rounded-[2rem] bg-white'
           "
         >
           <template v-if="isDarkTrayStore && menuDetailMode === 'detail'">
@@ -9274,14 +9758,59 @@ onBeforeUnmount(() => {
           <template v-else>
             <div
               class="relative h-48"
-              :class="isDaylightCafeStore ? 'bg-[#fff7e8]' : 'bg-gray-950'"
+              :class="
+                isDaylightCafeStore
+                  ? 'bg-[#fff7e8]'
+                  : isReusableDiscoveryTemplate
+                    ? 'bg-[#f3efe7]'
+                    : 'bg-gray-950'
+              "
             >
+              <div
+                v-if="isReusableDiscoveryTemplate"
+                class="absolute inset-0 flex items-center justify-center overflow-hidden"
+                :class="
+                  activeStoreTemplate === 'cafe_counter'
+                    ? 'bg-[#7f392c] text-[#f5d3b4]'
+                    : activeStoreTemplate === 'convenience_shelf'
+                      ? 'bg-[#ead5cd] text-[#9b6e75]'
+                      : 'bg-[#f7e6ba] text-[#cc3f2d]'
+                "
+                data-testid="food-delivery-menu-detail-fallback"
+                aria-hidden="true"
+              >
+                <span class="absolute inset-5 border border-current opacity-35"></span>
+                <span class="absolute inset-x-0 top-1/2 h-px bg-current opacity-20"></span>
+                <span class="absolute inset-y-0 left-1/2 w-px bg-current opacity-20"></span>
+                <div class="relative z-10 flex flex-col items-center gap-3">
+                  <i
+                    class="text-4xl"
+                    :class="
+                      activeStoreTemplate === 'cafe_counter'
+                        ? 'fas fa-mug-hot'
+                        : activeStoreTemplate === 'convenience_shelf'
+                          ? 'fas fa-cake-candles'
+                          : 'fas fa-bowl-food'
+                    "
+                  ></i>
+                  <strong class="text-[10px] font-black uppercase">
+                    {{
+                      activeStoreTemplate === 'cafe_counter'
+                        ? t('现点现制', 'MADE TO ORDER')
+                        : activeStoreTemplate === 'convenience_shelf'
+                          ? t('今日陈列', "TODAY'S DISPLAY")
+                          : t('沿街现做', 'STREET KITCHEN')
+                    }}
+                  </strong>
+                </div>
+              </div>
               <img
                 v-if="foodImageUrl(selectedMenuItem)"
                 :src="foodImageUrl(selectedMenuItem)"
                 :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
-                class="h-full w-full"
+                class="relative z-10 h-full w-full"
                 :class="isDaylightCafeStore ? 'object-contain' : 'object-cover'"
+                @error="handleFoodShopImageError"
               />
               <div
                 v-else
@@ -9502,7 +10031,7 @@ onBeforeUnmount(() => {
         <div class="mt-3 space-y-2">
           <article
             v-for="line in activeStoreCartLineItems"
-            :key="line.menuItemId"
+            :key="line.lineId"
             class="rounded-2xl p-3"
             :class="
               isDessertWindowStore
@@ -9511,9 +10040,9 @@ onBeforeUnmount(() => {
                   ? 'border border-white/[0.06] bg-white/[0.08]'
                   : 'bg-amber-50/70'
             "
-            :data-testid="`food-delivery-cart-${line.menuItemId}`"
+            :data-testid="`food-delivery-cart-${line.lineId}`"
           >
-            <p class="text-xs font-bold">{{ line.menuItem.title }} × {{ line.quantity }}</p>
+            <p class="text-xs font-bold">{{ storeCartLineTitle(line) }} × {{ line.quantity }}</p>
             <p
               class="mt-1 text-[11px]"
               :class="
@@ -9645,7 +10174,7 @@ onBeforeUnmount(() => {
           <div class="mt-4 space-y-2">
             <article
               v-for="line in activeStoreCartLineItems"
-              :key="line.menuItemId"
+              :key="line.lineId"
               class="flex items-center justify-between gap-3 rounded-2xl p-3"
               :class="
                 isDessertWindowStore
@@ -9658,10 +10187,10 @@ onBeforeUnmount(() => {
                         ? '!rounded-lg border border-[#d8ddd5] bg-white'
                         : 'bg-white/[0.07]'
               "
-              :data-testid="`food-delivery-checkout-line-${line.menuItemId}`"
+              :data-testid="`food-delivery-checkout-line-${line.lineId}`"
             >
               <div class="min-w-0">
-                <p class="truncate text-sm font-bold">{{ line.menuItem.title }}</p>
+                <p class="truncate text-sm font-bold">{{ storeCartLineTitle(line) }}</p>
                 <p
                   class="mt-1 text-[11px]"
                   :class="

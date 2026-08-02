@@ -1,0 +1,8 @@
+Use case: stylized-concept
+Asset type: transparent Harbor Roast empty-bag illustration
+Primary request: Create one open Cream #F9F2ED handled takeout bag with Copper #C67C4E trim, an empty rigid two-cup carrier beside it, and one small original anchor-shaped hang tag. No mascot.
+Style/medium: polished dimensional editorial brand illustration consistent with Harbor Roast, tactile matte paper, clean readable mobile-app empty-state art.
+Composition/framing: centered compact still life, bag and carrier fully visible, generous even padding, crisp opaque silhouette.
+Scene/backdrop: perfectly flat solid #00ff00 chroma-key background, one uniform color with no floor, shadow, gradient, texture or lighting variation.
+Constraints: bag and tag must be blank with no text or logo; no cups, food, cast shadow, reflection, UI or watermark; do not use #00ff00 in the subject.
+Avoid: real-brand packaging, Starbucks, siren emblem, green handles, glass or soft transparent effects.
