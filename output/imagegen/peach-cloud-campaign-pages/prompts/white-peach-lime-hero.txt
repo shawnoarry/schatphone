@@ -1,0 +1,13 @@
+Use case: style-transfer
+Asset type: portrait hero photography for a mobile long-form product campaign page
+Primary request: Create a new text-free Peach Cloud hero composition for White Peach Lime Sparkler, using the references only to preserve the exact drink semantics and the established tactile dessert-studio language.
+Input images: Image 1 is the accepted campaign-poster style and mascot identity reference; Image 2 is the exact White Peach Lime Sparkler product reference.
+Scene/backdrop: airy pale-green dessert studio with Pink Mist peach arcs, fresh white cloud-paper forms, a low blush podium, a few natural bubbles, and generous calm space in the upper-left for code-rendered copy.
+Subject: one complete tall clear glass of pale blush sparkling water with white-peach wedges, round lime slices, mint, transparent ice, dense fine carbonation, and cold condensation; the established small white-peach mascot may sit low beside the glass without becoming larger than the drink.
+Style/medium: photorealistic premium beverage campaign photography with tactile paper-set depth.
+Composition/framing: 2:3 portrait; glass occupies the lower-right and remains fully visible from rim to base; mascot low-left; quiet upper-left and upper-center; crop-safe on a 393px mobile screen.
+Lighting/mood: bright directional morning light, crisp glass highlights, fresh and weightless.
+Color palette: Pale Green #F2FBE0, Pink Mist #FDA1B8, Petal Rouge #FD6C93, fresh white, restrained Jet Black only in the mascot face.
+Materials/textures: realistic peach flesh and red blush, translucent lime, mint veins, clear ice, condensation, sparkling bubbles, matte paper and plaster podiums.
+Constraints: preserve the exact drink ingredients and Peach Cloud mascot identity; no extra drinks, desserts, packaging, people, hands, logos, wordmarks, letters, readable text, numbers, prices, UI, borders, watermarks, or imitation brand assets.
+Avoid: copying any typography from Image 1, beige cast, opaque soda, cloudy liquid, lemon instead of lime, sliced fruit outside the approved ingredients, floating objects, childish cartoon rendering, heavy shadows.

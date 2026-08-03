@@ -645,9 +645,11 @@ platform-merchant-mark-coconut-curry-01.png
 
 ## 5. Peach Cloud Independent App / Peach Cloud 独立店 App
 
-Peach Cloud 使用 Iron Grey `#444545`、Jet Black `#2B303A`、浅绿 `#F2FBE0`、Petal Rouge `#FD6C93` 和 Pink Mist `#FDA1B8` 建立独立品牌感。浅绿承担大面积背景，深灰承担正文与固定导航，高饱和粉只用于主要操作和选中状态，粉雾用于顶栏与辅助层；`#FD6C93` 上使用 Jet Black 文字，不使用小号白字。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 提供原始信息架构依据，当前视觉在该结构上完成桃子云自己的品牌刷新。正式运行时素材包共 `33` 个：`27` 张 PNG 和 `6` 个 SVG；其中新增的三张 `2:3` 竖版海报是带完整广告文案的整图素材，页面不再在首页海报上叠加代码遮罩或分栏文案。目录额外保留 `5` 个未被桃子云引用的原版分类 SVG，便于其他店铺复用。页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
+Peach Cloud 使用 Iron Grey `#444545`、Jet Black `#2B303A`、浅绿 `#F2FBE0`、Petal Rouge `#FD6C93` 和 Pink Mist `#FDA1B8` 建立独立品牌感。浅绿承担大面积背景，深灰承担正文与固定导航，高饱和粉只用于主要操作和选中状态，粉雾用于顶栏与辅助层；`#FD6C93` 上使用 Jet Black 文字，不使用小号白字。它不是 Food Platform 内部商户，也不复用 Moon Bistro 的暗色图片。精确 Figma 首页节点 `47:23` 提供原始信息架构依据，当前视觉在该结构上完成桃子云自己的品牌刷新。正式运行时素材包共 `39` 个：`27` 张 PNG、`6` 张 WebP 和 `6` 个 SVG；其中三张正式 `2:3` 竖版海报仍是带完整广告文案的整图素材，不使用分栏文案或相邻海报条，两套新品广告长页各使用一张无文字竖版 Hero 与两张无文字横版故事图。白桃青柠另有一张不计入正式包的动态价格试验衍生图，只由代码补回价格。目录额外保留 `5` 个未被桃子云引用的原版分类 SVG，便于其他店铺复用。页面保留稳定路径与 `data-required-asset`，文件加载失败时显示共享诊断占位图。
 
-可供人工修图的生成母版保存在 `output/imagegen/peach-cloud-refresh/ads/`、`output/imagegen/peach-cloud-refresh/products/`、`output/imagegen/peach-cloud-refresh/merchandise/` 与 `output/imagegen/peach-cloud-refresh/posters/`；产品目录同时保留高分辨率原图、正式 `768x768` 版本和一张套图预览，周边与海报目录保留精确提示词、验收记录与正式文件副本。页面运行只依赖 `public/images/ui-assets/apps/food-delivery/peach-cloud/` 中的正式资源，不依赖 `output/` 母版或 `tmp/imagegen/` 中的 CLI 请求清单。
+可供人工修图的生成母版保存在 `output/imagegen/peach-cloud-refresh/ads/`、`output/imagegen/peach-cloud-refresh/products/`、`output/imagegen/peach-cloud-refresh/merchandise/`、`output/imagegen/peach-cloud-refresh/posters/` 与 `output/imagegen/peach-cloud-campaign-pages/`；产品目录同时保留高分辨率原图、正式 `768x768` 版本和一张套图预览，周边、海报与广告长页目录保留精确提示词、参考职责、候选/接受记录与正式文件副本。页面运行只依赖 `public/images/ui-assets/apps/food-delivery/peach-cloud/` 中的正式资源，不依赖 `output/` 母版或 `tmp/imagegen/` 中的 CLI 请求清单。
+
+动态价格试验另保留在 `output/imagegen/peach-cloud-dynamic-price-pilot/`。它只为白桃青柠海报增加一张版本化运行时衍生图，不替换或修改原始正式海报，也不计入当前 `39` 个正式素材。首页与 Discover/New 使用同一个百分比价格槽读取 Wallet 主币种和汇率表；杨梅荔枝与毛绒周边海报仍保留图片内固定价格。
 
 ### Asset Contract / 素材合同
 
@@ -666,6 +668,13 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
 │  ├─ drinks.svg
 │  ├─ snacks.svg
 │  └─ meal.svg
+├─ campaigns/
+│  ├─ peach-cloud-white-peach-lime-campaign-hero-01.webp
+│  ├─ peach-cloud-white-peach-lime-campaign-bubbles-01.webp
+│  ├─ peach-cloud-white-peach-lime-campaign-ingredients-01.webp
+│  ├─ peach-cloud-waxberry-lychee-campaign-hero-01.webp
+│  ├─ peach-cloud-waxberry-lychee-campaign-ice-01.webp
+│  └─ peach-cloud-waxberry-lychee-campaign-ingredients-01.webp
 ├─ promotions/
 │  ├─ peach-cloud-golden-pairing-01.png
 │  ├─ peach-cloud-weekly-drop-01.png
@@ -707,12 +716,19 @@ public/images/ui-assets/apps/food-delivery/peach-cloud/
 | `promotions/posters/peach-cloud-poster-white-peach-lime-01.png` | 白桃青柠气泡新品整图海报                                            | `1024x1536`、`2:3`；内含准确品名、`26 CNY` 与开售时间，不另叠 UI 文案                                   |
 | `promotions/posters/peach-cloud-poster-waxberry-lychee-01.png` | 杨梅荔枝冰茶季节整图海报                                             | `1024x1536`、`2:3`；内含准确品名、`29 CNY` 与限时信息，不另叠 UI 文案                                   |
 | `promotions/posters/peach-cloud-poster-mascot-plush-01.png` | 桃气云朵毛绒周边整图海报                                                | `1024x1536`、`2:3`；内含准确品名、`99 CNY` 与发售信息，不另叠 UI 文案                                   |
+| `promotions/posters/peach-cloud-poster-white-peach-lime-dynamic-price-pilot-01.png` | 白桃青柠动态价格试验衍生图 | `1024x1536`、`2:3`；只清除原 `26 CNY` 区域，Home 与 Discover/New 在 `left 6.6% / top 35.5% / width 35.5%` 的独立槽渲染 Wallet 币种价格；不计入正式 `39` 个素材 |
+| `campaigns/peach-cloud-white-peach-lime-campaign-hero-01.webp` | 白桃青柠气泡广告长页 Hero | `1024x1536`、`2:3`；完整高杯位于右下，吉祥物位于左下，左上保留代码文案安全区；无文字与价格 |
+| `campaigns/peach-cloud-white-peach-lime-campaign-bubbles-01.webp` | 白桃青柠气泡、凝露与透明冰感官细节 | `1536x1024`、`3:2`；白桃、青柠、薄荷、透明冰和气泡语义准确，横向全宽裁切安全 |
+| `campaigns/peach-cloud-white-peach-lime-campaign-ingredients-01.webp` | 白桃青柠气泡原料静物 | `1536x1024`、`3:2`；只含白桃、青柠、薄荷、透明冰和无标识气泡水容器 |
+| `campaigns/peach-cloud-waxberry-lychee-campaign-hero-01.webp` | 杨梅荔枝冰茶广告长页 Hero | `1024x1536`、`2:3`；完整低矮切面杯位于右下，左上保留代码文案安全区；无文字与价格 |
+| `campaigns/peach-cloud-waxberry-lychee-campaign-ice-01.webp` | 杨梅荔枝冰茶、凝露与透明冰感官细节 | `1536x1024`、`3:2`；红宝石茶汤、杨梅、去壳荔枝、茶叶和透明冰语义准确 |
+| `campaigns/peach-cloud-waxberry-lychee-campaign-ingredients-01.webp` | 杨梅荔枝冰茶原料静物 | `1536x1024`、`3:2`；只含杨梅、荔枝、茶叶、绿叶和透明冰，不出现成品杯 |
 | `merchandise/peach-cloud-merch-plush-01.png`        | 桃气云朵毛绒                                                                   | `1024x1024`；完整毛绒主体、短绒材质和裁切安全边距                                                       |
 | `merchandise/peach-cloud-merch-bag-charm-01.png`    | 桃气随行挂件                                                                   | `1024x1024`；完整挂件与粉金扣具                                                                        |
 | `merchandise/peach-cloud-merch-tote-01.png`         | 桃云野餐托特包                                                                 | `1024x1024`；完整包体、粉色提带、内袋与吉祥物刺绣                                                      |
 | `brand/peach-cloud-mark-01.svg`                     | 白桃、云顶、绿色叶片与表情组成的独立品牌标志                                  | 原生 `48x48` 矢量，适合小尺寸店铺栏与文件夹入口                                                         |
 | `categories/peach-cloud-*.svg`                      | Fresh Fruit、Frozen、Tea & Coffee、Bakes、Seasonal 五个桃子云专属 IP 分类插画 | 统一 `38x38` 画布、透明背景和圆润彩色线稿；Fresh Fruit 同时表达桃子、柑橘与果实，不绑定单一果味或气泡水 |
-| `categories/{vegan,dessert,drinks,snacks,meal}.svg` | 原版五枚通用分类标记，桃子云不再引用，保留给其他店铺复用                      | 保持原文件内容与原路径，不纳入桃子云 `33` 个运行时正式素材计数                                          |
+| `categories/{vegan,dessert,drinks,snacks,meal}.svg` | 原版五枚通用分类标记，桃子云不再引用，保留给其他店铺复用                      | 保持原文件内容与原路径，不纳入桃子云 `39` 个运行时正式素材计数                                          |
 | `products/peach-cloud-item-01.png`                  | White Peach Lime Sparkler                                                     | `768x768`；白桃、青柠与薄荷气泡饮                                                                       |
 | `products/peach-cloud-item-02.png`                  | Roasted Peach Oolong Cloud                                                    | `768x768`；白桃烘焙乌龙与厚云顶                                                                         |
 | `products/peach-cloud-item-03.png`                  | Peach Cocoa Brownie                                                           | `768x768`；桃片奶油可可布朗尼                                                                           |
@@ -768,6 +784,16 @@ English: Create a polished 3:2 landscape brand campaign image for the fictional 
 - `peach-cloud-poster-white-peach-lime-01.png`：以完整白桃青柠气泡饮为主产品，搭配小型桃子云吉祥物；指定文字为 `PEACH CLOUD`、`白桃季上新`、`白桃青柠气泡`、`26 CNY`、`每周五 10:00`。
 - `peach-cloud-poster-waxberry-lychee-01.png`：以杨梅、荔枝、透明冰块与凝露清晰可辨的红宝石色冰茶为主产品；指定文字为 `PEACH CLOUD`、`夏日限定`、`杨梅荔枝冰茶`、`29 CNY`、`酸甜果香 限时回归`。
 - `peach-cloud-poster-mascot-plush-01.png`：以完整桃气云朵毛绒为唯一周边主体，保持既有桃形、云顶、叶片和表情；指定文字为 `PEACH CLOUD GOODS`、`把小桃子带回家`、`桃气云朵毛绒`、`99 CNY`、`本周限量发售`。
+
+### Dynamic Price Pilot / 动态价格试验
+
+白桃青柠试验以原始正式海报和矩形蒙版执行 `gpt-image-2` 高质量 edit，只移除 `26 CNY`。候选图不直接作为运行时文件；接受版把修复区域合成回原图，并验证价格区域外无像素变化。精确请求、蒙版、候选、接受版和 `ACCEPTANCE.md` 位于 `output/imagegen/peach-cloud-dynamic-price-pilot/`，运行时只读取 `public/images/ui-assets/apps/food-delivery/peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-dynamic-price-pilot-01.png`。当前仅白桃青柠迁移；另外两张海报与整个金融系统仍不在此试验范围内。
+
+### Product Campaign Page Sets / 新品广告长页套图
+
+白桃青柠与杨梅荔枝各拥有一组 `1` 张竖版 Hero 加 `2` 张横版故事图。所有图片保持桃子云浅绿、粉雾、纸艺云层与明亮侧光的同店语言，同时按产品区分镜头职责：白桃青柠使用高挑透明杯、浅色气泡与清爽果肉；杨梅荔枝使用低矮切面杯、红宝石茶汤与珠状果皮。素材内不烘焙标题、价格或按钮，页面用可本地化代码文案和 Wallet 跟随价格完成排版。
+
+每组都以对应正式海报作为品牌/场景锚点，以对应 `products/peach-cloud-item-01.png` 或 `products/peach-cloud-item-16.png` 作为精确商品锚点。`gpt-image-2` 高质量 CLI edit 的六份完整请求保存在 `output/imagegen/peach-cloud-campaign-pages/prompts/`，生成候选与接受 PNG 分别保存在 `candidates/` 和 `accepted/`，接受理由与桌面/移动验收保存在同目录 `ACCEPTANCE.md`。运行时只读取 `public/images/ui-assets/apps/food-delivery/peach-cloud/campaigns/` 下的六张 WebP。
 
 ### Merchandise Product Prompts / 周边产品提示词
 
@@ -1049,9 +1075,9 @@ English product: Square commercial product photography for the original virtual 
 
 Harbor Roast 是原创的都市咖啡连锁概念，只借鉴成熟连锁品牌的品类完整度、活动节奏和点单认知，不复制任何现实品牌。正式素材统一使用用户确认色卡：Copper `#C67C4E`、Blush `#EDD6C8`、Ink `#313131`、Line `#E3E3E3`、Cream `#F9F2ED`。摄影以暖铜色台面、浅奶油背景、深炭色器皿、棱纹玻璃和柔和定向侧光建立成熟但亲和的连锁咖啡气质；插画围绕原创 Captain Roast 杯子船长 IP 展开。不得使用 Starbucks 名称、官方 logo、海妖或相似圆形徽章、绿色围裙、现实品牌杯套、产品名或门店装潢。
 
-状态：截至 2026-08-02，当前 `harbor_roast_chain` 审计出的 `34` 张正式 PNG 已全部生成、验收并接入运行时：三张品牌/App Store 素材、六张轮播与活动素材、十二张饮品与烘焙商品图、五张船长补给站与周边商品图、六张订单状态图和两张空状态图均从下述稳定 `public/` 路径读取。首页轮播、三个活动落地页、补给站与周边详情、Menu/Detail、混合 Bag、Orders、订单详情和 App Store 默认外观已在桌面 Chromium 与 `393x851` 模拟移动端完成媒体态检查；所有图片均成功解码，页面无横向溢出，关键商品与 Captain Roast IP 未被代码文案遮挡。该结论不等同于命名实体设备验收。
+状态：截至 2026-08-03，Harbor Roast 的正式合同从 `34` 张扩展到 `41` 张 PNG，全部为 `DELIVERED_ACCEPTED`。新增的常驻纸杯、可拆卸布丁狗杯套、独立手提杯托、联名套餐商品、Home 轮播、活动 Hero 与包装关系长图共 `7` 张，已经完成 CLI 生成、候选接受、稳定 `public/` 接入、桌面 Chromium、Mobile Chrome 与手工 `393x851` 页面验收。代码保持“常驻纸杯 / 可替换杯套 / 独立杯托”三层分离，不把联名图案描述成纸杯永久印刷。Home、Menu/Detail、活动页、Bag 和订单图片均成功解码，页面无横向溢出，控制台无 warning/error。该结论不等同于命名实体设备验收。
 
-请求记录、提示词、候选、源图、联系表与接受证据保存在 `output/imagegen/harbor-roast/`；正式运行时副本只写入并读取 `public/images/ui-assets/apps/food-delivery/harbor-roast/`，运行时不得依赖 `output/` 或 `tmp/`。所有条目当前状态均为 `DELIVERED_ACCEPTED`。
+原 `34` 张的请求记录、提示词、候选、源图、联系表与接受证据保存在 `output/imagegen/harbor-roast/`；新增联名轮次保存在 `output/imagegen/harbor-roast-pompompurin-collab/`。正式运行时副本只写入并读取 `public/images/ui-assets/apps/food-delivery/harbor-roast/`，运行时不得依赖 `output/` 或 `tmp/`。本轮使用用户已授权的 OpenAI Image CLI、`gpt-image-2` 与高质量模式；不得生成或近似 Sanrio 官方 wordmark、logo 或额外品牌字样，活动名称和价格继续由代码渲染。
 
 ### Delivered Asset Summary / 已交付汇总
 
@@ -1062,7 +1088,8 @@ Harbor Roast 是原创的都市咖啡连锁概念，只借鉴成熟连锁品牌�
 | C | 商品摄影 | 12 | Home 推荐、Menu、商品详情、Bag、订单 |
 | D | 订单状态插画、购物袋与订单空状态 | 8 | Orders、订单详情、Bag |
 | E | 船长补给站广告与周边商品摄影 | 5 | Supply、周边详情、Bag、订单 |
-| **合计** |  | **34** |  |
+| F | 常驻纸杯、布丁狗可拆杯套、独立杯托、联名套餐与活动素材 | 7 | Home、Menu/Detail、联名活动页、Bag、订单 |
+| **合计** |  | **41** |  |
 
 ### Asset Contract / 素材合同
 
@@ -1077,6 +1104,9 @@ Harbor Roast 是原创的都市咖啡连锁概念，只借鉴成熟连锁品牌�
 | `campaigns/harbor-roast-member-poster-01.png` | 会员活动落地页 Hero | `1200x1500`，`4:5`；Captain Roast 欢迎新会员、首杯与豆章礼遇，顶部和左侧保留标题安全区；无可读文字、价格、UI 卡片 |
 | `campaigns/harbor-roast-new-poster-01.png` | 新品活动落地页 Hero | `1200x1500`，`4:5`；三杯 Copper Coast 季节新品的编辑式组合，主杯完整、材质可辨，顶部保留标题安全区；无可读文字或 UI |
 | `campaigns/harbor-roast-passport-poster-01.png` | Roast Passport 落地页 Hero | `1200x1500`，`4:5`；Captain Roast 沿六站港口旅程抵达限定船长杯，图形章印不可读，顶部保留标题安全区；无文字或 UI |
+| `campaigns/harbor-roast-carousel-pompompurin-01.png` | Home 布丁狗联名轮播 | `1536x1280`；真实联名套餐主体位于右侧，左侧保持代码标题安全区；不生成官方 Sanrio wordmark、价格、按钮或 UI |
+| `campaigns/harbor-roast-pompompurin-poster-01.png` | 布丁狗联名活动 Hero | `1200x1500`，`4:5`；饮品、蛋挞、可拆杯套、独立杯托与布丁狗形象形成暖铜活动场景，顶部/左侧保留代码标题安全区 |
+| `campaigns/harbor-roast-pompompurin-story-01.png` | 包装三层关系长图 | `1536x1024`，`3:2`；从左到右清楚展示常驻纸杯、分离杯套、组合状态、独立杯托，不把杯套图案烘焙到基础杯身 |
 | `products/harbor-roast-item-01.png` | Harbor House Americano / 港湾美式 | `768x768`；深炭陶瓷杯中的清澈美式，薄油脂层，不出现奶泡 |
 | `products/harbor-roast-item-02.png` | Copper Flat White / 铜韵馥芮白 | `768x768`；矮陶瓷杯、紧实微奶泡与细致拉花，体量明显小于拿铁 |
 | `products/harbor-roast-item-03.png` | Vanilla Bean Latte / 香草籽拿铁 | `768x768`；Cream 高杯拿铁，可见香草籽点，不使用焦糖淋酱 |
@@ -1089,6 +1119,10 @@ Harbor Roast 是原创的都市咖啡连锁概念，只借鉴成熟连锁品牌�
 | `products/harbor-roast-item-10.png` | Apricot Earl Grey Iced Tea / 杏桃伯爵冰茶 | `768x768`；琥珀茶汤、杏桃片、柠檬和透明冰块，不出现咖啡分层 |
 | `products/harbor-roast-item-11.png` | Copper Sugar Scone / 铜糖司康 | `768x768`；单只完整司康，粗糖脆壳与橙皮屑清楚，配无字烘焙纸 |
 | `products/harbor-roast-item-12.png` | Almond Butter Croissant / 杏仁黄油可颂 | `768x768`；单只二次烘焙可颂，杏仁片和少量糖粉，层次与完整两端可见 |
+| `products/harbor-roast-item-13.png` | Pompompurin Dockside Custard Set / 布丁狗港湾布蕾套餐 | `1024x1024`；一杯焦糖布蕾拿铁、一只蛋挞、可拆杯套与后置独立手提杯托完整可辨；小布丁狗摆件只承担联名活动语义，不生成官方字标 |
+| `packaging/harbor-roast-paper-cup-standard-01.png` | Harbor Roast 常驻纸杯 | `1024x1024`；奶油白纸杯、炭黑杯盖与小铜锚为永久包装识别；不带杯套、联名图案、价格或文字 |
+| `packaging/harbor-roast-pompompurin-sleeve-01.png` | 布丁狗可拆活动杯套 | `1024x1024`；常驻杯与拆下的弧形/展开杯套同时完整可见，明确杯套可替换而非永久杯身印刷 |
+| `packaging/harbor-roast-pompompurin-carrier-01.png` | 布丁狗独立手提杯托 | `1024x1024`；带提手的牛皮纸杯托与常驻纸杯分开陈列，轮廓、开口和独立运输语义清楚 |
 | `merchandise/harbor-roast-supply-hero-01.png` | Captain Supply Station / 船长补给站主广告 | `1024x1536`；Captain Roast 与船长杯、托特包、铜锚徽章、贴纸包形成完整周边家族，下方保留 Ink 文案安全区；无可读文字、价格、按钮或 UI |
 | `merchandise/harbor-roast-merch-captain-mug-01.png` | Captain Roast 船长杯 | `1024x1024`；Cream 灯塔杯身与可拆 Copper 船长帽杯盖完整可辨，商品居中，不裁切杯盖或底座 |
 | `merchandise/harbor-roast-merch-anchor-pin-01.png` | 铜锚珐琅徽章 | `1024x1024`；Captain Roast、船长帽与锚形组合为单枚真实珐琅徽章，金属与珐琅材质清楚 |

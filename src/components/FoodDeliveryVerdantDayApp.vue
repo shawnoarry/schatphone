@@ -474,7 +474,9 @@ watch(
             </button>
           </div>
 
-          <div class="verdant-scroll mt-5 flex gap-3 overflow-x-auto px-4 pb-4 pt-7">
+          <div
+            class="verdant-scroll verdant-featured-scroll mt-5 flex gap-3 overflow-x-auto px-4 pb-4 pt-7"
+          >
             <article
               v-for="item in featuredItems"
               :key="item.id"
@@ -1487,6 +1489,26 @@ watch(
 
 .verdant-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.verdant-featured-scroll {
+  scrollbar-color: var(--verdant-green) color-mix(in srgb, var(--verdant-line) 80%, transparent);
+  scrollbar-width: thin;
+}
+
+.verdant-featured-scroll::-webkit-scrollbar {
+  display: block;
+  height: 0.34rem;
+}
+
+.verdant-featured-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--verdant-line) 80%, transparent);
+}
+
+.verdant-featured-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--verdant-green);
 }
 
 .verdant-day-app button,

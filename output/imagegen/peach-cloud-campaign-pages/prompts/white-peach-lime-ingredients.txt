@@ -1,0 +1,13 @@
+Use case: style-transfer
+Asset type: landscape ingredient-story photography for a mobile long-form product campaign page
+Primary request: Create a new text-free ingredient still life for White Peach Lime Sparkler in Peach Cloud's tactile editorial studio.
+Input images: Image 1 is the accepted Peach Cloud campaign style and mascot identity reference; Image 2 is the exact product reference.
+Scene/backdrop: pale-green plaster surface with white cloud-paper layers and one Pink Mist circular arc, bright and clean.
+Subject: fresh white peaches with believable blush, one peach cut open to show juicy flesh, whole and sliced green limes, mint sprigs, a few melting clear ice cubes, and small sparkling-water bubbles suggested through one plain unbranded glass carafe; no finished drink glass and no mascot.
+Style/medium: photorealistic editorial ingredient photography.
+Composition/framing: 3:2 landscape, controlled diagonal still life with complete fruit silhouettes and generous margins; usable as a full-width band on mobile.
+Lighting/mood: clear morning window light with compact soft shadows.
+Color palette: Pale Green #F2FBE0, Pink Mist #FDA1B8, pale peach, lime green, fresh white.
+Materials/textures: real fruit skin and cut flesh, mint veins, wet ice, matte plaster and paper.
+Constraints: only white peach, lime, mint, ice, and sparkling water; no labels, text, numbers, price, logo, UI, people, hands, packaging, watermark.
+Avoid: yellow peaches, lemons, strawberries, flowers covering the fruit, rustic wood, restaurant table clutter, artificial gloss, childish illustration.

@@ -1,0 +1,13 @@
+Use case: style-transfer
+Asset type: landscape ingredient-story photography for a mobile long-form product campaign page
+Primary request: Create a new text-free ingredient still life for Waxberry Lychee Iced Tea in Peach Cloud's seasonal editorial studio.
+Input images: Image 1 is the accepted seasonal campaign style reference; Image 2 is the exact product reference.
+Scene/backdrop: pale-green plaster surface with fresh-white cloud-paper layers, one Pink Mist arc, and only a few restrained blossom details.
+Subject: deep-red waxberries with accurate bead-like skin, peeled ivory lychees and one opened lychee shell, loose dark tea leaves in a tiny plain ceramic pinch bowl, glossy green tea leaves, and a few melting clear ice cubes; no finished drink glass and no mascot.
+Style/medium: photorealistic editorial ingredient photography.
+Composition/framing: 3:2 landscape, elegant asymmetrical still life with complete ingredient silhouettes and generous margins; usable as a full-width mobile band.
+Lighting/mood: clean summer window light with compact soft shadows.
+Color palette: Pale Green #F2FBE0, Pink Mist #FDA1B8, ruby red, lychee ivory, leaf green, fresh white.
+Materials/textures: accurate waxberry skin, translucent wet lychee flesh, dry tea leaves, wet clear ice, matte plaster and paper.
+Constraints: only waxberry, lychee, tea leaves, green leaves, and ice; no labels, text, numbers, price, logo, UI, people, hands, packaging, watermark.
+Avoid: strawberries, cherries, cranberries, rose petals dominating the scene, rustic wood, table clutter, artificial gloss, childish illustration.

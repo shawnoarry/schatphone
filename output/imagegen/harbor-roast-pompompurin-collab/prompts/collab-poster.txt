@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: Harbor Roast x Pompompurin mobile activity Hero
+Input images: Image 1 is the accepted permanent Harbor Roast paper cup and must remain recognizable as the base cup body; Image 2 is the accepted Harbor Roast photography anchor.
+Primary request: Create a portrait campaign photograph for an explicitly requested Harbor Roast collaboration with the recognizable Pompompurin character.
+Scene/backdrop: playful Cream #F9F2ED and Blush #EDD6C8 cafe set with Copper #C67C4E accents, warm copper counter, soft paper shapes, no real store interior.
+Subject: a cheerful recognizable Pompompurin golden-yellow floppy-eared dog character wearing its brown beret, beside a complete Harbor Roast cream paper cup. The cup has a clearly separate removable blush-and-caramel collaboration sleeve featuring a simple Pompompurin face motif. Include one small caramel custard latte, one golden custard pudding tart, and a separate kraft-paper single-cup carrier decorated with small character motifs.
+Style/medium: premium commercial product photography with a carefully integrated polished character figure, friendly but not infantile.
+Composition/framing: portrait 4:5 campaign composition, product family lower-right and center, character and all packaging complete, top-left 38% kept low-detail for code-rendered copy.
+Lighting/mood: warm morning cafe light, soft compact shadows, celebratory seasonal collaboration.
+Constraints: the permanent cup print, removable sleeve, and separate carrier must be visibly distinct objects. No Sanrio wordmark, no Harbor Roast readable text, no official logos, no price, no button, no UI, no watermark, no extra characters, no green coffee branding.
+

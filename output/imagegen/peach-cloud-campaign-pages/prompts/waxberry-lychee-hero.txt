@@ -1,0 +1,13 @@
+Use case: style-transfer
+Asset type: portrait hero photography for a mobile long-form product campaign page
+Primary request: Create a new text-free Peach Cloud summer hero composition for Waxberry Lychee Iced Tea, using the references only to preserve the exact drink semantics and the established tactile dessert-studio language.
+Input images: Image 1 is the accepted Waxberry Lychee poster and seasonal set reference; Image 2 is the exact Waxberry Lychee Iced Tea product reference.
+Scene/backdrop: luminous pale-green and soft blush Peach Cloud studio with restrained blossom branches, layered cloud-paper arcs, and generous quiet space in the upper-left for code-rendered copy.
+Subject: one complete low faceted glass of translucent ruby-red iced tea with large clear ice, two deep-red waxberries, one peeled ivory lychee, and a restrained pair of glossy green tea leaves; fruit remains garnish and ingredient evidence, not a pile.
+Style/medium: photorealistic premium seasonal beverage campaign photography with tactile paper-set depth.
+Composition/framing: 2:3 portrait; glass sits lower-right and remains fully visible; fruit detail around the base; calm upper-left and upper-center; crop-safe on a 393px mobile screen.
+Lighting/mood: bright summer side light, jewel-like tea transparency, crisp cold condensation, elegant rather than sugary.
+Color palette: Pale Green #F2FBE0, Pink Mist #FDA1B8, ruby waxberry red, lychee ivory, fresh white, restrained leaf green.
+Materials/textures: real waxberry bead texture, translucent lychee flesh, faceted glass, clear ice, condensation, matte paper and plaster.
+Constraints: preserve exact waxberry, lychee, tea, ice, and leaf semantics; no mascot, extra drinks, packaging, people, hands, logos, wordmarks, letters, readable text, numbers, prices, UI, borders, watermarks, or imitation brand assets.
+Avoid: strawberries, cherries, cranberries, opaque fruit punch, neon red, syrup pour, cluttered flower wall, dark bar lighting, cartoon rendering.

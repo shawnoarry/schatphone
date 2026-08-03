@@ -1,0 +1,31 @@
+# White Peach Lime Dynamic Price Pilot
+
+Date: 2026-08-03
+
+Mode: `scripts/image_gen.py edit`, `gpt-image-2`, high quality, `1024x1536` PNG.
+
+## Input Roles
+
+- Edit target: `public/images/ui-assets/apps/food-delivery/peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-01.png`
+- Mask: `output/imagegen/peach-cloud-dynamic-price-pilot/prompts/white-peach-lime-price-mask.png`
+- The transparent mask rectangle is limited to source coordinates `x=50..395`, `y=535..700`.
+
+## Prompt
+
+```text
+Use case: precise-object-edit
+Asset type: 2:3 mobile campaign poster background for a code-rendered dynamic price pilot
+Primary request: Remove only the readable price text "26 CNY" inside the masked upper-left price area. Reconstruct the underlying pale-green softly lit photographic background so the cleared area looks naturally empty and remains suitable for code-rendered price text.
+Input image: Image 1 is the exact accepted Peach Cloud White Peach Lime poster and the edit target.
+Constraints: Change pixels only inside the supplied mask. Keep every other pixel and every unmasked element unchanged, including PEACH CLOUD, 白桃季上新, 白桃青柠气泡, 每周五 10:00, the drink, peach slices, lime, mint, mascot, flowers, bubbles, podium, cloud props, lighting, colors, framing, and 2:3 composition. Do not add replacement text, numbers, letters, symbols, labels, badges, panels, gradients, objects, or watermarks. The edited region must contain no readable price or currency.
+Avoid: altered typography outside the mask, changed product or mascot identity, changed lighting, changed composition, smudged text edges, visible repair patch, new text, UI chrome, watermark.
+```
+
+## Acceptance Criteria
+
+- Output remains exactly `1024x1536` PNG.
+- `26 CNY` is fully absent and no replacement characters appear.
+- `PEACH CLOUD`, both Chinese product lines, and `每周五 10:00` remain unchanged and readable.
+- Drink, garnish, mascot, fruit, lighting, background arcs, flowers, bubbles, and podium remain visually unchanged.
+- The cleared area is visually continuous with its pale-green background at Home and Discover carousel sizes.
+- Runtime consumes only the accepted project-local copy; it does not depend on `output/`.

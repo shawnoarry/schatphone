@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: Harbor Roast Home carousel artwork
+Input images: Image 1 is the accepted collaboration poster and locks the character, packaging and product family; Image 2 is the accepted permanent Harbor Roast paper cup.
+Primary request: Recompose the collaboration as a wide mobile carousel artwork while preserving the same cup, removable sleeve, carrier, Pompompurin character, latte and custard tart.
+Scene/backdrop: Cream and Blush paper-set cafe background with restrained Copper accents.
+Subject: recognizable Pompompurin character presenting the Dockside Custard Set on the right half. The permanent Harbor Roast cup body, removable collaboration sleeve, and separate paper carrier remain visibly distinct.
+Style/medium: premium commercial campaign photography, consistent with the accepted portrait poster.
+Composition/framing: wide 6:5 canvas; all key subjects on the right 48%; left 52% is low-detail Cream negative space for code-rendered campaign copy; keep silhouettes complete under cover cropping.
+Lighting/mood: warm bright cafe light, seasonal and friendly.
+Constraints: no readable text, no price, no button, no UI, no watermark, no Sanrio wordmark or official logo, no extra characters.
+

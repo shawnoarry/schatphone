@@ -1,0 +1,11 @@
+Use case: product-mockup
+Asset type: Pompompurin collaboration paper drink carrier preview
+Input images: Image 1 is the accepted Harbor Roast permanent paper cup; Image 2 is the accepted collaboration poster and defines the character treatment.
+Primary request: Create a square catalog photograph of a separate kraft-paper drink carrier for the Harbor Roast x Pompompurin collaboration.
+Scene/backdrop: light Cream #F9F2ED cafe-studio background and warm copper counter.
+Subject: one complete sturdy single-cup paper carrier with handle and clearly visible cup opening, decorated with small Pompompurin golden-yellow dog and brown-beret motifs in Blush and Copper. Place the permanent Harbor Roast cup beside, not inside, so the carrier and cup body cannot be confused.
+Style/medium: realistic chain-coffee packaging photography, tactile recycled kraft paper, precise folds and handle structure.
+Composition/framing: centered three-quarter product view, complete carrier silhouette and separate cup, generous margins.
+Lighting/mood: soft friendly cafe side light.
+Constraints: no sleeve fused to the cup, no readable text, no Sanrio wordmark, no official logos, no price, no UI, no watermark, no extra characters.
+

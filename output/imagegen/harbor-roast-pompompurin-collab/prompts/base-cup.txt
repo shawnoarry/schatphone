@@ -1,0 +1,11 @@
+Use case: product-mockup
+Asset type: Harbor Roast permanent paper cup packaging preview
+Input images: Image 1 is the accepted Harbor Roast photography and palette anchor; Image 2 is the accepted Captain Roast color and emblem-language anchor.
+Primary request: Create a new square commercial packaging photograph of the permanent Harbor Roast hot-drink paper cup body, with no removable sleeve fitted.
+Scene/backdrop: light Cream #F9F2ED studio-cafe backdrop and a warm Copper #C67C4E counter, with a restrained Ink #313131 shadow.
+Subject: one complete matte cream paper cup with a dark charcoal sip lid. Permanent cup printing uses a slender copper harbor-route stripe and a tiny original non-text anchor-and-cup emblem printed directly near the upper cup body. The cup body must remain visually distinct from any future sleeve.
+Style/medium: polished realistic chain-coffee packaging photography, tactile uncoated paper, precise product silhouette.
+Composition/framing: centered three-quarter product view, cup fills about 68% of the square, complete lid and base, generous crop-safe margins, readable at 112 pixels.
+Lighting/mood: soft directional cafe side light, friendly and mature.
+Constraints: no sleeve, no carrier, no drink spill, no readable text, no price, no official logo, no Starbucks or green branding, no UI, no watermark. Preserve Harbor Roast palette and material language from the references.
+

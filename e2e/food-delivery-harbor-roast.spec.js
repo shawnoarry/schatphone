@@ -14,9 +14,9 @@ test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detai
   await expect(storeShell).toHaveAttribute('data-store-template', 'harbor_roast_chain')
   await expect(storeShell).toContainText('Harbor Roast')
   await expect(page.getByTestId('food-delivery-harbor-carousel')).toBeVisible()
-  await expect(page.locator('[data-testid^="food-delivery-harbor-campaign-"]')).toHaveCount(3)
+  await expect(page.locator('[data-testid^="food-delivery-harbor-campaign-"]')).toHaveCount(4)
   const homeAssets = page.locator('[data-required-asset^="harbor-roast/"]')
-  await expect(homeAssets).toHaveCount(8)
+  await expect(homeAssets).toHaveCount(9)
   await expect
     .poll(() =>
       homeAssets.evaluateAll((images) =>
@@ -26,6 +26,16 @@ test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detai
       ),
     )
     .toEqual([])
+
+  const featuredScroller = page.getByTestId('food-delivery-harbor-featured-scroller')
+  await expect
+    .poll(() =>
+      featuredScroller.evaluate((element) => ({
+        hasOverflow: element.scrollWidth > element.clientWidth + 1,
+        scrollbarWidth: getComputedStyle(element).scrollbarWidth,
+      })),
+    )
+    .toEqual({ hasOverflow: true, scrollbarWidth: 'thin' })
 
   await testInfo.attach(`harbor-roast-${testInfo.project.name}`, {
     body: await page.screenshot(),
@@ -43,6 +53,44 @@ test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detai
     await expect.poll(() => poster.evaluate((image) => image.naturalWidth)).toBe(1200)
     await page.getByTestId('food-delivery-store-home').click()
   }
+
+  await page.getByTestId('food-delivery-harbor-campaign-pompompurin').click()
+  const collaborationPage = page.getByTestId('food-delivery-harbor-pompompurin-page')
+  await expect(collaborationPage).toBeVisible()
+  await expect(page).toHaveURL(/shopView=pompompurin/)
+  const collaborationAssets = collaborationPage.locator('[data-required-asset^="harbor-roast/"]')
+  await expect(collaborationAssets).toHaveCount(5)
+  await expect
+    .poll(() =>
+      collaborationAssets.evaluateAll((images) =>
+        images
+          .filter((image) => !image.complete || image.naturalWidth === 0)
+          .map((image) => image.getAttribute('data-required-asset')),
+      ),
+    )
+    .toEqual([])
+  await expect(collaborationPage).not.toContainText(/Permanent cup|常驻纸杯/)
+  await expect(collaborationPage).toContainText(/Pompompurin collaboration cup|布丁狗联名纸杯/)
+  await expect(collaborationPage).toContainText(/Removable keepsake sleeve|可拆收藏杯套/)
+  await expect(collaborationPage).toContainText(/Collaboration carrier|联名手提杯托/)
+
+  await testInfo.attach(`harbor-roast-pompompurin-${testInfo.project.name}`, {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  })
+
+  await page.getByTestId('food-delivery-harbor-collab-add').click()
+  const collaborationCartLine = page.locator(
+    '[data-testid^="food-delivery-cart-food_menu_harbor_pompompurin_dockside_set"]',
+  )
+  await expect(collaborationCartLine).toContainText(
+    /Pompompurin Dockside Custard Set|布丁狗港湾布蕾套餐/,
+  )
+  await expect(collaborationCartLine).toContainText(
+    /Collaboration cup, sleeve \+ carrier|联名纸杯、杯套与手提杯托/,
+  )
+  await collaborationCartLine.getByRole('button', { name: /Decrease|减少/ }).click()
+  await page.getByTestId('food-delivery-store-home').click()
 
   await page.getByTestId('food-delivery-harbor-supply-entry').click()
   await expect(page.getByTestId('food-delivery-harbor-supply-page')).toBeVisible()
@@ -94,12 +142,31 @@ test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detai
   await expect(page.getByTestId('food-delivery-store-menu-section-harbor_signatures')).toBeVisible()
   await expect(page.getByTestId('food-delivery-store-menu-section-cold_blended')).toBeVisible()
   await expect(page.getByTestId('food-delivery-store-menu-section-tea_counter_bakes')).toBeVisible()
+  await expect(
+    page.getByTestId('food-delivery-store-menu-section-harbor_collaboration'),
+  ).toBeVisible()
+  await expect(page.getByTestId('food-delivery-harbor-packaging-deck')).toHaveCount(0)
 
   await page.getByTestId('food-delivery-store-menu-section-harbor_signatures').click()
-  await page.getByTestId('food-delivery-menu-open-food_menu_harbor_sea_salt_caramel_latte').click()
+  await expect(
+    page.getByTestId('food-delivery-add-food_menu_harbor_sea_salt_caramel_latte'),
+  ).toHaveCount(0)
+  await page
+    .getByTestId('food-delivery-harbor-customize-food_menu_harbor_sea_salt_caramel_latte')
+    .click()
   await expect(page.getByTestId('food-delivery-harbor-detail-page')).toContainText(
     'Sea-Salt Caramel Latte',
   )
+  await expect(page.getByTestId('food-delivery-harbor-packaging-standard')).toContainText(
+    /Harbor classic paper cup|Harbor 经典纸杯/,
+  )
+  await expect(page.getByTestId('food-delivery-harbor-packaging-pompompurin_cup')).toContainText(
+    /Pompompurin collaboration cup|布丁狗联名纸杯/,
+  )
+  await page.getByTestId('food-delivery-harbor-temperature-iced').click()
+  await page.getByTestId('food-delivery-harbor-size-long').click()
+  await page.getByTestId('food-delivery-harbor-packaging-pompompurin_sleeve').click()
+  await expect(page.getByTestId('food-delivery-harbor-detail-page')).toContainText('42.00 CNY')
 
   await testInfo.attach(`harbor-roast-detail-${testInfo.project.name}`, {
     body: await page.screenshot(),
@@ -111,6 +178,9 @@ test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detai
   await expect(page.getByTestId('food-delivery-harbor-bag-page')).toContainText(
     'Sea-Salt Caramel Latte',
   )
+  await expect(page.getByTestId('food-delivery-harbor-cart-selection')).toContainText(
+    /Iced · Long 16oz · Collaboration cup \+ keepsake sleeve|冰饮 · 长杯 16oz · 联名纸杯 \+ 收藏杯套/,
+  )
   await page.getByTestId('food-delivery-harbor-pickup-dine-in').click()
   await page.getByTestId('food-delivery-checkout').click()
   await expect(page.getByTestId('food-delivery-harbor-checkout-sheet')).toContainText(
@@ -120,6 +190,9 @@ test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detai
   await page.getByTestId('food-delivery-harbor-checkout-submit').click()
   await expect(page.getByTestId('food-delivery-harbor-order-page')).toContainText(
     /到店堂食|Dine in/,
+  )
+  await expect(page.getByTestId('food-delivery-harbor-order-selection')).toContainText(
+    /Iced · Long 16oz · Collaboration cup \+ keepsake sleeve|冰饮 · 长杯 16oz · 联名纸杯 \+ 收藏杯套/,
   )
   await expect(page).toHaveURL(/shopView=order/)
   await expect(page).toHaveURL(/shopOrderId=food_order_/)

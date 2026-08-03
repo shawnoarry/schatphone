@@ -1,0 +1,10 @@
+Use case: precise-object-edit
+Asset type: portrait mobile campaign Hero for the Harbor Roast Pompompurin collaboration
+Primary request: Update Image 1 so the featured takeaway cup is the complete printed collaboration paper cup from Image 2, not the plain permanent Harbor cup. Remove the sleeve from around the cup and place one detached keepsake sleeve nearby as a clearly separate accessory. Keep the campaign as a warm, appetizing cafe advertisement.
+Input images: Image 1 is the edit target and fixes the portrait composition, Pompompurin figure, tart, coffee, handled carrier, set, lighting, and crop. Image 2 is the exact visual reference for the new printed collaboration cup.
+Subject: Pompompurin collaboration set with one complete printed collaboration paper cup, custard tart, latte, Pompompurin figure, detached peach keepsake sleeve, and handled carrier.
+Style/medium: premium realistic cafe campaign photography with tactile paper packaging and appetizing pastry texture
+Composition/framing: preserve Image 1 portrait aspect ratio, upper-left breathing room, and complete foreground products; make the printed cup clearly readable and keep the detached sleeve visibly separate
+Lighting/mood: preserve soft warm studio lighting and cozy custard-season mood
+Constraints: change only the takeaway cup and sleeve arrangement needed for the new collaboration packaging; keep the tart, latte, carrier, Pompompurin figure, background shapes, lighting, palette, camera, and crop consistent with Image 1. Match the cup design from Image 2. The sleeve must not cover the printed cup. No text, no wordmark, no official Sanrio logo, no watermark, no duplicate cup, no distorted packaging.
+Avoid: plain cream cup as the hero, sleeve hiding the collaboration print, structural packaging diagram, product-development presentation, extra props

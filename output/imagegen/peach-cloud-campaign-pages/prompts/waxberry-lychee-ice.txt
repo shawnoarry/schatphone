@@ -1,0 +1,13 @@
+Use case: style-transfer
+Asset type: landscape sensory-detail photography for a mobile long-form product campaign page
+Primary request: Create a new text-free macro editorial scene for Waxberry Lychee Iced Tea that emphasizes ruby tea translucency, faceted glass, clear ice, condensation, waxberry texture, and lychee flesh.
+Input images: Image 1 is the accepted seasonal campaign style reference; Image 2 is the exact product reference.
+Scene/backdrop: pale-green and soft blush Peach Cloud studio with one restrained cloud-paper arc and a few out-of-focus blossom points.
+Subject: close detail of the same ruby-red iced tea and faceted glass, with clear ice, condensation, one waxberry, one peeled lychee, and green tea leaves physically grounded; no second drink.
+Style/medium: photorealistic premium beverage macro photography.
+Composition/framing: 3:2 landscape; jewel-red glass detail occupies center-right; left third remains quiet enough for adjacent code copy while retaining natural photographic depth.
+Lighting/mood: bright cold sidelight, precise refraction, fresh summer clarity.
+Color palette: Pale Green #F2FBE0, Pink Mist #FDA1B8, ruby red, ivory, leaf green.
+Materials/textures: waxberry bead skin, translucent lychee, clear angular ice, condensation, faceted glass, matte paper.
+Constraints: exact approved ingredients only; no people, hands, packaging, text, letters, numbers, price, logo, UI, watermark.
+Avoid: strawberry seeds, cherries, cloudy ice, opaque syrup, exaggerated splash, dark bar scene, flat vector illustration.

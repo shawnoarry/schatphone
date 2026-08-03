@@ -106,7 +106,8 @@ export const PEACH_CLOUD_MERCHANDISE_CATALOG = Object.freeze([
     descZh: '把桃子云招牌小桃子抱回家，柔软云顶与桃粉绒面完整还原。',
     descEn: 'The signature Peach Cloud mascot in soft peach-pink plush with its cloud cap.',
     detailZh: '约 28 cm 高，采用短绒面料与刺绣表情，适合抱枕、桌面陈列与礼赠。',
-    detailEn: 'About 28 cm tall with short plush fabric and embroidered features for display or gifting.',
+    detailEn:
+      'About 28 cm tall with short plush fabric and embroidered features for display or gifting.',
     purchasePriceCents: 9900,
     beanStampCost: 0,
     imagePath: 'merchandise/peach-cloud-merch-plush-01.png',
@@ -122,7 +123,8 @@ export const PEACH_CLOUD_MERCHANDISE_CATALOG = Object.freeze([
     descZh: '迷你小桃子搭配粉金登山扣，让云朵桃气跟着包袋一起出门。',
     descEn: 'A miniature mascot with a rose-gold clip for bags and keys.',
     detailZh: '约 9 cm 高，金属扣可拆卸，叶片与云顶使用不同触感面料。',
-    detailEn: 'About 9 cm tall with a detachable metal clip and mixed-texture leaf and cloud details.',
+    detailEn:
+      'About 9 cm tall with a detachable metal clip and mixed-texture leaf and cloud details.',
     purchasePriceCents: 3900,
     beanStampCost: 0,
     imagePath: 'merchandise/peach-cloud-merch-bag-charm-01.png',
@@ -388,6 +390,22 @@ const normalizeHarborRoastRewards = (rawRewards) => ({
   beanStamps: clamp(toInt(rawRewards?.beanStamps, HARBOR_ROAST_DEFAULT_BEAN_STAMPS), 0, 999),
 })
 
+const normalizeMenuSelection = (rawSelection) => {
+  if (!rawSelection || typeof rawSelection !== 'object') return null
+  const selection = {
+    temperature: normalizeText(rawSelection.temperature, '', 24),
+    temperatureLabelZh: normalizeText(rawSelection.temperatureLabelZh, '', 40),
+    temperatureLabelEn: normalizeText(rawSelection.temperatureLabelEn, '', 40),
+    size: normalizeText(rawSelection.size, '', 24),
+    sizeLabelZh: normalizeText(rawSelection.sizeLabelZh, '', 40),
+    sizeLabelEn: normalizeText(rawSelection.sizeLabelEn, '', 40),
+    packaging: normalizeText(rawSelection.packaging, '', 40),
+    packagingLabelZh: normalizeText(rawSelection.packagingLabelZh, '', 60),
+    packagingLabelEn: normalizeText(rawSelection.packagingLabelEn, '', 60),
+  }
+  return Object.values(selection).some(Boolean) ? selection : null
+}
+
 const normalizeMerchandiseAcquisition = (value, fallback = 'purchase') => {
   const normalized = normalizeText(value, fallback, 32)
   return HARBOR_ROAST_MERCHANDISE_ACQUISITIONS.has(normalized) ? normalized : fallback
@@ -434,11 +452,22 @@ const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
   if (!menuItemId || (menuItemIds.size > 0 && !menuItemIds.has(menuItemId))) return null
   const now = Date.now()
   const addedAt = Math.max(0, toInt(rawItem.addedAt || rawItem.createdAt, now + index))
+  const selectionKey = normalizeText(rawItem.selectionKey, '', 64)
+  const selection = selectionKey ? normalizeMenuSelection(rawItem.selection) : null
+  const selectedUnitPriceCents =
+    selectionKey &&
+    Number.isFinite(Number(rawItem.unitPriceCents)) &&
+    Number(rawItem.unitPriceCents) > 0
+      ? Math.floor(Number(rawItem.unitPriceCents))
+      : null
 
   return {
-    lineId: menuItemId,
+    lineId: selectionKey ? `${menuItemId}__${selectionKey}`.slice(0, 140) : menuItemId,
     lineKind: 'menu',
     menuItemId,
+    selectionKey,
+    selection,
+    unitPriceCents: selectedUnitPriceCents,
     quantity: normalizeQuantity(rawItem.quantity),
     sourceModule: normalizeText(rawItem.sourceModule, 'food_delivery_cart', 60),
     sourceId: normalizeText(rawItem.sourceId, '', 140),
@@ -647,6 +676,8 @@ const normalizeOrderItem = (rawItem, index = 0) => {
     beanStampCost:
       acquisition === 'redeemed_gift' ? clamp(toInt(rawItem.beanStampCost, 0), 0, 999) : 0,
     category: normalizeCategory(rawItem.category, 'restaurants'),
+    selectionKey: normalizeText(rawItem.selectionKey, '', 64),
+    selection: normalizeMenuSelection(rawItem.selection),
     quantity: normalizeQuantity(rawItem.quantity),
     unitPriceCents,
     currency: normalizeCurrency(rawItem.currency),
@@ -1685,6 +1716,24 @@ const createSeedMenuItems = () =>
         sourceModule: 'seed',
         createdAt: Date.now() - 29 * 60 * 1000,
         updatedAt: Date.now() - 29 * 60 * 1000,
+      },
+      {
+        id: 'food_menu_harbor_pompompurin_dockside_set',
+        restaurantId: HARBOR_ROAST_SEED_RESTAURANT_ID,
+        title: 'Pompompurin Dockside Custard Set',
+        category: 'cafe',
+        menuSection: 'harbor_collaboration',
+        price: '48.00',
+        desc: 'A caramel custard latte and custard tart with a printed Pompompurin collaboration cup, keepsake sleeve, and handled carrier.',
+        ingredients:
+          'espresso, milk, caramel custard, custard tart, printed collaboration paper cup, removable paper sleeve, paper carrier',
+        imageSourceType: 'url',
+        imageUrl: FOOD_SEED_IMAGE_URLS.harborRoastProduct(13),
+        imageAlt:
+          'Pompompurin collaboration latte and custard tart set with printed cup, removable sleeve, and paper carrier',
+        sourceModule: 'seed',
+        createdAt: Date.now() - 30 * 60 * 1000,
+        updatedAt: Date.now() - 30 * 60 * 1000,
       },
       {
         id: 'food_menu_sugar_cake',
@@ -3026,15 +3075,19 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         if (!menuItem) return null
         const sourceRestaurant = restaurantMap.value.get(menuItem.restaurantId) || null
         const restaurant = sourceRestaurant ? presentRestaurant(sourceRestaurant) : null
-        const subtotalCents = menuItem.priceCents * item.quantity
+        const unitPriceCents =
+          Number.isFinite(Number(item.unitPriceCents)) && Number(item.unitPriceCents) > 0
+            ? Math.floor(Number(item.unitPriceCents))
+            : menuItem.priceCents
+        const subtotalCents = unitPriceCents * item.quantity
         return {
           ...item,
-          lineId: item.menuItemId,
+          lineId: item.lineId || item.menuItemId,
           menuItem,
           restaurant,
           title: menuItem.title,
           image: menuItem.image,
-          unitPriceCents: menuItem.priceCents,
+          unitPriceCents,
           acquisition: 'purchase',
           isGift: false,
           subtotalCents,
@@ -3316,16 +3369,28 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     if (!menuItem || menuItem.available === false) return null
     const normalizedQuantity = normalizeQuantity(quantity)
     const now = Date.now()
-    const existing = cartItems.value.find((item) => item.menuItemId === menuItem.id)
+    const selectionKey = normalizeText(options.selectionKey, '', 64)
+    const selection = selectionKey ? normalizeMenuSelection(options.selection) : null
+    const selectedUnitPriceCents =
+      selectionKey &&
+      Number.isFinite(Number(options.unitPriceCents)) &&
+      Number(options.unitPriceCents) > 0
+        ? Math.floor(Number(options.unitPriceCents))
+        : null
+    const lineId = selectionKey ? `${menuItem.id}__${selectionKey}`.slice(0, 140) : menuItem.id
+    const existing = cartItems.value.find((item) => (item.lineId || item.menuItemId) === lineId)
     if (existing) {
       existing.quantity = Math.min(99, existing.quantity + normalizedQuantity)
       existing.updatedAt = now
       return existing
     }
     const item = {
-      lineId: menuItem.id,
+      lineId,
       lineKind: 'menu',
       menuItemId: menuItem.id,
+      selectionKey,
+      selection,
+      unitPriceCents: selectedUnitPriceCents,
       quantity: normalizedQuantity,
       sourceModule: normalizeText(options.sourceModule, 'food_delivery_cart', 60),
       sourceId: normalizeText(options.sourceId, '', 140),
@@ -3568,6 +3633,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         assetBase: line.assetBase,
         beanStampCost: line.beanStampCost,
         category: line.menuItem?.category || restaurant.category,
+        selectionKey: line.selectionKey,
+        selection: line.selection,
         quantity: line.quantity,
         unitPriceCents: line.unitPriceCents,
         currency: primaryCurrency.value,

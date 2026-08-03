@@ -470,9 +470,7 @@ watch(
                   :src="imageUrl(item)"
                   :alt="item.image?.alt || item.title"
                   class="h-full w-full"
-                  :class="
-                    item.id === 'food_menu_jade_sea_bass' ? 'object-contain' : 'object-cover'
-                  "
+                  :class="item.id === 'food_menu_jade_sea_bass' ? 'object-contain' : 'object-cover'"
                   :data-required-asset="requiredAssetPath(item)"
                   @error="handleImageError"
                 />
@@ -499,7 +497,7 @@ watch(
               {{ t('全部', 'See all') }}
             </button>
           </div>
-          <div class="jade-scroll mt-4 flex gap-3 overflow-x-auto px-4 pb-1">
+          <div class="jade-scroll jade-featured-scroll mt-4 flex gap-3 overflow-x-auto px-4 pb-3">
             <button
               v-for="item in smallPlateItems"
               :key="item.id"
@@ -1035,10 +1033,7 @@ watch(
                   </div>
                   <div class="shrink-0 text-right text-[9px] font-bold text-[var(--jade-muted)]">
                     <p>{{ event.timeLabel }}</p>
-                    <p
-                      v-if="Number(event.etaMinutes) > 0"
-                      class="mt-1 text-[var(--jade-cinnabar)]"
-                    >
+                    <p v-if="Number(event.etaMinutes) > 0" class="mt-1 text-[var(--jade-cinnabar)]">
                       {{ event.etaMinutes }} min
                     </p>
                   </div>
@@ -1091,9 +1086,7 @@ watch(
               >
                 <i
                   :class="
-                    activeWalletSuggestion.walletImported
-                      ? 'fas fa-circle-check'
-                      : 'fas fa-wallet'
+                    activeWalletSuggestion.walletImported ? 'fas fa-circle-check' : 'fas fa-wallet'
                   "
                 ></i>
                 {{
@@ -1197,6 +1190,26 @@ watch(
 
 .jade-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.jade-featured-scroll {
+  scrollbar-color: var(--jade-cinnabar) color-mix(in srgb, var(--jade-line) 80%, transparent);
+  scrollbar-width: thin;
+}
+
+.jade-featured-scroll::-webkit-scrollbar {
+  display: block;
+  height: 0.34rem;
+}
+
+.jade-featured-scroll::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--jade-line) 80%, transparent);
+}
+
+.jade-featured-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--jade-cinnabar);
 }
 
 .jade-hearth-app :is(button, input):focus-visible {

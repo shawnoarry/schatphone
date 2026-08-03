@@ -1,0 +1,11 @@
+Use case: precise-object-edit
+Asset type: Harbor Roast Pompompurin collaboration paper-cup product photograph for menu packaging selection and campaign page
+Primary request: Transform the permanent cream Harbor Roast paper cup in Image 1 into a complete limited-edition Pompompurin collaboration paper cup with artwork printed directly on the cup body. This must read as a finished paper cup design, not as a removable sleeve. Use Image 2 only as the reference for the existing Pompompurin character linework, custard-yellow, apricot-pink, caramel-brown palette, and paper-print texture.
+Input images: Image 1 is the edit target and fixes the cup silhouette, charcoal lid, camera, table, background, lighting, and crop. Image 2 is a style and character-art reference only.
+Subject: One centered 12oz takeaway paper cup with charcoal-black lid. The cup body has a full-height limited-edition print: warm custard-yellow upper field, muted apricot-pink lower field, one large recognizable Pompompurin face with brown beret integrated into the print, small copper Harbor anchor and restrained wave/scallop details. The printed artwork follows the cup curvature naturally.
+Style/medium: premium realistic cafe packaging product photography, tactile uncoated paper, subtle printed ink, believable seams and cup curvature
+Composition/framing: preserve Image 1 square composition and subject scale; complete cup and lid fully visible with generous breathing room
+Lighting/mood: preserve Image 1 soft warm studio light, cream slatted background, and terracotta tabletop
+Color palette: custard yellow, apricot pink, caramel brown, Harbor copper, charcoal black, warm cream
+Constraints: change only the cup-body print in Image 1; keep the exact cup silhouette, lid, table, background, camera angle, lighting direction, shadow, and framing unchanged. The design is printed directly on the paper cup with no raised sleeve edge and no detachable band. Keep the recognizable Pompompurin character design. Keep Harbor's small copper anchor as a secondary co-brand mark. No text, no wordmark, no official Sanrio logo, no watermark, no extra cup, no carrier, no tart, no figurine, no hands.
+Avoid: removable sleeve appearance, blank permanent cup, duplicate objects, glossy plastic cup, distorted lid, illegible symbols, extra character faces, text artifacts

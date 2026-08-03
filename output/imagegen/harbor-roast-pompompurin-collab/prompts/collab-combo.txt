@@ -1,0 +1,11 @@
+Use case: product-mockup
+Asset type: Harbor Roast limited collaboration menu product
+Input images: Image 1 is the accepted permanent Harbor Roast paper cup; Image 2 is the accepted collaboration poster and defines the sleeve, carrier, character, and campaign palette.
+Primary request: Create a square commercial product photograph of the complete Pompompurin Dockside Custard Set.
+Scene/backdrop: warm copper counter against a Cream and Blush paper-set background.
+Subject: one caramel custard latte in the permanent Harbor Roast paper cup, fitted with the clearly removable Pompompurin blush-and-caramel sleeve; one small golden pudding-shaped custard tart on cream paper; one separate collaboration single-cup carrier folded open behind them; a small polished Pompompurin character figure as the campaign companion.
+Style/medium: appetizing realistic chain-cafe product photography with a carefully integrated recognizable character figure.
+Composition/framing: complete set fills about 74% of the square, cup, sleeve, tart and carrier all readable at menu thumbnail size, no clipped silhouettes.
+Lighting/mood: warm directional cafe light, appetizing caramel highlights, compact natural shadows.
+Constraints: exactly one drink and one tart; distinguish permanent cup, removable sleeve and carrier. No readable text, no price, no UI, no watermark, no Sanrio wordmark or official logo, no green coffee branding.
+

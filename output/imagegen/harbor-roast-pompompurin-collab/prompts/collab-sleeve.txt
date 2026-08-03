@@ -1,0 +1,11 @@
+Use case: product-mockup
+Asset type: replaceable Pompompurin collaboration sleeve preview
+Input images: Image 1 is the accepted Harbor Roast permanent paper cup and must be preserved as the base-cup design; Image 2 is the accepted collaboration poster and defines the Pompompurin palette and motif.
+Primary request: Create a square catalog photograph that clearly explains the removable collaboration sleeve as a separate packaging layer.
+Scene/backdrop: clean Cream #F9F2ED background with a narrow Copper #C67C4E tabletop edge.
+Subject: the permanent Harbor Roast paper cup stands behind without a sleeve, while one unfolded and one gently curved removable blush-and-caramel corrugated paper sleeve sit beside it. The sleeves feature a recognizable Pompompurin face and brown-beret motif without any wordmark or readable text.
+Style/medium: realistic premium packaging mockup, tactile corrugated paper and matte cup stock.
+Composition/framing: three-quarter catalog arrangement, every object complete and separated by visible negative space, center-safe square crop.
+Lighting/mood: soft directional product light.
+Constraints: do not print the collaboration character directly on the permanent cup body. No carrier, no food, no random text, no price, no UI, no watermark, no official wordmark or logo.
+

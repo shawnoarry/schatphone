@@ -30,6 +30,7 @@ import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useSimulationStore } from '../stores/simulation'
 import { useSystemStore } from '../stores/system'
 import { useWalletStore } from '../stores/wallet'
+import { getRateToUsd } from '../lib/currency-system'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
@@ -198,7 +199,7 @@ const peachCloudPromotionImageUrl = foodDeliveryUiAsset(
   'peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
 )
 const peachCloudWhitePeachLimePosterUrl = foodDeliveryUiAsset(
-  'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-01.png',
+  'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-dynamic-price-pilot-01.png',
 )
 const peachCloudWaxberryLycheePosterUrl = foodDeliveryUiAsset(
   'peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
@@ -1968,6 +1969,7 @@ const usesFullBleedStoreShell = computed(
 const PEACH_CLOUD_PAGE_KEYS = new Set([
   'search',
   'new',
+  'campaign',
   'club',
   'merch',
   'bag',
@@ -1982,9 +1984,12 @@ const peachCloudPageKey = computed(() => {
 const peachCloudOrderId = computed(() =>
   typeof route.query.shopOrderId === 'string' ? route.query.shopOrderId.trim() : '',
 )
+const peachCloudCampaignKey = computed(() =>
+  typeof route.query.shopCampaign === 'string' ? route.query.shopCampaign.trim() : '',
+)
 const activePeachCloudNavKey = computed(() => {
   if (peachCloudPageKey.value === 'order') return 'orders'
-  if (['new', 'club', 'merch'].includes(peachCloudPageKey.value)) return 'discover'
+  if (['new', 'campaign', 'club', 'merch'].includes(peachCloudPageKey.value)) return 'discover'
   return peachCloudPageKey.value
 })
 const QUICK_SERVICE_PAGE_KEYS = new Set(['menu', 'deals', 'bag', 'orders', 'order'])
@@ -2021,6 +2026,7 @@ const HARBOR_ROAST_PAGE_KEYS = new Set([
   'member',
   'new',
   'passport',
+  'pompompurin',
   'supply',
   'supply-detail',
   'menu',
@@ -2093,29 +2099,169 @@ const peachCloudSearchResults = computed(() => {
 const peachCloudShowsCuratedHome = computed(
   () => activeStoreMenuSectionKey.value === 'all' && !peachCloudSearchQuery.value.trim(),
 )
-const peachCloudPosterCampaigns = computed(() => [
-  {
-    key: 'white-peach-lime',
-    menuItemId: 'food_menu_peach_oolong_cloud',
-    title: t('白桃青柠气泡新品海报', 'White Peach Lime Sparkler launch poster'),
-    imageUrl: peachCloudWhitePeachLimePosterUrl,
-    assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-01.png',
-  },
-  {
-    key: 'waxberry-lychee',
-    menuItemId: 'food_menu_peach_waxberry_lychee_tea',
-    title: t('杨梅荔枝冰茶季节海报', 'Waxberry Lychee Iced Tea seasonal poster'),
-    imageUrl: peachCloudWaxberryLycheePosterUrl,
-    assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
-  },
-  {
-    key: 'mascot-plush',
-    pageKey: 'merch',
-    title: t('桃气云朵毛绒周边海报', 'Peach Cloud plush merchandise poster'),
-    imageUrl: peachCloudMascotPlushPosterUrl,
-    assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-mascot-plush-01.png',
-  },
-])
+const PEACH_CLOUD_ZERO_DECIMAL_CURRENCIES = new Set(['JPY', 'KRW'])
+const formatPeachCloudPosterAmount = (amount, currency) => {
+  const fractionDigits = PEACH_CLOUD_ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2
+  return new Intl.NumberFormat(languageBase.value === 'zh' ? 'zh-CN' : 'en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
+    useGrouping: false,
+  }).format(amount)
+}
+const resolvePeachCloudPosterPrice = (menuItemId) => {
+  const sourceItem = foodDeliveryStore.menuItems.find((item) => item.id === menuItemId)
+  const sourceAmount = Number(sourceItem?.priceCents || 0) / 100
+  if (!sourceItem || !Number.isFinite(sourceAmount)) return null
+
+  const sourceCurrency = sourceItem.currency || 'CNY'
+  const targetCurrency = activeCurrency.value
+  const sourceRate = getRateToUsd(walletStore.exchangeRates, sourceCurrency)
+  const targetRate = getRateToUsd(walletStore.exchangeRates, targetCurrency)
+  const convertedAmount = targetRate > 0 ? (sourceAmount * sourceRate) / targetRate : sourceAmount
+  return {
+    amount: formatPeachCloudPosterAmount(convertedAmount, targetCurrency),
+    currency: targetCurrency,
+    sourceCurrency,
+  }
+}
+const peachCloudCampaignMedia = (fileName, altZh, altEn) => {
+  const assetPath = `peach-cloud/campaigns/${fileName}`
+  return {
+    imageUrl: foodDeliveryUiAsset(assetPath),
+    assetPath,
+    alt: t(altZh, altEn),
+  }
+}
+const peachCloudPosterCampaigns = computed(() => {
+  const whitePeachLimePrice = resolvePeachCloudPosterPrice('food_menu_peach_oolong_cloud')
+  return [
+    {
+      key: 'white-peach-lime',
+      menuItemId: 'food_menu_peach_oolong_cloud',
+      title: t('白桃青柠气泡新品海报', 'White Peach Lime Sparkler launch poster'),
+      productTitle: t('白桃青柠气泡', 'White Peach Lime Sparkler'),
+      imageUrl: peachCloudWhitePeachLimePosterUrl,
+      assetPath:
+        'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-dynamic-price-pilot-01.png',
+      price: whitePeachLimePrice,
+      priceSlotStyle: {
+        left: '6.6%',
+        top: '35.5%',
+        width: '35.5%',
+      },
+      campaignCopy: {
+        eyebrow: 'WHITE PEACH / 01',
+        headline: t('一口，把白桃季打开', 'OPEN WHITE-PEACH SEASON'),
+        lede: t(
+          '白桃的柔甜贴近杯口，青柠把尾调提亮，细密气泡让每一口都轻盈。',
+          'Soft white peach meets a bright lime finish, lifted by a fine stream of bubbles.',
+        ),
+        sensoryTitle: t('气泡先到，桃香随后', 'BUBBLES FIRST, PEACH AFTER'),
+        sensoryBody: t(
+          '透明冰块锁住低温，白桃果肉保留清甜和轻柔的果香，薄荷只在最后留下一点凉意。',
+          'Clear ice holds the chill while white-peach flesh stays delicate and mint leaves a clean final note.',
+        ),
+        ingredientTitle: t('五种清爽，刚刚好', 'FIVE FRESH NOTES, NOTHING EXTRA'),
+        ingredientBody: t(
+          '白桃、青柠、薄荷、透明冰与天然气泡水。没有厚重糖浆，只保留果香、酸度和气泡感。',
+          'White peach, lime, mint, clear ice, and sparkling water. No heavy syrup, just fruit, acidity, and lift.',
+        ),
+        finishTitle: t('周五，桃气准时冒泡', 'FRIDAY, FRESHLY POURED'),
+        finishBody: t(
+          '适合午后第一杯，也适合把甜点后的味觉重新擦亮。',
+          'Made for the first afternoon sip or a bright reset after dessert.',
+        ),
+      },
+      campaignMedia: {
+        hero: peachCloudCampaignMedia(
+          'peach-cloud-white-peach-lime-campaign-hero-01.webp',
+          '白桃青柠气泡长页主视觉',
+          'White Peach Lime campaign hero',
+        ),
+        sensory: peachCloudCampaignMedia(
+          'peach-cloud-white-peach-lime-campaign-bubbles-01.webp',
+          '白桃青柠气泡与冷凝细节',
+          'White peach, lime, bubbles, and condensation detail',
+        ),
+        ingredients: peachCloudCampaignMedia(
+          'peach-cloud-white-peach-lime-campaign-ingredients-01.webp',
+          '白桃青柠气泡食材静物',
+          'White peach and lime ingredient still life',
+        ),
+      },
+    },
+    {
+      key: 'waxberry-lychee',
+      menuItemId: 'food_menu_peach_waxberry_lychee_tea',
+      title: t('杨梅荔枝冰茶季节海报', 'Waxberry Lychee Iced Tea seasonal poster'),
+      productTitle: t('杨梅荔枝冰茶', 'Waxberry Lychee Iced Tea'),
+      imageUrl: peachCloudWaxberryLycheePosterUrl,
+      assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
+      campaignCopy: {
+        eyebrow: 'SUMMER RUBY / 02',
+        headline: t('把盛夏装进一杯红宝石', 'SUMMER, POURED LIKE A RUBY'),
+        lede: t(
+          '杨梅的明亮果酸、荔枝的透明甜感和冰茶的清爽骨架，叠成一杯不黏腻的夏日红。',
+          'Bright waxberry acidity, translucent lychee sweetness, and clean iced tea form a vivid summer red.',
+        ),
+        sensoryTitle: t('冰透、果香、轻茶感', 'COLD, JUICY, LIGHTLY TEA-LED'),
+        sensoryBody: t(
+          '大块透明冰让茶汤保持清亮，杨梅先给出酸甜，荔枝把尾调收得圆润。',
+          'Large clear ice keeps the tea luminous; waxberry opens tart and juicy, then lychee rounds the finish.',
+        ),
+        ingredientTitle: t('红果与白果的夏日对话', 'RUBY FRUIT, IVORY FRUIT'),
+        ingredientBody: t(
+          '新鲜杨梅、去壳荔枝、茶叶与透明冰，各自保持真实质地，不用厚重果酱掩盖。',
+          'Fresh waxberry, peeled lychee, tea leaves, and clear ice keep their real textures without heavy preserves.',
+        ),
+        finishTitle: t('酸甜回归，限时供应', 'BRIGHT, JUICY, HERE FOR A WHILE'),
+        finishBody: t(
+          '适合闷热午后，也适合和轻奶油甜点一起分享。',
+          'A cool answer to humid afternoons and an easy match for light cream desserts.',
+        ),
+      },
+      campaignMedia: {
+        hero: peachCloudCampaignMedia(
+          'peach-cloud-waxberry-lychee-campaign-hero-01.webp',
+          '杨梅荔枝冰茶长页主视觉',
+          'Waxberry Lychee campaign hero',
+        ),
+        sensory: peachCloudCampaignMedia(
+          'peach-cloud-waxberry-lychee-campaign-ice-01.webp',
+          '杨梅荔枝冰茶与透明冰细节',
+          'Waxberry lychee tea and clear ice detail',
+        ),
+        ingredients: peachCloudCampaignMedia(
+          'peach-cloud-waxberry-lychee-campaign-ingredients-01.webp',
+          '杨梅荔枝冰茶食材静物',
+          'Waxberry and lychee ingredient still life',
+        ),
+      },
+    },
+    {
+      key: 'mascot-plush',
+      pageKey: 'merch',
+      title: t('桃气云朵毛绒周边海报', 'Peach Cloud plush merchandise poster'),
+      imageUrl: peachCloudMascotPlushPosterUrl,
+      assetPath: 'peach-cloud/promotions/posters/peach-cloud-poster-mascot-plush-01.png',
+    },
+  ]
+})
+const activePeachCloudCampaign = computed(() => {
+  const productCampaigns = peachCloudPosterCampaigns.value.filter(
+    (campaign) => campaign.menuItemId && campaign.campaignMedia,
+  )
+  return (
+    productCampaigns.find((campaign) => campaign.key === peachCloudCampaignKey.value) ||
+    productCampaigns[0] ||
+    null
+  )
+})
+const activePeachCloudCampaignPrice = computed(() =>
+  activePeachCloudCampaign.value?.menuItemId
+    ? resolvePeachCloudPosterPrice(activePeachCloudCampaign.value.menuItemId)
+    : null,
+)
 const peachCloudMerchandiseItems = computed(() =>
   foodDeliveryStore.peachCloudMerchandise.map((item) => ({
     ...item,
@@ -3085,16 +3231,19 @@ const copyPlatformOrderNumber = async (order = {}) => {
   }
 }
 
-const commitMenuItemToCart = (menuItemId, quantity = 1) => {
+const commitMenuItemToCart = (menuItemId, quantity = 1, customization = {}) => {
   const added = foodDeliveryStore.addToCart(menuItemId, quantity, {
     sourceModule: FOOD_DELIVERY_SOURCE_KEYS.CHAT_FOOD_DELIVERY_PUSH,
+    selectionKey: customization.selectionKey,
+    selection: customization.selection,
+    unitPriceCents: customization.unitPriceCents,
   })
   storeNavigationFeedback.value = ''
   checkoutFeedback.value = ''
   return added
 }
 
-const addMenuItemToCart = (menuItemId, quantity = 1) => {
+const addMenuItemToCart = (menuItemId, quantity = 1, interactionContext = null) => {
   const menuItem = foodDeliveryStore.findMenuItemById(menuItemId)
   if (
     !menuItem ||
@@ -3103,7 +3252,8 @@ const addMenuItemToCart = (menuItemId, quantity = 1) => {
     menuItem.restaurantId !== activeRestaurant.value.id
   )
     return null
-  return commitMenuItemToCart(menuItem.id, quantity)
+  const customization = interactionContext?.selectionKey ? interactionContext : {}
+  return commitMenuItemToCart(menuItem.id, quantity, customization)
 }
 
 const openCheckoutSheet = () => {
@@ -3315,10 +3465,12 @@ const openPeachCloudPage = async (pageKey = 'home', extraQuery = {}) => {
   if (nextPageKey === 'home') delete nextQuery.shopView
   else nextQuery.shopView = nextPageKey
   if (nextPageKey !== 'order') delete nextQuery.shopOrderId
+  if (nextPageKey !== 'campaign') delete nextQuery.shopCampaign
 
   const routeChanged =
     peachCloudPageKey.value !== nextPageKey ||
-    String(route.query.shopOrderId || '') !== String(nextQuery.shopOrderId || '')
+    String(route.query.shopOrderId || '') !== String(nextQuery.shopOrderId || '') ||
+    String(route.query.shopCampaign || '') !== String(nextQuery.shopCampaign || '')
   if (routeChanged) {
     await router.push({ path: route.path, query: nextQuery })
   }
@@ -3331,6 +3483,14 @@ const openPeachCloudHome = async () => {
   storeNavigationFeedback.value = ''
   peachCloudNewCarouselIndex.value = 0
   await openPeachCloudPage('home')
+}
+
+const showPeachCloudHomePosters = async () => {
+  activeStoreMenuSectionKey.value = 'all'
+  peachCloudSearchQuery.value = ''
+  storeNavigationFeedback.value = ''
+  peachCloudNewCarouselIndex.value = 0
+  await scrollToStoreSurface('food-delivery-peach-cloud-home-poster-stage')
 }
 
 const focusPeachCloudSearch = async () => {
@@ -3359,11 +3519,14 @@ const openPeachCloudMerch = async () => {
 }
 
 const openPeachCloudPosterCampaign = async (campaign = {}) => {
-  if (campaign.menuItemId) {
-    openMenuItemDetail(campaign.menuItemId)
+  if (campaign.pageKey) {
+    await openPeachCloudPage(campaign.pageKey)
     return
   }
-  if (campaign.pageKey) await openPeachCloudPage(campaign.pageKey)
+  if (campaign.menuItemId) {
+    await openPeachCloudPage('campaign', { shopCampaign: campaign.key })
+    return
+  }
 }
 
 const addPeachCloudMerchandiseToCart = (merchandiseId) => {
@@ -4060,7 +4223,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              class="-mx-4 px-4 pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              class="food-platform-merchant-scroll -mx-4 px-4 pb-3"
               :class="
                 platformMerchantListExpanded
                   ? 'grid grid-cols-1 gap-3'
@@ -6589,7 +6752,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2"
+              class="food-platform-merchant-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-3"
               data-testid="food-delivery-shop-app-list"
             >
               <article
@@ -7316,91 +7479,52 @@ onBeforeUnmount(() => {
             class="relative bg-[var(--peach-cloud-canvas)] px-4 pb-24 pt-4"
             data-testid="food-delivery-peach-cloud-home-main"
           >
-            <section data-testid="food-delivery-peach-cloud-home-poster-stage">
-              <div class="flex items-end justify-between gap-3">
-                <div>
-                  <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
-                    PEACH CLOUD / POSTER DROP
-                  </p>
-                  <h1 class="mt-1 text-2xl font-black">
-                    {{ t('新品海报', 'New release posters') }}
-                  </h1>
-                </div>
-                <div class="flex gap-2">
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-white/75"
-                    :aria-label="t('上一张海报', 'Previous poster')"
-                    @click="scrollPeachCloudNewCarousel(-1)"
-                  >
-                    <i class="fas fa-arrow-left text-xs"></i>
-                  </button>
-                  <button
-                    type="button"
-                    class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)]"
-                    :aria-label="t('下一张海报', 'Next poster')"
-                    @click="scrollPeachCloudNewCarousel(1)"
-                  >
-                    <i class="fas fa-arrow-right text-xs"></i>
-                  </button>
-                </div>
-              </div>
-              <div
-                ref="peachCloudNewCarouselRef"
-                class="mt-4 flex snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                data-testid="food-delivery-peach-cloud-campaigns"
-                @scroll.passive="syncPeachCloudPosterCarouselIndex"
+            <section
+              class="relative aspect-[3/2] overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)] shadow-[4px_4px_0_var(--peach-cloud-ink)]"
+              data-testid="food-delivery-peach-cloud-brand-hero"
+            >
+              <button
+                type="button"
+                class="relative block h-full w-full overflow-hidden text-left"
+                data-testid="food-delivery-peach-cloud-hero-cover"
+                @click="openPeachCloudNew"
               >
-                <button
-                  v-for="campaign in peachCloudPosterCampaigns"
-                  :key="campaign.key"
-                  type="button"
-                  class="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white transition active:scale-[0.995]"
-                  :data-testid="`food-delivery-peach-cloud-poster-${campaign.key}`"
-                  :aria-label="campaign.title"
-                  @click="openPeachCloudPosterCampaign(campaign)"
-                >
-                  <img
-                    :src="campaign.imageUrl"
-                    :alt="campaign.title"
-                    class="h-full w-full object-cover"
-                    :data-required-asset="campaign.assetPath"
-                    @error="handleFoodShopImageError"
-                  />
-                </button>
-              </div>
-              <div class="mt-1 flex items-center justify-center gap-1.5" aria-hidden="true">
-                <span
-                  v-for="(_, index) in peachCloudPosterCampaigns"
-                  :key="index"
-                  class="h-1.5 transition-all"
-                  :class="
-                    peachCloudNewCarouselIndex === index
-                      ? 'w-7 bg-[var(--peach-cloud-ink)]'
-                      : 'w-2 bg-[var(--peach-cloud-mist)]'
-                  "
-                ></span>
-              </div>
-              <div class="mt-4 grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  class="inline-flex h-11 items-center justify-center gap-2 border-2 border-[var(--peach-cloud-ink)] bg-white/80 text-xs font-black shadow-[3px_3px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                  data-testid="food-delivery-peach-cloud-home-club"
-                  @click="openPeachCloudClub"
-                >
-                  <i class="fas fa-crown text-[var(--peach-cloud-accent)]"></i>
-                  {{ t('桃子会', 'Peach Club') }}
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-11 items-center justify-center gap-2 border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] text-xs font-black shadow-[3px_3px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                  data-testid="food-delivery-peach-cloud-home-order"
-                  @click="focusPeachCloudSearch"
-                >
-                  <i class="fas fa-utensils"></i>
-                  {{ t('直接点单', 'Order menu') }}
-                </button>
-              </div>
+                <img
+                  :src="activeStoreCoverImageUrl"
+                  :alt="`${activeStoreDisplayName} ${t('本周精选', 'weekly selection')}`"
+                  class="absolute inset-0 h-full w-full object-cover object-center"
+                  :data-required-asset="foodDeliveryRequiredAssetPath(activeRestaurant)"
+                  @error="handleFoodShopImageError"
+                />
+                <span class="relative z-10 flex h-full w-[48%] flex-col justify-between p-4">
+                  <span>
+                    <span
+                      class="inline-flex items-center gap-1.5 bg-[var(--peach-cloud-ink)] px-2 py-1 text-[8px] font-black text-[var(--peach-cloud-canvas)]"
+                    >
+                      <i class="fas fa-circle-check text-[8px]"></i>
+                      FRESH PEACH · OPEN TODAY
+                    </span>
+                    <strong
+                      class="mt-4 block max-w-36 text-xl font-black leading-[0.98] text-[var(--peach-cloud-ink)] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
+                    >
+                      <span class="block">PEACH,</span>
+                      <span class="block">POURED INTO</span>
+                      <span class="block">CLOUDS</span>
+                    </strong>
+                    <span
+                      class="mt-3 block max-w-36 text-[9px] font-bold leading-3.5 text-[var(--peach-cloud-iron)] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
+                    >
+                      White-peach fizz, oolong clouds, and freshly shaved ice.
+                    </span>
+                  </span>
+                  <span
+                    class="inline-flex w-fit items-center gap-2 border-b-2 border-[var(--peach-cloud-ink)] pb-1 text-[10px] font-black text-[var(--peach-cloud-ink)]"
+                  >
+                    VIEW THE DROP
+                    <i class="fas fa-arrow-right text-[9px]"></i>
+                  </span>
+                </span>
+              </button>
             </section>
 
             <div class="mt-7 flex items-end justify-between gap-3">
@@ -7462,116 +7586,249 @@ onBeforeUnmount(() => {
             <div class="mt-3 h-px bg-[var(--peach-cloud-mist)]/70"></div>
 
             <section
-              v-if="!peachCloudShowsCuratedHome"
-              class="pt-3"
-              data-testid="food-delivery-menu-panel"
+              v-if="peachCloudShowsCuratedHome"
+              class="pt-4"
+              data-testid="food-delivery-peach-cloud-home-poster-stage"
             >
+              <div>
+                <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
+                  PEACH CLOUD / POSTER DROP
+                </p>
+                <h1 class="mt-1 text-2xl font-black">
+                  {{ t('新品海报', 'New release posters') }}
+                </h1>
+              </div>
+              <div
+                ref="peachCloudNewCarouselRef"
+                class="mt-4 flex snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                data-testid="food-delivery-peach-cloud-campaigns"
+                @scroll.passive="syncPeachCloudPosterCarouselIndex"
+              >
+                <div
+                  v-for="campaign in peachCloudPosterCampaigns"
+                  :key="campaign.key"
+                  class="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white [container-type:inline-size]"
+                  :data-testid="`food-delivery-peach-cloud-carousel-slide-${campaign.key}`"
+                >
+                  <button
+                    type="button"
+                    class="relative block h-full w-full overflow-hidden text-left transition active:scale-[0.995]"
+                    :data-testid="`food-delivery-peach-cloud-poster-${campaign.key}`"
+                    :aria-label="
+                      campaign.price
+                        ? `${campaign.title}, ${campaign.price.amount} ${campaign.price.currency}`
+                        : campaign.title
+                    "
+                    @click="openPeachCloudPosterCampaign(campaign)"
+                  >
+                    <img
+                      :src="campaign.imageUrl"
+                      :alt="campaign.title"
+                      class="h-full w-full object-cover"
+                      :data-required-asset="campaign.assetPath"
+                      @error="handleFoodShopImageError"
+                    />
+                    <span
+                      v-if="campaign.price"
+                      class="pointer-events-none absolute z-10 flex text-[var(--peach-cloud-ink)]"
+                      :class="
+                        campaign.price.currency.length > 3
+                          ? 'flex-col items-start gap-0'
+                          : 'items-end gap-[1.4cqi]'
+                      "
+                      :style="campaign.priceSlotStyle"
+                      :data-testid="`food-delivery-peach-cloud-poster-price-${campaign.key}`"
+                      :data-price-source-currency="campaign.price.sourceCurrency"
+                      aria-hidden="true"
+                    >
+                      <strong
+                        class="font-black leading-[0.82]"
+                        :class="
+                          campaign.price.amount.length > 3
+                            ? 'text-[clamp(2.25rem,11.2cqi,3.1rem)]'
+                            : 'text-[clamp(2.7rem,14cqi,3.8rem)]'
+                        "
+                      >
+                        {{ campaign.price.amount }}
+                      </strong>
+                      <span
+                        class="font-black uppercase leading-none"
+                        :class="
+                          campaign.price.currency.length > 3
+                            ? 'mt-[1.5cqi] break-all text-[clamp(0.7rem,3.7cqi,1rem)] [writing-mode:vertical-rl]'
+                            : 'pb-[0.45cqi] text-[clamp(0.8rem,4.3cqi,1.2rem)]'
+                        "
+                      >
+                        {{ campaign.price.currency }}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="group absolute inset-y-0 left-0 z-20 flex w-12 items-center justify-start pl-1.5"
+                    :aria-label="t('上一张海报', 'Previous poster')"
+                    :data-testid="`food-delivery-peach-cloud-carousel-previous-${campaign.key}`"
+                    @click="scrollPeachCloudNewCarousel(-1)"
+                  >
+                    <span
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
+                    >
+                      <i class="fas fa-chevron-left text-xs"></i>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="group absolute inset-y-0 right-0 z-20 flex w-12 items-center justify-end pr-1.5"
+                    :aria-label="t('下一张海报', 'Next poster')"
+                    :data-testid="`food-delivery-peach-cloud-carousel-next-${campaign.key}`"
+                    @click="scrollPeachCloudNewCarousel(1)"
+                  >
+                    <span
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
+                    >
+                      <i class="fas fa-chevron-right text-xs"></i>
+                    </span>
+                  </button>
+                </div>
+              </div>
+              <div class="mt-1 flex items-center justify-center gap-1.5" aria-hidden="true">
+                <span
+                  v-for="(_, index) in peachCloudPosterCampaigns"
+                  :key="index"
+                  class="h-1.5 transition-all"
+                  :class="
+                    peachCloudNewCarouselIndex === index
+                      ? 'w-7 bg-[var(--peach-cloud-ink)]'
+                      : 'w-2 bg-[var(--peach-cloud-mist)]'
+                  "
+                ></span>
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  class="inline-flex h-11 items-center justify-center gap-2 border-2 border-[var(--peach-cloud-ink)] bg-white/80 text-xs font-black shadow-[3px_3px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  data-testid="food-delivery-peach-cloud-home-club"
+                  @click="openPeachCloudClub"
+                >
+                  <i class="fas fa-crown text-[var(--peach-cloud-accent)]"></i>
+                  {{ t('桃子会', 'Peach Club') }}
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-11 items-center justify-center gap-2 border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)] text-xs font-black shadow-[3px_3px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  data-testid="food-delivery-peach-cloud-home-order"
+                  @click="focusPeachCloudSearch"
+                >
+                  <i class="fas fa-utensils"></i>
+                  {{ t('直接点单', 'Order menu') }}
+                </button>
+              </div>
+            </section>
+
+            <section v-else class="pt-4" data-testid="food-delivery-menu-panel">
               <div
                 data-testid="food-delivery-store-menu-items"
                 :data-active-section="activeStoreMenuSection?.key"
               >
-                  <div class="flex items-end justify-between gap-3">
-                    <div>
-                      <p class="text-[10px] font-black uppercase text-[var(--peach-cloud-iron)]">
-                        {{ activeStoreDisplayName }}
-                      </p>
-                      <h2 class="mt-1 text-xl font-black leading-none">
-                        {{
-                          peachCloudSearchQuery.trim()
-                            ? t('搜索结果', 'Search results')
-                            : activeStoreMenuSection?.label
-                        }}
-                      </h2>
-                    </div>
+                <div class="flex items-end justify-between gap-3">
+                  <div>
+                    <p class="text-[10px] font-black uppercase text-[var(--peach-cloud-iron)]">
+                      {{ activeStoreDisplayName }}
+                    </p>
+                    <h2 class="mt-1 text-xl font-black leading-none">
+                      {{
+                        peachCloudSearchQuery.trim()
+                          ? t('搜索结果', 'Search results')
+                          : activeStoreMenuSection?.label
+                      }}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    class="text-xs font-black text-[var(--peach-cloud-ink)]"
+                    data-testid="food-delivery-peach-cloud-clear-filter"
+                    @click="showPeachCloudHomePosters"
+                  >
+                    {{ t('返回海报', 'Posters') }}
+                  </button>
+                </div>
+
+                <div v-if="peachCloudFilteredMenuItems.length" class="mt-3 grid grid-cols-2 gap-3">
+                  <article
+                    v-for="item in peachCloudFilteredMenuItems"
+                    :key="item.id"
+                    class="min-w-0 overflow-hidden rounded-[1.2rem] border border-[var(--peach-cloud-mist)]/30 bg-white/90 shadow-[0_9px_20px_rgba(43,48,58,0.08)]"
+                    :data-testid="`food-delivery-menu-${item.id}`"
+                    :data-menu-section="item.menuSection || 'signature'"
+                    :data-template="activeStoreTemplate"
+                  >
                     <button
                       type="button"
-                      class="text-xs font-black text-[var(--peach-cloud-ink)]"
-                      data-testid="food-delivery-peach-cloud-clear-filter"
-                      @click="openPeachCloudHome"
+                      class="block w-full text-left"
+                      :data-testid="`food-delivery-menu-open-${item.id}`"
+                      @click="openMenuItemDetail(item.id)"
                     >
-                      {{ t('返回推荐', 'Home') }}
+                      <div
+                        class="relative aspect-[1.22/1] overflow-hidden bg-[var(--peach-cloud-mist)]/25"
+                        :data-testid="`food-delivery-menu-dish-${item.id}`"
+                      >
+                        <img
+                          v-if="foodImageUrl(item)"
+                          :src="foodImageUrl(item)"
+                          :alt="item.image?.alt || item.title"
+                          class="h-full w-full object-cover"
+                          :data-required-asset="foodDeliveryRequiredAssetPath(item)"
+                          @error="handleFoodShopImageError"
+                        />
+                        <div
+                          v-else
+                          class="flex h-full items-center justify-center text-[var(--peach-cloud-accent)]"
+                        >
+                          <i class="fas fa-ice-cream"></i>
+                        </div>
+                        <span
+                          class="absolute bottom-0 right-0 rounded-tl-2xl bg-[var(--peach-cloud-ink)] px-2.5 py-1 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
+                        >
+                          {{ item.price }}
+                        </span>
+                      </div>
+                      <div class="p-2.5">
+                        <p class="line-clamp-2 min-h-9 text-xs font-black leading-[1.1rem]">
+                          {{ item.title }}
+                        </p>
+                        <p
+                          class="mt-1 line-clamp-2 min-h-7 text-[9px] font-semibold leading-3.5 text-[var(--peach-cloud-iron)]"
+                        >
+                          {{ item.desc }}
+                        </p>
+                      </div>
                     </button>
-                  </div>
-
-                  <div
-                    v-if="peachCloudFilteredMenuItems.length"
-                    class="mt-3 grid grid-cols-2 gap-3"
-                  >
-                    <article
-                      v-for="item in peachCloudFilteredMenuItems"
-                      :key="item.id"
-                      class="min-w-0 overflow-hidden rounded-[1.2rem] border border-[var(--peach-cloud-mist)]/30 bg-white/90 shadow-[0_9px_20px_rgba(43,48,58,0.08)]"
-                      :data-testid="`food-delivery-menu-${item.id}`"
-                      :data-menu-section="item.menuSection || 'signature'"
-                      :data-template="activeStoreTemplate"
-                    >
+                    <div class="flex items-center justify-between px-2.5 pb-2.5">
+                      <span class="text-[9px] font-bold text-[var(--peach-cloud-iron)]">{{
+                        item.currency
+                      }}</span>
                       <button
                         type="button"
-                        class="block w-full text-left"
-                        :data-testid="`food-delivery-menu-open-${item.id}`"
-                        @click="openMenuItemDetail(item.id)"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-sm transition active:scale-[0.94]"
+                        :data-testid="`food-delivery-add-${item.id}`"
+                        :aria-label="`Add ${item.title}`"
+                        @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
                       >
-                        <div
-                          class="relative aspect-[1.22/1] overflow-hidden bg-[var(--peach-cloud-mist)]/25"
-                          :data-testid="`food-delivery-menu-dish-${item.id}`"
-                        >
-                          <img
-                            v-if="foodImageUrl(item)"
-                            :src="foodImageUrl(item)"
-                            :alt="item.image?.alt || item.title"
-                            class="h-full w-full object-cover"
-                            :data-required-asset="foodDeliveryRequiredAssetPath(item)"
-                            @error="handleFoodShopImageError"
-                          />
-                          <div
-                            v-else
-                            class="flex h-full items-center justify-center text-[var(--peach-cloud-accent)]"
-                          >
-                            <i class="fas fa-ice-cream"></i>
-                          </div>
-                          <span
-                            class="absolute bottom-0 right-0 rounded-tl-2xl bg-[var(--peach-cloud-ink)] px-2.5 py-1 text-[9px] font-black text-[var(--peach-cloud-canvas)]"
-                          >
-                            {{ item.price }}
-                          </span>
-                        </div>
-                        <div class="p-2.5">
-                          <p class="line-clamp-2 min-h-9 text-xs font-black leading-[1.1rem]">
-                            {{ item.title }}
-                          </p>
-                          <p
-                            class="mt-1 line-clamp-2 min-h-7 text-[9px] font-semibold leading-3.5 text-[var(--peach-cloud-iron)]"
-                          >
-                            {{ item.desc }}
-                          </p>
-                        </div>
+                        <i class="fas fa-plus text-[9px]"></i>
                       </button>
-                      <div class="flex items-center justify-between px-2.5 pb-2.5">
-                        <span class="text-[9px] font-bold text-[var(--peach-cloud-iron)]">{{
-                          item.currency
-                        }}</span>
-                        <button
-                          type="button"
-                          class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--peach-cloud-accent)] text-[var(--peach-cloud-ink)] shadow-sm transition active:scale-[0.94]"
-                          :data-testid="`food-delivery-add-${item.id}`"
-                          :aria-label="`Add ${item.title}`"
-                          @click.stop="addMenuItemToCart(item.id, 1, $event.currentTarget)"
-                        >
-                          <i class="fas fa-plus text-[9px]"></i>
-                        </button>
-                      </div>
-                    </article>
-                  </div>
-                  <div
-                    v-else
-                    class="mt-3 rounded-[1.2rem] bg-[var(--peach-cloud-mist)]/25 px-4 py-8 text-center"
-                    data-testid="food-delivery-peach-cloud-empty-results"
-                  >
-                    <i class="fas fa-magnifying-glass text-lg text-[var(--peach-cloud-accent)]"></i>
-                    <p class="mt-2 text-sm font-black">
-                      {{ t('没有找到合适的甜品', 'No cloud found') }}
-                    </p>
-                  </div>
+                    </div>
+                  </article>
+                </div>
+                <div
+                  v-else
+                  class="mt-3 rounded-[1.2rem] bg-[var(--peach-cloud-mist)]/25 px-4 py-8 text-center"
+                  data-testid="food-delivery-peach-cloud-empty-results"
+                >
+                  <i class="fas fa-magnifying-glass text-lg text-[var(--peach-cloud-accent)]"></i>
+                  <p class="mt-2 text-sm font-black">
+                    {{ t('没有找到合适的甜品', 'No cloud found') }}
+                  </p>
+                </div>
               </div>
             </section>
 
@@ -7749,56 +8006,105 @@ onBeforeUnmount(() => {
               data-testid="food-delivery-peach-cloud-new-page"
             >
               <section data-testid="food-delivery-peach-cloud-new-carousel">
-                <div class="flex items-end justify-between gap-3">
-                  <div>
-                    <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
-                      PEACH CLOUD / POSTER DROP
-                    </p>
-                    <h1 class="mt-1 text-2xl font-black">
-                      {{ t('新品放映厅', 'New release gallery') }}
-                    </h1>
-                  </div>
-                  <div class="flex gap-2">
-                    <button
-                      type="button"
-                      class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-white/75"
-                      :aria-label="t('上一张海报', 'Previous poster')"
-                      @click="scrollPeachCloudNewCarousel(-1)"
-                    >
-                      <i class="fas fa-arrow-left text-xs"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="inline-flex h-9 w-9 items-center justify-center border-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-accent)]"
-                      :aria-label="t('下一张海报', 'Next poster')"
-                      @click="scrollPeachCloudNewCarousel(1)"
-                    >
-                      <i class="fas fa-arrow-right text-xs"></i>
-                    </button>
-                  </div>
+                <div>
+                  <p class="text-[9px] font-black text-[var(--peach-cloud-iron)]">
+                    PEACH CLOUD / POSTER DROP
+                  </p>
+                  <h1 class="mt-1 text-2xl font-black">
+                    {{ t('新品放映厅', 'New release gallery') }}
+                  </h1>
                 </div>
                 <div
                   ref="peachCloudNewCarouselRef"
                   class="mt-4 flex snap-x snap-mandatory overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   @scroll.passive="syncPeachCloudPosterCarouselIndex"
                 >
-                  <button
+                  <div
                     v-for="campaign in peachCloudPosterCampaigns"
                     :key="campaign.key"
-                    type="button"
-                    class="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white transition active:scale-[0.995]"
-                    :data-testid="`food-delivery-peach-cloud-new-poster-${campaign.key}`"
-                    :aria-label="campaign.title"
-                    @click="openPeachCloudPosterCampaign(campaign)"
+                    class="relative aspect-[2/3] w-full shrink-0 snap-center overflow-hidden border-2 border-[var(--peach-cloud-ink)] bg-white [container-type:inline-size]"
+                    :data-testid="`food-delivery-peach-cloud-new-carousel-slide-${campaign.key}`"
                   >
-                    <img
-                      :src="campaign.imageUrl"
-                      :alt="campaign.title"
-                      class="h-full w-full object-cover"
-                      :data-required-asset="campaign.assetPath"
-                      @error="handleFoodShopImageError"
-                    />
-                  </button>
+                    <button
+                      type="button"
+                      class="relative block h-full w-full overflow-hidden text-left transition active:scale-[0.995]"
+                      :data-testid="`food-delivery-peach-cloud-new-poster-${campaign.key}`"
+                      :aria-label="
+                        campaign.price
+                          ? `${campaign.title}, ${campaign.price.amount} ${campaign.price.currency}`
+                          : campaign.title
+                      "
+                      @click="openPeachCloudPosterCampaign(campaign)"
+                    >
+                      <img
+                        :src="campaign.imageUrl"
+                        :alt="campaign.title"
+                        class="h-full w-full object-cover"
+                        :data-required-asset="campaign.assetPath"
+                        @error="handleFoodShopImageError"
+                      />
+                      <span
+                        v-if="campaign.price"
+                        class="pointer-events-none absolute z-10 flex text-[var(--peach-cloud-ink)]"
+                        :class="
+                          campaign.price.currency.length > 3
+                            ? 'flex-col items-start gap-0'
+                            : 'items-end gap-[1.4cqi]'
+                        "
+                        :style="campaign.priceSlotStyle"
+                        :data-testid="`food-delivery-peach-cloud-new-price-${campaign.key}`"
+                        :data-price-source-currency="campaign.price.sourceCurrency"
+                        aria-hidden="true"
+                      >
+                        <strong
+                          class="font-black leading-[0.82]"
+                          :class="
+                            campaign.price.amount.length > 3
+                              ? 'text-[clamp(2.25rem,11.2cqi,3.1rem)]'
+                              : 'text-[clamp(2.45rem,14cqi,3.75rem)]'
+                          "
+                        >
+                          {{ campaign.price.amount }}
+                        </strong>
+                        <span
+                          class="font-black uppercase leading-none"
+                          :class="
+                            campaign.price.currency.length > 3
+                              ? 'mt-[1.5cqi] break-all text-[clamp(0.7rem,3.7cqi,1rem)] [writing-mode:vertical-rl]'
+                              : 'pb-[0.75cqi] text-[clamp(0.75rem,4.3cqi,1.1rem)]'
+                          "
+                        >
+                          {{ campaign.price.currency }}
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="group absolute inset-y-0 left-0 z-20 flex w-12 items-center justify-start pl-1.5"
+                      :aria-label="t('上一张海报', 'Previous poster')"
+                      :data-testid="`food-delivery-peach-cloud-new-carousel-previous-${campaign.key}`"
+                      @click="scrollPeachCloudNewCarousel(-1)"
+                    >
+                      <span
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
+                      >
+                        <i class="fas fa-chevron-left text-xs"></i>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      class="group absolute inset-y-0 right-0 z-20 flex w-12 items-center justify-end pr-1.5"
+                      :aria-label="t('下一张海报', 'Next poster')"
+                      :data-testid="`food-delivery-peach-cloud-new-carousel-next-${campaign.key}`"
+                      @click="scrollPeachCloudNewCarousel(1)"
+                    >
+                      <span
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
+                      >
+                        <i class="fas fa-chevron-right text-xs"></i>
+                      </span>
+                    </button>
+                  </div>
                 </div>
                 <div class="mt-1 flex items-center justify-center gap-1.5" aria-hidden="true">
                   <span
@@ -7847,6 +8153,171 @@ onBeforeUnmount(() => {
                     />
                   </span>
                 </button>
+              </section>
+            </main>
+          </template>
+          <template v-else-if="peachCloudPageKey === 'campaign'">
+            <main
+              class="min-h-[calc(100vh-5rem)] bg-[var(--peach-cloud-canvas)] pb-24"
+              data-testid="food-delivery-peach-cloud-campaign-page"
+              :data-campaign-key="activePeachCloudCampaign?.key"
+            >
+              <section
+                v-if="activePeachCloudCampaign"
+                class="relative aspect-[2/3] overflow-hidden border-b-2 border-[var(--peach-cloud-ink)] bg-white"
+                data-testid="food-delivery-peach-cloud-campaign-hero"
+              >
+                <img
+                  :src="activePeachCloudCampaign.campaignMedia.hero.imageUrl"
+                  :alt="activePeachCloudCampaign.campaignMedia.hero.alt"
+                  class="absolute inset-0 h-full w-full object-cover"
+                  loading="eager"
+                  :data-required-asset="activePeachCloudCampaign.campaignMedia.hero.assetPath"
+                  @error="handleFoodShopImageError"
+                />
+                <div class="absolute inset-x-0 top-0 p-5 text-[var(--peach-cloud-ink)]">
+                  <button
+                    type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/35 bg-[var(--peach-cloud-canvas)]/80 shadow-[0_4px_12px_rgba(43,48,58,0.14)] backdrop-blur-sm active:scale-[0.94]"
+                    data-testid="food-delivery-peach-cloud-campaign-back"
+                    :aria-label="t('返回新品海报', 'Back to new releases')"
+                    @click="openPeachCloudPage('new')"
+                  >
+                    <i class="fas fa-chevron-left text-xs"></i>
+                  </button>
+                  <p class="mt-8 text-[9px] font-black">
+                    {{ activePeachCloudCampaign.campaignCopy.eyebrow }}
+                  </p>
+                  <h1 class="mt-2 max-w-[78%] text-[2rem] font-black leading-[0.98]">
+                    {{ activePeachCloudCampaign.campaignCopy.headline }}
+                  </h1>
+                  <p
+                    class="mt-3 max-w-[72%] text-xs font-bold leading-5 text-[var(--peach-cloud-iron)]"
+                  >
+                    {{ activePeachCloudCampaign.productTitle }}
+                  </p>
+                  <p
+                    v-if="activePeachCloudCampaignPrice"
+                    class="mt-4 text-xl font-black"
+                    data-testid="food-delivery-peach-cloud-campaign-price"
+                    :data-price-source-currency="activePeachCloudCampaignPrice.sourceCurrency"
+                  >
+                    {{ activePeachCloudCampaignPrice.amount }}
+                    {{ activePeachCloudCampaignPrice.currency }}
+                  </p>
+                </div>
+              </section>
+
+              <section v-if="activePeachCloudCampaign" class="px-5 py-8">
+                <p class="text-[9px] font-black text-[var(--peach-cloud-accent)]">
+                  TASTE NOTE / 01
+                </p>
+                <p class="mt-3 text-xl font-black leading-tight">
+                  {{ activePeachCloudCampaign.campaignCopy.lede }}
+                </p>
+                <div
+                  class="mt-6 grid grid-cols-3 border-y border-[var(--peach-cloud-mist)]/70 py-4 text-center"
+                >
+                  <div>
+                    <i class="fas fa-wind text-[var(--peach-cloud-accent)]"></i>
+                    <p class="mt-2 text-[10px] font-black">{{ t('清爽', 'BRIGHT') }}</p>
+                  </div>
+                  <div class="border-x border-[var(--peach-cloud-mist)]/70">
+                    <i class="fas fa-snowflake text-[var(--peach-cloud-accent)]"></i>
+                    <p class="mt-2 text-[10px] font-black">{{ t('冰透', 'CHILLED') }}</p>
+                  </div>
+                  <div>
+                    <i class="fas fa-leaf text-[var(--peach-cloud-accent)]"></i>
+                    <p class="mt-2 text-[10px] font-black">{{ t('鲜果', 'FRUIT-LED') }}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section
+                v-if="activePeachCloudCampaign"
+                class="border-y-2 border-[var(--peach-cloud-ink)]"
+              >
+                <img
+                  :src="activePeachCloudCampaign.campaignMedia.sensory.imageUrl"
+                  :alt="activePeachCloudCampaign.campaignMedia.sensory.alt"
+                  class="aspect-[3/2] w-full object-cover"
+                  loading="lazy"
+                  :data-required-asset="activePeachCloudCampaign.campaignMedia.sensory.assetPath"
+                  @error="handleFoodShopImageError"
+                />
+              </section>
+
+              <section v-if="activePeachCloudCampaign" class="px-5 py-8">
+                <p class="text-[9px] font-black text-[var(--peach-cloud-accent)]">SENSORY / 02</p>
+                <h2 class="mt-2 text-2xl font-black leading-tight">
+                  {{ activePeachCloudCampaign.campaignCopy.sensoryTitle }}
+                </h2>
+                <p class="mt-3 text-sm font-semibold leading-6 text-[var(--peach-cloud-iron)]">
+                  {{ activePeachCloudCampaign.campaignCopy.sensoryBody }}
+                </p>
+              </section>
+
+              <section
+                v-if="activePeachCloudCampaign"
+                class="border-y-2 border-[var(--peach-cloud-ink)]"
+              >
+                <img
+                  :src="activePeachCloudCampaign.campaignMedia.ingredients.imageUrl"
+                  :alt="activePeachCloudCampaign.campaignMedia.ingredients.alt"
+                  class="aspect-[3/2] w-full object-cover"
+                  loading="lazy"
+                  :data-required-asset="
+                    activePeachCloudCampaign.campaignMedia.ingredients.assetPath
+                  "
+                  @error="handleFoodShopImageError"
+                />
+              </section>
+
+              <section v-if="activePeachCloudCampaign" class="px-5 py-8">
+                <p class="text-[9px] font-black text-[var(--peach-cloud-accent)]">
+                  INGREDIENTS / 03
+                </p>
+                <h2 class="mt-2 text-2xl font-black leading-tight">
+                  {{ activePeachCloudCampaign.campaignCopy.ingredientTitle }}
+                </h2>
+                <p class="mt-3 text-sm font-semibold leading-6 text-[var(--peach-cloud-iron)]">
+                  {{ activePeachCloudCampaign.campaignCopy.ingredientBody }}
+                </p>
+              </section>
+
+              <section
+                v-if="activePeachCloudCampaign"
+                class="border-t-2 border-[var(--peach-cloud-ink)] bg-[var(--peach-cloud-mist)]/35 px-5 py-8"
+              >
+                <p class="text-[9px] font-black">PEACH CLOUD / READY TO POUR</p>
+                <h2 class="mt-2 text-2xl font-black leading-tight">
+                  {{ activePeachCloudCampaign.campaignCopy.finishTitle }}
+                </h2>
+                <p class="mt-3 text-sm font-semibold leading-6 text-[var(--peach-cloud-iron)]">
+                  {{ activePeachCloudCampaign.campaignCopy.finishBody }}
+                </p>
+                <div
+                  class="mt-6 flex items-center justify-between gap-4 border-t border-[var(--peach-cloud-ink)]/20 pt-5"
+                >
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-black">
+                      {{ activePeachCloudCampaign.productTitle }}
+                    </p>
+                    <p v-if="activePeachCloudCampaignPrice" class="mt-1 text-xs font-black">
+                      {{ activePeachCloudCampaignPrice.amount }}
+                      {{ activePeachCloudCampaignPrice.currency }}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="inline-flex h-11 shrink-0 items-center gap-2 bg-[var(--peach-cloud-accent)] px-5 text-xs font-black shadow-[3px_3px_0_var(--peach-cloud-ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                    data-testid="food-delivery-peach-cloud-campaign-order"
+                    @click="openMenuItemDetail(activePeachCloudCampaign.menuItemId)"
+                  >
+                    {{ t('选择数量', 'Choose quantity') }}
+                    <i class="fas fa-arrow-right text-[10px]"></i>
+                  </button>
+                </div>
               </section>
             </main>
           </template>
@@ -7953,12 +8424,41 @@ onBeforeUnmount(() => {
                   @error="handleFoodShopImageError"
                 />
                 <div
-                  class="relative flex h-full w-[48%] flex-col justify-between bg-[var(--peach-cloud-accent)]/92 p-5 backdrop-blur-[2px]"
+                  class="absolute inset-0 flex flex-col justify-between p-5 text-[var(--peach-cloud-ink)]"
+                  data-testid="food-delivery-peach-cloud-merch-hero-copy"
                 >
-                  <span class="text-[9px] font-black">PEACH CLOUD GOODS / 01</span>
-                  <h1 class="text-3xl font-black leading-[0.96]">
-                    {{ t('把小桃子带回家', 'TAKE A LITTLE CLOUD HOME') }}
-                  </h1>
+                  <div class="flex items-start justify-between gap-3">
+                    <span
+                      class="inline-flex items-center gap-2 rounded-full border border-[var(--peach-cloud-ink)]/35 bg-white/70 px-3 py-1.5 text-[8px] font-black shadow-[0_3px_10px_rgba(43,48,58,0.1)] backdrop-blur-sm"
+                    >
+                      <i class="fas fa-star text-[var(--peach-cloud-accent)]"></i>
+                      PEACH CLOUD GOODS / 01
+                    </span>
+                    <span
+                      class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/30 bg-[var(--peach-cloud-accent)]/80 text-xs shadow-[0_3px_10px_rgba(43,48,58,0.12)]"
+                      aria-hidden="true"
+                    >
+                      <i class="fas fa-heart"></i>
+                    </span>
+                  </div>
+                  <div class="max-w-[54%] pb-1">
+                    <span class="mb-3 block h-1 w-12 bg-[var(--peach-cloud-accent)]"></span>
+                    <h1
+                      class="text-[1.75rem] font-black leading-[0.98] [text-shadow:0_1px_0_rgba(255,255,255,0.9)]"
+                    >
+                      {{ t('把小桃子带回家', 'TAKE A LITTLE CLOUD HOME') }}
+                    </h1>
+                    <p
+                      class="mt-3 text-[9px] font-black leading-4 text-[var(--peach-cloud-iron)] [text-shadow:0_1px_0_rgba(255,255,255,0.9)]"
+                    >
+                      {{
+                        t(
+                          '柔软、轻巧，陪你去每个日常。',
+                          'Soft companions for bright everyday trips.',
+                        )
+                      }}
+                    </p>
+                  </div>
                 </div>
               </section>
               <section class="px-4 pt-7">
@@ -8166,7 +8666,12 @@ onBeforeUnmount(() => {
                     {{ t('购物袋轻飘飘的', 'Your bag feels light') }}
                   </h2>
                   <p class="mt-2 text-xs font-semibold leading-5 text-[var(--peach-cloud-iron)]">
-                    {{ t('先挑一杯饮品、一份甜点或一件桃气周边。', 'Add a drink, dessert, or Peach Cloud good to get started.') }}
+                    {{
+                      t(
+                        '先挑一杯饮品、一份甜点或一件桃气周边。',
+                        'Add a drink, dessert, or Peach Cloud good to get started.',
+                      )
+                    }}
                   </p>
                   <button
                     type="button"
@@ -8362,9 +8867,9 @@ onBeforeUnmount(() => {
                       class="flex items-start justify-between gap-3 text-xs"
                     >
                       <div class="min-w-0">
-                        <p class="font-black">{{
-                          resolvePeachCloudOrderItemTitle(item, systemLanguage)
-                        }}</p>
+                        <p class="font-black">
+                          {{ resolvePeachCloudOrderItemTitle(item, systemLanguage) }}
+                        </p>
                         <p class="mt-1 font-semibold text-[var(--peach-cloud-iron)]">
                           × {{ item.quantity }}
                         </p>

@@ -1,0 +1,13 @@
+Use case: style-transfer
+Asset type: landscape sensory-detail photography for a mobile long-form product campaign page
+Primary request: Create a new text-free macro editorial scene for White Peach Lime Sparkler that makes carbonation, cold glass, peach flesh, lime, mint, and transparent ice feel vivid and tactile.
+Input images: Image 1 is the accepted campaign-poster style and mascot identity reference; Image 2 is the exact product reference.
+Scene/backdrop: pale-green and fresh-white Peach Cloud studio with one soft Pink Mist arc and minimal cloud-paper depth.
+Subject: extreme close detail of the same pale blush sparkling drink, with the glass rim, dense fine bubbles, condensation beads, one white-peach wedge, one lime round, mint, and clear ice all physically plausible; no mascot in this frame.
+Style/medium: photorealistic premium beverage macro photography.
+Composition/framing: 3:2 landscape; glass detail runs diagonally from lower-right toward center; left third remains calm enough for adjacent code copy but is still photographic, not a flat panel.
+Lighting/mood: cool bright sidelight with crisp refraction and tiny specular highlights.
+Color palette: Pale Green #F2FBE0, Pink Mist #FDA1B8, pale peach, lime green, white.
+Materials/textures: real condensation, carbonated bubbles, translucent fruit, clear ice, glass refraction, matte paper background.
+Constraints: exact approved ingredients only; no full second glass, people, hands, packaging, text, letters, numbers, price, logo, UI, watermark.
+Avoid: synthetic plastic fruit, cloudy ice, lemon-yellow dominance, syrupy liquid, exaggerated splash, dark bar scene, flat vector illustration.

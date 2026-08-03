@@ -174,11 +174,17 @@ describe('food delivery store', () => {
     expect(harborRoast?.image.url).toContain(
       '/images/ui-assets/apps/food-delivery/harbor-roast/cover/harbor-roast-cover-01.png',
     )
-    expect(harborMenu).toHaveLength(12)
+    expect(harborMenu).toHaveLength(13)
     expect(new Set(harborMenu.map((item) => item.menuSection))).toEqual(
-      new Set(['espresso_classics', 'harbor_signatures', 'cold_blended', 'tea_counter_bakes']),
+      new Set([
+        'espresso_classics',
+        'harbor_signatures',
+        'cold_blended',
+        'tea_counter_bakes',
+        'harbor_collaboration',
+      ]),
     )
-    expect(harborMenu.filter((item) => item.menuSection !== 'tea_counter_bakes')).toHaveLength(9)
+    expect(harborMenu.filter((item) => item.menuSection !== 'tea_counter_bakes')).toHaveLength(10)
     expect(store.findMenuItemById('food_menu_harbor_sea_salt_caramel_latte')).toMatchObject({
       title: 'Sea-Salt Caramel Latte',
       ingredients: expect.stringContaining('sea salt'),
@@ -186,6 +192,16 @@ describe('food delivery store', () => {
     expect(store.findMenuItemById('food_menu_harbor_almond_butter_croissant')?.image.url).toContain(
       '/images/ui-assets/apps/food-delivery/harbor-roast/products/harbor-roast-item-12.png',
     )
+    expect(store.findMenuItemById('food_menu_harbor_pompompurin_dockside_set')).toMatchObject({
+      title: 'Pompompurin Dockside Custard Set',
+      menuSection: 'harbor_collaboration',
+      price: '48.00',
+      image: {
+        url: expect.stringContaining(
+          '/images/ui-assets/apps/food-delivery/harbor-roast/products/harbor-roast-item-13.png',
+        ),
+      },
+    })
   })
 
   test('adds Harbor Roast to older saves while preserving same-id user edits', () => {
@@ -229,7 +245,7 @@ describe('food delivery store', () => {
     expect(store.findRestaurantById('food_saved_corner_cafe')).toMatchObject({
       name: 'Saved Corner Cafe',
     })
-    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(12)
+    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(13)
     expect(store.findMenuItemById('food_menu_harbor_house_americano')).toMatchObject({
       restaurantId: 'food_seed_harbor_roast',
       title: 'My Saved Americano',
@@ -565,8 +581,8 @@ describe('food delivery store', () => {
     expect(store.listMenuByRestaurant('food_seed_dash_grill')).toHaveLength(10)
     expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
     expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
-    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(12)
-    expect(store.menuItemCount).toBe(459)
+    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(13)
+    expect(store.menuItemCount).toBe(460)
 
     const migratedSnapshot = store.createBackupSnapshot()
     store.resetForTesting()

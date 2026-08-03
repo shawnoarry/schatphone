@@ -1194,7 +1194,7 @@ describe('FoodDeliveryView', () => {
       wrapper
         .get('[data-testid="food-delivery-peach-cloud-poster-white-peach-lime"]')
         .attributes('aria-label'),
-    ).toBe('白桃青柠气泡新品海报')
+    ).toBe('白桃青柠气泡新品海报, 26 CNY')
     expect(wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').text()).toContain(
       '鲜果特饮',
     )
@@ -1761,6 +1761,7 @@ describe('FoodDeliveryView', () => {
   test('renders Peach Cloud as a distinct dessert-window app with working browse and quantity cart actions', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
+    const walletStore = useWalletStore()
     systemStore.settings.system.language = 'en-US'
     await router.push(
       '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
@@ -1776,9 +1777,7 @@ describe('FoodDeliveryView', () => {
     const peachCloudMenu = store.listMenuByRestaurant('food_seed_peach_cloud')
     const teaItem = peachCloudMenu.find((item) => item.menuSection === 'cloud_tea')
     const posterItem = peachCloudMenu.find((item) => item.id === 'food_menu_peach_oolong_cloud')
-    const pairingItem = peachCloudMenu.find(
-      (item) => item.id === 'food_menu_peach_golden_hour_set',
-    )
+    const pairingItem = peachCloudMenu.find((item) => item.id === 'food_menu_peach_golden_hour_set')
     const peachCloudView = wrapper.get('[data-testid="food-delivery-view"]')
 
     expect(
@@ -1792,42 +1791,145 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-store-app"]').classes()).toContain(
       'food-delivery-store-peach-cloud',
     )
-    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-home-poster-stage"]').exists()).toBe(
-      true,
+    expect(
+      wrapper.get('[data-testid="food-delivery-peach-cloud-home-poster-stage"]').exists(),
+    ).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-brand-hero"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-hero-cover"]').exists()).toBe(true)
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-peach-cloud-hero-cover"] img')
+        .attributes('data-required-asset'),
+    ).toBe('peach-cloud/cover/peach-cloud-hero-01.png')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-brand-hero"]').classes()).toContain(
+      'aspect-[3/2]',
     )
-    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-brand-hero"]').exists()).toBe(
-      false,
-    )
-    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-hero-cover"]').exists()).toBe(
-      false,
-    )
+    expect(wrapper.find('[data-testid="food-delivery-menu-panel"]').exists()).toBe(false)
     expect(
       wrapper
         .get('[data-testid="food-delivery-peach-cloud-header-profile"] img')
         .attributes('data-required-asset'),
     ).toBe('peach-cloud/brand/peach-cloud-mark-01.svg')
-    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(0)
+    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(
+      0,
+    )
     const productAssetPaths = wrapper
       .findAll('img[data-required-asset^="peach-cloud/products/peach-cloud-item-"]')
       .map((image) => image.attributes('data-required-asset'))
     expect(productAssetPaths).toHaveLength(0)
     expect(
-      wrapper.findAll('[data-testid="food-delivery-peach-cloud-campaigns"] button'),
+      wrapper.findAll(
+        '[data-testid="food-delivery-peach-cloud-campaigns"] button[data-testid^="food-delivery-peach-cloud-poster-"]',
+      ),
+    ).toHaveLength(3)
+    expect(
+      wrapper.findAll('[data-testid^="food-delivery-peach-cloud-carousel-previous-"]'),
+    ).toHaveLength(3)
+    expect(
+      wrapper.findAll('[data-testid^="food-delivery-peach-cloud-carousel-next-"]'),
     ).toHaveLength(3)
     const posterAssetPaths = wrapper
       .findAll('img[data-required-asset^="peach-cloud/promotions/posters/"]')
       .map((image) => image.attributes('data-required-asset'))
     expect(posterAssetPaths).toEqual([
-      'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-01.png',
+      'peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-dynamic-price-pilot-01.png',
       'peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
       'peach-cloud/promotions/posters/peach-cloud-poster-mascot-plush-01.png',
     ])
+    const posterPrice = wrapper.get(
+      '[data-testid="food-delivery-peach-cloud-poster-price-white-peach-lime"]',
+    )
+    expect(posterPrice.text()).toContain('26')
+    expect(posterPrice.text()).toContain('CNY')
+    expect(posterPrice.attributes('data-price-source-currency')).toBe('CNY')
+
+    walletStore.setPrimaryCurrency('EUR')
+    await flushPromises()
+    expect(posterPrice.text()).toContain('3.34')
+    expect(posterPrice.text()).toContain('EUR')
+
+    walletStore.setPrimaryCurrency('KRW')
+    await flushPromises()
+    expect(posterPrice.text()).toContain('5015')
+    expect(posterPrice.text()).toContain('KRW')
+
+    walletStore.setPrimaryCurrency('CNY')
+    await flushPromises()
+    expect(posterPrice.text()).toContain('26')
+
     expect(wrapper.find('[data-testid="food-delivery-peach-cloud-featured"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-nav"]').exists()).toBe(true)
 
     await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-fruit_sparkle"]')
+      .trigger('click')
+    await flushPromises()
+    expect(
+      wrapper.find('[data-testid="food-delivery-peach-cloud-home-poster-stage"]').exists(),
+    ).toBe(false)
+    expect(wrapper.get('[data-testid="food-delivery-menu-panel"]').exists()).toBe(true)
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-store-menu-items"]')
+        .attributes('data-active-section'),
+    ).toBe('fruit_sparkle')
+    expect(wrapper.findAll('[data-testid^="food-delivery-menu-"][data-menu-section]')).toHaveLength(
+      5,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-clear-filter"]').text()).toContain(
+      'Posters',
+    )
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-clear-filter"]').trigger('click')
+    await flushPromises()
+    expect(
+      wrapper.get('[data-testid="food-delivery-peach-cloud-home-poster-stage"]').exists(),
+    ).toBe(true)
+    expect(wrapper.find('[data-testid="food-delivery-menu-panel"]').exists()).toBe(false)
+    expect(
+      wrapper.findAll(
+        '[data-testid="food-delivery-peach-cloud-campaigns"] button[data-testid^="food-delivery-peach-cloud-poster-"]',
+      ),
+    ).toHaveLength(3)
+
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-carousel-next-white-peach-lime"]')
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBeUndefined()
+    expect(wrapper.find('[data-testid="food-delivery-peach-cloud-campaign-page"]').exists()).toBe(
+      false,
+    )
+
+    await wrapper
       .get('[data-testid="food-delivery-peach-cloud-poster-white-peach-lime"]')
       .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('campaign')
+    expect(router.currentRoute.value.query.shopCampaign).toBe('white-peach-lime')
+    expect(wrapper.find('[data-testid="food-delivery-menu-detail-sheet"]').exists()).toBe(false)
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-peach-cloud-campaign-page"]')
+        .attributes('data-campaign-key'),
+    ).toBe('white-peach-lime')
+    expect(wrapper.get('[data-testid="food-delivery-peach-cloud-campaign-page"]').text()).toContain(
+      posterItem.title,
+    )
+    expect(
+      wrapper
+        .findAll(
+          '[data-testid="food-delivery-peach-cloud-campaign-page"] img[data-required-asset^="peach-cloud/campaigns/"]',
+        )
+        .map((image) => image.attributes('data-required-asset')),
+    ).toEqual([
+      'peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-hero-01.webp',
+      'peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-bubbles-01.webp',
+      'peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-ingredients-01.webp',
+    ])
+    expect(
+      wrapper.get('[data-testid="food-delivery-peach-cloud-campaign-price"]').text(),
+    ).toContain('26')
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-campaign-order"]').trigger('click')
     await flushPromises()
     expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
       posterItem.title,
@@ -1866,6 +1968,12 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.findAll('[data-testid^="food-delivery-peach-cloud-new-poster-"]')).toHaveLength(
       3,
     )
+    const newPagePosterPrice = wrapper.get(
+      '[data-testid="food-delivery-peach-cloud-new-price-white-peach-lime"]',
+    )
+    expect(newPagePosterPrice.text()).toContain('26')
+    expect(newPagePosterPrice.text()).toContain('CNY')
+    expect(newPagePosterPrice.attributes('data-price-source-currency')).toBe('CNY')
     expect(
       wrapper.find('[data-testid="food-delivery-menu-food_menu_peach_golden_hour_set"]').exists(),
     ).toBe(false)
@@ -1874,6 +1982,34 @@ describe('FoodDeliveryView', () => {
         '[data-testid="food-delivery-peach-cloud-new-page"] [data-testid^="food-delivery-menu-"][data-menu-section]',
       ),
     ).toHaveLength(0)
+
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-new-poster-waxberry-lychee"]')
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('campaign')
+    expect(router.currentRoute.value.query.shopCampaign).toBe('waxberry-lychee')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-peach-cloud-campaign-page"]')
+        .attributes('data-campaign-key'),
+    ).toBe('waxberry-lychee')
+    expect(
+      wrapper
+        .findAll(
+          '[data-testid="food-delivery-peach-cloud-campaign-page"] img[data-required-asset^="peach-cloud/campaigns/"]',
+        )
+        .map((image) => image.attributes('data-required-asset')),
+    ).toEqual([
+      'peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-hero-01.webp',
+      'peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-ice-01.webp',
+      'peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-ingredients-01.webp',
+    ])
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-campaign-back"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('new')
+    expect(router.currentRoute.value.query.shopCampaign).toBeUndefined()
+
     expect(wrapper.get('[data-testid="food-delivery-peach-cloud-featured"]').text()).toContain(
       pairingItem.title,
     )
@@ -1957,6 +2093,18 @@ describe('FoodDeliveryView', () => {
         .get('[data-testid="food-delivery-peach-cloud-merch-campaign-image"]')
         .attributes('data-required-asset'),
     ).toBe('peach-cloud/promotions/peach-cloud-mascot-market-01.png')
+    const merchHeroCopy = wrapper.get('[data-testid="food-delivery-peach-cloud-merch-hero-copy"]')
+    expect(merchHeroCopy.classes()).not.toContain('w-[48%]')
+    expect(merchHeroCopy.classes()).not.toContain('bg-[var(--peach-cloud-accent)]/92')
+
+    await wrapper.get('[data-testid="food-delivery-peach-cloud-nav-home"]').trigger('click')
+    await flushPromises()
+    await wrapper
+      .get('[data-testid="food-delivery-peach-cloud-poster-mascot-plush"]')
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('merch')
+    expect(router.currentRoute.value.query.shopCampaign).toBeUndefined()
 
     await wrapper
       .get('[data-testid="food-delivery-peach-cloud-add-merch-peach_merch_cloud_plush"]')
@@ -2411,13 +2559,13 @@ describe('FoodDeliveryView', () => {
     const store = useFoodDeliveryStore()
     const harborItem = store.findMenuItemById('food_menu_harbor_sea_salt_caramel_latte')
 
-    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(12)
+    expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(13)
     expect(
       wrapper.get('[data-testid="food-delivery-store-shell"]').attributes('data-store-template'),
     ).toBe('harbor_roast_chain')
-    expect(wrapper.findAll('[data-testid^="food-delivery-harbor-campaign-"]')).toHaveLength(3)
+    expect(wrapper.findAll('[data-testid^="food-delivery-harbor-campaign-"]')).toHaveLength(4)
 
-    for (const campaign of ['member', 'new', 'passport']) {
+    for (const campaign of ['member', 'new', 'passport', 'pompompurin']) {
       await wrapper
         .get(`[data-testid="food-delivery-harbor-campaign-${campaign}"]`)
         .trigger('click')
@@ -2486,23 +2634,58 @@ describe('FoodDeliveryView', () => {
     await wrapper.get('[data-testid="food-delivery-harbor-nav-menu"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.shopView).toBe('menu')
+    expect(wrapper.find('[data-testid="food-delivery-harbor-packaging-deck"]').exists()).toBe(false)
     await wrapper
       .get('[data-testid="food-delivery-store-menu-section-harbor_signatures"]')
       .trigger('click')
-    await wrapper.get(`[data-testid="food-delivery-menu-open-${harborItem.id}"]`).trigger('click')
+    expect(wrapper.find(`[data-testid="food-delivery-add-${harborItem.id}"]`).exists()).toBe(false)
+    await wrapper
+      .get(`[data-testid="food-delivery-harbor-customize-${harborItem.id}"]`)
+      .trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query).toMatchObject({
       shopView: 'detail',
       shopItemId: harborItem.id,
     })
+    expect(wrapper.get('[data-testid="food-delivery-harbor-packaging-standard"]').text()).toContain(
+      'Harbor classic paper cup',
+    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-harbor-packaging-pompompurin_cup"]').text(),
+    ).toContain('Pompompurin collaboration cup')
     await wrapper
       .get('[data-testid="food-delivery-harbor-detail-quantity-increase"]')
       .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-harbor-temperature-iced"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-harbor-size-long"]').trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-harbor-packaging-pompompurin_sleeve"]')
+      .trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-harbor-detail-page"]').text()).toContain(
+      '84.00 CNY',
+    )
     await wrapper.get('[data-testid="food-delivery-harbor-detail-add"]').trigger('click')
     expect(store.getCartQuantityByRestaurant('food_seed_harbor_roast')).toBe(4)
+    expect(store.listCartLineItemsByRestaurant('food_seed_harbor_roast')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          menuItemId: harborItem.id,
+          unitPriceCents: 4200,
+          quantity: 2,
+          selection: expect.objectContaining({
+            temperature: 'iced',
+            size: 'long',
+            packaging: 'pompompurin_sleeve',
+          }),
+        }),
+      ]),
+    )
 
     await wrapper.get('[data-testid="food-delivery-harbor-header-bag"]').trigger('click')
     await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-harbor-cart-selection"]').text()).toContain(
+      'Iced · Long 16oz · Collaboration cup + keepsake sleeve',
+    )
     await wrapper.get('[data-testid="food-delivery-harbor-pickup-dine-in"]').trigger('click')
     await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
     expect(wrapper.find('[data-testid="food-delivery-checkout-sheet"]').exists()).toBe(false)
@@ -2530,6 +2713,15 @@ describe('FoodDeliveryView', () => {
           acquisition: 'purchase',
           unitPriceCents: 8900,
         }),
+        expect.objectContaining({
+          menuItemId: harborItem.id,
+          unitPriceCents: 4200,
+          selection: expect.objectContaining({
+            temperature: 'iced',
+            size: 'long',
+            packaging: 'pompompurin_sleeve',
+          }),
+        }),
       ]),
     })
     expect(router.currentRoute.value.query).toMatchObject({
@@ -2539,10 +2731,20 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-harbor-order-page"]').text()).toContain(
       'Dine in',
     )
+    expect(wrapper.get('[data-testid="food-delivery-harbor-order-selection"]').text()).toContain(
+      'Iced · Long 16oz · Collaboration cup + keepsake sleeve',
+    )
 
     await wrapper.get('[data-testid="food-delivery-harbor-nav-menu"]').trigger('click')
     await flushPromises()
-    await wrapper.get(`[data-testid="food-delivery-add-${harborItem.id}"]`).trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-harbor_signatures"]')
+      .trigger('click')
+    await wrapper
+      .get(`[data-testid="food-delivery-harbor-customize-${harborItem.id}"]`)
+      .trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="food-delivery-harbor-detail-add"]').trigger('click')
     await wrapper.get('[data-testid="food-delivery-harbor-nav-bag"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="food-delivery-harbor-mode-delivery"]').trigger('click')

@@ -1,0 +1,10 @@
+Use case: ads-marketing
+Asset type: Harbor Roast collaboration activity story band
+Input images: Image 1 is the accepted permanent Harbor Roast paper cup; Image 2 is the accepted collaboration poster and locks the character and packaging style.
+Primary request: Create a wide editorial exploded-packaging photograph showing how the collaboration layers work.
+Scene/backdrop: clean Cream #F9F2ED tabletop with Blush #EDD6C8 and Copper #C67C4E paper accents.
+Subject: from left to right, the permanent Harbor Roast paper cup without sleeve, the removable Pompompurin collaboration sleeve shown separately, the cup with the sleeve fitted, and the separate collaboration paper carrier. Add one small recognizable Pompompurin character figure near the carrier for scale and charm.
+Style/medium: refined commercial packaging story photography, clear tactile materials and construction.
+Composition/framing: wide 3:2 layout, each stage fully visible with equal breathing room, center-safe for responsive crop, no text area required.
+Lighting/mood: soft directional cafe light with compact shadows.
+Constraints: cup body, sleeve, and carrier must remain distinct. No food besides a subtle latte lid cue, no readable text, no price, no UI, no watermark, no Sanrio wordmark or official logo, no extra characters.

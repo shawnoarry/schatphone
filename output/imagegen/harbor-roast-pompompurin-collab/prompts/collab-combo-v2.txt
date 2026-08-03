@@ -1,0 +1,10 @@
+Use case: precise-object-edit
+Asset type: square Food Delivery product photograph for the Pompompurin Dockside Custard Set
+Primary request: Update Image 1 so the drink uses the complete printed collaboration paper cup from Image 2. Remove the sleeve from around the cup and display one detached peach keepsake sleeve beside it, clearly separate from the cup. Keep the custard tart and handled carrier as included parts of the set.
+Input images: Image 1 is the edit target and fixes the square composition, Pompompurin figure, tart, handled carrier, terracotta table, lighting, and crop. Image 2 is the exact visual reference for the printed collaboration cup.
+Subject: One complete printed collaboration paper cup, one detached keepsake sleeve, one custard tart, one handled carrier, and one small Pompompurin figure.
+Style/medium: premium realistic delivery-menu product photography, tactile paper and pastry textures, coherent Harbor Roast campaign lighting
+Composition/framing: preserve Image 1 square crop and central product scale; keep every included item fully visible and visually distinct; cup print must remain readable at thumbnail size
+Lighting/mood: preserve Image 1 warm soft studio light and apricot-custard palette
+Constraints: change only the takeaway cup and sleeve arrangement; preserve the tart, carrier, figure, background, camera angle, lighting, and table. Match the collaboration cup from Image 2. No text, no wordmark, no official Sanrio logo, no watermark, no duplicate cup, no missing tart, no missing carrier.
+Avoid: plain permanent cup, sleeve covering the printed collaboration cup, merged cup-and-carrier object, diagrammatic layout, extra food

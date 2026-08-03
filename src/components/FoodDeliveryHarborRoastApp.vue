@@ -41,6 +41,9 @@ const activeSlide = ref(0)
 const activeSection = ref('espresso_classics')
 const searchQuery = ref('')
 const detailQuantity = ref(1)
+const detailTemperature = ref('hot')
+const detailSize = ref('harbor')
+const detailPackaging = ref('standard')
 const checkoutOpen = ref(false)
 const fulfillmentMode = ref('pickup')
 const pickupMode = ref('takeout')
@@ -59,13 +62,24 @@ const harborBrandAssets = Object.freeze({
   emptyBag: harborAssetUrl('states/harbor-roast-empty-bag-01.png'),
   emptyOrders: harborAssetUrl('states/harbor-roast-empty-orders-01.png'),
   supplyHero: harborAssetUrl('merchandise/harbor-roast-supply-hero-01.png'),
+  standardPaperCup: harborAssetUrl('packaging/harbor-roast-paper-cup-standard-01.png'),
+  pompompurinPaperCup: harborAssetUrl('packaging/harbor-roast-pompompurin-paper-cup-01.png'),
+  pompompurinSleeve: harborAssetUrl('packaging/harbor-roast-pompompurin-sleeve-01.png'),
+  pompompurinCarrier: harborAssetUrl('packaging/harbor-roast-pompompurin-carrier-01.png'),
 })
+
+const HARBOR_COLLABORATION_ITEM_ID = 'food_menu_harbor_pompompurin_dockside_set'
+const HARBOR_BAKE_ITEM_IDS = new Set([
+  'food_menu_harbor_copper_sugar_scone',
+  'food_menu_harbor_almond_butter_croissant',
+])
 
 const sectionOptions = Object.freeze([
   { key: 'espresso_classics', zh: '经典意式', en: 'Espresso', icon: 'fas fa-mug-hot' },
   { key: 'harbor_signatures', zh: '港湾特调', en: 'Signatures', icon: 'fas fa-anchor' },
   { key: 'cold_blended', zh: '冷萃冰饮', en: 'Cold bar', icon: 'fas fa-snowflake' },
   { key: 'tea_counter_bakes', zh: '茶与烘焙', en: 'Tea & bakes', icon: 'fas fa-cookie-bite' },
+  { key: 'harbor_collaboration', zh: '联名限定', en: 'Collaboration', icon: 'fas fa-star' },
 ])
 
 const campaigns = computed(() => [
@@ -111,6 +125,20 @@ const campaigns = computed(() => [
     carouselImage: harborAssetUrl('campaigns/harbor-roast-carousel-passport-01.png'),
     posterImage: harborAssetUrl('campaigns/harbor-roast-passport-poster-01.png'),
   },
+  {
+    key: 'pompompurin',
+    page: 'pompompurin',
+    eyebrow: t('POMPOMPURIN 联名靠岸', 'POMPOMPURIN HAS DOCKED'),
+    title: t('布丁狗港湾布蕾季', 'A custard-soft Harbor season'),
+    desc: t(
+      '焦糖布蕾拿铁与酥香蛋挞，限时换上布丁狗联名纸杯，套餐另含收藏杯套与手提杯托。',
+      'Custard latte and a golden tart arrive in a limited Pompompurin cup, with a keepsake sleeve and carrier in the set.',
+    ),
+    cta: t('进入联名活动页', 'Enter the collaboration'),
+    className: 'is-pompompurin',
+    carouselImage: harborAssetUrl('campaigns/harbor-roast-carousel-pompompurin-01.png'),
+    posterImage: harborAssetUrl('campaigns/harbor-roast-pompompurin-poster-01.png'),
+  },
 ])
 
 const menuSections = computed(() =>
@@ -139,15 +167,145 @@ const visibleMenuItems = computed(() => {
 const signatureItems = computed(() =>
   props.menuItems.filter((item) => item.menuSection === 'harbor_signatures').slice(0, 3),
 )
+const collaborationItem = computed(
+  () => props.menuItems.find((item) => item.id === HARBOR_COLLABORATION_ITEM_ID) || null,
+)
 const activeCampaign = computed(
   () => campaigns.value.find((campaign) => campaign.page === props.page) || campaigns.value[0],
 )
+const isBakeItem = (item = {}) => HARBOR_BAKE_ITEM_IDS.has(item?.id)
+const isCollaborationItem = (item = {}) => item?.id === HARBOR_COLLABORATION_ITEM_ID
+const menuItemTitle = (item = {}) =>
+  isCollaborationItem(item)
+    ? t('布丁狗港湾布蕾套餐', 'Pompompurin Dockside Custard Set')
+    : item.title || ''
+const menuItemDescription = (item = {}) =>
+  isCollaborationItem(item)
+    ? t(
+        '焦糖布蕾拿铁搭配酥香蛋挞，含布丁狗联名纸杯、收藏杯套与手提杯托。',
+        'Caramel custard latte and tart with a Pompompurin cup, keepsake sleeve, and handled carrier.',
+      )
+    : item.desc || ''
+const temperatureChoices = computed(() => {
+  if (!props.activeItem || isBakeItem(props.activeItem)) return []
+  const choices = [
+    { key: 'hot', zh: '热饮', en: 'Hot', icon: 'fas fa-mug-hot' },
+    { key: 'iced', zh: '冰饮', en: 'Iced', icon: 'fas fa-snowflake' },
+  ]
+  if (
+    props.activeItem.menuSection === 'cold_blended' ||
+    props.activeItem.id === 'food_menu_harbor_apricot_earl_grey'
+  ) {
+    return choices.filter((choice) => choice.key === 'iced')
+  }
+  return choices
+})
+const sizeChoices = computed(() => {
+  if (!props.activeItem || isBakeItem(props.activeItem)) return []
+  if (isCollaborationItem(props.activeItem)) {
+    return [{ key: 'harbor', zh: '港湾杯 12oz', en: 'Harbor 12oz', deltaCents: 0 }]
+  }
+  return [
+    { key: 'short', zh: '短杯 8oz', en: 'Short 8oz', deltaCents: -200 },
+    { key: 'harbor', zh: '港湾杯 12oz', en: 'Harbor 12oz', deltaCents: 0 },
+    { key: 'long', zh: '长杯 16oz', en: 'Long 16oz', deltaCents: 400 },
+  ]
+})
+const packagingChoices = computed(() => {
+  if (!props.activeItem || isBakeItem(props.activeItem)) return []
+  if (isCollaborationItem(props.activeItem)) {
+    return [
+      {
+        key: 'pompompurin_set',
+        zh: '联名纸杯、杯套与手提杯托',
+        en: 'Collaboration cup, sleeve + carrier',
+        deltaCents: 0,
+        image: harborBrandAssets.pompompurinPaperCup,
+        asset: 'harbor-roast/packaging/harbor-roast-pompompurin-paper-cup-01.png',
+        descZh: '套餐已含完整联名包装',
+        descEn: 'The complete collaboration packaging is included',
+      },
+    ]
+  }
+  return [
+    {
+      key: 'standard',
+      zh: 'Harbor 经典纸杯',
+      en: 'Harbor classic paper cup',
+      deltaCents: 0,
+      image: harborBrandAssets.standardPaperCup,
+      asset: 'harbor-roast/packaging/harbor-roast-paper-cup-standard-01.png',
+      descZh: '奶油白杯身与铜锚标记',
+      descEn: 'Cream paper with the copper anchor',
+    },
+    {
+      key: 'pompompurin_cup',
+      zh: '布丁狗联名纸杯',
+      en: 'Pompompurin collaboration cup',
+      deltaCents: 300,
+      image: harborBrandAssets.pompompurinPaperCup,
+      asset: 'harbor-roast/packaging/harbor-roast-pompompurin-paper-cup-01.png',
+      descZh: '整杯限定印花，不是杯套',
+      descEn: 'A full printed cup, not a sleeve',
+    },
+    {
+      key: 'pompompurin_sleeve',
+      zh: '联名纸杯 + 收藏杯套',
+      en: 'Collaboration cup + keepsake sleeve',
+      deltaCents: 500,
+      image: harborBrandAssets.pompompurinSleeve,
+      asset: 'harbor-roast/packaging/harbor-roast-pompompurin-sleeve-01.png',
+      descZh: '联名杯与可拆杯套一起带走',
+      descEn: 'Take home the printed cup and removable sleeve',
+    },
+  ]
+})
+const activeSizeChoice = computed(
+  () => sizeChoices.value.find((choice) => choice.key === detailSize.value) || sizeChoices.value[0],
+)
+const activePackagingChoice = computed(
+  () =>
+    packagingChoices.value.find((choice) => choice.key === detailPackaging.value) ||
+    packagingChoices.value[0],
+)
+const activeTemperatureChoice = computed(
+  () =>
+    temperatureChoices.value.find((choice) => choice.key === detailTemperature.value) ||
+    temperatureChoices.value[0],
+)
+const detailUnitPriceCents = computed(() =>
+  Math.max(
+    100,
+    Number(props.activeItem?.priceCents || 0) +
+      Number(activeSizeChoice.value?.deltaCents || 0) +
+      Number(activePackagingChoice.value?.deltaCents || 0),
+  ),
+)
 const detailTotal = computed(() => {
-  const price = Number(props.activeItem?.priceCents || 0) * detailQuantity.value
+  const price = detailUnitPriceCents.value * detailQuantity.value
   return `${(price / 100).toFixed(2)} ${props.activeItem?.currency || props.restaurant.currency || 'CNY'}`
 })
+const detailSelection = computed(() => ({
+  temperature: activeTemperatureChoice.value?.key || '',
+  temperatureLabelZh: activeTemperatureChoice.value?.zh || '',
+  temperatureLabelEn: activeTemperatureChoice.value?.en || '',
+  size: activeSizeChoice.value?.key || '',
+  sizeLabelZh: activeSizeChoice.value?.zh || '',
+  sizeLabelEn: activeSizeChoice.value?.en || '',
+  packaging: activePackagingChoice.value?.key || '',
+  packagingLabelZh: activePackagingChoice.value?.zh || '',
+  packagingLabelEn: activePackagingChoice.value?.en || '',
+}))
+const detailSelectionKey = computed(() =>
+  [
+    detailSelection.value.temperature || 'none',
+    detailSelection.value.size || 'none',
+    detailSelection.value.packaging || 'none',
+  ].join('_'),
+)
 const activeNavKey = computed(() => {
-  if (['member', 'new', 'passport', 'supply', 'supply-detail'].includes(props.page)) return 'home'
+  if (['member', 'new', 'passport', 'pompompurin', 'supply', 'supply-detail'].includes(props.page))
+    return 'home'
   if (props.page === 'detail') return 'menu'
   if (props.page === 'order') return 'orders'
   return props.page
@@ -202,6 +360,21 @@ const hideBrokenImage = (event) => {
 }
 
 const displayPrice = (item = {}) => `${item.price || '0.00'} ${item.currency || 'CNY'}`
+const displayPriceDelta = (deltaCents = 0) => {
+  if (!deltaCents) return t('已含', 'Included')
+  const sign = deltaCents > 0 ? '+' : '−'
+  return `${sign}${(Math.abs(deltaCents) / 100).toFixed(2)} ${props.activeItem?.currency || props.restaurant.currency || 'CNY'}`
+}
+const selectionSummary = (selection = {}) => {
+  const value = selection || {}
+  return [
+    t(value.temperatureLabelZh || '', value.temperatureLabelEn || ''),
+    t(value.sizeLabelZh || '', value.sizeLabelEn || ''),
+    t(value.packagingLabelZh || '', value.packagingLabelEn || ''),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
 const merchandiseTitle = (item = {}) => t(item.titleZh || item.title, item.titleEn || item.title)
 const merchandiseDescription = (item = {}) => t(item.descZh || '', item.descEn || '')
 const merchandiseDetail = (item = {}) => t(item.detailZh || '', item.detailEn || '')
@@ -332,7 +505,43 @@ const redeemMerchandise = (item) => {
 
 const addDetailItem = (event) => {
   if (!props.activeItem?.id) return
-  emit('add-item', props.activeItem.id, detailQuantity.value, event?.currentTarget)
+  emit('add-item', props.activeItem.id, detailQuantity.value, {
+    selectionKey: detailSelectionKey.value,
+    selection: detailSelection.value,
+    unitPriceCents: detailUnitPriceCents.value,
+    trigger: event?.currentTarget || null,
+  })
+}
+
+const addCollaborationSet = () => {
+  if (!collaborationItem.value) return
+  emit('add-item', collaborationItem.value.id, 1, {
+    selectionKey: 'hot_harbor_pompompurin_set',
+    selection: {
+      temperature: 'hot',
+      temperatureLabelZh: '热饮',
+      temperatureLabelEn: 'Hot',
+      size: 'harbor',
+      sizeLabelZh: '港湾杯 12oz',
+      sizeLabelEn: 'Harbor 12oz',
+      packaging: 'pompompurin_set',
+      packagingLabelZh: '联名纸杯、杯套与手提杯托',
+      packagingLabelEn: 'Collaboration cup, sleeve + carrier',
+    },
+    unitPriceCents: Number(collaborationItem.value.priceCents || 4800),
+  })
+  emit('navigate', 'bag')
+}
+
+const resetDetailOptions = () => {
+  detailQuantity.value = 1
+  const item = props.activeItem
+  detailTemperature.value =
+    item?.menuSection === 'cold_blended' || item?.id === 'food_menu_harbor_apricot_earl_grey'
+      ? 'iced'
+      : 'hot'
+  detailSize.value = 'harbor'
+  detailPackaging.value = isCollaborationItem(item) ? 'pompompurin_set' : 'standard'
 }
 
 const handleBack = () => {
@@ -351,7 +560,7 @@ const submitCheckout = () => {
 watch(
   () => [props.restaurant.id, props.activeItem?.id, props.activeMerchandise?.id],
   () => {
-    detailQuantity.value = 1
+    resetDetailOptions()
     merchandiseFeedback.value = ''
   },
 )
@@ -520,7 +729,10 @@ onBeforeUnmount(stopCarousel)
               {{ t('全部菜单', 'Full menu') }} <i class="fas fa-chevron-right"></i>
             </button>
           </div>
-          <div class="harbor-product-row mt-4 flex gap-3 overflow-x-auto pb-2">
+          <div
+            class="harbor-product-row mt-4 flex gap-3 overflow-x-auto pb-3"
+            data-testid="food-delivery-harbor-featured-scroller"
+          >
             <article
               v-for="item in signatureItems"
               :key="item.id"
@@ -622,6 +834,143 @@ onBeforeUnmount(stopCarousel)
                 ><strong>{{ t('外卖配送', 'Delivery') }}</strong
                 ><small>{{ etaText }}</small></span
               >
+            </button>
+          </div>
+        </section>
+      </main>
+    </template>
+
+    <template v-else-if="page === 'pompompurin'">
+      <main class="harbor-collaboration-page" data-testid="food-delivery-harbor-pompompurin-page">
+        <section class="harbor-collaboration-hero">
+          <img
+            :src="activeCampaign.posterImage"
+            alt="Harbor Roast Pompompurin collaboration drinks, custard tart, removable sleeve, and carrier"
+            data-required-asset="harbor-roast/campaigns/harbor-roast-pompompurin-poster-01.png"
+          />
+          <div class="harbor-collaboration-hero-copy">
+            <p>POMPOMPURIN × HARBOR ROAST</p>
+            <h1>{{ t('布蕾香气，软软靠岸', 'Custard comfort has docked') }}</h1>
+            <span>{{ t('限时联名 · 数量有限', 'LIMITED COLLABORATION') }}</span>
+          </div>
+        </section>
+
+        <section class="harbor-collab-intro px-4 py-7">
+          <p class="harbor-eyebrow">DOCKSIDE CUSTARD SEASON</p>
+          <h2 class="mt-2 text-3xl font-black leading-none">
+            {{ t('把布丁狗的软萌，装进焦糖布蕾', 'A little custard-soft joy in every sip') }}
+          </h2>
+          <p class="mt-4 text-sm font-semibold leading-6 text-[var(--harbor-muted)]">
+            {{
+              t(
+                '烤糖般的焦香、奶油布蕾的柔滑，再配一只酥脆蛋挞。这个季节，每杯限定饮品都会换上布丁狗联名纸杯。',
+                'Toasty caramel, silky custard, and a crisp tart come together for the season. Every limited drink arrives in the Pompompurin collaboration cup.',
+              )
+            }}
+          </p>
+          <div class="harbor-collab-notes mt-5 grid grid-cols-3 gap-2">
+            <span>{{ t('烤糖焦香', 'TOASTED CARAMEL') }}</span>
+            <span>{{ t('奶油布蕾', 'CREAMY CUSTARD') }}</span>
+            <span>{{ t('限时包装', 'LIMITED CUP') }}</span>
+          </div>
+        </section>
+
+        <section class="harbor-collab-collection px-4 pb-7">
+          <article class="harbor-collab-feature">
+            <img
+              :src="harborBrandAssets.pompompurinPaperCup"
+              alt="Pompompurin limited-edition printed paper cup"
+              data-required-asset="harbor-roast/packaging/harbor-roast-pompompurin-paper-cup-01.png"
+            />
+            <div>
+              <small>LIMITED CUP</small>
+              <h3>{{ t('布丁狗联名纸杯', 'Pompompurin collaboration cup') }}</h3>
+              <p>
+                {{
+                  t(
+                    '布丁黄与杏桃粉铺满杯身，铜锚与贝雷帽小狗一起靠岸。限定印花直接呈现在纸杯上。',
+                    'Custard yellow and apricot pink wrap the cup, with Harbor copper and Pompompurin printed directly onto the paper.',
+                  )
+                }}
+              </p>
+            </div>
+          </article>
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <article class="harbor-collab-extra">
+              <img
+                :src="harborBrandAssets.pompompurinSleeve"
+                alt="Pompompurin removable keepsake sleeve"
+                data-required-asset="harbor-roast/packaging/harbor-roast-pompompurin-sleeve-01.png"
+              />
+              <div>
+                <small>KEEPSAKE SLEEVE</small>
+                <h3>{{ t('可拆收藏杯套', 'Removable keepsake sleeve') }}</h3>
+                <p>
+                  {{
+                    t(
+                      '套餐随杯附赠，单杯也可加购。',
+                      'Included with the set or available as an add-on.',
+                    )
+                  }}
+                </p>
+              </div>
+            </article>
+            <article class="harbor-collab-extra">
+              <img
+                :src="harborBrandAssets.pompompurinCarrier"
+                alt="Pompompurin handled carrier for the collaboration set"
+                data-required-asset="harbor-roast/packaging/harbor-roast-pompompurin-carrier-01.png"
+              />
+              <div>
+                <small>SET EXCLUSIVE</small>
+                <h3>{{ t('联名手提杯托', 'Collaboration carrier') }}</h3>
+                <p>{{ t('一手带走饮品与蛋挞。', 'Carries the drink and tart together.') }}</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section v-if="collaborationItem" class="harbor-collab-order px-4 py-7">
+          <div class="harbor-collab-order-media">
+            <img
+              :src="imageUrl(collaborationItem)"
+              :alt="menuItemTitle(collaborationItem)"
+              data-required-asset="harbor-roast/products/harbor-roast-item-13.png"
+              @error="hideBrokenImage"
+            />
+            <span>{{ t('联名杯 + 杯套 + 杯托', 'CUP + SLEEVE + CARRIER') }}</span>
+          </div>
+          <p class="harbor-eyebrow mt-5">DOCKSIDE SET · LIMITED</p>
+          <h2 class="mt-2 text-3xl font-black leading-none">
+            {{ menuItemTitle(collaborationItem) }}
+          </h2>
+          <p class="mt-3 text-sm font-semibold leading-6 text-[var(--harbor-muted)]">
+            {{ menuItemDescription(collaborationItem) }}
+          </p>
+          <div class="mt-5 flex items-center justify-between border-y py-4">
+            <span class="text-xs font-bold text-[var(--harbor-muted)]"
+              >12oz · {{ t('冷热可选', 'HOT / ICED') }}</span
+            >
+            <strong class="text-xl text-[var(--harbor-copper)]">{{
+              displayPrice(collaborationItem)
+            }}</strong>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              class="harbor-secondary-button"
+              data-testid="food-delivery-harbor-collab-customize"
+              @click="openDetail(collaborationItem)"
+            >
+              <i class="fas fa-sliders"></i> {{ t('选择冷热', 'Customize') }}
+            </button>
+            <button
+              type="button"
+              class="harbor-primary-button"
+              data-testid="food-delivery-harbor-collab-add"
+              @click="addCollaborationSet"
+            >
+              <i class="fas fa-bag-shopping"></i> {{ t('热饮套餐加入袋中', 'Add hot set') }}
             </button>
           </div>
         </section>
@@ -1052,49 +1401,66 @@ onBeforeUnmount(stopCarousel)
             <i :class="section.icon"></i> {{ section.label }}
           </button>
         </div>
-        <div class="mt-4 divide-y border-y" data-testid="food-delivery-store-menu-items">
+
+        <div class="harbor-menu-list mt-5" data-testid="food-delivery-store-menu-items">
           <article
-            v-for="item in visibleMenuItems"
+            v-for="(item, itemIndex) in visibleMenuItems"
             :key="item.id"
-            class="harbor-menu-row"
+            class="harbor-menu-card"
+            :class="{ 'is-collaboration': isCollaborationItem(item) }"
             :data-testid="`food-delivery-menu-${item.id}`"
           >
             <button
               type="button"
-              class="harbor-row-image"
+              class="harbor-menu-card-image"
               :data-testid="`food-delivery-menu-open-${item.id}`"
               @click="openDetail(item)"
             >
-              <span class="harbor-product-fallback"
-                ><i class="fas fa-mug-hot"></i><small>HR</small></span
-              >
+              <span class="harbor-product-fallback" aria-hidden="true">
+                <i :class="isBakeItem(item) ? 'fas fa-cookie-bite' : 'fas fa-mug-hot'"></i>
+              </span>
               <img
                 v-if="imageUrl(item)"
                 :src="imageUrl(item)"
-                :alt="item.image?.alt || item.title"
+                :alt="item.image?.alt || menuItemTitle(item)"
                 :data-required-asset="requiredAssetPath(item)"
                 @error="hideBrokenImage"
               />
             </button>
-            <button type="button" class="min-w-0 flex-1 text-left" @click="openDetail(item)">
-              <strong class="block text-sm leading-4">{{ item.title }}</strong>
-              <span
-                class="mt-1 line-clamp-2 block text-[11px] leading-4 text-[var(--harbor-muted)]"
-                >{{ item.desc }}</span
-              >
-              <span class="mt-2 block text-xs font-black text-[var(--harbor-copper)]">{{
-                displayPrice(item)
-              }}</span>
-            </button>
-            <button
-              type="button"
-              class="harbor-add-button"
-              :aria-label="t('加入购物袋', 'Add to bag')"
-              :data-testid="`food-delivery-add-${item.id}`"
-              @click="emit('add-item', item.id, 1, $event.currentTarget)"
-            >
-              <i class="fas fa-plus"></i>
-            </button>
+            <div class="min-w-0 py-1">
+              <button type="button" class="block w-full text-left" @click="openDetail(item)">
+                <span class="harbor-menu-card-kicker">
+                  {{ String(itemIndex + 1).padStart(2, '0') }}
+                  <template v-if="isCollaborationItem(item)"> · POMPOMPURIN</template>
+                </span>
+                <strong class="mt-1 block text-sm leading-5">{{ menuItemTitle(item) }}</strong>
+                <span
+                  class="mt-1 line-clamp-2 block text-[10px] leading-4 text-[var(--harbor-muted)]"
+                >
+                  {{ menuItemDescription(item) }}
+                </span>
+              </button>
+              <div class="mt-3 flex items-center justify-between gap-2">
+                <div>
+                  <small class="block text-[9px] font-black text-[var(--harbor-muted)]">{{
+                    t('起', 'FROM')
+                  }}</small>
+                  <strong class="text-sm text-[var(--harbor-copper)]">{{
+                    displayPrice(item)
+                  }}</strong>
+                </div>
+                <button
+                  type="button"
+                  class="harbor-menu-card-action"
+                  :aria-label="t('选择冷热、杯型与规格', 'Choose temperature, cup, and size')"
+                  :data-testid="`food-delivery-harbor-customize-${item.id}`"
+                  @click="openDetail(item)"
+                >
+                  <i :class="isBakeItem(item) ? 'fas fa-bag-shopping' : 'fas fa-sliders'"></i>
+                  {{ isBakeItem(item) ? t('选择', 'Select') : t('选规格', 'Customize') }}
+                </button>
+              </div>
+            </div>
           </article>
         </div>
         <div
@@ -1109,15 +1475,8 @@ onBeforeUnmount(stopCarousel)
 
     <template v-else-if="page === 'detail'">
       <main v-if="activeItem" class="px-4 py-5" data-testid="food-delivery-harbor-detail-page">
-        <div
-          class="harbor-detail-stage relative mx-auto aspect-square w-full max-w-[20rem] overflow-hidden"
-        >
-          <span class="harbor-detail-ring" aria-hidden="true"
-            >HARBOR · FRESH ROAST · COASTAL COFFEE ·</span
-          >
-          <div class="harbor-detail-cup" aria-hidden="true">
-            <i class="fas fa-mug-hot"></i><small>HARBOR<br />ROAST</small>
-          </div>
+        <div class="harbor-detail-stage relative mx-auto aspect-[4/3] w-full overflow-hidden">
+          <span class="harbor-detail-mark">BARISTA CARD · MADE TO ORDER</span>
           <img
             v-if="imageUrl(activeItem)"
             :src="imageUrl(activeItem)"
@@ -1129,10 +1488,87 @@ onBeforeUnmount(stopCarousel)
         <p class="harbor-eyebrow mt-6">
           {{ t('ROASTED FOR YOUR ORDER', 'ROASTED FOR YOUR ORDER') }}
         </p>
-        <h1 class="mt-1 text-3xl font-black leading-none">{{ activeItem.title }}</h1>
+        <h1 class="mt-1 text-3xl font-black leading-none">{{ menuItemTitle(activeItem) }}</h1>
         <p class="mt-3 text-sm font-semibold leading-6 text-[var(--harbor-muted)]">
-          {{ activeItem.desc }}
+          {{ menuItemDescription(activeItem) }}
         </p>
+
+        <section v-if="temperatureChoices.length" class="harbor-option-section mt-5 border-t pt-4">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <small>{{ t('温度', 'TEMPERATURE') }}</small>
+              <strong>{{ t('冷热选择', 'Choose your pour') }}</strong>
+            </div>
+            <span>{{ t('制作方式会写入订单', 'Saved with this item') }}</span>
+          </div>
+          <div
+            class="harbor-option-grid mt-3"
+            :style="{ '--option-count': temperatureChoices.length }"
+          >
+            <button
+              v-for="choice in temperatureChoices"
+              :key="choice.key"
+              type="button"
+              :class="{ 'is-active': detailTemperature === choice.key }"
+              :data-testid="`food-delivery-harbor-temperature-${choice.key}`"
+              @click="detailTemperature = choice.key"
+            >
+              <i :class="choice.icon"></i>
+              <strong>{{ t(choice.zh, choice.en) }}</strong>
+            </button>
+          </div>
+        </section>
+
+        <section v-if="sizeChoices.length" class="harbor-option-section mt-5 border-t pt-4">
+          <div>
+            <small>{{ t('杯型与容量', 'CUP SIZE') }}</small>
+            <strong>{{ t('选择杯型规格', 'Select a cup profile') }}</strong>
+          </div>
+          <div class="harbor-size-grid mt-3" :class="{ 'is-single': sizeChoices.length === 1 }">
+            <button
+              v-for="choice in sizeChoices"
+              :key="choice.key"
+              type="button"
+              :class="{ 'is-active': detailSize === choice.key }"
+              :data-testid="`food-delivery-harbor-size-${choice.key}`"
+              @click="detailSize = choice.key"
+            >
+              <span class="harbor-cup-scale" :class="`is-${choice.key}`"
+                ><i class="fas fa-mug-hot"></i
+              ></span>
+              <strong>{{ t(choice.zh, choice.en) }}</strong>
+              <small>{{ displayPriceDelta(choice.deltaCents) }}</small>
+            </button>
+          </div>
+        </section>
+
+        <section v-if="packagingChoices.length" class="harbor-option-section mt-5 border-t pt-4">
+          <div>
+            <small>{{ t('包装', 'PACKAGING') }}</small>
+            <strong>{{ t('选择这杯的纸杯包装', 'Choose the cup for this drink') }}</strong>
+          </div>
+          <div class="mt-3 space-y-2">
+            <button
+              v-for="choice in packagingChoices"
+              :key="choice.key"
+              type="button"
+              class="harbor-packaging-choice"
+              :class="{ 'is-active': detailPackaging === choice.key }"
+              :data-testid="`food-delivery-harbor-packaging-${choice.key}`"
+              @click="detailPackaging = choice.key"
+            >
+              <span class="harbor-packaging-choice-media">
+                <img :src="choice.image" alt="" :data-required-asset="choice.asset" />
+              </span>
+              <span class="min-w-0 flex-1 text-left">
+                <strong>{{ t(choice.zh, choice.en) }}</strong>
+                <small>{{ t(choice.descZh, choice.descEn) }}</small>
+              </span>
+              <b>{{ displayPriceDelta(choice.deltaCents) }}</b>
+            </button>
+          </div>
+        </section>
+
         <div class="mt-5 flex items-center justify-between border-y py-4">
           <div>
             <span class="block text-[10px] font-bold text-[var(--harbor-muted)]">{{
@@ -1235,8 +1671,17 @@ onBeforeUnmount(stopCarousel)
                   <i class="fas fa-gift"></i> {{ t('赠品 · 已兑换', 'Gift · Redeemed') }}
                 </span>
                 <strong class="mt-1 block text-sm">{{
-                  line.lineKind === 'merchandise' ? merchandiseTitle(line) : line.menuItem.title
+                  line.lineKind === 'merchandise'
+                    ? merchandiseTitle(line)
+                    : menuItemTitle(line.menuItem)
                 }}</strong>
+                <span
+                  v-if="line.lineKind === 'menu' && selectionSummary(line.selection)"
+                  class="mt-1 block text-[10px] font-semibold leading-4 text-[var(--harbor-muted)]"
+                  data-testid="food-delivery-harbor-cart-selection"
+                >
+                  {{ selectionSummary(line.selection) }}
+                </span>
                 <span
                   v-if="line.isGift"
                   class="mt-1 block text-xs font-black text-[var(--harbor-copper)]"
@@ -1525,15 +1970,24 @@ onBeforeUnmount(stopCarousel)
               :key="item.id"
               class="flex items-center justify-between gap-3 py-3 text-sm"
             >
-              <span class="min-w-0 truncate font-bold"
-                >{{ item.title }}
-                <small class="text-[var(--harbor-muted)]">× {{ item.quantity }}</small>
+              <span class="min-w-0 flex-1 font-bold">
+                <span class="block truncate"
+                  >{{ menuItemTitle(item) }}
+                  <small class="text-[var(--harbor-muted)]">× {{ item.quantity }}</small>
+                  <small
+                    v-if="item.acquisition === 'redeemed_gift'"
+                    class="ml-1 text-[var(--harbor-copper)]"
+                    >{{ t('赠品', 'Gift') }}</small
+                  ></span
+                >
                 <small
-                  v-if="item.acquisition === 'redeemed_gift'"
-                  class="ml-1 text-[var(--harbor-copper)]"
-                  >{{ t('赠品', 'Gift') }}</small
-                ></span
-              >
+                  v-if="selectionSummary(item.selection)"
+                  class="mt-1 block text-[10px] font-semibold leading-4 text-[var(--harbor-muted)]"
+                  data-testid="food-delivery-harbor-order-selection"
+                >
+                  {{ selectionSummary(item.selection) }}
+                </small>
+              </span>
               <strong
                 v-if="item.acquisition === 'redeemed_gift'"
                 class="shrink-0 text-[var(--harbor-copper)]"
@@ -1642,16 +2096,26 @@ onBeforeUnmount(stopCarousel)
             :key="line.lineId"
             class="flex items-center justify-between gap-3 py-3 text-xs"
           >
-            <span class="min-w-0 truncate font-bold"
-              >{{
-                line.lineKind === 'merchandise' ? merchandiseTitle(line) : line.menuItem.title
-              }}
-              ×
-              {{ line.quantity }}
-              <small v-if="line.isGift" class="text-[var(--harbor-copper)]">{{
-                t('赠品', 'Gift')
-              }}</small></span
-            ><strong
+            <span class="min-w-0 flex-1 font-bold">
+              <span class="block truncate"
+                >{{
+                  line.lineKind === 'merchandise'
+                    ? merchandiseTitle(line)
+                    : menuItemTitle(line.menuItem)
+                }}
+                × {{ line.quantity }}
+                <small v-if="line.isGift" class="text-[var(--harbor-copper)]">{{
+                  t('赠品', 'Gift')
+                }}</small></span
+              >
+              <small
+                v-if="line.lineKind === 'menu' && selectionSummary(line.selection)"
+                class="mt-0.5 block text-[9px] font-semibold text-[var(--harbor-muted)]"
+              >
+                {{ selectionSummary(line.selection) }}
+              </small>
+            </span>
+            <strong
               >{{ line.isGift ? t('已兑换 · 0.00', 'Redeemed · 0.00') : line.subtotal }}
               {{ line.currency }}</strong
             >
@@ -1814,6 +2278,10 @@ onBeforeUnmount(stopCarousel)
 .harbor-slide.is-passport,
 .harbor-campaign-hero.is-passport {
   background: var(--harbor-blush);
+  color: var(--harbor-ink);
+}
+.harbor-slide.is-pompompurin {
+  background: #f6d5c6;
   color: var(--harbor-ink);
 }
 .harbor-slide.is-member,
@@ -1999,9 +2467,25 @@ onBeforeUnmount(stopCarousel)
   font-weight: 900;
 }
 .harbor-product-row {
-  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  scrollbar-color: var(--harbor-copper) color-mix(in srgb, var(--harbor-line) 72%, transparent);
+  scrollbar-width: thin;
 }
-.harbor-product-row::-webkit-scrollbar,
+.harbor-product-card {
+  scroll-snap-align: start;
+}
+.harbor-product-row::-webkit-scrollbar {
+  display: block;
+  height: 0.38rem;
+}
+.harbor-product-row::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--harbor-line) 72%, transparent);
+}
+.harbor-product-row::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--harbor-copper);
+}
 .harbor-tabs::-webkit-scrollbar {
   display: none;
 }
@@ -2386,6 +2870,151 @@ onBeforeUnmount(stopCarousel)
 .harbor-campaign-copy {
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
 }
+.harbor-collaboration-page {
+  background: #fff8f1;
+}
+.harbor-collaboration-hero {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: #f2d8c8;
+}
+.harbor-collaboration-hero > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.harbor-collaboration-hero-copy {
+  position: absolute;
+  top: 1.35rem;
+  left: 1.2rem;
+  width: 58%;
+  color: var(--harbor-ink);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.harbor-collaboration-hero-copy p,
+.harbor-collaboration-hero-copy span {
+  display: block;
+  font-size: 0.55rem;
+  font-weight: 900;
+}
+.harbor-collaboration-hero-copy h1 {
+  margin-top: 0.65rem;
+  font-size: 2.25rem;
+  font-weight: 900;
+  line-height: 1;
+  text-wrap: balance;
+}
+.harbor-collaboration-hero-copy span {
+  margin-top: 0.8rem;
+  color: #9d6148;
+}
+.harbor-collab-intro {
+  background: #fff8f1;
+}
+.harbor-collab-notes span {
+  display: grid;
+  min-height: 3.4rem;
+  place-items: center;
+  border-top: 1px solid #d7a68d;
+  border-bottom: 1px solid #d7a68d;
+  color: #8f573e;
+  font-size: 0.5rem;
+  font-weight: 900;
+  line-height: 0.72rem;
+  text-align: center;
+}
+.harbor-collab-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 54%) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  overflow: hidden;
+  border: 1px solid #e4c9ba;
+  border-radius: 8px;
+  background: #fffdf9;
+  padding: 0.65rem;
+  box-shadow: 0 14px 34px rgba(89, 61, 48, 0.09);
+}
+.harbor-collab-feature > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.harbor-collab-feature small,
+.harbor-collab-extra small {
+  color: #9d6148;
+  font-size: 0.5rem;
+  font-weight: 900;
+}
+.harbor-collab-feature h3,
+.harbor-collab-extra h3 {
+  margin-top: 0.35rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+.harbor-collab-feature h3 {
+  font-size: 1rem;
+}
+.harbor-collab-feature p,
+.harbor-collab-extra p {
+  margin-top: 0.5rem;
+  color: var(--harbor-muted);
+  font-weight: 700;
+}
+.harbor-collab-feature p {
+  font-size: 0.62rem;
+  line-height: 1rem;
+}
+.harbor-collab-extra {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e4c9ba;
+  border-radius: 8px;
+  background: #fffdf9;
+}
+.harbor-collab-extra > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.harbor-collab-extra > div {
+  padding: 0.75rem;
+}
+.harbor-collab-extra h3 {
+  font-size: 0.72rem;
+}
+.harbor-collab-extra p {
+  font-size: 0.55rem;
+  line-height: 0.85rem;
+}
+.harbor-collab-order-media {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #efd4c3;
+}
+.harbor-collab-order-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.harbor-collab-order-media span {
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.7rem;
+  border-radius: 6px;
+  background: var(--harbor-ink);
+  padding: 0.45rem 0.55rem;
+  color: white;
+  font-size: 0.52rem;
+  font-weight: 900;
+}
 .harbor-campaign-mascot {
   position: absolute;
   right: -1.5rem;
@@ -2525,6 +3154,65 @@ onBeforeUnmount(stopCarousel)
   background: var(--harbor-copper);
   color: white;
 }
+.harbor-menu-list {
+  display: grid;
+  gap: 0.7rem;
+}
+.harbor-menu-card {
+  display: grid;
+  min-height: 8.5rem;
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+  gap: 0.9rem;
+  border: 1px solid var(--harbor-line);
+  border-radius: 8px;
+  background: var(--harbor-surface);
+  padding: 0.65rem;
+  box-shadow: 0 8px 24px rgba(49, 49, 49, 0.055);
+}
+.harbor-menu-card.is-collaboration {
+  border-color: #dda98f;
+  background: #fff2e9;
+}
+.harbor-menu-card-image {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: 7.1rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--harbor-blush);
+}
+.harbor-menu-card-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.harbor-menu-card-kicker {
+  display: block;
+  color: var(--harbor-copper);
+  font-size: 0.52rem;
+  font-weight: 900;
+}
+.harbor-menu-card-action {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid var(--harbor-ink);
+  border-radius: 6px;
+  padding: 0.35rem 0.55rem;
+  color: var(--harbor-ink);
+  font-size: 0.57rem;
+  font-weight: 900;
+}
+.harbor-menu-card-action:active {
+  background: var(--harbor-ink);
+  color: white;
+}
 .harbor-menu-row {
   display: flex;
   min-height: 7.25rem;
@@ -2541,51 +3229,172 @@ onBeforeUnmount(stopCarousel)
   font-size: 1.5rem;
 }
 .harbor-detail-stage {
-  border-radius: 50%;
+  border: 1px solid var(--harbor-line);
+  border-radius: 8px;
   background: var(--harbor-blush);
-  box-shadow:
-    inset 0 0 0 1px var(--harbor-line),
-    0 18px 45px rgba(49, 49, 49, 0.12);
+  box-shadow: 0 18px 45px rgba(49, 49, 49, 0.12);
 }
 .harbor-detail-stage::before {
-  content: '';
-  position: absolute;
-  inset: 11%;
-  border: 1px solid rgba(198, 124, 78, 0.4);
-  border-radius: 50%;
+  content: none;
 }
-.harbor-detail-ring {
+.harbor-detail-mark {
   position: absolute;
-  inset: 0.8rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  overflow: hidden;
-  border: 1px dashed var(--harbor-copper);
-  border-radius: 50%;
-  padding-top: 0.55rem;
-  color: var(--harbor-copper);
-  font-size: 0.47rem;
+  z-index: 2;
+  right: 0.7rem;
+  bottom: 0.7rem;
+  border-radius: 6px;
+  background: var(--harbor-ink);
+  padding: 0.4rem 0.5rem;
+  color: white;
+  font-size: 0.5rem;
   font-weight: 900;
-  word-spacing: 0.35rem;
 }
-.harbor-detail-cup {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.harbor-option-section {
+  border-color: var(--harbor-line);
+}
+.harbor-option-section > div:first-child small,
+.harbor-option-section > div:first-child strong {
+  display: block;
+}
+.harbor-option-section > div:first-child small {
   color: var(--harbor-copper);
-}
-.harbor-detail-cup i {
-  font-size: 6rem;
-}
-.harbor-detail-cup small {
-  margin-top: 0.4rem;
-  text-align: center;
   font-size: 0.55rem;
   font-weight: 900;
+}
+.harbor-option-section > div:first-child strong {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+}
+.harbor-option-section > div:first-child > span {
+  color: var(--harbor-muted);
+  font-size: 0.55rem;
+  font-weight: 700;
+}
+.harbor-option-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--option-count), minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.harbor-option-grid button {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--harbor-line);
+  border-radius: 6px;
+  background: var(--harbor-surface);
+  color: var(--harbor-muted);
+  font-size: 0.7rem;
+}
+.harbor-option-grid button.is-active {
+  border-color: var(--harbor-ink);
+  background: var(--harbor-ink);
+  color: white;
+}
+.harbor-size-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.harbor-size-grid.is-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.harbor-size-grid button {
+  display: flex;
+  min-height: 6.5rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  border: 1px solid var(--harbor-line);
+  border-radius: 6px;
+  background: var(--harbor-surface);
+  padding: 0.65rem 0.35rem;
+  color: var(--harbor-muted);
+}
+.harbor-size-grid button.is-active {
+  border-color: var(--harbor-copper);
+  background: var(--harbor-blush);
+  color: var(--harbor-ink);
+}
+.harbor-size-grid strong,
+.harbor-size-grid small {
+  display: block;
+  text-align: center;
+}
+.harbor-size-grid strong {
+  margin-top: 0.45rem;
+  font-size: 0.58rem;
+}
+.harbor-size-grid small {
+  margin-top: 0.25rem;
+  color: var(--harbor-muted);
+  font-size: 0.48rem;
+  font-weight: 800;
+}
+.harbor-cup-scale {
+  display: flex;
+  height: 2.4rem;
+  align-items: flex-end;
+  justify-content: center;
+  color: var(--harbor-copper);
+}
+.harbor-cup-scale.is-short {
+  font-size: 1.25rem;
+}
+.harbor-cup-scale.is-harbor {
+  font-size: 1.65rem;
+}
+.harbor-cup-scale.is-long {
+  font-size: 2rem;
+}
+.harbor-packaging-choice {
+  display: flex;
+  width: 100%;
+  min-height: 5.25rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid var(--harbor-line);
+  border-radius: 6px;
+  background: var(--harbor-surface);
+  padding: 0.65rem;
+}
+.harbor-packaging-choice.is-active {
+  border-color: var(--harbor-copper);
+  background: var(--harbor-blush);
+}
+.harbor-packaging-choice-media {
+  display: block;
+  width: 4rem;
+  height: 4rem;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--harbor-line);
+  border-radius: 6px;
+  background: var(--harbor-blush);
+}
+.harbor-packaging-choice-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.harbor-packaging-choice strong,
+.harbor-packaging-choice small {
+  display: block;
+}
+.harbor-packaging-choice strong {
+  font-size: 0.7rem;
+}
+.harbor-packaging-choice small {
+  margin-top: 0.25rem;
+  color: var(--harbor-muted);
+  font-size: 0.52rem;
+  line-height: 0.8rem;
+}
+.harbor-packaging-choice b {
+  flex: 0 0 auto;
+  color: var(--harbor-copper);
+  font-size: 0.58rem;
 }
 .harbor-qty-button {
   display: grid;
