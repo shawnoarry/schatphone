@@ -128,7 +128,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
   }),
   transit: Object.freeze({
     id: 'transit',
-    order: 90,
+    order: 6,
     icon: 'fas fa-train-subway',
     tone: '#0284c7',
     labelZh: '交通',
@@ -139,7 +139,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
   }),
   transit_hub: Object.freeze({
     id: 'transit_hub',
-    order: 91,
+    order: 5,
     icon: 'fas fa-train',
     tone: '#0369a1',
     labelZh: '交通枢纽',
@@ -255,8 +255,8 @@ const CATEGORY_DEFINITIONS = Object.freeze({
   }),
   residence_budget: Object.freeze({
     id: 'residence_budget',
-    order: 70,
-    icon: 'fas fa-house',
+    order: 11,
+    icon: 'fas fa-house-chimney',
     tone: '#64748b',
     labelZh: '经济型住宅',
     labelEn: 'Budget housing',
@@ -267,7 +267,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
   }),
   residence_standard: Object.freeze({
     id: 'residence_standard',
-    order: 71,
+    order: 12,
     icon: 'fas fa-building',
     tone: '#0f766e',
     labelZh: '普通住宅',
@@ -279,7 +279,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
   }),
   residence_premium: Object.freeze({
     id: 'residence_premium',
-    order: 72,
+    order: 13,
     icon: 'fas fa-building-shield',
     tone: '#1d4ed8',
     labelZh: '高端住宅',
@@ -291,7 +291,7 @@ const CATEGORY_DEFINITIONS = Object.freeze({
   }),
   residence_luxury: Object.freeze({
     id: 'residence_luxury',
-    order: 73,
+    order: 14,
     icon: 'fas fa-crown',
     tone: '#6d28d9',
     labelZh: '豪华住宅',
@@ -361,19 +361,243 @@ const CATEGORY_DEFINITIONS = Object.freeze({
   }),
 })
 
-export const MAP_USER_PLACE_CATEGORIES = Object.freeze(
-  ['home', 'work', 'school', 'shop', 'leisure', 'other'].map(
-    (categoryId) => CATEGORY_DEFINITIONS[categoryId],
+const CATEGORY_GROUP_DEFINITIONS = Object.freeze({
+  transit: Object.freeze({
+    id: 'transit',
+    order: 5,
+    icon: 'fas fa-train-subway',
+    tone: '#0284c7',
+    labelZh: '交通',
+    labelEn: 'Transit',
+    descriptionZh: '地铁、车站、机场与大型换乘枢纽',
+    descriptionEn: 'Metro stops, stations, airports, and major interchanges',
+    categoryIds: Object.freeze(['transit', 'transit_hub']),
+  }),
+  residence: Object.freeze({
+    id: 'residence',
+    order: 10,
+    icon: 'fas fa-house',
+    tone: '#2563eb',
+    labelZh: '住宅',
+    labelEn: 'Residence',
+    descriptionZh: '家、宿舍、公寓、住宅区与不同档次的居住地点',
+    descriptionEn: 'Homes, dorms, apartments, and residential areas across housing tiers',
+    categoryIds: Object.freeze([
+      'home',
+      'residence_budget',
+      'residence_standard',
+      'residence_premium',
+      'residence_luxury',
+    ]),
+  }),
+  work: Object.freeze({
+    id: 'work',
+    order: 20,
+    icon: 'fas fa-building',
+    tone: '#7c3aed',
+    labelZh: '工作',
+    labelEn: 'Work',
+    descriptionZh: '公司、办公室与工作场所',
+    descriptionEn: 'Companies, offices, and workplaces',
+    categoryIds: Object.freeze(['work']),
+  }),
+  education: Object.freeze({
+    id: 'education',
+    order: 30,
+    icon: 'fas fa-graduation-cap',
+    tone: '#0f766e',
+    labelZh: '教育',
+    labelEn: 'Education',
+    descriptionZh: '学校、大学、教室与学习地点',
+    descriptionEn: 'Schools, universities, classrooms, and study places',
+    categoryIds: Object.freeze(['school']),
+  }),
+  shopping: Object.freeze({
+    id: 'shopping',
+    order: 40,
+    icon: 'fas fa-bag-shopping',
+    tone: '#c2410c',
+    labelZh: '商业购物',
+    labelEn: 'Shopping',
+    descriptionZh: '商店、综合商场、高端购物与商业街区',
+    descriptionEn: 'Shops, malls, luxury retail, and commercial districts',
+    categoryIds: Object.freeze(['shop', 'mall_general', 'mall_luxury', 'commerce']),
+  }),
+  supermarket: Object.freeze({
+    id: 'supermarket',
+    order: 43,
+    icon: 'fas fa-basket-shopping',
+    tone: '#15803d',
+    labelZh: '超市',
+    labelEn: 'Supermarkets',
+    descriptionZh: '大型超市、食品卖场与日常采购地点',
+    descriptionEn: 'Large supermarkets, food halls, and grocery destinations',
+    categoryIds: Object.freeze(['supermarket']),
+  }),
+  convenience_store: Object.freeze({
+    id: 'convenience_store',
+    order: 44,
+    icon: 'fas fa-store',
+    tone: '#0891b2',
+    labelZh: '便利店',
+    labelEn: 'Convenience stores',
+    descriptionZh: '仅在搜索或主动选择分类时集中显示的快速补给点',
+    descriptionEn: 'Quick supply stops shown through search or explicit category selection',
+    categoryIds: Object.freeze(['convenience_store']),
+  }),
+  leisure: Object.freeze({
+    id: 'leisure',
+    order: 50,
+    icon: 'fas fa-mug-hot',
+    tone: '#be185d',
+    labelZh: '休闲娱乐',
+    labelEn: 'Leisure',
+    descriptionZh: '餐饮、夜生活、运动、影院与公园',
+    descriptionEn: 'Dining, nightlife, fitness, cinemas, and parks',
+    categoryIds: Object.freeze(['leisure', 'nightlife', 'fitness', 'cinema', 'park']),
+  }),
+  medical: Object.freeze({
+    id: 'medical',
+    order: 60,
+    icon: 'fas fa-kit-medical',
+    tone: '#dc2626',
+    labelZh: '医疗',
+    labelEn: 'Medical',
+    descriptionZh: '综合医疗、医院、整形医院与药店',
+    descriptionEn: 'General care, hospitals, plastic surgery, and pharmacies',
+    categoryIds: Object.freeze(['medical', 'hospital', 'plastic_surgery', 'pharmacy']),
+  }),
+  culture: Object.freeze({
+    id: 'culture',
+    order: 100,
+    icon: 'fas fa-landmark',
+    tone: '#92400e',
+    labelZh: '文化地标',
+    labelEn: 'Culture',
+    descriptionZh: '博物馆、宫殿、广场与文化场所',
+    descriptionEn: 'Museums, palaces, squares, and cultural landmarks',
+    categoryIds: Object.freeze(['culture']),
+  }),
+  city_services: Object.freeze({
+    id: 'city_services',
+    order: 104,
+    icon: 'fas fa-building-columns',
+    tone: '#0f4c81',
+    labelZh: '城市服务',
+    labelEn: 'City services',
+    descriptionZh: '银行、警察、消防与城市公共服务',
+    descriptionEn: 'Banks, police, fire, and public city services',
+    categoryIds: Object.freeze(['bank', 'public_safety']),
+  }),
+  lodging: Object.freeze({
+    id: 'lodging',
+    order: 110,
+    icon: 'fas fa-hotel',
+    tone: '#9333ea',
+    labelZh: '住宿',
+    labelEn: 'Lodging',
+    descriptionZh: '酒店、商务住宿与度假设施',
+    descriptionEn: 'Hotels, business accommodation, and resort stays',
+    categoryIds: Object.freeze(['hotel']),
+  }),
+  world_story: Object.freeze({
+    id: 'world_story',
+    order: 130,
+    icon: 'fas fa-shield-halved',
+    tone: '#6d28d9',
+    labelZh: '世界与剧情',
+    labelEn: 'World & story',
+    descriptionZh: '阵营据点、剧情、任务与高风险地点',
+    descriptionEn: 'Faction bases, story, mission, and high-risk locations',
+    categoryIds: Object.freeze(['faction', 'story']),
+  }),
+  other: Object.freeze({
+    id: 'other',
+    order: 140,
+    icon: 'fas fa-location-dot',
+    tone: '#475569',
+    labelZh: '其他',
+    labelEn: 'Other',
+    descriptionZh: '不属于以上类型的自定义地点',
+    descriptionEn: 'Custom places outside the other groups',
+    categoryIds: Object.freeze(['other']),
+  }),
+})
+
+const CATEGORY_GROUP_ORDER = Object.freeze([
+  'transit',
+  'residence',
+  'work',
+  'education',
+  'shopping',
+  'supermarket',
+  'convenience_store',
+  'leisure',
+  'medical',
+  'culture',
+  'city_services',
+  'lodging',
+  'world_story',
+  'other',
+])
+
+const CATEGORY_TO_GROUP_ID = Object.freeze(
+  Object.fromEntries(
+    CATEGORY_GROUP_ORDER.flatMap((groupId) =>
+      CATEGORY_GROUP_DEFINITIONS[groupId].categoryIds.map((categoryId) => [categoryId, groupId]),
+    ),
   ),
 )
 
+export const MAP_PLACE_CATEGORY_GROUPS = Object.freeze(
+  CATEGORY_GROUP_ORDER.map((groupId) => {
+    const group = CATEGORY_GROUP_DEFINITIONS[groupId]
+    return Object.freeze({
+      ...group,
+      iconTypes: Object.freeze(
+        group.categoryIds.map((categoryId) => CATEGORY_DEFINITIONS[categoryId]),
+      ),
+    })
+  }),
+)
+
+const CATEGORY_GROUP_LOOKUP = Object.freeze(
+  Object.fromEntries(MAP_PLACE_CATEGORY_GROUPS.map((group) => [group.id, group])),
+)
+
+export const MAP_PLACE_ICON_TYPES = Object.freeze(
+  MAP_PLACE_CATEGORY_GROUPS.flatMap((group) => group.iconTypes),
+)
+
+// Compatibility name retained for existing callers; editable places now support every icon type.
+export const MAP_USER_PLACE_CATEGORIES = MAP_PLACE_ICON_TYPES
+
 export const normalizeUserMapPlaceCategory = (value) => {
   const categoryId = typeof value === 'string' ? value.trim().toLowerCase() : ''
-  return MAP_USER_PLACE_CATEGORIES.some((category) => category.id === categoryId)
+  return CATEGORY_DEFINITIONS[categoryId]
     ? categoryId
     : categoryId
       ? 'other'
       : 'home'
+}
+
+export const getMapPlaceCategoryGroupId = (categoryId = '') => {
+  const normalizedId = typeof categoryId === 'string' ? categoryId.trim().toLowerCase() : ''
+  if (CATEGORY_GROUP_LOOKUP[normalizedId]) return normalizedId
+  return CATEGORY_TO_GROUP_ID[normalizedId] || 'other'
+}
+
+export const getMapPlaceCategoryGroupVisual = (categoryId = '') =>
+  CATEGORY_GROUP_LOOKUP[getMapPlaceCategoryGroupId(categoryId)] || CATEGORY_GROUP_LOOKUP.other
+
+export const getMapPlaceIconTypesForGroup = (categoryId = '') =>
+  getMapPlaceCategoryGroupVisual(categoryId).iconTypes
+
+export const matchesMapPlaceCategoryFilter = (categoryId = '', filterId = 'all') => {
+  const normalizedFilter = typeof filterId === 'string' ? filterId.trim().toLowerCase() : ''
+  if (!normalizedFilter || normalizedFilter === 'all') return true
+  if (!CATEGORY_GROUP_LOOKUP[normalizedFilter] && !CATEGORY_TO_GROUP_ID[normalizedFilter]) return false
+  return getMapPlaceCategoryGroupId(categoryId) === getMapPlaceCategoryGroupId(normalizedFilter)
 }
 
 export const getMapPlaceCategoryVisual = (categoryId = '') =>

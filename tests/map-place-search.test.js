@@ -54,6 +54,17 @@ const PLACES = [
     position: { kind: 'geo', lat: 37.55, lng: 126.97 },
   },
   {
+    id: 'airport',
+    placeId: 'airport',
+    nameZh: '仁川国际机场',
+    nameEn: 'Incheon International Airport',
+    detailZh: '仁川广域市中区机场路',
+    detailEn: 'Gonghang-ro, Jung-gu, Incheon',
+    category: 'transit_hub',
+    source: 'map_pack',
+    position: { kind: 'geo', lat: 37.46, lng: 126.44 },
+  },
+  {
     id: 'saved-home',
     placeId: 'address:1',
     label: '我的公寓',
@@ -61,6 +72,28 @@ const PLACES = [
     category: 'home',
     source: 'user',
     position: { kind: 'geo', lat: 37.54, lng: 127.03 },
+  },
+  {
+    id: 'budget-home',
+    placeId: 'budget-home',
+    nameZh: '青年公共住宅',
+    nameEn: 'Youth Public Housing',
+    detailZh: '首尔特别市城东区',
+    detailEn: 'Seongdong-gu, Seoul',
+    category: 'residence_budget',
+    source: 'map_pack',
+    position: { kind: 'geo', lat: 37.55, lng: 127.04 },
+  },
+  {
+    id: 'luxury-home',
+    placeId: 'luxury-home',
+    nameZh: '汉南顶层公寓',
+    nameEn: 'Hannam Penthouse',
+    detailZh: '首尔特别市龙山区汉南洞',
+    detailEn: 'Hannam-dong, Yongsan-gu, Seoul',
+    category: 'residence_luxury',
+    source: 'map_pack',
+    position: { kind: 'geo', lat: 37.54, lng: 127.0 },
   },
   {
     id: 'convenience',
@@ -96,13 +129,28 @@ describe('map place search', () => {
     expect(searchMapPlaces(PLACES, 'SML')).toEqual([])
   })
 
-  test('ranks a name match above address-only matches and respects category filters', () => {
+  test('ranks a name match above address-only matches and respects broad category filters', () => {
     expect(searchMapPlaces(PLACES, 'Seoul')[0].place.id).toBe('station')
     expect(
-      searchMapPlaces(PLACES, 'Seoul', { categoryId: 'shop' }).map(
+      searchMapPlaces(PLACES, 'Seoul', { categoryId: 'shopping' }).map(
         (result) => result.place.id,
       ),
     ).toEqual(['salon'])
+  })
+
+  test('groups icon subtypes for filters while preserving subtype search semantics', () => {
+    expect(
+      suggestMapPlaces(PLACES, { categoryId: 'residence', limit: 20 }).map(
+        (result) => result.place.id,
+      ),
+    ).toEqual(['saved-home', 'budget-home', 'luxury-home'])
+    expect(
+      suggestMapPlaces(PLACES, { categoryId: 'transit', limit: 20 }).map(
+        (result) => result.place.id,
+      ),
+    ).toEqual(['station', 'airport'])
+    expect(searchMapPlaces(PLACES, '豪华住宅')[0].place.id).toBe('luxury-home')
+    expect(searchMapPlaces(PLACES, '住宅', { categoryId: 'residence' })).toHaveLength(3)
   })
 
   test('automatically searches future places through standard fields and category terms', () => {

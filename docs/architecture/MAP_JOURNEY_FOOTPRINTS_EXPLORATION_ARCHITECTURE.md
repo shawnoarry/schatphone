@@ -1,8 +1,8 @@
 # Map Journey, Footprints, And Exploration Architecture
 
-Updated: 2026-07-31
+Updated: 2026-08-03
 
-Status: `APPROVED_DIRECTION / MJE-1_USER_ACCEPTED_IMPLEMENTED_IN_CURRENT_TREE / MJE-2_USER_ACCEPTED_IMPLEMENTED_IN_CURRENT_TREE / MJE-3_READY_FOR_USER_REVIEW`
+Status: `APPROVED_DIRECTION / MJE-1_THROUGH_MJE-4_USER_ACCEPTED_INTEGRATED_LOCAL`
 
 This contract defines how Map travel, transport choice, route familiarity, active exploration, and journey-triggered events fit together. In architecture and cross-module records, this domain is always `Map Journey`, distinct from the future `Agenda Journey / 行程` app defined in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`. `docs/roadmap/TODO_ROADMAP.md` remains the only live execution board. The stage identifiers below define acceptance boundaries; they do not authorize a later stage by themselves.
 
@@ -18,7 +18,7 @@ Map remains the primary place where a player:
 
 Transportation is a journey parameter, not a separate app owner. The first journey-planning surface stays inside Map. A future Transit app may present an independently useful network, but it must consume the same Map-owned journey records instead of creating a second trip runtime.
 
-The current `探索 / Explore` dashboard is useful but is not yet active spatial exploration. Its existing exploration points, route familiarity, area unlocks, and static feedback become the foundation of `足迹 / Footprints`. Active exploration is a separate player action added later.
+The former passive `探索 / Explore` dashboard is now presented as `足迹 / Footprints`. Its existing points, route familiarity, area unlocks, static feedback, and history remain passive travel records. Active exploration is a separate player action added later.
 
 ## 2. Player Concepts
 
@@ -30,6 +30,8 @@ The current `探索 / Explore` dashboard is useful but is not yet active spatial
 | `交通网络 / Transit network` | Define how this world can be crossed | modes, static lines/stations/topology | planning options and map presentation, not journey ownership |
 
 Map Journey and Exploration are mutually clear actions. A Map Journey targets a known destination. Exploration targets an area and may discover a destination that did not exist as a player-visible place before the action.
+
+MJE-4 adds one optional place-knowledge policy per world. `all_known` preserves the existing sandbox catalog and is the compatibility default for old saves. `footprint_gated` withholds explicitly eligible authored nearby facilities until a completed Map Journey resolves to a canonical destination coordinate near them. Knowledge and presentation remain separate: locked places are absent from markers, search, pickers, Places, and Settings lists; known places can still be hidden by the existing marker-visibility controls. Switching policy never deletes discovery evidence. Manual role-position changes, cancelled journeys, free text without a resolvable coordinate, and visibility changes never create discoveries.
 
 ## 3. User Experience And Information Depth
 
@@ -93,7 +95,7 @@ The target record may eventually carry:
 - pending checkpoint-event review reference;
 - start, expected arrival, completion, cancellation, and outcome data.
 
-MJE-1 implements only the minimum transport and compatibility fields needed by its acceptance criteria. It is user-accepted and implemented in the current uncommitted tree; this does not claim an integrated commit. MJE-2 implements only the versioned active-journey lifecycle, deterministic duration-based checkpoint plan, and Map-owned pause/resume data needed for its acceptance; it is user-accepted in the same tree. MJE-3 adds only evaluated-checkpoint IDs, one pending-review reference, and cumulative event-delay seconds to journey truth. The persisted `activeInterruption` compatibility key now denotes a pending route-update review only and never authorizes an automatic pause. Journey schema V3 migrates V2 journeys previously blocked by an event back to active timing while retaining proposal lineage and remaining time. Event proposal copy, eligibility, provenance, and audit stay in Event Runtime; no event, leg, companion, destination-change, or broader outcome structure is prebuilt in Map. The existing optional shared-route relationship fact is selected only during arrived-journey acknowledgement; it records settlement context and is not active-journey companion or participant truth.
+MJE-1 implements only the minimum transport and compatibility fields needed by its acceptance criteria. MJE-1 through MJE-4 are user-accepted and integrated locally. MJE-2 implements only the versioned active-journey lifecycle, deterministic duration-based checkpoint plan, and Map-owned pause/resume data needed for its acceptance. MJE-3 adds only evaluated-checkpoint IDs, one pending-review reference, and cumulative event-delay seconds to journey truth. The persisted `activeInterruption` compatibility key now denotes a pending route-update review only and never authorizes an automatic pause. Journey schema V3 migrates V2 journeys previously blocked by an event back to active timing while retaining proposal lineage and remaining time. Event proposal copy, eligibility, provenance, and audit stay in Event Runtime; no event, leg, companion, destination-change, or broader outcome structure is prebuilt in Map. The existing optional shared-route relationship fact is selected only during arrived-journey acknowledgement; it records settlement context and is not active-journey companion or participant truth.
 
 ## 5. Checkpoint-Driven Events
 
@@ -197,17 +199,27 @@ Boundary: preserve `idle`, `traveling`, and `arrived` compatibility while adding
 
 ### MJE-3: First Journey Event Adapter
 
-Status: `READY_FOR_USER_REVIEW` (implemented and validated in the current uncommitted tree; not `DONE` or integrated).
+Status: `USER_ACCEPTED / IMPLEMENTED_IN_CURRENT_TREE` (uncommitted; no integrated commit claimed).
 
 User-visible result: one low-impact, world-aware checkpoint event family can appear as a pending route update while the journey continues. The map-level journey card remains prominent, opens detail on demand, and makes clear that only accepting a bounded delay changes ETA. Uneventful completion remains covered.
 
 Start gate: satisfied by the user's explicit MJE-3 authorization after accepting the MJE-2 behavior.
 
+Acceptance evidence: the user confirmed that the sample journey event appears during travel and does not pause the journey. Event copy/values and later transport, owned-vehicle, driving-ability, and other world-variable variants remain deferred to the separate project-event work.
+
 Boundary: Event Runtime evaluates only completed `en_route` and `near_arrival` checkpoints while Map is mounted, using Map module permission, Surprise Mode, deterministic randomness, cooldown, daily cap, local world variants, persistent proposals, and audit logs. Map validates every reviewed result and accepts only no ETA change or a 120-second delay. Event eligibility never pauses the journey or opens the detail drawer automatically; a missing, stale, non-pending, or arrival-expired proposal can be cleared without changing journey truth. No generic popup system, Event Runtime tick integration, destination change, cancellation outcome, high-impact owner mutation, Agenda Journey integration, or active exploration is implemented.
 
 ### MJE-4: Footprints Information Architecture
 
-User-visible result: the current passive progression is labeled and explained as Footprints; Journey and active Exploration entries are distinct; existing points, familiarity, unlocks, and feedback are preserved.
+Status: `USER_ACCEPTED / INTEGRATED_LOCAL`.
+
+User-visible result: the current passive progression is labeled and explained as Footprints; Journey and active Exploration remain distinct; existing points, familiarity, unlocks, feedback, and history are preserved. Map Settings offers `All places known` and `Discover through Footprints` per world. In the gated mode, a completed positioned journey can reveal a small deterministic set of nearby authored convenience stores or pharmacy districts, which then become available in the map, search, journey pickers, Places, and Settings.
+
+Start gate: satisfied by the user's explicit MJE-3 acceptance and approval of the per-world all-known versus Footprints-gated discovery direction.
+
+Acceptance evidence: the user verified the per-world knowledge choice and the nearby authored-place reveal flow after the role-position endpoint correction made saved coordinates authoritative for trip distance estimates.
+
+Boundary: old saves normalize to `all_known`. Discovery state is keyed by world and map pack, retains stable place IDs plus trip-arrival evidence, and is backed up/restored through Map persistence. New journeys snapshot world/map-pack lineage. Each arrival reveals at most four eligible authored facilities within 1.2 km using the existing provider-neutral distance calculation and stable distance/ID ordering. It does not reveal from manual role-position changes or cancelled journeys. It does not add Event Runtime outcomes, generated places, candidate acceptance, active-exploration timers/checkpoints, keep/discard ownership, transit topology, route planning, or POI services.
 
 ### MJE-5: Active Area Exploration
 

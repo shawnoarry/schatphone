@@ -48,7 +48,7 @@ const openWorldBookForPoint = (pointId) => {
 <template>
   <section class="map-glass-panel rounded-[1.75rem] p-4">
     <div class="mb-2 flex items-center justify-between gap-2">
-      <h2 class="font-semibold">{{ t('区域反馈', 'Area feedback') }}</h2>
+      <h2 class="font-semibold">{{ t('足迹反馈', 'Footprints feedback') }}</h2>
       <AssetStatusBadge
         :label="t(`${mapAreaFeedback.length} 条反馈`, `${mapAreaFeedback.length} notes`)"
         icon="fas fa-location-crosshairs"
@@ -57,7 +57,7 @@ const openWorldBookForPoint = (pointId) => {
       />
     </div>
     <p v-if="mapAreaFeedback.length === 0" class="text-xs text-gray-500">
-      {{ t('解锁区域后会自动生成地点反馈。', 'Area feedback appears after areas are unlocked.') }}
+      {{ t('形成区域足迹后会自动生成地点反馈。', 'Location feedback appears as area Footprints form.') }}
     </p>
     <div v-else class="space-y-2">
       <div

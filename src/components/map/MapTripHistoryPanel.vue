@@ -62,7 +62,7 @@ const deleteTrip = (tripId) => {
     <div class="mb-2 flex items-center justify-between gap-2">
       <h2 class="font-semibold">{{ t('行程记录', 'Trip history') }}</h2>
       <AssetStatusBadge
-        :label="t(`探索 ${mapRewardScore} 点`, `${mapRewardScore} pts`)"
+        :label="t(`足迹 ${mapRewardScore} 点`, `${mapRewardScore} Footprints pts`)"
         icon="fas fa-route"
         tone="emerald"
         :truncate="false"
@@ -103,7 +103,7 @@ const deleteTrip = (tripId) => {
         >
           <div class="mb-1 flex flex-wrap items-center gap-1.5">
             <AssetStatusBadge
-              :label="t(`+${Number(item.rewardPoints) || 0} 探索`, `+${Number(item.rewardPoints) || 0} exploration`)"
+              :label="t(`+${Number(item.rewardPoints) || 0} 足迹`, `+${Number(item.rewardPoints) || 0} Footprints`)"
               icon="fas fa-star"
               tone="emerald"
               :truncate="false"

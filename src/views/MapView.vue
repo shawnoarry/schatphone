@@ -17,10 +17,12 @@ import {
 import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
 import { formatMapPosition } from '../lib/map-packs'
 import {
-  MAP_USER_PLACE_CATEGORIES,
+  getMapPlaceCategoryGroupVisual,
+  matchesMapPlaceCategoryFilter,
   resolveMapPlaceVisual,
 } from '../lib/map-place-categories'
 import { searchMapPlaces, suggestMapPlaces } from '../lib/map-place-search'
+import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
 import {
   MAP_JOURNEY_CHECKPOINT_DEFINITIONS,
   MAP_JOURNEY_PHASE,
@@ -69,25 +71,21 @@ const {
   routeFamiliarity,
   mapAreaUnlocks,
   mapAreaFeedback,
+  activeMapPlaceKnowledgeMode,
+  activeMapPlaceDiscoverySummary,
   mapVisualSettings,
   mapAutomationRuntime,
   mapAiVisualAutomationPolicy,
 } =
   storeToRefs(mapStore)
 
-const addressForm = reactive({
-  label: '',
-  detail: '',
-  position: null,
-  category: 'home',
-})
-const pendingMapPosition = ref(null)
 const mapSearchSuggestionsOpen = ref(false)
-const placeCreatorOpen = ref(false)
-const placePinMode = ref(false)
+const rolePositionMode = ref(false)
+const rolePositionNotice = ref('')
 const selectedMapPlace = ref(null)
 const selectedPlaceCategory = ref('all')
 const selectedSearchCategory = ref('all')
+const mapSearchText = ref('')
 const destinationIntentActive = ref(false)
 const mapFocusRequestId = ref(0)
 const mapFocusTarget = ref(null)
@@ -117,9 +115,9 @@ let runtimeTimer = null
 const MAP_PACK_PREVIEW_SCOPE_ID = 'map-runtime-pack'
 
 const MAP_DRAWER_SECTIONS = Object.freeze([
-  { key: 'trip', icon: 'fas fa-route', labelZh: '行程', labelEn: 'Trip' },
-  { key: 'places', icon: 'fas fa-map-location-dot', labelZh: '地点', labelEn: 'Places' },
-  { key: 'progress', icon: 'fas fa-layer-group', labelZh: '探索', labelEn: 'Progress' },
+  { key: 'trip', icon: 'fas fa-route', labelZh: '行程计划', labelEn: 'Journey', shortLabelZh: '行程', shortLabelEn: 'Journey' },
+  { key: 'places', icon: 'fas fa-map-location-dot', labelZh: '地点', labelEn: 'Places', shortLabelZh: '地点', shortLabelEn: 'Places' },
+  { key: 'progress', icon: 'fas fa-shoe-prints', labelZh: '足迹', labelEn: 'Footprints', shortLabelZh: '足迹', shortLabelEn: 'Footprints' },
   { key: 'visual', icon: 'fas fa-map', labelZh: '图层', labelEn: 'Layers' },
 ])
 const MAP_PRIMARY_SECTIONS = MAP_DRAWER_SECTIONS.filter((section) => section.key !== 'visual')
@@ -153,6 +151,9 @@ const mapDrawerTitle = computed(() => {
   const section = MAP_DRAWER_SECTIONS.find((item) => item.key === mapDrawerFocus.value)
   return section ? t(section.labelZh, section.labelEn) : t('地图', 'Map')
 })
+const isJourneyPlanningLocked = computed(() =>
+  ['traveling', 'arrived'].includes(tripRuntime.value.status),
+)
 
 const mapWorldAppContext = computed(() =>
   resolveWorldAppUxContext({
@@ -193,6 +194,8 @@ const openWorldBook = (options = {}) => {
 
 const openMapDrawer = (section = 'trip') => {
   const nextSection = MAP_DRAWER_SECTIONS.some((item) => item.key === section) ? section : 'trip'
+  rolePositionMode.value = false
+  rolePositionNotice.value = ''
   mapDrawerFocus.value = nextSection
   mapDrawerOpen.value = true
 }
@@ -213,8 +216,11 @@ const openMapSettings = () => {
   router.push({ path: '/map/settings', query: buildMapSettingsQuery() })
 }
 
-const openPlaceManager = () => {
-  router.push({ path: '/map/settings/places', query: buildMapSettingsQuery() })
+const openPlaceManager = ({ create = false } = {}) => {
+  router.push({
+    path: '/map/settings/places',
+    query: { ...buildMapSettingsQuery(), ...(create ? { create: '1' } : {}) },
+  })
   closeMapDrawer()
 }
 
@@ -228,61 +234,8 @@ const openSelectedPlaceManager = () => {
   closePlaceDetail()
 }
 
-const resetAddressDraft = () => {
-  addressForm.label = ''
-  addressForm.detail = ''
-  addressForm.position = null
-  addressForm.category = 'home'
-  pendingMapPosition.value = null
-}
-
-const openPlaceCreator = () => {
-  selectedMapPlace.value = null
-  resetAddressDraft()
-  placeCreatorOpen.value = true
-}
-
-const closePlaceCreator = () => {
-  placeCreatorOpen.value = false
-}
-
-const startPlacePinMode = () => {
-  placeCreatorOpen.value = false
-  closeMapDrawer()
-  placePinMode.value = true
-}
-
-const cancelPlacePinMode = () => {
-  placePinMode.value = false
-  pendingMapPosition.value = null
-  addressForm.position = null
-  placeCreatorOpen.value = true
-}
-
-const useCurrentPositionForDraft = () => {
-  if (!currentLocation.value?.position || currentLocation.value.mapPackId !== activeMapPackId.value) return
-  addressForm.position = { ...currentLocation.value.position }
-  pendingMapPosition.value = { ...currentLocation.value.position }
-}
-
-const addAddress = () => {
-  const ok = mapStore.addAddress({
-    ...addressForm,
-    mapPackId: activeMapPackId.value,
-    category: addressForm.category,
-  })
-  if (!ok) return
-  const saved = activeMapPlaces.value.find(
-    (place) => place.source === 'user' && place.label === addressForm.label.trim(),
-  )
-  selectedMapPlace.value = saved || null
-  if (saved) focusMapPlace(saved)
-  placeCreatorOpen.value = false
-  placePinMode.value = false
-  resetAddressDraft()
-}
-
 const updateTripFrom = (value) => {
+  if (tripRuntime.value.status === 'traveling' || tripRuntime.value.status === 'arrived') return
   tripForm.value.from = value
 }
 
@@ -290,12 +243,24 @@ const updateTripTo = (value) => {
   if (tripRuntime.value.status === 'traveling' || tripRuntime.value.status === 'arrived') return
   const nextValue = typeof value === 'string' ? value : ''
   tripForm.value.to = nextValue
+  mapSearchText.value = nextValue
   destinationIntentActive.value = Boolean(nextValue.trim())
-  mapSearchSuggestionsOpen.value = destinationIntentActive.value
+  mapSearchSuggestionsOpen.value = false
+}
+
+const updateMapSearch = (value) => {
+  const nextValue = typeof value === 'string' ? value : ''
+  mapSearchText.value = nextValue
+  if (!isJourneyPlanningLocked.value && destinationIntentActive.value) {
+    mapStore.setTripEndpoint('to', '')
+    destinationIntentActive.value = false
+    tripActionHint.value = { tone: '', message: '' }
+  }
+  mapSearchSuggestionsOpen.value = true
 }
 
 const openMapSearch = () => {
-  if (tripRuntime.value.status === 'traveling' || tripRuntime.value.status === 'arrived') return
+  rolePositionNotice.value = ''
   mapSearchSuggestionsOpen.value = true
 }
 
@@ -304,7 +269,12 @@ const closeMapSearch = () => {
 }
 
 const clearMapSearch = () => {
-  updateTripTo('')
+  mapSearchText.value = ''
+  if (!isJourneyPlanningLocked.value && destinationIntentActive.value) {
+    mapStore.setTripEndpoint('to', '')
+    destinationIntentActive.value = false
+    tripActionHint.value = { tone: '', message: '' }
+  }
   selectedSearchCategory.value = 'all'
   mapSearchSuggestionsOpen.value = true
 }
@@ -337,11 +307,22 @@ const mapPlaceDetail = (place) =>
 const mapPlaceVisual = (place) =>
   resolveMapPlaceVisual(place, activeMapPack.value?.factions)
 
+const tripPlaceOptions = computed(() =>
+  activeMapPlaces.value
+    .filter((place) => place?.position)
+    .map((place) => ({
+      id: place.placeId || place.id,
+      label: mapPlaceName(place),
+      value: mapPlaceDetail(place) || mapPlaceName(place),
+      source: place.source,
+    })),
+)
+
 const mapPlaceCategoryOptions = computed(() => {
   const categories = new Map()
   activeMapPlaces.value.forEach((place) => {
-    const visual = mapPlaceVisual(place)
-    const categoryId = visual?.id || 'other'
+    const visual = getMapPlaceCategoryGroupVisual(place.category)
+    const categoryId = visual.id
     const current = categories.get(categoryId)
     categories.set(categoryId, {
       ...visual,
@@ -350,12 +331,7 @@ const mapPlaceCategoryOptions = computed(() => {
     })
   })
 
-  const userCategoryIds = new Set(MAP_USER_PLACE_CATEGORIES.map((category) => category.id))
-  const userCategories = MAP_USER_PLACE_CATEGORIES
-    .filter((category) => categories.has(category.id))
-    .map((category) => categories.get(category.id))
-  const worldCategories = Array.from(categories.values())
-    .filter((category) => !userCategoryIds.has(category.id))
+  const sortedCategories = Array.from(categories.values())
     .sort((left, right) => (left.order || 999) - (right.order || 999) || left.id.localeCompare(right.id))
 
   return [
@@ -367,8 +343,7 @@ const mapPlaceCategoryOptions = computed(() => {
       labelEn: 'All',
       count: activeMapPlaces.value.length,
     },
-    ...userCategories,
-    ...worldCategories,
+    ...sortedCategories,
   ].map((category) => ({
     ...category,
     ...mapStore.getMapPlaceCategoryVisibility(category.id),
@@ -379,12 +354,13 @@ const visibleMapPlaces = computed(() =>
   selectedPlaceCategory.value === 'all'
     ? activeMapPlaces.value
     : activeMapPlaces.value.filter(
-        (place) => mapPlaceVisual(place).id === selectedPlaceCategory.value,
+        (place) => matchesMapPlaceCategoryFilter(place.category, selectedPlaceCategory.value),
       ),
 )
 
 const mapScenePins = computed(() =>
-  activeMapPlaces.value
+  [
+    ...activeMapPlaces.value
     .filter(
       (place) =>
         place?.position &&
@@ -397,6 +373,20 @@ const mapScenePins = computed(() =>
       icon: mapPlaceVisual(place).icon,
       tone: mapPlaceVisual(place).tone,
     })),
+    ...(currentLocation.value?.mapPackId === activeMapPackId.value && currentLocation.value?.position
+      ? [{
+          placeId: 'map-role-position',
+          source: 'role_position',
+          nameZh: tripRuntime.value.status === 'traveling' ? '出发位置' : '角色位置',
+          nameEn: tripRuntime.value.status === 'traveling' ? 'Start position' : 'Role position',
+          detailZh: currentLocation.value.detail,
+          detailEn: currentLocation.value.detail,
+          position: { ...currentLocation.value.position },
+          icon: 'fas fa-person',
+          tone: '#17664f',
+        }]
+      : []),
+  ],
 )
 
 const mapPinVisibilitySummary = computed(() => mapStore.getMapPlaceCategoryVisibility('all'))
@@ -417,17 +407,8 @@ const setAllMapPlaceVisibility = (visible) => {
   mapStore.setMapPlaceCategoryVisibility('all', visible)
 }
 
-const mapSearchQuery = computed(() =>
-  destinationIntentActive.value && typeof tripForm.value.to === 'string'
-    ? tripForm.value.to.trim()
-    : '',
-)
-const mapSearchPanelOpen = computed(
-  () =>
-    mapSearchSuggestionsOpen.value &&
-    tripRuntime.value.status !== 'traveling' &&
-    tripRuntime.value.status !== 'arrived',
-)
+const mapSearchQuery = computed(() => mapSearchText.value.trim())
+const mapSearchPanelOpen = computed(() => mapSearchSuggestionsOpen.value)
 const searchableMapPlaces = computed(() =>
   activeMapPlaces.value.filter((place) => place?.position),
 )
@@ -444,19 +425,21 @@ const mapPlaceSearchResults = computed(() => {
   if (mapSearchQuery.value) {
     return searchMapPlaces(searchableMapPlaces.value, mapSearchQuery.value, {
       categoryId: selectedSearchCategory.value,
+      limit: Math.max(1, searchableMapPlaces.value.length),
     })
   }
   return suggestMapPlaces(searchableMapPlaces.value, {
     recentDestinationTexts: recentMapDestinationTexts.value,
     categoryId: selectedSearchCategory.value,
+    limit: Math.max(1, searchableMapPlaces.value.length),
   })
 })
 
-const mapSearchScopeLabel = computed(() =>
-  mapSearchQuery.value
-    ? t('匹配地点', 'Matching places')
-    : t('最近与推荐', 'Recent and suggested'),
-)
+const mapSearchScopeLabel = computed(() => {
+  if (mapSearchQuery.value) return t('匹配地点', 'Matching places')
+  if (selectedSearchCategory.value !== 'all') return t('分类地点', 'Category places')
+  return t('全部地点', 'All places')
+})
 
 const mapSearchMatchHint = (result) => {
   const match = result?.match
@@ -466,16 +449,26 @@ const mapSearchMatchHint = (result) => {
   if (match.kind === 'detail') return t('区域或地址匹配', 'Area or address match')
   if (match.kind === 'category') {
     const category = mapPlaceVisual(result.place)
-    return t(`类型：${category.labelZh}`, `Type: ${category.labelEn}`)
+    const group = getMapPlaceCategoryGroupVisual(result.place.category)
+    return group.id === category.id
+      ? t(`分类：${group.labelZh}`, `Category: ${group.labelEn}`)
+      : t(
+          `分类：${group.labelZh} · ${category.labelZh}`,
+          `Category: ${group.labelEn} · ${category.labelEn}`,
+        )
   }
   if (match.kind === 'keyword') return t('相关地点', 'Related place')
   return ''
 }
 
 const useFreeformDestination = () => {
-  if (!mapSearchQuery.value) return
+  if (!mapSearchQuery.value || isJourneyPlanningLocked.value) return
+  mapStore.setTripEndpoint('to', mapSearchQuery.value)
+  mapSearchText.value = mapSearchQuery.value
+  destinationIntentActive.value = true
   selectedSearchCategory.value = 'all'
   closeMapSearch()
+  tripActionHint.value = { tone: '', message: '' }
 }
 
 const browsePlacesFromSearch = () => {
@@ -498,24 +491,29 @@ const onMapSearchResultSelected = (result) => {
 }
 
 const selectMapDestination = (place) => {
+  if (isJourneyPlanningLocked.value) return
   mapStore.setTripEndpoint('to', mapPlaceDetail(place) || mapPlaceName(place))
+  mapSearchText.value = mapPlaceName(place)
   destinationIntentActive.value = true
   mapSearchSuggestionsOpen.value = false
   tripActionHint.value = { tone: '', message: '' }
 }
 
 const useMapPlaceAsCurrent = (place) => {
+  if (isJourneyPlanningLocked.value) return
   mapStore.setCurrentLocation({
     label: mapPlaceName(place),
     detail: mapPlaceDetail(place),
     source: place.source === 'user' ? 'saved' : 'map_pack',
     mapPackId: activeMapPackId.value,
     position: place.position,
+    syncTripOrigin: true,
   })
   tripActionHint.value = { tone: '', message: '' }
 }
 
 const setTripFromMapPlace = (place) => {
+  if (isJourneyPlanningLocked.value) return
   mapStore.setTripEndpoint('from', mapPlaceDetail(place) || mapPlaceName(place))
   tripActionHint.value = { tone: '', message: '' }
 }
@@ -524,19 +522,53 @@ const setTripToMapPlace = (place) => {
   selectMapDestination(place)
 }
 
-const onMapPlacePin = ({ position }) => {
-  if (!placePinMode.value) return
-  pendingMapPosition.value = position
-  addressForm.position = position
-  if (!addressForm.detail.trim()) addressForm.detail = formatMapPosition(position)
-  placePinMode.value = false
-  placeCreatorOpen.value = true
-}
-
 const onMapPinSelected = (place) => {
-  if (placePinMode.value) return
+  if (place?.source === 'role_position') {
+    focusCurrentLocation()
+    return
+  }
   selectedMapPlace.value = place
   mapSearchSuggestionsOpen.value = false
+}
+
+const canSetRolePosition = computed(
+  () => !isTripTraveling.value && !isTripArrived.value,
+)
+
+const startRolePositionMode = () => {
+  if (!canSetRolePosition.value) return
+  closeMapDrawer()
+  closeMapSearch()
+  closePlaceDetail()
+  rolePositionNotice.value = ''
+  rolePositionMode.value = true
+}
+
+const cancelRolePositionMode = () => {
+  rolePositionMode.value = false
+}
+
+const onRolePositionSelected = ({ position }) => {
+  if (!rolePositionMode.value || !canSetRolePosition.value || !position) return
+  const detail = formatMapPosition(position)
+  if (!detail) return
+  mapStore.setCurrentLocation({
+    label: t('自选位置', 'Selected map point'),
+    detail,
+    source: 'map_point',
+    mapPackId: activeMapPackId.value,
+    position,
+    syncTripOrigin: true,
+  })
+  rolePositionMode.value = false
+  rolePositionNotice.value = t('角色位置已更新', 'Role position updated')
+  mapFocusTarget.value = { ...position }
+  mapFocusRequestId.value += 1
+}
+
+const onMapInteraction = () => {
+  closeMapSearch()
+  if (!rolePositionMode.value) rolePositionNotice.value = ''
 }
 
 const focusCurrentLocation = () => {
@@ -566,10 +598,6 @@ const useSelectedPlaceAsStart = () => {
   setTripFromMapPlace(selectedMapPlace.value)
   closePlaceDetail()
 }
-
-const canSavePlace = computed(() =>
-  Boolean(addressForm.label.trim() && addressForm.detail.trim() && addressForm.position),
-)
 
 const removeSelectedPlace = async () => {
   const place = selectedMapPlace.value
@@ -1105,10 +1133,25 @@ const isTripPaused = computed(
 )
 const showRoleLocationControl = computed(
   () =>
-    !isTripTraveling.value &&
     currentLocation.value?.mapPackId === activeMapPackId.value &&
     Boolean(currentLocation.value?.position),
 )
+const roleLocationControlLabel = computed(() =>
+  isTripTraveling.value ? t('出发位置', 'Start position') : t('角色位置', 'Role location'),
+)
+const roleLocationControlHint = computed(() =>
+  isTripTraveling.value
+    ? t(`出发位置：${currentLocationText.value}`, `Start position: ${currentLocationText.value}`)
+    : t(`角色位置：${currentLocationText.value}`, `Role location: ${currentLocationText.value}`),
+)
+const mapPrimarySectionLabel = (section) => {
+  if (section?.key === 'trip') {
+    if (isTripPaused.value) return t('已暂停', 'Paused')
+    if (isTripArrived.value) return t('已到达', 'Arrived')
+    if (isTripTraveling.value) return t('行程中', 'Traveling')
+  }
+  return t(section?.shortLabelZh || section?.labelZh, section?.shortLabelEn || section?.labelEn)
+}
 const isLegacyJourney = computed(
   () =>
     (isTripTraveling.value || isTripArrived.value) &&
@@ -1140,11 +1183,7 @@ const showPrimaryRouteCard = computed(
     isTripArrived.value ||
     Boolean(mapWorldAppContext.value),
 )
-const mapDestinationSearchValue = computed(() =>
-  destinationIntentActive.value || isTripTraveling.value || isTripArrived.value
-    ? tripForm.value.to
-    : '',
-)
+const mapDestinationSearchValue = computed(() => mapSearchText.value)
 
 const relationshipContactOptions = computed(() =>
   chatStore.contacts
@@ -1290,7 +1329,7 @@ const mapPrimarySheetDescription = computed(() => {
   if (mapDestinationHint.value) {
     return t(`当前位置到 ${mapDestinationHint.value}`, `Current location to ${mapDestinationHint.value}`)
   }
-  return t('输入目的地，或从地点、探索反馈和历史路线中选择。', 'Enter a destination, or choose from places, feedback, and route history.')
+  return t('输入目的地，或从地点、足迹反馈和历史路线中选择。', 'Enter a destination, or choose from places, Footprints feedback, and route history.')
 })
 
 const buildMapKnowledgeContextTexts = (item = {}) =>
@@ -1391,7 +1430,7 @@ const getMapAreaUnlockHint = (area) => {
 
   const requirements = []
   if (Number(area?.remainingPoints) > 0) {
-    requirements.push(t(`${area.remainingPoints} 点探索`, `${area.remainingPoints} pts`))
+    requirements.push(t(`${area.remainingPoints} 点足迹`, `${area.remainingPoints} pts`))
   }
   if (Number(area?.remainingCompletedTrips) > 0) {
     requirements.push(t(`${area.remainingCompletedTrips} 次行程`, `${area.remainingCompletedTrips} trips`))
@@ -1519,6 +1558,7 @@ const startTrip = async () => {
 const cancelTrip = () => {
   const ok = mapStore.cancelTrip()
   if (!ok) return
+  mapSearchText.value = ''
   destinationIntentActive.value = false
   mapSearchSuggestionsOpen.value = false
   tripActionHint.value = {
@@ -1531,6 +1571,7 @@ const acknowledgeArrival = () => {
   const sharedRouteTarget = selectedSharedRouteContact.value
   const ok = mapStore.acknowledgeTripArrival()
   if (!ok) return
+  mapSearchText.value = ''
   destinationIntentActive.value = false
   mapSearchSuggestionsOpen.value = false
   const latestReward = tripHistory.value.find((item) => item?.status === 'arrived' && Number(item.rewardPoints) > 0)
@@ -1557,8 +1598,8 @@ const acknowledgeArrival = () => {
     tone: 'success',
     message: latestReward
       ? t(
-          `行程已完成，获得 ${Number(latestReward.rewardPoints) || 0} 点探索进度。`,
-          `Trip completed. Gained ${Number(latestReward.rewardPoints) || 0} exploration points.`,
+          `行程已完成，获得 ${Number(latestReward.rewardPoints) || 0} 点足迹进度。`,
+          `Trip completed. Gained ${Number(latestReward.rewardPoints) || 0} Footprints points.`,
         )
       : t('行程已完成。', 'Trip marked as completed.'),
   }
@@ -1656,6 +1697,7 @@ watch(
 
 watch(activeMapPackId, (nextPackId, previousPackId) => {
   if (!previousPackId || nextPackId === previousPackId || isTripTraveling.value || isTripArrived.value) return
+  mapSearchText.value = ''
   destinationIntentActive.value = false
   mapSearchSuggestionsOpen.value = false
   selectedMapPlace.value = null
@@ -1679,7 +1721,15 @@ watch(
 watch(
   () => route.query.panel,
   (panel) => {
-    if (panel === 'visual') openMapDrawer('visual')
+    if (MAP_DRAWER_SECTIONS.some((section) => section.key === panel)) openMapDrawer(panel)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.query.action,
+  (action) => {
+    if (action === 'create') openPlaceManager({ create: true })
   },
   { immediate: true },
 )
@@ -1737,12 +1787,11 @@ onBeforeUnmount(() => {
         <MapSceneCanvas
           :map-pack="renderedActiveMapPack"
           :pins="mapScenePins"
-          :pending-position="pendingMapPosition"
           :focus-position="mapFocusPosition"
-          :allow-pin-placement="placePinMode"
-          @place-pin="onMapPlacePin"
+          :allow-pin-placement="rolePositionMode"
+          @place-pin="onRolePositionSelected"
           @select-pin="onMapPinSelected"
-          @map-interact="closeMapSearch"
+          @map-interact="onMapInteraction"
         />
 
         <div class="map-search-card" :class="{ 'has-results': mapSearchPanelOpen }">
@@ -1751,11 +1800,12 @@ onBeforeUnmount(() => {
             <input
               :value="mapDestinationSearchValue"
               class="map-destination-input"
-              :placeholder="t('搜索地点、区域或类型', 'Search places, areas, or categories')"
-              :readonly="isTripTraveling || isTripArrived"
+              :placeholder="isJourneyPlanningLocked
+                ? t('搜索并浏览其他地点', 'Search and browse other places')
+                : t('搜索地点、区域或类型', 'Search places, areas, or categories')"
               data-testid="map-destination-search"
               @focus="openMapSearch"
-              @input="updateTripTo($event.target.value)"
+              @input="updateMapSearch($event.target.value)"
               @keydown.esc="closeMapSearch"
             />
             <button
@@ -1771,6 +1821,15 @@ onBeforeUnmount(() => {
             <div class="map-search-scope" data-testid="map-local-search-scope">
               <span><i class="fas fa-map-pin" aria-hidden="true"></i>{{ mapSearchScopeLabel }}</span>
               <small>{{ mapPlaceSearchResults.length }}/{{ searchableMapPlaces.length }}</small>
+            </div>
+            <div
+              v-if="isJourneyPlanningLocked"
+              class="map-search-journey-lock"
+              data-testid="map-search-journey-lock"
+              role="status"
+            >
+              <i class="fas fa-lock" aria-hidden="true"></i>
+              <span>{{ t('当前行程目的地已锁定，可继续浏览地点', 'Current destination is locked; you can still browse places') }}</span>
             </div>
             <div
               class="map-search-categories"
@@ -1815,7 +1874,7 @@ onBeforeUnmount(() => {
             <div v-if="mapPlaceSearchResults.length === 0" class="map-search-empty">
               <p>{{ t('当前世界没有匹配的地点。', 'No matching place exists in the current world.') }}</p>
               <div class="map-search-empty-actions">
-                <button type="button" data-testid="map-use-freeform-destination" @click="useFreeformDestination">
+                <button v-if="!isJourneyPlanningLocked" type="button" data-testid="map-use-freeform-destination" @click="useFreeformDestination">
                   <i class="fas fa-arrow-right" aria-hidden="true"></i>
                   <span>{{ t('按此文字规划', 'Use this destination') }}</span>
                 </button>
@@ -1829,26 +1888,66 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="map-control-stack" data-testid="map-primary-controls">
+          <div class="map-role-control-group">
+            <button
+              v-if="showRoleLocationControl"
+              type="button"
+              class="map-control-button"
+              data-testid="map-current-location"
+              :aria-label="roleLocationControlHint"
+              :title="roleLocationControlHint"
+              @click="focusCurrentLocation"
+            >
+              <i class="fas fa-location-dot" aria-hidden="true"></i>
+              <span>{{ roleLocationControlLabel }}</span>
+            </button>
+            <button
+              v-if="canSetRolePosition"
+              type="button"
+              class="map-control-button is-icon-only"
+              :class="{ 'is-active': rolePositionMode }"
+              data-testid="map-set-current-location"
+              :aria-label="t('在地图上设定角色位置', 'Set role position on map')"
+              :title="t('在地图上设定角色位置', 'Set role position on map')"
+              :aria-pressed="rolePositionMode"
+              @click="startRolePositionMode"
+            >
+              <i class="fas fa-crosshairs" aria-hidden="true"></i>
+            </button>
+          </div>
           <button
-            v-if="showRoleLocationControl"
+            v-for="section in MAP_PRIMARY_SECTIONS"
+            :key="section.key"
             type="button"
-            class="map-control-button"
-            data-testid="map-current-location"
-            :aria-label="t(`角色位置：${currentLocationText}`, `Role location: ${currentLocationText}`)"
-            :title="t(`角色位置：${currentLocationText}`, `Role location: ${currentLocationText}`)"
-            @click="focusCurrentLocation"
+            class="map-control-button map-section-control"
+            :class="{
+              'is-active': mapDrawerOpen && mapDrawerFocus === section.key,
+              'has-runtime': section.key === 'trip' && (isTripTraveling || isTripArrived),
+            }"
+            :data-testid="`map-open-${section.key}`"
+            :aria-label="mapPrimarySectionLabel(section)"
+            @click="openMapDrawer(section.key)"
           >
-            <i class="fas fa-location-dot" aria-hidden="true"></i>
-          </button>
-          <button type="button" class="map-control-button" data-testid="map-open-places" :aria-label="t('地点列表', 'Places')" @click="openMapDrawer('places')">
-            <i class="fas fa-bookmark" aria-hidden="true"></i>
+            <i :class="section.icon" aria-hidden="true"></i>
+            <span>{{ mapPrimarySectionLabel(section) }}</span>
           </button>
         </div>
 
-        <div v-if="placePinMode" class="map-placement-banner" data-testid="map-placement-mode">
-          <i class="fas fa-location-crosshairs" aria-hidden="true"></i>
-          <span>{{ t('点击地图确定地点位置', 'Tap the map to place this location') }}</span>
-          <button type="button" @click="cancelPlacePinMode">{{ t('取消', 'Cancel') }}</button>
+        <div
+          v-if="rolePositionMode || rolePositionNotice"
+          class="map-role-position-banner"
+          :class="{ 'is-success': !rolePositionMode }"
+          :data-testid="rolePositionMode ? 'map-role-position-mode' : 'map-role-position-feedback'"
+          role="status"
+        >
+          <i :class="rolePositionMode ? 'fas fa-location-crosshairs' : 'fas fa-check'" aria-hidden="true"></i>
+          <span>
+            <strong>{{ rolePositionMode ? t('设定角色位置', 'Set role position') : rolePositionNotice }}</strong>
+            <small v-if="rolePositionMode">{{ t('点击地图任意空白位置确认坐标', 'Tap any blank map point to confirm') }}</small>
+          </span>
+          <button type="button" :aria-label="rolePositionMode ? t('取消', 'Cancel') : t('关闭', 'Dismiss')" @click="rolePositionMode ? cancelRolePositionMode() : rolePositionNotice = ''">
+            {{ rolePositionMode ? t('取消', 'Cancel') : t('知道了', 'Done') }}
+          </button>
         </div>
 
         <div
@@ -1858,6 +1957,7 @@ onBeforeUnmount(() => {
             'is-active-journey': isTripTraveling || isTripArrived,
             'has-journey-event': hasPendingJourneyEventNotice,
             'is-arrived-journey': isTripArrived,
+            'is-journey-moving': isTripTraveling && !isTripPaused,
           }"
           data-testid="map-primary-route-card"
         >
@@ -2013,20 +2113,6 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div class="map-drawer-tabs">
-          <button
-            v-for="section in MAP_PRIMARY_SECTIONS"
-            :key="section.key"
-            type="button"
-            class="map-drawer-tab"
-            :class="{ 'map-drawer-tab-active': mapDrawerFocus === section.key }"
-            @click="mapDrawerFocus = section.key"
-          >
-            <i :class="section.icon"></i>
-            {{ t(section.labelZh, section.labelEn) }}
-          </button>
-        </div>
-
         <div class="map-drawer-content no-scrollbar p-4 space-y-4">
       <MapVisualSettingsPanel
         v-show="mapDrawerFocus === 'visual'"
@@ -2084,10 +2170,6 @@ onBeforeUnmount(() => {
             <span>{{ t('当前位置', 'Current location') }}</span>
             <strong>{{ currentLocationText }}</strong>
           </div>
-          <button type="button" data-testid="map-add-place-drawer" @click="openPlaceCreator">
-            <i class="fas fa-plus" aria-hidden="true"></i>
-            {{ t('添加地点', 'Add place') }}
-          </button>
         </div>
         <div class="map-pin-visibility-toolbar" data-testid="map-pin-visibility-toolbar">
           <div>
@@ -2174,12 +2256,12 @@ onBeforeUnmount(() => {
           type="button"
           class="map-place-management-link"
           data-testid="map-manage-places"
-          @click="openPlaceManager"
+          @click="openPlaceManager()"
         >
           <i class="fas fa-map-location-dot" aria-hidden="true"></i>
           <span>
-            <strong>{{ t('管理地点与图钉', 'Manage places and pins') }}</strong>
-            <small>{{ t('编辑资料、分类与坐标', 'Edit details, categories, and coordinates') }}</small>
+            <strong>{{ t('新增或管理地点与图钉', 'Add or manage places and pins') }}</strong>
+            <small>{{ t('在地图设置中新增、编辑与选定坐标', 'Create, edit, and place pins in Map Settings') }}</small>
           </span>
           <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </button>
@@ -2223,6 +2305,44 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
+      <section
+        v-show="mapDrawerFocus === 'progress'"
+        class="map-glass-panel rounded-[1.75rem] p-4"
+        data-testid="map-footprints-discovery"
+      >
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <div>
+            <p class="text-[10px] font-extrabold text-gray-500">{{ t('地点认知', 'PLACE KNOWLEDGE') }}</p>
+            <h2 class="font-semibold">{{ t('附近发现', 'Nearby discoveries') }}</h2>
+          </div>
+          <AssetStatusBadge
+            :label="activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED
+              ? t(`${activeMapPlaceDiscoverySummary.discoveredCount}/${activeMapPlaceDiscoverySummary.totalCount} 已发现`, `${activeMapPlaceDiscoverySummary.discoveredCount}/${activeMapPlaceDiscoverySummary.totalCount} discovered`)
+              : t('全部地点已知', 'All places known')"
+            icon="fas fa-shoe-prints"
+            tone="emerald"
+            :truncate="false"
+          />
+        </div>
+        <p class="text-xs leading-5 text-gray-500">
+          {{ activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED
+            ? t('完成有坐标的行程后，目的地周边的便利设施会逐步出现在地图与搜索中。', 'Complete positioned journeys to reveal nearby facilities on the map and in search.')
+            : t('当前世界使用全部已知模式；切换模式也会保留已经形成的发现记录。', 'This world currently reveals all places; existing discoveries remain saved when modes change.') }}
+        </p>
+        <div v-if="activeMapPlaceDiscoverySummary.recentDiscoveries.length" class="mt-3 border-t border-white/50">
+          <div
+            v-for="discovery in activeMapPlaceDiscoverySummary.recentDiscoveries"
+            :key="discovery.placeId"
+            class="flex min-h-10 items-center gap-2 border-b border-white/50 py-2"
+            :data-testid="`map-footprint-discovery-${discovery.placeId}`"
+          >
+            <i :class="mapPlaceVisual(discovery.place).icon" class="w-5 text-center text-[11px] text-emerald-700" aria-hidden="true"></i>
+            <span class="min-w-0 flex-1 truncate text-xs font-semibold">{{ mapPlaceName(discovery.place) }}</span>
+            <small class="text-[10px] text-gray-500">{{ formatTime(discovery.evidence?.discoveredAt) }}</small>
+          </div>
+        </div>
+      </section>
+
       <MapAreaFeedbackPanel
         v-show="mapDrawerFocus === 'progress'"
         :map-area-feedback="mapAreaFeedback"
@@ -2249,6 +2369,9 @@ onBeforeUnmount(() => {
         :is-trip-arrived="isTripArrived"
         :is-real-world-map="isRealWorldMap"
         :relationship-contact-options="relationshipContactOptions"
+        :trip-place-options="tripPlaceOptions"
+        :role-position-label="currentLocationText"
+        :role-position-value="currentLocation.detail"
         :shared-route-contact-id="sharedRouteContactId"
         :can-start-trip="canStartTrip"
         :format-seconds="formatSeconds"
@@ -2336,69 +2459,6 @@ onBeforeUnmount(() => {
       </aside>
     </div>
 
-    <div v-if="placeCreatorOpen" class="map-place-modal-backdrop" @click.self="closePlaceCreator">
-      <section class="map-place-modal" role="dialog" aria-modal="true" :aria-label="t('添加地点', 'Add place')" data-testid="map-place-creator">
-        <div class="map-place-modal-header">
-          <div>
-            <span>{{ t(activeMapPack.shortLabelZh, activeMapPack.shortLabelEn) }}</span>
-            <h2>{{ t('添加地点', 'Add place') }}</h2>
-          </div>
-          <button type="button" :aria-label="t('关闭', 'Close')" @click="closePlaceCreator">
-            <i class="fas fa-xmark" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <div class="map-place-category-grid" role="group" :aria-label="t('地点类型', 'Place type')">
-          <button
-            v-for="category in MAP_USER_PLACE_CATEGORIES"
-            :key="category.id"
-            type="button"
-            :class="{ 'is-active': addressForm.category === category.id }"
-            :style="{ '--map-place-tone': category.tone }"
-            :aria-pressed="addressForm.category === category.id"
-            @click="addressForm.category = category.id"
-          >
-            <i :class="category.icon" aria-hidden="true"></i>
-            <span>{{ t(category.labelZh, category.labelEn) }}</span>
-          </button>
-        </div>
-
-        <label class="map-place-field">
-          <span>{{ t('地点名称', 'Place name') }}</span>
-          <input v-model="addressForm.label" data-testid="map-place-name" :placeholder="t('例如：家、公司、练习室', 'Home, office, studio...')" />
-        </label>
-        <label class="map-place-field">
-          <span>{{ t('地址或说明', 'Address or description') }}</span>
-          <input v-model="addressForm.detail" data-testid="map-place-detail" :placeholder="t('输入真实地址或自定义描述', 'Enter an address or custom description')" />
-        </label>
-
-        <div class="map-place-position-row" :class="{ 'has-position': addressForm.position }">
-          <span class="map-place-position-icon"><i class="fas fa-map-pin" aria-hidden="true"></i></span>
-          <span class="min-w-0">
-            <strong>{{ addressForm.position ? t('位置已确定', 'Position selected') : t('尚未设置位置', 'Position not set') }}</strong>
-            <small>{{ addressForm.position ? formatMapPosition(addressForm.position) : t('在地图上选择，或使用当前位置', 'Choose on the map or use current location') }}</small>
-          </span>
-          <i v-if="addressForm.position" class="fas fa-check" aria-hidden="true"></i>
-        </div>
-        <p v-if="addressForm.position" class="sr-only" data-testid="map-pending-pin-status">{{ t('已在地图上选定图钉位置', 'Pin position selected on the map') }}</p>
-
-        <div class="map-place-position-actions">
-          <button type="button" data-testid="map-choose-pin" @click="startPlacePinMode">
-            <i class="fas fa-crosshairs" aria-hidden="true"></i>
-            {{ addressForm.position ? t('重新选点', 'Choose again') : t('在地图选点', 'Choose on map') }}
-          </button>
-          <button type="button" :disabled="!currentLocation.position || currentLocation.mapPackId !== activeMapPackId" @click="useCurrentPositionForDraft">
-            <i class="fas fa-location-arrow" aria-hidden="true"></i>
-            {{ t('使用当前位置', 'Use current') }}
-          </button>
-        </div>
-
-        <button type="button" class="map-place-save-button" :disabled="!canSavePlace" data-testid="map-save-address" @click="addAddress">
-          {{ t('保存地点', 'Save place') }}
-        </button>
-      </section>
-    </div>
-
     <div v-if="selectedMapPlace" class="map-place-modal-backdrop" @click.self="closePlaceDetail">
       <section class="map-place-detail-sheet" role="dialog" aria-modal="true" :aria-label="mapPlaceName(selectedMapPlace)" :style="{ '--map-place-tone': mapPlaceVisual(selectedMapPlace).tone }" data-testid="map-place-detail-sheet">
         <div class="map-place-detail-head">
@@ -2410,7 +2470,15 @@ onBeforeUnmount(() => {
           </div>
           <button type="button" :aria-label="t('关闭', 'Close')" @click="closePlaceDetail"><i class="fas fa-xmark" aria-hidden="true"></i></button>
         </div>
-        <div class="map-place-detail-actions">
+        <div
+          v-if="isJourneyPlanningLocked"
+          class="map-place-journey-lock"
+          data-testid="map-place-journey-lock"
+        >
+          <i class="fas fa-eye" aria-hidden="true"></i>
+          <span>{{ t('浏览此地点不会改变当前行程', 'Viewing this place will not change the current journey') }}</span>
+        </div>
+        <div v-else class="map-place-detail-actions">
           <button type="button" class="is-primary" data-testid="map-place-use-destination" @click="useSelectedPlaceAsDestination">
             <i class="fas fa-location-arrow" aria-hidden="true"></i>
             {{ t('设为目的地', 'Set destination') }}
@@ -2774,31 +2842,6 @@ onBeforeUnmount(() => {
   background: #cbd5e1;
 }
 
-.map-drawer-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 10px;
-}
-
-.map-drawer-tab {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 7px;
-  border-radius: 999px;
-  background: #e2e8f0;
-  padding: 8px 12px;
-  color: #475569;
-  font-size: 0.8rem;
-  font-weight: 750;
-}
-
-.map-drawer-tab-active {
-  background: #0f172a;
-  color: #fff;
-}
-
 .map-drawer-content {
   overflow-y: auto;
 }
@@ -2976,14 +3019,11 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-.map-destination-input[readonly] {
-  cursor: default;
-  color: #526158;
-}
-
 .map-place-results {
-  max-height: min(52vh, 360px);
+  max-height: min(72vh, 520px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border-top: 1px solid #e1e6e2;
   background: #fff;
   padding: 5px;
@@ -3016,16 +3056,31 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-.map-search-categories {
+.map-search-journey-lock {
   display: flex;
-  gap: 5px;
-  overflow-x: auto;
-  padding: 0 7px 7px;
-  scrollbar-width: none;
+  align-items: center;
+  gap: 7px;
+  margin: 0 7px 7px;
+  border: 1px solid #d7e2dc;
+  border-radius: 6px;
+  background: #f2f7f4;
+  padding: 7px 8px;
+  color: #315044;
+  font-size: 9px;
+  font-weight: 750;
+  line-height: 1.4;
 }
 
-.map-search-categories::-webkit-scrollbar {
-  display: none;
+.map-search-journey-lock i {
+  flex: 0 0 auto;
+  color: #17664f;
+}
+
+.map-search-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0 7px 7px;
 }
 
 .map-search-category {
@@ -3166,53 +3221,87 @@ onBeforeUnmount(() => {
   gap: 7px;
 }
 
+.map-role-control-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
 .map-control-button {
-  display: grid;
-  width: 42px;
+  display: inline-flex;
+  min-width: 42px;
   height: 42px;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid rgba(211, 221, 214, 0.9);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
+  padding: 0 10px;
   color: #2f443a;
   box-shadow: 0 8px 22px rgba(31, 48, 39, 0.12);
   font-size: 12px;
   backdrop-filter: blur(10px);
 }
 
-.map-control-button.is-primary {
+.map-control-button span {
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.map-control-button.is-icon-only {
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+}
+
+.map-control-button.is-active,
+.map-control-button.has-runtime {
   border-color: #17664f;
   background: #17664f;
   color: #fff;
 }
 
-.map-placement-banner {
+.map-control-button.has-runtime {
+  box-shadow: 0 9px 24px rgba(23, 102, 79, 0.24);
+}
+
+.map-role-position-banner {
   position: absolute;
   top: 76px;
-  right: 66px;
+  right: 134px;
   left: 14px;
-  z-index: 15;
+  z-index: 13;
   display: grid;
-  min-height: 46px;
+  min-height: 48px;
   grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  border: 1px solid #d7bf73;
+  border: 1px solid #bda45d;
   border-radius: 8px;
-  background: #fff8dd;
+  background: rgba(255, 249, 224, 0.98);
   padding: 7px 9px;
   color: #5f4b11;
-  box-shadow: 0 10px 26px rgba(82, 62, 9, 0.16);
-  font-size: 11px;
-  font-weight: 800;
+  box-shadow: 0 10px 28px rgba(82, 62, 9, 0.16);
 }
 
-.map-placement-banner > button {
-  min-height: 30px;
-  border-radius: 6px;
-  background: #efe0a8;
-  padding: 0 8px;
-  font-size: 10px;
+.map-role-position-banner.is-success {
+  border-color: #9fc8b5;
+  background: rgba(235, 246, 239, 0.98);
+  color: #17664f;
+}
+
+.map-role-position-banner > span { display: grid; min-width: 0; gap: 2px; }
+.map-role-position-banner strong { font-size: 10px; font-weight: 850; }
+.map-role-position-banner small { font-size: 9px; line-height: 1.35; }
+.map-role-position-banner > button { min-height: 32px; border-radius: 6px; background: rgba(255, 255, 255, 0.72); padding: 0 8px; font-size: 9px; font-weight: 800; }
+
+.map-control-button.is-primary {
+  border-color: #17664f;
+  background: #17664f;
+  color: #fff;
 }
 
 .map-route-card {
@@ -3265,6 +3354,15 @@ onBeforeUnmount(() => {
 
 .map-journey-live-status > span i {
   font-size: 7px;
+}
+
+.map-route-card.is-journey-moving .map-journey-live-status > span i {
+  animation: map-journey-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes map-journey-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1.18); }
 }
 
 .map-journey-live-status > small {
@@ -3492,7 +3590,6 @@ onBeforeUnmount(() => {
 }
 
 .map-bottom-drawer,
-.map-place-modal,
 .map-place-detail-sheet {
   display: flex;
   width: min(100%, 720px);
@@ -3514,34 +3611,6 @@ onBeforeUnmount(() => {
   width: 38px;
   border-radius: 999px;
   background: #c9d1cc;
-}
-
-.map-drawer-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
-  overflow: visible;
-  padding-bottom: 9px;
-}
-
-.map-drawer-tab {
-  display: inline-flex;
-  min-width: 0;
-  min-height: 38px;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border-radius: 7px;
-  background: #e8ece9;
-  padding: 0 7px;
-  color: #526158;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.map-drawer-tab-active {
-  background: #17664f;
-  color: #fff;
 }
 
 .map-drawer-content { overflow-y: auto; padding: 8px 4px 4px; }
@@ -3583,8 +3652,7 @@ onBeforeUnmount(() => {
 .map-pin-visibility-toolbar strong { display: block; margin-top: 2px; color: #273a31; font-size: 10px; }
 .map-pin-visibility-toolbar > div:last-child { display: flex; gap: 5px; }
 .map-pin-visibility-toolbar button { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #d9e1dc; border-radius: 7px; background: #f7f9f7; color: #456154; }
-.map-place-category-filter { display: flex; overflow-x: auto; gap: 6px; margin: 12px -4px 0; padding: 0 4px 4px; scrollbar-width: none; }
-.map-place-category-filter::-webkit-scrollbar { display: none; }
+.map-place-category-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px -4px 0; padding: 0 4px 4px; }
 .map-place-category-control { display: inline-flex; min-height: 34px; flex: 0 0 auto; overflow: hidden; border: 1px solid #dfe5e1; border-radius: 7px; background: #f4f6f4; }
 .map-place-category-control.is-active { border-color: var(--map-place-tone); background: color-mix(in srgb, var(--map-place-tone) 10%, white); box-shadow: inset 0 0 0 1px var(--map-place-tone); }
 .map-place-category-control.is-hidden { opacity: 0.66; }
@@ -3619,50 +3687,25 @@ onBeforeUnmount(() => {
 .map-place-management-link small { color: #758179; font-size: 9px; }
 .map-place-management-link > i:last-child { color: #98a49d; font-size: 8px; }
 
-.map-place-modal,
 .map-place-detail-sheet {
   overflow-y: auto;
   padding: 18px 18px calc(22px + env(safe-area-inset-bottom));
 }
 
-.map-place-modal-header,
 .map-place-detail-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
-.map-place-modal-header span { color: #718078; font-size: 9px; font-weight: 800; text-transform: uppercase; }
-.map-place-modal-header h2,
 .map-place-detail-head h2 { margin-top: 3px; font-size: 18px; font-weight: 850; }
-.map-place-modal-header > button,
 .map-place-detail-head > button { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border: 1px solid #dce2de; border-radius: 7px; background: #fff; color: #526158; }
-.map-place-category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 16px; }
-.map-place-category-grid button { display: flex; min-height: 52px; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid #dde4df; border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 5%, white); color: var(--map-place-tone); font-size: 9px; font-weight: 800; }
-.map-place-category-grid button.is-active { border-color: var(--map-place-tone); background: color-mix(in srgb, var(--map-place-tone) 14%, white); color: var(--map-place-tone); box-shadow: inset 0 0 0 1px var(--map-place-tone); }
-.map-place-field { display: block; margin-top: 13px; }
-.map-place-field > span { display: block; margin-bottom: 6px; color: #6c7871; font-size: 9px; font-weight: 800; }
-.map-place-field input { width: 100%; min-height: 44px; border: 1px solid #d5ddd8; border-radius: 7px; background: #fff; padding: 0 11px; color: #17211d; font-size: 12px; outline: none; }
-.map-place-field input:focus { border-color: #17664f; box-shadow: 0 0 0 3px rgba(23, 102, 79, 0.12); }
-.map-place-position-row { display: grid; min-height: 60px; grid-template-columns: 38px minmax(0, 1fr) 20px; align-items: center; gap: 9px; margin-top: 14px; border: 1px solid #dce2de; border-radius: 7px; background: #f2f5f2; padding: 8px; }
-.map-place-position-row.has-position { border-color: #a9cbbb; background: #eaf3ed; }
-.map-place-position-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 7px; background: #dfe8e2; color: #607068; }
-.map-place-position-row.has-position .map-place-position-icon { background: #17664f; color: #fff; }
-.map-place-position-row strong,
-.map-place-position-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.map-place-position-row strong { font-size: 11px; }
-.map-place-position-row small { margin-top: 3px; color: #748078; font-size: 9px; }
-.map-place-position-row > i { color: #17664f; }
-.map-place-position-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
-.map-place-position-actions button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; border: 1px solid #d8dfda; border-radius: 7px; background: #fff; color: #345044; font-size: 10px; font-weight: 800; }
-.map-place-position-actions button:disabled { opacity: 0.45; }
-.map-place-save-button { width: 100%; min-height: 46px; margin-top: 15px; border-radius: 7px; background: #17664f; color: #fff; font-size: 12px; font-weight: 850; }
-.map-place-save-button:disabled { background: #d1d9d4; color: #7d8982; }
-
 .map-place-detail-head { display: grid; grid-template-columns: 48px minmax(0, 1fr) 38px; }
 .map-place-detail-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 8px; background: var(--map-place-tone); color: #fff; }
 .map-place-detail-head small { color: #718078; font-size: 9px; font-weight: 800; }
 .map-place-detail-head p { margin-top: 5px; color: #627067; font-size: 11px; line-height: 1.5; }
+.map-place-journey-lock { display: flex; align-items: center; gap: 8px; margin-top: 16px; border: 1px solid #d7e2dc; border-radius: 7px; background: #f2f7f4; padding: 10px 11px; color: #315044; font-size: 10px; font-weight: 750; line-height: 1.45; }
+.map-place-journey-lock i { flex: 0 0 auto; color: #17664f; }
 .map-place-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 18px; }
 .map-place-detail-actions button { display: flex; min-height: 58px; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid #dae1dc; border-radius: 7px; background: #fff; color: #3a4d43; padding: 5px; font-size: 9px; font-weight: 800; }
 .map-place-detail-actions button.is-primary { border-color: #17664f; background: #17664f; color: #fff; }
@@ -3680,7 +3723,6 @@ input:focus-visible {
   .map-canvas-shell { padding: 12px; }
   .map-canvas { border: 1px solid #d3dcd6; border-radius: 8px; }
   .map-bottom-drawer,
-  .map-place-modal,
   .map-place-detail-sheet { margin-bottom: 18px; border-radius: 8px; }
 }
 

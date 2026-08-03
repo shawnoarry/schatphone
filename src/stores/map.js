@@ -27,8 +27,18 @@ import {
 import {
   getMapPlaceCategoryVisual,
   isMapPlaceCategoryDefaultVisible,
+  matchesMapPlaceCategoryFilter,
   normalizeUserMapPlaceCategory,
 } from '../lib/map-place-categories'
+import {
+  MAP_PLACE_DISCOVERY_SOURCE,
+  createMapPlaceKnowledgeState,
+  findNearbyFootprintDiscoveries,
+  isMapPlaceFootprintDiscoverable,
+  isMapPlaceKnown as isPlaceKnownByPolicy,
+  normalizeMapPlaceKnowledgeByWorld,
+  normalizeMapPlaceKnowledgeMode,
+} from '../lib/map-place-discovery'
 import {
   LEGACY_MAP_TRANSPORT_MODE,
   MAP_JOURNEY_PHASE,
@@ -152,8 +162,8 @@ const MAP_AREA_UNLOCKS = [
     id: 'outer_ring',
     areaLabelZh: '远行外环',
     areaLabelEn: 'Outer ring',
-    descriptionZh: '足够多的探索和稳定路线会打开更远区域的叙事空间。',
-    descriptionEn: 'Enough exploration and trusted routes open narrative space beyond the usual area.',
+    descriptionZh: '足够多的足迹和稳定路线会打开更远区域的叙事空间。',
+    descriptionEn: 'Enough Footprints and trusted routes open narrative space beyond the usual area.',
     requiredPoints: 120,
     requiredCompletedTrips: 6,
     requiredKnownRoutes: 2,
@@ -256,6 +266,8 @@ const createIdleTripState = () => ({
   eventCheckpointIds: [],
   activeInterruption: null,
   eventDelaySeconds: 0,
+  worldPackId: '',
+  mapPackId: '',
   from: '',
   to: '',
   fromLabel: '',
@@ -502,6 +514,10 @@ const normalizeTripState = (raw) => {
     eventCheckpointIds: normalizeTripEventCheckpointIds(raw.eventCheckpointIds),
     activeInterruption,
     eventDelaySeconds: Math.max(0, toInt(raw.eventDelaySeconds, 0)),
+    worldPackId:
+      typeof raw.worldPackId === 'string' ? raw.worldPackId.trim().slice(0, 120) : '',
+    mapPackId:
+      typeof raw.mapPackId === 'string' ? raw.mapPackId.trim().slice(0, 120) : '',
     from: typeof raw.from === 'string' ? raw.from.trim() : '',
     to: typeof raw.to === 'string' ? raw.to.trim() : '',
     fromLabel: typeof raw.fromLabel === 'string' ? raw.fromLabel.trim() : '',
@@ -570,6 +586,10 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
     eventCheckpointIds: normalizeTripEventCheckpointIds(raw.eventCheckpointIds),
     eventDelaySeconds: Math.max(0, toInt(raw.eventDelaySeconds, 0)),
     totalPausedSeconds: Math.max(0, toInt(raw.totalPausedSeconds, 0)),
+    worldPackId:
+      typeof raw.worldPackId === 'string' ? raw.worldPackId.trim().slice(0, 120) : '',
+    mapPackId:
+      typeof raw.mapPackId === 'string' ? raw.mapPackId.trim().slice(0, 120) : '',
     from,
     to,
     fromLabel: typeof raw.fromLabel === 'string' ? raw.fromLabel.trim() : '',
@@ -1080,6 +1100,7 @@ export const useMapStore = defineStore('map', () => {
   const customMapPacks = ref([])
   const worldMapPackBindings = ref({})
   const mapPinVisibilityByPack = ref({})
+  const mapPlaceKnowledgeByWorld = ref({})
   const mapPacks = computed(() => listMapPacks(customMapPacks.value))
   const activeMapPackId = ref(DEFAULT_MAP_PACK_ID)
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
@@ -1105,10 +1126,17 @@ export const useMapStore = defineStore('map', () => {
 
   const activeMapPack = computed(() => findMapPackInList(mapPacks.value, activeMapPackId.value))
 
+  const activeWorldPackId = computed(() => {
+    const worldPack = getSystemStore().getActiveWorldPack?.()
+    return typeof worldPack?.id === 'string' && worldPack.id.trim()
+      ? worldPack.id.trim().slice(0, 120)
+      : 'default_world'
+  })
+
   const getAvailableMapPackById = (packId) => findMapPackInList(mapPacks.value, packId)
 
-  const activeMapPlaces = computed(() => {
-    const pack = activeMapPack.value
+  const buildMapPlacesForPack = (packInput) => {
+    const pack = findMapPackInList(mapPacks.value, packInput?.id || packInput)
     const builtInPlaces = (pack.places || []).map((place) => ({
       ...place,
       placeId: place.id,
@@ -1132,6 +1160,68 @@ export const useMapStore = defineStore('map', () => {
         }
       })
     return [...builtInPlaces, ...userPlaces]
+  }
+
+  const activeMapAllPlaces = computed(() => buildMapPlacesForPack(activeMapPack.value))
+
+  const getMapPlaceKnowledgeState = (worldPackId = activeWorldPackId.value) =>
+    mapPlaceKnowledgeByWorld.value[worldPackId] || createMapPlaceKnowledgeState()
+
+  const getMapPlaceDiscoveries = (
+    worldPackId = activeWorldPackId.value,
+    mapPackId = activeMapPackId.value,
+  ) =>
+    getMapPlaceKnowledgeState(worldPackId).discoveriesByMapPack?.[mapPackId] || {
+      placeIds: [],
+      evidenceByPlaceId: {},
+    }
+
+  const activeMapPlaceKnowledgeMode = computed(
+    () => getMapPlaceKnowledgeState(activeWorldPackId.value).mode,
+  )
+
+  const activeMapPlaces = computed(() => {
+    const discoveries = getMapPlaceDiscoveries(
+      activeWorldPackId.value,
+      activeMapPackId.value,
+    )
+    return activeMapAllPlaces.value.filter((place) =>
+      isPlaceKnownByPolicy({
+        place,
+        mode: activeMapPlaceKnowledgeMode.value,
+        discoveredPlaceIds: discoveries.placeIds,
+      }),
+    )
+  })
+
+  const activeMapPlaceDiscoverySummary = computed(() => {
+    const discoveries = getMapPlaceDiscoveries(
+      activeWorldPackId.value,
+      activeMapPackId.value,
+    )
+    const discoverablePlaces = activeMapAllPlaces.value.filter(isMapPlaceFootprintDiscoverable)
+    const placeById = new Map(
+      discoverablePlaces.map((place) => [place.placeId || place.id, place]),
+    )
+    const recentDiscoveries = discoveries.placeIds
+      .map((placeId) => ({
+        placeId,
+        place: placeById.get(placeId) || null,
+        evidence: discoveries.evidenceByPlaceId?.[placeId] || null,
+      }))
+      .filter((item) => item.place)
+      .sort(
+        (left, right) =>
+          Number(right.evidence?.discoveredAt || 0) - Number(left.evidence?.discoveredAt || 0) ||
+          left.placeId.localeCompare(right.placeId),
+      )
+      .slice(0, 4)
+    return {
+      mode: activeMapPlaceKnowledgeMode.value,
+      totalCount: discoverablePlaces.length,
+      discoveredCount: discoveries.placeIds.filter((placeId) => placeById.has(placeId)).length,
+      recentDiscoveries,
+    }
   })
 
   const getMapPinVisibilityState = (mapPackId = activeMapPackId.value) =>
@@ -1166,7 +1256,9 @@ export const useMapStore = defineStore('map', () => {
     const places =
       categoryId === 'all'
         ? activeMapPlaces.value
-        : activeMapPlaces.value.filter((place) => place.category === categoryId)
+        : activeMapPlaces.value.filter((place) =>
+            matchesMapPlaceCategoryFilter(place.category, categoryId),
+          )
     const visibleCount = places.filter((place) => isMapPlaceVisible(place)).length
     return {
       visibleCount,
@@ -1203,7 +1295,9 @@ export const useMapStore = defineStore('map', () => {
     const places =
       categoryId === 'all'
         ? activeMapPlaces.value
-        : activeMapPlaces.value.filter((place) => place.category === categoryId)
+        : activeMapPlaces.value.filter((place) =>
+            matchesMapPlaceCategoryFilter(place.category, categoryId),
+          )
     if (places.length === 0) return false
     const mapPackId = activeMapPackId.value
     const current = getMapPinVisibilityState(mapPackId)
@@ -1227,11 +1321,11 @@ export const useMapStore = defineStore('map', () => {
     return true
   }
 
-  const findActivePlaceByText = (textInput) => {
+  const findMapPlaceByText = (textInput, places = activeMapAllPlaces.value) => {
     const text = typeof textInput === 'string' ? textInput.trim().toLocaleLowerCase() : ''
     if (!text) return null
     return (
-      activeMapPlaces.value.find((place) => {
+      places.find((place) => {
         const candidates = [
           place.label,
           place.detail,
@@ -1249,9 +1343,108 @@ export const useMapStore = defineStore('map', () => {
     )
   }
 
+  const findActivePlaceByText = (textInput) => findMapPlaceByText(textInput)
+
+  const findCurrentLocationByText = (textInput) => {
+    const text = typeof textInput === 'string' ? textInput.trim().toLocaleLowerCase() : ''
+    const current = currentLocation.value
+    if (
+      !text ||
+      !current?.position ||
+      current.mapPackId !== activeMapPackId.value
+    ) return null
+    const candidates = [
+      current.label,
+      current.detail,
+      `${current.label || ''} · ${current.detail || ''}`,
+    ]
+    if (!candidates.some((candidate) =>
+      typeof candidate === 'string' && candidate.trim().toLocaleLowerCase() === text
+    )) return null
+    return {
+      ...current,
+      id: 'map-role-position',
+      placeId: 'map-role-position',
+      source: 'role_position',
+    }
+  }
+
+  const findTripEndpointByText = (textInput) =>
+    findCurrentLocationByText(textInput) || findActivePlaceByText(textInput)
+
+  const setMapPlaceKnowledgeMode = (
+    modeInput,
+    worldPackId = activeWorldPackId.value,
+  ) => {
+    const normalizedWorldPackId =
+      typeof worldPackId === 'string' ? worldPackId.trim().slice(0, 120) : ''
+    const mode = normalizeMapPlaceKnowledgeMode(modeInput, '')
+    if (!normalizedWorldPackId || !mode) return false
+    const current = getMapPlaceKnowledgeState(normalizedWorldPackId)
+    mapPlaceKnowledgeByWorld.value = {
+      ...mapPlaceKnowledgeByWorld.value,
+      [normalizedWorldPackId]: {
+        ...current,
+        mode,
+        discoveriesByMapPack: { ...current.discoveriesByMapPack },
+      },
+    }
+    return true
+  }
+
+  const recordMapPlaceDiscoveriesForArrival = ({
+    trip,
+    destinationPlace,
+    sourceTripId,
+    discoveredAt,
+  } = {}) => {
+    const worldPackId = trip?.worldPackId || activeWorldPackId.value
+    const mapPackId = trip?.mapPackId || activeMapPackId.value
+    const mapPack = getAvailableMapPackById(mapPackId)
+    const sourceId = typeof sourceTripId === 'string' ? sourceTripId.trim() : ''
+    const at = Math.max(0, Math.floor(Number(discoveredAt) || 0))
+    if (!worldPackId || !mapPack || !destinationPlace?.position || !sourceId || !at) return []
+
+    const worldState = getMapPlaceKnowledgeState(worldPackId)
+    const packState = getMapPlaceDiscoveries(worldPackId, mapPackId)
+    const discoveries = findNearbyFootprintDiscoveries({
+      mapPack,
+      places: buildMapPlacesForPack(mapPack),
+      position: destinationPlace.position,
+      discoveredPlaceIds: packState.placeIds,
+    })
+    if (discoveries.length === 0) return []
+
+    const placeIds = [...packState.placeIds]
+    const evidenceByPlaceId = { ...packState.evidenceByPlaceId }
+    discoveries.forEach(({ place }) => {
+      const placeId = place.placeId || place.id
+      if (!placeIds.includes(placeId)) placeIds.push(placeId)
+      evidenceByPlaceId[placeId] = {
+        sourceType: MAP_PLACE_DISCOVERY_SOURCE.TRIP_ARRIVAL,
+        sourceId,
+        discoveredAt: at,
+      }
+    })
+    mapPlaceKnowledgeByWorld.value = {
+      ...mapPlaceKnowledgeByWorld.value,
+      [worldPackId]: {
+        ...worldState,
+        discoveriesByMapPack: {
+          ...worldState.discoveriesByMapPack,
+          [mapPackId]: { placeIds, evidenceByPlaceId },
+        },
+      },
+    }
+    return discoveries.map(({ place, distanceKm }) => ({
+      placeId: place.placeId || place.id,
+      distanceKm,
+    }))
+  }
+
   const computeActiveTripEstimate = (fromText, toText, transportMode = tripForm.transportMode) => {
-    const fromPlace = findActivePlaceByText(fromText)
-    const toPlace = findActivePlaceByText(toText)
+    const fromPlace = findTripEndpointByText(fromText)
+    const toPlace = findTripEndpointByText(toText)
     const measuredDistanceKm =
       fromPlace?.position && toPlace?.position
         ? calculateMapDistanceKm(activeMapPack.value, fromPlace.position, toPlace.position)
@@ -1681,7 +1874,7 @@ export const useMapStore = defineStore('map', () => {
   const resolveAddressLabel = (detailText, fallbackLabel) => {
     const detail = typeof detailText === 'string' ? detailText.trim() : ''
     if (!detail) return fallbackLabel
-    const activePlace = findActivePlaceByText(detail)
+    const activePlace = findTripEndpointByText(detail)
     if (activePlace) {
       return activePlace.label || activePlace.nameZh || activePlace.nameEn || fallbackLabel
     }
@@ -1943,17 +2136,20 @@ export const useMapStore = defineStore('map', () => {
       remainingSecondsAtPause: 0,
       scheduledPushId: '',
     }
-    const destinationPlace = findActivePlaceByText(state.to)
+    const journeyMapPack = getAvailableMapPackById(state.mapPackId || activeMapPackId.value)
+    const journeyPlaces = buildMapPlacesForPack(journeyMapPack)
+    const destinationPlace = findMapPlaceByText(state.to, journeyPlaces)
     setCurrentLocation({
       source: 'trip_arrived',
       label: state.toLabel || resolveAddressLabel(state.to, '目的地'),
       detail: state.to,
-      mapPackId: activeMapPackId.value,
+      mapPackId: journeyMapPack.id,
       position: destinationPlace?.position || null,
     })
     const reward = buildTripArrivalReward(state)
+    const historyId = `trip_hist_${arrivedAt}`
     appendTripHistory({
-      id: `trip_hist_${arrivedAt}`,
+      id: historyId,
       status: 'arrived',
       journeySchemaVersion: state.journeySchemaVersion,
       journeyId: state.journeyId,
@@ -1962,6 +2158,8 @@ export const useMapStore = defineStore('map', () => {
       eventCheckpointIds: state.eventCheckpointIds,
       eventDelaySeconds: state.eventDelaySeconds,
       totalPausedSeconds: state.totalPausedSeconds,
+      worldPackId: state.worldPackId,
+      mapPackId: state.mapPackId,
       from: state.from,
       to: state.to,
       fromLabel: state.fromLabel,
@@ -1974,6 +2172,12 @@ export const useMapStore = defineStore('map', () => {
       startedAt: state.startedAt,
       endedAt: arrivedAt,
       ...reward,
+    })
+    recordMapPlaceDiscoveriesForArrival({
+      trip: state,
+      destinationPlace,
+      sourceTripId: historyId,
+      discoveredAt: arrivedAt,
     })
     clearTripArrivalTimer()
     if (scheduleId) {
@@ -2534,8 +2738,9 @@ export const useMapStore = defineStore('map', () => {
     source = 'manual',
     mapPackId = activeMapPackId.value,
     position = null,
+    syncTripOrigin = false,
   }) => {
-    if (!detail?.trim()) return
+    if (!detail?.trim()) return false
     const pack = getAvailableMapPackById(mapPackId)
     currentLocation.value = {
       source,
@@ -2544,6 +2749,10 @@ export const useMapStore = defineStore('map', () => {
       mapPackId: pack.id,
       position: normalizeMapPosition(position, pack.coordinateKind),
     }
+    if (syncTripOrigin && normalizeTripState(tripState.value).status === TRIP_STATUS_IDLE) {
+      tripForm.from = currentLocation.value.detail
+    }
+    return true
   }
 
   const setCurrentLocationByAddressId = (addressId) => {
@@ -2555,6 +2764,7 @@ export const useMapStore = defineStore('map', () => {
       source: 'saved',
       mapPackId: match.mapPackId,
       position: match.position,
+      syncTripOrigin: true,
     })
   }
 
@@ -2780,6 +2990,8 @@ export const useMapStore = defineStore('map', () => {
     const startedAt = Date.now()
     const etaAt = startedAt + estimate.durationSeconds * 1000
     const journeyId = createMapJourneyId(startedAt)
+    const worldPackId = activeWorldPackId.value
+    const mapPackId = activeMapPackId.value
 
     tripState.value = {
       status: TRIP_STATUS_TRAVELING,
@@ -2790,6 +3002,8 @@ export const useMapStore = defineStore('map', () => {
       eventCheckpointIds: [],
       activeInterruption: null,
       eventDelaySeconds: 0,
+      worldPackId,
+      mapPackId,
       from,
       to,
       transportMode,
@@ -2819,6 +3033,8 @@ export const useMapStore = defineStore('map', () => {
       durationSeconds: estimate.durationSeconds,
       transportMode,
       journeyId,
+      worldPackId,
+      mapPackId,
       remotePushPromise,
     }
   }
@@ -2845,6 +3061,8 @@ export const useMapStore = defineStore('map', () => {
       eventCheckpointIds: state.eventCheckpointIds,
       eventDelaySeconds: state.eventDelaySeconds,
       totalPausedSeconds: state.totalPausedSeconds,
+      worldPackId: state.worldPackId,
+      mapPackId: state.mapPackId,
       from: state.from,
       to: state.to,
       fromLabel: state.fromLabel,
@@ -3230,6 +3448,9 @@ export const useMapStore = defineStore('map', () => {
       source.mapPinVisibilityByPack,
       mapPacks.value,
     )
+    mapPlaceKnowledgeByWorld.value = normalizeMapPlaceKnowledgeByWorld(
+      source.mapPlaceKnowledgeByWorld,
+    )
     activeMapPackId.value = getAvailableMapPackById(source.activeMapPackId).id
 
     if (Array.isArray(source.addresses)) {
@@ -3307,6 +3528,9 @@ export const useMapStore = defineStore('map', () => {
       places: [],
     })),
     worldMapPackBindings: { ...worldMapPackBindings.value },
+    mapPlaceKnowledgeByWorld: normalizeMapPlaceKnowledgeByWorld(
+      mapPlaceKnowledgeByWorld.value,
+    ),
     mapPinVisibilityByPack: Object.fromEntries(
       Object.entries(mapPinVisibilityByPack.value).map(([mapPackId, state]) => [
         mapPackId,
@@ -3355,6 +3579,7 @@ export const useMapStore = defineStore('map', () => {
     mapCalendarReminderPreferences.value = {}
     activeMapPackId.value = DEFAULT_MAP_PACK_ID
     mapPinVisibilityByPack.value = {}
+    mapPlaceKnowledgeByWorld.value = {}
     mapVisualSettings.value = createDefaultMapVisualSettings()
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
     journeyCheckpointEventEvaluationEnabled = false
@@ -3395,6 +3620,7 @@ export const useMapStore = defineStore('map', () => {
       customMapPacks,
       worldMapPackBindings,
       mapPinVisibilityByPack,
+      mapPlaceKnowledgeByWorld,
       addresses,
       currentLocation,
       tripForm,
@@ -3462,10 +3688,14 @@ export const useMapStore = defineStore('map', () => {
     customMapPacks,
     worldMapPackBindings,
     mapPinVisibilityByPack,
+    mapPlaceKnowledgeByWorld,
     activeMapPackId,
     activeMapPack,
+    activeMapAllPlaces,
     activeMapPlaces,
     activeMapVisiblePlaces,
+    activeMapPlaceKnowledgeMode,
+    activeMapPlaceDiscoverySummary,
     addresses,
     currentLocation,
     currentLocationText,
@@ -3489,6 +3719,7 @@ export const useMapStore = defineStore('map', () => {
     bindMapPackToWorld,
     resetWorldMapPackBinding,
     syncMapPackForWorld,
+    setMapPlaceKnowledgeMode,
     isMapPlaceVisible,
     getMapPlaceCategoryVisibility,
     setMapPlaceVisibility,

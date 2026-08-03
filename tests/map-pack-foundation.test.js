@@ -12,7 +12,11 @@ import {
 } from '../src/lib/map-packs'
 import { useMapStore } from '../src/stores/map'
 import {
+  MAP_PLACE_CATEGORY_GROUPS,
+  MAP_PLACE_ICON_TYPES,
   MAP_USER_PLACE_CATEGORIES,
+  getMapPlaceCategoryGroupId,
+  getMapPlaceIconTypesForGroup,
   isMapPlaceCategoryDefaultVisible,
   isMapPlaceCategoryDiscoveryOnly,
   normalizeUserMapPlaceCategory,
@@ -39,17 +43,58 @@ describe('local map pack foundation', () => {
     expect(new Set(wasteland.places.map((place) => place.factionId).filter(Boolean)).size).toBe(4)
   })
 
-  test('keeps one normalized visual contract for editable pin categories', () => {
-    expect(MAP_USER_PLACE_CATEGORIES.map((category) => category.id)).toEqual([
-      'home',
+  test('separates broad filter groups from stable editable icon types', () => {
+    expect(MAP_PLACE_CATEGORY_GROUPS.map((group) => group.id)).toEqual([
+      'transit',
+      'residence',
       'work',
-      'school',
-      'shop',
+      'education',
+      'shopping',
+      'supermarket',
+      'convenience_store',
       'leisure',
+      'medical',
+      'culture',
+      'city_services',
+      'lodging',
+      'world_story',
       'other',
     ])
+    expect(MAP_USER_PLACE_CATEGORIES).toBe(MAP_PLACE_ICON_TYPES)
+    expect(MAP_PLACE_ICON_TYPES).toHaveLength(31)
+    expect(new Set(MAP_PLACE_ICON_TYPES.map((category) => category.id)).size).toBe(31)
+    expect(MAP_PLACE_ICON_TYPES.map((category) => category.id)).toEqual(
+      expect.arrayContaining([
+        'home',
+        'residence_budget',
+        'residence_standard',
+        'residence_premium',
+        'residence_luxury',
+        'transit_hub',
+        'mall_luxury',
+        'plastic_surgery',
+        'public_safety',
+        'story',
+      ]),
+    )
     expect(normalizeUserMapPlaceCategory(' WORK ')).toBe('work')
+    expect(normalizeUserMapPlaceCategory(' residence_luxury ')).toBe('residence_luxury')
     expect(normalizeUserMapPlaceCategory('unknown')).toBe('other')
+    expect(getMapPlaceCategoryGroupId('home')).toBe('residence')
+    expect(getMapPlaceCategoryGroupId('residence_luxury')).toBe('residence')
+    expect(getMapPlaceCategoryGroupId('transit_hub')).toBe('transit')
+    expect(getMapPlaceIconTypesForGroup('residence').map((category) => category.id)).toEqual([
+      'home',
+      'residence_budget',
+      'residence_standard',
+      'residence_premium',
+      'residence_luxury',
+    ])
+    expect(
+      new Set(
+        getMapPlaceIconTypesForGroup('residence').map((category) => category.icon),
+      ).size,
+    ).toBe(5)
     expect(resolveMapPlaceVisual({ category: 'home' }).icon).toBe('fas fa-house')
     expect(resolveMapPlaceVisual({ category: 'home' }).tone).not.toBe(
       resolveMapPlaceVisual({ category: 'work' }).tone,
@@ -204,6 +249,29 @@ describe('local map pack foundation', () => {
     expect(restored.activeMapPlaces).toHaveLength(104)
   })
 
+  test('applies broad category visibility to every stable icon subtype', () => {
+    const store = useMapStore()
+    const residencePlaces = store.activeMapPlaces.filter((place) =>
+      ['home', 'residence_budget', 'residence_standard', 'residence_premium', 'residence_luxury']
+        .includes(place.category),
+    )
+
+    expect(residencePlaces.length).toBeGreaterThan(5)
+    expect(store.setMapPlaceCategoryVisibility('residence', false)).toBe(true)
+    expect(store.getMapPlaceCategoryVisibility('residence')).toEqual({
+      visibleCount: 0,
+      totalCount: residencePlaces.length,
+      state: 'hidden',
+    })
+    expect(residencePlaces.every((place) => !store.isMapPlaceVisible(place))).toBe(true)
+
+    expect(store.setMapPlaceCategoryVisibility('residence', true)).toBe(true)
+    expect(store.getMapPlaceCategoryVisibility('residence')).toMatchObject({
+      visibleCount: residencePlaces.length,
+      state: 'visible',
+    })
+  })
+
   test('round-trips real coordinates through the versioned map image plane', () => {
     const seoul = getMapPackById(DEFAULT_MAP_PACK_ID)
     const source = { kind: 'geo', lat: 37.5444, lng: 127.0441 }
@@ -235,6 +303,31 @@ describe('local map pack foundation', () => {
       { kind: 'canvas', x: 0.8, y: 0.8 },
     )
     expect(fictionalDistance).toBeGreaterThan(20)
+  })
+
+  test('uses the saved role coordinate when a legacy display label is selected as the trip start', () => {
+    const store = useMapStore()
+    const gangnamStation = store.activeMapPlaces.find(
+      (place) => place.placeId === 'seoul-gangnam-station',
+    )
+    const samsungTown = store.activeMapPlaces.find(
+      (place) => place.placeId === 'seoul-samsung-town',
+    )
+
+    expect(store.setCurrentLocation({
+      label: gangnamStation.nameZh,
+      detail: gangnamStation.detailZh,
+      source: 'map_pack',
+      mapPackId: store.activeMapPackId,
+      position: gangnamStation.position,
+    })).toBe(true)
+    store.setTripEndpoint(
+      'from',
+      `${gangnamStation.nameZh} · ${gangnamStation.detailZh}`,
+    )
+    store.setTripEndpoint('to', samsungTown.detailZh)
+
+    expect(store.tripEstimate.distanceKm).toBe(0.3)
   })
 
   test('switches worlds locally and blocks cross-world switching during a trip', () => {

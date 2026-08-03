@@ -8,9 +8,12 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { formatMapPosition } from '../lib/map-packs'
 import {
-  MAP_USER_PLACE_CATEGORIES,
+  MAP_PLACE_CATEGORY_GROUPS,
+  getMapPlaceCategoryGroupVisual,
+  matchesMapPlaceCategoryFilter,
   resolveMapPlaceVisual,
 } from '../lib/map-place-categories'
+import { searchMapPlaces } from '../lib/map-place-search'
 import { normalizeHomePageQuery } from '../lib/navigation-return'
 import { useGalleryStore } from '../stores/gallery'
 import { useMapStore } from '../stores/map'
@@ -32,6 +35,8 @@ const editorOpen = ref(false)
 const coordinateMode = ref(false)
 const editingAddressId = ref(null)
 const categoryGuideOpen = ref(false)
+const managementSearchText = ref('')
+const managementCategory = ref('all')
 const feedback = ref({ tone: '', text: '' })
 
 const placeForm = reactive({
@@ -55,6 +60,54 @@ const userPlaces = computed(() =>
 const worldPlaces = computed(() => activeMapPack.value?.places || [])
 const mapPlaceVisual = (place) =>
   resolveMapPlaceVisual(place, activeMapPack.value?.factions)
+const selectedPlaceIconType = computed(() => resolveMapPlaceVisual({ category: placeForm.category }))
+const selectedPlaceCategoryGroup = computed(() =>
+  getMapPlaceCategoryGroupVisual(placeForm.category),
+)
+const managementCategoryOptions = computed(() => {
+  const categories = new Map()
+  activeMapPlaces.value.forEach((place) => {
+    const visual = getMapPlaceCategoryGroupVisual(place.category)
+    const current = categories.get(visual.id)
+    categories.set(visual.id, {
+      ...visual,
+      count: Number(current?.count || 0) + 1,
+    })
+  })
+  return [
+    {
+      id: 'all',
+      icon: 'fas fa-layer-group',
+      tone: '#18705a',
+      labelZh: '全部',
+      labelEn: 'All',
+      count: activeMapPlaces.value.length,
+      order: -1,
+    },
+    ...Array.from(categories.values()).sort(
+      (left, right) => Number(left.order || 999) - Number(right.order || 999),
+    ),
+  ]
+})
+const managedPlaces = computed(() => {
+  const query = managementSearchText.value.trim()
+  if (query) {
+    return searchMapPlaces(activeMapPlaces.value, query, {
+      categoryId: managementCategory.value,
+      limit: Math.max(1, activeMapPlaces.value.length),
+    }).map((result) => result.place)
+  }
+  if (managementCategory.value === 'all') return activeMapPlaces.value
+  return activeMapPlaces.value.filter(
+    (place) => matchesMapPlaceCategoryFilter(place.category, managementCategory.value),
+  )
+})
+const filteredUserPlaces = computed(() =>
+  managedPlaces.value.filter((place) => place.source === 'user'),
+)
+const filteredWorldPlaces = computed(() =>
+  managedPlaces.value.filter((place) => place.source !== 'user'),
+)
 const mapScenePins = computed(() =>
   activeMapPlaces.value.map((place) => ({
     ...place,
@@ -141,6 +194,7 @@ const onMapPinSelected = (place) => {
 const useCurrentCoordinate = () => {
   if (!currentLocation.value?.position || currentLocation.value.mapPackId !== activeMapPackId.value) return
   placeForm.position = { ...currentLocation.value.position }
+  if (!placeForm.detail.trim()) placeForm.detail = formatMapPosition(placeForm.position)
 }
 
 const savePlace = () => {
@@ -214,6 +268,14 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => route.query.create,
+  (create) => {
+    if (String(create || '') === '1') openCreate()
+  },
+  { immediate: true },
+)
+
 onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCOPE_ID))
 </script>
 
@@ -251,6 +313,38 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
       </section>
 
       <section class="map-pin-list-panel no-scrollbar">
+        <div class="map-pin-filter" data-testid="map-pin-management-filter">
+          <label>
+            <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              v-model="managementSearchText"
+              type="search"
+              data-testid="map-pin-management-search"
+              :placeholder="t('搜索名称、地址或类型', 'Search name, address, or type')"
+            />
+          </label>
+          <div
+            class="map-pin-filter-categories no-scrollbar"
+            data-testid="map-pin-management-categories"
+            :aria-label="t('按地点类型筛选', 'Filter by place type')"
+          >
+            <button
+              v-for="category in managementCategoryOptions"
+              :key="category.id"
+              type="button"
+              :class="{ 'is-active': managementCategory === category.id }"
+              :style="{ '--map-place-tone': category.tone }"
+              :aria-pressed="managementCategory === category.id"
+              :data-testid="`map-pin-management-category-${category.id}`"
+              @click="managementCategory = category.id"
+            >
+              <i :class="category.icon" aria-hidden="true"></i>
+              <span>{{ t(category.labelZh, category.labelEn) }}</span>
+              <small>{{ category.count }}</small>
+            </button>
+          </div>
+        </div>
+
         <div class="map-pin-list-heading">
           <div>
             <span>{{ t(activeMapPack.shortLabelZh, activeMapPack.shortLabelEn) }}</span>
@@ -260,39 +354,44 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
             <button type="button" :aria-label="t('查看图钉类型说明', 'View pin type guide')" data-testid="map-pin-category-guide-trigger" @click="categoryGuideOpen = true">
               <i class="fas fa-circle-info" aria-hidden="true"></i>
             </button>
-            <small>{{ userPlaces.length }}</small>
+            <small>{{ filteredUserPlaces.length }}/{{ userPlaces.length }}</small>
           </div>
         </div>
 
         <p v-if="feedback.text" class="map-pin-feedback" :class="`is-${feedback.tone}`" role="status">{{ feedback.text }}</p>
 
-        <div v-if="userPlaces.length" class="map-pin-list" data-testid="map-user-pin-list">
-          <button v-for="address in userPlaces" :key="address.id" type="button" class="map-pin-row" :style="{ '--map-place-tone': mapPlaceVisual(address).tone }" :data-testid="`map-user-pin-${address.id}`" @click="openEdit(address)">
+        <div v-if="filteredUserPlaces.length" class="map-pin-list" data-testid="map-user-pin-list">
+          <button v-for="address in filteredUserPlaces" :key="address.id" type="button" class="map-pin-row" :style="{ '--map-place-tone': mapPlaceVisual(address).tone }" :data-testid="`map-user-pin-${address.id}`" @click="openEdit(address)">
             <i :class="mapPlaceVisual(address).icon" aria-hidden="true"></i>
             <span><strong>{{ address.label }}</strong><small>{{ address.detail }}</small></span>
             <span class="map-pin-coordinate">{{ formatMapPosition(address.position) || t('未设置', 'Not set') }}</span>
             <i class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
         </div>
-        <button v-else type="button" class="map-pin-empty" @click="openCreate">
+        <div v-else class="map-pin-empty">
           <i class="fas fa-location-dot" aria-hidden="true"></i>
-          <span>{{ t('还没有自定义图钉', 'No custom pins yet') }}</span>
-        </button>
+          <span>{{ userPlaces.length ? t('没有符合条件的自定义图钉', 'No custom pins match this filter') : t('还没有自定义图钉', 'No custom pins yet') }}</span>
+          <button v-if="!userPlaces.length" type="button" data-testid="map-pin-create-empty" @click="openCreate">{{ t('新增第一个图钉', 'Add first pin') }}</button>
+        </div>
 
         <div class="map-pin-list-heading is-world">
           <div>
             <span>{{ t('地图包内容', 'MAP PACK CONTENT') }}</span>
             <h2>{{ t('世界地点', 'World places') }}</h2>
           </div>
-          <small><i class="fas fa-lock" aria-hidden="true"></i> {{ worldPlaces.length }}</small>
+          <small><i class="fas fa-lock" aria-hidden="true"></i> {{ filteredWorldPlaces.length }}/{{ worldPlaces.length }}</small>
         </div>
-        <div class="map-pin-list" data-testid="map-world-pin-list">
-          <div v-for="place in worldPlaces" :key="place.id" class="map-pin-row is-readonly" :style="{ '--map-place-tone': mapPlaceVisual(place).tone }">
+        <div v-if="filteredWorldPlaces.length" class="map-pin-list" data-testid="map-world-pin-list">
+          <div v-for="place in filteredWorldPlaces" :key="place.id" class="map-pin-row is-readonly" :style="{ '--map-place-tone': mapPlaceVisual(place).tone }">
             <i :class="mapPlaceVisual(place).icon" aria-hidden="true"></i>
             <span><strong>{{ mapPlaceName(place) }}</strong><small>{{ mapPlaceDetail(place) }}</small></span>
             <span class="map-pin-coordinate">{{ formatMapPosition(place.position) }}</span>
             <i class="fas fa-lock" aria-hidden="true"></i>
           </div>
+        </div>
+        <div v-else class="map-pin-empty is-compact">
+          <i class="fas fa-filter-circle-xmark" aria-hidden="true"></i>
+          <span>{{ t('没有符合条件的世界地点', 'No world places match this filter') }}</span>
         </div>
       </section>
     </main>
@@ -310,11 +409,51 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
           </div>
         </div>
 
-        <div class="map-pin-category-grid" role="group" :aria-label="t('地点类型', 'Place type')">
-          <button v-for="category in MAP_USER_PLACE_CATEGORIES" :key="category.id" type="button" :class="{ 'is-active': placeForm.category === category.id }" :style="{ '--map-place-tone': category.tone }" @click="placeForm.category = category.id">
-            <i :class="category.icon" aria-hidden="true"></i>
-            <span>{{ t(category.labelZh, category.labelEn) }}</span>
-          </button>
+        <div
+          class="map-pin-type-summary"
+          :style="{ '--map-place-tone': selectedPlaceIconType.tone }"
+          data-testid="map-pin-selected-type"
+        >
+          <span><i :class="selectedPlaceIconType.icon" aria-hidden="true"></i></span>
+          <div>
+            <small>{{ t('地点分类与图标', 'Category and icon') }}</small>
+            <strong>
+              {{ t(selectedPlaceCategoryGroup.labelZh, selectedPlaceCategoryGroup.labelEn) }}
+              · {{ t(selectedPlaceIconType.labelZh, selectedPlaceIconType.labelEn) }}
+            </strong>
+          </div>
+        </div>
+
+        <div class="map-pin-category-groups" :aria-label="t('选择地点图标', 'Choose place icon')">
+          <section
+            v-for="group in MAP_PLACE_CATEGORY_GROUPS"
+            :key="group.id"
+            class="map-pin-category-group"
+            :class="{ 'is-selected': selectedPlaceCategoryGroup.id === group.id }"
+            :style="{ '--map-group-tone': group.tone }"
+            :data-testid="`map-pin-icon-group-${group.id}`"
+          >
+            <div class="map-pin-category-group-heading">
+              <i :class="group.icon" aria-hidden="true"></i>
+              <strong>{{ t(group.labelZh, group.labelEn) }}</strong>
+              <small>{{ group.iconTypes.length }}</small>
+            </div>
+            <div class="map-pin-category-grid" role="group" :aria-label="t(group.labelZh, group.labelEn)">
+              <button
+                v-for="iconType in group.iconTypes"
+                :key="iconType.id"
+                type="button"
+                :class="{ 'is-active': placeForm.category === iconType.id }"
+                :style="{ '--map-place-tone': iconType.tone }"
+                :aria-pressed="placeForm.category === iconType.id"
+                :data-testid="`map-pin-icon-type-${iconType.id}`"
+                @click="placeForm.category = iconType.id"
+              >
+                <i :class="iconType.icon" aria-hidden="true"></i>
+                <span>{{ t(iconType.labelZh, iconType.labelEn) }}</span>
+              </button>
+            </div>
+          </section>
         </div>
 
         <label class="map-pin-field">
@@ -323,16 +462,16 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
         </label>
         <label class="map-pin-field">
           <span>{{ t('地址或地点说明', 'Address or description') }}</span>
-          <input v-model="placeForm.detail" data-testid="map-pin-detail" :placeholder="t('可填写真实地址，也可填写虚构地点', 'Use a real address or a fictional description')" />
+          <input v-model="placeForm.detail" data-testid="map-pin-detail" :placeholder="t('用于识别和搜索，不决定图钉位置', 'Used for recognition and search, not pin placement')" />
         </label>
 
         <div class="map-pin-position-summary" :class="{ 'has-position': placeForm.position }">
           <i class="fas fa-map-pin" aria-hidden="true"></i>
-          <span><strong>{{ placeForm.position ? t('坐标已设置', 'Coordinates set') : t('尚未设置坐标', 'Coordinates not set') }}</strong><small>{{ formatMapPosition(placeForm.position) || t('需要在地图上点选一次', 'Choose a point on the map') }}</small></span>
+          <span><strong>{{ placeForm.position ? t('地图坐标已设置', 'Map coordinates set') : t('地图坐标未设置', 'Map coordinates not set') }}</strong><small>{{ formatMapPosition(placeForm.position) || t('坐标决定图钉在地图上的位置', 'Coordinates determine the pin position') }}</small></span>
         </div>
         <div class="map-pin-position-actions">
           <button type="button" data-testid="map-pin-reselect-coordinate" @click="startCoordinateSelection"><i class="fas fa-crosshairs" aria-hidden="true"></i>{{ placeForm.position ? t('重新选点', 'Reselect') : t('地图选点', 'Choose on map') }}</button>
-          <button type="button" :disabled="!currentLocation.position || currentLocation.mapPackId !== activeMapPackId" @click="useCurrentCoordinate"><i class="fas fa-location-arrow" aria-hidden="true"></i>{{ t('使用当前位置', 'Use current') }}</button>
+          <button type="button" :disabled="!currentLocation.position || currentLocation.mapPackId !== activeMapPackId" @click="useCurrentCoordinate"><i class="fas fa-location-arrow" aria-hidden="true"></i>{{ t('使用角色位置', 'Use role position') }}</button>
         </div>
 
         <div class="map-pin-editor-actions">
@@ -452,6 +591,14 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 .map-pin-placement button { min-height: 34px; padding: 0 8px; color: #bfe7d5; font-size: 10px; font-weight: 800; }
 
 .map-pin-list-panel { min-height: 0; overflow-y: auto; background: #f7f8f6; padding: 17px 17px calc(32px + env(safe-area-inset-bottom)); }
+.map-pin-filter { display: grid; gap: 9px; margin-bottom: 18px; }
+.map-pin-filter > label { display: grid; min-height: 40px; grid-template-columns: 30px minmax(0, 1fr); align-items: center; border: 1px solid var(--pin-line); border-radius: 7px; background: #fff; color: #78847d; }
+.map-pin-filter > label > i { text-align: center; font-size: 10px; }
+.map-pin-filter input { min-width: 0; height: 38px; border: 0; background: transparent; padding: 0 9px 0 0; color: var(--pin-ink); font-size: 11px; outline: none; }
+.map-pin-filter-categories { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 2px; }
+.map-pin-filter-categories button { display: inline-flex; min-height: 34px; flex: 0 0 auto; align-items: center; gap: 6px; border: 1px solid var(--pin-line); border-radius: 7px; background: #fff; padding: 0 8px; color: #5f6e66; font-size: 9px; font-weight: 800; }
+.map-pin-filter-categories button.is-active { border-color: var(--map-place-tone); background: color-mix(in srgb, var(--map-place-tone) 10%, white); color: var(--map-place-tone); }
+.map-pin-filter-categories button small { border-radius: 4px; background: #eef2ef; padding: 2px 4px; color: inherit; font-size: 8px; }
 .map-pin-list-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .map-pin-list-heading.is-world { margin-top: 22px; }
 .map-pin-heading-actions { display: flex; align-items: center; gap: 6px; }
@@ -481,6 +628,8 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 .map-pin-row.is-readonly { color: #4f5b54; }
 .map-pin-coordinate { color: var(--pin-muted); font-size: 8px; text-align: right; }
 .map-pin-empty { display: flex; width: 100%; min-height: 92px; flex-direction: column; align-items: center; justify-content: center; gap: 7px; border: 1px dashed #bdc8c1; border-radius: 8px; color: var(--pin-muted); font-size: 11px; }
+.map-pin-empty.is-compact { min-height: 70px; }
+.map-pin-empty button { min-height: 34px; border-radius: 7px; background: var(--pin-accent); padding: 0 12px; color: #fff; font-size: 10px; font-weight: 800; }
 .map-pin-feedback { margin-bottom: 10px; border: 1px solid #c4d8cc; border-radius: 7px; background: #e9f3ed; padding: 9px 10px; color: #32644d; font-size: 11px; }
 
 .map-pin-editor-backdrop {
@@ -506,8 +655,22 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(MAP_PACK_PREVIEW_SCO
 
 .map-pin-editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .map-pin-editor-head-actions { display: flex; flex: 0 0 auto; gap: 6px; }
-.map-pin-category-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
-.map-pin-category-grid button { display: flex; min-width: 0; min-height: 52px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--pin-line); border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 5%, white); color: var(--map-place-tone); font-size: 8px; font-weight: 800; }
+.map-pin-type-summary { display: grid; min-height: 56px; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 10px; margin-top: 14px; border: 1px solid color-mix(in srgb, var(--map-place-tone) 30%, var(--pin-line)); border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 7%, white); padding: 8px 10px; }
+.map-pin-type-summary > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 14%, white); color: var(--map-place-tone); }
+.map-pin-type-summary small,
+.map-pin-type-summary strong { display: block; }
+.map-pin-type-summary small { color: var(--pin-muted); font-size: 8px; font-weight: 800; }
+.map-pin-type-summary strong { margin-top: 2px; font-size: 11px; }
+.map-pin-category-groups { margin-top: 8px; border-top: 1px solid var(--pin-line); }
+.map-pin-category-group { padding: 10px 0; border-bottom: 1px solid var(--pin-line); }
+.map-pin-category-group-heading { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 5px; color: #5c6962; }
+.map-pin-category-group-heading > i { color: var(--map-group-tone); font-size: 9px; text-align: center; }
+.map-pin-category-group-heading strong { font-size: 9px; }
+.map-pin-category-group-heading small { border-radius: 4px; background: #e9eeeb; padding: 2px 5px; color: #68756e; font-size: 8px; font-weight: 800; }
+.map-pin-category-group.is-selected .map-pin-category-group-heading { color: var(--map-group-tone); }
+.map-pin-category-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 7px; }
+.map-pin-category-grid button { display: flex; min-width: 0; min-height: 56px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--pin-line); border-radius: 7px; background: color-mix(in srgb, var(--map-place-tone) 5%, white); padding: 6px 4px; color: var(--map-place-tone); font-size: 8px; font-weight: 800; line-height: 1.25; text-align: center; }
+.map-pin-category-grid button span { max-width: 100%; overflow-wrap: anywhere; }
 .map-pin-category-grid button.is-active { border-color: var(--map-place-tone); background: color-mix(in srgb, var(--map-place-tone) 14%, white); color: var(--map-place-tone); box-shadow: inset 0 0 0 1px var(--map-place-tone); }
 .map-pin-field { display: block; margin-top: 12px; }
 .map-pin-field > span { display: block; margin-bottom: 5px; color: var(--pin-muted); font-size: 10px; font-weight: 800; }
@@ -537,5 +700,6 @@ input:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
   .map-pin-workspace { grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr); grid-template-rows: minmax(0, 1fr); }
   .map-pin-canvas { border-right: 1px solid var(--pin-line); border-bottom: 0; }
   .map-pin-editor { margin-bottom: 22px; border-radius: 8px; }
+  .map-pin-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 </style>

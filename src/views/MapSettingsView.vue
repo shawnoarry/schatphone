@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { normalizeHomePageQuery } from '../lib/navigation-return'
 import { getRecommendedMapPackIdForWorldPack } from '../lib/map-packs'
+import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
 import { useGalleryStore } from '../stores/gallery'
 import { useImageGenerationStore } from '../stores/imageGeneration'
 import { useMapStore } from '../stores/map'
@@ -142,6 +143,16 @@ const mapVisualModeLabel = computed(() =>
     ? t('素材库视觉', 'Gallery visual')
     : t('默认视觉', 'Default visual'),
 )
+
+const setPlaceKnowledgeMode = (mode) => {
+  const ok = mapStore.setMapPlaceKnowledgeMode(mode, activeWorldPackId.value)
+  setFeedback(
+    ok ? 'success' : 'warning',
+    ok
+      ? t('当前世界的地点认知方式已更新。', 'Place knowledge for this world has been updated.')
+      : t('地点认知方式未能更新。', 'Place knowledge could not be updated.'),
+  )
+}
 
 const useMapPack = (packId) => {
   const ok = mapStore.bindMapPackToWorld(activeWorldPack.value, packId)
@@ -373,6 +384,62 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScopeId))
         </button>
       </section>
 
+      <section class="map-knowledge-section" data-testid="map-place-knowledge-settings">
+        <div class="map-section-heading">
+          <div>
+            <span>{{ t('当前世界', 'Current world') }}</span>
+            <h2>{{ t('地点认知方式', 'Place knowledge') }}</h2>
+          </div>
+          <span>
+            {{ mapStore.activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED
+              ? t('随足迹发现', 'Footprints')
+              : t('全部已知', 'All known') }}
+          </span>
+        </div>
+        <div class="map-knowledge-options" role="radiogroup" :aria-label="t('地点认知方式', 'Place knowledge')">
+          <button
+            type="button"
+            role="radio"
+            data-testid="map-place-knowledge-all-known"
+            :class="{ 'is-active': mapStore.activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.ALL_KNOWN }"
+            :aria-checked="mapStore.activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.ALL_KNOWN"
+            @click="setPlaceKnowledgeMode(MAP_PLACE_KNOWLEDGE_MODE.ALL_KNOWN)"
+          >
+            <i class="fas fa-map-location-dot" aria-hidden="true"></i>
+            <span>
+              <strong>{{ t('全部地点已知', 'All places known') }}</strong>
+              <small>{{ t('保留当前沙盒体验，所有预设地点都可查找', 'Keep the sandbox experience with every authored place searchable') }}</small>
+            </span>
+            <i class="fas fa-check" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            role="radio"
+            data-testid="map-place-knowledge-footprints"
+            :class="{ 'is-active': mapStore.activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED }"
+            :aria-checked="mapStore.activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED"
+            @click="setPlaceKnowledgeMode(MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED)"
+          >
+            <i class="fas fa-shoe-prints" aria-hidden="true"></i>
+            <span>
+              <strong>{{ t('随足迹逐步发现', 'Discover through Footprints') }}</strong>
+              <small>{{ t('完成有坐标的行程后，逐步发现目的地周边配套', 'Complete positioned journeys to reveal nearby facilities') }}</small>
+            </span>
+            <i class="fas fa-check" aria-hidden="true"></i>
+          </button>
+        </div>
+        <p class="map-knowledge-note">
+          <i class="fas fa-circle-info" aria-hidden="true"></i>
+          <span v-if="mapStore.activeMapPlaceKnowledgeMode === MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED">
+            {{ t(
+              `已通过足迹发现 ${mapStore.activeMapPlaceDiscoverySummary.discoveredCount}/${mapStore.activeMapPlaceDiscoverySummary.totalCount} 个附近配套；手动修改角色位置不会解锁地点。`,
+              `${mapStore.activeMapPlaceDiscoverySummary.discoveredCount}/${mapStore.activeMapPlaceDiscoverySummary.totalCount} nearby facilities discovered; manually moving the role does not reveal places.`,
+            ) }}
+          </span>
+          <span v-else>{{ t('切换模式不会清除已经形成的足迹发现记录。', 'Switching modes never deletes Footprints discoveries.') }}</span>
+        </p>
+      </section>
+
       <section class="map-source-section" data-testid="map-current-source">
         <div class="map-section-heading">
           <div>
@@ -601,6 +668,7 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScopeId))
 }
 
 .map-world-band,
+.map-knowledge-section,
 .map-source-section,
 .map-management-section,
 .map-create-section,
@@ -634,6 +702,44 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScopeId))
   font-size: 12px;
   font-weight: 800;
 }
+
+.map-knowledge-options {
+  display: grid;
+  gap: 8px;
+}
+
+.map-knowledge-options > button {
+  display: grid;
+  min-height: 64px;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--map-line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 9px 10px;
+  color: var(--map-muted);
+  text-align: left;
+}
+
+.map-knowledge-options > button > i:first-child {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 7px;
+  background: #edf1ee;
+}
+
+.map-knowledge-options > button > i:last-child { visibility: hidden; font-size: 10px; }
+.map-knowledge-options > button span { display: grid; min-width: 0; gap: 3px; }
+.map-knowledge-options > button strong { color: var(--map-ink); font-size: 12px; }
+.map-knowledge-options > button small { color: var(--map-muted); font-size: 10px; line-height: 1.45; }
+.map-knowledge-options > button.is-active { border-color: #80a792; background: #edf4ef; color: var(--map-accent); }
+.map-knowledge-options > button.is-active > i:first-child { background: #dcebe2; }
+.map-knowledge-options > button.is-active > i:last-child { visibility: visible; }
+.map-knowledge-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px; color: var(--map-muted); font-size: 10px; line-height: 1.5; }
+.map-knowledge-note > i { margin-top: 2px; color: var(--map-accent); }
 
 .map-section-heading {
   display: flex;

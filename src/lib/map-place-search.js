@@ -1,6 +1,9 @@
 import {
+  getMapPlaceCategoryGroupId,
+  getMapPlaceCategoryGroupVisual,
   getMapPlaceCategoryVisual,
   isMapPlaceCategoryDiscoveryOnly,
+  matchesMapPlaceCategoryFilter,
 } from './map-place-categories'
 
 const DEFAULT_RESULT_LIMIT = 6
@@ -42,6 +45,7 @@ const uniqueSearchValues = (values) => {
 // alternate names and searchTerms only for non-display discovery words.
 const buildPlaceSearchFields = (place = {}) => {
   const category = getMapPlaceCategoryVisual(place.category)
+  const categoryGroup = getMapPlaceCategoryGroupVisual(place.category)
   const fieldGroups = [
     {
       kind: 'name',
@@ -64,6 +68,11 @@ const buildPlaceSearchFields = (place = {}) => {
         category.descriptionZh,
         category.descriptionEn,
         ...(Array.isArray(category.searchTerms) ? category.searchTerms : []),
+        categoryGroup.id,
+        categoryGroup.labelZh,
+        categoryGroup.labelEn,
+        categoryGroup.descriptionZh,
+        categoryGroup.descriptionEn,
       ],
     },
     {
@@ -165,7 +174,7 @@ const scorePlace = (place, normalizedQuery) => {
 const filterPlacesByCategory = (places, categoryId) => {
   const normalizedCategory = typeof categoryId === 'string' ? categoryId.trim().toLowerCase() : ''
   if (!normalizedCategory || normalizedCategory === 'all') return places
-  return places.filter((place) => place.category === normalizedCategory)
+  return places.filter((place) => matchesMapPlaceCategoryFilter(place.category, normalizedCategory))
 }
 
 export const searchMapPlaces = (
@@ -221,8 +230,9 @@ export const suggestMapPlaces = (
 
   const seenCategories = new Set()
   available.forEach((place) => {
-    if (seenCategories.has(place.category)) return
-    seenCategories.add(place.category)
+    const categoryGroupId = getMapPlaceCategoryGroupId(place.category)
+    if (seenCategories.has(categoryGroupId)) return
+    seenCategories.add(categoryGroupId)
     addPlace(place)
   })
   available.forEach(addPlace)

@@ -3,6 +3,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import MapSettingsView from '../src/views/MapSettingsView.vue'
+import { MAP_PLACE_KNOWLEDGE_MODE } from '../src/lib/map-place-discovery'
+import { useMapStore } from '../src/stores/map'
 
 const DummyView = { template: '<div />' }
 
@@ -71,6 +73,28 @@ describe('Map settings view', () => {
       path: '/map',
       query: { from: 'home', homePage: '1' },
     })
+
+    wrapper.unmount()
+  })
+
+  test('configures place knowledge per world without deleting Footprints progress', async () => {
+    const router = createTestRouter()
+    await router.push('/map/settings')
+    await router.isReady()
+    const wrapper = mount(MapSettingsView, { global: { plugins: [router] } })
+    const mapStore = useMapStore()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="map-place-knowledge-all-known"]').attributes('aria-checked')).toBe('true')
+    await wrapper.get('[data-testid="map-place-knowledge-footprints"]').trigger('click')
+
+    expect(mapStore.activeMapPlaceKnowledgeMode).toBe(MAP_PLACE_KNOWLEDGE_MODE.FOOTPRINT_GATED)
+    expect(wrapper.get('[data-testid="map-place-knowledge-settings"]').text()).toMatch(
+      /手动修改角色位置不会解锁地点|manually moving the role does not reveal places/,
+    )
+
+    await wrapper.get('[data-testid="map-place-knowledge-all-known"]').trigger('click')
+    expect(mapStore.activeMapPlaceKnowledgeMode).toBe(MAP_PLACE_KNOWLEDGE_MODE.ALL_KNOWN)
 
     wrapper.unmount()
   })

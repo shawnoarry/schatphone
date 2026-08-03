@@ -1,6 +1,6 @@
 <script setup>
 import { useI18n } from '../../composables/useI18n'
-import { MAP_USER_PLACE_CATEGORIES } from '../../lib/map-place-categories'
+import { MAP_PLACE_CATEGORY_GROUPS } from '../../lib/map-place-categories'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
@@ -26,26 +26,39 @@ const { t } = useI18n()
       </header>
 
       <div class="map-pin-guide-list">
-        <div
-          v-for="category in MAP_USER_PLACE_CATEGORIES"
-          :key="category.id"
-          class="map-pin-guide-row"
-          :style="{ '--map-place-tone': category.tone }"
-          :data-testid="`map-pin-category-guide-${category.id}`"
+        <section
+          v-for="group in MAP_PLACE_CATEGORY_GROUPS"
+          :key="group.id"
+          class="map-pin-guide-group"
+          :style="{ '--map-place-tone': group.tone }"
+          :data-testid="`map-pin-category-guide-group-${group.id}`"
         >
-          <span class="map-pin-guide-icon"><i :class="category.icon" aria-hidden="true"></i></span>
-          <span>
-            <strong>{{ t(category.labelZh, category.labelEn) }}</strong>
-            <small>{{ t(category.descriptionZh, category.descriptionEn) }}</small>
-          </span>
-        </div>
+          <div class="map-pin-guide-row">
+            <span class="map-pin-guide-icon"><i :class="group.icon" aria-hidden="true"></i></span>
+            <span>
+              <strong>{{ t(group.labelZh, group.labelEn) }}</strong>
+              <small>{{ t(group.descriptionZh, group.descriptionEn) }}</small>
+            </span>
+          </div>
+          <div class="map-pin-guide-types">
+            <span
+              v-for="iconType in group.iconTypes"
+              :key="iconType.id"
+              :style="{ '--map-icon-tone': iconType.tone }"
+              :data-testid="`map-pin-category-guide-icon-${iconType.id}`"
+            >
+              <i :class="iconType.icon" aria-hidden="true"></i>
+              {{ t(iconType.labelZh, iconType.labelEn) }}
+            </span>
+          </div>
+        </section>
       </div>
 
       <div class="map-pin-guide-world">
         <span><i class="fas fa-landmark" aria-hidden="true"></i></span>
         <div>
           <strong>{{ t('世界地点', 'World places') }}</strong>
-          <small>{{ t('由地图包定义，并按地点类型或阵营显示。', 'Defined by the map pack and styled by place type or faction.') }}</small>
+          <small>{{ t('地图包地点使用同一套分类与图标，但只能在地图包中维护。', 'Map-pack places use the same categories and icons, but remain map-pack managed.') }}</small>
         </div>
       </div>
     </section>
@@ -119,8 +132,9 @@ const { t } = useI18n()
   grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid #e4e8e5;
 }
+
+.map-pin-guide-group { border-bottom: 1px solid #e4e8e5; padding: 3px 0 10px; }
 
 .map-pin-guide-icon,
 .map-pin-guide-world > span {
@@ -154,6 +168,10 @@ const { t } = useI18n()
   font-size: 9px;
   line-height: 1.45;
 }
+
+.map-pin-guide-types { display: flex; flex-wrap: wrap; gap: 5px; padding-left: 48px; }
+.map-pin-guide-types > span { display: inline-flex; min-height: 27px; align-items: center; gap: 5px; border: 1px solid #e0e5e2; border-radius: 6px; background: #f3f5f3; padding: 0 7px; color: #56635c; font-size: 8px; font-weight: 750; }
+.map-pin-guide-types i { color: var(--map-icon-tone); }
 
 .map-pin-guide-world {
   --map-place-tone: #475569;

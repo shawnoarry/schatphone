@@ -65,6 +65,18 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  tripPlaceOptions: {
+    type: Array,
+    default: () => [],
+  },
+  rolePositionLabel: {
+    type: String,
+    default: '',
+  },
+  rolePositionValue: {
+    type: String,
+    default: '',
+  },
   sharedRouteContactId: {
     type: [String, Number],
     default: '',
@@ -83,7 +95,7 @@ const props = defineProps({
   },
 })
 
-defineEmits([
+const emit = defineEmits([
   'acknowledge-arrival',
   'cancel-trip',
   'start-trip',
@@ -171,6 +183,18 @@ const consumptionLabel = computed(() => {
   if (props.tripEstimate.consumptionLevel === 'medium') return t('中', 'Medium')
   return '--'
 })
+const userTripPlaceOptions = computed(() =>
+  props.tripPlaceOptions.filter((option) => option.source === 'user'),
+)
+const worldTripPlaceOptions = computed(() =>
+  props.tripPlaceOptions.filter((option) => option.source !== 'user'),
+)
+const applyEndpointChoice = (endpoint, event) => {
+  const value = event?.target?.value || ''
+  if (!value || transportLocked.value) return
+  emit(endpoint === 'from' ? 'update-trip-from' : 'update-trip-to', value)
+  event.target.value = ''
+}
 </script>
 
 <template>
@@ -180,19 +204,56 @@ const consumptionLabel = computed(() => {
       <span class="map-trip-status">{{ tripStatusLabel }}</span>
     </div>
 
-    <div class="space-y-2">
-      <input
-        :value="tripForm.from"
-        class="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-        :placeholder="t('起点', 'From')"
-        @input="$emit('update-trip-from', $event.target.value)"
-      />
-      <input
-        :value="tripForm.to"
-        class="w-full rounded-lg border px-3 py-2 text-sm outline-none"
-        :placeholder="t('目的地', 'Destination')"
-        @input="$emit('update-trip-to', $event.target.value)"
-      />
+    <div class="map-trip-endpoints">
+      <div class="map-trip-endpoint-row">
+        <input
+          :value="tripForm.from"
+          :readonly="transportLocked"
+          data-testid="map-trip-from-input"
+          :placeholder="t('起点', 'From')"
+          @input="$emit('update-trip-from', $event.target.value)"
+        />
+        <select
+          :disabled="transportLocked"
+          data-testid="map-trip-from-picker"
+          :aria-label="t('从地点中选择起点', 'Choose start from places')"
+          @change="applyEndpointChoice('from', $event)"
+        >
+          <option value="">{{ t('点选起点', 'Pick start') }}</option>
+          <option v-if="rolePositionValue" :value="rolePositionValue">
+            {{ t('角色位置', 'Role position') }} · {{ rolePositionLabel || rolePositionValue }}
+          </option>
+          <optgroup v-if="userTripPlaceOptions.length" :label="t('我的地点', 'My places')">
+            <option v-for="option in userTripPlaceOptions" :key="`from-${option.id}`" :value="option.value">{{ option.label }}</option>
+          </optgroup>
+          <optgroup v-if="worldTripPlaceOptions.length" :label="t('世界地点', 'World places')">
+            <option v-for="option in worldTripPlaceOptions" :key="`from-${option.id}`" :value="option.value">{{ option.label }}</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="map-trip-endpoint-row">
+        <input
+          :value="tripForm.to"
+          :readonly="transportLocked"
+          data-testid="map-trip-to-input"
+          :placeholder="t('目的地', 'Destination')"
+          @input="$emit('update-trip-to', $event.target.value)"
+        />
+        <select
+          :disabled="transportLocked"
+          data-testid="map-trip-to-picker"
+          :aria-label="t('从地点中选择目的地', 'Choose destination from places')"
+          @change="applyEndpointChoice('to', $event)"
+        >
+          <option value="">{{ t('点选目的地', 'Pick destination') }}</option>
+          <optgroup v-if="userTripPlaceOptions.length" :label="t('我的地点', 'My places')">
+            <option v-for="option in userTripPlaceOptions" :key="`to-${option.id}`" :value="option.value">{{ option.label }}</option>
+          </optgroup>
+          <optgroup v-if="worldTripPlaceOptions.length" :label="t('世界地点', 'World places')">
+            <option v-for="option in worldTripPlaceOptions" :key="`to-${option.id}`" :value="option.value">{{ option.label }}</option>
+          </optgroup>
+        </select>
+      </div>
     </div>
 
     <div class="map-transport-section">
@@ -394,6 +455,52 @@ const consumptionLabel = computed(() => {
 <style scoped>
 .map-trip-panel {
   color: #17211d;
+}
+
+.map-trip-endpoints {
+  display: grid;
+  gap: 8px;
+}
+
+.map-trip-endpoint-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(104px, 34%);
+  gap: 7px;
+}
+
+.map-trip-endpoint-row input,
+.map-trip-endpoint-row select {
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid #d8dfda;
+  border-radius: 7px;
+  background: #fff;
+  color: #26372f;
+  font-size: 11px;
+  outline: none;
+}
+
+.map-trip-endpoint-row input {
+  padding: 0 10px;
+}
+
+.map-trip-endpoint-row select {
+  padding: 0 7px;
+  color: #17664f;
+  font-weight: 800;
+}
+
+.map-trip-endpoint-row input:focus,
+.map-trip-endpoint-row select:focus {
+  border-color: #17664f;
+  box-shadow: 0 0 0 3px rgba(23, 102, 79, 0.1);
+}
+
+.map-trip-endpoint-row input[readonly],
+.map-trip-endpoint-row select:disabled {
+  background: #f0f3f1;
+  color: #6f7a74;
 }
 
 .map-shared-journey-record {

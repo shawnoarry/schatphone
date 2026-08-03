@@ -81,7 +81,7 @@ const openWorldBookForPoint = (pointId) => {
         </div>
         <div class="mt-1 flex flex-wrap gap-1.5 text-[11px] text-gray-600">
           <span>{{ t(`${route.completedCount} 次完成`, `${route.completedCount} trips`) }}</span>
-          <span>{{ t(`${route.points} 点探索`, `${route.points} pts`) }}</span>
+          <span>{{ t(`${route.points} 点足迹`, `${route.points} Footprints pts`) }}</span>
           <span>{{ t(`平均 ${route.averageDistanceKm} km`, `Avg ${route.averageDistanceKm} km`) }}</span>
         </div>
         <p class="mt-1 text-[11px] text-gray-500">

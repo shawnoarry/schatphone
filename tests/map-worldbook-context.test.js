@@ -101,15 +101,9 @@ describe('map worldbook context', () => {
       .find((node) => node.attributes('data-testid') === testId)
 
   const openProgressDrawer = async () => {
-    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
+    await wrapper.get('[data-testid="map-open-progress"]').trigger('click')
     await nextTick()
-    const progressButton = wrapper
-      .get('[data-testid="map-secondary-drawer"]')
-      .findAll('.map-drawer-tab')
-      .find((button) => button.text().includes('探索') || button.text().includes('Progress'))
-    expect(progressButton?.exists()).toBe(true)
-    await progressButton.trigger('click')
-    await nextTick()
+    expect(wrapper.get('[data-testid="map-secondary-drawer"] h2').text()).toMatch(/足迹|Footprints/)
   }
 
   test('shows related WorldBook knowledge points across map feedback, route familiarity, and trip history', async () => {

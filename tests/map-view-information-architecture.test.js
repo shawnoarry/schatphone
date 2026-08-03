@@ -4,6 +4,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import MapView from '../src/views/MapView.vue'
+import { isMapPlaceCategoryDiscoveryOnly } from '../src/lib/map-place-categories'
 import { useMapStore } from '../src/stores/map'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../src/stores/simulation'
@@ -54,7 +55,15 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-primary-canvas"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="map-primary-route-card"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="map-secondary-menu"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="map-primary-controls"]').findAll('button')).toHaveLength(2)
+    const primaryControls = wrapper.get('[data-testid="map-primary-controls"]')
+    expect(primaryControls.findAll('button')).toHaveLength(5)
+    expect(wrapper.get('[data-testid="map-current-location"]').text()).toMatch(
+      /Role location|角色位置/,
+    )
+    expect(wrapper.get('[data-testid="map-set-current-location"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-open-trip"]').text()).toMatch(/Journey|行程/)
+    expect(wrapper.get('[data-testid="map-open-places"]').text()).toMatch(/Places|地点/)
+    expect(wrapper.get('[data-testid="map-open-progress"]').text()).toMatch(/Footprints|足迹/)
     expect(wrapper.find('[data-testid="map-add-place"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="map-secondary-drawer"]').exists()).toBe(false)
 
@@ -63,16 +72,12 @@ describe('MapView information architecture', () => {
 
     const drawer = wrapper.get('[data-testid="map-secondary-drawer"]')
     expect(drawer.exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-add-place-drawer"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="map-add-place-drawer"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="map-manage-places"]').text()).toMatch(
-      /Manage places and pins|管理地点与图钉/,
+      /Add or manage places and pins|新增或管理地点与图钉/,
     )
-    const tripTab = drawer
-      .findAll('.map-drawer-tab')
-      .find((button) => button.text().includes('行程') || button.text().includes('Trip'))
-    await tripTab.trigger('click')
-    await nextTick()
-    expect(drawer.text()).toMatch(/行程计划|Journey plan/)
+    expect(drawer.findAll('.map-drawer-tab')).toHaveLength(0)
+    expect(wrapper.findComponent({ name: 'MapTripControlPanel' }).isVisible()).toBe(false)
     expect(wrapper.get('[data-testid="map-visual-image-source"]').isVisible()).toBe(false)
   })
 
@@ -90,6 +95,77 @@ describe('MapView information architecture', () => {
     expect(mapScene.props('focusPosition').focusRequestId).toBe(initialRequestId + 1)
   })
 
+  test('persists a blank map point as the role position and locks reselection during a journey', async () => {
+    const mapStore = useMapStore()
+    const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
+    const selectedPosition = { kind: 'geo', lat: 37.4978, lng: 127.0275 }
+
+    await wrapper.get('[data-testid="map-set-current-location"]').trigger('click')
+    await nextTick()
+
+    expect(mapScene.props('allowPinPlacement')).toBe(true)
+    expect(wrapper.get('[data-testid="map-role-position-mode"]').text()).toMatch(
+      /Tap any blank map point|点击地图任意空白位置/,
+    )
+
+    mapScene.vm.$emit('place-pin', { position: selectedPosition })
+    await nextTick()
+
+    expect(mapStore.currentLocation).toMatchObject({
+      source: 'map_point',
+      mapPackId: 'real-seoul-v1',
+      position: selectedPosition,
+    })
+    expect(mapStore.tripForm.from).toBe('37.49780, 127.02750')
+    expect(mapStore.createBackupSnapshot().currentLocation).toMatchObject({
+      source: 'map_point',
+      position: selectedPosition,
+    })
+    expect(mapScene.props('pins')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          placeId: 'map-role-position',
+          source: 'role_position',
+          position: selectedPosition,
+        }),
+      ]),
+    )
+    expect(wrapper.get('[data-testid="map-role-position-feedback"]').text()).toMatch(
+      /Role position updated|角色位置已更新/,
+    )
+
+    const nearbyDestination = mapStore.activeMapPlaces.find(
+      (place) => place.placeId === 'seoul-samsung-town',
+    )
+    mapStore.setTripEndpoint('to', nearbyDestination.detailZh)
+    expect(mapStore.tripEstimate.distanceKm).toBe(0.3)
+
+    expect(mapStore.setTripTransportMode('walk').ok).toBe(true)
+    expect(mapStore.startTrip().ok).toBe(true)
+    await nextTick()
+
+    expect(wrapper.find('[data-testid="map-set-current-location"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-current-location"]').text()).toMatch(
+      /Start position|出发位置/,
+    )
+  })
+
+  test('opens Journey, Places, and Footprints from three independent map buttons', async () => {
+    const expectations = [
+      ['map-open-trip', /Journey|行程计划/],
+      ['map-open-places', /Places|地点/],
+      ['map-open-progress', /Footprints|足迹/],
+    ]
+
+    for (const [testId, title] of expectations) {
+      await wrapper.get(`[data-testid="${testId}"]`).trigger('click')
+      await nextTick()
+      const drawer = wrapper.get('[data-testid="map-secondary-drawer"]')
+      expect(drawer.get('h2').text()).toMatch(title)
+      expect(drawer.findAll('.map-drawer-tab')).toHaveLength(0)
+    }
+  })
+
   test('shows real place categories inside Places and filters the visible list', async () => {
     const mapStore = useMapStore()
     await wrapper.get('[data-testid="map-open-places"]').trigger('click')
@@ -102,23 +178,35 @@ describe('MapView information architecture', () => {
     )
     expect(wrapper.get('[data-testid="map-place-filter-work"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="map-place-filter-transit"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-residence"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="map-place-filter-convenience_store"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-filter-pharmacy"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-filter-fitness"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-filter-cinema"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-filter-bank"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-filter-public_safety"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-medical"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-leisure"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-filter-city_services"]').exists()).toBe(true)
 
-    await wrapper.get('[data-testid="map-place-filter-cinema"]').trigger('click')
+    const expectedResidenceCount = mapStore.activeMapPlaces.filter((place) =>
+      ['home', 'residence_budget', 'residence_standard', 'residence_premium', 'residence_luxury']
+        .includes(place.category),
+    ).length
+    expect(wrapper.get('[data-testid="map-place-filter-residence"]').text()).toContain(
+      String(expectedResidenceCount),
+    )
+
+    await wrapper.get('[data-testid="map-place-filter-leisure"]').trigger('click')
     await nextTick()
-    expect(wrapper.get('[data-testid="map-filtered-place-list"]').findAll('.map-place-list-row')).toHaveLength(4)
+    const expectedLeisureCount = mapStore.activeMapPlaces.filter((place) =>
+      ['leisure', 'nightlife', 'fitness', 'cinema', 'park'].includes(place.category),
+    ).length
+    expect(wrapper.get('[data-testid="map-filtered-place-list"]').findAll('.map-place-list-row')).toHaveLength(
+      expectedLeisureCount,
+    )
     expect(wrapper.get('[data-testid="map-filtered-place-list"]').text()).toContain('CGV')
 
     await wrapper.get('[data-testid="map-place-filter-transit"]').trigger('click')
     await nextTick()
 
     const expectedTransitCount = mapStore.activeMapPlaces.filter(
-      (place) => place.category === 'transit',
+      (place) => ['transit', 'transit_hub'].includes(place.category),
     ).length
     expect(wrapper.get('[data-testid="map-place-filter-transit"]').attributes('aria-pressed')).toBe('true')
     expect(wrapper.get('[data-testid="map-filtered-place-list"]').findAll('.map-place-list-row')).toHaveLength(
@@ -172,6 +260,52 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-pin-visibility-toolbar"]').text()).toMatch(/shown|已显示/)
   })
 
+  test('keeps undiscovered facilities out of map, search, and Places until Footprints reveal them', async () => {
+    const mapStore = useMapStore()
+    const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
+    expect(mapStore.setMapPlaceKnowledgeMode('footprint_gated')).toBe(true)
+    await nextTick()
+
+    expect(mapStore.activeMapPlaces.some((place) => place.id === 'seoul-cu-bgf-hq')).toBe(false)
+    expect(mapScene.props('pins').some((pin) => pin.placeId === 'seoul-cu-bgf-hq')).toBe(false)
+
+    await wrapper.get('[data-testid="map-destination-search"]').setValue('CU BGF')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-local-place-results"]').text()).not.toContain('CU BGF')
+
+    await wrapper.get('[data-testid="map-search-browse-places"]').trigger('click')
+    await nextTick()
+    expect(wrapper.find('[data-testid="map-place-filter-convenience_store"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-filtered-place-list"]').text()).not.toContain('CU BGF')
+
+    expect(mapStore.restoreFromBackup({
+      map: {
+        mapPlaceKnowledgeByWorld: {
+          default_world: {
+            mode: 'footprint_gated',
+            discoveriesByMapPack: {
+              'real-seoul-v1': {
+                placeIds: ['seoul-cu-bgf-hq'],
+                evidenceByPlaceId: {
+                  'seoul-cu-bgf-hq': {
+                    sourceType: 'trip_arrival',
+                    sourceId: 'trip_hist_discovery_ui',
+                    discoveredAt: Date.now(),
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })).toBe(true)
+    await nextTick()
+
+    await wrapper.get('[data-testid="map-open-progress"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-footprints-discovery"]').text()).toContain('CU BGF')
+  })
+
   test('connects the visible trip-history delete action to Map ownership', async () => {
     const mapStore = useMapStore()
     expect(mapStore.restoreFromBackup({
@@ -191,13 +325,7 @@ describe('MapView information architecture', () => {
     })).toBe(true)
     await nextTick()
 
-    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
-    await nextTick()
-    const progressTab = wrapper
-      .get('[data-testid="map-secondary-drawer"]')
-      .findAll('.map-drawer-tab')
-      .find((button) => button.text().includes('探索') || button.text().includes('Explore'))
-    await progressTab.trigger('click')
+    await wrapper.get('[data-testid="map-open-progress"]').trigger('click')
     await nextTick()
 
     await wrapper.get('[data-testid="map-trip-history-delete-trip_history_delete_test"]').trigger('click')
@@ -205,19 +333,70 @@ describe('MapView information architecture', () => {
     expect(mapStore.tripHistory).toEqual([])
   })
 
-  test('keeps destination search on the primary map surface', async () => {
+  test('keeps destination discovery on the primary map surface and requires explicit planning', async () => {
     const input = wrapper.get('[data-testid="map-destination-search"]')
 
     await input.setValue('Moon Market')
     await nextTick()
 
     expect(input.element.value).toBe('Moon Market')
+    expect(wrapper.find('[data-testid="map-primary-route-card"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="map-use-freeform-destination"]').trigger('click')
+    await nextTick()
+
     expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toContain('Moon Market')
+  })
+
+  test('lets journey endpoints be selected from current-world places as well as typed', async () => {
+    const mapStore = useMapStore()
+    const gangnamStation = mapStore.activeMapPlaces.find(
+      (place) => place.placeId === 'seoul-gangnam-station',
+    )
+    expect(mapStore.setCurrentLocation({
+      label: gangnamStation.nameZh,
+      detail: gangnamStation.detailZh,
+      source: 'map_pack',
+      mapPackId: mapStore.activeMapPackId,
+      position: gangnamStation.position,
+      syncTripOrigin: true,
+    })).toBe(true)
+    const input = wrapper.get('[data-testid="map-destination-search"]')
+    await input.setValue('Moon Market')
+    await nextTick()
+    await wrapper.get('[data-testid="map-use-freeform-destination"]').trigger('click')
+    await wrapper.get('[data-testid="map-open-trip-drawer"]').trigger('click')
+    await nextTick()
+
+    const fromPicker = wrapper.get('[data-testid="map-trip-from-picker"]')
+    const rolePositionOption = fromPicker
+      .findAll('option')
+      .find((option) => /Role position|角色位置/.test(option.text()))
+    expect(rolePositionOption).toBeTruthy()
+    expect(rolePositionOption.attributes('value')).toBe(gangnamStation.detailZh)
+    expect(rolePositionOption.text()).toContain(gangnamStation.nameZh)
+    await fromPicker.setValue(rolePositionOption.attributes('value'))
+    expect(mapStore.tripForm.from).toBe(rolePositionOption.attributes('value'))
+
+    const toPicker = wrapper.get('[data-testid="map-trip-to-picker"]')
+    const worldPlaceOption = toPicker
+      .findAll('option')
+      .find((option) => /Samsung Town|三星城/.test(option.text()))
+    expect(worldPlaceOption).toBeTruthy()
+    await toPicker.setValue(worldPlaceOption.attributes('value'))
+
+    expect(mapStore.tripForm.to).toBe(worldPlaceOption.attributes('value'))
+    expect(wrapper.get('[data-testid="map-trip-to-input"]').element.value).toBe(
+      worldPlaceOption.attributes('value'),
+    )
+    expect(mapStore.tripEstimate.distanceKm).toBe(0.3)
   })
 
   test('requires a visible transport choice, updates the estimate, and locks it after departure', async () => {
     const mapStore = useMapStore()
     await wrapper.get('[data-testid="map-destination-search"]').setValue('Moon Market')
+    await nextTick()
+    await wrapper.get('[data-testid="map-use-freeform-destination"]').trigger('click')
     await nextTick()
 
     expect(wrapper.get('[data-testid="map-primary-start-trip"]').attributes('disabled')).toBeDefined()
@@ -252,11 +431,16 @@ describe('MapView information architecture', () => {
     expect(wrapper.get('[data-testid="map-transport-mode-walk"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="map-transport-mode-public_transit"]').attributes('aria-checked')).toBe('true')
     expect(wrapper.find('[data-testid="map-local-place-results"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="map-destination-search"]').attributes('readonly')).toBeDefined()
-    expect(wrapper.find('[data-testid="map-current-location"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-destination-search"]').attributes('readonly')).toBeUndefined()
+    expect(wrapper.get('[data-testid="map-current-location"]').text()).toMatch(
+      /Start position|出发位置/,
+    )
     expect(wrapper.get('[data-testid="map-active-journey"]').text()).toMatch(/In transit|行程中/)
     expect(wrapper.get('[data-testid="map-primary-journey-status"]').text()).toMatch(/In transit|行程中/)
-    expect(wrapper.get('[data-testid="map-primary-controls"]').findAll('button')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="map-primary-controls"]').findAll('button')).toHaveLength(4)
+    expect(wrapper.get('[data-testid="map-open-trip"]').text()).toMatch(/In transit|行程中/)
+    expect(wrapper.get('[data-testid="map-open-places"]').text()).toMatch(/Places|地点/)
+    expect(wrapper.get('[data-testid="map-open-progress"]').text()).toMatch(/Footprints|足迹/)
     expect(wrapper.find('[data-testid="map-relationship-contact"]').exists()).toBe(false)
 
     const closeDrawer = wrapper
@@ -271,6 +455,50 @@ describe('MapView information architecture', () => {
     await nextTick()
     expect(wrapper.get('[data-testid="map-secondary-drawer"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="map-journey-phase"]').exists()).toBe(true)
+  })
+
+  test('keeps place search available as read-only browsing during an active journey', async () => {
+    const mapStore = useMapStore()
+    const input = wrapper.get('[data-testid="map-destination-search"]')
+
+    await input.setValue('Trip destination')
+    await wrapper.get('[data-testid="map-use-freeform-destination"]').trigger('click')
+    await wrapper.get('[data-testid="map-primary-transport-mode"]').trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="map-transport-mode-walk"]').trigger('click')
+    await wrapper.get('[data-testid="map-trip-start"]').trigger('click')
+    await flushPromises()
+
+    const lockedDestination = mapStore.tripState.to
+    const routeCardBeforeBrowse = wrapper.get('[data-testid="map-primary-route-card"]').text()
+    const closeDrawer = wrapper
+      .get('[data-testid="map-secondary-drawer"]')
+      .findAll('button')
+      .find((button) => /Close|关闭/.test(button.attributes('aria-label') || ''))
+    await closeDrawer.trigger('click')
+    await input.setValue('SM')
+    await nextTick()
+
+    expect(input.attributes('readonly')).toBeUndefined()
+    expect(mapStore.tripState.to).toBe(lockedDestination)
+    expect(mapStore.tripForm.to).toBe(lockedDestination)
+    expect(wrapper.get('[data-testid="map-search-journey-lock"]').text()).toMatch(
+      /destination is locked|目的地已锁定/,
+    )
+
+    await wrapper
+      .get('[data-testid="map-local-place-results"]')
+      .get('.map-place-result')
+      .trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-place-journey-lock"]').text()).toMatch(
+      /will not change the current journey|不会改变当前行程/,
+    )
+    expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
+    expect(wrapper.find('.map-place-detail-actions').exists()).toBe(false)
+    expect(mapStore.tripState.to).toBe(lockedDestination)
+    expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toBe(routeCardBeforeBrowse)
   })
 
   test('labels legacy active journeys without asserting a transport choice', async () => {
@@ -301,13 +529,7 @@ describe('MapView information architecture', () => {
       /Taxi|出租车/,
     )
 
-    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
-    await nextTick()
-    const tripTab = wrapper
-      .get('[data-testid="map-secondary-drawer"]')
-      .findAll('.map-drawer-tab')
-      .find((button) => button.text().includes('行程') || button.text().includes('Trip'))
-    await tripTab.trigger('click')
+    await wrapper.get('[data-testid="map-open-trip"]').trigger('click')
     await nextTick()
 
     expect(wrapper.get('[data-testid="map-transport-mode-hired_vehicle"]').attributes('aria-checked')).toBe('false')
@@ -339,7 +561,9 @@ describe('MapView information architecture', () => {
 
     const etaBeforeReview = mapStore.tripState.etaAt
     expect(mapStore.tripState.phase).toBe('en_route')
-    expect(wrapper.find('[data-testid="map-current-location"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-current-location"]').text()).toMatch(
+      /Start position|出发位置/,
+    )
     expect(wrapper.get('[data-testid="map-active-journey"]').text()).toMatch(
       /View route update|查看途中情况/,
     )
@@ -461,6 +685,34 @@ describe('MapView information architecture', () => {
     })
   })
 
+  test('keeps place discovery separate from journey planning until a destination is confirmed', async () => {
+    const mapStore = useMapStore()
+    const initialDestination = mapStore.tripForm.to
+    const input = wrapper.get('[data-testid="map-destination-search"]')
+
+    await input.setValue('SM')
+    await nextTick()
+
+    expect(mapStore.tripForm.to).toBe(initialDestination)
+    expect(wrapper.find('[data-testid="map-primary-route-card"]').exists()).toBe(false)
+
+    await wrapper
+      .get('[data-testid="map-local-place-results"]')
+      .get('.map-place-result')
+      .trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-place-detail-sheet"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="map-primary-route-card"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="map-place-use-destination"]').trigger('click')
+    await nextTick()
+
+    expect(mapStore.tripForm.to).not.toBe(initialDestination)
+    expect(wrapper.get('[data-testid="map-primary-route-card"]').exists()).toBe(true)
+    expect(input.element.value).toMatch(/SM/)
+  })
+
   test('opens local discovery on focus and filters suggestions by category', async () => {
     const mapStore = useMapStore()
     const input = wrapper.get('[data-testid="map-destination-search"]')
@@ -469,20 +721,43 @@ describe('MapView information architecture', () => {
     await nextTick()
 
     expect(wrapper.get('[data-testid="map-local-place-results"]').text()).toMatch(
-      /Recent and suggested|最近与推荐/,
+      /All places|全部地点/,
     )
     expect(wrapper.get('[data-testid="map-search-categories"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-local-place-results"]').findAll('.map-place-result').length).toBeGreaterThan(0)
+    const expectedBrowseCount = mapStore.activeMapPlaces.filter(
+      (place) => place.position && !isMapPlaceCategoryDiscoveryOnly(place.category),
+    ).length
+    expect(wrapper.get('[data-testid="map-local-place-results"]').findAll('.map-place-result')).toHaveLength(
+      expectedBrowseCount,
+    )
+    expect(wrapper.get('[data-testid="map-local-search-scope"]').text()).toContain(
+      `${expectedBrowseCount}/${mapStore.activeMapPlaces.length}`,
+    )
+
+    const categoryOrder = wrapper
+      .get('[data-testid="map-search-categories"]')
+      .findAll('button')
+      .map((button) => button.attributes('data-testid'))
+    expect(categoryOrder.slice(0, 8)).toEqual([
+      'map-search-category-all',
+      'map-search-category-transit',
+      'map-search-category-residence',
+      'map-search-category-work',
+      'map-search-category-education',
+      'map-search-category-shopping',
+      'map-search-category-supermarket',
+      'map-search-category-convenience_store',
+    ])
 
     await wrapper.get('[data-testid="map-search-category-transit"]').trigger('click')
     await nextTick()
 
     const expectedTransitCount = mapStore.activeMapPlaces.filter(
-      (place) => place.position && place.category === 'transit',
+      (place) => place.position && ['transit', 'transit_hub'].includes(place.category),
     ).length
     expect(wrapper.get('[data-testid="map-search-category-transit"]').attributes('aria-pressed')).toBe('true')
     expect(wrapper.get('[data-testid="map-local-place-results"]').findAll('.map-place-result')).toHaveLength(
-      Math.min(6, expectedTransitCount),
+      expectedTransitCount,
     )
   })
 
@@ -526,6 +801,7 @@ describe('MapView information architecture', () => {
 
     expect(wrapper.get('[data-testid="map-use-freeform-destination"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="map-search-browse-places"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="map-primary-route-card"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="map-use-freeform-destination"]').trigger('click')
     await nextTick()
@@ -575,96 +851,14 @@ describe('MapView information architecture', () => {
     expect(router.currentRoute.value.path).toBe('/map/settings/places')
   })
 
-  test('creates a categorized place through explicit map placement and opens its detail', async () => {
-    const mapStore = useMapStore()
-    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
-    await nextTick()
-    await wrapper.get('[data-testid="map-add-place-drawer"]').trigger('click')
-    await nextTick()
+  test('routes the legacy create handoff to the settings-owned manager', async () => {
+    await router.push('/map?source=map-settings&panel=places&action=create')
+    await flushPromises()
 
-    const creator = wrapper.get('[data-testid="map-place-creator"]')
-    await creator.get('[data-testid="map-place-name"]').setValue('北岸排练室')
-    await creator.get('[data-testid="map-place-detail"]').setValue('城东区排练楼 3F')
-    const workCategory = creator
-      .findAll('.map-place-category-grid button')
-      .find((button) => button.text().includes('工作') || button.text().includes('Work'))
-    expect(workCategory?.exists()).toBe(true)
-    await workCategory.trigger('click')
-    await creator.get('[data-testid="map-choose-pin"]').trigger('click')
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="map-placement-mode"]').exists()).toBe(true)
-    wrapper.findComponent({ name: 'MapSceneCanvas' }).vm.$emit('place-pin', {
-      position: { kind: 'geo', lat: 37.5444, lng: 127.0441 },
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/map/settings/places',
+      query: { create: '1' },
     })
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="map-pending-pin-status"]').exists()).toBe(true)
-    await wrapper.get('[data-testid="map-save-address"]').trigger('click')
-    await nextTick()
-
-    expect(mapStore.addresses.at(-1)).toMatchObject({
-      label: '北岸排练室',
-      category: 'work',
-      mapPackId: 'real-seoul-v1',
-    })
-    expect(wrapper.findComponent({ name: 'MapSceneCanvas' }).props('focusPosition')).toMatchObject({
-      kind: 'geo',
-      lat: 37.5444,
-      lng: 127.0441,
-    })
-    expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('北岸排练室')
-    expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('城东区排练楼 3F')
-  })
-
-  test('leaves the Places drawer for map placement and preserves the draft on cancel', async () => {
-    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
-    await nextTick()
-    expect(wrapper.get('[data-testid="map-secondary-drawer"]').exists()).toBe(true)
-
-    await wrapper.get('[data-testid="map-add-place-drawer"]').trigger('click')
-    await nextTick()
-    await wrapper.get('[data-testid="map-place-name"]').setValue('桥下工作室')
-    await wrapper.get('[data-testid="map-choose-pin"]').trigger('click')
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="map-placement-mode"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="map-secondary-drawer"]').exists()).toBe(false)
-
-    await wrapper.get('[data-testid="map-placement-mode"]').get('button').trigger('click')
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="map-place-creator"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-name"]').element.value).toBe('桥下工作室')
-  })
-
-  test('keeps coordinate placement available while a trip is in progress', async () => {
-    const mapStore = useMapStore()
-    expect(mapStore.setTripTransportMode('walk').ok).toBe(true)
-    expect(mapStore.startTrip().ok).toBe(true)
-    await nextTick()
-
-    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
-    await nextTick()
-    await wrapper.get('[data-testid="map-add-place-drawer"]').trigger('click')
-    await wrapper.get('[data-testid="map-place-name"]').setValue('途中便利店')
-    await wrapper.get('[data-testid="map-place-detail"]').setValue('汉江沿线补给点')
-    await wrapper.get('[data-testid="map-choose-pin"]').trigger('click')
-    await nextTick()
-
-    const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
-    expect(mapScene.props('allowPinPlacement')).toBe(true)
-    mapScene.vm.$emit('select-pin', mapStore.activeMapPlaces[0])
-    await nextTick()
-    expect(wrapper.get('[data-testid="map-placement-mode"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="map-place-detail-sheet"]').exists()).toBe(false)
-    mapScene.vm.$emit('place-pin', {
-      position: { kind: 'geo', lat: 37.55, lng: 126.99 },
-    })
-    await nextTick()
-
-    expect(wrapper.get('[data-testid="map-place-creator"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-pending-pin-status"]').exists()).toBe(true)
   })
 
   test('records an arrived shared route for the selected companion', async () => {
