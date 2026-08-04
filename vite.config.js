@@ -1,4 +1,4 @@
-import { realpathSync } from 'node:fs'
+import { readFileSync, realpathSync } from 'node:fs'
 import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
@@ -22,9 +22,23 @@ const MAPLIBRE_RUNTIME_PACKAGES = [
 const belongsToPackage = (id, packageName) =>
   id.includes(`/node_modules/${packageName}/`)
 
+const maplibreWorkerRuntimeAssets = {
+  name: 'maplibre-worker-runtime-assets',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({
+      type: 'asset',
+      fileName: 'assets/maplibre-gl-shared.mjs',
+      source: readFileSync(
+        realpathSync('node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs'),
+      ),
+    })
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [vue(), tailwindcss()],
+  plugins: [vue(), tailwindcss(), maplibreWorkerRuntimeAssets],
   base: '/schatphone/',
   optimizeDeps: {
     exclude: ['maplibre-gl'],

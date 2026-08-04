@@ -24,13 +24,21 @@ const trackMapRuntimeRequests = (page) => {
     openFreeMap: [],
     maplibreModules: [],
     maplibreWorkers: [],
+    maplibreShared: [],
   }
   page.on('request', (request) => {
     const url = request.url()
     if (!/^https?:/i.test(url)) return
     const parsed = new URL(url)
     if (parsed.hostname === OPENFREEMAP_HOST) requests.openFreeMap.push(url)
-    if (/maplibre/i.test(parsed.pathname) && !/maplibre-gl-worker/i.test(parsed.pathname)) {
+    if (/maplibre-gl-shared\.mjs/i.test(parsed.pathname)) {
+      requests.maplibreShared.push(url)
+    }
+    if (
+      /maplibre/i.test(parsed.pathname) &&
+      !/maplibre-gl-worker/i.test(parsed.pathname) &&
+      !/maplibre-gl-shared/i.test(parsed.pathname)
+    ) {
       requests.maplibreModules.push(url)
     }
     if (/maplibre-gl-worker/i.test(parsed.pathname) && !url.includes('?url')) {
@@ -81,6 +89,7 @@ test.describe('world-bound narrative maps', () => {
     await expect(renderer.locator('.openfreemap-marker-button')).not.toHaveCount(0)
     expect(requests.openFreeMap).toHaveLength(1)
     expect(requests.maplibreWorkers).toHaveLength(1)
+    expect(requests.maplibreShared.length).toBeGreaterThan(0)
     expect(new URL(requests.openFreeMap[0]).pathname).toBe('/styles/liberty')
     await expect(page.getByTestId('map-current-location')).toHaveAttribute(
       'aria-label',
