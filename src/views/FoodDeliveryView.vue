@@ -3448,7 +3448,7 @@ const scrollToStoreSurface = async (testId) => {
   const target = document.querySelector(`[data-testid="${testId}"]`)
   if (!target) return false
   if (typeof target.scrollIntoView === 'function') {
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    target.scrollIntoView({ behavior: 'auto', block: 'start' })
   }
   return true
 }
@@ -3539,11 +3539,14 @@ const addPeachCloudMerchandiseToCart = (merchandiseId) => {
     : t('购物袋暂时装不下更多商品', 'Your bag cannot hold another product right now')
 }
 
-const scrollPeachCloudNewCarousel = (direction = 1) => {
-  const slides = peachCloudPosterCampaigns.value.length
+const scrollPeachCloudNewCarousel = (direction = 1, sourceKey = '') => {
+  const campaigns = peachCloudPosterCampaigns.value
+  const slides = campaigns.length
   if (!slides) return
+  const sourceIndex = campaigns.findIndex((campaign) => campaign.key === sourceKey)
+  const currentIndex = sourceIndex >= 0 ? sourceIndex : peachCloudNewCarouselIndex.value
   peachCloudNewCarouselIndex.value =
-    (peachCloudNewCarouselIndex.value + direction + slides) % slides
+    (currentIndex + direction + slides) % slides
   const container = peachCloudNewCarouselRef.value
   if (!container || typeof container.scrollTo !== 'function') return
   const target = container.children?.[peachCloudNewCarouselIndex.value]
@@ -7673,7 +7676,7 @@ onBeforeUnmount(() => {
                     class="group absolute inset-y-0 left-0 z-20 flex w-12 items-center justify-start pl-1.5"
                     :aria-label="t('上一张海报', 'Previous poster')"
                     :data-testid="`food-delivery-peach-cloud-carousel-previous-${campaign.key}`"
-                    @click="scrollPeachCloudNewCarousel(-1)"
+                    @click="scrollPeachCloudNewCarousel(-1, campaign.key)"
                   >
                     <span
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
@@ -7686,7 +7689,7 @@ onBeforeUnmount(() => {
                     class="group absolute inset-y-0 right-0 z-20 flex w-12 items-center justify-end pr-1.5"
                     :aria-label="t('下一张海报', 'Next poster')"
                     :data-testid="`food-delivery-peach-cloud-carousel-next-${campaign.key}`"
-                    @click="scrollPeachCloudNewCarousel(1)"
+                    @click="scrollPeachCloudNewCarousel(1, campaign.key)"
                   >
                     <span
                       class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
@@ -8088,7 +8091,7 @@ onBeforeUnmount(() => {
                       class="group absolute inset-y-0 left-0 z-20 flex w-12 items-center justify-start pl-1.5"
                       :aria-label="t('上一张海报', 'Previous poster')"
                       :data-testid="`food-delivery-peach-cloud-new-carousel-previous-${campaign.key}`"
-                      @click="scrollPeachCloudNewCarousel(-1)"
+                      @click="scrollPeachCloudNewCarousel(-1, campaign.key)"
                     >
                       <span
                         class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
@@ -8101,7 +8104,7 @@ onBeforeUnmount(() => {
                       class="group absolute inset-y-0 right-0 z-20 flex w-12 items-center justify-end pr-1.5"
                       :aria-label="t('下一张海报', 'Next poster')"
                       :data-testid="`food-delivery-peach-cloud-new-carousel-next-${campaign.key}`"
-                      @click="scrollPeachCloudNewCarousel(1)"
+                      @click="scrollPeachCloudNewCarousel(1, campaign.key)"
                     >
                       <span
                         class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--peach-cloud-ink)]/45 bg-[var(--peach-cloud-canvas)]/80 text-[var(--peach-cloud-ink)] opacity-70 shadow-[0_3px_10px_rgba(43,48,58,0.18)] backdrop-blur-sm transition group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-visible:ring-2 group-focus-visible:ring-[var(--peach-cloud-ink)]"
