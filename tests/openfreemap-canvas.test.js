@@ -75,6 +75,7 @@ const maplibreMock = vi.hoisted(() => {
     resize() {}
 
     remove() {
+      if (maplibreMock.failMapRemove) throw new Error('map cleanup unavailable')
       this.removed = true
     }
   }
@@ -93,6 +94,7 @@ const maplibreMock = vi.hoisted(() => {
     }
 
     addTo(map) {
+      if (maplibreMock.failMarkerAdd) throw new Error('marker projection unavailable')
       this.map = map
       return this
     }
@@ -111,6 +113,8 @@ const maplibreMock = vi.hoisted(() => {
   return {
     maps: [],
     markers: [],
+    failMapRemove: false,
+    failMarkerAdd: false,
     FakeMap,
     FakeMarker,
     FakeNavigationControl,
@@ -144,6 +148,8 @@ describe('OpenFreeMap canvas', () => {
     setActivePinia(createPinia())
     maplibreMock.maps.length = 0
     maplibreMock.markers.length = 0
+    maplibreMock.failMapRemove = false
+    maplibreMock.failMarkerAdd = false
   })
 
   test('selects canonical markers normally and makes them pass through during coordinate placement', async () => {
@@ -258,5 +264,25 @@ describe('OpenFreeMap canvas', () => {
     expect(wrapper.emitted('renderer-status')?.some(([event]) => event.status === 'ready')).toBe(false)
 
     wrapper.unmount()
+  })
+
+  test('falls back when marker rendering fails and safely cleans up a partial map', async () => {
+    maplibreMock.failMarkerAdd = true
+    const wrapper = mountCanvas({
+      pins: [{ name: 'Seoul', position: { kind: 'geo', lat: 37.5665, lng: 126.978 } }],
+    })
+    await flushPromises()
+    await vi.waitFor(() => expect(maplibreMock.maps).toHaveLength(1))
+
+    const map = maplibreMock.maps[0]
+    map.emit('load')
+    await nextTick()
+
+    expect(wrapper.emitted('fallback')?.[0]?.[0]).toEqual({
+      reason: 'OPENFREEMAP_MARKER_RENDER_FAILED',
+    })
+
+    maplibreMock.failMapRemove = true
+    expect(() => wrapper.unmount()).not.toThrow()
   })
 })

@@ -124,34 +124,49 @@ const createMarkerElement = (pin, pending = false) => {
 }
 
 const clearMarkers = () => {
-  markers.forEach((marker) => marker.remove())
+  markers.forEach((marker) => {
+    try {
+      marker.remove()
+    } catch {
+      // MapLibre can reject marker cleanup when its map is only partially initialized.
+    }
+  })
   markers = []
 }
 
 const renderMarkers = () => {
-  if (!mapInstance || !maplibre) return
-  clearMarkers()
-  props.pins.forEach((pin) => {
-    const position = resolveGeoPosition(pin?.position)
-    if (!position) return
-    const marker = new maplibre.Marker({
-      element: createMarkerElement(pin),
-      anchor: 'bottom',
-    })
-      .setLngLat([position.lng, position.lat])
-      .addTo(mapInstance)
-    markers.push(marker)
-  })
+  if (!mapInstance || !maplibre || !mapLoaded.value) return true
 
-  const pendingPosition = resolveGeoPosition(props.pendingPosition)
-  if (pendingPosition) {
-    const marker = new maplibre.Marker({
-      element: createMarkerElement({}, true),
-      anchor: 'bottom',
+  try {
+    clearMarkers()
+    props.pins.forEach((pin) => {
+      const position = resolveGeoPosition(pin?.position)
+      if (!position) return
+      const marker = new maplibre.Marker({
+        element: createMarkerElement(pin),
+        anchor: 'bottom',
+      })
+        .setLngLat([position.lng, position.lat])
+        .addTo(mapInstance)
+      markers.push(marker)
     })
-      .setLngLat([pendingPosition.lng, pendingPosition.lat])
-      .addTo(mapInstance)
-    markers.push(marker)
+
+    const pendingPosition = resolveGeoPosition(props.pendingPosition)
+    if (pendingPosition) {
+      const marker = new maplibre.Marker({
+        element: createMarkerElement({}, true),
+        anchor: 'bottom',
+      })
+        .setLngLat([pendingPosition.lng, pendingPosition.lat])
+        .addTo(mapInstance)
+      markers.push(marker)
+    }
+    return true
+  } catch {
+    clearMarkers()
+    mapLoaded.value = false
+    requestFallback('OPENFREEMAP_MARKER_RENDER_FAILED')
+    return false
   }
 }
 
@@ -217,7 +232,7 @@ const initializeMap = async () => {
       mapLoaded.value = true
       clearTimeout(startupTimer)
       startupTimer = null
-      renderMarkers()
+      if (!renderMarkers()) return
       setRendererStatus('ready')
     })
     mapInstance.on('error', (event) => {
@@ -237,6 +252,17 @@ const initializeMap = async () => {
 }
 
 onMounted(initializeMap)
+
+const destroyMap = () => {
+  const currentMap = mapInstance
+  mapInstance = null
+  if (!currentMap) return
+  try {
+    currentMap.remove()
+  } catch {
+    // A failed style/WebGL setup can leave MapLibre without a complete render task queue.
+  }
+}
 
 watch(
   () => [props.pins, props.pendingPosition, props.allowPinPlacement],
@@ -269,8 +295,7 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   resizeObserver = null
   clearMarkers()
-  mapInstance?.remove()
-  mapInstance = null
+  destroyMap()
   maplibre = null
 })
 </script>
