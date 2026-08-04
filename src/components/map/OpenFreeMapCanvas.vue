@@ -87,6 +87,16 @@ const resolveInitialCenter = () =>
   resolveGeoPosition(props.pins.find((pin) => pin?.source === 'user')?.position) ||
   SEOUL_CENTER
 
+const focusMapOnPosition = (rawPosition) => {
+  const position = resolveGeoPosition(rawPosition)
+  if (!mapInstance || !mapLoaded.value || !position) return
+  mapInstance.easeTo({
+    center: [position.lng, position.lat],
+    zoom: Math.max(mapInstance.getZoom(), 13.4),
+    duration: 360,
+  })
+}
+
 const createMarkerElement = (pin, pending = false) => {
   const button = document.createElement('button')
   button.type = 'button'
@@ -236,6 +246,7 @@ const initializeMap = async () => {
       clearTimeout(startupTimer)
       startupTimer = null
       if (!renderMarkers()) return
+      focusMapOnPosition(props.focusPosition)
       setRendererStatus('ready')
     })
     mapInstance.on('error', (event) => {
@@ -279,15 +290,7 @@ watch(
 
 watch(
   () => props.focusPosition,
-  (rawPosition) => {
-    const position = resolveGeoPosition(rawPosition)
-    if (!mapInstance || !position) return
-    mapInstance.easeTo({
-      center: [position.lng, position.lat],
-      zoom: Math.max(mapInstance.getZoom(), 13.4),
-      duration: 360,
-    })
-  },
+  focusMapOnPosition,
   { deep: true },
 )
 

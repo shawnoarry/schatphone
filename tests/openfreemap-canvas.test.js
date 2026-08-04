@@ -247,6 +247,27 @@ describe('OpenFreeMap canvas', () => {
     }
   })
 
+  test('defers focus changes until the online map is ready', async () => {
+    const wrapper = mountCanvas()
+    await flushPromises()
+    await vi.waitFor(() => expect(maplibreMock.maps).toHaveLength(1))
+    const map = maplibreMock.maps[0]
+    const focusPosition = { kind: 'geo', lat: 37.58, lng: 127.03 }
+
+    await wrapper.setProps({ focusPosition })
+    expect(map.easeToCalls).toHaveLength(0)
+
+    map.emit('load')
+    await nextTick()
+
+    expect(map.easeToCalls.at(-1)).toMatchObject({
+      center: [127.03, 37.58],
+      zoom: 13.4,
+    })
+
+    wrapper.unmount()
+  })
+
   test('reacts to pin, focus, and interaction prop updates without replacing map truth', async () => {
     const firstPin = {
       placeId: 'first',
