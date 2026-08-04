@@ -193,11 +193,13 @@ const initializeMap = async () => {
   setRendererStatus('loading')
 
   try {
-    const [module] = await Promise.all([
+    const [module, , workerModule] = await Promise.all([
       import('maplibre-gl'),
       import('maplibre-gl/dist/maplibre-gl.css'),
+      import('maplibre-gl/dist/maplibre-gl-worker.mjs?url'),
     ])
     maplibre = module.default || module
+    maplibre.setWorkerUrl?.(workerModule.default || workerModule)
     if (!mapRootRef.value) return
     const center = resolveInitialCenter()
     mapInstance = new maplibre.Map({

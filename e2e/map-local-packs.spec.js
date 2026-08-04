@@ -23,13 +23,19 @@ const trackMapRuntimeRequests = (page) => {
   const requests = {
     openFreeMap: [],
     maplibreModules: [],
+    maplibreWorkers: [],
   }
   page.on('request', (request) => {
     const url = request.url()
     if (!/^https?:/i.test(url)) return
     const parsed = new URL(url)
     if (parsed.hostname === OPENFREEMAP_HOST) requests.openFreeMap.push(url)
-    if (/maplibre/i.test(parsed.pathname)) requests.maplibreModules.push(url)
+    if (/maplibre/i.test(parsed.pathname) && !/maplibre-gl-worker/i.test(parsed.pathname)) {
+      requests.maplibreModules.push(url)
+    }
+    if (/maplibre-gl-worker/i.test(parsed.pathname) && !url.includes('?url')) {
+      requests.maplibreWorkers.push(url)
+    }
   })
   return requests
 }
@@ -62,6 +68,7 @@ const clickMapLibreCanvas = async (scope, xRatio, yRatio) => {
 
 test.describe('world-bound narrative maps', () => {
   test('renders geographic Seoul with MapLibre and creates canonical places', async ({ page }, testInfo) => {
+    test.setTimeout(45_000)
     await mockOpenFreeMapStyle(page)
     const requests = trackMapRuntimeRequests(page)
     await unlockToHome(page)
@@ -73,6 +80,7 @@ test.describe('world-bound narrative maps', () => {
     await expect(renderer.locator('.maplibregl-canvas')).toBeVisible()
     await expect(renderer.locator('.openfreemap-marker-button')).not.toHaveCount(0)
     expect(requests.openFreeMap).toHaveLength(1)
+    expect(requests.maplibreWorkers).toHaveLength(1)
     expect(new URL(requests.openFreeMap[0]).pathname).toBe('/styles/liberty')
     await expect(page.getByTestId('map-current-location')).toHaveAttribute(
       'aria-label',

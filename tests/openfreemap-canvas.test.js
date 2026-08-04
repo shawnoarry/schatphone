@@ -113,6 +113,7 @@ const maplibreMock = vi.hoisted(() => {
   return {
     maps: [],
     markers: [],
+    workerUrls: [],
     failMapRemove: false,
     failMarkerAdd: false,
     FakeMap,
@@ -126,9 +127,13 @@ vi.mock('maplibre-gl', () => ({
     Map: maplibreMock.FakeMap,
     Marker: maplibreMock.FakeMarker,
     NavigationControl: maplibreMock.FakeNavigationControl,
+    setWorkerUrl: (url) => maplibreMock.workerUrls.push(url),
   },
 }))
 vi.mock('maplibre-gl/dist/maplibre-gl.css', () => ({}))
+vi.mock('maplibre-gl/dist/maplibre-gl-worker.mjs?url', () => ({
+  default: '/maplibre-gl-worker.mjs',
+}))
 
 const seoulPack = getMapPackById('real-seoul-v1')
 
@@ -148,6 +153,7 @@ describe('OpenFreeMap canvas', () => {
     setActivePinia(createPinia())
     maplibreMock.maps.length = 0
     maplibreMock.markers.length = 0
+    maplibreMock.workerUrls.length = 0
     maplibreMock.failMapRemove = false
     maplibreMock.failMarkerAdd = false
   })
@@ -178,6 +184,7 @@ describe('OpenFreeMap canvas', () => {
       attributionControl: false,
       interactive: true,
     })
+    expect(maplibreMock.workerUrls).toEqual(['/maplibre-gl-worker.mjs'])
     expect(wrapper.attributes('data-renderer')).toBe('openfreemap-loading')
 
     map.emit('load')
