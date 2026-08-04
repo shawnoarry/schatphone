@@ -216,6 +216,30 @@ describe('OpenFreeMap canvas', () => {
     expect(map.removed).toBe(true)
   })
 
+  test('keeps a slow online startup alive beyond the previous ten-second boundary', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mountCanvas()
+      await flushPromises()
+      expect(maplibreMock.maps).toHaveLength(1)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(wrapper.emitted('fallback')).toBeUndefined()
+
+      await vi.advanceTimersByTimeAsync(19_999)
+      expect(wrapper.emitted('fallback')).toBeUndefined()
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(wrapper.emitted('fallback')?.[0]?.[0]).toEqual({
+        reason: 'OPENFREEMAP_LOAD_TIMEOUT',
+      })
+
+      wrapper.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   test('reacts to pin, focus, and interaction prop updates without replacing map truth', async () => {
     const firstPin = {
       placeId: 'first',
@@ -262,6 +286,28 @@ describe('OpenFreeMap canvas', () => {
 
     expect(wrapper.emitted('fallback')?.[0]?.[0]).toEqual({ reason: 'style unavailable' })
     expect(wrapper.emitted('renderer-status')?.some(([event]) => event.status === 'ready')).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('does not treat a source-scoped tile error as a fatal style startup failure', async () => {
+    const wrapper = mountCanvas()
+    await flushPromises()
+    await vi.waitFor(() => expect(maplibreMock.maps).toHaveLength(1))
+    const map = maplibreMock.maps[0]
+
+    map.emit('error', {
+      error: new Error('temporary tile failure'),
+      sourceId: 'openmaptiles',
+      tile: {},
+    })
+    await nextTick()
+
+    expect(wrapper.emitted('fallback')).toBeUndefined()
+
+    map.emit('load')
+    await nextTick()
+    expect(wrapper.attributes('data-renderer')).toBe('openfreemap')
 
     wrapper.unmount()
   })

@@ -439,7 +439,7 @@ test.describe('world-bound narrative maps', () => {
   test('falls back locally when OpenFreeMap startup fails and keeps placement interactive', async ({
     page,
   }) => {
-    test.setTimeout(45_000)
+    test.setTimeout(55_000)
     const requests = trackMapRuntimeRequests(page)
     await page.route(`https://${OPENFREEMAP_HOST}/**`, (route) =>
       route.abort('internetdisconnected'),
@@ -449,7 +449,7 @@ test.describe('world-bound narrative maps', () => {
 
     const mapCanvas = page.getByTestId('map-primary-canvas')
     await expect(mapCanvas.locator('[data-renderer="local-fallback"]')).toBeVisible({
-      timeout: 15000,
+      timeout: 40_000,
     })
     await expect(mapCanvas.locator('.leaflet-image-layer')).toBeVisible()
     expect(requests.openFreeMap.length).toBeGreaterThan(0)
@@ -478,7 +478,7 @@ test.describe('world-bound narrative maps', () => {
     await page.getByRole('button', { name: /Back to Map|返回地图/ }).click()
     await expect(page).toHaveURL(/#\/map(?:\?|$)/)
     await expect(mapCanvas.locator('[data-renderer="local-fallback"]')).toBeVisible({
-      timeout: 15000,
+      timeout: 40_000,
     })
     await mapCanvas.locator('.leaflet-marker-icon[title="Offline studio"]').click()
     await expect(page.getByTestId('map-place-detail-sheet')).toContainText('Offline studio')

@@ -4,6 +4,7 @@ import { useI18n } from '../../composables/useI18n'
 import { mapPositionToNormalized } from '../../lib/map-packs'
 
 const OPENFREEMAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
+const OPENFREEMAP_LOAD_TIMEOUT_MS = 30_000
 const SEOUL_CENTER = Object.freeze({ lat: 37.5665, lng: 126.978 })
 
 const props = defineProps({
@@ -236,11 +237,15 @@ const initializeMap = async () => {
       setRendererStatus('ready')
     })
     mapInstance.on('error', (event) => {
-      if (!mapLoaded.value) {
+      // Let recoverable tile errors settle while the style is still starting.
+      if (!mapLoaded.value && !event?.sourceId && !event?.tile) {
         requestFallback(event?.error?.message || 'OPENFREEMAP_STYLE_LOAD_FAILED')
       }
     })
-    startupTimer = setTimeout(() => requestFallback('OPENFREEMAP_LOAD_TIMEOUT'), 10000)
+    startupTimer = setTimeout(
+      () => requestFallback('OPENFREEMAP_LOAD_TIMEOUT'),
+      OPENFREEMAP_LOAD_TIMEOUT_MS,
+    )
 
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => mapInstance?.resize())
