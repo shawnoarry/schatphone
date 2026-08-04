@@ -5,7 +5,13 @@ import prettier from 'eslint-config-prettier'
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', '.agents/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '.agents/**',
+      'test-results/**',
+      'playwright-report/**',
+    ],
   },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],

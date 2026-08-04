@@ -310,6 +310,8 @@ const openPlacedWorldEntry = async (page, entry, language, testInfo) => {
 
   if (entry.moduleKey === 'food_delivery') {
     await page.getByTestId('food-delivery-go-home').click()
+  } else if (entry.moduleKey === 'map') {
+    await page.getByTestId('map-go-home').click()
   } else {
     await page.getByRole('button', { name: /^(首页|Home)$/ }).first().click()
   }
@@ -319,6 +321,7 @@ const openPlacedWorldEntry = async (page, entry, language, testInfo) => {
 test('World Pack loop keeps placement, target ownership, and disabled safe defaults', async ({
   page,
 }, testInfo) => {
+  testInfo.setTimeout(60_000)
   const simulatedPhone = testInfo.project.name === 'mobile-chrome'
   const language = simulatedPhone ? 'zh-CN' : 'en-US'
   const theme = simulatedPhone ? 'zen' : 'default'

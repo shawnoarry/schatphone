@@ -132,6 +132,7 @@ const menuDetailFeedback = ref('')
 const menuDetailQuantity = ref(1)
 const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
+const showStoreCartPanel = ref(false)
 const platformSearchQuery = ref('')
 const platformSearchInputRef = ref(null)
 const platformMerchantListExpanded = ref(false)
@@ -3240,6 +3241,7 @@ const commitMenuItemToCart = (menuItemId, quantity = 1, customization = {}) => {
   })
   storeNavigationFeedback.value = ''
   checkoutFeedback.value = ''
+  if (added) showStoreCartPanel.value = true
   return added
 }
 
@@ -3324,6 +3326,7 @@ const checkoutFoodDelivery = (checkoutOptions = {}) => {
     )
     return
   }
+  showStoreCartPanel.value = true
   checkoutSheetOpen.value = false
   checkoutFeedback.value = t(
     '订单已提交，可在本店订单里查看。',
@@ -3750,6 +3753,7 @@ watch(
   (restaurantId) => {
     activeStoreMenuSectionKey.value = 'all'
     storeNavigationFeedback.value = ''
+    showStoreCartPanel.value = activeStoreCartLineItems.value.length > 0
     if (selectedMenuItem.value && selectedMenuItem.value.restaurantId !== restaurantId) {
       closeMenuItemDetail()
     }
@@ -4154,6 +4158,7 @@ onBeforeUnmount(() => {
                 :key="category.key"
                 type="button"
                 class="flex min-w-0 flex-col items-center gap-2 text-center transition active:scale-[0.97]"
+                :class="category.active ? 'ring-2 ring-[#24bcb7]/25' : ''"
                 :aria-pressed="category.active"
                 :data-testid="`food-delivery-category-${category.key}`"
                 @click="openPlatformCategory(category)"
@@ -10477,7 +10482,11 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="isStoreMode && !isDedicatedStoreApp && activeStoreCartLineItems.length > 0"
+        v-if="
+          isStoreMode &&
+          !isDedicatedStoreApp &&
+          (activeStoreCartLineItems.length > 0 || showStoreCartPanel)
+        "
         class="rounded-3xl p-4"
         :class="
           isDessertWindowStore

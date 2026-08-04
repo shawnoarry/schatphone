@@ -711,6 +711,16 @@ const flushIndexedDbOps = async () => {
         })
       }
       warnIndexedDb(new Error(result.error))
+      continue
+    }
+    const previous = persistedHeadStates.get(fullKey)
+    if (previous?.localRaw === op.payload) {
+      setPersistedHeadState(fullKey, {
+        ...previous,
+        forceFork: false,
+        mirrorAvailable: true,
+        mirrorRaw: op.payload,
+      })
     }
   }
 }
@@ -760,11 +770,13 @@ const createWritePlan = (key, version) => {
   }
 
   let generation = null
+  let forceFork = state?.forceFork === true
   if (state?.generation && !state.forceFork) {
     generation = state.generation
   } else if (!state) {
     const current = inspectLayerRead(local, { version })
     if (current.valid && current.order === 'ordered') generation = current.generation
+    if (current.valid && current.order !== 'ordered') forceFork = true
   }
 
   if (generation?.sequence === Number.MAX_SAFE_INTEGER) return createGenerationFailure()
@@ -774,10 +786,11 @@ const createWritePlan = (key, version) => {
       ? { lineage: generation.lineage, sequence: generation.sequence + 1 }
       : { lineage: createLineageId(), sequence: 1 },
     excluded: false,
+    forceFork,
   }
 }
 
-const rememberLocalCommit = (key, rawPayload, generation) => {
+const rememberLocalCommit = (key, rawPayload, generation, forceFork = false) => {
   if (key === BOOK_STORAGE_KEY || !generation) return
   const fullKey = buildStorageKey(key)
   const previous = persistedHeadStates.get(fullKey)
@@ -786,7 +799,7 @@ const rememberLocalCommit = (key, rawPayload, generation) => {
     blocked: false,
     serveLayer: 'local',
     generation,
-    forceFork: false,
+    forceFork,
     localAvailable: true,
     localRaw: rawPayload,
     mirrorAvailable: previous?.mirrorAvailable === true,
@@ -818,10 +831,10 @@ export const writePersistedState = (key, data, { version = 1 } = {}) => {
 
   const local = writePersistedStateToLocal(key, serialized.rawPayload)
   if (local.ok) {
-    rememberLocalCommit(key, serialized.rawPayload, plan.generation)
+    rememberLocalCommit(key, serialized.rawPayload, plan.generation, plan.forceFork)
     queueIndexedDbWrite(fullKey, serialized.rawPayload, {
       version,
-      skipFreshnessCheck: plan.excluded,
+      skipFreshnessCheck: plan.excluded || plan.forceFork,
     })
   }
   return local
@@ -884,7 +897,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
     }
   }
 
-  if (!plan.excluded && canUseLayeredPersistence()) {
+  if (!plan.excluded && !plan.forceFork && canUseLayeredPersistence()) {
     const mirrorHead = await readIndexedDbLayer(fullKey)
     if (mirrorHead.available) {
       const precondition = checkMirrorWritePrecondition(
@@ -904,7 +917,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
       mirror: createSkippedWrite('indexeddb', 'primary_write_failed', local.retryable),
     }
   }
-  rememberLocalCommit(key, serialized.rawPayload, plan.generation)
+  rememberLocalCommit(key, serialized.rawPayload, plan.generation, plan.forceFork)
 
   if (!canUseLayeredPersistence()) {
     const mirror = ENABLE_INDEXEDDB_MIRROR
@@ -923,8 +936,19 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
 
   const mirror = await writeToIndexedDbWithResult(fullKey, serialized.rawPayload, {
     version,
-    skipFreshnessCheck: plan.excluded,
+    skipFreshnessCheck: plan.excluded || plan.forceFork,
   })
+  if (mirror.ok) {
+    const previous = persistedHeadStates.get(fullKey)
+    if (previous?.localRaw === serialized.rawPayload) {
+      setPersistedHeadState(fullKey, {
+        ...previous,
+        forceFork: false,
+        mirrorAvailable: true,
+        mirrorRaw: serialized.rawPayload,
+      })
+    }
+  }
   return {
     ok: local.ok && mirror.ok,
     error: mirror.ok ? null : mirror.error,

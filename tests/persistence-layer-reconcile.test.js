@@ -246,6 +246,30 @@ describe('persistence layer freshness reconciliation', () => {
     expect(localStorage.getItem('schatphone:store:system')).toBe(raw)
   })
 
+  test('allows the first ordered write after a legacy pair has been reconciled', async () => {
+    const idb = installIndexedDbMock()
+    const legacy = makeRaw({ marker: 'legacy' })
+    localStorage.setItem('schatphone:store:system', legacy)
+    idb.payloadByKey.set('schatphone:store:system', legacy)
+    const { reconcilePersistedStateLayers, writePersistedStateAsync } = await importPersistence()
+
+    await expect(
+      reconcilePersistedStateLayers('store:system', { version: 1 }),
+    ).resolves.toMatchObject({ ok: true, action: 'noop' })
+
+    const result = await writePersistedStateAsync(
+      'store:system',
+      { marker: 'ordered successor' },
+      { version: 1 },
+    )
+
+    expect(result).toMatchObject({ ok: true, local: { ok: true }, mirror: { ok: true } })
+    const saved = localStorage.getItem('schatphone:store:system')
+    expect(saved).toBe(idb.payloadByKey.get('schatphone:store:system'))
+    expect(JSON.parse(saved).data).toEqual({ marker: 'ordered successor' })
+    expect(JSON.parse(saved).generation.sequence).toBe(1)
+  })
+
   test.each([
     ['absent', null],
     ['corrupt', '{broken'],

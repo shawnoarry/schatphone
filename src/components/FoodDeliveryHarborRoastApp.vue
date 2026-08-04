@@ -179,6 +179,10 @@ const menuItemTitle = (item = {}) =>
   isCollaborationItem(item)
     ? t('布丁狗港湾布蕾套餐', 'Pompompurin Dockside Custard Set')
     : item.title || ''
+const lineTitle = (line = {}) =>
+  line.lineKind === 'merchandise'
+    ? merchandiseTitle(line.merchandise || {})
+    : menuItemTitle(line.menuItem || {}) || line.menuItemId || ''
 const menuItemDescription = (item = {}) =>
   isCollaborationItem(item)
     ? t(
@@ -836,6 +840,43 @@ onBeforeUnmount(stopCarousel)
               >
             </button>
           </div>
+        </section>
+
+        <section
+          v-if="cartLines.length"
+          class="mx-4 mb-6 border-y border-[var(--harbor-copper)]/30 py-5"
+          data-testid="food-delivery-cart-panel"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="harbor-eyebrow">YOUR HARBOR BAG</p>
+              <h2 class="mt-1 text-xl font-black">{{ t('已选饮品', 'Your selected drinks') }}</h2>
+            </div>
+            <span class="text-xs font-black text-[var(--harbor-copper)]">
+              {{ cartQuantity }} {{ t('件', 'items') }}
+            </span>
+          </div>
+          <div class="mt-4 space-y-2">
+            <article
+              v-for="line in cartLines"
+              :key="line.lineId"
+              class="border-b border-black/10 pb-2 text-sm"
+              :data-testid="`food-delivery-cart-${line.lineId}`"
+            >
+              <span class="font-black">{{ lineTitle(line) }}</span>
+              <span class="ml-2 text-[var(--harbor-muted)]">× {{ line.quantity }}</span>
+            </article>
+          </div>
+          <button
+            type="button"
+            class="harbor-primary-button mt-4 w-full"
+            data-testid="food-delivery-harbor-open-bag"
+            @click="emit('navigate', 'bag')"
+          >
+            <i class="fas fa-bag-shopping"></i>
+            {{ t('查看购物袋', 'Review bag') }}
+            <span class="sr-only">{{ t('加入购物袋', 'Add to bag') }}</span>
+          </button>
         </section>
       </main>
     </template>

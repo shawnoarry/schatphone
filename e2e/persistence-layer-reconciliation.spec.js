@@ -145,7 +145,10 @@ test.describe('layered persistence bootstrap reconciliation', () => {
     await cleanup(page)
   })
 
-  test('repairs local-higher and corrupt-local cases without clock arbitration', async ({ page }) => {
+  test('repairs local-higher and corrupt-local cases without clock arbitration', async ({
+    page,
+    browser,
+  }) => {
     await openStaticSeedPage(page)
     const localWinner = mapRaw({
       marker: 'Local winner',
@@ -164,25 +167,45 @@ test.describe('layered persistence bootstrap reconciliation', () => {
     await page.goto('/#/lock')
     let bootstrapWrites = await page.evaluate(() => window.__persistenceBootstrapWrites)
     expect(bootstrapWrites.mirror[0]).toBe(localWinner)
+    await expect
+      .poll(async () => {
+        const layers = await readLayers(page)
+        return layers.localRaw === layers.mirrorRaw
+      })
+      .toBe(true)
     const localRecovered = await readLayers(page)
     expect(localRecovered.localRaw).toBe(localRecovered.mirrorRaw)
     expect(JSON.parse(localRecovered.localRaw).data.tripForm.to).toBe('Local winner')
-
-    const mirrorValid = mapRaw({
-      marker: 'Recovered mirror',
-      lineage: 'corrupt-recovery',
-      sequence: 4,
-      savedAt: 1,
-    })
-    await openStaticSeedPage(page)
-    await seedLayers(page, { localRaw: '{broken', mirrorRaw: mirrorValid })
-    await page.goto('/#/lock')
-    bootstrapWrites = await page.evaluate(() => window.__persistenceBootstrapWrites)
-    expect(bootstrapWrites.local[0]).toBe(mirrorValid)
-    const recovered = await readLayers(page)
-    expect(recovered.localRaw).toBe(recovered.mirrorRaw)
-    expect(JSON.parse(recovered.localRaw).data.tripForm.to).toBe('Recovered mirror')
     await cleanup(page)
+
+    const secondContext = await browser.newContext()
+    const secondPage = await secondContext.newPage()
+    try {
+      const mirrorValid = mapRaw({
+        marker: 'Recovered mirror',
+        lineage: 'corrupt-recovery',
+        sequence: 4,
+        savedAt: 1,
+      })
+      await openStaticSeedPage(secondPage)
+      await seedLayers(secondPage, { localRaw: '{broken', mirrorRaw: mirrorValid })
+      await captureBootstrapWrites(secondPage)
+      await secondPage.goto('/#/lock')
+      bootstrapWrites = await secondPage.evaluate(() => window.__persistenceBootstrapWrites)
+      expect(bootstrapWrites.local[0]).toBe(mirrorValid)
+      await expect
+        .poll(async () => {
+          const layers = await readLayers(secondPage)
+          return layers.localRaw === layers.mirrorRaw
+        })
+        .toBe(true)
+      const recovered = await readLayers(secondPage)
+      expect(recovered.localRaw).toBe(recovered.mirrorRaw)
+      expect(JSON.parse(recovered.localRaw).data.tripForm.to).toBe('Recovered mirror')
+    } finally {
+      await cleanup(secondPage)
+      await secondContext.close()
+    }
   })
 
   test('preserves same-generation conflict and divergent legacy bytes with zero writes', async ({ page }) => {

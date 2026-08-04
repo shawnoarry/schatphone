@@ -4317,6 +4317,7 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const hasFinishedStorageHydration = ref(false)
+  let storageWriteRequestedBeforeHydration = false
 
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(SYSTEM_STORAGE_KEY, {
@@ -4332,6 +4333,7 @@ export const useSystemStore = defineStore('system', () => {
     const persisted = await readPersistedStateAsync(SYSTEM_STORAGE_KEY, {
       version: SYSTEM_STORAGE_VERSION,
     })
+    if (storageWriteRequestedBeforeHydration) return false
     if (!persisted || typeof persisted !== 'object') return false
     applyPersistedSnapshot(persisted)
     return true
@@ -4345,8 +4347,12 @@ export const useSystemStore = defineStore('system', () => {
     return applyPersistedSnapshot(source)
   }
 
-  const persistToStorage = () => {
-    writePersistedState(
+  const persistToStorage = ({ allowBeforeHydration = false } = {}) => {
+    if (!hasFinishedStorageHydration.value && !allowBeforeHydration) {
+      storageWriteRequestedBeforeHydration = true
+      return { ok: false, error: 'hydration_pending', retryable: true }
+    }
+    return writePersistedState(
       SYSTEM_STORAGE_KEY,
       {
         settings: {
@@ -4484,7 +4490,8 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const saveNow = () => {
-    persistToStorage()
+    if (!hasFinishedStorageHydration.value) storageWriteRequestedBeforeHydration = true
+    return persistToStorage({ allowBeforeHydration: true })
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -4493,6 +4500,7 @@ export const useSystemStore = defineStore('system', () => {
       await hydrateFromStorageAsync()
     }
     hasFinishedStorageHydration.value = true
+    storageWriteRequestedBeforeHydration = false
     persistToStorage()
   })()
 

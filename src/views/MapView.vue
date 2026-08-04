@@ -85,7 +85,12 @@ const rolePositionNotice = ref('')
 const selectedMapPlace = ref(null)
 const selectedPlaceCategory = ref('all')
 const selectedSearchCategory = ref('all')
-const mapSearchText = ref('')
+const defaultMapDestination = mapStore.addresses?.[1]?.detail || ''
+const restoredMapDestination =
+  typeof tripForm.value?.to === 'string' && tripForm.value.to !== defaultMapDestination
+    ? tripForm.value.to
+    : ''
+const mapSearchText = ref(restoredMapDestination)
 const destinationIntentActive = ref(false)
 const mapFocusRequestId = ref(0)
 const mapFocusTarget = ref(null)
@@ -1770,7 +1775,13 @@ onBeforeUnmount(() => {
 <template>
   <div class="map-immersive-root" data-app="map" :data-world-pack="activeWorldPack.id">
     <header class="map-topbar">
-      <button type="button" class="map-topbar-button" :aria-label="returnsToMapSettings ? t('返回地图设置', 'Back to Map settings') : t('返回首页', 'Back to Home')" @click="goHome">
+      <button
+        type="button"
+        class="map-topbar-button"
+        data-testid="map-go-home"
+        :aria-label="returnsToMapSettings ? t('返回地图设置', 'Back to Map settings') : t('返回首页', 'Back to Home')"
+        @click="goHome"
+      >
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
       </button>
       <div class="map-topbar-title">
@@ -1980,7 +1991,7 @@ onBeforeUnmount(() => {
             :data-world-app="mapWorldAppContext.bindingId"
           >
             <i :class="mapWorldAppContext.icon" aria-hidden="true"></i>
-            <span>{{ mapWorldAppContext.bindingTitle }}</span>
+            <p>{{ mapWorldAppContext.bindingTitle }}</p>
           </div>
           <div class="map-route-summary">
             <div class="min-w-0">
@@ -3437,7 +3448,7 @@ onBeforeUnmount(() => {
   font-weight: 850;
 }
 
-.map-world-app-line span {
+.map-world-app-line p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
