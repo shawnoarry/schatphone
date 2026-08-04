@@ -227,7 +227,7 @@ describe('workflow governance', () => {
       expect(uploadStep).toContain(
         "        if: ${{ failure() && (steps.full-e2e.outcome == 'failure' || steps.playwright-summary.outcome == 'failure') }}",
       )
-      expect(uploadStep).toContain('        uses: actions/upload-artifact@v4')
+      expect(uploadStep).toContain('        uses: actions/upload-artifact@v6')
       expect(uploadStep).toContain('            playwright-report/')
       expect(uploadStep).toContain('            test-results/')
       expect(uploadStep).toContain('            test-results/playwright-results.json')
