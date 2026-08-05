@@ -3837,7 +3837,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="h-screen min-h-screen overflow-x-hidden overflow-y-auto overscroll-contain text-gray-950"
+    class="box-border h-screen min-h-screen min-w-0 w-full overflow-x-hidden overflow-y-auto overscroll-contain text-gray-950"
     :class="[
       foodDeliveryShellClass,
       usesFullBleedStoreShell ? 'p-0 pb-0' : 'p-4',
@@ -3847,10 +3847,13 @@ onBeforeUnmount(() => {
     data-testid="food-delivery-view"
     @error.capture="handleFoodDeliveryAssetError"
   >
-    <div class="mx-auto max-w-md" :class="usesFullBleedStoreShell ? 'space-y-0' : 'space-y-4'">
+    <div
+      class="mx-auto min-w-0 w-full max-w-md"
+      :class="usesFullBleedStoreShell ? 'space-y-0' : 'space-y-4'"
+    >
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
-        class="space-y-5 pt-4"
+        class="min-w-0 w-full space-y-5 pt-4"
         data-testid="food-delivery-platform-top"
       >
         <div class="flex items-start justify-between gap-3">
@@ -4045,10 +4048,14 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <div v-if="!isStoreMode" class="space-y-5" data-testid="food-delivery-platform">
+      <div
+        v-if="!isStoreMode"
+        class="min-w-0 w-full space-y-5"
+        data-testid="food-delivery-platform"
+      >
         <section
           v-if="platformPageKey === 'home'"
-          class="space-y-5 food-delivery-platform-redesign"
+          class="min-w-0 w-full space-y-5 food-delivery-platform-redesign"
           data-testid="food-delivery-pseudo-folder-home"
         >
           <section
@@ -7395,7 +7402,7 @@ onBeforeUnmount(() => {
 
         <article
           v-else-if="activeRestaurant && isDessertWindowStore"
-          class="peach-cloud-app relative mx-auto min-h-screen w-full max-w-md overflow-hidden bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)]"
+          class="peach-cloud-app relative mx-auto min-h-screen w-full max-w-md overflow-visible bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)]"
           data-testid="food-delivery-store-shell"
           :data-store-id="activeRestaurant.id"
           :data-store-tone="activeStoreVisual.tone"
@@ -7493,18 +7500,24 @@ onBeforeUnmount(() => {
             >
               <button
                 type="button"
-                class="relative block h-full w-full overflow-hidden text-left"
+                class="relative grid h-full w-full grid-cols-[44%_56%] overflow-hidden text-left"
                 data-testid="food-delivery-peach-cloud-hero-cover"
                 @click="openPeachCloudNew"
               >
-                <img
-                  :src="activeStoreCoverImageUrl"
-                  :alt="`${activeStoreDisplayName} ${t('本周精选', 'weekly selection')}`"
-                  class="absolute inset-0 h-full w-full object-cover object-center"
-                  :data-required-asset="foodDeliveryRequiredAssetPath(activeRestaurant)"
-                  @error="handleFoodShopImageError"
-                />
-                <span class="relative z-10 flex h-full w-[48%] flex-col justify-between p-4">
+                <span class="relative order-2 min-w-0 overflow-hidden bg-[var(--peach-cloud-mist)]">
+                  <img
+                    :src="activeStoreCoverImageUrl"
+                    :alt="`${activeStoreDisplayName} ${t('本周精选', 'weekly selection')}`"
+                    class="absolute inset-0 h-full w-full object-cover object-[62%_center]"
+                    :data-required-asset="foodDeliveryRequiredAssetPath(activeRestaurant)"
+                    data-testid="food-delivery-peach-cloud-hero-image"
+                    @error="handleFoodShopImageError"
+                  />
+                </span>
+                <span
+                  class="relative z-10 order-1 flex min-w-0 flex-col justify-between bg-[var(--peach-cloud-canvas)] p-3 pr-2"
+                  data-testid="food-delivery-peach-cloud-hero-copy"
+                >
                   <span>
                     <span
                       class="inline-flex items-center gap-1.5 bg-[var(--peach-cloud-ink)] px-2 py-1 text-[8px] font-black text-[var(--peach-cloud-canvas)]"
@@ -7513,14 +7526,14 @@ onBeforeUnmount(() => {
                       FRESH PEACH · OPEN TODAY
                     </span>
                     <strong
-                      class="mt-4 block max-w-36 text-xl font-black leading-[0.98] text-[var(--peach-cloud-ink)] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
+                      class="mt-3 block text-[1.15rem] font-black leading-[0.98] text-[var(--peach-cloud-ink)]"
                     >
                       <span class="block">PEACH,</span>
                       <span class="block">POURED INTO</span>
                       <span class="block">CLOUDS</span>
                     </strong>
                     <span
-                      class="mt-3 block max-w-36 text-[9px] font-bold leading-3.5 text-[var(--peach-cloud-iron)] [text-shadow:0_1px_0_rgba(255,255,255,0.95)]"
+                      class="mt-2 block text-[8px] font-bold leading-3 text-[var(--peach-cloud-iron)]"
                     >
                       White-peach fizz, oolong clouds, and freshly shaved ice.
                     </span>
@@ -9039,7 +9052,7 @@ onBeforeUnmount(() => {
             !isReusableDiscoveryTemplate &&
             !isReusableEditorialTemplate
           "
-          class="relative overflow-hidden rounded-[2rem] shadow-sm"
+          class="relative overflow-visible rounded-[2rem] shadow-sm"
           :class="
             isDarkTrayStore
               ? 'border border-white/[0.08] bg-[#10131d] shadow-[0_24px_70px_rgba(0,0,0,0.35)]'
@@ -9052,6 +9065,51 @@ onBeforeUnmount(() => {
           :data-store-tone="activeStoreVisual.tone"
           :data-store-template="activeStoreTemplate"
         >
+          <header
+            class="sticky top-0 z-40 flex min-h-14 items-center justify-between gap-3 border-b px-4 py-2 backdrop-blur"
+            :class="
+              isDarkTrayStore
+                ? 'border-white/10 bg-[#080a10]/95 text-white'
+                : 'border-black/5 bg-white/95 text-gray-950'
+            "
+            data-testid="food-delivery-generic-store-header"
+          >
+            <button
+              type="button"
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+              :class="isDarkTrayStore ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-800'"
+              data-testid="food-delivery-store-home"
+              :aria-label="t('杩斿洖鎵嬫満涓婚〉', 'Return to Home')"
+              @click="goHome"
+            >
+              <i class="fas fa-arrow-left text-sm"></i>
+            </button>
+            <div class="min-w-0 flex-1 text-center">
+              <p class="truncate text-sm font-black">{{ activeStoreDisplayName }}</p>
+              <p
+                class="truncate text-[9px] font-bold"
+                :class="isDarkTrayStore ? 'text-white/55' : 'text-gray-500'"
+              >
+                {{ activeStoreShortDescription }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+              :class="isDarkTrayStore ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-800'"
+              data-testid="food-delivery-store-cart-shortcut"
+              :aria-label="t('Open bag', 'Open bag')"
+              @click="openStoreCartSurface"
+            >
+              <i class="fas fa-bag-shopping text-sm"></i>
+              <span
+                v-if="activeStoreCartQuantity"
+                class="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ef512d] px-1 text-[8px] font-black text-white"
+              >
+                {{ activeStoreCartQuantity }}
+              </span>
+            </button>
+          </header>
           <div
             class="relative overflow-hidden bg-gradient-to-br p-4 text-gray-950"
             :class="
@@ -9062,16 +9120,6 @@ onBeforeUnmount(() => {
                   : activeStoreVisual.heroClass
             "
           >
-            <div class="relative z-20 flex items-center justify-between gap-2">
-              <button
-                class="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white/90 p-0 text-[0px] font-bold text-gray-900 shadow-sm"
-                data-testid="food-delivery-store-home"
-                aria-label="Home"
-                @click="goHome"
-              >
-                <i class="fas fa-house text-[11px]"></i>
-              </button>
-            </div>
             <div
               v-if="activeStoreCoverImageUrl"
               class="overflow-hidden"

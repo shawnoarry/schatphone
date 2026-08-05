@@ -589,7 +589,7 @@ onBeforeUnmount(stopCarousel)
 
 <template>
   <section
-    class="harbor-app mx-auto min-h-screen w-full max-w-md overflow-x-hidden pb-24"
+    class="harbor-app mx-auto min-h-screen w-full max-w-md overflow-visible pb-24"
     data-store-template="harbor_roast_chain"
     data-testid="food-delivery-store-shell"
   >

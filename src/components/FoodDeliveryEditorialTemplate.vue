@@ -396,7 +396,7 @@ const handleImageError = (event) => {
   --editorial-ink: #22201d;
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  overflow: visible;
   color: var(--editorial-ink);
 }
 

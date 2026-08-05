@@ -488,7 +488,7 @@ const handleImageError = (event) => {
   --muted: #716966;
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  overflow: visible;
   color: var(--ink);
 }
 

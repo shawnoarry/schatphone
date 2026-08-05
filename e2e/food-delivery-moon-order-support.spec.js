@@ -80,6 +80,24 @@ test('Moon Bistro order support stays folded until opened and records a delivere
   await expect(page).toHaveURL(/homePage=1/)
   await expect(page.getByTestId('food-delivery-store-support-drawer')).toHaveCount(0)
 
+  const storeHeader = page.getByTestId('food-delivery-generic-store-header')
+  await expect(storeHeader).toHaveCSS('position', 'sticky')
+  const initialHeaderBox = await storeHeader.boundingBox()
+  expect(initialHeaderBox).not.toBeNull()
+  const foodDeliveryScroll = page.getByTestId('food-delivery-view')
+  await foodDeliveryScroll.evaluate((element) => {
+    element.scrollTop = 360
+  })
+  await expect
+    .poll(() => foodDeliveryScroll.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0)
+  const stickyHeaderBox = await storeHeader.boundingBox()
+  expect(stickyHeaderBox).not.toBeNull()
+  expect(Math.abs(stickyHeaderBox.y - initialHeaderBox.y)).toBeLessThanOrEqual(1)
+  await foodDeliveryScroll.evaluate((element) => {
+    element.scrollTop = 0
+  })
+
   const addButton = page.locator('[data-testid^="food-delivery-add-"]').first()
   const itemTitle = (await addButton.getAttribute('aria-label')).replace(/^Add |^添加 /, '')
   await addButton.click()

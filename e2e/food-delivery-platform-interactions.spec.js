@@ -19,6 +19,14 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby')
   await expectNoHorizontalOverflow(page)
+  const foodViewBox = await page.getByTestId('food-delivery-view').boundingBox()
+  const platformBox = await page.getByTestId('food-delivery-platform').boundingBox()
+  expect(foodViewBox).not.toBeNull()
+  expect(platformBox).not.toBeNull()
+  expect(platformBox.x).toBeGreaterThanOrEqual(foodViewBox.x - 1)
+  expect(platformBox.x + platformBox.width).toBeLessThanOrEqual(
+    foodViewBox.x + foodViewBox.width + 1,
+  )
   await expect(page.getByTestId('food-delivery-category-grid').locator('button')).toHaveCount(10)
   await expect(page.getByTestId('food-delivery-category-icon-all')).toBeVisible()
   await expect(page.getByTestId('food-delivery-category-icon-sushi')).toHaveAttribute(

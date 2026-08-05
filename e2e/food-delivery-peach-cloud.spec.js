@@ -161,6 +161,17 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   await expect(page.getByTestId('food-delivery-peach-cloud-brand-hero')).toBeVisible()
   const homeHeroCover = page.getByTestId('food-delivery-peach-cloud-hero-cover')
   await expect(homeHeroCover).toBeVisible()
+  await expect(page.getByTestId('food-delivery-peach-cloud-home-header')).toHaveCSS(
+    'position',
+    'sticky',
+  )
+  const [heroCopyBox, heroImageBox] = await Promise.all([
+    page.getByTestId('food-delivery-peach-cloud-hero-copy').boundingBox(),
+    page.getByTestId('food-delivery-peach-cloud-hero-image').boundingBox(),
+  ])
+  expect(heroCopyBox).not.toBeNull()
+  expect(heroImageBox).not.toBeNull()
+  expect(heroCopyBox.x + heroCopyBox.width).toBeLessThanOrEqual(heroImageBox.x + 1)
   const homeHeroImage = homeHeroCover.locator('img')
   await expect(homeHeroImage).toHaveAttribute(
     'data-required-asset',
