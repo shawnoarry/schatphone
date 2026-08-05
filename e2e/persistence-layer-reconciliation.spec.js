@@ -70,6 +70,15 @@ const readLayers = (page) =>
     { key: KEY, databaseName: DB_NAME, storeName: STORE_NAME },
   )
 
+const waitForStableLayerPair = async (page) => {
+  const first = await readLayers(page)
+  if (!first.localRaw || first.localRaw !== first.mirrorRaw) return false
+
+  await page.waitForTimeout(75)
+  const second = await readLayers(page)
+  return second.localRaw === first.localRaw && second.localRaw === second.mirrorRaw
+}
+
 const captureBootstrapWrites = async (page) => {
   await page.addInitScript((key) => {
     if (location.pathname.endsWith('/manifest.webmanifest')) return
@@ -168,10 +177,7 @@ test.describe('layered persistence bootstrap reconciliation', () => {
     let bootstrapWrites = await page.evaluate(() => window.__persistenceBootstrapWrites)
     expect(bootstrapWrites.mirror[0]).toBe(localWinner)
     await expect
-      .poll(async () => {
-        const layers = await readLayers(page)
-        return layers.localRaw === layers.mirrorRaw
-      })
+      .poll(() => waitForStableLayerPair(page))
       .toBe(true)
     const localRecovered = await readLayers(page)
     expect(localRecovered.localRaw).toBe(localRecovered.mirrorRaw)
@@ -194,10 +200,7 @@ test.describe('layered persistence bootstrap reconciliation', () => {
       bootstrapWrites = await secondPage.evaluate(() => window.__persistenceBootstrapWrites)
       expect(bootstrapWrites.local[0]).toBe(mirrorValid)
       await expect
-        .poll(async () => {
-          const layers = await readLayers(secondPage)
-          return layers.localRaw === layers.mirrorRaw
-        })
+        .poll(() => waitForStableLayerPair(secondPage))
         .toBe(true)
       const recovered = await readLayers(secondPage)
       expect(recovered.localRaw).toBe(recovered.mirrorRaw)
