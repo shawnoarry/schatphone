@@ -94,10 +94,18 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
   await page.getByTestId('food-delivery-quick-service-nav-menu').click()
   await expect(page).toHaveURL(/shopView=menu/)
   await expect(page.getByTestId('food-delivery-quick-service-menu-page')).toBeVisible()
-  await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveAttribute(
+  await expect(page.getByTestId('food-delivery-store-menu-section-featured')).toHaveAttribute(
     'aria-pressed',
     'true',
   )
+  await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-store-menu-section-rail')).toHaveAttribute(
+    'tabindex',
+    '0',
+  )
+  await expect(
+    page.getByTestId('food-delivery-dash-ticket-food_menu_dash_double_stack'),
+  ).toHaveAttribute('data-menu-card-style', 'order-ticket')
   await testInfo.attach(`dash-grill-menu-${testInfo.project.name}`, {
     body: await page.screenshot(),
     contentType: 'image/png',
@@ -106,26 +114,60 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
 
   await page.getByTestId('food-delivery-menu-open-food_menu_dash_double_stack').click()
   await expect(page.getByTestId('food-delivery-menu-detail-sheet')).toContainText(
-    'Dash Double Stack',
+    /达什双层牛肉堡套餐|Dash Double Stack Combo/,
   )
+  await expect(page.getByTestId('food-delivery-dash-detail-ticket')).toHaveAttribute(
+    'data-detail-layout',
+    'tray-ticket',
+  )
+  await expect(page.getByTestId('food-delivery-dash-detail-ticket')).toContainText('#01')
   const detailImage = page
     .getByTestId('food-delivery-menu-detail-sheet')
     .locator('[data-required-asset="dash-grill/products/dash-grill-item-01.png"]')
   await expect(detailImage).toBeVisible()
   await expect(detailImage).not.toHaveAttribute('data-asset-missing', 'true')
+  await expect(page.getByTestId('food-delivery-dash-selection-progress')).toContainText('2/2')
+  await expect(
+    page
+      .getByTestId('food-delivery-dash-combo-side-sea_salt_fries')
+      .locator('[data-required-asset="dash-grill/products/dash-grill-item-06.png"]'),
+  ).toBeVisible()
   await testInfo.attach(`dash-grill-detail-${testInfo.project.name}`, {
     body: await page.screenshot(),
     contentType: 'image/png',
   })
   await expectNoHorizontalOverflow(page)
+  await page.getByTestId('food-delivery-dash-combo-side-loaded_cheese_fries').click()
+  await page.getByTestId('food-delivery-dash-combo-drink-vanilla_cloud_shake').click()
+  await expect(page.getByTestId('food-delivery-dash-selection-summary')).toContainText(
+    /浓芝士薯条 · 香草云奶昔|Loaded Cheese Fries · Vanilla Cloud Shake/,
+  )
+  await expect(page.getByTestId('food-delivery-menu-detail-total')).toContainText('56.00 CNY')
   await page.getByTestId('food-delivery-menu-detail-quantity-increase').click()
   await expect(page.getByTestId('food-delivery-menu-detail-quantity')).toContainText('2')
+  await expect(page.getByTestId('food-delivery-menu-detail-total')).toContainText('112.00 CNY')
+  await page.getByTestId('food-delivery-menu-detail-add').click()
+  await page.getByTestId('food-delivery-menu-detail-close').click()
+
+  await page.getByTestId('food-delivery-store-menu-section-chicken').click()
+  await page.getByTestId('food-delivery-add-food_menu_dash_chicken_tenders').click()
+  await expect(page.getByTestId('food-delivery-dash-sauce-builder')).toBeVisible()
+  await expect(page.getByTestId('food-delivery-dash-selection-progress')).toContainText('1/1')
+  await page.getByTestId('food-delivery-dash-sauce-smoky_bbq_sauce').click()
+  await expect(page.getByTestId('food-delivery-dash-selection-summary')).toContainText(
+    /烟熏烧烤酱|Smoky BBQ Sauce/,
+  )
   await page.getByTestId('food-delivery-menu-detail-add').click()
   await page.getByTestId('food-delivery-menu-detail-close').click()
 
   await page.getByTestId('food-delivery-quick-service-header-bag').click()
   await expect(page).toHaveURL(/shopView=bag/)
-  await expect(page.getByTestId('food-delivery-cart-panel')).toContainText('Dash Double Stack')
+  await expect(page.getByTestId('food-delivery-cart-panel')).toContainText(
+    /浓芝士薯条 · 香草云奶昔|Loaded Cheese Fries · Vanilla Cloud Shake/,
+  )
+  await expect(page.getByTestId('food-delivery-cart-panel')).toContainText(
+    /烟熏烧烤酱|Smoky BBQ Sauce/,
+  )
   await page.getByTestId('food-delivery-checkout').click()
   await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText('Dash Grill')
   await page.getByTestId('food-delivery-checkout-submit').click()
@@ -133,7 +175,13 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
   await expect(page).toHaveURL(/shopView=order/)
   await expect(page).toHaveURL(/shopOrderId=/)
   await expect(page.getByTestId('food-delivery-quick-service-order-page')).toContainText(
-    'Dash Double Stack',
+    /达什双层牛肉堡套餐|Dash Double Stack Combo/,
+  )
+  await expect(page.getByTestId('food-delivery-quick-service-order-page')).toContainText(
+    /浓芝士薯条 · 香草云奶昔|Loaded Cheese Fries · Vanilla Cloud Shake/,
+  )
+  await expect(page.getByTestId('food-delivery-quick-service-order-page')).toContainText(
+    /烟熏烧烤酱|Smoky BBQ Sauce/,
   )
   await expect(page.getByTestId('food-delivery-quick-service-nav-orders')).toHaveAttribute(
     'aria-current',

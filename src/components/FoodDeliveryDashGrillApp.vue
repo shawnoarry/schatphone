@@ -1,6 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useI18n } from '../composables/useI18n'
+import {
+  getDashGrillMenuSearchValues,
+  resolveDashGrillTicketNumber,
+} from '../lib/food-delivery-dash-grill-copy'
 
 const props = defineProps({
   restaurant: { type: Object, required: true },
@@ -30,12 +34,11 @@ const emit = defineEmits([
 ])
 
 const { t } = useI18n()
-const activeSection = ref('all')
+const activeSection = ref('featured')
 const searchQuery = ref('')
 const deliveryDetailsOpen = ref(false)
 
 const sectionOptions = Object.freeze([
-  { key: 'all', labelZh: '全部', labelEn: 'All', icon: 'fas fa-border-all' },
   { key: 'featured', labelZh: '人气套餐', labelEn: 'Combos', icon: 'fas fa-burger' },
   { key: 'burgers', labelZh: '汉堡', labelEn: 'Burgers', icon: 'fas fa-burger' },
   { key: 'chicken', labelZh: '鸡肉', labelEn: 'Chicken', icon: 'fas fa-drumstick-bite' },
@@ -49,22 +52,19 @@ const menuSections = computed(() =>
     .map((section) => ({
       ...section,
       label: t(section.labelZh, section.labelEn),
-      count:
-        section.key === 'all'
-          ? props.menuItems.length
-          : props.menuItems.filter((item) => item.menuSection === section.key).length,
+      count: props.menuItems.filter((item) => item.menuSection === section.key).length,
     }))
-    .filter((section) => section.key === 'all' || section.count > 0),
+    .filter((section) => section.count > 0),
 )
 
 const filteredMenuItems = computed(() => {
   const query = searchQuery.value.trim().toLocaleLowerCase()
   return props.menuItems.filter((item) => {
-    if (activeSection.value !== 'all' && item.menuSection !== activeSection.value) return false
+    if (!query && item.menuSection !== activeSection.value) return false
     if (!query) return true
-    return [item.title, item.desc, item.ingredients]
-      .filter(Boolean)
-      .some((value) => String(value).toLocaleLowerCase().includes(query))
+    return getDashGrillMenuSearchValues(item).some((value) =>
+      String(value).toLocaleLowerCase().includes(query),
+    )
   })
 })
 
@@ -95,10 +95,55 @@ const handleImageError = (event) => {
 }
 
 const displayPrice = (item = {}) => `${item.price || '0.00'} ${item.currency || 'CNY'}`
+const configurableComboIds = new Set([
+  'food_menu_dash_double_stack',
+  'food_menu_dash_golden_chicken_stack',
+])
+const configurableSauceIds = new Set(['food_menu_dash_chicken_tenders'])
+const isConfigurableCombo = (item = {}) => configurableComboIds.has(item.id)
+const isConfigurableItem = (item = {}) =>
+  isConfigurableCombo(item) || configurableSauceIds.has(item.id)
+const configurationActionLabel = (item = {}) =>
+  isConfigurableCombo(item) ? t('选套餐', 'Choose combo') : t('选蘸酱', 'Choose dip')
+const configurationAriaLabel = (item = {}) =>
+  isConfigurableCombo(item)
+    ? t('选择套餐内容', 'Choose combo contents')
+    : t('选择蘸酱', 'Choose dipping sauce')
+
+const selectionLabel = (line = {}) => {
+  const selection = line.selection || {}
+  return [
+    t(selection.comboSideLabelZh, selection.comboSideLabelEn),
+    t(selection.comboDrinkLabelZh, selection.comboDrinkLabelEn),
+    t(selection.sauceLabelZh, selection.sauceLabelEn),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+const addOrConfigureItem = (item, trigger) => {
+  if (isConfigurableItem(item)) {
+    emit('open-item', item.id)
+    return
+  }
+  emit('add-item', item.id, 1, trigger)
+}
+
+const menuSectionLabel = (item = {}) =>
+  menuSections.value.find((section) => section.key === item.menuSection)?.label ||
+  t('现点现做', 'Made to order')
+
+const ticketNumber = (item = {}) => resolveDashGrillTicketNumber(item)
 
 const openSection = (sectionKey) => {
   activeSection.value = sectionKey
+  searchQuery.value = ''
   emit('navigate', 'menu')
+}
+
+const selectSection = (sectionKey) => {
+  activeSection.value = sectionKey
+  searchQuery.value = ''
 }
 
 const orderStatus = (status = '') => {
@@ -127,10 +172,20 @@ const orderTime = (value) => {
 watch(
   () => props.restaurant.id,
   () => {
-    activeSection.value = 'all'
+    activeSection.value = menuSections.value[0]?.key || ''
     searchQuery.value = ''
     deliveryDetailsOpen.value = false
   },
+)
+
+watch(
+  menuSections,
+  (sections) => {
+    if (!sections.some((section) => section.key === activeSection.value)) {
+      activeSection.value = sections[0]?.key || ''
+    }
+  },
+  { immediate: true },
 )
 </script>
 
@@ -300,9 +355,13 @@ watch(
               {{ t('全部菜单', 'Full menu') }}
             </button>
           </div>
-          <div class="dash-horizontal-scroll mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <div
+            class="dash-horizontal-scroll mt-4 flex gap-2 overflow-x-auto px-4 pb-2"
+            tabindex="0"
+            :aria-label="t('快捷分类', 'Quick categories')"
+          >
             <button
-              v-for="section in menuSections.filter((item) => item.key !== 'all')"
+              v-for="section in menuSections"
               :key="section.key"
               type="button"
               class="flex h-[4.75rem] w-[5.25rem] shrink-0 flex-col items-center justify-center gap-2 border border-black/10 bg-white text-center"
@@ -352,15 +411,31 @@ watch(
               <h2 class="mt-1 text-xl font-black">{{ t('热门餐品', 'Crowd favorites') }}</h2>
             </div>
           </div>
-          <div class="mt-4 grid grid-cols-2 gap-x-3 gap-y-5">
-            <article v-for="item in featuredItems" :key="item.id" class="min-w-0">
+          <div
+            class="dash-horizontal-scroll -mr-4 mt-4 flex snap-x gap-3 overflow-x-auto pb-3 pr-4"
+            tabindex="0"
+            :aria-label="t('热门餐品', 'Popular menu items')"
+          >
+            <article
+              v-for="item in featuredItems"
+              :key="item.id"
+              class="dash-counter-ticket w-[13.75rem] shrink-0 snap-start"
+              data-menu-card-style="order-ticket"
+              :data-testid="`food-delivery-dash-ticket-${item.id}`"
+            >
+              <div class="dash-ticket-heading flex h-9 items-center justify-between gap-2 px-2.5">
+                <span class="dash-display text-base">#{{ ticketNumber(item) }}</span>
+                <span class="truncate text-[9px] font-black uppercase">{{
+                  menuSectionLabel(item)
+                }}</span>
+              </div>
               <button
                 type="button"
                 class="block w-full text-left"
                 :data-testid="`food-delivery-menu-open-${item.id}`"
                 @click="emit('open-item', item.id)"
               >
-                <span class="relative block aspect-square overflow-hidden bg-white">
+                <span class="relative block aspect-[4/3] overflow-hidden bg-white">
                   <img
                     v-if="imageUrl(item)"
                     :src="imageUrl(item)"
@@ -369,26 +444,47 @@ watch(
                     :data-required-asset="requiredAssetPath(item)"
                     @error="handleImageError"
                   />
+                  <span class="absolute bottom-0 right-0 bg-white px-2 py-1 text-[9px] font-black">
+                    {{ t('查看餐品', 'View item') }} <i class="fas fa-arrow-right ml-1"></i>
+                  </span>
+                </span>
+                <span class="block px-3 pb-3 pt-2.5">
+                  <span class="block truncate text-sm font-black">{{ item.title }}</span>
                   <span
-                    class="absolute bottom-0 left-0 bg-[var(--dash-yellow)] px-2 py-1 text-[9px] font-black"
-                    >{{ displayPrice(item) }}</span
+                    class="mt-1 line-clamp-2 block min-h-8 text-[10px] font-semibold leading-4 text-black/55"
+                    >{{ item.desc }}</span
                   >
                 </span>
-                <span class="mt-2 block truncate text-sm font-black">{{ item.title }}</span>
-                <span
-                  class="mt-1 line-clamp-2 block min-h-8 text-[10px] font-semibold leading-4 text-black/55"
-                  >{{ item.desc }}</span
+              </button>
+              <div class="dash-ticket-footer flex min-h-14 items-stretch justify-between">
+                <span class="flex min-w-0 flex-col justify-center px-3 py-2">
+                  <span class="text-[8px] font-black uppercase text-black/45">{{
+                    t('单价', 'Item price')
+                  }}</span>
+                  <strong class="truncate text-sm">{{ displayPrice(item) }}</strong>
+                </span>
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 shrink-0 items-center gap-2 bg-[var(--dash-red)] px-3 text-[10px] font-black text-white"
+                  :aria-label="
+                    isConfigurableItem(item)
+                      ? configurationAriaLabel(item)
+                      : t('加入点单', 'Add to order')
+                  "
+                  :data-testid="`food-delivery-add-${item.id}`"
+                  @click="addOrConfigureItem(item, $event.currentTarget)"
                 >
-              </button>
-              <button
-                type="button"
-                class="mt-2 inline-flex h-11 w-11 items-center justify-center bg-[var(--dash-red)] text-white"
-                :aria-label="t('加入购物袋', 'Add to bag')"
-                :data-testid="`food-delivery-add-${item.id}`"
-                @click="emit('add-item', item.id, 1, $event.currentTarget)"
-              >
-                <i class="fas fa-plus text-xs"></i>
-              </button>
+                  <i
+                    :class="[
+                      isConfigurableItem(item) ? 'fas fa-sliders' : 'fas fa-plus',
+                      'text-[9px]',
+                    ]"
+                  ></i>
+                  <span>{{
+                    isConfigurableItem(item) ? configurationActionLabel(item) : t('加入点单', 'Add')
+                  }}</span>
+                </button>
+              </div>
             </article>
           </div>
         </section>
@@ -415,6 +511,8 @@ watch(
         <div
           class="dash-horizontal-scroll mt-4 flex gap-2 overflow-x-auto pb-2"
           data-testid="food-delivery-store-menu-section-rail"
+          tabindex="0"
+          :aria-label="t('菜单分类', 'Menu categories')"
         >
           <button
             v-for="section in menuSections"
@@ -422,57 +520,94 @@ watch(
             type="button"
             class="min-h-11 shrink-0 border px-3 py-2 text-xs font-black"
             :class="
-              activeSection === section.key
+              !searchQuery && activeSection === section.key
                 ? 'border-[var(--dash-ink)] bg-[var(--dash-ink)] text-white'
                 : 'border-black/10 bg-white'
             "
             :data-testid="`food-delivery-store-menu-section-${section.key}`"
-            :aria-pressed="activeSection === section.key"
-            @click="activeSection = section.key"
+            :aria-pressed="!searchQuery && activeSection === section.key"
+            @click="selectSection(section.key)"
           >
             {{ section.label }} <span class="ml-1 opacity-55">{{ section.count }}</span>
           </button>
         </div>
-        <div class="mt-4 divide-y divide-black/10" data-testid="food-delivery-store-menu-items">
+        <div class="mt-5 space-y-5" data-testid="food-delivery-store-menu-items">
           <article
             v-for="item in filteredMenuItems"
             :key="item.id"
-            class="grid grid-cols-[6.25rem_minmax(0,1fr)] gap-3 py-4"
+            class="dash-order-ticket"
+            data-menu-card-style="order-ticket"
+            :data-testid="`food-delivery-dash-ticket-${item.id}`"
           >
+            <div class="dash-ticket-heading flex min-h-10 items-center gap-3 px-3 py-2">
+              <span class="dash-display text-xl">#{{ ticketNumber(item) }}</span>
+              <span class="min-w-0 flex-1 truncate text-[10px] font-black uppercase">{{
+                menuSectionLabel(item)
+              }}</span>
+              <span class="text-[8px] font-black uppercase text-black/45">{{
+                t('现点现做', 'Made to order')
+              }}</span>
+            </div>
             <button
               type="button"
-              class="aspect-square overflow-hidden bg-white"
+              class="block w-full text-left"
               :data-testid="`food-delivery-menu-open-${item.id}`"
               @click="emit('open-item', item.id)"
             >
-              <img
-                v-if="imageUrl(item)"
-                :src="imageUrl(item)"
-                :alt="item.image?.alt || item.title"
-                class="h-full w-full object-cover"
-                :data-required-asset="requiredAssetPath(item)"
-                @error="handleImageError"
-              />
-            </button>
-            <div class="flex min-w-0 flex-col justify-between py-0.5">
-              <button type="button" class="text-left" @click="emit('open-item', item.id)">
-                <h2 class="text-sm font-black">{{ item.title }}</h2>
-                <p class="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 text-black/55">
-                  {{ item.desc }}
-                </p>
-              </button>
-              <div class="mt-3 flex items-center justify-between gap-3">
-                <span class="text-sm font-black">{{ displayPrice(item) }}</span>
-                <button
-                  type="button"
-                  class="inline-flex h-11 w-11 items-center justify-center bg-[var(--dash-red)] text-white"
-                  :aria-label="t('加入购物袋', 'Add to bag')"
-                  :data-testid="`food-delivery-add-${item.id}`"
-                  @click="emit('add-item', item.id, 1, $event.currentTarget)"
+              <span class="relative block aspect-[16/10] overflow-hidden bg-white">
+                <img
+                  v-if="imageUrl(item)"
+                  :src="imageUrl(item)"
+                  :alt="item.image?.alt || item.title"
+                  class="h-full w-full object-cover"
+                  :data-required-asset="requiredAssetPath(item)"
+                  @error="handleImageError"
+                />
+                <span
+                  class="absolute bottom-0 right-0 inline-flex min-h-8 items-center gap-2 bg-[var(--dash-yellow)] px-3 text-[9px] font-black"
                 >
-                  <i class="fas fa-plus text-xs"></i>
-                </button>
-              </div>
+                  {{ t('查看详情', 'View details') }} <i class="fas fa-arrow-right"></i>
+                </span>
+              </span>
+              <span class="block px-4 pb-4 pt-3">
+                <span class="block text-lg font-black leading-tight">{{ item.title }}</span>
+                <span
+                  class="mt-1.5 line-clamp-2 block text-[11px] font-semibold leading-5 text-black/55"
+                >
+                  {{ item.desc }}
+                </span>
+              </span>
+            </button>
+            <div class="dash-ticket-footer flex min-h-16 items-stretch justify-between">
+              <span class="flex min-w-0 flex-col justify-center px-4 py-2.5">
+                <span class="text-[8px] font-black uppercase text-black/45">{{
+                  t('本单价格', 'Ticket price')
+                }}</span>
+                <strong class="truncate text-xl">{{ displayPrice(item) }}</strong>
+              </span>
+              <button
+                type="button"
+                class="inline-flex min-h-12 shrink-0 items-center gap-2 bg-[var(--dash-red)] px-5 text-xs font-black text-white"
+                :aria-label="
+                  isConfigurableItem(item)
+                    ? configurationAriaLabel(item)
+                    : t('加入点单', 'Add to order')
+                "
+                :data-testid="`food-delivery-add-${item.id}`"
+                @click="addOrConfigureItem(item, $event.currentTarget)"
+              >
+                <i
+                  :class="[
+                    isConfigurableItem(item) ? 'fas fa-sliders' : 'fas fa-plus',
+                    'text-[10px]',
+                  ]"
+                ></i>
+                <span>{{
+                  isConfigurableItem(item)
+                    ? configurationActionLabel(item)
+                    : t('加入点单', 'Add to order')
+                }}</span>
+              </button>
             </div>
           </article>
         </div>
@@ -582,9 +717,10 @@ watch(
         >
           <article
             v-for="line in cartLines"
-            :key="line.menuItemId"
+            :key="line.lineId || line.menuItemId"
             class="grid grid-cols-[5rem_minmax(0,1fr)] gap-3 py-4"
-            :data-testid="`food-delivery-cart-${line.menuItemId}`"
+            :data-testid="`food-delivery-cart-${line.lineId || line.menuItemId}`"
+            :data-menu-item-id="line.menuItemId"
           >
             <div class="aspect-square overflow-hidden bg-white">
               <img
@@ -600,6 +736,13 @@ watch(
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
                   <h2 class="truncate text-sm font-black">{{ line.menuItem.title }}</h2>
+                  <p
+                    v-if="selectionLabel(line)"
+                    class="mt-1 text-[10px] font-black leading-4 text-[var(--dash-red)]"
+                    data-testid="food-delivery-dash-cart-combo-selection"
+                  >
+                    {{ selectionLabel(line) }}
+                  </p>
                   <p class="mt-1 text-[10px] font-bold text-black/55">
                     {{ line.subtotal }} {{ line.currency }}
                   </p>
@@ -608,7 +751,7 @@ watch(
                   type="button"
                   class="inline-flex h-11 w-11 items-center justify-center text-black/45"
                   :aria-label="t('移除', 'Remove')"
-                  @click="emit('update-cart', line.menuItemId, 0)"
+                  @click="emit('update-cart', line.lineId || line.menuItemId, 0)"
                 >
                   <i class="fas fa-trash-can text-xs"></i>
                 </button>
@@ -618,7 +761,7 @@ watch(
                   type="button"
                   class="inline-flex h-11 w-11 items-center justify-center"
                   :aria-label="t('减少数量', 'Decrease quantity')"
-                  @click="emit('update-cart', line.menuItemId, line.quantity - 1)"
+                  @click="emit('update-cart', line.lineId || line.menuItemId, line.quantity - 1)"
                 >
                   <i class="fas fa-minus text-[9px]"></i>
                 </button>
@@ -627,7 +770,7 @@ watch(
                   type="button"
                   class="inline-flex h-11 w-11 items-center justify-center"
                   :aria-label="t('增加数量', 'Increase quantity')"
-                  @click="emit('update-cart', line.menuItemId, line.quantity + 1)"
+                  @click="emit('update-cart', line.lineId || line.menuItemId, line.quantity + 1)"
                 >
                   <i class="fas fa-plus text-[9px]"></i>
                 </button>
@@ -781,12 +924,18 @@ watch(
               :key="item.id"
               class="flex items-start justify-between gap-3 py-3 text-xs"
             >
-              <span
-                ><span class="block font-black">{{ item.title }}</span
-                ><span class="mt-1 block font-semibold text-black/45"
-                  >× {{ item.quantity }}</span
-                ></span
-              ><span class="font-black">{{
+              <div class="min-w-0">
+                <span class="block font-black">{{ item.title }}</span>
+                <span
+                  v-if="selectionLabel(item)"
+                  class="mt-1 block font-black leading-4 text-[var(--dash-red)]"
+                  data-testid="food-delivery-dash-order-combo-selection"
+                >
+                  {{ selectionLabel(item) }}
+                </span>
+                <span class="mt-1 block font-semibold text-black/45">× {{ item.quantity }}</span>
+              </div>
+              <span class="font-black">{{
                 ((item.unitPriceCents * item.quantity) / 100).toFixed(2)
               }}</span>
             </div>
@@ -875,14 +1024,66 @@ watch(
 }
 
 .dash-horizontal-scroll {
-  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scrollbar-color: var(--dash-red) rgb(32 26 23 / 12%);
+  scrollbar-width: thin;
 }
 
 .dash-horizontal-scroll::-webkit-scrollbar {
-  display: none;
+  height: 5px;
 }
 
-.dash-grill-app :is(button, input):focus-visible {
+.dash-horizontal-scroll::-webkit-scrollbar-track {
+  background: rgb(32 26 23 / 12%);
+}
+
+.dash-horizontal-scroll::-webkit-scrollbar-thumb {
+  background: var(--dash-red);
+}
+
+.dash-counter-ticket,
+.dash-order-ticket {
+  border: 2px solid var(--dash-ink);
+  background: #fffef8;
+  box-shadow: 5px 5px 0 var(--dash-yellow);
+}
+
+.dash-counter-ticket {
+  min-height: 21.75rem;
+}
+
+.dash-ticket-heading {
+  border-bottom: 2px solid var(--dash-ink);
+  background: var(--dash-yellow);
+}
+
+.dash-ticket-footer {
+  position: relative;
+  border-top: 2px dashed var(--dash-ink);
+}
+
+.dash-ticket-footer::before,
+.dash-ticket-footer::after {
+  position: absolute;
+  top: -8px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--dash-ink);
+  border-radius: 50%;
+  background: var(--dash-paper);
+  content: '';
+}
+
+.dash-ticket-footer::before {
+  left: -9px;
+}
+
+.dash-ticket-footer::after {
+  right: -9px;
+}
+
+.dash-grill-app :is(button, input, .dash-horizontal-scroll):focus-visible {
   outline: 2px solid var(--dash-ink);
   outline-offset: 2px;
 }

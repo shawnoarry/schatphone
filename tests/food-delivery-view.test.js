@@ -14,6 +14,11 @@ import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSimulationStore } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
+import {
+  DASH_GRILL_MENU_COPY_BY_ID,
+  getDashGrillMenuSearchValues,
+  resolveDashGrillMenuItemCopy,
+} from '../src/lib/food-delivery-dash-grill-copy'
 import FoodDeliveryView from '../src/views/FoodDeliveryView.vue'
 
 const DummyView = { template: '<div />' }
@@ -1853,6 +1858,12 @@ describe('FoodDeliveryView', () => {
     expect(posterPrice.text()).toContain('5015')
     expect(posterPrice.text()).toContain('KRW')
 
+    walletStore.setPrimaryCurrency('CRD')
+    await flushPromises()
+    expect(posterPrice.text()).toContain('26')
+    expect(posterPrice.text()).toContain('CNY')
+    expect(posterPrice.text()).not.toContain('CRD')
+
     walletStore.setPrimaryCurrency('CNY')
     await flushPromises()
     expect(posterPrice.text()).toContain('26')
@@ -2132,6 +2143,81 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('localizes every built-in Dash Grill menu field without rewriting user copy', async () => {
+    const store = useFoodDeliveryStore()
+    const dashMenu = store.listMenuByRestaurant('food_seed_dash_grill')
+
+    expect(dashMenu).toHaveLength(10)
+    expect(Object.keys(DASH_GRILL_MENU_COPY_BY_ID)).toHaveLength(10)
+    dashMenu.forEach((item) => {
+      const copy = DASH_GRILL_MENU_COPY_BY_ID[item.id]
+      expect(resolveDashGrillMenuItemCopy(item, 'zh-CN')).toMatchObject({
+        title: copy.title.zh,
+        desc: copy.desc.zh,
+        ingredients: copy.ingredients.zh,
+        image: expect.objectContaining({ alt: copy.imageAlt.zh }),
+      })
+      expect(resolveDashGrillMenuItemCopy(item, 'en-US')).toMatchObject({
+        title: copy.title.en,
+        desc: copy.desc.en,
+        ingredients: copy.ingredients.en,
+        image: expect.objectContaining({ alt: copy.imageAlt.en }),
+      })
+    })
+
+    const shake = store.findMenuItemById('food_menu_dash_vanilla_shake')
+    expect(getDashGrillMenuSearchValues(shake)).toEqual(
+      expect.arrayContaining(['香草云奶昔', 'Vanilla Cloud Shake']),
+    )
+    expect(
+      resolveDashGrillMenuItemCopy(
+        {
+          ...shake,
+          title: '我的限定奶昔',
+          desc: '用户自己写的介绍',
+          ingredients: '用户自选配料',
+          image: { ...shake.image, alt: '用户上传的奶昔照片' },
+        },
+        'en-US',
+      ),
+    ).toMatchObject({
+      title: '我的限定奶昔',
+      desc: '用户自己写的介绍',
+      ingredients: '用户自选配料',
+      image: expect.objectContaining({ alt: '用户上传的奶昔照片' }),
+    })
+
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'zh-CN'
+    await router.push(
+      '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper
+      .get('[data-testid="food-delivery-quick-service-search"]')
+      .setValue('Smoky BBQ Stack')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-dash-ticket-food_menu_dash_smoky_bbq_stack"]')
+        .text(),
+    ).toContain('烟熏烧烤牛肉堡')
+    systemStore.settings.system.language = 'en-US'
+    await flushPromises()
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-dash-ticket-food_menu_dash_smoky_bbq_stack"]')
+        .text(),
+    ).toContain('Smoky BBQ Stack')
+    wrapper.unmount()
+  })
+
   test('resolves Dash Grill as a quick-service app with route-driven menu, deals, bag, and orders pages', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
@@ -2163,6 +2249,41 @@ describe('FoodDeliveryView', () => {
     await flushPromises()
     expect(router.currentRoute.value.query.shopView).toBe('menu')
     expect(wrapper.get('[data-testid="food-delivery-quick-service-menu-page"]').exists()).toBe(true)
+    const featuredDashItem = store
+      .listMenuByRestaurant('food_seed_dash_grill')
+      .find((item) => item.menuSection === 'featured')
+    const drinksDashItem = store
+      .listMenuByRestaurant('food_seed_dash_grill')
+      .find((item) => item.menuSection === 'drinks')
+    expect(
+      wrapper
+        .get(`[data-testid="food-delivery-dash-ticket-${featuredDashItem.id}"]`)
+        .attributes('data-menu-card-style'),
+    ).toBe('order-ticket')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-store-menu-section-featured"]')
+        .attributes('aria-pressed'),
+    ).toBe('true')
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').attributes('tabindex'),
+    ).toBe('0')
+    await wrapper
+      .get('[data-testid="food-delivery-quick-service-search"]')
+      .setValue(drinksDashItem.title)
+    expect(
+      wrapper.get(`[data-testid="food-delivery-dash-ticket-${drinksDashItem.id}"]`).text(),
+    ).toContain('Add to order')
+    await wrapper.get('[data-testid="food-delivery-store-menu-section-drinks"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-quick-service-search"]').element.value).toBe('')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-store-menu-section-drinks"]')
+        .attributes('aria-pressed'),
+    ).toBe('true')
 
     await wrapper.get('[data-testid="food-delivery-quick-service-nav-deals"]').trigger('click')
     await flushPromises()
@@ -2207,34 +2328,85 @@ describe('FoodDeliveryView', () => {
       },
     })
     const store = useFoodDeliveryStore()
-    const dashItem = store.listMenuByRestaurant('food_seed_dash_grill')[0]
+    const dashItem = store.findMenuItemById('food_menu_dash_double_stack')
 
     await wrapper.get(`[data-testid="food-delivery-menu-open-${dashItem.id}"]`).trigger('click')
     await flushPromises()
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-dash-detail-ticket"]')
+        .attributes('data-detail-layout'),
+    ).toBe('tray-ticket')
     expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
-      dashItem.title,
+      'Main fixed · choose one side and one drink',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-dash-selection-progress"]').text()).toContain(
+      '2/2',
+    )
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-dash-combo-side-sea_salt_fries"] img')
+        .attributes('data-required-asset'),
+    ).toBe('dash-grill/products/dash-grill-item-06.png')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-total"]').text()).toContain(
+      '39.00 CNY',
+    )
+    await wrapper
+      .get('[data-testid="food-delivery-dash-combo-side-loaded_cheese_fries"]')
+      .trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-dash-combo-drink-vanilla_cloud_shake"]')
+      .trigger('click')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-dash-combo-drink-vanilla_cloud_shake"] img')
+        .attributes('data-required-asset'),
+    ).toBe('dash-grill/products/dash-grill-item-09.png')
+    expect(wrapper.get('[data-testid="food-delivery-dash-selection-summary"]').text()).toContain(
+      'Loaded Cheese Fries · Vanilla Cloud Shake',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-dash-footer-selection"]').text()).toContain(
+      'Loaded Cheese Fries · Vanilla Cloud Shake',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-total"]').text()).toContain(
+      '56.00 CNY',
     )
     await wrapper
       .get('[data-testid="food-delivery-menu-detail-quantity-increase"]')
       .trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-menu-detail-total"]').text()).toContain(
+      '112.00 CNY',
+    )
     await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
 
     expect(store.cartRestaurant.id).toBe('food_seed_dash_grill')
     expect(store.cartLineItems).toEqual([
-      expect.objectContaining({ menuItemId: dashItem.id, quantity: 2 }),
+      expect.objectContaining({
+        menuItemId: dashItem.id,
+        quantity: 2,
+        unitPriceCents: 5600,
+        selectionKey: 'combo:loaded_cheese_fries:vanilla_cloud_shake',
+        selection: expect.objectContaining({
+          comboSide: 'loaded_cheese_fries',
+          comboDrink: 'vanilla_cloud_shake',
+        }),
+      }),
     ])
 
     await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
     await wrapper.get('[data-testid="food-delivery-quick-service-header-bag"]').trigger('click')
     await flushPromises()
-    expect(wrapper.get(`[data-testid="food-delivery-cart-${dashItem.id}"]`).text()).toContain(
-      dashItem.title,
+    expect(wrapper.get('[data-testid="food-delivery-cart-panel"]').text()).toContain(
+      'Loaded Cheese Fries · Vanilla Cloud Shake',
     )
 
     await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
     await flushPromises()
     expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
       'Dash Grill',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      'Loaded Cheese Fries · Vanilla Cloud Shake',
     )
     await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
     await flushPromises()
@@ -2244,15 +2416,82 @@ describe('FoodDeliveryView', () => {
       restaurantId: 'food_seed_dash_grill',
       restaurantName: 'Dash Grill',
       itemCount: 2,
-      items: [expect.objectContaining({ menuItemId: dashItem.id, quantity: 2 })],
+      items: [
+        expect.objectContaining({
+          menuItemId: dashItem.id,
+          quantity: 2,
+          unitPriceCents: 5600,
+          selection: expect.objectContaining({
+            comboSide: 'loaded_cheese_fries',
+            comboDrink: 'vanilla_cloud_shake',
+          }),
+        }),
+      ],
     })
     expect(router.currentRoute.value.query).toMatchObject({
       restaurantId: 'food_seed_dash_grill',
       shopView: 'order',
       shopOrderId: order.id,
     })
-    expect(wrapper.get('[data-testid="food-delivery-quick-service-order-page"]').text()).toContain(
-      dashItem.title,
+    const orderPage = wrapper.get('[data-testid="food-delivery-quick-service-order-page"]')
+    expect(orderPage.text()).toContain(dashItem.title)
+    expect(orderPage.text()).toContain('Loaded Cheese Fries · Vanilla Cloud Shake')
+    wrapper.unmount()
+  })
+
+  test('requires a Dash Grill dipping-sauce choice and preserves it in the bag', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push(
+      '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const tenders = store.findMenuItemById('food_menu_dash_chicken_tenders')
+
+    await wrapper.get('[data-testid="food-delivery-store-menu-section-chicken"]').trigger('click')
+    await wrapper.get(`[data-testid="food-delivery-add-${tenders.id}"]`).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-dash-sauce-builder"]').text()).toContain(
+      'One dipping sauce is included',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-dash-selection-progress"]').text()).toContain(
+      '1/1',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-dash-selection-summary"]').text()).toContain(
+      'House Dash Sauce',
+    )
+
+    await wrapper.get('[data-testid="food-delivery-dash-sauce-smoky_bbq_sauce"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-dash-selection-summary"]').text()).toContain(
+      'Smoky BBQ Sauce',
+    )
+    await wrapper.get('[data-testid="food-delivery-menu-detail-add"]').trigger('click')
+
+    expect(store.cartLineItems).toEqual([
+      expect.objectContaining({
+        menuItemId: tenders.id,
+        selectionKey: 'sauce:smoky_bbq_sauce',
+        selection: expect.objectContaining({
+          sauce: 'smoky_bbq_sauce',
+          sauceLabelEn: 'Smoky BBQ Sauce',
+        }),
+      }),
+    ])
+
+    await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-quick-service-header-bag"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-cart-panel"]').text()).toContain(
+      'Smoky BBQ Sauce',
     )
     wrapper.unmount()
   })
@@ -2263,7 +2502,7 @@ describe('FoodDeliveryView', () => {
     systemStore.settings.system.language = 'en-US'
     const store = useFoodDeliveryStore()
     const moonItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
-    const dashItem = store.listMenuByRestaurant('food_seed_dash_grill')[0]
+    const dashItem = store.findMenuItemById('food_menu_dash_smoky_bbq_stack')
     store.addToCart(moonItem.id)
     await router.push(
       '/food-delivery?category=fast_food&restaurantId=food_seed_dash_grill&entry=shop&shopView=menu',
@@ -2275,6 +2514,7 @@ describe('FoodDeliveryView', () => {
       },
     })
 
+    await wrapper.get('[data-testid="food-delivery-store-menu-section-burgers"]').trigger('click')
     await wrapper.get(`[data-testid="food-delivery-add-${dashItem.id}"]`).trigger('click')
     await flushPromises()
     expect(wrapper.find('[data-testid="food-delivery-cart-replacement-dialog"]').exists()).toBe(

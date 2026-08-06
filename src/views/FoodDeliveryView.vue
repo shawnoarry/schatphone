@@ -30,7 +30,6 @@ import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useSimulationStore } from '../stores/simulation'
 import { useSystemStore } from '../stores/system'
 import { useWalletStore } from '../stores/wallet'
-import { getRateToUsd } from '../lib/currency-system'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
@@ -53,6 +52,132 @@ import {
   resolvePeachCloudMenuItemCopy,
   resolvePeachCloudOrderItemTitle,
 } from '../lib/food-delivery-peach-cloud-copy'
+import {
+  resolveDashGrillMenuItemCopy,
+  resolveDashGrillOrderItemTitle,
+  resolveDashGrillTicketNumber,
+} from '../lib/food-delivery-dash-grill-copy'
+
+const DASH_GRILL_DEFAULT_COMBO_SIDE = 'sea_salt_fries'
+const DASH_GRILL_DEFAULT_COMBO_DRINK = 'fountain_cola'
+const DASH_GRILL_DEFAULT_SAUCE = 'house_dash_sauce'
+const DASH_GRILL_COMBO_CONFIG_BY_ID = Object.freeze({
+  food_menu_dash_double_stack: Object.freeze({
+    sides: Object.freeze([
+      Object.freeze({
+        key: 'sea_salt_fries',
+        labelZh: '海盐薯条',
+        labelEn: 'Sea-Salt Fries',
+        menuItemId: 'food_menu_dash_sea_salt_fries',
+        icon: 'fas fa-box-open',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'loaded_cheese_fries',
+        labelZh: '浓芝士薯条',
+        labelEn: 'Loaded Cheese Fries',
+        menuItemId: 'food_menu_dash_loaded_fries',
+        icon: 'fas fa-cheese',
+        deltaCents: 900,
+      }),
+    ]),
+    drinks: Object.freeze([
+      Object.freeze({
+        key: 'fountain_cola',
+        labelZh: '冰爽可乐',
+        labelEn: 'Fountain Cola',
+        icon: 'fas fa-glass-water',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'sparkling_water',
+        labelZh: '气泡水',
+        labelEn: 'Sparkling Water',
+        icon: 'fas fa-bottle-water',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'vanilla_cloud_shake',
+        labelZh: '香草云奶昔',
+        labelEn: 'Vanilla Cloud Shake',
+        menuItemId: 'food_menu_dash_vanilla_shake',
+        icon: 'fas fa-glass-water',
+        deltaCents: 800,
+      }),
+    ]),
+  }),
+  food_menu_dash_golden_chicken_stack: Object.freeze({
+    sides: Object.freeze([
+      Object.freeze({
+        key: 'sea_salt_fries',
+        labelZh: '海盐薯条',
+        labelEn: 'Sea-Salt Fries',
+        menuItemId: 'food_menu_dash_sea_salt_fries',
+        icon: 'fas fa-box-open',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'loaded_cheese_fries',
+        labelZh: '浓芝士薯条',
+        labelEn: 'Loaded Cheese Fries',
+        menuItemId: 'food_menu_dash_loaded_fries',
+        icon: 'fas fa-cheese',
+        deltaCents: 900,
+      }),
+    ]),
+    drinks: Object.freeze([
+      Object.freeze({
+        key: 'fountain_cola',
+        labelZh: '冰爽可乐',
+        labelEn: 'Fountain Cola',
+        icon: 'fas fa-glass-water',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'sparkling_water',
+        labelZh: '气泡水',
+        labelEn: 'Sparkling Water',
+        icon: 'fas fa-bottle-water',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'vanilla_cloud_shake',
+        labelZh: '香草云奶昔',
+        labelEn: 'Vanilla Cloud Shake',
+        menuItemId: 'food_menu_dash_vanilla_shake',
+        icon: 'fas fa-glass-water',
+        deltaCents: 800,
+      }),
+    ]),
+  }),
+})
+const DASH_GRILL_SAUCE_CONFIG_BY_ID = Object.freeze({
+  food_menu_dash_chicken_tenders: Object.freeze({
+    sauces: Object.freeze([
+      Object.freeze({
+        key: 'house_dash_sauce',
+        labelZh: '招牌达什酱',
+        labelEn: 'House Dash Sauce',
+        icon: 'fas fa-droplet',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'smoky_bbq_sauce',
+        labelZh: '烟熏烧烤酱',
+        labelEn: 'Smoky BBQ Sauce',
+        icon: 'fas fa-fire-flame-curved',
+        deltaCents: 0,
+      }),
+      Object.freeze({
+        key: 'honey_mustard_sauce',
+        labelZh: '蜂蜜黄芥末酱',
+        labelEn: 'Honey Mustard Sauce',
+        icon: 'fas fa-seedling',
+        deltaCents: 0,
+      }),
+    ]),
+  }),
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -130,6 +255,9 @@ const selectedMenuItemId = ref('')
 const menuDetailMode = ref('detail')
 const menuDetailFeedback = ref('')
 const menuDetailQuantity = ref(1)
+const dashComboSideKey = ref(DASH_GRILL_DEFAULT_COMBO_SIDE)
+const dashComboDrinkKey = ref(DASH_GRILL_DEFAULT_COMBO_DRINK)
+const dashSauceKey = ref(DASH_GRILL_DEFAULT_SAUCE)
 const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
 const showStoreCartPanel = ref(false)
@@ -1820,7 +1948,10 @@ const activeRestaurant = computed(
   () => selectedRestaurant.value || activeRestaurants.value[0] || null,
 )
 const resolveLocalizedMenuItem = (item = {}) =>
-  resolvePeachCloudMenuItemCopy(item, systemLanguage.value)
+  resolveDashGrillMenuItemCopy(
+    resolvePeachCloudMenuItemCopy(item, systemLanguage.value),
+    systemLanguage.value,
+  )
 const activeStoreCartLineItems = computed(() =>
   foodDeliveryStore.listCartLineItemsByRestaurant(activeRestaurant.value?.id).map((line) => ({
     ...line,
@@ -1907,6 +2038,121 @@ const selectedMenuItemSource = computed(() =>
   selectedMenuItemId.value ? foodDeliveryStore.findMenuItemById(selectedMenuItemId.value) : null,
 )
 const selectedMenuItem = computed(() => resolveLocalizedMenuItem(selectedMenuItemSource.value))
+const selectedDashComboConfig = computed(
+  () => DASH_GRILL_COMBO_CONFIG_BY_ID[selectedMenuItem.value?.id] || null,
+)
+const selectedDashComboSide = computed(() => {
+  const options = selectedDashComboConfig.value?.sides || []
+  return (
+    options.find((option) => option.key === dashComboSideKey.value) ||
+    options.find((option) => option.key === DASH_GRILL_DEFAULT_COMBO_SIDE) ||
+    options[0] ||
+    null
+  )
+})
+const selectedDashComboDrink = computed(() => {
+  const options = selectedDashComboConfig.value?.drinks || []
+  return (
+    options.find((option) => option.key === dashComboDrinkKey.value) ||
+    options.find((option) => option.key === DASH_GRILL_DEFAULT_COMBO_DRINK) ||
+    options[0] ||
+    null
+  )
+})
+const selectedDashSauceConfig = computed(
+  () => DASH_GRILL_SAUCE_CONFIG_BY_ID[selectedMenuItem.value?.id] || null,
+)
+const selectedDashSauce = computed(() => {
+  const options = selectedDashSauceConfig.value?.sauces || []
+  return (
+    options.find((option) => option.key === dashSauceKey.value) ||
+    options.find((option) => option.key === DASH_GRILL_DEFAULT_SAUCE) ||
+    options[0] ||
+    null
+  )
+})
+const selectedDashComboUnitPriceCents = computed(() => {
+  const item = selectedMenuItem.value
+  if (!item) return 0
+  return (
+    Number(item.priceCents || 0) +
+    Number(selectedDashComboSide.value?.deltaCents || 0) +
+    Number(selectedDashComboDrink.value?.deltaCents || 0)
+  )
+})
+const selectedDashComboCustomization = computed(() => {
+  const config = selectedDashComboConfig.value
+  const side = selectedDashComboSide.value
+  const drink = selectedDashComboDrink.value
+  if (!config || !side || !drink) return null
+  return {
+    selectionKey: `combo:${side.key}:${drink.key}`,
+    selection: {
+      comboSide: side.key,
+      comboSideLabelZh: side.labelZh,
+      comboSideLabelEn: side.labelEn,
+      comboDrink: drink.key,
+      comboDrinkLabelZh: drink.labelZh,
+      comboDrinkLabelEn: drink.labelEn,
+    },
+    unitPriceCents: selectedDashComboUnitPriceCents.value,
+  }
+})
+const selectedDashSauceCustomization = computed(() => {
+  const config = selectedDashSauceConfig.value
+  const sauce = selectedDashSauce.value
+  const item = selectedMenuItem.value
+  if (!config || !sauce || !item) return null
+  return {
+    selectionKey: `sauce:${sauce.key}`,
+    selection: {
+      sauce: sauce.key,
+      sauceLabelZh: sauce.labelZh,
+      sauceLabelEn: sauce.labelEn,
+    },
+    unitPriceCents: Number(item.priceCents || 0) + Number(sauce.deltaCents || 0),
+  }
+})
+const selectedDashCustomization = computed(
+  () => selectedDashComboCustomization.value || selectedDashSauceCustomization.value || null,
+)
+const selectedDashConfiguredUnitPriceCents = computed(
+  () =>
+    selectedDashCustomization.value?.unitPriceCents ??
+    Number(selectedMenuItem.value?.priceCents || 0),
+)
+const localizedDashOptionLabel = (option = {}) => t(option.labelZh, option.labelEn)
+const dashOptionPriceLabel = (option = {}) =>
+  Number(option.deltaCents || 0) > 0
+    ? `+${(Number(option.deltaCents) / 100).toFixed(2)} ${selectedMenuItem.value?.currency || activeCurrency.value}`
+    : t('已包含', 'Included')
+const selectedDashChoiceSummary = computed(() => {
+  if (selectedDashComboConfig.value) {
+    return [selectedDashComboSide.value, selectedDashComboDrink.value]
+      .filter(Boolean)
+      .map(localizedDashOptionLabel)
+      .join(' · ')
+  }
+  return selectedDashSauce.value ? localizedDashOptionLabel(selectedDashSauce.value) : ''
+})
+const selectedDashConfiguredContents = computed(() =>
+  selectedDashChoiceSummary.value
+    ? [selectedMenuItem.value?.title, selectedDashChoiceSummary.value].filter(Boolean).join(' · ')
+    : '',
+)
+const selectedDashRequiredSelectionCount = computed(() => {
+  if (selectedDashComboConfig.value) return 2
+  if (selectedDashSauceConfig.value) return 1
+  return 0
+})
+const selectedDashCompletedSelectionCount = computed(() => {
+  if (selectedDashComboConfig.value) {
+    return (
+      Number(Boolean(selectedDashComboSide.value)) + Number(Boolean(selectedDashComboDrink.value))
+    )
+  }
+  return selectedDashSauce.value ? 1 : 0
+})
 const activeStoreVisual = computed(() => {
   const key = activeRestaurant.value?.category || activeCategory.value?.key || 'restaurants'
   return FOOD_STORE_VISUALS[key] || FOOD_STORE_VISUALS.restaurants
@@ -2100,29 +2346,25 @@ const peachCloudSearchResults = computed(() => {
 const peachCloudShowsCuratedHome = computed(
   () => activeStoreMenuSectionKey.value === 'all' && !peachCloudSearchQuery.value.trim(),
 )
-const PEACH_CLOUD_ZERO_DECIMAL_CURRENCIES = new Set(['JPY', 'KRW'])
-const formatPeachCloudPosterAmount = (amount, currency) => {
-  const fractionDigits = PEACH_CLOUD_ZERO_DECIMAL_CURRENCIES.has(currency) ? 0 : 2
-  return new Intl.NumberFormat(languageBase.value === 'zh' ? 'zh-CN' : 'en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: fractionDigits,
-    useGrouping: false,
-  }).format(amount)
-}
 const resolvePeachCloudPosterPrice = (menuItemId) => {
   const sourceItem = foodDeliveryStore.menuItems.find((item) => item.id === menuItemId)
-  const sourceAmount = Number(sourceItem?.priceCents || 0) / 100
-  if (!sourceItem || !Number.isFinite(sourceAmount)) return null
+  const sourceAmountMinor = Number(sourceItem?.priceCents)
+  if (!sourceItem || !Number.isSafeInteger(sourceAmountMinor)) return null
 
   const sourceCurrency = sourceItem.currency || 'CNY'
   const targetCurrency = activeCurrency.value
-  const sourceRate = getRateToUsd(walletStore.exchangeRates, sourceCurrency)
-  const targetRate = getRateToUsd(walletStore.exchangeRates, targetCurrency)
-  const convertedAmount = targetRate > 0 ? (sourceAmount * sourceRate) / targetRate : sourceAmount
+  const sourceMoney = { amountMinor: sourceAmountMinor, currency: sourceCurrency }
+  const quote = walletStore.quoteMoney(sourceMoney, targetCurrency)
+  const displayMoney = quote.ok ? quote.quotedMoney : sourceMoney
   return {
-    amount: formatPeachCloudPosterAmount(convertedAmount, targetCurrency),
-    currency: targetCurrency,
+    amount: walletStore.formatMoneyAmount(displayMoney, {
+      locale: languageBase.value === 'zh' ? 'zh-CN' : 'en-US',
+      minimumFractionDigits: 0,
+      useGrouping: false,
+    }),
+    currency: displayMoney.currency,
     sourceCurrency,
+    rateSetId: quote.ok ? quote.rateSetId : '',
   }
 }
 const peachCloudCampaignMedia = (fileName, altZh, altEn) => {
@@ -2312,7 +2554,10 @@ const selectedMenuItemDetailTotal = computed(() => {
   const item = selectedMenuItem.value
   if (!item) return `0.00 ${activeRestaurant.value?.currency || activeCurrency.value}`
   const quantity = Math.min(99, Math.max(1, Number(menuDetailQuantity.value) || 1))
-  return `${((Number(item.priceCents || 0) * quantity) / 100).toFixed(2)} ${item.currency || activeCurrency.value}`
+  const unitPriceCents = selectedDashCustomization.value
+    ? selectedDashConfiguredUnitPriceCents.value
+    : Number(item.priceCents || 0)
+  return `${((unitPriceCents * quantity) / 100).toFixed(2)} ${item.currency || activeCurrency.value}`
 })
 const galleryImageOptions = computed(() =>
   galleryStore.assets
@@ -2363,7 +2608,13 @@ const scopedFoodOrders = computed(() => {
       ...order,
       items: order.items.map((item) => ({
         ...item,
-        title: resolvePeachCloudOrderItemTitle(item, systemLanguage.value),
+        title: resolveDashGrillOrderItemTitle(
+          {
+            ...item,
+            title: resolvePeachCloudOrderItemTitle(item, systemLanguage.value),
+          },
+          systemLanguage.value,
+        ),
       })),
     }))
 })
@@ -3006,6 +3257,9 @@ const openMenuItemDetail = (menuItemId) => {
   menuDetailMode.value = 'detail'
   menuDetailFeedback.value = ''
   menuDetailQuantity.value = 1
+  dashComboSideKey.value = DASH_GRILL_DEFAULT_COMBO_SIDE
+  dashComboDrinkKey.value = DASH_GRILL_DEFAULT_COMBO_DRINK
+  dashSauceKey.value = DASH_GRILL_DEFAULT_SAUCE
   fillMenuItemEditDraft(item)
 }
 
@@ -3014,6 +3268,9 @@ const closeMenuItemDetail = () => {
   menuDetailMode.value = 'detail'
   menuDetailFeedback.value = ''
   menuDetailQuantity.value = 1
+  dashComboSideKey.value = DASH_GRILL_DEFAULT_COMBO_SIDE
+  dashComboDrinkKey.value = DASH_GRILL_DEFAULT_COMBO_DRINK
+  dashSauceKey.value = DASH_GRILL_DEFAULT_SAUCE
 }
 
 const startMenuItemEdit = () => {
@@ -3258,6 +3515,12 @@ const addMenuItemToCart = (menuItemId, quantity = 1, interactionContext = null) 
   return commitMenuItemToCart(menuItem.id, quantity, customization)
 }
 
+const addDashMenuItemDetailToCart = () => {
+  const item = selectedMenuItem.value
+  if (!item) return null
+  return addMenuItemToCart(item.id, menuDetailQuantity.value, selectedDashCustomization.value)
+}
+
 const openCheckoutSheet = () => {
   checkoutFeedback.value = ''
   if (!isStoreMode.value) {
@@ -3430,6 +3693,14 @@ const foodDeliveryRequiredAssetPath = (item) => {
   return markerIndex >= 0 ? url.slice(markerIndex + marker.length) : ''
 }
 
+const dashGrillOptionMenuItem = (option = {}) =>
+  option.menuItemId
+    ? activeMenuItems.value.find((item) => item.id === option.menuItemId) || null
+    : null
+const dashGrillOptionImageUrl = (option = {}) => foodImageUrl(dashGrillOptionMenuItem(option))
+const dashGrillOptionRequiredAssetPath = (option = {}) =>
+  foodDeliveryRequiredAssetPath(dashGrillOptionMenuItem(option))
+
 const handleFoodShopImageError = (event) => {
   const image = event?.currentTarget
   if (!image || image.dataset.fallbackApplied === 'true') return
@@ -3545,8 +3816,7 @@ const scrollPeachCloudNewCarousel = (direction = 1, sourceKey = '') => {
   if (!slides) return
   const sourceIndex = campaigns.findIndex((campaign) => campaign.key === sourceKey)
   const currentIndex = sourceIndex >= 0 ? sourceIndex : peachCloudNewCarouselIndex.value
-  peachCloudNewCarouselIndex.value =
-    (currentIndex + direction + slides) % slides
+  peachCloudNewCarouselIndex.value = (currentIndex + direction + slides) % slides
   const container = peachCloudNewCarouselRef.value
   if (!container || typeof container.scrollTo !== 'function') return
   const target = container.children?.[peachCloudNewCarouselIndex.value]
@@ -3576,6 +3846,20 @@ const storeCartLineTitle = (line = {}) => {
     return t(line.titleZh || line.title, line.titleEn || line.title)
   }
   return line.menuItem?.title || line.title || ''
+}
+
+const storeCartLineSelectionLabel = (line = {}) => {
+  const selection = line.selection || {}
+  return [
+    t(selection.temperatureLabelZh, selection.temperatureLabelEn),
+    t(selection.sizeLabelZh, selection.sizeLabelEn),
+    t(selection.packagingLabelZh, selection.packagingLabelEn),
+    t(selection.comboSideLabelZh, selection.comboSideLabelEn),
+    t(selection.comboDrinkLabelZh, selection.comboDrinkLabelEn),
+    t(selection.sauceLabelZh, selection.sauceLabelEn),
+  ]
+    .filter(Boolean)
+    .join(' · ')
 }
 
 const peachCloudCartLineImageUrl = (line = {}) => {
@@ -9769,7 +10053,7 @@ onBeforeUnmount(() => {
               : isDessertWindowStore && menuDetailMode === 'detail'
                 ? 'overflow-hidden rounded-[1.75rem] border border-[var(--peach-cloud-mist)] bg-[var(--peach-cloud-canvas)] text-[var(--peach-cloud-ink)] shadow-[0_26px_70px_rgba(43,48,58,0.28)]'
                 : isQuickServiceStore && menuDetailMode === 'detail'
-                  ? 'overflow-hidden rounded-lg border border-black/10 bg-[#fff9ec] text-[#201a17] shadow-[0_26px_70px_rgba(32,26,23,0.28)]'
+                  ? 'max-h-[calc(100dvh-1.5rem)] overflow-y-auto border-2 border-[#201a17] bg-[#fff9ec] text-[#201a17] shadow-[7px_7px_0_#ffc833,0_26px_70px_rgba(32,26,23,0.3)]'
                   : isJadeTableStore && menuDetailMode === 'detail'
                     ? 'overflow-hidden rounded-sm border border-[#cfc2ad] bg-[#f5efe2] text-[#211e19] shadow-[0_26px_70px_rgba(31,77,58,0.25)]'
                     : isReusableDiscoveryTemplate && menuDetailMode === 'detail'
@@ -10053,134 +10337,515 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else-if="isQuickServiceStore && menuDetailMode === 'detail'">
-            <div class="relative aspect-[16/10] overflow-hidden bg-[#e33d2e]">
-              <img
-                v-if="foodImageUrl(selectedMenuItem)"
-                :src="foodImageUrl(selectedMenuItem)"
-                :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
-                class="h-full w-full object-cover"
-                :data-required-asset="`dash-grill/products/dash-grill-item-${String(
-                  activeMenuItems.findIndex((item) => item.id === selectedMenuItem.id) + 1,
-                ).padStart(2, '0')}.png`"
-                @error="handleFoodShopImageError"
-              />
-              <div
-                class="absolute inset-0 bg-[linear-gradient(180deg,rgba(32,26,23,0.06),rgba(32,26,23,0.55))]"
-              ></div>
-              <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-                <button
-                  type="button"
-                  class="inline-flex h-10 w-10 items-center justify-center bg-[#fff9ec] text-[#201a17] shadow-sm"
-                  data-testid="food-delivery-menu-detail-close"
-                  :aria-label="t('关闭', 'Close')"
-                  @click="closeMenuItemDetail"
-                >
-                  <i class="fas fa-xmark"></i>
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-10 w-10 items-center justify-center bg-[#ffc833] text-[#201a17] shadow-sm"
-                  data-testid="food-delivery-menu-detail-edit"
-                  :aria-label="t('编辑餐品', 'Edit item')"
-                  @click="startMenuItemEdit"
-                >
-                  <i class="fas fa-pen"></i>
-                </button>
-              </div>
-              <span
-                class="absolute bottom-3 left-3 bg-[#ffc833] px-2.5 py-1 text-[10px] font-black uppercase text-[#201a17]"
+            <div data-testid="food-delivery-dash-detail-ticket" data-detail-layout="tray-ticket">
+              <header
+                class="sticky top-0 z-30 flex min-h-14 items-center justify-between gap-3 border-b-2 border-[#201a17] bg-[#ffc833] px-3"
               >
-                {{ resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).en }}
-              </span>
-            </div>
-
-            <div class="space-y-4 p-4">
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <p class="text-[9px] font-black uppercase text-[#e33d2e]">
-                    {{ activeStoreDisplayName }}
-                  </p>
-                  <h3 class="mt-1 text-2xl font-black leading-tight text-[#201a17]">
-                    {{ selectedMenuItem.title }}
-                  </h3>
+                <div class="flex min-w-0 items-center gap-3">
+                  <span
+                    class="inline-flex h-9 min-w-11 items-center justify-center border-2 border-[#201a17] bg-[#fff9ec] px-2 text-base font-black"
+                  >
+                    #{{ resolveDashGrillTicketNumber(selectedMenuItem) }}
+                  </span>
+                  <div class="min-w-0">
+                    <p class="text-[9px] font-black uppercase text-black/55">
+                      {{ t('现点现做', 'MADE TO ORDER') }}
+                    </p>
+                    <p class="truncate text-xs font-black uppercase">
+                      {{ resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).en }}
+                    </p>
+                  </div>
                 </div>
-                <span class="shrink-0 bg-white px-2.5 py-1 text-xs font-black">
-                  {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
-                </span>
-              </div>
+                <div class="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center border-2 border-[#201a17] bg-[#fff9ec] text-[#201a17]"
+                    data-testid="food-delivery-menu-detail-edit"
+                    :aria-label="t('编辑餐品', 'Edit item')"
+                    @click="startMenuItemEdit"
+                  >
+                    <i class="fas fa-pen text-xs"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center border-2 border-[#201a17] bg-[#201a17] text-white"
+                    data-testid="food-delivery-menu-detail-close"
+                    :aria-label="t('关闭', 'Close')"
+                    @click="closeMenuItemDetail"
+                  >
+                    <i class="fas fa-xmark"></i>
+                  </button>
+                </div>
+              </header>
 
-              <p
-                class="text-sm font-semibold leading-6 text-black/60"
-                data-testid="food-delivery-menu-detail-desc"
+              <section
+                class="relative overflow-hidden border-b-2 border-[#201a17] bg-[#e33d2e] p-3"
               >
-                {{ selectedMenuItem.desc }}
-              </p>
-
-              <div
-                class="border-l-4 border-[#ffc833] bg-white p-3"
-                data-testid="food-delivery-menu-detail-ingredients"
-              >
-                <p class="text-[9px] font-black uppercase text-black/45">
-                  {{ t('餐品内容', 'WHAT IS INSIDE') }}
-                </p>
-                <p class="mt-1 text-sm font-semibold leading-5 text-[#201a17]">
-                  {{ selectedMenuItem.ingredients || t('未设置', 'Not set') }}
-                </p>
-              </div>
-
-              <p
-                v-if="menuDetailFeedback"
-                class="bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-                data-testid="food-delivery-menu-detail-feedback"
-              >
-                {{ menuDetailFeedback }}
-              </p>
-
-              <div class="flex items-center justify-between gap-4">
+                <span
+                  class="pointer-events-none absolute -right-8 top-7 h-8 w-48 rotate-[-18deg] bg-[#ffc833]"
+                  aria-hidden="true"
+                ></span>
                 <div
-                  class="inline-flex h-11 items-center border border-black/15 bg-white"
-                  data-testid="food-delivery-menu-detail-quantity"
+                  class="relative grid grid-cols-[minmax(0,1.55fr)_minmax(5.75rem,0.75fr)] gap-2"
                 >
-                  <button
-                    type="button"
-                    class="inline-flex h-11 w-11 items-center justify-center"
-                    data-testid="food-delivery-menu-detail-quantity-decrease"
-                    :aria-label="t('减少数量', 'Decrease quantity')"
-                    @click="decreaseMenuDetailQuantity"
+                  <div
+                    class="relative aspect-[4/3] overflow-hidden border-2 border-[#201a17] bg-white"
                   >
-                    <i class="fas fa-minus text-xs"></i>
-                  </button>
-                  <span class="min-w-8 text-center text-sm font-black">{{
-                    menuDetailQuantity
+                    <img
+                      v-if="foodImageUrl(selectedMenuItem)"
+                      :src="foodImageUrl(selectedMenuItem)"
+                      :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
+                      class="h-full w-full object-cover"
+                      :data-required-asset="foodDeliveryRequiredAssetPath(selectedMenuItem)"
+                      :data-asset-role="selectedDashComboConfig ? 'combo-main' : 'menu-item'"
+                      @error="handleFoodShopImageError"
+                    />
+                    <span
+                      class="absolute bottom-0 left-0 bg-[#201a17] px-2.5 py-1 text-[9px] font-black uppercase text-white"
+                    >
+                      {{ selectedDashComboConfig ? t('主餐', 'MAIN') : t('餐品', 'ITEM') }}
+                    </span>
+                  </div>
+
+                  <div
+                    v-if="selectedDashComboConfig"
+                    class="grid min-h-0 grid-rows-2 border-2 border-[#201a17] bg-[#fff9ec]"
+                    data-testid="food-delivery-dash-combo-tray-map"
+                  >
+                    <div class="flex min-h-0 items-center gap-2 border-b-2 border-[#201a17] p-2">
+                      <span
+                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden bg-[#ffc833] text-[#e33d2e]"
+                        data-testid="food-delivery-dash-selected-side-media"
+                      >
+                        <img
+                          v-if="dashGrillOptionImageUrl(selectedDashComboSide)"
+                          :src="dashGrillOptionImageUrl(selectedDashComboSide)"
+                          :alt="localizedDashOptionLabel(selectedDashComboSide)"
+                          class="h-full w-full object-cover"
+                          :data-required-asset="
+                            dashGrillOptionRequiredAssetPath(selectedDashComboSide)
+                          "
+                          @error="handleFoodShopImageError"
+                        />
+                        <i v-else :class="selectedDashComboSide?.icon || 'fas fa-box-open'"></i>
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block text-[8px] font-black uppercase text-black/45">{{
+                          t('小食', 'SIDE')
+                        }}</span>
+                        <strong class="mt-0.5 line-clamp-2 block text-[9px] leading-3.5">
+                          {{ localizedDashOptionLabel(selectedDashComboSide) }}
+                        </strong>
+                      </span>
+                    </div>
+                    <div class="flex min-h-0 items-center gap-2 p-2">
+                      <span
+                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden bg-[#ffc833] text-[#e33d2e]"
+                        data-testid="food-delivery-dash-selected-drink-media"
+                      >
+                        <img
+                          v-if="dashGrillOptionImageUrl(selectedDashComboDrink)"
+                          :src="dashGrillOptionImageUrl(selectedDashComboDrink)"
+                          :alt="localizedDashOptionLabel(selectedDashComboDrink)"
+                          class="h-full w-full object-cover"
+                          :data-required-asset="
+                            dashGrillOptionRequiredAssetPath(selectedDashComboDrink)
+                          "
+                          @error="handleFoodShopImageError"
+                        />
+                        <i v-else :class="selectedDashComboDrink?.icon || 'fas fa-glass-water'"></i>
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block text-[8px] font-black uppercase text-black/45">{{
+                          t('饮品', 'DRINK')
+                        }}</span>
+                        <strong class="mt-0.5 line-clamp-2 block text-[9px] leading-3.5">
+                          {{ localizedDashOptionLabel(selectedDashComboDrink) }}
+                        </strong>
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    v-else
+                    class="flex flex-col justify-between border-2 border-[#201a17] bg-[#fff9ec] p-3"
+                  >
+                    <i class="fas fa-fire-burner text-xl text-[#e33d2e]"></i>
+                    <div>
+                      <p class="text-[8px] font-black uppercase text-black/45">
+                        {{
+                          selectedDashSauceConfig
+                            ? t('含一份蘸酱', 'ONE DIP INCLUDED')
+                            : t('单点餐品', 'A LA CARTE')
+                        }}
+                      </p>
+                      <p class="mt-1 line-clamp-2 text-xs font-black">
+                        {{
+                          selectedDashSauce
+                            ? localizedDashOptionLabel(selectedDashSauce)
+                            : `${selectedMenuItem.price} ${selectedMenuItem.currency}`
+                        }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="space-y-4 p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-[9px] font-black uppercase text-[#e33d2e]">
+                      {{ activeStoreDisplayName }} · {{ t('点单票', 'ORDER TICKET') }}
+                    </p>
+                    <h3 class="mt-1 text-2xl font-black leading-tight text-[#201a17]">
+                      {{ selectedMenuItem.title }}
+                    </h3>
+                  </div>
+                  <span
+                    class="shrink-0 border-2 border-[#201a17] bg-white px-2.5 py-1 text-xs font-black"
+                  >
+                    {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
+                  </span>
+                </div>
+
+                <p
+                  class="text-sm font-semibold leading-6 text-black/65"
+                  data-testid="food-delivery-menu-detail-desc"
+                >
+                  {{ selectedMenuItem.desc }}
+                </p>
+
+                <section
+                  v-if="selectedDashComboConfig"
+                  class="border-2 border-[#201a17] bg-white"
+                  data-testid="food-delivery-dash-combo-builder"
+                >
+                  <div
+                    class="flex items-center justify-between gap-3 border-b-2 border-[#201a17] bg-[#201a17] px-3 py-2 text-white"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-[9px] font-black uppercase text-[#ffc833]">
+                        {{ t('搭配你的套餐', 'BUILD YOUR TRAY') }}
+                      </p>
+                      <p class="mt-0.5 text-xs font-black">
+                        {{
+                          t(
+                            '主餐固定，小食和饮品任选',
+                            'Main fixed · choose one side and one drink',
+                          )
+                        }}
+                      </p>
+                    </div>
+                    <span
+                      class="shrink-0 border border-[#ffc833] px-2 py-1 text-[9px] font-black text-[#ffc833]"
+                      data-testid="food-delivery-dash-selection-progress"
+                    >
+                      {{ selectedDashCompletedSelectionCount }}/{{
+                        selectedDashRequiredSelectionCount
+                      }}
+                      {{ t('已选', 'SELECTED') }}
+                    </span>
+                  </div>
+
+                  <div
+                    class="flex items-center gap-3 border-b-2 border-dashed border-[#201a17] p-3"
+                  >
+                    <span
+                      class="inline-flex h-10 w-10 shrink-0 items-center justify-center bg-[#ffc833]"
+                    >
+                      <i class="fas fa-lock text-xs"></i>
+                    </span>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-[8px] font-black uppercase text-black/45">
+                        {{ t('固定主餐', 'FIXED MAIN') }}
+                      </p>
+                      <p class="truncate text-xs font-black">{{ selectedMenuItem.title }}</p>
+                    </div>
+                    <span class="text-[9px] font-black text-[#e33d2e]">{{
+                      t('不可更换', 'FIXED')
+                    }}</span>
+                  </div>
+
+                  <fieldset class="border-b-2 border-dashed border-[#201a17] p-3">
+                    <legend class="px-1 text-[10px] font-black uppercase">
+                      1 · {{ t('选择小食', 'CHOOSE A SIDE') }}
+                    </legend>
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        v-for="option in selectedDashComboConfig.sides"
+                        :key="option.key"
+                        type="button"
+                        class="relative flex min-h-[8.75rem] min-w-0 flex-col overflow-hidden border-2 text-left"
+                        :class="
+                          selectedDashComboSide?.key === option.key
+                            ? 'border-[#201a17] bg-[#ffc833] text-[#201a17] shadow-[3px_3px_0_#201a17]'
+                            : 'border-black/20 bg-[#fff9ec] text-[#201a17]'
+                        "
+                        :aria-pressed="selectedDashComboSide?.key === option.key"
+                        :data-testid="`food-delivery-dash-combo-side-${option.key}`"
+                        @click="dashComboSideKey = option.key"
+                      >
+                        <span
+                          class="relative flex aspect-[16/8] w-full items-center justify-center overflow-hidden border-b-2 border-current/20 bg-[#f4ead7] text-xl text-[#e33d2e]"
+                        >
+                          <img
+                            v-if="dashGrillOptionImageUrl(option)"
+                            :src="dashGrillOptionImageUrl(option)"
+                            :alt="localizedDashOptionLabel(option)"
+                            class="h-full w-full object-cover"
+                            :data-required-asset="dashGrillOptionRequiredAssetPath(option)"
+                            @error="handleFoodShopImageError"
+                          />
+                          <i v-else :class="option.icon || 'fas fa-box-open'"></i>
+                          <span
+                            v-if="selectedDashComboSide?.key === option.key"
+                            class="absolute right-1.5 top-1.5 inline-flex h-5 w-5 items-center justify-center bg-[#201a17] text-[8px] text-white"
+                            aria-hidden="true"
+                          >
+                            <i class="fas fa-check"></i>
+                          </span>
+                        </span>
+                        <span class="flex min-h-[4.25rem] flex-1 flex-col justify-between p-2">
+                          <span class="text-[10px] font-black leading-4">{{
+                            localizedDashOptionLabel(option)
+                          }}</span>
+                          <span class="text-[9px] font-black text-black/55">{{
+                            dashOptionPriceLabel(option)
+                          }}</span>
+                        </span>
+                      </button>
+                    </div>
+                  </fieldset>
+
+                  <fieldset class="p-3">
+                    <legend class="px-1 text-[10px] font-black uppercase">
+                      2 · {{ t('选择饮品', 'CHOOSE A DRINK') }}
+                    </legend>
+                    <div class="mt-2 grid grid-cols-3 gap-2">
+                      <button
+                        v-for="option in selectedDashComboConfig.drinks"
+                        :key="option.key"
+                        type="button"
+                        class="relative flex min-h-[8.75rem] min-w-0 flex-col overflow-hidden border-2 text-left"
+                        :class="
+                          selectedDashComboDrink?.key === option.key
+                            ? 'border-[#201a17] bg-[#ffc833] text-[#201a17] shadow-[3px_3px_0_#201a17]'
+                            : 'border-black/20 bg-[#fff9ec] text-[#201a17]'
+                        "
+                        :aria-pressed="selectedDashComboDrink?.key === option.key"
+                        :data-testid="`food-delivery-dash-combo-drink-${option.key}`"
+                        @click="dashComboDrinkKey = option.key"
+                      >
+                        <span
+                          class="relative flex aspect-square w-full items-center justify-center overflow-hidden border-b-2 border-current/20 bg-[#f4ead7] text-xl text-[#e33d2e]"
+                        >
+                          <img
+                            v-if="dashGrillOptionImageUrl(option)"
+                            :src="dashGrillOptionImageUrl(option)"
+                            :alt="localizedDashOptionLabel(option)"
+                            class="h-full w-full object-cover"
+                            :data-required-asset="dashGrillOptionRequiredAssetPath(option)"
+                            @error="handleFoodShopImageError"
+                          />
+                          <i v-else :class="option.icon || 'fas fa-glass-water'"></i>
+                          <span
+                            v-if="selectedDashComboDrink?.key === option.key"
+                            class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center bg-[#201a17] text-[8px] text-white"
+                            aria-hidden="true"
+                          >
+                            <i class="fas fa-check"></i>
+                          </span>
+                        </span>
+                        <span class="flex min-h-[4.5rem] flex-1 flex-col justify-between p-2">
+                          <span class="break-words text-[9px] font-black leading-3.5">{{
+                            localizedDashOptionLabel(option)
+                          }}</span>
+                          <span class="text-[8px] font-black text-black/55">{{
+                            dashOptionPriceLabel(option)
+                          }}</span>
+                        </span>
+                      </button>
+                    </div>
+                  </fieldset>
+                </section>
+
+                <section
+                  v-else-if="selectedDashSauceConfig"
+                  class="border-2 border-[#201a17] bg-white"
+                  data-testid="food-delivery-dash-sauce-builder"
+                >
+                  <div
+                    class="flex items-center justify-between gap-3 border-b-2 border-[#201a17] bg-[#201a17] px-3 py-2 text-white"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-[9px] font-black uppercase text-[#ffc833]">
+                        {{ t('选一份蘸酱', 'PICK YOUR DIP') }}
+                      </p>
+                      <p class="mt-0.5 text-xs font-black">
+                        {{ t('鸡柳已含一份蘸酱', 'One dipping sauce is included') }}
+                      </p>
+                    </div>
+                    <span
+                      class="shrink-0 border border-[#ffc833] px-2 py-1 text-[9px] font-black text-[#ffc833]"
+                      data-testid="food-delivery-dash-selection-progress"
+                    >
+                      {{ selectedDashCompletedSelectionCount }}/{{
+                        selectedDashRequiredSelectionCount
+                      }}
+                      {{ t('已选', 'SELECTED') }}
+                    </span>
+                  </div>
+
+                  <fieldset class="p-3">
+                    <legend class="px-1 text-[10px] font-black uppercase">
+                      1 · {{ t('选择蘸酱', 'CHOOSE A DIP') }}
+                    </legend>
+                    <div class="mt-2 grid grid-cols-3 gap-2">
+                      <button
+                        v-for="option in selectedDashSauceConfig.sauces"
+                        :key="option.key"
+                        type="button"
+                        class="relative flex min-h-[7.25rem] min-w-0 flex-col items-center justify-between border-2 p-2 text-center"
+                        :class="
+                          selectedDashSauce?.key === option.key
+                            ? 'border-[#201a17] bg-[#ffc833] text-[#201a17] shadow-[3px_3px_0_#201a17]'
+                            : 'border-black/20 bg-[#fff9ec] text-[#201a17]'
+                        "
+                        :aria-pressed="selectedDashSauce?.key === option.key"
+                        :data-testid="`food-delivery-dash-sauce-${option.key}`"
+                        @click="dashSauceKey = option.key"
+                      >
+                        <span
+                          class="inline-flex h-10 w-10 items-center justify-center bg-[#f4ead7] text-lg text-[#e33d2e]"
+                          aria-hidden="true"
+                        >
+                          <i :class="option.icon || 'fas fa-droplet'"></i>
+                        </span>
+                        <span class="break-words text-[9px] font-black leading-3.5">{{
+                          localizedDashOptionLabel(option)
+                        }}</span>
+                        <span class="text-[8px] font-black text-black/55">{{
+                          dashOptionPriceLabel(option)
+                        }}</span>
+                        <span
+                          v-if="selectedDashSauce?.key === option.key"
+                          class="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center bg-[#201a17] text-[8px] text-white"
+                          aria-hidden="true"
+                        >
+                          <i class="fas fa-check"></i>
+                        </span>
+                      </button>
+                    </div>
+                  </fieldset>
+                </section>
+
+                <div
+                  class="border-l-4 border-[#ffc833] bg-white p-3"
+                  data-testid="food-delivery-menu-detail-ingredients"
+                >
+                  <p class="text-[9px] font-black uppercase text-black/45">
+                    {{
+                      selectedDashComboConfig
+                        ? t('本次套餐', 'YOUR COMBO')
+                        : selectedDashSauceConfig
+                          ? t('本次蘸酱', 'YOUR DIP')
+                          : t('餐品内容', 'WHAT IS INSIDE')
+                    }}
+                  </p>
+                  <p
+                    v-if="selectedDashConfiguredContents"
+                    class="mt-1.5 text-xs font-black leading-5 text-[#201a17]"
+                    data-testid="food-delivery-dash-selection-summary"
+                    aria-live="polite"
+                  >
+                    {{ selectedDashConfiguredContents }}
+                  </p>
+                  <p
+                    class="text-xs font-semibold leading-5 text-[#201a17]"
+                    :class="
+                      selectedDashConfiguredContents
+                        ? 'mt-2 border-t border-dashed border-black/20 pt-2'
+                        : 'mt-1'
+                    "
+                  >
+                    {{ selectedMenuItem.ingredients || t('未设置', 'Not set') }}
+                  </p>
+                </div>
+
+                <p
+                  v-if="menuDetailFeedback"
+                  class="bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                  data-testid="food-delivery-menu-detail-feedback"
+                >
+                  {{ menuDetailFeedback }}
+                </p>
+              </section>
+
+              <footer
+                class="sticky bottom-0 z-20 border-t-2 border-dashed border-[#201a17] bg-[#fff9ec] p-3 shadow-[0_-10px_24px_rgba(32,26,23,0.08)]"
+              >
+                <p
+                  v-if="selectedDashChoiceSummary"
+                  class="mb-2 flex min-w-0 items-center gap-2 text-[9px] font-black"
+                  data-testid="food-delivery-dash-footer-selection"
+                >
+                  <span class="shrink-0 uppercase text-[#e33d2e]">{{
+                    t('当前搭配', 'CURRENT PICK')
                   }}</span>
+                  <span class="truncate text-black/60">{{ selectedDashChoiceSummary }}</span>
+                </p>
+                <div class="grid grid-cols-[auto_minmax(0,1fr)] items-stretch gap-2">
+                  <div
+                    class="inline-flex h-12 items-center border-2 border-[#201a17] bg-white"
+                    data-testid="food-delivery-menu-detail-quantity"
+                  >
+                    <button
+                      type="button"
+                      class="inline-flex h-12 w-10 items-center justify-center"
+                      data-testid="food-delivery-menu-detail-quantity-decrease"
+                      :aria-label="t('减少数量', 'Decrease quantity')"
+                      @click="decreaseMenuDetailQuantity"
+                    >
+                      <i class="fas fa-minus text-xs"></i>
+                    </button>
+                    <span class="min-w-8 text-center text-sm font-black">{{
+                      menuDetailQuantity
+                    }}</span>
+                    <button
+                      type="button"
+                      class="inline-flex h-12 w-10 items-center justify-center"
+                      data-testid="food-delivery-menu-detail-quantity-increase"
+                      :aria-label="t('增加数量', 'Increase quantity')"
+                      @click="increaseMenuDetailQuantity"
+                    >
+                      <i class="fas fa-plus text-xs"></i>
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    class="inline-flex h-11 w-11 items-center justify-center"
-                    data-testid="food-delivery-menu-detail-quantity-increase"
-                    :aria-label="t('增加数量', 'Increase quantity')"
-                    @click="increaseMenuDetailQuantity"
+                    class="inline-flex min-h-12 min-w-0 items-center justify-between gap-3 bg-[#e33d2e] px-3 text-left text-white shadow-[3px_3px_0_#201a17] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                    data-testid="food-delivery-menu-detail-add"
+                    @click="addDashMenuItemDetailToCart"
                   >
-                    <i class="fas fa-plus text-xs"></i>
+                    <span class="min-w-0">
+                      <span class="block truncate text-[8px] font-black uppercase text-white/75">{{
+                        selectedDashComboConfig
+                          ? t('确认套餐', 'CONFIRM COMBO')
+                          : selectedDashSauceConfig
+                            ? t('确认蘸酱', 'CONFIRM DIP')
+                            : t('加入点单', 'ADD TO ORDER')
+                      }}</span>
+                      <span
+                        class="block truncate text-sm font-black"
+                        data-testid="food-delivery-menu-detail-total"
+                        aria-live="polite"
+                      >
+                        {{ selectedMenuItemDetailTotal }}
+                      </span>
+                    </span>
+                    <i class="fas fa-arrow-right shrink-0"></i>
                   </button>
                 </div>
-                <p
-                  class="text-right text-lg font-black text-[#201a17]"
-                  data-testid="food-delivery-menu-detail-total"
-                >
-                  {{ selectedMenuItemDetailTotal }}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                class="min-h-12 w-full bg-[#e33d2e] px-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(227,61,46,0.25)] active:scale-[0.99]"
-                data-testid="food-delivery-menu-detail-add"
-                @click="
-                  addMenuItemToCart(selectedMenuItem.id, menuDetailQuantity, $event.currentTarget)
-                "
-              >
-                {{ t('加入购物袋', 'Add to bag') }}
-              </button>
+              </footer>
             </div>
           </template>
 
@@ -10756,6 +11421,24 @@ onBeforeUnmount(() => {
             >
               <div class="min-w-0">
                 <p class="truncate text-sm font-bold">{{ storeCartLineTitle(line) }}</p>
+                <p
+                  v-if="storeCartLineSelectionLabel(line)"
+                  class="mt-1 text-[10px] font-semibold leading-4"
+                  :class="
+                    isQuickServiceStore
+                      ? 'text-[#8a352c]'
+                      : isDessertWindowStore
+                        ? 'text-[var(--peach-cloud-iron)]'
+                        : isJadeTableStore
+                          ? 'text-[#746c61]'
+                          : isLightFoodStore
+                            ? 'text-[#6c756e]'
+                            : 'text-slate-300'
+                  "
+                  data-testid="food-delivery-checkout-line-selection"
+                >
+                  {{ storeCartLineSelectionLabel(line) }}
+                </p>
                 <p
                   class="mt-1 text-[11px]"
                   :class="

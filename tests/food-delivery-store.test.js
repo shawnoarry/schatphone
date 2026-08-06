@@ -681,6 +681,38 @@ describe('food delivery store', () => {
     )
   })
 
+  test('migrates only the exact legacy Dash combo copy to the complete-meal contract', () => {
+    persistLegacyFoodDeliveryState({
+      restaurants: [
+        {
+          id: 'food_seed_dash_grill',
+          name: 'Dash Grill',
+          category: 'fast_food',
+        },
+      ],
+      menuItems: [
+        {
+          id: 'food_menu_dash_double_stack',
+          restaurantId: 'food_seed_dash_grill',
+          title: 'Dash Double Stack',
+          category: 'fast_food',
+          menuSection: 'featured',
+          price: '39.00',
+          desc: 'Two seared beef patties, cheddar, pickles, onion, and house dash sauce.',
+          ingredients: 'beef, cheddar, pickles, onion, sesame bun, dash sauce',
+        },
+      ],
+    })
+    setActivePinia(createPinia())
+
+    const store = useFoodDeliveryStore()
+    expect(store.findMenuItemById('food_menu_dash_double_stack')).toMatchObject({
+      title: 'Dash Double Stack Combo',
+      desc: expect.stringContaining('choice of fries and a drink'),
+      ingredients: expect.stringContaining('choice of fries'),
+    })
+  })
+
   test('preserves same-id Jade Hearth edits while filling the rest of its seeded menu', () => {
     persistLegacyFoodDeliveryState({
       restaurants: [
@@ -1395,6 +1427,121 @@ describe('food delivery store', () => {
     expect(store.findRestaurantById(restaurant.id).currency).toBe('EUR')
     expect(store.findMenuItemById(item.id).currency).toBe('EUR')
     expect(store.findOrderById(order.id).currency).toBe('USD')
+  })
+
+  test('keeps Dash Grill combo choices distinct through cart, backup, and order snapshots', () => {
+    const store = useFoodDeliveryStore()
+    const comboItem = store.findMenuItemById('food_menu_dash_double_stack')
+    const loadedShakeSelection = {
+      comboSide: 'loaded_cheese_fries',
+      comboSideLabelZh: '浓芝士薯条',
+      comboSideLabelEn: 'Loaded Cheese Fries',
+      comboDrink: 'vanilla_cloud_shake',
+      comboDrinkLabelZh: '香草云奶昔',
+      comboDrinkLabelEn: 'Vanilla Cloud Shake',
+    }
+    const standardSelection = {
+      comboSide: 'sea_salt_fries',
+      comboSideLabelZh: '海盐薯条',
+      comboSideLabelEn: 'Sea-Salt Fries',
+      comboDrink: 'fountain_cola',
+      comboDrinkLabelZh: '冰爽可乐',
+      comboDrinkLabelEn: 'Fountain Cola',
+    }
+
+    store.addToCart(comboItem.id, 2, {
+      selectionKey: 'combo:loaded_cheese_fries:vanilla_cloud_shake',
+      selection: loadedShakeSelection,
+      unitPriceCents: 5600,
+    })
+    store.addToCart(comboItem.id, 1, {
+      selectionKey: 'combo:sea_salt_fries:fountain_cola',
+      selection: standardSelection,
+      unitPriceCents: 3900,
+    })
+
+    expect(store.listCartLineItemsByRestaurant('food_seed_dash_grill')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          lineId: 'food_menu_dash_double_stack__combo:loaded_cheese_fries:vanilla_cloud_shake',
+          quantity: 2,
+          unitPriceCents: 5600,
+          selection: expect.objectContaining(loadedShakeSelection),
+        }),
+        expect.objectContaining({
+          lineId: 'food_menu_dash_double_stack__combo:sea_salt_fries:fountain_cola',
+          quantity: 1,
+          unitPriceCents: 3900,
+          selection: expect.objectContaining(standardSelection),
+        }),
+      ]),
+    )
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.listCartLineItemsByRestaurant('food_seed_dash_grill')).toHaveLength(2)
+
+    const order = store.checkoutCart({
+      restaurantId: 'food_seed_dash_grill',
+      deliveryAddress: 'Dash Test Counter',
+    })
+    expect(order.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          selectionKey: 'combo:loaded_cheese_fries:vanilla_cloud_shake',
+          unitPriceCents: 5600,
+          selection: expect.objectContaining(loadedShakeSelection),
+        }),
+        expect.objectContaining({
+          selectionKey: 'combo:sea_salt_fries:fountain_cola',
+          unitPriceCents: 3900,
+          selection: expect.objectContaining(standardSelection),
+        }),
+      ]),
+    )
+  })
+
+  test('keeps a Dash Grill dipping-sauce choice through backup and order snapshots', () => {
+    const store = useFoodDeliveryStore()
+    const tenders = store.findMenuItemById('food_menu_dash_chicken_tenders')
+    const sauceSelection = {
+      sauce: 'honey_mustard_sauce',
+      sauceLabelZh: '蜂蜜黄芥末酱',
+      sauceLabelEn: 'Honey Mustard Sauce',
+    }
+
+    store.addToCart(tenders.id, 1, {
+      selectionKey: 'sauce:honey_mustard_sauce',
+      selection: sauceSelection,
+      unitPriceCents: tenders.priceCents,
+    })
+
+    expect(store.listCartLineItemsByRestaurant('food_seed_dash_grill')).toEqual([
+      expect.objectContaining({
+        lineId: 'food_menu_dash_chicken_tenders__sauce:honey_mustard_sauce',
+        unitPriceCents: tenders.priceCents,
+        selection: expect.objectContaining(sauceSelection),
+      }),
+    ])
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.listCartLineItemsByRestaurant('food_seed_dash_grill')[0]).toMatchObject({
+      selectionKey: 'sauce:honey_mustard_sauce',
+      selection: sauceSelection,
+    })
+
+    const order = store.checkoutCart({
+      restaurantId: 'food_seed_dash_grill',
+      deliveryAddress: 'Dash Test Counter',
+    })
+    expect(order.items[0]).toMatchObject({
+      selectionKey: 'sauce:honey_mustard_sauce',
+      unitPriceCents: tenders.priceCents,
+      selection: sauceSelection,
+    })
   })
 
   test('persists Harbor pickup and dine-in choices while keeping delivery as the legacy default', () => {

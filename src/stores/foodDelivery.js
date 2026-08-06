@@ -402,6 +402,15 @@ const normalizeMenuSelection = (rawSelection) => {
     packaging: normalizeText(rawSelection.packaging, '', 40),
     packagingLabelZh: normalizeText(rawSelection.packagingLabelZh, '', 60),
     packagingLabelEn: normalizeText(rawSelection.packagingLabelEn, '', 60),
+    comboSide: normalizeText(rawSelection.comboSide, '', 40),
+    comboSideLabelZh: normalizeText(rawSelection.comboSideLabelZh, '', 60),
+    comboSideLabelEn: normalizeText(rawSelection.comboSideLabelEn, '', 60),
+    comboDrink: normalizeText(rawSelection.comboDrink, '', 40),
+    comboDrinkLabelZh: normalizeText(rawSelection.comboDrinkLabelZh, '', 60),
+    comboDrinkLabelEn: normalizeText(rawSelection.comboDrinkLabelEn, '', 60),
+    sauce: normalizeText(rawSelection.sauce, '', 40),
+    sauceLabelZh: normalizeText(rawSelection.sauceLabelZh, '', 60),
+    sauceLabelEn: normalizeText(rawSelection.sauceLabelEn, '', 60),
   }
   return Object.values(selection).some(Boolean) ? selection : null
 }
@@ -2154,12 +2163,13 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_dash_double_stack',
         restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
-        title: 'Dash Double Stack',
+        title: 'Dash Double Stack Combo',
         category: 'fast_food',
         menuSection: 'featured',
         price: '39.00',
-        desc: 'Two seared beef patties, cheddar, pickles, onion, and house dash sauce.',
-        ingredients: 'beef, cheddar, pickles, onion, sesame bun, dash sauce',
+        desc: 'Two seared beef patties, cheddar, pickles, onion, and house dash sauce, served with your choice of fries and a drink.',
+        ingredients:
+          'double beef stack (beef, cheddar, pickles, onion, sesame bun, dash sauce), choice of fries, choice of drink',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(1),
         imageAlt: 'Dash Double Stack burger',
@@ -2170,12 +2180,13 @@ const createSeedMenuItems = () =>
       {
         id: 'food_menu_dash_golden_chicken_stack',
         restaurantId: DASH_GRILL_SEED_RESTAURANT_ID,
-        title: 'Golden Chicken Stack',
+        title: 'Golden Chicken Stack Combo',
         category: 'fast_food',
         menuSection: 'featured',
         price: '36.00',
-        desc: 'Crisp chicken, shredded lettuce, pepper mayo, and a toasted potato bun.',
-        ingredients: 'chicken, lettuce, pepper mayo, potato bun',
+        desc: 'Crisp chicken, shredded lettuce, pepper mayo, and a toasted potato bun, served with your choice of fries and a drink.',
+        ingredients:
+          'golden chicken stack (chicken, lettuce, pepper mayo, potato bun), choice of fries, choice of drink',
         imageSourceType: 'url',
         imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(2),
         imageAlt: 'Golden Chicken Stack burger',
@@ -2805,6 +2816,18 @@ const EXPANDED_SHOP_LEGACY_MENU_COPY_BY_ID = Object.freeze({
     imageAlt: 'Tiny Moon Cake',
   },
 })
+const DASH_GRILL_LEGACY_COMBO_COPY_BY_ID = Object.freeze({
+  food_menu_dash_double_stack: Object.freeze({
+    title: 'Dash Double Stack',
+    desc: 'Two seared beef patties, cheddar, pickles, onion, and house dash sauce.',
+    ingredients: 'beef, cheddar, pickles, onion, sesame bun, dash sauce',
+  }),
+  food_menu_dash_golden_chicken_stack: Object.freeze({
+    title: 'Golden Chicken Stack',
+    desc: 'Crisp chicken, shredded lettuce, pepper mayo, and a toasted potato bun.',
+    ingredients: 'chicken, lettuce, pepper mayo, potato bun',
+  }),
+})
 const defineLegacyPeachMenuCopy = ({
   title,
   desc,
@@ -2959,6 +2982,21 @@ const migrateLegacyExpandedShopMenuCopy = (existing, seedItem) => {
   if (existing.image?.alt === legacyCopy.imageAlt && existing.image.alt !== seedImageAlt) {
     existing.image = { ...existing.image, alt: seedImageAlt }
     changed = true
+  }
+  return changed
+}
+
+const migrateLegacyDashComboCopy = (existing, seedItem) => {
+  if (existing.restaurantId !== DASH_GRILL_SEED_RESTAURANT_ID) return false
+  const legacyCopy = DASH_GRILL_LEGACY_COMBO_COPY_BY_ID[seedItem.id]
+  if (!legacyCopy) return false
+
+  let changed = false
+  for (const field of ['title', 'desc', 'ingredients']) {
+    if (existing[field] === legacyCopy[field] && existing[field] !== seedItem[field]) {
+      existing[field] = seedItem[field]
+      changed = true
+    }
   }
   return changed
 }
@@ -3882,6 +3920,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       }
       if (migrateLegacyExpandedShopMenuCopy(existing, seedItem)) changed = true
       if (migrateLegacyPeachMenuCopy(existing, seedItem)) changed = true
+      if (migrateLegacyDashComboCopy(existing, seedItem)) changed = true
       const legacyMoonCopy = MOON_BISTRO_LEGACY_MENU_COPY_BY_ID[seedItem.id]
       if (
         legacyMoonCopy &&
@@ -3950,7 +3989,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     primaryCurrency: primaryCurrency.value,
     restaurants: restaurants.value.map((restaurant) => ({ ...restaurant })),
     menuItems: menuItems.value.map((item) => ({ ...item })),
-    cartItems: cartItems.value.map((item) => ({ ...item })),
+    cartItems: cartItems.value.map((item) => ({
+      ...item,
+      selection: item.selection ? { ...item.selection } : null,
+    })),
     harborRoastRewards: { ...harborRoastRewards.value },
     platformCartItems: platformCartItems.value.map((item) => ({ ...item })),
     platformOrders: platformOrders.value.map((order) => ({
@@ -3959,7 +4001,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     })),
     orders: orders.value.map((order) => ({
       ...order,
-      items: order.items.map((item) => ({ ...item })),
+      items: order.items.map((item) => ({
+        ...item,
+        selection: item.selection ? { ...item.selection } : null,
+      })),
       totals: order.totals.map((item) => ({ ...item })),
       events: Array.isArray(order.events) ? order.events.map((event) => ({ ...event })) : [],
     })),
