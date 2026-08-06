@@ -553,7 +553,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 1. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 2. `P0 CURRENT`: 4.9 current-save write/conflict safety followed by complete local recovery; architecture work proceeds only as separately reviewable slices.
 3. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; Gallery People curation and source-module callers require separately promoted follow-ups.
-4. `P1 IN_PROGRESS`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, and one ordinary Shopping life-consequence flow are done; next review default Home release curation as a product choice.
+4. `P1 IN_PROGRESS`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, and one ordinary Shopping life-consequence flow are done; the user-promoted next implementation slice is the focused Wallet quote-explainability handoff in `docs/pm/commerce-finance-and-assets/WALLET_QUOTE_EXPLAINABILITY_HANDOFF.md`, after which default Home release curation returns as the next product-choice review.
 5. `P1` 4.9/4.5 hosted release proof: remote gates, deployed base-path/PWA/install/relaunch, real-provider Chat, backup round trip, and named true-device evidence.
 6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.

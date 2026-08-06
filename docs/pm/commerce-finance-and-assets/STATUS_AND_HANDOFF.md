@@ -63,10 +63,10 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-Roadmap 4.4 service-account continuity and the roadmap 4.9 ordinary-life consequence proof are complete at current acceptance. The live roadmap next asks for default Home release-surface curation as a product choice rather than another commerce behavior slice. Preserve these later commerce candidates without treating them as an ordered queue:
+Roadmap 4.4 service-account continuity and the roadmap 4.9 ordinary-life consequence proof are complete at current acceptance. The user explicitly promoted one focused Wallet quote-explainability implementation slice before default Home release-surface curation. Its exact scope, acceptance criteria, and cross-machine instruction are frozen in `WALLET_QUOTE_EXPLAINABILITY_HANDOFF.md`; this promotion does not include mixed-currency settlement, refunds, or broader Wallet expansion. After this slice, default Home release curation returns as the next product-choice review. Preserve later commerce candidates without treating them as an ordered queue:
 
 1. true-device test Shopping/Food Delivery world-app, checkout, service-notification, and return-to-source flows;
-2. continue Wallet cleanup/explainability and currency UX only as a focused slice;
+2. `CURRENT`: implement Wallet quote explainability only through `WALLET_QUOTE_EXPLAINABILITY_HANDOFF.md`;
 3. exercise existing source notification plans without auto-creating Chat identities;
 4. treat `补给站` and `救援调度` as trial bindings before another archetype;
 5. expand Assets/Stock only through a named user loop;
