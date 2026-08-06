@@ -6,7 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
 import { useWalletStore } from '../stores/wallet'
-import { normalizeCurrencyDefinition } from '../lib/currency-system'
+import { MAX_CURRENCY_EXPONENT, normalizeCurrencyDefinition } from '../lib/currency-system'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import { formatApiErrorForUi } from '../lib/ai'
@@ -275,6 +275,7 @@ const worldCurrencyDraft = reactive({
   labelZh: '',
   labelEn: '',
   symbol: '',
+  exponent: '2',
   rateToCny: '',
 })
 const worldCurrencyNotice = ref('')
@@ -453,6 +454,7 @@ const resetWorldCurrencyDraft = () => {
   worldCurrencyDraft.labelZh = ''
   worldCurrencyDraft.labelEn = ''
   worldCurrencyDraft.symbol = ''
+  worldCurrencyDraft.exponent = '2'
   worldCurrencyDraft.rateToCny = ''
 }
 
@@ -463,12 +465,21 @@ const updateWorldCurrencyDraft = ({ key, value } = {}) => {
 
 const saveWorldCurrencyDraft = () => {
   const pack = worldOverview.value.activePack || systemStore.getActiveWorldPack()
+  const exponent = Number(worldCurrencyDraft.exponent)
+  if (!Number.isInteger(exponent) || exponent < 0 || exponent > MAX_CURRENCY_EXPONENT) {
+    worldCurrencyNotice.value = t(
+      `请输入 0-${MAX_CURRENCY_EXPONENT} 之间的整数小数位。`,
+      `Enter a whole-number decimal precision from 0 to ${MAX_CURRENCY_EXPONENT}.`,
+    )
+    return
+  }
   const normalized = normalizeCurrencyDefinition(
     {
       code: worldCurrencyDraft.code,
       labelZh: worldCurrencyDraft.labelZh,
       labelEn: worldCurrencyDraft.labelEn,
       symbol: worldCurrencyDraft.symbol,
+      exponent,
       source: 'world_pack',
       worldPackId: pack?.id || 'default_world',
     },

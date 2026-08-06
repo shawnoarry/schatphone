@@ -44,7 +44,7 @@ Updated: 2026-08-06
 - Chat `payee_account` cards are review requests, not transfers; Wallet locks recipient/currency, lists only matching same-currency accounts, requires an active linked debit card and sufficient balance, and records the relationship fact only after confirmation
 - role-payee transfers do not create NPC cash balances, automatic exchange, background transfers, or a separate Bank app
 - source modules retain native prices and authoritative totals; current display may re-quote, while checkout/order/ledger records freeze source money, quoted money, and rate provenance
-- current adoption is partial: Peach Cloud's White Peach Lime price slot uses the shared service, but general Food Delivery remains relabel-only in many paths; remove hard-coded formatted money and add immutable record snapshots only through promoted migration slices
+- current commerce adoption covers Peach Cloud's White Peach Lime price slot, Shopping catalog/cart quotations, Food Delivery menus/modifiers/fees/carts/checkouts across current facades, Baemin campaign values and structured minimum-order enforcement, and new Shopping/Food Delivery/Food Platform order snapshots. Explicit Shopping/Food Delivery Wallet expenses retain the source order quote. Shopping mixed-currency settlement, refund snapshots, and the general poster-anchor schema remain separate work.
 
 ## 4. Workstream D: Assets And Stock
 

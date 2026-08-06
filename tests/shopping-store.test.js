@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useChatStore } from '../src/stores/chat'
+import { useWalletStore } from '../src/stores/wallet'
 import {
   SHOPPING_ORDER_EVENT_TYPE,
   useShoppingStore,
@@ -168,6 +169,44 @@ describe('shopping store', () => {
     })
     expect(store.cartQuantity).toBe(0)
     expect(store.orderCount).toBe(1)
+  })
+
+  test('freezes the Wallet-primary checkout quote through rate changes and backup restore', () => {
+    const store = useShoppingStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    walletStore.resetForTesting()
+    walletStore.setPrimaryCurrency('USD')
+    const product = store.upsertProduct({
+      id: 'product_quote_snapshot',
+      title: 'Quote Snapshot Gift',
+      category: 'gifts',
+      price: '39.00',
+      currency: 'CNY',
+    })
+
+    store.addToCart(product.id)
+    const order = store.checkoutCart()
+
+    expect(order.quoteSnapshot).toEqual({
+      sourceMoney: { amountMinor: 3900, currency: 'CNY' },
+      quotedMoney: { amountMinor: 542, currency: 'USD' },
+      rateSetId: 'wallet-rates-bundled-average-v1',
+      rate: '0.138888888888888888888889',
+      rateSource: 'bundled_average',
+      quotedAt: Date.now(),
+      targetCurrency: 'USD',
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    walletStore.setUsdCnyRate('10')
+    expect(store.findOrderById(order.id)?.quoteSnapshot).toEqual(order.quoteSnapshot)
+
+    setActivePinia(createPinia())
+    const restoredStore = useShoppingStore()
+    restoredStore.resetForTesting()
+    expect(restoredStore.restoreFromBackup(snapshot)).toBe(true)
+    expect(restoredStore.findOrderById(order.id)?.quoteSnapshot).toEqual(order.quoteSnapshot)
   })
 
   test('blocks sold-out cart additions and removes cart/order records', () => {

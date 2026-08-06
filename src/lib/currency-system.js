@@ -419,6 +419,91 @@ export const normalizeMoney = (raw = {}) => {
   return { amountMinor, currency }
 }
 
+export const convertLegacyCentsToMoney = (
+  rawAmountCents,
+  rawCurrency,
+  currencyDefinitions = [],
+) => {
+  const amountCents = normalizeMoneyAmountMinor(rawAmountCents)
+  const currency = normalizeCurrencyCode(rawCurrency, '')
+  if (amountCents == null || !currency) return null
+
+  const definition = buildCurrencyMap(currencyDefinitions).get(currency)
+  if (!definition) return null
+
+  const exponentDifference = definition.exponent - DEFAULT_CURRENCY_EXPONENT
+  const rawMinor = BigInt(amountCents)
+  const amountMinor = exponentDifference >= 0
+    ? rawMinor * pow10(exponentDifference)
+    : divideRoundHalfUp(rawMinor, pow10(-exponentDifference))
+  if (
+    amountMinor == null ||
+    amountMinor > BigInt(Number.MAX_SAFE_INTEGER) ||
+    amountMinor < BigInt(Number.MIN_SAFE_INTEGER)
+  ) {
+    return null
+  }
+
+  return {
+    amountMinor: Number(amountMinor),
+    currency,
+  }
+}
+
+export const convertMoneyToLegacyCents = (rawMoney, currencyDefinitions = []) => {
+  const money = normalizeMoney(rawMoney)
+  if (!money) return null
+  const definition = buildCurrencyMap(currencyDefinitions).get(money.currency)
+  if (!definition) return null
+
+  const exponentDifference = DEFAULT_CURRENCY_EXPONENT - definition.exponent
+  const rawCents = BigInt(money.amountMinor)
+  const amountCents = exponentDifference >= 0
+    ? rawCents * pow10(exponentDifference)
+    : divideRoundHalfUp(rawCents, pow10(-exponentDifference))
+  if (
+    amountCents == null ||
+    amountCents > BigInt(Number.MAX_SAFE_INTEGER) ||
+    amountCents < BigInt(Number.MIN_SAFE_INTEGER)
+  ) {
+    return null
+  }
+  return Number(amountCents)
+}
+
+export const normalizeMoneyQuote = (raw = {}) => {
+  if (!raw || typeof raw !== 'object') return null
+  const sourceMoney = normalizeMoney(raw.sourceMoney)
+  const quotedMoney = normalizeMoney(raw.quotedMoney)
+  const targetCurrency = normalizeCurrencyCode(raw.targetCurrency || quotedMoney?.currency, '')
+  const rateSetId = normalizeText(raw.rateSetId, '', 120)
+  const rate = normalizePositiveDecimalString(raw.rate)
+  const rateSource = normalizeRateSource(raw.rateSource, '')
+  const quotedAt = normalizeTimestamp(raw.quotedAt)
+  if (
+    !sourceMoney ||
+    !quotedMoney ||
+    !targetCurrency ||
+    quotedMoney.currency !== targetCurrency ||
+    !rateSetId ||
+    !rate ||
+    !rateSource ||
+    quotedAt <= 0
+  ) {
+    return null
+  }
+
+  return {
+    sourceMoney,
+    quotedMoney,
+    rateSetId,
+    rate,
+    rateSource,
+    quotedAt,
+    targetCurrency,
+  }
+}
+
 const createQuoteFailure = (error, sourceMoney, targetCurrency) => ({
   ok: false,
   error,

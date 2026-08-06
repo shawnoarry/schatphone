@@ -36,6 +36,7 @@ import {
   findFoodDeliveryCategory,
 } from '../lib/planned-module-registry'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { convertLegacyCentsToMoney, convertMoneyToLegacyCents } from '../lib/currency-system'
 import { runFoodDeliveryRandomOrderEventPilot } from '../lib/simulation/adapters/food-delivery-events'
 import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
 import {
@@ -400,6 +401,28 @@ const PEACH_CLOUD_MENU_SHORTCUTS = Object.freeze([
 ])
 const displayMoney = (amount = '0.00', currency = '') =>
   `${amount} ${currency || activeCurrency.value}`
+const quoteLegacyFoodAmount = (amountCents = 0, sourceCurrency = 'CNY') => {
+  const sourceMoney = convertLegacyCentsToMoney(
+    amountCents,
+    sourceCurrency,
+    walletStore.currencyOptions,
+  )
+  const quote = sourceMoney ? walletStore.quoteMoney(sourceMoney, activeCurrency.value) : null
+  const money = quote?.ok ? quote.quotedMoney : sourceMoney
+  return {
+    amountCents: money
+      ? convertMoneyToLegacyCents(money, walletStore.currencyOptions) ?? 0
+      : Number(amountCents) || 0,
+    amount: money
+      ? walletStore.formatMoneyAmount(money, { useGrouping: false })
+      : (Number(amountCents || 0) / 100).toFixed(2),
+    currency: money?.currency || sourceCurrency,
+  }
+}
+const formatLegacyFoodAmount = (amountCents = 0, sourceCurrency = 'CNY') => {
+  const display = quoteLegacyFoodAmount(amountCents, sourceCurrency)
+  return displayMoney(display.amount, display.currency)
+}
 const platformRiderImageUrl = foodDeliveryUiAsset(
   'platform/decorations/mascot/delivery-rider-mascot-01.png',
 )
@@ -858,7 +881,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 38,
     deliveryFee: '0.00',
     currency: 'CNY',
-    minimumOrder: '10,000원',
+    minimumOrderMoney: { amountMinor: 10_000, currency: 'KRW' },
     distanceKm: 1.4,
     badge: '外卖会员',
     imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-korean-beef-soup-02.png'),
@@ -893,7 +916,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 35,
     deliveryFee: '0.00',
     currency: 'CNY',
-    minimumOrder: '15,000원',
+    minimumOrderMoney: { amountMinor: 15_000, currency: 'KRW' },
     distanceKm: 1.9,
     badge: '外卖会员',
     imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-sushi-02.png'),
@@ -920,7 +943,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 30,
     deliveryFee: '3.00',
     currency: 'CNY',
-    minimumOrder: '13,000원',
+    minimumOrderMoney: { amountMinor: 13_000, currency: 'KRW' },
     distanceKm: 2.5,
     badge: '热卖',
     imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-pizza-02.png'),
@@ -951,7 +974,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 24,
     deliveryFee: '2.00',
     currency: 'CNY',
-    minimumOrder: '9,000원',
+    minimumOrderMoney: { amountMinor: 9_000, currency: 'KRW' },
     distanceKm: 0.9,
     badge: '轻食',
     imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-salad-bowl-02.png'),
@@ -982,7 +1005,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 28,
     deliveryFee: '0.00',
     currency: 'CNY',
-    minimumOrder: '12,000원',
+    minimumOrderMoney: { amountMinor: 12_000, currency: 'KRW' },
     distanceKm: 1.7,
     badge: '免配送',
     imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-fried-chicken-02.png'),
@@ -1013,7 +1036,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 22,
     deliveryFee: '2.00',
     currency: 'CNY',
-    minimumOrder: '20.00',
+    minimumOrderMoney: { amountMinor: 2_000, currency: 'CNY' },
     distanceKm: 0.8,
     badge: '清爽甜品',
     visualType: 'ad-cover',
@@ -1044,7 +1067,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 18,
     deliveryFee: '0.00',
     currency: 'CNY',
-    minimumOrder: '25.00',
+    minimumOrderMoney: { amountMinor: 2_500, currency: 'CNY' },
     distanceKm: 0.6,
     badge: '18 分钟达',
     visualType: 'ad-cover',
@@ -1075,7 +1098,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 26,
     deliveryFee: '0.00',
     currency: 'CNY',
-    minimumOrder: '30.00',
+    minimumOrderMoney: { amountMinor: 3_000, currency: 'CNY' },
     distanceKm: 1.1,
     badge: '面馆新客',
     imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-noodle-house-01.png'),
@@ -1103,7 +1126,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 25,
     deliveryFee: '1.00',
     currency: 'CNY',
-    minimumOrder: '28.00',
+    minimumOrderMoney: { amountMinor: 2_800, currency: 'CNY' },
     distanceKm: 1.3,
     badge: '早餐组合',
     visualType: 'ad-cover',
@@ -1138,7 +1161,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 32,
     deliveryFee: '3.00',
     currency: 'CNY',
-    minimumOrder: '38.00',
+    minimumOrderMoney: { amountMinor: 3_800, currency: 'CNY' },
     distanceKm: 2.1,
     badge: '清晨开蒸',
     visualType: 'ad-cover',
@@ -1169,7 +1192,7 @@ const FOOD_PLATFORM_MERCHANTS = Object.freeze([
     deliveryEtaMinutes: 29,
     deliveryFee: '2.00',
     currency: 'CNY',
-    minimumOrder: '35.00',
+    minimumOrderMoney: { amountMinor: 3_500, currency: 'CNY' },
     distanceKm: 2.0,
     badge: '下饭推荐',
     imageUrl: foodDeliveryUiAsset('platform/merchants/merchant-coconut-curry-01.png'),
@@ -1648,7 +1671,28 @@ const platformMerchantEmptyLabel = computed(() =>
 const platformDeliveryFeeLabel = (merchant = {}) =>
   Number(merchant.deliveryFee) <= 0
     ? t('免配送费', 'Free')
-    : displayMoney(merchant.deliveryFee, merchant.currency)
+    : formatLegacyFoodAmount(
+        Math.round(Number(merchant.deliveryFee) * 100),
+        merchant.currency,
+      )
+const platformMenuItemPriceLabel = (item = {}, merchant = {}) =>
+  formatLegacyFoodAmount(
+    Math.round(Number(item.price || 0) * 100),
+    merchant.currency || 'CNY',
+  )
+const platformMinimumOrderLabel = (merchant = {}) => {
+  const sourceMoney = merchant.minimumOrderMoney
+  if (!sourceMoney) return ''
+  const formatOptions = {
+    locale: languageBase.value === 'zh' ? 'zh-CN' : 'en-US',
+    currencyPosition: 'suffix',
+  }
+  const sourceText = walletStore.formatMoney(sourceMoney, formatOptions)
+  const quote = walletStore.quoteMoney(sourceMoney, activeCurrency.value)
+  if (!quote.ok || quote.quotedMoney.currency === sourceMoney.currency) return sourceText
+  const quotedText = walletStore.formatMoney(quote.quotedMoney, formatOptions)
+  return quotedText ? `${quotedText} · ${sourceText}` : sourceText
+}
 const selectedPlatformMerchant = computed(() => {
   const selectedMerchant = FOOD_PLATFORM_MERCHANTS.find(
     (merchant) => merchant.id === platformMerchantId.value,
@@ -1690,13 +1734,35 @@ const platformCheckoutDeliveryFeeCents = computed(() =>
   Math.max(0, Math.round(Number(platformCartMerchant.value?.deliveryFee || 0) * 100)),
 )
 const platformCheckoutTotal = computed(() => {
-  const amountCents =
-    foodDeliveryStore.platformCartPrimaryTotal.amountCents + platformCheckoutDeliveryFeeCents.value
+  const sourceCurrency = platformCartMerchant.value?.currency || 'CNY'
+  const sourceAmountCents = foodDeliveryStore.platformCartItems.reduce(
+    (sum, item) => sum + item.unitPriceCents * item.quantity,
+    platformCheckoutDeliveryFeeCents.value,
+  )
+  const quoted = quoteLegacyFoodAmount(sourceAmountCents, sourceCurrency)
   return {
-    amountCents,
-    amount: (amountCents / 100).toFixed(2),
-    currency: foodDeliveryStore.platformCartPrimaryTotal.currency,
+    amountCents: quoted.amountCents,
+    amount: quoted.amount,
+    currency: quoted.currency,
   }
+})
+const platformMinimumOrderSourceCents = (merchant = {}) => {
+  const minimumOrderMoney = merchant.minimumOrderMoney
+  if (!minimumOrderMoney) return 0
+  const quote = walletStore.quoteMoney(minimumOrderMoney, merchant.currency || 'CNY')
+  if (!quote.ok) return null
+  return convertMoneyToLegacyCents(quote.quotedMoney, walletStore.currencyOptions)
+}
+const platformCartMeetsMinimumOrder = computed(() => {
+  const merchant = platformCartMerchant.value
+  if (!merchant || foodDeliveryStore.platformCartItems.length === 0) return false
+  const minimumOrderCents = platformMinimumOrderSourceCents(merchant)
+  if (minimumOrderCents == null) return false
+  const itemsTotalCents = foodDeliveryStore.platformCartItems.reduce(
+    (sum, item) => sum + item.unitPriceCents * item.quantity,
+    0,
+  )
+  return itemsTotalCents >= minimumOrderCents
 })
 const platformCheckoutPaymentOptions = computed(() => [
   {
@@ -1964,6 +2030,17 @@ const activeStoreCartQuantity = computed(() =>
 const activeStoreCartPrimaryTotal = computed(() =>
   foodDeliveryStore.getCartPrimaryTotalByRestaurant(activeRestaurant.value?.id),
 )
+const activeStoreCartItemsPrimaryTotal = computed(() => {
+  const restaurant = activeRestaurant.value
+  const lines = activeStoreCartLineItems.value
+  const sourceCurrency =
+    lines[0]?.sourceCurrency || restaurant?.sourceCurrency || restaurant?.currency || 'CNY'
+  const sourceAmountCents = lines.reduce(
+    (sum, line) => sum + Number(line.sourceUnitPriceCents || 0) * Number(line.quantity || 0),
+    0,
+  )
+  return quoteLegacyFoodAmount(sourceAmountCents, sourceCurrency)
+})
 const activeMenuItems = computed(() =>
   activeRestaurant.value
     ? foodDeliveryStore
@@ -2071,14 +2148,22 @@ const selectedDashSauce = computed(() => {
     null
   )
 })
-const selectedDashComboUnitPriceCents = computed(() => {
+const selectedDashComboSourceUnitPriceCents = computed(() => {
   const item = selectedMenuItem.value
   if (!item) return 0
   return (
-    Number(item.priceCents || 0) +
+    Number(item.sourcePriceCents ?? item.priceCents ?? 0) +
     Number(selectedDashComboSide.value?.deltaCents || 0) +
     Number(selectedDashComboDrink.value?.deltaCents || 0)
   )
+})
+const selectedDashComboUnitPriceCents = computed(() => {
+  const item = selectedMenuItem.value
+  if (!item) return 0
+  return quoteLegacyFoodAmount(
+    selectedDashComboSourceUnitPriceCents.value,
+    item.sourceCurrency || item.currency,
+  ).amountCents
 })
 const selectedDashComboCustomization = computed(() => {
   const config = selectedDashComboConfig.value
@@ -2096,6 +2181,7 @@ const selectedDashComboCustomization = computed(() => {
       comboDrinkLabelEn: drink.labelEn,
     },
     unitPriceCents: selectedDashComboUnitPriceCents.value,
+    sourceUnitPriceCents: selectedDashComboSourceUnitPriceCents.value,
   }
 })
 const selectedDashSauceCustomization = computed(() => {
@@ -2110,21 +2196,24 @@ const selectedDashSauceCustomization = computed(() => {
       sauceLabelZh: sauce.labelZh,
       sauceLabelEn: sauce.labelEn,
     },
-    unitPriceCents: Number(item.priceCents || 0) + Number(sauce.deltaCents || 0),
+    unitPriceCents: quoteLegacyFoodAmount(
+      Number(item.sourcePriceCents ?? item.priceCents ?? 0) + Number(sauce.deltaCents || 0),
+      item.sourceCurrency || item.currency,
+    ).amountCents,
+    sourceUnitPriceCents:
+      Number(item.sourcePriceCents ?? item.priceCents ?? 0) + Number(sauce.deltaCents || 0),
   }
 })
 const selectedDashCustomization = computed(
   () => selectedDashComboCustomization.value || selectedDashSauceCustomization.value || null,
 )
-const selectedDashConfiguredUnitPriceCents = computed(
-  () =>
-    selectedDashCustomization.value?.unitPriceCents ??
-    Number(selectedMenuItem.value?.priceCents || 0),
-)
 const localizedDashOptionLabel = (option = {}) => t(option.labelZh, option.labelEn)
 const dashOptionPriceLabel = (option = {}) =>
   Number(option.deltaCents || 0) > 0
-    ? `+${(Number(option.deltaCents) / 100).toFixed(2)} ${selectedMenuItem.value?.currency || activeCurrency.value}`
+    ? `+${formatLegacyFoodAmount(
+        Number(option.deltaCents),
+        selectedMenuItem.value?.sourceCurrency || selectedMenuItem.value?.currency || 'CNY',
+      )}`
     : t('已包含', 'Included')
 const selectedDashChoiceSummary = computed(() => {
   if (selectedDashComboConfig.value) {
@@ -2554,10 +2643,12 @@ const selectedMenuItemDetailTotal = computed(() => {
   const item = selectedMenuItem.value
   if (!item) return `0.00 ${activeRestaurant.value?.currency || activeCurrency.value}`
   const quantity = Math.min(99, Math.max(1, Number(menuDetailQuantity.value) || 1))
-  const unitPriceCents = selectedDashCustomization.value
-    ? selectedDashConfiguredUnitPriceCents.value
-    : Number(item.priceCents || 0)
-  return `${((unitPriceCents * quantity) / 100).toFixed(2)} ${item.currency || activeCurrency.value}`
+  const sourceUnitPriceCents = selectedDashCustomization.value?.sourceUnitPriceCents ??
+    Number(item.sourcePriceCents ?? item.priceCents ?? 0)
+  return formatLegacyFoodAmount(
+    sourceUnitPriceCents * quantity,
+    item.sourceCurrency || item.currency || activeCurrency.value,
+  )
 })
 const galleryImageOptions = computed(() =>
   galleryStore.assets
@@ -2671,13 +2762,17 @@ const walletExpenseSuggestions = computed(() =>
         walletStore.findTransactionBySource(FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE, sourceId),
       )
       const relationshipSuggestion = buildSharedMealSuggestion(order)
+      const quotedMoney = order.quoteSnapshot?.quotedMoney || null
       return {
         order,
         orderId: order.id,
         sourceId,
         restaurantName: order.restaurantName,
-        amount: (Number(order.totalCents || 0) / 100).toFixed(2),
-        currency: order.currency,
+        amount: quotedMoney
+          ? walletStore.formatMoneyAmount(quotedMoney, { useGrouping: false })
+          : (Number(order.totalCents || 0) / 100).toFixed(2),
+        currency: quotedMoney?.currency || order.currency,
+        quoteSnapshot: order.quoteSnapshot,
         itemCount: order.itemCount,
         relationshipSuggestion,
         relationshipAvailable: relationshipSuggestion.available,
@@ -3232,6 +3327,7 @@ const addPlatformMenuItemToCart = (item, itemIndex) => {
     itemId: platformMenuItemId(merchant.id, itemIndex),
     title: item.title,
     price: item.price,
+    currency: merchant.currency,
     sourceModule: 'food_delivery_platform_cart',
     sourceId: merchant.id,
   })
@@ -3244,7 +3340,10 @@ const updatePlatformCartItemQuantity = (itemId, quantity) => {
 }
 
 const platformCartLineTotal = (item = {}) =>
-  displayMoney(((Number(item.unitPriceCents) * Number(item.quantity)) / 100).toFixed(2))
+  formatLegacyFoodAmount(
+    Number(item.unitPriceCents) * Number(item.quantity),
+    item.currency || platformCartMerchant.value?.currency || 'CNY',
+  )
 
 const openPlatformCartFromMerchant = () => {
   openPlatformUtilitySheet('cart')
@@ -3304,7 +3403,8 @@ const saveMenuItemEdit = () => {
     title: menuItemEditDraft.title,
     category: item.category,
     menuSection: item.menuSection || 'signature',
-    price: item.price,
+    price: (Number(item.sourcePriceCents ?? item.priceCents ?? 0) / 100).toFixed(2),
+    currency: item.sourceCurrency || item.currency,
     desc: menuItemEditDraft.desc,
     ingredients: menuItemEditDraft.ingredients,
     sourceModule: item.sourceModule || 'food_delivery_menu',
@@ -3442,6 +3542,13 @@ const openPlatformCheckout = () => {
     )
     return
   }
+  if (!platformCartMeetsMinimumOrder.value) {
+    platformCartFeedback.value = t(
+      '还未达到本店最低起送金额。',
+      'Add more items to reach this shop\'s minimum order.',
+    )
+    return
+  }
   closePlatformUtilitySheet()
   openPlatformPage('checkout')
 }
@@ -3456,11 +3563,19 @@ const submitPlatformOrder = () => {
     )
     return
   }
+  if (!platformCartMeetsMinimumOrder.value) {
+    platformCheckoutFeedback.value = t(
+      '还未达到本店最低起送金额。',
+      'Add more items to reach this shop\'s minimum order.',
+    )
+    return
+  }
   const order = foodDeliveryStore.checkoutPlatformCart({
     deliveryAddress: platformLocationLabel.value,
     note: platformCheckoutNote.value,
     paymentMethod: platformCheckoutPaymentMethod.value,
     deliveryFee: merchant.deliveryFee,
+    currency: merchant.currency,
     etaMinutes: merchant.deliveryEtaMinutes,
   })
   if (!order) {
@@ -3495,6 +3610,7 @@ const commitMenuItemToCart = (menuItemId, quantity = 1, customization = {}) => {
     selectionKey: customization.selectionKey,
     selection: customization.selection,
     unitPriceCents: customization.unitPriceCents,
+    sourceUnitPriceCents: customization.sourceUnitPriceCents,
   })
   storeNavigationFeedback.value = ''
   checkoutFeedback.value = ''
@@ -3652,6 +3768,7 @@ const transferFoodSuggestionToWallet = (suggestion) => {
       ),
       sourceModule: FOOD_DELIVERY_SOURCE_KEYS.WALLET_EXPENSE,
       sourceId: suggestion.sourceId,
+      quoteSnapshot: suggestion.quoteSnapshot,
     })
   recordFoodDeliverySharedMealRelationshipFact({
     chatStore,
@@ -4988,7 +5105,7 @@ onBeforeUnmount(() => {
                     }}</span>
                     <span class="mt-1 block truncate text-[0.68rem] font-semibold text-gray-500"
                       >{{ pick.merchant.name }} ·
-                      {{ displayMoney(pick.item.price, pick.merchant.currency) }}</span
+                      {{ platformMenuItemPriceLabel(pick.item, pick.merchant) }}</span
                     >
                   </span>
                   <i class="fas fa-chevron-right text-[10px] text-gray-300"></i>
@@ -5486,7 +5603,10 @@ onBeforeUnmount(() => {
               </dl>
               <p class="mt-3 text-[11px] font-bold text-gray-500">
                 {{ t('最低起送', 'Minimum order') }}
-                <span class="ml-1 text-gray-900">{{ selectedPlatformMerchant.minimumOrder }}</span>
+                <span
+                  class="ml-1 text-gray-900"
+                  data-testid="food-delivery-platform-minimum-order"
+                >{{ platformMinimumOrderLabel(selectedPlatformMerchant) }}</span>
               </p>
             </section>
 
@@ -5517,7 +5637,7 @@ onBeforeUnmount(() => {
                   </p>
                   <div class="mt-auto flex items-end justify-between gap-3 pt-3">
                     <span class="text-sm font-black text-gray-950">{{
-                      displayMoney(item.price)
+                      platformMenuItemPriceLabel(item, selectedPlatformMerchant)
                     }}</span>
                     <button
                       v-if="platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) === 0"
@@ -6078,7 +6198,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="flex items-center justify-between gap-3">
                   <dt>{{ t('配送费', 'Delivery fee') }}</dt>
-                  <dd>{{ displayMoney(platformCartMerchant.deliveryFee) }}</dd>
+                  <dd>{{ platformDeliveryFeeLabel(platformCartMerchant) }}</dd>
                 </div>
               </dl>
               <div class="mt-3 flex items-end justify-between gap-3 border-t border-white/10 pt-3">
@@ -6104,8 +6224,9 @@ onBeforeUnmount(() => {
               </div>
               <button
                 type="button"
-                class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-[1rem] bg-[#24bcb7] px-4 text-sm font-black text-white transition active:scale-[0.99]"
+                class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-[1rem] bg-[#24bcb7] px-4 text-sm font-black text-white transition active:scale-[0.99] disabled:bg-gray-300"
                 data-testid="food-delivery-platform-checkout-submit"
+                :disabled="!platformCartMeetsMinimumOrder"
                 @click="submitPlatformOrder"
               >
                 {{ t('提交订单', 'Place order') }}
@@ -6611,7 +6732,7 @@ onBeforeUnmount(() => {
               <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
                 <p class="text-[10px] font-black text-gray-400">{{ t('配送费', 'Delivery') }}</p>
                 <p class="mt-1 text-sm font-black text-gray-950">
-                  {{ displayMoney(selectedPlatformMerchant.deliveryFee) }}
+                  {{ platformDeliveryFeeLabel(selectedPlatformMerchant) }}
                 </p>
               </div>
               <div class="rounded-[1rem] bg-gray-50 px-2 py-3">
@@ -6659,7 +6780,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="flex shrink-0 flex-col items-end gap-2">
                   <span class="text-xs font-black text-gray-950">{{
-                    displayMoney(item.price)
+                    platformMenuItemPriceLabel(item, selectedPlatformMerchant)
                   }}</span>
                   <button
                     v-if="platformCartItemQuantity(selectedPlatformMerchant.id, itemIndex) === 0"
@@ -6882,10 +7003,19 @@ onBeforeUnmount(() => {
                   }}
                 </p>
               </div>
+              <p
+                class="text-[10px] font-bold"
+                :class="platformCartMeetsMinimumOrder ? 'text-[#159f9a]' : 'text-rose-600'"
+                data-testid="food-delivery-platform-cart-minimum-order"
+              >
+                {{ t('最低起送', 'Minimum order') }} ·
+                {{ platformMinimumOrderLabel(platformCartMerchant) }}
+              </p>
               <button
                 type="button"
-                class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)] transition active:scale-[0.99]"
+                class="flex min-h-12 w-full items-center justify-between rounded-[1rem] bg-gray-950 px-4 text-sm font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.2)] transition active:scale-[0.99] disabled:bg-gray-300 disabled:shadow-none"
                 data-testid="food-delivery-platform-cart-checkout"
+                :disabled="!platformCartMeetsMinimumOrder"
                 @click="openPlatformCheckout"
               >
                 <span>{{ t('去结算', 'Checkout') }}</span>
@@ -7515,6 +7645,8 @@ onBeforeUnmount(() => {
           :cart-lines="activeStoreCartLineItems"
           :cart-quantity="activeStoreCartQuantity"
           :cart-total="activeStoreCartPrimaryTotal"
+          :cart-items-total="activeStoreCartItemsPrimaryTotal"
+          :format-source-amount="formatLegacyFoodAmount"
           :orders="scopedFoodOrders"
           :active-order="activeHarborRoastOrder"
           :page="harborRoastPageKey"

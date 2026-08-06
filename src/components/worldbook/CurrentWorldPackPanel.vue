@@ -732,6 +732,19 @@ const updateCurrencyDraft = (key, value) => {
           />
         </label>
         <label>
+          <span>{{ t('小数位', 'Decimal places') }}</span>
+          <input
+            :value="currencyDraft.exponent"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="6"
+            step="1"
+            data-testid="worldbook-currency-exponent"
+            @input="updateCurrencyDraft('exponent', $event.target.value)"
+          />
+        </label>
+        <label>
           <span>{{ t('1 单位约等于 CNY', '1 unit equals CNY') }}</span>
           <input
             :value="currencyDraft.rateToCny"

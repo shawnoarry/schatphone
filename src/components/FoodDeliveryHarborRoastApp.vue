@@ -15,6 +15,8 @@ const props = defineProps({
   cartLines: { type: Array, default: () => [] },
   cartQuantity: { type: Number, default: 0 },
   cartTotal: { type: Object, default: () => ({ amount: '0.00', currency: 'CNY' }) },
+  cartItemsTotal: { type: Object, default: null },
+  formatSourceAmount: { type: Function, default: null },
   orders: { type: Array, default: () => [] },
   activeOrder: { type: Object, default: null },
   page: { type: String, default: 'home' },
@@ -277,18 +279,32 @@ const activeTemperatureChoice = computed(
     temperatureChoices.value.find((choice) => choice.key === detailTemperature.value) ||
     temperatureChoices.value[0],
 )
-const detailUnitPriceCents = computed(() =>
+const detailSourceCurrency = computed(
+  () =>
+    props.activeItem?.sourceCurrency ||
+    props.activeItem?.currency ||
+    props.restaurant.sourceCurrency ||
+    props.restaurant.currency ||
+    'CNY',
+)
+const formatSourceAmount = (amountCents = 0, sourceCurrency = detailSourceCurrency.value) =>
+  typeof props.formatSourceAmount === 'function'
+    ? props.formatSourceAmount(amountCents, sourceCurrency)
+    : `${(Number(amountCents || 0) / 100).toFixed(2)} ${sourceCurrency}`
+const detailSourceUnitPriceCents = computed(() =>
   Math.max(
     100,
-    Number(props.activeItem?.priceCents || 0) +
+    Number(props.activeItem?.sourcePriceCents ?? props.activeItem?.priceCents ?? 0) +
       Number(activeSizeChoice.value?.deltaCents || 0) +
       Number(activePackagingChoice.value?.deltaCents || 0),
   ),
 )
-const detailTotal = computed(() => {
-  const price = detailUnitPriceCents.value * detailQuantity.value
-  return `${(price / 100).toFixed(2)} ${props.activeItem?.currency || props.restaurant.currency || 'CNY'}`
-})
+const detailTotal = computed(() =>
+  formatSourceAmount(
+    detailSourceUnitPriceCents.value * detailQuantity.value,
+    detailSourceCurrency.value,
+  ),
+)
 const detailSelection = computed(() => ({
   temperature: activeTemperatureChoice.value?.key || '',
   temperatureLabelZh: activeTemperatureChoice.value?.zh || '',
@@ -324,12 +340,23 @@ const isPickup = computed(() => fulfillmentMode.value === 'pickup')
 const checkoutFee = computed(() =>
   isPickup.value ? t('免配送费', 'No delivery fee') : props.feeText,
 )
-const itemsSubtotalCents = computed(() =>
-  props.cartLines.reduce((sum, line) => sum + Math.round(Number(line.subtotal || 0) * 100), 0),
+const itemsSubtotal = computed(
+  () =>
+    props.cartItemsTotal?.amount ||
+    (
+      props.cartLines.reduce(
+        (sum, line) => sum + Math.round(Number(line.subtotal || 0) * 100),
+        0,
+      ) / 100
+    ).toFixed(2),
 )
-const itemsSubtotal = computed(() => (itemsSubtotalCents.value / 100).toFixed(2))
 const checkoutTotal = computed(() =>
   isPickup.value ? itemsSubtotal.value : props.cartTotal.amount,
+)
+const checkoutCurrency = computed(() =>
+  isPickup.value
+    ? props.cartItemsTotal?.currency || props.cartTotal.currency
+    : props.cartTotal.currency,
 )
 const supplyFilters = computed(() => [
   { key: 'all', label: t('全部好物', 'All supplies') },
@@ -367,7 +394,7 @@ const displayPrice = (item = {}) => `${item.price || '0.00'} ${item.currency || 
 const displayPriceDelta = (deltaCents = 0) => {
   if (!deltaCents) return t('已含', 'Included')
   const sign = deltaCents > 0 ? '+' : '−'
-  return `${sign}${(Math.abs(deltaCents) / 100).toFixed(2)} ${props.activeItem?.currency || props.restaurant.currency || 'CNY'}`
+  return `${sign}${formatSourceAmount(Math.abs(deltaCents), detailSourceCurrency.value)}`
 }
 const selectionSummary = (selection = {}) => {
   const value = selection || {}
@@ -512,7 +539,8 @@ const addDetailItem = (event) => {
   emit('add-item', props.activeItem.id, detailQuantity.value, {
     selectionKey: detailSelectionKey.value,
     selection: detailSelection.value,
-    unitPriceCents: detailUnitPriceCents.value,
+    unitPriceCents: detailSourceUnitPriceCents.value,
+    sourceUnitPriceCents: detailSourceUnitPriceCents.value,
     trigger: event?.currentTarget || null,
   })
 }
@@ -532,7 +560,12 @@ const addCollaborationSet = () => {
       packagingLabelZh: '联名纸杯、杯套与手提杯托',
       packagingLabelEn: 'Collaboration cup, sleeve + carrier',
     },
-    unitPriceCents: Number(collaborationItem.value.priceCents || 4800),
+    unitPriceCents: Number(
+      collaborationItem.value.sourcePriceCents ?? collaborationItem.value.priceCents ?? 4800,
+    ),
+    sourceUnitPriceCents: Number(
+      collaborationItem.value.sourcePriceCents ?? collaborationItem.value.priceCents ?? 4800,
+    ),
   })
   emit('navigate', 'bag')
 }
@@ -1857,7 +1890,7 @@ onBeforeUnmount(stopCarousel)
               class="flex items-center justify-between text-xs font-bold text-[var(--harbor-muted)]"
             >
               <span>{{ t('商品小计', 'Items') }}</span
-              ><span>{{ itemsSubtotal }} {{ cartTotal.currency }}</span>
+              ><span>{{ itemsSubtotal }} {{ checkoutCurrency }}</span>
             </div>
             <div
               class="mt-2 flex items-center justify-between text-xs font-bold text-[var(--harbor-muted)]"
@@ -1868,7 +1901,7 @@ onBeforeUnmount(stopCarousel)
             <div class="mt-4 flex items-end justify-between">
               <strong class="text-sm">{{ t('应付合计', 'Order total') }}</strong
               ><strong class="text-xl text-[var(--harbor-copper)]"
-                >{{ checkoutTotal }} {{ cartTotal.currency }}</strong
+                >{{ checkoutTotal }} {{ checkoutCurrency }}</strong
               >
             </div>
           </section>
@@ -2167,7 +2200,7 @@ onBeforeUnmount(stopCarousel)
             t('确认金额', 'Order total')
           }}</span
           ><strong class="text-2xl text-[var(--harbor-copper)]"
-            >{{ checkoutTotal }} {{ cartTotal.currency }}</strong
+            >{{ checkoutTotal }} {{ checkoutCurrency }}</strong
           >
         </div>
         <button

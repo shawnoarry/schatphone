@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from '../src/stores/chat'
+import { useWalletStore } from '../src/stores/wallet'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
   FOOD_DELIVERY_ORDER_STATUS,
@@ -1101,6 +1102,38 @@ describe('food delivery store', () => {
     })
   })
 
+  test('inherits a restaurant source currency when the display currency differs', () => {
+    const walletStore = useWalletStore()
+    walletStore.setPrimaryCurrency('EUR')
+    const store = useFoodDeliveryStore()
+    store.resetForTesting()
+    store.setPrimaryCurrency('EUR')
+    const restaurant = store.upsertRestaurant({
+      id: 'food_source_currency_shop',
+      name: 'Source Currency Kitchen',
+      category: 'restaurants',
+      currency: 'CNY',
+    })
+
+    const menuItem = store.upsertMenuItem({
+      id: 'food_source_currency_item',
+      restaurantId: restaurant.id,
+      title: 'Source Currency Meal',
+      price: '20.00',
+    })
+    const storedMenuItem = store.menuItems.find((item) => item.id === menuItem.id)
+
+    expect(storedMenuItem).toMatchObject({
+      priceCents: 2000,
+      currency: 'CNY',
+    })
+    expect(menuItem).toMatchObject({
+      sourcePriceCents: 2000,
+      sourceCurrency: 'CNY',
+      currency: 'EUR',
+    })
+  })
+
   test('migrates older Moon Bistro local data without overwriting edited menu content', () => {
     localStorage.setItem(
       'schatphone:store:food-delivery',
@@ -1393,7 +1426,9 @@ describe('food delivery store', () => {
 
   test('uses the finance primary currency for active food pricing without rewriting historic orders', () => {
     const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
     store.resetForTesting()
+    walletStore.resetForTesting()
     expect(store.setPrimaryCurrency('usd')).toBe('USD')
     const restaurant = store.upsertRestaurant({
       id: 'food_currency_shop',
@@ -1421,12 +1456,85 @@ describe('food delivery store', () => {
       currency: 'USD',
       totalCents: 2400,
       items: [expect.objectContaining({ currency: 'USD' })],
+      quoteSnapshot: {
+        sourceMoney: { amountMinor: 2400, currency: 'USD' },
+        quotedMoney: { amountMinor: 17280, currency: 'CNY' },
+        targetCurrency: 'CNY',
+      },
     })
 
     store.setPrimaryCurrency('eur')
-    expect(store.findRestaurantById(restaurant.id).currency).toBe('EUR')
-    expect(store.findMenuItemById(item.id).currency).toBe('EUR')
+    walletStore.setUsdCnyRate('10')
+    expect(store.findRestaurantById(restaurant.id)).toMatchObject({
+      currency: 'EUR',
+      deliveryFee: '3.70',
+      sourceDeliveryFeeCents: 400,
+      sourceCurrency: 'USD',
+    })
+    expect(store.findMenuItemById(item.id)).toMatchObject({
+      currency: 'EUR',
+      price: '18.52',
+      sourcePriceCents: 2000,
+      sourceCurrency: 'USD',
+    })
+    expect(store.createBackupSnapshot().menuItems.find((entry) => entry.id === item.id)).toMatchObject({
+      priceCents: 2000,
+      currency: 'USD',
+    })
     expect(store.findOrderById(order.id).currency).toBe('USD')
+    expect(store.findOrderById(order.id).quoteSnapshot).toEqual(order.quoteSnapshot)
+  })
+
+  test('quotes active menu and cart values numerically while checkout retains source money', () => {
+    const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
+    walletStore.resetForTesting()
+    walletStore.setPrimaryCurrency('EUR')
+    store.setPrimaryCurrency('EUR')
+    const sourceRestaurant = store.restaurants.find((entry) => entry.id === 'food_seed_moon_bistro')
+    const sourceItem = store.menuItems.find((entry) => entry.restaurantId === sourceRestaurant.id)
+    const presentedItem = store.findMenuItemById(sourceItem.id)
+    const currentQuote = walletStore.quoteMoney(
+      { amountMinor: sourceItem.priceCents, currency: sourceItem.currency },
+      'EUR',
+    )
+
+    expect(currentQuote.ok).toBe(true)
+    expect(presentedItem).toMatchObject({
+      sourcePriceCents: sourceItem.priceCents,
+      sourceCurrency: sourceItem.currency,
+      priceCents: currentQuote.quotedMoney.amountMinor,
+      currency: 'EUR',
+    })
+    expect(presentedItem.priceCents).not.toBe(sourceItem.priceCents)
+
+    store.addToCart(sourceItem.id)
+    expect(store.cartLineItems[0]).toMatchObject({
+      sourceUnitPriceCents: sourceItem.priceCents,
+      sourceCurrency: 'CNY',
+      unitPriceCents: currentQuote.quotedMoney.amountMinor,
+      currency: 'EUR',
+    })
+    expect(store.getCartTotalsByRestaurant(sourceRestaurant.id)[0].currency).toBe('CNY')
+    expect(store.getCartPrimaryTotalByRestaurant(sourceRestaurant.id).currency).toBe('EUR')
+
+    const order = store.checkoutCart({
+      restaurantId: sourceRestaurant.id,
+      deliveryAddress: 'Currency Quote Address',
+    })
+    expect(order).toMatchObject({
+      currency: 'CNY',
+      items: [expect.objectContaining({ currency: 'CNY' })],
+      quoteSnapshot: {
+        sourceMoney: { currency: 'CNY' },
+        quotedMoney: { currency: 'EUR' },
+        targetCurrency: 'EUR',
+      },
+    })
+
+    const frozenQuote = order.quoteSnapshot
+    walletStore.setUsdCnyRate('10')
+    expect(store.findOrderById(order.id).quoteSnapshot).toEqual(frozenQuote)
   })
 
   test('keeps Dash Grill combo choices distinct through cart, backup, and order snapshots', () => {
@@ -2012,6 +2120,12 @@ describe('food delivery store', () => {
       paymentMethod: 'pay_on_delivery',
       etaMinutes: 28,
       sourceModule: 'food_delivery_platform_checkout',
+      quoteSnapshot: {
+        sourceMoney: { amountMinor: 5200, currency: 'CNY' },
+        quotedMoney: { amountMinor: 5200, currency: 'CNY' },
+        rate: '1',
+        targetCurrency: 'CNY',
+      },
     })
     expect(store.platformCartQuantity).toBe(0)
     expect(store.platformOrderCount).toBe(1)
@@ -2028,5 +2142,50 @@ describe('food delivery store', () => {
       total: '52.00',
     })
     expect(store.orders).toHaveLength(0)
+    })
   })
-})
+
+  test('quotes Food Platform cart totals while keeping platform order source prices', () => {
+    const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    walletStore.resetForTesting()
+    walletStore.setPrimaryCurrency('EUR')
+    store.setPrimaryCurrency('EUR')
+    store.addPlatformCartItem(
+      {
+        merchantId: 'platform_currency_shop',
+        merchantName: 'Platform Currency Shop',
+        itemId: 'platform_currency_meal',
+        title: 'Platform Currency Meal',
+        price: '18.50',
+        currency: 'CNY',
+      },
+      2,
+    )
+
+    const itemsQuote = walletStore.quoteMoney({ amountMinor: 3700, currency: 'CNY' }, 'EUR')
+    expect(store.platformCartPrimaryTotal).toEqual({
+      amountCents: itemsQuote.quotedMoney.amountMinor,
+      amount: walletStore.formatMoneyAmount(itemsQuote.quotedMoney, { useGrouping: false }),
+      currency: 'EUR',
+    })
+
+    const order = store.checkoutPlatformCart({
+      deliveryAddress: 'Platform Currency Address',
+      deliveryFee: '3.00',
+      currency: 'CNY',
+    })
+    expect(order).toMatchObject({
+      itemsTotalCents: 3700,
+      deliveryFeeCents: 300,
+      totalCents: 4000,
+      currency: 'CNY',
+      items: [expect.objectContaining({ unitPriceCents: 1850, currency: 'CNY' })],
+      quoteSnapshot: {
+        sourceMoney: { amountMinor: 4000, currency: 'CNY' },
+        quotedMoney: { currency: 'EUR' },
+        targetCurrency: 'EUR',
+      },
+    })
+  })

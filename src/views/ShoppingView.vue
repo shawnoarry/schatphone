@@ -31,6 +31,7 @@ import {
   findShoppingServicePreset,
 } from '../lib/planned-module-registry'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { convertLegacyCentsToMoney } from '../lib/currency-system'
 import { useAssetsStore } from '../stores/assets'
 import { useCalendarStore } from '../stores/calendar'
 import { useChatStore } from '../stores/chat'
@@ -282,12 +283,16 @@ const walletExpenseSuggestions = computed(() =>
         relationshipRuntimeStore,
         order,
       })
+      const quotedMoney = order.quoteSnapshot?.quotedMoney || null
       return {
         order,
         orderId: order.id,
         sourceId,
-        amount: (Number(order.totalCents || 0) / 100).toFixed(2),
-        currency: order.currency,
+        amount: quotedMoney
+          ? walletStore.formatMoneyAmount(quotedMoney, { useGrouping: false })
+          : (Number(order.totalCents || 0) / 100).toFixed(2),
+        currency: quotedMoney?.currency || order.currency,
+        quoteSnapshot: order.quoteSnapshot,
         itemCount: order.itemCount,
         giftRecipient: order.giftRecipient,
         relationshipSuggestion,
@@ -458,7 +463,50 @@ const applyWorldAppFilter = () => {
   })
 }
 
-const formatPrice = (product) => `${(Number(product?.priceCents || 0) / 100).toFixed(2)} ${product?.currency || 'CNY'}`
+const formatSourceLegacyMoney = (amountCents = 0, currency = 'CNY') => {
+  const sourceMoney = convertLegacyCentsToMoney(
+    amountCents,
+    currency,
+    walletStore.currencyOptions,
+  )
+  return sourceMoney
+    ? walletStore.formatMoney(sourceMoney, {
+        locale: languageBase.value === 'zh' ? 'zh-CN' : 'en-US',
+        currencyPosition: 'suffix',
+        useGrouping: false,
+      })
+    : `${(Number(amountCents || 0) / 100).toFixed(2)} ${currency || 'CNY'}`
+}
+
+const quoteLegacyMoney = (amountCents = 0, currency = 'CNY') => {
+  const sourceMoney = convertLegacyCentsToMoney(
+    amountCents,
+    currency,
+    walletStore.currencyOptions,
+  )
+  return sourceMoney ? walletStore.quoteMoney(sourceMoney) : null
+}
+
+const formatQuotedMoney = (money = null) =>
+  money
+    ? walletStore.formatMoney(money, {
+        locale: languageBase.value === 'zh' ? 'zh-CN' : 'en-US',
+        currencyPosition: 'suffix',
+      })
+    : ''
+
+const formatLegacyMoneyQuote = (amountCents = 0, currency = 'CNY') => {
+  const sourceText = formatSourceLegacyMoney(amountCents, currency)
+  const quote = quoteLegacyMoney(amountCents, currency)
+  if (!quote?.ok) return sourceText
+  if (quote.quotedMoney.currency === currency) return sourceText
+  const quotedText = formatQuotedMoney(quote.quotedMoney)
+  if (!quotedText) return sourceText
+  return `${quotedText} · ${sourceText}`
+}
+
+const formatPrice = (product) =>
+  formatLegacyMoneyQuote(product?.priceCents, product?.currency || 'CNY')
 
 const resetProductDraft = () => {
   productDraft.title = ''
@@ -568,11 +616,20 @@ const formatOrderTotal = (order) => {
   const totals = Array.isArray(order.totals) && order.totals.length > 0
     ? order.totals
     : [{ amount: (Number(order.totalCents || 0) / 100).toFixed(2), currency: order.currency || 'CNY' }]
-  return totals.map((item) => `${item.amount} ${item.currency}`).join(' / ')
+  const sourceText = totals.map((item) => `${item.amount} ${item.currency}`).join(' / ')
+  if (order.quoteSnapshot?.quotedMoney?.currency === order.quoteSnapshot?.sourceMoney?.currency) {
+    return sourceText
+  }
+  const quotedText = formatQuotedMoney(order.quoteSnapshot?.quotedMoney)
+  if (!quotedText) return sourceText
+  return `${quotedText} · ${sourceText}`
 }
 
 const formatOrderItemSubtotal = (item) =>
-  `${((Number(item?.unitPriceCents || 0) * Number(item?.quantity || 0)) / 100).toFixed(2)} ${item?.currency || 'CNY'}`
+  formatSourceLegacyMoney(
+    Number(item?.unitPriceCents || 0) * Number(item?.quantity || 0),
+    item?.currency || 'CNY',
+  )
 
 const toggleFavorite = (productId) => {
   shoppingStore.toggleProductFavorite(productId)
@@ -684,6 +741,7 @@ const transferSuggestionToWallet = (suggestion) => {
     note: t('Manually imported from a Shopping order.', 'Manually imported from a Shopping order.'),
     sourceModule: SHOPPING_SOURCE_KEYS.WALLET_EXPENSE,
     sourceId: suggestion.sourceId,
+    quoteSnapshot: suggestion.quoteSnapshot,
   })
   recordShoppingGiftRelationshipFact({
     chatStore,
@@ -1346,7 +1404,7 @@ onBeforeUnmount(() => {
             </p>
           </div>
           <span class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600">
-            {{ cartPrimaryTotal.amount }} {{ cartPrimaryTotal.currency }}
+            {{ formatLegacyMoneyQuote(cartPrimaryTotal.amountCents, cartPrimaryTotal.currency) }}
           </span>
         </div>
         <div v-if="cartLineItems.length === 0" class="mt-4 rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-400">
@@ -1361,7 +1419,9 @@ onBeforeUnmount(() => {
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
                 <p class="truncate text-xs font-semibold">{{ line.product.title }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">{{ line.subtotal }} {{ line.currency }}</p>
+                <p class="mt-1 text-[11px] text-gray-500">
+                  {{ formatLegacyMoneyQuote(line.subtotalCents, line.currency) }}
+                </p>
               </div>
               <div class="flex items-center gap-2">
                 <button class="w-7 h-7 rounded-full bg-gray-100 text-xs" @click="updateCartQuantity(line.productId, -1)">-</button>
@@ -1637,7 +1697,7 @@ onBeforeUnmount(() => {
               <div class="min-w-0">
                 <p class="truncate text-xs font-bold text-gray-950">{{ item.title }}</p>
                 <p class="mt-1 text-[11px] text-gray-500">
-                  {{ item.quantity }} × {{ (item.unitPriceCents / 100).toFixed(2) }} {{ item.currency }}
+                  {{ item.quantity }} × {{ formatSourceLegacyMoney(item.unitPriceCents, item.currency) }}
                 </p>
               </div>
               <span class="shrink-0 text-xs font-bold text-gray-900">

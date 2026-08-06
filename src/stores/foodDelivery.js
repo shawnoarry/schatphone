@@ -5,6 +5,11 @@ import {
   readPersistedStateAsync,
   writePersistedState,
 } from '../lib/persistence'
+import {
+  convertLegacyCentsToMoney,
+  convertMoneyToLegacyCents,
+  normalizeMoneyQuote,
+} from '../lib/currency-system'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
@@ -18,7 +23,7 @@ import {
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from './chat'
-import { DEFAULT_WALLET_CURRENCY, normalizeWalletCurrency } from './wallet'
+import { DEFAULT_WALLET_CURRENCY, normalizeWalletCurrency, useWalletStore } from './wallet'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
 const FOOD_DELIVERY_STORAGE_VERSION = 1
@@ -444,6 +449,8 @@ const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
       imagePath: merchandise.imagePath,
       assetBase: normalizeText(merchandise.assetBase, 'harbor-roast', 60),
       unitPriceCents: acquisition === 'redeemed_gift' ? 0 : merchandise.purchasePriceCents,
+      sourceUnitPriceCents: acquisition === 'redeemed_gift' ? 0 : merchandise.purchasePriceCents,
+      sourceCurrency: DEFAULT_CURRENCY,
       beanStampCost: acquisition === 'redeemed_gift' ? merchandise.beanStampCost : 0,
       quantity: normalizeQuantity(rawItem.quantity),
       sourceModule: normalizeText(
@@ -469,6 +476,12 @@ const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
     Number(rawItem.unitPriceCents) > 0
       ? Math.floor(Number(rawItem.unitPriceCents))
       : null
+  const sourceUnitPriceCents =
+    selectionKey &&
+    Number.isFinite(Number(rawItem.sourceUnitPriceCents)) &&
+    Number(rawItem.sourceUnitPriceCents) > 0
+      ? Math.floor(Number(rawItem.sourceUnitPriceCents))
+      : selectedUnitPriceCents
 
   return {
     lineId: selectionKey ? `${menuItemId}__${selectionKey}`.slice(0, 140) : menuItemId,
@@ -476,7 +489,9 @@ const normalizeCartItem = (rawItem, menuItemIds, index = 0) => {
     menuItemId,
     selectionKey,
     selection,
-    unitPriceCents: selectedUnitPriceCents,
+    unitPriceCents: sourceUnitPriceCents,
+    sourceUnitPriceCents,
+    sourceCurrency: normalizeCurrency(rawItem.sourceCurrency, ''),
     quantity: normalizeQuantity(rawItem.quantity),
     sourceModule: normalizeText(rawItem.sourceModule, 'food_delivery_cart', 60),
     sourceId: normalizeText(rawItem.sourceId, '', 140),
@@ -535,6 +550,7 @@ const normalizePlatformCartItem = (rawItem, index = 0) => {
     itemId,
     title,
     unitPriceCents,
+    currency: normalizeCurrency(rawItem.currency),
     quantity: normalizeQuantity(rawItem.quantity),
     sourceModule: normalizeText(rawItem.sourceModule, 'food_delivery_platform_cart', 60),
     sourceId: normalizeText(rawItem.sourceId, merchantId, 140),
@@ -604,6 +620,9 @@ const normalizePlatformOrder = (rawOrder, index = 0) => {
       ? Math.floor(Number(rawOrder.deliveryFeeCents))
       : normalizeAmountCents(rawOrder.deliveryFee)
   const totalCents = itemsTotalCents + deliveryFeeCents
+  const quoteSnapshot = normalizeMoneyQuote(
+    rawOrder.quoteSnapshot || rawOrder.moneyQuote || rawOrder.checkoutQuote,
+  )
 
   return {
     id: normalizeText(rawOrder.id, `platform_food_order_legacy_${now}_${index}`, 140),
@@ -619,6 +638,7 @@ const normalizePlatformOrder = (rawOrder, index = 0) => {
     totalCents,
     total: formatAmount(totalCents),
     currency,
+    quoteSnapshot,
     deliveryAddress: normalizeText(rawOrder.deliveryAddress || rawOrder.address, '', 160),
     note: normalizeText(rawOrder.note, '', 240),
     paymentMethod: normalizeText(rawOrder.paymentMethod, 'app_pay', 40),
@@ -903,6 +923,9 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
       amountCents: 0,
       amount: '0.00',
     }
+  const quoteSnapshot = normalizeMoneyQuote(
+    rawOrder.quoteSnapshot || rawOrder.moneyQuote || rawOrder.checkoutQuote,
+  )
 
   return {
     id: normalizeText(rawOrder.id, `food_order_legacy_${now}_${index}`, 140),
@@ -916,6 +939,7 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
     totals,
     totalCents: primaryTotal.amountCents,
     currency: primaryTotal.currency,
+    quoteSnapshot,
     deliveryAddress: normalizeText(rawOrder.deliveryAddress || rawOrder.address, '', 160),
     note: normalizeText(rawOrder.note, '', 240),
     fulfillmentMode,
@@ -3003,6 +3027,7 @@ const migrateLegacyDashComboCopy = (existing, seedItem) => {
 
 export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const getChatStore = () => useChatStore()
+  const getWalletStore = () => useWalletStore()
   const primaryCurrency = ref(DEFAULT_CURRENCY)
   const restaurants = ref([])
   const menuItems = ref([])
@@ -3013,6 +3038,35 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const orders = ref([])
   const hasFinishedStorageHydration = ref(false)
 
+  const quoteLegacyAmount = (
+    amountCents = 0,
+    sourceCurrency = DEFAULT_CURRENCY,
+    targetCurrency = primaryCurrency.value,
+  ) => {
+    const walletStore = getWalletStore()
+    const sourceMoney = convertLegacyCentsToMoney(
+      amountCents,
+      sourceCurrency,
+      walletStore.currencyOptions,
+    )
+    const quote = sourceMoney
+      ? walletStore.quoteMoney(sourceMoney, targetCurrency)
+      : null
+    const money = quote?.ok ? quote.quotedMoney : sourceMoney
+    const displayAmountCents = money
+      ? convertMoneyToLegacyCents(money, walletStore.currencyOptions)
+      : null
+    return {
+      amountCents: displayAmountCents ?? Math.floor(Number(amountCents) || 0),
+      amount: money
+        ? walletStore.formatMoneyAmount(money, { useGrouping: false })
+        : formatAmount(amountCents),
+      currency: money?.currency || normalizeCurrency(sourceCurrency),
+      sourceMoney,
+      quote: quote?.ok ? quote : null,
+    }
+  }
+
   const restaurantMap = computed(
     () => new Map(restaurants.value.map((restaurant) => [restaurant.id, restaurant])),
   )
@@ -3021,24 +3075,36 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const menuItemCount = computed(() => menuItems.value.length)
   const harborRoastBeanStamps = computed(() => harborRoastRewards.value.beanStamps)
   const harborRoastMerchandise = computed(() =>
-    HARBOR_ROAST_MERCHANDISE_CATALOG.map((item) => ({
-      ...item,
-      currency: primaryCurrency.value,
-      purchasePrice: formatAmount(item.purchasePriceCents),
-      canPurchase: item.purchasePriceCents > 0,
-      canRedeem: item.beanStampCost > 0 && harborRoastBeanStamps.value >= item.beanStampCost,
-      missingBeanStamps: Math.max(0, item.beanStampCost - harborRoastBeanStamps.value),
-    })),
+    HARBOR_ROAST_MERCHANDISE_CATALOG.map((item) => {
+      const price = quoteLegacyAmount(item.purchasePriceCents, DEFAULT_CURRENCY)
+      return {
+        ...item,
+        sourcePurchasePriceCents: item.purchasePriceCents,
+        sourceCurrency: DEFAULT_CURRENCY,
+        purchasePriceCents: price.amountCents,
+        purchasePrice: price.amount,
+        currency: price.currency,
+        canPurchase: item.purchasePriceCents > 0,
+        canRedeem: item.beanStampCost > 0 && harborRoastBeanStamps.value >= item.beanStampCost,
+        missingBeanStamps: Math.max(0, item.beanStampCost - harborRoastBeanStamps.value),
+      }
+    }),
   )
   const peachCloudMerchandise = computed(() =>
-    PEACH_CLOUD_MERCHANDISE_CATALOG.map((item) => ({
-      ...item,
-      currency: primaryCurrency.value,
-      purchasePrice: formatAmount(item.purchasePriceCents),
-      canPurchase: item.purchasePriceCents > 0,
-      canRedeem: false,
-      missingBeanStamps: 0,
-    })),
+    PEACH_CLOUD_MERCHANDISE_CATALOG.map((item) => {
+      const price = quoteLegacyAmount(item.purchasePriceCents, DEFAULT_CURRENCY)
+      return {
+        ...item,
+        sourcePurchasePriceCents: item.purchasePriceCents,
+        sourceCurrency: DEFAULT_CURRENCY,
+        purchasePriceCents: price.amountCents,
+        purchasePrice: price.amount,
+        currency: price.currency,
+        canPurchase: item.purchasePriceCents > 0,
+        canRedeem: false,
+        missingBeanStamps: 0,
+      }
+    }),
   )
   const cartQuantity = computed(() =>
     cartItems.value.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
@@ -3047,28 +3113,47 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     platformCartItems.value.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0),
   )
   const platformCartPrimaryTotal = computed(() => {
-    const amountCents = platformCartItems.value.reduce(
+    const sourceAmountCents = platformCartItems.value.reduce(
       (sum, item) => sum + item.unitPriceCents * item.quantity,
       0,
     )
+    const sourceCurrency = platformCartItems.value[0]?.currency || DEFAULT_CURRENCY
+    const quoted = quoteLegacyAmount(sourceAmountCents, sourceCurrency)
     return {
-      currency: primaryCurrency.value,
-      amountCents,
-      amount: formatAmount(amountCents),
+      currency: quoted.currency,
+      amountCents: quoted.amountCents,
+      amount: quoted.amount,
     }
   })
   const platformOrderCount = computed(() => platformOrders.value.length)
   const recentPlatformOrders = computed(() => platformOrders.value.slice(0, 20))
   const orderCount = computed(() => orders.value.length)
   const recentOrders = computed(() => orders.value.slice(0, 5))
-  const presentRestaurant = (restaurant = {}) => ({
-    ...restaurant,
-    currency: primaryCurrency.value,
-  })
-  const presentMenuItem = (item = {}) => ({
-    ...item,
-    currency: primaryCurrency.value,
-  })
+  const presentRestaurant = (restaurant = {}) => {
+    const deliveryFee = quoteLegacyAmount(
+      restaurant.deliveryFeeCents,
+      restaurant.currency,
+    )
+    return {
+      ...restaurant,
+      sourceDeliveryFeeCents: restaurant.deliveryFeeCents,
+      sourceCurrency: restaurant.currency,
+      deliveryFeeCents: deliveryFee.amountCents,
+      deliveryFee: deliveryFee.amount,
+      currency: deliveryFee.currency,
+    }
+  }
+  const presentMenuItem = (item = {}) => {
+    const price = quoteLegacyAmount(item.priceCents, item.currency)
+    return {
+      ...item,
+      sourcePriceCents: item.priceCents,
+      sourceCurrency: item.currency,
+      priceCents: price.amountCents,
+      price: price.amount,
+      currency: price.currency,
+    }
+  }
   const categorySummaries = computed(() =>
     FOOD_DELIVERY_CATEGORY_ENTRIES.map((entry) => ({
       key: entry.key,
@@ -3088,12 +3173,23 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
           const sourceRestaurant = restaurantMap.value.get(item.restaurantId) || null
           const restaurant = sourceRestaurant ? presentRestaurant(sourceRestaurant) : null
           if (!merchandise || !restaurant) return null
-          const unitPriceCents = item.acquisition === 'redeemed_gift' ? 0 : item.unitPriceCents
-          const subtotalCents = unitPriceCents * item.quantity
+          const sourceUnitPriceCents = item.acquisition === 'redeemed_gift'
+            ? 0
+            : item.sourceUnitPriceCents ?? item.unitPriceCents
+          const sourceCurrency = item.sourceCurrency || DEFAULT_CURRENCY
+          const unitPrice = quoteLegacyAmount(sourceUnitPriceCents, sourceCurrency)
+          const subtotal = quoteLegacyAmount(
+            sourceUnitPriceCents * item.quantity,
+            sourceCurrency,
+          )
           return {
             ...item,
             lineId: item.lineId,
-            merchandise: { ...merchandise, currency: primaryCurrency.value },
+            merchandise: {
+              ...merchandise,
+              sourceCurrency,
+              currency: unitPrice.currency,
+            },
             menuItem: null,
             restaurant,
             title: merchandise.title,
@@ -3101,23 +3197,31 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
             titleEn: merchandise.titleEn,
             imagePath: merchandise.imagePath,
             assetBase: merchandise.assetBase || item.assetBase || 'harbor-roast',
-            unitPriceCents,
+            sourceUnitPriceCents,
+            sourceCurrency,
+            unitPriceCents: unitPrice.amountCents,
             isGift: item.acquisition === 'redeemed_gift',
-            subtotalCents,
-            subtotal: formatAmount(subtotalCents),
-            currency: primaryCurrency.value,
+            subtotalCents: subtotal.amountCents,
+            subtotal: subtotal.amount,
+            currency: subtotal.currency,
           }
         }
         const sourceMenuItem = menuItemMap.value.get(item.menuItemId)
         const menuItem = sourceMenuItem ? presentMenuItem(sourceMenuItem) : null
         if (!menuItem) return null
-        const sourceRestaurant = restaurantMap.value.get(menuItem.restaurantId) || null
+        const sourceRestaurant = restaurantMap.value.get(sourceMenuItem.restaurantId) || null
         const restaurant = sourceRestaurant ? presentRestaurant(sourceRestaurant) : null
-        const unitPriceCents =
-          Number.isFinite(Number(item.unitPriceCents)) && Number(item.unitPriceCents) > 0
-            ? Math.floor(Number(item.unitPriceCents))
-            : menuItem.priceCents
-        const subtotalCents = unitPriceCents * item.quantity
+        const sourceUnitPriceCents =
+          Number.isFinite(Number(item.sourceUnitPriceCents ?? item.unitPriceCents)) &&
+          Number(item.sourceUnitPriceCents ?? item.unitPriceCents) > 0
+            ? Math.floor(Number(item.sourceUnitPriceCents ?? item.unitPriceCents))
+            : sourceMenuItem.priceCents
+        const sourceCurrency = item.sourceCurrency || sourceMenuItem.currency
+        const unitPrice = quoteLegacyAmount(sourceUnitPriceCents, sourceCurrency)
+        const subtotal = quoteLegacyAmount(
+          sourceUnitPriceCents * item.quantity,
+          sourceCurrency,
+        )
         return {
           ...item,
           lineId: item.lineId || item.menuItemId,
@@ -3125,12 +3229,14 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
           restaurant,
           title: menuItem.title,
           image: menuItem.image,
-          unitPriceCents,
+          sourceUnitPriceCents,
+          sourceCurrency,
+          unitPriceCents: unitPrice.amountCents,
           acquisition: 'purchase',
           isGift: false,
-          subtotalCents,
-          subtotal: formatAmount(subtotalCents),
-          currency: menuItem.currency,
+          subtotalCents: subtotal.amountCents,
+          subtotal: subtotal.amount,
+          currency: subtotal.currency,
         }
       })
       .filter(Boolean),
@@ -3146,7 +3252,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       0,
     )
   const getCartTotalsByRestaurant = (restaurantId) => {
-    const restaurant = findRestaurantById(restaurantId)
+    const restaurant = restaurantMap.value.get(normalizeFoodId(restaurantId)) || null
     if (!restaurant) return []
     const lines = listCartLineItemsByRestaurant(restaurant.id)
     if (lines.length === 0) return []
@@ -3156,23 +3262,26 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         title: line.title,
         category: line.menuItem?.category || restaurant.category,
         quantity: line.quantity,
-        unitPriceCents: line.unitPriceCents,
-        currency: line.currency,
+        unitPriceCents: line.sourceUnitPriceCents,
+        currency: line.sourceCurrency,
       })),
       restaurant.deliveryFeeCents || 0,
-      primaryCurrency.value,
+      restaurant.currency,
     )
   }
   const getCartPrimaryTotalByRestaurant = (restaurantId) => {
     const totals = getCartTotalsByRestaurant(restaurantId)
-    return (
-      totals.find((item) => item.currency === primaryCurrency.value) ||
-      totals[0] || {
-        currency: primaryCurrency.value,
-        amountCents: 0,
-        amount: '0.00',
-      }
-    )
+    const restaurant = restaurantMap.value.get(normalizeFoodId(restaurantId)) || null
+    const sourceTotal = totals.find((item) => item.currency === restaurant?.currency) || totals[0]
+    if (!sourceTotal) {
+      return { currency: primaryCurrency.value, amountCents: 0, amount: '0.00' }
+    }
+    const quoted = quoteLegacyAmount(sourceTotal.amountCents, sourceTotal.currency)
+    return {
+      currency: quoted.currency,
+      amountCents: quoted.amountCents,
+      amount: quoted.amount,
+    }
   }
   const cartRestaurant = computed(() => cartLineItems.value[0]?.restaurant || null)
   const cartTotals = computed(() =>
@@ -3182,22 +3291,25 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         title: line.title,
         category: line.menuItem?.category || line.restaurant?.category || 'restaurants',
         quantity: line.quantity,
-        unitPriceCents: line.unitPriceCents,
-        currency: line.currency,
+        unitPriceCents: line.sourceUnitPriceCents,
+        currency: line.sourceCurrency,
       })),
-      cartRestaurant.value?.deliveryFeeCents || 0,
-      primaryCurrency.value,
+      cartRestaurant.value?.sourceDeliveryFeeCents || 0,
+      cartRestaurant.value?.sourceCurrency || DEFAULT_CURRENCY,
     ),
   )
-  const cartPrimaryTotal = computed(
-    () =>
-      cartTotals.value.find((item) => item.currency === primaryCurrency.value) ||
-      cartTotals.value[0] || {
-        currency: primaryCurrency.value,
-        amountCents: 0,
-        amount: '0.00',
-      },
-  )
+  const cartPrimaryTotal = computed(() => {
+    const sourceTotal = cartTotals.value[0]
+    if (!sourceTotal) {
+      return { currency: primaryCurrency.value, amountCents: 0, amount: '0.00' }
+    }
+    const quoted = quoteLegacyAmount(sourceTotal.amountCents, sourceTotal.currency)
+    return {
+      currency: quoted.currency,
+      amountCents: quoted.amountCents,
+      amount: quoted.amount,
+    }
+  })
 
   const findRestaurantById = (restaurantId) => {
     const id = normalizeFoodId(restaurantId)
@@ -3253,7 +3365,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const existing = existingIndex >= 0 ? restaurants.value[existingIndex] : null
     const restaurant = normalizeRestaurant({
       ...input,
-      currency: input.currency || primaryCurrency.value,
+      currency: input.currency || existing?.currency || primaryCurrency.value,
       id: inputId || createRestaurantId(),
       createdAt: existing?.createdAt || input.createdAt || now,
       updatedAt: now,
@@ -3264,7 +3376,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       restaurants.value.splice(existingIndex, 1, {
         ...existing,
         ...restaurant,
-        currency: primaryCurrency.value,
+        currency: restaurant.currency,
         createdAt: existing.createdAt,
       })
       return presentRestaurant(restaurants.value[existingIndex])
@@ -3282,10 +3394,14 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const inputId = normalizeFoodId(input.id)
     const existingIndex = inputId ? menuItems.value.findIndex((item) => item.id === inputId) : -1
     const existing = existingIndex >= 0 ? menuItems.value[existingIndex] : null
+    const restaurantCurrency = restaurantMap.value.get(
+      normalizeFoodId(input.restaurantId || existing?.restaurantId),
+    )?.currency
     const menuItem = normalizeMenuItem(
       {
         ...input,
-        currency: input.currency || primaryCurrency.value,
+        currency:
+          input.currency || existing?.currency || restaurantCurrency || primaryCurrency.value,
         id: inputId || createMenuItemId(),
         menuSection: input.menuSection || input.section || existing?.menuSection,
         createdAt: existing?.createdAt || input.createdAt || now,
@@ -3299,7 +3415,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       menuItems.value.splice(existingIndex, 1, {
         ...existing,
         ...menuItem,
-        currency: primaryCurrency.value,
+        currency: menuItem.currency,
         createdAt: existing.createdAt,
       })
       return presentMenuItem(menuItems.value[existingIndex])
@@ -3411,9 +3527,9 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const selection = selectionKey ? normalizeMenuSelection(options.selection) : null
     const selectedUnitPriceCents =
       selectionKey &&
-      Number.isFinite(Number(options.unitPriceCents)) &&
-      Number(options.unitPriceCents) > 0
-        ? Math.floor(Number(options.unitPriceCents))
+      Number.isFinite(Number(options.sourceUnitPriceCents ?? options.unitPriceCents)) &&
+      Number(options.sourceUnitPriceCents ?? options.unitPriceCents) > 0
+        ? Math.floor(Number(options.sourceUnitPriceCents ?? options.unitPriceCents))
         : null
     const lineId = selectionKey ? `${menuItem.id}__${selectionKey}`.slice(0, 140) : menuItem.id
     const existing = cartItems.value.find((item) => (item.lineId || item.menuItemId) === lineId)
@@ -3429,6 +3545,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       selectionKey,
       selection,
       unitPriceCents: selectedUnitPriceCents,
+      sourceUnitPriceCents: selectedUnitPriceCents,
+      sourceCurrency: menuItem.sourceCurrency || menuItem.currency,
       quantity: normalizedQuantity,
       sourceModule: normalizeText(options.sourceModule, 'food_delivery_cart', 60),
       sourceId: normalizeText(options.sourceId, '', 140),
@@ -3543,11 +3661,26 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     note = '',
     paymentMethod = 'app_pay',
     deliveryFee = '0.00',
+    currency = '',
     etaMinutes = 35,
   } = {}) => {
     if (platformCartItems.value.length === 0) return null
     const firstItem = platformCartItems.value[0]
     const now = Date.now()
+    const sourceCurrency = normalizeCurrency(currency || firstItem.currency)
+    const deliveryFeeCents = normalizeAmountCents(deliveryFee)
+    const itemsTotalCents = platformCartItems.value.reduce(
+      (sum, item) => sum + item.unitPriceCents * item.quantity,
+      0,
+    )
+    const sourceMoney = convertLegacyCentsToMoney(
+      itemsTotalCents + deliveryFeeCents,
+      sourceCurrency,
+      getWalletStore().currencyOptions,
+    )
+    const quoteSnapshot = sourceMoney
+      ? getWalletStore().quoteMoney(sourceMoney, getWalletStore().primaryCurrency, { quotedAt: now })
+      : null
     const order = normalizePlatformOrder({
       id: createPlatformOrderId(),
       status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
@@ -3559,14 +3692,15 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         title: item.title,
         quantity: item.quantity,
         unitPriceCents: item.unitPriceCents,
-        currency: primaryCurrency.value,
+        currency: item.currency,
       })),
       deliveryAddress,
       note,
       paymentMethod,
       deliveryFee,
       etaMinutes,
-      currency: primaryCurrency.value,
+      currency: sourceCurrency,
+      quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
       sourceModule: 'food_delivery_platform_checkout',
       sourceId: firstItem.merchantId,
       createdAt: now,
@@ -3648,16 +3782,33 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       normalizeFoodId(restaurantId) || cartLineItems.value[0]?.restaurant?.id || ''
     const lines = listCartLineItemsByRestaurant(targetRestaurantId)
     if (lines.length === 0) return null
-    const restaurant = findRestaurantById(targetRestaurantId)
+    const restaurant = restaurantMap.value.get(targetRestaurantId) || null
     if (!restaurant) return null
     const now = Date.now()
+    const normalizedFulfillmentMode = normalizeFulfillmentMode(fulfillmentMode)
+    const deliveryFeeCents = normalizedFulfillmentMode === 'pickup'
+      ? 0
+      : restaurant.deliveryFeeCents
+    const sourceTotalCents = lines.reduce(
+      (sum, line) => sum + line.sourceUnitPriceCents * line.quantity,
+      deliveryFeeCents,
+    )
+    const walletStore = getWalletStore()
+    const sourceMoney = convertLegacyCentsToMoney(
+      sourceTotalCents,
+      restaurant.currency,
+      walletStore.currencyOptions,
+    )
+    const quoteSnapshot = sourceMoney
+      ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
+      : null
     const order = normalizeFoodOrder({
       id: createFoodOrderId(),
       status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
       restaurantId: restaurant.id,
       restaurantName: restaurant.name,
       deliveryFeeCents: restaurant.deliveryFeeCents,
-      currency: primaryCurrency.value,
+      currency: restaurant.currency,
       items: lines.map((line) => ({
         id: `${line.lineId}_${line.addedAt}`,
         lineKind: line.lineKind,
@@ -3674,14 +3825,15 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         selectionKey: line.selectionKey,
         selection: line.selection,
         quantity: line.quantity,
-        unitPriceCents: line.unitPriceCents,
-        currency: primaryCurrency.value,
+        unitPriceCents: line.sourceUnitPriceCents,
+        currency: line.sourceCurrency,
       })),
       deliveryAddress,
       note,
       fulfillmentMode,
       pickupMode,
       relationshipBinding,
+      quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
       sourceModule,
       sourceId,
       createdAt: now,
@@ -3997,10 +4149,24 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     platformCartItems: platformCartItems.value.map((item) => ({ ...item })),
     platformOrders: platformOrders.value.map((order) => ({
       ...order,
+      quoteSnapshot: order.quoteSnapshot
+        ? {
+            ...order.quoteSnapshot,
+            sourceMoney: { ...order.quoteSnapshot.sourceMoney },
+            quotedMoney: { ...order.quoteSnapshot.quotedMoney },
+          }
+        : null,
       items: order.items.map((item) => ({ ...item })),
     })),
     orders: orders.value.map((order) => ({
       ...order,
+      quoteSnapshot: order.quoteSnapshot
+        ? {
+            ...order.quoteSnapshot,
+            sourceMoney: { ...order.quoteSnapshot.sourceMoney },
+            quotedMoney: { ...order.quoteSnapshot.quotedMoney },
+          }
+        : null,
       items: order.items.map((item) => ({
         ...item,
         selection: item.selection ? { ...item.selection } : null,

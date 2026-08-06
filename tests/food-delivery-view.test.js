@@ -159,6 +159,13 @@ describe('FoodDeliveryView', () => {
       '花见十二贯',
     )
 
+    expect(wrapper.get('[data-testid="food-delivery-platform-minimum-order"]').text()).toContain(
+      '77.76 CNY',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-minimum-order"]').text()).toContain(
+      '15,000 KRW',
+    )
+
     await wrapper.get('[data-testid="food-delivery-platform-merchant-back"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.platformView).toBe('search')
@@ -743,6 +750,75 @@ describe('FoodDeliveryView', () => {
         .text(),
     ).toBe('1')
     expect(wrapper.get('[data-testid="food-delivery-platform-cart-count"]').text()).toBe('1')
+    wrapper.unmount()
+  })
+
+  test('blocks platform checkout until the structured minimum order is met', async () => {
+    const router = createTestRouter()
+    await router.push(
+      '/food-delivery?platformView=merchant&platformMerchant=platform_salad_day',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+
+    await wrapper
+      .get('[data-testid="food-delivery-platform-menu-add-platform_salad_day_menu_1"]')
+      .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-platform-menu-view-cart"]').trigger('click')
+
+    const checkoutButton = wrapper.get(
+      '[data-testid="food-delivery-platform-cart-checkout"]',
+    )
+    expect(checkoutButton.attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="food-delivery-platform-cart-minimum-order"]').text()).toContain(
+      '9,000 KRW',
+    )
+    expect(router.currentRoute.value.query.platformView).toBe('merchant')
+
+    await wrapper
+      .get('[data-testid="food-delivery-platform-cart-increase-platform_salad_day_menu_1"]')
+      .trigger('click')
+    expect(checkoutButton.attributes('disabled')).toBeUndefined()
+
+    await checkoutButton.trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.platformView).toBe('checkout')
+    wrapper.unmount()
+  })
+
+  test('quotes platform campaign menu picks in the Wallet primary currency', async () => {
+    const router = createTestRouter()
+    const walletStore = useWalletStore()
+    walletStore.setPrimaryCurrency('EUR')
+    const expectedQuote = walletStore.quoteMoney(
+      { amountMinor: 3900, currency: 'CNY' },
+      'EUR',
+    )
+    await router.push(
+      '/food-delivery?platformView=campaign&platformCampaign=quick_lunch',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(expectedQuote.ok).toBe(true)
+    const pick = wrapper.get(
+      '[data-testid="food-delivery-platform-campaign-menu-platform_salad_day-0"]',
+    )
+    expect(pick.text()).toContain(
+      `${walletStore.formatMoneyAmount(expectedQuote.quotedMoney, { useGrouping: false })} EUR`,
+    )
+    expect(pick.text()).not.toContain('39.00 CNY')
     wrapper.unmount()
   })
 
@@ -1571,9 +1647,22 @@ describe('FoodDeliveryView', () => {
     const store = useFoodDeliveryStore()
     const restaurant = store.findRestaurantById('food_seed_moon_bistro')
     const menuItem = store.listMenuByRestaurant(restaurant.id)[0]
+    const sourceMenuItem = store.menuItems.find((item) => item.id === menuItem.id)
+    const expectedQuote = walletStore.quoteMoney(
+      { amountMinor: sourceMenuItem.priceCents, currency: sourceMenuItem.currency },
+      'EUR',
+    )
     await flushPromises()
 
     expect(store.primaryCurrency).toBe('EUR')
+    expect(expectedQuote.ok).toBe(true)
+    expect(menuItem).toMatchObject({
+      sourcePriceCents: sourceMenuItem.priceCents,
+      sourceCurrency: 'CNY',
+      priceCents: expectedQuote.quotedMoney.amountMinor,
+      currency: 'EUR',
+    })
+    expect(menuItem.priceCents).not.toBe(sourceMenuItem.priceCents)
     expect(wrapper.get(`[data-testid="food-delivery-menu-tray-${menuItem.id}"]`).text()).toContain(
       'EUR',
     )
@@ -1583,6 +1672,11 @@ describe('FoodDeliveryView', () => {
 
     expect(wrapper.get('[data-testid="food-delivery-cart-panel"]').text()).toContain('EUR')
     expect(store.cartPrimaryTotal.currency).toBe('EUR')
+    expect(store.cartLineItems[0]).toMatchObject({
+      sourceUnitPriceCents: sourceMenuItem.priceCents,
+      sourceCurrency: 'CNY',
+      currency: 'EUR',
+    })
     wrapper.unmount()
   })
 
@@ -3005,6 +3099,79 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('quotes Harbor Roast customization from source money exactly once', async () => {
+    const router = createTestRouter()
+    const walletStore = useWalletStore()
+    walletStore.setPrimaryCurrency('EUR')
+    await router.push('/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop')
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const menuItemId = 'food_menu_harbor_sea_salt_caramel_latte'
+    const sourceItem = store.menuItems.find((item) => item.id === menuItemId)
+
+    await wrapper.get('[data-testid="food-delivery-harbor-nav-menu"]').trigger('click')
+    await flushPromises()
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-harbor_signatures"]')
+      .trigger('click')
+    await wrapper
+      .get(`[data-testid="food-delivery-harbor-customize-${menuItemId}"]`)
+      .trigger('click')
+    await flushPromises()
+    await wrapper
+      .get('[data-testid="food-delivery-harbor-detail-quantity-increase"]')
+      .trigger('click')
+    await wrapper.get('[data-testid="food-delivery-harbor-size-long"]').trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-harbor-packaging-pompompurin_sleeve"]')
+      .trigger('click')
+
+    const sourceUnitPriceCents = sourceItem.priceCents + 400 + 500
+    const expectedUnitQuote = walletStore.quoteMoney(
+      { amountMinor: sourceUnitPriceCents, currency: sourceItem.currency },
+      'EUR',
+    )
+    const expectedTotalQuote = walletStore.quoteMoney(
+      { amountMinor: sourceUnitPriceCents * 2, currency: sourceItem.currency },
+      'EUR',
+    )
+    expect(expectedUnitQuote.ok).toBe(true)
+    expect(expectedTotalQuote.ok).toBe(true)
+    expect(wrapper.get('[data-testid="food-delivery-harbor-detail-page"]').text()).toContain(
+      `${walletStore.formatMoneyAmount(expectedTotalQuote.quotedMoney, { useGrouping: false })} EUR`,
+    )
+
+    await wrapper.get('[data-testid="food-delivery-harbor-detail-add"]').trigger('click')
+    const sourceLine = store.cartItems.find((item) => item.menuItemId === menuItemId)
+    const presentedLine = store
+      .listCartLineItemsByRestaurant('food_seed_harbor_roast')
+      .find((item) => item.menuItemId === menuItemId)
+    expect(sourceLine).toMatchObject({
+      sourceUnitPriceCents,
+      sourceCurrency: 'CNY',
+      quantity: 2,
+    })
+    expect(presentedLine).toMatchObject({
+      unitPriceCents: expectedUnitQuote.quotedMoney.amountMinor,
+      subtotalCents: expectedTotalQuote.quotedMoney.amountMinor,
+      currency: 'EUR',
+    })
+
+    await wrapper.get('[data-testid="food-delivery-harbor-header-bag"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-harbor-checkout-sheet"]').text()).toContain(
+      `${walletStore.formatMoneyAmount(expectedTotalQuote.quotedMoney, { useGrouping: false })} EUR`,
+    )
+    wrapper.unmount()
+  })
+
   test('resolves Verdant Day as a minimalist light-food app with route-driven detail, bag, and order pages', async () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
@@ -3999,6 +4166,7 @@ describe('FoodDeliveryView', () => {
       counterparty: activeRestaurant.name,
       sourceModule: 'food_delivery_wallet_expense',
       sourceId: order.id,
+      quoteSnapshot: order.quoteSnapshot,
     })
     expect(relationshipSummary.metrics.affinity).toBe(56)
     expect(relationshipSummary.metrics.intimacy).toBe(25)

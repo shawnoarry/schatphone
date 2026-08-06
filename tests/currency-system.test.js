@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import {
   SYSTEM_WALLET_CURRENCIES,
+  convertLegacyCentsToMoney,
+  convertMoneyToLegacyCents,
   createDefaultWalletExchangeRates,
   createMoneyQuote,
   formatMoney,
@@ -8,6 +10,7 @@ import {
   getRateToUsd,
   normalizeDecimalString,
   normalizeCurrencyDefinition,
+  normalizeMoneyQuote,
   normalizeWalletExchangeRates,
   reviseWalletExchangeRates,
 } from '../src/lib/currency-system'
@@ -69,6 +72,50 @@ describe('currency system', () => {
       quotedAt: 42,
       targetCurrency: 'USD',
     })
+  })
+
+  test('adapts legacy exponent-2 cents before quoting zero and custom-decimal currencies', () => {
+    expect(convertLegacyCentsToMoney(1_000_000, 'KRW')).toEqual({
+      amountMinor: 10_000,
+      currency: 'KRW',
+    })
+    expect(
+      convertLegacyCentsToMoney(1234, 'CRD', [{ code: 'CRD', exponent: 3 }]),
+    ).toEqual({
+      amountMinor: 12_340,
+      currency: 'CRD',
+    })
+    expect(convertLegacyCentsToMoney(155, 'JPY')).toEqual({
+      amountMinor: 2,
+      currency: 'JPY',
+    })
+    expect(convertMoneyToLegacyCents({ amountMinor: 10_000, currency: 'KRW' })).toBe(1_000_000)
+    expect(
+      convertMoneyToLegacyCents(
+        { amountMinor: 12_340, currency: 'CRD' },
+        [{ code: 'CRD', exponent: 3 }],
+      ),
+    ).toBe(1234)
+  })
+
+  test('normalizes complete immutable quote snapshots and rejects partial provenance', () => {
+    const quote = createMoneyQuote({
+      sourceMoney: { amountMinor: 3900, currency: 'CNY' },
+      targetCurrency: 'USD',
+      exchangeRates: createDefaultWalletExchangeRates(),
+      quotedAt: 42,
+    })
+
+    expect(normalizeMoneyQuote(quote)).toEqual({
+      sourceMoney: { amountMinor: 3900, currency: 'CNY' },
+      quotedMoney: { amountMinor: 542, currency: 'USD' },
+      rateSetId: 'wallet-rates-bundled-average-v1',
+      rate: '0.138888888888888888888889',
+      rateSource: 'bundled_average',
+      quotedAt: 42,
+      targetCurrency: 'USD',
+    })
+    expect(normalizeMoneyQuote({ ...quote, rateSetId: '' })).toBeNull()
   })
 
   test('rounds negative half values away from zero for zero-decimal currencies', () => {

@@ -20,6 +20,7 @@ import {
   normalizeDecimalString,
   normalizeCurrencyCode,
   normalizeCurrencyDefinition,
+  normalizeMoneyQuote,
   normalizeWalletExchangeRates,
   reviseWalletExchangeRates,
 } from '../lib/currency-system'
@@ -263,6 +264,9 @@ const normalizeWalletTransaction = (rawTransaction, index = 0, fallbackCurrency 
     sourceChatId: normalizePositiveInt(rawTransaction.sourceChatId),
     sourceMessageId: normalizeText(rawTransaction.sourceMessageId, '', 140),
     relationshipBinding: normalizeRelationshipBinding(rawTransaction.relationshipBinding),
+    quoteSnapshot: normalizeMoneyQuote(
+      rawTransaction.quoteSnapshot || rawTransaction.moneyQuote || rawTransaction.checkoutQuote,
+    ),
     createdAt,
     updatedAt: Math.max(0, toInt(rawTransaction.updatedAt, createdAt)),
   }
@@ -1062,7 +1066,16 @@ export const useWalletStore = defineStore('wallet', () => {
     })),
     knownPayeeAccounts: knownPayeeAccounts.value.map((payee) => ({ ...payee })),
     activeCardId: activeCardId.value,
-    transactions: transactions.value.map((item) => ({ ...item })),
+    transactions: transactions.value.map((item) => ({
+      ...item,
+      quoteSnapshot: item.quoteSnapshot
+        ? {
+            ...item.quoteSnapshot,
+            sourceMoney: { ...item.quoteSnapshot.sourceMoney },
+            quotedMoney: { ...item.quoteSnapshot.quotedMoney },
+          }
+        : null,
+    })),
   })
 
   const createBackupSnapshotAsync = async () => createBackupSnapshot()

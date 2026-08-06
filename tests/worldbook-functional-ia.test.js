@@ -593,6 +593,7 @@ describe('WorldBook functional IA', () => {
     await wrapper.get('[data-testid="worldbook-currency-label-zh"]').setValue('信用点')
     await wrapper.get('[data-testid="worldbook-currency-label-en"]').setValue('Credits')
     await wrapper.get('[data-testid="worldbook-currency-symbol"]').setValue('CR')
+    await wrapper.get('[data-testid="worldbook-currency-exponent"]').setValue('0')
     await wrapper.get('[data-testid="worldbook-currency-rate-cny"]').setValue('0.25')
     await wrapper.get('[data-testid="worldbook-save-currency"]').trigger('click')
     await nextTick()
@@ -601,9 +602,12 @@ describe('WorldBook functional IA', () => {
       expect.objectContaining({
         code: 'CRD',
         labelEn: 'Credits',
+        exponent: 0,
       }),
     ])
     expect(walletStore.currencyOptions.map((currency) => currency.code)).toContain('CRD')
+    expect(walletStore.currencyOptions.find((currency) => currency.code === 'CRD')?.exponent).toBe(0)
+    expect(walletStore.formatMoney({ amountMinor: 1234, currency: 'CRD' })).toBe('CRD 1,234')
     expect(walletStore.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe('0.2500')
     expect(wrapper.get('[data-testid="worldbook-currency-notice"]').text()).toContain('CRD')
 

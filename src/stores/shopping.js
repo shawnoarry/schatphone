@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { convertLegacyCentsToMoney, normalizeMoneyQuote } from '../lib/currency-system'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import {
   SHOPPING_CATEGORY_ENTRIES,
@@ -14,6 +15,7 @@ import {
 } from '../lib/relationship-cleanup-helpers'
 import { useCalendarStore } from './calendar'
 import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from './chat'
+import { useWalletStore } from './wallet'
 
 const SHOPPING_STORAGE_KEY = 'store:shopping'
 const SHOPPING_STORAGE_VERSION = 1
@@ -421,6 +423,9 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
     amountCents: 0,
     amount: '0.00',
   }
+  const quoteSnapshot = normalizeMoneyQuote(
+    rawOrder.quoteSnapshot || rawOrder.moneyQuote || rawOrder.checkoutQuote,
+  )
 
   return {
     id: normalizeText(rawOrder.id, `shopping_order_legacy_${now}_${index}`, 140),
@@ -430,6 +435,7 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
     totals,
     totalCents: primaryTotal.amountCents,
     currency: primaryTotal.currency,
+    quoteSnapshot,
     note: normalizeText(rawOrder.note, '', 240),
     recipient: normalizeText(rawOrder.recipient, '', 120),
     giftRecipient: normalizeGiftRecipient(rawOrder),
@@ -523,6 +529,7 @@ const createSeedProducts = () => normalizeShoppingProducts([
 export const useShoppingStore = defineStore('shopping', () => {
   const getCalendarStore = () => useCalendarStore()
   const getChatStore = () => useChatStore()
+  const getWalletStore = () => useWalletStore()
   const products = ref([])
   const favoriteProductIds = ref([])
   const cartItems = ref([])
@@ -769,6 +776,16 @@ export const useShoppingStore = defineStore('shopping', () => {
     const lines = cartLineItems.value
     if (lines.length === 0) return null
     const now = Date.now()
+    const sourceTotal = cartPrimaryTotal.value
+    const walletStore = getWalletStore()
+    const sourceMoney = convertLegacyCentsToMoney(
+      sourceTotal.amountCents,
+      sourceTotal.currency,
+      walletStore.currencyOptions,
+    )
+    const quoteSnapshot = sourceMoney
+      ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
+      : null
     const order = normalizeShoppingOrder({
       id: createShoppingOrderId(),
       status: SHOPPING_ORDER_STATUS.PLACED,
@@ -788,6 +805,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       note,
       recipient,
       giftRecipient,
+      quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
       sourceModule: normalizeText(sourceModule, SHOPPING_SOURCE_KEYS.ORDER_UPDATE, 40),
       sourceId,
       createdAt: now,
@@ -944,6 +962,13 @@ export const useShoppingStore = defineStore('shopping', () => {
     cartItems: cartItems.value.map((item) => ({ ...item })),
     orders: orders.value.map((order) => ({
       ...order,
+      quoteSnapshot: order.quoteSnapshot
+        ? {
+            ...order.quoteSnapshot,
+            sourceMoney: { ...order.quoteSnapshot.sourceMoney },
+            quotedMoney: { ...order.quoteSnapshot.quotedMoney },
+          }
+        : null,
       items: order.items.map((item) => ({ ...item })),
       totals: order.totals.map((item) => ({ ...item })),
       events: Array.isArray(order.events) ? order.events.map((event) => ({ ...event })) : [],

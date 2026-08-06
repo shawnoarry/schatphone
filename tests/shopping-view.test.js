@@ -157,6 +157,55 @@ describe('ShoppingView', () => {
     wrapper.unmount()
   })
 
+  test('uses live Wallet quotes for catalog and cart while recording the frozen checkout quote', async () => {
+    const router = createTestRouter()
+    const store = useShoppingStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    walletStore.resetForTesting()
+    walletStore.setPrimaryCurrency('USD')
+    const product = store.upsertProduct({
+      id: 'product_view_quote',
+      title: 'Currency Quote Gift',
+      category: 'gifts',
+      price: '39.00',
+      currency: 'CNY',
+    })
+
+    await router.push('/shopping?category=gifts')
+    await router.isReady()
+    const wrapper = mount(ShoppingView, {
+      global: { plugins: [router] },
+    })
+
+    const productCard = wrapper.get(`[data-testid="shopping-product-${product.id}"]`)
+    expect(productCard.text()).toContain('5.42 USD')
+    expect(productCard.text()).toContain('39.00 CNY')
+
+    await wrapper.get(`[data-testid="shopping-add-cart-${product.id}"]`).trigger('click')
+    expect(wrapper.text()).toContain('5.42 USD · 39.00 CNY')
+    await wrapper.get('[data-testid="shopping-checkout"]').trigger('click')
+    const order = store.orders[0]
+    expect(order.quoteSnapshot?.quotedMoney).toEqual({ amountMinor: 542, currency: 'USD' })
+
+    walletStore.setPrimaryCurrency('EUR')
+    walletStore.setUsdCnyRate('10')
+    await flushPromises()
+    expect(wrapper.get(`[data-testid="shopping-order-${order.id}"]`).text()).toContain('5.42 USD')
+
+    store.markOrderCompleted(order.id)
+    await flushPromises()
+    await wrapper.get(`[data-testid="shopping-transfer-wallet-${order.id}"]`).trigger('click')
+    const transaction = walletStore.findTransactionBySource('shopping_wallet_expense', order.id)
+    expect(transaction).toMatchObject({
+      amountCents: 542,
+      currency: 'USD',
+      quoteSnapshot: order.quoteSnapshot,
+    })
+
+    wrapper.unmount()
+  })
+
   test('creates user custom products with URL and Gallery images', async () => {
     const router = createTestRouter()
     const store = useShoppingStore()

@@ -67,6 +67,38 @@ describe('wallet store', () => {
     })
   })
 
+  test('persists source-linked quote provenance without re-quoting ledger history', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+    const quoteSnapshot = store.quoteMoney(
+      { amountMinor: 3900, currency: 'CNY' },
+      'USD',
+      { quotedAt: Date.now() },
+    )
+    const persistedQuoteSnapshot = { ...quoteSnapshot }
+    delete persistedQuoteSnapshot.ok
+    const transaction = store.addTransaction({
+      type: 'expense',
+      title: 'Shopping order',
+      amount: '5.42',
+      currency: 'USD',
+      sourceModule: 'shopping_wallet_expense',
+      sourceId: 'shopping_quote_order',
+      quoteSnapshot,
+    })
+    const snapshot = store.createBackupSnapshot()
+
+    store.setUsdCnyRate('10')
+    expect(transaction.quoteSnapshot).toEqual(persistedQuoteSnapshot)
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.findTransactionBySource('shopping_wallet_expense', 'shopping_quote_order')).toMatchObject({
+      amountCents: 542,
+      currency: 'USD',
+      quoteSnapshot: persistedQuoteSnapshot,
+    })
+  })
+
   test('stores relationship binding on manual transfer records and anonymizes them during cleanup', () => {
     const store = useWalletStore()
     store.resetForTesting()
