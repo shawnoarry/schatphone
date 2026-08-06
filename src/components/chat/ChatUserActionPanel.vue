@@ -170,7 +170,7 @@ const shoppingShareHint = (product = {}) =>
         @click="$emit('open-form', USER_ACTION_FORM_TRANSFER)"
         class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
       >
-        {{ t('转账', 'Transfer') }}
+        {{ t('向对方转账', 'Send money') }}
       </button>
       <button
         data-testid="chat-user-action-open-voice"
@@ -311,7 +311,7 @@ const shoppingShareHint = (product = {}) =>
     </div>
 
     <div v-else-if="userActionFormType === USER_ACTION_FORM_TRANSFER" class="space-y-2">
-      <p class="text-[11px] font-medium text-gray-700">{{ t('发送转账卡片', 'Send transfer card') }}</p>
+      <p class="text-[11px] font-medium text-gray-700">{{ t('请求收款账户', 'Request receiving account') }}</p>
       <div class="grid grid-cols-3 gap-2">
         <input
           data-testid="chat-user-action-transfer-amount"
@@ -321,7 +321,7 @@ const shoppingShareHint = (product = {}) =>
           type="text"
           inputmode="decimal"
           class="col-span-2 rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] outline-none"
-          :placeholder="t('金额，如 88.00', 'Amount, e.g. 88.00')"
+          :placeholder="t('准备转账的金额', 'Planned amount')"
         />
         <select
           data-testid="chat-user-action-transfer-currency"
@@ -366,7 +366,7 @@ const shoppingShareHint = (product = {}) =>
           class="rounded-lg border px-2 py-1 text-[11px] transition disabled:cursor-not-allowed disabled:opacity-50"
           :class="transferFormState.valid ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' : 'border-gray-200 bg-gray-100 text-gray-500'"
         >
-          {{ t('发送转账', 'Send transfer') }}
+          {{ t('请求账户卡', 'Request account card') }}
         </button>
       </div>
     </div>

@@ -214,6 +214,7 @@ const serviceNotificationTone = (block = {}) =>
   SERVICE_NOTIFICATION_TONES[serviceNotificationToneKey(block)] || SERVICE_NOTIFICATION_TONES.service
 
 const shareCardTypeLabel = (block = {}) => {
+  if (block.shareType === 'payee_account') return t('收款账户', 'Receiving account')
   if (block.shareType === 'gift_card') return t('礼品卡', 'Gift card')
   if (block.shareType === 'virtual_gift') return t('虚拟礼物', 'Virtual gift')
   if (block.shareType === 'tracking_share') return t('物流分享', 'Tracking share')
@@ -227,6 +228,7 @@ const shareCardTypeLabel = (block = {}) => {
 
 const shareCardSourceLabel = (block = {}) => {
   if (block.serviceLabel || block.serviceKey) return block.serviceLabel || block.serviceKey
+  if (block.sourceModule === 'wallet') return 'Wallet'
   if (block.sourceModule === 'shopping') return t('Shopping', 'Shopping')
   if (block.sourceModule === 'logistics') return t('Logistics', 'Logistics')
   if (block.sourceModule === 'food_delivery') return t('Food Delivery', 'Food Delivery')
@@ -237,6 +239,14 @@ const shareCardSourceLabel = (block = {}) => {
 }
 
 const shareCardToneClass = (block = {}) => {
+  if (block.shareType === 'payee_account') {
+    return {
+      card: 'border-emerald-200 bg-emerald-50/90',
+      label: 'text-emerald-700',
+      pill: 'bg-white text-emerald-700',
+      button: 'border-emerald-200 bg-white text-emerald-800',
+    }
+  }
   if (block.shareType === 'gift_card' || block.shareType === 'virtual_gift') {
     return {
       card: 'border-rose-100 bg-rose-50/80',
@@ -260,6 +270,11 @@ const shareCardToneClass = (block = {}) => {
     button: 'border-amber-200 bg-white text-amber-700',
   }
 }
+
+const shareCardActionLabel = (block = {}) =>
+  block.shareType === 'payee_account'
+    ? t('去 Wallet 转账', 'Transfer in Wallet')
+    : t('打开来源', 'Open source')
 
 const quoteLabel = (quote = {}) => {
   if (quote.sourceType === 'service_notification') return t('引用通知', 'Quoted notification')
@@ -478,7 +493,7 @@ const metaClasses = computed(() => [
                 {{ block.sourceModule }}
               </span>
             </div>
-            <p v-if="block.aiContext?.mutationBoundary" class="mt-2 rounded-md border border-white/70 bg-white/60 px-2 py-1.5 text-[10px] leading-4 text-gray-500">
+            <p v-if="block.aiContext?.mutationBoundary && block.shareType !== 'payee_account'" class="mt-2 rounded-md border border-white/70 bg-white/60 px-2 py-1.5 text-[10px] leading-4 text-gray-500">
               {{ block.aiContext.mutationBoundary }}
             </p>
             <button
@@ -488,7 +503,7 @@ const metaClasses = computed(() => [
               class="mt-2 rounded-md border px-2 py-1 text-[11px] font-semibold"
               :class="shareCardToneClass(block).button"
             >
-              {{ t('打开来源', 'Open source') }}
+              {{ shareCardActionLabel(block) }}
             </button>
           </div>
 

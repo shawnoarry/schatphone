@@ -105,7 +105,7 @@ describe('Chat active thread model interface', () => {
     expect(model.activeAiPrefs.value).toBe(DEFAULT_CHAT_THREAD_AI_PREFS)
     expect(model.canActiveChatCommunicate.value).toBe(false)
     expect(model.isActiveServiceChat.value).toBe(false)
-    expect(model.activeContactAvatar.value).toContain('api.dicebear.com')
+    expect(model.activeContactAvatar.value).toMatch(/^data:image\/svg\+xml;charset=UTF-8,/)
   })
 
   test('resolves thread and user avatars through the same hierarchy used by ChatView', () => {

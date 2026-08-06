@@ -28,6 +28,37 @@ describe('chat store model', () => {
     expect(messages[0].blocks[0]?.type).toBe('text')
   })
 
+  test('keeps stable role receiving accounts through Chat backup restore', () => {
+    const store = useChatStore()
+    const originalProfile = store.getRoleProfileById(1)
+    const originalAccount = originalProfile.payeeAccounts[0]
+    const snapshot = {
+      roleProfiles: store.roleProfiles.map((profile) => ({
+        ...profile,
+        payeeAccounts: profile.payeeAccounts.map((account) => ({ ...account })),
+      })),
+      contacts: store.contacts.map((contact) => ({ ...contact })),
+      conversations: JSON.parse(JSON.stringify(store.conversations)),
+      messagesByConversation: JSON.parse(JSON.stringify(store.messagesByConversation)),
+    }
+
+    expect(originalAccount).toMatchObject({
+      id: 'role_payee_1_icbc_cny',
+      institutionId: 'icbc',
+      currency: 'CNY',
+      status: 'active',
+      isPrimary: true,
+    })
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.getRoleProfileById(1).payeeAccounts).toEqual(
+      snapshot.roleProfiles.find((profile) => profile.id === 1).payeeAccounts,
+    )
+    expect(store.getRoleProfileById(2).payeeAccounts[0]).toMatchObject({
+      institutionId: 'kb-kookmin',
+      currency: 'KRW',
+    })
+  })
+
   test('supports draft, unread and message status updates', () => {
     const store = useChatStore()
     const contactId = store.contacts[0].id
@@ -617,7 +648,8 @@ describe('chat store model', () => {
 
     store.updateContact(created.id, { avatar: '' })
     const fallbackAvatar = store.resolveContactAvatar(created.id)
-    expect(fallbackAvatar).toContain('https://api.dicebear.com/7.x/avataaars/svg?seed=')
+    expect(fallbackAvatar).toMatch(/^data:image\/svg\+xml;charset=UTF-8,/)
+    expect(fallbackAvatar).not.toMatch(/^https?:\/\//)
   })
 
   test('supports chat module user identity and anonymity scope', () => {

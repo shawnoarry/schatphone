@@ -220,6 +220,8 @@ describe('Chat AI prompt context model interface', () => {
     expect(rolePrompt).toContain('Allow plain, quote_user. Disallow quote_self.')
     expect(rolePrompt).toContain('image_virtual blocks are allowed only when reference cues are present')
     expect(rolePrompt).toContain('Image-reference transport mode: native_url (provider: openai).')
+    expect(rolePrompt).toContain('Never invent, guess, or output a bank name paired with an account number')
+    expect(rolePrompt).toContain('Only a Wallet-confirmed receipt represents a completed transfer')
 
     const servicePrompt = model.buildSystemPrompt(
       { id: 9, kind: 'service', name: 'Daily Fresh', role: 'service', serviceTemplate: 'Helpful store account' },

@@ -1,6 +1,6 @@
 # Home Folder, Shopping, and Assets Direction
 
-Updated: 2026-05-19
+Updated: 2026-08-06
 
 This document defines how Home folders, Shopping, Assets, Wallet, and Stock should relate to each other.
 
@@ -152,6 +152,8 @@ That means:
 - Shopping, Logistics, and Food Delivery can produce Chat service-account notifications into existing Chat Directory service accounts;
 - Wallet can attach supporting relationship traceability to those records when explicit upstream lineage exists, but it should not create a competing primary memory for the same order or shared meal;
 - Assets-related purchases or ownership changes may produce Wallet records;
+- Wallet itself presents the user's virtual bank accounts, debit cards, multi-currency credit card, transfers, receipts, activity, and finance settings; the current product does not split those interactions into a separate Bank app;
+- Wallet account balances derive from its ledger, while credit-card limits stay outside cash and Assets;
 - Wallet does not become the owner of products, stores, or asset truth.
 
 ## 9. Map Relationship

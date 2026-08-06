@@ -44,6 +44,10 @@ import {
   normalizeRoleDetailSection,
   normalizeRoleId,
 } from '../lib/role-profile-schema'
+import {
+  cloneRolePayeeAccounts,
+  normalizeRolePayeeAccounts,
+} from '../lib/wallet-banking'
 
 const CHAT_STORAGE_KEY = 'store:chat'
 const CHAT_STORAGE_VERSION = 2
@@ -137,6 +141,7 @@ const MAX_SHORT_LABEL_LENGTH = 80
 const MAX_QUOTE_PREVIEW_LENGTH = 240
 const MAX_QUOTE_MESSAGE_ID_LENGTH = 128
 const MAX_AI_META_PROVIDER_LENGTH = 32
+const MAX_INTERNAL_ROUTE_LENGTH = 2048
 const MAX_BLOCK_COUNT = 16
 const MAX_SERVICE_ACTION_COUNT = 3
 const MAX_ROLE_KNOWLEDGE_POINT_IDS = 80
@@ -358,7 +363,7 @@ const mergeRoleProfileAssetFolderBindings = (currentBindings, updates) => {
 }
 
 const sanitizeRoutePath = (value, fallback = SAFE_ROUTE_FALLBACK) => {
-  const route = trimTo(value, 200)
+  const route = trimTo(value, MAX_INTERNAL_ROUTE_LENGTH)
   if (!route) return fallback
   if (!route.startsWith('/') || route.startsWith('//')) return fallback
   if (/\s/.test(route)) return fallback
@@ -881,9 +886,10 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
         : CONTACTS_ENTITY_TYPES.MAIN_ROLE,
   )
   const relationshipFields = normalizeRelationshipProfileFields(rawProfile)
+  const roleId = normalizeRoleId(rawProfile?.roleId, createRoleIdFromProfileId(id, fallbackIndex))
   return {
     id,
-    roleId: normalizeRoleId(rawProfile?.roleId, createRoleIdFromProfileId(id, fallbackIndex)),
+    roleId,
     name,
     role: typeof rawProfile?.role === 'string' ? rawProfile.role : '',
     entityType,
@@ -905,6 +911,11 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
     profileValues: normalizeProfileValues(rawProfile?.profileValues),
     capabilities: normalizeProfileCapabilities(rawProfile?.capabilities, entityType),
     detailItems: normalizeRoleDetailItems(rawProfile?.detailItems, fallbackIndex),
+    payeeAccounts: normalizeRolePayeeAccounts(rawProfile?.payeeAccounts, {
+      profileId: id,
+      roleId,
+      entityType,
+    }),
     assetPack: normalizeRoleProfileAssetPack(rawProfile?.assetPack),
     assetFolderBindings: normalizeRoleProfileAssetFolderBindings(rawProfile?.assetFolderBindings),
     tags: Array.isArray(rawProfile?.tags)
@@ -2623,6 +2634,19 @@ export const useChatStore = defineStore('chat', () => {
       target.isMain = entityType === CONTACTS_ENTITY_TYPES.MAIN_ROLE
       target.capabilities = normalizeProfileCapabilities(target.capabilities, entityType)
     }
+    if (Array.isArray(updates.payeeAccounts)) {
+      target.payeeAccounts = normalizeRolePayeeAccounts(updates.payeeAccounts, {
+        profileId: target.id,
+        roleId: target.roleId,
+        entityType: target.entityType,
+      })
+    } else {
+      target.payeeAccounts = normalizeRolePayeeAccounts(target.payeeAccounts, {
+        profileId: target.id,
+        roleId: target.roleId,
+        entityType: target.entityType,
+      })
+    }
     if (updates.templateLink && typeof updates.templateLink === 'object') {
       target.templateLink = normalizeProfileTemplateLink(updates.templateLink)
     }
@@ -3237,6 +3261,7 @@ export const useChatStore = defineStore('chat', () => {
             : [],
           capabilities: { ...profile.capabilities },
           detailItems: cloneRoleDetailItems(profile.detailItems),
+          payeeAccounts: cloneRolePayeeAccounts(profile.payeeAccounts),
           assetPack: cloneRoleProfileAssetPack(profile.assetPack),
           assetFolderBindings: cloneRoleProfileAssetFolderBindings(profile.assetFolderBindings),
         })),

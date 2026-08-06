@@ -44,6 +44,7 @@ export const useChatUserActionPanelModel = ({
   activeRoleAssetContext,
   currentLocationText,
   primaryCurrency,
+  rolePayeeAccount,
   canActiveChatCommunicate,
   resolveFolderAssetsByCategory,
   closeMessageActions,
@@ -52,6 +53,9 @@ export const useChatUserActionPanelModel = ({
   t,
 } = {}) => {
   const translate = (zh, en) => translateWith(t, zh, en)
+  const usesVerifiedPayeeFlow = Boolean(
+    rolePayeeAccount && typeof rolePayeeAccount === 'object' && 'value' in rolePayeeAccount,
+  )
 
   const showUserActionPanel = ref(false)
   const pendingUserMediaKind = ref(CHAT_USER_MEDIA_KINDS.IMAGE)
@@ -170,8 +174,8 @@ export const useChatUserActionPanelModel = ({
     if (!locationShareState.value.enabled) hints.push(locationShareState.value.message)
     if (hints.length > 0) return hints.join(' · ')
     return translate(
-      '可通过 + 面板发送图片、链接、位置、转账、语音卡片与购物建议。',
-      'Use + panel to send images, links, location, transfer cards, voice cards and shopping picks.',
+      '可通过 + 面板发送图片、链接、位置、收款账户请求、语音卡片与购物建议。',
+      'Use + panel to send images, links, location, payee-account requests, voice cards and shopping picks.',
     )
   })
 
@@ -199,6 +203,16 @@ export const useChatUserActionPanelModel = ({
   })
 
   const transferFormState = computed(() => {
+    const payeeAccount = usesVerifiedPayeeFlow ? rolePayeeAccount.value : null
+    if (usesVerifiedPayeeFlow && !payeeAccount) {
+      return {
+        valid: false,
+        message: translate('当前聊天对象没有可分享的收款账户。', 'This chat target has no shareable receiving account.'),
+        amount: '',
+        currency: '',
+        note: '',
+      }
+    }
     const amount = normalizeString(userActionDraft.transferAmount)
     if (!amount) {
       return {
@@ -230,10 +244,24 @@ export const useChatUserActionPanelModel = ({
         note: '',
       }
     }
+    if (payeeAccount?.currency && currency !== payeeAccount.currency) {
+      return {
+        valid: false,
+        message: translate(
+          `对方账户仅接收 ${payeeAccount.currency}。`,
+          `The receiving account accepts ${payeeAccount.currency} only.`,
+        ),
+        amount: '',
+        currency: '',
+        note: '',
+      }
+    }
 
     return {
       valid: true,
-      message: translate('转账卡片信息可发送。', 'Transfer card is ready to send.'),
+      message: usesVerifiedPayeeFlow
+        ? translate('将请求对方发送验证账户卡。', 'A verified account card will be requested.')
+        : translate('转账卡片信息可发送。', 'Transfer card is ready to send.'),
       amount,
       currency,
       note: normalizeString(userActionDraft.transferNote),
@@ -274,7 +302,7 @@ export const useChatUserActionPanelModel = ({
     userActionDraft.linkTitle = ''
     userActionDraft.linkNote = ''
     userActionDraft.transferAmount = ''
-    userActionDraft.transferCurrency = primaryCurrency?.value || 'CNY'
+    userActionDraft.transferCurrency = rolePayeeAccount?.value?.currency || primaryCurrency?.value || 'CNY'
     userActionDraft.transferNote = ''
     userActionDraft.voiceTranscript = ''
     userActionDraft.voiceDurationSec = 8
@@ -346,6 +374,9 @@ export const useChatUserActionPanelModel = ({
     }
     showUserActionPanel.value = true
     userActionFormType.value = nextType
+    if (nextType === CHAT_USER_ACTION_FORMS.TRANSFER && rolePayeeAccount?.value?.currency) {
+      userActionDraft.transferCurrency = rolePayeeAccount.value.currency
+    }
     if (nextType === CHAT_USER_ACTION_FORMS.GALLERY) {
       galleryPickerCategory.value = resolveInitialGalleryCategory()
     }

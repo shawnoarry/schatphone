@@ -31,6 +31,7 @@ const createModel = ({
   activeRoleAssetContext = {},
   currentLocationText = 'Seoul Station',
   primaryCurrency = 'CNY',
+  rolePayeeAccount,
   canCommunicate = true,
   closeMessageActions = vi.fn(),
   showUiNotice = vi.fn(),
@@ -47,6 +48,7 @@ const createModel = ({
     }),
     currentLocationText: ref(currentLocationText),
     primaryCurrency: ref(primaryCurrency),
+    rolePayeeAccount: rolePayeeAccount === undefined ? undefined : ref(rolePayeeAccount),
     canActiveChatCommunicate: ref(canCommunicate),
     closeMessageActions,
     showUiNotice,
@@ -134,6 +136,36 @@ describe('Chat user action panel model interface', () => {
     })
   })
 
+  test('locks verified account requests to the persisted role account currency', () => {
+    const model = createModel({
+      primaryCurrency: 'CRD',
+      rolePayeeAccount: { id: 'role_payee_7_kb_krw', currency: 'KRW' },
+    })
+
+    model.openUserActionForm(CHAT_USER_ACTION_FORMS.TRANSFER)
+    expect(model.userActionDraft.transferCurrency).toBe('KRW')
+    model.updateUserActionDraft({ key: 'transferAmount', value: '12.30' })
+    expect(model.transferFormState.value).toMatchObject({
+      valid: true,
+      amount: '12.30',
+      currency: 'KRW',
+    })
+
+    model.updateUserActionDraft({ key: 'transferCurrency', value: 'USD' })
+    expect(model.transferFormState.value).toMatchObject({
+      valid: false,
+      currency: '',
+    })
+    expect(model.transferFormState.value.message).toContain('KRW only')
+
+    const unavailableModel = createModel({ rolePayeeAccount: null })
+    unavailableModel.updateUserActionDraft({ key: 'transferAmount', value: '12.30' })
+    expect(unavailableModel.transferFormState.value).toMatchObject({
+      valid: false,
+      currency: '',
+    })
+  })
+
   test('reports gallery and location readiness in the grid hint', () => {
     const disabledModel = createModel({
       galleryStore: createGalleryStore({ assets: [] }),
@@ -155,7 +187,7 @@ describe('Chat user action panel model interface', () => {
     expect(enabledModel.gallerySendState.value.enabled).toBe(true)
     expect(enabledModel.locationShareState.value.enabled).toBe(true)
     expect(enabledModel.userActionGridHint.value).toBe(
-      'Use + panel to send images, links, location, transfer cards, voice cards and shopping picks.',
+      'Use + panel to send images, links, location, payee-account requests, voice cards and shopping picks.',
     )
   })
 

@@ -277,6 +277,7 @@ Landed expanded adapter batch:
 - Phone can record completed-call and missed-call relationship facts when the user binds the call to an existing Chat contact.
 - Map can record shared-route relationship facts when the user selects a companion and acknowledges an arrived trip.
 - Wallet can record transfer or shared-expense relationship facts when the user binds a manual virtual transfer to an existing Chat contact.
+- A system-verified role-payee transfer uses the same Wallet adapter only after Wallet confirms and persists the expense. The Chat account request/card is not a relationship fact, and the target role receives no separate spendable balance.
 - Calendar can record confirmed-event relationship facts when the user explicitly links an acknowledged event to an existing Chat contact.
 - Current low-impact adapter facts attach soft-reference `relationshipGate` metadata from saved profile category/modifier classification. The metadata is audit context and still allows the fact.
 - High-risk hard-gate helper behavior supports block/confirm/allow decisions through named presets, but no new high-impact romance/conflict automation is enabled by the current adapter batch.

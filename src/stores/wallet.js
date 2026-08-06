@@ -11,12 +11,26 @@ import {
   DEFAULT_WALLET_CURRENCY,
   SYSTEM_WALLET_CURRENCIES,
   createDefaultWalletExchangeRates,
+  createMoneyQuote as createWalletMoneyQuote,
+  deriveRateToUsdFromCnyRate,
   formatExchangeRate,
+  formatMoney as formatWalletMoneyValue,
+  formatMoneyAmount as formatWalletMoneyAmountValue,
   getRateToCny,
+  normalizeDecimalString,
   normalizeCurrencyCode,
   normalizeCurrencyDefinition,
   normalizeWalletExchangeRates,
+  reviseWalletExchangeRates,
 } from '../lib/currency-system'
+import {
+  WALLET_BANK_INSTITUTIONS,
+  createDefaultWalletBankAccounts,
+  createDefaultWalletPaymentCards,
+  findWalletBankInstitution,
+  normalizeWalletBankAccounts,
+  normalizeWalletPaymentCards,
+} from '../lib/wallet-banking'
 
 export {
   DEFAULT_WALLET_CURRENCY,
@@ -27,6 +41,7 @@ export {
 const WALLET_STORAGE_KEY = 'store:wallet'
 const WALLET_STORAGE_VERSION = 1
 const WALLET_TRANSACTION_LIMIT = 200
+const WALLET_KNOWN_PAYEE_LIMIT = 200
 const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
 export const WALLET_TRANSACTION_SOURCE_FILTERS = Object.freeze({
   ALL: 'all',
@@ -35,6 +50,8 @@ export const WALLET_TRANSACTION_SOURCE_FILTERS = Object.freeze({
   ORDERS: 'orders',
 })
 const WALLET_TRANSACTION_TYPES = new Set(['income', 'expense', 'transfer'])
+const WALLET_TRANSFER_DIRECTIONS = new Set(['incoming', 'outgoing'])
+const WALLET_TRANSFER_STATUSES = new Set(['completed'])
 const WALLET_TRANSACTION_SOURCE_FILTER_VALUES = new Set(
   Object.values(WALLET_TRANSACTION_SOURCE_FILTERS),
 )
@@ -53,6 +70,10 @@ const normalizeText = (value, fallback = '', max = 120) => {
 
 const normalizeCurrency = normalizeCurrencyCode
 
+const systemCurrencyByCode = new Map(
+  SYSTEM_WALLET_CURRENCIES.map((currency) => [currency.code, currency]),
+)
+
 const createDefaultRegisteredCurrencies = () =>
   SYSTEM_WALLET_CURRENCIES.map((currency) =>
     normalizeCurrencyDefinition(currency, { source: 'system' }),
@@ -66,9 +87,12 @@ const normalizeWalletCurrencyList = (rawCurrencies = []) => {
   ;(Array.isArray(rawCurrencies) ? rawCurrencies : []).forEach((currency) => {
     const normalized = normalizeCurrencyDefinition(currency)
     if (!normalized) return
+    const systemDefinition = systemCurrencyByCode.get(normalized.code)
     byCode.set(normalized.code, {
       ...(byCode.get(normalized.code) || {}),
       ...normalized,
+      exponent: systemDefinition?.exponent ?? normalized.exponent,
+      source: systemDefinition?.source ?? normalized.source,
     })
   })
   return [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code))
@@ -89,10 +113,8 @@ const formatAmount = (amountCents = 0) => {
   return (safeCents / 100).toFixed(2)
 }
 
-const normalizeRateValue = (value) => {
-  const number = Number(value)
-  return Number.isFinite(number) && number > 0 ? number : 0
-}
+const formatSignedAmount = (amountCents = 0) =>
+  `${Number(amountCents) < 0 ? '-' : ''}${formatAmount(amountCents)}`
 
 const createWalletTransactionId = () => `wallet_tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
@@ -101,7 +123,14 @@ const normalizeTransactionType = (value, fallback = 'transfer') => {
   return WALLET_TRANSACTION_TYPES.has(normalized) ? normalized : fallback
 }
 
-const isChatTransferTransaction = (transaction) => transaction?.sourceModule === 'chat_transfer'
+const normalizeTransferDirection = (value) => {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  return WALLET_TRANSFER_DIRECTIONS.has(normalized) ? normalized : ''
+}
+
+const isChatTransferTransaction = (transaction) =>
+  transaction?.sourceModule === 'chat_transfer' ||
+  transaction?.sourceModule === 'wallet_payee_transfer'
 
 const isOrderExpenseTransaction = (transaction) =>
   transaction?.sourceModule === 'shopping_wallet_expense' ||
@@ -116,6 +145,80 @@ const normalizeTransactionSourceFilter = (value) => {
     : WALLET_TRANSACTION_SOURCE_FILTERS.ALL
 }
 
+const normalizePositiveInt = (value, fallback = 0) => {
+  const number = Number(value)
+  return Number.isSafeInteger(number) && number > 0 ? number : fallback
+}
+
+const normalizeKnownPayeeAccount = (rawPayee, index = 0) => {
+  if (!rawPayee || typeof rawPayee !== 'object') return null
+  const payeeAccountId = normalizeText(rawPayee.payeeAccountId || rawPayee.id, '', 140)
+  const ownerProfileId = normalizePositiveInt(rawPayee.ownerProfileId || rawPayee.profileId)
+  const ownerName = normalizeText(rawPayee.ownerName || rawPayee.name, '', 120)
+  const institutionId = normalizeText(rawPayee.institutionId, '', 120).toLowerCase()
+  const currency = normalizeCurrency(rawPayee.currency, '')
+  const accountNumberLast4 = String(
+    rawPayee.accountNumberLast4 || rawPayee.accountNumber || '',
+  ).replace(/\D/g, '').slice(-4)
+  if (
+    !payeeAccountId ||
+    !ownerProfileId ||
+    !ownerName ||
+    !findWalletBankInstitution(institutionId) ||
+    !currency ||
+    accountNumberLast4.length !== 4
+  ) {
+    return null
+  }
+
+  const disclosedAt = Math.max(0, toInt(rawPayee.disclosedAt, Date.now() - index))
+  return {
+    id: payeeAccountId,
+    payeeAccountId,
+    ownerProfileId,
+    ownerRoleId: normalizeText(rawPayee.ownerRoleId || rawPayee.roleId, '', 40),
+    ownerContactId: normalizePositiveInt(rawPayee.ownerContactId || rawPayee.contactId),
+    ownerName,
+    institutionId,
+    currency,
+    accountNumberLast4,
+    maskedAccountNumber: `•••• ${accountNumberLast4}`,
+    status: rawPayee.status === 'closed' ? 'closed' : 'active',
+    sourceChatId: normalizePositiveInt(rawPayee.sourceChatId || rawPayee.chatId),
+    sourceMessageId: normalizeText(rawPayee.sourceMessageId || rawPayee.messageId, '', 140),
+    disclosedAt,
+    updatedAt: Math.max(disclosedAt, toInt(rawPayee.updatedAt, disclosedAt)),
+  }
+}
+
+const normalizeKnownPayeeAccounts = (rawPayees = []) => {
+  if (!Array.isArray(rawPayees)) return []
+  const byId = new Map()
+  rawPayees.forEach((payee, index) => {
+    const normalized = normalizeKnownPayeeAccount(payee, index)
+    if (!normalized) return
+    const existing = byId.get(normalized.id)
+    if (!existing || normalized.updatedAt >= existing.updatedAt) {
+      byId.set(normalized.id, normalized)
+    }
+  })
+  return [...byId.values()]
+    .sort((left, right) => right.updatedAt - left.updatedAt)
+    .slice(0, WALLET_KNOWN_PAYEE_LIMIT)
+}
+
+const createWalletReceiptNumber = (createdAt = Date.now()) => {
+  const date = new Date(createdAt)
+  const datePart = Number.isNaN(date.getTime())
+    ? '00000000'
+    : [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+      ].join('')
+  return `SP${datePart}${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`
+}
+
 const normalizeWalletTransaction = (rawTransaction, index = 0, fallbackCurrency = DEFAULT_CURRENCY) => {
   if (!rawTransaction || typeof rawTransaction !== 'object') return null
 
@@ -127,6 +230,9 @@ const normalizeWalletTransaction = (rawTransaction, index = 0, fallbackCurrency 
 
   const createdAt = Math.max(0, toInt(rawTransaction.createdAt, Date.now()))
   const type = normalizeTransactionType(rawTransaction.type)
+  const transferStatus = WALLET_TRANSFER_STATUSES.has(rawTransaction.transferStatus)
+    ? rawTransaction.transferStatus
+    : ''
 
   return {
     id:
@@ -134,13 +240,28 @@ const normalizeWalletTransaction = (rawTransaction, index = 0, fallbackCurrency 
         ? rawTransaction.id.trim()
         : `wallet_tx_legacy_${Date.now()}_${index}`,
     type,
+    direction: normalizeTransferDirection(rawTransaction.direction),
     title: normalizeText(rawTransaction.title, type === 'expense' ? '支出' : '转账记录', 80),
     counterparty: normalizeText(rawTransaction.counterparty, '', 120),
     note: normalizeText(rawTransaction.note, '', 240),
     amountCents,
     currency: normalizeCurrency(rawTransaction.currency, fallbackCurrency),
+    accountId: normalizeText(rawTransaction.accountId, '', 120),
+    cardId: normalizeText(rawTransaction.cardId, '', 120),
     sourceModule: normalizeText(rawTransaction.sourceModule, 'wallet', 40),
     sourceId: normalizeText(rawTransaction.sourceId, '', 140),
+    transferStatus,
+    receiptNumber: normalizeText(rawTransaction.receiptNumber, '', 40),
+    payeeAccountId: normalizeText(rawTransaction.payeeAccountId, '', 140),
+    recipientProfileId: normalizePositiveInt(rawTransaction.recipientProfileId),
+    recipientContactId: normalizePositiveInt(rawTransaction.recipientContactId),
+    recipientAccountId: normalizeText(rawTransaction.recipientAccountId, '', 140),
+    recipientInstitutionId: normalizeText(rawTransaction.recipientInstitutionId, '', 120).toLowerCase(),
+    recipientAccountLast4: String(rawTransaction.recipientAccountLast4 || '')
+      .replace(/\D/g, '')
+      .slice(-4),
+    sourceChatId: normalizePositiveInt(rawTransaction.sourceChatId),
+    sourceMessageId: normalizeText(rawTransaction.sourceMessageId, '', 140),
     relationshipBinding: normalizeRelationshipBinding(rawTransaction.relationshipBinding),
     createdAt,
     updatedAt: Math.max(0, toInt(rawTransaction.updatedAt, createdAt)),
@@ -183,6 +304,10 @@ export const useWalletStore = defineStore('wallet', () => {
   const primaryCurrency = ref(DEFAULT_CURRENCY)
   const registeredCurrencies = ref(createDefaultRegisteredCurrencies())
   const exchangeRates = ref(createDefaultWalletExchangeRates())
+  const bankAccounts = ref(createDefaultWalletBankAccounts())
+  const paymentCards = ref(createDefaultWalletPaymentCards())
+  const knownPayeeAccounts = ref([])
+  const activeCardId = ref(paymentCards.value.find((card) => card.isDefault)?.id || '')
   const transactions = ref([])
   const hasFinishedStorageHydration = ref(false)
 
@@ -220,6 +345,150 @@ export const useWalletStore = defineStore('wallet', () => {
     amount: '0.00',
   })
 
+  const findBankAccountById = (accountId = '') => {
+    const id = normalizeText(accountId, '', 120)
+    if (!id) return null
+    return bankAccounts.value.find((account) => account.id === id) || null
+  }
+
+  const findPaymentCardById = (cardId = '') => {
+    const id = normalizeText(cardId, '', 120)
+    if (!id) return null
+    return paymentCards.value.find((card) => card.id === id) || null
+  }
+
+  const findKnownPayeeAccountById = (payeeAccountId = '') => {
+    const id = normalizeText(payeeAccountId, '', 140)
+    if (!id) return null
+    return knownPayeeAccounts.value.find((payee) => payee.id === id) || null
+  }
+
+  const listKnownPayeeAccountsForProfile = (profileId = 0) => {
+    const numericProfileId = normalizePositiveInt(profileId)
+    if (!numericProfileId) return []
+    return knownPayeeAccounts.value.filter(
+      (payee) => payee.ownerProfileId === numericProfileId && payee.status === 'active',
+    )
+  }
+
+  const rememberRolePayeeAccount = ({
+    account,
+    profile,
+    contact,
+    sourceChatId = 0,
+    sourceMessageId = '',
+    disclosedAt = Date.now(),
+  } = {}) => {
+    const normalized = normalizeKnownPayeeAccount({
+      id: account?.id,
+      payeeAccountId: account?.id,
+      ownerProfileId: profile?.id,
+      ownerRoleId: profile?.roleId,
+      ownerContactId: contact?.id,
+      ownerName: profile?.name || contact?.name,
+      institutionId: account?.institutionId,
+      currency: account?.currency,
+      accountNumberLast4: account?.accountNumberLast4 || account?.accountNumber,
+      status: account?.status,
+      sourceChatId: sourceChatId || contact?.id,
+      sourceMessageId,
+      disclosedAt,
+      updatedAt: Date.now(),
+    })
+    if (!normalized || normalized.status !== 'active') return null
+
+    knownPayeeAccounts.value = normalizeKnownPayeeAccounts([
+      normalized,
+      ...knownPayeeAccounts.value.filter((payee) => payee.id !== normalized.id),
+    ])
+    return findKnownPayeeAccountById(normalized.id)
+  }
+
+  const removeKnownPayeeAccountsForProfile = (profileId = 0) => {
+    const numericProfileId = normalizePositiveInt(profileId)
+    if (!numericProfileId) return 0
+    const before = knownPayeeAccounts.value.length
+    knownPayeeAccounts.value = knownPayeeAccounts.value.filter(
+      (payee) => payee.ownerProfileId !== numericProfileId,
+    )
+    return before - knownPayeeAccounts.value.length
+  }
+
+  const findDefaultBankAccountForCurrency = (currency = '') => {
+    const code = normalizeCurrency(currency, '')
+    if (!code) return null
+    return bankAccounts.value.find(
+      (account) => account.isDefaultForCurrency && account.currencies.includes(code),
+    ) || bankAccounts.value.find((account) => account.currencies.includes(code)) || null
+  }
+
+  const resolveTransactionAccountId = (transaction = {}) => {
+    const explicitAccount = findBankAccountById(transaction?.accountId)
+    const currency = normalizeCurrency(transaction?.currency, '')
+    if (explicitAccount?.currencies.includes(currency)) return explicitAccount.id
+    return findDefaultBankAccountForCurrency(currency)?.id || ''
+  }
+
+  const accountTransactionTotals = computed(() => {
+    const totals = new Map()
+    transactions.value.forEach((transaction) => {
+      const accountId = resolveTransactionAccountId(transaction)
+      if (!accountId) return
+      const key = `${accountId}:${transaction.currency}`
+      const sign = transaction.type === 'expense' ? -1 : 1
+      totals.set(key, (totals.get(key) || 0) + sign * transaction.amountCents)
+    })
+    return totals
+  })
+
+  const bankAccountSummaries = computed(() =>
+    bankAccounts.value.map((account) => {
+      const accountBalances = account.currencies.map((currency) => {
+        const amountCents = accountTransactionTotals.value.get(`${account.id}:${currency}`) || 0
+        return {
+          currency,
+          amountCents,
+          amount: formatSignedAmount(amountCents),
+        }
+      })
+      return {
+        ...account,
+        institution: findWalletBankInstitution(account.institutionId),
+        balances: accountBalances,
+        primaryBalance:
+          accountBalances.find((balance) => balance.currency === account.primaryCurrency) ||
+          accountBalances[0] ||
+          null,
+      }
+    }),
+  )
+
+  const paymentCardSummaries = computed(() =>
+    paymentCards.value.map((card) => ({
+      ...card,
+      institution: findWalletBankInstitution(card.institutionId),
+      account: bankAccountSummaries.value.find((account) => account.id === card.accountId) || null,
+      creditLimit:
+        card.kind === 'credit'
+          ? { amountMinor: card.creditLimitMinor, currency: card.creditLimitCurrency }
+          : null,
+    })),
+  )
+
+  const activePaymentCard = computed(() =>
+    paymentCardSummaries.value.find((card) => card.id === activeCardId.value) ||
+    paymentCardSummaries.value.find((card) => card.isDefault) ||
+    paymentCardSummaries.value[0] ||
+    null,
+  )
+
+  const knownPayeeAccountSummaries = computed(() =>
+    knownPayeeAccounts.value.map((payee) => ({
+      ...payee,
+      institution: findWalletBankInstitution(payee.institutionId),
+    })),
+  )
+
   const currencyOptions = computed(() => {
     const byCode = new Map()
     normalizeWalletCurrencyList(registeredCurrencies.value).forEach((currency) => {
@@ -246,6 +515,7 @@ export const useWalletStore = defineStore('wallet', () => {
         ...currency,
         rateToCny,
         rateToCnyLabel: formatExchangeRate(rateToCny),
+        isRateAvailable: currency.code === 'CNY' || rateToCny > 0,
         isPrimary: currency.code === primaryCurrency.value,
       }
     }),
@@ -333,6 +603,50 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
+  const listTransactionsByAccount = (accountId = '') => {
+    const account = findBankAccountById(accountId)
+    if (!account) return []
+    return transactions.value.filter(
+      (transaction) => resolveTransactionAccountId(transaction) === account.id,
+    )
+  }
+
+  const listTransactionsByCard = (cardId = '') => {
+    const card = findPaymentCardById(cardId)
+    if (!card) return []
+    if (card.accountId) return listTransactionsByAccount(card.accountId)
+    return transactions.value.filter((transaction) => transaction.cardId === card.id)
+  }
+
+  const selectPaymentCard = (cardId = '') => {
+    const card = findPaymentCardById(cardId)
+    if (!card) return null
+    activeCardId.value = card.id
+    return card
+  }
+
+  const setDefaultPaymentCard = (cardId = '') => {
+    const card = findPaymentCardById(cardId)
+    if (!card || card.status !== 'active') return null
+    paymentCards.value = normalizeWalletPaymentCards(
+      paymentCards.value.map((item) => ({ ...item, isDefault: item.id === card.id })),
+    )
+    activeCardId.value = card.id
+    return findPaymentCardById(card.id)
+  }
+
+  const togglePaymentCardFrozen = (cardId = '') => {
+    const card = findPaymentCardById(cardId)
+    if (!card) return null
+    const nextStatus = card.status === 'frozen' ? 'active' : 'frozen'
+    paymentCards.value = normalizeWalletPaymentCards(
+      paymentCards.value.map((item) =>
+        item.id === card.id ? { ...item, status: nextStatus } : item,
+      ),
+    )
+    return findPaymentCardById(card.id)
+  }
+
   const addTransaction = (input = {}) => {
     const now = Date.now()
     const transaction = normalizeWalletTransaction({
@@ -343,6 +657,23 @@ export const useWalletStore = defineStore('wallet', () => {
       updatedAt: now,
     }, 0, primaryCurrency.value)
     if (!transaction) return null
+    const requestedAccount = findBankAccountById(transaction.accountId)
+    const account = requestedAccount?.currencies.includes(transaction.currency)
+      ? requestedAccount
+      : findDefaultBankAccountForCurrency(transaction.currency)
+    transaction.accountId = account?.id || ''
+
+    const requestedCard = findPaymentCardById(transaction.cardId)
+    const matchingCard =
+      requestedCard?.supportedCurrencies.includes(transaction.currency)
+        ? requestedCard
+        : paymentCards.value.find(
+            (card) =>
+              card.accountId === transaction.accountId &&
+              card.status === 'active' &&
+              card.supportedCurrencies.includes(transaction.currency),
+          )
+    transaction.cardId = matchingCard?.id || ''
     transactions.value.unshift(transaction)
     if (transactions.value.length > WALLET_TRANSACTION_LIMIT) {
       transactions.value.splice(WALLET_TRANSACTION_LIMIT)
@@ -353,20 +684,124 @@ export const useWalletStore = defineStore('wallet', () => {
   const addTransferTransaction = ({
     amount,
     currency = '',
+    accountId = '',
+    cardId = '',
+    direction = '',
     counterparty = '',
     note = '',
     relationshipBinding = null,
   } = {}) =>
     addTransaction({
-      type: 'transfer',
-      title: '聊天转账',
+      type:
+        normalizeTransferDirection(direction) === 'outgoing'
+          ? 'expense'
+          : normalizeTransferDirection(direction) === 'incoming'
+            ? 'income'
+            : 'transfer',
+      direction: normalizeTransferDirection(direction),
+      title:
+        normalizeTransferDirection(direction) === 'outgoing'
+          ? '转账'
+          : normalizeTransferDirection(direction) === 'incoming'
+            ? '收款'
+            : '聊天转账',
       amount,
       currency: currency || primaryCurrency.value,
+      accountId,
+      cardId,
       counterparty,
       note,
       sourceModule: 'wallet_manual',
       relationshipBinding,
     })
+
+  const addRolePayeeTransfer = ({
+    payeeAccountId = '',
+    amount,
+    accountId = '',
+    cardId = '',
+    note = '',
+    sourceChatId = 0,
+    sourceMessageId = '',
+  } = {}) => {
+    const payee = findKnownPayeeAccountById(payeeAccountId)
+    if (!payee || payee.status !== 'active') {
+      return { ok: false, reason: 'payee_not_found', transaction: null }
+    }
+
+    const amountCents = normalizeAmountCents(amount)
+    if (amountCents <= 0) {
+      return { ok: false, reason: 'amount_invalid', transaction: null }
+    }
+
+    const account = findBankAccountById(accountId)
+    if (!account || !account.currencies.includes(payee.currency)) {
+      return { ok: false, reason: 'currency_mismatch', transaction: null }
+    }
+    const accountSummary = bankAccountSummaries.value.find((item) => item.id === account.id)
+    const availableCents = accountSummary?.balances.find(
+      (balance) => balance.currency === payee.currency,
+    )?.amountCents || 0
+    if (amountCents > availableCents) {
+      return { ok: false, reason: 'insufficient_funds', transaction: null }
+    }
+
+    const requestedCard = findPaymentCardById(cardId)
+    const paymentCard =
+      (requestedCard?.status === 'active' &&
+      requestedCard.accountId === account.id &&
+      requestedCard.supportedCurrencies.includes(payee.currency)
+        ? requestedCard
+        : null) ||
+      paymentCards.value.find(
+        (card) =>
+          card.kind === 'debit' &&
+          card.status === 'active' &&
+          card.accountId === account.id &&
+          card.supportedCurrencies.includes(payee.currency),
+      )
+    if (!paymentCard) {
+      return { ok: false, reason: 'payment_card_unavailable', transaction: null }
+    }
+
+    const createdAt = Date.now()
+    const transaction = addTransaction({
+      type: 'expense',
+      direction: 'outgoing',
+      title: '转账',
+      amount,
+      currency: payee.currency,
+      accountId: account.id,
+      cardId: paymentCard.id,
+      counterparty: payee.ownerName,
+      note,
+      sourceModule: 'wallet_payee_transfer',
+      sourceId: payee.id,
+      transferStatus: 'completed',
+      receiptNumber: createWalletReceiptNumber(createdAt),
+      payeeAccountId: payee.id,
+      recipientProfileId: payee.ownerProfileId,
+      recipientContactId: payee.ownerContactId,
+      recipientAccountId: payee.payeeAccountId,
+      recipientInstitutionId: payee.institutionId,
+      recipientAccountLast4: payee.accountNumberLast4,
+      sourceChatId: normalizePositiveInt(sourceChatId, payee.sourceChatId),
+      sourceMessageId: normalizeText(sourceMessageId, payee.sourceMessageId, 140),
+      relationshipBinding: {
+        profileId: payee.ownerProfileId,
+        contactId: payee.ownerContactId,
+        kind: 'role',
+        name: payee.ownerName,
+        sourceModule: 'chat',
+        sourceId: String(payee.ownerContactId || payee.ownerProfileId),
+      },
+      createdAt,
+    })
+
+    return transaction
+      ? { ok: true, reason: '', transaction }
+      : { ok: false, reason: 'transaction_invalid', transaction: null }
+  }
 
   const addChatTransferTransaction = ({
     messageId = '',
@@ -410,6 +845,14 @@ export const useWalletStore = defineStore('wallet', () => {
     transaction.note = anonymizeRelationshipText(transaction.note, profile?.name, nextName)
     transaction.title = anonymizeRelationshipText(transaction.title, profile?.name, nextName)
     transaction.relationshipBinding = clearRelationshipBinding()
+    transaction.payeeAccountId = ''
+    transaction.recipientProfileId = 0
+    transaction.recipientContactId = 0
+    transaction.recipientAccountId = ''
+    transaction.recipientInstitutionId = ''
+    transaction.recipientAccountLast4 = ''
+    transaction.sourceChatId = 0
+    transaction.sourceMessageId = ''
     transaction.updatedAt = Date.now()
     return true
   }
@@ -435,7 +878,9 @@ export const useWalletStore = defineStore('wallet', () => {
   const setPrimaryCurrency = (currency = '') => {
     const nextCurrency = normalizeCurrency(currency, '')
     if (!nextCurrency) return ''
-    registerCurrency({ code: nextCurrency, source: 'manual' })
+    if (!findCurrencyOption(nextCurrency)) {
+      registerCurrency({ code: nextCurrency, source: 'manual' })
+    }
     primaryCurrency.value = nextCurrency
     return nextCurrency
   }
@@ -457,14 +902,20 @@ export const useWalletStore = defineStore('wallet', () => {
     }
     registeredCurrencies.value = normalizeWalletCurrencyList(current)
 
-    if (normalized.rateToUsd > 0) {
-      exchangeRates.value = normalizeWalletExchangeRates({
-        ...exchangeRates.value,
-        ratesToUsd: {
-          ...exchangeRates.value.ratesToUsd,
-          [normalized.code]: normalized.rateToUsd,
+    if (normalized.rateToUsd) {
+      exchangeRates.value = reviseWalletExchangeRates(
+        exchangeRates.value,
+        {
+          ratesToUsd: {
+            ...exchangeRates.value.ratesToUsd,
+            [normalized.code]: normalized.rateToUsd,
+          },
         },
-      })
+        {
+          rateSource: normalized.source === 'world_pack' ? 'world_pack' : 'user_edit',
+          updatedAt: Date.now(),
+        },
+      )
     }
     return next
   }
@@ -477,29 +928,36 @@ export const useWalletStore = defineStore('wallet', () => {
     })
 
   const setUsdCnyRate = (rate) => {
-    const nextRate = normalizeRateValue(rate)
+    const nextRate = normalizeDecimalString(rate, { positiveOnly: true, maxScale: 30 })
     if (!nextRate) return null
-    exchangeRates.value = normalizeWalletExchangeRates({
-      ...exchangeRates.value,
-      usdCnyRate: nextRate,
-    })
-    return exchangeRates.value.reference.rate
+    exchangeRates.value = reviseWalletExchangeRates(
+      exchangeRates.value,
+      { reference: { rate: nextRate } },
+      { rateSource: 'user_edit', updatedAt: Date.now() },
+    )
+    return Number(exchangeRates.value.reference.rate)
   }
 
   const setCurrencyCnyRate = (currency = '', rateToCny = 0) => {
     const code = normalizeCurrency(currency, '')
-    const rate = normalizeRateValue(rateToCny)
+    const rate = normalizeDecimalString(rateToCny, { positiveOnly: true, maxScale: 30 })
     if (!code || !rate) return null
-    registerCurrency({ code, source: 'manual' })
+    if (!findCurrencyOption(code)) {
+      registerCurrency({ code, source: 'manual' })
+    }
     if (code === 'CNY') return 1
-    const usdCny = normalizeRateValue(exchangeRates.value.reference?.rate) || 1
-    exchangeRates.value = normalizeWalletExchangeRates({
-      ...exchangeRates.value,
-      ratesToUsd: {
-        ...exchangeRates.value.ratesToUsd,
-        [code]: rate / usdCny,
+    const rateToUsd = deriveRateToUsdFromCnyRate(rate, exchangeRates.value.reference?.rate)
+    if (!rateToUsd) return null
+    exchangeRates.value = reviseWalletExchangeRates(
+      exchangeRates.value,
+      {
+        ratesToUsd: {
+          ...exchangeRates.value.ratesToUsd,
+          [code]: rateToUsd,
+        },
       },
-    })
+      { rateSource: 'user_edit', updatedAt: Date.now() },
+    )
     return getRateToCny(exchangeRates.value, code)
   }
 
@@ -508,6 +966,21 @@ export const useWalletStore = defineStore('wallet', () => {
     if (!code) return null
     return currencyOptions.value.find((item) => item.code === code) || null
   }
+
+  const quoteMoney = (sourceMoney = {}, targetCurrency = primaryCurrency.value, options = {}) =>
+    createWalletMoneyQuote({
+      sourceMoney,
+      targetCurrency,
+      exchangeRates: exchangeRates.value,
+      currencyDefinitions: currencyOptions.value,
+      quotedAt: options.quotedAt,
+    })
+
+  const formatMoney = (money = {}, options = {}) =>
+    formatWalletMoneyValue(money, currencyOptions.value, options)
+
+  const formatMoneyAmount = (money = {}, options = {}) =>
+    formatWalletMoneyAmountValue(money, currencyOptions.value, options)
 
   const applyPersistedSource = (source) => {
     const sourceObject = Array.isArray(source)
@@ -521,6 +994,9 @@ export const useWalletStore = defineStore('wallet', () => {
       Array.isArray(sourceTransactions) ||
       Array.isArray(sourceObject.registeredCurrencies) ||
       Array.isArray(sourceObject.currencies) ||
+      Array.isArray(sourceObject.bankAccounts) ||
+      Array.isArray(sourceObject.paymentCards) ||
+      Array.isArray(sourceObject.knownPayeeAccounts) ||
       Boolean(sourceObject.exchangeRates)
     if (!hasWalletPayload) return false
     primaryCurrency.value = normalizeCurrency(
@@ -531,10 +1007,23 @@ export const useWalletStore = defineStore('wallet', () => {
       sourceObject.registeredCurrencies || sourceObject.currencies || registeredCurrencies.value,
     )
     exchangeRates.value = normalizeWalletExchangeRates(sourceObject.exchangeRates || sourceObject.rates)
+    bankAccounts.value = normalizeWalletBankAccounts(sourceObject.bankAccounts || sourceObject.accounts)
+    paymentCards.value = normalizeWalletPaymentCards(sourceObject.paymentCards || sourceObject.cards)
+    knownPayeeAccounts.value = normalizeKnownPayeeAccounts(
+      sourceObject.knownPayeeAccounts || sourceObject.payees,
+    )
     transactions.value = normalizeWalletTransactions(
       Array.isArray(sourceTransactions) ? sourceTransactions : [],
       primaryCurrency.value,
     )
+    const requestedActiveCardId = normalizeText(
+      sourceObject.activeCardId || sourceObject.selectedCardId,
+      '',
+      120,
+    )
+    activeCardId.value = paymentCards.value.some((card) => card.id === requestedActiveCardId)
+      ? requestedActiveCardId
+      : paymentCards.value.find((card) => card.isDefault)?.id || paymentCards.value[0]?.id || ''
     return true
   }
 
@@ -556,9 +1045,23 @@ export const useWalletStore = defineStore('wallet', () => {
     primaryCurrency: primaryCurrency.value,
     registeredCurrencies: registeredCurrencies.value.map((item) => ({ ...item })),
     exchangeRates: {
+      rateSetId: exchangeRates.value.rateSetId,
+      revision: exchangeRates.value.revision,
+      rateSource: exchangeRates.value.rateSource,
+      updatedAt: exchangeRates.value.updatedAt,
       reference: { ...exchangeRates.value.reference },
       ratesToUsd: { ...exchangeRates.value.ratesToUsd },
     },
+    bankAccounts: bankAccounts.value.map((account) => ({
+      ...account,
+      currencies: [...account.currencies],
+    })),
+    paymentCards: paymentCards.value.map((card) => ({
+      ...card,
+      supportedCurrencies: [...card.supportedCurrencies],
+    })),
+    knownPayeeAccounts: knownPayeeAccounts.value.map((payee) => ({ ...payee })),
+    activeCardId: activeCardId.value,
     transactions: transactions.value.map((item) => ({ ...item })),
   })
 
@@ -586,6 +1089,10 @@ export const useWalletStore = defineStore('wallet', () => {
     primaryCurrency.value = DEFAULT_CURRENCY
     registeredCurrencies.value = createDefaultRegisteredCurrencies()
     exchangeRates.value = createDefaultWalletExchangeRates()
+    bankAccounts.value = createDefaultWalletBankAccounts()
+    paymentCards.value = createDefaultWalletPaymentCards()
+    knownPayeeAccounts.value = []
+    activeCardId.value = paymentCards.value.find((card) => card.isDefault)?.id || ''
     transactions.value = []
   }
 
@@ -603,7 +1110,16 @@ export const useWalletStore = defineStore('wallet', () => {
   })()
 
   watch(
-    [transactions, primaryCurrency, registeredCurrencies, exchangeRates],
+    [
+      transactions,
+      primaryCurrency,
+      registeredCurrencies,
+      exchangeRates,
+      bankAccounts,
+      paymentCards,
+      knownPayeeAccounts,
+      activeCardId,
+    ],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -616,10 +1132,19 @@ export const useWalletStore = defineStore('wallet', () => {
     primaryCurrency,
     registeredCurrencies,
     exchangeRates,
+    bankInstitutions: WALLET_BANK_INSTITUTIONS,
+    bankAccounts,
+    paymentCards,
+    knownPayeeAccounts,
+    activeCardId,
     transactionCount,
     transactionSourceSummary,
     balances,
     primaryBalance,
+    bankAccountSummaries,
+    paymentCardSummaries,
+    knownPayeeAccountSummaries,
+    activePaymentCard,
     currencyOptions,
     exchangeRateRows,
     primaryCurrencyDefinition,
@@ -629,8 +1154,21 @@ export const useWalletStore = defineStore('wallet', () => {
     listTransactionsBySourceFilter,
     listTransactionsByCounterparty,
     summarizeCounterpartyLedger,
+    findBankAccountById,
+    findPaymentCardById,
+    findKnownPayeeAccountById,
+    listKnownPayeeAccountsForProfile,
+    rememberRolePayeeAccount,
+    removeKnownPayeeAccountsForProfile,
+    findDefaultBankAccountForCurrency,
+    listTransactionsByAccount,
+    listTransactionsByCard,
+    selectPaymentCard,
+    setDefaultPaymentCard,
+    togglePaymentCardFrozen,
     addTransaction,
     addTransferTransaction,
+    addRolePayeeTransfer,
     addChatTransferTransaction,
     setPrimaryCurrency,
     registerCurrency,
@@ -638,6 +1176,9 @@ export const useWalletStore = defineStore('wallet', () => {
     setUsdCnyRate,
     setCurrencyCnyRate,
     findCurrencyOption,
+    quoteMoney,
+    formatMoney,
+    formatMoneyAmount,
     removeTransaction,
     anonymizeTransaction,
     cleanupRelationshipForProfile,

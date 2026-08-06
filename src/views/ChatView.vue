@@ -47,10 +47,12 @@ import {
 import { buildNetworkSetupState } from '../lib/network-guidance'
 import {
   SHAREABLE_OBJECT_TYPES,
+  createPayeeAccountShareObject,
   createProductLinkShareObject,
   createVirtualGiftShareObject,
   shareableObjectToChatBlock,
 } from '../lib/shareable-object'
+import { findWalletBankInstitution, maskRolePayeeAccountNumber } from '../lib/wallet-banking'
 import { getAvatarImageGalleryAssetId } from '../lib/avatar-image-source-resolver'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
@@ -504,7 +506,11 @@ const normalizeShoppingShareType = (value, rawProduct = {}) => {
 const isVirtualGiftShareType = (shareType) => VIRTUAL_GIFT_SHARE_TYPES.has(shareType)
 
 const shoppingShareLabel = (shareType) =>
-  isVirtualGiftShareType(shareType) ? t('虚拟礼物', 'Virtual gift') : t('商品链接', 'Product link')
+  shareType === SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT
+    ? t('收款账户', 'Receiving account')
+    : isVirtualGiftShareType(shareType)
+      ? t('虚拟礼物', 'Virtual gift')
+      : t('商品链接', 'Product link')
 
 const normalizeShoppingCardPayload = (rawProduct = {}) => {
   const productId = typeof rawProduct.productId === 'string' ? rawProduct.productId.trim() : typeof rawProduct.id === 'string' ? rawProduct.id.trim() : ''
@@ -716,6 +722,21 @@ const activeRoleAssetContext = computed(() => {
   }
 })
 
+const activeRoleProfile = computed(() => {
+  const profileId = Number(activeChat.value?.profileId)
+  if (!Number.isFinite(profileId) || profileId <= 0) return null
+  return chatStore.getRoleProfileById(profileId)
+})
+
+const activeRolePayeeAccount = computed(() => {
+  const accounts = Array.isArray(activeRoleProfile.value?.payeeAccounts)
+    ? activeRoleProfile.value.payeeAccounts
+    : []
+  return accounts.find((account) => account.status === 'active' && account.isPrimary) ||
+    accounts.find((account) => account.status === 'active') ||
+    null
+})
+
 const roleImageReferenceAvailability = computed(() => {
   const context = activeRoleAssetContext.value
   const pack = context.profileAssetPack || createEmptyProfileAssetPack()
@@ -872,6 +893,7 @@ const {
   activeRoleAssetContext,
   currentLocationText,
   primaryCurrency,
+  rolePayeeAccount: activeRolePayeeAccount,
   canActiveChatCommunicate,
   resolveFolderAssetsByCategory: (category) => {
     const chatId = Number(activeChat.value?.id)
@@ -2550,7 +2572,12 @@ const resolveImageBlockUrl = (messageId, blockIndex, block) => {
   return messageImagePreviewMap[key] || block?.url || ''
 }
 
-const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) => {
+const appendUserMessage = ({
+  content = '',
+  blocks = [],
+  source = 'send',
+  suppressAiReply = false,
+} = {}) => {
   if (!activeChat.value) return null
   if (!canActiveChatCommunicate.value) {
     showUiNotice('warning', t('当前通讯状态不允许发送消息。', 'Current communication state does not allow sending messages.'))
@@ -2588,7 +2615,7 @@ const appendUserMessage = ({ content = '', blocks = [], source = 'send' } = {}) 
   scrollToBottom()
 
   const aiPrefs = chatStore.getConversationAiPrefs(chatId)
-  if (aiPrefs.replyMode === 'auto' && chatAutomationEnabled.value) {
+  if (!suppressAiReply && aiPrefs.replyMode === 'auto' && chatAutomationEnabled.value) {
     requestAiReply(chatId, appended.id, { replyCount: aiPrefs.replyCount })
   }
   scheduleAutoInvokeTick()
@@ -2685,35 +2712,95 @@ const submitTransferCardForm = () => {
     return
   }
   const { amount, currency, note } = transferFormState.value
+  const profile = activeRoleProfile.value
+  const account = activeRolePayeeAccount.value
+  if (!profile || !account || account.currency !== currency) {
+    showUiNotice(
+      'warning',
+      t('当前聊天对象没有该币种的可分享账户。', 'This chat target has no shareable account in that currency.'),
+    )
+    return
+  }
 
-  const appended = appendUserMessage({
-    content: `${t('转账', 'Transfer')} ${amount} ${currency}`,
+  const requestMessage = appendUserMessage({
+    content: t(
+      `可以把你的 ${currency} 收款账户发给我吗？我准备转 ${amount} ${currency}。`,
+      `Could you share your ${currency} receiving account? I plan to send ${amount} ${currency}.`,
+    ),
+    blocks: [],
+    source: 'payee_account_request',
+    suppressAiReply: true,
+  })
+  if (!requestMessage) return
+
+  const responseMessageId = `chat_payee_share_${profile.id}_${Date.now()}`
+  const knownPayee = walletStore.rememberRolePayeeAccount({
+    account,
+    profile,
+    contact: activeChat.value,
+    sourceChatId: activeChat.value.id,
+    sourceMessageId: responseMessageId,
+  })
+  const institution = findWalletBankInstitution(account.institutionId)
+  if (!knownPayee || !institution) {
+    showUiNotice('warning', t('收款账户暂不可用。', 'The receiving account is unavailable.'))
+    return
+  }
+
+  const institutionLabel = t(institution.nameZh, institution.nameEn)
+  const maskedAccount = maskRolePayeeAccountNumber(account)
+  const shareable = createPayeeAccountShareObject({
+    ...knownPayee,
+    payeeAccountId: knownPayee.id,
+    ownerProfileId: profile.id,
+    sourceChatId: activeChat.value.id,
+    sourceMessageId: responseMessageId,
+    amount,
+    currency,
+    note,
+    institutionLabel,
+    title: t(
+      `${institution.shortName} · ${currency} 收款账户`,
+      `${institution.shortName} · ${currency} receiving account`,
+    ),
+    summary: t(
+      `${profile.name} · 账户 ${maskedAccount}`,
+      `${profile.name} · Account ${maskedAccount}`,
+    ),
+    statusLabel: t('已验证', 'Verified'),
+  })
+  const shareBlock = shareableObjectToChatBlock(shareable)
+  if (!shareBlock) {
+    showUiNotice('warning', t('收款账户卡暂不可用。', 'The receiving-account card is unavailable.'))
+    return
+  }
+
+  chatStore.appendMessage(activeChat.value.id, {
+    id: responseMessageId,
+    role: 'assistant',
+    content: t(
+      '这是我的收款账户，转账前请在 Wallet 核对。',
+      'Here is my receiving account. Review it in Wallet before sending.',
+    ),
     blocks: [
       {
-        type: 'transfer_virtual',
-        label: t('转账卡片', 'Transfer card'),
-        amount,
-        currency,
-        to: activeChat.value.name || '',
-        note,
-        actionRoute: '/wallet',
+        type: 'text',
+        variant: 'primary',
+        lang: 'auto',
+        text: t(
+          '这是我的收款账户，转账前请在 Wallet 核对。',
+          'Here is my receiving account. Review it in Wallet before sending.',
+        ),
       },
+      shareBlock,
     ],
-    source: 'transfer',
+    status: 'delivered',
   })
-  if (appended) {
-    const transaction = walletStore.addChatTransferTransaction({
-      messageId: appended.id,
-      amount,
-      currency,
-      counterparty: activeChat.value.name || '',
-      note,
-      createdAt: appended.createdAt,
-    })
-    if (transaction) {
-      showUiNotice('success', t('转账卡已同步到钱包流水。', 'Transfer card synced to Wallet ledger.'))
-    }
-  }
+  showUiNotice(
+    'success',
+    t('已收到验证账户卡，资金尚未转出。', 'Verified account card received; no money has moved yet.'),
+  )
+  scrollToBottom()
   closeUserActionPanel()
 }
 
@@ -3301,7 +3388,9 @@ const openShareCardRoute = (block = {}) => {
   if (!pushSafeServiceRoute(block.route)) return
   showUiNotice(
     'info',
-    t('已打开来源 App；聊天记录保持不变。', 'Opened the source app; Chat history stays unchanged.'),
+    block.shareType === SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT
+      ? t('已进入 Wallet 核对，资金尚未转出。', 'Opened Wallet for review; no money has moved yet.')
+      : t('已打开来源 App；聊天记录保持不变。', 'Opened the source app; Chat history stays unchanged.'),
   )
 }
 

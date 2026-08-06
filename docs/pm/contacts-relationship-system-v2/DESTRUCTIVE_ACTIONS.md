@@ -45,6 +45,7 @@ The flow must allow:
 - relationship progress
 - memory groups
 - event-attached role-detail entries derived from relationship development
+- Wallet payee references disclosed from the deleted role profile
 
 ### 2.5 Optional Cross-Module Cleanup
 
@@ -93,6 +94,7 @@ The user wants to keep this character but restart the route from zero.
 - manually entered static role information
 - manual preferences/life-pattern/social-graph entries
 - role-bound visual assets
+- stable role receiving-account definitions and Wallet's disclosed reference to them
 
 ### 3.4 Must Remove
 

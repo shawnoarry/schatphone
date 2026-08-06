@@ -36,6 +36,7 @@ Owns:
 
 - visible `roleId`
 - role profile basics
+- stable fictional receiving-account definitions for non-self role profiles
 - profile-side relationship premise text, initial relationship seed, and stored classification metadata
 - role-control display of the current relationship runtime snapshot before profile-side premise editing
 - manually authored preferences/life-pattern/social-graph entries
@@ -50,6 +51,7 @@ Must not own:
 - chat-thread-only settings
 - runtime-only internal identifiers as user-facing labels
 - eligibility or application of generated friend/block/refusal social events
+- confirmed Wallet transactions, receipts, account balances, or exchange behavior
 
 ## 4. Chat Directory / 会话通讯录
 
@@ -89,6 +91,7 @@ Owns:
 
 - message history
 - user and AI message content
+- system-generated masked receiving-account cards that reference profile-owned account data
 - thread-level actions and preferences
 - chat-side interaction history
 
@@ -97,6 +100,7 @@ Must not own:
 - whole-role destructive cleanup policy
 - role-detail semantics
 - relationship runtime truth values
+- original role receiving-account credentials or Wallet ledger mutation
 
 Important boundary:
 

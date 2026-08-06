@@ -117,12 +117,14 @@ Chat may expose a service-account linkage contract to other modules. This contra
 
 Chat may store:
 
-- `shareType`, such as `product_link`, `gift_card`, `virtual_gift`, or `tracking_share`;
+- `shareType`, such as `product_link`, `gift_card`, `virtual_gift`, `tracking_share`, or `payee_account`;
 - `sourceModule`, `sourceId`, and optional `sourceEventId`;
 - title, summary, status, amount, preview image, and source route snapshots;
 - `aiContext` that explains what the object means and which app owns the truth.
 
 Chat must not treat a `product_link` as a purchased or delivered gift. User-sent gifts inside Chat should be source-created digital objects such as gift cards, vouchers, redemption codes, or virtual gifts. Physical goods should enter Chat as product links, order shares, or tracking/signature shares, while Shopping or Logistics owns purchase, fulfillment, and delivery state.
+
+A `payee_account` card is a system-verified reference to a persisted role-profile account. Chat may store its masked display snapshot and Wallet route, but neither the user request nor the card is a completed transfer. AI output must never create or alter bank credentials, and only Wallet may validate the matching currency, deduct funds, persist the receipt, and submit the confirmed relationship fact.
 
 World Pack service-account templates should surface as availability from WorldBook and be joined from Chat Directory's `Services` management area. WorldBook must not become the service-account editor or creator. Chat Directory may let the user edit/reset enabled-pack service-account candidate metadata before joining, and may review AI/pasted service-candidate proposals from active WorldBook/World Pack context. Confirming a proposal only writes a World Pack template; it does not subscribe the user, create source-module business records, or silently rewrite already joined Chat accounts. Generated entries may store origin metadata such as `worldPackId`, `worldServiceTemplateId`, and `worldAppBindingId`, and may display a source notification plan for supported source bindings, but the generated entry is still owned by Chat Directory and must not become a role profile or source-module record owner.
 
@@ -151,5 +153,6 @@ They must not create, delete, or rewrite global Contacts role profiles. A future
 7. Chat Settings must not duplicate the Chat Me identity/social surface
 8. social-channel state must not become relationship runtime truth or event eligibility by itself
 9. legacy `htmlSnippet` or new generated HTML must not execute inside Chat, and Chat must not copy the shared Mini Scene regex/profile/presenter implementation
+10. AI dialogue, a transfer request, or a `payee_account` card must not create Wallet ledger records or claim money moved
 
 When `relationshipLevel` or `relationshipNote` appears in Chat Directory UI, label it as Chat-local tuning/note. Do not use "Affinity" or other copy that implies current relationship progress.

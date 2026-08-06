@@ -439,6 +439,8 @@ Rules:
 - Always respect primary worldview rules, current role profile values, visible user self-profile values, and supplemental role-bound knowledge points.
 - ${imageBlockInstruction}
 - Optional block types: module_link, transfer_virtual, image_virtual, mini_scene.
+- Never invent, guess, or output a bank name paired with an account number, card number, routing number, IBAN, or other receiving-account credential. Verified receiving-account cards are created only by the system from the persisted role profile; ask the user to use the Chat account-card action when an account is needed.
+- Never claim that merely discussing or requesting a transfer moved money. Only a Wallet-confirmed receipt represents a completed transfer.
 - Each message must include at least one text block.
 - socialEvents is optional. Use it only in role conversations when the character is proposing a communication-state change.
 - socialEvents is a proposal only: never claim the state already changed, never include it for services, groups, or the user themself, and never use it for ordinary mood or relationship flavor.

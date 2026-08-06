@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-07-14
+Updated: 2026-08-06
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -71,6 +71,7 @@ What is already landed:
 53. Contacts profile-header display read-model governance is extracted. `src/composables/useContactsProfileHeaderModel.js` now owns selected-profile header avatar URL, eyebrow/name/meta/bio copy, empty state, NPC detection, and NPC upgrade hint copy. This is architecture cleanup only: profile editing, NPC upgrade execution, Chat Directory binding ownership, avatar asset resolution, relationship-runtime truth/write APIs, and visible UI behavior stay unchanged.
 54. Contacts profile-template editor display read-model governance is extracted. `src/composables/useContactsProfileTemplateEditorModel.js` now owns profile-template editor draft template reads, applicable field rows, save-review facts, preserved custom-field rows, empty copy, helper/placeholder/type/icon copy, and tag previews. This is architecture cleanup only: profile-template saves, AI draft/adaptation actions, profile-value serialization, Chat Directory binding ownership, relationship-runtime truth/write APIs, and visible UI behavior stay unchanged.
 55. Contacts now closes the explicit custom role -> Chat handoff. Eligible Main Role/NPC profiles expose `Start Chat`, while bound profiles reuse the existing contact and conversation. Contacts delegates creation to the Chat-owned idempotent seam, Self and disabled unbound profiles remain ineligible, and validated return context restores the same Contacts profile after Network recovery and Chat.
+56. Non-self role profiles now carry stable fictional receiving-account definitions used by Chat's system-generated payee cards. Contacts remains the lifecycle owner of that original profile data: formal role deletion also clears Wallet's disclosed payee references, while relationship reset preserves the account because the role profile remains. Contacts does not own Wallet balances, confirmation, receipts, or NPC wealth.
 
 Still incomplete:
 
@@ -121,6 +122,7 @@ The older cross-device plans remain implementation history. They are not current
 6. Do not implement WorldBook-driven profile templates directly from the decision log; use the formal specs and the implementation plan after review.
 7. Do not let Contacts, Chat, or raw relationship premise prose become the event-decision owner.
 8. Do not let Contacts apply role-initiated friend/block/refusal outcomes directly; generated social events must use the landed Chat social-event seam plus event-runtime audit.
+9. Do not remove a role receiving account during relationship reset, and do not leave its disclosed Wallet payee reference behind after formal role deletion.
 
 ## 4. Validation
 

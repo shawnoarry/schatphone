@@ -12,6 +12,7 @@ export const SHAREABLE_OBJECT_TYPES = Object.freeze({
   REMINDER_CUE_SHARE: 'reminder_cue_share',
   GALLERY_ASSET_SHARE: 'gallery_asset_share',
   ASSET_RECORD_SHARE: 'asset_record_share',
+  PAYEE_ACCOUNT: 'payee_account',
 })
 
 export const SHAREABLE_SOURCE_MODULES = Object.freeze({
@@ -23,10 +24,12 @@ export const SHAREABLE_SOURCE_MODULES = Object.freeze({
   REMINDERS: 'reminders',
   GALLERY: 'gallery',
   ASSETS: 'assets',
+  WALLET: 'wallet',
 })
 
 const VALID_SHARE_TYPES = new Set(Object.values(SHAREABLE_OBJECT_TYPES))
 const VALID_SOURCE_MODULES = new Set(Object.values(SHAREABLE_SOURCE_MODULES))
+const MAX_INTERNAL_ROUTE_LENGTH = 2048
 
 const trimTo = (value, max = 120, fallback = '') => {
   if (typeof value !== 'string') return fallback
@@ -46,7 +49,7 @@ const normalizeSourceModule = (value, fallback = SHAREABLE_SOURCE_MODULES.SHOPPI
 }
 
 const sanitizeRoute = (value, fallback = '') => {
-  const normalized = trimTo(value, 240, fallback)
+  const normalized = trimTo(value, MAX_INTERNAL_ROUTE_LENGTH, fallback)
   if (!normalized) return ''
   if (!normalized.startsWith('/')) return fallback
   if (normalized.startsWith('//')) return fallback
@@ -241,6 +244,48 @@ export const createTrackingShareObject = (input = {}) => {
         'The user shared a package or delivery tracking object. The recipient may need to wait for delivery or sign after arrival.',
       sourceTruthOwner: 'Logistics',
       mutationBoundary: 'Chat replies can discuss the delivery, but Logistics or Shopping owns tracking, signature, and delivery state.',
+    },
+  })
+}
+
+export const createPayeeAccountShareObject = (input = {}) => {
+  const payeeAccountId = trimTo(input.payeeAccountId || input.id, 140)
+  const ownerProfileId = trimTo(input.ownerProfileId || input.profileId, 40)
+  const sourceChatId = trimTo(input.sourceChatId || input.chatId, 40)
+  const sourceMessageId = trimTo(input.sourceMessageId || input.messageId, 140)
+  const currency = trimTo(input.currency, 8).toUpperCase()
+  const query = buildRouteQuery({
+    source: 'chat',
+    intent: SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT,
+    payeeAccountId,
+    profileId: ownerProfileId,
+    chatId: sourceChatId,
+    messageId: sourceMessageId,
+    amount: input.amount,
+    currency,
+    note: input.note,
+  })
+  return normalizeShareableObject({
+    id: `wallet-payee-account:${payeeAccountId}`,
+    type: SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT,
+    sourceModule: SHAREABLE_SOURCE_MODULES.WALLET,
+    sourceId: payeeAccountId,
+    sourceEventId: sourceMessageId,
+    title: input.title || `${input.institutionLabel || 'Bank'} · ${currency}`,
+    summary: input.summary,
+    statusLabel: input.statusLabel || 'Verified account',
+    amountLabel: input.amount ? `${trimTo(input.amount, 24)} ${currency}` : currency,
+    route: query ? `/wallet?${query}` : '/wallet',
+    category: currency,
+    serviceKey: input.institutionId,
+    serviceLabel: input.institutionLabel,
+    aiContext: {
+      intent: SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT,
+      recipientMeaning:
+        'The role shared a system-verified receiving-account reference. The account fields come from the persisted role profile, not generated dialogue.',
+      sourceTruthOwner: 'Wallet',
+      mutationBoundary:
+        'This card does not move money. The user must review and confirm the same-currency transfer in Wallet.',
     },
   })
 }

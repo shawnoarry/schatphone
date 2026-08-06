@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../src/stores/wallet'
+import { createDefaultRolePayeeAccounts } from '../src/lib/wallet-banking'
 
 describe('wallet store', () => {
   beforeEach(() => {
@@ -372,5 +373,291 @@ describe('wallet store', () => {
     expect(store.primaryCurrency).toBe('CRD')
     expect(store.currencyOptions.map((currency) => currency.code)).toContain('CRD')
     expect(store.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe('0.2500')
+  })
+
+  test('seeds one bank account per system currency and a multi-currency credit card', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    expect(store.bankInstitutions).toHaveLength(7)
+    expect(store.bankAccounts).toHaveLength(6)
+    expect(store.paymentCards).toHaveLength(7)
+    expect(store.bankAccounts.map((account) => account.primaryCurrency).sort()).toEqual([
+      'CNY',
+      'EUR',
+      'HKD',
+      'JPY',
+      'KRW',
+      'USD',
+    ])
+
+    const creditCard = store.findPaymentCardById('wallet_card_hana_global_credit')
+    expect(creditCard).toMatchObject({
+      institutionId: 'hana-bank',
+      kind: 'credit',
+      settlementCurrency: 'KRW',
+      creditLimitMinor: 15000000,
+    })
+    expect(creditCard.supportedCurrencies).toEqual(['KRW', 'CNY', 'USD', 'EUR', 'JPY', 'HKD'])
+  })
+
+  test('maps legacy currency-only records into the default bank account without duplicating balances', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    store.restoreFromBackup({
+      transactions: [
+        {
+          id: 'legacy_cny_balance',
+          type: 'income',
+          title: 'Legacy balance',
+          amount: '1288.00',
+          currency: 'CNY',
+        },
+      ],
+    })
+
+    const cnyAccount = store.bankAccountSummaries.find(
+      (account) => account.id === 'wallet_account_icbc_cny',
+    )
+    expect(cnyAccount).toMatchObject({
+      primaryCurrency: 'CNY',
+      institution: { id: 'icbc' },
+      primaryBalance: { amountCents: 128800, amount: '1288.00' },
+    })
+    expect(store.listTransactionsByAccount(cnyAccount.id).map((item) => item.id)).toEqual([
+      'legacy_cny_balance',
+    ])
+    expect(
+      store.bankAccountSummaries.reduce(
+        (total, account) => total + (account.primaryBalance?.amountCents || 0),
+        0,
+      ),
+    ).toBe(128800)
+  })
+
+  test('persists card selection, default card, frozen state, and account-linked transfers', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const usdAccount = store.findDefaultBankAccountForCurrency('USD')
+    const incoming = store.addTransferTransaction({
+      amount: '120.00',
+      currency: 'USD',
+      accountId: usdAccount.id,
+      direction: 'incoming',
+      counterparty: 'Tour settlement',
+    })
+    const outgoing = store.addTransferTransaction({
+      amount: '20.00',
+      currency: 'USD',
+      accountId: usdAccount.id,
+      direction: 'outgoing',
+      counterparty: 'Studio',
+    })
+
+    expect(incoming).toMatchObject({
+      type: 'income',
+      direction: 'incoming',
+      accountId: 'wallet_account_chase_usd',
+      cardId: 'wallet_card_chase_usd',
+    })
+    expect(outgoing).toMatchObject({ type: 'expense', direction: 'outgoing' })
+    expect(
+      store.bankAccountSummaries.find((account) => account.id === usdAccount.id)?.primaryBalance,
+    ).toMatchObject({ amountCents: 10000, amount: '100.00' })
+
+    expect(store.setDefaultPaymentCard('wallet_card_chase_usd')).toMatchObject({ isDefault: true })
+    expect(store.togglePaymentCardFrozen('wallet_card_mufg_jpy')).toMatchObject({ status: 'frozen' })
+    store.selectPaymentCard('wallet_card_chase_usd')
+    const snapshot = store.createBackupSnapshot()
+
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.activeCardId).toBe('wallet_card_chase_usd')
+    expect(store.findPaymentCardById('wallet_card_chase_usd')?.isDefault).toBe(true)
+    expect(store.findPaymentCardById('wallet_card_mufg_jpy')?.status).toBe('frozen')
+    expect(store.listTransactionsByCard('wallet_card_chase_usd')).toHaveLength(2)
+  })
+
+  test('quotes money through the current Wallet rate revision', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const quote = store.quoteMoney({ amountMinor: 3900, currency: 'CNY' }, 'USD', { quotedAt: 42 })
+
+    expect(store.currencyOptions.find((currency) => currency.code === 'KRW')?.exponent).toBe(0)
+    expect(quote).toMatchObject({
+      ok: true,
+      quotedMoney: { amountMinor: 542, currency: 'USD' },
+      rateSetId: 'wallet-rates-bundled-average-v1',
+      quotedAt: 42,
+    })
+    expect(store.formatMoney(quote.quotedMoney, { locale: 'en-US' })).toBe('USD 5.42')
+  })
+
+  test('persists rate revisions and migrates legacy numeric rate payloads', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const bundledRateSetId = store.exchangeRates.rateSetId
+    expect(store.setUsdCnyRate('7.35')).toBe(7.35)
+    expect(store.exchangeRates).toMatchObject({
+      revision: 2,
+      rateSource: 'user_edit',
+      reference: { rate: '7.35' },
+    })
+    expect(store.exchangeRates.rateSetId).not.toBe(bundledRateSetId)
+
+    const snapshot = store.createBackupSnapshot()
+    const revisedRateSetId = snapshot.exchangeRates.rateSetId
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.exchangeRates.rateSetId).toBe(revisedRateSetId)
+    expect(store.exchangeRates.reference.rate).toBe('7.35')
+
+    expect(
+      store.restoreFromBackup({
+        registeredCurrencies: [{ code: 'CRD', exponent: 0 }],
+        exchangeRates: {
+          reference: { rate: 7.4 },
+          ratesToUsd: { CRD: 0.05 },
+        },
+        transactions: [],
+      }),
+    ).toBe(true)
+    expect(store.exchangeRates).toMatchObject({
+      rateSetId: 'wallet-rates-legacy-v1',
+      reference: { rate: '7.4' },
+    })
+    expect(store.exchangeRates.ratesToUsd.CRD).toBe('0.05')
+    expect(store.currencyOptions.find((currency) => currency.code === 'CRD')?.exponent).toBe(0)
+  })
+
+  test('creates stable role payee accounts while keeping self profiles account-free', () => {
+    const evaAccounts = createDefaultRolePayeeAccounts({
+      profileId: 1,
+      roleId: 'eva',
+      entityType: 'main_role',
+    })
+    const sameEvaAccounts = createDefaultRolePayeeAccounts({
+      profileId: 1,
+      roleId: 'eva',
+      entityType: 'main_role',
+    })
+    const koreanRoleAccounts = createDefaultRolePayeeAccounts({
+      profileId: 2,
+      roleId: 'idol-2',
+      entityType: 'main_role',
+    })
+
+    expect(evaAccounts).toEqual(sameEvaAccounts)
+    expect(evaAccounts[0]).toMatchObject({
+      id: 'role_payee_1_icbc_cny',
+      institutionId: 'icbc',
+      currency: 'CNY',
+      status: 'active',
+      isPrimary: true,
+    })
+    expect(koreanRoleAccounts[0]).toMatchObject({
+      id: 'role_payee_2_kb-kookmin_krw',
+      institutionId: 'kb-kookmin',
+      currency: 'KRW',
+    })
+    expect(
+      createDefaultRolePayeeAccounts({
+        profileId: 999,
+        roleId: 'self',
+        entityType: 'self_profile',
+      }),
+    ).toEqual([])
+  })
+
+  test('validates same-currency role transfers, deducts the source account, and persists receipts', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+    const account = createDefaultRolePayeeAccounts({
+      profileId: 1,
+      roleId: 'eva',
+      entityType: 'main_role',
+    })[0]
+    const knownPayee = store.rememberRolePayeeAccount({
+      account,
+      profile: { id: 1, roleId: 'eva', name: 'Eva' },
+      contact: { id: 1, profileId: 1, name: 'Eva' },
+      sourceChatId: 1,
+      sourceMessageId: 'chat_payee_share_1',
+    })
+    store.addTransaction({
+      type: 'income',
+      title: 'Opening balance',
+      amount: '100.00',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+    })
+
+    expect(
+      store.addRolePayeeTransfer({
+        payeeAccountId: knownPayee.id,
+        amount: '10.00',
+        accountId: 'wallet_account_chase_usd',
+      }),
+    ).toMatchObject({ ok: false, reason: 'currency_mismatch', transaction: null })
+    expect(
+      store.addRolePayeeTransfer({
+        payeeAccountId: knownPayee.id,
+        amount: '120.00',
+        accountId: 'wallet_account_icbc_cny',
+      }),
+    ).toMatchObject({ ok: false, reason: 'insufficient_funds', transaction: null })
+
+    const result = store.addRolePayeeTransfer({
+      payeeAccountId: knownPayee.id,
+      amount: '25.50',
+      accountId: 'wallet_account_icbc_cny',
+      cardId: 'wallet_card_icbc_cny',
+      note: 'Dinner share',
+      sourceChatId: 1,
+      sourceMessageId: 'chat_payee_share_1',
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.transaction).toMatchObject({
+      type: 'expense',
+      direction: 'outgoing',
+      amountCents: 2550,
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+      cardId: 'wallet_card_icbc_cny',
+      counterparty: 'Eva',
+      sourceModule: 'wallet_payee_transfer',
+      sourceId: knownPayee.id,
+      transferStatus: 'completed',
+      payeeAccountId: knownPayee.id,
+      recipientProfileId: 1,
+      recipientContactId: 1,
+      sourceChatId: 1,
+      sourceMessageId: 'chat_payee_share_1',
+    })
+    expect(result.transaction.receiptNumber).toMatch(/^SP20260101\d{6}$/)
+    expect(
+      store.bankAccountSummaries.find((item) => item.id === 'wallet_account_icbc_cny')
+        ?.primaryBalance,
+    ).toMatchObject({ amountCents: 7450, amount: '74.50' })
+    expect(store.transactionSourceSummary.chat).toBe(1)
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.findKnownPayeeAccountById(knownPayee.id)).toMatchObject({
+      ownerProfileId: 1,
+      currency: 'CNY',
+    })
+    expect(store.findTransactionById(result.transaction.id)).toMatchObject({
+      receiptNumber: result.transaction.receiptNumber,
+      sourceModule: 'wallet_payee_transfer',
+    })
+    expect(store.removeKnownPayeeAccountsForProfile(1)).toBe(1)
+    expect(store.findKnownPayeeAccountById(knownPayee.id)).toBeNull()
   })
 })

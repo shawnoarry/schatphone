@@ -1682,6 +1682,7 @@ const deleteSelectedProfile = async () => {
     setUiNotice('error', t('删除失败，请重试。', 'Delete failed, please retry.'))
     return
   }
+  walletStore.removeKnownPayeeAccountsForProfile(profile.id)
   selectedProfileId.value = roleProfiles.value[0]?.id || 0
   dangerIncludeLinkedRecords.value = false
   setUiNotice('success', t('角色档案已删除。', 'Role profile deleted.'))

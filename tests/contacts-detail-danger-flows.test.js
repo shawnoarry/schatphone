@@ -11,6 +11,7 @@ import { useMapStore } from '../src/stores/map'
 import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
+import { useWalletStore } from '../src/stores/wallet'
 
 const DummyView = { template: '<div />' }
 
@@ -625,9 +626,17 @@ describe('ContactsView relationship danger flows', () => {
   test('requires irreversible, scope, and typed-id confirmations before deleting a role', async () => {
     const chatStore = useChatStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const walletStore = useWalletStore()
     const { profile, binding } = createRoleWithBinding(chatStore, {
       roleId: '952A',
       name: 'Delete Flow',
+    })
+    const knownPayee = walletStore.rememberRolePayeeAccount({
+      account: profile.payeeAccounts[0],
+      profile,
+      contact: binding,
+      sourceChatId: binding.id,
+      sourceMessageId: 'chat_payee_delete_flow',
     })
     relationshipRuntimeStore.recordRelationshipFact({
       target: {
@@ -668,6 +677,7 @@ describe('ContactsView relationship danger flows', () => {
     expect(chatStore.getRoleProfileById(profile.id)).toBe(null)
     expect(chatStore.contacts.some((item) => item.id === binding.id)).toBe(false)
     expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: profile.id }).exists).toBe(false)
+    expect(walletStore.findKnownPayeeAccountById(knownPayee.id)).toBeNull()
 
     wrapper.unmount()
   })

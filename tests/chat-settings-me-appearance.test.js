@@ -475,11 +475,18 @@ describe('Chat settings, Me, and appearance routes', () => {
     const chatStore = useChatStore()
     const shoppingStore = useShoppingStore()
     const { dialogState, submitDialog } = useDialog()
+    const roleProfile = chatStore.addRoleProfile({
+      name: 'Mina Device',
+      role: 'Tester',
+      isMain: true,
+    })
     const contact = chatStore.addContact({
       kind: 'role',
+      profileId: roleProfile.id,
       name: 'Mina Device',
       role: 'Tester',
     })
+    const payeeCurrency = roleProfile.payeeAccounts[0].currency
     const product = shoppingStore.upsertProduct({
       id: 'chat_rich_panel_product',
       title: 'Signal Ribbon',
@@ -507,7 +514,6 @@ describe('Chat settings, Me, and appearance routes', () => {
     await wrapper.get('[data-testid="chat-user-action-open-transfer"]').trigger('click')
     await flushUi()
     await wrapper.get('[data-testid="chat-user-action-transfer-amount"]').setValue('88.50')
-    await wrapper.get('[data-testid="chat-user-action-transfer-currency"]').setValue('USD')
     await wrapper.get('[data-testid="chat-user-action-transfer-note"]').setValue('panel transfer note')
     await flushUi()
     await wrapper.get('[data-testid="chat-user-action-submit-transfer"]').trigger('click')
@@ -529,9 +535,16 @@ describe('Chat settings, Me, and appearance routes', () => {
     await flushUi()
 
     const messages = chatStore.getMessagesByContactId(contact.id)
-    const transferMessage = messages.find((item) =>
-      item.blocks?.some((block) => block?.type === 'transfer_virtual' && block.note === 'panel transfer note'),
+    const payeeAccountMessageIndex = messages.findIndex((item) =>
+      item.blocks?.some(
+        (block) =>
+          block?.type === 'share_card' &&
+          block.shareType === 'payee_account' &&
+          block.sourceModule === 'wallet',
+      ),
     )
+    const payeeAccountMessage = messages[payeeAccountMessageIndex]
+    const transferRequestMessage = messages[payeeAccountMessageIndex - 1]
     const voiceMessage = messages.find((item) =>
       item.blocks?.some((block) => block?.type === 'voice_virtual' && block.transcript === 'panel voice secret'),
     )
@@ -545,15 +558,23 @@ describe('Chat settings, Me, and appearance routes', () => {
       ),
     )
 
-    expect(transferMessage?.content).toContain('88.50 USD')
+    expect(transferRequestMessage?.content).toContain(`88.50 ${payeeCurrency}`)
+    expect(payeeAccountMessage?.content).toContain('receiving account')
     expect(voiceMessage?.content).toBe('panel voice secret')
     expect(productMessage?.content).toContain('Signal Ribbon')
-    expect(wrapper.get(`[data-testid="chat-message-row-${transferMessage.id}"]`).text()).toContain('panel transfer note')
+    expect(wrapper.get(`[data-testid="chat-message-row-${payeeAccountMessage.id}"]`).text()).toContain(
+      'Receiving account',
+    )
+    expect(
+      wrapper.get(
+        `[data-testid="chat-share-card-open-wallet-${roleProfile.payeeAccounts[0].id}"]`,
+      ).text(),
+    ).toContain('Transfer in Wallet')
     expect(wrapper.get(`[data-testid="chat-message-row-${voiceMessage.id}"]`).text()).toContain('panel voice secret')
     expect(wrapper.get(`[data-testid="chat-message-row-${productMessage.id}"]`).text()).toContain('Signal Ribbon')
     expect(wrapper.get(`[data-testid="chat-share-card-open-shopping-${product.id}"]`).text()).toContain('Open source')
 
-    const transferRow = wrapper.get(`[data-testid="chat-message-row-${transferMessage.id}"]`)
+    const transferRow = wrapper.get(`[data-testid="chat-message-row-${transferRequestMessage.id}"]`)
     await transferRow.get('[data-testid="chat-message-bubble"]').trigger('contextmenu')
     await flushUi()
     expect(wrapper.find('[data-testid="chat-message-action-quote"]').exists()).toBe(true)
@@ -565,7 +586,9 @@ describe('Chat settings, Me, and appearance routes', () => {
 
     await wrapper.get('[data-testid="chat-message-action-quote"]').trigger('click')
     await flushUi()
-    expect(wrapper.get('[data-testid="chat-pending-quote-bar"]').text()).toContain('88.50 USD')
+    expect(wrapper.get('[data-testid="chat-pending-quote-bar"]').text()).toContain(
+      `88.50 ${payeeCurrency}`,
+    )
 
     const voiceRow = wrapper.get(`[data-testid="chat-message-row-${voiceMessage.id}"]`)
     await voiceRow.get('[data-testid="chat-message-bubble"]').trigger('contextmenu')
@@ -594,7 +617,7 @@ describe('Chat settings, Me, and appearance routes', () => {
     wrapper.unmount()
   })
 
-  test('uses Wallet primary currency for Chat transfer cards and sourced ledger records', async () => {
+  test('uses the persisted role account currency and does not move money before Wallet confirmation', async () => {
     const router = createTestRouter()
     const chatStore = useChatStore()
     const walletStore = useWalletStore()
@@ -608,11 +631,18 @@ describe('Chat settings, Me, and appearance routes', () => {
       { id: 'survival_city' },
     )
     walletStore.setPrimaryCurrency('CRD')
+    const roleProfile = chatStore.addRoleProfile({
+      name: 'Mina Credits',
+      role: 'Tester',
+      isMain: true,
+    })
     const contact = chatStore.addContact({
       kind: 'role',
+      profileId: roleProfile.id,
       name: 'Mina Credits',
       role: 'Tester',
     })
+    const payeeAccount = roleProfile.payeeAccounts[0]
 
     await router.push(`/chat/${contact.id}`)
     await router.isReady()
@@ -628,20 +658,33 @@ describe('Chat settings, Me, and appearance routes', () => {
     await flushUi()
     await wrapper.get('[data-testid="chat-user-action-open-transfer"]').trigger('click')
     await flushUi()
-    expect(wrapper.get('[data-testid="chat-user-action-transfer-currency"]').element.value).toBe('CRD')
+    expect(wrapper.get('[data-testid="chat-user-action-transfer-currency"]').element.value).toBe(
+      payeeAccount.currency,
+    )
 
     await wrapper.get('[data-testid="chat-user-action-transfer-amount"]').setValue('12.00')
     await wrapper.get('[data-testid="chat-user-action-submit-transfer"]').trigger('click')
     await flushUi()
 
-    const transfer = walletStore.listTransactionsBySourceFilter('chat')[0]
-    expect(transfer).toMatchObject({
-      amountCents: 1200,
-      currency: 'CRD',
-      counterparty: 'Mina Credits',
-      sourceModule: 'chat_transfer',
+    expect(walletStore.listTransactionsBySourceFilter('chat')).toHaveLength(0)
+    expect(walletStore.knownPayeeAccounts).toHaveLength(1)
+    expect(walletStore.knownPayeeAccounts[0]).toMatchObject({
+      id: payeeAccount.id,
+      currency: payeeAccount.currency,
+      ownerProfileId: roleProfile.id,
+      ownerName: 'Mina Credits',
     })
-    expect(chatStore.getMessagesByContactId(contact.id).at(-1).content).toContain('12.00 CRD')
+    const accountCard = chatStore
+      .getMessagesByContactId(contact.id)
+      .at(-1)
+      .blocks.find((block) => block.type === 'share_card')
+    expect(accountCard).toMatchObject({
+      shareType: 'payee_account',
+      sourceModule: 'wallet',
+      sourceId: payeeAccount.id,
+      amountLabel: `12.00 ${payeeAccount.currency}`,
+    })
+    expect(accountCard.route).toContain(`currency=${payeeAccount.currency}`)
 
     wrapper.unmount()
   })

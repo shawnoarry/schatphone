@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   SHAREABLE_OBJECT_TYPES,
+  createPayeeAccountShareObject,
   createProductLinkShareObject,
   createTrackingShareObject,
   createVirtualGiftShareObject,
@@ -113,6 +114,36 @@ describe('shareable-object contract', () => {
         sourceTruthOwner: 'Logistics',
       },
     })
+  })
+
+  test('builds a Wallet-owned role payee card without moving money', () => {
+    const share = createPayeeAccountShareObject({
+      payeeAccountId: 'role_payee_1_icbc_cny',
+      ownerProfileId: 1,
+      sourceChatId: 1,
+      sourceMessageId: 'chat_payee_share_1',
+      institutionId: 'icbc',
+      institutionLabel: 'ICBC',
+      currency: 'CNY',
+      amount: '88.50',
+      note: '练习结束后的晚餐',
+      title: 'ICBC · CNY receiving account',
+      summary: 'Eva · Account •••• 1288',
+    })
+
+    expect(share).toMatchObject({
+      type: SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT,
+      sourceModule: 'wallet',
+      sourceId: 'role_payee_1_icbc_cny',
+      sourceEventId: 'chat_payee_share_1',
+      amountLabel: '88.50 CNY',
+      serviceKey: 'icbc',
+      serviceLabel: 'ICBC',
+    })
+    expect(share.route).toContain('/wallet?source=chat&intent=payee_account')
+    expect(share.route).toContain('payeeAccountId=role_payee_1_icbc_cny')
+    expect(new URLSearchParams(share.route.split('?')[1]).get('note')).toBe('练习结束后的晚餐')
+    expect(share.aiContext.mutationBoundary).toContain('does not move money')
   })
 
   test('drops unusable share objects without title or source id', () => {
