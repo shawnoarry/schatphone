@@ -1,0 +1,8 @@
+Use case: identity-preserve
+Asset type: isolated 3D order-delivering status illustration
+Input images: Image 1 is a non-destructive horizontally mirrored reference derived from the accepted platform rider so that the scooter already faces right. Create a new status illustration; do not overwrite or modify the input file.
+Primary request: Preserve the same round rider, large black glasses, teal helmet, white jacket, black trousers, brown shoes, right-facing teal scooter, and teal delivery box with one simple white heart. The scooter front wheel, headlamp, and handlebar must be on the image-right side; the rear wheel and delivery box must be on the image-left side. Show the complete rider and scooter moving toward the right, with three small solid warm-yellow motion marks to the left of the rear wheel.
+Style/medium: The same polished restrained friendly commercial 3D style, proportions, materials, and teal color as Image 1.
+Composition/framing: Square, centered, fills about 74 percent, complete wheels, helmet, box, and motion marks fully visible with at least 12 percent safe padding, clear at 112px.
+Scene/backdrop: Perfectly flat uniform solid #FF00FF chroma-key background, edge to edge, with no gradient, texture, road, floor plane, cast shadow, reflection, haze, or lighting variation.
+Constraints: Preserve rider identity and the input image's right-facing direction; never mirror it back; crisp separated silhouette; do not use #FF00FF anywhere in the subject; no readable text, letters, price, additional logo, wordmark, official mascot, traffic scene, UI card, phone frame, extra people, or watermark.

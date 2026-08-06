@@ -1,0 +1,13 @@
+Use case: product-mockup
+Asset type: square mobile food-delivery combo photograph for thumbnail and detail views
+Input images: Image 1 is the fixed Dash Double Stack burger appearance reference; Image 2 is the Sea-Salt Fries appearance reference; Image 3 is only the Dash Grill paper-tray, palette, and quick-service photography reference. Create a new photograph. Do not alter or overwrite any input image.
+Primary request: Create one complete default Dash Double Stack combo arranged together on one unbranded paper service tray.
+Scene/backdrop: Clean Paper #FFF9EC counter and backdrop with bold flat Mustard Yellow #FFC833 and Ink #201A17 paper planes; Tomato Red #E33D2E appears only as a concentrated liner or carton accent.
+Subject: Exactly one complete double beef burger matching Image 1, one regular serving of thin Sea-Salt Fries matching Image 2, and one medium unbranded Fountain Cola with dark cola, clear ice, condensation, a plain clear lid, and no straw wrapper. All three default components must be simultaneously obvious.
+Style/medium: Photorealistic commercial quick-service food photography, real grilled beef, melted cheddar, glossy bun, crisp fries, cold carbonated cola, appetizing but not toy-like.
+Composition/framing: Square 1024x1024 composition, approximately 35-degree three-quarter overhead camera. The entire tray and all three components are fully inside the frame with 10 percent safe padding. Burger is the largest anchor, while fries and drink remain independently readable at a 100px thumbnail. Keep the complete combo within the central 80 percent; no edge cropping.
+Lighting/mood: Bright hard direct flash with crisp highlights and short controlled hard-edged shadows, energetic fast-counter photography.
+Materials/textures: Unbranded folded paper tray, matte paper liner, plain fries carton, real food moisture and grill texture, realistic ice and condensation.
+Text: none.
+Constraints: Preserve the exact default combo semantics: fixed double beef stack plus Sea-Salt Fries plus Fountain Cola. Exactly one burger, one fries serving, one drink, and one tray. No readable text, price, logo, letters, arch symbol, mascot, people, hands, UI, watermark, or real-brand packaging.
+Avoid: chicken tenders from Image 3; extra side dishes; loaded cheese fries; shake; sundae; second burger; multiple drinks; floating food; excessive props; soft pastel cafe lighting; mint-teal Baemin styling.
