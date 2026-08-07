@@ -165,6 +165,7 @@ export const createWriteCoordinator = ({
   locks = globalThis.navigator?.locks,
   BroadcastChannelClass = globalThis.BroadcastChannel,
   forceIndexedDbFallback = false,
+  scopeKey = REPOSITORY_WRITE_SCOPE,
   ownerId = globalThis.crypto?.randomUUID?.() || `writer-${Date.now()}`,
   now = () => Date.now(),
   waitTimeoutMs = WRITE_COORDINATOR_DEFAULTS.waitTimeoutMs,
@@ -187,7 +188,7 @@ export const createWriteCoordinator = ({
   const notify = (type, metadata) => {
     channel?.postMessage({
       type,
-      scopeKey: REPOSITORY_WRITE_SCOPE,
+      scopeKey,
       ownerId,
       operationId: metadata.operationId,
       fencingToken: metadata.fencingToken ?? null,
@@ -196,9 +197,9 @@ export const createWriteCoordinator = ({
   }
 
   const acquire = async ({ operationId, scope = {}, expectedPointerRevision = null } = {}) => {
-    if (closed) return { ok: false, code: 'unsupported' }
+    if (closed) return { ok: false, code: 'unsupported', readOnly: true }
     if (typeof operationId !== 'string' || !operationId.trim()) {
-      return { ok: false, code: 'unsupported' }
+      return { ok: false, code: 'unsupported', readOnly: true }
     }
     const startedAt = now()
     const retry = () => acquire({ operationId, scope, expectedPointerRevision })
@@ -228,7 +229,7 @@ export const createWriteCoordinator = ({
         try {
           lock = await acquireWebLock({
             locks,
-            scopeKey: REPOSITORY_WRITE_SCOPE,
+            scopeKey,
             ownerId,
             operationId,
           })
@@ -272,7 +273,7 @@ export const createWriteCoordinator = ({
         let result
         try {
           result = await leaseAdapter.acquire({
-            scopeKey: REPOSITORY_WRITE_SCOPE,
+            scopeKey,
             ownerId,
             operationId,
             leaseDurationMs,
@@ -332,7 +333,7 @@ export const createWriteCoordinator = ({
           return createReadOnlyConflict({ retry, refreshCurrentSave: refresh, cause: 'unsafe_recovery' })
         }
       } else {
-        return { ok: false, code: 'unsupported' }
+        return { ok: false, code: 'unsupported', readOnly: true }
       }
 
       if (now() - startedAt >= waitTimeoutMs) break
@@ -350,6 +351,7 @@ export const createWriteCoordinator = ({
 
   return Object.freeze({
     ownerId,
+    scopeKey,
     adapter: useWebLocks ? 'web_locks' : leaseAdapter ? 'indexeddb_lease' : 'unsupported',
     acquire,
     close,

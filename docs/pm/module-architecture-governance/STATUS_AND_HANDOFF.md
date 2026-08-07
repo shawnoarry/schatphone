@@ -44,7 +44,7 @@ Current active architecture slice:
 - legacy inspection returns `shapeOk` separately from `completePackageEligible`; Chat `moduleIdentity` and `moduleAvatarOverrides` remain the explicit required-but-uncovered legacy v2 gap, so structurally valid v2 output is not eligible for a future complete-package claim;
 - `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED`: it fixes the separate `schatphone-repository` v1 stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, localStorage hint allowlist, contextual quota/persist policy, fail-closed WriteCoordinator, and Book Adapter/fixture/legacy-reader/rollback contract;
 - Batch 2B completed as the exact non-active foundation, followed on 2026-07-22 by the separately approved Book-only runtime cutover: explicit Book UI confirmation, contextual persistent-storage request, atomic activation/reopen, Repository-only later writes, unchanged legacy rollback bytes, and real-Chromium rollback evidence are implemented; dual write, legacy deletion, Gallery/R2, and other owners remain unapproved;
-- the structured write-result primitive, lineage/sequence local/mirror freshness bootstrap, and product-level save-failed/read-only recovery surface are integrated. Sync/async layered writes and Book Repository conflicts now report through one non-persisted root-shell state with retry, confirmed reload-current-save, and complete-backup handoff; product-wide same-container writer protection and complete backup/restore/reopen/rollback remain open;
+- the structured write-result primitive, lineage/sequence local/mirror freshness bootstrap, product-level save-failed/read-only recovery surface, and product-wide same-container writer boundary are integrated. A page acquires the current-save writer before reconciliation and Store mount; later pages inspect without repair and fail closed across layered, Book, Gallery binary, and image-generation device-local writes until retry succeeds. Complete backup/restore/reopen/rollback remains open;
 - `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` is `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`: `legacy_single_world` is stable compatibility identity/scope, Pack capability is separate, Book/WorldBook/Pack/template ownership is frozen, and zero-Pack/zero-encyclopedia/zero-text worlds remain valid;
 - WorldBook and Contacts now read immutable identity/narrative/encyclopedia/profile/capability/diagnostic projections through `world-interface.js`; Pack switching does not change world identity or setting selection, and new template/contact writes do not record active Pack IDs;
 - legacy Pack content references remain reviewable compatibility evidence, but missing Book, encyclopedia, or template references no longer block capability Pack activation;
@@ -65,7 +65,7 @@ Current active architecture slice:
 | --- | --- | --- |
 | Browser/PWA persistence | `CONFIRMED` | One isolated browser/Web App container owns one current save; IndexedDB-first is the target and `localStorage` becomes small hot/recovery state. |
 | Isolated entry containers | `CONFIRMED` | Each isolated browser profile/site-data or separately isolated desktop Web App container is an independent current save. There is no internal slot, automatic sync, cross-container discovery, or silent merge; transfer uses a user-selected complete backup. |
-| Same-container tabs | `CONFIRMED` | Writes wait behind one coordinator. After timeout the later tab remains read-only and offers retry/refresh-current-save only; last-write-wins and force takeover are excluded. |
+| Same-container tabs | `IMPLEMENTED` | One page-level writer gates current durable carriers. After timeout the later page is inspect-only/read-only and offers retry/refresh-current-save only; last-write-wins and force takeover are excluded. |
 | Persistent-storage timing | `CONFIRMED` | Do not ask at first launch. Ask in context before the first qualifying high-volume durable action, and expose browser status plus explicit retry in Settings. |
 | IndexedDB / Book pilot | `BOOK_CUTOVER_DONE` | Batch 2B foundation and the separately approved Book runtime cutover are implemented and browser-tested; the unchanged legacy carrier remains rollback-only. |
 | Durable records | `CONFIRMED` | Committed user/AI/system content and authoritative/audit truth remain durable under their owning modules; raw transport and rebuildable material do not. |
@@ -337,22 +337,23 @@ Use the live roadmap order.
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
 1. personal R2/Worker onboarding is post-release because remote transport cannot repair an unsafe local write or an incomplete local recovery package;
-2. structured write results, newest-valid local/mirror reconciliation, and product-level save-failed/read-only recovery are integrated foundations; the next architecture slice is product-wide same-container writer protection;
-3. the next release deliverable is complete local backup/restore/reopen coverage, including required Chat identity/avatar state, default-on retained Gallery material, integrity, capacity, staged activation, crash journal, and rollback;
+2. structured write results, newest-valid local/mirror reconciliation, product-level save-failed/read-only recovery, and the product-wide same-container writer boundary are integrated foundations;
+3. the next architecture and release deliverable is complete local backup/restore/reopen coverage, including required Chat identity/avatar state, default-on retained Gallery material, integrity, capacity, staged activation, crash journal, and rollback;
 4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages, deployed PWA/install/offline, hosted-provider Chat, and true-device backup evidence still close the public-release gate;
 5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene, and World Setting W2 remain post-preview unless a current product blocker requires a separately approved slice.
 6. roadmap 4.10's Camera/shared-image-generation first slice is complete; Gallery People truth, source-module callers, hosted proxy deployment, true-device checks, and hosted-provider smoke require separate promotion and do not displace the current-save P0 lane.
 
 ### P0: Current Save Safety And Complete Local Recovery
 
-Status: `IN_PROGRESS`; write-result, local/mirror freshness, and product-level failure recovery are implemented, while broader same-container read-only enforcement and complete local recovery remain open.
+Status: `IN_PROGRESS`; write-result, local/mirror freshness, product-level failure recovery, and same-container read-only enforcement are implemented, while complete local recovery remains open.
 
 Next coherent slice:
 
-- extend WriteCoordinator protection so a later same-container page cannot mutate any durable owner after timeout;
-- route those later-owner conflicts into the existing root-shell recovery state without creating owner-specific warning systems;
-- add focused two-page Chromium coverage for the broader writer boundary without beginning R2, Gallery schema, dual write, or a non-Book Repository migration;
-- then close complete local backup/restore/reopen/rollback as its own reviewable slice.
+- close complete local backup/restore/reopen/rollback as its own reviewable slice;
+- include required Chat identity/avatar state and default-on retained Gallery material;
+- prove integrity, capacity preflight, staged activation, crash recovery, rollback, and reopen without beginning R2 transport or another Repository owner migration.
+
+`DONE 2026-08-07`: one page-level current-save writer is acquired before reconciliation and Store mount. A later same-container page times out into the existing read-only recovery state, inspects all 17 targets without repair, and cannot mutate layered sync/async/deferred mirror carriers, Book Repository/legacy writes, Gallery binaries, or image-generation credentials/candidates. Releasing the first page permits retry and captured owner writes; unchanged heads persist, while a head changed by the former writer remains reconciliation-blocked. Focused Vitest and real two-page Chromium cover cross-owner zero-write behavior, fallback heartbeat lease loss, retry, and stale-head rejection. Store snapshots, envelopes, Repository schema, backup format, force takeover, and last-write-wins remain unchanged.
 
 `DONE 2026-08-07`: sync and async layered write failures plus Book Repository failures now enter one non-persisted product status. The root shell distinguishes primary-save failure, read-only conflict, and local-primary/mirror-degraded states; retryable incidents can retry their captured owner write, successful writes clear only their matching incident, and non-retryable errors do not expose false retry. Reload-current-save requires destructive confirmation, and the emergency action opens the existing Settings complete-backup section instead of inventing a second backup owner. Desktop Chromium and simulated Pixel 5 failure injection prove quota recovery, unresolved zero-write conflict, backup handoff, 44px actions, viewport containment, and no horizontal overflow. Envelope, Store, Repository, and backup formats are unchanged; broader same-container WriteCoordinator coverage and complete recovery remain open.
 

@@ -19,6 +19,7 @@ import {
   testImageProviderConnection,
 } from '../lib/image-generation-api'
 import { readPersistedState, writePersistedState } from '../lib/persistence'
+import { canWriteCurrentSave } from '../lib/current-save-write-runtime'
 
 const CONFIG_STORAGE_KEY = 'store:image-generation'
 const LEGACY_CONFIG_STORAGE_KEY = 'schatphone:image-generation:config'
@@ -48,7 +49,7 @@ const readLocalRecord = (key, fallback) => {
 }
 
 const writeLocalRecord = (key, data) => {
-  if (!canUseLocalStorage()) return false
+  if (!canUseLocalStorage() || !canWriteCurrentSave()) return false
   try {
     window.localStorage.setItem(key, JSON.stringify({ version: STORAGE_VERSION, data }))
     return true

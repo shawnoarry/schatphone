@@ -47,7 +47,7 @@ Problem:
 
 Most current stores write whole JSON snapshots to `localStorage` and mirror them to IndexedDB. Their normal startup still prefers valid `localStorage`, so the mirror does not remove the small synchronous quota or whole-store rewrite cost. Book is now the first active Repository exception; long Chat history, inline base64 media, Gallery binaries, and future archived-role continuity still need separately approved long-term storage contracts.
 
-The root shell now consumes structured layered-write and Book Repository failures as one product-level save-failed/read-only state with retry, confirmed reload-current-save, and complete-backup handoff. This closes silent product feedback only; it does not broaden WriteCoordinator ownership, change any persisted shape, or complete staged backup recovery.
+The root shell consumes structured layered-write and Book Repository failures as one product-level save-failed/read-only state with retry, confirmed reload-current-save, and complete-backup handoff. One page-level current-save writer now also keeps later same-container pages inspect-only/read-only across the current durable carriers. Neither slice changes persisted shapes or completes staged backup recovery.
 
 Confirmed product boundary:
 

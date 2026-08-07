@@ -14,6 +14,10 @@ import { createPersistenceRepository } from './persistence-repository'
 import { canonicalStringify, sha256Canonical } from './persistence-repository-schema'
 import { createPersistentStoragePolicy } from './persistent-storage-policy'
 import { createWriteCoordinator } from './write-coordinator'
+import {
+  getCurrentSaveWriteBlock,
+  retryCurrentSaveWrite,
+} from './current-save-write-runtime'
 
 const BOOK_STORAGE_KEY = 'store:book'
 
@@ -247,6 +251,24 @@ export const createBookRepositoryRuntime = (options = {}) => {
     expectedPointer = null,
   }) => {
     const pointer = expectedPointer || await repository.readActivePointer()
+    const retryActivation = () =>
+      activateSnapshot({
+        snapshot,
+        operationId: createId('book-write', randomUUID, now),
+        generationId: createId('book-generation', randomUUID, now),
+        sourceEvidence,
+        worldBookSourceLinks,
+        capacityEvidence,
+        expectedPointer: pointer,
+      })
+    const accessBlock = getCurrentSaveWriteBlock()
+    if (accessBlock) {
+      return {
+        ...accessBlock,
+        retry: () => retryCurrentSaveWrite(retryActivation),
+        refreshCurrentSave: () => initialize(),
+      }
+    }
     const lease = await coordinator.acquire({
       operationId,
       expectedPointerRevision: pointer.pointerRevision,
@@ -255,15 +277,7 @@ export const createBookRepositoryRuntime = (options = {}) => {
     if (!lease.ok) {
       return {
         ...lease,
-        retry: () => activateSnapshot({
-          snapshot,
-          operationId: createId('book-write', randomUUID, now),
-          generationId: createId('book-generation', randomUUID, now),
-          sourceEvidence,
-          worldBookSourceLinks,
-          capacityEvidence,
-          expectedPointer: pointer,
-        }),
+        retry: retryActivation,
         refreshCurrentSave: () => initialize(),
       }
     }
@@ -297,7 +311,7 @@ export const createBookRepositoryRuntime = (options = {}) => {
         expectedPointerRevision: pointer.pointerRevision,
         now: now(),
       })
-      const commitCheck = await lease.verifyBeforeCommit()
+      const commitCheck = getCurrentSaveWriteBlock() || await lease.verifyBeforeCommit()
       if (!commitCheck.ok) {
         await repository.markGenerationRollbackRequired({
           generationId,

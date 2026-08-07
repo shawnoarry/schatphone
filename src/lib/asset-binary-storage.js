@@ -1,3 +1,5 @@
+import { canWriteCurrentSave } from './current-save-write-runtime'
+
 const GALLERY_ASSET_DB_NAME = 'schatphone-gallery-assets'
 const GALLERY_ASSET_DB_STORE = 'blobs'
 const GALLERY_ASSET_DB_VERSION = 1
@@ -111,6 +113,7 @@ const deleteBlobFromIndexedDb = async (assetId) => {
 
 export const putGalleryAssetBlob = async (assetId, blob) => {
   if (typeof assetId !== 'string' || !assetId.trim() || !(blob instanceof Blob)) return false
+  if (!canWriteCurrentSave()) return false
   const normalizedId = assetId.trim()
   const written = await writeBlobToIndexedDb(normalizedId, blob)
   if (written) return true
@@ -128,6 +131,7 @@ export const getGalleryAssetBlob = async (assetId) => {
 
 export const deleteGalleryAssetBlob = async (assetId) => {
   if (typeof assetId !== 'string' || !assetId.trim()) return false
+  if (!canWriteCurrentSave()) return false
   const normalizedId = assetId.trim()
   const deleted = await deleteBlobFromIndexedDb(normalizedId)
   const hadFallback = memoryBlobFallback.delete(normalizedId)

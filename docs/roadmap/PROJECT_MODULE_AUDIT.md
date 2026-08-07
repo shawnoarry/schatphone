@@ -84,7 +84,8 @@ Priority meanings:
 - Chat, relationship-evidence, Book, and Gallery growth policy;
 - generated-media local retention, one default-on whole-Gallery backup choice, URL/source-only backup, recovery-only R2 placement, and default-off automation;
 - quota visibility, persistent-storage request, and multi-tab coordination;
-- `DONE 2026-08-07`: one root-shell save-failed/read-only state consumes layered and Book results with retry, confirmed reload, and Settings complete-backup handoff; broader same-container writer enforcement remains open;
+- `DONE 2026-08-07`: one root-shell save-failed/read-only state consumes layered and Book results with retry, confirmed reload, and Settings complete-backup handoff;
+- `DONE 2026-08-07`: one page-level writer is acquired before reconciliation and Store mount; later same-container pages inspect without repair and fail closed across layered, Book, Gallery binary, and image-generation device-local writes until retry succeeds;
 - accepted contract for multiple independently importable complete sensitive backups with editable/default naming, platform-owned local files, direct in-app personal-R2 listing/restore, manifest, integrity, capacity/failure states, staged restore, exact local-material reuse, non-destructive Gallery preservation, missing-media placeholders, legacy migration, and rollback;
 - confirmed explicit in-app R2 deletion with prominent cloud warning and cloud-success gating; no local or cloud backup may be rotated or deleted automatically, and quota pressure must warn or block rather than remove recovery points.
 

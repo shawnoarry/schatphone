@@ -1,4 +1,8 @@
 import { reportPersistenceWriteResult } from './persistence-runtime-status'
+import {
+  getCurrentSaveWriteBlock,
+  retryCurrentSaveWrite,
+} from './current-save-write-runtime'
 
 const STORAGE_NAMESPACE = 'schatphone'
 const INDEXED_DB_NAME = 'schatphone-layered-storage'
@@ -702,6 +706,32 @@ const flushIndexedDbOps = async () => {
       await deleteFromIndexedDb(fullKey)
       continue
     }
+    const accessBlock = getCurrentSaveWriteBlock()
+    if (accessBlock) {
+      const result = {
+        ...accessBlock,
+        local: createWriteSuccess('localStorage', false),
+        mirror: createSkippedWrite('indexeddb', accessBlock.error, true),
+      }
+      reportPersistenceWriteResult({
+        key: op.key,
+        result,
+        retry: () =>
+          retryCurrentSaveWrite(async () => {
+            const mirror = await writeToIndexedDbWithResult(fullKey, op.payload, op.options)
+            return {
+              ok: mirror.ok,
+              error: mirror.error,
+              carrier: mirror.carrier,
+              retryable: mirror.retryable,
+              attempted: mirror.attempted,
+              local: createWriteSuccess('localStorage', false),
+              mirror,
+            }
+          }),
+      })
+      continue
+    }
     const result = await writeToIndexedDbWithResult(fullKey, op.payload, op.options)
     if (!result.ok) {
       if (result.carrier === 'reconciliation') {
@@ -727,9 +757,9 @@ const flushIndexedDbOps = async () => {
   }
 }
 
-const queueIndexedDbWrite = (fullKey, rawPayload, options = {}) => {
+const queueIndexedDbWrite = (key, fullKey, rawPayload, options = {}) => {
   if (!canUseLayeredPersistence()) return
-  pendingIndexedDbOps.set(fullKey, { type: 'write', payload: rawPayload, options })
+  pendingIndexedDbOps.set(fullKey, { key, type: 'write', payload: rawPayload, options })
   if (indexedDbFlushTimerId) return
   indexedDbFlushTimerId = setTimeout(() => {
     void flushIndexedDbOps()
@@ -764,7 +794,7 @@ const createWritePlan = (key, version) => {
   if (key === BOOK_STORAGE_KEY) return { ok: true, generation: null, excluded: true }
   const fullKey = buildStorageKey(key)
   const state = persistedHeadStates.get(fullKey)
-  if (state?.blocked) return createReconciliationFailure()
+  if (state?.blocked || state?.writeBlocked) return createReconciliationFailure()
 
   const local = readLocalLayer(fullKey)
   if (state?.localAvailable && local.available && local.rawPayload !== state.localRaw) {
@@ -799,6 +829,7 @@ const rememberLocalCommit = (key, rawPayload, generation, forceFork = false) => 
   if (!previous) return
   setPersistedHeadState(fullKey, {
     blocked: false,
+    writeBlocked: false,
     serveLayer: 'local',
     generation,
     forceFork,
@@ -829,18 +860,21 @@ export const writePersistedState = (key, data, { version = 1 } = {}) => {
     reportPersistenceWriteResult({
       key,
       result,
-      retry: () => writePersistedState(key, data, { version }),
+      retry: () =>
+        retryCurrentSaveWrite(() => writePersistedState(key, data, { version })),
     })
   const fullKey = buildStorageKey(key)
   const plan = createWritePlan(key, version)
   if (!plan.ok) return finalize(plan)
+  const accessBlock = getCurrentSaveWriteBlock()
+  if (accessBlock) return finalize(accessBlock)
   const serialized = serializePersistedState(data, version, plan.generation)
   if (!serialized.ok) return finalize(serialized)
 
   const local = writePersistedStateToLocal(key, serialized.rawPayload)
   if (local.ok) {
     rememberLocalCommit(key, serialized.rawPayload, plan.generation, plan.forceFork)
-    queueIndexedDbWrite(fullKey, serialized.rawPayload, {
+    queueIndexedDbWrite(key, fullKey, serialized.rawPayload, {
       version,
       skipFreshnessCheck: plan.excluded || plan.forceFork,
     })
@@ -888,7 +922,8 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
     reportPersistenceWriteResult({
       key,
       result,
-      retry: () => writePersistedStateAsync(key, data, { version }),
+      retry: () =>
+        retryCurrentSaveWrite(() => writePersistedStateAsync(key, data, { version })),
     })
   const fullKey = buildStorageKey(key)
   const plan = createWritePlan(key, version)
@@ -901,6 +936,14 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
       })
     }
     return finalize(createReconciliationFailure(true, plan.error))
+  }
+  const accessBlock = getCurrentSaveWriteBlock()
+  if (accessBlock) {
+    return finalize({
+      ...accessBlock,
+      local: createSkippedWrite('localStorage', accessBlock.error, true),
+      mirror: createSkippedWrite('indexeddb', accessBlock.error, true),
+    })
   }
   const serialized = serializePersistedState(data, version, plan.generation)
   if (!serialized.ok) {
@@ -1044,8 +1087,43 @@ export const reconcilePersistedStateLayers = async (key, options = {}) => {
       initialPair.local.rawPayload === initialPair.indexeddb.rawPayload,
   }
 
-  if (options.inspectOnly === true || normalizedKey === BOOK_STORAGE_KEY) {
+  if (normalizedKey === BOOK_STORAGE_KEY) {
     return { ok: true, action: 'inspect_only', reason: 'repository_owned_exclusion', ...baseReport }
+  }
+
+  const writeAccessBlocked = getCurrentSaveWriteBlock()
+  if (options.inspectOnly === true || writeAccessBlocked) {
+    const empty = !initial.local.present && !initial.indexeddb.present
+    const fullyReconciled =
+      empty ||
+      (plan.type === 'winner' &&
+        initial.local.valid &&
+        initial.local.rawPayload === plan.rawPayload &&
+        (!initialPair.indexeddb.applicable ||
+          (initial.indexeddb.valid && initial.indexeddb.rawPayload === plan.rawPayload)))
+    const desired = plan.rawPayload
+      ? inspectRawPayload(plan.rawPayload, { ...options, available: true, present: true })
+      : null
+    setPersistedHeadState(fullKey, {
+      blocked: plan.type === 'conflict' || (!empty && plan.type === 'none'),
+      writeBlocked: !fullyReconciled,
+      reason: fullyReconciled ? '' : plan.reason,
+      serveLayer: plan.winner,
+      generation: desired?.generation || null,
+      forceFork: empty || desired?.order !== 'ordered',
+      localAvailable: initial.local.available,
+      localRaw: initial.local.rawPayload,
+      mirrorAvailable: initial.indexeddb.available,
+      mirrorApplicable: initial.indexeddb.applicable,
+      mirrorRaw: initial.indexeddb.rawPayload,
+    })
+    return {
+      ok: true,
+      action: 'inspect_only',
+      reason: writeAccessBlocked ? 'write_access_read_only' : 'inspect_only',
+      promotionSafe: fullyReconciled,
+      ...baseReport,
+    }
   }
 
   if (plan.type === 'conflict') {
@@ -1057,6 +1135,7 @@ export const reconcilePersistedStateLayers = async (key, options = {}) => {
     const empty = !initial.local.present && !initial.indexeddb.present
     setPersistedHeadState(fullKey, {
       blocked: !empty,
+      writeBlocked: false,
       reason: plan.reason,
       serveLayer: 'none',
       generation: null,
@@ -1142,6 +1221,7 @@ export const reconcilePersistedStateLayers = async (key, options = {}) => {
         : plan.winner
   setPersistedHeadState(fullKey, {
     blocked: false,
+    writeBlocked: false,
     reason: writesOk ? '' : 'write_failed',
     serveLayer,
     generation: desiredInspect.generation,
@@ -1205,8 +1285,8 @@ export const preparePersistedStateLayers = async (targets = []) => {
   return {
     ok: results.every((result) => result.ok),
     total: results.length,
-    mutable: results.filter((result) => result.reason !== 'repository_owned_exclusion').length,
-    inspectOnly: results.filter((result) => result.reason === 'repository_owned_exclusion').length,
+    mutable: results.filter((result) => result.action !== 'inspect_only').length,
+    inspectOnly: results.filter((result) => result.action === 'inspect_only').length,
     results,
   }
 }

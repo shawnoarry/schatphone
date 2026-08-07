@@ -5,14 +5,15 @@ import router from './router'
 import { ensurePushServiceWorkerRegistration } from './lib/push'
 import { preparePersistedStateLayers } from './lib/persistence'
 import { PERSISTED_STATE_AUDIT_TARGETS } from './lib/persistence-owner-inventory'
+import { initializeCurrentSaveWriter } from './lib/current-save-write-runtime'
 import './style.css'
 
-const persistenceBootstrapTargets = PERSISTED_STATE_AUDIT_TARGETS.map((target) => ({
-  ...target,
-  inspectOnly: target.key === 'store:book',
-}))
-
 if (typeof window !== 'undefined') {
+  const writeAccess = await initializeCurrentSaveWriter()
+  const persistenceBootstrapTargets = PERSISTED_STATE_AUDIT_TARGETS.map((target) => ({
+    ...target,
+    inspectOnly: target.key === 'store:book' || writeAccess.ok !== true,
+  }))
   await preparePersistedStateLayers(persistenceBootstrapTargets)
 }
 

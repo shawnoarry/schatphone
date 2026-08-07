@@ -557,12 +557,42 @@ describe('persistence layer freshness reconciliation', () => {
     expect(localStorage.getItem('schatphone:store:book')).toBe(bookLocal)
     expect(idb.payloadByKey.get('schatphone:store:book')).toBe(bookMirror)
   })
+
+  test('observes a non-Book read-only baseline without repairing either layer', async () => {
+    const idb = installIndexedDbMock()
+    const local = makeRaw({ marker: 'local-older', lineage: 'shared', sequence: 1 })
+    const mirror = makeRaw({ marker: 'mirror-newer', lineage: 'shared', sequence: 2 })
+    localStorage.setItem('schatphone:store:system', local)
+    idb.payloadByKey.set('schatphone:store:system', mirror)
+    const { preparePersistedStateLayers, writePersistedState } = await importPersistence()
+
+    const result = await preparePersistedStateLayers([
+      { key: 'store:system', version: 1, inspectOnly: true },
+    ])
+
+    expect(result).toMatchObject({ ok: true, total: 1, mutable: 0, inspectOnly: 1 })
+    expect(result.results[0]).toMatchObject({
+      action: 'inspect_only',
+      promotionSafe: false,
+    })
+    expect(localStorage.getItem('schatphone:store:system')).toBe(local)
+    expect(idb.payloadByKey.get('schatphone:store:system')).toBe(mirror)
+    expect(writePersistedState('store:system', { marker: 'must-stay-blocked' })).toMatchObject({
+      ok: false,
+      error: 'reconciliation_required',
+      attempted: false,
+    })
+  })
 })
 
 describe('persistence bootstrap ordering', () => {
-  test('prepares the 17 inventory targets with Book inspect-only before app creation and mount', async () => {
+  test('acquires writer access before preparing 17 targets, app creation, and mount', async () => {
     vi.resetModules()
     const events = []
+    const initializeWriter = vi.fn(async () => {
+      events.push('writer')
+      return { ok: true, writable: true }
+    })
     const prepare = vi.fn(async (targets) => {
       events.push('prepare')
       expect(targets).toHaveLength(17)
@@ -573,6 +603,9 @@ describe('persistence bootstrap ordering', () => {
       return { ok: true }
     })
     vi.doMock('../src/lib/persistence', () => ({ preparePersistedStateLayers: prepare }))
+    vi.doMock('../src/lib/current-save-write-runtime', () => ({
+      initializeCurrentSaveWriter: initializeWriter,
+    }))
     vi.doMock('vue', () => ({
       createApp: () => {
         events.push('createApp')
@@ -589,7 +622,32 @@ describe('persistence bootstrap ordering', () => {
 
     await import('../src/main.js')
 
-    expect(events.slice(0, 3)).toEqual(['prepare', 'createApp', 'mount'])
+    expect(events.slice(0, 4)).toEqual(['writer', 'prepare', 'createApp', 'mount'])
+    expect(initializeWriter).toHaveBeenCalledTimes(1)
+    expect(prepare).toHaveBeenCalledTimes(1)
+  })
+
+  test('keeps every persistence target inspect-only when writer access is denied', async () => {
+    vi.resetModules()
+    const prepare = vi.fn(async (targets) => {
+      expect(targets).toHaveLength(17)
+      expect(targets.every((target) => target.inspectOnly === true)).toBe(true)
+      return { ok: true }
+    })
+    vi.doMock('../src/lib/persistence', () => ({ preparePersistedStateLayers: prepare }))
+    vi.doMock('../src/lib/current-save-write-runtime', () => ({
+      initializeCurrentSaveWriter: vi.fn(async () => ({ ok: false, readOnly: true })),
+    }))
+    vi.doMock('vue', () => ({
+      createApp: () => ({ use: () => {}, mount: () => {} }),
+    }))
+    vi.doMock('pinia', () => ({ createPinia: () => ({}) }))
+    vi.doMock('../src/App.vue', () => ({ default: {} }))
+    vi.doMock('../src/router', () => ({ default: {} }))
+    vi.doMock('../src/lib/push', () => ({ ensurePushServiceWorkerRegistration: vi.fn() }))
+
+    await import('../src/main.js')
+
     expect(prepare).toHaveBeenCalledTimes(1)
   })
 })

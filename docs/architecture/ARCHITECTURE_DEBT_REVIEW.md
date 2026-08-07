@@ -304,7 +304,8 @@ Before another broad feature family:
 2. preserve the architecture-accepted IndexedDB v1 schema, record/generation model, persistent-storage timing, isolated-container rule, and fail-closed multi-tab contract;
 3. `DONE 2026-07-22`: the approved non-active Book foundation/fixture/staging pilot and the later separately approved Book-only application cutover/runtime activation now have targeted real-Chromium IndexedDB, same-container coordination, reopen, and rollback coverage; every non-Book migration remains behind a later gate;
 4. `DONE 2026-07-22`: preserve complete migration backup contents, including configured credentials, and add the confirmed pre-download sensitive-file warning plus export regression coverage;
-5. `DONE 2026-08-07`: expose structured layered-write and Book Repository failures through one root-shell recovery status without changing Store snapshots, Repository schema, or backup format; product-wide same-container writer enforcement and complete recovery remain later P0 slices;
+5. `DONE 2026-08-07`: expose structured layered-write and Book Repository failures through one root-shell recovery status without changing Store snapshots, Repository schema, or backup format;
+6. `DONE 2026-08-07`: acquire one page-level current-save writer before reconciliation/mount, keep later same-container pages inspect-only/read-only across current durable carriers, and prove release/retry plus stale-head rejection in two-page Chromium; complete local recovery remains the next P0 persistence slice;
 6. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
 7. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
 8. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;

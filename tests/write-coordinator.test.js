@@ -125,6 +125,23 @@ describe('repository write coordinator', () => {
     coordinator.close()
   })
 
+  test('isolates a caller-defined scope without changing the repository default', async () => {
+    FakeBroadcastChannel.messages = []
+    const coordinator = createWriteCoordinator({
+      locks: new FakeLockManager(),
+      BroadcastChannelClass: FakeBroadcastChannel,
+      ownerId: 'page-writer',
+      scopeKey: 'current-save-write',
+    })
+
+    const lease = await coordinator.acquire({ operationId: 'page-session' })
+
+    expect(coordinator.scopeKey).toBe('current-save-write')
+    expect(FakeBroadcastChannel.messages[0]?.message.scopeKey).toBe('current-save-write')
+    await lease.release()
+    coordinator.close()
+  })
+
   test('fails closed when the active pointer changes before staging or commit', async () => {
     let pointerRevision = 2
     const coordinator = createWriteCoordinator({
