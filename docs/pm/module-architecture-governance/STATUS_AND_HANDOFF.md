@@ -101,7 +101,7 @@ Current inventory and validation posture:
 - 153 JavaScript files, 85 Vue files, and 131,038 source lines under `src`;
 - 197 static unit-test files;
 - the 2026-07-22 architecture baseline passed 185 Vitest files / 1170 tests, lint, production build, both audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
-- the current local integration passes lint, 206 Vitest files / 1457 tests, production build, and both audit scopes; remote CI, deployed-artifact, named physical-device, and independently rerunnable audit proof remain open.
+- the current local integration passes lint, 206 Vitest files / 1457 tests, production build, and both audit scopes; remote CI and the deployed Pages artifact now have Run #130 and deployed-browser smoke evidence, while named physical-device and independently rerunnable audit proof remain open.
 
 ## 2. Landed Architecture Baselines
 
@@ -260,7 +260,7 @@ Implemented 2026-07-22:
 
 - Pages Run #128 stopped before deployment at `Audit all dependencies` because the lockfile held the transitive `js-yaml` 4.3.0 advisory range;
 - normal npm resolution refreshed only `node_modules/js-yaml` to 4.3.1 in `package-lock.json`, with no `package.json`, direct dependency, override, or resolution change;
-- production audit and full audit now both report 0 vulnerabilities; local lint, 206 Vitest files / 1457 tests, and production build pass; the remote rerun remains pending.
+- production audit and full audit now both report 0 vulnerabilities; local lint, 206 Vitest files / 1457 tests, and production build pass; remote Pages Run #130 is green and deployed successfully.
 
 Do not report only the production audit when describing developer/CI safety.
 
@@ -284,7 +284,7 @@ Do not describe it as a production backend or closed-page simulation engine.
 - E2E/summary failures upload HTML, test-results, and JSON diagnostics for seven days without retaining download or storage-state data;
 - no coverage threshold exists;
 - local validation and CI both use Node 24.
-- remote GitHub execution, external branch/environment required checks, and a deployed `dist` base-path smoke are not yet proven; this release slice remains partial.
+- remote GitHub execution and a deployed Pages base-path smoke are proven by Run #130 and the live `/schatphone/` browser check; external branch/environment required checks remain separately unverified, and this release slice remains partial.
 
 ## 5. Completed Governance Rounds
 
@@ -345,7 +345,7 @@ The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 1. personal R2/Worker onboarding is post-release because remote transport cannot repair an unsafe local write or an incomplete local recovery package;
 2. structured write results, newest-valid local/mirror reconciliation, product-level save-failed/read-only recovery, and the product-wide same-container writer boundary are integrated foundations;
 3. the next architecture and release deliverable is complete local backup/restore/reopen coverage, including required Chat identity/avatar state, default-on retained Gallery material, integrity, capacity, staged activation, crash journal, and rollback;
-4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages, deployed PWA/install/offline, hosted-provider Chat, and true-device backup evidence still close the public-release gate;
+4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages and a deployed base-path smoke are complete, while deployed PWA/install/offline, hosted-provider Chat, and true-device backup evidence still close the public-release gate;
 5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene, and World Setting W2 remain post-preview unless a current product blocker requires a separately approved slice.
 6. roadmap 4.10's Camera/shared-image-generation first slice is complete; Gallery People truth, source-module callers, hosted proxy deployment, true-device checks, and hosted-provider smoke require separate promotion and do not displace the current-save P0 lane.
 
@@ -399,8 +399,8 @@ Cross-package dependencies:
 ### P1: Release Gate
 
 1. `WORKFLOW_IMPLEMENTED 2026-07-22`: PR verification and main Pages build now define the same full fail-closed gate while preserving focused visual coverage inside the full E2E suite;
-2. verify both workflows on GitHub and confirm the external main required check plus `github-pages` environment protection after an authorized push;
-3. add a later deployed `dist`/Vite base-path smoke before marking release gating complete.
+2. `DONE 2026-08-07`: verify the remote main Pages workflow. Run #130 passed its fail-closed build gate and `deploy` job for `9c263cb`; external main required-check and `github-pages` environment-protection policy remain separately unverified.
+3. `DONE 2026-08-07`: smoke the deployed `/schatphone/` artifact through lock -> Home -> Map, including the manifest, base-path route, map rendering, console-error, and horizontal-overflow checks.
 
 ### P1: Cross-Module Mini Scene Foundation
 

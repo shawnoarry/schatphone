@@ -4,30 +4,24 @@ Updated: 2026-08-07
 
 ## Current conclusion
 
-- Remote `origin/main` was at `da65024` when this round started.
-- GitHub Actions Pages Run #129 passed audit, lint, unit tests, and build, but failed the full Playwright E2E gate, so Pages deployment did not run.
-- The expected Pages address remains [https://shawnoarry.github.io/schatphone/](https://shawnoarry.github.io/schatphone/), but no new version is released by Run #129.
-- Run details: [#129](https://github.com/shawnoarry/schatphone/actions/runs/31166621913)
+- Remote `origin/main` is at `9c263cb`.
+- GitHub Actions Pages Run #130 passed the fail-closed build gate and the `deploy` job, so GitHub Pages released the current `main` artifact.
+- [https://shawnoarry.github.io/schatphone/](https://shawnoarry.github.io/schatphone/) returns the deployed app and manifest from the `/schatphone/` base path. A deployed-browser smoke unlocked to Home, entered Map at `#/map?homePage=0&from=home`, rendered the Seoul map, reported no console errors, and had no horizontal overflow.
+- Run details: [#130](https://github.com/shawnoarry/schatphone/actions/runs/31168706100)
 
-## Submitted in this round
+## Repair evidence
 
 - `src/views/ChatDirectoryView.vue`: renamed the header management button test id to `chat-directory-service-management-header`, leaving `chat-directory-service-management-toggle` unique for the management-panel action.
 - Targeted `shopping-life-consequence.spec.js`: passed 1/1.
 - Single-file ESLint and `git diff --check`: passed.
+- `e2e/map-local-packs.spec.js` passed 14/14 both with one worker and with CI's two workers.
+- Run #130 then passed the complete remote CI collection and deployed successfully.
 
-## Remaining blocker
+## Resolved blocker
 
-The full E2E baseline had 122 tests: 98 passed, 20 failed, and 4 skipped. The remaining failures are concentrated in Map and World Pack navigation:
+Run #129 had 20 Map and World Pack navigation failures after the URL hash changed. The current branch no longer reproduces the focused Map failure under either worker count, and Run #130 is green. The previous failed run remains historical evidence only; it is not a current deployment blocker.
 
-- the URL hash changes to `/map`, but the visible shell can remain on Home;
-- returning from Map Settings can remain at `/map/settings` instead of `/map`;
-- the failures occur in both desktop Chromium and mobile Chromium.
+## Remaining release proof
 
-The Map rerun was intentionally stopped before completion to avoid delaying shutdown. No conclusion has been made that the Map renderer itself is broken; the next investigation should first separate router/navigation timing from parallel-test state contention.
-
-## Next handoff steps
-
-1. Reproduce `e2e/map-local-packs.spec.js` with one worker, then with CI's two workers.
-2. Inspect `e2e/helpers/navigation.js`, Vue Router hash updates, and the Map Settings return handlers.
-3. After the Map failures are fixed, run lint, unit tests, build, production/full audit, and the full E2E gate.
-4. Confirm the new GitHub Actions run is green before treating the Pages URL as updated.
+1. Confirm external branch required-check and `github-pages` environment-protection policy separately.
+2. Collect the separately scheduled installed-PWA/relaunch and named true-device evidence.
