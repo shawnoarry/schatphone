@@ -2391,7 +2391,7 @@ onBeforeUnmount(() => {
             type="button"
             class="chat-home-icon-button chat-ink"
             :aria-label="t('管理订阅', 'Manage subscriptions')"
-            data-testid="chat-directory-service-management-toggle"
+            data-testid="chat-directory-service-management-header"
             @click="toggleServiceManagement"
           >
             <i class="fas fa-gear"></i>
