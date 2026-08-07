@@ -36,6 +36,14 @@ Updated: 2026-08-07
 
 Windows CLI 应使用 UTF-8 提示词文件或结构化请求文件，先检查 dry-run 请求体，再提交生成，避免 `.cmd` 内联多行提示被截断。随机种子只能辅助复现，不能替代参考图、模型版本和槽位合同。
 
+### Batch Execution Default / 批量执行默认
+
+外卖素材的既定视觉合同进入正式生成后，默认按同一家店或同一平台资产族分批执行：两张及以上独立素材写入一份 UTF-8 JSONL，整批只做一次 dry-run，再用 bundled ImageGen CLI 的 `generate-batch` 并发提交。并发数取任务数与 `5` 的较小值；遇到限流时只降低失败批次的并发，不预先把正常批次全部串行化。
+
+已冻结规格的正式素材直接使用 `gpt-image-2` 与 `quality=high`。只有视觉方向尚未确定时才先生成低质量探索稿，不为每张正式素材机械地执行 low -> high 两次请求。API 返回整批结果后，统一做一次尺寸/模式扫描、一次联系表和一次视觉验收；只对失败或被拒绝的单项使用版本化文件名重试，已通过的同批素材不重生。单张任务仍只执行一次 `generate` 和一次返回后验收，API 运行中不存在可反复进行的中途视觉验收。
+
+候选、接受版和运行时边界保持不变：候选先进入 `output/imagegen/<round>/candidates/`，不得直接写入 `public/`；通过语义、数量、文字、品牌、尺寸和页面裁切验收后，再确定性导出到稳定运行时路径。完整 PowerShell 环境加载、批量 dry-run 和并发提交命令由 `docs/process/FIGMA_IMAGEGEN_CROSS_PC_SETUP.md` 的 `SchatPhone Batch Performance Default` 小节统一维护。
+
 ### Reusable Prompt Skeleton / 可复用提示词骨架
 
 ```text

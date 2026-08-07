@@ -439,6 +439,70 @@ The verified request completed in about 46 seconds and returned a valid PNG. Alt
 
 For SchatPhone assets, crop or downscale deliberately and verify the final aspect ratio before moving the image into `public/images/...`.
 
+### 5.9 SchatPhone Batch Performance Default
+
+Image API latency is paid per request and cannot be reduced by repeatedly inspecting the filesystem while a request is running. For an accepted asset contract, SchatPhone therefore uses one batch submission and one batch acceptance pass instead of a separate generate-and-review loop for every file.
+
+Use these defaults:
+
+1. Put two or more independent assets from one coherent visual family into one UTF-8 JSONL request file. Each job keeps its own semantic filename through the JSONL `out` field.
+2. Run `generate-batch --dry-run` once for the complete JSONL file. Check every prompt, model, size, quality, and output path in that one result; do not repeat the same dry run per asset.
+3. For a frozen production asset contract, submit `gpt-image-2` with `quality=high` directly. Use a low-quality exploratory request only when the visual direction itself is unresolved; do not automatically pay for both low and high generations for every asset.
+4. Set concurrency to the smaller of the job count and `5`. If the provider returns rate limits or transport instability, reduce concurrency for the retry instead of serializing every normal batch in advance.
+5. Let independent jobs continue when one job fails. After the batch finishes, inspect actual dimensions and file modes in one metadata pass, create one contact sheet, and perform one visual acceptance pass for the family.
+6. Retry only rejected or failed jobs, with versioned candidate names when rejected evidence must be retained. Do not regenerate accepted siblings.
+7. Keep generated files under the round's `output/imagegen/<round>/candidates/` directory until acceptance. Only accepted, deterministically exported assets may enter `public/images/...`.
+
+Load missing user-level environment values once in the PowerShell session without printing them, then reuse that session for the dry run and real submission:
+
+```powershell
+@(
+  "OPENAI_API_KEY",
+  "OPENAI_BASE_URL",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY"
+) | ForEach-Object {
+  $currentValue = [Environment]::GetEnvironmentVariable($_, "Process")
+  if (-not $currentValue) {
+    $userValue = [Environment]::GetEnvironmentVariable($_, "User")
+    if ($userValue) {
+      [Environment]::SetEnvironmentVariable($_, $userValue, "Process")
+    }
+  }
+}
+```
+
+Run one dry run and one real batch from that session:
+
+```powershell
+$batchFile = "tmp\imagegen\requests.jsonl"
+$candidateDir = "output\imagegen\<round>\candidates"
+$jobCount = @(
+  Get-Content -Encoding UTF8 $batchFile |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+).Count
+$concurrency = [Math]::Min(5, [Math]::Max(1, $jobCount))
+
+& $venvPython $imageGenScript generate-batch `
+  --input $batchFile `
+  --out-dir $candidateDir `
+  --model gpt-image-2 `
+  --quality high `
+  --concurrency $concurrency `
+  --dry-run
+
+# After reviewing the dry-run payload, repeat the same command without --dry-run.
+& $venvPython $imageGenScript generate-batch `
+  --input $batchFile `
+  --out-dir $candidateDir `
+  --model gpt-image-2 `
+  --quality high `
+  --concurrency $concurrency
+```
+
+A single requested asset still uses one `generate` call and one post-return acceptance check. There is no useful intermediate visual inspection while the API call is active.
+
 ## 6. ImageGen Troubleshooting
 
 | Symptom | Likely cause | Action |

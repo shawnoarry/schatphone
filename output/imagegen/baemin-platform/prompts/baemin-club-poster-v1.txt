@@ -1,0 +1,11 @@
+Use case: ads-marketing
+Asset type: portrait membership campaign poster for the Baemin food-delivery platform experience in SchatPhone
+Primary request: Create a polished vertical campaign poster for a weekly platform-member free-delivery benefit. The visual must feel energetic, appetizing, friendly, and credible inside a premium mobile food-delivery app.
+Scene/backdrop: Fresh mint-teal campaign set with warm butter-yellow and coral-red accent panels, subtle paper-ticket texture, and clean dimensional depth. Avoid gradients as the main background treatment.
+Subject: An original dimensional teal delivery bag with a simple white heart symbol, one oversized free-delivery ticket, and a carefully arranged mix of believable hot soup rice, sushi, pizza, and a dessert cup. Food should look photographic and appetizing; supporting delivery objects may use refined tactile 3D styling.
+Composition/framing: Vertical 2:3 poster. Strong top-to-bottom hierarchy. Large headline in the upper third, central delivery-bag-and-food hero composition, and a restrained benefit line near the lower third. Keep all text comfortably inside safe margins and readable at mobile width. No button-like CTA.
+Lighting/mood: Bright soft studio light, crisp but friendly, celebratory without looking childish.
+Color palette: Mint teal #2AC1BC, deep ink #183B3A, warm butter yellow #FFD766, coral #FF6B57, and clean white.
+Text (verbatim): Render only these three Simplified Chinese lines, exactly as written: "外卖会员"; "本周免配送"; "每周可领 1 次". Use bold modern Chinese display typography with clear character forms. Do not add, translate, repeat, or alter any character.
+Constraints: Original platform campaign art only. Preserve generous spacing. Every food item must remain fully recognizable. No official Baemin logo, no official wordmark, no official or approximated mascot, no Korean text, no English text, no prices, no currency symbols, no QR code, no phone mockup, no UI chrome, no coupon code, no real-brand packaging, and no watermark.
+Avoid: clutter, tiny copy, warped Chinese characters, duplicated food, floating utensils, illegible text, stock-photo collage appearance, excessive gloss, neon lighting, or a one-note monochrome palette.
