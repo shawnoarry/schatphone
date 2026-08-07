@@ -31,9 +31,9 @@ Food Delivery continues to own restaurant, menu, cart, checkout, order, and deli
 | --- | --- | --- | --- |
 | Baemin / Food Platform | `food_delivery_platform` | Dedicated platform discovery UI and formal original entry icon; some internal headings still say `Food Delivery` | Keep the platform structure, finish the current asset contract, and make consumer naming consistent |
 | Moon Bistro | `food_seed_moon_bistro` | Dedicated `dark_tray_menu` baseline | Deepen celestial fine-dining identity |
-| River Noodles | `food_seed_river_noodles` | Reusable `street_food_stall` route; nine menu items; formal one-Hero/nine-product pack pending | Deepen the noodle-shop App after formal media delivery |
+| River Noodles | `food_seed_river_noodles` | Reusable `street_food_stall` route; nine menu items; accepted one-Hero/nine-product pack | Deepen the noodle-shop App only through a promoted content or interaction slice |
 | Daylight Cafe | `food_seed_daylight_cafe` | Reusable `daypart_journal` route; accepted one-Hero/nine-product pack | Treat as a high-completion reference and deepen only through a promoted daypart slice |
-| Sugar Lane | `food_seed_sugar_lane` | Reusable `convenience_shelf` route; nine menu items; formal one-Hero/nine-product pack pending | Repair the unresolved cover path, then deepen the patisserie App after formal media delivery |
+| Sugar Lane | `food_seed_sugar_lane` | Reusable `convenience_shelf` route; nine menu items; accepted one-Hero/nine-product pack | Deepen the patisserie App only through a promoted content or interaction slice |
 | Peach Cloud | `food_seed_peach_cloud` | Dedicated `dessert_window` App, accepted campaign/product pack, and one shared-Wallet-quote dynamic-price poster pilot | Treat as a high-completion reference; limit work to focused defects or approved campaign slices |
 | Dash Grill | `food_seed_dash_grill` | Dedicated `quick_service_chain` App with accepted one-Hero/ten-product pack, connected image-led order-ticket menus, and configurable tray-ticket combo detail | Keep the UI pending user visual acceptance; add two versioned complete-tray photographs without replacing the accepted single-item pack |
 | Jade Hearth | `food_seed_jade_hearth` | Dedicated `jade_table_menu` App with accepted one-Hero/twelve-product pack | Design the menu, detail, and ordering hierarchy as one integrated paper-banquet-menu pass |
@@ -145,7 +145,7 @@ Generic templates share restaurant/menu input, item detail, add-to-bag, cart own
 - Keep the accepted original full-bleed mint entry icon; do not approximate an official Baemin Logo or mascot.
 - Render `Baemin` consistently at the platform-entry and in-app identity levels. Transitional `Food Delivery` headings are a naming defect, not a second consumer brand.
 - Preserve distinct photographic and composition capsules for all eleven internal merchants. Platform mint styling may unify platform-owned navigation and campaigns, but must not flatten merchant identities.
-- Replace the remaining `54` diagnostic targets before claiming the current platform media contract complete: `44` product images, `3` platform decorations, and `7` checkout/order-state images. The delayed-state illustration remains a separately deferred target.
+- Replace the remaining `46` diagnostic targets before claiming the current platform media contract complete: `36` product images, `3` platform decorations, and `7` checkout/order-state images. Reverse Station Hanwoo Gukbap and Sushi Hana have complete five-image families; the delayed-state illustration remains a separately deferred target.
 - Platform merchant identity remains inside the shared platform shell; its eleven internal merchants do not automatically become independent shop-app templates.
 
 ### 6.2 Moon Bistro
@@ -235,7 +235,7 @@ Generic templates share restaurant/menu input, item detail, add-to-bag, cart own
 
 ## 7. Menu Depth For The Three Reusable-Template Shops
 
-River Noodles, Daylight Cafe, and Sugar Lane now each have nine stable built-in items across four real sections. Their reusable structure templates are implemented, but River Noodles and Sugar Lane still await their formal one-cover/nine-product PNG packs. A later content expansion may move toward approximately twelve items when it adds real menu depth rather than padding the first category. Same-ID user edits and backup fidelity remain protected.
+River Noodles, Daylight Cafe, and Sugar Lane now each have nine stable built-in items across four real sections, implemented reusable structure templates, and accepted one-cover/nine-product PNG packs. River Noodles and Sugar Lane completed their formal media delivery on 2026-08-07. A later content expansion may move toward approximately twelve items when it adds real menu depth rather than padding the first category. Same-ID user edits and backup fidelity remain protected.
 
 Suggested distribution:
 
@@ -245,7 +245,7 @@ Suggested distribution:
 | Daylight Cafe | 3 espresso drinks, 2 cold drinks, 4 brunch dishes, 3 bakery items |
 | Sugar Lane | 3 cakes, 3 tarts/pastries, 3 baked sweets/gift items, 3 drinks |
 
-Exact menu names, ingredients, prices, seed IDs, migration behavior, photography, and bilingual copy must be reviewed as one focused content contract before implementation.
+Any later expansion's exact menu names, ingredients, prices, seed IDs, migration behavior, photography, and bilingual copy must be reviewed as one focused content contract before implementation.
 
 ## 8. Audited Follow-Up Register
 
@@ -256,16 +256,16 @@ This register completes the UI audit without becoming an execution queue. `Obser
 | Baemin minimum order and fees | Observed defect | Several platform merchants pair `CNY` menu/delivery values with hard-coded `9,000원` to `15,000원` minimum-order strings | Store the minimum order as money data and route it through the shared Wallet quote/format path; one merchant card must not mix currencies |
 | Baemin consumer name | Observed defect | The Home-folder entry says `Baemin`, while some in-app headings still say `Food Delivery` | Use `Baemin` as the consumer platform name and reserve `Food Delivery` for the module/domain description |
 | Horizontal category and product rails | Implemented candidates / visual acceptance pending | Dash Grill and Jade Hearth now expose branded scrollbars and focusable rails; Jade also supports arrow controls and pointer drag in addition to native touch and wheel/trackpad scrolling | Verify both candidates through user review and keep the no-page-overflow contract in regression coverage |
-| Sugar Lane cover | Observed defect / asset gap | The current cover reference does not resolve and the formal pack is still pending | Connect an accepted stable runtime cover and verify its Home crop and error fallback |
+| Sugar Lane cover | Resolved 2026-08-07 | The accepted `1200x750` cover resolves from its stable local runtime path; focused desktop Chromium and simulated Pixel 5 verify media loading and fallback behavior | Keep the stable path and focused regression coverage intact |
 | Built-in bilingual menu copy | Partially fixed | Peach Cloud and all ten Dash Grill items now follow system language, preserve accurate `en-US`, search both built-in languages, and leave user-authored copy literal; several remaining built-in menus still appear English-only in Chinese UI | Continue the same presentation-only contract shop by shop without rewriting user-authored records; keep image, ingredients, title, description, and alt text semantically aligned |
 | Dash Grill menu cards | Implemented candidate / visual acceptance pending | Home popular items use compact counter tickets; Menu uses full-width image-led order tickets, opens the first real section, and searches across sections | Have the user review crop, density, rail behavior, detail entry, and add-command prominence before marking the direction accepted or scheduling refinements |
 | Dash Grill combo detail | Implemented candidate / asset gap / visual acceptance pending | Two featured combos expose `2/2` completion, photographed side/shake choices, a live summary, compact total action, and persisted side/drink deltas; Chicken Tenders now require and persist one of three sauces. Accepted item `01/02` photographs still show only the fixed main, while pending drink/sauce media uses branded icon fallbacks | Connect the accepted complete-tray and remaining drink/sauce option media without changing the persisted modifier contract, then have the user review the tray-ticket composition before closure |
 | Jade Hearth overall menu | Implemented candidate / visual acceptance pending | Home, Menu, Feast, and detail now share one paper-banquet-menu hierarchy with localized identity/copy, dish sequence, title slips, vessel-aware media, and rectangular add actions | Have the user review density, crop, rail discoverability, and detail action hierarchy before marking the direction accepted |
 | Verdant Day meal customization | Confirmed direction | Current item-level ordering does not communicate ingredient customization | Add ingredient-specific quantities, price deltas, constraints, and cart/order snapshots through a focused data-plus-UI slice |
 | Independent-shop marks | Asset gap | Seven entries still use generic or cover-derived fallbacks | Deliver one stable reusable mark each for Moon Bistro, River Noodles, Daylight Cafe, Sugar Lane, Dash Grill, Jade Hearth, and Verdant Day |
-| River Noodles media | Asset gap | The formal one-Hero/nine-product pack is not delivered | Generate and accept `10` shop-specific PNGs before replacing template-native fallbacks |
-| Sugar Lane media | Asset gap | The formal one-Hero/nine-product pack is not delivered | Generate and accept `10` patisserie-specific PNGs before claiming media completion |
-| Baemin media | Asset gap | `54` current targets remain, plus one separately deferred delayed-state illustration | Finish assets as merchant-specific families; do not normalize all merchant photography into the platform capsule |
+| River Noodles media | Delivered 2026-08-07 | One accepted `1200x750` cover and nine `768x768` product PNGs resolve from stable local runtime paths | Preserve the accepted CLI requests, masters, runtime paths, and focused media regression coverage |
+| Sugar Lane media | Delivered 2026-08-07 | One accepted `1200x750` cover and nine `768x768` product PNGs resolve from stable local runtime paths | Preserve the accepted CLI requests, masters, runtime paths, and focused media regression coverage |
+| Baemin media | Asset gap | `46` current targets remain after the completed Reverse Station Hanwoo Gukbap and Sushi Hana menu families, plus one separately deferred delayed-state illustration | Finish assets as merchant-specific families; do not normalize all merchant photography into the platform capsule |
 | Harbor circular detail composition | Deferred candidate | The earlier circular composition was visually useful but no longer fits Harbor's coffee-menu-board priority | Reassign only after another shop is selected and the pattern is adapted to that shop's identity rather than copied wholesale |
 
 Peach Cloud, Harbor Roast, and Daylight Cafe are the current high-completion visual references. Their completeness does not require other shops to copy their campaigns, merchandise, navigation count, card geometry, or photography; it only sets the expected level of semantic consistency and route finish.

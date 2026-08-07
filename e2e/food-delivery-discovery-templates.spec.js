@@ -8,6 +8,8 @@ const templateCases = [
     templateId: 'street_food_stall',
     firstSection: 'broth_noodles',
     nextSection: 'dry_noodles',
+    assetSlug: 'river-noodles',
+    identityAlt: 'River Noodles bowl',
   },
   {
     restaurantId: 'food_seed_sugar_lane',
@@ -15,6 +17,8 @@ const templateCases = [
     templateId: 'convenience_shelf',
     firstSection: 'layer_cakes',
     nextSection: 'pastry_case',
+    assetSlug: 'sugar-lane',
+    identityAlt: 'Sugar Lane dessert',
   },
 ]
 
@@ -48,6 +52,20 @@ test('reusable discovery templates stay distinct and menu mosaic can be reassign
 
     const storeShell = page.getByTestId('food-delivery-store-shell')
     await expect(storeShell).toHaveAttribute('data-store-template', templateCase.templateId)
+    const identityImage = storeShell.locator(`img[alt="${templateCase.identityAlt}"]`).first()
+    await expect(identityImage).toHaveAttribute(
+      'src',
+      new RegExp(`${templateCase.assetSlug}/cover/${templateCase.assetSlug}-cover-01\\.png$`),
+    )
+    await expect
+      .poll(() =>
+        identityImage.evaluate((image) => ({
+          complete: image.complete,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        })),
+      )
+      .toEqual({ complete: true, width: 1200, height: 750 })
     await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveCount(0)
     await expect(page.getByTestId(`food-delivery-store-menu-section-${templateCase.firstSection}`)).toBeVisible()
     await expect(page.getByTestId('food-delivery-store-menu-items')).toHaveAttribute(
@@ -66,31 +84,60 @@ test('reusable discovery templates stay distinct and menu mosaic can be reassign
     const productViews = page.locator('[data-testid^="food-delivery-menu-open-"]')
     await expect
       .poll(() =>
-        productViews.evaluateAll((views) =>
-          views.every((view) => {
-            const image = view.querySelector('img')
-            if (image && !image.hidden) {
-              return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0
-            }
-            return Boolean(view.querySelector('.discovery-image-fallback'))
-          }),
+        productViews.evaluateAll(
+          (views, assetSlug) =>
+            views.every((view) => {
+              const image = view.querySelector('img')
+              return Boolean(
+                image &&
+                  !image.hidden &&
+                  image.complete &&
+                  image.naturalWidth === 768 &&
+                  image.naturalHeight === 768 &&
+                  image.currentSrc.includes(
+                    `/images/ui-assets/apps/food-delivery/${assetSlug}/products/`,
+                  ),
+              )
+            }),
+          templateCase.assetSlug,
         ),
       )
       .toBe(true)
     await expect(
-      page.locator('[data-testid^="food-delivery-menu-open-"] .discovery-image-fallback'),
-    ).not.toHaveCount(0)
-    await expect(
       page.locator(
         '[data-testid^="food-delivery-menu-open-"].is-image-fallback, [data-testid^="food-delivery-menu-open-"] .is-image-fallback',
       ),
-    ).not.toHaveCount(0)
+    ).toHaveCount(0)
     await expectNoHorizontalOverflow(page)
 
     await testInfo.attach(`${templateCase.templateId}-${testInfo.project.name}`, {
       body: await page.screenshot(),
       contentType: 'image/png',
     })
+
+    await productViews.first().click()
+    const detailSheet = page.getByTestId('food-delivery-menu-detail-sheet')
+    await expect(detailSheet).toBeVisible()
+    const detailImage = detailSheet.locator('img')
+    await expect(detailImage).toHaveAttribute(
+      'src',
+      new RegExp(`${templateCase.assetSlug}/products/${templateCase.assetSlug}-item-\\d{2}\\.png$`),
+    )
+    await expect
+      .poll(() =>
+        detailImage.evaluate((image) => ({
+          complete: image.complete,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        })),
+      )
+      .toEqual({ complete: true, width: 768, height: 768 })
+    await expectNoHorizontalOverflow(page)
+    await testInfo.attach(`${templateCase.assetSlug}-detail-${testInfo.project.name}`, {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    })
+    await page.getByTestId('food-delivery-menu-detail-close').click()
   }
 
   await navigateInsideUnlockedApp(page, '/app-store?section=shops')

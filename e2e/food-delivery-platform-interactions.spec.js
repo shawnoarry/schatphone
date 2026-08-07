@@ -10,7 +10,7 @@ const expectNoHorizontalOverflow = async (page) => {
 
 test('Food Platform controls and checkout produce a complete in-app order flow', async ({
   page,
-}) => {
+}, testInfo) => {
   const pageErrors = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
@@ -193,10 +193,37 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
     'src',
     /platform\/menus\/hanwoo-gukbap\/menu-item-01\.png/,
   )
-  await expect(page.locator('[data-platform-menu-image]').nth(1).locator('img')).toHaveAttribute(
-    'src',
-    /missing-asset-placeholder\.svg/,
-  )
+  const hanwooMenuImages = page.locator('[data-platform-menu-image] img')
+  await expect
+    .poll(() =>
+      hanwooMenuImages.evaluateAll((images) =>
+        images.map((image) => ({
+          complete: image.complete,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+          src: image.currentSrc.split('/').pop(),
+          missing: image.dataset.assetMissing || null,
+        })),
+      ),
+    )
+    .toEqual(
+      Array.from({ length: 5 }, (_, index) => ({
+        complete: true,
+        width: 768,
+        height: 768,
+        src: `menu-item-${String(index + 1).padStart(2, '0')}.png`,
+        missing: null,
+      })),
+    )
+  await testInfo.attach(`baemin-hanwoo-gukbap-menu-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await page.locator('[data-platform-menu-image]').last().scrollIntoViewIfNeeded()
+  await testInfo.attach(`baemin-hanwoo-gukbap-menu-end-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
   await page.getByTestId('food-delivery-platform-menu-add-platform_hanwoo_gukbap_menu_1').click()
   await expect(
     page.getByTestId('food-delivery-platform-menu-quantity-platform_hanwoo_gukbap_menu_1'),
@@ -283,7 +310,7 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
 
 test('Food Platform returns to the originating Home screen after internal navigation', async ({
   page,
-}) => {
+}, testInfo) => {
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby&from=home&homePage=3')
 
@@ -297,6 +324,43 @@ test('Food Platform returns to the originating Home screen after internal naviga
   await expect(page).toHaveURL(/platformView=merchant/)
   await expect(page).toHaveURL(/platformMerchant=platform_sushi_hana/)
   await expect(page).toHaveURL(/homePage=3/)
+  await expect(page.locator('[data-platform-menu-image]')).toHaveCount(5)
+  await expect(page.locator('[data-platform-menu-image]').first()).toHaveAttribute(
+    'data-required-asset',
+    'platform/menus/sushi-hana/menu-item-01.png',
+  )
+  const sushiMenuImages = page.locator('[data-platform-menu-image] img')
+  await expect
+    .poll(() =>
+      sushiMenuImages.evaluateAll((images) =>
+        images.map((image) => ({
+          complete: image.complete,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+          src: image.currentSrc.split('/').pop(),
+          missing: image.dataset.assetMissing || null,
+        })),
+      ),
+    )
+    .toEqual(
+      Array.from({ length: 5 }, (_, index) => ({
+        complete: true,
+        width: 768,
+        height: 768,
+        src: `menu-item-${String(index + 1).padStart(2, '0')}.png`,
+        missing: null,
+      })),
+    )
+  await testInfo.attach(`baemin-sushi-hana-menu-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await page.locator('[data-platform-menu-image]').last().scrollIntoViewIfNeeded()
+  await testInfo.attach(`baemin-sushi-hana-menu-end-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+  await expectNoHorizontalOverflow(page)
 
   await page.getByTestId('food-delivery-platform-merchant-back').click()
   await expect(page.getByTestId('food-delivery-platform-search-page')).toBeVisible()

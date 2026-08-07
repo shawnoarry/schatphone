@@ -11239,7 +11239,7 @@ onBeforeUnmount(() => {
               >
                 <i class="fas fa-bowl-food"></i>
               </div>
-              <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+              <div class="absolute inset-x-0 top-0 z-20 flex items-center justify-between p-3">
                 <button
                   type="button"
                   class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-900 shadow-sm"

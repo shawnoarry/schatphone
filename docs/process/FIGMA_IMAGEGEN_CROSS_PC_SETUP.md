@@ -1,6 +1,6 @@
 # Figma And ImageGen Cross-PC Setup
 
-Updated: 2026-07-25
+Updated: 2026-08-07
 
 Purpose: reproduce the Figma design-to-code connection and the ljqclub-backed image-generation CLI on another Windows PC used by the same owner.
 
@@ -143,9 +143,11 @@ For later implementation work, treat generated React/Tailwind code as reference 
 
 ### 5.1 Choose Built-In Or CLI Mode
 
-The preferred ImageGen path is Codex's built-in `image_gen` tool, which does not need an API Key. A listed `imagegen` skill does not prove that the built-in generation tool is callable in the current task.
+The general ImageGen default is Codex's built-in `image_gen` tool, which does not need an API Key. A listed `imagegen` skill does not prove that the built-in generation tool is callable in the current task.
 
-Use this CLI setup only when:
+For SchatPhone, the project owner explicitly selected the bundled CLI on 2026-08-07 as the standing default for later raster-asset generation rounds. Treat that as project-specific CLI opt-in until the owner changes it. Use `gpt-image-2` by default, keep the exact request record with project-bound assets, and do not silently switch to another model. Transparent-output requests still require their own model/background decision; never silently downgrade to `gpt-image-1.5`.
+
+Outside that standing SchatPhone preference, use this CLI setup only when:
 
 1. the built-in tool is unavailable; and
 2. the user explicitly chooses the API/CLI fallback.
