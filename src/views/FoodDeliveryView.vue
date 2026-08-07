@@ -47,7 +47,10 @@ import {
   isMiniAppEntryInstalled,
   normalizeAppStoreMiniAppPlacements,
 } from '../lib/app-store-mini-app-placement'
-import { resolveFoodShopDefaultTemplateId } from '../lib/food-shop-presentation'
+import {
+  resolveFoodShopDefaultIdentity,
+  resolveFoodShopDefaultTemplateId,
+} from '../lib/food-shop-presentation'
 import {
   getPeachCloudMenuSearchValues,
   resolvePeachCloudMenuItemCopy,
@@ -58,6 +61,11 @@ import {
   resolveDashGrillOrderItemTitle,
   resolveDashGrillTicketNumber,
 } from '../lib/food-delivery-dash-grill-copy'
+import {
+  resolveJadeHearthDishNumber,
+  resolveJadeHearthMenuItemCopy,
+  resolveJadeHearthOrderItemTitle,
+} from '../lib/food-delivery-jade-hearth-copy'
 
 const DASH_GRILL_DEFAULT_COMBO_SIDE = 'sea_salt_fries'
 const DASH_GRILL_DEFAULT_COMBO_DRINK = 'fountain_cola'
@@ -411,7 +419,7 @@ const quoteLegacyFoodAmount = (amountCents = 0, sourceCurrency = 'CNY') => {
   const money = quote?.ok ? quote.quotedMoney : sourceMoney
   return {
     amountCents: money
-      ? convertMoneyToLegacyCents(money, walletStore.currencyOptions) ?? 0
+      ? (convertMoneyToLegacyCents(money, walletStore.currencyOptions) ?? 0)
       : Number(amountCents) || 0,
     amount: money
       ? walletStore.formatMoneyAmount(money, { useGrouping: false })
@@ -1585,11 +1593,21 @@ const platformCategoryTiles = computed(() =>
 const shopAppEntries = computed(() =>
   activeRestaurants.value.map((restaurant) => {
     const presentation = resolveShopEntryPresentation(restaurant)
+    const defaultIdentity = resolveFoodShopDefaultIdentity(restaurant)
     return {
       ...restaurant,
       visual: FOOD_STORE_VISUALS[restaurant.category] || FOOD_STORE_VISUALS.restaurants,
-      displayName: presentation.displayName || restaurant.name,
-      shortDescription: presentation.shortDescription || restaurant.cuisine || restaurant.category,
+      displayName:
+        presentation.displayName ||
+        (languageBase.value === 'zh' ? defaultIdentity.nameZh : defaultIdentity.nameEn) ||
+        restaurant.name,
+      shortDescription:
+        presentation.shortDescription ||
+        (languageBase.value === 'zh'
+          ? defaultIdentity.descriptionZh
+          : defaultIdentity.descriptionEn) ||
+        restaurant.cuisine ||
+        restaurant.category,
       entryTags: presentation.tags || [],
     }
   }),
@@ -1671,15 +1689,9 @@ const platformMerchantEmptyLabel = computed(() =>
 const platformDeliveryFeeLabel = (merchant = {}) =>
   Number(merchant.deliveryFee) <= 0
     ? t('免配送费', 'Free')
-    : formatLegacyFoodAmount(
-        Math.round(Number(merchant.deliveryFee) * 100),
-        merchant.currency,
-      )
+    : formatLegacyFoodAmount(Math.round(Number(merchant.deliveryFee) * 100), merchant.currency)
 const platformMenuItemPriceLabel = (item = {}, merchant = {}) =>
-  formatLegacyFoodAmount(
-    Math.round(Number(item.price || 0) * 100),
-    merchant.currency || 'CNY',
-  )
+  formatLegacyFoodAmount(Math.round(Number(item.price || 0) * 100), merchant.currency || 'CNY')
 const platformMinimumOrderLabel = (merchant = {}) => {
   const sourceMoney = merchant.minimumOrderMoney
   if (!sourceMoney) return ''
@@ -2014,8 +2026,11 @@ const activeRestaurant = computed(
   () => selectedRestaurant.value || activeRestaurants.value[0] || null,
 )
 const resolveLocalizedMenuItem = (item = {}) =>
-  resolveDashGrillMenuItemCopy(
-    resolvePeachCloudMenuItemCopy(item, systemLanguage.value),
+  resolveJadeHearthMenuItemCopy(
+    resolveDashGrillMenuItemCopy(
+      resolvePeachCloudMenuItemCopy(item, systemLanguage.value),
+      systemLanguage.value,
+    ),
     systemLanguage.value,
   )
 const activeStoreCartLineItems = computed(() =>
@@ -2259,12 +2274,24 @@ const activeStoreCoverImageUrl = computed(() => {
     ? activeStoreRestaurantImageUrl.value
     : ''
 })
+const activeStoreDefaultIdentity = computed(() =>
+  resolveFoodShopDefaultIdentity(activeRestaurant.value || {}),
+)
 const activeStoreDisplayName = computed(
-  () => activeStorePresentation.value?.displayName || activeRestaurant.value?.name || '',
+  () =>
+    activeStorePresentation.value?.displayName ||
+    (languageBase.value === 'zh'
+      ? activeStoreDefaultIdentity.value.nameZh
+      : activeStoreDefaultIdentity.value.nameEn) ||
+    activeRestaurant.value?.name ||
+    '',
 )
 const activeStoreShortDescription = computed(
   () =>
     activeStorePresentation.value?.shortDescription ||
+    (languageBase.value === 'zh'
+      ? activeStoreDefaultIdentity.value.descriptionZh
+      : activeStoreDefaultIdentity.value.descriptionEn) ||
     activeRestaurant.value?.cuisine ||
     activeRestaurant.value?.category ||
     '',
@@ -2643,7 +2670,8 @@ const selectedMenuItemDetailTotal = computed(() => {
   const item = selectedMenuItem.value
   if (!item) return `0.00 ${activeRestaurant.value?.currency || activeCurrency.value}`
   const quantity = Math.min(99, Math.max(1, Number(menuDetailQuantity.value) || 1))
-  const sourceUnitPriceCents = selectedDashCustomization.value?.sourceUnitPriceCents ??
+  const sourceUnitPriceCents =
+    selectedDashCustomization.value?.sourceUnitPriceCents ??
     Number(item.sourcePriceCents ?? item.priceCents ?? 0)
   return formatLegacyFoodAmount(
     sourceUnitPriceCents * quantity,
@@ -2699,10 +2727,16 @@ const scopedFoodOrders = computed(() => {
       ...order,
       items: order.items.map((item) => ({
         ...item,
-        title: resolveDashGrillOrderItemTitle(
+        title: resolveJadeHearthOrderItemTitle(
           {
             ...item,
-            title: resolvePeachCloudOrderItemTitle(item, systemLanguage.value),
+            title: resolveDashGrillOrderItemTitle(
+              {
+                ...item,
+                title: resolvePeachCloudOrderItemTitle(item, systemLanguage.value),
+              },
+              systemLanguage.value,
+            ),
           },
           systemLanguage.value,
         ),
@@ -3545,7 +3579,7 @@ const openPlatformCheckout = () => {
   if (!platformCartMeetsMinimumOrder.value) {
     platformCartFeedback.value = t(
       '还未达到本店最低起送金额。',
-      'Add more items to reach this shop\'s minimum order.',
+      "Add more items to reach this shop's minimum order.",
     )
     return
   }
@@ -3566,7 +3600,7 @@ const submitPlatformOrder = () => {
   if (!platformCartMeetsMinimumOrder.value) {
     platformCheckoutFeedback.value = t(
       '还未达到本店最低起送金额。',
-      'Add more items to reach this shop\'s minimum order.',
+      "Add more items to reach this shop's minimum order.",
     )
     return
   }
@@ -5606,7 +5640,8 @@ onBeforeUnmount(() => {
                 <span
                   class="ml-1 text-gray-900"
                   data-testid="food-delivery-platform-minimum-order"
-                >{{ platformMinimumOrderLabel(selectedPlatformMerchant) }}</span>
+                  >{{ platformMinimumOrderLabel(selectedPlatformMerchant) }}</span
+                >
               </p>
             </section>
 
@@ -10187,7 +10222,7 @@ onBeforeUnmount(() => {
                 : isQuickServiceStore && menuDetailMode === 'detail'
                   ? 'max-h-[calc(100dvh-1.5rem)] overflow-y-auto border-2 border-[#201a17] bg-[#fff9ec] text-[#201a17] shadow-[7px_7px_0_#ffc833,0_26px_70px_rgba(32,26,23,0.3)]'
                   : isJadeTableStore && menuDetailMode === 'detail'
-                    ? 'overflow-hidden rounded-sm border border-[#cfc2ad] bg-[#f5efe2] text-[#211e19] shadow-[0_26px_70px_rgba(31,77,58,0.25)]'
+                    ? 'max-h-[calc(100dvh-1.5rem)] overflow-y-auto border border-[#1f4d3a] bg-[#f5efe2] text-[#211e19] shadow-[6px_6px_0_#afc2b2,0_26px_70px_rgba(31,77,58,0.28)]'
                     : isReusableDiscoveryTemplate && menuDetailMode === 'detail'
                       ? 'overflow-hidden rounded-lg border border-[#b9afa5] bg-[#f8f4ec] text-[#201c1a] shadow-[0_26px_70px_rgba(43,33,27,0.28)]'
                       : 'overflow-hidden rounded-[2rem] bg-white'
@@ -10982,97 +11017,121 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else-if="isJadeTableStore && menuDetailMode === 'detail'">
-            <div class="relative aspect-[16/10] overflow-hidden bg-[#1f4d3a]">
-              <img
-                v-if="foodImageUrl(selectedMenuItem)"
-                :src="foodImageUrl(selectedMenuItem)"
-                :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
-                class="h-full w-full object-cover"
-                :data-required-asset="foodDeliveryRequiredAssetPath(selectedMenuItem)"
-                @error="handleFoodShopImageError"
-              />
-              <div class="absolute inset-0 bg-black/30"></div>
-              <div class="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-                <button
-                  type="button"
-                  class="inline-flex h-11 w-11 items-center justify-center border border-white/35 bg-[#f5efe2] text-[#211e19] shadow-sm"
-                  data-testid="food-delivery-menu-detail-close"
-                  :aria-label="t('关闭', 'Close')"
-                  @click="closeMenuItemDetail"
-                >
-                  <i class="fas fa-xmark"></i>
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-11 w-11 items-center justify-center border border-white/35 bg-[#bd4b35] text-white shadow-sm"
-                  data-testid="food-delivery-menu-detail-edit"
-                  :aria-label="t('编辑餐品', 'Edit item')"
-                  @click="startMenuItemEdit"
-                >
-                  <i class="fas fa-pen"></i>
-                </button>
-              </div>
-              <span
-                class="absolute bottom-3 left-3 inline-flex h-12 w-12 items-center justify-center border border-white/55 bg-[#bd4b35] text-lg font-black text-white"
-              >
-                {{ resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).zh.slice(0, 1) }}
-              </span>
-            </div>
-
-            <div class="space-y-4 p-4">
-              <div
-                class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-[#cfc2ad] pb-4"
-              >
-                <div class="min-w-0">
-                  <p class="text-[10px] font-black text-[#bd4b35]">{{ activeStoreDisplayName }}</p>
-                  <h3
-                    class="mt-1 break-words font-serif text-2xl font-black leading-tight text-[#211e19]"
+            <div data-testid="food-delivery-jade-detail-menu" data-detail-layout="banquet-menu">
+              <div class="relative border-b border-[#cfc2ad] bg-[#e8dfcd] p-3 pt-14">
+                <div class="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-2.5">
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center border border-[#1f4d3a] bg-[#f5efe2] text-[#1f4d3a] shadow-[2px_2px_0_#afc2b2]"
+                    data-testid="food-delivery-menu-detail-close"
+                    :aria-label="t('合上菜页', 'Close dish page')"
+                    @click="closeMenuItemDetail"
                   >
-                    {{ selectedMenuItem.title }}
-                  </h3>
+                    <i class="fas fa-xmark"></i>
+                  </button>
+                  <span class="text-[9px] font-black text-[#746c61]">
+                    {{ activeStoreDisplayName }} · {{ t('菜品笺', 'DISH LEAF') }}
+                  </span>
+                  <button
+                    type="button"
+                    class="inline-flex h-11 w-11 items-center justify-center border border-[#bd4b35] bg-[#bd4b35] text-white shadow-[2px_2px_0_#7b2f25]"
+                    data-testid="food-delivery-menu-detail-edit"
+                    :aria-label="t('编辑餐品', 'Edit item')"
+                    @click="startMenuItemEdit"
+                  >
+                    <i class="fas fa-pen"></i>
+                  </button>
                 </div>
-                <span
-                  class="shrink-0 border border-[#cfc2ad] bg-white/55 px-2.5 py-1 text-xs font-black"
-                >
-                  {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
-                </span>
-              </div>
 
-              <p
-                class="text-sm font-semibold leading-6 text-[#746c61]"
-                data-testid="food-delivery-menu-detail-desc"
-              >
-                {{ selectedMenuItem.desc }}
-              </p>
-
-              <div
-                class="border-l-4 border-[#1f4d3a] bg-white/55 p-3"
-                data-testid="food-delivery-menu-detail-ingredients"
-              >
-                <p class="text-[10px] font-black text-[#bd4b35]">
-                  {{ t('这道菜里', 'AT THE TABLE') }}
-                </p>
-                <p class="mt-1 text-sm font-semibold leading-5 text-[#211e19]">
-                  {{ selectedMenuItem.ingredients || t('未设置', 'Not set') }}
-                </p>
-              </div>
-
-              <p
-                v-if="menuDetailFeedback"
-                class="border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-                data-testid="food-delivery-menu-detail-feedback"
-              >
-                {{ menuDetailFeedback }}
-              </p>
-
-              <div class="flex items-center justify-between gap-4">
                 <div
-                  class="inline-flex h-11 items-center border border-[#cfc2ad] bg-white/55"
+                  class="relative aspect-[4/3] overflow-hidden border border-[#cfc2ad] bg-[#f8f3e9] p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)]"
+                >
+                  <img
+                    v-if="foodImageUrl(selectedMenuItem)"
+                    :src="foodImageUrl(selectedMenuItem)"
+                    :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
+                    class="h-full w-full object-contain"
+                    :data-required-asset="foodDeliveryRequiredAssetPath(selectedMenuItem)"
+                    @error="handleFoodShopImageError"
+                  />
+                  <div
+                    class="absolute bottom-2 left-2 flex h-12 w-12 items-center justify-center bg-[#1f4d3a] text-sm font-black text-white shadow-[3px_3px_0_#afc2b2]"
+                    aria-hidden="true"
+                  >
+                    {{ resolveJadeHearthDishNumber(selectedMenuItem) }}
+                  </div>
+                </div>
+              </div>
+
+              <section class="grid grid-cols-[2.7rem_minmax(0,1fr)] border-b border-[#cfc2ad]">
+                <aside
+                  class="flex items-center justify-center bg-[#1f4d3a] px-2 py-4 text-white [writing-mode:vertical-rl]"
+                >
+                  <span class="text-[11px] font-black tracking-normal">
+                    {{
+                      t(
+                        resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).zh,
+                        resolveStoreMenuSectionMeta(selectedMenuItem.menuSection).en,
+                      )
+                    }}
+                  </span>
+                </aside>
+                <div class="min-w-0 p-4">
+                  <p class="text-[9px] font-black text-[#bd4b35]">
+                    {{ activeStoreDisplayName }} · {{ t('本席第', 'DISH') }}
+                    {{ resolveJadeHearthDishNumber(selectedMenuItem) }}
+                  </p>
+                  <div class="mt-1.5 flex items-start justify-between gap-3">
+                    <h3
+                      class="min-w-0 break-words font-serif text-2xl font-black leading-tight text-[#211e19]"
+                    >
+                      {{ selectedMenuItem.title }}
+                    </h3>
+                    <span
+                      class="shrink-0 border-b-2 border-[#bd4b35] pb-1 text-xs font-black text-[#bd4b35]"
+                    >
+                      {{ selectedMenuItem.price }} {{ selectedMenuItem.currency }}
+                    </span>
+                  </div>
+                  <p
+                    class="mt-3 text-sm font-semibold leading-6 text-[#655e54]"
+                    data-testid="food-delivery-menu-detail-desc"
+                  >
+                    {{ selectedMenuItem.desc }}
+                  </p>
+
+                  <div
+                    class="mt-4 grid grid-cols-[2rem_minmax(0,1fr)] border-y border-[#cfc2ad] py-3"
+                    data-testid="food-delivery-menu-detail-ingredients"
+                  >
+                    <span class="text-[9px] font-black text-[#bd4b35] [writing-mode:vertical-rl]">
+                      {{ t('入味', 'NOTES') }}
+                    </span>
+                    <p class="text-xs font-semibold leading-5 text-[#211e19]">
+                      {{ selectedMenuItem.ingredients || t('未设置', 'Not set') }}
+                    </p>
+                  </div>
+
+                  <p
+                    v-if="menuDetailFeedback"
+                    class="mt-3 border-l-4 border-emerald-600 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                    data-testid="food-delivery-menu-detail-feedback"
+                  >
+                    {{ menuDetailFeedback }}
+                  </p>
+                </div>
+              </section>
+
+              <footer
+                class="sticky bottom-0 z-20 grid grid-cols-[auto_minmax(0,1fr)] gap-2 border-t border-[#1f4d3a] bg-[#f5efe2] p-3 shadow-[0_-10px_24px_rgba(31,77,58,0.1)]"
+              >
+                <div
+                  class="inline-flex h-12 items-center border border-[#1f4d3a] bg-white/65"
                   data-testid="food-delivery-menu-detail-quantity"
                 >
                   <button
                     type="button"
-                    class="inline-flex h-11 w-11 items-center justify-center"
+                    class="inline-flex h-12 w-10 items-center justify-center"
                     data-testid="food-delivery-menu-detail-quantity-decrease"
                     :aria-label="t('减少数量', 'Decrease quantity')"
                     @click="decreaseMenuDetailQuantity"
@@ -11084,7 +11143,7 @@ onBeforeUnmount(() => {
                   }}</span>
                   <button
                     type="button"
-                    class="inline-flex h-11 w-11 items-center justify-center"
+                    class="inline-flex h-12 w-10 items-center justify-center"
                     data-testid="food-delivery-menu-detail-quantity-increase"
                     :aria-label="t('增加数量', 'Increase quantity')"
                     @click="increaseMenuDetailQuantity"
@@ -11092,24 +11151,28 @@ onBeforeUnmount(() => {
                     <i class="fas fa-plus text-xs"></i>
                   </button>
                 </div>
-                <p
-                  class="text-right text-lg font-black text-[#211e19]"
-                  data-testid="food-delivery-menu-detail-total"
+                <button
+                  type="button"
+                  class="flex min-h-12 min-w-0 items-center justify-between gap-3 bg-[#bd4b35] px-3 text-left text-white shadow-[3px_3px_0_#1f4d3a] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  data-testid="food-delivery-menu-detail-add"
+                  @click="
+                    addMenuItemToCart(selectedMenuItem.id, menuDetailQuantity, $event.currentTarget)
+                  "
                 >
-                  {{ selectedMenuItemDetailTotal }}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                class="min-h-12 w-full bg-[#bd4b35] px-4 text-sm font-black text-white shadow-[0_14px_30px_rgba(189,75,53,0.22)] active:scale-[0.99]"
-                data-testid="food-delivery-menu-detail-add"
-                @click="
-                  addMenuItemToCart(selectedMenuItem.id, menuDetailQuantity, $event.currentTarget)
-                "
-              >
-                {{ t('添到餐桌', 'Add to table') }}
-              </button>
+                  <span class="min-w-0">
+                    <span class="block truncate text-[8px] font-black text-white/70">
+                      {{ t('添入本席', 'ADD DISH') }}
+                    </span>
+                    <span
+                      class="block truncate text-sm font-black"
+                      data-testid="food-delivery-menu-detail-total"
+                    >
+                      {{ selectedMenuItemDetailTotal }}
+                    </span>
+                  </span>
+                  <i class="fas fa-arrow-right shrink-0"></i>
+                </button>
+              </footer>
             </div>
           </template>
 

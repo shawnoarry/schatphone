@@ -8,6 +8,7 @@ import {
   SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_ROUTE,
 } from './planned-module-registry'
+import { resolveFoodShopDefaultIdentity } from './food-shop-presentation'
 
 export const FOOD_DELIVERY_PLATFORM_ENTRY_KEY = 'food_delivery_platform'
 
@@ -25,9 +26,7 @@ const uiAssetUrl = (path = '') =>
 const FOOD_SHOP_FOLDER_ENTRY_DEFAULTS = Object.freeze({
   food_seed_harbor_roast: Object.freeze({
     icon: 'fas fa-mug-hot',
-    iconAsset: uiAssetUrl(
-      'apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png',
-    ),
+    iconAsset: uiAssetUrl('apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png'),
     iconAssetFullBleed: true,
     accent: 'warm',
   }),
@@ -90,17 +89,16 @@ export const buildFoodDeliveryFolderEntries = ({
         },
         presentationOverrides,
       )
-      const displayName = presentation.displayName || restaurant.name || 'Food shop'
-      const shortDescription =
-        presentation.shortDescription ||
-        formatFoodShopDescription(restaurant) ||
-        'Food Delivery mini app'
+      const defaultIdentity = resolveFoodShopDefaultIdentity(restaurant)
+      const fallbackDescription = formatFoodShopDescription(restaurant) || 'Food Delivery mini app'
       return {
         key: entryId,
-        zh: displayName,
-        en: displayName,
-        descZh: shortDescription,
-        descEn: shortDescription,
+        zh: presentation.displayName || defaultIdentity.nameZh || restaurant.name || 'Food shop',
+        en: presentation.displayName || defaultIdentity.nameEn || restaurant.name || 'Food shop',
+        descZh:
+          presentation.shortDescription || defaultIdentity.descriptionZh || fallbackDescription,
+        descEn:
+          presentation.shortDescription || defaultIdentity.descriptionEn || fallbackDescription,
         icon: presentation.icon || entryDefaults.icon || 'fas fa-store',
         iconAsset: presentation.hasOverride ? '' : entryDefaults.iconAsset || '',
         iconAssetFullBleed:

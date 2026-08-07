@@ -44,6 +44,45 @@ export const FOOD_SHOP_DEFAULT_TEMPLATE_BY_RESTAURANT_ID = Object.freeze({
   food_seed_river_noodles: 'street_food_stall',
 })
 
+const FOOD_SHOP_DEFAULT_IDENTITY_BY_RESTAURANT_ID = Object.freeze({
+  food_seed_jade_hearth: Object.freeze({
+    standardNames: Object.freeze(['Jade Hearth', '玉炉雅席']),
+    standardDescriptions: Object.freeze([
+      'Regional Chinese dishes and shared tables',
+      '时令中式桌菜与雅致家宴',
+    ]),
+    nameZh: '玉炉雅席',
+    nameEn: 'Jade Hearth',
+    descriptionZh: '时令中式桌菜与雅致家宴',
+    descriptionEn: 'Seasonal regional Chinese cooking for shared tables',
+  }),
+})
+
+export const resolveFoodShopDefaultIdentity = (restaurant = {}) => {
+  const identity = FOOD_SHOP_DEFAULT_IDENTITY_BY_RESTAURANT_ID[restaurant?.id]
+  const currentName = typeof restaurant?.name === 'string' ? restaurant.name.trim() : ''
+  const currentDescription =
+    typeof restaurant?.cuisine === 'string' ? restaurant.cuisine.trim() : ''
+  if (!identity) {
+    return {
+      nameZh: currentName,
+      nameEn: currentName,
+      descriptionZh: currentDescription,
+      descriptionEn: currentDescription,
+    }
+  }
+
+  const usesBuiltInName = !currentName || identity.standardNames.includes(currentName)
+  const usesBuiltInDescription =
+    !currentDescription || identity.standardDescriptions.includes(currentDescription)
+  return {
+    nameZh: usesBuiltInName ? identity.nameZh : currentName,
+    nameEn: usesBuiltInName ? identity.nameEn : currentName,
+    descriptionZh: usesBuiltInDescription ? identity.descriptionZh : currentDescription,
+    descriptionEn: usesBuiltInDescription ? identity.descriptionEn : currentDescription,
+  }
+}
+
 export const resolveFoodShopDefaultTemplateId = (restaurantId) =>
   normalizeShopEntryTemplateId(
     FOOD_SHOP_DEFAULT_TEMPLATE_BY_RESTAURANT_ID[restaurantId] || 'standard',

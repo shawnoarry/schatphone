@@ -42,6 +42,7 @@ import {
 import { buildActiveWorldAppEntryRows } from '../lib/world-pack-app-bindings'
 import {
   resolveFoodDeliveryAssetUrl,
+  resolveFoodShopDefaultIdentity,
   resolveFoodShopDefaultTemplateId,
 } from '../lib/food-shop-presentation'
 import {
@@ -356,34 +357,45 @@ const worldAppStoreEntries = computed(() =>
 )
 
 const foodDeliveryShopAppStoreEntries = computed(() =>
-  foodDeliveryStore.restaurants.slice(0, 24).map((restaurant) => ({
-    id: `shop_app_${restaurant.id}`,
-    route: '/food-delivery',
-    routeQuery: {
+  foodDeliveryStore.restaurants.slice(0, 24).map((restaurant) => {
+    const defaultIdentity = resolveFoodShopDefaultIdentity(restaurant)
+    return {
+      id: `shop_app_${restaurant.id}`,
+      route: '/food-delivery',
+      routeQuery: {
+        restaurantId: restaurant.id,
+        category: restaurant.category || 'restaurants',
+        entry: 'shop',
+        shopEntryId: `shop_app_${restaurant.id}`,
+      },
+      labelZh: defaultIdentity.nameZh || restaurant.name,
+      labelEn: defaultIdentity.nameEn || restaurant.name,
+      categoryZh: '店铺',
+      categoryEn: 'Shops',
+      descZh:
+        defaultIdentity.descriptionZh ||
+        restaurant.cuisine ||
+        restaurant.address ||
+        'Food Delivery 文件夹内小应用',
+      descEn:
+        defaultIdentity.descriptionEn ||
+        restaurant.cuisine ||
+        restaurant.address ||
+        'Mini app inside Food Delivery folder',
+      icon: 'fas fa-store',
+      accent: 'warm',
+      entryKind: 'shop_app',
+      entryType: APP_ENTRY_TYPE.SHOP,
+      shopAppEntry: true,
+      sourceOwnedShopEntry: true,
+      sourceModule: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+      bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
+      runtimeIdentity: restaurant.id,
+      defaultTemplateId: resolveFoodShopDefaultTemplateId(restaurant.id),
       restaurantId: restaurant.id,
-      category: restaurant.category || 'restaurants',
-      entry: 'shop',
-      shopEntryId: `shop_app_${restaurant.id}`,
-    },
-    labelZh: restaurant.name,
-    labelEn: restaurant.name,
-    categoryZh: '店铺',
-    categoryEn: 'Shops',
-    descZh: restaurant.cuisine || restaurant.address || 'Food Delivery 文件夹内小应用',
-    descEn: restaurant.cuisine || restaurant.address || 'Mini app inside Food Delivery folder',
-    icon: 'fas fa-store',
-    accent: 'warm',
-    entryKind: 'shop_app',
-    entryType: APP_ENTRY_TYPE.SHOP,
-    shopAppEntry: true,
-    sourceOwnedShopEntry: true,
-    sourceModule: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
-    bindingTarget: SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY,
-    runtimeIdentity: restaurant.id,
-    defaultTemplateId: resolveFoodShopDefaultTemplateId(restaurant.id),
-    restaurantId: restaurant.id,
-    restaurant,
-  })),
+      restaurant,
+    }
+  }),
 )
 
 const shoppingShopAppStoreEntries = computed(() =>

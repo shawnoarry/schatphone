@@ -118,4 +118,38 @@ describe('FoodDeliveryJadeHearthApp', () => {
 
     wrapper.unmount()
   })
+
+  test('uses chapter navigation and paper-banquet dish controls instead of generic round adds', async () => {
+    const wrapper = mount(FoodDeliveryJadeHearthApp, {
+      props: { ...baseProps, page: 'menu' },
+      global: { plugins: [pinia] },
+    })
+
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').attributes('tabindex'),
+    ).toBe('0')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-menu-custom_house_first"]')
+        .attributes('data-menu-card-style'),
+    ).toBe('paper-banquet-entry')
+    const addDish = wrapper.get('[data-testid="food-delivery-add-custom_house_first"]')
+    expect(addDish.text()).toContain('Add dish')
+    expect(addDish.classes()).not.toContain('rounded-full')
+
+    await wrapper
+      .get('[data-testid="food-delivery-store-menu-section-small_plates"]')
+      .trigger('click')
+    expect(wrapper.find('[data-testid="food-delivery-menu-custom_house_first"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.find('[data-testid="food-delivery-menu-custom_small_first"]').exists()).toBe(
+      true,
+    )
+
+    wrapper.unmount()
+  })
 })

@@ -755,9 +755,7 @@ describe('FoodDeliveryView', () => {
 
   test('blocks platform checkout until the structured minimum order is met', async () => {
     const router = createTestRouter()
-    await router.push(
-      '/food-delivery?platformView=merchant&platformMerchant=platform_salad_day',
-    )
+    await router.push('/food-delivery?platformView=merchant&platformMerchant=platform_salad_day')
     await router.isReady()
 
     const wrapper = mount(FoodDeliveryView, {
@@ -771,13 +769,11 @@ describe('FoodDeliveryView', () => {
       .trigger('click')
     await wrapper.get('[data-testid="food-delivery-platform-menu-view-cart"]').trigger('click')
 
-    const checkoutButton = wrapper.get(
-      '[data-testid="food-delivery-platform-cart-checkout"]',
-    )
+    const checkoutButton = wrapper.get('[data-testid="food-delivery-platform-cart-checkout"]')
     expect(checkoutButton.attributes('disabled')).toBeDefined()
-    expect(wrapper.get('[data-testid="food-delivery-platform-cart-minimum-order"]').text()).toContain(
-      '9,000 KRW',
-    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-platform-cart-minimum-order"]').text(),
+    ).toContain('9,000 KRW')
     expect(router.currentRoute.value.query.platformView).toBe('merchant')
 
     await wrapper
@@ -795,13 +791,8 @@ describe('FoodDeliveryView', () => {
     const router = createTestRouter()
     const walletStore = useWalletStore()
     walletStore.setPrimaryCurrency('EUR')
-    const expectedQuote = walletStore.quoteMoney(
-      { amountMinor: 3900, currency: 'CNY' },
-      'EUR',
-    )
-    await router.push(
-      '/food-delivery?platformView=campaign&platformCampaign=quick_lunch',
-    )
+    const expectedQuote = walletStore.quoteMoney({ amountMinor: 3900, currency: 'CNY' }, 'EUR')
+    await router.push('/food-delivery?platformView=campaign&platformCampaign=quick_lunch')
     await router.isReady()
 
     const wrapper = mount(FoodDeliveryView, {
@@ -2648,15 +2639,42 @@ describe('FoodDeliveryView', () => {
       'food-delivery-store-jade-table',
     )
     expect(wrapper.get('[data-testid="food-delivery-jade-home"]').text()).toContain(
-      'Gather around something warm.',
+      'A table shaped by the season.',
     )
 
     await wrapper.get('[data-testid="food-delivery-jade-nav-menu"]').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.query.shopView).toBe('menu')
     expect(wrapper.get('[data-testid="food-delivery-jade-menu-page"]').text()).toContain(
-      'From small plates to the wok',
+      'Six chapters for the table',
     )
+    expect(wrapper.find('[data-testid="food-delivery-store-menu-section-all"]').exists()).toBe(
+      false,
+    )
+    expect(
+      wrapper.get('[data-testid="food-delivery-store-menu-section-rail"]').attributes('tabindex'),
+    ).toBe('0')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-menu-food_menu_jade_tea_smoked_chicken"]')
+        .attributes('data-menu-card-style'),
+    ).toBe('paper-banquet-entry')
+    expect(
+      wrapper.get('[data-testid="food-delivery-add-food_menu_jade_tea_smoked_chicken"]').text(),
+    ).toContain('Add dish')
+
+    systemStore.settings.system.language = 'zh-CN'
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').text()).toContain('玉炉雅席')
+    expect(
+      wrapper.get('[data-testid="food-delivery-menu-food_menu_jade_tea_smoked_chicken"]').text(),
+    ).toContain('玉炉茶熏半鸡')
+    expect(store.findMenuItemById('food_menu_jade_tea_smoked_chicken').title).toBe(
+      'Tea-Smoked Half Chicken',
+    )
+
+    systemStore.settings.system.language = 'en-US'
+    await flushPromises()
 
     await wrapper.get('[data-testid="food-delivery-jade-nav-feast"]').trigger('click')
     await flushPromises()
@@ -2705,6 +2723,11 @@ describe('FoodDeliveryView', () => {
 
     await wrapper.get(`[data-testid="food-delivery-menu-open-${jadeItem.id}"]`).trigger('click')
     await flushPromises()
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-jade-detail-menu"]')
+        .attributes('data-detail-layout'),
+    ).toBe('banquet-menu')
     expect(wrapper.get('[data-testid="food-delivery-menu-detail-sheet"]').text()).toContain(
       jadeItem.title,
     )

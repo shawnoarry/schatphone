@@ -1,6 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useI18n } from '../composables/useI18n'
+import {
+  getJadeHearthMenuSearchValues,
+  resolveJadeHearthDishNumber,
+} from '../lib/food-delivery-jade-hearth-copy'
 
 const props = defineProps({
   restaurant: { type: Object, required: true },
@@ -36,10 +40,20 @@ const emit = defineEmits([
 ])
 
 const { t } = useI18n()
-const activeSection = ref('all')
+const activeSection = ref('house_table')
 const menuMode = ref('shared')
 const searchQuery = ref('')
 const addressOpen = ref(false)
+const chapterRail = ref(null)
+const smallPlateRail = ref(null)
+const railDrag = {
+  element: null,
+  pointerId: null,
+  startX: 0,
+  startScrollLeft: 0,
+  moved: false,
+}
+let suppressRailClick = false
 
 const shopName = computed(
   () => String(props.displayName || props.restaurant?.name || '').trim() || t('本店', 'This shop'),
@@ -55,13 +69,12 @@ const emptyOrdersLabel = computed(() =>
 )
 
 const sectionOptions = Object.freeze([
-  { key: 'all', labelZh: '全单', labelEn: 'Full menu', mark: '全' },
-  { key: 'house_table', labelZh: '招牌桌菜', labelEn: 'House table', mark: '宴' },
-  { key: 'small_plates', labelZh: '茶点小碟', labelEn: 'Small plates', mark: '点' },
-  { key: 'wok_favorites', labelZh: '锅气小炒', labelEn: 'From the wok', mark: '炒' },
-  { key: 'claypot', labelZh: '暖煲', labelEn: 'Claypot', mark: '煲' },
-  { key: 'rice_noodles', labelZh: '饭面', labelEn: 'Rice & noodles', mark: '饭' },
-  { key: 'tea_sweets', labelZh: '茶与甜汤', labelEn: 'Tea & sweets', mark: '茶' },
+  { key: 'house_table', labelZh: '招牌桌菜', labelEn: 'House table', mark: '宴', chapter: '壹' },
+  { key: 'small_plates', labelZh: '茶点小碟', labelEn: 'Small plates', mark: '点', chapter: '贰' },
+  { key: 'wok_favorites', labelZh: '锅气小炒', labelEn: 'From the wok', mark: '炒', chapter: '叁' },
+  { key: 'claypot', labelZh: '暖煲', labelEn: 'Claypot', mark: '煲', chapter: '肆' },
+  { key: 'rice_noodles', labelZh: '饭面', labelEn: 'Rice & noodles', mark: '饭', chapter: '伍' },
+  { key: 'tea_sweets', labelZh: '茶与甜汤', labelEn: 'Tea & sweets', mark: '茶', chapter: '陆' },
 ])
 
 const menuSections = computed(() =>
@@ -69,24 +82,30 @@ const menuSections = computed(() =>
     .map((section) => ({
       ...section,
       label: t(section.labelZh, section.labelEn),
-      count:
-        section.key === 'all'
-          ? props.menuItems.length
-          : props.menuItems.filter((item) => item.menuSection === section.key).length,
+      count: props.menuItems.filter((item) => item.menuSection === section.key).length,
     }))
-    .filter((section) => section.key === 'all' || section.count > 0),
+    .filter((section) => section.count > 0),
 )
 
 const filteredMenuItems = computed(() => {
   const query = searchQuery.value.trim().toLocaleLowerCase()
   return props.menuItems.filter((item) => {
-    if (activeSection.value !== 'all' && item.menuSection !== activeSection.value) return false
+    if (!query && item.menuSection !== activeSection.value) return false
     if (!query) return true
-    return [item.title, item.desc, item.ingredients]
-      .filter(Boolean)
-      .some((value) => String(value).toLocaleLowerCase().includes(query))
+    return getJadeHearthMenuSearchValues(item).some((value) =>
+      String(value).toLocaleLowerCase().includes(query),
+    )
   })
 })
+
+const visibleMenuGroups = computed(() =>
+  menuSections.value
+    .map((section) => ({
+      ...section,
+      items: filteredMenuItems.value.filter((item) => item.menuSection === section.key),
+    }))
+    .filter((section) => section.items.length > 0),
+)
 
 const sharedTableItems = computed(() => {
   const primary = props.menuItems.filter((item) => item.menuSection === 'house_table')
@@ -183,6 +202,18 @@ const activeNavKey = computed(() => (props.page === 'order' ? 'orders' : props.p
 
 const imageUrl = (item = {}) => (item.image?.sourceType === 'url' ? item.image.url || '' : '')
 
+const dishFrameClass = (item = {}) => {
+  if (item.id === 'food_menu_jade_sea_bass') return 'aspect-[5/3]'
+  if (item.menuSection === 'claypot') return 'aspect-square'
+  if (item.menuSection === 'tea_sweets') return 'aspect-[4/3]'
+  return 'aspect-[4/3]'
+}
+
+const dishImageClass = (item = {}, detail = false) => {
+  if (detail || item.id === 'food_menu_jade_sea_bass') return 'object-contain'
+  return 'object-cover'
+}
+
 const requiredAssetPath = (item = {}) => {
   const url = imageUrl(item)
   const marker = 'images/ui-assets/apps/food-delivery/'
@@ -199,12 +230,80 @@ const handleImageError = (event) => {
 
 const displayPrice = (item = {}) => `${item.price || '0.00'} ${item.currency || 'CNY'}`
 
-const openSection = (sectionKey = 'all') => {
+const openSection = (sectionKey = 'house_table') => {
   activeSection.value = menuSections.value.some((section) => section.key === sectionKey)
     ? sectionKey
-    : 'all'
+    : menuSections.value[0]?.key || 'house_table'
+  searchQuery.value = ''
   emit('navigate', 'menu')
 }
+
+const selectMenuSection = (sectionKey) => {
+  activeSection.value = sectionKey
+  searchQuery.value = ''
+}
+
+const scrollRail = (railRef, direction = 1) => {
+  const element = railRef?.value
+  if (!element) return
+  element.scrollBy({
+    left: Math.max(180, element.clientWidth * 0.7) * direction,
+    behavior: 'smooth',
+  })
+}
+
+const handleRailWheel = (event) => {
+  const element = event.currentTarget
+  if (!element || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return
+  event.preventDefault()
+  element.scrollLeft += event.deltaY
+}
+
+const handleRailKeydown = (event) => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+  event.preventDefault()
+  event.currentTarget?.scrollBy({
+    left: event.key === 'ArrowRight' ? 180 : -180,
+    behavior: 'smooth',
+  })
+}
+
+const beginRailDrag = (event) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  const element = event.currentTarget
+  railDrag.element = element
+  railDrag.pointerId = event.pointerId
+  railDrag.startX = event.clientX
+  railDrag.startScrollLeft = element.scrollLeft
+  railDrag.moved = false
+  element.setPointerCapture?.(event.pointerId)
+  element.dataset.dragging = 'true'
+}
+
+const moveRailDrag = (event) => {
+  if (railDrag.element !== event.currentTarget || railDrag.pointerId !== event.pointerId) return
+  if (Math.abs(event.clientX - railDrag.startX) > 6) railDrag.moved = true
+  railDrag.element.scrollLeft = railDrag.startScrollLeft - (event.clientX - railDrag.startX)
+}
+
+const endRailDrag = (event) => {
+  if (railDrag.element !== event.currentTarget || railDrag.pointerId !== event.pointerId) return
+  event.currentTarget.releasePointerCapture?.(event.pointerId)
+  delete event.currentTarget.dataset.dragging
+  suppressRailClick = railDrag.moved
+  if (suppressRailClick) setTimeout(() => (suppressRailClick = false), 0)
+  railDrag.element = null
+  railDrag.pointerId = null
+}
+
+const handleRailClickCapture = (event) => {
+  if (!suppressRailClick) return
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+const collectionTotal = (collection = {}) =>
+  (collection.items || []).reduce((total, item) => total + Number(item.price || 0), 0).toFixed(2)
 
 const orderStatus = (status = '') => {
   const states = {
@@ -236,7 +335,7 @@ const orderTime = (value) => {
 watch(
   () => props.restaurant.id,
   () => {
-    activeSection.value = 'all'
+    activeSection.value = menuSections.value[0]?.key || 'house_table'
     menuMode.value = 'shared'
     searchQuery.value = ''
     addressOpen.value = false
@@ -268,7 +367,7 @@ watch(
         <button type="button" class="min-w-0 text-center" @click="emit('navigate', 'home')">
           <span class="jade-wordmark block truncate text-lg font-black">{{ shopName }}</span>
           <span class="block truncate text-[9px] font-bold text-[var(--jade-muted)]">
-            {{ t('家 宴 · 时 令 新 作', 'TABLE · SEASONAL') }}
+            {{ t('时 令 · 雅 席', 'SEASONAL · TABLE') }}
           </span>
         </button>
         <button
@@ -327,44 +426,50 @@ watch(
         </section>
 
         <section
-          class="relative min-h-[22rem] overflow-hidden bg-[var(--jade-green)] text-white"
+          class="jade-hero relative min-h-[22rem] overflow-hidden bg-[var(--jade-green)] text-white"
           data-testid="food-delivery-jade-hero"
         >
           <img
             v-if="imageUrl(restaurant)"
             :src="imageUrl(restaurant)"
             :alt="restaurant.image?.alt || shopName"
-            class="absolute inset-0 h-full w-full object-cover"
+            class="absolute inset-0 h-full w-full object-cover object-[68%_center]"
             :data-required-asset="requiredAssetPath(restaurant)"
             @error="handleImageError"
           />
-          <div class="absolute inset-0 bg-black/48"></div>
+          <div
+            class="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,52,39,0.96)_0%,rgba(18,54,42,0.77)_39%,rgba(18,54,42,0.12)_75%),linear-gradient(0deg,rgba(9,33,25,0.68),transparent_56%)]"
+          ></div>
+          <div class="jade-paper-grain absolute inset-0 opacity-25"></div>
           <div class="relative flex min-h-[22rem] flex-col justify-between px-5 pb-6 pt-5">
             <div class="flex items-start justify-between gap-4">
               <span
-                class="inline-flex h-14 w-14 items-center justify-center border border-white/55 bg-[var(--jade-cinnabar)] text-2xl font-black shadow-lg"
+                class="jade-seal inline-flex h-14 w-14 items-center justify-center border border-white/55 bg-[var(--jade-cinnabar)] text-2xl font-black shadow-[4px_4px_0_rgba(16,38,29,0.48)]"
                 aria-hidden="true"
                 >{{ shopMonogram }}</span
               >
               <span
-                class="border border-white/35 bg-black/20 px-3 py-1.5 text-[10px] font-bold backdrop-blur"
+                class="border border-white/35 bg-[#153f31]/72 px-3 py-1.5 text-[10px] font-bold backdrop-blur"
               >
                 {{ restaurant.rating.toFixed(1) }} · {{ etaText }}
               </span>
             </div>
-            <div class="max-w-[18rem]">
-              <p class="text-[10px] font-bold text-white/75">
-                {{ t('今日桌宴', "TODAY'S TABLE") }}
+            <div class="max-w-[16.5rem]">
+              <p class="text-[10px] font-bold text-[var(--jade-celadon-light)]">
+                {{ t('今日席面 · 顺时而食', "TODAY'S TABLE · IN SEASON") }}
               </p>
-              <h1 class="jade-display mt-2 text-[2.45rem] font-black leading-[1.02]">
-                {{ t('一席热菜，慢慢分享。', 'Gather around something warm.') }}
+              <h1 class="jade-display mt-2 break-words text-[2.5rem] font-black leading-[1.05]">
+                {{ shopName }}
               </h1>
-              <p class="mt-3 text-xs font-semibold leading-5 text-white/82">
+              <p class="mt-3 text-sm font-bold leading-6 text-white/88">
+                {{ t('一席入味，四时有章。', 'A table shaped by the season.') }}
+              </p>
+              <p class="mt-1.5 line-clamp-2 text-[11px] font-semibold leading-5 text-white/65">
                 {{ shortDescription }}
               </p>
               <button
                 type="button"
-                class="mt-5 inline-flex min-h-11 items-center gap-3 bg-[var(--jade-rice)] px-4 text-xs font-black text-[var(--jade-green)]"
+                class="mt-5 inline-flex min-h-11 items-center gap-3 border border-[var(--jade-rice)] bg-[var(--jade-rice)] px-4 text-xs font-black text-[var(--jade-green)] shadow-[4px_4px_0_var(--jade-cinnabar)]"
                 data-testid="food-delivery-jade-open-menu"
                 @click="openSection('house_table')"
               >
@@ -422,23 +527,32 @@ watch(
             </div>
           </div>
 
-          <div v-if="homeTableItems.length" class="mt-5 border-y border-[var(--jade-line)]">
+          <div
+            v-if="homeTableItems.length"
+            class="mt-5 border border-[var(--jade-line)] bg-[var(--jade-paper-soft)] shadow-[4px_4px_0_var(--jade-line)]"
+          >
             <article
               v-for="(item, index) in homeTableItems"
               :key="item.id"
-              class="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-4 border-b border-[var(--jade-line)] py-4 last:border-b-0"
+              class="grid grid-cols-[1.8rem_minmax(0,1fr)_6.5rem] gap-3 border-b border-[var(--jade-line)] p-3 last:border-b-0"
               :data-testid="`food-delivery-menu-${item.id}`"
+              data-menu-card-style="paper-banquet-entry"
             >
-              <div class="flex min-w-0 flex-col justify-between py-1">
+              <span
+                class="jade-vertical-slip flex min-h-full items-center justify-center border-r border-[var(--jade-line)] pr-2 text-[9px] font-black text-[var(--jade-cinnabar)]"
+              >
+                {{ menuMode === 'shared' ? t('合菜', 'SHARE') : t('独食', 'SOLO') }}
+              </span>
+              <div class="flex min-w-0 flex-col justify-between py-0.5">
                 <button
                   type="button"
                   class="min-w-0 text-left"
                   :data-testid="`food-delivery-menu-open-${item.id}`"
                   @click="emit('open-item', item.id)"
                 >
-                  <span class="text-[9px] font-black text-[var(--jade-cinnabar)]"
-                    >0{{ index + 1 }}</span
-                  >
+                  <span class="text-[9px] font-black text-[var(--jade-cinnabar)]">
+                    {{ t('席中第', 'COURSE') }} {{ String(index + 1).padStart(2, '0') }}
+                  </span>
                   <h3 class="mt-1 break-words text-base font-black leading-5">{{ item.title }}</h3>
                   <p
                     class="mt-2 line-clamp-2 text-[11px] font-semibold leading-4 text-[var(--jade-muted)]"
@@ -446,22 +560,24 @@ watch(
                     {{ item.desc }}
                   </p>
                 </button>
-                <div class="mt-4 flex items-center justify-between gap-3">
+                <div class="mt-3 flex items-center justify-between gap-2">
                   <span class="text-sm font-black">{{ displayPrice(item) }}</span>
                   <button
                     type="button"
-                    class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--jade-cinnabar)] text-white"
+                    class="inline-flex min-h-10 items-center gap-2 border border-[var(--jade-cinnabar)] px-3 text-[10px] font-black text-[var(--jade-cinnabar)]"
                     :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
                     :data-testid="`food-delivery-add-${item.id}`"
                     @click="emit('add-item', item.id, 1, $event.currentTarget)"
                   >
-                    <i class="fas fa-plus text-[10px]"></i>
+                    <i class="fas fa-plus text-[9px]"></i>
+                    {{ t('添菜', 'Add dish') }}
                   </button>
                 </div>
               </div>
               <button
                 type="button"
-                class="aspect-[4/5] overflow-hidden bg-[var(--jade-paper)]"
+                class="self-center overflow-hidden border border-[var(--jade-line)] bg-[var(--jade-photo-mat)] p-1"
+                :class="dishFrameClass(item)"
                 :aria-label="t(`查看 ${item.title}`, `View ${item.title}`)"
                 @click="emit('open-item', item.id)"
               >
@@ -470,7 +586,7 @@ watch(
                   :src="imageUrl(item)"
                   :alt="item.image?.alt || item.title"
                   class="h-full w-full"
-                  :class="item.id === 'food_menu_jade_sea_bass' ? 'object-contain' : 'object-cover'"
+                  :class="dishImageClass(item)"
                   :data-required-asset="requiredAssetPath(item)"
                   @error="handleImageError"
                 />
@@ -489,15 +605,48 @@ watch(
                 {{ t('茶点与小碟', 'Tea & small plates') }}
               </h2>
             </div>
-            <button
-              type="button"
-              class="min-h-11 text-xs font-black"
-              @click="openSection('small_plates')"
-            >
-              {{ t('全部', 'See all') }}
-            </button>
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center border border-[var(--jade-line)]"
+                :aria-label="t('向前查看小碟', 'Previous small plates')"
+                :title="t('向前', 'Previous')"
+                @click="scrollRail(smallPlateRail, -1)"
+              >
+                <i class="fas fa-arrow-left text-[9px]"></i>
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-10 w-10 items-center justify-center border border-[var(--jade-line)]"
+                :aria-label="t('向后查看小碟', 'Next small plates')"
+                :title="t('向后', 'Next')"
+                @click="scrollRail(smallPlateRail, 1)"
+              >
+                <i class="fas fa-arrow-right text-[9px]"></i>
+              </button>
+              <button
+                type="button"
+                class="min-h-10 px-2 text-xs font-black"
+                @click="openSection('small_plates')"
+              >
+                {{ t('全部', 'See all') }}
+              </button>
+            </div>
           </div>
-          <div class="jade-scroll jade-featured-scroll mt-4 flex gap-3 overflow-x-auto px-4 pb-3">
+          <div
+            ref="smallPlateRail"
+            class="jade-scroll jade-featured-scroll mt-4 flex cursor-grab gap-3 overflow-x-auto px-4 pb-3 active:cursor-grabbing"
+            tabindex="0"
+            :aria-label="t('茶点与小碟横向列表', 'Tea and small plates carousel')"
+            data-testid="food-delivery-jade-small-plate-rail"
+            @wheel="handleRailWheel"
+            @keydown="handleRailKeydown"
+            @pointerdown="beginRailDrag"
+            @pointermove="moveRailDrag"
+            @pointerup="endRailDrag"
+            @pointercancel="endRailDrag"
+            @click.capture="handleRailClickCapture"
+          >
             <button
               v-for="item in smallPlateItems"
               :key="item.id"
@@ -550,15 +699,23 @@ watch(
 
     <template v-else-if="page === 'menu'">
       <main data-testid="food-delivery-jade-menu-page">
-        <section class="border-b border-[var(--jade-line)] px-4 pb-5 pt-6">
+        <section class="jade-paper-grain border-b border-[var(--jade-line)] px-4 pb-5 pt-6">
           <p class="truncate text-[10px] font-black text-[var(--jade-cinnabar)]">
             {{ shopMenuLabel }}
           </p>
-          <h1 class="jade-display mt-1 text-3xl font-black">
-            {{ t('从小碟到热锅', 'From small plates to the wok') }}
+          <h1 class="jade-display mt-1 max-w-[20rem] text-3xl font-black leading-tight">
+            {{ t('翻开六章，顺席添菜', 'Six chapters for the table') }}
           </h1>
+          <p class="mt-2 text-[11px] font-semibold leading-5 text-[var(--jade-muted)]">
+            {{
+              t(
+                '按菜序浏览；点菜名看详情，点“添菜”直接落单。',
+                'Open a dish for detail, or add it directly from its course.',
+              )
+            }}
+          </p>
           <label
-            class="mt-5 flex h-12 items-center gap-3 border border-[var(--jade-line)] bg-white/55 px-3"
+            class="mt-5 flex h-12 items-center gap-3 border border-[var(--jade-green)] bg-white/62 px-3 shadow-[3px_3px_0_var(--jade-line)]"
           >
             <i class="fas fa-magnifying-glass text-xs text-[var(--jade-muted)]"></i>
             <span class="sr-only">{{ t('搜索菜单', 'Search menu') }}</span>
@@ -573,82 +730,154 @@ watch(
         </section>
 
         <section
-          class="sticky top-[4.05rem] z-20 border-b border-[var(--jade-line)] bg-[var(--jade-rice)] py-3"
+          class="sticky top-[4.05rem] z-20 border-b border-[var(--jade-line)] bg-[var(--jade-rice)]/96 py-3 backdrop-blur"
         >
+          <div class="mb-2 flex items-center justify-between gap-3 px-4">
+            <p class="text-[9px] font-black text-[var(--jade-muted)]">
+              {{ t('左右拖动翻章', 'DRAG TO TURN CHAPTERS') }}
+            </p>
+            <div class="flex gap-1">
+              <button
+                type="button"
+                class="inline-flex h-9 w-9 items-center justify-center border border-[var(--jade-line)] bg-white/55"
+                :aria-label="t('上一章', 'Previous chapter')"
+                :title="t('上一章', 'Previous chapter')"
+                @click="scrollRail(chapterRail, -1)"
+              >
+                <i class="fas fa-arrow-left text-[9px]"></i>
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-9 w-9 items-center justify-center border border-[var(--jade-line)] bg-white/55"
+                :aria-label="t('下一章', 'Next chapter')"
+                :title="t('下一章', 'Next chapter')"
+                @click="scrollRail(chapterRail, 1)"
+              >
+                <i class="fas fa-arrow-right text-[9px]"></i>
+              </button>
+            </div>
+          </div>
           <div
-            class="jade-scroll flex gap-2 overflow-x-auto px-4"
+            ref="chapterRail"
+            class="jade-scroll jade-featured-scroll flex cursor-grab gap-2 overflow-x-auto px-4 pb-2 active:cursor-grabbing"
+            tabindex="0"
+            :aria-label="t('菜单章节', 'Menu chapters')"
             data-testid="food-delivery-store-menu-section-rail"
+            @wheel="handleRailWheel"
+            @keydown="handleRailKeydown"
+            @pointerdown="beginRailDrag"
+            @pointermove="moveRailDrag"
+            @pointerup="endRailDrag"
+            @pointercancel="endRailDrag"
+            @click.capture="handleRailClickCapture"
           >
             <button
               v-for="section in menuSections"
               :key="section.key"
               type="button"
-              class="inline-flex min-h-11 shrink-0 items-center gap-2 border px-3 text-xs font-black"
+              class="grid min-h-14 min-w-[8.5rem] shrink-0 grid-cols-[2rem_minmax(0,1fr)] items-stretch border text-left"
               :class="
                 activeSection === section.key
                   ? 'border-[var(--jade-green)] bg-[var(--jade-green)] text-white'
-                  : 'border-[var(--jade-line)] bg-white/45 text-[var(--jade-ink)]'
+                  : 'border-[var(--jade-line)] bg-white/55 text-[var(--jade-ink)]'
               "
+              :aria-pressed="activeSection === section.key"
               :data-testid="`food-delivery-store-menu-section-${section.key}`"
-              @click="activeSection = section.key"
+              @click="selectMenuSection(section.key)"
             >
-              <span class="text-[10px]">{{ section.mark }}</span>
-              {{ section.label }}
-              <span class="text-[9px] opacity-60">{{ section.count }}</span>
+              <span
+                class="flex items-center justify-center border-r border-current/25 text-sm font-black"
+                >{{ section.mark }}</span
+              >
+              <span class="flex min-w-0 flex-col justify-center px-2 py-1.5">
+                <span class="truncate text-[11px] font-black">{{ section.label }}</span>
+                <span class="mt-0.5 text-[8px] font-bold opacity-60"
+                  >{{ section.chapter }} · {{ section.count }} {{ t('道', 'DISHES') }}</span
+                >
+              </span>
             </button>
           </div>
         </section>
 
-        <section class="px-4 py-2" data-testid="food-delivery-menu-panel">
-          <article
-            v-for="item in filteredMenuItems"
-            :key="item.id"
-            class="grid grid-cols-[5.75rem_minmax(0,1fr)_2.75rem] items-center gap-3 border-b border-[var(--jade-line)] py-4"
-            :data-testid="`food-delivery-menu-${item.id}`"
+        <section class="space-y-4 px-3 py-4" data-testid="food-delivery-menu-panel">
+          <section
+            v-for="group in visibleMenuGroups"
+            :key="group.key"
+            class="grid grid-cols-[2.4rem_minmax(0,1fr)] border border-[var(--jade-line)] bg-[var(--jade-paper-soft)] shadow-[4px_4px_0_var(--jade-line)]"
+            :data-testid="`food-delivery-jade-menu-chapter-${group.key}`"
           >
-            <button
-              type="button"
-              class="aspect-square overflow-hidden bg-[var(--jade-paper)]"
-              :aria-label="t(`查看 ${item.title}`, `View ${item.title}`)"
-              @click="emit('open-item', item.id)"
+            <header
+              class="jade-chapter-slip flex min-h-full flex-col items-center justify-between bg-[var(--jade-green)] px-1.5 py-3 text-white"
             >
-              <img
-                v-if="imageUrl(item)"
-                :src="imageUrl(item)"
-                :alt="item.image?.alt || item.title"
-                class="h-full w-full object-cover"
-                :data-required-asset="requiredAssetPath(item)"
-                @error="handleImageError"
-              />
-            </button>
-            <button
-              type="button"
-              class="min-w-0 text-left"
-              :data-testid="`food-delivery-menu-open-${item.id}`"
-              @click="emit('open-item', item.id)"
-            >
-              <h2 class="break-words text-sm font-black leading-5">{{ item.title }}</h2>
-              <p
-                class="mt-1 line-clamp-2 text-[10px] font-semibold leading-4 text-[var(--jade-muted)]"
+              <span class="text-[9px] font-black text-[var(--jade-celadon-light)]">{{
+                group.chapter
+              }}</span>
+              <h2 class="jade-vertical-title text-[12px] font-black tracking-normal">
+                {{ group.label }}
+              </h2>
+              <span class="text-base font-black text-[var(--jade-celadon-light)]">{{
+                group.mark
+              }}</span>
+            </header>
+            <div class="min-w-0 divide-y divide-[var(--jade-line)]">
+              <article
+                v-for="item in group.items"
+                :key="item.id"
+                class="grid grid-cols-[1.7rem_5.25rem_minmax(0,1fr)_3.75rem] items-center gap-2 p-2.5"
+                :data-testid="`food-delivery-menu-${item.id}`"
+                data-menu-card-style="paper-banquet-entry"
               >
-                {{ item.desc }}
-              </p>
-              <p class="mt-2 text-xs font-black text-[var(--jade-cinnabar)]">
-                {{ displayPrice(item) }}
-              </p>
-            </button>
-            <button
-              type="button"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--jade-green)] text-[var(--jade-green)]"
-              :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
-              :data-testid="`food-delivery-add-${item.id}`"
-              @click="emit('add-item', item.id, 1, $event.currentTarget)"
-            >
-              <i class="fas fa-plus text-[10px]"></i>
-            </button>
-          </article>
+                <span class="self-start pt-1 text-[9px] font-black text-[var(--jade-cinnabar)]">
+                  {{ resolveJadeHearthDishNumber(item) }}
+                </span>
+                <button
+                  type="button"
+                  class="overflow-hidden border border-[var(--jade-line)] bg-[var(--jade-photo-mat)] p-1"
+                  :class="dishFrameClass(item)"
+                  :aria-label="t(`查看 ${item.title}`, `View ${item.title}`)"
+                  @click="emit('open-item', item.id)"
+                >
+                  <img
+                    v-if="imageUrl(item)"
+                    :src="imageUrl(item)"
+                    :alt="item.image?.alt || item.title"
+                    class="h-full w-full"
+                    :class="dishImageClass(item)"
+                    :data-required-asset="requiredAssetPath(item)"
+                    @error="handleImageError"
+                  />
+                </button>
+                <button
+                  type="button"
+                  class="min-w-0 text-left"
+                  :data-testid="`food-delivery-menu-open-${item.id}`"
+                  @click="emit('open-item', item.id)"
+                >
+                  <h3 class="break-words text-[13px] font-black leading-5">{{ item.title }}</h3>
+                  <p
+                    class="mt-1 line-clamp-2 text-[9px] font-semibold leading-4 text-[var(--jade-muted)]"
+                  >
+                    {{ item.desc }}
+                  </p>
+                  <p class="mt-1.5 text-[11px] font-black text-[var(--jade-cinnabar)]">
+                    {{ displayPrice(item) }}
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  class="flex min-h-[5.25rem] flex-col items-center justify-center gap-1 border-l border-[var(--jade-cinnabar)] px-1 text-[9px] font-black text-[var(--jade-cinnabar)]"
+                  :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
+                  :data-testid="`food-delivery-add-${item.id}`"
+                  @click="emit('add-item', item.id, 1, $event.currentTarget)"
+                >
+                  <i class="fas fa-plus text-[9px]"></i>
+                  <span class="jade-vertical-title">{{ t('添菜', 'Add dish') }}</span>
+                </button>
+              </article>
+            </div>
+          </section>
           <div
-            v-if="!filteredMenuItems.length"
+            v-if="!visibleMenuGroups.length"
             class="flex min-h-72 flex-col items-center justify-center text-center"
           >
             <span class="text-3xl font-black text-[var(--jade-cinnabar)]">空</span>
@@ -667,67 +896,109 @@ watch(
 
     <template v-else-if="page === 'feast'">
       <main data-testid="food-delivery-jade-feast-page">
-        <section class="bg-[var(--jade-green)] px-5 pb-7 pt-6 text-white">
-          <p class="text-[10px] font-bold text-white/65">{{ t('桌宴灵感', 'TABLE NOTES') }}</p>
-          <h1 class="jade-display mt-2 text-3xl font-black">
-            {{ t('按人数，把一餐配完整', 'A table for every kind of gathering') }}
-          </h1>
-          <p class="mt-3 max-w-[19rem] text-xs font-semibold leading-5 text-white/70">
+        <section
+          class="jade-feast-hero jade-paper-grain bg-[var(--jade-green)] px-5 pb-7 pt-6 text-white"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <p class="text-[10px] font-bold text-[var(--jade-celadon-light)]">
+                {{ t('桌宴笺', 'TABLE NOTES') }}
+              </p>
+              <h1 class="jade-display mt-2 text-3xl font-black leading-tight">
+                {{ t('按人数，把一餐配完整', 'A table for every kind of gathering') }}
+              </h1>
+            </div>
+            <span
+              class="jade-seal inline-flex h-14 w-14 shrink-0 items-center justify-center border border-white/45 bg-[var(--jade-cinnabar)] text-2xl font-black"
+              >宴</span
+            >
+          </div>
+          <p class="mt-3 max-w-[20rem] text-xs font-semibold leading-5 text-white/70">
             {{
               t(
-                '每道菜仍可单独查看和加购，份量由你决定。',
-                'Every dish stays individually selectable, so you control the portions.',
+                '这是配席建议，不是固定套餐；每道菜仍可单独查看、添菜和调整份量。',
+                'These are table suggestions, not fixed sets. Every dish remains individually selectable.',
               )
             }}
           </p>
         </section>
-        <section class="divide-y divide-[var(--jade-line)]">
+        <section class="space-y-5 px-3 py-5">
           <article
             v-for="(collection, collectionIndex) in feastCollections"
             :key="collection.key"
-            class="px-4 py-6"
+            class="border border-[var(--jade-line)] bg-[var(--jade-paper-soft)] shadow-[5px_5px_0_var(--jade-line)]"
+            :data-testid="`food-delivery-jade-feast-${collection.key}`"
           >
-            <div class="grid grid-cols-[3rem_minmax(0,1fr)] gap-3">
+            <div
+              class="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-start gap-3 border-b border-[var(--jade-line)] p-3"
+            >
               <span
-                class="inline-flex h-12 w-12 items-center justify-center border border-[var(--jade-cinnabar)] text-lg font-black text-[var(--jade-cinnabar)]"
+                class="inline-flex h-14 w-14 items-center justify-center bg-[var(--jade-green)] text-lg font-black text-white"
               >
-                {{ collectionIndex + 1 }}
+                {{ ['双', '家', '独'][collectionIndex] || collectionIndex + 1 }}
               </span>
-              <div>
+              <div class="min-w-0">
+                <p class="text-[8px] font-black text-[var(--jade-cinnabar)]">
+                  {{ t('配席建议', 'TABLE COMPOSITION') }} ·
+                  {{ String(collectionIndex + 1).padStart(2, '0') }}
+                </p>
                 <h2 class="jade-display text-xl font-black">{{ collection.title }}</h2>
                 <p class="mt-1 text-[11px] font-semibold leading-5 text-[var(--jade-muted)]">
                   {{ collection.desc }}
                 </p>
               </div>
+              <span class="shrink-0 pt-1 text-right text-xs font-black text-[var(--jade-cinnabar)]">
+                {{ collectionTotal(collection) }} {{ collection.items[0]?.currency || 'CNY' }}
+              </span>
             </div>
-            <div class="mt-4 divide-y divide-[var(--jade-line)] border-y border-[var(--jade-line)]">
+            <div class="divide-y divide-[var(--jade-line)]">
               <div
-                v-for="item in collection.items"
+                v-for="(item, itemIndex) in collection.items"
                 :key="item.id"
-                class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 py-3"
+                class="grid grid-cols-[1.7rem_4.75rem_minmax(0,1fr)_3.75rem] items-center gap-2 p-2.5"
               >
-                <button type="button" class="min-w-0 text-left" @click="emit('open-item', item.id)">
-                  <span class="block truncate text-xs font-black">{{ item.title }}</span>
+                <span class="self-start pt-1 text-[9px] font-black text-[var(--jade-cinnabar)]">{{
+                  String(itemIndex + 1).padStart(2, '0')
+                }}</span>
+                <button
+                  type="button"
+                  class="overflow-hidden border border-[var(--jade-line)] bg-[var(--jade-photo-mat)] p-1"
+                  :class="dishFrameClass(item)"
+                  :aria-label="t(`查看 ${item.title}`, `View ${item.title}`)"
+                  @click="emit('open-item', item.id)"
+                >
+                  <img
+                    v-if="imageUrl(item)"
+                    :src="imageUrl(item)"
+                    :alt="item.image?.alt || item.title"
+                    class="h-full w-full"
+                    :class="dishImageClass(item)"
+                    :data-required-asset="requiredAssetPath(item)"
+                    @error="handleImageError"
+                  />
+                </button>
+                <button
+                  type="button"
+                  class="min-w-0 text-left"
+                  :data-testid="`food-delivery-menu-open-${item.id}`"
+                  @click="emit('open-item', item.id)"
+                >
+                  <span class="block break-words text-xs font-black leading-4">{{
+                    item.title
+                  }}</span>
                   <span class="mt-1 block text-[10px] font-bold text-[var(--jade-muted)]">{{
                     displayPrice(item)
                   }}</span>
                 </button>
                 <button
                   type="button"
-                  class="inline-flex h-11 w-11 items-center justify-center"
-                  :aria-label="t(`查看 ${item.title}`, `View ${item.title}`)"
-                  @click="emit('open-item', item.id)"
-                >
-                  <i class="fas fa-arrow-up-right-from-square text-[10px]"></i>
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--jade-cinnabar)] text-white"
+                  class="flex min-h-[4.75rem] flex-col items-center justify-center gap-1 border-l border-[var(--jade-cinnabar)] text-[9px] font-black text-[var(--jade-cinnabar)]"
                   :aria-label="t(`加入 ${item.title}`, `Add ${item.title}`)"
                   :data-testid="`food-delivery-add-${item.id}`"
                   @click="emit('add-item', item.id, 1, $event.currentTarget)"
                 >
-                  <i class="fas fa-plus text-[10px]"></i>
+                  <i class="fas fa-plus text-[9px]"></i>
+                  <span class="jade-vertical-title">{{ t('添菜', 'Add dish') }}</span>
                 </button>
               </div>
             </div>
@@ -1171,21 +1442,48 @@ watch(
   --jade-cinnabar: #bd4b35;
   --jade-rice: #f5efe2;
   --jade-paper: #e9deca;
+  --jade-paper-soft: #fbf6eb;
+  --jade-photo-mat: #eee5d5;
+  --jade-celadon-light: #dbe7dd;
   --jade-ink: #211e19;
   --jade-muted: #746c61;
   --jade-line: #cfc2ad;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', STSong, Georgia, serif;
   letter-spacing: 0;
 }
 
 .jade-display,
 .jade-wordmark {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', STSong, Georgia, serif;
   letter-spacing: 0;
+}
+
+.jade-paper-grain {
+  background-image:
+    repeating-linear-gradient(0deg, rgb(83 72 54 / 0.025) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 5px);
+}
+
+.jade-seal {
+  font-family: 'Noto Serif SC', 'Songti SC', STSong, serif;
+}
+
+.jade-vertical-title,
+.jade-vertical-slip {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0;
+}
+
+.jade-chapter-slip {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.06), transparent 45%);
 }
 
 .jade-scroll {
   scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  touch-action: pan-x;
 }
 
 .jade-scroll::-webkit-scrollbar {
@@ -1210,6 +1508,14 @@ watch(
 .jade-featured-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: var(--jade-cinnabar);
+}
+
+.jade-scroll[data-dragging='true'] {
+  user-select: none;
+}
+
+.jade-scroll[data-dragging='true'] * {
+  pointer-events: none;
 }
 
 .jade-hearth-app :is(button, input):focus-visible {

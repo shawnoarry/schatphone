@@ -28,8 +28,9 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
     'background-color',
     'rgb(245, 239, 226)',
   )
+  await expect(page.getByTestId('food-delivery-jade-hero')).toContainText(/玉炉雅席|Jade Hearth/)
   await expect(page.getByTestId('food-delivery-jade-hero')).toContainText(
-    /一席热菜，慢慢分享。|Gather around something warm\./,
+    /一席入味，四时有章。|A table shaped by the season\./,
   )
   await expect(page.getByTestId('food-delivery-jade-nav')).toBeVisible()
 
@@ -118,6 +119,17 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
   await page.getByTestId('food-delivery-jade-nav-menu').click()
   await expect(page).toHaveURL(/shopView=menu/)
   await expect(page.getByTestId('food-delivery-jade-menu-page')).toBeVisible()
+  await expect(page.getByTestId('food-delivery-store-menu-section-all')).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-store-menu-section-rail')).toHaveAttribute(
+    'tabindex',
+    '0',
+  )
+  await expect(
+    page.getByTestId('food-delivery-menu-food_menu_jade_tea_smoked_chicken'),
+  ).toHaveAttribute('data-menu-card-style', 'paper-banquet-entry')
+  await expect(
+    page.getByTestId('food-delivery-add-food_menu_jade_tea_smoked_chicken'),
+  ).toContainText(/添菜|Add dish/)
   await testInfo.attach(`jade-hearth-menu-${testInfo.project.name}`, {
     body: await page.screenshot(),
     contentType: 'image/png',
@@ -125,9 +137,18 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
   await expectNoHorizontalOverflow(page)
 
   await page.getByTestId('food-delivery-menu-open-food_menu_jade_tea_smoked_chicken').click()
-  await expect(page.getByTestId('food-delivery-menu-detail-sheet')).toContainText(
-    'Tea-Smoked Half Chicken',
+  await expect(page.getByTestId('food-delivery-jade-detail-menu')).toHaveAttribute(
+    'data-detail-layout',
+    'banquet-menu',
   )
+  await expect(page.getByTestId('food-delivery-menu-detail-sheet')).toContainText(
+    /玉炉茶熏半鸡|Tea-Smoked Half Chicken/,
+  )
+  await expect(
+    page
+      .getByTestId('food-delivery-jade-detail-menu')
+      .locator('[data-required-asset="jade-hearth/products/jade-hearth-item-01.png"]'),
+  ).toHaveCSS('object-fit', 'contain')
   await testInfo.attach(`jade-hearth-detail-${testInfo.project.name}`, {
     body: await page.screenshot(),
     contentType: 'image/png',
@@ -140,16 +161,18 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
   await page.getByTestId('food-delivery-jade-header-bag').click()
   await expect(page).toHaveURL(/shopView=bag/)
   await expect(page.getByTestId('food-delivery-cart-panel')).toContainText(
-    'Tea-Smoked Half Chicken',
+    /玉炉茶熏半鸡|Tea-Smoked Half Chicken/,
   )
   await page.getByTestId('food-delivery-checkout').click()
-  await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText('Jade Hearth')
+  await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText(
+    /玉炉雅席|Jade Hearth/,
+  )
   await page.getByTestId('food-delivery-checkout-submit').click()
 
   await expect(page).toHaveURL(/shopView=order/)
   await expect(page).toHaveURL(/shopOrderId=/)
   await expect(page.getByTestId('food-delivery-jade-order-page')).toContainText(
-    'Tea-Smoked Half Chicken',
+    /玉炉茶熏半鸡|Tea-Smoked Half Chicken/,
   )
   await expect(page.getByTestId('food-delivery-jade-nav-orders')).toHaveAttribute(
     'aria-current',

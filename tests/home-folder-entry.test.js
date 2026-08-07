@@ -1004,9 +1004,7 @@ describe('Home folder entries', () => {
         .attributes('src'),
     ).toContain('/images/ui-assets/apps/food-delivery/platform/brand/baemin-entry-icon-01.png')
     expect(
-      wrapper
-        .get('[data-testid="home-folder-entry-image-food_delivery_platform"]')
-        .classes(),
+      wrapper.get('[data-testid="home-folder-entry-image-food_delivery_platform"]').classes(),
     ).toContain('is-full-bleed')
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_moon_bistro"]').exists(),
@@ -1018,15 +1016,16 @@ describe('Home folder entries', () => {
       wrapper
         .get('[data-testid="home-folder-entry-image-shop_app_food_seed_peach_cloud"]')
         .attributes('src'),
-    ).toContain(
-      '/images/ui-assets/apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg',
-    )
+    ).toContain('/images/ui-assets/apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg')
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_dash_grill"]').exists(),
     ).toBe(true)
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_jade_hearth"]').exists(),
     ).toBe(true)
+    expect(
+      wrapper.get('[data-testid="home-folder-entry-shop_app_food_seed_jade_hearth"]').text(),
+    ).toContain('玉炉雅席')
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_verdant_day"]').exists(),
     ).toBe(true)
