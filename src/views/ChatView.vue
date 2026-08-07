@@ -3739,8 +3739,8 @@ onBeforeUnmount(() => {
           >
             <i class="fas fa-chevron-left"></i>
           </button>
-          <p class="flex-1 text-2xl font-bold leading-tight">{{ t('消息', 'Messages') }}</p>
-          <div class="flex items-center gap-1.5">
+          <p class="flex-1 text-[1.45rem] font-extrabold leading-tight tracking-tight">{{ t('消息', 'Messages') }}</p>
+          <div class="flex items-center gap-1">
             <button
               type="button"
               class="chat-home-icon-button chat-ink"
@@ -3790,10 +3790,15 @@ onBeforeUnmount(() => {
 
       <div class="chat-home-sheet flex-1 overflow-y-auto no-scrollbar">
         <section class="chat-home-hero mx-4 mt-4 mb-2">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-gray-950">{{ chatHomeHeroTitle }}</p>
-              <p class="mt-1 text-[11px] leading-4 text-gray-600">{{ chatHomeHeroDetail }}</p>
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <span class="chat-home-hero__badge" aria-hidden="true">
+                <i class="fas fa-bolt"></i>
+              </span>
+              <div class="min-w-0">
+                <p class="text-[13px] font-extrabold leading-snug text-gray-950">{{ chatHomeHeroTitle }}</p>
+                <p class="mt-0.5 text-[11px] leading-4 text-gray-600 line-clamp-2">{{ chatHomeHeroDetail }}</p>
+              </div>
             </div>
             <div class="flex shrink-0 gap-1.5">
               <button
@@ -3910,9 +3915,29 @@ onBeforeUnmount(() => {
 
         <p
           v-if="visibleChatContacts.length === 0 && chatMessageRequestContacts.length === 0 && !showFoldedSubscriptionsCard"
-          class="px-4 py-8 text-center text-xs text-gray-400"
+          class="chat-home-empty"
         >
-          {{ normalizedChatSearchKeyword ? t('没有匹配的会话。', 'No matching chats.') : t('暂无会话，先从对象页绑定角色或创建群聊。', 'No chats yet. Bind an object or create a group first.') }}
+          <span class="chat-home-empty__icon" aria-hidden="true">
+            <i :class="normalizedChatSearchKeyword ? 'fas fa-magnifying-glass' : 'far fa-comments'"></i>
+          </span>
+          <span class="chat-home-empty__title">
+            {{ normalizedChatSearchKeyword ? t('没有匹配的会话', 'No matching chats') : t('还没有会话', 'No chats yet') }}
+          </span>
+          <span class="chat-home-empty__detail">
+            {{
+              normalizedChatSearchKeyword
+                ? t('换个角色名、群名或草稿关键词试试。', 'Try another role, group, or draft keyword.')
+                : t('从对象页绑定角色，或创建一个群聊开始第一段对话。', 'Bind a role from Objects or create a group to start your first conversation.')
+            }}
+          </span>
+          <button
+            v-if="!normalizedChatSearchKeyword"
+            type="button"
+            class="chat-home-empty__action"
+            @click="openChatObjects"
+          >
+            {{ t('去绑定对象', 'Bind someone') }}
+          </button>
         </p>
 
         <div
@@ -3920,6 +3945,7 @@ onBeforeUnmount(() => {
           :key="contact.id"
           @click="enterChat(contact)"
           class="chat-list-row"
+          :class="{ 'is-unread': Boolean(getConversationPreview(contact.id)?.unread) }"
           :data-testid="`chat-contact-row-${contact.id}`"
         >
           <div class="chat-list-avatar">
@@ -3928,6 +3954,12 @@ onBeforeUnmount(() => {
               class="w-full h-full object-cover"
               :data-testid="`chat-contact-avatar-${contact.id}`"
             />
+            <span
+              v-if="chatSocialStateTag(contact)"
+              class="chat-list-avatar__dot"
+              :class="chatSocialStateTagClass(contact)"
+              aria-hidden="true"
+            ></span>
           </div>
           <div class="chat-list-content">
             <div class="flex justify-between items-center gap-2">
@@ -3935,12 +3967,12 @@ onBeforeUnmount(() => {
               <span class="text-[10px] text-gray-400 shrink-0">{{ formatConversationTime(getConversationPreview(contact.id)?.lastMessageAt) }}</span>
             </div>
             <div class="chat-list-preview" :class="getConversationPreview(contact.id)?.draft?.trim() ? 'text-orange-500' : 'text-gray-500'">
-              <span v-if="contactKindTag(contact)" class="px-1 rounded text-[8px] font-medium" :class="contactKindTagClass(contact)">
+              <span v-if="contactKindTag(contact)" class="chat-list-tag" :class="contactKindTagClass(contact)">
                 {{ contactKindTag(contact) }}
               </span>
               <span
                 v-if="chatSocialStateTag(contact)"
-                class="px-1 rounded text-[8px] font-medium"
+                class="chat-list-tag"
                 :class="chatSocialStateTagClass(contact)"
                 :data-testid="`chat-contact-social-tag-${contact.id}`"
               >
@@ -3948,7 +3980,7 @@ onBeforeUnmount(() => {
               </span>
               <span
                 v-if="chatSubscriptionStateTag(contact)"
-                class="px-1 rounded text-[8px] font-medium"
+                class="chat-list-tag"
                 :class="chatSubscriptionStateTagClass(contact)"
                 :data-testid="`chat-contact-subscription-tag-${contact.id}`"
               >
@@ -3957,12 +3989,21 @@ onBeforeUnmount(() => {
               {{ contactPreviewText(contact.id) }}
             </div>
           </div>
-          <span
-            v-if="getConversationPreview(contact.id)?.unread"
-            class="chat-list-unread"
-          >
-            {{ Math.min(getConversationPreview(contact.id)?.unread || 0, 99) }}
-          </span>
+          <div class="chat-list-side">
+            <span
+              v-if="chatStore.isChatSubscriptionMuted(contact) && !getConversationPreview(contact.id)?.unread"
+              class="chat-list-muted"
+              aria-hidden="true"
+            >
+              <i class="fas fa-bell-slash"></i>
+            </span>
+            <span
+              v-if="getConversationPreview(contact.id)?.unread"
+              class="chat-list-unread"
+            >
+              {{ Math.min(getConversationPreview(contact.id)?.unread || 0, 99) }}
+            </span>
+          </div>
         </div>
       </div>
 

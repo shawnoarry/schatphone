@@ -200,177 +200,171 @@ const removeGroup = async (group) => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-gray-50 flex flex-col">
-    <div class="pt-12 pb-3 px-4 bg-white border-b border-gray-100">
+  <div class="w-full h-full flex flex-col chat-shell chat-groups-shell">
+    <div class="chat-home-header pt-12 px-4 pb-4 chat-ink">
       <div class="flex items-center justify-between gap-3">
-        <div>
-          <p class="text-[11px] text-gray-400">Chat</p>
-          <h1 class="text-2xl font-bold leading-tight">{{ t('群聊', 'Groups') }}</h1>
-        </div>
+        <button
+          @click="router.push('/chat')"
+          class="chat-home-icon-button chat-ink"
+          :aria-label="t('返回消息', 'Back to Messages')"
+        >
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <p class="flex-1 text-[1.45rem] font-extrabold leading-tight tracking-tight">{{ t('群聊', 'Groups') }}</p>
         <button
           type="button"
-          class="h-10 px-3 rounded-full border border-yellow-300 bg-yellow-50 text-sm font-semibold text-gray-900"
+          class="chat-home-icon-button chat-ink"
+          :aria-label="t('新建群聊', 'New group')"
           data-testid="chat-group-create"
           @click="openCreateGroup"
         >
-          <i class="fas fa-plus mr-1"></i>{{ t('新建', 'New') }}
+          <i class="fas fa-plus"></i>
         </button>
       </div>
-      <p class="mt-2 text-xs text-gray-500">
-        {{ t('把多个角色放进同一个会话，再为这个群设置发言方式。', 'Put multiple roles into one thread and choose how the group speaks.') }}
-      </p>
     </div>
 
-    <p
-      v-if="uiNoticeMessage"
-      class="px-4 py-2 text-[11px]"
-      :class="uiNoticeType === 'error' ? 'text-red-600' : uiNoticeType === 'warning' ? 'text-amber-600' : 'text-emerald-600'"
-    >
-      {{ uiNoticeMessage }}
-    </p>
+    <div class="chat-home-sheet flex-1 overflow-y-auto no-scrollbar">
+      <p
+        v-if="uiNoticeMessage"
+        class="mx-4 mt-3 rounded-xl px-3 py-2 text-[11px]"
+        :class="uiNoticeType === 'error' ? 'bg-red-50 text-red-600' : uiNoticeType === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'"
+      >
+        {{ uiNoticeMessage }}
+      </p>
 
-    <main class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
       <section
         v-if="groupContacts.length === 0"
-        class="rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-8 text-center"
+        class="chat-home-empty"
       >
-        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-700">
-          <i class="fas fa-comments"></i>
-        </div>
-        <p class="mt-3 text-sm font-semibold text-gray-900">{{ t('还没有群聊', 'No groups yet') }}</p>
-        <p class="mt-1 text-xs leading-5 text-gray-500">
+        <span class="chat-home-empty__icon" aria-hidden="true">
+          <i class="far fa-comments"></i>
+        </span>
+        <span class="chat-home-empty__title">{{ t('还没有群聊', 'No groups yet') }}</span>
+        <span class="chat-home-empty__detail">
           {{ t('先选择至少两个 Chat 对象，创建后会出现在消息列表里。', 'Choose at least two Chat objects. The group then appears in Messages.') }}
-        </p>
+        </span>
         <button
           type="button"
-          class="mt-4 rounded-full bg-gray-950 px-4 py-2 text-xs font-semibold text-white"
+          class="chat-home-empty__action"
           @click="openCreateGroup"
         >
           {{ t('创建第一个群聊', 'Create first group') }}
         </button>
       </section>
 
-      <article
+      <div
         v-for="group in groupContacts"
         :key="group.id"
-        class="rounded-2xl border border-gray-100 bg-white p-3"
+        class="chat-list-row"
         :data-testid="`chat-group-${group.id}`"
+        @click="openChat(group)"
       >
-        <div class="flex items-start gap-3">
-          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-700">
-            <i class="fas fa-comments"></i>
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
-                <p class="truncate text-sm font-bold text-gray-950">{{ group.name }}</p>
-                <p class="mt-0.5 text-[11px] text-gray-500">
-                  {{ groupModeLabel(group.groupReplyMode) }} · {{ (group.groupMemberIds || []).length }} {{ t('人', 'members') }}
-                </p>
-              </div>
-              <span class="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
-                {{ t('群聊', 'Group') }}
-              </span>
-            </div>
-            <p class="mt-2 line-clamp-1 text-xs text-gray-600">{{ groupMemberNames(group) }}</p>
-            <p class="mt-1 line-clamp-1 text-[11px] text-gray-400">{{ conversationPreviewText(group) }}</p>
-            <div class="mt-3 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                class="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700"
-                @click="openChat(group)"
-              >
-                {{ t('聊天', 'Chat') }}
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] text-gray-600"
-                @click="openEditGroup(group)"
-              >
-                {{ t('设置', 'Settings') }}
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] text-red-600"
-                @click="removeGroup(group)"
-              >
-                {{ t('删除', 'Delete') }}
-              </button>
-            </div>
-          </div>
+        <div class="chat-list-avatar chat-list-avatar--group">
+          <i class="fas fa-comments"></i>
         </div>
-      </article>
-    </main>
+        <div class="chat-list-content">
+          <div class="flex justify-between items-center gap-2">
+            <span class="font-bold text-sm truncate">{{ group.name }}</span>
+            <span class="text-[10px] text-gray-400 shrink-0">
+              {{ groupModeLabel(group.groupReplyMode) }} · {{ (group.groupMemberIds || []).length }}{{ t('人', '') }}
+            </span>
+          </div>
+          <div class="chat-list-preview text-gray-500">
+            <span class="chat-list-tag bg-indigo-100 text-indigo-700">{{ t('群聊', 'Group') }}</span>
+            {{ groupMemberNames(group) }}
+          </div>
+          <p class="mt-0.5 line-clamp-1 text-[11px] text-gray-400">{{ conversationPreviewText(group) }}</p>
+        </div>
+        <div class="chat-list-side">
+          <button
+            type="button"
+            class="chat-row-icon-action"
+            :aria-label="t('设置', 'Settings')"
+            @click.stop="openEditGroup(group)"
+          >
+            <i class="fas fa-gear"></i>
+          </button>
+          <button
+            type="button"
+            class="chat-row-icon-action chat-row-icon-action--danger"
+            :aria-label="t('删除', 'Delete')"
+            @click.stop="removeGroup(group)"
+          >
+            <i class="fas fa-trash-can"></i>
+          </button>
+        </div>
+      </div>
+    </div>
 
     <ChatAppTabBar active="groups" />
 
     <div
       v-if="showGroupModal"
-      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
+      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-end justify-center pb-6"
       @click.self="closeGroupModal"
     >
-      <div class="w-full max-w-sm rounded-3xl bg-white p-4 shadow-2xl">
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-base font-bold">
+            <p class="text-lg font-extrabold text-gray-950">
               {{ editingGroupId ? t('编辑群聊', 'Edit group') : t('新建群聊', 'New group') }}
             </p>
             <p class="mt-1 text-[11px] text-gray-500">
               {{ t('群成员来自已经进入 Chat 的角色对象。', 'Members come from role objects already in Chat.') }}
             </p>
           </div>
-          <button type="button" class="rounded-full px-2 py-1 text-gray-400" @click="closeGroupModal">
+          <button type="button" class="chat-home-icon-button -mr-1 -mt-1 text-gray-400" @click="closeGroupModal">
             <i class="fas fa-times"></i>
           </button>
         </div>
 
-        <div class="mt-3 space-y-3">
-          <label class="block space-y-1">
-            <span class="text-[11px] text-gray-500">{{ t('群名', 'Group name') }}</span>
+        <div class="mt-4 space-y-4">
+          <label class="block space-y-1.5">
+            <span class="text-xs font-semibold text-gray-600">{{ t('群名', 'Group name') }}</span>
             <input
               v-model="groupDraft.name"
               type="text"
-              class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+              class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
               :placeholder="t('不填则用成员名生成', 'Leave blank to use member names')"
             />
           </label>
 
-          <label class="block space-y-1">
-            <span class="text-[11px] text-gray-500">{{ t('群聊模式', 'Group mode') }}</span>
+          <label class="block space-y-1.5">
+            <span class="text-xs font-semibold text-gray-600">{{ t('群聊模式', 'Group mode') }}</span>
             <select
               v-model="groupDraft.groupReplyMode"
-              class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+              class="w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
             >
               <option
                 v-for="option in groupReplyModeOptions"
                 :key="option.value"
                 :value="option.value"
               >
-                {{ option.label }}
+                {{ option.label }} · {{ option.desc }}
               </option>
             </select>
           </label>
 
           <div class="space-y-2">
             <div class="flex items-center justify-between gap-2">
-              <p class="text-[11px] text-gray-500">{{ t('选择成员', 'Choose members') }}</p>
-              <span class="text-[10px] text-gray-400">
+              <p class="text-xs font-semibold text-gray-600">{{ t('选择成员', 'Choose members') }}</p>
+              <span class="text-[10px] font-semibold text-gray-400">
                 {{ groupDraft.groupMemberIds.length }} / {{ roleContacts.length }}
               </span>
             </div>
             <div
               v-if="roleContacts.length === 0"
-              class="rounded-xl border border-dashed border-gray-200 px-3 py-4 text-center text-xs text-gray-500"
+              class="rounded-2xl border border-dashed border-gray-200 px-3 py-5 text-center text-xs text-gray-500"
             >
               {{ t('暂无可选角色，请先到对象页绑定角色。', 'No role objects yet. Bind roles from Objects first.') }}
             </div>
-            <div v-else class="max-h-60 overflow-y-auto space-y-1.5 pr-0.5 no-scrollbar">
+            <div v-else class="max-h-60 overflow-y-auto space-y-2 pr-0.5 no-scrollbar">
               <button
                 v-for="contact in roleContacts"
                 :key="contact.id"
                 type="button"
-                class="w-full rounded-xl border px-3 py-2 text-left flex items-center gap-3"
-                :class="isMemberSelected(contact.id) ? 'border-yellow-300 bg-yellow-50' : 'border-gray-100 bg-white'"
+                class="w-full rounded-2xl border px-3 py-2.5 text-left flex items-center gap-3 transition-colors"
+                :class="isMemberSelected(contact.id) ? 'border-yellow-300 bg-yellow-50' : 'border-gray-100 bg-white hover:bg-gray-50'"
                 @click="toggleMember(contact.id)"
               >
                 <span
@@ -387,17 +381,17 @@ const removeGroup = async (group) => {
             </div>
           </div>
 
-          <div class="flex justify-end gap-2 pt-1">
+          <div class="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              class="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600"
+              class="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600"
               @click="closeGroupModal"
             >
               {{ t('取消', 'Cancel') }}
             </button>
             <button
               type="button"
-              class="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-sm font-semibold text-gray-950"
+              class="rounded-full bg-yellow-300 px-4 py-2 text-sm font-extrabold text-gray-950 shadow-sm"
               @click="saveGroup"
             >
               {{ editingGroupId ? t('保存', 'Save') : t('创建并进入', 'Create and open') }}

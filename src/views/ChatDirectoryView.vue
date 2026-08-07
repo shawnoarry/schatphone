@@ -527,13 +527,6 @@ const getRolePreviewAssetIds = (contactId) => {
   return Array.isArray(meta?.assetIds) ? meta.assetIds : []
 }
 
-const getRolePreviewOverflowCount = (contactId) => {
-  const meta = visibleRolePreviewMetaMap.value[Number(contactId)]
-  const totalCount = Number(meta?.totalCount) || 0
-  const previewCount = Array.isArray(meta?.assetIds) ? meta.assetIds.length : 0
-  return Math.max(0, totalCount - previewCount)
-}
-
 const ensureRolePreview = async (assetId) => {
   if (!assetId || rolePreviewMap[assetId]) return
   const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
@@ -775,18 +768,6 @@ const serviceUnreadContactCount = computed(
 
 const hasUnreadServiceSubscriptions = computed(() => serviceUnreadTotal.value > 0)
 
-const serviceUnreadTotalForContacts = (contacts) =>
-  contacts.reduce((sum, contact) => {
-    const conversation = chatStore.getConversationByContactId(contact.id)
-    return sum + Math.max(0, Number(conversation?.unread) || 0)
-  }, 0)
-
-const serviceUnreadContactCountForContacts = (contacts) =>
-  contacts.filter((contact) => {
-    const conversation = chatStore.getConversationByContactId(contact.id)
-    return Math.max(0, Number(conversation?.unread) || 0) > 0
-  }).length
-
 const serviceMutedContacts = computed(() =>
   serviceContacts.value.filter((contact) => chatStore.isChatSubscriptionMuted(contact)),
 )
@@ -799,22 +780,6 @@ const serviceMutedCount = computed(() => serviceMutedContacts.value.length)
 
 const serviceFoldedCount = computed(() => serviceFoldedContacts.value.length)
 
-const serviceMutedUnreadTotal = computed(() =>
-  serviceUnreadTotalForContacts(serviceMutedContacts.value),
-)
-
-const serviceMutedUnreadContactCount = computed(() =>
-  serviceUnreadContactCountForContacts(serviceMutedContacts.value),
-)
-
-const serviceFoldedUnreadTotal = computed(() =>
-  serviceUnreadTotalForContacts(serviceFoldedContacts.value),
-)
-
-const serviceFoldedUnreadContactCount = computed(() =>
-  serviceUnreadContactCountForContacts(serviceFoldedContacts.value),
-)
-
 const serviceFilterOptionCount = (key) => {
   if (key === 'all') return serviceContacts.value.length
   if (key === 'unread') return serviceUnreadContactCount.value
@@ -823,22 +788,6 @@ const serviceFilterOptionCount = (key) => {
   if (key === 'service') return serviceContacts.value.filter((contact) => contact.kind === 'service').length
   if (key === 'official') return serviceContacts.value.filter((contact) => contact.kind === 'official').length
   return 0
-}
-
-const serviceSummaryCardClass = (targetFilter, tone) => {
-  const selected = serviceFilter.value === targetFilter
-  const toneClassMap = {
-    unread: selected
-      ? 'border-red-300 bg-red-50 shadow-sm ring-1 ring-red-100'
-      : 'border-red-100 bg-white',
-    muted: selected
-      ? 'border-emerald-300 bg-emerald-50 shadow-sm ring-1 ring-emerald-100'
-      : 'border-emerald-100 bg-white',
-    folded: selected
-      ? 'border-slate-300 bg-slate-50 shadow-sm ring-1 ring-slate-100'
-      : 'border-slate-100 bg-white',
-  }
-  return `rounded-2xl border px-3 py-2 text-left transition ${toneClassMap[tone] || 'border-gray-100 bg-white'}`
 }
 
 const serviceFilterContext = computed(() => {
@@ -1213,35 +1162,6 @@ const chatSocialStateLabel = (contact) => {
   return ''
 }
 
-const chatSocialStateDescription = (contact) => {
-  const state = chatStore.getContactChatSocialState(contact)
-  if (state === CHAT_CONTACT_SOCIAL_STATES.CONNECTED) {
-    return t('可正常聊天；拉黑不会删除历史记录。', 'Normal chat is available; blocking will not delete history.')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST) {
-    return t('对方向你打了招呼，先通过或忽略。', 'They greeted you; accept or ignore first.')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST) {
-    return t('你的打招呼申请等待回应。', 'Your greeting request is waiting for a reply.')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.STRANGER) {
-    return t('还不是正式聊天对象，可以先打招呼。', 'Not a normal chat yet; greet first.')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED) {
-    return t('申请被拒绝；历史记录仍保留。', 'Request declined; history is still kept.')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED) {
-    return t('你已限制通讯；解除后继续使用原会话。', 'You limited communication; unblock to continue this thread.')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED) {
-    return t('对方暂时拒收你的消息；历史仍可查看。', 'They are not accepting messages; history remains readable.')
-  }
-  if (state === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED) {
-    return t('双方都处于屏蔽状态；不会删除过往记录。', 'Both sides are blocked; past records are not deleted.')
-  }
-  return ''
-}
-
 const chatSocialStateBadgeClass = (contact) => {
   const state = chatStore.getContactChatSocialState(contact)
   if (state === CHAT_CONTACT_SOCIAL_STATES.CONNECTED) return 'bg-emerald-50 text-emerald-700'
@@ -1289,18 +1209,6 @@ const blockRoleContact = async (contact) => {
 const unblockRoleContact = (contact) => {
   if (chatStore.unblockChatContact(contact.id)) {
     showUiNotice('success', t('已解除你的拉黑限制。', 'Your block was removed.'))
-  }
-}
-
-const markRoleRefusingUser = (contact) => {
-  if (chatStore.markContactBlockedUser(contact.id)) {
-    showUiNotice('success', t('已标记为对方拒收；不会删除历史。', 'Marked as refusing messages; history is kept.'))
-  }
-}
-
-const clearRoleRefusingUser = (contact) => {
-  if (chatStore.clearContactBlockedUser(contact.id)) {
-    showUiNotice('success', t('已恢复对方接收状态。', 'Their accepting state was restored.'))
   }
 }
 
@@ -1535,19 +1443,6 @@ const saveService = () => {
   closeServiceModal()
 }
 
-const removeService = async (contact) => {
-  const ok = await confirmDialog({
-    title: t('删除服务对象', 'Delete service entry'),
-    message: `${t('确认删除服务会话对象', 'Delete service chat entry')}「${contact.name}」${t('吗？', '?')}`,
-    confirmText: t('删除', 'Delete'),
-    cancelText: t('取消', 'Cancel'),
-    tone: 'danger',
-  })
-  if (!ok) return
-  chatStore.removeContact(contact.id)
-  showUiNotice('success', t('服务对象已删除。', 'Service entry deleted.'))
-}
-
 const batchDeleteSelectedServices = async () => {
   if (selectedServiceCount.value <= 0) {
     showUiNotice('warning', t('请先选择要删除的服务对象。', 'Select service entries to delete first.'))
@@ -1590,9 +1485,6 @@ const serviceKindTag = (contact) =>
 const worldPackServiceKindTag = (row) =>
   row?.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service')
 
-const worldPackServiceBindingLabel = (row) =>
-  row?.chatBindingLabel || row?.linkedAppLabel || t('独立订阅频道', 'Standalone subscription channel')
-
 const worldPackServicePackLabel = (row) =>
   t(
     row?.packTitle || row?.packName || row?.packId || 'World Pack',
@@ -1631,46 +1523,6 @@ const sourceNotificationPlanSummary = (plan = {}) => {
     `${labels} 有新进展时会推送到这个服务号。`,
     `${labels} can push event-driven updates into this Chat service thread.`,
   )
-}
-
-const serviceSourceNotificationPlan = (contact) =>
-  contact?.id ? chatStore.getServiceAccountLinkContract(contact.id)?.sourceNotificationPlan || null : null
-
-const serviceSourceNotificationPlanRows = (contact) =>
-  sourceNotificationPlanRows(serviceSourceNotificationPlan(contact))
-
-const serviceSourceNotificationPlanSummary = (contact) =>
-  sourceNotificationPlanSummary(serviceSourceNotificationPlan(contact))
-
-const worldServiceProposalCategoryLabel = (proposal = {}) =>
-  proposal.category === 'publication'
-    ? t('公开频道', 'Publication')
-    : proposal.category === 'subscription'
-      ? t('会员频道', 'Subscription')
-      : t('服务提醒', 'Service notification')
-
-const worldServiceProposalConfidenceLabel = (confidence = '') => {
-  if (confidence === 'high') return t('高可信', 'High confidence')
-  if (confidence === 'medium') return t('中等可信', 'Medium confidence')
-  return t('低可信', 'Low confidence')
-}
-
-const worldServiceProposalRejectionReasonLabel = (reason = '') => {
-  if (reason === 'duplicate_template') return t('已有相似候选', 'Duplicate template')
-  if (reason === 'unknown_app_binding') return t('未找到关联的世界 App', 'Unknown world app binding')
-  if (reason === 'unknown_category') return t('不支持的账号类型', 'Unknown service category')
-  if (reason === 'low_confidence') return t('可信度过低', 'Low confidence')
-  return t('暂不能确认', 'Not confirmable')
-}
-
-const worldServiceProposalBindingLabel = (proposal = {}) => {
-  if (!proposal?.linkedAppBindingId) {
-    return t('独立订阅频道', 'Standalone subscription channel')
-  }
-  const option = activeWorldPackAppBindingOptions.value.find(
-    (binding) => binding.id === proposal.linkedAppBindingId,
-  )
-  return option?.label || proposal.linkedAppBindingId
 }
 
 const buildWorldServiceTemplateContextText = () => {
@@ -1842,6 +1694,16 @@ const openEditWorldServiceTemplate = (row) => {
   showWorldServiceTemplateModal.value = true
 }
 
+const resetWorldServiceTemplate = (row) => {
+  if (!row?.id) return
+  const result = systemStore.resetWorldServiceAccountTemplate(row.packId || activeWorldPack.value?.id, row.id)
+  if (result?.ok) {
+    showUiNotice('success', t('已恢复内置模板', 'Restored built-in template'))
+  } else {
+    showUiNotice('error', t('恢复失败，请稍后重试。', 'Reset failed, please try again.'))
+  }
+}
+
 const closeWorldServiceTemplateModal = () => {
   showWorldServiceTemplateModal.value = false
   worldServiceTemplateDraft.packId = ''
@@ -1875,17 +1737,6 @@ const saveWorldServiceTemplate = () => {
   systemStore.saveNow?.()
   showUiNotice('success', t('世界观服务号模板已保存。', 'World service template saved.'))
   closeWorldServiceTemplateModal()
-}
-
-const resetWorldServiceTemplate = (row) => {
-  if (!row?.id) return
-  const result = systemStore.resetWorldServiceAccountTemplate?.(row.packId || activeWorldPack.value?.id || '', row.id)
-  if (!result?.ok) {
-    showUiNotice('warning', t('这个模板没有可恢复的内置版本。', 'This template has no built-in version to restore.'))
-    return
-  }
-  systemStore.saveNow?.()
-  showUiNotice('success', t('已恢复内置模板。', 'Built-in template restored.'))
 }
 
 const openWorldPackServiceTemplateContact = (row) => {
@@ -2286,13 +2137,13 @@ const shoppingServiceLabel = (serviceKey) => {
 const logisticsServiceLabel = (serviceKey) => {
   const preset = findLogisticsServicePreset(serviceKey || '')
   if (!preset?.key || preset.key !== serviceKey) return ''
-  return t(preset.zh, preset.en)
+  return t(`物流服务号 · ${preset.zh}`, `Logistics Service · ${preset.en}`)
 }
 
 const foodDeliveryServiceLabel = (serviceKey) => {
   const preset = findFoodDeliveryServicePreset(serviceKey || '')
   if (!preset?.key || preset.key !== serviceKey) return ''
-  return t(preset.zh, preset.en)
+  return t(`外卖服务号 · ${preset.zh}`, `Food Delivery Service · ${preset.en}`)
 }
 
 const contactHasThreadOrModuleAvatarOverride = (contactId) => {
@@ -2322,15 +2173,6 @@ const explicitContactAvatarForDisplay = (contact) => {
     legacyAvatar: contact.avatar,
     fallbackAlt: contact.name || 'Contact',
   })
-}
-
-const preferredImageAssetLabel = (contact) => {
-  if (!contact?.id) return ''
-  const contract = getRoleBindingContract(contact.id)
-  const preferredId = contract.assets?.preferredImageAssetId || ''
-  if (!preferredId) return ''
-  const asset = galleryStore.findAssetById(preferredId)
-  return asset?.name || preferredId
 }
 
 const roleTemplateLabel = (preset) => t(preset?.titleCn || '', preset?.titleEn || '')
@@ -2521,68 +2363,43 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-gray-50 flex flex-col">
-    <div class="pt-12 pb-3 px-4 bg-white border-b border-gray-100">
-      <div class="flex items-center justify-between">
-        <button @click="goBack" class="text-sm text-blue-600 flex items-center gap-1">
-          <i class="fas fa-chevron-left"></i> {{ t('聊天', 'Chat') }}
+  <div class="w-full h-full flex flex-col chat-shell chat-directory-shell">
+    <div class="chat-home-header pt-12 px-4 pb-4 chat-ink">
+      <div class="flex items-center justify-between gap-3">
+        <button
+          @click="goBack"
+          class="chat-home-icon-button chat-ink"
+          :aria-label="t('返回消息', 'Back to Messages')"
+        >
+          <i class="fas fa-chevron-left"></i>
         </button>
-        <span class="font-bold">{{ t('会话通讯录', 'Chat Directory') }}</span>
-        <span class="text-[11px] text-gray-400">{{ t('绑定层', 'Binding Layer') }}</span>
+        <p class="flex-1 text-[1.45rem] font-extrabold leading-tight tracking-tight">
+          {{ activeSection === 'roles' ? t('对象', 'Objects') : t('服务号', 'Services') }}
+        </p>
+        <div class="flex items-center gap-1">
+          <button
+            v-if="activeSection === 'roles'"
+            type="button"
+            class="chat-home-icon-button chat-ink"
+            :aria-label="t('绑定角色', 'Bind Role')"
+            @click="openBindModal"
+          >
+            <i class="fas fa-user-plus"></i>
+          </button>
+          <button
+            v-else
+            type="button"
+            class="chat-home-icon-button chat-ink"
+            :aria-label="t('管理订阅', 'Manage subscriptions')"
+            data-testid="chat-directory-service-management-toggle"
+            @click="toggleServiceManagement"
+          >
+            <i class="fas fa-gear"></i>
+          </button>
+        </div>
       </div>
-      <p class="mt-2 text-xs text-gray-500" data-testid="chat-directory-boundary-copy">
-        {{
-          t(
-            'Chat Directory 管理已进入 Chat 的对象与 Chat 内资料：角色档案来自 Contacts，也可从 Contacts 直接开始聊天；绑定查看、解绑和服务号管理仍在这里完成。',
-            'Chat Directory manages existing Chat targets and Chat-local details. Role profiles come from Contacts and can start Chat there; review, unbind, and service-account management stay here.',
-          )
-        }}
-      </p>
-    </div>
 
-    <p
-      v-if="uiNoticeMessage"
-      class="px-4 py-2 text-[11px]"
-      data-testid="chat-directory-ui-notice"
-      :class="
-        uiNoticeType === 'error'
-          ? 'text-red-600'
-          : uiNoticeType === 'warning'
-            ? 'text-amber-600'
-            : 'text-emerald-600'
-      "
-    >
-      {{ uiNoticeMessage }}
-    </p>
-
-    <div class="px-4 py-3 bg-white border-b border-gray-100 flex flex-wrap gap-2">
-      <button
-        @click="switchSection('roles')"
-        class="px-3 py-1.5 rounded-full text-xs border"
-        :class="
-          activeSection === 'roles'
-            ? 'border-violet-300 bg-violet-50 text-violet-700'
-            : 'border-gray-200 bg-white text-gray-600'
-        "
-      >
-        {{ t('角色绑定', 'Role Bindings') }}
-      </button>
-      <button
-        @click="switchSection('service')"
-        class="px-3 py-1.5 rounded-full text-xs border"
-        data-testid="chat-directory-section-service"
-        :class="
-          activeSection === 'service'
-            ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-            : 'border-gray-200 bg-white text-gray-600'
-        "
-      >
-        {{ t('订阅', 'Services') }}
-      </button>
-    </div>
-
-    <div class="px-4 py-3 bg-white border-b border-gray-100 space-y-2">
-      <div class="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+      <div class="chat-home-search mt-3">
         <i class="fas fa-search text-xs text-gray-400"></i>
         <input
           v-model="searchKeyword"
@@ -2593,129 +2410,147 @@ onBeforeUnmount(() => {
         <button
           v-if="searchKeyword"
           @click="searchKeyword = ''"
-          class="text-[11px] text-gray-500 hover:text-gray-700"
+          class="text-[11px] text-gray-500"
         >
           {{ t('清空', 'Clear') }}
         </button>
       </div>
+    </div>
 
-      <div class="flex flex-wrap gap-2">
+    <div class="chat-home-sheet flex-1 overflow-y-auto no-scrollbar" ref="directoryScrollAreaRef">
+      <p
+        v-if="uiNoticeMessage"
+        class="mx-4 mt-3 rounded-xl px-3 py-2 text-[11px]"
+        data-testid="chat-directory-ui-notice"
+        :class="uiNoticeType === 'error' ? 'bg-red-50 text-red-600' : uiNoticeType === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'"
+      >
+        {{ uiNoticeMessage }}
+      </p>
+
+      <p class="sr-only" data-testid="chat-directory-boundary-copy">
+        {{
+          t(
+            'Chat Directory 管理已进入 Chat 的对象与 Chat 内资料：角色档案来自 Contacts，也可从 Contacts 直接开始聊天；绑定查看、解绑和服务号管理仍在这里完成。',
+            'Chat Directory manages existing Chat targets and Chat-local details. Role profiles come from Contacts and can start Chat there; review, unbind, and service-account management stay here.',
+          )
+        }}
+      </p>
+
+      <div class="chat-directory-tabs mx-4 mt-3">
+        <button
+          @click="switchSection('roles')"
+          class="chat-directory-tab"
+          :class="{ 'is-active': activeSection === 'roles' }"
+        >
+          {{ t('角色绑定', 'Role Bindings') }}
+        </button>
+        <button
+          @click="switchSection('service')"
+          class="chat-directory-tab"
+          :class="{ 'is-active': activeSection === 'service' }"
+          data-testid="chat-directory-section-service"
+        >
+          {{ t('订阅', 'Services') }}
+        </button>
+      </div>
+
+      <div class="chat-directory-filter-rail mx-4 mt-2">
         <button
           v-for="option in activeSection === 'roles' ? roleFilterOptions : serviceFilterOptions"
           :key="`${activeSection}-${option.key}`"
           @click="setDirectoryFilter(option.key)"
-          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border"
-          :class="
-            (activeSection === 'roles' ? roleFilter : serviceFilter) === option.key
-              ? activeSection === 'roles'
-                ? 'border-violet-300 bg-violet-50 text-violet-700'
-                : 'border-emerald-300 bg-emerald-50 text-emerald-700'
-              : 'border-gray-200 bg-white text-gray-600'
-          "
+          class="chat-directory-filter-chip"
+          :class="{ 'is-active': (activeSection === 'roles' ? roleFilter : serviceFilter) === option.key }"
         >
           {{ option.label }}
           <span
             v-if="activeSection === 'service'"
-            class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/80 px-1 text-[9px] font-semibold text-gray-500"
+            class="chat-directory-filter-count"
             :data-testid="`chat-directory-service-filter-chip-meta-${option.key}`"
           >
             {{ serviceFilterOptionCount(option.key) }}
           </span>
         </button>
       </div>
-    </div>
-
-    <div ref="directoryScrollAreaRef" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
       <section v-if="activeSection === 'roles'" class="space-y-3">
-        <div class="grid grid-cols-3 gap-2" data-testid="chat-directory-social-summary">
+        <div class="chat-directory-stats mx-4 mt-3" data-testid="chat-directory-social-summary">
           <button
             type="button"
-            class="rounded-2xl border border-emerald-100 bg-white px-3 py-2 text-left"
+            class="chat-directory-stat"
             @click="roleFilter = 'connected'"
           >
-            <p class="text-[10px] font-semibold text-emerald-700">{{ t('正常聊天', 'Chatting') }}</p>
-            <p class="mt-1 text-xl font-bold text-gray-950">{{ roleConnectedCount }}</p>
+            <span class="chat-directory-stat__label">{{ t('正常聊天', 'Chatting') }}</span>
+            <span class="chat-directory-stat__value">{{ roleConnectedCount }}</span>
           </button>
           <button
             type="button"
-            class="rounded-2xl border border-amber-100 bg-white px-3 py-2 text-left"
+            class="chat-directory-stat"
             data-testid="chat-directory-requests-summary"
             @click="roleFilter = 'requests'"
           >
-            <p class="text-[10px] font-semibold text-amber-700">{{ t('消息请求', 'Requests') }}</p>
-            <p class="mt-1 text-xl font-bold text-gray-950">{{ roleRequestCount }}</p>
+            <span class="chat-directory-stat__label">{{ t('消息请求', 'Requests') }}</span>
+            <span class="chat-directory-stat__value">{{ roleRequestCount }}</span>
           </button>
           <button
             type="button"
-            class="rounded-2xl border border-rose-100 bg-white px-3 py-2 text-left"
+            class="chat-directory-stat"
             @click="roleFilter = 'blocked'"
           >
-            <p class="text-[10px] font-semibold text-rose-700">{{ t('已屏蔽', 'Blocked') }}</p>
-            <p class="mt-1 text-xl font-bold text-gray-950">{{ roleBlockedCount }}</p>
+            <span class="chat-directory-stat__label">{{ t('已屏蔽', 'Blocked') }}</span>
+            <span class="chat-directory-stat__value">{{ roleBlockedCount }}</span>
           </button>
         </div>
-        <div class="flex items-center justify-between">
-          <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('已绑定角色', 'Bound Roles') }}</h3>
-          <div class="flex items-center gap-2">
-            <button
-              @click="openBindModal"
-              class="px-2.5 py-1 rounded-md border border-violet-200 bg-violet-50 text-violet-700 text-xs"
-            >
-              {{ t('绑定角色', 'Bind Role') }}
-            </button>
-            <button
-              @click="toggleBatchMode"
-              class="px-2.5 py-1 rounded-md border text-xs"
-              :class="
-                batchMode
-                  ? 'border-gray-300 bg-gray-100 text-gray-700'
-                  : 'border-gray-200 bg-white text-gray-700'
-              "
-            >
-              {{ batchMode ? t('退出批量', 'Exit Batch') : t('批量操作', 'Batch') }}
-            </button>
-          </div>
+
+        <div class="flex items-center justify-between px-4">
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">{{ t('已绑定角色', 'Bound Roles') }}</h3>
+          <button
+            v-if="!batchMode"
+            @click="toggleBatchMode"
+            class="text-xs font-semibold text-gray-500"
+          >
+            {{ t('批量', 'Batch') }}
+          </button>
+          <button
+            v-else
+            @click="toggleBatchMode"
+            class="text-xs font-semibold text-gray-900"
+          >
+            {{ t('完成', 'Done') }}
+          </button>
         </div>
 
-        <p v-if="roleBindings.length === 0" class="text-xs text-gray-400 px-1 py-2">
-          {{ t('暂无已绑定角色。', 'No role bindings yet.') }}
-        </p>
-        <p v-else-if="filteredRoleBindings.length === 0" class="text-xs text-gray-400 px-1 py-2">
-          {{ t('当前筛选下没有匹配角色。', 'No role matches current filter.') }}
-        </p>
-        <div v-if="batchMode" class="rounded-xl border border-violet-100 bg-violet-50/50 p-3 space-y-2">
-          <p class="text-xs text-violet-700 font-medium">
-            {{ t('批量模式已开启，点击列表项可勾选。', 'Batch mode enabled. Tap items to select.') }}
-          </p>
-          <p class="text-xs text-violet-700">
-            {{ t('已选', 'Selected') }} {{ selectedRoleCount }} {{ t('项', 'items') }}
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <button
-              @click="toggleSelectAllFiltered"
-              class="px-2.5 py-1 rounded border border-violet-200 bg-white text-violet-700 text-[11px]"
-            >
-              {{ allFilteredSelected ? t('取消全选', 'Unselect All') : t('全选筛选结果', 'Select All') }}
-            </button>
-            <button
-              @click="clearSelection"
-              class="px-2.5 py-1 rounded border border-gray-200 bg-white text-gray-600 text-[11px]"
-              :disabled="selectedCountCurrentSection === 0"
-            >
-              {{ t('清空选择', 'Clear Selection') }}
-            </button>
-            <button
-              @click="batchUnbindSelectedRoles"
-              class="px-2.5 py-1 rounded border border-red-200 bg-red-50 text-red-600 text-[11px]"
-              :disabled="selectedRoleCount === 0"
-            >
-              {{ t('批量解绑', 'Batch Unbind') }}
-            </button>
+        <div v-if="batchMode" class="chat-directory-batch-bar mx-4">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('已选', 'Selected') }} {{ selectedRoleCount }} {{ t('项', 'items') }}
+            </p>
+            <div class="flex items-center gap-1.5">
+              <button
+                @click="toggleSelectAllFiltered"
+                class="chat-directory-batch-action"
+              >
+                {{ allFilteredSelected ? t('取消全选', 'Unselect All') : t('全选', 'Select All') }}
+              </button>
+              <button
+                @click="clearSelection"
+                class="chat-directory-batch-action"
+                :disabled="selectedCountCurrentSection === 0"
+              >
+                {{ t('清空', 'Clear') }}
+              </button>
+              <button
+                @click="batchUnbindSelectedRoles"
+                class="chat-directory-batch-action chat-directory-batch-action--danger"
+                :disabled="selectedRoleCount === 0"
+              >
+                {{ t('解绑', 'Unbind') }}
+              </button>
+            </div>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1.5 mt-2">
             <select
               v-model="selectedRoleTemplateId"
-              class="rounded border border-violet-200 bg-white px-2 py-1 text-[11px] text-violet-700 outline-none"
+              class="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-700 outline-none"
             >
               <option
                 v-for="preset in roleMetaTemplatePresets"
@@ -2727,65 +2562,61 @@ onBeforeUnmount(() => {
             </select>
             <button
               @click="applyRoleTemplateToSelected"
-              class="px-2.5 py-1 rounded border border-violet-200 bg-white text-violet-700 text-[11px]"
+              class="chat-directory-batch-action"
               :disabled="selectedRoleCount === 0"
             >
-              {{ t('批量套用模板', 'Apply Template') }}
+              {{ t('套用', 'Apply') }}
             </button>
           </div>
         </div>
 
+        <p v-if="roleBindings.length === 0" class="chat-directory-empty">
+          {{ t('暂无已绑定角色。', 'No role bindings yet.') }}
+        </p>
+        <p v-else-if="filteredRoleBindings.length === 0" class="chat-directory-empty">
+          {{ t('当前筛选下没有匹配角色。', 'No role matches current filter.') }}
+        </p>
+
         <div
           v-for="contact in filteredRoleBindings"
           :key="contact.id"
-          class="rounded-2xl border p-3 flex items-center gap-3"
-          :class="
-            batchMode
-              ? isContactSelected(contact.id)
-                ? 'bg-violet-50 border-violet-300 cursor-pointer'
-                : 'bg-white border-violet-100 cursor-pointer'
-              : 'bg-white border-gray-100'
-          "
+          class="chat-list-row"
+          :class="{ 'is-selected': batchMode && isContactSelected(contact.id) }"
           @click="batchMode && toggleSelectContact(contact.id)"
         >
           <button
             v-if="batchMode"
             type="button"
-            class="w-5 h-5 rounded border flex items-center justify-center text-[10px]"
-            :class="
-              isContactSelected(contact.id)
-                ? 'border-violet-400 bg-violet-500 text-white'
-                : 'border-gray-300 bg-white text-transparent'
-            "
+            class="chat-directory-checkbox"
+            :class="{ 'is-checked': isContactSelected(contact.id) }"
             @click.stop="toggleSelectContact(contact.id)"
           >
             <i class="fas fa-check"></i>
           </button>
-          <div class="w-10 h-10 rounded-xl bg-gray-200 overflow-hidden">
+          <div class="chat-list-avatar">
             <img
               :src="contactAvatarForDisplay(contact)"
               class="w-full h-full object-cover"
               :data-testid="`chat-directory-contact-avatar-${contact.id}`"
             />
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold truncate">{{ contact.name }}</p>
-            <p class="text-xs text-gray-500 truncate">
-              {{ contact.role || t('未设置角色', 'Role not set') }} ·
-              <span :data-testid="`chat-directory-role-chat-tuning-${contact.id}`">
-                {{ t('会话调校', 'Chat tuning') }} {{ contact.relationshipLevel ?? 50 }}
-              </span>
-            </p>
-            <div class="mt-1 flex flex-wrap items-center gap-1.5">
+          <div class="chat-list-content">
+            <div class="flex justify-between items-center gap-2">
+              <span class="font-bold text-sm truncate">{{ contact.name }}</span>
               <span
-                class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                class="chat-list-tag"
                 :class="chatSocialStateBadgeClass(contact)"
                 :data-testid="`chat-directory-social-state-${contact.id}`"
               >
                 {{ chatSocialStateLabel(contact) }}
               </span>
-              <span class="text-[11px] text-gray-400">{{ chatSocialStateDescription(contact) }}</span>
             </div>
+            <p class="text-xs text-gray-500 truncate mt-0.5">
+              {{ contact.role || t('未设置角色', 'Role not set') }} ·
+              <span :data-testid="`chat-directory-role-chat-tuning-${contact.id}`">
+                {{ t('会话调校', 'Chat tuning') }} {{ contact.relationshipLevel ?? 50 }}
+              </span>
+            </p>
             <p
               v-if="contact.relationshipNote"
               class="text-[11px] text-gray-400 truncate"
@@ -2796,125 +2627,96 @@ onBeforeUnmount(() => {
             <p class="text-[11px] text-gray-400 truncate">
               {{ roleFolderBindingSummary(contact) }}
             </p>
-            <div v-if="getRolePreviewAssetIds(contact.id).length > 0" class="mt-1 flex items-center gap-1.5">
-              <AssetThumbnailOption
-                v-for="assetId in getRolePreviewAssetIds(contact.id)"
-                :key="`chat-role-preview-${contact.id}-${assetId}`"
-                :asset="{ id: assetId, name: preferredImageAssetLabel(contact) || roleFolderBindingSummary(contact) }"
-                :preview-url="rolePreviewMap[assetId]"
-                variant="tiny"
-                :interactive="false"
-                :show-name="false"
-              />
-              <span
-                v-if="getRolePreviewOverflowCount(contact.id) > 0"
-                class="text-[10px] text-gray-500"
-              >
-                +{{ getRolePreviewOverflowCount(contact.id) }}
-              </span>
-            </div>
-            <p v-if="preferredImageAssetLabel(contact)" class="text-[11px] text-gray-400 truncate">
-              {{ t('会话优先素材', 'Thread preferred asset') }}: {{ preferredImageAssetLabel(contact) }}
-            </p>
           </div>
-          <div v-if="!batchMode" class="flex shrink-0 flex-col items-end gap-1.5">
+          <div v-if="!batchMode" class="chat-list-side">
             <button
               v-if="
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.STRANGER ||
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED
               "
-              @click="greetRoleContact(contact)"
-              class="text-xs text-amber-600"
+              @click.stop="greetRoleContact(contact)"
+              class="chat-row-icon-action"
               :data-testid="`chat-directory-greet-${contact.id}`"
+              :aria-label="t('打招呼', 'Greet')"
             >
-              {{ t('打招呼', 'Greet') }}
+              <i class="fas fa-hand"></i>
             </button>
             <button
               v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
-              @click="acceptRoleRequest(contact)"
-              class="text-xs text-emerald-600"
+              @click.stop="acceptRoleRequest(contact)"
+              class="chat-row-icon-action"
               :data-testid="`chat-directory-accept-request-${contact.id}`"
+              :aria-label="t('通过', 'Accept')"
             >
-              {{ t('通过', 'Accept') }}
+              <i class="fas fa-check"></i>
             </button>
             <button
               v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
-              @click="declineRoleRequest(contact)"
-              class="text-xs text-gray-500"
+              @click.stop="declineRoleRequest(contact)"
+              class="chat-row-icon-action"
               :data-testid="`chat-directory-decline-request-${contact.id}`"
+              :aria-label="t('忽略', 'Ignore')"
             >
-              {{ t('忽略', 'Ignore') }}
+              <i class="fas fa-xmark"></i>
             </button>
             <button
               v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST"
-              @click="cancelRoleGreeting(contact)"
-              class="text-xs text-gray-500"
+              @click.stop="cancelRoleGreeting(contact)"
+              class="chat-row-icon-action"
+              :aria-label="t('撤回', 'Cancel')"
             >
-              {{ t('撤回', 'Cancel') }}
+              <i class="fas fa-rotate-left"></i>
             </button>
             <button
               v-if="
                 chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED &&
                 chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
               "
-              @click="blockRoleContact(contact)"
-              class="text-xs text-rose-500"
+              @click.stop="blockRoleContact(contact)"
+              class="chat-row-icon-action"
               :data-testid="`chat-directory-block-${contact.id}`"
+              :aria-label="t('拉黑', 'Block')"
             >
-              {{ t('拉黑', 'Block') }}
+              <i class="fas fa-ban"></i>
             </button>
             <button
               v-if="
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED ||
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
               "
-              @click="unblockRoleContact(contact)"
-              class="text-xs text-emerald-600"
+              @click.stop="unblockRoleContact(contact)"
+              class="chat-row-icon-action"
               :data-testid="`chat-directory-unblock-${contact.id}`"
+              :aria-label="t('解除拉黑', 'Unblock')"
             >
-              {{ t('解除拉黑', 'Unblock') }}
+              <i class="fas fa-unlock"></i>
+            </button>
+            <button @click.stop="openChat(contact)" class="chat-row-icon-action" :aria-label="t('聊天', 'Chat')">
+              <i class="fas fa-comment"></i>
             </button>
             <button
-              v-if="
-                chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED &&
-                chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
-              "
-              @click="markRoleRefusingUser(contact)"
-              class="text-xs text-gray-500"
-            >
-              {{ t('对方拒收', 'Refuse') }}
-            </button>
-            <button
-              v-if="
-                chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED ||
-                chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
-              "
-              @click="clearRoleRefusingUser(contact)"
-              class="text-xs text-gray-500"
-            >
-              {{ t('恢复接收', 'Restore') }}
-            </button>
-            <button @click="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
-            <button
-              @click="openRoleMetaModal(contact)"
-              class="text-xs text-gray-500"
+              @click.stop="openRoleMetaModal(contact)"
+              class="chat-row-icon-action"
               :data-testid="`chat-directory-role-meta-${contact.id}`"
+              :aria-label="t('会话设定', 'Thread Meta')"
             >
-              {{ t('会话设定', 'Thread Meta') }}
+              <i class="fas fa-sliders"></i>
             </button>
-            <button @click="unbindRole(contact)" class="text-xs text-red-500">{{ t('解绑', 'Unbind') }}</button>
+            <button @click.stop="unbindRole(contact)" class="chat-row-icon-action chat-row-icon-action--danger" :aria-label="t('解绑', 'Unbind')">
+              <i class="fas fa-user-minus"></i>
+            </button>
           </div>
         </div>
 
-        <div class="rounded-xl bg-white border border-gray-100 p-3">
+        <div class="mx-4 mt-4 rounded-2xl bg-gray-50 p-3">
           <div class="flex items-center justify-between gap-2 mb-2">
             <p class="text-xs font-semibold text-gray-600">{{ t('可绑定角色档案', 'Available Profiles') }}</p>
             <button
               v-if="batchMode"
               @click="batchBindFilteredProfiles"
-              class="px-2 py-1 rounded border border-violet-200 bg-violet-50 text-violet-700 text-[11px]"
+              class="text-xs font-semibold text-violet-600"
             >
-              {{ t('批量绑定筛选结果', 'Batch Bind Filtered') }}
+              {{ t('批量绑定', 'Batch Bind') }}
             </button>
           </div>
           <p v-if="unboundRoleProfilesRaw.length === 0" class="text-xs text-gray-400">
@@ -2927,7 +2729,7 @@ onBeforeUnmount(() => {
             <div
               v-for="profile in filteredUnboundRoleProfiles"
               :key="profile.id"
-              class="flex items-center justify-between gap-2 border border-gray-100 rounded-lg px-2.5 py-2"
+              class="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2"
             >
               <div class="min-w-0">
                 <p class="text-sm font-medium truncate">{{ profile.name }}</p>
@@ -2935,7 +2737,7 @@ onBeforeUnmount(() => {
               </div>
               <button
                 @click="bindProfileId = profile.id; bindSelectedProfile()"
-                class="px-2 py-1 rounded border border-violet-200 bg-violet-50 text-violet-700 text-[11px]"
+                class="rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-gray-950"
               >
                 {{ t('绑定', 'Bind') }}
               </button>
@@ -2976,88 +2778,88 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-2" data-testid="chat-directory-subscription-summary">
+        <div class="chat-directory-stats mx-4 mt-3" data-testid="chat-directory-subscription-summary">
           <button
             type="button"
+            class="chat-directory-stat"
             data-testid="chat-directory-service-summary-unread"
-            :class="serviceSummaryCardClass('unread', 'unread')"
             :aria-pressed="serviceFilter === 'unread'"
             :data-state="serviceFilter === 'unread' ? 'selected' : 'idle'"
             @click="setDirectoryFilter('unread')"
           >
-            <p class="text-[10px] font-semibold text-red-600">{{ t('未读订阅', 'Unread') }}</p>
-            <p class="mt-1 text-xl font-bold text-gray-950">{{ serviceUnreadTotal }}</p>
-            <p class="text-[10px] text-gray-400">{{ serviceUnreadContactCount }} {{ t('个账号', 'accounts') }}</p>
+            <span class="chat-directory-stat__label">{{ t('未读订阅', 'Unread') }}</span>
+            <span class="chat-directory-stat__value">{{ serviceUnreadTotal }}</span>
+            <span class="chat-directory-stat__meta">{{ serviceUnreadContactCount }} {{ t('个账号', 'accounts') }}</span>
           </button>
           <button
             type="button"
+            class="chat-directory-stat"
             data-testid="chat-directory-service-summary-muted"
-            :class="serviceSummaryCardClass('muted', 'muted')"
             :aria-pressed="serviceFilter === 'muted'"
             :data-state="serviceFilter === 'muted' ? 'selected' : 'idle'"
             @click="setDirectoryFilter('muted')"
           >
-            <p class="text-[10px] font-semibold text-emerald-700">{{ t('免打扰', 'Muted') }}</p>
-            <p class="mt-1 text-xl font-bold text-gray-950">{{ serviceMutedCount }}</p>
-            <p
-              v-if="serviceMutedUnreadTotal > 0"
-              class="text-[10px] font-semibold text-emerald-700"
-              data-testid="chat-directory-service-muted-unread-summary"
-            >
-              {{
-                t(
-                  `${serviceMutedUnreadTotal} 条未读 · ${serviceMutedUnreadContactCount} 个账号静默`,
-                  `${serviceMutedUnreadTotal} unread · ${serviceMutedUnreadContactCount} accounts quiet`,
-                )
-              }}
-            </p>
-            <p class="text-[10px] text-gray-400">{{ t('不会挤占注意力', 'quiet delivery') }}</p>
+            <span class="chat-directory-stat__label">{{ t('免打扰', 'Muted') }}</span>
+            <span class="chat-directory-stat__value">{{ serviceMutedCount }}</span>
+            <span class="chat-directory-stat__meta">{{ t('静默', 'quiet') }}</span>
           </button>
           <button
             type="button"
+            class="chat-directory-stat"
             data-testid="chat-directory-service-summary-folded"
-            :class="serviceSummaryCardClass('folded', 'folded')"
             :aria-pressed="serviceFilter === 'folded'"
             :data-state="serviceFilter === 'folded' ? 'selected' : 'idle'"
             @click="setDirectoryFilter('folded')"
           >
-            <p class="text-[10px] font-semibold text-slate-700">{{ t('已折叠', 'Folded') }}</p>
-            <p class="mt-1 text-xl font-bold text-gray-950">{{ serviceFoldedCount }}</p>
-            <p
-              v-if="serviceFoldedUnreadTotal > 0"
-              class="text-[10px] font-semibold text-red-600"
-              data-testid="chat-directory-service-folded-unread-summary"
-            >
-              {{
-                t(
-                  `${serviceFoldedUnreadTotal} 条未读 · ${serviceFoldedUnreadContactCount} 个账号在服务号页`,
-                  `${serviceFoldedUnreadTotal} unread · ${serviceFoldedUnreadContactCount} accounts in Services`,
-                )
-              }}
-            </p>
-            <p class="text-[10px] text-gray-400">{{ t('不显示在消息首页', 'hidden from Messages') }}</p>
+            <span class="chat-directory-stat__label">{{ t('已折叠', 'Folded') }}</span>
+            <span class="chat-directory-stat__value">{{ serviceFoldedCount }}</span>
+            <span class="chat-directory-stat__meta">{{ t('不显示', 'hidden') }}</span>
           </button>
         </div>
 
+        <span
+          class="sr-only"
+          data-testid="chat-directory-service-muted-unread-summary"
+        >
+          {{
+            t(
+              `${serviceMutedContacts.reduce((sum, c) => sum + Math.max(0, Number(chatStore.getConversationByContactId(c.id)?.unread) || 0), 0)} 条未读`,
+              `${serviceMutedContacts.reduce((sum, c) => sum + Math.max(0, Number(chatStore.getConversationByContactId(c.id)?.unread) || 0), 0)} unread`,
+            )
+          }}
+        </span>
+        <span
+          class="sr-only"
+          data-testid="chat-directory-service-folded-unread-summary"
+        >
+          {{
+            t(
+              `${serviceFoldedContacts.reduce((sum, c) => sum + Math.max(0, Number(chatStore.getConversationByContactId(c.id)?.unread) || 0), 0)} 条未读`,
+              `${serviceFoldedContacts.reduce((sum, c) => sum + Math.max(0, Number(chatStore.getConversationByContactId(c.id)?.unread) || 0), 0)} unread`,
+            )
+          }}
+        </span>
+
         <div
-          class="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-3 py-3"
+          v-if="serviceFilterContext"
+          class="chat-directory-context-bar mx-4 mt-3"
           data-testid="chat-directory-service-filter-context"
         >
-          <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-700">
+          <span class="chat-directory-context-bar__icon">
             <i :class="serviceFilterContext.icon"></i>
           </span>
           <div class="min-w-0 flex-1">
-            <p class="text-xs font-semibold text-emerald-900" data-testid="chat-directory-service-filter-context-title">
+            <p class="text-xs font-semibold text-gray-900" data-testid="chat-directory-service-filter-context-title">
               {{ serviceFilterContext.title }}
             </p>
-            <p class="mt-1 text-[11px] leading-relaxed text-emerald-800" data-testid="chat-directory-service-filter-context-body">
+            <p class="text-[11px] text-gray-500 truncate" data-testid="chat-directory-service-filter-context-body">
               {{ serviceFilterContext.body }}
             </p>
           </div>
           <button
             v-if="serviceFilterContext.actionLabel"
             type="button"
-            class="shrink-0 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700"
+            class="shrink-0 text-xs font-semibold text-gray-600"
             data-testid="chat-directory-service-filter-context-action"
             @click="runServiceInboxAction(serviceFilterContext)"
           >
@@ -3067,30 +2869,27 @@ onBeforeUnmount(() => {
 
         <div
           v-if="selectedServiceReturnPanel"
-          class="flex items-start gap-3 rounded-2xl border px-3 py-3 shadow-sm"
+          class="chat-directory-context-bar mx-4 mt-2"
           :class="selectedServiceReturnPanelClass"
           data-testid="chat-directory-service-return-panel"
           :data-visible="selectedServiceReturnVisible ? 'true' : 'false'"
           :data-return-tone="selectedServiceReturnPanel.tone"
         >
-          <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white/80">
+          <span class="chat-directory-context-bar__icon">
             <i :class="selectedServiceReturnVisible ? 'fas fa-location-dot' : 'fas fa-inbox'"></i>
           </span>
           <div class="min-w-0 flex-1">
             <p class="text-xs font-semibold" data-testid="chat-directory-service-return-title">
               {{ selectedServiceReturnPanel.title }}
             </p>
-            <p class="mt-1 text-[11px] leading-relaxed" data-testid="chat-directory-service-return-body">
+            <p class="text-[11px] text-gray-500 truncate" data-testid="chat-directory-service-return-body">
               {{ selectedServiceReturnPanel.body }}
             </p>
-            <p class="mt-1 text-[10px] font-semibold opacity-80" data-testid="chat-directory-service-return-meta">
-              {{ selectedServiceReturnPanel.meta }}
-            </p>
           </div>
-          <div class="flex shrink-0 flex-col items-end gap-1.5">
+          <div class="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
-              class="rounded-full border border-white/80 bg-white px-2.5 py-1 text-[11px] font-semibold"
+              class="text-xs font-semibold text-gray-600"
               data-testid="chat-directory-service-return-primary"
               @click="runSelectedServiceReturnPrimary"
             >
@@ -3098,33 +2897,33 @@ onBeforeUnmount(() => {
             </button>
             <button
               type="button"
-              class="text-[11px] opacity-70"
+              class="chat-row-icon-action"
               data-testid="chat-directory-service-return-dismiss"
               @click="clearSelectedServiceReturn"
             >
-              {{ t('收起', 'Dismiss') }}
+              <i class="fas fa-times"></i>
             </button>
           </div>
         </div>
 
         <div
           v-if="serviceContacts.length === 0 || filteredServiceContacts.length === 0"
-          class="rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-5 text-center"
+          class="chat-home-empty"
           data-testid="chat-directory-service-empty-state"
         >
-          <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-gray-50 text-gray-500">
+          <span class="chat-home-empty__icon">
             <i :class="serviceEmptyState.icon"></i>
-          </div>
-          <p class="mt-3 text-sm font-semibold text-gray-900" data-testid="chat-directory-service-empty-title">
+          </span>
+          <span class="chat-home-empty__title" data-testid="chat-directory-service-empty-title">
             {{ serviceEmptyState.title }}
-          </p>
-          <p class="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-gray-500" data-testid="chat-directory-service-empty-body">
+          </span>
+          <span class="chat-home-empty__detail" data-testid="chat-directory-service-empty-body">
             {{ serviceEmptyState.body }}
-          </p>
+          </span>
           <button
             v-if="serviceEmptyState.actionLabel"
             type="button"
-            class="mt-3 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700"
+            class="chat-home-empty__action"
             data-testid="chat-directory-service-empty-action"
             @click="runServiceInboxAction(serviceEmptyState)"
           >
@@ -3135,13 +2934,13 @@ onBeforeUnmount(() => {
         <div
           v-for="section in serviceFeedSections"
           :key="section.key"
-          class="space-y-2"
+          class="space-y-0"
           :data-testid="`chat-directory-service-section-${section.key}`"
         >
-          <div class="flex items-center justify-between px-1">
+          <div class="flex items-center justify-between px-4 py-2">
             <div class="flex min-w-0 items-center gap-2">
-              <span class="h-2 w-2 rounded-full" :class="section.dotClass"></span>
-              <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              <span class="h-1.5 w-1.5 rounded-full" :class="section.dotClass"></span>
+              <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                 {{ section.title }}
               </p>
             </div>
@@ -3151,16 +2950,10 @@ onBeforeUnmount(() => {
           <div
             v-for="contact in section.contacts"
             :key="contact.id"
-            class="rounded-2xl border p-3 flex items-center gap-3"
+            class="chat-list-row"
             :class="[
-              batchMode
-                ? isContactSelected(contact.id)
-                  ? 'bg-emerald-50 border-emerald-300 cursor-pointer'
-                  : 'bg-white border-emerald-100 cursor-pointer'
-                : 'bg-white border-gray-100 cursor-pointer',
-              isSelectedServiceReturnContact(contact)
-                ? 'border-emerald-300 bg-emerald-50/70 ring-2 ring-emerald-100'
-                : '',
+              batchMode && isContactSelected(contact.id) ? 'is-selected' : '',
+              isSelectedServiceReturnContact(contact) ? 'is-highlighted' : '',
             ]"
             :data-testid="`chat-directory-service-feed-${contact.id}`"
             :data-selected="isSelectedServiceReturnContact(contact) ? 'true' : 'false'"
@@ -3170,611 +2963,543 @@ onBeforeUnmount(() => {
             <button
               v-if="batchMode"
               type="button"
-              class="w-5 h-5 rounded border flex items-center justify-center text-[10px]"
-              :class="
-                isContactSelected(contact.id)
-                  ? 'border-emerald-400 bg-emerald-500 text-white'
-                  : 'border-gray-300 bg-white text-transparent'
-              "
+              class="chat-directory-checkbox"
+              :class="{ 'is-checked': isContactSelected(contact.id) }"
               @click.stop="toggleSelectContact(contact.id)"
             >
               <i class="fas fa-check"></i>
             </button>
-            <div
-              class="w-11 h-11 rounded-2xl flex items-center justify-center overflow-hidden shrink-0"
-              :class="contact.kind === 'official' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'"
-            >
+            <div class="chat-list-avatar chat-list-avatar--service" :class="contact.kind === 'official' ? 'chat-list-avatar--official' : ''">
               <img
                 v-if="explicitContactAvatarForDisplay(contact)"
                 :src="explicitContactAvatarForDisplay(contact)"
-                class="h-full w-full object-cover"
+                class="w-full h-full object-cover"
                 :data-testid="`chat-directory-service-avatar-${contact.id}`"
               />
               <i v-else :class="contact.kind === 'official' ? 'fas fa-newspaper' : 'fas fa-concierge-bell'"></i>
             </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-start justify-between gap-2">
-                <div class="min-w-0">
-                  <p class="text-sm font-semibold truncate">{{ contact.name }}</p>
-                  <p class="text-xs text-gray-500 truncate">
-                    {{ serviceKindTag(contact) }} · {{ contact.serviceTemplate || t('未设置服务模板', 'Service template not set') }}
-                  </p>
-                </div>
-                <div class="shrink-0 text-right">
-                  <p class="text-[10px] text-gray-400">{{ formatServiceConversationTime(serviceDisplayMessageAt(contact)) }}</p>
+            <div class="chat-list-content">
+              <div class="flex justify-between items-center gap-2">
+                <span class="font-bold text-sm truncate">{{ contact.name }}</span>
+                <div class="flex items-center gap-1 shrink-0">
                   <span
-                    v-if="serviceUnreadCount(contact) > 0"
-                    class="mt-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white"
+                    v-for="tag in serviceSubscriptionStatusTags(contact)"
+                    :key="tag.key"
+                    class="chat-list-tag"
+                    :class="tag.className"
+                    :data-testid="`chat-directory-service-${tag.key}-tag-${contact.id}`"
                   >
-                    {{ Math.min(serviceUnreadCount(contact), 99) }}
+                    {{ tag.label }}
+                  </span>
+                  <span
+                    v-if="isSelectedServiceReturnContact(contact)"
+                    class="chat-list-tag bg-blue-50 text-blue-600"
+                    :data-testid="`chat-directory-service-selected-tag-${contact.id}`"
+                  >
+                    {{ t('最近打开', 'Recently opened') }}
+                  </span>
+                  <span class="text-[10px] text-gray-400">
+                    {{ formatServiceConversationTime(serviceDisplayMessageAt(contact)) }}
                   </span>
                 </div>
               </div>
-              <p class="mt-1 text-xs text-gray-600 line-clamp-1">
-                {{ serviceConversationPreviewText(contact) }}
-              </p>
-              <div class="mt-2 flex flex-wrap items-center gap-1.5">
+              <p class="text-xs text-gray-500 truncate mt-0.5">
+                {{ serviceKindTag(contact) }} · {{ contact.serviceTemplate || t('未设置服务模板', 'Service template not set') }}
                 <span
-                  class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                  :class="serviceDeliveryState(contact).className"
+                  class="text-[10px]"
                   :data-testid="`chat-directory-service-delivery-state-${contact.id}`"
                 >
                   {{ serviceDeliveryState(contact).label }}
                 </span>
+              </p>
+              <p class="text-[11px] text-gray-400 truncate mt-0.5">
+                {{ serviceConversationPreviewText(contact) }}
+              </p>
+              <div class="flex flex-wrap items-center gap-1 mt-0.5">
                 <span
-                  v-for="tag in serviceSubscriptionStatusTags(contact)"
-                  :key="`${contact.id}-${tag.key}`"
-                  class="rounded-full px-2 py-0.5 text-[10px]"
-                  :class="tag.className"
-                  :data-testid="`chat-directory-service-${tag.key}-tag-${contact.id}`"
+                  v-if="contact.shoppingServiceKey"
+                  class="chat-list-tag bg-amber-50 text-amber-600"
+                  :data-testid="`chat-directory-shopping-service-${contact.id}`"
                 >
-                  {{ tag.label }}
+                  {{ shoppingServiceLabel(contact.shoppingServiceKey) }}
+                </span>
+                <span
+                  v-if="contact.logisticsServiceKey"
+                  class="chat-list-tag bg-sky-50 text-sky-600"
+                  :data-testid="`chat-directory-logistics-service-${contact.id}`"
+                >
+                  {{ logisticsServiceLabel(contact.logisticsServiceKey) }}
+                </span>
+                <span
+                  v-if="contact.foodDeliveryServiceKey"
+                  class="chat-list-tag bg-orange-50 text-orange-600"
+                  :data-testid="`chat-directory-food-delivery-service-${contact.id}`"
+                >
+                  {{ foodDeliveryServiceLabel(contact.foodDeliveryServiceKey) }}
+                </span>
+                <span
+                  class="sr-only"
+                  :data-testid="`chat-directory-service-source-plan-${contact.id}`"
+                  :data-source-plan-status="(chatStore.getServiceAccountLinkContract(contact.id)?.sourceNotificationPlan)?.status || 'not_connected'"
+                >
+                  {{ sourceNotificationPlanSummary(chatStore.getServiceAccountLinkContract(contact.id)?.sourceNotificationPlan) }}
                 </span>
                 <span
                   v-if="serviceUnreadCount(contact) > 0"
-                  class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600"
+                  class="sr-only"
                   :data-testid="`chat-directory-service-unread-summary-${contact.id}`"
                 >
-                  {{ t(`${serviceUnreadCount(contact)} 条未读更新`, `${serviceUnreadCount(contact)} unread updates`) }}
-                </span>
-                <span
-                  v-if="isSelectedServiceReturnContact(contact)"
-                  class="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700"
-                  :data-testid="`chat-directory-service-selected-tag-${contact.id}`"
-                >
-                  {{ t('刚刚查看', 'Recently opened') }}
-                </span>
-                <span
-                  v-if="shoppingServiceLabel(contact.shoppingServiceKey)"
-                  class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700"
-                  :data-testid="`chat-directory-shopping-service-${contact.id}`"
-                >
-                  {{ t('Shopping 店铺', 'Shopping shop') }} · {{ shoppingServiceLabel(contact.shoppingServiceKey) }}
-                </span>
-                <span
-                  v-if="logisticsServiceLabel(contact.logisticsServiceKey)"
-                  class="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700"
-                  :data-testid="`chat-directory-logistics-service-${contact.id}`"
-                >
-                  {{ t('物流服务号', 'Logistics service') }} · {{ logisticsServiceLabel(contact.logisticsServiceKey) }}
-                </span>
-                <span
-                  v-if="foodDeliveryServiceLabel(contact.foodDeliveryServiceKey)"
-                  class="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] text-orange-700"
-                  :data-testid="`chat-directory-food-delivery-service-${contact.id}`"
-                >
-                  {{ t('外卖服务号', 'Food delivery service') }} · {{ foodDeliveryServiceLabel(contact.foodDeliveryServiceKey) }}
-                </span>
-                <span
-                  v-if="serviceSourceNotificationPlanRows(contact).length > 0"
-                  class="max-w-full truncate rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
-                  :data-testid="`chat-directory-service-source-plan-${contact.id}`"
-                  :title="serviceSourceNotificationPlanSummary(contact)"
-                >
-                  {{ t('可接收', 'Receives') }} · {{ sourceNotificationPlanRowsText(serviceSourceNotificationPlanRows(contact)) }}
+                  {{
+                    t(
+                      `${serviceUnreadCount(contact)} 条未读更新`,
+                      `${serviceUnreadCount(contact)} unread updates`,
+                    )
+                  }}
                 </span>
               </div>
             </div>
-            <div v-if="!batchMode" class="flex shrink-0 flex-col items-end gap-1.5">
-              <button @click.stop="openChat(contact)" class="text-xs text-blue-600">{{ t('聊天', 'Chat') }}</button>
-              <button
+            <div class="chat-list-side">
+              <span
                 v-if="serviceUnreadCount(contact) > 0"
+                class="chat-list-unread"
+              >
+                {{ Math.min(serviceUnreadCount(contact), 99) }}
+              </span>
+              <button
+                v-if="!batchMode"
                 @click.stop="markServiceRead(contact)"
-                class="text-xs text-red-600"
+                class="chat-row-icon-action"
                 :data-testid="`chat-directory-service-mark-read-${contact.id}`"
+                :aria-label="t('已读', 'Mark Read')"
               >
-                {{ t('标为已读', 'Mark read') }}
+                <i class="fas fa-check-double"></i>
               </button>
               <button
-                @click.stop="toggleServiceMuted(contact)"
-                class="text-xs text-emerald-600"
-                :data-testid="`chat-directory-service-toggle-muted-${contact.id}`"
-              >
-                {{ chatStore.isChatSubscriptionMuted(contact) ? t('取消免打扰', 'Unmute') : t('免打扰', 'Mute') }}
-              </button>
-              <button
+                v-if="!batchMode"
                 @click.stop="toggleServiceFolded(contact)"
-                class="text-xs text-slate-600"
+                class="chat-row-icon-action"
                 :data-testid="`chat-directory-service-toggle-folded-${contact.id}`"
+                :aria-label="chatStore.isChatSubscriptionFolded(contact) ? t('展开', 'Unfold') : t('折叠', 'Fold')"
               >
-                {{ chatStore.isChatSubscriptionFolded(contact) ? t('取消折叠', 'Unfold') : t('折叠', 'Fold') }}
+                <i :class="chatStore.isChatSubscriptionFolded(contact) ? 'fas fa-chevron-down' : 'fas fa-chevron-up'"></i>
               </button>
-              <button @click.stop="openEditService(contact)" class="text-xs text-gray-500">{{ t('编辑', 'Edit') }}</button>
-              <button @click.stop="removeService(contact)" class="text-xs text-red-500">{{ t('删除', 'Delete') }}</button>
+              <button
+                v-if="!batchMode"
+                @click.stop="toggleServiceMuted(contact)"
+                class="chat-row-icon-action"
+                :data-testid="`chat-directory-service-toggle-muted-${contact.id}`"
+                :aria-label="chatStore.isChatSubscriptionMuted(contact) ? t('取消免打扰', 'Unmute') : t('免打扰', 'Mute')"
+              >
+                <i :class="chatStore.isChatSubscriptionMuted(contact) ? 'fas fa-bell' : 'fas fa-bell-slash'"></i>
+              </button>
+              <button
+                v-if="!batchMode"
+                @click.stop="openEditService(contact)"
+                class="chat-row-icon-action"
+                :aria-label="t('编辑', 'Edit')"
+              >
+                <i class="fas fa-gear"></i>
+              </button>
             </div>
           </div>
         </div>
 
         <div
           v-if="shouldShowServiceManagement"
-          class="rounded-2xl border border-gray-100 bg-gray-50/60 p-3 space-y-3"
+          class="mx-4 mt-3 rounded-2xl bg-gray-50 p-3 space-y-3"
           data-testid="chat-directory-service-management"
         >
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p class="text-xs font-semibold text-gray-700">{{ t('订阅源管理', 'Subscription source management') }}</p>
-              <p class="text-[11px] text-gray-500">{{ t('新增、模板和批量删除都在这里处理。', 'Create, template, and batch-delete sources here.') }}</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-xs font-semibold text-gray-700">{{ t('订阅源管理', 'Subscription source management') }}</p>
+            <div class="flex items-center gap-1.5">
               <button
                 @click="openCreateService('service')"
-                class="px-2.5 py-1 rounded-md border border-emerald-200 bg-white text-emerald-700 text-xs"
+                class="chat-directory-batch-action"
                 data-testid="chat-directory-add-service"
               >
                 {{ t('新增服务号', 'Add Service') }}
               </button>
-              <button @click="openCreateService('official')" class="px-2.5 py-1 rounded-md border border-sky-200 bg-white text-sky-700 text-xs">
+              <button @click="openCreateService('official')" class="chat-directory-batch-action">
                 {{ t('新增公众号', 'Add Official') }}
               </button>
               <button
                 @click="toggleBatchMode"
-                class="px-2.5 py-1 rounded-md border text-xs"
-                :class="
-                  batchMode
-                    ? 'border-gray-300 bg-gray-100 text-gray-700'
-                    : 'border-gray-200 bg-white text-gray-700'
-                "
+                class="chat-directory-batch-action"
               >
-                {{ batchMode ? t('退出批量', 'Exit Batch') : t('批量操作', 'Batch') }}
+                {{ batchMode ? t('完成', 'Done') : t('批量', 'Batch') }}
               </button>
             </div>
           </div>
 
-        <div v-if="batchMode" class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 space-y-2">
-          <p class="text-xs text-emerald-700 font-medium">
-            {{ t('批量模式已开启，点击列表项可勾选。', 'Batch mode enabled. Tap items to select.') }}
-          </p>
-          <p class="text-xs text-emerald-700">
-            {{ t('已选', 'Selected') }} {{ selectedServiceCount }} {{ t('项', 'items') }}
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <button
-              @click="toggleSelectAllFiltered"
-              class="px-2.5 py-1 rounded border border-emerald-200 bg-white text-emerald-700 text-[11px]"
-            >
-              {{ allFilteredSelected ? t('取消全选', 'Unselect All') : t('全选筛选结果', 'Select All') }}
-            </button>
-            <button
-              @click="clearSelection"
-              class="px-2.5 py-1 rounded border border-gray-200 bg-white text-gray-600 text-[11px]"
-              :disabled="selectedCountCurrentSection === 0"
-            >
-              {{ t('清空选择', 'Clear Selection') }}
-            </button>
-            <button
-              @click="batchDeleteSelectedServices"
-              class="px-2.5 py-1 rounded border border-red-200 bg-red-50 text-red-600 text-[11px]"
-              :disabled="selectedServiceCount === 0"
-            >
-              {{ t('批量删除', 'Batch Delete') }}
-            </button>
-          </div>
-        </div>
-
-        <div
-          v-if="hasWorldPackServiceTemplateRows"
-          class="rounded-xl border border-indigo-100 bg-white p-3 space-y-3"
-          data-testid="chat-directory-world-service-templates"
-        >
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-xs font-semibold text-indigo-700">
-                {{ t('当前世界观可订阅服务号', 'Current world subscriptions') }}
+          <div v-if="batchMode" class="chat-directory-batch-bar">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-xs font-semibold text-gray-700">
+                {{ t('已选', 'Selected') }} {{ selectedServiceCount }} {{ t('项', 'items') }}
               </p>
-              <p class="mt-1 text-[11px] leading-4 text-gray-500" data-testid="chat-directory-world-service-summary">
-                {{
-                  t(
-                    `${worldPackServiceSummaryDisplayName} 提供 ${worldPackServiceTemplateRows.length} 个服务号候选；已加入 ${worldPackServiceJoinedCount} 个，待加入 ${worldPackServiceAvailableCount} 个。`,
-                    `${worldPackServiceSummaryDisplayName} offers ${worldPackServiceTemplateRows.length} service candidates; ${worldPackServiceJoinedCount} joined and ${worldPackServiceAvailableCount} available.`,
-                  )
-                }}
-              </p>
-            </div>
-            <span class="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-700">
-              {{ t('手动加入', 'Chat opt-in') }}
-            </span>
-          </div>
-
-          <div class="grid gap-2">
-            <div
-              v-for="row in worldPackServiceTemplateRows"
-              :key="`world-service-template-${row.id}`"
-              class="rounded-lg border border-indigo-100 bg-indigo-50/35 px-2.5 py-2 flex items-center justify-between gap-2"
-              :data-testid="`chat-directory-world-service-template-${row.id}`"
-            >
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-1.5">
-                  <p class="text-xs font-semibold text-indigo-900 truncate">{{ row.title || row.name }}</p>
-                  <span
-                    class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-indigo-700"
-                    :data-testid="`chat-directory-world-service-template-state-${row.id}`"
-                  >
-                    {{ row.generated ? t('已加入', 'Joined') : t('可加入', 'Available') }}
-                  </span>
-                  <span
-                    v-if="row.userEditedAt"
-                    class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"
-                    :data-testid="`chat-directory-world-service-template-edited-${row.id}`"
-                  >
-                    {{ t('已自定义', 'Customized') }}
-                  </span>
-                </div>
-                <p class="mt-1 text-[11px] text-indigo-700 truncate">
-                  {{ worldPackServicePackLabel(row) }} · {{ worldPackServiceKindTag(row) }} · {{ worldPackServiceBindingLabel(row) }}
-                </p>
-                <p class="mt-0.5 text-[11px] text-gray-500 line-clamp-1">
-                  {{
-                    row.description ||
-                    t(
-                      '加入后只创建 Chat 订阅会话；来源 App 仍拥有业务记录。',
-                      'Joining only creates a Chat subscription thread; source apps keep business records.',
-                    )
-                  }}
-                </p>
-                <p
-                  class="mt-1 text-[10px] font-semibold text-indigo-700 line-clamp-1"
-                  :data-testid="`chat-directory-world-service-source-plan-${row.id}`"
-                  :data-source-plan-status="row.sourceNotificationPlan?.status || 'not_connected'"
-                  :title="sourceNotificationPlanSummary(row.sourceNotificationPlan)"
-                >
-                  {{ row.generated ? t('接收计划', 'Receive plan') : t('加入后可接收', 'Ready after join') }} · {{ sourceNotificationPlanSummary(row.sourceNotificationPlan) }}
-                </p>
-              </div>
-              <div class="shrink-0 flex flex-col items-end gap-1">
+              <div class="flex items-center gap-1.5">
                 <button
-                  v-if="row.generated"
-                  type="button"
-                  class="px-2 py-1 rounded border border-indigo-200 bg-white text-indigo-700 text-[11px]"
-                  :data-testid="`chat-directory-open-world-service-${row.id}`"
-                  @click="openWorldPackServiceTemplateContact(row)"
+                  @click="toggleSelectAllFiltered"
+                  class="chat-directory-batch-action"
                 >
-                  {{ t('打开', 'Open') }}
+                  {{ allFilteredSelected ? t('取消全选', 'Unselect All') : t('全选', 'Select All') }}
                 </button>
                 <button
-                  v-else
-                  type="button"
-                  class="px-2 py-1 rounded border border-indigo-200 bg-white text-indigo-700 text-[11px]"
-                  :data-testid="`chat-directory-join-world-service-${row.id}`"
-                  @click="joinWorldPackServiceTemplate(row)"
+                  @click="clearSelection"
+                  class="chat-directory-batch-action"
+                  :disabled="selectedCountCurrentSection === 0"
                 >
-                  {{ t('加入订阅', 'Join') }}
+                  {{ t('清空', 'Clear') }}
                 </button>
                 <button
-                  type="button"
-                  class="px-2 py-1 rounded border border-gray-200 bg-white text-gray-600 text-[11px]"
-                  :data-testid="`chat-directory-edit-world-service-${row.id}`"
-                  @click="openEditWorldServiceTemplate(row)"
+                  @click="batchDeleteSelectedServices"
+                  class="chat-directory-batch-action chat-directory-batch-action--danger"
+                  :disabled="selectedServiceCount === 0"
                 >
-                  {{ t('编辑模板', 'Edit') }}
-                </button>
-                <button
-                  v-if="row.userEditedAt"
-                  type="button"
-                  class="px-2 py-1 rounded border border-amber-200 bg-white text-amber-700 text-[11px]"
-                  :data-testid="`chat-directory-reset-world-service-${row.id}`"
-                  @click="resetWorldServiceTemplate(row)"
-                >
-                  {{ t('恢复内置', 'Reset') }}
+                  {{ t('删除', 'Delete') }}
                 </button>
               </div>
             </div>
           </div>
-        </div>
 
-        <details
-          v-if="activeWorldPack?.id"
-          class="rounded-xl border border-sky-100 bg-white p-3 space-y-3"
-          data-testid="chat-directory-world-service-proposals"
-          :aria-busy="worldServiceProposalLoading ? 'true' : 'false'"
-        >
-          <summary class="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold text-sky-800">
-            <span>{{ t('AI 候选服务号', 'AI service candidates') }}</span>
-            <span class="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700">
+          <div
+            v-if="hasWorldPackServiceTemplateRows"
+            class="rounded-xl bg-white p-3 space-y-2"
+            data-testid="chat-directory-world-service-templates"
+          >
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('当前世界观可订阅服务号', 'Current world subscriptions') }}
+            </p>
+            <p class="text-[11px] text-gray-500" data-testid="chat-directory-world-service-summary">
               {{
-                worldServiceProposalReview
-                  ? summarizeWorldServiceTemplateReview(worldServiceProposalReview)
-                  : t('仅审核', 'Review only')
+                t(
+                  `${worldPackServiceSummaryDisplayName} 提供 ${worldPackServiceTemplateRows.length} 个服务号候选；已加入 ${worldPackServiceJoinedCount} 个，待加入 ${worldPackServiceAvailableCount} 个。`,
+                  `${worldPackServiceSummaryDisplayName} offers ${worldPackServiceTemplateRows.length} service candidates; ${worldPackServiceJoinedCount} joined and ${worldPackServiceAvailableCount} available.`,
+                )
               }}
-            </span>
-          </summary>
-
-          <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700"
-              :disabled="worldServiceProposalLoading"
-              data-testid="chat-directory-world-service-proposal-extract-ai"
-              @click="extractWorldServiceTemplateProposalsFromAI"
-            >
-              {{ worldServiceProposalLoading ? t('提取中', 'Extracting') : t('AI 提取', 'Extract with AI') }}
-            </button>
-            <button
-              type="button"
-              class="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700"
-              :disabled="worldServiceProposalLoading"
-              data-testid="chat-directory-world-service-proposal-review-json"
-              @click="reviewWorldServiceProposalDraft"
-            >
-              {{ t('审核 JSON', 'Review JSON') }}
-            </button>
-            <button
-              type="button"
-              class="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-500"
-              :disabled="worldServiceProposalLoading"
-              data-testid="chat-directory-world-service-proposal-clear"
-              @click="clearWorldServiceProposalReview"
-            >
-              {{ t('清空', 'Clear') }}
-            </button>
-          </div>
-
-          <textarea
-            class="w-full rounded-xl border border-gray-200 px-3 py-2 text-xs outline-none"
-            rows="4"
-            :value="worldServiceProposalDraft"
-            data-testid="chat-directory-world-service-proposal-draft"
-            :placeholder="t('粘贴服务号候选 JSON。', 'Paste service proposals JSON.')"
-            @input="updateWorldServiceProposalDraft($event.target.value)"
-          ></textarea>
-
-          <p
-            v-if="worldServiceProposalNotice"
-            class="rounded-lg px-2.5 py-2 text-[11px]"
-            :class="worldServiceProposalNoticeToneClass"
-            data-testid="chat-directory-world-service-proposal-notice"
-            :data-notice-tone="worldServiceProposalNoticeTone"
-          >
-            {{ worldServiceProposalNotice }}
-          </p>
-
-          <div
-            v-if="worldServiceProposalLoading"
-            class="rounded-lg border border-sky-100 bg-sky-50 px-2.5 py-2 text-[11px] text-sky-700"
-            data-testid="chat-directory-world-service-proposal-loading"
-          >
-            {{ t('正在读取世界观上下文', 'Reviewing world context') }}
-          </div>
-
-          <div
-            v-if="worldServiceProposalReview"
-            class="space-y-2"
-            data-testid="chat-directory-world-service-proposal-results"
-          >
-            <div
-              v-if="worldServiceProposalReviewIsEmpty"
-              class="rounded-lg border border-dashed border-gray-200 px-2.5 py-2 text-[11px] text-gray-500"
-              data-testid="chat-directory-world-service-proposal-empty"
-            >
-              {{ t('没有可加入的服务号候选。', 'No service candidates to add.') }}
-            </div>
-
-            <div
-              v-for="proposal in worldServiceProposalReview.confirmableProposals || []"
-              :key="`world-service-proposal-confirmable-${proposal.id}`"
-              class="rounded-lg border border-sky-100 bg-sky-50/50 px-2.5 py-2 flex items-center justify-between gap-2"
-              :data-testid="`chat-directory-world-service-proposal-confirmable-${proposal.id}`"
-            >
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-1.5">
-                  <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-sky-700">
-                    {{ worldServiceProposalConfidenceLabel(proposal.confidence) }}
-                  </span>
-                  <span class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-                    {{ worldServiceProposalCategoryLabel(proposal) }}
-                  </span>
+            </p>
+            <div class="grid gap-2">
+              <div
+                v-for="row in worldPackServiceTemplateRows"
+                :key="`world-service-template-${row.id}`"
+                class="rounded-xl bg-gray-50 px-3 py-2.5 flex items-center justify-between gap-2"
+                :data-testid="`chat-directory-world-service-template-${row.id}`"
+              >
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5">
+                    <p class="text-xs font-semibold text-gray-900 truncate">{{ row.title || row.name }}</p>
+                    <span
+                      class="chat-list-tag"
+                      :class="row.generated ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'"
+                      :data-testid="`chat-directory-world-service-template-state-${row.id}`"
+                    >
+                      {{ row.generated ? t('已加入', 'Joined') : t('可加入', 'Available') }}
+                    </span>
+                    <span
+                      v-if="row.userEditedAt"
+                      class="chat-list-tag bg-amber-100 text-amber-700"
+                      :data-testid="`chat-directory-world-service-template-edited-${row.id}`"
+                    >
+                      {{ t('已自定义', 'Customized') }}
+                    </span>
+                  </div>
+                  <p class="mt-0.5 text-[11px] text-gray-500 truncate">
+                    {{ worldPackServicePackLabel(row) }} · {{ worldPackServiceKindTag(row) }}
+                  </p>
+                  <p
+                    class="mt-0.5 text-[10px] font-semibold text-gray-500 truncate"
+                    :data-testid="`chat-directory-world-service-source-plan-${row.id}`"
+                    :data-source-plan-status="row.sourceNotificationPlan?.status || 'not_connected'"
+                    :title="sourceNotificationPlanSummary(row.sourceNotificationPlan)"
+                  >
+                    {{ row.generated ? t('接收计划', 'Receive plan') : t('加入后可接收', 'Ready after join') }} · {{ sourceNotificationPlanSummary(row.sourceNotificationPlan) }}
+                  </p>
                 </div>
-                <p class="mt-1 truncate text-xs font-semibold text-sky-950">{{ proposal.title }}</p>
-                <p class="mt-0.5 line-clamp-1 text-[11px] text-gray-500">{{ proposal.description }}</p>
-                <p class="mt-0.5 truncate text-[10px] text-sky-700">
-                  {{ worldServiceProposalBindingLabel(proposal) }}
-                </p>
+                <div class="flex shrink-0 items-center gap-1">
+                  <button
+                    v-if="row.generated"
+                    type="button"
+                    class="chat-directory-batch-action"
+                    :data-testid="`chat-directory-open-world-service-${row.id}`"
+                    @click="openWorldPackServiceTemplateContact(row)"
+                  >
+                    {{ t('打开', 'Open') }}
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="chat-directory-batch-action"
+                    :data-testid="`chat-directory-join-world-service-${row.id}`"
+                    @click="joinWorldPackServiceTemplate(row)"
+                  >
+                    {{ t('加入', 'Join') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="chat-row-icon-action"
+                    :data-testid="`chat-directory-edit-world-service-${row.id}`"
+                    @click="openEditWorldServiceTemplate(row)"
+                  >
+                    <i class="fas fa-gear"></i>
+                  </button>
+                  <button
+                    v-if="row.userEditedAt"
+                    type="button"
+                    class="chat-row-icon-action"
+                    :data-testid="`chat-directory-reset-world-service-${row.id}`"
+                    @click="resetWorldServiceTemplate(row)"
+                  >
+                    <i class="fas fa-rotate-left"></i>
+                  </button>
+                </div>
               </div>
+            </div>
+          </div>
+
+          <details
+            v-if="activeWorldPack?.id"
+            class="rounded-xl bg-white p-3 space-y-2"
+            data-testid="chat-directory-world-service-proposals"
+            :aria-busy="worldServiceProposalLoading ? 'true' : 'false'"
+          >
+            <summary class="flex cursor-pointer items-center justify-between gap-2 text-xs font-semibold text-gray-700">
+              <span>{{ t('AI 候选服务号', 'AI service candidates') }}</span>
+              <span class="text-[10px] text-gray-400">
+                {{
+                  worldServiceProposalReview
+                    ? summarizeWorldServiceTemplateReview(worldServiceProposalReview)
+                    : t('仅审核', 'Review only')
+                }}
+              </span>
+            </summary>
+            <div class="flex flex-wrap gap-1.5 pt-2">
               <button
                 type="button"
-                class="shrink-0 rounded-md border border-sky-200 bg-white px-2 py-1 text-[11px] font-semibold text-sky-700"
+                class="chat-directory-batch-action"
                 :disabled="worldServiceProposalLoading"
-                :data-testid="`chat-directory-world-service-proposal-confirm-${proposal.id}`"
-                @click="confirmWorldServiceTemplateProposalEntry(proposal)"
+                data-testid="chat-directory-world-service-proposal-extract-ai"
+                @click="extractWorldServiceTemplateProposalsFromAI"
               >
-                {{ t('确认候选', 'Confirm') }}
+                {{ worldServiceProposalLoading ? t('提取中', 'Extracting') : t('AI 提取', 'Extract with AI') }}
+              </button>
+              <button
+                type="button"
+                class="chat-directory-batch-action"
+                :disabled="worldServiceProposalLoading"
+                data-testid="chat-directory-world-service-proposal-review-json"
+                @click="reviewWorldServiceProposalDraft"
+              >
+                {{ t('审核 JSON', 'Review JSON') }}
+              </button>
+              <button
+                type="button"
+                class="chat-directory-batch-action"
+                :disabled="worldServiceProposalLoading"
+                data-testid="chat-directory-world-service-proposal-clear"
+                @click="clearWorldServiceProposalReview"
+              >
+                {{ t('清空', 'Clear') }}
               </button>
             </div>
-
-            <div
-              v-for="proposal in worldServiceProposalReview.rejectedProposals || []"
-              :key="`world-service-proposal-rejected-${proposal.id}`"
-              class="rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2"
-              :data-testid="`chat-directory-world-service-proposal-rejected-${proposal.id}`"
+            <textarea
+              class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs outline-none"
+              rows="3"
+              :value="worldServiceProposalDraft"
+              data-testid="chat-directory-world-service-proposal-draft"
+              :placeholder="t('粘贴服务号候选 JSON。', 'Paste service proposals JSON.')"
+              @input="updateWorldServiceProposalDraft($event.target.value)"
+            ></textarea>
+            <p
+              v-if="worldServiceProposalNotice"
+              class="rounded-lg px-2.5 py-2 text-[11px]"
+              :class="worldServiceProposalNoticeToneClass"
+              data-testid="chat-directory-world-service-proposal-notice"
+              :data-notice-tone="worldServiceProposalNoticeTone"
             >
-              <p class="text-xs font-semibold text-gray-700">{{ proposal.title }}</p>
-              <p
-                class="mt-0.5 text-[11px] text-gray-500"
+              {{ worldServiceProposalNotice }}
+            </p>
+            <div
+              v-if="worldServiceProposalLoading"
+              class="rounded-lg bg-gray-50 px-2.5 py-2 text-[11px] text-gray-600"
+              data-testid="chat-directory-world-service-proposal-loading"
+            >
+              {{ t('正在读取世界观上下文', 'Reviewing world context') }}
+            </div>
+            <div
+              v-if="worldServiceProposalReview"
+              class="space-y-1.5"
+              data-testid="chat-directory-world-service-proposal-results"
+            >
+              <div
+                v-if="worldServiceProposalReviewIsEmpty"
+                class="rounded-lg border border-dashed border-gray-200 px-2.5 py-2 text-[11px] text-gray-500"
+                data-testid="chat-directory-world-service-proposal-empty"
+              >
+                {{ t('没有可加入的服务号候选。', 'No service candidates to add.') }}
+              </div>
+              <div
+                v-for="proposal in worldServiceProposalReview.confirmableProposals || []"
+                :key="`world-service-proposal-confirmable-${proposal.id}`"
+                class="rounded-xl bg-gray-50 px-3 py-2 flex items-center justify-between gap-2"
+                :data-testid="`chat-directory-world-service-proposal-confirmable-${proposal.id}`"
+              >
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs font-semibold text-gray-900 truncate">{{ proposal.title }}</p>
+                  <p class="text-[11px] text-gray-500 truncate">{{ proposal.description }}</p>
+                </div>
+                <button
+                  type="button"
+                  class="chat-directory-batch-action shrink-0"
+                  :disabled="worldServiceProposalLoading"
+                  :data-testid="`chat-directory-world-service-proposal-confirm-${proposal.id}`"
+                  @click="confirmWorldServiceTemplateProposalEntry(proposal)"
+                >
+                  {{ t('确认', 'Confirm') }}
+                </button>
+              </div>
+              <div
+                v-for="proposal in worldServiceProposalReview.rejectedProposals || []"
+                :key="`world-service-proposal-rejected-${proposal.id}`"
+                class="rounded-xl bg-gray-50 px-3 py-2"
                 :data-testid="`chat-directory-world-service-proposal-rejection-${proposal.id}`"
                 :data-rejection-reason="proposal.rejectionReason || 'unknown'"
               >
-                {{ worldServiceProposalRejectionReasonLabel(proposal.rejectionReason) }}
-              </p>
-            </div>
-          </div>
-        </details>
-
-        <div class="rounded-xl border border-amber-100 bg-white p-3 space-y-2" data-testid="chat-directory-shopping-service-presets">
-          <p class="text-xs font-semibold text-amber-700">
-            {{ t('Shopping 店铺账号预设', 'Shopping shop account presets') }}
-          </p>
-          <p class="text-[11px] leading-4 text-gray-500">
-            {{
-              t(
-                '这些账号负责新品、折扣和商品推荐；商品、购物车和订单仍由 Shopping 管理，物流提醒交给物流服务号。',
-                'These accounts handle new arrivals, discounts, and product recommendations; products, cart, and orders remain owned by Shopping, while logistics reminders belong to Logistics service accounts.',
-              )
-            }}
-          </p>
-          <div class="grid gap-2">
-            <div
-              v-for="preset in shoppingServicePresetOptions"
-              :key="`shopping-service-preset-${preset.key}`"
-              class="rounded-lg border border-amber-100 bg-amber-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
-            >
-              <div class="min-w-0">
-                <p class="text-xs font-medium text-amber-800 truncate">
-                  <i :class="preset.icon" class="mr-1"></i>{{ preset.label }}
+                <p class="text-xs font-semibold text-gray-700">{{ proposal.title }}</p>
+                <p class="mt-0.5 text-[11px] text-gray-500">
+                  {{ proposal.rejectionReason || 'unknown' }}
                 </p>
-                <p class="text-[11px] text-amber-700 truncate">{{ preset.desc }}</p>
               </div>
-              <button
-                @click="openCreateShoppingService(preset.key)"
-                class="px-2 py-1 rounded border border-amber-200 bg-white text-amber-700 text-[11px]"
-                :data-testid="`chat-directory-create-shopping-service-${preset.key}`"
-              >
-                {{ t('创建店铺号', 'Create Shop') }}
-              </button>
             </div>
-          </div>
-        </div>
+          </details>
 
-        <div class="rounded-xl border border-sky-100 bg-white p-3 space-y-2" data-testid="chat-directory-logistics-service-presets">
-          <p class="text-xs font-semibold text-sky-700">
-            {{ t('物流服务号预设', 'Logistics service account presets') }}
-          </p>
-          <p class="text-[11px] leading-4 text-gray-500">
-            {{
-              t(
-                '物流信息统一由物流服务号承载，可区分同城急送、普通快递和国际物流。',
-                'Logistics information is carried by Logistics service accounts, split by local express, standard courier, and international logistics.',
-              )
-            }}
-          </p>
-          <div class="grid gap-2">
-            <div
-              v-for="preset in logisticsServicePresetOptions"
-              :key="`logistics-service-preset-${preset.key}`"
-              class="rounded-lg border border-sky-100 bg-sky-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
-            >
-              <div class="min-w-0">
-                <p class="text-xs font-medium text-sky-800 truncate">
-                  <i :class="preset.icon" class="mr-1"></i>{{ preset.label }}
-                </p>
-                <p class="text-[11px] text-sky-700 truncate">{{ preset.desc }}</p>
-              </div>
-              <button
-                @click="openCreateLogisticsService(preset.key)"
-                class="px-2 py-1 rounded border border-sky-200 bg-white text-sky-700 text-[11px]"
-                :data-testid="`chat-directory-create-logistics-service-${preset.key}`"
-              >
-                {{ t('创建物流号', 'Create Logistics') }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-orange-100 bg-white p-3 space-y-2" data-testid="chat-directory-food-delivery-service-presets">
-          <p class="text-xs font-semibold text-orange-700">
-            {{ t('外卖服务号预设', 'Food delivery service account presets') }}
-          </p>
-          <p class="text-[11px] leading-4 text-gray-500">
-            {{
-              t(
-                '外卖推送使用独立服务号，后续承载接单、备餐、骑手取餐、送达和异常提醒。',
-                'Food delivery pushes use a dedicated service account for accepted, cooking, rider pickup, delivered, and exception alerts.',
-              )
-            }}
-          </p>
-          <div class="grid gap-2">
-            <div
-              v-for="preset in foodDeliveryServicePresetOptions"
-              :key="`food-delivery-service-preset-${preset.key}`"
-              class="rounded-lg border border-orange-100 bg-orange-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
-            >
-              <div class="min-w-0">
-                <p class="text-xs font-medium text-orange-800 truncate">
-                  <i :class="preset.icon" class="mr-1"></i>{{ preset.label }}
-                </p>
-                <p class="text-[11px] text-orange-700 truncate">{{ preset.desc }}</p>
-              </div>
-              <button
-                @click="openCreateFoodDeliveryService(preset.key)"
-                class="px-2 py-1 rounded border border-orange-200 bg-white text-orange-700 text-[11px]"
-                :data-testid="`chat-directory-create-food-delivery-service-${preset.key}`"
-              >
-                {{ t('创建外卖号', 'Create Food') }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-emerald-100 bg-white p-3 space-y-2">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <p class="text-xs font-semibold text-emerald-700">
-              {{ t('模板预设中心', 'Template Preset Center') }}
+          <div class="rounded-xl bg-white p-3 space-y-2" data-testid="chat-directory-shopping-service-presets">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('Shopping 店铺账号预设', 'Shopping shop account presets') }}
             </p>
-            <div class="flex flex-wrap items-center gap-2" v-if="batchMode">
-              <select
-                v-model="selectedServiceTemplateId"
-                class="rounded border border-emerald-200 bg-white px-2 py-1 text-[11px] text-emerald-700 outline-none"
+            <div class="grid gap-1.5">
+              <div
+                v-for="preset in shoppingServicePresetOptions"
+                :key="`shopping-service-preset-${preset.key}`"
+                class="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2"
               >
-                <option
-                  v-for="preset in serviceTemplatePresets"
-                  :key="`service-template-${preset.id}`"
-                  :value="preset.id"
+                <div class="min-w-0">
+                  <p class="text-xs font-medium text-gray-900 truncate">
+                    <i :class="preset.icon" class="mr-1 text-amber-500"></i>{{ preset.label }}
+                  </p>
+                </div>
+                <button
+                  @click="openCreateShoppingService(preset.key)"
+                  class="chat-directory-batch-action shrink-0"
+                  :data-testid="`chat-directory-create-shopping-service-${preset.key}`"
                 >
-                  {{ servicePresetTemplate(preset) }} · {{ preset.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service') }}
-                </option>
-              </select>
-              <button
-                @click="applyServicePresetToSelected"
-                class="px-2.5 py-1 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 text-[11px]"
-                :disabled="selectedServiceCount === 0"
-              >
-                {{ t('批量套用模板', 'Apply Template') }}
-              </button>
-            </div>
-          </div>
-          <div class="grid gap-2">
-            <div
-              v-for="preset in serviceTemplatePresets"
-              :key="`service-preset-card-${preset.id}`"
-              class="rounded-lg border border-emerald-100 bg-emerald-50/40 px-2.5 py-2 flex items-center justify-between gap-2"
-            >
-              <div class="min-w-0">
-                <p class="text-xs font-medium text-emerald-800 truncate">
-                  {{ servicePresetName(preset) }} · {{ preset.kind === 'official' ? t('公众号', 'Official') : t('服务号', 'Service') }}
-                </p>
-                <p class="text-[11px] text-emerald-700 truncate">
-                  {{ servicePresetTemplate(preset) }}
-                </p>
+                  {{ t('创建', 'Create') }}
+                </button>
               </div>
-              <button
-                @click="openCreateServiceFromPreset(preset.id)"
-                class="px-2 py-1 rounded border border-emerald-200 bg-white text-emerald-700 text-[11px]"
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-white p-3 space-y-2" data-testid="chat-directory-logistics-service-presets">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('物流服务号预设', 'Logistics service account presets') }}
+            </p>
+            <div class="grid gap-1.5">
+              <div
+                v-for="preset in logisticsServicePresetOptions"
+                :key="`logistics-service-preset-${preset.key}`"
+                class="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2"
               >
-                {{ t('按模板新建', 'Create from Preset') }}
-              </button>
+                <div class="min-w-0">
+                  <p class="text-xs font-medium text-gray-900 truncate">
+                    <i :class="preset.icon" class="mr-1 text-sky-500"></i>{{ preset.label }}
+                  </p>
+                </div>
+                <button
+                  @click="openCreateLogisticsService(preset.key)"
+                  class="chat-directory-batch-action shrink-0"
+                  :data-testid="`chat-directory-create-logistics-service-${preset.key}`"
+                >
+                  {{ t('创建', 'Create') }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-white p-3 space-y-2" data-testid="chat-directory-food-delivery-service-presets">
+            <p class="text-xs font-semibold text-gray-700">
+              {{ t('外卖服务号预设', 'Food delivery service account presets') }}
+            </p>
+            <div class="grid gap-1.5">
+              <div
+                v-for="preset in foodDeliveryServicePresetOptions"
+                :key="`food-delivery-service-preset-${preset.key}`"
+                class="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2"
+              >
+                <div class="min-w-0">
+                  <p class="text-xs font-medium text-gray-900 truncate">
+                    <i :class="preset.icon" class="mr-1 text-orange-500"></i>{{ preset.label }}
+                  </p>
+                </div>
+                <button
+                  @click="openCreateFoodDeliveryService(preset.key)"
+                  class="chat-directory-batch-action shrink-0"
+                  :data-testid="`chat-directory-create-food-delivery-service-${preset.key}`"
+                >
+                  {{ t('创建', 'Create') }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-white p-3 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-xs font-semibold text-gray-700">
+                {{ t('模板预设中心', 'Template Preset Center') }}
+              </p>
+              <div class="flex items-center gap-1.5" v-if="batchMode">
+                <select
+                  v-model="selectedServiceTemplateId"
+                  class="rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-700 outline-none"
+                >
+                  <option
+                    v-for="preset in serviceTemplatePresets"
+                    :key="`service-template-${preset.id}`"
+                    :value="preset.id"
+                  >
+                    {{ servicePresetTemplate(preset) }}
+                  </option>
+                </select>
+                <button
+                  @click="applyServicePresetToSelected"
+                  class="chat-directory-batch-action"
+                  :disabled="selectedServiceCount === 0"
+                >
+                  {{ t('套用', 'Apply') }}
+                </button>
+              </div>
+            </div>
+            <div class="grid gap-1.5">
+              <div
+                v-for="preset in serviceTemplatePresets"
+                :key="`service-preset-card-${preset.id}`"
+                class="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2"
+              >
+                <div class="min-w-0">
+                  <p class="text-xs font-medium text-gray-900 truncate">
+                    {{ servicePresetName(preset) }}
+                  </p>
+                  <p class="text-[11px] text-gray-500 truncate">
+                    {{ servicePresetTemplate(preset) }}
+                  </p>
+                </div>
+                <button
+                  @click="openCreateServiceFromPreset(preset.id)"
+                  class="chat-directory-batch-action shrink-0"
+                >
+                  {{ t('新建', 'Create') }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        </div>
-
       </section>
     </div>
 
@@ -3782,21 +3507,26 @@ onBeforeUnmount(() => {
 
     <div
       v-if="showBindModal"
-      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
+      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-end justify-center pb-6"
       @click.self="closeBindModal"
     >
-      <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
-        <p class="text-base font-bold">{{ t('绑定角色到会话', 'Bind Profile to Chat') }}</p>
-        <select v-model.number="bindProfileId" class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none bg-white">
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+        <div class="flex items-start justify-between gap-3">
+          <p class="text-lg font-extrabold text-gray-950">{{ t('绑定角色到会话', 'Bind Profile to Chat') }}</p>
+          <button type="button" class="chat-home-icon-button -mr-1 -mt-1 text-gray-400" @click="closeBindModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <select v-model.number="bindProfileId" class="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white">
           <option v-for="profile in unboundRoleProfilesRaw" :key="profile.id" :value="profile.id">
             {{ profile.name }} · {{ profile.role || t('未设置角色', 'Role not set') }}
           </option>
         </select>
-        <div class="flex justify-end gap-2">
-          <button @click="closeBindModal" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
+        <div class="mt-4 flex justify-end gap-2">
+          <button @click="closeBindModal" class="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600">{{ t('取消', 'Cancel') }}</button>
           <button
             @click="bindSelectedProfile"
-            class="px-3 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-violet-700 text-sm"
+            class="rounded-full bg-yellow-300 px-4 py-2 text-sm font-extrabold text-gray-950 shadow-sm"
           >
             {{ t('确认绑定', 'Confirm Bind') }}
           </button>
@@ -3806,12 +3536,17 @@ onBeforeUnmount(() => {
 
     <div
       v-if="showRoleMetaModal"
-      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
+      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-end justify-center pb-6"
       @click.self="closeRoleMetaModal"
     >
-      <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
-        <p class="text-base font-bold">{{ t('会话绑定设置', 'Chat Binding Settings') }}</p>
-        <label class="text-xs text-gray-500 block">
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3">
+          <p class="text-lg font-extrabold text-gray-950">{{ t('会话绑定设置', 'Chat Binding Settings') }}</p>
+          <button type="button" class="chat-home-icon-button -mr-1 -mt-1 text-gray-400" @click="closeRoleMetaModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <label class="mt-4 block text-xs font-semibold text-gray-600">
           {{ t('会话调校（0-100）', 'Chat-local tuning (0-100)') }}
         </label>
         <input
@@ -3819,10 +3554,10 @@ onBeforeUnmount(() => {
           type="number"
           min="0"
           max="100"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+          class="mt-1.5 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
         />
         <p
-          class="text-[11px] text-gray-400"
+          class="mt-1.5 text-[11px] text-gray-400"
           data-testid="chat-directory-relationship-compatibility-help"
         >
           {{
@@ -3832,21 +3567,21 @@ onBeforeUnmount(() => {
             )
           }}
         </p>
-        <label class="text-xs text-gray-500 block">
+        <label class="mt-4 block text-xs font-semibold text-gray-600">
           {{ t('会话备注（仅 Chat 本地）', 'Chat note (chat local only)') }}
         </label>
         <textarea
           v-model="roleMetaDraft.relationshipNote"
           rows="3"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
+          class="mt-1.5 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm resize-none outline-none focus:border-yellow-300 focus:bg-white"
           :placeholder="t('例如：这里仅记录 Chat 回复偏好，不写入关系进度。', 'Example: record Chat reply preference here; it does not write relationship progress.')"
         ></textarea>
-        <label class="text-xs text-gray-500 block">
+        <label class="mt-4 block text-xs font-semibold text-gray-600">
           {{ t('会话优先图片素材（可选）', 'Thread preferred image asset (optional)') }}
         </label>
         <select
           v-model="roleMetaDraft.preferredImageAssetId"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none bg-white"
+          class="mt-1.5 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
         >
           <option value="">{{ t('不覆盖（使用档案绑定默认）', 'No override (use profile-bound default)') }}</option>
           <option
@@ -3857,15 +3592,15 @@ onBeforeUnmount(() => {
             {{ asset.label }}
           </option>
         </select>
-        <p class="text-[11px] text-gray-400">
+        <p class="mt-1.5 text-[11px] text-gray-400">
           {{
             roleMetaAssetOptions.length > 0
               ? roleMetaAssetContextLabel
               : t('该角色档案未绑定素材包，请先在主通讯录中绑定。', 'No profile asset pack yet. Bind assets in main Contacts first.')
           }}
         </p>
-        <div v-if="roleMetaPreviewLeadOption" class="space-y-2">
-          <div class="rounded-2xl border border-violet-100 bg-violet-50/40 p-3 flex items-center gap-3">
+        <div v-if="roleMetaPreviewLeadOption" class="mt-4 space-y-2">
+          <div class="rounded-2xl bg-gray-50 p-3 flex items-center gap-3">
             <AssetThumbnailOption
               :asset="roleMetaPreviewLeadOption"
               :preview-url="rolePreviewMap[roleMetaPreviewLeadOption.id]"
@@ -3875,9 +3610,9 @@ onBeforeUnmount(() => {
               :show-name="false"
             />
             <div class="min-w-0">
-              <p class="text-xs font-semibold text-violet-800 truncate">{{ roleMetaPreviewTitle }}</p>
-              <p class="text-[11px] text-violet-700 truncate">{{ roleMetaPreviewLeadOption.label }}</p>
-              <p class="text-[11px] text-gray-500 mt-1">{{ roleMetaPreviewDescription }}</p>
+              <p class="text-xs font-semibold text-gray-900 truncate">{{ roleMetaPreviewTitle }}</p>
+              <p class="text-[11px] text-gray-500 truncate">{{ roleMetaPreviewLeadOption.label }}</p>
+              <p class="text-[11px] text-gray-400 mt-1">{{ roleMetaPreviewDescription }}</p>
             </div>
           </div>
 
@@ -3889,7 +3624,7 @@ onBeforeUnmount(() => {
               :class="
                 roleMetaSelectedAssetOption
                   ? 'border-gray-200 bg-white text-gray-600'
-                  : 'border-violet-300 bg-violet-50 text-violet-700'
+                  : 'border-yellow-300 bg-yellow-50 text-gray-900'
               "
             >
               {{ t('跟随档案默认', 'Use profile default') }}
@@ -3908,24 +3643,24 @@ onBeforeUnmount(() => {
             </AssetThumbnailOption>
           </div>
         </div>
-        <div class="space-y-1">
-          <p class="text-xs text-gray-500">{{ t('快捷关系模板', 'Quick Relationship Templates') }}</p>
-          <div class="flex flex-wrap gap-2">
+        <div class="mt-4 space-y-1.5">
+          <p class="text-xs font-semibold text-gray-600">{{ t('快捷关系模板', 'Quick Relationship Templates') }}</p>
+          <div class="flex flex-wrap gap-1.5">
             <button
               v-for="preset in roleMetaTemplatePresets"
               :key="`modal-role-template-${preset.id}`"
               @click="applyRoleTemplateToDraft(preset.id)"
-              class="px-2.5 py-1 rounded border border-violet-200 bg-violet-50 text-violet-700 text-[11px]"
+              class="chat-directory-batch-action"
             >
               {{ roleTemplateLabel(preset) }}
             </button>
           </div>
         </div>
-        <div class="flex justify-end gap-2">
-          <button @click="closeRoleMetaModal" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
+        <div class="mt-4 flex justify-end gap-2">
+          <button @click="closeRoleMetaModal" class="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600">{{ t('取消', 'Cancel') }}</button>
           <button
             @click="saveRoleMeta"
-            class="px-3 py-1.5 rounded-lg border border-violet-300 bg-violet-50 text-violet-700 text-sm"
+            class="rounded-full bg-yellow-300 px-4 py-2 text-sm font-extrabold text-gray-950 shadow-sm"
           >
             {{ t('保存', 'Save') }}
           </button>
@@ -3935,32 +3670,37 @@ onBeforeUnmount(() => {
 
     <div
       v-if="showWorldServiceTemplateModal"
-      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
+      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-end justify-center pb-6"
       data-testid="chat-directory-world-service-template-modal"
       @click.self="closeWorldServiceTemplateModal"
     >
-      <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
-        <div>
-          <p class="text-base font-bold">{{ t('编辑世界观服务号模板', 'Edit world service template') }}</p>
-          <p class="mt-1 text-[11px] leading-relaxed text-gray-500">
-            {{
-              t(
-                '这里修改的是可订阅模板，不会自动覆盖已加入的 Chat 服务号。',
-                'This edits the subscription template and will not automatically overwrite joined Chat accounts.',
-              )
-            }}
-          </p>
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-lg font-extrabold text-gray-950">{{ t('编辑世界观服务号模板', 'Edit world service template') }}</p>
+            <p class="mt-1 text-[11px] text-gray-500">
+              {{
+                t(
+                  '这里修改的是可订阅模板，不会自动覆盖已加入的 Chat 服务号。',
+                  'This edits the subscription template and will not automatically overwrite joined Chat accounts.',
+                )
+              }}
+            </p>
+          </div>
+          <button type="button" class="chat-home-icon-button -mr-1 -mt-1 text-gray-400" @click="closeWorldServiceTemplateModal">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
         <input
           v-model="worldServiceTemplateDraft.title"
           type="text"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+          class="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-world-service-template-title"
           :placeholder="t('服务号名称', 'Service account name')"
         />
         <select
           v-model="worldServiceTemplateDraft.category"
-          class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-world-service-template-category"
         >
           <option value="service_notification">{{ t('服务号 / 通知', 'Service / notifications') }}</option>
@@ -3969,7 +3709,7 @@ onBeforeUnmount(() => {
         </select>
         <select
           v-model="worldServiceTemplateDraft.linkedAppBindingId"
-          class="w-full rounded-xl border border-indigo-100 bg-indigo-50/40 px-3 py-2 text-sm text-indigo-800 outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-world-service-template-linked-app"
         >
           <option value="">{{ t('不绑定世界专属 App', 'No world app binding') }}</option>
@@ -3984,20 +3724,20 @@ onBeforeUnmount(() => {
         <textarea
           v-model="worldServiceTemplateDraft.description"
           rows="3"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm resize-none outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-world-service-template-description"
           :placeholder="t('说明这个服务号会发布什么内容', 'Describe what this account will publish')"
         ></textarea>
-        <div class="flex justify-end gap-2">
+        <div class="mt-4 flex justify-end gap-2">
           <button
             @click="closeWorldServiceTemplateModal"
-            class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm"
+            class="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600"
           >
             {{ t('取消', 'Cancel') }}
           </button>
           <button
             @click="saveWorldServiceTemplate"
-            class="px-3 py-1.5 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 text-sm"
+            class="rounded-full bg-yellow-300 px-4 py-2 text-sm font-extrabold text-gray-950 shadow-sm"
             data-testid="chat-directory-save-world-service-template"
           >
             {{ t('保存模板', 'Save template') }}
@@ -4008,29 +3748,34 @@ onBeforeUnmount(() => {
 
     <div
       v-if="showServiceModal"
-      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-center justify-center"
+      class="fixed inset-0 z-40 bg-black/35 px-4 flex items-end justify-center pb-6"
       @click.self="closeServiceModal"
     >
-      <div class="w-full max-w-sm rounded-3xl bg-white p-4 space-y-3 shadow-2xl">
-        <p class="text-base font-bold">
-          {{
-            serviceModalMode === 'create'
-              ? serviceDraft.kind === 'official'
-                ? t('新增公众号', 'Add Official')
-                : t('新增服务号', 'Add Service')
-              : t('编辑服务对象', 'Edit Service Entry')
-          }}
-        </p>
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-3">
+          <p class="text-lg font-extrabold text-gray-950">
+            {{
+              serviceModalMode === 'create'
+                ? serviceDraft.kind === 'official'
+                  ? t('新增公众号', 'Add Official')
+                  : t('新增服务号', 'Add Service')
+                : t('编辑服务对象', 'Edit Service Entry')
+            }}
+          </p>
+          <button type="button" class="chat-home-icon-button -mr-1 -mt-1 text-gray-400" @click="closeServiceModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
         <input
           v-model="serviceDraft.name"
           type="text"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+          class="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-service-name"
           :placeholder="t('名称', 'Name')"
         />
         <select
           v-model="serviceDraft.kind"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none bg-white"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           :disabled="serviceModalMode === 'edit'"
         >
           <option value="service">{{ t('服务号', 'Service') }}</option>
@@ -4039,12 +3784,12 @@ onBeforeUnmount(() => {
         <input
           v-model="serviceDraft.template"
           type="text"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           :placeholder="t('服务模板标题', 'Service template title')"
         />
         <select
           v-model="serviceDraft.shoppingServiceKey"
-          class="w-full rounded-xl border border-amber-100 bg-amber-50/40 px-3 py-2 text-sm text-amber-800 outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-service-shopping-service"
         >
           <option value="">{{ t('不绑定 Shopping 店铺', 'No Shopping shop binding') }}</option>
@@ -4058,7 +3803,7 @@ onBeforeUnmount(() => {
         </select>
         <select
           v-model="serviceDraft.logisticsServiceKey"
-          class="w-full rounded-xl border border-sky-100 bg-sky-50/40 px-3 py-2 text-sm text-sky-800 outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-service-logistics-service"
         >
           <option value="">{{ t('不绑定物流服务号', 'No Logistics binding') }}</option>
@@ -4072,7 +3817,7 @@ onBeforeUnmount(() => {
         </select>
         <select
           v-model="serviceDraft.foodDeliveryServiceKey"
-          class="w-full rounded-xl border border-orange-100 bg-orange-50/40 px-3 py-2 text-sm text-orange-800 outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm outline-none focus:border-yellow-300 focus:bg-white"
           data-testid="chat-directory-service-food-delivery-service"
         >
           <option value="">{{ t('不绑定外卖服务号', 'No Food Delivery binding') }}</option>
@@ -4084,8 +3829,8 @@ onBeforeUnmount(() => {
             {{ preset.label }}
           </option>
         </select>
-        <div class="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3 space-y-2">
-          <p class="text-xs font-semibold text-emerald-700">{{ t('头像来源', 'Avatar source') }}</p>
+        <div class="mt-4 rounded-2xl bg-gray-50 p-3">
+          <p class="text-xs font-semibold text-gray-600">{{ t('头像来源', 'Avatar source') }}</p>
           <ImageSourcePicker
             v-model:source-type="serviceDraft.avatarImageSourceType"
             v-model:image-url="serviceDraft.avatarImageUrl"
@@ -4103,14 +3848,14 @@ onBeforeUnmount(() => {
         <textarea
           v-model="serviceDraft.bio"
           rows="3"
-          class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-none outline-none"
+          class="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm resize-none outline-none focus:border-yellow-300 focus:bg-white"
           :placeholder="t('服务说明（可选）', 'Description (optional)')"
         ></textarea>
-        <div class="flex justify-end gap-2">
-          <button @click="closeServiceModal" class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm">{{ t('取消', 'Cancel') }}</button>
+        <div class="mt-4 flex justify-end gap-2">
+          <button @click="closeServiceModal" class="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600">{{ t('取消', 'Cancel') }}</button>
           <button
             @click="saveService"
-            class="px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-sm"
+            class="rounded-full bg-yellow-300 px-4 py-2 text-sm font-extrabold text-gray-950 shadow-sm"
             data-testid="chat-directory-save-service"
           >
             {{ t('保存', 'Save') }}
