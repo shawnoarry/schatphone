@@ -97,7 +97,7 @@ export const useChatHomeListModel = ({ contactsForList, chatStore, t } = {}) => 
 
   const chatHomeHeroTitle = computed(() => {
     if (getContactList(contactsForList).length === 0) {
-      return translate('先把对象带进 Chat', 'Bring someone into Chat')
+      return translate('\u5148\u628a\u8054\u7cfb\u4eba\u5e26\u8fdb Chat', 'Bring a contact into Chat')
     }
     if (chatMessageRequestContacts.value.length > 0) {
       return translate(
@@ -117,8 +117,8 @@ export const useChatHomeListModel = ({ contactsForList, chatStore, t } = {}) => 
   const chatHomeHeroDetail = computed(() => {
     if (getContactList(contactsForList).length === 0) {
       return translate(
-        '从对象页绑定角色，或创建服务号与群聊。',
-        'Bind roles from Objects, or create services and groups.',
+        '\u4ece\u8054\u7cfb\u4eba\u9875\u6dfb\u52a0\u89d2\u8272\uff0c\u6216\u521b\u5efa\u670d\u52a1\u53f7\u4e0e\u7fa4\u804a\u3002',
+        'Add contacts, or create services and groups.',
       )
     }
     if (chatFoldedSubscriptionContacts.value.length > 0) {

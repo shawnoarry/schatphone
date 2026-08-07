@@ -57,6 +57,7 @@ const roleFilter = ref(initialDirectorySection === 'roles' ? normalizeRoleFilter
 const serviceFilter = ref(initialDirectorySection === 'service' ? normalizeServiceFilter(route.query.filter) : 'all')
 const batchMode = ref(false)
 const selectedContactIds = ref([])
+const roleActionMenuContactId = ref(0)
 const showServiceManagement = ref(false)
 const showBindModal = ref(false)
 const bindProfileId = ref(0)
@@ -431,7 +432,7 @@ const filteredServiceContacts = computed(() =>
 
 const searchPlaceholder = computed(() =>
   activeSection.value === 'roles'
-    ? t('搜索角色名/设定/备注', 'Search role name/profile/note')
+    ? t('\u641c\u7d22\u8054\u7cfb\u4eba\u6216\u5907\u6ce8', 'Search contacts or notes')
     : t('搜索服务号/模板/说明', 'Search service account/template/description'),
 )
 
@@ -458,30 +459,6 @@ const roleFolderSlotShortLabel = (slotKey) => {
   if (slotKey === 'profileImage') return t('形象', 'Profile')
   if (slotKey === 'emojiPack') return t('表情', 'Emoji')
   return slotKey || ''
-}
-
-const roleFolderBindingSummary = (contact) => {
-  if (!contact?.id) return ''
-  const contract = getRoleBindingContract(contact.id)
-  const summaries = summarizeRoleAssetFolderBindings(
-    galleryStore,
-    contract.assets?.profileAssetFolderBindings,
-  )
-  const boundCount = summaries.filter((item) => item.isBound).length
-  const readyCount = summaries.filter((item) => item.status === 'ready').length
-  const totalAssets = summaries.reduce((sum, item) => sum + (item.assetCount || 0), 0)
-
-  if (boundCount <= 0) return t('档案文件夹未启用', 'Profile folders not enabled')
-  if (readyCount <= 0) {
-    return t(
-      `档案文件夹已绑定 ${boundCount} 个槽位 · 当前走默认模式`,
-      `${boundCount} profile folders bound · fallback mode active`,
-    )
-  }
-  return t(
-    `档案文件夹就绪 ${readyCount}/${boundCount} · 素材 ${totalAssets} 项`,
-    `Profile folders ready ${readyCount}/${boundCount} · ${totalAssets} assets`,
-  )
 }
 
 const buildRoleFolderPreviewMeta = (contact, limit = 3) => {
@@ -1009,11 +986,28 @@ const clearSelection = () => {
 
 const setBatchMode = (enabled) => {
   batchMode.value = Boolean(enabled)
+  roleActionMenuContactId.value = 0
   if (!batchMode.value) clearSelection()
 }
 
 const toggleBatchMode = () => {
   setBatchMode(!batchMode.value)
+}
+
+const isRoleActionMenuOpen = (contactId) => roleActionMenuContactId.value === Number(contactId)
+
+const toggleRoleActionMenu = (contactId) => {
+  const normalizedId = Number(contactId)
+  roleActionMenuContactId.value = roleActionMenuContactId.value === normalizedId ? 0 : normalizedId
+}
+
+const closeRoleActionMenu = () => {
+  roleActionMenuContactId.value = 0
+}
+
+const runRoleMenuAction = (action) => {
+  closeRoleActionMenu()
+  action?.()
 }
 
 const toggleServiceManagement = () => {
@@ -1071,6 +1065,7 @@ const switchSection = (section) => {
   const nextSection = normalizeDirectorySection(section)
   activeSection.value = nextSection
   searchKeyword.value = ''
+  closeRoleActionMenu()
   setBatchMode(false)
   replaceDirectoryRoute()
 }
@@ -1082,6 +1077,7 @@ const setDirectoryFilter = (filter) => {
     serviceFilter.value = normalizeServiceFilter(filter)
   }
   searchKeyword.value = ''
+  closeRoleActionMenu()
   setBatchMode(false)
   replaceDirectoryRoute()
 }
@@ -1135,6 +1131,7 @@ watch(
 )
 
 const openChat = (contact) => {
+  closeRoleActionMenu()
   chatStore.ensureConversationForContact(contact.id)
   if (chatStore.isChatSubscriptionContact(contact)) {
     router.push({
@@ -2374,14 +2371,14 @@ onBeforeUnmount(() => {
           <i class="fas fa-chevron-left"></i>
         </button>
         <p class="flex-1 text-[1.45rem] font-extrabold leading-tight tracking-tight">
-          {{ activeSection === 'roles' ? t('对象', 'Objects') : t('服务号', 'Services') }}
+          {{ activeSection === 'roles' ? t('\u8054\u7cfb\u4eba', 'Contacts') : t('服务号', 'Services') }}
         </p>
         <div class="flex items-center gap-1">
           <button
             v-if="activeSection === 'roles'"
             type="button"
             class="chat-home-icon-button chat-ink"
-            :aria-label="t('绑定角色', 'Bind Role')"
+            :aria-label="t('\u6dfb\u52a0\u8054\u7cfb\u4eba', 'Add contact')"
             @click="openBindModal"
           >
             <i class="fas fa-user-plus"></i>
@@ -2430,8 +2427,8 @@ onBeforeUnmount(() => {
       <p class="sr-only" data-testid="chat-directory-boundary-copy">
         {{
           t(
-            'Chat Directory 管理已进入 Chat 的对象与 Chat 内资料：角色档案来自 Contacts，也可从 Contacts 直接开始聊天；绑定查看、解绑和服务号管理仍在这里完成。',
-            'Chat Directory manages existing Chat targets and Chat-local details. Role profiles come from Contacts and can start Chat there; review, unbind, and service-account management stay here.',
+            '\u8054\u7cfb\u4eba\u9875\u7ba1\u7406\u5df2\u8fdb\u5165 Chat \u7684\u8054\u7cfb\u4eba\u4e0e\u804a\u5929\u504f\u597d\u3002\u89d2\u8272\u6863\u6848\u6765\u81ea\u4e3b\u901a\u8baf\u5f55\uff0c\u4e5f\u53ef\u4ece\u4e3b\u901a\u8baf\u5f55\u76f4\u63a5\u5f00\u59cb\u804a\u5929\uff1b\u89e3\u7ed1\u548c\u670d\u52a1\u53f7\u7ba1\u7406\u4ecd\u5728\u8fd9\u91cc\u5b8c\u6210\u3002',
+            'Contacts manages people already in Chat and their Chat-only preferences. Role profiles come from main Contacts and can start Chat there; unbinding and service-account management stay here.',
           )
         }}
       </p>
@@ -2441,8 +2438,9 @@ onBeforeUnmount(() => {
           @click="switchSection('roles')"
           class="chat-directory-tab"
           :class="{ 'is-active': activeSection === 'roles' }"
+          data-testid="chat-directory-section-roles"
         >
-          {{ t('角色绑定', 'Role Bindings') }}
+          {{ t('\u8054\u7cfb\u4eba', 'Contacts') }}
         </button>
         <button
           @click="switchSection('service')"
@@ -2502,13 +2500,13 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex items-center justify-between px-4">
-          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">{{ t('已绑定角色', 'Bound Roles') }}</h3>
+          <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wide">{{ t('\u8054\u7cfb\u4eba', 'Contacts') }}</h3>
           <button
             v-if="!batchMode"
             @click="toggleBatchMode"
             class="text-xs font-semibold text-gray-500"
           >
-            {{ t('批量', 'Batch') }}
+            {{ t('\u7ba1\u7406', 'Manage') }}
           </button>
           <button
             v-else
@@ -2571,16 +2569,16 @@ onBeforeUnmount(() => {
         </div>
 
         <p v-if="roleBindings.length === 0" class="chat-directory-empty">
-          {{ t('暂无已绑定角色。', 'No role bindings yet.') }}
+          {{ t('\u8fd8\u6ca1\u6709\u804a\u5929\u8054\u7cfb\u4eba\u3002', 'No contacts in Chat yet.') }}
         </p>
         <p v-else-if="filteredRoleBindings.length === 0" class="chat-directory-empty">
-          {{ t('当前筛选下没有匹配角色。', 'No role matches current filter.') }}
+          {{ t('\u5f53\u524d\u7b5b\u9009\u4e0b\u6ca1\u6709\u5339\u914d\u8054\u7cfb\u4eba\u3002', 'No contacts match this filter.') }}
         </p>
 
         <div
           v-for="contact in filteredRoleBindings"
           :key="contact.id"
-          class="chat-list-row"
+          class="chat-list-row chat-contact-row"
           :class="{ 'is-selected': batchMode && isContactSelected(contact.id) }"
           @click="batchMode && toggleSelectContact(contact.id)"
         >
@@ -2593,156 +2591,199 @@ onBeforeUnmount(() => {
           >
             <i class="fas fa-check"></i>
           </button>
-          <div class="chat-list-avatar">
-            <img
-              :src="contactAvatarForDisplay(contact)"
-              class="w-full h-full object-cover"
-              :data-testid="`chat-directory-contact-avatar-${contact.id}`"
-            />
-          </div>
-          <div class="chat-list-content">
-            <div class="flex justify-between items-center gap-2">
-              <span class="font-bold text-sm truncate">{{ contact.name }}</span>
-              <span
-                class="chat-list-tag"
-                :class="chatSocialStateBadgeClass(contact)"
-                :data-testid="`chat-directory-social-state-${contact.id}`"
-              >
-                {{ chatSocialStateLabel(contact) }}
-              </span>
+          <button
+            type="button"
+            class="chat-contact-row__identity"
+            :aria-label="batchMode ? t('\u9009\u62e9\u8054\u7cfb\u4eba', 'Select contact') : t('\u6253\u5f00\u804a\u5929', 'Open chat')"
+            @click.stop="batchMode ? toggleSelectContact(contact.id) : openChat(contact)"
+          >
+            <div class="chat-list-avatar">
+              <img
+                :src="contactAvatarForDisplay(contact)"
+                class="w-full h-full object-cover"
+                :data-testid="`chat-directory-contact-avatar-${contact.id}`"
+              />
             </div>
-            <p class="text-xs text-gray-500 truncate mt-0.5">
-              {{ contact.role || t('未设置角色', 'Role not set') }} ·
-              <span :data-testid="`chat-directory-role-chat-tuning-${contact.id}`">
-                {{ t('会话调校', 'Chat tuning') }} {{ contact.relationshipLevel ?? 50 }}
-              </span>
-            </p>
-            <p
-              v-if="contact.relationshipNote"
-              class="text-[11px] text-gray-400 truncate"
-              :data-testid="`chat-directory-role-chat-note-${contact.id}`"
-            >
-              {{ t('会话备注', 'Chat note') }}: {{ contact.relationshipNote }}
-            </p>
-            <p class="text-[11px] text-gray-400 truncate">
-              {{ roleFolderBindingSummary(contact) }}
-            </p>
-          </div>
-          <div v-if="!batchMode" class="chat-list-side">
+            <div class="chat-list-content">
+              <div class="flex justify-between items-center gap-2">
+                <span class="font-bold text-sm truncate">{{ contact.name }}</span>
+                <span
+                  class="chat-list-tag"
+                  :class="chatSocialStateBadgeClass(contact)"
+                  :data-testid="`chat-directory-social-state-${contact.id}`"
+                >
+                  {{ chatSocialStateLabel(contact) }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-500 truncate mt-0.5">
+                {{ contact.role || t('未设置角色', 'Role not set') }}
+              </p>
+              <p v-if="contact.relationshipNote" class="text-[11px] text-gray-400 truncate">
+                {{ contact.relationshipNote }}
+              </p>
+            </div>
+          </button>
+          <div v-if="!batchMode" class="chat-contact-row__actions">
             <button
               v-if="
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.STRANGER ||
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.REQUEST_DECLINED
               "
-              @click.stop="greetRoleContact(contact)"
-              class="chat-row-icon-action"
+              type="button"
+              class="chat-contact-row__primary"
               :data-testid="`chat-directory-greet-${contact.id}`"
-              :aria-label="t('打招呼', 'Greet')"
+              @click.stop="greetRoleContact(contact)"
             >
-              <i class="fas fa-hand"></i>
+              {{ t('打招呼', 'Greet') }}
             </button>
             <button
-              v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
-              @click.stop="acceptRoleRequest(contact)"
-              class="chat-row-icon-action"
+              v-else-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
+              type="button"
+              class="chat-contact-row__primary"
               :data-testid="`chat-directory-accept-request-${contact.id}`"
-              :aria-label="t('通过', 'Accept')"
+              @click.stop="acceptRoleRequest(contact)"
             >
-              <i class="fas fa-check"></i>
+              {{ t('通过', 'Accept') }}
             </button>
             <button
-              v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
-              @click.stop="declineRoleRequest(contact)"
-              class="chat-row-icon-action"
-              :data-testid="`chat-directory-decline-request-${contact.id}`"
-              :aria-label="t('忽略', 'Ignore')"
-            >
-              <i class="fas fa-xmark"></i>
-            </button>
-            <button
-              v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST"
-              @click.stop="cancelRoleGreeting(contact)"
-              class="chat-row-icon-action"
-              :aria-label="t('撤回', 'Cancel')"
-            >
-              <i class="fas fa-rotate-left"></i>
-            </button>
-            <button
-              v-if="
-                chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED &&
-                chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
-              "
-              @click.stop="blockRoleContact(contact)"
-              class="chat-row-icon-action"
-              :data-testid="`chat-directory-block-${contact.id}`"
-              :aria-label="t('拉黑', 'Block')"
-            >
-              <i class="fas fa-ban"></i>
-            </button>
-            <button
-              v-if="
+              v-else-if="
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED ||
                 chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
               "
-              @click.stop="unblockRoleContact(contact)"
-              class="chat-row-icon-action"
+              type="button"
+              class="chat-contact-row__primary"
               :data-testid="`chat-directory-unblock-${contact.id}`"
-              :aria-label="t('解除拉黑', 'Unblock')"
+              @click.stop="unblockRoleContact(contact)"
             >
-              <i class="fas fa-unlock"></i>
+              {{ t('解除', 'Unblock') }}
             </button>
-            <button @click.stop="openChat(contact)" class="chat-row-icon-action" :aria-label="t('聊天', 'Chat')">
-              <i class="fas fa-comment"></i>
-            </button>
-            <button
-              @click.stop="openRoleMetaModal(contact)"
-              class="chat-row-icon-action"
-              :data-testid="`chat-directory-role-meta-${contact.id}`"
-              :aria-label="t('会话设定', 'Thread Meta')"
-            >
-              <i class="fas fa-sliders"></i>
-            </button>
-            <button @click.stop="unbindRole(contact)" class="chat-row-icon-action chat-row-icon-action--danger" :aria-label="t('解绑', 'Unbind')">
-              <i class="fas fa-user-minus"></i>
-            </button>
+            <div class="chat-contact-menu-anchor" @click.stop>
+              <button
+                type="button"
+                class="chat-contact-menu-trigger"
+                :aria-label="t('\u66f4\u591a\u8054\u7cfb\u4eba\u64cd\u4f5c', 'More contact actions')"
+                :aria-expanded="isRoleActionMenuOpen(contact.id)"
+                aria-haspopup="menu"
+                :data-testid="`chat-directory-role-more-${contact.id}`"
+                @click="toggleRoleActionMenu(contact.id)"
+              >
+                <i class="fas fa-ellipsis"></i>
+              </button>
+              <div
+                v-if="isRoleActionMenuOpen(contact.id)"
+                class="chat-contact-menu"
+                role="menu"
+                :data-testid="`chat-directory-role-menu-${contact.id}`"
+              >
+                <button
+                  v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST"
+                  type="button"
+                  class="chat-contact-menu__item"
+                  role="menuitem"
+                  :data-testid="`chat-directory-decline-request-${contact.id}`"
+                  @click="runRoleMenuAction(() => declineRoleRequest(contact))"
+                >
+                  <i class="fas fa-xmark"></i>
+                  <span>{{ t('忽略请求', 'Ignore request') }}</span>
+                </button>
+                <button
+                  v-if="chatStore.getContactChatSocialState(contact) === CHAT_CONTACT_SOCIAL_STATES.OUTGOING_REQUEST"
+                  type="button"
+                  class="chat-contact-menu__item"
+                  role="menuitem"
+                  @click="runRoleMenuAction(() => cancelRoleGreeting(contact))"
+                >
+                  <i class="fas fa-rotate-left"></i>
+                  <span>{{ t('撤回请求', 'Cancel request') }}</span>
+                </button>
+                <button
+                  v-if="
+                    chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.USER_BLOCKED &&
+                    chatStore.getContactChatSocialState(contact) !== CHAT_CONTACT_SOCIAL_STATES.MUTUAL_BLOCKED
+                  "
+                  type="button"
+                  class="chat-contact-menu__item chat-contact-menu__item--danger"
+                  role="menuitem"
+                  :data-testid="`chat-directory-block-${contact.id}`"
+                  @click="runRoleMenuAction(() => blockRoleContact(contact))"
+                >
+                  <i class="fas fa-ban"></i>
+                  <span>{{ t('拉黑联系人', 'Block contact') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="chat-contact-menu__item"
+                  role="menuitem"
+                  :data-testid="`chat-directory-role-meta-${contact.id}`"
+                  @click="runRoleMenuAction(() => openRoleMetaModal(contact))"
+                >
+                  <i class="fas fa-sliders"></i>
+                  <span>{{ t('聊天偏好', 'Chat preferences') }}</span>
+                </button>
+                <div class="chat-contact-menu__divider"></div>
+                <button
+                  type="button"
+                  class="chat-contact-menu__item chat-contact-menu__item--danger"
+                  role="menuitem"
+                  :data-testid="`chat-directory-unbind-${contact.id}`"
+                  @click="runRoleMenuAction(() => unbindRole(contact))"
+                >
+                  <i class="fas fa-user-minus"></i>
+                  <span>{{ t('解除聊天绑定', 'Remove from Chat') }}</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="mx-4 mt-4 rounded-2xl bg-gray-50 p-3">
-          <div class="flex items-center justify-between gap-2 mb-2">
-            <p class="text-xs font-semibold text-gray-600">{{ t('可绑定角色档案', 'Available Profiles') }}</p>
-            <button
-              v-if="batchMode"
-              @click="batchBindFilteredProfiles"
-              class="text-xs font-semibold text-violet-600"
-            >
-              {{ t('批量绑定', 'Batch Bind') }}
-            </button>
-          </div>
-          <p v-if="unboundRoleProfilesRaw.length === 0" class="text-xs text-gray-400">
-            {{ t('全部角色已绑定到会话。', 'All profiles are already bound.') }}
-          </p>
-          <p v-else-if="filteredUnboundRoleProfiles.length === 0" class="text-xs text-gray-400">
-            {{ t('可绑定角色中暂无匹配结果。', 'No available profile matches current filter.') }}
-          </p>
-          <div v-else class="space-y-1.5">
-            <div
-              v-for="profile in filteredUnboundRoleProfiles"
-              :key="profile.id"
-              class="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2"
-            >
-              <div class="min-w-0">
-                <p class="text-sm font-medium truncate">{{ profile.name }}</p>
-                <p class="text-[11px] text-gray-500 truncate">{{ roleTypeTag(profile) }} · {{ profile.role || t('未设置角色', 'Role not set') }}</p>
-              </div>
+        <div v-if="unboundRoleProfilesRaw.length > 0" class="mx-4 mt-4">
+          <button
+            v-if="!batchMode"
+            type="button"
+            class="chat-directory-add-contact"
+            @click="openBindModal"
+          >
+            <span class="chat-directory-add-contact__icon"><i class="fas fa-user-plus"></i></span>
+            <span class="min-w-0 flex-1 text-left">
+              <span class="block text-sm font-bold text-gray-900">{{ t('添加联系人', 'Add contact') }}</span>
+              <span class="mt-0.5 block text-[11px] text-gray-500 truncate">
+                {{ t('从主通讯录选择角色开始聊天', 'Choose a role from Contacts to start chatting') }}
+              </span>
+            </span>
+            <i class="fas fa-chevron-right text-[11px] text-gray-400"></i>
+          </button>
+          <template v-else>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <p class="text-xs font-semibold text-gray-600">{{ t('可添加联系人', 'Available contacts') }}</p>
               <button
-                @click="bindProfileId = profile.id; bindSelectedProfile()"
-                class="rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-gray-950"
+                @click="batchBindFilteredProfiles"
+                class="text-xs font-semibold text-violet-600"
               >
-                {{ t('绑定', 'Bind') }}
+                {{ t('批量添加', 'Add all') }}
               </button>
             </div>
-          </div>
+            <p v-if="filteredUnboundRoleProfiles.length === 0" class="text-xs text-gray-400">
+              {{ t('当前筛选下没有可添加联系人。', 'No contacts are available in this filter.') }}
+            </p>
+            <div v-else class="space-y-1.5">
+              <div
+                v-for="profile in filteredUnboundRoleProfiles"
+                :key="profile.id"
+                class="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2"
+              >
+                <div class="min-w-0">
+                  <p class="text-sm font-medium truncate">{{ profile.name }}</p>
+                  <p class="text-[11px] text-gray-500 truncate">{{ roleTypeTag(profile) }} · {{ profile.role || t('未设置角色', 'Role not set') }}</p>
+                </div>
+                <button
+                  @click="bindProfileId = profile.id; bindSelectedProfile()"
+                  class="rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-gray-950"
+                >
+                  {{ t('添加', 'Add') }}
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
       </section>
 

@@ -72,8 +72,8 @@ describe('Chat home list model interface', () => {
 
   test('prioritizes empty, request, unread, folded, blocked, and default hero copy', () => {
     const emptyModel = createModel({ contactList: [] })
-    expect(emptyModel.chatHomeHeroTitle.value).toBe('Bring someone into Chat')
-    expect(emptyModel.chatHomeHeroDetail.value).toBe('Bind roles from Objects, or create services and groups.')
+    expect(emptyModel.chatHomeHeroTitle.value).toBe('Bring a contact into Chat')
+    expect(emptyModel.chatHomeHeroDetail.value).toBe('Add contacts, or create services and groups.')
 
     const requestModel = createModel({
       conversations: {

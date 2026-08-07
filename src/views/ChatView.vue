@@ -3804,7 +3804,7 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 class="chat-home-hero__action"
-                :aria-label="t('对象', 'Objects')"
+                :aria-label="t('\u8054\u7cfb\u4eba', 'Contacts')"
                 @click="openChatObjects"
               >
                 <i class="fas fa-user text-xs"></i>
@@ -3927,7 +3927,7 @@ onBeforeUnmount(() => {
             {{
               normalizedChatSearchKeyword
                 ? t('换个角色名、群名或草稿关键词试试。', 'Try another role, group, or draft keyword.')
-                : t('从对象页绑定角色，或创建一个群聊开始第一段对话。', 'Bind a role from Objects or create a group to start your first conversation.')
+                : t('\u4ece\u8054\u7cfb\u4eba\u9875\u6dfb\u52a0\u89d2\u8272\uff0c\u6216\u521b\u5efa\u7fa4\u804a\u5f00\u59cb\u7b2c\u4e00\u6bb5\u5bf9\u8bdd\u3002', 'Add a contact or create a group to start your first conversation.')
             }}
           </span>
           <button
@@ -3936,7 +3936,7 @@ onBeforeUnmount(() => {
             class="chat-home-empty__action"
             @click="openChatObjects"
           >
-            {{ t('去绑定对象', 'Bind someone') }}
+            {{ t('\u6dfb\u52a0\u8054\u7cfb\u4eba', 'Add contact') }}
           </button>
         </p>
 

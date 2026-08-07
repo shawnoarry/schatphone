@@ -58,7 +58,7 @@ describe('Contacts and Chat Directory boundary copy', () => {
     wrapper.unmount()
   })
 
-  test('presents Chat Directory as the management surface for existing Chat targets', async () => {
+  test('presents Chat Directory as the Contacts surface for Chat-local preferences', async () => {
     const router = createTestRouter()
     await router.push('/chat-contacts')
     await router.isReady()
@@ -71,10 +71,11 @@ describe('Contacts and Chat Directory boundary copy', () => {
     await flushUi()
 
     const copy = wrapper.get('[data-testid="chat-directory-boundary-copy"]').text()
-    expect(copy).toContain('manages existing Chat targets')
-    expect(copy).toContain('Role profiles come from Contacts')
+    expect(copy).toContain('manages people already in Chat')
+    expect(copy).toContain('Chat-only preferences')
+    expect(copy).toContain('Role profiles come from main Contacts')
     expect(copy).toContain('can start Chat there')
-    expect(copy).toContain('review, unbind')
+    expect(copy).toContain('unbinding and service-account management stay here')
 
     wrapper.unmount()
   })
@@ -221,14 +222,16 @@ describe('Contacts and Chat Directory boundary copy', () => {
     })
     await flushUi()
 
-    expect(wrapper.get(`[data-testid="chat-directory-role-chat-tuning-${binding.id}"]`).text()).toBe(
-      'Chat tuning 88',
-    )
-    expect(wrapper.get(`[data-testid="chat-directory-role-chat-note-${binding.id}"]`).text()).toBe(
-      'Chat note: Thread-local preference note',
-    )
+    expect(wrapper.text()).toContain('Contacts')
+    expect(wrapper.text()).not.toContain('Objects')
+    expect(wrapper.find(`[data-testid="chat-directory-role-chat-tuning-${binding.id}"]`).exists()).toBe(false)
+    expect(wrapper.find(`[data-testid="chat-directory-role-chat-note-${binding.id}"]`).exists()).toBe(false)
+    expect(wrapper.find(`[data-testid="chat-directory-role-meta-${binding.id}"]`).exists()).toBe(false)
     expect(wrapper.text()).not.toContain('Affinity 88')
 
+    await wrapper.get(`[data-testid="chat-directory-role-more-${binding.id}"]`).trigger('click')
+    await flushUi()
+    expect(wrapper.get(`[data-testid="chat-directory-role-menu-${binding.id}"]`).exists()).toBe(true)
     await wrapper.get(`[data-testid="chat-directory-role-meta-${binding.id}"]`).trigger('click')
     await flushUi()
 

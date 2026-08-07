@@ -22,7 +22,7 @@ const items = computed(() => [
   },
   {
     id: 'objects',
-    label: t('对象', 'Objects'),
+    label: t('\u8054\u7cfb\u4eba', 'Contacts'),
     icon: 'fas fa-user',
     route: { path: '/chat-contacts', query: { section: 'roles' } },
   },
