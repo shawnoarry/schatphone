@@ -101,7 +101,7 @@ Current inventory and validation posture:
 - 153 JavaScript files, 85 Vue files, and 131,038 source lines under `src`;
 - 197 static unit-test files;
 - the 2026-07-22 architecture baseline passed 185 Vitest files / 1170 tests, lint, production build, both audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
-- the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and independently rerunnable audit proof remain open.
+- the current local integration passes lint, 206 Vitest files / 1457 tests, production build, and both audit scopes; remote CI, deployed-artifact, named physical-device, and independently rerunnable audit proof remain open.
 
 ## 2. Landed Architecture Baselines
 
@@ -256,6 +256,12 @@ Implemented 2026-07-22:
 - normal npm resolution then refreshed only compatible transitive advisory nodes and the required `hasown` child closure, without changing `package.json`, any direct dependency version, override/resolution policy, or major line;
 - production audit: 0 vulnerabilities; full audit: 0 vulnerabilities.
 
+2026-08-07 audit repair:
+
+- Pages Run #128 stopped before deployment at `Audit all dependencies` because the lockfile held the transitive `js-yaml` 4.3.0 advisory range;
+- normal npm resolution refreshed only `node_modules/js-yaml` to 4.3.1 in `package-lock.json`, with no `package.json`, direct dependency, override, or resolution change;
+- production audit and full audit now both report 0 vulnerabilities; local lint, 206 Vitest files / 1457 tests, and production build pass; the remote rerun remains pending.
+
 Do not report only the production audit when describing developer/CI safety.
 
 ### Push Relay
@@ -272,12 +278,12 @@ Do not describe it as a production backend or closed-page simulation engine.
 
 ### CI And Deployment
 
-- the PR/manual CI workflow definition runs Node 20, `npm ci`, separate official-registry production/full audits, lint, unit, build, one Chromium install, and one full product E2E collection;
+- the PR/manual CI workflow definition runs Node 24, `npm ci`, separate official-registry production/full audits, lint, unit, build, one Chromium install, and one full product E2E collection;
 - the full E2E collection already includes the focused visual-quality cases, uses a dedicated strict port, fails on flaky recovery, and enforces no more than the four existing intentional skips;
 - the main/manual-main Pages build definition runs the same gates on a separate strict port before configure/upload, and `deploy` still requires that verified build job;
 - E2E/summary failures upload HTML, test-results, and JSON diagnostics for seven days without retaining download or storage-state data;
 - no coverage threshold exists;
-- local validation uses Node 24 while CI uses Node 20.
+- local validation and CI both use Node 24.
 - remote GitHub execution, external branch/environment required checks, and a deployed `dist` base-path smoke are not yet proven; this release slice remains partial.
 
 ## 5. Completed Governance Rounds
