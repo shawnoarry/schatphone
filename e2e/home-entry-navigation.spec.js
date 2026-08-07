@@ -88,6 +88,11 @@ test.describe('Home entry navigation', () => {
 
     await unlockToHome(page)
 
+    await expect(page.locator('.home-dot')).toHaveCount(2)
+    await expect(page.locator('[data-home-tile-id="app_network"]')).toHaveCount(0)
+    await expect(page.locator('[data-home-tile-id="app_stock"]')).toHaveCount(0)
+    await expect(page.locator('[data-home-tile-id="app_assets"]')).toHaveCount(0)
+
     await openHomeDockApp(page, 'app_chat', '/chat')
 
     await returnToHome(page)
@@ -100,8 +105,8 @@ test.describe('Home entry navigation', () => {
     await openHomeDockApp(page, 'app_widgets', '/widgets')
 
     await returnToHome(page)
-    await page.locator('[data-home-tile-id="app_network"]').click()
-    await expect(page).toHaveURL(/#\/network(?:\?|$)/)
+    await page.locator('[data-home-tile-id="app_wallet"]').click()
+    await expect(page).toHaveURL(/#\/wallet(?:\?|$)/)
 
     expect(pageErrors).toEqual([])
   })
@@ -124,6 +129,12 @@ test.describe('Home entry navigation', () => {
     await page.getByTestId('app-store-item-app_widgets').click()
     await openVisibleAppStoreAction(page)
     await expect(page).toHaveURL(/#\/widgets(?:\?|$)/)
+
+    await navigateInsideUnlockedApp(page, '/app-store?section=library')
+
+    await page.getByTestId('app-store-item-app_network').click()
+    await openVisibleAppStoreAction(page)
+    await expect(page).toHaveURL(/#\/network(?:\?|$)/)
 
     expect(pageErrors).toEqual([])
   })

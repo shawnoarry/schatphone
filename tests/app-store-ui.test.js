@@ -1065,7 +1065,7 @@ describe('App Store entry management UI', () => {
     await router.isReady()
     const systemStore = useSystemStore()
 
-    expect(systemStore.settings.appearance.homeWidgetPages.flat()).toContain('app_network')
+    expect(systemStore.settings.appearance.homeWidgetPages.flat()).toContain('app_wallet')
 
     const wrapper = mount(AppStoreView, {
       global: {
@@ -1073,11 +1073,11 @@ describe('App Store entry management UI', () => {
       },
     })
 
-    await wrapper.find('[data-testid="app-store-item-app_network"]').trigger('click')
+    await wrapper.find('[data-testid="app-store-item-app_wallet"]').trigger('click')
     expect(wrapper.find('[data-testid="app-store-remove-home"]').exists()).toBe(true)
     await wrapper.find('[data-testid="app-store-remove-home"]').trigger('click')
 
-    expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_network')
+    expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_wallet')
     expect(wrapper.find('[data-testid="app-store-open"]').exists()).toBe(true)
 
     wrapper.unmount()

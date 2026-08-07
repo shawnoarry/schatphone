@@ -1,6 +1,6 @@
 # Visual And IA Governance Implementation Workstreams / 视觉与信息架构治理实施工作流
 
-Updated: 2026-07-22
+Updated: 2026-08-07
 
 ## 1. Workstream A: Shell And Entry Ownership
 
@@ -8,6 +8,7 @@ Updated: 2026-07-22
 - hidden-system placeholders
 - app entry clarity
 - Home template-slot desktop model
+- default Home release curation: two normal-mode pages for glanceable/personal and daily-life entry groups, with secondary utilities remaining recoverable from App Store or Widget Center
 - `主屏 / 桌面 / Home` as a system desktop layer, not a user-facing app entry
 - `组件 / Widgets` as widget creation/import/action-config/edit entry, not a whole-page template catalog
 - `外观 / Appearance` as broader visual customization and possible template-management surface

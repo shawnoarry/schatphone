@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-07-22
+Updated: 2026-08-07
 
 ## 1. Core Rule
 
@@ -26,6 +26,8 @@ It also owns:
   - `外观 / Appearance` owns broader theme, wallpaper, icon style, and possible template-management settings;
   - `应用商城 / App Store` owns app-entry visibility and Home-entry placement recovery;
   - App Library / App Store-like presentation owns app-entry visibility only, not widget packs, themes, wallpapers, or layout templates.
+  - default Home placement is release curation rather than capability availability: demoted apps remain usable from App Store, and trailing empty customization pages stay hidden only in normal mode;
+  - setup migrations may replace recognized earlier defaults but must preserve user-managed Home layouts.
 - which installed-app entry owns a visible Chat action:
   - Chat `Me` owns user identity, anonymity, recent interaction data, and lightweight derived social feed;
   - Chat Settings owns Chat appearance, default-behavior entry points, and diagnostics;

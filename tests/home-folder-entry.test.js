@@ -42,7 +42,7 @@ describe('Home folder entries', () => {
     setActivePinia(createPinia())
   })
 
-  test('renders Reminders, Shopping, Food Delivery, and Assets on Home', async () => {
+  test('renders daily-life entries while keeping secondary utilities off the release Home', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -61,8 +61,13 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-testid="home-folder-app_shopping"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_food_delivery"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-app_food_delivery"]').exists()).toBe(true)
-    expect(wrapper.find('[data-home-tile-id="app_assets"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_reminders"]').exists()).toBe(true)
+    expect(wrapper.find('[data-home-tile-id="app_network"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-tile-id="app_stock"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-tile-id="app_assets"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-tile-id="system"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-tile-id="quick_heart"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-tile-id="quick_disc"]').exists()).toBe(false)
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
     expect(wrapper.find('[data-home-tile-id="weather"] .home-widget-card').classes()).toContain(
       'is-weather',
@@ -73,21 +78,8 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="music"] .home-widget-card').classes()).toContain(
       'is-music',
     )
-    expect(
-      wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('type'),
-    ).toBe('button')
-    expect(
-      wrapper.find('[data-home-tile-id="quick_heart"] .home-widget-quick').attributes('aria-label'),
-    ).toBeTruthy()
-    expect(
-      wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('type'),
-    ).toBe('button')
-    expect(
-      wrapper.find('[data-home-tile-id="quick_disc"] .home-widget-quick').attributes('aria-label'),
-    ).toBeTruthy()
     expect(wrapper.text()).toContain('购物')
     expect(wrapper.text()).toContain('提醒事项')
-    expect(wrapper.text()).toContain('资产')
     wrapper.unmount()
   })
 
@@ -135,7 +127,7 @@ describe('Home folder entries', () => {
     })
 
     expect(wrapper.find('[data-testid="home-left-page"]').exists()).toBe(true)
-    expect(wrapper.findAll('.home-dot')).toHaveLength(5)
+    expect(wrapper.findAll('.home-dot')).toHaveLength(2)
     expect(wrapper.find('[data-testid="home-left-utility-panel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain(
       'is-installed',

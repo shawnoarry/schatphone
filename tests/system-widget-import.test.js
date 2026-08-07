@@ -165,14 +165,17 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
   })
 
-  test('hides Files from default and restored Home layouts', () => {
+  test('keeps secondary utilities in the library instead of the default Home release surface', () => {
     const store = useSystemStore()
 
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_files')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_shopping')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_reminders')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_food_delivery')
-    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_assets')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_network')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
 
     store.setHomeWidgetPages([
@@ -201,9 +204,11 @@ describe('system widget import safety', () => {
     expect(flattened).not.toContain('app_chat')
 
     store.resetHomeWidgetPages()
-    expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_network')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_network')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_phone')
     expect(store.settings.appearance.homeWidgetPages.flat()).toContain('app_gallery')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_widgets')
   })
 
@@ -277,29 +282,49 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_shopping')
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_food_delivery')
-    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_store')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeLayoutSlotPlacements[1]).toContainEqual({
-      slotId: 'b-small-7',
+      slotId: 'b-small-6',
       tileId: 'app_food_delivery',
     })
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(3)
   })
 
-  test('migrates versioned legacy crowded Home into the cleaned setup layout', () => {
+  test('migrates the previous versioned default Home into the release layout', () => {
     writePersistedState(
       'store:system',
       {
         settings: {
           appearance: {
-            homeDesktopSetupVersion: 1,
+            homeDesktopSetupVersion: 2,
             homeWidgetPages: [
-              ['weather', 'calendar', 'music', 'app_network', 'app_chat', 'app_wallet', 'app_themes', 'app_gallery'],
-              ['system', 'quick_heart', 'quick_disc', 'app_phone', 'app_map'],
-              [],
+              [
+                'weather',
+                'calendar',
+                'music',
+                'app_network',
+                'app_wallet',
+                'app_themes',
+                'app_gallery',
+                'app_camera',
+              ],
+              [
+                'app_phone',
+                'app_map',
+                'app_calendar',
+                'app_reminders',
+                'app_stock',
+                'app_shopping',
+                'app_food_delivery',
+                'app_assets',
+              ],
+              ['system', 'quick_heart', 'quick_disc', 'app_store'],
               [],
               [],
             ],
-            homeLayoutTemplateIds: ['layout-c', 'layout-f', 'layout-b', 'layout-d', 'layout-e'],
+            homeLayoutTemplateIds: ['layout-c', 'layout-b', 'layout-f', 'layout-d', 'layout-e'],
           },
         },
       },
@@ -310,8 +335,11 @@ describe('system widget import safety', () => {
 
     expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_phone')
-    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_store')
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_network')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(3)
   })
 
   test('keeps customized Home slot setup during setup-version hydration', () => {
@@ -345,7 +373,7 @@ describe('system widget import safety', () => {
 
     expect(store.settings.appearance.homeWidgetPages[0]).toEqual(['weather'])
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_phone')
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(3)
     expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
       slotId: 'c-top-left',
       tileId: 'weather',
@@ -375,8 +403,11 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[0]).not.toContain('app_chat')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain(widgetId)
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_widgets')
-    expect(store.settings.appearance.homeWidgetPages[2]).toContain('app_store')
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(2)
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_network')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
+    expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(3)
   })
 
   test('World Hub Home entry is user-managed instead of controlled by legacy toggles', () => {

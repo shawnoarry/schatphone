@@ -1,6 +1,6 @@
 # Home Desktop Layout System
 
-Updated: 2026-05-27
+Updated: 2026-08-07
 
 This document defines the target Home model for SchatPhone.
 
@@ -36,12 +36,24 @@ Current direction:
 User-facing Home consists of:
 
 - left-side Today View;
-- five formal Home pages;
+- up to five editable formal Home pages;
 - persistent Dock.
 
 The Today View is a native-system surface and does not count as a formal layout page.
 It uses one fixed, non-selectable entry template rather than the formal Home page template picker.
 Its slots are `1x1` system-entry slots only: App Store stays reachable there by default, conditionally opened runtime-control entries such as World Hub and future Cheats stay fixed when available, and reserved slots can be filled by later fixed-entry rules.
+
+The current release default shows two formal pages in normal mode. Trailing empty pages remain available in edit mode but do not appear as empty swipe targets or page dots during ordinary use.
+
+| Surface | Default contents | Product meaning |
+| --- | --- | --- |
+| Today View | App Store recovery, conditional World Hub/Cheats, system summary | Fixed system access, not a user-arranged app page |
+| Screen 1 | Weather, Calendar, Music, Wallet, Appearance, Photos, Camera | At-a-glance state plus frequent personal tools |
+| Screen 2 | Phone, Map, Calendar, Reminders, Shopping, Food Delivery | Daily communication, planning, travel, and ordinary-life actions |
+| Dock | Chat, Contacts, Settings, Widgets | Globally reachable communication and device controls |
+| App/Widget libraries | Network, Stock, Assets, System Status, Quick Heart, Quick Disc, and other unplaced entries | Available but not presented as equally release-ready defaults |
+
+Default placement is a release editorial choice, not an availability or entitlement state. Demoted entries remain openable in App Store or recoverable through Home/Widget editing. A setup-version migration may replace only recognized earlier default layouts; customized layouts keep their content and placement while advancing the internal version.
 
 Formal Home pages should be template-based. A page template defines slots such as:
 
@@ -144,6 +156,7 @@ Current first-pass implementation:
 - filled slots can be replaced or cleared from that picker;
 - edit mode also exposes a lightweight content library for currently unplaced apps, folders, built-in widgets, and custom widgets; opening that library does not preselect an item, and selecting an item highlights compatible empty slots for recovery;
 - default Home content is distributed across multiple formal pages so visible entries fit their selected template slots without relying on a normal-mode overflow row;
+- the release default uses two visible formal pages; trailing empty customization pages are hidden in normal mode and reappear in edit mode;
 - persisted Home desktop layouts carry a setup version; unversioned local layouts are treated as legacy setup data and migrate once to the cleaned default so old browser state cannot keep the crowded pre-slot Home arrangement alive;
 - the desktop setup version now also distinguishes old-default layouts from user-managed layouts: recognizable old crowded defaults are migrated to the current setup automatically, while customized layouts keep their placement and only advance the internal setup version;
 - Appearance exposes an explicit `Apply Current Layout` recovery action for users who still see an old Home arrangement after browser storage, cache, or cross-version drift; it restores the current default Home layout, keeps `Widgets` as the Dock customization entry, and does not delete saved custom widget definitions;

@@ -325,9 +325,24 @@ const customWidgetSrcDocMap = computed(() => {
 })
 
 const widgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
-const totalPages = computed(() => Math.max(widgetPages.value.length, 1))
+const visibleHomePageCount = computed(() => {
+  let count = widgetPages.value.length
+  while (count > 1 && (widgetPages.value[count - 1] || []).length === 0) {
+    count -= 1
+  }
+  return Math.max(count, 1)
+})
+const displayedWidgetPages = computed(() =>
+  layoutEditMode.value
+    ? widgetPages.value
+    : widgetPages.value.slice(0, visibleHomePageCount.value),
+)
+const totalPages = computed(() => Math.max(displayedWidgetPages.value.length, 1))
 const homeLayoutTemplateIds = computed(() =>
-  normalizeHomeLayoutTemplateIds(settings.value.appearance.homeLayoutTemplateIds, totalPages.value),
+  normalizeHomeLayoutTemplateIds(
+    settings.value.appearance.homeLayoutTemplateIds,
+    Math.max(widgetPages.value.length, 1),
+  ),
 )
 const homeLayoutSlotPlacements = computed(() =>
   Array.isArray(settings.value.appearance.homeLayoutSlotPlacements)
@@ -391,6 +406,11 @@ const clampPage = (page) => Math.min(totalPages.value - 1, Math.max(LEFT_HOME_PA
 const setPage = (page) => {
   currentPage.value = clampPage(page)
 }
+
+watch(visibleHomePageCount, () => {
+  if (layoutEditMode.value || widgetEditRouteRequested.value) return
+  setPage(currentPage.value)
+})
 
 const syncHomePageFromRoute = () => {
   const homePage = normalizeHomePageQuery(route.query.homePage)
@@ -1589,6 +1609,7 @@ const exitLayoutMode = () => {
   clearTilePressed()
   dragEdgeDirection.value = ''
   layoutEditMode.value = false
+  setPage(currentPage.value)
   templatePickerOpen.value = false
   ignoreAppOpenUntil.value = Date.now() + 220
   systemStore.saveNow()
@@ -1597,6 +1618,8 @@ const exitLayoutMode = () => {
 const consumeWidgetEditRouteRequest = () => {
   if (!widgetEditRouteRequested.value) return
   enterWidgetLayoutMode()
+  const homePage = normalizeHomePageQuery(route.query.homePage)
+  if (homePage) setPage(Number(homePage))
   const requestedLibraryTileId = widgetEditLibraryTileId.value
   const requestedFocusTileId = widgetEditFocusTileId.value
   if (requestedLibraryTileId && availableHomeSlotCandidates.value.includes(requestedLibraryTileId)) {
@@ -1609,7 +1632,6 @@ const consumeWidgetEditRouteRequest = () => {
   } else if (requestedLibraryTileId || requestedFocusTileId) {
     triggerLayoutToast(t('入口已在主屏或暂不可用', 'Entry is already on Home or unavailable'))
   }
-  const homePage = normalizeHomePageQuery(route.query.homePage)
   router.replace(homePage ? { path: '/home', query: { homePage } } : '/home')
 }
 
@@ -2032,7 +2054,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section v-for="(page, pageIndex) in widgetPages" :key="pageIndex" class="home-page">
+      <section v-for="(page, pageIndex) in displayedWidgetPages" :key="pageIndex" class="home-page">
         <div class="home-search-pill" v-if="pageIndex === 1">
           <i class="fas fa-search"></i>
           <span>{{ t('搜索手机', 'Search phone') }}</span>

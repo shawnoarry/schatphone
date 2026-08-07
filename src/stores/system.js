@@ -117,7 +117,31 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
-  ['weather', 'calendar', 'music', 'app_network', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
+  ['weather', 'calendar', 'music', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
+  [
+    'app_phone',
+    'app_map',
+    'app_calendar',
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+  ],
+  [],
+  [],
+  [],
+]
+
+const PREVIOUS_DEFAULT_WIDGET_PAGES = [
+  [
+    'weather',
+    'calendar',
+    'music',
+    'app_network',
+    'app_wallet',
+    'app_themes',
+    'app_gallery',
+    CAMERA_HOME_APP_ID,
+  ],
   [
     'app_phone',
     'app_map',
@@ -128,12 +152,7 @@ const DEFAULT_WIDGET_PAGES = [
     FOOD_DELIVERY_HOME_APP_ID,
     ASSETS_HOME_APP_ID,
   ],
-  [
-    'system',
-    'quick_heart',
-    'quick_disc',
-    APP_STORE_HOME_APP_ID,
-  ],
+  ['system', 'quick_heart', 'quick_disc', APP_STORE_HOME_APP_ID],
   [],
   [],
 ]
@@ -205,7 +224,7 @@ const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
 )
 
 const MIN_HOME_PAGES = 5
-const DEFAULT_HOME_TILE_ORDER_PAGES = DEFAULT_WIDGET_PAGES.map((page) => [...page])
+const DEFAULT_HOME_TILE_ORDER_PAGES = PREVIOUS_DEFAULT_WIDGET_PAGES.map((page) => [...page])
 const DEFAULT_APP_STORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findIndex((page) =>
   page.includes(APP_STORE_HOME_APP_ID),
 )
@@ -338,7 +357,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 2
+const HOME_DESKTOP_SETUP_VERSION = 3
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -1996,6 +2015,7 @@ export const useSystemStore = defineStore('system', () => {
       normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION
     const shouldResetToCleanSetup =
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PREVIOUS_DEFAULT_WIDGET_PAGES) ||
       isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)
 
     if (shouldResetToCleanSetup) {
@@ -2010,7 +2030,13 @@ export const useSystemStore = defineStore('system', () => {
   }
 
   const recommendHomeDesktopRefresh = computed(() => {
-    if (isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)) return true
+    if (
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PREVIOUS_DEFAULT_WIDGET_PAGES) ||
+      isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)
+    ) {
+      return true
+    }
     return normalizeHomeDesktopSetupVersion(settings.appearance.homeDesktopSetupVersion) < HOME_DESKTOP_SETUP_VERSION
   })
 

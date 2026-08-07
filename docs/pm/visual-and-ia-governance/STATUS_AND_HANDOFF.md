@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-07-31
+Updated: 2026-08-07
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -110,6 +110,7 @@ What is already landed:
 94. Vistack is a validated candidate for a semi-automatic asset workbench, not a configured project capability, approved production toolchain, formal asset source, or second roadmap. A later controlled trial may send a prepared asset list to Vistack, download outputs into a temporary intake area, use human selection and quality checks, and wire only accepted files in a separate implementation slice.
 95. Roadmap 4.10's first Camera slice is implemented. Camera is a Home/App Store installed app with a restrained dark capture screen; provider URL/key/model/proxy, defaults, module routing, diagnostics, and tasks live in Camera-owned push-navigation pages. The embedded Gallery reference sheet preserves Camera visual ownership, candidates require explicit Keep before Gallery durability, Download/Keep/Discard remain distinct, and desktop plus simulated Pixel 5 Chromium checks cover route flow, overflow, page errors, and provider privacy. Gallery People curation, automatic person/intent resolution, source-module callers, true-device validation, and hosted-provider smoke remain separate work.
 96. Peach Cloud now has a persistent branded shop bar, an icon-only return-to-originating-Home action, a brand-led Home, a discovery-focused Search page without a visible catch-all category, and a release-timeline New page instead of three similar product grids. Its 17 built-in menu records use semantically matched fresh-fruit, frozen, tea/coffee, bake, and seasonal categories while preserving user-edited same-ID fields; Fresh Fruit now has five products and Seasonal has three without adding automatic date rules. The Food Delivery folder launcher and shop bar use the dedicated peach/cloud mascot mark. Five colorful background-free Peach Cloud IP illustrations replace the mismatched black line icons, while the original generic SVG set remains unchanged for reuse. Search presents the five filters in one compact row with short visible labels and full accessible names instead of a clipped horizontal rail or tall two-row container. New keeps the featured product out of its repeated timeline, prioritizes the remaining seasonal additions, and uses accurate bilingual category labels. The Home `30% OFF` block keeps the approved English campaign copy while showing the complete right-side campaign artwork without cropping. Product details, bag, checkout, and order copy follow the system language with Chinese as default and accurate English retained; approved English advertising copy remains fixed. The delivered 26-file active pack gives Home Hero, promotion, New, and all 17 products separate stable assets. Current D-drive evidence covers desktop and simulated Pixel 5 Chromium with no horizontal overflow or broken required images, plus Bag, checkout, order detail, order-list, and reload persistence. True-device acceptance remains separate.
+97. Default Home release curation is complete. Normal mode now shows two formal pages: glanceable widgets with Wallet/Appearance/Photos/Camera, followed by Phone/Map/Calendar/Reminders/Shopping/Food Delivery. Network, Stock, Assets, System Status, Quick Heart, Quick Disc, and the duplicate formal-page App Store entry remain available through App Store, Widget Center, Today View, or edit mode without appearing equally mature. Trailing empty pages are hidden during ordinary use and return in edit mode. Setup version 3 migrates recognized earlier defaults while preserving customized layouts; focused unit and desktop/mobile Playwright cover migration, page count, route context, and App Store recovery.
 
 ### 2026-07-16 Visual Portfolio Audit
 
@@ -152,12 +153,12 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The first successful Chat activation loop and explicit custom role -> Chat journey are complete. No additional page-local visual slice is active while roadmap 4.9 current-save safety and complete local recovery are the P0 execution lane.
+The first successful Chat activation loop, explicit custom role -> Chat journey, ordinary Shopping consequence, Wallet quote detail, and default Home release curation are complete. No additional page-local visual slice is active while roadmap 4.9 current-save safety and complete local recovery remain the P0 lane and hosted product proof is the next P1 release gate.
 
-1. after the persistence P0 gates, prove one ordinary Food Delivery or Shopping consequence flow before returning to page-local polish;
-2. curate the default Home release surface only through a focused product decision so partial utilities do not appear equally mature;
-3. fold World Pack and Chat true-device coverage into the named release matrix rather than treating another archetype as progress;
-4. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 P0 gates are complete.
+1. preserve the curated Home defaults while proving deployed base-path/PWA/install/relaunch behavior and complete backup recovery;
+2. fold World Pack, Chat, and Home touch/safe-area checks into the named true-device release matrix rather than treating another archetype as progress;
+3. fix only observed release-surface problems; do not refill Home merely because a module exists;
+4. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 gates are complete.
 
 ## 3. Do Not Do
 

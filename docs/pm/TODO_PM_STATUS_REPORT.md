@@ -170,7 +170,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 
 1. `DONE 2026-07-22`: close the first successful Chat activation loop through the existing Network flow with originating thread/draft continuity and desktop plus simulated-mobile first-reply evidence;
 2. make current-save writes fail visibly, prevent unsafe same-container writers, and complete the local export/restore/reopen recovery boundary;
-3. preserve the completed custom role -> Chat path, then prove one ordinary Food Delivery or Shopping consequence through existing Calendar, Wallet, Chat, and relationship continuity;
+3. `DONE 2026-08-07`: preserve the custom role -> Chat path, prove one ordinary Shopping consequence through Calendar, Wallet, Chat, and relationship continuity, add Wallet historical quote detail, and curate the default Home release surface without disabling demoted apps;
 4. finish with remote CI/Pages, deployed PWA/install/relaunch, hosted-provider, backup round-trip, and named true-device evidence.
 
 This is the only current product-completion sequence. It does not require a broad onboarding wizard, mandatory built-in content, another World Pack archetype, Mini Scene runtime, or a general visual rebuild.
@@ -253,7 +253,7 @@ CJA-0 documentation is complete. CJA-1 Calendar information architecture and eve
 ## 7. PM Decisions Still Needed
 
 1. production intent for the push relay versus a real authenticated backend;
-2. the exact first-release device matrix and which immature Home entries should be demoted from the default shipping surface;
+2. the exact first-release device matrix and acceptance owners for named physical-device evidence;
 3. next World Pack archetype after marketplace, dispatch, reservation, and transit;
 4. whether closed-page autonomy is worth its identity/privacy/server complexity;
 5. when Cheats should become a real product surface, if ever.
