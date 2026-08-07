@@ -74,7 +74,10 @@ describe('WalletView', () => {
       targetLabel: 'Jackie',
       status: 'applied',
     })
-    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 2, name: 'Jackie' }).metrics.trust).toBe(54)
+    expect(
+      relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 2, name: 'Jackie' }).metrics
+        .trust,
+    ).toBe(54)
 
     wrapper.unmount()
   })
@@ -92,9 +95,7 @@ describe('WalletView', () => {
     await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
     await wrapper.get('[data-testid="wallet-open-transfer"]').trigger('click')
     await wrapper.get('[data-testid="wallet-transfer-incoming"]').trigger('click')
-    await wrapper
-      .get('[data-testid="wallet-transfer-account"]')
-      .setValue('wallet_account_bnp_eur')
+    await wrapper.get('[data-testid="wallet-transfer-account"]').setValue('wallet_account_bnp_eur')
     await flushUi()
 
     await wrapper.get('[data-testid="wallet-transfer-amount"]').setValue('12.00')
@@ -133,10 +134,179 @@ describe('WalletView', () => {
     await wrapper.get('[data-testid="wallet-save-cny-rate-CRD"]').trigger('click')
     await flushUi()
 
-    expect(walletStore.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe('0.2500')
+    expect(walletStore.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe(
+      '0.2500',
+    )
     expect(wrapper.get('[data-testid="wallet-rate-row-CRD"]').text()).toContain('CRD')
 
     wrapper.unmount()
+  })
+
+  test('opens a saved quote detail that remains stable across rate changes and direct reopen', async () => {
+    const walletStore = useWalletStore()
+    const quoteSnapshot = {
+      sourceMoney: { amountMinor: 8800, currency: 'CNY' },
+      quotedMoney: { amountMinor: 1222, currency: 'USD' },
+      targetCurrency: 'USD',
+      rateSetId: 'wallet-rates-test-20260516',
+      rate: '0.1389',
+      rateSource: 'bundled_average',
+      quotedAt: new Date('2026-05-16T11:30:00.000Z').getTime(),
+    }
+    const transaction = walletStore.addTransaction({
+      type: 'expense',
+      title: 'Shopping order',
+      counterparty: 'Schat Mall',
+      amount: '12.22',
+      currency: 'USD',
+      accountId: 'wallet_account_chase_usd',
+      cardId: 'wallet_card_chase_usd',
+      sourceModule: 'shopping_wallet_expense',
+      sourceId: 'shopping_order_quote_20260516',
+      quoteSnapshot,
+      createdAt: new Date('2026-05-17T07:30:00.000Z').getTime(),
+    })
+    const { wrapper, router } = await mountWalletView('/wallet?from=home&homePage=2')
+
+    await wrapper.get('[data-testid="wallet-open-activity"]').trigger('click')
+    await wrapper
+      .get(`[data-testid="wallet-open-transaction-detail-${transaction.id}"]`)
+      .trigger('click')
+    await flushUi()
+
+    const detail = wrapper.get('[data-testid="wallet-transaction-detail"]')
+    expect(detail.text()).toContain('Shopping order')
+    expect(detail.text()).toContain('Schat Mall')
+    expect(detail.text()).toContain('Shopping')
+    expect(detail.text()).toContain('shopping_order_quote_20260516')
+    expect(detail.text()).toMatch(/摩根大通银行|JPMorgan Chase/)
+    expect(detail.text()).toContain('美元借记卡')
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-source-money"]').text()).toBe(
+      '88.00 CNY',
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-quoted-money"]').text()).toBe(
+      '12.22 USD',
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-rate"]').text()).toBe(
+      '1 CNY = 0.1389 USD',
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-rate-set"]').text()).toBe(
+      quoteSnapshot.rateSetId,
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-rate-source"]').text()).toContain(
+      quoteSnapshot.rateSource,
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-quoted-at"]').text()).toContain(
+      '2026',
+    )
+    expect(router.currentRoute.value.query).toMatchObject({
+      transactionId: transaction.id,
+      from: 'home',
+      homePage: '2',
+    })
+
+    const recordedDetail = {
+      source: wrapper.get('[data-testid="wallet-transaction-detail-source-money"]').text(),
+      quoted: wrapper.get('[data-testid="wallet-transaction-detail-quoted-money"]').text(),
+      rate: wrapper.get('[data-testid="wallet-transaction-detail-rate"]').text(),
+      rateSet: wrapper.get('[data-testid="wallet-transaction-detail-rate-set"]').text(),
+    }
+    walletStore.setPrimaryCurrency('EUR')
+    walletStore.setUsdCnyRate('8.25')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-source-money"]').text()).toBe(
+      recordedDetail.source,
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-quoted-money"]').text()).toBe(
+      recordedDetail.quoted,
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-rate"]').text()).toBe(
+      recordedDetail.rate,
+    )
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-rate-set"]').text()).toBe(
+      recordedDetail.rateSet,
+    )
+
+    const directRoute = router.currentRoute.value.fullPath
+    wrapper.unmount()
+    const remounted = await mountWalletView(directRoute)
+    expect(remounted.wrapper.get('[data-testid="wallet-transaction-detail"]').text()).toContain(
+      'Shopping order',
+    )
+    await remounted.wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    await flushUi()
+    expect(remounted.router.currentRoute.value.query.transactionId).toBeUndefined()
+    expect(remounted.router.currentRoute.value.query).toMatchObject({ from: 'home', homePage: '2' })
+    expect(
+      remounted.wrapper
+        .get(`[data-testid="wallet-open-transaction-detail-${transaction.id}"]`)
+        .exists(),
+    ).toBe(true)
+    remounted.wrapper.unmount()
+  })
+
+  test('shows legacy, deleted, missing, and unknown-currency transaction states honestly', async () => {
+    const walletStore = useWalletStore()
+    const legacyTransaction = walletStore.addTransaction({
+      type: 'income',
+      title: 'Legacy allowance',
+      amount: '5.00',
+      currency: 'CNY',
+      sourceModule: 'wallet_manual',
+      quoteSnapshot: {
+        sourceMoney: { amountMinor: 500, currency: 'CNY' },
+      },
+    })
+    const { wrapper, router } = await mountWalletView(
+      `/wallet?transactionId=${legacyTransaction.id}&from=home&homePage=1`,
+    )
+
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-legacy"]').text()).toContain(
+      '旧版记录，无报价快照',
+    )
+
+    walletStore.removeTransaction(legacyTransaction.id)
+    await flushUi()
+    expect(wrapper.get('[data-testid="wallet-transaction-detail-unavailable"]').text()).toContain(
+      '找不到这笔交易',
+    )
+    await wrapper.get('[data-testid="wallet-transaction-detail-return-activity"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value.query.transactionId).toBeUndefined()
+    expect(router.currentRoute.value.query).toMatchObject({ from: 'home', homePage: '1' })
+    wrapper.unmount()
+
+    const missing = await mountWalletView('/wallet?transactionId=missing-transaction')
+    expect(
+      missing.wrapper.get('[data-testid="wallet-transaction-detail-unavailable"]').exists(),
+    ).toBe(true)
+    missing.wrapper.unmount()
+
+    const unknownCurrencyTransaction = walletStore.addTransaction({
+      type: 'expense',
+      title: 'World market order',
+      amount: '1.00',
+      currency: 'USD',
+      sourceModule: 'shopping_wallet_expense',
+      sourceId: 'world_market_order_1',
+      quoteSnapshot: {
+        sourceMoney: { amountMinor: 12345, currency: 'ZZZ' },
+        quotedMoney: { amountMinor: 100, currency: 'USD' },
+        targetCurrency: 'USD',
+        rateSetId: 'world-rate-1',
+        rate: '0.000081004455245',
+        rateSource: 'world_pack',
+        quotedAt: new Date('2026-05-16T10:00:00.000Z').getTime(),
+      },
+    })
+    const unknownCurrency = await mountWalletView(
+      `/wallet?transactionId=${unknownCurrencyTransaction.id}`,
+    )
+    expect(
+      unknownCurrency.wrapper.get('[data-testid="wallet-transaction-detail-source-money"]').text(),
+    ).toContain('12345 ZZZ · 最小单位')
+    unknownCurrency.wrapper.unmount()
   })
 
   test('removes a transaction and clears its relationship fact from the module list', async () => {
@@ -154,12 +324,16 @@ describe('WalletView', () => {
     const transaction = walletStore.listTransactionsBySourceFilter('all')[0]
     expect(relationshipRuntimeStore.events).toHaveLength(1)
 
-    await wrapper.get(`[data-testid="wallet-remove-transaction-${transaction.id}"]`).trigger('click')
+    await wrapper
+      .get(`[data-testid="wallet-remove-transaction-${transaction.id}"]`)
+      .trigger('click')
     await flushUi()
 
     expect(walletStore.findTransactionById(transaction.id)).toBeNull()
     expect(relationshipRuntimeStore.events).toHaveLength(0)
-    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 2, name: 'Jackie' }).exists).toBe(false)
+    expect(
+      relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 2, name: 'Jackie' }).exists,
+    ).toBe(false)
 
     wrapper.unmount()
   })
@@ -169,10 +343,12 @@ describe('WalletView', () => {
     const { wrapper } = await mountWalletView()
 
     expect(wrapper.findAll('[data-testid^="wallet-payment-card-"]')).toHaveLength(7)
-    expect(wrapper.get('[data-testid="wallet-payment-card-wallet_card_hana_global_credit"]').text()).toContain(
-      'Global One',
-    )
-    expect(walletStore.findPaymentCardById('wallet_card_hana_global_credit')?.supportedCurrencies).toHaveLength(6)
+    expect(
+      wrapper.get('[data-testid="wallet-payment-card-wallet_card_hana_global_credit"]').text(),
+    ).toContain('Global One')
+    expect(
+      walletStore.findPaymentCardById('wallet_card_hana_global_credit')?.supportedCurrencies,
+    ).toHaveLength(6)
 
     wrapper.unmount()
   })
@@ -253,9 +429,8 @@ describe('WalletView', () => {
     })
     expect(transfer.receiptNumber).toMatch(/^SP20260517\d{6}$/)
     expect(
-      walletStore.bankAccountSummaries.find(
-        (account) => account.id === 'wallet_account_icbc_cny',
-      )?.primaryBalance,
+      walletStore.bankAccountSummaries.find((account) => account.id === 'wallet_account_icbc_cny')
+        ?.primaryBalance,
     ).toMatchObject({ amountCents: 7450, amount: '74.50' })
     expect(relationshipRuntimeStore.events).toHaveLength(1)
     expect(relationshipRuntimeStore.events[0]).toMatchObject({

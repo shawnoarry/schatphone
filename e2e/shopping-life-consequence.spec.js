@@ -30,9 +30,19 @@ const pollPersistedData = async (page, storageKey, resolveValue) => {
   return resolved
 }
 
+const expectNoHorizontalOverflow = async (page) => {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ),
+    )
+    .toBe(true)
+}
+
 test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship memory', async ({
   page,
-}) => {
+}, testInfo) => {
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
@@ -70,10 +80,8 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   )
   await page.getByTestId('chat-directory-save-service').click()
 
-  const shoppingServiceContact = await pollPersistedData(
-    page,
-    STORAGE_KEYS.chat,
-    (snapshot) => snapshot?.contacts?.find((contact) => contact.shoppingServiceKey === 'schat_mall'),
+  const shoppingServiceContact = await pollPersistedData(page, STORAGE_KEYS.chat, (snapshot) =>
+    snapshot?.contacts?.find((contact) => contact.shoppingServiceKey === 'schat_mall'),
   )
 
   await navigateInsideUnlockedApp(page, '/shopping?category=mall')
@@ -88,10 +96,8 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   const orderId = (await orderCard.getAttribute('data-testid')).replace('shopping-order-', '')
   expect(orderId).toBeTruthy()
 
-  const shoppingOrder = await pollPersistedData(
-    page,
-    STORAGE_KEYS.shopping,
-    (snapshot) => snapshot?.orders?.find((order) => order.id === orderId),
+  const shoppingOrder = await pollPersistedData(page, STORAGE_KEYS.shopping, (snapshot) =>
+    snapshot?.orders?.find((order) => order.id === orderId),
   )
   expect(shoppingOrder).toMatchObject({
     id: orderId,
@@ -113,10 +119,8 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
     page.getByTestId(`chat-service-notification-shopping_order_update-${orderId}`),
   ).toContainText('Order placed')
 
-  const shoppingCue = await pollPersistedData(
-    page,
-    STORAGE_KEYS.reminders,
-    (snapshot) => snapshot?.shoppingDeliveryCues?.find((cue) => cue.orderId === orderId),
+  const shoppingCue = await pollPersistedData(page, STORAGE_KEYS.reminders, (snapshot) =>
+    snapshot?.shoppingDeliveryCues?.find((cue) => cue.orderId === orderId),
   )
   await navigateInsideUnlockedApp(page, '/reminders')
   const reminderCard = page.getByTestId(`reminder-card-shopping:${shoppingCue.id}`)
@@ -124,10 +128,8 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   await reminderCard.getByRole('button', { name: 'Confirm to Calendar' }).click()
   await expect(reminderCard).toContainText('In Calendar')
 
-  const calendarEvent = await pollPersistedData(
-    page,
-    STORAGE_KEYS.calendar,
-    (snapshot) => snapshot?.events?.find((event) => event.sourceReminderId === shoppingCue.id),
+  const calendarEvent = await pollPersistedData(page, STORAGE_KEYS.calendar, (snapshot) =>
+    snapshot?.events?.find((event) => event.sourceReminderId === shoppingCue.id),
   )
   expect(calendarEvent).toMatchObject({
     source: 'shopping_calendar_delivery',
@@ -148,15 +150,11 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   await walletRecordButton.click()
   await expect(walletRecordButton).toBeDisabled()
 
-  const walletTransaction = await pollPersistedData(
-    page,
-    STORAGE_KEYS.wallet,
-    (snapshot) =>
-      snapshot?.transactions?.find(
-        (transaction) =>
-          transaction.sourceModule === 'shopping_wallet_expense' &&
-          transaction.sourceId === orderId,
-      ),
+  const walletTransaction = await pollPersistedData(page, STORAGE_KEYS.wallet, (snapshot) =>
+    snapshot?.transactions?.find(
+      (transaction) =>
+        transaction.sourceModule === 'shopping_wallet_expense' && transaction.sourceId === orderId,
+    ),
   )
   expect(walletTransaction).toMatchObject({
     type: 'expense',
@@ -173,7 +171,8 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
     page,
     STORAGE_KEYS.relationship,
     (snapshot) => {
-      const events = snapshot?.events?.filter((event) => event.memoryKey === relationshipMemoryKey) || []
+      const events =
+        snapshot?.events?.filter((event) => event.memoryKey === relationshipMemoryKey) || []
       return events.length === 2 ? events : null
     },
   )
@@ -190,14 +189,52 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   await page.getByTestId('wallet-nav-activity').click()
   await expect(page.getByText('Shopping order').first()).toBeVisible()
 
+  await page.getByTestId(`wallet-open-transaction-detail-${walletTransaction.id}`).click()
+  await expect(page.getByTestId('wallet-transaction-detail')).toContainText('Shopping order')
+  await expect(page.getByTestId('wallet-transaction-detail')).toContainText(orderId)
+  await expect(page.getByTestId('wallet-transaction-detail-source-money')).toHaveText('88.00 CNY')
+  await expect(page.getByTestId('wallet-transaction-detail-quoted-money')).toHaveText('12.22 USD')
+  await expect(page.getByTestId('wallet-transaction-detail-rate')).toHaveText(
+    `1 CNY = ${walletTransaction.quoteSnapshot.rate} USD`,
+  )
+  await expect(page.getByTestId('wallet-transaction-detail-rate-set')).toHaveText(
+    walletTransaction.quoteSnapshot.rateSetId,
+  )
+  await expect(page.getByTestId('wallet-transaction-detail-rate-source')).toContainText(
+    walletTransaction.quoteSnapshot.rateSource,
+  )
+  await expect(page.getByTestId('wallet-transaction-detail-quoted-at')).not.toHaveText('')
+  await expect(page).toHaveURL(new RegExp(`transactionId=${walletTransaction.id}`))
+  await expectNoHorizontalOverflow(page)
+
+  await testInfo.attach(`wallet-transaction-detail-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+
+  await page.getByTestId('wallet-transaction-detail-rate-set').scrollIntoViewIfNeeded()
+  await testInfo.attach(`wallet-transaction-quote-${testInfo.project.name}`, {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  })
+
+  await navigateInsideUnlockedApp(page, `/wallet?transactionId=${walletTransaction.id}`)
+  await expect(page.getByTestId('wallet-transaction-detail')).toContainText('Shopping order')
+  await expect(page.getByTestId('wallet-transaction-detail-rate-set')).toHaveText(
+    walletTransaction.quoteSnapshot.rateSetId,
+  )
+  await page.getByTestId('wallet-header-back').click()
+  await expect(page).not.toHaveURL(/transactionId=/)
+  await expect(
+    page.getByTestId(`wallet-open-transaction-detail-${walletTransaction.id}`),
+  ).toBeVisible()
+
   await navigateInsideUnlockedApp(page, '/contacts')
   const memoryRow = page.getByTestId(`contacts-memory-open-${relationshipMemoryKey}`)
   await expect(memoryRow).toContainText('Gift purchased for Eva')
   await expect(memoryRow).toContainText('2 item(s)')
   await memoryRow.click()
-  await expect(
-    page.getByTestId('contacts-memory-source-relationship_shopping_gift'),
-  ).toBeVisible()
+  await expect(page.getByTestId('contacts-memory-source-relationship_shopping_gift')).toBeVisible()
   await expect(
     page.getByTestId('contacts-memory-source-relationship_wallet_order_support'),
   ).toBeVisible()

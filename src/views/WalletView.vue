@@ -47,6 +47,7 @@ const WALLET_WORKFLOW_QUERY_KEYS = new Set([
   'currency',
   'note',
   'receiptId',
+  'transactionId',
   'source',
 ])
 
@@ -72,6 +73,7 @@ const feedback = ref('')
 const feedbackType = ref('success')
 const cardCarouselRef = ref(null)
 const selectedReceiptId = ref('')
+const selectedTransactionId = ref('')
 const payeeTransferSubmitting = ref(false)
 let cardSelectionFrame = 0
 
@@ -105,12 +107,14 @@ const sectionTitle = computed(() => {
   if (activeSection.value === 'card-detail') return t('卡片详情', 'Card details')
   if (activeSection.value === 'payee-transfer') return t('确认转账', 'Confirm transfer')
   if (activeSection.value === 'receipt') return t('转账回执', 'Transfer receipt')
+  if (activeSection.value === 'transaction-detail') return t('交易详情', 'Transaction details')
   return t('钱包', 'Wallet')
 })
 
 const headerBackText = computed(() => {
   if (activeSection.value === 'home') return t('首页', 'Home')
   if (activeSection.value === 'payee-transfer' && workflowChatId.value) return 'Chat'
+  if (activeSection.value === 'transaction-detail') return t('活动', 'Activity')
   return t('钱包', 'Wallet')
 })
 
@@ -119,6 +123,9 @@ const headerBackAriaLabel = computed(() => {
   if (activeSection.value === 'payee-transfer' && workflowChatId.value) {
     return t('返回聊天', 'Return to Chat')
   }
+  if (activeSection.value === 'transaction-detail') {
+    return t('返回钱包活动', 'Return to Wallet activity')
+  }
   return t('返回钱包', 'Return to Wallet')
 })
 
@@ -126,26 +133,30 @@ const showBottomNavigation = computed(() =>
   ['home', 'activity', 'cards'].includes(activeSection.value),
 )
 
-const selectedDetailCard = computed(() =>
-  paymentCardSummaries.value.find((card) => card.id === detailCardId.value) ||
-  activePaymentCard.value ||
-  null,
+const selectedDetailCard = computed(
+  () =>
+    paymentCardSummaries.value.find((card) => card.id === detailCardId.value) ||
+    activePaymentCard.value ||
+    null,
 )
 
-const selectedTransferAccount = computed(() =>
-  bankAccountSummaries.value.find((account) => account.id === transferDraft.value.accountId) ||
-  null,
+const selectedTransferAccount = computed(
+  () =>
+    bankAccountSummaries.value.find((account) => account.id === transferDraft.value.accountId) ||
+    null,
 )
 
-const transferAccountCard = computed(() =>
-  paymentCardSummaries.value.find(
-    (card) => card.kind === 'debit' && card.accountId === selectedTransferAccount.value?.id,
-  ) || null,
+const transferAccountCard = computed(
+  () =>
+    paymentCardSummaries.value.find(
+      (card) => card.kind === 'debit' && card.accountId === selectedTransferAccount.value?.id,
+    ) || null,
 )
 
-const selectedReceiveAccount = computed(() =>
-  bankAccountSummaries.value.find((account) => account.id === receiveAccountId.value) ||
-  firstFundedAccount(),
+const selectedReceiveAccount = computed(
+  () =>
+    bankAccountSummaries.value.find((account) => account.id === receiveAccountId.value) ||
+    firstFundedAccount(),
 )
 
 const selectedPayeeAccount = computed(() => {
@@ -170,19 +181,22 @@ const payeeTransferAccounts = computed(() => {
   return bankAccountSummaries.value.filter((account) => account.currencies.includes(currency))
 })
 
-const selectedPayeeTransferAccount = computed(() =>
-  payeeTransferAccounts.value.find((account) => account.id === payeeTransferDraft.value.accountId) ||
-  null,
+const selectedPayeeTransferAccount = computed(
+  () =>
+    payeeTransferAccounts.value.find(
+      (account) => account.id === payeeTransferDraft.value.accountId,
+    ) || null,
 )
 
-const selectedPayeeTransferCard = computed(() =>
-  paymentCardSummaries.value.find(
-    (card) =>
-      card.kind === 'debit' &&
-      card.status === 'active' &&
-      card.accountId === selectedPayeeTransferAccount.value?.id &&
-      card.supportedCurrencies.includes(selectedPayeeAccount.value?.currency),
-  ) || null,
+const selectedPayeeTransferCard = computed(
+  () =>
+    paymentCardSummaries.value.find(
+      (card) =>
+        card.kind === 'debit' &&
+        card.status === 'active' &&
+        card.accountId === selectedPayeeTransferAccount.value?.id &&
+        card.supportedCurrencies.includes(selectedPayeeAccount.value?.currency),
+    ) || null,
 )
 
 const selectedReceipt = computed(() => {
@@ -192,16 +206,40 @@ const selectedReceipt = computed(() => {
     : null
 })
 
+const selectedTransaction = computed(() =>
+  walletStore.findTransactionById(selectedTransactionId.value),
+)
+
+const selectedTransactionAccount = computed(() => {
+  const transaction = selectedTransaction.value
+  if (!transaction) return null
+  const explicitAccount = bankAccountSummaries.value.find(
+    (account) => account.id === transaction.accountId,
+  )
+  if (explicitAccount) return explicitAccount
+  const fallbackAccount = walletStore.findDefaultBankAccountForCurrency(transaction.currency)
+  return bankAccountSummaries.value.find((account) => account.id === fallbackAccount?.id) || null
+})
+
+const selectedTransactionCard = computed(() => {
+  const cardId = selectedTransaction.value?.cardId
+  if (!cardId) return null
+  return paymentCardSummaries.value.find((card) => card.id === cardId) || null
+})
+
 const receiptInstitution = computed(() =>
   findWalletBankInstitution(selectedReceipt.value?.recipientInstitutionId),
 )
 
-const receiptPaymentAccount = computed(() =>
-  bankAccountSummaries.value.find((account) => account.id === selectedReceipt.value?.accountId) || null,
+const receiptPaymentAccount = computed(
+  () =>
+    bankAccountSummaries.value.find((account) => account.id === selectedReceipt.value?.accountId) ||
+    null,
 )
 
-const receiptPaymentCard = computed(() =>
-  paymentCardSummaries.value.find((card) => card.id === selectedReceipt.value?.cardId) || null,
+const receiptPaymentCard = computed(
+  () =>
+    paymentCardSummaries.value.find((card) => card.id === selectedReceipt.value?.cardId) || null,
 )
 
 const workflowChatId = computed(
@@ -224,10 +262,11 @@ const canSubmitPayeeTransfer = computed(
     payeeTransferAmountIsValid.value,
 )
 
-const receiveCard = computed(() =>
-  paymentCardSummaries.value.find(
-    (card) => card.kind === 'debit' && card.accountId === selectedReceiveAccount.value?.id,
-  ) || null,
+const receiveCard = computed(
+  () =>
+    paymentCardSummaries.value.find(
+      (card) => card.kind === 'debit' && card.accountId === selectedReceiveAccount.value?.id,
+    ) || null,
 )
 
 const sourceFilterOptions = computed(() => [
@@ -277,10 +316,11 @@ const relationshipContactOptions = computed(() =>
     })),
 )
 
-const selectedRelationshipContact = computed(() =>
-  relationshipContactOptions.value.find(
-    (contact) => contact.optionValue === String(transferDraft.value.contactId || ''),
-  ) || null,
+const selectedRelationshipContact = computed(
+  () =>
+    relationshipContactOptions.value.find(
+      (contact) => contact.optionValue === String(transferDraft.value.contactId || ''),
+    ) || null,
 )
 
 watch(
@@ -298,10 +338,16 @@ const showFeedback = (type, message) => {
 
 const payeeTransferErrorMessage = (reason = '') => {
   if (reason === 'payee_not_found') {
-    return t('收款账户已失效，请返回 Chat 重新请求账户卡。', 'This receiving account is no longer available. Request a new account card in Chat.')
+    return t(
+      '收款账户已失效，请返回 Chat 重新请求账户卡。',
+      'This receiving account is no longer available. Request a new account card in Chat.',
+    )
   }
   if (reason === 'currency_mismatch') {
-    return t('账户卡币种信息不一致，请返回 Chat 重新请求。', 'The account-card currency no longer matches. Request a new card in Chat.')
+    return t(
+      '账户卡币种信息不一致，请返回 Chat 重新请求。',
+      'The account-card currency no longer matches. Request a new card in Chat.',
+    )
   }
   if (reason === 'insufficient_funds') {
     return t('该币种账户余额不足。', 'Insufficient balance in this currency account.')
@@ -310,9 +356,15 @@ const payeeTransferErrorMessage = (reason = '') => {
     return t('该付款账户没有可用的借记卡。', 'This payment account has no available debit card.')
   }
   if (reason === 'amount_invalid') {
-    return t('请输入有效金额，最多保留两位小数。', 'Enter a valid amount with up to two decimal places.')
+    return t(
+      '请输入有效金额，最多保留两位小数。',
+      'Enter a valid amount with up to two decimal places.',
+    )
   }
-  return t('暂时无法完成转账，请稍后重试。', 'The transfer could not be completed. Try again later.')
+  return t(
+    '暂时无法完成转账，请稍后重试。',
+    'The transfer could not be completed. Try again later.',
+  )
 }
 
 const accountBalanceForCurrency = (account, currency = '') =>
@@ -342,9 +394,19 @@ const replaceWalletWorkflowQuery = (workflowQuery = {}) => {
 
 const closeWalletWorkflow = (section = 'home') => {
   selectedReceiptId.value = ''
+  selectedTransactionId.value = ''
   payeeTransferSubmitting.value = false
   activeSection.value = section
   replaceWalletWorkflowQuery()
+}
+
+const closeTransactionDetail = () => {
+  selectedTransactionId.value = ''
+  activeSection.value = 'activity'
+  const nextQuery = Object.fromEntries(
+    Object.entries(route.query).filter(([key]) => key !== 'transactionId'),
+  )
+  void router.replace({ path: '/wallet', query: nextQuery })
 }
 
 const returnToSourceChat = () => {
@@ -362,6 +424,15 @@ const goHome = () => {
 
 const navigateToSection = (section) => {
   clearFeedback()
+  if (activeSection.value === 'transaction-detail') {
+    selectedTransactionId.value = ''
+    activeSection.value = section
+    const nextQuery = Object.fromEntries(
+      Object.entries(route.query).filter(([key]) => key !== 'transactionId'),
+    )
+    void router.replace({ path: '/wallet', query: nextQuery })
+    return
+  }
   const leavingWorkflow = ['payee-transfer', 'receipt'].includes(activeSection.value)
   activeSection.value = section
   if (leavingWorkflow) replaceWalletWorkflowQuery()
@@ -375,6 +446,10 @@ const navigateBack = () => {
   }
   if (activeSection.value === 'receipt') {
     closeWalletWorkflow('activity')
+    return
+  }
+  if (activeSection.value === 'transaction-detail') {
+    closeTransactionDetail()
     return
   }
   if (activeSection.value === 'home') {
@@ -392,8 +467,18 @@ const syncWalletWorkflowFromRoute = () => {
   const receiptId = queryText(route.query.receiptId)
   if (receiptId) {
     clearFeedback()
+    selectedTransactionId.value = ''
     selectedReceiptId.value = receiptId
     activeSection.value = 'receipt'
+    return
+  }
+
+  const transactionId = queryText(route.query.transactionId)
+  if (transactionId) {
+    clearFeedback()
+    selectedReceiptId.value = ''
+    selectedTransactionId.value = transactionId
+    activeSection.value = 'transaction-detail'
     return
   }
 
@@ -403,11 +488,10 @@ const syncWalletWorkflowFromRoute = () => {
 
   clearFeedback()
   selectedReceiptId.value = ''
+  selectedTransactionId.value = ''
   activeSection.value = 'payee-transfer'
   const requestedAmount = queryText(route.query.amount)
-  payeeTransferDraft.value.amount = /^\d+(\.\d{1,2})?$/.test(requestedAmount)
-    ? requestedAmount
-    : ''
+  payeeTransferDraft.value.amount = /^\d+(\.\d{1,2})?$/.test(requestedAmount) ? requestedAmount : ''
   payeeTransferDraft.value.note = queryText(route.query.note).slice(0, 240)
 
   const accounts = payeeTransferAccounts.value
@@ -508,6 +592,18 @@ const formatTime = (timestamp) => {
   })
 }
 
+const formatDetailTime = (timestamp) => {
+  const value = Number(timestamp)
+  if (!Number.isFinite(value) || value <= 0) return t('未知时间', 'Unknown time')
+  return new Date(value).toLocaleString(systemLanguage.value, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 const isRolePayeeTransfer = (transaction) => transaction?.sourceModule === 'wallet_payee_transfer'
 
 const isChatSource = (transaction) =>
@@ -527,6 +623,53 @@ const getTransactionSourceLabel = (transaction) =>
         : transaction?.direction === 'outgoing'
           ? t('转账', 'Transfer')
           : t('钱包记录', 'Wallet record')
+
+const getTransactionModuleLabel = (transaction) => {
+  if (transaction?.sourceModule === 'shopping_wallet_expense') return 'Shopping'
+  if (transaction?.sourceModule === 'food_delivery_wallet_expense') return 'Food Delivery'
+  if (isChatSource(transaction)) return 'Chat'
+  if (transaction?.sourceModule === 'seed') return 'SchatPhone'
+  if (transaction?.sourceModule === 'wallet_manual' || transaction?.sourceModule === 'wallet') {
+    return t('钱包', 'Wallet')
+  }
+  return transaction?.sourceModule || t('钱包', 'Wallet')
+}
+
+const getTransactionDirectionLabel = (transaction) => {
+  if (transaction?.direction === 'incoming') return t('转入', 'Incoming')
+  if (transaction?.direction === 'outgoing') return t('转出', 'Outgoing')
+  if (transaction?.type === 'expense') return t('支出', 'Expense')
+  if (transaction?.type === 'income') return t('收入', 'Income')
+  return t('转账', 'Transfer')
+}
+
+const formatHistoricalMoney = (money) => {
+  const definition = currencyOptions.value.find((currency) => currency.code === money?.currency)
+  const formatted =
+    definition && definition.source !== 'ledger'
+      ? walletStore.formatMoney(money, {
+          locale: systemLanguage.value,
+          currencyPosition: 'suffix',
+        })
+      : ''
+  if (formatted) return formatted
+  const amountMinor = Number.isSafeInteger(money?.amountMinor) ? money.amountMinor : 0
+  const currency = queryText(money?.currency).toUpperCase() || t('未知币种', 'Unknown currency')
+  return `${amountMinor} ${currency} · ${t('最小单位', 'minor units')}`
+}
+
+const formatRecordedRate = (quoteSnapshot) => {
+  if (!quoteSnapshot) return ''
+  return `1 ${quoteSnapshot.sourceMoney.currency} = ${quoteSnapshot.rate} ${quoteSnapshot.quotedMoney.currency}`
+}
+
+const getRateSourceLabel = (rateSource = '') => {
+  if (rateSource === 'bundled_average') return t('内置参考平均值', 'Bundled reference average')
+  if (rateSource === 'user_edit') return t('用户设置', 'User setting')
+  if (rateSource === 'world_pack') return t('世界货币设置', 'World currency setting')
+  if (rateSource === 'live_provider') return t('实时汇率服务', 'Live rate provider')
+  return rateSource || t('未知来源', 'Unknown source')
+}
 
 const transactionAmountLabel = (transaction) => {
   const sign = transaction.type === 'expense' ? '-' : '+'
@@ -555,6 +698,12 @@ const openReceive = () => {
   const activeAccount = activePaymentCard.value?.account
   receiveAccountId.value = activeAccount?.id || firstFundedAccount()?.id || ''
   navigateToSection('receive')
+}
+
+const useReceiveCard = () => {
+  if (!receiveCard.value) return
+  selectCard(receiveCard.value.id)
+  activeSection.value = 'home'
 }
 
 const submitTransfer = () => {
@@ -613,7 +762,9 @@ const submitTransfer = () => {
   activeSection.value = 'activity'
   showFeedback(
     'success',
-    created.direction === 'incoming' ? t('收款已记入账户。', 'Payment received.') : t('转账已完成。', 'Transfer complete.'),
+    created.direction === 'incoming'
+      ? t('收款已记入账户。', 'Payment received.')
+      : t('转账已完成。', 'Transfer complete.'),
   )
 }
 
@@ -672,6 +823,7 @@ const submitPayeeTransfer = () => {
   payeeTransferSubmitting.value = false
   clearFeedback()
   selectedReceiptId.value = result.transaction.id
+  selectedTransactionId.value = ''
   activeSection.value = 'receipt'
   replaceWalletWorkflowQuery({
     receiptId: result.transaction.id,
@@ -683,6 +835,7 @@ const submitPayeeTransfer = () => {
 const openTransferReceipt = (transaction) => {
   if (!isRolePayeeTransfer(transaction) || !transaction?.receiptNumber) return
   clearFeedback()
+  selectedTransactionId.value = ''
   selectedReceiptId.value = transaction.id
   activeSection.value = 'receipt'
   replaceWalletWorkflowQuery({
@@ -690,6 +843,15 @@ const openTransferReceipt = (transaction) => {
     source: 'activity',
     chatId: transaction.sourceChatId,
   })
+}
+
+const openTransactionDetail = (transaction) => {
+  if (!transaction?.id) return
+  clearFeedback()
+  selectedReceiptId.value = ''
+  selectedTransactionId.value = transaction.id
+  activeSection.value = 'transaction-detail'
+  replaceWalletWorkflowQuery({ transactionId: transaction.id })
 }
 
 const removeTransaction = (transactionId) => {
@@ -762,7 +924,9 @@ const toggleCardFrozen = () => {
   if (!updated) return
   showFeedback(
     'success',
-    updated.status === 'frozen' ? t('卡片已冻结。', 'Card frozen.') : t('卡片已解冻。', 'Card unfrozen.'),
+    updated.status === 'frozen'
+      ? t('卡片已冻结。', 'Card frozen.')
+      : t('卡片已解冻。', 'Card unfrozen.'),
   )
 }
 
@@ -831,7 +995,11 @@ onBeforeUnmount(() => {
             <div>
               <p class="wallet-eyebrow">{{ t('常用卡', 'Everyday cards') }}</p>
               <h2 id="wallet-cards-heading">
-                {{ activePaymentCard?.institution ? t(activePaymentCard.institution.nameZh, activePaymentCard.institution.nameEn) : '' }}
+                {{
+                  activePaymentCard?.institution
+                    ? t(activePaymentCard.institution.nameZh, activePaymentCard.institution.nameEn)
+                    : ''
+                }}
               </h2>
             </div>
             <button
@@ -869,10 +1037,14 @@ onBeforeUnmount(() => {
 
           <div class="wallet-card-stage__footer">
             <span>
-              {{ paymentCardSummaries.findIndex((card) => card.id === activePaymentCard?.id) + 1 }} / {{ paymentCardSummaries.length }}
+              {{
+                paymentCardSummaries.findIndex((card) => card.id === activePaymentCard?.id) + 1
+              }}
+              / {{ paymentCardSummaries.length }}
             </span>
             <span v-if="activePaymentCard?.kind === 'credit'">
-              {{ activePaymentCard.supportedCurrencies.length }} {{ t('币种', 'currencies') }} · {{ activePaymentCard.settlementCurrency }} {{ t('账单', 'billing') }}
+              {{ activePaymentCard.supportedCurrencies.length }} {{ t('币种', 'currencies') }} ·
+              {{ activePaymentCard.settlementCurrency }} {{ t('账单', 'billing') }}
             </span>
             <span v-else>{{ activePaymentCard?.settlementCurrency }}</span>
           </div>
@@ -887,7 +1059,11 @@ onBeforeUnmount(() => {
             <span><i class="fas fa-arrow-down" aria-hidden="true"></i></span>
             {{ t('收款', 'Receive') }}
           </button>
-          <button type="button" data-testid="wallet-open-activity" @click="navigateToSection('activity')">
+          <button
+            type="button"
+            data-testid="wallet-open-activity"
+            @click="navigateToSection('activity')"
+          >
             <span><i class="fas fa-clock-rotate-left" aria-hidden="true"></i></span>
             {{ t('活动', 'Activity') }}
           </button>
@@ -915,14 +1091,23 @@ onBeforeUnmount(() => {
               class="wallet-transaction-row"
               role="listitem"
             >
-              <span class="wallet-transaction-row__icon" :class="{ 'is-expense': item.type === 'expense' }">
+              <span
+                class="wallet-transaction-row__icon"
+                :class="{ 'is-expense': item.type === 'expense' }"
+              >
                 <i :class="transactionIcon(item)" aria-hidden="true"></i>
               </span>
               <span class="wallet-transaction-row__copy">
                 <strong>{{ item.title }}</strong>
-                <small>{{ item.counterparty || getTransactionSourceLabel(item) }} · {{ formatTime(item.createdAt) }}</small>
+                <small
+                  >{{ item.counterparty || getTransactionSourceLabel(item) }} ·
+                  {{ formatTime(item.createdAt) }}</small
+                >
               </span>
-              <span class="wallet-transaction-row__amount" :class="{ 'is-expense': item.type === 'expense' }">
+              <span
+                class="wallet-transaction-row__amount"
+                :class="{ 'is-expense': item.type === 'expense' }"
+              >
                 {{ transactionAmountLabel(item) }}
               </span>
             </div>
@@ -937,7 +1122,9 @@ onBeforeUnmount(() => {
       <template v-else-if="activeSection === 'activity'">
         <section class="wallet-page-lead">
           <p class="wallet-eyebrow">{{ transactionCount }} {{ t('条记录', 'records') }}</p>
-          <h2>{{ t('每一次资金变化都保留原币种', 'Every movement keeps its original currency') }}</h2>
+          <h2>
+            {{ t('每一次资金变化都保留原币种', 'Every movement keeps its original currency') }}
+          </h2>
         </section>
 
         <div class="wallet-segmented" role="group" :aria-label="t('活动筛选', 'Activity filter')">
@@ -960,17 +1147,35 @@ onBeforeUnmount(() => {
               class="wallet-transaction-row wallet-transaction-row--manage"
               role="listitem"
             >
-              <span class="wallet-transaction-row__icon" :class="{ 'is-expense': item.type === 'expense' }">
+              <span
+                class="wallet-transaction-row__icon"
+                :class="{ 'is-expense': item.type === 'expense' }"
+              >
                 <i :class="transactionIcon(item)" aria-hidden="true"></i>
               </span>
               <span class="wallet-transaction-row__copy">
                 <strong>{{ item.title }}</strong>
-                <small>{{ item.counterparty || getTransactionSourceLabel(item) }} · {{ formatTime(item.createdAt) }}</small>
+                <small
+                  >{{ item.counterparty || getTransactionSourceLabel(item) }} ·
+                  {{ formatTime(item.createdAt) }}</small
+                >
                 <em>{{ getTransactionSourceLabel(item) }}</em>
               </span>
               <span class="wallet-transaction-row__actions">
-                <strong :class="{ 'is-expense': item.type === 'expense' }">{{ transactionAmountLabel(item) }}</strong>
+                <strong :class="{ 'is-expense': item.type === 'expense' }">{{
+                  transactionAmountLabel(item)
+                }}</strong>
                 <span class="wallet-transaction-row__action-buttons">
+                  <button
+                    type="button"
+                    class="is-detail"
+                    :title="t('查看交易详情', 'View transaction details')"
+                    :aria-label="t('查看交易详情', 'View transaction details')"
+                    :data-testid="`wallet-open-transaction-detail-${item.id}`"
+                    @click="openTransactionDetail(item)"
+                  >
+                    <i class="fas fa-circle-info" aria-hidden="true"></i>
+                  </button>
                   <button
                     v-if="isRolePayeeTransfer(item)"
                     type="button"
@@ -1009,7 +1214,11 @@ onBeforeUnmount(() => {
         </section>
 
         <section class="wallet-card-library" aria-label="Cards">
-          <article v-for="card in paymentCardSummaries" :key="card.id" class="wallet-card-library__item">
+          <article
+            v-for="card in paymentCardSummaries"
+            :key="card.id"
+            class="wallet-card-library__item"
+          >
             <WalletBankCard
               :card="card"
               :selected="activePaymentCard?.id === card.id"
@@ -1022,7 +1231,11 @@ onBeforeUnmount(() => {
                 {{ card.kind === 'credit' ? t('信用卡', 'Credit') : t('借记卡', 'Debit') }}
               </span>
               <span>
-                {{ card.kind === 'credit' ? `${card.supportedCurrencies.length} ${t('币种', 'currencies')}` : card.settlementCurrency }}
+                {{
+                  card.kind === 'credit'
+                    ? `${card.supportedCurrencies.length} ${t('币种', 'currencies')}`
+                    : card.settlementCurrency
+                }}
               </span>
               <button type="button" @click="openCardDetail(card.id, 'cards')">
                 {{ t('管理', 'Manage') }}
@@ -1046,15 +1259,29 @@ onBeforeUnmount(() => {
         <section class="wallet-detail-list">
           <div>
             <span>{{ t('发卡银行', 'Issuer') }}</span>
-            <strong>{{ t(selectedDetailCard.institution?.nameZh || '', selectedDetailCard.institution?.nameEn || '') }}</strong>
+            <strong>{{
+              t(
+                selectedDetailCard.institution?.nameZh || '',
+                selectedDetailCard.institution?.nameEn || '',
+              )
+            }}</strong>
           </div>
           <div>
             <span>{{ t('地区', 'Region') }}</span>
-            <strong>{{ t(selectedDetailCard.institution?.regionZh || '', selectedDetailCard.institution?.regionEn || '') }}</strong>
+            <strong>{{
+              t(
+                selectedDetailCard.institution?.regionZh || '',
+                selectedDetailCard.institution?.regionEn || '',
+              )
+            }}</strong>
           </div>
           <div>
             <span>{{ t('卡片类型', 'Card type') }}</span>
-            <strong>{{ selectedDetailCard.kind === 'credit' ? t('多币种信用卡', 'Multi-currency credit') : t('借记卡', 'Debit card') }}</strong>
+            <strong>{{
+              selectedDetailCard.kind === 'credit'
+                ? t('多币种信用卡', 'Multi-currency credit')
+                : t('借记卡', 'Debit card')
+            }}</strong>
           </div>
           <div>
             <span>{{ t('结算币种', 'Settlement') }}</span>
@@ -1062,7 +1289,10 @@ onBeforeUnmount(() => {
           </div>
           <div v-if="selectedDetailCard.account">
             <span>{{ t('关联账户', 'Linked account') }}</span>
-            <strong>{{ t(selectedDetailCard.account.nameZh, selectedDetailCard.account.nameEn) }} · {{ selectedDetailCard.account.accountNumberLast4 }}</strong>
+            <strong
+              >{{ t(selectedDetailCard.account.nameZh, selectedDetailCard.account.nameEn) }} ·
+              {{ selectedDetailCard.account.accountNumberLast4 }}</strong
+            >
           </div>
         </section>
 
@@ -1103,14 +1333,20 @@ onBeforeUnmount(() => {
               class="wallet-transaction-row"
               role="listitem"
             >
-              <span class="wallet-transaction-row__icon" :class="{ 'is-expense': item.type === 'expense' }">
+              <span
+                class="wallet-transaction-row__icon"
+                :class="{ 'is-expense': item.type === 'expense' }"
+              >
                 <i :class="transactionIcon(item)" aria-hidden="true"></i>
               </span>
               <span class="wallet-transaction-row__copy">
                 <strong>{{ item.title }}</strong>
                 <small>{{ formatTime(item.createdAt) }}</small>
               </span>
-              <span class="wallet-transaction-row__amount" :class="{ 'is-expense': item.type === 'expense' }">
+              <span
+                class="wallet-transaction-row__amount"
+                :class="{ 'is-expense': item.type === 'expense' }"
+              >
                 {{ transactionAmountLabel(item) }}
               </span>
             </div>
@@ -1133,15 +1369,203 @@ onBeforeUnmount(() => {
             data-testid="wallet-toggle-card-frozen"
             @click="toggleCardFrozen"
           >
-            <i :class="selectedDetailCard.status === 'frozen' ? 'fas fa-lock-open' : 'fas fa-lock'" aria-hidden="true"></i>
-            {{ selectedDetailCard.status === 'frozen' ? t('解冻卡片', 'Unfreeze card') : t('冻结卡片', 'Freeze card') }}
+            <i
+              :class="selectedDetailCard.status === 'frozen' ? 'fas fa-lock-open' : 'fas fa-lock'"
+              aria-hidden="true"
+            ></i>
+            {{
+              selectedDetailCard.status === 'frozen'
+                ? t('解冻卡片', 'Unfreeze card')
+                : t('冻结卡片', 'Freeze card')
+            }}
           </button>
         </div>
       </template>
 
+      <template v-else-if="activeSection === 'transaction-detail'">
+        <article
+          v-if="selectedTransaction"
+          class="wallet-transaction-detail"
+          data-testid="wallet-transaction-detail"
+        >
+          <header class="wallet-transaction-detail__summary">
+            <span :class="{ 'is-expense': selectedTransaction.type === 'expense' }">
+              <i :class="transactionIcon(selectedTransaction)" aria-hidden="true"></i>
+            </span>
+            <p>{{ getTransactionSourceLabel(selectedTransaction) }}</p>
+            <h2>{{ selectedTransaction.title }}</h2>
+            <strong
+              :class="{ 'is-expense': selectedTransaction.type === 'expense' }"
+              data-testid="wallet-transaction-detail-settled-amount"
+            >
+              {{ transactionAmountLabel(selectedTransaction) }}
+            </strong>
+            <small>{{ formatDetailTime(selectedTransaction.createdAt) }}</small>
+          </header>
+
+          <dl class="wallet-transaction-detail__facts">
+            <div>
+              <dt>{{ t('交易名称', 'Transaction') }}</dt>
+              <dd>{{ selectedTransaction.title }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('交易对象', 'Counterparty') }}</dt>
+              <dd>
+                {{
+                  selectedTransaction.counterparty || getTransactionSourceLabel(selectedTransaction)
+                }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ t('交易时间', 'Transaction time') }}</dt>
+              <dd>{{ formatDetailTime(selectedTransaction.createdAt) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('资金方向', 'Direction') }}</dt>
+              <dd>{{ getTransactionDirectionLabel(selectedTransaction) }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('记账金额', 'Recorded amount') }}</dt>
+              <dd>{{ transactionAmountLabel(selectedTransaction) }}</dd>
+            </div>
+            <div v-if="selectedTransaction.sourceModule">
+              <dt>{{ t('来源', 'Source') }}</dt>
+              <dd>{{ getTransactionModuleLabel(selectedTransaction) }}</dd>
+            </div>
+            <div v-if="selectedTransaction.sourceId">
+              <dt>{{ t('来源记录', 'Source record') }}</dt>
+              <dd class="is-technical">{{ selectedTransaction.sourceId }}</dd>
+            </div>
+            <div v-if="selectedTransactionAccount">
+              <dt>{{ t('账户', 'Account') }}</dt>
+              <dd>
+                {{
+                  t(
+                    selectedTransactionAccount.institution?.nameZh || '',
+                    selectedTransactionAccount.institution?.nameEn || '',
+                  )
+                }}
+                · •••• {{ selectedTransactionAccount.accountNumberLast4 }}
+              </dd>
+            </div>
+            <div v-if="selectedTransactionCard">
+              <dt>{{ t('卡片', 'Card') }}</dt>
+              <dd>
+                {{ t(selectedTransactionCard.nameZh, selectedTransactionCard.nameEn) }}
+                · {{ selectedTransactionCard.last4 }}
+              </dd>
+            </div>
+            <div v-if="selectedTransaction.note">
+              <dt>{{ t('备注', 'Note') }}</dt>
+              <dd>{{ selectedTransaction.note }}</dd>
+            </div>
+          </dl>
+
+          <section
+            v-if="selectedTransaction.quoteSnapshot"
+            class="wallet-transaction-detail__quote"
+            aria-labelledby="wallet-transaction-quote-heading"
+          >
+            <div class="wallet-transaction-detail__quote-heading">
+              <p class="wallet-eyebrow">{{ t('历史结算依据', 'Historical settlement') }}</p>
+              <h2 id="wallet-transaction-quote-heading">{{ t('本次报价', 'Recorded quote') }}</h2>
+            </div>
+            <dl class="wallet-transaction-detail__facts is-quote">
+              <div>
+                <dt>{{ t('源金额', 'Source amount') }}</dt>
+                <dd data-testid="wallet-transaction-detail-source-money">
+                  {{ formatHistoricalMoney(selectedTransaction.quoteSnapshot.sourceMoney) }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ t('成交金额', 'Settled quote') }}</dt>
+                <dd data-testid="wallet-transaction-detail-quoted-money">
+                  {{ formatHistoricalMoney(selectedTransaction.quoteSnapshot.quotedMoney) }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ t('成交汇率', 'Applied rate') }}</dt>
+                <dd class="is-technical" data-testid="wallet-transaction-detail-rate">
+                  {{ formatRecordedRate(selectedTransaction.quoteSnapshot) }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ t('报价版本', 'Quote version') }}</dt>
+                <dd class="is-technical" data-testid="wallet-transaction-detail-rate-set">
+                  {{ selectedTransaction.quoteSnapshot.rateSetId }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ t('汇率来源', 'Rate source') }}</dt>
+                <dd
+                  class="wallet-transaction-detail__rate-source"
+                  data-testid="wallet-transaction-detail-rate-source"
+                >
+                  <span>{{
+                    getRateSourceLabel(selectedTransaction.quoteSnapshot.rateSource)
+                  }}</span>
+                  <small>{{ selectedTransaction.quoteSnapshot.rateSource }}</small>
+                </dd>
+              </div>
+              <div>
+                <dt>{{ t('报价时间', 'Quoted at') }}</dt>
+                <dd data-testid="wallet-transaction-detail-quoted-at">
+                  {{ formatDetailTime(selectedTransaction.quoteSnapshot.quotedAt) }}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section
+            v-else
+            class="wallet-transaction-detail__legacy"
+            data-testid="wallet-transaction-detail-legacy"
+          >
+            <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
+            <span>{{ t('旧版记录，无报价快照', 'Legacy record, no quote snapshot') }}</span>
+          </section>
+
+          <div
+            v-if="isRolePayeeTransfer(selectedTransaction)"
+            class="wallet-transaction-detail__actions"
+          >
+            <button type="button" @click="openTransferReceipt(selectedTransaction)">
+              <i class="fas fa-receipt" aria-hidden="true"></i>
+              {{ t('查看转账回执', 'View transfer receipt') }}
+            </button>
+          </div>
+        </article>
+
+        <section
+          v-else
+          class="wallet-workflow-unavailable"
+          data-testid="wallet-transaction-detail-unavailable"
+        >
+          <i class="fas fa-circle-info" aria-hidden="true"></i>
+          <strong>{{ t('找不到这笔交易', 'Transaction not found') }}</strong>
+          <p>
+            {{
+              t(
+                '这笔记录可能已被删除，或链接已经失效。',
+                'This record may have been deleted or the link is no longer available.',
+              )
+            }}
+          </p>
+          <button
+            type="button"
+            data-testid="wallet-transaction-detail-return-activity"
+            @click="closeTransactionDetail"
+          >
+            {{ t('查看钱包活动', 'View wallet activity') }}
+          </button>
+        </section>
+      </template>
+
       <template v-else-if="activeSection === 'payee-transfer'">
         <section class="wallet-page-lead">
-          <p class="wallet-eyebrow">{{ t('来自 Chat 的收款账户', 'Receiving account from Chat') }}</p>
+          <p class="wallet-eyebrow">
+            {{ t('来自 Chat 的收款账户', 'Receiving account from Chat') }}
+          </p>
           <h2>{{ t('核对收款账户', 'Review receiving account') }}</h2>
         </section>
 
@@ -1168,7 +1592,12 @@ onBeforeUnmount(() => {
               <small>{{ t('收款人', 'Recipient') }}</small>
               <strong>{{ selectedPayeeAccount.ownerName }}</strong>
               <em>
-                {{ t(selectedPayeeAccount.institution?.nameZh || '', selectedPayeeAccount.institution?.nameEn || '') }}
+                {{
+                  t(
+                    selectedPayeeAccount.institution?.nameZh || '',
+                    selectedPayeeAccount.institution?.nameEn || '',
+                  )
+                }}
                 · {{ selectedPayeeAccount.maskedAccountNumber }}
               </em>
             </span>
@@ -1185,8 +1614,15 @@ onBeforeUnmount(() => {
           >
             <label>
               <span>{{ t('付款账户', 'Payment account') }}</span>
-              <select v-model="payeeTransferDraft.accountId" data-testid="wallet-payee-payment-account">
-                <option v-for="account in payeeTransferAccounts" :key="account.id" :value="account.id">
+              <select
+                v-model="payeeTransferDraft.accountId"
+                data-testid="wallet-payee-payment-account"
+              >
+                <option
+                  v-for="account in payeeTransferAccounts"
+                  :key="account.id"
+                  :value="account.id"
+                >
                   {{ t(account.institution?.nameZh || '', account.institution?.nameEn || '') }}
                   · {{ accountBalanceForCurrency(account, selectedPayeeAccount.currency).amount }}
                   {{ selectedPayeeAccount.currency }}
@@ -1194,7 +1630,10 @@ onBeforeUnmount(() => {
               </select>
             </label>
 
-            <div class="wallet-payee-payment-card" :class="{ 'is-unavailable': !selectedPayeeTransferCard }">
+            <div
+              class="wallet-payee-payment-card"
+              :class="{ 'is-unavailable': !selectedPayeeTransferCard }"
+            >
               <span><i class="fas fa-credit-card" aria-hidden="true"></i></span>
               <p v-if="selectedPayeeTransferCard">
                 <small>{{ t('付款卡', 'Payment card') }}</small>
@@ -1242,7 +1681,12 @@ onBeforeUnmount(() => {
 
             <p class="wallet-payee-transfer-policy">
               <i class="fas fa-circle-info" aria-hidden="true"></i>
-              {{ t(`仅从 ${selectedPayeeAccount.currency} 账户转出，不会自动换汇。`, `Sent only from a ${selectedPayeeAccount.currency} account; no automatic currency conversion.`) }}
+              {{
+                t(
+                  `仅从 ${selectedPayeeAccount.currency} 账户转出，不会自动换汇。`,
+                  `Sent only from a ${selectedPayeeAccount.currency} account; no automatic currency conversion.`,
+                )
+              }}
             </p>
 
             <button
@@ -1252,18 +1696,29 @@ onBeforeUnmount(() => {
               data-testid="wallet-confirm-payee-transfer"
             >
               <i class="fas fa-shield-check" aria-hidden="true"></i>
-              {{ payeeTransferSubmitting ? t('处理中', 'Processing') : t('确认并转账', 'Confirm and transfer') }}
+              {{
+                payeeTransferSubmitting
+                  ? t('处理中', 'Processing')
+                  : t('确认并转账', 'Confirm and transfer')
+              }}
             </button>
           </form>
         </template>
       </template>
 
       <template v-else-if="activeSection === 'receipt'">
-        <article v-if="selectedReceipt" class="wallet-receipt" data-testid="wallet-transfer-receipt">
+        <article
+          v-if="selectedReceipt"
+          class="wallet-receipt"
+          data-testid="wallet-transfer-receipt"
+        >
           <header class="wallet-receipt__status">
             <span><i class="fas fa-check" aria-hidden="true"></i></span>
             <p>{{ t('转账成功', 'Transfer complete') }}</p>
-            <strong>{{ (selectedReceipt.amountCents / 100).toFixed(2) }} {{ selectedReceipt.currency }}</strong>
+            <strong
+              >{{ (selectedReceipt.amountCents / 100).toFixed(2) }}
+              {{ selectedReceipt.currency }}</strong
+            >
             <small>{{ formatTime(selectedReceipt.createdAt) }}</small>
           </header>
 
@@ -1274,7 +1729,9 @@ onBeforeUnmount(() => {
             </div>
             <div>
               <span>{{ t('收款银行', 'Receiving bank') }}</span>
-              <strong>{{ t(receiptInstitution?.nameZh || '', receiptInstitution?.nameEn || '') }}</strong>
+              <strong>{{
+                t(receiptInstitution?.nameZh || '', receiptInstitution?.nameEn || '')
+              }}</strong>
             </div>
             <div>
               <span>{{ t('收款账户', 'Receiving account') }}</span>
@@ -1283,14 +1740,21 @@ onBeforeUnmount(() => {
             <div>
               <span>{{ t('付款账户', 'Payment account') }}</span>
               <strong>
-                {{ t(receiptPaymentAccount?.institution?.nameZh || '', receiptPaymentAccount?.institution?.nameEn || '') }}
+                {{
+                  t(
+                    receiptPaymentAccount?.institution?.nameZh || '',
+                    receiptPaymentAccount?.institution?.nameEn || '',
+                  )
+                }}
                 · {{ receiptPaymentAccount?.accountNumberLast4 || '' }}
               </strong>
             </div>
             <div>
               <span>{{ t('付款卡', 'Payment card') }}</span>
               <strong>
-                {{ receiptPaymentCard ? t(receiptPaymentCard.nameZh, receiptPaymentCard.nameEn) : '' }}
+                {{
+                  receiptPaymentCard ? t(receiptPaymentCard.nameZh, receiptPaymentCard.nameEn) : ''
+                }}
                 <template v-if="receiptPaymentCard"> · {{ receiptPaymentCard.last4 }}</template>
               </strong>
             </div>
@@ -1304,7 +1768,9 @@ onBeforeUnmount(() => {
             </div>
             <div>
               <span>{{ t('回执编号', 'Receipt number') }}</span>
-              <strong data-testid="wallet-receipt-number">{{ selectedReceipt.receiptNumber }}</strong>
+              <strong data-testid="wallet-receipt-number">{{
+                selectedReceipt.receiptNumber
+              }}</strong>
             </div>
           </section>
 
@@ -1329,7 +1795,11 @@ onBeforeUnmount(() => {
           </div>
         </article>
 
-        <section v-else class="wallet-workflow-unavailable" data-testid="wallet-receipt-unavailable">
+        <section
+          v-else
+          class="wallet-workflow-unavailable"
+          data-testid="wallet-receipt-unavailable"
+        >
           <i class="fas fa-receipt" aria-hidden="true"></i>
           <strong>{{ t('找不到这张回执', 'Receipt not found') }}</strong>
           <p>{{ t('这笔记录可能已被删除。', 'This transaction may have been deleted.') }}</p>
@@ -1342,10 +1812,20 @@ onBeforeUnmount(() => {
       <template v-else-if="activeSection === 'transfer'">
         <section class="wallet-page-lead">
           <p class="wallet-eyebrow">{{ t('账户间保留原币种', 'Original currency retained') }}</p>
-          <h2>{{ transferDraft.direction === 'outgoing' ? t('向联系人转账', 'Send to a contact') : t('记录一笔收款', 'Record a payment received') }}</h2>
+          <h2>
+            {{
+              transferDraft.direction === 'outgoing'
+                ? t('向联系人转账', 'Send to a contact')
+                : t('记录一笔收款', 'Record a payment received')
+            }}
+          </h2>
         </section>
 
-        <div class="wallet-segmented wallet-segmented--two" role="group" :aria-label="t('转账方向', 'Transfer direction')">
+        <div
+          class="wallet-segmented wallet-segmented--two"
+          role="group"
+          :aria-label="t('转账方向', 'Transfer direction')"
+        >
           <button
             type="button"
             :class="{ 'is-active': transferDraft.direction === 'outgoing' }"
@@ -1364,12 +1844,17 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <form class="wallet-form" data-testid="wallet-transfer-form" @submit.prevent="submitTransfer">
+        <form
+          class="wallet-form"
+          data-testid="wallet-transfer-form"
+          @submit.prevent="submitTransfer"
+        >
           <label>
             <span>{{ t('账户', 'Account') }}</span>
             <select v-model="transferDraft.accountId" data-testid="wallet-transfer-account">
               <option v-for="account in bankAccountSummaries" :key="account.id" :value="account.id">
-                {{ t(account.institution?.nameZh || '', account.institution?.nameEn || '') }} · {{ account.primaryCurrency }} · {{ account.primaryBalance?.amount || '0.00' }}
+                {{ t(account.institution?.nameZh || '', account.institution?.nameEn || '') }} ·
+                {{ account.primaryCurrency }} · {{ account.primaryBalance?.amount || '0.00' }}
               </option>
             </select>
           </label>
@@ -1377,7 +1862,11 @@ onBeforeUnmount(() => {
             <span>{{ t('联系人', 'Contact') }}</span>
             <select v-model="transferDraft.contactId" data-testid="wallet-relationship-contact">
               <option value="">{{ t('其他对象', 'Other recipient') }}</option>
-              <option v-for="contact in relationshipContactOptions" :key="contact.id" :value="contact.optionValue">
+              <option
+                v-for="contact in relationshipContactOptions"
+                :key="contact.id"
+                :value="contact.optionValue"
+              >
                 {{ contact.optionLabel }}
               </option>
             </select>
@@ -1394,7 +1883,11 @@ onBeforeUnmount(() => {
             </label>
             <label>
               <span>{{ t('币种', 'Currency') }}</span>
-              <select v-model="transferDraft.currency" disabled data-testid="wallet-transfer-currency">
+              <select
+                v-model="transferDraft.currency"
+                disabled
+                data-testid="wallet-transfer-currency"
+              >
                 <option :value="transferDraft.currency">{{ transferDraft.currency }}</option>
               </select>
             </label>
@@ -1413,7 +1906,11 @@ onBeforeUnmount(() => {
             <input v-model="transferDraft.note" :placeholder="t('可选', 'Optional')" />
           </label>
           <button type="submit" class="wallet-primary-action" data-testid="wallet-submit-transfer">
-            {{ transferDraft.direction === 'outgoing' ? t('确认转账', 'Confirm transfer') : t('确认收款', 'Confirm receipt') }}
+            {{
+              transferDraft.direction === 'outgoing'
+                ? t('确认转账', 'Confirm transfer')
+                : t('确认收款', 'Confirm receipt')
+            }}
           </button>
         </form>
       </template>
@@ -1428,7 +1925,8 @@ onBeforeUnmount(() => {
           <span>{{ t('账户', 'Account') }}</span>
           <select v-model="receiveAccountId" data-testid="wallet-receive-account">
             <option v-for="account in bankAccountSummaries" :key="account.id" :value="account.id">
-              {{ t(account.institution?.nameZh || '', account.institution?.nameEn || '') }} · {{ account.primaryCurrency }}
+              {{ t(account.institution?.nameZh || '', account.institution?.nameEn || '') }} ·
+              {{ account.primaryCurrency }}
             </option>
           </select>
         </label>
@@ -1443,9 +1941,19 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-if="selectedReceiveAccount" class="wallet-receive-details">
-          <p>{{ t(selectedReceiveAccount.institution?.nameZh || '', selectedReceiveAccount.institution?.nameEn || '') }}</p>
+          <p>
+            {{
+              t(
+                selectedReceiveAccount.institution?.nameZh || '',
+                selectedReceiveAccount.institution?.nameEn || '',
+              )
+            }}
+          </p>
           <strong>{{ selectedReceiveAccount.accountNumber }}</strong>
-          <span>{{ t(selectedReceiveAccount.nameZh, selectedReceiveAccount.nameEn) }} · {{ selectedReceiveAccount.primaryCurrency }}</span>
+          <span
+            >{{ t(selectedReceiveAccount.nameZh, selectedReceiveAccount.nameEn) }} ·
+            {{ selectedReceiveAccount.primaryCurrency }}</span
+          >
         </section>
 
         <button
@@ -1453,7 +1961,7 @@ onBeforeUnmount(() => {
           type="button"
           class="wallet-primary-action"
           data-testid="wallet-use-receive-card"
-          @click="selectCard(receiveCard.id); activeSection = 'home'"
+          @click="useReceiveCard"
         >
           {{ t('设为当前卡', 'Use this card') }}
         </button>
@@ -1469,11 +1977,20 @@ onBeforeUnmount(() => {
           </div>
           <div class="wallet-setting-control">
             <select v-model="primaryCurrencyDraft" data-testid="wallet-primary-currency">
-              <option v-for="currency in currencyOptions" :key="currency.code" :value="currency.code">
-                {{ currency.code }} · {{ t(currency.labelZh || currency.code, currency.labelEn || currency.code) }}
+              <option
+                v-for="currency in currencyOptions"
+                :key="currency.code"
+                :value="currency.code"
+              >
+                {{ currency.code }} ·
+                {{ t(currency.labelZh || currency.code, currency.labelEn || currency.code) }}
               </option>
             </select>
-            <button type="button" data-testid="wallet-save-primary-currency" @click="savePrimaryCurrency">
+            <button
+              type="button"
+              data-testid="wallet-save-primary-currency"
+              @click="savePrimaryCurrency"
+            >
               {{ t('保存', 'Save') }}
             </button>
           </div>
@@ -1492,7 +2009,10 @@ onBeforeUnmount(() => {
               <strong>{{ t('参考汇率', 'Reference rates') }}</strong>
             </span>
             <span>{{ exchangeRates.reference?.base }}/{{ exchangeRates.reference?.quote }}</span>
-            <i :class="ratesExpanded ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" aria-hidden="true"></i>
+            <i
+              :class="ratesExpanded ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"
+              aria-hidden="true"
+            ></i>
           </button>
 
           <div v-if="ratesExpanded" class="wallet-rate-settings">
@@ -1546,7 +2066,11 @@ onBeforeUnmount(() => {
       </template>
     </main>
 
-    <nav v-if="showBottomNavigation" class="wallet-bottom-nav" :aria-label="t('钱包导航', 'Wallet navigation')">
+    <nav
+      v-if="showBottomNavigation"
+      class="wallet-bottom-nav"
+      :aria-label="t('钱包导航', 'Wallet navigation')"
+    >
       <button
         type="button"
         :class="{ 'is-active': activeSection === 'home' }"
@@ -1935,6 +2459,17 @@ onBeforeUnmount(() => {
   background: #e7f3ee;
 }
 
+.wallet-transaction-row__actions button.is-detail {
+  color: #39434c;
+  background: #edf0f1;
+}
+
+.wallet-transaction-row__actions button:focus-visible,
+.wallet-transaction-detail__actions button:focus-visible {
+  outline: 3px solid rgba(33, 133, 189, 0.28);
+  outline-offset: 2px;
+}
+
 .wallet-empty-state {
   display: flex;
   min-height: 7rem;
@@ -2138,6 +2673,184 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--wallet-line);
   padding: 1rem;
   background: var(--wallet-surface);
+}
+
+.wallet-transaction-detail {
+  padding-bottom: 1.5rem;
+}
+
+.wallet-transaction-detail__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 1.35rem;
+  text-align: center;
+}
+
+.wallet-transaction-detail__summary > span {
+  display: inline-flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--wallet-positive);
+  background: #e8f3ef;
+  font-size: 1rem;
+}
+
+.wallet-transaction-detail__summary > span.is-expense {
+  color: #a63835;
+  background: #f9e9e7;
+}
+
+.wallet-transaction-detail__summary p {
+  margin: 0.75rem 0 0.2rem;
+  color: var(--wallet-muted);
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.wallet-transaction-detail__summary h2 {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.wallet-transaction-detail__summary strong {
+  margin-top: 0.45rem;
+  color: var(--wallet-positive);
+  font-size: 1.45rem;
+  line-height: 1.2;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.wallet-transaction-detail__summary strong.is-expense {
+  color: #9c3532;
+}
+
+.wallet-transaction-detail__summary small {
+  margin-top: 0.35rem;
+  color: var(--wallet-muted);
+  font-size: 0.64rem;
+}
+
+.wallet-transaction-detail__facts {
+  margin: 0;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  background: var(--wallet-surface);
+}
+
+.wallet-transaction-detail__facts > div {
+  display: grid;
+  min-height: 3.2rem;
+  grid-template-columns: minmax(5.5rem, 0.72fr) minmax(0, 1.45fr);
+  align-items: center;
+  gap: 1rem;
+  margin-left: 1rem;
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0.65rem 1rem 0.65rem 0;
+}
+
+.wallet-transaction-detail__facts > div:last-child {
+  border-bottom: 0;
+}
+
+.wallet-transaction-detail__facts dt {
+  color: var(--wallet-muted);
+  font-size: 0.66rem;
+}
+
+.wallet-transaction-detail__facts dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  font-size: 0.69rem;
+  font-weight: 750;
+}
+
+.wallet-transaction-detail__facts dd.is-technical {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.63rem;
+  font-weight: 650;
+}
+
+.wallet-transaction-detail__quote {
+  margin-top: 1rem;
+}
+
+.wallet-transaction-detail__quote-heading {
+  padding: 0 1rem 0.75rem;
+}
+
+.wallet-transaction-detail__quote-heading h2 {
+  margin: 0.12rem 0 0;
+  font-size: 0.94rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.wallet-transaction-detail__facts.is-quote {
+  border-bottom-color: rgba(25, 114, 90, 0.18);
+}
+
+.wallet-transaction-detail__rate-source {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.wallet-transaction-detail__rate-source small {
+  color: var(--wallet-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.56rem;
+  font-weight: 600;
+}
+
+.wallet-transaction-detail__legacy {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0.8rem 1rem;
+  color: #68552f;
+  background: #fff8e9;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.wallet-transaction-detail__legacy i {
+  color: #9a6b19;
+}
+
+.wallet-transaction-detail__actions {
+  padding: 1.1rem 1rem 0;
+}
+
+.wallet-transaction-detail__actions button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.7rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid #202429;
+  border-radius: 7px;
+  padding: 0 1rem;
+  color: #ffffff;
+  background: #202429;
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .wallet-payee-identity {

@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Package
 
-Updated: 2026-08-06
+Updated: 2026-08-07
 
 Use this package for Shopping, logistics, Food Delivery, Wallet, Assets, Stock, and downstream ownership loops.
 
@@ -39,6 +39,8 @@ Current role-payee note: each non-self role profile owns a stable fictional rece
 Current ordinary-life proof note: one Shopping gift-card order now has desktop Chromium and simulated Pixel 5 Playwright evidence across its existing user-confirmed consequences. The user explicitly creates the matching Chat service account, places a gift order for an existing role, receives the source-owned order notification, confirms the delivery cue into Calendar, completes the Shopping order, records the expense into Wallet, and sees the Shopping gift plus Wallet supporting fact consolidated into one Contacts memory. The flow creates neither a Chat identity nor a Wallet transaction automatically, preserves `orderId` lineage across records, adds no relationship metric delta for Wallet support, and stays idempotent after reopen.
 
 Current commerce-quote note: Shopping catalog/cart values and Food Delivery menu, modifier, delivery-fee, platform-campaign, cart, and checkout values now show Wallet-primary quotations while retaining source prices and honest missing-rate fallback. Food Delivery custom menu records inherit their restaurant's source currency, Baemin minimum orders are structured KRW/CNY Money values and enforced before checkout/submission, and all independent-shop facades preserve source customization values before quotation. New Shopping, Food Delivery, and Food Platform orders persist normalized quote provenance through backup/restore, and explicit Shopping/Food Delivery Wallet expenses reuse the source order snapshot instead of re-quoting. World Pack currency authoring exposes exponent `0-6`. Mixed-currency Shopping settlement, future refund snapshots, and a general poster-anchor schema remain open.
+
+Current Wallet quote-explainability note: every Wallet Activity row now opens a route-backed general transaction detail. Valid saved snapshots show source money, settled quoted money, the exact recorded rate, `rateSetId`, localized rate-source provenance with its saved key, and quote time without calling the current quote service. Legacy or malformed records show an explicit no-snapshot state, unknown historical currencies fall back to raw minor units and code, and role-payee receipts remain a separate `receiptId` surface. Current Wallet currency/rate edits do not change an open or reopened historical detail.
 
 ## Read This Package In This Order
 

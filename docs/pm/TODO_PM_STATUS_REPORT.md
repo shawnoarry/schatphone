@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-06
+Updated: 2026-08-07
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -54,7 +54,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Map / Reminders / Phone | `Map partial; MJE-3 ready for user review` | Map resolves one map per world and renders geographic packs through keyless OpenFreeMap + MapLibre, while fictional/custom packs and startup fallback remain local. MJE-1 transport-aware planning and MJE-2 lifecycle/checkpoints are user-accepted in the current uncommitted tree; MJE-3 adds one validated low-impact checkpoint event family and awaits user review. Active exploration, public-transit topology, and a standalone Transit app remain separately gated |
 | Calendar / Agenda Journey | `Calendar list baseline; orchestration architecture only` | Calendar is a visible list-first app for confirmed events, push state, and reminder context. Month/Week/Agenda Calendar views, the separate short-range Agenda Journey app, hidden Schedule Orchestrator, Activity Session timer, related event adapters, and Narrative Timeline have accepted terminology and ownership only; no CJA runtime or UI implementation has started |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | five independent Food Delivery shop facades share one Food Delivery runtime; the next roadmap-owned gap is one ordinary Food Delivery/Shopping consequence flow, while tracking and polish remain separate |
-| Wallet / Gallery | `Wallet card-pack + role-payee V1; Gallery support platform` | Wallet exposes six fictional single-currency accounts/debit cards and one fictional six-currency credit card over one ledger truth; verified role account cards now lead to explicit same-currency confirmation and receipts without NPC balances or automatic exchange, while display currency and rates stay in Wallet Settings; Gallery's deeper Photos ambitions remain controlled |
+| Wallet / Gallery | `Wallet card-pack + role-payee V1 + historical quote detail; Gallery support platform` | Wallet exposes six fictional single-currency accounts/debit cards and one fictional six-currency credit card over one ledger truth; verified role account cards lead to explicit same-currency confirmation and separate receipts, while every Activity row can open a general detail that presents saved quote provenance without re-quotation; display currency and rates stay in Wallet Settings, NPC balances and automatic exchange remain excluded, and Gallery's deeper Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
@@ -98,7 +98,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - manage confirmed Calendar events through the current list-first Calendar surface, raw Reminders cues, and Phone callbacks;
 - browse and create Shopping/Food Delivery records, checkout, track updates, and produce downstream Wallet/relationship continuity;
 - use Gallery assets across modules;
-- use Wallet as a card-first app with six currency-specific virtual bank accounts/debit cards, one six-currency credit card, account-scoped transfers/receipts, Chat-disclosed role payees, activity, display-currency settings, and source-linked transactions without automatic exchange;
+- use Wallet as a card-first app with six currency-specific virtual bank accounts/debit cards, one six-currency credit card, account-scoped transfers/receipts, Chat-disclosed role payees, activity, display-currency settings, and source-linked transactions whose saved historical quote details remain stable without automatic exchange;
 - access Assets and Stock MVP loops.
 
 ## 5. What Is Not Finished

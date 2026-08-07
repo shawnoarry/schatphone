@@ -1,6 +1,6 @@
 # Wallet Currency And Money Conversion Plan
 
-Updated: 2026-08-06
+Updated: 2026-08-07
 
 Status: `PARTIALLY IMPLEMENTED CONTRACT / NOT A ROADMAP`
 
@@ -49,6 +49,8 @@ Role-payee checkpoint, 2026-08-06: a Chat account request now produces a system-
 Commerce quote-adoption checkpoint, 2026-08-06: Shopping catalog and cart values now quote through Wallet without replacing source `priceCents`; checkout freezes the existing primary payable total into a normalized `MoneyQuote`, and explicit Wallet expense recording reuses that exact snapshot after primary-currency or rate changes. New Food Delivery and Food Platform orders use the same persisted snapshot field and downstream Food Delivery Wallet expenses retain it. Baemin minimum-order labels are structured KRW/CNY Money values with Wallet-primary quotation, and World Pack currency authoring now requires an explicit exponent from `0` through `6`. Focused tests cover zero-decimal legacy adaptation, missing/partial snapshot rejection, historical stability, backup restore, and ledger propagation.
 
 Food Delivery source-price checkpoint, 2026-08-06: independent-shop and Baemin menus, modifier deltas, delivery fees, campaign picks, carts, and checkout totals now derive Wallet-primary quotations from retained source values. Custom menu records inherit their restaurant currency, Dash Grill and Harbor Roast customization prices remain source-native until quotation, cart totals convert authoritative source totals once, and Baemin compares structured thresholds in the merchant source currency before both checkout navigation and submission. Missing rates retain honest source display, while new order and downstream Wallet records keep immutable quote provenance. Mixed-currency Shopping settlement, refund snapshots, and the general poster-anchor schema remain open.
+
+Wallet quote-explainability checkpoint, 2026-08-07: every Wallet Activity record now opens a general `transactionId` detail. Valid saved snapshots present source money, settled quoted money, the exact recorded rate, `rateSetId`, rate source, and quote time without calling the current quote service; current primary-currency/rate edits therefore cannot change historical display. Legacy or malformed snapshots produce one explicit no-snapshot state, unavailable historical currency definitions use raw minor-unit/code fallback, and role-payee `receiptId` remains a separate surface.
 
 ## 3. Ownership Boundary
 

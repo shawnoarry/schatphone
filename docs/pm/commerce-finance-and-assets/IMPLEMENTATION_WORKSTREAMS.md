@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Implementation Workstreams / 消费金融资产实施工作流
 
-Updated: 2026-08-06
+Updated: 2026-08-07
 
 ## 1. Workstream A: Shopping And Logistics
 
@@ -45,6 +45,7 @@ Updated: 2026-08-06
 - role-payee transfers do not create NPC cash balances, automatic exchange, background transfers, or a separate Bank app
 - source modules retain native prices and authoritative totals; current display may re-quote, while checkout/order/ledger records freeze source money, quoted money, and rate provenance
 - current commerce adoption covers Peach Cloud's White Peach Lime price slot, Shopping catalog/cart quotations, Food Delivery menus/modifiers/fees/carts/checkouts across current facades, Baemin campaign values and structured minimum-order enforcement, and new Shopping/Food Delivery/Food Platform order snapshots. Explicit Shopping/Food Delivery Wallet expenses retain the source order quote. Shopping mixed-currency settlement, refund snapshots, and the general poster-anchor schema remain separate work.
+- Wallet Activity now owns a general route-backed transaction detail for every ledger row. It presents saved quote provenance without re-quotation, gives legacy/malformed records an explicit no-snapshot state, uses raw minor-unit fallback when a historical currency definition is unavailable, and keeps role-payee transfer receipts as a separate surface.
 
 ## 4. Workstream D: Assets And Stock
 

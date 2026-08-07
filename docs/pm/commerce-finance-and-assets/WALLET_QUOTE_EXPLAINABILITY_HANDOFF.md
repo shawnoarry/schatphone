@@ -2,7 +2,7 @@
 
 Updated: 2026-08-07
 
-Status: `USER_PROMOTED_FOCUSED_SLICE / NOT_STARTED`
+Status: `DONE 2026-08-07`
 
 ## 1. Purpose And Authority
 
@@ -146,3 +146,7 @@ The slice is complete only when:
 Use this as the first message in the new Codex task:
 
 > 基于远端最新 `main` 继续 SchatPhone 的 Wallet 报价可解释性。先完整阅读根目录 `AGENTS.md`、`docs/process/AI_WORK_MODE.md`、`docs/roadmap/TODO_ROADMAP.md`、commerce-finance-and-assets 包的 `README.md` 与 `STATUS_AND_HANDOFF.md`，再完整阅读 `docs/pm/commerce-finance-and-assets/WALLET_QUOTE_EXPLAINABILITY_HANDOFF.md`。按该 handoff 的 Focused TODO 实现通用 Wallet 交易详情，展示已保存的源金额、成交金额、成交汇率、`rateSetId` 版本标识、汇率来源和报价时间；旧记录显示“旧版记录，无报价快照”。保持角色转账回执独立，禁止按当前汇率重算历史记录，不扩展到混币结算、退款、Home 整理或 Food Delivery 拆分。完成代码、测试、E2E、文档同步和本地提交，并明确报告未推送状态与剩余风险。
+
+## 7. Completion Record
+
+Completed on 2026-08-07 in `WalletView.vue`, focused Wallet view tests, and the Shopping life-consequence Playwright journey. General transaction detail, saved quote fields, stability, direct reopen, legacy/missing/deleted states, raw unknown-currency fallback, independent receipt routing, desktop/mobile screenshots, and horizontal-overflow checks are covered. Mixed-currency settlement, refunds, Home curation, and broader Wallet expansion remain outside this completed slice.
