@@ -126,6 +126,21 @@ const DEFAULT_WIDGET_PAGES = [
     SHOPPING_HOME_APP_ID,
     FOOD_DELIVERY_HOME_APP_ID,
   ],
+  ['system', 'quick_heart', 'quick_disc'],
+  [],
+  [],
+]
+
+const CURATED_RELEASE_DEFAULT_WIDGET_PAGES = [
+  ['weather', 'calendar', 'music', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
+  [
+    'app_phone',
+    'app_map',
+    'app_calendar',
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+  ],
   [],
   [],
   [],
@@ -224,6 +239,9 @@ const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
 )
 
 const MIN_HOME_PAGES = 5
+const MIN_VISIBLE_HOME_PAGES = 2
+const MAX_VISIBLE_HOME_PAGES = 5
+const DEFAULT_VISIBLE_HOME_PAGE_COUNT = 3
 const DEFAULT_HOME_TILE_ORDER_PAGES = PREVIOUS_DEFAULT_WIDGET_PAGES.map((page) => [...page])
 const DEFAULT_APP_STORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findIndex((page) =>
   page.includes(APP_STORE_HOME_APP_ID),
@@ -357,7 +375,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 3
+const HOME_DESKTOP_SETUP_VERSION = 4
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -964,6 +982,25 @@ const ensureMinimumHomePages = (pages) => {
   return nextPages
 }
 
+const normalizeHomeVisiblePageCount = (value, pages = []) => {
+  const availablePages = Math.min(
+    MAX_VISIBLE_HOME_PAGES,
+    Math.max(MIN_HOME_PAGES, Array.isArray(pages) ? pages.length : 0),
+  )
+  const numeric = Number(value)
+  if (Number.isInteger(numeric)) {
+    return clamp(numeric, MIN_VISIBLE_HOME_PAGES, availablePages)
+  }
+
+  const lastPopulatedPageIndex = Array.isArray(pages)
+    ? pages.reduce((lastIndex, page, pageIndex) => {
+        return Array.isArray(page) && page.length > 0 ? pageIndex : lastIndex
+      }, -1)
+    : -1
+
+  return clamp(lastPopulatedPageIndex + 1, MIN_VISIBLE_HOME_PAGES, availablePages)
+}
+
 const isCustomWidgetId = (tileId) =>
   typeof tileId === 'string' && tileId.startsWith(CUSTOM_WIDGET_ID_PREFIX)
 
@@ -1375,6 +1412,7 @@ export const useSystemStore = defineStore('system', () => {
       appStoreMiniAppPlacements: normalizeAppStoreMiniAppPlacements(),
       homeDesktopSetupVersion: HOME_DESKTOP_SETUP_VERSION,
       homeWidgetPages: cloneDefaultWidgetPages(),
+      homeVisiblePageCount: DEFAULT_VISIBLE_HOME_PAGE_COUNT,
       homeLayoutTemplateIds: cloneDefaultHomeLayoutTemplateIds(),
       homeLayoutSlotPlacements: cloneDefaultHomeLayoutSlotPlacements(),
       customWidgets: [],
@@ -1995,6 +2033,10 @@ export const useSystemStore = defineStore('system', () => {
 
   const setHomeWidgetPages = (pages) => {
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(pages)
+    settings.appearance.homeVisiblePageCount = normalizeHomeVisiblePageCount(
+      settings.appearance.homeVisiblePageCount,
+      settings.appearance.homeWidgetPages,
+    )
     settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIdsForCurrentPages(
       settings.appearance.homeLayoutTemplateIds,
     )
@@ -2005,6 +2047,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
       cloneDefaultWidgetPages(),
     )
+    settings.appearance.homeVisiblePageCount = DEFAULT_VISIBLE_HOME_PAGE_COUNT
     settings.appearance.homeLayoutTemplateIds = cloneDefaultHomeLayoutTemplateIds()
     settings.appearance.homeDesktopSetupVersion = HOME_DESKTOP_SETUP_VERSION
     syncHomeLayoutSlotPlacementsFromPages()
@@ -2015,6 +2058,10 @@ export const useSystemStore = defineStore('system', () => {
       normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION
     const shouldResetToCleanSetup =
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        CURATED_RELEASE_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PREVIOUS_DEFAULT_WIDGET_PAGES) ||
       isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)
 
@@ -2032,6 +2079,10 @@ export const useSystemStore = defineStore('system', () => {
   const recommendHomeDesktopRefresh = computed(() => {
     if (
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        CURATED_RELEASE_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PREVIOUS_DEFAULT_WIDGET_PAGES) ||
       isLegacyCrowdedHomeDesktopSetup(settings.appearance.homeWidgetPages)
     ) {
@@ -2046,7 +2097,18 @@ export const useSystemStore = defineStore('system', () => {
       ok: true,
       homeDesktopSetupVersion: settings.appearance.homeDesktopSetupVersion,
       pageCount: settings.appearance.homeWidgetPages.length,
+      visiblePageCount: settings.appearance.homeVisiblePageCount,
     }
+  }
+
+  const setHomeVisiblePageCount = (pageCount) => {
+    const nextCount = normalizeHomeVisiblePageCount(
+      pageCount,
+      settings.appearance.homeWidgetPages,
+    )
+    const changed = settings.appearance.homeVisiblePageCount !== nextCount
+    settings.appearance.homeVisiblePageCount = nextCount
+    return changed
   }
 
   const setHomeLayoutTemplate = (pageIndex, templateId) => {
@@ -4092,6 +4154,10 @@ export const useSystemStore = defineStore('system', () => {
         currentCustomWidgetIds(),
         { dynamicHomeTileIds: persistedWorldAppHomeTileIds },
       )
+      settings.appearance.homeVisiblePageCount = normalizeHomeVisiblePageCount(
+        appearance.homeVisiblePageCount,
+        settings.appearance.homeWidgetPages,
+      )
       settings.appearance.homeLayoutTemplateIds = normalizeHomeLayoutTemplateIds(
         appearance.homeLayoutTemplateIds,
         settings.appearance.homeWidgetPages.length || MIN_HOME_PAGES,
@@ -4574,6 +4640,7 @@ export const useSystemStore = defineStore('system', () => {
     recommendHomeDesktopRefresh,
     applyCurrentHomeDesktopDefaults,
     setHomeWidgetPages,
+    setHomeVisiblePageCount,
     resetHomeWidgetPages,
     setHomeLayoutTemplate,
     setHomeLayoutSlotPlacement,

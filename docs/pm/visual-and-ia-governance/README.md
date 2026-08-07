@@ -12,7 +12,7 @@ Current Home customization baseline:
 - `外观 / Appearance` owns broader theme, wallpaper, icon style, and possible template-management settings.
 - `应用商城 / App Store` owns the app-entry management surface; `More` is no longer a Home app.
 - App Library / App Store-like surfaces own app-entry visibility only.
-- The default release Home shows two normal-mode pages: glanceable widgets and personal tools first, then daily communication/planning/life apps. Network, Stock, Assets, system-status/quick widgets, and the duplicate formal-page App Store entry stay recoverable in their libraries instead of appearing equally mature.
+- The default release Home shows three normal-mode pages: glanceable widgets and personal tools first, daily communication/planning/life apps second, then System Status, Quick Heart, and Quick Disc. Appearance lets users choose two through five visible screens without altering any retained page template, slot placement, or content; Home edit mode always exposes all five pages.
 
 The left-side Today View is a fixed native-system entry layer, not a selectable Home layout page; App Store stays there as the recovery entry when formal Home pages return items to their libraries.
 

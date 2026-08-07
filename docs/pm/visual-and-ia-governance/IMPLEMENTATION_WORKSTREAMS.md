@@ -8,7 +8,7 @@ Updated: 2026-08-07
 - hidden-system placeholders
 - app entry clarity
 - Home template-slot desktop model
-- default Home release curation: two normal-mode pages for glanceable/personal and daily-life entry groups, with secondary utilities remaining recoverable from App Store or Widget Center
+- default Home release curation: three normal-mode pages for glanceable/personal, daily-life, and System Status/Quick widgets; Appearance owns a two-through-five visible-screen preference that never alters retained page layouts
 - `主屏 / 桌面 / Home` as a system desktop layer, not a user-facing app entry
 - `组件 / Widgets` as widget creation/import/action-config/edit entry, not a whole-page template catalog
 - `外观 / Appearance` as broader visual customization and possible template-management surface

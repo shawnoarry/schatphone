@@ -326,11 +326,10 @@ const customWidgetSrcDocMap = computed(() => {
 
 const widgetPages = computed(() => settings.value.appearance.homeWidgetPages || [])
 const visibleHomePageCount = computed(() => {
-  let count = widgetPages.value.length
-  while (count > 1 && (widgetPages.value[count - 1] || []).length === 0) {
-    count -= 1
-  }
-  return Math.max(count, 1)
+  const maxPageCount = Math.max(1, widgetPages.value.length)
+  const configuredCount = Number(settings.value.appearance.homeVisiblePageCount)
+  if (!Number.isInteger(configuredCount)) return Math.min(3, maxPageCount)
+  return Math.min(maxPageCount, Math.max(2, configuredCount))
 })
 const displayedWidgetPages = computed(() =>
   layoutEditMode.value

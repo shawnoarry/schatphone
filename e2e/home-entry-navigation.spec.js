@@ -88,10 +88,13 @@ test.describe('Home entry navigation', () => {
 
     await unlockToHome(page)
 
-    await expect(page.locator('.home-dot')).toHaveCount(2)
+    await expect(page.locator('.home-dot')).toHaveCount(3)
     await expect(page.locator('[data-home-tile-id="app_network"]')).toHaveCount(0)
     await expect(page.locator('[data-home-tile-id="app_stock"]')).toHaveCount(0)
     await expect(page.locator('[data-home-tile-id="app_assets"]')).toHaveCount(0)
+    await expect(page.locator('[data-home-tile-id="system"]')).toHaveCount(1)
+    await expect(page.locator('[data-home-tile-id="quick_heart"]')).toHaveCount(1)
+    await expect(page.locator('[data-home-tile-id="quick_disc"]')).toHaveCount(1)
 
     await openHomeDockApp(page, 'app_chat', '/chat')
 
@@ -108,6 +111,31 @@ test.describe('Home entry navigation', () => {
     await page.locator('[data-home-tile-id="app_wallet"]').click()
     await expect(page).toHaveURL(/#\/wallet(?:\?|$)/)
 
+    expect(pageErrors).toEqual([])
+  })
+
+  test('changes the visible Home screen count from Appearance without leaving the Home layout editor behind', async ({ page }) => {
+    const pageErrors = []
+    page.on('pageerror', (error) => {
+      pageErrors.push(error.message)
+    })
+
+    await unlockToHome(page)
+    await navigateInsideUnlockedApp(page, '/appearance')
+
+    await expect(page.getByTestId('appearance-home-page-count-3')).toHaveAttribute('aria-pressed', 'true')
+    await page.getByTestId('appearance-home-page-count-2').click()
+    await expect(page.getByTestId('appearance-home-page-count-2')).toHaveAttribute('aria-pressed', 'true')
+
+    await navigateInsideUnlockedApp(page, '/home')
+    await expect(page.locator('.home-dot')).toHaveCount(2)
+
+    await navigateInsideUnlockedApp(page, '/appearance')
+    await page.getByTestId('appearance-home-page-count-5').click()
+    await expect(page.getByTestId('appearance-home-page-count-5')).toHaveAttribute('aria-pressed', 'true')
+
+    await navigateInsideUnlockedApp(page, '/home')
+    await expect(page.locator('.home-dot')).toHaveCount(5)
     expect(pageErrors).toEqual([])
   })
 

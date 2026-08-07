@@ -360,6 +360,13 @@ test('World Pack loop keeps placement, target ownership, and disabled safe defau
     await placeWorldEntry(page, entry, worldPack.title)
   }
 
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-home-page-count-3').click()
+  await expect(page.getByTestId('appearance-home-page-count-3')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
   const expectedEntryIds = entries.map((entry) => worldEntryId(entry))
   await expect
     .poll(() => readPersistedWorldPlacement(page))

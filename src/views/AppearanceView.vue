@@ -70,6 +70,7 @@ const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
 
 const wallpaperAssets = computed(() => galleryStore.getAssetsByCategory('wallpaper'))
 const homeLayoutPreviewTemplates = computed(() => HOME_LAYOUT_TEMPLATES)
+const HOME_VISIBLE_PAGE_OPTIONS = [2, 3, 4, 5]
 const homeLayoutPageCount = computed(() =>
   Math.max(
     5,
@@ -100,6 +101,10 @@ const homeLayoutPageSummaries = computed(() =>
 const selectedHomeLayoutTemplate = computed(() =>
   getHomeLayoutTemplate(settings.value.appearance.homeLayoutTemplateIds?.[selectedHomeLayoutPageIndex.value]),
 )
+const homeVisiblePageCount = computed(() => {
+  const configuredCount = Number(settings.value.appearance.homeVisiblePageCount)
+  return HOME_VISIBLE_PAGE_OPTIONS.includes(configuredCount) ? configuredCount : 3
+})
 const homeDesktopRefreshRecommended = computed(() => systemStore.recommendHomeDesktopRefresh)
 
 const fontPresetLabel = (preset) => {
@@ -384,8 +389,8 @@ const applyCurrentHomeDesktopDefaults = () => {
   if (!result?.ok) return
   selectedHomeLayoutPage.value = 0
   homeLayoutRefreshFeedback.value = t(
-    '已应用新版桌面布局：组件固定在 Dock，旧默认图标会回到可恢复的应用库。',
-    'Current Home layout applied: Widgets stays in the Dock and old default icons return to the recoverable library.',
+    '已应用新版桌面布局：保留三屏默认内容，并可在下方选择日常显示屏数。',
+    'Current Home layout applied: three default screens are restored, and the visible screen count remains configurable below.',
   )
   triggerSaved()
 }
@@ -397,6 +402,11 @@ const selectAppearanceHomePage = (pageIndex) => {
 const setAppearanceHomeTemplate = (templateId) => {
   const ok = systemStore.setHomeLayoutTemplate(selectedHomeLayoutPageIndex.value, templateId)
   if (!ok) return
+  triggerSaved()
+}
+
+const setAppearanceHomeVisiblePageCount = (pageCount) => {
+  if (!systemStore.setHomeVisiblePageCount(pageCount)) return
   triggerSaved()
 }
 
@@ -658,8 +668,8 @@ onBeforeUnmount(() => {
             <span>
               {{
                 t(
-                  '让组件固定在 Dock，并把旧默认图标整理回新版桌面。不会删除自定义组件。',
-                  'Keep Widgets in the Dock and organize old default icons into the current Home setup. Custom widgets are not deleted.',
+                  '恢复三屏默认桌面；下方可选择日常显示的主屏数量。不会删除自定义组件。',
+                  'Restore the three-screen Home default. Choose how many screens appear in normal use below. Custom widgets are not deleted.',
                 )
               }}
             </span>
@@ -680,6 +690,26 @@ onBeforeUnmount(() => {
         >
           {{ homeLayoutRefreshFeedback }}
         </p>
+        <div class="appearance-layout-page-count" data-testid="appearance-home-page-count">
+          <span>{{ t('显示页面', 'Visible Screens') }}</span>
+          <div
+            class="appearance-layout-page-count-options"
+            role="group"
+            :aria-label="t('主屏显示页面数量', 'Visible Home screen count')"
+          >
+            <button
+              v-for="count in HOME_VISIBLE_PAGE_OPTIONS"
+              :key="count"
+              type="button"
+              :class="{ 'is-active': homeVisiblePageCount === count }"
+              :aria-pressed="homeVisiblePageCount === count"
+              :data-testid="`appearance-home-page-count-${count}`"
+              @click="setAppearanceHomeVisiblePageCount(count)"
+            >
+              {{ count }}
+            </button>
+          </div>
+        </div>
         <div class="appearance-layout-pages" role="tablist" :aria-label="t('主屏页面', 'Home screens')">
           <button
             v-for="page in homeLayoutPageSummaries"
@@ -1666,6 +1696,58 @@ onBeforeUnmount(() => {
   font-weight: 750;
 }
 
+.appearance-layout-page-count {
+  border-top: 1px solid var(--system-subtle-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 11px;
+}
+
+.appearance-layout-page-count > span {
+  min-width: 0;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.appearance-layout-page-count-options {
+  flex: 0 1 172px;
+  min-width: 0;
+  border: 1px solid var(--system-control-border);
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 3px;
+  background: var(--system-surface-muted);
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.appearance-layout-page-count-options button {
+  min-width: 0;
+  min-height: 30px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--system-text-muted);
+  background: transparent;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.appearance-layout-page-count-options button.is-active {
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+  box-shadow: var(--system-shadow-control);
+}
+
+.appearance-layout-page-count-options button:active {
+  transform: scale(0.96);
+}
+
 .appearance-layout-pages,
 .appearance-layout-preview-row {
   display: grid;
@@ -1964,6 +2046,14 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 719px) {
+  .appearance-layout-page-count {
+    align-items: flex-start;
+  }
+
+  .appearance-layout-page-count-options {
+    flex-basis: 156px;
+  }
+
   .appearance-shell.is-appearance-sheet-open > div[class*="overflow-y-auto"] {
     overflow: visible;
   }

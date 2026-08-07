@@ -26,7 +26,7 @@ It also owns:
   - `外观 / Appearance` owns broader theme, wallpaper, icon style, and possible template-management settings;
   - `应用商城 / App Store` owns app-entry visibility and Home-entry placement recovery;
   - App Library / App Store-like presentation owns app-entry visibility only, not widget packs, themes, wallpapers, or layout templates.
-  - default Home placement is release curation rather than capability availability: demoted apps remain usable from App Store, and trailing empty customization pages stay hidden only in normal mode;
+  - default Home placement is release curation rather than capability availability: demoted apps remain usable from App Store, while Appearance owns the persisted two-through-five normal-mode screen count; changing that count hides or restores trailing retained pages without changing their templates, slots, or content, and Home edit mode always exposes all five pages;
   - setup migrations may replace recognized earlier defaults but must preserve user-managed Home layouts.
 - which installed-app entry owns a visible Chat action:
   - Chat `Me` owns user identity, anonymity, recent interaction data, and lightweight derived social feed;

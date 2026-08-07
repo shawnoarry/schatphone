@@ -42,7 +42,7 @@ describe('Home folder entries', () => {
     setActivePinia(createPinia())
   })
 
-  test('renders daily-life entries while keeping secondary utilities off the release Home', async () => {
+  test('renders the three-screen default while keeping secondary utilities off the release Home', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -65,9 +65,9 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="app_network"]').exists()).toBe(false)
     expect(wrapper.find('[data-home-tile-id="app_stock"]').exists()).toBe(false)
     expect(wrapper.find('[data-home-tile-id="app_assets"]').exists()).toBe(false)
-    expect(wrapper.find('[data-home-tile-id="system"]').exists()).toBe(false)
-    expect(wrapper.find('[data-home-tile-id="quick_heart"]').exists()).toBe(false)
-    expect(wrapper.find('[data-home-tile-id="quick_disc"]').exists()).toBe(false)
+    expect(wrapper.find('[data-home-tile-id="system"]').exists()).toBe(true)
+    expect(wrapper.find('[data-home-tile-id="quick_heart"]').exists()).toBe(true)
+    expect(wrapper.find('[data-home-tile-id="quick_disc"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_control_center"]').exists()).toBe(false)
     expect(wrapper.find('[data-home-tile-id="weather"] .home-widget-card').classes()).toContain(
       'is-weather',
@@ -127,7 +127,7 @@ describe('Home folder entries', () => {
     })
 
     expect(wrapper.find('[data-testid="home-left-page"]').exists()).toBe(true)
-    expect(wrapper.findAll('.home-dot')).toHaveLength(2)
+    expect(wrapper.findAll('.home-dot')).toHaveLength(3)
     expect(wrapper.find('[data-testid="home-left-utility-panel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain(
       'is-installed',
@@ -149,6 +149,57 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-testid="home-left-page"]').text()).toContain('1x1 Slots')
     expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('Apps to Install')
     expect(wrapper.find('[data-testid="home-left-page"]').text()).not.toContain('More Labs')
+    wrapper.unmount()
+  })
+
+  test('keeps hidden Home page templates and slot content intact until the user restores them', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([['weather'], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-b')
+    store.setHomeVisiblePageCount(2)
+
+    expect(store.setHomeLayoutSlotPlacement(4, 'b-small-1', 'app_gallery')).toBe(true)
+    expect(store.settings.appearance.homeVisiblePageCount).toBe(2)
+    const templatesBefore = [...store.settings.appearance.homeLayoutTemplateIds]
+    const placementsBefore = JSON.parse(JSON.stringify(store.settings.appearance.homeLayoutSlotPlacements))
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.home-dot')).toHaveLength(2)
+    expect(wrapper.find('[data-home-grid-page="4"]').exists()).toBe(false)
+
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findAll('.home-dot')).toHaveLength(5)
+    expect(wrapper.find('[data-home-grid-page="4"] [data-home-tile-id="app_gallery"]').exists()).toBe(true)
+    expect(store.settings.appearance.homeLayoutTemplateIds).toEqual(templatesBefore)
+    expect(store.settings.appearance.homeLayoutSlotPlacements).toEqual(placementsBefore)
+
+    store.setHomeVisiblePageCount(5)
+    await router.push('/home?homePage=4')
+    await router.isReady()
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findAll('.home-dot')).toHaveLength(5)
+    expect(
+      wrapper
+        .find('[data-home-grid-page="4"] [data-home-tile-id="app_gallery"]')
+        .attributes('data-home-slot-id'),
+    ).toBe('b-small-1')
     wrapper.unmount()
   })
 
@@ -1179,6 +1230,7 @@ describe('Home folder entries', () => {
     })
     expect(wrapper.find(`[data-home-tile-id="${worldAppId}"]`).exists()).toBe(true)
 
+    store.setHomeVisiblePageCount(5)
     await wrapper.find('.home-edit-btn.is-primary').trigger('click')
     vi.advanceTimersByTime(250)
     await wrapper.vm.$nextTick()
