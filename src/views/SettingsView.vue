@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -72,6 +72,7 @@ const {
 })
 
 const activeMenu = ref('')
+const backupFocusTarget = ref(null)
 const generalSaved = ref(false)
 const automationSaved = ref(false)
 const softwareUpdateFeedbackType = ref('')
@@ -799,6 +800,13 @@ onBeforeUnmount(() => {
   if (softwareUpdateFeedbackTimerId) clearTimeout(softwareUpdateFeedbackTimerId)
 })
 
+onMounted(() => {
+  if (route.query?.focus !== 'backup') return
+  void nextTick(() => {
+    backupFocusTarget.value?.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+  })
+})
+
 const initialMenu = normalizeSettingsMenuFromQuery(
   typeof route.query?.menu === 'string' ? route.query.menu : '',
 )
@@ -839,24 +847,30 @@ if (initialMenu) {
         @open-appearance="openAppearanceStudio"
       />
 
-      <div class="settings-section-label px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
-      <SettingsBackupSection
-        :backup-copy-tone="backupCopyTone"
-        :backup-include-asset-package="backupIncludeAssetPackage"
-        :backup-exporting="backupExporting"
-        :backup-importing="backupImporting"
-        :backup-export-mode-label="backupExportModeLabel"
-        :backup-export-mode-hint="backupExportModeHint"
-        :backup-package-limit-hint="backupPackageLimitHint"
-        :backup-feedback-type="backupFeedbackType"
-        :backup-feedback-message="backupFeedbackMessage"
-        :resolve-backup-copy="resolveBackupCopy"
-        @update-backup-copy-tone="setBackupCopyTone"
-        @update-include-asset-package="setBackupIncludeAssetPackage"
-        @export-data="exportData"
-        @trigger-import-data="triggerImportData"
-        @open-about="openSubPage('about')"
-      />
+      <section
+        ref="backupFocusTarget"
+        class="space-y-2 scroll-mt-4"
+        data-testid="settings-backup-focus"
+      >
+        <div class="settings-section-label px-1 text-[11px] text-gray-500 font-medium">{{ t('数据与安全', 'Data & Security') }}</div>
+        <SettingsBackupSection
+          :backup-copy-tone="backupCopyTone"
+          :backup-include-asset-package="backupIncludeAssetPackage"
+          :backup-exporting="backupExporting"
+          :backup-importing="backupImporting"
+          :backup-export-mode-label="backupExportModeLabel"
+          :backup-export-mode-hint="backupExportModeHint"
+          :backup-package-limit-hint="backupPackageLimitHint"
+          :backup-feedback-type="backupFeedbackType"
+          :backup-feedback-message="backupFeedbackMessage"
+          :resolve-backup-copy="resolveBackupCopy"
+          @update-backup-copy-tone="setBackupCopyTone"
+          @update-include-asset-package="setBackupIncludeAssetPackage"
+          @export-data="exportData"
+          @trigger-import-data="triggerImportData"
+          @open-about="openSubPage('about')"
+        />
+      </section>
       <input
         ref="backupFileInput"
         type="file"

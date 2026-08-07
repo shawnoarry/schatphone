@@ -1,3 +1,5 @@
+import { reportPersistenceWriteResult } from './persistence-runtime-status'
+
 const STORAGE_NAMESPACE = 'schatphone'
 const INDEXED_DB_NAME = 'schatphone-layered-storage'
 const INDEXED_DB_STORE = 'state'
@@ -823,11 +825,17 @@ export const readPersistedState = (key, options = {}) => {
 }
 
 export const writePersistedState = (key, data, { version = 1 } = {}) => {
+  const finalize = (result) =>
+    reportPersistenceWriteResult({
+      key,
+      result,
+      retry: () => writePersistedState(key, data, { version }),
+    })
   const fullKey = buildStorageKey(key)
   const plan = createWritePlan(key, version)
-  if (!plan.ok) return plan
+  if (!plan.ok) return finalize(plan)
   const serialized = serializePersistedState(data, version, plan.generation)
-  if (!serialized.ok) return serialized
+  if (!serialized.ok) return finalize(serialized)
 
   const local = writePersistedStateToLocal(key, serialized.rawPayload)
   if (local.ok) {
@@ -837,7 +845,7 @@ export const writePersistedState = (key, data, { version = 1 } = {}) => {
       skipFreshnessCheck: plan.excluded || plan.forceFork,
     })
   }
-  return local
+  return finalize(local)
 }
 
 export const readPersistedStateAsync = async (key, options = {}) => {
@@ -876,25 +884,31 @@ export const readPersistedRawLayers = async (key) => {
 }
 
 export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) => {
+  const finalize = (result) =>
+    reportPersistenceWriteResult({
+      key,
+      result,
+      retry: () => writePersistedStateAsync(key, data, { version }),
+    })
   const fullKey = buildStorageKey(key)
   const plan = createWritePlan(key, version)
   if (!plan.ok) {
     if (plan.error === 'generation_exhausted') {
-      return {
+      return finalize({
         ...plan,
         local: createSkippedWrite('localStorage', plan.error, plan.retryable),
         mirror: createSkippedWrite('indexeddb', plan.error, plan.retryable),
-      }
+      })
     }
-    return createReconciliationFailure(true, plan.error)
+    return finalize(createReconciliationFailure(true, plan.error))
   }
   const serialized = serializePersistedState(data, version, plan.generation)
   if (!serialized.ok) {
-    return {
+    return finalize({
       ...serialized,
       local: createSkippedWrite('localStorage', serialized.error),
       mirror: createSkippedWrite('indexeddb', serialized.error),
-    }
+    })
   }
 
   if (!plan.excluded && !plan.forceFork && canUseLayeredPersistence()) {
@@ -905,17 +919,17 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
         serialized.rawPayload,
         { version },
       )
-      if (!precondition.ok) return createReconciliationFailure(true)
+      if (!precondition.ok) return finalize(createReconciliationFailure(true))
     }
   }
 
   const local = writePersistedStateToLocal(key, serialized.rawPayload)
   if (!local.ok) {
-    return {
+    return finalize({
       ...local,
       local,
       mirror: createSkippedWrite('indexeddb', 'primary_write_failed', local.retryable),
-    }
+    })
   }
   rememberLocalCommit(key, serialized.rawPayload, plan.generation, plan.forceFork)
 
@@ -923,7 +937,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
     const mirror = ENABLE_INDEXEDDB_MIRROR
       ? createWriteFailure('indexeddb', indexedDbUnavailableError, false)
       : createWriteSuccess('indexeddb', false)
-    return {
+    return finalize({
       ok: local.ok && mirror.ok,
       error: mirror.ok ? null : mirror.error,
       carrier: mirror.ok ? local.carrier : mirror.carrier,
@@ -931,7 +945,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
       attempted: local.attempted,
       local,
       mirror,
-    }
+    })
   }
 
   const mirror = await writeToIndexedDbWithResult(fullKey, serialized.rawPayload, {
@@ -949,7 +963,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
       })
     }
   }
-  return {
+  return finalize({
     ok: local.ok && mirror.ok,
     error: mirror.ok ? null : mirror.error,
     carrier: mirror.ok ? local.carrier : mirror.carrier,
@@ -957,7 +971,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
     attempted: true,
     local,
     mirror,
-  }
+  })
 }
 
 export const inspectPersistedStateLayers = async (key, options = {}) => {

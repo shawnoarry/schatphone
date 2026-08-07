@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-07-31
+Updated: 2026-08-07
 
 > **Candidate pool only / 仅候选池**
 >
@@ -32,7 +32,7 @@ Priority meanings:
 | --- | --- | --- | --- | --- | --- |
 | Lock Screen | stable entry and notification surface | true-device/safe-area polish | parallel notification behavior | keep metadata and return paths aligned | Watch |
 | Home | stable app/folder/widget shell, large view | editing/library complexity | becoming a control console | one named edit/library state seam | P1 |
-| Settings | usable system hub | whole-snapshot runtime persistence while the completed Repository foundation remains unconnected | owning domain records or becoming the database | keep runtime cutover separate; sensitive-file warning is complete | P0 |
+| Settings | usable system hub with product-level persistence recovery handoff | whole-snapshot runtime persistence while broader WriteCoordinator and complete recovery remain open | owning domain records or becoming the database | keep runtime cutover separate; reuse root-shell recovery and the existing backup owner | P0 |
 | Network & API | strong URL-first MVP | security guidance and provider QA | transport churn hidden in UI work | add sensitive-data guidance after policy | P1 |
 | Chat | strongest immersive core, very large | group orchestration and real-device media QA | relationship/source truth drift | focused product seam or later group design | P1 |
 | Chat Directory | real object/group/service manager | concept density | becoming role archive or source-record owner | separate one service/template management seam | P1 |
@@ -84,6 +84,7 @@ Priority meanings:
 - Chat, relationship-evidence, Book, and Gallery growth policy;
 - generated-media local retention, one default-on whole-Gallery backup choice, URL/source-only backup, recovery-only R2 placement, and default-off automation;
 - quota visibility, persistent-storage request, and multi-tab coordination;
+- `DONE 2026-08-07`: one root-shell save-failed/read-only state consumes layered and Book results with retry, confirmed reload, and Settings complete-backup handoff; broader same-container writer enforcement remains open;
 - accepted contract for multiple independently importable complete sensitive backups with editable/default naming, platform-owned local files, direct in-app personal-R2 listing/restore, manifest, integrity, capacity/failure states, staged restore, exact local-material reuse, non-destructive Gallery preservation, missing-media placeholders, legacy migration, and rollback;
 - confirmed explicit in-app R2 deletion with prominent cloud warning and cloud-success gating; no local or cloud backup may be rotated or deleted automatically, and quota pressure must warn or block rather than remove recovery points.
 

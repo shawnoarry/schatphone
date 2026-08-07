@@ -344,7 +344,7 @@ Delivery stages:
 2. `P0 Current-save safety and complete local recovery` - `IN_PROGRESS`, parallel architecture lane
    - `DONE 2026-07-22`: return structured persistence write results without breaking existing callers; local primary and mirror outcomes are independently observable;
    - `DONE 2026-07-22`: reconcile local/mirror freshness by lineage and sequence before Store mount, with bounded unavailable-IndexedDB startup, conflict zero-write behavior, verified repair, and the repository-owned legacy Book carrier explicitly inspect-only;
-   - still TODO: surface quota/carrier failure at product level and connect unresolved reconciliation to user-visible recovery actions;
+   - `DONE 2026-08-07`: surface structured sync/async and Book Repository failures through one product-level save-failed/read-only recovery state with retry, confirmed reload-current-save, and handoff to the existing complete-backup section; desktop and simulated Pixel 5 fault injection cover quota recovery, unresolved zero-write conflict, action sizing, containment, and overflow without changing persistence or backup formats;
    - extend the accepted same-container read-only timeout behavior beyond Book without introducing force takeover or last-write-wins;
    - close complete-package coverage, including required Chat identity/avatar state and default-on retained Gallery material, then prove integrity, staged activation, rollback, and reopen;
    - personal R2/Worker transport remains post-release because it cannot repair an unsafe or incomplete local recovery point.

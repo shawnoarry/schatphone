@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-07-31
+Updated: 2026-08-07
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -28,7 +28,7 @@ Current state:
 - Book owns reusable text assets while WorldBook owns source-link activation, structured encyclopedia entries, profile-template definitions, and reviewed per-world Pack enablement; zero Pack and zero encyclopedia selection remain valid, and Pack activation never binds Book content;
 - legacy backups may restore valid core data with a missing-material report and type-appropriate placeholders, while exact local binaries are reused and current-only retained Gallery material is not deleted or hidden by an older restore;
 - the non-active Batch 2B foundation and the separately approved Book-only Repository cutover completed on 2026-07-22 with focused Vitest and real-Chromium coverage; Book keeps its byte-identical legacy fallback and never dual-writes, while Gallery/R2 and all other owner migrations remain unapproved;
-- the layered-persistence freshness foundation now prepares all 17 inventory targets before Store mount, mutates only the 16 non-Book layered owners, orders valid heads by lineage/sequence rather than timestamps, fails closed on ambiguous/conflicting heads, verifies repairs, and bounds unavailable IndexedDB startup; visible save-failed recovery, broader same-container read-only enforcement, and complete recovery remain open;
+- the layered-persistence freshness foundation now prepares all 17 inventory targets before Store mount, mutates only the 16 non-Book layered owners, orders valid heads by lineage/sequence rather than timestamps, fails closed on ambiguous/conflicting heads, verifies repairs, and bounds unavailable IndexedDB startup; product-level save-failed/read-only recovery now aggregates structured results in the root shell with retry, confirmed reload, and complete-backup handoff, while product-wide same-container writer enforcement and complete recovery remain open;
 - the cross-module Mini Scene direction is architecture-accepted and its pure Stage 1 foundation is landed: request/draft/artifact/policy schemas, an empty-by-default caller registry, Book structured-profile/regex validation, and deterministic world/profile resolution exist without runtime imports; later Settings, persistence, presenters, and source Adapters remain unimplemented;
 - Mini Scene was not added to persistence Batch 2B. Its future artifact/profile-binding/policy data classes still require a separate persistence and complete-backup approval after the completed Book foundation pilot;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;

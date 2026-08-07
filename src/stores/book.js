@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedRawLayers, readPersistedState, writePersistedState } from '../lib/persistence'
+import { reportPersistenceWriteResult } from '../lib/persistence-runtime-status'
 import {
   buildBookAssetExportPayload,
   buildBookAssetPortableExport,
@@ -304,6 +305,7 @@ export const useBookStore = defineStore('book', () => {
       storageReadOnly.value = false
       activeGenerationId.value = result.pointer?.generationId || activeGenerationId.value
       pendingConflictResult = null
+      reportPersistenceWriteResult({ key: BOOK_STORAGE_KEY, result })
       return result
     }
     storageErrorCode.value = result?.code || 'repository_write_failed'
@@ -319,6 +321,16 @@ export const useBookStore = defineStore('book', () => {
       storageState.value = 'error'
       storageReadOnly.value = true
     }
+    reportPersistenceWriteResult({
+      key: BOOK_STORAGE_KEY,
+      result: {
+        ...result,
+        error: result?.code || 'repository_write_failed',
+        retryable: typeof result?.retry === 'function',
+      },
+      retry: result?.retry,
+      refreshCurrentSave: result?.refreshCurrentSave,
+    })
     return result
   }
 

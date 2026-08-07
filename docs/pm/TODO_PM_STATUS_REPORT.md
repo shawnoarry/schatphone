@@ -45,7 +45,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Area | Current state | PM judgment |
 | --- | --- | --- |
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
-| Settings / Network / backup | `Activation loop usable, recovery incomplete` | Chat now reaches the existing Network flow and returns after save plus smoke success for the first manual reply; complete-backup/recovery contracts are accepted and Book is the first active Repository owner, while product-wide current-save safety and complete recovery remain open |
+| Settings / Network / backup | `Activation loop usable, recovery incomplete` | Chat reaches Network and returns after save plus smoke success; root-shell save failures/read-only conflicts now offer retry, confirmed reload, and complete-backup handoff, while product-wide same-container writer protection and complete recovery remain open |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
@@ -177,7 +177,7 @@ This is the only current product-completion sequence. It does not require a broa
 
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
-1. make local and mirror writes return visible, actionable failure rather than silently swallowing quota, security, or unavailable-carrier errors;
+1. `DONE 2026-08-07`: make structured layered and Book Repository failures visible through one product-level recovery state with retry, confirmed reload-current-save, and complete-backup handoff;
 2. preserve the newest valid envelope and extend the accepted read-only conflict boundary beyond Book without force takeover or last-write-wins;
 3. implement the accepted independently importable complete-version backup, integrity, capacity/failure, staged restore, local delivery, legacy fallback, crash recovery, and rollback boundary;
 4. `DONE 2026-07-22`: the non-active Batch 2B Repository foundation and active Book-only cutover remain the reference pilot;

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppDialogHost from './components/AppDialogHost.vue'
+import PersistenceRecoverySheet from './components/PersistenceRecoverySheet.vue'
 import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
 import { useGalleryStore } from './stores/gallery'
@@ -10,6 +11,7 @@ import { useMapStore } from './stores/map'
 import { useSimulationStore } from './stores/simulation'
 import { useFoodDeliveryStore } from './stores/foodDelivery'
 import { useI18n } from './composables/useI18n'
+import { useDialog } from './composables/useDialog'
 import { useAppIconImagePreviews } from './composables/useAppIconImagePreviews'
 import { useSystemApiReports } from './composables/useSystemApiReports'
 import { useSystemNotifications } from './composables/useSystemNotifications'
@@ -32,6 +34,11 @@ import { pushReturnTarget } from './lib/navigation-return'
 import { resolveAppShellScopeAttrs } from './lib/app-shell-scope'
 import { buildScopedCustomCss } from './lib/appearance-scoped-css'
 import { buildAppSkinCss } from './lib/app-skin-customization'
+import {
+  getPersistenceRuntimeStatus,
+  retryPersistenceWrites,
+  subscribePersistenceRuntimeStatus,
+} from './lib/persistence-runtime-status'
 
 const router = useRouter()
 const route = useRoute()
@@ -42,6 +49,7 @@ const mapStore = useMapStore()
 const simulationStore = useSimulationStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const { systemLanguage, languageBase, t } = useI18n()
+const { confirmDialog } = useDialog()
 
 const { settings } = storeToRefs(systemStore)
 const systemApiReports = useSystemApiReports({ systemStore })
@@ -85,6 +93,10 @@ const shellBannerQueue = ref([])
 const showShellBanner = computed(
   () => Boolean(shellBannerVisible.value && shellBannerNote.value && !isLockRoute.value && !systemStore.isLocked),
 )
+const persistenceStatus = ref(getPersistenceRuntimeStatus())
+const showPersistenceRecovery = computed(
+  () => persistenceStatus.value.active && !isLockRoute.value && !systemStore.isLocked,
+)
 
 let timerId = null
 let backupReminderTimerId = null
@@ -102,6 +114,7 @@ let chatAutoPushVisibilityHandler = null
 let shellBannerTimerId = null
 let shellBannerVisibilityHandler = null
 let seenShellNotificationIds = new Set()
+let persistenceStatusUnsubscribe = null
 
 const MAP_AUTOMATION_MODULE_KEY = 'map'
 const CHAT_AUTOMATION_MODULE_KEY = 'chat'
@@ -111,6 +124,35 @@ const ROOT_AUTOMATION_ACTIVE_TICK_MS = 5 * 1000
 const PUSH_STARTUP_SELF_HEAL_ACTION_HEALTH = 'health_check'
 const PUSH_STARTUP_SELF_HEAL_ACTION_RESYNC = 'resync'
 const SHELL_WALLPAPER_PREVIEW_SCOPE = 'app-shell-wallpaper'
+
+const retryCurrentSaveWrites = async () => {
+  await retryPersistenceWrites()
+}
+
+const reloadCurrentSave = async () => {
+  const confirmed = await confirmDialog({
+    title: t('重新载入已保存版本', 'Reload saved version'),
+    message: t(
+      '这会放弃此页面尚未保存的内存更改，并重新打开最近一次可读取的当前存档。',
+      'This discards unsaved in-memory changes on this page and reopens the latest readable current save.',
+    ),
+    confirmText: t('重新载入', 'Reload'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
+  window.location.reload()
+}
+
+const openEmergencyBackup = () => {
+  router.push({
+    path: '/settings',
+    query: {
+      focus: 'backup',
+      recovery: persistenceStatus.value.mode,
+    },
+  })
+}
 
 let wallpaperResolveVersion = 0
 
@@ -858,6 +900,9 @@ const syncChatAutoPushSchedules = async ({ force = false } = {}) => {
 }
 
 onMounted(() => {
+  persistenceStatusUnsubscribe = subscribePersistenceRuntimeStatus((status) => {
+    persistenceStatus.value = status
+  })
   updateTime()
   timerId = setInterval(updateTime, 1000)
   void runPushStartupSelfHeal().finally(() => {
@@ -903,6 +948,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  persistenceStatusUnsubscribe?.()
+  persistenceStatusUnsubscribe = null
   clearShellBannerTimer()
   if (timerId) {
     clearInterval(timerId)
@@ -1020,6 +1067,14 @@ const lockPhone = () => {
           </div>
         </button>
       </transition>
+
+      <PersistenceRecoverySheet
+        v-if="showPersistenceRecovery"
+        :status="persistenceStatus"
+        @retry="retryCurrentSaveWrites"
+        @refresh="reloadCurrentSave"
+        @backup="openEmergencyBackup"
+      />
 
       <RouterView v-slot="{ Component }">
         <component :is="Component" :current-time="currentTime" :current-date="currentDate" />

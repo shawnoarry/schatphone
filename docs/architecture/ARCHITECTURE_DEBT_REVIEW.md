@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-07-31
+Updated: 2026-08-07
 
 > Scope and authority note
 >
@@ -304,10 +304,11 @@ Before another broad feature family:
 2. preserve the architecture-accepted IndexedDB v1 schema, record/generation model, persistent-storage timing, isolated-container rule, and fail-closed multi-tab contract;
 3. `DONE 2026-07-22`: the approved non-active Book foundation/fixture/staging pilot and the later separately approved Book-only application cutover/runtime activation now have targeted real-Chromium IndexedDB, same-container coordination, reopen, and rollback coverage; every non-Book migration remains behind a later gate;
 4. `DONE 2026-07-22`: preserve complete migration backup contents, including configured credentials, and add the confirmed pre-download sensitive-file warning plus export regression coverage;
-5. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
-6. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
-7. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;
-8. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build definitions with full E2E and separate production/full audits; still require remote/external proof and a later deployed base-path smoke.
+5. `DONE 2026-08-07`: expose structured layered-write and Book Repository failures through one root-shell recovery status without changing Store snapshots, Repository schema, or backup format; product-wide same-container writer enforcement and complete recovery remain later P0 slices;
+6. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
+7. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
+8. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;
+9. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build definitions with full E2E and separate production/full audits; still require remote/external proof and a later deployed base-path smoke.
 
 Do not mix these changes with product behavior or a large view refactor.
 

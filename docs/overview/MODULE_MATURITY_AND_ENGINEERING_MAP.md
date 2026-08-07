@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-07-31
+Updated: 2026-08-07
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -28,7 +28,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
 | Image Generation | shared first slice implemented; Camera is the visible owner | keep provider protocols behind the shared module, back up public configuration only, keep credentials/candidates device-local, and require explicit Gallery retention |
-| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contracts accepted; non-active foundation and Book-only Repository cutover implemented and browser-tested | keep one-container/one-save, complete versions, no sync/merge, and all non-Book runtime cutover/activation gates; preserve the unchanged legacy Book fallback |
+| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contracts accepted; product-level failed-write/read-only recovery and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge, broaden same-container writer protection before complete recovery, and preserve all non-Book cutover gates plus the unchanged legacy Book fallback |
 
 ### Tier B: Integrated V1
 
@@ -127,7 +127,7 @@ Gaps:
 - push/provider/permission flows are not end-to-end CI tested;
 - real-device keyboard/touch/safe-area/media/weak-network checks are absent;
 - production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; the local workflow definitions now enforce that baseline, pending remote proof.
-- the complete-backup/recovery contract is accepted but not implemented; current JSON export still lacks manifest integrity, capacity preflight, staged atomic activation, unified binary rollback, and legacy missing-media fallback.
+- product-level save-failed/read-only recovery now exists, but the complete-backup/recovery contract is not implemented; current JSON export still lacks manifest integrity, capacity preflight, staged atomic activation, unified binary rollback, and legacy missing-media fallback.
 
 ## 5. Module Engineering Guidance
 
