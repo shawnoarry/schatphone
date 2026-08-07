@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-08-07
+Updated: 2026-08-08
 
 This is the only live execution board for implementation order.
 
@@ -23,7 +23,7 @@ Inventory refreshed on 2026-07-30; validation state is tracked separately below:
 
 1. the current tree contains 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables, and 197 static unit-test files;
 2. Camera/shared image generation, five independent Food Delivery shop facades, and world-bound local Map packs are implemented at their named partial baselines;
-3. the current local integration passes lint, 197 Vitest files / 1321 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and full audit proof remain separate;
+3. the current local integration passes lint, 206 Vitest files / 1457 tests, production build, governance, both audit scopes, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI and deployed Pages now have successful-run and deployed-browser-smoke evidence, while named physical-device and independently rerunnable audit proof remain separate;
 4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
 5. the largest engineering risk remains concentrated in oversized views, especially Food Delivery, and `systemStore` fan-out.
 
@@ -178,13 +178,13 @@ Completed in the 2026-07-16 workflow-layering round:
    - `DONE 2026-07-22`: every complete local JSON export now requires an explicit danger confirmation before payload construction or download; the warning names configured API credentials plus private chat/role/world data, cancellation has no export/report side effects, and the full credential-bearing payload remains unchanged;
    - any redacted/shareable export remains a separate future contract and cannot silently replace the complete migration backup;
    - `DONE 2026-07-22`: normal npm resolution refreshed only the approved compatible transitive advisory nodes and required `hasown` child closure; production and full audits are both 0, with `package.json`, direct dependency versions, overrides/resolutions, and major versions unchanged;
-    - `DONE 2026-08-07`: remote Pages Run #128 exposed a newly published high advisory in the transitive `js-yaml` 4.3.0 lock; the lockfile now pins 4.3.1 without changing direct dependencies, and production/full audits are again 0/0. Remote rerun remains the release proof step;
+    - `DONE 2026-08-07`: remote Pages Run #128 exposed a newly published high advisory in the transitive `js-yaml` 4.3.0 lock; the lockfile now pins 4.3.1 without changing direct dependencies, and production/full audits are again 0/0. Run #130 passed the repaired remote gate and deployment; latest main Run #132 also passed and deployed `13c910b`.
    - the 2026-07-22 architecture baseline passed 185 Vitest files / 1170 tests, production build, and 60 collected Playwright cases with 56 passed and 4 existing project-specific skips; this is historical evidence, not validation of the later OpenFreeMap checkpoint.
 3. `P1 CI and release gating` - `PARTIAL_DONE`
    - `WORKFLOW_IMPLEMENTED 2026-07-22`: PR/manual CI and main-only Pages release definitions now fail closed on separate production/full audits, lint, unit, build, and one full Playwright collection that already includes the focused visual-quality cases;
    - both paths reject flaky recovery, cap intentional skips at four, retain failure-only Playwright diagnostics for seven days, and avoid a duplicate `test:visual` run;
-   - Pages config/upload/deploy now follows the verified build job, but remote GitHub execution, external required-check/environment protection, and a deployed `dist` base-path smoke remain unverified;
-   - keep this slice `PARTIAL_DONE` until those remote/external checks pass; do not treat the local workflow definition as release proof.
+   - Pages config/upload/deploy follows the verified build job; Run #130 proves remote GitHub execution and the deployed `dist` base-path smoke, while Run #132 proves the latest main commit passes and deploys. External required-check and environment-protection policy remain unverified;
+   - keep this slice `PARTIAL_DONE` until the external required-check/environment-protection policy is verified; a successful workflow and deployment alone do not prove those controls.
 4. `P1 Unified world-setting identity` - `STAGE_W1_DONE / STAGE_W2_NOT_APPROVED`
    - `DONE 2026-07-22`: the shared World Setting Interface exposes stable `legacy_single_world` compatibility identity separately from narrative, encyclopedia, profile-template, Pack-capability, and diagnostic projections;
    - WorldBook and Contacts consume the Interface; Pack switching cannot change displayed identity, Book/encyclopedia/template selection, or create new Pack-shaped template/contact scope values;
@@ -227,6 +227,7 @@ Integrated V1 already landed:
 - guarded AI/pasted proposals can confirm supported nonstandard app bindings and service templates;
 - Wallet owns injected currencies and exchange-rate settings;
 - app-specific customization exists, but global Appearance packs intentionally do not transport those app-owned layers.
+- `DONE 2026-08-08`: Chat's first-level `Contacts` tab replaces the legacy `Objects` label; contact rows open Chat directly, state-dependent social actions stay primary, and Chat-local preferences, block, and unbind live in a secondary action menu without changing Contacts global-role or Chat Directory binding ownership.
 
 Remaining acceptance work:
 
