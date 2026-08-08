@@ -273,6 +273,19 @@ Configure proxy credentials only through the Vercel project's Environment Variab
 
 The first 2026-08-09 Vercel deployment came from a local working-tree upload. The first Git push containing `vercel.json`, the Functions, and the matching application state establishes the reproducible repository baseline. After that baseline, the normal update flow is local validation -> commit -> GitHub push -> automatic Vercel deployment. Real-provider Chat remains incomplete until the Environment Variables are configured and one connection test plus one real reply pass.
 
+Cloudflare is the third independent root-path release and uses one Worker for both static assets and the same fixed AI proxy routes:
+
+- configuration: `wrangler.jsonc`;
+- Worker entry: `server/cloudflare-worker.mjs`;
+- build command: `npm run build:cloudflare`;
+- deploy command for Workers Builds: `npx wrangler deploy`;
+- Git source: `shawnoarry/schatphone`, production branch `main`;
+- pushes to the connected production branch trigger a Cloudflare build after the Git integration is active.
+
+Cloudflare production credentials belong only in the Worker's Variables and Secrets UI. Use secrets for `SCHATPHONE_AI_PROXY_UPSTREAM_KEY` and `SCHATPHONE_AI_PROXY_CLIENT_TOKEN`, and ordinary server variables for the upstream URL, allowed origins, and optional timeout/keyless controls. The Cloudflare app uses its own same-origin `/api/openai/v1` base; it never needs the upstream provider key in the browser.
+
+Before a Cloudflare release, run `npm.cmd run build:cloudflare` and `npm.cmd exec wrangler -- deploy --dry-run`. The current repository configuration is locally validated but is not an online deployment until the Git-connected Workers build completes and the resulting URL passes smoke checks. Detailed evidence is in `docs/qa/CLOUDFLARE_DEPLOYMENT_HANDOFF_2026-08-09.md`.
+
 ## 14. Quick Troubleshooting
 
 ### Changes seem not applied

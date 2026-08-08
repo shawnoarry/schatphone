@@ -1,8 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import {
-  handleVercelAiProxyRequest,
-  resolveProxyUpstreamUrl,
-} from '../server/vercel-ai-proxy.mjs'
+import { handleVercelAiProxyRequest, resolveProxyUpstreamUrl } from '../server/vercel-ai-proxy.mjs'
 
 const baseEnv = {
   SCHATPHONE_AI_PROXY_UPSTREAM_URL: 'https://provider.example/v1/chat/completions',
@@ -11,7 +8,12 @@ const baseEnv = {
   SCHATPHONE_AI_PROXY_ALLOWED_ORIGINS: 'http://localhost:5173',
 }
 
-const request = ({ method = 'POST', origin = 'https://preview.vercel.app', token = 'client-secret', body } = {}) => ({
+const request = ({
+  method = 'POST',
+  origin = 'https://preview.vercel.app',
+  token = 'client-secret',
+  body,
+} = {}) => ({
   method,
   headers: {
     authorization: token ? `Bearer ${token}` : '',
@@ -27,9 +29,9 @@ describe('Vercel AI proxy', () => {
     expect(resolveProxyUpstreamUrl('https://provider.example/v1', 'chat')?.toString()).toBe(
       'https://provider.example/v1/chat/completions',
     )
-    expect(resolveProxyUpstreamUrl('https://provider.example/v1/chat/completions', 'models')?.toString()).toBe(
-      'https://provider.example/v1/models',
-    )
+    expect(
+      resolveProxyUpstreamUrl('https://provider.example/v1/chat/completions', 'models')?.toString(),
+    ).toBe('https://provider.example/v1/models')
     expect(resolveProxyUpstreamUrl('http://provider.example/v1', 'chat')).toBeNull()
   })
 
@@ -48,10 +50,10 @@ describe('Vercel AI proxy', () => {
       request({ origin: 'https://attacker.example' }),
       { route: 'chat', env: baseEnv },
     )
-    const badToken = await handleVercelAiProxyRequest(
-      request({ token: 'wrong', body: '{}' }),
-      { route: 'chat', env: baseEnv },
-    )
+    const badToken = await handleVercelAiProxyRequest(request({ token: 'wrong', body: '{}' }), {
+      route: 'chat',
+      env: baseEnv,
+    })
 
     expect(badOrigin.status).toBe(403)
     expect(await badOrigin.json()).toMatchObject({ code: 'ORIGIN_NOT_ALLOWED' })
@@ -79,10 +81,11 @@ describe('Vercel AI proxy', () => {
   })
 
   test('forwards models with only the server-side upstream credential', async () => {
-    const fetchImpl = vi.fn(async () =>
-      new Response(JSON.stringify({ data: [{ id: 'model-a' }] }), {
-        headers: { 'Content-Type': 'application/json' },
-      }),
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ data: [{ id: 'model-a' }] }), {
+          headers: { 'Content-Type': 'application/json' },
+        }),
     )
     const response = await handleVercelAiProxyRequest(request({ method: 'GET' }), {
       route: 'models',
@@ -124,6 +127,35 @@ describe('Vercel AI proxy', () => {
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ choices: [{ message: { content: 'OK' } }] })
+  })
+
+  test('forwards a native Request body instead of serializing its stream as an object', async () => {
+    const payload = { model: 'model-a', messages: [{ role: 'user', content: 'Hello' }] }
+    const fetchImpl = vi.fn(async (_url, options) => {
+      expect(JSON.parse(new TextDecoder().decode(options.body))).toEqual(payload)
+      return new Response('data: done\n\n', {
+        headers: { 'Content-Type': 'text/event-stream' },
+      })
+    })
+    const nativeRequest = new Request('https://schatphone.example/api/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer client-secret',
+        'Content-Type': 'application/json',
+        Origin: 'https://schatphone.example',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const response = await handleVercelAiProxyRequest(nativeRequest, {
+      route: 'chat',
+      env: baseEnv,
+      fetchImpl,
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('text/event-stream')
+    expect(await response.text()).toBe('data: done\n\n')
   })
 
   test('redacts upstream network failures', async () => {

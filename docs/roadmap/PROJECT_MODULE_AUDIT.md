@@ -61,7 +61,7 @@ Priority meanings:
 | Cheats | concept only | unlock/route/editor contract | duplicating World Hub | explicit product decision | Decision |
 | Files | internal compatibility component | none for ordinary users | public file-manager drift | expand only for an internal consumer | Watch |
 | Push relay | working local delivery helper | auth/tenancy/operations | being mistaken for backend autonomy | production-backend decision | Decision |
-| QA / CI | local gates pass; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Vercel root/proxy baseline are proven | synchronize the Git-triggered Vercel build, verify external protections, configured-provider/PWA/true-device flows, independent audit availability, and a coverage floor | treating partial deployed evidence as complete release confidence | preserve current gates and add only the missing external proof | P0 |
+| QA / CI | local gates pass; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Vercel root/proxy baseline are proven; Cloudflare Worker/static-assets is locally deployment-ready | complete the first Git-connected Cloudflare build, verify external protections, configured-provider/PWA/true-device flows, independent audit availability, and a coverage floor | treating partial deployed evidence as complete release confidence | preserve current gates and add only the missing external proof | P0 |
 
 ## 3. Cross-Cutting Candidates
 
@@ -74,6 +74,7 @@ Priority meanings:
 - `WORKFLOW_IMPLEMENTED 2026-07-22`: one full Playwright run plus separate production/full audits for PR and main Pages build;
 - `DONE 2026-08-07`: remote Pages gate and deployed `/schatphone/` base-path smoke;
 - `PARTIAL_DONE 2026-08-09`: Git-connected Vercel root-path app and fail-closed fixed-upstream proxy deployed; production secret/provider proof, PWA/relaunch, external protection, and true-device evidence remain.
+- `LOCAL_READY 2026-08-09`: Cloudflare Worker/static-assets root-path configuration, shared proxy core, native Request body forwarding, focused tests, root build, and Wrangler dry-run pass; Git-connected online deployment and URL smoke remain.
 
 ### Persistence And Recovery
 
@@ -128,7 +129,7 @@ Priority meanings:
 
 1. preserve the accepted complete-backup/recovery contract, completed non-active IndexedDB Repository/Book foundation, and active Book-only reference cutover while keeping every non-Book migration and later data-lifecycle work separately gated;
 2. use the completed Book cutover, fixtures, and rollback proof as the reference boundary; do not begin another owner migration without separate approval;
-3. finish the remaining Git-triggered Vercel/provider/PWA/external-protection/true-device proof while preserving the deployed Pages and Vercel infrastructure baselines;
+3. complete the first Git-triggered Cloudflare deployment and remaining provider/PWA/external-protection/true-device proof while preserving the deployed Pages and Vercel infrastructure baselines;
 4. one named architecture hotspot or adapter seam;
 5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 

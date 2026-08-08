@@ -15,7 +15,7 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current local integration has passing lint, unit, build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Git-connected Vercel root/proxy infrastructure baseline are proven, while configured provider, installed PWA, external protections, and named physical-device proof remain open.
+- the current local integration has passing lint, unit, build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Git-connected Vercel root/proxy infrastructure baseline are proven. The third Cloudflare Worker/static-assets root path is locally validated and awaits its first Git-connected deployment; configured provider, installed PWA, external protections, and named physical-device proof remain open.
 
 The current work is concentrated in four areas:
 
@@ -59,7 +59,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
-| QA / release | `Strong local baseline; hosted infrastructure partial` | remote Pages and `/schatphone/` smoke pass; the Git-connected Vercel root and fail-closed AI proxy are deployed, while configured-provider Chat, external checks, installed PWA, and true-device QA remain open |
+| QA / release | `Strong local baseline; hosted infrastructure partial` | remote Pages and `/schatphone/` smoke pass; the Git-connected Vercel root and fail-closed AI proxy are deployed; Cloudflare Worker/static-assets passes local deployment gates but is not online yet; configured-provider Chat, external checks, installed PWA, and true-device QA remain open |
 
 ## 4. What Users Can Do Now
 

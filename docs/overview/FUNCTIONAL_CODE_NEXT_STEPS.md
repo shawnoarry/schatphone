@@ -89,6 +89,7 @@ Current evidence:
 - PR and main Pages workflow definitions now fail closed on full product E2E and separate production/full audits; the full suite contains the focused visual cases and is not run twice;
 - Pages configure/upload/deploy requires the verified build job; remote Run #130 and the deployed `/schatphone/` base-path smoke are proven.
 - Vercel serves the root app and fixed-upstream OpenAI-compatible proxy Functions; this repository baseline makes later production-branch pushes automatic, while production secrets and one real-provider reply remain unproven.
+- the third Cloudflare Worker/static-assets root-path configuration shares the proxy core, passes local build/focused tests/Wrangler dry-run, and still needs its first Git-connected deployment and URL smoke.
 
 Safe sequence:
 
@@ -96,7 +97,7 @@ Safe sequence:
 2. `DONE`: isolated Vitest 4 migration plus full lint/unit/build/E2E validation;
 3. `DONE 2026-07-22`: compatible transitive advisory refresh through normal npm resolution, with production/full audit at 0/0;
 4. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build with audits plus one full E2E run, flaky rejection, skip ceiling, and failure diagnostics;
-5. preserve the proven remote Pages and Git-connected Vercel baselines, then confirm external required checks/environment policy, configured-provider Chat, installed-PWA/relaunch, and named true-device evidence.
+5. preserve the proven remote Pages and Git-connected Vercel baselines, complete the first Git-connected Cloudflare deployment, then confirm external required checks/environment policy, configured-provider Chat, installed-PWA/relaunch, and named true-device evidence.
 
 ## 5. Candidate C: One Named Hotspot Seam
 

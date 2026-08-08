@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:cloudflare": "vite build --base /",
     "preview": "vite preview",
     "push:server": "node server/push-server.mjs",
     "push:keys": "node server/generate-vapid.mjs",
@@ -44,6 +45,7 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^6.0.3",
     "vite": "^7.3.6",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "4.120.0"
   }
 }
