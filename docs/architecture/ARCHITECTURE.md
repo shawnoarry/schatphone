@@ -426,7 +426,7 @@ Gaps:
 
 Vercel project `shawn-e-s-projects/schatphone` is connected to `shawnoarry/schatphone` and serves the root-path app at `https://schatphone.vercel.app`. `vercel.json` adds fixed-upstream OpenAI-compatible models and Chat Completions Functions with server-only upstream credentials, a separate browser client token, allowed-origin enforcement, size/time limits, streaming preservation, and redacted errors. The initial deployment came from the local dirty tree; the `main` commit containing this deployment contract becomes the reproducible source for automatic later builds. Secure Environment Variable configuration and one real-provider Chat reply remain required. The proxy is a personal release helper, not a multi-tenant backend or abuse-control boundary.
 
-Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third root-path build. One Worker routes the two fixed `/api/openai/v1/*` endpoints through the shared Web Platform proxy core and delegates all non-API requests to the Workers Static Assets binding with SPA fallback. The Vercel-only Node response adapter remains outside that core. Local root build, focused Worker/native-Request/streaming tests, and Wrangler dry-run pass; Git-connected online deployment, URL smoke, secure Variables and Secrets, and one real-provider reply remain pending.
+Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third root-path build. One Worker routes the two fixed `/api/openai/v1/*` endpoints through the shared Web Platform proxy core and delegates all non-API requests to the Workers Static Assets binding with SPA fallback. The Vercel-only Node response adapter remains outside that core. Local root build, focused Worker/native-Request/streaming tests, Wrangler dry-run, the first Git-triggered Workers Build, and root/manifest/hash-route/static-asset/fail-closed API smoke pass at `https://schatphone.noarry.workers.dev`; secure Variables and Secrets plus one real-provider reply remain pending.
 
 ## 11. Current Debt And Direction
 
@@ -444,12 +444,12 @@ Other debt:
 
 - direct store-to-store coupling across some ownership boundaries;
 - no compile-time contract layer;
-- remaining Git-triggered Cloudflare/provider/PWA/external-protection release proof;
+- remaining configured-provider/PWA/external-protection release proof;
 - incomplete true-device and push/provider QA.
 
 Recommended order:
 
-1. preserve proven Pages and Git-connected Vercel infrastructure baselines, complete the first Git-connected Cloudflare deployment, then close external protection, configured-provider, PWA/relaunch, and named true-device proof;
+1. preserve proven Pages, Git-connected Vercel, and Git-connected Cloudflare infrastructure baselines, then close external protection, configured-provider, PWA/relaunch, and named true-device proof;
 2. one measured hotspot or facade slice;
 3. one deeper cross-store adapter;
 4. incremental types for shared contracts only;

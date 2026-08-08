@@ -8,7 +8,8 @@ Updated: 2026-08-09
 - One Worker serves the built Vue SPA through Workers Static Assets and handles the fixed `/api/openai/v1/models` and `/api/openai/v1/chat/completions` proxy routes before static fallback.
 - The proxy core is shared with Vercel and uses Web Platform request/response streams; the Vercel Node response adapter remains separate.
 - Local Cloudflare build, focused Worker/proxy tests, and `wrangler deploy --dry-run` pass.
-- The first Git-connected Cloudflare deployment is pending the protected `main` push and Cloudflare dashboard setup. No online Cloudflare URL is claimed yet.
+- The Git-connected production Worker is deployed at `https://schatphone.noarry.workers.dev` from `main` commit `25b5329`.
+- Cloudflare Workers Build `00ebb7df` completed successfully with Worker version `4f524e75-aed3-498a-bdf1-f9d07ce4954d`.
 
 ## Git Deployment Contract
 
@@ -16,7 +17,7 @@ Updated: 2026-08-09
 - Production branch: `main`.
 - Build command: `npm run build:cloudflare`.
 - Deploy command: `npx wrangler deploy`.
-- Later pushes to `main` should trigger Cloudflare Workers Builds after the Git integration is connected.
+- Later authorized pushes to `main` trigger Cloudflare Workers Builds automatically.
 - GitHub Pages continues to build with `/schatphone/`; Vercel and Cloudflare build with `/`.
 
 ## AI Proxy Boundary
@@ -51,9 +52,16 @@ Do not use a `VITE_` prefix and do not store production values in repository fil
 - production audit: 0 vulnerabilities;
 - full audit: 0 vulnerabilities.
 
+## Online Deployment Evidence
+
+- `/` returns `200 text/html`;
+- `/manifest.webmanifest` returns `200 application/manifest+json`;
+- a representative hashed JavaScript asset returns `200 text/javascript`;
+- `/#/lock` renders the SchatPhone lock screen in a browser;
+- `/api/openai/v1/models` returns `503 PROXY_NOT_CONFIGURED` while production credentials are absent;
+- an unknown `/api/*` route returns JSON `404 NOT_FOUND`.
+
 ## Remaining Deployment Proof
 
-1. Push the exact reviewed local commits to `origin/main` after explicit authorization.
-2. Connect the GitHub repository in Cloudflare Workers Builds and complete the first deployment.
-3. Record the resulting `workers.dev` URL and verify root, manifest, route refresh, static assets, and fail-closed API behavior.
-4. Configure secrets through the Cloudflare UI, then prove model discovery and one real Chat reply without exposing credentials.
+1. Configure production variables and secrets through the Cloudflare UI without exposing credentials.
+2. Prove model discovery and one real Chat reply through the Cloudflare same-origin proxy.

@@ -39,7 +39,7 @@ Current state:
 - the 2026-08-07 audit repair refreshed only the lockfile's transitive `js-yaml` node from 4.3.0 to 4.3.1 after the remote Pages gate exposed its high advisory; `package.json`, direct versions, and override/resolution policy remain unchanged, with production/full audits back at 0/0;
 - the CI/release workflow first slice defines fail-closed production/full audits, lint, unit, build, and one full E2E run for PR verification and main Pages release; remote Pages Run #130 and the deployed `/schatphone/` smoke are proven;
 - the Git-connected Vercel root-path project and fixed-upstream OpenAI-compatible proxy Functions are deployed as a fail-closed infrastructure baseline; production secret configuration, one real-provider Chat reply, external required checks/environment protection, installed-PWA/relaunch, and named true-device proof remain;
-- the Cloudflare Worker/static-assets configuration is locally validated as a third root-path host using the same Web Platform proxy core; its Git-connected first deployment, resulting URL, production secrets, and real-provider proof remain pending;
+- the Git-connected Cloudflare Worker/static-assets third root-path host is deployed at `https://schatphone.noarry.workers.dev` using the same Web Platform proxy core; root, manifest, hash-route, static-asset, fail-closed proxy, and unknown-API smoke checks pass, while production secrets and one real-provider reply remain pending;
 - the root bootstrap points to a thin cross-task execution contract, while task packages and specialist workflows own their execution detail;
 - project-local skill inventory and workflow layering are guarded by automated governance tests;
 - framework replacement or a broad TypeScript migration is not recommended.

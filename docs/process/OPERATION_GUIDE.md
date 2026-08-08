@@ -280,11 +280,11 @@ Cloudflare is the third independent root-path release and uses one Worker for bo
 - build command: `npm run build:cloudflare`;
 - deploy command for Workers Builds: `npx wrangler deploy`;
 - Git source: `shawnoarry/schatphone`, production branch `main`;
-- pushes to the connected production branch trigger a Cloudflare build after the Git integration is active.
+- pushes to the connected production branch trigger a Cloudflare Workers Build automatically; the first Git-triggered deployment completed on 2026-08-09.
 
 Cloudflare production credentials belong only in the Worker's Variables and Secrets UI. Use secrets for `SCHATPHONE_AI_PROXY_UPSTREAM_KEY` and `SCHATPHONE_AI_PROXY_CLIENT_TOKEN`, and ordinary server variables for the upstream URL, allowed origins, and optional timeout/keyless controls. The Cloudflare app uses its own same-origin `/api/openai/v1` base; it never needs the upstream provider key in the browser.
 
-Before a Cloudflare release, run `npm.cmd run build:cloudflare` and `npm.cmd exec wrangler -- deploy --dry-run`. The current repository configuration is locally validated but is not an online deployment until the Git-connected Workers build completes and the resulting URL passes smoke checks. Detailed evidence is in `docs/qa/CLOUDFLARE_DEPLOYMENT_HANDOFF_2026-08-09.md`.
+Before a Cloudflare release, run `npm.cmd run build:cloudflare` and `npm.cmd exec wrangler -- deploy --dry-run`. The Git-connected production Worker is live at `https://schatphone.noarry.workers.dev`; later authorized pushes to `main` automatically rebuild it. Detailed deployment and smoke evidence is in `docs/qa/CLOUDFLARE_DEPLOYMENT_HANDOFF_2026-08-09.md`.
 
 ## 14. Quick Troubleshooting
 
