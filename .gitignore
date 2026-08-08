@@ -16,6 +16,7 @@ playwright-report
 .env
 .env.*
 !.env.example
+.vercel
 server/data/*.json
 
 # Editor directories and files

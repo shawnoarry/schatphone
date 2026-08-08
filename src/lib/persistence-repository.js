@@ -343,6 +343,66 @@ export const createPersistenceRepository = async (options = {}) => {
       requestResult(store.get(key)),
     )
 
+  const beginExternalOperation = ({ generationId, operationId, now = Date.now() }) =>
+    runTransaction([GENERATIONS_STORE, OPERATION_JOURNAL_STORE], 'readwrite', async (stores) => {
+      const generation = await requestResult(stores[GENERATIONS_STORE].get(generationId))
+      const journal = await requestResult(stores[OPERATION_JOURNAL_STORE].get(operationId))
+      if (!generation || !journal || generation.operationId !== operationId) {
+        throw new PersistenceRepositoryError('generation_incomplete', { generationId, operationId })
+      }
+      if (generation.status !== 'verified' || journal.phase !== 'verified') {
+        throw new PersistenceRepositoryError('generation_state_conflict', {
+          generationId,
+          generationStatus: generation.status,
+          journalPhase: journal.phase,
+        })
+      }
+      const nextGeneration = { ...generation, status: 'external_applying', updatedAt: now }
+      const nextJournal = { ...journal, phase: 'external_applying', updatedAt: now }
+      stores[GENERATIONS_STORE].put(nextGeneration)
+      stores[OPERATION_JOURNAL_STORE].put(nextJournal)
+      return { generation: nextGeneration, journal: nextJournal }
+    })
+
+  const completeExternalOperation = ({
+    generationId,
+    operationId,
+    recoveryAction = 'external_operation_completed',
+    errorCode = '',
+    now = Date.now(),
+  }) => runTransaction(
+    [GENERATIONS_STORE, OPERATION_JOURNAL_STORE],
+    'readwrite',
+    async (stores) => {
+      const generation = await requestResult(stores[GENERATIONS_STORE].get(generationId))
+      const journal = await requestResult(stores[OPERATION_JOURNAL_STORE].get(operationId))
+      if (!generation || !journal || generation.operationId !== operationId) {
+        throw new PersistenceRepositoryError('generation_incomplete', { generationId, operationId })
+      }
+      if (
+        !['external_applying', 'external_completed'].includes(generation.status) ||
+        !['external_applying', 'completed'].includes(journal.phase)
+      ) {
+        throw new PersistenceRepositoryError('generation_state_conflict', {
+          generationId,
+          generationStatus: generation.status,
+          journalPhase: journal.phase,
+        })
+      }
+      const nextGeneration = { ...generation, status: 'external_completed', updatedAt: now }
+      const nextJournal = {
+        ...journal,
+        phase: 'completed',
+        updatedAt: now,
+        errorCode,
+        recoveryAction,
+      }
+      stores[GENERATIONS_STORE].put(nextGeneration)
+      stores[OPERATION_JOURNAL_STORE].put(nextJournal)
+      return { generation: nextGeneration, journal: nextJournal }
+    },
+  )
+
   const readActivePointer = async () => {
     const pointer = await readMeta('active-generation')
     return pointer || {
@@ -662,6 +722,8 @@ export const createPersistenceRepository = async (options = {}) => {
     readClassRecords,
     markGenerationVerified,
     abortGeneration,
+    beginExternalOperation,
+    completeExternalOperation,
     readMeta,
     readActivePointer,
     getOperationJournal,

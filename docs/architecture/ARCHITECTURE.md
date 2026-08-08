@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## 1. Architecture Goals
 
@@ -256,14 +256,14 @@ Confirmed target direction and current non-active foundation:
 - a configured personal R2 exposes its backup-file list and direct restore inside SchatPhone, without a required Cloudflare-dashboard download or a hidden duplicate local backup store;
 - in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
-- complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`: required-section manifests, integrity evidence, capacity preflight, staged generations, atomic activation, crash journals, migration, failure taxonomy, and metadata/binary rollback are frozen before implementation;
+- complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`; the roadmap 4.9 release-local v3 boundary now implements required-section manifests, integrity evidence, complete selected Gallery material, durable rollback checkpoints, startup crash recovery, legacy compatibility, and metadata/binary rollback, while predictive capacity and cross-owner root-generation activation remain separate work;
 - `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted stores, serialized mirror, Gallery binary carrier, image-generation credential/candidate/legacy carriers, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
-- `src/lib/backup-section-registry.js` is consumed by legacy v2 export shape validation and separately audits the existing Chat module-identity backup gap; the v2 payload now includes public `imageGeneration` configuration while device-local credentials and temporary candidates remain excluded, and old backups may omit that optional import section; a shape-valid legacy file is still ineligible for a future complete-package claim while the Chat gap exists; `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is now `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
+- `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration participates in backup while device-local credentials and temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container conflicts become read-only with retry/refresh rather than force takeover or last-write-wins;
 - Batch 2B completed as the non-active foundation, followed by a separately approved Book-only runtime cutover on 2026-07-22. Book now activates verified generations through the fenced pointer/journal flow, preserves the byte-identical legacy carrier for rollback, and performs no dual write; Gallery/R2 and every other owner migration remain unapproved.
-- the current layered-persistence foundation reports local and mirror write outcomes separately, blocks writes after unresolved reconciliation/precondition conflicts, rejects mirror generation regression, and preserves the last readable durable bytes; a non-persisted root-shell status aggregates layered and Book Repository failure/read-only results with retry, confirmed reload-current-save, and Settings backup handoff. A page-level current-save writer now keeps later same-container pages inspect-only/read-only across current durable carriers; complete staged recovery remains separate work.
+- the current layered-persistence foundation reports local and mirror write outcomes separately, blocks writes after unresolved reconciliation/precondition conflicts, rejects mirror generation regression, and preserves the last readable durable bytes; a non-persisted root-shell status aggregates layered and Book Repository failure/read-only results with retry, confirmed reload-current-save, and Settings backup handoff. A page-level current-save writer keeps later same-container pages inspect-only/read-only across current durable carriers; the release-local v3 path verifies before mutation, durably checkpoints the prior metadata-plus-binary save, rolls back failure or interrupted work before mount, and closes completed checkpoints. A broader cross-owner Repository root-generation switch remains separate work.
 
 ### Gallery Binaries
 
@@ -288,13 +288,13 @@ Current security gap:
 - every complete local JSON export now requires an explicit danger confirmation before payload construction or download, while keeping configured credentials and private local data unchanged;
 - a redacted/shareable export and encrypted personal remote backup remain separate future contracts.
 
-Target engineering contract, not current behavior:
+Current release-local behavior and remaining target:
 
-- a new `complete` package is a self-verified standalone object with every required owner section and every selected Gallery binary accounted for by size and integrity evidence;
-- package inspection, verification, legacy migration, local-asset resolution, and capacity planning occur before current-save mutation;
-- restore stages a complete new generation, activates it through one atomic root switch, verifies it after activation, and keeps the previous generation until rollback is no longer needed;
+- a schema v3 `complete` package is a self-verified standalone object with every required owner section and every selected Gallery binary accounted for by size and integrity evidence;
+- package inspection, integrity verification, legacy migration, and local-asset resolution occur before current-save mutation; predictive source/package/staging/destination capacity reporting remains separate work;
+- release-local restore durably checkpoints a clone-safe metadata-plus-binary snapshot before applying changes, verifies the result, rolls back failures and interrupted work, and closes successful checkpoints; staging every owner behind one atomic Repository root switch remains a broader target;
 - restoring an older version is non-destructive toward currently retained local Gallery material, but local reuse never weakens clean-device standalone-package requirements;
-- legacy core data may recover with explicit unavailable-media reporting and stable placeholders, while raw provider prompts/responses remain outside durable fallback metadata;
+- legacy core data remains import-compatible, while the complete unavailable-media reporting and stable-placeholder presentation path remains future work; raw provider prompts/responses stay outside durable fallback metadata;
 - local platform handoff, remote object confirmation, and restore activation have distinct success states so the UI cannot claim more durability than the Adapter proved.
 
 ## 8. Cross-Module Data Flows
@@ -406,9 +406,9 @@ Its boundary is important:
 ### Validation Posture
 
 - the 2026-07-22 architecture baseline passed ESLint, 185 Vitest files / 1170 tests, Vite production build, both npm audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
-- the current tree contains 197 static Vitest test files;
+- the current tree contains 209 static Vitest test files;
 - later promoted Camera, Food Delivery, and local-map slices have focused desktop/mobile evidence;
-- the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and independently rerunnable audit proof remain open.
+- the current local integration has passing lint, unit, production build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Git-connected Vercel root/proxy infrastructure baseline are proven, while configured provider, installed PWA, named physical-device, and independently rerunnable audit proof remain open.
 
 ### CI
 
@@ -422,9 +422,9 @@ Gaps:
 
 ### Deployment
 
-`.github/workflows/deploy.yml` runs the same hard gates on main push or main-only manual dispatch before configuring and uploading `dist`; the deploy job requires that verified build job.
+`.github/workflows/deploy.yml` runs the same hard gates on main push or main-only manual dispatch before configuring and uploading `dist`; the deploy job requires that verified build job. Remote Pages Run #130 and the live `/schatphone/` base-path smoke are proven. It does not deploy the push relay.
 
-It does not deploy the push relay. Remote execution, external `github-pages` protection, and a deployed `dist`/Vite base-path smoke remain unverified, so the release gate is still partial.
+Vercel project `shawn-e-s-projects/schatphone` is connected to `shawnoarry/schatphone` and serves the root-path app at `https://schatphone.vercel.app`. `vercel.json` adds fixed-upstream OpenAI-compatible models and Chat Completions Functions with server-only upstream credentials, a separate browser client token, allowed-origin enforcement, size/time limits, streaming preservation, and redacted errors. The initial deployment came from the local dirty tree; the `main` commit containing this deployment contract becomes the reproducible source for automatic later builds. Secure Environment Variable configuration and one real-provider Chat reply remain required. The proxy is a personal release helper, not a multi-tenant backend or abuse-control boundary.
 
 ## 11. Current Debt And Direction
 
@@ -442,12 +442,12 @@ Other debt:
 
 - direct store-to-store coupling across some ownership boundaries;
 - no compile-time contract layer;
-- CI/release gaps;
+- remaining Git-triggered Vercel/provider/PWA/external-protection release proof;
 - incomplete true-device and push/provider QA.
 
 Recommended order:
 
-1. remote CI/release proof, external protection checks, and a deployed base-path smoke now that the workflow first slice is implemented;
+1. preserve proven Pages and Git-connected Vercel infrastructure baselines, then close external protection, configured-provider, PWA/relaunch, and named true-device proof;
 2. one measured hotspot or facade slice;
 3. one deeper cross-store adapter;
 4. incremental types for shared contracts only;

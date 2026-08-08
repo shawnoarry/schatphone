@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 > **Candidate pool only / 仅候选池**
 >
@@ -12,7 +12,7 @@ SchatPhone is in internal personal development with several strong integrated lo
 
 Current product risks, in order:
 
-1. whole-snapshot local persistence, backup completeness, and long-term data lifecycle;
+1. long-term persistence growth, capacity visibility, and post-preview data lifecycle beyond the completed release-local v3 recovery boundary;
 2. core product definition and ownership-sensitive architecture;
 3. large view/store hotspots;
 4. later credential/toolchain/release hardening;
@@ -32,7 +32,7 @@ Priority meanings:
 | --- | --- | --- | --- | --- | --- |
 | Lock Screen | stable entry and notification surface | true-device/safe-area polish | parallel notification behavior | keep metadata and return paths aligned | Watch |
 | Home | stable app/folder/widget shell, large view | editing/library complexity | becoming a control console | one named edit/library state seam | P1 |
-| Settings | usable system hub with product-level persistence recovery handoff | whole-snapshot runtime persistence while broader WriteCoordinator and complete recovery remain open | owning domain records or becoming the database | keep runtime cutover separate; reuse root-shell recovery and the existing backup owner | P0 |
+| Settings | usable system hub with product-level persistence recovery and complete v3 local export/restore | whole-snapshot runtime persistence plus broader capacity/Repository/R2 work | owning domain records or becoming the database | preserve the completed local recovery owner; keep broader runtime cutover separate | P1 staged |
 | Network & API | strong URL-first MVP | security guidance and provider QA | transport churn hidden in UI work | add sensitive-data guidance after policy | P1 |
 | Chat | strongest immersive core, very large | group orchestration and real-device media QA | relationship/source truth drift | focused product seam or later group design | P1 |
 | Chat Directory | real object/group/service manager | concept density | becoming role archive or source-record owner | separate one service/template management seam | P1 |
@@ -61,7 +61,7 @@ Priority meanings:
 | Cheats | concept only | unlock/route/editor contract | duplicating World Hub | explicit product decision | Decision |
 | Files | internal compatibility component | none for ordinary users | public file-manager drift | expand only for an internal consumer | Watch |
 | Push relay | working local delivery helper | auth/tenancy/operations | being mistaken for backend autonomy | production-backend decision | Decision |
-| QA / CI | current local lint/unit/build/governance and focused Map/Peach desktop-mobile evidence pass; remote/external, named physical-device, deployed artifact, and independent audit proof remain | prove GitHub/deployed artifact behavior, true-device flows, audit availability, base-path smoke, and a coverage floor | treating local gates or workflow YAML as complete release confidence | preserve current local gates and add the missing external proof | P0 |
+| QA / CI | local gates pass; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Vercel root/proxy baseline are proven | synchronize the Git-triggered Vercel build, verify external protections, configured-provider/PWA/true-device flows, independent audit availability, and a coverage floor | treating partial deployed evidence as complete release confidence | preserve current gates and add only the missing external proof | P0 |
 
 ## 3. Cross-Cutting Candidates
 
@@ -72,7 +72,8 @@ Priority meanings:
 - `DONE 2026-07-22`: isolated Vitest 4 migration, nested Vite 5/esbuild removal, and critical-advisory closure;
 - `DONE 2026-07-22`: normal-resolver compatible transitive lock refresh, with production/full audit at 0/0 and no direct, override/resolution, or major change;
 - `WORKFLOW_IMPLEMENTED 2026-07-22`: one full Playwright run plus separate production/full audits for PR and main Pages build;
-- remote required-check/environment proof and a later deployed `dist` base-path smoke.
+- `DONE 2026-08-07`: remote Pages gate and deployed `/schatphone/` base-path smoke;
+- `PARTIAL_DONE 2026-08-09`: Git-connected Vercel root-path app and fail-closed fixed-upstream proxy deployed; production secret/provider proof, PWA/relaunch, external protection, and true-device evidence remain.
 
 ### Persistence And Recovery
 
@@ -86,6 +87,7 @@ Priority meanings:
 - quota visibility, persistent-storage request, and multi-tab coordination;
 - `DONE 2026-08-07`: one root-shell save-failed/read-only state consumes layered and Book results with retry, confirmed reload, and Settings complete-backup handoff;
 - `DONE 2026-08-07`: one page-level writer is acquired before reconciliation and Store mount; later same-container pages inspect without repair and fail closed across layered, Book, Gallery binary, and image-generation device-local writes until retry succeeds;
+- `DONE 2026-08-09`: schema v3 complete local backup requires all current sections, Chat identity/avatar state, canonical section/payload/binary integrity, and default-on whole-Gallery material; import verifies before mutation, preserves current-only retained material, journals a full rollback snapshot, and recovers interrupted restores before mount;
 - accepted contract for multiple independently importable complete sensitive backups with editable/default naming, platform-owned local files, direct in-app personal-R2 listing/restore, manifest, integrity, capacity/failure states, staged restore, exact local-material reuse, non-destructive Gallery preservation, missing-media placeholders, legacy migration, and rollback;
 - confirmed explicit in-app R2 deletion with prominent cloud warning and cloud-success gating; no local or cloud backup may be rotated or deleted automatically, and quota pressure must warn or block rather than remove recovery points.
 
@@ -126,7 +128,7 @@ Priority meanings:
 
 1. preserve the accepted complete-backup/recovery contract, completed non-active IndexedDB Repository/Book foundation, and active Book-only reference cutover while keeping every non-Book migration and later data-lifecycle work separately gated;
 2. use the completed Book cutover, fixtures, and rollback proof as the reference boundary; do not begin another owner migration without separate approval;
-3. remote CI/release proof and deployed base-path confidence now that the workflow first slice is implemented;
+3. finish the remaining Git-triggered Vercel/provider/PWA/external-protection/true-device proof while preserving the deployed Pages and Vercel infrastructure baselines;
 4. one named architecture hotspot or adapter seam;
 5. later device, content, commerce, secondary-module, and broader-runtime work only after explicit promotion.
 

@@ -20,6 +20,7 @@ import {
 } from './current-save-write-runtime'
 
 const BOOK_STORAGE_KEY = 'store:book'
+const BOOK_REPOSITORY_OPERATION_TYPE = 'book_legacy_stage'
 
 const createId = (prefix, randomUUID, now) =>
   `${prefix}-${randomUUID?.() || `${now()}-${Math.random().toString(16).slice(2)}`}`
@@ -103,6 +104,7 @@ export const createBookRepositoryRuntime = (options = {}) => {
       }
       const journals = await repository.listNonterminalJournals()
       for (const journal of journals) {
+        if (journal.operationType !== BOOK_REPOSITORY_OPERATION_TYPE) continue
         const generation = await repository.getGeneration(journal.candidateGenerationId)
         if (!generation) return { safe: false, code: 'generation_incomplete' }
         if (['staging', 'verified'].includes(journal.phase)) {

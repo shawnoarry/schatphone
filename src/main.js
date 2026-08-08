@@ -5,16 +5,27 @@ import router from './router'
 import { ensurePushServiceWorkerRegistration } from './lib/push'
 import { preparePersistedStateLayers } from './lib/persistence'
 import { PERSISTED_STATE_AUDIT_TARGETS } from './lib/persistence-owner-inventory'
-import { initializeCurrentSaveWriter } from './lib/current-save-write-runtime'
+import {
+  closeCurrentSaveWriter,
+  initializeCurrentSaveWriter,
+} from './lib/current-save-write-runtime'
+import { recoverPendingBackupRestores } from './lib/backup-restore-runtime'
 import './style.css'
 
+let currentSaveWriteAccess = null
 if (typeof window !== 'undefined') {
-  const writeAccess = await initializeCurrentSaveWriter()
+  currentSaveWriteAccess = await initializeCurrentSaveWriter()
   const persistenceBootstrapTargets = PERSISTED_STATE_AUDIT_TARGETS.map((target) => ({
     ...target,
-    inspectOnly: target.key === 'store:book' || writeAccess.ok !== true,
+    inspectOnly: target.key === 'store:book' || currentSaveWriteAccess.ok !== true,
   }))
   await preparePersistedStateLayers(persistenceBootstrapTargets)
+}
+
+const pinia = createPinia()
+if (typeof window !== 'undefined' && currentSaveWriteAccess?.ok === true) {
+  const recovery = await recoverPendingBackupRestores({ pinia })
+  if (!recovery.ok) await closeCurrentSaveWriter()
 }
 
 const runAfterFirstPaint = (task) => {
@@ -82,7 +93,7 @@ if (typeof window !== 'undefined') {
 
 const app = createApp(App)
 
-app.use(createPinia())
+app.use(pinia)
 app.use(router)
 app.mount('#app')
 

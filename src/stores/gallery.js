@@ -311,6 +311,42 @@ const normalizeAssetPackageSnapshot = (rawPackage) => {
   }
 }
 
+const mergeRetainedGallerySnapshot = (incoming, retained) => {
+  const incomingAssets = Array.isArray(incoming?.assets) ? incoming.assets : []
+  const retainedAssets = Array.isArray(retained?.assets) ? retained.assets : []
+  const incomingAssetIds = new Set(incomingAssets.map((asset) => asset?.id).filter(Boolean))
+  const assets = [
+    ...incomingAssets,
+    ...retainedAssets.filter((asset) => asset?.id && !incomingAssetIds.has(asset.id)),
+  ]
+  const validAssetIds = new Set(assets.map((asset) => asset?.id).filter(Boolean))
+
+  const incomingFolders = Array.isArray(incoming?.folders) ? incoming.folders : []
+  const retainedFolders = Array.isArray(retained?.folders) ? retained.folders : []
+  const retainedFolderById = new Map(retainedFolders.map((folder) => [folder?.id, folder]))
+  const mergedFolders = incomingFolders.map((folder) => {
+    const retainedFolder = retainedFolderById.get(folder?.id)
+    if (!retainedFolder) return folder
+    return {
+      ...folder,
+      assetIds: normalizeAssetIdList(
+        [...(folder?.assetIds || []), ...(retainedFolder?.assetIds || [])],
+        { existingAssetIds: validAssetIds },
+      ),
+    }
+  })
+  const incomingFolderIds = new Set(incomingFolders.map((folder) => folder?.id).filter(Boolean))
+  mergedFolders.push(
+    ...retainedFolders.filter((folder) => folder?.id && !incomingFolderIds.has(folder.id)),
+  )
+
+  return {
+    ...incoming,
+    assets,
+    folders: mergedFolders,
+  }
+}
+
 const normalizeUsageItem = (rawUsage, fallbackKey) => {
   const usage = rawUsage && typeof rawUsage === 'object' ? rawUsage : {}
   const moduleKey =
@@ -1318,12 +1354,19 @@ export const useGalleryStore = defineStore('gallery', () => {
 
   const restoreFromBackupAsync = async (
     snapshot = {},
-    { restoreAssetPackage = true } = {},
+    {
+      restoreAssetPackage = true,
+      preserveCurrentOnlyAssets = false,
+      requireCompleteAssetPackage = false,
+    } = {},
   ) => {
-    const source =
+    const incomingSource =
       snapshot && typeof snapshot.gallery === 'object' && snapshot.gallery
         ? snapshot.gallery
         : snapshot
+    const source = preserveCurrentOnlyAssets
+      ? mergeRetainedGallerySnapshot(incomingSource, createBackupSnapshot())
+      : incomingSource
     const restoredMetadata = hydrateFromSnapshot(source)
     if (!restoredMetadata) {
       return {
@@ -1349,12 +1392,30 @@ export const useGalleryStore = defineStore('gallery', () => {
       }
     }
 
+    const hasAssetPackage =
+      source?.assetPackage &&
+      typeof source.assetPackage === 'object' &&
+      Array.isArray(source.assetPackage.items)
     const normalizedPackage = normalizeAssetPackageSnapshot(source?.assetPackage)
     if (!Array.isArray(normalizedPackage.items) || normalizedPackage.items.length === 0) {
+      const requiredFileAssetCount = Array.isArray(incomingSource?.assets)
+        ? incomingSource.assets.filter((asset) => asset?.sourceType === 'file').length
+        : 0
+      if (requireCompleteAssetPackage && requiredFileAssetCount > 0) {
+        return {
+          ok: false,
+          reason: 'package_incomplete',
+          packageApplied: false,
+          packageItemCount: 0,
+          restoredPackageCount: 0,
+          failedPackageCount: requiredFileAssetCount,
+          skippedPackageCount: 0,
+        }
+      }
       return {
         ok: true,
         reason: '',
-        packageApplied: false,
+        packageApplied: Boolean(hasAssetPackage),
         packageItemCount: 0,
         restoredPackageCount: 0,
         failedPackageCount: 0,
@@ -1397,9 +1458,10 @@ export const useGalleryStore = defineStore('gallery', () => {
       }
     }
 
+    const packageComplete = failedPackageCount === 0 && skippedPackageCount === 0
     return {
-      ok: true,
-      reason: failedPackageCount > 0 ? 'package_partial_failed' : '',
+      ok: requireCompleteAssetPackage ? packageComplete : true,
+      reason: packageComplete ? '' : 'package_partial_failed',
       packageApplied: true,
       packageItemCount: normalizedPackage.items.length,
       restoredPackageCount,

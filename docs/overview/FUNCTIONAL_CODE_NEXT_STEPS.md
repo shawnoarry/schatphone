@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 > **Frozen execution status / 非执行看板**
 >
@@ -47,7 +47,7 @@ Problem:
 
 Most current stores write whole JSON snapshots to `localStorage` and mirror them to IndexedDB. Their normal startup still prefers valid `localStorage`, so the mirror does not remove the small synchronous quota or whole-store rewrite cost. Book is now the first active Repository exception; long Chat history, inline base64 media, Gallery binaries, and future archived-role continuity still need separately approved long-term storage contracts.
 
-The root shell consumes structured layered-write and Book Repository failures as one product-level save-failed/read-only state with retry, confirmed reload-current-save, and complete-backup handoff. One page-level current-save writer now also keeps later same-container pages inspect-only/read-only across the current durable carriers. Neither slice changes persisted shapes or completes staged backup recovery.
+The root shell consumes structured layered-write and Book Repository failures as one product-level save-failed/read-only state with retry, confirmed reload-current-save, and complete-backup handoff. One page-level current-save writer keeps later same-container pages inspect-only/read-only across current durable carriers. The roadmap 4.9 release-local v3 backup path now adds required-section and binary integrity, Chat identity/avatar coverage, default-on complete Gallery material, durable metadata-plus-binary rollback checkpoints, and pre-mount crash recovery. Predictive capacity reporting, a cross-owner Repository root-generation switch, and remote transport remain separate architecture work.
 
 Confirmed product boundary:
 
@@ -87,7 +87,8 @@ Current evidence:
 - Vite 7.3.6 and its compatible root esbuild/Rollup refresh are complete;
 - Vitest 4.1.10 now reuses root Vite 7.3.6, with the old nested Vite 5/esbuild chain removed;
 - PR and main Pages workflow definitions now fail closed on full product E2E and separate production/full audits; the full suite contains the focused visual cases and is not run twice;
-- Pages configure/upload/deploy requires the verified build job, while remote run proof, external protections, and a deployed base-path smoke remain pending.
+- Pages configure/upload/deploy requires the verified build job; remote Run #130 and the deployed `/schatphone/` base-path smoke are proven.
+- Vercel serves the root app and fixed-upstream OpenAI-compatible proxy Functions; this repository baseline makes later production-branch pushes automatic, while production secrets and one real-provider reply remain unproven.
 
 Safe sequence:
 
@@ -95,7 +96,7 @@ Safe sequence:
 2. `DONE`: isolated Vitest 4 migration plus full lint/unit/build/E2E validation;
 3. `DONE 2026-07-22`: compatible transitive advisory refresh through normal npm resolution, with production/full audit at 0/0;
 4. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build with audits plus one full E2E run, flaky rejection, skip ceiling, and failure diagnostics;
-5. prove the workflows remotely, confirm external required checks/environment policy, and add a later deployed base-path smoke.
+5. preserve the proven remote Pages and Git-connected Vercel baselines, then confirm external required checks/environment policy, configured-provider Chat, installed-PWA/relaunch, and named true-device evidence.
 
 ## 5. Candidate C: One Named Hotspot Seam
 

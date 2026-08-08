@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -14,7 +14,7 @@ SchatPhone is in:
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation first slice, browser/PWA-first persistence foundation, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete, while Gallery People/source callers and broader backup/data-lifecycle work remain active or deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation first slice, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete, while Gallery People/source callers and broader capacity/data-lifecycle work remain deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
 
 ## 2. Maturity Tiers
 
@@ -28,7 +28,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
 | Image Generation | shared first slice implemented; Camera is the visible owner | keep provider protocols behind the shared module, back up public configuration only, keep credentials/candidates device-local, and require explicit Gallery retention |
-| persistence / backup / diagnostics | usable snapshot baseline; backup/recovery contracts accepted; product-level recovery, same-container writer protection, and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge, finish complete local recovery, and preserve all non-Book cutover gates plus the unchanged legacy Book fallback |
+| persistence / backup / diagnostics | release-local v3 complete backup/recovery, product-level recovery, same-container writer protection, and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge; preserve non-Book cutover gates and pursue capacity/root-generation/R2 work only as separate architecture slices |
 
 ### Tier B: Integrated V1
 
@@ -78,8 +78,8 @@ Measured on 2026-07-30:
 - 153 JavaScript files and 85 Vue files under `src`;
 - zero TypeScript source files;
 - 131,038 source lines;
-- 197 static unit-test files;
-- current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks.
+- 209 static unit-test files;
+- current local integration passes lint, 209 Vitest files / 1479 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks.
 
 ### Largest Views
 
@@ -123,11 +123,11 @@ Strongly defended areas:
 Gaps:
 
 - no coverage threshold;
-- PR and main Pages workflow definitions now include full product E2E plus separate production/full audits, but remote GitHub execution and external required-check/environment enforcement remain unverified;
+- PR and main Pages workflow definitions include full product E2E plus separate production/full audits; remote Run #130 and the deployed `/schatphone/` smoke are proven, while external required-check/environment enforcement remains unverified;
 - push/provider/permission flows are not end-to-end CI tested;
 - real-device keyboard/touch/safe-area/media/weak-network checks are absent;
-- production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; the local workflow definitions now enforce that baseline, pending remote proof.
-- product-level save-failed/read-only recovery and the same-container writer boundary now exist, but the complete-backup/recovery contract is not implemented; current JSON export still lacks manifest integrity, capacity preflight, staged atomic activation, unified binary rollback, and legacy missing-media fallback.
+- production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; local and remote workflow evidence enforce that baseline, while independently rerunnable audit proof remains separate.
+- product-level save-failed/read-only recovery, same-container writer protection, and the release-local complete v3 package/rollback/crash-recovery boundary are implemented. Predictive capacity reporting, cross-owner atomic Repository activation, legacy unavailable-media presentation, and personal R2 transport remain separate work.
 
 ## 5. Module Engineering Guidance
 
@@ -172,7 +172,7 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
 2. preserve the completed non-active IndexedDB/Book Batch 2B foundation and active Book-only reference cutover, including its browser evidence and unchanged legacy fallback;
 3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration/cutover separately approved;
-4. finish CI/release gating through remote workflow proof, external required-check/environment verification, and a later deployed `dist` base-path smoke;
+4. preserve the proven remote Pages/base-path and Git-connected Vercel root/proxy baselines, then finish external required-check/environment verification, configured-provider Chat, installed-PWA/relaunch, and named true-device proof;
 5. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;
 6. one named view/store hotspot seam or deeper cross-store adapter;
 7. later device findings and incremental typing only where dependencies justify them.

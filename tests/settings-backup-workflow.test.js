@@ -53,7 +53,7 @@ describe('Settings backup workflow interface', () => {
     vi.unstubAllGlobals()
   })
 
-  test('exports the existing metadata backup shape and writes a storage report', async () => {
+  test('exports a verified metadata-only package when retained material is explicitly excluded', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
     const imageGenerationStore = useImageGenerationStore()
@@ -71,6 +71,14 @@ describe('Settings backup workflow interface', () => {
       roleId: '901A',
       name: 'Backup Role',
       role: 'Archivist',
+    })
+    chatStore.setModuleIdentity({
+      nickname: 'Backup identity',
+      avatar: 'https://example.com/chat-self.png',
+      anonymityEnabled: true,
+    })
+    chatStore.setModuleAvatarOverrides({
+      defaultContactAvatar: 'https://example.com/default-contact.png',
     })
     imageGenerationStore.setCredentials(imageGenerationStore.profiles[0].id, {
       apiKey: 'image-secret',
@@ -93,6 +101,8 @@ describe('Settings backup workflow interface', () => {
       confirmDialog,
     })
 
+    expect(workflow.backupExportModeLabel.value).toContain('metadata + asset package')
+    workflow.setBackupIncludeAssetPackage(false)
     expect(workflow.backupExportModeLabel.value).toContain('metadata only')
 
     await workflow.exportData()
@@ -107,6 +117,8 @@ describe('Settings backup workflow interface', () => {
       'notifications',
       'apiReports',
       'truthState',
+      'moduleAvatarOverrides',
+      'moduleIdentity',
       'roleProfiles',
       'contacts',
       'chatHistory',
@@ -129,14 +141,24 @@ describe('Settings backup workflow interface', () => {
       'imageGeneration',
     ])
     expect(exported.backupMeta).toMatchObject({
-      schemaVersion: 2,
+      magic: 'schatphone-complete-backup',
+      schemaVersion: 3,
       exportMode: 'metadata_only',
     })
+    expect(exported.backupMeta.manifest.sectionCount).toBeGreaterThan(20)
     expect(exported.backupMeta.galleryAssetPackage).toMatchObject({
       requested: false,
       included: false,
     })
     expect(exported.settings.api.key).toBe('seeded-api-key')
+    expect(exported.moduleIdentity).toMatchObject({
+      nickname: 'Backup identity',
+      avatar: 'https://example.com/chat-self.png',
+      anonymityEnabled: true,
+    })
+    expect(exported.moduleAvatarOverrides.defaultContactAvatar).toBe(
+      'https://example.com/default-contact.png',
+    )
     expect(exported.imageGeneration.defaults.aspectRatio).toBe('4:5')
     expect(JSON.stringify(exported.imageGeneration)).not.toContain('image-secret')
     expect(JSON.stringify(exported.imageGeneration)).not.toContain('proxy-secret')
@@ -284,7 +306,7 @@ describe('Settings backup workflow interface', () => {
     const exportedBlob = createObjectURL.mock.calls[0][0]
     const exported = JSON.parse(exportedBlob.parts.join(''))
     expect(exported.backupMeta).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       exportMode: 'metadata_with_asset_package',
     })
     expect(exported.backupMeta.galleryAssetPackage).toMatchObject({
@@ -298,7 +320,7 @@ describe('Settings backup workflow interface', () => {
     })
   })
 
-  test('blocks export when a required legacy v2 shape section is missing', async () => {
+  test('blocks export when a required complete-package section is missing', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
     const createObjectURL = vi.fn()
@@ -328,7 +350,7 @@ describe('Settings backup workflow interface', () => {
     )
     expect(workflow.backupFeedbackType.value).toBe('error')
     expect(workflow.backupFeedbackMessage.value).toContain(
-      'Legacy v2 backup payload shape is missing or invalid',
+      'Required backup section is missing: book',
     )
     expect(systemStore.apiReports[0]).toMatchObject({
       module: 'storage',
@@ -385,5 +407,76 @@ describe('Settings backup workflow interface', () => {
       },
     })
     expect(imageGenerationStore.defaults.aspectRatio).toBe('3:2')
+  })
+
+  test('restores Chat identity from a verified v3 package and rejects corruption before mutation', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    chatStore.setModuleIdentity({
+      nickname: 'Packaged identity',
+      avatar: 'https://example.com/packaged-self.png',
+      anonymityEnabled: true,
+    })
+    chatStore.setModuleAvatarOverrides({
+      defaultContactAvatar: 'https://example.com/packaged-contact.png',
+    })
+
+    const { createObjectURL } = installDownloadHarness()
+    const workflow = useSettingsBackupWorkflow({
+      systemStore,
+      chatStore,
+      t,
+      confirmDialog: vi.fn(async () => true),
+    })
+    await workflow.exportData()
+    const exported = JSON.parse(createObjectURL.mock.calls[0][0].parts.join(''))
+
+    chatStore.setModuleIdentity({
+      nickname: 'Current identity',
+      avatar: 'https://example.com/current-self.png',
+      anonymityEnabled: false,
+    })
+    await workflow.importData({
+      target: {
+        files: [{ name: 'verified-v3.json', text: vi.fn(async () => JSON.stringify(exported)) }],
+        value: 'verified-v3.json',
+      },
+    })
+
+    expect(chatStore.moduleIdentity).toMatchObject({
+      nickname: 'Packaged identity',
+      avatar: 'https://example.com/packaged-self.png',
+      anonymityEnabled: true,
+    })
+    expect(chatStore.moduleAvatarOverrides.defaultContactAvatar).toBe(
+      'https://example.com/packaged-contact.png',
+    )
+
+    setActivePinia(createPinia())
+    const reopenedChatStore = useChatStore()
+    expect(reopenedChatStore.moduleIdentity).toMatchObject({
+      nickname: 'Packaged identity',
+      avatar: 'https://example.com/packaged-self.png',
+      anonymityEnabled: true,
+    })
+    expect(reopenedChatStore.moduleAvatarOverrides.defaultContactAvatar).toBe(
+      'https://example.com/packaged-contact.png',
+    )
+
+    chatStore.setModuleIdentity({ nickname: 'Must survive corruption' })
+    const corrupted = structuredClone(exported)
+    corrupted.moduleIdentity.nickname = 'Tampered identity'
+    await workflow.importData({
+      target: {
+        files: [{ name: 'corrupted-v3.json', text: vi.fn(async () => JSON.stringify(corrupted)) }],
+        value: 'corrupted-v3.json',
+      },
+    })
+
+    expect(chatStore.moduleIdentity.nickname).toBe('Must survive corruption')
+    expect(workflow.backupFeedbackType.value).toBe('error')
+    expect(workflow.backupFeedbackMessage.value).toContain(
+      'Import failed before any data was changed',
+    )
   })
 })

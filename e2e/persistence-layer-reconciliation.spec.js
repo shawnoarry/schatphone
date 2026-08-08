@@ -138,6 +138,9 @@ test.describe('layered persistence bootstrap reconciliation', () => {
     await page.goto('/#/lock')
     const bootstrapWrites = await page.evaluate(() => window.__persistenceBootstrapWrites)
     expect(bootstrapWrites.local[0]).toBe(mirrorRaw)
+    await expect
+      .poll(() => waitForStableLayerPair(page))
+      .toBe(true)
     const bootstrapped = await readLayers(page)
     expect(bootstrapped.localRaw).toBe(bootstrapped.mirrorRaw)
     expect(JSON.parse(bootstrapped.localRaw).data.tripForm.to).toBe('Mirror winner')

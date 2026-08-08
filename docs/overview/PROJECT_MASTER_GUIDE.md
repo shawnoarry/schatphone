@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-07-31
+Updated: 2026-08-09
 
 ## 1. Purpose And Status Method
 
@@ -84,9 +84,9 @@ Inventory date: 2026-07-31. Validation rows distinguish current local integratio
 | Git baseline | local `main` at `f36dc9fd20fe22f1ff0be145fe2b672c54d1b4e3` before this architecture documentation commit |
 | Source scale | 238 JavaScript/Vue files / 131,038 lines under `src` |
 | Application shape | 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables |
-| Unit-test inventory | 197 static `*.test.js` files |
-| Validation posture | current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI, deployed-artifact, named physical-device, and full audit proof remain open |
-| Dependency audit | most recent Map source evidence: production 0, full 10 high development-only findings; current controller rerun blocked by the configured npm mirror's missing audit endpoint |
+| Unit-test inventory | 209 static `*.test.js` files |
+| Validation posture | current local gates and focused browser evidence pass; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Git-connected Vercel root/proxy baseline are proven; configured-provider/PWA, external-protection, named physical-device, and independent audit proof remain open |
+| Dependency audit | production and full audits are clean after the accepted compatible transitive lock refresh; independent rerun availability remains a release-evidence concern |
 
 Build-size signals:
 
@@ -98,7 +98,7 @@ Build-size signals:
 Test limitations:
 
 - there is no coverage threshold or published branch/statement coverage metric;
-- CI definitions run lint, unit, build, both audit scopes, and full Playwright, but remote execution and external enforcement remain unverified;
+- CI definitions run lint, unit, build, both audit scopes, and full Playwright; remote Pages execution is proven, while external enforcement remains unverified;
 - current E2E is browser emulation, not real-device QA;
 - push delivery, browser permission behavior, weak-network recovery, and provider-specific AI behavior still require environment/manual testing.
 

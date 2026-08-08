@@ -1,6 +1,6 @@
 # Camera, Gallery, And Image Generation Architecture Plan
 
-Updated: 2026-07-31
+Updated: 2026-08-09
 
 Status: `FIRST_IMPLEMENTATION_SLICE_DONE / GALLERY_PEOPLE_AND_SOURCE_CALLERS_DEFERRED`
 
@@ -32,7 +32,7 @@ Still deferred:
 - Gallery `People / 人物` smart views and person-to-reference curation truth;
 - automatic person/intent reference resolution and role/user policy editing;
 - Chat, Community, Map, and other source-module generation callers;
-- prompt-assistant management UI, hosted proxy deployment/security acceptance, expiring remote-result materialization, true-device checks, and opt-in hosted-provider smoke.
+- prompt-assistant management UI, Camera routing/security acceptance through the deployed shared proxy, expiring remote-result materialization, true-device checks, and opt-in hosted-provider smoke.
 
 ## 1. Goal
 

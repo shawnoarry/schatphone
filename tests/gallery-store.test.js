@@ -447,6 +447,29 @@ describe('gallery store', () => {
     expect(exportedAgain.assetPackage?.items?.length).toBeGreaterThan(0)
   })
 
+  test('recognizes a verified empty asset package as applied', async () => {
+    const store = useGalleryStore()
+    const snapshot = await store.createBackupSnapshotAsync({
+      includeAssetPackage: true,
+    })
+
+    expect(snapshot.assetPackage?.items).toEqual([])
+
+    const restored = await store.restoreFromBackupAsync(snapshot, {
+      restoreAssetPackage: true,
+      requireCompleteAssetPackage: true,
+    })
+
+    expect(restored).toMatchObject({
+      ok: true,
+      packageApplied: true,
+      packageItemCount: 0,
+      restoredPackageCount: 0,
+      failedPackageCount: 0,
+      skippedPackageCount: 0,
+    })
+  })
+
   test('keeps metadata restore working when asset package contains invalid items', async () => {
     const store = useGalleryStore()
     const file = new File(['invalid-package-case'], 'broken.png', {
@@ -491,5 +514,72 @@ describe('gallery store', () => {
 
     expect(nextStore.assets.length).toBe(1)
     expect(nextStore.assets[0].id).toBe(assetId)
+  })
+
+  test('preserves current-only retained material when restoring an older snapshot', async () => {
+    const store = useGalleryStore()
+    const currentFile = new File(['current-only-binary'], 'current-only.png', {
+      type: 'image/png',
+      lastModified: 1_234,
+    })
+    const importedCurrent = await store.importAssetsFromFiles([currentFile], {
+      category: 'reference',
+    })
+    expect(importedCurrent.ok).toBe(true)
+
+    const restored = await store.restoreFromBackupAsync(
+      {
+        assets: [
+          {
+            id: 'asset_older_url',
+            name: 'Older URL asset',
+            category: 'scenario',
+            sourceType: 'url',
+            sourceUrl: 'https://example.com/older.png',
+          },
+        ],
+        folders: [],
+        assetPackage: null,
+      },
+      {
+        restoreAssetPackage: true,
+        preserveCurrentOnlyAssets: true,
+      },
+    )
+
+    expect(restored.ok).toBe(true)
+    expect(store.findAssetById('asset_older_url')).not.toBeNull()
+    expect(store.findAssetById(importedCurrent.importedIds[0])).not.toBeNull()
+    await expect(store.getAssetPreviewUrl(importedCurrent.importedIds[0])).resolves.toBeTruthy()
+  })
+
+  test('fails a required complete material restore instead of accepting missing binaries', async () => {
+    const store = useGalleryStore()
+    const restored = await store.restoreFromBackupAsync(
+      {
+        assets: [
+          {
+            id: 'asset_missing_binary',
+            blobId: 'asset_missing_binary',
+            name: 'Missing binary',
+            category: 'reference',
+            sourceType: 'file',
+            mimeType: 'image/png',
+          },
+        ],
+        folders: [],
+        assetPackage: null,
+      },
+      {
+        restoreAssetPackage: true,
+        requireCompleteAssetPackage: true,
+      },
+    )
+
+    expect(restored).toMatchObject({
+      ok: false,
+      reason: 'package_incomplete',
+      failedPackageCount: 1,
+    })
   })
 })

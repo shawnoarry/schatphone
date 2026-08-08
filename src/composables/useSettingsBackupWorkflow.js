@@ -21,13 +21,19 @@ import { useDialog } from './useDialog'
 import { useI18n } from './useI18n'
 import { useSystemApiReports } from './useSystemApiReports'
 import {
-  LEGACY_V2_BACKUP_SCHEMA_VERSION,
-  assertLegacyV2BackupPayloadShape,
-} from '../lib/backup-section-registry'
+  COMPLETE_BACKUP_SCHEMA_VERSION,
+  assertCompleteBackupPackage,
+  createCompleteBackupPackage,
+  inspectCompleteBackupPackage,
+} from '../lib/complete-backup-package'
+import {
+  completeBackupRestoreCheckpoint,
+  markBackupRestoreCheckpointHardFailure,
+  stageBackupRestoreCheckpoint,
+} from '../lib/backup-restore-checkpoint'
+import { restoreBackupRollbackSnapshot } from '../lib/backup-restore-runtime'
 
-const BACKUP_SCHEMA_VERSION = LEGACY_V2_BACKUP_SCHEMA_VERSION
-const BACKUP_ASSET_PACKAGE_MAX_BYTES = 20 * 1024 * 1024
-const BACKUP_ASSET_PACKAGE_MAX_ITEMS = 120
+const BACKUP_SCHEMA_VERSION = COMPLETE_BACKUP_SCHEMA_VERSION
 const BACKUP_COPY_TONE_DIRECT = 'direct'
 const BACKUP_COPY_TONE_IMMERSIVE = 'immersive'
 
@@ -157,6 +163,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
 
   const { settings, user, notifications, truthState } = storeToRefs(systemStore)
   const {
+    moduleAvatarOverrides,
+    moduleIdentity,
     roleProfiles,
     contacts,
     chatHistory,
@@ -169,7 +177,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
   const backupFileInput = ref(null)
   const backupFeedbackType = ref('')
   const backupFeedbackMessage = ref('')
-  const backupIncludeAssetPackage = ref(false)
+  const backupIncludeAssetPackage = ref(true)
   let backupFeedbackTimerId = null
 
   const backupCopyTone = computed(() =>
@@ -221,10 +229,10 @@ export const useSettingsBackupWorkflow = (options = {}) => {
 
   const backupPackageLimitHint = computed(() =>
     resolveBackupCopy(
-      `素材包上限：最多 ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} 项，约 ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}。`,
-      `Asset package limits: up to ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} item(s), about ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}.`,
-      `行李舱上限：最多 ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} 项，约 ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}。`,
-      `Luggage cap: up to ${BACKUP_ASSET_PACKAGE_MAX_ITEMS} item(s), about ${formatBytes(BACKUP_ASSET_PACKAGE_MAX_BYTES)}.`,
+      '完整模式会校验全部已保留素材；任一素材缺失或损坏时不会导出不完整备份。',
+      'Complete mode verifies every retained asset and stops instead of exporting an incomplete backup.',
+      '完整行李会逐件核验；少一件或损坏一件都会停止打包。',
+      'Full luggage is checked item by item; missing or damaged material stops packaging.',
     ),
   )
 
@@ -347,8 +355,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     const includeAssetPackage = backupIncludeAssetPackage.value === true
     const gallerySnapshot = await galleryStore.createBackupSnapshotAsync({
       includeAssetPackage,
-      maxPackageBytes: BACKUP_ASSET_PACKAGE_MAX_BYTES,
-      maxPackageItems: BACKUP_ASSET_PACKAGE_MAX_ITEMS,
+      maxPackageBytes: Number.MAX_SAFE_INTEGER,
+      maxPackageItems: Number.MAX_SAFE_INTEGER,
     })
     const packageSummary =
       gallerySnapshot && typeof gallerySnapshot.packageSummary === 'object'
@@ -361,9 +369,20 @@ export const useSettingsBackupWorkflow = (options = {}) => {
             skippedCount: 0,
             missingCount: 0,
             overflow: false,
-            maxPackageBytes: BACKUP_ASSET_PACKAGE_MAX_BYTES,
-            maxPackageItems: BACKUP_ASSET_PACKAGE_MAX_ITEMS,
+            maxPackageBytes: Number.MAX_SAFE_INTEGER,
+            maxPackageItems: Number.MAX_SAFE_INTEGER,
           }
+
+    if (
+      includeAssetPackage &&
+      (Number(packageSummary.skippedCount || 0) > 0 ||
+        Number(packageSummary.missingCount || 0) > 0 ||
+        Boolean(packageSummary.overflow))
+    ) {
+      const error = new Error('Retained Gallery material could not be packaged completely.')
+      error.code = 'BINARY_MISSING'
+      throw error
+    }
 
     const payload = {
       backupMeta: {
@@ -377,6 +396,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       notifications: notifications.value,
       apiReports: systemApiReports.createReportSnapshot(),
       truthState: truthState.value,
+      moduleAvatarOverrides: moduleAvatarOverrides.value,
+      moduleIdentity: moduleIdentity.value,
       roleProfiles: roleProfiles.value,
       contacts: contacts.value,
       chatHistory: chatHistory.value,
@@ -402,10 +423,11 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
       imageGeneration: imageGenerationStore.exportForBackup(),
     }
-    return assertLegacyV2BackupPayloadShape(payload)
+    const completePackage = await createCompleteBackupPackage(payload)
+    return assertCompleteBackupPackage(completePackage)
   }
 
-  const validateBackupPayload = (payload) => {
+  const validateBackupPayload = async (payload) => {
     if (!payload || typeof payload !== 'object') {
       return {
         ok: false,
@@ -425,6 +447,29 @@ export const useSettingsBackupWorkflow = (options = {}) => {
           `Backup schema is newer (v${schemaVersion}); current app supports up to v${BACKUP_SCHEMA_VERSION}.`,
         ),
         schemaVersion,
+      }
+    }
+
+    if (schemaVersion === COMPLETE_BACKUP_SCHEMA_VERSION) {
+      const inspection = await inspectCompleteBackupPackage(payload)
+      if (!inspection.ok) {
+        return {
+          ok: false,
+          code: inspection.errors[0]?.code || 'BACKUP_IMPORT_INTEGRITY_FAILED',
+          message: t(
+            '备份完整性校验失败，当前存档未发生变化。',
+            'Backup integrity verification failed; the current save was not changed.',
+          ),
+          schemaVersion,
+          inspection,
+        }
+      }
+      return {
+        ok: true,
+        code: '',
+        message: '',
+        schemaVersion,
+        inspection,
       }
     }
 
@@ -561,8 +606,26 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     return assetsStore.restoreFromBackup(section)
   }
 
-  const createRollbackSnapshot = () => {
-    return {
+  const createRollbackSnapshot = async () => {
+    const gallery = await galleryStore.createBackupSnapshotAsync({
+      includeAssetPackage: true,
+      maxPackageBytes: Number.MAX_SAFE_INTEGER,
+      maxPackageItems: Number.MAX_SAFE_INTEGER,
+    })
+    if (
+      Number(gallery?.packageSummary?.skippedCount || 0) > 0 ||
+      Number(gallery?.packageSummary?.missingCount || 0) > 0 ||
+      Boolean(gallery?.packageSummary?.overflow)
+    ) {
+      throw createBackupImportError(
+        'BACKUP_IMPORT_ROLLBACK_SNAPSHOT_INCOMPLETE',
+        t(
+          '无法完整暂存当前素材，导入已在修改数据前停止。',
+          'The current material library could not be staged completely; import stopped before changing data.',
+        ),
+      )
+    }
+    const snapshot = {
       system: {
         settings: deepClone(settings.value),
         user: deepClone(user.value),
@@ -571,6 +634,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         truthState: deepClone(truthState.value),
       },
       chat: {
+        moduleAvatarOverrides: deepClone(moduleAvatarOverrides.value),
+        moduleIdentity: deepClone(moduleIdentity.value),
         roleProfiles: deepClone(roleProfiles.value),
         contacts: deepClone(contacts.value),
         chatHistory: deepClone(chatHistory.value),
@@ -584,7 +649,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         ...deepClone(calendarStore.createBackupSnapshot()),
       },
       reminders: remindersStore.createBackupSnapshot(),
-      gallery: galleryStore.createBackupSnapshot(),
+      gallery,
       files: filesStore.createBackupSnapshot(),
       book: bookStore.createBackupSnapshot(),
       shopping: shoppingStore.createBackupSnapshot(),
@@ -597,6 +662,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       relationshipRuntime: relationshipRuntimeStore.createBackupSnapshot(),
       imageGeneration: imageGenerationStore.exportForBackup(),
     }
+    return deepClone(snapshot)
   }
 
   const triggerImportData = () => {
@@ -609,58 +675,28 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     event.target.value = ''
   }
 
-  const restoreRollbackSnapshot = async (rollback) => {
-    const operations = [
-      ['system', systemStore, rollback.system],
-      ['chat', chatStore, rollback.chat],
-      ['map', mapStore, rollback.map],
-      ['calendar', calendarStore, rollback.calendar],
-      ['reminders', remindersStore, rollback.reminders],
-      ['gallery', galleryStore, rollback.gallery],
-      ['files', filesStore, rollback.files],
-      ['book', bookStore, rollback.book],
-      ['shopping', shoppingStore, rollback.shopping],
-      ['foodDelivery', foodDeliveryStore, rollback.foodDelivery],
-      ['simulation', simulationStore, rollback.simulation],
-      ['assets', assetsStore, rollback.assets],
-      ['wallet', walletStore, rollback.wallet],
-      ['phone', phoneStore, rollback.phone],
-      ['stock', stockStore, rollback.stock],
-      ['relationshipRuntime', relationshipRuntimeStore, rollback.relationshipRuntime],
-      ['imageGeneration', imageGenerationStore, rollback.imageGeneration],
-    ]
-    const results = []
-
-    for (const [owner, store, snapshot] of operations) {
-      try {
-        const restored = await Promise.resolve(store.restoreFromBackup(snapshot))
-        if (restored !== false) {
-          results.push({ owner, ok: true, exact: true, store })
-          continue
-        }
-        if (owner === 'book' && typeof store.refreshBookStorage === 'function') {
-          const refreshed = await store.refreshBookStorage()
-          if (refreshed?.ok) {
-            results.push({ owner, ok: true, exact: false, refreshed: true, store })
-            continue
-          }
-        }
-        results.push({ owner, ok: false, exact: false, store })
-      } catch (error) {
-        results.push({ owner, ok: false, exact: false, error, store })
-      }
-    }
-
-    return {
-      ok: results.every((result) => result.ok),
-      exact: results.every((result) => result.ok && result.exact),
-      refreshedOwners: results.filter((result) => result.refreshed).map((result) => result.owner),
-      storesToSave: results
-        .filter((result) => result.ok && result.exact)
-        .map((result) => result.store),
-      results,
-    }
+  const backupRestoreStoreSet = {
+    system: systemStore,
+    chat: chatStore,
+    map: mapStore,
+    calendar: calendarStore,
+    reminders: remindersStore,
+    gallery: galleryStore,
+    files: filesStore,
+    book: bookStore,
+    shopping: shoppingStore,
+    foodDelivery: foodDeliveryStore,
+    simulation: simulationStore,
+    assets: assetsStore,
+    wallet: walletStore,
+    phone: phoneStore,
+    stock: stockStore,
+    relationshipRuntime: relationshipRuntimeStore,
+    imageGeneration: imageGenerationStore,
   }
+
+  const restoreRollbackSnapshot = (rollback) =>
+    restoreBackupRollbackSnapshot(backupRestoreStoreSet, rollback)
 
   const backupStoresInSaveOrder = [
     systemStore,
@@ -700,7 +736,8 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     if (!confirmed) return
 
     backupImporting.value = true
-    const rollback = createRollbackSnapshot()
+    let rollback = null
+    let restoreCheckpoint = null
     let restoreStarted = false
 
     try {
@@ -715,7 +752,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         )
       }
 
-      const preflight = validateBackupPayload(parsed)
+      const preflight = await validateBackupPayload(parsed)
       if (!preflight.ok) {
         throw createBackupImportError(preflight.code, preflight.message)
       }
@@ -726,6 +763,10 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         )
       }
 
+      rollback = await createRollbackSnapshot()
+      if (typeof indexedDB !== 'undefined') {
+        restoreCheckpoint = await stageBackupRestoreCheckpoint(rollback)
+      }
       restoreStarted = true
       const systemOk = systemStore.restoreFromBackup(parsed)
       const chatOk = chatStore.restoreFromBackup(parsed)
@@ -736,6 +777,10 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       )
       const galleryRestoreResult = await galleryStore.restoreFromBackupAsync(parsed.gallery || parsed, {
         restoreAssetPackage: true,
+        preserveCurrentOnlyAssets: preflight.schemaVersion >= COMPLETE_BACKUP_SCHEMA_VERSION,
+        requireCompleteAssetPackage:
+          preflight.schemaVersion >= COMPLETE_BACKUP_SCHEMA_VERSION &&
+          parsed?.backupMeta?.galleryAssetPackage?.requested === true,
       })
       const filesOk = restoreOptionalBackupSection(filesStore, parsed.files)
       const bookOk = restoreOptionalBackupSection(bookStore, parsed.book)
@@ -787,6 +832,22 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         )
       }
 
+      if (restoreCheckpoint) {
+        const checkpointCompleted = await completeBackupRestoreCheckpoint(restoreCheckpoint, {
+          recoveryAction: 'backup_restore_committed_and_reopened',
+        })
+        if (!checkpointCompleted) {
+          throw createBackupImportError(
+            'BACKUP_IMPORT_CHECKPOINT_FINALIZE_FAILED',
+            t(
+              '恢复内容已写入，但恢复日志未能安全关闭。',
+              'Restored data was written, but the recovery checkpoint could not be closed safely.',
+            ),
+          )
+        }
+        restoreCheckpoint = null
+      }
+
       const restoredCount = Number(galleryRestoreResult.restoredPackageCount || 0)
       const failedCount = Number(galleryRestoreResult.failedPackageCount || 0)
       const skippedCount = Number(galleryRestoreResult.skippedPackageCount || 0)
@@ -819,6 +880,24 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         ? await saveStores(rollbackRestore.storesToSave)
         : { ok: true, results: [] }
       const rollbackSafe = rollbackRestore.ok && rollbackSave.ok
+      if (restoreCheckpoint) {
+        try {
+          if (rollbackSafe) {
+            await completeBackupRestoreCheckpoint(restoreCheckpoint, {
+              recoveryAction: 'backup_restore_failed_previous_save_restored',
+              errorCode: error?.code || 'backup_import_failed',
+            })
+          } else {
+            await markBackupRestoreCheckpointHardFailure(
+              restoreCheckpoint,
+              error?.code || 'rollback_failed',
+            )
+          }
+        } catch {
+          // A nonterminal durable checkpoint remains available for startup recovery.
+        }
+        restoreCheckpoint = null
+      }
       const resolved = resolveBackupImportFailure(error)
       const detail = resolved.detail ? ` ${resolved.detail}` : ''
       const rollbackMessage = !restoreStarted

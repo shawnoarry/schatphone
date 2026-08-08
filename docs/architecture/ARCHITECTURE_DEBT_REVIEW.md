@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 > Scope and authority note
 >
@@ -39,7 +39,8 @@ Additional debt remains real:
 - `src` has zero TypeScript files even though the project relies heavily on structured payloads and module contracts.
 - backup export currently includes `settings.api.key` through the full settings snapshot;
 - production and full dependency audits are clean after an isolated normal-resolver compatible transitive refresh, without direct, override/resolution, or major changes;
-- PR and main Pages workflow definitions now include full E2E plus separate production/full audits, but remote execution, external protection, and deployed base-path behavior remain unverified.
+- PR and main Pages workflow definitions include full E2E plus separate production/full audits; remote Pages Run #130 and the deployed `/schatphone/` base-path smoke are proven, while external protection remains unverified.
+- the Vercel root app and fail-closed fixed-upstream AI proxy are deployed and the project is Git-connected, but production proxy configuration, installed-PWA/relaunch, and real-provider Chat proof remain open.
 
 This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and the current test setup are still appropriate. The urgent work is ownership closure, not framework replacement.
 
@@ -201,7 +202,7 @@ Verified on 2026-07-22:
 - GitHub Pages deploy requires the verified build job and still does not deploy the push relay;
 - the repository has no coverage threshold.
 
-These findings do not establish production readiness. The most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings, while exported/local secrets, the unauthenticated push relay, remote CI/environment proof, deployed-network proof, and named physical-device evidence still require explicit hardening or verification.
+These findings do not establish production readiness. Production and full dependency audits are clean after the accepted lock refresh, while exported/local secrets, the unauthenticated push relay, Vercel client-token exposure/abuse limits, external CI/environment protection, configured-provider/PWA proof, deployed-network proof, and named physical-device evidence still require explicit hardening or verification.
 
 ## 4. Findings
 
@@ -262,7 +263,7 @@ Better direction:
 - every complete local JSON export now warns before payload construction/download and cancellation has no export/report side effects;
 - local browser state and exported JSON are not encrypted;
 - the push relay is a local/single-operator delivery helper, not a production security boundary;
-- the root Vite/Vitest migrations and compatible transitive advisory remediation are complete; workflow definitions now include production/full audit gates, while remote execution and external enforcement remain unverified.
+- the root Vite/Vitest migrations and compatible transitive advisory remediation are complete; local and remote workflow evidence now include production/full audit gates, while external enforcement remains unverified.
 
 Why it matters:
 
@@ -272,15 +273,15 @@ Why it matters:
 
 ### 4.6 [Release] CI Workflow Proof And Deployed Artifact Validation Remain Incomplete
 
-- the workflow definitions now exercise full product E2E and both audit scopes before PR acceptance or Pages artifact upload;
-- neither workflow has run remotely yet, and branch/environment required checks remain external unverified settings;
-- the first slice has no deployed `dist`/Vite base-path smoke;
+- the workflow definitions exercise full product E2E and both audit scopes before PR acceptance or Pages artifact upload;
+- remote Pages Run #130 and the deployed `/schatphone/` base-path smoke are proven;
+- branch/environment required checks remain external unverified settings, and Vercel still needs configured-provider, installed-PWA/relaunch, and true-device proof;
 - no code-coverage floor exists.
 
 Why it matters:
 
 - a locally valid workflow can still be misconfigured remotely or bypassed by external repository settings;
-- a successful source-mode E2E run does not prove the deployed Pages base path and static artifact are correct;
+- one successful Pages or Vercel deployment does not prove Git reproducibility, provider credentials, installed-PWA behavior, or later true-device operation;
 - test-count growth does not prove important branches are covered.
 
 ### 4.7 [Preserve] What Is Working Well
@@ -305,11 +306,12 @@ Before another broad feature family:
 3. `DONE 2026-07-22`: the approved non-active Book foundation/fixture/staging pilot and the later separately approved Book-only application cutover/runtime activation now have targeted real-Chromium IndexedDB, same-container coordination, reopen, and rollback coverage; every non-Book migration remains behind a later gate;
 4. `DONE 2026-07-22`: preserve complete migration backup contents, including configured credentials, and add the confirmed pre-download sensitive-file warning plus export regression coverage;
 5. `DONE 2026-08-07`: expose structured layered-write and Book Repository failures through one root-shell recovery status without changing Store snapshots, Repository schema, or backup format;
-6. `DONE 2026-08-07`: acquire one page-level current-save writer before reconciliation/mount, keep later same-container pages inspect-only/read-only across current durable carriers, and prove release/retry plus stale-head rejection in two-page Chromium; complete local recovery remains the next P0 persistence slice;
-6. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
-7. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
-8. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;
-9. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build definitions with full E2E and separate production/full audits; still require remote/external proof and a later deployed base-path smoke.
+6. `DONE 2026-08-07`: acquire one page-level current-save writer before reconciliation/mount, keep later same-container pages inspect-only/read-only across current durable carriers, and prove release/retry plus stale-head rejection in two-page Chromium;
+7. `DONE 2026-08-09`: implement the release-local complete v3 required-section/binary integrity, durable rollback checkpoint, crash recovery, legacy compatibility, and reopen boundary; predictive capacity, cross-owner root activation, and unavailable-media presentation remain separate;
+8. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
+9. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
+10. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;
+11. `PARTIAL_DONE 2026-08-09`: gate PR and Pages builds with full E2E and both audits, prove remote Pages plus deployed base-path behavior, and establish the Git-connected Vercel root/proxy baseline; external protection, configured provider, PWA/relaunch, and true-device proof remain.
 
 Do not mix these changes with product behavior or a large view refactor.
 

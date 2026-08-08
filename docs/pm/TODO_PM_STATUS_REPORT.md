@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -15,12 +15,12 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current local integration passes lint, 197 Vitest files / 1320 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; CI and Pages definitions include the full suite, while remote execution, deployed-artifact, and named physical-device proof remain open.
+- the current local integration has passing lint, unit, build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Git-connected Vercel root/proxy infrastructure baseline are proven, while configured provider, installed PWA, external protections, and named physical-device proof remain open.
 
 The current work is concentrated in four areas:
 
 1. preserving the completed first-value Chat activation and custom-role journey;
-2. current-save write/conflict safety and a complete local recovery point;
+2. preserving the completed current-save write/conflict safety and complete local v3 recovery point;
 3. one ordinary daily-life cross-module loop;
 4. deployed PWA, hosted-provider, backup, and true-device release proof.
 
@@ -45,7 +45,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Area | Current state | PM judgment |
 | --- | --- | --- |
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
-| Settings / Network / backup | `Activation loop usable, recovery incomplete` | Chat reaches Network and returns after save plus smoke success; root-shell recovery offers retry, confirmed reload, and complete-backup handoff, while one page-level writer prevents later same-container pages from mutating the current save. Complete local recovery remains open |
+| Settings / Network / backup | `Activation and local recovery usable` | Chat reaches Network and returns after save plus smoke success; root-shell recovery offers retry/reload, one page-level writer prevents unsafe later-page writes, and schema v3 complete backup now verifies required sections and Gallery binaries, restores Chat identity, rolls back failures, and recovers interrupted import before mount |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
 | Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
@@ -59,7 +59,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
-| QA / release | `Strong local baseline, workflow gate pending remote proof` | PR and Pages definitions now gate full E2E plus both audit scopes; external checks, deployed base-path smoke, and true-device QA remain open |
+| QA / release | `Strong local baseline; hosted infrastructure partial` | remote Pages and `/schatphone/` smoke pass; the Git-connected Vercel root and fail-closed AI proxy are deployed, while configured-provider Chat, external checks, installed PWA, and true-device QA remain open |
 
 ## 4. What Users Can Do Now
 
@@ -127,7 +127,8 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - Settings backup currently includes the configured AI API key because it exports the full settings snapshot;
 - the local push relay has no authentication and permissive CORS;
 - the most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings in existing tooling paths; the controller's current rerun was blocked because the configured npm mirror does not implement the audit endpoint;
-- PR CI and main Pages build definitions now fail closed on both audits, lint, unit, build, and one full E2E run that includes focused visual coverage; remote execution, external protections, and a deployed base-path smoke are still pending;
+- PR CI and main Pages build definitions fail closed on both audits, lint, unit, build, and one full E2E run that includes focused visual coverage; remote Pages execution and the deployed base-path smoke are proven, while external protections remain pending;
+- the Vercel Functions proxy keeps the upstream API key server-side and requires a separate client token, fixed HTTPS upstream, allowed origins, bounded request size/time, and redacted errors; it is a personal deployment boundary, not a public multi-tenant gateway or substitute for rate limiting and abuse controls;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 
 ### Persistence And Recovery
@@ -139,7 +140,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - full AI prompts/raw responses, uncommitted drafts, and rebuildable projections are not retained by default; canonical committed content, authoritative state/facts, references, structured outcomes, and minimum provenance remain durable;
 - non-Book structured stores still use whole `localStorage` snapshots with an IndexedDB mirror rather than an IndexedDB-first database;
 - Chat history, Gallery total binary usage, and several role/world collections need explicit growth and retention contracts;
-- backup/restore is usable but current code does not yet implement the accepted complete-package manifest, integrity, capacity preflight, staged atomic activation, crash recovery, or unified metadata/binary rollback contract;
+- roadmap 4.9's release-local backup/restore now implements a schema v3 required-section manifest, section/payload/Gallery-binary integrity, default-on complete retained material, durable metadata-plus-binary rollback checkpoints, startup crash recovery, and reopen proof; predictive capacity reporting, a cross-owner Repository root-generation switch, platform-confirmed file durability, and remote transport remain separate architecture work;
 - optional cloud backup is confirmed as personal BYOS rather than one shared workgroup archive: each user owns a separate Cloudflare account and R2 destination, with R2 as the first officially guided target;
 - each user connects through a personal Cloudflare Worker gateway; SchatPhone may store a revocable, scoped device token but never the R2 API Secret;
 - cloud backup is encrypted on the client and can be recovered with either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, and initial setup must verify recovery;
@@ -169,17 +170,17 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 ### P0: Usable Product Preview
 
 1. `DONE 2026-07-22`: close the first successful Chat activation loop through the existing Network flow with originating thread/draft continuity and desktop plus simulated-mobile first-reply evidence;
-2. make current-save writes fail visibly, prevent unsafe same-container writers, and complete the local export/restore/reopen recovery boundary;
+2. `DONE 2026-08-09`: make current-save writes fail visibly, prevent unsafe same-container writers, and complete the release-local v3 export/restore/reopen/crash-recovery boundary;
 3. `DONE 2026-08-07`: preserve the custom role -> Chat path, prove one ordinary Shopping consequence through Calendar, Wallet, Chat, and relationship continuity, add Wallet historical quote detail, and curate the default Home release surface without disabling demoted apps;
-4. finish with remote CI/Pages, deployed PWA/install/relaunch, hosted-provider, backup round-trip, and named true-device evidence.
+4. finish the partial hosted baseline with configured-provider Chat, deployed PWA/install/relaunch, backup round-trip, external protection checks, and named true-device evidence.
 
 This is the only current product-completion sequence. It does not require a broad onboarding wizard, mandatory built-in content, another World Pack archetype, Mini Scene runtime, or a general visual rebuild.
 
 ### P0: Local Persistence, Backup, And Data Lifecycle Architecture
 
 1. `DONE 2026-08-07`: make structured layered and Book Repository failures visible through one product-level recovery state with retry, confirmed reload-current-save, and complete-backup handoff;
-2. preserve the newest valid envelope and extend the accepted read-only conflict boundary beyond Book without force takeover or last-write-wins;
-3. implement the accepted independently importable complete-version backup, integrity, capacity/failure, staged restore, local delivery, legacy fallback, crash recovery, and rollback boundary;
+2. `DONE 2026-08-07`: preserve the newest valid envelope and extend the accepted read-only conflict boundary beyond Book without force takeover or last-write-wins;
+3. `DONE 2026-08-09` for the release-local boundary: independently importable schema v3 packages, required-section and Gallery-binary integrity, fail-closed local delivery, legacy compatibility, durable rollback checkpoints, crash recovery, and reopen proof; predictive capacity detail, cross-owner root-generation activation, and remote delivery remain separately staged;
 4. `DONE 2026-07-22`: the non-active Batch 2B Repository foundation and active Book-only cutover remain the reference pilot;
 5. move provider-neutral R2/Worker onboarding after the first usable local release; keep Gallery schema, dual write, legacy Book deletion, garbage collection, and every non-Book Repository migration separately approved.
 
@@ -192,8 +193,8 @@ This is the only current product-completion sequence. It does not require a broa
 
 ### P1: Release And Architecture Confidence
 
-1. prove the full-product CI E2E/audit and Pages build dependency remotely, confirm external required checks/environment protection, and run the deployed base-path/PWA smoke;
-2. prove one hosted-origin provider setup -> connection test -> Chat reply path and complete local backup export/import/reopen;
+1. preserve the proven remote Pages build and deployed base-path smoke, then confirm external required checks/environment protection plus the Vercel Git-triggered production build and installed-PWA/relaunch path;
+2. configure the Vercel proxy through secure Environment Variables, then prove one hosted-origin provider setup -> connection test -> Chat reply path and complete local backup export/import/reopen;
 3. run the named true-device release matrix before claiming mobile/PWA completion;
 4. defer large-view seams, `systemStore` facades, cross-store cleanup, and incremental typing unless a selected product slice is blocked by them.
 
@@ -309,6 +310,11 @@ Current checkpoint note on 2026-07-31:
 
 - Camera/shared image generation, five-shop Food Delivery, and the world-bound local-map baseline have their named focused evidence;
 - OpenFreeMap + MapLibre is integrated locally with focused unit/E2E, bundle, fallback, attribution, real-network desktop/mobile visual, and controller interaction evidence; named physical-device gestures/offline-cache and deployed-network proof remain separate.
+
+Hosted checkpoint note on 2026-08-09:
+
+- Pages Run #130 and the deployed `/schatphone/` browser smoke are proven;
+- Vercel serves the root app and fail-closed AI proxy Functions. The first production upload came from the local dirty tree, and this repository baseline supersedes it for automatic later builds; configured real-provider Chat remains required.
 
 ## 9. Read Next
 

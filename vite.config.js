@@ -36,10 +36,18 @@ const maplibreWorkerRuntimeAssets = {
   },
 }
 
+const resolveAppBase = () => {
+  const configured = process.env.SCHATPHONE_BASE_PATH?.trim()
+  if (configured) {
+    return `/${configured.replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/')
+  }
+  return process.env.VERCEL ? '/' : '/schatphone/'
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [vue(), tailwindcss(), maplibreWorkerRuntimeAssets],
-  base: '/schatphone/',
+  base: resolveAppBase(),
   optimizeDeps: {
     exclude: ['maplibre-gl'],
   },

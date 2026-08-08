@@ -1,6 +1,6 @@
 # SchatPhone Operation Guide
 
-Updated: 2026-07-17
+Updated: 2026-08-09
 
 This is the practical guide for daily development, validation, and release flow.
 
@@ -258,7 +258,20 @@ git push origin main
 
 Previous push approval does not cover future commits. Always report whether local `main` is ahead of `origin/main`.
 
-Deployment is handled by GitHub Actions. The PR/manual CI workflow and main/manual-main Pages build now define the same fail-closed production/full audits, lint, unit, build, Chromium, and full-E2E gate. Each path runs the full Playwright collection once, so the included focused visual-quality cases are not repeated through a second `test:visual` step. Pages configure/upload/deploy follows the verified build job, but the workflow still needs an authorized remote run plus external required-check/environment verification before this is treated as release proof. A deployed `dist`/Vite base-path smoke remains a later slice. The optional push relay is not deployed by the Pages workflow.
+GitHub Pages remains the static `/schatphone/` release path. The PR/manual CI workflow and main/manual-main Pages build define the same fail-closed production/full audits, lint, unit, build, Chromium, and full-E2E gate. Each path runs the full Playwright collection once, so the included focused visual-quality cases are not repeated through a second `test:visual` step. Pages configure/upload/deploy follows the verified build job. The optional push relay is not deployed by the Pages workflow.
+
+Vercel is the root-path hosted release and serverless AI-proxy path:
+
+- project: `shawn-e-s-projects/schatphone`;
+- production URL: `https://schatphone.vercel.app`;
+- Git source: `shawnoarry/schatphone`;
+- pushes to the connected production branch trigger a Vercel build automatically; there is no separate routine Vercel push;
+- Vercel builds with `/`, while GitHub Pages and ordinary local builds keep `/schatphone/`; `SCHATPHONE_BASE_PATH` may explicitly override either path;
+- `/api/openai/v1/models` and `/api/openai/v1/chat/completions` are fixed-upstream OpenAI-compatible proxy Functions, not arbitrary forwarders or a general backend.
+
+Configure proxy credentials only through the Vercel project's Environment Variables UI. Never use a `VITE_` prefix for server secrets. Required production values are `SCHATPHONE_AI_PROXY_UPSTREAM_URL`, `SCHATPHONE_AI_PROXY_UPSTREAM_KEY`, `SCHATPHONE_AI_PROXY_CLIENT_TOKEN`, and `SCHATPHONE_AI_PROXY_ALLOWED_ORIGINS`; the optional timeout and keyless controls are documented in `.env.example`. The browser Network/API profile uses the Vercel `/api/openai/v1` URL and the client token, never the upstream provider key.
+
+The first 2026-08-09 Vercel deployment came from a local working-tree upload. The first Git push containing `vercel.json`, the Functions, and the matching application state establishes the reproducible repository baseline. After that baseline, the normal update flow is local validation -> commit -> GitHub push -> automatic Vercel deployment. Real-provider Chat remains incomplete until the Environment Variables are configured and one connection test plus one real reply pass.
 
 ## 14. Quick Troubleshooting
 

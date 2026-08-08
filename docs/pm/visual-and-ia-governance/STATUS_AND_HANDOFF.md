@@ -1,6 +1,6 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
 
@@ -153,9 +153,9 @@ Still incomplete:
 
 ## 2. Recommended Next Slice
 
-The first successful Chat activation loop, explicit custom role -> Chat journey, ordinary Shopping consequence, Wallet quote detail, and configurable multi-screen Home release curation are complete. No additional page-local visual slice is active while roadmap 4.9 current-save safety and complete local recovery remain the P0 lane and hosted product proof is the next P1 release gate.
+The first successful Chat activation loop, explicit custom role -> Chat journey, ordinary Shopping consequence, Wallet quote detail, configurable multi-screen Home release curation, and release-local complete v3 backup/recovery boundary are complete. The Vercel root app and AI-proxy infrastructure baseline are deployed; no additional page-local visual slice is active while configured-provider, PWA, and true-device product proof remain the next P1 release gate.
 
-1. preserve the curated multi-screen Home defaults and page-layout independence while proving deployed base-path/PWA/install/relaunch behavior and complete backup recovery;
+1. preserve the curated multi-screen Home defaults and page-layout independence while proving deployed PWA/install/relaunch behavior, hosted-provider Chat, and named true-device backup recovery;
 2. fold World Pack, Chat, and Home touch/safe-area checks into the named true-device release matrix rather than treating another archetype as progress;
 3. fix only observed release-surface problems; do not refill Home merely because a module exists;
 4. defer Gallery Photos-first, wide-viewport shell redesign, app-by-app visual consistency, and Mini Scene Presenter work until the roadmap 4.9 gates are complete.

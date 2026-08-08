@@ -8,7 +8,7 @@ defineProps({
   },
   backupIncludeAssetPackage: {
     type: Boolean,
-    default: false,
+    default: true,
   },
   backupExporting: {
     type: Boolean,
@@ -96,14 +96,14 @@ const { t } = useI18n()
     <div class="px-3.5 py-3 border-b border-gray-100">
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
-          <p class="text-sm font-medium">{{ resolveBackupCopy('导出包含素材包（可选）', 'Include asset package in export (optional)', '导出时附带素材行李（可选）', 'Include asset luggage in export (optional)') }}</p>
+          <p class="text-sm font-medium">{{ resolveBackupCopy('导出包含素材包（默认）', 'Include asset package in export (default)', '导出时附带素材行李（默认）', 'Include asset luggage in export (default)') }}</p>
           <p class="text-[11px] text-gray-500">
             {{
               resolveBackupCopy(
-                '默认仅导出元数据。开启后会尝试打包本地素材二进制，文件体积会明显增大。',
-                'Metadata-only is default. When enabled, local binary assets are packaged and backup size grows significantly.',
-                '默认轻装模式仅导出元数据。开启后会尽量装入本地素材，备份体积会明显变大。',
-                'Travel-light (metadata-only) is default. Enabling this packs local assets when possible and increases backup size.',
+                '默认包含全部已保留本地素材。关闭后仍保留素材元数据和 URL，但无法保证恢复本地文件。',
+                'All retained local assets are included by default. Turning this off keeps metadata and URLs but cannot restore local files by itself.',
+                '默认带上全部已保留素材。关闭后仍会记住清单和 URL，但本地文件不能随备份恢复。',
+                'All retained material travels by default. Turning this off keeps its records and URLs, but not the local files.',
               )
             }}
           </p>

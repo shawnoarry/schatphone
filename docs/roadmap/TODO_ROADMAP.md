@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-08-08
+Updated: 2026-08-09
 
 This is the only live execution board for implementation order.
 
@@ -21,9 +21,9 @@ SchatPhone is past prototype viability and now has a stable local-first product 
 
 Inventory refreshed on 2026-07-30; validation state is tracked separately below:
 
-1. the current tree contains 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables, and 197 static unit-test files;
+1. the current tree contains 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables, and 209 static unit-test files;
 2. Camera/shared image generation, five independent Food Delivery shop facades, and world-bound local Map packs are implemented at their named partial baselines;
-3. the current local integration passes lint, 206 Vitest files / 1457 tests, production build, governance, both audit scopes, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI and deployed Pages now have successful-run and deployed-browser-smoke evidence, while named physical-device and independently rerunnable audit proof remain separate;
+3. the current local integration passes lint, 209 Vitest files / 1479 tests, production build, governance, both audit scopes, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks; remote CI and deployed Pages have successful-run and deployed-browser-smoke evidence, while the Vercel root/proxy baseline is deployed and named physical-device plus independently rerunnable audit proof remain separate;
 4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
 5. the largest engineering risk remains concentrated in oversized views, especially Food Delivery, and `systemStore` fan-out.
 
@@ -344,12 +344,12 @@ Delivery stages:
    - preserve the originating thread and typed content, keep provider configuration owned by Network, and return to the same Chat after save plus successful connection test;
    - prove one manual AI reply across desktop and simulated mobile without adding a broad onboarding wizard, duplicated provider form, automatic automation, or mandatory world setup.
    - focused Playwright now proves the complete fresh-storage journey in desktop and simulated Pixel 5 Chromium, including bounded return context, preserved draft/thread, fake-provider smoke plus first reply, no page errors or horizontal overflow, no critical axe violations, and no rendered fake credential; true-device and hosted-provider proof remain in stage 4.
-2. `P0 Current-save safety and complete local recovery` - `IN_PROGRESS`, parallel architecture lane
+2. `P0 Current-save safety and complete local recovery` - `DONE 2026-08-09`, parallel architecture lane
    - `DONE 2026-07-22`: return structured persistence write results without breaking existing callers; local primary and mirror outcomes are independently observable;
    - `DONE 2026-07-22`: reconcile local/mirror freshness by lineage and sequence before Store mount, with bounded unavailable-IndexedDB startup, conflict zero-write behavior, verified repair, and the repository-owned legacy Book carrier explicitly inspect-only;
    - `DONE 2026-08-07`: surface structured sync/async and Book Repository failures through one product-level save-failed/read-only recovery state with retry, confirmed reload-current-save, and handoff to the existing complete-backup section; desktop and simulated Pixel 5 fault injection cover quota recovery, unresolved zero-write conflict, action sizing, containment, and overflow without changing persistence or backup formats;
    - `DONE 2026-08-07`: extend the accepted same-container read-only timeout across the current save. One page-level writer is acquired before reconciliation and Store mount; later pages inspect all 17 targets without repair, block layered sync/async/deferred mirror writes plus Book, Gallery binary, and image-generation device-local writes, and may retry only after the active page releases ownership. Focused Vitest and two-page Chromium prove cross-owner zero-write behavior, retry after release, and stale-head rejection without force takeover or last-write-wins;
-   - close complete-package coverage, including required Chat identity/avatar state and default-on retained Gallery material, then prove integrity, staged activation, rollback, and reopen;
+   - `DONE 2026-08-09`: schema v3 complete local packages now require all current sections, including Chat identity/avatar state, carry canonical SHA-256 section/payload and Gallery-binary evidence, include every retained Gallery binary by default, and fail before delivery on missing or corrupt material. Import verifies before mutation, durably stages the previous metadata-plus-binary save in the Repository journal, restores current-only Gallery material non-destructively, rolls back failed or interrupted restore work before mount, and preserves legacy v1/v2 compatibility without relabeling those files complete. Focused Vitest plus desktop and simulated-mobile Chromium prove corruption rejection, full-material restore, rollback, crash recovery, and reopen;
    - personal R2/Worker transport remains post-release because it cannot repair an unsafe or incomplete local recovery point.
 3. `P1 Core personal-life vertical slice` - `IN_PROGRESS`
    - `DONE 2026-07-22`: prove one explicit custom role -> Chat journey without changing the valid zero-Book/zero-encyclopedia/zero-Pack boundary; Contacts starts the explicit action, Chat owns idempotent binding/conversation execution, and Chat Directory remains the management surface;
@@ -559,10 +559,10 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 ## 6. Current Execution Queue
 
 1. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
-2. `P0 CURRENT`: 4.9 current-save write/conflict safety followed by complete local recovery; architecture work proceeds only as separately reviewable slices.
+2. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.
 3. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; Gallery People curation and source-module callers require separately promoted follow-ups.
 4. `P1 DONE 2026-08-07`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, one ordinary Shopping life-consequence flow, focused Wallet quote explainability, and configurable multi-screen Home release curation are complete at local desktop/simulated-mobile acceptance.
-5. `P1` 4.9/4.5 hosted release proof: remote gates, deployed base-path/PWA/install/relaunch, real-provider Chat, backup round trip, and named true-device evidence.
+5. `P1 PARTIAL_DONE` 4.9/4.5 hosted release proof: GitHub Pages remote gates/base-path smoke and the Git-connected Vercel root-path plus fail-closed AI-proxy baseline are deployed. Configured real-provider Chat, installed-PWA/relaunch, backup round trip, external protection checks, and named true-device evidence remain.
 6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
 8. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.

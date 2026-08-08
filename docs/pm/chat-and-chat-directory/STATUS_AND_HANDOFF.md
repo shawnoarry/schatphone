@@ -1,6 +1,6 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-08-08
+Updated: 2026-08-09
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
@@ -61,7 +61,7 @@ Still incomplete or risky:
 
 ## 2. Recommended Next Slice
 
-Chat's 4.4 service-continuity baseline, World Pack service-template contract, 4.9 first-use activation loop, and explicit custom role -> Chat journey are landed. Current candidates after the active current-save safety lane are:
+Chat's 4.4 service-continuity baseline, World Pack service-template contract, 4.9 first-use activation loop, explicit custom role -> Chat journey, and the release-local current-save recovery boundary are landed. Current candidates are:
 
 1. perform real-device rich-message/media-picker/service-thread smoke testing;
 2. exercise existing source notification plans from concrete source modules before adding another account family;
@@ -71,7 +71,7 @@ Chat's 4.4 service-continuity baseline, World Pack service-template contract, 4.
 6. if roadmap 4.7 approves K-pop service accounts, add candidates/templates first and keep user subscription manual.
 7. when roadmap 4.8 reaches Chat, add one focused request Adapter and legacy-text compatibility path; do not build a Chat-specific HTML renderer.
 
-Do not start another broad Chat decomposition by inertia while roadmap 4.9 current-save safety and complete local recovery are active.
+Do not start another broad Chat decomposition by inertia. The Vercel root app and fail-closed AI proxy are deployed, but configured real-provider Chat, deployed PWA, and named true-device evidence remain the next roadmap 4.9 gate.
 
 ## 3. Do Not Do
 

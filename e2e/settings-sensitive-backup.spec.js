@@ -86,6 +86,32 @@ const seedSettings = async (page, { language, theme, apiKey }) => {
   )
 }
 
+const seedChatIdentity = async (page, identity) => {
+  await page.addInitScript((seededIdentity) => {
+    const storageKey = 'schatphone:store:chat'
+    if (window.localStorage.getItem(storageKey)) return
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        version: 2,
+        savedAt: Date.now(),
+        data: {
+          moduleAvatarOverrides: {
+            selfAvatar: '',
+            defaultContactAvatar: 'https://example.com/backup-contact.png',
+            contactAvatars: {},
+          },
+          moduleIdentity: seededIdentity,
+          roleProfiles: [],
+          contacts: [],
+          conversations: {},
+          messagesByConversation: {},
+        },
+      }),
+    )
+  }, identity)
+}
+
 const expectNoHorizontalOverflow = async (page) => {
   const overflow = await page.evaluate(() => {
     const settingsScroll = document.querySelector('.settings-scroll')
@@ -137,6 +163,69 @@ const readDownloadText = async (download) => {
   return Buffer.concat(chunks).toString('utf8')
 }
 
+const readBackupRecoveryEvidence = async (page) =>
+  page.evaluate(async () => {
+    const chatEnvelope = JSON.parse(window.localStorage.getItem('schatphone:store:chat') || '{}')
+    const systemEnvelope = JSON.parse(window.localStorage.getItem('schatphone:store:system') || '{}')
+    const journals = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('schatphone-repository')
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const database = request.result
+        const transaction = database.transaction('operation_journal', 'readonly')
+        const getAll = transaction.objectStore('operation_journal').getAll()
+        getAll.onerror = () => reject(getAll.error)
+        getAll.onsuccess = () => {
+          database.close()
+          resolve(getAll.result)
+        }
+      }
+    })
+    return {
+      identity: chatEnvelope?.data?.moduleIdentity || null,
+      storageReports: (systemEnvelope?.data?.apiReports || []).filter(
+        (entry) => entry?.module === 'storage',
+      ),
+      restoreJournals: journals.filter(
+        (entry) => entry?.operationType === 'complete_backup_restore',
+      ),
+    }
+  })
+
+const createRollbackSnapshotFromBackup = (backup) => ({
+  system: {
+    settings: backup.settings,
+    user: backup.user,
+    notifications: backup.notifications,
+    apiReports: backup.apiReports,
+    truthState: backup.truthState,
+  },
+  chat: {
+    moduleAvatarOverrides: backup.moduleAvatarOverrides,
+    moduleIdentity: backup.moduleIdentity,
+    roleProfiles: backup.roleProfiles,
+    contacts: backup.contacts,
+    chatHistory: backup.chatHistory,
+    conversations: backup.conversations,
+    messagesByConversation: backup.messagesByConversation,
+  },
+  map: backup.map,
+  calendar: backup.calendar,
+  reminders: backup.reminders,
+  gallery: backup.gallery,
+  files: backup.files,
+  book: backup.book,
+  shopping: backup.shopping,
+  foodDelivery: backup.foodDelivery,
+  simulation: backup.simulation,
+  assets: backup.assets,
+  wallet: backup.wallet,
+  phone: backup.phone,
+  stock: backup.stock,
+  relationshipRuntime: backup.relationshipRuntime,
+  imageGeneration: backup.imageGeneration,
+})
+
 test('Settings warns before exporting a complete backup and preserves the configured credential', async ({
   page,
 }, testInfo) => {
@@ -170,7 +259,7 @@ test('Settings warns before exporting a complete backup and preserves the config
 
   const assetToggle = page.getByRole('checkbox', { name: localeCopy.assetToggle })
   const exportButton = page.getByRole('button', { name: localeCopy.exportAction })
-  await expect(assetToggle).not.toBeChecked()
+  await expect(assetToggle).toBeChecked()
   await expect(exportButton).toBeEnabled()
   await expectSecretNotRendered(page, seededApiKey)
   await expectNoHorizontalOverflow(page)
@@ -214,20 +303,138 @@ test('Settings warns before exporting a complete backup and preserves the config
     'the exported credential bytes must equal the seeded credential bytes',
   ).toBe(true)
   expect(exported.backupMeta).toMatchObject({
-    schemaVersion: 2,
-    exportMode: 'metadata_only',
+    magic: 'schatphone-complete-backup',
+    schemaVersion: 3,
+    exportMode: 'metadata_with_asset_package',
   })
+  expect(exported.backupMeta.manifest.sectionCount).toBeGreaterThan(20)
   expect(exported.backupMeta.galleryAssetPackage).toMatchObject({
-    requested: false,
-    included: false,
+    requested: true,
+    included: true,
   })
   await expect(page.getByText(localeCopy.feedback, { exact: false })).toBeVisible()
   await expect(exportButton).toBeEnabled()
-  await expect(assetToggle).not.toBeChecked()
+  await expect(assetToggle).toBeChecked()
   await expectSecretNotRendered(page, seededApiKey)
   await expect(
     page.getByRole('button', { name: /redacted|shareable|脱敏|分享版/i }),
   ).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
   expect(pageErrors).toEqual([])
+})
+
+test('verified backup restores Chat identity and survives an app reopen', async ({ page }, testInfo) => {
+  const packagedIdentity = {
+    nickname: `Packaged ${testInfo.project.name}`,
+    avatar: 'https://example.com/packaged-self.png',
+    anonymityEnabled: true,
+    anonymityScope: 'all',
+    anonymityContactIds: [],
+  }
+  await seedSettings(page, {
+    language: 'en-US',
+    theme: 'default',
+    apiKey: `roundtrip_${testInfo.project.name}`,
+  })
+  await seedChatIdentity(page, packagedIdentity)
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/settings')
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: /Backup & Export|Exporting/ }).click()
+  await page.getByRole('button', { name: 'I understand, continue download', exact: true }).click()
+  const exportedText = await readDownloadText(await downloadPromise)
+  const exported = JSON.parse(exportedText)
+  expect(exported.moduleIdentity).toMatchObject(packagedIdentity)
+
+  await navigateInsideUnlockedApp(page, '/chat-me?section=identity')
+  const identitySection = page.getByTestId('chat-me-identity-section')
+  await identitySection.getByLabel('Avatar URL').fill('https://example.com/current-self.png')
+  await identitySection.getByLabel('Chat nickname').fill('Current identity before restore')
+  const anonymousMode = identitySection.getByRole('checkbox').first()
+  if (await anonymousMode.isChecked()) await anonymousMode.uncheck()
+  await identitySection.getByRole('button', { name: 'Save Chat identity', exact: true }).click()
+  await expect(page.getByText('Chat identity saved.', { exact: true })).toBeVisible()
+  await navigateInsideUnlockedApp(page, '/settings')
+
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'verified-complete-backup.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(exportedText, 'utf8'),
+  })
+  await page.getByRole('button', { name: 'Continue import', exact: true }).click()
+  const importButton = page.getByRole('button', { name: /Importing|Restore Import/ })
+  await expect(importButton).toContainText('Importing...')
+  await expect(importButton).toContainText('Restore Import (JSON)')
+  const imported = await readBackupRecoveryEvidence(page)
+  expect(imported.storageReports[0], JSON.stringify(imported, null, 2)).toMatchObject({
+    action: 'import_backup',
+    code: 'BACKUP_IMPORT_WITH_ASSET_PACKAGE',
+  })
+  await expect(page.getByText(/Import succeeded and data has been restored/)).toBeVisible()
+
+  await page.reload()
+  await unlockToHome(page)
+  const reopened = await readBackupRecoveryEvidence(page)
+
+  expect(reopened.identity).toMatchObject(packagedIdentity)
+  expect(reopened.restoreJournals.at(-1)).toMatchObject({
+    phase: 'completed',
+    recoveryAction: 'backup_restore_committed_and_reopened',
+  })
+})
+
+test('unfinished backup restore rolls back before the app reopens', async ({ page }, testInfo) => {
+  const previousIdentity = {
+    nickname: `Previous ${testInfo.project.name}`,
+    avatar: 'https://example.com/previous-self.png',
+    anonymityEnabled: true,
+    anonymityScope: 'all',
+    anonymityContactIds: [],
+  }
+  await seedSettings(page, {
+    language: 'en-US',
+    theme: 'default',
+    apiKey: `crash_recovery_${testInfo.project.name}`,
+  })
+  await seedChatIdentity(page, previousIdentity)
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/settings')
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: /Backup & Export|Exporting/ }).click()
+  await page.getByRole('button', { name: 'I understand, continue download', exact: true }).click()
+  const exported = JSON.parse(await readDownloadText(await downloadPromise))
+  const rollbackSnapshot = createRollbackSnapshotFromBackup(exported)
+
+  await page.evaluate(async (snapshot) => {
+    const { stageBackupRestoreCheckpoint } = await import(
+      '/schatphone/src/lib/backup-restore-checkpoint.js'
+    )
+    const checkpoint = await stageBackupRestoreCheckpoint(snapshot)
+    checkpoint.repository.close()
+  }, rollbackSnapshot)
+
+  await navigateInsideUnlockedApp(page, '/chat-me?section=identity')
+  const identitySection = page.getByTestId('chat-me-identity-section')
+  await identitySection.getByLabel('Avatar URL').fill('https://example.com/interrupted-self.png')
+  await identitySection.getByLabel('Chat nickname').fill('Interrupted restore state')
+  const anonymousMode = identitySection.getByRole('checkbox').first()
+  if (await anonymousMode.isChecked()) await anonymousMode.uncheck()
+  await identitySection.getByRole('button', { name: 'Save Chat identity', exact: true }).click()
+  await expect(page.getByText('Chat identity saved.', { exact: true })).toBeVisible()
+
+  const interrupted = await readBackupRecoveryEvidence(page)
+  expect(interrupted.identity.nickname).toBe('Interrupted restore state')
+  expect(interrupted.restoreJournals.at(-1)).toMatchObject({ phase: 'external_applying' })
+
+  await page.reload()
+  await unlockToHome(page)
+  const recovered = await readBackupRecoveryEvidence(page)
+
+  expect(recovered.identity).toMatchObject(previousIdentity)
+  expect(recovered.restoreJournals.at(-1)).toMatchObject({
+    phase: 'completed',
+    recoveryAction: 'crash_recovery_previous_save_restored',
+  })
 })

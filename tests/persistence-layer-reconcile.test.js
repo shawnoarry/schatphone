@@ -602,9 +602,17 @@ describe('persistence bootstrap ordering', () => {
       expect(targets.filter((target) => !target.inspectOnly)).toHaveLength(16)
       return { ok: true }
     })
+    const recover = vi.fn(async () => {
+      events.push('recover')
+      return { ok: true, recovered: 0 }
+    })
     vi.doMock('../src/lib/persistence', () => ({ preparePersistedStateLayers: prepare }))
     vi.doMock('../src/lib/current-save-write-runtime', () => ({
+      closeCurrentSaveWriter: vi.fn(),
       initializeCurrentSaveWriter: initializeWriter,
+    }))
+    vi.doMock('../src/lib/backup-restore-runtime', () => ({
+      recoverPendingBackupRestores: recover,
     }))
     vi.doMock('vue', () => ({
       createApp: () => {
@@ -622,9 +630,10 @@ describe('persistence bootstrap ordering', () => {
 
     await import('../src/main.js')
 
-    expect(events.slice(0, 4)).toEqual(['writer', 'prepare', 'createApp', 'mount'])
+    expect(events.slice(0, 5)).toEqual(['writer', 'prepare', 'recover', 'createApp', 'mount'])
     expect(initializeWriter).toHaveBeenCalledTimes(1)
     expect(prepare).toHaveBeenCalledTimes(1)
+    expect(recover).toHaveBeenCalledTimes(1)
   })
 
   test('keeps every persistence target inspect-only when writer access is denied', async () => {
@@ -635,8 +644,13 @@ describe('persistence bootstrap ordering', () => {
       return { ok: true }
     })
     vi.doMock('../src/lib/persistence', () => ({ preparePersistedStateLayers: prepare }))
+    const recover = vi.fn(async () => ({ ok: true, recovered: 0 }))
     vi.doMock('../src/lib/current-save-write-runtime', () => ({
+      closeCurrentSaveWriter: vi.fn(),
       initializeCurrentSaveWriter: vi.fn(async () => ({ ok: false, readOnly: true })),
+    }))
+    vi.doMock('../src/lib/backup-restore-runtime', () => ({
+      recoverPendingBackupRestores: recover,
     }))
     vi.doMock('vue', () => ({
       createApp: () => ({ use: () => {}, mount: () => {} }),
@@ -649,5 +663,6 @@ describe('persistence bootstrap ordering', () => {
     await import('../src/main.js')
 
     expect(prepare).toHaveBeenCalledTimes(1)
+    expect(recover).not.toHaveBeenCalled()
   })
 })

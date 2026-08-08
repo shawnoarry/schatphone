@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -39,12 +39,12 @@ Current active architecture slice:
 - SchatPhone never rotates, expires, or deletes a cloud backup automatically; every personal-R2 backup remains until the user explicitly confirms permanent deletion, and quota pressure may block a new backup or prompt manual cleanup but cannot authorize silent removal;
 - the complete-backup/recovery engineering contract is accepted: new complete packages use a versioned required-section manifest, integrity evidence, capacity preflight, creation self-check, staged generation restore, atomic activation, crash journal, failure taxonomy, and metadata-plus-binary rollback;
 - the executable canonical inventory independently classifies 17 persisted stores, the serialized mirror, Gallery binary storage, image-generation credential/candidate/legacy carriers, the Home local hint, Chat session feedback, and their logical owner/data classes; Contacts-in-Chat and WorldBook-in-System remain explicit rather than inheriting the physical store owner;
-- Settings diagnostics consumes the inventory's stable 17-store projection and includes Book plus public image-generation configuration; legacy v2 backup export consumes a separate schema/section shape registry before download, now adding an `imageGeneration` public-configuration section while preserving old-backup optional import compatibility and excluding image credentials/candidates;
+- Settings diagnostics consumes the inventory's stable 17-store projection and includes Book plus public image-generation configuration; schema v3 complete local export covers every current required section, including `imageGeneration` public configuration and Chat identity/avatar state, while preserving legacy v1/v2 import compatibility and excluding image credentials/candidates;
 - roadmap 4.10's first shared Image Generation Module slice is implemented behind dedicated contract/API/Store files rather than `src/lib/ai.js`; OpenAI Images/Edit, OpenAI Chat image output, and Grsai async adapters share normalized requests, redacted errors, direct-first/profile-proxy routing, model discovery, tasks, and bounded candidate behavior. Public profiles/defaults/module routing participate in backup/restore/rollback, while device-local API keys/proxy tokens and temporary candidates do not;
-- legacy inspection returns `shapeOk` separately from `completePackageEligible`; Chat `moduleIdentity` and `moduleAvatarOverrides` remain the explicit required-but-uncovered legacy v2 gap, so structurally valid v2 output is not eligible for a future complete-package claim;
+- legacy inspection still returns `shapeOk` separately from `completePackageEligible`; legacy v2's missing Chat `moduleIdentity` and `moduleAvatarOverrides` remain an explicit historical gap, while v3 requires and integrity-checks both sections;
 - `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED`: it fixes the separate `schatphone-repository` v1 stores/keyPaths/indexes, immutable record versions plus generation membership, atomic pointer/journal, localStorage hint allowlist, contextual quota/persist policy, fail-closed WriteCoordinator, and Book Adapter/fixture/legacy-reader/rollback contract;
 - Batch 2B completed as the exact non-active foundation, followed on 2026-07-22 by the separately approved Book-only runtime cutover: explicit Book UI confirmation, contextual persistent-storage request, atomic activation/reopen, Repository-only later writes, unchanged legacy rollback bytes, and real-Chromium rollback evidence are implemented; dual write, legacy deletion, Gallery/R2, and other owners remain unapproved;
-- the structured write-result primitive, lineage/sequence local/mirror freshness bootstrap, product-level save-failed/read-only recovery surface, and product-wide same-container writer boundary are integrated. A page acquires the current-save writer before reconciliation and Store mount; later pages inspect without repair and fail closed across layered, Book, Gallery binary, and image-generation device-local writes until retry succeeds. Complete backup/restore/reopen/rollback remains open;
+- the structured write-result primitive, lineage/sequence local/mirror freshness bootstrap, product-level save-failed/read-only recovery surface, and product-wide same-container writer boundary are integrated. A page acquires the current-save writer before reconciliation and Store mount; later pages inspect without repair and fail closed across layered, Book, Gallery binary, and image-generation device-local writes until retry succeeds. The release-local v3 backup/restore/reopen/rollback boundary is now implemented;
 - `docs/architecture/WORLD_SETTING_ARCHITECTURE.md` is `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`: `legacy_single_world` is stable compatibility identity/scope, Pack capability is separate, Book/WorldBook/Pack/template ownership is frozen, and zero-Pack/zero-encyclopedia/zero-text worlds remain valid;
 - WorldBook and Contacts now read immutable identity/narrative/encyclopedia/profile/capability/diagnostic projections through `world-interface.js`; Pack switching does not change world identity or setting selection, and new template/contact writes do not record active Pack IDs;
 - legacy Pack content references remain reviewable compatibility evidence, but missing Book, encyclopedia, or template references no longer block capability Pack activation;
@@ -57,7 +57,7 @@ Current active architecture slice:
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
 - this is a promoted architecture-decision slice; beyond the completed Book-only cutover, it does not approve migration of any additional application owner.
-- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; hosted PWA, true-device, and real-provider proof remain unverified release work.
+- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; the Git-connected Vercel root-path app and fail-closed proxy Functions are deployed, while hosted PWA, true-device, and configured real-provider proof remain release work.
 
 ### Product Decision Checkpoint - 2026-07-21
 
@@ -99,9 +99,9 @@ Current inventory and validation posture:
 
 - 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, and 37 JavaScript composables;
 - 153 JavaScript files, 85 Vue files, and 131,038 source lines under `src`;
-- 197 static unit-test files;
+- 209 static unit-test files;
 - the 2026-07-22 architecture baseline passed 185 Vitest files / 1170 tests, lint, production build, both audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
-- the current local integration passes lint, 206 Vitest files / 1457 tests, production build, and both audit scopes; remote CI and the deployed Pages artifact now have Run #130 and deployed-browser smoke evidence, while named physical-device and independently rerunnable audit proof remain open.
+- the current local integration passes lint, 209 Vitest files / 1479 tests, production build, and both audit scopes; remote CI and the deployed Pages artifact have Run #130 and deployed-browser smoke evidence, while named physical-device and independently rerunnable audit proof remain open.
 
 ## 2. Landed Architecture Baselines
 
@@ -260,7 +260,7 @@ Implemented 2026-07-22:
 
 - Pages Run #128 stopped before deployment at `Audit all dependencies` because the lockfile held the transitive `js-yaml` 4.3.0 advisory range;
 - normal npm resolution refreshed only `node_modules/js-yaml` to 4.3.1 in `package-lock.json`, with no `package.json`, direct dependency, override, or resolution change;
-- production audit and full audit now both report 0 vulnerabilities; local lint, 206 Vitest files / 1457 tests, and production build pass; remote Pages Run #130 is green and deployed successfully.
+- production audit and full audit report 0 vulnerabilities; local lint, 209 Vitest files / 1479 tests, and production build pass; remote Pages Run #130 is green and deployed successfully.
 
 Do not report only the production audit when describing developer/CI safety.
 
@@ -284,7 +284,10 @@ Do not describe it as a production backend or closed-page simulation engine.
 - E2E/summary failures upload HTML, test-results, and JSON diagnostics for seven days without retaining download or storage-state data;
 - no coverage threshold exists;
 - local validation and CI both use Node 24.
-- remote GitHub execution and a deployed Pages base-path smoke are proven by Run #130 and the live `/schatphone/` browser check; external branch/environment required checks remain separately unverified, and this release slice remains partial.
+- remote GitHub execution and a deployed Pages base-path smoke are proven by Run #130 and the live `/schatphone/` browser check;
+- Vercel project `shawn-e-s-projects/schatphone` serves the root-path app at `https://schatphone.vercel.app` and detects fixed-upstream `/api/openai/v1/models` plus `/api/openai/v1/chat/completions` Functions; the unconfigured endpoint returns `503 PROXY_NOT_CONFIGURED` without leaking provider details;
+- the initial Vercel production upload came from the local dirty tree; the `main` commit containing this deployment contract is the reproducible source for automatic later builds;
+- external branch/environment required checks, production proxy secrets, one real-provider reply, installed-PWA/relaunch, and named true-device evidence remain separately unverified, so this release slice is partial.
 
 ## 5. Completed Governance Rounds
 
@@ -344,20 +347,23 @@ The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
 1. personal R2/Worker onboarding is post-release because remote transport cannot repair an unsafe local write or an incomplete local recovery package;
 2. structured write results, newest-valid local/mirror reconciliation, product-level save-failed/read-only recovery, and the product-wide same-container writer boundary are integrated foundations;
-3. the next architecture and release deliverable is complete local backup/restore/reopen coverage, including required Chat identity/avatar state, default-on retained Gallery material, integrity, capacity, staged activation, crash journal, and rollback;
-4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages and a deployed base-path smoke are complete, while deployed PWA/install/offline, hosted-provider Chat, and true-device backup evidence still close the public-release gate;
+3. `DONE 2026-08-09`: the release-local v3 backup/restore/reopen boundary covers required Chat identity/avatar state, default-on retained Gallery material, integrity verification, durable rollback checkpoints, startup crash recovery, and legacy compatibility;
+4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages, the deployed `/schatphone/` smoke, and the Git-connected Vercel root/proxy infrastructure baseline are complete, while deployed PWA/install/offline, configured hosted-provider Chat, and named true-device backup evidence still close the public-release gate;
 5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene, and World Setting W2 remain post-preview unless a current product blocker requires a separately approved slice.
-6. roadmap 4.10's Camera/shared-image-generation first slice is complete; Gallery People truth, source-module callers, hosted proxy deployment, true-device checks, and hosted-provider smoke require separate promotion and do not displace the current-save P0 lane.
+6. roadmap 4.10's Camera/shared-image-generation first slice is complete; the shared Vercel proxy transport exists, but Camera provider routing through it, Gallery People truth, source-module callers, true-device checks, and hosted-provider smoke require separate promotion.
 
 ### P0: Current Save Safety And Complete Local Recovery
 
-Status: `IN_PROGRESS`; write-result, local/mirror freshness, product-level failure recovery, and same-container read-only enforcement are implemented, while complete local recovery remains open.
+Status: `DONE 2026-08-09` for the roadmap 4.9 release-local boundary; write-result, local/mirror freshness, product-level failure recovery, same-container read-only enforcement, and complete v3 local export/restore/crash recovery are implemented.
 
-Next coherent slice:
+Completed release-local slice:
 
-- close complete local backup/restore/reopen/rollback as its own reviewable slice;
-- include required Chat identity/avatar state and default-on retained Gallery material;
-- prove integrity, capacity preflight, staged activation, crash recovery, rollback, and reopen without beginning R2 transport or another Repository owner migration.
+- v3 requires all 27 current backup sections, including Chat identity/avatar state, and writes canonical per-section, payload, manifest, and Gallery-binary SHA-256 evidence;
+- whole-Gallery material is default-on and fail-closed: missing, unreadable, corrupt, or skipped retained binaries stop complete export or required restore;
+- import verifies before current-save mutation, durably stages a clone-safe metadata-plus-binary rollback snapshot in the existing Repository journal, preserves current-only Gallery material during older restore, closes successful/failed checkpoints, and rolls back unfinished restore work before mount;
+- desktop and simulated-mobile Chromium prove sensitive export, Chat identity round trip, completed-log reopen, interrupted-restore rollback, and blocked-IndexedDB fail-closed startup; the full E2E suite passes with 128 tests and four intentional skips.
+
+Next coherent architecture work remains separate: predictive capacity reporting, independent inventory-to-registry closure, broader cross-owner Repository generations, local destination confirmation, legacy unavailable-media presentation, and personal R2/Worker transport. None reopens the completed roadmap 4.9 release-local gate unless release evidence exposes a blocker.
 
 `DONE 2026-08-07`: one page-level current-save writer is acquired before reconciliation and Store mount. A later same-container page times out into the existing read-only recovery state, inspects all 17 targets without repair, and cannot mutate layered sync/async/deferred mirror carriers, Book Repository/legacy writes, Gallery binaries, or image-generation credentials/candidates. Releasing the first page permits retry and captured owner writes; unchanged heads persist, while a head changed by the former writer remains reconciliation-blocked. Focused Vitest and real two-page Chromium cover cross-owner zero-write behavior, fallback heartbeat lease loss, retry, and stale-head rejection. Store snapshots, envelopes, Repository schema, backup format, force takeover, and last-write-wins remain unchanged.
 

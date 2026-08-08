@@ -1,8 +1,8 @@
 # Complete Backup And Recovery Engineering Contract
 
-Updated: 2026-07-18
+Updated: 2026-08-09
 
-Status: `ARCHITECTURE_ACCEPTED`; storage implementation remains `NOT_APPROVED`.
+Status: `ARCHITECTURE_ACCEPTED`; roadmap 4.9 release-local v3 recovery is implemented, while the broader target remains staged.
 
 Purpose: define the engineering contract for complete standalone backup packages, integrity checks, staged restore, capacity reporting, failure handling, legacy migration, and rollback. This contract freezes acceptance boundaries; it does not approve an IndexedDB migration, Cloudflare connector, Gallery schema change, or application-code slice.
 
@@ -13,20 +13,17 @@ Use this contract with:
 - `docs/architecture/ARCHITECTURE.md` for the current persistence topology;
 - `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` for live execution status.
 
-## Current Implementation Gap
+## Current Implementation State
 
-This contract is not a description of current backup behavior.
+Roadmap 4.9 now has a release-local implementation of the core recovery boundary:
 
-Current evidence:
+- `src/lib/complete-backup-package.js` creates schema v3 files with package magic/identity, all 27 current required sections, canonical per-section byte size and SHA-256 evidence, manifest and payload digests, plus exact Gallery binary inventory/digest checks;
+- Settings includes Chat `moduleIdentity` and `moduleAvatarOverrides`, defaults whole-Gallery material on, and stops complete export when retained binaries are missing, unreadable, skipped, oversized for the chosen path, or corrupt;
+- restore verifies v3 integrity before mutation, keeps legacy v1/v2 import compatibility without relabeling those files complete, preserves current-only retained Gallery material, and requires all declared full-material binaries;
+- the previous metadata-plus-binary current save is cloned into an external Repository operation before Store mutation; commit failure restores it, startup closes pre-apply checkpoints, and unfinished applying checkpoints roll back before app mount;
+- desktop and simulated-mobile Chromium prove sensitive export, Chat identity round trip, completed reopen evidence, interrupted-restore recovery, blocked-IndexedDB fail-closed startup, and the full route suite.
 
-- `src/lib/persistence.js` still uses `localStorage` as the synchronous primary read path and IndexedDB as an asynchronous serialized mirror;
-- `src/composables/useSettingsBackupWorkflow.js` builds backup schema v2 as one JSON payload, validates only broad format/version/recognizable-section conditions, and does not have a required-section manifest or package/section digests;
-- current Gallery binary export is an optional best-effort package with 20 MB / 120-item limits and can report skipped or failed items;
-- current restore mutates stores in sequence, then saves them in sequence, with an in-memory metadata rollback snapshot rather than a staged-generation atomic commit;
-- Gallery binary writes can partially fail independently of metadata restore, and current rollback does not prove that prior metadata and binary state were restored as one unit;
-- current storage diagnostics checks layer readability/drift, not full package integrity, quota headroom, restore staging capacity, or crash recovery.
-
-These are implementation gaps to be measured against this contract. No code or schema change is included in this documentation slice.
+The broader target in this contract remains intentionally incomplete: independent canonical-inventory-to-registry closure, predictive source/package/staging/destination capacity reporting, a cross-owner Repository root-generation switch, platform-confirmed local-save durability, the complete legacy unavailable-media presentation path, and personal R2/Worker transport. `src/lib/persistence.js` also remains `localStorage` primary with an IndexedDB mirror for non-Book owners. These follow-ups require separate architecture slices and must not be inferred from the release-local v3 milestone.
 
 ## 1. User Outcome
 
