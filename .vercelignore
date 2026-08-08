@@ -6,7 +6,6 @@
 .superpowers
 node_modules
 dist
-docs
 e2e
 tests
 output

@@ -9,6 +9,7 @@ Updated: 2026-08-09
 - The initial production deployment `dpl_8YRkMVKopNEFmm4Wsu4aKr1hhdVZ` reached `READY` and served the root app and manifest successfully.
 - Vercel detected both OpenAI-compatible Functions. With no production secrets configured, the models endpoint failed closed with `503 PROXY_NOT_CONFIGURED` as designed.
 - The initial deployment was uploaded from the local dirty working tree, not built from a Git commit. The `main` commit containing this handoff and the deployment files is the first reproducible repository baseline and becomes the source for automatic later builds.
+- The first Git-triggered attempt, `dpl_Beje6c7tihkiGEqsEGsPtdUSMmVK`, proved that Vercel cloned commit `e5b1b91` but failed because `.vercelignore` excluded `docs/` while `src/lib/built-in-book-assets.js` imports one tracked Markdown asset from that directory. The corrective baseline keeps `docs/` in the Vercel build source while continuing to exclude tests, reports, caches, and repository metadata.
 
 ## Deployment Contract
 
