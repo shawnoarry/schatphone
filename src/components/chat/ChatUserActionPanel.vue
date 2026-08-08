@@ -105,157 +105,79 @@ const USER_ACTION_FORM_LINK = 'link'
 const USER_ACTION_FORM_TRANSFER = 'transfer'
 const USER_ACTION_FORM_VOICE = 'voice'
 const USER_ACTION_FORM_GALLERY = 'gallery'
-
-const isVirtualGiftShare = (product = {}) =>
-  product.shareType === 'gift_card' || product.shareType === 'virtual_gift'
-
-const shoppingShareTypeLabel = (product = {}) => {
-  if (product.shareLabel) return product.shareLabel
-  return isVirtualGiftShare(product) ? t('虚拟礼物', 'Virtual gift') : t('商品链接', 'Product link')
-}
-
-const shoppingShareActionLabel = (product = {}) =>
-  isVirtualGiftShare(product) ? t('发送礼物', 'Send gift') : t('发送链接', 'Send link')
-
-const shoppingShareHint = (product = {}) =>
-  isVirtualGiftShare(product)
-    ? t('来源创建礼物', 'Source creates gift')
-    : t('来源保留商品状态', 'Source keeps product state')
 </script>
 
 <template>
-  <div class="absolute bottom-[56px] left-3 right-3 rounded-xl border border-gray-200 bg-white/95 p-2 shadow-lg backdrop-blur-sm">
-    <div v-if="userActionFormType === USER_ACTION_FORM_NONE" class="grid grid-cols-3 gap-2">
+  <div class="absolute bottom-[56px] left-0 right-0 rounded-t-2xl border-t border-gray-200 bg-white/98 px-4 pb-4 pt-3 shadow-[0_-12px_30px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+    <div class="mx-auto mb-3 h-1 w-9 rounded-full bg-gray-300" aria-hidden="true"></div>
+    <div v-if="userActionFormType === USER_ACTION_FORM_NONE" class="grid grid-cols-4 gap-x-3 gap-y-4">
       <button
         data-testid="chat-user-action-open-image"
         @click="$emit('trigger-media-picker', USER_MEDIA_KIND_IMAGE)"
-        class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700"
       >
-        {{ t('图片', 'Image') }}
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-base"><i class="far fa-image"></i></span>
+        <span>{{ t('图片', 'Photo') }}</span>
       </button>
       <button
         data-testid="chat-user-action-open-gif"
         @click="$emit('trigger-media-picker', USER_MEDIA_KIND_GIF)"
-        class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700"
       >
-        GIF
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-xs font-bold">GIF</span>
+        <span>GIF</span>
       </button>
       <button
         data-testid="chat-user-action-open-gallery"
         @click="$emit('open-form', USER_ACTION_FORM_GALLERY)"
         :disabled="!gallerySendState.enabled"
-        class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
-        :class="gallerySendState.enabled ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-500'"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700 disabled:opacity-40"
       >
-        {{ t('素材库', 'Asset library') }}
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-base"><i class="fas fa-images"></i></span>
+        <span>{{ t('相册', 'Gallery') }}</span>
       </button>
       <button
         data-testid="chat-user-action-open-link"
         @click="$emit('open-form', USER_ACTION_FORM_LINK)"
-        class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700"
       >
-        {{ t('链接', 'Link') }}
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-base"><i class="fas fa-link"></i></span>
+        <span>{{ t('链接', 'Link') }}</span>
       </button>
       <button
         data-testid="chat-user-action-send-location"
         @click="$emit('send-current-location')"
         :disabled="!locationShareState.enabled"
-        class="rounded-lg border px-2 py-1.5 text-[11px] text-left transition disabled:cursor-not-allowed disabled:opacity-70"
-        :class="locationShareState.enabled ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 bg-gray-100 text-gray-500'"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700 disabled:opacity-40"
       >
-        {{ t('位置', 'Location') }}
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-base"><i class="fas fa-location-dot"></i></span>
+        <span>{{ t('位置', 'Location') }}</span>
       </button>
       <button
         data-testid="chat-user-action-open-transfer"
         @click="$emit('open-form', USER_ACTION_FORM_TRANSFER)"
-        class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700"
       >
-        {{ t('向对方转账', 'Send money') }}
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-base"><i class="fas fa-yen-sign"></i></span>
+        <span>{{ t('转账', 'Money') }}</span>
       </button>
       <button
         data-testid="chat-user-action-open-voice"
         @click="$emit('open-form', USER_ACTION_FORM_VOICE)"
-        class="rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] text-left hover:bg-gray-50"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700"
       >
-        {{ t('语音卡片', 'Voice card') }}
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-base"><i class="fas fa-microphone-lines"></i></span>
+        <span>{{ t('语音', 'Voice') }}</span>
       </button>
       <button
         data-testid="chat-user-action-open-shopping"
         @click="$emit('open-shopping')"
-        class="rounded-lg border border-orange-200 bg-orange-50 px-2 py-1.5 text-left text-[11px] text-orange-700 transition hover:bg-orange-100"
+        class="flex min-w-0 flex-col items-center gap-1.5 text-[11px] text-gray-700"
       >
-        <span class="block font-semibold">{{ t('Shopping 分享', 'Shopping share') }}</span>
-        <span class="block text-[10px] text-orange-500">{{ t('去 Shopping 生成', 'Create in Shopping') }}</span>
+        <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 text-base"><i class="fas fa-bag-shopping"></i></span>
+        <span>{{ t('商品', 'Shopping') }}</span>
       </button>
     </div>
-    <div
-      v-if="userActionFormType === USER_ACTION_FORM_NONE && shoppingPreviewProducts.length > 0"
-      class="mt-2 rounded-xl border border-orange-100 bg-orange-50/70 p-2"
-    >
-      <div class="flex items-center justify-between gap-2">
-        <p class="text-[11px] font-semibold text-orange-800">{{ t('Shopping 分享预览', 'Shopping share preview') }}</p>
-        <span class="text-[10px] text-orange-500">{{ t('来源状态仍在 Shopping', 'Source state stays in Shopping') }}</span>
-      </div>
-      <div class="mt-2 grid grid-cols-1 gap-2">
-        <button
-          v-for="product in shoppingPreviewProducts"
-          :key="product.id"
-          :data-testid="`chat-shopping-preview-${product.id}`"
-          @click="$emit('open-shopping', { productId: product.id, category: product.category, serviceKey: product.serviceKey })"
-          class="rounded-lg border border-orange-100 bg-white/80 px-2 py-2 text-left transition hover:border-orange-200 hover:bg-white"
-        >
-          <span class="flex items-start justify-between gap-2">
-            <span class="min-w-0">
-              <span class="block truncate text-[11px] font-semibold text-gray-900">{{ product.title }}</span>
-              <span
-                v-if="product.serviceLabel || product.serviceKey"
-                class="mt-0.5 block truncate text-[10px] font-semibold text-amber-700"
-              >
-                {{ product.serviceLabel || product.serviceKey }}
-              </span>
-              <span class="mt-0.5 block truncate text-[10px] text-gray-500">{{ product.desc || t('来自 Shopping 商品目录', 'From Shopping catalog') }}</span>
-            </span>
-            <span class="shrink-0 text-[10px] font-semibold text-orange-600">{{ product.price }}</span>
-          </span>
-          <span class="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-gray-500">
-            <span class="rounded-full bg-orange-50 px-1.5 py-0.5 text-orange-600">{{ product.category }}</span>
-            <span class="rounded-full bg-white px-1.5 py-0.5 text-orange-700">
-              {{ shoppingShareTypeLabel(product) }}
-            </span>
-            <span
-              v-if="product.serviceLabel || product.serviceKey"
-              class="rounded-full bg-amber-50 px-1.5 py-0.5 text-amber-700"
-            >
-              {{ product.serviceLabel || product.serviceKey }}
-            </span>
-            <span v-if="isVirtualGiftShare(product)" class="rounded-full bg-rose-50 px-1.5 py-0.5 text-rose-600">
-              {{ t('可赠送', 'Giftable') }}
-            </span>
-          </span>
-          <span class="mt-2 flex items-center gap-2">
-            <span
-              role="button"
-              tabindex="0"
-              :data-testid="`chat-send-product-card-${product.id}`"
-              @click.stop="$emit('send-product-card', product)"
-              @keydown.enter.prevent.stop="$emit('send-product-card', product)"
-              @keydown.space.prevent.stop="$emit('send-product-card', product)"
-              class="rounded-full bg-orange-500 px-2 py-1 text-[10px] font-semibold text-white"
-            >
-              {{ shoppingShareActionLabel(product) }}
-            </span>
-            <span class="text-[10px] text-orange-600">{{ shoppingShareHint(product) }}</span>
-          </span>
-        </button>
-      </div>
-    </div>
-    <p
-      v-if="userActionFormType === USER_ACTION_FORM_NONE"
-      class="mt-2 text-[10px]"
-      :class="gallerySendState.enabled && locationShareState.enabled ? 'text-gray-500' : 'text-amber-600'"
-    >
-      {{ userActionGridHint }}
-    </p>
 
     <div v-else-if="userActionFormType === USER_ACTION_FORM_LINK" class="space-y-2">
       <p class="text-[11px] font-medium text-gray-700">{{ t('发送链接', 'Send link') }}</p>
@@ -511,21 +433,17 @@ const shoppingShareHint = (product = {}) =>
       </div>
     </div>
 
-    <div class="mt-2 flex items-center justify-between gap-2">
+    <div
+      v-if="suggestionFeatureEnabled && userActionFormType === USER_ACTION_FORM_NONE"
+      class="mt-4"
+    >
       <button
-        v-if="suggestionFeatureEnabled && userActionFormType === USER_ACTION_FORM_NONE"
         @click="$emit('generate-smart-replies')"
-        class="rounded-lg border border-emerald-200 px-2 py-1 text-[11px] text-emerald-700 hover:bg-emerald-50"
+        class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50"
         :disabled="loadingSuggestions || loadingAI"
       >
         <span v-if="loadingSuggestions">{{ t('生成中...', 'Generating...') }}</span>
         <span v-else>{{ t('生成建议回复', 'Generate suggested replies') }}</span>
-      </button>
-      <button
-        @click="$emit('close')"
-        class="ml-auto rounded-lg border border-gray-200 px-2 py-1 text-[11px] text-gray-600 hover:bg-gray-50"
-      >
-        {{ t('收起', 'Collapse') }}
       </button>
     </div>
   </div>

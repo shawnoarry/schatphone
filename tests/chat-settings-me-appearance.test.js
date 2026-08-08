@@ -22,10 +22,10 @@ import ChatMessageRow from '../src/components/chat/ChatMessageRow.vue'
 import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
-import { useShoppingStore } from '../src/stores/shopping'
 import { useWalletStore } from '../src/stores/wallet'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { callAI } from '../src/lib/ai'
+import { getChatAppearanceClasses } from '../src/lib/chat-appearance'
 
 const DummyView = { template: '<div />' }
 
@@ -470,10 +470,9 @@ describe('Chat settings, Me, and appearance routes', () => {
     wrapper.unmount()
   })
 
-  test('sends rich message cards through the Chat action panel and preserves recall/delete semantics', async () => {
+  test('sends native chat cards through the compact action panel and preserves recall semantics', async () => {
     const router = createTestRouter()
     const chatStore = useChatStore()
-    const shoppingStore = useShoppingStore()
     const { dialogState, submitDialog } = useDialog()
     const roleProfile = chatStore.addRoleProfile({
       name: 'Mina Device',
@@ -487,17 +486,6 @@ describe('Chat settings, Me, and appearance routes', () => {
       role: 'Tester',
     })
     const payeeCurrency = roleProfile.payeeAccounts[0].currency
-    const product = shoppingStore.upsertProduct({
-      id: 'chat_rich_panel_product',
-      title: 'Signal Ribbon',
-      category: 'digital',
-      desc: 'Wearable signal charm',
-      priceCents: 128800,
-      currency: 'CNY',
-      stockStatus: 'in_stock',
-      assetEligible: true,
-      giftable: true,
-    })
 
     await router.push(`/chat/${contact.id}`)
     await router.isReady()
@@ -529,11 +517,6 @@ describe('Chat settings, Me, and appearance routes', () => {
     await wrapper.get('[data-testid="chat-user-action-submit-voice"]').trigger('click')
     await flushUi()
 
-    await wrapper.get('[data-testid="chat-user-action-toggle"]').trigger('click')
-    await flushUi()
-    await wrapper.get(`[data-testid="chat-send-product-card-${product.id}"]`).trigger('click')
-    await flushUi()
-
     const messages = chatStore.getMessagesByContactId(contact.id)
     const payeeAccountMessageIndex = messages.findIndex((item) =>
       item.blocks?.some(
@@ -548,20 +531,9 @@ describe('Chat settings, Me, and appearance routes', () => {
     const voiceMessage = messages.find((item) =>
       item.blocks?.some((block) => block?.type === 'voice_virtual' && block.transcript === 'panel voice secret'),
     )
-    const productMessage = messages.find((item) =>
-      item.blocks?.some(
-        (block) =>
-          block?.type === 'share_card' &&
-          block.shareType === 'product_link' &&
-          block.sourceModule === 'shopping' &&
-          block.sourceId === product.id,
-      ),
-    )
-
     expect(transferRequestMessage?.content).toContain(`88.50 ${payeeCurrency}`)
     expect(payeeAccountMessage?.content).toContain('receiving account')
     expect(voiceMessage?.content).toBe('panel voice secret')
-    expect(productMessage?.content).toContain('Signal Ribbon')
     expect(wrapper.get(`[data-testid="chat-message-row-${payeeAccountMessage.id}"]`).text()).toContain(
       'Receiving account',
     )
@@ -571,8 +543,6 @@ describe('Chat settings, Me, and appearance routes', () => {
       ).text(),
     ).toContain('Transfer in Wallet')
     expect(wrapper.get(`[data-testid="chat-message-row-${voiceMessage.id}"]`).text()).toContain('panel voice secret')
-    expect(wrapper.get(`[data-testid="chat-message-row-${productMessage.id}"]`).text()).toContain('Signal Ribbon')
-    expect(wrapper.get(`[data-testid="chat-share-card-open-shopping-${product.id}"]`).text()).toContain('Open source')
 
     const transferRow = wrapper.get(`[data-testid="chat-message-row-${transferRequestMessage.id}"]`)
     await transferRow.get('[data-testid="chat-message-bubble"]').trigger('contextmenu')
@@ -601,18 +571,6 @@ describe('Chat settings, Me, and appearance routes', () => {
 
     expect(wrapper.get(`[data-testid="chat-message-row-${voiceMessage.id}"]`).text()).toContain('You recalled a message')
     expect(wrapper.text()).not.toContain('panel voice secret')
-
-    const productRow = wrapper.get(`[data-testid="chat-message-row-${productMessage.id}"]`)
-    await productRow.get('[data-testid="chat-message-bubble"]').trigger('contextmenu')
-    await flushUi()
-    await wrapper.get('[data-testid="chat-message-action-delete"]').trigger('click')
-    await flushUi()
-    expect(dialogState.title).toBe('Delete message')
-    submitDialog()
-    await flushUi()
-
-    expect(chatStore.getMessagesByContactId(contact.id).find((item) => item.id === productMessage.id)).toBeUndefined()
-    expect(wrapper.text()).not.toContain('Signal Ribbon')
 
     wrapper.unmount()
   })
@@ -975,19 +933,35 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(store.settings.appearance.chat).toMatchObject({
       presetId: 'kakao_immersive',
       messageLayout: 'kakao',
+      messageAvatarMode: 'layout',
+      messageBubbleMode: 'bubble',
+      themeColorMode: 'layout',
+      bubbleColorMode: 'theme',
       customCss: '',
       customCssEnabled: false,
     })
 
     const changed = store.setChatAppearance({
       messageLayout: 'imessage',
+      messageAvatarMode: 'all',
+      messageBubbleMode: 'plain',
+      themeColorMode: 'ocean',
+      bubbleColorMode: 'mono',
       customCss: '.chat-shell { --chat-bg: #ffee66; }',
       customCssEnabled: true,
     })
 
     expect(changed).toBe(true)
     expect(store.settings.appearance.chat.messageLayout).toBe('imessage')
+    expect(store.settings.appearance.chat.messageAvatarMode).toBe('all')
+    expect(store.settings.appearance.chat.messageBubbleMode).toBe('bubble')
+    expect(store.settings.appearance.chat.themeColorMode).toBe('ocean')
+    expect(store.settings.appearance.chat.bubbleColorMode).toBe('mono')
     expect(store.settings.appearance.chat.customCssEnabled).toBe(true)
+    expect(store.settings.appearance.chat.customCssProfiles).toHaveLength(1)
+    expect(store.settings.appearance.chat.activeCustomCssProfileId).toBe(
+      store.settings.appearance.chat.customCssProfiles[0].id,
+    )
 
     const restored = store.restoreFromBackup({
       settings: {
@@ -995,6 +969,10 @@ describe('Chat settings, Me, and appearance routes', () => {
           chat: {
             presetId: 'unknown',
             messageLayout: 'stacked',
+            messageAvatarMode: 'everywhere',
+            messageBubbleMode: 'none',
+            themeColorMode: 'unknown',
+            bubbleColorMode: 'unknown',
             customCss: 42,
             customCssEnabled: 'yes',
           },
@@ -1006,9 +984,49 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(store.settings.appearance.chat).toMatchObject({
       presetId: 'kakao_immersive',
       messageLayout: 'kakao',
+      messageAvatarMode: 'layout',
+      messageBubbleMode: 'bubble',
+      themeColorMode: 'layout',
+      bubbleColorMode: 'theme',
       customCss: '',
       customCssEnabled: false,
     })
+  })
+
+  test('builds one normalized appearance class set for every Chat route shell', () => {
+    expect(
+      getChatAppearanceClasses({
+        presetId: 'kakao_immersive',
+        messageLayout: 'imessage',
+        messageAvatarMode: 'all',
+        messageBubbleMode: 'glass',
+        themeColorMode: 'ocean',
+        bubbleColorMode: 'mono',
+      }),
+    ).toEqual([
+      'chat-preset-kakao_immersive',
+      'chat-layout-imessage',
+      'chat-avatar-mode-all',
+      'chat-bubble-mode-glass',
+      'chat-theme-color-ocean',
+      'chat-bubble-color-mono',
+    ])
+
+    expect(
+      getChatAppearanceClasses({
+        messageAvatarMode: 'unknown',
+        messageBubbleMode: 'plain',
+        themeColorMode: 'unknown',
+        bubbleColorMode: 'unknown',
+      }),
+    ).toEqual([
+      'chat-preset-kakao_immersive',
+      'chat-layout-kakao',
+      'chat-avatar-mode-layout',
+      'chat-bubble-mode-bubble',
+      'chat-theme-color-layout',
+      'chat-bubble-color-theme',
+    ])
   })
 
   test('saves Chat Appearance layout and Chat-scoped CSS', async () => {
@@ -1025,14 +1043,40 @@ describe('Chat settings, Me, and appearance routes', () => {
     await flushUi()
 
     await wrapper.get('[data-testid="chat-layout-option-imessage"]').trigger('click')
-    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await wrapper.get('[data-testid="chat-theme-color-mode-ocean"]').trigger('click')
+    await wrapper.get('[data-testid="chat-bubble-color-mode-mono"]').trigger('click')
+    await wrapper.get('[data-testid="chat-message-avatar-mode-all"]').trigger('click')
+    await wrapper.get('[data-testid="chat-appearance-custom-css-enabled"]').setValue(true)
     await wrapper.get('[data-testid="chat-appearance-custom-css"]').setValue('.chat-shell { --chat-bg: #ffee66; }')
+    await wrapper.get('[data-testid="chat-appearance-css-profile-name"]').setValue('Frosted blue')
+    await wrapper.get('[data-testid="chat-appearance-css-profile-save"]').trigger('click')
+    await flushUi()
+    expect(systemStore.settings.appearance.chat.customCssProfiles).toHaveLength(1)
+    expect(systemStore.settings.appearance.chat.customCssProfiles[0]).toMatchObject({
+      name: 'Frosted blue',
+      css: '.chat-shell { --chat-bg: #ffee66; }',
+    })
+    await wrapper.get('[data-testid="chat-appearance-custom-css"]').setValue('')
+    await wrapper.get('[data-testid^="chat-appearance-css-profile-select-"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="chat-appearance-custom-css"]').element.value).toContain('--chat-bg')
     await wrapper.get('[data-testid="chat-appearance-save"]').trigger('click')
     await flushUi()
 
     expect(systemStore.settings.appearance.chat.messageLayout).toBe('imessage')
+    expect(systemStore.settings.appearance.chat.messageAvatarMode).toBe('all')
+    expect(systemStore.settings.appearance.chat.messageBubbleMode).toBe('bubble')
+    expect(systemStore.settings.appearance.chat.themeColorMode).toBe('ocean')
+    expect(systemStore.settings.appearance.chat.bubbleColorMode).toBe('mono')
     expect(systemStore.settings.appearance.chat.customCssEnabled).toBe(true)
     expect(systemStore.settings.appearance.chat.customCss).toContain('--chat-bg')
+
+    const profileId = systemStore.settings.appearance.chat.customCssProfiles[0].id
+    await wrapper.get(`[data-testid="chat-appearance-css-profile-delete-${profileId}"]`).trigger('click')
+    await flushUi()
+    expect(systemStore.settings.appearance.chat.customCssProfiles).toHaveLength(0)
+    expect(systemStore.settings.appearance.chat.activeCustomCssProfileId).toBe('')
+    expect(systemStore.settings.appearance.chat.customCss).toBe('')
 
     wrapper.unmount()
   })
@@ -1050,7 +1094,7 @@ describe('Chat settings, Me, and appearance routes', () => {
     })
     await flushUi()
 
-    await wrapper.get('input[type="checkbox"]').setValue(true)
+    await wrapper.get('[data-testid="chat-appearance-custom-css-enabled"]').setValue(true)
     await wrapper.get('[data-testid="chat-appearance-custom-css"]').setValue(
       '.chat-shell { --chat-bg: #ffee66; }\n.chat-thread-header { color: #123456; }\n.chat-bubble-user { color: #111111; }',
     )
@@ -1065,7 +1109,7 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(previewCss).not.toContain('.chat-appearance-preview .chat-appearance-preview')
     expect(systemStore.settings.appearance.chat.customCss).toBe('')
 
-    await wrapper.get('input[type="checkbox"]').setValue(false)
+    await wrapper.get('[data-testid="chat-appearance-custom-css-enabled"]').setValue(false)
     await flushUi()
     expect(document.head.querySelector('[data-testid="chat-appearance-preview-css"]')).toBeNull()
 
@@ -1091,10 +1135,61 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(wrapper.get('[data-testid="chat-layout-option-wechat-sample"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="chat-layout-option-imessage-sample"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="chat-layout-option-kakao"]').attributes('aria-pressed')).toBe('true')
+    expect(wrapper.get('[data-testid="chat-message-bubble-mode-bubble"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-message-bubble-mode-soft"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-message-bubble-mode-outline"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-message-bubble-mode-glass"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="chat-message-bubble-mode-plain"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="chat-theme-color-mode-layout"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-theme-color-mode-ocean"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-theme-color-mode-mint"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-theme-color-mode-coral"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-theme-color-preview-layout"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-theme-color-preview-ocean"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-bubble-color-mode-theme"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-bubble-color-mode-contrast"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-bubble-color-mode-soft"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-bubble-color-mode-mono"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-appearance-preview"]').classes()).toContain('chat-theme-color-layout')
+    expect(wrapper.get('[data-testid="chat-appearance-preview"]').classes()).toContain('chat-bubble-color-theme')
+    expect(wrapper.get('[data-testid="chat-appearance-preview-composer"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-appearance-preview-summary"]').text()).toMatch(/随布局|Follow layout/)
+    const previewGuide = wrapper.get('[data-testid="chat-appearance-preview-legend"]')
+    expect(previewGuide.exists()).toBe(true)
+    expect(previewGuide.element.closest('[data-testid="chat-appearance-preview"]')).toBeNull()
+    expect(wrapper.find('.chat-appearance-preview__caption').exists()).toBe(false)
+    expect(wrapper.find('.chat-appearance-preview__legend').exists()).toBe(false)
+    expect(wrapper.find('.chat-appearance-preview__role-label').exists()).toBe(false)
+    expect(wrapper.find('.chat-thread-header__hint').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="chat-appearance-preview-avatar-hint"]').exists()).toBe(true)
     expect(assistantRow().attributes('data-layout-mode')).toBe('kakao')
+    expect(assistantRow().attributes('data-bubble-mode')).toBe('bubble')
+    expect(assistantRow().get('.chat-message-content').attributes('data-content-width-mode')).toBe('fit-content')
     expect(assistantRow().find('[data-testid="chat-message-avatar-contact"]').exists()).toBe(true)
     expect(assistantRow().find('[data-testid="chat-message-sender-name"]').exists()).toBe(true)
     expect(userRow().find('[data-testid="chat-message-avatar-self"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="chat-theme-color-mode-ocean"]').trigger('click')
+    await wrapper.get('[data-testid="chat-bubble-color-mode-mono"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="chat-appearance-preview"]').classes()).toContain('chat-theme-color-ocean')
+    expect(wrapper.get('[data-testid="chat-appearance-preview"]').classes()).toContain('chat-bubble-color-mono')
+    expect(wrapper.get('[data-testid="chat-appearance-preview-summary"]').text()).toMatch(/海盐蓝|Sea blue/)
+    expect(wrapper.get('[data-testid="chat-theme-color-detail"]').text()).toMatch(/冷静蓝灰层次|Calm blue-gray/)
+    expect(wrapper.get('[data-testid="chat-bubble-color-detail"]').text()).toMatch(/黑白层级|Monochrome layers/)
+
+    await wrapper.get('[data-testid="chat-message-bubble-mode-soft"]').trigger('click')
+    await flushUi()
+    expect(assistantRow().attributes('data-bubble-mode')).toBe('soft')
+    expect(assistantRow().get('[data-testid="chat-message-bubble"]').classes()).not.toContain('is-plain')
+
+    await wrapper.get('[data-testid="chat-message-bubble-mode-outline"]').trigger('click')
+    await flushUi()
+    expect(assistantRow().attributes('data-bubble-mode')).toBe('outline')
+
+    await wrapper.get('[data-testid="chat-message-bubble-mode-glass"]').trigger('click')
+    await flushUi()
+    expect(assistantRow().attributes('data-bubble-mode')).toBe('glass')
 
     await wrapper.get('[data-testid="chat-layout-option-wechat"]').trigger('click')
     await flushUi()
@@ -1108,6 +1203,18 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(assistantRow().attributes('data-layout-mode')).toBe('imessage')
     expect(assistantRow().find('[data-testid="chat-message-avatar-contact"]').exists()).toBe(false)
     expect(userRow().find('[data-testid="chat-message-avatar-self"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="chat-appearance-preview-header-avatar"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-appearance-preview-header-avatar"]').attributes('title')).toBeTruthy()
+    expect(wrapper.get('[data-testid="chat-appearance-preview-header-avatar"]').element.parentElement?.classList.contains('chat-thread-header__avatar-wrap')).toBe(true)
+    expect(wrapper.find('.chat-thread-header__identity-wrap').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="chat-message-avatar-mode-all"]').trigger('click')
+    await flushUi()
+    expect(assistantRow().attributes('data-avatar-mode')).toBe('all')
+    expect(assistantRow().find('[data-testid="chat-message-avatar-contact"]').exists()).toBe(true)
+    expect(userRow().find('[data-testid="chat-message-avatar-self"]').exists()).toBe(true)
+    expect(assistantRow().attributes('data-bubble-mode')).toBe('glass')
+    expect(assistantRow().get('[data-testid="chat-message-bubble"]').classes()).not.toContain('is-plain')
 
     wrapper.unmount()
   })
@@ -1207,6 +1314,48 @@ describe('Chat settings, Me, and appearance routes', () => {
     directRow.unmount()
     groupRow.unmount()
     userRow.unmount()
+  })
+
+  test('honors explicit avatar and bubble visibility overrides without changing the layout selection', () => {
+    const allAvatarRow = mount(ChatMessageRow, {
+      props: createMessageRowProps({
+        layoutMode: 'imessage',
+        avatarMode: 'all',
+        bubbleMode: 'bubble',
+      }),
+    })
+    const allAvatarUserRow = mount(ChatMessageRow, {
+      props: createMessageRowProps({
+        layoutMode: 'imessage',
+        avatarMode: 'all',
+        message: {
+          id: 'override-user',
+          role: 'user',
+          content: 'No bubble, but keep my avatar.',
+          blocks: [{ type: 'text', text: 'No bubble, but keep my avatar.' }],
+        },
+      }),
+    })
+    const hiddenAvatarRow = mount(ChatMessageRow, {
+      props: createMessageRowProps({
+        layoutMode: 'kakao',
+        avatarMode: 'hidden',
+      }),
+    })
+
+    expect(allAvatarRow.attributes()).toMatchObject({
+      'data-layout-mode': 'imessage',
+      'data-avatar-mode': 'all',
+      'data-bubble-mode': 'bubble',
+    })
+    expect(allAvatarRow.find('[data-testid="chat-message-avatar-contact"]').exists()).toBe(true)
+    expect(allAvatarRow.get('[data-testid="chat-message-bubble"]').classes()).not.toContain('is-plain')
+    expect(allAvatarUserRow.find('[data-testid="chat-message-avatar-self"]').exists()).toBe(true)
+    expect(hiddenAvatarRow.find('[data-testid="chat-message-avatar-contact"]').exists()).toBe(false)
+
+    allAvatarRow.unmount()
+    allAvatarUserRow.unmount()
+    hiddenAvatarRow.unmount()
   })
 
   test('places message status receipts according to each layout mode', () => {
@@ -1327,6 +1476,8 @@ describe('Chat settings, Me, and appearance routes', () => {
       'share_card',
     ])
     expect(richRow.get('[data-testid="chat-message-block-rich-blocks-1"]').classes()).toContain('chat-message-block')
+    expect(richRow.get('.chat-message-content').attributes('data-content-width-mode')).toBe('rich')
+    expect(richRow.get('.chat-message-content').classes()).toContain('is-rich')
     expect(richRow.text()).not.toContain('可转资产')
     expect(richRow.text()).not.toContain('鍙浆')
     expect(richRow.get(`[data-testid="chat-product-card-open-product-${longToken}"]`).classes()).toContain('text-orange-700')
@@ -1346,7 +1497,12 @@ describe('Chat settings, Me, and appearance routes', () => {
     const chatStore = useChatStore()
     const contactId = chatStore.contacts[0].id
 
-    systemStore.setChatAppearance({ messageLayout: 'imessage' })
+    chatStore.contacts[0].relationshipNote = 'Weekend check-in'
+    systemStore.setChatAppearance({
+      messageLayout: 'imessage',
+      messageAvatarMode: 'all',
+      messageBubbleMode: 'bubble',
+    })
     chatStore.appendMessage(contactId, {
       role: 'assistant',
       content: 'Layout check from assistant.',
@@ -1372,9 +1528,17 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(rows.some((row) => row.classes().includes('is-assistant'))).toBe(true)
     expect(rows.some((row) => row.classes().includes('is-user'))).toBe(true)
     expect(rows.every((row) => row.attributes('data-layout-mode') === 'imessage')).toBe(true)
-    expect(wrapper.find('[data-testid="chat-active-self-avatar"]').exists()).toBe(false)
+    expect(rows.every((row) => row.attributes('data-avatar-mode') === 'all')).toBe(true)
+    expect(rows.every((row) => row.attributes('data-bubble-mode') === 'bubble')).toBe(true)
+    expect(wrapper.find('[data-testid="chat-active-self-avatar"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-thread-header-contact-avatar"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="chat-thread-header-note"]').text()).toBe('Weekend check-in')
 
-    systemStore.setChatAppearance({ messageLayout: 'wechat' })
+    systemStore.setChatAppearance({
+      messageLayout: 'wechat',
+      messageAvatarMode: 'layout',
+      messageBubbleMode: 'bubble',
+    })
     await flushUi()
     expect(wrapper.get('.chat-shell').classes()).toContain('chat-layout-wechat')
     expect(wrapper.findAll('[data-testid="chat-active-self-avatar"]').length).toBeGreaterThan(0)

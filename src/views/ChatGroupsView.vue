@@ -3,15 +3,20 @@ import { computed, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
+import { useSystemStore } from '../stores/system'
+import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import ChatAppTabBar from '../components/chat/ChatAppTabBar.vue'
 
 const router = useRouter()
 const chatStore = useChatStore()
+const systemStore = useSystemStore()
 const { contactsForList } = storeToRefs(chatStore)
+const { settings } = storeToRefs(systemStore)
 const { confirmDialog } = useDialog()
 const { t } = useI18n()
+const chatShellClasses = computed(() => getChatAppearanceClasses(settings.value.appearance?.chat))
 
 const uiNoticeType = ref('')
 const uiNoticeMessage = ref('')
@@ -200,7 +205,11 @@ const removeGroup = async (group) => {
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col chat-shell chat-groups-shell">
+  <div
+    class="w-full h-full flex flex-col chat-shell chat-groups-shell"
+    :class="chatShellClasses"
+    data-testid="chat-groups-page"
+  >
     <div class="chat-home-header pt-12 px-4 pb-4 chat-ink">
       <div class="flex items-center justify-between gap-3">
         <button

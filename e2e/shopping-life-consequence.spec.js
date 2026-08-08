@@ -72,7 +72,7 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   await expect(page.getByRole('status')).toContainText(/Display currency updated|显示币种已更新/)
 
   await navigateInsideUnlockedApp(page, '/chat-contacts?section=service')
-  await page.getByTestId('chat-directory-service-management-toggle').click()
+  await page.getByTestId('chat-directory-service-management-header').click()
   await expect(page.getByTestId('chat-directory-service-management')).toBeVisible()
   await page.getByTestId('chat-directory-create-shopping-service-schat_mall').click()
   await expect(page.getByTestId('chat-directory-service-shopping-service')).toHaveValue(

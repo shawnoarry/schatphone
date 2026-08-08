@@ -28,7 +28,7 @@ const canEditMessage = (message, editableRichTypes) =>
   Boolean(
     message &&
       !isRecalledMessage(message) &&
-      (message.role === 'user' || message.role === 'assistant') &&
+      message.role === 'user' &&
       (!hasRichMessageBlocks(message.blocks) || hasEditableRichMessageBlock(message, editableRichTypes)),
   )
 
@@ -36,6 +36,7 @@ const canRestoreSemanticRevision = (message) =>
   Boolean(
     message &&
       !isRecalledMessage(message) &&
+      message.role === 'user' &&
       typeof message?.semanticRevision?.revisedText === 'string' &&
       message.semanticRevision.revisedText.trim() &&
       typeof message?.semanticRevision?.originalText === 'string' &&
@@ -87,11 +88,8 @@ export const useChatMessageActionSheetModel = ({
       message &&
         !isRecalledMessage(message) &&
         !isActiveServiceChat?.value &&
-        (message.role === 'user' || message.role === 'assistant'),
+        message.role === 'user',
     )
-
-  const recallMessageActionLabel = (message) =>
-    message?.role === 'assistant' ? translate('让角色撤回', 'Make contact recall') : translate('撤回', 'Recall')
 
   const messageActionRows = computed(() => {
     const message = activeActionMessage.value
@@ -136,14 +134,14 @@ export const useChatMessageActionSheetModel = ({
       {
         id: CHAT_MESSAGE_ACTION_IDS.REROLL,
         testId: 'chat-message-action-reroll',
-        label: translate('重roll', 'Reroll'),
+        label: translate('重新生成', 'Regenerate'),
         tone: 'primary',
         visible: canRerollMessage(message),
       },
       {
         id: CHAT_MESSAGE_ACTION_IDS.RECALL,
         testId: 'chat-message-action-recall',
-        label: recallMessageActionLabel(message),
+        label: translate('撤回', 'Recall'),
         tone: 'warning',
         visible: canRecallMessage(message),
       },
@@ -159,15 +157,15 @@ export const useChatMessageActionSheetModel = ({
 
   const messageActionButtonClass = (action) => {
     if (action?.tone === 'primary') {
-      return 'w-full rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left text-sm text-blue-700 hover:bg-blue-100'
+      return 'w-full border-b border-gray-100 px-1 py-3 text-left text-sm text-blue-600 hover:bg-gray-50'
     }
     if (action?.tone === 'warning') {
-      return 'w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-left text-sm text-amber-700 hover:bg-amber-100'
+      return 'w-full border-b border-gray-100 px-1 py-3 text-left text-sm text-gray-800 hover:bg-gray-50'
     }
     if (action?.tone === 'danger') {
-      return 'w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-100'
+      return 'w-full px-1 py-3 text-left text-sm text-red-600 hover:bg-gray-50'
     }
-    return 'w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50'
+    return 'w-full border-b border-gray-100 px-1 py-3 text-left text-sm text-gray-800 hover:bg-gray-50'
   }
 
   return {

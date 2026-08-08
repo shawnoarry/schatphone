@@ -11,6 +11,14 @@ const props = defineProps({
     type: String,
     default: 'kakao',
   },
+  avatarMode: {
+    type: String,
+    default: 'layout',
+  },
+  bubbleMode: {
+    type: String,
+    default: 'bubble',
+  },
   activeSelfAvatar: {
     type: String,
     default: '',
@@ -88,13 +96,26 @@ const { t } = useI18n()
 const normalizedLayoutMode = computed(() =>
   ['kakao', 'wechat', 'imessage'].includes(props.layoutMode) ? props.layoutMode : 'kakao',
 )
+const normalizedAvatarMode = computed(() =>
+  ['layout', 'all', 'hidden'].includes(props.avatarMode) ? props.avatarMode : 'layout',
+)
+const normalizedBubbleMode = computed(() =>
+  ['bubble', 'soft', 'outline', 'glass'].includes(props.bubbleMode) ? props.bubbleMode : 'bubble',
+)
 const normalizedServiceNotificationDensity = computed(() =>
   ['full', 'compact'].includes(props.serviceNotificationDensity)
     ? props.serviceNotificationDensity
     : 'full',
 )
+const renderedBlocks = computed(() => {
+  const blocks = props.messageBlocks(props.message)
+  return Array.isArray(blocks) ? blocks : []
+})
+const hasRichMessageContent = computed(() =>
+  renderedBlocks.value.some((block) => block?.type && block.type !== 'text'),
+)
 const hasServiceNotificationBlock = computed(() =>
-  props.messageBlocks(props.message).some((block) => block?.type === 'service_notification'),
+  renderedBlocks.value.some((block) => block?.type === 'service_notification'),
 )
 const isCompactServiceNotificationRow = computed(
   () => normalizedServiceNotificationDensity.value === 'compact' && hasServiceNotificationBlock.value,
@@ -286,9 +307,18 @@ const isRecalledMessage = computed(() => Boolean(Number(props.message?.recalledA
 const roleClass = computed(() => (isUserMessage.value ? 'is-user' : 'is-assistant'))
 const rowTestId = computed(() => `chat-message-row-${props.message?.id || 'unknown'}`)
 const showContactAvatar = computed(
-  () => !isUserMessage.value && normalizedLayoutMode.value !== 'imessage' && !isCompactServiceNotificationRow.value,
+  () => {
+    if (isUserMessage.value || isCompactServiceNotificationRow.value) return false
+    if (normalizedAvatarMode.value === 'hidden') return false
+    if (normalizedAvatarMode.value === 'all') return true
+    return normalizedLayoutMode.value !== 'imessage'
+  },
 )
-const showSelfAvatar = computed(() => isUserMessage.value && normalizedLayoutMode.value === 'wechat')
+const showSelfAvatar = computed(() => {
+  if (!isUserMessage.value || normalizedAvatarMode.value === 'hidden') return false
+  if (normalizedAvatarMode.value === 'all') return true
+  return normalizedLayoutMode.value === 'wechat'
+})
 const showSenderName = computed(
   () => !isUserMessage.value && !isCompactServiceNotificationRow.value && (normalizedLayoutMode.value === 'kakao' || props.isGroup),
 )
@@ -321,6 +351,8 @@ const metaClasses = computed(() => [
     :class="[
       roleClass,
       `chat-row-layout-${normalizedLayoutMode}`,
+      `chat-avatar-mode-${normalizedAvatarMode}`,
+      `chat-bubble-mode-${normalizedBubbleMode}`,
       {
         'is-group': isGroup,
         'is-recalled': isRecalledMessage,
@@ -328,6 +360,8 @@ const metaClasses = computed(() => [
       },
     ]"
     :data-layout-mode="normalizedLayoutMode"
+    :data-avatar-mode="normalizedAvatarMode"
+    :data-bubble-mode="normalizedBubbleMode"
     :data-testid="rowTestId"
   >
     <div
@@ -342,18 +376,29 @@ const metaClasses = computed(() => [
         class="w-full h-full object-cover"
         data-testid="chat-active-contact-avatar"
       />
-      <span v-else class="w-full h-full inline-flex items-center justify-center bg-white/80 text-[11px] font-bold text-gray-700">
+      <span
+        v-else
+        class="w-full h-full inline-flex items-center justify-center bg-white/80 text-[11px] font-bold text-gray-700"
+        :title="t('头像占位，可替换为联系人头像', 'Avatar placeholder; replaceable with a contact avatar')"
+        :aria-label="t('可替换的头像占位', 'Replaceable avatar placeholder')"
+      >
         {{ contactAvatarFallbackLabel }}
       </span>
     </div>
 
-    <div class="chat-message-content">
+    <div
+      class="chat-message-content"
+      :class="{ 'is-rich': hasRichMessageContent }"
+      :data-content-width-mode="hasRichMessageContent ? 'rich' : 'fit-content'"
+    >
       <p v-if="showSenderName" class="chat-message-sender" data-testid="chat-message-sender-name">
         {{ senderName }}
       </p>
       <div
         class="chat-message-bubble px-3 py-2 text-sm rounded-xl shadow-sm relative"
-        :class="isUserMessage ? 'chat-bubble-user' : 'chat-bubble-assistant'"
+        :class="[
+          isUserMessage ? 'chat-bubble-user' : 'chat-bubble-assistant',
+        ]"
         data-testid="chat-message-bubble"
         @contextmenu.prevent="emit('open-message-actions', message.id)"
         @mousedown.left="emit('start-message-long-press', message.id, $event)"
@@ -370,7 +415,7 @@ const metaClasses = computed(() => [
         </div>
 
         <div
-          v-for="(block, blockIndex) in messageBlocks(message)"
+          v-for="(block, blockIndex) in renderedBlocks"
           :key="`${message.id}-block-${blockIndex}`"
           class="chat-message-block mt-1 first:mt-0"
           :data-block-type="block.type"
@@ -733,7 +778,12 @@ const metaClasses = computed(() => [
         class="w-full h-full object-cover"
         data-testid="chat-active-self-avatar"
       />
-      <span v-else class="w-full h-full inline-flex items-center justify-center bg-yellow-200 text-[10px] font-bold text-yellow-950">
+      <span
+        v-else
+        class="w-full h-full inline-flex items-center justify-center bg-yellow-200 text-[10px] font-bold text-yellow-950"
+        :title="t('头像占位，可替换为我的头像', 'Avatar placeholder; replaceable with your avatar')"
+        :aria-label="t('可替换的我的头像占位', 'Replaceable self-avatar placeholder')"
+      >
         Me
       </span>
     </div>

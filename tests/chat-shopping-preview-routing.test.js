@@ -42,7 +42,7 @@ describe('ChatView Shopping product preview routing', () => {
     setActivePinia(createPinia())
   })
 
-  test('shows read-only Shopping catalog products and routes selected preview back to Shopping', async () => {
+  test('opens Shopping as a source picker without embedding its catalog in Chat', async () => {
     const router = createTestRouter()
     await router.push('/chat/1')
     await router.isReady()
@@ -69,12 +69,8 @@ describe('ChatView Shopping product preview routing', () => {
     await wrapper.get('[data-testid="chat-user-action-toggle"]').trigger('click')
     await nextTick()
 
-    const preview = wrapper.get(`[data-testid="chat-shopping-preview-${product.id}"]`)
-    expect(preview.text()).toContain('Mira Lens')
-    expect(preview.text()).toContain('1288.00 CNY')
-    expect(preview.text()).toContain('Nova Digital')
-
-    await preview.trigger('click')
+    expect(wrapper.find(`[data-testid="chat-shopping-preview-${product.id}"]`).exists()).toBe(false)
+    await wrapper.get('[data-testid="chat-user-action-open-shopping"]').trigger('click')
     await flushPromises()
     await nextTick()
 
@@ -82,16 +78,14 @@ describe('ChatView Shopping product preview routing', () => {
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       intent: 'product_link',
-      category: 'digital',
-      service: 'nova_digital',
-      productId: product.id,
+      chatId: '1',
     })
     expect(shoppingStore.cartQuantity).toBe(0)
     expect(shoppingStore.orderCount).toBe(0)
     wrapper.unmount()
   })
 
-  test('sends a Shopping product link share card as a local chat message without checkout side effects', async () => {
+  test('does not create a local product message before the user chooses a source item', async () => {
     const router = createTestRouter()
     await router.push('/chat/1')
     await router.isReady()
@@ -115,20 +109,13 @@ describe('ChatView Shopping product preview routing', () => {
     })
     await nextTick()
 
+    const chatStore = useChatStore()
+    const messageCountBefore = chatStore.getMessagesByContactId(1).length
+
     await wrapper.get('[data-testid="chat-user-action-toggle"]').trigger('click')
     await nextTick()
-    await wrapper.get(`[data-testid="chat-send-product-card-${product.id}"]`).trigger('click')
-    await nextTick()
-
-    expect(router.currentRoute.value.path).toBe('/chat/1')
-    expect(wrapper.text()).toContain('Product link')
-    expect(wrapper.text()).toContain('Mira Lens')
-    expect(wrapper.text()).toContain('Nova Digital')
-    expect(wrapper.get(`[data-testid="chat-share-card-open-shopping-${product.id}"]`).exists()).toBe(true)
-    expect(shoppingStore.cartQuantity).toBe(0)
-    expect(shoppingStore.orderCount).toBe(0)
-
-    await wrapper.get(`[data-testid="chat-share-card-open-shopping-${product.id}"]`).trigger('click')
+    expect(wrapper.find(`[data-testid="chat-send-product-card-${product.id}"]`).exists()).toBe(false)
+    await wrapper.get('[data-testid="chat-user-action-open-shopping"]').trigger('click')
     await flushPromises()
     await nextTick()
 
@@ -136,10 +123,9 @@ describe('ChatView Shopping product preview routing', () => {
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       intent: 'product_link',
-      category: 'digital',
-      service: 'nova_digital',
-      productId: product.id,
+      chatId: '1',
     })
+    expect(chatStore.getMessagesByContactId(1)).toHaveLength(messageCountBefore)
     expect(shoppingStore.cartQuantity).toBe(0)
     expect(shoppingStore.orderCount).toBe(0)
     wrapper.unmount()
@@ -196,7 +182,7 @@ describe('ChatView Shopping product preview routing', () => {
     wrapper.unmount()
   })
 
-  test('prioritizes products from the active Shopping service account', async () => {
+  test('opens Shopping in the active service account context', async () => {
     const router = createTestRouter()
     const shoppingStore = useShoppingStore()
     shoppingStore.resetForTesting()
@@ -240,10 +226,19 @@ describe('ChatView Shopping product preview routing', () => {
     await wrapper.get('[data-testid="chat-user-action-toggle"]').trigger('click')
     await nextTick()
 
-    expect(wrapper.get(`[data-testid="chat-shopping-preview-${serviceProduct.id}"]`).text()).toContain(
-      'Style Cloud',
-    )
+    expect(wrapper.find(`[data-testid="chat-shopping-preview-${serviceProduct.id}"]`).exists()).toBe(false)
     expect(wrapper.find('[data-testid="chat-shopping-preview-service_other_product"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="chat-user-action-open-shopping"]').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.query).toMatchObject({
+      source: 'chat',
+      intent: 'product_link',
+      service: 'style_cloud',
+      chatId: String(serviceContact.id),
+    })
 
     wrapper.unmount()
   })

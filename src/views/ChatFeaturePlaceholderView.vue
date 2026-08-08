@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import { useSystemStore } from '../stores/system'
+import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import ChatAppTabBar from '../components/chat/ChatAppTabBar.vue'
@@ -13,9 +14,10 @@ const router = useRouter()
 const chatStore = useChatStore()
 const systemStore = useSystemStore()
 const { contactsForList } = storeToRefs(chatStore)
-const { user } = storeToRefs(systemStore)
+const { settings, user } = storeToRefs(systemStore)
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
+const chatShellClasses = computed(() => getChatAppearanceClasses(settings.value.appearance?.chat))
 
 const featureMeta = computed(() => {
   const id = typeof route.params.feature === 'string' ? route.params.feature.trim() : ''
@@ -318,9 +320,13 @@ watch(
 </script>
 
 <template>
-  <div class="w-full h-full bg-[#f2f2f7] text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 bg-white/80 backdrop-blur flex items-center gap-3">
-      <button @click="goBack" class="text-blue-500 text-sm flex items-center gap-1">
+  <div
+    class="chat-feature-page chat-shell w-full h-full flex flex-col"
+    :class="chatShellClasses"
+    data-testid="chat-feature-page"
+  >
+    <div class="chat-native-header pt-12 pb-3 px-4 flex items-center gap-3">
+      <button @click="goBack" class="chat-native-back text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('聊天', 'Chat') }}
       </button>
       <h1 class="font-bold text-xl">{{ featureMeta.title }}</h1>

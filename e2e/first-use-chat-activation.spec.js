@@ -129,10 +129,10 @@ test('fresh storage reaches the first successful Chat reply through Network setu
 
   const readiness = page.getByTestId('chat-network-readiness')
   await expect(readiness).toBeVisible()
-  await expect(readiness).toContainText(/Network & API/)
+  await expect(readiness).toContainText(/AI 尚未连接|AI is not connected/)
   const setupAction = page.getByTestId('chat-open-network-setup')
   await expect(setupAction).toBeVisible()
-  await expect(setupAction).toHaveText(/配置 Network & API|Configure Network & API/)
+  await expect(setupAction).toHaveText(/前往设置|Open settings/)
 
   await page.getByTestId('chat-message-input').fill(draftText)
   await expectNoHorizontalOverflow(page)

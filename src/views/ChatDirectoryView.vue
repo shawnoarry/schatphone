@@ -27,6 +27,7 @@ import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pa
 import { extractWorldServiceTemplateProposals } from '../lib/world-service-template-proposals'
 import { formatApiErrorForUi } from '../lib/ai'
 import { resolveWorldviewText } from '../lib/world-interface'
+import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
@@ -43,6 +44,7 @@ const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const { contacts, roleProfiles } = storeToRefs(chatStore)
 const { settings } = storeToRefs(systemStore)
+const chatShellClasses = computed(() => getChatAppearanceClasses(settings.value.appearance?.chat))
 
 const normalizeDirectorySection = (value) => (value === 'service' ? 'service' : 'roles')
 const normalizeRoleFilter = (value) =>
@@ -962,9 +964,7 @@ const serviceEmptyState = computed(() => {
   }
 })
 
-const shouldShowServiceManagement = computed(
-  () => showServiceManagement.value || serviceContacts.value.length === 0,
-)
+const shouldShowServiceManagement = computed(() => showServiceManagement.value)
 
 const allFilteredSelected = computed(() => {
   const targetIds = activeSection.value === 'roles' ? filteredRoleIds.value : filteredServiceIds.value
@@ -2360,7 +2360,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col chat-shell chat-directory-shell">
+  <div
+    class="w-full h-full flex flex-col chat-shell chat-directory-shell"
+    :class="chatShellClasses"
+    data-testid="chat-directory-page"
+  >
     <div class="chat-home-header pt-12 px-4 pb-4 chat-ink">
       <div class="flex items-center justify-between gap-3">
         <button
@@ -2788,7 +2792,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section v-if="activeSection === 'service'" class="space-y-3">
-        <div class="flex items-center justify-between">
+        <div v-if="serviceContacts.length > 0" class="flex items-center justify-between">
           <div>
             <h3 class="text-xs font-bold text-gray-500 uppercase">{{ t('订阅消息', 'Subscriptions') }}</h3>
             <p class="mt-1 text-[11px] text-gray-500">
@@ -2819,7 +2823,11 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="chat-directory-stats mx-4 mt-3" data-testid="chat-directory-subscription-summary">
+        <div
+          v-if="serviceContacts.length > 0"
+          class="chat-directory-stats mx-4 mt-3"
+          data-testid="chat-directory-subscription-summary"
+        >
           <button
             type="button"
             class="chat-directory-stat"
@@ -2882,7 +2890,7 @@ onBeforeUnmount(() => {
         </span>
 
         <div
-          v-if="serviceFilterContext"
+          v-if="serviceContacts.length > 0 && serviceFilterContext"
           class="chat-directory-context-bar mx-4 mt-3"
           data-testid="chat-directory-service-filter-context"
         >

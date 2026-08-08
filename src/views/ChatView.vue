@@ -269,6 +269,8 @@ const {
   activeChatSocialState,
   canActiveChatCommunicate,
   activeChatMessageLayout,
+  activeChatMessageAvatarMode,
+  activeChatMessageBubbleMode,
   chatShellClasses,
   isActiveServiceChat,
   activeServiceIsMuted,
@@ -310,8 +312,6 @@ const {
   chatFoldedSubscriptionUnreadContactCount,
   showFoldedSubscriptionsCard,
   visibleChatContacts,
-  chatHomeHeroTitle,
-  chatHomeHeroDetail,
   getConversationPreview,
   toggleChatSearch,
 } = useChatHomeListModel({
@@ -390,7 +390,7 @@ const messageInputPlaceholder = computed(() => {
 })
 
 const triggerReplyButtonLabel = computed(() =>
-  isActiveServiceChat.value ? t('服务号回复', 'Service Reply') : t('触发回复', 'Trigger Reply'),
+  isActiveServiceChat.value ? t('服务号回复', 'Service reply') : t('让 TA 回复', 'Let them reply'),
 )
 
 const networkSetupState = computed(() => buildNetworkSetupState(settings.value.api))
@@ -398,22 +398,9 @@ const showAiNetworkReadiness = computed(() =>
   Boolean(activeChat.value && !networkSetupState.value.readyToTest),
 )
 const aiNetworkReadinessDetail = computed(() => {
-  const nextStep = networkSetupState.value.nextStep
-  if (nextStep === 'url') {
-    return t(
-      '请先在 Network & API 中填写接口地址。当前草稿会留在这个会话中。',
-      'Add an endpoint in Network & API first. Your current draft stays in this conversation.',
-    )
-  }
-  if (nextStep === 'key') {
-    return t(
-      '当前接口需要 API Key。请在 Network & API 中完成配置；当前草稿会保留。',
-      'This endpoint needs an API key. Finish setup in Network & API; your current draft is preserved.',
-    )
-  }
   return t(
-    '请在 Network & API 中选择或填写模型。当前草稿会留在这个会话中。',
-    'Choose or enter a model in Network & API. Your current draft stays in this conversation.',
+    '连接后，TA 才能在这个会话中回复。你当前输入的内容不会丢失。',
+    'Connect AI so they can reply in this conversation. Your current draft will be kept.',
   )
 })
 
@@ -918,7 +905,7 @@ const {
   activeActionMessage,
   hasActiveMessageActions,
   messageActionRows,
-  openMessageActions,
+  openMessageActions: openMessageActionsModel,
   closeMessageActions,
   canCopyMessage,
   canQuoteMessage,
@@ -937,6 +924,11 @@ const {
 })
 
 closeMessageActionsFromSheet = closeMessageActions
+
+const openMessageActions = (messageId) => {
+  closeThreadMenu()
+  openMessageActionsModel(messageId)
+}
 
 let clearServiceNotificationActionFeedbackFromQuote = () => {}
 let getMessagePrimaryTextForQuote = (message) => message?.content || ''
@@ -1080,10 +1072,6 @@ const openMessageRequests = () => {
 
 const openFoldedSubscriptions = () => {
   router.push({ path: '/chat-contacts', query: { section: 'service', filter: 'folded' } })
-}
-
-const openChatGroups = () => {
-  router.push('/chat-groups')
 }
 
 const openChatSettings = () => {
@@ -3278,6 +3266,16 @@ const headerSecondaryStatusText = computed(() => {
   return ''
 })
 
+const activeThreadHeaderNote = computed(() => {
+  if (!activeChat.value) return ''
+  return (
+    activeChat.value.relationshipNote ||
+    headerSecondaryStatusText.value ||
+    contactKindTag(activeChat.value) ||
+    ''
+  )
+})
+
 const headerSecondaryStatusClass = computed(() =>
   !loadingAI.value && activeChatRestrictionTitle.value
     ? 'text-amber-600 font-medium'
@@ -3403,7 +3401,8 @@ const reopenServiceRouteFeedbackSource = () => {
 const openShoppingFromChat = (payload = {}) => {
   const productId = typeof payload?.productId === 'string' ? payload.productId.trim() : ''
   const category = typeof payload?.category === 'string' ? payload.category.trim() : ''
-  const serviceKey = typeof payload?.serviceKey === 'string' ? payload.serviceKey.trim() : ''
+  const payloadServiceKey = typeof payload?.serviceKey === 'string' ? payload.serviceKey.trim() : ''
+  const serviceKey = payloadServiceKey || activeChat.value?.shoppingServiceKey || ''
   const intent = typeof payload?.intent === 'string' && payload.intent.trim()
     ? payload.intent.trim()
     : SHAREABLE_OBJECT_TYPES.PRODUCT_LINK
@@ -3508,12 +3507,24 @@ const toggleActiveServiceFolded = () => {
 }
 
 const toggleThreadMenu = () => {
+  if (!showThreadMenu.value) {
+    closeUserActionPanel()
+    closeMessageActions()
+  }
   toggleThreadMenuModel({
     prefs: activeAiPrefs.value,
     identityOverrides: activeChat.value
       ? chatStore.getConversationIdentityOverrides(activeChat.value.id)
       : null,
   })
+}
+
+const toggleChatUserActionPanel = () => {
+  if (!showUserActionPanel.value) {
+    closeThreadMenu()
+    closeMessageActions()
+  }
+  toggleUserActionPanel()
 }
 
 const saveThreadIdentityOverrides = () => {
@@ -3728,7 +3739,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full flex flex-col chat-shell" :class="chatShellClasses">
+  <div
+    class="relative w-full h-full flex flex-col overflow-hidden chat-shell"
+    :class="chatShellClasses"
+    data-testid="chat-page"
+  >
     <template v-if="!activeChat">
       <div class="chat-home-header pt-12 px-4 pb-4 chat-ink">
         <div class="flex items-center justify-between gap-3">
@@ -3789,41 +3804,9 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="chat-home-sheet flex-1 overflow-y-auto no-scrollbar">
-        <section class="chat-home-hero mx-4 mt-4 mb-2">
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-3">
-              <span class="chat-home-hero__badge" aria-hidden="true">
-                <i class="fas fa-bolt"></i>
-              </span>
-              <div class="min-w-0">
-                <p class="text-[13px] font-extrabold leading-snug text-gray-950">{{ chatHomeHeroTitle }}</p>
-                <p class="mt-0.5 text-[11px] leading-4 text-gray-600 line-clamp-2">{{ chatHomeHeroDetail }}</p>
-              </div>
-            </div>
-            <div class="flex shrink-0 gap-1.5">
-              <button
-                type="button"
-                class="chat-home-hero__action"
-                :aria-label="t('\u8054\u7cfb\u4eba', 'Contacts')"
-                @click="openChatObjects"
-              >
-                <i class="fas fa-user text-xs"></i>
-              </button>
-              <button
-                type="button"
-                class="chat-home-hero__action"
-                :aria-label="t('群聊', 'Groups')"
-                @click="openChatGroups"
-              >
-                <i class="fas fa-comments text-xs"></i>
-              </button>
-            </div>
-          </div>
-        </section>
-
         <section
           v-if="chatMessageRequestContacts.length > 0"
-          class="chat-home-notice-card mx-4 mb-2 border-amber-100 bg-white"
+          class="chat-home-notice-card mx-4 mt-3 mb-2 border-amber-100 bg-white"
           data-testid="chat-message-requests-card"
           @click="openMessageRequests"
         >
@@ -4011,7 +3994,10 @@ onBeforeUnmount(() => {
     </template>
 
     <template v-else>
-      <div class="pt-12 pb-2 px-3 chat-thread-header backdrop-blur flex items-center justify-between z-10 shadow-sm">
+      <div
+        class="pt-12 pb-2 px-3 chat-thread-header backdrop-blur flex items-center justify-between z-10 shadow-sm"
+        :class="`chat-thread-header--${activeChatMessageLayout}`"
+      >
         <button
           @click="leaveChat"
           class="chat-ink px-2 flex items-center gap-1 w-16"
@@ -4019,22 +4005,44 @@ onBeforeUnmount(() => {
         >
           {{ t('返回', 'Back') }}
         </button>
-        <div class="flex-1 text-center min-w-0">
-          <div class="flex items-center justify-center gap-1.5 min-w-0">
-            <span
-              v-if="isActiveServiceChat"
-              class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
-              data-testid="chat-active-service-icon"
-            >
-              <i :class="activeChat.kind === 'official' ? 'fas fa-newspaper' : 'fas fa-bullhorn'" class="text-[10px]"></i>
+        <div class="flex-1 min-w-0" :class="activeChatMessageLayout === 'imessage' ? 'text-left' : 'text-center'">
+          <div v-if="activeChatMessageLayout === 'imessage'" class="chat-thread-header__identity-wrap">
+            <span class="chat-thread-header__avatar" data-testid="chat-thread-header-contact-avatar">
+              <img v-if="activeContactAvatar" :src="activeContactAvatar" :alt="activeChat.name" />
+              <span
+                v-else
+                :title="t('头像占位，可替换为联系人头像', 'Avatar placeholder; replaceable with a contact avatar')"
+                :aria-label="t('可替换的联系人头像占位', 'Replaceable contact-avatar placeholder')"
+              >{{ activeChat.name.slice(0, 1) }}</span>
             </span>
-            <p class="font-bold text-sm truncate">{{ activeChat.name }}</p>
+            <span class="chat-thread-header__identity min-w-0">
+              <span class="chat-thread-header__name truncate">{{ activeChat.name }}</span>
+              <span
+                v-if="activeThreadHeaderNote"
+                class="chat-thread-header__note truncate"
+                data-testid="chat-thread-header-note"
+              >
+                {{ activeThreadHeaderNote }}
+              </span>
+            </span>
           </div>
-          <p class="text-[10px] text-gray-500">
-            <span v-if="contactKindTag(activeChat)">{{ contactKindTag(activeChat) }}</span>
-            <span v-if="contactKindTag(activeChat) && headerSecondaryStatusText"> · </span>
-            <span v-if="headerSecondaryStatusText" :class="headerSecondaryStatusClass">{{ headerSecondaryStatusText }}</span>
-          </p>
+          <template v-else>
+            <div class="flex items-center justify-center gap-1.5 min-w-0">
+              <span
+                v-if="isActiveServiceChat"
+                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+                data-testid="chat-active-service-icon"
+              >
+                <i :class="activeChat.kind === 'official' ? 'fas fa-newspaper' : 'fas fa-bullhorn'" class="text-[10px]"></i>
+              </span>
+              <p class="font-bold text-sm truncate">{{ activeChat.name }}</p>
+            </div>
+            <p class="text-[10px] text-gray-500">
+              <span v-if="contactKindTag(activeChat)">{{ contactKindTag(activeChat) }}</span>
+              <span v-if="contactKindTag(activeChat) && headerSecondaryStatusText"> · </span>
+              <span v-if="headerSecondaryStatusText" :class="headerSecondaryStatusClass">{{ headerSecondaryStatusText }}</span>
+            </p>
+          </template>
         </div>
         <button
           @click="toggleThreadMenu"
@@ -4042,7 +4050,7 @@ onBeforeUnmount(() => {
           data-testid="chat-thread-menu-toggle"
           :aria-label="t('打开会话菜单', 'Open conversation menu')"
           :title="t('打开会话菜单', 'Open conversation menu')"
-        ><i class="fas fa-bars"></i></button>
+        ><i class="fas fa-ellipsis"></i></button>
       </div>
 
       <ChatThreadMenuPanel
@@ -4587,6 +4595,8 @@ onBeforeUnmount(() => {
             v-else
             :message="item.message"
             :layout-mode="activeChatMessageLayout"
+            :avatar-mode="activeChatMessageAvatarMode"
+            :bubble-mode="activeChatMessageBubbleMode"
             :active-self-avatar="activeSelfAvatar"
             :active-contact-avatar="activeContactAvatar"
             :is-group="activeChat?.kind === 'group'"
@@ -4696,13 +4706,13 @@ onBeforeUnmount(() => {
 
           <section
             v-if="showAiNetworkReadiness"
-            class="flex items-start gap-3 rounded-2xl border px-3 py-2.5 text-[11px]"
+            class="flex items-center gap-2 rounded-xl border px-2.5 py-2 text-[11px]"
             style="border-color: var(--chat-suggest-border); background: var(--chat-input-field-bg); color: var(--chat-ink)"
             data-testid="chat-network-readiness"
             aria-labelledby="chat-network-readiness-title"
           >
             <span
-              class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
               style="background: var(--chat-send-bg); color: var(--chat-send-text)"
               aria-hidden="true"
             >
@@ -4710,21 +4720,21 @@ onBeforeUnmount(() => {
             </span>
             <div class="min-w-0 flex-1">
               <p id="chat-network-readiness-title" class="font-semibold">
-                {{ t('AI 回复需要完成 Network & API', 'AI replies need Network & API') }}
+                {{ t('AI 尚未连接', 'AI is not connected') }}
               </p>
-              <p class="mt-0.5 break-words leading-4 opacity-75">
+              <p class="mt-0.5 truncate opacity-70">
                 {{ aiNetworkReadinessDetail }}
               </p>
+            </div>
               <button
                 type="button"
-                class="mt-2 min-h-11 w-full rounded-xl border px-3 py-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:w-auto"
+                class="min-h-8 shrink-0 rounded-lg border px-2.5 py-1.5 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                 style="border-color: var(--chat-suggest-border); background: var(--chat-input-bg); color: var(--chat-ink)"
                 data-testid="chat-open-network-setup"
                 @click="openNetworkSetup"
               >
-                {{ t('配置 Network & API', 'Configure Network & API') }}
+                {{ t('前往设置', 'Open settings') }}
               </button>
-            </div>
           </section>
 
           <div
@@ -4801,7 +4811,7 @@ onBeforeUnmount(() => {
           <div class="flex items-center gap-2">
             <button
               data-testid="chat-user-action-toggle"
-              @click="toggleUserActionPanel"
+              @click="toggleChatUserActionPanel"
               :aria-label="showUserActionPanel ? t('关闭更多操作', 'Close more actions') : t('打开更多操作', 'Open more actions')"
               :title="showUserActionPanel ? t('关闭更多操作', 'Close more actions') : t('打开更多操作', 'Open more actions')"
               class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition border"
@@ -4814,7 +4824,7 @@ onBeforeUnmount(() => {
               "
               :disabled="!canActiveChatCommunicate"
             >
-              <i class="fas fa-plus text-xs"></i>
+              <i class="fas fa-plus text-xs transition-transform" :class="showUserActionPanel ? 'rotate-45' : ''"></i>
             </button>
 
             <input
@@ -4853,7 +4863,7 @@ onBeforeUnmount(() => {
 
       <div
         v-if="hasActiveMessageActions && activeActionMessage"
-        class="fixed inset-0 z-40 flex items-end"
+        class="absolute inset-0 z-40 flex items-end"
       >
         <button
           type="button"
@@ -4867,7 +4877,7 @@ onBeforeUnmount(() => {
             {{ t('消息操作', 'Message actions') }}
           </p>
 
-          <div class="space-y-2">
+          <div class="overflow-hidden rounded-xl border border-gray-100 px-3">
             <button
               v-for="action in messageActionRows"
               :key="action.id"

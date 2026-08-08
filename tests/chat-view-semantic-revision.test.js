@@ -26,8 +26,8 @@ const createTestRouter = () =>
 const findButtonByText = (wrapper, text) =>
   wrapper.findAll('button').find((button) => button.text().includes(text))
 
-const openFirstAssistantActionSheet = async (wrapper) => {
-  const bubble = wrapper.find('.chat-bubble-assistant')
+const openFirstUserActionSheet = async (wrapper) => {
+  const bubble = wrapper.find('.chat-bubble-user')
   expect(bubble.exists()).toBe(true)
   await bubble.trigger('contextmenu')
   await nextTick()
@@ -49,6 +49,11 @@ describe('chat view semantic revision flow', () => {
       },
     })
     chatStore = useChatStore()
+    chatStore.appendMessage(1, {
+      role: 'user',
+      content: 'User-authored message for revision.',
+      status: 'delivered',
+    })
     await nextTick()
   })
 
@@ -58,13 +63,13 @@ describe('chat view semantic revision flow', () => {
     chatStore = null
   })
 
-  test('supports edit modal save and restore flow for assistant message', async () => {
-    const targetBefore = chatStore.getMessagesByContactId(1).find((item) => item.role === 'assistant')
+  test('supports direct edit flow for a user-authored message', async () => {
+    const targetBefore = chatStore.getMessagesByContactId(1).find((item) => item.role === 'user')
     expect(targetBefore).toBeTruthy()
     const originalText = targetBefore.content
     const revisedText = `${originalText}（修订测试）`
 
-    await openFirstAssistantActionSheet(wrapper)
+    await openFirstUserActionSheet(wrapper)
     const editButton = findButtonByText(wrapper, '编辑')
     expect(editButton).toBeTruthy()
     await editButton.trigger('click')
@@ -84,28 +89,20 @@ describe('chat view semantic revision flow', () => {
     const targetAfterSave = chatStore
       .getMessagesByContactId(1)
       .find((item) => item.id === targetBefore.id)
-    expect(targetAfterSave?.semanticRevision?.revisedText).toBe(revisedText)
+    expect(targetAfterSave?.semanticRevision).toBe(null)
     expect(targetAfterSave?.content).toBe(revisedText)
 
-    await openFirstAssistantActionSheet(wrapper)
+    await openFirstUserActionSheet(wrapper)
     const restoreButton = findButtonByText(wrapper, '恢复原文')
-    expect(restoreButton).toBeTruthy()
-    await restoreButton.trigger('click')
-    await nextTick()
-
-    const targetAfterRestore = chatStore
-      .getMessagesByContactId(1)
-      .find((item) => item.id === targetBefore.id)
-    expect(targetAfterRestore?.semanticRevision).toBe(null)
-    expect(targetAfterRestore?.content).toBe(originalText)
+    expect(restoreButton).toBeUndefined()
   })
 
   test('shows consistent edit-modal validation hints and disabled save state', async () => {
-    const target = chatStore.getMessagesByContactId(1).find((item) => item.role === 'assistant')
+    const target = chatStore.getMessagesByContactId(1).find((item) => item.role === 'user')
     expect(target).toBeTruthy()
     const originalText = target.content
 
-    await openFirstAssistantActionSheet(wrapper)
+    await openFirstUserActionSheet(wrapper)
     const editButton = findButtonByText(wrapper, '编辑')
     expect(editButton).toBeTruthy()
     await editButton.trigger('click')
@@ -131,8 +128,7 @@ describe('chat view semantic revision flow', () => {
 
     await textarea.setValue(`${originalText}#`)
     await nextTick()
-    expect(wrapper.text()).toContain('修订后文本将作为后续上下文')
+    expect(wrapper.text()).toContain('将直接更新这条用户消息')
     expect(saveButton()?.attributes('disabled')).toBeUndefined()
   })
 })
-

@@ -178,6 +178,8 @@ describe('chat avatar image source rendering', () => {
 
     await wrapper.get('[data-testid="chat-directory-section-service"]').trigger('click')
     await flushUi()
+    await wrapper.get('[data-testid="chat-directory-service-management-header"]').trigger('click')
+    await flushUi()
     await wrapper.get('[data-testid="chat-directory-add-service"]').trigger('click')
     await flushUi()
     await wrapper.get('[data-testid="chat-directory-service-name"]').setValue('Gallery Service')
@@ -217,6 +219,8 @@ describe('chat avatar image source rendering', () => {
     await flushUi()
 
     await wrapper.get('[data-testid="chat-directory-section-service"]').trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="chat-directory-service-management-header"]').trigger('click')
     await flushUi()
 
     expect(wrapper.get('[data-testid="chat-directory-shopping-service-presets"]').exists()).toBe(true)

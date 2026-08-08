@@ -101,6 +101,14 @@ const sourceRoleName = computed(
   () => props.worldKernelState.profileName || props.activeChat?.name || '',
 )
 
+const contactAvatar = computed(
+  () =>
+    props.threadIdentityDraft.contactAvatar ||
+    props.activeChat?.avatar ||
+    props.activeChat?.avatarUrl ||
+    '',
+)
+
 const serviceTemplateSummary = computed(
   () =>
     props.activeChat?.serviceTemplate ||
@@ -128,9 +136,69 @@ const updateNumberSetting = (key, value) => {
 </script>
 
 <template>
-  <div class="mx-3 mt-2 rounded-2xl border border-gray-200 bg-white/90 backdrop-blur p-3 text-xs text-gray-600 space-y-3">
+  <div
+    class="absolute inset-0 z-30 flex items-end bg-black/25"
+    data-testid="chat-thread-details-layer"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="t('聊天详情', 'Chat details')"
+  >
+    <button
+      type="button"
+      class="absolute inset-0"
+      :aria-label="t('关闭聊天详情', 'Close chat details')"
+      @click="$emit('close')"
+    ></button>
+    <section class="relative flex max-h-[88%] w-full flex-col rounded-t-2xl bg-white text-xs text-gray-600 shadow-2xl">
+      <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-gray-300" aria-hidden="true"></div>
+      <header class="flex items-center justify-between border-b border-gray-100 px-4 pb-3 pt-2">
+        <button
+          type="button"
+          class="h-9 w-9 rounded-full text-gray-500 hover:bg-gray-100"
+          :aria-label="t('关闭', 'Close')"
+          @click="$emit('close')"
+        >
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <p class="text-sm font-semibold text-gray-950">{{ t('聊天详情', 'Chat details') }}</p>
+        <span class="h-9 w-9" aria-hidden="true"></span>
+      </header>
+
+      <div class="overflow-y-auto px-4 pb-6 pt-4 no-scrollbar">
+        <div class="flex flex-col items-center text-center">
+          <span class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-lg font-semibold text-gray-600">
+            <img v-if="contactAvatar" :src="contactAvatar" :alt="activeChat?.name || ''" class="h-full w-full object-cover" />
+            <span v-else>{{ (activeChat?.name || '?').slice(0, 1) }}</span>
+          </span>
+          <p class="mt-2 text-base font-semibold text-gray-950">{{ activeChat?.name }}</p>
+          <p v-if="activeChat?.relationshipNote || activeChat?.role" class="mt-0.5 text-[11px] text-gray-500">
+            {{ activeChat.relationshipNote || activeChat.role }}
+          </p>
+        </div>
+
+        <div class="mx-auto mt-4 grid max-w-xs grid-cols-2 gap-3">
+          <button
+            type="button"
+            class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gray-100 text-gray-700"
+            @click="$emit('open-chat-directory')"
+          >
+            <i :class="isActiveServiceChat ? 'fas fa-bullhorn' : 'fas fa-user'"></i>
+            <span class="text-[11px]">{{ isActiveServiceChat ? t('服务号资料', 'Service info') : t('联系人资料', 'Contact info') }}</span>
+          </button>
+          <button
+            type="button"
+            class="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gray-100 text-gray-700"
+            data-testid="thread-worldbook-open-shortcut"
+            @click="$emit('open-worldbook')"
+          >
+            <i class="fas fa-book-open"></i>
+            <span class="text-[11px]">{{ t('世界设定', 'World context') }}</span>
+          </button>
+        </div>
+
+        <div class="mt-5 divide-y divide-gray-100 border-y border-gray-100">
     <template v-if="isActiveServiceChat">
-      <div class="space-y-3" data-testid="thread-service-subscription-panel">
+      <div class="space-y-3 py-4" data-testid="thread-service-subscription-panel">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <p class="font-semibold text-sm text-gray-900">{{ t('订阅频道', 'Subscription channel') }}</p>
@@ -170,10 +238,18 @@ const updateNumberSetting = (key, value) => {
       </div>
     </template>
 
-    <div
-      class="space-y-2 rounded-xl border border-blue-100 bg-blue-50/70 p-3"
-      data-testid="thread-worldbook-summary"
-    >
+    <details class="group py-1">
+      <summary class="flex cursor-pointer list-none items-center justify-between py-3 text-sm font-medium text-gray-900">
+        <span>{{ t('AI 与世界设定', 'AI and world context') }}</span>
+        <span class="flex items-center gap-2 text-[11px] font-normal text-gray-500">
+          {{ worldKernelState.injectedCount }} / {{ worldKernelState.configuredCount }}
+          <i class="fas fa-chevron-down transition-transform group-open:rotate-180"></i>
+        </span>
+      </summary>
+      <div
+        class="mb-4 space-y-2 rounded-xl bg-blue-50/70 p-3"
+        data-testid="thread-worldbook-summary"
+      >
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
           <p class="font-semibold text-sm text-gray-900">
@@ -293,10 +369,15 @@ const updateNumberSetting = (key, value) => {
           }}
         </p>
       </div>
-    </div>
+      </div>
+    </details>
 
-    <div class="border-t border-gray-200 pt-3 space-y-2">
-      <p class="font-semibold text-sm text-gray-900">{{ t('会话身份覆写', 'Thread identity overrides') }}</p>
+    <details class="group py-1">
+      <summary class="flex cursor-pointer list-none items-center justify-between py-3 text-sm font-medium text-gray-900">
+        <span>{{ t('本会话头像', 'Chat avatars') }}</span>
+        <i class="fas fa-chevron-down text-[11px] text-gray-400 transition-transform group-open:rotate-180"></i>
+      </summary>
+      <div class="space-y-2 pb-4">
       <label class="block space-y-1">
         <span class="text-[11px] text-gray-500">{{ t('我的头像（会话级）', 'My avatar (thread-level)') }}</span>
         <input
@@ -318,7 +399,7 @@ const updateNumberSetting = (key, value) => {
         />
       </label>
       <p class="text-[10px] text-gray-400">
-        {{ t('优先级：会话 > 模块 > 全局 > 默认。留空将回退到下一级。', 'Priority: thread > module > global > fallback. Leave blank to fall back.') }}
+        {{ t('只影响当前聊天；留空会使用你的默认头像和联系人头像。', 'Only affects this chat. Leave blank to use the default avatars.') }}
       </p>
       <div class="flex justify-end gap-2 pt-1">
         <button
@@ -331,17 +412,23 @@ const updateNumberSetting = (key, value) => {
           @click="$emit('save-thread-identity')"
           class="px-2.5 py-1 rounded-lg border border-violet-200 bg-violet-50 text-violet-700"
         >
-          {{ t('保存身份覆写', 'Save identity overrides') }}
+          {{ t('保存头像', 'Save avatars') }}
         </button>
       </div>
-    </div>
+      </div>
+    </details>
 
-    <div class="border-t border-gray-200 pt-3 space-y-2">
+    <details class="group py-1">
+      <summary class="flex cursor-pointer list-none items-center justify-between py-3 text-sm font-medium text-gray-900">
+        <span>{{ t('回复与自动聊天', 'Replies and auto chat') }}</span>
+        <i class="fas fa-chevron-down text-[11px] text-gray-400 transition-transform group-open:rotate-180"></i>
+      </summary>
+      <div class="space-y-2 pb-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <p class="font-semibold text-sm text-gray-900">{{ t('当前会话调校', 'Current thread tuning') }}</p>
+          <p class="font-semibold text-sm text-gray-900">{{ t('本会话回复偏好', 'Reply preferences for this chat') }}</p>
           <p class="mt-0.5 text-[10px] text-gray-500">
-            {{ t('回复预设在具体会话里调用，保存后只影响当前会话。', 'Apply reply presets here; saving only affects this thread.') }}
+            {{ t('这些设置只影响当前聊天。', 'These settings only affect this chat.') }}
           </p>
         </div>
         <button
@@ -583,9 +670,13 @@ const updateNumberSetting = (key, value) => {
           class="px-2.5 py-1 rounded-lg border"
           :class="threadSettingsSaved ? 'border-green-300 bg-green-50 text-green-700' : 'border-blue-300 bg-blue-50 text-blue-700'"
         >
-          {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存本会话调校', 'Save this thread tuning') }}
+          {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存设置', 'Save settings') }}
         </button>
       </div>
-    </div>
+      </div>
+    </details>
+        </div>
+      </div>
+    </section>
   </div>
 </template>

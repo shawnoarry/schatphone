@@ -207,7 +207,7 @@ describe('Chat service subscriptions', () => {
     expect(wrapper.get('[data-testid="chat-directory-service-empty-body"]').text()).toContain(
       'receive shop, logistics, delivery, and public-channel messages here like chats',
     )
-    expect(wrapper.get('[data-testid="chat-directory-service-management"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="chat-directory-service-management"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="chat-directory-service-empty-action"]').trigger('click')
     await flushUi()
@@ -231,6 +231,9 @@ describe('Chat service subscriptions', () => {
         plugins: [router],
       },
     })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-directory-service-management-header"]').trigger('click')
     await flushUi()
 
     expect(wrapper.get('[data-testid="chat-directory-world-service-templates"]').text()).toContain(
@@ -345,6 +348,9 @@ describe('Chat service subscriptions', () => {
     })
     await flushUi()
 
+    await wrapper.get('[data-testid="chat-directory-service-management-header"]').trigger('click')
+    await flushUi()
+
     expect(wrapper.get('[data-testid="chat-directory-world-service-summary"]').text()).toContain(
       '2 enabled world packs offers 2 service candidates',
     )
@@ -393,6 +399,9 @@ describe('Chat service subscriptions', () => {
         plugins: [router],
       },
     })
+    await flushUi()
+
+    await directoryWrapper.get('[data-testid="chat-directory-service-management-header"]').trigger('click')
     await flushUi()
 
     const templateText = directoryWrapper
@@ -449,6 +458,9 @@ describe('Chat service subscriptions', () => {
         plugins: [router],
       },
     })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-directory-service-management-header"]').trigger('click')
     await flushUi()
 
     const payload = {

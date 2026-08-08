@@ -1,6 +1,11 @@
 import { computed } from 'vue'
 import { resolveAvatarWithHierarchy } from '../lib/avatar'
 import { resolveAvatarImageSourceUrl } from '../lib/avatar-image-source-resolver'
+import {
+  CHAT_BUBBLE_COLOR_MODES,
+  CHAT_THEME_COLOR_MODES,
+  getChatAppearanceClasses,
+} from '../lib/chat-appearance'
 
 export const DEFAULT_CHAT_THREAD_AI_PREFS = Object.freeze({
   suggestedRepliesEnabled: false,
@@ -75,10 +80,27 @@ export const useChatActiveThreadModel = ({
     activeChatAppearance.value.messageLayout || 'kakao',
   )
 
-  const chatShellClasses = computed(() => [
-    `chat-preset-${activeChatAppearance.value.presetId || 'kakao_immersive'}`,
-    `chat-layout-${activeChatMessageLayout.value}`,
-  ])
+  const activeChatMessageAvatarMode = computed(() => {
+    const value = activeChatAppearance.value.messageAvatarMode
+    return ['layout', 'all', 'hidden'].includes(value) ? value : 'layout'
+  })
+
+  const activeChatMessageBubbleMode = computed(() => {
+    const value = activeChatAppearance.value.messageBubbleMode
+    return ['bubble', 'soft', 'outline', 'glass'].includes(value) ? value : 'bubble'
+  })
+
+  const activeChatThemeColorMode = computed(() => {
+    const value = activeChatAppearance.value.themeColorMode
+    return CHAT_THEME_COLOR_MODES.includes(value) ? value : 'layout'
+  })
+
+  const activeChatBubbleColorMode = computed(() => {
+    const value = activeChatAppearance.value.bubbleColorMode
+    return CHAT_BUBBLE_COLOR_MODES.includes(value) ? value : 'theme'
+  })
+
+  const chatShellClasses = computed(() => getChatAppearanceClasses(activeChatAppearance.value))
 
   const isActiveServiceChat = computed(() =>
     Boolean(activeChat.value && ['service', 'official'].includes(activeChat.value.kind || 'role')),
@@ -169,6 +191,10 @@ export const useChatActiveThreadModel = ({
     canActiveChatCommunicate,
     activeChatAppearance,
     activeChatMessageLayout,
+    activeChatMessageAvatarMode,
+    activeChatMessageBubbleMode,
+    activeChatThemeColorMode,
+    activeChatBubbleColorMode,
     chatShellClasses,
     isActiveServiceChat,
     activeServiceIsMuted,

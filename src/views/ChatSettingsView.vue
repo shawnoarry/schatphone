@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import { useSystemStore } from '../stores/system'
+import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
@@ -42,6 +43,7 @@ onBeforeUnmount(() => {
 })
 
 const chatAppearance = computed(() => settings.value.appearance?.chat || {})
+const chatShellClasses = computed(() => getChatAppearanceClasses(chatAppearance.value))
 
 const messageLayoutLabel = computed(() => {
   if (chatAppearance.value.messageLayout === 'wechat') return t('微信式', 'WeChat-like')
@@ -190,16 +192,20 @@ const behaviorRows = computed(() => [
 </script>
 
 <template>
-  <div class="chat-settings-page w-full h-full text-black flex flex-col">
+  <div
+    class="chat-settings-page chat-shell w-full h-full flex flex-col"
+    :class="chatShellClasses"
+    data-testid="chat-settings-page"
+  >
     <div class="chat-native-header pt-12 pb-3 px-4 flex items-center gap-3">
-      <button @click="router.push('/chat')" class="text-blue-500 text-sm flex items-center gap-1">
+      <button @click="router.push('/chat')" class="chat-native-back text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('聊天', 'Chat') }}
       </button>
       <h1 class="font-bold text-xl">{{ t('Chat 设置', 'Chat Settings') }}</h1>
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar">
-      <section class="rounded-[28px] border border-yellow-100 bg-yellow-50 px-5 py-5">
+      <section class="chat-settings-hero rounded-[28px] border px-5 py-5">
         <p class="text-2xl font-bold leading-tight text-gray-950">{{ t('Chat 设置', 'Chat Settings') }}</p>
         <p class="mt-2 text-sm text-gray-600">
           {{ t('外观、沉浸、默认会话和维护工具集中在这里。', 'Appearance, immersion, defaults, and maintenance live here.') }}

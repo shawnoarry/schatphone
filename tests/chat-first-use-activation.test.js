@@ -52,8 +52,8 @@ describe('Chat first-use activation entry', () => {
     await flushUi()
 
     const readiness = wrapper.get('[data-testid="chat-network-readiness"]')
-    expect(readiness.text()).toContain('AI replies need Network & API')
-    expect(readiness.text()).toContain('current draft is preserved')
+    expect(readiness.text()).toContain('AI is not connected')
+    expect(readiness.text()).toContain('current draft will be kept')
 
     await wrapper.get('[data-testid="chat-message-input"]').setValue('Keep this draft for Eva')
     await wrapper.get('[data-testid="chat-open-network-setup"]').trigger('click')

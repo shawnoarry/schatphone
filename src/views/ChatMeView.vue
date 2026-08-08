@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import { useSystemStore } from '../stores/system'
+import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useI18n } from '../composables/useI18n'
 import ChatAppTabBar from '../components/chat/ChatAppTabBar.vue'
 
@@ -12,8 +13,9 @@ const router = useRouter()
 const chatStore = useChatStore()
 const systemStore = useSystemStore()
 const { contactsForList } = storeToRefs(chatStore)
-const { user } = storeToRefs(systemStore)
+const { settings, user } = storeToRefs(systemStore)
 const { t } = useI18n()
+const chatShellClasses = computed(() => getChatAppearanceClasses(settings.value.appearance?.chat))
 
 const actionFeedbackType = ref('')
 const actionFeedbackMessage = ref('')
@@ -329,9 +331,13 @@ watch(moduleIdentityState, syncIdentityDraft, { immediate: true })
 </script>
 
 <template>
-  <div class="chat-me-page w-full h-full text-black flex flex-col">
+  <div
+    class="chat-me-page chat-shell w-full h-full flex flex-col"
+    :class="chatShellClasses"
+    data-testid="chat-me-page"
+  >
     <div class="chat-native-header pt-12 pb-3 px-4 flex items-center gap-3">
-      <button @click="router.push('/chat')" class="text-blue-500 text-sm flex items-center gap-1">
+      <button @click="router.push('/chat')" class="chat-native-back text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('聊天', 'Chat') }}
       </button>
       <h1 class="font-bold text-xl">{{ t('我', 'Me') }}</h1>

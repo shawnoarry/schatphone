@@ -60,7 +60,16 @@ describe('Chat active thread model interface', () => {
       route,
       chatStore,
       contactsForList,
-      settings: ref({ appearance: { chat: { presetId: 'wechat_clean', messageLayout: 'wechat' } } }),
+      settings: ref({
+        appearance: {
+          chat: {
+            presetId: 'wechat_clean',
+            messageLayout: 'wechat',
+            messageAvatarMode: 'all',
+            messageBubbleMode: 'plain',
+          },
+        },
+      }),
       user: ref({ name: 'Me' }),
       galleryStore: {},
       avatarPreviewMap: {},
@@ -83,7 +92,15 @@ describe('Chat active thread model interface', () => {
     expect(model.chatShellClasses.value).toEqual([
       'chat-preset-wechat_clean',
       'chat-layout-wechat',
+      'chat-avatar-mode-all',
+      'chat-bubble-mode-bubble',
+      'chat-theme-color-layout',
+      'chat-bubble-color-theme',
     ])
+    expect(model.activeChatMessageAvatarMode.value).toBe('all')
+    expect(model.activeChatMessageBubbleMode.value).toBe('bubble')
+    expect(model.activeChatThemeColorMode.value).toBe('layout')
+    expect(model.activeChatBubbleColorMode.value).toBe('theme')
   })
 
   test('falls back safely when the route does not point at a known thread', () => {

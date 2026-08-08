@@ -56,7 +56,7 @@ describe('Chat message action sheet model interface', () => {
     )
   })
 
-  test('uses unsave, restore, reroll, and contact recall labels when message state supports them', () => {
+  test('keeps assistant actions immersive while retaining regeneration control', () => {
     const message = {
       id: 'm-assistant',
       role: 'assistant',
@@ -76,17 +76,14 @@ describe('Chat message action sheet model interface', () => {
       CHAT_MESSAGE_ACTION_IDS.QUOTE,
       CHAT_MESSAGE_ACTION_IDS.COPY,
       CHAT_MESSAGE_ACTION_IDS.SAVE,
-      CHAT_MESSAGE_ACTION_IDS.EDIT,
-      CHAT_MESSAGE_ACTION_IDS.RESTORE,
       CHAT_MESSAGE_ACTION_IDS.REROLL,
-      CHAT_MESSAGE_ACTION_IDS.RECALL,
       CHAT_MESSAGE_ACTION_IDS.DELETE,
     ])
     expect(model.messageActionRows.value.find((action) => action.id === CHAT_MESSAGE_ACTION_IDS.SAVE)?.label).toBe(
       'Unsave',
     )
-    expect(model.messageActionRows.value.find((action) => action.id === CHAT_MESSAGE_ACTION_IDS.RECALL)?.label).toBe(
-      'Make contact recall',
+    expect(model.messageActionRows.value.find((action) => action.id === CHAT_MESSAGE_ACTION_IDS.REROLL)?.label).toBe(
+      'Regenerate',
     )
   })
 
@@ -107,7 +104,6 @@ describe('Chat message action sheet model interface', () => {
     expect(model.messageActionRows.value.map((action) => action.id)).toEqual([
       CHAT_MESSAGE_ACTION_IDS.QUOTE,
       CHAT_MESSAGE_ACTION_IDS.COPY,
-      CHAT_MESSAGE_ACTION_IDS.EDIT,
       CHAT_MESSAGE_ACTION_IDS.REROLL,
       CHAT_MESSAGE_ACTION_IDS.DELETE,
     ])
@@ -132,12 +128,12 @@ describe('Chat message action sheet model interface', () => {
     ])
   })
 
-  test('only exposes edit for supported rich-card messages', () => {
+  test('only exposes edit for supported user-authored rich-card messages', () => {
     const editableModel = createModel({
       messages: [
         {
           id: 'm-voice',
-          role: 'assistant',
+          role: 'user',
           blocks: [{ type: 'voice_virtual', transcript: 'memo' }],
         },
       ],
@@ -152,7 +148,7 @@ describe('Chat message action sheet model interface', () => {
       messages: [
         {
           id: 'm-share',
-          role: 'assistant',
+          role: 'user',
           blocks: [{ type: 'share_card', title: 'source record' }],
         },
       ],

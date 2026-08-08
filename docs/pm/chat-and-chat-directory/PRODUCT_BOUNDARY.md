@@ -1,6 +1,6 @@
 # Chat And Chat Directory Product Boundary
 
-Updated: 2026-07-22
+Updated: 2026-08-08
 
 This file defines the ownership boundary between Chat, Chat Directory, and Contacts.
 
@@ -28,6 +28,7 @@ Chat owns:
 - AI reply trigger and prompt assembly
 - the user-facing Chat App shell for message entry and thread-level controls
 - Chat Settings as the Chat-local behavior, appearance-entry, and diagnostics surface
+- Chat Appearance presentation settings for the shared Chat-owned route shell, message layout, independent avatar visibility, bubble treatments, content-fit sizing for ordinary text, and the iMessage-like thread-header identity presentation
 - Chat Me as the Chat-local user identity, anonymity, and recent social-presence surface
 - confirmed Chat social/channel state once the social shell lands, such as whether a role can message, is pending friend confirmation, is blocked by the user, or has blocked the user
 - the idempotent role-binding and conversation-creation seam used by Chat Directory or an explicit Contacts `Start Chat` action
@@ -154,5 +155,6 @@ They must not create, delete, or rewrite global Contacts role profiles. A future
 8. social-channel state must not become relationship runtime truth or event eligibility by itself
 9. legacy `htmlSnippet` or new generated HTML must not execute inside Chat, and Chat must not copy the shared Mini Scene regex/profile/presenter implementation
 10. AI dialogue, a transfer request, or a `payee_account` card must not create Wallet ledger records or claim money moved
+11. Chat Appearance controls presentation only; any iMessage-like header note/status is Chat-local display context and must not be treated as current relationship truth
 
 When `relationshipLevel` or `relationshipNote` appears in Chat Directory UI, label it as Chat-local tuning/note. Do not use "Affinity" or other copy that implies current relationship progress.

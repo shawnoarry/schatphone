@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-07-22
+Updated: 2026-08-08
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -13,6 +13,9 @@ Updated: 2026-07-22
 - ordinary message save/unsave actions and Chat Me saved-message review
 - messaging-app style first-level shell and thread-list controls
 - Chat Settings for Chat-local appearance entry points, diagnostics, and default-behavior surfaces
+- Chat Appearance V1: layout classes, independent message avatar visibility, selectable bubble treatments, content-fit sizing for ordinary text with bounded rich-content rows, normalized persisted settings, shared preview rows, and iMessage-like thread-header identity presentation
+- Chat Appearance preview polish: a first-screen live header/thread/composer preview, compact layout/theme/bubble selectors, layout-specific default palettes, role legend, iMessage identity header, and replaceable-avatar placeholder guidance
+- Chat Appearance route-shell coverage: one shared class resolver and semantic page/sheet/panel/header/tab tokens across Messages, Contacts/Services, Groups, Me, Chat Settings, Chat Appearance, and retained feature routes while keeping bubble colors independently selectable
 - Chat Me for user identity/anonymity, recent interaction data, and derived social feed items
 - source-owned `share_card` rendering, message context, and Shopping share send paths for product links, gift cards, and virtual gifts
 - preserve legacy `mini_scene.htmlSnippet` as inert Chat history; a later Chat request Adapter uses the shared Mini Scene Interface and stores only an artifact reference/display snapshot where required
@@ -72,3 +75,4 @@ Treat these as bugs:
 10. recall is implemented as deletion, or recalled original content remains available through copy, quote preview, pending quote bars, edit, reroll, saved-message, AI context, or history review
 11. `product_link` share cards are presented as purchased, delivered, or directly giftable items; user-sendable gifts should be source-created digital gifts, vouchers, or virtual gifts
 12. Chat executes legacy/generated Mini Scene HTML or copies Book regex, profile resolution, artifact persistence, presenter, or fallback logic into Chat
+13. Chat Appearance presentation controls mutate message, relationship, or source-module truth, or expose a Chat-local header note as authoritative relationship progress
