@@ -15,14 +15,14 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current local integration has passing lint, 210 files / 1497 unit tests, build, and focused desktop/Pixel 5 restricted-relay evidence; remote Pages Run #130, the deployed `/schatphone/` smoke plus direct configured-provider Chat/reload proof, and the Git-connected Vercel/Cloudflare `ced45db` root/fail-closed proxy baselines are proven. The restricted dynamic relay is implemented locally but unpushed; installed PWA, external protections, deployed relay smoke, and named physical-device proof remain open.
+- release commit `a1418ed` has passing lint, 210 files / 1497 unit tests, production and Cloudflare builds, focused desktop/Pixel 5 restricted-relay evidence, Wrangler dry-run, governance, and GitHub Pages Run #31294272595. The deployed Vercel and Cloudflare relays each returned 6 real provider models and Chat smoke reply `OK` from GitHub Pages while preserving Direct as the default; installed PWA, external protections, and named physical-device proof remain open.
 
 The current work is concentrated in four areas:
 
 1. preserving the completed first-value Chat activation and custom-role journey;
 2. preserving the completed current-save write/conflict safety and complete local v3 recovery point;
 3. one ordinary daily-life cross-module loop;
-4. deployed PWA, backup, external-protection, and true-device release proof; hosted direct-provider Chat is proven, while optional proxy proof is conditional.
+4. deployed PWA, backup, external-protection, and true-device release proof; hosted direct-provider and optional compatibility-proxy Chat are proven.
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
@@ -59,7 +59,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
-| QA / release | `Strong local baseline; hosted infrastructure partial` | remote Pages/direct-provider Chat and the Vercel/Cloudflare `ced45db` root baselines pass; a direct-default restricted dynamic relay passes local desktop/Pixel 5 but still needs authorized push and deployed smoke; external checks, installed PWA, and true-device QA remain open |
+| QA / release | `Strong local and hosted baseline; device proof partial` | remote Pages/direct-provider Chat and the Vercel/Cloudflare `a1418ed` restricted relays pass, including real provider model-list and Chat smoke through both backends; external checks, installed PWA, and true-device QA remain open |
 
 ## 4. What Users Can Do Now
 
@@ -128,7 +128,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - the local push relay has no authentication and permissive CORS;
 - the most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings in existing tooling paths; the controller's current rerun was blocked because the configured npm mirror does not implement the audit endpoint;
 - PR CI and main Pages build definitions fail closed on both audits, lint, unit, build, and one full E2E run that includes focused visual coverage; remote Pages execution and the deployed base-path smoke are proven, while external protections remain pending;
-- the prepared Vercel/Cloudflare relay lets each user retain a separate public HTTPS OpenAI-compatible URL, provider Key, and model, but only after explicit Compatibility Proxy selection. It reserves two route shapes, blocks private/local literals and domains, URL credentials, redirects, and loops, bounds request size/time, and uses origin/fetch metadata plus best-effort per-runtime rate limiting. Optional proxy access tokens stay separate from provider authorization. Origin spoofing, non-durable global rate limits, and residual DNS rebinding mean it is not abuse-proof infrastructure;
+- the deployed Vercel/Cloudflare relay lets each user retain a separate public HTTPS OpenAI-compatible URL, provider Key, and model, but only after explicit Compatibility Proxy selection. It reserves two route shapes, blocks private/local literals and domains, URL credentials, redirects, and loops, bounds request size/time, and uses origin/fetch metadata plus best-effort per-runtime rate limiting. Optional proxy access tokens stay separate from provider authorization. Origin spoofing, non-durable global rate limits, and residual DNS rebinding mean it is not abuse-proof infrastructure;
 - browser local storage is the user-data security boundary; there is no encryption-at-rest layer.
 
 ### Persistence And Recovery
@@ -172,7 +172,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 1. `DONE 2026-07-22`: close the first successful Chat activation loop through the existing Network flow with originating thread/draft continuity and desktop plus simulated-mobile first-reply evidence;
 2. `DONE 2026-08-09`: make current-save writes fail visibly, prevent unsafe same-container writers, and complete the release-local v3 export/restore/reopen/crash-recovery boundary;
 3. `DONE 2026-08-07`: preserve the custom role -> Chat path, prove one ordinary Shopping consequence through Calendar, Wallet, Chat, and relationship continuity, add Wallet historical quote detail, and curate the default Home release surface without disabling demoted apps;
-4. finish the partial hosted baseline with an authorized restricted-relay push/deployed smoke, PWA/install/relaunch, backup round-trip, external protection checks, and named true-device evidence; preserve Direct as the default and use Compatibility Proxy only when a provider's browser CORS requires it.
+4. finish the partial hosted baseline with PWA/install/relaunch, backup round-trip, external protection checks, and named true-device evidence; preserve Direct as the default and use the now-deployed Compatibility Proxy only when a provider's browser CORS requires it.
 
 This is the only current product-completion sequence. It does not require a broad onboarding wizard, mandatory built-in content, another World Pack archetype, Mini Scene runtime, or a general visual rebuild.
 
@@ -193,8 +193,8 @@ This is the only current product-completion sequence. It does not require a broa
 
 ### P1: Release And Architecture Confidence
 
-1. preserve the proven remote Pages build and deployed base-path smoke, then confirm external required checks/environment protection plus the Vercel Git-triggered production build and installed-PWA/relaunch path;
-2. configure the Vercel proxy through secure Environment Variables, then prove one hosted-origin provider setup -> connection test -> Chat reply path and complete local backup export/import/reopen;
+1. preserve the proven remote Pages build, deployed base-path smoke, and Vercel/Cloudflare Git-triggered relay builds, then confirm external required checks/environment protection plus the installed-PWA/relaunch path;
+2. keep public relay mode free of shared provider secrets; use secure Environment Variables only if token or legacy fixed-upstream mode is deliberately enabled, and complete local backup export/import/reopen proof;
 3. run the named true-device release matrix before claiming mobile/PWA completion;
 4. defer large-view seams, `systemStore` facades, cross-store cleanup, and incremental typing unless a selected product slice is blocked by them.
 
@@ -314,7 +314,7 @@ Current checkpoint note on 2026-07-31:
 Hosted checkpoint note on 2026-08-09:
 
 - Pages Run #130 and the deployed `/schatphone/` browser smoke are proven;
-- Vercel serves the root app and deployed `ced45db` fail-closed optional AI proxy Functions; Cloudflare serves the matching root/static baseline. The current local repository upgrades both to a restricted per-request compatibility relay but has not been pushed. Deployed Pages direct-provider Chat already passes; the next hosted network proof is the explicit proxy path after authorized deployment.
+- commit `a1418ed` is live on GitHub Pages, Vercel, and the Cloudflare Worker/static-assets host. Deployed Pages direct-provider Chat remains proven, and the explicit Compatibility Proxy path now passes real provider model discovery and Chat smoke through both Vercel and Cloudflare. The remaining hosted work is PWA/relaunch, external protection, backup round-trip, and true-device evidence.
 
 ## 9. Read Next
 

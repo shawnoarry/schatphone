@@ -275,7 +275,7 @@ Vercel is the root-path hosted release and serverless AI-proxy path:
 
 Public mode is a restricted compatibility baseline, not abuse-proof infrastructure: non-browser clients can spoof origin/fetch metadata, the rate limiter is process-instance local, and hostname validation cannot fully eliminate DNS rebinding. Use token mode or a durable edge rate-limit/auth layer before exposing a higher-risk or higher-volume deployment.
 
-The first 2026-08-09 Vercel deployment came from a local working-tree upload. The first Git push containing `vercel.json`, the Functions, and the matching application state establishes the reproducible repository baseline. After that baseline, the normal update flow is local validation -> commit -> GitHub push -> automatic Vercel deployment. Real-provider Chat remains incomplete until the Environment Variables are configured and one connection test plus one real reply pass.
+The first 2026-08-09 Vercel deployment came from a local working-tree upload. Commit `a1418ed` is the verified Git-built restricted-relay baseline. The normal update flow is local validation -> commit -> GitHub push -> automatic Vercel deployment. Public mode needs no shared provider Environment Variables; a GitHub Pages browser has completed one real-provider model-list and Chat-`OK` smoke through the production Vercel route. Configure Vercel secrets only when deliberately enabling token or legacy fixed-upstream mode.
 
 Cloudflare is the third independent root-path release and uses one Worker for both static assets and the same restricted AI relay routes:
 
@@ -286,7 +286,7 @@ Cloudflare is the third independent root-path release and uses one Worker for bo
 - Git source: `shawnoarry/schatphone`, production branch `main`;
 - pushes to the connected production branch trigger a Cloudflare Workers Build automatically; the first Git-triggered deployment completed on 2026-08-09.
 
-`wrangler.jsonc` enables the restricted public dynamic mode for the prepared repository baseline. It needs no shared upstream URL or upstream key: each user keeps those values in their own Network profile. The Worker uses its same-origin `/api/openai/v1` route; GitHub Pages defaults to the same Worker cross-origin after explicit proxy selection. If an operator changes to token mode, store only `SCHATPHONE_AI_PROXY_CLIENT_TOKEN` as a Worker secret and distribute it as a revocable proxy-access credential. Legacy fixed-upstream values, when deliberately used, still belong only in Variables and Secrets.
+`wrangler.jsonc` enables the restricted public dynamic mode deployed from `a1418ed`. It needs no shared upstream URL or upstream key: each user keeps those values in their own Network profile. The Worker uses its same-origin `/api/openai/v1` route; GitHub Pages defaults to the same Worker cross-origin after explicit proxy selection. The production GitHub Pages -> Worker path has returned 6 real provider models and Chat smoke reply `OK`. If an operator changes to token mode, store only `SCHATPHONE_AI_PROXY_CLIENT_TOKEN` as a Worker secret and distribute it as a revocable proxy-access credential. Legacy fixed-upstream values, when deliberately used, still belong only in Variables and Secrets.
 
 Before a Cloudflare release, run `npm.cmd run build:cloudflare` and `npm.cmd exec wrangler -- deploy --dry-run`. The Git-connected production Worker is live at `https://schatphone.noarry.workers.dev`; later authorized pushes to `main` automatically rebuild it. Detailed deployment and smoke evidence is in `docs/qa/CLOUDFLARE_DEPLOYMENT_HANDOFF_2026-08-09.md`.
 

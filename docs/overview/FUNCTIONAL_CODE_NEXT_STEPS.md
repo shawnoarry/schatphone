@@ -88,8 +88,8 @@ Current evidence:
 - Vitest 4.1.10 now reuses root Vite 7.3.6, with the old nested Vite 5/esbuild chain removed;
 - PR and main Pages workflow definitions now fail closed on full product E2E and separate production/full audits; the full suite contains the focused visual cases and is not run twice;
 - Pages configure/upload/deploy requires the verified build job; remote Run #130 and the deployed `/schatphone/` base-path smoke are proven.
-- Vercel serves the root app and deployed `ced45db` fail-closed fixed-upstream Functions; the current local tree prepares the same two routes as an explicitly selected restricted relay for per-user OpenAI-compatible URLs/keys/models while keeping Direct as default.
-- the third Git-connected Cloudflare Worker/static-assets root path shares the proxy core and is deployed at `https://schatphone.noarry.workers.dev`; the deployed root/manifest/hash-route/static-asset/fail-closed checks pass, while the local public dynamic-mode baseline still requires an authorized push and hosted smoke.
+- Vercel serves the root app and commit `a1418ed` restricted relay Functions for per-user OpenAI-compatible URLs/keys/models while keeping Direct as default; production passed a no-secret upstream probe plus a real-provider 6-model/Chat-`OK` smoke from GitHub Pages.
+- the third Git-connected Cloudflare Worker/static-assets root path shares the proxy core and is deployed at `https://schatphone.noarry.workers.dev`; commit `a1418ed` passed the root/static checks, a no-secret dynamic-target probe, and the same real-provider 6-model/Chat-`OK` GitHub Pages smoke.
 - GitHub Pages has deployed-browser evidence for one direct user-configured provider: five models discovered, connection test `OK`, one real Chat reply, and message persistence after reload/reopen.
 
 Safe sequence:

@@ -57,7 +57,7 @@ Current active architecture slice:
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
 - this is a promoted architecture-decision slice; beyond the completed Book-only cutover, it does not approve migration of any additional application owner.
-- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; GitHub Pages now also has direct user-configured provider model discovery, connection, one real Chat reply, and reload persistence evidence; the Git-connected Vercel root-path app and fail-closed optional proxy Functions are deployed, while hosted PWA and true-device proof remain release work.
+- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; GitHub Pages now has direct user-configured provider model discovery, connection, one real Chat reply, reload persistence, and real-provider restricted-relay evidence through both deployed Vercel and Cloudflare backends, while hosted PWA and true-device proof remain release work.
 
 ### Product Decision Checkpoint - 2026-07-21
 
@@ -101,7 +101,7 @@ Current inventory and validation posture:
 - 153 JavaScript files, 85 Vue files, and 131,038 source lines under `src`;
 - 209 static unit-test files;
 - the 2026-07-22 architecture baseline passed 185 Vitest files / 1170 tests, lint, production build, both audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
-- the current local integration passes lint, 209 Vitest files / 1479 tests, production build, and both audit scopes; remote CI and the deployed Pages artifact have Run #130 and deployed-browser smoke evidence, while named physical-device and independently rerunnable audit proof remain open.
+- release commit `a1418ed` passes lint, 210 Vitest files / 1497 tests, production and Cloudflare builds, governance, focused relay E2E, and remote Pages Run #31294272595; both deployed relay backends have real-provider model/Chat smoke evidence, while named physical-device and independently rerunnable audit proof remain open.
 
 ## 2. Landed Architecture Baselines
 
@@ -285,12 +285,12 @@ Do not describe it as a production backend or closed-page simulation engine.
 - no coverage threshold exists;
 - local validation and CI both use Node 24.
 - remote GitHub execution and a deployed Pages base-path smoke are proven by Run #130 and the live `/schatphone/` browser check;
-- Vercel project `shawn-e-s-projects/schatphone` serves the root-path app at `https://schatphone.vercel.app`; deployed `ced45db` still has the fail-closed fixed-upstream Functions, while the current local tree prepares restricted per-request OpenAI-compatible targets on the same two routes without making proxy transport the default;
+- Vercel project `shawn-e-s-projects/schatphone` serves the root-path app at `https://schatphone.vercel.app`; commit `a1418ed` deploys restricted per-request OpenAI-compatible targets on the same two routes without making proxy transport the default, and production passed both a no-secret upstream probe and a GitHub Pages real-provider model/Chat smoke;
 - the initial Vercel production upload came from the local dirty tree; the `main` commit containing this deployment contract is the reproducible source for automatic later builds;
-- the Git-connected Cloudflare Worker/static-assets deployment is live at `https://schatphone.noarry.workers.dev`: `npm run build:cloudflare` builds at `/`, the Worker serves the SPA and the two reserved proxy routes, unknown API routes fail as JSON `404`, and the first Git-triggered `ced45db` build plus root, manifest, hash-route, static-asset, and fail-closed proxy smoke checks pass;
+- the Git-connected Cloudflare Worker/static-assets deployment is live at `https://schatphone.noarry.workers.dev`: `npm run build:cloudflare` builds at `/`, the Worker serves the SPA and the two reserved proxy routes, unknown API routes fail as JSON `404`, and the `a1418ed` build plus root/static, no-secret dynamic-target, and GitHub Pages real-provider 6-model/Chat-`OK` smoke checks pass;
 - the local Network UI now keeps Direct selected by default and progressively reveals Compatibility Proxy, optional custom relay URL, credential-routing disclosure, and optional independent proxy-access token. Desktop/Pixel 5 Playwright proves relay URL plus target-header routing, hidden fake credentials, zero horizontal overflow, and zero critical accessibility violations;
 - the shared relay restricts dynamic targets to public HTTPS/443 OpenAI-compatible model/chat endpoints, blocks local/private literals and domains, URL credentials, redirects, and loops, bounds request size/time, and applies a best-effort per-runtime rate limit. Origin/fetch metadata spoofing, non-durable global rate limits, and residual DNS rebinding remain explicit production risks; this is not an abuse-proof gateway;
-- external branch/environment required checks, installed-PWA/relaunch, named true-device evidence, and deployed dynamic-relay smoke remain unverified, so this release slice is partial. Fresh push/deploy authorization is still required.
+- external branch/environment required checks, installed-PWA/relaunch, and named true-device evidence remain unverified, so this release slice is partial. The deployed dynamic-relay smoke is complete; higher-volume exposure still needs durable authentication or global rate limiting.
 
 ## 5. Completed Governance Rounds
 
@@ -351,7 +351,7 @@ The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 1. personal R2/Worker onboarding is post-release because remote transport cannot repair an unsafe local write or an incomplete local recovery package;
 2. structured write results, newest-valid local/mirror reconciliation, product-level save-failed/read-only recovery, and the product-wide same-container writer boundary are integrated foundations;
 3. `DONE 2026-08-09`: the release-local v3 backup/restore/reopen boundary covers required Chat identity/avatar state, default-on retained Gallery material, integrity verification, durable rollback checkpoints, startup crash recovery, and legacy compatibility;
-4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages, the deployed `/schatphone/` smoke, the Git-connected Vercel root/fixed-proxy baseline, and the Git-connected Cloudflare Worker/static-assets deployment plus URL smoke are complete. The restricted dynamic relay is implemented and locally validated but not pushed or deployed; deployed PWA/install/offline and named true-device backup evidence still close the public-release gate;
+4. first Chat activation and the explicit custom-role-to-Chat journey are already product-side complete; remote CI/Pages, the deployed `/schatphone/` smoke, and the Git-connected Vercel plus Cloudflare Worker/static-assets `a1418ed` restricted relays are complete with real-provider model/Chat smoke. Deployed PWA/install/offline and named true-device backup evidence still close the public-release gate;
 5. Gallery schema, non-Book Repository cutovers, production push, hotspot decomposition, incremental typing, Mini Scene, and World Setting W2 remain post-preview unless a current product blocker requires a separately approved slice.
 6. roadmap 4.10's Camera/shared-image-generation first slice is complete; the new Chat/Network compatibility relay does not automatically become Camera image-generation transport. Gallery People truth, source-module callers, true-device checks, and hosted image-provider smoke require separate promotion.
 
