@@ -3,6 +3,11 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "env": {
+    "SCHATPHONE_AI_PROXY_DYNAMIC_MODE": "public",
+    "SCHATPHONE_AI_PROXY_ALLOWED_ORIGINS": "https://schatphone.vercel.app,https://shawnoarry.github.io,https://schatphone.noarry.workers.dev,http://localhost:5173,http://127.0.0.1:5174",
+    "SCHATPHONE_AI_PROXY_RATE_LIMIT_PER_MINUTE": "60"
+  },
   "functions": {
     "api/openai/v1/chat/completions.js": {
       "maxDuration": 60

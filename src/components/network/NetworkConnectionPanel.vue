@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from '../../composables/useI18n'
 
 const props = defineProps({
@@ -34,6 +34,26 @@ const props = defineProps({
   apiKey: {
     type: String,
     default: '',
+  },
+  transportMode: {
+    type: String,
+    default: 'direct',
+  },
+  proxyUrl: {
+    type: String,
+    default: '',
+  },
+  proxyToken: {
+    type: String,
+    default: '',
+  },
+  resolvedProxyUrl: {
+    type: String,
+    default: '',
+  },
+  proxyCompatible: {
+    type: Boolean,
+    default: true,
   },
   modelValue: {
     type: String,
@@ -107,6 +127,9 @@ const emit = defineEmits([
   'continue-chat',
   'update:apiUrl',
   'update:apiKey',
+  'update:transportMode',
+  'update:proxyUrl',
+  'update:proxyToken',
   'update:modelValue',
   'update:showApiKey',
   'update:presetName',
@@ -114,6 +137,7 @@ const emit = defineEmits([
 ])
 
 const { t } = useI18n()
+const showProxyToken = ref(false)
 
 const modelOptionsSummary = computed(() => {
   const count = props.modelOptions.length
@@ -136,6 +160,22 @@ const updateApiUrl = (event) => {
 
 const updateApiKey = (event) => {
   emit('update:apiKey', event.target.value)
+}
+
+const updateTransportMode = (value) => {
+  emit('update:transportMode', value === 'proxy' ? 'proxy' : 'direct')
+}
+
+const updateProxyUrl = (event) => {
+  emit('update:proxyUrl', event.target.value)
+}
+
+const updateProxyToken = (event) => {
+  emit('update:proxyToken', event.target.value)
+}
+
+const toggleProxyTokenVisibility = () => {
+  showProxyToken.value = !showProxyToken.value
 }
 
 const updateModelValue = (event) => {
@@ -206,9 +246,117 @@ const toggleApiKeyVisibility = () => {
         <option value="">{{ t('选择配置', 'Choose configuration') }}</option>
         <option v-for="preset in presets" :key="preset.id" :value="preset.id">
           {{ preset.name }} · {{ preset.model || t('未填模型', 'No model') }} ·
+          {{ preset.transportMode === 'proxy' ? t('代理', 'Proxy') : t('直连', 'Direct') }} ·
           {{ preset.key ? t('含 Key', 'Key saved') : t('无 Key', 'No key') }}
         </option>
       </select>
+    </div>
+
+    <div class="network-transport-block mt-4">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-xs font-semibold text-gray-700">
+          {{ t('连接方式', 'Connection method') }}
+        </span>
+        <span class="text-[10px] text-gray-400">
+          {{ transportMode === 'proxy' ? t('显式中转', 'Explicit relay') : t('默认', 'Default') }}
+        </span>
+      </div>
+      <div
+        class="network-transport-segments mt-2"
+        role="group"
+        :aria-label="t('连接方式', 'Connection method')"
+      >
+        <button
+          type="button"
+          :aria-pressed="transportMode !== 'proxy'"
+          :class="{ 'network-transport-segment-active': transportMode !== 'proxy' }"
+          data-testid="network-transport-direct"
+          @click="updateTransportMode('direct')"
+        >
+          <i class="fas fa-bolt" aria-hidden="true"></i>
+          {{ t('直连', 'Direct') }}
+        </button>
+        <button
+          type="button"
+          :aria-pressed="transportMode === 'proxy'"
+          :class="{ 'network-transport-segment-active': transportMode === 'proxy' }"
+          data-testid="network-transport-proxy"
+          @click="updateTransportMode('proxy')"
+        >
+          <i class="fas fa-route" aria-hidden="true"></i>
+          {{ t('兼容代理', 'Compatibility proxy') }}
+        </button>
+      </div>
+    </div>
+
+    <div
+      v-if="transportMode === 'proxy'"
+      class="network-proxy-notice mt-3"
+      :class="proxyCompatible ? 'network-state-warn' : 'network-state-bad'"
+      data-testid="network-proxy-notice"
+    >
+      <i class="fas fa-shield-halved mt-0.5 shrink-0" aria-hidden="true"></i>
+      <div class="min-w-0">
+        <p class="text-xs font-semibold">
+          {{
+            proxyCompatible
+              ? t('仅在直连受跨域限制时使用', 'Use only when direct access is blocked by CORS')
+              : t('当前接口不能使用兼容代理', 'This endpoint cannot use the compatibility proxy')
+          }}
+        </p>
+        <p class="mt-1 break-words text-[11px]">
+          {{
+            proxyCompatible
+              ? t('供应商 URL 与 Key 会经此地址临时转发，代理代码不会保存凭据：', 'The provider URL and key are relayed temporarily; the proxy code does not store credentials:')
+              : t('兼容代理只转发 OpenAI 兼容的模型列表和 Chat Completions 请求。', 'The proxy only forwards OpenAI-compatible models and Chat Completions requests.')
+          }}
+          <span v-if="proxyCompatible" class="font-mono">{{ resolvedProxyUrl || '--' }}</span>
+        </p>
+        <details v-if="proxyCompatible" class="network-proxy-advanced mt-2">
+          <summary>{{ t('自定义代理地址', 'Custom proxy address') }}</summary>
+          <input
+            :value="proxyUrl"
+            type="url"
+            class="mt-2 w-full border-b border-current/20 bg-transparent py-2 font-mono text-xs outline-none"
+            :placeholder="resolvedProxyUrl"
+            :aria-label="t('自定义代理地址', 'Custom proxy address')"
+            data-testid="network-proxy-url-input"
+            @input="updateProxyUrl"
+          />
+          <div class="mt-3">
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-[11px] font-semibold" for="network-proxy-token-input">
+                {{ t('代理访问 Token', 'Proxy access token') }}
+              </label>
+              <span class="text-[10px] font-normal opacity-70">
+                {{ t('可选', 'Optional') }}
+              </span>
+            </div>
+            <div class="mt-1 flex items-end gap-2">
+              <input
+                id="network-proxy-token-input"
+                :value="proxyToken"
+                :type="showProxyToken ? 'text' : 'password'"
+                class="min-w-0 flex-1 border-b border-current/20 bg-transparent py-2 font-mono text-xs outline-none"
+                autocomplete="off"
+                data-testid="network-proxy-token-input"
+                @input="updateProxyToken"
+              />
+              <button
+                type="button"
+                class="shrink-0 px-2 py-2 text-[11px] font-semibold"
+                data-testid="network-proxy-token-toggle"
+                @click="toggleProxyTokenVisibility"
+              >
+                {{ showProxyToken ? t('隐藏', 'Hide') : t('显示', 'Show') }}
+              </button>
+            </div>
+            <p class="mt-1 text-[10px] opacity-70">
+              {{ t('仅私有代理要求独立访问凭据时填写。', 'Only required when a private proxy has separate access control.') }}
+            </p>
+          </div>
+        </details>
+      </div>
     </div>
 
     <div class="network-form-grid mt-4">
@@ -229,7 +377,9 @@ const toggleApiKeyVisibility = () => {
 
       <div class="network-field">
         <div class="mb-1 flex items-center justify-between gap-2">
-          <label class="text-xs text-gray-500" for="network-api-key-input">API Key</label>
+          <label class="text-xs text-gray-500" for="network-api-key-input">
+            {{ t('供应商 API Key', 'Provider API Key') }}
+          </label>
           <span v-if="!networkSetupState.keyRequired" class="text-[10px] font-medium text-emerald-600">
             {{ t('可留空', 'Optional') }}
           </span>
@@ -537,6 +687,62 @@ const toggleApiKeyVisibility = () => {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
+}
+
+.network-transport-block {
+  border-top: 1px solid var(--system-subtle-border);
+  padding-top: 12px;
+}
+
+.network-transport-segments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 40px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: 10px;
+  padding: 3px;
+  background: var(--system-surface-muted);
+}
+
+.network-transport-segments button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 7px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.network-transport-segments .network-transport-segment-active {
+  color: var(--system-text);
+  background: var(--system-panel-bg);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 10%);
+}
+
+.network-proxy-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.network-proxy-advanced summary {
+  width: fit-content;
+  cursor: pointer;
+  list-style: none;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.network-proxy-advanced summary::-webkit-details-marker {
+  display: none;
 }
 
 .network-field {

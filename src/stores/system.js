@@ -36,7 +36,7 @@ import {
 } from '../lib/planned-module-registry'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 import { normalizeImageSource } from '../lib/image-source-contract'
-import { detectApiKindFromUrl } from '../lib/ai'
+import { detectApiKindFromUrl, normalizeAiTransportMode } from '../lib/ai'
 import {
   assignHomeLayoutSlots,
   canHomeLayoutTileSizeUseSlot,
@@ -1393,6 +1393,9 @@ export const useSystemStore = defineStore('system', () => {
       key: DEFAULT_API_KEY,
       model: DEFAULT_API_MODEL,
       resolvedKind: DEFAULT_API_RESOLVED_KIND,
+      transportMode: 'direct',
+      proxyUrl: '',
+      proxyToken: '',
       presets: [],
       activePresetId: '',
     },
@@ -4083,10 +4086,20 @@ export const useSystemStore = defineStore('system', () => {
       Object.assign(settings.api, persisted.settings.api)
       if (!Array.isArray(settings.api.presets)) {
         settings.api.presets = []
+      } else {
+        settings.api.presets = settings.api.presets.map((preset) => ({
+          ...preset,
+          transportMode: normalizeAiTransportMode(preset?.transportMode),
+          proxyUrl: typeof preset?.proxyUrl === 'string' ? preset.proxyUrl : '',
+          proxyToken: typeof preset?.proxyToken === 'string' ? preset.proxyToken : '',
+        }))
       }
       if (typeof settings.api.activePresetId !== 'string') {
         settings.api.activePresetId = ''
       }
+      settings.api.transportMode = normalizeAiTransportMode(settings.api.transportMode)
+      if (typeof settings.api.proxyUrl !== 'string') settings.api.proxyUrl = ''
+      if (typeof settings.api.proxyToken !== 'string') settings.api.proxyToken = ''
     }
 
     if (persisted.settings?.appearance && typeof persisted.settings.appearance === 'object') {

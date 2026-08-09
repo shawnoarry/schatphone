@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import {
+  buildOpenAiTransportRequest,
   callAI,
   detectApiKindFromUrl,
   fetchAvailableModels,
+  normalizeAiTransportMode,
   requiresApiKeyForUrl,
+  resolveAiProxyBaseUrl,
 } from '../src/lib/ai'
 
 const createJsonResponse = (payload, status = 200) => ({
@@ -79,6 +82,45 @@ describe('AI URL adapters', () => {
     expect(requiresApiKeyForUrl('https://gateway.example.com/v1')).toBe(false)
   })
 
+  test('normalizes transport mode and resolves deployment-aware proxy bases', () => {
+    expect(normalizeAiTransportMode('proxy')).toBe('proxy')
+    expect(normalizeAiTransportMode('unexpected')).toBe('direct')
+    expect(resolveAiProxyBaseUrl({}, 'https://schatphone.vercel.app/#/network')).toBe(
+      'https://schatphone.vercel.app/api/openai/v1',
+    )
+    expect(resolveAiProxyBaseUrl({}, 'https://schatphone.noarry.workers.dev/#/network')).toBe(
+      'https://schatphone.noarry.workers.dev/api/openai/v1',
+    )
+    expect(resolveAiProxyBaseUrl({}, 'https://shawnoarry.github.io/schatphone/#/network')).toBe(
+      'https://schatphone.noarry.workers.dev/api/openai/v1',
+    )
+  })
+
+  test('builds explicit proxy requests without replacing the user provider URL', () => {
+    const result = buildOpenAiTransportRequest({
+      settings: {
+        api: {
+          url: 'https://gateway.provider.com/v1/chat/completions',
+          transportMode: 'proxy',
+          proxyUrl: 'https://relay.example.net/api/openai/v1',
+          proxyToken: 'relay-access-token',
+        },
+      },
+      route: 'models',
+      directUrl: 'https://gateway.provider.com/v1/models',
+      headers: { Authorization: 'Bearer user-key' },
+    })
+
+    expect(result).toEqual({
+      url: 'https://relay.example.net/api/openai/v1/models',
+      headers: {
+        Authorization: 'Bearer user-key',
+        'X-SchatPhone-Proxy-Token': 'relay-access-token',
+        'X-SchatPhone-Upstream-URL': 'https://gateway.provider.com/v1/chat/completions',
+      },
+    })
+  })
+
   test('loads models from local Ollama-style URLs without Authorization header', async () => {
     const result = await fetchAvailableModels({
       settings: {
@@ -96,6 +138,28 @@ describe('AI URL adapters', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(fetch.mock.calls[0][0]).toBe('http://localhost:11434/v1/models')
     expect(fetch.mock.calls[0][1].headers).toEqual({})
+  })
+
+  test('loads OpenAI-compatible models through the selected compatibility proxy', async () => {
+    const result = await fetchAvailableModels({
+      settings: {
+        api: {
+          url: 'https://gateway.provider.com/v1/chat/completions',
+          key: 'user-key',
+          transportMode: 'proxy',
+          proxyUrl: 'https://relay.example.net/api/openai/v1',
+          proxyToken: 'relay-access-token',
+        },
+      },
+    })
+
+    expect(result.models).toEqual(['local-model'])
+    expect(fetch.mock.calls[0][0]).toBe('https://relay.example.net/api/openai/v1/models')
+    expect(fetch.mock.calls[0][1].headers).toEqual({
+      Authorization: 'Bearer user-key',
+      'X-SchatPhone-Proxy-Token': 'relay-access-token',
+      'X-SchatPhone-Upstream-URL': 'https://gateway.provider.com/v1/chat/completions',
+    })
   })
 
   test('loads Anthropic models and Azure deployments with native auth headers', async () => {
@@ -144,6 +208,49 @@ describe('AI URL adapters', () => {
     expect(fetch.mock.calls[0][1].headers).toEqual({
       'Content-Type': 'application/json',
     })
+  })
+
+  test('routes OpenAI-compatible chat through the selected proxy', async () => {
+    await callAI({
+      messages: [{ role: 'user', content: 'ping' }],
+      systemPrompt: 'Return OK',
+      settings: {
+        api: {
+          url: 'https://gateway.provider.com/v1',
+          key: 'user-key',
+          model: 'provider-model',
+          transportMode: 'proxy',
+          proxyUrl: 'https://relay.example.net/api/openai/v1',
+        },
+      },
+    })
+
+    expect(fetch.mock.calls[0][0]).toBe(
+      'https://relay.example.net/api/openai/v1/chat/completions',
+    )
+    expect(fetch.mock.calls[0][1].headers).toEqual({
+      Authorization: 'Bearer user-key',
+      'Content-Type': 'application/json',
+      'X-SchatPhone-Upstream-URL': 'https://gateway.provider.com/v1',
+    })
+  })
+
+  test('rejects native provider protocols in compatibility proxy mode', async () => {
+    await expect(
+      callAI({
+        messages: [{ role: 'user', content: 'ping' }],
+        systemPrompt: 'Return OK',
+        settings: {
+          api: {
+            url: 'https://api.anthropic.com/v1/messages',
+            key: 'anthropic-key',
+            model: 'claude-test',
+            transportMode: 'proxy',
+          },
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'PROXY_UNSUPPORTED_PROVIDER' })
+    expect(fetch).not.toHaveBeenCalled()
   })
 
   test('uses the native Responses API for Responses URLs', async () => {

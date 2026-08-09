@@ -40,7 +40,7 @@ Additional debt remains real:
 - backup export currently includes `settings.api.key` through the full settings snapshot;
 - production and full dependency audits are clean after an isolated normal-resolver compatible transitive refresh, without direct, override/resolution, or major changes;
 - PR and main Pages workflow definitions include full E2E plus separate production/full audits; remote Pages Run #130 and the deployed `/schatphone/` base-path smoke are proven, while external protection remains unverified.
-- the Vercel root app and fail-closed fixed-upstream optional AI proxy are deployed and the project is Git-connected; GitHub Pages direct-provider model/connection/real-Chat/reload proof passes, while installed-PWA/relaunch and named true-device proof remain open. Production proxy configuration is conditional personal deployment work, not a multi-user release prerequisite.
+- the Vercel root app and fail-closed fixed-upstream optional AI proxy are deployed and Git-connected; the current local tree prepares a direct-default, explicitly selected, restricted per-request OpenAI-compatible relay for Vercel, Cloudflare, and GitHub Pages without operator-per-provider configuration. It is not yet pushed or deployed. GitHub Pages direct-provider model/connection/real-Chat/reload proof passes, while installed-PWA/relaunch and named true-device proof remain open.
 
 This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and the current test setup are still appropriate. The urgent work is ownership closure, not framework replacement.
 
@@ -202,7 +202,7 @@ Verified on 2026-07-22:
 - GitHub Pages deploy requires the verified build job and still does not deploy the push relay;
 - the repository has no coverage threshold.
 
-These findings do not establish production readiness. Production and full dependency audits are clean after the accepted lock refresh, while exported/local secrets, the unauthenticated push relay, optional-proxy client-token exposure/abuse limits, external CI/environment protection, installed-PWA/deployed-network proof, and named physical-device evidence still require explicit hardening or verification. One direct configured-provider Chat path is proven on deployed GitHub Pages.
+These findings do not establish production readiness. Production and full dependency audits are clean after the accepted lock refresh, while exported/local secrets, the unauthenticated push relay, public-relay origin spoofing, instance-local rate limiting, residual DNS-rebinding risk, external CI/environment protection, installed-PWA/deployed-network proof, and named physical-device evidence still require explicit hardening or verification. One direct configured-provider Chat path is proven on deployed GitHub Pages; the new restricted compatibility relay remains local until an authorized push.
 
 ## 4. Findings
 

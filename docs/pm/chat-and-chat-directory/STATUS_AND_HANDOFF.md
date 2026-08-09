@@ -45,6 +45,7 @@ What is already landed:
 26. Roadmap 4.8 now distinguishes the future shared Mini Scene Module from Chat's current rich block. Legacy `htmlSnippet` remains inert; a later Chat Adapter will call the shared Interface and may retain an artifact reference/display snapshot while the Mini Scene Module owns profile/regex/artifact/presenter/fallback behavior. No Chat Mini Scene runtime or migration is implemented.
 27. Roadmap 4.9's first successful Chat activation loop is complete at automated desktop and simulated-mobile acceptance. When the current provider configuration is incomplete, Chat exposes the existing Network & API setup path, preserves the active thread and draft, and returns to the same thread only after save plus a successful smoke test. The focused browser journey then proves the first manual AI reply without making Book, encyclopedia, World Pack, role personalization, or automation mandatory.
 28. Roadmap 4.9's explicit custom role -> Chat half is complete. Contacts exposes `Start Chat` for eligible Main Role/NPC profiles and delegates to the existing Chat-owned idempotent binding seam; bound targets reuse their contact/conversation, Self and disabled unbound profiles do not bind, and Chat -> Network -> Chat -> Contacts preserves only validated profile context. Focused desktop and simulated-mobile Chromium prove the journey with zero selected Book sources, zero encyclopedia entries, and zero extra World Packs.
+29. Chat transport remains direct by default. Network now lets users explicitly select a restricted Compatibility Proxy for OpenAI-compatible model discovery and Chat Completions while keeping each user's provider URL, Key, and model. Native Gemini, Anthropic, Azure, and Responses transports remain direct. Desktop/Pixel 5 coverage proves relay routing, hidden fake credentials, and responsive/accessibility guards; deployed proxy proof remains pending.
 
 Still incomplete or risky:
 
@@ -71,7 +72,7 @@ Chat's 4.4 service-continuity baseline, World Pack service-template contract, 4.
 6. if roadmap 4.7 approves K-pop service accounts, add candidates/templates first and keep user subscription manual.
 7. when roadmap 4.8 reaches Chat, add one focused request Adapter and legacy-text compatibility path; do not build a Chat-specific HTML renderer.
 
-Do not start another broad Chat decomposition by inertia. GitHub Pages now has direct configured-provider model discovery, connection, one real Chat reply, and reload persistence evidence; the Vercel root app and fail-closed optional AI proxy are deployed. Installed-PWA/relaunch and named true-device rich-message/media/service-thread evidence remain the next roadmap 4.9 gate.
+Do not start another broad Chat decomposition by inertia. GitHub Pages has direct configured-provider model discovery, connection, one real Chat reply, and reload persistence evidence; the Vercel/Cloudflare root baselines are deployed, while the new restricted dynamic relay is still local and requires a separately authorized push/deployed smoke. Installed-PWA/relaunch and named true-device rich-message/media/service-thread evidence remain the next roadmap 4.9 gate.
 
 ## 3. Do Not Do
 

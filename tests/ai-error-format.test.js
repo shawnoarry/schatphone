@@ -28,6 +28,12 @@ describe('formatApiErrorForUi', () => {
     expect(message).toContain('网络')
   })
 
+  it('maps compatibility proxy target and rate-limit errors', () => {
+    expect(formatApiErrorForUi({ code: 'PROXY_TARGET_NOT_ALLOWED' })).toContain('HTTPS')
+    expect(formatApiErrorForUi({ code: 'PROXY_RATE_LIMITED' })).toContain('频繁')
+    expect(formatApiErrorForUi({ code: 'PROXY_UNSUPPORTED_PROVIDER' })).toContain('OpenAI')
+  })
+
   it('falls back to given message', () => {
     const message = formatApiErrorForUi({}, 'fallback message')
     expect(message).toBe('fallback message')

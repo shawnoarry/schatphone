@@ -221,6 +221,66 @@ describe('NetworkView Chat smoke controls', () => {
     wrapper.unmount()
   })
 
+  test('keeps direct as the default and reveals proxy details only after explicit selection', async () => {
+    const store = useSystemStore()
+    configureReadyApi(store)
+
+    const { wrapper } = await mountNetworkView()
+
+    expect(store.settings.api.transportMode).toBe('direct')
+    expect(wrapper.get('[data-testid="network-transport-direct"]').attributes('aria-pressed')).toBe(
+      'true',
+    )
+    expect(wrapper.find('[data-testid="network-proxy-notice"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="network-transport-proxy"]').trigger('click')
+    await flushUi()
+
+    expect(store.settings.api.transportMode).toBe('proxy')
+    expect(wrapper.get('[data-testid="network-proxy-notice"]').text()).toContain(
+      'schatphone.noarry.workers.dev',
+    )
+    await wrapper
+      .get('[data-testid="network-proxy-url-input"]')
+      .setValue('https://relay.example.net/api/openai/v1')
+    await wrapper
+      .get('[data-testid="network-proxy-token-input"]')
+      .setValue('relay-access-token')
+    expect(store.settings.api.proxyUrl).toBe('https://relay.example.net/api/openai/v1')
+    expect(store.settings.api.proxyToken).toBe('relay-access-token')
+    expect(wrapper.get('[data-testid="network-proxy-token-input"]').attributes('type')).toBe(
+      'password',
+    )
+
+    await wrapper.get('[data-testid="network-transport-direct"]').trigger('click')
+    await flushUi()
+    expect(wrapper.find('[data-testid="network-proxy-notice"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('blocks native provider protocols before a compatibility proxy request', async () => {
+    const store = useSystemStore()
+    store.settings.api.url = 'https://api.anthropic.com/v1/messages'
+    store.settings.api.key = 'anthropic-key'
+    store.settings.api.model = 'claude-test'
+    store.settings.api.transportMode = 'proxy'
+
+    const { wrapper } = await mountNetworkView()
+
+    expect(wrapper.get('[data-testid="network-proxy-notice"]').text()).toContain(
+      'OpenAI',
+    )
+    await wrapper.get('[data-testid="network-chat-smoke-run"]').trigger('click')
+    await flushUi()
+
+    expect(aiMockState.calls).toHaveLength(0)
+    expect(wrapper.get('[data-testid="network-chat-smoke-error"]').text()).toContain('OpenAI')
+    expect(store.apiReports[0]).toMatchObject({ code: 'PROXY_UNSUPPORTED_PROVIDER' })
+
+    wrapper.unmount()
+  })
+
   test('keeps the core connection flow in one compact panel with diagnostics behind a disclosure', async () => {
     const store = useSystemStore()
     configureReadyApi(store)
@@ -282,6 +342,9 @@ describe('NetworkView Chat smoke controls', () => {
   test('saves and removes API presets through the setup panel', async () => {
     const store = useSystemStore()
     configureReadyApi(store)
+    store.settings.api.transportMode = 'proxy'
+    store.settings.api.proxyUrl = 'https://relay.example.net/api/openai/v1'
+    store.settings.api.proxyToken = 'relay-access-token'
 
     const { wrapper } = await mountNetworkView()
 
@@ -295,6 +358,9 @@ describe('NetworkView Chat smoke controls', () => {
       url: 'https://api.openai.com/v1/chat/completions',
       key: 'sk-test',
       model: 'gpt-4o-mini',
+      transportMode: 'proxy',
+      proxyUrl: 'https://relay.example.net/api/openai/v1',
+      proxyToken: 'relay-access-token',
     })
     expect(wrapper.get('[data-testid="network-active-preset-select"]').element.value).toBe(store.settings.api.presets[0].id)
 

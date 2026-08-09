@@ -4,11 +4,14 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import {
+  AI_TRANSPORT_MODE_PROXY,
   callAI,
   detectApiKindFromUrl,
   fetchAvailableModels,
   formatApiErrorForUi,
+  normalizeAiTransportMode,
   requiresApiKeyForUrl,
+  resolveAiProxyBaseUrl,
 } from '../lib/ai'
 import {
   buildNetworkEndpointGuidance,
@@ -82,6 +85,14 @@ const ensurePresetState = () => {
   if (typeof settings.value.api.activePresetId !== 'string') {
     settings.value.api.activePresetId = ''
   }
+  settings.value.api.transportMode = normalizeAiTransportMode(settings.value.api.transportMode)
+  if (typeof settings.value.api.proxyUrl !== 'string') settings.value.api.proxyUrl = ''
+  if (typeof settings.value.api.proxyToken !== 'string') settings.value.api.proxyToken = ''
+  settings.value.api.presets.forEach((preset) => {
+    preset.transportMode = normalizeAiTransportMode(preset.transportMode)
+    if (typeof preset.proxyUrl !== 'string') preset.proxyUrl = ''
+    if (typeof preset.proxyToken !== 'string') preset.proxyToken = ''
+  })
 }
 
 const apiKindLabel = computed(() => {
@@ -96,6 +107,10 @@ const apiKindLabel = computed(() => {
 })
 
 const presets = computed(() => settings.value.api.presets || [])
+const resolvedProxyUrl = computed(() => resolveAiProxyBaseUrl(settings.value.api))
+const proxyCompatible = computed(
+  () => detectApiKindFromUrl(settings.value.api.url) === 'openai_compatible',
+)
 const networkSetupState = computed(() => buildNetworkSetupState(settings.value.api))
 const networkSetupCopy = computed(() => buildNetworkSetupCopy(networkSetupState.value))
 const endpointGuidance = computed(() => buildNetworkEndpointGuidance(settings.value.api))
@@ -174,6 +189,9 @@ const savePreset = () => {
   const url = settings.value.api.url?.trim()
   const key = settings.value.api.key?.trim()
   const model = settings.value.api.model?.trim()
+  const transportMode = normalizeAiTransportMode(settings.value.api.transportMode)
+  const proxyUrl = settings.value.api.proxyUrl?.trim() || ''
+  const proxyToken = settings.value.api.proxyToken?.trim() || ''
 
   if (!name) {
     setUiFeedback('error', t('请输入预设名称。', 'Please enter a preset name.'))
@@ -191,6 +209,20 @@ const savePreset = () => {
     setUiFeedback('error', t('这个地址需要 API Key，请先填写 Key。', 'This endpoint needs an API key. Please enter the key first.'))
     return
   }
+  if (transportMode === AI_TRANSPORT_MODE_PROXY && detectApiKindFromUrl(url) !== 'openai_compatible') {
+    setUiFeedback(
+      'error',
+      t('兼容代理仅支持 OpenAI 兼容接口，请改用直连。', 'Compatibility proxy supports OpenAI-compatible endpoints only. Use direct mode.'),
+    )
+    return
+  }
+  if (transportMode === AI_TRANSPORT_MODE_PROXY && !resolvedProxyUrl.value) {
+    setUiFeedback(
+      'error',
+      t('兼容代理地址无效，请检查代理设置。', 'The compatibility proxy URL is invalid.'),
+    )
+    return
+  }
 
   const now = Date.now()
   const existing = presets.value.find((item) => item.name === name)
@@ -198,6 +230,9 @@ const savePreset = () => {
     existing.url = url
     existing.key = key
     existing.model = model
+    existing.transportMode = transportMode
+    existing.proxyUrl = proxyUrl
+    existing.proxyToken = proxyToken
     existing.updatedAt = now
     settings.value.api.activePresetId = existing.id
   } else {
@@ -207,6 +242,9 @@ const savePreset = () => {
       url,
       key,
       model,
+      transportMode,
+      proxyUrl,
+      proxyToken,
       createdAt: now,
       updatedAt: now,
     }
@@ -237,6 +275,10 @@ const applyPreset = (presetId) => {
   settings.value.api.url = selected.url || ''
   settings.value.api.key = selected.key || ''
   settings.value.api.model = selected.model || settings.value.api.model
+  settings.value.api.transportMode = normalizeAiTransportMode(selected.transportMode)
+  settings.value.api.proxyUrl = typeof selected.proxyUrl === 'string' ? selected.proxyUrl : ''
+  settings.value.api.proxyToken =
+    typeof selected.proxyToken === 'string' ? selected.proxyToken : ''
   settings.value.api.activePresetId = selected.id
 }
 
@@ -379,10 +421,16 @@ const isHttpApiUrl = (value) => {
   }
 }
 
-const buildPreflightError = (apiUrl, apiKey) => {
+const buildPreflightError = (apiUrl, apiKey, apiSettings = {}) => {
   if (!apiUrl) return { code: 'MISSING_URL' }
   if (!isHttpApiUrl(apiUrl)) return { code: 'INVALID_URL' }
   if (!apiKey && requiresApiKeyForUrl(apiUrl)) return { code: 'NO_API_KEY' }
+  if (normalizeAiTransportMode(apiSettings.transportMode) === AI_TRANSPORT_MODE_PROXY) {
+    if (detectApiKindFromUrl(apiUrl) !== 'openai_compatible') {
+      return { code: 'PROXY_UNSUPPORTED_PROVIDER' }
+    }
+    if (!resolveAiProxyBaseUrl(apiSettings)) return { code: 'PROXY_URL_INVALID' }
+  }
   return null
 }
 
@@ -419,7 +467,7 @@ const loadModels = async (options = {}) => {
 
   settings.value.api.resolvedKind = detectApiKindFromUrl(apiUrl)
 
-  const preflightError = buildPreflightError(apiUrl, apiKey)
+  const preflightError = buildPreflightError(apiUrl, apiKey, settings.value.api)
   if (preflightError) {
     clearModelState()
     if (manual) {
@@ -471,7 +519,7 @@ const loadModels = async (options = {}) => {
 const runChatSmokeTest = async () => {
   const apiUrl = settings.value.api.url?.trim()
   const apiKey = settings.value.api.key?.trim()
-  const preflightError = buildPreflightError(apiUrl, apiKey)
+  const preflightError = buildPreflightError(apiUrl, apiKey, settings.value.api)
   settings.value.api.resolvedKind = detectApiKindFromUrl(apiUrl)
 
   if (preflightError) {
@@ -604,7 +652,13 @@ watch(
 )
 
 watch(
-  () => [settings.value.api.url, settings.value.api.key],
+  () => [
+    settings.value.api.url,
+    settings.value.api.key,
+    settings.value.api.transportMode,
+    settings.value.api.proxyUrl,
+    settings.value.api.proxyToken,
+  ],
   () => {
     clearModelState()
     hasSavedCurrentSettings.value = false
@@ -669,11 +723,16 @@ ensurePresetState()
       <NetworkConnectionPanel
         v-model:api-url="settings.api.url"
         v-model:api-key="settings.api.key"
+        v-model:transport-mode="settings.api.transportMode"
+        v-model:proxy-url="settings.api.proxyUrl"
+        v-model:proxy-token="settings.api.proxyToken"
         v-model="settings.api.model"
         v-model:show-api-key="showApiKey"
         v-model:preset-name="presetName"
         v-model:active-preset-id="settings.api.activePresetId"
         :api-kind-label="apiKindLabel"
+        :resolved-proxy-url="resolvedProxyUrl"
+        :proxy-compatible="proxyCompatible"
         :network-setup-copy="networkSetupCopy"
         :network-setup-state="networkSetupState"
         :endpoint-guidance="endpointGuidance"

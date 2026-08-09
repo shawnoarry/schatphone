@@ -4,6 +4,11 @@
   "main": "server/cloudflare-worker.mjs",
   "compatibility_date": "2026-08-08",
   "workers_dev": true,
+  "vars": {
+    "SCHATPHONE_AI_PROXY_DYNAMIC_MODE": "public",
+    "SCHATPHONE_AI_PROXY_ALLOWED_ORIGINS": "https://shawnoarry.github.io,https://schatphone.vercel.app,http://localhost:5173,http://127.0.0.1:5174",
+    "SCHATPHONE_AI_PROXY_RATE_LIMIT_PER_MINUTE": "60",
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

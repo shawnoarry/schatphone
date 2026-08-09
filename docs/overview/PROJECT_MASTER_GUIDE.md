@@ -84,8 +84,8 @@ Inventory date: 2026-07-31. Validation rows distinguish current local integratio
 | Git baseline | local `main` at `f36dc9fd20fe22f1ff0be145fe2b672c54d1b4e3` before this architecture documentation commit |
 | Source scale | 238 JavaScript/Vue files / 131,038 lines under `src` |
 | Application shape | 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables |
-| Unit-test inventory | 209 static `*.test.js` files |
-| Validation posture | current local gates and focused browser evidence pass; remote Pages Run #130, the deployed `/schatphone/` smoke plus direct configured-provider Chat/reload, and the Git-connected Vercel root/optional-proxy baseline are proven; installed-PWA, external-protection, named physical-device, and independent audit proof remain open |
+| Unit-test inventory | 210 static `*.test.js` files / 1497 passing tests in the current local run |
+| Validation posture | current local gates and desktop/Pixel 5 restricted-relay evidence pass; remote Pages/direct-provider Chat and Git-connected Vercel/Cloudflare `ced45db` root baselines are proven. The dynamic relay is unpushed; deployed relay, installed-PWA, external-protection, named physical-device, and independent audit proof remain open |
 | Dependency audit | production and full audits are clean after the accepted compatible transitive lock refresh; independent rerun availability remains a release-evidence concern |
 
 Build-size signals:

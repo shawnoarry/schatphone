@@ -36,4 +36,30 @@ describe('Cloudflare Worker', () => {
     expect(response.status).toBe(404)
     expect(await response.json()).toEqual({ ok: false, code: 'NOT_FOUND' })
   })
+
+  test('advertises dynamic proxy headers and blocks private targets', async () => {
+    const preflight = await worker.fetch(
+      new Request('https://schatphone.example/api/openai/v1/models', {
+        method: 'OPTIONS',
+        headers: { Origin: 'https://schatphone.example' },
+      }),
+      { ASSETS: assets, SCHATPHONE_AI_PROXY_DYNAMIC_MODE: 'public' },
+    )
+    const blocked = await worker.fetch(
+      new Request('https://schatphone.example/api/openai/v1/models', {
+        headers: {
+          Origin: 'https://schatphone.example',
+          'X-SchatPhone-Upstream-URL': 'https://127.0.0.1/v1',
+        },
+      }),
+      { ASSETS: assets, SCHATPHONE_AI_PROXY_DYNAMIC_MODE: 'public' },
+    )
+
+    expect(preflight.status).toBe(204)
+    expect(preflight.headers.get('access-control-allow-headers')).toContain(
+      'X-SchatPhone-Upstream-URL',
+    )
+    expect(blocked.status).toBe(403)
+    expect(await blocked.json()).toEqual({ ok: false, code: 'PROXY_TARGET_NOT_ALLOWED' })
+  })
 })

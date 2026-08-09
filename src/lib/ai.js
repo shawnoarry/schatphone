@@ -12,15 +12,152 @@ const MAX_IMAGE_REFERENCE_DATA_URL_CHARS = 2_200_000
 const IMAGE_REFERENCE_MODE_AUTO = 'auto'
 const IMAGE_REFERENCE_MODE_CONTEXT_ONLY = 'context_only'
 const IMAGE_REFERENCE_MODE_NATIVE_URL = 'native_url'
+export const AI_TRANSPORT_MODE_DIRECT = 'direct'
+export const AI_TRANSPORT_MODE_PROXY = 'proxy'
+const DEFAULT_PUBLIC_PROXY_BASE_URL = 'https://schatphone.noarry.workers.dev/api/openai/v1'
+const PROXY_UPSTREAM_URL_HEADER = 'X-SchatPhone-Upstream-URL'
+const PROXY_TOKEN_HEADER = 'X-SchatPhone-Proxy-Token'
+const KNOWN_PROXY_ERROR_CODES = new Set([
+  'DYNAMIC_PROXY_DISABLED',
+  'PROXY_ACCESS_REQUIRED',
+  'PROXY_NOT_CONFIGURED',
+  'PROXY_ORIGIN_REQUIRED',
+  'PROXY_RATE_LIMITED',
+  'PROXY_TARGET_NOT_ALLOWED',
+  'UPSTREAM_LOOP_BLOCKED',
+  'UPSTREAM_REDIRECT_BLOCKED',
+])
 
 const normalizeUrl = (url) => (url || '').trim()
 const isAbortError = (error) => error?.name === 'AbortError'
+
+export const normalizeAiTransportMode = (value) =>
+  value === AI_TRANSPORT_MODE_PROXY ? AI_TRANSPORT_MODE_PROXY : AI_TRANSPORT_MODE_DIRECT
+
+const parseProxyBaseUrl = (value) => {
+  try {
+    const url = new URL(String(value || '').trim())
+    const localHttp =
+      url.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '::1', '[::1]'].includes(url.hostname.toLowerCase())
+    if (url.protocol !== 'https:' && !localHttp) return null
+    if (url.username || url.password) return null
+    url.hash = ''
+    return url
+  } catch {
+    return null
+  }
+}
+
+const configuredPublicProxyBaseUrl = () => {
+  const value =
+    typeof import.meta !== 'undefined' &&
+    typeof import.meta?.env?.VITE_SCHATPHONE_AI_PROXY_URL === 'string'
+      ? import.meta.env.VITE_SCHATPHONE_AI_PROXY_URL.trim()
+      : ''
+  return value || DEFAULT_PUBLIC_PROXY_BASE_URL
+}
+
+export const resolveAiProxyBaseUrl = (apiSettings = {}, currentLocation) => {
+  const override = normalizeUrl(apiSettings.proxyUrl)
+  if (override) return parseProxyBaseUrl(override)?.toString() || ''
+
+  const locationValue =
+    currentLocation || (typeof window !== 'undefined' ? window.location?.href : '')
+  try {
+    const currentUrl = new URL(locationValue)
+    const hostname = currentUrl.hostname.toLowerCase()
+    if (hostname.endsWith('.vercel.app') || hostname.endsWith('.workers.dev')) {
+      return new URL('/api/openai/v1', currentUrl.origin).toString()
+    }
+  } catch {
+    // Use the configured cross-origin fallback below.
+  }
+
+  return parseProxyBaseUrl(configuredPublicProxyBaseUrl())?.toString() || ''
+}
+
+const toProxyRouteUrl = (baseUrl, route) => {
+  const url = parseProxyBaseUrl(baseUrl)
+  if (!url) return ''
+  const path = url.pathname.replace(/\/+$/, '')
+  if (route === 'models') {
+    if (path.endsWith('/chat/completions')) {
+      url.pathname = `${path.slice(0, -'/chat/completions'.length)}/models`
+    } else if (!path.endsWith('/models')) {
+      url.pathname = `${path}/models`
+    }
+  } else if (path.endsWith('/models')) {
+    url.pathname = `${path.slice(0, -'/models'.length)}/chat/completions`
+  } else if (!path.endsWith('/chat/completions')) {
+    url.pathname = `${path}/chat/completions`
+  }
+  return url.toString()
+}
 
 const createApiError = (message, code, extra = {}) => {
   const error = new Error(message)
   error.code = code
   Object.assign(error, extra)
   return error
+}
+
+export const buildOpenAiTransportRequest = ({ settings, route, directUrl, headers = {} }) => {
+  const apiSettings = settings?.api || {}
+  if (normalizeAiTransportMode(apiSettings.transportMode) !== AI_TRANSPORT_MODE_PROXY) {
+    return { url: directUrl, headers }
+  }
+
+  if (detectApiKindFromUrl(apiSettings.url) !== 'openai_compatible') {
+    throw createApiError(
+      'Compatibility proxy supports OpenAI-compatible endpoints only',
+      'PROXY_UNSUPPORTED_PROVIDER',
+    )
+  }
+
+  let upstreamUrl
+  try {
+    upstreamUrl = new URL(normalizeUrl(apiSettings.url))
+  } catch {
+    throw createApiError('Invalid upstream URL', 'INVALID_URL')
+  }
+  if (upstreamUrl.protocol !== 'https:' || upstreamUrl.username || upstreamUrl.password) {
+    throw createApiError('Proxy target must be a public HTTPS URL', 'PROXY_TARGET_NOT_ALLOWED')
+  }
+
+  const proxyUrl = toProxyRouteUrl(resolveAiProxyBaseUrl(apiSettings), route)
+  if (!proxyUrl) throw createApiError('Invalid compatibility proxy URL', 'PROXY_URL_INVALID')
+
+  return {
+    url: proxyUrl,
+    headers: {
+      ...headers,
+      [PROXY_UPSTREAM_URL_HEADER]: upstreamUrl.toString(),
+      ...(normalizeUrl(apiSettings.proxyToken)
+        ? { [PROXY_TOKEN_HEADER]: normalizeUrl(apiSettings.proxyToken) }
+        : {}),
+    },
+  }
+}
+
+const throwHttpResponseError = async (response, settings, message) => {
+  if (normalizeAiTransportMode(settings?.api?.transportMode) === AI_TRANSPORT_MODE_PROXY) {
+    try {
+      const payload = await response.json()
+      const proxyCode = typeof payload?.code === 'string' ? payload.code.trim().toUpperCase() : ''
+      if (KNOWN_PROXY_ERROR_CODES.has(proxyCode)) {
+        throw createApiError(`Compatibility proxy failed: ${proxyCode}`, proxyCode, {
+          status: response.status,
+        })
+      }
+    } catch (error) {
+      if (error?.code) throw error
+    }
+  }
+
+  throw createApiError(`${message}: ${response.status}`, classifyHttpCode(response.status), {
+    status: response.status,
+  })
 }
 
 const classifyHttpCode = (status) => {
@@ -114,6 +251,14 @@ export const formatApiErrorForUi = (error, fallbackMessage = '请求失败，请
   if (code === 'CANCELED') return '请求已取消。'
   if (code === 'TIMEOUT') return '请求超时，请检查网络或网关响应速度。'
   if (code === 'NETWORK') return '网络或跨域错误（可能是 CORS），请检查网关设置。'
+  if (code === 'PROXY_UNSUPPORTED_PROVIDER') return '兼容代理仅支持 OpenAI 兼容接口，请改用直连。'
+  if (code === 'PROXY_URL_INVALID') return '兼容代理地址无效，请检查代理设置。'
+  if (code === 'PROXY_TARGET_NOT_ALLOWED') return '代理只允许公共 HTTPS AI 地址，当前目标已被拒绝。'
+  if (code === 'DYNAMIC_PROXY_DISABLED' || code === 'PROXY_NOT_CONFIGURED') return '当前站点尚未启用兼容代理。'
+  if (code === 'PROXY_ACCESS_REQUIRED') return '兼容代理需要有效的访问凭据。'
+  if (code === 'PROXY_ORIGIN_REQUIRED') return '公开兼容代理只接受来自已允许网页的请求。'
+  if (code === 'PROXY_RATE_LIMITED') return '兼容代理请求过于频繁，请稍后重试。'
+  if (code === 'UPSTREAM_REDIRECT_BLOCKED') return '供应商返回了代理不允许跟随的重定向，请检查 API URL。'
   if (code === 'PARSE_ERROR') return '响应解析失败，请确认返回格式是否为 JSON。'
   if (code === 'HTTP_ERROR') return `请求失败（${status || 'unknown'}），请检查 URL 与服务状态。`
 
@@ -617,6 +762,15 @@ export async function fetchAvailableModels({ settings }) {
   }
 
   const kind = detectApiKindFromUrl(settings.api.url)
+  if (
+    normalizeAiTransportMode(settings.api.transportMode) === AI_TRANSPORT_MODE_PROXY &&
+    kind !== 'openai_compatible'
+  ) {
+    throw createApiError(
+      'Compatibility proxy supports OpenAI-compatible endpoints only',
+      'PROXY_UNSUPPORTED_PROVIDER',
+    )
+  }
   try {
     if (kind === 'gemini') {
       const listUrl = `${toGeminiVersionBaseUrl(settings.api.url)}/models?key=${encodeURIComponent(key)}`
@@ -703,16 +857,18 @@ export async function fetchAvailableModels({ settings }) {
     const modelsUrl = toOpenAIModelsUrl(settings.api.url)
     const headers = {}
     if (key) headers.Authorization = `Bearer ${key}`
-    const response = await fetchWithTimeout(modelsUrl, {
-      method: 'GET',
+    const transport = buildOpenAiTransportRequest({
+      settings,
+      route: 'models',
+      directUrl: modelsUrl,
       headers,
     })
+    const response = await fetchWithTimeout(transport.url, {
+      method: 'GET',
+      headers: transport.headers,
+    })
     if (!response.ok) {
-      throw createApiError(
-        `Load models failed: ${response.status}`,
-        classifyHttpCode(response.status),
-        { status: response.status },
-      )
+      await throwHttpResponseError(response, settings, 'Load models failed')
     }
 
     let payload
@@ -758,6 +914,15 @@ export async function callAI({
 
   const apiKind = detectApiKindFromUrl(settings.api.url)
   settings.api.resolvedKind = apiKind
+  if (
+    normalizeAiTransportMode(settings.api.transportMode) === AI_TRANSPORT_MODE_PROXY &&
+    apiKind !== 'openai_compatible'
+  ) {
+    throw createApiError(
+      'Compatibility proxy supports OpenAI-compatible endpoints only',
+      'PROXY_UNSUPPORTED_PROVIDER',
+    )
+  }
 
   try {
     const normalizedReferences = normalizeImageReferences(imageReferences)
@@ -1017,14 +1182,20 @@ export async function callAI({
         temperature: 0.7,
         stream: false,
       }
+      const transport = buildOpenAiTransportRequest({
+        settings,
+        route: 'chat',
+        directUrl: url,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(key ? { Authorization: `Bearer ${key}` } : {}),
+        },
+      })
       return fetchWithTimeout(
-        url,
+        transport.url,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(key ? { Authorization: `Bearer ${key}` } : {}),
-          },
+          headers: transport.headers,
           body: JSON.stringify(payload),
           signal,
         },
@@ -1055,11 +1226,7 @@ export async function callAI({
     }
 
     if (!response.ok) {
-      throw createApiError(
-        `API Request Failed: ${response.status}`,
-        classifyHttpCode(response.status),
-        { status: response.status },
-      )
+      await throwHttpResponseError(response, settings, 'API Request Failed')
     }
 
     let data

@@ -585,6 +585,78 @@ export const buildNetworkFailureGuidance = (error = {}, apiSettings = {}) => {
     }
   }
 
+  if (code === 'PROXY_UNSUPPORTED_PROVIDER') {
+    return {
+      ...base,
+      titleZh: '当前接口不能使用兼容代理',
+      titleEn: 'This endpoint cannot use the compatibility proxy',
+      detailZh: '兼容代理只转发 OpenAI 兼容的模型列表和 Chat Completions 请求。',
+      detailEn: 'The compatibility proxy only forwards OpenAI-compatible models and Chat Completions requests.',
+      fixZh: '切换为直连；或改用提供 OpenAI 兼容接口的供应商地址。',
+      fixEn: 'Switch to direct mode, or use an OpenAI-compatible provider endpoint.',
+    }
+  }
+
+  if (code === 'PROXY_URL_INVALID') {
+    return {
+      ...base,
+      titleZh: '兼容代理地址无效',
+      titleEn: 'Compatibility proxy URL is invalid',
+      detailZh: '当前代理地址无法作为 HTTPS 中转端点使用，请求尚未发出。',
+      detailEn: 'The current proxy URL cannot be used as an HTTPS relay endpoint, so no request was sent.',
+      fixZh: '清空自定义代理地址以恢复站点默认值，或填写可信的 HTTPS 代理地址。',
+      fixEn: 'Clear the custom proxy URL to restore the site default, or enter a trusted HTTPS proxy URL.',
+    }
+  }
+
+  if (code === 'PROXY_TARGET_NOT_ALLOWED') {
+    return {
+      ...base,
+      titleZh: '供应商地址被代理拒绝',
+      titleEn: 'Provider target was blocked by the proxy',
+      detailZh: '代理只接受公共 HTTPS 地址，并阻止本机、局域网、内网和非标准端口目标。',
+      detailEn: 'The proxy accepts public HTTPS targets only and blocks local, private-network, and non-standard-port destinations.',
+      fixZh: '确认填写的是供应商公开的 HTTPS API 地址；本地模型请改用直连。',
+      fixEn: 'Use the provider public HTTPS API URL. Local models must use direct mode.',
+    }
+  }
+
+  if (code === 'DYNAMIC_PROXY_DISABLED' || code === 'PROXY_NOT_CONFIGURED') {
+    return {
+      ...base,
+      titleZh: '当前站点未启用兼容代理',
+      titleEn: 'Compatibility proxy is not enabled',
+      detailZh: '此部署没有开启动态 AI 中转，供应商请求没有被转发。',
+      detailEn: 'This deployment has not enabled dynamic AI relay, so the provider request was not forwarded.',
+      fixZh: '先切回直连；站点维护者可部署受限代理后再重试。',
+      fixEn: 'Switch back to direct mode, or retry after the site operator deploys the restricted proxy.',
+    }
+  }
+
+  if (code === 'PROXY_RATE_LIMITED') {
+    return {
+      ...base,
+      titleZh: '兼容代理请求过于频繁',
+      titleEn: 'Compatibility proxy rate limit reached',
+      detailZh: '当前来源在一分钟内的中转请求已达到限制。',
+      detailEn: 'This client has reached the relay request limit for the current minute.',
+      fixZh: '稍后重试；能直连的供应商应优先切回直连。',
+      fixEn: 'Retry later. Prefer direct mode whenever the provider supports browser access.',
+    }
+  }
+
+  if (code === 'UPSTREAM_REDIRECT_BLOCKED') {
+    return {
+      ...base,
+      titleZh: '供应商返回了不允许的重定向',
+      titleEn: 'Provider redirect was blocked',
+      detailZh: '为避免代理被重定向到未知或内网地址，中转不会自动跟随 3xx 响应。',
+      detailEn: 'The relay does not follow 3xx responses because they could redirect to an unknown or private destination.',
+      fixZh: '填写供应商最终的 HTTPS API 地址，不要使用会跳转的主页或短链接。',
+      fixEn: 'Use the provider final HTTPS API endpoint instead of a homepage or redirecting short URL.',
+    }
+  }
+
   if (code === 'AUTH') {
     return {
       ...base,
