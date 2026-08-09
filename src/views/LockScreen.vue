@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
 import { useI18n } from '../composables/useI18n'
@@ -9,6 +9,11 @@ import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import { resolveNotificationModuleMeta as resolveNotificationModuleMetaBase } from '../lib/notification-presentation'
+import {
+  INTERNAL_CHAT_SHARE_ROUTE_QUERY,
+  INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+  readPendingInternalChatShare,
+} from '../lib/internal-chat-share'
 
 defineProps({
   currentTime: {
@@ -22,6 +27,7 @@ defineProps({
 })
 
 const router = useRouter()
+const route = useRoute()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
 const { systemLanguage, languageBase, t } = useI18n()
@@ -85,6 +91,12 @@ const visibleLockNotificationGroups = computed(() =>
 )
 const lockBannerVisible = ref(false)
 const lockBannerNote = ref(null)
+const pendingInternalShare = ref(readPendingInternalChatShare())
+const shouldContinueInternalShare = computed(
+  () =>
+    route.query.continue === INTERNAL_CHAT_SHARE_ROUTE_VALUE &&
+    Boolean(pendingInternalShare.value),
+)
 
 let lockBannerTimerId = null
 let seenNotificationIds = new Set()
@@ -111,6 +123,13 @@ const notificationIconImageUrl = (note) => appIconImageUrl(resolveNotificationMo
 const unlockPhone = () => {
   lockBannerVisible.value = false
   systemStore.unlockPhone()
+  if (shouldContinueInternalShare.value) {
+    router.push({
+      path: '/chat',
+      query: { [INTERNAL_CHAT_SHARE_ROUTE_QUERY]: INTERNAL_CHAT_SHARE_ROUTE_VALUE },
+    })
+    return
+  }
   router.push('/home')
 }
 
@@ -267,6 +286,25 @@ onBeforeUnmount(() => {
         <span>{{ t('专注模式：每组仅显示最新一条', 'Focus mode: newest item per group') }}</span>
       </div>
 
+      <button
+        v-if="shouldContinueInternalShare"
+        type="button"
+        class="lock-internal-share-card glass"
+        data-testid="lock-internal-share-card"
+        @click="unlockPhone"
+      >
+        <span class="lock-internal-share-icon" aria-hidden="true">
+          <i class="fas fa-share-nodes"></i>
+        </span>
+        <span class="min-w-0 flex-1 text-left">
+          <span class="block text-xs font-semibold">{{ t('继续分享到聊天', 'Continue sharing to Chat') }}</span>
+          <span class="mt-0.5 block truncate text-[11px] opacity-75">
+            {{ pendingInternalShare.shareable.title }}
+          </span>
+        </span>
+        <i class="fas fa-chevron-right text-xs opacity-60" aria-hidden="true"></i>
+      </button>
+
       <div v-if="visibleLockNotificationGroups.length > 0" class="space-y-3">
         <section
           v-for="group in visibleLockNotificationGroups"
@@ -340,8 +378,12 @@ onBeforeUnmount(() => {
     </section>
 
     <div class="lock-unlock-area">
-      <button class="lock-unlock-button" @click="unlockPhone">
-        {{ t('解锁进入主屏', 'Unlock to Home') }}
+      <button class="lock-unlock-button" data-testid="lock-unlock-button" @click="unlockPhone">
+        {{
+          shouldContinueInternalShare
+            ? t('解锁并选择会话', 'Unlock and choose chat')
+            : t('解锁进入主屏', 'Unlock to Home')
+        }}
       </button>
       <p class="lock-unlock-hint">{{ t('提示：通知可直接点开并解锁进入对应页面', 'Tip: tap a notification to unlock and open its target page') }}</p>
     </div>
@@ -553,6 +595,30 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   font-size: 14px;
   opacity: 0.9;
+}
+
+.lock-internal-share-card {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 16px;
+  color: white;
+}
+
+.lock-internal-share-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .lock-notification-stack {

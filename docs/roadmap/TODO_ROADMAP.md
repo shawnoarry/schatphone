@@ -19,10 +19,10 @@ If an older plan, package note, PM brief, or `docs/superpowers/**` artifact conf
 
 SchatPhone is past prototype viability and now has a stable local-first product baseline.
 
-Inventory refreshed on 2026-07-30; validation state is tracked separately below:
+Inventory refreshed on 2026-08-09; validation state is tracked separately below:
 
-1. the current tree contains 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables, and 209 static unit-test files;
-2. Camera/shared image generation, five independent Food Delivery shop facades, and world-bound local Map packs are implemented at their named partial baselines;
+1. the current tree contains 41 route-view files, 18 Pinia stores, 51 Vue components under `src/components`, 37 JavaScript composables, and 214 static unit-test files;
+2. Camera/shared image generation, Music, five independent Food Delivery shop facades, and world-bound local Map packs are implemented at their named partial baselines;
 3. release commit `a1418ed` passes lint, 210 Vitest files / 1497 tests, production and Cloudflare builds, focused proxy tests, desktop/Pixel 5 restricted-relay checks, Wrangler dry-run, governance, and the remote Pages build/deploy gate. The direct-default restricted relay is live on Vercel and Cloudflare; a GitHub Pages browser using a user-owned provider returned 6 models and Chat smoke reply `OK` through each deployed relay. Named physical-device, installed-PWA/relaunch, external-protection, and independently rerunnable audit proof remain separate;
 4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
 5. the largest engineering risk remains concentrated in oversized views, especially Food Delivery, and `systemStore` fan-out.
@@ -37,6 +37,7 @@ Roadmap interpretation:
 - 4.9 is now the product-control lane: turn the integrated modules into a usable product preview by closing first-value activation, current-save safety, one ordinary life loop, and deployed PWA proof before more infrastructure or feature breadth.
 - 4.11 is `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: the accepted MJE-3 checkpoint event remains non-blocking, and MJE-4 presents passive progress as Footprints plus an optional per-world place-knowledge mode. In Footprints-gated worlds, completed positioned journeys can reveal a small deterministic set of nearby authored facilities; old saves remain all-known. MJE-5 remains separately gated.
 - 4.12 is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY / NOT_STARTED`: the visible Calendar remains the long-range confirmed-plan app, its future Month/Week/Agenda views are distinct from a future short-range Agenda Journey app, and a hidden Schedule Orchestrator will link them without taking ownership of Map Journey, Event Runtime, Activity Session, or downstream values. No route, store, timer, popup, narrative projection, persistence field, or migration is implemented by this decision.
+- 4.13 is `PARTIAL_DONE / CHKSZ_AND_LOCAL_INTAKE_INTEGRATED_LOCAL`: Music is an installed listening app with browser playback, library/queue/search, generic JSON configuration, a dedicated ChKSz NetEase/QQ/Kugou Adapter, direct HTTPS URL songs, Music-owned device-local file import, a shell mini-player, and bounded Chat/Map Interfaces. Real-key rights/CORS smoke, true-device media behavior, and remaining Chat/Map callers remain separate gates.
 
 ## 3. Completed Baselines
 
@@ -378,10 +379,14 @@ Delivery stages:
    - `DONE 2026-08-01`: the user-selectable Food Delivery structure library expanded from four to six options. Harbor Roast now proves the dense `cafe_counter`; Daylight Cafe moved to the time-indexed `daypart_journal`; and the brand-neutral `menu_mosaic` adds a category atlas plus asymmetric product grid for future customization. Both new structures open the first real category without `All`, retain shared detail/cart/checkout/order ownership, and passed focused Vitest plus desktop Chromium and simulated Pixel 5 route/override/overflow review. Harbor Roast's later dedicated-facade and formal-media delivery does not change that reusable-template ownership, and this UI-template milestone does not complete the remaining cross-module life-consequence slice;
    - `DONE 2026-08-06`: one ordinary Shopping gift-card order is proven through its existing user-confirmed consequences. Focused Playwright creates the matching Chat service account explicitly, places a gift order for an existing role, verifies the source-owned order notification, confirms the delivery cue through Reminders into Calendar, completes the Shopping order, records the expense into Wallet, reopens Wallet Activity, and verifies the Shopping gift plus Wallet support fact as one Contacts memory. The same Shopping `orderId` anchors downstream lineage; Wallet support remains metric-neutral, reopen produces no duplicate transaction or memory fact, and desktop Chromium plus simulated Pixel 5 pass. No Chat identity or Wallet record is auto-created, no new ownership is introduced, and named physical-device proof is still pending;
    - `DONE 2026-08-07`: the user-promoted Wallet quote-explainability slice adds one general Activity transaction-detail path without broadening role-transfer receipt semantics. Saved Shopping/Food/other quote snapshots show source money, settled quoted money, exact recorded rate, `rateSetId`, rate source, and quote time without re-quotation; legacy, malformed, missing, deleted, and unavailable-currency states remain honest. Direct `transactionId` reopen, return cleanup, current-rate stability, account/card lineage, desktop Chromium, simulated Pixel 5, screenshots, and overflow are regression-covered. Mixed-currency settlement, refunds, broader Wallet expansion, and named physical-device proof remain separate;
-   - `DONE 2026-08-07`: configurable multi-screen Home release curation defaults normal use to three formal pages: glanceable widgets plus Wallet/Appearance/Photos/Camera, then Phone/Map/Calendar/Reminders/Shopping/Food Delivery, then System Status/Quick Heart/Quick Disc. Appearance lets users choose two through five visible pages; reducing the count hides trailing retained pages only and never changes their templates, slot placements, or content, while Home edit mode always shows all five pages. Network, Stock, Assets, and the duplicate formal-page App Store entry remain usable through App Store, Widget Center, Today View, or edit mode without appearing equally mature. Setup version 4 migrates only recognized earlier defaults while preserving customized layouts; focused unit and desktop/mobile Playwright cover migration, page count, route context, and App Store recovery.
+   - `DONE 2026-08-09`: the user-promoted Wallet Activity search slice builds on the existing source filters without changing ledger or quote ownership. Search matches recorded title, counterparty, note, currency, source module/record, receipt, account/card lineage, and amount; it composes with Wallet/Chat/purchase filters, reports the current result count, clears explicitly, and distinguishes no-match from an empty category. Every result retains the same general transaction-detail path, and no historical amount or quote snapshot is recomputed. Focused component tests plus desktop Chromium and simulated Pixel 5 Playwright cover matching, combined filtering, empty/clear states, page/console errors, and horizontal overflow. Receipt sharing, checkout payment selection, and named physical-device proof remain separate;
+   - `DONE 2026-08-09`: Wallet Activity now exposes a focused monthly-statement page backed only by retained ledger records. Available local calendar months are selectable newest-first; each month reports record count and separate income, spending, and net totals for every recorded currency without cross-currency aggregation or current-rate quotation. Monthly rows keep the general transaction-detail path, return to the selected statement month, and leave Activity-only delete and role-receipt actions out of the read-only statement surface. Empty history is explicit. Pure store tests, black-box view tests, and desktop Chromium plus simulated Pixel 5 Playwright cover month boundaries, multi-currency totals, negative net, month switching, empty state, detail return, console/page errors, and horizontal overflow. Formal statement export, receipt sharing, checkout payment selection, and named physical-device proof remain separate;
+   - `DONE 2026-08-09`: Wallet Home now exposes a focused verified-payee management path over retained role-account references. The list shows owner, institution, masked account, currency, and verification state; every active row enters the existing same-currency role-transfer confirmation with amount and note empty. Explicit `wallet_payees`, `chat`, and `activity` origins keep transfer and receipt returns honest without duplicating the ledger, receipt, balance, card-validation, or relationship-fact runtime. Empty state, list consistency, repeat transfer, route cleanup, desktop Chromium, simulated Pixel 5, console/page errors, and horizontal overflow are regression-covered. Receipt sharing, checkout payment selection, formal statement export, and named physical-device proof remain separate;
+   - `DONE 2026-08-09`: configurable multi-screen Home release curation defaults normal use to three formal pages: Weather/Calendar/Music widgets plus Wallet/Appearance/Photos/Camera, then Phone/Map/Music/Calendar/Reminders/Shopping/Food Delivery, then System Status/Quick Heart/Quick Disc. Appearance lets users choose two through five visible pages; reducing the count hides trailing retained pages only and never changes their templates, slot placements, or content, while Home edit mode always shows all five pages. Network, Stock, Assets, and the duplicate formal-page App Store entry remain usable through App Store, Widget Center, Today View, or edit mode without appearing equally mature. Setup version 5 migrates only recognized earlier defaults, including the pre-Music release layout, while preserving customized layouts; focused unit and desktop/mobile Playwright cover migration, page count, route context, and App Store recovery.
 4. `P1 Hosted product proof` - `TODO`
    - observe the remote CI and Pages jobs for the exact release commit and verify external required-check/environment policy;
    - add deployed base-path, manifest/install, controlled online-to-offline relaunch, hosted-provider Chat, and complete backup export/import smoke evidence;
+   - `PARTIAL_DONE 2026-08-09`: local desktop and simulated Pixel 5 automation prove rich-media type/size recovery, one-off/Gallery image rendering, and the first internal App collaboration flow. Map places and Music tracks support source-owned structured sharing through lock/reload recovery, Chat recipient selection, explicit send/cancel, quoting, and exact source-detail return; Music return does not auto-play and Map return does not change trip state. This is project-internal App collaboration, not an OS/PWA share target;
    - run a named true-device matrix for safe areas, browser chrome, keyboard/composer, touch, back navigation, file save/import, and PWA relaunch.
 5. `P2 Post-preview depth` - `ON_HOLD`
    - Mini Scene Text Presenter and the first Calendar Adapter may resume only after the product-preview P0 gates; interactive HTML remains a later security stage;
@@ -530,6 +535,61 @@ Focused architecture and product decision:
 
 This lane does not modify or block roadmap 4.11 Map Journey work. MJE stages remain owned and reviewed separately.
 
+### 4.13 Music App And User-Owned Provider Playback
+
+Status: `PARTIAL_DONE / CHKSZ_AND_LOCAL_INTAKE_INTEGRATED_LOCAL`
+
+Promoted first slice completed on 2026-08-09:
+
+1. added `/music` as a Home/App Store installed app with a listening-first record-library identity rather than a Settings or administration surface;
+2. added Listen Now, Browse, Library, favorites, recent tracks, playlists, search, queue, shuffle/repeat, seek, volume, expanded Now Playing, and a live Home Music widget;
+3. added real browser `Audio` playback, Media Session support, and a shell mini-player that preserves the active session across unlocked routes while clearing Home and app-owned bottom controls;
+4. added user-configurable GET/POST JSON music APIs with endpoint/search path, auth mode, query/limit fields, result path, response-field mapping, relative URL normalization, connection testing, and playable-URL detection;
+5. normalized public Music library/provider/integration state under `systemStore.settings.music`, required it through the existing `system-settings` backup section, and separately inventoried `schatphone:music:credentials` as a device-local secret excluded from plaintext backup;
+6. added stable Chat/Map integration requests, capability discovery, share/now-playing projections, and explicit gesture/confirmation boundaries without changing current Chat or Map business behavior;
+7. added app icon, app skin, scoped-CSS, custom-widget action, notification-presentation, App Store, Home migration, contract/store/view/persistence tests, and targeted desktop/simulated-mobile Playwright coverage for both default and zen themes.
+
+Dedicated ChKSz follow-up integrated locally on 2026-08-09:
+
+8. added a preset Adapter for NetEase, QQ, and Kugou search without requiring endpoint paths or response mappings;
+9. added click-to-resolve playback so ChKSz search/library/queue records retain stable source references while expiring stream URLs remain runtime-only;
+10. added device-local query-parameter authentication, Key-redacted errors, `401/402/403/429/503` handling, quota headers, and one bounded `Retry-After` retry;
+11. added NetEase lyrics and explicit playlist-ID import inside consumer Music surfaces, while leaving QQ member Cookie unsupported;
+12. added focused Adapter/Store/View tests plus desktop and simulated-mobile browser coverage for search, resolve, lyrics, import, quota display, secret visibility, and overflow.
+
+Music-owned intake follow-up integrated locally on 2026-08-09:
+
+13. added `Music Settings -> Add Music` as an IA peer of `Music Sources`, with URL and Local Files modes kept out of Library and separate from Gallery/image resources;
+14. added validated direct HTTPS audio URLs plus multi-file local audio import, compact imported-song management, real playback, missing-file feedback, and deletion of Music-owned metadata/binaries/references;
+15. added the independently inventoried `schatphone-music-media` IndexedDB carrier, runtime-only object URLs with explicit revocation, device-local backup exclusion for imported binaries, focused contract/Store/View/inventory tests, and desktop/simulated-mobile Playwright coverage.
+
+Current local-intake evidence passes 33 focused contract/Store/View/persistence tests, the full 217-file / 1549-test Vitest suite, lint, production build, governance and diff checks, 8 Music Playwright cases across desktop and simulated mobile, the 12-case default/zen visual gate, and direct browser inspection at desktop and 393 x 852 with no document or settings-panel overflow.
+
+Acceptance boundary:
+
+- the app can play built-in samples, generic results with usable browser audio URLs, and ChKSz results that successfully resolve at the user's Play action;
+- users can add a stable HTTPS audio URL or import supported local audio files from Music Settings; local binaries remain in Music-owned device storage and never enter Gallery;
+- provider licensing, CORS, mixed-content, expiring signed URLs, DRM, cookies, proprietary signing, and byte-range behavior remain provider/browser constraints;
+- cross-module projections never include API keys, endpoints, headers, raw responses, queue contents, or stream URLs;
+- external callers cannot directly start playback, and queue requests remain behind Music policy plus user confirmation.
+
+Remaining stages are separately gated:
+
+- opt-in smoke against ChKSz with a real user-authorized device Key and playable track, including rights, CORS, quota, and expiring-URL behavior;
+- true-device audio focus/interruption, headset or lock controls, safe areas, keyboard, and PWA relaunch proof;
+- optional local-audio backup packaging and a same-track relink flow; restored metadata currently reports a missing local file and requires re-import;
+- actual Chat share/search UI and Map now-playing or queue-request consumers;
+- provider-specific OAuth, signed-stream, DRM, QQ Cookie, non-NetEase lyrics/playlist import, cast, download/offline, or hosted-proxy contracts.
+
+Primary packages:
+
+- `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` for installed-app identity, Home/App Store entry, Now Playing, and mini-player acceptance;
+- `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` for provider, playback, persistence, credential, backup, and Chat/Map Interface boundaries.
+
+Focused contract:
+
+- `docs/architecture/MUSIC_MODULE_CONTRACT.md`.
+
 ## 5. Guarded Or Deferred Directions
 
 ### Gallery-Driven Relationship Memory
@@ -561,13 +621,14 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 1. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 2. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.
 3. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; Gallery People curation and source-module callers require separately promoted follow-ups.
-4. `P1 DONE 2026-08-07`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, one ordinary Shopping life-consequence flow, focused Wallet quote explainability, and configurable multi-screen Home release curation are complete at local desktop/simulated-mobile acceptance.
-5. `P1 PARTIAL_DONE 2026-08-09` 4.9/4.5 hosted release proof: GitHub Pages Run #31294272595, base-path smoke, and the prior direct-provider Chat/reload flow pass. Commit `a1418ed` is deployed through the Git-connected Vercel and Cloudflare builds; both restricted relay backends passed a no-secret upstream probe plus a GitHub Pages real-provider model-list and Chat smoke (`6` models, reply `OK`). Installed-PWA/relaunch, backup round trip, external protection checks, and named true-device evidence remain.
-6. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
-7. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
-8. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
-9. `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: 4.11 local narrative-map baseline now includes accepted transport planning, lifecycle/checkpoints, the first non-blocking checkpoint event adapter, Footprints IA, and optional per-world authored-facility discovery. Active exploration, event-driven place reveal, candidate-place ownership, transit topology, broader-city, and true-device stages remain gated by the explicit order above.
-10. `P2 ARCHITECTURE_ACCEPTED / NOT_STARTED`: 4.12 Calendar/Agenda Journey orchestration is documented only. CJA-1 Calendar information architecture requires a separate user acceptance decision; no Agenda Journey, Schedule Orchestrator, Activity Session, event popup, Narrative Timeline, or persistence implementation has started.
+4. `P2 PARTIAL_DONE / CHKSZ_AND_LOCAL_INTAKE_INTEGRATED_LOCAL`: 4.13 Music has the installed app, browser playback, library/queue/search, generic JSON and ChKSz sources, direct HTTPS URL songs, Music-owned local-file import, Home/App Store integration, shell mini-player, and bounded Chat/Map Interfaces. Real-key rights/CORS smoke, true-device media behavior, optional local-binary backup/relink, and remaining callers remain separately promoted work.
+5. `P1 DONE 2026-08-07`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, one ordinary Shopping life-consequence flow, focused Wallet quote explainability, and configurable multi-screen Home release curation are complete at local desktop/simulated-mobile acceptance.
+6. `P1 PARTIAL_DONE 2026-08-09` 4.9/4.5 hosted release proof: GitHub Pages Run #31294272595, base-path smoke, and the prior direct-provider Chat/reload flow pass. Commit `a1418ed` is deployed through the Git-connected Vercel and Cloudflare builds; both restricted relay backends passed a no-secret upstream probe plus a GitHub Pages real-provider model-list and Chat smoke (`6` models, reply `OK`). Installed-PWA/relaunch, backup round trip, external protection checks, and named true-device evidence remain.
+7. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
+8. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
+9. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
+10. `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: 4.11 local narrative-map baseline now includes accepted transport planning, lifecycle/checkpoints, the first non-blocking checkpoint event adapter, Footprints IA, and optional per-world authored-facility discovery. Active exploration, event-driven place reveal, candidate-place ownership, transit topology, broader-city, and true-device stages remain gated by the explicit order above.
+11. `P2 ARCHITECTURE_ACCEPTED / NOT_STARTED`: 4.12 Calendar/Agenda Journey orchestration is documented only. CJA-1 Calendar information architecture requires a separate user acceptance decision; no Agenda Journey, Schedule Orchestrator, Activity Session, event popup, Narrative Timeline, or persistence implementation has started.
 
 ## 7. Validation Rule
 

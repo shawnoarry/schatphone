@@ -9,6 +9,7 @@ const APP_ICON_LABELS = {
   app_network: { zh: '网络', en: 'Network', ko: '네트워크' },
   app_wallet: { zh: '钱包', en: 'Wallet', ko: '지갑' },
   app_gallery: { zh: '相册', en: 'Photos', ko: '사진' },
+  app_music: { zh: '音乐', en: 'Music', ko: 'Music' },
   app_camera: { zh: '相机', en: 'Camera', ko: 'Camera' },
   app_themes: { zh: '外观', en: 'Themes', ko: '테마' },
   app_widgets: { zh: '组件', en: 'Widgets', ko: '위젯' },
@@ -31,6 +32,7 @@ const BUILT_IN_APP_ICON_META = {
   app_network: { icon: 'fas fa-network-wired', accent: 'cool' },
   app_wallet: { icon: 'fas fa-wallet', accent: 'warm' },
   app_gallery: { icon: 'fas fa-images', accent: 'light' },
+  app_music: { icon: 'fas fa-music', accent: 'warm' },
   app_camera: { icon: 'fas fa-camera', accent: 'dark' },
   app_themes: { icon: 'fas fa-palette', accent: 'default' },
   app_widgets: { icon: 'fas fa-table-cells-large', accent: 'light' },
@@ -63,6 +65,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
   'app_wallet',
   'app_gallery',
+  'app_music',
   'app_camera',
   'app_themes',
   'app_widgets',
@@ -91,6 +94,7 @@ export const APP_ICON_PRESET_OPTIONS = [
   { value: 'fas fa-map-location-dot', zh: '地图定位', en: 'Map Pin', ko: '지도 핀' },
   { value: 'fas fa-route', zh: '路线', en: 'Route', ko: '경로' },
   { value: 'fas fa-images', zh: '相册', en: 'Photos', ko: '사진' },
+  { value: 'fas fa-music', zh: '音符', en: 'Music Note', ko: 'Music' },
   { value: 'fas fa-camera', zh: '相机', en: 'Camera', ko: '카메라' },
   { value: 'fas fa-palette', zh: '调色盘', en: 'Palette', ko: '팔레트' },
   { value: 'fas fa-phone', zh: '电话', en: 'Phone', ko: '전화' },
@@ -241,6 +245,7 @@ export const resolveNotificationModuleAppId = (moduleKey) => {
   if (moduleKey === 'map') return 'app_map'
   if (moduleKey === 'reminders') return 'app_reminders'
   if (moduleKey === 'gallery') return 'app_gallery'
+  if (moduleKey === 'music') return 'app_music'
   if (moduleKey === 'camera') return 'app_camera'
   if (moduleKey === 'shopping') return 'app_shopping'
   if (moduleKey === 'food_delivery') return 'app_food_delivery'

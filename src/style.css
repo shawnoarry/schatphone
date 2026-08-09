@@ -721,6 +721,11 @@ select {
   display: flex;
   align-items: center;
   gap: 14px;
+  width: 100%;
+  border: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
 }
 
 .home-music-cover {
@@ -737,9 +742,9 @@ select {
 }
 
 .home-widget-card.is-music .home-music-cover {
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.88), transparent 29%),
-    linear-gradient(135deg, rgba(205, 223, 229, 0.88), rgba(77, 97, 108, 0.9));
+  background-color: rgba(77, 97, 108, 0.9);
+  background-size: cover;
+  background-position: center;
 }
 
 .home-music-meta {

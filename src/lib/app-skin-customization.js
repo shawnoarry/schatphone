@@ -14,6 +14,7 @@ export const APP_SKIN_TARGETS = Object.freeze([
   Object.freeze({ appId: 'app_contacts', scope: 'contacts', labelZh: '联系人', labelEn: 'Contacts' }),
   Object.freeze({ appId: 'app_phone', scope: 'phone', labelZh: '电话', labelEn: 'Phone' }),
   Object.freeze({ appId: 'app_gallery', scope: 'gallery', labelZh: '相册', labelEn: 'Photos' }),
+  Object.freeze({ appId: 'app_music', scope: 'music', labelZh: '音乐', labelEn: 'Music' }),
   Object.freeze({ appId: 'app_camera', scope: 'camera', labelZh: '相机', labelEn: 'Camera' }),
   Object.freeze({ appId: 'app_map', scope: 'map', labelZh: '地图', labelEn: 'Map' }),
   Object.freeze({ appId: 'app_calendar', scope: 'calendar', labelZh: '日历', labelEn: 'Calendar' }),

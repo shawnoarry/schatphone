@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Implementation Workstreams / 消费金融资产实施工作流
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## 1. Workstream A: Shopping And Logistics
 
@@ -46,6 +46,9 @@ Updated: 2026-08-07
 - source modules retain native prices and authoritative totals; current display may re-quote, while checkout/order/ledger records freeze source money, quoted money, and rate provenance
 - current commerce adoption covers Peach Cloud's White Peach Lime price slot, Shopping catalog/cart quotations, Food Delivery menus/modifiers/fees/carts/checkouts across current facades, Baemin campaign values and structured minimum-order enforcement, and new Shopping/Food Delivery/Food Platform order snapshots. Explicit Shopping/Food Delivery Wallet expenses retain the source order quote. Shopping mixed-currency settlement, refund snapshots, and the general poster-anchor schema remain separate work.
 - Wallet Activity now owns a general route-backed transaction detail for every ledger row. It presents saved quote provenance without re-quotation, gives legacy/malformed records an explicit no-snapshot state, uses raw minor-unit fallback when a historical currency definition is unavailable, and keeps role-payee transfer receipts as a separate surface.
+- Wallet Activity source filters compose with a case-insensitive read-only search over recorded transaction identity and provenance. Search changes only the visible projection, leaves ledger rows and quote snapshots untouched, and retains the same general detail path for every result.
+- Wallet Activity exposes a focused monthly-statement projection over retained ledger records. It derives local calendar months, keeps income/spending/net totals separate per original currency, performs no current-rate quotation, and returns statement-opened details to the selected month while leaving delete and role-receipt actions on Activity.
+- Wallet Home exposes verified-payee management over retained role-account references. Active rows share one repeat-transfer path into the existing confirmation runtime with empty amount/note, and explicit route origin keeps Wallet returns on the payee list while preserving Chat-card and Activity-receipt behavior.
 
 ## 4. Workstream D: Assets And Stock
 

@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import {
   SHAREABLE_OBJECT_TYPES,
+  createMapLocationShareObject,
+  createMusicTrackShareObject,
   createPayeeAccountShareObject,
   createProductLinkShareObject,
   createTrackingShareObject,
@@ -114,6 +116,43 @@ describe('shareable-object contract', () => {
         sourceTruthOwner: 'Logistics',
       },
     })
+  })
+
+  test('builds Map and Music shares with precise source routes and no mutation claim', () => {
+    const location = createMapLocationShareObject({
+      placeId: 'seoul-sm-hq',
+      mapPackId: 'modern-seoul',
+      title: 'SM Entertainment',
+      summary: 'Seongsu, Seoul',
+    })
+    const track = createMusicTrackShareObject({
+      trackRef: { id: 'demo_blue_hour', providerId: 'demo' },
+      presentation: {
+        title: 'Blue Hour Drive',
+        artist: 'North Arcade',
+        album: 'City in Stereo',
+        coverUrl: 'https://images.example.test/blue-hour.jpg',
+      },
+    })
+
+    expect(location).toMatchObject({
+      type: SHAREABLE_OBJECT_TYPES.LOCATION_SHARE,
+      sourceModule: 'map',
+      sourceId: 'seoul-sm-hq',
+      route:
+        '/map?placeId=seoul-sm-hq&mapPackId=modern-seoul&source=chat&intent=location_share',
+    })
+    expect(location.aiContext.mutationBoundary).toContain('Map owns')
+    expect(track).toMatchObject({
+      type: SHAREABLE_OBJECT_TYPES.MUSIC_TRACK_SHARE,
+      sourceModule: 'music',
+      sourceId: 'demo_blue_hour',
+      title: 'Blue Hour Drive',
+      summary: 'North Arcade · City in Stereo',
+      route: '/music?source=chat&track=demo_blue_hour',
+      previewImageUrl: 'https://images.example.test/blue-hour.jpg',
+    })
+    expect(track.aiContext.mutationBoundary).toContain('Music owns playback')
   })
 
   test('builds a Wallet-owned role payee card without moving money', () => {

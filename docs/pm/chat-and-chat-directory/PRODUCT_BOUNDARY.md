@@ -22,6 +22,7 @@ Chat owns:
 - message deletion
 - message recall as a retained Chat event that hides original text and rich-block details from UI actions, AI context, quote previews, pending quote bars, and history review while preserving who recalled it
 - rich message display
+- internal source-App object sharing with recipient selection, one bounded device-local pending draft, explicit `share_card` send, cancel-to-source, refresh/lock recovery, and exact source-detail return
 - source-owned share-card display and transport, including Shopping `product_link`, `gift_card` / `virtual_gift`, and future tracking/location/calendar/media share objects
 - legacy product-card compatibility display while the active Shopping send path migrates to `share_card`
 - Chat-local saved-message flags for ordinary role/group threads
@@ -42,6 +43,7 @@ Chat does not own:
 - event eligibility for generated social events
 - Shopping checkout, order truth, Wallet suggestions, or Assets transfer suggestions
 - product, voucher, delivery, route, calendar, media, or asset source truth represented by a `share_card`
+- ownership of the external webpage represented by a shared URL, or permission to send an incoming share without user confirmation
 - shared Mini Scene world-profile resolution, Book regex execution, artifact truth, or HTML Presenter security
 
 ### Mini Scene Compatibility
@@ -156,5 +158,6 @@ They must not create, delete, or rewrite global Contacts role profiles. A future
 9. legacy `htmlSnippet` or new generated HTML must not execute inside Chat, and Chat must not copy the shared Mini Scene regex/profile/presenter implementation
 10. AI dialogue, a transfer request, or a `payee_account` card must not create Wallet ledger records or claim money moved
 11. Chat Appearance controls presentation only; any iMessage-like header note/status is Chat-local display context and must not be treated as current relationship truth
+12. an internal App share must not auto-send or become Chat history before the user selects a conversation and confirms; cancel returns to the source, and opening a sent card must not mutate source-owned state
 
 When `relationshipLevel` or `relationshipNote` appears in Chat Directory UI, label it as Chat-local tuning/note. Do not use "Affinity" or other copy that implies current relationship progress.

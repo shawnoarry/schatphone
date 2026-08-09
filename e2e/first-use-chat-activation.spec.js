@@ -15,7 +15,10 @@ test.use({
 const providerUrl = 'https://activation.provider.test/v1/chat/completions'
 const providerModel = 'activation-model'
 const draftText = 'Keep this first-use draft in the same conversation.'
+const draftSecondLine = 'Continue this as a second line.'
 const assistantReply = 'Your first SchatPhone reply is ready.'
+const recoveryDraft = 'Cancel this reply once, then retry it.'
+const recoveredReply = 'The canceled reply recovered successfully.'
 
 const expectNoHorizontalOverflow = async (page) => {
   const overflow = await page.evaluate(() => {
@@ -71,9 +74,20 @@ test('fresh storage reaches the first successful Chat reply through Network setu
   let modelRequestCount = 0
   let smokeRequestCount = 0
   let chatRequestCount = 0
+  let holdNextChatRequest = false
+  let releaseHeldRequest = null
 
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.emulateMedia({ reducedMotion: 'reduce' })
+
+  const projectBaseUrl = new URL(String(testInfo.project.use.baseURL))
+  if (
+    testInfo.project.name === 'mobile-chrome' &&
+    ['127.0.0.1', 'localhost'].includes(projectBaseUrl.hostname)
+  ) {
+    projectBaseUrl.hostname = projectBaseUrl.hostname === '127.0.0.1' ? 'localhost' : '127.0.0.1'
+  }
+  projectBaseUrl.hash = '/lock'
 
   await page.route('https://activation.provider.test/**', async (route) => {
     const request = route.request()
@@ -92,7 +106,23 @@ test('fresh storage reaches the first successful Chat reply through Network setu
     const systemPrompt = String(payload?.messages?.[0]?.content || '')
     const isSmokeTest = systemPrompt.includes('connection smoke-test endpoint')
     if (isSmokeTest) smokeRequestCount += 1
-    else chatRequestCount += 1
+    else {
+      chatRequestCount += 1
+      if (holdNextChatRequest) {
+        holdNextChatRequest = false
+        await new Promise((resolve) => {
+          releaseHeldRequest = resolve
+        })
+      }
+    }
+
+    const latestUserMessage = [...(payload?.messages || [])]
+      .reverse()
+      .find((message) => message?.role === 'user')
+    const latestUserText = String(latestUserMessage?.content || '')
+    const currentAssistantReply = latestUserText.includes(recoveryDraft)
+      ? recoveredReply
+      : assistantReply
 
     const content = isSmokeTest
       ? 'OK'
@@ -106,7 +136,7 @@ test('fresh storage reaches the first successful Chat reply through Network setu
                   type: 'text',
                   variant: 'primary',
                   lang: 'en',
-                  text: assistantReply,
+                  text: currentAssistantReply,
                 },
               ],
             },
@@ -121,7 +151,7 @@ test('fresh storage reaches the first successful Chat reply through Network setu
     })
   })
 
-  await unlockToHome(page)
+  await unlockToHome(page, projectBaseUrl.href)
   await openHomeDockApp(page, 'app_chat', '/chat')
   await page.getByTestId('chat-contact-row-1').click()
   await waitForAppRouteReady(page, '/chat/1')
@@ -164,15 +194,47 @@ test('fresh storage reaches the first successful Chat reply through Network setu
   await page.getByTestId('network-continue-chat').click()
   await waitForAppRouteReady(page, '/chat/1')
   await expect(page).toHaveURL(/#\/chat\/1\?from=home&homePage=0$/)
-  await expect(page.getByTestId('chat-message-input')).toHaveValue(draftText)
+  const chatInput = page.getByTestId('chat-message-input')
+  await expect(chatInput).toHaveValue(draftText)
+  await expect(chatInput).toHaveJSProperty('tagName', 'TEXTAREA')
   await expect(page.getByTestId('chat-network-readiness')).toHaveCount(0)
 
-  await page.getByTestId('chat-message-input').press('Enter')
-  await expect(page.locator('.chat-message-row').filter({ hasText: draftText })).toBeVisible()
+  const oneLineInputHeight = await chatInput.evaluate((input) => input.getBoundingClientRect().height)
+  await chatInput.press('Shift+Enter')
+  await chatInput.type(draftSecondLine)
+  await expect(chatInput).toHaveValue(`${draftText}\n${draftSecondLine}`)
+  const multilineInputHeight = await chatInput.evaluate((input) => input.getBoundingClientRect().height)
+  expect(multilineInputHeight).toBeGreaterThan(oneLineInputHeight)
+
+  await chatInput.press('Enter')
+  await expect(page.locator('.chat-message-row').filter({ hasText: draftSecondLine })).toBeVisible()
   await page.getByTestId('chat-trigger-reply').click()
   await expect(page.getByText(assistantReply, { exact: false })).toBeVisible()
   await expect.poll(() => chatRequestCount).toBe(1)
   await expectCredentialNotRendered(page, fakeCredential)
+  await expectNoHorizontalOverflow(page)
+  await expectNoCriticalAxeViolations(page)
+
+  await chatInput.fill(recoveryDraft)
+  await chatInput.press('Enter')
+  holdNextChatRequest = true
+  await page.getByTestId('chat-trigger-reply').click()
+  await expect.poll(() => Boolean(releaseHeldRequest)).toBe(true)
+
+  const stopReply = page.getByTestId('chat-cancel-reply')
+  await expect(stopReply).toBeVisible()
+  await expect(stopReply).toHaveAccessibleName(/停止回复|Stop reply/)
+  await stopReply.click()
+  releaseHeldRequest()
+  releaseHeldRequest = null
+
+  await expect(page.getByText(/请求已取消|Request canceled/)).toBeVisible()
+  const retryReply = page.getByRole('button', { name: /重试|Retry/ })
+  await expect(retryReply).toBeVisible()
+  await retryReply.click()
+  await expect(page.getByText(recoveredReply, { exact: false })).toBeVisible()
+  await expect.poll(() => chatRequestCount).toBe(3)
+  await expect(page.getByTestId('chat-cancel-reply')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
   await expectNoCriticalAxeViolations(page)
   expect(pageErrors).toEqual([])

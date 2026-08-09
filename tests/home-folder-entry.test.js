@@ -60,6 +60,7 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="app_shopping"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-app_shopping"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_food_delivery"]').exists()).toBe(true)
+    expect(wrapper.find('[data-home-tile-id="app_music"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-folder-app_food_delivery"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_reminders"]').exists()).toBe(true)
     expect(wrapper.find('[data-home-tile-id="app_network"]').exists()).toBe(false)

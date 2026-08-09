@@ -459,11 +459,41 @@ describe('canonical persistence-owner inventory', () => {
     const calendar = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'calendar.events',
     )
+    const music = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'music.library-and-provider-settings',
+    )
+    const musicCredentials = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'music.credentials',
+    )
+    const musicLocalMedia = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'music.local-media-binaries',
+    )
+    const internalShareDraft = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'chat.internal-share-draft',
+    )
 
     expect(contacts).toMatchObject({ logicalOwner: 'Contacts', storageKeys: ['store:chat'] })
     expect(worldBook).toMatchObject({ logicalOwner: 'WorldBook', storageKeys: ['store:system'] })
     expect(reminders).toMatchObject({ logicalOwner: 'Reminders', storageKeys: ['store:reminders'] })
     expect(calendar.referenceRule).toContain('import compatibility only')
+    expect(music).toMatchObject({ logicalOwner: 'Music', storageKeys: ['store:system'] })
+    expect(musicCredentials).toMatchObject({
+      logicalOwner: 'Music',
+      backupRequirement: 'excluded',
+      physicalCarrierIds: ['local:music-credentials'],
+    })
+    expect(musicLocalMedia).toMatchObject({
+      logicalOwner: 'Music',
+      backupRequirement: 'excluded',
+      physicalCarrierIds: ['idb:music-local-media'],
+      durability: 'durable-authoritative-device-binary',
+    })
+    expect(internalShareDraft).toMatchObject({
+      logicalOwner: 'Chat',
+      backupRequirement: 'excluded',
+      physicalCarrierIds: ['local:chat-internal-share-draft'],
+      durability: 'bounded-device-transient',
+    })
   })
 
   test('separates covered required data classes from the named legacy v2 required gap', () => {

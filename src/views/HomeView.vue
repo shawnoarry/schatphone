@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
+import { useMusicStore } from '../stores/music'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
@@ -39,6 +40,7 @@ import {
   CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  MUSIC_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import {
@@ -76,12 +78,19 @@ const route = useRoute()
 const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
 const foodDeliveryStore = useFoodDeliveryStore()
+const musicStore = useMusicStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
 const { settings, user, availableThemes } = storeToRefs(systemStore)
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
+const homeMusicTrack = computed(() => musicStore.currentTrack || musicStore.featuredTrack)
+const homeMusicProgress = computed(() => {
+  const duration = Number(musicStore.runtime.duration || homeMusicTrack.value?.durationSec || 0)
+  if (!duration) return 0
+  return Math.max(0, Math.min(100, (Number(musicStore.runtime.currentTime || 0) / duration) * 100))
+})
 const { appIconImageUrl } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
@@ -218,6 +227,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_widgets') return t('组件', 'Widgets')
   if (tileId === 'app_phone') return t('电话', 'Phone')
   if (tileId === 'app_map') return t('地图', 'Map')
+  if (tileId === MUSIC_HOME_APP_ID) return t('音乐', 'Music')
   if (tileId === 'app_calendar') return t('日历', 'Calendar')
   if (tileId === 'app_reminders') return t('提醒事项', 'Reminders')
   if (tileId === 'app_stock') return t('股票', 'Stock')
@@ -2131,17 +2141,26 @@ onBeforeUnmount(() => {
                     <span class="home-calendar-day">{{ today.getDate() }}</span>
                   </div>
 
-                  <div class="home-widget-card home-widget-music is-music" v-else-if="tileMeta(placement.tileId)?.variant === 'music'">
-                    <div class="home-music-cover"></div>
+                  <button
+                    v-else-if="tileMeta(placement.tileId)?.variant === 'music'"
+                    type="button"
+                    class="home-widget-card home-widget-music is-music"
+                    :aria-label="t('打开音乐', 'Open Music')"
+                    @click.stop="openAppById(MUSIC_HOME_APP_ID)"
+                  >
+                    <div
+                      class="home-music-cover"
+                      :style="homeMusicTrack?.coverUrl ? { backgroundImage: `url(${JSON.stringify(homeMusicTrack.coverUrl)})` } : undefined"
+                    ></div>
                     <div class="home-music-meta">
-                      <span class="home-widget-topline">{{ t('正在播放', 'Now Playing') }}</span>
-                      <h3>{{ t('晚间电台', 'Evening Radio') }}</h3>
-                      <p>{{ t('日常播放列表', 'Daily Mix') }}</p>
+                      <span class="home-widget-topline">{{ musicStore.isPlaying ? t('正在播放', 'Now Playing') : t('继续播放', 'Listen Again') }}</span>
+                      <h3>{{ homeMusicTrack?.title || t('晚间电台', 'Evening Radio') }}</h3>
+                      <p>{{ homeMusicTrack?.artist || t('日常播放列表', 'Daily Mix') }}</p>
                       <div class="home-progress">
-                        <div class="home-progress-fill"></div>
+                        <div class="home-progress-fill" :style="{ width: `${homeMusicProgress}%` }"></div>
                       </div>
                     </div>
-                  </div>
+                  </button>
 
                   <div class="home-widget-card is-system" v-else-if="tileMeta(placement.tileId)?.variant === 'system'">
                     <div class="home-widget-topline">

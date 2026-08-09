@@ -114,6 +114,7 @@ Phone does not own:
 - Reminders can promote something into Calendar when it becomes a real confirmed schedule/date item.
 - Map can provide route/location context, but does not absorb schedule ownership.
 - Map-derived cues should pass explicit trip lineage into Calendar when available, while Calendar remains the owner of the confirmed event.
+- Map may expose one bounded place snapshot to Chat, but Map keeps place/trip truth; Chat owns the pending recipient/send workflow and message history, while card return is detail-only and cannot set location or journey endpoints.
 - Phone can generate callback context, but callback scheduling belongs to Reminders until it becomes a real Calendar item.
 - World Pack can provide `reservation -> Calendar` labels/context for Calendar, including confirmed `reservation_board` appBindings, but it cannot move schedule records or push decisions out of Calendar.
 - the active world identifies which per-world Map binding to resolve; Map owns that binding and falls back to its reviewed recommendation table when no override exists.

@@ -23,6 +23,11 @@ const MODULE_COPY = {
     en: 'Photos',
     ko: '사진',
   },
+  music: {
+    zh: '音乐',
+    en: 'Music',
+    ko: 'Music',
+  },
   shopping: {
     zh: '购物',
     en: 'Shop',
@@ -64,6 +69,11 @@ const MODULE_COPY = {
       en: 'You have a new gallery reminder.',
       ko: '새로운 사진 관련 알림이 있어요.',
     },
+    music: {
+      zh: '音乐播放状态已更新。',
+      en: 'Music playback was updated.',
+      ko: 'Music playback was updated.',
+    },
     shopping: {
       zh: '你有一条新的购物提醒',
       en: 'You have a new shopping reminder.',
@@ -97,6 +107,7 @@ const detectModuleKey = (note) => {
   if (source.startsWith('chat_') || route.startsWith('/chat')) return 'chat'
   if (source.startsWith('map_') || route.startsWith('/map')) return 'map'
   if (source.startsWith('gallery_') || route.startsWith('/gallery')) return 'gallery'
+  if (source.startsWith('music_') || route.startsWith('/music')) return 'music'
   if (source.startsWith('shopping_') || route.startsWith('/shopping')) return 'shopping'
   if (source.startsWith('forum_') || route.startsWith('/forum')) return 'forum'
   return 'system'

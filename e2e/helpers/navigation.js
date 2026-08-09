@@ -24,6 +24,7 @@ const routeReadySelectors = {
   '/map': '[data-testid="map-scene-surface"], [data-testid="map-scene-leaflet"]',
   '/map/settings': '[data-testid="map-settings-view"]',
   '/map/settings/places': '[data-testid="map-pin-settings-view"]',
+  '/music': '[data-testid="music-app"]',
   '/settings': '[data-settings-menu-title="World Book"]',
   '/shopping': '[data-testid="shopping-service-filter-panel"]',
   '/worldbook': '[data-testid="worldbook-overview"]',
@@ -69,8 +70,8 @@ export const expectHomeReady = async (page) => {
   await expect(page.getByTestId('home-dock-icon-app_chat')).toBeVisible()
 }
 
-export const unlockToHome = async (page) => {
-  await page.goto('/#/lock')
+export const unlockToHome = async (page, lockUrl = '/#/lock') => {
+  await page.goto(lockUrl)
   const englishUnlockButton = page.getByRole('button', { name: /Unlock to Home/ })
   if (await englishUnlockButton.isVisible()) {
     await englishUnlockButton.click()

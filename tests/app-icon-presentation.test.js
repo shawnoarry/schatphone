@@ -138,6 +138,7 @@ describe('app icon presentation helpers', () => {
 
   test('resolves planned Shopping, Reminders, and Assets app metadata', () => {
     const shopping = resolveAppIconMeta('app_shopping', {}, 'zh-CN')
+    const music = resolveAppIconMeta('app_music', {}, 'en-US')
     const reminders = resolveAppIconMeta('app_reminders', {}, 'en-US')
     const food = resolveAppIconMeta('app_food_delivery', {}, 'en-US')
     const assets = resolveAppIconMeta('app_assets', {}, 'en-US')
@@ -147,6 +148,9 @@ describe('app icon presentation helpers', () => {
     expect(shopping.label).toBe('购物')
     expect(shopping.icon).toBe('fas fa-bag-shopping')
     expect(shopping.accent).toBe('warm')
+    expect(music.label).toBe('Music')
+    expect(music.icon).toBe('fas fa-music')
+    expect(music.accent).toBe('warm')
     expect(reminders.label).toBe('Reminders')
     expect(reminders.icon).toBe('fas fa-list-check')
     expect(reminders.accent).toBe('warm')

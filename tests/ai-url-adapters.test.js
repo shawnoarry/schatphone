@@ -235,6 +235,35 @@ describe('AI URL adapters', () => {
     })
   })
 
+  test('normalizes browser-specific transport errors after an external abort', async () => {
+    const controller = new AbortController()
+    fetch.mockImplementationOnce(
+      async (_url, options) =>
+        new Promise((resolve, reject) => {
+          options.signal.addEventListener('abort', () => {
+            reject(new DOMException('signal is aborted without reason', 'AbortError'))
+          })
+        }),
+    )
+
+    const request = callAI({
+      messages: [{ role: 'user', content: 'cancel this request' }],
+      systemPrompt: 'Return OK',
+      settings: {
+        api: {
+          url: 'https://gateway.example.com/v1/chat/completions',
+          key: '',
+          model: 'gateway-model',
+        },
+      },
+      signal: controller.signal,
+    })
+
+    controller.abort()
+
+    await expect(request).rejects.toMatchObject({ code: 'CANCELED' })
+  })
+
   test('rejects native provider protocols in compatibility proxy mode', async () => {
     await expect(
       callAI({

@@ -8,6 +8,8 @@ This file is the handoff page for Map, Calendar, and Reminders work.
 
 Status: `PARTIAL_DONE`
 
+Map's first internal Chat share caller is integrated locally. Place Details creates a source-owned `location_share`; Chat owns recipient selection, confirmation, history, and quoting; cancel and sent-card navigation restore the same `placeId`. Desktop and simulated Pixel 5 prove that source return does not change current location or create a journey.
+
 ## Calendar, Agenda Journey, And Event Orchestration Direction
 
 Status: `CJA-0_DONE_DOCUMENTATION_ONLY / CJA-1_USER_ACCEPTANCE_REQUIRED`

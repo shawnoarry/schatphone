@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 2
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 5
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -38,6 +38,15 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     databaseVersion: 1,
     objectStoreName: 'blobs',
     sourceFile: 'src/lib/asset-binary-storage.js',
+    durability: 'durable-primary',
+  },
+  {
+    id: 'idb:music-local-media',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-music-media',
+    databaseVersion: 1,
+    objectStoreName: 'audioBlobs',
+    sourceFile: 'src/lib/music-local-media-storage.js',
     durability: 'durable-primary',
   },
   {
@@ -116,6 +125,13 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     durability: 'session-transient',
   },
   {
+    id: 'local:chat-internal-share-draft',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:chat:internal-share-draft',
+    sourceFile: 'src/lib/internal-chat-share.js',
+    durability: 'bounded-device-transient',
+  },
+  {
     id: 'local:image-generation-legacy-config',
     carrierType: 'localStorage',
     fullKey: 'schatphone:image-generation:config',
@@ -135,6 +151,13 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     fullKey: 'schatphone:image-generation:recent',
     sourceFile: 'src/stores/imageGeneration.js',
     durability: 'bounded-device-transient',
+  },
+  {
+    id: 'local:music-credentials',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:music:credentials',
+    sourceFile: 'src/stores/music.js',
+    durability: 'durable-device-secret',
   },
 ])
 
@@ -195,6 +218,34 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupSectionId: 'system-user',
     stableIdRule: 'One current-user singleton per isolated client save.',
     referenceRule: 'Role projections refer to the current user without duplicating ownership.',
+  },
+  {
+    id: 'music.library-and-provider-settings',
+    logicalOwner: 'Music',
+    dataClass: 'Music library, playlists, favorites, queue, playback preferences, public provider profiles, and integration policy',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:system'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-user-library',
+    backupRequirement: 'required',
+    backupSectionId: 'system-settings',
+    stableIdRule: 'Track, playlist, and provider profile IDs remain stable across restore.',
+    referenceRule: 'Chat and Map consume bounded Music projections; provider credentials and stream URLs are not copied into their records.',
+  },
+  {
+    id: 'music.local-media-binaries',
+    logicalOwner: 'Music',
+    dataClass: 'Device-local audio files explicitly imported into Music',
+    physicalCarrierIds: ['idb:music-local-media'],
+    storageKeys: [],
+    durability: 'durable-authoritative-device-binary',
+    growthClass: 'unbounded-binary-growth',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'IndexedDB blob key equals the Music-local mediaId retained by track metadata.',
+    referenceRule: 'Music track metadata references mediaId; Gallery, Chat, and Map do not own or receive the binary.',
+    exclusionReason: 'Local audio binary packaging is outside the current backup slice; restored metadata reports a missing file instead of silently substituting media.',
+    rebuildSource: 'The user selects the original local audio file again in Music Settings.',
   },
   {
     id: 'worldbook.world-context',
@@ -539,6 +590,21 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     rebuildSource: 'Regenerate the image or retain it in Gallery before backup.',
   },
   {
+    id: 'music.credentials',
+    logicalOwner: 'Music',
+    dataClass: 'Music provider API keys',
+    physicalCarrierIds: ['local:music-credentials'],
+    storageKeys: [],
+    durability: 'durable-device-secret',
+    growthClass: 'bounded-secret-configuration',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Credential records are keyed by Music provider profile ID.',
+    referenceRule: 'Credentials never enter Music share payloads, cross-module projections, or ordinary plaintext backups.',
+    exclusionReason: 'Plaintext backup export must not duplicate provider secrets.',
+    rebuildSource: 'The user re-enters credentials on each device.',
+  },
+  {
     id: 'persistence.serialized-mirror',
     logicalOwner: 'Module Architecture / Technical Governance',
     dataClass: 'Serialized IndexedDB mirror of persisted store envelopes',
@@ -582,6 +648,21 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     referenceRule: 'References only the current Chat route context.',
     exclusionReason: 'Best-effort session UI feedback expires and is not continuity truth.',
     rebuildSource: 'No rebuild required; the feedback disappears safely.',
+  },
+  {
+    id: 'chat.internal-share-draft',
+    logicalOwner: 'Chat',
+    dataClass: 'Pending internal source-object share awaiting recipient selection and send confirmation',
+    physicalCarrierIds: ['local:chat-internal-share-draft'],
+    storageKeys: [],
+    durability: 'bounded-device-transient',
+    growthClass: 'single-expiring-record',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'One fixed localStorage key with a 24-hour maximum age.',
+    referenceRule: 'Carries one normalized source-object snapshot and return route; it is not a sent message or source-app truth.',
+    exclusionReason: 'The draft is cleared after send or cancel and can be recreated by sharing again.',
+    rebuildSource: 'The user repeats the sharing action in the source app.',
   },
 ])
 

@@ -144,6 +144,7 @@ const MAX_AI_META_PROVIDER_LENGTH = 32
 const MAX_INTERNAL_ROUTE_LENGTH = 2048
 const MAX_BLOCK_COUNT = 16
 const MAX_SERVICE_ACTION_COUNT = 3
+const MAX_INLINE_IMAGE_DATA_URL_LENGTH = 8 * 1024 * 1024 + 512
 const MAX_ROLE_KNOWLEDGE_POINT_IDS = 80
 const MAX_KNOWLEDGE_POINT_ID_LENGTH = 64
 const SAFE_ROUTE_FALLBACK = '/home'
@@ -377,6 +378,14 @@ const sanitizeImageUrl = (value) => {
   if (url.startsWith('/')) return url
   if (/^https?:\/\//i.test(url)) return url
   return ''
+}
+
+const sanitizeMessageImageUrl = (value) => {
+  if (typeof value !== 'string') return ''
+  const url = value.trim()
+  if (!url || url.length > MAX_INLINE_IMAGE_DATA_URL_LENGTH) return ''
+  if (/^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+$/i.test(url)) return url
+  return sanitizeImageUrl(url)
 }
 
 const normalizeAvatarUrl = (value) => sanitizeAvatarUrl(value)
@@ -766,7 +775,7 @@ const normalizeMessageBlock = (rawBlock) => {
     return {
       type: 'image_virtual',
       alt: normalizeSingleLineText(rawBlock.alt, MAX_SHORT_LABEL_LENGTH, '图片消息'),
-      url: sanitizeImageUrl(rawBlock.url),
+      url: sanitizeMessageImageUrl(rawBlock.url),
       assetId: sanitizeAssetId(rawBlock.assetId),
       caption: trimTo(rawBlock.caption, MAX_DETAIL_TEXT_LENGTH),
     }

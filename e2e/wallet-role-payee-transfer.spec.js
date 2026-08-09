@@ -75,15 +75,18 @@ test('Chat requests a verified role account and Wallet confirms the transfer', a
     contentType: 'image/png',
   })
 
-  await page.getByTestId('wallet-receipt-open-activity').click()
+  await page.getByTestId('wallet-receipt-return-chat').click()
+  await waitForAppRouteReady(page, '/chat/1')
+  await expect(accountCardAction).toBeVisible()
+  await expectNoPageOverflow(page)
+
+  await navigateInsideUnlockedApp(page, '/wallet')
+  await page.getByTestId('wallet-open-activity').click()
   const reopenReceipt = page.locator('[data-testid^="wallet-open-receipt-"]').first()
   await expect(reopenReceipt).toBeVisible()
   await reopenReceipt.click()
   await expect(page.getByTestId('wallet-transfer-receipt')).toContainText('18.80 CNY')
-
-  await page.getByTestId('wallet-receipt-return-chat').click()
-  await waitForAppRouteReady(page, '/chat/1')
-  await expect(accountCardAction).toBeVisible()
+  await expect(page.getByTestId('wallet-receipt-return-chat')).toHaveCount(0)
   await expectNoPageOverflow(page)
 
   expect(pageErrors).toEqual([])

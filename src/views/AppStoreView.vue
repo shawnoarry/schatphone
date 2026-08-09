@@ -52,6 +52,8 @@ import {
   BOOK_ROUTE,
   CAMERA_HOME_APP_ID,
   CAMERA_ROUTE,
+  MUSIC_HOME_APP_ID,
+  MUSIC_ROUTE,
   SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_ROUTE,
 } from '../lib/planned-module-registry'
@@ -192,6 +194,16 @@ const APP_STORE_ENTRIES = [
     categoryEn: 'Media',
     descZh: '图片素材、壁纸与角色媒体。',
     descEn: 'Images, wallpapers, and role media.',
+  },
+  {
+    id: MUSIC_HOME_APP_ID,
+    route: MUSIC_ROUTE,
+    labelZh: '音乐',
+    labelEn: 'Music',
+    categoryZh: '媒体',
+    categoryEn: 'Media',
+    descZh: '资料库、搜索、播放队列与自定义音乐平台接入。',
+    descEn: 'Library, search, playback queue, and user-owned music source connections.',
   },
   {
     id: CAMERA_HOME_APP_ID,

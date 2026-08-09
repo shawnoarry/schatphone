@@ -153,6 +153,7 @@ Visible copy rule:
 - Sending a user message does not automatically call the AI unless that specific surface is designed to do so.
 - `Trigger Reply` remains the explicit AI invocation lane where that pattern is used.
 - Rich message creation belongs to the chat input and its action panel.
+- Installed-PWA external link sharing resumes through the lock screen, asks for a Chat recipient, and opens the existing link-card form; it never sends without an explicit user action.
 
 ### Chat Directory (`/chat-contacts`)
 

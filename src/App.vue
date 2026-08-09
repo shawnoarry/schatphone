@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppDialogHost from './components/AppDialogHost.vue'
+import MusicMiniPlayer from './components/MusicMiniPlayer.vue'
 import PersistenceRecoverySheet from './components/PersistenceRecoverySheet.vue'
 import { useSystemStore } from './stores/system'
 import { useChatStore } from './stores/chat'
@@ -1079,6 +1080,8 @@ const lockPhone = () => {
       <RouterView v-slot="{ Component }">
         <component :is="Component" :current-time="currentTime" :current-date="currentDate" />
       </RouterView>
+
+      <MusicMiniPlayer />
 
       <div v-if="showHomeIndicator" class="home-indicator" @click="goHome"></div>
     </div>

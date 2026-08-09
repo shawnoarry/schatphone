@@ -14,6 +14,8 @@ export const BOOK_HOME_APP_ID = 'app_book'
 export const BOOK_ROUTE = '/book'
 export const CAMERA_HOME_APP_ID = 'app_camera'
 export const CAMERA_ROUTE = '/camera'
+export const MUSIC_HOME_APP_ID = 'app_music'
+export const MUSIC_ROUTE = '/music'
 
 export const SHOPPING_CATEGORY_ENTRIES = Object.freeze([
   {

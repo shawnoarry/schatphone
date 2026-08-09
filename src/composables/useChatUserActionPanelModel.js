@@ -31,7 +31,8 @@ export const normalizeExternalUrl = (value) => {
   if (!candidate) return ''
   try {
     const parsed = new URL(candidate)
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return ''
+    if (!['http:', 'https:'].includes(parsed.protocol)) return ''
+    if (parsed.username || parsed.password) return ''
     return parsed.toString()
   } catch {
     return ''

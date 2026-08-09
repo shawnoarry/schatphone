@@ -14,7 +14,7 @@ SchatPhone is in:
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation first slice, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete, while Gallery People/source callers and broader capacity/data-lifecycle work remain deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation and Music first slices, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete at their named local boundaries, while Gallery People/source callers, Music real-provider/caller proof, and broader capacity/data-lifecycle work remain deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
 
 ## 2. Maturity Tiers
 
@@ -42,6 +42,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Appearance / Widgets / app identity | strong but split across owners | consistency and real-device authoring/recovery QA |
 | Network | strong MVP | security guidance and provider-environment QA |
 | Camera | focused installed-app V1 | Gallery People curation, source-module callers, hosted-provider smoke, and true-device QA |
+| Music | focused installed-app first slice | real-provider/CORS smoke, true-device media/PWA proof, and separately promoted Chat/Map callers |
 
 ### Tier C: Partial Or Guarded
 
@@ -69,43 +70,45 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 
 ## 3. Measured Engineering Baseline
 
-Measured on 2026-07-30:
+Measured on 2026-08-09:
 
-- 40 route views;
-- 17 Pinia stores;
-- 44 components;
+- 41 route views;
+- 18 Pinia stores;
+- 51 components;
 - 37 composables;
-- 153 JavaScript files and 85 Vue files under `src`;
+- 173 JavaScript files and 93 Vue files under `src`;
 - zero TypeScript source files;
-- 131,038 source lines;
-- 209 static unit-test files;
-- current local integration passes lint, 209 Vitest files / 1479 tests, production build, governance, focused Map tests, and desktop/Pixel 5 Map plus Peach Cloud interaction checks.
+- 171,987 source lines;
+- 214 static unit-test files;
+- the current Music worktree passes lint, 214 Vitest files / 1519 tests, production build, governance, 4 focused desktop/Pixel 5 Music cases, and the 12-case default/zen system visual gate.
 
 ### Largest Views
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `FoodDeliveryView.vue` | 10329 | platform/five-shop/order/commerce presentation |
-| `ContactsView.vue` | 5232 | role/profile/memory/destructive-flow concentration |
-| `ChatView.vue` | 4776 | messaging/AI/rich-card/service/runtime coordination |
-| `HomeView.vue` | 4373 | layout/edit/library/shell sensitivity |
-| `ChatDirectoryView.vue` | 4122 | role/group/service/template concept density |
-| `WorldBookView.vue` | 4093 | source/pack/template/knowledge control density |
+| `FoodDeliveryView.vue` | 12195 | platform/shop/order/commerce presentation |
+| `ContactsView.vue` | 5233 | role/profile/memory/destructive-flow concentration |
+| `ChatView.vue` | 4960 | messaging/AI/rich-card/service/runtime coordination |
+| `HomeView.vue` | 4456 | layout/edit/library/shell sensitivity |
+| `WorldBookView.vue` | 4104 | source/pack/template/knowledge control density |
 | `WidgetsView.vue` | 4050 | authoring/import/preview breadth |
-| `AppStoreView.vue` | 3647 | app/world/mini-app/placement ownership |
+| `ChatDirectoryView.vue` | 3916 | role/group/service/template concept density |
+| `AppStoreView.vue` | 3699 | app/world/mini-app/placement ownership |
+| `MusicView.vue` | 2783 | listening/library/provider/settings presentation in one installed-app route |
 
 ### Largest Stores
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `system.js` | 4644 | broad infrastructure/compatibility owner; 24/40 view imports |
-| `chat.js` | 3411 | rich communication/profile domain |
-| `map.js` | 2686 | map packs, pins, trips, renderer-facing state, and route responsibilities |
-| `foodDelivery.js` | 2627 | shared platform/shop commerce and event runtime |
-| `gallery.js` | 1471 | asset ownership and binary lifecycle |
+| `system.js` | 4808 | broad infrastructure/compatibility owner; 25/41 view imports, including Music's public compatibility carrier |
+| `foodDelivery.js` | 4313 | shared platform/shop commerce and event runtime |
+| `map.js` | 3778 | map packs, pins, trips, renderer-facing state, and route responsibilities |
+| `chat.js` | 3436 | rich communication/profile domain |
+| `gallery.js` | 1533 | asset ownership and binary lifecycle |
 | `relationshipRuntime.js` | 1397 | cross-module truth layer |
+| `wallet.js` | 1327 | ledger, accounts/cards, quotes, receipts, payees, activity, and statements |
 | `calendar.js` | 1116 | confirmed schedule, push, compatibility, relationship handoff |
-| `shopping.js` | 1043 | commerce/logistics/service handoff |
+| `shopping.js` | 1068 | commerce/logistics/service handoff |
 
 Line counts are signals, not goals. A file becomes a priority when size combines with mixed responsibilities, frequent feature growth, cross-owner knowledge, or weak test locality.
 
@@ -127,6 +130,7 @@ Gaps:
 - Vercel root/optional-proxy and the third Git-connected Cloudflare Worker/static-assets root path are deployed at `ced45db`; the current local tree prepares a restricted dynamic relay but is not pushed. Cloudflare root/manifest/hash-route/static-asset/fail-closed checks and GitHub Pages direct configured-provider Chat/reload proof pass;
 - push/provider/permission flows are not end-to-end CI tested;
 - real-device keyboard/touch/safe-area/media/weak-network checks are absent;
+- Music's generic provider seam has simulated-browser coverage but no opt-in real-provider/CORS or true-device audio-focus/interruption proof;
 - production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; local and remote workflow evidence enforce that baseline, while independently rerunnable audit proof remains separate.
 - product-level save-failed/read-only recovery, same-container writer protection, and the release-local complete v3 package/rollback/crash-recovery boundary are implemented. Predictive capacity reporting, cross-owner atomic Repository activation, legacy unavailable-media presentation, and personal R2 transport remain separate work.
 
@@ -163,6 +167,10 @@ Calendar and Map are also future Mini Scene callers, but each must use a focused
 ### Commerce / Finance
 
 Preserve source records and use Chat/Wallet/Map only through explicit handoffs. Food Delivery now has five independent shop facades over one shared runtime; the live roadmap's next commerce-relevant target is the ordinary Food Delivery/Shopping consequence proof, not an implicit asset or facade queue. Assets/Stock should deepen only through named user loops.
+
+### Music
+
+Preserve the listening-first app and keep generic provider search, browser playback, persistence, credentials, and Chat/Map projections behind the Music contract. Public library/provider state may remain compatibility-carried by System until a separately approved migration; API keys stay device-local and excluded. Promote real-provider or caller work one bounded slice at a time, and do not let Chat/Map receive stream URLs or direct playback authority.
 
 ### Runtime / World Hub / Push
 

@@ -33,6 +33,7 @@ Browser / static SPA
             localStorage primary state
             IndexedDB serialized mirror
             Gallery binary storage
+            Music local-audio storage
             external AI provider APIs
             optional push relay
 
@@ -97,11 +98,11 @@ Owns:
 - compatibility redirects;
 - the global lock guard.
 
-There are 40 route-view files. Normal user-facing modules are lazy-loaded. `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
+There are 41 route-view files. Normal user-facing modules are lazy-loaded. `/music` is a first-class installed app, `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
 
 ## 5. State Layer
 
-SchatPhone has 17 Pinia stores.
+SchatPhone has 18 Pinia stores.
 
 | Store | Owned records and responsibility |
 | --- | --- |
@@ -112,6 +113,7 @@ SchatPhone has 17 Pinia stores.
 | `book` | reusable long-form text assets |
 | `gallery` | media metadata, binary references, categories, cross-module asset operations |
 | `imageGeneration` | public image-provider profiles/defaults/routing, device-local credential references, bounded candidates, and generation tasks |
+| `music` | Music library, favorites, playlists, queue, playback policy/runtime facade, direct URL/local-file intake, public provider profiles, device-local credential/media access, and Chat/Map projections |
 | `map` | location, destination, route, trip, ETA, familiarity, travel context |
 | `calendar` | confirmed events, event time changes, push schedule state, confirmed relationship handoff |
 | `reminders` | raw cross-module cue queue and handling state |
@@ -135,7 +137,7 @@ The accepted Calendar/Agenda Journey direction does not add another landed store
 
 ### `systemStore` Concentration
 
-`src/stores/system.js` is 4644 lines and is imported by 24 of 40 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, and user/system settings.
+`src/stores/system.js` is 4808 lines and is imported by 25 of 41 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, Music's compatibility-carried public state, and user/system settings.
 
 The preferred strategy is stable facades, not a big-bang store split:
 
@@ -166,6 +168,22 @@ The Image Generation Module normalizes OpenAI-compatible Images/Edit, OpenAI-com
 Views and source stores may build domain prompts/context and decide why a request exists, but they must not implement provider HTTP calls independently of the matching shared transport module.
 
 Full assembled prompts, raw provider responses, headers, and transport payloads are transient transport/diagnostic material rather than persistent product truth. Any artifact that an owning module formally publishes, confirms, applies, or admits into revisitable/continuity-bearing history becomes that module's durable canonical content regardless of user/AI/system origin. Durable storage therefore includes committed module content, authoritative state/facts, cross-module references, validated structured proposals/effects, and minimum provenance. Full-payload capture requires an explicit temporary diagnostic mode with hard limits and user clearing.
+
+### Music
+
+`docs/architecture/MUSIC_MODULE_CONTRACT.md` defines the implemented Music first slice:
+
+- `music-contract.js` normalizes versioned public state, tracks, provider profiles, JSON response mappings, and GET/POST search requests;
+- `chksz-music-adapter.js` owns ChKSz NetEase/QQ/Kugou search, user-action playback resolution, NetEase lyrics/playlist intake, quota metadata, bounded retry, and Key-redacted errors;
+- `music-playback-runtime.js` is the sole browser `Audio` and Media Session runtime;
+- `music-local-media-storage.js` owns the separate `schatphone-music-media` IndexedDB carrier for imported audio blobs and obeys the current-save writer boundary;
+- `stores/music.js` owns the library/queue/playback/import facade while using `systemStore.settings.music` as the public metadata compatibility carrier;
+- `music-module-interface.js` exposes bounded Chat/Map routes, capability discovery, track-share payloads, and now-playing projections;
+- `schatphone:music:credentials` stores provider API keys only on the current device and is excluded from ordinary backup;
+- direct HTTPS URLs persist as Music tracks, while local binaries persist separately and become revocable object URLs only during playback;
+- external callers cannot directly start playback, and cross-module projections omit credentials, endpoints, headers, raw responses, queue contents, stream URLs, and local media IDs.
+
+The generic provider contract supports user-authorized JSON search APIs that return browser-playable HTTP(S) audio URLs. The dedicated ChKSz Adapter instead stores stable public source references and resolves an ephemeral stream URL only when the user presses Play; those URLs, lyrics, and quota/error projections remain outside durable state and Chat/Map payloads. Provider licensing, CORS, autoplay, mixed-content, expiring URLs, DRM, and proprietary signing remain explicit provider/browser constraints rather than capabilities SchatPhone can bypass.
 
 ### World Context
 
@@ -257,8 +275,8 @@ Confirmed target direction and current non-active foundation:
 - in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
 - complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`; the roadmap 4.9 release-local v3 boundary now implements required-section manifests, integrity evidence, complete selected Gallery material, durable rollback checkpoints, startup crash recovery, legacy compatibility, and metadata/binary rollback, while predictive capacity and cross-owner root-generation activation remain separate work;
-- `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted stores, serialized mirror, Gallery binary carrier, image-generation credential/candidate/legacy carriers, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
-- `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration participates in backup while device-local credentials and temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
+- `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted carriers, serialized mirror, Gallery binary carrier, Music local-media carrier, image-generation credential/candidate/legacy carriers, Music's device-local credential carrier, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
+- `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration and Music library/provider/import metadata participate in backup, while device-local credentials, Music local-audio binaries, and image-generation temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container conflicts become read-only with retry/refresh rather than force takeover or last-write-wins;
@@ -344,6 +362,19 @@ WorldBook reviewed World Pack
   -> target app resolves presentation/defaults
   -> target store remains record owner
 ```
+
+### Music Integration
+
+```text
+Chat or Map intent
+  -> normalized Music integration request
+  -> /music open/search or explicit Music confirmation
+  -> Music-owned playback/library/queue state
+  -> bounded track-share or now-playing projection
+  -> Chat/Map-owned presentation only
+```
+
+Provider keys, endpoints, headers, stream URLs, queue contents, and raw provider responses never cross this Interface. Current Chat and Map business flows do not yet consume it.
 
 ### Calendar To Agenda Journey
 
@@ -432,13 +463,14 @@ Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third 
 
 Highest-risk files:
 
-- `FoodDeliveryView.vue` 10329 lines;
-- `ContactsView.vue` 5232 lines;
-- `ChatView.vue` 4776 lines;
-- `system.js` 4644 lines;
-- `HomeView.vue` 4373 lines;
-- `ChatDirectoryView.vue` 4122 lines;
-- `WorldBookView.vue` 4093 lines.
+- `FoodDeliveryView.vue` 12195 lines;
+- `ContactsView.vue` 5233 lines;
+- `ChatView.vue` 4960 lines;
+- `system.js` 4808 lines;
+- `HomeView.vue` 4456 lines;
+- `WorldBookView.vue` 4104 lines;
+- `ChatDirectoryView.vue` 3916 lines;
+- `MusicView.vue` 2783 lines.
 
 Other debt:
 
@@ -466,5 +498,8 @@ Recommended order:
 - `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_ARCHITECTURE_PLAN.md`
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_TODO.md`
+- `docs/architecture/MUSIC_MODULE_CONTRACT.md`
 
 The Camera documents record the promoted first slice plus deferred inventory. They are supporting contracts, not execution boards; roadmap 4.10 remains authoritative for status and promotion.
+
+The Music contract records the implemented first slice plus the real-provider, true-device, and caller gates. Roadmap 4.13 remains authoritative for status and promotion.

@@ -54,6 +54,12 @@ import {
 } from '../lib/shareable-object'
 import { findWalletBankInstitution, maskRolePayeeAccountNumber } from '../lib/wallet-banking'
 import { getAvatarImageGalleryAssetId } from '../lib/avatar-image-source-resolver'
+import {
+  INTERNAL_CHAT_SHARE_ROUTE_QUERY,
+  INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+  clearPendingInternalChatShare,
+  readPendingInternalChatShare,
+} from '../lib/internal-chat-share'
 import { useI18n } from '../composables/useI18n'
 import { useDialog } from '../composables/useDialog'
 import {
@@ -163,6 +169,7 @@ const SAFE_MODULE_ROUTES = new Set([
   '/gallery',
   '/phone',
   '/map',
+  '/music',
   '/calendar',
   '/reminders',
   '/wallet',
@@ -181,6 +188,7 @@ const MANUAL_PRIORITY_GUARD_MS = 1500
 const MAX_RESTORE_NOTIFICATIONS_PER_CONTACT = 3
 const SAVE_FEEDBACK_DURATION_MS = 1200
 const MESSAGE_LONG_PRESS_MS = 380
+const MESSAGE_COMPOSER_MAX_HEIGHT_PX = 120
 const SERVICE_DIRECTORY_FILTERS = new Set(['all', 'unread', 'muted', 'folded', 'service', 'official'])
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -495,6 +503,10 @@ const isVirtualGiftShareType = (shareType) => VIRTUAL_GIFT_SHARE_TYPES.has(share
 const shoppingShareLabel = (shareType) =>
   shareType === SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT
     ? t('收款账户', 'Receiving account')
+    : shareType === SHAREABLE_OBJECT_TYPES.LOCATION_SHARE
+      ? t('位置分享', 'Location share')
+      : shareType === SHAREABLE_OBJECT_TYPES.MUSIC_TRACK_SHARE
+        ? t('音乐分享', 'Music share')
     : isVirtualGiftShareType(shareType)
       ? t('虚拟礼物', 'Virtual gift')
       : t('商品链接', 'Product link')
@@ -901,6 +913,34 @@ const {
   t,
 })
 
+const pendingInternalShare = ref(readPendingInternalChatShare())
+const isInternalShareFlow = computed(
+  () =>
+    String(route.query[INTERNAL_CHAT_SHARE_ROUTE_QUERY] || '') ===
+      INTERNAL_CHAT_SHARE_ROUTE_VALUE && Boolean(pendingInternalShare.value),
+)
+const pendingInternalShareSourceLabel = computed(() => {
+  const source = pendingInternalShare.value?.shareable?.sourceModule
+  if (source === 'map') return t('地图', 'Map')
+  if (source === 'music') return t('音乐', 'Music')
+  return t('来源 App', 'Source app')
+})
+
+const removeInternalShareRouteQuery = () => {
+  if (!(INTERNAL_CHAT_SHARE_ROUTE_QUERY in route.query)) return
+  const query = { ...route.query }
+  delete query[INTERNAL_CHAT_SHARE_ROUTE_QUERY]
+  void router.replace({ path: route.path, query })
+}
+
+const cancelInternalShareFlow = () => {
+  const sourceRoute = pendingInternalShare.value?.sourceRoute || '/home'
+  clearPendingInternalChatShare()
+  pendingInternalShare.value = null
+  closeUserActionPanel()
+  void router.push(sourceRoute)
+}
+
 const {
   activeActionMessage,
   hasActiveMessageActions,
@@ -1084,9 +1124,13 @@ const contactById = (contactId) =>
 const enterChat = (contact) => {
   chatStore.ensureConversationForContact(contact.id)
   const fromHome = route.query.from === 'home'
+  const query = fromHome ? buildReturnSourceQuery('home', route) : {}
+  if (isInternalShareFlow.value) {
+    query[INTERNAL_CHAT_SHARE_ROUTE_QUERY] = INTERNAL_CHAT_SHARE_ROUTE_VALUE
+  }
   router.push({
     path: `/chat/${contact.id}`,
-    ...(fromHome ? { query: buildReturnSourceQuery('home', route) } : {}),
+    ...(Object.keys(query).length > 0 ? { query } : {}),
   })
 }
 
@@ -2417,7 +2461,7 @@ const rerollMessage = async (message) => {
     const message =
       error?.code === 'CANCELED'
         ? formatApiErrorForUi(error, t('请求已取消。', 'Request canceled.'))
-        : formatApiErrorForUi(error, t('重roll失败，请稍后重试。', 'Reroll failed. Please retry later.'))
+        : formatApiErrorForUi(error, t('重新生成失败，请稍后重试。', 'Reroll failed. Please retry later.'))
     recordRerollFailure(message, target.id)
     resetConversationAutoNextAt(activeChat.value.id, Date.now() + getAutomationCooldownMs())
     systemApiReports.addReport({
@@ -2646,6 +2690,32 @@ const sendTextMessage = () => {
   closeUserActionPanel()
 }
 
+const resizeMessageComposer = () => {
+  const input = messageTextInputRef.value
+  if (!input) return
+
+  input.style.height = 'auto'
+  const nextHeight = Math.min(input.scrollHeight, MESSAGE_COMPOSER_MAX_HEIGHT_PX)
+  input.style.height = `${nextHeight}px`
+  input.style.overflowY = input.scrollHeight > MESSAGE_COMPOSER_MAX_HEIGHT_PX ? 'auto' : 'hidden'
+}
+
+const handleMessageComposerKeydown = (event) => {
+  if (
+    event.key !== 'Enter' ||
+    event.shiftKey ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.isComposing
+  ) {
+    return
+  }
+
+  event.preventDefault()
+  sendTextMessage()
+}
+
 const sendCurrentLocation = () => {
   if (!activeChat.value) return
 
@@ -2678,7 +2748,7 @@ const submitLinkCardForm = () => {
   }
   const { url, label, note } = linkFormState.value
 
-  appendUserMessage({
+  const appended = appendUserMessage({
     content: `${label}\n${url}`,
     blocks: [
       {
@@ -2690,7 +2760,28 @@ const submitLinkCardForm = () => {
     ],
     source: 'link',
   })
+  if (!appended) return
   closeUserActionPanel()
+}
+
+const submitPendingInternalShare = () => {
+  const draft = pendingInternalShare.value
+  if (!draft || !activeChat.value) return
+  const shareBlock = shareableObjectToChatBlock(draft.shareable)
+  if (!shareBlock) {
+    showUiNotice('warning', t('分享对象暂不可用。', 'The shared object is unavailable.'))
+    return
+  }
+  const appended = appendUserMessage({
+    content: t(`分享了：${draft.shareable.title}`, `Shared: ${draft.shareable.title}`),
+    blocks: [shareBlock],
+    source: `internal_share_${draft.shareable.sourceModule}`,
+  })
+  if (!appended) return
+  clearPendingInternalChatShare()
+  pendingInternalShare.value = null
+  removeInternalShareRouteQuery()
+  showUiNotice('success', t('已发送分享卡片。', 'Share card sent.'))
 }
 
 const submitTransferCardForm = () => {
@@ -3304,7 +3395,7 @@ const messageMetaHintText = (message) => {
   if (isRecalledMessage(message)) return t('已撤回', 'Recalled')
   const hints = []
   if (message.role === 'assistant' && message.aiMeta?.rerollOf) {
-    hints.push(t('重roll结果', 'Rerolled'))
+    hints.push(t('重新生成结果', 'Rerolled'))
   }
   if (message.role === 'assistant' && Number(message.aiMeta?.imageReferenceCount) > 0) {
     if (message.aiMeta?.imageReferenceFallback) {
@@ -3710,8 +3801,10 @@ watch(
 )
 
 watch(inputMessage, (text) => {
-  if (!activeChat.value) return
-  chatStore.setConversationDraft(activeChat.value.id, text)
+  if (activeChat.value) {
+    chatStore.setConversationDraft(activeChat.value.id, text)
+  }
+  nextTick(resizeMessageComposer)
 })
 
 onMounted(() => {
@@ -3804,6 +3897,32 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="chat-home-sheet flex-1 overflow-y-auto no-scrollbar">
+        <section
+          v-if="isInternalShareFlow"
+          class="mx-4 mt-3 mb-2 flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2.5 text-sky-950"
+          data-testid="chat-internal-share-recipient-picker"
+        >
+          <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700" aria-hidden="true">
+            <i class="fas fa-link text-sm"></i>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold">{{ t('选择接收会话', 'Choose a conversation') }}</p>
+            <p class="mt-0.5 truncate text-[11px] text-sky-700">
+              {{ pendingInternalShareSourceLabel }} · {{ pendingInternalShare.shareable.title }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-200 bg-white text-sky-700"
+            :aria-label="t('取消分享', 'Cancel share')"
+            :title="t('取消分享', 'Cancel share')"
+            data-testid="chat-internal-share-cancel"
+            @click="cancelInternalShareFlow"
+          >
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+          </button>
+        </section>
+
         <section
           v-if="chatMessageRequestContacts.length > 0"
           class="chat-home-notice-card mx-4 mt-3 mb-2 border-amber-100 bg-white"
@@ -4637,6 +4756,40 @@ onBeforeUnmount(() => {
 
       <div class="p-3 chat-input border-t">
         <div class="space-y-2">
+          <section
+            v-if="isInternalShareFlow"
+            class="flex items-center gap-2 rounded-2xl border border-sky-100 bg-sky-50 px-2.5 py-2 text-[11px] text-sky-950"
+            data-testid="chat-internal-share-composer-status"
+          >
+            <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-sky-700" aria-hidden="true">
+              <i class="fas fa-share-nodes text-xs"></i>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold">{{ t('发送分享卡片', 'Send share card') }}</p>
+              <p class="mt-0.5 truncate text-[10px] text-sky-700">
+                {{ pendingInternalShareSourceLabel }} · {{ pendingInternalShare.shareable.title }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-sky-700"
+              data-testid="chat-internal-share-send"
+              @click="submitPendingInternalShare"
+            >
+              {{ t('发送', 'Send') }}
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-sky-200 bg-white text-sky-700"
+              :aria-label="t('取消分享', 'Cancel share')"
+              :title="t('取消分享', 'Cancel share')"
+              data-testid="chat-internal-share-cancel"
+              @click="cancelInternalShareFlow"
+            >
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </section>
+
           <div
             v-if="activeServiceInteractionDock"
             class="rounded-2xl border px-3 py-2 text-[11px] shadow-sm"
@@ -4808,7 +4961,7 @@ onBeforeUnmount(() => {
             @change="handleUserMediaPicked"
           />
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-end gap-2">
             <button
               data-testid="chat-user-action-toggle"
               @click="toggleChatUserActionPanel"
@@ -4827,21 +4980,36 @@ onBeforeUnmount(() => {
               <i class="fas fa-plus text-xs transition-transform" :class="showUserActionPanel ? 'rotate-45' : ''"></i>
             </button>
 
-            <input
+            <textarea
               ref="messageTextInputRef"
               v-model="inputMessage"
-              @keyup.enter="sendTextMessage"
-              type="text"
-              class="min-w-0 flex-1 chat-input-field rounded-full px-4 py-2 text-sm outline-none"
+              @input="resizeMessageComposer"
+              @keydown="handleMessageComposerKeydown"
+              rows="1"
+              class="min-h-8 min-w-0 max-h-[7.5rem] flex-1 resize-none overflow-y-hidden chat-input-field rounded-2xl px-4 py-2 text-sm leading-5 outline-none"
               data-testid="chat-message-input"
               :disabled="!canActiveChatCommunicate"
               :placeholder="messageInputPlaceholder"
-            />
+            ></textarea>
 
             <button
+              v-if="canCancelAi"
+              type="button"
+              @click="cancelActiveRequest"
+              data-testid="chat-cancel-reply"
+              :aria-label="t('停止回复', 'Stop reply')"
+              :title="t('停止回复', 'Stop reply')"
+              class="inline-flex h-8 min-w-20 shrink-0 items-center justify-center gap-1.5 rounded-full border border-red-300 bg-red-50 px-3 text-xs font-medium text-red-700 transition hover:bg-red-100"
+            >
+              <i class="fas fa-stop text-[10px]" aria-hidden="true"></i>
+              <span>{{ t('停止', 'Stop') }}</span>
+            </button>
+
+            <button
+              v-else
               @click="requestPendingAiReply"
               data-testid="chat-trigger-reply"
-              class="h-8 shrink-0 rounded-full border px-3 text-xs transition"
+              class="h-8 min-w-20 shrink-0 rounded-full border px-3 text-xs transition"
               :class="canRequestAiReply ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-gray-100 text-gray-400'"
               :disabled="!canRequestAiReply"
             >

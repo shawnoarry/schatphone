@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-08-08
+Updated: 2026-08-09
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -12,6 +12,9 @@ Updated: 2026-08-08
 - per-thread reply preset application
 - ordinary message save/unsave actions and Chat Me saved-message review
 - messaging-app style first-level shell and thread-list controls
+- bounded auto-growing multiline composer with `Enter` send, `Shift+Enter` newline, IME-safe keyboard handling, in-context AI stop, and cancellation-to-retry recovery
+- internal source-App structured sharing with lock-screen continuation, conversation selection, explicit `share_card` confirmation, bounded draft expiry, cancel-to-source, exact detail return, and send/cancel cleanup
+- release-level rich-message acceptance for structured edit, media type/size recovery, one-off and Gallery-backed images, accessibility labels, persistence, source actions, and inert legacy Mini Scene history
 - Chat Settings for Chat-local appearance entry points, diagnostics, and default-behavior surfaces
 - Chat Appearance V1: layout classes, independent message avatar visibility, selectable bubble treatments, content-fit sizing for ordinary text with bounded rich-content rows, normalized persisted settings, shared preview rows, and iMessage-like thread-header identity presentation
 - Chat Appearance preview polish: a first-screen live header/thread/composer preview, compact layout/theme/bubble selectors, layout-specific default palettes, role legend, iMessage identity header, and replaceable-avatar placeholder guidance

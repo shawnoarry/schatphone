@@ -1237,15 +1237,15 @@ export async function callAI({
     }
     return buildCallPayload(data.choices?.[0]?.message?.content || '', executionMeta, withMeta)
   } catch (error) {
+    if (signal?.aborted) {
+      throw createApiError('Request canceled', 'CANCELED')
+    }
     if (error?.code) throw error
 
     if (error instanceof TypeError && error.message.includes('Invalid URL')) {
       throw createApiError('Invalid URL', 'INVALID_URL')
     }
     if (isAbortError(error)) {
-      if (signal?.aborted) {
-        throw createApiError('Request canceled', 'CANCELED')
-      }
       throw createApiError('Request timeout', 'TIMEOUT')
     }
     if (error instanceof TypeError) {

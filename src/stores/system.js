@@ -31,9 +31,11 @@ import {
   CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  MUSIC_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
 } from '../lib/planned-module-registry'
+import { createDefaultMusicState, normalizeMusicState } from '../lib/music-contract'
 import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl, normalizeAiTransportMode } from '../lib/ai'
@@ -121,6 +123,7 @@ const DEFAULT_WIDGET_PAGES = [
   [
     'app_phone',
     'app_map',
+    MUSIC_HOME_APP_ID,
     'app_calendar',
     REMINDERS_HOME_APP_ID,
     SHOPPING_HOME_APP_ID,
@@ -132,6 +135,37 @@ const DEFAULT_WIDGET_PAGES = [
 ]
 
 const CURATED_RELEASE_DEFAULT_WIDGET_PAGES = [
+  ['weather', 'calendar', 'music', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
+  [
+    'app_phone',
+    'app_map',
+    MUSIC_HOME_APP_ID,
+    'app_calendar',
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+  ],
+  [],
+  [],
+  [],
+]
+
+const PRE_MUSIC_DEFAULT_WIDGET_PAGES = [
+  ['weather', 'calendar', 'music', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
+  [
+    'app_phone',
+    'app_map',
+    'app_calendar',
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+  ],
+  ['system', 'quick_heart', 'quick_disc'],
+  [],
+  [],
+]
+
+const PRE_MUSIC_CURATED_RELEASE_DEFAULT_WIDGET_PAGES = [
   ['weather', 'calendar', 'music', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
   [
     'app_phone',
@@ -217,6 +251,7 @@ const CORE_HOME_TILE_IDS = [
   'app_widgets',
   'app_phone',
   'app_map',
+  MUSIC_HOME_APP_ID,
   'app_calendar',
   REMINDERS_HOME_APP_ID,
   'app_stock',
@@ -375,7 +410,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 4
+const HOME_DESKTOP_SETUP_VERSION = 5
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -1443,6 +1478,7 @@ export const useSystemStore = defineStore('system', () => {
     },
     more: createDefaultMoreSettings(),
     aiAutomation: createDefaultAiAutomationSettings(),
+    music: createDefaultMusicState(),
   })
 
   const user = reactive({
@@ -2061,6 +2097,11 @@ export const useSystemStore = defineStore('system', () => {
       normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION
     const shouldResetToCleanSetup =
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MUSIC_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_MUSIC_CURATED_RELEASE_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
         CURATED_RELEASE_DEFAULT_WIDGET_PAGES,
@@ -2082,6 +2123,11 @@ export const useSystemStore = defineStore('system', () => {
   const recommendHomeDesktopRefresh = computed(() => {
     if (
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MUSIC_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_MUSIC_CURATED_RELEASE_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
         CURATED_RELEASE_DEFAULT_WIDGET_PAGES,
@@ -4102,6 +4148,8 @@ export const useSystemStore = defineStore('system', () => {
       if (typeof settings.api.proxyToken !== 'string') settings.api.proxyToken = ''
     }
 
+    settings.music = normalizeMusicState(persisted.settings?.music || settings.music)
+
     if (persisted.settings?.appearance && typeof persisted.settings.appearance === 'object') {
       const appearance = persisted.settings.appearance
       persistedHomeDesktopSetupVersion = normalizeHomeDesktopSetupVersion(
@@ -4373,6 +4421,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.scopedCustomCss = normalizeScopedCustomCss(settings.appearance.scopedCustomCss)
     settings.appearance.appSkins = normalizeAppSkinSettings(settings.appearance.appSkins)
     settings.appearance.chat = normalizeChatAppearance(settings.appearance.chat)
+    settings.music = normalizeMusicState(settings.music)
     settings.system.notifications = settings.system.notifications !== false
     settings.system.realPushEnabled = settings.system.realPushEnabled === true
     settings.system.pushDisplayMode = normalizePushDisplayMode(
@@ -4462,6 +4511,7 @@ export const useSystemStore = defineStore('system', () => {
       {
         settings: {
           api: { ...settings.api },
+          music: normalizeMusicState(settings.music),
           appearance: {
             ...settings.appearance,
             chat: normalizeChatAppearance(settings.appearance.chat),

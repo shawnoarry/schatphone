@@ -4400,7 +4400,16 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="relative mt-3 px-4">
-          <h1 class="sr-only" data-testid="food-delivery-hero-title">{{ foodDeliveryTitle }}</h1>
+          <h1
+            :class="
+              worldAppUxContext
+                ? 'mb-1 block max-w-[calc(100%-7rem)] break-words text-[0.68rem] font-extrabold leading-4 text-white/80'
+                : 'sr-only'
+            "
+            data-testid="food-delivery-hero-title"
+          >
+            {{ foodDeliveryTitle }}
+          </h1>
           <p
             class="text-[1.02rem] font-black leading-6 text-white"
             data-testid="food-delivery-platform-greeting"

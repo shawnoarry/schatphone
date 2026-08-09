@@ -7,6 +7,7 @@ export const SHAREABLE_OBJECT_TYPES = Object.freeze({
   FOOD_SHOP_LINK: 'food_shop_link',
   FOOD_ORDER_SHARE: 'food_order_share',
   LOCATION_SHARE: 'location_share',
+  MUSIC_TRACK_SHARE: 'music_track_share',
   ROUTE_SHARE: 'route_share',
   CALENDAR_INVITE: 'calendar_invite',
   REMINDER_CUE_SHARE: 'reminder_cue_share',
@@ -20,6 +21,7 @@ export const SHAREABLE_SOURCE_MODULES = Object.freeze({
   LOGISTICS: 'logistics',
   FOOD_DELIVERY: 'food_delivery',
   MAP: 'map',
+  MUSIC: 'music',
   CALENDAR: 'calendar',
   REMINDERS: 'reminders',
   GALLERY: 'gallery',
@@ -244,6 +246,69 @@ export const createTrackingShareObject = (input = {}) => {
         'The user shared a package or delivery tracking object. The recipient may need to wait for delivery or sign after arrival.',
       sourceTruthOwner: 'Logistics',
       mutationBoundary: 'Chat replies can discuss the delivery, but Logistics or Shopping owns tracking, signature, and delivery state.',
+    },
+  })
+}
+
+export const createMapLocationShareObject = (input = {}) => {
+  const placeId = trimTo(input.placeId || input.sourceId || input.id, 140)
+  const mapPackId = trimTo(input.mapPackId, 140)
+  const query = buildRouteQuery({
+    placeId,
+    mapPackId,
+    source: 'chat',
+    intent: SHAREABLE_OBJECT_TYPES.LOCATION_SHARE,
+  })
+  return normalizeShareableObject({
+    id: `map-location:${placeId}`,
+    type: SHAREABLE_OBJECT_TYPES.LOCATION_SHARE,
+    sourceModule: SHAREABLE_SOURCE_MODULES.MAP,
+    sourceId: placeId,
+    title: input.title || input.label,
+    summary: input.summary || input.detail,
+    statusLabel: input.statusLabel || 'Location',
+    route: query ? `/map?${query}` : '/map',
+    category: input.category,
+    aiContext: {
+      intent: SHAREABLE_OBJECT_TYPES.LOCATION_SHARE,
+      recipientMeaning:
+        'The user shared a Map place for conversation, meeting context, or route planning.',
+      sourceTruthOwner: 'Map',
+      mutationBoundary:
+        'Chat can discuss this place, but Map owns place details, visibility, position, and trip state.',
+    },
+  })
+}
+
+export const createMusicTrackShareObject = (input = {}) => {
+  const trackRef = input.trackRef && typeof input.trackRef === 'object' ? input.trackRef : {}
+  const presentation =
+    input.presentation && typeof input.presentation === 'object' ? input.presentation : input
+  const trackId = trimTo(trackRef.id || input.trackId || input.sourceId || input.id, 180)
+  const query = buildRouteQuery({
+    source: 'chat',
+    track: trackId,
+  })
+  const artist = trimTo(presentation.artist, 120)
+  const album = trimTo(presentation.album, 120)
+  return normalizeShareableObject({
+    id: `music-track:${trackId}`,
+    type: SHAREABLE_OBJECT_TYPES.MUSIC_TRACK_SHARE,
+    sourceModule: SHAREABLE_SOURCE_MODULES.MUSIC,
+    sourceId: trackId,
+    title: presentation.title,
+    summary: [artist, album].filter(Boolean).join(' · '),
+    statusLabel: input.statusLabel || 'Track',
+    previewImageUrl: presentation.coverUrl,
+    route: query ? `/music?${query}` : '/music',
+    category: artist,
+    aiContext: {
+      intent: SHAREABLE_OBJECT_TYPES.MUSIC_TRACK_SHARE,
+      recipientMeaning:
+        'The user shared a Music track for listening context or conversation. Sharing does not start playback.',
+      sourceTruthOwner: 'Music',
+      mutationBoundary:
+        'Chat can discuss this track, but Music owns playback, queue, library, favorites, and provider state.',
     },
   })
 }

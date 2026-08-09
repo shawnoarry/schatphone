@@ -1,5 +1,10 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import {
+  INTERNAL_CHAT_SHARE_ROUTE_QUERY,
+  INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+  isInternalChatShareRoute,
+} from '../lib/internal-chat-share'
 
 const LockScreen = () => import('../views/LockScreen.vue')
 const HomeView = () => import('../views/HomeView.vue')
@@ -41,6 +46,7 @@ const ControlCenterView = () => import('../views/ControlCenterView.vue')
 const UserProfileView = () => import('../views/UserProfileView.vue')
 const FilesView = () => import('../views/FilesView.vue')
 const AppStoreView = () => import('../views/AppStoreView.vue')
+const MusicView = () => import('../views/MusicView.vue')
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -92,6 +98,7 @@ const router = createRouter({
     { path: '/control-center', component: ControlCenterView },
     { path: '/files', component: FilesView },
     { path: '/app-store', component: AppStoreView },
+    { path: '/music', component: MusicView },
     { path: '/more', redirect: '/settings' },
   ],
 })
@@ -103,7 +110,15 @@ router.beforeEach((to) => {
     return true
   }
   if (systemStore.isLocked) {
-    return { path: '/lock' }
+    return isInternalChatShareRoute(to)
+      ? {
+          path: '/lock',
+          query: {
+            continue: INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+            [INTERNAL_CHAT_SHARE_ROUTE_QUERY]: INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+          },
+        }
+      : { path: '/lock' }
   }
   return true
 })

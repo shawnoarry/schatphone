@@ -40,6 +40,7 @@ Priority meanings:
 | Relationship Runtime | usable truth layer | 500-event truncation conflicts with long-term audit continuity | copied metrics/memories or lost evidence | define authoritative/audit retention before persistence migration | P0 decision |
 | Gallery | stable media owner | Photos-like collections/visual finish | forced memory/admin role | keep asset-first | P2 |
 | Camera / Image Generation | focused V1 with shared adapters, routing, candidates, and explicit Gallery keep | Gallery People truth, source callers, hosted proxy/provider and true-device proof | duplicated endpoint/credential fields, secret leakage, or automatic Gallery admission | preserve shared module and promote each caller separately | P1 partial |
+| Music | focused installed-app first slice with generic JSON provider search and browser playback | real-provider/CORS smoke, true-device media behavior, and actual Chat/Map callers | provider secrets/stream URLs crossing owners or external direct-play authority | preserve the Music contract and promote provider/caller work one slice at a time | P2 partial |
 | Appearance | strong split ownership baseline | product-wide visual consistency | global pack absorbing app-owned layers | real-device authoring/recovery QA | P1 |
 | App Store | integrated app/world/mini-app manager | growing catalog density | owning target-app business state | search/detail density review after phone test | P1 |
 | Book | integrated V1 long-text library; K-pop 2 + 6 + 1 landed | phone hardening and structured Mini Scene profile authoring | becoming Files/reader/runtime-activation owner | validate separate structured transform profiles only through the shared Mini Scene contract | P1 staged |
@@ -89,6 +90,7 @@ Priority meanings:
 - `DONE 2026-08-07`: one root-shell save-failed/read-only state consumes layered and Book results with retry, confirmed reload, and Settings complete-backup handoff;
 - `DONE 2026-08-07`: one page-level writer is acquired before reconciliation and Store mount; later same-container pages inspect without repair and fail closed across layered, Book, Gallery binary, and image-generation device-local writes until retry succeeds;
 - `DONE 2026-08-09`: schema v3 complete local backup requires all current sections, Chat identity/avatar state, canonical section/payload/binary integrity, and default-on whole-Gallery material; import verifies before mutation, preserves current-only retained material, journals a full rollback snapshot, and recovers interrupted restores before mount;
+- Music public library/provider/integration state is required through `system-settings`, while `schatphone:music:credentials` is a separately inventoried device-local secret excluded from plaintext backup and cross-module projections;
 - accepted contract for multiple independently importable complete sensitive backups with editable/default naming, platform-owned local files, direct in-app personal-R2 listing/restore, manifest, integrity, capacity/failure states, staged restore, exact local-material reuse, non-destructive Gallery preservation, missing-media placeholders, legacy migration, and rollback;
 - confirmed explicit in-app R2 deletion with prominent cloud warning and cloud-success gating; no local or cloud backup may be rotated or deleted automatically, and quota pressure must warn or block rather than remove recovery points.
 
@@ -117,6 +119,7 @@ Priority meanings:
 - app/scoped CSS recovery;
 - shop/detail/checkout density;
 - push/provider permission and failure paths.
+- Music real-provider/CORS, audio interruption/media controls, mini-player clearance, PWA relaunch, and bounded Chat/Map caller paths.
 
 ### Content Governance
 

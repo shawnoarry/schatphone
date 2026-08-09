@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Product Boundary
 
-Updated: 2026-08-06
+Updated: 2026-08-09
 
 This file defines ownership boundaries for Shopping, Logistics, Food Delivery, Wallet, Assets, and Stock.
 
@@ -84,6 +84,7 @@ Wallet owns:
 - rate-set revisions and quote provenance used by downstream snapshots
 - disclosed role-payee account references
 - explicit same-currency role-transfer confirmation, confirmed transaction receipts, and source Chat lineage
+- verified-payee management and Wallet-origin repeat-transfer navigation over those same disclosed references
 
 Wallet does not own:
 
@@ -136,6 +137,7 @@ Stock does not own:
 - Wallet may provide supporting relationship traceability for Shopping/Food records, but the primary order or shared-meal memory remains owned by the upstream module lineage.
 - Wallet may use real-world bank names as fictional-world institution references, but account numbers, card products, balances, limits, and transactions are SchatPhone-owned virtual records. A separate Bank app is not required for the current account/card loop.
 - Each cash transaction belongs to one compatible Wallet account. Legacy transactions without an account ID resolve to the default account for their recorded currency; changing the selected display currency or a reference rate never moves money between accounts.
+- Wallet may reopen a retained role-payee reference for another explicitly confirmed transfer. That path must reuse the existing role-transfer runtime and distinguish Wallet, Chat, and Activity return origins; opening the payee list or transfer form never moves money.
 - A multi-currency credit card may declare supported and settlement currencies, but its credit line stays outside cash balances and Assets.
 - WorldBook/World Pack may declare custom world currencies, but Wallet owns whether they are active/primary and how their effective reference rates are maintained. A Pack-provided rate is a proposal/provenance input, not permission to rewrite existing records.
 - Current catalog values may be quoted into the Wallet primary currency, but submitted orders, Wallet ledger entries, transfers, notifications, and source-linked memories keep their recorded money and rate snapshot. Replacing only a currency label without converting the number is a boundary violation.

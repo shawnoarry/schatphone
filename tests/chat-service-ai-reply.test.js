@@ -104,7 +104,7 @@ describe('Chat service account AI replies', () => {
     await wrapper.get('[data-testid="chat-service-notification-reply-order-100"]').trigger('click')
     await flushUi()
     await wrapper.get('[data-testid="chat-message-input"]').setValue('Can I change the address?')
-    await wrapper.get('[data-testid="chat-message-input"]').trigger('keyup.enter')
+    await wrapper.get('[data-testid="chat-message-input"]').trigger('keydown', { key: 'Enter' })
     await flushUi()
 
     await wrapper.get('[data-testid="chat-trigger-reply"]').trigger('click')

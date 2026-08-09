@@ -13,6 +13,7 @@ export const APP_SCOPED_CSS_TARGETS = [
   { id: 'app_store', labelZh: '应用商城', labelEn: 'App Store' },
   { id: 'shopping', labelZh: '购物', labelEn: 'Shopping' },
   { id: 'food_delivery', labelZh: '外卖', labelEn: 'Food Delivery' },
+  { id: 'music', labelZh: '音乐', labelEn: 'Music' },
   { id: 'worldbook', labelZh: '世界书', labelEn: 'WorldBook' },
   { id: 'appearance', labelZh: '外观', labelEn: 'Appearance' },
 ]

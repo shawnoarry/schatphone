@@ -48,7 +48,10 @@ const selectCard = () => {
     :is="interactive ? 'button' : 'div'"
     :type="interactive ? 'button' : undefined"
     class="wallet-bank-card"
-    :class="[`theme-${card.theme}`, { 'is-selected': selected, 'is-frozen': card.status === 'frozen' }]"
+    :class="[
+      `theme-${card.theme}`,
+      { 'is-selected': selected, 'is-frozen': card.status === 'frozen' },
+    ]"
     :aria-label="interactive ? accessibleName : undefined"
     :aria-pressed="interactive ? selected : undefined"
     :data-testid="`wallet-payment-card-${card.id}`"
@@ -67,9 +70,7 @@ const selectCard = () => {
     </span>
 
     <span class="wallet-bank-card__middle">
-      <span class="wallet-bank-card__chip" aria-hidden="true">
-        <i></i><i></i><i></i>
-      </span>
+      <span class="wallet-bank-card__chip" aria-hidden="true"> <i></i><i></i><i></i> </span>
       <i class="fas fa-wifi wallet-bank-card__contactless" aria-hidden="true"></i>
     </span>
 
@@ -104,9 +105,12 @@ const selectCard = () => {
   border-radius: 8px;
   padding: 1rem;
   color: var(--card-ink);
+  font: inherit;
   text-align: left;
   background: var(--card-surface);
-  box-shadow: 0 16px 34px rgba(22, 28, 36, 0.17);
+  box-shadow:
+    0 10px 24px rgba(22, 28, 36, 0.18),
+    0 1px 1px rgba(255, 255, 255, 0.14) inset;
   transform: translateY(0);
   transition:
     transform 180ms ease,
@@ -114,25 +118,21 @@ const selectCard = () => {
     opacity 180ms ease;
 }
 
-.wallet-bank-card::after {
-  position: absolute;
-  right: -20%;
-  bottom: -70%;
-  width: 58%;
-  height: 160%;
-  border-left: 1px solid color-mix(in srgb, var(--card-ink) 22%, transparent);
-  border-top: 1px solid color-mix(in srgb, var(--card-ink) 16%, transparent);
-  content: '';
-  pointer-events: none;
-  transform: rotate(18deg);
+button.wallet-bank-card {
+  cursor: pointer;
+}
+
+button.wallet-bank-card:hover {
+  box-shadow:
+    0 13px 28px rgba(22, 28, 36, 0.22),
+    0 1px 1px rgba(255, 255, 255, 0.14) inset;
 }
 
 .wallet-bank-card.is-selected {
   box-shadow:
-    0 20px 42px rgba(22, 28, 36, 0.22),
-    0 0 0 2px rgba(255, 255, 255, 0.9),
-    0 0 0 4px #20242b;
-  transform: translateY(-2px);
+    0 18px 38px rgba(22, 28, 36, 0.27),
+    0 1px 1px rgba(255, 255, 255, 0.14) inset;
+  transform: translateY(-1px);
 }
 
 .wallet-bank-card.is-frozen {
@@ -191,6 +191,12 @@ const selectCard = () => {
 }
 
 .wallet-bank-card__status {
+  display: inline-flex;
+  min-height: 1.35rem;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--card-ink) 18%, transparent);
+  border-radius: 4px;
+  padding: 0 0.38rem;
   font-size: 0.62rem;
   font-weight: 700;
   color: var(--card-muted);
@@ -250,6 +256,7 @@ const selectCard = () => {
 .wallet-bank-card__balance strong {
   overflow: hidden;
   font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -282,6 +289,11 @@ const selectCard = () => {
 .wallet-bank-card__network {
   font-size: 0.62rem;
   color: var(--card-muted);
+}
+
+.wallet-bank-card__identity small {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .wallet-bank-card__network {

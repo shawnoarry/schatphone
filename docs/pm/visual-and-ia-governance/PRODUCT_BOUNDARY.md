@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## 1. Core Rule
 
@@ -36,6 +36,11 @@ It also owns:
   - Camera is an installed app and owns capture, candidate review, provider/default/routing pages, diagnostics, and its embedded Gallery reference picker;
   - Gallery owns only media the user explicitly keeps and later curation; selecting a reference does not transfer the picker container to Gallery styling;
   - Camera Download, Keep in Gallery, and Discard are distinct outcomes, and Keep does not automatically classify an image as a person reference.
+- how Music owns its installed-app experience:
+  - `/music` is listening-first and keeps provider configuration behind a Music-owned settings sheet rather than becoming another native-system API page;
+  - Listen Now, Browse, Library, Search, queue, Now Playing, and the global mini-player use Music's visual identity while preserving shell return, safe-area, and bottom-control clearance;
+  - Chat and Map may open Music or consume bounded projections, but their data source does not transfer outer visual ownership and they cannot start playback without the Music/user confirmation boundary.
+  - Music Track Details owns the first user-visible share entry; Chat owns recipient selection, confirmation, message history, and quoting, while a card return opens the same track detail without auto-play.
 - how user customization should layer with world-driven presentation:
   - user-controlled Appearance CSS is an explicit override layer above system defaults and World Pack defaults;
   - Chat-scoped CSS remains Chat-owned and should not be moved into global Appearance CSS;

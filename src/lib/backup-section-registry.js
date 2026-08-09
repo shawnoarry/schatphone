@@ -14,7 +14,7 @@ const freezeRegistry = (entries) =>
   )
 
 export const LEGACY_V2_BACKUP_SECTION_REGISTRY = freezeRegistry([
-  { id: 'system-settings', owner: 'Settings', coverage: 'required', dataClassIds: ['settings.application-settings'], payloadFields: [{ path: 'settings', shape: 'object' }] },
+  { id: 'system-settings', owner: 'Settings / Music', coverage: 'required', dataClassIds: ['settings.application-settings', 'music.library-and-provider-settings'], payloadFields: [{ path: 'settings', shape: 'object' }] },
   { id: 'system-user', owner: 'Settings / WorldBook', coverage: 'required', dataClassIds: ['settings.current-user-profile', 'worldbook.world-context'], payloadFields: [{ path: 'user', shape: 'object' }] },
   { id: 'system-notifications', owner: 'System', coverage: 'required', dataClassIds: ['system.notifications'], payloadFields: [{ path: 'notifications', shape: 'array' }] },
   { id: 'system-api-reports', owner: 'Module Architecture / Technical Governance', coverage: 'required', dataClassIds: ['technical-governance.api-reports'], payloadFields: [{ path: 'apiReports', shape: 'array' }] },

@@ -22,6 +22,7 @@ const createTestRouter = () =>
       { path: '/gallery', component: DummyView },
       { path: '/settings', component: DummyView },
       { path: '/worldbook', component: DummyView },
+      { path: '/chat', component: DummyView },
     ],
   })
 
@@ -682,6 +683,30 @@ describe('MapView information architecture', () => {
     expect(mapScene.props('focusPosition')).toMatchObject({
       ...smPlace.position,
       focusRequestId: initialRequestId + 1,
+    })
+  })
+
+  test('restores a shared place detail and prepares an internal Chat share', async () => {
+    await router.push('/map?placeId=seoul-sm-hq')
+    await nextTick()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('SM')
+    await wrapper.get('[data-testid="map-place-share-chat"]').trigger('click')
+    await nextTick()
+    await flushPromises()
+
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/chat',
+      query: { share: 'internal' },
+    })
+    expect(JSON.parse(localStorage.getItem('schatphone:chat:internal-share-draft'))).toMatchObject({
+      sourceRoute: expect.stringContaining('/map?'),
+      shareable: {
+        type: 'location_share',
+        sourceModule: 'map',
+        sourceId: 'seoul-sm-hq',
+      },
     })
   })
 

@@ -16,7 +16,7 @@ Updated: 2026-08-09
   - `[Structural]`: large ownership or maintainability risk.
   - `[Technical Debt]`: real debt, but safer to address after the structural cuts.
   - `[Preserve]`: healthy patterns that future work should keep.
-- Measurements were re-run on 2026-07-31 against the current integration tree after the Camera/image-generation, five-shop Food Delivery, OpenFreeMap, Seoul catalog, and Peach Cloud refresh changes.
+- Measurements were re-run on 2026-08-09 against the current worktree after the Camera/image-generation, Music, expanded Food Delivery, OpenFreeMap, Seoul catalog, and current product slices.
 - Measurement hygiene: line counts are evidence, not the problem by themselves. Treat a large file as a governance issue only when size appears together with mixed responsibilities, cross-owner knowledge, weak test locality, or repeated feature pile-up.
 - The two strongest signals are still:
   - large view files;
@@ -27,8 +27,8 @@ Updated: 2026-08-09
 
 The `lib/` layer and the module-ownership philosophy are the project's strongest assets. The largest structural risks are still both "God object" patterns:
 
-1. God View Modules: the top 8 view files now average about 5078 lines each, with `FoodDeliveryView.vue` at 10329 lines after the five independent shop facades landed.
-2. God Store Module: `src/stores/system.js` is now 4644 lines and is directly imported by 24 of 40 view files.
+1. God View Modules: the top 8 view files now average about 5327 lines each, with `FoodDeliveryView.vue` at 12195 lines after the independent shop facades and current commerce slices landed.
+2. God Store Module: `src/stores/system.js` is now 4808 lines and is directly imported by 25 of 41 view files.
 
 Both risks directly work against the ownership-closure goal. The ongoing `4.5 Architecture Cleanup` lane is the right home for this work, and the current snapshot still shows debt concentrated in the same hot view files and the same store module.
 
@@ -50,16 +50,16 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 
 | File | Lines |
 | --- | ---: |
-| `src/views/FoodDeliveryView.vue` | 10329 |
-| `src/views/ContactsView.vue` | 5232 |
-| `src/views/ChatView.vue` | 4776 |
-| `src/views/HomeView.vue` | 4373 |
-| `src/views/ChatDirectoryView.vue` | 4122 |
-| `src/views/WorldBookView.vue` | 4093 |
+| `src/views/FoodDeliveryView.vue` | 12195 |
+| `src/views/ContactsView.vue` | 5233 |
+| `src/views/ChatView.vue` | 4960 |
+| `src/views/HomeView.vue` | 4456 |
+| `src/views/WorldBookView.vue` | 4104 |
 | `src/views/WidgetsView.vue` | 4050 |
-| `src/views/AppStoreView.vue` | 3647 |
+| `src/views/ChatDirectoryView.vue` | 3916 |
+| `src/views/AppStoreView.vue` | 3699 |
 
-The top 8 view files average about 5078 lines. This is a decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination. The five Food Delivery facades intentionally share one runtime owner, but their route-view concentration is now the clearest measured hotspot.
+The top 8 view files average about 5327 lines. This is a decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination. The Food Delivery facades intentionally share one runtime owner, but their route-view concentration is now the clearest measured hotspot. `MusicView.vue` is 2783 lines and should be monitored, but its current first slice remains below this top-eight hotspot set and has focused contract/store/view coverage.
 
 The `src/composables/` directory now contains 37 files. The list below records the established architecture seams and is not an exhaustive inventory:
 
@@ -104,9 +104,9 @@ That means view-level state, computed values, and side effects are still often w
 
 ### 3.2 God Store Module: `system.js`
 
-`src/stores/system.js` is 4644 lines.
+`src/stores/system.js` is 4808 lines.
 
-It is directly imported by 24 of 40 view files. The remaining 16 view files have no direct `useSystemStore` import.
+It is directly imported by 25 of 41 view files. The remaining 16 view files have no direct `useSystemStore` import.
 
 What `systemStore` currently owns or coordinates:
 
@@ -117,6 +117,7 @@ What `systemStore` currently owns or coordinates:
 - world context: global worldview, encyclopedia/knowledge-point compatibility, world packs, world profile state;
 - automation: AI automation queue, recent fingerprints, Chat truth events, Surprise Mode, module permissions;
 - backup: reminder interval, last-notified state, copy tone;
+- Music compatibility carrier: normalized public library/provider/integration state, while the Music Store remains the logical owner and credentials use a separate carrier;
 - miscellaneous system/user context fields.
 
 This is the largest ownership-concentration point in the codebase. Some of it is understandable history, but it is now too broad for locality: a change to one product area can require understanding unrelated system, appearance, world, network, and Home behavior.
@@ -130,6 +131,7 @@ calendar      -> Reminders, Chat, RelationshipRuntime, System
 foodDelivery  -> Chat
 gallery       -> Map, System
 map           -> System
+music         -> System
 phone         -> Calendar, System
 reminders     -> Calendar, Map
 shopping      -> Calendar, Chat

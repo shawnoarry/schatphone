@@ -67,14 +67,94 @@ describe('wallet store', () => {
     })
   })
 
+  test('summarizes monthly ledger activity separately by original currency', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+    const mayDate = (day) => new Date(2026, 4, day, 12, 0, 0).getTime()
+    const aprilDate = new Date(2026, 3, 30, 12, 0, 0).getTime()
+
+    store.addTransaction({
+      type: 'income',
+      title: 'May income',
+      amount: '100.00',
+      currency: 'CNY',
+      createdAt: mayDate(1),
+    })
+    store.addTransaction({
+      type: 'expense',
+      title: 'May expense',
+      amount: '35.50',
+      currency: 'CNY',
+      createdAt: mayDate(2),
+    })
+    store.addTransaction({
+      type: 'income',
+      title: 'USD income',
+      amount: '2.20',
+      currency: 'USD',
+      createdAt: mayDate(3),
+    })
+    store.addTransaction({
+      type: 'expense',
+      title: 'USD expense',
+      amount: '12.20',
+      currency: 'USD',
+      createdAt: mayDate(4),
+    })
+    store.addTransaction({
+      type: 'income',
+      title: 'April income',
+      amount: '8.00',
+      currency: 'CNY',
+      createdAt: aprilDate,
+    })
+
+    expect(store.transactionMonths).toEqual([
+      { key: '2026-05', count: 4 },
+      { key: '2026-04', count: 1 },
+    ])
+    expect(store.summarizeTransactionsByMonth('2026-05')).toMatchObject({
+      monthKey: '2026-05',
+      count: 4,
+      currencies: [
+        {
+          currency: 'CNY',
+          count: 2,
+          incomeCents: 10000,
+          expenseCents: 3550,
+          netCents: 6450,
+          income: '100.00',
+          expense: '35.50',
+          net: '64.50',
+        },
+        {
+          currency: 'USD',
+          count: 2,
+          incomeCents: 220,
+          expenseCents: 1220,
+          netCents: -1000,
+          income: '2.20',
+          expense: '12.20',
+          net: '-10.00',
+        },
+      ],
+    })
+    expect(store.listTransactionsByMonth('2026-05')).toHaveLength(4)
+    expect(store.listTransactionsByMonth('bad-month')).toEqual([])
+    expect(store.summarizeTransactionsByMonth('bad-month')).toEqual({
+      monthKey: '',
+      count: 0,
+      currencies: [],
+      latestTransaction: null,
+    })
+  })
+
   test('persists source-linked quote provenance without re-quoting ledger history', () => {
     const store = useWalletStore()
     store.resetForTesting()
-    const quoteSnapshot = store.quoteMoney(
-      { amountMinor: 3900, currency: 'CNY' },
-      'USD',
-      { quotedAt: Date.now() },
-    )
+    const quoteSnapshot = store.quoteMoney({ amountMinor: 3900, currency: 'CNY' }, 'USD', {
+      quotedAt: Date.now(),
+    })
     const persistedQuoteSnapshot = { ...quoteSnapshot }
     delete persistedQuoteSnapshot.ok
     const transaction = store.addTransaction({
@@ -92,7 +172,9 @@ describe('wallet store', () => {
     expect(transaction.quoteSnapshot).toEqual(persistedQuoteSnapshot)
     store.resetForTesting()
     expect(store.restoreFromBackup(snapshot)).toBe(true)
-    expect(store.findTransactionBySource('shopping_wallet_expense', 'shopping_quote_order')).toMatchObject({
+    expect(
+      store.findTransactionBySource('shopping_wallet_expense', 'shopping_quote_order'),
+    ).toMatchObject({
       amountCents: 542,
       currency: 'USD',
       quoteSnapshot: persistedQuoteSnapshot,
@@ -202,7 +284,9 @@ describe('wallet store', () => {
       chat: 1,
       orders: 0,
     })
-    expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.CHAT)).toEqual([chat])
+    expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.CHAT)).toEqual([
+      chat,
+    ])
     expect(store.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL)).toEqual([
       manual,
     ])
@@ -361,7 +445,9 @@ describe('wallet store', () => {
     expect(store.addTransferTransaction({ amount: '12.00' })).toMatchObject({
       currency: 'EUR',
     })
-    expect(store.addChatTransferTransaction({ messageId: 'msg_eur_1', amount: '8.00' })).toMatchObject({
+    expect(
+      store.addChatTransferTransaction({ messageId: 'msg_eur_1', amount: '8.00' }),
+    ).toMatchObject({
       currency: 'EUR',
     })
     expect(store.setPrimaryCurrency('bad currency')).toBe('')
@@ -394,7 +480,9 @@ describe('wallet store', () => {
       rateToCnyLabel: '0.2500',
     })
     expect(store.setPrimaryCurrency('CRD')).toBe('CRD')
-    expect(store.addChatTransferTransaction({ messageId: 'msg_crd_1', amount: '8.00' })).toMatchObject({
+    expect(
+      store.addChatTransferTransaction({ messageId: 'msg_crd_1', amount: '8.00' }),
+    ).toMatchObject({
       currency: 'CRD',
     })
 
@@ -500,7 +588,9 @@ describe('wallet store', () => {
     ).toMatchObject({ amountCents: 10000, amount: '100.00' })
 
     expect(store.setDefaultPaymentCard('wallet_card_chase_usd')).toMatchObject({ isDefault: true })
-    expect(store.togglePaymentCardFrozen('wallet_card_mufg_jpy')).toMatchObject({ status: 'frozen' })
+    expect(store.togglePaymentCardFrozen('wallet_card_mufg_jpy')).toMatchObject({
+      status: 'frozen',
+    })
     store.selectPaymentCard('wallet_card_chase_usd')
     const snapshot = store.createBackupSnapshot()
 

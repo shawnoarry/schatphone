@@ -31,6 +31,7 @@ The best next work is:
 - Book source library and WorldBook activation;
 - compatible World Packs, App Store world entries, reviewed app/service proposals;
 - Shopping/Food Delivery/Calendar/Map world-app context;
+- Music installed-app playback/library/provider baseline, dedicated ChKSz Adapter with on-demand stream resolution plus NetEase lyrics/playlist intake, Home/App Store entry, shell mini-player, and bounded Chat/Map Interfaces;
 - global/scoped appearance ownership seams;
 - Settings, Chat, Contacts, and WorldBook composable extraction batches already listed in architecture docs.
 
@@ -60,6 +61,7 @@ Confirmed product boundary:
 - complete migration backup includes configured credentials and now presents a fixed danger warning before every local JSON export; cancellation creates no payload, download, or storage report;
 - Gallery is the reusable local material library; generated image/media results require explicit user retention before durability, and `keep` never uploads or automatically enrolls material in backup;
 - Camera is the visible owner of shared image-generation management, while provider protocols, public profiles/defaults/routing, device-local credentials, and bounded candidates remain separated behind the Image Generation Module;
+- Music is the logical owner of its library, provider profiles, playback policy, and integration projections even while public state is physically carried under System settings; Music API keys remain in the separate device-local excluded carrier;
 - ordinary backup includes image-generation public configuration but excludes API keys, proxy tokens, and temporary candidates; older backups may omit the section without clearing current device-local secrets or review state;
 - core data is always complete, while one default-on whole-Gallery choice includes all retained local binaries without per-item reselection; URL-backed items always preserve their original URL and minimum metadata rather than exact bytes;
 - backup is for rollback/recovery rather than sync or local-space offload; manual backup is always available, automatic backup defaults off, and successful remote backup never releases local originals;
@@ -165,6 +167,7 @@ Do not add regex execution, a Store, route, Settings UI, popup, iframe, AI call,
 
 ## 9. Later Product Candidates
 
+- opt-in Music smoke with a user-authorized ChKSz device Key/browser-playable track, named true-device media evidence, and one separately promoted Chat or Map caller;
 - Gallery People curation plus one separately promoted image-generation source caller;
 - explicit group multi-speaker orchestration;
 - tracking/order share surfaces from source apps;

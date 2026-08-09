@@ -75,7 +75,7 @@ describe('chat view semantic revision flow', () => {
     await editButton.trigger('click')
     await nextTick()
 
-    const editModalTextarea = wrapper.find('textarea')
+    const editModalTextarea = wrapper.find('[data-testid="chat-message-edit-textarea"]')
     expect(editModalTextarea.exists()).toBe(true)
     await editModalTextarea.setValue(revisedText)
     await nextTick()
@@ -108,7 +108,7 @@ describe('chat view semantic revision flow', () => {
     await editButton.trigger('click')
     await nextTick()
 
-    const textarea = wrapper.find('textarea')
+    const textarea = wrapper.find('[data-testid="chat-message-edit-textarea"]')
     expect(textarea.exists()).toBe(true)
 
     const saveButton = () => findButtonByText(wrapper, '保存')

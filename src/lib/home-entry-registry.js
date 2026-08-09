@@ -7,6 +7,8 @@ import {
   CONTROL_CENTER_ROUTE,
   FOOD_DELIVERY_HOME_APP_ID,
   FOOD_DELIVERY_ROUTE,
+  MUSIC_HOME_APP_ID,
+  MUSIC_ROUTE,
   SHOPPING_HOME_APP_ID,
   SHOPPING_ROUTE,
 } from './planned-module-registry'
@@ -47,6 +49,13 @@ export const HOME_FOLDER_REGISTRY = Object.freeze({
 })
 
 export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
+  [MUSIC_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-music',
+    label: 'Music',
+    accent: 'warm',
+    route: MUSIC_ROUTE,
+  }),
   [CAMERA_HOME_APP_ID]: Object.freeze({
     kind: 'app',
     icon: 'fas fa-camera',
@@ -71,6 +80,7 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
 })
 
 export const HOME_PLANNED_TILE_IDS = Object.freeze([
+  MUSIC_HOME_APP_ID,
   CAMERA_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,

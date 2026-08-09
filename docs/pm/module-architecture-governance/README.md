@@ -21,6 +21,7 @@ Current state:
 - the complete-backup/recovery engineering contract is accepted: new complete versions require manifest/section/binary integrity, capacity preflight, staged atomic activation, crash-safe rollback, and explicit failure states; Book is the first and only migrated owner;
 - the canonical persistence-owner inventory now classifies all current store, mirror, binary, direct-local, and session carriers independently from backup coverage; Settings diagnostics consumes its 17-store projection, including Book and public image-generation configuration;
 - roadmap 4.10's first shared Image Generation Module slice is implemented separately from `src/lib/ai.js`: public provider/default/routing state is backup-covered, API keys/proxy tokens and bounded candidates remain separate device-local carriers, and only explicit Gallery keep creates durable reusable media;
+- Music's module slice is implemented behind `music-contract.js`, `chksz-music-adapter.js`, `music-module-interface.js`, `music-playback-runtime.js`, `music-local-media-storage.js`, and `stores/music.js`: generic JSON plus dedicated ChKSz search/on-demand resolution share one normalized boundary; direct HTTPS URLs persist as Music tracks; imported local binaries use a separate Music-owned IndexedDB carrier and runtime-only object URLs. Public library/provider/import metadata is backup-covered through System settings, API keys and local audio binaries remain separate device-local excluded carriers, and Chat/Map receive bounded references/projections without stream URLs, media IDs, or provider secrets. The first Chat caller converts a track payload into a source-owned card through one transient internal-share draft; card return opens details without playback;
 - schema v3 local export now creates a self-verifying required-section manifest with canonical SHA-256 evidence, includes Chat module identity/avatar settings and retained Gallery binaries by default, and fails instead of emitting a partial full-material package; legacy v1/v2 imports remain compatible and are never relabeled complete;
 - the Repository contract is now `ARCHITECTURE_ACCEPTED` with an exact separate IndexedDB v1 schema, immutable record-version/generation-membership model, atomic pointer/journal, contextual persistent-storage policy, fail-closed multi-tab coordination, and Book Adapter/fixture/rollback contract;
 - each isolated browser or desktop Web App storage container remains one independent current save; same-container tabs coordinate writes, while different entry containers never auto-sync or silently merge;
@@ -62,6 +63,7 @@ Also read:
 - `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md`
 - `docs/architecture/WORLD_SETTING_ARCHITECTURE.md`
 - `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`
+- `docs/architecture/MUSIC_MODULE_CONTRACT.md`
 
 ## Guardrails
 

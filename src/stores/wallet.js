@@ -1,6 +1,10 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
-import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import {
+  readPersistedState,
+  readPersistedStateAsync,
+  writePersistedState,
+} from '../lib/persistence'
 import {
   anonymizeRelationshipText,
   bindingMatchesProfile,
@@ -110,14 +114,17 @@ const normalizeAmountCents = (value) => {
 }
 
 const formatAmount = (amountCents = 0) => {
-  const safeCents = Number.isFinite(Number(amountCents)) ? Math.abs(Math.floor(Number(amountCents))) : 0
+  const safeCents = Number.isFinite(Number(amountCents))
+    ? Math.abs(Math.floor(Number(amountCents)))
+    : 0
   return (safeCents / 100).toFixed(2)
 }
 
 const formatSignedAmount = (amountCents = 0) =>
   `${Number(amountCents) < 0 ? '-' : ''}${formatAmount(amountCents)}`
 
-const createWalletTransactionId = () => `wallet_tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createWalletTransactionId = () =>
+  `wallet_tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
 const normalizeTransactionType = (value, fallback = 'transfer') => {
   const normalized = typeof value === 'string' ? value.trim() : ''
@@ -146,6 +153,19 @@ const normalizeTransactionSourceFilter = (value) => {
     : WALLET_TRANSACTION_SOURCE_FILTERS.ALL
 }
 
+const transactionMonthKey = (timestamp) => {
+  const value = Number(timestamp)
+  if (!Number.isFinite(value) || value <= 0) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+const normalizeTransactionMonthKey = (value) => {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(normalized) ? normalized : ''
+}
+
 const normalizePositiveInt = (value, fallback = 0) => {
   const number = Number(value)
   return Number.isSafeInteger(number) && number > 0 ? number : fallback
@@ -158,9 +178,9 @@ const normalizeKnownPayeeAccount = (rawPayee, index = 0) => {
   const ownerName = normalizeText(rawPayee.ownerName || rawPayee.name, '', 120)
   const institutionId = normalizeText(rawPayee.institutionId, '', 120).toLowerCase()
   const currency = normalizeCurrency(rawPayee.currency, '')
-  const accountNumberLast4 = String(
-    rawPayee.accountNumberLast4 || rawPayee.accountNumber || '',
-  ).replace(/\D/g, '').slice(-4)
+  const accountNumberLast4 = String(rawPayee.accountNumberLast4 || rawPayee.accountNumber || '')
+    .replace(/\D/g, '')
+    .slice(-4)
   if (
     !payeeAccountId ||
     !ownerProfileId ||
@@ -220,7 +240,11 @@ const createWalletReceiptNumber = (createdAt = Date.now()) => {
   return `SP${datePart}${String(Math.floor(Math.random() * 1000000)).padStart(6, '0')}`
 }
 
-const normalizeWalletTransaction = (rawTransaction, index = 0, fallbackCurrency = DEFAULT_CURRENCY) => {
+const normalizeWalletTransaction = (
+  rawTransaction,
+  index = 0,
+  fallbackCurrency = DEFAULT_CURRENCY,
+) => {
   if (!rawTransaction || typeof rawTransaction !== 'object') return null
 
   const amountCents =
@@ -257,7 +281,11 @@ const normalizeWalletTransaction = (rawTransaction, index = 0, fallbackCurrency 
     recipientProfileId: normalizePositiveInt(rawTransaction.recipientProfileId),
     recipientContactId: normalizePositiveInt(rawTransaction.recipientContactId),
     recipientAccountId: normalizeText(rawTransaction.recipientAccountId, '', 140),
-    recipientInstitutionId: normalizeText(rawTransaction.recipientInstitutionId, '', 120).toLowerCase(),
+    recipientInstitutionId: normalizeText(
+      rawTransaction.recipientInstitutionId,
+      '',
+      120,
+    ).toLowerCase(),
     recipientAccountLast4: String(rawTransaction.recipientAccountLast4 || '')
       .replace(/\D/g, '')
       .slice(-4),
@@ -282,9 +310,7 @@ const normalizeWalletTransactions = (rawTransactions, fallbackCurrency = DEFAULT
     seenIds.add(record.id)
     normalized.push(record)
   })
-  return normalized
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, WALLET_TRANSACTION_LIMIT)
+  return normalized.sort((a, b) => b.createdAt - a.createdAt).slice(0, WALLET_TRANSACTION_LIMIT)
 }
 
 const createSeedTransactions = () => {
@@ -327,6 +353,17 @@ export const useWalletStore = defineStore('wallet', () => {
       orders,
     }
   })
+  const transactionMonths = computed(() => {
+    const monthCounts = new Map()
+    transactions.value.forEach((transaction) => {
+      const key = transactionMonthKey(transaction.createdAt)
+      if (!key) return
+      monthCounts.set(key, (monthCounts.get(key) || 0) + 1)
+    })
+    return [...monthCounts.entries()]
+      .map(([key, count]) => ({ key, count }))
+      .sort((a, b) => b.key.localeCompare(a.key))
+  })
   const balances = computed(() => {
     const totals = new Map()
     transactions.value.forEach((transaction) => {
@@ -343,11 +380,14 @@ export const useWalletStore = defineStore('wallet', () => {
       .sort((a, b) => a.currency.localeCompare(b.currency))
   })
 
-  const primaryBalance = computed(() => balances.value.find((item) => item.currency === primaryCurrency.value) || {
-    currency: primaryCurrency.value,
-    amountCents: 0,
-    amount: '0.00',
-  })
+  const primaryBalance = computed(
+    () =>
+      balances.value.find((item) => item.currency === primaryCurrency.value) || {
+        currency: primaryCurrency.value,
+        amountCents: 0,
+        amount: '0.00',
+      },
+  )
 
   const findBankAccountById = (accountId = '') => {
     const id = normalizeText(accountId, '', 120)
@@ -421,9 +461,13 @@ export const useWalletStore = defineStore('wallet', () => {
   const findDefaultBankAccountForCurrency = (currency = '') => {
     const code = normalizeCurrency(currency, '')
     if (!code) return null
-    return bankAccounts.value.find(
-      (account) => account.isDefaultForCurrency && account.currencies.includes(code),
-    ) || bankAccounts.value.find((account) => account.currencies.includes(code)) || null
+    return (
+      bankAccounts.value.find(
+        (account) => account.isDefaultForCurrency && account.currencies.includes(code),
+      ) ||
+      bankAccounts.value.find((account) => account.currencies.includes(code)) ||
+      null
+    )
   }
 
   const resolveTransactionAccountId = (transaction = {}) => {
@@ -479,11 +523,12 @@ export const useWalletStore = defineStore('wallet', () => {
     })),
   )
 
-  const activePaymentCard = computed(() =>
-    paymentCardSummaries.value.find((card) => card.id === activeCardId.value) ||
-    paymentCardSummaries.value.find((card) => card.isDefault) ||
-    paymentCardSummaries.value[0] ||
-    null,
+  const activePaymentCard = computed(
+    () =>
+      paymentCardSummaries.value.find((card) => card.id === activeCardId.value) ||
+      paymentCardSummaries.value.find((card) => card.isDefault) ||
+      paymentCardSummaries.value[0] ||
+      null,
   )
 
   const knownPayeeAccountSummaries = computed(() =>
@@ -498,7 +543,10 @@ export const useWalletStore = defineStore('wallet', () => {
     normalizeWalletCurrencyList(registeredCurrencies.value).forEach((currency) => {
       byCode.set(currency.code, currency)
     })
-    ;[primaryCurrency.value, ...transactions.value.map((transaction) => transaction.currency)].forEach((currency) => {
+    ;[
+      primaryCurrency.value,
+      ...transactions.value.map((transaction) => transaction.currency),
+    ].forEach((currency) => {
       const code = normalizeCurrency(currency, '')
       if (!code || byCode.has(code)) return
       byCode.set(code, normalizeCurrencyDefinition({ code, source: 'ledger' }))
@@ -514,7 +562,8 @@ export const useWalletStore = defineStore('wallet', () => {
 
   const exchangeRateRows = computed(() =>
     currencyOptions.value.map((currency) => {
-      const rateToCny = currency.code === 'CNY' ? 1 : getRateToCny(exchangeRates.value, currency.code)
+      const rateToCny =
+        currency.code === 'CNY' ? 1 : getRateToCny(exchangeRates.value, currency.code)
       return {
         ...currency,
         rateToCny,
@@ -526,7 +575,8 @@ export const useWalletStore = defineStore('wallet', () => {
   )
 
   const primaryCurrencyDefinition = computed(
-    () => currencyOptions.value.find((currency) => currency.code === primaryCurrency.value) ||
+    () =>
+      currencyOptions.value.find((currency) => currency.code === primaryCurrency.value) ||
       normalizeCurrencyDefinition({ code: primaryCurrency.value, source: 'ledger' }),
   )
 
@@ -540,7 +590,10 @@ export const useWalletStore = defineStore('wallet', () => {
     const module = normalizeText(sourceModule, '', 40)
     const id = normalizeText(sourceId, '', 140)
     if (!module || !id) return null
-    return transactions.value.find((item) => item.sourceModule === module && item.sourceId === id) || null
+    return (
+      transactions.value.find((item) => item.sourceModule === module && item.sourceId === id) ||
+      null
+    )
   }
 
   const listTransactionsBySourceFilter = (filter = WALLET_TRANSACTION_SOURCE_FILTERS.ALL) => {
@@ -553,10 +606,61 @@ export const useWalletStore = defineStore('wallet', () => {
     }
     if (normalizedFilter === WALLET_TRANSACTION_SOURCE_FILTERS.MANUAL) {
       return transactions.value.filter(
-        (transaction) => !isChatTransferTransaction(transaction) && !isOrderExpenseTransaction(transaction),
+        (transaction) =>
+          !isChatTransferTransaction(transaction) && !isOrderExpenseTransaction(transaction),
       )
     }
     return transactions.value.slice()
+  }
+
+  const listTransactionsByMonth = (monthKey = '') => {
+    const normalizedMonthKey = normalizeTransactionMonthKey(monthKey)
+    if (!normalizedMonthKey) return []
+    return transactions.value.filter(
+      (transaction) => transactionMonthKey(transaction.createdAt) === normalizedMonthKey,
+    )
+  }
+
+  const summarizeTransactionsByMonth = (monthKey = '') => {
+    const normalizedMonthKey = normalizeTransactionMonthKey(monthKey)
+    const records = listTransactionsByMonth(normalizedMonthKey)
+    const totals = new Map()
+
+    records.forEach((transaction) => {
+      const current = totals.get(transaction.currency) || {
+        incomeCents: 0,
+        expenseCents: 0,
+        count: 0,
+      }
+      if (transaction.type === 'expense') {
+        current.expenseCents += transaction.amountCents
+      } else {
+        current.incomeCents += transaction.amountCents
+      }
+      current.count += 1
+      totals.set(transaction.currency, current)
+    })
+
+    return {
+      monthKey: normalizedMonthKey,
+      count: records.length,
+      currencies: [...totals.entries()]
+        .map(([currency, total]) => {
+          const netCents = total.incomeCents - total.expenseCents
+          return {
+            currency,
+            count: total.count,
+            incomeCents: total.incomeCents,
+            expenseCents: total.expenseCents,
+            netCents,
+            income: formatAmount(total.incomeCents),
+            expense: formatAmount(total.expenseCents),
+            net: formatSignedAmount(netCents),
+          }
+        })
+        .sort((a, b) => a.currency.localeCompare(b.currency)),
+      latestTransaction: records[0] || null,
+    }
   }
 
   const listTransactionsByCounterparty = (counterparty = '') => {
@@ -594,7 +698,8 @@ export const useWalletStore = defineStore('wallet', () => {
       chatCount: records.filter(isChatTransferTransaction).length,
       orderCount: records.filter(isOrderExpenseTransaction).length,
       manualCount: records.filter(
-        (transaction) => !isChatTransferTransaction(transaction) && !isOrderExpenseTransaction(transaction),
+        (transaction) =>
+          !isChatTransferTransaction(transaction) && !isOrderExpenseTransaction(transaction),
       ).length,
       currencies: [...totals.entries()]
         .map(([currency, amountCents]) => ({
@@ -653,13 +758,17 @@ export const useWalletStore = defineStore('wallet', () => {
 
   const addTransaction = (input = {}) => {
     const now = Date.now()
-    const transaction = normalizeWalletTransaction({
-      ...input,
-      currency: input.currency || primaryCurrency.value,
-      id: input.id || createWalletTransactionId(),
-      createdAt: input.createdAt || now,
-      updatedAt: now,
-    }, 0, primaryCurrency.value)
+    const transaction = normalizeWalletTransaction(
+      {
+        ...input,
+        currency: input.currency || primaryCurrency.value,
+        id: input.id || createWalletTransactionId(),
+        createdAt: input.createdAt || now,
+        updatedAt: now,
+      },
+      0,
+      primaryCurrency.value,
+    )
     if (!transaction) return null
     const requestedAccount = findBankAccountById(transaction.accountId)
     const account = requestedAccount?.currencies.includes(transaction.currency)
@@ -668,15 +777,14 @@ export const useWalletStore = defineStore('wallet', () => {
     transaction.accountId = account?.id || ''
 
     const requestedCard = findPaymentCardById(transaction.cardId)
-    const matchingCard =
-      requestedCard?.supportedCurrencies.includes(transaction.currency)
-        ? requestedCard
-        : paymentCards.value.find(
-            (card) =>
-              card.accountId === transaction.accountId &&
-              card.status === 'active' &&
-              card.supportedCurrencies.includes(transaction.currency),
-          )
+    const matchingCard = requestedCard?.supportedCurrencies.includes(transaction.currency)
+      ? requestedCard
+      : paymentCards.value.find(
+          (card) =>
+            card.accountId === transaction.accountId &&
+            card.status === 'active' &&
+            card.supportedCurrencies.includes(transaction.currency),
+        )
     transaction.cardId = matchingCard?.id || ''
     transactions.value.unshift(transaction)
     if (transactions.value.length > WALLET_TRANSACTION_LIMIT) {
@@ -743,9 +851,9 @@ export const useWalletStore = defineStore('wallet', () => {
       return { ok: false, reason: 'currency_mismatch', transaction: null }
     }
     const accountSummary = bankAccountSummaries.value.find((item) => item.id === account.id)
-    const availableCents = accountSummary?.balances.find(
-      (balance) => balance.currency === payee.currency,
-    )?.amountCents || 0
+    const availableCents =
+      accountSummary?.balances.find((balance) => balance.currency === payee.currency)
+        ?.amountCents || 0
     if (amountCents > availableCents) {
       return { ok: false, reason: 'insufficient_funds', transaction: null }
     }
@@ -841,7 +949,11 @@ export const useWalletStore = defineStore('wallet', () => {
     return true
   }
 
-  const anonymizeTransaction = (transactionId, profile = {}, replacementName = 'Unknown counterparty') => {
+  const anonymizeTransaction = (
+    transactionId,
+    profile = {},
+    replacementName = 'Unknown counterparty',
+  ) => {
     const transaction = findTransactionById(transactionId)
     if (!transaction) return false
     const nextName = normalizeText(replacementName, 'Unknown counterparty', 120)
@@ -1004,15 +1116,23 @@ export const useWalletStore = defineStore('wallet', () => {
       Boolean(sourceObject.exchangeRates)
     if (!hasWalletPayload) return false
     primaryCurrency.value = normalizeCurrency(
-      sourceObject.primaryCurrency || sourceObject.defaultCurrency || sourceObject.settings?.primaryCurrency,
+      sourceObject.primaryCurrency ||
+        sourceObject.defaultCurrency ||
+        sourceObject.settings?.primaryCurrency,
       primaryCurrency.value,
     )
     registeredCurrencies.value = normalizeWalletCurrencyList(
       sourceObject.registeredCurrencies || sourceObject.currencies || registeredCurrencies.value,
     )
-    exchangeRates.value = normalizeWalletExchangeRates(sourceObject.exchangeRates || sourceObject.rates)
-    bankAccounts.value = normalizeWalletBankAccounts(sourceObject.bankAccounts || sourceObject.accounts)
-    paymentCards.value = normalizeWalletPaymentCards(sourceObject.paymentCards || sourceObject.cards)
+    exchangeRates.value = normalizeWalletExchangeRates(
+      sourceObject.exchangeRates || sourceObject.rates,
+    )
+    bankAccounts.value = normalizeWalletBankAccounts(
+      sourceObject.bankAccounts || sourceObject.accounts,
+    )
+    paymentCards.value = normalizeWalletPaymentCards(
+      sourceObject.paymentCards || sourceObject.cards,
+    )
     knownPayeeAccounts.value = normalizeKnownPayeeAccounts(
       sourceObject.knownPayeeAccounts || sourceObject.payees,
     )
@@ -1152,6 +1272,7 @@ export const useWalletStore = defineStore('wallet', () => {
     activeCardId,
     transactionCount,
     transactionSourceSummary,
+    transactionMonths,
     balances,
     primaryBalance,
     bankAccountSummaries,
@@ -1165,6 +1286,8 @@ export const useWalletStore = defineStore('wallet', () => {
     findTransactionById,
     findTransactionBySource,
     listTransactionsBySourceFilter,
+    listTransactionsByMonth,
+    summarizeTransactionsByMonth,
     listTransactionsByCounterparty,
     summarizeCounterpartyLedger,
     findBankAccountById,

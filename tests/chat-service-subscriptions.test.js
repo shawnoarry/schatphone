@@ -1405,7 +1405,7 @@ describe('Chat service subscriptions', () => {
     expect(wrapper.text()).toContain('Order shipped')
 
     await wrapper.get('[data-testid="chat-message-input"]').setValue('Can I change the address?')
-    await wrapper.get('[data-testid="chat-message-input"]').trigger('keyup.enter')
+    await wrapper.get('[data-testid="chat-message-input"]').trigger('keydown', { key: 'Enter' })
     await flushUi()
 
     const sent = chatStore

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import WalletBankCard from '../components/wallet/WalletBankCard.vue'
@@ -27,6 +27,7 @@ const walletStore = useWalletStore()
 const {
   transactionCount,
   transactionSourceSummary,
+  transactionMonths,
   primaryCurrency,
   currencyOptions,
   exchangeRateRows,
@@ -65,17 +66,18 @@ const activeSection = ref('home')
 const detailCardId = ref('')
 const detailReturnSection = ref('cards')
 const sourceFilter = ref(WALLET_TRANSACTION_SOURCE_FILTERS.ALL)
+const activitySearch = ref('')
+const selectedStatementMonth = ref('')
+const transactionDetailReturnSection = ref('activity')
 const primaryCurrencyDraft = ref(primaryCurrency.value)
 const usdCnyDraft = ref(String(exchangeRates.value.reference?.rate || '7.2'))
 const rateDrafts = ref({})
 const ratesExpanded = ref(false)
 const feedback = ref('')
 const feedbackType = ref('success')
-const cardCarouselRef = ref(null)
 const selectedReceiptId = ref('')
 const selectedTransactionId = ref('')
 const payeeTransferSubmitting = ref(false)
-let cardSelectionFrame = 0
 
 const firstFundedAccount = () =>
   bankAccountSummaries.value.find((account) => (account.primaryBalance?.amountCents || 0) > 0) ||
@@ -100,6 +102,8 @@ const payeeTransferDraft = ref({
 
 const sectionTitle = computed(() => {
   if (activeSection.value === 'activity') return t('活动', 'Activity')
+  if (activeSection.value === 'monthly-statement') return t('月度账单', 'Monthly statement')
+  if (activeSection.value === 'payees') return t('已验证收款人', 'Verified payees')
   if (activeSection.value === 'cards') return t('卡片', 'Cards')
   if (activeSection.value === 'settings') return t('钱包设置', 'Wallet settings')
   if (activeSection.value === 'transfer') return t('转账', 'Transfer')
@@ -113,18 +117,40 @@ const sectionTitle = computed(() => {
 
 const headerBackText = computed(() => {
   if (activeSection.value === 'home') return t('首页', 'Home')
+  if (activeSection.value === 'payee-transfer' && isInternalPayeeWorkflow.value) {
+    return t('收款人', 'Payees')
+  }
+  if (activeSection.value === 'receipt' && isInternalPayeeWorkflow.value) {
+    return t('收款人', 'Payees')
+  }
   if (activeSection.value === 'payee-transfer' && workflowChatId.value) return 'Chat'
-  if (activeSection.value === 'transaction-detail') return t('活动', 'Activity')
+  if (activeSection.value === 'monthly-statement') return t('活动', 'Activity')
+  if (activeSection.value === 'transaction-detail') {
+    return transactionDetailReturnSection.value === 'monthly-statement'
+      ? t('月度账单', 'Monthly statement')
+      : t('活动', 'Activity')
+  }
   return t('钱包', 'Wallet')
 })
 
 const headerBackAriaLabel = computed(() => {
   if (activeSection.value === 'home') return t('返回首页', 'Return Home')
+  if (
+    ['payee-transfer', 'receipt'].includes(activeSection.value) &&
+    isInternalPayeeWorkflow.value
+  ) {
+    return t('返回已验证收款人', 'Return to verified payees')
+  }
   if (activeSection.value === 'payee-transfer' && workflowChatId.value) {
     return t('返回聊天', 'Return to Chat')
   }
-  if (activeSection.value === 'transaction-detail') {
+  if (activeSection.value === 'monthly-statement') {
     return t('返回钱包活动', 'Return to Wallet activity')
+  }
+  if (activeSection.value === 'transaction-detail') {
+    return transactionDetailReturnSection.value === 'monthly-statement'
+      ? t('返回月度账单', 'Return to monthly statement')
+      : t('返回钱包活动', 'Return to Wallet activity')
   }
   return t('返回钱包', 'Return to Wallet')
 })
@@ -163,6 +189,15 @@ const selectedPayeeAccount = computed(() => {
   const payeeAccountId = queryText(route.query.payeeAccountId)
   if (!payeeAccountId) return null
   return knownPayeeAccountSummaries.value.find((payee) => payee.id === payeeAccountId) || null
+})
+
+const activeVerifiedPayees = computed(() =>
+  knownPayeeAccountSummaries.value.filter((payee) => payee.status === 'active'),
+)
+
+const verifiedPayeeCountLabel = computed(() => {
+  const count = activeVerifiedPayees.value.length
+  return t(`${count} 个已验证账户`, `${count} verified ${count === 1 ? 'account' : 'accounts'}`)
 })
 
 const payeeTransferContextError = computed(() => {
@@ -242,12 +277,22 @@ const receiptPaymentCard = computed(
     paymentCardSummaries.value.find((card) => card.id === selectedReceipt.value?.cardId) || null,
 )
 
-const workflowChatId = computed(
-  () =>
+const walletWorkflowSource = computed(() => queryText(route.query.source))
+
+const isInternalPayeeWorkflow = computed(() => walletWorkflowSource.value === 'wallet_payees')
+
+const workflowChatId = computed(() => {
+  const source = walletWorkflowSource.value
+  const isLegacyChatPayeeRoute =
+    !source &&
+    (queryText(route.query.intent) === 'payee_account' || queryText(route.query.payeeAccountId))
+  if (source !== 'chat' && !isLegacyChatPayeeRoute) return 0
+  return (
     Number(selectedReceipt.value?.sourceChatId) ||
     Number(selectedPayeeAccount.value?.sourceChatId) ||
-    queryPositiveInt(route.query.chatId),
-)
+    queryPositiveInt(route.query.chatId)
+  )
+})
 
 const payeeTransferAmountIsValid = computed(() => {
   const amount = String(payeeTransferDraft.value.amount || '').trim()
@@ -292,13 +337,87 @@ const sourceFilterOptions = computed(() => [
   },
 ])
 
-const filteredTransactions = computed(() =>
-  walletStore.listTransactionsBySourceFilter(sourceFilter.value),
+const activitySearchQuery = computed(() => activitySearch.value.trim().toLocaleLowerCase())
+
+const filteredTransactions = computed(() => {
+  const sourceTransactions = walletStore.listTransactionsBySourceFilter(sourceFilter.value)
+  const query = activitySearchQuery.value
+  if (!query) return sourceTransactions
+
+  return sourceTransactions.filter((transaction) => {
+    const searchableText = [
+      transaction.title,
+      transaction.counterparty,
+      transaction.note,
+      transaction.currency,
+      transaction.sourceModule,
+      transaction.sourceId,
+      transaction.receiptNumber,
+      transaction.accountId,
+      transaction.cardId,
+      getTransactionSourceLabel(transaction),
+      getTransactionModuleLabel(transaction),
+      Number.isFinite(transaction.amountCents) ? (transaction.amountCents / 100).toFixed(2) : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLocaleLowerCase()
+
+    return searchableText.includes(query)
+  })
+})
+
+const activityResultCountLabel = computed(() => {
+  const count = filteredTransactions.value.length
+  return t(`${count} 条结果`, `${count} ${count === 1 ? 'result' : 'results'}`)
+})
+
+const formatStatementMonthLabel = (monthKey = '') => {
+  const [year, month] = String(monthKey).split('-').map(Number)
+  if (!Number.isInteger(year) || !Number.isInteger(month)) return t('未知月份', 'Unknown month')
+  return new Date(year, month - 1, 1).toLocaleDateString(systemLanguage.value, {
+    year: 'numeric',
+    month: 'long',
+  })
+}
+
+const statementTransactionCountLabel = (count = 0, zhSuffix = '笔') =>
+  t(`${count} ${zhSuffix}`, `${count} ${Number(count) === 1 ? 'transaction' : 'transactions'}`)
+
+const statementMonthOptions = computed(() =>
+  transactionMonths.value.map((month) => ({
+    ...month,
+    label: formatStatementMonthLabel(month.key),
+  })),
+)
+
+const selectedStatementTransactions = computed(() =>
+  walletStore.listTransactionsByMonth(selectedStatementMonth.value),
+)
+
+const selectedStatementSummary = computed(() =>
+  walletStore.summarizeTransactionsByMonth(selectedStatementMonth.value),
+)
+
+const latestStatementMonth = computed(() => statementMonthOptions.value[0] || null)
+
+const selectedStatementMonthLabel = computed(() =>
+  selectedStatementMonth.value
+    ? formatStatementMonthLabel(selectedStatementMonth.value)
+    : t('暂无账单', 'No statements yet'),
 )
 
 const recentTransactions = computed(() =>
   walletStore.listTransactionsBySourceFilter(WALLET_TRANSACTION_SOURCE_FILTERS.ALL).slice(0, 3),
 )
+
+const cardDeckCards = computed(() => {
+  const activeCardId = activePaymentCard.value?.id
+  if (!activeCardId) return paymentCardSummaries.value
+  const activeCard = paymentCardSummaries.value.find((card) => card.id === activeCardId)
+  if (!activeCard) return paymentCardSummaries.value
+  return [...paymentCardSummaries.value.filter((card) => card.id !== activeCardId), activeCard]
+})
 
 const detailTransactions = computed(() =>
   selectedDetailCard.value
@@ -324,6 +443,16 @@ const selectedRelationshipContact = computed(
 )
 
 watch(
+  transactionMonths,
+  (months) => {
+    if (!months.some((month) => month.key === selectedStatementMonth.value)) {
+      selectedStatementMonth.value = months[0]?.key || ''
+    }
+  },
+  { immediate: true },
+)
+
+watch(
   () => transferDraft.value.accountId,
   (accountId) => {
     const account = bankAccountSummaries.value.find((item) => item.id === accountId)
@@ -338,12 +467,24 @@ const showFeedback = (type, message) => {
 
 const payeeTransferErrorMessage = (reason = '') => {
   if (reason === 'payee_not_found') {
+    if (isInternalPayeeWorkflow.value) {
+      return t(
+        '这个收款账户已不可用，请返回收款人列表。',
+        'This receiving account is no longer available. Return to the payee list.',
+      )
+    }
     return t(
       '收款账户已失效，请返回 Chat 重新请求账户卡。',
       'This receiving account is no longer available. Request a new account card in Chat.',
     )
   }
   if (reason === 'currency_mismatch') {
+    if (isInternalPayeeWorkflow.value) {
+      return t(
+        '收款账户币种信息不一致，请返回收款人列表。',
+        'The receiving-account currency no longer matches. Return to the payee list.',
+      )
+    }
     return t(
       '账户卡币种信息不一致，请返回 Chat 重新请求。',
       'The account-card currency no longer matches. Request a new card in Chat.',
@@ -395,14 +536,18 @@ const replaceWalletWorkflowQuery = (workflowQuery = {}) => {
 const closeWalletWorkflow = (section = 'home') => {
   selectedReceiptId.value = ''
   selectedTransactionId.value = ''
+  transactionDetailReturnSection.value = 'activity'
   payeeTransferSubmitting.value = false
   activeSection.value = section
   replaceWalletWorkflowQuery()
 }
 
 const closeTransactionDetail = () => {
+  const returnSection =
+    transactionDetailReturnSection.value === 'monthly-statement' ? 'monthly-statement' : 'activity'
   selectedTransactionId.value = ''
-  activeSection.value = 'activity'
+  transactionDetailReturnSection.value = 'activity'
+  activeSection.value = returnSection
   const nextQuery = Object.fromEntries(
     Object.entries(route.query).filter(([key]) => key !== 'transactionId'),
   )
@@ -441,15 +586,27 @@ const navigateToSection = (section) => {
 const navigateBack = () => {
   clearFeedback()
   if (activeSection.value === 'payee-transfer') {
+    if (isInternalPayeeWorkflow.value) {
+      closeWalletWorkflow('payees')
+      return
+    }
     returnToSourceChat()
     return
   }
   if (activeSection.value === 'receipt') {
+    if (isInternalPayeeWorkflow.value) {
+      closeWalletWorkflow('payees')
+      return
+    }
     closeWalletWorkflow('activity')
     return
   }
   if (activeSection.value === 'transaction-detail') {
     closeTransactionDetail()
+    return
+  }
+  if (activeSection.value === 'monthly-statement') {
+    activeSection.value = 'activity'
     return
   }
   if (activeSection.value === 'home') {
@@ -475,9 +632,16 @@ const syncWalletWorkflowFromRoute = () => {
 
   const transactionId = queryText(route.query.transactionId)
   if (transactionId) {
+    const preservesCurrentReturnSection =
+      activeSection.value === 'transaction-detail' &&
+      selectedTransactionId.value === transactionId &&
+      transactionDetailReturnSection.value === 'monthly-statement'
     clearFeedback()
     selectedReceiptId.value = ''
     selectedTransactionId.value = transactionId
+    transactionDetailReturnSection.value = preservesCurrentReturnSection
+      ? 'monthly-statement'
+      : 'activity'
     activeSection.value = 'transaction-detail'
     return
   }
@@ -504,58 +668,7 @@ const syncWalletWorkflowFromRoute = () => {
   payeeTransferDraft.value.accountId = preferredAccount?.id || ''
 }
 
-const centerCardInCarousel = async (cardId) => {
-  await nextTick()
-  const carousel = cardCarouselRef.value
-  if (!carousel) return
-  const cardItem = [...carousel.querySelectorAll('[data-wallet-card-id]')].find(
-    (item) => item.dataset.walletCardId === cardId,
-  )
-  if (!cardItem || typeof carousel.scrollTo !== 'function') return
-  const targetLeft = cardItem.offsetLeft - (carousel.clientWidth - cardItem.clientWidth) / 2
-  carousel.scrollTo({ left: Math.max(0, targetLeft), behavior: 'auto' })
-}
-
-const selectCard = (cardId) => {
-  const card = walletStore.selectPaymentCard(cardId)
-  if (card) void centerCardInCarousel(card.id)
-  return card
-}
-
-const syncCardSelectionFromCarousel = () => {
-  if (typeof window === 'undefined') return
-  if (cardSelectionFrame) window.cancelAnimationFrame(cardSelectionFrame)
-  cardSelectionFrame = window.requestAnimationFrame(() => {
-    cardSelectionFrame = 0
-    const carousel = cardCarouselRef.value
-    if (!carousel) return
-    const cardItems = [...carousel.querySelectorAll('[data-wallet-card-id]')]
-    const maxScrollLeft = Math.max(0, carousel.scrollWidth - carousel.clientWidth)
-    const edgeTolerance = 2
-    let nearestCardId = ''
-    if (carousel.scrollLeft <= edgeTolerance) {
-      nearestCardId = cardItems[0]?.dataset.walletCardId || ''
-    } else if (maxScrollLeft - carousel.scrollLeft <= edgeTolerance) {
-      nearestCardId = cardItems.at(-1)?.dataset.walletCardId || ''
-    }
-
-    const carouselCenter = carousel.scrollLeft + carousel.clientWidth / 2
-    let nearestDistance = Number.POSITIVE_INFINITY
-    if (!nearestCardId) {
-      cardItems.forEach((item) => {
-        const itemCenter = item.offsetLeft + item.clientWidth / 2
-        const distance = Math.abs(itemCenter - carouselCenter)
-        if (distance < nearestDistance) {
-          nearestDistance = distance
-          nearestCardId = item.dataset.walletCardId || ''
-        }
-      })
-    }
-    if (nearestCardId && nearestCardId !== activePaymentCard.value?.id) {
-      walletStore.selectPaymentCard(nearestCardId)
-    }
-  })
-}
+const selectCard = (cardId) => walletStore.selectPaymentCard(cardId)
 
 const openCardDetail = (cardId, returnSection = 'cards') => {
   const card = walletStore.selectPaymentCard(cardId)
@@ -676,6 +789,13 @@ const transactionAmountLabel = (transaction) => {
   return `${sign}${(transaction.amountCents / 100).toFixed(2)} ${transaction.currency}`
 }
 
+const statementAmountLabel = (amountCents = 0, kind = 'net') => {
+  const value = Number.isFinite(Number(amountCents)) ? Math.trunc(Number(amountCents)) : 0
+  const sign =
+    value === 0 ? '' : kind === 'income' ? '+' : kind === 'expense' ? '-' : value > 0 ? '+' : '-'
+  return `${sign}${(Math.abs(value) / 100).toFixed(2)}`
+}
+
 const transactionIcon = (transaction) => {
   if (isOrderSource(transaction)) return 'fas fa-bag-shopping'
   if (isRolePayeeTransfer(transaction)) return 'fas fa-building-columns'
@@ -698,6 +818,29 @@ const openReceive = () => {
   const activeAccount = activePaymentCard.value?.account
   receiveAccountId.value = activeAccount?.id || firstFundedAccount()?.id || ''
   navigateToSection('receive')
+}
+
+const openVerifiedPayees = () => {
+  navigateToSection('payees')
+}
+
+const openPayeeTransfer = (payee) => {
+  if (!payee?.id || payee.status !== 'active') return
+  clearFeedback()
+  selectedReceiptId.value = ''
+  selectedTransactionId.value = ''
+  payeeTransferDraft.value = {
+    accountId: '',
+    amount: '',
+    note: '',
+  }
+  replaceWalletWorkflowQuery({
+    intent: 'payee_account',
+    payeeAccountId: payee.id,
+    profileId: payee.ownerProfileId,
+    currency: payee.currency,
+    source: 'wallet_payees',
+  })
 }
 
 const useReceiveCard = () => {
@@ -827,8 +970,8 @@ const submitPayeeTransfer = () => {
   activeSection.value = 'receipt'
   replaceWalletWorkflowQuery({
     receiptId: result.transaction.id,
-    source: 'chat',
-    chatId: result.transaction.sourceChatId,
+    source: isInternalPayeeWorkflow.value ? 'wallet_payees' : 'chat',
+    chatId: isInternalPayeeWorkflow.value ? '' : result.transaction.sourceChatId,
   })
 }
 
@@ -845,11 +988,20 @@ const openTransferReceipt = (transaction) => {
   })
 }
 
-const openTransactionDetail = (transaction) => {
+const openMonthlyStatement = () => {
+  if (!selectedStatementMonth.value) {
+    selectedStatementMonth.value = transactionMonths.value[0]?.key || ''
+  }
+  navigateToSection('monthly-statement')
+}
+
+const openTransactionDetail = (transaction, returnSection = 'activity') => {
   if (!transaction?.id) return
   clearFeedback()
   selectedReceiptId.value = ''
   selectedTransactionId.value = transaction.id
+  transactionDetailReturnSection.value =
+    returnSection === 'monthly-statement' ? 'monthly-statement' : 'activity'
   activeSection.value = 'transaction-detail'
   replaceWalletWorkflowQuery({ transactionId: transaction.id })
 }
@@ -935,16 +1087,6 @@ watch(
   () => syncWalletWorkflowFromRoute(),
   { immediate: true },
 )
-
-onMounted(() => {
-  if (activePaymentCard.value?.id) void centerCardInCarousel(activePaymentCard.value.id)
-})
-
-onBeforeUnmount(() => {
-  if (cardSelectionFrame && typeof window !== 'undefined') {
-    window.cancelAnimationFrame(cardSelectionFrame)
-  }
-})
 </script>
 
 <template>
@@ -990,132 +1132,250 @@ onBeforeUnmount(() => {
       </div>
 
       <template v-if="activeSection === 'home'">
-        <section class="wallet-card-stage" aria-labelledby="wallet-cards-heading">
-          <div class="wallet-section-heading wallet-section-heading--stage">
-            <div>
-              <p class="wallet-eyebrow">{{ t('常用卡', 'Everyday cards') }}</p>
-              <h2 id="wallet-cards-heading">
-                {{
-                  activePaymentCard?.institution
-                    ? t(activePaymentCard.institution.nameZh, activePaymentCard.institution.nameEn)
-                    : ''
-                }}
-              </h2>
+        <div class="wallet-home-layout">
+          <section class="wallet-card-stage" aria-labelledby="wallet-cards-heading">
+            <div class="wallet-section-heading wallet-section-heading--stage">
+              <div>
+                <p class="wallet-eyebrow">{{ t('常用卡', 'Everyday cards') }}</p>
+                <h2 id="wallet-cards-heading">
+                  {{
+                    activePaymentCard?.institution
+                      ? t(
+                          activePaymentCard.institution.nameZh,
+                          activePaymentCard.institution.nameEn,
+                        )
+                      : ''
+                  }}
+                </h2>
+              </div>
+              <button
+                type="button"
+                class="wallet-text-button"
+                data-testid="wallet-open-active-card"
+                @click="openActiveCardDetail"
+              >
+                {{ t('详情', 'Details') }}
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+              </button>
             </div>
+
+            <div
+              class="wallet-card-deck"
+              role="list"
+              :aria-label="t('钱包卡包', 'Wallet card deck')"
+              data-testid="wallet-card-deck"
+              :style="{
+                '--wallet-card-stack-tail': `calc(${Math.max(0, cardDeckCards.length - 1)} * var(--wallet-card-stack-step))`,
+              }"
+            >
+              <div
+                v-for="(card, index) in cardDeckCards"
+                :key="card.id"
+                class="wallet-card-deck__item"
+                :class="{ 'is-active': activePaymentCard?.id === card.id }"
+                :style="{
+                  zIndex: index + 1,
+                  transform: `translateY(calc(${index} * var(--wallet-card-stack-step)))`,
+                }"
+                :data-wallet-card-id="card.id"
+                role="listitem"
+              >
+                <WalletBankCard
+                  :card="card"
+                  :selected="activePaymentCard?.id === card.id"
+                  :amount-label="cardAmountLabel(card)"
+                  :amount-caption="cardAmountCaption(card)"
+                  @select="selectCard"
+                />
+              </div>
+            </div>
+
+            <div class="wallet-card-stage__footer">
+              <span>
+                {{
+                  paymentCardSummaries.findIndex((card) => card.id === activePaymentCard?.id) + 1
+                }}
+                / {{ paymentCardSummaries.length }}
+              </span>
+              <span v-if="activePaymentCard?.kind === 'credit'">
+                {{ activePaymentCard.supportedCurrencies.length }} {{ t('币种', 'currencies') }} ·
+                {{ activePaymentCard.settlementCurrency }} {{ t('账单', 'billing') }}
+              </span>
+              <span v-else>{{ activePaymentCard?.settlementCurrency }}</span>
+            </div>
+          </section>
+
+          <div class="wallet-home-companion">
+            <nav class="wallet-quick-actions" :aria-label="t('钱包操作', 'Wallet actions')">
+              <button type="button" data-testid="wallet-open-transfer" @click="openTransfer">
+                <span><i class="fas fa-arrow-up" aria-hidden="true"></i></span>
+                {{ t('转账', 'Transfer') }}
+              </button>
+              <button type="button" data-testid="wallet-open-receive" @click="openReceive">
+                <span><i class="fas fa-arrow-down" aria-hidden="true"></i></span>
+                {{ t('收款', 'Receive') }}
+              </button>
+              <button
+                type="button"
+                data-testid="wallet-open-activity"
+                @click="navigateToSection('activity')"
+              >
+                <span><i class="fas fa-clock-rotate-left" aria-hidden="true"></i></span>
+                {{ t('活动', 'Activity') }}
+              </button>
+              <button
+                type="button"
+                data-testid="wallet-open-cards"
+                @click="navigateToSection('cards')"
+              >
+                <span><i class="fas fa-credit-card" aria-hidden="true"></i></span>
+                {{ t('卡片', 'Cards') }}
+              </button>
+            </nav>
+
             <button
               type="button"
-              class="wallet-text-button"
-              data-testid="wallet-open-active-card"
-              @click="openActiveCardDetail"
+              class="wallet-payee-entry"
+              :class="{ 'has-payees': activeVerifiedPayees.length > 0 }"
+              data-testid="wallet-open-verified-payees"
+              @click="openVerifiedPayees"
             >
-              {{ t('详情', 'Details') }}
-              <i class="fas fa-chevron-right" aria-hidden="true"></i>
+              <span class="wallet-payee-entry__icon">
+                <i class="fas fa-user-shield" aria-hidden="true"></i>
+              </span>
+              <span class="wallet-payee-entry__copy">
+                <strong>{{ t('已验证收款人', 'Verified payees') }}</strong>
+                <small>{{ verifiedPayeeCountLabel }}</small>
+              </span>
+              <span class="wallet-payee-entry__meta" aria-hidden="true">
+                <strong>{{ activeVerifiedPayees.length }}</strong>
+                <i class="fas fa-chevron-right"></i>
+              </span>
             </button>
-          </div>
 
-          <div
-            ref="cardCarouselRef"
-            class="wallet-card-carousel"
-            data-testid="wallet-card-carousel"
-            @scroll.passive="syncCardSelectionFromCarousel"
-          >
-            <div
-              v-for="card in paymentCardSummaries"
-              :key="card.id"
-              class="wallet-card-carousel__item"
-              :data-wallet-card-id="card.id"
+            <section class="wallet-section" aria-labelledby="wallet-recent-heading">
+              <div class="wallet-section-heading">
+                <div>
+                  <p class="wallet-eyebrow">{{ t('最近', 'Latest') }}</p>
+                  <h2 id="wallet-recent-heading">{{ t('钱包活动', 'Wallet activity') }}</h2>
+                </div>
+                <button
+                  type="button"
+                  class="wallet-text-button"
+                  @click="navigateToSection('activity')"
+                >
+                  {{ t('全部', 'All') }}
+                  <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div v-if="recentTransactions.length" class="wallet-transaction-list" role="list">
+                <div
+                  v-for="item in recentTransactions"
+                  :key="item.id"
+                  class="wallet-transaction-row"
+                  role="listitem"
+                >
+                  <span
+                    class="wallet-transaction-row__icon"
+                    :class="{ 'is-expense': item.type === 'expense' }"
+                  >
+                    <i :class="transactionIcon(item)" aria-hidden="true"></i>
+                  </span>
+                  <span class="wallet-transaction-row__copy">
+                    <strong>{{ item.title }}</strong>
+                    <small
+                      >{{ item.counterparty || getTransactionSourceLabel(item) }} ·
+                      {{ formatTime(item.createdAt) }}</small
+                    >
+                  </span>
+                  <span
+                    class="wallet-transaction-row__amount"
+                    :class="{ 'is-expense': item.type === 'expense' }"
+                  >
+                    {{ transactionAmountLabel(item) }}
+                  </span>
+                </div>
+              </div>
+              <div v-else class="wallet-empty-state">
+                <i class="fas fa-receipt" aria-hidden="true"></i>
+                <p>{{ t('还没有钱包活动', 'No wallet activity yet') }}</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="activeSection === 'payees'">
+        <section class="wallet-page-lead">
+          <p class="wallet-eyebrow">{{ verifiedPayeeCountLabel }}</p>
+          <h2>{{ t('已保存的收款账户', 'Saved receiving accounts') }}</h2>
+        </section>
+
+        <section
+          v-if="knownPayeeAccountSummaries.length"
+          class="wallet-payee-list"
+          role="list"
+          data-testid="wallet-verified-payees"
+        >
+          <div v-for="payee in knownPayeeAccountSummaries" :key="payee.id" role="listitem">
+            <button
+              type="button"
+              class="wallet-payee-row"
+              :class="{ 'is-unavailable': payee.status !== 'active' }"
+              :disabled="payee.status !== 'active'"
+              :aria-label="
+                payee.status === 'active'
+                  ? t(`再次向 ${payee.ownerName} 转账`, `Transfer again to ${payee.ownerName}`)
+                  : t(
+                      `${payee.ownerName} 的账户不可用`,
+                      `${payee.ownerName}'s account is unavailable`,
+                    )
+              "
+              :data-testid="`wallet-payee-${payee.id}`"
+              @click="openPayeeTransfer(payee)"
             >
-              <WalletBankCard
-                :card="card"
-                :selected="activePaymentCard?.id === card.id"
-                :amount-label="cardAmountLabel(card)"
-                :amount-caption="cardAmountCaption(card)"
-                @select="selectCard"
-              />
-            </div>
-          </div>
-
-          <div class="wallet-card-stage__footer">
-            <span>
-              {{
-                paymentCardSummaries.findIndex((card) => card.id === activePaymentCard?.id) + 1
-              }}
-              / {{ paymentCardSummaries.length }}
-            </span>
-            <span v-if="activePaymentCard?.kind === 'credit'">
-              {{ activePaymentCard.supportedCurrencies.length }} {{ t('币种', 'currencies') }} ·
-              {{ activePaymentCard.settlementCurrency }} {{ t('账单', 'billing') }}
-            </span>
-            <span v-else>{{ activePaymentCard?.settlementCurrency }}</span>
+              <span class="wallet-payee-row__icon">
+                <strong aria-hidden="true">{{ payee.ownerName.slice(0, 1).toUpperCase() }}</strong>
+                <i class="fas fa-shield-check" aria-hidden="true"></i>
+              </span>
+              <span class="wallet-payee-row__copy">
+                <strong>{{ payee.ownerName }}</strong>
+                <small class="wallet-payee-row__institution">
+                  {{ t(payee.institution?.nameZh || '', payee.institution?.nameEn || '') }} ·
+                </small>
+                <em>{{ payee.maskedAccountNumber }}</em>
+              </span>
+              <span class="wallet-payee-row__meta">
+                <strong>{{ payee.currency }}</strong>
+                <small>
+                  <i
+                    :class="
+                      payee.status === 'active' ? 'fas fa-shield-check' : 'fas fa-circle-xmark'
+                    "
+                    aria-hidden="true"
+                  ></i>
+                  {{
+                    payee.status === 'active' ? t('已验证', 'Verified') : t('不可用', 'Unavailable')
+                  }}
+                </small>
+              </span>
+              <span class="wallet-payee-row__action" aria-hidden="true">
+                <i :class="payee.status === 'active' ? 'fas fa-chevron-right' : 'fas fa-lock'"></i>
+              </span>
+            </button>
           </div>
         </section>
 
-        <nav class="wallet-quick-actions" :aria-label="t('钱包操作', 'Wallet actions')">
-          <button type="button" data-testid="wallet-open-transfer" @click="openTransfer">
-            <span><i class="fas fa-arrow-up" aria-hidden="true"></i></span>
-            {{ t('转账', 'Transfer') }}
+        <section
+          v-else
+          class="wallet-workflow-unavailable wallet-verified-payees-empty"
+          data-testid="wallet-verified-payees-empty"
+        >
+          <i class="fas fa-user-shield" aria-hidden="true"></i>
+          <strong>{{ t('还没有已验证收款人', 'No verified payees yet') }}</strong>
+          <button type="button" @click="navigateToSection('home')">
+            {{ t('返回钱包', 'Return to Wallet') }}
           </button>
-          <button type="button" data-testid="wallet-open-receive" @click="openReceive">
-            <span><i class="fas fa-arrow-down" aria-hidden="true"></i></span>
-            {{ t('收款', 'Receive') }}
-          </button>
-          <button
-            type="button"
-            data-testid="wallet-open-activity"
-            @click="navigateToSection('activity')"
-          >
-            <span><i class="fas fa-clock-rotate-left" aria-hidden="true"></i></span>
-            {{ t('活动', 'Activity') }}
-          </button>
-          <button type="button" data-testid="wallet-open-cards" @click="navigateToSection('cards')">
-            <span><i class="fas fa-credit-card" aria-hidden="true"></i></span>
-            {{ t('卡片', 'Cards') }}
-          </button>
-        </nav>
-
-        <section class="wallet-section" aria-labelledby="wallet-recent-heading">
-          <div class="wallet-section-heading">
-            <div>
-              <p class="wallet-eyebrow">{{ t('最近', 'Latest') }}</p>
-              <h2 id="wallet-recent-heading">{{ t('钱包活动', 'Wallet activity') }}</h2>
-            </div>
-            <button type="button" class="wallet-text-button" @click="navigateToSection('activity')">
-              {{ t('全部', 'All') }}
-              <i class="fas fa-chevron-right" aria-hidden="true"></i>
-            </button>
-          </div>
-          <div v-if="recentTransactions.length" class="wallet-transaction-list" role="list">
-            <div
-              v-for="item in recentTransactions"
-              :key="item.id"
-              class="wallet-transaction-row"
-              role="listitem"
-            >
-              <span
-                class="wallet-transaction-row__icon"
-                :class="{ 'is-expense': item.type === 'expense' }"
-              >
-                <i :class="transactionIcon(item)" aria-hidden="true"></i>
-              </span>
-              <span class="wallet-transaction-row__copy">
-                <strong>{{ item.title }}</strong>
-                <small
-                  >{{ item.counterparty || getTransactionSourceLabel(item) }} ·
-                  {{ formatTime(item.createdAt) }}</small
-                >
-              </span>
-              <span
-                class="wallet-transaction-row__amount"
-                :class="{ 'is-expense': item.type === 'expense' }"
-              >
-                {{ transactionAmountLabel(item) }}
-              </span>
-            </div>
-          </div>
-          <div v-else class="wallet-empty-state">
-            <i class="fas fa-receipt" aria-hidden="true"></i>
-            <p>{{ t('还没有钱包活动', 'No wallet activity yet') }}</p>
-          </div>
         </section>
       </template>
 
@@ -1127,12 +1387,59 @@ onBeforeUnmount(() => {
           </h2>
         </section>
 
+        <button
+          type="button"
+          class="wallet-statement-entry"
+          data-testid="wallet-open-monthly-statement"
+          @click="openMonthlyStatement"
+        >
+          <span class="wallet-statement-entry__icon">
+            <i class="fas fa-calendar-days" aria-hidden="true"></i>
+          </span>
+          <span class="wallet-statement-entry__copy">
+            <strong>{{ t('月度账单', 'Monthly statement') }}</strong>
+            <small v-if="latestStatementMonth">
+              {{ latestStatementMonth.label }} ·
+              {{ statementTransactionCountLabel(latestStatementMonth.count, '条记录') }}
+            </small>
+            <small v-else>{{ t('暂无记录', 'No records yet') }}</small>
+          </span>
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </button>
+
+        <div class="wallet-activity-tools">
+          <label class="wallet-activity-search">
+            <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              v-model="activitySearch"
+              type="search"
+              :placeholder="t('搜索交易', 'Search transactions')"
+              :aria-label="t('搜索钱包交易', 'Search Wallet transactions')"
+              data-testid="wallet-activity-search"
+            />
+            <button
+              v-if="activitySearch"
+              type="button"
+              :title="t('清除搜索', 'Clear search')"
+              :aria-label="t('清除搜索', 'Clear search')"
+              data-testid="wallet-activity-search-clear"
+              @click="activitySearch = ''"
+            >
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </label>
+          <p aria-live="polite" data-testid="wallet-activity-result-count">
+            {{ activityResultCountLabel }}
+          </p>
+        </div>
+
         <div class="wallet-segmented" role="group" :aria-label="t('活动筛选', 'Activity filter')">
           <button
             v-for="option in sourceFilterOptions"
             :key="option.key"
             type="button"
             :class="{ 'is-active': sourceFilter === option.key }"
+            :data-testid="`wallet-activity-filter-${option.key}`"
             @click="sourceFilter = option.key"
           >
             {{ option.label }} <span>{{ option.count }}</span>
@@ -1201,10 +1508,148 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div v-else class="wallet-empty-state">
-            <i class="fas fa-receipt" aria-hidden="true"></i>
-            <p>{{ t('这个分类还没有记录', 'No records in this category') }}</p>
+            <i
+              :class="activitySearchQuery ? 'fas fa-magnifying-glass' : 'fas fa-receipt'"
+              aria-hidden="true"
+            ></i>
+            <p v-if="activitySearchQuery">
+              {{ t('没有匹配的交易', 'No matching transactions') }}
+            </p>
+            <p v-else>{{ t('这个分类还没有记录', 'No records in this category') }}</p>
           </div>
         </section>
+      </template>
+
+      <template v-else-if="activeSection === 'monthly-statement'">
+        <div data-testid="wallet-monthly-statement">
+          <section class="wallet-page-lead">
+            <p class="wallet-eyebrow">{{ t('按原币种统计', 'Totals by original currency') }}</p>
+            <h2>{{ selectedStatementMonthLabel }}</h2>
+          </section>
+
+          <template v-if="statementMonthOptions.length">
+            <section class="wallet-statement-controls">
+              <label>
+                <span>{{ t('账单月份', 'Statement month') }}</span>
+                <select
+                  v-model="selectedStatementMonth"
+                  data-testid="wallet-statement-month-select"
+                >
+                  <option
+                    v-for="month in statementMonthOptions"
+                    :key="month.key"
+                    :value="month.key"
+                  >
+                    {{ month.label }} · {{ statementTransactionCountLabel(month.count) }}
+                  </option>
+                </select>
+              </label>
+              <span>
+                {{ statementTransactionCountLabel(selectedStatementSummary.count, '笔交易') }}
+              </span>
+            </section>
+
+            <section
+              class="wallet-statement-summary"
+              :aria-label="t('月度收支汇总', 'Monthly income and spending summary')"
+              data-testid="wallet-monthly-statement-summary"
+            >
+              <div
+                v-for="total in selectedStatementSummary.currencies"
+                :key="total.currency"
+                class="wallet-statement-summary__currency"
+                :data-testid="`wallet-statement-total-${total.currency}`"
+              >
+                <header>
+                  <strong>{{ total.currency }}</strong>
+                  <small>{{ statementTransactionCountLabel(total.count) }}</small>
+                </header>
+                <dl class="wallet-statement-summary__metrics">
+                  <div class="is-income">
+                    <dt>{{ t('收入', 'Income') }}</dt>
+                    <dd>
+                      <strong>{{ statementAmountLabel(total.incomeCents, 'income') }}</strong>
+                      <small>{{ total.currency }}</small>
+                    </dd>
+                  </div>
+                  <div class="is-expense">
+                    <dt>{{ t('支出', 'Spending') }}</dt>
+                    <dd>
+                      <strong>{{ statementAmountLabel(total.expenseCents, 'expense') }}</strong>
+                      <small>{{ total.currency }}</small>
+                    </dd>
+                  </div>
+                  <div class="is-net">
+                    <dt>{{ t('净额', 'Net') }}</dt>
+                    <dd>
+                      <strong>{{ statementAmountLabel(total.netCents) }}</strong>
+                      <small>{{ total.currency }}</small>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
+
+            <section class="wallet-section wallet-section--activity">
+              <div class="wallet-section-heading">
+                <div>
+                  <p class="wallet-eyebrow">{{ t('月内明细', 'Monthly activity') }}</p>
+                  <h2>{{ selectedStatementMonthLabel }}</h2>
+                </div>
+              </div>
+              <div
+                v-if="selectedStatementTransactions.length"
+                class="wallet-transaction-list"
+                role="list"
+                data-testid="wallet-monthly-statement-transactions"
+              >
+                <div
+                  v-for="item in selectedStatementTransactions"
+                  :key="item.id"
+                  class="wallet-transaction-row wallet-transaction-row--manage"
+                  role="listitem"
+                >
+                  <span
+                    class="wallet-transaction-row__icon"
+                    :class="{ 'is-expense': item.type === 'expense' }"
+                  >
+                    <i :class="transactionIcon(item)" aria-hidden="true"></i>
+                  </span>
+                  <span class="wallet-transaction-row__copy">
+                    <strong>{{ item.title }}</strong>
+                    <small
+                      >{{ item.counterparty || getTransactionSourceLabel(item) }} ·
+                      {{ formatTime(item.createdAt) }}</small
+                    >
+                    <em>{{ getTransactionSourceLabel(item) }}</em>
+                  </span>
+                  <span class="wallet-transaction-row__actions">
+                    <strong :class="{ 'is-expense': item.type === 'expense' }">{{
+                      transactionAmountLabel(item)
+                    }}</strong>
+                    <span class="wallet-transaction-row__action-buttons">
+                      <button
+                        type="button"
+                        class="is-detail"
+                        :title="t('查看交易详情', 'View transaction details')"
+                        :aria-label="t('查看交易详情', 'View transaction details')"
+                        :data-testid="`wallet-open-statement-transaction-${item.id}`"
+                        @click="openTransactionDetail(item, 'monthly-statement')"
+                      >
+                        <i class="fas fa-circle-info" aria-hidden="true"></i>
+                      </button>
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </section>
+          </template>
+
+          <section v-else class="wallet-empty-state wallet-statement-empty">
+            <i class="fas fa-calendar-xmark" aria-hidden="true"></i>
+            <p>{{ t('还没有可生成账单的记录', 'No recorded activity for a statement yet') }}</p>
+          </section>
+        </div>
       </template>
 
       <template v-else-if="activeSection === 'cards'">
@@ -1586,7 +2031,10 @@ onBeforeUnmount(() => {
         <template v-else-if="selectedPayeeAccount">
           <section class="wallet-payee-identity" data-testid="wallet-payee-account-summary">
             <span class="wallet-payee-identity__icon">
-              <i class="fas fa-building-columns" aria-hidden="true"></i>
+              <strong aria-hidden="true">{{
+                selectedPayeeAccount.ownerName.slice(0, 1).toUpperCase()
+              }}</strong>
+              <i class="fas fa-shield-check" aria-hidden="true"></i>
             </span>
             <span class="wallet-payee-identity__copy">
               <small>{{ t('收款人', 'Recipient') }}</small>
@@ -1601,9 +2049,12 @@ onBeforeUnmount(() => {
                 · {{ selectedPayeeAccount.maskedAccountNumber }}
               </em>
             </span>
-            <span class="wallet-payee-identity__verified">
-              <i class="fas fa-shield-check" aria-hidden="true"></i>
-              {{ t('已验证', 'Verified') }}
+            <span class="wallet-payee-identity__meta">
+              <strong>{{ selectedPayeeAccount.currency }}</strong>
+              <span class="wallet-payee-identity__verified">
+                <i class="fas fa-shield-check" aria-hidden="true"></i>
+                {{ t('已验证', 'Verified') }}
+              </span>
             </span>
           </section>
 
@@ -1649,7 +2100,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="wallet-form__amount">
-              <label>
+              <label class="wallet-payee-amount-field">
                 <span>{{ t('金额', 'Amount') }}</span>
                 <input
                   v-model="payeeTransferDraft.amount"
@@ -1659,7 +2110,7 @@ onBeforeUnmount(() => {
                   placeholder="0.00"
                 />
               </label>
-              <label>
+              <label class="wallet-payee-currency-field">
                 <span>{{ t('币种', 'Currency') }}</span>
                 <input
                   :value="selectedPayeeAccount.currency"
@@ -1776,7 +2227,16 @@ onBeforeUnmount(() => {
 
           <div class="wallet-receipt__actions">
             <button
-              v-if="workflowChatId"
+              v-if="isInternalPayeeWorkflow"
+              type="button"
+              data-testid="wallet-receipt-return-payees"
+              @click="closeWalletWorkflow('payees')"
+            >
+              <i class="fas fa-user-shield" aria-hidden="true"></i>
+              {{ t('返回收款人', 'Return to payees') }}
+            </button>
+            <button
+              v-else-if="workflowChatId"
               type="button"
               data-testid="wallet-receipt-return-chat"
               @click="returnToSourceChat"
@@ -2220,6 +2680,15 @@ onBeforeUnmount(() => {
   padding: 0 0 0.25rem;
 }
 
+.wallet-home-layout {
+  width: 100%;
+  margin: 0 auto;
+}
+
+.wallet-home-companion {
+  min-width: 0;
+}
+
 .wallet-section-heading {
   display: flex;
   align-items: flex-end;
@@ -2238,6 +2707,189 @@ onBeforeUnmount(() => {
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0;
+}
+
+.wallet-statement-entry {
+  display: grid;
+  width: 100%;
+  min-height: 4.35rem;
+  grid-template-columns: 2.35rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 0;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0.75rem 1rem;
+  color: var(--wallet-ink);
+  background: var(--wallet-surface);
+  text-align: left;
+}
+
+.wallet-statement-entry:focus-visible {
+  outline: 3px solid rgba(33, 133, 189, 0.28);
+  outline-offset: -3px;
+}
+
+.wallet-statement-entry__icon {
+  display: inline-flex;
+  width: 2.35rem;
+  height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #39434c;
+  background: #edf0f1;
+  font-size: 0.75rem;
+}
+
+.wallet-statement-entry__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.wallet-statement-entry__copy strong {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.wallet-statement-entry__copy small,
+.wallet-statement-entry > i {
+  color: var(--wallet-muted);
+  font-size: 0.64rem;
+}
+
+.wallet-statement-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0.85rem 1rem;
+  background: var(--wallet-surface);
+}
+
+.wallet-statement-controls label {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wallet-statement-controls label > span,
+.wallet-statement-controls > span {
+  color: var(--wallet-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.wallet-statement-controls select {
+  width: min(100%, 18rem);
+  min-height: 2.55rem;
+  border: 1px solid var(--wallet-line);
+  border-radius: 6px;
+  padding: 0 0.65rem;
+  color: var(--wallet-ink);
+  background: #ffffff;
+  font: inherit;
+  font-size: 0.74rem;
+}
+
+.wallet-statement-controls select:focus {
+  border-color: rgba(33, 133, 189, 0.62);
+  outline: 3px solid rgba(33, 133, 189, 0.12);
+}
+
+.wallet-statement-summary {
+  margin-top: 1rem;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0 1rem;
+  background: var(--wallet-surface);
+}
+
+.wallet-statement-summary__currency {
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0.9rem 0;
+}
+
+.wallet-statement-summary__currency:last-child {
+  border-bottom: 0;
+}
+
+.wallet-statement-summary__currency > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.wallet-statement-summary__currency > header strong {
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.wallet-statement-summary__currency > header small {
+  color: var(--wallet-muted);
+  font-size: 0.62rem;
+}
+
+.wallet-statement-summary__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.wallet-statement-summary__metrics > div {
+  min-width: 0;
+}
+
+.wallet-statement-summary__metrics dt {
+  margin-bottom: 0.22rem;
+  color: var(--wallet-muted);
+  font-size: 0.59rem;
+  font-weight: 700;
+}
+
+.wallet-statement-summary__metrics dd {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.05rem;
+  margin: 0;
+}
+
+.wallet-statement-summary__metrics dd strong {
+  overflow-wrap: anywhere;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.wallet-statement-summary__metrics dd small {
+  color: var(--wallet-muted);
+  font-size: 0.56rem;
+  font-weight: 700;
+}
+
+.wallet-statement-summary__metrics .is-income dd strong {
+  color: var(--wallet-positive);
+}
+
+.wallet-statement-summary__metrics .is-expense dd strong {
+  color: #9c3532;
+}
+
+.wallet-statement-empty {
+  min-height: 14rem;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  background: var(--wallet-surface);
 }
 
 .wallet-eyebrow {
@@ -2262,25 +2914,24 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.wallet-card-carousel {
-  display: flex;
-  gap: 0.85rem;
-  overflow-x: auto;
-  padding: 0.35rem 1rem 0.65rem;
-  scroll-padding-inline: 1rem;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
+.wallet-card-deck {
+  --wallet-card-stack-step: 2.4rem;
+  display: grid;
+  width: min(100%, 24rem);
+  isolation: isolate;
+  margin: 0 auto;
+  padding: 0.35rem 1rem calc(0.85rem + var(--wallet-card-stack-tail));
 }
 
-.wallet-card-carousel::-webkit-scrollbar {
-  display: none;
+.wallet-card-deck__item {
+  position: relative;
+  width: 100%;
+  grid-area: 1 / 1;
+  transition: transform 220ms cubic-bezier(0.22, 0.8, 0.28, 1);
 }
 
-.wallet-card-carousel__item {
-  width: min(82vw, 21rem);
-  max-width: calc(100% - 1.65rem);
-  flex: 0 0 min(82vw, 21rem);
-  scroll-snap-align: center;
+.wallet-card-deck__item.is-active {
+  z-index: 20;
 }
 
 .wallet-card-stage__footer {
@@ -2331,6 +2982,85 @@ onBeforeUnmount(() => {
   color: #22272c;
   background: #f4f6f6;
   font-size: 0.82rem;
+}
+
+.wallet-payee-entry {
+  display: grid;
+  width: 100%;
+  min-height: 4.4rem;
+  grid-template-columns: 2.55rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  border-right: 0;
+  border-left: 3px solid transparent;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0.75rem 1rem 0.75rem 0.85rem;
+  color: var(--wallet-ink);
+  text-align: left;
+  background: var(--wallet-surface);
+}
+
+.wallet-payee-entry.has-payees {
+  border-left-color: var(--wallet-positive);
+}
+
+.wallet-payee-entry:focus-visible,
+.wallet-payee-row:focus-visible {
+  outline: 3px solid rgba(33, 133, 189, 0.28);
+  outline-offset: -3px;
+}
+
+.wallet-payee-entry__icon {
+  display: inline-flex;
+  width: 2.55rem;
+  height: 2.55rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(23, 99, 79, 0.12);
+  border-radius: 7px;
+  color: #17634f;
+  background: #e7f3ee;
+  font-size: 0.78rem;
+}
+
+.wallet-payee-entry__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.wallet-payee-entry__copy strong {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.wallet-payee-entry__copy small,
+.wallet-payee-entry__meta {
+  color: var(--wallet-muted);
+  font-size: 0.64rem;
+}
+
+.wallet-payee-entry__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.wallet-payee-entry__meta strong {
+  display: inline-flex;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--wallet-line);
+  border-radius: 6px;
+  color: #344048;
+  background: #f2f5f4;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .wallet-section {
@@ -2497,6 +3227,79 @@ onBeforeUnmount(() => {
   max-width: 22rem;
   font-size: 1.25rem;
   line-height: 1.35;
+}
+
+.wallet-activity-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 1rem 0.75rem;
+}
+
+.wallet-activity-search {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid var(--wallet-line);
+  border-radius: 7px;
+  padding: 0 0.7rem;
+  color: var(--wallet-muted);
+  background: var(--wallet-surface);
+}
+
+.wallet-activity-search:focus-within {
+  border-color: rgba(33, 133, 189, 0.62);
+  box-shadow: 0 0 0 3px rgba(33, 133, 189, 0.12);
+}
+
+.wallet-activity-search > i {
+  font-size: 0.72rem;
+}
+
+.wallet-activity-search input {
+  min-width: 0;
+  min-height: 2.65rem;
+  border: 0;
+  padding: 0;
+  color: var(--wallet-ink);
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.76rem;
+}
+
+.wallet-activity-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.wallet-activity-search button {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--wallet-muted);
+  background: transparent;
+}
+
+.wallet-activity-search button:focus-visible {
+  outline: 3px solid rgba(33, 133, 189, 0.28);
+  outline-offset: 1px;
+}
+
+.wallet-activity-tools > p {
+  min-width: 3.25rem;
+  margin: 0;
+  color: var(--wallet-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .wallet-segmented {
@@ -2853,27 +3656,220 @@ onBeforeUnmount(() => {
   font-weight: 800;
 }
 
+.wallet-payee-list {
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0 0 0 1rem;
+  background: var(--wallet-surface);
+}
+
+.wallet-payee-list > div + div {
+  border-top: 1px solid var(--wallet-line);
+}
+
+.wallet-payee-row {
+  display: grid;
+  width: 100%;
+  min-height: 5.4rem;
+  grid-template-columns: 2.7rem minmax(0, 1fr) auto 2.4rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 0;
+  padding: 0.72rem 0;
+  color: var(--wallet-ink);
+  text-align: left;
+  background: transparent;
+}
+
+.wallet-payee-row:hover:not(:disabled) {
+  background: #f7f9f8;
+}
+
+.wallet-payee-row:active:not(:disabled) {
+  background: #edf3f0;
+}
+
+.wallet-payee-row__icon {
+  position: relative;
+  display: inline-flex;
+  width: 2.7rem;
+  height: 2.7rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(23, 99, 79, 0.12);
+  border-radius: 50%;
+  color: #17634f;
+  background: #edf6f2;
+}
+
+.wallet-payee-row__icon strong {
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.wallet-payee-row__icon i {
+  position: absolute;
+  right: -0.12rem;
+  bottom: -0.08rem;
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #19725a;
+  font-size: 0.43rem;
+}
+
+.wallet-payee-row__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.wallet-payee-row__copy strong {
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-payee-row__copy small {
+  overflow: hidden;
+  color: var(--wallet-muted);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-payee-row__copy em {
+  color: #3f484f;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.61rem;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-payee-row__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.28rem;
+}
+
+.wallet-payee-row__meta strong {
+  display: inline-flex;
+  min-width: 2.7rem;
+  height: 1.45rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--wallet-line);
+  border-radius: 5px;
+  color: #354047;
+  background: #f2f5f4;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-payee-row__meta small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+  color: #17634f;
+  font-size: 0.58rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.wallet-payee-row__action {
+  display: inline-flex;
+  width: 2.4rem;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--wallet-line);
+  color: #536068;
+  font-size: 0.64rem;
+}
+
+.wallet-payee-row.is-unavailable {
+  color: #7d8387;
+}
+
+.wallet-payee-row.is-unavailable .wallet-payee-row__icon {
+  color: #7d8387;
+  background: #edf0f1;
+}
+
+.wallet-payee-row.is-unavailable .wallet-payee-row__icon i {
+  background: #7d8387;
+}
+
+.wallet-payee-row.is-unavailable .wallet-payee-row__meta small,
+.wallet-payee-row.is-unavailable .wallet-payee-row__action {
+  color: #7d8387;
+}
+
+.wallet-verified-payees-empty > i {
+  display: inline-flex;
+  width: 3.25rem;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(23, 99, 79, 0.12);
+  border-radius: 50%;
+  color: #17634f;
+  background: #e7f3ee;
+  font-size: 1.05rem;
+}
+
 .wallet-payee-identity {
   display: grid;
-  grid-template-columns: 2.65rem minmax(0, 1fr) auto;
+  grid-template-columns: 2.85rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
   border-top: 1px solid var(--wallet-line);
   border-bottom: 1px solid var(--wallet-line);
-  padding: 1rem;
-  background: var(--wallet-surface);
+  box-shadow: inset 3px 0 0 var(--wallet-positive);
+  padding: 1rem 1rem 1rem 1.1rem;
+  background: #fbfcfb;
 }
 
 .wallet-payee-identity__icon {
+  position: relative;
   display: inline-flex;
-  width: 2.65rem;
-  height: 2.65rem;
+  width: 2.85rem;
+  height: 2.85rem;
   align-items: center;
   justify-content: center;
+  border: 1px solid rgba(23, 99, 79, 0.14);
   border-radius: 50%;
   color: #17634f;
-  background: #e7f3ee;
-  font-size: 0.85rem;
+  background: #edf6f2;
+}
+
+.wallet-payee-identity__icon strong {
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.wallet-payee-identity__icon i {
+  position: absolute;
+  right: -0.12rem;
+  bottom: -0.08rem;
+  display: inline-flex;
+  width: 1.05rem;
+  height: 1.05rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fbfcfb;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #19725a;
+  font-size: 0.45rem;
 }
 
 .wallet-payee-identity__copy {
@@ -2905,6 +3901,19 @@ onBeforeUnmount(() => {
   font-style: normal;
 }
 
+.wallet-payee-identity__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.wallet-payee-identity__meta > strong {
+  color: #364148;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .wallet-payee-identity__verified {
   display: inline-flex;
   align-items: center;
@@ -2920,6 +3929,21 @@ onBeforeUnmount(() => {
 
 .wallet-payee-transfer-form {
   margin-top: 1rem;
+}
+
+.wallet-payee-transfer-form .wallet-payee-amount-field input {
+  min-height: 3.4rem;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.wallet-payee-transfer-form .wallet-payee-currency-field input {
+  min-height: 3.4rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
 }
 
 .wallet-payee-payment-card {
@@ -3041,8 +4065,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  border-bottom: 1px solid var(--wallet-line);
   padding: 1.75rem 1rem 1.5rem;
   text-align: center;
+  background: #fbfcfb;
 }
 
 .wallet-receipt__status > span {
@@ -3066,6 +4092,7 @@ onBeforeUnmount(() => {
 
 .wallet-receipt__status strong {
   font-size: 1.65rem;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0;
 }
 
@@ -3076,8 +4103,10 @@ onBeforeUnmount(() => {
 }
 
 .wallet-receipt__details {
-  border-top: 1px solid var(--wallet-line);
-  border-bottom: 1px solid var(--wallet-line);
+  overflow: hidden;
+  margin: 1rem 1rem 0;
+  border: 1px solid var(--wallet-line);
+  border-radius: 7px;
   background: var(--wallet-surface);
 }
 
@@ -3087,7 +4116,7 @@ onBeforeUnmount(() => {
   grid-template-columns: minmax(5.5rem, 0.75fr) minmax(0, 1.4fr);
   align-items: center;
   gap: 1rem;
-  margin-left: 1rem;
+  margin-left: 0.85rem;
   border-bottom: 1px solid var(--wallet-line);
   padding: 0.65rem 1rem 0.65rem 0;
 }
@@ -3105,6 +4134,12 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
   text-align: right;
   font-size: 0.69rem;
+}
+
+.wallet-receipt__details [data-testid='wallet-receipt-number'] {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .wallet-receipt__actions {
@@ -3368,9 +4403,8 @@ onBeforeUnmount(() => {
 }
 
 @media (min-width: 680px) {
-  .wallet-card-carousel__item {
-    width: 22rem;
-    flex-basis: 22rem;
+  .wallet-card-deck {
+    width: 22.5rem;
   }
 
   .wallet-card-library {
@@ -3382,9 +4416,62 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (min-width: 840px) {
+  .wallet-home-layout {
+    display: grid;
+    max-width: 68rem;
+    grid-template-columns: minmax(22.5rem, 25rem) minmax(20rem, 1fr);
+    align-items: start;
+    gap: clamp(2rem, 5vw, 4.5rem);
+    padding: 0 clamp(1.5rem, 4vw, 3rem);
+  }
+
+  .wallet-card-stage {
+    position: sticky;
+    top: 0;
+    padding-bottom: 1rem;
+  }
+
+  .wallet-section-heading--stage,
+  .wallet-card-stage__footer {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .wallet-card-stage__footer {
+    display: none;
+  }
+
+  .wallet-card-deck {
+    --wallet-card-stack-step: 2.55rem;
+    margin-left: 0;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .wallet-home-companion {
+    padding-top: 3rem;
+  }
+
+  .wallet-home-companion .wallet-quick-actions {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
+    background: transparent;
+  }
+
+  .wallet-home-companion .wallet-payee-entry {
+    margin-top: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wallet-content {
     scroll-behavior: auto;
+  }
+
+  .wallet-card-deck__item {
+    transition: none;
   }
 }
 </style>

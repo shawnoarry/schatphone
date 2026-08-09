@@ -124,7 +124,7 @@ describe('Chat social state and message requests', () => {
     await flushUi()
 
     expect(wrapper.get('[data-testid="chat-social-state-banner"]').text()).toContain('New greeting request')
-    expect(wrapper.get('input.chat-input-field').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="chat-message-input"]').attributes('disabled')).toBeDefined()
     expect(wrapper.text()).toContain('Can you see this?')
 
     await wrapper.get('[data-testid="chat-social-accept-request"]').trigger('click')
@@ -134,7 +134,7 @@ describe('Chat social state and message requests', () => {
       CHAT_CONTACT_SOCIAL_STATES.CONNECTED,
     )
     expect(wrapper.find('[data-testid="chat-social-state-banner"]').exists()).toBe(false)
-    expect(wrapper.get('input.chat-input-field').attributes('disabled')).toBeUndefined()
+    expect(wrapper.get('[data-testid="chat-message-input"]').attributes('disabled')).toBeUndefined()
 
     wrapper.unmount()
   })

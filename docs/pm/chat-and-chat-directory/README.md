@@ -1,6 +1,6 @@
 # Chat And Chat Directory Package
 
-Updated: 2026-08-08
+Updated: 2026-08-09
 
 Use this package for Chat thread behavior, Chat Directory, service accounts, role binding into Chat, and message-surface work.
 
@@ -39,6 +39,10 @@ Incoming social-event note: Chat social/channel state has a V1 applied shell for
 Current Chat preview note: the default Kakao, WeChat, and iMessage layouts each carry an explicit shell/thread palette. Chat Appearance previews label contact versus user messages, show the iMessage header identity row, and explain that letter avatars are replaceable placeholders.
 
 Current Chat sizing note: ordinary text bubbles use content-fit sizing for short messages and a bounded, wrapping width for long messages; rich cards, images, and service notifications keep the available message-column width.
+
+Current composer note: the active thread uses a bounded auto-growing multiline composer. `Enter` sends, `Shift+Enter` inserts a line break, IME composition is not treated as send, and drafts keep their line breaks across the existing Network setup return flow. While an AI reply or regeneration is running, the reply trigger becomes an in-context stop action; intentional cancellation is normalized to user-facing copy and keeps the existing retry target.
+
+Current internal-App collaboration note: `push`, `share`, `quote`, and `open source` are separate behaviors. Source-owned commerce events enter joined service threads as `service_notification`; a user-initiated Map place or Music track share becomes one normalized `share_card` only after choosing a conversation and confirming send; quoting stays inside Chat; opening the card restores the exact source detail without changing trip, playback, payment, or other source state. One 24-hour device-local draft supports cancel-to-source and refresh/lock recovery, is excluded from backup, and is cleared after send or cancel. Desktop and simulated Pixel 5 Playwright cover the Map/Music flows. No OS/PWA share target is claimed.
 
 ## Read This Package In This Order
 

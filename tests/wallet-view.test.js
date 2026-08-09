@@ -142,6 +142,223 @@ describe('WalletView', () => {
     wrapper.unmount()
   })
 
+  test('searches Wallet Activity across transaction identity and provenance fields', async () => {
+    const walletStore = useWalletStore()
+    const manualTransaction = walletStore.addTransaction({
+      type: 'income',
+      title: 'Studio refund',
+      counterparty: 'Nova Studio',
+      amount: '18.50',
+      currency: 'CNY',
+      note: 'Lighting deposit',
+      sourceModule: 'wallet_manual',
+      sourceId: 'manual-refund-17',
+      createdAt: new Date('2026-05-16T06:00:00.000Z').getTime(),
+    })
+    const shoppingTransaction = walletStore.addTransaction({
+      type: 'expense',
+      title: 'Shopping order',
+      counterparty: 'Schat Mall',
+      amount: '88.00',
+      currency: 'CNY',
+      sourceModule: 'shopping_wallet_expense',
+      sourceId: 'shopping-order-42',
+      createdAt: new Date('2026-05-17T06:00:00.000Z').getTime(),
+    })
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-open-activity"]').trigger('click')
+    const search = wrapper.get('[data-testid="wallet-activity-search"]')
+
+    await search.setValue('nova studio')
+    expect(
+      wrapper
+        .find(`[data-testid="wallet-open-transaction-detail-${manualTransaction.id}"]`)
+        .exists(),
+    ).toBe(true)
+    expect(
+      wrapper
+        .find(`[data-testid="wallet-open-transaction-detail-${shoppingTransaction.id}"]`)
+        .exists(),
+    ).toBe(false)
+
+    await search.setValue('shopping-order-42')
+    expect(
+      wrapper
+        .find(`[data-testid="wallet-open-transaction-detail-${manualTransaction.id}"]`)
+        .exists(),
+    ).toBe(false)
+    expect(
+      wrapper
+        .find(`[data-testid="wallet-open-transaction-detail-${shoppingTransaction.id}"]`)
+        .exists(),
+    ).toBe(true)
+    expect(wrapper.get('[data-testid="wallet-activity-result-count"]').text()).toContain('1')
+
+    wrapper.unmount()
+  })
+
+  test('combines Activity source filtering with search and clears the query', async () => {
+    const walletStore = useWalletStore()
+    const manualTransaction = walletStore.addTransaction({
+      type: 'income',
+      title: 'Coffee reimbursement',
+      counterparty: 'Nova',
+      amount: '12.00',
+      currency: 'CNY',
+      sourceModule: 'wallet_manual',
+      sourceId: 'manual-coffee-1',
+    })
+    walletStore.addTransaction({
+      type: 'expense',
+      title: 'Coffee beans order',
+      counterparty: 'Harbor Roast',
+      amount: '36.00',
+      currency: 'CNY',
+      sourceModule: 'food_delivery_wallet_expense',
+      sourceId: 'food-coffee-1',
+    })
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-open-activity"]').trigger('click')
+    await wrapper.get('[data-testid="wallet-activity-search"]').setValue('coffee')
+    await wrapper.get('[data-testid="wallet-activity-filter-orders"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-activity-result-count"]').text()).toContain('1')
+    expect(wrapper.text()).toContain('Coffee beans order')
+    expect(wrapper.text()).not.toContain('Coffee reimbursement')
+
+    await wrapper.get('[data-testid="wallet-activity-search"]').setValue('nova')
+    expect(wrapper.text()).toContain('没有匹配的交易')
+    expect(wrapper.get('[data-testid="wallet-activity-result-count"]').text()).toContain('0')
+
+    await wrapper.get('[data-testid="wallet-activity-search-clear"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-activity-search"]').element.value).toBe('')
+    expect(wrapper.text()).toContain('Coffee beans order')
+    expect(
+      wrapper
+        .find(`[data-testid="wallet-open-transaction-detail-${manualTransaction.id}"]`)
+        .exists(),
+    ).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('shows monthly statement totals separately by month and original currency', async () => {
+    const walletStore = useWalletStore()
+    const mayDate = (day) => new Date(2026, 4, day, 12, 0, 0).getTime()
+    walletStore.addTransaction({
+      type: 'income',
+      title: 'May CNY income',
+      amount: '100.00',
+      currency: 'CNY',
+      createdAt: mayDate(1),
+    })
+    walletStore.addTransaction({
+      type: 'expense',
+      title: 'May CNY expense',
+      amount: '35.50',
+      currency: 'CNY',
+      createdAt: mayDate(2),
+    })
+    walletStore.addTransaction({
+      type: 'income',
+      title: 'May USD income',
+      amount: '2.20',
+      currency: 'USD',
+      createdAt: mayDate(3),
+    })
+    walletStore.addTransaction({
+      type: 'expense',
+      title: 'May USD expense',
+      amount: '12.20',
+      currency: 'USD',
+      createdAt: mayDate(4),
+    })
+    walletStore.addTransaction({
+      type: 'income',
+      title: 'April CNY income',
+      amount: '8.00',
+      currency: 'CNY',
+      createdAt: new Date(2026, 3, 30, 12, 0, 0).getTime(),
+    })
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-open-activity"]').trigger('click')
+    await wrapper.get('[data-testid="wallet-open-monthly-statement"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="wallet-statement-month-select"]').element.value).toBe(
+      '2026-05',
+    )
+    expect(wrapper.get('[data-testid="wallet-statement-total-CNY"]').text()).toContain('+100.00')
+    expect(wrapper.get('[data-testid="wallet-statement-total-CNY"]').text()).toContain('-35.50')
+    expect(wrapper.get('[data-testid="wallet-statement-total-CNY"]').text()).toContain('+64.50')
+    expect(wrapper.get('[data-testid="wallet-statement-total-USD"]').text()).toContain('+2.20')
+    expect(wrapper.get('[data-testid="wallet-statement-total-USD"]').text()).toContain('-12.20')
+    expect(wrapper.get('[data-testid="wallet-statement-total-USD"]').text()).toContain('-10.00')
+    expect(
+      wrapper.get('[data-testid="wallet-monthly-statement-transactions"]').text(),
+    ).not.toContain('April CNY income')
+
+    await wrapper.get('[data-testid="wallet-statement-month-select"]').setValue('2026-04')
+    expect(wrapper.get('[data-testid="wallet-statement-total-CNY"]').text()).toContain('+8.00')
+    expect(wrapper.find('[data-testid="wallet-statement-total-USD"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="wallet-monthly-statement-transactions"]').text()).toContain(
+      'April CNY income',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('returns from a statement transaction detail to the selected month', async () => {
+    const walletStore = useWalletStore()
+    const transaction = walletStore.addTransaction({
+      type: 'expense',
+      title: 'Monthly detail target',
+      amount: '18.00',
+      currency: 'CNY',
+      createdAt: new Date(2026, 4, 10, 12, 0, 0).getTime(),
+    })
+    const { wrapper, router } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-open-activity"]').trigger('click')
+    await wrapper.get('[data-testid="wallet-open-monthly-statement"]').trigger('click')
+    await wrapper
+      .get(`[data-testid="wallet-open-statement-transaction-${transaction.id}"]`)
+      .trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="wallet-transaction-detail"]').text()).toContain(
+      'Monthly detail target',
+    )
+    expect(router.currentRoute.value.query.transactionId).toBe(transaction.id)
+
+    await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="wallet-monthly-statement"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="wallet-statement-month-select"]').element.value).toBe(
+      '2026-05',
+    )
+    expect(router.currentRoute.value.query.transactionId).toBeUndefined()
+
+    await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-activity-search"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('shows an honest empty monthly statement before any activity is recorded', async () => {
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-open-activity"]').trigger('click')
+    await wrapper.get('[data-testid="wallet-open-monthly-statement"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="wallet-monthly-statement"]').text()).toContain(
+      '还没有可生成账单的记录',
+    )
+    expect(wrapper.find('[data-testid="wallet-statement-month-select"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
   test('opens a saved quote detail that remains stable across rate changes and direct reopen', async () => {
     const walletStore = useWalletStore()
     const quoteSnapshot = {
@@ -349,6 +566,11 @@ describe('WalletView', () => {
     expect(
       walletStore.findPaymentCardById('wallet_card_hana_global_credit')?.supportedCurrencies,
     ).toHaveLength(6)
+    expect(wrapper.get('[data-testid="wallet-card-deck"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wallet-card-carousel"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-wallet-card-id]').at(-1).attributes('data-wallet-card-id')).toBe(
+      walletStore.activeCardId,
+    )
 
     wrapper.unmount()
   })
@@ -360,6 +582,9 @@ describe('WalletView', () => {
     await wrapper.get('[data-testid="wallet-payment-card-wallet_card_chase_usd"]').trigger('click')
     await flushUi()
     expect(walletStore.activeCardId).toBe('wallet_card_chase_usd')
+    expect(wrapper.findAll('[data-wallet-card-id]').at(-1).attributes('data-wallet-card-id')).toBe(
+      'wallet_card_chase_usd',
+    )
 
     await wrapper.get('[data-testid="wallet-open-active-card"]').trigger('click')
     await wrapper.get('[data-testid="wallet-set-default-card"]').trigger('click')
@@ -369,6 +594,94 @@ describe('WalletView', () => {
     await wrapper.get('[data-testid="wallet-toggle-card-frozen"]').trigger('click')
     await flushUi()
     expect(walletStore.findPaymentCardById('wallet_card_chase_usd')?.status).toBe('frozen')
+
+    wrapper.unmount()
+  })
+
+  test('shows a visible verified-payee entry and an honest empty management state', async () => {
+    const { wrapper } = await mountWalletView()
+
+    expect(wrapper.get('[data-testid="wallet-open-verified-payees"]').text()).toContain(
+      '0 个已验证账户',
+    )
+    await wrapper.get('[data-testid="wallet-open-verified-payees"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="wallet-verified-payees-empty"]').text()).toContain(
+      '还没有已验证收款人',
+    )
+    expect(wrapper.get('[data-testid="wallet-header-back"]').text()).toContain('钱包')
+
+    await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-open-verified-payees"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('repeats a verified-payee transfer inside Wallet and returns to the payee list', async () => {
+    const chatStore = useChatStore()
+    const walletStore = useWalletStore()
+    const profile = chatStore.getRoleProfileById(1)
+    const contact = chatStore.getContactById(1)
+    const knownPayee = walletStore.rememberRolePayeeAccount({
+      account: profile.payeeAccounts[0],
+      profile,
+      contact,
+      sourceChatId: contact.id,
+      sourceMessageId: 'chat_payee_share_eva_repeat',
+    })
+    walletStore.addTransaction({
+      type: 'income',
+      title: 'Opening balance',
+      amount: '100.00',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+    })
+    const { wrapper, router } = await mountWalletView()
+
+    expect(wrapper.get('[data-testid="wallet-open-verified-payees"]').text()).toContain(
+      '1 个已验证账户',
+    )
+    await wrapper.get('[data-testid="wallet-open-verified-payees"]').trigger('click')
+    const payeeRow = wrapper.get(`[data-testid="wallet-payee-${knownPayee.id}"]`)
+    expect(payeeRow.text()).toContain('Eva')
+    expect(payeeRow.text()).toContain('中国工商银行')
+    expect(payeeRow.text()).toContain(knownPayee.maskedAccountNumber)
+    expect(payeeRow.text()).toContain('CNY')
+    expect(payeeRow.text()).toContain('已验证')
+    expect(payeeRow.attributes('aria-label')).toBe('再次向 Eva 转账')
+
+    await payeeRow.trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value.query).toMatchObject({
+      source: 'wallet_payees',
+      intent: 'payee_account',
+      payeeAccountId: knownPayee.id,
+    })
+    expect(wrapper.get('[data-testid="wallet-header-back"]').text()).toContain('收款人')
+    expect(wrapper.get('[data-testid="wallet-payee-transfer-amount"]').element.value).toBe('')
+    expect(wrapper.get('[data-testid="wallet-payee-transfer-note"]').element.value).toBe('')
+
+    await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="wallet-verified-payees"]').exists()).toBe(true)
+    expect(router.currentRoute.value.query.payeeAccountId).toBeUndefined()
+
+    await wrapper.get(`[data-testid="wallet-payee-${knownPayee.id}"]`).trigger('click')
+    await flushUi()
+    await wrapper.get('[data-testid="wallet-payee-transfer-amount"]').setValue('25.50')
+    await wrapper.get('[data-testid="wallet-payee-transfer-note"]').setValue('Dinner repeat')
+    await wrapper.get('[data-testid="wallet-payee-transfer-form"]').trigger('submit')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="wallet-transfer-receipt"]').text()).toContain('25.50 CNY')
+    expect(wrapper.find('[data-testid="wallet-receipt-return-chat"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="wallet-receipt-return-payees"]').exists()).toBe(true)
+    expect(router.currentRoute.value.query.source).toBe('wallet_payees')
+
+    await wrapper.get('[data-testid="wallet-receipt-return-payees"]').trigger('click')
+    await flushUi()
+    expect(wrapper.get('[data-testid="wallet-verified-payees"]').exists()).toBe(true)
 
     wrapper.unmount()
   })
@@ -409,6 +722,7 @@ describe('WalletView', () => {
     expect(wrapper.get('[data-testid="wallet-payee-account-summary"]').text()).toContain('Eva')
     expect(wrapper.get('[data-testid="wallet-payee-transfer-currency"]').element.value).toBe('CNY')
     expect(wrapper.get('[data-testid="wallet-payee-transfer-amount"]').element.value).toBe('25.50')
+    expect(wrapper.get('[data-testid="wallet-header-back"]').text()).toContain('Chat')
     expect(wrapper.findAll('[data-testid="wallet-payee-payment-account"] option')).toHaveLength(1)
     expect(wrapper.get('[data-testid="wallet-payee-payment-account"]').element.value).toBe(
       'wallet_account_icbc_cny',
@@ -441,6 +755,8 @@ describe('WalletView', () => {
     expect(wrapper.get('[data-testid="wallet-transfer-receipt"]').text()).toContain(
       transfer.receiptNumber,
     )
+    expect(wrapper.get('[data-testid="wallet-receipt-return-chat"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="wallet-receipt-return-payees"]').exists()).toBe(false)
     expect(router.currentRoute.value.query.receiptId).toBe(transfer.id)
 
     await wrapper.get('[data-testid="wallet-receipt-open-activity"]').trigger('click')
@@ -449,6 +765,7 @@ describe('WalletView', () => {
     await wrapper.get(`[data-testid="wallet-open-receipt-${transfer.id}"]`).trigger('click')
     await flushUi()
     expect(wrapper.get('[data-testid="wallet-transfer-receipt"]').text()).toContain('25.50 CNY')
+    expect(wrapper.find('[data-testid="wallet-receipt-return-chat"]').exists()).toBe(false)
 
     const receiptRoute = router.currentRoute.value.fullPath
     wrapper.unmount()

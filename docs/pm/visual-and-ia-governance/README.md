@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -12,12 +12,13 @@ Current Home customization baseline:
 - `外观 / Appearance` owns broader theme, wallpaper, icon style, and possible template-management settings.
 - `应用商城 / App Store` owns the app-entry management surface; `More` is no longer a Home app.
 - App Library / App Store-like surfaces own app-entry visibility only.
-- The default release Home shows three normal-mode pages: glanceable widgets and personal tools first, daily communication/planning/life apps second, then System Status, Quick Heart, and Quick Disc. Appearance lets users choose two through five visible screens without altering any retained page template, slot placement, or content; Home edit mode always exposes all five pages.
+- The default release Home shows three normal-mode pages: glanceable widgets and personal tools first, daily communication/planning/life apps including Music second, then System Status, Quick Heart, and Quick Disc. Appearance lets users choose two through five visible screens without altering any retained page template, slot placement, or content; Home edit mode always exposes all five pages.
 
 The left-side Today View is a fixed native-system entry layer, not a selectable Home layout page; App Store stays there as the recovery entry when formal Home pages return items to their libraries.
 
 Current visual pass:
 
+- `音乐 / Music` is a standalone installed app with a restrained record-library identity rather than a system dashboard. Listening, browsing, library, search, queue, Now Playing, lyrics, playlist intake, and Track Details sharing stay consumer-facing; Music Settings separates `Add Music` (URL/local files) from external `Music Sources` (ChKSz/custom JSON), local audio remains Music-owned rather than entering Gallery, the shell mini-player preserves the live session without covering Home or app-owned bottom controls, and a Chat-returned track opens as details without auto-play.
 - `相机 / Camera` now has an installed-app identity: a restrained dark capture surface keeps prompt, mode, references, preview, and shutter together, while provider/model/default/routing/diagnostic work uses separate Camera-owned push-navigation pages. Gallery reference selection stays an embedded Camera sheet, and generated candidates expose separate Download, Keep in Gallery, and Discard outcomes.
 
 - `应用商城 / App Store` is now a standalone native-system app with search, category filters, selected app detail, and Home-entry actions.

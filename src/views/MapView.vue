@@ -23,6 +23,12 @@ import {
 } from '../lib/map-place-categories'
 import { searchMapPlaces, suggestMapPlaces } from '../lib/map-place-search'
 import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
+import { createMapLocationShareObject } from '../lib/shareable-object'
+import {
+  INTERNAL_CHAT_SHARE_ROUTE_QUERY,
+  INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+  savePendingInternalChatShare,
+} from '../lib/internal-chat-share'
 import {
   MAP_JOURNEY_CHECKPOINT_DEFINITIONS,
   MAP_JOURNEY_PHASE,
@@ -602,6 +608,39 @@ const useSelectedPlaceAsStart = () => {
   if (!selectedMapPlace.value) return
   setTripFromMapPlace(selectedMapPlace.value)
   closePlaceDetail()
+}
+
+const shareSelectedPlaceToChat = () => {
+  const place = selectedMapPlace.value
+  if (!place) return
+  const placeId = place.placeId || place.id
+  const shareable = createMapLocationShareObject({
+    ...place,
+    placeId,
+    mapPackId: place.mapPackId || activeMapPackId.value,
+    title: mapPlaceName(place),
+    summary: mapPlaceDetail(place),
+    statusLabel: t('地点', 'Location'),
+  })
+  const sourceRoute = router.resolve({
+    path: '/map',
+    query: {
+      placeId,
+      mapPackId: place.mapPackId || activeMapPackId.value,
+    },
+  }).fullPath
+  const draft = savePendingInternalChatShare({ shareable, sourceRoute })
+  if (!draft) {
+    tripActionHint.value = {
+      tone: 'warn',
+      message: t('暂时无法创建分享，请稍后再试。', 'The share could not be prepared. Try again.'),
+    }
+    return
+  }
+  void router.push({
+    path: '/chat',
+    query: { [INTERNAL_CHAT_SHARE_ROUTE_QUERY]: INTERNAL_CHAT_SHARE_ROUTE_VALUE },
+  })
 }
 
 const removeSelectedPlace = async () => {
@@ -1739,6 +1778,27 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => [
+    route.query.placeId,
+    route.query.mapPackId,
+    activeMapPackId.value,
+    activeMapPlaces.value.length,
+  ],
+  ([placeId, mapPackId]) => {
+    const normalizedPlaceId = typeof placeId === 'string' ? placeId.trim() : ''
+    if (!normalizedPlaceId) return
+    if (mapPackId && String(mapPackId) !== String(activeMapPackId.value)) return
+    const place = activeMapPlaces.value.find(
+      (item) => String(item.placeId || item.id) === normalizedPlaceId,
+    )
+    if (!place) return
+    focusMapPlace(place)
+    selectedMapPlace.value = place
+  },
+  { immediate: true },
+)
+
 watch(activeMapPackId, () => {
   selectedPlaceCategory.value = 'all'
 })
@@ -2503,6 +2563,10 @@ onBeforeUnmount(() => {
             {{ t('设为当前位置', 'Set current') }}
           </button>
         </div>
+        <button type="button" class="map-place-share-button" data-testid="map-place-share-chat" @click="shareSelectedPlaceToChat">
+          <i class="fas fa-share-nodes" aria-hidden="true"></i>
+          {{ t('分享到聊天', 'Share to Chat') }}
+        </button>
         <button v-if="selectedMapPlace.source === 'user'" type="button" class="map-place-manage-button" data-testid="map-place-manage-pin" @click="openSelectedPlaceManager">
           <i class="fas fa-pen-to-square" aria-hidden="true"></i>
           {{ t('编辑地点与图钉', 'Edit place and pin') }}
@@ -3720,8 +3784,10 @@ onBeforeUnmount(() => {
 .map-place-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 18px; }
 .map-place-detail-actions button { display: flex; min-height: 58px; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid #dae1dc; border-radius: 7px; background: #fff; color: #3a4d43; padding: 5px; font-size: 9px; font-weight: 800; }
 .map-place-detail-actions button.is-primary { border-color: #17664f; background: #17664f; color: #fff; }
+.map-place-share-button,
 .map-place-manage-button,
 .map-place-delete-button { display: inline-flex; min-height: 40px; align-items: center; gap: 7px; margin-top: 12px; color: #a54238; font-size: 10px; font-weight: 800; }
+.map-place-share-button { margin-right: 18px; color: #17664f; }
 .map-place-manage-button { margin-right: 18px; color: #17664f; }
 
 button:focus-visible,

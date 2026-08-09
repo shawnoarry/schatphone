@@ -6,6 +6,8 @@ import {
   FOOD_DELIVERY_SOURCE_KEYS,
   LOGISTICS_SERVICE_PRESETS,
   LOGISTICS_SOURCE_KEYS,
+  MUSIC_HOME_APP_ID,
+  MUSIC_ROUTE,
   MODULE_RELATIONSHIP_BOUNDARIES,
   SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_SERVICE_PRESETS,
@@ -107,6 +109,13 @@ describe('planned module registry', () => {
   test('keeps World Hub as an optional planned Home entry rather than a locked module', () => {
     expect(HOME_PLANNED_TILE_IDS).toContain('app_control_center')
     expect(HOME_PLANNED_LOCKED_TILE_IDS).not.toContain('app_control_center')
+  })
+
+  test('registers Music as an installed Home app with a stable route', () => {
+    expect(MUSIC_HOME_APP_ID).toBe('app_music')
+    expect(MUSIC_ROUTE).toBe('/music')
+    expect(HOME_PLANNED_TILE_IDS).toContain(MUSIC_HOME_APP_ID)
+    expect(HOME_PLANNED_LOCKED_TILE_IDS).not.toContain(MUSIC_HOME_APP_ID)
   })
 
   test('keeps Assets categories and Stock relationship separate', () => {

@@ -116,6 +116,8 @@ describe('current save writer runtime', () => {
 
     const { putGalleryAssetBlob } = await import('../src/lib/asset-binary-storage')
     await expect(putGalleryAssetBlob('blocked-binary', new Blob(['blocked']))).resolves.toBe(false)
+    const { putMusicLocalMedia } = await import('../src/lib/music-local-media-storage')
+    await expect(putMusicLocalMedia('blocked-audio', new Blob(['blocked']))).resolves.toBe(false)
 
     const { useImageGenerationStore } = await import('../src/stores/imageGeneration')
     const imageStore = useImageGenerationStore()

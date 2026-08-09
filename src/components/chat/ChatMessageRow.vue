@@ -242,6 +242,7 @@ const shareCardTypeLabel = (block = {}) => {
   if (block.shareType === 'order_share') return t('订单分享', 'Order share')
   if (block.shareType === 'food_shop_link') return t('店铺链接', 'Shop link')
   if (block.shareType === 'location_share') return t('位置分享', 'Location share')
+  if (block.shareType === 'music_track_share') return t('音乐分享', 'Music share')
   if (block.shareType === 'calendar_invite') return t('日程邀请', 'Calendar invite')
   if (block.shareType === 'gallery_asset_share') return t('素材分享', 'Asset share')
   return t('商品链接', 'Product link')
@@ -254,6 +255,7 @@ const shareCardSourceLabel = (block = {}) => {
   if (block.sourceModule === 'logistics') return t('Logistics', 'Logistics')
   if (block.sourceModule === 'food_delivery') return t('Food Delivery', 'Food Delivery')
   if (block.sourceModule === 'map') return t('Map', 'Map')
+  if (block.sourceModule === 'music') return t('Music', 'Music')
   if (block.sourceModule === 'calendar') return t('Calendar', 'Calendar')
   if (block.sourceModule === 'gallery') return t('Gallery', 'Gallery')
   return t('来源 App', 'Source app')
@@ -284,6 +286,14 @@ const shareCardToneClass = (block = {}) => {
       button: 'border-sky-200 bg-white text-sky-700',
     }
   }
+  if (block.shareType === 'music_track_share') {
+    return {
+      card: 'border-fuchsia-100 bg-fuchsia-50/80',
+      label: 'text-fuchsia-700',
+      pill: 'bg-white text-fuchsia-700',
+      button: 'border-fuchsia-200 bg-white text-fuchsia-700',
+    }
+  }
   return {
     card: 'border-amber-100 bg-amber-50/80',
     label: 'text-amber-700',
@@ -295,6 +305,10 @@ const shareCardToneClass = (block = {}) => {
 const shareCardActionLabel = (block = {}) =>
   block.shareType === 'payee_account'
     ? t('去 Wallet 转账', 'Transfer in Wallet')
+    : block.shareType === 'music_track_share'
+      ? t('在音乐中查看', 'View in Music')
+      : block.shareType === 'location_share'
+        ? t('在地图中查看', 'View in Map')
     : t('打开来源', 'Open source')
 
 const quoteLabel = (quote = {}) => {
@@ -525,6 +539,13 @@ const metaClasses = computed(() => [
                 {{ block.statusLabel }}
               </span>
             </div>
+            <img
+              v-if="block.previewImageUrl"
+              :src="block.previewImageUrl"
+              :alt="block.title || t('分享预览', 'Shared preview')"
+              class="mt-2 h-28 w-full rounded-md object-cover"
+              loading="lazy"
+            />
             <p class="mt-1 text-[12px] font-semibold text-gray-950">{{ block.title }}</p>
             <p v-if="block.summary" class="mt-1 text-[11px] leading-4 text-gray-600 line-clamp-2">{{ block.summary }}</p>
             <div class="mt-2 flex flex-wrap items-center gap-1.5">
@@ -726,6 +747,7 @@ const metaClasses = computed(() => [
               <img
                 v-if="resolveImageBlockUrl(message.id, blockIndex, block)"
                 :src="resolveImageBlockUrl(message.id, blockIndex, block)"
+                :alt="block.alt || t('聊天图片', 'Chat image')"
                 class="w-full h-full object-cover"
               />
               <div v-else class="w-full h-full flex items-center justify-center text-[11px] opacity-70">{{ t('图片预览', 'Image preview') }}</div>

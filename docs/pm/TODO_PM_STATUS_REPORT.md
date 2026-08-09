@@ -13,7 +13,7 @@ SchatPhone is in an internal personal-development phase: product definition, cor
 The core product can already support meaningful use and continued development:
 
 - Lock -> Home -> app navigation is stable;
-- Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
+- Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Music, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
 - release commit `a1418ed` has passing lint, 210 files / 1497 unit tests, production and Cloudflare builds, focused desktop/Pixel 5 restricted-relay evidence, Wrangler dry-run, governance, and GitHub Pages Run #31294272595. The deployed Vercel and Cloudflare relays each returned 6 real provider models and Chat smoke reply `OK` from GitHub Pages while preserving Direct as the default; installed PWA, external protections, and named physical-device proof remain open.
 
@@ -26,7 +26,7 @@ The current work is concentrated in four areas:
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, and 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus lightweight custom-map intake.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus lightweight custom-map intake, 4.12 keeps Calendar/Agenda orchestration documentation-only, and 4.13 has an integrated local Music first slice with provider/device/caller proof still gated.
 
 ## 2. Product Positioning
 
@@ -56,6 +56,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Shopping / Food Delivery / Logistics | `Integrated V1` | five independent Food Delivery shop facades share one Food Delivery runtime; the next roadmap-owned gap is one ordinary Food Delivery/Shopping consequence flow, while tracking and polish remain separate |
 | Wallet / Gallery | `Wallet card-pack + role-payee V1 + historical quote detail; Gallery support platform` | Wallet exposes six fictional single-currency accounts/debit cards and one fictional six-currency credit card over one ledger truth; verified role account cards lead to explicit same-currency confirmation and separate receipts, while every Activity row can open a general detail that presents saved quote provenance without re-quotation; display currency and rates stay in Wallet Settings, NPC balances and automatic exchange remain excluded, and Gallery's deeper Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
+| Music | `Focused first slice, provider/caller proof staged` | consumer playback, library, queue, search, user-owned generic JSON provider setup, device-local excluded keys, Home/App Store entry, and shell mini-player are implemented; real-provider/CORS, true-device media, and actual Chat/Map callers remain |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
@@ -72,12 +73,14 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - inspect and repair localStorage/IndexedDB mirror drift;
 - configure AI endpoints, models, and push delivery.
 - configure image providers/models inside Camera, choose Gallery references, review generated candidates, and explicitly download, keep, or discard them.
+- use Music as an installed listening app, play the built-in catalog, manage library/favorites/playlists/queue, keep playback available across routes, and connect an authorized browser-accessible JSON music API.
 
 ### Communication And Roles
 
 - create and manage Self Profile, Main Role, and NPC profiles;
 - bind roles into Chat without making Chat Directory the global role archive;
 - use direct and group conversations, rich messages, quote/edit/save/delete/recall flows, and explicit AI invocation;
+- share a Map place or Music track into a chosen Chat conversation as a source-owned card, quote it in Chat, cancel back to the source, and reopen the exact source detail without automatic playback or business-state mutation;
 - request a role's system-verified fictional receiving-account card in Chat, then confirm the matching-currency transfer and review its receipt in Wallet;
 - subscribe to service/official accounts and receive source-linked commerce/logistics updates;
 - review current relationship metrics, memories, source records, and guarded cleanup from Contacts;
@@ -113,6 +116,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - Calendar does not yet provide conventional Month/Week/Agenda views or full event authoring; Agenda Journey, Schedule Orchestrator, Activity Session, their event collaboration, and Narrative Timeline are architecture-only under roadmap 4.12;
 - group chat has target/member/reply-mode V1, not full multi-speaker orchestration;
 - Assets and Stock remain less deep than core modules;
+- Music still needs opt-in real-provider/CORS proof, true-device audio interruption/media-control/PWA evidence, and separately promoted Chat/Map consumers;
 - Cheats has no frozen product contract.
 
 ### Runtime
@@ -238,6 +242,16 @@ Product direction is accepted; pure Stage 1 foundation is complete and user-visi
 
 Stage 1 landed on 2026-07-21 with five pure library modules and 22 focused tests. The registry intentionally contains no default caller and the regex layer validates but does not execute.
 
+### P2: Music Provider And Caller Proof
+
+Roadmap 4.13 is `PARTIAL_DONE / FIRST_SLICE_INTEGRATED_LOCAL`:
+
+- preserve Music's listening-first installed-app identity and the generic JSON provider boundary;
+- run an opt-in smoke only with a user-authorized provider that exposes a browser-playable URL;
+- include audio focus/interruption, media controls, safe areas, keyboard, and PWA relaunch in named true-device evidence;
+- promote Chat sharing/search and Map now-playing/queue requests one caller at a time without copying provider credentials, endpoints, headers, raw responses, queue contents, or stream URLs;
+- require a separate provider-specific contract for OAuth, signed streams, DRM, offline download, or a hosted proxy.
+
 ### P2: Calendar And Agenda Journey Orchestration
 
 Roadmap 4.12 is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY / NOT_STARTED`:
@@ -305,6 +319,15 @@ CI/release workflow first-slice validation on 2026-07-22:
 - both workflow files parse through the existing `js-yaml` dependency and retain explicit triggers, permissions, concurrency/timeout, failure artifacts, and `deploy.needs: build`;
 - local CI-mode full E2E simulation on strict port 5181 collected 60 cases: 56 expected, 4 skipped, 0 unexpected, and 0 flaky; the inline JSON guard passed;
 - remote GitHub execution, branch/environment protection, and deployed `dist` base-path behavior were not tested and remain release blockers.
+
+Music first-slice validation on 2026-08-09:
+
+- `git diff --check`, governance, and lint pass;
+- `npm.cmd run test`: 214 files / 1519 tests, pass;
+- `npm.cmd run build`: pass, Vite 7.3.6 / 361 modules;
+- focused Music Playwright: 4 cases pass across desktop Chromium and simulated Pixel 5;
+- system visual gate: 12 cases pass across default/zen and desktop/simulated-mobile Chromium;
+- opt-in real-provider and named physical-device proof remain separate.
 
 Current checkpoint note on 2026-07-31:
 
