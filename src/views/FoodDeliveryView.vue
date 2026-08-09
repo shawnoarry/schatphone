@@ -332,6 +332,7 @@ const foodDeliveryUiAsset = (path) => uiAssetUrl(`apps/food-delivery/${path}`)
 const platformMissingAssetPlaceholderUrl = foodDeliveryUiAsset(
   'platform/diagnostics/missing-asset-placeholder.svg',
 )
+const platformBrandMarkUrl = foodDeliveryUiAsset('platform/brand/baemin-entry-icon-01.png')
 const peachCloudBrandImageUrl = foodDeliveryUiAsset('peach-cloud/brand/peach-cloud-mark-01.svg')
 const peachCloudPromotionImageUrl = foodDeliveryUiAsset(
   'peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
@@ -4288,102 +4289,105 @@ onBeforeUnmount(() => {
     >
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
-        class="min-w-0 w-full space-y-5 pt-4"
+        class="relative -mx-4 -mt-4 min-w-0 overflow-hidden bg-gradient-to-b from-[#2ec4bd] via-[#27b8b1] to-[#17a39c] pb-5 pt-[2.25rem] text-white"
         data-testid="food-delivery-platform-top"
       >
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex min-w-0 items-start gap-3">
+        <span
+          class="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10"
+          aria-hidden="true"
+        ></span>
+        <span
+          class="pointer-events-none absolute -left-14 top-24 h-36 w-36 rounded-full bg-white/[0.06]"
+          aria-hidden="true"
+        ></span>
+        <div class="relative flex items-center justify-between gap-3 px-4 pt-3">
+          <div class="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
-              class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5 transition active:scale-95"
+              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition active:scale-95"
               data-testid="food-delivery-go-home"
               :aria-label="t('返回桌面', 'Return to Home')"
               :title="t('返回桌面', 'Return to Home')"
               @click="goHome"
             >
-              <i class="fas fa-house text-base"></i>
+              <i class="fas fa-house text-sm"></i>
             </button>
-            <div class="min-w-0">
-              <h1
-                class="max-w-full break-words text-[1.72rem] font-black leading-tight text-gray-950 [overflow-wrap:anywhere]"
-                data-testid="food-delivery-hero-title"
+            <img
+              :src="platformBrandMarkUrl"
+              alt="Baemin"
+              class="h-9 w-9 shrink-0 rounded-[0.7rem] bg-white object-cover shadow-[0_6px_16px_rgba(9,84,80,0.28)] ring-1 ring-white/30"
+              data-testid="food-delivery-platform-brand-mark"
+              draggable="false"
+            />
+            <div class="relative min-w-0">
+              <button
+                type="button"
+                class="flex max-w-full items-center gap-1.5 text-left"
+                data-testid="food-delivery-platform-location"
+                :aria-expanded="platformAddressMenuOpen"
+                @click="togglePlatformAddressMenu"
               >
-                {{ foodDeliveryTitle }}
-              </h1>
-              <div class="relative mt-3">
-                <button
-                  type="button"
-                  class="inline-flex max-w-full items-center gap-2.5 text-left"
-                  data-testid="food-delivery-platform-location"
-                  :aria-expanded="platformAddressMenuOpen"
-                  @click="togglePlatformAddressMenu"
-                >
+                <span class="min-w-0">
                   <span
-                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5fbfa] text-[#24bcb7]"
+                    class="block text-[0.6rem] font-black uppercase tracking-wide text-white/70"
+                    >{{ t('配送到', 'Deliver to') }}</span
                   >
-                    <i class="fas fa-location-dot text-sm"></i>
-                  </span>
-                  <span class="min-w-0">
-                    <span class="block text-[0.62rem] font-black uppercase text-[#159f9a]">{{
-                      t('配送到', 'Deliver to')
-                    }}</span>
-                    <span class="block truncate text-[0.82rem] font-black text-gray-950">{{
-                      platformLocationLabel
-                    }}</span>
-                  </span>
+                  <span class="mt-0.5 block truncate text-[0.82rem] font-black text-white">{{
+                    platformLocationLabel
+                  }}</span>
+                </span>
+                <i
+                  class="fas shrink-0 text-[10px] text-white/80"
+                  :class="platformAddressMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'"
+                ></i>
+              </button>
+              <div
+                v-if="platformAddressMenuOpen"
+                class="absolute left-0 top-[calc(100%+0.55rem)] z-40 w-[min(19rem,calc(100vw-2rem))] space-y-1 rounded-[1rem] bg-white p-2 text-gray-950 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
+                data-testid="food-delivery-platform-address-menu"
+              >
+                <button
+                  v-for="(address, addressIndex) in platformDeliveryAddressOptions"
+                  :key="address"
+                  type="button"
+                  class="flex w-full items-center gap-3 rounded-[0.8rem] px-3 py-2.5 text-left text-xs font-bold"
+                  :class="
+                    platformLocationLabel === address
+                      ? 'bg-[#e5fbfa] text-[#128e89]'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  "
+                  :aria-pressed="platformLocationLabel === address"
+                  :data-testid="`food-delivery-platform-address-${addressIndex}`"
+                  @click="selectPlatformDeliveryAddress(address)"
+                >
+                  <i class="fas fa-location-dot w-4 text-center"></i>
+                  <span class="min-w-0 flex-1 leading-5">{{ address }}</span>
                   <i
-                    class="fas shrink-0 text-xs text-gray-500"
-                    :class="platformAddressMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'"
+                    v-if="platformLocationLabel === address"
+                    class="fas fa-check text-[10px]"
                   ></i>
                 </button>
-                <div
-                  v-if="platformAddressMenuOpen"
-                  class="absolute left-0 top-[calc(100%+0.55rem)] z-40 w-[min(19rem,calc(100vw-2rem))] space-y-1 rounded-[1rem] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-black/5"
-                  data-testid="food-delivery-platform-address-menu"
-                >
-                  <button
-                    v-for="(address, addressIndex) in platformDeliveryAddressOptions"
-                    :key="address"
-                    type="button"
-                    class="flex w-full items-center gap-3 rounded-[0.8rem] px-3 py-2.5 text-left text-xs font-bold"
-                    :class="
-                      platformLocationLabel === address
-                        ? 'bg-[#e5fbfa] text-[#128e89]'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    "
-                    :aria-pressed="platformLocationLabel === address"
-                    :data-testid="`food-delivery-platform-address-${addressIndex}`"
-                    @click="selectPlatformDeliveryAddress(address)"
-                  >
-                    <i class="fas fa-location-dot w-4 text-center"></i>
-                    <span class="min-w-0 flex-1 leading-5">{{ address }}</span>
-                    <i
-                      v-if="platformLocationLabel === address"
-                      class="fas fa-check text-[10px]"
-                    ></i>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
-          <div class="flex shrink-0 items-center gap-3">
+          <div class="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition active:scale-95"
               aria-label="Notifications"
               data-testid="food-delivery-platform-notifications"
               @click="openPlatformUtilitySheet('notifications')"
             >
-              <i class="fas fa-bell text-lg"></i>
+              <i class="fas fa-bell text-sm"></i>
             </button>
             <button
               type="button"
-              class="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-950 shadow-sm ring-1 ring-black/5"
+              class="relative inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition active:scale-95"
               aria-label="Cart"
               data-testid="food-delivery-platform-cart"
               @click="openPlatformUtilitySheet('cart')"
             >
-              <i class="fas fa-cart-shopping text-lg"></i>
+              <i class="fas fa-cart-shopping text-sm"></i>
               <span
                 v-if="foodDeliveryStore.platformCartQuantity > 0"
                 class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white"
@@ -4395,34 +4399,39 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <p
-          class="text-[1.02rem] font-semibold leading-6 text-gray-800"
-          data-testid="food-delivery-platform-greeting"
-        >
-          {{ t('嗨，今天想吃点什么？', 'Hey, what sounds good today?') }}
-        </p>
+        <div class="relative mt-3 px-4">
+          <h1 class="sr-only" data-testid="food-delivery-hero-title">{{ foodDeliveryTitle }}</h1>
+          <p
+            class="text-[1.02rem] font-black leading-6 text-white"
+            data-testid="food-delivery-platform-greeting"
+          >
+            {{ t('嗨,今天想吃点什么?', 'Hey, what sounds good today?') }}
+          </p>
 
-        <div class="relative pt-5">
-          <button
-            type="button"
-            class="relative z-10 flex min-h-[3.45rem] items-center gap-3 rounded-[1.15rem] bg-white px-4 pr-[7.25rem] text-sm font-semibold text-gray-500 shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/5"
-            data-testid="food-delivery-platform-search"
-            @click="openPlatformPage('search')"
-          >
-            <i class="fas fa-magnifying-glass text-xl text-gray-400"></i>
-            <span>{{ t('搜索美食、菜单、小店名', 'Search food, menu, shop name') }}</span>
-          </button>
-          <div
-            class="pointer-events-none absolute right-[-1.45rem] top-[-3.05rem] z-20 h-[8.65rem] w-[10.75rem]"
-            aria-hidden="true"
-            data-testid="food-delivery-platform-rider"
-          >
-            <img
-              :src="platformRiderImageUrl"
-              alt=""
-              class="h-full w-full object-contain drop-shadow-[0_18px_20px_rgba(20,184,166,0.2)]"
-              draggable="false"
-            />
+          <div class="relative mt-2.5">
+            <button
+              type="button"
+              class="relative z-10 flex min-h-[3.1rem] w-full items-center gap-3 rounded-full bg-white px-4 pr-[6.5rem] text-left text-sm font-semibold text-gray-500 shadow-[0_12px_26px_rgba(9,84,80,0.16)]"
+              data-testid="food-delivery-platform-search"
+              @click="openPlatformPage('search')"
+            >
+              <i class="fas fa-magnifying-glass text-lg text-[#17a39c]"></i>
+              <span class="truncate">{{
+                t('搜索美食、菜单、小店名', 'Search food, menu, shop name')
+              }}</span>
+            </button>
+            <div
+              class="pointer-events-none absolute -top-[3.4rem] right-[-0.9rem] z-20 h-[7.1rem] w-[8.5rem]"
+              aria-hidden="true"
+              data-testid="food-delivery-platform-rider"
+            >
+              <img
+                :src="platformRiderImageUrl"
+                alt=""
+                class="h-full w-full object-contain drop-shadow-[0_14px_16px_rgba(9,84,80,0.28)]"
+                draggable="false"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -4490,7 +4499,7 @@ onBeforeUnmount(() => {
       >
         <section
           v-if="platformPageKey === 'home'"
-          class="min-w-0 w-full space-y-5 food-delivery-platform-redesign"
+          class="-mt-4 min-w-0 w-full space-y-5 rounded-t-[1.5rem] bg-[#f4f7f7] px-4 pt-5 food-delivery-platform-redesign"
           data-testid="food-delivery-pseudo-folder-home"
         >
           <section
@@ -4588,32 +4597,35 @@ onBeforeUnmount(() => {
             </p>
           </section>
 
-          <section class="space-y-2.5" data-testid="food-delivery-category-panel">
-            <div class="flex items-center justify-between gap-3 px-0.5">
-              <p class="text-xs font-black uppercase text-gray-500">
+          <section
+            class="-mt-1 rounded-[1.25rem] bg-white p-3 shadow-[0_12px_28px_rgba(15,23,42,0.06)] ring-1 ring-black/[0.04]"
+            data-testid="food-delivery-category-panel"
+          >
+            <div class="flex items-center justify-between gap-3 px-0.5 pb-1">
+              <p class="text-xs font-black uppercase tracking-wide text-gray-400">
                 {{ t('快速分类', 'Quick picks') }}
               </p>
               <span class="truncate text-[0.68rem] font-bold text-[#159f9a]">{{
                 platformActiveCategoryLabel
               }}</span>
             </div>
-            <div class="grid grid-cols-5 gap-2 px-0.5" data-testid="food-delivery-category-grid">
+            <div class="grid grid-cols-5 gap-1" data-testid="food-delivery-category-grid">
               <button
                 v-for="category in platformCategoryTiles"
                 :key="category.key"
                 type="button"
-                class="flex min-w-0 flex-col items-center gap-2 text-center transition active:scale-[0.97]"
-                :class="category.active ? 'ring-2 ring-[#24bcb7]/25' : ''"
+                class="flex min-w-0 flex-col items-center gap-1.5 rounded-[0.95rem] px-0.5 py-2 text-center transition active:scale-[0.97]"
+                :class="category.active ? 'bg-[#e5fbfa] ring-1 ring-[#24bcb7]/25' : ''"
                 :aria-pressed="category.active"
                 :data-testid="`food-delivery-category-${category.key}`"
                 @click="openPlatformCategory(category)"
               >
                 <span
-                  class="relative inline-flex h-12 w-12 items-center justify-center rounded-[0.95rem] bg-gradient-to-br text-lg shadow-sm ring-1 transition"
+                  class="relative inline-flex h-12 w-12 items-center justify-center rounded-[1rem] text-lg transition"
                   :class="
                     category.active
-                      ? 'bg-none bg-[#24bcb7] text-white shadow-[0_8px_20px_rgba(36,188,183,0.24)] ring-[#24bcb7]/20'
-                      : `${category.className} ring-black/[0.04]`
+                      ? 'bg-[#24bcb7] text-white shadow-[0_8px_20px_rgba(36,188,183,0.28)]'
+                      : 'bg-[#f1f5f5] text-gray-700'
                   "
                   :data-asset-slot="`platform-category-icon-${category.key}`"
                   :data-required-asset="category.requiredAsset"
@@ -4625,7 +4637,7 @@ onBeforeUnmount(() => {
                     alt=""
                     aria-hidden="true"
                     decoding="async"
-                    class="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain p-0.5"
+                    class="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain p-1"
                     :data-testid="`food-delivery-category-image-${category.key}`"
                     @load="$event.currentTarget.previousElementSibling.style.opacity = '0'"
                     @error="$event.currentTarget.style.display = 'none'"
@@ -4694,7 +4706,7 @@ onBeforeUnmount(() => {
               >
                 <button
                   type="button"
-                  class="group block w-full rounded-[1.1rem] bg-white p-2.5 text-left shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
+                  class="group block w-full rounded-[1.1rem] bg-white p-2.5 pb-3 text-left shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-black/[0.04] transition active:scale-[0.99]"
                   :data-testid="`food-delivery-select-platform-merchant-${merchant.id}`"
                   @click="selectPlatformMerchant(merchant)"
                 >
@@ -4723,28 +4735,28 @@ onBeforeUnmount(() => {
                       >
                       <i v-else :class="merchant.icon || 'fas fa-store'"></i>
                     </div>
+                    <span
+                      class="absolute left-2.5 top-2.5 z-20 rounded-full bg-white/92 px-2.5 py-1 text-[9px] font-black text-[#128e89] shadow-sm backdrop-blur"
+                      >{{ merchant.badge }}</span
+                    >
                   </div>
-                  <div class="mt-3 flex min-w-0 items-center gap-2 pr-12">
+                  <div class="mt-3 flex min-w-0 items-center gap-2 pr-10">
                     <p
                       class="min-w-0 flex-1 truncate text-[0.98rem] font-black leading-tight text-gray-950"
                     >
                       {{ merchant.name }}
                     </p>
-                    <span
-                      class="shrink-0 rounded-md bg-[#e5fbfa] px-2 py-1 text-[9px] font-black text-[#128e89]"
-                    >
-                      {{ merchant.badge }}
-                    </span>
                   </div>
-                  <p class="mt-1 truncate pr-12 text-xs font-semibold text-gray-500">
+                  <p class="mt-1 truncate pr-10 text-xs font-semibold text-gray-500">
                     {{ merchant.cuisine }} · {{ merchant.distanceKm.toFixed(1) }} km
                   </p>
                   <div
-                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pr-12 text-[0.7rem] font-black text-gray-600"
+                    class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pr-10 text-[0.7rem] font-black text-gray-600"
                   >
                     <span class="inline-flex items-center gap-1.5">
                       <i class="fas fa-star text-amber-500"></i>
                       {{ merchant.rating.toFixed(1) }}
+                      <span class="font-bold text-gray-400">({{ merchant.reviewCount }})</span>
                     </span>
                     <span class="inline-flex items-center gap-1.5">
                       <i class="fas fa-motorcycle text-[#24bcb7]"></i>
@@ -4758,11 +4770,11 @@ onBeforeUnmount(() => {
                 </button>
                 <button
                   type="button"
-                  class="absolute bottom-4 right-4 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full shadow-sm transition active:scale-95"
+                  class="absolute bottom-3.5 right-3.5 z-30 inline-flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition active:scale-95"
                   :class="
                     isPlatformMerchantSaved(merchant.id)
                       ? 'bg-rose-500 text-white'
-                      : 'bg-gray-100 text-gray-500'
+                      : 'bg-gray-100 text-gray-400'
                   "
                   :aria-label="
                     isPlatformMerchantSaved(merchant.id)
@@ -4773,7 +4785,7 @@ onBeforeUnmount(() => {
                   :data-testid="`food-delivery-platform-save-${merchant.id}`"
                   @click="togglePlatformMerchantSaved(merchant)"
                 >
-                  <i class="fas fa-heart text-xs"></i>
+                  <i class="fas fa-heart text-[10px]"></i>
                 </button>
               </article>
               <div
@@ -5499,42 +5511,34 @@ onBeforeUnmount(() => {
 
         <section
           v-else-if="platformPageKey === 'merchant'"
-          class="-mx-4 -mt-4 min-h-screen bg-[#f3f7f7] pb-28"
+          class="relative -mx-4 -mt-4 min-h-screen bg-[#f3f6f6] pb-28"
           data-testid="food-delivery-platform-merchant-page"
           :data-merchant-id="platformMerchantId"
         >
           <template v-if="selectedPlatformMerchant">
             <header
-              class="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur"
+              class="absolute left-0 right-0 top-0 z-50 flex min-h-[4.5rem] items-center justify-between gap-3 px-4 pb-2 pt-[3.25rem]"
               data-testid="food-delivery-platform-merchant-header"
             >
-              <div class="flex min-w-0 items-center gap-3">
+              <div class="flex min-w-0 items-center gap-2">
                 <button
                   type="button"
-                  class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-800 transition active:scale-95"
+                  class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/25 text-white ring-1 ring-white/25 backdrop-blur transition active:scale-95"
                   data-testid="food-delivery-platform-merchant-back"
                   :aria-label="t('返回小店列表', 'Back to shops')"
                   @click="returnFromPlatformMerchant"
                 >
                   <i class="fas fa-chevron-left text-sm"></i>
                 </button>
-                <div class="min-w-0">
-                  <p class="text-[10px] font-black uppercase text-[#159f9a]">
-                    {{ t('平台小店', 'Merchant') }}
-                  </p>
-                  <p class="truncate text-sm font-black text-gray-950">
-                    {{ selectedPlatformMerchant.name }}
-                  </p>
-                </div>
               </div>
               <div class="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
-                  class="inline-flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95"
+                  class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/25 text-white ring-1 ring-white/25 backdrop-blur transition active:scale-95"
                   :class="
                     isPlatformMerchantSaved(selectedPlatformMerchant.id)
-                      ? 'bg-rose-500 text-white'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-rose-500 text-white ring-rose-500/60'
+                      : 'bg-black/25 text-white ring-white/25'
                   "
                   :aria-label="
                     isPlatformMerchantSaved(selectedPlatformMerchant.id)
@@ -5549,7 +5553,7 @@ onBeforeUnmount(() => {
                 </button>
                 <button
                   type="button"
-                  class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-800 transition active:scale-95"
+                  class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/25 text-white ring-1 ring-white/25 backdrop-blur transition active:scale-95"
                   :aria-label="t('打开购物车', 'Open cart')"
                   data-testid="food-delivery-platform-merchant-cart"
                   @click="openPlatformCartFromMerchant"
@@ -5567,7 +5571,7 @@ onBeforeUnmount(() => {
             </header>
 
             <div
-              class="relative aspect-[17/8] w-full overflow-hidden bg-gray-100"
+              class="relative aspect-[16/9] w-full overflow-hidden bg-gray-100"
               :class="
                 selectedPlatformMerchant.fallbackClass || 'from-[#e6fffd] to-white text-[#24bcb7]'
               "
@@ -5590,7 +5594,9 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <section class="border-b border-black/5 bg-white px-4 py-5">
+            <section
+              class="relative z-20 -mt-10 mx-3 rounded-[1.25rem] bg-white px-4 py-4 shadow-[0_14px_34px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.04]"
+            >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                   <span
@@ -5598,7 +5604,7 @@ onBeforeUnmount(() => {
                   >
                     {{ selectedPlatformMerchant.badge }}
                   </span>
-                  <h1 class="mt-2 text-[1.65rem] font-black leading-tight text-gray-950">
+                  <h1 class="mt-2 text-[1.6rem] font-black leading-tight text-gray-950">
                     {{ selectedPlatformMerchant.name }}
                   </h1>
                   <p class="mt-1 text-xs font-bold text-gray-500">
@@ -5607,11 +5613,8 @@ onBeforeUnmount(() => {
                   </p>
                 </div>
               </div>
-              <p class="mt-3 text-sm font-semibold leading-6 text-gray-600">
-                {{ selectedPlatformMerchant.desc }}
-              </p>
               <dl
-                class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-black/5 py-3 text-xs font-black text-gray-700"
+                class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-black/5 pt-3 text-xs font-black text-gray-700"
                 data-testid="food-delivery-platform-merchant-summary"
               >
                 <div class="inline-flex items-center gap-1.5">
@@ -5635,7 +5638,7 @@ onBeforeUnmount(() => {
                   <dd>{{ platformDeliveryFeeLabel(selectedPlatformMerchant) }}</dd>
                 </div>
               </dl>
-              <p class="mt-3 text-[11px] font-bold text-gray-500">
+              <p class="mt-2.5 text-[11px] font-bold text-gray-500">
                 {{ t('最低起送', 'Minimum order') }}
                 <span
                   class="ml-1 text-gray-900"
@@ -5643,9 +5646,12 @@ onBeforeUnmount(() => {
                   >{{ platformMinimumOrderLabel(selectedPlatformMerchant) }}</span
                 >
               </p>
+              <p class="mt-2 text-[0.82rem] font-semibold leading-5 text-gray-600">
+                {{ selectedPlatformMerchant.desc }}
+              </p>
             </section>
 
-            <section class="mt-2 bg-white" data-testid="food-delivery-platform-merchant-menu">
+            <section class="mt-3 bg-white" data-testid="food-delivery-platform-merchant-menu">
               <div class="flex items-end justify-between gap-3 px-4 pb-2 pt-5">
                 <div>
                   <p class="text-lg font-black text-gray-950">{{ t('本店菜单', 'Menu') }}</p>
@@ -5660,10 +5666,10 @@ onBeforeUnmount(() => {
               <article
                 v-for="(item, itemIndex) in selectedPlatformMerchant.menu"
                 :key="`${selectedPlatformMerchant.id}-${item.title}`"
-                class="grid grid-cols-[minmax(0,1fr)_7rem] gap-4 border-b border-black/5 px-4 py-5 last:border-b-0"
+                class="flex gap-3 border-b border-gray-100 px-4 py-4 last:border-b-0"
                 :data-testid="`food-delivery-platform-menu-item-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
               >
-                <div class="flex min-w-0 flex-col">
+                <div class="flex min-w-0 flex-1 flex-col">
                   <h2 class="line-clamp-2 text-[0.98rem] font-black leading-5 text-gray-950">
                     {{ item.title }}
                   </h2>
@@ -5721,7 +5727,7 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
                 <div
-                  class="h-28 w-28 overflow-hidden rounded-[0.8rem] bg-gray-100 ring-1 ring-black/[0.04]"
+                  class="h-28 w-28 shrink-0 overflow-hidden rounded-[0.9rem] bg-gray-100 ring-1 ring-black/[0.04]"
                   data-platform-menu-image
                   :data-asset-slot="`platform-menu-image-${platformMenuItemId(selectedPlatformMerchant.id, itemIndex)}`"
                   :data-required-asset="
@@ -6668,7 +6674,7 @@ onBeforeUnmount(() => {
             platformPageKey !== 'checkout' &&
             platformPageKey !== 'order'
           "
-          class="rounded-[1.4rem] bg-white/95 px-2 py-2 shadow-[0_16px_40px_rgba(15,23,42,0.14)] ring-1 ring-black/5 backdrop-blur"
+          class="sticky bottom-3 z-40 rounded-[1.35rem] border border-black/5 bg-white/92 px-2 py-2 shadow-[0_16px_38px_rgba(15,23,42,0.16)] backdrop-blur"
           data-testid="food-delivery-platform-bottom-nav"
         >
           <div class="grid grid-cols-5 gap-1">
@@ -6676,13 +6682,13 @@ onBeforeUnmount(() => {
               v-for="item in platformBottomNavItems"
               :key="item.key"
               type="button"
-              class="flex min-h-[3.65rem] flex-col items-center justify-center gap-1 rounded-[1rem] text-[0.68rem] font-black transition active:scale-[0.98]"
-              :class="item.active ? 'bg-[#e5fbfa] text-[#13aaa5]' : 'text-gray-500'"
+              class="flex min-h-[3.5rem] flex-col items-center justify-center gap-0.5 rounded-[1rem] text-[0.66rem] font-black transition active:scale-[0.97]"
+              :class="item.active ? 'text-[#0e9a95]' : 'text-gray-400'"
               :aria-current="item.active ? 'page' : undefined"
               :data-testid="`food-delivery-platform-nav-${item.key}`"
               @click="handlePlatformNavItem(item)"
             >
-              <i :class="item.icon" class="text-lg"></i>
+              <i :class="item.icon" class="text-[1.05rem]"></i>
               <span>{{ item.label }}</span>
             </button>
           </div>
