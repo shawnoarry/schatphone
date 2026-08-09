@@ -57,7 +57,7 @@ Current active architecture slice:
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
 - this is a promoted architecture-decision slice; beyond the completed Book-only cutover, it does not approve migration of any additional application owner.
-- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; the Git-connected Vercel root-path app and fail-closed proxy Functions are deployed, while hosted PWA, true-device, and configured real-provider proof remain release work.
+- first successful Chat activation and the explicit custom-role-to-Chat journey are completed product evidence rather than architecture prerequisites; GitHub Pages now also has direct user-configured provider model discovery, connection, one real Chat reply, and reload persistence evidence; the Git-connected Vercel root-path app and fail-closed optional proxy Functions are deployed, while hosted PWA and true-device proof remain release work.
 
 ### Product Decision Checkpoint - 2026-07-21
 
@@ -288,7 +288,7 @@ Do not describe it as a production backend or closed-page simulation engine.
 - Vercel project `shawn-e-s-projects/schatphone` serves the root-path app at `https://schatphone.vercel.app` and detects fixed-upstream `/api/openai/v1/models` plus `/api/openai/v1/chat/completions` Functions; the unconfigured endpoint returns `503 PROXY_NOT_CONFIGURED` without leaking provider details;
 - the initial Vercel production upload came from the local dirty tree; the `main` commit containing this deployment contract is the reproducible source for automatic later builds;
 - the Git-connected Cloudflare Worker/static-assets deployment is live at `https://schatphone.noarry.workers.dev`: `npm run build:cloudflare` builds at `/`, the Worker serves the SPA and the same two fixed proxy routes, unknown API routes fail as JSON `404`, and the first Git-triggered build plus root, manifest, hash-route, static-asset, and fail-closed proxy smoke checks pass;
-- external branch/environment required checks, production proxy secrets, one real-provider reply, installed-PWA/relaunch, and named true-device evidence remain separately unverified, so this release slice is partial.
+- external branch/environment required checks, installed-PWA/relaunch, and named true-device evidence remain separately unverified, so this release slice is partial. Production proxy secrets are intentionally absent while direct access is sufficient; any later fixed-upstream proxy proof is provider-specific optional evidence, not a public multi-user requirement.
 
 ## 5. Completed Governance Rounds
 

@@ -1,12 +1,13 @@
 # Deployment E2E Handoff
 
-Updated: 2026-08-07
+Updated: 2026-08-09
 
 ## Current conclusion
 
 - Remote `origin/main` is at `9c263cb`.
 - GitHub Actions Pages Run #130 passed the fail-closed build gate and the `deploy` job, so GitHub Pages released the current `main` artifact.
 - [https://shawnoarry.github.io/schatphone/](https://shawnoarry.github.io/schatphone/) returns the deployed app and manifest from the `/schatphone/` base path. A deployed-browser smoke unlocked to Home, entered Map at `#/map?homePage=0&from=home`, rendered the Seoul map, reported no console errors, and had no horizontal overflow.
+- A Chrome session on the deployed Pages origin completed the direct user-configured OpenAI-compatible path: model discovery returned five models, the Network connection test returned `OK`, one real Chat turn returned the requested exact reply, and both messages remained after reload and reopen. The provider credential stayed in the browser configuration and was not copied into repository or deployment settings.
 - Run details: [#130](https://github.com/shawnoarry/schatphone/actions/runs/31168706100)
 
 ## Repair evidence
@@ -24,4 +25,4 @@ Run #129 had 20 Map and World Pack navigation failures after the URL hash change
 ## Remaining release proof
 
 1. Confirm external branch required-check and `github-pages` environment-protection policy separately.
-2. Collect the separately scheduled installed-PWA/relaunch and named true-device evidence.
+2. Collect the separately scheduled installed-PWA/relaunch and named true-device evidence. The direct hosted-provider Chat proof is complete; origin-specific proxy proof is optional and applies only when a chosen provider cannot be called directly from the browser.

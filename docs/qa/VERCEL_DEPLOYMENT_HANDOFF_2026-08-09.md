@@ -8,6 +8,7 @@ Updated: 2026-08-09
 - Production is available at [https://schatphone.vercel.app](https://schatphone.vercel.app).
 - The initial production deployment `dpl_8YRkMVKopNEFmm4Wsu4aKr1hhdVZ` reached `READY` and served the root app and manifest successfully.
 - Vercel detected both OpenAI-compatible Functions. With no production secrets configured, the models endpoint failed closed with `503 PROXY_NOT_CONFIGURED` as designed.
+- The fixed-upstream Functions are optional personal deployment helpers. Ordinary user profiles continue to call their configured provider URL directly; SchatPhone does not require every user or provider to share the deployment owner's upstream.
 - The initial deployment was uploaded from the local dirty working tree, not built from a Git commit. The `main` commit containing this handoff and the deployment files is the first reproducible repository baseline and becomes the source for automatic later builds.
 - The first Git-triggered attempt, `dpl_Beje6c7tihkiGEqsEGsPtdUSMmVK`, proved that Vercel cloned commit `e5b1b91` but failed because `.vercelignore` excluded `docs/` while `src/lib/built-in-book-assets.js` imports one tracked Markdown asset from that directory. The corrective baseline keeps `docs/` in the Vercel build source while continuing to exclude tests, reports, caches, and repository metadata.
 
@@ -35,9 +36,9 @@ Updated: 2026-08-09
 - remote Vercel build completed;
 - production root and manifest returned `200`;
 - both Functions were detected and the unconfigured endpoint returned the expected redacted `503` response.
+- the production root was rechecked at `200` on 2026-08-09 while the optional proxy remained fail-closed at `503`.
 
 ## Remaining Release Proof
 
-1. Enter the proxy environment values through Vercel's Environment Variables UI and redeploy without exposing either secret in repository files or logs.
-2. Configure SchatPhone Network/API with `https://schatphone.vercel.app/api/openai/v1` and the client token, then prove one model/connection test and one real Chat reply.
-3. Complete installed-PWA/relaunch, backup round-trip, and named true-device evidence separately.
+1. Keep the proxy unconfigured while direct provider access is sufficient. If a personal deployment later needs the relay, enter its fixed upstream values through Vercel's Environment Variables UI and prove that optional route separately.
+2. Complete installed-PWA/relaunch, backup round-trip, and named true-device evidence separately. GitHub Pages already has one direct configured-provider model, connection, real Chat, and reload-persistence proof; repeat it on Vercel only for origin-specific CORS or PWA evidence.

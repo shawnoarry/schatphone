@@ -61,7 +61,7 @@ Priority meanings:
 | Cheats | concept only | unlock/route/editor contract | duplicating World Hub | explicit product decision | Decision |
 | Files | internal compatibility component | none for ordinary users | public file-manager drift | expand only for an internal consumer | Watch |
 | Push relay | working local delivery helper | auth/tenancy/operations | being mistaken for backend autonomy | production-backend decision | Decision |
-| QA / CI | local gates pass; remote Pages Run #130, the deployed `/schatphone/` smoke, the Vercel root/proxy baseline, and the Git-connected Cloudflare Worker/static-assets deployment plus URL smoke are proven | verify external protections, configured-provider/PWA/true-device flows, independent audit availability, and a coverage floor | treating partial deployed evidence as complete release confidence | preserve current gates and add only the missing external proof | P0 |
+| QA / CI | local gates pass; remote Pages Run #130, the deployed `/schatphone/` smoke plus direct configured-provider Chat/reload flow, the Vercel root/optional-proxy baseline, and the Git-connected Cloudflare Worker/static-assets deployment plus URL smoke are proven | verify external protections, installed-PWA/true-device flows, independent audit availability, and a coverage floor | treating partial deployed evidence as complete release confidence | preserve current gates and add only the missing external proof | P0 |
 
 ## 3. Cross-Cutting Candidates
 
@@ -73,8 +73,8 @@ Priority meanings:
 - `DONE 2026-07-22`: normal-resolver compatible transitive lock refresh, with production/full audit at 0/0 and no direct, override/resolution, or major change;
 - `WORKFLOW_IMPLEMENTED 2026-07-22`: one full Playwright run plus separate production/full audits for PR and main Pages build;
 - `DONE 2026-08-07`: remote Pages gate and deployed `/schatphone/` base-path smoke;
-- `PARTIAL_DONE 2026-08-09`: Git-connected Vercel root-path app and fail-closed fixed-upstream proxy deployed; production secret/provider proof, PWA/relaunch, external protection, and true-device evidence remain.
-- `DEPLOYED_BASELINE 2026-08-09`: Git-connected Cloudflare Worker/static-assets root path is live at `https://schatphone.noarry.workers.dev`; shared proxy-core tests, root build, Wrangler dry-run, automatic Workers Build, and root/manifest/hash-route/static-asset/fail-closed API smoke pass. Production secrets and one real-provider reply remain.
+- `PARTIAL_DONE 2026-08-09`: Git-connected Vercel root-path app and fail-closed fixed-upstream optional proxy deployed; GitHub Pages direct-provider model/connection/real-Chat/reload proof passes, while PWA/relaunch, external protection, and true-device evidence remain.
+- `DEPLOYED_BASELINE 2026-08-09`: Git-connected Cloudflare Worker/static-assets root path is live at `https://schatphone.noarry.workers.dev`; shared proxy-core tests, root build, Wrangler dry-run, automatic Workers Build, and root/manifest/hash-route/static-asset/fail-closed API smoke pass. The optional fixed-upstream relay is intentionally unconfigured while direct provider access is sufficient.
 
 ### Persistence And Recovery
 

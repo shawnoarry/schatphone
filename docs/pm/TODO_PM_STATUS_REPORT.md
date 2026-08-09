@@ -15,14 +15,14 @@ The core product can already support meaningful use and continued development:
 - Lock -> Home -> app navigation is stable;
 - Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
-- the current local integration has passing lint, unit, build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke, the Git-connected Vercel root/proxy baseline, and the Git-connected Cloudflare Worker/static-assets deployment plus URL smoke are proven. Configured provider, installed PWA, external protections, and named physical-device proof remain open.
+- the current local integration has passing lint, unit, build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke plus direct configured-provider Chat/reload proof, the Git-connected Vercel root/optional-proxy baseline, and the Git-connected Cloudflare Worker/static-assets deployment plus URL smoke are proven. Installed PWA, external protections, and named physical-device proof remain open.
 
 The current work is concentrated in four areas:
 
 1. preserving the completed first-value Chat activation and custom-role journey;
 2. preserving the completed current-save write/conflict safety and complete local v3 recovery point;
 3. one ordinary daily-life cross-module loop;
-4. deployed PWA, hosted-provider, backup, and true-device release proof.
+4. deployed PWA, backup, external-protection, and true-device release proof; hosted direct-provider Chat is proven, while optional proxy proof is conditional.
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
@@ -59,7 +59,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
-| QA / release | `Strong local baseline; hosted infrastructure partial` | remote Pages and `/schatphone/` smoke pass; the Git-connected Vercel root/fail-closed AI proxy and Cloudflare Worker/static-assets root plus URL smoke are deployed; configured-provider Chat, external checks, installed PWA, and true-device QA remain open |
+| QA / release | `Strong local baseline; hosted infrastructure partial` | remote Pages and `/schatphone/` smoke plus direct configured-provider Chat/reload pass; the Git-connected Vercel root/fail-closed optional AI proxy and Cloudflare Worker/static-assets root plus URL smoke are deployed; external checks, installed PWA, and true-device QA remain open |
 
 ## 4. What Users Can Do Now
 
@@ -172,7 +172,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 1. `DONE 2026-07-22`: close the first successful Chat activation loop through the existing Network flow with originating thread/draft continuity and desktop plus simulated-mobile first-reply evidence;
 2. `DONE 2026-08-09`: make current-save writes fail visibly, prevent unsafe same-container writers, and complete the release-local v3 export/restore/reopen/crash-recovery boundary;
 3. `DONE 2026-08-07`: preserve the custom role -> Chat path, prove one ordinary Shopping consequence through Calendar, Wallet, Chat, and relationship continuity, add Wallet historical quote detail, and curate the default Home release surface without disabling demoted apps;
-4. finish the partial hosted baseline with configured-provider Chat, deployed PWA/install/relaunch, backup round-trip, external protection checks, and named true-device evidence.
+4. finish the partial hosted baseline with deployed PWA/install/relaunch, backup round-trip, external protection checks, and named true-device evidence; preserve the proven direct-provider Chat path and configure a fixed proxy only for a provider that actually requires it.
 
 This is the only current product-completion sequence. It does not require a broad onboarding wizard, mandatory built-in content, another World Pack archetype, Mini Scene runtime, or a general visual rebuild.
 
@@ -314,7 +314,7 @@ Current checkpoint note on 2026-07-31:
 Hosted checkpoint note on 2026-08-09:
 
 - Pages Run #130 and the deployed `/schatphone/` browser smoke are proven;
-- Vercel serves the root app and fail-closed AI proxy Functions. The first production upload came from the local dirty tree, and this repository baseline supersedes it for automatic later builds; configured real-provider Chat remains required.
+- Vercel serves the root app and fail-closed optional AI proxy Functions. The first production upload came from the local dirty tree, and this repository baseline supersedes it for automatic later builds; deployed Pages direct-provider Chat already passes, while a Vercel-specific provider run is conditional origin/PWA evidence.
 
 ## 9. Read Next
 

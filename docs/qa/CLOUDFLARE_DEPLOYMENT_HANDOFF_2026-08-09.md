@@ -8,8 +8,8 @@ Updated: 2026-08-09
 - One Worker serves the built Vue SPA through Workers Static Assets and handles the fixed `/api/openai/v1/models` and `/api/openai/v1/chat/completions` proxy routes before static fallback.
 - The proxy core is shared with Vercel and uses Web Platform request/response streams; the Vercel Node response adapter remains separate.
 - Local Cloudflare build, focused Worker/proxy tests, and `wrangler deploy --dry-run` pass.
-- The Git-connected production Worker is deployed at `https://schatphone.noarry.workers.dev` from `main` commit `25b5329`.
-- Cloudflare Workers Build `00ebb7df` completed successfully with Worker version `4f524e75-aed3-498a-bdf1-f9d07ce4954d`.
+- The Git-connected production Worker is deployed at `https://schatphone.noarry.workers.dev`; the latest verified `main` baseline is commit `ced45db`.
+- The corresponding Worker version `79520fe3-c61b-41b6-9e1c-28691b2d0d46` completed successfully.
 
 ## Git Deployment Contract
 
@@ -27,10 +27,11 @@ Updated: 2026-08-09
 - Missing client-token configuration fails closed with `503 PROXY_NOT_CONFIGURED`.
 - Same-origin or explicitly allowed CORS, a 2 MiB request limit, bounded timeouts, streamed responses, upstream-loop rejection, and redacted transport errors remain enforced.
 - The browser-facing client token is separate from the server-only upstream provider key.
+- These routes are optional personal deployment helpers. Normal user profiles call their own configured provider URL directly, and the Worker must not become an arbitrary multi-tenant forwarder.
 
 ## Secure Configuration
 
-Enter production values only through Cloudflare Workers & Pages -> the SchatPhone Worker -> Settings -> Variables and Secrets:
+Only when this personal deployment actually needs the optional fixed-upstream relay, enter production values through Cloudflare Workers & Pages -> the SchatPhone Worker -> Settings -> Variables and Secrets:
 
 - secret: `SCHATPHONE_AI_PROXY_UPSTREAM_KEY`;
 - secret: `SCHATPHONE_AI_PROXY_CLIENT_TOKEN`;
@@ -60,8 +61,9 @@ Do not use a `VITE_` prefix and do not store production values in repository fil
 - `/#/lock` renders the SchatPhone lock screen in a browser;
 - `/api/openai/v1/models` returns `503 PROXY_NOT_CONFIGURED` while production credentials are absent;
 - an unknown `/api/*` route returns JSON `404 NOT_FOUND`.
+- a 2026-08-09 recheck returned `200` for `/` and `503` for the unconfigured models route; the prepared variable form was cancelled and no proxy variable names were saved.
 
 ## Remaining Deployment Proof
 
-1. Configure production variables and secrets through the Cloudflare UI without exposing credentials.
-2. Prove model discovery and one real Chat reply through the Cloudflare same-origin proxy.
+1. No mandatory proxy configuration remains while direct provider access is sufficient.
+2. If a future personal provider requires the relay, configure its fixed upstream securely and prove model discovery plus one Chat reply through that optional path. Do not turn it into a per-request arbitrary URL proxy.

@@ -71,7 +71,7 @@ Chat's 4.4 service-continuity baseline, World Pack service-template contract, 4.
 6. if roadmap 4.7 approves K-pop service accounts, add candidates/templates first and keep user subscription manual.
 7. when roadmap 4.8 reaches Chat, add one focused request Adapter and legacy-text compatibility path; do not build a Chat-specific HTML renderer.
 
-Do not start another broad Chat decomposition by inertia. The Vercel root app and fail-closed AI proxy are deployed, but configured real-provider Chat, deployed PWA, and named true-device evidence remain the next roadmap 4.9 gate.
+Do not start another broad Chat decomposition by inertia. GitHub Pages now has direct configured-provider model discovery, connection, one real Chat reply, and reload persistence evidence; the Vercel root app and fail-closed optional AI proxy are deployed. Installed-PWA/relaunch and named true-device rich-message/media/service-thread evidence remain the next roadmap 4.9 gate.
 
 ## 3. Do Not Do
 

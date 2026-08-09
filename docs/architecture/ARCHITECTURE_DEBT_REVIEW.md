@@ -40,7 +40,7 @@ Additional debt remains real:
 - backup export currently includes `settings.api.key` through the full settings snapshot;
 - production and full dependency audits are clean after an isolated normal-resolver compatible transitive refresh, without direct, override/resolution, or major changes;
 - PR and main Pages workflow definitions include full E2E plus separate production/full audits; remote Pages Run #130 and the deployed `/schatphone/` base-path smoke are proven, while external protection remains unverified.
-- the Vercel root app and fail-closed fixed-upstream AI proxy are deployed and the project is Git-connected, but production proxy configuration, installed-PWA/relaunch, and real-provider Chat proof remain open.
+- the Vercel root app and fail-closed fixed-upstream optional AI proxy are deployed and the project is Git-connected; GitHub Pages direct-provider model/connection/real-Chat/reload proof passes, while installed-PWA/relaunch and named true-device proof remain open. Production proxy configuration is conditional personal deployment work, not a multi-user release prerequisite.
 
 This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and the current test setup are still appropriate. The urgent work is ownership closure, not framework replacement.
 
@@ -202,7 +202,7 @@ Verified on 2026-07-22:
 - GitHub Pages deploy requires the verified build job and still does not deploy the push relay;
 - the repository has no coverage threshold.
 
-These findings do not establish production readiness. Production and full dependency audits are clean after the accepted lock refresh, while exported/local secrets, the unauthenticated push relay, Vercel client-token exposure/abuse limits, external CI/environment protection, configured-provider/PWA proof, deployed-network proof, and named physical-device evidence still require explicit hardening or verification.
+These findings do not establish production readiness. Production and full dependency audits are clean after the accepted lock refresh, while exported/local secrets, the unauthenticated push relay, optional-proxy client-token exposure/abuse limits, external CI/environment protection, installed-PWA/deployed-network proof, and named physical-device evidence still require explicit hardening or verification. One direct configured-provider Chat path is proven on deployed GitHub Pages.
 
 ## 4. Findings
 
@@ -275,7 +275,7 @@ Why it matters:
 
 - the workflow definitions exercise full product E2E and both audit scopes before PR acceptance or Pages artifact upload;
 - remote Pages Run #130 and the deployed `/schatphone/` base-path smoke are proven;
-- branch/environment required checks remain external unverified settings, and Vercel still needs configured-provider, installed-PWA/relaunch, and true-device proof;
+- branch/environment required checks remain external unverified settings, and installed-PWA/relaunch plus true-device proof remain; a Vercel-specific configured-provider run is only needed for origin-specific CORS/PWA evidence because the deployed Pages direct-provider flow already passes;
 - no code-coverage floor exists.
 
 Why it matters:
@@ -311,7 +311,7 @@ Before another broad feature family:
 8. `DONE 2026-07-21`: update the compatible Vite patch line and safe transitive dependencies;
 9. `DONE 2026-07-22`: complete Vitest's isolated 4.1.10 migration and preserve the full test baseline;
 10. `DONE 2026-07-22`: refresh the remaining compatible transitive advisory nodes through normal npm resolution and close production/full audit at 0/0;
-11. `PARTIAL_DONE 2026-08-09`: gate PR and Pages builds with full E2E and both audits, prove remote Pages plus deployed base-path behavior, and establish the Git-connected Vercel root/proxy baseline; external protection, configured provider, PWA/relaunch, and true-device proof remain.
+11. `PARTIAL_DONE 2026-08-09`: gate PR and Pages builds with full E2E and both audits, prove remote Pages plus deployed base-path and direct-provider Chat/reload behavior, and establish the Git-connected Vercel root/optional-proxy baseline; external protection, PWA/relaunch, and true-device proof remain.
 
 Do not mix these changes with product behavior or a large view refactor.
 

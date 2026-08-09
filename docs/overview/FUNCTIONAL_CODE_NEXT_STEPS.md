@@ -88,8 +88,9 @@ Current evidence:
 - Vitest 4.1.10 now reuses root Vite 7.3.6, with the old nested Vite 5/esbuild chain removed;
 - PR and main Pages workflow definitions now fail closed on full product E2E and separate production/full audits; the full suite contains the focused visual cases and is not run twice;
 - Pages configure/upload/deploy requires the verified build job; remote Run #130 and the deployed `/schatphone/` base-path smoke are proven.
-- Vercel serves the root app and fixed-upstream OpenAI-compatible proxy Functions; this repository baseline makes later production-branch pushes automatic, while production secrets and one real-provider reply remain unproven.
-- the third Git-connected Cloudflare Worker/static-assets root path shares the proxy core and is deployed at `https://schatphone.noarry.workers.dev`; local gates and root/manifest/hash-route/static-asset/fail-closed API smoke checks pass, while production secrets and one real-provider reply remain open.
+- Vercel serves the root app and fail-closed fixed-upstream OpenAI-compatible proxy Functions; this repository baseline makes later production-branch pushes automatic. The Functions are optional personal deployment helpers and stay unconfigured while user provider profiles work directly.
+- the third Git-connected Cloudflare Worker/static-assets root path shares the optional proxy core and is deployed at `https://schatphone.noarry.workers.dev`; local gates and root/manifest/hash-route/static-asset/fail-closed API smoke checks pass, and no production proxy values are required while direct access is sufficient.
+- GitHub Pages has deployed-browser evidence for one direct user-configured provider: five models discovered, connection test `OK`, one real Chat reply, and message persistence after reload/reopen.
 
 Safe sequence:
 
@@ -97,7 +98,7 @@ Safe sequence:
 2. `DONE`: isolated Vitest 4 migration plus full lint/unit/build/E2E validation;
 3. `DONE 2026-07-22`: compatible transitive advisory refresh through normal npm resolution, with production/full audit at 0/0;
 4. `WORKFLOW_IMPLEMENTED 2026-07-22`: gate PR and Pages build with audits plus one full E2E run, flaky rejection, skip ceiling, and failure diagnostics;
-5. preserve the proven remote Pages, Git-connected Vercel, and Git-connected Cloudflare baselines, then confirm external required checks/environment policy, configured-provider Chat, installed-PWA/relaunch, and named true-device evidence.
+5. preserve the proven remote Pages direct-provider, Git-connected Vercel, and Git-connected Cloudflare baselines, then confirm external required checks/environment policy, installed-PWA/relaunch, and named true-device evidence; treat any fixed-upstream proxy setup as provider-specific optional proof.
 
 ## 5. Candidate C: One Named Hotspot Seam
 

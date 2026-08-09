@@ -408,7 +408,7 @@ Its boundary is important:
 - the 2026-07-22 architecture baseline passed ESLint, 185 Vitest files / 1170 tests, Vite production build, both npm audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
 - the current tree contains 209 static Vitest test files;
 - later promoted Camera, Food Delivery, and local-map slices have focused desktop/mobile evidence;
-- the current local integration has passing lint, unit, production build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke, and the Git-connected Vercel root/proxy infrastructure baseline are proven, while configured provider, installed PWA, named physical-device, and independently rerunnable audit proof remain open.
+- the current local integration has passing lint, unit, production build, governance, and focused browser evidence; remote Pages Run #130, the deployed `/schatphone/` smoke plus direct user-configured provider model/connection/real-Chat/reload flow, and the Git-connected Vercel root/optional-proxy infrastructure baseline are proven, while installed PWA, named physical-device, external protection, and independently rerunnable audit proof remain open.
 
 ### CI
 
@@ -424,9 +424,9 @@ Gaps:
 
 `.github/workflows/deploy.yml` runs the same hard gates on main push or main-only manual dispatch before configuring and uploading `dist`; the deploy job requires that verified build job. Remote Pages Run #130 and the live `/schatphone/` base-path smoke are proven. It does not deploy the push relay.
 
-Vercel project `shawn-e-s-projects/schatphone` is connected to `shawnoarry/schatphone` and serves the root-path app at `https://schatphone.vercel.app`. `vercel.json` adds fixed-upstream OpenAI-compatible models and Chat Completions Functions with server-only upstream credentials, a separate browser client token, allowed-origin enforcement, size/time limits, streaming preservation, and redacted errors. The initial deployment came from the local dirty tree; the `main` commit containing this deployment contract becomes the reproducible source for automatic later builds. Secure Environment Variable configuration and one real-provider Chat reply remain required. The proxy is a personal release helper, not a multi-tenant backend or abuse-control boundary.
+Vercel project `shawn-e-s-projects/schatphone` is connected to `shawnoarry/schatphone` and serves the root-path app at `https://schatphone.vercel.app`. `vercel.json` adds fixed-upstream OpenAI-compatible models and Chat Completions Functions with server-only upstream credentials, a separate browser client token, allowed-origin enforcement, size/time limits, streaming preservation, and redacted errors. The initial deployment came from the local dirty tree; the `main` commit containing this deployment contract becomes the reproducible source for automatic later builds. The proxy is an optional personal release helper, not a multi-tenant backend, arbitrary per-request forwarder, default Chat transport, or abuse-control boundary; it remains fail-closed and unconfigured while user profiles can call their providers directly.
 
-Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third root-path build. One Worker routes the two fixed `/api/openai/v1/*` endpoints through the shared Web Platform proxy core and delegates all non-API requests to the Workers Static Assets binding with SPA fallback. The Vercel-only Node response adapter remains outside that core. Local root build, focused Worker/native-Request/streaming tests, Wrangler dry-run, the first Git-triggered Workers Build, and root/manifest/hash-route/static-asset/fail-closed API smoke pass at `https://schatphone.noarry.workers.dev`; secure Variables and Secrets plus one real-provider reply remain pending.
+Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third root-path build. One Worker routes the two fixed `/api/openai/v1/*` endpoints through the shared Web Platform proxy core and delegates all non-API requests to the Workers Static Assets binding with SPA fallback. The Vercel-only Node response adapter remains outside that core. Local root build, focused Worker/native-Request/streaming tests, Wrangler dry-run, the Git-triggered Workers Build, and root/manifest/hash-route/static-asset/fail-closed API smoke pass at `https://schatphone.noarry.workers.dev`. Its optional fixed-upstream proxy remains deliberately unconfigured while direct provider access is sufficient; a future personal deployment may configure it without changing the multi-user direct-first contract.
 
 ## 11. Current Debt And Direction
 
@@ -444,12 +444,12 @@ Other debt:
 
 - direct store-to-store coupling across some ownership boundaries;
 - no compile-time contract layer;
-- remaining configured-provider/PWA/external-protection release proof;
+- remaining installed-PWA/external-protection/true-device release proof; direct configured-provider Chat is proven on deployed GitHub Pages, while optional proxy proof remains provider-specific;
 - incomplete true-device and push/provider QA.
 
 Recommended order:
 
-1. preserve proven Pages, Git-connected Vercel, and Git-connected Cloudflare infrastructure baselines, then close external protection, configured-provider, PWA/relaunch, and named true-device proof;
+1. preserve proven Pages direct-provider, Git-connected Vercel, and Git-connected Cloudflare infrastructure baselines, then close external protection, PWA/relaunch, and named true-device proof;
 2. one measured hotspot or facade slice;
 3. one deeper cross-store adapter;
 4. incremental types for shared contracts only;
