@@ -23,7 +23,7 @@ Chat owns:
 - message recall as a retained Chat event that hides original text and rich-block details from UI actions, AI context, quote previews, pending quote bars, and history review while preserving who recalled it
 - rich message display
 - internal source-App object sharing with recipient selection, one bounded device-local pending draft, explicit `share_card` send, cancel-to-source, refresh/lock recovery, and exact source-detail return
-- source-owned share-card display and transport, including Shopping `product_link`, `gift_card` / `virtual_gift`, and future tracking/location/calendar/media share objects
+- source-owned share-card display and transport, including Shopping `product_link`, `gift_card` / `virtual_gift`, Wallet `wallet_receipt_share`, and future tracking/location/calendar/media share objects
 - legacy product-card compatibility display while the active Shopping send path migrates to `share_card`
 - Chat-local saved-message flags for ordinary role/group threads
 - AI reply trigger and prompt assembly
@@ -120,7 +120,7 @@ Chat may expose a service-account linkage contract to other modules. This contra
 
 Chat may store:
 
-- `shareType`, such as `product_link`, `gift_card`, `virtual_gift`, `tracking_share`, or `payee_account`;
+- `shareType`, such as `product_link`, `gift_card`, `virtual_gift`, `tracking_share`, `payee_account`, or `wallet_receipt_share`;
 - `sourceModule`, `sourceId`, and optional `sourceEventId`;
 - title, summary, status, amount, preview image, and source route snapshots;
 - `aiContext` that explains what the object means and which app owns the truth.
@@ -128,6 +128,8 @@ Chat may store:
 Chat must not treat a `product_link` as a purchased or delivered gift. User-sent gifts inside Chat should be source-created digital objects such as gift cards, vouchers, redemption codes, or virtual gifts. Physical goods should enter Chat as product links, order shares, or tracking/signature shares, while Shopping or Logistics owns purchase, fulfillment, and delivery state.
 
 A `payee_account` card is a system-verified reference to a persisted role-profile account. Chat may store its masked display snapshot and Wallet route, but neither the user request nor the card is a completed transfer. AI output must never create or alter bank credentials, and only Wallet may validate the matching currency, deduct funds, persist the receipt, and submit the confirmed relationship fact.
+
+A `wallet_receipt_share` card is a snapshot of an already completed Wallet receipt. Chat owns recipient selection, explicit send, message history, and the receiving-conversation `returnChatId`; Wallet owns the transaction, receipt, amount, and original source lineage. Sending, opening, quoting, or returning from this card must not move money or replace the transaction's original `sourceChatId`.
 
 World Pack service-account templates should surface as availability from WorldBook and be joined from Chat Directory's `Services` management area. WorldBook must not become the service-account editor or creator. Chat Directory may let the user edit/reset enabled-pack service-account candidate metadata before joining, and may review AI/pasted service-candidate proposals from active WorldBook/World Pack context. Confirming a proposal only writes a World Pack template; it does not subscribe the user, create source-module business records, or silently rewrite already joined Chat accounts. Generated entries may store origin metadata such as `worldPackId`, `worldServiceTemplateId`, and `worldAppBindingId`, and may display a source notification plan for supported source bindings, but the generated entry is still owned by Chat Directory and must not become a role profile or source-module record owner.
 

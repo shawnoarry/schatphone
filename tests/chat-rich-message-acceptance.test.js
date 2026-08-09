@@ -111,6 +111,36 @@ describe('Chat rich-message acceptance matrix', () => {
     expect(wrapper.emitted('open-share-card-route')?.[0]).toEqual([block])
   })
 
+  test('renders a Wallet receipt as a finished consumer card without internal ownership copy', async () => {
+    const block = {
+      type: 'share_card',
+      shareType: 'wallet_receipt_share',
+      sourceModule: 'wallet',
+      sourceId: 'wallet_tx_42',
+      sourceEventId: 'SP20260517000420',
+      title: '转账回执',
+      summary: '已向 Eva 完成转账 · SP20260517000420',
+      statusLabel: '已完成',
+      amountLabel: '25.50 CNY',
+      category: 'CNY',
+      route:
+        '/wallet?receiptId=wallet_tx_42&intent=wallet_receipt_share&source=chat_share&returnChatId=2',
+      aiContext: {
+        mutationBoundary: 'Wallet owns the transaction and receipt state.',
+      },
+    }
+    const wrapper = mountMessage([block])
+    const card = wrapper.get('[data-testid="chat-share-card-wallet-wallet_tx_42"]')
+
+    expect(card.text()).toMatch(/钱包回执|Wallet receipt/)
+    expect(card.text()).toContain('25.50 CNY')
+    expect(card.text()).toMatch(/查看回执|View receipt/)
+    expect(card.text()).not.toContain('Wallet owns the transaction')
+    expect(card.text()).not.toContain('wallet_receipt_share')
+    await card.get('button').trigger('click')
+    expect(wrapper.emitted('open-share-card-route')?.[0]).toEqual([block])
+  })
+
   test('separates service source actions from Chat replies in full and compact cards', async () => {
     const block = {
       type: 'service_notification',

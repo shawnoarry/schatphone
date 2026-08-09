@@ -49,6 +49,7 @@ Updated: 2026-08-09
 - Wallet Activity source filters compose with a case-insensitive read-only search over recorded transaction identity and provenance. Search changes only the visible projection, leaves ledger rows and quote snapshots untouched, and retains the same general detail path for every result.
 - Wallet Activity exposes a focused monthly-statement projection over retained ledger records. It derives local calendar months, keeps income/spending/net totals separate per original currency, performs no current-rate quotation, and returns statement-opened details to the selected month while leaving delete and role-receipt actions on Activity.
 - Wallet Home exposes verified-payee management over retained role-account references. Active rows share one repeat-transfer path into the existing confirmation runtime with empty amount/note, and explicit route origin keeps Wallet returns on the payee list while preserving Chat-card and Activity-receipt behavior.
+- Completed role-transfer receipts can create a Wallet-owned `wallet_receipt_share` through the bounded internal Chat-share draft. Chat selects the recipient and finalizes `returnChatId`; Wallet restores the saved receipt, keeps original `sourceChatId` lineage unchanged, and performs no ledger or relationship mutation when the card is sent, opened, canceled, or returned.
 
 ## 4. Workstream D: Assets And Stock
 

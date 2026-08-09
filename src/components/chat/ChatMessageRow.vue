@@ -236,6 +236,7 @@ const serviceNotificationTone = (block = {}) =>
 
 const shareCardTypeLabel = (block = {}) => {
   if (block.shareType === 'payee_account') return t('收款账户', 'Receiving account')
+  if (block.shareType === 'wallet_receipt_share') return t('钱包回执', 'Wallet receipt')
   if (block.shareType === 'gift_card') return t('礼品卡', 'Gift card')
   if (block.shareType === 'virtual_gift') return t('虚拟礼物', 'Virtual gift')
   if (block.shareType === 'tracking_share') return t('物流分享', 'Tracking share')
@@ -245,7 +246,8 @@ const shareCardTypeLabel = (block = {}) => {
   if (block.shareType === 'music_track_share') return t('音乐分享', 'Music share')
   if (block.shareType === 'calendar_invite') return t('日程邀请', 'Calendar invite')
   if (block.shareType === 'gallery_asset_share') return t('素材分享', 'Asset share')
-  return t('商品链接', 'Product link')
+  if (block.shareType === 'product_link') return t('商品链接', 'Product link')
+  return t('App 分享', 'App share')
 }
 
 const shareCardSourceLabel = (block = {}) => {
@@ -262,6 +264,14 @@ const shareCardSourceLabel = (block = {}) => {
 }
 
 const shareCardToneClass = (block = {}) => {
+  if (block.shareType === 'wallet_receipt_share') {
+    return {
+      card: 'border-neutral-200 bg-neutral-50/95',
+      label: 'text-neutral-700',
+      pill: 'bg-neutral-900 text-white',
+      button: 'border-neutral-900 bg-neutral-900 text-white',
+    }
+  }
   if (block.shareType === 'payee_account') {
     return {
       card: 'border-emerald-200 bg-emerald-50/90',
@@ -305,6 +315,8 @@ const shareCardToneClass = (block = {}) => {
 const shareCardActionLabel = (block = {}) =>
   block.shareType === 'payee_account'
     ? t('去 Wallet 转账', 'Transfer in Wallet')
+    : block.shareType === 'wallet_receipt_share'
+      ? t('查看回执', 'View receipt')
     : block.shareType === 'music_track_share'
       ? t('在音乐中查看', 'View in Music')
       : block.shareType === 'location_share'
@@ -555,11 +567,11 @@ const metaClasses = computed(() => [
               <span v-if="block.category" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">
                 {{ block.category }}
               </span>
-              <span v-if="block.sourceModule" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">
+              <span v-if="block.sourceModule && block.shareType !== 'wallet_receipt_share'" class="rounded-full bg-white/70 px-2 py-0.5 text-[10px] text-gray-600">
                 {{ block.sourceModule }}
               </span>
             </div>
-            <p v-if="block.aiContext?.mutationBoundary && block.shareType !== 'payee_account'" class="mt-2 rounded-md border border-white/70 bg-white/60 px-2 py-1.5 text-[10px] leading-4 text-gray-500">
+            <p v-if="block.aiContext?.mutationBoundary && !['payee_account', 'wallet_receipt_share'].includes(block.shareType)" class="mt-2 rounded-md border border-white/70 bg-white/60 px-2 py-1.5 text-[10px] leading-4 text-gray-500">
               {{ block.aiContext.mutationBoundary }}
             </p>
             <button

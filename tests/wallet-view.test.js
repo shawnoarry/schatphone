@@ -15,6 +15,7 @@ const createTestRouter = () =>
     history: createMemoryHistory(),
     routes: [
       { path: '/wallet', component: WalletView },
+      { path: '/chat', component: DummyView },
       { path: '/chat/:id', component: DummyView },
       { path: '/home', component: DummyView },
     ],
@@ -755,6 +756,7 @@ describe('WalletView', () => {
     expect(wrapper.get('[data-testid="wallet-transfer-receipt"]').text()).toContain(
       transfer.receiptNumber,
     )
+    expect(wrapper.get('[data-testid="wallet-receipt-share-chat"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="wallet-receipt-return-chat"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wallet-receipt-return-payees"]').exists()).toBe(false)
     expect(router.currentRoute.value.query.receiptId).toBe(transfer.id)
@@ -774,5 +776,65 @@ describe('WalletView', () => {
       transfer.receiptNumber,
     )
     remounted.wrapper.unmount()
+  })
+
+  test('shares a receipt draft and returns a Chat-opened receipt to the receiving conversation', async () => {
+    const chatStore = useChatStore()
+    const walletStore = useWalletStore()
+    const profile = chatStore.getRoleProfileById(1)
+    const contact = chatStore.getContactById(1)
+    const knownPayee = walletStore.rememberRolePayeeAccount({
+      account: profile.payeeAccounts[0],
+      profile,
+      contact,
+      sourceChatId: contact.id,
+      sourceMessageId: 'chat_payee_share_eva_2',
+    })
+    walletStore.addTransaction({
+      type: 'income',
+      title: 'Opening balance',
+      amount: '100.00',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+    })
+    const result = walletStore.addRolePayeeTransfer({
+      payeeAccountId: knownPayee.id,
+      amount: '12.80',
+      accountId: 'wallet_account_icbc_cny',
+      sourceChatId: 1,
+      sourceMessageId: 'chat_payee_share_eva_2',
+    })
+    expect(result.ok).toBe(true)
+
+    const receiptRoute = `/wallet?receiptId=${result.transaction.id}&source=activity`
+    const { wrapper, router } = await mountWalletView(receiptRoute)
+    await wrapper.get('[data-testid="wallet-receipt-share-chat"]').trigger('click')
+    await flushUi()
+
+    expect(router.currentRoute.value.fullPath).toBe('/chat?share=internal')
+    expect(JSON.parse(localStorage.getItem('schatphone:chat:internal-share-draft'))).toMatchObject({
+      shareable: {
+        type: 'wallet_receipt_share',
+        sourceModule: 'wallet',
+        sourceId: result.transaction.id,
+        sourceEventId: result.transaction.receiptNumber,
+        amountLabel: '12.80 CNY',
+      },
+      sourceRoute: receiptRoute,
+    })
+
+    await router.push(
+      `/wallet?receiptId=${result.transaction.id}&intent=wallet_receipt_share&source=chat_share&returnChatId=2`,
+    )
+    await flushUi()
+    expect(wrapper.get('[data-testid="wallet-transfer-receipt"]').text()).toContain('12.80 CNY')
+    expect(wrapper.get('[data-testid="wallet-header-back"]').text()).toContain('Chat')
+    expect(result.transaction.sourceChatId).toBe(1)
+
+    await wrapper.get('[data-testid="wallet-receipt-return-chat"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value.fullPath).toBe('/chat/2')
+
+    wrapper.unmount()
   })
 })

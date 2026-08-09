@@ -5,6 +5,12 @@ import { useRoute, useRouter } from 'vue-router'
 import WalletBankCard from '../components/wallet/WalletBankCard.vue'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { createWalletReceiptShareObject } from '../lib/shareable-object'
+import {
+  INTERNAL_CHAT_SHARE_ROUTE_QUERY,
+  INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+  savePendingInternalChatShare,
+} from '../lib/internal-chat-share'
 import { findWalletBankInstitution } from '../lib/wallet-banking'
 import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
@@ -49,6 +55,7 @@ const WALLET_WORKFLOW_QUERY_KEYS = new Set([
   'note',
   'receiptId',
   'transactionId',
+  'returnChatId',
   'source',
 ])
 
@@ -123,6 +130,7 @@ const headerBackText = computed(() => {
   if (activeSection.value === 'receipt' && isInternalPayeeWorkflow.value) {
     return t('收款人', 'Payees')
   }
+  if (activeSection.value === 'receipt' && sharedReceiptReturnChatId.value) return 'Chat'
   if (activeSection.value === 'payee-transfer' && workflowChatId.value) return 'Chat'
   if (activeSection.value === 'monthly-statement') return t('活动', 'Activity')
   if (activeSection.value === 'transaction-detail') {
@@ -143,6 +151,9 @@ const headerBackAriaLabel = computed(() => {
   }
   if (activeSection.value === 'payee-transfer' && workflowChatId.value) {
     return t('返回聊天', 'Return to Chat')
+  }
+  if (activeSection.value === 'receipt' && sharedReceiptReturnChatId.value) {
+    return t('返回分享会话', 'Return to shared conversation')
   }
   if (activeSection.value === 'monthly-statement') {
     return t('返回钱包活动', 'Return to Wallet activity')
@@ -293,6 +304,14 @@ const workflowChatId = computed(() => {
     queryPositiveInt(route.query.chatId)
   )
 })
+
+const sharedReceiptReturnChatId = computed(() =>
+  walletWorkflowSource.value === 'chat_share' ? queryPositiveInt(route.query.returnChatId) : 0,
+)
+
+const receiptReturnChatId = computed(
+  () => sharedReceiptReturnChatId.value || workflowChatId.value,
+)
 
 const payeeTransferAmountIsValid = computed(() => {
   const amount = String(payeeTransferDraft.value.amount || '').trim()
@@ -563,6 +582,15 @@ const returnToSourceChat = () => {
   void router.push(`/chat/${chatId}`)
 }
 
+const returnToReceiptChat = () => {
+  const chatId = receiptReturnChatId.value
+  if (!chatId) {
+    closeWalletWorkflow('activity')
+    return
+  }
+  void router.push(`/chat/${chatId}`)
+}
+
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
 }
@@ -596,6 +624,10 @@ const navigateBack = () => {
   if (activeSection.value === 'receipt') {
     if (isInternalPayeeWorkflow.value) {
       closeWalletWorkflow('payees')
+      return
+    }
+    if (sharedReceiptReturnChatId.value) {
+      returnToReceiptChat()
       return
     }
     closeWalletWorkflow('activity')
@@ -985,6 +1017,38 @@ const openTransferReceipt = (transaction) => {
     receiptId: transaction.id,
     source: 'activity',
     chatId: transaction.sourceChatId,
+  })
+}
+
+const shareSelectedReceiptToChat = () => {
+  const receipt = selectedReceipt.value
+  if (!receipt) return
+  const amount = (receipt.amountCents / 100).toFixed(2)
+  const shareable = createWalletReceiptShareObject({
+    receiptId: receipt.id,
+    receiptNumber: receipt.receiptNumber,
+    currency: receipt.currency,
+    amount,
+    amountLabel: `${amount} ${receipt.currency}`,
+    title: t('转账回执', 'Transfer receipt'),
+    summary: t(
+      `已向 ${receipt.counterparty} 完成转账 · ${receipt.receiptNumber}`,
+      `Transfer to ${receipt.counterparty} completed · ${receipt.receiptNumber}`,
+    ),
+    statusLabel: t('已完成', 'Completed'),
+    createdAt: receipt.createdAt,
+  })
+  const draft = savePendingInternalChatShare({ shareable, sourceRoute: route.fullPath })
+  if (!draft) {
+    showFeedback(
+      'warning',
+      t('暂时无法创建分享，请稍后再试。', 'The share could not be prepared. Try again.'),
+    )
+    return
+  }
+  void router.push({
+    path: '/chat',
+    query: { [INTERNAL_CHAT_SHARE_ROUTE_QUERY]: INTERNAL_CHAT_SHARE_ROUTE_VALUE },
   })
 }
 
@@ -2227,8 +2291,17 @@ watch(
 
           <div class="wallet-receipt__actions">
             <button
+              type="button"
+              data-testid="wallet-receipt-share-chat"
+              @click="shareSelectedReceiptToChat"
+            >
+              <i class="fas fa-share-nodes" aria-hidden="true"></i>
+              {{ t('分享到 Chat', 'Share to Chat') }}
+            </button>
+            <button
               v-if="isInternalPayeeWorkflow"
               type="button"
+              class="is-secondary"
               data-testid="wallet-receipt-return-payees"
               @click="closeWalletWorkflow('payees')"
             >
@@ -2236,10 +2309,11 @@ watch(
               {{ t('返回收款人', 'Return to payees') }}
             </button>
             <button
-              v-else-if="workflowChatId"
+              v-else-if="receiptReturnChatId"
               type="button"
+              class="is-secondary"
               data-testid="wallet-receipt-return-chat"
-              @click="returnToSourceChat"
+              @click="returnToReceiptChat"
             >
               <i class="fas fa-message" aria-hidden="true"></i>
               {{ t('返回 Chat', 'Return to Chat') }}

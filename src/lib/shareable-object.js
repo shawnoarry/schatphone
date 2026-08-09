@@ -14,6 +14,7 @@ export const SHAREABLE_OBJECT_TYPES = Object.freeze({
   GALLERY_ASSET_SHARE: 'gallery_asset_share',
   ASSET_RECORD_SHARE: 'asset_record_share',
   PAYEE_ACCOUNT: 'payee_account',
+  WALLET_RECEIPT_SHARE: 'wallet_receipt_share',
 })
 
 export const SHAREABLE_SOURCE_MODULES = Object.freeze({
@@ -105,6 +106,22 @@ const buildRouteQuery = (entries = {}) => {
     .join('&')
 }
 
+const appendRouteQuery = (route = '', entries = {}) => {
+  const normalizedRoute = sanitizeRoute(route)
+  if (!normalizedRoute) return ''
+  try {
+    const url = new URL(normalizedRoute, 'https://schatphone.local')
+    Object.entries(entries).forEach(([key, value]) => {
+      const normalizedKey = trimTo(key, 40)
+      const normalizedValue = trimTo(String(value ?? ''), 160)
+      if (normalizedKey && normalizedValue) url.searchParams.set(normalizedKey, normalizedValue)
+    })
+    return sanitizeRoute(`${url.pathname}${url.search}${url.hash}`)
+  } catch {
+    return normalizedRoute
+  }
+}
+
 export const normalizeShareableObject = (input = {}) => {
   if (!input || typeof input !== 'object') return null
   const type = normalizeShareType(input.type)
@@ -136,9 +153,17 @@ export const normalizeShareableObject = (input = {}) => {
   }
 }
 
-export const shareableObjectToChatBlock = (shareable = {}) => {
+export const shareableObjectToChatBlock = (shareable = {}, options = {}) => {
   const normalized = normalizeShareableObject(shareable)
   if (!normalized) return null
+  const recipientChatId = trimTo(String(options?.recipientChatId ?? ''), 40)
+  const route =
+    normalized.type === SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE && recipientChatId
+      ? appendRouteQuery(normalized.route, {
+          source: 'chat_share',
+          returnChatId: recipientChatId,
+        })
+      : normalized.route
   return {
     type: 'share_card',
     shareType: normalized.type,
@@ -150,7 +175,7 @@ export const shareableObjectToChatBlock = (shareable = {}) => {
     statusLabel: normalized.statusLabel,
     amountLabel: normalized.amountLabel,
     previewImageUrl: normalized.previewImageUrl,
-    route: normalized.route,
+    route,
     actions: normalized.actions,
     aiContext: normalized.aiContext,
     category: normalized.category,
@@ -351,6 +376,41 @@ export const createPayeeAccountShareObject = (input = {}) => {
       sourceTruthOwner: 'Wallet',
       mutationBoundary:
         'This card does not move money. The user must review and confirm the same-currency transfer in Wallet.',
+    },
+  })
+}
+
+export const createWalletReceiptShareObject = (input = {}) => {
+  const receiptId = trimTo(input.receiptId || input.transactionId || input.id, 140)
+  if (!receiptId) return null
+  const receiptNumber = trimTo(input.receiptNumber, 80)
+  const currency = trimTo(input.currency, 8).toUpperCase()
+  const query = buildRouteQuery({
+    receiptId,
+    intent: SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE,
+  })
+  return normalizeShareableObject({
+    id: `wallet-receipt:${receiptId}`,
+    type: SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE,
+    sourceModule: SHAREABLE_SOURCE_MODULES.WALLET,
+    sourceId: receiptId,
+    sourceEventId: receiptNumber,
+    title: input.title || 'Transfer receipt',
+    summary: input.summary,
+    statusLabel: input.statusLabel || 'Completed',
+    amountLabel:
+      input.amountLabel ||
+      (input.amount && currency ? `${trimTo(input.amount, 24)} ${currency}` : currency),
+    route: query ? `/wallet?${query}` : '/wallet',
+    category: currency,
+    createdAt: input.createdAt,
+    aiContext: {
+      intent: SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE,
+      recipientMeaning:
+        'The user shared a completed Wallet transfer receipt for reference in this conversation.',
+      sourceTruthOwner: 'Wallet',
+      mutationBoundary:
+        'Chat displays the saved receipt snapshot. Wallet owns the transaction and receipt state; opening or discussing it does not move money.',
     },
   })
 }

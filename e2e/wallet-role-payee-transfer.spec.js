@@ -15,7 +15,7 @@ const expectNoPageOverflow = async (page) => {
     .toBe(true)
 }
 
-test('Chat requests a verified role account and Wallet confirms the transfer', async ({
+test('Chat requests a verified role account, Wallet transfers, and the receipt returns to its shared thread', async ({
   page,
 }, testInfo) => {
   const pageErrors = []
@@ -75,9 +75,28 @@ test('Chat requests a verified role account and Wallet confirms the transfer', a
     contentType: 'image/png',
   })
 
+  await page.getByTestId('wallet-receipt-share-chat').click()
+  await waitForAppRouteReady(page, '/chat?share=internal')
+  await expect(page.getByTestId('chat-internal-share-recipient-picker')).toContainText(
+    /转账回执|Transfer receipt/,
+  )
+  await page.getByTestId('chat-contact-row-2').click()
+  await waitForAppRouteReady(page, '/chat/2')
+  await page.getByTestId('chat-internal-share-send').click()
+
+  const receiptShareCard = page.locator('[data-testid^="chat-share-card-wallet-wallet_tx_"]').last()
+  await expect(receiptShareCard).toContainText('18.80 CNY')
+  await expect(receiptShareCard).toContainText(/钱包回执|Wallet receipt/)
+  await expectNoPageOverflow(page)
+
+  await receiptShareCard.getByRole('button', { name: /查看回执|View receipt/ }).click()
+  await waitForAppRouteReady(page, '/wallet')
+  await expect(page).toHaveURL(/source=chat_share/)
+  await expect(page).toHaveURL(/returnChatId=2/)
+  await expect(page.getByTestId('wallet-transfer-receipt')).toContainText('18.80 CNY')
   await page.getByTestId('wallet-receipt-return-chat').click()
-  await waitForAppRouteReady(page, '/chat/1')
-  await expect(accountCardAction).toBeVisible()
+  await waitForAppRouteReady(page, '/chat/2')
+  await expect(receiptShareCard).toBeVisible()
   await expectNoPageOverflow(page)
 
   await navigateInsideUnlockedApp(page, '/wallet')

@@ -7,6 +7,7 @@ import {
   createProductLinkShareObject,
   createTrackingShareObject,
   createVirtualGiftShareObject,
+  createWalletReceiptShareObject,
   normalizeShareableObject,
   shareableObjectToChatBlock,
 } from '../src/lib/shareable-object'
@@ -183,6 +184,42 @@ describe('shareable-object contract', () => {
     expect(share.route).toContain('payeeAccountId=role_payee_1_icbc_cny')
     expect(new URLSearchParams(share.route.split('?')[1]).get('note')).toBe('练习结束后的晚餐')
     expect(share.aiContext.mutationBoundary).toContain('does not move money')
+  })
+
+  test('finalizes a Wallet receipt route for the actual receiving Chat conversation', () => {
+    const share = createWalletReceiptShareObject({
+      receiptId: 'wallet_tx_42',
+      receiptNumber: 'SP20260517000420',
+      title: '转账回执',
+      summary: '已向 Eva 完成转账 · SP20260517000420',
+      statusLabel: '已完成',
+      amount: '25.50',
+      currency: 'CNY',
+      createdAt: 1_747_472_400_000,
+    })
+
+    expect(share).toMatchObject({
+      type: SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE,
+      sourceModule: 'wallet',
+      sourceId: 'wallet_tx_42',
+      sourceEventId: 'SP20260517000420',
+      amountLabel: '25.50 CNY',
+      route: '/wallet?receiptId=wallet_tx_42&intent=wallet_receipt_share',
+    })
+
+    const block = shareableObjectToChatBlock(share, { recipientChatId: 2 })
+    const routeQuery = new URLSearchParams(block.route.split('?')[1])
+    expect(block).toMatchObject({
+      type: 'share_card',
+      shareType: SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE,
+      sourceModule: 'wallet',
+      sourceId: 'wallet_tx_42',
+    })
+    expect(routeQuery.get('receiptId')).toBe('wallet_tx_42')
+    expect(routeQuery.get('intent')).toBe(SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE)
+    expect(routeQuery.get('source')).toBe('chat_share')
+    expect(routeQuery.get('returnChatId')).toBe('2')
+    expect(share.route).not.toContain('returnChatId')
   })
 
   test('drops unusable share objects without title or source id', () => {

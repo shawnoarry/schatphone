@@ -14,6 +14,7 @@ Updated: 2026-08-09
 - messaging-app style first-level shell and thread-list controls
 - bounded auto-growing multiline composer with `Enter` send, `Shift+Enter` newline, IME-safe keyboard handling, in-context AI stop, and cancellation-to-retry recovery
 - internal source-App structured sharing with lock-screen continuation, conversation selection, explicit `share_card` confirmation, bounded draft expiry, cancel-to-source, exact detail return, and send/cancel cleanup
+- Wallet `wallet_receipt_share` finalization that attaches the actual receiving conversation only at send time, preserving the transaction's original Chat lineage while making Wallet return to the card's conversation
 - release-level rich-message acceptance for structured edit, media type/size recovery, one-off and Gallery-backed images, accessibility labels, persistence, source actions, and inert legacy Mini Scene history
 - Chat Settings for Chat-local appearance entry points, diagnostics, and default-behavior surfaces
 - Chat Appearance V1: layout classes, independent message avatar visibility, selectable bubble treatments, content-fit sizing for ordinary text with bounded rich-content rows, normalized persisted settings, shared preview rows, and iMessage-like thread-header identity presentation

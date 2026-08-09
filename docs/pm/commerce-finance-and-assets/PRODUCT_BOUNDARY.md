@@ -85,6 +85,7 @@ Wallet owns:
 - disclosed role-payee account references
 - explicit same-currency role-transfer confirmation, confirmed transaction receipts, and source Chat lineage
 - verified-payee management and Wallet-origin repeat-transfer navigation over those same disclosed references
+- source-owned `wallet_receipt_share` snapshots and receipt routes; the sent card's Chat return context is transport metadata and does not replace the transaction's original Chat lineage
 
 Wallet does not own:
 
@@ -99,6 +100,7 @@ Wallet does not own:
 - treatment of a credit-card limit as cash balance, net worth, or an Asset
 - original role-profile receiving-account definitions
 - NPC wealth, NPC spendable balances, automatic exchange, or transfers inferred from Chat dialogue/account-card display
+- Chat conversation choice, message history, or share-card send confirmation
 
 ## 5. Assets
 

@@ -923,6 +923,7 @@ const pendingInternalShareSourceLabel = computed(() => {
   const source = pendingInternalShare.value?.shareable?.sourceModule
   if (source === 'map') return t('地图', 'Map')
   if (source === 'music') return t('音乐', 'Music')
+  if (source === 'wallet') return t('钱包', 'Wallet')
   return t('来源 App', 'Source app')
 })
 
@@ -2767,7 +2768,9 @@ const submitLinkCardForm = () => {
 const submitPendingInternalShare = () => {
   const draft = pendingInternalShare.value
   if (!draft || !activeChat.value) return
-  const shareBlock = shareableObjectToChatBlock(draft.shareable)
+  const shareBlock = shareableObjectToChatBlock(draft.shareable, {
+    recipientChatId: activeChat.value.id,
+  })
   if (!shareBlock) {
     showUiNotice('warning', t('分享对象暂不可用。', 'The shared object is unavailable.'))
     return
@@ -3479,6 +3482,8 @@ const openShareCardRoute = (block = {}) => {
     'info',
     block.shareType === SHAREABLE_OBJECT_TYPES.PAYEE_ACCOUNT
       ? t('已进入 Wallet 核对，资金尚未转出。', 'Opened Wallet for review; no money has moved yet.')
+      : block.shareType === SHAREABLE_OBJECT_TYPES.WALLET_RECEIPT_SHARE
+        ? t('已打开 Wallet 回执；聊天记录保持不变。', 'Opened the Wallet receipt; Chat history stays unchanged.')
       : t('已打开来源 App；聊天记录保持不变。', 'Opened the source app; Chat history stays unchanged.'),
   )
 }
