@@ -11,6 +11,7 @@ const expectNoHorizontalOverflow = async (page) => {
 test('Food Platform controls and checkout produce a complete in-app order flow', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(90_000)
   const pageErrors = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
@@ -51,11 +52,11 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
 
   const bannerRail = page.getByTestId('food-delivery-platform-banner-rail')
   const bannerScroller = page.getByTestId('food-delivery-platform-banner-scroller')
-  await expect(page.getByTestId('food-delivery-platform-banner-dot-0')).toHaveAttribute(
+  await expect(bannerRail).toHaveAttribute('data-active-banner-index', '1', { timeout: 7000 })
+  await expect(page.getByTestId('food-delivery-platform-banner-dot-1')).toHaveAttribute(
     'aria-current',
     'true',
   )
-  await expect(bannerRail).toHaveAttribute('data-active-banner-index', '1', { timeout: 7000 })
   await expect
     .poll(() => bannerScroller.evaluate((element) => element.scrollLeft))
     .toBeGreaterThan(250)
@@ -283,6 +284,23 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
   await expect(page.getByTestId('food-delivery-platform-order-list')).toContainText(
     '逆站洞韩牛汤饭',
   )
+  const merchantMarkImage = page.locator(
+    '[data-asset-slot="platform-merchant-mark-platform_hanwoo_gukbap"] img',
+  )
+  await expect(merchantMarkImage).toHaveAttribute(
+    'src',
+    /platform\/orders\/merchant-marks\/platform-merchant-mark-hanwoo-01\.png/,
+  )
+  await expect
+    .poll(() =>
+      merchantMarkImage.evaluate((image) => ({
+        complete: image.complete,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        missing: image.dataset.assetMissing || null,
+      })),
+    )
+    .toEqual({ complete: true, width: 768, height: 768, missing: null })
   await expect(page.getByTestId('food-delivery-platform-bottom-nav')).toBeVisible()
   await page.getByTestId(`food-delivery-platform-order-card-${orderId}`).click()
   await expect(page.getByTestId('food-delivery-platform-order-id')).toHaveAttribute(
@@ -311,6 +329,7 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
 test('Food Platform returns to the originating Home screen after internal navigation', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(60_000)
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby&from=home&homePage=3')
 
@@ -369,4 +388,95 @@ test('Food Platform returns to the originating Home screen after internal naviga
   await page.getByTestId('food-delivery-go-home').click()
 
   await expect(page).toHaveURL(/#\/home\?homePage=3$/)
+})
+
+test('Food Platform serves every menu family and loads the selected texture fixes', async ({
+  page,
+}) => {
+  test.setTimeout(60_000)
+  const pageErrors = []
+  page.on('pageerror', (error) => {
+    pageErrors.push(error.message)
+  })
+
+  const merchants = [
+    ['platform_hanwoo_gukbap', 'hanwoo-gukbap'],
+    ['platform_sushi_hana', 'sushi-hana'],
+    ['platform_hwadeok_pizza', 'hwadeok-pizza'],
+    ['platform_salad_day', 'salad-day'],
+    ['platform_chicken_crisp', 'chicken-crisp'],
+    ['platform_berry_morning', 'berry-morning'],
+    ['platform_green_basket', 'green-basket'],
+    ['platform_neighborhood_soup', 'camellia-noodles'],
+    ['platform_golden_chicken', 'morning-bagel'],
+    ['platform_nori_table', 'elm-dim-sum'],
+    ['platform_corner_pizza', 'coconut-curry'],
+  ]
+
+  const menuAssetPaths = merchants.flatMap(([, assetKey]) =>
+    Array.from(
+      { length: 5 },
+      (_, index) =>
+        `/images/ui-assets/apps/food-delivery/platform/menus/${assetKey}/menu-item-${String(index + 1).padStart(2, '0')}.png`,
+    ),
+  )
+  const assetResponses = await Promise.all(
+    menuAssetPaths.map(async (assetPath) => {
+      const response = await page.request.get(`/schatphone${assetPath}`)
+      return {
+        assetPath,
+        status: response.status(),
+        contentType: response.headers()['content-type'] || '',
+      }
+    }),
+  )
+  expect(
+    assetResponses.filter(
+      (response) => response.status !== 200 || !response.contentType.startsWith('image/png'),
+    ),
+  ).toEqual([])
+
+  await unlockToHome(page)
+  const textureFixMerchants = [
+    ['platform_hwadeok_pizza', 'hwadeok-pizza'],
+    ['platform_chicken_crisp', 'chicken-crisp'],
+    ['platform_golden_chicken', 'morning-bagel'],
+  ]
+  for (const [merchantId, assetKey] of textureFixMerchants) {
+    await navigateInsideUnlockedApp(
+      page,
+      `/food-delivery?category=nearby&platformView=merchant&platformMerchant=${merchantId}`,
+    )
+    await expect(page.getByTestId('food-delivery-platform-merchant-page')).toBeVisible()
+    const menuImages = page.locator('[data-platform-menu-image] img')
+    await expect(menuImages).toHaveCount(5)
+    await expect
+      .poll(() =>
+        menuImages.evaluateAll((images) =>
+          images.map((image) => ({
+            complete: image.complete,
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+            src: image.currentSrc.split('/').pop(),
+            missing: image.dataset.assetMissing || null,
+          })),
+        ),
+      )
+      .toEqual(
+        Array.from({ length: 5 }, (_, index) => ({
+          complete: true,
+          width: 768,
+          height: 768,
+          src: `menu-item-${String(index + 1).padStart(2, '0')}.png`,
+          missing: null,
+        })),
+      )
+    await expect(menuImages.first()).toHaveAttribute(
+      'src',
+      new RegExp(`platform/menus/${assetKey}/menu-item-01\\.png`),
+    )
+    await expectNoHorizontalOverflow(page)
+  }
+
+  expect(pageErrors).toEqual([])
 })

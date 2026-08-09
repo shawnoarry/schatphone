@@ -6362,10 +6362,10 @@ onBeforeUnmount(() => {
                   :data-required-asset="platformMerchantIdentityAssetPath(order.merchantId)"
                 >
                   <img
-                    :src="platformMissingAssetPlaceholderUrl"
-                    :alt="t('待补商家身份素材', 'Merchant mark pending')"
+                    :src="foodDeliveryUiAsset(platformMerchantIdentityAssetPath(order.merchantId))"
+                    :alt="`${order.merchantName} ${t('商家标识', 'merchant mark')}`"
                     class="h-full w-full object-contain p-1"
-                    data-asset-placeholder
+                    decoding="async"
                   />
                 </span>
                 <span class="min-w-0 flex-1">

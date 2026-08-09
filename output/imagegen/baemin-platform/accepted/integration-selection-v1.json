@@ -1,0 +1,74 @@
+{
+  "menuSize": [768, 768],
+  "menuSelections": {
+    "berry-morning": {
+      "02": "candidates/menu-batches/berry-morning/v1-modern/menu-item-02.png",
+      "03": "candidates/menu-batches/berry-morning/v1-modern/menu-item-03.png",
+      "04": "candidates/menu-batches/berry-morning/v1-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/berry-morning/v1-modern/menu-item-05.png"
+    },
+    "camellia-noodles": {
+      "02": "candidates/menu-batches/camellia-noodles/v2-texture-fix/menu-item-02.png",
+      "03": "candidates/menu-batches/camellia-noodles/v1-modern/menu-item-03.png",
+      "04": "candidates/menu-batches/camellia-noodles/v1-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/camellia-noodles/v1-modern/menu-item-05.png"
+    },
+    "chicken-crisp": {
+      "02": "candidates/menu-batches/chicken-crisp/v1-modern/menu-item-02.png",
+      "03": "candidates/menu-batches/chicken-crisp/v2-texture-fix/menu-item-03.png",
+      "04": "candidates/menu-batches/chicken-crisp/v1-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/chicken-crisp/v1-modern/menu-item-05.png"
+    },
+    "coconut-curry": {
+      "02": "candidates/menu-batches/coconut-curry/v1-modern/menu-item-02.png",
+      "03": "candidates/menu-batches/coconut-curry/v1-modern/menu-item-03.png",
+      "04": "candidates/menu-batches/coconut-curry/v1-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/coconut-curry/v1-modern/menu-item-05.png"
+    },
+    "elm-dim-sum": {
+      "02": "candidates/menu-batches/elm-dim-sum/v1-modern/menu-item-02.png",
+      "03": "candidates/menu-batches/elm-dim-sum/v2-texture-fix/menu-item-03.png",
+      "04": "candidates/menu-batches/elm-dim-sum/v1-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/elm-dim-sum/v1-modern/menu-item-05.png"
+    },
+    "green-basket": {
+      "02": "candidates/menu-batches/green-basket/v1-modern/menu-item-02.png",
+      "03": "candidates/menu-batches/green-basket/v1-modern/menu-item-03.png",
+      "04": "candidates/menu-batches/green-basket/v1-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/green-basket/v1-modern/menu-item-05.png"
+    },
+    "hwadeok-pizza": {
+      "02": "candidates/menu-batches/hwadeok-pizza/v3-clean-texture/menu-item-02.png",
+      "03": "candidates/menu-batches/hwadeok-pizza/v2-modern/menu-item-03.png",
+      "04": "candidates/menu-batches/hwadeok-pizza/v2-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/hwadeok-pizza/v2-modern/menu-item-05.png"
+    },
+    "morning-bagel": {
+      "02": "candidates/menu-batches/morning-bagel/v1-modern/menu-item-02.png",
+      "03": "candidates/menu-batches/morning-bagel/v1-modern/menu-item-03.png",
+      "04": "candidates/menu-batches/morning-bagel/v3-clean-texture/menu-item-04.png",
+      "05": "candidates/menu-batches/morning-bagel/v1-modern/menu-item-05.png"
+    },
+    "salad-day": {
+      "02": "candidates/menu-batches/salad-day/v1-modern/menu-item-02.png",
+      "03": "candidates/menu-batches/salad-day/v1-modern/menu-item-03.png",
+      "04": "candidates/menu-batches/salad-day/v1-modern/menu-item-04.png",
+      "05": "candidates/menu-batches/salad-day/v1-modern/menu-item-05.png"
+    }
+  },
+  "merchantMarkSelections": [
+    "candidates/merchant-marks/v1-modern-alpha/platform-merchant-mark-hanwoo-01.png",
+    "candidates/merchant-marks/v1-modern-alpha/platform-merchant-mark-sushi-hana-01.png",
+    "candidates/merchant-marks/v1-modern-alpha/platform-merchant-mark-hwadeok-pizza-01.png",
+    "candidates/merchant-marks/v1-modern-alpha/platform-merchant-mark-salad-day-01.png",
+    "candidates/merchant-marks/v1-modern-alpha/platform-merchant-mark-chicken-crisp-01.png",
+    "candidates/merchant-marks/v1-modern-alpha/platform-merchant-mark-camellia-noodles-01.png",
+    "candidates/merchant-marks/v1-modern-alpha/platform-merchant-mark-coconut-curry-01.png"
+  ],
+  "decisions": {
+    "chicken-crisp/menu-item-03.png": "User selected v2-texture-fix for runtime integration; v3 and v4 are rejected.",
+    "chicken-crisp/menu-item-02.png": "Use the original modern fries candidate; the mistaken wing texture edit is rejected.",
+    "hwadeok-pizza/menu-item-02.png": "Use the clean-texture wing regeneration mapped to Hwadeok Pizza.",
+    "morning-bagel/menu-item-04.png": "Use the clean-texture scone regeneration."
+  }
+}

@@ -916,6 +916,13 @@ describe('FoodDeliveryView', () => {
     expect(
       wrapper.get('[data-asset-slot="platform-merchant-mark-platform_hanwoo_gukbap"]').exists(),
     ).toBe(true)
+    const merchantMark = wrapper.get(
+      '[data-asset-slot="platform-merchant-mark-platform_hanwoo_gukbap"] img',
+    )
+    expect(merchantMark.attributes('src')).toContain(
+      'platform/orders/merchant-marks/platform-merchant-mark-hanwoo-01.png',
+    )
+    expect(merchantMark.attributes('data-asset-placeholder')).toBeUndefined()
 
     await wrapper
       .get(`[data-testid="food-delivery-platform-order-card-${order.id}"]`)
