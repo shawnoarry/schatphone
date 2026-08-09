@@ -27,6 +27,7 @@ const routeReadySelectors = {
   '/music': '[data-testid="music-app"]',
   '/settings': '[data-settings-menu-title="World Book"]',
   '/shopping': '[data-testid="shopping-service-filter-panel"]',
+  '/widgets': '.widgets-shell',
   '/worldbook': '[data-testid="worldbook-overview"]',
 }
 

@@ -10,6 +10,7 @@ const createStatus = (patch = {}) => ({
   incidentCount: 1,
   affectedKeys: ['store:system'],
   primaryCode: 'quota_exceeded',
+  primaryCause: '',
   retryAvailable: true,
   revision: 1,
   updatedAt: 1,
@@ -44,6 +45,33 @@ describe('PersistenceRecoverySheet', () => {
     expect(wrapper.emitted('retry')).toHaveLength(1)
     expect(wrapper.emitted('refresh')).toHaveLength(1)
     expect(wrapper.emitted('backup')).toHaveLength(1)
+  })
+
+  test('presents an active writer as a calm read-only preview with only safe actions', async () => {
+    const wrapper = mount(PersistenceRecoverySheet, {
+      props: {
+        status: createStatus({
+          mode: 'read_only',
+          primaryCode: 'read_only_conflict',
+          primaryCause: 'active_writer',
+        }),
+      },
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    const sheet = wrapper.get('[data-testid="persistence-recovery-sheet"]')
+    expect(sheet.attributes('data-reason')).toBe('active_writer')
+    expect(sheet.attributes('role')).toBe('status')
+    expect(wrapper.text()).toContain('当前页面为只读预览')
+    expect(wrapper.text()).toContain('写入页面关闭后会自动恢复')
+    expect(wrapper.find('[data-testid="persistence-recovery-backup"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="persistence-recovery-retry"]').trigger('click')
+    await wrapper.get('[data-testid="persistence-recovery-refresh"]').trigger('click')
+    expect(wrapper.emitted('retry')).toHaveLength(1)
+    expect(wrapper.emitted('refresh')).toHaveLength(1)
   })
 
   test('disables retry while a retry is already running', () => {

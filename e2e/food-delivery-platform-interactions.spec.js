@@ -20,6 +20,39 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby')
   await expectNoHorizontalOverflow(page)
+
+  const platformOrderAssetPaths = [
+    'platform/orders/platform-checkout-takeout-bag-01.png',
+    'platform/orders/platform-order-status-placed-01.png',
+    'platform/orders/platform-order-status-preparing-01.png',
+    'platform/orders/platform-order-status-delivering-01.png',
+    'platform/orders/platform-order-status-delivered-01.png',
+    'platform/orders/platform-order-status-cancelled-01.png',
+    'platform/orders/platform-orders-empty-receipt-01.png',
+  ]
+  const platformOrderAssetResults = await page.evaluate(async (assetPaths) => {
+    return Promise.all(
+      assetPaths.map(
+        (assetPath) =>
+          new Promise((resolve) => {
+            const image = new Image()
+            image.onload = () =>
+              resolve({
+                assetPath,
+                loaded: image.naturalWidth === 1024 && image.naturalHeight === 1024,
+              })
+            image.onerror = () => resolve({ assetPath, loaded: false })
+            image.src = new URL(
+              `images/ui-assets/apps/food-delivery/${assetPath}`,
+              document.baseURI,
+            ).href
+          }),
+      ),
+    )
+  }, platformOrderAssetPaths)
+  expect(platformOrderAssetResults).toEqual(
+    platformOrderAssetPaths.map((assetPath) => ({ assetPath, loaded: true })),
+  )
   const foodViewBox = await page.getByTestId('food-delivery-view').boundingBox()
   const platformBox = await page.getByTestId('food-delivery-platform').boundingBox()
   expect(foodViewBox).not.toBeNull()
@@ -246,9 +279,21 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
   await expect(page.getByTestId('food-delivery-platform-checkout-page')).toBeVisible()
   await expect(page.getByTestId('food-delivery-platform-checkout-total')).toContainText('116.00')
   await expect(page.locator('[data-asset-slot="platform-checkout-takeout-bag"]')).toBeVisible()
-  await expect(
-    page.locator('[data-asset-slot="platform-checkout-takeout-bag"] img'),
-  ).toHaveAttribute('src', /missing-asset-placeholder\.svg/)
+  const checkoutArtwork = page.locator('[data-asset-slot="platform-checkout-takeout-bag"] img')
+  await expect(checkoutArtwork).toHaveAttribute(
+    'src',
+    /platform\/orders\/platform-checkout-takeout-bag-01\.png/,
+  )
+  await expect(checkoutArtwork).not.toHaveAttribute('data-asset-missing', 'true')
+  await expect
+    .poll(() =>
+      checkoutArtwork.evaluate((image) => ({
+        complete: image.complete,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })),
+    )
+    .toEqual({ complete: true, width: 1024, height: 1024 })
   await expect(page.getByTestId('food-delivery-platform-bottom-nav')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 
@@ -266,6 +311,21 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
     'placed',
   )
   await expect(page.locator('[data-asset-slot="platform-order-status-placed"]')).toBeVisible()
+  const placedArtwork = page.locator('[data-asset-slot="platform-order-status-placed"] img')
+  await expect(placedArtwork).toHaveAttribute(
+    'src',
+    /platform\/orders\/platform-order-status-placed-01\.png/,
+  )
+  await expect(placedArtwork).not.toHaveAttribute('data-asset-missing', 'true')
+  await expect
+    .poll(() =>
+      placedArtwork.evaluate((image) => ({
+        complete: image.complete,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })),
+    )
+    .toEqual({ complete: true, width: 1024, height: 1024 })
   await expect(page.getByTestId('food-delivery-platform-bottom-nav')).toHaveCount(0)
   await expect(page.getByTestId('food-delivery-platform-order-summary')).toContainText(
     '逆站洞一号韩牛汤饭',

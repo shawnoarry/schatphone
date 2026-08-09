@@ -3,28 +3,11 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
-import {
-  CHKSZ_MUSIC_PLATFORMS,
-  CHKSZ_MUSIC_QUALITIES,
-  DEFAULT_MUSIC_FIELD_MAP,
-  MUSIC_ADAPTER_KINDS,
-  MUSIC_AUTH_MODES,
-  MUSIC_PROVIDER_METHODS,
-  MUSIC_TRACK_SOURCE_TYPES,
-  createMusicProviderId,
-  normalizeMusicProviderProfile,
-} from '../lib/music-contract'
-import {
-  MUSIC_INTEGRATION_ACTIONS,
-  normalizeMusicIntegrationRequest,
-} from '../lib/music-module-interface'
+import { CHKSZ_MUSIC_PLATFORMS, CHKSZ_MUSIC_QUALITIES, DEFAULT_MUSIC_FIELD_MAP, MUSIC_ADAPTER_KINDS, MUSIC_AUTH_MODES, MUSIC_PROVIDER_METHODS, MUSIC_TRACK_SOURCE_TYPES, createMusicProviderId, createRadioBrowserMusicProviderProfile, isRadioBrowserMusicProviderProfile, normalizeMusicProviderProfile } from '../lib/music-contract'
+import { MUSIC_INTEGRATION_ACTIONS, normalizeMusicIntegrationRequest } from '../lib/music-module-interface'
 import { createMusicTrackShareObject } from '../lib/shareable-object'
-import {
-  INTERNAL_CHAT_SHARE_ROUTE_QUERY,
-  INTERNAL_CHAT_SHARE_ROUTE_VALUE,
-  savePendingInternalChatShare,
-} from '../lib/internal-chat-share'
-import { pushReturnTarget } from '../lib/navigation-return'
+import { INTERNAL_CHAT_SHARE_ROUTE_QUERY, INTERNAL_CHAT_SHARE_ROUTE_VALUE, savePendingInternalChatShare } from '../lib/internal-chat-share'
+import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 import { useMusicStore } from '../stores/music'
 
 const router = useRouter()
@@ -112,17 +95,9 @@ const featuredAlbum = computed(() => {
 
 const playerTrack = computed(() => musicStore.currentTrack || musicStore.featuredTrack)
 const nowPlayingTrack = computed(() => inspectedTrack.value || playerTrack.value)
-const isNowPlayingCurrentTrack = computed(
-  () =>
-    Boolean(musicStore.currentTrack?.id) &&
-    musicStore.currentTrack.id === nowPlayingTrack.value?.id,
-)
-const selectedPlaylist = computed(
-  () => musicStore.playlists.find((playlist) => playlist.id === selectedPlaylistId.value) || null,
-)
-const selectedPlaylistTracks = computed(() =>
-  selectedPlaylist.value ? musicStore.tracksForPlaylist(selectedPlaylist.value.id) : [],
-)
+const isNowPlayingCurrentTrack = computed(() => Boolean(musicStore.currentTrack?.id) && musicStore.currentTrack.id === nowPlayingTrack.value?.id)
+const selectedPlaylist = computed(() => musicStore.playlists.find((playlist) => playlist.id === selectedPlaylistId.value) || null)
+const selectedPlaylistTracks = computed(() => (selectedPlaylist.value ? musicStore.tracksForPlaylist(selectedPlaylist.value.id) : []))
 const libraryVisibleTracks = computed(() => {
   if (libraryMode.value === 'favorites') return musicStore.favoriteTracks
   if (libraryMode.value === 'recent') return musicStore.recentTracks
@@ -132,22 +107,17 @@ const libraryVisibleTracks = computed(() => {
 const currentProviderState = computed(() => musicStore.providerStateById[providerDraft.id] || null)
 const hasConnectedProvider = computed(() => Boolean(musicStore.activeProfile?.baseUrl))
 const isChkszDraft = computed(() => providerDraft.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ)
-const chkszQualityOptions = computed(
-  () => CHKSZ_MUSIC_QUALITIES[providerDraft.platform?.toUpperCase()] || [],
+const isRadioBrowserDraft = computed(() => isRadioBrowserMusicProviderProfile(providerDraft))
+const chkszQualityOptions = computed(() => CHKSZ_MUSIC_QUALITIES[providerDraft.platform?.toUpperCase()] || [])
+const canImportNeteasePlaylist = computed(() => musicStore.activeProfile?.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ && musicStore.activeProfile?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE)
+const canLoadLyrics = computed(() => playerTrack.value?.sourceRef?.type === MUSIC_ADAPTER_KINDS.CHKSZ && playerTrack.value?.sourceRef?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE)
+const lyricTabs = computed(() =>
+  [
+    { id: 'original', label: t('原文', 'Lyrics') },
+    { id: 'translation', label: t('翻译', 'Translation') },
+    { id: 'romanized', label: t('罗马音', 'Romanization') },
+  ].filter((item) => musicStore.lyricsState[item.id]),
 )
-const canImportNeteasePlaylist = computed(
-  () => musicStore.activeProfile?.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ &&
-    musicStore.activeProfile?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE,
-)
-const canLoadLyrics = computed(
-  () => playerTrack.value?.sourceRef?.type === MUSIC_ADAPTER_KINDS.CHKSZ &&
-    playerTrack.value?.sourceRef?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE,
-)
-const lyricTabs = computed(() => [
-  { id: 'original', label: t('原文', 'Lyrics') },
-  { id: 'translation', label: t('翻译', 'Translation') },
-  { id: 'romanized', label: t('罗马音', 'Romanization') },
-].filter((item) => musicStore.lyricsState[item.id]))
 const lyricBody = computed(() => {
   const text = musicStore.lyricsState[lyricsMode.value] || ''
   return text
@@ -227,8 +197,7 @@ const formatFileSize = (bytesInput) => {
   return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`
 }
 
-const coverStyle = (track) =>
-  track?.coverUrl ? { backgroundImage: `url(${JSON.stringify(track.coverUrl)})` } : undefined
+const coverStyle = (track) => (track?.coverUrl ? { backgroundImage: `url(${JSON.stringify(track.coverUrl)})` } : undefined)
 
 const onCoverError = (event) => {
   if (event?.currentTarget instanceof HTMLElement) event.currentTarget.style.visibility = 'hidden'
@@ -243,19 +212,20 @@ const setSection = (sectionId) => {
   }
 }
 
+const returnButtonLabel = computed(() => {
+  const destination = resolveReturnLabel(route, 'Home')
+  if (destination === 'Map') return t('返回地图', 'Back to Map')
+  if (destination === 'Chat') return t('返回聊天', 'Back to Chat')
+  if (destination === 'Settings') return t('返回设置', 'Back to Settings')
+  return t('返回主屏', 'Back to Home')
+})
 const goHome = () => pushReturnTarget(router, route, '/home')
 
 const playTrack = async (track, tracks = musicStore.libraryTracks) => {
   playbackRequestError.value = ''
   const result = await musicStore.playTrack(track, { queue: tracks })
   if (!result?.ok) {
-    playbackRequestError.value = result?.error?.message || (
-      result?.code === 'CHKSZ_KEY_MISSING'
-        ? t('请先在音乐设置中填写 ChKSz API Key', 'Add your ChKSz API Key in Music Settings')
-        : result?.code === 'LOCAL_MEDIA_MISSING'
-          ? t('本地音频已不在此设备，请在音乐设置中重新导入', 'This local file is missing. Import it again in Music Settings')
-        : t('这首歌暂时无法播放', 'This song is temporarily unavailable')
-    )
+    playbackRequestError.value = result?.error?.message || (result?.code === 'CHKSZ_KEY_MISSING' ? t('请先在音乐设置中填写 ChKSz API Key', 'Add your ChKSz API Key in Music Settings') : result?.code === 'LOCAL_MEDIA_MISSING' ? t('本地音频已不在此设备，请在音乐设置中重新导入', 'This local file is missing. Import it again in Music Settings') : t('这首歌暂时无法播放', 'This song is temporarily unavailable'))
   }
   return result
 }
@@ -273,6 +243,11 @@ const playLibraryMode = () => {
 const submitSearch = () => {
   setSection('search')
   void musicStore.search(musicStore.searchQuery)
+}
+
+const clearMusicSearch = () => {
+  musicStore.searchQuery = ''
+  musicStore.searchResults = []
 }
 
 const toggleFavorite = (track) => musicStore.toggleFavorite(track)
@@ -340,6 +315,11 @@ const createPlaylistAndAdd = () => {
   playlistSheetOpen.value = false
 }
 
+const openCreatePlaylistSheet = () => {
+  playlistTargetTrack.value = null
+  playlistSheetOpen.value = true
+}
+
 const choosePlaylist = (playlistId) => {
   selectedPlaylistId.value = playlistId
   libraryMode.value = 'playlists'
@@ -377,6 +357,17 @@ const createChkszProviderDraft = () => {
     platform: CHKSZ_MUSIC_PLATFORMS.NETEASE,
     quality: 'jymaster',
     baseUrl: 'https://api.chksz.com',
+  })
+  Object.assign(providerDraft, JSON.parse(JSON.stringify(normalized)))
+  providerCredentialDraft.value = ''
+  providerHeadersDraft.value = '{}'
+  providerFormError.value = ''
+  settingsPanel.value = 'sources'
+}
+
+const createRadioBrowserProviderDraft = () => {
+  const normalized = createRadioBrowserMusicProviderProfile({
+    id: createMusicProviderId(),
   })
   Object.assign(providerDraft, JSON.parse(JSON.stringify(normalized)))
   providerCredentialDraft.value = ''
@@ -460,17 +451,13 @@ const importLocalMusicFiles = async (event) => {
     return
   }
   addMusicState.status = result.failed.length ? 'warning' : 'success'
-  addMusicState.message = result.failed.length
-    ? t(`已导入 ${result.tracks.length} 首，${result.failed.length} 首未导入`, `${result.tracks.length} imported, ${result.failed.length} skipped`)
-    : t(`已导入 ${result.tracks.length} 首歌曲`, `${result.tracks.length} songs imported`)
+  addMusicState.message = result.failed.length ? t(`已导入 ${result.tracks.length} 首，${result.failed.length} 首未导入`, `${result.tracks.length} imported, ${result.failed.length} skipped`) : t(`已导入 ${result.tracks.length} 首歌曲`, `${result.tracks.length} songs imported`)
 }
 
 const removeImportedMusic = async (track) => {
   const confirmed = await confirmDialog({
     title: t('移除这首歌曲？', 'Remove this song?'),
-    message: track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE
-      ? t('这会从音乐中移除歌曲及当前设备上的音频文件。', 'This removes the song and its audio file from this device.')
-      : t('这会从音乐中移除该 URL 歌曲。', 'This removes the URL song from Music.'),
+    message: track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE ? t('这会从音乐中移除歌曲及当前设备上的音频文件。', 'This removes the song and its audio file from this device.') : t('这会从音乐中移除该 URL 歌曲。', 'This removes the URL song from Music.'),
     confirmText: t('移除', 'Remove'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -492,6 +479,14 @@ const saveProvider = async ({ close = true } = {}) => {
   if (isChkszDraft.value) {
     providerDraft.name = providerDraft.name.trim() || 'ChKSz Music'
     providerDraft.baseUrl = 'https://api.chksz.com'
+  } else if (isRadioBrowserDraft.value) {
+    Object.assign(
+      providerDraft,
+      createRadioBrowserMusicProviderProfile({
+        ...JSON.parse(JSON.stringify(providerDraft)),
+        name: providerDraft.name.trim() || 'Radio Browser',
+      }),
+    )
   }
   if (!providerDraft.name.trim() || !providerDraft.baseUrl.trim()) {
     providerFormError.value = t('请填写名称和接口地址', 'Enter a name and endpoint URL')
@@ -499,7 +494,7 @@ const saveProvider = async ({ close = true } = {}) => {
   }
   let headers
   try {
-    headers = isChkszDraft.value ? {} : parseProviderHeaders()
+    headers = isChkszDraft.value || isRadioBrowserDraft.value ? {} : parseProviderHeaders()
   } catch {
     providerFormError.value = t('请求头必须是 JSON 对象', 'Headers must be a JSON object')
     return null
@@ -582,10 +577,7 @@ const submitPlaylistImport = async () => {
 const acceptIntegration = () => {
   const request = pendingIntegration.value
   if (!request) return
-  const track = request.trackId
-    ? musicStore.libraryTracks.find((item) => item.id === request.trackId) ||
-      musicStore.queue.find((item) => item.id === request.trackId)
-    : null
+  const track = request.trackId ? musicStore.libraryTracks.find((item) => item.id === request.trackId) || musicStore.queue.find((item) => item.id === request.trackId) : null
   if (request.action === MUSIC_INTEGRATION_ACTIONS.PLAY && track) {
     void playTrack(track)
   } else if (request.action === MUSIC_INTEGRATION_ACTIONS.ENQUEUE && track) {
@@ -610,10 +602,7 @@ const applyRouteIntegration = () => {
     return
   }
   if (request.action === MUSIC_INTEGRATION_ACTIONS.OPEN && request.trackId) {
-    const track =
-      musicStore.libraryTracks.find((item) => item.id === request.trackId) ||
-      musicStore.searchResults.find((item) => item.id === request.trackId) ||
-      musicStore.queue.find((item) => item.id === request.trackId)
+    const track = musicStore.libraryTracks.find((item) => item.id === request.trackId) || musicStore.searchResults.find((item) => item.id === request.trackId) || musicStore.queue.find((item) => item.id === request.trackId)
     if (track) {
       inspectedTrack.value = track
       nowPlayingOpen.value = true
@@ -621,10 +610,7 @@ const applyRouteIntegration = () => {
     }
     return
   }
-  if (
-    request.sourceModule &&
-    [MUSIC_INTEGRATION_ACTIONS.PLAY, MUSIC_INTEGRATION_ACTIONS.ENQUEUE].includes(request.action)
-  ) {
+  if (request.sourceModule && [MUSIC_INTEGRATION_ACTIONS.PLAY, MUSIC_INTEGRATION_ACTIONS.ENQUEUE].includes(request.action)) {
     pendingIntegration.value = request
   }
 }
@@ -638,9 +624,7 @@ watch(
   () => providerDraft.platform,
   () => {
     if (!isChkszDraft.value || chkszQualityOptions.value.includes(providerDraft.quality)) return
-    providerDraft.quality = providerDraft.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE
-      ? 'jymaster'
-      : 'flac'
+    providerDraft.quality = providerDraft.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE ? 'jymaster' : 'flac'
   },
 )
 
@@ -657,7 +641,7 @@ onMounted(() => {
     <div class="music-shell">
       <aside class="music-sidebar" aria-label="Music navigation">
         <div class="music-brand-block">
-          <button class="music-icon-button is-dark" type="button" :title="t('返回主屏', 'Home')" @click="goHome">
+          <button class="music-icon-button is-dark" type="button" :title="returnButtonLabel" @click="goHome">
             <i class="fas fa-chevron-left" aria-hidden="true"></i>
           </button>
           <div class="music-wordmark" aria-label="Music">
@@ -667,15 +651,7 @@ onMounted(() => {
         </div>
 
         <nav class="music-nav-list">
-          <button
-            v-for="item in navItems"
-            :key="item.id"
-            type="button"
-            class="music-nav-item"
-            :class="{ 'is-active': activeSection === item.id }"
-            :data-testid="`music-tab-${item.id}`"
-            @click="setSection(item.id)"
-          >
+          <button v-for="item in navItems" :key="item.id" type="button" class="music-nav-item" :class="{ 'is-active': activeSection === item.id }" :data-testid="`music-tab-${item.id}`" @click="setSection(item.id)">
             <i :class="item.icon" aria-hidden="true"></i>
             <span>{{ item.label }}</span>
           </button>
@@ -696,7 +672,7 @@ onMounted(() => {
       <section class="music-content">
         <header class="music-topbar">
           <div class="music-mobile-brand">
-            <button class="music-icon-button" type="button" :title="t('返回主屏', 'Home')" @click="goHome">
+            <button class="music-icon-button" type="button" :title="returnButtonLabel" @click="goHome">
               <i class="fas fa-chevron-left" aria-hidden="true"></i>
             </button>
             <div class="music-wordmark"><i class="fas fa-music" aria-hidden="true"></i><span>Music</span></div>
@@ -736,12 +712,7 @@ onMounted(() => {
           <template v-if="activeSection === 'listen'">
             <section class="music-feature" data-testid="music-feature">
               <div class="music-feature-art music-cover-fallback" :style="coverStyle(featuredAlbum?.tracks?.[0])">
-                <img
-                  v-if="featuredAlbum?.coverUrl"
-                  :src="featuredAlbum.coverUrl"
-                  :alt="featuredAlbum.title"
-                  @error="onCoverError"
-                />
+                <img v-if="featuredAlbum?.coverUrl" :src="featuredAlbum.coverUrl" :alt="featuredAlbum.title" @error="onCoverError" />
                 <span class="music-vinyl-groove" aria-hidden="true"></span>
               </div>
               <div class="music-feature-copy">
@@ -768,17 +739,16 @@ onMounted(() => {
 
             <section class="music-section-block">
               <div class="music-section-heading">
-                <div><span>{{ t('为你精选', 'Made for You') }}</span><h2>{{ t('今晚的唱片架', 'Tonight on the shelf') }}</h2></div>
-                <button type="button" @click="setSection('browse')">{{ t('查看全部', 'See All') }}</button>
+                <div>
+                  <span>{{ t('为你精选', 'Made for You') }}</span>
+                  <h2>{{ t('今晚的唱片架', 'Tonight on the shelf') }}</h2>
+                </div>
+                <button type="button" @click="setSection('browse')">
+                  {{ t('查看全部', 'See All') }}
+                </button>
               </div>
               <div class="music-album-rail no-scrollbar">
-                <button
-                  v-for="album in allAlbums"
-                  :key="album.id"
-                  type="button"
-                  class="music-album-item"
-                  @click="playAlbum(album)"
-                >
+                <button v-for="album in allAlbums" :key="album.id" type="button" class="music-album-item" @click="playAlbum(album)">
                   <span class="music-album-cover music-cover-fallback" :style="coverStyle(album.tracks[0])">
                     <img v-if="album.coverUrl" :src="album.coverUrl" :alt="album.title" loading="lazy" @error="onCoverError" />
                     <span class="music-album-play"><i class="fas fa-play" aria-hidden="true"></i></span>
@@ -791,22 +761,24 @@ onMounted(() => {
 
             <section class="music-section-block">
               <div class="music-section-heading">
-                <div><span>{{ t('刚刚听过', 'Recently Played') }}</span><h2>{{ t('接着听', 'Pick up where you left off') }}</h2></div>
+                <div>
+                  <span>{{ t('刚刚听过', 'Recently Played') }}</span>
+                  <h2>{{ t('接着听', 'Pick up where you left off') }}</h2>
+                </div>
               </div>
               <div class="music-track-list">
-                <article
-                  v-for="(track, index) in (musicStore.recentTracks.length ? musicStore.recentTracks : musicStore.demoTracks.slice(0, 4))"
-                  :key="track.id"
-                  class="music-track-row"
-                  :class="{ 'is-current': musicStore.currentTrack?.id === track.id }"
-                >
+                <article v-for="(track, index) in musicStore.recentTracks.length ? musicStore.recentTracks : musicStore.demoTracks.slice(0, 4)" :key="track.id" class="music-track-row" :class="{ 'is-current': musicStore.currentTrack?.id === track.id }">
                   <button class="music-track-index" type="button" :disabled="!musicStore.canPlayTrack(track)" :title="t('播放', 'Play')" @click="playTrack(track)">
-                    <span>{{ String(index + 1).padStart(2, '0') }}</span><i class="fas fa-play" aria-hidden="true"></i>
+                    <span>{{ String(index + 1).padStart(2, '0') }}</span
+                    ><i class="fas fa-play" aria-hidden="true"></i>
                   </button>
                   <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)">
                     <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.album" loading="lazy" @error="onCoverError" />
                   </span>
-                  <div class="music-track-meta"><strong>{{ track.title }}</strong><span>{{ track.artist }}</span></div>
+                  <div class="music-track-meta">
+                    <strong>{{ track.title }}</strong
+                    ><span>{{ track.artist }}</span>
+                  </div>
                   <span class="music-track-album">{{ track.album }}</span>
                   <span class="music-track-duration">{{ formatDuration(track.durationSec) }}</span>
                   <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)">
@@ -831,73 +803,87 @@ onMounted(() => {
                   <img v-if="album.coverUrl" :src="album.coverUrl" :alt="album.title" loading="lazy" @error="onCoverError" />
                   <span class="music-album-play"><i class="fas fa-play" aria-hidden="true"></i></span>
                 </span>
-                <strong>{{ album.title }}</strong><span>{{ album.artist }}</span>
-                <small>{{ album.genre }}<template v-if="album.year"> · {{ album.year }}</template></small>
+                <strong>{{ album.title }}</strong
+                ><span>{{ album.artist }}</span>
+                <small
+                  >{{ album.genre }}<template v-if="album.year"> · {{ album.year }}</template></small
+                >
               </button>
             </section>
           </template>
 
           <template v-else-if="activeSection === 'library'">
             <section class="music-page-intro is-library">
-              <div><span class="music-kicker">{{ t('个人收藏', 'YOUR COLLECTION') }}</span><h1>{{ t('资料库', 'Library') }}</h1></div>
+              <div>
+                <span class="music-kicker">{{ t('个人收藏', 'YOUR COLLECTION') }}</span>
+                <h1>{{ t('资料库', 'Library') }}</h1>
+              </div>
               <button class="music-primary-button" type="button" :disabled="!libraryVisibleTracks.length" @click="playLibraryMode">
                 <i class="fas fa-play" aria-hidden="true"></i><span>{{ t('播放全部', 'Play All') }}</span>
               </button>
             </section>
             <div class="music-segmented" role="tablist" :aria-label="t('资料库分类', 'Library categories')">
-              <button
-                v-for="mode in libraryModes"
-                :key="mode.id"
-                type="button"
-                :class="{ 'is-active': libraryMode === mode.id }"
-                @click="libraryMode = mode.id"
-              >{{ mode.label }}</button>
+              <button v-for="mode in libraryModes" :key="mode.id" type="button" :class="{ 'is-active': libraryMode === mode.id }" @click="libraryMode = mode.id">
+                {{ mode.label }}
+              </button>
             </div>
 
             <section v-if="libraryMode === 'playlists'" class="music-playlist-layout">
               <div class="music-playlist-grid">
-                <button class="music-playlist-create" type="button" @click="playlistTargetTrack = null; playlistSheetOpen = true">
+                <button class="music-playlist-create" type="button" @click="openCreatePlaylistSheet">
                   <i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('新建播放列表', 'New Playlist') }}</span>
                 </button>
                 <button v-if="canImportNeteasePlaylist" class="music-playlist-create is-import" type="button" data-testid="music-playlist-import-open" @click="openPlaylistImport">
                   <i class="fas fa-cloud-arrow-down" aria-hidden="true"></i><span>{{ t('导入网易云歌单', 'Import NetEase Playlist') }}</span>
                 </button>
-                <button
-                  v-for="playlist in musicStore.playlists"
-                  :key="playlist.id"
-                  type="button"
-                  class="music-playlist-tile"
-                  :class="{ 'is-active': selectedPlaylistId === playlist.id }"
-                  @click="choosePlaylist(playlist.id)"
-                >
+                <button v-for="playlist in musicStore.playlists" :key="playlist.id" type="button" class="music-playlist-tile" :class="{ 'is-active': selectedPlaylistId === playlist.id }" @click="choosePlaylist(playlist.id)">
                   <span class="music-playlist-mosaic">
                     <span v-for="track in musicStore.tracksForPlaylist(playlist.id).slice(0, 4)" :key="track.id" :style="coverStyle(track)"></span>
                     <i v-if="!musicStore.tracksForPlaylist(playlist.id).length" class="fas fa-music" aria-hidden="true"></i>
                   </span>
-                  <strong>{{ playlist.name }}</strong><span>{{ t(`${playlist.trackIds.length} 首`, `${playlist.trackIds.length} songs`) }}</span>
+                  <strong>{{ playlist.name }}</strong
+                  ><span>{{ t(`${playlist.trackIds.length} 首`, `${playlist.trackIds.length} songs`) }}</span>
                 </button>
               </div>
               <div v-if="selectedPlaylist" class="music-playlist-detail">
                 <div class="music-section-heading">
-                  <div><span>{{ t('播放列表', 'Playlist') }}</span><h2>{{ selectedPlaylist.name }}</h2></div>
-                  <button type="button" class="is-danger" @click="removePlaylist(selectedPlaylist)">{{ t('删除', 'Delete') }}</button>
+                  <div>
+                    <span>{{ t('播放列表', 'Playlist') }}</span>
+                    <h2>{{ selectedPlaylist.name }}</h2>
+                  </div>
+                  <button type="button" class="is-danger" @click="removePlaylist(selectedPlaylist)">
+                    {{ t('删除', 'Delete') }}
+                  </button>
                 </div>
-                <p v-if="!selectedPlaylistTracks.length" class="music-empty-state">{{ t('还没有歌曲', 'No songs yet') }}</p>
+                <p v-if="!selectedPlaylistTracks.length" class="music-empty-state">
+                  {{ t('还没有歌曲', 'No songs yet') }}
+                </p>
               </div>
             </section>
 
             <div v-if="libraryMode !== 'playlists' || selectedPlaylist" class="music-track-list is-library-list">
               <article v-for="(track, index) in libraryVisibleTracks" :key="track.id" class="music-track-row" :class="{ 'is-current': musicStore.currentTrack?.id === track.id }">
                 <button class="music-track-index" type="button" :disabled="!musicStore.canPlayTrack(track)" :title="t('播放', 'Play')" @click="playTrack(track, libraryVisibleTracks)">
-                  <span>{{ String(index + 1).padStart(2, '0') }}</span><i class="fas fa-play" aria-hidden="true"></i>
+                  <span>{{ String(index + 1).padStart(2, '0') }}</span
+                  ><i class="fas fa-play" aria-hidden="true"></i>
                 </button>
                 <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"><img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.album" loading="lazy" @error="onCoverError" /></span>
-                <div class="music-track-meta"><strong>{{ track.title }}</strong><span>{{ track.artist }}</span></div>
-                <span class="music-track-album">{{ track.album }}</span><span class="music-track-duration">{{ formatDuration(track.durationSec) }}</span>
-                <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)"><i :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i></button>
-                <button class="music-track-action" type="button" :title="t('加入播放列表', 'Add to Playlist')" @click="openPlaylistPicker(track)"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                <div class="music-track-meta">
+                  <strong>{{ track.title }}</strong
+                  ><span>{{ track.artist }}</span>
+                </div>
+                <span class="music-track-album">{{ track.album }}</span
+                ><span class="music-track-duration">{{ formatDuration(track.durationSec) }}</span>
+                <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)">
+                  <i :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i>
+                </button>
+                <button class="music-track-action" type="button" :title="t('加入播放列表', 'Add to Playlist')" @click="openPlaylistPicker(track)">
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
               </article>
-              <p v-if="!libraryVisibleTracks.length" class="music-empty-state">{{ t('这里还没有歌曲', 'No songs here yet') }}</p>
+              <p v-if="!libraryVisibleTracks.length" class="music-empty-state">
+                {{ t('这里还没有歌曲', 'No songs here yet') }}
+              </p>
             </div>
           </template>
 
@@ -907,27 +893,41 @@ onMounted(() => {
               <form class="music-search-form" @submit.prevent="submitSearch">
                 <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
                 <input ref="searchInput" v-model="musicStore.searchQuery" type="search" :placeholder="t('歌曲、艺人或专辑', 'Songs, artists, or albums')" autocomplete="off" data-testid="music-search-input" />
-                <button v-if="musicStore.searchQuery" type="button" :title="t('清空', 'Clear')" @click="musicStore.searchQuery = ''; musicStore.searchResults = []"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+                <button v-if="musicStore.searchQuery" type="button" :title="t('清空', 'Clear')" @click="clearMusicSearch">
+                  <i class="fas fa-xmark" aria-hidden="true"></i>
+                </button>
                 <button class="music-search-submit" type="submit">{{ t('搜索', 'Search') }}</button>
               </form>
               <div class="music-search-source">
                 <span class="music-source-dot" :class="{ 'is-online': hasConnectedProvider }"></span>
                 <span>{{ hasConnectedProvider ? musicStore.activeProfile?.name : t('当前仅搜索本地资料库', 'Searching this library') }}</span>
-                <button v-if="!hasConnectedProvider" type="button" @click="openSettings">{{ t('连接音乐源', 'Connect Source') }}</button>
+                <button v-if="!hasConnectedProvider" type="button" @click="openSettings">
+                  {{ t('连接音乐源', 'Connect Source') }}
+                </button>
               </div>
             </section>
-            <p v-if="searchStateCopy" class="music-search-state" :class="`is-${musicStore.searchStatus}`">{{ searchStateCopy }}</p>
+            <p v-if="searchStateCopy" class="music-search-state" :class="`is-${musicStore.searchStatus}`">
+              {{ searchStateCopy }}
+            </p>
             <div v-if="musicStore.searchResults.length" class="music-track-list is-search-results">
               <article v-for="(track, index) in musicStore.searchResults" :key="track.id" class="music-track-row" :class="{ 'is-unplayable': !musicStore.canPlayTrack(track) }">
                 <button class="music-track-index" type="button" :disabled="!musicStore.canPlayTrack(track)" :title="musicStore.canPlayTrack(track) ? t('播放', 'Play') : t('没有播放地址', 'No playable URL')" @click="playTrack(track, musicStore.searchResults)">
-                  <span>{{ String(index + 1).padStart(2, '0') }}</span><i class="fas fa-play" aria-hidden="true"></i>
+                  <span>{{ String(index + 1).padStart(2, '0') }}</span
+                  ><i class="fas fa-play" aria-hidden="true"></i>
                 </button>
                 <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"><img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.album" loading="lazy" @error="onCoverError" /></span>
-                <div class="music-track-meta"><strong>{{ track.title }}</strong><span>{{ track.artist }}</span></div>
+                <div class="music-track-meta">
+                  <strong>{{ track.title }}</strong
+                  ><span>{{ track.artist }}</span>
+                </div>
                 <span class="music-track-album">{{ track.album }}</span>
-                <span class="music-track-duration">{{ track.durationSec ? formatDuration(track.durationSec) : (musicStore.canPlayTrack(track) ? t('在线', 'Stream') : t('仅资料', 'Info only')) }}</span>
-                <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)"><i :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i></button>
-                <button class="music-track-action" type="button" :title="t('加入播放列表', 'Add to Playlist')" @click="openPlaylistPicker(track)"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                <span class="music-track-duration">{{ track.durationSec ? formatDuration(track.durationSec) : musicStore.canPlayTrack(track) ? t('在线', 'Stream') : t('仅资料', 'Info only') }}</span>
+                <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)">
+                  <i :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i>
+                </button>
+                <button class="music-track-action" type="button" :title="t('加入播放列表', 'Add to Playlist')" @click="openPlaylistPicker(track)">
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
               </article>
             </div>
           </template>
@@ -938,14 +938,25 @@ onMounted(() => {
     <section v-if="playerTrack" class="music-player" data-testid="music-player">
       <button class="music-player-track" type="button" data-testid="music-now-playing-open" @click="openNowPlaying(playerTrack)">
         <span class="music-player-cover music-cover-fallback" :style="coverStyle(playerTrack)"><img v-if="playerTrack.coverUrl" :src="playerTrack.coverUrl" :alt="playerTrack.album" @error="onCoverError" /></span>
-        <span class="music-player-meta"><strong>{{ playerTrack.title }}</strong><span>{{ playerTrack.artist }}</span></span>
+        <span class="music-player-meta"
+          ><strong>{{ playerTrack.title }}</strong
+          ><span>{{ playerTrack.artist }}</span></span
+        >
       </button>
       <div class="music-player-center">
         <div class="music-player-controls">
-          <button type="button" :class="{ 'is-active': musicStore.state.playback.shuffle }" :title="t('随机播放', 'Shuffle')" @click="musicStore.toggleShuffle"><i class="fas fa-shuffle" aria-hidden="true"></i></button>
-          <button type="button" :title="t('上一首', 'Previous')" @click="musicStore.previous"><i class="fas fa-backward-step" aria-hidden="true"></i></button>
-          <button class="music-play-button" type="button" data-testid="music-player-toggle" :title="musicStore.isPlaying ? t('暂停', 'Pause') : t('播放', 'Play')" @click="musicStore.togglePlayback"><i :class="musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'" aria-hidden="true"></i></button>
-          <button type="button" :title="t('下一首', 'Next')" @click="musicStore.next"><i class="fas fa-forward-step" aria-hidden="true"></i></button>
+          <button type="button" :class="{ 'is-active': musicStore.state.playback.shuffle }" :title="t('随机播放', 'Shuffle')" @click="musicStore.toggleShuffle">
+            <i class="fas fa-shuffle" aria-hidden="true"></i>
+          </button>
+          <button type="button" :title="t('上一首', 'Previous')" @click="musicStore.previous">
+            <i class="fas fa-backward-step" aria-hidden="true"></i>
+          </button>
+          <button class="music-play-button" type="button" data-testid="music-player-toggle" :title="musicStore.isPlaying ? t('暂停', 'Pause') : t('播放', 'Play')" @click="musicStore.togglePlayback">
+            <i :class="musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'" aria-hidden="true"></i>
+          </button>
+          <button type="button" :title="t('下一首', 'Next')" @click="musicStore.next">
+            <i class="fas fa-forward-step" aria-hidden="true"></i>
+          </button>
           <button type="button" :class="{ 'is-active': musicStore.state.playback.repeatMode !== 'off' }" :title="t('循环模式', 'Repeat')" @click="musicStore.cycleRepeatMode"><i :class="musicStore.state.playback.repeatMode === 'one' ? 'fas fa-repeat' : 'fas fa-retweet'" aria-hidden="true"></i><small v-if="musicStore.state.playback.repeatMode === 'one'">1</small></button>
         </div>
         <div class="music-player-progress">
@@ -955,8 +966,12 @@ onMounted(() => {
         </div>
       </div>
       <div class="music-player-tools">
-        <button type="button" :title="t('播放队列', 'Queue')" @click="queueOpen = true"><i class="fas fa-list-ul" aria-hidden="true"></i></button>
-        <button type="button" :title="musicStore.state.playback.muted ? t('取消静音', 'Unmute') : t('静音', 'Mute')" @click="musicStore.toggleMuted"><i :class="musicStore.state.playback.muted ? 'fas fa-volume-xmark' : 'fas fa-volume-high'" aria-hidden="true"></i></button>
+        <button type="button" :title="t('播放队列', 'Queue')" @click="queueOpen = true">
+          <i class="fas fa-list-ul" aria-hidden="true"></i>
+        </button>
+        <button type="button" :title="musicStore.state.playback.muted ? t('取消静音', 'Unmute') : t('静音', 'Mute')" @click="musicStore.toggleMuted">
+          <i :class="musicStore.state.playback.muted ? 'fas fa-volume-xmark' : 'fas fa-volume-high'" aria-hidden="true"></i>
+        </button>
         <input type="range" min="0" max="1" step="0.01" :value="musicStore.state.playback.volume" :aria-label="t('音量', 'Volume')" @input="musicStore.setVolume($event.target.value)" />
       </div>
       <p v-if="playbackErrorText" class="music-player-error">{{ playbackErrorText }}</p>
@@ -965,12 +980,26 @@ onMounted(() => {
     <transition name="music-drawer">
       <div v-if="queueOpen" class="music-overlay" @click.self="queueOpen = false">
         <aside class="music-queue-drawer" aria-label="Queue" data-testid="music-queue">
-          <div class="music-drawer-heading"><div><span>{{ t('接下来播放', 'Up Next') }}</span><h2>{{ t('播放队列', 'Queue') }}</h2></div><button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="queueOpen = false"><i class="fas fa-xmark" aria-hidden="true"></i></button></div>
+          <div class="music-drawer-heading">
+            <div>
+              <span>{{ t('接下来播放', 'Up Next') }}</span>
+              <h2>{{ t('播放队列', 'Queue') }}</h2>
+            </div>
+            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="queueOpen = false">
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
           <div class="music-queue-list no-scrollbar">
             <button v-for="(track, index) in musicStore.queue" :key="track.id" type="button" class="music-queue-row" :class="{ 'is-current': musicStore.currentTrack?.id === track.id }" @click="playTrack(track, musicStore.queue)">
-              <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"></span><span><strong>{{ track.title }}</strong><small>{{ track.artist }}</small></span><em>{{ String(index + 1).padStart(2, '0') }}</em>
+              <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"></span
+              ><span
+                ><strong>{{ track.title }}</strong
+                ><small>{{ track.artist }}</small></span
+              ><em>{{ String(index + 1).padStart(2, '0') }}</em>
             </button>
-            <p v-if="!musicStore.queue.length" class="music-empty-state">{{ t('队列是空的', 'Your queue is empty') }}</p>
+            <p v-if="!musicStore.queue.length" class="music-empty-state">
+              {{ t('队列是空的', 'Your queue is empty') }}
+            </p>
           </div>
         </aside>
       </div>
@@ -979,27 +1008,69 @@ onMounted(() => {
     <transition name="music-drawer">
       <div v-if="nowPlayingOpen && nowPlayingTrack" class="music-overlay is-now-playing" @click.self="closeNowPlaying">
         <section class="music-now-playing-sheet" data-testid="music-now-playing-sheet">
-          <button class="music-icon-button is-sheet-close" type="button" :title="t('收起', 'Close')" @click="closeNowPlaying"><i class="fas fa-chevron-down" aria-hidden="true"></i></button>
-          <div class="music-now-playing-art music-cover-fallback" :style="coverStyle(nowPlayingTrack)"><img v-if="nowPlayingTrack.coverUrl" :src="nowPlayingTrack.coverUrl" :alt="nowPlayingTrack.album" @error="onCoverError" /></div>
-          <div class="music-now-playing-copy"><span>{{ isNowPlayingCurrentTrack ? t('正在播放', 'NOW PLAYING') : t('曲目详情', 'TRACK DETAILS') }}</span><h2>{{ nowPlayingTrack.title }}</h2><p>{{ nowPlayingTrack.artist }} · {{ nowPlayingTrack.album }}</p></div>
+          <button class="music-icon-button is-sheet-close" type="button" :title="t('收起', 'Close')" @click="closeNowPlaying">
+            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="music-now-playing-art music-cover-fallback" :style="coverStyle(nowPlayingTrack)">
+            <img v-if="nowPlayingTrack.coverUrl" :src="nowPlayingTrack.coverUrl" :alt="nowPlayingTrack.album" @error="onCoverError" />
+          </div>
+          <div class="music-now-playing-copy">
+            <span>{{ isNowPlayingCurrentTrack ? t('正在播放', 'NOW PLAYING') : t('曲目详情', 'TRACK DETAILS') }}</span>
+            <h2>{{ nowPlayingTrack.title }}</h2>
+            <p>{{ nowPlayingTrack.artist }} · {{ nowPlayingTrack.album }}</p>
+          </div>
           <template v-if="isNowPlayingCurrentTrack">
             <input class="music-now-playing-range" type="range" min="0" :max="Math.max(1, musicStore.runtime.duration || nowPlayingTrack.durationSec)" step="1" :value="musicStore.runtime.currentTime" :aria-label="t('播放进度', 'Playback progress')" @input="musicStore.seek($event.target.value)" />
-            <div class="music-now-playing-times"><span>{{ formatDuration(musicStore.runtime.currentTime) }}</span><span>-{{ formatDuration(Math.max(0, (musicStore.runtime.duration || nowPlayingTrack.durationSec) - musicStore.runtime.currentTime)) }}</span></div>
+            <div class="music-now-playing-times">
+              <span>{{ formatDuration(musicStore.runtime.currentTime) }}</span
+              ><span>-{{ formatDuration(Math.max(0, (musicStore.runtime.duration || nowPlayingTrack.durationSec) - musicStore.runtime.currentTime)) }}</span>
+            </div>
           </template>
-          <p v-else class="music-track-inspection-note">{{ t('打开详情不会自动播放', 'Opening details does not start playback') }}</p>
+          <p v-else class="music-track-inspection-note">
+            {{ t('打开详情不会自动播放', 'Opening details does not start playback') }}
+          </p>
           <div class="music-now-playing-controls">
-            <button v-if="isNowPlayingCurrentTrack" type="button" :title="t('上一首', 'Previous')" @click="musicStore.previous"><i class="fas fa-backward-step" aria-hidden="true"></i></button>
-            <button class="music-play-button is-large" type="button" :title="isNowPlayingCurrentTrack && musicStore.isPlaying ? t('暂停', 'Pause') : t('播放', 'Play')" @click="toggleNowPlayingPlayback"><i :class="isNowPlayingCurrentTrack && musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'" aria-hidden="true"></i></button>
-            <button v-if="isNowPlayingCurrentTrack" type="button" :title="t('下一首', 'Next')" @click="musicStore.next"><i class="fas fa-forward-step" aria-hidden="true"></i></button>
+            <button v-if="isNowPlayingCurrentTrack" type="button" :title="t('上一首', 'Previous')" @click="musicStore.previous">
+              <i class="fas fa-backward-step" aria-hidden="true"></i>
+            </button>
+            <button class="music-play-button is-large" type="button" :title="isNowPlayingCurrentTrack && musicStore.isPlaying ? t('暂停', 'Pause') : t('播放', 'Play')" @click="toggleNowPlayingPlayback">
+              <i :class="isNowPlayingCurrentTrack && musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'" aria-hidden="true"></i>
+            </button>
+            <button v-if="isNowPlayingCurrentTrack" type="button" :title="t('下一首', 'Next')" @click="musicStore.next">
+              <i class="fas fa-forward-step" aria-hidden="true"></i>
+            </button>
           </div>
           <div class="music-now-playing-actions">
-            <button type="button" @click="toggleFavorite(nowPlayingTrack)"><i :class="musicStore.isFavorite(nowPlayingTrack.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i><span>{{ t('喜爱', 'Favorite') }}</span></button>
-            <button v-if="canLoadLyrics && isNowPlayingCurrentTrack" type="button" data-testid="music-lyrics-open" @click="openLyrics"><i class="fas fa-align-left" aria-hidden="true"></i><span>{{ t('歌词', 'Lyrics') }}</span></button>
-            <button type="button" @click="openPlaylistPicker(nowPlayingTrack)"><i class="fas fa-list-ul" aria-hidden="true"></i><span>{{ t('播放列表', 'Playlist') }}</span></button>
-            <button type="button" data-testid="music-share-chat" @click="shareNowPlayingTrackToChat"><i class="fas fa-share-nodes" aria-hidden="true"></i><span>{{ t('聊天', 'Chat') }}</span></button>
-            <button type="button" @click="queueOpen = true"><i class="fas fa-bars-staggered" aria-hidden="true"></i><span>{{ t('队列', 'Queue') }}</span></button>
+            <button type="button" @click="toggleFavorite(nowPlayingTrack)">
+              <i :class="musicStore.isFavorite(nowPlayingTrack.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i><span>{{ t('喜爱', 'Favorite') }}</span>
+            </button>
+            <button v-if="canLoadLyrics && isNowPlayingCurrentTrack" type="button" data-testid="music-lyrics-open" @click="openLyrics">
+              <i class="fas fa-align-left" aria-hidden="true"></i><span>{{ t('歌词', 'Lyrics') }}</span>
+            </button>
+            <button type="button" @click="openPlaylistPicker(nowPlayingTrack)">
+              <i class="fas fa-list-ul" aria-hidden="true"></i><span>{{ t('播放列表', 'Playlist') }}</span>
+            </button>
+            <button type="button" data-testid="music-share-chat" @click="shareNowPlayingTrackToChat">
+              <i class="fas fa-share-nodes" aria-hidden="true"></i><span>{{ t('聊天', 'Chat') }}</span>
+            </button>
+            <button type="button" @click="queueOpen = true">
+              <i class="fas fa-bars-staggered" aria-hidden="true"></i><span>{{ t('队列', 'Queue') }}</span>
+            </button>
           </div>
-          <dl class="music-track-details"><div><dt>{{ t('音乐源', 'Source') }}</dt><dd>{{ nowPlayingTrack.providerName }}</dd></div><div><dt>{{ t('类型', 'Genre') }}</dt><dd>{{ nowPlayingTrack.genre || '—' }}</dd></div><div><dt>{{ t('年份', 'Year') }}</dt><dd>{{ nowPlayingTrack.year || '—' }}</dd></div></dl>
+          <dl class="music-track-details">
+            <div>
+              <dt>{{ t('音乐源', 'Source') }}</dt>
+              <dd>{{ nowPlayingTrack.providerName }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('类型', 'Genre') }}</dt>
+              <dd>{{ nowPlayingTrack.genre || '—' }}</dd>
+            </div>
+            <div>
+              <dt>{{ t('年份', 'Year') }}</dt>
+              <dd>{{ nowPlayingTrack.year || '—' }}</dd>
+            </div>
+          </dl>
         </section>
       </div>
     </transition>
@@ -1007,14 +1078,31 @@ onMounted(() => {
     <transition name="music-drawer">
       <div v-if="lyricsOpen && playerTrack" class="music-overlay is-lyrics" @click.self="lyricsOpen = false">
         <section class="music-lyrics-sheet" data-testid="music-lyrics-sheet">
-          <header class="music-drawer-heading"><div><span>{{ t('正在播放', 'NOW PLAYING') }}</span><h2>{{ playerTrack.title }}</h2><small>{{ playerTrack.artist }}</small></div><button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="lyricsOpen = false"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+          <header class="music-drawer-heading">
+            <div>
+              <span>{{ t('正在播放', 'NOW PLAYING') }}</span>
+              <h2>{{ playerTrack.title }}</h2>
+              <small>{{ playerTrack.artist }}</small>
+            </div>
+            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="lyricsOpen = false">
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </header>
           <div v-if="lyricTabs.length > 1" class="music-segmented is-lyrics-tabs" role="tablist" :aria-label="t('歌词版本', 'Lyric version')">
-            <button v-for="tab in lyricTabs" :key="tab.id" type="button" :class="{ 'is-active': lyricsMode === tab.id }" @click="lyricsMode = tab.id">{{ tab.label }}</button>
+            <button v-for="tab in lyricTabs" :key="tab.id" type="button" :class="{ 'is-active': lyricsMode === tab.id }" @click="lyricsMode = tab.id">
+              {{ tab.label }}
+            </button>
           </div>
           <div class="music-lyrics-content no-scrollbar">
-            <p v-if="musicStore.lyricsState.status === 'loading'" class="music-empty-state">{{ t('正在读取歌词…', 'Loading lyrics...') }}</p>
-            <p v-else-if="musicStore.lyricsState.status === 'error'" class="music-empty-state is-error">{{ currentProviderState?.message || t('歌词暂时不可用', 'Lyrics are unavailable') }}</p>
-            <p v-else-if="musicStore.lyricsState.status === 'empty'" class="music-empty-state">{{ t('这首歌暂无歌词', 'No lyrics for this song') }}</p>
+            <p v-if="musicStore.lyricsState.status === 'loading'" class="music-empty-state">
+              {{ t('正在读取歌词…', 'Loading lyrics...') }}
+            </p>
+            <p v-else-if="musicStore.lyricsState.status === 'error'" class="music-empty-state is-error">
+              {{ currentProviderState?.message || t('歌词暂时不可用', 'Lyrics are unavailable') }}
+            </p>
+            <p v-else-if="musicStore.lyricsState.status === 'empty'" class="music-empty-state">
+              {{ t('这首歌暂无歌词', 'No lyrics for this song') }}
+            </p>
             <pre v-else>{{ lyricBody }}</pre>
           </div>
         </section>
@@ -1024,11 +1112,23 @@ onMounted(() => {
     <transition name="music-drawer">
       <div v-if="playlistImportOpen" class="music-overlay" @click.self="playlistImportOpen = false">
         <section class="music-playlist-sheet is-import" data-testid="music-playlist-import-sheet">
-          <div class="music-drawer-heading"><div><span>{{ t('来自网易云音乐', 'FROM NETEASE') }}</span><h2>{{ t('导入歌单', 'Import Playlist') }}</h2></div><button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="playlistImportOpen = false"><i class="fas fa-xmark" aria-hidden="true"></i></button></div>
+          <div class="music-drawer-heading">
+            <div>
+              <span>{{ t('来自网易云音乐', 'FROM NETEASE') }}</span>
+              <h2>{{ t('导入歌单', 'Import Playlist') }}</h2>
+            </div>
+            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="playlistImportOpen = false">
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
           <form class="music-import-form" @submit.prevent="submitPlaylistImport">
             <label>{{ t('歌单 ID', 'Playlist ID') }}<input v-model="playlistIdDraft" inputmode="numeric" autocomplete="off" placeholder="3778678" data-testid="music-playlist-id" /></label>
-            <p v-if="musicStore.playlistImportState.status === 'error'" class="music-form-error">{{ currentProviderState?.message || t('无法导入这个歌单', 'This playlist could not be imported') }}</p>
-            <button class="music-primary-button" type="submit" :disabled="!playlistIdDraft.trim() || musicStore.playlistImportState.status === 'loading'" data-testid="music-playlist-import-submit"><i class="fas fa-cloud-arrow-down" aria-hidden="true"></i><span>{{ musicStore.playlistImportState.status === 'loading' ? t('导入中…', 'Importing...') : t('导入', 'Import') }}</span></button>
+            <p v-if="musicStore.playlistImportState.status === 'error'" class="music-form-error">
+              {{ currentProviderState?.message || t('无法导入这个歌单', 'This playlist could not be imported') }}
+            </p>
+            <button class="music-primary-button" type="submit" :disabled="!playlistIdDraft.trim() || musicStore.playlistImportState.status === 'loading'" data-testid="music-playlist-import-submit">
+              <i class="fas fa-cloud-arrow-down" aria-hidden="true"></i><span>{{ musicStore.playlistImportState.status === 'loading' ? t('导入中…', 'Importing...') : t('导入', 'Import') }}</span>
+            </button>
           </form>
         </section>
       </div>
@@ -1037,9 +1137,28 @@ onMounted(() => {
     <transition name="music-drawer">
       <div v-if="playlistSheetOpen" class="music-overlay" @click.self="playlistSheetOpen = false">
         <section class="music-playlist-sheet">
-          <div class="music-drawer-heading"><div><span>{{ playlistTargetTrack ? t('加入', 'ADD TO') : t('新建', 'CREATE') }}</span><h2>{{ t('播放列表', 'Playlist') }}</h2></div><button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="playlistSheetOpen = false"><i class="fas fa-xmark" aria-hidden="true"></i></button></div>
-          <button v-for="playlist in musicStore.playlists" :key="playlist.id" type="button" class="music-playlist-choice" @click="addTargetTrackToPlaylist(playlist.id)"><span class="music-playlist-choice-icon"><i class="fas fa-music" aria-hidden="true"></i></span><span><strong>{{ playlist.name }}</strong><small>{{ t(`${playlist.trackIds.length} 首歌曲`, `${playlist.trackIds.length} songs`) }}</small></span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-          <form class="music-create-playlist-form" @submit.prevent="createPlaylistAndAdd"><label>{{ t('新的播放列表', 'New Playlist') }}<input v-model="playlistNameDraft" maxlength="80" :placeholder="t('播放列表名称', 'Playlist name')" /></label><button class="music-primary-button" type="submit" :disabled="!playlistNameDraft.trim()"><i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('创建', 'Create') }}</span></button></form>
+          <div class="music-drawer-heading">
+            <div>
+              <span>{{ playlistTargetTrack ? t('加入', 'ADD TO') : t('新建', 'CREATE') }}</span>
+              <h2>{{ t('播放列表', 'Playlist') }}</h2>
+            </div>
+            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="playlistSheetOpen = false">
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+          <button v-for="playlist in musicStore.playlists" :key="playlist.id" type="button" class="music-playlist-choice" @click="addTargetTrackToPlaylist(playlist.id)">
+            <span class="music-playlist-choice-icon"><i class="fas fa-music" aria-hidden="true"></i></span
+            ><span
+              ><strong>{{ playlist.name }}</strong
+              ><small>{{ t(`${playlist.trackIds.length} 首歌曲`, `${playlist.trackIds.length} songs`) }}</small></span
+            ><i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          <form class="music-create-playlist-form" @submit.prevent="createPlaylistAndAdd">
+            <label>{{ t('新的播放列表', 'New Playlist') }}<input v-model="playlistNameDraft" maxlength="80" :placeholder="t('播放列表名称', 'Playlist name')" /></label
+            ><button class="music-primary-button" type="submit" :disabled="!playlistNameDraft.trim()">
+              <i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('创建', 'Create') }}</span>
+            </button>
+          </form>
         </section>
       </div>
     </transition>
@@ -1047,21 +1166,62 @@ onMounted(() => {
     <transition name="music-settings">
       <div v-if="settingsOpen" class="music-settings-overlay" @click.self="closeSettings">
         <section class="music-settings-sheet" data-testid="music-settings">
-          <header class="music-settings-header"><div><span>{{ t('MUSIC', 'MUSIC') }}</span><h2>{{ t('音乐设置', 'Music Settings') }}</h2></div><button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="closeSettings"><i class="fas fa-xmark" aria-hidden="true"></i></button></header>
+          <header class="music-settings-header">
+            <div>
+              <span>{{ t('MUSIC', 'MUSIC') }}</span>
+              <h2>{{ t('音乐设置', 'Music Settings') }}</h2>
+            </div>
+            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="closeSettings">
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </header>
           <div class="music-settings-body no-scrollbar">
             <aside class="music-provider-list">
-              <button class="music-settings-add-entry" type="button" :class="{ 'is-active': settingsPanel === 'add' }" data-testid="music-settings-add-entry" @click="openAddMusic"><span class="music-settings-entry-icon"><i class="fas fa-file-audio" aria-hidden="true"></i></span><span><strong>{{ t('添加音乐', 'Add Music') }}</strong><small>{{ t('URL 或本地文件', 'URL or local files') }}</small></span></button>
+              <button class="music-settings-add-entry" type="button" :class="{ 'is-active': settingsPanel === 'add' }" data-testid="music-settings-add-entry" @click="openAddMusic">
+                <span class="music-settings-entry-icon"><i class="fas fa-file-audio" aria-hidden="true"></i></span
+                ><span
+                  ><strong>{{ t('添加音乐', 'Add Music') }}</strong
+                  ><small>{{ t('URL 或本地文件', 'URL or local files') }}</small></span
+                >
+              </button>
               <p class="music-settings-group-label">{{ t('音乐源', 'MUSIC SOURCES') }}</p>
-              <button v-for="profile in musicStore.profiles" :key="profile.id" type="button" :class="{ 'is-active': settingsPanel === 'sources' && providerDraft.id === profile.id }" @click="selectProviderDraft(profile)"><span class="music-source-dot" :class="{ 'is-online': profile.enabled && profile.baseUrl }"></span><span><strong>{{ profile.name }}</strong><small>{{ profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ ? profile.platform : formatProviderHost(profile.baseUrl) }}</small></span></button>
+              <button
+                v-for="profile in musicStore.profiles"
+                :key="profile.id"
+                type="button"
+                :class="{
+                  'is-active': settingsPanel === 'sources' && providerDraft.id === profile.id,
+                }"
+                @click="selectProviderDraft(profile)"
+              >
+                <span class="music-source-dot" :class="{ 'is-online': profile.enabled && profile.baseUrl }"></span
+                ><span
+                  ><strong>{{ profile.name }}</strong
+                  ><small>{{ profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ ? profile.platform : isRadioBrowserMusicProviderProfile(profile) ? t('直播电台', 'Live radio') : formatProviderHost(profile.baseUrl) }}</small></span
+                >
+              </button>
               <button class="music-add-source is-chksz" type="button" data-testid="music-add-chksz" @click="createChkszProviderDraft"><i class="fas fa-wave-square" aria-hidden="true"></i><span>ChKSz</span></button>
-              <button class="music-add-source" type="button" data-testid="music-add-custom-source" @click="createNewProviderDraft"><i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('自定义 JSON', 'Custom JSON') }}</span></button>
+              <button class="music-add-source is-radio" type="button" data-testid="music-add-radio-browser" @click="createRadioBrowserProviderDraft"><i class="fas fa-radio" aria-hidden="true"></i><span>Radio Browser</span></button>
+              <button class="music-add-source" type="button" data-testid="music-add-custom-source" @click="createNewProviderDraft">
+                <i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('自定义 JSON', 'Custom JSON') }}</span>
+              </button>
             </aside>
             <div v-if="settingsPanel === 'add'" class="music-provider-form music-add-music-panel" data-testid="music-add-panel">
               <section class="music-settings-section music-add-heading">
-                <div class="music-settings-section-heading"><div><span>{{ t('添加音乐', 'ADD MUSIC') }}</span><h3>{{ addMusicMode === 'url' ? t('通过 URL 添加', 'Add from URL') : t('从本地导入', 'Import Local Files') }}</h3></div><span class="music-import-count">{{ importedTrackCount }}</span></div>
+                <div class="music-settings-section-heading">
+                  <div>
+                    <span>{{ t('添加音乐', 'ADD MUSIC') }}</span>
+                    <h3>
+                      {{ addMusicMode === 'url' ? t('通过 URL 添加', 'Add from URL') : t('从本地导入', 'Import Local Files') }}
+                    </h3>
+                  </div>
+                  <span class="music-import-count">{{ importedTrackCount }}</span>
+                </div>
                 <div class="music-add-segmented" role="tablist" :aria-label="t('添加方式', 'Add method')">
                   <button type="button" role="tab" :aria-selected="addMusicMode === 'url'" :class="{ 'is-active': addMusicMode === 'url' }" data-testid="music-add-url-tab" @click="selectAddMusicMode('url')"><i class="fas fa-link" aria-hidden="true"></i><span>URL</span></button>
-                  <button type="button" role="tab" :aria-selected="addMusicMode === 'files'" :class="{ 'is-active': addMusicMode === 'files' }" data-testid="music-add-files-tab" @click="selectAddMusicMode('files')"><i class="fas fa-folder-open" aria-hidden="true"></i><span>{{ t('本地文件', 'Local Files') }}</span></button>
+                  <button type="button" role="tab" :aria-selected="addMusicMode === 'files'" :class="{ 'is-active': addMusicMode === 'files' }" data-testid="music-add-files-tab" @click="selectAddMusicMode('files')">
+                    <i class="fas fa-folder-open" aria-hidden="true"></i><span>{{ t('本地文件', 'Local Files') }}</span>
+                  </button>
                 </div>
               </section>
 
@@ -1073,7 +1233,11 @@ onMounted(() => {
                   <label>{{ t('专辑', 'Album') }}<input v-model="directUrlDraft.album" maxlength="180" :placeholder="t('未知专辑', 'Unknown Album')" /></label>
                   <label class="is-wide">{{ t('封面 URL', 'Cover URL') }}<input v-model="directUrlDraft.coverUrl" type="url" inputmode="url" placeholder="https://media.example.com/cover.jpg" /></label>
                 </div>
-                <div class="music-add-submit-row"><button class="music-primary-button" type="submit" :disabled="addMusicState.status === 'loading'" data-testid="music-direct-add"><i class="fas fa-plus" aria-hidden="true"></i><span>{{ addMusicState.status === 'loading' ? t('正在读取…', 'Reading...') : t('添加歌曲', 'Add Song') }}</span></button></div>
+                <div class="music-add-submit-row">
+                  <button class="music-primary-button" type="submit" :disabled="addMusicState.status === 'loading'" data-testid="music-direct-add">
+                    <i class="fas fa-plus" aria-hidden="true"></i><span>{{ addMusicState.status === 'loading' ? t('正在读取…', 'Reading...') : t('添加歌曲', 'Add Song') }}</span>
+                  </button>
+                </div>
               </form>
 
               <section v-else class="music-settings-section music-local-import" data-testid="music-local-import">
@@ -1088,33 +1252,93 @@ onMounted(() => {
               <p v-if="addMusicState.message" class="music-add-status" :class="`is-${addMusicState.status}`" role="status"><i :class="addMusicState.status === 'error' ? 'fas fa-circle-exclamation' : addMusicState.status === 'warning' ? 'fas fa-triangle-exclamation' : 'fas fa-circle-check'" aria-hidden="true"></i>{{ addMusicState.message }}</p>
 
               <section class="music-settings-section music-imported-section">
-                <div class="music-settings-section-heading"><div><span>{{ t('已添加', 'IMPORTED MUSIC') }}</span><h3>{{ t('我的歌曲', 'My Songs') }}</h3></div></div>
+                <div class="music-settings-section-heading">
+                  <div>
+                    <span>{{ t('已添加', 'IMPORTED MUSIC') }}</span>
+                    <h3>{{ t('我的歌曲', 'My Songs') }}</h3>
+                  </div>
+                </div>
                 <div v-if="musicStore.importedTracks.length" class="music-imported-list" data-testid="music-imported-list">
                   <div v-for="track in musicStore.importedTracks" :key="track.id" class="music-imported-row">
                     <span class="music-imported-art" :style="coverStyle(track)"><i v-if="!track.coverUrl" :class="track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE ? 'fas fa-file-audio' : 'fas fa-link'" aria-hidden="true"></i></span>
-                    <span class="music-imported-copy"><strong>{{ track.title }}</strong><small>{{ track.artist }}<template v-if="track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE && track.sourceRef.size"> · {{ formatFileSize(track.sourceRef.size) }}</template></small></span>
+                    <span class="music-imported-copy"
+                      ><strong>{{ track.title }}</strong
+                      ><small
+                        >{{ track.artist }}<template v-if="track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE && track.sourceRef.size"> · {{ formatFileSize(track.sourceRef.size) }}</template></small
+                      ></span
+                    >
                     <span class="music-imported-kind">{{ track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE ? t('本地', 'LOCAL') : 'URL' }}</span>
-                    <button class="music-icon-button is-imported-action" type="button" :title="t('播放', 'Play')" @click="playTrack(track, musicStore.importedTracks)"><i class="fas fa-play" aria-hidden="true"></i></button>
-                    <button class="music-icon-button is-imported-action is-remove" type="button" :title="t('移除', 'Remove')" @click="removeImportedMusic(track)"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                    <button class="music-icon-button is-imported-action" type="button" :title="t('播放', 'Play')" @click="playTrack(track, musicStore.importedTracks)">
+                      <i class="fas fa-play" aria-hidden="true"></i>
+                    </button>
+                    <button class="music-icon-button is-imported-action is-remove" type="button" :title="t('移除', 'Remove')" @click="removeImportedMusic(track)">
+                      <i class="fas fa-trash" aria-hidden="true"></i>
+                    </button>
                   </div>
                 </div>
-                <div v-else class="music-imported-empty"><i class="fas fa-music" aria-hidden="true"></i><span>{{ t('尚未添加歌曲', 'No imported songs') }}</span></div>
+                <div v-else class="music-imported-empty">
+                  <i class="fas fa-music" aria-hidden="true"></i><span>{{ t('尚未添加歌曲', 'No imported songs') }}</span>
+                </div>
               </section>
             </div>
             <div v-else class="music-provider-form">
               <section class="music-settings-section">
-                <div class="music-settings-section-heading"><div><span>{{ t('当前音乐源', 'CURRENT SOURCE') }}</span><h3>{{ providerDraft.name || t('新音乐源', 'New Music Source') }}</h3></div><span class="music-provider-badge" :class="`is-${currentProviderState?.status || 'idle'}`">{{ providerStatusCopy }}</span></div>
+                <div class="music-settings-section-heading">
+                  <div>
+                    <span>{{ t('当前音乐源', 'CURRENT SOURCE') }}</span>
+                    <h3>{{ providerDraft.name || t('新音乐源', 'New Music Source') }}</h3>
+                  </div>
+                  <span class="music-provider-badge" :class="`is-${currentProviderState?.status || 'idle'}`">{{ providerStatusCopy }}</span>
+                </div>
                 <div v-if="isChkszDraft" class="music-form-grid">
                   <label>{{ t('名称', 'Name') }}<input v-model="providerDraft.name" maxlength="80" placeholder="ChKSz Music" data-testid="music-provider-name" /></label>
-                  <label>{{ t('音乐平台', 'Platform') }}<select v-model="providerDraft.platform" data-testid="music-chksz-platform"><option :value="CHKSZ_MUSIC_PLATFORMS.NETEASE">{{ t('网易云音乐', 'NetEase Music') }}</option><option :value="CHKSZ_MUSIC_PLATFORMS.QQ">QQ Music</option><option :value="CHKSZ_MUSIC_PLATFORMS.KUGOU">{{ t('酷狗音乐', 'Kugou Music') }}</option></select></label>
-                  <label>{{ t('播放音质', 'Playback Quality') }}<select v-model="providerDraft.quality" data-testid="music-chksz-quality"><option v-for="quality in chkszQualityOptions" :key="quality" :value="quality">{{ quality }}</option></select></label>
-                  <div class="music-fixed-source"><i class="fas fa-shield-halved" aria-hidden="true"></i><span><strong>api.chksz.com</strong><small>{{ t('官方安全连接', 'Secure service endpoint') }}</small></span></div>
+                  <label
+                    >{{ t('音乐平台', 'Platform')
+                    }}<select v-model="providerDraft.platform" data-testid="music-chksz-platform">
+                      <option :value="CHKSZ_MUSIC_PLATFORMS.NETEASE">
+                        {{ t('网易云音乐', 'NetEase Music') }}
+                      </option>
+                      <option :value="CHKSZ_MUSIC_PLATFORMS.QQ">QQ Music</option>
+                      <option :value="CHKSZ_MUSIC_PLATFORMS.KUGOU">
+                        {{ t('酷狗音乐', 'Kugou Music') }}
+                      </option>
+                    </select></label
+                  >
+                  <label
+                    >{{ t('播放音质', 'Playback Quality')
+                    }}<select v-model="providerDraft.quality" data-testid="music-chksz-quality">
+                      <option v-for="quality in chkszQualityOptions" :key="quality" :value="quality">
+                        {{ quality }}
+                      </option>
+                    </select></label
+                  >
+                  <div class="music-fixed-source">
+                    <i class="fas fa-shield-halved" aria-hidden="true"></i
+                    ><span
+                      ><strong>api.chksz.com</strong><small>{{ t('官方安全连接', 'Secure service endpoint') }}</small></span
+                    >
+                  </div>
+                </div>
+                <div v-else-if="isRadioBrowserDraft" class="music-form-grid" data-testid="music-radio-browser-form">
+                  <label>{{ t('名称', 'Name') }}<input v-model="providerDraft.name" maxlength="80" placeholder="Radio Browser" data-testid="music-provider-name" /></label>
+                  <div class="music-fixed-source is-radio">
+                    <i class="fas fa-radio" aria-hidden="true"></i
+                    ><span
+                      ><strong>all.api.radio-browser.info</strong><small>{{ t('HTTPS · MP3 · 全球直播电台', 'HTTPS · MP3 · Global live radio') }}</small></span
+                    >
+                  </div>
                 </div>
                 <div v-else class="music-form-grid">
                   <label>{{ t('名称', 'Name') }}<input v-model="providerDraft.name" maxlength="80" :placeholder="t('我的音乐平台', 'My music service')" data-testid="music-provider-name" /></label>
                   <label class="is-wide">{{ t('接口地址', 'Endpoint URL') }}<input v-model="providerDraft.baseUrl" inputmode="url" placeholder="https://api.example.com" data-testid="music-provider-url" /></label>
                   <label>{{ t('搜索路径', 'Search Path') }}<input v-model="providerDraft.searchPath" placeholder="/search" /></label>
-                  <label>{{ t('请求方式', 'Method') }}<select v-model="providerDraft.method"><option :value="MUSIC_PROVIDER_METHODS.GET">GET</option><option :value="MUSIC_PROVIDER_METHODS.POST">POST</option></select></label>
+                  <label
+                    >{{ t('请求方式', 'Method')
+                    }}<select v-model="providerDraft.method">
+                      <option :value="MUSIC_PROVIDER_METHODS.GET">GET</option>
+                      <option :value="MUSIC_PROVIDER_METHODS.POST">POST</option>
+                    </select></label
+                  >
                   <label>{{ t('搜索参数', 'Query Parameter') }}<input v-model="providerDraft.queryParam" placeholder="q" /></label>
                   <label>{{ t('数量参数', 'Limit Parameter') }}<input v-model="providerDraft.limitParam" placeholder="limit" /></label>
                   <label class="is-wide">{{ t('歌曲数组路径', 'Track Array Path') }}<input v-model="providerDraft.resultPath" placeholder="data.tracks" /></label>
@@ -1122,23 +1346,51 @@ onMounted(() => {
               </section>
 
               <section class="music-settings-section">
-                <div class="music-settings-section-heading"><div><span>{{ t('设备凭据', 'DEVICE CREDENTIAL') }}</span><h3>{{ t('访问认证', 'Authentication') }}</h3></div><i class="fas fa-lock" aria-hidden="true"></i></div>
+                <div class="music-settings-section-heading">
+                  <div>
+                    <span>{{ t('设备凭据', 'DEVICE CREDENTIAL') }}</span>
+                    <h3>{{ t('访问认证', 'Authentication') }}</h3>
+                  </div>
+                  <i class="fas fa-lock" aria-hidden="true"></i>
+                </div>
                 <div v-if="isChkszDraft" class="music-form-grid">
                   <label class="is-wide">ChKSz API Key<input v-model="providerCredentialDraft" type="password" autocomplete="off" placeholder="chksz_••••••••" data-testid="music-provider-key" /></label>
                 </div>
+                <div v-else-if="isRadioBrowserDraft" class="music-fixed-source is-radio is-wide" data-testid="music-radio-browser-no-key">
+                  <i class="fas fa-unlock-keyhole" aria-hidden="true"></i
+                  ><span
+                    ><strong>{{ t('无需 API Key', 'No API key required') }}</strong
+                    ><small>{{ t('直接连接 Radio Browser 公共目录', 'Connects directly to the Radio Browser public directory') }}</small></span
+                  >
+                </div>
                 <div v-else class="music-form-grid">
-                  <label>{{ t('认证方式', 'Auth Type') }}<select v-model="providerDraft.authMode"><option :value="MUSIC_AUTH_MODES.NONE">{{ t('无需认证', 'None') }}</option><option :value="MUSIC_AUTH_MODES.BEARER">Bearer</option><option :value="MUSIC_AUTH_MODES.API_KEY">X-API-Key</option><option :value="MUSIC_AUTH_MODES.CUSTOM">{{ t('自定义请求头', 'Custom Header') }}</option></select></label>
+                  <label
+                    >{{ t('认证方式', 'Auth Type')
+                    }}<select v-model="providerDraft.authMode">
+                      <option :value="MUSIC_AUTH_MODES.NONE">{{ t('无需认证', 'None') }}</option>
+                      <option :value="MUSIC_AUTH_MODES.BEARER">Bearer</option>
+                      <option :value="MUSIC_AUTH_MODES.API_KEY">X-API-Key</option>
+                      <option :value="MUSIC_AUTH_MODES.CUSTOM">
+                        {{ t('自定义请求头', 'Custom Header') }}
+                      </option>
+                    </select></label
+                  >
                   <label v-if="providerDraft.authMode === MUSIC_AUTH_MODES.CUSTOM">{{ t('请求头名称', 'Header Name') }}<input v-model="providerDraft.authHeader" placeholder="X-API-Key" /></label>
                   <label v-if="providerDraft.authMode === MUSIC_AUTH_MODES.CUSTOM">{{ t('值前缀', 'Value Prefix') }}<input v-model="providerDraft.authPrefix" placeholder="Token " /></label>
                   <label v-if="providerDraft.authMode !== MUSIC_AUTH_MODES.NONE" class="is-wide">{{ t('API 密钥', 'API Key') }}<input v-model="providerCredentialDraft" type="password" autocomplete="off" :placeholder="t('保存在当前设备', 'Stored on this device')" data-testid="music-provider-key" /></label>
                 </div>
-                <p class="music-field-note"><i class="fas fa-shield-halved" aria-hidden="true"></i>{{ t('密钥仅保存在当前设备，不会进入备份或分享内容。', 'The key stays on this device and is excluded from backups and sharing.') }}</p>
+                <p v-if="!isRadioBrowserDraft" class="music-field-note"><i class="fas fa-shield-halved" aria-hidden="true"></i>{{ t('密钥仅保存在当前设备，不会进入备份或分享内容。', 'The key stays on this device and is excluded from backups and sharing.') }}</p>
                 <p v-if="providerQuotaCopy" class="music-quota-line"><i class="fas fa-gauge-high" aria-hidden="true"></i>{{ providerQuotaCopy }}</p>
-                <p v-if="currentProviderState?.status === 'error' && currentProviderState.message" class="music-form-error">{{ currentProviderState.message }}</p>
+                <p v-if="currentProviderState?.status === 'error' && currentProviderState.message" class="music-form-error">
+                  {{ currentProviderState.message }}
+                </p>
               </section>
 
-              <details v-if="!isChkszDraft" class="music-advanced-settings">
-                <summary><span><i class="fas fa-code" aria-hidden="true"></i>{{ t('响应字段映射', 'Response Field Mapping') }}</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+              <details v-if="!isChkszDraft && !isRadioBrowserDraft" class="music-advanced-settings">
+                <summary>
+                  <span><i class="fas fa-code" aria-hidden="true"></i>{{ t('响应字段映射', 'Response Field Mapping') }}</span
+                  ><i class="fas fa-chevron-down" aria-hidden="true"></i>
+                </summary>
                 <div class="music-form-grid is-mapping">
                   <label v-for="(_, key) in DEFAULT_MUSIC_FIELD_MAP" :key="key">{{ key }}<input v-model="providerDraft.fieldMap[key]" :placeholder="DEFAULT_MUSIC_FIELD_MAP[key]" /></label>
                   <label class="is-wide">{{ t('附加请求头（JSON）', 'Additional Headers (JSON)') }}<textarea v-model="providerHeadersDraft" rows="4" spellcheck="false"></textarea></label>
@@ -1146,13 +1398,51 @@ onMounted(() => {
               </details>
 
               <section class="music-settings-section is-integrations">
-                <div class="music-settings-section-heading"><div><span>{{ t('APP 联动', 'APP CONNECTIONS') }}</span><h3>{{ t('共享范围', 'Sharing') }}</h3></div></div>
-                <label class="music-toggle-row"><span class="music-toggle-icon is-chat"><i class="fas fa-comment" aria-hidden="true"></i></span><span><strong>Chat</strong><small>{{ t('允许分享歌曲卡片', 'Share track cards') }}</small></span><input type="checkbox" :checked="musicStore.state.integrationPolicy.chatShareEnabled" @change="musicStore.updateIntegrationPolicy({ chatShareEnabled: $event.target.checked })" /><span class="music-switch" aria-hidden="true"></span></label>
-                <label class="music-toggle-row"><span class="music-toggle-icon is-map"><i class="fas fa-map-location-dot" aria-hidden="true"></i></span><span><strong>Map</strong><small>{{ t('允许显示正在播放', 'Show now playing') }}</small></span><input type="checkbox" :checked="musicStore.state.integrationPolicy.mapNowPlayingEnabled" @change="musicStore.updateIntegrationPolicy({ mapNowPlayingEnabled: $event.target.checked })" /><span class="music-switch" aria-hidden="true"></span></label>
+                <div class="music-settings-section-heading">
+                  <div>
+                    <span>{{ t('APP 联动', 'APP CONNECTIONS') }}</span>
+                    <h3>{{ t('共享范围', 'Sharing') }}</h3>
+                  </div>
+                </div>
+                <label class="music-toggle-row"
+                  ><span class="music-toggle-icon is-chat"><i class="fas fa-comment" aria-hidden="true"></i></span
+                  ><span
+                    ><strong>Chat</strong><small>{{ t('允许分享歌曲卡片', 'Share track cards') }}</small></span
+                  ><input
+                    type="checkbox"
+                    :checked="musicStore.state.integrationPolicy.chatShareEnabled"
+                    @change="
+                      musicStore.updateIntegrationPolicy({
+                        chatShareEnabled: $event.target.checked,
+                      })
+                    " /><span class="music-switch" aria-hidden="true"></span
+                ></label>
+                <label class="music-toggle-row"
+                  ><span class="music-toggle-icon is-map"><i class="fas fa-map-location-dot" aria-hidden="true"></i></span
+                  ><span
+                    ><strong>Map</strong><small>{{ t('允许显示正在播放', 'Show now playing') }}</small></span
+                  ><input
+                    type="checkbox"
+                    :checked="musicStore.state.integrationPolicy.mapNowPlayingEnabled"
+                    @change="
+                      musicStore.updateIntegrationPolicy({
+                        mapNowPlayingEnabled: $event.target.checked,
+                      })
+                    " /><span class="music-switch" aria-hidden="true"></span
+                ></label>
               </section>
 
               <p v-if="providerFormError" class="music-form-error">{{ providerFormError }}</p>
-              <div class="music-settings-actions"><button v-if="musicStore.profiles.some((profile) => profile.id === providerDraft.id)" class="music-danger-button" type="button" @click="deleteProvider"><i class="fas fa-trash" aria-hidden="true"></i><span>{{ t('移除', 'Remove') }}</span></button><span></span><button class="music-secondary-button" type="button" :disabled="providerTesting" data-testid="music-provider-test" @click="testProvider"><i class="fas fa-plug-circle-check" aria-hidden="true"></i><span>{{ providerTesting ? t('测试中…', 'Testing...') : t('测试连接', 'Test Connection') }}</span></button><button class="music-primary-button" type="button" :disabled="providerSaving" data-testid="music-provider-save" @click="saveProvider()"><i class="fas fa-check" aria-hidden="true"></i><span>{{ t('保存', 'Save') }}</span></button></div>
+              <div class="music-settings-actions">
+                <button v-if="musicStore.profiles.some((profile) => profile.id === providerDraft.id)" class="music-danger-button" type="button" @click="deleteProvider">
+                  <i class="fas fa-trash" aria-hidden="true"></i><span>{{ t('移除', 'Remove') }}</span></button
+                ><span></span
+                ><button class="music-secondary-button" type="button" :disabled="providerTesting" data-testid="music-provider-test" @click="testProvider">
+                  <i class="fas fa-plug-circle-check" aria-hidden="true"></i><span>{{ providerTesting ? t('测试中…', 'Testing...') : t('测试连接', 'Test Connection') }}</span></button
+                ><button class="music-primary-button" type="button" :disabled="providerSaving" data-testid="music-provider-save" @click="saveProvider()">
+                  <i class="fas fa-check" aria-hidden="true"></i><span>{{ t('保存', 'Save') }}</span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -1177,7 +1467,7 @@ onMounted(() => {
   overflow: hidden;
   color: var(--music-ink);
   background: var(--music-bg);
-  font-family: "Avenir Next", "Trebuchet MS", sans-serif;
+  font-family: 'Avenir Next', 'Trebuchet MS', sans-serif;
 }
 
 button,
@@ -1246,7 +1536,7 @@ summary:focus-visible {
 
 .music-wordmark {
   gap: 9px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 23px;
   font-weight: 700;
 }
@@ -1403,7 +1693,7 @@ summary:focus-visible {
 }
 
 .music-topbar-title span {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 20px;
   font-weight: 700;
 }
@@ -1490,7 +1780,7 @@ summary:focus-visible {
   position: absolute;
   inset: 0;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  content: "";
+  content: '';
   pointer-events: none;
 }
 
@@ -1507,7 +1797,7 @@ summary:focus-visible {
   position: absolute;
   inset: 0;
   background: rgba(15, 17, 19, 0.18);
-  content: "";
+  content: '';
 }
 
 .music-feature-art img,
@@ -1553,7 +1843,7 @@ summary:focus-visible {
 .music-feature h1,
 .music-page-intro h1 {
   margin: 10px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 48px;
   line-height: 1.02;
   letter-spacing: 0;
@@ -1624,7 +1914,7 @@ summary:focus-visible {
   right: 22px;
   bottom: 12px;
   color: rgba(255, 255, 255, 0.08);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 92px;
 }
 
@@ -1655,7 +1945,7 @@ summary:focus-visible {
 .music-settings-header h2,
 .music-settings-section-heading h3 {
   margin: 4px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 25px;
   line-height: 1.1;
 }
@@ -1726,7 +2016,9 @@ summary:focus-visible {
   box-shadow: 0 7px 18px rgba(24, 26, 29, 0.28);
   opacity: 0;
   transform: translateY(5px);
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
 .music-album-item:hover .music-album-play,
@@ -1910,7 +2202,7 @@ summary:focus-visible {
   left: 12px;
   height: 2px;
   background: var(--music-accent);
-  content: "";
+  content: '';
 }
 
 .music-playlist-grid {
@@ -2035,7 +2327,7 @@ summary:focus-visible {
   padding: 8px 0;
   color: var(--music-ink);
   background: transparent;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 30px !important;
 }
 
@@ -2439,7 +2731,7 @@ input[type='range'] {
 
 .music-now-playing-copy h2 {
   margin: 7px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 28px;
 }
 
@@ -2551,7 +2843,10 @@ input[type='range'] {
 .music-lyrics-content pre {
   margin: 0;
   color: rgba(255, 255, 255, 0.88);
-  font: 500 17px/2 "Avenir Next", "Trebuchet MS", sans-serif;
+  font:
+    500 17px/2 'Avenir Next',
+    'Trebuchet MS',
+    sans-serif;
   text-align: center;
   white-space: pre-wrap;
 }
@@ -2696,6 +2991,11 @@ input[type='range'] {
 .music-provider-list button.music-add-source.is-chksz {
   color: var(--music-teal);
   border-color: rgba(45, 123, 118, 0.34);
+}
+
+.music-provider-list button.music-add-source.is-radio {
+  color: var(--music-gold);
+  border-color: rgba(199, 147, 50, 0.38);
 }
 
 .music-provider-form {
@@ -2979,6 +3279,10 @@ input[type='range'] {
   color: var(--music-teal);
 }
 
+.music-fixed-source.is-radio {
+  color: var(--music-gold);
+}
+
 .music-fixed-source strong,
 .music-fixed-source small {
   display: block;
@@ -3114,7 +3418,7 @@ input[type='range'] {
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 5px rgba(24, 26, 29, 0.18);
-  content: "";
+  content: '';
   transition: transform 160ms ease;
 }
 

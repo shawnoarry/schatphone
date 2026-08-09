@@ -1,6 +1,6 @@
 # Dash Grill Complete Combo Tray Request And Acceptance
 
-Status: `DELIVERED_ACCEPTED / NOT_CONNECTED`
+Status: `DELIVERED_ACCEPTED / CONNECTED`
 
 Date: `2026-08-06`
 
@@ -39,4 +39,4 @@ public/images/ui-assets/apps/food-delivery/dash-grill/combos/dash-grill-double-s
 public/images/ui-assets/apps/food-delivery/dash-grill/combos/dash-grill-golden-chicken-combo-01.png
 ```
 
-The files are intentionally not connected to UI code in this asset-only round.
+Both files are connected to the corresponding combo detail while the default Sea-Salt Fries and Fountain Cola remain selected. Choosing a different side or drink switches the main media back to the honest single-main image while the option map shows the selected components.

@@ -651,7 +651,12 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-asset-slot="platform-orders-empty-receipt"]').exists()).toBe(true)
     expect(
       wrapper.get('[data-asset-slot="platform-orders-empty-receipt"] img').attributes('src'),
-    ).toContain('missing-asset-placeholder.svg')
+    ).toContain('platform/orders/platform-orders-empty-receipt-01.png')
+    expect(
+      wrapper
+        .get('[data-asset-slot="platform-orders-empty-receipt"] img')
+        .attributes('data-asset-placeholder'),
+    ).toBeUndefined()
     wrapper.unmount()
   })
 
@@ -847,7 +852,12 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-asset-slot="platform-checkout-takeout-bag"]').exists()).toBe(true)
     expect(
       wrapper.get('[data-asset-slot="platform-checkout-takeout-bag"] img').attributes('src'),
-    ).toContain('missing-asset-placeholder.svg')
+    ).toContain('platform/orders/platform-checkout-takeout-bag-01.png')
+    expect(
+      wrapper
+        .get('[data-asset-slot="platform-checkout-takeout-bag"] img')
+        .attributes('data-asset-placeholder'),
+    ).toBeUndefined()
     expect(wrapper.find('[data-testid="food-delivery-platform-bottom-nav"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="food-delivery-platform-checkout-address-1"]').trigger('click')
@@ -888,7 +898,7 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-asset-slot="platform-order-status-placed"]').exists()).toBe(true)
     expect(
       wrapper.get('[data-asset-slot="platform-order-status-placed"] img').attributes('src'),
-    ).toContain('missing-asset-placeholder.svg')
+    ).toContain('platform/orders/platform-order-status-placed-01.png')
     expect(wrapper.find('[data-testid="food-delivery-platform-bottom-nav"]').exists()).toBe(false)
 
     order.status = FOOD_DELIVERY_ORDER_STATUS.COOKING
@@ -902,6 +912,26 @@ describe('FoodDeliveryView', () => {
       '餐点制作中',
     )
     expect(wrapper.get('[data-asset-slot="platform-order-status-preparing"]').exists()).toBe(true)
+    expect(
+      wrapper.get('[data-asset-slot="platform-order-status-preparing"] img').attributes('src'),
+    ).toContain('platform/orders/platform-order-status-preparing-01.png')
+
+    for (const [status, assetKey] of [
+      [FOOD_DELIVERY_ORDER_STATUS.RIDER_PICKUP, 'delivering'],
+      [FOOD_DELIVERY_ORDER_STATUS.DELIVERED, 'delivered'],
+      [FOOD_DELIVERY_ORDER_STATUS.CANCELLED, 'cancelled'],
+    ]) {
+      order.status = status
+      await flushPromises()
+      const statusImage = wrapper.get(`[data-asset-slot="platform-order-status-${assetKey}"] img`)
+      expect(statusImage.attributes('src')).toContain(
+        `platform/orders/platform-order-status-${assetKey}-01.png`,
+      )
+      expect(statusImage.attributes('data-asset-placeholder')).toBeUndefined()
+    }
+
+    order.status = FOOD_DELIVERY_ORDER_STATUS.COOKING
+    await flushPromises()
 
     await wrapper.get('[data-testid="food-delivery-platform-view-orders"]').trigger('click')
     await flushPromises()
@@ -2422,6 +2452,26 @@ describe('FoodDeliveryView', () => {
     const store = useFoodDeliveryStore()
     const dashItem = store.findMenuItemById('food_menu_dash_double_stack')
 
+    for (const [menuItemId, assetPath] of [
+      [
+        'food_menu_dash_double_stack',
+        'dash-grill/combos/dash-grill-double-stack-combo-01.png',
+      ],
+      [
+        'food_menu_dash_golden_chicken_stack',
+        'dash-grill/combos/dash-grill-golden-chicken-combo-01.png',
+      ],
+    ]) {
+      await wrapper.get(`[data-testid="food-delivery-menu-open-${menuItemId}"]`).trigger('click')
+      await flushPromises()
+      const trayImage = wrapper.get(
+        '[data-testid="food-delivery-menu-detail-sheet"] [data-asset-role="combo-tray"]',
+      )
+      expect(trayImage.attributes('data-required-asset')).toBe(assetPath)
+      expect(trayImage.attributes('src')).toContain(assetPath)
+      await wrapper.get('[data-testid="food-delivery-menu-detail-close"]').trigger('click')
+    }
+
     await wrapper.get(`[data-testid="food-delivery-menu-open-${dashItem.id}"]`).trigger('click')
     await flushPromises()
     expect(
@@ -2454,6 +2504,16 @@ describe('FoodDeliveryView', () => {
         .get('[data-testid="food-delivery-dash-combo-drink-vanilla_cloud_shake"] img')
         .attributes('data-required-asset'),
     ).toBe('dash-grill/products/dash-grill-item-09.png')
+    expect(
+      wrapper
+        .get('[data-testid="food-delivery-menu-detail-sheet"] [data-asset-role="combo-main"]')
+        .attributes('data-required-asset'),
+    ).toBe('dash-grill/products/dash-grill-item-01.png')
+    expect(
+      wrapper
+        .find('[data-testid="food-delivery-menu-detail-sheet"] [data-asset-role="combo-tray"]')
+        .exists(),
+    ).toBe(false)
     expect(wrapper.get('[data-testid="food-delivery-dash-selection-summary"]').text()).toContain(
       'Loaded Cheese Fries · Vanilla Cloud Shake',
     )

@@ -50,6 +50,7 @@ const buildPublicStatus = () => {
     incidentCount: items.length,
     affectedKeys: Object.freeze(items.map((item) => item.key)),
     primaryCode: primary?.code || '',
+    primaryCause: primary?.cause || '',
     retryAvailable: items.some((item) => typeof item.retry === 'function'),
     revision,
     updatedAt: primary?.updatedAt || 0,
@@ -100,6 +101,7 @@ export const reportPersistenceWriteResult = ({
   incidents.set(normalizedKey, {
     key: normalizedKey,
     code,
+    cause: typeof result?.cause === 'string' ? result.cause : '',
     mode,
     retryable: result?.retryable !== false,
     retry: result?.retryable !== false && typeof retry === 'function' ? retry : null,

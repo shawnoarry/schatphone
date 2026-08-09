@@ -21,16 +21,34 @@ class FakeLockManager {
 
 class FakeBroadcastChannel {
   static messages = []
+  static channels = new Set()
 
   constructor(name) {
     this.name = name
+    this.listeners = new Set()
+    FakeBroadcastChannel.channels.add(this)
   }
 
   postMessage(message) {
     FakeBroadcastChannel.messages.push({ channel: this.name, message })
+    for (const channel of FakeBroadcastChannel.channels) {
+      if (channel === this || channel.name !== this.name) continue
+      for (const listener of channel.listeners) listener({ data: message })
+    }
   }
 
-  close() {}
+  addEventListener(type, listener) {
+    if (type === 'message') this.listeners.add(listener)
+  }
+
+  removeEventListener(type, listener) {
+    if (type === 'message') this.listeners.delete(listener)
+  }
+
+  close() {
+    FakeBroadcastChannel.channels.delete(this)
+    this.listeners.clear()
+  }
 }
 
 class ThrowingLockManager {
@@ -123,6 +141,45 @@ describe('repository write coordinator', () => {
       expect(message).not.toHaveProperty('payload')
     }
     coordinator.close()
+  })
+
+  test('lets another page observe a bounded release for the same write scope', async () => {
+    FakeBroadcastChannel.messages = []
+    FakeBroadcastChannel.channels.clear()
+    const locks = new FakeLockManager()
+    const first = createWriteCoordinator({
+      locks,
+      BroadcastChannelClass: FakeBroadcastChannel,
+      ownerId: 'page-one',
+      scopeKey: 'current-save-write',
+    })
+    const second = createWriteCoordinator({
+      locks,
+      BroadcastChannelClass: FakeBroadcastChannel,
+      ownerId: 'page-two',
+      scopeKey: 'current-save-write',
+    })
+    const observed = []
+    const unsubscribe = second.subscribe((message) => observed.push(message))
+
+    const lease = await first.acquire({ operationId: 'page-one-session' })
+    await lease.release()
+
+    expect(observed).toEqual([
+      expect.objectContaining({
+        type: 'acquired',
+        scopeKey: 'current-save-write',
+        ownerId: 'page-one',
+      }),
+      expect.objectContaining({
+        type: 'released',
+        scopeKey: 'current-save-write',
+        ownerId: 'page-one',
+      }),
+    ])
+    unsubscribe()
+    first.close()
+    second.close()
   })
 
   test('isolates a caller-defined scope without changing the repository default', async () => {

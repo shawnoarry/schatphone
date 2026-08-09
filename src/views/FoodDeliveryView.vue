@@ -72,6 +72,7 @@ const DASH_GRILL_DEFAULT_COMBO_DRINK = 'fountain_cola'
 const DASH_GRILL_DEFAULT_SAUCE = 'house_dash_sauce'
 const DASH_GRILL_COMBO_CONFIG_BY_ID = Object.freeze({
   food_menu_dash_double_stack: Object.freeze({
+    defaultTrayAsset: 'dash-grill/combos/dash-grill-double-stack-combo-01.png',
     sides: Object.freeze([
       Object.freeze({
         key: 'sea_salt_fries',
@@ -116,6 +117,7 @@ const DASH_GRILL_COMBO_CONFIG_BY_ID = Object.freeze({
     ]),
   }),
   food_menu_dash_golden_chicken_stack: Object.freeze({
+    defaultTrayAsset: 'dash-grill/combos/dash-grill-golden-chicken-combo-01.png',
     sides: Object.freeze([
       Object.freeze({
         key: 'sea_salt_fries',
@@ -2152,6 +2154,17 @@ const selectedDashComboDrink = computed(() => {
     null
   )
 })
+const selectedDashComboTrayAssetPath = computed(() => {
+  const config = selectedDashComboConfig.value
+  if (
+    !config?.defaultTrayAsset ||
+    selectedDashComboSide.value?.key !== DASH_GRILL_DEFAULT_COMBO_SIDE ||
+    selectedDashComboDrink.value?.key !== DASH_GRILL_DEFAULT_COMBO_DRINK
+  ) {
+    return ''
+  }
+  return config.defaultTrayAsset
+})
 const selectedDashSauceConfig = computed(
   () => DASH_GRILL_SAUCE_CONFIG_BY_ID[selectedMenuItem.value?.id] || null,
 )
@@ -3852,6 +3865,24 @@ const dashGrillOptionMenuItem = (option = {}) =>
 const dashGrillOptionImageUrl = (option = {}) => foodImageUrl(dashGrillOptionMenuItem(option))
 const dashGrillOptionRequiredAssetPath = (option = {}) =>
   foodDeliveryRequiredAssetPath(dashGrillOptionMenuItem(option))
+const selectedDashDetailImageUrl = computed(() =>
+  selectedDashComboTrayAssetPath.value
+    ? foodDeliveryUiAsset(selectedDashComboTrayAssetPath.value)
+    : foodImageUrl(selectedMenuItem.value),
+)
+const selectedDashDetailRequiredAssetPath = computed(
+  () =>
+    selectedDashComboTrayAssetPath.value || foodDeliveryRequiredAssetPath(selectedMenuItem.value),
+)
+const selectedDashDetailImageAlt = computed(() => {
+  if (!selectedDashComboTrayAssetPath.value) {
+    return selectedMenuItem.value?.image?.alt || selectedMenuItem.value?.title || ''
+  }
+  return t(
+    `${selectedMenuItem.value?.title || ''} 默认套餐，含海盐薯条和可乐`,
+    `${selectedMenuItem.value?.title || ''} default combo with Sea-Salt Fries and Fountain Cola`,
+  )
+})
 
 const handleFoodShopImageError = (event) => {
   const image = event?.currentTarget
@@ -6079,10 +6110,13 @@ onBeforeUnmount(() => {
                   data-required-asset="platform/orders/platform-checkout-takeout-bag-01.png"
                 >
                   <img
-                    :src="platformMissingAssetPlaceholderUrl"
-                    :alt="t('待补结算页素材', 'Checkout artwork pending')"
+                    :src="
+                      foodDeliveryUiAsset(
+                        'platform/orders/platform-checkout-takeout-bag-01.png',
+                      )
+                    "
+                    :alt="t('结算外卖袋插图', 'Checkout takeout bag illustration')"
                     class="h-[5.5rem] w-[5.5rem] object-contain"
-                    data-asset-placeholder
                   />
                 </div>
               </div>
@@ -6411,10 +6445,11 @@ onBeforeUnmount(() => {
               data-required-asset="platform/orders/platform-orders-empty-receipt-01.png"
             >
               <img
-                :src="platformMissingAssetPlaceholderUrl"
-                :alt="t('待补空订单素材', 'Empty orders artwork pending')"
+                :src="
+                  foodDeliveryUiAsset('platform/orders/platform-orders-empty-receipt-01.png')
+                "
+                :alt="t('空订单小票插图', 'Empty orders receipt illustration')"
                 class="h-full w-full object-contain p-1"
-                data-asset-placeholder
               />
             </div>
             <p class="mt-2 text-sm font-black text-gray-900">
@@ -6503,10 +6538,13 @@ onBeforeUnmount(() => {
                   :data-required-asset="`platform/orders/platform-order-status-${activePlatformOrderStatus.assetKey}-01.png`"
                 >
                   <img
-                    :src="platformMissingAssetPlaceholderUrl"
-                    :alt="t('待补订单状态素材', 'Order status artwork pending')"
+                    :src="
+                      foodDeliveryUiAsset(
+                        `platform/orders/platform-order-status-${activePlatformOrderStatus.assetKey}-01.png`,
+                      )
+                    "
+                    :alt="activePlatformOrderStatus.title"
                     class="h-24 w-24 object-contain"
-                    data-asset-placeholder
                   />
                 </div>
               </div>
@@ -10574,12 +10612,18 @@ onBeforeUnmount(() => {
                     class="relative aspect-[4/3] overflow-hidden border-2 border-[#201a17] bg-white"
                   >
                     <img
-                      v-if="foodImageUrl(selectedMenuItem)"
-                      :src="foodImageUrl(selectedMenuItem)"
-                      :alt="selectedMenuItem.image?.alt || selectedMenuItem.title"
+                      v-if="selectedDashDetailImageUrl"
+                      :src="selectedDashDetailImageUrl"
+                      :alt="selectedDashDetailImageAlt"
                       class="h-full w-full object-cover"
-                      :data-required-asset="foodDeliveryRequiredAssetPath(selectedMenuItem)"
-                      :data-asset-role="selectedDashComboConfig ? 'combo-main' : 'menu-item'"
+                      :data-required-asset="selectedDashDetailRequiredAssetPath"
+                      :data-asset-role="
+                        selectedDashComboTrayAssetPath
+                          ? 'combo-tray'
+                          : selectedDashComboConfig
+                            ? 'combo-main'
+                            : 'menu-item'
+                      "
                       @error="handleFoodShopImageError"
                     />
                     <span

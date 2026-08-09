@@ -26,7 +26,8 @@ test.describe('same-container current-save writer', () => {
     const recovery = secondPage.getByTestId('persistence-recovery-sheet')
     await expect(recovery).toBeVisible()
     await expect(recovery).toHaveAttribute('data-mode', 'read_only')
-    await expect(recovery).toContainText('当前存档已进入只读保护')
+    await expect(recovery).toHaveAttribute('data-reason', 'active_writer')
+    await expect(recovery).toContainText('当前页面为只读预览')
 
     const blockedKeys = ['store:wallet', 'store:phone']
     const beforeBlockedWrites = await readOwnerLayers(secondPage, blockedKeys)
@@ -80,7 +81,6 @@ test.describe('same-container current-save writer', () => {
     const firstPageStockLayers = await readOwnerLayers(firstPage, ['store:stock'])
 
     await firstPage.close()
-    await secondPage.getByTestId('persistence-recovery-retry').click()
     await expect(recovery).toBeHidden()
 
     await expect

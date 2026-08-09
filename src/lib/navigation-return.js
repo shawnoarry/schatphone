@@ -83,6 +83,15 @@ const buildSettingsReturnTarget = (route) => {
   }
 }
 
+const buildMapReturnTarget = (route) => {
+  const homePage = normalizeHomePageQuery(route?.query?.homePage)
+  if (!homePage) return SOURCE_RETURN_TARGETS.map
+  return {
+    path: SOURCE_RETURN_TARGETS.map,
+    query: { from: 'home', homePage },
+  }
+}
+
 export const resolveChatReturnTarget = (route) => {
   const routeSource = normalizeCrossModuleSource(route?.query?.source)
   if (routeSource !== 'chat') return null
@@ -196,6 +205,7 @@ export const resolveReturnTarget = (route, fallback = HOME_RETURN_ROUTE) => {
   if (source === 'home') return buildHomeReturnTarget(route)
   const routeSource = normalizeCrossModuleSource(route?.query?.source)
   if (routeSource === 'chat') return resolveChatReturnTarget(route) || SOURCE_RETURN_TARGETS.chat
+  if (routeSource === 'map') return buildMapReturnTarget(route)
   if (SOURCE_RETURN_TARGETS[routeSource]) return SOURCE_RETURN_TARGETS[routeSource]
   return fallback
 }

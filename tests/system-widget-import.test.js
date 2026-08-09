@@ -16,6 +16,7 @@ const snapshotWidgetState = (store) =>
       name: item.name,
       size: item.size,
       code: item.code,
+      sourcePresetId: item.sourcePresetId,
       action: item.action,
       createdAt: item.createdAt,
     })),
@@ -90,6 +91,92 @@ describe('system widget import safety', () => {
     expect(widgetId).toMatch(/^custom_widget_/)
     expect(store.settings.appearance.customWidgets.some((item) => item.id === widgetId)).toBe(true)
     expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
+  })
+
+  test('rejects unsafe appearance code in direct create and update paths', () => {
+    const store = useSystemStore()
+
+    expect(
+      store.addCustomWidget({
+        name: 'Unsafe create',
+        size: '2x2',
+        code: '<script>window.parent.hacked = true</script>',
+        placeOnHome: false,
+      }),
+    ).toBeNull()
+    expect(store.settings.appearance.customWidgets).toHaveLength(0)
+
+    const widgetId = store.addCustomWidget({
+      name: 'Safe widget',
+      size: '2x2',
+      code: '<div>Safe</div>',
+      placeOnHome: false,
+    })
+
+    expect(
+      store.updateCustomWidget(widgetId, {
+        code: '<img src="preview.png" onerror="window.parent.hacked = true">',
+      }),
+    ).toBe(false)
+    expect(store.settings.appearance.customWidgets[0].code).toBe('<div>Safe</div>')
+  })
+
+  test('sanitizes persisted unsafe widgets without deleting their definitions', () => {
+    writePersistedState(
+      'store:system',
+      {
+        settings: {
+          appearance: {
+            customWidgets: [
+              {
+                id: 'custom_widget_legacy_unsafe',
+                name: 'Legacy look',
+                size: '2x2',
+                code: '<div onclick="alert(1)">Keep me</div><script>alert(2)</script>',
+                sourcePresetId: 'mood_charm',
+                createdAt: 42,
+              },
+            ],
+          },
+        },
+      },
+      { version: 1 },
+    )
+
+    const store = useSystemStore()
+    const widget = store.settings.appearance.customWidgets.find(
+      (item) => item.id === 'custom_widget_legacy_unsafe',
+    )
+
+    expect(widget).toBeTruthy()
+    expect(widget.code).toContain('Keep me')
+    expect(widget.code).not.toMatch(/onclick|<script/i)
+    expect(widget.sourcePresetId).toBe('mood_charm')
+  })
+
+  test('persists official preset identity across store hydration', () => {
+    const store = useSystemStore()
+    const widgetId = store.addCustomWidget({
+      name: 'Mood Charm',
+      size: '1x1',
+      code: '<div>Mood</div>',
+      sourcePresetId: 'mood_charm',
+      placeOnHome: false,
+    })
+
+    expect(store.updateCustomWidget(widgetId, { name: 'My Mood' })).toBe(true)
+    store.saveNow()
+
+    setActivePinia(createPinia())
+    const restoredStore = useSystemStore()
+    const restoredWidget = restoredStore.settings.appearance.customWidgets.find(
+      (item) => item.id === widgetId,
+    )
+
+    expect(restoredWidget).toMatchObject({
+      name: 'My Mood',
+      sourcePresetId: 'mood_charm',
+    })
   })
 
   test('stores custom widget actions as UI metadata outside import code', () => {

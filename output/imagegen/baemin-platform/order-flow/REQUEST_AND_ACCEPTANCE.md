@@ -1,6 +1,6 @@
 # Baemin Platform Order Flow Request And Acceptance
 
-Status: `DELIVERED_ACCEPTED / NOT_CONNECTED`
+Status: `DELIVERED_ACCEPTED / CONNECTED`
 
 Date: `2026-08-06`
 
@@ -60,4 +60,4 @@ public/images/ui-assets/apps/food-delivery/platform/orders/platform-order-status
 public/images/ui-assets/apps/food-delivery/platform/orders/platform-orders-empty-receipt-01.png
 ```
 
-The files are intentionally not connected to UI code in this asset-only round.
+The seven runtime files are connected to checkout, empty Orders, and the five current order-status slots. Image-load failures still fall back to the shared diagnostic placeholder.

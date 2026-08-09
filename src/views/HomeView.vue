@@ -61,6 +61,7 @@ import {
   HOME_WIDGET_REGISTRY_ENTRIES,
   HOME_WIDGET_SIZE_CLASS_MAP,
 } from '../lib/home-widgets'
+import { buildCustomWidgetSrcDoc } from '../lib/custom-widget-preview'
 
 const props = defineProps({
   currentTime: {
@@ -311,25 +312,7 @@ const worldAppTileMap = computed(() => {
 const customWidgetSrcDocMap = computed(() => {
   const map = new Map()
   customWidgets.value.forEach((widget) => {
-    const body = typeof widget.code === 'string' ? widget.code : ''
-    map.set(
-      widget.id,
-      `<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
-      body { font-family: Inter, "Noto Sans SC", sans-serif; }
-      #widget-root { width: 100%; height: 100%; }
-    </style>
-  </head>
-  <body>
-    <div id="widget-root">${body}</div>
-  </body>
-</html>`,
-    )
+    map.set(widget.id, buildCustomWidgetSrcDoc(widget))
   })
   return map
 })
@@ -1805,7 +1788,9 @@ onBeforeUnmount(() => {
           <div v-else-if="candidate.kind === 'custom_widget'" class="home-content-library-preview is-custom-widget">
             <iframe
               :srcdoc="customWidgetSrcDoc(candidate.tileId)"
-              sandbox="allow-scripts"
+              sandbox=""
+              tabindex="-1"
+              aria-hidden="true"
               loading="lazy"
               referrerpolicy="no-referrer"
             ></iframe>
@@ -1909,7 +1894,9 @@ onBeforeUnmount(() => {
           <div v-else-if="candidate.kind === 'custom_widget'" class="home-slot-content-preview is-custom-widget">
             <iframe
               :srcdoc="customWidgetSrcDoc(candidate.tileId)"
-              sandbox="allow-scripts"
+              sandbox=""
+              tabindex="-1"
+              aria-hidden="true"
               loading="lazy"
               referrerpolicy="no-referrer"
             ></iframe>
@@ -2247,7 +2234,12 @@ onBeforeUnmount(() => {
                   <span class="home-app-label">{{ tileMeta(placement.tileId).label }}</span>
                 </button>
 
-                <div class="home-custom-widget-card" v-else-if="tileMeta(placement.tileId)?.kind === 'custom_widget'">
+                <div
+                  class="home-custom-widget-card"
+                  v-else-if="tileMeta(placement.tileId)?.kind === 'custom_widget'"
+                  :role="customWidgetHasAction(placement.tileId) ? null : 'img'"
+                  :aria-label="customWidgetHasAction(placement.tileId) ? null : tileMeta(placement.tileId).label"
+                >
                   <iframe
                     class="home-custom-widget-frame"
                     :class="{
@@ -2255,7 +2247,9 @@ onBeforeUnmount(() => {
                       'is-actionable': customWidgetHasAction(placement.tileId),
                     }"
                     :srcdoc="customWidgetSrcDoc(placement.tileId)"
-                    sandbox="allow-scripts"
+                    sandbox=""
+                    tabindex="-1"
+                    aria-hidden="true"
                     loading="lazy"
                     referrerpolicy="no-referrer"
                   ></iframe>
@@ -4057,6 +4051,7 @@ onBeforeUnmount(() => {
   height: 100%;
   border: 0;
   background: transparent;
+  pointer-events: none;
 }
 
 .home-custom-widget-frame.is-editing {

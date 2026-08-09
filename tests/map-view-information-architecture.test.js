@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import MapView from '../src/views/MapView.vue'
 import { isMapPlaceCategoryDiscoveryOnly } from '../src/lib/map-place-categories'
 import { useMapStore } from '../src/stores/map'
+import { useMusicStore } from '../src/stores/music'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../src/stores/simulation'
 
@@ -23,6 +24,7 @@ const createTestRouter = () =>
       { path: '/settings', component: DummyView },
       { path: '/worldbook', component: DummyView },
       { path: '/chat', component: DummyView },
+      { path: '/music', component: DummyView },
     ],
   })
 
@@ -80,6 +82,51 @@ describe('MapView information architecture', () => {
     expect(drawer.findAll('.map-drawer-tab')).toHaveLength(0)
     expect(wrapper.findComponent({ name: 'MapTripControlPanel' }).isVisible()).toBe(false)
     expect(wrapper.get('[data-testid="map-visual-image-source"]').isVisible()).toBe(false)
+  })
+
+  test('reveals bounded music and radio controls only during an active journey', async () => {
+    const mapStore = useMapStore()
+    const musicStore = useMusicStore()
+    expect(wrapper.find('[data-testid="map-journey-media-button"]').exists()).toBe(false)
+
+    mapStore.setTripEndpoint('to', 'Journey media destination')
+    expect(mapStore.setTripTransportMode('walk').ok).toBe(true)
+    expect(mapStore.startTrip().ok).toBe(true)
+    await nextTick()
+
+    const mediaButton = wrapper.get('[data-testid="map-journey-media-button"]')
+    expect(mediaButton.attributes('aria-label')).toMatch(/Journey music and radio|行程音乐与电台/)
+    await mediaButton.trigger('click')
+    await nextTick()
+
+    const mediaDrawer = wrapper.get('[data-testid="map-journey-media-drawer"]')
+    expect(mediaDrawer.get('[data-testid="map-journey-media-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="map-secondary-drawer"]').exists()).toBe(false)
+    await mediaDrawer.get('[data-testid="map-journey-radio-tab"]').trigger('click')
+    await nextTick()
+    expect(mediaDrawer.findAll('[data-testid^="map-journey-station-"]')).toHaveLength(3)
+    expect(mediaDrawer.html()).not.toContain('soundhelix.com')
+    expect(mediaDrawer.html()).not.toContain('mediaId')
+
+    await mediaDrawer.get('[data-testid="map-open-music-floating"]').trigger('click')
+    await nextTick()
+    expect(musicStore.floatingPlayerVisible).toBe(true)
+    expect(musicStore.floatingPlayerExpanded).toBe(true)
+    expect(wrapper.find('[data-testid="map-journey-media-drawer"]').exists()).toBe(true)
+
+    const closeMediaDrawer = mediaDrawer
+      .findAll('button')
+      .find((button) => /Close|关闭/.test(button.attributes('aria-label') || ''))
+    await closeMediaDrawer.trigger('click')
+    await nextTick()
+    expect(wrapper.find('[data-testid="map-journey-media-drawer"]').exists()).toBe(false)
+    expect(musicStore.floatingPlayerVisible).toBe(true)
+
+    expect(mapStore.cancelTrip()).toBe(true)
+    await nextTick()
+    expect(wrapper.find('[data-testid="map-journey-media-button"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="map-journey-media-drawer"]').exists()).toBe(false)
+    expect(musicStore.floatingPlayerVisible).toBe(true)
   })
 
   test('focuses the saved role position without implying device location', async () => {
@@ -165,6 +212,64 @@ describe('MapView information architecture', () => {
       expect(drawer.get('h2').text()).toMatch(title)
       expect(drawer.findAll('.map-drawer-tab')).toHaveLength(0)
     }
+  })
+
+  test('switches Map-owned place names without mutating canonical place data', async () => {
+    const mapStore = useMapStore()
+    const place = mapStore.activeMapPlaces.find(
+      (item) => item.placeId === 'seoul-yeouido-hangang-park',
+    )
+    const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
+
+    mapScene.vm.$emit('select-pin', place)
+    await nextTick()
+
+    const detail = wrapper.get('[data-testid="map-place-detail-sheet"]')
+    expect(detail.get('h2').text()).toBe('汝矣岛汉江公园')
+    expect(
+      detail.get('[data-testid="map-place-language-mode-system"]').attributes('aria-pressed'),
+    ).toBe('true')
+
+    await detail.get('[data-testid="map-place-language-mode-en"]').trigger('click')
+    await nextTick()
+    expect(detail.get('h2').text()).toBe('Yeouido Hangang Park')
+    expect(
+      mapScene.props('pins').find((item) => item.placeId === place.placeId)?.name,
+    ).toBe('Yeouido Hangang Park')
+
+    await detail.get('[data-testid="map-place-language-mode-bilingual"]').trigger('click')
+    await nextTick()
+    expect(detail.get('h2').text()).toBe('汝矣岛汉江公园')
+    expect(detail.get('[data-testid="map-place-secondary-name"]').text()).toBe(
+      'Yeouido Hangang Park',
+    )
+    expect(detail.get('[data-testid="map-place-secondary-detail"]').text()).toBe(
+      '330 Yeouidong-ro, Yeongdeungpo-gu, Seoul',
+    )
+    expect(place).toMatchObject({
+      nameZh: '汝矣岛汉江公园',
+      nameEn: 'Yeouido Hangang Park',
+    })
+
+    await detail.get('button[aria-label="关闭"]').trigger('click')
+    await wrapper.get('[data-testid="map-destination-search"]').trigger('focus')
+    await wrapper.get('[data-testid="map-destination-search"]').setValue('Yeouido')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-local-place-results"]').text()).toContain(
+      '汝矣岛汉江公园',
+    )
+    expect(wrapper.get('[data-testid="map-local-place-results"]').text()).toContain(
+      'Yeouido Hangang Park',
+    )
+
+    await wrapper.get('[data-testid="map-open-places"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-filtered-place-list"]').text()).toContain(
+      '汝矣岛汉江公园',
+    )
+    expect(wrapper.get('[data-testid="map-filtered-place-list"]').text()).toContain(
+      'Yeouido Hangang Park',
+    )
   })
 
   test('shows real place categories inside Places and filters the visible list', async () => {
@@ -438,10 +543,13 @@ describe('MapView information architecture', () => {
     )
     expect(wrapper.get('[data-testid="map-active-journey"]').text()).toMatch(/In transit|行程中/)
     expect(wrapper.get('[data-testid="map-primary-journey-status"]').text()).toMatch(/In transit|行程中/)
-    expect(wrapper.get('[data-testid="map-primary-controls"]').findAll('button')).toHaveLength(4)
+    expect(wrapper.get('[data-testid="map-primary-controls"]').findAll('button')).toHaveLength(5)
     expect(wrapper.get('[data-testid="map-open-trip"]').text()).toMatch(/In transit|行程中/)
     expect(wrapper.get('[data-testid="map-open-places"]').text()).toMatch(/Places|地点/)
     expect(wrapper.get('[data-testid="map-open-progress"]').text()).toMatch(/Footprints|足迹/)
+    expect(wrapper.get('[data-testid="map-journey-media-button"]').attributes('aria-label')).toMatch(
+      /Journey music and radio|行程音乐与电台/,
+    )
     expect(wrapper.find('[data-testid="map-relationship-contact"]').exists()).toBe(false)
 
     const closeDrawer = wrapper

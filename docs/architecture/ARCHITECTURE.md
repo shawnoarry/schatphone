@@ -113,8 +113,8 @@ SchatPhone has 18 Pinia stores.
 | `book` | reusable long-form text assets |
 | `gallery` | media metadata, binary references, categories, cross-module asset operations |
 | `imageGeneration` | public image-provider profiles/defaults/routing, device-local credential references, bounded candidates, and generation tasks |
-| `music` | Music library, favorites, playlists, queue, playback policy/runtime facade, direct URL/local-file intake, public provider profiles, device-local credential/media access, and Chat/Map projections |
-| `map` | location, destination, route, trip, ETA, familiarity, travel context |
+| `music` | Music library, favorites, playlists, queue/radio construction, playback and floating-player policy/runtime facade, direct URL/local-file intake, public provider profiles, device-local credential/media access, and Chat/Map projections |
+| `map` | location, destination, route, trip, ETA, familiarity, travel context, and active-journey media presentation |
 | `calendar` | confirmed events, event time changes, push schedule state, confirmed relationship handoff |
 | `reminders` | raw cross-module cue queue and handling state |
 | `shopping` | products, cart, orders, logistics events, commerce handoffs |
@@ -178,10 +178,10 @@ Full assembled prompts, raw provider responses, headers, and transport payloads 
 - `music-playback-runtime.js` is the sole browser `Audio` and Media Session runtime;
 - `music-local-media-storage.js` owns the separate `schatphone-music-media` IndexedDB carrier for imported audio blobs and obeys the current-save writer boundary;
 - `stores/music.js` owns the library/queue/playback/import facade while using `systemStore.settings.music` as the public metadata compatibility carrier;
-- `music-module-interface.js` exposes bounded Chat/Map routes, capability discovery, track-share payloads, and now-playing projections;
+- `music-module-interface.js` exposes bounded Chat/Map routes, capability discovery, track-share payloads, now-playing/quick-track projections, and deterministic library-backed journey-radio catalogs;
 - `schatphone:music:credentials` stores provider API keys only on the current device and is excluded from ordinary backup;
 - direct HTTPS URLs persist as Music tracks, while local binaries persist separately and become revocable object URLs only during playback;
-- external callers cannot directly start playback, and cross-module projections omit credentials, endpoints, headers, raw responses, queue contents, stream URLs, and local media IDs.
+- external route requests cannot directly start playback, and cross-module projections omit credentials, endpoints, headers, raw responses, queue contents, stream URLs, and local media IDs. Map's active-journey panel may delegate an explicit user click to Music-owned play/radio actions without receiving source or queue ownership.
 
 The generic provider contract supports user-authorized JSON search APIs that return browser-playable HTTP(S) audio URLs. The dedicated ChKSz Adapter instead stores stable public source references and resolves an ephemeral stream URL only when the user presses Play; those URLs, lyrics, and quota/error projections remain outside durable state and Chat/Map payloads. Provider licensing, CORS, autoplay, mixed-content, expiring URLs, DRM, and proprietary signing remain explicit provider/browser constraints rather than capabilities SchatPhone can bypass.
 
@@ -279,9 +279,9 @@ Confirmed target direction and current non-active foundation:
 - `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration and Music library/provider/import metadata participate in backup, while device-local credentials, Music local-audio binaries, and image-generation temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
-- one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container conflicts become read-only with retry/refresh rather than force takeover or last-write-wins;
+- one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container later pages become read-only previews with retry/refresh rather than force takeover or last-write-wins. Ordinary writer occupancy is distinct from a true save conflict, and cooperative release may trigger the same bounded retry automatically;
 - Batch 2B completed as the non-active foundation, followed by a separately approved Book-only runtime cutover on 2026-07-22. Book now activates verified generations through the fenced pointer/journal flow, preserves the byte-identical legacy carrier for rollback, and performs no dual write; Gallery/R2 and every other owner migration remain unapproved.
-- the current layered-persistence foundation reports local and mirror write outcomes separately, blocks writes after unresolved reconciliation/precondition conflicts, rejects mirror generation regression, and preserves the last readable durable bytes; a non-persisted root-shell status aggregates layered and Book Repository failure/read-only results with retry, confirmed reload-current-save, and Settings backup handoff. A page-level current-save writer keeps later same-container pages inspect-only/read-only across current durable carriers; the release-local v3 path verifies before mutation, durably checkpoints the prior metadata-plus-binary save, rolls back failure or interrupted work before mount, and closes completed checkpoints. A broader cross-owner Repository root-generation switch remains separate work.
+- the current layered-persistence foundation reports local and mirror write outcomes separately, blocks writes after unresolved reconciliation/precondition conflicts, rejects mirror generation regression, and preserves the last readable durable bytes; a non-persisted root-shell status aggregates layered and Book Repository failure/read-only results with retry, confirmed reload-current-save, and Settings backup handoff. A page-level current-save writer keeps later same-container pages inspect-only/read-only across current durable carriers; normal page exit releases cooperatively, and bounded release metadata automatically starts the same lease-authoritative retry while multiple waiters still promote at most one writer. The release-local v3 path verifies before mutation, durably checkpoints the prior metadata-plus-binary save, rolls back failure or interrupted work before mount, and closes completed checkpoints. A broader cross-owner Repository root-generation switch remains separate work.
 
 ### Gallery Binaries
 
@@ -368,13 +368,13 @@ WorldBook reviewed World Pack
 ```text
 Chat or Map intent
   -> normalized Music integration request
-  -> /music open/search or explicit Music confirmation
+  -> /music open/search, explicit Music confirmation, or active-journey user action
   -> Music-owned playback/library/queue state
-  -> bounded track-share or now-playing projection
+  -> bounded track-share, now-playing, quick-track, or journey-station projection
   -> Chat/Map-owned presentation only
 ```
 
-Provider keys, endpoints, headers, stream URLs, queue contents, and raw provider responses never cross this Interface. Current Chat and Map business flows do not yet consume it.
+Provider keys, endpoints, headers, stream URLs, queue contents, local media IDs, and raw provider responses never cross this Interface. Chat's track-share caller and Map's active-journey music/radio caller consume it; Chat search and external Map queue-request flows remain unimplemented.
 
 ### Calendar To Agenda Journey
 

@@ -1,11 +1,11 @@
-const SERVICE_WORKER_VERSION = 'schatphone-pwa-v4'
+const SERVICE_WORKER_VERSION = 'schatphone-pwa-v5'
 const RUNTIME_CACHE = `${SERVICE_WORKER_VERSION}-runtime`
 const DEFAULT_ICON = 'icons/pwa-icon-192.png'
-const FALLBACK_ICON = 'icons/pwa-icon.svg'
+const FALLBACK_ICON = DEFAULT_ICON
 const PRECACHE_URLS = [
   './',
   'manifest.webmanifest',
-  'icons/pwa-icon.svg',
+  'icons/favicon-32.png',
   'icons/pwa-icon-192.png',
   'icons/pwa-icon-512.png',
   'icons/pwa-maskable-512.png',

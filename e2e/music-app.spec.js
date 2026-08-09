@@ -302,6 +302,62 @@ test('Music Settings adds URL songs and device-local audio files', async ({ page
   expect(pageErrors).toEqual([])
 })
 
+test('Music configures and plays Radio Browser live stations without an API key', async ({
+  page,
+}) => {
+  const pageErrors = []
+  const requestUrls = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await seedMusicState(page)
+  await page.route('https://all.api.radio-browser.info/json/stations/search**', async (route) => {
+    requestUrls.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          stationuuid: 'radio-browser-bbc-world',
+          name: 'BBC World Service',
+          country: 'United Kingdom',
+          codec: 'MP3',
+          favicon: '',
+          url_resolved: silentWav,
+          tags: 'news,world',
+        },
+      ]),
+    })
+  })
+
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/music')
+  await page.getByTestId('music-settings-button').click()
+  await page.getByTestId('music-add-radio-browser').click()
+
+  await expect(page.getByTestId('music-radio-browser-form')).toContainText('Global live radio')
+  await expect(page.getByTestId('music-radio-browser-no-key')).toContainText(
+    'No API key required',
+  )
+  await expect(page.getByTestId('music-provider-key')).toHaveCount(0)
+  await page.getByTestId('music-provider-test').click()
+  await expect(page.locator('.music-provider-badge')).toContainText('Connected')
+  await page.getByTestId('music-provider-save').click()
+
+  await page.getByTestId('music-tab-search').click()
+  await page.getByTestId('music-search-input').fill('BBC')
+  await page.getByTestId('music-search-input').press('Enter')
+  await expect(page.locator('.is-search-results')).toContainText('BBC World Service')
+  await page.locator('.is-search-results .music-track-index').click()
+  await expect(page.getByTestId('music-player')).toContainText('BBC World Service')
+
+  const requestUrl = new URL(requestUrls.at(-1))
+  expect(requestUrl.searchParams.get('name')).toBe('BBC')
+  expect(requestUrl.searchParams.get('hidebroken')).toBe('true')
+  expect(requestUrl.searchParams.get('is_https')).toBe('true')
+  expect(requestUrl.searchParams.get('codec')).toBe('MP3')
+  expect(pageErrors).toEqual([])
+})
+
 test('Music searches, resolves, reads lyrics, and imports playlists through ChKSz', async ({
   page,
 }) => {

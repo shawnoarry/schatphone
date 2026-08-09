@@ -1,6 +1,6 @@
 # Map Calendar Reminders Implementation Workstreams / 地图日历提醒事项实施工作流
 
-Updated: 2026-08-03
+Updated: 2026-08-09
 
 ## 1. Workstream A: Map Travel Core
 
@@ -12,12 +12,14 @@ Updated: 2026-08-03
 - Gallery-owned source images referenced by Map-owned custom-pack metadata
 - geographic coordinates for real packs and normalized canvas coordinates for fictional packs
 - dated, versioned real-place catalogs with stable Map IDs, bilingual address/search metadata, and locally maintained coordinates
+- Map-owned persisted place-name display mode with system-language, Chinese, English, and bilingual choices across authored pins/search/Places/details; canonical records, coordinates, search indexing, journeys, and provider-owned basemap labels remain unchanged
 - current-world positioned pack/player-pin search with a fully browsable empty-focus catalog except discovery-only categories, wrapped shared category filters, normalized ranked multi-term matching, optional aliases/search terms, and bounded Latin typo tolerance; new places inherit standard name/address/category search, selected matches retain coordinate focus, and unmatched text remains an explicit free-form destination without online POI/geocoding
 - persisted per-map marker visibility with separate category and individual-place overrides; catalog filtering remains independent, hidden places remain searchable/usable, selected hidden places may appear in detail context, and discovery-only categories stay out of empty-query suggestions until explicitly requested
 - one shared two-level place taxonomy across renderers, search, lists, details, and Settings: broad user-facing groups own browse/filter/visibility semantics, while all stable icon subtypes remain editable and persisted; choosing an icon subtype automatically determines its group without rewriting legacy category IDs
 - explicit click-to-create/reselect required player coordinates without draggable everyday markers; address/description remains display/search metadata, geographic packs use latitude/longitude, fictional/custom packs use normalized canvas coordinates, and active trips lock map replacement rather than map interaction
 - exclusive coordinate-placement interaction in both renderers: existing markers are pointer-transparent and cannot replace the active place draft
 - map-first progressive disclosure: compact search, canonical role-position focus plus idle-only arbitrary-point selection, and independent Journey/Places/Footprints buttons whose drawers do not repeat that navigation; a static start-position focus plus persistent primary journey card while traveling; browse-only search and place detail during traveling/paused/arrived states without endpoint mutation; one Places-drawer link to the Settings-owned create/manage surface; typed and current-world-picked journey endpoints; active/paused/arrived progress, remaining time, and pending-update access; route cards only for explicit destination/runtime context; selected-place details on demand; and fictional faction legends collapsed by default
+- active-journey music/radio progressive disclosure: one traveling/paused-only icon opens a focused Map panel over the independent Music floating layer; Map consumes bounded projections and delegates explicit user actions to Music without receiving audio URLs, local media IDs, credentials, raw queues, or playback ownership
 - place-detail-to-Chat sharing through one normalized Map-owned snapshot, with Chat-owned recipient/send state, cancel-to-place, stable `placeId` return, and no location/trip mutation
 - `MapSceneCanvas` as the stable renderer seam: lazy-loaded OpenFreeMap + MapLibre for geographic packs, and `LocalMapCanvas` for fictional/custom packs plus geographic failure fallback
 - canonical provider-neutral coordinates and Map-owned pins/trips/world bindings remain usable when external style, tile, or WebGL startup fails; `/map/labs/kakao-compare` is an inert compatibility redirect

@@ -1,4 +1,5 @@
-import { readFileSync, realpathSync } from 'node:fs'
+import { copyFileSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { defineConfig, searchForWorkspaceRoot } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
@@ -19,6 +20,15 @@ const MAPLIBRE_RUNTIME_PACKAGES = [
   'vt-pbf',
 ]
 
+const DEPLOYMENT_BRANDS = new Set(['github', 'vercel', 'cloudflare'])
+const DEPLOYMENT_BRAND_FILES = [
+  'favicon-32.png',
+  'apple-touch-icon.png',
+  'pwa-icon-192.png',
+  'pwa-icon-512.png',
+  'pwa-maskable-512.png',
+]
+
 const belongsToPackage = (id, packageName) =>
   id.includes(`/node_modules/${packageName}/`)
 
@@ -36,6 +46,36 @@ const maplibreWorkerRuntimeAssets = {
   },
 }
 
+const resolveDeploymentBrand = (mode) => {
+  const configured = process.env.SCHATPHONE_DEPLOYMENT_BRAND?.trim().toLowerCase()
+  if (DEPLOYMENT_BRANDS.has(configured)) return configured
+  if (DEPLOYMENT_BRANDS.has(mode)) return mode
+  return 'github'
+}
+
+const deploymentBrandAssets = (brand) => {
+  let resolvedConfig
+  return {
+    name: 'deployment-brand-assets',
+    apply: 'build',
+    configResolved(config) {
+      resolvedConfig = config
+    },
+    closeBundle() {
+      const sourceDir = resolve(resolvedConfig.publicDir, 'icons', 'brands', brand)
+      const targetDir = resolve(
+        resolvedConfig.root,
+        resolvedConfig.build.outDir,
+        'icons',
+      )
+      mkdirSync(targetDir, { recursive: true })
+      for (const filename of DEPLOYMENT_BRAND_FILES) {
+        copyFileSync(resolve(sourceDir, filename), resolve(targetDir, filename))
+      }
+    },
+  }
+}
+
 const resolveAppBase = () => {
   const configured = process.env.SCHATPHONE_BASE_PATH?.trim()
   if (configured) {
@@ -46,7 +86,12 @@ const resolveAppBase = () => {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [vue(), tailwindcss(), maplibreWorkerRuntimeAssets],
+  plugins: [
+    vue(),
+    tailwindcss(),
+    maplibreWorkerRuntimeAssets,
+    deploymentBrandAssets(resolveDeploymentBrand(mode)),
+  ],
   base: resolveAppBase(),
   optimizeDeps: {
     exclude: ['maplibre-gl'],

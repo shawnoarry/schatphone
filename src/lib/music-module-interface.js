@@ -12,6 +12,39 @@ export const MUSIC_INTEGRATION_ACTIONS = Object.freeze({
   ENQUEUE: 'enqueue',
 })
 
+export const MUSIC_JOURNEY_RADIO_STATIONS = Object.freeze([
+  Object.freeze({
+    id: 'route_mix',
+    icon: 'fas fa-shuffle',
+    labelZh: '沿途混播',
+    labelEn: 'Route Mix',
+    detailZh: '收藏、导入与已接入音乐',
+    detailEn: 'Favorites, imports, and connected music',
+    genreTokens: Object.freeze([]),
+    fallbackOffset: 0,
+  }),
+  Object.freeze({
+    id: 'city_pulse',
+    icon: 'fas fa-city',
+    labelZh: '城市节拍',
+    labelEn: 'City Pulse',
+    detailZh: '电子、另类与独立流行',
+    detailEn: 'Electronic, alternative, and indie pop',
+    genreTokens: Object.freeze(['electronic', 'alternative', 'indie pop']),
+    fallbackOffset: 1,
+  }),
+  Object.freeze({
+    id: 'night_window',
+    icon: 'fas fa-moon',
+    labelZh: '夜间慢行',
+    labelEn: 'Night Window',
+    detailZh: '梦幻流行、灵魂乐与氛围',
+    detailEn: 'Dream pop, soul, and ambient',
+    genreTokens: Object.freeze(['dream pop', 'soul', 'ambient']),
+    fallbackOffset: 0,
+  }),
+])
+
 const sourceValues = new Set(Object.values(MUSIC_INTEGRATION_SOURCES))
 const actionValues = new Set(Object.values(MUSIC_INTEGRATION_ACTIONS))
 
@@ -59,9 +92,75 @@ export const resolveMusicIntegrationCapabilities = (policy = {}) => ({
   map: {
     open: true,
     readNowPlaying: policy.mapNowPlayingEnabled !== false,
+    journeyControls: policy.mapNowPlayingEnabled !== false,
+    journeyRadio: policy.mapNowPlayingEnabled !== false,
     requestQueue: policy.externalQueueRequestsEnabled === true,
     directPlayback: false,
   },
+})
+
+export const createMusicJourneyTrackProjection = (trackInput) => {
+  const track = normalizeMusicTrack(trackInput)
+  if (!track.id) return null
+  return {
+    trackRef: {
+      id: track.id,
+      providerId: track.providerId,
+    },
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    coverUrl: track.coverUrl,
+    durationSec: track.durationSec,
+  }
+}
+
+const normalizePlayableJourneyTracks = (tracksInput, canPlayTrack = () => true) => {
+  const ids = new Set()
+  return (Array.isArray(tracksInput) ? tracksInput : [])
+    .map((track) => normalizeMusicTrack(track))
+    .filter((track) => {
+      if (!track.id || ids.has(track.id) || !canPlayTrack(track)) return false
+      ids.add(track.id)
+      return true
+    })
+}
+
+export const resolveMusicJourneyRadioQueue = (
+  stationId,
+  tracksInput,
+  canPlayTrack = () => true,
+) => {
+  const station = MUSIC_JOURNEY_RADIO_STATIONS.find((item) => item.id === stationId)
+  if (!station) return []
+  const tracks = normalizePlayableJourneyTracks(tracksInput, canPlayTrack)
+  if (!station.genreTokens.length || tracks.length <= 2) return tracks
+
+  const matched = tracks.filter((track) => {
+    const genre = normalizeText(track.genre, 120).toLowerCase()
+    return station.genreTokens.some((token) => genre.includes(token))
+  })
+  if (matched.length >= 2) return matched
+
+  const fallback = tracks.filter((_, index) => index % 2 === station.fallbackOffset)
+  return fallback.length >= 2 ? fallback : tracks
+}
+
+export const createMusicJourneyRadioCatalog = (
+  tracksInput,
+  canPlayTrack = () => true,
+) => MUSIC_JOURNEY_RADIO_STATIONS.map((station) => {
+  const queue = resolveMusicJourneyRadioQueue(station.id, tracksInput, canPlayTrack)
+  return {
+    id: station.id,
+    icon: station.icon,
+    labelZh: station.labelZh,
+    labelEn: station.labelEn,
+    detailZh: station.detailZh,
+    detailEn: station.detailEn,
+    trackCount: queue.length,
+    preview: queue.slice(0, 3).map(createMusicJourneyTrackProjection).filter(Boolean),
+  }
 })
 
 export const createMusicTrackSharePayload = (trackInput, policy = {}) => {

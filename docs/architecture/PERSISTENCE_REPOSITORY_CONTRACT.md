@@ -16,7 +16,7 @@ Confirmed product direction and proposed technical closure:
 
 1. browser and installable PWA clients remain complete first-class clients;
 2. each isolated browser profile/site-data container or separately isolated desktop Web App container owns exactly one current save; different containers remain independent and never auto-sync, silently merge, or expose internal save slots;
-3. tabs that share one storage container share one current save; after a bounded safe wait, a competing later tab remains read-only and exposes only retry and refresh/reload-current-save actions, never last-write-wins or force takeover;
+3. tabs that share one storage container share one current save; after a bounded safe wait, a competing later tab remains a read-only preview and exposes only retry and refresh/reload-current-save actions. A cooperative page exit may broadcast a bounded release hint so waiting pages automatically start the same safe retry, but the lease remains authoritative and there is never last-write-wins or force takeover;
 4. persistent-storage permission is never requested on first launch; it is requested contextually before the first qualifying high-volume durable action, while Settings exposes current status and an explicit retry;
 5. the Repository uses a hybrid physical model: immutable generic record versions plus generation membership for structured owner records, with specialized stores only where correctness requires them;
 6. restore and migration activation use a staged generation plus one atomic active-generation pointer and crash journal;
@@ -295,7 +295,7 @@ All mutating Repository operations cross a WriteCoordinator seam. Its Interface 
 - heartbeat/renewal when the chosen Adapter needs it;
 - commit/release and crash-expiry evidence;
 - stale-writer rejection using active generation/revision;
-- a cross-tab notification containing only bounded coordination metadata;
+- a subscribable cross-tab notification containing only bounded coordination metadata;
 - structured `busy`, `timed_out`, `stale_generation`, `lease_lost`, and `unsupported` outcomes.
 
 Version 1 uses one container-wide write scope, `repository-write`. The preferred Adapter is an exclusive Web Lock plus bounded BroadcastChannel metadata. When Web Locks is unavailable, `write_leases/repository-write` provides an IndexedDB compare-and-swap lease plus fencing token; BroadcastChannel remains an optimization, not authority.
@@ -306,11 +306,12 @@ Same-container behavior:
 
 1. a page captures the active generation/pointer revision before requesting the write lease;
 2. if it acquires the lease, it rechecks that revision before staging and again before commit;
-3. if another page still owns the lease after the safe wait, the later page enters `read_only_conflict`, discards no durable data, and offers `Retry` and `Refresh current save`;
+3. if another page still owns the lease after the safe wait, the later page enters `read_only_conflict` with cause `active_writer`, discards no durable data, and presents a read-only preview with `Retry` and `Refresh current save`; a stale generation or reconciliation failure remains a distinct blocking conflict;
 4. `Retry` starts a new bounded acquisition attempt and keeps the page read-only until acquisition plus active-revision recheck succeeds;
-5. `Refresh current save` discards only that page's uncommitted in-memory mutation, reloads the authoritative active generation, and permits a later ordinary retry; it does not merge local edits;
-6. lease loss or stale revision aborts the inactive operation with a structured error and never changes the active pointer;
-7. there is no force-takeover action, last-write-wins path, timestamp winner, background merge, or silent success.
+5. a normal page exit releases ownership cooperatively and broadcasts `released`; waiting previews may use that message only as a hint to start the same bounded retry. If several previews retry, the lease promotes at most one and all others remain read-only;
+6. `Refresh current save` discards only that page's uncommitted in-memory mutation, reloads the authoritative active generation, and permits a later ordinary retry; it does not merge local edits;
+7. lease loss or stale revision aborts the inactive operation with a structured error and never changes the active pointer;
+8. there is no force-takeover action, last-write-wins path, timestamp winner, background merge, or silent success.
 
 Different isolated storage containers do not share this Coordinator and do not coordinate through network, backup, or device identity.
 

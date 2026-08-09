@@ -5,6 +5,8 @@ import {
   MUSIC_PROVIDER_METHODS,
   MUSIC_TRACK_SOURCE_TYPES,
   buildMusicProviderSearchRequest,
+  createRadioBrowserMusicProviderProfile,
+  isRadioBrowserMusicProviderProfile,
   normalizeMusicProviderProfile,
   normalizeMusicProviderResults,
   normalizeMusicState,
@@ -14,8 +16,10 @@ import {
 import {
   MUSIC_INTEGRATION_ACTIONS,
   buildMusicIntegrationRoute,
+  createMusicJourneyRadioCatalog,
   createMusicNowPlayingProjection,
   createMusicTrackSharePayload,
+  resolveMusicJourneyRadioQueue,
   resolveMusicIntegrationCapabilities,
 } from '../src/lib/music-module-interface'
 
@@ -49,6 +53,61 @@ const providerProfile = {
 }
 
 describe('music provider and integration contracts', () => {
+  test('builds the no-key Radio Browser live-station preset', () => {
+    const profile = createRadioBrowserMusicProviderProfile({ id: 'radio_browser' })
+    const request = buildMusicProviderSearchRequest({
+      profile,
+      query: 'BBC',
+      limit: 5,
+    })
+
+    expect(isRadioBrowserMusicProviderProfile(profile)).toBe(true)
+    expect(profile).toMatchObject({
+      name: 'Radio Browser',
+      authMode: MUSIC_AUTH_MODES.NONE,
+      queryParam: 'name',
+      fieldMap: {
+        id: 'stationuuid',
+        title: 'name',
+        artist: 'country',
+        coverUrl: 'favicon',
+        audioUrl: 'url_resolved',
+        genre: 'tags',
+      },
+    })
+    expect(request.url).toBe(
+      'https://all.api.radio-browser.info/json/stations/search?hidebroken=true&order=clickcount&reverse=true&is_https=true&codec=MP3&name=BBC&limit=5',
+    )
+    expect(request.options.headers).toEqual({ Accept: 'application/json' })
+
+    expect(
+      normalizeMusicProviderResults(
+        [
+          {
+            stationuuid: 'station-1',
+            name: 'BBC World Service',
+            country: 'United Kingdom',
+            codec: 'MP3',
+            favicon: 'https://example.com/bbc.png',
+            url_resolved: 'https://stream.example.com/bbc',
+            tags: 'news,world',
+          },
+        ],
+        profile,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        id: 'station-1',
+        title: 'BBC World Service',
+        artist: 'United Kingdom',
+        album: 'MP3',
+        audioUrl: 'https://stream.example.com/bbc',
+        genre: 'news,world',
+        durationSec: 0,
+      }),
+    ])
+  })
+
   test('builds a credentialed request without persisting sensitive headers', () => {
     const normalized = normalizeMusicProviderProfile(providerProfile)
     expect(normalized.headers).toEqual({ 'X-Client': 'schatphone' })
@@ -60,9 +119,7 @@ describe('music provider and integration contracts', () => {
       limit: 12,
     })
 
-    expect(request.url).toBe(
-      'https://music.example.com/v1/catalog/search?term=Blue+Hour&take=12',
-    )
+    expect(request.url).toBe('https://music.example.com/v1/catalog/search?term=Blue+Hour&take=12')
     expect(request.options).toMatchObject({
       method: 'GET',
       headers: {
@@ -167,14 +224,16 @@ describe('music provider and integration contracts', () => {
     })
     const state = normalizeMusicState({
       profiles: [profile],
-      savedTracks: [{
-        id: 'chksz_public:netease:7',
-        title: 'Ephemeral',
-        artist: 'Artist',
-        providerId: profile.id,
-        audioUrl: 'https://signed.example.com/temporary.mp3',
-        sourceRef: { type: 'chksz', platform: 'netease', id: '7' },
-      }],
+      savedTracks: [
+        {
+          id: 'chksz_public:netease:7',
+          title: 'Ephemeral',
+          artist: 'Artist',
+          providerId: profile.id,
+          audioUrl: 'https://signed.example.com/temporary.mp3',
+          sourceRef: { type: 'chksz', platform: 'netease', id: '7' },
+        },
+      ],
     })
 
     expect(profile).toEqual({
@@ -269,16 +328,24 @@ describe('music provider and integration contracts', () => {
       currentTime: 18,
     })
     expect(JSON.stringify({ share, nowPlaying })).not.toContain('secret-stream')
-    expect(buildMusicIntegrationRoute({
-      sourceModule: 'chat',
-      action: MUSIC_INTEGRATION_ACTIONS.SEARCH,
-      query: 'Shared Song',
-    })).toEqual({
+    expect(
+      buildMusicIntegrationRoute({
+        sourceModule: 'chat',
+        action: MUSIC_INTEGRATION_ACTIONS.SEARCH,
+        query: 'Shared Song',
+      }),
+    ).toEqual({
       path: '/music',
       query: { source: 'chat', action: 'search', q: 'Shared Song' },
     })
-    expect(resolveMusicIntegrationCapabilities({ externalQueueRequestsEnabled: false }).map)
-      .toMatchObject({ requestQueue: false, directPlayback: false })
+    expect(
+      resolveMusicIntegrationCapabilities({ externalQueueRequestsEnabled: false }).map,
+    ).toMatchObject({
+      requestQueue: false,
+      directPlayback: false,
+      journeyControls: true,
+      journeyRadio: true,
+    })
 
     const localTrack = {
       ...track,
@@ -292,5 +359,52 @@ describe('music provider and integration contracts', () => {
     }
     expect(JSON.stringify(localPayloads)).not.toContain('private-local-audio')
     expect(JSON.stringify(localPayloads)).not.toContain('music_media_private')
+  })
+
+  test('builds bounded journey radio stations without exposing playback sources', () => {
+    const tracks = [
+      {
+        id: 'city_track',
+        title: 'City Track',
+        artist: 'Artist A',
+        genre: 'Indie Electronic',
+        audioUrl: 'https://private.example.com/city.mp3',
+      },
+      {
+        id: 'alternative_track',
+        title: 'Alternative Track',
+        artist: 'Artist B',
+        genre: 'Alternative',
+        audioUrl: 'https://private.example.com/alternative.mp3',
+      },
+      {
+        id: 'night_track',
+        title: 'Night Track',
+        artist: 'Artist C',
+        genre: 'Ambient',
+        sourceRef: { type: 'local_file', mediaId: 'music_media_night' },
+      },
+      {
+        id: 'soul_track',
+        title: 'Soul Track',
+        artist: 'Artist D',
+        genre: 'Neo Soul',
+        audioUrl: 'https://private.example.com/soul.mp3',
+      },
+    ]
+    const canPlayTrack = (track) => Boolean(track.audioUrl || track.sourceRef?.mediaId)
+    const catalog = createMusicJourneyRadioCatalog(tracks, canPlayTrack)
+    const cityQueue = resolveMusicJourneyRadioQueue('city_pulse', tracks, canPlayTrack)
+    const nightQueue = resolveMusicJourneyRadioQueue('night_window', tracks, canPlayTrack)
+
+    expect(catalog.map((station) => station.id)).toEqual([
+      'route_mix',
+      'city_pulse',
+      'night_window',
+    ])
+    expect(cityQueue.map((track) => track.id)).toEqual(['city_track', 'alternative_track'])
+    expect(nightQueue.map((track) => track.id)).toEqual(['night_track', 'soul_track'])
+    expect(JSON.stringify(catalog)).not.toContain('private.example.com')
+    expect(JSON.stringify(catalog)).not.toContain('music_media_night')
   })
 })

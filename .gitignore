@@ -12,6 +12,10 @@ dist
 dist-ssr
 test-results
 playwright-report
+tmp/brand-build/
+output/imagegen/schatphone-deployment-brand/vercel-maskable-master.png
+output/imagegen/schatphone-deployment-brand/vercel-maskable-master-v2.png
+output/imagegen/schatphone-deployment-brand/vercel-maskable-master-v3.png
 *.local
 .env
 .env.*

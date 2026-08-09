@@ -9,11 +9,58 @@ export const WIDGET_IMPORT_LIMITS = Object.freeze({
 
 const ALLOWED_IMPORT_KEYS = new Set(['name', 'size', 'code'])
 
+const FORBIDDEN_WIDGET_TAGS = new Set([
+  'a',
+  'area',
+  'audio',
+  'base',
+  'button',
+  'embed',
+  'form',
+  'frame',
+  'frameset',
+  'iframe',
+  'input',
+  'link',
+  'meta',
+  'object',
+  'option',
+  'portal',
+  'script',
+  'select',
+  'source',
+  'textarea',
+  'track',
+  'video',
+])
+
+const FORBIDDEN_WIDGET_ATTRIBUTES = new Set([
+  'action',
+  'autofocus',
+  'contenteditable',
+  'download',
+  'formaction',
+  'href',
+  'ping',
+  'srcdoc',
+  'tabindex',
+  'target',
+  'xlink:href',
+])
+
+const DANGEROUS_CSS_PATTERNS = [
+  { code: 'CSS_IMPORT', regex: /@import\b/i },
+  { code: 'CSS_EXPRESSION', regex: /expression\s*\(/i },
+  { code: 'CSS_BEHAVIOR', regex: /(?:behavior|-moz-binding)\s*:/i },
+  { code: 'CSS_JS_URL', regex: /url\s*\(\s*['"]?\s*(?:javascript|data\s*:\s*text\/html)\s*:/i },
+]
+
 const DANGEROUS_CODE_PATTERNS = [
-  { code: 'SCRIPT_TAG', regex: /<\s*script\b/i },
+  { code: 'ACTIVE_TAG', regex: /<\s*(?:script|iframe|object|embed|form|button|input|select|textarea|audio|video|link|meta|base|a)\b/i },
   { code: 'INLINE_HANDLER', regex: /\bon[a-z0-9_-]+\s*=/i },
   { code: 'JS_PROTOCOL', regex: /javascript\s*:/i },
-  { code: 'IFRAME_TAG', regex: /<\s*iframe\b/i },
+  { code: 'NAVIGATION_ATTRIBUTE', regex: /\b(?:href|srcdoc|action|formaction|ping)\s*=/i },
+  ...DANGEROUS_CSS_PATTERNS,
 ]
 
 const toInt = (value, fallback = 0) => {
@@ -27,6 +74,123 @@ const resolveLimits = (options = {}) => ({
   maxNameChars: Math.max(1, toInt(options.maxNameChars, WIDGET_IMPORT_LIMITS.maxNameChars)),
   maxCodeChars: Math.max(100, toInt(options.maxCodeChars, WIDGET_IMPORT_LIMITS.maxCodeChars)),
 })
+
+const createWidgetMarkupTemplate = (code) => {
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') return null
+  const template = document.createElement('template')
+  template.innerHTML = code
+  return template
+}
+
+const inspectWidgetMarkup = (template) => {
+  const elements = [...template.content.querySelectorAll('*')]
+  for (const element of elements) {
+    const tagName = element.tagName.toLowerCase()
+    if (FORBIDDEN_WIDGET_TAGS.has(tagName)) {
+      return { code: 'DANGEROUS_CODE', pattern: `ELEMENT_${tagName.toUpperCase()}` }
+    }
+
+    if (tagName === 'style') {
+      const danger = DANGEROUS_CSS_PATTERNS.find((rule) => rule.regex.test(element.textContent || ''))
+      if (danger) return { code: 'DANGEROUS_CODE', pattern: danger.code }
+    }
+
+    for (const attribute of [...element.attributes]) {
+      const attributeName = attribute.name.toLowerCase()
+      if (attributeName.startsWith('on')) {
+        return { code: 'DANGEROUS_CODE', pattern: 'INLINE_HANDLER' }
+      }
+      if (FORBIDDEN_WIDGET_ATTRIBUTES.has(attributeName)) {
+        return { code: 'DANGEROUS_CODE', pattern: `ATTRIBUTE_${attributeName.toUpperCase()}` }
+      }
+      if (attributeName === 'style') {
+        const danger = DANGEROUS_CSS_PATTERNS.find((rule) => rule.regex.test(attribute.value || ''))
+        if (danger) return { code: 'DANGEROUS_CODE', pattern: danger.code }
+      }
+      if ((attributeName === 'src' || attributeName === 'srcset') && /javascript\s*:|data\s*:\s*text\/html/i.test(attribute.value || '')) {
+        return { code: 'DANGEROUS_CODE', pattern: 'UNSAFE_MEDIA_SOURCE' }
+      }
+    }
+  }
+  return null
+}
+
+const findWidgetAppearanceRisk = (code) => {
+  const template = createWidgetMarkupTemplate(code)
+  if (template) return inspectWidgetMarkup(template)
+
+  const danger = DANGEROUS_CODE_PATTERNS.find((rule) => rule.regex.test(code))
+  return danger ? { code: 'DANGEROUS_CODE', pattern: danger.code } : null
+}
+
+export const validateWidgetAppearanceCode = (codeInput, options = {}) => {
+  const code = typeof codeInput === 'string' ? codeInput : ''
+  const limits = resolveLimits(options)
+  if (!code.trim()) {
+    return { ok: false, code, errors: [{ code: 'EMPTY_CODE' }], limits }
+  }
+  if (code.length > limits.maxCodeChars) {
+    return {
+      ok: false,
+      code,
+      errors: [{ code: 'CODE_TOO_LONG', max: limits.maxCodeChars }],
+      limits,
+    }
+  }
+
+  const danger = findWidgetAppearanceRisk(code)
+  return danger
+    ? { ok: false, code, errors: [danger], limits }
+    : { ok: true, code, errors: [], limits }
+}
+
+export const sanitizeWidgetAppearanceCode = (codeInput) => {
+  const code = typeof codeInput === 'string' ? codeInput : ''
+  if (!code || !findWidgetAppearanceRisk(code)) return { code, changed: false }
+
+  const template = createWidgetMarkupTemplate(code)
+  if (!template) return { code: '', changed: true }
+
+  let changed = false
+  for (const element of [...template.content.querySelectorAll('*')]) {
+    const tagName = element.tagName.toLowerCase()
+    if (FORBIDDEN_WIDGET_TAGS.has(tagName)) {
+      element.remove()
+      changed = true
+      continue
+    }
+
+    if (
+      tagName === 'style' &&
+      DANGEROUS_CSS_PATTERNS.some((rule) => rule.regex.test(element.textContent || ''))
+    ) {
+      element.remove()
+      changed = true
+      continue
+    }
+
+    for (const attribute of [...element.attributes]) {
+      const attributeName = attribute.name.toLowerCase()
+      const unsafeStyle =
+        attributeName === 'style' &&
+        DANGEROUS_CSS_PATTERNS.some((rule) => rule.regex.test(attribute.value || ''))
+      const unsafeSource =
+        (attributeName === 'src' || attributeName === 'srcset') &&
+        /javascript\s*:|data\s*:\s*text\/html/i.test(attribute.value || '')
+      if (
+        attributeName.startsWith('on') ||
+        FORBIDDEN_WIDGET_ATTRIBUTES.has(attributeName) ||
+        unsafeStyle ||
+        unsafeSource
+      ) {
+        element.removeAttribute(attribute.name)
+        changed = true
+      }
+    }
+  }
+
+  return { code: template.innerHTML, changed }
+}
 
 export const validateWidgetImportPayload = (payload, options = {}) => {
   const fallbackName =
@@ -149,34 +313,18 @@ export const validateWidgetImportPayload = (payload, options = {}) => {
       return
     }
 
-    const code = typeof item.code === 'string' ? item.code : ''
-    if (!code.trim()) {
-      errors.push({ index, code: 'EMPTY_CODE' })
-      return
-    }
-    if (code.length > limits.maxCodeChars) {
-      errors.push({
-        index,
-        code: 'CODE_TOO_LONG',
-        max: limits.maxCodeChars,
-      })
-      return
-    }
-
-    const danger = DANGEROUS_CODE_PATTERNS.find((rule) => rule.regex.test(code))
-    if (danger) {
-      errors.push({
-        index,
-        code: 'DANGEROUS_CODE',
-        pattern: danger.code,
-      })
+    const codeValidation = validateWidgetAppearanceCode(item.code, {
+      maxCodeChars: limits.maxCodeChars,
+    })
+    if (!codeValidation.ok) {
+      errors.push({ index, ...(codeValidation.errors[0] || { code: 'DANGEROUS_CODE' }) })
       return
     }
 
     normalizedItems.push({
       name,
       size,
-      code,
+      code: codeValidation.code,
     })
   })
 

@@ -165,12 +165,12 @@ Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台
 | 商户菜单商品图 | 55 | 十一家均已交付并接入完整 `menu-item-01.png` 到 `menu-item-05.png`；新增 36 张正式文件统一为 `768x768` RGB PNG |
 | 平台分类图标 | 10 | 10 个 `1024x1024` 真正透明 RGBA PNG 已交付并接入；旧棋盘格 RGB 图仅保留为历史源图 |
 | 平台装饰 | 4 | 骑手已接受为真正透明的 `1024x1024` RGBA PNG；其余优惠券、外卖袋和小票类运行时素材仍待复核 |
-| 当前页面订单流程图 | 7 | 缺 7：结算、空订单和五个当前状态 |
+| 当前页面订单流程图 | 7 | 7 张 `1024x1024` 真透明 RGBA PNG 已接入结算、空订单和五个当前状态；加载失败仍回退诊断图 |
 | 未来延误状态图 | 1 | 缺 1，当前不显示，可后置 |
 | 摄影型商户订单标记 | 7 | 七张 `768x768` 真正透明 RGBA PNG 已交付并接入；四家 Logo 型商户继续复用店铺 Logo |
 | Baemin 官方品牌图形 | 0 个生成目标 | 不由生图模型重画；如后续使用，必须接入来源明确的正式文件并单独记录来源 |
 
-十一家菜单的 `55` 张正式素材与全部十一家商户的紧凑订单身份路径现已接入。此次选择清单明确保留 V2 黑蒜无骨鸡块、V3 苹果肉桂司康和 V3 花德双拼鸡翅，并排除误修薯条及未采用的黑蒜 V3/V4。平台装饰、订单流程占位图与未来延误状态图继续按各自行保留的状态单独推进；五张既有商户封面仍须按新摄影胶囊复核，不得用“文件已存在”掩盖风格不符。
+十一家菜单的 `55` 张正式素材、全部十一家商户的紧凑订单身份路径与七张当前订单流程图现已接入。此次选择清单明确保留 V2 黑蒜无骨鸡块、V3 苹果肉桂司康和 V3 花德双拼鸡翅，并排除误修薯条及未采用的黑蒜 V3/V4。平台装饰与未来延误状态图继续按各自保留状态单独推进；五张既有商户封面仍须按新摄影胶囊复核，不得用“文件已存在”掩盖风格不符。
 
 ### Resume Paths And Generation Order / 续接路径与生成顺序
 
@@ -192,7 +192,7 @@ Baemin 是 Food Delivery 伪文件夹中与独立店铺 mini app 平级的平台
 3. 脆脆炸鸡屋原创 IP 锚点已冻结在 `output/imagegen/baemin-platform/references/chicken-crisp-ip-anchor-01.png`；任何带 IP 的商品图都要引用同一锚点。
 4. 周末活动海报、两张新增摄影封面、四张透明商户 Logo 和十张透明分类图标均已完成并接入。Baemin 名称继续由代码渲染，官方品牌图形不进入生图队列。
 5. 菜单五图家族与七个摄影型商户订单标识已完成；后续替换必须继续记录请求参数、候选比较和接受理由，不跨店混用参考图。
-6. 当前订单流程图与平台装饰按保留状态单独推进；未来延误状态继续标为可后置。
+6. 七张当前订单流程图已接入稳定素材位，加载失败仍回退诊断图；平台装饰继续按保留状态单独推进，未来延误状态继续标为可后置。
 7. 新增菜单与订单标识已经接入 `public/`；实际桌面与移动页面检查作为运行时验收门槛保留。
 
 ### Acceptance Gate / 验收门槛
@@ -587,7 +587,7 @@ English: Cute polished 3D food delivery receipt with small heart icon, teal and 
 
 ## 6. Platform Order Flow PNG Pack / 平台订单流程 PNG 组
 
-用途：替换结算页、订单列表和订单详情里已经预留好的稳定素材位。所有待补位置当前统一显示高对比诊断占位图，便于在页面中直接发现；新素材交付后再逐项接入。
+用途：为结算页、订单列表和订单详情提供稳定订单流程素材。七个当前页面素材位已接入正式图；真实文件加载失败时仍统一切换到高对比诊断占位图。未来延误状态尚未显示，继续后置。
 
 诊断占位图：
 
@@ -612,16 +612,16 @@ public/images/ui-assets/apps/food-delivery/platform/orders/
 
 ### Required Core Assets / 必须准备
 
-| 文件名                                    | 对应素材位                         | 内容建议                                         | 当前回退                   |
-| ----------------------------------------- | ---------------------------------- | ------------------------------------------------ | -------------------------- |
-| `platform-checkout-takeout-bag-01.png`    | `platform-checkout-takeout-bag`    | 封好的外卖袋、餐盒与小票，主体偏右，轮廓简洁     | 诊断占位图                 |
-| `platform-order-status-placed-01.png`     | `platform-order-status-placed`     | 小票、确认勾和刚封好的餐袋                       | 诊断占位图                 |
-| `platform-order-status-preparing-01.png`  | `platform-order-status-preparing`  | 厨房出餐台、蒸汽餐盒或厨师帽，不出现真人品牌制服 | 诊断占位图                 |
-| `platform-order-status-delivering-01.png` | `platform-order-status-delivering` | 骑手与青绿色电动车，方向朝右                     | 诊断占位图                 |
-| `platform-order-status-delivered-01.png`  | `platform-order-status-delivered`  | 门口餐袋、完成勾与温和庆祝元素                   | 诊断占位图                 |
-| `platform-order-status-cancelled-01.png`  | `platform-order-status-cancelled`  | 收起的餐袋、小票与克制取消符号                   | 诊断占位图                 |
-| `platform-order-status-delayed-01.png`    | 未来延误状态位                     | 骑手、时钟和小范围琥珀色提醒                     | 暂未显示，留给后续订单事件 |
-| `platform-orders-empty-receipt-01.png`    | `platform-orders-empty-receipt`    | 空白小票、餐叉和轻微爱心点缀                     | 诊断占位图                 |
+| 文件名                                    | 对应素材位                         | 内容建议                                         | 当前状态                         |
+| ----------------------------------------- | ---------------------------------- | ------------------------------------------------ | -------------------------------- |
+| `platform-checkout-takeout-bag-01.png`    | `platform-checkout-takeout-bag`    | 封好的外卖袋、餐盒与小票，主体偏右，轮廓简洁     | 已接入；加载失败回退诊断图       |
+| `platform-order-status-placed-01.png`     | `platform-order-status-placed`     | 小票、确认勾和刚封好的餐袋                       | 已接入；加载失败回退诊断图       |
+| `platform-order-status-preparing-01.png`  | `platform-order-status-preparing`  | 厨房出餐台、蒸汽餐盒或厨师帽，不出现真人品牌制服 | 已接入；加载失败回退诊断图       |
+| `platform-order-status-delivering-01.png` | `platform-order-status-delivering` | 骑手与青绿色电动车，方向朝右                     | 已接入；加载失败回退诊断图       |
+| `platform-order-status-delivered-01.png`  | `platform-order-status-delivered`  | 门口餐袋、完成勾与温和庆祝元素                   | 已接入；加载失败回退诊断图       |
+| `platform-order-status-cancelled-01.png`  | `platform-order-status-cancelled`  | 收起的餐袋、小票与克制取消符号                   | 已接入；加载失败回退诊断图       |
+| `platform-order-status-delayed-01.png`    | 未来延误状态位                     | 骑手、时钟和小范围琥珀色提醒                     | 暂未显示，留给后续订单事件       |
+| `platform-orders-empty-receipt-01.png`    | `platform-orders-empty-receipt`    | 空白小票、餐叉和轻微爱心点缀                     | 已接入；加载失败回退诊断图       |
 
 统一生成提示：
 
@@ -831,14 +831,14 @@ English: Standalone 48px vector mark for the Peach Cloud dessert-drinks brand wi
 
 Dash Grill 是原创连锁快餐概念，视觉使用 Tomato Red `#E33D2E`、Mustard Yellow `#FFC833`、Paper `#FFF9EC` 和 Ink `#201A17`。它可以传达高频套餐、汉堡、炸鸡和奶昔的快节奏消费感，但不得使用麦当劳或其他现实品牌的名称、拱门、吉祥物、制服、包装、门店照片或可识别商标。
 
-下列 `11` 张正式 PNG 已交付到稳定运行时路径，并完成桌面 Chromium 与模拟 Pixel 5 的 Home、Menu、Bag 和 Detail 页面验收；未发现诊断占位、横向溢出或页面错误。CLI 请求、候选母版、联系表和接受记录保存在 `output/imagegen/dash-grill/`，运行时只依赖 `public/images/ui-assets/apps/food-delivery/dash-grill/`。
+下列 `13` 张正式 PNG 已交付到稳定运行时路径：一张 Hero、十张单品图和两张默认套餐托盘图。Home、Menu、Bag 和 Detail 已覆盖桌面 Chromium 与模拟 Pixel 5；未发现诊断占位、横向溢出或页面错误。CLI 请求、候选母版、联系表和接受记录保存在 `output/imagegen/dash-grill/`，运行时只依赖 `public/images/ui-assets/apps/food-delivery/dash-grill/`。
 
 ### Asset Contract / 素材合同
 
 ```text
 public/images/ui-assets/apps/food-delivery/dash-grill/
 ├─ cover/dash-grill-cover-01.png
-└─ products/
+├─ products/
    ├─ dash-grill-item-01.png
    ├─ dash-grill-item-02.png
    ├─ dash-grill-item-03.png
@@ -849,6 +849,9 @@ public/images/ui-assets/apps/food-delivery/dash-grill/
    ├─ dash-grill-item-08.png
    ├─ dash-grill-item-09.png
    └─ dash-grill-item-10.png
+└─ combos/
+   ├─ dash-grill-double-stack-combo-01.png
+   └─ dash-grill-golden-chicken-combo-01.png
 ```
 
 | 文件                              | 菜品 / 用途                         | 建议尺寸与构图                                 |
@@ -864,6 +867,10 @@ public/images/ui-assets/apps/food-delivery/dash-grill/
 | `products/dash-grill-item-08.png` | Garden Crunch Wrap                  | `768x768`；烤鸡蔬菜卷饼                        |
 | `products/dash-grill-item-09.png` | Vanilla Cloud Shake                 | `768x768`；香草奶昔与柔软奶油顶                |
 | `products/dash-grill-item-10.png` | Choco Swirl Sundae                  | `768x768`；巧克力旋纹香草圣代                  |
+| `combos/dash-grill-double-stack-combo-01.png` | Dash Double Stack 默认套餐 | `1024x1024`；双层牛肉堡、海盐薯条与无品牌可乐同托盘 |
+| `combos/dash-grill-golden-chicken-combo-01.png` | Golden Chicken Stack 默认套餐 | `1024x1024`；脆鸡堡、海盐薯条与无品牌可乐同托盘 |
+
+两张套餐图只在默认海盐薯条与 Fountain Cola 同时选中时显示；用户更换任一搭配后，大图恢复对应汉堡单品，右侧选择图继续呈现实际小食与饮品。
 
 ### Cover Prompt / 封面提示词
 

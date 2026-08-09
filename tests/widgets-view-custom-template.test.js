@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -10,6 +10,7 @@ import { useSystemStore } from '../src/stores/system'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 
 const DummyView = { template: '<div />' }
+let mobileLayoutMatches = false
 
 const createTestRouter = () =>
   createRouter({
@@ -21,12 +22,13 @@ const createTestRouter = () =>
     ],
   })
 
-const mountWidgetsView = async () => {
+const mountWidgetsView = async ({ attachToDocument = false } = {}) => {
   const router = createTestRouter()
   await router.push('/widgets')
   await router.isReady()
 
   const wrapper = mount(WidgetsView, {
+    ...(attachToDocument ? { attachTo: document.body } : {}),
     global: {
       plugins: [router],
     },
@@ -42,6 +44,23 @@ describe('Widgets custom template starters', () => {
     localStorage.clear()
     resetDialogServiceForTest()
     setActivePinia(createPinia())
+    mobileLayoutMatches = false
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({
+        matches: mobileLayoutMatches,
+        media: '(max-width: 719px)',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      })),
+    )
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+    vi.unstubAllGlobals()
   })
 
   test('loads an official style preset into the custom editor without creating a widget', async () => {
@@ -188,6 +207,64 @@ describe('Widgets custom template starters', () => {
     wrapper.unmount()
   })
 
+  test('keeps official preset added state across locale changes and numbers copies', async () => {
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+    const firstPresetAction = wrapper.find(
+      '.widgets-market-card.is-style-preset .widgets-action-btn',
+    )
+
+    await firstPresetAction.trigger('click')
+    await nextTick()
+    await firstPresetAction.trigger('click')
+    await nextTick()
+
+    expect(
+      store.settings.appearance.customWidgets.map((widget) => ({
+        name: widget.name,
+        sourcePresetId: widget.sourcePresetId,
+      })),
+    ).toEqual([
+      { name: 'Mood Charm', sourcePresetId: 'mood_charm' },
+      { name: 'Mood Charm 2', sourcePresetId: 'mood_charm' },
+    ])
+
+    store.settings.system.language = 'zh-CN'
+    await nextTick()
+
+    const localizedPreset = wrapper.find('.widgets-market-card.is-style-preset')
+    expect(localizedPreset.text()).toContain('心情徽章')
+    expect(localizedPreset.text()).toContain('创建副本')
+
+    wrapper.unmount()
+  })
+
+  test('moves focus into style previews and restores it after Escape', async () => {
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView({ attachToDocument: true })
+    const previewButton = wrapper.find(
+      '.widgets-market-card.is-style-preset .widgets-preview-open',
+    )
+    previewButton.element.focus()
+
+    await previewButton.trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    const dialog = wrapper.find('.widgets-style-preview-dialog')
+    const closeButton = dialog.find('[data-dialog-initial-focus]')
+    expect(document.activeElement).toBe(closeButton.element)
+
+    await dialog.trigger('keydown', { key: 'Escape' })
+    await nextTick()
+
+    expect(wrapper.find('.widgets-style-preview-dialog').exists()).toBe(false)
+    expect(document.activeElement).toBe(previewButton.element)
+
+    wrapper.unmount()
+  })
+
   test('confirms before replacing an existing custom widget draft', async () => {
     useSystemStore().settings.system.language = 'en-US'
     const wrapper = await mountWidgetsView()
@@ -303,6 +380,105 @@ describe('Widgets custom template starters', () => {
     expect(wrapper.find('.widgets-import-preview-empty.is-error').exists()).toBe(true)
     expect(wrapper.text()).toContain('Import content format is invalid.')
     expect(wrapper.find('.widgets-import-actions .widgets-primary-btn').element.disabled).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('exposes accessible tabs and selected size filters', async () => {
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView()
+    const tabs = wrapper.findAll('[role="tab"]')
+
+    expect(tabs).toHaveLength(3)
+    expect(tabs[0].attributes('aria-selected')).toBe('true')
+    expect(tabs[0].attributes('tabindex')).toBe('0')
+    expect(tabs[1].attributes('aria-selected')).toBe('false')
+    expect(tabs[1].attributes('tabindex')).toBe('-1')
+
+    await tabs[0].trigger('keydown', { key: 'ArrowRight' })
+    await nextTick()
+
+    expect(wrapper.find('#widgets-tab-custom').attributes('aria-selected')).toBe('true')
+    expect(wrapper.find('#widgets-panel-custom').attributes('role')).toBe('tabpanel')
+
+    await wrapper.find('#widgets-tab-library').trigger('click')
+    const sizeFilter = wrapper
+      .findAll('.widgets-size-filter button')
+      .find((button) => button.text() === '4x2')
+    await sizeFilter.trigger('click')
+
+    expect(sizeFilter.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.findAll('.widgets-size-filter button')[0].attributes('aria-pressed')).toBe(
+      'false',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('treats the mobile custom editor as a focus-restoring dialog', async () => {
+    mobileLayoutMatches = true
+    useSystemStore().settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView({ attachToDocument: true })
+    const createButton = wrapper.find('.widgets-home-btn')
+    createButton.element.focus()
+
+    await createButton.trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    const sheet = wrapper.find('.widgets-custom-composer')
+    const closeButton = sheet.find('[data-dialog-initial-focus]')
+    expect(sheet.attributes('role')).toBe('dialog')
+    expect(sheet.attributes('aria-modal')).toBe('true')
+    expect(wrapper.find('.widgets-header').attributes()).toHaveProperty('inert')
+    expect(document.activeElement).toBe(closeButton.element)
+
+    await sheet.trigger('keydown', { key: 'Escape' })
+    await nextTick()
+
+    expect(sheet.attributes('role')).toBeUndefined()
+    expect(document.activeElement).toBe(createButton.element)
+
+    wrapper.unmount()
+  })
+
+  test('shows unsafe custom code and invalid imports inside their active mobile sheets', async () => {
+    mobileLayoutMatches = true
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    const wrapper = await mountWidgetsView({ attachToDocument: true })
+
+    await wrapper.find('.widgets-home-btn').trigger('click')
+    await nextTick()
+    await wrapper.find('.widgets-code-toggle').trigger('click')
+    const customSheet = wrapper.find('.widgets-custom-composer')
+    const customCode = customSheet.find('textarea')
+    await customCode.setValue('<script>window.parent.hacked = true</script>')
+    await customSheet.find('.widgets-form-actions .widgets-primary-btn').trigger('click')
+    await nextTick()
+
+    expect(customSheet.find('.widgets-editor-feedback.is-error').text()).toContain(
+      'unsupported script content',
+    )
+    expect(customSheet.find('iframe').attributes('srcdoc')).not.toMatch(/<script/i)
+    expect(store.settings.appearance.customWidgets).toHaveLength(0)
+
+    await customSheet.trigger('keydown', { key: 'Escape' })
+    await wrapper.find('#widgets-tab-import').trigger('click')
+    await wrapper
+      .find('.widgets-mobile-action-strip .widgets-primary-btn')
+      .trigger('click')
+    await nextTick()
+
+    const importSheet = wrapper.find('.widgets-import-editor')
+    expect(importSheet.attributes('role')).toBe('dialog')
+    await importSheet.find('.widgets-import-textarea').setValue('{')
+    await nextTick()
+
+    const importError = importSheet.find('#widgets-import-editor-feedback')
+    expect(importError.exists()).toBe(true)
+    expect(importError.text()).toContain('Import content format is invalid.')
+    expect(importSheet.find('textarea').attributes('aria-invalid')).toBe('true')
 
     wrapper.unmount()
   })

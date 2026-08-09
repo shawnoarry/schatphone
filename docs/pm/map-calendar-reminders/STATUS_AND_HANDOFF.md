@@ -1,6 +1,6 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-08-03
+Updated: 2026-08-09
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
@@ -9,6 +9,8 @@ This file is the handoff page for Map, Calendar, and Reminders work.
 Status: `PARTIAL_DONE`
 
 Map's first internal Chat share caller is integrated locally. Place Details creates a source-owned `location_share`; Chat owns recipient selection, confirmation, history, and quoting; cancel and sent-card navigation restore the same `placeId`. Desktop and simulated Pixel 5 prove that source return does not change current location or create a journey.
+
+Map's active-journey Music caller is also integrated locally. A traveling or paused journey exposes one compact music/radio control that opens a focused bottom panel for quick tracks, transport controls, and three Music-owned library-backed stations. Map receives only bounded projections and never receives API keys, endpoints, audio URLs, local media IDs, or raw queue contents. The Map panel and Music's global floating player coexist as separate layers: closing the trip panel or leaving the journey removes only Map presentation, while playback and an explicitly opened Music float continue. Focused unit coverage and desktop/simulated Pixel 5 Playwright protect the full Map -> radio -> float -> Music -> Map return path, layer order, dismissal behavior, page errors, and horizontal overflow.
 
 ## Calendar, Agenda Journey, And Event Orchestration Direction
 
@@ -125,6 +127,7 @@ What is already landed:
 21. Map search now acts as a tolerant current-world local-pin index: empty focus exposes the complete positioned catalog except discovery-only categories; search, Places, and Settings category controls wrap so every option remains reachable; ranked matching covers normalized names, addresses, broad-category and stable icon-subtype semantics, optional aliases/search terms, and bounded Latin typos; new places inherit standard-field search without page-specific branches; unmatched text has explicit free-form/browse exits; and result selection still focuses plus opens the place without any POI/geocoding call. The shared taxonomy keeps 14 user-facing broad groups for browsing, filtering, labels, and visibility while retaining all 31 stable icon subtypes for concrete visuals and persisted player-pin values. Settings groups every icon subtype under its automatic broad label, so transport hubs and ordinary transit share one filter, all housing tiers share Residential, and legacy category IDs require no migration.
 22. Places now separates catalog filtering from persisted marker visibility. Every populated category and every place row has its own visibility control, with show-all/hide-all shortcuts and mixed-state counts; hidden places stay in local search, detail, Settings, and trip flows. Dense everyday categories default hidden, while convenience stores are additionally excluded from empty-search discovery until their category is selected or a query matches them.
 23. Journey planning now exposes explicit current-world place pickers for both start and destination while retaining free-form entry. The Settings-owned new-place flow distinguishes descriptive address/search text from the required canonical coordinate. Separately, the everyday Map can persist any blank map point as the role's current coordinate while idle; this action is locked during traveling/arrived states and does not claim geocoding, GPS, route geometry, or movement animation.
+24. Place Details now exposes a Map-owned `system` / Chinese / English / bilingual display preference. The persisted mode applies to authored marker labels, search results, Places rows, and place-detail names/addresses without mutating canonical place data, coordinates, search indexing, or existing journeys. Bilingual mode uses one primary marker label and progressive secondary text in browse/detail surfaces; player pins with only one available language are deduplicated. OpenFreeMap basemap labels remain provider-style output and are not switched by this control. Focused unit coverage plus desktop and simulated Pixel 5 Playwright protect language switching, refresh persistence, legacy fallback, and horizontal overflow.
 
 Still incomplete:
 

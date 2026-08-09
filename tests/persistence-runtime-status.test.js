@@ -73,6 +73,7 @@ describe('persistence runtime status', () => {
       mode: 'read_only',
       incidentCount: 3,
       primaryCode: 'read_only_conflict',
+      primaryCause: '',
     })
 
     clearPersistenceIncident('store:book')
@@ -80,6 +81,24 @@ describe('persistence runtime status', () => {
       mode: 'save_failed',
       incidentCount: 2,
       primaryCode: 'serialization_failed',
+    })
+  })
+
+  test('exposes the primary cause so an active page is not presented as data corruption', () => {
+    reportPersistenceWriteResult({
+      key: 'current-save-writer',
+      result: {
+        ok: false,
+        code: 'read_only_conflict',
+        cause: 'active_writer',
+        readOnly: true,
+      },
+    })
+
+    expect(getPersistenceRuntimeStatus()).toMatchObject({
+      mode: 'read_only',
+      primaryCode: 'read_only_conflict',
+      primaryCause: 'active_writer',
     })
   })
 

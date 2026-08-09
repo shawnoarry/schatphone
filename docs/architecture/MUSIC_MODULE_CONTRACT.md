@@ -2,7 +2,7 @@
 
 Updated: 2026-08-09
 
-Status: `CHKSZ_AND_LOCAL_INTAKE_INTEGRATED_LOCAL / CHAT_TRACK_SHARE_CALLER_INTEGRATED_LOCAL / REAL_CREDENTIAL_AND_OTHER_CALLER_PROOF_DEFERRED`
+Status: `CHKSZ_RADIO_BROWSER_AND_LOCAL_INTAKE_INTEGRATED_LOCAL / CHAT_TRACK_SHARE_AND_MAP_JOURNEY_MEDIA_CALLERS_INTEGRATED_LOCAL / REAL_CREDENTIAL_AND_REMAINING_CALLER_PROOF_DEFERRED`
 
 Authority note:
 
@@ -13,7 +13,7 @@ Authority note:
 
 ## 1. Goal
 
-Music is a first-class installed app, not a Settings dashboard. It provides a believable consumer listening experience while letting a user connect an authorized generic JSON API or the dedicated ChKSz multi-platform Adapter, add a stable HTTPS audio URL, or import audio files owned by Music on the current device.
+Music is a first-class installed app, not a Settings dashboard. It provides a believable consumer listening experience while letting a user connect an authorized generic JSON API, use the no-key Radio Browser live-station preset, use the dedicated ChKSz multi-platform Adapter, add a stable HTTPS audio URL, or import audio files owned by Music on the current device.
 
 The product model is:
 
@@ -31,10 +31,11 @@ The first slice includes:
 
 - `/music` as a Home and App Store installed-app route;
 - Listen Now, Browse, Library, Search, favorites, recent tracks, playlists, queue, shuffle, repeat, seek, volume, mute, and expanded Now Playing;
-- a global mini-player that preserves the in-memory playback session while navigating to other unlocked routes;
+- a Music-owned global floating player that preserves the in-memory playback session across unlocked routes and supports collapsed, expanded, and dismissed states;
 - browser `Audio` playback plus Media Session metadata and play/pause/previous/next/seek handlers where supported;
 - built-in listening samples so the app remains usable before a provider is configured;
 - configurable GET or POST JSON search APIs with result-path and field mapping;
+- a focused Radio Browser preset that searches healthy HTTPS MP3 live stations without an API Key;
 - a dedicated ChKSz source preset for NetEase, QQ, and Kugou search, with playback resolution deferred until the user presses Play;
 - a Music Settings `Add Music` surface with separate URL and local-file modes, compact imported-track management, and no Gallery/image-resource dependency;
 - validated direct HTTPS audio URLs with user-supplied title/artist/album/cover metadata;
@@ -45,9 +46,10 @@ The first slice includes:
 - connection tests that distinguish reachable results from results with a usable audio URL;
 - stable Chat/Map route requests, track-share payloads, capability discovery, and now-playing projections;
 - a Music-owned Track Details action that creates the normalized internal Chat share draft, requires recipient selection and explicit send, and returns a sent card to the same track detail without starting playback;
+- an active-journey Map caller with a compact music/radio panel, quick Music-owned track controls, three deterministic library-backed journey stations, and a handoff to either the global Music floating player or the full Music app;
 - Home live Music widget state, app icon/skin/scoped-style support, and notification presentation metadata.
 
-This slice does not claim provider catalog licensing, unrestricted stream rights, a hosted music proxy, closed-app playback, offline download, DRM support, Chat search UI, or Map now-playing/queue caller UI.
+This slice does not claim provider catalog licensing, unrestricted stream rights, a hosted music proxy, closed-app playback, offline download, DRM support, Chat search UI, or external Map queue-request UI.
 
 ## 3. Ownership
 
@@ -57,20 +59,22 @@ This slice does not claim provider catalog licensing, unrestricted stream rights
 | Music playback runtime | active `Audio` element, current time, duration, buffering/error state, Media Session handlers | durable library truth, closed-app/background-service guarantees |
 | Provider API | search results and playable media made available under the user's authorization | SchatPhone library, queue, cross-module records |
 | Chat | confirmed `share_card` records and the user-facing recipient/send/quote/source-return workflow | Music credentials, provider configuration, playback control |
-| Map | future Map-owned presentation of a bounded now-playing projection | Music credentials, stream URL, queue or playback ownership |
+| Map | active-journey presentation, panel visibility, journey label, and navigation into Music | Music credentials, stream URL, queue construction, radio selection logic, audio runtime, or playback ownership |
 | Settings/backup | packaging and restoring Music public state through the existing `system-settings` section | provider keys or a second Music settings UI |
 
 ## 4. Product And IA Rules
 
 1. The default `/music` surface is listening-first. Provider configuration stays behind the Music-owned settings sheet.
-2. Music Settings presents `Add Music` and `Music Sources` as separate top-level intentions. URL/local-file intake does not move into Library, and Music local audio does not enter Gallery or use image-resource language.
+2. Music Settings presents `Add Music` and `Music Sources` as separate top-level intentions. URL/local-file intake does not move into Library, Music local audio does not enter Gallery or use image-resource language, and Radio Browser is labeled as live radio rather than an on-demand song platform.
 3. Music keeps its own installed-app visual identity under both built-in system themes. It must not inherit a system-settings or admin-dashboard composition.
 4. Search must work against the local/demo library when no provider is configured or a provider is unavailable.
 5. A generic result without `audioUrl` remains catalog-only. A dedicated-Adapter result with a valid `sourceRef` may expose Play because Music resolves its ephemeral stream URL at that user action. A local-file track may expose Play because Music resolves its `mediaId` at that same boundary.
 6. Queue, playlist, favorite, destructive, empty, loading, connection-warning, missing-local-file, and playback-error states must remain explicit.
 7. Playback controls remain icon-led with accessible names and stable control dimensions.
-8. The mini-player must not render on Lock or `/music`, and it must clear Home and app-owned bottom controls.
+8. The global floating player must not render on Lock or `/music`; it supports collapsed, expanded, and dismissed states, clears Home/app-owned bottom controls, and stays beneath an open Map journey-media panel.
 9. Route return context uses the shared navigation-return contract; Music must not invent an unrelated back stack.
+10. Map journey media appears only while a journey is traveling or paused. Closing that focused Map panel does not close Music's floating player or stop playback.
+11. Map radio labels are deterministic Music presets over playable library tracks. They do not embed or imply a third-party live-radio stream.
 
 ## 5. Track Contract
 
@@ -136,6 +140,18 @@ Rules:
 5. `401`, `402`, `403`, `429`, and `503` preserve the API's bounded message after Key redaction, quota headers are runtime-only, and `429` retries at most once after `Retry-After`;
 6. QQ member Cookie input is not supported by this slice because it is a separate, more sensitive credential contract.
 
+### 6.2 Radio Browser Preset
+
+Radio Browser uses the existing generic JSON request and normalization boundary with a fixed public preset:
+
+- base URL `https://all.api.radio-browser.info`;
+- station search through `/json/stations/search` with `name` and `limit`;
+- `hidebroken=true`, `is_https=true`, and `codec=MP3` to reduce broken, mixed-content, and unsupported-stream results;
+- `stationuuid`, `name`, `country`, `codec`, `favicon`, `url_resolved`, and `tags` mapped into the normalized Music track projection;
+- no API Key, credential carrier entry, custom header, or project-hosted proxy.
+
+The provider directory and station streams remain third-party live services. A returned station can stop broadcasting or change its stream URL independently of SchatPhone. This preset does not change the separately owned Map journey-radio catalog, which remains deterministic and library-backed.
+
 ## 7. Playback Runtime
 
 `src/lib/music-playback-runtime.js` is the sole browser-audio runtime for this slice.
@@ -147,7 +163,7 @@ It owns:
 - active track/current time/duration snapshots;
 - Media Session metadata and supported action handlers.
 
-The Pinia store owns queue order, repeat/shuffle policy, recent history, which normalized track should load next, dedicated-Adapter resolution, and Music-local binary resolution before runtime load. A local blob becomes an object URL only for the active playback session; the prior URL is revoked on track change, stop, removal, or Store disposal. Direct external playback is never authorized by a Chat/Map request. Browser autoplay restrictions remain authoritative, so play requests must originate from a user gesture.
+The Pinia store owns queue order, repeat/shuffle policy, recent history, journey-radio queues, floating-player state, which normalized track should load next, dedicated-Adapter resolution, and Music-local binary resolution before runtime load. A local blob becomes an object URL only for the active playback session; the prior URL is revoked on track change, stop, removal, or Store disposal. Dismissing the floating player survives automatic ended-to-next transitions, while a later explicit user playback action may reveal it again. Direct external playback is never authorized by a Chat/Map request. Browser autoplay restrictions remain authoritative, so play requests must originate from a user gesture.
 
 The runtime persists no `Audio` object, signed media request, or closed-app worker. Navigating inside the live app preserves playback; terminating or suspending the browser/PWA may stop it.
 
@@ -189,17 +205,20 @@ Rules:
 1. `open` and `search` may deep-link directly into Music.
 2. `play` always requires an explicit user gesture inside Music.
 3. `enqueue` requires Music's `externalQueueRequestsEnabled` policy plus user confirmation/presentation at the Music boundary.
-4. Capability discovery reports direct playback as false for both callers.
+4. Capability discovery reports cross-module direct playback as false for both callers. The active Map panel may invoke Music-owned play actions only from an explicit user click; it never supplies a stream URL or mutates the queue directly.
 5. Chat track-share payloads contain only a stable track/provider reference and bounded display metadata.
-6. Map now-playing projections contain stable references, display metadata, playback state, current time, and duration.
+6. Map now-playing and journey-track projections contain stable references, display metadata, playback state, current time, and duration.
 7. Neither projection includes `audioUrl`, local `mediaId`, endpoint URL, API key, auth header, static headers, provider response, or queue contents.
 8. Chat's first promoted caller uses `createMusicTrackSharePayload` and a source-owned `music_track_share` card. The draft is temporary, send is explicit, quote stays in Chat, and `/music?source=chat&track=...` opens Track Details without auto-play.
-9. Chat search and Map now-playing/queue flows do not yet call these Interfaces; each requires its own promoted UX and record-ownership slice.
+9. Map's active-journey caller consumes only the bounded now-playing, quick-track, and station catalog projections. Music resolves the selected stable reference, owns the resulting queue, and loops a selected station without changing the user's durable repeat preference.
+10. The Map media button is absent outside traveling/paused journeys. Its focused panel may coexist with the lower Music floating layer, and both provide an explicit route into `/music?source=map` with Home return context preserved.
+11. Chat search and external Map queue-request flows do not yet call these Interfaces; each requires its own promoted UX and record-ownership slice.
 
 ## 10. Security And Provider Constraints
 
 - Users must connect only APIs and media they are authorized to access.
 - ChKSz credentials are supplied by the user through Music's device-local password input; real user credentials are never embedded in source, fixtures, logs, screenshots, cross-module payloads, or backup.
+- Radio Browser requires no credential and is restricted by its preset to healthy HTTPS MP3 station results; individual station uptime remains external.
 - The provider must allow browser-origin requests through its CORS policy.
 - HTTPS deployments cannot play blocked mixed-content HTTP streams.
 - Expiring or signed media URLs may stop working after the provider's validity window; Music does not persist provider authorization material into another owner.
@@ -216,12 +235,16 @@ The first slice requires:
 - focused contract, store, view, registry, persistence-inventory, and integration tests;
 - lint, full unit suite, production build, governance, and diff checks;
 - desktop and simulated-mobile Music route tests for default and zen themes;
-- route entry, provider setup, secret visibility, search, playback, queue, expanded player, Home/App Store, mini-player clearance, page errors, and horizontal overflow evidence;
+- route entry, provider setup, secret visibility, search, playback, queue, expanded player, Home/App Store, floating-player clearance, page errors, and horizontal overflow evidence;
 - the existing project visual gate.
 
-The internal Chat caller adds focused contract/View/Chat-card coverage plus `chat-internal-app-share.spec.js`: desktop and simulated Pixel 5 prove recipient selection, explicit send, refresh/lock recovery, quoting, card persistence, exact Track Details return, no auto-play, and no horizontal overflow. The broader current-tree validation totals are recorded in the roadmap and package handoffs.
+The internal Chat caller adds focused contract/View/Chat-card coverage plus `chat-internal-app-share.spec.js`: desktop and simulated Pixel 5 prove recipient selection, explicit send, refresh/lock recovery, quoting, card persistence, exact Track Details return, no auto-play, and no horizontal overflow. The Map caller adds focused contract/Store/View coverage plus `music-map-journey.spec.js`: desktop and simulated Pixel 5 prove journey-only entry, radio activation, Map-panel/floating-player coexistence, panel-close continuity, expand/dismiss behavior, Map-to-Music return context, layer order, page errors, and horizontal overflow. The broader current-tree validation totals are recorded in the roadmap and package handoffs.
 
 The direct/local intake follow-up passes 33 focused contract/Store/View/persistence tests, the full 217-file / 1549-test Vitest suite, lint, production build, governance and diff checks, 8 Music Playwright cases across desktop and simulated mobile, the 12-case default/zen visual gate, and direct browser inspection at desktop and 393 x 852 with no document or settings-panel overflow.
+
+The active-journey Map media follow-up passes the current full 217-file / 1556-test Vitest suite, lint, production build, governance and diff checks, plus 10 focused Music and Map/Music Playwright cases across desktop Chromium and simulated Pixel 5. The prior 12-case default/zen visual gate remains green.
+
+The Radio Browser preset follow-up passes the current full 217-file / 1559-test Vitest suite, lint, production build, governance and diff checks, plus 12 focused Music and Map/Music Playwright cases across desktop Chromium and simulated Pixel 5. The two new Radio Browser cases prove no-key setup, fixed HTTPS/MP3 filtering, station normalization, search, and playback. Direct API inspection also returned HTTP 200 with wildcard CORS; individual live-station uptime remains external.
 
 Still deferred:
 
@@ -229,7 +252,7 @@ Still deferred:
 - true-device audio focus, interruption, headset/lock controls, safe-area, keyboard, and PWA relaunch proof;
 - provider-specific OAuth, signed-stream, DRM, QQ Cookie, non-NetEase playlist/lyrics, offline-cache, cast, and download contracts;
 - optional local-audio binary backup packaging and same-track relink after restore/device-storage loss;
-- Chat search and Map now-playing/queue-request callers;
+- Chat search and external Map queue-request callers;
 - any hosted music proxy or server-side catalog service.
 
 These gaps do not reopen the implemented local app baseline, but they block claims that every third-party music platform will play successfully.

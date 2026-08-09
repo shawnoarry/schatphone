@@ -72,7 +72,7 @@ Lunch keeps its existing approved banner artwork. Membership and Weekend Picks u
 - Merchant-page integration: all eleven shops open through `platformView=merchant` and `platformMerchant=<id>` instead of `restaurantId` or a modal. The page restores Home, Search, Saved, or Campaign as its source, retains `from/homePage`, and hides the platform bottom navigation while focused on a merchant.
 - Integration selection: Camellia tomato-and-egg noodles and Elm custard buns use V2 texture fixes; Morning Bagel apple-cinnamon scone and Hwadeok half-and-half wings use V3 clean-texture regenerations; Crispy Chicken House black-garlic boneless chicken uses the user-selected V2 texture fix. The mistaken fries texture edit and black-garlic V3/V4 variants are not promoted.
 - Export gate: the 36 new accepted/runtime menu pairs are exact SHA-256 matches after deterministic Pillow LANCZOS export to `768x768` RGB PNG. The seven accepted/runtime merchant-mark pairs are exact SHA-256 matches, remain `768x768` RGBA, and contain true transparent pixels.
-- Remaining status: the menu and merchant-identity gaps are closed. Platform decoration/order-flow placeholders and the separately deferred future delayed-order illustration remain independent work.
+- Remaining status: the menu, merchant-identity, and seven current order-flow gaps are closed. Platform decoration review and the separately deferred future delayed-order illustration remain independent work.
 
 ## Runtime Files
 

@@ -217,6 +217,41 @@ describe('MusicView', () => {
     wrapper.unmount()
   })
 
+  test('offers a no-key Radio Browser preset for HTTPS MP3 live stations', async () => {
+    const { wrapper } = await mountMusic()
+    const store = useMusicStore()
+
+    await wrapper.get('[data-testid="music-settings-button"]').trigger('click')
+    await wrapper.get('[data-testid="music-add-radio-browser"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="music-radio-browser-form"]').text()).toContain(
+      'Global live radio',
+    )
+    expect(wrapper.get('[data-testid="music-radio-browser-no-key"]').text()).toContain(
+      'No API key required',
+    )
+    expect(wrapper.find('[data-testid="music-provider-url"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="music-provider-key"]').exists()).toBe(false)
+    expect(wrapper.find('.music-advanced-settings').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="music-provider-save"]').trigger('click')
+    await flushPromises()
+
+    expect(store.activeProfile).toMatchObject({
+      name: 'Radio Browser',
+      baseUrl: 'https://all.api.radio-browser.info/',
+      queryParam: 'name',
+      authMode: 'none',
+      fieldMap: {
+        id: 'stationuuid',
+        audioUrl: 'url_resolved',
+      },
+    })
+    expect(store.getCredential(store.activeProfile.id).apiKey).toBe('')
+
+    wrapper.unmount()
+  })
+
   test('keeps playback available in the shell mini player after leaving Music', async () => {
     const router = createTestRouter()
     await router.push('/home?homePage=1')
@@ -235,6 +270,37 @@ describe('MusicView', () => {
       query: { from: 'home', homePage: '1' },
     })
     expect(wrapper.find('[data-testid="music-mini-player"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('keeps the floating player independently expandable and dismissible on Map', async () => {
+    const router = createTestRouter()
+    await router.push('/map?from=home&homePage=2')
+    await router.isReady()
+    const wrapper = mount(MusicMiniPlayer, { global: { plugins: [router] } })
+    const store = useMusicStore()
+
+    store.openFloatingPlayer()
+    await flushPromises()
+    expect(wrapper.get('[data-testid="music-mini-player"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="music-floating-content"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="music-floating-expand"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[data-testid="music-floating-content"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid^="music-floating-track-"]')).toHaveLength(6)
+
+    await wrapper.get('[data-testid="music-floating-radio-tab"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.findAll('[data-testid^="music-floating-station-"]')).toHaveLength(3)
+    expect(wrapper.html()).not.toContain('audioUrl')
+    expect(wrapper.html()).not.toContain('mediaId')
+
+    await wrapper.get('[data-testid="music-floating-close"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="music-mini-player"]').exists()).toBe(false)
+    expect(store.floatingPlayerExpanded).toBe(false)
 
     wrapper.unmount()
   })

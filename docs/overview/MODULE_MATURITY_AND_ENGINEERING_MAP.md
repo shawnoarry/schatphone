@@ -14,7 +14,7 @@ SchatPhone is in:
 
 The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation and Music first slices, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete at their named local boundaries, while Gallery People/source callers, Music real-provider/caller proof, and broader capacity/data-lifecycle work remain deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation and Music first slices, Music's Chat track-share and Map active-journey media callers, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete at their named local boundaries, while Gallery People/source callers, Music real-provider/remaining-caller proof, and broader capacity/data-lifecycle work remain deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
 
 ## 2. Maturity Tiers
 
@@ -28,7 +28,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
 | Image Generation | shared first slice implemented; Camera is the visible owner | keep provider protocols behind the shared module, back up public configuration only, keep credentials/candidates device-local, and require explicit Gallery retention |
-| persistence / backup / diagnostics | release-local v3 complete backup/recovery, product-level recovery, same-container writer protection, and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge; preserve non-Book cutover gates and pursue capacity/root-generation/R2 work only as separate architecture slices |
+| persistence / backup / diagnostics | release-local v3 complete backup/recovery, product-level recovery, same-container one-writer/read-only-preview protection with automatic cooperative handoff, and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge; preserve non-Book cutover gates and pursue capacity/root-generation/R2 work only as separate architecture slices |
 
 ### Tier B: Integrated V1
 
@@ -42,7 +42,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Appearance / Widgets / app identity | strong but split across owners | consistency and real-device authoring/recovery QA |
 | Network | strong MVP | security guidance and provider-environment QA |
 | Camera | focused installed-app V1 | Gallery People curation, source-module callers, hosted-provider smoke, and true-device QA |
-| Music | focused installed-app first slice | real-provider/CORS smoke, true-device media/PWA proof, and separately promoted Chat/Map callers |
+| Music | focused installed-app first slice with Chat track-share and active-journey Map media callers | real-provider/CORS smoke, true-device media/PWA proof, Chat search, and external Map queue requests |
 
 ### Tier C: Partial Or Guarded
 
@@ -80,7 +80,7 @@ Measured on 2026-08-09:
 - zero TypeScript source files;
 - 171,987 source lines;
 - 214 static unit-test files;
-- the current Music worktree passes lint, 214 Vitest files / 1519 tests, production build, governance, 4 focused desktop/Pixel 5 Music cases, and the 12-case default/zen system visual gate.
+- the current Music plus active-journey Map media worktree passes lint, 217 Vitest files / 1556 tests, production build, governance, and 10 focused desktop/Pixel 5 Music and Map/Music cases; the prior 12-case default/zen system visual gate remains green.
 
 ### Largest Views
 
@@ -132,7 +132,7 @@ Gaps:
 - real-device keyboard/touch/safe-area/media/weak-network checks are absent;
 - Music's generic provider seam has simulated-browser coverage but no opt-in real-provider/CORS or true-device audio-focus/interruption proof;
 - production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; local and remote workflow evidence enforce that baseline, while independently rerunnable audit proof remains separate.
-- product-level save-failed/read-only recovery, same-container writer protection, and the release-local complete v3 package/rollback/crash-recovery boundary are implemented. Predictive capacity reporting, cross-owner atomic Repository activation, legacy unavailable-media presentation, and personal R2 transport remain separate work.
+- product-level save-failed/read-only recovery, same-container writer protection with calm active-writer previews and automatic cooperative handoff, and the release-local complete v3 package/rollback/crash-recovery boundary are implemented. Predictive capacity reporting, cross-owner atomic Repository activation, legacy unavailable-media presentation, and personal R2 transport remain separate work.
 
 ## 5. Module Engineering Guidance
 
@@ -170,7 +170,7 @@ Preserve source records and use Chat/Wallet/Map only through explicit handoffs. 
 
 ### Music
 
-Preserve the listening-first app and keep generic provider search, browser playback, persistence, credentials, and Chat/Map projections behind the Music contract. Public library/provider state may remain compatibility-carried by System until a separately approved migration; API keys stay device-local and excluded. Promote real-provider or caller work one bounded slice at a time, and do not let Chat/Map receive stream URLs or direct playback authority.
+Preserve the listening-first app, Music-owned global floating player, and active-journey Map panel split. Keep generic provider search, browser playback, radio queues, persistence, credentials, and Chat/Map projections behind the Music contract. Public library/provider state may remain compatibility-carried by System until a separately approved migration; API keys stay device-local and excluded. Promote real-provider or remaining caller work one bounded slice at a time, and do not let Chat/Map receive stream URLs, raw queues, or audio-runtime ownership.
 
 ### Runtime / World Hub / Push
 

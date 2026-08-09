@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -18,14 +18,14 @@ The left-side Today View is a fixed native-system entry layer, not a selectable 
 
 Current visual pass:
 
-- `音乐 / Music` is a standalone installed app with a restrained record-library identity rather than a system dashboard. Listening, browsing, library, search, queue, Now Playing, lyrics, playlist intake, and Track Details sharing stay consumer-facing; Music Settings separates `Add Music` (URL/local files) from external `Music Sources` (ChKSz/custom JSON), local audio remains Music-owned rather than entering Gallery, the shell mini-player preserves the live session without covering Home or app-owned bottom controls, and a Chat-returned track opens as details without auto-play.
+- `音乐 / Music` is a standalone installed app with a restrained record-library identity rather than a system dashboard. Listening, browsing, library, search, queue, Now Playing, lyrics, playlist intake, and Track Details sharing stay consumer-facing; Music Settings separates `Add Music` (URL/local files) from external `Music Sources` (ChKSz, no-key Radio Browser live radio, and custom JSON), local audio remains Music-owned rather than entering Gallery, and the global floating player preserves the live session without covering Home or app-owned bottom controls. During an active Map journey, a separate focused Map panel offers quick music/radio choices above that floating layer; closing the Map panel leaves Music playback and the float intact. A Chat-returned track opens as details without auto-play.
 - `相机 / Camera` now has an installed-app identity: a restrained dark capture surface keeps prompt, mode, references, preview, and shutter together, while provider/model/default/routing/diagnostic work uses separate Camera-owned push-navigation pages. Gallery reference selection stays an embedded Camera sheet, and generated candidates expose separate Download, Keep in Gallery, and Discard outcomes.
 
 - `应用商城 / App Store` is now a standalone native-system app with search, category filters, selected app detail, and Home-entry actions.
 - `外观 / Appearance` has a first native-system control surface and first token-coverage pass for deeper subpages.
 - Home Today View user-facing copy has been cleaned up for native-system language.
 - Home edit mode is now slot-first: template selection and the unplaced-content library are on-demand, larger slots only offer exact-size widget/custom-widget candidates, and opening the library no longer preselects a random item.
-- Widget Center style starters are protected by test as thumbnail cards, not iframe previews.
+- Widget Center style starters are protected by test as thumbnail cards, not iframe previews. Custom and imported appearance code now shares one validation/sanitization contract, renders in scriptless sandboxed previews, and keeps SchatPhone-owned click actions outside imported code.
 - `世界书 / WorldBook` now has a state-first Settings surface: stable current-world-setting overview, then a single-focus workspace for Setting Text, structured encyclopedia entries, profile templates, optional capabilities/apps, and advanced compatibility; Pack identity stays inside capability surfaces.
 - WorldBook Setting Text selection and changed-text review use layered sheets instead of stretching the Settings page inline.
 - WorldBook's Setting Text panel answers which Book text AI reads now. WorldBook chooses active context; Book owns writing/editing. Unused or missing text references live in Advanced management, while active changed text stays in the active list with a confirm-new-version action.
@@ -51,7 +51,7 @@ Current visual pass:
 - WorldBook's Optional capability Packs panel now also has a guarded nonstandard-app proposal review surface: AI extraction or pasted JSON shows whitelist matches, loading/empty/error states, rejection reasons, and explicit confirmation before adding an appBinding. Confirmed entries are visible in App Store detail with world-pack/target-module metadata, can be placed from Home's library, and open the target app with world context; current dynamic coverage includes `transit_pass -> Map`, `reservation_board -> Calendar`, and `dispatch_board -> Food Delivery`. `black_market` is blocked as needing a dedicated app shell, so it is not presented as Shopping.
 - User customization remains a first-class layer above World Pack defaults. Global Appearance CSS and Chat-scoped CSS exist, and the root shell exposes stable `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` hooks. Persisted app/world-app scoped CSS remains runtime-compatible, but the current global Appearance surface no longer authors or exports app-owned layers. Global Appearance packs exclude app icons, app skins, scoped CSS, Home layout/widgets, and Chat appearance.
 - `应用商城 / App Store` keeps desktop list/detail management, but phone-sized screens now open selected app details as a root-level sheet instead of stretching the catalog.
-- `组件 / Widgets` now keeps phone-sized pages scan-first: custom widget editing and import JSON entry open as focused sheets instead of extending the Widget Center page inline.
+- `组件 / Widgets` now keeps phone-sized pages scan-first: custom widget editing and import JSON entry open as focused sheets instead of extending the Widget Center page inline. Those sheets now trap and restore focus, close with Escape, and keep validation feedback inside the active execution surface.
 - `外观 / Appearance` Theme, Font, and App Icons keep state/previews visible first; phone-sized wallpaper-source selection, advanced CSS editing, custom font editing, and per-app icon/accent edits now open as focused sheets.
 - Visual work now uses zero or one specialist skill per round. Playwright is the single default verification path, with focused day/night, desktop/mobile, screenshot, overflow, page-error, and critical axe coverage for Home, Settings, and Appearance.
 

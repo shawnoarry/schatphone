@@ -15,6 +15,15 @@ import './style.css'
 let currentSaveWriteAccess = null
 if (typeof window !== 'undefined') {
   currentSaveWriteAccess = await initializeCurrentSaveWriter()
+  window.addEventListener(
+    'pagehide',
+    () => {
+      void closeCurrentSaveWriter()
+    },
+  )
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) void initializeCurrentSaveWriter()
+  })
   const persistenceBootstrapTargets = PERSISTED_STATE_AUDIT_TARGETS.map((target) => ({
     ...target,
     inspectOnly: target.key === 'store:book' || currentSaveWriteAccess.ok !== true,

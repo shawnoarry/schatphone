@@ -15,10 +15,41 @@ class FakeLockManager {
   }
 }
 
+class FakeBroadcastChannel {
+  static channels = new Set()
+
+  constructor(name) {
+    this.name = name
+    this.listeners = new Set()
+    FakeBroadcastChannel.channels.add(this)
+  }
+
+  postMessage(message) {
+    for (const channel of FakeBroadcastChannel.channels) {
+      if (channel === this || channel.name !== this.name) continue
+      for (const listener of channel.listeners) listener({ data: message })
+    }
+  }
+
+  addEventListener(type, listener) {
+    if (type === 'message') this.listeners.add(listener)
+  }
+
+  removeEventListener(type, listener) {
+    if (type === 'message') this.listeners.delete(listener)
+  }
+
+  close() {
+    FakeBroadcastChannel.channels.delete(this)
+    this.listeners.clear()
+  }
+}
+
 describe('current save writer runtime', () => {
   beforeEach(() => {
     vi.resetModules()
     localStorage.clear()
+    FakeBroadcastChannel.channels.clear()
     setActivePinia(createPinia())
   })
 
@@ -73,6 +104,100 @@ describe('current save writer runtime', () => {
     expect(cleared).toContain('current-save-writer')
     expect(CURRENT_SAVE_WRITE_SCOPE).toBe('current-save-write')
     await second.close()
+  })
+
+  test('automatically promotes a read-only preview after the active page releases', async () => {
+    const locks = new FakeLockManager()
+    const { createWriteCoordinator } = await import('../src/lib/write-coordinator')
+    const { createCurrentSaveWriteRuntime, CURRENT_SAVE_WRITE_SCOPE } = await import(
+      '../src/lib/current-save-write-runtime'
+    )
+    const first = createWriteCoordinator({
+      locks,
+      BroadcastChannelClass: FakeBroadcastChannel,
+      scopeKey: CURRENT_SAVE_WRITE_SCOPE,
+      ownerId: 'active-page',
+    })
+    const firstLease = await first.acquire({ operationId: 'active-page-session' })
+    let second
+    const retryPendingWrites = vi.fn(async () => second.retry())
+    second = createCurrentSaveWriteRuntime({
+      reportWriteResult: vi.fn(),
+      clearIncident: vi.fn(),
+      retryPendingWrites,
+    })
+
+    const blocked = await second.initialize({
+      locks,
+      coordinatorOptions: {
+        BroadcastChannelClass: FakeBroadcastChannel,
+        waitTimeoutMs: 10,
+        pollIntervalMs: 1,
+      },
+    })
+    expect(blocked).toMatchObject({
+      ok: false,
+      readOnly: true,
+      cause: 'active_writer',
+    })
+
+    await firstLease.release()
+
+    await vi.waitFor(() => expect(second.getAccess().writable).toBe(true))
+    expect(retryPendingWrites).toHaveBeenCalledTimes(1)
+    await second.close()
+    first.close()
+  })
+
+  test('keeps all but one preview read-only when several pages retry after release', async () => {
+    const locks = new FakeLockManager()
+    const { createWriteCoordinator } = await import('../src/lib/write-coordinator')
+    const { createCurrentSaveWriteRuntime, CURRENT_SAVE_WRITE_SCOPE } = await import(
+      '../src/lib/current-save-write-runtime'
+    )
+    const active = createWriteCoordinator({
+      locks,
+      BroadcastChannelClass: FakeBroadcastChannel,
+      scopeKey: CURRENT_SAVE_WRITE_SCOPE,
+      ownerId: 'active-page',
+    })
+    const activeLease = await active.acquire({ operationId: 'active-page-session' })
+    const createPreview = (ownerId) => {
+      let runtime
+      runtime = createCurrentSaveWriteRuntime({
+        reportWriteResult: vi.fn(),
+        clearIncident: vi.fn(),
+        retryPendingWrites: () => runtime.retry(),
+      })
+      return {
+        runtime,
+        initialize: () => runtime.initialize({
+          locks,
+          coordinatorOptions: {
+            BroadcastChannelClass: FakeBroadcastChannel,
+            ownerId,
+            waitTimeoutMs: 10,
+            pollIntervalMs: 1,
+          },
+        }),
+      }
+    }
+    const second = createPreview('preview-two')
+    const third = createPreview('preview-three')
+
+    await expect(second.initialize()).resolves.toMatchObject({ cause: 'active_writer' })
+    await expect(third.initialize()).resolves.toMatchObject({ cause: 'active_writer' })
+    await activeLease.release()
+
+    await vi.waitFor(() => {
+      const access = [second.runtime.getAccess(), third.runtime.getAccess()]
+      expect(access.filter((entry) => entry.writable)).toHaveLength(1)
+      expect(access.filter((entry) => entry.readOnly)).toHaveLength(1)
+    })
+
+    await second.runtime.close()
+    await third.runtime.close()
+    active.close()
   })
 
   test('blocks layered and direct durable writes with zero carrier mutation', async () => {

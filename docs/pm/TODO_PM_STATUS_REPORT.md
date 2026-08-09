@@ -26,7 +26,7 @@ The current work is concentrated in four areas:
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus lightweight custom-map intake, 4.12 keeps Calendar/Agenda orchestration documentation-only, and 4.13 has an integrated local Music first slice with provider/device/caller proof still gated.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus lightweight custom-map intake, 4.12 keeps Calendar/Agenda orchestration documentation-only, and 4.13 has an integrated local Music first slice plus Chat track sharing and active-journey Map music/radio, with provider/device/remaining-caller proof still gated.
 
 ## 2. Product Positioning
 
@@ -56,7 +56,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Shopping / Food Delivery / Logistics | `Integrated V1` | five independent Food Delivery shop facades share one Food Delivery runtime; the next roadmap-owned gap is one ordinary Food Delivery/Shopping consequence flow, while tracking and polish remain separate |
 | Wallet / Gallery | `Wallet card-pack + role-payee V1 + historical quote detail; Gallery support platform` | Wallet exposes six fictional single-currency accounts/debit cards and one fictional six-currency credit card over one ledger truth; verified role account cards lead to explicit same-currency confirmation and separate receipts, while every Activity row can open a general detail that presents saved quote provenance without re-quotation; display currency and rates stay in Wallet Settings, NPC balances and automatic exchange remain excluded, and Gallery's deeper Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
-| Music | `Focused first slice, provider/caller proof staged` | consumer playback, library, queue, search, user-owned generic JSON provider setup, device-local excluded keys, Home/App Store entry, and shell mini-player are implemented; real-provider/CORS, true-device media, and actual Chat/Map callers remain |
+| Music | `Focused first slice with Chat and Map callers, provider proof staged` | consumer playback, library, queue, search, user-owned generic JSON/ChKSz providers, no-key Radio Browser HTTPS/MP3 live radio, device-local excluded keys, Home/App Store entry, global floating player, Chat track sharing, and active-journey Map music/radio are implemented; live-station uptime remains external, while real-provider/CORS, true-device media, Chat search, and external Map queue requests remain |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
@@ -73,7 +73,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - inspect and repair localStorage/IndexedDB mirror drift;
 - configure AI endpoints, models, and push delivery.
 - configure image providers/models inside Camera, choose Gallery references, review generated candidates, and explicitly download, keep, or discard them.
-- use Music as an installed listening app, play the built-in catalog, manage library/favorites/playlists/queue, keep playback available across routes, and connect an authorized browser-accessible JSON music API.
+- use Music as an installed listening app, play the built-in catalog, manage library/favorites/playlists/queue, keep playback available in a collapsed or expanded floating player across routes, connect an authorized browser-accessible JSON music API, and choose quick music/radio from an active Map journey without moving source or playback ownership into Map.
 
 ### Communication And Roles
 
@@ -116,7 +116,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - Calendar does not yet provide conventional Month/Week/Agenda views or full event authoring; Agenda Journey, Schedule Orchestrator, Activity Session, their event collaboration, and Narrative Timeline are architecture-only under roadmap 4.12;
 - group chat has target/member/reply-mode V1, not full multi-speaker orchestration;
 - Assets and Stock remain less deep than core modules;
-- Music still needs opt-in real-provider/CORS proof, true-device audio interruption/media-control/PWA evidence, and separately promoted Chat/Map consumers;
+- Music still needs opt-in real-provider/CORS proof, true-device audio interruption/media-control/PWA evidence, Chat search, and any external Map queue-request consumer;
 - Cheats has no frozen product contract.
 
 ### Runtime
@@ -244,12 +244,12 @@ Stage 1 landed on 2026-07-21 with five pure library modules and 22 focused tests
 
 ### P2: Music Provider And Caller Proof
 
-Roadmap 4.13 is `PARTIAL_DONE / FIRST_SLICE_INTEGRATED_LOCAL`:
+Roadmap 4.13 is `PARTIAL_DONE / CHKSZ_RADIO_BROWSER_LOCAL_AND_MAP_MEDIA_INTEGRATED_LOCAL`:
 
-- preserve Music's listening-first installed-app identity and the generic JSON provider boundary;
+- preserve Music's listening-first installed-app identity, the generic JSON provider boundary, and the focused no-key Radio Browser live-station preset;
 - run an opt-in smoke only with a user-authorized provider that exposes a browser-playable URL;
 - include audio focus/interruption, media controls, safe areas, keyboard, and PWA relaunch in named true-device evidence;
-- promote Chat sharing/search and Map now-playing/queue requests one caller at a time without copying provider credentials, endpoints, headers, raw responses, queue contents, or stream URLs;
+- preserve the integrated Chat track-share and active-journey Map media callers; promote Chat search or external Map queue requests one caller at a time without copying provider credentials, endpoints, headers, raw responses, queue contents, local media IDs, or stream URLs;
 - require a separate provider-specific contract for OAuth, signed streams, DRM, offline download, or a hosted proxy.
 
 ### P2: Calendar And Agenda Journey Orchestration
@@ -320,12 +320,12 @@ CI/release workflow first-slice validation on 2026-07-22:
 - local CI-mode full E2E simulation on strict port 5181 collected 60 cases: 56 expected, 4 skipped, 0 unexpected, and 0 flaky; the inline JSON guard passed;
 - remote GitHub execution, branch/environment protection, and deployed `dist` base-path behavior were not tested and remain release blockers.
 
-Music first-slice validation on 2026-08-09:
+Current Music plus active-journey Map media and Radio Browser validation on 2026-08-09:
 
 - `git diff --check`, governance, and lint pass;
-- `npm.cmd run test`: 214 files / 1519 tests, pass;
-- `npm.cmd run build`: pass, Vite 7.3.6 / 361 modules;
-- focused Music Playwright: 4 cases pass across desktop Chromium and simulated Pixel 5;
+- `npm.cmd run test`: 217 files / 1559 tests, pass;
+- `npm.cmd run build`: pass, Vite 7.3.6 / 366 modules;
+- focused Music and Map/Music Playwright: 12 cases pass across desktop Chromium and simulated Pixel 5, including no-key Radio Browser setup/search/playback;
 - system visual gate: 12 cases pass across default/zen and desktop/simulated-mobile Chromium;
 - opt-in real-provider and named physical-device proof remain separate.
 

@@ -36,7 +36,12 @@ import {
   SHOPPING_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import { createDefaultMusicState, normalizeMusicState } from '../lib/music-contract'
-import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
+import {
+  VALID_WIDGET_SIZES,
+  sanitizeWidgetAppearanceCode,
+  validateWidgetAppearanceCode,
+  validateWidgetImportPayload,
+} from '../lib/widget-schema'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl, normalizeAiTransportMode } from '../lib/ai'
 import {
@@ -1042,6 +1047,12 @@ const isCustomWidgetId = (tileId) =>
 const normalizeCustomWidgetSize = (size) =>
   CUSTOM_WIDGET_SIZES.includes(size) ? size : '2x2'
 
+const normalizeCustomWidgetSourcePresetId = (presetId) => {
+  if (typeof presetId !== 'string') return ''
+  const normalized = presetId.trim()
+  return /^[a-z0-9][a-z0-9_-]{0,79}$/i.test(normalized) ? normalized : ''
+}
+
 const normalizeCustomWidgets = (widgetsInput) => {
   if (!Array.isArray(widgetsInput)) return []
 
@@ -1064,13 +1075,15 @@ const normalizeCustomWidgets = (widgetsInput) => {
           ? widget.name.trim()
           : `自定义组件 ${index + 1}`
 
-      const code = typeof widget.code === 'string' ? widget.code : ''
+      const rawCode = typeof widget.code === 'string' ? widget.code : ''
+      const { code } = sanitizeWidgetAppearanceCode(rawCode)
 
       return {
         id,
         name,
         size: normalizeCustomWidgetSize(widget.size),
         code,
+        sourcePresetId: normalizeCustomWidgetSourcePresetId(widget.sourcePresetId),
         action: normalizeCustomWidgetAction(widget.action),
         createdAt:
           typeof widget.createdAt === 'number' && Number.isFinite(widget.createdAt)
@@ -2249,15 +2262,20 @@ export const useSystemStore = defineStore('system', () => {
     name,
     size,
     code,
+    sourcePresetId = '',
     action = DEFAULT_CUSTOM_WIDGET_ACTION,
     pageIndex = 0,
     placeOnHome = true,
   } = {}) => {
+    const codeValidation = validateWidgetAppearanceCode(code)
+    if (!codeValidation.ok) return null
+
     const widget = {
       id: createCustomWidgetId(),
       name: typeof name === 'string' && name.trim() ? name.trim() : '自定义组件',
       size: normalizeCustomWidgetSize(size),
-      code: typeof code === 'string' ? code : '',
+      code: codeValidation.code,
+      sourcePresetId: normalizeCustomWidgetSourcePresetId(sourcePresetId),
       action: normalizeCustomWidgetAction(action),
       createdAt: Date.now(),
     }
@@ -2291,6 +2309,10 @@ export const useSystemStore = defineStore('system', () => {
     const index = settings.appearance.customWidgets.findIndex((item) => item.id === widgetId)
     if (index < 0) return false
 
+    const hasCodeUpdate = Object.prototype.hasOwnProperty.call(updates, 'code')
+    const codeValidation = hasCodeUpdate ? validateWidgetAppearanceCode(updates.code) : null
+    if (codeValidation && !codeValidation.ok) return false
+
     const current = settings.appearance.customWidgets[index]
     const next = {
       ...current,
@@ -2299,7 +2321,10 @@ export const useSystemStore = defineStore('system', () => {
           ? updates.name.trim()
           : current.name,
       size: updates.size ? normalizeCustomWidgetSize(updates.size) : current.size,
-      code: typeof updates.code === 'string' ? updates.code : current.code,
+      code: codeValidation ? codeValidation.code : current.code,
+      sourcePresetId: Object.prototype.hasOwnProperty.call(updates, 'sourcePresetId')
+        ? normalizeCustomWidgetSourcePresetId(updates.sourcePresetId)
+        : normalizeCustomWidgetSourcePresetId(current.sourcePresetId),
       action:
         updates.action && typeof updates.action === 'object'
           ? normalizeCustomWidgetAction(updates.action)
@@ -2375,6 +2400,7 @@ export const useSystemStore = defineStore('system', () => {
         name: item.name,
         size: normalizeCustomWidgetSize(item.size),
         code: item.code,
+        sourcePresetId: '',
         action: { ...DEFAULT_CUSTOM_WIDGET_ACTION },
         createdAt: now + index,
       }))

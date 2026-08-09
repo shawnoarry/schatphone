@@ -31,6 +31,10 @@ import {
   normalizeUserMapPlaceCategory,
 } from '../lib/map-place-categories'
 import {
+  MAP_PLACE_DISPLAY_MODE,
+  normalizeMapPlaceDisplayMode,
+} from '../lib/map-place-localization'
+import {
   MAP_PLACE_DISCOVERY_SOURCE,
   createMapPlaceKnowledgeState,
   findNearbyFootprintDiscoveries,
@@ -1101,6 +1105,7 @@ export const useMapStore = defineStore('map', () => {
   const worldMapPackBindings = ref({})
   const mapPinVisibilityByPack = ref({})
   const mapPlaceKnowledgeByWorld = ref({})
+  const mapPlaceDisplayMode = ref(MAP_PLACE_DISPLAY_MODE.SYSTEM)
   const mapPacks = computed(() => listMapPacks(customMapPacks.value))
   const activeMapPackId = ref(DEFAULT_MAP_PACK_ID)
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
@@ -1371,6 +1376,13 @@ export const useMapStore = defineStore('map', () => {
 
   const findTripEndpointByText = (textInput) =>
     findCurrentLocationByText(textInput) || findActivePlaceByText(textInput)
+
+  const setMapPlaceDisplayMode = (mode) => {
+    const normalizedMode = normalizeMapPlaceDisplayMode(mode)
+    if (mapPlaceDisplayMode.value === normalizedMode) return false
+    mapPlaceDisplayMode.value = normalizedMode
+    return true
+  }
 
   const setMapPlaceKnowledgeMode = (
     modeInput,
@@ -3451,6 +3463,7 @@ export const useMapStore = defineStore('map', () => {
     mapPlaceKnowledgeByWorld.value = normalizeMapPlaceKnowledgeByWorld(
       source.mapPlaceKnowledgeByWorld,
     )
+    mapPlaceDisplayMode.value = normalizeMapPlaceDisplayMode(source.mapPlaceDisplayMode)
     activeMapPackId.value = getAvailableMapPackById(source.activeMapPackId).id
 
     if (Array.isArray(source.addresses)) {
@@ -3531,6 +3544,7 @@ export const useMapStore = defineStore('map', () => {
     mapPlaceKnowledgeByWorld: normalizeMapPlaceKnowledgeByWorld(
       mapPlaceKnowledgeByWorld.value,
     ),
+    mapPlaceDisplayMode: mapPlaceDisplayMode.value,
     mapPinVisibilityByPack: Object.fromEntries(
       Object.entries(mapPinVisibilityByPack.value).map(([mapPackId, state]) => [
         mapPackId,
@@ -3580,6 +3594,7 @@ export const useMapStore = defineStore('map', () => {
     activeMapPackId.value = DEFAULT_MAP_PACK_ID
     mapPinVisibilityByPack.value = {}
     mapPlaceKnowledgeByWorld.value = {}
+    mapPlaceDisplayMode.value = MAP_PLACE_DISPLAY_MODE.SYSTEM
     mapVisualSettings.value = createDefaultMapVisualSettings()
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
     journeyCheckpointEventEvaluationEnabled = false
@@ -3621,6 +3636,7 @@ export const useMapStore = defineStore('map', () => {
       worldMapPackBindings,
       mapPinVisibilityByPack,
       mapPlaceKnowledgeByWorld,
+      mapPlaceDisplayMode,
       addresses,
       currentLocation,
       tripForm,
@@ -3689,6 +3705,7 @@ export const useMapStore = defineStore('map', () => {
     worldMapPackBindings,
     mapPinVisibilityByPack,
     mapPlaceKnowledgeByWorld,
+    mapPlaceDisplayMode,
     activeMapPackId,
     activeMapPack,
     activeMapAllPlaces,
@@ -3719,6 +3736,7 @@ export const useMapStore = defineStore('map', () => {
     bindMapPackToWorld,
     resetWorldMapPackBinding,
     syncMapPackForWorld,
+    setMapPlaceDisplayMode,
     setMapPlaceKnowledgeMode,
     isMapPlaceVisible,
     getMapPlaceCategoryVisibility,

@@ -48,11 +48,16 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
     )
     .toBe(true)
 
-  const deliveredProductAssets = Array.from(
-    { length: 10 },
-    (_, index) => `dash-grill/products/dash-grill-item-${String(index + 1).padStart(2, '0')}.png`,
-  )
-  const deliveredProductAssetResults = await page.evaluate(async (assetPaths) => {
+  const deliveredDashAssets = [
+    ...Array.from(
+      { length: 10 },
+      (_, index) =>
+        `dash-grill/products/dash-grill-item-${String(index + 1).padStart(2, '0')}.png`,
+    ),
+    'dash-grill/combos/dash-grill-double-stack-combo-01.png',
+    'dash-grill/combos/dash-grill-golden-chicken-combo-01.png',
+  ]
+  const deliveredDashAssetResults = await page.evaluate(async (assetPaths) => {
     return Promise.all(
       assetPaths.map(
         (assetPath) =>
@@ -68,9 +73,9 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
           }),
       ),
     )
-  }, deliveredProductAssets)
-  expect(deliveredProductAssetResults).toEqual(
-    deliveredProductAssets.map((assetPath) => ({ assetPath, loaded: true })),
+  }, deliveredDashAssets)
+  expect(deliveredDashAssetResults).toEqual(
+    deliveredDashAssets.map((assetPath) => ({ assetPath, loaded: true })),
   )
 
   const addressButton = page.getByTestId('food-delivery-quick-service-address')
@@ -123,9 +128,21 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
   await expect(page.getByTestId('food-delivery-dash-detail-ticket')).toContainText('#01')
   const detailImage = page
     .getByTestId('food-delivery-menu-detail-sheet')
-    .locator('[data-required-asset="dash-grill/products/dash-grill-item-01.png"]')
+    .locator(
+      '[data-required-asset="dash-grill/combos/dash-grill-double-stack-combo-01.png"]',
+    )
   await expect(detailImage).toBeVisible()
   await expect(detailImage).not.toHaveAttribute('data-asset-missing', 'true')
+  await expect(detailImage).toHaveAttribute('data-asset-role', 'combo-tray')
+  await expect
+    .poll(() =>
+      detailImage.evaluate((image) => ({
+        complete: image.complete,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })),
+    )
+    .toEqual({ complete: true, width: 1024, height: 1024 })
   await expect(page.getByTestId('food-delivery-dash-selection-progress')).toContainText('2/2')
   await expect(
     page
@@ -139,6 +156,11 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
   await expectNoHorizontalOverflow(page)
   await page.getByTestId('food-delivery-dash-combo-side-loaded_cheese_fries').click()
   await page.getByTestId('food-delivery-dash-combo-drink-vanilla_cloud_shake').click()
+  await expect(
+    page
+      .getByTestId('food-delivery-menu-detail-sheet')
+      .locator('[data-required-asset="dash-grill/products/dash-grill-item-01.png"]'),
+  ).toHaveAttribute('data-asset-role', 'combo-main')
   await expect(page.getByTestId('food-delivery-dash-selection-summary')).toContainText(
     /浓芝士薯条 · 香草云奶昔|Loaded Cheese Fries · Vanilla Cloud Shake/,
   )

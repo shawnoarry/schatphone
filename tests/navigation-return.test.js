@@ -80,6 +80,10 @@ describe('navigation return helpers', () => {
     expect(resolveReturnTarget({ query: { source: 'chat' } }, '/settings')).toBe('/chat')
     expect(resolveReturnLabel({ query: { source: 'chat' } }, 'Settings')).toBe('Chat')
     expect(resolveReturnTarget({ query: { source: ' Map ' } }, '/settings')).toBe('/map')
+    expect(resolveReturnTarget({ query: { source: 'map', homePage: '2' } }, '/settings')).toEqual({
+      path: '/map',
+      query: { from: 'home', homePage: '2' },
+    })
     expect(resolveReturnLabel({ query: { source: 'calendar' } }, 'Settings')).toBe('Calendar')
     expect(resolveReturnTarget({ query: { source: 'map-settings' } }, '/home')).toBe('/map/settings')
     expect(resolveReturnLabel({ query: { source: 'map-settings' } }, 'Home')).toBe('Map settings')

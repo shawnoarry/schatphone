@@ -38,8 +38,9 @@ It also owns:
   - Camera Download, Keep in Gallery, and Discard are distinct outcomes, and Keep does not automatically classify an image as a person reference.
 - how Music owns its installed-app experience:
   - `/music` is listening-first and keeps provider configuration behind a Music-owned settings sheet rather than becoming another native-system API page;
-  - Listen Now, Browse, Library, Search, queue, Now Playing, and the global mini-player use Music's visual identity while preserving shell return, safe-area, and bottom-control clearance;
-  - Chat and Map may open Music or consume bounded projections, but their data source does not transfer outer visual ownership and they cannot start playback without the Music/user confirmation boundary.
+  - Listen Now, Browse, Library, Search, queue, Now Playing, and the global collapsed/expanded floating player use Music's visual identity while preserving shell return, safe-area, and bottom-control clearance;
+  - Chat and Map may open Music or consume bounded projections, but their data source does not transfer outer visual ownership. Map may present a traveling/paused-only focused media panel and delegate an explicit user click to Music; it never receives a stream URL or playback ownership.
+  - an open Map journey-media panel stays above the Music floating player. Closing either surface affects only that surface, and closing the Map panel never stops playback or dismisses the float;
   - Music Track Details owns the first user-visible share entry; Chat owns recipient selection, confirmation, message history, and quoting, while a card return opens the same track detail without auto-play.
 - how user customization should layer with world-driven presentation:
   - user-controlled Appearance CSS is an explicit override layer above system defaults and World Pack defaults;

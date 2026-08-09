@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:cloudflare": "vite build --base /",
+    "build:github": "vite build --mode github",
+    "build:vercel": "vite build --mode vercel --base /",
+    "build:cloudflare": "vite build --mode cloudflare --base /",
     "preview": "vite preview",
     "push:server": "node server/push-server.mjs",
     "push:keys": "node server/generate-vapid.mjs",

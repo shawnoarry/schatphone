@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useMapStore } from '../stores/map'
+import { useMusicStore } from '../stores/music'
 import { useGalleryStore } from '../stores/gallery'
 import { useSimulationStore } from '../stores/simulation'
 import { useSystemStore } from '../stores/system'
@@ -21,6 +22,10 @@ import {
   matchesMapPlaceCategoryFilter,
   resolveMapPlaceVisual,
 } from '../lib/map-place-categories'
+import {
+  MAP_PLACE_DISPLAY_MODE,
+  resolveMapPlacePresentation,
+} from '../lib/map-place-localization'
 import { searchMapPlaces, suggestMapPlaces } from '../lib/map-place-search'
 import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
 import { createMapLocationShareObject } from '../lib/shareable-object'
@@ -36,6 +41,7 @@ import {
   isMapTransportMode,
 } from '../lib/map-journey'
 import { MAP_JOURNEY_EVENT_PROPOSAL_STATUS } from '../lib/simulation/adapters/map-journey-events'
+import { buildMusicIntegrationRoute } from '../lib/music-module-interface'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import MapAreaFeedbackPanel from '../components/map/MapAreaFeedbackPanel.vue'
 import MapRouteFamiliarityPanel from '../components/map/MapRouteFamiliarityPanel.vue'
@@ -43,6 +49,7 @@ import MapSceneCanvas from '../components/map/MapSceneCanvas.vue'
 import MapTripControlPanel from '../components/map/MapTripControlPanel.vue'
 import MapTripHistoryPanel from '../components/map/MapTripHistoryPanel.vue'
 import MapVisualSettingsPanel from '../components/map/MapVisualSettingsPanel.vue'
+import MapJourneyMediaPanel from '../components/map/MapJourneyMediaPanel.vue'
 import { useChatStore } from '../stores/chat'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import {
@@ -57,11 +64,12 @@ const router = useRouter()
 const route = useRoute()
 const chatStore = useChatStore()
 const mapStore = useMapStore()
+const musicStore = useMusicStore()
 const galleryStore = useGalleryStore()
 const simulationStore = useSimulationStore()
 const systemStore = useSystemStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
-const { t } = useI18n()
+const { t, systemLanguage } = useI18n()
 const { confirmDialog } = useDialog()
 
 const {
@@ -79,6 +87,7 @@ const {
   mapAreaFeedback,
   activeMapPlaceKnowledgeMode,
   activeMapPlaceDiscoverySummary,
+  mapPlaceDisplayMode,
   mapVisualSettings,
   mapAutomationRuntime,
   mapAiVisualAutomationPolicy,
@@ -119,6 +128,7 @@ const mapVisualLoading = ref(false)
 const mapAiVisualRefreshing = ref(false)
 const mapDrawerOpen = ref(false)
 const mapDrawerFocus = ref('trip')
+const journeyMediaOpen = ref(false)
 const sharedRouteContactId = ref('')
 const journeyEventApplying = ref(false)
 let runtimeTimer = null
@@ -130,6 +140,37 @@ const MAP_DRAWER_SECTIONS = Object.freeze([
   { key: 'places', icon: 'fas fa-map-location-dot', labelZh: '地点', labelEn: 'Places', shortLabelZh: '地点', shortLabelEn: 'Places' },
   { key: 'progress', icon: 'fas fa-shoe-prints', labelZh: '足迹', labelEn: 'Footprints', shortLabelZh: '足迹', shortLabelEn: 'Footprints' },
   { key: 'visual', icon: 'fas fa-map', labelZh: '图层', labelEn: 'Layers' },
+])
+
+const MAP_PLACE_DISPLAY_OPTIONS = Object.freeze([
+  {
+    id: MAP_PLACE_DISPLAY_MODE.SYSTEM,
+    labelZh: '系统',
+    labelEn: 'Auto',
+    titleZh: '跟随系统语言',
+    titleEn: 'Follow system language',
+  },
+  {
+    id: MAP_PLACE_DISPLAY_MODE.ZH,
+    labelZh: '中文',
+    labelEn: '中文',
+    titleZh: '显示中文地名',
+    titleEn: 'Show Chinese place names',
+  },
+  {
+    id: MAP_PLACE_DISPLAY_MODE.EN,
+    labelZh: 'EN',
+    labelEn: 'EN',
+    titleZh: '显示英文地名',
+    titleEn: 'Show English place names',
+  },
+  {
+    id: MAP_PLACE_DISPLAY_MODE.BILINGUAL,
+    labelZh: '双语',
+    labelEn: 'Both',
+    titleZh: '同时显示中英文地名',
+    titleEn: 'Show Chinese and English place names',
+  },
 ])
 const MAP_PRIMARY_SECTIONS = MAP_DRAWER_SECTIONS.filter((section) => section.key !== 'visual')
 const activeWorldPack = computed(() => systemStore.getActiveWorldPack?.() || {
@@ -208,11 +249,41 @@ const openMapDrawer = (section = 'trip') => {
   rolePositionMode.value = false
   rolePositionNotice.value = ''
   mapDrawerFocus.value = nextSection
+  journeyMediaOpen.value = false
   mapDrawerOpen.value = true
 }
 
 const closeMapDrawer = () => {
   mapDrawerOpen.value = false
+}
+
+const openJourneyMedia = () => {
+  if (!isTripTraveling.value) return
+  rolePositionMode.value = false
+  mapSearchSuggestionsOpen.value = false
+  mapDrawerOpen.value = false
+  journeyMediaOpen.value = true
+}
+
+const closeJourneyMedia = () => {
+  journeyMediaOpen.value = false
+}
+
+const openMusicFromJourney = () => {
+  const target = buildMusicIntegrationRoute({
+    sourceModule: 'map',
+    action: 'open',
+    contextId: tripRuntime.value?.journeyId || '',
+  })
+  router.push({
+    ...target,
+    query: {
+      ...target.query,
+      ...(normalizeHomePageQuery(route.query.homePage)
+        ? { homePage: normalizeHomePageQuery(route.query.homePage) }
+        : {}),
+    },
+  })
 }
 
 const buildMapSettingsQuery = () => {
@@ -309,11 +380,23 @@ const updateTripTransportMode = (value) => {
   }
 }
 
-const mapPlaceName = (place) =>
-  t(place?.nameZh || place?.label || '', place?.nameEn || place?.label || '')
+const mapPlacePresentation = (place) =>
+  resolveMapPlacePresentation(place, {
+    mode: mapPlaceDisplayMode.value,
+    systemLanguage: systemLanguage.value,
+  })
 
-const mapPlaceDetail = (place) =>
-  t(place?.detailZh || place?.detail || '', place?.detailEn || place?.detail || '')
+const mapPlaceName = (place) => mapPlacePresentation(place).name
+
+const mapPlaceSecondaryName = (place) => mapPlacePresentation(place).secondaryName
+
+const mapPlaceDetail = (place) => mapPlacePresentation(place).detail
+
+const mapPlaceSecondaryDetail = (place) => mapPlacePresentation(place).secondaryDetail
+
+const setMapPlaceDisplayMode = (mode) => {
+  mapStore.setMapPlaceDisplayMode(mode)
+}
 
 const mapPlaceVisual = (place) =>
   resolveMapPlaceVisual(place, activeMapPack.value?.factions)
@@ -1175,6 +1258,9 @@ const isTripArrived = computed(() => tripRuntime.value.status === 'arrived')
 const isTripPaused = computed(
   () => isTripTraveling.value && tripRuntime.value.phase === MAP_JOURNEY_PHASE.PAUSED,
 )
+watch(isTripTraveling, (active) => {
+  if (!active) journeyMediaOpen.value = false
+})
 const showRoleLocationControl = computed(
   () =>
     currentLocation.value?.mapPackId === activeMapPackId.value &&
@@ -1936,6 +2022,9 @@ onBeforeUnmount(() => {
               </span>
               <span class="min-w-0 text-left">
                 <span class="block truncate text-xs font-semibold text-slate-900">{{ mapPlaceName(result.place) }}</span>
+                <span v-if="mapPlaceSecondaryName(result.place)" class="map-place-result-secondary">
+                  {{ mapPlaceSecondaryName(result.place) }}
+                </span>
                 <span class="map-place-result-detail">
                   <span v-if="mapSearchMatchHint(result)" class="map-place-result-match">{{ mapSearchMatchHint(result) }}</span>
                   <span class="truncate">{{ mapPlaceDetail(result.place) }}</span>
@@ -2001,6 +2090,24 @@ onBeforeUnmount(() => {
           >
             <i :class="section.icon" aria-hidden="true"></i>
             <span>{{ mapPrimarySectionLabel(section) }}</span>
+          </button>
+          <button
+            v-if="isTripTraveling"
+            type="button"
+            class="map-control-button is-icon-only map-journey-media-button"
+            :class="{
+              'is-active': journeyMediaOpen,
+              'is-playing': musicStore.isPlaying,
+              'has-station': Boolean(musicStore.mapJourneyMedia.activeStationId),
+            }"
+            data-testid="map-journey-media-button"
+            :aria-label="t('行程音乐与电台', 'Journey music and radio')"
+            :title="t('行程音乐与电台', 'Journey music and radio')"
+            :aria-pressed="journeyMediaOpen"
+            @click="journeyMediaOpen ? closeJourneyMedia() : openJourneyMedia()"
+          >
+            <i :class="musicStore.mapJourneyMedia.activeStationId ? 'fas fa-tower-broadcast' : 'fas fa-headphones'" aria-hidden="true"></i>
+            <span class="map-journey-media-state" aria-hidden="true"></span>
           </button>
         </div>
 
@@ -2145,6 +2252,19 @@ onBeforeUnmount(() => {
 
       </section>
     </main>
+
+    <div
+      v-if="journeyMediaOpen && isTripTraveling"
+      class="map-journey-media-backdrop"
+      data-testid="map-journey-media-drawer"
+      @click.self="closeJourneyMedia"
+    >
+      <MapJourneyMediaPanel
+        :journey-label="activeTripRouteLabel"
+        @close="closeJourneyMedia"
+        @open-music="openMusicFromJourney"
+      />
+    </div>
 
     <div
       v-if="mapDrawerOpen"
@@ -2350,6 +2470,9 @@ onBeforeUnmount(() => {
               </span>
               <span class="min-w-0 text-left">
                 <strong>{{ mapPlaceName(item) }}</strong>
+                <small v-if="mapPlaceSecondaryName(item)" class="map-place-list-secondary">
+                  {{ mapPlaceSecondaryName(item) }}
+                </small>
                 <small>{{ mapPlaceDetail(item) }}</small>
               </span>
               <span class="map-place-list-source">{{ item.source === 'user' ? t('我的', 'Mine') : t('世界', 'World') }}</span>
@@ -2537,9 +2660,36 @@ onBeforeUnmount(() => {
           <div class="min-w-0">
             <small>{{ selectedMapPlace.source === 'user' ? t('我的地点', 'My place') : t('世界地点', 'World place') }}</small>
             <h2>{{ mapPlaceName(selectedMapPlace) }}</h2>
+            <p v-if="mapPlaceSecondaryName(selectedMapPlace)" class="map-place-detail-secondary-name" data-testid="map-place-secondary-name">
+              {{ mapPlaceSecondaryName(selectedMapPlace) }}
+            </p>
             <p>{{ mapPlaceDetail(selectedMapPlace) }}</p>
+            <p v-if="mapPlaceSecondaryDetail(selectedMapPlace)" class="map-place-detail-secondary-detail" data-testid="map-place-secondary-detail">
+              {{ mapPlaceSecondaryDetail(selectedMapPlace) }}
+            </p>
           </div>
           <button type="button" :aria-label="t('关闭', 'Close')" @click="closePlaceDetail"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+        </div>
+        <div class="map-place-language-control">
+          <span class="map-place-language-label">
+            <i class="fas fa-language" aria-hidden="true"></i>
+            {{ t('地名显示', 'Place names') }}
+          </span>
+          <div class="map-place-language-segments" role="group" :aria-label="t('地名显示语言', 'Place-name language')">
+            <button
+              v-for="option in MAP_PLACE_DISPLAY_OPTIONS"
+              :key="option.id"
+              type="button"
+              :class="{ 'is-active': mapPlaceDisplayMode === option.id }"
+              :data-testid="`map-place-language-mode-${option.id}`"
+              :aria-label="t(option.titleZh, option.titleEn)"
+              :title="t(option.titleZh, option.titleEn)"
+              :aria-pressed="mapPlaceDisplayMode === option.id"
+              @click="setMapPlaceDisplayMode(option.id)"
+            >
+              {{ t(option.labelZh, option.labelEn) }}
+            </button>
+          </div>
         </div>
         <div
           v-if="isJourneyPlanningLocked"
@@ -3270,6 +3420,17 @@ onBeforeUnmount(() => {
   font-size: 9px;
 }
 
+.map-place-result-secondary {
+  display: block;
+  overflow: hidden;
+  margin-top: 1px;
+  color: #506159;
+  font-size: 9px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .map-place-result-match {
   max-width: 46%;
   flex: 0 1 auto;
@@ -3337,6 +3498,43 @@ onBeforeUnmount(() => {
   border-color: #17664f;
   background: #17664f;
   color: #fff;
+}
+
+.map-journey-media-button {
+  position: relative;
+}
+
+.map-journey-media-button.has-station {
+  border-color: #9e7a26;
+  background: #fff8df;
+  color: #765711;
+}
+
+.map-journey-media-button.is-active {
+  border-color: #17664f;
+  background: #17664f;
+  color: #fff;
+}
+
+.map-journey-media-state {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #9aa69f;
+}
+
+.map-journey-media-button.is-playing .map-journey-media-state {
+  background: #e0ad36;
+  animation: map-journey-media-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes map-journey-media-pulse {
+  0%, 100% { transform: scale(0.78); opacity: 0.62; }
+  50% { transform: scale(1.2); opacity: 1; }
 }
 
 .map-control-button.has-runtime {
@@ -3664,6 +3862,16 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 
+.map-journey-media-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 72;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(21, 33, 27, 0.42);
+}
+
 .map-bottom-drawer,
 .map-place-detail-sheet {
   display: flex;
@@ -3747,6 +3955,7 @@ onBeforeUnmount(() => {
 .map-place-list-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-place-list-row strong { font-size: 11px; }
 .map-place-list-row small { margin-top: 3px; color: #758179; font-size: 9px; }
+.map-place-list-row small.map-place-list-secondary { color: #4f6258; font-weight: 700; }
 .map-place-list-row.is-pin-hidden .map-place-list-main { opacity: 0.62; }
 .map-place-pin-visibility { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #dce3de; border-radius: 7px; background: #f8faf8; color: #436153; font-size: 9px; }
 .map-place-list-row.is-pin-hidden .map-place-pin-visibility { color: #929d96; }
@@ -3779,6 +3988,15 @@ onBeforeUnmount(() => {
 .map-place-detail-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 8px; background: var(--map-place-tone); color: #fff; }
 .map-place-detail-head small { color: #718078; font-size: 9px; font-weight: 800; }
 .map-place-detail-head p { margin-top: 5px; color: #627067; font-size: 11px; line-height: 1.5; }
+.map-place-detail-head .map-place-detail-secondary-name { margin-top: 2px; color: #3f5b4e; font-size: 12px; font-weight: 750; }
+.map-place-detail-head .map-place-detail-secondary-detail { margin-top: 2px; color: #7a8780; font-size: 10px; }
+.map-place-language-control { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; margin-top: 14px; border-top: 1px solid #e2e7e3; padding-top: 12px; }
+.map-place-language-label { display: inline-flex; min-width: 0; align-items: center; gap: 6px; color: #52635a; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.map-place-language-label i { color: #17664f; font-size: 11px; }
+.map-place-language-segments { display: grid; min-width: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid #d7dfda; border-radius: 7px; background: #f4f7f5; }
+.map-place-language-segments button { min-width: 0; min-height: 34px; border-left: 1px solid #d7dfda; padding: 0 5px; color: #66746d; font-size: 9px; font-weight: 850; white-space: nowrap; }
+.map-place-language-segments button:first-child { border-left: 0; }
+.map-place-language-segments button.is-active { background: #17664f; color: #fff; }
 .map-place-journey-lock { display: flex; align-items: center; gap: 8px; margin-top: 16px; border: 1px solid #d7e2dc; border-radius: 7px; background: #f2f7f4; padding: 10px 11px; color: #315044; font-size: 10px; font-weight: 750; line-height: 1.45; }
 .map-place-journey-lock i { flex: 0 0 auto; color: #17664f; }
 .map-place-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 18px; }

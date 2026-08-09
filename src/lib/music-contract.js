@@ -35,8 +35,20 @@ export const MUSIC_TRACK_SOURCE_TYPES = Object.freeze({
   LOCAL_FILE: 'local_file',
 })
 
+export const RADIO_BROWSER_BASE_URL = 'https://all.api.radio-browser.info'
+export const RADIO_BROWSER_SEARCH_PATH =
+  '/json/stations/search?hidebroken=true&order=clickcount&reverse=true&is_https=true&codec=MP3'
+
 export const CHKSZ_MUSIC_QUALITIES = Object.freeze({
-  NETEASE: Object.freeze(['standard', 'exhigh', 'lossless', 'hires', 'jyeffect', 'sky', 'jymaster']),
+  NETEASE: Object.freeze([
+    'standard',
+    'exhigh',
+    'lossless',
+    'hires',
+    'jyeffect',
+    'sky',
+    'jymaster',
+  ]),
   QQ: Object.freeze(['mp3', 'hq', 'flac', 'master', 'atmos_2', 'atmos_51']),
   KUGOU: Object.freeze(['mp3', 'hq', 'flac']),
 })
@@ -62,7 +74,8 @@ export const DEFAULT_MUSIC_FIELD_MAP = Object.freeze({
   genre: 'genre',
 })
 
-const demoTrack = (track) => Object.freeze({ ...track, providerId: 'demo', providerName: 'Schat Music' })
+const demoTrack = (track) =>
+  Object.freeze({ ...track, providerId: 'demo', providerName: 'Schat Music' })
 
 export const MUSIC_DEMO_TRACKS = Object.freeze([
   demoTrack({
@@ -215,7 +228,10 @@ const normalizeMusicSourceRef = (input) => {
     if (!mediaId) return null
     const fileName = normalizeText(source.fileName, '', 240)
     const mimeType = normalizeText(source.mimeType, '', 100).toLowerCase()
-    const size = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(source.size) || 0)))
+    const size = Math.max(
+      0,
+      Math.min(Number.MAX_SAFE_INTEGER, Math.floor(Number(source.size) || 0)),
+    )
     return {
       type,
       mediaId,
@@ -225,7 +241,10 @@ const normalizeMusicSourceRef = (input) => {
     }
   }
   const platform = normalizeText(source.platform, '', 32)
-  if (type !== MUSIC_TRACK_SOURCE_TYPES.CHKSZ || !Object.values(CHKSZ_MUSIC_PLATFORMS).includes(platform)) {
+  if (
+    type !== MUSIC_TRACK_SOURCE_TYPES.CHKSZ ||
+    !Object.values(CHKSZ_MUSIC_PLATFORMS).includes(platform)
+  ) {
     return null
   }
   const id = normalizeId(source.id, '')
@@ -280,7 +299,11 @@ export const normalizeMusicTrack = (input = {}, options = {}) => {
     ),
     audioUrl,
     durationSec: normalizeDuration(
-      source.durationSec || source.durationSeconds || source.durationMs || source.duration_ms || source.duration,
+      source.durationSec ||
+        source.durationSeconds ||
+        source.durationMs ||
+        source.duration_ms ||
+        source.duration,
     ),
     providerId,
     providerName: normalizeText(source.providerName || options.providerName, providerId, 100),
@@ -289,10 +312,7 @@ export const normalizeMusicTrack = (input = {}, options = {}) => {
     addedAt: Math.max(0, Math.floor(Number(source.addedAt) || 0)),
     sourceRef: normalizeMusicSourceRef(source.sourceRef),
   }
-  normalized.id = normalizeId(
-    normalized.id,
-    `${providerId}:${stableTrackFallbackId(normalized)}`,
-  )
+  normalized.id = normalizeId(normalized.id, `${providerId}:${stableTrackFallbackId(normalized)}`)
   return normalized
 }
 
@@ -350,7 +370,9 @@ export const normalizeMusicProviderProfile = (input = {}, index = 0) => {
     name: normalizeText(source.name, `Music Source ${index + 1}`, 80),
     enabled: source.enabled !== false,
     adapterKind,
-    baseUrl: normalizeUrl(adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ ? 'https://api.chksz.com' : source.baseUrl),
+    baseUrl: normalizeUrl(
+      adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ ? 'https://api.chksz.com' : source.baseUrl,
+    ),
     updatedAt: Math.max(0, Math.floor(Number(source.updatedAt) || 0)),
   }
   if (adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ) {
@@ -375,6 +397,51 @@ export const normalizeMusicProviderProfile = (input = {}, index = 0) => {
     headers: normalizeHeaderMap(source.headers),
     fieldMap: normalizeFieldMap(source.fieldMap),
   }
+}
+
+export const createRadioBrowserMusicProviderProfile = (input = {}) =>
+  normalizeMusicProviderProfile({
+    ...input,
+    name: input.name || 'Radio Browser',
+    adapterKind: MUSIC_ADAPTER_KINDS.GENERIC_JSON,
+    baseUrl: RADIO_BROWSER_BASE_URL,
+    searchPath: RADIO_BROWSER_SEARCH_PATH,
+    method: MUSIC_PROVIDER_METHODS.GET,
+    queryParam: 'name',
+    limitParam: 'limit',
+    resultPath: 'stations',
+    authMode: MUSIC_AUTH_MODES.NONE,
+    authHeader: 'X-API-Key',
+    authPrefix: '',
+    headers: {},
+    fieldMap: {
+      id: 'stationuuid',
+      title: 'name',
+      artist: 'country',
+      album: 'codec',
+      coverUrl: 'favicon',
+      audioUrl: 'url_resolved',
+      duration: '_duration',
+      year: '_year',
+      genre: 'tags',
+    },
+  })
+
+export const isRadioBrowserMusicProviderProfile = (input = {}) => {
+  const profile = normalizeMusicProviderProfile(input)
+  let hostname = ''
+  try {
+    hostname = new URL(profile.baseUrl).hostname.toLowerCase()
+  } catch {
+    return false
+  }
+  return (
+    profile.adapterKind === MUSIC_ADAPTER_KINDS.GENERIC_JSON &&
+    hostname === 'all.api.radio-browser.info' &&
+    profile.searchPath.startsWith('/json/stations/search') &&
+    profile.method === MUSIC_PROVIDER_METHODS.GET &&
+    profile.queryParam === 'name'
+  )
 }
 
 export const normalizeMusicProviderProfiles = (input) => {
@@ -410,10 +477,11 @@ const normalizeTrackList = (input, limit) => {
 }
 
 const normalizeTrackIdList = (input, limit) =>
-  [...new Set((Array.isArray(input) ? input : []).map((id) => normalizeId(id, '')).filter(Boolean))].slice(
-    0,
-    limit,
-  )
+  [
+    ...new Set(
+      (Array.isArray(input) ? input : []).map((id) => normalizeId(id, '')).filter(Boolean),
+    ),
+  ].slice(0, limit)
 
 export const createDefaultMusicState = () => ({
   version: MUSIC_STATE_VERSION,
@@ -448,7 +516,9 @@ export const normalizeMusicState = (input = {}) => {
     : MUSIC_REPEAT_MODES.OFF
   return {
     version: MUSIC_STATE_VERSION,
-    activeProfileId: profileIds.has(source.activeProfileId) ? source.activeProfileId : fallbackProfile,
+    activeProfileId: profileIds.has(source.activeProfileId)
+      ? source.activeProfileId
+      : fallbackProfile,
     profiles,
     savedTracks: normalizeTrackList(source.savedTracks, MUSIC_LIMITS.savedTracks),
     favoriteTrackIds: normalizeTrackIdList(source.favoriteTrackIds, MUSIC_LIMITS.savedTracks),
@@ -477,8 +547,7 @@ export const normalizeMusicState = (input = {}) => {
     integrationPolicy: {
       chatShareEnabled: source.integrationPolicy?.chatShareEnabled !== false,
       mapNowPlayingEnabled: source.integrationPolicy?.mapNowPlayingEnabled !== false,
-      externalQueueRequestsEnabled:
-        source.integrationPolicy?.externalQueueRequestsEnabled === true,
+      externalQueueRequestsEnabled: source.integrationPolicy?.externalQueueRequestsEnabled === true,
     },
   }
 }
@@ -577,8 +646,10 @@ export const buildMusicProviderSearchRequest = ({
   limit = 30,
 } = {}) => {
   const profile = normalizeMusicProviderProfile(profileInput)
-  if (!profile.enabled) throw createMusicProviderError('PROVIDER_DISABLED', 'Music source is disabled.')
-  if (!profile.baseUrl) throw createMusicProviderError('PROVIDER_URL_MISSING', 'Music source URL is missing.')
+  if (!profile.enabled)
+    throw createMusicProviderError('PROVIDER_DISABLED', 'Music source is disabled.')
+  if (!profile.baseUrl)
+    throw createMusicProviderError('PROVIDER_URL_MISSING', 'Music source URL is missing.')
   const normalizedQuery = normalizeText(query, '', 240)
   if (!normalizedQuery) throw createMusicProviderError('QUERY_MISSING', 'Search query is missing.')
 
@@ -641,7 +712,8 @@ export const searchMusicProvider = async ({
   try {
     response = await fetchImpl(request.url, { ...request.options, signal })
   } catch (error) {
-    if (error?.name === 'AbortError') throw createMusicProviderError('ABORTED', 'Music request was cancelled.')
+    if (error?.name === 'AbortError')
+      throw createMusicProviderError('ABORTED', 'Music request was cancelled.')
     throw createMusicProviderError(
       'NETWORK_UNAVAILABLE',
       'Music source could not be reached. Check the endpoint and browser access policy.',
@@ -669,7 +741,11 @@ export const searchMusicProvider = async ({
 }
 
 export const testMusicProviderConnection = async (options = {}) => {
-  const result = await searchMusicProvider({ ...options, query: options.query || 'music', limit: 3 })
+  const result = await searchMusicProvider({
+    ...options,
+    query: options.query || 'music',
+    limit: 3,
+  })
   return {
     ...result,
     hasResults: result.tracks.length > 0,

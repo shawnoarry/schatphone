@@ -26,9 +26,12 @@ import {
 } from '../lib/chksz-music-adapter'
 import {
   MUSIC_INTEGRATION_ACTIONS,
+  createMusicJourneyRadioCatalog,
+  createMusicJourneyTrackProjection,
   createMusicNowPlayingProjection,
   createMusicTrackSharePayload,
   normalizeMusicIntegrationRequest,
+  resolveMusicJourneyRadioQueue,
   resolveMusicIntegrationCapabilities,
 } from '../lib/music-module-interface'
 import {
@@ -131,6 +134,10 @@ export const useMusicStore = defineStore('music', () => {
     romanized: '',
   })
   const playlistImportState = reactive({ status: 'idle', errorCode: '', importedPlaylistId: '' })
+  const activeJourneyStationId = ref('')
+  const floatingPlayerRequested = ref(false)
+  const floatingPlayerDismissed = ref(false)
+  const floatingPlayerExpanded = ref(false)
   let activeLocalPlaybackUrl = ''
 
   const state = computed(() => systemStore.settings.music)
@@ -167,6 +174,11 @@ export const useMusicStore = defineStore('music', () => {
   )
   const featuredTrack = computed(() => lastPlayedTrack.value || demoTracks.value[0] || null)
   const isPlaying = computed(() => runtime.status === 'playing')
+  const floatingPlayerVisible = computed(
+    () =>
+      floatingPlayerRequested.value ||
+      (Boolean(runtime.track && runtime.sessionActive) && !floatingPlayerDismissed.value),
+  )
   const integrationCapabilities = computed(() =>
     resolveMusicIntegrationCapabilities(state.value.integrationPolicy),
   )
@@ -561,7 +573,37 @@ export const useMusicStore = defineStore('music', () => {
     )
   }
 
+  const journeyRadioStations = computed(() =>
+    createMusicJourneyRadioCatalog(libraryTracks.value, canPlayTrack),
+  )
+  const journeyQuickTracks = computed(() =>
+    libraryTracks.value
+      .filter(canPlayTrack)
+      .slice(0, 6)
+      .map(createMusicJourneyTrackProjection)
+      .filter(Boolean),
+  )
+  const floatingPlayerMedia = computed(() => ({
+    nowPlaying: createMusicNowPlayingProjection(runtime, { mapNowPlayingEnabled: true }),
+    activeStationId: activeJourneyStationId.value,
+    quickTracks: journeyQuickTracks.value,
+    stations: journeyRadioStations.value,
+  }))
+  const mapJourneyMedia = computed(() => {
+    const enabled = integrationCapabilities.value.map.journeyControls === true
+    return {
+      enabled,
+      nowPlaying: enabled
+        ? nowPlayingProjection.value
+        : { available: false, status: 'idle' },
+      activeStationId: enabled ? activeJourneyStationId.value : '',
+      quickTracks: enabled ? journeyQuickTracks.value : [],
+      stations: enabled ? journeyRadioStations.value : [],
+    }
+  })
+
   const playTrack = async (trackInput, options = {}) => {
+    if (options.preserveJourneyStation !== true) activeJourneyStationId.value = ''
     const unresolvedTrack = normalizeMusicTrack(trackInput)
     let track = unresolvedTrack
     let localPlaybackUrl = ''
@@ -613,6 +655,7 @@ export const useMusicStore = defineStore('music', () => {
     const result = await musicPlaybackRuntime.load(track, { autoplay: options.autoplay !== false })
     const localSourceLoaded = result?.ok || result?.code === 'PLAYBACK_GESTURE_REQUIRED'
     if (localSourceLoaded) {
+      if (options.preserveFloatingDismissal !== true) floatingPlayerDismissed.value = false
       activeLocalPlaybackUrl = localPlaybackUrl
       if (previousLocalPlaybackUrl && previousLocalPlaybackUrl !== localPlaybackUrl) {
         revokeLocalPlaybackUrl(previousLocalPlaybackUrl, options.objectUrlApi)
@@ -638,7 +681,11 @@ export const useMusicStore = defineStore('music', () => {
   const next = async ({ fromEnded = false } = {}) => {
     if (!currentTrack.value) return playTrack(featuredTrack.value, { queue: libraryTracks.value })
     if (state.value.playback.repeatMode === MUSIC_REPEAT_MODES.ONE && fromEnded) {
-      return playTrack(currentTrack.value, { queue: queue.value })
+      return playTrack(currentTrack.value, {
+        queue: queue.value,
+        preserveJourneyStation: true,
+        preserveFloatingDismissal: true,
+      })
     }
     const sourceQueue = queue.value.length ? queue.value : libraryTracks.value
     if (!sourceQueue.length) return { ok: false, code: 'QUEUE_EMPTY' }
@@ -649,7 +696,10 @@ export const useMusicStore = defineStore('music', () => {
     } else {
       const index = sourceQueue.findIndex((track) => track.id === currentTrack.value.id)
       nextTrack = sourceQueue[index + 1] || null
-      if (!nextTrack && state.value.playback.repeatMode === MUSIC_REPEAT_MODES.ALL) {
+      if (
+        !nextTrack &&
+        (state.value.playback.repeatMode === MUSIC_REPEAT_MODES.ALL || activeJourneyStationId.value)
+      ) {
         nextTrack = sourceQueue[0] || null
       }
     }
@@ -657,7 +707,11 @@ export const useMusicStore = defineStore('music', () => {
       pause()
       return { ok: false, code: 'QUEUE_ENDED' }
     }
-    return playTrack(nextTrack, { queue: sourceQueue })
+    return playTrack(nextTrack, {
+      queue: sourceQueue,
+      preserveJourneyStation: true,
+      preserveFloatingDismissal: fromEnded,
+    })
   }
 
   const previous = async () => {
@@ -668,7 +722,70 @@ export const useMusicStore = defineStore('music', () => {
     const sourceQueue = queue.value.length ? queue.value : libraryTracks.value
     const index = sourceQueue.findIndex((track) => track.id === currentTrack.value?.id)
     const previousTrack = sourceQueue[index - 1] || sourceQueue[sourceQueue.length - 1] || featuredTrack.value
-    return previousTrack ? playTrack(previousTrack, { queue: sourceQueue }) : { ok: false, code: 'QUEUE_EMPTY' }
+    return previousTrack
+      ? playTrack(previousTrack, { queue: sourceQueue, preserveJourneyStation: true })
+      : { ok: false, code: 'QUEUE_EMPTY' }
+  }
+
+  const playFloatingTrack = async (trackId, options = {}) => {
+    const track = findMusicTrack(trackId, [libraryTracks.value])
+    if (!track || !canPlayTrack(track)) return { ok: false, code: 'TRACK_UNAVAILABLE' }
+    return playTrack(track, { ...options, queue: libraryTracks.value })
+  }
+
+  const playJourneyTrack = async (trackId, options = {}) => {
+    if (integrationCapabilities.value.map.journeyControls !== true) {
+      return { ok: false, code: 'MAP_MUSIC_DISABLED' }
+    }
+    return playFloatingTrack(trackId, options)
+  }
+
+  const playRadioStation = async (stationId, options = {}) => {
+    const station = journeyRadioStations.value.find((item) => item.id === stationId)
+    if (!station) return { ok: false, code: 'JOURNEY_STATION_NOT_FOUND' }
+    const stationQueue = resolveMusicJourneyRadioQueue(
+      stationId,
+      libraryTracks.value,
+      canPlayTrack,
+    )
+    if (!stationQueue.length) return { ok: false, code: 'QUEUE_EMPTY' }
+    const result = await playTrack(stationQueue[0], {
+      ...options,
+      queue: stationQueue,
+      preserveJourneyStation: true,
+    })
+    if (result?.ok || result?.code === 'PLAYBACK_GESTURE_REQUIRED') {
+      activeJourneyStationId.value = stationId
+    } else {
+      activeJourneyStationId.value = ''
+    }
+    return result
+  }
+
+  const playFloatingRadio = (stationId, options = {}) => playRadioStation(stationId, options)
+
+  const playJourneyRadio = async (stationId, options = {}) => {
+    if (integrationCapabilities.value.map.journeyRadio !== true) {
+      return { ok: false, code: 'MAP_MUSIC_DISABLED' }
+    }
+    return playRadioStation(stationId, options)
+  }
+
+  const openFloatingPlayer = ({ expanded = false } = {}) => {
+    floatingPlayerRequested.value = true
+    floatingPlayerDismissed.value = false
+    floatingPlayerExpanded.value = expanded === true
+  }
+
+  const closeFloatingPlayer = () => {
+    floatingPlayerRequested.value = false
+    floatingPlayerDismissed.value = true
+    floatingPlayerExpanded.value = false
+  }
+
+  const setFloatingPlayerExpanded = (expanded) => {
+    if (!floatingPlayerVisible.value && expanded === true) openFloatingPlayer({ expanded: true })
+    else floatingPlayerExpanded.value = expanded === true
   }
 
   const seek = (seconds) => musicPlaybackRuntime.seek(seconds)
@@ -699,6 +816,9 @@ export const useMusicStore = defineStore('music', () => {
   const stop = (options = {}) => {
     musicPlaybackRuntime.stop()
     revokeLocalPlaybackUrl(undefined, options.objectUrlApi)
+    activeJourneyStationId.value = ''
+    floatingPlayerRequested.value = false
+    floatingPlayerExpanded.value = false
   }
 
   const search = async (queryInput = searchQuery.value, options = {}) => {
@@ -948,6 +1068,8 @@ export const useMusicStore = defineStore('music', () => {
     lastPlayedTrack,
     featuredTrack,
     isPlaying,
+    floatingPlayerVisible,
+    floatingPlayerExpanded,
     searchQuery,
     searchResults,
     searchStatus,
@@ -957,6 +1079,8 @@ export const useMusicStore = defineStore('music', () => {
     playlistImportState,
     integrationCapabilities,
     nowPlayingProjection,
+    floatingPlayerMedia,
+    mapJourneyMedia,
     getCredential,
     setCredential,
     upsertProvider,
@@ -980,6 +1104,13 @@ export const useMusicStore = defineStore('music', () => {
     removeFromQueue,
     canPlayTrack,
     playTrack,
+    playFloatingTrack,
+    playFloatingRadio,
+    playJourneyTrack,
+    playJourneyRadio,
+    openFloatingPlayer,
+    closeFloatingPlayer,
+    setFloatingPlayerExpanded,
     resume,
     pause,
     togglePlayback,

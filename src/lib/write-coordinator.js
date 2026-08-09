@@ -183,7 +183,23 @@ export const createWriteCoordinator = ({
   const channel = typeof BroadcastChannelClass === 'function'
     ? new BroadcastChannelClass('schatphone-repository-write')
     : null
+  const listeners = new Set()
   let closed = false
+
+  const handleMessage = (event) => {
+    const message = event?.data
+    if (
+      !message ||
+      message.scopeKey !== scopeKey ||
+      message.ownerId === ownerId ||
+      !['acquired', 'released', 'timed_out'].includes(message.type)
+    ) {
+      return
+    }
+    for (const listener of listeners) listener(Object.freeze({ ...message }))
+  }
+
+  channel?.addEventListener?.('message', handleMessage)
 
   const notify = (type, metadata) => {
     channel?.postMessage({
@@ -262,8 +278,8 @@ export const createWriteCoordinator = ({
             fencingToken: null,
             heartbeat: async () => ({ ok: true }),
             verifyBeforeCommit: verifyPointer,
-            release: async () => {
-              const result = await lock.release()
+            release: () => {
+              const result = lock.release()
               notify('released', { operationId, fencingToken: null })
               return result
             },
@@ -346,7 +362,15 @@ export const createWriteCoordinator = ({
 
   const close = () => {
     closed = true
+    channel?.removeEventListener?.('message', handleMessage)
+    listeners.clear()
     channel?.close()
+  }
+
+  const subscribe = (listener) => {
+    if (closed || typeof listener !== 'function') return () => {}
+    listeners.add(listener)
+    return () => listeners.delete(listener)
   }
 
   return Object.freeze({
@@ -354,6 +378,7 @@ export const createWriteCoordinator = ({
     scopeKey,
     adapter: useWebLocks ? 'web_locks' : leaseAdapter ? 'indexeddb_lease' : 'unsupported',
     acquire,
+    subscribe,
     close,
   })
 }

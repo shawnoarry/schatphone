@@ -50,7 +50,7 @@ jobs:
         run: npm test
 
       - name: Build
-        run: npm run build
+        run: npm run build:github
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium

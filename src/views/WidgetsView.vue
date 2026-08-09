@@ -1,7 +1,7 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
@@ -11,7 +11,12 @@ import {
   pushReturnTarget,
   resolveReturnLabel,
 } from '../lib/navigation-return'
-import { VALID_WIDGET_SIZES, validateWidgetImportPayload } from '../lib/widget-schema'
+import {
+  VALID_WIDGET_SIZES,
+  validateWidgetAppearanceCode,
+  validateWidgetImportPayload,
+} from '../lib/widget-schema'
+import { buildCustomWidgetSrcDoc } from '../lib/custom-widget-preview'
 import { OFFICIAL_WIDGET_STYLE_PRESETS } from '../lib/widget-style-presets'
 import { BUILT_IN_HOME_WIDGETS } from '../lib/home-widgets'
 import {
@@ -57,12 +62,18 @@ const customWidgetSize = ref('2x2')
 const customWidgetCode = ref('')
 const customWidgetActionType = ref(CUSTOM_WIDGET_ACTION_TYPE_NONE)
 const customWidgetActionTarget = ref('')
+const customWidgetSourcePresetId = ref('')
 const editingWidgetId = ref('')
 const customWidgetCodeTextarea = ref(null)
 const widgetsContent = ref(null)
+const customEditorSheet = ref(null)
+const importEditorSheet = ref(null)
+const stylePreviewDialog = ref(null)
 const showCustomCodeEditor = ref(false)
 const customEditorOpen = ref(false)
 const importEditorOpen = ref(false)
+const isMobileWidgetsLayout = ref(false)
+const customFormError = ref('')
 const importJsonText = ref('')
 const importFeedbackType = ref('')
 const importFeedbackMessage = ref('')
@@ -70,6 +81,14 @@ const importFeedbackDetails = ref([])
 
 let savedTimerId = null
 let copiedTimerId = null
+let widgetsMobileMediaQuery = null
+let widgetsMobileMediaListener = null
+
+const dialogReturnFocus = {
+  custom: null,
+  import: null,
+  style: null,
+}
 
 const panels = computed(() => [
   { id: 'library', label: t('组件库', 'Library'), icon: 'fas fa-table-cells-large' },
@@ -236,7 +255,9 @@ const officialStylePresetStates = computed(() =>
   OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => ({
     ...preset,
     label: t(preset.nameZh, preset.nameEn),
-    added: customWidgets.value.some((widget) => widget.name === t(preset.nameZh, preset.nameEn)),
+    added: customWidgets.value.some(
+      (widget) => widget.sourcePresetId === preset.id || widget.code === preset.code,
+    ),
   })),
 )
 const filteredBuiltInWidgetStates = computed(() =>
@@ -259,24 +280,20 @@ const featuredStylePreset = computed(
   () => officialStylePresetStates.value.find((preset) => preset.id === 'theme_board') || officialStylePresetStates.value[0] || null,
 )
 
-const customWidgetPreviewSrcDoc = (widget = {}) => {
-  const body = typeof widget.code === 'string' ? widget.code : ''
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
-      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      #widget-root { width: 100%; height: 100%; }
-    </style>
-  </head>
-  <body>
-    <div id="widget-root">${body}</div>
-  </body>
-</html>`
-}
+const customWidgetPreviewSrcDoc = buildCustomWidgetSrcDoc
+
+const isCustomEditorModalOpen = computed(
+  () => isMobileWidgetsLayout.value && customEditorOpen.value,
+)
+const isImportEditorModalOpen = computed(
+  () => isMobileWidgetsLayout.value && importEditorOpen.value,
+)
+const hasOpenWidgetDialog = computed(
+  () =>
+    Boolean(previewedStylePreset.value) ||
+    isCustomEditorModalOpen.value ||
+    isImportEditorModalOpen.value,
+)
 
 const ensureCustomWidgetActionTarget = () => {
   const targets = currentCustomWidgetActionTargets.value
@@ -310,13 +327,41 @@ const customWidgetActionLabel = (actionInput) => {
   return t('无点击动作', 'No click action')
 }
 
-const closeStylePresetPreview = () => {
+const rememberDialogReturnFocus = (kind, candidate = document.activeElement) => {
+  dialogReturnFocus[kind] = candidate && typeof candidate.focus === 'function' ? candidate : null
+}
+
+const focusDialog = async (kind) => {
+  await nextTick()
+  if (kind === 'custom' && !isCustomEditorModalOpen.value) return
+  if (kind === 'import' && !isImportEditorModalOpen.value) return
+  const root =
+    kind === 'custom'
+      ? customEditorSheet.value
+      : kind === 'import'
+        ? importEditorSheet.value
+        : stylePreviewDialog.value
+  if (!root) return
+
+  const initialFocus = root.querySelector('[data-dialog-initial-focus]')
+  initialFocus?.focus?.()
+}
+
+const restoreDialogFocus = async (kind) => {
+  const returnTarget = dialogReturnFocus[kind]
+  dialogReturnFocus[kind] = null
+  await nextTick()
+  if (returnTarget?.isConnected) returnTarget.focus()
+}
+
+const closeStylePresetPreview = ({ restoreFocus = true } = {}) => {
   previewedStylePresetId.value = ''
+  if (restoreFocus) void restoreDialogFocus('style')
 }
 
 const openPanel = (panelId) => {
   activePanel.value = panelId
-  closeStylePresetPreview()
+  closeStylePresetPreview({ restoreFocus: false })
   clearImportFeedback()
   customEditorOpen.value = false
   importEditorOpen.value = false
@@ -326,32 +371,39 @@ const openPanel = (panelId) => {
 }
 
 const openCustomEditor = () => {
+  rememberDialogReturnFocus('custom')
   activePanel.value = 'custom'
-  closeStylePresetPreview()
+  closeStylePresetPreview({ restoreFocus: false })
   clearImportFeedback()
+  customFormError.value = ''
   importEditorOpen.value = false
   customEditorOpen.value = true
   nextTick(() => {
     widgetsContent.value?.scrollTo?.({ top: 0 })
   })
+  void focusDialog('custom')
 }
 
 const closeCustomEditor = () => {
   customEditorOpen.value = false
+  void restoreDialogFocus('custom')
 }
 
 const openImportEditor = () => {
+  rememberDialogReturnFocus('import')
   activePanel.value = 'import'
-  closeStylePresetPreview()
+  closeStylePresetPreview({ restoreFocus: false })
   customEditorOpen.value = false
   importEditorOpen.value = true
   nextTick(() => {
     widgetsContent.value?.scrollTo?.({ top: 0 })
   })
+  void focusDialog('import')
 }
 
 const closeImportEditor = () => {
   importEditorOpen.value = false
+  void restoreDialogFocus('import')
 }
 
 const setWidgetSizeFilter = (size) => {
@@ -362,7 +414,65 @@ const setWidgetSizeFilter = (size) => {
 
 const openStylePresetPreview = (preset) => {
   if (!preset?.id) return
+  rememberDialogReturnFocus('style')
   previewedStylePresetId.value = preset.id
+  void focusDialog('style')
+}
+
+const dialogFocusableElements = (root) => {
+  if (!root) return []
+  const candidates = [
+    ...root.querySelectorAll(
+      'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ]
+  const visibleCandidates = candidates.filter((element) => element.getClientRects().length > 0)
+  return visibleCandidates.length > 0 ? visibleCandidates : candidates
+}
+
+const handleDialogKeydown = (event, kind) => {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    if (kind === 'custom') closeCustomEditor()
+    else if (kind === 'import') closeImportEditor()
+    else closeStylePresetPreview()
+    return
+  }
+  if (event.key !== 'Tab') return
+
+  const root =
+    kind === 'custom'
+      ? customEditorSheet.value
+      : kind === 'import'
+        ? importEditorSheet.value
+        : stylePreviewDialog.value
+  const focusable = dialogFocusableElements(root)
+  if (focusable.length === 0) {
+    event.preventDefault()
+    return
+  }
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+const handlePanelTabKeydown = (event, panelIndex) => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  const tabButtons = [...event.currentTarget.parentElement.querySelectorAll('[role="tab"]')]
+  let nextIndex = panelIndex
+  if (event.key === 'Home') nextIndex = 0
+  else if (event.key === 'End') nextIndex = tabButtons.length - 1
+  else if (event.key === 'ArrowLeft') nextIndex = (panelIndex - 1 + tabButtons.length) % tabButtons.length
+  else nextIndex = (panelIndex + 1) % tabButtons.length
+  tabButtons[nextIndex]?.focus()
+  tabButtons[nextIndex]?.click()
 }
 
 const triggerSaved = () => {
@@ -402,13 +512,22 @@ const chooseBuiltInWidgetSlot = (tileId) => {
 
 const addOfficialStylePreset = (preset) => {
   if (!preset?.code) return
-  systemStore.addCustomWidget({
-    name: t(preset.nameZh, preset.nameEn),
+  const existingCopyCount = customWidgets.value.filter(
+    (widget) => widget.sourcePresetId === preset.id || widget.code === preset.code,
+  ).length
+  const baseName = t(preset.nameZh, preset.nameEn)
+  const widgetId = systemStore.addCustomWidget({
+    name: existingCopyCount > 0 ? `${baseName} ${existingCopyCount + 1}` : baseName,
     size: preset.size,
     code: preset.code,
+    sourcePresetId: preset.id,
     pageIndex: null,
     placeOnHome: false,
   })
+  if (!widgetId) {
+    setImportFeedback('error', t('这个样式无法加入组件库。', 'This style cannot be added to the library.'))
+    return
+  }
   setImportFeedback('success', t('样式已加入自定义组件库。', 'Style added to the custom widget library.'))
   triggerSaved()
 }
@@ -427,7 +546,30 @@ const hasCustomWidgetDraftChanges = () =>
       customWidgetActionTarget.value,
   )
 
-const applyStylePresetToCustomForm = async (preset) => {
+const EMPTY_CUSTOM_WIDGET_DRAFT_SNAPSHOT = JSON.stringify({
+  id: '',
+  name: '',
+  size: '2x2',
+  code: '',
+  sourcePresetId: '',
+  actionType: CUSTOM_WIDGET_ACTION_TYPE_NONE,
+  actionTarget: '',
+})
+const customWidgetDraftBaseline = ref(EMPTY_CUSTOM_WIDGET_DRAFT_SNAPSHOT)
+const customWidgetDraftSnapshot = () =>
+  JSON.stringify({
+    id: editingWidgetId.value,
+    name: customWidgetName.value,
+    size: customWidgetSize.value,
+    code: customWidgetCode.value,
+    sourcePresetId: customWidgetSourcePresetId.value,
+    actionType: customWidgetActionType.value,
+    actionTarget: customWidgetActionTarget.value,
+  })
+const hasUnsavedCustomWidgetDraft = () =>
+  customWidgetDraftSnapshot() !== customWidgetDraftBaseline.value
+
+const applyStylePresetToCustomForm = async (preset, options = {}) => {
   if (!preset?.code) return false
   if (hasCustomWidgetDraftChanges()) {
     const ok = await confirmDialog({
@@ -439,24 +581,31 @@ const applyStylePresetToCustomForm = async (preset) => {
     if (!ok) return false
   }
 
+  rememberDialogReturnFocus('custom', options.returnFocus || document.activeElement)
   activePanel.value = 'custom'
   editingWidgetId.value = ''
+  customWidgetDraftBaseline.value = EMPTY_CUSTOM_WIDGET_DRAFT_SNAPSHOT
   customWidgetName.value = t(preset.nameZh, preset.nameEn)
   customWidgetSize.value = preset.size
   customWidgetCode.value = preset.code
+  customWidgetSourcePresetId.value = preset.id
   customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
   customWidgetActionTarget.value = ''
   showCustomCodeEditor.value = false
   customEditorOpen.value = true
+  customFormError.value = ''
   clearImportFeedback()
   setImportFeedback('success', t('模板已填入编辑器。', 'Template loaded into the editor.'))
+  void focusDialog('custom')
   return true
 }
 
 const applyPreviewedStylePresetToCustomForm = async () => {
   if (!previewedStylePreset.value) return
-  const applied = await applyStylePresetToCustomForm(previewedStylePreset.value)
-  if (applied) closeStylePresetPreview()
+  const applied = await applyStylePresetToCustomForm(previewedStylePreset.value, {
+    returnFocus: dialogReturnFocus.style,
+  })
+  if (applied) closeStylePresetPreview({ restoreFocus: false })
 }
 
 const insertCodeSnippet = (snippet) => {
@@ -485,30 +634,42 @@ const resetCustomWidgetForm = () => {
   customWidgetName.value = ''
   customWidgetSize.value = '2x2'
   customWidgetCode.value = ''
+  customWidgetSourcePresetId.value = ''
   customWidgetActionType.value = CUSTOM_WIDGET_ACTION_TYPE_NONE
   customWidgetActionTarget.value = ''
   showCustomCodeEditor.value = false
+  customFormError.value = ''
+  customWidgetDraftBaseline.value = EMPTY_CUSTOM_WIDGET_DRAFT_SNAPSHOT
   customEditorOpen.value = false
+  void restoreDialogFocus('custom')
 }
 
 const startEditCustomWidget = (widget) => {
+  rememberDialogReturnFocus('custom')
   const action = normalizeCustomWidgetAction(widget.action)
   activePanel.value = 'custom'
   editingWidgetId.value = widget.id
   customWidgetName.value = widget.name || ''
   customWidgetSize.value = widget.size || '2x2'
   customWidgetCode.value = widget.code || ''
+  customWidgetSourcePresetId.value = widget.sourcePresetId || ''
   customWidgetActionType.value = action.type
   customWidgetActionTarget.value = action.target
   showCustomCodeEditor.value = true
+  customFormError.value = ''
   customEditorOpen.value = true
   ensureCustomWidgetActionTarget()
+  customWidgetDraftBaseline.value = customWidgetDraftSnapshot()
+  void focusDialog('custom')
 }
 
 const submitCustomWidget = () => {
   const code = customWidgetCode.value.trim()
-  if (!code) {
-    setImportFeedback('error', t('请先填写 Widget 内容。', 'Please enter widget content first.'))
+  const codeValidation = validateWidgetAppearanceCode(code)
+  if (!codeValidation.ok) {
+    const message = formatImportError(codeValidation.errors[0])
+    customFormError.value = message
+    setImportFeedback('error', message)
     return
   }
 
@@ -517,7 +678,8 @@ const submitCustomWidget = () => {
     size: editingWidgetIsPlaced.value
       ? editingCustomWidget.value?.size || customWidgetSize.value
       : customWidgetSize.value,
-    code,
+    code: codeValidation.code,
+    sourcePresetId: customWidgetSourcePresetId.value,
     action: normalizeCustomWidgetFormAction(),
   }
 
@@ -533,11 +695,17 @@ const submitCustomWidget = () => {
     return
   }
 
-  systemStore.addCustomWidget({
+  const widgetId = systemStore.addCustomWidget({
     ...payload,
     pageIndex: null,
     placeOnHome: false,
   })
+  if (!widgetId) {
+    const message = t('这个组件无法加入组件库。', 'This widget cannot be added to the library.')
+    customFormError.value = message
+    setImportFeedback('error', message)
+    return
+  }
   setImportFeedback('success', t('组件已加入库。', 'Widget added to the library.'))
   triggerSaved()
   resetCustomWidgetForm()
@@ -597,9 +765,8 @@ const exportWidgetTemplate = () => {
 }
 
 const fillRecognizedImportTemplate = () => {
-  clearImportFeedback()
   importJsonText.value = RECOGNIZED_IMPORT_TEMPLATE_JSON.value
-  importEditorOpen.value = true
+  openImportEditor()
 }
 
 const clearImportFeedback = () => {
@@ -732,19 +899,57 @@ const importCustomWidgets = () => {
         )
   setImportFeedback(warningCount > 0 ? 'warning' : 'success', message, details)
   importJsonText.value = ''
-  importEditorOpen.value = false
+  closeImportEditor()
   triggerSaved()
 }
+
+watch(customWidgetCode, () => {
+  customFormError.value = ''
+})
+
+onMounted(() => {
+  if (typeof window.matchMedia !== 'function') return
+  widgetsMobileMediaQuery = window.matchMedia('(max-width: 719px)')
+  const syncMobileLayout = () => {
+    isMobileWidgetsLayout.value = widgetsMobileMediaQuery.matches
+  }
+  widgetsMobileMediaListener = syncMobileLayout
+  syncMobileLayout()
+  widgetsMobileMediaQuery.addEventListener?.('change', syncMobileLayout)
+  widgetsMobileMediaQuery.addListener?.(syncMobileLayout)
+})
+
+onBeforeRouteLeave(async () => {
+  if (!hasUnsavedCustomWidgetDraft() && !importJsonText.value.trim()) return true
+  return confirmDialog({
+    title: t('离开组件中心', 'Leave Widget Center'),
+    message: t(
+      '尚未保存的组件编辑或导入内容会丢失。',
+      'Unsaved widget edits or import content will be lost.',
+    ),
+    confirmText: t('离开', 'Leave'),
+    cancelText: t('继续编辑', 'Keep editing'),
+    tone: 'danger',
+  })
+})
 
 onBeforeUnmount(() => {
   if (savedTimerId) clearTimeout(savedTimerId)
   if (copiedTimerId) clearTimeout(copiedTimerId)
+  if (widgetsMobileMediaListener) {
+    widgetsMobileMediaQuery?.removeEventListener?.('change', widgetsMobileMediaListener)
+    widgetsMobileMediaQuery?.removeListener?.(widgetsMobileMediaListener)
+  }
 })
 </script>
 
 <template>
   <div class="widgets-shell" :class="{ 'is-widget-sheet-open': customEditorOpen || importEditorOpen }">
-    <header class="widgets-header">
+    <header
+      class="widgets-header"
+      :inert="hasOpenWidgetDialog ? '' : null"
+      :aria-hidden="hasOpenWidgetDialog ? 'true' : null"
+    >
       <button class="widgets-icon-btn" type="button" @click="goHome" :aria-label="returnButtonLabel">
         <i class="fas fa-chevron-left"></i>
       </button>
@@ -764,22 +969,45 @@ onBeforeUnmount(() => {
       </button>
     </header>
 
-    <nav class="widgets-tabs" :aria-label="t('Widget 中心分区', 'Widget center sections')">
+    <nav
+      class="widgets-tabs"
+      role="tablist"
+      :aria-label="t('Widget 中心分区', 'Widget center sections')"
+      :inert="hasOpenWidgetDialog ? '' : null"
+      :aria-hidden="hasOpenWidgetDialog ? 'true' : null"
+    >
       <button
-        v-for="panel in panels"
+        v-for="(panel, panelIndex) in panels"
         :key="panel.id"
+        :id="`widgets-tab-${panel.id}`"
         class="widgets-tab"
         :class="{ 'is-active': activePanel === panel.id }"
         type="button"
+        role="tab"
+        :aria-selected="activePanel === panel.id ? 'true' : 'false'"
+        :aria-controls="`widgets-panel-${panel.id}`"
+        :tabindex="activePanel === panel.id ? 0 : -1"
         @click="openPanel(panel.id)"
+        @keydown="handlePanelTabKeydown($event, panelIndex)"
       >
         <i :class="panel.icon"></i>
         <span>{{ panel.label }}</span>
       </button>
     </nav>
 
-    <main ref="widgetsContent" class="widgets-content no-scrollbar">
-      <section v-if="activePanel === 'library'" class="widgets-section">
+    <main
+      ref="widgetsContent"
+      class="widgets-content no-scrollbar"
+      :inert="previewedStylePreset ? '' : null"
+      :aria-hidden="previewedStylePreset ? 'true' : null"
+    >
+      <section
+        v-if="activePanel === 'library'"
+        id="widgets-panel-library"
+        class="widgets-section"
+        role="tabpanel"
+        aria-labelledby="widgets-tab-library"
+      >
         <div class="widgets-section-head">
           <div>
             <h2>{{ t('组件市场', 'Widget Market') }}</h2>
@@ -813,7 +1041,7 @@ onBeforeUnmount(() => {
                 <span>{{ t('预览', 'Preview') }}</span>
               </button>
               <button class="widgets-action-btn" type="button" @click="addOfficialStylePreset(featuredStylePreset)">
-                {{ featuredStylePreset.added ? t('再加一个', 'Add again') : t('加入库', 'Add') }}
+                {{ featuredStylePreset.added ? t('创建副本', 'Create copy') : t('加入库', 'Add') }}
               </button>
             </div>
           </div>
@@ -826,6 +1054,7 @@ onBeforeUnmount(() => {
               :key="option.id"
               type="button"
               :class="{ 'is-active': widgetSizeFilter === option.id }"
+              :aria-pressed="widgetSizeFilter === option.id ? 'true' : 'false'"
               @click="setWidgetSizeFilter(option.id)"
             >
               {{ option.label }}
@@ -891,7 +1120,7 @@ onBeforeUnmount(() => {
                 <span>{{ preset.size }}</span>
               </div>
               <button class="widgets-action-btn" type="button" @click.stop="addOfficialStylePreset(preset)">
-                {{ preset.added ? t('再添加', 'Add again') : t('加入库', 'Add') }}
+                {{ preset.added ? t('创建副本', 'Create copy') : t('加入库', 'Add') }}
               </button>
             </div>
           </article>
@@ -959,15 +1188,30 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section v-else-if="activePanel === 'custom'" class="widgets-section">
-        <div class="widgets-section-head">
+      <section
+        v-else-if="activePanel === 'custom'"
+        id="widgets-panel-custom"
+        class="widgets-section"
+        role="tabpanel"
+        aria-labelledby="widgets-tab-custom"
+      >
+        <div
+          class="widgets-section-head"
+          :inert="isCustomEditorModalOpen ? '' : null"
+          :aria-hidden="isCustomEditorModalOpen ? 'true' : null"
+        >
           <div>
             <h2>{{ t('自定义组件', 'Custom widgets') }}</h2>
             <p>{{ t('先选缩略图样式，再编辑外观代码与点击动作。', 'Choose a visual starter, then tune the code and tap action.') }}</p>
           </div>
         </div>
 
-        <div class="widgets-workflow-steps" :aria-label="t('自定义组件步骤', 'Custom widget steps')">
+        <div
+          class="widgets-workflow-steps"
+          :aria-label="t('自定义组件步骤', 'Custom widget steps')"
+          :inert="isCustomEditorModalOpen ? '' : null"
+          :aria-hidden="isCustomEditorModalOpen ? 'true' : null"
+        >
           <span>
             <b>1</b>
             <small>{{ t('样式', 'Style') }}</small>
@@ -982,7 +1226,11 @@ onBeforeUnmount(() => {
           </span>
         </div>
 
-        <div class="widgets-starter-templates">
+        <div
+          class="widgets-starter-templates"
+          :inert="isCustomEditorModalOpen ? '' : null"
+          :aria-hidden="isCustomEditorModalOpen ? 'true' : null"
+        >
           <div class="widgets-section-subhead">
             <h3>{{ t('从样式开始', 'Start from a style') }}</h3>
             <span>{{ officialStylePresetStates.length }}</span>
@@ -1016,20 +1264,38 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="widgets-mobile-action-strip">
+        <div
+          class="widgets-mobile-action-strip"
+          :inert="isCustomEditorModalOpen ? '' : null"
+          :aria-hidden="isCustomEditorModalOpen ? 'true' : null"
+        >
           <button class="widgets-primary-btn" type="button" @click="openCustomEditor">
             <i class="fas fa-pen-to-square"></i>
             <span>{{ editingWidgetId ? t('继续编辑', 'Continue editing') : t('打开编辑器', 'Open editor') }}</span>
           </button>
         </div>
 
-        <div class="widgets-custom-composer" :class="{ 'is-mobile-sheet-open': customEditorOpen }">
+        <div
+          ref="customEditorSheet"
+          class="widgets-custom-composer"
+          :class="{ 'is-mobile-sheet-open': customEditorOpen }"
+          :role="isCustomEditorModalOpen ? 'dialog' : null"
+          :aria-modal="isCustomEditorModalOpen ? 'true' : null"
+          :aria-labelledby="isCustomEditorModalOpen ? 'widgets-custom-editor-title' : null"
+          @keydown="isCustomEditorModalOpen && handleDialogKeydown($event, 'custom')"
+        >
           <div class="widgets-editor-sheet-head widgets-custom-root-sheet-head">
             <div>
               <span>{{ t('组件编辑器', 'Widget editor') }}</span>
-              <strong>{{ customWidgetName || t('未命名组件', 'Untitled widget') }}</strong>
+              <strong id="widgets-custom-editor-title">{{ customWidgetName || t('未命名组件', 'Untitled widget') }}</strong>
             </div>
-            <button class="widgets-icon-btn" type="button" @click="closeCustomEditor" :aria-label="t('关闭编辑器', 'Close editor')">
+            <button
+              class="widgets-icon-btn"
+              type="button"
+              data-dialog-initial-focus
+              @click="closeCustomEditor"
+              :aria-label="t('关闭编辑器', 'Close editor')"
+            >
               <i class="fas fa-xmark"></i>
             </button>
           </div>
@@ -1076,11 +1342,23 @@ onBeforeUnmount(() => {
                     <i :class="showCustomCodeEditor ? 'fas fa-chevron-up' : 'fas fa-pen-to-square'"></i>
                     <span>{{ showCustomCodeEditor ? t('收起代码', 'Collapse') : t('编辑代码', 'Edit code') }}</span>
                   </button>
-                  <button class="widgets-secondary-btn" type="button" @click="copyWidgetTemplate">
+                  <button
+                    class="widgets-secondary-btn widgets-code-copy"
+                    type="button"
+                    :aria-label="templateCopied ? t('已复制', 'Copied') : t('复制模板', 'Copy template')"
+                    :title="templateCopied ? t('已复制', 'Copied') : t('复制模板', 'Copy template')"
+                    @click="copyWidgetTemplate"
+                  >
                     <i class="fas fa-copy"></i>
                     <span>{{ templateCopied ? t('已复制', 'Copied') : t('复制模板', 'Copy template') }}</span>
                   </button>
-                  <button class="widgets-secondary-btn" type="button" @click="exportWidgetTemplate">
+                  <button
+                    class="widgets-secondary-btn widgets-code-export"
+                    type="button"
+                    :aria-label="t('导出 TXT', 'Export TXT')"
+                    :title="t('导出 TXT', 'Export TXT')"
+                    @click="exportWidgetTemplate"
+                  >
                     <i class="fas fa-file-arrow-down"></i>
                     <span>{{ t('导出 TXT', 'Export TXT') }}</span>
                   </button>
@@ -1110,9 +1388,21 @@ onBeforeUnmount(() => {
                   ref="customWidgetCodeTextarea"
                   v-model="customWidgetCode"
                   spellcheck="false"
+                  :aria-invalid="customFormError ? 'true' : 'false'"
+                  :aria-describedby="customFormError ? 'widgets-custom-form-error' : null"
                   placeholder="<div style='height:100%;display:flex;align-items:center;justify-content:center;'>Hello Widget</div>"
                 ></textarea>
               </label>
+            </div>
+
+            <div
+              v-if="customFormError"
+              id="widgets-custom-form-error"
+              class="widgets-editor-feedback is-error"
+              role="alert"
+            >
+              <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+              <span>{{ customFormError }}</span>
             </div>
 
             <div class="widgets-action-config">
@@ -1177,7 +1467,9 @@ onBeforeUnmount(() => {
             >
               <iframe
                 :srcdoc="customWidgetPreviewSrcDoc(customWidgetDraftPreview)"
-                sandbox="allow-scripts"
+                sandbox=""
+                tabindex="-1"
+                aria-hidden="true"
                 loading="lazy"
                 referrerpolicy="no-referrer"
                 title="Widget draft preview"
@@ -1200,7 +1492,11 @@ onBeforeUnmount(() => {
           </aside>
         </div>
 
-        <div class="widgets-created">
+        <div
+          class="widgets-created"
+          :inert="isCustomEditorModalOpen ? '' : null"
+          :aria-hidden="isCustomEditorModalOpen ? 'true' : null"
+        >
           <div class="widgets-section-subhead">
             <h3>{{ t('已创建', 'Created') }}</h3>
             <span>{{ customWidgets.length }}</span>
@@ -1223,7 +1519,9 @@ onBeforeUnmount(() => {
               <div class="widgets-created-preview" :class="`size-${widget.size.replace('x', '-')}`">
                 <iframe
                   :srcdoc="customWidgetPreviewSrcDoc(widget)"
-                  sandbox="allow-scripts"
+                  sandbox=""
+                  tabindex="-1"
+                  aria-hidden="true"
                   loading="lazy"
                   referrerpolicy="no-referrer"
                   title="Widget preview"
@@ -1251,8 +1549,18 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section v-else class="widgets-section">
-        <div class="widgets-section-head">
+      <section
+        v-else
+        id="widgets-panel-import"
+        class="widgets-section"
+        role="tabpanel"
+        aria-labelledby="widgets-tab-import"
+      >
+        <div
+          class="widgets-section-head"
+          :inert="isImportEditorModalOpen ? '' : null"
+          :aria-hidden="isImportEditorModalOpen ? 'true' : null"
+        >
           <div>
             <h2>{{ t('导入组件', 'Import widgets') }}</h2>
             <p>{{ t('导入外观代码后生成组件预览；点击动作稍后在 SchatPhone 里配置。', 'Imported visual code becomes widget previews; tap actions are configured in SchatPhone.') }}</p>
@@ -1263,7 +1571,11 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <div class="widgets-import-showcase">
+        <div
+          class="widgets-import-showcase"
+          :inert="isImportEditorModalOpen ? '' : null"
+          :aria-hidden="isImportEditorModalOpen ? 'true' : null"
+        >
           <div class="widgets-import-showcase-copy">
             <span>{{ importPreviewLabel }}</span>
             <strong>{{ importPreviewHeadline }}</strong>
@@ -1278,7 +1590,9 @@ onBeforeUnmount(() => {
               <div class="widgets-created-preview" :class="`size-${widget.size.replace('x', '-')}`">
                 <iframe
                   :srcdoc="customWidgetPreviewSrcDoc(widget)"
-                  sandbox="allow-scripts"
+                  sandbox=""
+                  tabindex="-1"
+                  aria-hidden="true"
                   loading="lazy"
                   referrerpolicy="no-referrer"
                   :title="widget.name"
@@ -1305,7 +1619,11 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="widgets-import-guide">
+        <div
+          class="widgets-import-guide"
+          :inert="isImportEditorModalOpen ? '' : null"
+          :aria-hidden="isImportEditorModalOpen ? 'true' : null"
+        >
           <div>
             <i class="fas fa-file-code"></i>
             <span>{{ t('导入外观代码，不会自动占用主屏槽位。', 'Import visual code without placing it on Home automatically.') }}</span>
@@ -1315,20 +1633,38 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="widgets-mobile-action-strip">
+        <div
+          class="widgets-mobile-action-strip"
+          :inert="isImportEditorModalOpen ? '' : null"
+          :aria-hidden="isImportEditorModalOpen ? 'true' : null"
+        >
           <button class="widgets-primary-btn" type="button" @click="openImportEditor">
             <i class="fas fa-file-code"></i>
             <span>{{ t('粘贴外观包', 'Paste visual pack') }}</span>
           </button>
         </div>
 
-        <div class="widgets-import-editor" :class="{ 'is-mobile-sheet-open': importEditorOpen }">
+        <div
+          ref="importEditorSheet"
+          class="widgets-import-editor"
+          :class="{ 'is-mobile-sheet-open': importEditorOpen }"
+          :role="isImportEditorModalOpen ? 'dialog' : null"
+          :aria-modal="isImportEditorModalOpen ? 'true' : null"
+          :aria-labelledby="isImportEditorModalOpen ? 'widgets-import-editor-title' : null"
+          @keydown="isImportEditorModalOpen && handleDialogKeydown($event, 'import')"
+        >
           <div class="widgets-editor-sheet-head">
             <div>
               <span>{{ t('导入编辑器', 'Import editor') }}</span>
-              <strong>{{ importPreviewLabel }}</strong>
+              <strong id="widgets-import-editor-title">{{ importPreviewLabel }}</strong>
             </div>
-            <button class="widgets-icon-btn" type="button" @click="closeImportEditor" :aria-label="t('关闭导入编辑器', 'Close import editor')">
+            <button
+              class="widgets-icon-btn"
+              type="button"
+              data-dialog-initial-focus
+              @click="closeImportEditor"
+              :aria-label="t('关闭导入编辑器', 'Close import editor')"
+            >
               <i class="fas fa-xmark"></i>
             </button>
           </div>
@@ -1340,8 +1676,28 @@ onBeforeUnmount(() => {
               class="widgets-import-textarea"
               spellcheck="false"
               :placeholder="importJsonPlaceholder"
+              :aria-invalid="importPreviewErrors.length > 0 ? 'true' : 'false'"
+              :aria-describedby="importPreviewErrors.length > 0 || importPreviewWarnings.length > 0 ? 'widgets-import-editor-feedback' : 'widgets-import-editor-help'"
             ></textarea>
           </label>
+
+          <div
+            v-if="importPreviewErrors.length > 0 || importPreviewWarnings.length > 0"
+            id="widgets-import-editor-feedback"
+            class="widgets-editor-feedback"
+            :class="importPreviewErrors.length > 0 ? 'is-error' : 'is-warning'"
+            role="alert"
+            aria-live="assertive"
+          >
+            <i
+              :class="importPreviewErrors.length > 0 ? 'fas fa-circle-exclamation' : 'fas fa-triangle-exclamation'"
+              aria-hidden="true"
+            ></i>
+            <div>
+              <span v-for="(error, idx) in importPreviewErrors" :key="`import-sheet-error-${idx}`">{{ error }}</span>
+              <span v-for="(warning, idx) in importPreviewWarnings" :key="`import-sheet-warning-${idx}`">{{ warning }}</span>
+            </div>
+          </div>
 
           <div class="widgets-import-actions">
             <button class="widgets-primary-btn" type="button" :disabled="!canImportWidgets" @click="importCustomWidgets">
@@ -1350,7 +1706,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
-          <div class="widgets-import-note">
+          <div id="widgets-import-editor-help" class="widgets-import-note">
             <p>{{ t(`每个组件需要名称、尺寸和外观代码；尺寸支持 ${VALID_WIDGET_SIZES.join('、')}。`, `Each widget needs a name, size, and visual code; sizes: ${VALID_WIDGET_SIZES.join(', ')}.`) }}</p>
           </div>
         </div>
@@ -1361,30 +1717,40 @@ onBeforeUnmount(() => {
       v-if="customEditorOpen || importEditorOpen"
       class="widgets-mobile-sheet-backdrop"
       type="button"
-      :aria-label="t('关闭面板', 'Close panel')"
+      tabindex="-1"
+      aria-hidden="true"
       @click="customEditorOpen ? closeCustomEditor() : closeImportEditor()"
     ></button>
 
     <div
       v-if="previewedStylePreset"
+      ref="stylePreviewDialog"
       class="widgets-style-preview-dialog"
       role="dialog"
       aria-modal="true"
-      :aria-label="previewedStylePreset.label"
+      aria-labelledby="widgets-style-preview-title"
+      @keydown="handleDialogKeydown($event, 'style')"
     >
       <button
         class="widgets-style-preview-backdrop"
         type="button"
-        :aria-label="t('关闭预览', 'Close preview')"
+        tabindex="-1"
+        aria-hidden="true"
         @click="closeStylePresetPreview"
       ></button>
       <section class="widgets-style-preview-sheet">
         <header class="widgets-style-preview-head">
           <div>
             <span>{{ t('组件预览', 'Widget preview') }}</span>
-            <h3>{{ previewedStylePreset.label }}</h3>
+            <h3 id="widgets-style-preview-title">{{ previewedStylePreset.label }}</h3>
           </div>
-          <button class="widgets-icon-btn" type="button" :aria-label="t('关闭预览', 'Close preview')" @click="closeStylePresetPreview">
+          <button
+            class="widgets-icon-btn"
+            type="button"
+            data-dialog-initial-focus
+            :aria-label="t('关闭预览', 'Close preview')"
+            @click="closeStylePresetPreview"
+          >
             <i class="fas fa-xmark"></i>
           </button>
         </header>
@@ -1392,7 +1758,9 @@ onBeforeUnmount(() => {
         <div class="widgets-style-preview-frame" :class="`size-${previewedStylePreset.size.replace('x', '-')}`">
           <iframe
             :srcdoc="customWidgetPreviewSrcDoc(previewedStylePreset)"
-            sandbox="allow-scripts"
+            sandbox=""
+            tabindex="-1"
+            aria-hidden="true"
             loading="lazy"
             referrerpolicy="no-referrer"
             :title="previewedStylePreset.label"
@@ -1407,7 +1775,7 @@ onBeforeUnmount(() => {
         <div class="widgets-style-preview-actions">
           <button class="widgets-secondary-btn" type="button" @click="addPreviewedStylePreset">
             <i class="fas fa-plus"></i>
-            <span>{{ previewedStylePreset.added ? t('再加入库', 'Add again') : t('加入库', 'Add') }}</span>
+            <span>{{ previewedStylePreset.added ? t('创建副本', 'Create copy') : t('加入库', 'Add') }}</span>
           </button>
           <button class="widgets-primary-btn" type="button" @click="applyPreviewedStylePresetToCustomForm">
             <i class="fas fa-pen"></i>
@@ -3718,6 +4086,7 @@ onBeforeUnmount(() => {
   border: 0;
   display: block;
   background: transparent;
+  pointer-events: none;
 }
 
 .widgets-style-preview-frame.size-1-1 iframe,
@@ -3753,6 +4122,45 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   gap: 8px;
+}
+
+.widgets-editor-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 16px;
+  padding: 10px 11px;
+  background: var(--system-surface-muted);
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.widgets-editor-feedback > i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.widgets-editor-feedback span {
+  display: block;
+}
+
+.widgets-editor-feedback span + span {
+  margin-top: 3px;
+}
+
+.widgets-editor-feedback.is-error {
+  border-color: color-mix(in srgb, var(--system-danger) 34%, var(--system-control-border));
+  background: color-mix(in srgb, var(--system-danger) 9%, var(--system-surface-muted));
+  color: var(--system-danger);
+}
+
+.widgets-editor-feedback.is-warning {
+  border-color: color-mix(in srgb, var(--system-warning) 34%, var(--system-control-border));
+  background: color-mix(in srgb, var(--system-warning) 9%, var(--system-surface-muted));
+  color: var(--system-warning);
 }
 
 .widgets-import-note {
@@ -3824,6 +4232,11 @@ onBeforeUnmount(() => {
   line-height: 1.35;
 }
 
+.widgets-shell :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--system-accent);
+  outline-offset: 2px;
+}
+
 @media (max-width: 719px) {
   .widgets-shell.is-widget-sheet-open .widgets-content {
     overflow: visible;
@@ -3872,6 +4285,19 @@ onBeforeUnmount(() => {
     padding: 12px;
     background: var(--system-elevated-bg);
     box-shadow: var(--system-shadow-soft);
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--system-text-soft) 44%, transparent) transparent;
+  }
+
+  .widgets-custom-composer.is-mobile-sheet-open::-webkit-scrollbar,
+  .widgets-import-editor.is-mobile-sheet-open::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .widgets-custom-composer.is-mobile-sheet-open::-webkit-scrollbar-thumb,
+  .widgets-import-editor.is-mobile-sheet-open::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--system-text-soft) 44%, transparent);
   }
 
   .widgets-custom-composer.is-mobile-sheet-open > .widgets-form {
@@ -3946,6 +4372,49 @@ onBeforeUnmount(() => {
 
   .widgets-import-editor.is-mobile-sheet-open .widgets-import-note {
     margin-top: 0;
+  }
+
+  .widgets-code-workbench-head {
+    gap: 8px;
+  }
+
+  .widgets-code-workbench-head > span {
+    flex: 0 0 auto;
+  }
+
+  .widgets-code-workbench-head > .widgets-head-actions {
+    min-width: 0;
+    flex: 1;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .widgets-code-workbench-head .widgets-secondary-btn {
+    min-width: 38px;
+    padding-inline: 9px;
+  }
+
+  .widgets-code-copy span,
+  .widgets-code-export span {
+    display: none;
+  }
+
+  .widgets-size-filter,
+  .widgets-template-strip {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--system-text-soft) 42%, transparent) transparent;
+  }
+
+  .widgets-size-filter::-webkit-scrollbar,
+  .widgets-template-strip::-webkit-scrollbar {
+    display: block;
+    height: 4px;
+  }
+
+  .widgets-size-filter::-webkit-scrollbar-thumb,
+  .widgets-template-strip::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--system-text-soft) 42%, transparent);
   }
 }
 

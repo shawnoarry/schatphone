@@ -13,7 +13,25 @@ defineEmits(['retry', 'refresh', 'backup'])
 
 const { t } = useI18n()
 
+const isActiveWriterPreview = computed(
+  () =>
+    props.status.mode === 'read_only' &&
+    props.status.primaryCode === 'read_only_conflict' &&
+    props.status.primaryCause === 'active_writer',
+)
+
 const presentation = computed(() => {
+  if (isActiveWriterPreview.value) {
+    return {
+      icon: 'fa-eye',
+      eyebrow: t('本地预览', 'Local preview'),
+      title: t('当前页面为只读预览', 'This page is a read-only preview'),
+      body: t(
+        '另一个 SchatPhone 页面正在使用当前存档。你可以继续查看，写入页面关闭后会自动恢复。',
+        'Another SchatPhone page is using the current save. You can keep viewing, and this page will recover automatically after the writer closes.',
+      ),
+    }
+  }
   if (props.status.mode === 'read_only') {
     return {
       icon: 'fa-shield-halved',
@@ -52,9 +70,10 @@ const presentation = computed(() => {
   <section
     class="persistence-recovery-sheet"
     :data-mode="status.mode"
+    :data-reason="isActiveWriterPreview ? 'active_writer' : status.primaryCause || undefined"
     data-testid="persistence-recovery-sheet"
-    role="alert"
-    aria-live="assertive"
+    :role="isActiveWriterPreview ? 'status' : 'alert'"
+    :aria-live="isActiveWriterPreview ? 'polite' : 'assertive'"
   >
     <div class="persistence-recovery-sheet__lead">
       <span class="persistence-recovery-sheet__icon" aria-hidden="true">
@@ -76,7 +95,11 @@ const presentation = computed(() => {
         @click="$emit('retry')"
       >
         <i class="fas fa-rotate" aria-hidden="true"></i>
-        <span>{{ status.phase === 'retrying' ? t('正在重试', 'Retrying') : t('重试保存', 'Retry save') }}</span>
+        <span>{{ status.phase === 'retrying'
+          ? t('正在重试', 'Retrying')
+          : isActiveWriterPreview
+            ? t('检查写权', 'Check access')
+            : t('重试保存', 'Retry save') }}</span>
       </button>
       <button
         type="button"
@@ -88,6 +111,7 @@ const presentation = computed(() => {
         <span>{{ t('重新载入', 'Reload') }}</span>
       </button>
       <button
+        v-if="!isActiveWriterPreview"
         type="button"
         class="persistence-recovery-sheet__action"
         data-testid="persistence-recovery-backup"
@@ -122,6 +146,12 @@ const presentation = computed(() => {
   border-color: rgba(190, 95, 72, 0.46);
 }
 
+.persistence-recovery-sheet[data-reason='active_writer'] {
+  gap: 10px;
+  border-color: color-mix(in srgb, var(--system-accent) 24%, var(--system-border));
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+
 .persistence-recovery-sheet__lead {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr);
@@ -142,6 +172,11 @@ const presentation = computed(() => {
 .persistence-recovery-sheet[data-mode='read_only'] .persistence-recovery-sheet__icon {
   background: rgba(190, 95, 72, 0.12);
   color: #b4533d;
+}
+
+.persistence-recovery-sheet[data-reason='active_writer'] .persistence-recovery-sheet__icon {
+  background: color-mix(in srgb, var(--system-accent) 12%, var(--system-surface));
+  color: var(--system-accent);
 }
 
 .persistence-recovery-sheet__eyebrow {
@@ -169,6 +204,10 @@ const presentation = computed(() => {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.persistence-recovery-sheet[data-reason='active_writer'] .persistence-recovery-sheet__actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .persistence-recovery-sheet__action {

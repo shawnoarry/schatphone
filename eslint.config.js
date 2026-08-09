@@ -11,6 +11,7 @@ export default [
       '.agents/**',
       'test-results/**',
       'playwright-report/**',
+      'tmp/brand-build/**',
     ],
   },
   js.configs.recommended,

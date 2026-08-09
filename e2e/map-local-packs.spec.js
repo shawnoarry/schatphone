@@ -1,6 +1,9 @@
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
-import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation'
+import {
+  navigateInsideUnlockedApp,
+  unlockToHome,
+} from './helpers/navigation'
 
 const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
 const CUSTOM_MAP_FIXTURE = fileURLToPath(
@@ -353,6 +356,77 @@ test.describe('world-bound narrative maps', () => {
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     )
     expect(overflow).toBeLessThanOrEqual(1)
+  })
+
+  test('switches place-name language and keeps the Map preference after refresh', async ({
+    page,
+  }) => {
+    await mockOpenFreeMapStyle(page)
+    await unlockToHome(page)
+    await navigateInsideUnlockedApp(page, '/map')
+
+    const openYeouidoPark = async () => {
+      const destination = page.getByTestId('map-destination-search')
+      await destination.fill('Yeouido Hangang Park')
+      const results = page.getByTestId('map-local-place-results')
+      await expect(results).toBeVisible()
+      const parkResult = results.locator('.map-place-result').first()
+      await expect(parkResult).toBeVisible()
+      await parkResult.click()
+      const detail = page.getByTestId('map-place-detail-sheet')
+      await expect(detail).toBeVisible()
+      return detail
+    }
+
+    let detail = await openYeouidoPark()
+    await detail.getByTestId('map-place-language-mode-en').click()
+    await expect(detail.getByRole('heading', { level: 2 })).toHaveText('Yeouido Hangang Park')
+
+    await detail.getByTestId('map-place-language-mode-bilingual').click()
+    await expect(detail.getByTestId('map-place-language-mode-bilingual')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(detail.getByTestId('map-place-secondary-name')).toBeVisible()
+    const bilingualNames = await Promise.all([
+      detail.getByRole('heading', { level: 2 }).textContent(),
+      detail.getByTestId('map-place-secondary-name').textContent(),
+    ])
+    expect(bilingualNames.map((name) => name?.trim())).toContain('Yeouido Hangang Park')
+    expect(new Set(bilingualNames.map((name) => name?.trim())).size).toBe(2)
+
+    const overflow = await detail.evaluate((element) => {
+      const segments = element.querySelector('.map-place-language-segments')
+      return {
+        document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        detail: element.scrollWidth - element.clientWidth,
+        segments:
+          segments instanceof HTMLElement ? segments.scrollWidth - segments.clientWidth : 0,
+      }
+    })
+    expect(overflow.document).toBeLessThanOrEqual(1)
+    expect(overflow.detail).toBeLessThanOrEqual(1)
+    expect(overflow.segments).toBeLessThanOrEqual(1)
+
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const raw = window.localStorage.getItem('schatphone:store:map')
+          return raw ? JSON.parse(raw)?.data?.mapPlaceDisplayMode : null
+        }),
+      )
+      .toBe('bilingual')
+
+    await page.reload()
+    await unlockToHome(page)
+    await navigateInsideUnlockedApp(page, '/map')
+    detail = await openYeouidoPark()
+    await expect(detail.getByTestId('map-place-language-mode-bilingual')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(detail.getByTestId('map-place-secondary-name')).toBeVisible()
+    await expect(detail).toContainText('Yeouido Hangang Park')
   })
 
   test('gates nearby facilities through the per-world Footprints setting', async ({ page }) => {

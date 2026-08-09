@@ -365,4 +365,46 @@ describe('music store', () => {
       trackId: track.id,
     })).toMatchObject({ ok: false, code: 'USER_GESTURE_REQUIRED' })
   })
+
+  test('keeps Map journey controls bounded while Music owns radio playback', async () => {
+    const store = useMusicStore()
+
+    expect(store.mapJourneyMedia.enabled).toBe(true)
+    expect(store.mapJourneyMedia.stations.map((station) => station.id)).toEqual([
+      'route_mix',
+      'city_pulse',
+      'night_window',
+    ])
+    expect(JSON.stringify(store.mapJourneyMedia)).not.toContain('soundhelix.com')
+
+    await expect(store.playJourneyRadio('night_window')).resolves.toMatchObject({ ok: true })
+    expect(store.mapJourneyMedia.activeStationId).toBe('night_window')
+    expect(store.currentTrack.genre).toMatch(/Dream Pop|Neo Soul|Ambient/)
+    expect(store.queue).toHaveLength(3)
+
+    await store.next()
+    expect(store.mapJourneyMedia.activeStationId).toBe('night_window')
+
+    store.closeFloatingPlayer()
+    expect(store.floatingPlayerVisible).toBe(false)
+    await store.next({ fromEnded: true })
+    expect(store.floatingPlayerVisible).toBe(false)
+    await store.next()
+    expect(store.floatingPlayerVisible).toBe(true)
+
+    store.updateIntegrationPolicy({ mapNowPlayingEnabled: false })
+    expect(store.mapJourneyMedia).toMatchObject({
+      enabled: false,
+      activeStationId: '',
+      quickTracks: [],
+      stations: [],
+    })
+    await expect(store.playJourneyRadio('route_mix')).resolves.toEqual({
+      ok: false,
+      code: 'MAP_MUSIC_DISABLED',
+    })
+    expect(store.floatingPlayerMedia.stations).toHaveLength(3)
+    await expect(store.playFloatingRadio('route_mix')).resolves.toMatchObject({ ok: true })
+    expect(store.floatingPlayerMedia.activeStationId).toBe('route_mix')
+  })
 })

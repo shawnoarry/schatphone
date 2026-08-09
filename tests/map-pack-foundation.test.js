@@ -22,6 +22,7 @@ import {
   normalizeUserMapPlaceCategory,
   resolveMapPlaceVisual,
 } from '../src/lib/map-place-categories'
+import { MAP_PLACE_DISPLAY_MODE } from '../src/lib/map-place-localization'
 
 describe('local map pack foundation', () => {
   beforeEach(() => {
@@ -247,6 +248,25 @@ describe('local map pack foundation', () => {
       state: 'hidden',
     })
     expect(restored.activeMapPlaces).toHaveLength(104)
+  })
+
+  test('owns and persists the place-name display mode with legacy fallback', () => {
+    const store = useMapStore()
+
+    expect(store.mapPlaceDisplayMode).toBe(MAP_PLACE_DISPLAY_MODE.SYSTEM)
+    expect(store.setMapPlaceDisplayMode(MAP_PLACE_DISPLAY_MODE.BILINGUAL)).toBe(true)
+    expect(store.setMapPlaceDisplayMode(MAP_PLACE_DISPLAY_MODE.BILINGUAL)).toBe(false)
+
+    const snapshot = store.createBackupSnapshot()
+    expect(snapshot.mapPlaceDisplayMode).toBe(MAP_PLACE_DISPLAY_MODE.BILINGUAL)
+
+    setActivePinia(createPinia())
+    const restored = useMapStore()
+    expect(restored.restoreFromBackup({ map: snapshot })).toBe(true)
+    expect(restored.mapPlaceDisplayMode).toBe(MAP_PLACE_DISPLAY_MODE.BILINGUAL)
+
+    expect(restored.restoreFromBackup({ map: { mapPlaceDisplayMode: 'legacy-invalid' } })).toBe(true)
+    expect(restored.mapPlaceDisplayMode).toBe(MAP_PLACE_DISPLAY_MODE.SYSTEM)
   })
 
   test('applies broad category visibility to every stable icon subtype', () => {

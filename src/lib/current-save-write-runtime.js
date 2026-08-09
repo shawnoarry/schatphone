@@ -1,6 +1,7 @@
 import {
   clearPersistenceIncident,
   reportPersistenceWriteResult,
+  retryPersistenceWrites,
 } from './persistence-runtime-status'
 import { openPersistenceRepositoryDatabase } from './persistence-repository-schema'
 import { createWriteCoordinator } from './write-coordinator'
@@ -23,17 +24,23 @@ const createAccessSnapshot = (state) =>
     ownerId: state.ownerId,
   })
 
-const normalizeConflict = (result = {}) => ({
-  ok: false,
-  code: result.code || 'read_only_conflict',
-  error: result.code || result.error || 'read_only_conflict',
-  cause: result.cause || 'coordinator_unavailable',
-  carrier: 'coordination',
-  readOnly: true,
-  retryable: true,
-  attempted: false,
-  availableActions: Object.freeze(['retry', 'refresh_current_save']),
-})
+const normalizeConflict = (result = {}) => {
+  const code = result.code || 'read_only_conflict'
+  const rawCause = result.cause || 'coordinator_unavailable'
+  return {
+    ok: false,
+    code,
+    error: result.code || result.error || 'read_only_conflict',
+    cause: code === 'read_only_conflict' && rawCause === 'timed_out'
+      ? 'active_writer'
+      : rawCause,
+    carrier: 'coordination',
+    readOnly: true,
+    retryable: true,
+    attempted: false,
+    availableActions: Object.freeze(['retry', 'refresh_current_save']),
+  }
+}
 
 export const createCurrentSaveWriteRuntime = (baseOptions = {}) => {
   const state = {
@@ -46,6 +53,7 @@ export const createCurrentSaveWriteRuntime = (baseOptions = {}) => {
   const reportWriteResult =
     baseOptions.reportWriteResult || reportPersistenceWriteResult
   const clearIncident = baseOptions.clearIncident || clearPersistenceIncident
+  const retryPendingWrites = baseOptions.retryPendingWrites || retryPersistenceWrites
   const coordinatorFactory = baseOptions.coordinatorFactory || createWriteCoordinator
   const openDatabase =
     baseOptions.openDatabase || openPersistenceRepositoryDatabase
@@ -58,6 +66,8 @@ export const createCurrentSaveWriteRuntime = (baseOptions = {}) => {
   let heartbeatTimerId = null
   let heartbeatPending = false
   let lastOptions = null
+  let coordinatorUnsubscribe = null
+  let automaticRetryPromise = null
 
   const updateState = (patch) => {
     Object.assign(state, patch)
@@ -116,11 +126,36 @@ export const createCurrentSaveWriteRuntime = (baseOptions = {}) => {
     }, heartbeatMs)
   }
 
+  const handleCoordinationMessage = (message) => {
+    if (
+      message?.type !== 'released' ||
+      state.phase !== 'read_only' ||
+      state.code !== 'read_only_conflict' ||
+      state.cause !== 'active_writer' ||
+      automaticRetryPromise
+    ) {
+      return
+    }
+    automaticRetryPromise = Promise.resolve()
+      .then(() => retryPendingWrites())
+      .catch(() => null)
+      .finally(() => {
+        automaticRetryPromise = null
+      })
+  }
+
+  const subscribeToCoordinator = () => {
+    coordinatorUnsubscribe?.()
+    coordinatorUnsubscribe = coordinator?.subscribe?.(handleCoordinationMessage) || null
+  }
+
   const releaseResources = async () => {
     stopHeartbeat()
     const activeLease = lease
     lease = null
     if (activeLease) await activeLease.release().catch(() => {})
+    coordinatorUnsubscribe?.()
+    coordinatorUnsubscribe = null
     coordinator?.close()
     coordinator = null
     database?.close?.()
@@ -157,6 +192,7 @@ export const createCurrentSaveWriteRuntime = (baseOptions = {}) => {
             ...(lastOptions.coordinatorOptions || {}),
           }
           coordinator = coordinatorFactory(coordinatorOptions)
+          subscribeToCoordinator()
         }
 
         const result = await coordinator.acquire({

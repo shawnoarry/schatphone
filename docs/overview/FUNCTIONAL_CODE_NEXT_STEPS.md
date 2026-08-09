@@ -31,7 +31,7 @@ The best next work is:
 - Book source library and WorldBook activation;
 - compatible World Packs, App Store world entries, reviewed app/service proposals;
 - Shopping/Food Delivery/Calendar/Map world-app context;
-- Music installed-app playback/library/provider baseline, dedicated ChKSz Adapter with on-demand stream resolution plus NetEase lyrics/playlist intake, Home/App Store entry, shell mini-player, and bounded Chat/Map Interfaces;
+- Music installed-app playback/library/provider baseline, dedicated ChKSz Adapter with on-demand stream resolution plus NetEase lyrics/playlist intake, Home/App Store entry, global floating player, Chat track-share caller, active-journey Map music/radio caller, and bounded Chat/Map Interfaces;
 - global/scoped appearance ownership seams;
 - Settings, Chat, Contacts, and WorldBook composable extraction batches already listed in architecture docs.
 
@@ -48,7 +48,7 @@ Problem:
 
 Most current stores write whole JSON snapshots to `localStorage` and mirror them to IndexedDB. Their normal startup still prefers valid `localStorage`, so the mirror does not remove the small synchronous quota or whole-store rewrite cost. Book is now the first active Repository exception; long Chat history, inline base64 media, Gallery binaries, and future archived-role continuity still need separately approved long-term storage contracts.
 
-The root shell consumes structured layered-write and Book Repository failures as one product-level save-failed/read-only state with retry, confirmed reload-current-save, and complete-backup handoff. One page-level current-save writer keeps later same-container pages inspect-only/read-only across current durable carriers. The roadmap 4.9 release-local v3 backup path now adds required-section and binary integrity, Chat identity/avatar coverage, default-on complete Gallery material, durable metadata-plus-binary rollback checkpoints, and pre-mount crash recovery. Predictive capacity reporting, a cross-owner Repository root-generation switch, and remote transport remain separate architecture work.
+The root shell consumes structured layered-write and Book Repository failures as one product-level save-failed/read-only state with retry, confirmed reload-current-save, and complete-backup handoff. One page-level current-save writer keeps later same-container pages inspect-only/read-only across current durable carriers; ordinary occupancy is a calm preview, and cooperative page exit triggers the same bounded retry automatically while the lease still permits at most one writer. The roadmap 4.9 release-local v3 backup path now adds required-section and binary integrity, Chat identity/avatar coverage, default-on complete Gallery material, durable metadata-plus-binary rollback checkpoints, and pre-mount crash recovery. Predictive capacity reporting, a cross-owner Repository root-generation switch, and remote transport remain separate architecture work.
 
 Confirmed product boundary:
 
@@ -167,7 +167,7 @@ Do not add regex execution, a Store, route, Settings UI, popup, iframe, AI call,
 
 ## 9. Later Product Candidates
 
-- opt-in Music smoke with a user-authorized ChKSz device Key/browser-playable track, named true-device media evidence, and one separately promoted Chat or Map caller;
+- opt-in Music smoke with a user-authorized ChKSz device Key/browser-playable track, named true-device media evidence, and one separately promoted remaining caller such as Chat search or external Map queue request;
 - Gallery People curation plus one separately promoted image-generation source caller;
 - explicit group multi-speaker orchestration;
 - tracking/order share surfaces from source apps;
