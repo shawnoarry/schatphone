@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const installIndexedDbWriteMock = () => {
   const payloadByKey = new Map()
+  const writeDelayByKey = new Map()
   let hasStore = false
   let writeError = null
 
@@ -46,7 +47,7 @@ const installIndexedDbWriteMock = () => {
                 }
                 payloadByKey.set(record.key, record.payload)
                 if (typeof tx.oncomplete === 'function') tx.oncomplete()
-              }, 0)
+              }, writeDelayByKey.get(record.key) || 0)
               return request
             },
           }
@@ -84,6 +85,9 @@ const installIndexedDbWriteMock = () => {
 
   return {
     payloadByKey,
+    delayWritesFor(key, milliseconds) {
+      writeDelayByKey.set(key, milliseconds)
+    },
     failWritesWith(error) {
       writeError = error
     },
@@ -408,6 +412,31 @@ describe('persistence write results', () => {
     })
     expect(localStorage.getItem('schatphone:store:system')).toBe(localCommit)
     expect(indexedDb.payloadByKey.get('schatphone:store:system')).toBe(conflictingMirror)
+  })
+
+  test('serializes deferred mirror batches so newer state cannot overtake an older payload', async () => {
+    const indexedDb = installIndexedDbWriteMock()
+    const slowKey = 'schatphone:store:slow'
+    indexedDb.delayWritesFor(slowKey, 100)
+    const {
+      readPersistedRawLayers,
+      reconcilePersistedStateLayers,
+      writePersistedState,
+    } = await import('../src/lib/persistence')
+    await reconcilePersistedStateLayers('store:slow', { version: 1 })
+    await reconcilePersistedStateLayers('store:chat', { version: 1 })
+
+    expect(writePersistedState('store:slow', { marker: 'slow' })).toMatchObject({ ok: true })
+    expect(writePersistedState('store:chat', { marker: 'older' })).toMatchObject({ ok: true })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(writePersistedState('store:chat', { marker: 'newer' })).toMatchObject({ ok: true })
+    await new Promise((resolve) => setTimeout(resolve, 160))
+
+    expect(writePersistedState('store:chat', { marker: 'latest' })).toMatchObject({ ok: true })
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    const layers = await readPersistedRawLayers('store:chat')
+    expect(layers.mirrorRaw).toBe(layers.localRaw)
+    expect(JSON.parse(layers.localRaw).data).toEqual({ marker: 'latest' })
   })
 
   test('reports generation_exhausted without replacing the current bytes', async () => {

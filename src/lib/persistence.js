@@ -75,6 +75,7 @@ let indexedDbWarned = false
 const pendingIndexedDbOps = new Map()
 const persistedHeadStates = new Map()
 let indexedDbFlushTimerId = null
+let indexedDbFlushInProgress = false
 
 const normalizeSavedAt = (value, fallback = 0) => {
   const num = Number(value)
@@ -694,76 +695,94 @@ const checkMirrorWritePrecondition = (existingRaw, incomingRaw, options = {}) =>
     : { ok: false, error: 'legacy_freshness_unknown' }
 }
 
+const scheduleIndexedDbFlush = () => {
+  if (
+    indexedDbFlushTimerId ||
+    indexedDbFlushInProgress ||
+    pendingIndexedDbOps.size === 0
+  ) {
+    return
+  }
+  indexedDbFlushTimerId = setTimeout(() => {
+    void flushIndexedDbOps()
+  }, 16)
+}
+
 const flushIndexedDbOps = async () => {
   indexedDbFlushTimerId = null
-  if (pendingIndexedDbOps.size === 0) return
+  if (indexedDbFlushInProgress || pendingIndexedDbOps.size === 0) return
 
-  const entries = Array.from(pendingIndexedDbOps.entries())
-  pendingIndexedDbOps.clear()
+  indexedDbFlushInProgress = true
+  try {
+    while (pendingIndexedDbOps.size > 0) {
+      const entries = Array.from(pendingIndexedDbOps.entries())
+      pendingIndexedDbOps.clear()
 
-  for (const [fullKey, op] of entries) {
-    if (!op || op.type === 'delete') {
-      await deleteFromIndexedDb(fullKey)
-      continue
-    }
-    const accessBlock = getCurrentSaveWriteBlock()
-    if (accessBlock) {
-      const result = {
-        ...accessBlock,
-        local: createWriteSuccess('localStorage', false),
-        mirror: createSkippedWrite('indexeddb', accessBlock.error, true),
-      }
-      reportPersistenceWriteResult({
-        key: op.key,
-        result,
-        retry: () =>
-          retryCurrentSaveWrite(async () => {
-            const mirror = await writeToIndexedDbWithResult(fullKey, op.payload, op.options)
-            return {
-              ok: mirror.ok,
-              error: mirror.error,
-              carrier: mirror.carrier,
-              retryable: mirror.retryable,
-              attempted: mirror.attempted,
-              local: createWriteSuccess('localStorage', false),
-              mirror,
-            }
-          }),
-      })
-      continue
-    }
-    const result = await writeToIndexedDbWithResult(fullKey, op.payload, op.options)
-    if (!result.ok) {
-      if (result.carrier === 'reconciliation') {
+      for (const [fullKey, op] of entries) {
+        if (!op || op.type === 'delete') {
+          await deleteFromIndexedDb(fullKey)
+          continue
+        }
+        const accessBlock = getCurrentSaveWriteBlock()
+        if (accessBlock) {
+          const result = {
+            ...accessBlock,
+            local: createWriteSuccess('localStorage', false),
+            mirror: createSkippedWrite('indexeddb', accessBlock.error, true),
+          }
+          reportPersistenceWriteResult({
+            key: op.key,
+            result,
+            retry: () =>
+              retryCurrentSaveWrite(async () => {
+                const mirror = await writeToIndexedDbWithResult(fullKey, op.payload, op.options)
+                return {
+                  ok: mirror.ok,
+                  error: mirror.error,
+                  carrier: mirror.carrier,
+                  retryable: mirror.retryable,
+                  attempted: mirror.attempted,
+                  local: createWriteSuccess('localStorage', false),
+                  mirror,
+                }
+              }),
+          })
+          continue
+        }
+        const result = await writeToIndexedDbWithResult(fullKey, op.payload, op.options)
+        if (!result.ok) {
+          if (result.carrier === 'reconciliation') {
+            const previous = persistedHeadStates.get(fullKey)
+            setPersistedHeadState(fullKey, {
+              ...previous,
+              blocked: true,
+              reason: result.error,
+            })
+          }
+          warnIndexedDb(new Error(result.error))
+          continue
+        }
         const previous = persistedHeadStates.get(fullKey)
-        setPersistedHeadState(fullKey, {
-          ...previous,
-          blocked: true,
-          reason: result.error,
-        })
+        if (previous?.localRaw === op.payload) {
+          setPersistedHeadState(fullKey, {
+            ...previous,
+            forceFork: false,
+            mirrorAvailable: true,
+            mirrorRaw: op.payload,
+          })
+        }
       }
-      warnIndexedDb(new Error(result.error))
-      continue
     }
-    const previous = persistedHeadStates.get(fullKey)
-    if (previous?.localRaw === op.payload) {
-      setPersistedHeadState(fullKey, {
-        ...previous,
-        forceFork: false,
-        mirrorAvailable: true,
-        mirrorRaw: op.payload,
-      })
-    }
+  } finally {
+    indexedDbFlushInProgress = false
+    scheduleIndexedDbFlush()
   }
 }
 
 const queueIndexedDbWrite = (key, fullKey, rawPayload, options = {}) => {
   if (!canUseLayeredPersistence()) return
   pendingIndexedDbOps.set(fullKey, { key, type: 'write', payload: rawPayload, options })
-  if (indexedDbFlushTimerId) return
-  indexedDbFlushTimerId = setTimeout(() => {
-    void flushIndexedDbOps()
-  }, 16)
+  scheduleIndexedDbFlush()
 }
 
 const readLayerPair = async (fullKey) => {
