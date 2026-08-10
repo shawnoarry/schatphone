@@ -241,7 +241,7 @@ const playStation = (station) =>
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
 }
 
-.music-mini-player.is-home-route { bottom: calc(116px + env(safe-area-inset-bottom)); }
+.music-mini-player.is-home-route { bottom: calc(124px + env(safe-area-inset-bottom)); }
 .music-mini-player.has-bottom-controls { bottom: calc(78px + env(safe-area-inset-bottom)); }
 .music-mini-player.is-map-route { right: 14px; bottom: calc(224px + env(safe-area-inset-bottom)); left: auto; width: min(380px, calc(100% - 28px)); }
 .music-mini-player.is-expanded { max-height: min(620px, calc(100% - 48px)); }
@@ -300,7 +300,7 @@ const playStation = (station) =>
 
 @media (min-width: 760px) {
   .music-mini-player { right: 24px; bottom: 28px; left: auto; width: min(380px, calc(100vw - 48px)); }
-  .music-mini-player.is-home-route { bottom: calc(116px + env(safe-area-inset-bottom)); }
+  .music-mini-player.is-home-route { bottom: calc(124px + env(safe-area-inset-bottom)); }
   .music-mini-player.is-map-route { right: 24px; bottom: 24px; }
   .music-mini-player.is-map-route.is-expanded { top: 126px; bottom: auto; }
 }
