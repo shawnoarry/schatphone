@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Product Boundary
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 This file defines ownership boundaries for Shopping, Logistics, Food Delivery, Wallet, Assets, and Stock.
 
@@ -17,6 +17,8 @@ Shopping owns:
 - business truth for `shopping`-bound shop entries surfaced by App Store
 - source-created product links, gift cards, vouchers, virtual gifts, and order-share objects that may be rendered in Chat as `share_card`
 - source product prices, discounts, cart totals, checkout totals, and immutable Shopping order/refund money snapshots
+
+Within the Shopping pseudo-folder, Coupang, 29CM, and Kurly are independent marketplace Apps, while WORKSOUT, IKEA Korea, and OLIVE YOUNG are independent specialty-store Apps. Their stable service IDs remain unchanged for persistence compatibility. Each has its own canonical route, branded interface, catalog view, search, categories, favorites, cart, checkout, order history, and logistics view. They may reuse one Shopping-owned store, schema, quote service, persistence envelope, and downstream handoff implementation, but all visible commerce state is scoped by `serviceKey`; there is no aggregate Shopping hub, in-App platform switcher, cross-App cart, or mixed checkout. A setting anchor must not be presented as an official branch address. Map owns place truth; Shopping must not copy or mutate place records. Home owns folder presentation, and App Store owns listing and install visibility; neither owns or mutates Shopping business records. Shopping may display a public retailer name, a recognizable brand App logo, and restrained color/information-architecture reference for immersive world building, but it must not import an official catalog, product imagery, price, advertising copy, or affiliation claim.
 
 Shopping does not own:
 

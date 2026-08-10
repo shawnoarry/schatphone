@@ -53,6 +53,10 @@ import {
   shareableObjectToChatBlock,
 } from '../lib/shareable-object'
 import { findWalletBankInstitution, maskRolePayeeAccountNumber } from '../lib/wallet-banking'
+import {
+  buildShoppingAppRoute,
+  isShoppingPlatformAppKey,
+} from '../lib/planned-module-registry'
 import { getAvatarImageGalleryAssetId } from '../lib/avatar-image-source-resolver'
 import {
   INTERNAL_CHAT_SHARE_ROUTE_QUERY,
@@ -179,6 +183,12 @@ const SAFE_MODULE_ROUTES = new Set([
   '/files',
   '/app-store',
 ])
+
+const isSafeModulePath = (path = '') => {
+  if (SAFE_MODULE_ROUTES.has(path)) return true
+  const shoppingMatch = typeof path === 'string' ? path.match(/^\/shopping\/([^/?#]+)$/) : null
+  return Boolean(shoppingMatch && isShoppingPlatformAppKey(shoppingMatch[1]))
+}
 
 const MANUAL_TRIGGER_ID = CHAT_ASSISTANT_MANUAL_TRIGGER_ID
 const CHAT_AUTOMATION_MODULE_KEY = 'chat'
@@ -3442,7 +3452,7 @@ const formatVoiceDuration = (durationSec) => {
 }
 
 const openModuleRoute = (routePath) => {
-  if (typeof routePath !== 'string' || !SAFE_MODULE_ROUTES.has(routePath)) {
+  if (typeof routePath !== 'string' || !isSafeModulePath(routePath)) {
     showUiNotice('warning', t('该链接暂不可用。', 'This link is unavailable.'))
     return
   }
@@ -3455,7 +3465,7 @@ const pushSafeServiceRoute = (routePath) => {
     return false
   }
   const [path, rawQuery = ''] = routePath.split('?')
-  if (!SAFE_MODULE_ROUTES.has(path)) {
+  if (!isSafeModulePath(path)) {
     showUiNotice('warning', t('该链接暂不可用。', 'This link is unavailable.'))
     return false
   }
@@ -3498,21 +3508,27 @@ const openShoppingFromChat = (payload = {}) => {
   const productId = typeof payload?.productId === 'string' ? payload.productId.trim() : ''
   const category = typeof payload?.category === 'string' ? payload.category.trim() : ''
   const payloadServiceKey = typeof payload?.serviceKey === 'string' ? payload.serviceKey.trim() : ''
-  const serviceKey = payloadServiceKey || activeChat.value?.shoppingServiceKey || ''
   const intent = typeof payload?.intent === 'string' && payload.intent.trim()
     ? payload.intent.trim()
     : SHAREABLE_OBJECT_TYPES.PRODUCT_LINK
   const orderId = typeof payload?.orderId === 'string' ? payload.orderId.trim() : ''
+  const sourceProduct = productId ? shoppingStore.findProductById(productId) : null
+  const sourceOrder = orderId ? shoppingStore.findOrderById(orderId) : null
+  const serviceKey =
+    payloadServiceKey ||
+    activeChat.value?.shoppingServiceKey ||
+    sourceProduct?.serviceKey ||
+    sourceOrder?.items?.[0]?.serviceKey ||
+    ''
   const chatId = Number(activeChat.value?.id)
   closeUserActionPanel()
   router.push({
-    path: '/shopping',
+    path: buildShoppingAppRoute(serviceKey),
     query: {
       source: 'chat',
       intent,
       ...(Number.isFinite(chatId) && chatId > 0 ? { chatId: String(chatId) } : {}),
       ...(category ? { category } : {}),
-      ...(serviceKey ? { service: serviceKey } : {}),
       ...(productId ? { productId } : {}),
       ...(orderId ? { orderId } : {}),
     },

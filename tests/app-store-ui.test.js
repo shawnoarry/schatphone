@@ -27,6 +27,7 @@ const createTestRouter = () =>
       { path: '/control-center', component: DummyView },
       { path: '/book', component: DummyView },
       { path: '/shopping', component: DummyView },
+      { path: '/shopping/:serviceKey', component: DummyView },
       { path: '/food-delivery', component: DummyView },
       { path: '/map', component: DummyView },
       { path: '/calendar', component: DummyView },
@@ -626,6 +627,12 @@ describe('App Store entry management UI', () => {
     expect(wrapper.find('[data-testid="app-store-item-shop_app_food_seed_moon_bistro"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-item-shop_app_food_seed_harbor_roast"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-item-shop_app_shopping_daily_fresh"]').exists()).toBe(true)
+    expect(
+      wrapper
+        .get('[data-testid="app-store-item-shop_app_shopping_daily_fresh"]')
+        .get('.app-store-item-icon img')
+        .attributes('src'),
+    ).toContain('/images/ui-assets/apps/shopping/brand/kurly-official-brand-app-icon-v3.webp')
     expect(wrapper.find('[data-testid="app-store-item-app_chat"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="app-store-item-shop_app_shopping_daily_fresh"]').trigger('click')
@@ -701,9 +708,8 @@ describe('App Store entry management UI', () => {
     await wrapper.get('[data-testid="app-store-open"]').trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.path).toBe('/shopping/daily_fresh')
     expect(router.currentRoute.value.query).toMatchObject({
-      service: 'daily_fresh',
       category: 'grocery',
       entry: 'shop',
       shopEntryId: 'shop_app_shopping_daily_fresh',
@@ -759,7 +765,7 @@ describe('App Store entry management UI', () => {
     await wrapper.get('[data-testid="app-store-shop-create-open-target"]').trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.path).toBe('/shopping/schat_mall')
     expect(router.currentRoute.value.query).toMatchObject({
       createShop: '1',
       entry: 'shop',

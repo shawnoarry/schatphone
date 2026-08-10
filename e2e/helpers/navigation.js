@@ -26,7 +26,7 @@ const routeReadySelectors = {
   '/map/settings/places': '[data-testid="map-pin-settings-view"]',
   '/music': '[data-testid="music-app"]',
   '/settings': '[data-settings-menu-title="World Book"]',
-  '/shopping': '[data-testid="shopping-service-filter-panel"]',
+  '/shopping': '.shopping-storefront-header',
   '/widgets': '.widgets-shell',
   '/worldbook': '[data-testid="worldbook-overview"]',
 }
@@ -39,6 +39,7 @@ export const waitForHashRoute = async (page, hashPath) => {
 
   await page.waitForFunction(
     ({ expectedHash, routePath, shouldMatchExact }) => {
+      if (routePath === '/shopping') return /^#\/shopping\/[^/?#]+(?:\?|$)/.test(window.location.hash)
       if (shouldMatchExact) return window.location.hash === expectedHash
       return window.location.hash === `#${routePath}` || window.location.hash.startsWith(`#${routePath}?`)
     },
@@ -46,7 +47,10 @@ export const waitForHashRoute = async (page, hashPath) => {
     { timeout: 15000 },
   )
 
-  await expect(page).toHaveURL(new RegExp(`#${escapeRegExp(routePath)}(?:\\?|$)`), {
+  const routePattern = routePath === '/shopping'
+    ? '#/shopping/[^/?#]+(?:\\?|$)'
+    : `#${escapeRegExp(routePath)}(?:\\?|$)`
+  await expect(page).toHaveURL(new RegExp(routePattern), {
     timeout: 15000,
   })
 }

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title">
+  <title id="title">Coupang-inspired original shopping mark</title>
+  <rect width="96" height="96" rx="18" fill="#E52A2F"/>
+  <path d="M67 29c-5-5-11-8-19-8-16 0-28 12-28 27s12 27 28 27c8 0 15-3 20-9l-9-9c-3 3-6 5-11 5-8 0-14-6-14-14s6-14 14-14c4 0 8 2 11 5z" fill="#FFFFFF"/>
+  <path d="M70 20h10v18H70z" fill="#00A4E4"/>
+  <path d="M70 42h10v15H70z" fill="#F6C744"/>
+  <path d="M70 61h10v15H70z" fill="#59A942"/>
+</svg>

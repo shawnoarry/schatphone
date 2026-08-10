@@ -1,3 +1,5 @@
+import { buildShoppingAppRoute } from './planned-module-registry'
+
 export const SHAREABLE_OBJECT_TYPES = Object.freeze({
   GIFT_CARD: 'gift_card',
   VIRTUAL_GIFT: 'virtual_gift',
@@ -190,7 +192,6 @@ export const createProductLinkShareObject = (product = {}) => {
   const query = buildRouteQuery({
     productId,
     category,
-    service: product.serviceKey,
     source: 'chat',
     intent: SHAREABLE_OBJECT_TYPES.PRODUCT_LINK,
   })
@@ -203,7 +204,9 @@ export const createProductLinkShareObject = (product = {}) => {
     summary: product.desc || product.summary,
     statusLabel: 'Product link',
     amountLabel: product.price || product.amountLabel,
-    route: query ? `/shopping?${query}` : '/shopping',
+    route: query
+      ? `${buildShoppingAppRoute(product.serviceKey)}?${query}`
+      : buildShoppingAppRoute(product.serviceKey),
     category,
     serviceKey: product.serviceKey,
     serviceLabel: product.serviceLabel,
@@ -235,7 +238,9 @@ export const createVirtualGiftShareObject = (product = {}) => {
     summary: product.desc || product.summary,
     statusLabel: product.shareType === SHAREABLE_OBJECT_TYPES.GIFT_CARD ? 'Gift card' : 'Virtual gift',
     amountLabel: product.price || product.amountLabel,
-    route: query ? `/shopping?${query}` : '/shopping',
+    route: query
+      ? `${buildShoppingAppRoute(product.serviceKey)}?${query}`
+      : buildShoppingAppRoute(product.serviceKey),
     category: product.category,
     serviceKey: product.serviceKey,
     serviceLabel: product.serviceLabel,
@@ -254,7 +259,7 @@ export const createVirtualGiftShareObject = (product = {}) => {
 export const createTrackingShareObject = (input = {}) => {
   const sourceId = trimTo(input.sourceId || input.orderId || input.id, 140)
   const route = sanitizeRoute(input.route) ||
-    `/shopping?${buildRouteQuery({ category: 'logistics', orderId: sourceId, source: 'chat', intent: 'tracking_share' })}`
+    `${buildShoppingAppRoute(input.serviceKey)}?${buildRouteQuery({ category: 'logistics', orderId: sourceId, source: 'chat', intent: 'tracking_share' })}`
   return normalizeShareableObject({
     id: `logistics-tracking:${sourceId}`,
     type: SHAREABLE_OBJECT_TYPES.TRACKING_SHARE,

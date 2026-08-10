@@ -10,7 +10,7 @@ const MODULE_BINDING_RULES = Object.freeze({
   shopping: Object.freeze({
     field: 'shoppingServiceKey',
     value: 'daily_fresh',
-    label: 'Shopping / Daily Fresh',
+    label: 'Shopping / Kurly',
   }),
   food_delivery: Object.freeze({
     field: 'foodDeliveryServiceKey',

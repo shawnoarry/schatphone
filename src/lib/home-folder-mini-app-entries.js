@@ -6,7 +6,6 @@ import {
 import {
   FOOD_DELIVERY_ROUTE,
   SHOPPING_PLATFORM_APP_ENTRIES,
-  SHOPPING_ROUTE,
 } from './planned-module-registry'
 import { resolveFoodShopDefaultIdentity } from './food-shop-presentation'
 
@@ -150,8 +149,16 @@ export const buildShoppingFolderEntries = ({
       descZh: presentation.shortDescription || defaultDescriptionZh,
       descEn: presentation.shortDescription || defaultDescriptionEn,
       icon: presentation.icon || service.icon || 'fas fa-store',
+      iconAsset:
+        presentation.hasImageIcon || presentation.icon !== service.icon || !service.brandAssetPath
+          ? ''
+          : uiAssetUrl(service.brandAssetPath),
+      iconAssetFullBleed:
+        !presentation.hasImageIcon &&
+        presentation.icon === service.icon &&
+        Boolean(service.brandAssetPath),
       accent: presentation.accent || service.accent || 'warm',
-      route: SHOPPING_ROUTE,
+      route: service.route,
       folderQuery: {
         ...(service.folderQuery || {}),
         entry: 'shop',

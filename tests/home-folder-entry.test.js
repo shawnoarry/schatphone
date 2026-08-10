@@ -19,7 +19,7 @@ const createTestRouter = () =>
     history: createMemoryHistory(),
     routes: [
       { path: '/home', component: HomeView },
-      { path: '/shopping', component: ShoppingView },
+      { path: '/shopping/:serviceKey', component: ShoppingView },
       { path: '/food-delivery', component: FoodDeliveryView },
       { path: '/map', component: DummyView },
       { path: '/assets', component: AssetsView },
@@ -1158,7 +1158,7 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
-  test('opens Shopping folder and routes platform app entries with service and category query', async () => {
+  test('opens Shopping folder and launches each platform as an independent app route', async () => {
     const router = createTestRouter()
     await router.push('/home')
     await router.isReady()
@@ -1179,14 +1179,21 @@ describe('Home folder entries', () => {
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]').exists(),
     ).toBe(true)
+    expect(wrapper.findAll('[data-testid^="home-folder-entry-shop_app_shopping_"]')).toHaveLength(6)
+    expect(
+      wrapper
+        .get('[data-testid="home-folder-entry-image-shop_app_shopping_style_cloud"]')
+        .attributes('src'),
+    ).toContain('apps/shopping/brand/worksout-official-brand-app-icon-v3.webp')
 
     await wrapper
       .find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]')
       .trigger('click')
     await flushPromises()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
-    expect(router.currentRoute.value.query.service).toBe('style_cloud')
+    expect(router.currentRoute.value.path).toBe('/shopping/style_cloud')
+    expect(router.currentRoute.value.params.serviceKey).toBe('style_cloud')
+    expect(router.currentRoute.value.query.service).toBeUndefined()
     expect(router.currentRoute.value.query.category).toBe('fashion')
     expect(router.currentRoute.value.query.entry).toBe('shop')
     expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_shopping_style_cloud')

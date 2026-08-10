@@ -154,7 +154,24 @@ Public research sources already reviewed:
 - `e2e/home-entry-navigation.spec.js`
 - `e2e/map-local-packs.spec.js`
 
-## 6. Non-Negotiable Guardrails
+## 6. Deferred Shopping Verification
+
+The six independent Shopping storefront implementation, its existing test files, final
+runtime brand assets, Imagegen masters, and required commerce documentation are committed
+together as one feature checkpoint. At the user's request, this checkpoint does not rerun
+the validation commands before commit.
+
+- [ ] Run the focused Shopping Vitest files, including Store, View, Home folder, App Store,
+  Chat routing, registry, and share-object coverage.
+- [ ] Run `e2e/shopping-storefronts.spec.js` plus the Shopping-related App Store and Home
+  launcher Playwright cases on desktop Chromium and simulated Pixel 5.
+- [ ] Run the repository behavior gates: `npm.cmd run lint`, `npm.cmd run test`, and
+  `npm.cmd run build`.
+- [ ] Run the applicable user-facing and governance gates: targeted/full
+  `npm.cmd run test:e2e`, `npm.cmd run governance:check`, and `git diff --check`.
+- [ ] Perform named physical-device Shopping acceptance when that device gate is resumed.
+
+## 7. Non-Negotiable Guardrails
 
 - The Home folder is a system launcher surface, not an in-App multi-store hub.
 - Baemin and every independent shop are peer entries.

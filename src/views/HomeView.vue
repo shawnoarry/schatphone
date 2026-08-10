@@ -4082,7 +4082,7 @@ onBeforeUnmount(() => {
 }
 
 .home-folder-icon {
-  padding: 6px;
+  padding: 8px;
   overflow: hidden;
   border: 1px solid var(--home-folder-tile-border);
   background: var(--home-folder-tile-bg) !important;
@@ -4092,33 +4092,36 @@ onBeforeUnmount(() => {
 }
 
 .home-folder-preview-grid {
-  width: 100%;
-  height: 100%;
+  width: 40px;
+  height: 40px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 3px;
+  gap: 4px;
 }
 
 .home-folder-preview-cell {
   min-width: 0;
   min-height: 0;
-  border-radius: 9px;
+  overflow: hidden;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.28);
   color: var(--home-folder-text);
   font-size: 10px;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.17),
-    0 2px 5px rgba(10, 16, 24, 0.08);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 2px 4px rgba(10, 16, 24, 0.1);
 }
 
 .home-folder-preview-image {
+  display: block;
   width: 100%;
   height: 100%;
   padding: 2px;
+  border-radius: inherit;
   object-fit: contain;
 }
 

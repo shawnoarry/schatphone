@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Implementation Workstreams / 消费金融资产实施工作流
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## 1. Workstream A: Shopping And Logistics
 
@@ -10,9 +10,11 @@ Updated: 2026-08-09
 - service-account messaging
 - Shopping order notifications into matching Shopping service accounts
 - logistics event notifications into matching Logistics service accounts
-- World Pack marketplace context for Shopping, currently limited to `补给站` entry semantics and Daily Fresh / Grocery filter routing
+- World Pack marketplace context for Shopping, currently limited to `补给站` entry semantics and Kurly / Grocery filter routing over the stable `daily_fresh` service key
 - App Store can expose Shopping platform services as `shopping`-bound folder mini-app facades and control whether they appear in the Shopping folder list, but Shopping still owns products, cart, checkout, orders, logistics links, browsing filters, favorites/recent lists, and service notifications
 - App Store `Add mini app` can hand off to Shopping with `createShop=1`, but Shopping must own any real product/store/service records; custom Shopping store records beyond preset platform services remain a Shopping product decision
+- Shopping's built-in pseudo-folder exposes three independent real-name marketplace Apps (Coupang: `schat_mall` / `city_market`; 29CM: `nova_digital` / `tech_catalog`; Kurly: `daily_fresh` / `fresh_market`) and three independent real-name specialty-store Apps (WORKSOUT: `style_cloud` / `fashion_editorial`; IKEA Korea: `nordhus_home` / `room_planner`; OLIVE YOUNG: `mellow_care` / `care_lab`). Their routes, brand-color-derived headers, CLI-redrawn brand App icons, Seoul setting anchors, catalog views, search, categories, favorites, carts, checkout, order views, and logistics views are App-specific. All six reuse one Shopping-owned schema, quote, backup, and persistence implementation underneath, with visible state scoped by `serviceKey` and no cross-App cart or mixed checkout.
+- Built-in Shopping content currently includes four stable bilingual products per facade. Normal hydration may add missing built-in IDs without overwriting same-ID saved records; explicit backup restore must remain snapshot-faithful.
 
 ## 2. Workstream B: Food Delivery
 

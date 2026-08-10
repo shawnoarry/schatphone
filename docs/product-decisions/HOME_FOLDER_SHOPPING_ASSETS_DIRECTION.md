@@ -1,6 +1,6 @@
 # Home Folder, Shopping, and Assets Direction
 
-Updated: 2026-08-06
+Updated: 2026-08-10
 
 This document defines how Home folders, Shopping, Assets, Wallet, and Stock should relate to each other.
 
@@ -85,22 +85,52 @@ Recommended product framing:
 - Home expression: folder-backed entry family
 - Route base: `/shopping`
 
-First-priority child identities may look like store/platform identities, for example:
+The delivered built-in child identities are:
 
-- Schat Mall
-- Style Cloud
-- Nova Digital
-- Daily Fresh
+- marketplaces: Coupang, 29CM, and Kurly;
+- specialty stores: WORKSOUT, IKEA Korea, and OLIVE YOUNG.
+
+Each identity has a stable service ID, a distinct App route and storefront template, an existing Seoul setting anchor, an official source URL used for research provenance, and a CLI-redrawn raster App icon based on the brand's current Korean App Store identity. Shopping supplies 24 stable bilingual fictional seed products, four per identity. The six Apps may share one Shopping-owned store, schema, quote service, persistence envelope, and downstream handoff implementation, but favorites, carts, checkout, and visible order history are scoped by `serviceKey`. Shared implementation must not surface as a unified Shopping hub or cross-App commerce experience.
+
+### 5.1 Seoul Map And Retail Research Mapping
+
+| Stable service ID | Fictional storefront | Existing Seoul Map reference | Retail grammar references |
+| --- | --- | --- | --- |
+| `schat_mall` | Coupang | `seoul-starfield-coex-mall` | High-density search, rapid fulfillment, deals, and repeat purchase |
+| `nova_digital` | 29CM | `seoul-samsung-town` | Black-and-white editorial discovery, orange actions, features, and showcases |
+| `daily_fresh` | Kurly | `seoul-lotte-mart-seoul-station` | Purple market identity, dawn delivery, selected food, and repeat baskets |
+| `style_cloud` | WORKSOUT | `seoul-galleria-luxury-hall` | Dark multi-brand fashion, editorial content, drops, and raffles |
+| `nordhus_home` | IKEA Korea | `seoul-the-hyundai-seoul` | Blue/yellow home navigation, room planning, storage, and modular categories |
+| `mellow_care` | OLIVE YOUNG | `seoul-jennyhouse-cheongdam-hill` | Olive-green beauty discovery, rankings, deals, and functional categories |
+
+Public sources inspected on 2026-08-10:
+
+- Coupang: https://www.coupang.com/
+- Kurly: https://www.kurly.com/main
+- 29CM: https://www.29cm.co.kr/
+- WORKSOUT: https://worksout.co.kr/
+- IKEA Korea: https://www.ikea.com/kr/ko/
+- Olive Young Korea: https://www.oliveyoung.co.kr/store/main/main.do
+
+These sources inform retail type, logo identity, color, navigation, fulfillment, ranking, editorial, and category grammar. SchatPhone may display the public retailer names and recognizable App logos for immersive setting reference, but does not import official product catalogs, product images, prices, advertising copy, or affiliation claims. Every runtime product remains fictional. Map owns place truth; Shopping stores only a read-only setting-anchor place ID, and the UI must not present that anchor as an official branch address.
 
 Important boundary:
 
 - the first folder layer should represent storefront identities, not raw product categories;
 - categories such as fashion or digital should still live inside the Shopping product surface.
+- the Shopping folder is a Home launcher only; it is not a seventh Shopping app or an aggregate storefront;
+- every child App has a canonical route under `/shopping/:serviceKey` and must not expose an in-App switcher for the other children;
+- favorites, cart badges, cart contents, checkout, order history, logistics rows, and downstream suggestions must be scoped to the active App;
+- checkout must never mix lines from multiple Apps, and opening one App must not reveal another App's cart or orders;
+- App Store install state may control folder visibility, but it must not delete Shopping products, cart lines, or orders.
+- formal product photography may be added later without changing the stable service, template, product, or route contracts.
 
-It is acceptable for several folder child entries to land on the same underlying route if they pass store identity and default context through query or route state, for example:
+Canonical child-App routes are:
 
-- `/shopping?service=schat_mall`
-- `/shopping?service=style_cloud&category=fashion`
+- `/shopping/schat_mall`
+- `/shopping/style_cloud?category=fashion`
+
+Legacy `/shopping` links remain compatibility inputs only. They must redirect to one explicit App, preserve compatible query context, and remove a redundant `service` query from the canonical URL.
 
 ## 6. Assets Direction
 

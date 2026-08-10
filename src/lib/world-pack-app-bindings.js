@@ -10,7 +10,7 @@ const MODULE_TARGET_LABELS = Object.freeze({
 
 const SHOPPING_MARKETPLACE_RULE = Object.freeze({
   serviceKey: 'daily_fresh',
-  serviceLabel: 'Daily Fresh',
+  serviceLabel: 'Kurly',
   categoryKey: 'grocery',
   categoryLabel: 'Grocery',
 })

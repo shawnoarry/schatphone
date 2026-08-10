@@ -1,10 +1,16 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useShoppingStore } from '../stores/shopping'
 import {
   INTERNAL_CHAT_SHARE_ROUTE_QUERY,
   INTERNAL_CHAT_SHARE_ROUTE_VALUE,
   isInternalChatShareRoute,
 } from '../lib/internal-chat-share'
+import {
+  DEFAULT_SHOPPING_SERVICE_KEY,
+  buildShoppingAppRoute,
+  isShoppingPlatformAppKey,
+} from '../lib/planned-module-registry'
 
 const LockScreen = () => import('../views/LockScreen.vue')
 const HomeView = () => import('../views/HomeView.vue')
@@ -94,7 +100,39 @@ const router = createRouter({
     { path: '/book', component: BookView },
     { path: '/profile', component: UserProfileView },
     { path: '/stock', component: StockView },
-    { path: '/shopping', component: ShoppingView },
+    {
+      path: '/shopping',
+      component: ShoppingView,
+      beforeEnter: (to) => {
+        const query = { ...to.query }
+        const requestedService = typeof query.service === 'string' ? query.service.trim() : ''
+        const shoppingStore = useShoppingStore()
+        const productId = typeof query.productId === 'string' ? query.productId.trim() : ''
+        const orderId = typeof query.orderId === 'string' ? query.orderId.trim() : ''
+        const sourceProduct = productId ? shoppingStore.findProductById(productId) : null
+        const sourceOrder = orderId ? shoppingStore.findOrderById(orderId) : null
+        const inferredService = sourceOrder?.items?.[0]?.serviceKey || sourceProduct?.serviceKey || ''
+        delete query.service
+        return {
+          path: buildShoppingAppRoute(
+            isShoppingPlatformAppKey(requestedService)
+              ? requestedService
+              : isShoppingPlatformAppKey(inferredService)
+                ? inferredService
+                : DEFAULT_SHOPPING_SERVICE_KEY,
+          ),
+          query,
+        }
+      },
+    },
+    {
+      path: '/shopping/:serviceKey',
+      component: ShoppingView,
+      beforeEnter: (to) =>
+        isShoppingPlatformAppKey(to.params.serviceKey)
+          ? true
+          : { path: buildShoppingAppRoute(), query: to.query },
+    },
     { path: '/food-delivery', component: FoodDeliveryView },
     { path: '/assets', component: AssetsView },
     { path: '/control-center', component: ControlCenterView },

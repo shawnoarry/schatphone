@@ -23,6 +23,12 @@ describe('shopping store', () => {
     expect(store.productCount).toBeGreaterThan(0)
     expect(store.listProductsByCategory('digital').length).toBeGreaterThan(0)
     expect(store.listProductsByCategory('unknown').length).toBe(store.productCount)
+    expect(store.listProductsByService('schat_mall')).toHaveLength(4)
+    expect(store.listProductsByService('nova_digital')).toHaveLength(4)
+    expect(store.listProductsByService('daily_fresh')).toHaveLength(4)
+    expect(store.listProductsByService('style_cloud')).toHaveLength(4)
+    expect(store.listProductsByService('nordhus_home')).toHaveLength(4)
+    expect(store.listProductsByService('mellow_care')).toHaveLength(4)
   })
 
   test('upserts products, toggles favorites, and rejects invalid records', () => {
@@ -156,7 +162,7 @@ describe('shopping store', () => {
       productId: product.id,
       title: 'Mira Lens',
       serviceKey: 'nova_digital',
-      serviceLabel: 'Nova Digital',
+      serviceLabel: '29CM',
       assetEligible: true,
     })
     const calendarCue = calendarStore.findShoppingDeliveryCueByOrderId(order.id)
@@ -169,6 +175,53 @@ describe('shopping store', () => {
     })
     expect(store.cartQuantity).toBe(0)
     expect(store.orderCount).toBe(1)
+  })
+
+  test('scopes favorites, carts, checkout, and order lists by shopping app', () => {
+    const store = useShoppingStore()
+    const calendarStore = useCalendarStore()
+    store.resetForTesting()
+    calendarStore.resetForTesting()
+    const coupangProduct = store.upsertProduct({
+      id: 'product_coupang_scoped',
+      title: 'Coupang Daily Set',
+      category: 'mall',
+      serviceKey: 'schat_mall',
+      price: '20.00',
+    })
+    const cmProduct = store.upsertProduct({
+      id: 'product_29cm_scoped',
+      title: '29CM Select Bag',
+      category: 'fashion',
+      serviceKey: 'nova_digital',
+      price: '80.00',
+    })
+
+    store.toggleProductFavorite(coupangProduct.id)
+    store.toggleProductFavorite(cmProduct.id)
+    store.addToCart(coupangProduct.id, 1)
+    store.addToCart(cmProduct.id, 2)
+
+    expect(store.getFavoriteCountByService('schat_mall')).toBe(1)
+    expect(store.getFavoriteCountByService('nova_digital')).toBe(1)
+    expect(store.getCartQuantityByService('schat_mall')).toBe(1)
+    expect(store.getCartQuantityByService('nova_digital')).toBe(2)
+    expect(store.getCartPrimaryTotalByService('nova_digital').amountCents).toBe(16000)
+
+    const order = store.checkoutCart({ serviceKey: 'nova_digital' })
+
+    expect(order.items).toHaveLength(1)
+    expect(order.items[0]).toMatchObject({
+      productId: cmProduct.id,
+      serviceKey: 'nova_digital',
+      quantity: 2,
+    })
+    expect(store.getCartQuantityByService('nova_digital')).toBe(0)
+    expect(store.getCartQuantityByService('schat_mall')).toBe(1)
+    expect(store.listOrdersByService('nova_digital')).toEqual([order])
+    expect(store.listOrdersByService('schat_mall')).toEqual([])
+    expect(store.clearCart('schat_mall')).toBe(1)
+    expect(store.cartQuantity).toBe(0)
   })
 
   test('freezes the Wallet-primary checkout quote through rate changes and backup restore', () => {

@@ -223,7 +223,7 @@ test.describe('Home entry navigation', () => {
     await expect(handoff).toContainText('WorldBook still owns pack activation')
 
     await openVisibleAppStoreAction(page)
-    await expect(page).toHaveURL(/#\/shopping\?/)
+    await expect(page).toHaveURL(/#\/shopping\/schat_mall\?/)
     await expect(page).toHaveURL(/worldPack=survival_city/)
     await expect(page).toHaveURL(/worldApp=survival_supply_board/)
     expect(pageErrors).toEqual([])

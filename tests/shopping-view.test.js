@@ -26,7 +26,7 @@ const createTestRouter = () =>
       { path: '/chat', component: DummyView },
       { path: '/chat/:id', component: DummyView },
       { path: '/home', component: DummyView },
-      { path: '/shopping', component: ShoppingView },
+      { path: '/shopping/:serviceKey', component: ShoppingView },
     ],
   })
 
@@ -58,7 +58,7 @@ describe('ShoppingView', () => {
       giftable: true,
     })
     const sourceContact = chatStore.getContactById(1)
-    await router.push(`/shopping?category=digital&productId=${product.id}&source=chat&intent=product_link&chatId=1`)
+    await router.push(`/shopping/nova_digital?category=digital&productId=${product.id}&source=chat&intent=product_link&chatId=1`)
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -68,14 +68,13 @@ describe('ShoppingView', () => {
     })
 
     expect(wrapper.find(`[data-testid="shopping-product-${product.id}"]`).exists()).toBe(true)
-    expect(wrapper.find(`[data-testid="shopping-product-${product.id}"]`).classes()).toContain('border-orange-300')
+    expect(wrapper.find(`[data-testid="shopping-product-${product.id}"]`).classes()).toContain('is-highlighted')
     expect(wrapper.find('[data-testid="shopping-chat-source-banner"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Mira Lens')
-    expect(wrapper.text()).toContain('联动边界状态')
-    expect(wrapper.text()).toContain('Chat 商品链接')
-    expect(wrapper.text()).toContain('Calendar 配送线索')
-    expect(wrapper.text()).toContain('Wallet 消费记账')
-    expect(wrapper.text()).toContain('用户确认')
+    expect(wrapper.find('[data-testid="shopping-service-filter-panel"]').exists()).toBe(false)
+    expect(wrapper.find('#shopping-products').exists()).toBe(true)
+    expect(wrapper.find('#shopping-cart').exists()).toBe(true)
+    expect(wrapper.find('#shopping-orders').exists()).toBe(true)
 
     await wrapper.find(`[data-testid="shopping-add-cart-${product.id}"]`).trigger('click')
     expect(store.cartQuantity).toBe(1)
@@ -172,7 +171,7 @@ describe('ShoppingView', () => {
       currency: 'CNY',
     })
 
-    await router.push('/shopping?category=gifts')
+    await router.push('/shopping/schat_mall?category=gifts')
     await router.isReady()
     const wrapper = mount(ShoppingView, {
       global: { plugins: [router] },
@@ -218,7 +217,7 @@ describe('ShoppingView', () => {
       category: 'reference',
     })
 
-    await router.push('/shopping?category=fashion')
+    await router.push('/shopping/style_cloud?category=fashion')
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -230,7 +229,9 @@ describe('ShoppingView', () => {
     await wrapper.get('[data-testid="shopping-custom-title"]').setValue('Nova Jacket')
     await wrapper.get('[data-testid="shopping-custom-category"]').setValue('fashion')
     await wrapper.get('[data-testid="shopping-custom-price"]').setValue('399.00')
-    await wrapper.get('[data-testid="shopping-custom-service"]').setValue('style_cloud')
+    expect(wrapper.get('[data-testid="shopping-custom-service"]').attributes('data-service-key')).toBe(
+      'style_cloud',
+    )
     await wrapper.get('[data-testid="shopping-custom-image-source"]').setValue('url')
     await wrapper.get('[data-testid="shopping-custom-image-url"]').setValue('https://example.com/nova-jacket.png')
     await wrapper.get('[data-testid="shopping-custom-desc"]').setValue('Custom URL product')
@@ -249,16 +250,21 @@ describe('ShoppingView', () => {
       },
     })
     expect(router.currentRoute.value.query.productId).toBe(urlProduct.id)
-    expect(router.currentRoute.value.query.service).toBe('style_cloud')
+    expect(router.currentRoute.value.path).toBe('/shopping/style_cloud')
+    expect(router.currentRoute.value.query.service).toBeUndefined()
     expect(wrapper.get(`[data-testid="shopping-product-${urlProduct.id}"] img`).attributes('src')).toBe(
       'https://example.com/nova-jacket.png',
     )
-    expect(wrapper.get(`[data-testid="shopping-product-${urlProduct.id}"]`).text()).toContain('Style Cloud')
+    expect(wrapper.get(`[data-testid="shopping-product-${urlProduct.id}"]`).text()).toContain('WORKSOUT')
 
+    await router.push('/shopping/schat_mall?category=home')
+    await flushPromises()
     await wrapper.get('[data-testid="shopping-custom-title"]').setValue('Gallery Lamp')
     await wrapper.get('[data-testid="shopping-custom-category"]').setValue('home')
     await wrapper.get('[data-testid="shopping-custom-price"]').setValue('88.00')
-    await wrapper.get('[data-testid="shopping-custom-service"]').setValue('schat_mall')
+    expect(wrapper.get('[data-testid="shopping-custom-service"]').attributes('data-service-key')).toBe(
+      'schat_mall',
+    )
     await wrapper.get('[data-testid="shopping-custom-image-source"]').setValue('gallery')
     expect(imported.ok).toBe(true)
     await wrapper.get('[data-testid="shopping-custom-gallery-asset"]').setValue(imported.assetId)
@@ -280,11 +286,11 @@ describe('ShoppingView', () => {
       'https://example.com/gallery-cover.png',
     )
 
-    await wrapper.get('[data-testid="shopping-service-style_cloud"]').trigger('click')
+    await router.push('/shopping/style_cloud?category=fashion')
     await flushPromises()
-    expect(router.currentRoute.value.query.service).toBe('style_cloud')
+    expect(router.currentRoute.value.path).toBe('/shopping/style_cloud')
     expect(wrapper.find(`[data-testid="shopping-product-${galleryProduct.id}"]`).exists()).toBe(false)
-    expect(wrapper.get('[data-testid="shopping-service-all"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="shopping-service-all"]').exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -293,7 +299,7 @@ describe('ShoppingView', () => {
     const router = createTestRouter()
     const store = useShoppingStore()
     store.resetForTesting()
-    await router.push('/shopping?category=mall&entry=shop&createShop=1&bindingTarget=shopping&source=app_store')
+    await router.push('/shopping/schat_mall?category=mall&entry=shop&createShop=1&bindingTarget=shopping&source=app_store')
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -303,13 +309,13 @@ describe('ShoppingView', () => {
     })
 
     expect(wrapper.get('[data-testid="shopping-app-store-create-banner"]').text()).toContain(
-      'Shopping owns products',
+      'App Store 只保留安装入口',
     )
     expect(wrapper.get('[data-testid="shopping-app-store-create-banner"]').attributes('data-binding-target')).toBe(
       'shopping',
     )
     expect(wrapper.find('[data-testid="shopping-custom-product-form"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="shopping-service-filter-panel"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="shopping-service-filter-panel"]').exists()).toBe(false)
 
     wrapper.unmount()
   })
@@ -318,7 +324,7 @@ describe('ShoppingView', () => {
     const router = createTestRouter()
     const store = useShoppingStore()
     store.resetForTesting()
-    await router.push('/shopping?service=nova_digital&category=digital')
+    await router.push('/shopping/nova_digital?category=digital')
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -327,23 +333,27 @@ describe('ShoppingView', () => {
       },
     })
 
-    expect(wrapper.find('h1').text()).toBe('Nova Digital')
-    expect(wrapper.text()).toContain('Nova Digital')
-    expect(wrapper.get('[data-testid="shopping-service-nova_digital"]').classes()).toContain('border-amber-300')
+    expect(wrapper.find('h1').text()).toBe('29CM')
+    expect(wrapper.text()).toContain('29CM')
+    expect(wrapper.find('[data-testid="shopping-service-nova_digital"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="shopping-category-digital"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="shopping-category-luxury"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="shopping-category-fashion"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="shopping-map-reference"]').attributes('data-map-place-id')).toBe(
+      'seoul-samsung-town',
+    )
+    expect(wrapper.get('[data-testid="shopping-map-reference"]').text()).toContain('江南 · 瑞草')
     wrapper.unmount()
   })
 
-  test('hides uninstalled Shopping mini apps from the folder list only', async () => {
+  test('keeps an installed app route independent from folder visibility state', async () => {
     const router = createTestRouter()
     const store = useShoppingStore()
     const systemStore = useSystemStore()
     store.resetForTesting()
     systemStore.settings.system.language = 'en-US'
     systemStore.setAppStoreMiniAppInstalled('shop_app_shopping_daily_fresh', false)
-    await router.push('/shopping')
+    await router.push('/shopping/schat_mall')
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -353,12 +363,12 @@ describe('ShoppingView', () => {
     })
 
     expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="shopping-service-schat_mall"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="shopping-service-schat_mall"]').exists()).toBe(false)
 
-    await router.push('/shopping?service=daily_fresh&category=grocery&entry=shop')
+    await router.push('/shopping/daily_fresh?category=grocery&entry=shop')
     await flushPromises()
 
-    expect(wrapper.find('h1').text()).toBe('Daily Fresh')
+    expect(wrapper.find('h1').text()).toBe('Kurly')
     expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
 
     wrapper.unmount()
@@ -387,7 +397,7 @@ describe('ShoppingView', () => {
       }),
     ).toBe(true)
     await router.push(
-      '/shopping?service=daily_fresh&category=grocery&entry=shop&shopEntryId=shop_app_shopping_daily_fresh',
+      '/shopping/daily_fresh?category=grocery&entry=shop&shopEntryId=shop_app_shopping_daily_fresh',
     )
     await router.isReady()
 
@@ -398,13 +408,13 @@ describe('ShoppingView', () => {
     })
 
     expect(wrapper.find('h1').text()).toBe('Neighborhood Fresh')
-    expect(wrapper.text()).toContain('Folder mini app · Shopping owned')
+    expect(wrapper.get('.shopping-storefront-header').attributes('data-storefront')).toBe('fresh_market')
     expect(wrapper.text()).toContain('Daily groceries with local delivery.')
     await flushPromises()
     expect(wrapper.get('[data-testid="shopping-shop-cover"] img').attributes('src')).toBe(
       'https://example.com/daily-fresh-cover.png',
     )
-    expect(wrapper.get('[data-testid="shopping-service-daily_fresh"]').classes()).toContain('border-amber-300')
+    expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
     expect(store.cartQuantity).toBe(0)
     expect(store.orderCount).toBe(0)
 
@@ -419,7 +429,7 @@ describe('ShoppingView', () => {
     systemStore.settings.system.language = 'zh-CN'
     systemStore.activateWorldPack('survival_city')
 
-    await router.push('/shopping?worldPack=survival_city&worldApp=survival_supply_board')
+    await router.push('/shopping/schat_mall?worldPack=survival_city&worldApp=survival_supply_board')
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -428,7 +438,7 @@ describe('ShoppingView', () => {
       },
     })
 
-    expect(wrapper.find('h1').text()).toBe('补给站')
+    expect(wrapper.find('h1').text()).toBe('Coupang')
     const banner = wrapper.get('[data-testid="shopping-world-app-context"]')
     expect(banner.text()).toContain('补给站')
     expect(banner.text()).toContain('灾后生存都市')
@@ -442,10 +452,10 @@ describe('ShoppingView', () => {
     expect(router.currentRoute.value.query).toMatchObject({
       worldPack: 'survival_city',
       worldApp: 'survival_supply_board',
-      service: 'daily_fresh',
       category: 'grocery',
     })
-    expect(wrapper.get('[data-testid="shopping-service-daily_fresh"]').classes()).toContain('border-amber-300')
+    expect(router.currentRoute.value.path).toBe('/shopping/daily_fresh')
+    expect(router.currentRoute.value.query.service).toBeUndefined()
     expect(wrapper.get('[data-testid="shopping-category-grocery"]').classes()).toContain('border-orange-300')
     expect(store.cartQuantity).toBe(0)
     expect(store.orderCount).toBe(0)
@@ -476,7 +486,7 @@ describe('ShoppingView', () => {
       },
     })
 
-    await router.push(`/shopping?source=chat&intent=gift_order&chatId=1&orderId=${order.id}`)
+    await router.push(`/shopping/nova_digital?source=chat&intent=gift_order&chatId=1&orderId=${order.id}`)
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {
@@ -543,7 +553,7 @@ describe('ShoppingView', () => {
       etaDays: 2,
     })
 
-    await router.push('/shopping?category=logistics')
+    await router.push('/shopping/nova_digital?category=logistics')
     await router.isReady()
 
     const wrapper = mount(ShoppingView, {

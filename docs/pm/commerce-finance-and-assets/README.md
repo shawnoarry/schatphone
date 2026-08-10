@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Package
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 Use this package for Shopping, logistics, Food Delivery, Wallet, Assets, Stock, and downstream ownership loops.
 
@@ -11,6 +11,8 @@ Current 4.4 note: Shopping, Logistics, and Food Delivery can push Chat service-a
 Current share-card note: Shopping now has a source-owned Chat share path through `share_card`. Ordinary Shopping products shared from Chat are `product_link` objects, while only gift-card / voucher / virtual-gift-like products are labeled as direct sendable gifts. Physical products should move through product links, order shares, or tracking shares; Shopping and Logistics still own checkout, order truth, fulfillment, and delivery/signature state. The helper contract lives in `src/lib/shareable-object.js`.
 
 Optional capability Pack note: `survival_city` can open Shopping as `补给站` through `marketplace -> Shopping`, and Food Delivery as `救援调度` through `dispatch -> Food Delivery`. Confirmed nonstandard `dispatch_board` entries use the same Food Delivery context path. These change entry wording, world context, banners, and safe view/route defaults only; Shopping/Food Delivery still own products, restaurants, menus, carts, checkout, orders, delivery events, logistics review, Wallet suggestions, and Assets suggestions.
+
+Current Shopping pseudo-folder note: Shopping exposes three real-name Korean marketplace Apps and three real-name specialty-store Apps over one Shopping-owned implementation. Coupang uses `city_market`, 29CM uses `tech_catalog`, Kurly uses `fresh_market`, WORKSOUT uses `fashion_editorial`, IKEA Korea uses `room_planner`, and OLIVE YOUNG uses `care_lab`. Their stable service IDs remain `schat_mall`, `nova_digital`, `daily_fresh`, `style_cloud`, `nordhus_home`, and `mellow_care` for saved-data compatibility. The Home folder is launcher-only. Each App has its own canonical `/shopping/:serviceKey` route, identity, search, category view, favorites, cart, checkout, order history, and logistics view; no in-App switcher, cross-App cart, or mixed checkout remains. One Shopping store, schema, quote service, and persistence envelope are reused underneath with visible state scoped by `serviceKey`. Each App carries a read-only Seoul setting anchor and a CLI-redrawn raster icon based on its current Korean App Store identity, shared by Shopping, Home, and App Store. Public brand logo, color, and information-architecture grammar inform the six distinct UI treatments, while all 24 stable bilingual seed products remain fictional. No official catalog, product image, price, advertising copy, branch claim, or affiliation claim is imported. Normal hydration adds missing stable seeds without overwriting same-ID saved records; explicit backup restore remains snapshot-faithful. Formal product photography and named physical-device acceptance remain separate later slices.
 
 Current Food Delivery pseudo-folder note: Food Platform and shop mini apps are peer entries. Food Platform may own discovery plus checkout and order history for its own platform-internal merchants, while independent shop mini apps present their own cart, checkout confirmation, order status, delivery events, and Wallet suggestions. Platform orders must never aggregate peer shop-app orders.
 

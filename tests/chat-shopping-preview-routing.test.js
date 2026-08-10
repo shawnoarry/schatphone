@@ -23,7 +23,7 @@ const createTestRouter = () =>
     history: createMemoryHistory(),
     routes: [
       { path: '/chat/:id', component: ChatView },
-      { path: '/shopping', component: DummyView },
+      { path: '/shopping/:serviceKey', component: DummyView },
       { path: '/food-delivery', component: DummyView },
       { path: '/home', component: DummyView },
       { path: '/gallery', component: DummyView },
@@ -74,7 +74,7 @@ describe('ChatView Shopping product preview routing', () => {
     await flushPromises()
     await nextTick()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.path).toBe('/shopping/schat_mall')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       intent: 'product_link',
@@ -119,7 +119,7 @@ describe('ChatView Shopping product preview routing', () => {
     await flushPromises()
     await nextTick()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.path).toBe('/shopping/schat_mall')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       intent: 'product_link',
@@ -170,7 +170,7 @@ describe('ChatView Shopping product preview routing', () => {
     await flushPromises()
     await nextTick()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.path).toBe('/shopping/nova_digital')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       intent: 'gift_order',
@@ -232,11 +232,10 @@ describe('ChatView Shopping product preview routing', () => {
     await flushPromises()
     await nextTick()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.path).toBe('/shopping/style_cloud')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       intent: 'product_link',
-      service: 'style_cloud',
       chatId: String(serviceContact.id),
     })
 
@@ -324,7 +323,7 @@ describe('ChatView Shopping product preview routing', () => {
     await flushPromises()
     await nextTick()
 
-    expect(router.currentRoute.value.path).toBe('/shopping')
+    expect(router.currentRoute.value.path).toBe('/shopping/style_cloud')
     expect(router.currentRoute.value.query).toMatchObject({
       source: 'chat',
       intent: 'logistics',

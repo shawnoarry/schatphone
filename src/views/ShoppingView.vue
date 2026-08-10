@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
+import ShoppingStorefrontHeader from '../components/ShoppingStorefrontHeader.vue'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import { useI18n } from '../composables/useI18n'
@@ -18,14 +18,10 @@ import {
 } from '../lib/world-pack-app-bindings'
 import { SHOP_ENTRY_BINDING_TARGET, resolveEntryPresentationMeta } from '../lib/app-entry-presentation'
 import {
-  isMiniAppEntryInstalled,
-  normalizeAppStoreMiniAppPlacements,
-} from '../lib/app-store-mini-app-placement'
-import {
   ASSET_SOURCE_KEYS,
   SHOPPING_CATEGORY_ENTRIES,
-  SHOPPING_PLATFORM_APP_ENTRIES,
   SHOPPING_SOURCE_KEYS,
+  buildShoppingAppRoute,
   findShoppingCategory,
   findShoppingPlatformApp,
   findShoppingServicePreset,
@@ -54,26 +50,16 @@ const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const walletStore = useWalletStore()
-const {
-  productCount,
-  favoriteCount,
-  cartQuantity,
-  orderCount,
-  cartLineItems,
-  cartPrimaryTotal,
-  orders,
-} = storeToRefs(shoppingStore)
 
 const SHOPPING_IMAGE_PREVIEW_SCOPE_ID = 'shopping-products-view'
 const SHOPPING_SHOP_ENTRY_COVER_SCOPE_ID = 'shopping-shop-entry-cover'
 const productImagePreviewMap = reactive({})
 const shopEntryCoverPreviewMap = reactive({})
-const appStoreMiniAppPlacements = computed(() =>
-  normalizeAppStoreMiniAppPlacements(systemStore.settings.appearance?.appStoreMiniAppPlacements),
-)
 const shoppingMiniAppEntryId = (serviceKey = '') => (serviceKey ? `shop_app_shopping_${serviceKey}` : '')
-const shoppingMiniAppInstalled = (serviceKey = '') =>
-  isMiniAppEntryInstalled(appStoreMiniAppPlacements.value, shoppingMiniAppEntryId(serviceKey))
+const shoppingBrandAssetUrl = (path = '') =>
+  path
+    ? `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
+    : ''
 const productDraft = reactive({
   title: '',
   category: 'mall',
@@ -88,6 +74,9 @@ const productDraft = reactive({
   giftable: true,
 })
 const productFeedback = ref('')
+const productSearchQuery = ref('')
+const catalogManagerOpen = ref(false)
+const favoritesOnly = ref(false)
 const giftDraft = reactive({
   enabled: false,
   contactId: '',
@@ -95,17 +84,24 @@ const giftDraft = reactive({
 })
 const selectedOrderId = ref('')
 
-const activeCategoryKey = computed(() =>
-  typeof route.query.category === 'string' ? route.query.category : 'mall',
+const activeServiceKey = computed(() =>
+  typeof route.params.serviceKey === 'string' ? route.params.serviceKey.trim() : '',
 )
+const activePlatformApp = computed(() => findShoppingPlatformApp(activeServiceKey.value))
+const activeCategoryKey = computed(() => {
+  const requested = typeof route.query.category === 'string' ? route.query.category.trim() : ''
+  const allowedKeys = Array.isArray(activePlatformApp.value?.categoryKeys)
+    ? activePlatformApp.value.categoryKeys
+    : []
+  return requested && (requested === 'logistics' || allowedKeys.includes(requested))
+    ? requested
+    : activePlatformApp.value?.defaultCategory || 'mall'
+})
 const highlightedProductId = computed(() =>
   typeof route.query.productId === 'string' ? route.query.productId.trim() : '',
 )
 const highlightedOrderId = computed(() =>
   typeof route.query.orderId === 'string' ? route.query.orderId.trim() : '',
-)
-const activeServiceKey = computed(() =>
-  typeof route.query.service === 'string' ? route.query.service.trim() : '',
 )
 const sourceModule = computed(() =>
   typeof route.query.source === 'string' ? route.query.source.trim() : '',
@@ -158,17 +154,25 @@ const worldAppDescription = computed(() => {
 })
 const activeCategory = computed(() => findShoppingCategory(activeCategoryKey.value))
 const activeCategoryIsLogistics = computed(() => activeCategory.value?.key === 'logistics')
-const activeService = computed(() =>
-  activeServiceKey.value ? findShoppingServicePreset(activeServiceKey.value) : null,
+const favoriteProducts = computed(() =>
+  shoppingStore.listFavoriteProductsByService(activeServiceKey.value),
 )
-const activePlatformApp = computed(() =>
-  activeServiceKey.value ? findShoppingPlatformApp(activeServiceKey.value) : null,
+const favoriteCount = computed(() => favoriteProducts.value.length)
+const cartLineItems = computed(() =>
+  shoppingStore.listCartLineItemsByService(activeServiceKey.value),
 )
+const cartQuantity = computed(() =>
+  shoppingStore.getCartQuantityByService(activeServiceKey.value),
+)
+const cartPrimaryTotal = computed(() =>
+  shoppingStore.getCartPrimaryTotalByService(activeServiceKey.value),
+)
+const orders = computed(() => shoppingStore.listOrdersByService(activeServiceKey.value))
+const orderCount = computed(() => orders.value.length)
 const activeShopEntryId = computed(() => {
   const rawEntryId = typeof route.query.shopEntryId === 'string' ? route.query.shopEntryId.trim() : ''
-  if (rawEntryId.startsWith('shop_app_shopping_')) return rawEntryId
-  if (route.query.entry === 'shop' && activeServiceKey.value) return shoppingMiniAppEntryId(activeServiceKey.value)
-  return ''
+  const canonicalEntryId = shoppingMiniAppEntryId(activeServiceKey.value)
+  return rawEntryId === canonicalEntryId ? rawEntryId : canonicalEntryId
 })
 const activeShopEntryPresentation = computed(() => {
   if (!activeShopEntryId.value || !activePlatformApp.value?.key) return null
@@ -191,31 +195,36 @@ const activeShopEntryCoverImageUrl = computed(() =>
   activeShopEntryCoverAssetId.value ? shopEntryCoverPreviewMap[activeShopEntryCoverAssetId.value] || '' : '',
 )
 const activeShoppingAppLabel = computed(() => {
-  if (worldAppContext.value?.bindingTitle) return worldAppContext.value.bindingTitle
   if (activeShopEntryPresentation.value?.displayName) return activeShopEntryPresentation.value.displayName
   const platform = activePlatformApp.value
-  if (!platform?.key) return t('Shopping', 'Shopping')
   return languageBase.value === 'zh' ? platform.zh : platform.en
 })
 const activeShoppingAppDesc = computed(() => {
-  if (worldAppContext.value) return worldAppDescription.value
   if (activeShopEntryPresentation.value?.shortDescription) {
     return activeShopEntryPresentation.value.shortDescription
   }
   const platform = activePlatformApp.value
-  if (!platform?.key) {
-    return t(
-      'Select a shopping app from the Home folder, or browse the shared shopping catalog here.',
-      'Select a shopping app from the Home folder, or browse the shared shopping catalog here.',
-    )
-  }
   return languageBase.value === 'zh' ? platform.descZh : platform.descEn
 })
 const visibleProducts = computed(() => {
   if (activeCategoryIsLogistics.value) return []
-  const categoryProducts = shoppingStore.listProductsByCategory(activeCategory.value?.key || 'mall')
-  if (!activeService.value?.key) return categoryProducts
-  return categoryProducts.filter((product) => product.serviceKey === activeService.value.key)
+  const categoryKey = activeCategory.value?.key || 'mall'
+  const serviceProducts = shoppingStore.listProductsByService(activeServiceKey.value)
+  const categoryProducts = categoryKey === 'mall'
+    ? serviceProducts
+    : serviceProducts.filter((product) => product.category === categoryKey)
+
+  const query = productSearchQuery.value.trim().toLocaleLowerCase()
+  const searchResults = !query
+    ? categoryProducts
+    : categoryProducts.filter((product) =>
+    [product.title, product.titleEn, product.desc, product.descEn]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase().includes(query)),
+  )
+  return favoritesOnly.value
+    ? searchResults.filter((product) => shoppingStore.isProductFavorite(product.id))
+    : searchResults
 })
 const galleryImageOptions = computed(() =>
   galleryStore.assets
@@ -321,7 +330,7 @@ const logisticsOrderRows = computed(() =>
       mapHandoff: latestEvent ? buildShoppingEventMapContext(order, latestEvent) : null,
       suggestedAt: cue?.suggestedAt || order.createdAt,
       total: formatOrderTotal(order),
-      route: cue?.route || '/shopping',
+      route: cue?.route || buildShoppingAppRoute(activeServiceKey.value),
     }
   }),
 )
@@ -361,65 +370,74 @@ const categoryCards = computed(() =>
     label: languageBase.value === 'zh' ? entry.zh : entry.en,
     desc: languageBase.value === 'zh' ? entry.descZh : entry.descEn,
     active: entry.key === activeCategory.value?.key,
-    count: shoppingStore.listProductsByCategory(entry.key).length,
+    count:
+      entry.key === 'logistics'
+        ? orderCount.value
+        : entry.key === 'mall'
+          ? shoppingStore.listProductsByService(activeServiceKey.value).length
+          : shoppingStore
+              .listProductsByService(activeServiceKey.value)
+              .filter((product) => product.category === entry.key).length,
   })),
 )
 
-const productCategoryCards = computed(() =>
-  categoryCards.value.filter((entry) => entry.key !== 'logistics'),
-)
-
-const platformCategoryCards = computed(() => {
-  if (!activePlatformApp.value?.key || activeCategoryIsLogistics.value) return categoryCards.value
+const productCategoryCards = computed(() => {
   const allowedKeys = Array.isArray(activePlatformApp.value.categoryKeys)
     ? activePlatformApp.value.categoryKeys
     : []
-  if (allowedKeys.length === 0) return categoryCards.value
-  return categoryCards.value.filter((entry) => allowedKeys.includes(entry.key))
+  return categoryCards.value.filter(
+    (entry) => entry.key !== 'logistics' && allowedKeys.includes(entry.key),
+  )
 })
 
-const serviceCards = computed(() =>
-  SHOPPING_PLATFORM_APP_ENTRIES
-    .filter((entry) => shoppingMiniAppInstalled(entry.key))
-    .map((entry) => ({
-      ...entry,
-      label: languageBase.value === 'zh' ? entry.zh : entry.en,
-      desc: languageBase.value === 'zh' ? entry.descZh : entry.descEn,
-      active: entry.key === activeService.value?.key,
-      count: shoppingStore.listProductsByService(entry.key).length,
-    })),
-)
+const platformCategoryCards = computed(() => {
+  const allowedKeys = Array.isArray(activePlatformApp.value.categoryKeys)
+    ? activePlatformApp.value.categoryKeys
+    : []
+  return categoryCards.value.filter(
+    (entry) => entry.key === 'logistics' || allowedKeys.includes(entry.key),
+  )
+})
 
-const sourcePlan = computed(() => [
-  {
-    key: SHOPPING_SOURCE_KEYS.CHAT_PRODUCT_CARD,
-    title: t('Chat 商品链接', 'Chat product links'),
-    desc: t('Chat 后续可分享或推荐商品，但结账必须留在 Shopping。', 'Chat may later share or recommend goods, while checkout must remain in Shopping.'),
-  },
-  {
-    key: SHOPPING_SOURCE_KEYS.CART_REMINDER,
-    title: t('Calendar 配送线索', 'Calendar delivery cues'),
-    desc: t('本地订单只生成 Calendar 配送或预约线索，用户确认后才会成为日程。', 'Local orders now create Calendar delivery or appointment cues; they become events only after user confirmation.'),
-  },
-  {
-    key: SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING,
-    title: t('物流跟踪入口', 'Logistics tracking entry'),
-    desc: t('物流是 Shopping 内的订单配送聚合入口，可读取订单和 Calendar 配送线索，但不拥有结算或日程。', 'Logistics is a Shopping-owned delivery aggregation entry. It reads orders and Calendar delivery cues, but does not own checkout or scheduling.'),
-  },
-  {
-    key: SHOPPING_SOURCE_KEYS.ASSET_PURCHASE,
-    title: t('资产购买', 'Asset purchases'),
-    desc: t('可转资产商品会显示手动导入建议，只有点击后才写入 Assets。', 'Asset-ready goods show manual import suggestions and write to Assets only after a click.'),
-  },
-  {
-    key: SHOPPING_SOURCE_KEYS.WALLET_EXPENSE,
-    title: t('Wallet 消费记账', 'Wallet expense records'),
-    desc: t('本地订单会显示消费记录建议，只有点击后才写入 Wallet。', 'Local orders show expense-record suggestions and write to Wallet only after a click.'),
-  },
-])
+const activeStorefrontTemplate = computed(
+  () => activePlatformApp.value?.storefrontTemplate || 'shopping_hub',
+)
+const activeBrandAssetUrl = computed(() =>
+  shoppingBrandAssetUrl(activePlatformApp.value?.brandAssetPath || ''),
+)
+const activeMapReference = computed(() => {
+  const service = activePlatformApp.value
+  if (!service?.mapReferencePlaceId) return null
+  return {
+    placeId: service.mapReferencePlaceId,
+    district: languageBase.value === 'zh' ? service.districtZh : service.districtEn,
+  }
+})
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
+}
+
+const scrollToShoppingSection = (sectionId) => {
+  if (typeof document === 'undefined') return
+  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const showFavoriteProducts = () => {
+  favoritesOnly.value = true
+  scrollToShoppingSection('shopping-products')
+}
+
+const showAllProducts = () => {
+  favoritesOnly.value = false
+  scrollToShoppingSection('shopping-products')
+}
+
+const openCatalogManager = () => {
+  catalogManagerOpen.value = !catalogManagerOpen.value
+  if (catalogManagerOpen.value) {
+    requestAnimationFrame(() => scrollToShoppingSection('shopping-catalog-manager'))
+  }
 }
 
 const goBackToChat = () => {
@@ -428,23 +446,18 @@ const goBackToChat = () => {
 }
 
 const openCategory = (key) => {
+  favoritesOnly.value = false
+  const returnQuery = {}
+  if (route.query.from === 'home') returnQuery.from = 'home'
+  if (typeof route.query.homePage === 'string') returnQuery.homePage = route.query.homePage
   router.push({
-    path: '/shopping',
+    path: buildShoppingAppRoute(activeServiceKey.value),
     query: {
+      ...returnQuery,
       category: key,
-      ...(activeServiceKey.value && key !== 'logistics' ? { service: activeServiceKey.value } : {}),
-    },
-  })
-}
-
-const openService = (key = '') => {
-  const normalizedKey = typeof key === 'string' ? key.trim() : ''
-  const platform = normalizedKey ? findShoppingPlatformApp(normalizedKey) : null
-  router.push({
-    path: '/shopping',
-    query: {
-      category: platform?.defaultCategory || activeCategory.value?.key || 'mall',
-      ...(normalizedKey ? { service: normalizedKey } : {}),
+      ...(activeShopEntryId.value
+        ? { entry: 'shop', shopEntryId: activeShopEntryId.value }
+        : {}),
     },
   })
 }
@@ -454,12 +467,14 @@ const applyWorldAppFilter = () => {
   const stableQuery = { ...route.query }
   delete stableQuery.productId
   delete stableQuery.orderId
-  router.push({
-    path: '/shopping',
-    query: buildShoppingWorldAppFilterQuery({
+  const query = buildShoppingWorldAppFilterQuery({
       context: worldAppContext.value,
       currentQuery: stableQuery,
-    }),
+    })
+  delete query.service
+  router.push({
+    path: buildShoppingAppRoute(worldAppContext.value.serviceKey),
+    query,
   })
 }
 
@@ -517,7 +532,7 @@ const resetProductDraft = () => {
   productDraft.imageSourceType = 'none'
   productDraft.imageUrl = ''
   productDraft.imageGalleryAssetId = ''
-  productDraft.serviceKey = activeService.value?.key || ''
+  productDraft.serviceKey = activeServiceKey.value
   productDraft.assetEligible = false
   productDraft.giftable = true
 }
@@ -540,7 +555,7 @@ const createCustomProduct = () => {
     imageSourceType,
     imageUrl: imageSourceType === 'url' ? productDraft.imageUrl : '',
     imageGalleryAssetId: imageSourceType === 'gallery' ? productDraft.imageGalleryAssetId : '',
-    serviceKey: productDraft.serviceKey,
+    serviceKey: activeServiceKey.value,
     assetEligible: productDraft.assetEligible,
     giftable: productDraft.giftable,
   })
@@ -550,11 +565,10 @@ const createCustomProduct = () => {
   }
   productFeedback.value = t('Custom product added to catalog.', 'Custom product added to catalog.')
   router.push({
-    path: '/shopping',
+    path: buildShoppingAppRoute(activeServiceKey.value),
     query: {
       category: product.category,
       productId: product.id,
-      ...(product.serviceKey ? { service: product.serviceKey } : {}),
     },
   })
   resetProductDraft()
@@ -569,13 +583,17 @@ const productImageUrl = (product) => {
   return ''
 }
 
-const productImageSourceLabel = (product) => {
-  const sourceType = product?.image?.sourceType || 'none'
-  if (sourceType === 'url') return t('URL image', 'URL image')
-  if (sourceType === 'gallery') return t('Gallery asset', 'Gallery asset')
-  if (sourceType === 'ai') return t('AI image reserved', 'AI image reserved')
-  return t('Default icon', 'Default icon')
-}
+const productDisplayTitle = (product) =>
+  languageBase.value === 'en' && product?.titleEn ? product.titleEn : product?.title || ''
+
+const productDisplayDescription = (product) =>
+  languageBase.value === 'en' && product?.descEn ? product.descEn : product?.desc || ''
+
+const productCategoryIcon = (product) =>
+  findShoppingCategory(product?.category || 'mall')?.icon || 'fas fa-bag-shopping'
+
+const productStorefrontTemplate = (product) =>
+  findShoppingServicePreset(product?.serviceKey || '')?.storefrontTemplate || 'city_market'
 
 const productServiceLabel = (product) => {
   const service = findShoppingServicePreset(product?.serviceKey || '')
@@ -672,6 +690,7 @@ const buildGiftCheckoutPayload = () => {
 
 const checkoutCart = () => {
   shoppingStore.checkoutCart({
+    serviceKey: activeServiceKey.value,
     ...buildGiftCheckoutPayload(),
     note: t('Local shopping baseline order', 'Local shopping baseline order'),
   })
@@ -763,6 +782,18 @@ const transferSuggestionToWallet = (suggestion) => {
 }
 
 watch(
+  activeServiceKey,
+  () => {
+    productSearchQuery.value = ''
+    favoritesOnly.value = false
+    catalogManagerOpen.value = false
+    selectedOrderId.value = ''
+    resetProductDraft()
+  },
+  { immediate: true },
+)
+
+watch(
   () => visibleProducts.value.map((product) => product.image?.galleryAssetId || '').filter(Boolean),
   (assetIds) => {
     const activeSet = new Set(assetIds)
@@ -851,59 +882,41 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="w-full h-full bg-white text-black flex flex-col">
-    <div class="pt-12 pb-3 px-4 border-b border-gray-200 flex items-center gap-3">
-      <button @click="goHome" class="text-blue-500 text-sm flex items-center gap-1">
-        <i class="fas fa-chevron-left"></i> {{ t('Home', 'Home') }}
-      </button>
-      <h1 class="font-bold">{{ activeShoppingAppLabel }}</h1>
-    </div>
+  <div
+    class="shopping-view-shell w-full h-full text-black flex flex-col"
+    :data-storefront="activeStorefrontTemplate"
+  >
+    <div class="shopping-scroll flex-1 overflow-y-auto no-scrollbar">
+      <ShoppingStorefrontHeader
+        v-model:search-query="productSearchQuery"
+        :active-service="activePlatformApp"
+        :active-category="activeCategory"
+        :active-label="activeShoppingAppLabel"
+        :active-description="activeShoppingAppDesc"
+        :category-cards="platformCategoryCards"
+        :cover-image-url="activeShopEntryCoverImageUrl"
+        :brand-asset-url="activeBrandAssetUrl"
+        :map-reference="activeMapReference"
+        :language-base="languageBase"
+        :favorite-count="favoriteCount"
+        :cart-quantity="cartQuantity"
+        :order-count="orderCount"
+        @go-home="goHome"
+        @select-category="openCategory"
+        @open-favorites="showFavoriteProducts"
+        @open-cart="scrollToShoppingSection('shopping-cart')"
+        @open-orders="scrollToShoppingSection('shopping-orders')"
+        @open-manager="openCatalogManager"
+      />
 
-    <div class="flex-1 overflow-y-auto no-scrollbar bg-gray-50 px-5 py-6 space-y-4">
-      <section class="rounded-3xl bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 border border-orange-100 p-5">
-        <p class="text-xs font-semibold text-orange-600">
-          {{
-            activeShopEntryId
-              ? t('文件夹小应用 · Shopping 持有业务', 'Folder mini app · Shopping owned')
-              : t('Shopping folder app', 'Shopping folder app')
-          }}
-        </p>
-        <h2 class="mt-2 text-2xl font-black text-gray-950">
-          {{ activeShoppingAppLabel }}
-        </h2>
-        <p class="mt-3 text-xs leading-5 text-gray-600">
-          {{ activeShoppingAppDesc }}
-        </p>
+      <div class="shopping-content px-4 py-4 space-y-4">
         <div
           v-if="activeShopEntryCoverImageUrl"
-          class="mt-4 h-32 overflow-hidden rounded-2xl border border-white/70 bg-white/70"
+          class="sr-only"
           data-testid="shopping-shop-cover"
         >
-          <img
-            :src="activeShopEntryCoverImageUrl"
-            :alt="`${activeShoppingAppLabel} cover`"
-            class="h-full w-full object-cover"
-          />
+          <img :src="activeShopEntryCoverImageUrl" :alt="`${activeShoppingAppLabel} cover`" />
         </div>
-        <div class="mt-4 grid grid-cols-4 gap-2">
-          <div class="rounded-2xl bg-white/70 p-3">
-            <p class="text-[10px] text-gray-500">{{ t('Products', 'Products') }}</p>
-            <p class="mt-1 text-lg font-black">{{ productCount }}</p>
-          </div>
-          <div class="rounded-2xl bg-white/70 p-3">
-            <p class="text-[10px] text-gray-500">{{ t('Favorites', 'Favorites') }}</p>
-            <p class="mt-1 text-lg font-black">{{ favoriteCount }}</p>
-          </div>
-          <div class="rounded-2xl bg-white/70 p-3">
-            <p class="text-[10px] text-gray-500">{{ t('Cart', 'Cart') }}</p>
-            <p class="mt-1 text-lg font-black">{{ cartQuantity }}</p>
-          </div>
-          <div class="rounded-2xl bg-white/70 p-3">
-            <p class="text-[10px] text-gray-500">{{ t('Orders', 'Orders') }}</p>
-            <p class="mt-1 text-lg font-black">{{ orderCount }}</p>
-          </div>
-        </div>
-      </section>
 
       <section
         v-if="openedFromChatProductLink || openedFromChatGiftOrder || openedFromChatShoppingOrder || openedFromChatLogistics"
@@ -965,8 +978,8 @@ onBeforeUnmount(() => {
             <p class="mt-2 text-xs leading-5 text-amber-700">
               {{
                 t(
-                  'Shopping owns products, cart, checkout, shopping orders, logistics, and service notifications. Use the service shelf and custom product form below; App Store only keeps the mini app facade and launch context.',
-                  'Shopping owns products, cart, checkout, shopping orders, logistics, and service notifications. Use the service shelf and custom product form below; App Store only keeps the mini app facade and launch context.',
+                  '当前购物 App 负责自己的商品、购物车、结算、订单和物流通知；App Store 只保留安装入口与外观设置。',
+                  'This shopping app owns its catalog, cart, checkout, orders, and logistics notifications; App Store only keeps installation and presentation settings.',
                 )
               }}
             </p>
@@ -1018,20 +1031,6 @@ onBeforeUnmount(() => {
                 : t('应用补给筛选', 'Apply supply filter')
             }}
           </button>
-        </div>
-      </section>
-
-      <section class="rounded-2xl bg-white border border-gray-200 p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-semibold">{{ t('Current shelf', 'Current shelf') }}</p>
-            <p class="mt-1 text-xs text-gray-500">
-              {{ languageBase === 'zh' ? activeCategory.zh : activeCategory.en }}
-            </p>
-          </div>
-          <span class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600">
-            {{ activeCategory.key }}
-          </span>
         </div>
       </section>
 
@@ -1151,65 +1150,12 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="rounded-2xl bg-white border border-amber-100 p-4" data-testid="shopping-service-filter-panel">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-semibold">{{ t('Shopping apps', 'Shopping apps') }}</p>
-            <p class="mt-1 text-[11px] leading-4 text-gray-500">
-              {{
-                t(
-                  'The Home folder opens separate shopping apps. Orders still use the shared local checkout layer.',
-                  'The Home folder opens separate shopping apps. Orders still use the shared local checkout layer.',
-                )
-              }}
-            </p>
-          </div>
-          <button
-            class="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold"
-            :class="activeService ? 'bg-gray-100 text-gray-500' : 'bg-amber-500 text-white'"
-            data-testid="shopping-service-all"
-            @click="openService('')"
-          >
-            {{ t('All', 'All') }}
-          </button>
-        </div>
-        <div class="mt-3 grid grid-cols-2 gap-2">
-          <button
-            v-for="service in serviceCards"
-            :key="service.key"
-            class="rounded-2xl border p-3 text-left transition"
-            :class="service.active ? 'border-amber-300 bg-amber-50' : 'border-gray-100 bg-gray-50'"
-            :data-testid="`shopping-service-${service.key}`"
-            @click="openService(service.key)"
-          >
-            <span
-              class="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white"
-              :class="service.active ? 'bg-amber-500' : 'bg-gray-900'"
-            >
-              <i :class="service.icon"></i>
-            </span>
-            <p class="mt-2 text-xs font-bold text-gray-950">{{ service.label }}</p>
-            <p class="mt-1 line-clamp-2 text-[10px] leading-4 text-gray-500">{{ service.desc }}</p>
-            <p class="mt-2 text-[10px] font-semibold text-amber-600">
-              {{ service.count }} {{ t('items', 'items') }}
-            </p>
-          </button>
-          <div
-            v-if="serviceCards.length === 0"
-            class="col-span-2 rounded-2xl border border-dashed border-amber-200 bg-amber-50 p-4 text-center text-xs leading-5 text-amber-700"
-            data-testid="shopping-service-empty"
-          >
-            {{
-              t(
-                'No installed Shopping mini apps. Add them from App Store.',
-                'No installed Shopping mini apps. Add them from App Store.',
-              )
-            }}
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-2xl bg-white border border-orange-100 p-4" data-testid="shopping-custom-product-form">
+      <section
+        id="shopping-catalog-manager"
+        v-show="catalogManagerOpen || openedFromAppStoreShopCreate"
+        class="shopping-management-panel rounded-lg bg-white border border-orange-100 p-4"
+        data-testid="shopping-custom-product-form"
+      >
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-sm font-semibold">{{ t('Custom product', 'Custom product') }}</p>
@@ -1251,17 +1197,14 @@ onBeforeUnmount(() => {
             class="rounded-xl border border-gray-200 px-3 py-2 text-xs uppercase outline-none"
             :placeholder="t('Currency', 'Currency')"
           />
-          <select
-            v-model="productDraft.serviceKey"
+          <div
             data-testid="shopping-custom-service"
-            :aria-label="t('服务预设', 'Service preset')"
-            class="col-span-2 rounded-xl border border-amber-100 bg-amber-50/50 px-3 py-2 text-xs outline-none"
+            :data-service-key="activeServiceKey"
+            class="col-span-2 flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/50 px-3 py-2 text-xs font-semibold text-gray-700"
           >
-            <option value="">{{ t('Auto service preset', 'Auto service preset') }}</option>
-            <option v-for="service in serviceCards" :key="service.key" :value="service.key">
-              {{ service.label }}
-            </option>
-          </select>
+            <img v-if="activeBrandAssetUrl" :src="activeBrandAssetUrl" alt="" class="h-5 w-5 rounded object-cover" />
+            <span>{{ activeShoppingAppLabel }}</span>
+          </div>
           <ImageSourcePicker
             v-model:source-type="productDraft.imageSourceType"
             v-model:image-url="productDraft.imageUrl"
@@ -1300,108 +1243,95 @@ onBeforeUnmount(() => {
         <p v-if="productFeedback" class="mt-2 text-[11px] text-orange-600">{{ productFeedback }}</p>
       </section>
 
-      <section class="grid grid-cols-2 gap-3">
-        <button
-          v-for="category in platformCategoryCards"
-          :key="category.key"
-          class="rounded-2xl border p-4 text-left transition"
-          :class="category.active ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-white'"
-          :data-testid="`shopping-category-${category.key}`"
-          @click="openCategory(category.key)"
-        >
-          <span
-            class="w-10 h-10 rounded-xl text-white flex items-center justify-center"
-            :class="category.active ? 'bg-orange-500' : 'bg-gray-900'"
+      <section id="shopping-products" class="shopping-products-section">
+        <div class="shopping-section-heading">
+          <div>
+            <p class="shopping-section-kicker">
+              {{ favoritesOnly ? t('我的收藏', 'Saved items') : activePlatformApp?.storefrontKind === 'specialty' ? t('店内精选', 'Store edit') : t('正在流行', 'Trending now') }}
+            </p>
+            <h2>{{ activeCategory?.label || t('Products', 'Products') }}</h2>
+          </div>
+          <button
+            v-if="favoritesOnly"
+            type="button"
+            class="shopping-clear-filter"
+            :aria-label="t('显示全部商品', 'Show all products')"
+            :title="t('显示全部商品', 'Show all products')"
+            @click="showAllProducts"
           >
-            <i :class="category.icon"></i>
-          </span>
-          <p class="mt-3 text-sm font-bold">{{ category.label }}</p>
-          <p class="mt-1 text-[11px] leading-4 text-gray-500">{{ category.desc }}</p>
-          <p class="mt-2 text-[10px] font-semibold text-orange-600">
-            {{ category.count }} {{ t('items', 'items') }}
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+          </button>
+          <span v-else>{{ visibleProducts.length }} {{ t('items', 'items') }}</span>
+        </div>
+        <div v-if="visibleProducts.length === 0" class="shopping-empty-state">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <p>
+            {{ favoritesOnly ? t('这里还没有收藏商品。', 'No saved items here yet.') : productSearchQuery ? t('没有找到匹配商品。', 'No matching products found.') : t('这个分类还没有商品。', 'No products in this category yet.') }}
           </p>
-        </button>
-      </section>
-
-      <section class="rounded-2xl bg-white border border-gray-200 p-4">
-        <div class="flex items-center justify-between gap-3">
-          <p class="text-sm font-semibold">{{ t('Products', 'Products') }}</p>
-          <span class="text-[11px] text-gray-400">{{ visibleProducts.length }} {{ t('items', 'items') }}</span>
         </div>
-        <div v-if="visibleProducts.length === 0" class="mt-4 rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-400">
-          {{ t('No products in this category yet.', 'No products in this category yet.') }}
-        </div>
-        <div v-else class="mt-3 space-y-3">
+        <div v-else class="shopping-product-grid">
           <article
             v-for="product in visibleProducts"
             :key="product.id"
-            class="rounded-2xl border p-3 transition"
-            :class="product.id === highlightedProductId ? 'border-orange-300 bg-orange-50 shadow-sm' : 'border-gray-100 bg-gray-50'"
+            class="shopping-product-card"
+            :class="{ 'is-highlighted': product.id === highlightedProductId }"
+            :data-product-template="productStorefrontTemplate(product)"
             :data-testid="`shopping-product-${product.id}`"
           >
-            <div class="flex items-start gap-3">
-              <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-200 to-rose-200 flex items-center justify-center text-orange-700">
-                <img
-                  v-if="productImageUrl(product)"
-                  :src="productImageUrl(product)"
-                  :alt="product.image?.alt || product.title"
-                  class="h-full w-full rounded-2xl object-cover"
-                />
-                <i v-else class="fas fa-bag-shopping"></i>
+            <div class="shopping-product-visual">
+              <img
+                v-if="productImageUrl(product)"
+                :src="productImageUrl(product)"
+                :alt="product.image?.alt || productDisplayTitle(product)"
+              />
+              <div v-else class="shopping-product-symbol" aria-hidden="true">
+                <i :class="productCategoryIcon(product)"></i>
+                <span>{{ findShoppingServicePreset(product.serviceKey)?.mark || 'S' }}</span>
               </div>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <p class="text-sm font-bold text-gray-950">{{ product.title }}</p>
-                    <p class="mt-1 text-[11px] leading-4 text-gray-500">{{ product.desc }}</p>
-                    <p class="mt-1 text-[10px] text-orange-500">
-                      {{ productImageSourceLabel(product) }} · {{ product.origin }} · {{ productServiceLabel(product) }}
-                    </p>
-                  </div>
-                  <button
-                    class="shrink-0 text-sm"
-                    :class="shoppingStore.isProductFavorite(product.id) ? 'text-rose-500' : 'text-gray-300'"
-                    :aria-label="t('Toggle favorite', 'Toggle favorite')"
-                    @click="toggleFavorite(product.id)"
-                  >
-                    <i class="fas fa-heart"></i>
-                  </button>
-                </div>
-                <div class="mt-3 flex items-center justify-between gap-2">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-sm font-black">{{ formatPrice(product) }}</span>
-                    <span class="rounded-full px-2 py-1 text-[10px] font-semibold" :class="stockStatusClass(product.stockStatus)">
-                      {{ stockStatusLabel(product.stockStatus) }}
-                    </span>
-                    <span v-if="product.assetEligible" class="rounded-full bg-cyan-50 px-2 py-1 text-[10px] font-semibold text-cyan-700">
-                      {{ t('Asset-ready', 'Asset-ready') }}
-                    </span>
-                    <span v-if="product.giftable" class="rounded-full bg-pink-50 px-2 py-1 text-[10px] font-semibold text-pink-600">
-                      {{ t('Giftable', 'Giftable') }}
-                    </span>
-                  </div>
-                  <button
-                    class="rounded-full bg-orange-500 px-3 py-1.5 text-[11px] font-semibold text-white disabled:bg-gray-300"
-                    :disabled="product.stockStatus === 'sold_out'"
-                    :data-testid="`shopping-add-cart-${product.id}`"
-                    @click="addToCart(product.id)"
-                  >
-                    {{ t('Add', 'Add') }}
-                  </button>
-                </div>
+              <button
+                type="button"
+                class="shopping-favorite-button"
+                :class="{ 'is-favorite': shoppingStore.isProductFavorite(product.id) }"
+                :aria-label="t('收藏或取消收藏', 'Toggle favorite')"
+                :title="t('收藏或取消收藏', 'Toggle favorite')"
+                @click="toggleFavorite(product.id)"
+              >
+                <i class="fas fa-heart" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="shopping-product-body">
+              <p class="shopping-product-brand">{{ productServiceLabel(product) }}</p>
+              <h3>{{ productDisplayTitle(product) }}</h3>
+              <p class="shopping-product-description">{{ productDisplayDescription(product) }}</p>
+              <div class="shopping-product-tags">
+                <span :class="stockStatusClass(product.stockStatus)">{{ stockStatusLabel(product.stockStatus) }}</span>
+                <span v-if="product.assetEligible">{{ t('可转资产', 'Asset-ready') }}</span>
+                <span v-else-if="product.giftable">{{ t('可赠礼', 'Giftable') }}</span>
+              </div>
+              <div class="shopping-product-footer">
+                <strong>{{ formatPrice(product) }}</strong>
+                <button
+                  type="button"
+                  class="shopping-add-button"
+                  :disabled="product.stockStatus === 'sold_out'"
+                  :aria-label="`${t('加入购物车', 'Add to cart')}: ${productDisplayTitle(product)}`"
+                  :title="t('加入购物车', 'Add to cart')"
+                  :data-testid="`shopping-add-cart-${product.id}`"
+                  @click="addToCart(product.id)"
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i>
+                </button>
               </div>
             </div>
           </article>
         </div>
       </section>
 
-      <section class="rounded-2xl bg-white border border-gray-200 p-4">
+      <section id="shopping-cart" class="shopping-operation-section rounded-lg bg-white border border-gray-200 p-4">
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-sm font-semibold">{{ t('Cart', 'Cart') }}</p>
-            <p class="mt-1 text-[11px] text-gray-500">
-              {{ t('Checkout creates a Shopping-local order; Wallet, Assets, and Calendar handoffs still require user confirmation.', 'Checkout creates a Shopping-local order; Wallet, Assets, and Calendar handoffs still require user confirmation.') }}
-            </p>
+            <p class="mt-1 text-[11px] text-gray-500">{{ t('确认商品和赠礼对象后提交订单。', 'Review items and gift recipient before checkout.') }}</p>
           </div>
           <span class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600">
             {{ formatLegacyMoneyQuote(cartPrimaryTotal.amountCents, cartPrimaryTotal.currency) }}
@@ -1418,15 +1348,15 @@ onBeforeUnmount(() => {
           >
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
-                <p class="truncate text-xs font-semibold">{{ line.product.title }}</p>
+                <p class="truncate text-xs font-semibold">{{ productDisplayTitle(line.product) }}</p>
                 <p class="mt-1 text-[11px] text-gray-500">
                   {{ formatLegacyMoneyQuote(line.subtotalCents, line.currency) }}
                 </p>
               </div>
               <div class="flex items-center gap-2">
-                <button class="w-7 h-7 rounded-full bg-gray-100 text-xs" @click="updateCartQuantity(line.productId, -1)">-</button>
+                <button class="w-7 h-7 rounded-full bg-gray-100 text-xs" :aria-label="t('减少数量', 'Decrease quantity')" @click="updateCartQuantity(line.productId, -1)">-</button>
                 <span class="w-5 text-center text-xs font-semibold">{{ line.quantity }}</span>
-                <button class="w-7 h-7 rounded-full bg-gray-100 text-xs" @click="updateCartQuantity(line.productId, 1)">+</button>
+                <button class="w-7 h-7 rounded-full bg-gray-100 text-xs" :aria-label="t('增加数量', 'Increase quantity')" @click="updateCartQuantity(line.productId, 1)">+</button>
               </div>
             </div>
           </article>
@@ -1452,9 +1382,7 @@ onBeforeUnmount(() => {
                 data-testid="shopping-gift-name"
                 :placeholder="t('Recipient name', 'Recipient name')"
               />
-              <p class="text-[10px] leading-4 text-pink-600">
-                {{ t('Only gift context is recorded here; cart, order, and checkout stay owned by Shopping.', 'Only gift context is recorded here; cart, order, and checkout stay owned by Shopping.') }}
-              </p>
+              <p class="text-[10px] leading-4 text-pink-600">{{ t('收件人会随订单保存，付款记录仍需在 Wallet 中确认。', 'The recipient is saved with the order; expense recording is confirmed later in Wallet.') }}</p>
             </div>
           </div>
           <button
@@ -1462,12 +1390,12 @@ onBeforeUnmount(() => {
             data-testid="shopping-checkout"
             @click="checkoutCart"
           >
-            {{ t('Create local order', 'Create local order') }}
+            {{ t('去结算', 'Checkout') }}
           </button>
         </div>
       </section>
 
-      <section class="rounded-2xl bg-white border border-gray-200 p-4">
+      <section id="shopping-orders" class="shopping-operation-section rounded-lg bg-white border border-gray-200 p-4">
         <div class="flex items-center justify-between gap-3">
           <p class="text-sm font-semibold">{{ t('Recent orders', 'Recent orders') }}</p>
           <span class="text-[11px] text-gray-400">{{ orderCount }}</span>
@@ -1524,22 +1452,10 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="rounded-2xl bg-white border border-gray-200 p-4">
-        <p class="text-sm font-semibold">{{ t('联动边界状态', 'Handoff boundary status') }}</p>
-        <div class="mt-3 space-y-2">
-          <article
-            v-for="item in sourcePlan"
-            :key="item.key"
-            class="rounded-xl bg-gray-50 p-3"
-          >
-            <p class="text-xs font-semibold text-gray-900">{{ item.title }}</p>
-            <p class="mt-1 text-[11px] leading-4 text-gray-500">{{ item.desc }}</p>
-            <code class="mt-2 block text-[10px] text-gray-400">{{ item.key }}</code>
-          </article>
-        </div>
-      </section>
-
-      <section class="rounded-2xl bg-white border border-cyan-100 p-4">
+      <section
+        v-if="assetTransferSuggestions.length > 0"
+        class="shopping-operation-section rounded-lg bg-white border border-cyan-100 p-4"
+      >
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-sm font-semibold">{{ t('资产转入建议', 'Asset transfer suggestions') }}</p>
@@ -1551,13 +1467,7 @@ onBeforeUnmount(() => {
             {{ assetTransferSuggestions.length }}
           </span>
         </div>
-        <div
-          v-if="assetTransferSuggestions.length === 0"
-          class="mt-4 rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-400"
-        >
-          {{ t('暂无可转入 Assets 的 Shopping 订单。', 'No Shopping orders are ready for Assets yet.') }}
-        </div>
-        <div v-else class="mt-3 space-y-2">
+        <div class="mt-3 space-y-2">
           <article
             v-for="suggestion in assetTransferSuggestions"
             :key="suggestion.assetId"
@@ -1585,7 +1495,10 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="rounded-2xl bg-white border border-emerald-100 p-4">
+      <section
+        v-if="walletExpenseSuggestions.length > 0"
+        class="shopping-operation-section rounded-lg bg-white border border-emerald-100 p-4"
+      >
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-sm font-semibold">{{ t('Wallet 消费建议', 'Wallet expense suggestions') }}</p>
@@ -1597,13 +1510,7 @@ onBeforeUnmount(() => {
             {{ walletExpenseSuggestions.length }}
           </span>
         </div>
-        <div
-          v-if="walletExpenseSuggestions.length === 0"
-          class="mt-4 rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-400"
-        >
-          {{ t('暂无可写入 Wallet 的 Shopping 订单。', 'No Shopping orders are ready for Wallet yet.') }}
-        </div>
-        <div v-else class="mt-3 space-y-2">
+        <div class="mt-3 space-y-2">
           <article
             v-for="suggestion in walletExpenseSuggestions"
             :key="suggestion.orderId"
@@ -1644,7 +1551,34 @@ onBeforeUnmount(() => {
           </article>
         </div>
       </section>
+      </div>
     </div>
+
+    <nav
+      v-if="activePlatformApp && !activeCategoryIsLogistics"
+      class="shopping-bottom-nav"
+      :aria-label="t('店内导航', 'Store navigation')"
+    >
+      <button type="button" :class="{ 'is-active': !favoritesOnly }" @click="showAllProducts">
+        <i class="fas fa-store" aria-hidden="true"></i>
+        <span>{{ t('逛店', 'Shop') }}</span>
+      </button>
+      <button type="button" :class="{ 'is-active': favoritesOnly }" @click="showFavoriteProducts">
+        <i class="fas fa-heart" aria-hidden="true"></i>
+        <span>{{ t('收藏', 'Saved') }}</span>
+      </button>
+      <button type="button" @click="scrollToShoppingSection('shopping-cart')">
+        <span class="shopping-bottom-icon">
+          <i class="fas fa-bag-shopping" aria-hidden="true"></i>
+          <small v-if="cartQuantity">{{ cartQuantity }}</small>
+        </span>
+        <span>{{ t('购物车', 'Bag') }}</span>
+      </button>
+      <button type="button" @click="scrollToShoppingSection('shopping-orders')">
+        <i class="fas fa-receipt" aria-hidden="true"></i>
+        <span>{{ t('订单', 'Orders') }}</span>
+      </button>
+    </nav>
 
     <div
       v-if="selectedOrder"
@@ -1783,3 +1717,456 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.shopping-view-shell {
+  --shop-bg: #f5f6f7;
+  --shop-surface: #ffffff;
+  --shop-ink: #1e2329;
+  --shop-muted: #66707a;
+  --shop-accent: #e52a2f;
+  --shop-accent-2: #00a4e4;
+  --shop-line: rgba(30, 35, 41, 0.14);
+  overflow: hidden;
+  background: var(--shop-bg);
+}
+
+.shopping-view-shell[data-storefront='tech_catalog'] {
+  --shop-bg: #f7f7f7;
+  --shop-surface: #ffffff;
+  --shop-ink: #050505;
+  --shop-muted: #686868;
+  --shop-accent: #ff4800;
+  --shop-accent-2: #111111;
+  --shop-line: rgba(0, 0, 0, 0.16);
+}
+
+.shopping-view-shell[data-storefront='fresh_market'] {
+  --shop-bg: #f7f3f8;
+  --shop-surface: #ffffff;
+  --shop-ink: #32113f;
+  --shop-muted: #74657a;
+  --shop-accent: #5f0080;
+  --shop-accent-2: #b5d948;
+  --shop-line: rgba(95, 0, 128, 0.16);
+}
+
+.shopping-view-shell[data-storefront='fashion_editorial'] {
+  --shop-bg: #171a20;
+  --shop-surface: #22262e;
+  --shop-ink: #f8f8f5;
+  --shop-muted: #b4bac4;
+  --shop-accent: #ffda05;
+  --shop-accent-2: #e63838;
+  --shop-line: rgba(255, 255, 255, 0.18);
+}
+
+.shopping-view-shell[data-storefront='room_planner'] {
+  --shop-bg: #f5f5f5;
+  --shop-surface: #ffffff;
+  --shop-ink: #111111;
+  --shop-muted: #5d5d5d;
+  --shop-accent: #0058a3;
+  --shop-accent-2: #ffda1a;
+  --shop-line: rgba(0, 88, 163, 0.2);
+}
+
+.shopping-view-shell[data-storefront='care_lab'] {
+  --shop-bg: #f4f7ee;
+  --shop-surface: #ffffff;
+  --shop-ink: #26311f;
+  --shop-muted: #66705f;
+  --shop-accent: #6d961d;
+  --shop-accent-2: #f58220;
+  --shop-line: rgba(109, 150, 29, 0.18);
+}
+
+.shopping-scroll {
+  scroll-behavior: smooth;
+  background: var(--shop-bg);
+}
+
+.shopping-content {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-bottom: 92px;
+  color: #111827;
+}
+
+.shopping-products-section {
+  scroll-margin-top: 12px;
+  padding: 10px 0 4px;
+}
+
+.shopping-section-heading {
+  min-height: 48px;
+  margin-bottom: 13px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--shop-ink);
+}
+
+.shopping-section-heading h2 {
+  margin: 2px 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 23px;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.shopping-section-heading > span,
+.shopping-section-kicker {
+  margin: 0;
+  color: var(--shop-muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.shopping-clear-filter {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--shop-line);
+  border-radius: 50%;
+  color: var(--shop-ink);
+  background: var(--shop-surface);
+}
+
+.shopping-product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shopping-product-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--shop-line);
+  border-radius: 7px;
+  color: var(--shop-ink);
+  background: var(--shop-surface);
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.shopping-product-card.is-highlighted {
+  border-color: var(--shop-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--shop-accent) 22%, transparent);
+}
+
+.shopping-product-visual {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-bottom: 1px solid var(--shop-line);
+  background: #efe7da;
+}
+
+.shopping-product-visual img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.shopping-product-symbol {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #ed4b2d;
+}
+
+.shopping-product-symbol::before,
+.shopping-product-symbol::after {
+  content: '';
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+}
+
+.shopping-product-symbol::before {
+  width: 66%;
+  height: 66%;
+  transform: rotate(7deg);
+}
+
+.shopping-product-symbol::after {
+  width: 36%;
+  height: 36%;
+  transform: rotate(-8deg);
+}
+
+.shopping-product-symbol i {
+  z-index: 1;
+  font-size: 31px;
+}
+
+.shopping-product-symbol span {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  z-index: 1;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+[data-product-template='tech_catalog'] .shopping-product-symbol {
+  color: #ffffff;
+  background: #050505;
+}
+
+[data-product-template='fresh_market'] .shopping-product-symbol {
+  color: #ffffff;
+  background: #5f0080;
+}
+
+[data-product-template='fashion_editorial'] .shopping-product-symbol {
+  color: #ffda05;
+  background: #171a20;
+}
+
+[data-product-template='room_planner'] .shopping-product-symbol {
+  color: #ffffff;
+  background: #0058a3;
+}
+
+[data-product-template='care_lab'] .shopping-product-symbol {
+  color: #ffffff;
+  background: #6d961d;
+}
+
+.shopping-favorite-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 50%;
+  color: #b4b7bc;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.shopping-favorite-button.is-favorite {
+  color: #d94050;
+}
+
+.shopping-product-body {
+  min-height: 174px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.shopping-product-brand {
+  margin: 0;
+  color: var(--shop-accent);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.shopping-product-body h3 {
+  min-height: 36px;
+  margin: 5px 0 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--shop-ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+  line-height: 1.22;
+  letter-spacing: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.shopping-product-description {
+  min-height: 32px;
+  margin: 7px 0 0;
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--shop-muted);
+  font-size: 10px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.shopping-product-tags {
+  min-height: 20px;
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.shopping-product-tags span {
+  padding: 3px 6px;
+  border-radius: 3px;
+  color: #4b5563;
+  background: #f3f4f6;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.shopping-product-footer {
+  min-height: 38px;
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shopping-product-footer strong {
+  overflow-wrap: anywhere;
+  color: var(--shop-ink);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.shopping-add-button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--shop-bg);
+  background: var(--shop-ink);
+}
+
+.shopping-add-button:disabled {
+  opacity: 0.35;
+}
+
+.shopping-empty-state {
+  min-height: 170px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px dashed var(--shop-line);
+  border-radius: 7px;
+  color: var(--shop-muted);
+  text-align: center;
+  background: var(--shop-surface);
+}
+
+.shopping-empty-state i {
+  font-size: 24px;
+}
+
+.shopping-empty-state p {
+  margin: 0;
+  font-size: 11px;
+}
+
+.shopping-operation-section,
+.shopping-management-panel {
+  scroll-margin-top: 12px;
+}
+
+.shopping-bottom-nav {
+  position: relative;
+  z-index: 20;
+  min-height: calc(62px + env(safe-area-inset-bottom));
+  padding: 6px 12px max(7px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--shop-line);
+  background: color-mix(in srgb, var(--shop-surface) 94%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.shopping-bottom-nav button {
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--shop-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.shopping-bottom-nav button > i,
+.shopping-bottom-icon > i {
+  font-size: 16px;
+}
+
+.shopping-bottom-nav button.is-active {
+  color: var(--shop-accent);
+}
+
+.shopping-bottom-icon {
+  position: relative;
+}
+
+.shopping-bottom-icon small {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #ffffff;
+  background: #dc3f45;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.shopping-clear-filter:focus-visible,
+.shopping-favorite-button:focus-visible,
+.shopping-add-button:focus-visible,
+.shopping-bottom-nav button:focus-visible {
+  outline: 3px solid var(--shop-accent-2);
+  outline-offset: 2px;
+}
+
+@media (min-width: 680px) {
+  .shopping-product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 350px) {
+  .shopping-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-product-visual {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shopping-scroll {
+    scroll-behavior: auto;
+  }
+
+  .shopping-product-card {
+    transition: none;
+  }
+}
+</style>

@@ -32,6 +32,7 @@ import {
   HOME_PLANNED_TILE_IDS,
   resolveHomeFolderChildRoute,
 } from '../src/lib/home-entry-registry'
+import { DEFAULT_MAP_PACK_ID, getMapPackById } from '../src/lib/map-packs'
 
 describe('planned module registry', () => {
   test('defines Shopping as the first folder-backed Home module', () => {
@@ -42,18 +43,16 @@ describe('planned module registry', () => {
     const childEntries = buildShoppingFolderEntries()
     expect(childEntries).toHaveLength(SHOPPING_PLATFORM_APP_ENTRIES.length)
     expect(resolveHomeFolderChildRoute(childEntries.find((entry) => entry.key === buildShoppingShopEntryId('nova_digital')))).toEqual({
-      path: '/shopping',
+      path: '/shopping/nova_digital',
       query: {
-        service: 'nova_digital',
         category: 'digital',
         entry: 'shop',
         shopEntryId: 'shop_app_shopping_nova_digital',
       },
     })
     expect(resolveHomeFolderChildRoute(childEntries.find((entry) => entry.key === buildShoppingShopEntryId('style_cloud')))).toEqual({
-      path: '/shopping',
+      path: '/shopping/style_cloud',
       query: {
-        service: 'style_cloud',
         category: 'fashion',
         entry: 'shop',
         shopEntryId: 'shop_app_shopping_style_cloud',
@@ -148,18 +147,29 @@ describe('planned module registry', () => {
   test('defines Shopping service presets for platform-like folder immersion', () => {
     expect(SHOPPING_SERVICE_PRESETS.map((entry) => entry.key)).toEqual([
       'schat_mall',
-      'style_cloud',
       'nova_digital',
       'daily_fresh',
+      'style_cloud',
+      'nordhus_home',
+      'mellow_care',
     ])
     expect(SHOPPING_PLATFORM_APP_ENTRIES.map((entry) => entry.key)).toEqual([
       'schat_mall',
-      'style_cloud',
       'nova_digital',
       'daily_fresh',
+      'style_cloud',
+      'nordhus_home',
+      'mellow_care',
     ])
+    expect(
+      SHOPPING_SERVICE_PRESETS.filter((entry) => entry.storefrontKind === 'marketplace')
+        .map((entry) => entry.key),
+    ).toEqual(['schat_mall', 'nova_digital', 'daily_fresh'])
+    expect(
+      SHOPPING_SERVICE_PRESETS.filter((entry) => entry.storefrontKind === 'specialty')
+        .map((entry) => entry.key),
+    ).toEqual(['style_cloud', 'nordhus_home', 'mellow_care'])
     expect(findShoppingPlatformApp('daily_fresh')?.folderQuery).toEqual({
-      service: 'daily_fresh',
       category: 'grocery',
     })
     expect(
@@ -170,12 +180,31 @@ describe('planned module registry', () => {
       }).map((entry) => entry.key),
     ).toEqual([
       buildShoppingShopEntryId('schat_mall'),
-      buildShoppingShopEntryId('style_cloud'),
       buildShoppingShopEntryId('nova_digital'),
+      buildShoppingShopEntryId('style_cloud'),
+      buildShoppingShopEntryId('nordhus_home'),
+      buildShoppingShopEntryId('mellow_care'),
     ])
     expect(findShoppingServicePreset('nova_digital')?.key).toBe('nova_digital')
     expect('route' in findShoppingServicePreset('nova_digital')).toBe(false)
     expect(findShoppingServicePreset('unknown')?.key).toBe('schat_mall')
+    expect(SHOPPING_SERVICE_PRESETS.map((entry) => entry.en)).toEqual([
+      'Coupang',
+      '29CM',
+      'Kurly',
+      'WORKSOUT',
+      'IKEA Korea',
+      'OLIVE YOUNG',
+    ])
+
+    const seoulPlaceIds = new Set(getMapPackById(DEFAULT_MAP_PACK_ID).places.map((place) => place.id))
+    SHOPPING_SERVICE_PRESETS.forEach((entry) => {
+      expect(seoulPlaceIds.has(entry.mapReferencePlaceId)).toBe(true)
+      expect(entry.districtZh).toBeTruthy()
+      expect(entry.districtEn).toBeTruthy()
+      expect(entry.retailReferenceKeys.length).toBeGreaterThanOrEqual(1)
+      expect(entry.brandReferenceUrl).toMatch(/^https:\/\//)
+    })
   })
 
   test('defines Logistics and Food Delivery service presets for Chat service accounts', () => {

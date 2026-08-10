@@ -32,7 +32,7 @@ describe('shareable-object contract', () => {
       summary: 'Portable camera lens',
       statusLabel: 'Product link',
       amountLabel: '1288.00 CNY',
-      route: '/shopping?productId=product_lens&category=digital&service=nova_digital&source=chat&intent=product_link',
+      route: '/shopping/nova_digital?productId=product_lens&category=digital&source=chat&intent=product_link',
       aiContext: {
         intent: 'product_link',
         sourceTruthOwner: 'Shopping',

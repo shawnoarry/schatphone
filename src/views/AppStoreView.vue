@@ -55,7 +55,7 @@ import {
   MUSIC_HOME_APP_ID,
   MUSIC_ROUTE,
   SHOPPING_PLATFORM_APP_ENTRIES,
-  SHOPPING_ROUTE,
+  buildShoppingAppRoute,
 } from '../lib/planned-module-registry'
 import { useGalleryStore } from '../stores/gallery'
 import { useSystemStore } from '../stores/system'
@@ -90,6 +90,8 @@ const HARBOR_ROAST_DEFAULT_ICON_URL = resolveFoodDeliveryAssetUrl(
 const HARBOR_ROAST_DEFAULT_COVER_URL = resolveFoodDeliveryAssetUrl(
   '/images/ui-assets/apps/food-delivery/harbor-roast/cover/harbor-roast-cover-01.png',
 )
+const resolveShoppingAssetUrl = (path = '') =>
+  `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
 const APP_STORE_FILTERS = [
   'all',
   'home',
@@ -416,9 +418,8 @@ const shoppingShopAppStoreEntries = computed(() =>
     const defaultCategory = service.defaultCategory || service.categoryKeys?.[0] || 'mall'
     return {
       id: entryId,
-      route: SHOPPING_ROUTE,
+      route: service.route,
       routeQuery: {
-        service: service.key,
         category: defaultCategory,
         entry: 'shop',
         shopEntryId: entryId,
@@ -440,6 +441,9 @@ const shoppingShopAppStoreEntries = computed(() =>
       runtimeIdentity: service.key,
       shoppingServiceKey: service.key,
       shoppingService: service,
+      defaultIconAssetUrl: service.brandAssetPath
+        ? resolveShoppingAssetUrl(service.brandAssetPath)
+        : '',
       defaultTemplateId: service.key === 'daily_fresh' ? 'convenience_shelf' : 'standard',
     }
   }),
@@ -493,6 +497,10 @@ const appStoreItems = computed(() =>
     const coverGalleryAssetId = entry.shopAppEntry ? iconMeta.coverGalleryAssetId || '' : ''
     const usesHarborRoastDefaultArtwork =
       entry.restaurantId === HARBOR_ROAST_RESTAURANT_ID && iconMeta.hasOverride === false
+    const defaultShopIconUrl =
+      entry.shopAppEntry && !iconMeta.hasImageIcon && iconMeta.icon === entry.icon
+        ? entry.defaultIconAssetUrl || ''
+        : ''
     const folderInstalled = entry.shopAppEntry
       ? isMiniAppEntryInstalled(appStoreMiniAppPlacements.value, entry.id)
       : false
@@ -519,7 +527,7 @@ const appStoreItems = computed(() =>
       sourceType: iconMeta.sourceType || 'preset',
       galleryAssetId: iconMeta.galleryAssetId || '',
       coverGalleryAssetId,
-      hasImageIcon: iconMeta.hasImageIcon === true,
+      hasImageIcon: iconMeta.hasImageIcon === true || Boolean(defaultShopIconUrl),
       hasCoverImage:
         entry.shopAppEntry && Boolean(coverGalleryAssetId || usesHarborRoastDefaultArtwork),
       coverImageUrl:
@@ -533,6 +541,8 @@ const appStoreItems = computed(() =>
           ? entryImagePreviewUrls[entry.id] || ''
           : iconMeta.hasImageIcon === true && iconMeta.galleryAssetId
             ? appIconImageUrl(entry.id)
+          : defaultShopIconUrl
+            ? defaultShopIconUrl
           : usesHarborRoastDefaultArtwork
             ? HARBOR_ROAST_DEFAULT_ICON_URL
             : entry.worldAppEntry || entry.shopAppEntry
@@ -1390,7 +1400,10 @@ const openShopCreateTarget = () => {
   })
   shopCreateSheetOpen.value = false
   router.push({
-    path: bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING ? SHOPPING_ROUTE : '/food-delivery',
+    path:
+      bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING
+        ? buildShoppingAppRoute()
+        : '/food-delivery',
     query,
   })
 }
