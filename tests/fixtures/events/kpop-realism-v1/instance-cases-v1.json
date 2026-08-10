@@ -1,0 +1,778 @@
+{
+  "fixtureSchemaVersion": 1,
+  "id": "kpop-realism-event-instance-cases-v1",
+  "cases": [
+    {
+      "caseId": "local-only",
+      "instance": {
+        "schemaVersion": 1,
+        "id": "event_instance_local_only_001",
+        "lifecycle": "active",
+        "templateRef": {
+          "id": "workplace.arrival_briefing",
+          "schemaVersion": 2,
+          "version": 1
+        },
+        "source": {
+          "moduleKey": "map",
+          "recordType": "map_place_session",
+          "recordId": "map_place_session_local_001",
+          "recordRevision": 1,
+          "checkpointId": "map.place_session.entered.v1",
+          "checkpointAt": 1786338000000
+        },
+        "world": {
+          "worldContextId": "world_context_daily",
+          "worldPackId": "default_world",
+          "variantPackId": "kpop-realism-core-events",
+          "variantPackVersion": 1,
+          "mapPackId": "real-seoul-v1",
+          "mapPackVersion": 1
+        },
+        "place": {
+          "placeId": "seoul-kbs-hq",
+          "placeCategoryId": "broadcast_station",
+          "capabilityIds": ["work", "meet", "wait", "record", "perform"],
+          "anchor": {
+            "kind": "stable_place",
+            "mapPackId": "real-seoul-v1",
+            "placeId": "seoul-kbs-hq"
+          }
+        },
+        "presence": {
+          "activationScope": "interior",
+          "relation": "inside",
+          "provenance": "manual",
+          "placeSessionId": "map_place_session_local_001",
+          "placeSessionRevision": 1,
+          "journeyId": "",
+          "evidenceAt": 1786338000000
+        },
+        "selection": {
+          "seed": "fixture:local-only:001",
+          "variantId": "kpop-realism.production-arrival-briefing.standard",
+          "variantVersion": 1
+        },
+        "runtime": {
+          "proposalId": "event_proposal_local_001",
+          "eligibilityLogId": "simulation_event_local_001",
+          "outcomeLogId": ""
+        },
+        "text": {
+          "schemaVersion": 1,
+          "status": "local_only",
+          "source": "local",
+          "attemptCount": 0,
+          "cacheKey": "event-text:v1:event_instance_local_only_001:1:1:ctx_local_001",
+          "contextHash": "ctx_local_001",
+          "failureCode": "",
+          "provenance": {
+            "providerId": "",
+            "modelId": "",
+            "requestId": "",
+            "generatedAt": 0
+          },
+          "normalizedCopy": {
+            "locale": "en",
+            "title": "Production arrival briefing",
+            "opening": "The workplace is already settling into its rhythm.",
+            "environment": "The check-in desk and today's production notes remain quietly organized.",
+            "dialogue": [],
+            "choiceLabels": {
+              "review_brief": "Review the briefing",
+              "check_equipment": "Check your equipment",
+              "wait_for_staff": "Wait for staff"
+            },
+            "consequenceByOutcomeId": {
+              "brief_reviewed": "You finish the current briefing and can continue at your own pace.",
+              "equipment_checked": "You check what you brought without changing inventory.",
+              "wait_acknowledged": "You leave a little time in the waiting area."
+            }
+          }
+        },
+        "media": {
+          "intent": {
+            "schemaVersion": 1,
+            "slot": "scene_background",
+            "sceneKey": "workplace.arrival_briefing.lobby",
+            "placeCategoryId": "broadcast_station",
+            "capabilityIds": ["work", "wait"],
+            "toneTags": ["professional", "daytime", "quiet"],
+            "required": false
+          },
+          "resolvedAssetRef": null,
+          "resolutionReason": "no_authored_asset",
+          "renderMode": "text_only"
+        },
+        "choices": {
+          "allowedIds": ["review_brief", "check_equipment", "wait_for_staff"],
+          "selectedId": "",
+          "outcomeId": ""
+        },
+        "outcome": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "requestState": "not_requested",
+          "ownerResultCode": "",
+          "ownerResultRef": ""
+        },
+        "timestamps": {
+          "createdAt": 1786338000000,
+          "enteredAt": 1786338000000,
+          "resolvedAt": 0,
+          "dismissedAt": 0,
+          "updatedAt": 1786338000000
+        }
+      },
+      "expected": {
+        "providerCallCount": 0,
+        "renderSource": "local",
+        "choiceExecutionAllowed": true,
+        "renderMode": "text_only"
+      }
+    },
+    {
+      "caseId": "ai-enhanced",
+      "instance": {
+        "schemaVersion": 1,
+        "id": "event_instance_ai_enhanced_001",
+        "lifecycle": "active",
+        "templateRef": {
+          "id": "workplace.arrival_briefing",
+          "schemaVersion": 2,
+          "version": 1
+        },
+        "source": {
+          "moduleKey": "map",
+          "recordType": "map_place_session",
+          "recordId": "map_place_session_ai_001",
+          "recordRevision": 2,
+          "checkpointId": "map.place_session.entered.v1",
+          "checkpointAt": 1786338060000
+        },
+        "world": {
+          "worldContextId": "world_context_daily",
+          "worldPackId": "default_world",
+          "variantPackId": "kpop-realism-core-events",
+          "variantPackVersion": 1,
+          "mapPackId": "real-seoul-v1",
+          "mapPackVersion": 1
+        },
+        "place": {
+          "placeId": "seoul-mbc-hq",
+          "placeCategoryId": "broadcast_station",
+          "capabilityIds": ["work", "meet", "wait", "record", "perform"],
+          "anchor": {
+            "kind": "stable_place",
+            "mapPackId": "real-seoul-v1",
+            "placeId": "seoul-mbc-hq"
+          }
+        },
+        "presence": {
+          "activationScope": "interior",
+          "relation": "inside",
+          "provenance": "journey_arrival",
+          "placeSessionId": "map_place_session_ai_001",
+          "placeSessionRevision": 2,
+          "journeyId": "map_journey_ai_001",
+          "evidenceAt": 1786338060000
+        },
+        "selection": {
+          "seed": "fixture:ai-enhanced:001",
+          "variantId": "kpop-realism.production-arrival-briefing.standard",
+          "variantVersion": 1
+        },
+        "runtime": {
+          "proposalId": "event_proposal_ai_001",
+          "eligibilityLogId": "simulation_event_ai_001",
+          "outcomeLogId": ""
+        },
+        "text": {
+          "schemaVersion": 1,
+          "status": "succeeded",
+          "source": "ai",
+          "attemptCount": 1,
+          "cacheKey": "event-text:v1:event_instance_ai_enhanced_001:1:1:ctx_ai_001",
+          "contextHash": "ctx_ai_001",
+          "failureCode": "",
+          "provenance": {
+            "providerId": "fixture-provider",
+            "modelId": "fixture-text-model",
+            "requestId": "fixture-request-ai-001",
+            "generatedAt": 1786338061000
+          },
+          "normalizedCopy": {
+            "locale": "en",
+            "title": "A quiet minute before production",
+            "opening": "Beyond the lobby doors, staff voices and rolling cases settle into a measured rhythm.",
+            "environment": "A coordinator has left a short briefing beside the access desk.",
+            "dialogue": [
+              {
+                "speakerRef": "staff_coordinator",
+                "text": "You have a few minutes. Take whichever preparation route works for you."
+              }
+            ],
+            "choiceLabels": {
+              "review_brief": "Read the production brief",
+              "check_equipment": "Run a quick equipment check",
+              "wait_for_staff": "Stay in the waiting area"
+            },
+            "consequenceByOutcomeId": {
+              "brief_reviewed": "The key notes are clear, and the next move remains yours.",
+              "equipment_checked": "The check is complete without changing any inventory record.",
+              "wait_acknowledged": "You hold your place without changing the production schedule."
+            }
+          }
+        },
+        "media": {
+          "intent": {
+            "schemaVersion": 1,
+            "slot": "scene_background",
+            "sceneKey": "workplace.arrival_briefing.lobby",
+            "placeCategoryId": "broadcast_station",
+            "capabilityIds": ["work", "wait"],
+            "toneTags": ["professional", "daytime", "quiet"],
+            "required": false
+          },
+          "resolvedAssetRef": null,
+          "resolutionReason": "no_authored_asset",
+          "renderMode": "text_only"
+        },
+        "choices": {
+          "allowedIds": ["review_brief", "check_equipment", "wait_for_staff"],
+          "selectedId": "",
+          "outcomeId": ""
+        },
+        "outcome": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "requestState": "not_requested",
+          "ownerResultCode": "",
+          "ownerResultRef": ""
+        },
+        "timestamps": {
+          "createdAt": 1786338060000,
+          "enteredAt": 1786338060000,
+          "resolvedAt": 0,
+          "dismissedAt": 0,
+          "updatedAt": 1786338061000
+        }
+      },
+      "expected": {
+        "providerCallCount": 1,
+        "renderSource": "ai",
+        "choiceExecutionAllowed": true,
+        "cachePersisted": true
+      }
+    },
+    {
+      "caseId": "provider-fallback",
+      "instance": {
+        "schemaVersion": 1,
+        "id": "event_instance_provider_fallback_001",
+        "lifecycle": "active",
+        "templateRef": {
+          "id": "workplace.arrival_briefing",
+          "schemaVersion": 2,
+          "version": 1
+        },
+        "source": {
+          "moduleKey": "map",
+          "recordType": "map_place_session",
+          "recordId": "map_place_session_fallback_001",
+          "recordRevision": 1,
+          "checkpointId": "map.place_session.entered.v1",
+          "checkpointAt": 1786338120000
+        },
+        "world": {
+          "worldContextId": "world_context_daily",
+          "worldPackId": "default_world",
+          "variantPackId": "kpop-realism-core-events",
+          "variantPackVersion": 1,
+          "mapPackId": "real-seoul-v1",
+          "mapPackVersion": 1
+        },
+        "place": {
+          "placeId": "seoul-sbs-hq",
+          "placeCategoryId": "broadcast_station",
+          "capabilityIds": ["work", "meet", "wait", "record", "perform"],
+          "anchor": {
+            "kind": "stable_place",
+            "mapPackId": "real-seoul-v1",
+            "placeId": "seoul-sbs-hq"
+          }
+        },
+        "presence": {
+          "activationScope": "interior",
+          "relation": "inside",
+          "provenance": "manual",
+          "placeSessionId": "map_place_session_fallback_001",
+          "placeSessionRevision": 1,
+          "journeyId": "",
+          "evidenceAt": 1786338120000
+        },
+        "selection": {
+          "seed": "fixture:provider-fallback:001",
+          "variantId": "kpop-realism.production-arrival-briefing.standard",
+          "variantVersion": 1
+        },
+        "runtime": {
+          "proposalId": "event_proposal_fallback_001",
+          "eligibilityLogId": "simulation_event_fallback_001",
+          "outcomeLogId": ""
+        },
+        "text": {
+          "schemaVersion": 1,
+          "status": "fallback",
+          "source": "local",
+          "attemptCount": 1,
+          "cacheKey": "event-text:v1:event_instance_provider_fallback_001:1:1:ctx_fallback_001",
+          "contextHash": "ctx_fallback_001",
+          "failureCode": "provider_timeout",
+          "provenance": {
+            "providerId": "fixture-provider",
+            "modelId": "fixture-text-model",
+            "requestId": "fixture-request-fallback-001",
+            "generatedAt": 1786338140000
+          },
+          "normalizedCopy": {
+            "locale": "en",
+            "title": "Production arrival briefing",
+            "opening": "The workplace is already settling into its rhythm.",
+            "environment": "The check-in desk and today's production notes remain quietly organized.",
+            "dialogue": [],
+            "choiceLabels": {
+              "review_brief": "Review the briefing",
+              "check_equipment": "Check your equipment",
+              "wait_for_staff": "Wait for staff"
+            },
+            "consequenceByOutcomeId": {
+              "brief_reviewed": "You finish the current briefing and can continue at your own pace.",
+              "equipment_checked": "You check what you brought without changing inventory.",
+              "wait_acknowledged": "You leave a little time in the waiting area."
+            }
+          }
+        },
+        "media": {
+          "intent": {
+            "schemaVersion": 1,
+            "slot": "scene_background",
+            "sceneKey": "workplace.arrival_briefing.lobby",
+            "placeCategoryId": "broadcast_station",
+            "capabilityIds": ["work", "wait"],
+            "toneTags": ["professional", "daytime", "quiet"],
+            "required": false
+          },
+          "resolvedAssetRef": null,
+          "resolutionReason": "no_authored_asset",
+          "renderMode": "text_only"
+        },
+        "choices": {
+          "allowedIds": ["review_brief", "check_equipment", "wait_for_staff"],
+          "selectedId": "",
+          "outcomeId": ""
+        },
+        "outcome": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "requestState": "not_requested",
+          "ownerResultCode": "",
+          "ownerResultRef": ""
+        },
+        "timestamps": {
+          "createdAt": 1786338120000,
+          "enteredAt": 1786338120000,
+          "resolvedAt": 0,
+          "dismissedAt": 0,
+          "updatedAt": 1786338140000
+        }
+      },
+      "expected": {
+        "providerCallCount": 1,
+        "automaticRetryCount": 0,
+        "renderSource": "local",
+        "choiceExecutionAllowed": true,
+        "failureIsTerminalForInstance": true
+      }
+    },
+    {
+      "caseId": "stale-source",
+      "instance": {
+        "schemaVersion": 1,
+        "id": "event_instance_stale_source_001",
+        "lifecycle": "unavailable",
+        "templateRef": {
+          "id": "workplace.arrival_briefing",
+          "schemaVersion": 2,
+          "version": 1
+        },
+        "source": {
+          "moduleKey": "map",
+          "recordType": "map_place_session",
+          "recordId": "map_place_session_stale_001",
+          "recordRevision": 3,
+          "checkpointId": "map.place_session.entered.v1",
+          "checkpointAt": 1786338180000
+        },
+        "world": {
+          "worldContextId": "world_context_daily",
+          "worldPackId": "default_world",
+          "variantPackId": "kpop-realism-core-events",
+          "variantPackVersion": 1,
+          "mapPackId": "real-seoul-v1",
+          "mapPackVersion": 1
+        },
+        "place": {
+          "placeId": "seoul-jtbc-hq",
+          "placeCategoryId": "broadcast_station",
+          "capabilityIds": ["work", "meet", "wait", "record", "perform"],
+          "anchor": {
+            "kind": "stable_place",
+            "mapPackId": "real-seoul-v1",
+            "placeId": "seoul-jtbc-hq"
+          }
+        },
+        "presence": {
+          "activationScope": "interior",
+          "relation": "inside",
+          "provenance": "journey_arrival",
+          "placeSessionId": "map_place_session_stale_001",
+          "placeSessionRevision": 2,
+          "journeyId": "map_journey_stale_001",
+          "evidenceAt": 1786338180000
+        },
+        "selection": {
+          "seed": "fixture:stale-source:001",
+          "variantId": "kpop-realism.production-arrival-briefing.standard",
+          "variantVersion": 1
+        },
+        "runtime": {
+          "proposalId": "event_proposal_stale_001",
+          "eligibilityLogId": "simulation_event_stale_001",
+          "outcomeLogId": ""
+        },
+        "text": {
+          "schemaVersion": 1,
+          "status": "local_only",
+          "source": "local",
+          "attemptCount": 0,
+          "cacheKey": "event-text:v1:event_instance_stale_source_001:1:1:ctx_stale_001",
+          "contextHash": "ctx_stale_001",
+          "failureCode": "",
+          "provenance": {
+            "providerId": "",
+            "modelId": "",
+            "requestId": "",
+            "generatedAt": 0
+          },
+          "normalizedCopy": {
+            "locale": "en",
+            "title": "Production arrival briefing",
+            "opening": "The saved event can still be reviewed, but its place session is no longer current.",
+            "environment": "",
+            "dialogue": [],
+            "choiceLabels": {
+              "review_brief": "Review the briefing",
+              "check_equipment": "Check your equipment",
+              "wait_for_staff": "Wait for staff"
+            },
+            "consequenceByOutcomeId": {}
+          }
+        },
+        "media": {
+          "intent": {
+            "schemaVersion": 1,
+            "slot": "scene_background",
+            "sceneKey": "workplace.arrival_briefing.lobby",
+            "placeCategoryId": "broadcast_station",
+            "capabilityIds": ["work", "wait"],
+            "toneTags": ["professional", "daytime", "quiet"],
+            "required": false
+          },
+          "resolvedAssetRef": null,
+          "resolutionReason": "source_stale",
+          "renderMode": "text_only"
+        },
+        "choices": {
+          "allowedIds": ["review_brief", "check_equipment", "wait_for_staff"],
+          "selectedId": "",
+          "outcomeId": ""
+        },
+        "outcome": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "requestState": "rejected",
+          "ownerResultCode": "PLACE_SESSION_SOURCE_STALE",
+          "ownerResultRef": ""
+        },
+        "timestamps": {
+          "createdAt": 1786338180000,
+          "enteredAt": 1786338180000,
+          "resolvedAt": 0,
+          "dismissedAt": 0,
+          "updatedAt": 1786338240000
+        }
+      },
+      "expected": {
+        "providerCallCount": 0,
+        "renderSource": "local",
+        "choiceExecutionAllowed": false,
+        "reviewStillAvailable": true,
+        "unavailableReason": "PLACE_SESSION_SOURCE_STALE"
+      }
+    },
+    {
+      "caseId": "missing-asset",
+      "instance": {
+        "schemaVersion": 1,
+        "id": "event_instance_missing_asset_001",
+        "lifecycle": "active",
+        "templateRef": {
+          "id": "workplace.arrival_briefing",
+          "schemaVersion": 2,
+          "version": 1
+        },
+        "source": {
+          "moduleKey": "map",
+          "recordType": "map_place_session",
+          "recordId": "map_place_session_asset_001",
+          "recordRevision": 1,
+          "checkpointId": "map.place_session.entered.v1",
+          "checkpointAt": 1786338300000
+        },
+        "world": {
+          "worldContextId": "world_context_daily",
+          "worldPackId": "default_world",
+          "variantPackId": "kpop-realism-core-events",
+          "variantPackVersion": 1,
+          "mapPackId": "real-seoul-v1",
+          "mapPackVersion": 1
+        },
+        "place": {
+          "placeId": "seoul-cj-enm-center",
+          "placeCategoryId": "production_center",
+          "capabilityIds": ["work", "meet", "wait", "record", "perform"],
+          "anchor": {
+            "kind": "stable_place",
+            "mapPackId": "real-seoul-v1",
+            "placeId": "seoul-cj-enm-center"
+          }
+        },
+        "presence": {
+          "activationScope": "interior",
+          "relation": "inside",
+          "provenance": "manual",
+          "placeSessionId": "map_place_session_asset_001",
+          "placeSessionRevision": 1,
+          "journeyId": "",
+          "evidenceAt": 1786338300000
+        },
+        "selection": {
+          "seed": "fixture:missing-asset:001",
+          "variantId": "kpop-realism.production-arrival-briefing.standard",
+          "variantVersion": 1
+        },
+        "runtime": {
+          "proposalId": "event_proposal_asset_001",
+          "eligibilityLogId": "simulation_event_asset_001",
+          "outcomeLogId": ""
+        },
+        "text": {
+          "schemaVersion": 1,
+          "status": "local_only",
+          "source": "local",
+          "attemptCount": 0,
+          "cacheKey": "event-text:v1:event_instance_missing_asset_001:1:1:ctx_asset_001",
+          "contextHash": "ctx_asset_001",
+          "failureCode": "",
+          "provenance": {
+            "providerId": "",
+            "modelId": "",
+            "requestId": "",
+            "generatedAt": 0
+          },
+          "normalizedCopy": {
+            "locale": "en",
+            "title": "Production arrival briefing",
+            "opening": "The event remains complete without a scene image.",
+            "environment": "The text presentation carries the full interaction.",
+            "dialogue": [],
+            "choiceLabels": {
+              "review_brief": "Review the briefing",
+              "check_equipment": "Check your equipment",
+              "wait_for_staff": "Wait for staff"
+            },
+            "consequenceByOutcomeId": {
+              "brief_reviewed": "You finish the current briefing.",
+              "equipment_checked": "The check is complete.",
+              "wait_acknowledged": "You leave a little time in the waiting area."
+            }
+          }
+        },
+        "media": {
+          "intent": {
+            "schemaVersion": 1,
+            "slot": "scene_background",
+            "sceneKey": "workplace.arrival_briefing.lobby",
+            "placeCategoryId": "production_center",
+            "capabilityIds": ["work", "wait"],
+            "toneTags": ["professional", "daytime", "quiet"],
+            "required": false
+          },
+          "resolvedAssetRef": null,
+          "resolutionReason": "asset_reference_missing",
+          "renderMode": "text_only"
+        },
+        "choices": {
+          "allowedIds": ["review_brief", "check_equipment", "wait_for_staff"],
+          "selectedId": "",
+          "outcomeId": ""
+        },
+        "outcome": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "requestState": "not_requested",
+          "ownerResultCode": "",
+          "ownerResultRef": ""
+        },
+        "timestamps": {
+          "createdAt": 1786338300000,
+          "enteredAt": 1786338300000,
+          "resolvedAt": 0,
+          "dismissedAt": 0,
+          "updatedAt": 1786338300000
+        }
+      },
+      "expected": {
+        "providerCallCount": 0,
+        "renderSource": "local",
+        "choiceExecutionAllowed": true,
+        "renderMode": "text_only",
+        "eventBlockedByMissingAsset": false
+      }
+    },
+    {
+      "caseId": "reopen-without-regeneration",
+      "instance": {
+        "schemaVersion": 1,
+        "id": "event_instance_reopen_001",
+        "lifecycle": "resolved",
+        "templateRef": {
+          "id": "workplace.arrival_briefing",
+          "schemaVersion": 2,
+          "version": 1
+        },
+        "source": {
+          "moduleKey": "map",
+          "recordType": "map_place_session",
+          "recordId": "map_place_session_reopen_001",
+          "recordRevision": 4,
+          "checkpointId": "map.place_session.entered.v1",
+          "checkpointAt": 1786338360000
+        },
+        "world": {
+          "worldContextId": "world_context_daily",
+          "worldPackId": "default_world",
+          "variantPackId": "kpop-realism-core-events",
+          "variantPackVersion": 1,
+          "mapPackId": "real-seoul-v1",
+          "mapPackVersion": 1
+        },
+        "place": {
+          "placeId": "seoul-hybe-hq",
+          "placeCategoryId": "entertainment_agency",
+          "capabilityIds": ["work", "meet", "wait"],
+          "anchor": {
+            "kind": "stable_place",
+            "mapPackId": "real-seoul-v1",
+            "placeId": "seoul-hybe-hq"
+          }
+        },
+        "presence": {
+          "activationScope": "interior",
+          "relation": "inside",
+          "provenance": "journey_arrival",
+          "placeSessionId": "map_place_session_reopen_001",
+          "placeSessionRevision": 4,
+          "journeyId": "map_journey_reopen_001",
+          "evidenceAt": 1786338360000
+        },
+        "selection": {
+          "seed": "fixture:reopen:001",
+          "variantId": "kpop-realism.production-arrival-briefing.standard",
+          "variantVersion": 1
+        },
+        "runtime": {
+          "proposalId": "event_proposal_reopen_001",
+          "eligibilityLogId": "simulation_event_reopen_001",
+          "outcomeLogId": "simulation_event_outcome_reopen_001"
+        },
+        "text": {
+          "schemaVersion": 1,
+          "status": "succeeded",
+          "source": "ai",
+          "attemptCount": 1,
+          "cacheKey": "event-text:v1:event_instance_reopen_001:1:1:ctx_reopen_001",
+          "contextHash": "ctx_reopen_001",
+          "failureCode": "",
+          "provenance": {
+            "providerId": "fixture-provider",
+            "modelId": "fixture-text-model",
+            "requestId": "fixture-request-reopen-001",
+            "generatedAt": 1786338361000
+          },
+          "normalizedCopy": {
+            "locale": "en",
+            "title": "A short agency arrival briefing",
+            "opening": "The saved briefing is exactly the one accepted when this event was entered.",
+            "environment": "Reopening reads the persisted instance instead of contacting the provider.",
+            "dialogue": [],
+            "choiceLabels": {
+              "review_brief": "Review the briefing",
+              "check_equipment": "Check your equipment",
+              "wait_for_staff": "Wait for staff"
+            },
+            "consequenceByOutcomeId": {
+              "brief_reviewed": "The briefing was reviewed and the outcome is already recorded."
+            }
+          }
+        },
+        "media": {
+          "intent": {
+            "schemaVersion": 1,
+            "slot": "scene_background",
+            "sceneKey": "workplace.arrival_briefing.lobby",
+            "placeCategoryId": "entertainment_agency",
+            "capabilityIds": ["work", "wait"],
+            "toneTags": ["professional", "daytime", "quiet"],
+            "required": false
+          },
+          "resolvedAssetRef": null,
+          "resolutionReason": "no_authored_asset",
+          "renderMode": "text_only"
+        },
+        "choices": {
+          "allowedIds": ["review_brief", "check_equipment", "wait_for_staff"],
+          "selectedId": "review_brief",
+          "outcomeId": "brief_reviewed"
+        },
+        "outcome": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "requestState": "validated",
+          "ownerResultCode": "PLACE_SESSION_EVENT_RESOLUTION_VALID",
+          "ownerResultRef": "map_place_session_reopen_001:revision:4"
+        },
+        "timestamps": {
+          "createdAt": 1786338360000,
+          "enteredAt": 1786338360000,
+          "resolvedAt": 1786338420000,
+          "dismissedAt": 0,
+          "updatedAt": 1786338420000
+        }
+      },
+      "expected": {
+        "providerCallCountOnOriginalEntry": 1,
+        "providerCallCountOnReopen": 0,
+        "renderSource": "ai",
+        "choiceExecutionAllowed": false,
+        "selectedChoicePreserved": true,
+        "outcomePreserved": true
+      }
+    }
+  ]
+}

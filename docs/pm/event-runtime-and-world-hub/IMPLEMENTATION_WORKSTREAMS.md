@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-07-31
+Updated: 2026-08-10
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -49,6 +49,8 @@ Current landed guardrail:
 - stronger override surface
 - explicit safety boundary
 
+World Hub may link to a separately unlocked Cheats surface and share selected-event context/audit formatting, but their permissions and write Interfaces remain separate.
+
 ## 5. Workstream E: Mini Scene Trigger Collaboration
 
 - begin only when a concrete runtime event family is separately promoted under `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`
@@ -56,26 +58,52 @@ Current landed guardrail:
 - call the shared Mini Scene Interface with canonical source facts; do not copy world-profile, regex, artifact, or presenter logic into runtime adapters
 - treat interaction commands as requests that still pass the owning module's validation and any required runtime review
 
-## 6. Workstream F: Map Journey Checkpoint Collaboration
+## 6. Workstream F: Event Surface Projection And Host Entries
 
-- MJE-3's first adapter is implemented in the current uncommitted tree and awaits user review; do not widen it or begin MJE-4
+- EVE-1 is landed as a pure bounded projection over existing Map Journey/Chat social proposal and runtime-log truth plus caller-supplied current source references; it adds no Event route and no duplicate persistent record
+- strict stable-place, provider-neutral geographic, and normalized-canvas anchors, expansion targets, allowlisted request descriptors, source staleness, bilingual/accessibility copy, and deterministic output are normalized in `src/lib/simulation/event-surface-projection.js`
+- host registration remains empty by default in `src/lib/simulation/event-surface-host-registry.js`; Map, Chat, Calendar, World Hub, and later callers must opt in with bounded source/state/anchor/expansion/action capabilities
+- EVE-2 lets Map own coordinate-card placement, clustering/stacking, selection, text fit, and return context while Event Runtime and source Modules keep their existing ownership
+- before a location-aware family is promoted, name its authored activation scope, discoverability, accepted position provenance, place-entry requirement, module permission, intensity behavior, and no-event path; do not overload EVE-1 stale-source availability with eligibility
+- ordinary place focus and event-pin selection remain distinct host paths; a place card has no permanent Event button and Map `Enter` remains a Map-owned transition
+- EVE-3 adds event history, pending review, explanations, and event-scoped notes inside World Hub; it does not create a Reminders queue or Cheats editing authority
+- richer expansion uses the Mini Scene Interface only after its separate persistence, Settings, and Presenter gates
+
+## 7. Workstream G: Map Journey Checkpoint Collaboration
+
+- MJE-3's first adapter and MJE-4 Footprints/place knowledge are user-accepted and integrated locally; later event cards must consume the landed EVE-1 contract and remain separately gated under EVE-2
 - receive bounded canonical Map facts only for completed `en_route` and `near_arrival` checkpoints while Map is mounted; do not evaluate on each animation tick
 - keep permission, Surprise Mode, eligibility, deterministic/random gate, cooldown/cap, persistent proposal review, provenance, and logs in Event Runtime
 - return only no ETA change or a bounded 120-second delay through the Map adapter and let Map validate exact proposal/event/journey/checkpoint lineage
 - keep proposals pending without pausing Map Journey or opening detail automatically; preserve tested no-event, adapter-failure, legacy blocked-journey recovery, arrival dismissal, and missing/stale-proposal paths
 - keep destination change, event-driven cancellation, relationship, money, asset, identity, schedule, active exploration, and Agenda Journey effects unimplemented
 
-## 7. Workstream G: Agenda Journey And Activity Session Collaboration
+## 8. Workstream H: Agenda Journey And Activity Session Collaboration
 
 - status is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY`; follow roadmap 4.12 CJA gates and do not infer implementation authorization from this package
 - receive bounded canonical Agenda Journey or Activity Session facts only at explicit start, milestone, completion, or deadline checkpoints; never evaluate on each countdown tick
 - keep eligibility, deterministic/random gate, cooldown/cap, module permission, presentation mode, automatic-resolution policy, proposal/review, provenance, and logs in Event Runtime
 - keep Agenda Journey state, Activity Session timestamps, Calendar commitments, Map arrival, and all downstream domain truth in their owning modules
 - treat `off` as popup suppression rather than event-system disablement, while allowing only owner-approved low-impact automatic outcomes
+- keep module permission, random-event intensity, presentation mode, and future per-session override independent; optional-event suppression never removes the base activity, travel, deadline, or safety path
+- keep Focus Companion timing/presentation outside Event Runtime and consume explicit Activity Session or Map Journey checkpoints instead of creating a second clock
 - reconcile overdue checkpoints idempotently after resume and do not promise exact interactive delivery while a browser/PWA is fully closed or OS-suspended
 - implement nothing until the matching CJA stage receives separate user acceptance and persistence/compatibility review
 
-## 8. Semantic Guardrails
+## 9. Workstream I: Default K-pop Event Pack And Text Materialization
+
+- follow `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`; the first product content target is modern K-pop realism while generic Event Runtime logic remains world-neutral
+- EVE-2A is complete: the current Map inventory, conservative/exact place semantics, Event Template V2, Event Instance V1, variant-pack/text-materialization/media-intent/Map-session Interfaces, first production-arrival-briefing archetype, and six fixtures are frozen
+- EVE-2B is complete: pure normalizers/registries, Simulation V2-owned durable instance persistence/migration/backup, local K-pop materialization, and an optional one-call validated/cached text Composer are implemented with no Map fields, UI, or external domain mutation
+- keep ordinary ticks, distance updates, place focus, eligibility filtering, and compact invitations local and zero-token
+- call an optional Event Text Composer only after an approved event-entry/presentation checkpoint; validate/cache normalized output and fall back to authored local K-pop variants
+- keep choice IDs, Adapter keys, effect ranges, confirmations, persistence, and every domain mutation local and owner-validated
+- keep place/scene imagery in Map/world asset packs where practical; Event Runtime stores only stable references and bounded semantic media intent
+- preserve later CG as a separate, independently permissioned image-generation/media-resolution Adapter; do not add V1 provider fields, automatic generation, empty controls, or image payload persistence
+- do not implement parallel non-K-pop content packs in V1, but keep templates and capabilities independent of K-pop names, exact Seoul place IDs, and icons
+- EVE-2C Map provenance/session fields and the first Map vertical slice still require separate acceptance after the completed EVE-2B runtime foundation
+
+## 10. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -95,3 +123,6 @@ Treat these as bugs:
 14. elapsed time or Map arrival is treated as proof that a non-travel activity completed
 15. popup mode `off` disables event eligibility or silently auto-applies a high-impact outcome
 16. CJA documentation acceptance is treated as authorization to add a route, store, timer, adapter, permission, persistence field, or migration
+17. a host event card becomes a second event record or an authorization token
+18. a Map event anchor creates or mutates place, pin, discovery, role-position, or journey truth
+19. World Hub event review becomes a general task/reminder system or silently gains Cheats privileges

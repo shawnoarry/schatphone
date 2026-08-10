@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-07-31
+Updated: 2026-08-10
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -8,6 +8,7 @@ This document records the architecture direction for SchatPhone's immersive even
 - condition-triggered events
 - scheduled simulation
 - module-owned side effects through adapters
+- host-embedded event cards with optional location anchors
 
 Persistence boundary:
 
@@ -124,6 +125,47 @@ A persistent execution record useful for:
 - backup/restore
 - later AI assistant handoff
 
+### Event Surface Projection
+
+A bounded read model for presenting one runtime proposal or applied event inside an owning app. It may contain:
+
+- stable event/proposal ID, template ID, source module, and source-record reference;
+- display title, summary, status, risk/review state, and available action descriptors;
+- compact world context and optional participant references;
+- an optional presentation anchor such as a Map place ID or provider-neutral coordinate snapshot;
+- an explicit expansion target: host detail, World Hub review, or the shared Mini Scene Interface.
+
+The projection is not a second event store and is never an authorization token. It should be derived from Event Runtime proposal/log truth plus bounded source-owner facts. Every requested outcome still returns through the registered Module Adapter and is validated by the owning module.
+
+### Location-Aware Event Card
+
+A Map event card is one host rendering of an Event Surface Projection. The current Map UI remains the host while it grows toward a larger world map:
+
+- a pin or coordinate-anchored card may show a concise event preview;
+- the card exposes an explicit `Expand event` command rather than opening automatically;
+- expanding may open a Map-owned detail surface or a registered Mini Scene presentation;
+- dismiss/review state may be reflected on the card, but applying an effect still crosses the owner Adapter;
+- the coordinate is placement context, not permission to create a canonical place, rewrite a pin, move the role, or change a journey.
+
+Multiple events near one coordinate must cluster or stack behind one stable control instead of producing overlapping cards. Cards without a valid coordinate remain available through their owning host and World Hub review; they do not invent a fallback location.
+
+### Activation Scope, Presence, And Discoverability
+
+Location meaning belongs to the event template/source contract before it becomes host presentation. A future location-aware family may declare an activation scope such as:
+
+- `remote`: an explicitly authored remote interaction, for example a call, reservation, or message;
+- `nearby`: an area or exterior interaction inside a bounded approach radius;
+- `onsite`: presence at the place boundary is required;
+- `interior`: an explicit Map-owned place-entry session is required;
+- `journey_checkpoint`: eligibility belongs to a named Map Journey checkpoint rather than place entry;
+- `activity_checkpoint`: eligibility belongs to a named Agenda Journey or Activity Session checkpoint after that source exists.
+
+Distance is an eligibility fact, not an event-type converter. An `interior` event does not become `remote` when the role is far away. The source owner supplies bounded current facts such as stable place/map-pack identity, distance relation, journey/arrival reference, position provenance (`manual` or `journey_arrival`), and place-session state. Event Runtime evaluates those facts and never writes them.
+
+Discoverability is separate from activation. A template may be `hidden_until_eligible`, `teaser_when_locked`, or `always_visible` only when its product contract approves that disclosure. A locked teaser must explain the unmet condition and expose no outcome action. Ineligible hidden events produce no host card. An eligible event may produce no card when user permission, intensity, cooldown, cap, or presentation policy suppresses that surface.
+
+These are template and eligibility semantics, not implicit additions to the landed EVE-1 projection schema. EVE-1 `availability` continues to describe whether the projected source/anchor/action is valid. A later implementation must version any new projected activation or lock-reason fields instead of overloading stale-source behavior.
+
 ### Generated Chat Social Proposal
 
 A runtime proposal that asks whether a role-initiated communication-state change should happen in Chat.
@@ -152,6 +194,14 @@ Current product meaning:
 - Low is the conservative default for low-frequency, low-risk life events;
 - Balanced and High are stronger activity levels, but they still do not bypass cooldowns, daily caps, module event permissions, or World Hub review.
 
+Three controls remain independent:
+
+1. module event permission decides whether a source lane may submit optional runtime events;
+2. Surprise Mode decides random/ambient event frequency;
+3. presentation mode decides whether an eligible event is silent, text, or interactive.
+
+Turning optional activity events off must not delete or disable a deterministic Calendar commitment, Agenda Journey step, Map Journey, Activity Session, required deadline reconciliation, or safety notice. A future activity may also override its global default for one session, for example `quiet`, `important_only`, `balanced`, or `lively`, while still respecting module permission, cooldowns, caps, and high-impact review.
+
 ### Module Event Permissions
 
 Module event permissions decide which app lanes may receive runtime events. They are separate from AI auto-reply settings.
@@ -174,6 +224,16 @@ Event eligibility and event presentation are separate decisions. The shared Mini
 - `unconfigured` behaves as `off` until the user chooses a mode.
 
 High-impact money, asset, relationship, identity, communication, or schedule changes keep their existing confirmation or World Hub review boundary in every mode. Browser/PWA suspension may reconcile overdue checkpoints idempotently after resume, but the runtime must not promise an exact interactive popup while the app is fully closed or OS-suspended.
+
+### Review And Override Entrances
+
+The event system has no ordinary Home app.
+
+- `Event Runtime` is the hidden coordination Module.
+- event interaction appears as host-embedded cards, notices, messages, or Mini Scenes.
+- `World Hub / 世界中枢` is the existing hidden-by-default integrated entry for event history, pending review, explanations, event-scoped review notes, and bounded correction.
+- user-authored reminders and confirmed plans remain Reminders/Calendar data; a World Hub review note is audit context, not a new task system.
+- `Cheats / 金手指` remains a future separately unlocked privileged tool for explicit state/value overrides. It may reuse selected-event context and audit formatting, but it does not merge with World Hub permissions or Event Runtime ownership.
 
 ## 4. Proposed File Layout
 
@@ -253,6 +313,48 @@ Example engine result:
 }
 ```
 
+Example surface projection:
+
+```js
+{
+  schemaVersion: 1,
+  id: 'event_surface:map:proposal-123',
+  eventId: 'map.local_encounter.v1',
+  proposalId: 'proposal-123',
+  source: {
+    moduleKey: 'map',
+    recordType: 'map_journey',
+    recordId: 'journey-456',
+    runtimeLogId: 'runtime-log-123',
+  },
+  ownership: {
+    eventTruthOwner: 'event_runtime',
+    sourceTruthOwner: 'map',
+    effectOwner: 'map',
+  },
+  status: 'pending',
+  availability: { state: 'available', reason: '' },
+  risk: 'low',
+  review: { state: 'pending', mode: 'source_owner_review', reason: '' },
+  copy: {
+    titleEn: 'Something is happening nearby',
+    summaryEn: 'Open the event to review the situation.',
+    accessibilityLabelEn: 'Something is happening nearby, Pending review',
+  },
+  anchor: {
+    kind: 'geographic_coordinate',
+    mapPackId: 'real-seoul-v1',
+    latitude: 37.5665,
+    longitude: 126.978,
+  },
+  expansion: { kind: 'host_detail', hostKey: 'map', targetId: 'proposal-123' },
+  outcomeIds: [],
+  actions: [{ id: 'expand', kind: 'open_detail' }],
+}
+```
+
+EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation/event-surface-projection.js`, with explicit capabilities in `src/lib/simulation/event-surface-host-registry.js`. Existing Map Journey and Chat social proposals are supported. Current source references must be supplied by their owners; stale sources, invalid anchors, unknown/unbound actions, and unsupported hosts fail closed. No Store or route persists projection fields.
+
 ## 6. Execution Flow
 
 1. collect context snapshot from relevant stores
@@ -264,7 +366,9 @@ Example engine result:
 7. build adapter payload
 8. call the module adapter
 9. write event log to the simulation store
-10. let existing module views, Chat service accounts, notifications, or reminders display the result
+10. derive a bounded Event Surface Projection when a registered host needs one
+11. let existing module views, Chat service accounts, notifications, or reminders display the result
+12. route any user choice back through the owning Module Adapter
 
 ## 7. Ownership Rules
 
@@ -284,10 +388,14 @@ Example engine result:
 ### Map
 
 - owns location, route, distance, ETA, area context, canonical journey/exploration records, checkpoint transitions, and trip presentation
+- owns the current place relation, manual-versus-journey position provenance, explicit place-entry session, and validation of any future appointment-driven automatic entry
 - may provide context to Food Delivery, Shopping logistics, Assets, and Calendar
 - submits a bounded snapshot only at completed MJE-2 checkpoints while Map is mounted and validates the reviewed Event Runtime result
 - currently applies only no ETA change or a bounded 120-second delay; pending review remains non-blocking, and destination change plus event-driven cancellation remain unimplemented
 - keeps a valid no-event journey path; checkpoint eligibility never runs on every animation tick
+- owns large-map pin/card placement and overlap handling, but consumes event projections rather than copying Event Runtime proposal/log truth
+- treats place `Enter` as a Map transition that may submit a bounded checkpoint; Event Runtime may return zero, one, or a bounded set of invitations without owning the place session
+- treats `Expand event` as navigation/presentation only; any outcome returns through the source owner's validation seam
 - must not own orders, Wallet ledgers, or asset records
 
 ### Chat
@@ -316,21 +424,23 @@ Example engine result:
 - Wallet owns ledger writes
 - Assets owns asset records
 
-## 8. First Pilot
+## 8. Landed Pilots And Next Product Slice
 
-The safest first pilot is Food Delivery status and exception events.
+The foundation pilots are already landed:
 
-Why:
+1. Food Delivery status/exception events proved deterministic eligibility, caps, adapters, source-owned order changes, and service surfaces.
+2. Chat social proposals proved low-risk auto-apply plus high-risk World Hub review before Chat-owned communication changes.
+3. Map Journey MJE-3 proved checkpoint-triggered, non-blocking proposals whose only current effect is a Map-validated bounded delay.
 
-- the baseline already exists
-- visible surfaces already exist
-- tests already cover event persistence/display paths
+The next event work is staged separately from richer event content:
 
-Recommended pilot sequence:
-
-1. extract Food Delivery event presets
-2. add deterministic manual trigger helper
-3. only then add guarded random eligibility after cooldown/cap tests are in place
+1. `EVE-1 DONE 2026-08-10`: the pure Event Surface Projection, empty-by-default registered-host capability, stale-source handling, strict Map coordinate-anchor normalization, bounded actions/expansion, and Map Journey/Chat social projectors are implemented and covered by deterministic unit tests; no route or new side effect was added.
+2. `EVE-2A DONE 2026-08-10`: the reusable template/instance/place-capability/text/media/persistence contracts, Map place-session input Interface, first K-pop archetype, and six representative fixture cases are frozen under `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` and `tests/fixtures/events/kpop-realism-v1/`. This stage added no runtime writes.
+3. `EVE-2B DONE 2026-08-10`: reusable template/variant/instance normalizers and registries, persistence/reopen/backup, a local K-pop fallback pack, and an optional validated/cached after-entry Event Text Composer are implemented without host UI or external domain effects.
+4. `EVE-2C`: after separate UI acceptance, register one bounded Map host and render the selected K-pop vertical slice with a zero-token invitation/no-event path, explicit entry, allowlisted choice/outcome flow, clustering/stacking, and return context.
+5. `EVE-3`: add a World Hub event notebook/review slice over existing logs/proposals, including event-scoped notes and filters but no general reminder ownership or freeform value editing.
+6. `EVE-4`: register additional host projections, templates, and content packs only as their source modules are approved.
+7. `EVE-5`: use the shared Mini Scene Interface for richer expansion only after its persistence, Settings, and Presenter gates are complete; later CG remains a separate image-generation/media-resolution stage.
 
 ## 9. Randomness Policy
 
@@ -363,37 +473,33 @@ AI should be optional and layered:
 
 AI should not be the first state mutator.
 
+The accepted default K-pop realism V1 narrows runtime AI further:
+
+- ordinary Ticks, distance updates, place focus, eligibility filtering, deterministic/random gates, and compact invitations remain local and zero-token;
+- after a locally eligible event reaches an explicitly approved event-entry/presentation checkpoint, an optional Event Text Composer may materialize bounded title, narration, dialogue, and wording for existing allowlisted choice IDs;
+- local code precomputes and validates every effect request, numeric bound, confirmation/review requirement, and source-owner Adapter action;
+- accepted normalized text is cached with the Event Instance so reopen/review does not regenerate it;
+- invalid, unavailable, disabled, timed-out, or over-budget generation falls back to authored local copy and never blocks the source action;
+- runtime image/audio generation is outside V1. Map/world packs provide authored scene assets, and later CG uses a separate image-generation/media-resolution Adapter over stable media intent.
+
 World-aware event copy should still follow `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
+The current default-content and cross-machine handoff contract is `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`.
 
-## 11. Migration Path
+## 11. Evolution Path
 
-Phase 0:
+Landed:
 
-- documentation and ownership map
+- Food Delivery presets and Adapter;
+- `simulationStore` logs, cooldowns, caps, permissions, Surprise Mode, and proposal state;
+- deterministic shared event engine;
+- Chat social review and Map Journey checkpoint Adapters.
 
-Phase 1:
+Next:
 
-- Food Delivery event presets and adapter extraction
-
-Phase 2:
-
-- `simulationStore` with logs, cooldowns, caps, and user-level settings
-
-Phase 3:
-
-- shared `event-engine` with deterministic condition and random evaluation
-
-Phase 4:
-
-- Shopping, logistics, Phone, Calendar/Reminders, Map, and Photos event templates
-
-Phase 5:
-
-- evaluate XState/statecharts only if transition complexity truly warrants it
-
-Phase 6:
-
-- use the `game-engine` skill only for true minigame or Canvas/WebGL surfaces, not ordinary module events
+- EVE-2A contract/fixtures, EVE-2B reusable runtime, and EVE-2C first Map/K-pop vertical slice under `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`, followed by EVE-3 through EVE-5 in Section 8;
+- additional Shopping, logistics, Phone, Calendar/Reminders, Map, and Gallery event families only after an owning source slice is approved;
+- evaluate XState/statecharts only if transition complexity truly warrants it;
+- use a game engine only for true minigame or Canvas/WebGL surfaces, not ordinary module events.
 
 ## 12. Testing Requirements
 
@@ -406,6 +512,9 @@ Minimum tests for an event-engine slice:
 - event-log persistence and restore
 - module views display event outcomes without leaking internal labels
 - Chat/notification display stays read-only where ownership belongs elsewhere
+- event-surface projection normalization, missing/stale source behavior, and action allowlisting
+- coordinate-anchor validation for geographic and fictional/custom map packs
+- card clustering/stacking and text-fit behavior across desktop and mobile once Map rendering begins
 
 Current targeted examples:
 
@@ -433,11 +542,109 @@ Already landed:
 - `src/lib/simulation/event-tick-runner.js` can now run both the Food Delivery random pilot and the Chat runtime greeting pilot, with tick-level cooldown/daily caps
 - `src/lib/simulation/adapters/food-delivery-events.js` is the first real module adapter
 - `src/lib/simulation/adapters/map-journey-events.js` provides the first Map journey checkpoint adapter: local daily/sci-fi/apocalypse variants, permission and Surprise Mode checks, deterministic random selection, cooldown/cap, persistent proposal provenance, and a Map-owned validated return path
+- `src/lib/simulation/event-contracts.js` and `event-registry.js` normalize the frozen EVE-2 Interfaces and register world-neutral templates plus compatible world/content packs with fail-closed schema, Adapter, choice, and outcome checks
+- `src/lib/simulation/kpop-realism-event-pack.js` and `event-instance-materializer.js` provide the first complete bilingual local fallback and deterministic durable instance materialization for semantic workplace categories/capabilities rather than Seoul place IDs
+- `src/lib/simulation/event-text-composer.js` accepts an injected provider/call adapter only after entry, sends bounded context, performs at most one request, validates normalized copy against frozen IDs and limits, caches success or terminal local fallback, and never regenerates on reopen
+- `src/stores/simulation.js` storage V2 persists untruncated Event Instances plus the independent `local_only`/`optional_ai_after_entry` text mode, migrates V1 without losing existing runtime data, reports rejected restore records, and includes instances in backup/rollback snapshots
 - World Hub's Chat social proposal panel explains source, trigger policy, and ownership boundaries for AI output and foreground/session runtime proposals
 - Settings backup/import/rollback and storage diagnostics include `store:simulation`
 
 Recommended next step:
 
+- keep the landed EVE-1 projection/host-registration contract free of persistence and effect authority; EVE-2B runtime is complete, so obtain separate EVE-2C approval before adding Map provenance/session fields, host registration, `Enter`, cards, or event detail UI
 - preserve the World Hub filtered review-pack baseline for every new adapter, so each event log remains explainable by module, status, trigger source, reason, adapter boundary, target, and world variant context before stronger controls are added
 - preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.
 - deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes; V1 runtime greetings are intentionally narrow, and richer scheduling or high-risk communication changes still need explicit review semantics
+
+## 14. EVE-2A Frozen Versioned Interfaces
+
+Status: `CONTRACT_FROZEN / EVE-2B_RUNTIME_IMPLEMENTED / EVE-2C_UI_NOT_STARTED`.
+
+The fixture source for this section is `tests/fixtures/events/kpop-realism-v1/`. EVE-2B implements normalizers and registries against these records; changing a field's meaning still requires a new schema or fixture version rather than silently rewriting accepted fixtures.
+
+### Event Template V2
+
+`EventTemplateV2` is the world-neutral functional Interface. Its required top-level fields are:
+
+| Field | Contract |
+| --- | --- |
+| `schemaVersion` | exactly `2` |
+| `id` + `version` | stable template identity and independently incremented content/behavior version |
+| `archetypeId` | reusable interaction structure without world-specific naming |
+| `owner` | source and effect owner Module keys |
+| `source` | canonical source record type and explicit checkpoint ID |
+| `trigger` | modes, activation scope, discoverability, deterministic probability, cooldown, cap, target scope, permission, and intensity policy |
+| `eligibility` | normalized place categories/capabilities, accepted position provenance, required place-session state, and pure conditions |
+| `presentation` | allowed host surfaces, expansion kind, text mode, and semantic media-intent key |
+| `choices` | stable choice/outcome IDs and one allowlisted Adapter request descriptor per choice |
+| `safety` | risk, confirmation, reversibility, external-mutation class, and optional relationship gate preset |
+
+Template copy, K-pop terms, exact Seoul place IDs, provider settings, generated prose, and canonical domain values do not belong in this Interface. Unknown activation scopes, discoverability modes, choice IDs, Adapter keys, place categories, or capabilities fail closed.
+
+### Event Variant Pack V1
+
+`EventVariantPackV1` is world/content-specific and has `schemaVersion: 1`, stable pack `id`, `version`, `worldContextFamily`, `contentProfileId`, shipped locales, and `templateVariants` keyed by an existing template ID. Every variant has a stable ID/version, optional place-category filter, tone tags, bounded participant slots, complete local invitation/scene/choice/consequence copy, and optional `MediaIntentV1`.
+
+Every shipped template must have a complete local variant. Choice and outcome copy is keyed by IDs already declared by the template; a variant cannot add an action or effect. A missing or incompatible pack uses the frozen copy already stored in an Event Instance, otherwise the system default local variant, and never makes a provider request merely to repair pack absence.
+
+### Event Instance V1
+
+`EventInstanceV1` is the durable authoritative occurrence and has `schemaVersion: 1`. Its required groups are:
+
+| Group | Persisted meaning |
+| --- | --- |
+| `id`, `lifecycle` | stable occurrence ID and `active`, `resolved`, `dismissed`, or `unavailable` state |
+| `templateRef` | template ID, schema version, and template version used for this occurrence |
+| `source` | source Module, record type/ID/revision, checkpoint ID/time |
+| `world` | world context/pack, variant pack/version, Map pack/version lineage |
+| `place` | stable place ID, normalized semantic category/capabilities, strict Event Surface anchor |
+| `presence` | activation scope, relation, accepted provenance, place-session ID/revision, optional journey ID, evidence time |
+| `selection` | deterministic seed and chosen variant ID/version |
+| `runtime` | proposal, eligibility-log, and optional outcome-log references |
+| `text` | one normalized `TextMaterializationResultV1` including local fallback |
+| `media` | one `MediaIntentV1`, optional stable resolved asset reference, resolution reason, render mode |
+| `choices` | frozen allowed IDs plus optional selected choice/outcome |
+| `outcome` | Adapter key, request state, owner result code/reference; no copied owner record |
+| `timestamps` | created, entered, resolved, dismissed, and updated times |
+
+The invitation proposal exists before the instance. The instance is created only after explicit event entry and begins `active`; reopening reads the same instance. Template, source/world/place/presence lineage, seed, selected variant, allowed choices, and accepted normalized text are immutable after creation. Lifecycle, selected choice/outcome, owner result references, resolution timestamps, and a pending text result may advance monotonically.
+
+### Text Materialization Result V1
+
+Text materialization is local-first and non-blocking. Event entry synchronously freezes the selected local copy, renders it immediately, and may then start one optional provider request. A validated response may replace the normalized display copy only while the instance is still active and its context hash is unchanged. A choice made first, a stale source, timeout, invalid result, suspension, or provider failure keeps the local copy and ignores late output.
+
+The exact V1 limits are:
+
+| Limit | Value |
+| --- | --- |
+| provider calls per instance | at most `1`; no automatic retry and no branch follow-up call |
+| request timeout | `20,000 ms` |
+| serialized request payload | `8,000` characters |
+| world-context digest | `1,200` characters |
+| participants | `4` |
+| bounded context facts | `24`, each at most `160` characters |
+| title | `80` characters |
+| opening | `800` characters |
+| environment | `500` characters |
+| dialogue beats | `6`, each at most `240` characters |
+| choice labels | exactly the template's at-most-`3` IDs, each at most `80` characters |
+| consequence text | each allowlisted outcome at most `320` characters |
+| total normalized output | `3,200` characters |
+
+Persist `status` (`local_only`, `pending`, `succeeded`, or `fallback`), final `source` (`local` or `ai`), `attemptCount`, deterministic cache key, context hash, normalized copy, provider-neutral failure code, and minimum provider/model/request/time provenance. Never persist the prompt, raw response, transport payload, credentials, or uncommitted candidate.
+
+Allowed terminal fallback codes are `text_mode_local_only`, `provider_disabled`, `offline`, `provider_unavailable`, `provider_timeout`, `rate_limited`, `quota_exhausted`, `invalid_schema`, `content_rejected`, `context_stale`, and `request_interrupted`. Reopen never converts a terminal fallback into another request.
+
+### Media Intent V1
+
+`MediaIntentV1` has `schemaVersion: 1`, one semantic slot, scene key, normalized place category, bounded capability/tone tags, and `required`. The Event Instance separately stores an optional stable `resolvedAssetRef`, resolution reason, and `renderMode`. It stores no binary, external URL, provider prompt, crop implementation, or generated candidate.
+
+Resolution remains exact Map-pack asset, category asset in the active Map/world pack, approved Gallery asset reference, system generic asset, then text-only. Missing media never blocks event entry or resolution. The current repository has Map overview assets but no authored workplace-scene asset; EVE-2A therefore freezes text-only fallback rather than claiming that a scene image already exists.
+
+### Persistence, Backup, Migration, And Retention
+
+Event Runtime is the logical owner. EVE-2B adds `eventInstances` to the existing `store:simulation` owner, increments its storage version, and includes the full normalized array in the required `simulation` backup section and transactional rollback path. Map stores only its own place-session/current-location truth; an Event Instance stores source references and frozen evidence, not a copied Map session.
+
+Migration from Simulation storage V1 to V2 initializes `eventInstances: []` and preserves all current logs, ledgers, proposals, and settings. Restore normalizes each versioned instance, preserves valid records, reports invalid entries, and does not silently reinterpret unknown schemas. A missing source, pack, or asset leaves the instance reviewable with frozen text but disables new choice execution where source validation is impossible.
+
+V1 applies no automatic count/time truncation to Event Instances. Resolved instances remain durable until a separately accepted reversible archive or user deletion policy exists. Projection/UI queries may be bounded without deleting authoritative records. Full prompts, raw responses, temporary media candidates, and provider transport data are never part of retention.

@@ -38,6 +38,7 @@ Roadmap interpretation:
 - 4.11 is `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: the accepted MJE-3 checkpoint event remains non-blocking, and MJE-4 presents passive progress as Footprints plus an optional per-world place-knowledge mode. In Footprints-gated worlds, completed positioned journeys can reveal a small deterministic set of nearby authored facilities; old saves remain all-known. MJE-5 remains separately gated.
 - 4.12 is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY / NOT_STARTED`: the visible Calendar remains the long-range confirmed-plan app, its future Month/Week/Agenda views are distinct from a future short-range Agenda Journey app, and a hidden Schedule Orchestrator will link them without taking ownership of Map Journey, Event Runtime, Activity Session, or downstream values. No route, store, timer, popup, narrative projection, persistence field, or migration is implemented by this decision.
 - 4.13 is `PARTIAL_DONE / CHKSZ_RADIO_BROWSER_LOCAL_AND_MAP_MEDIA_INTEGRATED_LOCAL`: Music is an installed listening app with browser playback, library/queue/search, generic JSON configuration, a no-key Radio Browser HTTPS/MP3 live-station preset, a dedicated ChKSz NetEase/QQ/Kugou Adapter, direct HTTPS URL songs, Music-owned device-local file import, a global floating player, Chat track sharing, and an active-journey Map music/radio panel. Live-station uptime remains external; real-key rights/CORS smoke, true-device media behavior, Chat search, and external Map queue requests remain separate gates.
+- 4.14 is `P1 PARTIAL_DONE / EVE-2B DONE / EVE-2C USER ACCEPTANCE REQUIRED`: Event remains a cross-module experience without a normal Home app. The pure Event Surface Projection and empty-by-default host registry are implemented; EVE-2A froze the reusable contracts and first K-pop archetype; EVE-2B now provides strict registries/normalizers, durable Simulation-owned instances, V1-to-V2 migration/backup, local materialization, and optional validated one-call text composition. Map provenance/place sessions, `Enter`, host registration, and Event UI remain unimplemented.
 - 4.15 is `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: the first shared runtime TTS slice provides Cloudflare Workers AI MeloTTS and user-key MiniMax Chinese preview behind one contract. The bounded Worker route is deployed at `https://schatphone.noarry.workers.dev`; Chat message audio, automatic read-aloud, durable media, stable real-provider quality/playback proof, and production gateway hardening remain separately gated.
 
 ## 3. Completed Baselines
@@ -604,6 +605,57 @@ Focused contract:
 
 - `docs/architecture/MUSIC_MODULE_CONTRACT.md`.
 
+### 4.14 Cross-Module Event Experience And Map Event Cards
+
+Status: `P1 PARTIAL_DONE / EVE-0 DONE / EVE-1 DONE / EVE-2A DONE / EVE-2B DONE / EVE-2C USER_ACCEPTANCE_REQUIRED`
+
+Accepted product and entry direction on 2026-08-10:
+
+1. Event is an important cross-module product family, but it does not receive an ordinary Home/Desktop app like Chat or Map.
+2. Event Runtime remains the hidden coordination Module for eligibility, deterministic/random gates, cooldowns, caps, proposals, provenance, review state, and logs.
+3. user interaction appears through host-embedded event cards, messages, notices, or later Mini Scenes inside registered owning apps.
+4. ordinary Map pin selection now opens the implemented Stage 1 Map-owned place-focus sheet, not an Event Runtime card. It provides `Go` for idle remote places, existing-journey reuse while travel is locked, current-position/distance context, and progressive Details/Share/player-owned Manage without an Event placeholder. The later presence target remains `remote -> Go`, `traveling_to_place -> View journey`, `onsite -> Enter`, and `inside -> contextual action or Leave`.
+5. Stage 1 labels immediate relocation as a sandbox action that skips travel and creates no Map Journey. The accepted later state contract records that action with `manual` provenance, records completed travel with `journey_arrival` provenance, and makes `Enter` create or resume a Map-owned place session rather than directly starting an event; those provenance/session fields are not yet implemented.
+6. a place focus shows an event invitation only when Event Runtime provides an eligible event or an approved locked teaser. Location-aware templates retain an authored activation scope such as `remote`, `nearby`, `onsite`, `interior`, `journey_checkpoint`, or later `activity_checkpoint`; distance may affect eligibility but cannot convert one scope into another.
+7. Map is the first planned large-surface host. An eligible event at a pin or provider-neutral coordinate may present a compact card in the existing Map UI with an explicit expansion command.
+8. Map owns geographic/canvas anchor validation, card placement, clustering/stacking, selection, layer coexistence, place relation/session state, position provenance, and return context. It does not own the event proposal/log or another module's source record/effect.
+9. an event coordinate cannot silently create a place, change knowledge/visibility, move a role or journey, or authorize an outcome.
+10. `World Hub / 世界中枢` is the existing integrated hidden-by-default entry for event history, pending review, explanations, event-scoped notes, and bounded correction. Ordinary reminders and confirmed plans remain Reminders/Calendar data.
+11. `Cheats / 金手指` may share the hidden utility area, selected-event context, and audit format, but remains a separately unlocked privileged Module with separate write Interfaces and undo/recompute policy.
+12. richer event expansion may later use the shared Mini Scene Interface, but EVE-1/EVE-2 do not authorize Mini Scene persistence, Settings, Presenter, regex, or HTML runtime.
+13. the first product content pack targets the current modern K-pop realism world, while reusable event templates, place capabilities, instance lifecycle, choice/effect requests, and engine logic remain world-neutral.
+14. V1 runtime AI is optional and text-only after local eligibility plus an approved explicit event-entry/presentation checkpoint. Ordinary ticks, distance updates, place focus, eligibility filtering, and compact invitations remain local and zero-token; local K-pop variants are the required offline/provider-failure fallback.
+15. location/scene imagery primarily follows Map/world asset packs. Event Runtime stores stable references and minimal semantic media intent only. Later CG remains a separate image-generation/media-resolution Adapter with independent permission, cost, privacy, candidate retention, and failure policy.
+
+Execution stages:
+
+1. `EVE-0 DONE 2026-08-10`: refresh the total architecture and freeze entry/ownership direction across Event Runtime, host apps, World Hub, and Cheats.
+2. `EVE-1 DONE 2026-08-10`: `src/lib/simulation/event-surface-projection.js` now derives bounded Map Journey and Chat social surfaces with stable source/proposal/log references, ownership, lifecycle and risk/review state, bilingual/accessibility copy, strict stable-place/geographic/canvas anchors, bounded expansion/action descriptors, and stale-source fail-closed behavior. `src/lib/simulation/event-surface-host-registry.js` adds an empty-by-default explicit capability registry. The slice adds no route, Store field, persistent record, host UI, outcome execution, or new event content.
+3. `EVE-2A DONE 2026-08-10 / DOCUMENTATION_AND_FIXTURES`: inventoried the current 101-place default Map, froze conservative legacy and exact K-pop place semantics, Event Template V2, Event Instance V1, variant/text/media/Map-session Interfaces, limits, local fallback, cache/reopen/persistence policy, selected the production-arrival-briefing archetype, and added six immutable fixture cases. This stage added no runtime writes, host registration, provider calls, Map card, or scene asset.
+4. `EVE-2B DONE 2026-08-10 / RUNTIME_FOUNDATION`: implemented pure frozen-contract normalizers and registries, the built-in K-pop fallback pack, deterministic local Event Instance materialization, provider-neutral validated one-call/no-retry text composition, and `store:simulation` V2 durable `eventInstances` plus independent text mode, V1 migration, restore rejection reporting, backup, and rollback. No Map Place Session field, host registration, UI, scene asset, or external domain mutation was added.
+5. `EVE-2C SEPARATE_UI_ACCEPTANCE_REQUIRED`: register exactly one Map host capability and render the approved K-pop vertical slice with zero-token invitation/no-event behavior, explicit entry, local or cached optional text, allowlisted choices, owner-validated outcome, clustering/stacking, return context, and desktop/mobile geographic plus fictional/custom coverage.
+6. `EVE-3 SEPARATE_APPROVAL_REQUIRED`: add a World Hub Event Notebook/review view over existing proposal/log truth, including event-scoped notes and filters but no general task/reminder ownership or Cheats authority.
+7. `EVE-4 SEPARATE_APPROVAL_REQUIRED`: register more host Modules, templates, and content packs one owner at a time; each names trigger, source owner, Adapter action, visible surface, side effects, reversibility, persistence, local fallback, and tests.
+8. `EVE-5 MINI_SCENE_AND_MEDIA_GATES_REQUIRED`: add richer text/interactive expansion only through the roadmap 4.8 shared Module after its persistence, Settings, security, and Presenter prerequisites are accepted; later CG remains separately gated from text materialization.
+
+Primary package:
+
+- `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md`
+
+Secondary package for EVE-2 only:
+
+- `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md`
+
+Focused contracts:
+
+- `docs/architecture/SIMULATION_EVENT_ENGINE.md`
+- `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`
+- `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`
+- `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`
+- `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
+
+This lane does not authorize MJE-5 active exploration, event-driven place discovery, Agenda Journey, a new Event route/Store, broad high-impact automation, closed-page simulation, or Cheats implementation.
+
 ### 4.15 Shared Runtime Text To Speech
 
 Status: `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`
@@ -675,11 +727,12 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 5. `P1 DONE 2026-08-09`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, one ordinary Shopping life-consequence flow, focused Wallet quote explainability, Wallet Activity search/monthly statements/verified payees, Wallet receipt sharing, and configurable multi-screen Home release curation are complete at local desktop/simulated-mobile acceptance.
 6. `P1 PARTIAL_DONE 2026-08-09` 4.9/4.5 hosted release proof: GitHub Pages Run #31294272595, base-path smoke, and the prior direct-provider Chat/reload flow pass. Commit `a1418ed` is deployed through the Git-connected Vercel and Cloudflare builds; both restricted relay backends passed a no-secret upstream probe plus a GitHub Pages real-provider model-list and Chat smoke (`6` models, reply `OK`). Installed-PWA/relaunch, backup round trip, external protection checks, and named true-device evidence remain.
 7. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
-8. `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: 4.15 has landed Cloudflare MeloTTS and device-key MiniMax behind the shared runtime TTS Module for temporary Chinese preview, and the bounded Worker route is deployed. Stable end-to-end provider playback proof, production gateway policy, Chat read-aloud, and durable voice messages remain separate gates.
-9. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
-10. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
-11. `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: 4.11 local narrative-map baseline now includes accepted transport planning, lifecycle/checkpoints, the first non-blocking checkpoint event adapter, Footprints IA, and optional per-world authored-facility discovery. Active exploration, event-driven place reveal, candidate-place ownership, transit topology, broader-city, and true-device stages remain gated by the explicit order above.
-12. `P2 ARCHITECTURE_ACCEPTED / NOT_STARTED`: 4.12 Calendar/Agenda Journey orchestration is documented only. CJA-1 Calendar information architecture requires a separate user acceptance decision; no Agenda Journey, Schedule Orchestrator, Activity Session, event popup, Narrative Timeline, or persistence implementation has started.
+8. `P1 PARTIAL_DONE / EVE-2B DONE / EVE-2C USER_ACCEPTANCE_REQUIRED`: 4.14 has landed the pure Event Surface Projection, frozen EVE-2A contracts/fixtures, and implemented EVE-2B registries, local K-pop materialization, durable Event Instances, Simulation V2 migration/backup, and optional bounded one-call text composition. Ordinary Map place focus is implemented, but explicit place sessions, provenance schema, `Enter`, dynamic invitations, host registration, and event detail UI remain unimplemented.
+9. `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: 4.15 has landed Cloudflare MeloTTS and device-key MiniMax behind the shared runtime TTS Module for temporary Chinese preview, and the bounded Worker route is deployed. Stable end-to-end provider playback proof, production gateway policy, Chat read-aloud, and durable voice messages remain separate gates.
+10. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
+11. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
+12. `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: 4.11 local narrative-map baseline now includes accepted transport planning, lifecycle/checkpoints, the first non-blocking checkpoint event adapter, Footprints IA, and optional per-world authored-facility discovery. Active exploration, event-driven place reveal, candidate-place ownership, transit topology, broader-city, and true-device stages remain gated by the explicit order above.
+13. `P2 ARCHITECTURE_ACCEPTED / NOT_STARTED`: 4.12 Calendar/Agenda Journey orchestration is documented only. CJA-1 Calendar information architecture requires a separate user acceptance decision; no Agenda Journey, Schedule Orchestrator, Activity Session, event popup, Narrative Timeline, or persistence implementation has started.
 
 ## 7. Validation Rule
 

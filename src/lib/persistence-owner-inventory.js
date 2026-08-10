@@ -186,7 +186,7 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   { storageKey: 'store:book', schemaVersion: 1, labelZh: '长文素材', labelEn: 'Book library', sourceFile: 'src/stores/book.js', logicalOwners: ['Book'] },
   { storageKey: 'store:shopping', schemaVersion: 1, labelZh: '购物记录', labelEn: 'Shopping records', sourceFile: 'src/stores/shopping.js', logicalOwners: ['Shopping'] },
   { storageKey: 'store:food-delivery', schemaVersion: 1, labelZh: '外卖记录', labelEn: 'Food delivery records', sourceFile: 'src/stores/foodDelivery.js', logicalOwners: ['Food Delivery'] },
-  { storageKey: 'store:simulation', schemaVersion: 1, labelZh: '事件模拟', labelEn: 'Simulation events', sourceFile: 'src/stores/simulation.js', logicalOwners: ['Event Runtime'] },
+  { storageKey: 'store:simulation', schemaVersion: 2, labelZh: '事件模拟', labelEn: 'Simulation events', sourceFile: 'src/stores/simulation.js', logicalOwners: ['Event Runtime'] },
   { storageKey: 'store:assets', schemaVersion: 1, labelZh: '资产记录', labelEn: 'Assets records', sourceFile: 'src/stores/assets.js', logicalOwners: ['Assets'] },
   { storageKey: 'store:wallet', schemaVersion: 1, labelZh: '钱包账本', labelEn: 'Wallet ledger', sourceFile: 'src/stores/wallet.js', logicalOwners: ['Wallet'] },
   { storageKey: 'store:phone', schemaVersion: 1, labelZh: '电话记录', labelEn: 'Phone logs', sourceFile: 'src/stores/phone.js', logicalOwners: ['Phone'] },

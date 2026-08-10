@@ -19,16 +19,30 @@ import {
   normalizeMapJourneyEventProposal,
   normalizeMapJourneyEventProposals,
 } from '../lib/simulation/adapters/map-journey-events'
-import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import {
+  EVENT_INSTANCE_LIFECYCLE,
+  EVENT_TEXT_MODE,
+  EVENT_TEXT_STATUS,
+  cloneEventValue,
+  normalizeEventId,
+  normalizeEventInstanceV1,
+  normalizeEventInstancesV1,
+} from '../lib/simulation/event-contracts'
+import {
+  readPersistedState,
+  readPersistedStateAsync,
+  writePersistedState,
+} from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
-const SIMULATION_STORAGE_VERSION = 1
+const SIMULATION_STORAGE_VERSION = 2
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
 const SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT = 120
 const SIMULATION_MAP_JOURNEY_PROPOSAL_LIMIT = 120
 export const SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS = 10 * 60 * 1000
 export const SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS = 60 * 1000
+export const SIMULATION_EVENT_TEXT_MODE = EVENT_TEXT_MODE
 
 export const SIMULATION_SURPRISE_MODE = Object.freeze({
   OFF: 'off',
@@ -55,11 +69,13 @@ export const SIMULATION_EVENT_STATUS = Object.freeze({
 const SURPRISE_MODE_VALUES = new Set(Object.values(SIMULATION_SURPRISE_MODE))
 const TRIGGER_SOURCE_VALUES = new Set(Object.values(SIMULATION_TRIGGER_SOURCE))
 const EVENT_STATUS_VALUES = new Set(Object.values(SIMULATION_EVENT_STATUS))
+const EVENT_TEXT_MODE_VALUES = new Set(Object.values(EVENT_TEXT_MODE))
 const DEFAULT_SIMULATION_SETTINGS = Object.freeze({
   surpriseMode: SIMULATION_SURPRISE_MODE.LOW,
   enabledModules: Object.freeze({}),
   foregroundSessionTickEnabled: false,
   foregroundSessionTickIntervalMs: SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
+  eventTextMode: EVENT_TEXT_MODE.LOCAL_ONLY,
 })
 const CHAT_SOCIAL_RUNTIME_SUCCESS_STATUSES = new Set([
   CHAT_SOCIAL_EVENT_STATUS.APPLIED,
@@ -114,8 +130,7 @@ const normalizeEventStatus = (value, fallback = SIMULATION_EVENT_STATUS.TRIGGERE
   return EVENT_STATUS_VALUES.has(normalized) ? normalized : fallback
 }
 
-const normalizeModuleKey = (value, fallback = 'simulation') =>
-  normalizeText(value, fallback, 80)
+const normalizeModuleKey = (value, fallback = 'simulation') => normalizeText(value, fallback, 80)
 
 const normalizeTextList = (rawItems, maxItems = 16, maxLength = 160) => {
   if (!Array.isArray(rawItems)) return []
@@ -175,6 +190,23 @@ const normalizeSimulationSettings = (rawSettings = {}) => {
         SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
       ),
     ),
+    eventTextMode: EVENT_TEXT_MODE_VALUES.has(source.eventTextMode)
+      ? source.eventTextMode
+      : EVENT_TEXT_MODE.LOCAL_ONLY,
+  }
+}
+
+export const migrateSimulationStorage = ({ version, data } = {}) => {
+  if (Number(version) !== 1 || !data || typeof data !== 'object' || Array.isArray(data)) {
+    return null
+  }
+  return {
+    ...data,
+    eventInstances: [],
+    settings: {
+      ...(data.settings && typeof data.settings === 'object' ? data.settings : {}),
+      eventTextMode: EVENT_TEXT_MODE.LOCAL_ONLY,
+    },
   }
 }
 
@@ -184,7 +216,10 @@ const normalizeEventLog = (rawLog, index = 0) => {
   const eventId = normalizeText(rawLog.eventId || rawLog.templateId, '', 160)
   if (!eventId) return null
 
-  const at = normalizeTimestamp(rawLog.at || rawLog.createdAt || rawLog.updatedAt, Date.now() - index)
+  const at = normalizeTimestamp(
+    rawLog.at || rawLog.createdAt || rawLog.updatedAt,
+    Date.now() - index,
+  )
 
   return {
     id: normalizeText(rawLog.id, '', 180) || `simulation_event_legacy_${at}_${index}`,
@@ -213,9 +248,7 @@ const normalizeEventLogs = (rawLogs) => {
     seen.add(log.id)
     normalized.push(log)
   })
-  return normalized
-    .sort((a, b) => b.at - a.at)
-    .slice(0, SIMULATION_EVENT_LOG_LIMIT)
+  return normalized.sort((a, b) => b.at - a.at).slice(0, SIMULATION_EVENT_LOG_LIMIT)
 }
 
 const normalizeCooldown = (rawCooldown, fallbackKey = '') => {
@@ -228,7 +261,10 @@ const normalizeCooldown = (rawCooldown, fallbackKey = '') => {
   const key = createScopedKey(eventId, targetId)
   if (!key) return null
 
-  const lastTriggeredAt = normalizeTimestamp(rawCooldown.lastTriggeredAt || rawCooldown.updatedAt, 0)
+  const lastTriggeredAt = normalizeTimestamp(
+    rawCooldown.lastTriggeredAt || rawCooldown.updatedAt,
+    0,
+  )
   const cooldownMs = normalizePositiveMs(rawCooldown.cooldownMs)
   const expiresAt = normalizeTimestamp(rawCooldown.expiresAt, lastTriggeredAt + cooldownMs)
 
@@ -357,7 +393,8 @@ const normalizeChatSocialEventProposal = (rawProposal, index = 0) => {
     relationshipGate: normalizeChatSocialRelationshipGate(rawProposal.relationshipGate),
     policySnapshot: {
       surpriseMode: normalizeSurpriseMode(rawProposal.policySnapshot?.surpriseMode),
-      userAllowsGeneratedSocialEvents: rawProposal.policySnapshot?.userAllowsGeneratedSocialEvents !== false,
+      userAllowsGeneratedSocialEvents:
+        rawProposal.policySnapshot?.userAllowsGeneratedSocialEvents !== false,
       moduleEventsEnabled: rawProposal.policySnapshot?.moduleEventsEnabled !== false,
       cooldownActive: rawProposal.policySnapshot?.cooldownActive === true,
       dailyLimitReached: rawProposal.policySnapshot?.dailyLimitReached === true,
@@ -383,8 +420,66 @@ const normalizeChatSocialEventProposals = (rawProposals) => {
     .slice(0, SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT)
 }
 
+const EVENT_INSTANCE_LIFECYCLE_TRANSITIONS = Object.freeze({
+  [EVENT_INSTANCE_LIFECYCLE.ACTIVE]: new Set(Object.values(EVENT_INSTANCE_LIFECYCLE)),
+  [EVENT_INSTANCE_LIFECYCLE.RESOLVED]: new Set([EVENT_INSTANCE_LIFECYCLE.RESOLVED]),
+  [EVENT_INSTANCE_LIFECYCLE.DISMISSED]: new Set([EVENT_INSTANCE_LIFECYCLE.DISMISSED]),
+  [EVENT_INSTANCE_LIFECYCLE.UNAVAILABLE]: new Set([EVENT_INSTANCE_LIFECYCLE.UNAVAILABLE]),
+})
+
+const EVENT_INSTANCE_TEXT_TRANSITIONS = Object.freeze({
+  [EVENT_TEXT_STATUS.PENDING]: new Set(Object.values(EVENT_TEXT_STATUS)),
+  [EVENT_TEXT_STATUS.LOCAL_ONLY]: new Set([EVENT_TEXT_STATUS.LOCAL_ONLY]),
+  [EVENT_TEXT_STATUS.SUCCEEDED]: new Set([EVENT_TEXT_STATUS.SUCCEEDED]),
+  [EVENT_TEXT_STATUS.FALLBACK]: new Set([EVENT_TEXT_STATUS.FALLBACK]),
+})
+
+const createEventInstanceImmutableFingerprint = (instance) =>
+  JSON.stringify({
+    templateRef: instance.templateRef,
+    source: instance.source,
+    world: instance.world,
+    place: instance.place,
+    presence: instance.presence,
+    selection: instance.selection,
+    runtime: {
+      proposalId: instance.runtime.proposalId,
+      eligibilityLogId: instance.runtime.eligibilityLogId,
+    },
+    text: {
+      schemaVersion: instance.text.schemaVersion,
+      cacheKey: instance.text.cacheKey,
+      contextHash: instance.text.contextHash,
+    },
+    mediaIntent: instance.media.intent,
+    allowedChoiceIds: instance.choices.allowedIds,
+    adapterKey: instance.outcome.adapterKey,
+    createdAt: instance.timestamps.createdAt,
+    enteredAt: instance.timestamps.enteredAt,
+  })
+
+const canAdvanceEventInstance = (current, next) => {
+  if (
+    createEventInstanceImmutableFingerprint(current) !==
+    createEventInstanceImmutableFingerprint(next)
+  ) {
+    return false
+  }
+  if (!EVENT_INSTANCE_LIFECYCLE_TRANSITIONS[current.lifecycle]?.has(next.lifecycle)) return false
+  if (!EVENT_INSTANCE_TEXT_TRANSITIONS[current.text.status]?.has(next.text.status)) return false
+  if (next.text.attemptCount < current.text.attemptCount) return false
+  if (next.timestamps.updatedAt < current.timestamps.updatedAt) return false
+  if (current.choices.selectedId && next.choices.selectedId !== current.choices.selectedId)
+    return false
+  if (current.choices.outcomeId && next.choices.outcomeId !== current.choices.outcomeId)
+    return false
+  return true
+}
+
 export const useSimulationStore = defineStore('simulation', () => {
   const eventLogs = ref([])
+  const eventInstances = ref([])
+  const eventInstanceRestoreReport = ref({ inputCount: 0, restoredCount: 0, rejected: [] })
   const cooldownsByEvent = ref({})
   const dailyCounters = ref({})
   const chatSocialEventProposals = ref([])
@@ -393,12 +488,14 @@ export const useSimulationStore = defineStore('simulation', () => {
   const hasFinishedStorageHydration = ref(false)
 
   const eventLogCount = computed(() => eventLogs.value.length)
+  const eventInstanceCount = computed(() => eventInstances.value.length)
   const recentEventLogs = computed(() => eventLogs.value.slice(0, 24))
   const activeCooldownCount = computed(() => {
     const now = Date.now()
     return Object.values(cooldownsByEvent.value).filter((item) => item.expiresAt > now).length
   })
   const surpriseMode = computed(() => settings.value.surpriseMode)
+  const eventTextMode = computed(() => settings.value.eventTextMode)
   const pendingChatSocialEventProposals = computed(() =>
     chatSocialEventProposals.value.filter(
       (item) => item.status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
@@ -444,6 +541,15 @@ export const useSimulationStore = defineStore('simulation', () => {
     return nextMode
   }
 
+  const setEventTextMode = (mode) => {
+    const nextMode = EVENT_TEXT_MODE_VALUES.has(mode) ? mode : EVENT_TEXT_MODE.LOCAL_ONLY
+    settings.value = {
+      ...settings.value,
+      eventTextMode: nextMode,
+    }
+    return nextMode
+  }
+
   const setForegroundSessionTickEnabled = (enabled = true) => {
     settings.value = {
       ...settings.value,
@@ -462,6 +568,23 @@ export const useSimulationStore = defineStore('simulation', () => {
       foregroundSessionTickIntervalMs: nextIntervalMs,
     }
     return nextIntervalMs
+  }
+
+  const getEventInstance = (instanceId) => {
+    const normalizedId = normalizeEventId(instanceId, 220)
+    return eventInstances.value.find((item) => item.id === normalizedId) || null
+  }
+
+  const upsertEventInstance = (rawInstance) => {
+    const instance = normalizeEventInstanceV1(rawInstance)
+    if (!instance) return null
+    const current = eventInstances.value.find((item) => item.id === instance.id)
+    if (current && !canAdvanceEventInstance(current, instance)) return null
+    eventInstances.value = [
+      instance,
+      ...eventInstances.value.filter((item) => item.id !== instance.id),
+    ]
+    return instance
   }
 
   const recordEventLog = (input = {}) => {
@@ -525,8 +648,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     }
   }
 
-  const isCoolingDown = (eventId, options = {}) =>
-    getCooldownState(eventId, options).active
+  const isCoolingDown = (eventId, options = {}) => getCooldownState(eventId, options).active
 
   const incrementDailyCounter = ({
     eventId,
@@ -555,11 +677,10 @@ export const useSimulationStore = defineStore('simulation', () => {
     return counter
   }
 
-  const getDailyCounterState = (eventId, {
-    targetId = '',
-    dayKey = createDayKey(),
-    limit = 0,
-  } = {}) => {
+  const getDailyCounterState = (
+    eventId,
+    { targetId = '', dayKey = createDayKey(), limit = 0 } = {},
+  ) => {
     const key = createCounterKey(eventId, targetId, dayKey)
     const counter = key ? dailyCounters.value[key] : null
     const normalizedLimit = normalizePositiveLimit(limit, counter?.limit || 0)
@@ -576,11 +697,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const canUseDailyQuota = (eventId, options = {}) =>
     !getDailyCounterState(eventId, options).reached
 
-  const recordEventTrigger = ({
-    cooldownMs = 0,
-    dailyLimit = 0,
-    ...eventInput
-  } = {}) => {
+  const recordEventTrigger = ({ cooldownMs = 0, dailyLimit = 0, ...eventInput } = {}) => {
     const log = recordEventLog(eventInput)
     if (!log) return null
     if (log.status === SIMULATION_EVENT_STATUS.TRIGGERED) {
@@ -624,12 +741,7 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   const finalizeMapJourneyEventProposal = (
     proposalId,
-    {
-      outcome = '',
-      applied = false,
-      reason = '',
-      at = Date.now(),
-    } = {},
+    { outcome = '', applied = false, reason = '', at = Date.now() } = {},
   ) => {
     const existing = getMapJourneyEventProposal(proposalId)
     if (!existing || existing.status !== MAP_JOURNEY_EVENT_PROPOSAL_STATUS.PENDING_REVIEW) {
@@ -826,10 +938,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     }
   }
 
-  const approveChatSocialEventProposal = (
-    proposalId,
-    { chatStore, at = Date.now() } = {},
-  ) => {
+  const approveChatSocialEventProposal = (proposalId, { chatStore, at = Date.now() } = {}) => {
     const id = normalizeText(proposalId, '', 180)
     const existing = chatSocialEventProposals.value.find((item) => item.id === id)
     if (!existing || existing.status !== CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) return null
@@ -876,6 +985,13 @@ export const useSimulationStore = defineStore('simulation', () => {
     if (!rawSource || typeof rawSource !== 'object') return false
 
     eventLogs.value = normalizeEventLogs(rawSource.eventLogs)
+    const eventInstanceResult = normalizeEventInstancesV1(rawSource.eventInstances)
+    eventInstances.value = eventInstanceResult.instances
+    eventInstanceRestoreReport.value = {
+      inputCount: eventInstanceResult.inputCount,
+      restoredCount: eventInstanceResult.instances.length,
+      rejected: eventInstanceResult.rejected,
+    }
     cooldownsByEvent.value = normalizeCooldowns(rawSource.cooldownsByEvent || rawSource.cooldowns)
     dailyCounters.value = normalizeDailyCounters(rawSource.dailyCounters)
     chatSocialEventProposals.value = normalizeChatSocialEventProposals(
@@ -891,6 +1007,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(SIMULATION_STORAGE_KEY, {
       version: SIMULATION_STORAGE_VERSION,
+      migrate: migrateSimulationStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -898,12 +1015,14 @@ export const useSimulationStore = defineStore('simulation', () => {
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(SIMULATION_STORAGE_KEY, {
       version: SIMULATION_STORAGE_VERSION,
+      migrate: migrateSimulationStorage,
     })
     return applyPersistedSource(persisted)
   }
 
   const createBackupSnapshot = () => ({
     eventLogs: eventLogs.value.map((item) => ({ ...item })),
+    eventInstances: eventInstances.value.map((item) => cloneEventValue(item)),
     cooldownsByEvent: Object.fromEntries(
       Object.entries(cooldownsByEvent.value).map(([key, item]) => [key, { ...item }]),
     ),
@@ -930,6 +1049,7 @@ export const useSimulationStore = defineStore('simulation', () => {
       enabledModules: { ...settings.value.enabledModules },
       foregroundSessionTickEnabled: settings.value.foregroundSessionTickEnabled === true,
       foregroundSessionTickIntervalMs: settings.value.foregroundSessionTickIntervalMs,
+      eventTextMode: settings.value.eventTextMode,
     },
   })
 
@@ -949,6 +1069,8 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   const resetForTesting = () => {
     eventLogs.value = []
+    eventInstances.value = []
+    eventInstanceRestoreReport.value = { inputCount: 0, restoredCount: 0, rejected: [] }
     cooldownsByEvent.value = {}
     dailyCounters.value = {}
     chatSocialEventProposals.value = []
@@ -969,6 +1091,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   watch(
     [
       eventLogs,
+      eventInstances,
       cooldownsByEvent,
       dailyCounters,
       chatSocialEventProposals,
@@ -984,15 +1107,19 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   return {
     eventLogs,
+    eventInstances,
+    eventInstanceRestoreReport,
     cooldownsByEvent,
     dailyCounters,
     chatSocialEventProposals,
     mapJourneyEventProposals,
     settings,
     eventLogCount,
+    eventInstanceCount,
     recentEventLogs,
     activeCooldownCount,
     surpriseMode,
+    eventTextMode,
     pendingChatSocialEventProposals,
     pendingChatSocialEventProposalCount,
     pendingMapJourneyEventProposals,
@@ -1001,8 +1128,11 @@ export const useSimulationStore = defineStore('simulation', () => {
     isModuleEventsEnabled,
     setModuleEventsEnabled,
     setSurpriseMode,
+    setEventTextMode,
     setForegroundSessionTickEnabled,
     setForegroundSessionTickIntervalMs,
+    getEventInstance,
+    upsertEventInstance,
     recordEventLog,
     recordEventTrigger,
     markCooldown,

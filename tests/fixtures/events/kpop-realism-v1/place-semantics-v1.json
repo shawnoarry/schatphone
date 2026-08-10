@@ -1,0 +1,289 @@
+{
+  "fixtureSchemaVersion": 1,
+  "id": "real-seoul-place-semantics-v1",
+  "source": {
+    "mapPackId": "real-seoul-v1",
+    "mapPackVersion": 1,
+    "placeCount": 101,
+    "taxonomyGroupCount": 14,
+    "taxonomyIconTypeCount": 31,
+    "inventoryDate": "2026-08-10"
+  },
+  "resolverOrder": [
+    "explicit_place_semantics",
+    "pack_place_override",
+    "legacy_category_rule",
+    "unknown_fail_closed"
+  ],
+  "sourceInventory": {
+    "bank": { "count": 4, "icons": ["fas fa-building-columns"] },
+    "cinema": { "count": 4, "icons": ["fas fa-film"] },
+    "convenience_store": { "count": 3, "icons": ["fas fa-store"] },
+    "culture": {
+      "count": 8,
+      "icons": [
+        "fas fa-landmark",
+        "fas fa-tower-observation",
+        "fas fa-compass-drafting",
+        "fas fa-building"
+      ]
+    },
+    "fitness": {
+      "count": 3,
+      "icons": ["fas fa-person-running", "fas fa-dumbbell"]
+    },
+    "hospital": { "count": 4, "icons": ["fas fa-hospital"] },
+    "hotel": { "count": 3, "icons": ["fas fa-hotel"] },
+    "leisure": {
+      "count": 4,
+      "icons": [
+        "fas fa-music",
+        "fas fa-ticket",
+        "fas fa-baseball",
+        "fas fa-microphone-lines"
+      ]
+    },
+    "mall_general": { "count": 4, "icons": ["fas fa-bag-shopping"] },
+    "mall_luxury": { "count": 4, "icons": ["fas fa-gem"] },
+    "nightlife": {
+      "count": 4,
+      "icons": [
+        "fas fa-compact-disc",
+        "fas fa-record-vinyl",
+        "fas fa-guitar",
+        "fas fa-music"
+      ]
+    },
+    "other": { "count": 2, "icons": ["fas fa-building-columns"] },
+    "park": { "count": 3, "icons": ["fas fa-tree", "fas fa-water"] },
+    "pharmacy": {
+      "count": 3,
+      "icons": ["fas fa-prescription-bottle-medical"]
+    },
+    "plastic_surgery": { "count": 3, "icons": ["fas fa-user-doctor"] },
+    "public_safety": {
+      "count": 4,
+      "icons": ["fas fa-building-shield", "fas fa-fire-extinguisher"]
+    },
+    "residence_budget": { "count": 2, "icons": ["fas fa-house"] },
+    "residence_luxury": { "count": 2, "icons": ["fas fa-crown"] },
+    "residence_premium": {
+      "count": 2,
+      "icons": ["fas fa-building-shield"]
+    },
+    "residence_standard": { "count": 2, "icons": ["fas fa-building"] },
+    "school": { "count": 3, "icons": ["fas fa-graduation-cap"] },
+    "shop": { "count": 3, "icons": ["fas fa-scissors"] },
+    "supermarket": { "count": 3, "icons": ["fas fa-basket-shopping"] },
+    "transit": { "count": 1, "icons": ["fas fa-train-subway"] },
+    "transit_hub": {
+      "count": 6,
+      "icons": [
+        "fas fa-plane-departure",
+        "fas fa-plane",
+        "fas fa-train-subway",
+        "fas fa-bus-simple",
+        "fas fa-train"
+      ]
+    },
+    "work": {
+      "count": 17,
+      "icons": [
+        "fas fa-building",
+        "fas fa-city",
+        "fas fa-tower-broadcast",
+        "fas fa-photo-film",
+        "fas fa-newspaper"
+      ]
+    }
+  },
+  "legacyCategoryRules": {
+    "bank": { "placeCategoryId": "bank", "capabilityIds": ["finance", "wait"] },
+    "cinema": {
+      "placeCategoryId": "cinema",
+      "capabilityIds": ["watch", "meet", "wait"]
+    },
+    "convenience_store": {
+      "placeCategoryId": "convenience_store",
+      "capabilityIds": ["shop", "eat", "wait"]
+    },
+    "culture": {
+      "placeCategoryId": "cultural_landmark",
+      "capabilityIds": ["visit", "meet", "wait"]
+    },
+    "fitness": {
+      "placeCategoryId": "sports_facility",
+      "capabilityIds": ["exercise", "train", "meet", "wait"]
+    },
+    "hospital": {
+      "placeCategoryId": "hospital",
+      "capabilityIds": ["receive_care", "wait"]
+    },
+    "hotel": {
+      "placeCategoryId": "hotel",
+      "capabilityIds": ["stay", "rest", "eat", "meet", "wait"]
+    },
+    "leisure": {
+      "placeCategoryId": "leisure_venue",
+      "capabilityIds": ["visit", "meet", "wait"]
+    },
+    "mall_general": {
+      "placeCategoryId": "shopping_center",
+      "capabilityIds": ["shop", "eat", "meet", "wait"]
+    },
+    "mall_luxury": {
+      "placeCategoryId": "luxury_shopping_center",
+      "capabilityIds": ["shop", "eat", "meet", "wait"]
+    },
+    "nightlife": {
+      "placeCategoryId": "nightlife_venue",
+      "capabilityIds": ["socialize", "perform", "meet", "wait"]
+    },
+    "other": {
+      "placeCategoryId": "civic_place",
+      "capabilityIds": ["visit", "receive_help", "wait"]
+    },
+    "park": {
+      "placeCategoryId": "park",
+      "capabilityIds": ["visit", "exercise", "meet", "rest"]
+    },
+    "pharmacy": {
+      "placeCategoryId": "pharmacy",
+      "capabilityIds": ["shop", "receive_care", "wait"]
+    },
+    "plastic_surgery": {
+      "placeCategoryId": "clinic",
+      "capabilityIds": ["receive_care", "wait"]
+    },
+    "public_safety": {
+      "placeCategoryId": "public_service",
+      "capabilityIds": ["receive_help", "wait"]
+    },
+    "residence_budget": {
+      "placeCategoryId": "residence",
+      "capabilityIds": ["rest", "meet", "study", "practice"]
+    },
+    "residence_luxury": {
+      "placeCategoryId": "residence",
+      "capabilityIds": ["rest", "meet", "study", "practice"]
+    },
+    "residence_premium": {
+      "placeCategoryId": "residence",
+      "capabilityIds": ["rest", "meet", "study", "practice"]
+    },
+    "residence_standard": {
+      "placeCategoryId": "residence",
+      "capabilityIds": ["rest", "meet", "study", "practice"]
+    },
+    "school": {
+      "placeCategoryId": "education_campus",
+      "capabilityIds": ["study", "train", "meet", "wait"]
+    },
+    "shop": { "placeCategoryId": "shop", "capabilityIds": ["shop", "wait"] },
+    "supermarket": {
+      "placeCategoryId": "supermarket",
+      "capabilityIds": ["shop", "eat", "wait"]
+    },
+    "transit": {
+      "placeCategoryId": "transit_station",
+      "capabilityIds": ["travel", "wait", "meet"]
+    },
+    "transit_hub": {
+      "placeCategoryId": "transit_hub",
+      "capabilityIds": ["travel", "wait", "meet", "shop", "eat"]
+    },
+    "work": {
+      "placeCategoryId": "workplace",
+      "capabilityIds": ["work", "meet", "wait"]
+    }
+  },
+  "placeOverrides": {
+    "seoul-sm-hq": {
+      "placeCategoryId": "entertainment_agency",
+      "capabilityIds": ["work", "meet", "wait"]
+    },
+    "seoul-hybe-hq": {
+      "placeCategoryId": "entertainment_agency",
+      "capabilityIds": ["work", "meet", "wait"]
+    },
+    "seoul-jyp-hq": {
+      "placeCategoryId": "entertainment_agency",
+      "capabilityIds": ["work", "meet", "wait"]
+    },
+    "seoul-yg-hq": {
+      "placeCategoryId": "entertainment_agency",
+      "capabilityIds": ["work", "meet", "wait"]
+    },
+    "seoul-cube-hq": {
+      "placeCategoryId": "entertainment_agency",
+      "capabilityIds": ["work", "meet", "wait"]
+    },
+    "seoul-starship-hq": {
+      "placeCategoryId": "entertainment_agency",
+      "capabilityIds": ["work", "meet", "wait"]
+    },
+    "seoul-fnc-hq": {
+      "placeCategoryId": "entertainment_agency",
+      "capabilityIds": ["work", "meet", "wait"]
+    },
+    "seoul-kbs-hq": {
+      "placeCategoryId": "broadcast_station",
+      "capabilityIds": ["work", "meet", "wait", "record", "perform"]
+    },
+    "seoul-mbc-hq": {
+      "placeCategoryId": "broadcast_station",
+      "capabilityIds": ["work", "meet", "wait", "record", "perform"]
+    },
+    "seoul-sbs-hq": {
+      "placeCategoryId": "broadcast_station",
+      "capabilityIds": ["work", "meet", "wait", "record", "perform"]
+    },
+    "seoul-jtbc-hq": {
+      "placeCategoryId": "broadcast_station",
+      "capabilityIds": ["work", "meet", "wait", "record", "perform"]
+    },
+    "seoul-cj-enm-center": {
+      "placeCategoryId": "production_center",
+      "capabilityIds": ["work", "meet", "wait", "record", "perform"]
+    },
+    "seoul-ytn-newsquare": {
+      "placeCategoryId": "news_media_center",
+      "capabilityIds": ["work", "meet", "wait", "record"]
+    },
+    "seoul-gocheok-dome": {
+      "placeCategoryId": "performance_venue",
+      "capabilityIds": ["perform", "rehearse", "meet", "wait"]
+    },
+    "seoul-kspo-dome": {
+      "placeCategoryId": "performance_venue",
+      "capabilityIds": ["perform", "rehearse", "meet", "wait"]
+    },
+    "seoul-jangchung-arena": {
+      "placeCategoryId": "performance_venue",
+      "capabilityIds": ["perform", "rehearse", "train", "meet", "wait"]
+    },
+    "seoul-jennyhouse-cheongdam-hill": {
+      "placeCategoryId": "beauty_service",
+      "capabilityIds": ["prepare", "meet", "wait"]
+    },
+    "seoul-soonsoo-cheongdam": {
+      "placeCategoryId": "beauty_service",
+      "capabilityIds": ["prepare", "meet", "wait"]
+    },
+    "seoul-a-by-bom-cheongdam": {
+      "placeCategoryId": "beauty_service",
+      "capabilityIds": ["prepare", "meet", "wait"]
+    }
+  },
+  "unknownFallback": {
+    "placeCategoryId": "unknown",
+    "capabilityIds": [],
+    "eligibility": "fail_closed"
+  },
+  "guardrails": {
+    "iconIsLogicKey": false,
+    "nameInferenceAllowed": false,
+    "missingCapabilityFailsClosed": true,
+    "legacyPlaceRecordsMutated": false
+  }
+}
