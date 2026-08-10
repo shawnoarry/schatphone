@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -22,6 +22,7 @@ Current routing note:
 - roadmap 4.11 Map renderer, packs, places, pins, trips, and validation belong only to `map-calendar-reminders`; the functional group remains Map-only.
 - the accepted Calendar/Agenda Journey orchestration direction belongs primarily to `map-calendar-reminders` for Calendar, Agenda Journey, Activity Session, and schedule handoffs. Engage `event-runtime-and-world-hub` only for eligibility/randomness/review/log semantics, `module-architecture-governance` for the hidden Schedule Orchestrator and persistence Interfaces, and `visual-and-ia-governance` when the Calendar or Agenda Journey frontend slice is promoted. This direction does not change roadmap 4.11 Map ownership.
 - roadmap 4.13 Music belongs to `visual-and-ia-governance` for installed-app identity, Home/App Store entry, Now Playing, and mini-player acceptance, and to `module-architecture-governance` for provider/playback contracts, persistence, credentials, backup, and bounded Chat/Map Interfaces. Chat and Map packages are engaged only when an actual caller is separately promoted.
+- roadmap 4.15 shared runtime TTS belongs primarily to `module-architecture-governance` for provider Adapters, Cloudflare Worker behavior, persistence, credentials, preview-media lifecycle, and future caller contracts. Engage `chat-and-chat-directory` for the current Settings entry and any later read-aloud/voice-message behavior; development-time ElevenLabs Skills remain tooling rather than runtime ownership.
 
 ## 1. Standard Package Structure
 
@@ -74,6 +75,7 @@ Use for:
 - service accounts
 - role binding into Chat
 - rich message surfaces
+- Chat Settings entry and later approved caller behavior for the shared TTS Module
 
 Current handoff page:
 
@@ -171,6 +173,7 @@ Use for:
 - engineering decomposition
 - long-lived code quality governance
 - Music provider/playback Interfaces, persistence, credentials, and backup boundaries
+- TTS provider/Worker Interfaces, persistence, credentials, preview-media lifecycle, and caller boundaries
 
 Current handoff page:
 

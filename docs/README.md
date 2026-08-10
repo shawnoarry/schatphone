@@ -1,6 +1,6 @@
 # SchatPhone Documentation Map
 
-Updated: 2026-07-17
+Updated: 2026-08-10
 
 This is the top-level map for project documents. If two documents seem to overlap, use this file to decide which one is current.
 
@@ -97,6 +97,12 @@ Compatibility entry docs still exist:
   - local tooling assumptions
   - project-local skill inventory
   - cross-PC setup and install notes
+- `docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md`
+  - project-local ElevenLabs TTS, music, and sound-effect Skill setup
+  - secure cross-PC Key handling, verification, first smoke, update, and handoff rules
+- `docs/process/TTS_PROVIDER_SETUP.md`
+  - runtime Cloudflare MeloTTS and MiniMax setup on another PC
+  - device-local Key handling, Worker binding/deployment, and mock/real smoke boundaries
 - `docs/process/CODEX_FAST_SERVICE_TIER_TROUBLESHOOTING.md`
   - machine-local Codex Fast / service-tier billing troubleshooting
   - VS Code persisted-state check and backup-edit procedure

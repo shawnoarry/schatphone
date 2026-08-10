@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -17,6 +17,7 @@ Updated: 2026-08-09
 - Wallet `wallet_receipt_share` finalization that attaches the actual receiving conversation only at send time, preserving the transaction's original Chat lineage while making Wallet return to the card's conversation
 - release-level rich-message acceptance for structured edit, media type/size recovery, one-off and Gallery-backed images, accessibility labels, persistence, source actions, and inert legacy Mini Scene history
 - Chat Settings for Chat-local appearance entry points, diagnostics, and default-behavior surfaces
+- Chat Settings entry for shared TTS configuration and temporary Chinese preview; keep provider transport, credentials, audio lifecycle, and future caller behavior inside the TTS Module
 - Chat Appearance V1: layout classes, independent message avatar visibility, selectable bubble treatments, content-fit sizing for ordinary text with bounded rich-content rows, normalized persisted settings, shared preview rows, and iMessage-like thread-header identity presentation
 - Chat Appearance preview polish: a first-screen live header/thread/composer preview, compact layout/theme/bubble selectors, layout-specific default palettes, role legend, iMessage identity header, and replaceable-avatar placeholder guidance
 - Chat Appearance route-shell coverage: one shared class resolver and semantic page/sheet/panel/header/tab tokens across Messages, Contacts/Services, Groups, Me, Chat Settings, Chat Appearance, and retained feature routes while keeping bubble colors independently selectable
@@ -80,3 +81,4 @@ Treat these as bugs:
 11. `product_link` share cards are presented as purchased, delivered, or directly giftable items; user-sendable gifts should be source-created digital gifts, vouchers, or virtual gifts
 12. Chat executes legacy/generated Mini Scene HTML or copies Book regex, profile resolution, artifact persistence, presenter, or fallback logic into Chat
 13. Chat Appearance presentation controls mutate message, relationship, or source-module truth, or expose a Chat-local header note as authoritative relationship progress
+14. the TTS preview is treated as a sent voice message, persisted in Chat, or allowed to upgrade `voice_virtual` without a separately approved Chat media contract

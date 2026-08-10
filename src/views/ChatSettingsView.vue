@@ -55,6 +55,10 @@ const openChatAppearance = () => {
   router.push('/chat-settings/appearance')
 }
 
+const openVoiceSettings = () => {
+  router.push('/chat-settings/voice')
+}
+
 const openNetworkCenter = () => {
   router.push('/network')
 }
@@ -162,6 +166,13 @@ const settingsEntries = computed(() => [
       ? t('系统通知开启', 'System notifications on')
       : t('系统通知关闭', 'System notifications off'),
     action: () => router.push('/settings'),
+  },
+  {
+    id: 'voice',
+    icon: 'fas fa-volume-high',
+    title: t('语音与朗读', 'Voice & Read Aloud'),
+    meta: t('MeloTTS 与 MiniMax', 'MeloTTS and MiniMax'),
+    action: openVoiceSettings,
   },
   {
     id: 'behavior',

@@ -1,6 +1,6 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
@@ -14,6 +14,7 @@ Confirmed persistence dependency for future work:
 - older messages may be paged or moved into reversible cold archives, but Chat must preserve review, search/restore expectations, source references, and paused-thread read-only semantics;
 - Chat owns conversation behavior and records only; it does not own global role lifecycle or relationship truth.
 - Chat durably stores messages/rich records formally committed to Chat and minimum AI provenance, not the full assembled prompt, raw provider response, uncommitted candidate, or transport payload; future modules own their own committed content, and any full capture is an explicit temporary diagnostic concern.
+- Chat Settings now links to the shared TTS Module's device-local configuration and temporary preview surface. The first slice does not change Chat messages, `voice_virtual`, AI reply transport, automatic read-aloud behavior, or Chat persistence.
 
 What is already landed:
 
@@ -92,6 +93,7 @@ Do not start another broad Chat decomposition by inertia. GitHub Pages has confi
 11. Do not let AI-generated or runtime-generated role social proposals mutate Chat state directly; they must go through the event-runtime social-event review seam.
 12. Do not make Chat own currency definitions, exchange rates, transfer confirmation, receipts, or a separate ledger; Wallet owns those records, and Chat account cards must not deduct funds.
 13. Do not execute legacy `htmlSnippet`, accept raw generated HTML, or copy Mini Scene profile/regex/presenter logic into Chat.
+14. Do not persist TTS preview audio or provider payloads as Chat history, or treat the current settings preview as a durable voice-message implementation.
 
 Current Chat preview note: the default Kakao, WeChat, and iMessage layouts each carry an explicit shell/thread palette. Chat Appearance previews label contact versus user messages, show the iMessage header identity row, and explain that letter avatars are replaceable placeholders.
 
@@ -108,3 +110,4 @@ At the end of a meaningful round, check and update:
 5. `docs/architecture/ROLE_BINDING_CONTRACT.md` when binding semantics changed
 6. `docs/pm/contacts-relationship-system-v2/README.md` when Contacts vs Chat Directory meaning changed
 7. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` when Chat Mini Scene compatibility or request meaning changes
+8. `docs/architecture/TTS_MODULE_CONTRACT.md` when Chat's TTS entry, caller behavior, or voice-message boundary changes

@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 This is the only live execution board for implementation order.
 
@@ -38,6 +38,7 @@ Roadmap interpretation:
 - 4.11 is `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: the accepted MJE-3 checkpoint event remains non-blocking, and MJE-4 presents passive progress as Footprints plus an optional per-world place-knowledge mode. In Footprints-gated worlds, completed positioned journeys can reveal a small deterministic set of nearby authored facilities; old saves remain all-known. MJE-5 remains separately gated.
 - 4.12 is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY / NOT_STARTED`: the visible Calendar remains the long-range confirmed-plan app, its future Month/Week/Agenda views are distinct from a future short-range Agenda Journey app, and a hidden Schedule Orchestrator will link them without taking ownership of Map Journey, Event Runtime, Activity Session, or downstream values. No route, store, timer, popup, narrative projection, persistence field, or migration is implemented by this decision.
 - 4.13 is `PARTIAL_DONE / CHKSZ_RADIO_BROWSER_LOCAL_AND_MAP_MEDIA_INTEGRATED_LOCAL`: Music is an installed listening app with browser playback, library/queue/search, generic JSON configuration, a no-key Radio Browser HTTPS/MP3 live-station preset, a dedicated ChKSz NetEase/QQ/Kugou Adapter, direct HTTPS URL songs, Music-owned device-local file import, a global floating player, Chat track sharing, and an active-journey Map music/radio panel. Live-station uptime remains external; real-key rights/CORS smoke, true-device media behavior, Chat search, and external Map queue requests remain separate gates.
+- 4.15 is `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: the first shared runtime TTS slice provides Cloudflare Workers AI MeloTTS and user-key MiniMax Chinese preview behind one contract. The bounded Worker route is deployed at `https://schatphone.noarry.workers.dev`; Chat message audio, automatic read-aloud, durable media, stable real-provider quality/playback proof, and production gateway hardening remain separately gated.
 
 ## 3. Completed Baselines
 
@@ -603,6 +604,42 @@ Focused contract:
 
 - `docs/architecture/MUSIC_MODULE_CONTRACT.md`.
 
+### 4.15 Shared Runtime Text To Speech
+
+Status: `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`
+
+Promoted first slice completed on 2026-08-10:
+
+1. added one shared TTS contract/API/Store boundary separately from conversation AI, Music, Image Generation, and development-time audio Skills;
+2. added Cloudflare Workers AI MeloTTS at the bounded `POST /api/tts/v1/speech` route with AI binding, origin/method/input/language/rate/output controls, binary/Base64 response normalization, and redacted errors;
+3. added direct MiniMax T2A with a device-local user Key, official-host restriction, Chinese language boost, selectable model/voice/emotion/speed, Hex MP3 validation, and normalized Blob output;
+4. added `/chat-settings/voice` for provider configuration and temporary Chinese preview, while leaving Chat messages, `voice_virtual`, automatic reply reading, and durable audio unchanged;
+5. separately inventoried `schatphone:tts:config` and `schatphone:tts:credentials` as device-local ordinary-backup exclusions, and kept preview audio in revocable runtime object URLs only;
+6. added contract/Adapter/Store/View/Worker tests, desktop/simulated-mobile route coverage, Wrangler AI-binding dry-run, an architecture contract, and a cross-PC provider setup handoff.
+7. authenticated Wrangler against account `0de8b7a0ecea09c02667775b8c467ffd`, deployed the Worker route, and corrected the public `zh` to provider-native `ZH` boundary discovered during live inference. The final end-to-end playback smoke remains open because subsequent Workers AI calls returned provider-side `3043 Internal server error` for both English and Chinese while the Worker route and binding remained healthy.
+8. deployed reliability hardening as Worker version `d9e15cf0-f81f-46dc-bc04-22752547a994`: MeloTTS now exposes only the verified `zh`/`en` inputs, validates and labels WAV/MP3 from actual bytes, retries one temporary provider failure with shared cancellation/timeout, and presents a provider-outage fallback to MiniMax. One diagnosis returned 87,398 valid WAV bytes, while two bounded post-deployment Chinese requests still returned `TTS_PROVIDER_UNAVAILABLE`; provider quality/playback proof therefore remains open.
+
+Remaining stages are separately gated:
+
+- one stable authorized end-to-end Chinese quality/cost/playback smoke for MeloTTS after the provider-side `3043` failure clears, plus the separately keyed MiniMax smoke;
+- production decision for user-owned keys or personal gateways, durable abuse controls, quota/cost ownership, and monitoring;
+- explicit Chat read-aloud and/or durable voice-message contract covering user gesture, cancellation, playback, schema, media retention, accessibility, backup, and migration;
+- additional providers only through normalized Adapters, without provider branching in Chat.
+
+Primary package:
+
+- `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`
+
+Secondary package:
+
+- `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md`
+
+Focused contracts:
+
+- `docs/architecture/TTS_MODULE_CONTRACT.md`
+- `docs/process/TTS_PROVIDER_SETUP.md`
+
+
 ## 5. Guarded Or Deferred Directions
 
 ### Gallery-Driven Relationship Memory
@@ -638,10 +675,11 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 5. `P1 DONE 2026-08-09`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, one ordinary Shopping life-consequence flow, focused Wallet quote explainability, Wallet Activity search/monthly statements/verified payees, Wallet receipt sharing, and configurable multi-screen Home release curation are complete at local desktop/simulated-mobile acceptance.
 6. `P1 PARTIAL_DONE 2026-08-09` 4.9/4.5 hosted release proof: GitHub Pages Run #31294272595, base-path smoke, and the prior direct-provider Chat/reload flow pass. Commit `a1418ed` is deployed through the Git-connected Vercel and Cloudflare builds; both restricted relay backends passed a no-secret upstream probe plus a GitHub Pages real-provider model-list and Chat smoke (`6` models, reply `OK`). Installed-PWA/relaunch, backup round trip, external protection checks, and named true-device evidence remain.
 7. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
-8. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
-9. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
-10. `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: 4.11 local narrative-map baseline now includes accepted transport planning, lifecycle/checkpoints, the first non-blocking checkpoint event adapter, Footprints IA, and optional per-world authored-facility discovery. Active exploration, event-driven place reveal, candidate-place ownership, transit topology, broader-city, and true-device stages remain gated by the explicit order above.
-11. `P2 ARCHITECTURE_ACCEPTED / NOT_STARTED`: 4.12 Calendar/Agenda Journey orchestration is documented only. CJA-1 Calendar information architecture requires a separate user acceptance decision; no Agenda Journey, Schedule Orchestrator, Activity Session, event popup, Narrative Timeline, or persistence implementation has started.
+8. `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: 4.15 has landed Cloudflare MeloTTS and device-key MiniMax behind the shared runtime TTS Module for temporary Chinese preview, and the bounded Worker route is deployed. Stable end-to-end provider playback proof, production gateway policy, Chat read-aloud, and durable voice messages remain separate gates.
+9. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
+10. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
+11. `P2 PARTIAL_DONE / MJE-1 THROUGH MJE-4 USER_ACCEPTED_INTEGRATED_LOCAL`: 4.11 local narrative-map baseline now includes accepted transport planning, lifecycle/checkpoints, the first non-blocking checkpoint event adapter, Footprints IA, and optional per-world authored-facility discovery. Active exploration, event-driven place reveal, candidate-place ownership, transit topology, broader-city, and true-device stages remain gated by the explicit order above.
+12. `P2 ARCHITECTURE_ACCEPTED / NOT_STARTED`: 4.12 Calendar/Agenda Journey orchestration is documented only. CJA-1 Calendar information architecture requires a separate user acceptance decision; no Agenda Journey, Schedule Orchestrator, Activity Session, event popup, Narrative Timeline, or persistence implementation has started.
 
 ## 7. Validation Rule
 

@@ -50,6 +50,12 @@
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "2da1d23b8f53cfe67f2e0b68924ab9f4ec400bb6480de097007eeaeb517d1722"
     },
+    "music": {
+      "source": "elevenlabs/skills",
+      "sourceType": "github",
+      "skillPath": "music/SKILL.md",
+      "computedHash": "0d9d210cae860d17b890ef486f8f1524d0bb476a6c1eafa97cd303ee0e15b06d"
+    },
     "pinia": {
       "source": "antfu/skills",
       "sourceType": "github",
@@ -61,6 +67,18 @@
       "sourceType": "github",
       "skillPath": "skills/playwright-testing/SKILL.md",
       "computedHash": "0e1bbb2bd13da1cacafe3cf0507127b38fd1153e3e6fc836a2d7ebd03dbcd7a8"
+    },
+    "sound-effects": {
+      "source": "elevenlabs/skills",
+      "sourceType": "github",
+      "skillPath": "sound-effects/SKILL.md",
+      "computedHash": "49dba2b616f4a9b3fcd210c6b8019e0a9909994c7b56c8aebbffbecda61b9f93"
+    },
+    "text-to-speech": {
+      "source": "elevenlabs/skills",
+      "sourceType": "github",
+      "skillPath": "text-to-speech/SKILL.md",
+      "computedHash": "d702e45556a51ea4b75aa4119e9e18ac72895fd9a49c476d61cdbf7c4b52ae71"
     },
     "unit-test-vue-pinia": {
       "source": "github/awesome-copilot",

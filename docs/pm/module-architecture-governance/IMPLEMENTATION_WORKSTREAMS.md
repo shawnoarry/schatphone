@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-07-22
+Updated: 2026-08-10
 
 ## 1. Workstream A: Ownership Closure
 
@@ -31,6 +31,7 @@ Updated: 2026-07-22
 - preserve the Image Generation Module's separate public-config, credential, and candidate carriers; ordinary backup restores only public profiles/defaults/routing and must not clear or export local secrets/candidates
 - preserve Music's split carriers: public library/provider/integration state uses required `system-settings` backup coverage, while `schatphone:music:credentials` remains device-local and excluded
 - keep one bounded internal App-to-Chat share draft excluded from backup; it may carry a normalized source snapshot and return route, but never provider credentials, stream URLs, source mutations, or a sent-message claim
+- preserve TTS's separate device-local configuration and credential carriers; preview audio remains runtime-only until a separately approved durable-media/message contract exists
 
 ## 4. Workstream D: Cleanup Debt
 
@@ -49,6 +50,7 @@ Updated: 2026-07-22
 - isolate security/toolchain updates from product features
 - keep provider errors and diagnostics redacted, and keep optional proxy deployment/security approval separate from direct-browser Camera availability
 - keep Music provider credentials out of public profiles, static secret headers, cross-module payloads, and plaintext backup; direct browser playback remains subject to provider authorization, CORS, mixed-content, and stream-lifetime policy
+- keep MiniMax TTS keys device-local and restricted to official endpoint hosts; keep the shared Cloudflare MeloTTS route bounded by origin, input, rate, output, and redacted-error controls, and do not describe it as an unlimited production gateway
 
 ## 6. Workstream F: CI And Release Confidence
 
@@ -104,3 +106,4 @@ Treat these as bugs:
 16. a consumer independently assembles world context or reads mutable owner arrays instead of using the shared World Setting Interface
 17. Chat or Map receives a Music API key, provider endpoint/header, raw response, queue contents, or stream URL instead of a bounded Music reference/projection
 18. an external Music deep link starts playback without an explicit user gesture or changes the queue without the Music integration policy and confirmation boundary
+19. Chat or another caller sends provider-specific TTS payloads, persists preview blobs/raw audio encodings, copies credentials, or upgrades `voice_virtual` without an approved message/media contract

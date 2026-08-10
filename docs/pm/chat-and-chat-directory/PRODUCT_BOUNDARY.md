@@ -1,6 +1,6 @@
 # Chat And Chat Directory Product Boundary
 
-Updated: 2026-08-08
+Updated: 2026-08-10
 
 This file defines the ownership boundary between Chat, Chat Directory, and Contacts.
 
@@ -29,6 +29,7 @@ Chat owns:
 - AI reply trigger and prompt assembly
 - the user-facing Chat App shell for message entry and thread-level controls
 - Chat Settings as the Chat-local behavior, appearance-entry, and diagnostics surface
+- Chat Settings as the entry surface for shared TTS provider configuration and temporary preview, without taking ownership of TTS transport, credentials, or audio truth
 - Chat Appearance presentation settings for the shared Chat-owned route shell, message layout, independent avatar visibility, bubble treatments, content-fit sizing for ordinary text, and the iMessage-like thread-header identity presentation
 - Chat Me as the Chat-local user identity, anonymity, and recent social-presence surface
 - confirmed Chat social/channel state once the social shell lands, such as whether a role can message, is pending friend confirmation, is blocked by the user, or has blocked the user
@@ -45,6 +46,7 @@ Chat does not own:
 - product, voucher, delivery, route, calendar, media, or asset source truth represented by a `share_card`
 - ownership of the external webpage represented by a shared URL, or permission to send an incoming share without user confirmation
 - shared Mini Scene world-profile resolution, Book regex execution, artifact truth, or HTML Presenter security
+- TTS provider protocols, API keys, raw responses, temporary preview audio, or a durable voice-message media contract
 
 ### Mini Scene Compatibility
 

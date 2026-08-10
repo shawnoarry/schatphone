@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -13,7 +13,7 @@ SchatPhone is in an internal personal-development phase: product definition, cor
 The core product can already support meaningful use and continued development:
 
 - Lock -> Home -> app navigation is stable;
-- Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Music, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
+- Chat, Contacts, relationship memory, WorldBook/Book, Map/Calendar/Reminders, Music, runtime TTS preview, Camera/Gallery, Shopping/Food Delivery/Wallet, and optional runtime review are connected;
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
 - release commit `a1418ed` has passing lint, 210 files / 1497 unit tests, production and Cloudflare builds, focused desktop/Pixel 5 restricted-relay evidence, Wrangler dry-run, governance, and GitHub Pages Run #31294272595. The deployed Vercel and Cloudflare relays each returned 6 real provider models and Chat smoke reply `OK` from GitHub Pages while preserving Direct as the default; installed PWA, external protections, and named physical-device proof remain open.
 
@@ -26,7 +26,7 @@ The current work is concentrated in four areas:
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus lightweight custom-map intake, 4.12 keeps Calendar/Agenda orchestration documentation-only, and 4.13 has an integrated local Music first slice plus Chat track sharing and active-journey Map music/radio, with provider/device/remaining-caller proof still gated.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus lightweight custom-map intake, 4.12 keeps Calendar/Agenda orchestration documentation-only, 4.13 has an integrated local Music first slice plus Chat track sharing and active-journey Map music/radio with provider/device/remaining-caller proof still gated, and 4.15 has a deployed first shared runtime TTS preview slice with stable provider quality/playback and durable Chat audio stages still gated.
 
 ## 2. Product Positioning
 
@@ -57,6 +57,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Wallet / Gallery | `Wallet card-pack + role-payee V1 + historical quote detail; Gallery support platform` | Wallet exposes six fictional single-currency accounts/debit cards and one fictional six-currency credit card over one ledger truth; verified role account cards lead to explicit same-currency confirmation and separate receipts, while every Activity row can open a general detail that presents saved quote provenance without re-quotation; display currency and rates stay in Wallet Settings, NPC balances and automatic exchange remain excluded, and Gallery's deeper Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
 | Music | `Focused first slice with Chat and Map callers, provider proof staged` | consumer playback, library, queue, search, user-owned generic JSON/ChKSz providers, no-key Radio Browser HTTPS/MP3 live radio, device-local excluded keys, Home/App Store entry, global floating player, Chat track sharing, and active-journey Map music/radio are implemented; live-station uptime remains external, while real-provider/CORS, true-device media, Chat search, and external Map queue requests remain |
+| Text To Speech | `Temporary preview V1 deployed, provider quality proof staged` | one runtime contract supports Cloudflare Workers AI MeloTTS and device-key MiniMax Chinese preview; the bounded Cloudflare Worker route is deployed, configuration/keys are backup-excluded, preview audio is runtime-only, and stable provider playback plus Chat read-aloud/durable voice messages remain unimplemented |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
 | Event Runtime / World Hub | `Partial / Guarded` | safe foreground review baseline; stronger controls and background autonomy are not finished |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
@@ -251,6 +252,16 @@ Roadmap 4.13 is `PARTIAL_DONE / CHKSZ_RADIO_BROWSER_LOCAL_AND_MAP_MEDIA_INTEGRAT
 - include audio focus/interruption, media controls, safe areas, keyboard, and PWA relaunch in named true-device evidence;
 - preserve the integrated Chat track-share and active-journey Map media callers; promote Chat search or external Map queue requests one caller at a time without copying provider credentials, endpoints, headers, raw responses, queue contents, local media IDs, or stream URLs;
 - require a separate provider-specific contract for OAuth, signed streams, DRM, offline download, or a hosted proxy.
+
+
+### P2: Runtime TTS Provider Proof
+
+Roadmap 4.15 is `PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`:
+
+- preserve the shared TTS contract and keep Cloudflare MeloTTS, MiniMax, and future provider protocols behind normalized Adapters;
+- rerun the authorized end-to-end Chinese quality/cost/playback smoke after the current Workers AI provider-side `3043` failure clears, then run the separately keyed MiniMax comparison;
+- decide production user-key/personal-gateway and abuse-control policy before treating the shared Worker as production infrastructure;
+- design Chat read-aloud or durable voice messages separately, including user gesture, cancellation, playback, schema, retention, accessibility, and backup.
 
 ### P2: Calendar And Agenda Journey Orchestration
 

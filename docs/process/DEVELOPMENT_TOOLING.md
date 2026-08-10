@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-07-25
+Updated: 2026-08-10
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -196,10 +196,13 @@ The current externally sourced repo-local skills recorded in `.agents/skills` an
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
 | `image-to-code` | Pixel-level 750px source-image, screenshot, or design-export restoration into code plus high-resolution PNG slices | `docs/process/VISUAL_WORKFLOW.md` |
 | `improve-codebase-architecture` | Refactor seams, ownership review, decomposition planning | module-architecture package; `EVENT_WORKFLOW.md` for event seams |
+| `music` | ElevenLabs music-generation prototypes, composition plans, and inpainting experiments | `docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md`; product integration remains separately gated |
 | `pinia` | Store shape, actions, hydration, persistence patterns | owning task package; `EVENT_WORKFLOW.md` for event runtime |
 | `vue-pinia-best-practices` | Vue + Pinia reactivity and store-consumption patterns | owning task package; `EVENT_WORKFLOW.md` for event runtime |
 | `unit-test-vue-pinia` | Vue/Pinia unit tests for stores, components, composables | owning task package; `EVENT_WORKFLOW.md` for event runtime |
 | `playwright-testing` | Browser-level journey testing and E2E verification | owning task package; specialist workflow when one applies |
+| `sound-effects` | ElevenLabs sound-effect and ambience candidates for reviewed development/content work | `docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md`; runtime use remains separately gated |
+| `text-to-speech` | ElevenLabs speech and role-voice prototypes | `docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md`; current Chat voice cards remain virtual |
 | `game-engine` | Real game-loop, Canvas/WebGL, minigame work only | `docs/process/EVENT_WORKFLOW.md` |
 | `chinese-novelist` | Chinese fiction craft helper for story-world text, character tension, dialogue, and scene texture; optional support for WorldBook source writing | `docs/process/DEVELOPMENT_TOOLING.md` |
 
@@ -385,6 +388,36 @@ The `skills-lock.json` entry should record:
 
 After installation, restart Codex or the agent host before expecting the skill to appear in the active skill list.
 
+### 8.3 ElevenLabs Audio Skills
+
+The project vendors exactly three optional ElevenLabs development Skills:
+
+```text
+text-to-speech
+music
+sound-effects
+```
+
+They support temporary speech, music, and sound-effect prototypes. They are not SchatPhone runtime
+providers and do not approve SDK dependencies, persisted audio, Chat/Phone voice behavior, or
+automatic generation.
+
+Cross-PC installation, secure Key setup, zero-credit verification, live smoke testing, project
+boundaries, update rules, and handoff format are owned by:
+
+```text
+docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md
+```
+
+The reviewed clean-install command is:
+
+```powershell
+npx.cmd -y skills add elevenlabs/skills --skill text-to-speech music sound-effects --copy
+```
+
+Normal secondary-PC setup should pull the vendored `.agents/skills` directories and
+`skills-lock.json` through Git rather than refreshing upstream independently.
+
 ## 9. Cross-PC Setup Checklist
 
 Use this checklist before another device takes over development:
@@ -397,8 +430,9 @@ Use this checklist before another device takes over development:
 6. Confirm the vendored project-local skills from `.agents\skills` and `skills-lock.json`; do not reinstall them from moving upstream branches during ordinary setup.
 7. If visual work is in scope, follow `docs/process/VISUAL_WORKFLOW.md` for visual skill setup.
 8. If visual reference assets are in scope, confirm the external asset library path documented in `docs/references/VISUAL_ASSET_LIBRARY.md`.
-9. If Figma design-to-code or raster generation is in scope, follow `docs/process/FIGMA_IMAGEGEN_CROSS_PC_SETUP.md` for plugin OAuth, exact-node verification, the ljqclub-compatible ImageGen CLI, proxy setup, secure Key entry, and live smoke tests.
-10. Run verification commands:
+9. If ElevenLabs audio prototyping is in scope, follow `docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md` for the exact three-Skill inventory, secure Key entry, zero-credit checks, and paid-smoke approval.
+10. If Figma design-to-code or raster generation is in scope, follow `docs/process/FIGMA_IMAGEGEN_CROSS_PC_SETUP.md` for plugin OAuth, exact-node verification, the ljqclub-compatible ImageGen CLI, proxy setup, secure Key entry, and live smoke tests.
+11. Run verification commands:
 
 ```powershell
 node --version

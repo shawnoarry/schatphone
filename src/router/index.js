@@ -19,6 +19,7 @@ const ChatGroupsView = () => import('../views/ChatGroupsView.vue')
 const ChatSettingsView = () => import('../views/ChatSettingsView.vue')
 const ChatMeView = () => import('../views/ChatMeView.vue')
 const ChatAppearanceView = () => import('../views/ChatAppearanceView.vue')
+const TtsSettingsView = () => import('../views/TtsSettingsView.vue')
 const ContactsView = () => import('../views/ContactsView.vue')
 const GalleryView = () => import('../views/GalleryView.vue')
 const CameraView = () => import('../views/CameraView.vue')
@@ -62,6 +63,7 @@ const router = createRouter({
     { path: '/chat-contacts', component: ChatDirectoryView },
     { path: '/chat-settings', component: ChatSettingsView },
     { path: '/chat-settings/appearance', component: ChatAppearanceView },
+    { path: '/chat-settings/voice', component: TtsSettingsView },
     { path: '/chat-appearance', redirect: '/chat-settings/appearance' },
     { path: '/chat-me', component: ChatMeView },
     { path: '/chat-feature/more', redirect: '/chat-me' },

@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## 1. Architecture Goals
 
@@ -98,11 +98,11 @@ Owns:
 - compatibility redirects;
 - the global lock guard.
 
-There are 41 route-view files. Normal user-facing modules are lazy-loaded. `/music` is a first-class installed app, `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
+There are 42 route-view files. Normal user-facing modules are lazy-loaded. `/music` is a first-class installed app, `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
 
 ## 5. State Layer
 
-SchatPhone has 18 Pinia stores.
+SchatPhone has 19 Pinia stores.
 
 | Store | Owned records and responsibility |
 | --- | --- |
@@ -153,6 +153,7 @@ Provider transport is split by product meaning:
 
 - `src/lib/ai.js` is the approved text/conversation AI transport entry;
 - `src/lib/image-generation-contract.js`, `src/lib/image-generation-api.js`, and `src/stores/imageGeneration.js` form the dedicated shared Image Generation Module for Camera and separately promoted callers.
+- `src/lib/tts-contract.js`, `src/lib/tts-api.js`, and `src/stores/tts.js` form the shared runtime Text To Speech Module. Cloudflare MeloTTS runs through the Workers AI binding, MiniMax uses a device-local user Key through its dedicated browser Adapter, and the first slice owns temporary preview audio only rather than Chat messages.
 
 The text/conversation transport supports:
 
@@ -275,8 +276,8 @@ Confirmed target direction and current non-active foundation:
 - in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
 - complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`; the roadmap 4.9 release-local v3 boundary now implements required-section manifests, integrity evidence, complete selected Gallery material, durable rollback checkpoints, startup crash recovery, legacy compatibility, and metadata/binary rollback, while predictive capacity and cross-owner root-generation activation remain separate work;
-- `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted carriers, serialized mirror, Gallery binary carrier, Music local-media carrier, image-generation credential/candidate/legacy carriers, Music's device-local credential carrier, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
-- `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration and Music library/provider/import metadata participate in backup, while device-local credentials, Music local-audio binaries, and image-generation temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
+- `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted carriers, serialized mirror, Gallery binary carrier, Music local-media carrier, image-generation credential/candidate/legacy carriers, Music's device-local credential carrier, TTS's device-local configuration/credential carriers, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
+- `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration and Music library/provider/import metadata participate in backup, while device-local credentials, TTS configuration, runtime TTS previews, Music local-audio binaries, and image-generation temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container later pages become read-only previews with retry/refresh rather than force takeover or last-write-wins. Ordinary writer occupancy is distinct from a true save conflict, and cooperative release may trigger the same bounded retry automatically;
@@ -457,7 +458,7 @@ Gaps:
 
 Vercel project `shawn-e-s-projects/schatphone` is connected to `shawnoarry/schatphone` and serves the root-path app at `https://schatphone.vercel.app`. Commit `a1418ed` deploys the restricted per-request OpenAI-compatible relay on the two reserved Functions: users explicitly select Compatibility Proxy while retaining their own provider URL, key, and model; Direct remains the default. Public HTTPS/443 target validation, browser-origin checks, request size/time limits, redirect and loop rejection, redacted errors, and a best-effort instance-local rate limit bound the relay. Optional token mode uses a separate proxy-access token, and legacy fixed-upstream behavior remains compatible. A no-secret upstream probe and a GitHub Pages real-provider model-list plus Chat smoke pass against production.
 
-Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third root-path build. One Worker routes only `/api/openai/v1/models` and `/api/openai/v1/chat/completions` through the same Web Platform relay core and delegates other requests to Workers Static Assets with SPA fallback. Commit `a1418ed` enables public restricted dynamic mode so GitHub Pages can relay different users' OpenAI-compatible URLs without operator-per-provider setup; the deployed route passed both the no-secret upstream probe and the real-provider 6-model/Chat-`OK` browser smoke. Native Gemini, Anthropic, Azure, and Responses protocols remain direct. Origin/fetch metadata can be spoofed outside browsers, rate limits are not globally durable, and DNS rebinding is not completely eliminated, so this remains compatibility infrastructure rather than an abuse-proof multi-tenant gateway.
+Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third root-path build. One Worker routes `/api/openai/v1/models` and `/api/openai/v1/chat/completions` through the same Web Platform relay core, routes `/api/tts/v1/speech` through the bounded Workers AI MeloTTS handler, and delegates other requests to Workers Static Assets with SPA fallback. Commit `a1418ed` enables public restricted dynamic mode so GitHub Pages can relay different users' OpenAI-compatible URLs without operator-per-provider setup; the deployed Chat routes passed both the no-secret upstream probe and the real-provider 6-model/Chat-`OK` browser smoke. Native Gemini, Anthropic, Azure, Responses, and MiniMax TTS protocols remain direct. Origin/fetch metadata can be spoofed outside browsers, rate limits are not globally durable, and DNS rebinding is not completely eliminated, so the shared routes remain development/compatibility infrastructure rather than abuse-proof multi-tenant gateways.
 
 ## 11. Current Debt And Direction
 
