@@ -1889,6 +1889,16 @@ describe('FoodDeliveryView', () => {
     const router = createTestRouter()
     const systemStore = useSystemStore()
     const walletStore = useWalletStore()
+    const store = useFoodDeliveryStore()
+    const otherSeasonalIndex = store.menuItems.findIndex(
+      (item) =>
+        item.restaurantId === 'food_seed_peach_cloud' &&
+        item.menuSection === 'seasonal_drop' &&
+        item.id !== 'food_menu_peach_golden_hour_set',
+    )
+    expect(otherSeasonalIndex).toBeGreaterThanOrEqual(0)
+    const [otherSeasonalItem] = store.menuItems.splice(otherSeasonalIndex, 1)
+    store.menuItems.unshift(otherSeasonalItem)
     systemStore.settings.system.language = 'en-US'
     await router.push(
       '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
@@ -1900,7 +1910,6 @@ describe('FoodDeliveryView', () => {
         plugins: [router],
       },
     })
-    const store = useFoodDeliveryStore()
     const peachCloudMenu = store.listMenuByRestaurant('food_seed_peach_cloud')
     const teaItem = peachCloudMenu.find((item) => item.menuSection === 'cloud_tea')
     const posterItem = peachCloudMenu.find((item) => item.id === 'food_menu_peach_oolong_cloud')

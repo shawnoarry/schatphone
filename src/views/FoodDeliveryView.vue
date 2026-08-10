@@ -2428,6 +2428,7 @@ const harborRoastOrderId = computed(() =>
 )
 const peachCloudFeaturedItem = computed(
   () =>
+    activeMenuItems.value.find((item) => item.id === 'food_menu_peach_golden_hour_set') ||
     activeMenuItems.value.find((item) => item.menuSection === 'seasonal_drop') ||
     activeMenuItems.value[0] ||
     null,

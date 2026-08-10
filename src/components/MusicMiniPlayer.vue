@@ -293,7 +293,7 @@ const playStation = (station) =>
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
 }
 
-.music-mini-player.is-home-route { bottom: calc(116px + env(safe-area-inset-bottom)); }
+.music-mini-player.is-home-route { bottom: calc(124px + env(safe-area-inset-bottom)); }
 .music-mini-player.has-bottom-controls { bottom: calc(78px + env(safe-area-inset-bottom)); }
 .music-mini-player.is-chat-route { top: 50%; right: 0; bottom: auto; left: auto; width: 44px; border-right: 0; border-radius: 8px 0 0 8px; box-shadow: -10px 12px 26px rgba(6, 9, 13, 0.24); transform: translateY(-50%); transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease; }
 .music-mini-player.is-chat-route.is-chat-controls-open { width: min(244px, calc(100% - 10px)); box-shadow: -16px 16px 34px rgba(6, 9, 13, 0.3); }
@@ -371,7 +371,7 @@ const playStation = (station) =>
 
 @media (min-width: 760px) {
   .music-mini-player { right: 24px; bottom: 28px; left: auto; width: min(380px, calc(100vw - 48px)); }
-  .music-mini-player.is-home-route { bottom: calc(116px + env(safe-area-inset-bottom)); }
+  .music-mini-player.is-home-route { bottom: calc(124px + env(safe-area-inset-bottom)); }
   :global(.screen:has(.music-mini-player.is-chat-route) .chat-shell) { padding-right: 44px; box-shadow: inset -44px 0 var(--chat-thread-bg); }
   .music-mini-player.is-map-route { right: 24px; bottom: 24px; }
   .music-mini-player.is-map-route.is-expanded { top: 126px; bottom: auto; }

@@ -100,6 +100,17 @@ const captureBootstrapWrites = async (page) => {
   }, KEY)
 }
 
+const expectBootstrapWrite = async (page, layer, expected) => {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (targetLayer) => window.__persistenceBootstrapWrites?.[targetLayer]?.[0],
+        layer,
+      ),
+    )
+    .toBe(expected)
+}
+
 const cleanup = async (page) => {
   await page.evaluate(
     async ({ key, databaseName }) => {
@@ -136,8 +147,7 @@ test.describe('layered persistence bootstrap reconciliation', () => {
     await captureBootstrapWrites(page)
 
     await page.goto('/#/lock')
-    const bootstrapWrites = await page.evaluate(() => window.__persistenceBootstrapWrites)
-    expect(bootstrapWrites.local[0]).toBe(mirrorRaw)
+    await expectBootstrapWrite(page, 'local', mirrorRaw)
     await expect
       .poll(() => waitForStableLayerPair(page))
       .toBe(true)
@@ -177,8 +187,7 @@ test.describe('layered persistence bootstrap reconciliation', () => {
     await seedLayers(page, { localRaw: localWinner, mirrorRaw: mirrorOlder })
     await captureBootstrapWrites(page)
     await page.goto('/#/lock')
-    let bootstrapWrites = await page.evaluate(() => window.__persistenceBootstrapWrites)
-    expect(bootstrapWrites.mirror[0]).toBe(localWinner)
+    await expectBootstrapWrite(page, 'mirror', localWinner)
     await expect
       .poll(() => waitForStableLayerPair(page))
       .toBe(true)
@@ -200,8 +209,7 @@ test.describe('layered persistence bootstrap reconciliation', () => {
       await seedLayers(secondPage, { localRaw: '{broken', mirrorRaw: mirrorValid })
       await captureBootstrapWrites(secondPage)
       await secondPage.goto('/#/lock')
-      bootstrapWrites = await secondPage.evaluate(() => window.__persistenceBootstrapWrites)
-      expect(bootstrapWrites.local[0]).toBe(mirrorValid)
+      await expectBootstrapWrite(secondPage, 'local', mirrorValid)
       await expect
         .poll(() => waitForStableLayerPair(secondPage))
         .toBe(true)
