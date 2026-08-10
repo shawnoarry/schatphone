@@ -1,0 +1,97 @@
+import { mount } from '@vue/test-utils'
+import { describe, expect, test } from 'vitest'
+import MapPlaceFocusSheet from '../src/components/map/MapPlaceFocusSheet.vue'
+
+const displayOptions = [
+  {
+    id: 'system',
+    labelZh: '系统',
+    labelEn: 'Auto',
+    titleZh: '跟随系统语言',
+    titleEn: 'Follow system language',
+  },
+  {
+    id: 'en',
+    labelZh: 'EN',
+    labelEn: 'EN',
+    titleZh: '显示英文地名',
+    titleEn: 'Show English place names',
+  },
+]
+
+const createWrapper = (overrides = {}) =>
+  mount(MapPlaceFocusSheet, {
+    props: {
+      place: { id: 'place-1', placeId: 'place-1', source: 'map_pack' },
+      visual: { icon: 'fas fa-building', tone: '#17664f' },
+      name: 'A Television',
+      summary: 'Broadcast center and meeting venue.',
+      detail: '1 Studio Road',
+      sourceLabel: 'World place',
+      categoryLabel: 'Work',
+      contextLabel: '2.4 km from current position',
+      displayMode: 'system',
+      displayOptions,
+      t: (_zh, en) => en,
+      ...overrides,
+    },
+  })
+
+describe('MapPlaceFocusSheet', () => {
+  test('keeps the overview concise and emits the Go command', async () => {
+    const wrapper = createWrapper()
+
+    expect(wrapper.text()).toContain('Broadcast center and meeting venue.')
+    expect(wrapper.text()).toContain('2.4 km from current position')
+    expect(wrapper.find('[data-testid="map-place-detail-view"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="map-place-use-destination"]').trigger('click')
+
+    expect(wrapper.emitted('go')).toHaveLength(1)
+  })
+
+  test('replaces the overview with details and returns without nesting a surface', async () => {
+    const wrapper = createWrapper()
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="map-place-detail-view"]').text()).toContain('1 Studio Road')
+    expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="map-place-set-current"]').trigger('click')
+    expect(wrapper.emitted('set-current')).toHaveLength(1)
+
+    await wrapper.get('[data-testid="map-place-detail-back"]').trigger('click')
+    expect(wrapper.find('[data-testid="map-place-detail-view"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-place-use-destination"]').exists()).toBe(true)
+  })
+
+  test('offers the existing journey without exposing relocation while travel is locked', async () => {
+    const wrapper = createWrapper({
+      primaryAction: 'view_journey',
+      journeyLocked: true,
+      contextLabel: 'Heading here',
+      contextTone: 'journey',
+    })
+
+    expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-place-journey-lock"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="map-place-view-journey"]').trigger('click')
+    expect(wrapper.emitted('view-journey')).toHaveLength(1)
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+    expect(wrapper.find('[data-testid="map-place-set-current"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="map-place-use-start"]').exists()).toBe(false)
+  })
+
+  test('shows management only for a player-owned place', async () => {
+    const worldPlace = createWrapper()
+    expect(worldPlace.find('[data-testid="map-place-manage-pin"]').exists()).toBe(false)
+
+    const playerPlace = createWrapper({ canManage: true })
+    await playerPlace.get('[data-testid="map-place-manage-pin"]').trigger('click')
+
+    expect(playerPlace.emitted('manage')).toHaveLength(1)
+  })
+})

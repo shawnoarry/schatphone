@@ -12,6 +12,7 @@ import {
   normalizeMusicState,
   normalizeMusicTrack,
   searchMusicProvider,
+  selectWeeklyMusicRecommendation,
 } from '../src/lib/music-contract'
 import {
   MUSIC_INTEGRATION_ACTIONS,
@@ -53,6 +54,16 @@ const providerProfile = {
 }
 
 describe('music provider and integration contracts', () => {
+  test('keeps the weekly recommendation stable and rotates it at the next week boundary', () => {
+    const week = 7 * 24 * 60 * 60 * 1000
+    const tracks = [{ id: 'track_a' }, { id: 'track_b' }, { id: 'track_c' }]
+
+    expect(selectWeeklyMusicRecommendation(tracks, 0)).toEqual(tracks[0])
+    expect(selectWeeklyMusicRecommendation(tracks, week - 1)).toEqual(tracks[0])
+    expect(selectWeeklyMusicRecommendation(tracks, week)).toEqual(tracks[1])
+    expect(selectWeeklyMusicRecommendation([], week)).toBeNull()
+  })
+
   test('builds the no-key Radio Browser live-station preset', () => {
     const profile = createRadioBrowserMusicProviderProfile({ id: 'radio_browser' })
     const request = buildMusicProviderSearchRequest({

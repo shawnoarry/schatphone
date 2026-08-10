@@ -1,6 +1,6 @@
 # Calendar And Reminders Split
 
-Updated: 2026-07-31
+Updated: 2026-08-10
 
 Audience: product managers, designers, engineers, QA, and future AI assistants.
 
@@ -15,12 +15,14 @@ SchatPhone splits the old combined cue-and-calendar surface into two product con
 | `Calendar` | the schedule/date app for confirmed plans, dates, anniversaries, and timed life events |
 | `Reminders` | the follow-up and cue queue for callbacks, logistics updates, low-commitment prompts, and cross-module attention items |
 | `Agenda Journey` | the future short-range execution app for today's or the near-term plan, activity progress, performance, and outcomes |
+| `Activity Session` | the future timestamp-based duration and focus-companion runtime for one executable activity step |
 
 Short version:
 
 - `Calendar` answers: what is actually on my schedule?
 - `Reminders` answers: what still needs my attention or confirmation?
 - `Agenda Journey` answers: what should I execute now or soon, and what actually happened?
+- `Activity Session` answers: how long is this activity running, and what completion evidence does its step require?
 - `World Hub` remains the optional runtime/control app, not the normal place for everyday reminders.
 - `World Pack` may change Calendar labels/context through a reservation app binding and Map labels/context through a transit app binding, but it does not own Calendar records, Map trip truth, or event judgment.
 
@@ -101,6 +103,10 @@ It does not replace Calendar's long-range planning. A multi-day Calendar event s
 
 The hidden Schedule Orchestrator coordinates this handoff. It is not a Home app and cannot copy or take ownership of Calendar, Journey, Map, Event Runtime, relationship, Wallet, or profile records.
 
+For a location-bound commitment, Calendar keeps the appointment start/duration/place while Agenda Journey owns separate travel and activity steps. Map recalculates a suggested departure from the current role position rather than treating the planning-origin hint as actual truth. After explicit departure confirmation, Map creates the one canonical Map Journey; opening Map shows that same journey. Validated arrival may satisfy presence and, for an explicitly approved indoor appointment, Map may enter the place session automatically. Arrival never proves the meeting, class, rehearsal, or other activity completed.
+
+Activity Session owns the later activity timer and completion policy. Its Focus Companion presentation may offer Pomodoro or continuous modes, built-in scenes, and stable Gallery/Music/companion references, but it does not move those media assets or playback truth into Calendar or Event Runtime. Optional activity events remain checkpoint-driven and user-controlled; disabling them cannot remove the scheduled activity's base execution path.
+
 ### Reminders
 
 Reminders should own:
@@ -152,7 +158,9 @@ Intended flow:
 3. Reminders shows the user-facing actionable subset
 4. Calendar receives only the items that have schedule/date meaning
 5. the Schedule Orchestrator may materialize confirmed near-term Calendar commitments into Agenda Journey instances
-6. Agenda Journey may request Map Journey, Activity Session, and Event Runtime collaboration while every source owner keeps its own truth
+6. Agenda Journey may request one Map Journey from the current canonical position and later consume arrival/cancellation evidence
+7. Activity Session may run the duration-based activity and optional Focus Companion presentation
+8. Event Runtime may evaluate explicit checkpoints while every source owner keeps its own truth
 
 This preserves the main product principle:
 
@@ -176,6 +184,7 @@ Recommended sequence and current status:
 | 10 | Record Calendar versus Agenda Journey versus hidden Schedule Orchestrator ownership | DONE |
 | 11 | Rebuild the list-first Calendar surface into month/week/Agenda views with selected-day authoring | TODO / SEPARATE_USER_ACCEPTANCE_REQUIRED |
 | 12 | Implement Agenda Journey, Activity Session, or Calendar-to-Journey materialization | TODO / STAGED_IN_LIVE_ROADMAP_ONLY |
+| 13 | Record dynamic current-position departure, validated appointment entry, and Focus Companion boundaries | DONE / DOCUMENTATION_ONLY |
 
 Implementation notes:
 
@@ -197,6 +206,9 @@ Implementation notes:
 - Do not create another long-range planner inside Agenda Journey.
 - Do not use unqualified `Journey` in architecture, persistence, or event contracts when Map Journey and Agenda Journey could both apply.
 - Do not make the Schedule Orchestrator a visible app or a new owner of downstream records.
+- Do not store a fixed departure projection as Calendar truth after the current Map position changes.
+- Do not create a second travel timer or Activity Session for a duration already owned by Map Journey.
+- Do not make optional Event Runtime content a prerequisite for the base scheduled activity.
 
 ## 8. Acceptance Criteria
 

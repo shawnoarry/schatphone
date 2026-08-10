@@ -35,6 +35,7 @@ const bindAudioEvents = () => {
     if (audio?.paused) setState({ status: 'paused' })
   })
   audio.addEventListener('play', () => setState({ status: 'playing', errorCode: '', sessionActive: true }))
+  audio.addEventListener('playing', () => setState({ status: 'playing', errorCode: '', sessionActive: true }))
   audio.addEventListener('pause', () => {
     if (state.status !== 'ended') setState({ status: state.track ? 'paused' : 'idle' })
   })

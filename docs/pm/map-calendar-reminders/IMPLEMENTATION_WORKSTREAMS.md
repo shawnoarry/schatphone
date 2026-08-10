@@ -1,6 +1,6 @@
 # Map Calendar Reminders Implementation Workstreams / 地图日历提醒事项实施工作流
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## 1. Workstream A: Map Travel Core
 
@@ -19,6 +19,8 @@ Updated: 2026-08-09
 - explicit click-to-create/reselect required player coordinates without draggable everyday markers; address/description remains display/search metadata, geographic packs use latitude/longitude, fictional/custom packs use normalized canvas coordinates, and active trips lock map replacement rather than map interaction
 - exclusive coordinate-placement interaction in both renderers: existing markers are pointer-transparent and cannot replace the active place draft
 - map-first progressive disclosure: compact search, canonical role-position focus plus idle-only arbitrary-point selection, and independent Journey/Places/Footprints buttons whose drawers do not repeat that navigation; a static start-position focus plus persistent primary journey card while traveling; browse-only search and place detail during traveling/paused/arrived states without endpoint mutation; one Places-drawer link to the Settings-owned create/manage surface; typed and current-world-picked journey endpoints; active/paused/arrived progress, remaining time, and pending-update access; route cards only for explicit destination/runtime context; selected-place details on demand; and fictional faction legends collapsed by default
+- place-focus Stage 1 is implemented as one Map-owned overview/detail sheet with `Go`, locked-journey reuse, distance/current-position context, progressive details, Share, and player-owned Manage; it adds no Event placeholder or nested modal
+- a later separately reviewed presence slice adds `Enter`, inside-session actions, manual-versus-journey provenance, and persistence; event invitations remain absent until an eligible/approved-teaser projection is separately implemented
 - active-journey music/radio progressive disclosure: one traveling/paused-only icon opens a focused Map panel over the independent Music floating layer; Map consumes bounded projections and delegates explicit user actions to Music without receiving audio URLs, local media IDs, credentials, raw queues, or playback ownership
 - place-detail-to-Chat sharing through one normalized Map-owned snapshot, with Chat-owned recipient/send state, cancel-to-place, stable `placeId` return, and no location/trip mutation
 - `MapSceneCanvas` as the stable renderer seam: lazy-loaded OpenFreeMap + MapLibre for geographic packs, and `LocalMapCanvas` for fictional/custom packs plus geographic failure fallback
@@ -55,12 +57,17 @@ Updated: 2026-08-09
 - add Agenda Journey only in a later CJA-3 user-approved slice for short-range day/near-term steps, execution state, evidence references, and outcomes
 - keep Calendar as planned truth, Agenda Journey as execution truth, and Map Journey as travel truth
 - allow Map arrival to satisfy only an explicit arrival/presence requirement; it cannot prove a non-travel activity completed
+- preserve Calendar appointment time as planned truth while Map supplies dynamic current-origin estimates; explicit departure confirmation creates one canonical Map Journey and later Map opens reuse that journey
+- allow a linked indoor appointment to request validated automatic entry without making manual relocation equivalent to journey arrival
 
 ## 5. Workstream E: Activity Session And Narrative Projection
 
 - begin Activity Session only after Agenda Journey has a stable step owner
 - use absolute timestamps, explicit checkpoints, minimize/navigation continuity, and suspend/reopen reconciliation; do not promise exact interactive popups when the browser/PWA is closed or suspended
 - keep event eligibility and choices in Event Runtime and Mini Scene presentation; Activity Session owns time only
+- add explicit per-step completion policy and keep a no-event base activity path
+- treat Pomodoro as one Focus Companion presentation preset; later Gallery background, Music/ambient, and decorative companion references remain cross-owner references, not Activity Session assets
+- when the same presentation is used during a flight or other long Map Journey, consume the Map-owned clock instead of creating a duplicate Activity Session
 - keep the future Narrative Timeline as a bounded source-linked projection until Story/Diary/Journal naming, route, owner, retention, backup, review, and AI-context policy are separately approved
 
 ## 6. Workstream F: Reminders As Cue Layer
@@ -88,7 +95,19 @@ Updated: 2026-08-09
 - return only no ETA change or a bounded 120-second delay to Map for exact source validation; pending review cannot pause the journey, and Event Runtime cannot mutate journey or place truth directly
 - keep an ordinary no-event journey and missing/stale-proposal recovery as covered outcomes
 
-## 9. Semantic Guardrails
+## 9. Workstream I: Large-Map Event Card Host
+
+- EVE-1's Event Surface Projection and registered-host Interface plus the Event-owned EVE-2B runtime foundation are landed; keep Map unregistered until EVE-2C UI receives separate acceptance
+- EVE-2A is complete: it freezes the 101-place inventory, read-only legacy/exact semantic overlay, `MapPlaceSessionCheckpointV1`, no-external-mutation validation Adapter, and one interior production-arrival-briefing archetype under `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`; none is implemented in Map yet
+- EVE-2C renders exactly that approved vertical slice first, with zero-token invitation/no-event behavior, explicit event entry/expansion, local or cached optional text, and a complete local fallback
+- preserve the frozen interior activation scope, hidden-until-eligible discoverability, manual/journey-arrival provenance, explicit place-entry requirement, text-only media fallback, and Adapter action before EVE-2C; ordinary place focus and event-pin selection remain distinct paths
+- validate geographic latitude/longitude and fictional/custom normalized-canvas anchors without creating canonical places or provider identity
+- keep placement, selection, clustering/stacking, text fit, layer coexistence, authored Map-pack scene asset resolution, accessibility, and Map return context inside Map
+- keep proposal/log truth in Event Runtime and every effect behind the source owner's Adapter validation
+- fail invalid, stale, off-pack, and unpositioned anchors back to the source host/World Hub without inventing a location
+- do not treat this workstream as MJE-5 active exploration, event-driven discovery, generated candidate places, or Mini Scene authorization
+
+## 10. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -117,3 +136,7 @@ Treat these as bugs:
 23. Activity Session uses accumulated timer ticks as canonical progress or promises exact closed-app interaction
 24. presentation `off` disables event eligibility or bypasses high-impact owner confirmation/review
 25. Narrative Timeline becomes canonical business truth or sends unbounded raw logs/prompts to Forum or Chat
+26. an Event Surface Projection becomes a second event record or an authorization token
+27. a coordinate-anchored event creates a place, reveals discovery, changes visibility, or mutates role/journey truth
+28. map event cards overlap incoherently, obscure primary controls, or open automatically during ordinary pan/focus selection
+29. EVE-2 is treated as authorization for MJE-5 or Mini Scene runtime

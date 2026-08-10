@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { buildReturnSourceQuery, normalizeHomePageQuery } from '../lib/navigation-return'
@@ -14,6 +14,7 @@ const { t } = useI18n()
 const mode = ref('music')
 const busyId = ref('')
 const feedback = ref('')
+const chatControlsExpanded = ref(false)
 
 const track = computed(() => musicStore.currentTrack)
 const media = computed(() => musicStore.floatingPlayerMedia)
@@ -26,9 +27,10 @@ const visible = computed(
 )
 const isHomeRoute = computed(() => route.path === '/home')
 const isMapRoute = computed(() => route.path === '/map')
+const isChatRoute = computed(() => route.path.startsWith('/chat'))
 const hasBottomControls = computed(
   () =>
-    route.path.startsWith('/chat') ||
+    isChatRoute.value ||
     route.path === '/food-delivery' ||
     route.path === '/shopping',
 )
@@ -72,6 +74,34 @@ const openMusic = () => router.push({ path: '/music', query: musicRouteQuery() }
 const toggleExpanded = () =>
   musicStore.setFloatingPlayerExpanded(!musicStore.floatingPlayerExpanded)
 
+watch(
+  [isChatRoute, visible],
+  ([active, isVisible]) => {
+    if (!active || !isVisible) chatControlsExpanded.value = false
+    if (active && musicStore.floatingPlayerExpanded) {
+      musicStore.setFloatingPlayerExpanded(false)
+    }
+  },
+  { immediate: true },
+)
+
+const handleTrackAction = () => {
+  if (isChatRoute.value && !chatControlsExpanded.value) {
+    chatControlsExpanded.value = true
+    return
+  }
+  openMusic()
+}
+
+const collapseChatControls = () => {
+  chatControlsExpanded.value = false
+}
+
+const closeFloatingPlayer = () => {
+  chatControlsExpanded.value = false
+  musicStore.closeFloatingPlayer()
+}
+
 const errorMessage = (code) => {
   if (code === 'LOCAL_MEDIA_MISSING') return t('本地音频已不在此设备', 'The local audio file is missing')
   if (code === 'PLAYBACK_GESTURE_REQUIRED') return t('再次轻点播放以继续', 'Tap play again to continue')
@@ -90,15 +120,16 @@ const runPlaybackAction = async (id, action) => {
   }
 }
 
-const togglePlayback = () => {
+const togglePlayback = async () => {
   const firstTrack = media.value.quickTracks[0]
-  return runPlaybackAction('toggle', () =>
+  await runPlaybackAction('toggle', () =>
     track.value
       ? musicStore.togglePlayback()
       : firstTrack
         ? musicStore.playFloatingTrack(firstTrack.trackRef.id)
         : Promise.resolve({ ok: false, code: 'QUEUE_EMPTY' }),
   )
+  if (isChatRoute.value) collapseChatControls()
 }
 
 const playQuickTrack = (item) =>
@@ -118,6 +149,8 @@ const playStation = (station) =>
       :class="{
         'is-home-route': isHomeRoute,
         'is-map-route': isMapRoute,
+        'is-chat-route': isChatRoute,
+        'is-chat-controls-open': isChatRoute && chatControlsExpanded,
         'has-bottom-controls': hasBottomControls,
         'is-expanded': musicStore.floatingPlayerExpanded,
       }"
@@ -128,11 +161,16 @@ const playStation = (station) =>
         <button
           class="music-mini-track"
           type="button"
-          :title="t('打开音乐', 'Open Music')"
-          @click="openMusic"
+          :title="isChatRoute && !chatControlsExpanded ? t('展开音乐控制', 'Expand music controls') : t('打开音乐', 'Open Music')"
+          :aria-label="isChatRoute && !chatControlsExpanded ? t('展开音乐控制', 'Expand music controls') : t('打开音乐', 'Open Music')"
+          :aria-expanded="isChatRoute ? chatControlsExpanded : undefined"
+          @click="handleTrackAction"
         >
           <span class="music-mini-cover" :style="coverStyle">
             <i v-if="!track?.coverUrl" :class="media.activeStationId ? 'fas fa-tower-broadcast' : 'fas fa-music'" aria-hidden="true"></i>
+          </span>
+          <span v-if="isChatRoute && !chatControlsExpanded" class="music-chat-edge-cue" aria-hidden="true">
+            <i class="fas fa-chevron-left"></i>
           </span>
           <span class="music-mini-copy">
             <strong>{{ track?.title || t('音乐与电台', 'Music & Radio') }}</strong>
@@ -140,10 +178,12 @@ const playStation = (station) =>
           </span>
         </button>
 
-        <div class="music-mini-controls">
-          <button type="button" :disabled="!track" :title="t('上一首', 'Previous')" @click="runPlaybackAction('previous', musicStore.previous)">
-            <i class="fas fa-backward-step" aria-hidden="true"></i>
-          </button>
+        <div v-if="!isChatRoute || chatControlsExpanded" class="music-mini-controls">
+          <template v-if="!isChatRoute">
+            <button type="button" :disabled="!track" :title="t('上一首', 'Previous')" @click="runPlaybackAction('previous', musicStore.previous)">
+              <i class="fas fa-backward-step" aria-hidden="true"></i>
+            </button>
+          </template>
           <button
             class="music-mini-toggle"
             type="button"
@@ -152,25 +192,37 @@ const playStation = (station) =>
           >
             <i :class="busyId === 'toggle' ? 'fas fa-spinner fa-spin' : musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'" aria-hidden="true"></i>
           </button>
-          <button type="button" :disabled="!track" :title="t('下一首', 'Next')" @click="runPlaybackAction('next', () => musicStore.next())">
-            <i class="fas fa-forward-step" aria-hidden="true"></i>
-          </button>
           <button
+            v-if="isChatRoute"
             type="button"
-            data-testid="music-floating-expand"
-            :title="musicStore.floatingPlayerExpanded ? t('收起浮窗', 'Collapse player') : t('展开浮窗', 'Expand player')"
-            :aria-expanded="musicStore.floatingPlayerExpanded"
-            @click="toggleExpanded"
+            data-testid="music-chat-collapse"
+            :title="t('收回屏幕边缘', 'Collapse to screen edge')"
+            :aria-label="t('收回屏幕边缘', 'Collapse to screen edge')"
+            @click="collapseChatControls"
           >
-            <i :class="musicStore.floatingPlayerExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" aria-hidden="true"></i>
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
-          <button type="button" data-testid="music-floating-close" :title="t('关闭浮窗', 'Close player')" @click="musicStore.closeFloatingPlayer">
+          <template v-if="!isChatRoute">
+            <button type="button" :disabled="!track" :title="t('下一首', 'Next')" @click="runPlaybackAction('next', () => musicStore.next())">
+              <i class="fas fa-forward-step" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              data-testid="music-floating-expand"
+              :title="musicStore.floatingPlayerExpanded ? t('收起浮窗', 'Collapse player') : t('展开浮窗', 'Expand player')"
+              :aria-expanded="musicStore.floatingPlayerExpanded"
+              @click="toggleExpanded"
+            >
+              <i :class="musicStore.floatingPlayerExpanded ? 'fas fa-chevron-down' : 'fas fa-chevron-up'" aria-hidden="true"></i>
+            </button>
+          </template>
+          <button type="button" data-testid="music-floating-close" :title="t('关闭浮窗', 'Close player')" @click="closeFloatingPlayer">
             <i class="fas fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
       </div>
 
-      <div v-if="musicStore.floatingPlayerExpanded" class="music-floating-content" data-testid="music-floating-content">
+      <div v-if="musicStore.floatingPlayerExpanded && !isChatRoute" class="music-floating-content" data-testid="music-floating-content">
         <div class="music-floating-segments" role="tablist" :aria-label="t('音频类型', 'Audio type')">
           <button type="button" role="tab" :aria-selected="mode === 'music'" :class="{ 'is-active': mode === 'music' }" data-testid="music-floating-music-tab" @click="mode = 'music'">
             <i class="fas fa-music" aria-hidden="true"></i><span>{{ t('音乐', 'Music') }}</span>
@@ -243,6 +295,8 @@ const playStation = (station) =>
 
 .music-mini-player.is-home-route { bottom: calc(116px + env(safe-area-inset-bottom)); }
 .music-mini-player.has-bottom-controls { bottom: calc(78px + env(safe-area-inset-bottom)); }
+.music-mini-player.is-chat-route { top: 50%; right: 0; bottom: auto; left: auto; width: 44px; border-right: 0; border-radius: 8px 0 0 8px; box-shadow: -10px 12px 26px rgba(6, 9, 13, 0.24); transform: translateY(-50%); transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease; }
+.music-mini-player.is-chat-route.is-chat-controls-open { width: min(244px, calc(100% - 10px)); box-shadow: -16px 16px 34px rgba(6, 9, 13, 0.3); }
 .music-mini-player.is-map-route { right: 14px; bottom: calc(224px + env(safe-area-inset-bottom)); left: auto; width: min(380px, calc(100% - 28px)); }
 .music-mini-player.is-expanded { max-height: min(620px, calc(100% - 48px)); }
 .music-mini-player.is-map-route.is-expanded { top: 124px; bottom: auto; max-height: calc(100% - 142px); }
@@ -262,6 +316,21 @@ const playStation = (station) =>
 .music-mini-controls button:active { transform: scale(0.92); }
 .music-mini-controls button:disabled { opacity: 0.28; }
 .music-mini-controls .music-mini-toggle { color: #fff; font-size: 14px; }
+
+.music-mini-player.is-chat-route .music-mini-bar { min-height: 48px; }
+.music-mini-player.is-chat-route .music-mini-track { position: relative; }
+.music-mini-player.is-chat-route:not(.is-chat-controls-open) .music-mini-bar { grid-template-columns: 1fr; }
+.music-mini-player.is-chat-route:not(.is-chat-controls-open) .music-mini-track { width: 44px; grid-template-columns: 34px; justify-items: center; gap: 0; padding: 7px 5px; }
+.music-mini-player.is-chat-route:not(.is-chat-controls-open) .music-mini-cover { width: 34px; height: 34px; }
+.music-mini-player.is-chat-route:not(.is-chat-controls-open) .music-mini-copy { display: none; }
+.music-chat-edge-cue { position: absolute; top: 50%; left: 1px; display: grid; width: 10px; height: 18px; place-items: center; border-radius: 0 4px 4px 0; color: rgba(255, 255, 255, 0.76); background: rgba(8, 10, 13, 0.72); font-size: 7px; transform: translateY(-50%); }
+.music-mini-player.is-chat-route.is-chat-controls-open .music-mini-track { grid-template-columns: 32px minmax(0, 1fr); gap: 7px; padding: 6px 2px 6px 6px; }
+.music-mini-player.is-chat-route.is-chat-controls-open .music-mini-cover { width: 32px; height: 32px; }
+.music-mini-player.is-chat-route.is-chat-controls-open .music-mini-copy strong { font-size: 11px; }
+.music-mini-player.is-chat-route.is-chat-controls-open .music-mini-copy small { font-size: 8px; }
+.music-mini-player.is-chat-route .music-mini-controls { padding-right: 3px; }
+.music-mini-player.is-chat-route .music-mini-controls button { width: 28px; height: 36px; }
+.music-mini-player.is-chat-route button:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.92); outline-offset: -3px; }
 
 .music-floating-content { min-height: 0; overflow-y: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); background: #f6f8f6; color: #17211d; }
 .music-floating-segments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; margin: 10px 12px 8px; border: 1px solid #dce3df; border-radius: 7px; background: #e9eeeb; padding: 3px; }
@@ -297,10 +366,13 @@ const playStation = (station) =>
 .music-mini-leave-active { transition: opacity 180ms ease, transform 180ms ease; }
 .music-mini-enter-from,
 .music-mini-leave-to { opacity: 0; transform: translateY(10px); }
+.music-mini-enter-from.is-chat-route,
+.music-mini-leave-to.is-chat-route { transform: translate(8px, -50%); }
 
 @media (min-width: 760px) {
   .music-mini-player { right: 24px; bottom: 28px; left: auto; width: min(380px, calc(100vw - 48px)); }
   .music-mini-player.is-home-route { bottom: calc(116px + env(safe-area-inset-bottom)); }
+  :global(.screen:has(.music-mini-player.is-chat-route) .chat-shell) { padding-right: 44px; box-shadow: inset -44px 0 var(--chat-thread-bg); }
   .music-mini-player.is-map-route { right: 24px; bottom: 24px; }
   .music-mini-player.is-map-route.is-expanded { top: 126px; bottom: auto; }
 }
@@ -313,6 +385,7 @@ const playStation = (station) =>
 
 @media (prefers-reduced-motion: reduce) {
   .music-mini-player,
+  .music-mini-player.is-chat-route,
   .music-mini-controls button,
   .music-mini-progress > span { transition: none; }
 }

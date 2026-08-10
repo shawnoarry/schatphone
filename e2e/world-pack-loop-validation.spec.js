@@ -278,7 +278,8 @@ const openPlacedWorldEntry = async (page, entry, language, testInfo) => {
     await expect(title).toHaveText(expectedLabel)
     await expectTextNotClipped(title)
     await page.getByTestId('shopping-world-app-apply-filter').click()
-    await expect(page).toHaveURL(/service=daily_fresh/)
+    await expect(page).toHaveURL(/\/shopping\/daily_fresh\?/)
+    await expect(page).not.toHaveURL(/service=daily_fresh/)
     await expect(page).toHaveURL(/category=grocery/)
   } else if (entry.moduleKey === 'food_delivery') {
     const title = page.getByTestId('food-delivery-hero-title')
@@ -425,7 +426,7 @@ test('World Pack loop keeps placement, target ownership, and disabled safe defau
     `/shopping?worldPack=${packId}&worldApp=${entries[0].bindingId}`,
   )
   await expect(page.getByTestId('shopping-world-app-context')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Coupang', level: 1 })).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await expectNoCriticalAxeViolations(page)
 

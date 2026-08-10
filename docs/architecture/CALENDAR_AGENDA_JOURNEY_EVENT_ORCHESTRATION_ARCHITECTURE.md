@@ -57,7 +57,8 @@ It may:
 3. request creation or refresh of an Agenda Journey instance;
 4. link each generated journey and step to its Calendar source;
 5. request deadline evaluation when required work remains incomplete;
-6. expose deterministic reconciliation after application suspension or restart.
+6. request a bounded current Map travel estimate for a linked destination when departure readiness must be recalculated;
+7. expose deterministic reconciliation after application suspension or restart.
 
 It must not:
 
@@ -67,6 +68,8 @@ It must not:
 - write Map arrival truth;
 - write relationship, money, asset, identity, or world truth directly;
 - promise closed-application execution that the current browser/PWA runtime cannot provide.
+
+A Calendar appointment start and duration are planned truth. A suggested departure time is a projection derived from the current Map position, selected transport, and desired arrival time; it is not another Calendar field that stays correct after the role moves. The Schedule Orchestrator coordinates recomputation at materialization, relevant Map-position changes, the departure window, and resume, while Map remains the owner of distance and ETA calculation.
 
 Deletion test: if this Module were removed, every future caller would need to duplicate date-window materialization, source linking, deadline reconciliation, and idempotency. Concentrating those rules behind one Interface creates leverage and locality.
 
@@ -80,6 +83,7 @@ It owns:
 - ordered and optionally flexible activity steps;
 - step states such as planned, available, active, completed, missed, skipped, or cancelled;
 - required/optional semantics copied only as an execution snapshot when the journey is materialized;
+- destination/place requirements, desired arrival time, optional planning-origin hint, and approved arrival behavior for linked travel steps;
 - user performance and completion evidence references;
 - the final journey outcome summary and references to applied effects.
 
@@ -113,6 +117,27 @@ Reminder or direct user entry
 
 A Calendar event remains the historical planned fact even if its Agenda Journey is missed. A Journey outcome must never rewrite history by deleting or silently changing the original commitment.
 
+### Scheduled Travel Handoff
+
+For a location-bound activity, the linked Agenda Journey separates travel from the activity itself:
+
+```text
+confirmed Calendar appointment
+  -> Agenda Journey travel step + activity step
+  -> Map recalculates recommended departure from current role position
+  -> persistent foreground departure invitation
+  -> explicit user confirmation
+  -> Map creates one canonical Map Journey from the current origin
+  -> Map route/journey UI reflects that same mapJourneyId
+  -> Map returns arrival/cancellation evidence
+  -> Agenda Journey unlocks, delays, misses, or cancels the activity step
+  -> Activity Session and optional Event Runtime presentation begin
+```
+
+The planning origin is a hint, not the actual departure point. If an appointment was planned as home-to-studio but the role later moves to a supermarket, Map estimates from the supermarket at confirmation time. The invitation shows the current origin, current estimate, predicted arrival, and predicted lateness. Delaying confirmation causes those projections to be recomputed; Agenda Journey records planned, predicted, and actual timing without rewriting the Calendar commitment.
+
+The future in-app invitation may appear above Chat or another foreground app, but it prepares a ready travel step rather than moving the role silently. Exact notification delivery while SchatPhone is closed still follows browser/PWA limits. Opening Map after confirmation shows the already active journey and never asks the user to plan it again.
+
 ## 6. Multi-Day Example
 
 A confirmed Calendar event records `Concert, August 4-7` with venue, call times, reminder policy, and required participation.
@@ -136,6 +161,10 @@ When linked:
 - Map returns a stable `mapJourneyId` and later arrival/cancellation evidence;
 - Agenda Journey validates whether that evidence satisfies the step requirement;
 - Map checkpoint events remain Map-owned source events under `MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`.
+
+A linked step may request `arrive_outside` or `auto_enter_place` behavior. Automatic entry is valid only for an explicit appointment inside a stable known place and only after Map validates the exact journey destination and arrival evidence. Map then owns the `inside` place-session state. Manual coordinate relocation cannot impersonate that journey evidence unless the activity contract explicitly accepts manual presence.
+
+Arrival and optional automatic entry make the activity available; they do not complete it. By default the foreground host presents a lightweight activity/event invitation that can be minimized, and the user explicitly opens the full activity or scene. A later user setting may allow scheduled low-risk scenes to expand immediately after validated arrival, but source activity state, high-impact review, and a recoverable pending entry must remain intact when presentation is dismissed or fails.
 
 This architecture does not change or block MJE-1, MJE-2, MJE-3, Footprints, or active Exploration work.
 
@@ -166,6 +195,23 @@ Runtime rules:
 
 V1 should keep an active session continuously timed while an event surface is open. A future activity type may explicitly allow pausing, but event presentation must not silently change the timer policy.
 
+### Focus Companion Presentation
+
+The user-facing timer may be presented as a Focus Companion surface. `Pomodoro` is one preset, not the domain owner or a mandatory 25/5 cycle. Initial duration modes may include follow-the-Agenda-step, continuous, 25/5, 50/10, and custom focus/break intervals.
+
+The surface may show a built-in quiet scene, a user-selected Gallery background reference, a bounded Music/ambient-audio reference, and an optional decorative companion reference. Activity Session stores only presentation preferences and stable references; Gallery retains reusable image assets and Music retains playback, imported audio, queue, and audio-runtime truth. Browser autoplay and explicit-user-gesture requirements remain authoritative. A decorative companion initially owns no timer, event, relationship, or value state; autonomous growth or global desktop behavior would require a separately approved owner.
+
+The Focus Companion surface can be minimized and reopened without changing time. It may also present a Map-owned long travel duration such as a flight, but it must consume the Map Journey clock instead of creating a duplicate Activity Session timer. The source clock always remains canonical.
+
+Activity completion policy is explicit per step:
+
+- `duration_sufficient`: elapsed time can satisfy a bounded solo activity such as study or practice;
+- `user_confirmation`: elapsed time is followed by a user completion check;
+- `event_resolution`: a required deterministic activity scene must resolve;
+- `external_evidence`: another owner must provide the required proof.
+
+Even `duration_sufficient` permits only effects that the affected owner has approved for that activity contract. Optional events may add bounded modifiers, but the absence of an event never prevents the base Activity Session from completing.
+
 ## 9. Event And Interaction Policy
 
 Agenda Journey and Activity Session submit bounded snapshots only at explicit checkpoints such as step start, a duration milestone, near completion, completion, or deadline evaluation. Event Runtime must not evaluate on every timer tick.
@@ -180,6 +226,10 @@ Event Runtime owns:
 - minimum provenance and event logs.
 
 Agenda Journey owns validation of continue, delay, branch, complete, miss, skip, or cancel requests. Other owners validate their own effects.
+
+A scheduled activity is deterministic source work, not a random event. Event Runtime may select an occupation/world/late-arrival variant, passive beat, optional interruption, or choice-bearing scene at explicit checkpoints, but an empty event result must leave the base activity usable. Passive no-choice beats may update the companion presentation or event log without opening a blocking card.
+
+User control has three independent axes: module event permission, random-event intensity, and presentation mode. A future per-session override may choose quiet, important-only, balanced, or lively behavior. Quiet/off optional events do not disable the activity, its deadline, safety notices, or deterministic required completion path.
 
 The shared Mini Scene policy is the presentation seam:
 
@@ -247,7 +297,8 @@ Exact schema versions require a separate persistence review. Legacy Calendar and
 | Schedule Orchestrator | idempotent materialization and deadline coordination | copied business truth or direct effects |
 | Agenda Journey | short-range plan instances, steps, execution state, evidence references, outcome summary | Calendar history, Map truth, event gates, downstream owner state |
 | Map | places, Map Journey, travel checkpoints, arrival/cancellation | Agenda Journey completion or Calendar commitment |
-| Activity Session | time and session-checkpoint truth | event selection or broad value mutation |
+| Activity Session | time, completion policy, and session-checkpoint truth | event selection, media assets, or broad value mutation |
+| Focus Companion surface | timer projection, scene preference, and stable Gallery/Music/companion references | source clocks, Event Runtime truth, media binaries/playback, or broad values |
 | Event Runtime | eligibility, random/deterministic policy, cooldown/cap, proposal/review, logs | source-module records and final owner state |
 | Mini Scene Module | presentation policy, validated artifact, Presenter/fallback, interaction audit | source-event truth and state mutation |
 | Narrative Timeline | bounded source-linked projection after approval | canonical schedule, journey, map, event, relationship, or finance truth |
@@ -260,7 +311,7 @@ These stages define dependency order only. Live status and priority remain in th
 2. `CJA-1`: Calendar month/week/Agenda information architecture and event authoring contract.
 3. `CJA-2`: pure Schedule Orchestrator Interface, idempotent materialization fixtures, and persistence review without a new visible app.
 4. `CJA-3`: Agenda Journey V1 with one manual or Calendar-derived day plan and no random event requirement.
-5. `CJA-4`: one Activity Session with minimize/reopen reconciliation and no claim of exact closed-app popup delivery.
+5. `CJA-4`: one Activity Session with explicit completion policy, minimize/reopen reconciliation, and a restrained Focus Companion baseline; Gallery backgrounds, Music/ambient caller integration, and richer companions remain separately promoted extensions.
 6. `CJA-5`: one low-impact Event Runtime Adapter with `off` automatic resolution and `text` interaction; interactive HTML remains separately gated by Mini Scene security.
 7. `CJA-6`: Narrative Timeline projection and bounded AI-context Interface after owner, retention, review, and backup contracts are approved.
 
@@ -280,6 +331,11 @@ Stop and reopen architecture review if an implementation would:
 8. make a future Story/Diary summary the canonical source record;
 9. inject raw event logs or full prompts into Forum or Chat without a bounded context Interface;
 10. add persistence, backup, or migration fields before their owner and compatibility rules are approved.
+11. make an optional event required for a deterministic scheduled activity to exist or complete its approved base path;
+12. freeze a suggested departure time after the canonical Map position changes or create a second Map Journey when the linked journey is already active;
+13. treat manual relocation as journey-arrival evidence when a step requires real travel provenance;
+14. create an Activity Session timer for a flight or trip whose canonical duration is already owned by Map Journey;
+15. copy Gallery binaries, Music audio, queue state, or playback state into an Activity Session or event record.
 
 ## 16. Validation Expectations
 

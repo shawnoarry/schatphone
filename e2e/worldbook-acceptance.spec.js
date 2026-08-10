@@ -126,7 +126,7 @@ test('Settings entry separates the WorldBook overview from optional capability P
   await page.getByTestId('app-store-item-world_app_survival_city_survival_supply_board').click()
   await expect(page.getByTestId('app-store-world-handoff')).toContainText('灾后生存都市')
   await openVisibleAppStoreAction(page)
-  await expect(page).toHaveURL(/#\/shopping\?/)
+  await expect(page).toHaveURL(/#\/shopping\/schat_mall\?/)
   await expect(page).toHaveURL(/worldPack=survival_city/)
   await expect(page).toHaveURL(/worldApp=survival_supply_board/)
   await expect(page.getByTestId('shopping-world-app-context')).toContainText('补给站')
@@ -134,7 +134,8 @@ test('Settings entry separates the WorldBook overview from optional capability P
   await page.getByTestId('shopping-world-app-apply-filter').click()
   await expect(page).toHaveURL(/worldPack=survival_city/)
   await expect(page).toHaveURL(/worldApp=survival_supply_board/)
-  await expect(page).toHaveURL(/service=daily_fresh/)
+  await expect(page).toHaveURL(/#\/shopping\/daily_fresh\?/)
+  await expect(page).not.toHaveURL(/service=daily_fresh/)
   await expect(page).toHaveURL(/category=grocery/)
 
   await navigateInsideUnlockedApp(page, '/worldbook')

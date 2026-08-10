@@ -23,7 +23,7 @@ import {
   toReminderInt,
   trimReminderLine,
 } from '../lib/reminder-cues'
-import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
+import { SHOPPING_SOURCE_KEYS, buildShoppingAppRoute } from '../lib/planned-module-registry'
 import { useCalendarStore } from './calendar'
 import { useMapStore } from './map'
 
@@ -262,6 +262,7 @@ export const useRemindersStore = defineStore('reminders', () => {
     )
     const totalCents = Math.max(0, toReminderInt(order.totalCents, 0))
     const currency = trimReminderLine(order.currency, 'CNY', 12).toUpperCase()
+    const serviceKey = trimReminderLine(order.items?.[0]?.serviceKey, '', 40)
     const orderTitle =
       itemCount > 1
         ? `${itemCount} Shopping items`
@@ -276,7 +277,7 @@ export const useRemindersStore = defineStore('reminders', () => {
       summary: order.note || `Track delivery or follow up for ${itemCount || 1} Shopping item(s).`,
       suggestedAt: existing?.suggestedAt || createdAt + 24 * 60 * 60 * 1000,
       status: existing?.status || REMINDER_CUE_STATUS_SUGGESTED,
-      route: '/shopping',
+      route: `${buildShoppingAppRoute(serviceKey)}?category=logistics&orderId=${encodeURIComponent(orderId)}`,
       icon: 'fas fa-truck-fast',
       tone: 'orange',
       source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,

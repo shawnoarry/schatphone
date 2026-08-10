@@ -16,7 +16,7 @@ import {
   recordMapSharedRouteRelationshipFact,
 } from '../lib/relationship-fact-adapters'
 import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
-import { formatMapPosition } from '../lib/map-packs'
+import { calculateMapDistanceKm, formatMapPosition } from '../lib/map-packs'
 import {
   getMapPlaceCategoryGroupVisual,
   matchesMapPlaceCategoryFilter,
@@ -50,6 +50,7 @@ import MapTripControlPanel from '../components/map/MapTripControlPanel.vue'
 import MapTripHistoryPanel from '../components/map/MapTripHistoryPanel.vue'
 import MapVisualSettingsPanel from '../components/map/MapVisualSettingsPanel.vue'
 import MapJourneyMediaPanel from '../components/map/MapJourneyMediaPanel.vue'
+import MapPlaceFocusSheet from '../components/map/MapPlaceFocusSheet.vue'
 import { useChatStore } from '../stores/chat'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import {
@@ -206,6 +207,80 @@ const mapDrawerTitle = computed(() => {
 const isJourneyPlanningLocked = computed(() =>
   ['traveling', 'arrived'].includes(tripRuntime.value.status),
 )
+
+const normalizePlaceRelationText = (value) =>
+  typeof value === 'string' ? value.trim().toLocaleLowerCase() : ''
+
+const selectedPlaceDistanceKm = computed(() => {
+  const place = selectedMapPlace.value
+  const current = currentLocation.value
+  if (
+    !place?.position ||
+    !current?.position ||
+    place.mapPackId !== activeMapPackId.value ||
+    current.mapPackId !== activeMapPackId.value
+  ) return null
+  return calculateMapDistanceKm(activeMapPack.value, current.position, place.position)
+})
+
+const isSelectedPlaceCurrentLocation = computed(() =>
+  Number.isFinite(selectedPlaceDistanceKm.value) && selectedPlaceDistanceKm.value <= 0.001,
+)
+
+const isSelectedPlaceJourneyDestination = computed(() => {
+  if (!isJourneyPlanningLocked.value || !selectedMapPlace.value) return false
+  const destinationTexts = [tripRuntime.value?.to, tripRuntime.value?.toLabel]
+    .map(normalizePlaceRelationText)
+    .filter(Boolean)
+  const place = selectedMapPlace.value
+  const placeTexts = [
+    mapPlaceName(place),
+    mapPlaceDetail(place),
+    place.label,
+    place.detail,
+    place.nameZh,
+    place.nameEn,
+    place.detailZh,
+    place.detailEn,
+  ]
+    .map(normalizePlaceRelationText)
+    .filter(Boolean)
+  return destinationTexts.some((value) => placeTexts.includes(value))
+})
+
+const selectedPlaceSummary = computed(() => {
+  const place = selectedMapPlace.value
+  if (!place) return ''
+  const zh = place.summaryZh || place.descriptionZh || ''
+  const en = place.summaryEn || place.descriptionEn || ''
+  if (zh || en) return t(zh || en, en || zh)
+  return mapPlaceDetail(place)
+})
+
+const selectedPlaceContextTone = computed(() => {
+  if (isJourneyPlanningLocked.value) return 'journey'
+  if (isSelectedPlaceCurrentLocation.value) return 'current'
+  return 'remote'
+})
+
+const selectedPlaceContextLabel = computed(() => {
+  if (isSelectedPlaceJourneyDestination.value) return t('正在前往这里', 'Heading here')
+  if (isJourneyPlanningLocked.value) return t('当前行程中 · 浏览地点', 'Active journey · Browsing place')
+  if (isSelectedPlaceCurrentLocation.value) return t('当前位置', 'Current position')
+  if (!Number.isFinite(selectedPlaceDistanceKm.value)) return t('可用地点', 'Available place')
+  if (selectedPlaceDistanceKm.value < 1) {
+    const meters = Math.max(1, Math.round(selectedPlaceDistanceKm.value * 1000))
+    return t(`距当前位置 ${meters} 米`, `${meters} m from current position`)
+  }
+  const distance = selectedPlaceDistanceKm.value.toFixed(selectedPlaceDistanceKm.value < 10 ? 1 : 0)
+  return t(`距当前位置 ${distance} 公里`, `${distance} km from current position`)
+})
+
+const selectedPlacePrimaryAction = computed(() => {
+  if (isJourneyPlanningLocked.value) return 'view_journey'
+  if (isSelectedPlaceCurrentLocation.value) return 'none'
+  return 'go'
+})
 
 const mapWorldAppContext = computed(() =>
   resolveWorldAppUxContext({
@@ -673,6 +748,11 @@ const focusCurrentLocation = () => {
 
 const closePlaceDetail = () => {
   selectedMapPlace.value = null
+}
+
+const openSelectedPlaceJourney = () => {
+  closePlaceDetail()
+  openMapDrawer('trip')
 }
 
 const useSelectedPlaceAsCurrent = () => {
@@ -2653,80 +2733,35 @@ onBeforeUnmount(() => {
       </aside>
     </div>
 
-    <div v-if="selectedMapPlace" class="map-place-modal-backdrop" @click.self="closePlaceDetail">
-      <section class="map-place-detail-sheet" role="dialog" aria-modal="true" :aria-label="mapPlaceName(selectedMapPlace)" :style="{ '--map-place-tone': mapPlaceVisual(selectedMapPlace).tone }" data-testid="map-place-detail-sheet">
-        <div class="map-place-detail-head">
-          <span class="map-place-detail-icon"><i :class="mapPlaceVisual(selectedMapPlace).icon" aria-hidden="true"></i></span>
-          <div class="min-w-0">
-            <small>{{ selectedMapPlace.source === 'user' ? t('我的地点', 'My place') : t('世界地点', 'World place') }}</small>
-            <h2>{{ mapPlaceName(selectedMapPlace) }}</h2>
-            <p v-if="mapPlaceSecondaryName(selectedMapPlace)" class="map-place-detail-secondary-name" data-testid="map-place-secondary-name">
-              {{ mapPlaceSecondaryName(selectedMapPlace) }}
-            </p>
-            <p>{{ mapPlaceDetail(selectedMapPlace) }}</p>
-            <p v-if="mapPlaceSecondaryDetail(selectedMapPlace)" class="map-place-detail-secondary-detail" data-testid="map-place-secondary-detail">
-              {{ mapPlaceSecondaryDetail(selectedMapPlace) }}
-            </p>
-          </div>
-          <button type="button" :aria-label="t('关闭', 'Close')" @click="closePlaceDetail"><i class="fas fa-xmark" aria-hidden="true"></i></button>
-        </div>
-        <div class="map-place-language-control">
-          <span class="map-place-language-label">
-            <i class="fas fa-language" aria-hidden="true"></i>
-            {{ t('地名显示', 'Place names') }}
-          </span>
-          <div class="map-place-language-segments" role="group" :aria-label="t('地名显示语言', 'Place-name language')">
-            <button
-              v-for="option in MAP_PLACE_DISPLAY_OPTIONS"
-              :key="option.id"
-              type="button"
-              :class="{ 'is-active': mapPlaceDisplayMode === option.id }"
-              :data-testid="`map-place-language-mode-${option.id}`"
-              :aria-label="t(option.titleZh, option.titleEn)"
-              :title="t(option.titleZh, option.titleEn)"
-              :aria-pressed="mapPlaceDisplayMode === option.id"
-              @click="setMapPlaceDisplayMode(option.id)"
-            >
-              {{ t(option.labelZh, option.labelEn) }}
-            </button>
-          </div>
-        </div>
-        <div
-          v-if="isJourneyPlanningLocked"
-          class="map-place-journey-lock"
-          data-testid="map-place-journey-lock"
-        >
-          <i class="fas fa-eye" aria-hidden="true"></i>
-          <span>{{ t('浏览此地点不会改变当前行程', 'Viewing this place will not change the current journey') }}</span>
-        </div>
-        <div v-else class="map-place-detail-actions">
-          <button type="button" class="is-primary" data-testid="map-place-use-destination" @click="useSelectedPlaceAsDestination">
-            <i class="fas fa-location-arrow" aria-hidden="true"></i>
-            {{ t('设为目的地', 'Set destination') }}
-          </button>
-          <button type="button" @click="useSelectedPlaceAsStart">
-            <i class="fas fa-route" aria-hidden="true"></i>
-            {{ t('设为起点', 'Set start') }}
-          </button>
-          <button type="button" @click="useSelectedPlaceAsCurrent">
-            <i class="fas fa-crosshairs" aria-hidden="true"></i>
-            {{ t('设为当前位置', 'Set current') }}
-          </button>
-        </div>
-        <button type="button" class="map-place-share-button" data-testid="map-place-share-chat" @click="shareSelectedPlaceToChat">
-          <i class="fas fa-share-nodes" aria-hidden="true"></i>
-          {{ t('分享到聊天', 'Share to Chat') }}
-        </button>
-        <button v-if="selectedMapPlace.source === 'user'" type="button" class="map-place-manage-button" data-testid="map-place-manage-pin" @click="openSelectedPlaceManager">
-          <i class="fas fa-pen-to-square" aria-hidden="true"></i>
-          {{ t('编辑地点与图钉', 'Edit place and pin') }}
-        </button>
-        <button v-if="selectedMapPlace.source === 'user'" type="button" class="map-place-delete-button" @click="removeSelectedPlace">
-          <i class="fas fa-trash-can" aria-hidden="true"></i>
-          {{ t('删除地点', 'Delete place') }}
-        </button>
-      </section>
-    </div>
+    <MapPlaceFocusSheet
+      v-if="selectedMapPlace"
+      :place="selectedMapPlace"
+      :visual="mapPlaceVisual(selectedMapPlace)"
+      :name="mapPlaceName(selectedMapPlace)"
+      :secondary-name="mapPlaceSecondaryName(selectedMapPlace)"
+      :summary="selectedPlaceSummary"
+      :detail="mapPlaceDetail(selectedMapPlace)"
+      :secondary-detail="mapPlaceSecondaryDetail(selectedMapPlace)"
+      :source-label="selectedMapPlace.source === 'user' ? t('我的地点', 'My place') : t('世界地点', 'World place')"
+      :category-label="t(mapPlaceVisual(selectedMapPlace).labelZh, mapPlaceVisual(selectedMapPlace).labelEn)"
+      :context-label="selectedPlaceContextLabel"
+      :context-tone="selectedPlaceContextTone"
+      :primary-action="selectedPlacePrimaryAction"
+      :journey-locked="isJourneyPlanningLocked"
+      :can-manage="selectedMapPlace.source === 'user'"
+      :display-mode="mapPlaceDisplayMode"
+      :display-options="MAP_PLACE_DISPLAY_OPTIONS"
+      :t="t"
+      @close="closePlaceDetail"
+      @go="useSelectedPlaceAsDestination"
+      @view-journey="openSelectedPlaceJourney"
+      @share="shareSelectedPlaceToChat"
+      @manage="openSelectedPlaceManager"
+      @set-display-mode="setMapPlaceDisplayMode"
+      @set-start="useSelectedPlaceAsStart"
+      @set-current="useSelectedPlaceAsCurrent"
+      @delete="removeSelectedPlace"
+    />
   </div>
 </template>
 
@@ -3850,8 +3885,7 @@ onBeforeUnmount(() => {
 
 .map-bottom-nav-item i { color: #17664f; font-size: 12px; }
 
-.map-drawer-backdrop,
-.map-place-modal-backdrop {
+.map-drawer-backdrop {
   position: fixed;
   inset: 0;
   z-index: 70;
@@ -3872,8 +3906,7 @@ onBeforeUnmount(() => {
   background: rgba(21, 33, 27, 0.42);
 }
 
-.map-bottom-drawer,
-.map-place-detail-sheet {
+.map-bottom-drawer {
   display: flex;
   width: min(100%, 720px);
   max-height: 86vh;
@@ -3971,43 +4004,6 @@ onBeforeUnmount(() => {
 .map-place-management-link small { color: #758179; font-size: 9px; }
 .map-place-management-link > i:last-child { color: #98a49d; font-size: 8px; }
 
-.map-place-detail-sheet {
-  overflow-y: auto;
-  padding: 18px 18px calc(22px + env(safe-area-inset-bottom));
-}
-
-.map-place-detail-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.map-place-detail-head h2 { margin-top: 3px; font-size: 18px; font-weight: 850; }
-.map-place-detail-head > button { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border: 1px solid #dce2de; border-radius: 7px; background: #fff; color: #526158; }
-.map-place-detail-head { display: grid; grid-template-columns: 48px minmax(0, 1fr) 38px; }
-.map-place-detail-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 8px; background: var(--map-place-tone); color: #fff; }
-.map-place-detail-head small { color: #718078; font-size: 9px; font-weight: 800; }
-.map-place-detail-head p { margin-top: 5px; color: #627067; font-size: 11px; line-height: 1.5; }
-.map-place-detail-head .map-place-detail-secondary-name { margin-top: 2px; color: #3f5b4e; font-size: 12px; font-weight: 750; }
-.map-place-detail-head .map-place-detail-secondary-detail { margin-top: 2px; color: #7a8780; font-size: 10px; }
-.map-place-language-control { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; margin-top: 14px; border-top: 1px solid #e2e7e3; padding-top: 12px; }
-.map-place-language-label { display: inline-flex; min-width: 0; align-items: center; gap: 6px; color: #52635a; font-size: 9px; font-weight: 800; white-space: nowrap; }
-.map-place-language-label i { color: #17664f; font-size: 11px; }
-.map-place-language-segments { display: grid; min-width: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid #d7dfda; border-radius: 7px; background: #f4f7f5; }
-.map-place-language-segments button { min-width: 0; min-height: 34px; border-left: 1px solid #d7dfda; padding: 0 5px; color: #66746d; font-size: 9px; font-weight: 850; white-space: nowrap; }
-.map-place-language-segments button:first-child { border-left: 0; }
-.map-place-language-segments button.is-active { background: #17664f; color: #fff; }
-.map-place-journey-lock { display: flex; align-items: center; gap: 8px; margin-top: 16px; border: 1px solid #d7e2dc; border-radius: 7px; background: #f2f7f4; padding: 10px 11px; color: #315044; font-size: 10px; font-weight: 750; line-height: 1.45; }
-.map-place-journey-lock i { flex: 0 0 auto; color: #17664f; }
-.map-place-detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 18px; }
-.map-place-detail-actions button { display: flex; min-height: 58px; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid #dae1dc; border-radius: 7px; background: #fff; color: #3a4d43; padding: 5px; font-size: 9px; font-weight: 800; }
-.map-place-detail-actions button.is-primary { border-color: #17664f; background: #17664f; color: #fff; }
-.map-place-share-button,
-.map-place-manage-button,
-.map-place-delete-button { display: inline-flex; min-height: 40px; align-items: center; gap: 7px; margin-top: 12px; color: #a54238; font-size: 10px; font-weight: 800; }
-.map-place-share-button { margin-right: 18px; color: #17664f; }
-.map-place-manage-button { margin-right: 18px; color: #17664f; }
-
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid #0f8061;
@@ -4017,8 +4013,7 @@ input:focus-visible {
 @media (min-width: 720px) {
   .map-canvas-shell { padding: 12px; }
   .map-canvas { border: 1px solid #d3dcd6; border-radius: 8px; }
-  .map-bottom-drawer,
-  .map-place-detail-sheet { margin-bottom: 18px; border-radius: 8px; }
+  .map-bottom-drawer { margin-bottom: 18px; border-radius: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

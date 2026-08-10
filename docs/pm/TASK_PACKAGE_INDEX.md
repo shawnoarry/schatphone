@@ -22,6 +22,7 @@ Current routing note:
 - roadmap 4.11 Map renderer, packs, places, pins, trips, and validation belong only to `map-calendar-reminders`; the functional group remains Map-only.
 - the accepted Calendar/Agenda Journey orchestration direction belongs primarily to `map-calendar-reminders` for Calendar, Agenda Journey, Activity Session, and schedule handoffs. Engage `event-runtime-and-world-hub` only for eligibility/randomness/review/log semantics, `module-architecture-governance` for the hidden Schedule Orchestrator and persistence Interfaces, and `visual-and-ia-governance` when the Calendar or Agenda Journey frontend slice is promoted. This direction does not change roadmap 4.11 Map ownership.
 - roadmap 4.13 Music belongs to `visual-and-ia-governance` for installed-app identity, Home/App Store entry, Now Playing, and mini-player acceptance, and to `module-architecture-governance` for provider/playback contracts, persistence, credentials, backup, and bounded Chat/Map Interfaces. Chat and Map packages are engaged only when an actual caller is separately promoted.
+- roadmap 4.14 cross-module Event Experience belongs primarily to `event-runtime-and-world-hub` for the Event Surface Projection, host registration, event review/notebook semantics, and World Hub/Cheats separation. Engage `map-calendar-reminders` only for EVE-2 Map anchor/card rendering and Map-owned interaction, `module-architecture-governance` only when shared persistence or Mini Scene Interfaces change, and a source package only when its event family is explicitly promoted.
 - roadmap 4.15 shared runtime TTS belongs primarily to `module-architecture-governance` for provider Adapters, Cloudflare Worker behavior, persistence, credentials, preview-media lifecycle, and future caller contracts. Engage `chat-and-chat-directory` for the current Settings entry and any later read-aloud/voice-message behavior; development-time ElevenLabs Skills remain tooling rather than runtime ownership.
 
 ## 1. Standard Package Structure
@@ -90,6 +91,8 @@ Path:
 Use for:
 
 - simulation event engine
+- Event Surface Projection and registered host contracts
+- event-card review/notebook semantics
 - runtime review
 - World Hub
 - Cheats planning

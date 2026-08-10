@@ -41,6 +41,14 @@ import {
   probeMusicAudioSource,
   putMusicLocalMedia,
 } from '../lib/music-local-media-storage'
+import {
+  MUSIC_PROVIDER_CACHE_KINDS,
+  MUSIC_PROVIDER_LYRICS_TTL_MS,
+  MUSIC_PROVIDER_METADATA_TTL_MS,
+  createMusicProviderCacheKey,
+  getMusicProviderCacheEntry,
+  putMusicProviderCacheEntry,
+} from '../lib/music-provider-cache'
 import { musicPlaybackRuntime } from '../lib/music-playback-runtime'
 import { useSystemStore } from './system'
 
@@ -48,6 +56,8 @@ const CREDENTIAL_STORAGE_KEY = 'schatphone:music:credentials'
 const CREDENTIAL_STORAGE_VERSION = 1
 const MAX_LOCAL_AUDIO_FILE_SIZE = 512 * 1024 * 1024
 const LOCAL_AUDIO_FILE_PATTERN = /\.(mp3|m4a|aac|ogg|oga|wav|flac)$/i
+const CHKSZ_RESOLVED_TRACK_TTL_MS = 24 * 60 * 60 * 1000
+const CHKSZ_RESOLVED_TRACK_CACHE_LIMIT = 50
 
 const canUseLocalStorage = () => {
   try {
@@ -63,7 +73,8 @@ const readCredentials = () => {
     const raw = window.localStorage.getItem(CREDENTIAL_STORAGE_KEY)
     if (!raw) return {}
     const parsed = JSON.parse(raw)
-    if (parsed?.version !== CREDENTIAL_STORAGE_VERSION || typeof parsed?.data !== 'object') return {}
+    if (parsed?.version !== CREDENTIAL_STORAGE_VERSION || typeof parsed?.data !== 'object')
+      return {}
     return Object.fromEntries(
       Object.entries(parsed.data)
         .map(([profileId, value]) => [
@@ -103,11 +114,35 @@ const dedupeTracks = (tracks, limit = MUSIC_LIMITS.queue) => {
 }
 
 const matchesQuery = (track, query) => {
-  const needle = String(query || '').trim().toLowerCase()
+  const needle = String(query || '')
+    .trim()
+    .toLowerCase()
   if (!needle) return true
   return [track.title, track.artist, track.album, track.genre]
     .filter(Boolean)
     .some((value) => String(value).toLowerCase().includes(needle))
+}
+
+const mergeMusicTrackMetadata = (trackInput, metadataInput) => {
+  const track = normalizeMusicTrack(trackInput)
+  const metadata = normalizeMusicTrack(metadataInput)
+  const patch = {}
+  if (metadata.title && metadata.title !== 'Untitled Track') patch.title = metadata.title
+  if (metadata.artist && metadata.artist !== 'Unknown Artist') patch.artist = metadata.artist
+  if (metadata.album && metadata.album !== 'Unknown Album') patch.album = metadata.album
+  if (metadata.coverUrl) patch.coverUrl = metadata.coverUrl
+  if (metadata.audioUrl) patch.audioUrl = metadata.audioUrl
+  if (metadata.durationSec) patch.durationSec = metadata.durationSec
+  if (metadata.year) patch.year = metadata.year
+  if (metadata.genre) patch.genre = metadata.genre
+  if (metadata.providerName) patch.providerName = metadata.providerName
+  return normalizeMusicTrack({
+    ...track,
+    ...patch,
+    id: track.id,
+    providerId: track.providerId,
+    sourceRef: track.sourceRef,
+  })
 }
 
 export const useMusicStore = defineStore('music', () => {
@@ -138,7 +173,11 @@ export const useMusicStore = defineStore('music', () => {
   const floatingPlayerRequested = ref(false)
   const floatingPlayerDismissed = ref(false)
   const floatingPlayerExpanded = ref(false)
+  const resolvedTrackCache = new Map()
+  const pendingTrackResolutions = new Map()
+  const pendingLyricRequests = new Map()
   let activeLocalPlaybackUrl = ''
+  let activeCachedChkszPlayback = null
 
   const state = computed(() => systemStore.settings.music)
   const profiles = computed(() => state.value.profiles || [])
@@ -150,13 +189,17 @@ export const useMusicStore = defineStore('music', () => {
       null,
   )
   const savedTracks = computed(() => state.value.savedTracks || [])
-  const importedTracks = computed(() => savedTracks.value.filter((track) =>
-    [MUSIC_TRACK_SOURCE_TYPES.DIRECT_URL, MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE].includes(
-      track.sourceRef?.type,
+  const importedTracks = computed(() =>
+    savedTracks.value.filter((track) =>
+      [MUSIC_TRACK_SOURCE_TYPES.DIRECT_URL, MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE].includes(
+        track.sourceRef?.type,
+      ),
     ),
-  ))
+  )
   const demoTracks = computed(() => MUSIC_DEMO_TRACKS.map((track) => ({ ...track })))
-  const libraryTracks = computed(() => dedupeTracks([...savedTracks.value, ...demoTracks.value], MUSIC_LIMITS.savedTracks))
+  const libraryTracks = computed(() =>
+    dedupeTracks([...savedTracks.value, ...demoTracks.value], MUSIC_LIMITS.savedTracks),
+  )
   const favoriteTracks = computed(() => {
     const favorites = new Set(state.value.favoriteTrackIds || [])
     return libraryTracks.value.filter((track) => favorites.has(track.id))
@@ -170,10 +213,14 @@ export const useMusicStore = defineStore('music', () => {
     return queue.value.findIndex((track) => track.id === currentTrack.value.id)
   })
   const lastPlayedTrack = computed(() =>
-    findMusicTrack(state.value.lastPlayedTrackId, [recentTracks.value, savedTracks.value, demoTracks.value]),
+    findMusicTrack(state.value.lastPlayedTrackId, [
+      recentTracks.value,
+      savedTracks.value,
+      demoTracks.value,
+    ]),
   )
   const featuredTrack = computed(() => lastPlayedTrack.value || demoTracks.value[0] || null)
-  const isPlaying = computed(() => runtime.status === 'playing')
+  const isPlaying = computed(() => ['playing', 'buffering'].includes(runtime.status))
   const floatingPlayerVisible = computed(
     () =>
       floatingPlayerRequested.value ||
@@ -199,14 +246,16 @@ export const useMusicStore = defineStore('music', () => {
       resultCount: Math.max(0, Number(patch.resultCount ?? previous.resultCount) || 0),
       playableCount: Math.max(0, Number(patch.playableCount ?? previous.playableCount) || 0),
       resolvableCount: Math.max(0, Number(patch.resolvableCount ?? previous.resolvableCount) || 0),
-      rateLimit: Number.isFinite(quota.rateLimit) ? quota.rateLimit : previous.rateLimit ?? null,
+      rateLimit: Number.isFinite(quota.rateLimit) ? quota.rateLimit : (previous.rateLimit ?? null),
       freeRemaining: Number.isFinite(quota.freeRemaining)
         ? quota.freeRemaining
-        : previous.freeRemaining ?? null,
+        : (previous.freeRemaining ?? null),
       paidRemaining: Number.isFinite(quota.paidRemaining)
         ? quota.paidRemaining
-        : previous.paidRemaining ?? null,
-      retryAfter: Number.isFinite(quota.retryAfter) ? quota.retryAfter : previous.retryAfter ?? null,
+        : (previous.paidRemaining ?? null),
+      retryAfter: Number.isFinite(quota.retryAfter)
+        ? quota.retryAfter
+        : (previous.retryAfter ?? null),
     }
   }
 
@@ -227,6 +276,140 @@ export const useMusicStore = defineStore('music', () => {
     )
       ? { ...track, audioUrl: '' }
       : track
+  }
+
+  const applyMetadataToKnownTracks = (trackInput) => {
+    const metadata = toPersistableTrack(trackInput)
+    const mergeKnownTrack = (track) =>
+      track.id === metadata.id ? mergeMusicTrackMetadata(track, metadata) : track
+    state.value.savedTracks = savedTracks.value.map(mergeKnownTrack)
+    state.value.recentTracks = recentTracks.value.map(mergeKnownTrack)
+    state.value.queue = queue.value.map(mergeKnownTrack)
+    searchResults.value = searchResults.value.map(mergeKnownTrack)
+    return metadata
+  }
+
+  const readProviderCache = (kind, profile, track, options = {}) =>
+    (options.getProviderCache || getMusicProviderCacheEntry)({
+      kind,
+      profile,
+      track,
+      now: options.now,
+    })
+
+  const writeProviderCache = (kind, profile, track, value, ttlMs, options = {}) =>
+    (options.putProviderCache || putMusicProviderCacheEntry)({
+      kind,
+      profile,
+      track,
+      value,
+      ttlMs,
+      now: options.now,
+    })
+
+  const enrichChkszTracksFromMetadataCache = async (profile, tracks, options = {}) =>
+    Promise.all(
+      tracks.map(async (track) => {
+        const cachedMetadata = await readProviderCache(
+          MUSIC_PROVIDER_CACHE_KINDS.METADATA,
+          profile,
+          track,
+          options,
+        )
+        const enrichedTrack = cachedMetadata
+          ? mergeMusicTrackMetadata(track, cachedMetadata)
+          : track
+        await writeProviderCache(
+          MUSIC_PROVIDER_CACHE_KINDS.METADATA,
+          profile,
+          enrichedTrack,
+          toPersistableTrack(enrichedTrack),
+          MUSIC_PROVIDER_METADATA_TTL_MS,
+          options,
+        )
+        return enrichedTrack
+      }),
+    )
+
+  const cacheResolvedChkszTrack = (cacheKey, entry) => {
+    if (!cacheKey) return
+    resolvedTrackCache.delete(cacheKey)
+    resolvedTrackCache.set(cacheKey, entry)
+    while (resolvedTrackCache.size > CHKSZ_RESOLVED_TRACK_CACHE_LIMIT) {
+      const oldestKey = resolvedTrackCache.keys().next().value
+      if (!oldestKey) break
+      resolvedTrackCache.delete(oldestKey)
+    }
+  }
+
+  const resolveChkszTrackForPlayback = async (profile, trackInput, options = {}) => {
+    const track = normalizeMusicTrack(trackInput)
+    const cacheKey = createMusicProviderCacheKey({
+      kind: MUSIC_PROVIDER_CACHE_KINDS.METADATA,
+      profile,
+      track,
+    })
+    const now = Math.max(0, Number(options.now) || Date.now())
+    if (options.forceProviderRefresh === true) resolvedTrackCache.delete(cacheKey)
+    const cachedResolution = resolvedTrackCache.get(cacheKey)
+    if (cachedResolution && cachedResolution.expiresAt > now) {
+      cacheResolvedChkszTrack(cacheKey, cachedResolution)
+      return {
+        ok: true,
+        track: mergeMusicTrackMetadata(track, cachedResolution.track),
+        quota: null,
+        cacheKey,
+        fromResolvedCache: true,
+      }
+    }
+    if (cachedResolution) resolvedTrackCache.delete(cacheKey)
+    if (pendingTrackResolutions.has(cacheKey)) return pendingTrackResolutions.get(cacheKey)
+
+    const request = (async () => {
+      const cachedMetadata = await readProviderCache(
+        MUSIC_PROVIDER_CACHE_KINDS.METADATA,
+        profile,
+        track,
+        options,
+      )
+      const enrichedTrack = cachedMetadata ? mergeMusicTrackMetadata(track, cachedMetadata) : track
+      const result = await resolveChkszMusicTrack({
+        profile,
+        credential: getCredential(profile.id),
+        track: enrichedTrack,
+        fetchImpl: options.fetchImpl,
+        signal: options.signal,
+        sleepImpl: options.sleepImpl,
+      })
+      const resolvedTrack = mergeMusicTrackMetadata(enrichedTrack, result.track)
+      cacheResolvedChkszTrack(cacheKey, {
+        track: resolvedTrack,
+        expiresAt: now + CHKSZ_RESOLVED_TRACK_TTL_MS,
+      })
+      const metadata = applyMetadataToKnownTracks(resolvedTrack)
+      await writeProviderCache(
+        MUSIC_PROVIDER_CACHE_KINDS.METADATA,
+        profile,
+        resolvedTrack,
+        metadata,
+        MUSIC_PROVIDER_METADATA_TTL_MS,
+        options,
+      )
+      return {
+        ...result,
+        track: resolvedTrack,
+        cacheKey,
+        fromResolvedCache: false,
+      }
+    })()
+    pendingTrackResolutions.set(cacheKey, request)
+    try {
+      return await request
+    } finally {
+      if (pendingTrackResolutions.get(cacheKey) === request) {
+        pendingTrackResolutions.delete(cacheKey)
+      }
+    }
   }
 
   const revokeLocalPlaybackUrl = (url = activeLocalPlaybackUrl, objectUrlApi = globalThis.URL) => {
@@ -293,7 +476,10 @@ export const useMusicStore = defineStore('music', () => {
     const track = toPersistableTrack(trackInput)
     if (!track.id) return null
     const existingIndex = savedTracks.value.findIndex((item) => item.id === track.id)
-    const saved = { ...track, addedAt: existingIndex >= 0 ? savedTracks.value[existingIndex].addedAt : Date.now() }
+    const saved = {
+      ...track,
+      addedAt: existingIndex >= 0 ? savedTracks.value[existingIndex].addedAt : Date.now(),
+    }
     if (existingIndex >= 0) savedTracks.value.splice(existingIndex, 1, saved)
     else savedTracks.value.unshift(saved)
     state.value.savedTracks = dedupeTracks(savedTracks.value, MUSIC_LIMITS.savedTracks)
@@ -303,7 +489,10 @@ export const useMusicStore = defineStore('music', () => {
   const addTrackFromUrl = async (input = {}, options = {}) => {
     if (!canWriteCurrentSave()) return { ok: false, code: 'CURRENT_SAVE_READ_ONLY' }
     const audioUrlInput = String(input.audioUrl || input.url || '').trim()
-    const title = String(input.title || '').trim().replace(/\s+/g, ' ').slice(0, 180)
+    const title = String(input.title || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 180)
     if (!audioUrlInput) return { ok: false, code: 'AUDIO_URL_MISSING' }
     if (!title) return { ok: false, code: 'TRACK_TITLE_MISSING' }
 
@@ -320,8 +509,10 @@ export const useMusicStore = defineStore('music', () => {
     const probe = await probeImpl(audioUrl, options.probeOptions || {})
     if (!probe?.ok) return { ok: false, code: probe?.code || 'AUDIO_UNAVAILABLE' }
 
-    const duplicate = importedTracks.value.find((track) =>
-      track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.DIRECT_URL && track.audioUrl === audioUrl,
+    const duplicate = importedTracks.value.find(
+      (track) =>
+        track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.DIRECT_URL &&
+        track.audioUrl === audioUrl,
     )
     const normalized = normalizeMusicTrack({
       id: duplicate?.id || createMusicTrackId('music_url'),
@@ -344,7 +535,8 @@ export const useMusicStore = defineStore('music', () => {
   }
 
   const importLocalFiles = async (filesInput, options = {}) => {
-    if (!canWriteCurrentSave()) return { ok: false, code: 'CURRENT_SAVE_READ_ONLY', tracks: [], failed: [] }
+    if (!canWriteCurrentSave())
+      return { ok: false, code: 'CURRENT_SAVE_READ_ONLY', tracks: [], failed: [] }
     const files = Array.from(filesInput || [])
     if (!files.length) return { ok: false, code: 'LOCAL_FILES_MISSING', tracks: [], failed: [] }
     const putMedia = options.putMedia || putMusicLocalMedia
@@ -353,10 +545,19 @@ export const useMusicStore = defineStore('music', () => {
     const failed = []
 
     for (const file of files) {
-      const fileName = String(file?.name || '').trim().slice(0, 240)
-      const mimeType = String(file?.type || '').trim().toLowerCase().slice(0, 100)
+      const fileName = String(file?.name || '')
+        .trim()
+        .slice(0, 240)
+      const mimeType = String(file?.type || '')
+        .trim()
+        .toLowerCase()
+        .slice(0, 100)
       const fileSize = Math.max(0, Math.floor(Number(file?.size) || 0))
-      if (!(file instanceof Blob) || !fileName || (!mimeType.startsWith('audio/') && !LOCAL_AUDIO_FILE_PATTERN.test(fileName))) {
+      if (
+        !(file instanceof Blob) ||
+        !fileName ||
+        (!mimeType.startsWith('audio/') && !LOCAL_AUDIO_FILE_PATTERN.test(fileName))
+      ) {
         failed.push({ fileName, code: 'LOCAL_FILE_TYPE_UNSUPPORTED' })
         continue
       }
@@ -412,7 +613,11 @@ export const useMusicStore = defineStore('music', () => {
     if (tracks.length) await systemStore.saveNow()
     return {
       ok: tracks.length > 0,
-      code: tracks.length ? (failed.length ? 'LOCAL_IMPORT_PARTIAL' : 'OK') : failed[0]?.code || 'LOCAL_IMPORT_FAILED',
+      code: tracks.length
+        ? failed.length
+          ? 'LOCAL_IMPORT_PARTIAL'
+          : 'OK'
+        : failed[0]?.code || 'LOCAL_IMPORT_FAILED',
       tracks,
       failed,
     }
@@ -421,7 +626,12 @@ export const useMusicStore = defineStore('music', () => {
   const removeImportedTrack = async (trackId, options = {}) => {
     if (!canWriteCurrentSave()) return { ok: false, code: 'CURRENT_SAVE_READ_ONLY' }
     const track = savedTracks.value.find((item) => item.id === trackId)
-    if (!track || ![MUSIC_TRACK_SOURCE_TYPES.DIRECT_URL, MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE].includes(track.sourceRef?.type)) {
+    if (
+      !track ||
+      ![MUSIC_TRACK_SOURCE_TYPES.DIRECT_URL, MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE].includes(
+        track.sourceRef?.type,
+      )
+    ) {
       return { ok: false, code: 'IMPORTED_TRACK_NOT_FOUND' }
     }
     if (currentTrack.value?.id === track.id) {
@@ -456,7 +666,10 @@ export const useMusicStore = defineStore('music', () => {
   }
 
   const createPlaylist = (nameInput) => {
-    const name = String(nameInput || '').trim().replace(/\s+/g, ' ').slice(0, 80)
+    const name = String(nameInput || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 80)
     if (!name || playlists.value.length >= MUSIC_LIMITS.playlists) return null
     const now = Date.now()
     const id = `playlist_${now}_${Math.random().toString(36).slice(2, 8)}`
@@ -467,7 +680,10 @@ export const useMusicStore = defineStore('music', () => {
 
   const renamePlaylist = (playlistId, nameInput) => {
     const playlist = playlists.value.find((item) => item.id === playlistId)
-    const name = String(nameInput || '').trim().replace(/\s+/g, ' ').slice(0, 80)
+    const name = String(nameInput || '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, 80)
     if (!playlist || !name) return false
     playlist.name = name
     playlist.updatedAt = Date.now()
@@ -505,7 +721,9 @@ export const useMusicStore = defineStore('music', () => {
     const playlist = playlists.value.find((item) => item.id === playlistId)
     if (!playlist) return []
     return playlist.trackIds
-      .map((trackId) => findMusicTrack(trackId, [libraryTracks.value, recentTracks.value, queue.value]))
+      .map((trackId) =>
+        findMusicTrack(trackId, [libraryTracks.value, recentTracks.value, queue.value]),
+      )
       .filter(Boolean)
   }
 
@@ -593,9 +811,7 @@ export const useMusicStore = defineStore('music', () => {
     const enabled = integrationCapabilities.value.map.journeyControls === true
     return {
       enabled,
-      nowPlaying: enabled
-        ? nowPlayingProjection.value
-        : { available: false, status: 'idle' },
+      nowPlaying: enabled ? nowPlayingProjection.value : { available: false, status: 'idle' },
       activeStationId: enabled ? activeJourneyStationId.value : '',
       quickTracks: enabled ? journeyQuickTracks.value : [],
       stations: enabled ? journeyRadioStations.value : [],
@@ -604,6 +820,7 @@ export const useMusicStore = defineStore('music', () => {
 
   const playTrack = async (trackInput, options = {}) => {
     if (options.preserveJourneyStation !== true) activeJourneyStationId.value = ''
+    activeCachedChkszPlayback = null
     const unresolvedTrack = normalizeMusicTrack(trackInput)
     let track = unresolvedTrack
     let localPlaybackUrl = ''
@@ -618,24 +835,22 @@ export const useMusicStore = defineStore('music', () => {
       track = { ...track, audioUrl: localPlaybackUrl }
     }
     const profile = profiles.value.find((item) => item.id === track.providerId)
-    if (!track.audioUrl && profile?.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ && isChkszTrackResolvable(track)) {
+    let resolution = null
+    if (
+      !track.audioUrl &&
+      profile?.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ &&
+      isChkszTrackResolvable(track)
+    ) {
       setProviderState(profile.id, { status: 'resolving', code: '', message: '' })
       try {
-        const result = await resolveChkszMusicTrack({
-          profile,
-          credential: getCredential(profile.id),
-          track,
-          fetchImpl: options.fetchImpl,
-          signal: options.signal,
-          sleepImpl: options.sleepImpl,
-        })
-        track = result.track
+        resolution = await resolveChkszTrackForPlayback(profile, track, options)
+        track = resolution.track
         setProviderState(profile.id, {
           status: 'ready',
           code: 'OK',
           message: '',
           testedAt: Date.now(),
-          quota: result.quota,
+          quota: resolution.quota,
         })
       } catch (error) {
         setProviderErrorState(profile.id, error, 'CHKSZ_RESOLVE_FAILED')
@@ -653,6 +868,34 @@ export const useMusicStore = defineStore('music', () => {
     rememberTrack(track)
     const previousLocalPlaybackUrl = activeLocalPlaybackUrl
     const result = await musicPlaybackRuntime.load(track, { autoplay: options.autoplay !== false })
+    if (
+      resolution?.fromResolvedCache &&
+      result?.code === 'PLAYBACK_FAILED' &&
+      options.retryCachedResolution !== false
+    ) {
+      resolvedTrackCache.delete(resolution.cacheKey)
+      return playTrack(unresolvedTrack, {
+        ...options,
+        forceProviderRefresh: true,
+        retryCachedResolution: false,
+      })
+    }
+    if (
+      resolution?.fromResolvedCache &&
+      (result?.ok || result?.code === 'PLAYBACK_GESTURE_REQUIRED')
+    ) {
+      activeCachedChkszPlayback = {
+        cacheKey: resolution.cacheKey,
+        track: unresolvedTrack,
+        options: {
+          fetchImpl: options.fetchImpl,
+          getProviderCache: options.getProviderCache,
+          putProviderCache: options.putProviderCache,
+          signal: options.signal,
+          sleepImpl: options.sleepImpl,
+        },
+      }
+    }
     const localSourceLoaded = result?.ok || result?.code === 'PLAYBACK_GESTURE_REQUIRED'
     if (localSourceLoaded) {
       if (options.preserveFloatingDismissal !== true) floatingPlayerDismissed.value = false
@@ -721,7 +964,8 @@ export const useMusicStore = defineStore('music', () => {
     }
     const sourceQueue = queue.value.length ? queue.value : libraryTracks.value
     const index = sourceQueue.findIndex((track) => track.id === currentTrack.value?.id)
-    const previousTrack = sourceQueue[index - 1] || sourceQueue[sourceQueue.length - 1] || featuredTrack.value
+    const previousTrack =
+      sourceQueue[index - 1] || sourceQueue[sourceQueue.length - 1] || featuredTrack.value
     return previousTrack
       ? playTrack(previousTrack, { queue: sourceQueue, preserveJourneyStation: true })
       : { ok: false, code: 'QUEUE_EMPTY' }
@@ -743,11 +987,7 @@ export const useMusicStore = defineStore('music', () => {
   const playRadioStation = async (stationId, options = {}) => {
     const station = journeyRadioStations.value.find((item) => item.id === stationId)
     if (!station) return { ok: false, code: 'JOURNEY_STATION_NOT_FOUND' }
-    const stationQueue = resolveMusicJourneyRadioQueue(
-      stationId,
-      libraryTracks.value,
-      canPlayTrack,
-    )
+    const stationQueue = resolveMusicJourneyRadioQueue(stationId, libraryTracks.value, canPlayTrack)
     if (!stationQueue.length) return { ok: false, code: 'QUEUE_EMPTY' }
     const result = await playTrack(stationQueue[0], {
       ...options,
@@ -815,6 +1055,7 @@ export const useMusicStore = defineStore('music', () => {
 
   const stop = (options = {}) => {
     musicPlaybackRuntime.stop()
+    activeCachedChkszPlayback = null
     revokeLocalPlaybackUrl(undefined, options.objectUrlApi)
     activeJourneyStationId.value = ''
     floatingPlayerRequested.value = false
@@ -851,10 +1092,18 @@ export const useMusicStore = defineStore('music', () => {
         signal: options.signal,
         sleepImpl: options.sleepImpl,
       }
-      const result = profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
-        ? await searchChkszMusic(requestOptions)
-        : await searchMusicProvider(requestOptions)
-      searchResults.value = dedupeTracks([...result.tracks, ...localResults], MUSIC_LIMITS.searchResults)
+      const result =
+        profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
+          ? await searchChkszMusic(requestOptions)
+          : await searchMusicProvider(requestOptions)
+      const providerTracks =
+        profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
+          ? await enrichChkszTracksFromMetadataCache(profile, result.tracks, options)
+          : result.tracks
+      searchResults.value = dedupeTracks(
+        [...providerTracks, ...localResults],
+        MUSIC_LIMITS.searchResults,
+      )
       searchStatus.value = searchResults.value.length ? 'ready' : 'empty'
       setProviderState(profile.id, {
         status: 'ready',
@@ -889,12 +1138,14 @@ export const useMusicStore = defineStore('music', () => {
         signal: options.signal,
         sleepImpl: options.sleepImpl,
       }
-      const result = profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
-        ? await searchChkszMusic(requestOptions)
-        : await testMusicProviderConnection(requestOptions)
-      const sourceReady = profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
-        ? result.resolvableCount > 0
-        : result.hasPlayableTrack
+      const result =
+        profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
+          ? await searchChkszMusic(requestOptions)
+          : await testMusicProviderConnection(requestOptions)
+      const sourceReady =
+        profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
+          ? result.resolvableCount > 0
+          : result.hasPlayableTrack
       setProviderState(profileId, {
         status: sourceReady ? 'ready' : 'warning',
         code: sourceReady ? 'OK' : 'PLAYABLE_URL_MISSING',
@@ -926,23 +1177,65 @@ export const useMusicStore = defineStore('music', () => {
       return { ok: false, code: lyricsState.errorCode }
     }
     try {
-      const result = await fetchChkszLyrics({
-        profile,
-        credential: getCredential(profile.id),
-        track,
-        fetchImpl: options.fetchImpl,
-        signal: options.signal,
-        sleepImpl: options.sleepImpl,
-      })
-      Object.assign(lyricsState, {
-        trackId: track.id,
-        status: result.lyrics.original || result.lyrics.translation || result.lyrics.romanized
-          ? 'ready'
-          : 'empty',
-        errorCode: '',
-        ...result.lyrics,
-      })
-      setProviderState(profile.id, { quota: result.quota })
+      let result = null
+      if (options.forceProviderRefresh !== true) {
+        const cachedLyrics = await readProviderCache(
+          MUSIC_PROVIDER_CACHE_KINDS.LYRICS,
+          profile,
+          track,
+          options,
+        )
+        if (cachedLyrics) result = { ok: true, lyrics: cachedLyrics, quota: null, cached: true }
+      }
+      if (!result) {
+        const cacheKey = createMusicProviderCacheKey({
+          kind: MUSIC_PROVIDER_CACHE_KINDS.LYRICS,
+          profile,
+          track,
+        })
+        let request = pendingLyricRequests.get(cacheKey)
+        if (!request) {
+          request = (async () => {
+            const providerResult = await fetchChkszLyrics({
+              profile,
+              credential: getCredential(profile.id),
+              track,
+              fetchImpl: options.fetchImpl,
+              signal: options.signal,
+              sleepImpl: options.sleepImpl,
+            })
+            await writeProviderCache(
+              MUSIC_PROVIDER_CACHE_KINDS.LYRICS,
+              profile,
+              track,
+              providerResult.lyrics,
+              MUSIC_PROVIDER_LYRICS_TTL_MS,
+              options,
+            )
+            return providerResult
+          })()
+          pendingLyricRequests.set(cacheKey, request)
+        }
+        try {
+          result = await request
+        } finally {
+          if (pendingLyricRequests.get(cacheKey) === request) {
+            pendingLyricRequests.delete(cacheKey)
+          }
+        }
+      }
+      if (lyricsState.trackId === track.id) {
+        Object.assign(lyricsState, {
+          trackId: track.id,
+          status:
+            result.lyrics.original || result.lyrics.translation || result.lyrics.romanized
+              ? 'ready'
+              : 'empty',
+          errorCode: '',
+          ...result.lyrics,
+        })
+      }
+      if (result.quota) setProviderState(profile.id, { quota: result.quota })
       return result
     } catch (error) {
       lyricsState.status = 'error'
@@ -960,7 +1253,9 @@ export const useMusicStore = defineStore('music', () => {
     playlistImportState.importedPlaylistId = ''
     if (!profile || profile.adapterKind !== MUSIC_ADAPTER_KINDS.CHKSZ || !playlistId) {
       playlistImportState.status = 'error'
-      playlistImportState.errorCode = !playlistId ? 'PLAYLIST_ID_MISSING' : 'PLAYLIST_IMPORT_UNSUPPORTED'
+      playlistImportState.errorCode = !playlistId
+        ? 'PLAYLIST_ID_MISSING'
+        : 'PLAYLIST_IMPORT_UNSUPPORTED'
       return { ok: false, code: playlistImportState.errorCode }
     }
     try {
@@ -1032,6 +1327,22 @@ export const useMusicStore = defineStore('music', () => {
   const unsubscribePlaybackRuntime = musicPlaybackRuntime.subscribe(({ type, snapshot }) => {
     Object.assign(runtime, snapshot)
     if (type === 'ended') void next({ fromEnded: true })
+    if (
+      type === 'error' &&
+      snapshot.errorCode === 'AUDIO_UNAVAILABLE' &&
+      activeCachedChkszPlayback?.track.id === snapshot.track?.id
+    ) {
+      const retry = activeCachedChkszPlayback
+      activeCachedChkszPlayback = null
+      resolvedTrackCache.delete(retry.cacheKey)
+      void playTrack(retry.track, {
+        ...retry.options,
+        forceProviderRefresh: true,
+        retryCachedResolution: false,
+        preserveJourneyStation: true,
+        preserveFloatingDismissal: true,
+      })
+    }
   })
   musicPlaybackRuntime.setVolume(state.value.playback.volume)
   musicPlaybackRuntime.setMuted(state.value.playback.muted)
@@ -1046,6 +1357,10 @@ export const useMusicStore = defineStore('music', () => {
     unsubscribePlaybackRuntime()
     musicPlaybackRuntime.setMediaActionHandlers({})
     revokeLocalPlaybackUrl()
+    resolvedTrackCache.clear()
+    pendingTrackResolutions.clear()
+    pendingLyricRequests.clear()
+    activeCachedChkszPlayback = null
   })
 
   const saveNow = () => systemStore.saveNow()

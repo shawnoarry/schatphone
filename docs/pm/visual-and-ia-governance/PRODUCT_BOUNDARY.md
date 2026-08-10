@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 ## 1. Core Rule
 
@@ -12,6 +12,12 @@ It also owns:
 - parent-child page logic
 - visual ownership by entry context
 - user-readable interaction structure
+- the product-grade acceptance floor for a visible first implementation
+- the boundary between user-facing product content and construction/diagnostic narration
+- the expected use of inline controls, sheets, drawers, modals, subpages, and dedicated routes by task depth
+- control semantics, including when familiar icons should replace or support text buttons
+- deliberate palette, material, background/media, depth, motion, and responsive decisions
+- reference adaptation and proactive visual-asset/image-generation planning when imagery is part of the product experience
 
 ## 2. What This Package Decides
 

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from '../composables/useI18n'
 
 const props = defineProps({
@@ -12,6 +12,9 @@ const props = defineProps({
 defineEmits(['retry', 'refresh', 'backup'])
 
 const { t } = useI18n()
+const isCollapsed = ref(false)
+
+const isReadOnlyNotice = computed(() => props.status.mode === 'read_only')
 
 const isActiveWriterPreview = computed(
   () =>
@@ -67,7 +70,26 @@ const presentation = computed(() => {
 </script>
 
 <template>
+  <button
+    v-if="isReadOnlyNotice && isCollapsed"
+    type="button"
+    class="persistence-recovery-compact"
+    data-testid="persistence-recovery-compact"
+    :aria-label="t('展开只读提示', 'Expand read-only notice')"
+    :title="t('展开只读提示', 'Expand read-only notice')"
+    @click="isCollapsed = false"
+  >
+    <i
+      class="fas"
+      :class="isActiveWriterPreview ? 'fa-eye' : 'fa-shield-halved'"
+      aria-hidden="true"
+    ></i>
+    <span>{{ isActiveWriterPreview
+      ? t('只读预览', 'Read-only preview')
+      : t('只读保护', 'Read-only protection') }}</span>
+  </button>
   <section
+    v-else
     class="persistence-recovery-sheet"
     :data-mode="status.mode"
     :data-reason="isActiveWriterPreview ? 'active_writer' : status.primaryCause || undefined"
@@ -84,6 +106,17 @@ const presentation = computed(() => {
         <h2>{{ presentation.title }}</h2>
         <p>{{ presentation.body }}</p>
       </div>
+      <button
+        v-if="isReadOnlyNotice"
+        type="button"
+        class="persistence-recovery-sheet__collapse"
+        data-testid="persistence-recovery-collapse"
+        :aria-label="t('继续浏览并收起提示', 'Continue browsing and collapse notice')"
+        :title="t('继续浏览', 'Continue browsing')"
+        @click="isCollapsed = true"
+      >
+        <i class="fas fa-xmark" aria-hidden="true"></i>
+      </button>
     </div>
 
     <div class="persistence-recovery-sheet__actions">
@@ -152,11 +185,55 @@ const presentation = computed(() => {
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
 }
 
+.persistence-recovery-compact {
+  position: absolute;
+  right: 12px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 58;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--system-accent) 24%, var(--system-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--system-surface) 94%, transparent);
+  color: var(--system-text);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(18px) saturate(1.1);
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.persistence-recovery-compact i {
+  color: var(--system-accent);
+}
+
 .persistence-recovery-sheet__lead {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 11px;
   align-items: start;
+}
+
+.persistence-recovery-sheet[data-mode='read_only'] .persistence-recovery-sheet__lead {
+  grid-template-columns: 38px minmax(0, 1fr) 44px;
+}
+
+.persistence-recovery-sheet__collapse {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--system-text-muted);
+}
+
+.persistence-recovery-sheet__collapse:hover {
+  background: var(--system-surface-muted);
+  color: var(--system-text);
 }
 
 .persistence-recovery-sheet__icon {
@@ -236,7 +313,9 @@ const presentation = computed(() => {
   opacity: 0.46;
 }
 
-.persistence-recovery-sheet__action:focus-visible {
+.persistence-recovery-sheet__action:focus-visible,
+.persistence-recovery-sheet__collapse:focus-visible,
+.persistence-recovery-compact:focus-visible {
   outline: 2px solid var(--system-accent);
   outline-offset: 2px;
 }
@@ -248,10 +327,16 @@ const presentation = computed(() => {
     width: min(430px, calc(100% - 40px));
     bottom: 24px;
   }
+
+  .persistence-recovery-compact {
+    right: 20px;
+    bottom: 24px;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .persistence-recovery-sheet {
+  .persistence-recovery-sheet,
+  .persistence-recovery-compact {
     animation: persistence-sheet-enter 180ms ease-out both;
   }
 }

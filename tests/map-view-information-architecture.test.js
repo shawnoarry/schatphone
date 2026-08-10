@@ -226,6 +226,11 @@ describe('MapView information architecture', () => {
 
     const detail = wrapper.get('[data-testid="map-place-detail-sheet"]')
     expect(detail.get('h2').text()).toBe('汝矣岛汉江公园')
+    expect(detail.get('[data-testid="map-place-context"]').text()).toMatch(
+      /from current position|距当前位置/,
+    )
+    await detail.get('[data-testid="map-place-open-detail"]').trigger('click')
+    await nextTick()
     expect(
       detail.get('[data-testid="map-place-language-mode-system"]').attributes('aria-pressed'),
     ).toBe('true')
@@ -606,8 +611,17 @@ describe('MapView information architecture', () => {
     )
     expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
     expect(wrapper.find('.map-place-detail-actions').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-place-view-journey"]').text()).toMatch(
+      /View current journey|查看当前行程/,
+    )
     expect(mapStore.tripState.to).toBe(lockedDestination)
     expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toBe(routeCardBeforeBrowse)
+
+    await wrapper.get('[data-testid="map-place-view-journey"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-secondary-drawer"]').exists()).toBe(true)
+    expect(mapStore.tripState.to).toBe(lockedDestination)
   })
 
   test('labels legacy active journeys without asserting a transport choice', async () => {
@@ -836,6 +850,8 @@ describe('MapView information architecture', () => {
     await nextTick()
 
     expect(wrapper.get('[data-testid="map-place-detail-sheet"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toMatch(/Go|前往/)
+    expect(wrapper.find('[data-testid="map-place-event-entry"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="map-primary-route-card"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="map-place-use-destination"]').trigger('click')

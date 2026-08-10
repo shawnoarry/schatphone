@@ -29,6 +29,14 @@ test.describe('same-container current-save writer', () => {
     await expect(recovery).toHaveAttribute('data-reason', 'active_writer')
     await expect(recovery).toContainText('当前页面为只读预览')
 
+    await secondPage.getByTestId('persistence-recovery-collapse').click()
+    await expect(recovery).toBeHidden()
+    const compactRecovery = secondPage.getByTestId('persistence-recovery-compact')
+    await expect(compactRecovery).toBeVisible()
+    await expect(compactRecovery).toContainText('只读预览')
+    await compactRecovery.click()
+    await expect(recovery).toBeVisible()
+
     const blockedKeys = ['store:wallet', 'store:phone']
     const beforeBlockedWrites = await readOwnerLayers(secondPage, blockedKeys)
     const blockedActions = await secondPage.evaluate(async () => {

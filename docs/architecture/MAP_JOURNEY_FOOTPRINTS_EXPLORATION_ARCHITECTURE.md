@@ -1,6 +1,6 @@
 # Map Journey, Footprints, And Exploration Architecture
 
-Updated: 2026-08-03
+Updated: 2026-08-10
 
 Status: `APPROVED_DIRECTION / MJE-1_THROUGH_MJE-4_USER_ACCEPTED_INTEGRATED_LOCAL`
 
@@ -50,6 +50,23 @@ Selecting a pin or search result opens concise place detail with context-appropr
 - place details and player-owned edit entry where allowed.
 
 Selecting an unlocked activity area opens its summary and an exploration entry. Area progression alone must not imply that active exploration already exists.
+
+#### Place Focus And Presence Contract
+
+The next place-focus revision must replace the current all-in-one place modal with one Map-owned focus surface that preserves the map behind it. Desktop may use a drawer and mobile may use a bottom sheet. The surface first shows the place name, category, short summary, distance/presence state, and only the actions valid for the current context. Detailed editing remains in Map Settings, and deeper content replaces the focused surface or opens a dedicated execution surface rather than nesting another modal inside it.
+
+The primary place action is state-derived instead of exposing `Journey` and `Enter` as permanent peers:
+
+| Place relation | Primary action | Required behavior |
+| --- | --- | --- |
+| `remote` | `Go` | open Map Journey planning for the selected place |
+| `traveling_to_place` | `View journey` | focus the already active Map Journey; never create a duplicate trip |
+| `onsite` | `Enter` | create or resume an explicit Map-owned place session, then evaluate eligible place-entry events |
+| `inside` | context action or `Leave` | retain the explicit place session until the user or an approved linked activity ends it |
+
+`Set as current position` remains a secondary sandbox action for users who want immediate relocation. It must say that it skips travel, retain `manual` position provenance, create no Map Journey or journey-arrival evidence, and continue to reveal no Footprints-gated place. A completed Map Journey uses `journey_arrival` provenance. Event templates and later Agenda Journey requirements may distinguish those sources; changing the coordinate must not fabricate travel history.
+
+`Enter` is a Map/place transition, not an Event Runtime action. Distance may make it unavailable, but distance does not turn an onsite event into a remote event. Place details remain generally available, player-owned management remains permission-gated, and event invitations appear only in a dynamic event area when Event Runtime supplies an eligible or intentionally teased projection. The place card must not contain an empty permanent `Event` navigation button.
 
 ### L2: Management
 
@@ -112,6 +129,35 @@ Event Runtime owns template eligibility, deterministic selection, cooldowns, cap
 
 An ordinary uneventful journey is always valid. Event frequency must respect module permission, Surprise Mode, cooldowns, daily caps, and world-aware variants. High-impact relationship, asset, money, or identity effects retain their existing confirmation and owner boundaries.
 
+### Place-Entry Event Eligibility
+
+Location-aware event templates keep an authored activation scope such as `remote`, `nearby`, `onsite`, `interior`, or `journey_checkpoint`. The scope is stable template meaning; current distance only decides whether its entry conditions are satisfied. A remote event therefore needs an explicit remote interaction such as a call, reservation, or message. It is never synthesized merely because the role is far away.
+
+Map owns the bounded presence facts supplied to Event Runtime: current world/map pack, stable place and coordinate, distance relation, active Map Journey reference when present, position provenance, and explicit place-session state. Event Runtime owns template eligibility, visibility policy, cooldown/cap, proposal/review, and event logs. A template may remain hidden until eligible, expose a disabled teaser with a reason, or remain visible when remote interaction is genuinely supported.
+
+Entering a place creates an explicit checkpoint. Event Runtime may return no event, one invitation, or a bounded set of invitations. No event is a complete path. An invitation is a separate event surface with its own expansion action; it is not a second level of place management and does not make the place card the event record.
+
+A future Agenda Journey step may request Map travel and may carry an explicit arrival behavior such as arrival outside or validated automatic entry for an appointment inside a known place. Map still validates the exact active journey, destination, arrival evidence, and place session before changing presence. Arrival or entry can satisfy an Agenda Journey travel/presence requirement, but it cannot prove that a meeting, class, rehearsal, or other non-travel activity completed.
+
+### Large-Map Event Card Direction
+
+The current MJE-3 route-update card remains the implemented baseline. The next cross-module event lane may add coordinate-anchored event cards to the existing Map UI without making Event a desktop app or making Map the event owner.
+
+Map owns:
+
+- validation and rendering of geographic latitude/longitude anchors and fictional/custom normalized-canvas anchors;
+- event-pin placement, selected-card layout, clustering/stacking, viewport focus, and overlap avoidance;
+- the compact `Expand event` command and return-to-map context;
+- accessibility, text fitting, mobile drawer/sheet behavior, and coexistence with Journey, Places, Footprints, place detail, and Music layers.
+
+Coordinate-card selection and place selection are related but distinct host paths. Selecting an event pin opens the compact Event Surface Projection. Selecting an ordinary place opens the place-focus surface and shows a location-aware event invitation only when eligibility or an approved teaser policy provides one. Ordinary map pan, focus, and place selection never open a full event scene automatically.
+
+Map consumes a bounded Event Surface Projection. Event Runtime retains proposal/log truth and the source module retains its record and effect validation. An event anchor may reference an existing stable place or carry a coordinate snapshot, but it cannot create a place, change marker visibility/knowledge, move the role, change a journey, or become provider-owned location identity.
+
+The first Map implementation belongs to roadmap EVE-2C, not MJE-5. EVE-2A froze the reusable K-pop-first template/instance/place-capability/text/media contract, Map Place Session input Interface, and production-arrival-briefing archetype; EVE-2B has implemented the separately accepted Event Runtime foundation without changing Map. Expanding the future EVE-2C card is presentation only; optional text materialization remains Event-owned and locally validated, while every result still returns through the owning Adapter. A later Mini Scene or CG Adapter remains separately gated.
+
+Invalid, stale, off-pack, or unpositioned anchors fail closed to the owning host and World Hub review. They never receive an invented fallback coordinate. Multiple cards near the same screen point must collapse behind one stable cluster/stack control instead of overlapping each other or obscuring primary Map controls.
+
 ## 6. Footprints And Active Exploration
 
 The current Map progression already derives:
@@ -169,7 +215,7 @@ Until that threshold is met, transport stays in Map Journey Planning and Map Set
 | --- | --- | --- |
 | Map / Map Journey Runtime | journey source record, phase, transport snapshot, checkpoints, arrival/cancellation, exploration and discovered places | Agenda Journey execution, event eligibility/cooldowns, confirmed schedules, relationship truth |
 | Future Agenda Journey | short-range activity plan, steps, completion/miss state, Map evidence references | Map Journey travel truth, Calendar history, event eligibility |
-| Event Runtime | eligibility, deterministic/random gate, cooldown/cap, proposal/review, provenance and event log | Map journey transitions, pins, routes, places |
+| Event Runtime | eligibility, deterministic/random gate, cooldown/cap, proposal/review, provenance, event log, and source data for bounded surface projections | Map rendering, journey transitions, pins, routes, places |
 | Calendar | confirmed departure/arrival/follow-up schedule and push timing | active journey state or event eligibility |
 | Relationship Runtime | confirmed relationship facts, metrics and memory grouping | journey or event-source records |
 | WorldBook / Book | world knowledge and reviewed narrative content | active journey state or automatic Map mutation |
@@ -231,6 +277,8 @@ Start gate: Footprints semantics and at least one safe exploration outcome contr
 
 User-visible result: reviewed map packs may expose static modes/lines/stations in Map Settings and journey planning. A separate Transit app is reconsidered only against the independent-use threshold in Section 7.
 
+Cross-lane note: roadmap EVE-1/EVE-2 owns the shared event projection and the first large-map coordinate card. Completing either does not authorize MJE-5 active exploration, generated place candidates, event-driven place reveal, or MJE-6 transit topology.
+
 ## 10. Guardrails
 
 Treat these as bugs:
@@ -244,7 +292,14 @@ Treat these as bugs:
 7. a separate Transit app creates a second journey state or appears before it has independent utility;
 8. static topology quietly becomes live navigation, paid POI search, or provider-owned identity;
 9. a completed implementation stage automatically starts the next stage before user acceptance and roadmap update.
+10. an event projection creates a Map place, changes discovery/visibility, or mutates a journey merely because it has a coordinate anchor;
+11. event cards overlap each other, obscure primary Map controls, or open an event automatically when the user only pans/selects the map;
+12. EVE-2 is treated as authorization for MJE-5 active exploration or Mini Scene runtime.
+13. a selected place exposes a permanent `Event` button when no eligible or intentionally teased event exists;
+14. distance silently reclassifies an onsite/interior event as a remote event;
+15. manual role-position relocation is recorded as journey arrival or satisfies a journey-arrival-only event gate;
+16. place overview, details, management, and event execution are stacked as nested modals instead of using progressive disclosure.
 
 ## 11. Validation Contract
 
-Each behavior stage requires focused unit coverage for normalization, transitions, persistence, and owner boundaries; full lint, unit, and production build gates; and targeted desktop plus simulated-mobile E2E for the visible Map flow. Event stages also require deterministic no-event, cooldown/cap, adapter failure, non-blocking pending review, legacy blocked-journey recovery, arrival dismissal, and audit-log coverage. Schema or dependency changes require the additional checks in `docs/process/AI_WORK_MODE.md`.
+Each behavior stage requires focused unit coverage for normalization, transitions, persistence, and owner boundaries; full lint, unit, and production build gates; and targeted desktop plus simulated-mobile E2E for the visible Map flow. Event stages also require deterministic no-event, cooldown/cap, adapter failure, non-blocking pending review, legacy blocked-journey recovery, arrival dismissal, and audit-log coverage. EVE-2 additionally requires geographic plus fictional/custom anchor tests, stale/off-pack fallback, clustering/stacking, event-card text fit, layer coexistence, page-error checks, and zero horizontal overflow. Schema or dependency changes require the additional checks in `docs/process/AI_WORK_MODE.md`.

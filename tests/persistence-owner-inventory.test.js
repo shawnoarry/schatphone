@@ -53,8 +53,7 @@ const resolveSourceString = (token, constants) => {
 
 const parseIndexedDbDefinitions = (source, sourceFile = 'inline') => {
   const constants = new Map()
-  const constantPattern =
-    /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:(['"])(.*?)\2|(\d+))/g
+  const constantPattern = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*(?:(['"])(.*?)\2|(\d+))/g
 
   for (const match of source.matchAll(constantPattern)) {
     constants.set(match[1], match[4] == null ? match[3] : Number(match[4]))
@@ -65,28 +64,28 @@ const parseIndexedDbDefinitions = (source, sourceFile = 'inline') => {
     if (constants.has(match[2])) constants.set(match[1], constants.get(match[2]))
   }
 
-  const objectStoreNames = [
-    ...source.matchAll(/createObjectStore\(\s*([^,\s)]+)/g),
-  ]
+  const objectStoreNames = [...source.matchAll(/createObjectStore\(\s*([^,\s)]+)/g)]
     .map((match) => resolveSourceString(match[1], constants))
     .sort()
 
   const definitions = [
     ...source.matchAll(/(?:window\.)?indexedDB\.open\(\s*([^,\s)]+)\s*,\s*([^)]+?)\s*\)/g),
   ].map((match) => ({
-      sourceFile,
-      databaseName: resolveSourceString(match[1], constants),
-      databaseVersion: resolveSourceConstant(match[2], constants),
-      objectStoreNames: [...objectStoreNames],
-    }))
+    sourceFile,
+    databaseName: resolveSourceString(match[1], constants),
+    databaseVersion: resolveSourceConstant(match[2], constants),
+    objectStoreNames: [...objectStoreNames],
+  }))
 
   if (definitions.length === 0 && objectStoreNames.length > 0) {
-    return [{
-      sourceFile,
-      databaseName: '<unresolved:no-indexeddb-open>',
-      databaseVersion: undefined,
-      objectStoreNames,
-    }]
+    return [
+      {
+        sourceFile,
+        databaseName: '<unresolved:no-indexeddb-open>',
+        databaseVersion: undefined,
+        objectStoreNames,
+      },
+    ]
   }
   return definitions
 }
@@ -263,9 +262,7 @@ describe('canonical persistence-owner inventory', () => {
     for (const carrier of PERSISTED_STORE_CARRIERS) {
       const source = readSource(carrier.sourceFile)
       expect(source).toContain(`'${carrier.storageKey}'`)
-      expect(source).toMatch(
-        new RegExp(`STORAGE_VERSION\\s*=\\s*${carrier.schemaVersion}\\b`),
-      )
+      expect(source).toMatch(new RegExp(`STORAGE_VERSION\\s*=\\s*${carrier.schemaVersion}\\b`))
     }
   })
 
@@ -280,8 +277,7 @@ describe('canonical persistence-owner inventory', () => {
       return parseIndexedDbDefinitions(source, sourceFile)
     })
     const sourceDirectKeys = collectMatches(/["'`](schatphone:[a-z0-9_:-]+)["'`]/g)
-    const inventoriedDirectKeys = PERSISTENCE_PHYSICAL_CARRIERS
-      .map((entry) => entry.fullKey)
+    const inventoriedDirectKeys = PERSISTENCE_PHYSICAL_CARRIERS.map((entry) => entry.fullKey)
       .filter(Boolean)
       .sort()
 
@@ -309,12 +305,14 @@ describe('canonical persistence-owner inventory', () => {
       window.indexedDB.open(TEST_DB_NAME, TEST_DB_VERSION)
       db.createObjectStore(TEST_DB_STORE, { keyPath: 'id' })
     `
-    const expected = [{
-      sourceFile: 'synthetic.js',
-      databaseName: 'synthetic-db',
-      databaseVersion: 4,
-      objectStoreName: 'records',
-    }]
+    const expected = [
+      {
+        sourceFile: 'synthetic.js',
+        databaseName: 'synthetic-db',
+        databaseVersion: 4,
+        objectStoreName: 'records',
+      },
+    ]
 
     expect(
       inspectIndexedDbDefinitionCoverage(
@@ -331,11 +329,13 @@ describe('canonical persistence-owner inventory', () => {
       ),
     ).toMatchObject({
       ok: false,
-      unexpectedStores: [{
-        sourceFile: 'synthetic.js',
-        databaseName: 'synthetic-db',
-        objectStoreName: 'unexpected',
-      }],
+      unexpectedStores: [
+        {
+          sourceFile: 'synthetic.js',
+          databaseName: 'synthetic-db',
+          objectStoreName: 'unexpected',
+        },
+      ],
     })
 
     const withVersionChange = source.replace('TEST_DB_VERSION = 4', 'TEST_DB_VERSION = 5')
@@ -346,12 +346,14 @@ describe('canonical persistence-owner inventory', () => {
       ),
     ).toMatchObject({
       ok: false,
-      versionMismatches: [{
-        sourceFile: 'synthetic.js',
-        databaseName: 'synthetic-db',
-        expected: 4,
-        actual: 5,
-      }],
+      versionMismatches: [
+        {
+          sourceFile: 'synthetic.js',
+          databaseName: 'synthetic-db',
+          expected: 4,
+          actual: 5,
+        },
+      ],
     })
   })
 
@@ -374,19 +376,23 @@ describe('canonical persistence-owner inventory', () => {
       ...parseIndexedDbDefinitions(registeredSource, 'src/lib/registered.js'),
       ...parseIndexedDbDefinitions(independentSource, 'src/new/unregistered.js'),
     ]
-    const expectedCarriers = [{
-      sourceFile: 'src/lib/registered.js',
-      databaseName: 'registered-db',
-      databaseVersion: 1,
-      objectStoreName: 'records',
-    }]
+    const expectedCarriers = [
+      {
+        sourceFile: 'src/lib/registered.js',
+        databaseName: 'registered-db',
+        databaseVersion: 1,
+        objectStoreName: 'records',
+      },
+    ]
 
     expect(inspectIndexedDbDefinitionCoverage(actual, expectedCarriers)).toMatchObject({
       ok: false,
-      unexpectedDatabases: [{
-        sourceFile: 'src/new/unregistered.js',
-        databaseName: 'unregistered-db',
-      }],
+      unexpectedDatabases: [
+        {
+          sourceFile: 'src/new/unregistered.js',
+          databaseName: 'unregistered-db',
+        },
+      ],
     })
   })
 
@@ -422,12 +428,14 @@ describe('canonical persistence-owner inventory', () => {
       inspectIndexedDbDefinitionCoverage(actual, [...expectedCarriers, expectedCarriers[0]]),
     ).toMatchObject({
       ok: false,
-      duplicateInventoryStores: [{
-        sourceFile: 'src/lib/multi-store.js',
-        databaseName: 'multi-store-db',
-        objectStoreName: 'first',
-        count: 2,
-      }],
+      duplicateInventoryStores: [
+        {
+          sourceFile: 'src/lib/multi-store.js',
+          databaseName: 'multi-store-db',
+          objectStoreName: 'first',
+          count: 2,
+        },
+      ],
     })
 
     const conflictingVersion = {
@@ -438,11 +446,13 @@ describe('canonical persistence-owner inventory', () => {
       inspectIndexedDbDefinitionCoverage(actual, [expectedCarriers[0], conflictingVersion]),
     ).toMatchObject({
       ok: false,
-      inventoryVersionConflicts: [{
-        sourceFile: 'src/lib/multi-store.js',
-        databaseName: 'multi-store-db',
-        versions: [3, 4],
-      }],
+      inventoryVersionConflicts: [
+        {
+          sourceFile: 'src/lib/multi-store.js',
+          databaseName: 'multi-store-db',
+          versions: [3, 4],
+        },
+      ],
     })
   })
 
@@ -456,9 +466,7 @@ describe('canonical persistence-owner inventory', () => {
     const reminders = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'reminders.reminder-records',
     )
-    const calendar = PERSISTENCE_OWNER_DATA_CLASSES.find(
-      (entry) => entry.id === 'calendar.events',
-    )
+    const calendar = PERSISTENCE_OWNER_DATA_CLASSES.find((entry) => entry.id === 'calendar.events')
     const music = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'music.library-and-provider-settings',
     )
@@ -467,6 +475,9 @@ describe('canonical persistence-owner inventory', () => {
     )
     const musicLocalMedia = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'music.local-media-binaries',
+    )
+    const musicProviderCache = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'music.provider-cache',
     )
     const internalShareDraft = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'chat.internal-share-draft',
@@ -487,6 +498,12 @@ describe('canonical persistence-owner inventory', () => {
       backupRequirement: 'excluded',
       physicalCarrierIds: ['idb:music-local-media'],
       durability: 'durable-authoritative-device-binary',
+    })
+    expect(musicProviderCache).toMatchObject({
+      logicalOwner: 'Music',
+      backupRequirement: 'excluded',
+      physicalCarrierIds: ['idb:music-provider-cache'],
+      durability: 'durable-rebuildable-cache',
     })
     expect(internalShareDraft).toMatchObject({
       logicalOwner: 'Chat',
@@ -512,15 +529,13 @@ describe('canonical persistence-owner inventory', () => {
     )
 
     const coveredRequiredClassIds = new Set(
-      LEGACY_V2_BACKUP_SECTION_REGISTRY
-        .filter((section) =>
-          ['required', 'required_legacy_compatibility'].includes(section.coverage),
-        )
-        .flatMap((section) => section.dataClassIds),
+      LEGACY_V2_BACKUP_SECTION_REGISTRY.filter((section) =>
+        ['required', 'required_legacy_compatibility'].includes(section.coverage),
+      ).flatMap((section) => section.dataClassIds),
     )
-    const namedRequiredGapClassIds = LEGACY_V2_BACKUP_SECTION_REGISTRY
-      .filter((section) => section.coverage === 'known_gap')
-      .flatMap((section) => section.dataClassIds)
+    const namedRequiredGapClassIds = LEGACY_V2_BACKUP_SECTION_REGISTRY.filter(
+      (section) => section.coverage === 'known_gap',
+    ).flatMap((section) => section.dataClassIds)
 
     expect(namedRequiredGapClassIds).toEqual(['chat.module-identity-settings'])
     expect(coveredRequiredClassIds.has('chat.module-identity-settings')).toBe(false)

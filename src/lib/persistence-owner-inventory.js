@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 5
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 6
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -7,9 +7,7 @@ const freezeEntries = (entries) =>
         ...entry,
         physicalCarrierIds: Object.freeze([...(entry.physicalCarrierIds || [])]),
         storageKeys: Object.freeze([...(entry.storageKeys || [])]),
-        logicalOwners: entry.logicalOwners
-          ? Object.freeze([...entry.logicalOwners])
-          : undefined,
+        logicalOwners: entry.logicalOwners ? Object.freeze([...entry.logicalOwners]) : undefined,
       }),
     ),
   )
@@ -48,6 +46,15 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     objectStoreName: 'audioBlobs',
     sourceFile: 'src/lib/music-local-media-storage.js',
     durability: 'durable-primary',
+  },
+  {
+    id: 'idb:music-provider-cache',
+    carrierType: 'indexedDB',
+    databaseName: 'schatphone-music-provider-cache',
+    databaseVersion: 1,
+    objectStoreName: 'entries',
+    sourceFile: 'src/lib/music-provider-cache.js',
+    durability: 'durable-rebuildable-cache',
   },
   {
     id: 'idb:repository-record-versions',
@@ -176,23 +183,142 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
 ])
 
 export const PERSISTED_STORE_CARRIERS = freezeEntries([
-  { storageKey: 'store:system', schemaVersion: 1, labelZh: '系统存档', labelEn: 'System state', sourceFile: 'src/stores/system.js', logicalOwners: ['Settings', 'WorldBook', 'System'] },
-  { storageKey: 'store:chat', schemaVersion: 2, labelZh: '聊天存档', labelEn: 'Chat state', sourceFile: 'src/stores/chat.js', logicalOwners: ['Contacts', 'Chat'] },
-  { storageKey: 'store:map', schemaVersion: 2, labelZh: '地图存档', labelEn: 'Map state', sourceFile: 'src/stores/map.js', logicalOwners: ['Map'] },
-  { storageKey: 'store:calendar', schemaVersion: 1, labelZh: '日历存档', labelEn: 'Calendar state', sourceFile: 'src/stores/calendar.js', logicalOwners: ['Calendar'] },
-  { storageKey: 'store:reminders', schemaVersion: 1, labelZh: '提醒事项', labelEn: 'Reminders state', sourceFile: 'src/lib/reminder-cues.js', logicalOwners: ['Reminders'] },
-  { storageKey: 'store:gallery', schemaVersion: 1, labelZh: '素材存档', labelEn: 'Gallery state', sourceFile: 'src/stores/gallery.js', logicalOwners: ['Gallery'] },
-  { storageKey: 'store:files', schemaVersion: 1, labelZh: '文件索引', labelEn: 'Files index', sourceFile: 'src/stores/files.js', logicalOwners: ['Files'] },
-  { storageKey: 'store:book', schemaVersion: 1, labelZh: '长文素材', labelEn: 'Book library', sourceFile: 'src/stores/book.js', logicalOwners: ['Book'] },
-  { storageKey: 'store:shopping', schemaVersion: 1, labelZh: '购物记录', labelEn: 'Shopping records', sourceFile: 'src/stores/shopping.js', logicalOwners: ['Shopping'] },
-  { storageKey: 'store:food-delivery', schemaVersion: 1, labelZh: '外卖记录', labelEn: 'Food delivery records', sourceFile: 'src/stores/foodDelivery.js', logicalOwners: ['Food Delivery'] },
-  { storageKey: 'store:simulation', schemaVersion: 2, labelZh: '事件模拟', labelEn: 'Simulation events', sourceFile: 'src/stores/simulation.js', logicalOwners: ['Event Runtime'] },
-  { storageKey: 'store:assets', schemaVersion: 1, labelZh: '资产记录', labelEn: 'Assets records', sourceFile: 'src/stores/assets.js', logicalOwners: ['Assets'] },
-  { storageKey: 'store:wallet', schemaVersion: 1, labelZh: '钱包账本', labelEn: 'Wallet ledger', sourceFile: 'src/stores/wallet.js', logicalOwners: ['Wallet'] },
-  { storageKey: 'store:phone', schemaVersion: 1, labelZh: '电话记录', labelEn: 'Phone logs', sourceFile: 'src/stores/phone.js', logicalOwners: ['Phone'] },
-  { storageKey: 'store:stock', schemaVersion: 1, labelZh: '模拟行情', labelEn: 'Simulated market', sourceFile: 'src/stores/stock.js', logicalOwners: ['Stock'] },
-  { storageKey: 'store:relationship-runtime', schemaVersion: 1, labelZh: '关系运行时', labelEn: 'Relationship runtime', sourceFile: 'src/stores/relationshipRuntime.js', logicalOwners: ['Relationship Runtime'] },
-  { storageKey: 'store:image-generation', schemaVersion: 1, labelZh: '生图公开配置', labelEn: 'Image generation public configuration', sourceFile: 'src/stores/imageGeneration.js', logicalOwners: ['Image Generation'] },
+  {
+    storageKey: 'store:system',
+    schemaVersion: 1,
+    labelZh: '系统存档',
+    labelEn: 'System state',
+    sourceFile: 'src/stores/system.js',
+    logicalOwners: ['Settings', 'WorldBook', 'System'],
+  },
+  {
+    storageKey: 'store:chat',
+    schemaVersion: 2,
+    labelZh: '聊天存档',
+    labelEn: 'Chat state',
+    sourceFile: 'src/stores/chat.js',
+    logicalOwners: ['Contacts', 'Chat'],
+  },
+  {
+    storageKey: 'store:map',
+    schemaVersion: 2,
+    labelZh: '地图存档',
+    labelEn: 'Map state',
+    sourceFile: 'src/stores/map.js',
+    logicalOwners: ['Map'],
+  },
+  {
+    storageKey: 'store:calendar',
+    schemaVersion: 1,
+    labelZh: '日历存档',
+    labelEn: 'Calendar state',
+    sourceFile: 'src/stores/calendar.js',
+    logicalOwners: ['Calendar'],
+  },
+  {
+    storageKey: 'store:reminders',
+    schemaVersion: 1,
+    labelZh: '提醒事项',
+    labelEn: 'Reminders state',
+    sourceFile: 'src/lib/reminder-cues.js',
+    logicalOwners: ['Reminders'],
+  },
+  {
+    storageKey: 'store:gallery',
+    schemaVersion: 1,
+    labelZh: '素材存档',
+    labelEn: 'Gallery state',
+    sourceFile: 'src/stores/gallery.js',
+    logicalOwners: ['Gallery'],
+  },
+  {
+    storageKey: 'store:files',
+    schemaVersion: 1,
+    labelZh: '文件索引',
+    labelEn: 'Files index',
+    sourceFile: 'src/stores/files.js',
+    logicalOwners: ['Files'],
+  },
+  {
+    storageKey: 'store:book',
+    schemaVersion: 1,
+    labelZh: '长文素材',
+    labelEn: 'Book library',
+    sourceFile: 'src/stores/book.js',
+    logicalOwners: ['Book'],
+  },
+  {
+    storageKey: 'store:shopping',
+    schemaVersion: 1,
+    labelZh: '购物记录',
+    labelEn: 'Shopping records',
+    sourceFile: 'src/stores/shopping.js',
+    logicalOwners: ['Shopping'],
+  },
+  {
+    storageKey: 'store:food-delivery',
+    schemaVersion: 1,
+    labelZh: '外卖记录',
+    labelEn: 'Food delivery records',
+    sourceFile: 'src/stores/foodDelivery.js',
+    logicalOwners: ['Food Delivery'],
+  },
+  {
+    storageKey: 'store:simulation',
+    schemaVersion: 2,
+    labelZh: '事件模拟',
+    labelEn: 'Simulation events',
+    sourceFile: 'src/stores/simulation.js',
+    logicalOwners: ['Event Runtime'],
+  },
+  {
+    storageKey: 'store:assets',
+    schemaVersion: 1,
+    labelZh: '资产记录',
+    labelEn: 'Assets records',
+    sourceFile: 'src/stores/assets.js',
+    logicalOwners: ['Assets'],
+  },
+  {
+    storageKey: 'store:wallet',
+    schemaVersion: 1,
+    labelZh: '钱包账本',
+    labelEn: 'Wallet ledger',
+    sourceFile: 'src/stores/wallet.js',
+    logicalOwners: ['Wallet'],
+  },
+  {
+    storageKey: 'store:phone',
+    schemaVersion: 1,
+    labelZh: '电话记录',
+    labelEn: 'Phone logs',
+    sourceFile: 'src/stores/phone.js',
+    logicalOwners: ['Phone'],
+  },
+  {
+    storageKey: 'store:stock',
+    schemaVersion: 1,
+    labelZh: '模拟行情',
+    labelEn: 'Simulated market',
+    sourceFile: 'src/stores/stock.js',
+    logicalOwners: ['Stock'],
+  },
+  {
+    storageKey: 'store:relationship-runtime',
+    schemaVersion: 1,
+    labelZh: '关系运行时',
+    labelEn: 'Relationship runtime',
+    sourceFile: 'src/stores/relationshipRuntime.js',
+    logicalOwners: ['Relationship Runtime'],
+  },
+  {
+    storageKey: 'store:image-generation',
+    schemaVersion: 1,
+    labelZh: '生图公开配置',
+    labelEn: 'Image generation public configuration',
+    sourceFile: 'src/stores/imageGeneration.js',
+    logicalOwners: ['Image Generation'],
+  },
 ])
 
 const layeredStoreCarriers = ['local:persisted-state', 'idb:persisted-state-mirror']
@@ -236,7 +362,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
   {
     id: 'music.library-and-provider-settings',
     logicalOwner: 'Music',
-    dataClass: 'Music library, playlists, favorites, queue, playback preferences, public provider profiles, and integration policy',
+    dataClass:
+      'Music library, playlists, favorites, queue, playback preferences, public provider profiles, and integration policy',
     physicalCarrierIds: layeredStoreCarriers,
     storageKeys: ['store:system'],
     durability: 'durable-authoritative',
@@ -244,7 +371,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'system-settings',
     stableIdRule: 'Track, playlist, and provider profile IDs remain stable across restore.',
-    referenceRule: 'Chat and Map consume bounded Music projections; provider credentials and stream URLs are not copied into their records.',
+    referenceRule:
+      'Chat and Map consume bounded Music projections; provider credentials and stream URLs are not copied into their records.',
   },
   {
     id: 'music.local-media-binaries',
@@ -257,9 +385,29 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'excluded',
     backupSectionId: '',
     stableIdRule: 'IndexedDB blob key equals the Music-local mediaId retained by track metadata.',
-    referenceRule: 'Music track metadata references mediaId; Gallery, Chat, and Map do not own or receive the binary.',
-    exclusionReason: 'Local audio binary packaging is outside the current backup slice; restored metadata reports a missing file instead of silently substituting media.',
+    referenceRule:
+      'Music track metadata references mediaId; Gallery, Chat, and Map do not own or receive the binary.',
+    exclusionReason:
+      'Local audio binary packaging is outside the current backup slice; restored metadata reports a missing file instead of silently substituting media.',
     rebuildSource: 'The user selects the original local audio file again in Music Settings.',
+  },
+  {
+    id: 'music.provider-cache',
+    logicalOwner: 'Music',
+    dataClass: 'Normalized provider metadata and lyrics cached on the current device',
+    physicalCarrierIds: ['idb:music-provider-cache'],
+    storageKeys: [],
+    durability: 'durable-rebuildable-cache',
+    growthClass: 'bounded-expiring-provider-cache',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule:
+      'Entries are keyed by cache kind, provider profile, platform, and stable source track reference.',
+    referenceRule:
+      'The cache may enrich Music-owned tracks but never owns library truth, credentials, stream URLs, or audio bytes.',
+    exclusionReason:
+      'Provider metadata and lyrics can be fetched again and are not continuity truth.',
+    rebuildSource: 'The configured provider returns metadata or lyrics again after cache expiry.',
   },
   {
     id: 'worldbook.world-context',
@@ -271,8 +419,10 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     growthClass: 'user-content-growth',
     backupRequirement: 'required',
     backupSectionId: 'system-user',
-    stableIdRule: 'World Pack, source-link, knowledge, and template IDs remain stable across restore.',
-    referenceRule: 'Consumers store stable IDs and projections; WorldBook remains the logical owner.',
+    stableIdRule:
+      'World Pack, source-link, knowledge, and template IDs remain stable across restore.',
+    referenceRule:
+      'Consumers store stable IDs and projections; WorldBook remains the logical owner.',
   },
   {
     id: 'system.notifications',
@@ -297,7 +447,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     growthClass: 'bounded-history',
     backupRequirement: 'required',
     backupSectionId: 'system-api-reports',
-    stableIdRule: 'Report identity is preserved when present; ordering uses recorded creation time.',
+    stableIdRule:
+      'Report identity is preserved when present; ordering uses recorded creation time.',
     referenceRule: 'Reports retain compact source/provider references, not copied owner records.',
   },
   {
@@ -310,8 +461,10 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     growthClass: 'bounded-history',
     backupRequirement: 'required',
     backupSectionId: 'system-truth-state',
-    stableIdRule: 'Legacy entity keys and event identities remain stable until fixtures prove rebuildability.',
-    referenceRule: 'Required compatibility data; it is not promoted as a new canonical truth owner.',
+    stableIdRule:
+      'Legacy entity keys and event identities remain stable until fixtures prove rebuildability.',
+    referenceRule:
+      'Required compatibility data; it is not promoted as a new canonical truth owner.',
   },
   {
     id: 'contacts.role-profiles',
@@ -337,7 +490,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'chat-directory-conversations',
     stableIdRule: 'Contact and conversation IDs remain stable across restore.',
-    referenceRule: 'Directory rows may project Contacts roles; Chat owns only conversation-side state.',
+    referenceRule:
+      'Directory rows may project Contacts roles; Chat owns only conversation-side state.',
   },
   {
     id: 'chat.user-visible-messages',
@@ -350,7 +504,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'chat-messages',
     stableIdRule: 'Conversation and message IDs remain stable; recalls retain tombstone identity.',
-    referenceRule: 'Blocks reference owner records or Gallery assets by stable ID/URL rather than copying truth.',
+    referenceRule:
+      'Blocks reference owner records or Gallery assets by stable ID/URL rather than copying truth.',
   },
   {
     id: 'chat.module-identity-settings',
@@ -363,7 +518,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'chat-module-identity-known-gap',
     stableIdRule: 'Singleton Chat identity plus stable contact-ID override keys.',
-    referenceRule: 'Current v2 export omits this class; the gap is explicit and cannot satisfy a future complete-package claim.',
+    referenceRule:
+      'Current v2 export omits this class; the gap is explicit and cannot satisfy a future complete-package claim.',
   },
   {
     id: 'map.navigation-and-world-state',
@@ -389,7 +545,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'calendar',
     stableIdRule: 'Calendar event and source-link IDs remain stable.',
-    referenceRule: 'Reminder cues are import compatibility only; Reminders owns canonical reminder truth.',
+    referenceRule:
+      'Reminder cues are import compatibility only; Reminders owns canonical reminder truth.',
   },
   {
     id: 'reminders.reminder-records',
@@ -415,7 +572,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'gallery-metadata',
     stableIdRule: 'Asset and folder IDs remain stable across restore.',
-    referenceRule: 'URL assets preserve the original URL; local binaries use asset/blob stable IDs.',
+    referenceRule:
+      'URL assets preserve the original URL; local binaries use asset/blob stable IDs.',
   },
   {
     id: 'gallery.retained-binaries',
@@ -428,7 +586,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'user_selected',
     backupSectionId: 'gallery-binaries',
     stableIdRule: 'IndexedDB blob key equals the Gallery asset/blob stable ID.',
-    referenceRule: 'A complete whole-Gallery package must later match stable ID plus digest sets exactly.',
+    referenceRule:
+      'A complete whole-Gallery package must later match stable ID plus digest sets exactly.',
   },
   {
     id: 'files.file-index',
@@ -493,7 +652,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'simulation',
     stableIdRule: 'Event, proposal, and review IDs remain stable.',
-    referenceRule: 'Events reference owner truth; World Hub reviews but does not directly rewrite relationship truth.',
+    referenceRule:
+      'Events reference owner truth; World Hub reviews but does not directly rewrite relationship truth.',
   },
   {
     id: 'assets.owned-assets',
@@ -558,7 +718,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'relationship-runtime',
     stableIdRule: 'Entity, fact, proposal, effect, and memory IDs remain stable.',
-    referenceRule: 'This is the sole relationship-truth owner; Chat and Contacts receive projections only.',
+    referenceRule:
+      'This is the sole relationship-truth owner; Chat and Contacts receive projections only.',
   },
   {
     id: 'image-generation.public-configuration',
@@ -571,7 +732,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'required',
     backupSectionId: 'image-generation',
     stableIdRule: 'Provider profile IDs and module route keys remain stable across restore.',
-    referenceRule: 'Camera edits the shared configuration; consuming modules reference profile IDs.',
+    referenceRule:
+      'Camera edits the shared configuration; consuming modules reference profile IDs.',
   },
   {
     id: 'image-generation.credentials',
@@ -614,7 +776,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'excluded',
     backupSectionId: '',
     stableIdRule: 'Credential records are keyed by Music provider profile ID.',
-    referenceRule: 'Credentials never enter Music share payloads, cross-module projections, or ordinary plaintext backups.',
+    referenceRule:
+      'Credentials never enter Music share payloads, cross-module projections, or ordinary plaintext backups.',
     exclusionReason: 'Plaintext backup export must not duplicate provider secrets.',
     rebuildSource: 'The user re-enters credentials on each device.',
   },
@@ -629,8 +792,10 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'excluded',
     backupSectionId: '',
     stableIdRule: 'Built-in provider profile IDs remain stable on each device.',
-    referenceRule: 'Runtime callers use the shared TTS Store and never copy provider configuration into Chat messages.',
-    exclusionReason: 'The first TTS slice is device-local and is not part of the ordinary backup contract.',
+    referenceRule:
+      'Runtime callers use the shared TTS Store and never copy provider configuration into Chat messages.',
+    exclusionReason:
+      'The first TTS slice is device-local and is not part of the ordinary backup contract.',
     rebuildSource: 'Restore the built-in defaults or configure the provider on the device.',
   },
   {
@@ -644,7 +809,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'excluded',
     backupSectionId: '',
     stableIdRule: 'Credential records are keyed by TTS provider profile ID.',
-    referenceRule: 'Credentials never enter preview audio, Chat messages, or ordinary plaintext backups.',
+    referenceRule:
+      'Credentials never enter preview audio, Chat messages, or ordinary plaintext backups.',
     exclusionReason: 'Plaintext backup export must not duplicate provider secrets.',
     rebuildSource: 'The user re-enters credentials on each device.',
   },
@@ -660,7 +826,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupSectionId: '',
     stableIdRule: 'Mirror key equals the full namespaced persisted-store key.',
     referenceRule: 'Never a separate truth owner.',
-    exclusionReason: 'It duplicates local persisted envelopes and is rebuilt from canonical owner sections.',
+    exclusionReason:
+      'It duplicates local persisted envelopes and is rebuilt from canonical owner sections.',
     rebuildSource: 'Required canonical owner sections in the active save or backup package.',
   },
   {
@@ -696,7 +863,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
   {
     id: 'chat.internal-share-draft',
     logicalOwner: 'Chat',
-    dataClass: 'Pending internal source-object share awaiting recipient selection and send confirmation',
+    dataClass:
+      'Pending internal source-object share awaiting recipient selection and send confirmation',
     physicalCarrierIds: ['local:chat-internal-share-draft'],
     storageKeys: [],
     durability: 'bounded-device-transient',
@@ -704,8 +872,10 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupRequirement: 'excluded',
     backupSectionId: '',
     stableIdRule: 'One fixed localStorage key with a 24-hour maximum age.',
-    referenceRule: 'Carries one normalized source-object snapshot and return route; it is not a sent message or source-app truth.',
-    exclusionReason: 'The draft is cleared after send or cancel and can be recreated by sharing again.',
+    referenceRule:
+      'Carries one normalized source-object snapshot and return route; it is not a sent message or source-app truth.',
+    exclusionReason:
+      'The draft is cleared after send or cancel and can be recreated by sharing again.',
     rebuildSource: 'The user repeats the sharing action in the source app.',
   },
 ])
@@ -723,5 +893,6 @@ export const PERSISTED_STATE_AUDIT_TARGETS = Object.freeze(
 
 export const getBackupRelevantPersistenceDataClasses = () =>
   PERSISTENCE_OWNER_DATA_CLASSES.filter(
-    (entry) => entry.backupRequirement === 'required' || entry.backupRequirement === 'user_selected',
+    (entry) =>
+      entry.backupRequirement === 'required' || entry.backupRequirement === 'user_selected',
   )

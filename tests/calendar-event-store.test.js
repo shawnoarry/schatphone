@@ -252,7 +252,7 @@ describe('calendar event store', () => {
       source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
       sourceReminderId: cue.id,
       titleEn: 'Shopping follow-up: 2 Shopping items',
-      route: '/shopping',
+      route: '/shopping/schat_mall?category=logistics&orderId=shopping_order_nova',
       icon: 'fas fa-truck-fast',
       status: 'confirmed',
     })

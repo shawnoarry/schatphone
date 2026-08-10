@@ -448,7 +448,7 @@ export const useCalendarStore = defineStore('calendar', () => {
       timeEditedAt: existing?.timeEditedAt || 0,
       status: CALENDAR_EVENT_STATUS_CONFIRMED,
       pinned: false,
-      route: '/shopping',
+      route: cue.route || '/shopping',
       icon: 'fas fa-truck-fast',
       tone: cue.tone || 'orange',
       scheduledPushId: existing?.scheduledPushId || '',

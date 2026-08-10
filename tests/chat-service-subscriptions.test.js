@@ -897,7 +897,7 @@ describe('Chat service subscriptions', () => {
       'Shopping',
     )
     expect(wrapper.get('[data-testid="chat-service-channel-source-shopping"]').text()).toContain(
-      'Daily Fresh',
+      'Kurly',
     )
     expect(wrapper.get('[data-testid="chat-service-channel-source-plan"]').text()).toContain(
       'Shopping orders can push event-driven updates',

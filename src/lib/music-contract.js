@@ -62,6 +62,15 @@ export const MUSIC_LIMITS = Object.freeze({
   playlists: 40,
 })
 
+const MUSIC_RECOMMENDATION_WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+export const selectWeeklyMusicRecommendation = (tracks = [], timestamp = Date.now()) => {
+  const candidates = Array.isArray(tracks) ? tracks.filter((track) => track?.id) : []
+  if (!candidates.length) return null
+  const weekSlot = Math.floor(Math.max(0, Number(timestamp) || 0) / MUSIC_RECOMMENDATION_WEEK_MS)
+  return candidates[weekSlot % candidates.length] || null
+}
+
 export const DEFAULT_MUSIC_FIELD_MAP = Object.freeze({
   id: 'id',
   title: 'title',

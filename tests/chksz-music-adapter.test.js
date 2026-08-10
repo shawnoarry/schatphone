@@ -35,19 +35,35 @@ describe('ChKSz music adapter', () => {
     const netease = normalizeChkszSearchResponse(
       {
         result: {
-          songs: [{ id: 123, name: 'Cloud Song', ar: [{ name: 'Lin' }], al: { name: 'Sky', picUrl: '/sky.jpg' }, dt: 245000 }],
+          songs: [
+            {
+              id: 123,
+              name: 'Cloud Song',
+              ar: [{ name: 'Lin' }],
+              al: { name: 'Sky', picUrl: '/sky.jpg' },
+              dt: 245000,
+            },
+          ],
         },
       },
       createProfile(),
       'Cloud',
     )
     const qq = normalizeChkszSearchResponse(
-      { list: [{ n: 2, mid: 'qq_mid_2', name: 'Glass', singer: 'Mira', album: 'Transit', pay: 0 }] },
+      {
+        list: [{ n: 2, mid: 'qq_mid_2', name: 'Glass', singer: 'Mira', album: 'Transit', pay: 0 }],
+      },
       createProfile(CHKSZ_MUSIC_PLATFORMS.QQ),
       'Glass',
     )
     const kugou = normalizeChkszSearchResponse(
-      { data: { list: [{ n: 3, hash: 'kg_hash_3', songname: 'Signal', singer: 'North', album_name: 'Arcade' }] } },
+      {
+        data: {
+          list: [
+            { n: 3, hash: 'kg_hash_3', songname: 'Signal', singer: 'North', album_name: 'Arcade' },
+          ],
+        },
+      },
       createProfile(CHKSZ_MUSIC_PLATFORMS.KUGOU),
       'Signal',
     )
@@ -71,15 +87,47 @@ describe('ChKSz music adapter', () => {
     })
   })
 
-  test('adds the device key only to the official outgoing query and returns quota metadata', async () => {
-    const fetchImpl = vi.fn(async () => response({
-      payload: { result: { songs: [{ id: 7, name: 'Remote', ar: [{ name: 'Artist' }] }] } },
-      headers: {
-        'X-RateLimit-Limit': '20',
-        'X-Quota-Free-Remaining': '37',
-        'X-Quota-Paid-Remaining': '120',
+  test('normalizes common nested cover, artist, album, and publish-date variants', () => {
+    const tracks = normalizeChkszSearchResponse(
+      {
+        result: {
+          songs: [
+            {
+              id: 321,
+              name: 'Detailed Song',
+              artists: [{ name: 'First Artist' }, { name: 'Second Artist' }],
+              album: { name: 'Detailed Album', picurl: '/covers/detailed.jpg' },
+              publishTime: Date.UTC(2021, 4, 7),
+              durationMs: 201000,
+            },
+          ],
+        },
       },
-    }))
+      createProfile(),
+      'Detailed',
+    )
+
+    expect(tracks[0]).toMatchObject({
+      title: 'Detailed Song',
+      artist: 'First Artist, Second Artist',
+      album: 'Detailed Album',
+      coverUrl: 'https://api.chksz.com/covers/detailed.jpg',
+      durationSec: 201,
+      year: 2021,
+    })
+  })
+
+  test('adds the device key only to the official outgoing query and returns quota metadata', async () => {
+    const fetchImpl = vi.fn(async () =>
+      response({
+        payload: { result: { songs: [{ id: 7, name: 'Remote', ar: [{ name: 'Artist' }] }] } },
+        headers: {
+          'X-RateLimit-Limit': '20',
+          'X-Quota-Free-Remaining': '37',
+          'X-Quota-Paid-Remaining': '120',
+        },
+      }),
+    )
     const result = await searchChkszMusic({
       profile: createProfile(),
       credential: { apiKey: 'chksz_device_secret' },
@@ -108,11 +156,20 @@ describe('ChKSz music adapter', () => {
       profile,
       'On Demand',
     )[0]
-    const fetchImpl = vi.fn(async () => response({
-      payload: {
-        data: { url: 'https://stream.example.com/88.mp3', name: 'On Demand', singer: 'Mira' },
-      },
-    }))
+    const fetchImpl = vi.fn(async () =>
+      response({
+        payload: {
+          data: {
+            url: 'https://stream.example.com/88.mp3',
+            name: 'On Demand',
+            singer: 'Mira',
+            album: { name: 'Resolved Album' },
+            picUrl: 'https://images.example.com/88.jpg',
+            publishTime: Date.UTC(2020, 0, 1),
+          },
+        },
+      }),
+    )
 
     const result = await resolveChkszMusicTrack({
       profile,
@@ -124,6 +181,9 @@ describe('ChKSz music adapter', () => {
     expect(result.track).toMatchObject({
       id: track.id,
       audioUrl: 'https://stream.example.com/88.mp3',
+      album: 'Resolved Album',
+      coverUrl: 'https://images.example.com/88.jpg',
+      year: 2020,
       sourceRef: track.sourceRef,
     })
     const requestedUrl = new URL(fetchImpl.mock.calls[0][0])
@@ -134,16 +194,20 @@ describe('ChKSz music adapter', () => {
 
   test('redacts API keys from status errors and retries a 429 at most once', async () => {
     const profile = createProfile()
-    const deniedFetch = vi.fn(async () => response({
-      status: 401,
-      payload: { msg: 'invalid chksz_device_secret' },
-    }))
-    await expect(searchChkszMusic({
-      profile,
-      credential: { apiKey: 'chksz_device_secret' },
-      query: 'Denied',
-      fetchImpl: deniedFetch,
-    })).rejects.toMatchObject({ code: 'CHKSZ_HTTP_401', status: 401 })
+    const deniedFetch = vi.fn(async () =>
+      response({
+        status: 401,
+        payload: { msg: 'invalid chksz_device_secret' },
+      }),
+    )
+    await expect(
+      searchChkszMusic({
+        profile,
+        credential: { apiKey: 'chksz_device_secret' },
+        query: 'Denied',
+        fetchImpl: deniedFetch,
+      }),
+    ).rejects.toMatchObject({ code: 'CHKSZ_HTTP_401', status: 401 })
     try {
       await searchChkszMusic({
         profile,
@@ -152,21 +216,27 @@ describe('ChKSz music adapter', () => {
         fetchImpl: deniedFetch,
       })
     } catch (error) {
-      expect(JSON.stringify({ message: error.message, apiMessage: error.apiMessage })).not.toContain('chksz_device_secret')
+      expect(
+        JSON.stringify({ message: error.message, apiMessage: error.apiMessage }),
+      ).not.toContain('chksz_device_secret')
     }
 
     const rateLimitedFetch = vi
       .fn()
-      .mockResolvedValueOnce(response({ status: 429, payload: { msg: 'slow down' }, headers: { 'Retry-After': '0' } }))
+      .mockResolvedValueOnce(
+        response({ status: 429, payload: { msg: 'slow down' }, headers: { 'Retry-After': '0' } }),
+      )
       .mockResolvedValueOnce(response({ payload: { result: { songs: [] } } }))
     const sleepImpl = vi.fn(async () => {})
-    await expect(searchChkszMusic({
-      profile,
-      credential: { apiKey: 'chksz_device_secret' },
-      query: 'Retry',
-      fetchImpl: rateLimitedFetch,
-      sleepImpl,
-    })).resolves.toMatchObject({ ok: true })
+    await expect(
+      searchChkszMusic({
+        profile,
+        credential: { apiKey: 'chksz_device_secret' },
+        query: 'Retry',
+        fetchImpl: rateLimitedFetch,
+        sleepImpl,
+      }),
+    ).resolves.toMatchObject({ ok: true })
     expect(rateLimitedFetch).toHaveBeenCalledTimes(2)
     expect(sleepImpl).toHaveBeenCalledTimes(1)
   })
@@ -182,22 +252,30 @@ describe('ChKSz music adapter', () => {
       profile,
       credential: { apiKey: 'chksz_device_secret' },
       track,
-      fetchImpl: vi.fn(async () => response({ payload: {
-        lrc: { lyric: '[00:01.00]First line' },
-        tlyric: { lyric: '[00:01.00]第一行' },
-      } })),
+      fetchImpl: vi.fn(async () =>
+        response({
+          payload: {
+            lrc: { lyric: '[00:01.00]First line' },
+            tlyric: { lyric: '[00:01.00]第一行' },
+          },
+        }),
+      ),
     })
     const playlistResult = await fetchChkszPlaylist({
       profile,
       credential: { apiKey: 'chksz_device_secret' },
       playlistId: '3778678',
-      fetchImpl: vi.fn(async () => response({ payload: {
-        playlist: {
-          name: 'Night List',
-          creator: { nickname: 'DJ Lin' },
-          tracks: [{ id: 10, name: 'Ten', ar: [{ name: 'Mira' }], al: { name: 'Ten Album' } }],
-        },
-      } })),
+      fetchImpl: vi.fn(async () =>
+        response({
+          payload: {
+            playlist: {
+              name: 'Night List',
+              creator: { nickname: 'DJ Lin' },
+              tracks: [{ id: 10, name: 'Ten', ar: [{ name: 'Mira' }], al: { name: 'Ten Album' } }],
+            },
+          },
+        }),
+      ),
     })
 
     expect(lyricResult.lyrics).toMatchObject({

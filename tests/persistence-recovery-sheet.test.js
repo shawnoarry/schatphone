@@ -68,10 +68,51 @@ describe('PersistenceRecoverySheet', () => {
     expect(wrapper.text()).toContain('写入页面关闭后会自动恢复')
     expect(wrapper.find('[data-testid="persistence-recovery-backup"]').exists()).toBe(false)
 
+    const collapse = wrapper.get('[data-testid="persistence-recovery-collapse"]')
+    expect(collapse.attributes('aria-label')).toBe('继续浏览并收起提示')
+    await collapse.trigger('click')
+    expect(wrapper.find('[data-testid="persistence-recovery-sheet"]').exists()).toBe(false)
+
+    const compact = wrapper.get('[data-testid="persistence-recovery-compact"]')
+    expect(compact.text()).toContain('只读预览')
+    expect(compact.attributes('aria-label')).toBe('展开只读提示')
+    await compact.trigger('click')
+    expect(wrapper.get('[data-testid="persistence-recovery-sheet"]').attributes('role')).toBe(
+      'status',
+    )
+
     await wrapper.get('[data-testid="persistence-recovery-retry"]').trigger('click')
     await wrapper.get('[data-testid="persistence-recovery-refresh"]').trigger('click')
     expect(wrapper.emitted('retry')).toHaveLength(1)
     expect(wrapper.emitted('refresh')).toHaveLength(1)
+  })
+
+  test('lets a protected read-only page collapse without hiding recovery access', async () => {
+    const wrapper = mount(PersistenceRecoverySheet, {
+      props: {
+        status: createStatus({ mode: 'read_only', primaryCode: 'read_only_conflict' }),
+      },
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    expect(wrapper.get('[data-testid="persistence-recovery-sheet"]').attributes('role')).toBe(
+      'alert',
+    )
+    expect(wrapper.find('[data-testid="persistence-recovery-backup"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="persistence-recovery-collapse"]').trigger('click')
+    expect(wrapper.find('[data-testid="persistence-recovery-sheet"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="persistence-recovery-compact"]').text()).toContain(
+      '只读保护',
+    )
+
+    await wrapper.get('[data-testid="persistence-recovery-compact"]').trigger('click')
+    expect(wrapper.get('[data-testid="persistence-recovery-sheet"]').attributes('role')).toBe(
+      'alert',
+    )
+    expect(wrapper.find('[data-testid="persistence-recovery-backup"]').exists()).toBe(true)
   })
 
   test('disables retry while a retry is already running', () => {

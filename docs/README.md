@@ -109,6 +109,7 @@ Compatibility entry docs still exist:
 - `docs/process/EVENT_WORKFLOW.md`
   - event-specialist process
   - event/runtime skill invocation matrix
+  - current EVE-2/default K-pop content handoff: `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`
 - `docs/process/VISUAL_WORKFLOW.md`
   - visual-only workflow
   - visual/IA skill invocation matrix

@@ -4,6 +4,7 @@ import {
   MUSIC_ADAPTER_KINDS,
   MUSIC_DEMO_TRACKS,
   MUSIC_REPEAT_MODES,
+  normalizeMusicTrack,
 } from '../src/lib/music-contract'
 import { MUSIC_INTEGRATION_ACTIONS } from '../src/lib/music-module-interface'
 import { musicPlaybackRuntime } from '../src/lib/music-playback-runtime'
@@ -11,6 +12,7 @@ import { useMusicStore } from '../src/stores/music'
 
 class MockAudio {
   constructor() {
+    MockAudio.instance = this
     this.currentTime = 0
     this.duration = 240
     this.volume = 1
@@ -42,6 +44,10 @@ class MockAudio {
   }
 
   async play() {
+    if (MockAudio.failNextPlay) {
+      MockAudio.failNextPlay = false
+      throw new Error('stream rejected')
+    }
     if (MockAudio.blockNextPlay) {
       MockAudio.blockNextPlay = false
       const error = new Error('gesture required')
@@ -58,6 +64,7 @@ class MockAudio {
 }
 
 MockAudio.blockNextPlay = false
+MockAudio.failNextPlay = false
 
 Object.defineProperty(globalThis, 'Audio', {
   configurable: true,
@@ -67,9 +74,49 @@ Object.defineProperty(globalThis, 'Audio', {
 
 let pinia
 
+const createChkszTrackFixture = (store, suffix) => {
+  const profile = store.upsertProvider({
+    id: `provider_chksz_${suffix}`,
+    name: 'ChKSz Music',
+    adapterKind: MUSIC_ADAPTER_KINDS.CHKSZ,
+    platform: 'netease',
+    baseUrl: 'https://api.chksz.com',
+  })
+  store.setCredential(profile.id, { apiKey: 'chksz_device_secret' })
+  const track = normalizeMusicTrack({
+    id: `${profile.id}:netease:88`,
+    title: 'Cached Song',
+    artist: 'Remote Artist',
+    providerId: profile.id,
+    providerName: profile.name,
+    sourceRef: { type: MUSIC_ADAPTER_KINDS.CHKSZ, platform: 'netease', id: '88' },
+  })
+  return { profile, track }
+}
+
+const createProviderCacheStub = () => {
+  const entries = new Map()
+  const keyFor = ({ kind, track }) => `${kind}:${track.id}`
+  return {
+    getProviderCache: vi.fn(async (input) => entries.get(keyFor(input)) || null),
+    putProviderCache: vi.fn(async (input) => {
+      entries.set(keyFor(input), input.value)
+      return true
+    }),
+  }
+}
+
+const chkszResponse = (payload) => ({
+  ok: true,
+  status: 200,
+  headers: { get: () => null },
+  json: async () => payload,
+})
+
 describe('music store', () => {
   beforeEach(() => {
     MockAudio.blockNextPlay = false
+    MockAudio.failNextPlay = false
     musicPlaybackRuntime.stop()
     localStorage.clear()
     pinia = createPinia()
@@ -141,17 +188,37 @@ describe('music store', () => {
     expect(store.savedTracks.map((item) => item.id)).toContain('remote_track')
   })
 
+  test('keeps an active buffering session pausable and restores playing status', async () => {
+    const store = useMusicStore()
+
+    await expect(store.playTrack(MUSIC_DEMO_TRACKS[0])).resolves.toEqual({ ok: true })
+    MockAudio.instance.emit('waiting')
+    expect(store.runtime.status).toBe('buffering')
+    expect(store.isPlaying).toBe(true)
+
+    MockAudio.instance.emit('playing')
+    expect(store.runtime.status).toBe('playing')
+
+    await expect(store.togglePlayback()).resolves.toEqual({ ok: true, paused: true })
+    expect(MockAudio.instance.paused).toBe(true)
+    expect(store.runtime.status).toBe('paused')
+    expect(store.isPlaying).toBe(false)
+  })
+
   test('adds a validated HTTPS audio URL as a durable Music track', async () => {
     const store = useMusicStore()
     const probeImpl = vi.fn(async () => ({ ok: true, durationSec: 187 }))
 
-    const result = await store.addTrackFromUrl({
-      audioUrl: 'https://media.example.com/direct.mp3',
-      title: 'Direct Song',
-      artist: 'URL Artist',
-      album: 'URL Album',
-      coverUrl: 'https://media.example.com/direct.jpg',
-    }, { probeImpl })
+    const result = await store.addTrackFromUrl(
+      {
+        audioUrl: 'https://media.example.com/direct.mp3',
+        title: 'Direct Song',
+        artist: 'URL Artist',
+        album: 'URL Album',
+        coverUrl: 'https://media.example.com/direct.jpg',
+      },
+      { probeImpl },
+    )
 
     expect(result).toMatchObject({
       ok: true,
@@ -166,10 +233,15 @@ describe('music store', () => {
     expect(probeImpl).toHaveBeenCalledWith('https://media.example.com/direct.mp3', {})
     expect(localStorage.getItem('schatphone:store:system') || '').toContain('Direct Song')
 
-    await expect(store.addTrackFromUrl({
-      audioUrl: 'http://media.example.com/insecure.mp3',
-      title: 'Insecure Song',
-    }, { probeImpl })).resolves.toMatchObject({ ok: false, code: 'AUDIO_URL_HTTPS_REQUIRED' })
+    await expect(
+      store.addTrackFromUrl(
+        {
+          audioUrl: 'http://media.example.com/insecure.mp3',
+          title: 'Insecure Song',
+        },
+        { probeImpl },
+      ),
+    ).resolves.toMatchObject({ ok: false, code: 'AUDIO_URL_HTTPS_REQUIRED' })
     expect(probeImpl).toHaveBeenCalledTimes(1)
   })
 
@@ -190,16 +262,18 @@ describe('music store', () => {
     })
     expect(imported).toMatchObject({
       ok: true,
-      tracks: [{
-        title: 'Local Session',
-        durationSec: 42,
-        audioUrl: '',
-        sourceRef: {
-          type: 'local_file',
-          fileName: 'Local Session.wav',
-          mimeType: 'audio/wav',
+      tracks: [
+        {
+          title: 'Local Session',
+          durationSec: 42,
+          audioUrl: '',
+          sourceRef: {
+            type: 'local_file',
+            fileName: 'Local Session.wav',
+            mimeType: 'audio/wav',
+          },
         },
-      }],
+      ],
     })
     expect(putMedia).toHaveBeenCalledWith(imported.tracks[0].sourceRef.mediaId, localFile)
 
@@ -239,8 +313,10 @@ describe('music store', () => {
       },
     })
 
-    await expect(store.playTrack(track, { getMedia: vi.fn(async () => null) }))
-      .resolves.toEqual({ ok: false, code: 'LOCAL_MEDIA_MISSING' })
+    await expect(store.playTrack(track, { getMedia: vi.fn(async () => null) })).resolves.toEqual({
+      ok: false,
+      code: 'LOCAL_MEDIA_MISSING',
+    })
     expect(store.runtime.sessionActive).toBe(false)
   })
 
@@ -265,10 +341,12 @@ describe('music store', () => {
     })
     MockAudio.blockNextPlay = true
 
-    await expect(store.playTrack(track, {
-      getMedia: vi.fn(async () => blob),
-      objectUrlApi,
-    })).resolves.toEqual({ ok: false, code: 'PLAYBACK_GESTURE_REQUIRED' })
+    await expect(
+      store.playTrack(track, {
+        getMedia: vi.fn(async () => blob),
+        objectUrlApi,
+      }),
+    ).resolves.toEqual({ ok: false, code: 'PLAYBACK_GESTURE_REQUIRED' })
     expect(objectUrlApi.revokeObjectURL).not.toHaveBeenCalled()
     await expect(store.resume()).resolves.toEqual({ ok: true })
     expect(store.isPlaying).toBe(true)
@@ -319,8 +397,178 @@ describe('music store', () => {
     expect(store.queue[0].audioUrl).toBe('')
     expect(store.recentTracks[0].audioUrl).toBe('')
     await store.saveNow()
-    expect(localStorage.getItem('schatphone:store:system') || '').not.toContain('stream.example.com')
+    expect(localStorage.getItem('schatphone:store:system') || '').not.toContain(
+      'stream.example.com',
+    )
     expect(resolveFetch).toHaveBeenCalledTimes(1)
+  })
+
+  test('reuses a ChKSz stream resolution for 24 hours and refreshes it after the memory TTL', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'ttl')
+    const providerCache = createProviderCacheStub()
+    const resolveFetch = vi.fn(async () =>
+      chkszResponse({
+        data: {
+          url: 'https://stream.example.com/cached.mp3',
+          album: { name: 'Cached Album' },
+          picUrl: 'https://images.example.com/cached.jpg',
+        },
+      }),
+    )
+
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 1000 })
+    store.stop()
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 2000 })
+    expect(resolveFetch).toHaveBeenCalledTimes(1)
+    expect(store.currentTrack).toMatchObject({
+      album: 'Cached Album',
+      coverUrl: 'https://images.example.com/cached.jpg',
+    })
+    const metadataWrite = providerCache.putProviderCache.mock.calls
+      .map(([input]) => input)
+      .find((input) => input.kind === 'metadata')
+    expect(JSON.stringify(metadataWrite.value)).not.toContain('stream.example.com')
+
+    store.stop()
+    await store.playTrack(track, {
+      ...providerCache,
+      fetchImpl: resolveFetch,
+      now: 1000 + 24 * 60 * 60 * 1000 + 1,
+    })
+    expect(resolveFetch).toHaveBeenCalledTimes(2)
+  })
+
+  test('keeps only the 50 most recently used ChKSz stream resolutions', async () => {
+    const store = useMusicStore()
+    const { profile, track } = createChkszTrackFixture(store, 'lru')
+    const providerCache = createProviderCacheStub()
+    const resolveFetch = vi.fn(async () =>
+      chkszResponse({ data: { url: 'https://stream.example.com/lru.mp3' } }),
+    )
+    const tracks = Array.from({ length: 51 }, (_, index) =>
+      normalizeMusicTrack({
+        ...track,
+        id: `${profile.id}:netease:${index}`,
+        sourceRef: {
+          type: MUSIC_ADAPTER_KINDS.CHKSZ,
+          platform: 'netease',
+          id: String(index),
+        },
+      }),
+    )
+
+    for (const item of tracks) {
+      await store.playTrack(item, { ...providerCache, fetchImpl: resolveFetch, now: 1000 })
+    }
+    expect(resolveFetch).toHaveBeenCalledTimes(51)
+
+    await store.playTrack(tracks[50], { ...providerCache, fetchImpl: resolveFetch, now: 2000 })
+    expect(resolveFetch).toHaveBeenCalledTimes(51)
+    await store.playTrack(tracks[0], { ...providerCache, fetchImpl: resolveFetch, now: 2000 })
+    expect(resolveFetch).toHaveBeenCalledTimes(52)
+  })
+
+  test('invalidates a rejected cached ChKSz stream and resolves it only once more', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'retry')
+    const providerCache = createProviderCacheStub()
+    const resolveFetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        chkszResponse({
+          data: { url: 'https://stream.example.com/first.mp3' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        chkszResponse({
+          data: { url: 'https://stream.example.com/refreshed.mp3' },
+        }),
+      )
+
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 1000 })
+    store.stop()
+    MockAudio.failNextPlay = true
+
+    await expect(
+      store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 2000 }),
+    ).resolves.toEqual({ ok: true })
+    expect(resolveFetch).toHaveBeenCalledTimes(2)
+    expect(store.currentTrack.audioUrl).toBe('https://stream.example.com/refreshed.mp3')
+  })
+
+  test('refreshes a cached ChKSz stream once after an asynchronous audio error', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'async_retry')
+    const providerCache = createProviderCacheStub()
+    const resolveFetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        chkszResponse({ data: { url: 'https://stream.example.com/cached-async.mp3' } }),
+      )
+      .mockResolvedValueOnce(
+        chkszResponse({ data: { url: 'https://stream.example.com/refreshed-async.mp3' } }),
+      )
+
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 1000 })
+    store.stop()
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 2000 })
+    MockAudio.instance.emit('error')
+
+    await vi.waitFor(() => expect(resolveFetch).toHaveBeenCalledTimes(2))
+    expect(store.currentTrack.audioUrl).toBe('https://stream.example.com/refreshed-async.mp3')
+    MockAudio.instance.emit('error')
+    await Promise.resolve()
+    expect(resolveFetch).toHaveBeenCalledTimes(2)
+  })
+
+  test('shares one ChKSz resolution across concurrent play requests for the same track', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'single_flight')
+    const providerCache = createProviderCacheStub()
+    let releaseRequest
+    const requestGate = new Promise((resolve) => {
+      releaseRequest = resolve
+    })
+    const resolveFetch = vi.fn(async () => {
+      await requestGate
+      return chkszResponse({ data: { url: 'https://stream.example.com/shared.mp3' } })
+    })
+
+    const firstPlay = store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch })
+    const secondPlay = store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch })
+    await vi.waitFor(() => expect(resolveFetch).toHaveBeenCalledTimes(1))
+    releaseRequest()
+
+    await expect(Promise.all([firstPlay, secondPlay])).resolves.toEqual([
+      { ok: true },
+      { ok: true },
+    ])
+    expect(resolveFetch).toHaveBeenCalledTimes(1)
+  })
+
+  test('reuses cached ChKSz lyrics when the same lyrics view is opened again', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'lyrics')
+    const providerCache = createProviderCacheStub()
+    const lyricFetch = vi.fn(async () =>
+      chkszResponse({
+        lrc: { lyric: '[00:01.00]Cached lyric line' },
+      }),
+    )
+
+    await expect(
+      store.loadLyrics(track, { ...providerCache, fetchImpl: lyricFetch }),
+    ).resolves.toMatchObject({ ok: true })
+    await expect(
+      store.loadLyrics(track, { ...providerCache, fetchImpl: lyricFetch }),
+    ).resolves.toMatchObject({ ok: true, cached: true })
+
+    expect(lyricFetch).toHaveBeenCalledTimes(1)
+    expect(store.lyricsState).toMatchObject({
+      status: 'ready',
+      original: '[00:01.00]Cached lyric line',
+    })
   })
 
   test('plays a queue, advances tracks, and respects repeat-one', async () => {
@@ -345,25 +593,31 @@ describe('music store', () => {
     const store = useMusicStore()
     const track = MUSIC_DEMO_TRACKS[0]
 
-    expect(await store.handleIntegrationRequest({
-      sourceModule: 'map',
-      action: MUSIC_INTEGRATION_ACTIONS.ENQUEUE,
-      trackId: track.id,
-    })).toMatchObject({ ok: false, code: 'USER_CONFIRMATION_REQUIRED' })
+    expect(
+      await store.handleIntegrationRequest({
+        sourceModule: 'map',
+        action: MUSIC_INTEGRATION_ACTIONS.ENQUEUE,
+        trackId: track.id,
+      }),
+    ).toMatchObject({ ok: false, code: 'USER_CONFIRMATION_REQUIRED' })
 
     store.updateIntegrationPolicy({ externalQueueRequestsEnabled: true })
-    expect(await store.handleIntegrationRequest({
-      sourceModule: 'map',
-      action: MUSIC_INTEGRATION_ACTIONS.ENQUEUE,
-      trackId: track.id,
-    })).toMatchObject({ ok: true })
+    expect(
+      await store.handleIntegrationRequest({
+        sourceModule: 'map',
+        action: MUSIC_INTEGRATION_ACTIONS.ENQUEUE,
+        trackId: track.id,
+      }),
+    ).toMatchObject({ ok: true })
     expect(store.queue.map((item) => item.id)).toContain(track.id)
 
-    expect(await store.handleIntegrationRequest({
-      sourceModule: 'chat',
-      action: MUSIC_INTEGRATION_ACTIONS.PLAY,
-      trackId: track.id,
-    })).toMatchObject({ ok: false, code: 'USER_GESTURE_REQUIRED' })
+    expect(
+      await store.handleIntegrationRequest({
+        sourceModule: 'chat',
+        action: MUSIC_INTEGRATION_ACTIONS.PLAY,
+        trackId: track.id,
+      }),
+    ).toMatchObject({ ok: false, code: 'USER_GESTURE_REQUIRED' })
   })
 
   test('keeps Map journey controls bounded while Music owns radio playback', async () => {

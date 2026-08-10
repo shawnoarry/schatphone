@@ -375,6 +375,8 @@ test.describe('world-bound narrative maps', () => {
       await parkResult.click()
       const detail = page.getByTestId('map-place-detail-sheet')
       await expect(detail).toBeVisible()
+      await detail.getByTestId('map-place-open-detail').click()
+      await expect(detail.getByTestId('map-place-detail-view')).toBeVisible()
       return detail
     }
 

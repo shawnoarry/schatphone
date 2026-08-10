@@ -1,6 +1,6 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-08-09
+Updated: 2026-08-10
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
@@ -11,6 +11,23 @@ Status: `PARTIAL_DONE`
 Map's first internal Chat share caller is integrated locally. Place Details creates a source-owned `location_share`; Chat owns recipient selection, confirmation, history, and quoting; cancel and sent-card navigation restore the same `placeId`. Desktop and simulated Pixel 5 prove that source return does not change current location or create a journey.
 
 Map's active-journey Music caller is also integrated locally. A traveling or paused journey exposes one compact music/radio control that opens a focused bottom panel for quick tracks, transport controls, and three Music-owned library-backed stations. Map receives only bounded projections and never receives API keys, endpoints, audio URLs, local media IDs, or raw queue contents. The Map panel and Music's global floating player coexist as separate layers: closing the trip panel or leaving the journey removes only Map presentation, while playback and an explicitly opened Music float continue. Focused unit coverage and desktop/simulated Pixel 5 Playwright protect the full Map -> radio -> float -> Music -> Map return path, layer order, dismissal behavior, page errors, and horizontal overflow.
+
+## Large-Map Event Card Direction
+
+Status: `EVE-0_ARCHITECTURE_ACCEPTED / EVE-1_EVENT_CONTRACT_DONE / EVE-2A_DONE / EVE-2B_RUNTIME_DONE / EVE-2C_MAP_UI_ACCEPTANCE_REQUIRED`
+
+The user accepted Event as a cross-module product family without a normal Home app and named Map as its first large-surface host. The staged direction is:
+
+1. Event package EVE-1 has frozen and tested a pure Event Surface Projection, empty-by-default host registration, stale-source behavior, allowlisted request descriptors, and strict stable-place/geographic/canvas anchor normalization without a route, Store field, Map UI, or new event family.
+2. EVE-2A has inventoried the current Map and frozen its read-only semantic overlay, the reusable contracts, and one interior production-arrival-briefing archetype without changing Map. EVE-2B now implements the Event-owned registries, durable instances, local fallback materialization, and optional text Composer without changing Map. The first archetype accepts manual or journey-arrival provenance only after explicit Map-owned place entry, validates three no-external-mutation choices through a future Map Adapter, and has a complete no-event/text-only path. Only separately accepted EVE-2C may add the Map-owned provenance/session fields, explicitly register Map, and render the approved invitation/detail flow.
+3. The compact card exposes an explicit `Expand event` command and never opens automatically merely because the map pans, focuses, or selects a nearby point.
+4. Map owns placement, clustering/stacking, text fit, mobile layer behavior, and return context. Event Runtime owns proposal/log truth and the source Module validates effects.
+5. An anchor cannot create a place, reveal discovery, change visibility, move role/journey state, or authorize an effect. Invalid/off-pack anchors remain reviewable in the source host/World Hub without an invented coordinate.
+6. EVE-2 does not authorize MJE-5 active exploration, generated candidates, event-driven place reveal, Mini Scene runtime, or CG generation.
+7. The accepted architecture separates ordinary place focus from event-pin selection. Stage 1 implements only the ordinary focus UI over existing Map truth; the later presence contract still derives `Enter` or inside-session behavior, records manual-versus-journey provenance, and supplies dynamic eligible-event invitations. No Event Surface host, Store/persistence field, or location-aware event family is implemented.
+8. Ordinary place-focus Stage 1 is now integrated locally without registering Map as an Event Surface host. A dedicated Map component presents a concise overview with source/category, summary, current-position/distance or active-journey context, `Go` or `View current journey`, Details, Share, and player-owned Manage. Details replace the overview and retain existing language, trip-start, immediate-relocation, and player-pin deletion behavior. There is no Event button, `Enter`, place session, provenance schema, or persistence migration.
+
+Place-focus Stage 1 passes 2 focused files / 34 tests, the full 225-file / 1618-test Vitest suite, lint, production build, and 16/16 Map Playwright cases across desktop Chromium and Pixel 5. Direct browser inspection at desktop and 393 x 852 confirms the overview/detail sheets preserve visible map context, report zero document/sheet horizontal overflow, and emit no console warning/error. One first full-suite run hit the existing deferred-mirror 40 ms timing assertion under concurrent build load; that file passed 13/13 alone and the complete rerun passed.
 
 ## Calendar, Agenda Journey, And Event Orchestration Direction
 
@@ -24,6 +41,7 @@ The accepted direction is recorded in `docs/architecture/CALENDAR_AGENDA_JOURNEY
 4. a hidden Schedule Orchestrator may later materialize confirmed Calendar commitments into linked Agenda Journey instances without copying or taking ownership of Calendar, Map, Event Runtime, or downstream value truth;
 5. Activity Session, event checkpoints, automatic resolution, and a future Narrative Timeline are architecture contracts only. No route, store, timer, popup, persistence field, migration, or visible Story/Diary surface is implemented or authorized;
 6. CJA-0 documentation is complete. CJA-1 Calendar information architecture requires a separate user acceptance decision before `/calendar` changes.
+7. The accepted documentation refinement defines dynamic current-origin departure estimates, explicit creation of one linked Map Journey, validated appointment-driven place entry, and arrival as presence rather than activity completion. It also keeps Activity Session/Focus Companion independent from optional event eligibility and media ownership.
 
 This documentation lane does not modify, replace, or block the current Map implementation or roadmap 4.11 MJE work. Cross-module terms must qualify `Agenda Journey` and `Map Journey`; user-facing copy may use `行程` where the containing app makes the meaning clear.
 
@@ -145,6 +163,7 @@ Still incomplete:
 12. Footprints remains passive progression with only deterministic authored nearby-facility reveal; no active area exploration or generated discovery candidate exists yet.
 13. MJE-1 transport planning, MJE-2 lifecycle/checkpoints, MJE-3's first checkpoint Event Runtime adapter, and MJE-4 Footprints/place knowledge are user-accepted and integrated locally.
 14. Agenda Journey, Schedule Orchestrator, Activity Session, their event adapters, and Narrative Timeline are not implemented; roadmap 4.12 is architecture-only.
+15. ordinary place-focus overview/detail Stage 1 is implemented; explicit onsite/inside sessions, `Enter`/leave behavior, manual-versus-journey provenance, scheduled-travel handoff, appointment auto-entry, Focus Companion, media callers, and location-aware place-entry events remain documentation-only and unimplemented.
 
 ### Read-Only Calendar Carrier Candidate
 
@@ -162,15 +181,16 @@ Calendar relationship review and memory-lineage detail have reached the current 
 
 MJE-4 is `USER_ACCEPTED / INTEGRATED_LOCAL`. Do not begin MJE-5 without a new user decision; the accepted follow-up is only to expand the authored neighborhood-facility catalog and later link stable Map place IDs with Food Delivery and Shopping ownership.
 
-Current safe candidates:
+Current safe candidates after the user's event-lane reprioritization:
 
-1. after separate user acceptance, define CJA-1 Calendar Month/Week/Agenda information architecture without implementing Agenda Journey or changing Map;
-2. user-test Calendar reservation and Map transit world context on a real phone as presentation only;
-3. deepen the confirmed-event relationship adapter without changing Calendar, Chat, or relationship-runtime ownership;
-4. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family;
-5. decide whether to approve, revise, or reject the read-only Calendar carrier candidate before any schema or migration work; keep Calendar and Map changes in separate owner slices.
-6. after roadmap 4.8 shared foundation and persistence/presenter prerequisites are complete, add only one Calendar request Adapter for the confirmed music-show-day scene; do not combine Map or new schedule schema in that slice.
-7. after the usable-product preview gates, consider one separately reviewed full map-package authoring/validation/export slice; keep provider-backed POI search and route planning outside that slice.
+1. keep Map unregistered as an Event Surface host until EVE-2C UI receives separate acceptance; completed EVE-2B adds no Map field, migration, Adapter execution, or UI.
+2. preserve the frozen read-only legacy/exact place-semantic overlay and do not migrate the 101 existing place records merely to implement lookup.
+3. after separate EVE-2C acceptance, implement the frozen `MapPlaceSessionCheckpointV1` and resolution-validation Interface, then add geographic plus fictional/custom anchor tests, clustering, layer coexistence, and explicit expansion for the one approved archetype.
+4. after separate user acceptance, define CJA-1 Calendar Month/Week/Agenda information architecture without implementing Agenda Journey or changing Map.
+5. user-test Calendar reservation and Map transit world context on a real phone as presentation only.
+6. deepen the confirmed-event relationship Adapter without changing Calendar, Chat, or relationship-runtime ownership.
+6. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family.
+7. decide whether to approve, revise, or reject the read-only Calendar carrier candidate before any schema or migration work; keep Calendar and Map changes in separate owner slices.
 
 ## 3. Do Not Do
 

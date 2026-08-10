@@ -38,7 +38,9 @@ const ERROR_COPY = Object.freeze({
 
 const getHeader = (headers, name) => {
   if (typeof headers?.get === 'function') return headers.get(name) || ''
-  const entry = Object.entries(headers || {}).find(([key]) => key.toLowerCase() === name.toLowerCase())
+  const entry = Object.entries(headers || {}).find(
+    ([key]) => key.toLowerCase() === name.toLowerCase(),
+  )
   return entry?.[1] == null ? '' : String(entry[1])
 }
 
@@ -104,27 +106,42 @@ const firstValue = (value, paths) => {
   return undefined
 }
 
+const releaseYear = (value) => {
+  if (value == null || value === '') return 0
+  const directYear = Number(value)
+  if (Number.isInteger(directYear) && directYear >= 1900 && directYear <= 2200) return directYear
+  const timestamp = Number(value)
+  if (Number.isFinite(timestamp) && timestamp > 2200) {
+    const milliseconds = timestamp < 1_000_000_000_000 ? timestamp * 1000 : timestamp
+    const year = new Date(milliseconds).getUTCFullYear()
+    if (year >= 1900 && year <= 2200) return year
+  }
+  const match = String(value).match(/(?:19|20|21)\d{2}/)
+  return match ? Number(match[0]) : 0
+}
+
 const resolveList = (payload, platform, operation = 'search') => {
-  const candidates = operation === 'playlist'
-    ? [
-        payload?.playlist?.tracks,
-        payload?.data?.playlist?.tracks,
-        payload?.data?.tracks,
-        payload?.tracks,
-        payload?.songs,
-        payload?.data?.songs,
-      ]
-    : platform === CHKSZ_MUSIC_PLATFORMS.NETEASE
+  const candidates =
+    operation === 'playlist'
       ? [
-          payload?.result?.songs,
-          payload?.data?.result?.songs,
-          payload?.data?.songs,
+          payload?.playlist?.tracks,
+          payload?.data?.playlist?.tracks,
+          payload?.data?.tracks,
+          payload?.tracks,
           payload?.songs,
-          payload?.data?.list,
-          payload?.list,
-          payload?.data,
+          payload?.data?.songs,
         ]
-      : [payload?.list, payload?.data?.list, payload?.data?.songs, payload?.songs, payload?.data]
+      : platform === CHKSZ_MUSIC_PLATFORMS.NETEASE
+        ? [
+            payload?.result?.songs,
+            payload?.data?.result?.songs,
+            payload?.data?.songs,
+            payload?.songs,
+            payload?.data?.list,
+            payload?.list,
+            payload?.data,
+          ]
+        : [payload?.list, payload?.data?.list, payload?.data?.songs, payload?.songs, payload?.data]
   return candidates.find(Array.isArray) || []
 }
 
@@ -145,7 +162,11 @@ const buildTrackSourceRef = ({ platform, item, index, query = '' }) => {
     platform,
     ...(id != null && id !== '' ? { id: String(id) } : {}),
     ...(mid != null && mid !== '' ? { mid: String(mid) } : {}),
-    ...(!id && !mid ? { selection } : platform !== CHKSZ_MUSIC_PLATFORMS.NETEASE ? { selection } : {}),
+    ...(!id && !mid
+      ? { selection }
+      : platform !== CHKSZ_MUSIC_PLATFORMS.NETEASE
+        ? { selection }
+        : {}),
     ...(query ? { query } : {}),
   }
 }
@@ -160,24 +181,48 @@ const normalizeChkszTrack = ({ item, index, profile, query = '' }) => {
       title: firstValue(item, ['name', 'title', 'songname', 'songName', 'song_name']),
       artist: firstValue(item, [
         'ar',
+        'data.ar',
         'artists',
+        'data.artists',
         'artist',
+        'data.artist',
         'artistName',
         'singer',
+        'data.singer',
         'author_name',
       ]),
-      album: firstValue(item, ['al', 'album', 'albumName', 'album_name']),
+      album: firstValue(item, ['al', 'data.al', 'album', 'data.album', 'albumName', 'album_name']),
       coverUrl: firstValue(item, [
         'al.picUrl',
+        'al.pic',
+        'al.cover',
+        'data.al.picUrl',
         'album.picUrl',
+        'album.picurl',
+        'album.pic_url',
+        'album.pic',
         'album.cover',
+        'data.album.picUrl',
         'cover',
         'coverUrl',
+        'picUrl',
+        'picurl',
+        'pic_url',
+        'albumPic',
         'pic',
         'img',
       ]),
-      duration: firstValue(item, ['dt', 'duration', 'durationMs', 'interval']),
-      year: firstValue(item, ['year', 'publishTime']),
+      duration: firstValue(item, ['dt', 'data.dt', 'duration', 'durationMs', 'interval', 'time']),
+      year: releaseYear(
+        firstValue(item, [
+          'year',
+          'publishTime',
+          'publish_time',
+          'releaseDate',
+          'album.publishTime',
+          'al.publishTime',
+        ]),
+      ),
       providerId: profile.id,
       providerName: profile.name,
       sourceRef,
@@ -193,7 +238,15 @@ export const normalizeChkszSearchResponse = (payload, profileInput, query = '') 
     .map((item, index) => normalizeChkszTrack({ item, index, profile, query }))
 }
 
-const buildUrl = ({ profile, apiKey, operation, query = '', limit = 30, track, playlistId = '' }) => {
+const buildUrl = ({
+  profile,
+  apiKey,
+  operation,
+  query = '',
+  limit = 30,
+  track,
+  playlistId = '',
+}) => {
   const path = CHKSZ_PATHS[profile.platform]?.[operation]
   if (!path) {
     throw createChkszError({
@@ -213,7 +266,10 @@ const buildUrl = ({ profile, apiKey, operation, query = '', limit = 30, track, p
       normalizedQuery,
     )
     if (profile.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE) {
-      endpoint.searchParams.set('limit', String(Math.max(1, Math.min(100, Math.round(limit) || 30))))
+      endpoint.searchParams.set(
+        'limit',
+        String(Math.max(1, Math.min(100, Math.round(limit) || 30))),
+      )
       endpoint.searchParams.set('offset', '0')
     } else {
       endpoint.searchParams.set('num', String(Math.max(1, Math.min(50, Math.round(limit) || 30))))
@@ -222,7 +278,10 @@ const buildUrl = ({ profile, apiKey, operation, query = '', limit = 30, track, p
     const sourceRef = track?.sourceRef || {}
     if (profile.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE) {
       if (!sourceRef.id) {
-        throw createChkszError({ code: 'CHKSZ_TRACK_REFERENCE_MISSING', message: 'Track source ID is missing.' })
+        throw createChkszError({
+          code: 'CHKSZ_TRACK_REFERENCE_MISSING',
+          message: 'Track source ID is missing.',
+        })
       }
       endpoint.searchParams.set('id', sourceRef.id || '')
       endpoint.searchParams.set('level', profile.quality)
@@ -231,15 +290,22 @@ const buildUrl = ({ profile, apiKey, operation, query = '', limit = 30, track, p
       endpoint.searchParams.set('size', profile.quality)
     } else {
       if (!sourceRef.query && !track?.title) {
-        throw createChkszError({ code: 'CHKSZ_TRACK_REFERENCE_MISSING', message: 'Track search reference is missing.' })
+        throw createChkszError({
+          code: 'CHKSZ_TRACK_REFERENCE_MISSING',
+          message: 'Track search reference is missing.',
+        })
       }
       endpoint.searchParams.set('msg', sourceRef.query || track?.title || '')
       endpoint.searchParams.set('n', String(sourceRef.selection || 1))
-      if (profile.platform === CHKSZ_MUSIC_PLATFORMS.QQ) endpoint.searchParams.set('size', profile.quality)
+      if (profile.platform === CHKSZ_MUSIC_PLATFORMS.QQ)
+        endpoint.searchParams.set('size', profile.quality)
     }
   } else if (operation === 'lyrics') {
     if (!track?.sourceRef?.id) {
-      throw createChkszError({ code: 'CHKSZ_TRACK_REFERENCE_MISSING', message: 'Track source ID is missing.' })
+      throw createChkszError({
+        code: 'CHKSZ_TRACK_REFERENCE_MISSING',
+        message: 'Track source ID is missing.',
+      })
     }
     endpoint.searchParams.set('id', track?.sourceRef?.id || '')
   } else if (operation === 'playlist') {
@@ -274,10 +340,14 @@ const defaultSleep = (milliseconds, signal) =>
       return
     }
     const timer = setTimeout(resolve, milliseconds)
-    signal?.addEventListener?.('abort', () => {
-      clearTimeout(timer)
-      reject(createChkszError({ code: 'ABORTED', message: 'Music request was cancelled.' }))
-    }, { once: true })
+    signal?.addEventListener?.(
+      'abort',
+      () => {
+        clearTimeout(timer)
+        reject(createChkszError({ code: 'ABORTED', message: 'Music request was cancelled.' }))
+      },
+      { once: true },
+    )
   })
 
 const requestChksz = async ({
@@ -295,7 +365,10 @@ const requestChksz = async ({
   const profile = normalizeProfile(profileInput)
   const apiKey = requireApiKey(credential)
   if (typeof fetchImpl !== 'function') {
-    throw createChkszError({ code: 'FETCH_UNAVAILABLE', message: 'Browser network access is unavailable.' })
+    throw createChkszError({
+      code: 'FETCH_UNAVAILABLE',
+      message: 'Browser network access is unavailable.',
+    })
   }
   const url = buildUrl({ profile, apiKey, operation, query, limit, track, playlistId })
   let retryCount = 0
@@ -378,10 +451,54 @@ export const resolveChkszMusicTrack = async (options = {}) => {
     {
       ...track,
       title: firstValue(item, ['name', 'data.name', 'title']) || track.title,
-      artist: firstValue(item, ['singer', 'data.singer', 'artist', 'artists']) || track.artist,
-      album: firstValue(item, ['album', 'data.album']) || track.album,
-      coverUrl: firstValue(item, ['cover', 'data.cover', 'pic']) || track.coverUrl,
-      duration: firstValue(item, ['interval', 'data.interval', 'duration']) || track.durationSec,
+      artist:
+        firstValue(item, [
+          'singer',
+          'data.singer',
+          'artist',
+          'data.artist',
+          'artists',
+          'ar',
+          'data.ar',
+        ]) || track.artist,
+      album: firstValue(item, ['album', 'data.album', 'al', 'data.al']) || track.album,
+      coverUrl:
+        firstValue(item, [
+          'cover',
+          'data.cover',
+          'coverUrl',
+          'data.coverUrl',
+          'picUrl',
+          'data.picUrl',
+          'picurl',
+          'data.picurl',
+          'pic',
+          'data.pic',
+          'album.picUrl',
+          'data.album.picUrl',
+          'al.picUrl',
+          'data.al.picUrl',
+        ]) || track.coverUrl,
+      duration:
+        firstValue(item, [
+          'interval',
+          'data.interval',
+          'duration',
+          'data.duration',
+          'dt',
+          'data.dt',
+        ]) || track.durationSec,
+      year:
+        releaseYear(
+          firstValue(item, [
+            'year',
+            'data.year',
+            'publishTime',
+            'data.publishTime',
+            'album.publishTime',
+            'data.album.publishTime',
+          ]),
+        ) || track.year,
       audioUrl,
       sourceRef: track.sourceRef,
     },
@@ -419,16 +536,24 @@ export const fetchChkszLyrics = async (options = {}) => {
 
 export const fetchChkszPlaylist = async (options = {}) => {
   const result = await requestChksz({ ...options, operation: 'playlist' })
-  const playlist = result.payload?.playlist || result.payload?.data?.playlist || result.payload?.data || result.payload
+  const playlist =
+    result.payload?.playlist ||
+    result.payload?.data?.playlist ||
+    result.payload?.data ||
+    result.payload
   const tracks = resolveList(result.payload, CHKSZ_MUSIC_PLATFORMS.NETEASE, 'playlist')
     .slice(0, MUSIC_LIMITS.savedTracks)
     .map((item, index) => normalizeChkszTrack({ item, index, profile: result.profile }))
   return {
     ok: true,
     playlist: {
-      name: String(firstValue(playlist, ['name', 'title']) || 'Imported Playlist').trim().slice(0, 80),
+      name: String(firstValue(playlist, ['name', 'title']) || 'Imported Playlist')
+        .trim()
+        .slice(0, 80),
       coverUrl: String(firstValue(playlist, ['coverImgUrl', 'cover', 'picUrl']) || '').trim(),
-      creator: String(firstValue(playlist, ['creator.nickname', 'creator.name', 'creator']) || '').trim().slice(0, 100),
+      creator: String(firstValue(playlist, ['creator.nickname', 'creator.name', 'creator']) || '')
+        .trim()
+        .slice(0, 100),
       tracks,
     },
     quota: result.quota,

@@ -230,7 +230,7 @@ describe('chat avatar image source rendering', () => {
     await wrapper.get('[data-testid="chat-directory-create-shopping-service-style_cloud"]').trigger('click')
     await flushUi()
 
-    expect(wrapper.get('[data-testid="chat-directory-service-name"]').element.value).toBe('Style Cloud')
+    expect(wrapper.get('[data-testid="chat-directory-service-name"]').element.value).toBe('WORKSOUT')
     expect(wrapper.get('[data-testid="chat-directory-service-shopping-service"]').element.value).toBe(
       'style_cloud',
     )
@@ -241,11 +241,11 @@ describe('chat avatar image source rendering', () => {
     const created = chatStore.contacts.find((contact) => contact.shoppingServiceKey === 'style_cloud')
     expect(created).toMatchObject({
       kind: 'service',
-      name: 'Style Cloud',
+      name: 'WORKSOUT',
       shoppingServiceKey: 'style_cloud',
     })
     expect(wrapper.get(`[data-testid="chat-directory-shopping-service-${created.id}"]`).text()).toContain(
-      'Style Cloud',
+      'WORKSOUT',
     )
 
     await wrapper.get('[data-testid="chat-directory-create-logistics-service-standard_courier"]').trigger('click')

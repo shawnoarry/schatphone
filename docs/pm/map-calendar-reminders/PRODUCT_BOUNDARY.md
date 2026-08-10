@@ -1,6 +1,6 @@
 # Map Calendar Reminders Product Boundary
 
-Updated: 2026-08-03
+Updated: 2026-08-10
 
 This file defines ownership boundaries for Map, Calendar, future Agenda Journey/Activity Session, Reminders, and Phone-like callback support.
 
@@ -19,6 +19,7 @@ Map owns:
 - deterministic local distance estimation when route planning is absent
 - passive Footprints progression and later confirmed exploration/discovery records
 - active-journey music/radio entry visibility, journey-context labeling, and focused Map panel presentation
+- future Event Surface Projection anchor validation, pin/card placement, clustering/stacking, selection, explicit expansion, and return context for approved host cards
 
 Map does not own:
 
@@ -28,6 +29,7 @@ Map does not own:
 - confirmed schedule meaning
 - relationship truth
 - journey-event eligibility, random selection, cooldowns, caps, proposal review, or Event Runtime logs
+- canonical event/proposal records, another Module's source records, or authority to apply an effect from a surface projection
 - Mini Scene world-profile resolution, regex execution, artifacts, or presenters
 - device-location truth, live traffic, navigation, or third-party POI truth
 - commercial map-provider billing or provider-specific place identity
@@ -44,9 +46,13 @@ During traveling and paused journey phases, Map may present one compact music/ra
 
 Place knowledge is Map-owned, persisted per world and partitioned by map pack. Old saves and missing policy data normalize to `all_known`. In optional `footprint_gated` mode, eligible authored convenience stores and pharmacy districts are absent from markers, search, journey pickers, Places, and Settings until a completed journey resolves to a canonical destination coordinate within the deterministic discovery radius. Each reveal retains stable place ID, source trip ID, and discovery time. New journeys snapshot world/map-pack lineage for this purpose. Switching policy preserves discoveries. Manual role-position changes, cancelled journeys, and marker-visibility actions cannot reveal places. Event-based stable-place reveal, generated candidate places, keep/discard ownership, and active exploration remain separately gated.
 
+The current ordinary place-focus Stage 1 provides one Map-owned overview/detail sheet over existing truth: an idle remote place offers Map Journey planning, a place viewed during a locked journey offers the existing journey without changing its destination, exact current-position context suppresses redundant travel, and deeper language/placement controls replace rather than nest over the overview. Immediate relocation remains a secondary sandbox action and creates no Map Journey. This Stage 1 adds no provenance or place-session schema. The accepted later target adds explicit Map-owned onsite/inside sessions, `manual` versus `journey_arrival` provenance, `Enter`/leave behavior, and bounded entry checkpoints. Event Runtime may then evaluate eligibility, but a place card still shows no permanent Event entry and distance cannot reclassify an onsite/interior template as remote.
+
 Map Journey, Footprints, and Exploration have distinct meanings. A Map Journey goes to a known destination. Footprints passively summarize completed travel/exploration through history, familiarity, points, area activity, and optional nearby authored-place reveals. Active Exploration spends time in an area and may produce an explicitly accepted candidate discovery. The current Footprints dashboard is passive; unlocking an area or revealing a pre-authored nearby facility cannot imply that active exploration or generated discoveries already exist.
 
-The Map Journey Runtime is a Map-owned domain Module, not the future Agenda Journey app. Transport choice belongs to Map Journey planning, and Map Settings may later own versioned static transport modes/lines/stations/topology. MJE-2 keeps planning form state separate from persisted active-journey truth, adds only deterministic duration-based checkpoints, and keeps pause/resume/cancel validation in Map; it is user-accepted in the current uncommitted tree. MJE-3 evaluates a bounded Map snapshot only when a completed `en_route` or `near_arrival` checkpoint is observed while Map is mounted. Event Runtime owns eligibility, cooldown/cap, proposal/review, provenance, and logs; Map validates exact result lineage and currently applies only no ETA change or a bounded 120-second delay. A pending proposal is reviewable but never pauses Map Journey, stops automatic arrival, or opens detail automatically. Map persists only evaluated checkpoint IDs, one pending-review compatibility reference, and cumulative event-delay seconds; Event Runtime proposal copy/audit do not become Map truth. Journey schema V3 migrates V2 event-blocked journeys back to active timing without losing remaining time or proposal lineage. A future Agenda Journey step may request Map travel and retain stable evidence, but cannot write Map Journey truth or make arrival prove completion of a non-travel activity. Destination change, event-driven cancellation, high-impact owner mutation, and active exploration remain unimplemented. A future Transit app may present the same static or live network only after it has independent utility and must consume, not duplicate, Map Journey truth.
+The Map Journey Runtime is a Map-owned domain Module, not the future Agenda Journey app. Transport choice belongs to Map Journey planning, and Map Settings may later own versioned static transport modes/lines/stations/topology. MJE-2 keeps planning form state separate from persisted active-journey truth, adds only deterministic duration-based checkpoints, and keeps pause/resume/cancel validation in Map; it is user-accepted and integrated locally. MJE-3 evaluates a bounded Map snapshot only when a completed `en_route` or `near_arrival` checkpoint is observed while Map is mounted. Event Runtime owns eligibility, cooldown/cap, proposal/review, provenance, and logs; Map validates exact result lineage and currently applies only no ETA change or a bounded 120-second delay. A pending proposal is reviewable but never pauses Map Journey, stops automatic arrival, or opens detail automatically. Map persists only evaluated checkpoint IDs, one pending-review compatibility reference, and cumulative event-delay seconds; Event Runtime proposal copy/audit do not become Map truth. Journey schema V3 migrates V2 event-blocked journeys back to active timing without losing remaining time or proposal lineage. A future Agenda Journey step may request Map travel and retain stable evidence, but cannot write Map Journey truth or make arrival prove completion of a non-travel activity. Destination change, event-driven cancellation, high-impact owner mutation, and active exploration remain unimplemented. A future Transit app may present the same static or live network only after it has independent utility and must consume, not duplicate, Map Journey truth.
+
+Roadmap 4.14 keeps the future large-map event-card lane separate from MJE-5. EVE-1 has landed the shared pure projection/empty-host-registry Interface without registering Map or changing Map state. EVE-2A has frozen a read-only current-place semantic overlay, `MapPlaceSessionCheckpointV1`, and a no-external-mutation resolution-validation Interface for one interior production-arrival-briefing archetype; none is implemented in Map yet. EVE-2B has completed Event-owned runtime/instance/text-materialization work without Map writes. Only EVE-2C may add Map-owned provenance/session truth and render the approved slice at a valid geographic or fictional/custom coordinate/place. Invalid/off-pack anchors remain reviewable without an invented position. `Expand event` is presentation/navigation only; every result returns through the source owner's Adapter. Authored scene images may be referenced from Map/world packs, but Map does not own optional event text generation or later CG candidates.
 
 ## 2. Calendar
 
@@ -82,6 +88,10 @@ Agenda Journey later owns short-range day/near-term journey instances, ordered o
 The hidden Schedule Orchestrator later owns only idempotent Calendar-to-Agenda materialization and deadline coordination. It does not become a Home app and cannot copy or mutate Calendar, Map, Event Runtime, relationship, Wallet, Assets, profile, or world truth.
 
 Activity Session later owns timestamp-based duration, pause policy, session checkpoints, and suspend/reopen reconciliation for one Agenda Journey step. It does not select events or write broad values. A minimized session continues; an OS-suspended or closed browser/PWA cannot promise an exact interactive popup.
+
+For a linked location-bound activity, Calendar keeps appointment truth, Agenda Journey keeps desired arrival and separate travel/activity steps, and Map recalculates recommended departure from the canonical current position. Explicit confirmation creates one Map Journey; opening Map reuses it. A validated linked arrival may apply an approved outside/automatic-entry policy, but arrival or inside presence only satisfies travel/presence evidence and never proves the activity completed.
+
+Activity Session also owns explicit completion policy. A Focus Companion surface may present Pomodoro/continuous/custom modes plus stable Gallery background, Music/ambient, and decorative companion references, but it owns no media binaries, playback queue, event eligibility, Map Journey clock, relationship state, or broad values. Optional event permission/intensity/presentation cannot remove the base activity path.
 
 No Agenda Journey route/store, Schedule Orchestrator implementation, Activity Session, Narrative Timeline store, persistence field, or migration is implemented by this accepted documentation direction.
 

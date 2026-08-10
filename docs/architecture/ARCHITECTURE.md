@@ -19,6 +19,7 @@ Primary goals:
 - prevent shell or control surfaces from absorbing domain records;
 - keep AI transport replaceable and explicit;
 - grow World Pack/runtime features through reviewed contracts;
+- present cross-module events inside the owning apps while keeping runtime review optional;
 - reduce the cost of working in large product-critical files.
 
 ## 2. Runtime Topology
@@ -34,6 +35,7 @@ Browser / static SPA
             IndexedDB serialized mirror
             Gallery binary storage
             Music local-audio storage
+            Music provider metadata/lyrics cache
             external AI provider APIs
             optional push relay
 
@@ -88,7 +90,7 @@ Owns:
 - foreground simulation lifecycle;
 - push startup self-heal and Chat auto-push scheduling.
 
-`App.vue` is about 1049 lines and coordinates several infrastructure owners. Future work should prefer focused shell services/composables when adding lifecycle behavior.
+`App.vue` is about 1225 lines and coordinates several infrastructure owners. Future work should prefer focused shell services/composables when adding lifecycle behavior.
 
 ### `src/router/index.js`
 
@@ -98,7 +100,31 @@ Owns:
 - compatibility redirects;
 - the global lock guard.
 
-There are 42 route-view files. Normal user-facing modules are lazy-loaded. `/music` is a first-class installed app, `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
+The current tree contains 42 route-view files, 19 Pinia stores, 52 Vue files under `src/components`, 37 JavaScript composables, and 224 static Vitest test files. Normal user-facing modules are lazy-loaded. `/music` is a first-class installed app, `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
+
+### Entry Model And Current Product Modules
+
+SchatPhone separates a capability from the way users reach or review it. A module does not need a desktop icon merely because it owns important behavior.
+
+| Entry form | Current meaning | Examples |
+| --- | --- | --- |
+| ordinary installed app | direct repeated user workflow | Chat, Contacts, Map, Calendar, Music, Camera, Gallery, Shopping, Food Delivery, Wallet |
+| protected system entry | shell/configuration recovery that must remain reachable | App Store, Settings, Network |
+| optional placeable entry | available from App Store or a feature switch without being mandatory on Home | World Hub |
+| world or folder entry | reviewed presentation that opens an existing owning route with context | World Pack app bindings, Food Delivery shop mini apps |
+| host-embedded surface | contextual action or projection inside the app where the underlying activity occurs | Chat share cards, Map journey/event cards, Calendar event cards, global Music player |
+| hidden internal module | coordination with no user-facing route of its own | Event Runtime, future Schedule Orchestrator |
+| future privileged tool | separately unlocked control with stronger authorization and audit | Cheats |
+
+Current product families are:
+
+- shell and configuration: Lock, Home, App Store, Settings, Appearance, Widgets, Network, backup/recovery, and internal Files compatibility;
+- communication and identity: Chat, Chat Directory, groups/service accounts, Contacts, Phone, role binding, and relationship memory;
+- world and continuity: Book, WorldBook, World Pack bindings, Map, Calendar, Reminders, Event Runtime, and optional World Hub review;
+- media: Gallery, Camera/shared image generation, Music, the global player, and bounded Chat/Map media projections;
+- life and economy: Shopping, multiple Food Delivery shop facades, Wallet, Assets, and Stock.
+
+An `Event` desktop app is intentionally absent. Event Runtime is a hidden coordination Module; event interaction appears in the owning host app, while cross-module audit and adjustment enter through World Hub.
 
 ## 5. State Layer
 
@@ -137,7 +163,7 @@ The accepted Calendar/Agenda Journey direction does not add another landed store
 
 ### `systemStore` Concentration
 
-`src/stores/system.js` is 4808 lines and is imported by 25 of 41 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, Music's compatibility-carried public state, and user/system settings.
+`src/stores/system.js` is 4834 lines and is imported by 26 of 42 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, Music's compatibility-carried public state, and user/system settings.
 
 The preferred strategy is stable facades, not a big-bang store split:
 
@@ -178,6 +204,7 @@ Full assembled prompts, raw provider responses, headers, and transport payloads 
 - `chksz-music-adapter.js` owns ChKSz NetEase/QQ/Kugou search, user-action playback resolution, NetEase lyrics/playlist intake, quota metadata, bounded retry, and Key-redacted errors;
 - `music-playback-runtime.js` is the sole browser `Audio` and Media Session runtime;
 - `music-local-media-storage.js` owns the separate `schatphone-music-media` IndexedDB carrier for imported audio blobs and obeys the current-save writer boundary;
+- `music-provider-cache.js` owns the separate rebuildable `schatphone-music-provider-cache` IndexedDB carrier for expiring normalized provider metadata and lyrics; API keys, stream URLs, and audio bytes are excluded;
 - `stores/music.js` owns the library/queue/playback/import facade while using `systemStore.settings.music` as the public metadata compatibility carrier;
 - `music-module-interface.js` exposes bounded Chat/Map routes, capability discovery, track-share payloads, now-playing/quick-track projections, and deterministic library-backed journey-radio catalogs;
 - `schatphone:music:credentials` stores provider API keys only on the current device and is excluded from ordinary backup;
@@ -276,8 +303,8 @@ Confirmed target direction and current non-active foundation:
 - in-app deletion permanently deletes the selected SchatPhone backup object from the connected personal R2 and requires a prominent cloud-deletion confirmation; the list row remains until the Worker confirms success;
 - SchatPhone never rotates, expires, or deletes personal-R2 backups automatically; every version remains until explicit user-confirmed deletion, and quota pressure may warn or block a new backup but cannot silently remove an existing recovery point;
 - complete-package and recovery acceptance is defined by `docs/architecture/BACKUP_RECOVERY_ENGINEERING_CONTRACT.md`; the roadmap 4.9 release-local v3 boundary now implements required-section manifests, integrity evidence, complete selected Gallery material, durable rollback checkpoints, startup crash recovery, legacy compatibility, and metadata/binary rollback, while predictive capacity and cross-owner root-generation activation remain separate work;
-- `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted carriers, serialized mirror, Gallery binary carrier, Music local-media carrier, image-generation credential/candidate/legacy carriers, Music's device-local credential carrier, TTS's device-local configuration/credential carriers, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
-- `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration and Music library/provider/import metadata participate in backup, while device-local credentials, TTS configuration, runtime TTS previews, Music local-audio binaries, and image-generation temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
+- `src/lib/persistence-owner-inventory.js` now independently classifies the 17 persisted stores, serialized mirror, Gallery binary carrier, Music local-media and rebuildable provider-cache carriers, image-generation credential/candidate/legacy carriers, Music's device-local credential carrier, TTS's device-local configuration/credential carriers, Home local hint, Chat session feedback, the active Book Repository database and six stores, the direct legacy Book fallback, and logical-owner/data-class ownership; Settings diagnostics retain the stable 17-store audit projection, including Book and public image-generation configuration;
+- `src/lib/backup-section-registry.js` continues to validate legacy v2 shape and records its historical Chat module-identity gap; `src/lib/complete-backup-package.js` requires all 27 current v3 sections, including Chat `moduleIdentity` and `moduleAvatarOverrides`, and integrity-checks them. Public `imageGeneration` configuration and Music library/provider/import metadata participate in backup, while device-local credentials, TTS configuration, runtime TTS previews, Music local-audio binaries, rebuildable Music provider cache, and image-generation temporary candidates remain excluded; shape-valid legacy files remain importable but are never relabeled complete. `docs/architecture/PERSISTENCE_REPOSITORY_CONTRACT.md` is `ARCHITECTURE_ACCEPTED` with exact IndexedDB v1 stores/keyPaths, record-version/generation-membership, pointer/journal, contextual persistence permission, fail-closed tab coordination, and Book foundation/fixture rules;
 - binary-excluded or legacy restore first resolves exact local Gallery matches and preserves current-only retained material; absent media remains an unresolved owner reference rendered through a typed placeholder and saved description where available;
 - no fixed `8 GB` budget, per-generation three-way storage prompt, per-backup item picker, or automatic backup deletion is approved;
 - one isolated storage container remains one independent current save; different entry containers never auto-sync or silently merge, and same-container later pages become read-only previews with retry/refresh rather than force takeover or last-write-wins. Ordinary writer occupancy is distinct from a true save conflict, and cooperative release may trigger the same bounded retry automatically;
@@ -342,6 +369,21 @@ Owning module explicit event
   -> primary/supporting memory grouping
   -> Contacts/World Hub review and Chat recall summary
 ```
+
+### Location-Aware Event Experience
+
+```text
+owning module action or explicit checkpoint
+  -> bounded source snapshot
+  -> Event Runtime eligibility, cooldown/cap, proposal, provenance, and log
+  -> event-surface projection with stable source references and optional coordinate anchor
+  -> host card in Map, Chat, Calendar, or another registered owner
+  -> user expands through host detail or the shared Mini Scene Interface
+  -> bounded choice request returns to the owning module for validation
+  -> optional World Hub review, explanation, and narrow correction
+```
+
+The projection is not another canonical event record. Map owns coordinates, pins, places, and journey truth; the source module owns its business records; Event Runtime owns eligibility and audit; Mini Scene owns optional presentation artifacts. A coordinate anchor may place a card on the large-map surface, but it cannot silently create a Map place, move a journey, or transfer source ownership to Map.
 
 ### Service Notification
 
@@ -415,6 +457,15 @@ Calendar / Map / Chat / future Agenda Journey / future registered caller
 - current automatic families are deliberately conservative;
 - high-risk Chat social proposals wait for review.
 
+### Event Experience And Hidden Control Entries
+
+- Event Runtime remains a hidden coordination Module and receives no ordinary Home or desktop entry.
+- Event cards are host-embedded projections. The next Map direction uses coordinate-anchored cards inside the existing Map UI, with an explicit action to expand the event; other modules may expose their own contextual cards through the same projection contract.
+- `World Hub / 世界中枢` is the existing integrated hidden-by-default review entry (`app_control_center`, `/control-center`). It is already reachable from Settings, manageable in App Store/Home placement, and shown in the Home utility area when available.
+- Event review, event history, pending choices, runtime notes, and bounded correction belong in World Hub rather than a new Event app. Ordinary user reminders and confirmed schedules remain Reminders/Calendar records.
+- `Cheats / 金手指` remains a separate future privileged tool for explicit value/state overrides. It may share the hidden utility area, selected-event context, and audit format with World Hub, but it must not share World Hub's default permission level or be folded into Event Runtime.
+- internal Files compatibility and the future Schedule Orchestrator are not event-review entrances.
+
 ### Push Relay
 
 `server/push-server.mjs` supports:
@@ -438,7 +489,7 @@ Its boundary is important:
 ### Validation Posture
 
 - the 2026-07-22 architecture baseline passed ESLint, 185 Vitest files / 1170 tests, Vite production build, both npm audit scopes, and 56 of 60 Playwright cases with 4 intentional skips;
-- the current tree contains 209 static Vitest test files;
+- the current tree contains 220 static Vitest test files;
 - later promoted Camera, Food Delivery, and local-map slices have focused desktop/mobile evidence;
 - release commit `a1418ed` has passing lint, unit, production and Cloudflare builds, governance, focused browser evidence, and remote Pages Run #31294272595. The deployed `/schatphone/` direct-provider flow and the Vercel/Cloudflare restricted-relay model-list plus Chat smoke are proven, while installed PWA, named physical-device, external protection, and independently rerunnable audit proof remain open.
 
@@ -464,18 +515,23 @@ Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third 
 
 Highest-risk files:
 
-- `FoodDeliveryView.vue` 12195 lines;
+- `FoodDeliveryView.vue` 12248 lines;
 - `ContactsView.vue` 5233 lines;
-- `ChatView.vue` 4960 lines;
-- `system.js` 4808 lines;
-- `HomeView.vue` 4456 lines;
+- `ChatView.vue` 5089 lines;
+- `system.js` 4834 lines;
+- `WalletView.vue` 4551 lines;
+- `WidgetsView.vue` 4519 lines;
+- `HomeView.vue` 4451 lines;
+- `foodDelivery.js` 4313 lines;
 - `WorldBookView.vue` 4104 lines;
+- `MapView.vue` 4029 lines;
+- `MusicView.vue` 3918 lines;
 - `ChatDirectoryView.vue` 3916 lines;
-- `MusicView.vue` 2783 lines.
 
 Other debt:
 
 - direct store-to-store coupling across some ownership boundaries;
+- no shared persisted event-surface projection yet for location-aware cards across host apps;
 - no compile-time contract layer;
 - remaining installed-PWA/external-protection/true-device release proof; direct configured-provider Chat is proven on deployed GitHub Pages, while optional proxy proof remains provider-specific;
 - incomplete true-device and push/provider QA.
@@ -496,7 +552,10 @@ Recommended order:
 - `docs/architecture/ROLE_BINDING_CONTRACT.md`
 - `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
 - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
+- `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`
+- `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`
 - `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`
+- `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_ARCHITECTURE_PLAN.md`
 - `docs/architecture/CAMERA_GALLERY_IMAGE_GENERATION_TODO.md`
 - `docs/architecture/MUSIC_MODULE_CONTRACT.md`

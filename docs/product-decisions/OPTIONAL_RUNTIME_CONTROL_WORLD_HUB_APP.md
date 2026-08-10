@@ -1,6 +1,6 @@
 # Optional Runtime Control / World Hub App
 
-Updated: 2026-05-19
+Updated: 2026-08-10
 
 ## Decision
 
@@ -28,6 +28,7 @@ It is the softer, safer runtime-control surface in the same family as future `é‡
 World Hub may coordinate:
 
 - event review;
+- event history, pending choices, location-aware event explanations, and event-scoped review notes;
 - event intensity or enablement controls;
 - relationship runtime review;
 - pending confirmation approval or dismissal;
@@ -38,6 +39,7 @@ It must not become:
 - the main role-authoring surface;
 - the main reminders/task surface;
 - the everyday place where users are forced to manage normal phone life.
+- a second Event Runtime store, general reminder/task inbox, or privileged Cheats editor.
 
 ## Architecture Boundary
 
@@ -72,6 +74,7 @@ Current World Hub capabilities:
 7. can filter relationship facts by status/source and inspect selected facts with metric-delta, source-record, pending-effect, and supporting-only explanations;
 8. can review pending generated Chat social proposals before high-risk communication state changes are applied in Chat, and can explain proposal source, trigger policy, and ownership boundaries for AI-sourced and foreground/session runtime proposals;
 9. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
+10. is the accepted integrated hidden entry for the future cross-module Event Notebook/review slice; Event still receives no ordinary Home app.
 
 ## Relationship To Cheats
 
@@ -87,9 +90,10 @@ Important rule:
 
 - do not design Cheats as a normal default app;
 - do not freeze Cheats before World Hub review surfaces are stable enough.
+- event review may merge into World Hub, but Cheats permissions and direct override Interfaces must stay separate even if a future unlocked entry is linked from World Hub.
 
 ## Next Recommended Slice
 
-1. preserve the filtered review-pack baseline while adding future event adapters and generated Chat social-event sources;
-2. add another read-only explanation slice only when product review finds a concrete gap;
-3. freeze Cheats only after the World Hub review surface is strong enough to support a clearer control hierarchy.
+1. implement EVE-1's pure Event Surface Projection before changing World Hub persistence or adding Map cards;
+2. add the future Event Notebook as a World Hub view over existing proposal/log truth, with event-scoped notes but no general reminder ownership;
+3. keep Cheats separately gated after the World Hub event-review hierarchy is proven.

@@ -1,6 +1,6 @@
 # Visual And IA Governance Implementation Workstreams / 视觉与信息架构治理实施工作流
 
-Updated: 2026-08-07
+Updated: 2026-08-10
 
 ## 1. Workstream A: Shell And Entry Ownership
 
@@ -44,8 +44,14 @@ Updated: 2026-08-07
 ## 3. Workstream C: Visual Rebuild Queue
 
 - decide rebuild vs polish
-- keep references per module
+- start each accepted visible slice from a product-grade target rather than a generic functional scaffold unless the user explicitly requests a wireframe or spike
+- keep references per module and use the `视觉专项：原型检索` stage when a suitable prototype or flow is missing
+- select at most three serious reference candidates, map them to SchatPhone ownership and L0-L3 depth, and extract principles rather than copying brand appearance or assets
 - align with actual product maturity
+- replace construction narration with real product state, controls, feedback, progressive disclosure, or visual media
+- require an explicit icon/control, palette, material, background/media, depth, motion, and responsive plan
+- proactively identify missing visual slots and propose project assets, user selection, license-compatible sourcing, or generated candidates before accepting a text-heavy substitute
+- reuse shared mechanics without turning unrelated installed apps into label-swapped versions of the same template
 - Chat message layout modes should change row structure, not only toggle avatar visibility
 
 ## 4. Semantic Guardrails
@@ -68,3 +74,12 @@ Treat these as bugs:
 14. Optional built-in K-pop content is presented as the only supported world, or its authoring policy becomes a global restriction on user-authored/imported material.
 15. Mini Scene Settings hides the difference between WorldBook narrative activation, profile binding, and per-module popup mode, or defaults a new module to automatic popup.
 16. the interactive Presenter renders raw AI/profile/legacy Chat HTML, lacks a visible text fallback, or visually escapes its sandbox as trusted system UI.
+17. A visible first implementation is accepted as complete because controls render, while hierarchy, states, identity, media, responsive composition, or interaction feedback are deferred without an explicit scaffold scope.
+18. User-facing screens explain architecture, data ownership, construction progress, future work, or implementation limitations instead of presenting the user's state, choices, consequences, and recovery actions.
+19. Overview, editing, diagnostics, history, destructive actions, and multi-step execution are flattened into one long page instead of using task-appropriate inline, sheet/drawer, modal, subpage, or route depth.
+20. Conventional navigation and tool actions become repeated text buttons even though familiar icons with accessible names would be clearer and more compact.
+21. Palette, material, background/media, depth, or motion remain at browser/default-template values because no deliberate visual decision was made.
+22. Similar features reuse the same page composition, card stack, and interaction rhythm only for implementation convenience, with labels and accent colors as the sole distinction.
+23. A visually central person, place, product, collection, journey, campaign, or atmosphere is described with helper paragraphs because asset selection or generation was never considered.
+24. A content-rich surface is accepted with no background/media plan simply because the user did not supply an image; the workflow must first propose selection, sourcing, or generation where imagery would materially improve the experience.
+25. Generated or externally sourced visuals enter runtime assets without semantic, crop, rendered-size, localization, artifact, provenance, and license review.
