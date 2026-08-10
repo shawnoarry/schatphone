@@ -1,6 +1,6 @@
 # World Hub And Cheats
 
-Updated: 2026-06-01
+Updated: 2026-08-10
 
 This file defines the distinction between the current World Hub lane and the future Cheats lane.
 
@@ -29,6 +29,7 @@ Current implemented direction:
 - shows visible role IDs only for real Contacts profiles; runtime-only or missing-profile targets stay labeled as runtime keys
 - filters and inspects event logs and relationship facts with product-facing explanations
 - reviews pending generated Chat social proposals such as role refusal, block, restore, and unblock before Chat applies the communication state
+- is the integrated hidden entry for cross-module event history, pending choices, location-aware event explanations, and event-scoped review notes
 - uses UI-facing relationship memory summaries by default, reserving source-audit detail for focused review surfaces
 - does not take ownership of relationship truth, event execution, or source records
 
@@ -49,10 +50,20 @@ Current state:
 
 Do not design Cheats as a real user-facing system before World Hub review surfaces are stable enough.
 
-## 5. Future Freeze Decision
+## 5. Event Entry Decision
 
-Later we still need to decide whether Cheats becomes:
+Event does not receive a normal Home app. Its user-facing cards remain embedded in Map, Chat, Calendar, and other owning hosts. Cross-module review and adjustment merge into World Hub:
 
-1. a stronger tab inside World Hub
-2. a separately unlocked hidden app
-3. a future-only concept with no real route until a later phase
+1. World Hub may list event history, pending review, source/adapter explanations, map anchors, and event-scoped review notes.
+2. Ordinary reminders, calendar plans, source records, and event execution remain with their owning Modules.
+3. Event Runtime remains the hidden coordination Module behind this review surface.
+4. A future Event Notebook is a World Hub view over runtime truth, not a new desktop entry or second event store.
+
+## 6. Merge Decision For Cheats
+
+World Hub and Cheats may share the hidden Home utility area, selected-event context, and audit presentation, but they must not merge their permissions or write Interfaces.
+
+- World Hub remains review-first with bounded approve, dismiss, reset, delete-memory, note, and correction actions.
+- Cheats remains a separately unlocked privileged Module for explicit value/state overrides, preview, before/after provenance, and safe undo/recompute rules.
+- World Hub may link to Cheats after unlock, but a normal World Hub session must never gain Cheats authority merely by opening another tab.
+- The exact future Cheats route and unlock condition remain separately gated; the architectural separation no longer depends on that route decision.

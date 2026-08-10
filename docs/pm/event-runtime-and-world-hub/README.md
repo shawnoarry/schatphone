@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-07-31
+Updated: 2026-08-10
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, and override-lane design.
 
@@ -10,9 +10,17 @@ Confirmed AI-artifact boundary: Event Runtime persists normalized proposals, rev
 
 Current handoff: relationship classification Round 4 has added saved-classification gate audit metadata for low-impact relationship facts, plus named high-risk gate presets for event packs. World Hub may review gate metadata read-only; no high-impact romance/conflict automation is enabled by this package. Incoming generated Chat social events now enter explicit event-runtime review/audit from Chat AI output or the foreground/session runtime greeting source: low-risk greetings can become audited message requests, while role refusal/block/restore/unblock proposals wait for World Hub approval before Chat changes the communication state. World Hub now explains Chat social proposal source, trigger policy, and ownership boundaries. World Pack nonstandard-app template extraction now has a WorldBook Optional capability Packs review UI, but remains a WorldBook/appBinding seam only; it must not generate event rules or runtime mutations.
 
-Landed Map collaboration boundary: MJE-3 submits bounded canonical snapshots only for completed `en_route` and `near_arrival` checkpoints while Map is mounted. Event Runtime owns Map permission, Surprise Mode, deterministic/random gates, cooldowns, caps, persistent proposal review/provenance, and logs; Map owns journey truth, validates exact result lineage, and applies only no ETA change or a bounded 120-second delay. A proposal remains pending and visible without pausing Map Journey or opening detail automatically; ordinary arrival can dismiss an unreviewed proposal. Missing, stale, or non-pending proposals clear safely, and Map remains able to complete without an event. This adapter is implemented in the current uncommitted tree and is `READY_FOR_USER_REVIEW`, not integrated or accepted. Read `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`.
+Landed Map collaboration boundary: MJE-3 submits bounded canonical snapshots only for completed `en_route` and `near_arrival` checkpoints while Map is mounted. Event Runtime owns Map permission, Surprise Mode, deterministic/random gates, cooldowns, caps, persistent proposal review/provenance, and logs; Map owns journey truth, validates exact result lineage, and applies only no ETA change or a bounded 120-second delay. A proposal remains pending and visible without pausing Map Journey or opening detail automatically; ordinary arrival can dismiss an unreviewed proposal. Missing, stale, or non-pending proposals clear safely, and Map remains able to complete without an event. MJE-3 and the MJE-4 Footprints/place-knowledge follow-up are user-accepted and integrated locally. Read `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`.
+
+Landed Event Surface boundary: EVE-1 provides a pure bounded projection for existing Map Journey and Chat social proposals plus an empty-by-default registered-host capability Interface. It normalizes stable source/proposal/log references, ownership, lifecycle and risk/review state, bilingual/accessibility copy, optional strict stable-place/geographic/canvas anchors, expansion targets, and allowlisted request descriptors. Stale sources, invalid anchors, unknown/unbound actions, and unsupported hosts fail closed. It adds no Event route, Store field, persistent projection, host UI, Adapter call, or new event content. EVE-2 may separately render one approved low-risk family as a coordinate-anchored Map card with an explicit `Expand event` command. Cross-module history, pending review, explanations, and event-scoped notes remain assigned to the existing hidden World Hub entry; Cheats remains a separately unlocked privileged Module.
+
+Accepted location-entry refinement: an authored event activation scope (`remote`, `nearby`, `onsite`, `interior`, journey checkpoint, or later activity checkpoint) is separate from current distance and from card placement. Map owns place relation, manual-versus-journey position provenance, and explicit place entry. Event Runtime owns eligibility, discoverability, permissions, intensity, cooldown/cap, and invitations. Ordinary place-focus Stage 1 is now implemented separately over existing Map truth with no permanent Event button; it does not register Map as an Event Surface host or change the landed EVE-1 schema. Provenance/session fields and location-aware event eligibility remain documentation-only, and zero eligible events remains a complete path.
+
+Accepted default-content direction: the first product pack targets the current modern K-pop realism world while the engine remains world-neutral. Runtime AI is optional and text-only for V1, invoked only after local eligibility and an explicit event-entry/presentation checkpoint; ticks, distance updates, place focus, and compact invitations remain zero-token. Authored K-pop copy is the offline/provider-failure fallback. Location/scene images primarily follow Map/world asset packs, while later CG remains a separately permissioned image-generation Adapter over versioned media intent rather than an Event Runtime responsibility. EVE-2A froze the exact Interfaces, current Seoul place semantics, first production-arrival-briefing archetype, and six fixtures; EVE-2B now implements the reusable normalizer/registry/materializer, durable Simulation-owned instances, and optional one-call cached text Composer without Map or UI writes. EVE-2C Map UI remains separately gated. Read `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` before EVE-2 work.
 
 Accepted future scheduling boundary: Calendar remains the visible long-range confirmed-plan app; a future Agenda Journey app owns today/near-term execution, Activity Session owns timestamp-based activity timing, and a hidden Schedule Orchestrator owns idempotent Calendar-to-Journey materialization. Event Runtime may later evaluate bounded Agenda Journey or Activity Session snapshots only at explicit checkpoints. It owns eligibility, cooldown/cap, interaction and automatic-resolution policy, provenance, and logs, but never source journey, timer, Calendar, Map, or downstream value truth. This is documentation-only; no runtime adapter or visible Agenda Journey surface is implemented. Read `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`.
+
+Activity timing and its Focus Companion presentation remain useful when optional events are disabled. Module permission, random-event intensity, and presentation mode are independent controls. A scheduled activity, travel step, deadline, or safety notice cannot disappear merely because optional events are quiet/off, and a passive event cannot take ownership of the source timer or media assets.
 
 Future Mini Scene dependency: Event Runtime may be a trigger-policy/provenance caller of the shared Mini Scene Module, but it does not own the generated artifact, world-profile/regex execution, presenter, or source-module record. Read `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` before promoting a runtime-triggered scene.
 
@@ -22,11 +30,13 @@ Future Mini Scene dependency: Event Runtime may be a trigger-policy/provenance c
 2. `PRODUCT_BOUNDARY.md`
 3. `WORLD_HUB_AND_CHEATS.md`
 4. `IMPLEMENTATION_WORKSTREAMS.md`
+5. `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` for the current EVE-2/default-content direction
 
 Also read when needed:
 
 - `docs/process/EVENT_WORKFLOW.md`
 - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
+- `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`
 - `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
 - `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`
 - `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`

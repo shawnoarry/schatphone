@@ -1,6 +1,6 @@
 # SchatPhone Event Workflow
 
-Updated: 2026-06-01
+Updated: 2026-08-10
 
 This document defines the `事件专项` workflow.
 
@@ -13,6 +13,7 @@ Use it when the team is designing or implementing:
 - event logs;
 - surprise-mode behavior;
 - cross-module event handoff;
+- host-embedded event cards and optional Map coordinate anchors;
 - World Hub runtime review behavior tied to the event engine.
 
 This workflow is separate from:
@@ -48,6 +49,7 @@ When this phrase appears, treat the task as event-system work, not as visual pol
 - event architecture docs:
   - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
   - `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`
+  - `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`
 - frozen event reference docs:
   - `docs/overview/IMMERSIVE_EVENT_TODO.md`
 - live event handoff docs:
@@ -61,6 +63,7 @@ When this phrase appears, treat the task as event-system work, not as visual pol
   - `src/lib/simulation/adapters/food-delivery-events.js`
 - domain stores only through owned actions;
 - module views only when they need to display event outcomes;
+- pure Event Surface Projection and registered-host contracts in `src/lib/simulation/event-surface-projection.js` and `src/lib/simulation/event-surface-host-registry.js`;
 - tests for deterministic selection, cooldowns, adapters, persistence, and user-visible surfaces.
 
 `事件专项` should avoid:
@@ -95,12 +98,21 @@ If an event change needs visual work, first decide visual ownership through `doc
 11. Tests must avoid flaky randomness. Use fixed seeds or injected random values.
 12. Event logs should be readable by future AI assistants, not only rendered to users.
 13. World-aware events must follow `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
-14. Runtime event triggers should use local event variant packs by default; API calls are for generating or refreshing packs, not for every random event.
+14. Runtime event triggers should use local event variant packs by default. API calls may generate/refresh packs or optionally materialize bounded text after an approved explicit event-entry/presentation checkpoint, but never run for every random event, Tick, distance update, place focus, eligibility check, or compact invitation.
 15. World Hub review should keep event-log explanations read-only and inspectable by module, status, trigger source, reason, adapter boundary, target, and world variant context.
 16. Relationship event gating must consume saved role-profile classification fields (`primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit metadata), not raw `relationshipLabelText` or `relationshipLabelNote`.
 17. Low-risk relationship facts may attach classification gate metadata as soft-reference audit context and still allow the fact. High-risk hard-gate behavior must remain explicit, testable, and review/confirmation-oriented before any high-impact automation is enabled.
 18. Future high-risk relationship event packs should consume named gate presets from `src/lib/relationship-event-gating.js` instead of duplicating hard-gate rule objects in module adapters.
 19. Generated Chat social events such as role-initiated greetings, refusal, blocks, restores, and unblocks must use the explicit event-runtime review/audit seam before mutating Chat channel state. Low-risk greetings may auto-apply with audit; high-risk communication changes must stay review-first in World Hub. World Hub should explain proposal source, trigger policy, and the rule that Chat owns final communication reachability while Contacts and Relationship Runtime stay separate.
+20. Event Surface Projections are bounded read models, not a second event store or an authorization token. A host card may expose an explicit expansion command, but every outcome still returns through the owning Module Adapter.
+21. Map coordinate anchors are presentation context only. They cannot create places, reveal discoveries, change visibility, move role/journey truth, or invent a fallback position for invalid/stale events.
+22. Cross-module event history, pending review, explanations, and event-scoped notes use the existing World Hub hidden entry. Event receives no normal Home app; Cheats keeps separate privileged authority.
+23. Location-aware templates keep an authored activation scope. Distance may satisfy or fail that scope, but it never converts an onsite/interior event into a remote event.
+24. Map owns place relation, manual-versus-journey position provenance, and place-entry sessions. A place `Enter` action may submit an event checkpoint, but Event Runtime does not own or fabricate presence.
+25. Optional event permission, random-event intensity, and presentation mode are separate controls. Disabling optional events cannot remove deterministic schedule, journey, activity, deadline, or safety behavior.
+26. The first product content target is the current modern K-pop realism world, but engine templates, place capabilities, instance lifecycle, choice IDs, and effect requests remain world-neutral. Do not build parallel world packs before the first K-pop vertical slice is accepted.
+27. V1 runtime AI is optional and text-only. It cannot create executable actions, effect identifiers, unbounded numbers, image/audio payloads, external media URLs, or direct domain writes; accepted normalized text is cached per Event Instance and always has a local fallback.
+28. Place/scene imagery primarily follows Map/world asset packs. Event Runtime stores stable references and minimal semantic media intent only. Later CG uses a separately permissioned image-generation/media-resolution Adapter and is not a reason to add V1 provider fields or empty controls.
 
 ## 4. Event Entry Audit
 
@@ -108,6 +120,7 @@ Before changing event code, record or mentally check:
 
 ```text
 Event name:
+Event archetype:
 Trigger source: manual | condition | random | scheduled | AI-assisted | system
 Module owner:
 Adapter action:
@@ -119,6 +132,18 @@ Conditions:
 Random probability:
 Cooldown and caps:
 User-visible surfaces:
+Event surface projection: none | host card | host detail | World Hub review | Mini Scene
+Map anchor: none | stable place | geographic coordinate | normalized canvas coordinate
+Activation scope: none | remote | nearby | onsite | interior | journey_checkpoint | activity_checkpoint
+Discoverability: hidden_until_eligible | teaser_when_locked | always_visible
+Presence requirement: none | any_valid_presence | journey_arrival_only | explicit_place_entry
+Position provenance accepted: manual | journey_arrival | either | not_applicable
+Place category and required capabilities:
+Expansion target: none | host detail | World Hub | Mini Scene
+Event controls: module permission | intensity | presentation | per-session override
+Text materialization: local_only | optional_ai_after_entry | not_applicable
+Local fallback and instance-cache behavior:
+Media intent / authored asset source / future CG eligibility:
 Side effects:
 Reversibility / dismissal:
 Persistence and backup impact:
@@ -136,6 +161,8 @@ Decision rules:
 4. The module owner owns real state mutation and data normalization.
 5. Cross-module surfaces should display event context, not duplicate ownership.
 6. A surprising event should still feel fair: the user should understand why it happened and what changed.
+7. A place card exposes an event invitation only when an eligible event or approved locked teaser exists; do not reserve an empty permanent Event button.
+8. A deterministic scheduled activity remains executable when no event template is eligible or when optional event permission is off.
 
 ## 5. Event Template Draft
 
@@ -214,22 +241,24 @@ Use this sequence for event work unless the user asks for a narrower path:
 1. Read `docs/process/EVENT_WORKFLOW.md`.
 2. Read `docs/architecture/SIMULATION_EVENT_ENGINE.md`.
 3. If the event depends on WorldBook, worldview, or AI-generated copy, read `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
-4. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` as frozen reference, then check `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` for active status.
-5. Identify whether the task is:
+4. For the current default K-pop content lane or any EVE-2A/2B/2C work, read `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`.
+5. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` as frozen reference, then check `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` for active status.
+6. Identify whether the task is:
    - documentation-only;
    - store/library foundation;
    - module adapter;
    - user-facing surface;
    - browser journey;
    - game-loop work.
-6. Choose skills from Section 6.1 before editing.
-7. Run the event entry audit.
-8. Prefer the smallest useful module adapter before broad cross-module orchestration.
-9. Add deterministic tests before adding random trigger behavior.
-10. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
-11. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
-12. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` without turning this workflow into a second roadmap.
-13. Verify with `git diff --check`, then run targeted tests for touched stores/views.
+7. Choose skills from Section 6.1 before editing.
+8. Run the event entry audit.
+9. Prefer the smallest useful module adapter before broad cross-module orchestration.
+10. Roadmap 4.14 EVE-1's pure projection/host-registration contract is landed, EVE-2A has frozen the reusable contracts/fixtures, and EVE-2B has implemented strict runtime normalizers/registries, durable instances, local materialization, and optional one-call cached text composition. Keep EVE-1 empty-by-default and free of persistence/effect authority; EVE-2C Map provenance/session and UI still require separate implementation approval.
+11. Add deterministic tests before adding random trigger behavior.
+12. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
+13. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
+14. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` without turning this workflow into a second roadmap.
+15. Verify with `git diff --check`, then run targeted tests for touched stores/views.
 
 ## 8. First Prompt Templates
 
@@ -280,3 +309,4 @@ For random-event work, verify:
 - event logs persist and restore correctly;
 - user-visible surfaces explain the event without exposing implementation labels;
 - world-aware events use local variant packs at runtime and do not call an API on every random trigger.
+- optional event text generation occurs only after the accepted entry/presentation checkpoint, validates against local allowlists, caches by Event Instance, and proves local fallback/provider failure without live network dependence.

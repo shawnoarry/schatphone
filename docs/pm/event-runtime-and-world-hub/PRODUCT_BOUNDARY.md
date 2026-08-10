@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-07-31
+Updated: 2026-08-10
 
 ## 1. Core Rule
 
@@ -17,11 +17,17 @@ Owns:
 - caps
 - trigger policy
 - adapter orchestration
+- Event Surface Projection normalization and registered-host capability rules
+- reusable event-template eligibility and normalized Event Instance lifecycle/provenance once separately implemented
+- optional event-text materialization policy and validation, while local variants remain the required fallback
 - generated social-event eligibility/review/audit for role-initiated greetings, refusal, block, restore, and unblock proposals
 
 Does not own:
 
 - module-native records such as orders, routes, reminders, or role profiles
+- host rendering, Map card placement, canonical coordinates/places, or source-owner effect validation
+- K-pop terminology/assets, Map/world-pack image binaries, Gallery assets, provider-specific image generation, or future CG candidates
+- arbitrary AI-generated choice IDs, Adapter keys, numeric effects, domain mutations, external media URLs, or full-prompt/raw-response retention by default
 - applied Chat channel state after a social event is confirmed
 
 ### Relationship Runtime / 关系运行时
@@ -46,15 +52,18 @@ Owns:
 - narrow override/review actions
 - future GM-like control entry
 - filtered event-log and relationship-fact review details
+- future event history/notebook projection, pending review, event-scoped notes, and location-aware explanations
 - read-only relationship classification gate audit review
 
 Does not own:
 
 - normal role/data entry
 - daily reminders
+- confirmed Calendar plans or a general task/notebook system
 - role profile editing
 - relationship premise/classification editing
 - broad value, funds, unlock, or freeform override editing in the current baseline
+- Cheats authority merely because both belong to the hidden runtime-control family
 
 Current high-risk gate presets are contracts only. They do not trigger events, mutate module records, or turn World Hub into an editor.
 
@@ -68,7 +77,19 @@ A Map-owned Map Journey Runtime may submit a bounded source snapshot at an expli
 
 Map remains the source owner for the journey, checkpoint plan, pins, places, transport snapshot, ETA, arrival, and cancellation. Event Runtime cannot write those records directly, run journey eligibility on every animation tick, require every journey to produce an event, or convert proposal review into a pause. Map validates and applies any requested result through its own adapter. High-impact money, asset, relationship, identity, and schedule outcomes retain their existing owner and confirmation boundaries.
 
-This first collaboration is implemented and validated in the current uncommitted tree and is `READY_FOR_USER_REVIEW`. Destination change, event-driven cancellation, money, assets, relationships, identity, schedules, Agenda Journey behavior, and active exploration events remain outside MJE-3.
+This first collaboration is user-accepted and integrated locally. Destination change, event-driven cancellation, money, assets, relationships, identity, schedules, Agenda Journey behavior, and active exploration events remain outside MJE-3.
+
+### Event Surface Projection And Host Cards
+
+EVE-1's landed pure Interface in `src/lib/simulation/event-surface-projection.js` derives a bounded read model over existing Map Journey or Chat social proposal/log truth plus a caller-supplied current source reference. It normalizes identity, ownership, display state, risk/review state, bilingual/accessibility copy, allowlisted request descriptors, an expansion target, and optional strict stable-place/geographic/canvas anchors. `src/lib/simulation/event-surface-host-registry.js` stays empty by default and validates every explicit host capability before a projection may be consumed. Neither Module adds an Event route, duplicate event record, source effect, or host UI.
+
+EVE-2 lets Map consume that Interface for one low-risk approved family. Map owns anchor validation, pin/card placement, clustering/stacking, selection, text fit, explicit expansion, and return context. Event Runtime and the source Module retain their existing ownership. A projection is never an authorization token, and a coordinate never creates or mutates Map truth.
+
+Location-aware templates retain authored activation scope and discoverability separately from the EVE-1 projection's source/anchor availability. Map supplies bounded current distance relation, place-session state, position provenance, and journey/arrival references; Event Runtime evaluates them but never changes them. Distance cannot convert an onsite/interior template into a remote event. A Map place card shows an invitation only for an eligible event or approved locked teaser and never reserves an empty permanent Event entry.
+
+EVE-2A freezes the first concrete Interface and EVE-2B implements its Event Runtime side: `EventTemplateV2` and `EventInstanceV1` remain Event Runtime truth; strict registries/local materialization, Simulation-owned durable instances, and optional bounded one-call text composition do not write Map or another domain owner. A future Map-owned `MapPlaceSessionCheckpointV1` supplies one current stable place/session revision with manual or journey-arrival provenance, and `map.place_session.validate_event_resolution` may only validate the three approved production-arrival-briefing choices and return `canonicalMutation: none`. The read-only Seoul semantic overlay is Map-pack content, not an Event Runtime branch or a migration of current place records. Map session fields, Adapter execution, host registration, and UI remain EVE-2C.
+
+EVE-3 may add an Event Notebook view inside World Hub over existing runtime truth. Event-scoped review notes remain audit context; Reminders owns raw cues, Calendar owns confirmed plans, and Cheats owns any future privileged overrides.
 
 ### Agenda Journey And Activity Session Collaboration
 
@@ -79,6 +100,8 @@ Agenda Journey remains the owner of near-term steps and execution outcomes; Acti
 When Mini Scene presentation is `off`, eligibility still runs and only an explicitly approved low-impact result may auto-resolve. High-impact money, asset, relationship, identity, communication, or schedule changes still require their normal confirmation/review path. Suspension is reconciled idempotently from source timestamps after resume; exact interactive delivery while the browser/PWA is closed or OS-suspended is not guaranteed.
 
 This collaboration is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY`. No Agenda Journey route/store, Activity Session timer, Schedule Orchestrator, event adapter, Settings permission, or persistence field is implemented.
+
+Module event permission, random-event intensity, and presentation mode remain separate. Optional event suppression cannot remove a deterministic Agenda Journey step, Activity Session, Map Journey, deadline, or safety behavior. Activity Session owns its timer and completion policy; a future Focus Companion surface may consume stable media references but Event Runtime owns neither that presentation nor Gallery/Music assets.
 
 ### Mini Scene Collaboration
 
@@ -92,9 +115,12 @@ Owns later:
 
 - stronger override lane than World Hub
 - debug correction and high-power controls when explicitly unlocked
+- separate privileged write Interfaces, preview, before/after audit, and safe undo/recompute policy
 
 Does not own yet:
 
 - stable route
 - default Home visibility
 - mandatory user workflow
+
+World Hub may link to Cheats after a future unlock and share selected-event context/audit formatting. Opening World Hub must never grant Cheats authority.

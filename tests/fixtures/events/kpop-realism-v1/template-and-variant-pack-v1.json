@@ -1,0 +1,237 @@
+{
+  "fixtureSchemaVersion": 1,
+  "id": "kpop-realism-first-vertical-slice-contract-v1",
+  "mapPlaceSessionCheckpoint": {
+    "schemaVersion": 1,
+    "recordType": "map_place_session",
+    "checkpointId": "map.place_session.entered.v1",
+    "requiredFields": [
+      "sessionId",
+      "revision",
+      "state",
+      "worldPackId",
+      "mapPackId",
+      "mapPackVersion",
+      "placeId",
+      "placeCategoryId",
+      "capabilityIds",
+      "enteredAt",
+      "updatedAt",
+      "presence.relation",
+      "presence.provenance",
+      "presence.evidenceAt"
+    ],
+    "allowedState": "inside",
+    "allowedPresenceRelation": "inside",
+    "acceptedPositionProvenance": ["manual", "journey_arrival"],
+    "journeyArrivalEvidence": ["journeyId", "journeyArrivedAt"],
+    "legacySourceTranslation": {
+      "map_point": "manual",
+      "map_pack": "manual",
+      "saved": "manual",
+      "trip_arrived": "journey_arrival"
+    },
+    "legacyTranslationRules": [
+      "A stable placeId and current map-pack match are always required.",
+      "trip_arrived is accepted only when the matching arrived journey still proves the destination place.",
+      "Legacy source text alone never proves inside presence.",
+      "Unknown or stale evidence fails closed."
+    ]
+  },
+  "eventTemplate": {
+    "schemaVersion": 2,
+    "id": "workplace.arrival_briefing",
+    "version": 1,
+    "archetypeId": "arrival_briefing",
+    "owner": {
+      "sourceModuleKey": "map",
+      "effectModuleKey": "map"
+    },
+    "source": {
+      "recordType": "map_place_session",
+      "checkpointId": "map.place_session.entered.v1"
+    },
+    "trigger": {
+      "modes": ["condition"],
+      "activationScope": "interior",
+      "discoverability": "hidden_until_eligible",
+      "probability": 1,
+      "cooldownMs": 21600000,
+      "dailyLimit": 1,
+      "targetScope": "place_id",
+      "modulePermissionKey": "map",
+      "intensityPolicy": "enabled_when_not_off"
+    },
+    "eligibility": {
+      "requiredPlaceCategoryIds": [
+        "broadcast_station",
+        "entertainment_agency",
+        "production_center"
+      ],
+      "requiredCapabilityIds": ["work", "wait"],
+      "acceptedPositionProvenance": ["manual", "journey_arrival"],
+      "requiredPlaceSessionState": "inside",
+      "conditions": [
+        { "key": "placeSession.state", "op": "eq", "value": "inside" },
+        { "key": "placeSession.revision", "op": "gt", "value": 0 }
+      ]
+    },
+    "presentation": {
+      "surfaceKeys": ["map.event_invitation", "map.event_detail"],
+      "expansionKind": "host_detail",
+      "textMaterializationMode": "optional_ai_after_entry",
+      "mediaIntentKey": "workplace.arrival_briefing.lobby"
+    },
+    "choices": [
+      {
+        "id": "review_brief",
+        "outcomeId": "brief_reviewed",
+        "effectRequest": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "payloadSchema": "MapPlaceSessionEventResolutionRequestV1"
+        }
+      },
+      {
+        "id": "check_equipment",
+        "outcomeId": "equipment_checked",
+        "effectRequest": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "payloadSchema": "MapPlaceSessionEventResolutionRequestV1"
+        }
+      },
+      {
+        "id": "wait_for_staff",
+        "outcomeId": "wait_acknowledged",
+        "effectRequest": {
+          "adapterKey": "map.place_session.validate_event_resolution",
+          "payloadSchema": "MapPlaceSessionEventResolutionRequestV1"
+        }
+      }
+    ],
+    "safety": {
+      "risk": "low",
+      "requiresAdditionalConfirmation": false,
+      "reversibleExternalMutation": true,
+      "externalMutation": "none",
+      "relationshipGatePresetId": ""
+    }
+  },
+  "mapResolutionAdapter": {
+    "adapterKey": "map.place_session.validate_event_resolution",
+    "requestSchema": "MapPlaceSessionEventResolutionRequestV1",
+    "requiredRequestFields": [
+      "authorization",
+      "eventInstanceId",
+      "sessionId",
+      "sessionRevision",
+      "mapPackId",
+      "placeId",
+      "choiceId",
+      "outcomeId"
+    ],
+    "authorizationValue": "event_runtime_choice",
+    "allowedChoiceIds": ["review_brief", "check_equipment", "wait_for_staff"],
+    "allowedOutcomeIds": [
+      "brief_reviewed",
+      "equipment_checked",
+      "wait_acknowledged"
+    ],
+    "successResult": {
+      "ok": true,
+      "code": "PLACE_SESSION_EVENT_RESOLUTION_VALID",
+      "canonicalMutation": "none"
+    },
+    "failureCodes": [
+      "PLACE_SESSION_NOT_ACTIVE",
+      "PLACE_SESSION_SOURCE_STALE",
+      "PLACE_SESSION_PLACE_MISMATCH",
+      "EVENT_CHOICE_UNSUPPORTED",
+      "EVENT_OUTCOME_UNSUPPORTED",
+      "EVENT_AUTHORIZATION_INVALID"
+    ]
+  },
+  "variantPack": {
+    "schemaVersion": 1,
+    "id": "kpop-realism-core-events",
+    "version": 1,
+    "worldContextFamily": "daily",
+    "contentProfileId": "kpop_realism",
+    "locales": ["zh-CN", "en"],
+    "templateVariants": {
+      "workplace.arrival_briefing": [
+        {
+          "id": "kpop-realism.production-arrival-briefing.standard",
+          "version": 1,
+          "placeCategoryIds": [
+            "broadcast_station",
+            "entertainment_agency",
+            "production_center"
+          ],
+          "toneTags": ["professional", "grounded", "low_pressure"],
+          "participantSlots": [
+            {
+              "id": "staff_coordinator",
+              "kind": "role_slot",
+              "required": false,
+              "fallbackLabelZh": "现场协调人员",
+              "fallbackLabelEn": "Staff coordinator"
+            }
+          ],
+          "localCopy": {
+            "invitation": {
+              "titleZh": "到达后的简短准备",
+              "titleEn": "A short arrival briefing",
+              "summaryZh": "进入制作场所后，一份简短的现场说明正在等你确认。",
+              "summaryEn": "A short on-site briefing is ready after you enter the production workplace."
+            },
+            "scene": {
+              "titleZh": "制作场所到达简报",
+              "titleEn": "Production arrival briefing",
+              "openingZh": "大厅里的工作节奏已经开始。正式进入下一段安排前，你还有一点准备时间。",
+              "openingEn": "The workplace is already settling into its rhythm. You have a little preparation time before the next block begins.",
+              "environmentZh": "签到台、通行提示和今天的工作信息都保持在不打扰人的低声秩序里。",
+              "environmentEn": "The check-in desk, access notices, and today's production notes sit in a quiet working order."
+            },
+            "choicesById": {
+              "review_brief": {
+                "labelZh": "查看现场简报",
+                "labelEn": "Review the briefing"
+              },
+              "check_equipment": {
+                "labelZh": "确认随身设备",
+                "labelEn": "Check your equipment"
+              },
+              "wait_for_staff": {
+                "labelZh": "在等候区稍候",
+                "labelEn": "Wait for staff"
+              }
+            },
+            "consequencesByOutcomeId": {
+              "brief_reviewed": {
+                "zh": "你看完了当前的现场说明，接下来可以按自己的节奏继续。",
+                "en": "You finish the current briefing and can continue at your own pace."
+              },
+              "equipment_checked": {
+                "zh": "你确认了随身设备，没有产生额外的物品或数值变化。",
+                "en": "You check the equipment you brought. No inventory or value change is created."
+              },
+              "wait_acknowledged": {
+                "zh": "你在等候区留出了一点时间，现场安排本身没有被改写。",
+                "en": "You leave a little time in the waiting area without rewriting the underlying schedule."
+              }
+            }
+          },
+          "mediaIntent": {
+            "schemaVersion": 1,
+            "slot": "scene_background",
+            "sceneKey": "workplace.arrival_briefing.lobby",
+            "requiredCapabilityIds": ["work", "wait"],
+            "toneTags": ["professional", "daytime", "quiet"],
+            "required": false,
+            "fallbackMode": "text_only"
+          }
+        }
+      ]
+    }
+  }
+}
