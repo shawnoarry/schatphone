@@ -767,7 +767,7 @@ test.describe('world-bound narrative maps', () => {
       window.localStorage.setItem(
         'schatphone:store:simulation',
         JSON.stringify({
-          version: 1,
+          version: 2,
           savedAt: now,
           data: {
             eventLogs: [
@@ -787,6 +787,7 @@ test.describe('world-bound narrative maps', () => {
                 at: now - 1000,
               },
             ],
+            eventInstances: [],
             cooldownsByEvent: {},
             dailyCounters: {},
             mapJourneyEventProposals: [
@@ -833,6 +834,7 @@ test.describe('world-bound narrative maps', () => {
               enabledModules: { map: true },
               foregroundSessionTickEnabled: false,
               foregroundSessionTickIntervalMs: 600000,
+              eventTextMode: 'local_only',
             },
           },
         }),

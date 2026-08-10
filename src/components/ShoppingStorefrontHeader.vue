@@ -58,6 +58,7 @@ const localize = (zh, en) => (isZh.value ? zh : en)
       <button
         type="button"
         class="shopping-icon-button"
+        data-testid="shopping-go-home"
         :aria-label="localize('返回主屏幕', 'Back to Home')"
         :title="localize('返回主屏幕', 'Back to Home')"
         @click="emit('go-home')"

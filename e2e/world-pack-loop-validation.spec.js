@@ -311,6 +311,8 @@ const openPlacedWorldEntry = async (page, entry, language, testInfo) => {
 
   if (entry.moduleKey === 'food_delivery') {
     await page.getByTestId('food-delivery-go-home').click()
+  } else if (entry.moduleKey === 'shopping') {
+    await page.getByTestId('shopping-go-home').click()
   } else if (entry.moduleKey === 'map') {
     await page.getByTestId('map-go-home').click()
   } else {
