@@ -157,17 +157,11 @@ Shopping shop entries can use the same App Store facade controls as Food Deliver
 
 ## Pseudo-Folder UX Requirement
 
-Pseudo-folders need scrollable or paged content.
+Pseudo-folders need paged content once the installed entry set exceeds one screen.
 
 Food Delivery shops can grow over time, especially once users can create their own shops. The pseudo-folder should not assume a fixed number of entries.
 
-Recommended first screen:
-
-1. Folder title and search/add controls.
-2. Fixed Food platform entry.
-3. Favorite or recent shop apps.
-4. Scrollable shop grid/list.
-5. Filter chips for tags such as all, favorite, recent, late night, cafe, dessert, grocery.
+The accepted Home implementation keeps the fixed Food platform and installed shop Apps as peers in stable order. A clean seed has 15 entries, rendered as fixed `3 x 3` pages of `9 + 6` with arrows, dots, touch, pointer-drag, wheel/trackpad, and keyboard input. Search, favorites, recent state, and cuisine filters remain inside Food Delivery rather than becoming first-layer Home folder objects. The pager must reset/clamp when its entry set changes and must contain gestures so the underlying formal Home page does not move.
 
 ## Shop Template Direction
 
@@ -217,6 +211,7 @@ Current implementation status:
 - App Store's mini-app section now has an add-handoff sheet. The user chooses `food_delivery` or `shopping`, then App Store routes to the selected owner with `entry=shop`, `createShop=1`, and `bindingTarget` context. Food Delivery shows a restaurant-creation handoff and creates the real restaurant record inside Food Delivery. Shopping shows a Shopping-owned creation workspace handoff for service shelves/custom products while a dedicated custom Shopping store-record model remains a later product decision.
 - App Store now manages installed/not-installed placement for folder mini apps. Removing a mini app from its target folder hides it from the Food Delivery or Shopping folder list, but does not delete the restaurant, service preset, menu/product data, cart/order truth, or direct source-owned route.
 - Home pseudo-folders now read the same installed/not-installed placement. Food Delivery's folder first layer is the fixed Food platform entry plus installed restaurant shop mini apps; category entries such as nearby, fast food, cafe, dessert, and grocery stay inside Food Delivery as filters/tags, not folder-level apps. Shopping uses the same reusable folder mini-app builder for its installed shop entries.
+- Food Delivery's clean-seed Home folder now proves the scalable first layer with 15 entries on two fixed `3 x 3` pages (`9 + 6`). Home owns the pager, all input methods, reset/clamp behavior, gesture containment, and collapsed preview; App Store continues to own only install/facade visibility, and Food Delivery continues to own restaurant/menu/cart/order truth.
 - Food Delivery shop entries opened with restaurant context now render shop-first: platform hero/list chrome is hidden, the shop owns the first screen, the cart becomes the ordering anchor, and Map/order/Wallet support panels are folded behind an order-and-delivery section.
 - Five built-in Food Delivery shop facades now demonstrate distinct template directions without splitting runtime ownership: Moon Bistro `dark_tray_menu`, Peach Cloud `dessert_window`, Dash Grill `quick_service_chain`, Jade Hearth `jade_table_menu`, and Verdant Day `minimal_light_food`.
 - Template selection is a visual/UX preset only. It can change the shop surface treatment, but it must not create a separate cart, checkout, order lifecycle, Wallet handoff, Map route, or Chat service channel.

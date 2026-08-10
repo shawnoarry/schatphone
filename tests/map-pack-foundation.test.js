@@ -10,6 +10,7 @@ import {
   mapPositionToNormalized,
   normalizedToMapPosition,
 } from '../src/lib/map-packs'
+import { searchMapPlaces } from '../src/lib/map-place-search'
 import { useMapStore } from '../src/stores/map'
 import {
   MAP_PLACE_CATEGORY_GROUPS,
@@ -112,7 +113,7 @@ describe('local map pack foundation', () => {
     const seoul = getMapPackById(DEFAULT_MAP_PACK_ID)
     const placeIds = seoul.places.map((place) => place.id)
 
-    expect(seoul.places).toHaveLength(101)
+    expect(seoul.places).toHaveLength(106)
     expect(new Set(placeIds).size).toBe(placeIds.length)
     expect(placeIds).toEqual(
       expect.arrayContaining([
@@ -142,6 +143,11 @@ describe('local map pack foundation', () => {
         'seoul-bank-of-korea-main',
         'seoul-national-police-agency',
         'seoul-gangnam-fire-station',
+        'seoul-myeongdong-kyoja-main',
+        'seoul-london-bagel-museum-anguk',
+        'seoul-knotted-cheongdam',
+        'seoul-kyochon-chicken-yeoksam-1',
+        'seoul-eggdrop-gangnam-woosung',
       ]),
     )
 
@@ -197,6 +203,29 @@ describe('local map pack foundation', () => {
     expect(isMapPlaceCategoryDefaultVisible('bank')).toBe(false)
     expect(isMapPlaceCategoryDefaultVisible('public_safety')).toBe(false)
     expect(isMapPlaceCategoryDefaultVisible('transit_hub')).toBe(true)
+
+    const foodPlaces = [
+      ['Myeongdong Kyoja', 'seoul-myeongdong-kyoja-main', 37.5625608, 126.9856037],
+      ['LBM Anguk', 'seoul-london-bagel-museum-anguk', 37.5791826, 126.986152],
+      ['노티드 청담', 'seoul-knotted-cheongdam', 37.5241508, 127.0382334],
+      [
+        '炸鸡 Yeoksam',
+        'seoul-kyochon-chicken-yeoksam-1',
+        37.4918998657854,
+        127.032159214307,
+      ],
+      ['에그 샌드위치', 'seoul-eggdrop-gangnam-woosung', 37.4916861, 127.0301804],
+    ]
+    foodPlaces.forEach(([query, placeId, lat, lng]) => {
+      const result = searchMapPlaces(seoul.places, query, { limit: 10 })[0]
+      expect(result?.place).toMatchObject({
+        id: placeId,
+        placeId,
+        category: 'restaurant',
+        icon: 'fas fa-utensils',
+        position: { kind: 'geo', lat, lng },
+      })
+    })
   })
 
   test('persists category and individual marker visibility without hiding places from Map truth', () => {
@@ -206,8 +235,8 @@ describe('local map pack foundation', () => {
     )
     const firstConvenience = conveniencePlaces[0]
 
-    expect(store.activeMapPlaces).toHaveLength(104)
-    expect(store.activeMapVisiblePlaces).toHaveLength(47)
+    expect(store.activeMapPlaces).toHaveLength(109)
+    expect(store.activeMapVisiblePlaces).toHaveLength(52)
     expect(conveniencePlaces).toHaveLength(3)
     expect(store.isMapPlaceVisible(firstConvenience)).toBe(false)
     expect(store.activeMapVisiblePlaces).not.toContainEqual(firstConvenience)
@@ -247,7 +276,7 @@ describe('local map pack foundation', () => {
       visibleCount: 0,
       state: 'hidden',
     })
-    expect(restored.activeMapPlaces).toHaveLength(104)
+    expect(restored.activeMapPlaces).toHaveLength(109)
   })
 
   test('owns and persists the place-name display mode with legacy fallback', () => {

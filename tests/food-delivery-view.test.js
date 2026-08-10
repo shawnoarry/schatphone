@@ -1259,6 +1259,55 @@ describe('FoodDeliveryView', () => {
     wrapper.unmount()
   })
 
+  test('opens real Seoul shops as standard apps with restaurant-scoped bags', async () => {
+    const router = createTestRouter()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+    await router.push(
+      '/food-delivery?restaurantId=food_seed_eggdrop&entry=shop&shopView=menu',
+    )
+    await router.isReady()
+
+    const store = useFoodDeliveryStore()
+    const eggdropItem = store.listMenuByRestaurant('food_seed_eggdrop')[0]
+    const kyochonItem = store.listMenuByRestaurant('food_seed_kyochon_chicken')[0]
+    const wrapper = mount(FoodDeliveryView, { global: { plugins: [router] } })
+
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes()).toMatchObject({
+      'data-store-id': 'food_seed_eggdrop',
+      'data-store-template': 'standard',
+    })
+    expect(wrapper.get('[data-testid="food-delivery-store-app"]').text()).toContain('EGGDROP')
+    expect(store.listMenuByRestaurant('food_seed_eggdrop')).toHaveLength(4)
+    await wrapper.get(`[data-testid="food-delivery-add-${eggdropItem.id}"]`).trigger('click')
+
+    await router.push(
+      '/food-delivery?restaurantId=food_seed_kyochon_chicken&entry=shop&shopView=menu',
+    )
+    await flushPromises()
+    expect(wrapper.get('[data-testid="food-delivery-store-shell"]').attributes()).toMatchObject({
+      'data-store-id': 'food_seed_kyochon_chicken',
+      'data-store-template': 'standard',
+    })
+    await wrapper.get(`[data-testid="food-delivery-add-${kyochonItem.id}"]`).trigger('click')
+
+    expect(store.listCartLineItemsByRestaurant('food_seed_eggdrop')).toEqual([
+      expect.objectContaining({ menuItemId: eggdropItem.id, quantity: 1 }),
+    ])
+    expect(store.listCartLineItemsByRestaurant('food_seed_kyochon_chicken')).toEqual([
+      expect.objectContaining({ menuItemId: kyochonItem.id, quantity: 1 }),
+    ])
+
+    await router.push(
+      '/food-delivery?restaurantId=food_seed_eggdrop&entry=shop&shopView=bag',
+    )
+    await flushPromises()
+    const bag = wrapper.get('[data-testid="food-delivery-cart-panel"]')
+    expect(bag.text()).toContain(eggdropItem.title)
+    expect(bag.text()).not.toContain(kyochonItem.title)
+    wrapper.unmount()
+  })
+
   test('returns to the originating Home page when opened from a Home folder', async () => {
     const router = createTestRouter()
     await router.push(

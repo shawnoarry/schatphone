@@ -1060,6 +1060,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const persistToStorage = () => {
     writePersistedState(SIMULATION_STORAGE_KEY, createBackupSnapshot(), {
       version: SIMULATION_STORAGE_VERSION,
+      migrate: migrateSimulationStorage,
     })
   }
 

@@ -51,6 +51,7 @@ import MapTripHistoryPanel from '../components/map/MapTripHistoryPanel.vue'
 import MapVisualSettingsPanel from '../components/map/MapVisualSettingsPanel.vue'
 import MapJourneyMediaPanel from '../components/map/MapJourneyMediaPanel.vue'
 import MapPlaceFocusSheet from '../components/map/MapPlaceFocusSheet.vue'
+import MapEventSurfaceSheet from '../components/map/MapEventSurfaceSheet.vue'
 import { useChatStore } from '../stores/chat'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import {
@@ -79,6 +80,9 @@ const {
   activeMapPlaces,
   currentLocation,
   currentLocationText,
+  placeSession,
+  mapEventSurfaces,
+  mapEventSurfacePins,
   tripForm,
   tripEstimate,
   tripRuntime,
@@ -132,6 +136,10 @@ const mapDrawerFocus = ref('trip')
 const journeyMediaOpen = ref(false)
 const sharedRouteContactId = ref('')
 const journeyEventApplying = ref(false)
+const selectedEventSurfaceId = ref('')
+const selectedEventStackIds = ref([])
+const eventReturnPlaceId = ref('')
+const placeEventApplying = ref(false)
 let runtimeTimer = null
 
 const MAP_PACK_PREVIEW_SCOPE_ID = 'map-runtime-pack'
@@ -223,12 +231,37 @@ const selectedPlaceDistanceKm = computed(() => {
   return calculateMapDistanceKm(activeMapPack.value, current.position, place.position)
 })
 
-const isSelectedPlaceCurrentLocation = computed(() =>
-  Number.isFinite(selectedPlaceDistanceKm.value) && selectedPlaceDistanceKm.value <= 0.001,
+const isSelectedPlaceStableCurrentLocation = computed(() => {
+  const placeId = selectedMapPlace.value?.placeId || selectedMapPlace.value?.id
+  return Boolean(
+    placeId &&
+    currentLocation.value?.mapPackId === activeMapPackId.value &&
+    currentLocation.value?.positionEvidence?.placeId === placeId,
+  )
+})
+
+const isSelectedPlaceCurrentLocation = computed(
+  () =>
+    isSelectedPlaceStableCurrentLocation.value ||
+    (Number.isFinite(selectedPlaceDistanceKm.value) && selectedPlaceDistanceKm.value <= 0.001),
 )
+
+const isSelectedPlaceInside = computed(() => {
+  const placeId = selectedMapPlace.value?.placeId || selectedMapPlace.value?.id
+  return Boolean(
+    placeId &&
+    placeSession.value?.state === 'inside' &&
+    placeSession.value?.mapPackId === activeMapPackId.value &&
+    placeSession.value?.placeId === placeId,
+  )
+})
 
 const isSelectedPlaceJourneyDestination = computed(() => {
   if (!isJourneyPlanningLocked.value || !selectedMapPlace.value) return false
+  const placeId = selectedMapPlace.value.placeId || selectedMapPlace.value.id
+  if (tripRuntime.value?.destinationPlaceId) {
+    return tripRuntime.value.destinationPlaceId === placeId
+  }
   const destinationTexts = [tripRuntime.value?.to, tripRuntime.value?.toLabel]
     .map(normalizePlaceRelationText)
     .filter(Boolean)
@@ -258,12 +291,14 @@ const selectedPlaceSummary = computed(() => {
 })
 
 const selectedPlaceContextTone = computed(() => {
+  if (isSelectedPlaceInside.value) return 'current'
   if (isJourneyPlanningLocked.value) return 'journey'
   if (isSelectedPlaceCurrentLocation.value) return 'current'
   return 'remote'
 })
 
 const selectedPlaceContextLabel = computed(() => {
+  if (isSelectedPlaceInside.value) return t('已进入地点', 'Inside this place')
   if (isSelectedPlaceJourneyDestination.value) return t('正在前往这里', 'Heading here')
   if (isJourneyPlanningLocked.value) return t('当前行程中 · 浏览地点', 'Active journey · Browsing place')
   if (isSelectedPlaceCurrentLocation.value) return t('当前位置', 'Current position')
@@ -277,10 +312,27 @@ const selectedPlaceContextLabel = computed(() => {
 })
 
 const selectedPlacePrimaryAction = computed(() => {
+  if (isSelectedPlaceInside.value) return 'leave'
+  if (
+    isSelectedPlaceStableCurrentLocation.value &&
+    !isTripTraveling.value &&
+    (!isTripArrived.value || isSelectedPlaceJourneyDestination.value)
+  ) return 'enter'
   if (isJourneyPlanningLocked.value) return 'view_journey'
   if (isSelectedPlaceCurrentLocation.value) return 'none'
   return 'go'
 })
+
+const selectedPlaceEventInvitationResult = computed(() => {
+  if (!isSelectedPlaceInside.value) return null
+  return mapStore.getPlaceSessionEventInvitation({ locale: systemLanguage.value })
+})
+
+const selectedPlaceEventInvitation = computed(() =>
+  selectedPlaceEventInvitationResult.value?.eligible
+    ? selectedPlaceEventInvitationResult.value.invitation
+    : null,
+)
 
 const mapWorldAppContext = computed(() =>
   resolveWorldAppUxContext({
@@ -555,6 +607,7 @@ const mapScenePins = computed(() =>
           tone: '#17664f',
         }]
       : []),
+    ...mapEventSurfacePins.value,
   ],
 )
 
@@ -675,6 +728,7 @@ const useMapPlaceAsCurrent = (place) => {
     detail: mapPlaceDetail(place),
     source: place.source === 'user' ? 'saved' : 'map_pack',
     mapPackId: activeMapPackId.value,
+    placeId: place.placeId || place.id,
     position: place.position,
     syncTripOrigin: true,
   })
@@ -694,6 +748,13 @@ const setTripToMapPlace = (place) => {
 const onMapPinSelected = (place) => {
   if (place?.source === 'role_position') {
     focusCurrentLocation()
+    return
+  }
+  if (place?.source === 'map_event') {
+    selectedMapPlace.value = null
+    selectedEventSurfaceId.value = ''
+    selectedEventStackIds.value = [...(place.eventSurfaceIds || [])]
+    eventReturnPlaceId.value = ''
     return
   }
   selectedMapPlace.value = place
@@ -748,6 +809,91 @@ const focusCurrentLocation = () => {
 
 const closePlaceDetail = () => {
   selectedMapPlace.value = null
+}
+
+const enterSelectedPlace = () => {
+  const placeId = selectedMapPlace.value?.placeId || selectedMapPlace.value?.id
+  if (!placeId) return
+  mapStore.enterPlace(placeId)
+}
+
+const leaveSelectedPlace = () => {
+  mapStore.leavePlace()
+}
+
+const selectedEventSurface = computed(() =>
+  mapEventSurfaces.value.find((surface) => surface.id === selectedEventSurfaceId.value) || null,
+)
+
+const selectedEventStack = computed(() =>
+  selectedEventStackIds.value
+    .map((surfaceId) => mapEventSurfaces.value.find((surface) => surface.id === surfaceId))
+    .filter(Boolean),
+)
+
+const selectedEventInstance = computed(() =>
+  selectedEventSurface.value
+    ? simulationStore.getEventInstance(selectedEventSurface.value.proposalId)
+    : null,
+)
+
+const selectedEventPlace = computed(() => {
+  const placeId = selectedEventInstance.value?.place?.placeId
+  return activeMapPlaces.value.find((place) => place.placeId === placeId) || null
+})
+
+const openSelectedPlaceEvent = () => {
+  if (!selectedPlaceEventInvitation.value || placeEventApplying.value) return
+  placeEventApplying.value = true
+  try {
+    const placeId = selectedMapPlace.value?.placeId || selectedMapPlace.value?.id || ''
+    const result = mapStore.expandPlaceSessionEvent({ locale: systemLanguage.value })
+    if (!result.ok || !result.instance) return
+    eventReturnPlaceId.value = placeId
+    selectedMapPlace.value = null
+    selectedEventStackIds.value = []
+    selectedEventSurfaceId.value = `event_surface:map:${result.instance.id}`
+    void result.composePromise
+  } finally {
+    placeEventApplying.value = false
+  }
+}
+
+const selectEventSurfaceFromStack = (surfaceId) => {
+  selectedEventSurfaceId.value = surfaceId
+}
+
+const closeEventSurface = () => {
+  const returnPlaceId = eventReturnPlaceId.value
+  selectedEventSurfaceId.value = ''
+  selectedEventStackIds.value = []
+  eventReturnPlaceId.value = ''
+  if (!returnPlaceId) return
+  const place = activeMapPlaces.value.find((item) => item.placeId === returnPlaceId)
+  if (!place) return
+  selectedMapPlace.value = place
+  focusMapPlace(place)
+}
+
+const resolveSelectedPlaceEvent = (choiceId) => {
+  if (!selectedEventInstance.value || placeEventApplying.value) return
+  placeEventApplying.value = true
+  try {
+    mapStore.resolvePlaceSessionEventChoice(selectedEventInstance.value.id, choiceId)
+  } finally {
+    placeEventApplying.value = false
+  }
+}
+
+const dismissSelectedPlaceEvent = () => {
+  if (!selectedEventInstance.value || placeEventApplying.value) return
+  placeEventApplying.value = true
+  try {
+    const result = mapStore.dismissPlaceSessionEvent(selectedEventInstance.value.id)
+    if (result.ok) closeEventSurface()
+  } finally {
+    placeEventApplying.value = false
+  }
 }
 
 const openSelectedPlaceJourney = () => {
@@ -1911,6 +2057,9 @@ watch(activeMapPackId, (nextPackId, previousPackId) => {
   destinationIntentActive.value = false
   mapSearchSuggestionsOpen.value = false
   selectedMapPlace.value = null
+  selectedEventSurfaceId.value = ''
+  selectedEventStackIds.value = []
+  eventReturnPlaceId.value = ''
   mapFocusTarget.value = null
 })
 
@@ -2747,6 +2896,7 @@ onBeforeUnmount(() => {
       :context-label="selectedPlaceContextLabel"
       :context-tone="selectedPlaceContextTone"
       :primary-action="selectedPlacePrimaryAction"
+      :event-invitation="selectedPlaceEventInvitation"
       :journey-locked="isJourneyPlanningLocked"
       :can-manage="selectedMapPlace.source === 'user'"
       :display-mode="mapPlaceDisplayMode"
@@ -2755,12 +2905,29 @@ onBeforeUnmount(() => {
       @close="closePlaceDetail"
       @go="useSelectedPlaceAsDestination"
       @view-journey="openSelectedPlaceJourney"
+      @enter="enterSelectedPlace"
+      @leave="leaveSelectedPlace"
+      @expand-event="openSelectedPlaceEvent"
       @share="shareSelectedPlaceToChat"
       @manage="openSelectedPlaceManager"
       @set-display-mode="setMapPlaceDisplayMode"
       @set-start="useSelectedPlaceAsStart"
       @set-current="useSelectedPlaceAsCurrent"
       @delete="removeSelectedPlace"
+    />
+
+    <MapEventSurfaceSheet
+      v-if="selectedEventSurface || selectedEventStack.length"
+      :surface="selectedEventSurface"
+      :stack="selectedEventStack"
+      :instance="selectedEventInstance"
+      :place-name="selectedEventPlace ? mapPlaceName(selectedEventPlace) : ''"
+      :busy="placeEventApplying"
+      :t="t"
+      @close="closeEventSurface"
+      @select-surface="selectEventSurfaceFromStack"
+      @choose="resolveSelectedPlaceEvent"
+      @dismiss="dismissSelectedPlaceEvent"
     />
   </div>
 </template>

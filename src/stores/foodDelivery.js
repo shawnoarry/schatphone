@@ -42,6 +42,18 @@ const PEACH_CLOUD_SEED_RESTAURANT_ID = 'food_seed_peach_cloud'
 const DASH_GRILL_SEED_RESTAURANT_ID = 'food_seed_dash_grill'
 const JADE_HEARTH_SEED_RESTAURANT_ID = 'food_seed_jade_hearth'
 const VERDANT_DAY_SEED_RESTAURANT_ID = 'food_seed_verdant_day'
+const MYEONGDONG_KYOJA_SEED_RESTAURANT_ID = 'food_seed_myeongdong_kyoja'
+const LONDON_BAGEL_MUSEUM_SEED_RESTAURANT_ID = 'food_seed_london_bagel_museum'
+const KNOTTED_SEED_RESTAURANT_ID = 'food_seed_knotted'
+const KYOCHON_CHICKEN_SEED_RESTAURANT_ID = 'food_seed_kyochon_chicken'
+const EGGDROP_SEED_RESTAURANT_ID = 'food_seed_eggdrop'
+const REAL_SHOP_SEED_RESTAURANT_IDS = Object.freeze([
+  MYEONGDONG_KYOJA_SEED_RESTAURANT_ID,
+  LONDON_BAGEL_MUSEUM_SEED_RESTAURANT_ID,
+  KNOTTED_SEED_RESTAURANT_ID,
+  KYOCHON_CHICKEN_SEED_RESTAURANT_ID,
+  EGGDROP_SEED_RESTAURANT_ID,
+])
 const HARBOR_ROAST_DEFAULT_BEAN_STAMPS = 5
 
 export const HARBOR_ROAST_MERCHANDISE_CATALOG = Object.freeze([
@@ -837,6 +849,11 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   dashGrill: foodDeliveryUiAsset('dash-grill/cover/dash-grill-cover-01.png'),
   jadeHearth: foodDeliveryUiAsset('jade-hearth/cover/jade-hearth-cover-01.png'),
   verdantDay: foodDeliveryUiAsset('verdant-day/cover/verdant-day-cover-01.png'),
+  myeongdongKyoja: foodDeliveryUiAsset('river-noodles/cover/river-noodles-cover-01.png'),
+  londonBagelMuseum: foodDeliveryUiAsset('sugar-lane/cover/sugar-lane-cover-01.png'),
+  knotted: foodDeliveryUiAsset('peach-cloud/cover/peach-cloud-hero-01.png'),
+  kyochonChicken: foodDeliveryUiAsset('dash-grill/cover/dash-grill-cover-01.png'),
+  eggdrop: foodDeliveryUiAsset('daylight-cafe/cover/daylight-cafe-cover-01.png'),
   dashGrillProduct: (index) =>
     foodDeliveryUiAsset(
       `dash-grill/products/dash-grill-item-${String(index).padStart(2, '0')}.png`,
@@ -879,6 +896,240 @@ const FOOD_SEED_IMAGE_URLS = Object.freeze({
   emberLasagna: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-50.png'),
   blueMoonBowl: foodDeliveryUiAsset('moon-bistro/dishes/moon-bistro-dish-15.png'),
 })
+
+const createRealShopSeedMenuItems = () => {
+  const items = [
+    {
+      id: 'food_menu_myeongdong_pine_broth_noodles',
+      restaurantId: MYEONGDONG_KYOJA_SEED_RESTAURANT_ID,
+      title: 'Pine Broth Knife Noodles',
+      category: 'restaurants',
+      menuSection: 'noodles',
+      price: '13.40',
+      desc: 'Knife-cut noodles, chicken broth, zucchini ribbons, and toasted pine salt.',
+      ingredients: 'wheat noodles, chicken broth, zucchini, scallion, pine salt',
+      imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(1),
+    },
+    {
+      id: 'food_menu_myeongdong_sesame_dumpling_basket',
+      restaurantId: MYEONGDONG_KYOJA_SEED_RESTAURANT_ID,
+      title: 'Sesame Dumpling Basket',
+      category: 'restaurants',
+      menuSection: 'dumplings',
+      price: '11.80',
+      desc: 'Steamed pork and chive dumplings with a roasted sesame dipping sauce.',
+      ingredients: 'pork, chive, cabbage, wheat wrapper, sesame sauce',
+      imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(4),
+    },
+    {
+      id: 'food_menu_myeongdong_chili_buckwheat_ribbons',
+      restaurantId: MYEONGDONG_KYOJA_SEED_RESTAURANT_ID,
+      title: 'Chili Buckwheat Ribbons',
+      category: 'restaurants',
+      menuSection: 'cold_noodles',
+      price: '12.60',
+      desc: 'Cool buckwheat ribbons with pear, cucumber, perilla, and bright chili dressing.',
+      ingredients: 'buckwheat noodles, pear, cucumber, perilla, chili dressing',
+      imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(6),
+    },
+    {
+      id: 'food_menu_myeongdong_scallion_rice_pocket',
+      restaurantId: MYEONGDONG_KYOJA_SEED_RESTAURANT_ID,
+      title: 'Scallion Rice Pocket',
+      category: 'restaurants',
+      menuSection: 'sides',
+      price: '7.20',
+      desc: 'Warm rice, mushroom, and scallion tucked into a crisp tofu pocket.',
+      ingredients: 'rice, tofu pocket, mushroom, scallion, sesame',
+      imageUrl: FOOD_SEED_IMAGE_URLS.riverNoodlesProduct(8),
+    },
+    {
+      id: 'food_menu_lbm_rosemary_cloud_bagel',
+      restaurantId: LONDON_BAGEL_MUSEUM_SEED_RESTAURANT_ID,
+      title: 'Rosemary Cloud Bagel',
+      category: 'cafe',
+      menuSection: 'bagels',
+      price: '8.40',
+      desc: 'A chewy rosemary bagel with whipped white-bean spread and lemon zest.',
+      ingredients: 'wheat, rosemary, white bean, lemon, olive oil',
+      imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(1),
+    },
+    {
+      id: 'food_menu_lbm_orchard_picnic_stack',
+      restaurantId: LONDON_BAGEL_MUSEUM_SEED_RESTAURANT_ID,
+      title: 'Orchard Picnic Stack',
+      category: 'cafe',
+      menuSection: 'sandwiches',
+      price: '14.20',
+      desc: 'Apple, sharp cheddar, arugula, and mustard cream on a seeded bagel.',
+      ingredients: 'seeded bagel, apple, cheddar, arugula, mustard cream',
+      imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(3),
+    },
+    {
+      id: 'food_menu_lbm_tomato_marmalade_bagel',
+      restaurantId: LONDON_BAGEL_MUSEUM_SEED_RESTAURANT_ID,
+      title: 'Tomato Marmalade Bagel',
+      category: 'cafe',
+      menuSection: 'sandwiches',
+      price: '13.60',
+      desc: 'Roasted tomato marmalade, ricotta, basil, and pepper on a warm plain bagel.',
+      ingredients: 'plain bagel, tomato, ricotta, basil, black pepper',
+      imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(5),
+    },
+    {
+      id: 'food_menu_lbm_earl_grey_oat_cup',
+      restaurantId: LONDON_BAGEL_MUSEUM_SEED_RESTAURANT_ID,
+      title: 'Earl Grey Oat Cup',
+      category: 'cafe',
+      menuSection: 'drinks',
+      price: '6.80',
+      desc: 'Earl Grey tea shaken with oat milk, orange peel, and a light vanilla foam.',
+      ingredients: 'earl grey tea, oat milk, orange peel, vanilla',
+      imageUrl: FOOD_SEED_IMAGE_URLS.sugarLaneProduct(8),
+    },
+    {
+      id: 'food_menu_knotted_peach_ribbon_ring',
+      restaurantId: KNOTTED_SEED_RESTAURANT_ID,
+      title: 'Peach Ribbon Ring',
+      category: 'dessert',
+      menuSection: 'rings',
+      price: '7.60',
+      desc: 'Soft yeast ring filled with peach cream and finished with a tart fruit ribbon.',
+      ingredients: 'wheat, peach, cream, butter, yeast',
+      imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(1),
+    },
+    {
+      id: 'food_menu_knotted_black_sesame_pillow',
+      restaurantId: KNOTTED_SEED_RESTAURANT_ID,
+      title: 'Black Sesame Pillow',
+      category: 'dessert',
+      menuSection: 'filled_bakes',
+      price: '7.90',
+      desc: 'A square brioche pillow with black sesame custard and crisp sugar edges.',
+      ingredients: 'brioche, black sesame, custard, cane sugar',
+      imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(4),
+    },
+    {
+      id: 'food_menu_knotted_lemon_milk_cloud',
+      restaurantId: KNOTTED_SEED_RESTAURANT_ID,
+      title: 'Lemon Milk Cloud',
+      category: 'dessert',
+      menuSection: 'cold_sweets',
+      price: '8.20',
+      desc: 'Chilled milk mousse with lemon curd, shortbread crumbs, and candied peel.',
+      ingredients: 'milk mousse, lemon, shortbread, candied peel',
+      imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(7),
+    },
+    {
+      id: 'food_menu_knotted_strawberry_soda_float',
+      restaurantId: KNOTTED_SEED_RESTAURANT_ID,
+      title: 'Strawberry Soda Float',
+      category: 'dessert',
+      menuSection: 'drinks',
+      price: '6.90',
+      desc: 'Strawberry soda with vanilla milk foam and a pinch of pink pepper.',
+      ingredients: 'strawberry, sparkling water, milk foam, vanilla, pink pepper',
+      imageUrl: FOOD_SEED_IMAGE_URLS.peachCloudProduct(10),
+    },
+    {
+      id: 'food_menu_kyochon_garlic_glaze_wings',
+      restaurantId: KYOCHON_CHICKEN_SEED_RESTAURANT_ID,
+      title: 'Garlic Glaze Wings',
+      category: 'fast_food',
+      menuSection: 'chicken',
+      price: '18.60',
+      desc: 'Crisp chicken wings brushed with roasted garlic, rice syrup, and black pepper.',
+      ingredients: 'chicken wings, garlic, rice syrup, black pepper',
+      imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(2),
+    },
+    {
+      id: 'food_menu_kyochon_plum_pepper_tenders',
+      restaurantId: KYOCHON_CHICKEN_SEED_RESTAURANT_ID,
+      title: 'Plum Pepper Tenders',
+      category: 'fast_food',
+      menuSection: 'chicken',
+      price: '17.40',
+      desc: 'Boneless tenders with tart plum glaze, mild chili, and toasted sesame.',
+      ingredients: 'chicken tender, plum, chili, sesame',
+      imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(4),
+    },
+    {
+      id: 'food_menu_kyochon_perilla_crunch_cup',
+      restaurantId: KYOCHON_CHICKEN_SEED_RESTAURANT_ID,
+      title: 'Perilla Crunch Cup',
+      category: 'fast_food',
+      menuSection: 'sides',
+      price: '6.40',
+      desc: 'Crisp potato bites tossed with perilla salt and dried scallion.',
+      ingredients: 'potato, perilla, scallion, sea salt',
+      imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(7),
+    },
+    {
+      id: 'food_menu_kyochon_citrus_barley_fizz',
+      restaurantId: KYOCHON_CHICKEN_SEED_RESTAURANT_ID,
+      title: 'Citrus Barley Fizz',
+      category: 'fast_food',
+      menuSection: 'drinks',
+      price: '4.80',
+      desc: 'Sparkling roasted barley tea with yuzu peel and lemon.',
+      ingredients: 'barley tea, yuzu, lemon, sparkling water',
+      imageUrl: FOOD_SEED_IMAGE_URLS.dashGrillProduct(9),
+    },
+    {
+      id: 'food_menu_eggdrop_sunrise_corn_fold',
+      restaurantId: EGGDROP_SEED_RESTAURANT_ID,
+      title: 'Sunrise Corn Fold',
+      category: 'cafe',
+      menuSection: 'egg_folds',
+      price: '8.90',
+      desc: 'Soft egg, charred sweet corn, scallion, and pepper cream in toasted milk bread.',
+      ingredients: 'egg, milk bread, sweet corn, scallion, pepper cream',
+      imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(1),
+    },
+    {
+      id: 'food_menu_eggdrop_mushroom_morning_fold',
+      restaurantId: EGGDROP_SEED_RESTAURANT_ID,
+      title: 'Mushroom Morning Fold',
+      category: 'cafe',
+      menuSection: 'egg_folds',
+      price: '9.60',
+      desc: 'Scrambled egg, roasted mushroom, spinach, and mustard butter on milk bread.',
+      ingredients: 'egg, milk bread, mushroom, spinach, mustard butter',
+      imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(3),
+    },
+    {
+      id: 'food_menu_eggdrop_tomato_basil_pocket',
+      restaurantId: EGGDROP_SEED_RESTAURANT_ID,
+      title: 'Tomato Basil Pocket',
+      category: 'cafe',
+      menuSection: 'toast_pockets',
+      price: '8.40',
+      desc: 'Folded omelet, roasted tomato, basil, and white cheddar in a crisp toast pocket.',
+      ingredients: 'egg, toast, tomato, basil, white cheddar',
+      imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(6),
+    },
+    {
+      id: 'food_menu_eggdrop_honey_oat_cold_brew',
+      restaurantId: EGGDROP_SEED_RESTAURANT_ID,
+      title: 'Honey Oat Cold Brew',
+      category: 'cafe',
+      menuSection: 'drinks',
+      price: '5.90',
+      desc: 'Slow cold brew with oat milk, honey, and a dusting of toasted cinnamon.',
+      ingredients: 'cold brew, oat milk, honey, cinnamon',
+      imageUrl: FOOD_SEED_IMAGE_URLS.daylightCafeProduct(9),
+    },
+  ]
+
+  return items.map((item, index) => ({
+    ...item,
+    imageSourceType: 'url',
+    imageAlt: item.title,
+    sourceModule: 'seed',
+    createdAt: Date.now() - (20 - index) * 60 * 1000,
+    updatedAt: Date.now() - (20 - index) * 60 * 1000,
+  }))
+}
 
 const summarizeOrderTotals = (items, deliveryFeeCents = 0, currency = DEFAULT_CURRENCY) => {
   const totals = new Map()
@@ -1120,6 +1371,96 @@ const createSeedRestaurants = () =>
       sourceModule: 'seed',
       createdAt: Date.now() - 17 * 60 * 1000,
       updatedAt: Date.now() - 17 * 60 * 1000,
+    },
+    {
+      id: MYEONGDONG_KYOJA_SEED_RESTAURANT_ID,
+      name: 'Myeongdong Kyoja',
+      category: 'restaurants',
+      cuisine: 'Knife-cut noodles and dumplings',
+      rating: 4.8,
+      deliveryEtaMinutes: 31,
+      deliveryFee: '3.80',
+      distanceKm: 2.7,
+      address: '29 Myeongdong 10-gil, Jung-gu, Seoul',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.myeongdongKyoja,
+      imageAlt: 'Warm noodle bowls for Myeongdong Kyoja',
+      sourceModule: 'seed',
+      sourceId: 'seoul-myeongdong-kyoja-main',
+      createdAt: Date.now() - 25 * 60 * 1000,
+      updatedAt: Date.now() - 25 * 60 * 1000,
+    },
+    {
+      id: LONDON_BAGEL_MUSEUM_SEED_RESTAURANT_ID,
+      name: 'London Bagel Museum',
+      category: 'cafe',
+      cuisine: 'Bagels, sandwiches, and tea',
+      rating: 4.7,
+      deliveryEtaMinutes: 34,
+      deliveryFee: '4.20',
+      distanceKm: 3.4,
+      address: '20 Bukchon-ro 4-gil, Jongno-gu, Seoul',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.londonBagelMuseum,
+      imageAlt: 'Bagels and bakery spread for London Bagel Museum',
+      sourceModule: 'seed',
+      sourceId: 'seoul-london-bagel-museum-anguk',
+      createdAt: Date.now() - 24 * 60 * 1000,
+      updatedAt: Date.now() - 24 * 60 * 1000,
+    },
+    {
+      id: KNOTTED_SEED_RESTAURANT_ID,
+      name: 'Knotted',
+      category: 'dessert',
+      cuisine: 'Filled bakes, cold sweets, and soda',
+      rating: 4.8,
+      deliveryEtaMinutes: 26,
+      deliveryFee: '3.60',
+      distanceKm: 1.8,
+      address: '15 Dosan-daero 53-gil, Gangnam-gu, Seoul',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.knotted,
+      imageAlt: 'Pastel dessert counter for Knotted',
+      sourceModule: 'seed',
+      sourceId: 'seoul-knotted-cheongdam',
+      createdAt: Date.now() - 23 * 60 * 1000,
+      updatedAt: Date.now() - 23 * 60 * 1000,
+    },
+    {
+      id: KYOCHON_CHICKEN_SEED_RESTAURANT_ID,
+      name: 'Kyochon Chicken',
+      category: 'fast_food',
+      cuisine: 'Crisp chicken, sides, and cool drinks',
+      rating: 4.7,
+      deliveryEtaMinutes: 29,
+      deliveryFee: '4.00',
+      distanceKm: 1.1,
+      address: '16 Gangnam-daero 66-gil, Gangnam-gu, Seoul',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.kyochonChicken,
+      imageAlt: 'Crisp chicken meal for Kyochon Chicken',
+      sourceModule: 'seed',
+      sourceId: 'seoul-kyochon-chicken-yeoksam-1',
+      createdAt: Date.now() - 22 * 60 * 1000,
+      updatedAt: Date.now() - 22 * 60 * 1000,
+    },
+    {
+      id: EGGDROP_SEED_RESTAURANT_ID,
+      name: 'EGGDROP',
+      category: 'cafe',
+      cuisine: 'Egg folds, toast pockets, and coffee',
+      rating: 4.6,
+      deliveryEtaMinutes: 18,
+      deliveryFee: '3.20',
+      distanceKm: 1.0,
+      address: '321 Gangnam-daero, Seocho-gu, Seoul, 1F 104',
+      imageSourceType: 'url',
+      imageUrl: FOOD_SEED_IMAGE_URLS.eggdrop,
+      imageAlt: 'Egg toast and coffee for EGGDROP',
+      sourceModule: 'seed',
+      sourceId: 'seoul-eggdrop-gangnam-woosung',
+      createdAt: Date.now() - 21 * 60 * 1000,
+      updatedAt: Date.now() - 21 * 60 * 1000,
     },
   ])
 
@@ -2730,6 +3071,7 @@ const createSeedMenuItems = () =>
         createdAt: Date.now() - 60 * 1000,
         updatedAt: Date.now() - 60 * 1000,
       },
+      ...createRealShopSeedMenuItems(),
     ],
     new Set([
       'food_seed_moon_bistro',
@@ -2741,12 +3083,19 @@ const createSeedMenuItems = () =>
       DASH_GRILL_SEED_RESTAURANT_ID,
       JADE_HEARTH_SEED_RESTAURANT_ID,
       VERDANT_DAY_SEED_RESTAURANT_ID,
+      ...REAL_SHOP_SEED_RESTAURANT_IDS,
     ]),
   )
 
 const BUILT_IN_SEED_MENU_ITEMS = createSeedMenuItems()
 const BUILT_IN_SEED_RESTAURANTS_BY_ID = new Map(
   createSeedRestaurants().map((restaurant) => [restaurant.id, restaurant]),
+)
+const REAL_SHOP_REQUIRED_RESTAURANTS = REAL_SHOP_SEED_RESTAURANT_IDS.map((restaurantId) =>
+  BUILT_IN_SEED_RESTAURANTS_BY_ID.get(restaurantId),
+).filter(Boolean)
+const REAL_SHOP_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter((item) =>
+  REAL_SHOP_SEED_RESTAURANT_IDS.includes(item.restaurantId),
 )
 const MOON_BISTRO_REQUIRED_MENU_ITEMS = BUILT_IN_SEED_MENU_ITEMS.filter(
   (item) => item.restaurantId === MOON_BISTRO_SEED_RESTAURANT_ID,
@@ -4022,6 +4371,18 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       changed = true
     }
 
+    const missingRealShops = REAL_SHOP_REQUIRED_RESTAURANTS.filter(
+      (seedRestaurant) =>
+        !restaurants.value.some((restaurant) => restaurant.id === seedRestaurant.id),
+    )
+    if (missingRealShops.length > 0) {
+      restaurants.value = normalizeRestaurants([
+        ...restaurants.value,
+        ...missingRealShops.map((restaurant) => ({ ...restaurant })),
+      ])
+      changed = true
+    }
+
     const moonBistro = restaurants.value.find(
       (restaurant) => restaurant.id === MOON_BISTRO_SEED_RESTAURANT_ID,
     )
@@ -4055,6 +4416,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       ...(restaurantIds.has(DASH_GRILL_SEED_RESTAURANT_ID) ? DASH_GRILL_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(JADE_HEARTH_SEED_RESTAURANT_ID) ? JADE_HEARTH_REQUIRED_MENU_ITEMS : []),
       ...(restaurantIds.has(VERDANT_DAY_SEED_RESTAURANT_ID) ? VERDANT_DAY_REQUIRED_MENU_ITEMS : []),
+      ...REAL_SHOP_REQUIRED_MENU_ITEMS.filter((item) => restaurantIds.has(item.restaurantId)),
     ]
 
     requiredMenuItems.forEach((seedItem) => {

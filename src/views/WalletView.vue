@@ -116,6 +116,7 @@ const sectionTitle = computed(() => {
   if (activeSection.value === 'transfer') return t('转账', 'Transfer')
   if (activeSection.value === 'receive') return t('收款', 'Receive')
   if (activeSection.value === 'card-detail') return t('卡片详情', 'Card details')
+  if (activeSection.value === 'card-appearances') return t('卡面收藏', 'Card collection')
   if (activeSection.value === 'payee-transfer') return t('确认转账', 'Confirm transfer')
   if (activeSection.value === 'receipt') return t('转账回执', 'Transfer receipt')
   if (activeSection.value === 'transaction-detail') return t('交易详情', 'Transaction details')
@@ -138,6 +139,7 @@ const headerBackText = computed(() => {
       ? t('月度账单', 'Monthly statement')
       : t('活动', 'Activity')
   }
+  if (activeSection.value === 'card-appearances') return t('卡片详情', 'Card details')
   return t('钱包', 'Wallet')
 })
 
@@ -163,6 +165,9 @@ const headerBackAriaLabel = computed(() => {
       ? t('返回月度账单', 'Return to monthly statement')
       : t('返回钱包活动', 'Return to Wallet activity')
   }
+  if (activeSection.value === 'card-appearances') {
+    return t('返回卡片详情', 'Return to card details')
+  }
   return t('返回钱包', 'Return to Wallet')
 })
 
@@ -175,6 +180,18 @@ const selectedDetailCard = computed(
     paymentCardSummaries.value.find((card) => card.id === detailCardId.value) ||
     activePaymentCard.value ||
     null,
+)
+
+const selectedCardAppearances = computed(() =>
+  selectedDetailCard.value ? walletStore.listCardAppearances(selectedDetailCard.value.id) : [],
+)
+
+const selectedCardAppearance = computed(
+  () => selectedCardAppearances.value.find((item) => item.isSelected) || null,
+)
+
+const selectedCardAppearanceOwnedCount = computed(
+  () => selectedCardAppearances.value.filter((item) => item.isOwned).length,
 )
 
 const selectedTransferAccount = computed(
@@ -309,9 +326,7 @@ const sharedReceiptReturnChatId = computed(() =>
   walletWorkflowSource.value === 'chat_share' ? queryPositiveInt(route.query.returnChatId) : 0,
 )
 
-const receiptReturnChatId = computed(
-  () => sharedReceiptReturnChatId.value || workflowChatId.value,
-)
+const receiptReturnChatId = computed(() => sharedReceiptReturnChatId.value || workflowChatId.value)
 
 const payeeTransferAmountIsValid = computed(() => {
   const amount = String(payeeTransferDraft.value.amount || '').trim()
@@ -649,6 +664,10 @@ const navigateBack = () => {
     activeSection.value = detailReturnSection.value
     return
   }
+  if (activeSection.value === 'card-appearances') {
+    activeSection.value = 'card-detail'
+    return
+  }
   activeSection.value = 'home'
 }
 
@@ -712,6 +731,33 @@ const openCardDetail = (cardId, returnSection = 'cards') => {
 
 const openActiveCardDetail = () => {
   if (activePaymentCard.value) openCardDetail(activePaymentCard.value.id, 'home')
+}
+
+const openCardAppearances = () => {
+  if (!selectedDetailCard.value) return
+  navigateToSection('card-appearances')
+}
+
+const appearanceSeriesLabel = (series = '') => {
+  if (series === 'licensed_ip') return t('联名系列', 'Licensed series')
+  if (series === 'art_series') return t('艺术系列', 'Art series')
+  if (series === 'seasonal') return t('季节系列', 'Seasonal series')
+  if (series === 'commemorative') return t('纪念系列', 'Commemorative series')
+  return t('标准卡面', 'Standard design')
+}
+
+const appearanceStatusLabel = (item) => {
+  if (item?.isSelected) return t('当前使用', 'In use')
+  if (item?.isOwned) return t('已拥有', 'Owned')
+  return t('尚未揭晓', 'Not revealed')
+}
+
+const equipAppearance = (item) => {
+  const card = selectedDetailCard.value
+  if (!card || !item?.isEquippable || item.isSelected) return
+  const equipped = walletStore.equipCardAppearance(card.id, item.id)
+  if (!equipped) return
+  showFeedback('success', t('卡面已更换', 'Card appearance updated'))
 }
 
 const cardAmountLabel = (card) => {
@@ -1765,6 +1811,28 @@ watch(
           />
         </section>
 
+        <button
+          type="button"
+          class="wallet-appearance-entry"
+          data-testid="wallet-open-card-appearances"
+          @click="openCardAppearances"
+        >
+          <span class="wallet-appearance-entry__icon" aria-hidden="true">
+            <i class="fas fa-layer-group"></i>
+          </span>
+          <span class="wallet-appearance-entry__copy">
+            <small>{{ t('数字副卡', 'Digital supplementary cards') }}</small>
+            <strong>{{ t('卡面收藏', 'Card collection') }}</strong>
+            <span>{{
+              t(selectedCardAppearance?.titleZh || '', selectedCardAppearance?.titleEn || '')
+            }}</span>
+          </span>
+          <span class="wallet-appearance-entry__count">
+            {{ selectedCardAppearanceOwnedCount }} / {{ selectedCardAppearances.length }}
+          </span>
+          <i class="fas fa-chevron-right wallet-appearance-entry__chevron" aria-hidden="true"></i>
+        </button>
+
         <section class="wallet-detail-list">
           <div>
             <span>{{ t('发卡银行', 'Issuer') }}</span>
@@ -1889,6 +1957,124 @@ watch(
             }}
           </button>
         </div>
+      </template>
+
+      <template v-else-if="activeSection === 'card-appearances' && selectedDetailCard">
+        <section class="wallet-appearance-current" data-testid="wallet-card-appearance-collection">
+          <div class="wallet-appearance-current__heading">
+            <div>
+              <p class="wallet-eyebrow">{{ t('当前卡面', 'Current appearance') }}</p>
+              <h2>
+                {{
+                  t(selectedCardAppearance?.titleZh || '', selectedCardAppearance?.titleEn || '')
+                }}
+              </h2>
+            </div>
+            <span
+              >{{ selectedCardAppearanceOwnedCount }} / {{ selectedCardAppearances.length }}</span
+            >
+          </div>
+          <div class="wallet-appearance-current__card">
+            <WalletBankCard
+              :card="selectedDetailCard"
+              :interactive="false"
+              :amount-label="cardAmountLabel(selectedDetailCard)"
+              :amount-caption="cardAmountCaption(selectedDetailCard)"
+              test-id-suffix="appearance-current"
+            />
+          </div>
+        </section>
+
+        <section
+          class="wallet-appearance-library"
+          :aria-label="t('这张卡的卡面收藏', 'Appearance collection for this card')"
+        >
+          <div class="wallet-appearance-library__heading">
+            <div>
+              <p class="wallet-eyebrow">{{ t('专属目录', 'Exclusive catalog') }}</p>
+              <h2>{{ t('选择一张数字副卡', 'Choose a supplementary card') }}</h2>
+            </div>
+            <i class="fas fa-sparkles" aria-hidden="true"></i>
+          </div>
+
+          <div class="wallet-appearance-grid">
+            <article
+              v-for="item in selectedCardAppearances"
+              :key="item.id"
+              class="wallet-appearance-slot"
+              :class="{
+                'is-selected': item.isSelected,
+                'is-owned': item.isOwned,
+                'is-sealed': item.assetStatus === 'pending',
+              }"
+              :data-testid="`wallet-card-appearance-${item.id}`"
+            >
+              <button
+                v-if="item.assetStatus === 'ready'"
+                type="button"
+                class="wallet-appearance-slot__visual"
+                :class="{ 'is-actionable': item.isEquippable && !item.isSelected }"
+                :disabled="!item.isEquippable || item.isSelected"
+                :aria-label="
+                  item.isSelected
+                    ? t(`${item.titleZh}，当前使用`, `${item.titleEn}, in use`)
+                    : t(`使用${item.titleZh}`, `Use ${item.titleEn}`)
+                "
+                :data-testid="`wallet-equip-card-appearance-${item.id}`"
+                @click="equipAppearance(item)"
+              >
+                <WalletBankCard
+                  :card="{ ...selectedDetailCard, appearance: item }"
+                  :interactive="false"
+                  :amount-label="cardAmountLabel(selectedDetailCard)"
+                  :amount-caption="cardAmountCaption(selectedDetailCard)"
+                  :test-id-suffix="`appearance-${item.id}`"
+                />
+                <span
+                  v-if="item.isSelected"
+                  class="wallet-appearance-slot__badge"
+                  aria-hidden="true"
+                >
+                  <i class="fas fa-check"></i>
+                </span>
+              </button>
+
+              <div
+                v-else
+                class="wallet-appearance-slot__visual wallet-appearance-mystery"
+                :class="`tone-${item.mysteryTone}`"
+                aria-hidden="true"
+              >
+                <span class="wallet-appearance-mystery__orbit"></span>
+                <strong>{{ selectedDetailCard.institution?.shortName }}</strong>
+                <span class="wallet-appearance-mystery__seal">
+                  <i class="fas fa-lock"></i>
+                </span>
+                <small>{{ String(item.sortOrder).padStart(2, '0') }}</small>
+              </div>
+
+              <div class="wallet-appearance-slot__meta">
+                <div>
+                  <strong>{{ t(item.titleZh, item.titleEn) }}</strong>
+                  <span>{{ appearanceSeriesLabel(item.series) }}</span>
+                </div>
+                <span class="wallet-appearance-slot__state">
+                  <i
+                    :class="
+                      item.isSelected
+                        ? 'fas fa-circle-check'
+                        : item.isOwned
+                          ? 'fas fa-unlock'
+                          : 'fas fa-lock'
+                    "
+                    aria-hidden="true"
+                  ></i>
+                  {{ appearanceStatusLabel(item) }}
+                </span>
+              </div>
+            </article>
+          </div>
+        </section>
       </template>
 
       <template v-else-if="activeSection === 'transaction-detail'">
@@ -3454,6 +3640,416 @@ watch(
   margin: 0 auto 1.15rem;
 }
 
+.wallet-appearance-entry {
+  display: grid;
+  width: 100%;
+  min-height: 5rem;
+  grid-template-columns: 2.45rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  border: 0;
+  border-top: 1px solid var(--wallet-line);
+  border-bottom: 1px solid var(--wallet-line);
+  padding: 0.8rem 1rem;
+  color: var(--wallet-ink);
+  text-align: left;
+  background: var(--wallet-surface);
+}
+
+.wallet-appearance-entry__icon {
+  display: inline-flex;
+  width: 2.45rem;
+  height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: #f5efe3;
+  background: #20282d;
+  box-shadow: 0 5px 14px rgba(15, 20, 24, 0.18);
+}
+
+.wallet-appearance-entry__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.wallet-appearance-entry__copy small,
+.wallet-appearance-entry__copy span {
+  overflow: hidden;
+  color: var(--wallet-muted);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-appearance-entry__copy strong {
+  font-size: 0.76rem;
+}
+
+.wallet-appearance-entry__count {
+  color: var(--wallet-muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.wallet-appearance-entry__chevron {
+  color: var(--wallet-muted);
+  font-size: 0.65rem;
+}
+
+.wallet-appearance-entry:focus-visible,
+.wallet-appearance-slot__visual:focus-visible {
+  outline: 3px solid rgba(33, 133, 189, 0.3);
+  outline-offset: -3px;
+}
+
+.wallet-appearance-current {
+  margin-top: -1.25rem;
+  padding: 1.15rem 1rem 1.5rem;
+  color: #f7f4ec;
+  background: #151a1e;
+}
+
+.wallet-appearance-current__heading,
+.wallet-appearance-library__heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.wallet-appearance-current__heading {
+  width: min(100%, 23rem);
+  margin: 0 auto 0.9rem;
+}
+
+.wallet-appearance-current__heading h2,
+.wallet-appearance-library__heading h2 {
+  margin: 0.1rem 0 0;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.wallet-appearance-current__heading .wallet-eyebrow {
+  color: rgba(247, 244, 236, 0.56);
+}
+
+.wallet-appearance-current__heading > span {
+  min-width: 2.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 5px;
+  padding: 0.3rem 0.45rem;
+  color: rgba(247, 244, 236, 0.72);
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-align: center;
+}
+
+.wallet-appearance-current__card {
+  width: min(100%, 23rem);
+  margin: 0 auto;
+}
+
+.wallet-appearance-library {
+  padding: 1.4rem 1rem 2rem;
+}
+
+.wallet-appearance-library__heading {
+  margin-bottom: 1rem;
+}
+
+.wallet-appearance-library__heading > i {
+  color: #bd9152;
+  font-size: 0.9rem;
+}
+
+.wallet-appearance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 0.75rem;
+}
+
+.wallet-appearance-slot {
+  min-width: 0;
+  animation: wallet-appearance-arrive 260ms ease both;
+}
+
+.wallet-appearance-slot:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.wallet-appearance-slot:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+.wallet-appearance-slot:nth-child(4) {
+  animation-delay: 105ms;
+}
+
+.wallet-appearance-slot__visual {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.586 / 1;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  background: transparent;
+}
+
+button.wallet-appearance-slot__visual.is-actionable {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  button.wallet-appearance-slot__visual.is-actionable:hover :deep(.wallet-bank-card) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(19, 24, 28, 0.22);
+  }
+}
+
+button.wallet-appearance-slot__visual:disabled {
+  opacity: 1;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card) {
+  height: 100%;
+  border-radius: 8px;
+  padding: 0.55rem;
+  pointer-events: none;
+  box-shadow: 0 8px 18px rgba(19, 24, 28, 0.16);
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__rail) {
+  width: 3px;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__topline) {
+  min-height: 1rem;
+  gap: 0.25rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__mark) {
+  min-width: 1.45rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  font-size: 0.42rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__issuer),
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__status) {
+  font-size: 0.4rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__status) {
+  min-height: 0.9rem;
+  padding: 0 0.2rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__middle) {
+  gap: 0.25rem;
+  margin-top: 0.38rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__chip) {
+  width: 1.35rem;
+  height: 0.95rem;
+  border-radius: 3px;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__contactless) {
+  font-size: 0.5rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__balance) {
+  min-height: 1.25rem;
+  margin-top: 0;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__caption) {
+  display: none;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__balance strong) {
+  font-size: 0.58rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__bottomline) {
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__identity > span),
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__identity small),
+.wallet-appearance-slot__visual :deep(.wallet-bank-card__network) {
+  font-size: 0.4rem;
+}
+
+.wallet-appearance-slot__badge {
+  position: absolute;
+  z-index: 4;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: inline-flex;
+  width: 1.45rem;
+  height: 1.45rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 50%;
+  color: #ffffff;
+  background: #1f7b62;
+  box-shadow: 0 4px 12px rgba(13, 48, 39, 0.3);
+  font-size: 0.55rem;
+}
+
+.wallet-appearance-mystery {
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.78);
+  background-color: #272c30;
+  background-image:
+    linear-gradient(115deg, transparent 0 44%, rgba(255, 255, 255, 0.08) 45% 46%, transparent 47%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 12px);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, 0.08),
+    0 8px 18px rgba(19, 24, 28, 0.12);
+}
+
+.wallet-appearance-mystery.tone-plum,
+.wallet-appearance-mystery.tone-rose {
+  background-color: #493740;
+}
+
+.wallet-appearance-mystery.tone-ink,
+.wallet-appearance-mystery.tone-indigo {
+  background-color: #202838;
+}
+
+.wallet-appearance-mystery.tone-mist,
+.wallet-appearance-mystery.tone-silver {
+  color: rgba(27, 33, 38, 0.7);
+  background-color: #c9d0d1;
+  background-image:
+    linear-gradient(115deg, transparent 0 44%, rgba(255, 255, 255, 0.34) 45% 46%, transparent 47%),
+    repeating-linear-gradient(90deg, rgba(24, 30, 34, 0.05) 0 1px, transparent 1px 12px);
+}
+
+.wallet-appearance-mystery.tone-cobalt {
+  background-color: #2b4962;
+}
+
+.wallet-appearance-mystery.tone-lilac {
+  color: rgba(40, 35, 49, 0.74);
+  background-color: #c8bfd3;
+}
+
+.wallet-appearance-mystery.tone-jade {
+  background-color: #31564f;
+}
+
+.wallet-appearance-mystery > strong {
+  position: absolute;
+  z-index: 1;
+  top: 0.7rem;
+  left: 0.75rem;
+  font-size: 0.58rem;
+  letter-spacing: 0;
+  opacity: 0.72;
+}
+
+.wallet-appearance-mystery > small {
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.6rem;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.5rem;
+  opacity: 0.5;
+}
+
+.wallet-appearance-mystery__orbit {
+  position: absolute;
+  width: 78%;
+  aspect-ratio: 1;
+  top: 30%;
+  left: 52%;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.14;
+  transform: translate(-50%, -50%);
+}
+
+.wallet-appearance-mystery__seal {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  display: inline-flex;
+  width: 2.2rem;
+  height: 2.2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  font-size: 0.68rem;
+  opacity: 0.8;
+  transform: translate(-50%, -50%);
+}
+
+.wallet-appearance-slot__meta {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.6rem 0.1rem 0;
+}
+
+.wallet-appearance-slot__meta > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.wallet-appearance-slot__meta strong {
+  overflow: hidden;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wallet-appearance-slot__meta span {
+  color: var(--wallet-muted);
+  font-size: 0.58rem;
+}
+
+.wallet-appearance-slot__state {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 750;
+}
+
+.wallet-appearance-slot.is-selected .wallet-appearance-slot__state {
+  color: var(--wallet-positive);
+}
+
+@keyframes wallet-appearance-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .wallet-detail-list,
 .wallet-receive-details,
 .wallet-settings-band {
@@ -4488,6 +5084,16 @@ watch(
   .wallet-card-library__meta {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
+
+  .wallet-appearance-library {
+    width: min(100%, 50rem);
+    margin: 0 auto;
+  }
+
+  .wallet-appearance-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 1rem;
+  }
 }
 
 @media (min-width: 840px) {
@@ -4546,6 +5152,14 @@ watch(
 
   .wallet-card-deck__item {
     transition: none;
+  }
+
+  .wallet-appearance-slot {
+    animation: none;
+  }
+
+  button.wallet-appearance-slot__visual.is-actionable:hover :deep(.wallet-bank-card) {
+    transform: none;
   }
 }
 </style>

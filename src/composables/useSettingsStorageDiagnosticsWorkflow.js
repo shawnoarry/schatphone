@@ -207,6 +207,7 @@ export const useSettingsStorageDiagnosticsWorkflow = (options = {}) => {
         PERSISTED_STATE_AUDIT_TARGETS.map(async (target) => {
           const inspection = await inspectPersistedStateLayers(target.key, {
             version: target.version,
+            migrate: target.migrate,
           })
           return {
             ...target,
@@ -289,6 +290,7 @@ export const useSettingsStorageDiagnosticsWorkflow = (options = {}) => {
       for (const target of targets) {
         const report = await reconcilePersistedStateLayers(target.key, {
           version: target.version,
+          migrate: target.migrate,
           strategy: 'newest_valid',
         })
         if (report.action === 'repaired') {

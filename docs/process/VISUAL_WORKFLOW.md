@@ -268,7 +268,7 @@ Prefer sources in this order:
 2. editable community prototypes and UI kits: Figma Community, Pixso, MasterGo, and Jishi Design;
 3. limited professional reference libraries such as Mobbin and Refero when their accessible results materially improve the search;
 4. official system guidance such as Apple Human Interface Guidelines and Material Design;
-5. local `awesome-design-md` and the confirmed external visual asset library;
+5. optional machine-local `awesome-design-md` and external visual reference libraries, when available; these must never be cross-machine handoff dependencies;
 6. generated visual candidates when no suitable visual asset exists or the surface needs SchatPhone-owned imagery.
 
 Do not bypass login requirements, paywalls, CAPTCHAs, license restrictions, or download controls. Free viewing does not imply permission to ship the source asset.
@@ -460,7 +460,14 @@ Usage:
 - treat it as an external, read-only reference library by default;
 - do not bulk-import it into the repo;
 - before copying any image or code reference into SchatPhone, confirm the concrete product use, rename/compress it, and place it under a purpose-specific project asset folder;
-- on another PC, ask the machine owner to confirm the local asset-library path before relying on it.
+- on another PC, start from project docs and repository assets; do not require this path or treat its absence as missing project evidence.
+
+Cross-machine handoff rule:
+
+- any image, prompt/request, manifest, hash, contact sheet, source/license record, accepted master, or runtime derivative required by a later machine must live in a Git-eligible repository path;
+- handoff and acceptance docs must cite repository-relative paths, never a machine-local absolute path as the only evidence;
+- `output/imagegen/<feature>/<batch>/` is the traceable candidate/master location and the owning `public/images/ui-assets/` subtree is the runtime location;
+- uncommitted or unpushed files must be marked `PENDING_GIT_COMMIT`; being present in one checkout does not make them available on another machine.
 
 ## 10. Recommended Project Artifacts
 
@@ -492,7 +499,7 @@ To reuse this workflow on another machine:
 1. clone the SchatPhone repo;
 2. ask the machine owner to confirm local installation paths before installing anything;
 3. install or confirm the current visual skills;
-4. clone the design reference library to a confirmed path if needed;
+4. optionally clone or locate an external design reference library when it would materially help; do not require it for project handoff;
 5. restart Codex;
 6. use the trigger phrase `视觉专项`.
 
@@ -502,8 +509,8 @@ Confirm local paths first:
 1. SchatPhone project root:
 2. Global Codex skills directory:
 3. Project-local skills directory:
-4. Design reference library parent directory:
-5. External visual asset library path:
+4. Optional design reference library parent directory, if used:
+5. Optional external visual asset library path, if used:
 6. Whether PowerShell should use npx or npx.cmd:
 ```
 
@@ -512,6 +519,7 @@ Rules:
 - project-local visual skills belong under `<repo>\.agents\skills`;
 - run `npx.cmd skills add ...` from the confirmed SchatPhone project root;
 - do not assume every PC has a `D:` drive or the same global Codex skill location.
+- do not treat an absent external library as a handoff failure; import any later-machine dependency into a Git-eligible repository path and record `PENDING_GIT_COMMIT` until synchronized.
 
 ## 12. Standard Work Sequence
 
@@ -525,7 +533,7 @@ Use this sequence for visual work unless the user asks for a narrower path:
 6. Define the key state matrix before styling: normal, loading, empty, error, selected/edit, success, destructive, and any feature-specific intermediate states.
 7. Translate implementation terms into product-facing terms before discussing the work with the user or writing UI copy. For Home desktop work, avoid exposing route names, component names, tile kinds, or fake folder categories.
 8. Decide whether current external references are needed. When they are, run Prototype And Reference Discovery and return the reference pack before implementation.
-9. Confirm the local visual asset library path when it is relevant, and make an explicit background/media/image-generation decision. If a required visual is missing, propose sourcing or generation instead of silently substituting explanatory text.
+9. Use a local visual asset library only when it is available and relevant, and make an explicit background/media/image-generation decision. If a required visual is missing, propose sourcing or generation instead of silently substituting explanatory text; place every later-machine dependency in a Git-eligible repository path.
 10. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
 11. Choose zero or one design/implementation specialist: `frontend-logic-design` for IA, `frontend-design` for visual rebuild or polish, or `image-to-code` only when a source image is the contract. Use a separate focused round for non-trivial image generation.
 12. Define the smallest product-complete change slice before editing. A slice may be narrow, but its primary journey and required visible states cannot remain generic scaffolding.
@@ -550,13 +558,13 @@ Use this sequence for visual work unless the user asks for a narrower path:
 Audit-first visual session:
 
 ```text
-视觉专项：先读取 docs/process/VISUAL_WORKFLOW.md，然后只围绕视觉设计工作。先确认本机 awesome-design-md 参考库路径；如果不存在或路径未知，先询问我。本轮不推进功能路线。先审查 [页面/模块] 的上级入口属于【本机系统】还是【装载 App】，再输出问题清单、设计方向和最小改造切片。同时审查前端显示文案，禁止把开发注释、TODO、调试提示、实现说明显示给用户。
+视觉专项：先读取 docs/process/VISUAL_WORKFLOW.md，然后只围绕视觉设计工作。默认从仓库内项目文档和素材开始；本机外部参考库仅在可用且确有帮助时使用，不得作为跨机器交接依赖。本轮不推进功能路线。先审查 [页面/模块] 的上级入口属于【本机系统】还是【装载 App】，再输出问题清单、设计方向和最小改造切片。同时审查前端显示文案，禁止把开发注释、TODO、调试提示、实现说明显示给用户。
 ```
 
 Prototype discovery and adaptation:
 
 ```text
-视觉专项：原型检索。目标是 [页面/模块/用户任务]。先检查当前实现、入口归属、L0-L3 信息深度和必须保留的功能边界，再从免费真实产品流程、可编辑原型社区、官方设计系统和本地参考库中筛选最多三个候选。输出链接、免费边界、关键流程、可借鉴与不可复制内容、SchatPhone 适配映射、缺失状态、素材/底图/生图建议和一个推荐方向。本轮不改代码。
+视觉专项：原型检索。目标是 [页面/模块/用户任务]。先检查当前实现、入口归属、L0-L3 信息深度和必须保留的功能边界，再从免费真实产品流程、可编辑原型社区、官方设计系统和可用的本机参考库中筛选最多三个候选。输出链接、免费边界、关键流程、可借鉴与不可复制内容、SchatPhone 适配映射、缺失状态、素材/底图/生图建议和一个推荐方向。后续机器必须看到的证据要进入 Git 可提交的仓库路径。本轮不改代码。
 ```
 
 Direct implementation:

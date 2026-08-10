@@ -1,0 +1,111 @@
+{
+  "batch": "shopping-product-photography-batch-0a",
+  "status": "repo_alternatives_pending_git_commit",
+  "selectionStatus": "none_accepted",
+  "handoffStatus": "pending_git_commit",
+  "repoPath": "output/imagegen/shopping-product-photography/batch-0a-specialty-style-calibration/",
+  "mode": "bundled_imagegen_cli_generate_batch",
+  "model": "gpt-image-2",
+  "quality": "low",
+  "requestedSize": "1024x1024",
+  "returnedSize": "1254x1254",
+  "outputFormat": "png",
+  "items": [
+    {
+      "file": "candidates/shopping-seed-fashion-jacket-c01.png",
+      "productId": "shopping_seed_fashion_jacket",
+      "serviceKey": "style_cloud",
+      "variant": "c01",
+      "bytes": 1729353,
+      "sha256": "b6dda5ed6cab66ead5bd28632068520d837e99c347a6ee17388eb5f60d53ace0"
+    },
+    {
+      "file": "candidates/shopping-seed-fashion-jacket-c02.png",
+      "productId": "shopping_seed_fashion_jacket",
+      "serviceKey": "style_cloud",
+      "variant": "c02",
+      "bytes": 1811887,
+      "sha256": "b64f18e8756abdbb9eb272cd4fe41a543ccd861903b567847e64b5c67c787261"
+    },
+    {
+      "file": "candidates/shopping-seed-fashion-bag-c01.png",
+      "productId": "shopping_seed_fashion_bag",
+      "serviceKey": "style_cloud",
+      "variant": "c01",
+      "bytes": 2178540,
+      "sha256": "11b732252a7f56f8fba060c7dcae2c20fc2d771941fca349175cba46fd04bdc2"
+    },
+    {
+      "file": "candidates/shopping-seed-fashion-bag-c02.png",
+      "productId": "shopping_seed_fashion_bag",
+      "serviceKey": "style_cloud",
+      "variant": "c02",
+      "bytes": 1940101,
+      "sha256": "02c8ac71c8bb7d624bbec9d85dd49586078b92aed67c9191a40cd18f7a06eec9"
+    },
+    {
+      "file": "candidates/shopping-seed-nordhus-chair-c01.png",
+      "productId": "shopping_seed_nordhus_chair",
+      "serviceKey": "nordhus_home",
+      "variant": "c01",
+      "bytes": 2213220,
+      "sha256": "f8516806386632083479c53ed8747699dc7efa96ec264fabb78c7fb4f77a4ec0"
+    },
+    {
+      "file": "candidates/shopping-seed-nordhus-chair-c02.png",
+      "productId": "shopping_seed_nordhus_chair",
+      "serviceKey": "nordhus_home",
+      "variant": "c02",
+      "bytes": 2280923,
+      "sha256": "d194b7eee1cf0f0bfd7742c68034fba01e36bd510367dce99efbef0b9672bbdf"
+    },
+    {
+      "file": "candidates/shopping-seed-nordhus-lamp-c01.png",
+      "productId": "shopping_seed_nordhus_lamp",
+      "serviceKey": "nordhus_home",
+      "variant": "c01",
+      "bytes": 1512205,
+      "sha256": "9214d9f6450bd5d4cde7cc4417b3047d2f4362447f7c615f8be499fa32198582"
+    },
+    {
+      "file": "candidates/shopping-seed-nordhus-lamp-c02.png",
+      "productId": "shopping_seed_nordhus_lamp",
+      "serviceKey": "nordhus_home",
+      "variant": "c02",
+      "bytes": 1583806,
+      "sha256": "8cbf2730220b383f760f2846eed96e88320d1b7a60ced376d43cbcc440dfdaa5"
+    },
+    {
+      "file": "candidates/shopping-seed-care-serum-c01.png",
+      "productId": "shopping_seed_care_serum",
+      "serviceKey": "mellow_care",
+      "variant": "c01",
+      "bytes": 1567721,
+      "sha256": "2b9e6a4f381a11aea6f0c9f2b6855aa9bf3f9901701f1c244a76e9ec7c796582"
+    },
+    {
+      "file": "candidates/shopping-seed-care-serum-c02.png",
+      "productId": "shopping_seed_care_serum",
+      "serviceKey": "mellow_care",
+      "variant": "c02",
+      "bytes": 1516053,
+      "sha256": "3d649c725ab4eab59f5fe33bb15d7346e249d7779454f1e9edfe6c280277976a"
+    },
+    {
+      "file": "candidates/shopping-seed-care-lip-c01.png",
+      "productId": "shopping_seed_care_lip",
+      "serviceKey": "mellow_care",
+      "variant": "c01",
+      "bytes": 1958534,
+      "sha256": "f289ce8efaffeaf9e93441a317908094885d3e2d979e45e7fe9b763a121dd51f"
+    },
+    {
+      "file": "candidates/shopping-seed-care-lip-c02.png",
+      "productId": "shopping_seed_care_lip",
+      "serviceKey": "mellow_care",
+      "variant": "c02",
+      "bytes": 1511595,
+      "sha256": "3a01f65cd67b13ec6c5878999a0983ce701665b9838770feb4a7cd069b88c4b0"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ This file is the handoff page for event runtime, relationship runtime, World Hub
 
 ## 1. Current Status
 
-Status: `PARTIAL_DONE / EVE-2B_DONE / EVE-2C_USER_ACCEPTANCE_REQUIRED`
+Status: `PARTIAL_DONE / EVE-2C_DONE_2026-08-10`
 
 Confirmed persistence dependency for future work:
 
@@ -51,6 +51,8 @@ EVE-2A documentation/fixture validation is complete: all three fixture JSON file
 
 EVE-2B runtime validation is complete: the focused Event/Simulation set passes 2 files / 16 tests; the expanded persistence set passes 4 files / 52 tests; the bounded-concurrency full Vitest suite passes 226 files / 1647 tests; full lint, production build, governance at 2 files / 13 tests, and `git diff --check` pass. Default full-suite concurrency can expose a pre-existing fixed-40ms IndexedDB mirror timing sensitivity in `persistence-write-result.test.js`; that isolated test passes 13/13, and the full suite passes with four workers. No E2E was required because EVE-2B adds no route or user-facing surface.
 
+EVE-2C validation is complete: the focused Map/Event set passes 8 files / 109 tests and the full Vitest suite passes 228 files / 1671 tests. Full lint and production build pass; the dedicated user-facing flow passes 6/6 across desktop Chromium and simulated Pixel 5 with accessibility, page-error, layer-coexistence, and zero-horizontal-overflow checks. Eight screenshots cover invitation, expanded event, journey arrival, and off-pack no-event states. This is not physical-device evidence.
+
 Still incomplete:
 
 1. broad affinity/funds/unlock/freeform override controls remain deferred;
@@ -59,11 +61,11 @@ Still incomplete:
 4. the named high-risk relationship gate presets are now consumed by the Chat social-event review policy for relationship-aware audit/review decisions; broader high-impact romance/conflict automation is still deferred.
 5. deeper generated social behavior is still incomplete: broader social-event types, richer scheduling, and relationship-stage effects should build on the landed review seam instead of writing directly to Chat or relationship runtime.
 6. Mini Scene trigger integration remains unimplemented; the shared pure foundation is ready, but a named event family and the later persistence/presenter/source-Adapter prerequisites must still be promoted.
-7. no host is registered or rendered by default: large-map coordinate cards, event-card clustering, the World Hub Event Notebook, and runtime event presentation remain unimplemented. EVE-2B runtime is complete; EVE-2C Map/UI requires separate implementation acceptance.
+7. exactly one Map Event Surface host is registered for the frozen production-arrival-briefing archetype; additional hosts, event families, and the World Hub Event Notebook remain unimplemented and separately gated.
 8. Destination change, event-driven cancellation, high-impact outcomes, active exploration events, generic popup infrastructure, and Agenda Journey scheduling remain unimplemented.
 9. Agenda Journey, Activity Session, Schedule Orchestrator, their Event Runtime adapters, automatic-resolution implementation, and Narrative Timeline remain unimplemented; the accepted CJA contract is documentation only.
-10. no location-aware place-entry family, activation-scope schema, locked-teaser projection, Focus Companion runtime, or Activity Session media caller is implemented by the documentation refinement.
-11. EVE-2C remains absent: no Map provenance/place session, `Enter`, Map host registration, invitation/detail UI, authored workplace scene asset, or Map Adapter execution exists yet.
+10. no locked-teaser family, Focus Companion runtime, or Activity Session media caller is implemented; the completed location-aware family remains limited to interior production arrival briefing.
+11. EVE-2C adds no authored workplace scene asset: Map/world media remains optional and the current text-only fallback is complete.
 
 ## 2. Recommended Next Slice
 
@@ -74,7 +76,7 @@ Current safe sequence after the user's event-lane reprioritization:
 1. keep landed EVE-1 pure and empty-by-default; do not add persistence, effect authority, implicit host activation, or UI to the projection Modules.
 2. preserve the frozen EVE-2A Interfaces/fixtures and selected production-arrival-briefing archetype; change meaning only through a new schema/fixture version.
 3. preserve the landed EVE-2B runtime contracts, Simulation V2 migration, one-call/no-retry Composer policy, durable instance retention, and local K-pop fallback; change frozen meaning only through a new schema/fixture version.
-4. obtain separate EVE-2C acceptance before adding Map provenance/place-session fields, host registration, `Enter`, cards, detail UI, or scene work. Ordinary place focus and event selection remain separate.
+4. preserve the completed EVE-2C Map V3 provenance/place-session boundary, single explicit host, ordinary-place/event selection split, zero-token no-event path, and no-external-mutation owner validation.
 5. keep runtime-trigger explanation readable whenever a new Adapter is explicitly promoted.
 6. add the EVE-3 Event Notebook inside World Hub only after its read model and note ownership are frozen; do not turn it into Reminders or Cheats.
 7. deepen Chat social scheduling only through the existing audit/review seam and with visible cooldown/cap policy.

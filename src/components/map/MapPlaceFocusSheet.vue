@@ -16,8 +16,9 @@ const props = defineProps({
   primaryAction: {
     type: String,
     default: 'go',
-    validator: (value) => ['go', 'view_journey', 'none'].includes(value),
+    validator: (value) => ['go', 'view_journey', 'enter', 'leave', 'none'].includes(value),
   },
+  eventInvitation: { type: Object, default: null },
   journeyLocked: { type: Boolean, default: false },
   canManage: { type: Boolean, default: false },
   displayMode: { type: String, required: true },
@@ -29,6 +30,9 @@ const emit = defineEmits([
   'close',
   'go',
   'view-journey',
+  'enter',
+  'leave',
+  'expand-event',
   'share',
   'manage',
   'set-display-mode',
@@ -50,10 +54,20 @@ const isDetail = computed(() => level.value === 'detail')
 const primaryLabel = computed(() =>
   props.primaryAction === 'view_journey'
     ? props.t('查看当前行程', 'View current journey')
-    : props.t('前往', 'Go'),
+    : props.primaryAction === 'enter'
+      ? props.t('进入', 'Enter')
+      : props.primaryAction === 'leave'
+        ? props.t('离开', 'Leave')
+        : props.t('前往', 'Go'),
 )
 const primaryIcon = computed(() =>
-  props.primaryAction === 'view_journey' ? 'fas fa-route' : 'fas fa-location-arrow',
+  props.primaryAction === 'view_journey'
+    ? 'fas fa-route'
+    : props.primaryAction === 'enter'
+      ? 'fas fa-door-open'
+      : props.primaryAction === 'leave'
+        ? 'fas fa-arrow-right-from-bracket'
+        : 'fas fa-location-arrow',
 )
 const overviewActionsClass = computed(() => ({
   'has-management': props.canManage,
@@ -62,6 +76,8 @@ const overviewActionsClass = computed(() => ({
 const runPrimaryAction = () => {
   if (props.primaryAction === 'view_journey') emit('view-journey')
   else if (props.primaryAction === 'go') emit('go')
+  else if (props.primaryAction === 'enter') emit('enter')
+  else if (props.primaryAction === 'leave') emit('leave')
 }
 </script>
 
@@ -137,11 +153,41 @@ const runPrimaryAction = () => {
           <span>{{ t('浏览此地点不会改变当前行程', 'Viewing this place will not change the current journey') }}</span>
         </div>
 
+        <section
+          v-if="eventInvitation"
+          class="map-place-event-invitation"
+          data-testid="map-place-event-invitation"
+          aria-labelledby="map-place-event-invitation-title"
+        >
+          <span class="map-place-event-invitation-icon" aria-hidden="true">
+            <i class="fas fa-bolt"></i>
+          </span>
+          <div>
+            <h3 id="map-place-event-invitation-title">{{ eventInvitation.copy.title }}</h3>
+            <p>{{ eventInvitation.copy.summary }}</p>
+          </div>
+          <button
+            type="button"
+            :aria-label="t('展开事件', 'Expand event')"
+            data-testid="map-place-expand-event"
+            @click="emit('expand-event')"
+          >
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </section>
+
         <button
           v-if="primaryAction !== 'none'"
           type="button"
           class="map-place-focus-primary"
-          :data-testid="primaryAction === 'go' ? 'map-place-use-destination' : 'map-place-view-journey'"
+          :class="{ 'is-leave': primaryAction === 'leave' }"
+          :data-testid="primaryAction === 'go'
+            ? 'map-place-use-destination'
+            : primaryAction === 'view_journey'
+              ? 'map-place-view-journey'
+              : primaryAction === 'enter'
+                ? 'map-place-enter'
+                : 'map-place-leave'"
           @click="runPrimaryAction"
         >
           <i :class="primaryIcon" aria-hidden="true"></i>
@@ -329,6 +375,45 @@ const runPrimaryAction = () => {
 .map-place-focus-context.is-journey { border-color: #c7d7e2; background: #f0f5f8; color: #31576d; }
 .map-place-focus-journey-note { margin-top: 7px; background: #f7f9f7; color: #617068; font-weight: 700; }
 
+.map-place-event-invitation {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  border: 1px solid #e3c893;
+  border-radius: 7px;
+  background: #fff9eb;
+  padding: 9px;
+  color: #5b4318;
+}
+
+.map-place-event-invitation-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 7px;
+  background: #b45309;
+  color: #fff;
+  font-size: 12px;
+}
+
+.map-place-event-invitation h3,
+.map-place-event-invitation p { overflow-wrap: anywhere; }
+.map-place-event-invitation h3 { font-size: 10px; font-weight: 850; line-height: 1.35; }
+.map-place-event-invitation p { margin-top: 2px; color: #765f34; font-size: 9px; line-height: 1.45; }
+.map-place-event-invitation button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 7px;
+  background: #fff;
+  color: #8d4d09;
+}
+
 .map-place-focus-primary {
   display: grid;
   width: 100%;
@@ -347,6 +432,7 @@ const runPrimaryAction = () => {
 }
 
 .map-place-focus-primary i:last-child { font-size: 8px; text-align: right; }
+.map-place-focus-primary.is-leave { border: 1px solid #d7dfda; background: #fff; color: #40544a; }
 .map-place-focus-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
 .map-place-focus-actions.has-management { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .map-place-focus-actions button { display: flex; min-width: 0; min-height: 46px; align-items: center; justify-content: center; gap: 7px; border: 1px solid #dce3de; border-radius: 7px; background: #fff; color: #40544a; font-size: 10px; font-weight: 800; }

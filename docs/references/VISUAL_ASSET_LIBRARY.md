@@ -1,10 +1,10 @@
 # Visual Reference Asset Library
 
-Updated: 2026-06-10
+Updated: 2026-08-10
 
 This document records the external visual reference library used during SchatPhone visual work.
 
-The library is a reference source, not a package dependency and not a default runtime asset folder.
+The library is an optional machine-local reference source, not a package dependency, cross-machine handoff dependency, or default runtime asset folder.
 
 ## 1. Current Machine Path
 
@@ -14,9 +14,9 @@ Current machine:
 D:\github\美化包
 ```
 
-Other machines must not assume this path exists. Before starting visual work on another PC, ask the machine owner to confirm the local asset-library path.
+Other machines must not assume this path exists. Visual work and handoff must start from project docs and repository assets; confirming or recreating this external path is optional and must not block the round.
 
-If the library is missing, continue the workflow with project docs and project assets only, and record that the external library was unavailable for the round.
+If the library is missing, continue with project-local resources. Its absence is expected on another machine and is not a missing project artifact.
 
 ## 2. Current Inventory Snapshot
 
@@ -69,6 +69,14 @@ Before copying an asset:
 4. place it under a purpose-specific project folder such as `public/images/ui-assets/`;
 5. record why it was added in the relevant visual or product-decision document.
 
+Cross-machine handoff contract:
+
+- anything a later machine must inspect or consume must live in a Git-eligible repository path, including selected reference excerpts, generated candidates, prompts/requests, manifests, hashes, contact sheets, source/license notes, accepted masters, and runtime derivatives;
+- use repository-relative paths in task, acceptance, and handoff documents; a machine-local absolute path is never sufficient evidence;
+- keep traceable generation material under `output/imagegen/<feature>/<batch>/` and accepted runtime assets under the owning `public/images/ui-assets/` subtree;
+- a file in the working tree is not yet cross-machine evidence: mark it `PENDING_GIT_COMMIT` until it is committed and pushed through the normal project workflow;
+- do not copy the whole external library merely for portability; import only the reviewed subset and provenance required by the concrete task.
+
 The full external library should stay outside git unless a separate Git LFS-backed reference repository is explicitly created.
 
 ## 5. Project UI Asset Library
@@ -89,12 +97,12 @@ Current structure:
 
 Use stable ASCII filenames once an image is selected for product use. Code may reference these project-local public URLs through `/images/ui-assets/...` or Vite base-prefixed URLs.
 
-## 6. Cross-PC Setup Prompt
+## 6. Cross-PC Starting Point
 
 Use this prompt before visual work on a new machine:
 
 ```text
-Please confirm the local visual reference asset library path.
-Current-machine example: D:\github\美化包
-If the library is unavailable, should this round continue with project-local resources only?
+Start from the project docs and repository assets in this checkout.
+Do not depend on a prior machine's local visual reference library.
+If an external reference is required for later review, place the reviewed, redistributable evidence and provenance in a Git-eligible repository path and mark it PENDING_GIT_COMMIT until committed and pushed.
 ```

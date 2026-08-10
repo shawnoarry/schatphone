@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
+import {
+  SHOPPING_SERVICE_PRESETS,
+  SHOPPING_SOURCE_KEYS,
+} from '../src/lib/planned-module-registry'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useChatStore } from '../src/stores/chat'
 import { useWalletStore } from '../src/stores/wallet'
@@ -17,18 +20,72 @@ describe('shopping store', () => {
     setActivePinia(createPinia())
   })
 
-  test('seeds local products and supports category listing', () => {
+  test('seeds products for every allowed storefront category', () => {
     const store = useShoppingStore()
+    const expectedCounts = {
+      schat_mall: 6,
+      nova_digital: 6,
+      daily_fresh: 4,
+      style_cloud: 5,
+      nordhus_home: 5,
+      mellow_care: 5,
+    }
 
-    expect(store.productCount).toBeGreaterThan(0)
+    expect(store.productCount).toBe(31)
     expect(store.listProductsByCategory('digital').length).toBeGreaterThan(0)
     expect(store.listProductsByCategory('unknown').length).toBe(store.productCount)
-    expect(store.listProductsByService('schat_mall')).toHaveLength(4)
-    expect(store.listProductsByService('nova_digital')).toHaveLength(4)
-    expect(store.listProductsByService('daily_fresh')).toHaveLength(4)
-    expect(store.listProductsByService('style_cloud')).toHaveLength(4)
-    expect(store.listProductsByService('nordhus_home')).toHaveLength(4)
-    expect(store.listProductsByService('mellow_care')).toHaveLength(4)
+
+    SHOPPING_SERVICE_PRESETS.forEach((service) => {
+      const products = store.listProductsByService(service.key)
+      expect(products, service.key).toHaveLength(expectedCounts[service.key])
+      service.categoryKeys.forEach((categoryKey) => {
+        const visibleProducts = categoryKey === 'mall'
+          ? products
+          : products.filter((product) => product.category === categoryKey)
+        expect(visibleProducts.length, `${service.key}:${categoryKey}`).toBeGreaterThan(0)
+      })
+    })
+  })
+
+  test('adds missing category seeds during normal hydration without overwriting saved products', () => {
+    localStorage.setItem(
+      'schatphone:store:shopping',
+      JSON.stringify({
+        version: 1,
+        data: {
+          products: [
+            {
+              id: 'shopping_seed_mall_card',
+              title: 'Saved Gift Card Title',
+              category: 'mall',
+              serviceKey: 'schat_mall',
+              price: '88.00',
+              sourceModule: 'seed',
+            },
+          ],
+          favoriteProductIds: [],
+          cartItems: [],
+          orders: [],
+        },
+      }),
+    )
+
+    const store = useShoppingStore()
+
+    expect(store.productCount).toBe(31)
+    expect(store.findProductById('shopping_seed_mall_card')?.title).toBe('Saved Gift Card Title')
+    expect(store.findProductById('shopping_seed_mall_runner')).toMatchObject({
+      category: 'fashion',
+      serviceKey: 'schat_mall',
+    })
+    expect(store.findProductById('shopping_seed_nova_fountain_pen')).toMatchObject({
+      category: 'gifts',
+      serviceKey: 'nova_digital',
+    })
+    expect(store.findProductById('shopping_seed_care_travel_minis')).toMatchObject({
+      category: 'gifts',
+      serviceKey: 'mellow_care',
+    })
   })
 
   test('upserts products, toggles favorites, and rejects invalid records', () => {

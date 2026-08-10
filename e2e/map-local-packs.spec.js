@@ -112,8 +112,8 @@ test.describe('world-bound narrative maps', () => {
     await expect(searchPanel).toBeVisible()
     const searchCategories = page.getByTestId('map-search-categories')
     await expect(searchCategories).toBeVisible()
-    await expect(searchPanel.locator('.map-place-result')).toHaveCount(101)
-    await expect(page.getByTestId('map-local-search-scope')).toContainText('101/104')
+    await expect(searchPanel.locator('.map-place-result')).toHaveCount(106)
+    await expect(page.getByTestId('map-local-search-scope')).toContainText('106/109')
     await expect(searchPanel).not.toContainText(/CU BGF|GS25|7-Eleven/)
     const searchCategoryOrder = await searchCategories.locator('button').evaluateAll((buttons) =>
       buttons.slice(0, 8).map((button) => button.getAttribute('data-testid')),

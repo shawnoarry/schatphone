@@ -1046,7 +1046,7 @@ describe('Home folder entries', () => {
       wrapper
         .get('[data-testid="home-folder-entry-image-food_delivery_platform"]')
         .attributes('src'),
-    ).toContain('/images/ui-assets/apps/food-delivery/platform/brand/baemin-entry-icon-01.png')
+    ).toContain('/images/ui-assets/apps/food-delivery/platform/brand/baemin-entry-icon-02.webp')
     expect(
       wrapper.get('[data-testid="home-folder-entry-image-food_delivery_platform"]').classes(),
     ).toContain('is-full-bleed')
@@ -1070,9 +1070,10 @@ describe('Home folder entries', () => {
     expect(
       wrapper.get('[data-testid="home-folder-entry-shop_app_food_seed_jade_hearth"]').text(),
     ).toContain('玉炉雅席')
+    expect(wrapper.findAll('.home-folder-entry')).toHaveLength(9)
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_verdant_day"]').exists(),
-    ).toBe(true)
+    ).toBe(false)
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_harbor_roast"]').exists(),
     ).toBe(true)
@@ -1088,6 +1089,29 @@ describe('Home folder entries', () => {
         .get('[data-testid="home-folder-entry-image-shop_app_food_seed_harbor_roast"]')
         .classes(),
     ).toContain('is-full-bleed')
+
+    await wrapper.get('[data-testid="home-folder-page-next"]').trigger('click')
+    expect(wrapper.get('.home-folder-panel').attributes('data-folder-page')).toBe('2')
+    expect(wrapper.findAll('.home-folder-entry')).toHaveLength(6)
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_food_seed_verdant_day"]').exists(),
+    ).toBe(true)
+    for (const restaurantId of [
+      'food_seed_myeongdong_kyoja',
+      'food_seed_london_bagel_museum',
+      'food_seed_knotted',
+      'food_seed_kyochon_chicken',
+      'food_seed_eggdrop',
+    ]) {
+      const entry = wrapper.get(`[data-testid="home-folder-entry-shop_app_${restaurantId}"]`)
+      const image = wrapper.get(`[data-testid="home-folder-entry-image-shop_app_${restaurantId}"]`)
+      expect(entry.exists()).toBe(true)
+      expect(image.attributes('src')).toContain('/images/ui-assets/apps/food-delivery/')
+      expect(image.classes()).toContain('is-full-bleed')
+    }
+
+    await wrapper.get('[data-testid="home-folder-page-1"]').trigger('click')
+    expect(wrapper.get('.home-folder-panel').attributes('data-folder-page')).toBe('1')
 
     await wrapper
       .find('[data-testid="home-folder-entry-shop_app_food_seed_dash_grill"]')
@@ -1113,6 +1137,7 @@ describe('Home folder entries', () => {
     expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_jade_hearth')
 
     await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
+    await wrapper.get('[data-testid="home-folder-page-next"]').trigger('click')
     await wrapper
       .find('[data-testid="home-folder-entry-shop_app_food_seed_verdant_day"]')
       .trigger('click')
@@ -1124,6 +1149,70 @@ describe('Home folder entries', () => {
     expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_verdant_day')
     expect(router.currentRoute.value.query.from).toBe('home')
     expect(router.currentRoute.value.query.homePage).toBe('1')
+
+    await wrapper.find('[data-testid="home-folder-app_food_delivery"]').trigger('click')
+    await wrapper.get('[data-testid="home-folder-page-next"]').trigger('click')
+    await wrapper
+      .find('[data-testid="home-folder-entry-shop_app_food_seed_eggdrop"]')
+      .trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.restaurantId).toBe('food_seed_eggdrop')
+    expect(router.currentRoute.value.query.shopEntryId).toBe('shop_app_food_seed_eggdrop')
+    wrapper.unmount()
+  })
+
+  test('pages the 15-entry Food Delivery folder with controls, wheel, keyboard, and touch pointer', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+
+    const wrapper = mount(HomeView, {
+      props: { currentDate: 'Jan 1', currentTime: '09:00' },
+      global: { plugins: [router] },
+    })
+
+    await wrapper.findAll('.home-dot')[1].trigger('click')
+    await wrapper.get('[data-testid="home-folder-app_food_delivery"]').trigger('click')
+    const panel = wrapper.get('.home-folder-panel')
+    const overlay = wrapper.get('[data-testid="home-folder-overlay"]')
+
+    expect(panel.attributes('data-folder-page')).toBe('1')
+    expect(wrapper.findAll('.home-folder-entry')).toHaveLength(9)
+
+    await wrapper.get('[data-testid="home-folder-page-next"]').trigger('click')
+    expect(panel.attributes('data-folder-page')).toBe('2')
+    await wrapper.get('[data-testid="home-folder-page-previous"]').trigger('click')
+    expect(panel.attributes('data-folder-page')).toBe('1')
+
+    await overlay.trigger('wheel', { deltaX: 0, deltaY: 120 })
+    expect(panel.attributes('data-folder-page')).toBe('2')
+    await panel.trigger('keydown', { key: 'ArrowLeft' })
+    expect(panel.attributes('data-folder-page')).toBe('1')
+
+    await panel.trigger('pointerdown', {
+      pointerId: 7,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 260,
+      clientY: 300,
+    })
+    await panel.trigger('pointerup', {
+      pointerId: 7,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 80,
+      clientY: 304,
+    })
+    expect(panel.attributes('data-folder-page')).toBe('2')
+
+    await wrapper.get('[data-testid="home-folder-page-1"]').trigger('click')
+    expect(panel.attributes('data-folder-page')).toBe('1')
+    await panel.trigger('keydown', { key: 'End' })
+    expect(panel.attributes('data-folder-page')).toBe('2')
+    await panel.trigger('keydown', { key: 'Home' })
+    expect(panel.attributes('data-folder-page')).toBe('1')
+
     wrapper.unmount()
   })
 

@@ -303,6 +303,40 @@ describe('OpenFreeMap canvas', () => {
     wrapper.unmount()
   })
 
+  test('keeps ordinary place markers while rendering an event stack in its own marker layer', async () => {
+    const placePin = {
+      placeId: 'seoul-mbc-hq',
+      source: 'map_pack',
+      name: 'MBC Broadcast Center',
+      position: { kind: 'geo', lat: 37.5262, lng: 126.8963 },
+    }
+    const eventPin = {
+      placeId: 'map-event:real-seoul-v1:geo:test',
+      source: 'map_event',
+      name: '2 place events',
+      stackCount: 2,
+      eventSurfaceIds: ['event_surface_a', 'event_surface_b'],
+      position: { kind: 'geo', lat: 37.5262, lng: 126.89642 },
+    }
+    const wrapper = mountCanvas({ pins: [placePin, eventPin] })
+    await flushPromises()
+    await vi.waitFor(() => expect(maplibreMock.maps).toHaveLength(1))
+    maplibreMock.maps[0].emit('load')
+    await nextTick()
+
+    const activeMarkers = maplibreMock.markers.filter((marker) => !marker.removed)
+    expect(activeMarkers).toHaveLength(2)
+    const placeMarker = activeMarkers.find((marker) => !marker.element.classList.contains('is-event'))
+    const eventMarker = activeMarkers.find((marker) => marker.element.classList.contains('is-event'))
+    expect(placeMarker).toBeDefined()
+    expect(eventMarker).toBeDefined()
+    expect(eventMarker.element.querySelector('.openfreemap-marker-count')?.textContent).toBe('2')
+
+    eventMarker.element.click()
+    expect(wrapper.emitted('select-pin')?.at(-1)?.[0]).toEqual(eventPin)
+    wrapper.unmount()
+  })
+
   test('contains startup failures through the fallback event before reporting ready', async () => {
     const wrapper = mountCanvas()
     await flushPromises()

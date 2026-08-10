@@ -602,6 +602,72 @@ describe('wallet store', () => {
     expect(store.listTransactionsByCard('wallet_card_chase_usd')).toHaveLength(2)
   })
 
+  test('keeps card appearances bound to one card and persists the equipped supplementary card', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    const bnpCatalog = store.listCardAppearances('wallet_card_bnp_eur')
+    const mufgCatalog = store.listCardAppearances('wallet_card_mufg_jpy')
+    const kbCatalog = store.listCardAppearances('wallet_card_kb_krw')
+
+    expect(bnpCatalog).toHaveLength(3)
+    expect(mufgCatalog).toHaveLength(3)
+    expect(kbCatalog).toHaveLength(2)
+    expect(bnpCatalog.find((item) => item.id === 'bnp_paris_rain')).toMatchObject({
+      paymentCardId: 'wallet_card_bnp_eur',
+      assetStatus: 'ready',
+      isOwned: true,
+      isSelected: false,
+      isEquippable: true,
+    })
+    expect(bnpCatalog.find((item) => item.id === 'bnp_sealed_01')).toMatchObject({
+      artwork: '',
+      assetStatus: 'pending',
+      isOwned: false,
+      isEquippable: false,
+    })
+
+    expect(store.equipCardAppearance('wallet_card_mufg_jpy', 'bnp_paris_rain')).toBeNull()
+    expect(store.equipCardAppearance('wallet_card_bnp_eur', 'bnp_sealed_01')).toBeNull()
+    expect(store.equipCardAppearance('wallet_card_bnp_eur', 'bnp_paris_rain')).toMatchObject({
+      id: 'bnp_paris_rain',
+      isSelected: true,
+    })
+    expect(store.findSelectedCardAppearance('wallet_card_bnp_eur')?.id).toBe('bnp_paris_rain')
+    expect(
+      store.paymentCardSummaries.find((card) => card.id === 'wallet_card_bnp_eur'),
+    ).toMatchObject({
+      appearance: { id: 'bnp_paris_rain' },
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.findSelectedCardAppearance('wallet_card_bnp_eur')?.id).toBe('bnp_euro_standard')
+    expect(store.restoreFromBackup(snapshot)).toBe(true)
+    expect(store.findSelectedCardAppearance('wallet_card_bnp_eur')?.id).toBe('bnp_paris_rain')
+  })
+
+  test('falls back to a card standard appearance when restoring invalid legacy selections', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+
+    expect(
+      store.restoreFromBackup({
+        paymentCards: store.paymentCards,
+        ownedCardAppearanceIds: ['bnp_paris_rain'],
+        selectedAppearanceByCardId: {
+          wallet_card_bnp_eur: 'mufg_moonlit_makie',
+          wallet_card_mufg_jpy: 'mufg_sealed_01',
+        },
+        transactions: [],
+      }),
+    ).toBe(true)
+
+    expect(store.findSelectedCardAppearance('wallet_card_bnp_eur')?.id).toBe('bnp_euro_standard')
+    expect(store.findSelectedCardAppearance('wallet_card_mufg_jpy')?.id).toBe('mufg_jpy_standard')
+    expect(store.ownedCardAppearanceIds).toContain('icbc_peony_standard')
+  })
+
   test('quotes money through the current Wallet rate revision', () => {
     const store = useWalletStore()
     store.resetForTesting()

@@ -119,4 +119,19 @@ describe('persistence envelope helpers', () => {
       next: true,
     })
   })
+
+  test('passes the envelope timestamp to migrations for deterministic decoding', () => {
+    const payload = {
+      version: 1,
+      savedAt: 12345,
+      data: { old: true },
+    }
+    const migrate = ({ version, data, savedAt }) => ({ version, data, savedAt })
+
+    expect(decodePersistedEnvelope(payload, { version: 2, migrate })).toEqual({
+      version: 1,
+      data: { old: true },
+      savedAt: 12345,
+    })
+  })
 })

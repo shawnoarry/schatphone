@@ -37,9 +37,7 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(hasHorizontalOverflow).toBe(false)
 }
 
-test.use({ viewport: { width: 390, height: 844 } })
-
-test('mobile App Store mini apps hand off to Food Delivery and Shopping without deleting source records', async ({
+test('App Store mini apps hand off to Food Delivery and Shopping without deleting source records', async ({
   page,
 }) => {
   const pageErrors = []

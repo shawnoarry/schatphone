@@ -2,7 +2,7 @@
 
 Updated: 2026-08-10
 
-Status: `EVE-2A CONTRACT_AND_FIXTURES_FROZEN / EVE-2B DONE / EVE-2C USER_ACCEPTANCE_REQUIRED`
+Status: `EVE-2A CONTRACT_AND_FIXTURES_FROZEN / EVE-2B DONE / EVE-2C DONE 2026-08-10`
 
 ## 1. Purpose
 
@@ -266,15 +266,17 @@ Completed:
 
 ### EVE-2C: First Map/K-pop Vertical Slice
 
-Status: `EVE-2B COMPLETE / SEPARATE UI ACCEPTANCE REQUIRED`.
+Status: `DONE 2026-08-10 / FIRST MAP K-POP VERTICAL SLICE`.
 
-Expected implementation:
+Completed:
 
-- Map-owned current-position provenance and `MapPlaceSessionCheckpointV1` persistence;
-- one explicit Map host registration for the selected template;
-- zero-token invitation/no-event behavior, explicit `Enter`, event detail, and return context;
-- three allowlisted choices validated by Map against the current session, with `canonicalMutation: none`;
-- geographic and fictional/custom anchors, clustering/stacking, desktop/mobile text fit, layer coexistence, accessibility, overflow, and page-error evidence.
+1. upgraded `store:map` to version `3` with Map-owned `manual` versus internally authorized `journey_arrival` position evidence, stable destination-place lineage, durable `inside` / `left` place sessions, and V2 migration;
+2. registered exactly one Map Event Surface host and bounded it to the frozen `production-arrival-briefing` K-pop archetype;
+3. kept no-event and compact invitation checks local and zero-token, required explicit `Enter` and `Expand event`, and reused local or cached optional text after expansion;
+4. exposed exactly three allowlisted choices and required Map owner validation against the active session, revision, place, choice, and outcome; every accepted result reports `canonicalMutation: none`;
+5. derived event projections and pins from Event Runtime truth instead of persisting a second Map event record;
+6. supported geographic and fictional/custom anchors, fail-closed stale/off-pack instances, stable clustering/stacking, Map-layer coexistence, and return to the owning place;
+7. kept coordinates presentation-only: they cannot create a place, move the role, reveal knowledge, or create journey effects.
 
 EVE-3 World Hub Event Notebook, EVE-4 additional templates/hosts/value effects, EVE-5 Mini Scene/CG-rich presentation, Calendar/Agenda Journey implementation, and closed-page backend simulation remain separate later stages.
 
@@ -331,6 +333,8 @@ Closure result on 2026-08-10: the EVE-2B plus Simulation Store set passes 2 file
 
 EVE-2C user-facing flow additionally requires desktop and Pixel 5 Playwright for invitation/no-event, remote disabled `Enter`, manual/journey arrival, place session entry/leave, local-only, mocked AI success, provider fallback, reopen, stale source/anchor, missing asset, choice validation, clustering/stacking, layer coexistence, accessibility, page errors, and zero horizontal overflow.
 
+EVE-2C closure result on 2026-08-10: the focused Map/Event unit and integration set passes 8 files / 109 tests; the full Vitest suite passes 228 files / 1671 tests; full lint and production build pass, with only the existing large-chunk warning. The dedicated Playwright flow passes 6/6 across desktop Chromium and simulated Pixel 5 and records invitation, expanded detail, journey arrival, and off-pack no-event screenshots for both viewports. It covers manual and real-Journey arrival provenance, explicit entry/leave, local text, three-choice resolution/reopen/return, stale/off-pack fail-closed behavior, event stacking with ordinary Map markers, critical Axe checks, page errors, and zero horizontal overflow. This is simulated mobile evidence, not named physical-device proof. Governance and final diff checks are recorded with the implementation handoff.
+
 No live provider smoke is required for deterministic CI. A separately authorized smoke may verify the provider-neutral text Adapter without exposing credentials or making runtime network-dependent.
 
 ## 15. Cross-Machine Handoff
@@ -347,9 +351,9 @@ On another machine, start in this order:
 8. the three JSON files under `tests/fixtures/events/kpop-realism-v1/`;
 9. `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`;
 10. the EVE-2B runtime files and `tests/simulation-event-runtime-foundation.test.js`;
-11. Map package/contracts only when EVE-2C is separately accepted.
+11. the EVE-2C Map adapter, store, surface components, and focused tests when reviewing the completed first UI slice.
 
-Before editing, inspect `git status`, preserve unrelated worktree changes, and verify the current roadmap state. EVE-2B completion does not authorize EVE-2C Map/UI work. Accepted fixtures are immutable: add a new schema/fixture version when meaning changes.
+Before editing, inspect `git status`, preserve unrelated worktree changes, and verify the current roadmap state. EVE-2C completion does not authorize EVE-3, EVE-4, EVE-5, MJE-5, Mini Scene, CG, Calendar, or Agenda Journey work. Accepted fixtures are immutable: add a new schema/fixture version when meaning changes.
 
 ## 16. Resolved Decisions And Remaining Gates
 
@@ -363,8 +367,8 @@ EVE-2A resolved every former open decision:
 6. media: Map/world pack first, Gallery stable refs optional, text-only fallback, no current authored scene claim;
 7. value panel: none in the first slice; no downstream value mutation.
 
-The remaining gates are approvals, not missing EVE-2A/EVE-2B product meaning:
+The remaining gates are approvals beyond the completed EVE-2 slice:
 
-1. separate EVE-2C acceptance before Map provenance/session fields, host registration, `Enter`, cards, or event detail UI;
-2. separate content/Adapter acceptance before any event mutates a value owned by another Module;
-3. separate media acceptance before adding authored workplace backgrounds or future CG.
+1. separate EVE-3 acceptance before adding the World Hub Event Notebook;
+2. separate EVE-4 content/Adapter acceptance before adding another host, archetype, content pack, or mutation of a value owned by another Module;
+3. separate EVE-5 and media acceptance before adding Mini Scene presentation, authored workplace backgrounds, or future CG.

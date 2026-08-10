@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -154,18 +154,28 @@ const dragGhostY = ref(0)
 const dragGhostWidth = ref(72)
 const dragGhostHeight = ref(72)
 const openFolderTileId = ref('')
+const openFolderPageIndex = ref(0)
+const folderPanelRef = ref(null)
+const folderPointerId = ref(null)
+const folderPointerStartX = ref(0)
+const folderPointerStartY = ref(0)
 
 let longPressTimerId = null
 let lastDragPageSwitchAt = 0
 let layoutToastTimerId = null
 let droppedTileTimerId = null
 let widgetEntryLongPressTimerId = null
+let folderWheelLockedUntil = 0
+let folderEntryOpenBlockedUntil = 0
 
 const LONG_PRESS_MS = 600
 const LONG_PRESS_MOVE_THRESHOLD = 12
 const PAGE_SWIPE_THRESHOLD = 48
 const DRAG_EDGE_ZONE_PX = 36
 const DRAG_PAGE_SWITCH_COOLDOWN_MS = 260
+const FOLDER_PAGE_SIZE = 9
+const FOLDER_SWIPE_THRESHOLD = 42
+const FOLDER_WHEEL_COOLDOWN_MS = 240
 const LAYOUT_SLOT_COLUMNS = 4
 const LAYOUT_SLOT_ROWS = 6
 const LAYOUT_SLOT_GAP = 12
@@ -552,6 +562,13 @@ const openedFolderPreviewEntries = computed(() => {
     ? openedFolderMeta.value.childEntries
     : []
   return entries
+})
+const openedFolderPageCount = computed(() =>
+  Math.max(1, Math.ceil(openedFolderPreviewEntries.value.length / FOLDER_PAGE_SIZE)),
+)
+const openedFolderPageEntries = computed(() => {
+  const start = openFolderPageIndex.value * FOLDER_PAGE_SIZE
+  return openedFolderPreviewEntries.value.slice(start, start + FOLDER_PAGE_SIZE)
 })
 
 const isWorldHubInstalled = computed(() =>
@@ -978,7 +995,9 @@ const openAppById = (tileId) => {
 
   if (tile.kind === HOME_FOLDER_TILE_KIND) {
     maybeVibrate(8)
+    openFolderPageIndex.value = 0
     openFolderTileId.value = tileId
+    nextTick(() => folderPanelRef.value?.focus())
     return
   }
 
@@ -1051,11 +1070,99 @@ const openLeftPageUtilityEntry = (entry) => {
   router.push(buildRouteWithReturnSource(entry.route, 'home', { homePage: DEFAULT_HOME_RETURN_PAGE }))
 }
 
-const closeHomeFolder = () => {
+const resetFolderPointer = () => {
+  folderPointerId.value = null
+  folderPointerStartX.value = 0
+  folderPointerStartY.value = 0
+}
+
+const setOpenFolderPage = (pageIndex) => {
+  const nextPage = Math.max(0, Math.min(openedFolderPageCount.value - 1, Number(pageIndex) || 0))
+  if (nextPage === openFolderPageIndex.value) return false
+  openFolderPageIndex.value = nextPage
+  maybeVibrate(6)
+  return true
+}
+
+const turnOpenFolderPage = (direction) =>
+  setOpenFolderPage(openFolderPageIndex.value + (direction < 0 ? -1 : 1))
+
+const onFolderWheel = (event) => {
+  if (openedFolderPageCount.value <= 1 || Date.now() < folderWheelLockedUntil) return
+  const primaryDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
+  if (Math.abs(primaryDelta) < 8) return
+  if (turnOpenFolderPage(primaryDelta < 0 ? -1 : 1)) {
+    folderWheelLockedUntil = Date.now() + FOLDER_WHEEL_COOLDOWN_MS
+  }
+}
+
+const onFolderPointerDown = (event) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+  folderPointerId.value = event.pointerId
+  folderPointerStartX.value = event.clientX
+  folderPointerStartY.value = event.clientY
+}
+
+const onFolderPointerMove = (event) => {
+  if (folderPointerId.value !== event.pointerId) return
+  const deltaX = event.clientX - folderPointerStartX.value
+  const deltaY = event.clientY - folderPointerStartY.value
+  if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 10) return
+  if (!event.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+    event.currentTarget?.setPointerCapture?.(event.pointerId)
+  }
+}
+
+const onFolderPointerUp = (event) => {
+  if (folderPointerId.value !== event.pointerId) return
+  const deltaX = event.clientX - folderPointerStartX.value
+  const deltaY = event.clientY - folderPointerStartY.value
+  if (event.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+    event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+  resetFolderPointer()
+  if (Math.abs(deltaX) < FOLDER_SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) return
+  folderEntryOpenBlockedUntil = Date.now() + 260
+  turnOpenFolderPage(deltaX > 0 ? -1 : 1)
+}
+
+const onFolderPointerCancel = (event) => {
+  if (folderPointerId.value !== event.pointerId) return
+  if (event.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+    event.currentTarget.releasePointerCapture(event.pointerId)
+  }
+  resetFolderPointer()
+}
+
+const onFolderKeyDown = (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeHomeFolder()
+    return
+  }
+  if (!['ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes(event.key)) {
+    return
+  }
+  event.preventDefault()
+  if (event.key === 'Home') {
+    setOpenFolderPage(0)
+    return
+  }
+  if (event.key === 'End') {
+    setOpenFolderPage(openedFolderPageCount.value - 1)
+    return
+  }
+  turnOpenFolderPage(event.key === 'ArrowLeft' || event.key === 'PageUp' ? -1 : 1)
+}
+
+function closeHomeFolder() {
   openFolderTileId.value = ''
+  openFolderPageIndex.value = 0
+  resetFolderPointer()
 }
 
 const openFolderChildEntry = (entry) => {
+  if (Date.now() < folderEntryOpenBlockedUntil) return
   const target = resolveHomeFolderChildRoute(entry)
   if (!target) return
   maybeVibrate(8)
@@ -1066,6 +1173,20 @@ const openFolderChildEntry = (entry) => {
     query: buildHomeSourceQuery(homeReturnPageForCurrentView.value, normalizedTarget.query || {}),
   })
 }
+
+watch(
+  () => [openFolderTileId.value, openedFolderPreviewEntries.value.length],
+  ([folderTileId]) => {
+    if (!folderTileId) {
+      openFolderPageIndex.value = 0
+      return
+    }
+    openFolderPageIndex.value = Math.min(
+      openFolderPageIndex.value,
+      openedFolderPageCount.value - 1,
+    )
+  },
+)
 
 const clearLongPressTimer = () => {
   if (!longPressTimerId) return
@@ -2449,9 +2570,31 @@ onBeforeUnmount(() => {
       class="home-folder-overlay"
       data-testid="home-folder-overlay"
       data-no-layout-longpress
+      role="dialog"
+      aria-modal="true"
       @click.self="closeHomeFolder"
+      @touchstart.stop
+      @touchmove.stop.prevent
+      @touchend.stop
+      @touchcancel.stop
+      @mousedown.stop
+      @mousemove.stop
+      @mouseup.stop
+      @wheel.stop.prevent="onFolderWheel"
     >
-      <section class="home-folder-panel" :data-folder-presentation="openedFolderMeta.presentation.openAnimation">
+      <section
+        ref="folderPanelRef"
+        class="home-folder-panel"
+        tabindex="-1"
+        :aria-label="openedFolderMeta.label"
+        :data-folder-presentation="openedFolderMeta.presentation.openAnimation"
+        :data-folder-page="openFolderPageIndex + 1"
+        @keydown.stop="onFolderKeyDown"
+        @pointerdown="onFolderPointerDown"
+        @pointermove="onFolderPointerMove"
+        @pointerup="onFolderPointerUp"
+        @pointercancel="onFolderPointerCancel"
+      >
         <div class="home-folder-panel-head">
           <div>
             <p>{{ t('入口组', 'Entry Group') }}</p>
@@ -2461,33 +2604,74 @@ onBeforeUnmount(() => {
             <i class="fas fa-xmark"></i>
           </button>
         </div>
-        <div class="home-folder-entry-grid">
-          <button
-            v-for="entry in openedFolderPreviewEntries"
-            :key="entry.key"
-            class="home-folder-entry"
-            :data-testid="`home-folder-entry-${entry.key}`"
-            @click="openFolderChildEntry(entry)"
-          >
-            <span
-              class="home-folder-entry-icon"
-              :class="{ 'has-brand-image': entry.iconAsset }"
-              :style="iconStyle(entry.accent)"
+        <div class="home-folder-page-viewport">
+          <div :key="openFolderPageIndex" class="home-folder-entry-grid">
+            <button
+              v-for="entry in openedFolderPageEntries"
+              :key="entry.key"
+              class="home-folder-entry"
+              :data-testid="`home-folder-entry-${entry.key}`"
+              @click="openFolderChildEntry(entry)"
             >
-              <img
-                v-if="entry.iconAsset"
-                :src="entry.iconAsset"
-                :alt="entry.label"
-                class="home-folder-entry-image"
-                :class="{ 'is-full-bleed': entry.iconAssetFullBleed }"
-                :data-testid="`home-folder-entry-image-${entry.key}`"
-              />
-              <i v-else :class="entry.icon"></i>
-            </span>
-            <span class="home-folder-entry-label">{{ entry.label }}</span>
-            <span class="home-folder-entry-desc">{{ entry.desc }}</span>
+              <span
+                class="home-folder-entry-icon"
+                :class="{ 'has-brand-image': entry.iconAsset }"
+                :style="iconStyle(entry.accent)"
+              >
+                <img
+                  v-if="entry.iconAsset"
+                  :src="entry.iconAsset"
+                  :alt="entry.label"
+                  class="home-folder-entry-image"
+                  :class="{ 'is-full-bleed': entry.iconAssetFullBleed }"
+                  :data-testid="`home-folder-entry-image-${entry.key}`"
+                />
+                <i v-else :class="entry.icon"></i>
+              </span>
+              <span class="home-folder-entry-label">{{ entry.label }}</span>
+              <span class="home-folder-entry-desc">{{ entry.desc }}</span>
+            </button>
+          </div>
+        </div>
+        <div
+          v-if="openedFolderPageCount > 1"
+          class="home-folder-page-controls"
+          data-testid="home-folder-page-controls"
+        >
+          <button
+            class="home-folder-page-arrow"
+            data-testid="home-folder-page-previous"
+            :disabled="openFolderPageIndex === 0"
+            :aria-label="t('上一页', 'Previous page')"
+            @click="turnOpenFolderPage(-1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <div class="home-folder-page-dots" :aria-label="t('文件夹页面', 'Folder pages')">
+            <button
+              v-for="pageNumber in openedFolderPageCount"
+              :key="pageNumber"
+              class="home-folder-page-dot"
+              :class="{ 'is-active': pageNumber - 1 === openFolderPageIndex }"
+              :data-testid="`home-folder-page-${pageNumber}`"
+              :aria-label="t(`第 ${pageNumber} 页`, `Page ${pageNumber}`)"
+              :aria-current="pageNumber - 1 === openFolderPageIndex ? 'page' : undefined"
+              @click="setOpenFolderPage(pageNumber - 1)"
+            ></button>
+          </div>
+          <button
+            class="home-folder-page-arrow"
+            data-testid="home-folder-page-next"
+            :disabled="openFolderPageIndex === openedFolderPageCount - 1"
+            :aria-label="t('下一页', 'Next page')"
+            @click="turnOpenFolderPage(1)"
+          >
+            <i class="fas fa-chevron-right"></i>
           </button>
         </div>
+        <span class="home-folder-page-status sr-only" aria-live="polite">
+          {{ t(`第 ${openFolderPageIndex + 1} 页，共 ${openedFolderPageCount} 页`, `Page ${openFolderPageIndex + 1} of ${openedFolderPageCount}`) }}
+        </span>
       </section>
     </div>
   </div>
@@ -4277,6 +4461,8 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(34px) saturate(1.16);
   padding: 17px 16px 18px;
   animation: home-folder-panel-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  touch-action: none;
 }
 
 .home-folder-panel-head {
@@ -4325,20 +4511,24 @@ onBeforeUnmount(() => {
   background: var(--home-folder-entry-pressed-bg);
 }
 
+.home-folder-page-viewport {
+  min-height: 306px;
+  overflow: hidden;
+}
+
 .home-folder-entry-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px 8px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  max-height: 414px;
-  padding: 0 2px 4px 0;
-  scrollbar-width: thin;
+  grid-template-rows: repeat(3, 94px);
+  gap: 12px 8px;
+  min-height: 306px;
+  padding: 0 2px;
+  animation: home-folder-page-in 160ms ease-out;
 }
 
 .home-folder-entry {
   min-width: 0;
-  min-height: 88px;
+  min-height: 94px;
   border: 0;
   border-radius: 20px;
   background: transparent;
@@ -4406,12 +4596,102 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.home-folder-page-controls {
+  height: 34px;
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-folder-page-arrow,
+.home-folder-page-dot {
+  border: 0;
+  color: var(--home-folder-text);
+  cursor: pointer;
+}
+
+.home-folder-page-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--home-folder-close-bg);
+  font-size: 12px;
+}
+
+.home-folder-page-arrow:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.home-folder-page-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.home-folder-page-dot {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+}
+
+.home-folder-page-dot::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: var(--home-folder-text-muted);
+  opacity: 0.5;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+.home-folder-page-dot.is-active::after {
+  opacity: 1;
+  transform: scale(1.45);
+  background: var(--home-folder-text);
+}
+
+.home-folder-page-arrow:focus-visible,
+.home-folder-page-dot:focus-visible,
+.home-folder-entry:focus-visible,
+.home-folder-panel-head button:focus-visible {
+  outline: 2px solid var(--home-folder-text);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @keyframes home-folder-overlay-in {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes home-folder-page-in {
+  from {
+    opacity: 0.45;
+    transform: translateY(3px);
   }
 }
 

@@ -57,12 +57,22 @@ const createTextNode = (text, className = '') => {
 
 const createPinIcon = (pin, pending = false) => {
   const wrapper = document.createElement('span')
-  wrapper.className = `map-scene-marker${pending ? ' map-scene-marker-pending' : ''}`
+  wrapper.className = [
+    'map-scene-marker',
+    pending ? 'map-scene-marker-pending' : '',
+    pin?.source === 'map_event' ? 'map-scene-marker-event' : '',
+  ].filter(Boolean).join(' ')
   if (pin?.tone) wrapper.style.setProperty('--map-marker-tone', pin.tone)
   const icon = document.createElement('i')
   icon.className = pending ? 'fas fa-location-crosshairs' : pin?.icon || 'fas fa-location-dot'
   icon.setAttribute('aria-hidden', 'true')
   wrapper.append(icon)
+  if (!pending && Number(pin?.stackCount) > 1) {
+    const badge = document.createElement('span')
+    badge.className = 'map-scene-marker-count'
+    badge.textContent = String(pin.stackCount)
+    wrapper.append(badge)
+  }
   return L.divIcon({
     className: 'map-scene-marker-shell',
     html: wrapper,
@@ -133,6 +143,7 @@ const renderMarkers = () => {
       interactive: !props.allowPinPlacement,
       keyboard: !props.allowPinPlacement,
       riseOnHover: true,
+      zIndexOffset: pin?.source === 'map_event' ? 600 : 0,
       title: t(pin.nameZh || pin.labelZh || pin.name, pin.nameEn || pin.labelEn || pin.name),
     })
     const label = t(pin.nameZh || pin.labelZh || pin.name, pin.nameEn || pin.labelEn || pin.name)
@@ -532,6 +543,31 @@ onBeforeUnmount(() => {
 :deep(.map-scene-marker-pending) {
   --map-marker-tone: #eab308;
   animation: map-pin-pulse 1.4s ease-in-out infinite;
+}
+
+:deep(.map-scene-marker-event) {
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.22), 0 10px 24px rgba(15, 23, 42, 0.3);
+  transform: none;
+}
+
+:deep(.map-scene-marker-event i) { transform: none; }
+:deep(.map-scene-marker-count) {
+  position: absolute;
+  right: -7px;
+  top: -7px;
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 9px;
+  background: #17211d;
+  padding: 0 4px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+  transform: none;
 }
 
 :deep(.map-scene-faction-label) {

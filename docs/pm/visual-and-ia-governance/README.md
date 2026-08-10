@@ -82,6 +82,7 @@ The complete target is a believable phone system rather than one universal skin:
 
 Also read when needed:
 
+- `WIDGETS_VISUAL_OPTIMIZATION_HANDOFF.md` for focused Widget Center visual continuation, release acceptance, and conditional follow-ups
 - `docs/design/DESIGN.md`
 - `docs/overview/APPEARANCE_REBUILD_SCOPE.md`
 - `docs/overview/VISUAL_STYLE_DIRECTION_BRIEF.md`

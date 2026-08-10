@@ -42,6 +42,11 @@ export const FOOD_SHOP_DEFAULT_TEMPLATE_BY_RESTAURANT_ID = Object.freeze({
   food_seed_harbor_roast: 'harbor_roast_chain',
   food_seed_sugar_lane: 'convenience_shelf',
   food_seed_river_noodles: 'street_food_stall',
+  food_seed_myeongdong_kyoja: 'standard',
+  food_seed_london_bagel_museum: 'standard',
+  food_seed_knotted: 'standard',
+  food_seed_kyochon_chicken: 'standard',
+  food_seed_eggdrop: 'standard',
 })
 
 const FOOD_SHOP_DEFAULT_IDENTITY_BY_RESTAURANT_ID = Object.freeze({

@@ -325,3 +325,54 @@ test('Wallet provides a persistent multi-bank card pack and account-scoped money
   expect(pageErrors).toEqual([])
   expect(consoleErrors).toEqual([])
 })
+
+test('Wallet equips one card-bound appearance and keeps sealed slots intentional', async ({
+  page,
+}, testInfo) => {
+  const pageErrors = []
+  const consoleErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/wallet?homePage=0&from=home')
+
+  const bnpCard = page.getByTestId('wallet-payment-card-wallet_card_bnp_eur')
+  await bnpCard.scrollIntoViewIfNeeded()
+  await bnpCard.click({ position: { x: 24, y: 20 } })
+  await page.getByTestId('wallet-open-active-card').click()
+  await page.getByTestId('wallet-open-card-appearances').click()
+
+  const collection = page.getByTestId('wallet-card-appearance-collection')
+  await expect(collection).toBeVisible()
+  await expect(page.locator('[data-testid^="wallet-card-appearance-"]')).toHaveCount(4)
+  await expect(page.getByTestId('wallet-card-appearance-bnp_sealed_01')).toContainText(
+    /尚未揭晓|Not revealed/,
+  )
+  await expect(page.getByTestId('wallet-equip-card-appearance-bnp_sealed_01')).toHaveCount(0)
+  await expectNoPageOverflow(page)
+
+  await page.getByTestId('wallet-equip-card-appearance-bnp_paris_rain').click()
+  await expect(page.getByRole('status')).toContainText(/卡面已更换|Card appearance updated/)
+  await expect(
+    page.getByTestId('wallet-payment-card-wallet_card_bnp_eur-appearance-current'),
+  ).toHaveAttribute('style', /bnp-paris-rain\.webp/)
+
+  await testInfo.attach(`wallet-card-appearance-collection-${testInfo.project.name}`, {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  })
+
+  await page.reload()
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/wallet?homePage=0&from=home')
+  await expect(page.getByTestId('wallet-payment-card-wallet_card_bnp_eur')).toHaveAttribute(
+    'style',
+    /bnp-paris-rain\.webp/,
+  )
+  await expectNoPageOverflow(page)
+  expect(pageErrors).toEqual([])
+  expect(consoleErrors).toEqual([])
+})

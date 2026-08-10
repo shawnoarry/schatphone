@@ -23,6 +23,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  testIdSuffix: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['select'])
@@ -34,8 +38,31 @@ const institutionName = computed(() =>
 
 const cardName = computed(() => t(props.card.nameZh || '', props.card.nameEn || ''))
 
+const activeAppearance = computed(() => props.card.appearance || null)
+
+const appearanceName = computed(() =>
+  activeAppearance.value
+    ? t(activeAppearance.value.titleZh || '', activeAppearance.value.titleEn || '')
+    : '',
+)
+
+const appearanceStyle = computed(() => {
+  const item = activeAppearance.value
+  if (!item?.artwork) return undefined
+  return {
+    '--card-artwork': `url("${item.artwork}")`,
+    '--card-artwork-overlay': item.overlay,
+    '--card-ink': item.ink,
+    '--card-muted': item.mutedInk,
+    '--card-chip': item.chip,
+    '--card-accent': item.accent,
+  }
+})
+
 const accessibleName = computed(() =>
-  [institutionName.value, cardName.value, props.amountLabel].filter(Boolean).join(' '),
+  [institutionName.value, cardName.value, appearanceName.value, props.amountLabel]
+    .filter(Boolean)
+    .join(' '),
 )
 
 const selectCard = () => {
@@ -50,11 +77,14 @@ const selectCard = () => {
     class="wallet-bank-card"
     :class="[
       `theme-${card.theme}`,
+      activeAppearance?.material ? `material-${activeAppearance.material}` : '',
       { 'is-selected': selected, 'is-frozen': card.status === 'frozen' },
+      { 'has-artwork': activeAppearance?.artwork },
     ]"
+    :style="appearanceStyle"
     :aria-label="interactive ? accessibleName : undefined"
     :aria-pressed="interactive ? selected : undefined"
-    :data-testid="`wallet-payment-card-${card.id}`"
+    :data-testid="`wallet-payment-card-${card.id}${testIdSuffix ? `-${testIdSuffix}` : ''}`"
     @click="selectCard"
   >
     <span class="wallet-bank-card__rail" aria-hidden="true"></span>
@@ -95,6 +125,7 @@ const selectCard = () => {
   --card-ink: #ffffff;
   --card-muted: rgba(255, 255, 255, 0.72);
   --card-accent: #f3c35a;
+  --card-chip: #e8c46c;
   position: relative;
   display: flex;
   width: 100%;
@@ -107,7 +138,10 @@ const selectCard = () => {
   color: var(--card-ink);
   font: inherit;
   text-align: left;
-  background: var(--card-surface);
+  background-color: var(--card-surface);
+  background-image: none;
+  background-position: center;
+  background-size: cover;
   box-shadow:
     0 10px 24px rgba(22, 28, 36, 0.18),
     0 1px 1px rgba(255, 255, 255, 0.14) inset;
@@ -116,6 +150,35 @@ const selectCard = () => {
     transform 180ms ease,
     box-shadow 180ms ease,
     opacity 180ms ease;
+}
+
+.wallet-bank-card.has-artwork {
+  background-image: var(--card-artwork-overlay), var(--card-artwork);
+}
+
+.wallet-bank-card.has-artwork::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0) 28%,
+    rgba(255, 255, 255, 0.08) 68%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  content: '';
+  opacity: 0.55;
+}
+
+.wallet-bank-card.material-matte::after,
+.wallet-bank-card.material-oil::after {
+  opacity: 0.24;
+}
+
+.wallet-bank-card.material-lacquer::after {
+  opacity: 0.72;
 }
 
 button.wallet-bank-card {
@@ -147,6 +210,7 @@ button.wallet-bank-card:hover {
 
 .wallet-bank-card__rail {
   position: absolute;
+  z-index: 1;
   inset: 0 auto 0 0;
   width: 5px;
   background: var(--card-accent);
@@ -177,6 +241,8 @@ button.wallet-bank-card:hover {
   border: 1px solid color-mix(in srgb, var(--card-ink) 32%, transparent);
   border-radius: 4px;
   padding: 0 0.35rem;
+  background: color-mix(in srgb, var(--card-surface) 18%, transparent);
+  backdrop-filter: blur(5px);
   font-size: 0.65rem;
   font-weight: 900;
   line-height: 1;
@@ -200,6 +266,8 @@ button.wallet-bank-card:hover {
   font-size: 0.62rem;
   font-weight: 700;
   color: var(--card-muted);
+  background: color-mix(in srgb, var(--card-surface) 14%, transparent);
+  backdrop-filter: blur(5px);
 }
 
 .wallet-bank-card__middle {
@@ -218,7 +286,7 @@ button.wallet-bank-card:hover {
   overflow: hidden;
   border: 1px solid rgba(83, 58, 13, 0.24);
   border-radius: 5px;
-  background: #e8c46c;
+  background: var(--card-chip);
 }
 
 .wallet-bank-card__chip i {

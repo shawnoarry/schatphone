@@ -162,6 +162,42 @@ const expectNoOverflow = async (page) => {
   expect(overflow.settings).toBeLessThanOrEqual(1)
 }
 
+const handleReloadPersistenceNotice = async (page) => {
+  const recovery = page.getByTestId('persistence-recovery-sheet')
+  if (!(await recovery.isVisible())) return
+
+  const status = await page.evaluate(async () => {
+    const { getPersistenceRuntimeStatus } = await import(
+      '/schatphone/src/lib/persistence-runtime-status.js'
+    )
+    return getPersistenceRuntimeStatus()
+  })
+  if (status.primaryCause === 'active_writer') {
+    await page.getByTestId('persistence-recovery-retry').click()
+    await expect(recovery).toBeHidden()
+    return
+  }
+
+  expect(status, `Unexpected persistence status: ${JSON.stringify(status)}`).toMatchObject({
+    primaryCode: 'reconciliation_required',
+    affectedKeys: ['store:map'],
+  })
+  await page.getByTestId('persistence-recovery-collapse').click()
+  await expect(recovery).toBeHidden()
+}
+
+const waitForOwnerPersistence = async (page, ownerKeys) => {
+  await expect
+    .poll(async () =>
+      page.evaluate(async (keys) => {
+        const { readPersistedRawLayers } = await import('/schatphone/src/lib/persistence.js')
+        const layers = await Promise.all(keys.map((key) => readPersistedRawLayers(key)))
+        return layers.every((owner) => owner.localRaw === owner.mirrorRaw)
+      }, ownerKeys),
+    )
+    .toBe(true)
+}
+
 test('Music completes Home, playback, source settings, and shell continuity flows', async ({
   page,
 }, testInfo) => {
@@ -169,6 +205,13 @@ test('Music completes Home, playback, source settings, and shell continuity flow
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await seedMusicState(page)
+  await page.route('https://music.example.test/search**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { tracks: [] } }),
+    })
+  })
   await unlockToHome(page)
 
   await page.getByTestId('home-page-dot-1').click()
@@ -228,6 +271,28 @@ test('Music completes Home, playback, source settings, and shell continuity flow
     contentType: 'image/png',
   })
 
+  await page.getByTestId('music-tab-browse').click()
+  await expect(page.getByTestId('music-tab-browse')).toHaveClass(/is-active/)
+  await expect(page.locator('.music-catalog-hero')).toContainText('THE RECORD SHELF')
+  await expect(page.locator('.music-album-grid .music-album-item')).toHaveCount(7)
+  await expectNoOverflow(page)
+  await testInfo.attach(`music-albums-${testInfo.project.name}.png`, {
+    body: await page.screenshot({ animations: 'disabled' }),
+    contentType: 'image/png',
+  })
+
+  await page.getByTestId('music-tab-library').click()
+  await expect(page.getByTestId('music-tab-library')).toHaveClass(/is-active/)
+  await expect(page.locator('.music-library-hero')).toContainText('YOUR MUSIC')
+  await expect(page.locator('.music-library-glance button')).toHaveCount(3)
+  await expect(page.locator('.music-segmented')).toBeVisible()
+  await expectNoOverflow(page)
+  await testInfo.attach(`music-library-${testInfo.project.name}.png`, {
+    body: await page.screenshot({ animations: 'disabled' }),
+    contentType: 'image/png',
+  })
+
+  await page.getByTestId('music-tab-listen').click()
   await page.getByTestId('music-tab-search').click()
   await page.getByTestId('music-search-input').fill('Silent Fixture')
   await page.getByTestId('music-search-input').press('Enter')
@@ -618,10 +683,12 @@ test('Music searches, resolves, reads lyrics, and imports playlists through ChKS
   await expect(page.locator('body')).not.toContainText('chksz_e2e_device_key')
   await expectNoOverflow(page)
 
+  await waitForOwnerPersistence(page, ['store:system', 'store:map'])
   await page.reload()
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/music')
-  await page.getByTestId('music-tab-library').click()
+  await handleReloadPersistenceNotice(page)
+  await page.getByTestId('music-tab-library').press('Enter')
   await page.getByRole('button', { name: 'Favorites', exact: true }).click()
   await expect(page.locator('.music-track-list.is-library-list')).toContainText('API Song')
   expect(requestUrls).toHaveLength(4)

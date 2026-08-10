@@ -103,6 +103,7 @@ const createMarkerElement = (pin, pending = false) => {
   button.className = [
     'openfreemap-marker-button',
     pin?.source === 'user' ? 'is-user' : '',
+    pin?.source === 'map_event' ? 'is-event' : '',
     pending ? 'is-pending' : '',
   ].filter(Boolean).join(' ')
   const labelText = pending ? t('新图钉位置', 'New pin position') : pinLabel(pin)
@@ -116,6 +117,12 @@ const createMarkerElement = (pin, pending = false) => {
   icon.className = pending ? 'fas fa-location-crosshairs' : pin?.icon || 'fas fa-location-dot'
   icon.setAttribute('aria-hidden', 'true')
   marker.append(icon)
+  if (!pending && Number(pin?.stackCount) > 1) {
+    const badge = document.createElement('span')
+    badge.className = 'openfreemap-marker-count'
+    badge.textContent = String(pin.stackCount)
+    marker.append(badge)
+  }
 
   const label = document.createElement('span')
   label.className = 'openfreemap-marker-label'
@@ -472,6 +479,30 @@ onBeforeUnmount(() => {
 }
 
 :global(.openfreemap-marker-shape i) { font-size: 11px; transform: rotate(45deg); }
+
+:global(.openfreemap-marker-button.is-event) { z-index: 3; }
+:global(.openfreemap-marker-button.is-event .openfreemap-marker-shape) {
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.22), 0 7px 18px rgba(17, 35, 27, 0.3);
+  transform: none;
+}
+:global(.openfreemap-marker-button.is-event .openfreemap-marker-shape i) { transform: none; }
+:global(.openfreemap-marker-count) {
+  position: absolute;
+  right: -7px;
+  top: -7px;
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 9px;
+  background: #17211d;
+  padding: 0 4px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+}
 
 :global(.openfreemap-marker-label) {
   overflow: hidden;

@@ -64,6 +64,8 @@ Business modules should provide child-entry metadata such as:
 
 Home owns the rendering and interaction shell for the folder itself.
 
+The accepted Food Delivery proof now renders 15 clean-seed peer entries as fixed `3 x 3` pages of `9 + 6`. The folder resets or clamps its page when opened, closed, or when installed entries change; arrows and dots remain explicit controls, and touch, pointer-drag, wheel/trackpad, and keyboard paging are contained so the formal Home page does not swipe underneath. The collapsed tile remains a clipped four-icon preview with visible gutters. These are reusable Home-shell behaviors, not Food Delivery business logic and not a fixed upper bound for future user-created entries.
+
 ### 4.3 Appearance Scope
 
 Appearance may later configure:
@@ -90,7 +92,7 @@ The delivered built-in child identities are:
 - marketplaces: Coupang, 29CM, and Kurly;
 - specialty stores: WORKSOUT, IKEA Korea, and OLIVE YOUNG.
 
-Each identity has a stable service ID, a distinct App route and storefront template, an existing Seoul setting anchor, an official source URL used for research provenance, and a CLI-redrawn raster App icon based on the brand's current Korean App Store identity. Shopping supplies 24 stable bilingual fictional seed products, four per identity. The six Apps may share one Shopping-owned store, schema, quote service, persistence envelope, and downstream handoff implementation, but favorites, carts, checkout, and visible order history are scoped by `serviceKey`. Shared implementation must not surface as a unified Shopping hub or cross-App commerce experience.
+Each identity has a stable service ID, a distinct App route and storefront template, an existing Seoul setting anchor, an official source URL used for research provenance, and a CLI-redrawn raster App icon based on the brand's current Korean App Store identity. Shopping supplies 31 stable bilingual fictional seed products: the original four per identity plus seven additive products that fill every allowed storefront category. `mall` remains an aggregate all-products entry where applicable rather than a new cross-store taxonomy. The six Apps may share one Shopping-owned store, schema, quote service, persistence envelope, and downstream handoff implementation, but favorites, carts, checkout, and visible order history are scoped by `serviceKey`. Shared implementation must not surface as a unified Shopping hub or cross-App commerce experience.
 
 ### 5.1 Seoul Map And Retail Research Mapping
 

@@ -22,7 +22,51 @@ const normalizeList = (value = []) => (Array.isArray(value) ? value : [])
 const uiAssetUrl = (path = '') =>
   `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
 
+const FOOD_SHOP_FOLDER_ENTRY_ORDER = Object.freeze([
+  'food_seed_moon_bistro',
+  'food_seed_river_noodles',
+  'food_seed_daylight_cafe',
+  'food_seed_harbor_roast',
+  'food_seed_sugar_lane',
+  'food_seed_peach_cloud',
+  'food_seed_dash_grill',
+  'food_seed_jade_hearth',
+  'food_seed_verdant_day',
+  'food_seed_myeongdong_kyoja',
+  'food_seed_london_bagel_museum',
+  'food_seed_knotted',
+  'food_seed_kyochon_chicken',
+  'food_seed_eggdrop',
+])
+const FOOD_SHOP_FOLDER_ENTRY_RANK = new Map(
+  FOOD_SHOP_FOLDER_ENTRY_ORDER.map((restaurantId, index) => [restaurantId, index]),
+)
+
 const FOOD_SHOP_FOLDER_ENTRY_DEFAULTS = Object.freeze({
+  food_seed_moon_bistro: Object.freeze({
+    icon: 'fas fa-moon',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/moon-bistro/brand/moon-bistro-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'dark',
+  }),
+  food_seed_river_noodles: Object.freeze({
+    icon: 'fas fa-bowl-food',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/river-noodles/brand/river-noodles-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'cool',
+  }),
+  food_seed_daylight_cafe: Object.freeze({
+    icon: 'fas fa-mug-saucer',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/daylight-cafe/brand/daylight-cafe-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'light',
+  }),
   food_seed_harbor_roast: Object.freeze({
     icon: 'fas fa-mug-hot',
     iconAsset: uiAssetUrl('apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png'),
@@ -34,7 +78,74 @@ const FOOD_SHOP_FOLDER_ENTRY_DEFAULTS = Object.freeze({
     iconAsset: uiAssetUrl('apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg'),
     accent: 'rose',
   }),
-  food_seed_verdant_day: Object.freeze({ icon: 'fas fa-leaf', accent: 'light' }),
+  food_seed_sugar_lane: Object.freeze({
+    icon: 'fas fa-candy-cane',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/sugar-lane/brand/sugar-lane-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'rose',
+  }),
+  food_seed_dash_grill: Object.freeze({
+    icon: 'fas fa-burger',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/dash-grill/brand/dash-grill-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'warm',
+  }),
+  food_seed_jade_hearth: Object.freeze({
+    icon: 'fas fa-utensils',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/jade-hearth/brand/jade-hearth-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'light',
+  }),
+  food_seed_verdant_day: Object.freeze({
+    icon: 'fas fa-leaf',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/verdant-day/brand/verdant-day-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'light',
+  }),
+  food_seed_myeongdong_kyoja: Object.freeze({
+    icon: 'fas fa-bowl-food',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/myeongdong-kyoja/brand/myeongdong-kyoja-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'warm',
+  }),
+  food_seed_london_bagel_museum: Object.freeze({
+    icon: 'fas fa-bread-slice',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/london-bagel-museum/brand/london-bagel-museum-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'dark',
+  }),
+  food_seed_knotted: Object.freeze({
+    icon: 'fas fa-cookie-bite',
+    iconAsset: uiAssetUrl('apps/food-delivery/knotted/brand/knotted-app-icon-01.webp'),
+    iconAssetFullBleed: true,
+    accent: 'rose',
+  }),
+  food_seed_kyochon_chicken: Object.freeze({
+    icon: 'fas fa-drumstick-bite',
+    iconAsset: uiAssetUrl(
+      'apps/food-delivery/kyochon-chicken/brand/kyochon-chicken-app-icon-01.webp',
+    ),
+    iconAssetFullBleed: true,
+    accent: 'dark',
+  }),
+  food_seed_eggdrop: Object.freeze({
+    icon: 'fas fa-egg',
+    iconAsset: uiAssetUrl('apps/food-delivery/eggdrop/brand/eggdrop-app-icon-01.webp'),
+    iconAssetFullBleed: true,
+    accent: 'light',
+  }),
 })
 
 const formatFoodShopDescription = (restaurant = {}) => {
@@ -61,7 +172,7 @@ export const buildFoodDeliveryFolderEntries = ({
     descZh: '搜索、附近、订单和所有店铺发现。',
     descEn: 'Search, nearby shops, orders, and broad discovery.',
     icon: 'fas fa-utensils',
-    iconAsset: uiAssetUrl('apps/food-delivery/platform/brand/baemin-entry-icon-01.png'),
+    iconAsset: uiAssetUrl('apps/food-delivery/platform/brand/baemin-entry-icon-02.webp'),
     iconAssetFullBleed: true,
     accent: 'cool',
     route: FOOD_DELIVERY_ROUTE,
@@ -71,6 +182,16 @@ export const buildFoodDeliveryFolderEntries = ({
   }
 
   const shopEntries = normalizeList(restaurants)
+    .map((restaurant, sourceIndex) => ({ restaurant, sourceIndex }))
+    .sort((left, right) => {
+      const leftRank = FOOD_SHOP_FOLDER_ENTRY_RANK.get(left.restaurant?.id)
+      const rightRank = FOOD_SHOP_FOLDER_ENTRY_RANK.get(right.restaurant?.id)
+      if (leftRank !== undefined || rightRank !== undefined) {
+        return (leftRank ?? Number.MAX_SAFE_INTEGER) - (rightRank ?? Number.MAX_SAFE_INTEGER)
+      }
+      return left.sourceIndex - right.sourceIndex
+    })
+    .map(({ restaurant }) => restaurant)
     .map((restaurant) => {
       const entryId = buildFoodDeliveryShopEntryId(restaurant?.id || '')
       if (!entryId || !isMiniAppEntryInstalled(normalizedPlacements, entryId)) return null

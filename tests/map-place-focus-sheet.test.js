@@ -94,4 +94,37 @@ describe('MapPlaceFocusSheet', () => {
 
     expect(playerPlace.emitted('manage')).toHaveLength(1)
   })
+
+  test('uses explicit Enter and Leave commands for onsite place sessions', async () => {
+    const onsite = createWrapper({ primaryAction: 'enter', contextLabel: 'Current position' })
+    expect(onsite.get('[data-testid="map-place-enter"]').text()).toContain('Enter')
+    await onsite.get('[data-testid="map-place-enter"]').trigger('click')
+    expect(onsite.emitted('enter')).toHaveLength(1)
+
+    const inside = createWrapper({ primaryAction: 'leave', contextLabel: 'Inside this place' })
+    expect(inside.get('[data-testid="map-place-leave"]').text()).toContain('Leave')
+    await inside.get('[data-testid="map-place-leave"]').trigger('click')
+    expect(inside.emitted('leave')).toHaveLength(1)
+  })
+
+  test('shows no permanent event placeholder and expands only an eligible invitation', async () => {
+    const noEvent = createWrapper({ primaryAction: 'enter' })
+    expect(noEvent.find('[data-testid="map-place-event-invitation"]').exists()).toBe(false)
+    expect(noEvent.text()).not.toContain('Expand event')
+
+    const invited = createWrapper({
+      primaryAction: 'leave',
+      eventInvitation: {
+        copy: {
+          title: 'Production arrival briefing',
+          summary: 'A coordinator left a short call sheet at the access desk.',
+        },
+      },
+    })
+    expect(invited.get('[data-testid="map-place-event-invitation"]').text()).toContain(
+      'Production arrival briefing',
+    )
+    await invited.get('[data-testid="map-place-expand-event"]').trigger('click')
+    expect(invited.emitted('expand-event')).toHaveLength(1)
+  })
 })

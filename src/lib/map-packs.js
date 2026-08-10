@@ -1,6 +1,7 @@
 import { SEOUL_ADDITIONAL_PLACES } from './seoul-map-places'
 import { SEOUL_EVERYDAY_PLACES } from './seoul-map-everyday-places'
 import { SEOUL_COMMUNITY_PLACES } from './seoul-map-community-places'
+import { SEOUL_FOOD_DELIVERY_PLACES } from './seoul-map-food-places'
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0))
 const localAssetUrl = (relativePath) =>
@@ -127,6 +128,7 @@ const MAP_PACKS = Object.freeze([
       ...SEOUL_ADDITIONAL_PLACES,
       ...SEOUL_EVERYDAY_PLACES,
       ...SEOUL_COMMUNITY_PLACES,
+      ...SEOUL_FOOD_DELIVERY_PLACES,
     ]),
     factions: Object.freeze([]),
   }),

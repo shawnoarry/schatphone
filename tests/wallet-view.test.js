@@ -599,6 +599,48 @@ describe('WalletView', () => {
     wrapper.unmount()
   })
 
+  test('opens one card exclusive appearance catalog and equips an owned design', async () => {
+    const walletStore = useWalletStore()
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-payment-card-wallet_card_bnp_eur"]').trigger('click')
+    await wrapper.get('[data-testid="wallet-open-active-card"]').trigger('click')
+
+    const appearanceEntry = wrapper.get('[data-testid="wallet-open-card-appearances"]')
+    expect(appearanceEntry.text()).toContain('2 / 3')
+    expect(appearanceEntry.text()).toContain('欧元标准卡')
+
+    await appearanceEntry.trigger('click')
+    expect(wrapper.get('[data-testid="wallet-card-appearance-collection"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-"]')).toHaveLength(4)
+    expect(wrapper.get('[data-testid="wallet-card-appearance-bnp_sealed_01"]').text()).toContain(
+      '尚未揭晓',
+    )
+    expect(
+      wrapper.find('[data-testid="wallet-equip-card-appearance-bnp_sealed_01"]').exists(),
+    ).toBe(false)
+
+    await wrapper
+      .get('[data-testid="wallet-equip-card-appearance-bnp_paris_rain"]')
+      .trigger('click')
+    await flushUi()
+
+    expect(walletStore.findSelectedCardAppearance('wallet_card_bnp_eur')?.id).toBe('bnp_paris_rain')
+    expect(wrapper.get('[data-testid="wallet-card-appearance-collection"]').text()).toContain(
+      '巴黎雨夜',
+    )
+    expect(
+      wrapper
+        .get('[data-testid="wallet-payment-card-wallet_card_bnp_eur-appearance-current"]')
+        .attributes('style'),
+    ).toContain('bnp-paris-rain.webp')
+
+    await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-open-card-appearances"]').text()).toContain('巴黎雨夜')
+
+    wrapper.unmount()
+  })
+
   test('shows a visible verified-payee entry and an honest empty management state', async () => {
     const { wrapper } = await mountWalletView()
 

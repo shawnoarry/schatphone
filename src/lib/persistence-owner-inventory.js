@@ -7,6 +7,9 @@ const freezeEntries = (entries) =>
         ...entry,
         physicalCarrierIds: Object.freeze([...(entry.physicalCarrierIds || [])]),
         storageKeys: Object.freeze([...(entry.storageKeys || [])]),
+        legacySchemaVersions: entry.legacySchemaVersions
+          ? Object.freeze([...entry.legacySchemaVersions])
+          : undefined,
         logicalOwners: entry.logicalOwners ? Object.freeze([...entry.logicalOwners]) : undefined,
       }),
     ),
@@ -201,7 +204,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:map',
-    schemaVersion: 2,
+    schemaVersion: 3,
+    legacySchemaVersions: [2],
     labelZh: '地图存档',
     labelEn: 'Map state',
     sourceFile: 'src/stores/map.js',
@@ -266,6 +270,7 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   {
     storageKey: 'store:simulation',
     schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '事件模拟',
     labelEn: 'Simulation events',
     sourceFile: 'src/stores/simulation.js',
@@ -880,14 +885,29 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
   },
 ])
 
+const createLegacySchemaReconciliationReader = (legacySchemaVersions = []) => {
+  const acceptedVersions = new Set(legacySchemaVersions.map(Number))
+  return ({ version, data } = {}) =>
+    acceptedVersions.has(Number(version)) &&
+    data &&
+    typeof data === 'object' &&
+    !Array.isArray(data)
+      ? data
+      : null
+}
+
 export const PERSISTED_STATE_AUDIT_TARGETS = Object.freeze(
-  PERSISTED_STORE_CARRIERS.map(({ storageKey, schemaVersion, labelZh, labelEn }) =>
-    Object.freeze({
-      key: storageKey,
-      version: schemaVersion,
-      labelZh,
-      labelEn,
-    }),
+  PERSISTED_STORE_CARRIERS.map(
+    ({ storageKey, schemaVersion, legacySchemaVersions, labelZh, labelEn }) =>
+      Object.freeze({
+        key: storageKey,
+        version: schemaVersion,
+        migrate: legacySchemaVersions?.length
+          ? createLegacySchemaReconciliationReader(legacySchemaVersions)
+          : undefined,
+        labelZh,
+        labelEn,
+      }),
   ),
 )
 

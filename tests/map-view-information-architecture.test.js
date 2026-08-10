@@ -9,6 +9,7 @@ import { useMapStore } from '../src/stores/map'
 import { useMusicStore } from '../src/stores/music'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../src/stores/simulation'
+import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
 
@@ -141,6 +142,63 @@ describe('MapView information architecture', () => {
     await nextTick()
 
     expect(mapScene.props('focusPosition').focusRequestId).toBe(initialRequestId + 1)
+  })
+
+  test('runs the explicit K-pop place-session event flow and returns to the owning place', async () => {
+    const mapStore = useMapStore()
+    const simulationStore = useSimulationStore()
+    useSystemStore().setGlobalWorldview(
+      'Present-day Seoul with a realistic K-pop production and everyday social setting.',
+    )
+    const place = mapStore.activeMapPlaces.find((item) => item.placeId === 'seoul-mbc-hq')
+    mapStore.setCurrentLocation({
+      label: place.nameEn,
+      detail: place.detailEn,
+      source: 'map_pack',
+      mapPackId: place.mapPackId,
+      placeId: place.placeId,
+      position: place.position,
+    })
+    const mapScene = wrapper.findComponent({ name: 'MapSceneCanvas' })
+    mapScene.vm.$emit('select-pin', place)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-place-enter"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="map-place-event-invitation"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="map-place-enter"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-place-event-invitation"]').exists()).toBe(true)
+    expect(simulationStore.eventInstances).toHaveLength(0)
+    await wrapper.get('[data-testid="map-place-expand-event"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="map-place-detail-sheet"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-event-surface-sheet"]').attributes('role')).toBe('dialog')
+    expect(wrapper.get('[data-testid="map-event-choices"]').findAll('button')).toHaveLength(3)
+    expect(simulationStore.eventInstances).toHaveLength(1)
+
+    await wrapper.get('[data-testid="map-event-choice-review_brief"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-event-consequence"]').exists()).toBe(true)
+    expect(simulationStore.eventInstances[0]).toMatchObject({
+      lifecycle: 'resolved',
+      choices: { selectedId: 'review_brief', outcomeId: 'brief_reviewed' },
+      outcome: {
+        requestState: 'validated',
+        ownerResultCode: 'PLACE_SESSION_EVENT_RESOLUTION_VALID',
+      },
+    })
+
+    await wrapper.get('[data-testid="map-event-return"]').trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('MBC')
+    expect(wrapper.get('[data-testid="map-place-leave"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="map-place-leave"]').trigger('click')
+    await nextTick()
+    expect(mapStore.placeSession.state).toBe('left')
+    expect(wrapper.find('[data-testid="map-place-event-invitation"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-place-enter"]').exists()).toBe(true)
   })
 
   test('persists a blank map point as the role position and locks reselection during a journey', async () => {

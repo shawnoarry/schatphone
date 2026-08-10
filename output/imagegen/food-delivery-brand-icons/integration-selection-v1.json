@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-10",
+  "model": "gpt-image-2",
+  "masterSize": "1024x1024",
+  "runtimeSize": "256x256",
+  "runtimeFormat": "webp",
+  "selections": [
+    {
+      "master": "baemin-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/platform/brand/baemin-entry-icon-02.webp"
+    },
+    {
+      "master": "moon-bistro-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/moon-bistro/brand/moon-bistro-app-icon-01.webp"
+    },
+    {
+      "master": "river-noodles-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/river-noodles/brand/river-noodles-app-icon-01.webp"
+    },
+    {
+      "master": "daylight-cafe-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/daylight-cafe/brand/daylight-cafe-app-icon-01.webp"
+    },
+    {
+      "master": "sugar-lane-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/sugar-lane/brand/sugar-lane-app-icon-01.webp"
+    },
+    {
+      "master": "dash-grill-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/dash-grill/brand/dash-grill-app-icon-01.webp"
+    },
+    {
+      "master": "jade-hearth-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/jade-hearth/brand/jade-hearth-app-icon-01.webp"
+    },
+    {
+      "master": "verdant-day-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/verdant-day/brand/verdant-day-app-icon-01.webp"
+    },
+    {
+      "master": "myeongdong-kyoja-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/myeongdong-kyoja/brand/myeongdong-kyoja-app-icon-01.webp"
+    },
+    {
+      "master": "london-bagel-museum-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/london-bagel-museum/brand/london-bagel-museum-app-icon-01.webp"
+    },
+    {
+      "master": "knotted-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/knotted/brand/knotted-app-icon-01.webp"
+    },
+    {
+      "master": "kyochon-chicken-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/kyochon-chicken/brand/kyochon-chicken-app-icon-01.webp"
+    },
+    {
+      "master": "eggdrop-app-icon.png",
+      "runtime": "public/images/ui-assets/apps/food-delivery/eggdrop/brand/eggdrop-app-icon-01.webp"
+    }
+  ],
+  "preservedAssets": [
+    {
+      "path": "public/images/ui-assets/apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg",
+      "sha256": "C929E430C59CD83DE9B2A11A3B8D1D0ED2B244CD4124CB9018463BCE782A71AD"
+    },
+    {
+      "path": "public/images/ui-assets/apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png",
+      "sha256": "68E83866EDCC78C6E5530ECB1A4AF9E5885A978681A66FF176DC8B36F7CBB82D"
+    }
+  ]
+}

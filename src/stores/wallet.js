@@ -36,6 +36,15 @@ import {
   normalizeWalletBankAccounts,
   normalizeWalletPaymentCards,
 } from '../lib/wallet-banking'
+import {
+  createDefaultOwnedWalletCardAppearanceIds,
+  createDefaultSelectedWalletCardAppearances,
+  findWalletCardAppearanceById as findWalletCardAppearanceDefinition,
+  listWalletCardAppearances as listWalletCardAppearanceDefinitions,
+  normalizeOwnedWalletCardAppearanceIds,
+  normalizeSelectedWalletCardAppearances,
+  normalizeWalletCardAppearanceProgress,
+} from '../lib/wallet-card-appearances'
 
 export {
   DEFAULT_WALLET_CURRENCY,
@@ -336,6 +345,9 @@ export const useWalletStore = defineStore('wallet', () => {
   const exchangeRates = ref(createDefaultWalletExchangeRates())
   const bankAccounts = ref(createDefaultWalletBankAccounts())
   const paymentCards = ref(createDefaultWalletPaymentCards())
+  const ownedCardAppearanceIds = ref(createDefaultOwnedWalletCardAppearanceIds())
+  const selectedAppearanceByCardId = ref(createDefaultSelectedWalletCardAppearances())
+  const cardAppearanceProgress = ref({})
   const knownPayeeAccounts = ref([])
   const activeCardId = ref(paymentCards.value.find((card) => card.isDefault)?.id || '')
   const transactions = ref([])
@@ -399,6 +411,54 @@ export const useWalletStore = defineStore('wallet', () => {
     const id = normalizeText(cardId, '', 120)
     if (!id) return null
     return paymentCards.value.find((card) => card.id === id) || null
+  }
+
+  const listCardAppearances = (cardId = '') => {
+    const owned = new Set(ownedCardAppearanceIds.value)
+    const selectedId = selectedAppearanceByCardId.value[cardId] || ''
+    return listWalletCardAppearanceDefinitions(cardId).map((item) => ({
+      ...item,
+      isOwned: owned.has(item.id),
+      isSelected: item.id === selectedId,
+      isEquippable: item.assetStatus === 'ready' && owned.has(item.id),
+      progress: cardAppearanceProgress.value[item.id] || null,
+    }))
+  }
+
+  const findSelectedCardAppearance = (cardId = '') => {
+    const selectedId = selectedAppearanceByCardId.value[cardId]
+    const selected = findWalletCardAppearanceDefinition(selectedId)
+    if (selected?.paymentCardId === cardId) return selected
+    return listWalletCardAppearanceDefinitions(cardId)[0] || null
+  }
+
+  const equipCardAppearance = (cardId = '', appearanceId = '') => {
+    const card = findPaymentCardById(cardId)
+    const item = findWalletCardAppearanceDefinition(appearanceId)
+    if (
+      !card ||
+      !item ||
+      item.paymentCardId !== card.id ||
+      item.assetStatus !== 'ready' ||
+      !ownedCardAppearanceIds.value.includes(item.id)
+    ) {
+      return null
+    }
+    selectedAppearanceByCardId.value = {
+      ...selectedAppearanceByCardId.value,
+      [card.id]: item.id,
+    }
+    return { ...item, isOwned: true, isSelected: true, isEquippable: true }
+  }
+
+  const unlockCardAppearance = (appearanceId = '') => {
+    const item = findWalletCardAppearanceDefinition(appearanceId)
+    if (!item || item.assetStatus !== 'ready') return null
+    ownedCardAppearanceIds.value = normalizeOwnedWalletCardAppearanceIds([
+      ...ownedCardAppearanceIds.value,
+      item.id,
+    ])
+    return { ...item, isOwned: true }
   }
 
   const findKnownPayeeAccountById = (payeeAccountId = '') => {
@@ -516,6 +576,7 @@ export const useWalletStore = defineStore('wallet', () => {
       ...card,
       institution: findWalletBankInstitution(card.institutionId),
       account: bankAccountSummaries.value.find((account) => account.id === card.accountId) || null,
+      appearance: findSelectedCardAppearance(card.id),
       creditLimit:
         card.kind === 'credit'
           ? { amountMinor: card.creditLimitMinor, currency: card.creditLimitCurrency }
@@ -1112,6 +1173,8 @@ export const useWalletStore = defineStore('wallet', () => {
       Array.isArray(sourceObject.currencies) ||
       Array.isArray(sourceObject.bankAccounts) ||
       Array.isArray(sourceObject.paymentCards) ||
+      Array.isArray(sourceObject.ownedCardAppearanceIds) ||
+      Boolean(sourceObject.selectedAppearanceByCardId) ||
       Array.isArray(sourceObject.knownPayeeAccounts) ||
       Boolean(sourceObject.exchangeRates)
     if (!hasWalletPayload) return false
@@ -1132,6 +1195,16 @@ export const useWalletStore = defineStore('wallet', () => {
     )
     paymentCards.value = normalizeWalletPaymentCards(
       sourceObject.paymentCards || sourceObject.cards,
+    )
+    ownedCardAppearanceIds.value = normalizeOwnedWalletCardAppearanceIds(
+      sourceObject.ownedCardAppearanceIds,
+    )
+    selectedAppearanceByCardId.value = normalizeSelectedWalletCardAppearances(
+      sourceObject.selectedAppearanceByCardId,
+      ownedCardAppearanceIds.value,
+    )
+    cardAppearanceProgress.value = normalizeWalletCardAppearanceProgress(
+      sourceObject.cardAppearanceProgress,
     )
     knownPayeeAccounts.value = normalizeKnownPayeeAccounts(
       sourceObject.knownPayeeAccounts || sourceObject.payees,
@@ -1184,6 +1257,11 @@ export const useWalletStore = defineStore('wallet', () => {
       ...card,
       supportedCurrencies: [...card.supportedCurrencies],
     })),
+    ownedCardAppearanceIds: [...ownedCardAppearanceIds.value],
+    selectedAppearanceByCardId: { ...selectedAppearanceByCardId.value },
+    cardAppearanceProgress: Object.fromEntries(
+      Object.entries(cardAppearanceProgress.value).map(([id, progress]) => [id, { ...progress }]),
+    ),
     knownPayeeAccounts: knownPayeeAccounts.value.map((payee) => ({ ...payee })),
     activeCardId: activeCardId.value,
     transactions: transactions.value.map((item) => ({
@@ -1224,6 +1302,9 @@ export const useWalletStore = defineStore('wallet', () => {
     exchangeRates.value = createDefaultWalletExchangeRates()
     bankAccounts.value = createDefaultWalletBankAccounts()
     paymentCards.value = createDefaultWalletPaymentCards()
+    ownedCardAppearanceIds.value = createDefaultOwnedWalletCardAppearanceIds()
+    selectedAppearanceByCardId.value = createDefaultSelectedWalletCardAppearances()
+    cardAppearanceProgress.value = {}
     knownPayeeAccounts.value = []
     activeCardId.value = paymentCards.value.find((card) => card.isDefault)?.id || ''
     transactions.value = []
@@ -1250,6 +1331,9 @@ export const useWalletStore = defineStore('wallet', () => {
       exchangeRates,
       bankAccounts,
       paymentCards,
+      ownedCardAppearanceIds,
+      selectedAppearanceByCardId,
+      cardAppearanceProgress,
       knownPayeeAccounts,
       activeCardId,
     ],
@@ -1268,6 +1352,9 @@ export const useWalletStore = defineStore('wallet', () => {
     bankInstitutions: WALLET_BANK_INSTITUTIONS,
     bankAccounts,
     paymentCards,
+    ownedCardAppearanceIds,
+    selectedAppearanceByCardId,
+    cardAppearanceProgress,
     knownPayeeAccounts,
     activeCardId,
     transactionCount,
@@ -1292,6 +1379,10 @@ export const useWalletStore = defineStore('wallet', () => {
     summarizeCounterpartyLedger,
     findBankAccountById,
     findPaymentCardById,
+    listCardAppearances,
+    findSelectedCardAppearance,
+    equipCardAppearance,
+    unlockCardAppearance,
     findKnownPayeeAccountById,
     listKnownPayeeAccountsForProfile,
     rememberRolePayeeAccount,

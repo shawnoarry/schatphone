@@ -413,6 +413,76 @@ describe('food delivery store', () => {
     )
   })
 
+  test('seeds five real Seoul shops with independent original four-item menus', () => {
+    const store = useFoodDeliveryStore()
+    const expectedShops = [
+      {
+        id: 'food_seed_myeongdong_kyoja',
+        name: 'Myeongdong Kyoja',
+        sourceId: 'seoul-myeongdong-kyoja-main',
+        titles: [
+          'Pine Broth Knife Noodles',
+          'Sesame Dumpling Basket',
+          'Chili Buckwheat Ribbons',
+          'Scallion Rice Pocket',
+        ],
+      },
+      {
+        id: 'food_seed_london_bagel_museum',
+        name: 'London Bagel Museum',
+        sourceId: 'seoul-london-bagel-museum-anguk',
+        titles: [
+          'Rosemary Cloud Bagel',
+          'Orchard Picnic Stack',
+          'Tomato Marmalade Bagel',
+          'Earl Grey Oat Cup',
+        ],
+      },
+      {
+        id: 'food_seed_knotted',
+        name: 'Knotted',
+        sourceId: 'seoul-knotted-cheongdam',
+        titles: [
+          'Peach Ribbon Ring',
+          'Black Sesame Pillow',
+          'Lemon Milk Cloud',
+          'Strawberry Soda Float',
+        ],
+      },
+      {
+        id: 'food_seed_kyochon_chicken',
+        name: 'Kyochon Chicken',
+        sourceId: 'seoul-kyochon-chicken-yeoksam-1',
+        titles: [
+          'Garlic Glaze Wings',
+          'Plum Pepper Tenders',
+          'Perilla Crunch Cup',
+          'Citrus Barley Fizz',
+        ],
+      },
+      {
+        id: 'food_seed_eggdrop',
+        name: 'EGGDROP',
+        sourceId: 'seoul-eggdrop-gangnam-woosung',
+        titles: [
+          'Sunrise Corn Fold',
+          'Mushroom Morning Fold',
+          'Tomato Basil Pocket',
+          'Honey Oat Cold Brew',
+        ],
+      },
+    ]
+
+    expectedShops.forEach(({ id, name, sourceId, titles }) => {
+      expect(store.findRestaurantById(id)).toMatchObject({ name, sourceId })
+      const menu = store.listMenuByRestaurant(id)
+      expect(menu).toHaveLength(4)
+      expect(new Set(menu.map((item) => item.title))).toEqual(new Set(titles))
+      expect(menu.every((item) => item.sourceModule === 'seed')).toBe(true)
+      expect(menu.every((item) => item.image.url.includes('/images/ui-assets/'))).toBe(true)
+    })
+  })
+
   test('adds a missing Dash Grill shop and menu to older saves without removing saved records', () => {
     persistLegacyFoodDeliveryState({
       restaurants: [
@@ -480,6 +550,11 @@ describe('food delivery store', () => {
       category: 'restaurants',
     })
     expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
+    expect(store.listMenuByRestaurant('food_seed_myeongdong_kyoja')).toHaveLength(4)
+    expect(store.listMenuByRestaurant('food_seed_london_bagel_museum')).toHaveLength(4)
+    expect(store.listMenuByRestaurant('food_seed_knotted')).toHaveLength(4)
+    expect(store.listMenuByRestaurant('food_seed_kyochon_chicken')).toHaveLength(4)
+    expect(store.listMenuByRestaurant('food_seed_eggdrop')).toHaveLength(4)
   })
 
   test('preserves same-id edits while filling the three newly expanded shop menus', () => {
@@ -583,7 +658,7 @@ describe('food delivery store', () => {
     expect(store.listMenuByRestaurant('food_seed_jade_hearth')).toHaveLength(12)
     expect(store.listMenuByRestaurant('food_seed_verdant_day')).toHaveLength(12)
     expect(store.listMenuByRestaurant('food_seed_harbor_roast')).toHaveLength(13)
-    expect(store.menuItemCount).toBe(460)
+    expect(store.menuItemCount).toBe(480)
 
     const migratedSnapshot = store.createBackupSnapshot()
     store.resetForTesting()
@@ -625,6 +700,11 @@ describe('food delivery store', () => {
     expect(store.findRestaurantById('food_seed_dash_grill')).toBeNull()
     expect(store.findRestaurantById('food_seed_jade_hearth')).toBeNull()
     expect(store.findRestaurantById('food_seed_verdant_day')).toBeNull()
+    expect(store.findRestaurantById('food_seed_myeongdong_kyoja')).toBeNull()
+    expect(store.findRestaurantById('food_seed_london_bagel_museum')).toBeNull()
+    expect(store.findRestaurantById('food_seed_knotted')).toBeNull()
+    expect(store.findRestaurantById('food_seed_kyochon_chicken')).toBeNull()
+    expect(store.findRestaurantById('food_seed_eggdrop')).toBeNull()
   })
 
   test('preserves same-id Dash Grill edits while filling the rest of its seeded menu', () => {

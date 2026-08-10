@@ -64,6 +64,40 @@ import {
   MAP_JOURNEY_EVENT_OUTCOME,
   runMapJourneyCheckpointEvent,
 } from '../lib/simulation/adapters/map-journey-events'
+import {
+  MAP_EVENT_POSITION_PROVENANCE,
+  MAP_PLACE_SESSION_CHECKPOINT_ID,
+  MAP_PLACE_SESSION_RECORD_TYPE,
+  MAP_PLACE_SESSION_STATE,
+  clusterMapEventSurfacePins,
+  createEmptyMapPlaceSession,
+  createMapEventSurfaceHostRegistry,
+  createMapPositionEvidence,
+  dismissMapPlaceSessionEventInstance,
+  enterMapPlaceSession,
+  evaluateMapPlaceSessionEventInvitation,
+  getMapPlaceSessionEventAdapterKey,
+  getMapPlaceSessionEventTemplate,
+  leaveMapPlaceSession,
+  normalizeMapPlaceSession,
+  normalizeMapPositionEvidence,
+  projectMapPlaceSessionEventSurface,
+  resolveMapPlaceSessionEventInstance,
+} from '../lib/simulation/adapters/map-place-session-events'
+import {
+  KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID,
+  KPOP_REALISM_EVENT_PACK_ID,
+} from '../lib/simulation/kpop-realism-event-pack'
+import {
+  createEventContextHash,
+  materializeLocalEventInstanceV1,
+} from '../lib/simulation/event-instance-materializer'
+import { composeEventTextV1 } from '../lib/simulation/event-text-composer'
+import {
+  EVENT_INSTANCE_LIFECYCLE,
+  EVENT_TEXT_MODE,
+  normalizeEventInstanceV1,
+} from '../lib/simulation/event-contracts'
 import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
@@ -71,7 +105,8 @@ import { useSimulationStore } from './simulation'
 import { useSystemStore } from './system'
 
 const MAP_STORAGE_KEY = 'store:map'
-const MAP_STORAGE_VERSION = 2
+const MAP_STORAGE_VERSION = 3
+const MAP_JOURNEY_POSITION_EVIDENCE_AUTHORIZATION = Symbol('map_journey_position_evidence')
 const MAP_PIN_VISIBILITY_CATEGORY_LIMIT = 80
 const MAP_PIN_VISIBILITY_PLACE_LIMIT = 500
 const TRIP_STATUS_IDLE = 'idle'
@@ -247,13 +282,22 @@ const toInt = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback
 }
 
-const createDefaultCurrentLocation = () => ({
-  source: 'saved',
-  label: SEED_ADDRESSES[0].label,
-  detail: SEED_ADDRESSES[0].detail,
-  mapPackId: SEED_ADDRESSES[0].mapPackId,
-  position: { ...SEED_ADDRESSES[0].position },
-})
+const createDefaultCurrentLocation = () => {
+  const evidenceAt = Date.now()
+  return {
+    source: 'saved',
+    label: SEED_ADDRESSES[0].label,
+    detail: SEED_ADDRESSES[0].detail,
+    mapPackId: SEED_ADDRESSES[0].mapPackId,
+    placeId: `address:${SEED_ADDRESSES[0].id}`,
+    position: { ...SEED_ADDRESSES[0].position },
+    positionEvidence: createMapPositionEvidence({
+      provenance: MAP_EVENT_POSITION_PROVENANCE.MANUAL,
+      placeId: `address:${SEED_ADDRESSES[0].id}`,
+      evidenceAt,
+    }),
+  }
+}
 
 const createDefaultTripForm = () => ({
   from: SEED_ADDRESSES[0].detail,
@@ -276,6 +320,7 @@ const createIdleTripState = () => ({
   to: '',
   fromLabel: '',
   toLabel: '',
+  destinationPlaceId: '',
   transportMode: '',
   estimateVersion: 0,
   distanceKm: 0,
@@ -347,6 +392,8 @@ const normalizeCurrentLocation = (raw, mapPacks = listMapPacks()) => {
   if (!raw || typeof raw !== 'object') return fallback
   const detail = typeof raw.detail === 'string' ? raw.detail.trim() : ''
   if (!detail) return fallback
+  const placeId =
+    typeof raw.placeId === 'string' ? raw.placeId.trim().toLowerCase().slice(0, 180) : ''
   return {
     source: typeof raw.source === 'string' ? raw.source : fallback.source,
     label:
@@ -363,6 +410,12 @@ const normalizeCurrentLocation = (raw, mapPacks = listMapPacks()) => {
         raw.position,
         findMapPackInList(mapPacks, raw.mapPackId || fallback.mapPackId).coordinateKind,
       ) || null,
+    placeId,
+    positionEvidence: normalizeMapPositionEvidence(raw.positionEvidence, {
+      provenance: MAP_EVENT_POSITION_PROVENANCE.MANUAL,
+      placeId,
+      evidenceAt: raw.updatedAt || Date.now(),
+    }),
   }
 }
 
@@ -526,6 +579,10 @@ const normalizeTripState = (raw) => {
     to: typeof raw.to === 'string' ? raw.to.trim() : '',
     fromLabel: typeof raw.fromLabel === 'string' ? raw.fromLabel.trim() : '',
     toLabel: typeof raw.toLabel === 'string' ? raw.toLabel.trim() : '',
+    destinationPlaceId:
+      typeof raw.destinationPlaceId === 'string'
+        ? raw.destinationPlaceId.trim().toLowerCase().slice(0, 180)
+        : '',
     transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
     estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
     distanceKm: Math.max(0, Number(raw.distanceKm) || 0),
@@ -598,6 +655,10 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
     to,
     fromLabel: typeof raw.fromLabel === 'string' ? raw.fromLabel.trim() : '',
     toLabel: typeof raw.toLabel === 'string' ? raw.toLabel.trim() : '',
+    destinationPlaceId:
+      typeof raw.destinationPlaceId === 'string'
+        ? raw.destinationPlaceId.trim().toLowerCase().slice(0, 180)
+        : '',
     transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
     estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
     distanceKm: Math.max(0, Number(raw.distanceKm) || 0),
@@ -630,6 +691,115 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
         ? raw.eventSummaryEn.trim().slice(0, 180)
         : '',
     relationshipBinding: normalizeRelationshipBinding(raw.relationshipBinding),
+  }
+}
+
+const mapPositionsEqual = (left, right, coordinateKind) => {
+  const normalizedLeft = normalizeMapPosition(left, coordinateKind)
+  const normalizedRight = normalizeMapPosition(right, coordinateKind)
+  if (!normalizedLeft || !normalizedRight || normalizedLeft.kind !== normalizedRight.kind) return false
+  if (normalizedLeft.kind === 'geo') {
+    return (
+      Math.abs(normalizedLeft.lat - normalizedRight.lat) <= 0.000001 &&
+      Math.abs(normalizedLeft.lng - normalizedRight.lng) <= 0.000001
+    )
+  }
+  return (
+    Math.abs(normalizedLeft.x - normalizedRight.x) <= 0.000001 &&
+    Math.abs(normalizedLeft.y - normalizedRight.y) <= 0.000001
+  )
+}
+
+const findLegacyCurrentLocationPlace = (data = {}) => {
+  const availableMapPacks = listMapPacks(normalizeCustomMapPacks(data.customMapPacks))
+  const mapPack = findMapPackInList(availableMapPacks, data.currentLocation?.mapPackId)
+  const addresses = Array.isArray(data.addresses)
+    ? data.addresses
+        .map((item, index) => normalizeAddressRecord(item, index, availableMapPacks))
+        .filter(Boolean)
+    : []
+  const candidates = [
+    ...(mapPack.places || []).map((place) => ({ ...place, placeId: place.id })),
+    ...addresses
+      .filter((address) => address.mapPackId === mapPack.id)
+      .map((address) => ({ ...address, placeId: `address:${address.id}` })),
+  ]
+  const current = data.currentLocation || {}
+  const requestedPlaceId =
+    typeof current.placeId === 'string' ? current.placeId.trim().toLowerCase() : ''
+  if (requestedPlaceId) {
+    return candidates.find((place) => String(place.placeId).toLowerCase() === requestedPlaceId) || null
+  }
+  const currentTexts = [current.label, current.detail]
+    .filter((value) => typeof value === 'string' && value.trim())
+    .map((value) => value.trim().toLocaleLowerCase())
+  return candidates.find((place) => {
+    const placeTexts = [
+      place.label,
+      place.detail,
+      place.nameZh,
+      place.nameEn,
+      place.detailZh,
+      place.detailEn,
+    ]
+      .filter((value) => typeof value === 'string' && value.trim())
+      .map((value) => value.trim().toLocaleLowerCase())
+    return (
+      currentTexts.some((value) => placeTexts.includes(value)) &&
+      mapPositionsEqual(current.position, place.position, mapPack.coordinateKind)
+    )
+  }) || null
+}
+
+const migrateMapCurrentLocationV3 = (data = {}, { migratedAt = Date.now() } = {}) => {
+  const current = data.currentLocation && typeof data.currentLocation === 'object'
+    ? data.currentLocation
+    : createDefaultCurrentLocation()
+  const place = findLegacyCurrentLocationPlace(data)
+  const placeId = place?.placeId || ''
+  const trip = data.tripState && typeof data.tripState === 'object' ? data.tripState : {}
+  const tripDestinationTexts = [trip.to, trip.toLabel]
+    .filter((value) => typeof value === 'string' && value.trim())
+    .map((value) => value.trim().toLocaleLowerCase())
+  const placeTexts = place
+    ? [place.label, place.detail, place.nameZh, place.nameEn, place.detailZh, place.detailEn]
+        .filter((value) => typeof value === 'string' && value.trim())
+        .map((value) => value.trim().toLocaleLowerCase())
+    : []
+  const provesJourneyArrival =
+    current.source === 'trip_arrived' &&
+    trip.status === TRIP_STATUS_ARRIVED &&
+    typeof trip.journeyId === 'string' &&
+    Boolean(trip.journeyId.trim()) &&
+    Number(trip.arrivedAt) > 0 &&
+    String(trip.mapPackId || current.mapPackId) === String(current.mapPackId) &&
+    Boolean(placeId) &&
+    tripDestinationTexts.some((value) => placeTexts.includes(value))
+  return {
+    ...current,
+    placeId,
+    positionEvidence: createMapPositionEvidence({
+      provenance: provesJourneyArrival
+        ? MAP_EVENT_POSITION_PROVENANCE.JOURNEY_ARRIVAL
+        : MAP_EVENT_POSITION_PROVENANCE.MANUAL,
+      placeId,
+      evidenceAt: provesJourneyArrival
+        ? Number(trip.arrivedAt)
+        : Math.max(1, toInt(migratedAt, 1)),
+      journeyId: provesJourneyArrival ? trip.journeyId : '',
+      journeyArrivedAt: provesJourneyArrival ? Number(trip.arrivedAt) : 0,
+    }),
+  }
+}
+
+export const migrateMapStorage = ({ version, data, savedAt } = {}) => {
+  if (Number(version) !== 2 || !data || typeof data !== 'object' || Array.isArray(data)) {
+    return null
+  }
+  return {
+    ...data,
+    currentLocation: migrateMapCurrentLocationV3(data, { migratedAt: savedAt }),
+    placeSession: createEmptyMapPlaceSession(),
   }
 }
 
@@ -1111,6 +1281,7 @@ export const useMapStore = defineStore('map', () => {
   const addresses = reactive(SEED_ADDRESSES.map((item) => ({ ...item })))
 
   const currentLocation = ref(createDefaultCurrentLocation())
+  const placeSession = ref(createEmptyMapPlaceSession())
 
   const tripForm = reactive(createDefaultTripForm())
   const tripState = ref(createIdleTripState())
@@ -1125,6 +1296,7 @@ export const useMapStore = defineStore('map', () => {
   const tripPushCancelPromises = new Map()
   let mapAutomationHandlerRegistered = false
   let mapProviderRunnerOverride = null
+  let mapEventTextProviderRunnerOverride = null
   let journeyCheckpointEventEvaluationEnabled = false
   let journeyEventRandomValueOverride
   const hasFinishedStorageHydration = ref(false)
@@ -1168,6 +1340,41 @@ export const useMapStore = defineStore('map', () => {
   }
 
   const activeMapAllPlaces = computed(() => buildMapPlacesForPack(activeMapPack.value))
+
+  const mapEventSurfaceHostRegistry = createMapEventSurfaceHostRegistry()
+
+  const mapEventSurfaces = computed(() => {
+    const simulationStore = getSimulationStore()
+    return simulationStore.eventInstances
+      .filter(
+        (instance) =>
+          instance?.templateRef?.id === KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID &&
+          instance.lifecycle !== EVENT_INSTANCE_LIFECYCLE.DISMISSED,
+      )
+      .map((instance) => {
+        const mapPack = getAvailableMapPackById(instance.world.mapPackId)
+        if (mapPack.id !== instance.world.mapPackId) return null
+        const place = buildMapPlacesForPack(mapPack).find(
+          (candidate) => candidate.placeId === instance.place.placeId,
+        )
+        const surface = projectMapPlaceSessionEventSurface({
+          instance,
+          sourceRecord: placeSession.value,
+          mapPack,
+          place,
+        })
+        if (!surface) return null
+        const validation = mapEventSurfaceHostRegistry.validateProjection('map', surface)
+        return validation.ok ? validation.projection : null
+      })
+      .filter(Boolean)
+  })
+
+  const mapEventSurfacePins = computed(() =>
+    clusterMapEventSurfacePins(mapEventSurfaces.value, {
+      mapPackId: activeMapPackId.value,
+    }),
+  )
 
   const getMapPlaceKnowledgeState = (worldPackId = activeWorldPackId.value) =>
     mapPlaceKnowledgeByWorld.value[worldPackId] || createMapPlaceKnowledgeState()
@@ -2150,14 +2357,21 @@ export const useMapStore = defineStore('map', () => {
     }
     const journeyMapPack = getAvailableMapPackById(state.mapPackId || activeMapPackId.value)
     const journeyPlaces = buildMapPlacesForPack(journeyMapPack)
-    const destinationPlace = findMapPlaceByText(state.to, journeyPlaces)
+    const destinationPlace = state.destinationPlaceId
+      ? journeyPlaces.find((place) => place.placeId === state.destinationPlaceId) || null
+      : null
     setCurrentLocation({
       source: 'trip_arrived',
       label: state.toLabel || resolveAddressLabel(state.to, '目的地'),
       detail: state.to,
       mapPackId: journeyMapPack.id,
+      placeId: destinationPlace?.placeId || '',
       position: destinationPlace?.position || null,
-    })
+      provenance: MAP_EVENT_POSITION_PROVENANCE.JOURNEY_ARRIVAL,
+      evidenceAt: arrivedAt,
+      journeyId: state.journeyId,
+      journeyArrivedAt: arrivedAt,
+    }, MAP_JOURNEY_POSITION_EVIDENCE_AUTHORIZATION)
     const reward = buildTripArrivalReward(state)
     const historyId = `trip_hist_${arrivedAt}`
     appendTripHistory({
@@ -2176,6 +2390,7 @@ export const useMapStore = defineStore('map', () => {
       to: state.to,
       fromLabel: state.fromLabel,
       toLabel: state.toLabel,
+      destinationPlaceId: state.destinationPlaceId,
       transportMode: state.transportMode,
       estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,
@@ -2696,6 +2911,7 @@ export const useMapStore = defineStore('map', () => {
         detail: firstPlace.detail || firstPlace.detailZh || firstPlace.detailEn,
         source: savedAddress ? 'saved' : 'map_pack',
         mapPackId: pack.id,
+        placeId: savedAddress ? `address:${savedAddress.id}` : firstPlace.id,
         position: firstPlace.position,
       })
       tripForm.from = firstPlace.detail || firstPlace.detailZh || firstPlace.detailEn || ''
@@ -2749,17 +2965,41 @@ export const useMapStore = defineStore('map', () => {
     detail,
     source = 'manual',
     mapPackId = activeMapPackId.value,
+    placeId = '',
     position = null,
+    provenance = MAP_EVENT_POSITION_PROVENANCE.MANUAL,
+    evidenceAt = Date.now(),
+    journeyId = '',
+    journeyArrivedAt = 0,
     syncTripOrigin = false,
-  }) => {
+  }, evidenceAuthorization = null) => {
     if (!detail?.trim()) return false
     const pack = getAvailableMapPackById(mapPackId)
+    if (placeSession.value.state === MAP_PLACE_SESSION_STATE.INSIDE) {
+      const left = leaveMapPlaceSession(placeSession.value, { now: evidenceAt })
+      if (left.ok) placeSession.value = left.session
+    }
+    const normalizedPlaceId =
+      typeof placeId === 'string' ? placeId.trim().toLowerCase().slice(0, 180) : ''
+    const canWriteJourneyArrival =
+      evidenceAuthorization === MAP_JOURNEY_POSITION_EVIDENCE_AUTHORIZATION &&
+      provenance === MAP_EVENT_POSITION_PROVENANCE.JOURNEY_ARRIVAL
     currentLocation.value = {
       source,
       label: label?.trim() || '当前位置',
       detail: detail.trim(),
       mapPackId: pack.id,
+      placeId: normalizedPlaceId,
       position: normalizeMapPosition(position, pack.coordinateKind),
+      positionEvidence: createMapPositionEvidence({
+        provenance: canWriteJourneyArrival
+          ? MAP_EVENT_POSITION_PROVENANCE.JOURNEY_ARRIVAL
+          : MAP_EVENT_POSITION_PROVENANCE.MANUAL,
+        placeId: normalizedPlaceId,
+        evidenceAt,
+        journeyId: canWriteJourneyArrival ? journeyId : '',
+        journeyArrivedAt: canWriteJourneyArrival ? journeyArrivedAt : 0,
+      }),
     }
     if (syncTripOrigin && normalizeTripState(tripState.value).status === TRIP_STATUS_IDLE) {
       tripForm.from = currentLocation.value.detail
@@ -2775,9 +3015,304 @@ export const useMapStore = defineStore('map', () => {
       detail: match.detail,
       source: 'saved',
       mapPackId: match.mapPackId,
+      placeId: `address:${match.id}`,
       position: match.position,
       syncTripOrigin: true,
     })
+  }
+
+  const findMapPlaceById = (placeId, mapPackId = activeMapPackId.value) => {
+    const normalizedPlaceId =
+      typeof placeId === 'string' ? placeId.trim().toLowerCase().slice(0, 180) : ''
+    if (!normalizedPlaceId) return null
+    const mapPack = getAvailableMapPackById(mapPackId)
+    if (mapPack.id !== mapPackId) return null
+    return buildMapPlacesForPack(mapPack).find((place) => place.placeId === normalizedPlaceId) || null
+  }
+
+  const enterPlace = (placeId, { now = Date.now() } = {}) => {
+    const place = findMapPlaceById(placeId)
+    if (!place) return { ok: false, code: 'PLACE_SESSION_PLACE_MISSING' }
+    const trip = normalizeTripState(tripState.value)
+    if (trip.status === TRIP_STATUS_TRAVELING) {
+      return { ok: false, code: 'PLACE_SESSION_JOURNEY_ACTIVE' }
+    }
+    if (
+      trip.status === TRIP_STATUS_ARRIVED &&
+      trip.destinationPlaceId &&
+      trip.destinationPlaceId !== place.placeId
+    ) {
+      return { ok: false, code: 'PLACE_SESSION_ARRIVAL_PLACE_MISMATCH' }
+    }
+    const result = enterMapPlaceSession({
+      previousSession: placeSession.value,
+      currentLocation: currentLocation.value,
+      place,
+      worldPackId: activeWorldPackId.value,
+      mapPackVersion: activeMapPack.value.version || 1,
+      now,
+    })
+    if (result.ok) placeSession.value = result.session
+    return result
+  }
+
+  const leavePlace = ({ now = Date.now() } = {}) => {
+    const result = leaveMapPlaceSession(placeSession.value, { now })
+    if (result.ok) placeSession.value = result.session
+    return result
+  }
+
+  const getPlaceSessionEventInvitation = ({ locale = 'zh-CN', at = Date.now() } = {}) => {
+    const checkpoint = placeSession.value
+    const place = findMapPlaceById(checkpoint.placeId, checkpoint.mapPackId)
+    if (!place) return { eligible: false, reason: 'place_missing', invitation: null, checkpoint: null }
+    const simulationStore = getSimulationStore()
+    const existingInstance = simulationStore.eventInstances.find(
+      (instance) =>
+        instance.templateRef?.id === KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID &&
+        instance.world?.variantPackId === KPOP_REALISM_EVENT_PACK_ID &&
+        instance.source?.recordId === checkpoint.sessionId &&
+        instance.source?.recordRevision === checkpoint.revision &&
+        instance.lifecycle !== EVENT_INSTANCE_LIFECYCLE.DISMISSED,
+    )
+    if (existingInstance) {
+      const copy = existingInstance.text.normalizedCopy
+      return {
+        eligible: true,
+        reason: 'existing_event_instance',
+        checkpoint,
+        existingInstanceId: existingInstance.id,
+        invitation: {
+          schemaVersion: 1,
+          id: `map_event_invitation_${checkpoint.sessionId}_${checkpoint.revision}`.slice(0, 220),
+          eventId: KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID,
+          proposalId: existingInstance.runtime.proposalId || existingInstance.id,
+          sourceRecordId: checkpoint.sessionId,
+          sourceRecordRevision: checkpoint.revision,
+          mapPackId: checkpoint.mapPackId,
+          placeId: checkpoint.placeId,
+          tokenCost: 0,
+          lifecycle: existingInstance.lifecycle,
+          copy: {
+            title: copy.title,
+            summary: copy.opening,
+            titleZh: copy.title,
+            titleEn: copy.title,
+            summaryZh: copy.opening,
+            summaryEn: copy.opening,
+          },
+        },
+      }
+    }
+    const template = getMapPlaceSessionEventTemplate()
+    const worldContext = resolveWorldContextFromSystemStore(getSystemStore(), { locale })
+    const dayKey = new Date(Math.max(0, Number(at) || Date.now())).toISOString().slice(0, 10)
+    return evaluateMapPlaceSessionEventInvitation({
+      session: checkpoint,
+      currentLocation: currentLocation.value,
+      place,
+      locale,
+      worldContextFamily: worldContext.genreTags[0] || 'daily',
+      moduleEnabled: simulationStore.isModuleEventsEnabled('map'),
+      intensity: simulationStore.surpriseMode,
+      cooldownActive: simulationStore.isCoolingDown(template.id, {
+        targetId: checkpoint.placeId,
+        at,
+      }),
+      dailyLimitReached: !simulationStore.canUseDailyQuota(template.id, {
+        targetId: checkpoint.placeId,
+        dayKey,
+        limit: template.trigger.dailyLimit,
+      }),
+    })
+  }
+
+  const expandPlaceSessionEvent = ({ locale = 'zh-CN', now = Date.now() } = {}) => {
+    const invitationResult = getPlaceSessionEventInvitation({ locale, at: now })
+    if (!invitationResult.eligible || !invitationResult.invitation || !invitationResult.checkpoint) {
+      return { ok: false, code: invitationResult.reason || 'EVENT_INVITATION_UNAVAILABLE' }
+    }
+    const simulationStore = getSimulationStore()
+    if (invitationResult.existingInstanceId) {
+      const existing = simulationStore.getEventInstance(invitationResult.existingInstanceId)
+      return { ok: Boolean(existing), code: existing ? 'EVENT_INSTANCE_REOPENED' : 'EVENT_INSTANCE_MISSING', instance: existing, composePromise: null }
+    }
+
+    const checkpoint = invitationResult.checkpoint
+    const place = findMapPlaceById(checkpoint.placeId, checkpoint.mapPackId)
+    const systemStore = getSystemStore()
+    const worldContext = resolveWorldContextFromSystemStore(systemStore, { locale })
+    const textContext = {
+      worldContextDigest: [
+        worldContext.genreTags.join(', '),
+        worldContext.toneTags.join(', '),
+        worldContext.socialOrder,
+      ].filter(Boolean).join(' | '),
+      participants: [],
+      facts: [
+        `Place: ${place?.nameEn || place?.nameZh || place?.label || checkpoint.placeId}`,
+        `Position provenance: ${checkpoint.presence.provenance}`,
+      ],
+    }
+    const contextHash = createEventContextHash(textContext)
+    const materialized = materializeLocalEventInstanceV1({
+      templateId: KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID,
+      variantPackId: KPOP_REALISM_EVENT_PACK_ID,
+      source: {
+        moduleKey: 'map',
+        recordType: MAP_PLACE_SESSION_RECORD_TYPE,
+        recordId: checkpoint.sessionId,
+        recordRevision: checkpoint.revision,
+        checkpointId: MAP_PLACE_SESSION_CHECKPOINT_ID,
+        checkpointAt: checkpoint.enteredAt,
+      },
+      world: {
+        worldContextId: worldContext.id,
+        worldPackId: checkpoint.worldPackId,
+        mapPackId: checkpoint.mapPackId,
+        mapPackVersion: checkpoint.mapPackVersion,
+      },
+      place: {
+        placeId: checkpoint.placeId,
+        placeCategoryId: checkpoint.placeCategoryId,
+        capabilityIds: checkpoint.capabilityIds,
+        anchor: {
+          kind: 'stable_place',
+          mapPackId: checkpoint.mapPackId,
+          placeId: checkpoint.placeId,
+        },
+      },
+      presence: {
+        activationScope: 'interior',
+        relation: checkpoint.presence.relation,
+        provenance: checkpoint.presence.provenance,
+        placeSessionId: checkpoint.sessionId,
+        placeSessionRevision: checkpoint.revision,
+        journeyId: checkpoint.presence.journeyId,
+        evidenceAt: checkpoint.presence.evidenceAt,
+      },
+      runtime: { proposalId: invitationResult.invitation.proposalId },
+      locale,
+      textMode: simulationStore.eventTextMode,
+      textContext,
+      contextHash,
+      seed: `${checkpoint.sessionId}:${checkpoint.revision}:${checkpoint.placeId}`,
+      now,
+    })
+    if (!materialized.ok) {
+      return { ok: false, code: materialized.reason || 'EVENT_INSTANCE_MATERIALIZATION_FAILED' }
+    }
+    const template = getMapPlaceSessionEventTemplate()
+    const eligibilityLog = simulationStore.recordEventTrigger({
+      eventId: template.id,
+      moduleKey: 'map',
+      targetId: checkpoint.placeId,
+      adapterKey: getMapPlaceSessionEventAdapterKey(),
+      triggerSource: 'condition',
+      status: 'triggered',
+      reason: 'place_session_event_eligible',
+      cooldownMs: template.trigger.cooldownMs,
+      dailyLimit: template.trigger.dailyLimit,
+      at: now,
+    })
+    const instance = normalizeEventInstanceV1({
+      ...materialized.instance,
+      runtime: {
+        ...materialized.instance.runtime,
+        eligibilityLogId: eligibilityLog?.id || '',
+      },
+    })
+    const stored = simulationStore.upsertEventInstance(instance)
+    if (!stored) return { ok: false, code: 'EVENT_INSTANCE_STORE_REJECTED' }
+
+    let composePromise = null
+    if (stored.text.status === 'pending' && simulationStore.eventTextMode === EVENT_TEXT_MODE.OPTIONAL_AI_AFTER_ENTRY) {
+      const providerAdapter =
+        typeof mapEventTextProviderRunnerOverride === 'function'
+          ? mapEventTextProviderRunnerOverride
+          : ({ messages, systemPrompt, signal }) =>
+              callAI({
+                messages,
+                systemPrompt,
+                signal,
+                settings: systemStore.settings,
+                withMeta: true,
+              })
+      composePromise = composeEventTextV1({
+        instance: stored,
+        template,
+        textMode: simulationStore.eventTextMode,
+        context: textContext,
+        contextHash,
+        providerAdapter,
+        providerMetadata: {
+          providerId: systemStore.settings?.api?.resolvedKind || '',
+          modelId: systemStore.settings?.api?.model || '',
+        },
+        instanceStore: simulationStore,
+        now,
+      })
+    }
+    return { ok: true, code: 'EVENT_INSTANCE_ENTERED', instance: stored, composePromise }
+  }
+
+  const resolvePlaceSessionEventChoice = (
+    instanceId,
+    choiceId,
+    { now = Date.now() } = {},
+  ) => {
+    const simulationStore = getSimulationStore()
+    const instance = simulationStore.getEventInstance(instanceId)
+    const checked = resolveMapPlaceSessionEventInstance({
+      instance,
+      session: placeSession.value,
+      choiceId,
+      now,
+    })
+    if (!checked.ok) return checked
+    const outcomeLog = simulationStore.recordEventLog({
+      eventId: KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID,
+      moduleKey: 'map',
+      targetId: placeSession.value.placeId,
+      adapterKey: getMapPlaceSessionEventAdapterKey(),
+      triggerSource: 'manual',
+      status: 'triggered',
+      reason: `place_session_event_${checked.outcomeId}`,
+      at: now,
+    })
+    const resolved = resolveMapPlaceSessionEventInstance({
+      instance,
+      session: placeSession.value,
+      choiceId,
+      outcomeLogId: outcomeLog?.id || '',
+      now,
+    })
+    const stored = resolved.instance && simulationStore.upsertEventInstance(resolved.instance)
+    return stored ? { ...resolved, instance: stored } : { ok: false, code: 'EVENT_INSTANCE_STORE_REJECTED' }
+  }
+
+  const dismissPlaceSessionEvent = (instanceId, { now = Date.now() } = {}) => {
+    const simulationStore = getSimulationStore()
+    const instance = simulationStore.getEventInstance(instanceId)
+    const dismissed = dismissMapPlaceSessionEventInstance(instance, { now })
+    if (!dismissed) return { ok: false, code: 'EVENT_INSTANCE_NOT_ACTIVE' }
+    const stored = simulationStore.upsertEventInstance(dismissed)
+    if (!stored) return { ok: false, code: 'EVENT_INSTANCE_STORE_REJECTED' }
+    simulationStore.recordEventLog({
+      eventId: KPOP_REALISM_ARRIVAL_BRIEFING_TEMPLATE_ID,
+      moduleKey: 'map',
+      targetId: dismissed.place.placeId,
+      adapterKey: getMapPlaceSessionEventAdapterKey(),
+      triggerSource: 'manual',
+      status: 'skipped',
+      reason: 'place_session_event_dismissed',
+      at: now,
+    })
+    return { ok: true, code: 'EVENT_INSTANCE_DISMISSED', instance: stored }
+  }
+
+  const setMapEventTextProviderRunnerForTesting = (runner) => {
+    mapEventTextProviderRunnerOverride = typeof runner === 'function' ? runner : null
   }
 
   const setTripEndpoint = (endpoint, detail) => {
@@ -2858,6 +3393,7 @@ export const useMapStore = defineStore('map', () => {
         detail,
         source: 'saved',
         mapPackId: pack.id,
+        placeId: `address:${match.id}`,
         position: nextPosition,
       })
     }
@@ -3004,6 +3540,11 @@ export const useMapStore = defineStore('map', () => {
     const journeyId = createMapJourneyId(startedAt)
     const worldPackId = activeWorldPackId.value
     const mapPackId = activeMapPackId.value
+    const destinationPlace = findActivePlaceByText(to)
+    const destinationPlaceId =
+      destinationPlace?.mapPackId === mapPackId
+        ? destinationPlace.placeId || destinationPlace.id || ''
+        : ''
 
     tripState.value = {
       status: TRIP_STATUS_TRAVELING,
@@ -3022,6 +3563,7 @@ export const useMapStore = defineStore('map', () => {
       estimateVersion: MAP_TRIP_ESTIMATE_VERSION,
       fromLabel: resolveAddressLabel(from, '起点'),
       toLabel: resolveAddressLabel(to, '目的地'),
+      destinationPlaceId,
       distanceKm: estimate.distanceKm,
       fare: estimate.fare,
       durationSeconds: estimate.durationSeconds,
@@ -3079,6 +3621,7 @@ export const useMapStore = defineStore('map', () => {
       to: state.to,
       fromLabel: state.fromLabel,
       toLabel: state.toLabel,
+      destinationPlaceId: state.destinationPlaceId,
       transportMode: state.transportMode,
       estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,
@@ -3475,7 +4018,22 @@ export const useMapStore = defineStore('map', () => {
       }
     }
 
-    currentLocation.value = normalizeCurrentLocation(source.currentLocation, mapPacks.value)
+    const currentLocationSource = source.currentLocation?.positionEvidence
+      ? source.currentLocation
+      : migrateMapCurrentLocationV3(source)
+    currentLocation.value = normalizeCurrentLocation(currentLocationSource, mapPacks.value)
+    placeSession.value = normalizeMapPlaceSession(source.placeSession)
+    if (
+      placeSession.value.state === MAP_PLACE_SESSION_STATE.INSIDE &&
+      (
+        placeSession.value.mapPackId !== currentLocation.value.mapPackId ||
+        placeSession.value.placeId !== currentLocation.value.positionEvidence.placeId ||
+        placeSession.value.presence.provenance !== currentLocation.value.positionEvidence.provenance
+      )
+    ) {
+      const left = leaveMapPlaceSession(placeSession.value, { now: Date.now() })
+      placeSession.value = left.ok ? left.session : createEmptyMapPlaceSession()
+    }
 
     const normalizedTripForm = normalizeTripForm(source.tripForm)
     tripForm.from = normalizedTripForm.from
@@ -3514,6 +4072,7 @@ export const useMapStore = defineStore('map', () => {
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(MAP_STORAGE_KEY, {
       version: MAP_STORAGE_VERSION,
+      migrate: migrateMapStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -3521,6 +4080,7 @@ export const useMapStore = defineStore('map', () => {
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(MAP_STORAGE_KEY, {
       version: MAP_STORAGE_VERSION,
+      migrate: migrateMapStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -3555,7 +4115,16 @@ export const useMapStore = defineStore('map', () => {
       ]),
     ),
     addresses: addresses.map((item) => ({ ...item })),
-    currentLocation: { ...currentLocation.value },
+    currentLocation: {
+      ...currentLocation.value,
+      position: currentLocation.value.position ? { ...currentLocation.value.position } : null,
+      positionEvidence: { ...currentLocation.value.positionEvidence },
+    },
+    placeSession: {
+      ...placeSession.value,
+      capabilityIds: [...placeSession.value.capabilityIds],
+      presence: { ...placeSession.value.presence },
+    },
     tripForm: { ...tripForm },
     tripState: {
       ...tripState.value,
@@ -3597,6 +4166,8 @@ export const useMapStore = defineStore('map', () => {
     mapPlaceDisplayMode.value = MAP_PLACE_DISPLAY_MODE.SYSTEM
     mapVisualSettings.value = createDefaultMapVisualSettings()
     mapAutomationRuntime.value = createDefaultMapAutomationRuntime()
+    placeSession.value = createEmptyMapPlaceSession()
+    mapEventTextProviderRunnerOverride = null
     journeyCheckpointEventEvaluationEnabled = false
     journeyEventRandomValueOverride = undefined
     runtimeNow.value = Date.now()
@@ -3610,7 +4181,7 @@ export const useMapStore = defineStore('map', () => {
     writePersistedState(
       MAP_STORAGE_KEY,
       createBackupSnapshot(),
-      { version: MAP_STORAGE_VERSION },
+      { version: MAP_STORAGE_VERSION, migrate: migrateMapStorage },
     )
   }
 
@@ -3639,6 +4210,7 @@ export const useMapStore = defineStore('map', () => {
       mapPlaceDisplayMode,
       addresses,
       currentLocation,
+      placeSession,
       tripForm,
       tripState,
       tripHistory,
@@ -3716,6 +4288,9 @@ export const useMapStore = defineStore('map', () => {
     addresses,
     currentLocation,
     currentLocationText,
+    placeSession,
+    mapEventSurfaces,
+    mapEventSurfacePins,
     tripForm,
     tripEstimate,
     tripState,
@@ -3745,6 +4320,12 @@ export const useMapStore = defineStore('map', () => {
     resetActiveMapPinVisibility,
     setCurrentLocation,
     setCurrentLocationByAddressId,
+    enterPlace,
+    leavePlace,
+    getPlaceSessionEventInvitation,
+    expandPlaceSessionEvent,
+    resolvePlaceSessionEventChoice,
+    dismissPlaceSessionEvent,
     setTripEndpoint,
     setTripTransportMode,
     applyAddressToTripEndpoint,
@@ -3789,6 +4370,7 @@ export const useMapStore = defineStore('map', () => {
     createBackupSnapshotAsync,
     resetTripRuntimeForTesting,
     setMapAiProviderRunnerForTesting,
+    setMapEventTextProviderRunnerForTesting,
     setJourneyCheckpointEventEvaluationEnabled,
     setJourneyEventRandomValueForTesting,
     saveNow,

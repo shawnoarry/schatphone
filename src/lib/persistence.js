@@ -228,7 +228,11 @@ export const decodePersistedEnvelope = (parsed, { version, migrate } = {}) => {
   }
 
   if (typeof migrate === 'function') {
-    return migrate({ version: storedVersion, data: storedData })
+    return migrate({
+      version: storedVersion,
+      data: storedData,
+      savedAt: parsed.savedAt,
+    })
   }
 
   return null
@@ -444,7 +448,7 @@ const readFromIndexedDb = async (fullKey) => (await readIndexedDbLayer(fullKey))
 const writeToIndexedDbWithResult = async (
   fullKey,
   rawPayload,
-  { version, allowReconciliation = false, skipFreshnessCheck = false } = {},
+  { version, migrate, allowReconciliation = false, skipFreshnessCheck = false } = {},
 ) => {
   const db = await openIndexedDb()
   if (!db) return createWriteFailure('indexeddb', indexedDbUnavailableError)
@@ -480,7 +484,10 @@ const writeToIndexedDbWithResult = async (
           readRequest.result && typeof readRequest.result.payload === 'string'
             ? readRequest.result.payload
             : null
-        const precondition = checkMirrorWritePrecondition(existingRaw, rawPayload, { version })
+        const precondition = checkMirrorWritePrecondition(existingRaw, rawPayload, {
+          version,
+          migrate,
+        })
         if (!precondition.ok) {
           finish(createReconciliationFailure(false, precondition.error))
           try {
@@ -874,13 +881,13 @@ export const readPersistedState = (key, options = {}) => {
   return readPersistedStateFromLocal(key, options)
 }
 
-export const writePersistedState = (key, data, { version = 1 } = {}) => {
+export const writePersistedState = (key, data, { version = 1, migrate } = {}) => {
   const finalize = (result) =>
     reportPersistenceWriteResult({
       key,
       result,
       retry: () =>
-        retryCurrentSaveWrite(() => writePersistedState(key, data, { version })),
+        retryCurrentSaveWrite(() => writePersistedState(key, data, { version, migrate })),
     })
   const fullKey = buildStorageKey(key)
   const plan = createWritePlan(key, version)
@@ -895,6 +902,7 @@ export const writePersistedState = (key, data, { version = 1 } = {}) => {
     rememberLocalCommit(key, serialized.rawPayload, plan.generation, plan.forceFork)
     queueIndexedDbWrite(key, fullKey, serialized.rawPayload, {
       version,
+      migrate,
       skipFreshnessCheck: plan.excluded || plan.forceFork,
     })
   }
@@ -936,13 +944,13 @@ export const readPersistedRawLayers = async (key) => {
   }
 }
 
-export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) => {
+export const writePersistedStateAsync = async (key, data, { version = 1, migrate } = {}) => {
   const finalize = (result) =>
     reportPersistenceWriteResult({
       key,
       result,
       retry: () =>
-        retryCurrentSaveWrite(() => writePersistedStateAsync(key, data, { version })),
+        retryCurrentSaveWrite(() => writePersistedStateAsync(key, data, { version, migrate })),
     })
   const fullKey = buildStorageKey(key)
   const plan = createWritePlan(key, version)
@@ -979,7 +987,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
       const precondition = checkMirrorWritePrecondition(
         mirrorHead.rawPayload,
         serialized.rawPayload,
-        { version },
+        { version, migrate },
       )
       if (!precondition.ok) return finalize(createReconciliationFailure(true))
     }
@@ -1012,6 +1020,7 @@ export const writePersistedStateAsync = async (key, data, { version = 1 } = {}) 
 
   const mirror = await writeToIndexedDbWithResult(fullKey, serialized.rawPayload, {
     version,
+    migrate,
     skipFreshnessCheck: plan.excluded || plan.forceFork,
   })
   if (mirror.ok) {
@@ -1288,6 +1297,7 @@ export const preparePersistedStateLayers = async (targets = []) => {
       results.push(
         await reconcilePersistedStateLayers(target?.key, {
           version: target?.version,
+          migrate: target?.migrate,
           inspectOnly,
         }),
       )

@@ -5,6 +5,7 @@ const STOREFRONTS = Object.freeze([
   {
     service: 'schat_mall',
     category: 'mall',
+    categories: ['mall', 'gifts', 'home', 'fashion', 'beauty'],
     name: 'Coupang',
     template: 'city_market',
     mapPlaceId: 'seoul-starfield-coex-mall',
@@ -12,6 +13,7 @@ const STOREFRONTS = Object.freeze([
   {
     service: 'nova_digital',
     category: 'digital',
+    categories: ['digital', 'luxury', 'gifts'],
     name: '29CM',
     template: 'tech_catalog',
     mapPlaceId: 'seoul-samsung-town',
@@ -19,6 +21,7 @@ const STOREFRONTS = Object.freeze([
   {
     service: 'daily_fresh',
     category: 'grocery',
+    categories: ['grocery', 'home', 'mall'],
     name: 'Kurly',
     template: 'fresh_market',
     mapPlaceId: 'seoul-lotte-mart-seoul-station',
@@ -26,6 +29,7 @@ const STOREFRONTS = Object.freeze([
   {
     service: 'style_cloud',
     category: 'fashion',
+    categories: ['fashion', 'luxury', 'gifts'],
     name: 'WORKSOUT',
     template: 'fashion_editorial',
     mapPlaceId: 'seoul-galleria-luxury-hall',
@@ -33,6 +37,7 @@ const STOREFRONTS = Object.freeze([
   {
     service: 'nordhus_home',
     category: 'home',
+    categories: ['home', 'gifts'],
     name: 'IKEA Korea',
     template: 'room_planner',
     mapPlaceId: 'seoul-the-hyundai-seoul',
@@ -40,6 +45,7 @@ const STOREFRONTS = Object.freeze([
   {
     service: 'mellow_care',
     category: 'beauty',
+    categories: ['beauty', 'gifts'],
     name: 'OLIVE YOUNG',
     template: 'care_lab',
     mapPlaceId: 'seoul-jennyhouse-cheongdam-hill',
@@ -184,6 +190,18 @@ test('six Shopping apps keep distinct routes, identities, carts, favorites, and 
         body: await page.screenshot(),
         contentType: 'image/png',
       },
+    )
+
+    for (const category of storefront.categories) {
+      await page.getByTestId(`shopping-category-${category}`).click()
+      await expect(page.getByTestId(`shopping-category-${category}`)).toHaveClass(/is-active/)
+      await expect
+        .poll(() => page.locator('#shopping-products .shopping-product-card').count())
+        .toBeGreaterThan(0)
+    }
+    await page.getByTestId(`shopping-category-${storefront.category}`).click()
+    await expect(page.getByTestId(`shopping-category-${storefront.category}`)).toHaveClass(
+      /is-active/,
     )
   }
 

@@ -259,6 +259,19 @@ describe('canonical persistence-owner inventory', () => {
     )
     expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toContain('store:book')
 
+    const mapTarget = PERSISTED_STATE_AUDIT_TARGETS.find((entry) => entry.key === 'store:map')
+    expect(mapTarget.migrate({ version: 2, data: { marker: 'legacy-map' } })).toEqual({
+      marker: 'legacy-map',
+    })
+    expect(mapTarget.migrate({ version: 1, data: { marker: 'too-old' } })).toBeNull()
+
+    const simulationTarget = PERSISTED_STATE_AUDIT_TARGETS.find(
+      (entry) => entry.key === 'store:simulation',
+    )
+    expect(simulationTarget.migrate({ version: 1, data: { marker: 'legacy-events' } })).toEqual({
+      marker: 'legacy-events',
+    })
+
     for (const carrier of PERSISTED_STORE_CARRIERS) {
       const source = readSource(carrier.sourceFile)
       expect(source).toContain(`'${carrier.storageKey}'`)
