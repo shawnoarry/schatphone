@@ -1,6 +1,6 @@
 # SchatPhone Design System
 
-Updated: 2026-05-15
+Updated: 2026-08-10
 
 This document defines the visual ownership model for SchatPhone. SchatPhone is an immersive virtual-phone OS shell, not a single ordinary app. Its design must distinguish between the native phone system and the installed apps running inside it.
 
@@ -55,6 +55,33 @@ Design-facing summary:
 - App and system return controls use the shared return helper instead of hardcoded `/home`.
 - Moving an app icon from one Home page to another should automatically change its return destination because the page is captured from the visible entry context.
 - Direct URL entry, lock-screen unlock fallback, and notifications without target routes may still fall back to Home page 1.
+
+### Product-Grade Surface Contract
+
+A functional scaffold is not a visually complete first implementation. Unless the user explicitly requests a wireframe, technical spike, or temporary diagnostic surface, visible UI work must begin with a product-grade target and deliver a coherent primary journey in the first accepted slice.
+
+Every new or materially rebuilt surface must define before implementation:
+
+1. the user-facing purpose and primary action;
+2. its visual owner and a short visual thesis;
+3. the L0 overview, L1 focus, L2 management, and L3 execution path that the feature actually needs;
+4. the required normal, loading, empty, error, selected/edit, success, and destructive states;
+5. the icon, color, material, background/media, depth, and motion decisions appropriate to the domain;
+6. the mobile and wide-viewport composition;
+7. the reference, asset, or image-generation plan when visual content would communicate better than explanatory text.
+
+The following are product-quality rules, not optional polish:
+
+- **User experience is not construction narration.** Visible copy should help the user understand state, make a choice, or recover from a problem. Do not explain module ownership, storage architecture, implementation progress, future plans, or why the UI was built a certain way unless the surface is explicitly developer-facing.
+- **Hierarchy must match task depth.** Do not place overview, editing, diagnostics, history, destructive actions, and multi-step execution in one flat page. Use inline controls for small reversible actions, sheets or drawers for focused contextual work, modals for short blocking decisions, and subpages or dedicated routes for complex management and execution.
+- **Controls should use the right visual language.** Use familiar icons for conventional navigation and tool actions. Use icon-plus-text when meaning or consequence needs reinforcement, and reserve text-only buttons for commands that cannot be represented clearly. Icon-only controls require accessible names and a tooltip when the symbol is not universally understood.
+- **Visual richness requires an explicit decision.** Each product surface must intentionally choose its palette, surface material, imagery/background treatment, depth, and motion grammar. Restraint is valid; an undecided white or dark slab with default cards is not. Motion must clarify state, continuity, or feedback rather than decorate inactivity.
+- **Shared behavior does not require cloned composition.** Similar modules may reuse system mechanics and base components, but installed apps should not default to the same header-card-list template. Their information rhythm, content emphasis, media treatment, key control geometry, and interaction personality should follow the module's role.
+- **Show what can be shown.** When a place, product, person, collection, journey, media item, atmosphere, or state is central, prefer appropriate visual media over paragraphs that describe the absent visual. Empty imagery must be an intentional product state, not the result of omitted asset work.
+- **Missing assets require a proactive proposal.** Before finalizing a visually dependent surface without suitable assets, present concrete choices: reuse a reviewed project/local asset, ask the user to select material, locate a license-compatible source, or generate candidate imagery. Image generation is a candidate-production step; generated output still requires semantic, visual, cropping, localization, and licensing review before product use.
+- **Templates are scaffolds, not identities.** A template may establish layout mechanics, but the accepted result must be adapted to the feature's content model and brand role. Repeated templates without a deliberate product reason are unfinished design.
+
+Richness does not mean maximum decoration. A settings utility may use restrained tint, material, iconography, and motion, while a commerce or media surface may require photography, illustration, stronger color, and branded composition. The requirement is deliberate, domain-appropriate completeness rather than a single visual intensity.
 
 The current baseline native-system style is defined in:
 

@@ -3,10 +3,30 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
-import { CHKSZ_MUSIC_PLATFORMS, CHKSZ_MUSIC_QUALITIES, DEFAULT_MUSIC_FIELD_MAP, MUSIC_ADAPTER_KINDS, MUSIC_AUTH_MODES, MUSIC_PROVIDER_METHODS, MUSIC_TRACK_SOURCE_TYPES, createMusicProviderId, createRadioBrowserMusicProviderProfile, isRadioBrowserMusicProviderProfile, normalizeMusicProviderProfile } from '../lib/music-contract'
-import { MUSIC_INTEGRATION_ACTIONS, normalizeMusicIntegrationRequest } from '../lib/music-module-interface'
+import {
+  CHKSZ_MUSIC_PLATFORMS,
+  CHKSZ_MUSIC_QUALITIES,
+  DEFAULT_MUSIC_FIELD_MAP,
+  MUSIC_ADAPTER_KINDS,
+  MUSIC_AUTH_MODES,
+  MUSIC_PROVIDER_METHODS,
+  MUSIC_TRACK_SOURCE_TYPES,
+  createMusicProviderId,
+  createRadioBrowserMusicProviderProfile,
+  isRadioBrowserMusicProviderProfile,
+  normalizeMusicProviderProfile,
+  selectWeeklyMusicRecommendation,
+} from '../lib/music-contract'
+import {
+  MUSIC_INTEGRATION_ACTIONS,
+  normalizeMusicIntegrationRequest,
+} from '../lib/music-module-interface'
 import { createMusicTrackShareObject } from '../lib/shareable-object'
-import { INTERNAL_CHAT_SHARE_ROUTE_QUERY, INTERNAL_CHAT_SHARE_ROUTE_VALUE, savePendingInternalChatShare } from '../lib/internal-chat-share'
+import {
+  INTERNAL_CHAT_SHARE_ROUTE_QUERY,
+  INTERNAL_CHAT_SHARE_ROUTE_VALUE,
+  savePendingInternalChatShare,
+} from '../lib/internal-chat-share'
 import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 import { useMusicStore } from '../stores/music'
 
@@ -37,7 +57,9 @@ const searchInput = ref(null)
 const pendingIntegration = ref(null)
 const playbackRequestError = ref('')
 
-const providerDraft = reactive(normalizeMusicProviderProfile({ id: createMusicProviderId(), name: '' }))
+const providerDraft = reactive(
+  normalizeMusicProviderProfile({ id: createMusicProviderId(), name: '' }),
+)
 const providerCredentialDraft = ref('')
 const providerHeadersDraft = ref('{}')
 const providerFormError = ref('')
@@ -55,17 +77,23 @@ const directUrlDraft = reactive({
 const addMusicState = reactive({ status: 'idle', message: '' })
 
 const navItems = computed(() => [
-  { id: 'listen', icon: 'fas fa-play-circle', label: t('现在就听', 'Listen Now') },
-  { id: 'browse', icon: 'fas fa-compact-disc', label: t('浏览', 'Browse') },
-  { id: 'library', icon: 'fas fa-layer-group', label: t('资料库', 'Library') },
-  { id: 'search', icon: 'fas fa-magnifying-glass', label: t('搜索', 'Search') },
+  { id: 'listen', icon: 'fas fa-compass', label: t('发现', 'Discover') },
+  { id: 'browse', icon: 'fas fa-compact-disc', label: t('专辑', 'Albums') },
+  { id: 'library', icon: 'fas fa-user', label: t('我的', 'My Music') },
 ])
 
+const activeSectionLabel = computed(() => {
+  if (activeSection.value === 'search') return t('搜索', 'Search')
+  return (
+    navItems.value.find((item) => item.id === activeSection.value)?.label || t('发现', 'Discover')
+  )
+})
+
 const libraryModes = computed(() => [
-  { id: 'tracks', label: t('歌曲', 'Songs') },
-  { id: 'favorites', label: t('喜爱', 'Favorites') },
+  { id: 'tracks', label: t('全部歌曲', 'Songs') },
+  { id: 'favorites', label: t('我喜欢', 'Favorites') },
   { id: 'recent', label: t('最近播放', 'Recently Played') },
-  { id: 'playlists', label: t('播放列表', 'Playlists') },
+  { id: 'playlists', label: t('我的歌单', 'Playlists') },
 ])
 
 const allAlbums = computed(() => {
@@ -88,16 +116,57 @@ const allAlbums = computed(() => {
   return [...groups.values()]
 })
 
-const featuredAlbum = computed(() => {
-  const track = musicStore.featuredTrack
-  return allAlbums.value.find((album) => album.tracks.some((item) => item.id === track?.id)) || allAlbums.value[0]
+const playerTrack = computed(() => musicStore.currentTrack)
+const recommendationTrack = computed(() =>
+  selectWeeklyMusicRecommendation(
+    musicStore.libraryTracks.filter((track) => musicStore.canPlayTrack(track)),
+  ),
+)
+const recommendationQueue = computed(() => {
+  const track = recommendationTrack.value
+  if (!track) return []
+  return (
+    allAlbums.value.find((album) => album.tracks.some((item) => item.id === track.id))?.tracks || [
+      track,
+    ]
+  )
 })
-
-const playerTrack = computed(() => musicStore.currentTrack || musicStore.featuredTrack)
+const isRecommendationCurrentTrack = computed(
+  () =>
+    Boolean(musicStore.currentTrack?.id) &&
+    musicStore.currentTrack.id === recommendationTrack.value?.id,
+)
+const recommendationPrimaryLabel = computed(() =>
+  isRecommendationCurrentTrack.value && musicStore.isPlaying
+    ? t('暂停', 'Pause')
+    : t('播放', 'Play'),
+)
 const nowPlayingTrack = computed(() => inspectedTrack.value || playerTrack.value)
-const isNowPlayingCurrentTrack = computed(() => Boolean(musicStore.currentTrack?.id) && musicStore.currentTrack.id === nowPlayingTrack.value?.id)
-const selectedPlaylist = computed(() => musicStore.playlists.find((playlist) => playlist.id === selectedPlaylistId.value) || null)
-const selectedPlaylistTracks = computed(() => (selectedPlaylist.value ? musicStore.tracksForPlaylist(selectedPlaylist.value.id) : []))
+const isNowPlayingCurrentTrack = computed(
+  () =>
+    Boolean(musicStore.currentTrack?.id) &&
+    musicStore.currentTrack.id === nowPlayingTrack.value?.id,
+)
+const selectedPlaylist = computed(
+  () => musicStore.playlists.find((playlist) => playlist.id === selectedPlaylistId.value) || null,
+)
+const selectedPlaylistTracks = computed(() =>
+  selectedPlaylist.value ? musicStore.tracksForPlaylist(selectedPlaylist.value.id) : [],
+)
+const recentVisibleTracks = computed(() =>
+  musicStore.recentTracks.length ? musicStore.recentTracks : musicStore.demoTracks.slice(0, 4),
+)
+const recentOverviewTracks = computed(() => recentVisibleTracks.value.slice(0, 3))
+const libraryArtworkTracks = computed(() => {
+  const candidates = [
+    ...musicStore.favoriteTracks,
+    ...musicStore.recentTracks,
+    ...musicStore.libraryTracks,
+  ]
+  return candidates
+    .filter((track, index, list) => list.findIndex((item) => item.id === track.id) === index)
+    .slice(0, 4)
+})
 const libraryVisibleTracks = computed(() => {
   if (libraryMode.value === 'favorites') return musicStore.favoriteTracks
   if (libraryMode.value === 'recent') return musicStore.recentTracks
@@ -108,9 +177,19 @@ const currentProviderState = computed(() => musicStore.providerStateById[provide
 const hasConnectedProvider = computed(() => Boolean(musicStore.activeProfile?.baseUrl))
 const isChkszDraft = computed(() => providerDraft.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ)
 const isRadioBrowserDraft = computed(() => isRadioBrowserMusicProviderProfile(providerDraft))
-const chkszQualityOptions = computed(() => CHKSZ_MUSIC_QUALITIES[providerDraft.platform?.toUpperCase()] || [])
-const canImportNeteasePlaylist = computed(() => musicStore.activeProfile?.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ && musicStore.activeProfile?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE)
-const canLoadLyrics = computed(() => playerTrack.value?.sourceRef?.type === MUSIC_ADAPTER_KINDS.CHKSZ && playerTrack.value?.sourceRef?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE)
+const chkszQualityOptions = computed(
+  () => CHKSZ_MUSIC_QUALITIES[providerDraft.platform?.toUpperCase()] || [],
+)
+const canImportNeteasePlaylist = computed(
+  () =>
+    musicStore.activeProfile?.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ &&
+    musicStore.activeProfile?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE,
+)
+const canLoadLyrics = computed(
+  () =>
+    playerTrack.value?.sourceRef?.type === MUSIC_ADAPTER_KINDS.CHKSZ &&
+    playerTrack.value?.sourceRef?.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE,
+)
 const lyricTabs = computed(() =>
   [
     { id: 'original', label: t('原文', 'Lyrics') },
@@ -132,9 +211,11 @@ const playbackErrorText = computed(() => {
   if (playbackRequestError.value) return playbackRequestError.value
   const code = musicStore.runtime.errorCode
   if (!code) return ''
-  if (code === 'AUDIO_URL_MISSING') return t('此歌曲没有可播放地址', 'This track has no playable URL')
+  if (code === 'AUDIO_URL_MISSING')
+    return t('此歌曲没有可播放地址', 'This track has no playable URL')
   if (code === 'PLAYBACK_GESTURE_REQUIRED') return t('轻点播放以继续', 'Tap play to continue')
-  if (code === 'AUDIO_UNSUPPORTED') return t('当前浏览器不支持音频播放', 'Audio playback is unavailable in this browser')
+  if (code === 'AUDIO_UNSUPPORTED')
+    return t('当前浏览器不支持音频播放', 'Audio playback is unavailable in this browser')
   return t('音频暂时无法播放', 'Audio is temporarily unavailable')
 })
 
@@ -170,7 +251,8 @@ const providerQuotaCopy = computed(() => {
 const searchStateCopy = computed(() => {
   if (musicStore.searchStatus === 'loading') return t('正在搜索…', 'Searching...')
   if (musicStore.searchStatus === 'empty') return t('没有找到歌曲', 'No songs found')
-  if (musicStore.searchStatus === 'error') return t('音乐源暂时无法访问', 'Music source is unavailable')
+  if (musicStore.searchStatus === 'error')
+    return t('音乐源暂时无法访问', 'Music source is unavailable')
   return ''
 })
 
@@ -197,7 +279,8 @@ const formatFileSize = (bytesInput) => {
   return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`
 }
 
-const coverStyle = (track) => (track?.coverUrl ? { backgroundImage: `url(${JSON.stringify(track.coverUrl)})` } : undefined)
+const coverStyle = (track) =>
+  track?.coverUrl ? { backgroundImage: `url(${JSON.stringify(track.coverUrl)})` } : undefined
 
 const onCoverError = (event) => {
   if (event?.currentTarget instanceof HTMLElement) event.currentTarget.style.visibility = 'hidden'
@@ -210,6 +293,17 @@ const setSection = (sectionId) => {
   if (sectionId === 'search') {
     void nextTick(() => searchInput.value?.focus())
   }
+}
+
+const openRecentLibrary = () => {
+  libraryMode.value = 'recent'
+  setSection('library')
+}
+
+const openLibraryMode = (mode) => {
+  if (!libraryModes.value.some((item) => item.id === mode)) return
+  libraryMode.value = mode
+  setSection('library')
 }
 
 const returnButtonLabel = computed(() => {
@@ -225,14 +319,53 @@ const playTrack = async (track, tracks = musicStore.libraryTracks) => {
   playbackRequestError.value = ''
   const result = await musicStore.playTrack(track, { queue: tracks })
   if (!result?.ok) {
-    playbackRequestError.value = result?.error?.message || (result?.code === 'CHKSZ_KEY_MISSING' ? t('请先在音乐设置中填写 ChKSz API Key', 'Add your ChKSz API Key in Music Settings') : result?.code === 'LOCAL_MEDIA_MISSING' ? t('本地音频已不在此设备，请在音乐设置中重新导入', 'This local file is missing. Import it again in Music Settings') : t('这首歌暂时无法播放', 'This song is temporarily unavailable'))
+    playbackRequestError.value =
+      result?.error?.message ||
+      (result?.code === 'CHKSZ_KEY_MISSING'
+        ? t('请先在音乐设置中填写 ChKSz API Key', 'Add your ChKSz API Key in Music Settings')
+        : result?.code === 'LOCAL_MEDIA_MISSING'
+          ? t(
+              '本地音频已不在此设备，请在音乐设置中重新导入',
+              'This local file is missing. Import it again in Music Settings',
+            )
+          : t('这首歌暂时无法播放', 'This song is temporarily unavailable'))
   }
   return result
 }
 
-const playAlbum = (album) => {
+const isTrackCurrent = (track) => Boolean(track?.id) && musicStore.currentTrack?.id === track.id
+const isTrackPlaying = (track) => isTrackCurrent(track) && musicStore.isPlaying
+const trackPlaybackLabel = (track) =>
+  isTrackPlaying(track) ? t('暂停', 'Pause') : t('播放', 'Play')
+
+const toggleTrackPlayback = async (track, tracks = musicStore.libraryTracks) => {
+  if (!track) return
+  if (isTrackCurrent(track)) {
+    await musicStore.togglePlayback()
+    return
+  }
+  await playTrack(track, tracks)
+}
+
+const isAlbumCurrent = (album) => Boolean(album?.tracks?.some((track) => isTrackCurrent(track)))
+const isAlbumPlaying = (album) => isAlbumCurrent(album) && musicStore.isPlaying
+const albumPlaybackLabel = (album) =>
+  isAlbumPlaying(album) ? t('暂停这张专辑', 'Pause album') : t('播放这张专辑', 'Play album')
+
+const toggleAlbumPlayback = async (album) => {
   if (!album?.tracks?.length) return
-  void playTrack(album.tracks[0], album.tracks)
+  const currentAlbumTrack = album.tracks.find((track) => isTrackCurrent(track))
+  if (currentAlbumTrack) {
+    await musicStore.togglePlayback()
+    return
+  }
+  await playTrack(album.tracks[0], album.tracks)
+}
+
+const toggleRecommendationPlayback = async () => {
+  const track = recommendationTrack.value
+  if (!track) return
+  await toggleTrackPlayback(track, recommendationQueue.value)
 }
 
 const playLibraryMode = () => {
@@ -261,6 +394,11 @@ const openNowPlaying = (track = playerTrack.value) => {
 const closeNowPlaying = () => {
   nowPlayingOpen.value = false
   inspectedTrack.value = null
+}
+
+const openQueueFromNowPlaying = () => {
+  closeNowPlaying()
+  queueOpen.value = true
 }
 
 const toggleNowPlayingPlayback = async () => {
@@ -309,7 +447,8 @@ const addTargetTrackToPlaylist = (playlistId) => {
 const createPlaylistAndAdd = () => {
   const playlist = musicStore.createPlaylist(playlistNameDraft.value)
   if (!playlist) return
-  if (playlistTargetTrack.value) musicStore.addTrackToPlaylist(playlist.id, playlistTargetTrack.value)
+  if (playlistTargetTrack.value)
+    musicStore.addTrackToPlaylist(playlist.id, playlistTargetTrack.value)
   selectedPlaylistId.value = playlist.id
   libraryMode.value = 'playlists'
   playlistSheetOpen.value = false
@@ -328,7 +467,10 @@ const choosePlaylist = (playlistId) => {
 const removePlaylist = async (playlist) => {
   const confirmed = await confirmDialog({
     title: t('删除播放列表？', 'Delete playlist?'),
-    message: t(`“${playlist.name}”中的歌曲不会从资料库删除。`, `Songs in "${playlist.name}" stay in your library.`),
+    message: t(
+      `“${playlist.name}”中的歌曲不会从资料库删除。`,
+      `Songs in "${playlist.name}" stay in your library.`,
+    ),
     confirmText: t('删除', 'Delete'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -339,7 +481,9 @@ const removePlaylist = async (playlist) => {
 }
 
 const selectProviderDraft = (profile) => {
-  const normalized = normalizeMusicProviderProfile(profile || { id: createMusicProviderId(), name: '' })
+  const normalized = normalizeMusicProviderProfile(
+    profile || { id: createMusicProviderId(), name: '' },
+  )
   Object.assign(providerDraft, JSON.parse(JSON.stringify(normalized)))
   providerCredentialDraft.value = profile ? musicStore.getCredential(normalized.id).apiKey : ''
   providerHeadersDraft.value = JSON.stringify(normalized.headers || {}, null, 2)
@@ -415,11 +559,20 @@ const addMusicErrorCopy = (code) => {
     LOCAL_FILE_TYPE_UNSUPPORTED: t('请选择支持的音频文件', 'Choose a supported audio file'),
     LOCAL_FILE_TOO_LARGE: t('单个文件不能超过 512 MB', 'Each file must be 512 MB or smaller'),
     LOCAL_FILE_EMPTY: t('空文件无法导入', 'Empty files cannot be imported'),
-    LOCAL_MEDIA_STORAGE_FAILED: t('当前设备无法保存该音频', 'This device could not store the audio file'),
+    LOCAL_MEDIA_STORAGE_FAILED: t(
+      '当前设备无法保存该音频',
+      'This device could not store the audio file',
+    ),
     MUSIC_LIBRARY_LIMIT_REACHED: t('音乐数量已达上限', 'The Music library is full'),
-    CURRENT_SAVE_READ_ONLY: t('当前存档为只读，请刷新后重试', 'The current save is read-only. Refresh and try again'),
+    CURRENT_SAVE_READ_ONLY: t(
+      '当前存档为只读，请刷新后重试',
+      'The current save is read-only. Refresh and try again',
+    ),
   }
-  return messages[code] || t('添加失败，请检查音频后重试', 'Could not add this music. Check the audio and try again')
+  return (
+    messages[code] ||
+    t('添加失败，请检查音频后重试', 'Could not add this music. Check the audio and try again')
+  )
 }
 
 const submitDirectUrl = async () => {
@@ -451,13 +604,24 @@ const importLocalMusicFiles = async (event) => {
     return
   }
   addMusicState.status = result.failed.length ? 'warning' : 'success'
-  addMusicState.message = result.failed.length ? t(`已导入 ${result.tracks.length} 首，${result.failed.length} 首未导入`, `${result.tracks.length} imported, ${result.failed.length} skipped`) : t(`已导入 ${result.tracks.length} 首歌曲`, `${result.tracks.length} songs imported`)
+  addMusicState.message = result.failed.length
+    ? t(
+        `已导入 ${result.tracks.length} 首，${result.failed.length} 首未导入`,
+        `${result.tracks.length} imported, ${result.failed.length} skipped`,
+      )
+    : t(`已导入 ${result.tracks.length} 首歌曲`, `${result.tracks.length} songs imported`)
 }
 
 const removeImportedMusic = async (track) => {
   const confirmed = await confirmDialog({
     title: t('移除这首歌曲？', 'Remove this song?'),
-    message: track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE ? t('这会从音乐中移除歌曲及当前设备上的音频文件。', 'This removes the song and its audio file from this device.') : t('这会从音乐中移除该 URL 歌曲。', 'This removes the URL song from Music.'),
+    message:
+      track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE
+        ? t(
+            '这会从音乐中移除歌曲及当前设备上的音频文件。',
+            'This removes the song and its audio file from this device.',
+          )
+        : t('这会从音乐中移除该 URL 歌曲。', 'This removes the URL song from Music.'),
     confirmText: t('移除', 'Remove'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -470,7 +634,8 @@ const parseProviderHeaders = () => {
   const text = providerHeadersDraft.value.trim()
   if (!text) return {}
   const parsed = JSON.parse(text)
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid_headers')
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new Error('invalid_headers')
   return parsed
 }
 
@@ -504,7 +669,10 @@ const saveProvider = async ({ close = true } = {}) => {
     headers,
   })
   if (!normalizedDraft.baseUrl) {
-    providerFormError.value = t('请输入有效的 HTTP 或 HTTPS 接口地址', 'Enter a valid HTTP or HTTPS endpoint URL')
+    providerFormError.value = t(
+      '请输入有效的 HTTP 或 HTTPS 接口地址',
+      'Enter a valid HTTP or HTTPS endpoint URL',
+    )
     return null
   }
   providerSaving.value = true
@@ -538,7 +706,10 @@ const deleteProvider = async () => {
   }
   const confirmed = await confirmDialog({
     title: t('移除音乐源？', 'Remove music source?'),
-    message: t(`将移除“${profile.name}”的配置与本机密钥。`, `This removes "${profile.name}" and its device key.`),
+    message: t(
+      `将移除“${profile.name}”的配置与本机密钥。`,
+      `This removes "${profile.name}" and its device key.`,
+    ),
     confirmText: t('移除', 'Remove'),
     cancelText: t('取消', 'Cancel'),
     tone: 'danger',
@@ -577,7 +748,10 @@ const submitPlaylistImport = async () => {
 const acceptIntegration = () => {
   const request = pendingIntegration.value
   if (!request) return
-  const track = request.trackId ? musicStore.libraryTracks.find((item) => item.id === request.trackId) || musicStore.queue.find((item) => item.id === request.trackId) : null
+  const track = request.trackId
+    ? musicStore.libraryTracks.find((item) => item.id === request.trackId) ||
+      musicStore.queue.find((item) => item.id === request.trackId)
+    : null
   if (request.action === MUSIC_INTEGRATION_ACTIONS.PLAY && track) {
     void playTrack(track)
   } else if (request.action === MUSIC_INTEGRATION_ACTIONS.ENQUEUE && track) {
@@ -602,7 +776,10 @@ const applyRouteIntegration = () => {
     return
   }
   if (request.action === MUSIC_INTEGRATION_ACTIONS.OPEN && request.trackId) {
-    const track = musicStore.libraryTracks.find((item) => item.id === request.trackId) || musicStore.searchResults.find((item) => item.id === request.trackId) || musicStore.queue.find((item) => item.id === request.trackId)
+    const track =
+      musicStore.libraryTracks.find((item) => item.id === request.trackId) ||
+      musicStore.searchResults.find((item) => item.id === request.trackId) ||
+      musicStore.queue.find((item) => item.id === request.trackId)
     if (track) {
       inspectedTrack.value = track
       nowPlayingOpen.value = true
@@ -610,7 +787,10 @@ const applyRouteIntegration = () => {
     }
     return
   }
-  if (request.sourceModule && [MUSIC_INTEGRATION_ACTIONS.PLAY, MUSIC_INTEGRATION_ACTIONS.ENQUEUE].includes(request.action)) {
+  if (
+    request.sourceModule &&
+    [MUSIC_INTEGRATION_ACTIONS.PLAY, MUSIC_INTEGRATION_ACTIONS.ENQUEUE].includes(request.action)
+  ) {
     pendingIntegration.value = request
   }
 }
@@ -624,7 +804,8 @@ watch(
   () => providerDraft.platform,
   () => {
     if (!isChkszDraft.value || chkszQualityOptions.value.includes(providerDraft.quality)) return
-    providerDraft.quality = providerDraft.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE ? 'jymaster' : 'flac'
+    providerDraft.quality =
+      providerDraft.platform === CHKSZ_MUSIC_PLATFORMS.NETEASE ? 'jymaster' : 'flac'
   },
 )
 
@@ -641,7 +822,12 @@ onMounted(() => {
     <div class="music-shell">
       <aside class="music-sidebar" aria-label="Music navigation">
         <div class="music-brand-block">
-          <button class="music-icon-button is-dark" type="button" :title="returnButtonLabel" @click="goHome">
+          <button
+            class="music-icon-button is-dark"
+            type="button"
+            :title="returnButtonLabel"
+            @click="goHome"
+          >
             <i class="fas fa-chevron-left" aria-hidden="true"></i>
           </button>
           <div class="music-wordmark" aria-label="Music">
@@ -651,20 +837,24 @@ onMounted(() => {
         </div>
 
         <nav class="music-nav-list">
-          <button v-for="item in navItems" :key="item.id" type="button" class="music-nav-item" :class="{ 'is-active': activeSection === item.id }" :data-testid="`music-tab-${item.id}`" @click="setSection(item.id)">
+          <button
+            v-for="item in navItems"
+            :key="item.id"
+            type="button"
+            class="music-nav-item"
+            :class="{ 'is-active': activeSection === item.id }"
+            :data-testid="`music-tab-${item.id}`"
+            @click="setSection(item.id)"
+          >
             <i :class="item.icon" aria-hidden="true"></i>
             <span>{{ item.label }}</span>
           </button>
         </nav>
 
-        <div class="music-source-status">
-          <span class="music-source-dot" :class="{ 'is-online': hasConnectedProvider }"></span>
-          <div>
-            <strong>{{ hasConnectedProvider ? musicStore.activeProfile?.name : t('Schat 精选', 'Schat Collection') }}</strong>
-            <span>{{ hasConnectedProvider ? t('在线音乐源', 'Online source') : t('内置试听', 'Built-in listening') }}</span>
-          </div>
-          <button type="button" :title="t('音乐设置', 'Music Settings')" @click="openSettings">
+        <div class="music-sidebar-footer">
+          <button type="button" @click="openSettings">
             <i class="fas fa-sliders" aria-hidden="true"></i>
+            <span>{{ t('音乐设置', 'Music Settings') }}</span>
           </button>
         </div>
       </aside>
@@ -672,23 +862,48 @@ onMounted(() => {
       <section class="music-content">
         <header class="music-topbar">
           <div class="music-mobile-brand">
-            <button class="music-icon-button" type="button" :title="returnButtonLabel" @click="goHome">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="returnButtonLabel"
+              @click="goHome"
+            >
               <i class="fas fa-chevron-left" aria-hidden="true"></i>
             </button>
-            <div class="music-wordmark"><i class="fas fa-music" aria-hidden="true"></i><span>Music</span></div>
+            <div class="music-wordmark">
+              <i class="fas fa-music" aria-hidden="true"></i><span>Music</span>
+            </div>
           </div>
           <div class="music-topbar-title">
-            <span>{{ navItems.find((item) => item.id === activeSection)?.label }}</span>
-            <small v-if="activeSection !== 'search'">{{ t('你的声音空间', 'Your listening space') }}</small>
+            <span>{{ activeSectionLabel }}</span>
           </div>
+          <button
+            class="music-search-trigger"
+            :class="{ 'is-active': activeSection === 'search' }"
+            type="button"
+            :title="t('搜索歌曲、歌手或专辑', 'Search songs, artists, or albums')"
+            data-testid="music-tab-search"
+            @click="setSection('search')"
+          >
+            <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+            <span>{{ t('搜索歌曲、歌手或专辑', 'Search songs, artists, or albums') }}</span>
+          </button>
           <div class="music-topbar-actions">
-            <button class="music-icon-button" type="button" :title="t('搜索', 'Search')" @click="setSection('search')">
-              <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-            </button>
-            <button class="music-icon-button" type="button" :title="t('播放队列', 'Queue')" @click="queueOpen = true">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('播放队列', 'Queue')"
+              @click="queueOpen = true"
+            >
               <i class="fas fa-list-ul" aria-hidden="true"></i>
             </button>
-            <button class="music-icon-button" type="button" :title="t('音乐设置', 'Music Settings')" data-testid="music-settings-button" @click="openSettings">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('音乐设置', 'Music Settings')"
+              data-testid="music-settings-button"
+              @click="openSettings"
+            >
               <i class="fas fa-sliders" aria-hidden="true"></i>
             </button>
           </div>
@@ -697,152 +912,457 @@ onMounted(() => {
         <div class="music-scroll no-scrollbar">
           <div v-if="pendingIntegration" class="music-integration-banner">
             <span class="music-integration-icon">
-              <i :class="pendingIntegration.sourceModule === 'map' ? 'fas fa-map-location-dot' : 'fas fa-comment'" aria-hidden="true"></i>
+              <i
+                :class="
+                  pendingIntegration.sourceModule === 'map'
+                    ? 'fas fa-map-location-dot'
+                    : 'fas fa-comment'
+                "
+                aria-hidden="true"
+              ></i>
             </span>
             <div>
-              <strong>{{ pendingIntegration.sourceModule === 'map' ? t('来自地图', 'From Map') : t('来自聊天', 'From Chat') }}</strong>
-              <span>{{ pendingIntegration.action === 'enqueue' ? t('加入播放队列', 'Add to queue') : t('准备播放', 'Ready to play') }}</span>
+              <strong>{{
+                pendingIntegration.sourceModule === 'map'
+                  ? t('来自地图', 'From Map')
+                  : t('来自聊天', 'From Chat')
+              }}</strong>
+              <span>{{
+                pendingIntegration.action === 'enqueue'
+                  ? t('加入播放队列', 'Add to queue')
+                  : t('准备播放', 'Ready to play')
+              }}</span>
             </div>
             <button type="button" @click="acceptIntegration">{{ t('继续', 'Continue') }}</button>
-            <button class="music-icon-button" type="button" :title="t('关闭', 'Dismiss')" @click="pendingIntegration = null">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('关闭', 'Dismiss')"
+              @click="pendingIntegration = null"
+            >
               <i class="fas fa-xmark" aria-hidden="true"></i>
             </button>
           </div>
 
           <template v-if="activeSection === 'listen'">
-            <section class="music-feature" data-testid="music-feature">
-              <div class="music-feature-art music-cover-fallback" :style="coverStyle(featuredAlbum?.tracks?.[0])">
-                <img v-if="featuredAlbum?.coverUrl" :src="featuredAlbum.coverUrl" :alt="featuredAlbum.title" @error="onCoverError" />
-                <span class="music-vinyl-groove" aria-hidden="true"></span>
-              </div>
-              <div class="music-feature-copy">
-                <span class="music-kicker">{{ t('本周精选', 'FEATURED THIS WEEK') }}</span>
-                <h1>{{ featuredAlbum?.title }}</h1>
-                <p class="music-feature-artist">{{ featuredAlbum?.artist }}</p>
-                <p class="music-feature-note">
-                  {{ featuredAlbum?.genre || t('精选音乐', 'Curated music') }}
-                  <span v-if="featuredAlbum?.year"> · {{ featuredAlbum.year }}</span>
-                </p>
-                <div class="music-feature-actions">
-                  <button class="music-primary-button" type="button" data-testid="music-feature-play" @click="playAlbum(featuredAlbum)">
-                    <i class="fas fa-play" aria-hidden="true"></i>
-                    <span>{{ t('播放', 'Play') }}</span>
-                  </button>
-                  <button class="music-secondary-button" type="button" @click="musicStore.addToQueue(featuredAlbum?.tracks?.[0])">
-                    <i class="fas fa-plus" aria-hidden="true"></i>
-                    <span>{{ t('稍后播放', 'Play Later') }}</span>
-                  </button>
-                </div>
-              </div>
-              <div class="music-feature-index" aria-hidden="true">01</div>
-            </section>
-
-            <section class="music-section-block">
-              <div class="music-section-heading">
-                <div>
-                  <span>{{ t('为你精选', 'Made for You') }}</span>
-                  <h2>{{ t('今晚的唱片架', 'Tonight on the shelf') }}</h2>
-                </div>
-                <button type="button" @click="setSection('browse')">
-                  {{ t('查看全部', 'See All') }}
+            <div class="music-listen-layout" data-testid="music-listen-layout">
+              <section v-if="recommendationTrack" class="music-feature" data-testid="music-feature">
+                <span
+                  class="music-feature-backdrop music-cover-fallback"
+                  :style="coverStyle(recommendationTrack)"
+                  aria-hidden="true"
+                ></span>
+                <button
+                  class="music-feature-art music-cover-fallback"
+                  type="button"
+                  :style="coverStyle(recommendationTrack)"
+                  :title="t('查看歌曲详情', 'View track details')"
+                  @click="openNowPlaying(recommendationTrack)"
+                >
+                  <img
+                    v-if="recommendationTrack.coverUrl"
+                    :src="recommendationTrack.coverUrl"
+                    :alt="recommendationTrack.title"
+                    @error="onCoverError"
+                  />
+                  <span class="music-vinyl-groove" aria-hidden="true"></span>
                 </button>
-              </div>
-              <div class="music-album-rail no-scrollbar">
-                <button v-for="album in allAlbums" :key="album.id" type="button" class="music-album-item" @click="playAlbum(album)">
-                  <span class="music-album-cover music-cover-fallback" :style="coverStyle(album.tracks[0])">
-                    <img v-if="album.coverUrl" :src="album.coverUrl" :alt="album.title" loading="lazy" @error="onCoverError" />
-                    <span class="music-album-play"><i class="fas fa-play" aria-hidden="true"></i></span>
-                  </span>
-                  <strong>{{ album.title }}</strong>
-                  <span>{{ album.artist }}</span>
-                </button>
-              </div>
-            </section>
-
-            <section class="music-section-block">
-              <div class="music-section-heading">
-                <div>
-                  <span>{{ t('刚刚听过', 'Recently Played') }}</span>
-                  <h2>{{ t('接着听', 'Pick up where you left off') }}</h2>
-                </div>
-              </div>
-              <div class="music-track-list">
-                <article v-for="(track, index) in musicStore.recentTracks.length ? musicStore.recentTracks : musicStore.demoTracks.slice(0, 4)" :key="track.id" class="music-track-row" :class="{ 'is-current': musicStore.currentTrack?.id === track.id }">
-                  <button class="music-track-index" type="button" :disabled="!musicStore.canPlayTrack(track)" :title="t('播放', 'Play')" @click="playTrack(track)">
-                    <span>{{ String(index + 1).padStart(2, '0') }}</span
-                    ><i class="fas fa-play" aria-hidden="true"></i>
-                  </button>
-                  <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)">
-                    <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.album" loading="lazy" @error="onCoverError" />
-                  </span>
-                  <div class="music-track-meta">
-                    <strong>{{ track.title }}</strong
-                    ><span>{{ track.artist }}</span>
+                <div class="music-feature-copy">
+                  <span class="music-kicker">{{ t('本周推荐', "THIS WEEK'S PICK") }}</span>
+                  <h1>{{ recommendationTrack.title }}</h1>
+                  <p class="music-feature-artist">{{ recommendationTrack.artist }}</p>
+                  <p class="music-feature-note">
+                    {{ recommendationTrack.album }}
+                    <span v-if="recommendationTrack.genre"> · {{ recommendationTrack.genre }}</span>
+                    <span v-if="recommendationTrack.year"> · {{ recommendationTrack.year }}</span>
+                  </p>
+                  <div class="music-feature-actions">
+                    <button
+                      class="music-primary-button"
+                      type="button"
+                      :title="recommendationPrimaryLabel"
+                      data-testid="music-feature-play"
+                      @click="toggleRecommendationPlayback"
+                    >
+                      <i
+                        :class="
+                          isRecommendationCurrentTrack && musicStore.isPlaying
+                            ? 'fas fa-pause'
+                            : 'fas fa-play'
+                        "
+                        aria-hidden="true"
+                      ></i>
+                      <span>{{ recommendationPrimaryLabel }}</span>
+                    </button>
+                    <button
+                      v-if="!isRecommendationCurrentTrack"
+                      class="music-secondary-button"
+                      type="button"
+                      @click="musicStore.addToQueue(recommendationTrack)"
+                    >
+                      <i class="fas fa-plus" aria-hidden="true"></i>
+                      <span>{{ t('稍后播放', 'Play Later') }}</span>
+                    </button>
                   </div>
-                  <span class="music-track-album">{{ track.album }}</span>
-                  <span class="music-track-duration">{{ formatDuration(track.durationSec) }}</span>
-                  <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)">
-                    <i :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i>
+                </div>
+              </section>
+
+              <nav
+                class="music-discovery-shortcuts"
+                :aria-label="t('音乐快捷入口', 'Music shortcuts')"
+              >
+                <button type="button" @click="openLibraryMode('favorites')">
+                  <span class="music-shortcut-icon is-favorite"
+                    ><i class="fas fa-heart" aria-hidden="true"></i
+                  ></span>
+                  <strong>{{ t('我喜欢', 'Favorites') }}</strong>
+                  <small>{{ musicStore.favoriteTracks.length }}</small>
+                </button>
+                <button type="button" @click="openRecentLibrary">
+                  <span class="music-shortcut-icon is-recent"
+                    ><i class="fas fa-clock-rotate-left" aria-hidden="true"></i
+                  ></span>
+                  <strong>{{ t('最近播放', 'Recent') }}</strong>
+                  <small>{{ musicStore.recentTracks.length }}</small>
+                </button>
+                <button type="button" @click="openLibraryMode('playlists')">
+                  <span class="music-shortcut-icon is-playlist"
+                    ><i class="fas fa-list-ul" aria-hidden="true"></i
+                  ></span>
+                  <strong>{{ t('我的歌单', 'Playlists') }}</strong>
+                  <small>{{ musicStore.playlists.length }}</small>
+                </button>
+                <button type="button" @click="setSection('browse')">
+                  <span class="music-shortcut-icon is-album"
+                    ><i class="fas fa-compact-disc" aria-hidden="true"></i
+                  ></span>
+                  <strong>{{ t('全部专辑', 'Albums') }}</strong>
+                  <small>{{ allAlbums.length }}</small>
+                </button>
+              </nav>
+
+              <section class="music-section-block music-album-section">
+                <div class="music-section-heading">
+                  <div>
+                    <span>{{ t('为你精选', 'Made for You') }}</span>
+                    <h2>{{ t('值得完整听完', 'Albums worth your time') }}</h2>
+                  </div>
+                  <button class="music-section-action" type="button" @click="setSection('browse')">
+                    <span>{{ t('查看全部', 'See All') }}</span>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
                   </button>
-                  <button class="music-track-action" type="button" :title="t('加入播放列表', 'Add to Playlist')" @click="openPlaylistPicker(track)">
-                    <i class="fas fa-plus" aria-hidden="true"></i>
+                </div>
+                <div class="music-album-rail no-scrollbar">
+                  <button
+                    v-for="album in allAlbums"
+                    :key="album.id"
+                    type="button"
+                    class="music-album-item"
+                    :class="{
+                      'is-current': isAlbumCurrent(album),
+                      'is-playing': isAlbumPlaying(album),
+                    }"
+                    :title="albumPlaybackLabel(album)"
+                    :aria-label="`${albumPlaybackLabel(album)}：${album.title}`"
+                    :data-testid="`music-album-${album.tracks[0].id}`"
+                    @click="toggleAlbumPlayback(album)"
+                  >
+                    <span
+                      class="music-album-cover music-cover-fallback"
+                      :style="coverStyle(album.tracks[0])"
+                    >
+                      <img
+                        v-if="album.coverUrl"
+                        :src="album.coverUrl"
+                        :alt="album.title"
+                        loading="lazy"
+                        @error="onCoverError"
+                      />
+                      <span class="music-album-play"
+                        ><i
+                          :class="isAlbumPlaying(album) ? 'fas fa-pause' : 'fas fa-play'"
+                          aria-hidden="true"
+                        ></i
+                      ></span>
+                    </span>
+                    <strong>{{ album.title }}</strong>
+                    <span>{{ album.artist }}</span>
                   </button>
-                </article>
-              </div>
-            </section>
+                </div>
+              </section>
+
+              <section
+                class="music-section-block music-recent-section"
+                data-testid="music-recent-overview"
+              >
+                <div class="music-section-heading">
+                  <div>
+                    <span>{{ t('刚刚听过', 'Recently Played') }}</span>
+                    <h2>{{ t('接着听', 'Pick up where you left off') }}</h2>
+                  </div>
+                  <button
+                    class="music-section-action"
+                    type="button"
+                    :title="t('查看最近播放', 'View listening history')"
+                    data-testid="music-recent-see-all"
+                    @click="openRecentLibrary"
+                  >
+                    <span>{{ t('查看全部', 'See All') }}</span>
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="music-track-list">
+                  <article
+                    v-for="(track, index) in recentOverviewTracks"
+                    :key="track.id"
+                    class="music-track-row"
+                    :class="{ 'is-current': isTrackCurrent(track) }"
+                  >
+                    <button
+                      class="music-track-index"
+                      type="button"
+                      :disabled="!musicStore.canPlayTrack(track)"
+                      :title="trackPlaybackLabel(track)"
+                      :data-testid="`music-track-toggle-${track.id}`"
+                      @click="toggleTrackPlayback(track, recentOverviewTracks)"
+                    >
+                      <span>{{ String(index + 1).padStart(2, '0') }}</span
+                      ><i
+                        :class="isTrackPlaying(track) ? 'fas fa-pause' : 'fas fa-play'"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+                    <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)">
+                      <img
+                        v-if="track.coverUrl"
+                        :src="track.coverUrl"
+                        :alt="track.album"
+                        loading="lazy"
+                        @error="onCoverError"
+                      />
+                    </span>
+                    <div class="music-track-meta">
+                      <strong>{{ track.title }}</strong
+                      ><span>{{ track.artist }}</span>
+                    </div>
+                    <span class="music-track-album">{{ track.album }}</span>
+                    <span class="music-track-duration">{{
+                      formatDuration(track.durationSec)
+                    }}</span>
+                    <button
+                      class="music-track-action"
+                      type="button"
+                      :title="
+                        musicStore.isFavorite(track.id)
+                          ? t('取消喜爱', 'Unfavorite')
+                          : t('加入喜爱', 'Favorite')
+                      "
+                      @click="toggleFavorite(track)"
+                    >
+                      <i
+                        :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+                    <button
+                      class="music-track-action"
+                      type="button"
+                      :title="t('加入播放列表', 'Add to Playlist')"
+                      @click="openPlaylistPicker(track)"
+                    >
+                      <i class="fas fa-plus" aria-hidden="true"></i>
+                    </button>
+                  </article>
+                </div>
+              </section>
+            </div>
           </template>
 
           <template v-else-if="activeSection === 'browse'">
-            <section class="music-page-intro">
-              <span class="music-kicker">{{ t('音乐目录', 'THE CATALOG') }}</span>
-              <h1>{{ t('浏览新声音', 'Browse new sounds') }}</h1>
+            <section class="music-catalog-hero">
+              <div class="music-catalog-copy">
+                <span class="music-kicker">{{ t('唱片架', 'THE RECORD SHELF') }}</span>
+                <h1>{{ t('专辑', 'Albums') }}</h1>
+                <p>
+                  {{ t(`${allAlbums.length} 张完整唱片`, `${allAlbums.length} complete records`) }}
+                </p>
+                <button
+                  v-if="recommendationTrack"
+                  class="music-primary-button"
+                  type="button"
+                  @click="toggleRecommendationPlayback"
+                >
+                  <i
+                    :class="
+                      isRecommendationCurrentTrack && musicStore.isPlaying
+                        ? 'fas fa-pause'
+                        : 'fas fa-play'
+                    "
+                    aria-hidden="true"
+                  ></i>
+                  <span>{{ t('播放本周推荐', "Play this week's pick") }}</span>
+                </button>
+              </div>
+              <div class="music-catalog-stack" aria-hidden="true">
+                <span
+                  v-for="(album, index) in allAlbums.slice(0, 3)"
+                  :key="album.id"
+                  :class="`is-${index + 1}`"
+                  :style="coverStyle(album.tracks[0])"
+                ></span>
+              </div>
             </section>
             <section class="music-album-grid">
-              <button v-for="album in allAlbums" :key="album.id" type="button" class="music-album-item" @click="playAlbum(album)">
-                <span class="music-album-cover music-cover-fallback" :style="coverStyle(album.tracks[0])">
-                  <img v-if="album.coverUrl" :src="album.coverUrl" :alt="album.title" loading="lazy" @error="onCoverError" />
-                  <span class="music-album-play"><i class="fas fa-play" aria-hidden="true"></i></span>
+              <button
+                v-for="album in allAlbums"
+                :key="album.id"
+                type="button"
+                class="music-album-item"
+                :class="{
+                  'is-current': isAlbumCurrent(album),
+                  'is-playing': isAlbumPlaying(album),
+                }"
+                :title="albumPlaybackLabel(album)"
+                :aria-label="`${albumPlaybackLabel(album)}：${album.title}`"
+                @click="toggleAlbumPlayback(album)"
+              >
+                <span
+                  class="music-album-cover music-cover-fallback"
+                  :style="coverStyle(album.tracks[0])"
+                >
+                  <img
+                    v-if="album.coverUrl"
+                    :src="album.coverUrl"
+                    :alt="album.title"
+                    loading="lazy"
+                    @error="onCoverError"
+                  />
+                  <span class="music-album-play"
+                    ><i
+                      :class="isAlbumPlaying(album) ? 'fas fa-pause' : 'fas fa-play'"
+                      aria-hidden="true"
+                    ></i
+                  ></span>
                 </span>
                 <strong>{{ album.title }}</strong
                 ><span>{{ album.artist }}</span>
                 <small
-                  >{{ album.genre }}<template v-if="album.year"> · {{ album.year }}</template></small
+                  >{{ album.genre
+                  }}<template v-if="album.year"> · {{ album.year }}</template></small
                 >
               </button>
             </section>
           </template>
 
           <template v-else-if="activeSection === 'library'">
-            <section class="music-page-intro is-library">
-              <div>
-                <span class="music-kicker">{{ t('个人收藏', 'YOUR COLLECTION') }}</span>
-                <h1>{{ t('资料库', 'Library') }}</h1>
+            <section class="music-library-hero">
+              <div class="music-library-mosaic" aria-hidden="true">
+                <span
+                  v-for="track in libraryArtworkTracks"
+                  :key="track.id"
+                  :style="coverStyle(track)"
+                ></span>
+                <i v-if="!libraryArtworkTracks.length" class="fas fa-music"></i>
               </div>
-              <button class="music-primary-button" type="button" :disabled="!libraryVisibleTracks.length" @click="playLibraryMode">
-                <i class="fas fa-play" aria-hidden="true"></i><span>{{ t('播放全部', 'Play All') }}</span>
-              </button>
+              <div class="music-library-hero-copy">
+                <span class="music-kicker">{{ t('只属于你的音乐', 'YOUR MUSIC') }}</span>
+                <h1>{{ t('我的音乐', 'My Music') }}</h1>
+                <p>
+                  {{
+                    t(
+                      `${musicStore.libraryTracks.length} 首歌曲 · ${musicStore.playlists.length} 个歌单`,
+                      `${musicStore.libraryTracks.length} songs · ${musicStore.playlists.length} playlists`,
+                    )
+                  }}
+                </p>
+                <button
+                  class="music-primary-button"
+                  type="button"
+                  :disabled="!libraryVisibleTracks.length"
+                  @click="playLibraryMode"
+                >
+                  <i class="fas fa-play" aria-hidden="true"></i
+                  ><span>{{ t('播放当前分类', 'Play this collection') }}</span>
+                </button>
+              </div>
+              <div class="music-library-glance">
+                <button type="button" @click="openLibraryMode('favorites')">
+                  <i class="fas fa-heart" aria-hidden="true"></i>
+                  <strong>{{ musicStore.favoriteTracks.length }}</strong>
+                  <span>{{ t('我喜欢', 'Favorites') }}</span>
+                </button>
+                <button type="button" @click="openRecentLibrary">
+                  <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
+                  <strong>{{ musicStore.recentTracks.length }}</strong>
+                  <span>{{ t('最近播放', 'Recent') }}</span>
+                </button>
+                <button type="button" @click="openLibraryMode('playlists')">
+                  <i class="fas fa-list-ul" aria-hidden="true"></i>
+                  <strong>{{ musicStore.playlists.length }}</strong>
+                  <span>{{ t('我的歌单', 'Playlists') }}</span>
+                </button>
+              </div>
             </section>
-            <div class="music-segmented" role="tablist" :aria-label="t('资料库分类', 'Library categories')">
-              <button v-for="mode in libraryModes" :key="mode.id" type="button" :class="{ 'is-active': libraryMode === mode.id }" @click="libraryMode = mode.id">
+            <div
+              class="music-segmented"
+              role="tablist"
+              :aria-label="t('资料库分类', 'Library categories')"
+            >
+              <button
+                v-for="mode in libraryModes"
+                :key="mode.id"
+                type="button"
+                :class="{ 'is-active': libraryMode === mode.id }"
+                @click="libraryMode = mode.id"
+              >
                 {{ mode.label }}
               </button>
             </div>
 
             <section v-if="libraryMode === 'playlists'" class="music-playlist-layout">
               <div class="music-playlist-grid">
-                <button class="music-playlist-create" type="button" @click="openCreatePlaylistSheet">
-                  <i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('新建播放列表', 'New Playlist') }}</span>
+                <button
+                  class="music-playlist-create"
+                  type="button"
+                  @click="openCreatePlaylistSheet"
+                >
+                  <i class="fas fa-plus" aria-hidden="true"></i
+                  ><span>{{ t('新建播放列表', 'New Playlist') }}</span>
                 </button>
-                <button v-if="canImportNeteasePlaylist" class="music-playlist-create is-import" type="button" data-testid="music-playlist-import-open" @click="openPlaylistImport">
-                  <i class="fas fa-cloud-arrow-down" aria-hidden="true"></i><span>{{ t('导入网易云歌单', 'Import NetEase Playlist') }}</span>
+                <button
+                  v-if="canImportNeteasePlaylist"
+                  class="music-playlist-create is-import"
+                  type="button"
+                  data-testid="music-playlist-import-open"
+                  @click="openPlaylistImport"
+                >
+                  <i class="fas fa-cloud-arrow-down" aria-hidden="true"></i
+                  ><span>{{ t('导入网易云歌单', 'Import NetEase Playlist') }}</span>
                 </button>
-                <button v-for="playlist in musicStore.playlists" :key="playlist.id" type="button" class="music-playlist-tile" :class="{ 'is-active': selectedPlaylistId === playlist.id }" @click="choosePlaylist(playlist.id)">
+                <button
+                  v-for="playlist in musicStore.playlists"
+                  :key="playlist.id"
+                  type="button"
+                  class="music-playlist-tile"
+                  :class="{ 'is-active': selectedPlaylistId === playlist.id }"
+                  @click="choosePlaylist(playlist.id)"
+                >
                   <span class="music-playlist-mosaic">
-                    <span v-for="track in musicStore.tracksForPlaylist(playlist.id).slice(0, 4)" :key="track.id" :style="coverStyle(track)"></span>
-                    <i v-if="!musicStore.tracksForPlaylist(playlist.id).length" class="fas fa-music" aria-hidden="true"></i>
+                    <span
+                      v-for="track in musicStore.tracksForPlaylist(playlist.id).slice(0, 4)"
+                      :key="track.id"
+                      :style="coverStyle(track)"
+                    ></span>
+                    <i
+                      v-if="!musicStore.tracksForPlaylist(playlist.id).length"
+                      class="fas fa-music"
+                      aria-hidden="true"
+                    ></i>
                   </span>
                   <strong>{{ playlist.name }}</strong
-                  ><span>{{ t(`${playlist.trackIds.length} 首`, `${playlist.trackIds.length} songs`) }}</span>
+                  ><span>{{
+                    t(`${playlist.trackIds.length} 首`, `${playlist.trackIds.length} songs`)
+                  }}</span>
                 </button>
               </div>
               <div v-if="selectedPlaylist" class="music-playlist-detail">
@@ -861,23 +1381,65 @@ onMounted(() => {
               </div>
             </section>
 
-            <div v-if="libraryMode !== 'playlists' || selectedPlaylist" class="music-track-list is-library-list">
-              <article v-for="(track, index) in libraryVisibleTracks" :key="track.id" class="music-track-row" :class="{ 'is-current': musicStore.currentTrack?.id === track.id }">
-                <button class="music-track-index" type="button" :disabled="!musicStore.canPlayTrack(track)" :title="t('播放', 'Play')" @click="playTrack(track, libraryVisibleTracks)">
+            <div
+              v-if="libraryMode !== 'playlists' || selectedPlaylist"
+              class="music-track-list is-library-list"
+            >
+              <article
+                v-for="(track, index) in libraryVisibleTracks"
+                :key="track.id"
+                class="music-track-row"
+                :class="{ 'is-current': isTrackCurrent(track) }"
+              >
+                <button
+                  class="music-track-index"
+                  type="button"
+                  :disabled="!musicStore.canPlayTrack(track)"
+                  :title="trackPlaybackLabel(track)"
+                  :data-testid="`music-track-toggle-${track.id}`"
+                  @click="toggleTrackPlayback(track, libraryVisibleTracks)"
+                >
                   <span>{{ String(index + 1).padStart(2, '0') }}</span
-                  ><i class="fas fa-play" aria-hidden="true"></i>
+                  ><i
+                    :class="isTrackPlaying(track) ? 'fas fa-pause' : 'fas fa-play'"
+                    aria-hidden="true"
+                  ></i>
                 </button>
-                <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"><img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.album" loading="lazy" @error="onCoverError" /></span>
+                <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"
+                  ><img
+                    v-if="track.coverUrl"
+                    :src="track.coverUrl"
+                    :alt="track.album"
+                    loading="lazy"
+                    @error="onCoverError"
+                /></span>
                 <div class="music-track-meta">
                   <strong>{{ track.title }}</strong
                   ><span>{{ track.artist }}</span>
                 </div>
                 <span class="music-track-album">{{ track.album }}</span
                 ><span class="music-track-duration">{{ formatDuration(track.durationSec) }}</span>
-                <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)">
-                  <i :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i>
+                <button
+                  class="music-track-action"
+                  type="button"
+                  :title="
+                    musicStore.isFavorite(track.id)
+                      ? t('取消喜爱', 'Unfavorite')
+                      : t('加入喜爱', 'Favorite')
+                  "
+                  @click="toggleFavorite(track)"
+                >
+                  <i
+                    :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'"
+                    aria-hidden="true"
+                  ></i>
                 </button>
-                <button class="music-track-action" type="button" :title="t('加入播放列表', 'Add to Playlist')" @click="openPlaylistPicker(track)">
+                <button
+                  class="music-track-action"
+                  type="button"
+                  :title="t('加入播放列表', 'Add to Playlist')"
+                  @click="openPlaylistPicker(track)"
+                >
                   <i class="fas fa-plus" aria-hidden="true"></i>
                 </button>
               </article>
@@ -889,43 +1451,120 @@ onMounted(() => {
 
           <template v-else>
             <section class="music-search-page">
-              <span class="music-kicker">{{ t('搜索资料库与音乐源', 'SEARCH LIBRARY & SOURCES') }}</span>
+              <span class="music-kicker">{{
+                t('搜索资料库与音乐源', 'SEARCH LIBRARY & SOURCES')
+              }}</span>
               <form class="music-search-form" @submit.prevent="submitSearch">
                 <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-                <input ref="searchInput" v-model="musicStore.searchQuery" type="search" :placeholder="t('歌曲、艺人或专辑', 'Songs, artists, or albums')" autocomplete="off" data-testid="music-search-input" />
-                <button v-if="musicStore.searchQuery" type="button" :title="t('清空', 'Clear')" @click="clearMusicSearch">
+                <input
+                  ref="searchInput"
+                  v-model="musicStore.searchQuery"
+                  type="search"
+                  :placeholder="t('歌曲、艺人或专辑', 'Songs, artists, or albums')"
+                  autocomplete="off"
+                  data-testid="music-search-input"
+                />
+                <button
+                  v-if="musicStore.searchQuery"
+                  type="button"
+                  :title="t('清空', 'Clear')"
+                  @click="clearMusicSearch"
+                >
                   <i class="fas fa-xmark" aria-hidden="true"></i>
                 </button>
                 <button class="music-search-submit" type="submit">{{ t('搜索', 'Search') }}</button>
               </form>
               <div class="music-search-source">
-                <span class="music-source-dot" :class="{ 'is-online': hasConnectedProvider }"></span>
-                <span>{{ hasConnectedProvider ? musicStore.activeProfile?.name : t('当前仅搜索本地资料库', 'Searching this library') }}</span>
+                <span
+                  class="music-source-dot"
+                  :class="{ 'is-online': hasConnectedProvider }"
+                ></span>
+                <span>{{
+                  hasConnectedProvider
+                    ? musicStore.activeProfile?.name
+                    : t('当前仅搜索本地资料库', 'Searching this library')
+                }}</span>
                 <button v-if="!hasConnectedProvider" type="button" @click="openSettings">
                   {{ t('连接音乐源', 'Connect Source') }}
                 </button>
               </div>
             </section>
-            <p v-if="searchStateCopy" class="music-search-state" :class="`is-${musicStore.searchStatus}`">
+            <p
+              v-if="searchStateCopy"
+              class="music-search-state"
+              :class="`is-${musicStore.searchStatus}`"
+            >
               {{ searchStateCopy }}
             </p>
             <div v-if="musicStore.searchResults.length" class="music-track-list is-search-results">
-              <article v-for="(track, index) in musicStore.searchResults" :key="track.id" class="music-track-row" :class="{ 'is-unplayable': !musicStore.canPlayTrack(track) }">
-                <button class="music-track-index" type="button" :disabled="!musicStore.canPlayTrack(track)" :title="musicStore.canPlayTrack(track) ? t('播放', 'Play') : t('没有播放地址', 'No playable URL')" @click="playTrack(track, musicStore.searchResults)">
+              <article
+                v-for="(track, index) in musicStore.searchResults"
+                :key="track.id"
+                class="music-track-row"
+                :class="{
+                  'is-current': isTrackCurrent(track),
+                  'is-unplayable': !musicStore.canPlayTrack(track),
+                }"
+              >
+                <button
+                  class="music-track-index"
+                  type="button"
+                  :disabled="!musicStore.canPlayTrack(track)"
+                  :title="
+                    musicStore.canPlayTrack(track)
+                      ? trackPlaybackLabel(track)
+                      : t('没有播放地址', 'No playable URL')
+                  "
+                  :data-testid="`music-track-toggle-${track.id}`"
+                  @click="toggleTrackPlayback(track, musicStore.searchResults)"
+                >
                   <span>{{ String(index + 1).padStart(2, '0') }}</span
-                  ><i class="fas fa-play" aria-hidden="true"></i>
+                  ><i
+                    :class="isTrackPlaying(track) ? 'fas fa-pause' : 'fas fa-play'"
+                    aria-hidden="true"
+                  ></i>
                 </button>
-                <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"><img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.album" loading="lazy" @error="onCoverError" /></span>
+                <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"
+                  ><img
+                    v-if="track.coverUrl"
+                    :src="track.coverUrl"
+                    :alt="track.album"
+                    loading="lazy"
+                    @error="onCoverError"
+                /></span>
                 <div class="music-track-meta">
                   <strong>{{ track.title }}</strong
                   ><span>{{ track.artist }}</span>
                 </div>
                 <span class="music-track-album">{{ track.album }}</span>
-                <span class="music-track-duration">{{ track.durationSec ? formatDuration(track.durationSec) : musicStore.canPlayTrack(track) ? t('在线', 'Stream') : t('仅资料', 'Info only') }}</span>
-                <button class="music-track-action" type="button" :title="musicStore.isFavorite(track.id) ? t('取消喜爱', 'Unfavorite') : t('加入喜爱', 'Favorite')" @click="toggleFavorite(track)">
-                  <i :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i>
+                <span class="music-track-duration">{{
+                  track.durationSec
+                    ? formatDuration(track.durationSec)
+                    : musicStore.canPlayTrack(track)
+                      ? t('在线', 'Stream')
+                      : t('仅资料', 'Info only')
+                }}</span>
+                <button
+                  class="music-track-action"
+                  type="button"
+                  :title="
+                    musicStore.isFavorite(track.id)
+                      ? t('取消喜爱', 'Unfavorite')
+                      : t('加入喜爱', 'Favorite')
+                  "
+                  @click="toggleFavorite(track)"
+                >
+                  <i
+                    :class="musicStore.isFavorite(track.id) ? 'fas fa-heart' : 'far fa-heart'"
+                    aria-hidden="true"
+                  ></i>
                 </button>
-                <button class="music-track-action" type="button" :title="t('加入播放列表', 'Add to Playlist')" @click="openPlaylistPicker(track)">
+                <button
+                  class="music-track-action"
+                  type="button"
+                  :title="t('加入播放列表', 'Add to Playlist')"
+                  @click="openPlaylistPicker(track)"
+                >
                   <i class="fas fa-plus" aria-hidden="true"></i>
                 </button>
               </article>
@@ -936,8 +1575,19 @@ onMounted(() => {
     </div>
 
     <section v-if="playerTrack" class="music-player" data-testid="music-player">
-      <button class="music-player-track" type="button" data-testid="music-now-playing-open" @click="openNowPlaying(playerTrack)">
-        <span class="music-player-cover music-cover-fallback" :style="coverStyle(playerTrack)"><img v-if="playerTrack.coverUrl" :src="playerTrack.coverUrl" :alt="playerTrack.album" @error="onCoverError" /></span>
+      <button
+        class="music-player-track"
+        type="button"
+        data-testid="music-now-playing-open"
+        @click="openNowPlaying(playerTrack)"
+      >
+        <span class="music-player-cover music-cover-fallback" :style="coverStyle(playerTrack)"
+          ><img
+            v-if="playerTrack.coverUrl"
+            :src="playerTrack.coverUrl"
+            :alt="playerTrack.album"
+            @error="onCoverError"
+        /></span>
         <span class="music-player-meta"
           ><strong>{{ playerTrack.title }}</strong
           ><span>{{ playerTrack.artist }}</span></span
@@ -945,23 +1595,66 @@ onMounted(() => {
       </button>
       <div class="music-player-center">
         <div class="music-player-controls">
-          <button type="button" :class="{ 'is-active': musicStore.state.playback.shuffle }" :title="t('随机播放', 'Shuffle')" @click="musicStore.toggleShuffle">
+          <button
+            type="button"
+            :class="{ 'is-active': musicStore.state.playback.shuffle }"
+            :title="t('随机播放', 'Shuffle')"
+            @click="musicStore.toggleShuffle"
+          >
             <i class="fas fa-shuffle" aria-hidden="true"></i>
           </button>
           <button type="button" :title="t('上一首', 'Previous')" @click="musicStore.previous">
             <i class="fas fa-backward-step" aria-hidden="true"></i>
           </button>
-          <button class="music-play-button" type="button" data-testid="music-player-toggle" :title="musicStore.isPlaying ? t('暂停', 'Pause') : t('播放', 'Play')" @click="musicStore.togglePlayback">
-            <i :class="musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'" aria-hidden="true"></i>
+          <button
+            class="music-play-button"
+            type="button"
+            data-testid="music-player-toggle"
+            :title="musicStore.isPlaying ? t('暂停', 'Pause') : t('播放', 'Play')"
+            @click="musicStore.togglePlayback"
+          >
+            <i
+              :class="musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'"
+              aria-hidden="true"
+            ></i>
+          </button>
+          <button
+            type="button"
+            data-testid="music-player-stop"
+            :title="t('停止播放', 'Stop playback')"
+            @click="musicStore.stop"
+          >
+            <i class="fas fa-stop" aria-hidden="true"></i>
           </button>
           <button type="button" :title="t('下一首', 'Next')" @click="musicStore.next">
             <i class="fas fa-forward-step" aria-hidden="true"></i>
           </button>
-          <button type="button" :class="{ 'is-active': musicStore.state.playback.repeatMode !== 'off' }" :title="t('循环模式', 'Repeat')" @click="musicStore.cycleRepeatMode"><i :class="musicStore.state.playback.repeatMode === 'one' ? 'fas fa-repeat' : 'fas fa-retweet'" aria-hidden="true"></i><small v-if="musicStore.state.playback.repeatMode === 'one'">1</small></button>
+          <button
+            type="button"
+            :class="{ 'is-active': musicStore.state.playback.repeatMode !== 'off' }"
+            :title="t('循环模式', 'Repeat')"
+            @click="musicStore.cycleRepeatMode"
+          >
+            <i
+              :class="
+                musicStore.state.playback.repeatMode === 'one' ? 'fas fa-repeat' : 'fas fa-retweet'
+              "
+              aria-hidden="true"
+            ></i
+            ><small v-if="musicStore.state.playback.repeatMode === 'one'">1</small>
+          </button>
         </div>
         <div class="music-player-progress">
           <span>{{ formatDuration(musicStore.runtime.currentTime) }}</span>
-          <input type="range" min="0" :max="Math.max(1, musicStore.runtime.duration || playerTrack.durationSec)" step="1" :value="musicStore.runtime.currentTime" :aria-label="t('播放进度', 'Playback progress')" @input="musicStore.seek($event.target.value)" />
+          <input
+            type="range"
+            min="0"
+            :max="Math.max(1, musicStore.runtime.duration || playerTrack.durationSec)"
+            step="1"
+            :value="musicStore.runtime.currentTime"
+            :aria-label="t('播放进度', 'Playback progress')"
+            @input="musicStore.seek($event.target.value)"
+          />
           <span>{{ formatDuration(musicStore.runtime.duration || playerTrack.durationSec) }}</span>
         </div>
       </div>
@@ -969,10 +1662,25 @@ onMounted(() => {
         <button type="button" :title="t('播放队列', 'Queue')" @click="queueOpen = true">
           <i class="fas fa-list-ul" aria-hidden="true"></i>
         </button>
-        <button type="button" :title="musicStore.state.playback.muted ? t('取消静音', 'Unmute') : t('静音', 'Mute')" @click="musicStore.toggleMuted">
-          <i :class="musicStore.state.playback.muted ? 'fas fa-volume-xmark' : 'fas fa-volume-high'" aria-hidden="true"></i>
+        <button
+          type="button"
+          :title="musicStore.state.playback.muted ? t('取消静音', 'Unmute') : t('静音', 'Mute')"
+          @click="musicStore.toggleMuted"
+        >
+          <i
+            :class="musicStore.state.playback.muted ? 'fas fa-volume-xmark' : 'fas fa-volume-high'"
+            aria-hidden="true"
+          ></i>
         </button>
-        <input type="range" min="0" max="1" step="0.01" :value="musicStore.state.playback.volume" :aria-label="t('音量', 'Volume')" @input="musicStore.setVolume($event.target.value)" />
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          :value="musicStore.state.playback.volume"
+          :aria-label="t('音量', 'Volume')"
+          @input="musicStore.setVolume($event.target.value)"
+        />
       </div>
       <p v-if="playbackErrorText" class="music-player-error">{{ playbackErrorText }}</p>
     </section>
@@ -985,12 +1693,24 @@ onMounted(() => {
               <span>{{ t('接下来播放', 'Up Next') }}</span>
               <h2>{{ t('播放队列', 'Queue') }}</h2>
             </div>
-            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="queueOpen = false">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('关闭', 'Close')"
+              @click="queueOpen = false"
+            >
               <i class="fas fa-xmark" aria-hidden="true"></i>
             </button>
           </div>
           <div class="music-queue-list no-scrollbar">
-            <button v-for="(track, index) in musicStore.queue" :key="track.id" type="button" class="music-queue-row" :class="{ 'is-current': musicStore.currentTrack?.id === track.id }" @click="playTrack(track, musicStore.queue)">
+            <button
+              v-for="(track, index) in musicStore.queue"
+              :key="track.id"
+              type="button"
+              class="music-queue-row"
+              :class="{ 'is-current': musicStore.currentTrack?.id === track.id }"
+              @click="playTrack(track, musicStore.queue)"
+            >
               <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"></span
               ><span
                 ><strong>{{ track.title }}</strong
@@ -1006,77 +1726,217 @@ onMounted(() => {
     </transition>
 
     <transition name="music-drawer">
-      <div v-if="nowPlayingOpen && nowPlayingTrack" class="music-overlay is-now-playing" @click.self="closeNowPlaying">
+      <div
+        v-if="nowPlayingOpen && nowPlayingTrack"
+        class="music-overlay is-now-playing"
+        @click.self="closeNowPlaying"
+      >
         <section class="music-now-playing-sheet" data-testid="music-now-playing-sheet">
-          <button class="music-icon-button is-sheet-close" type="button" :title="t('收起', 'Close')" @click="closeNowPlaying">
+          <div
+            class="music-now-playing-ambient music-cover-fallback"
+            :style="coverStyle(nowPlayingTrack)"
+            aria-hidden="true"
+          ></div>
+          <button
+            class="music-icon-button is-sheet-close"
+            type="button"
+            :title="t('收起', 'Close')"
+            @click="closeNowPlaying"
+          >
             <i class="fas fa-chevron-down" aria-hidden="true"></i>
           </button>
-          <div class="music-now-playing-art music-cover-fallback" :style="coverStyle(nowPlayingTrack)">
-            <img v-if="nowPlayingTrack.coverUrl" :src="nowPlayingTrack.coverUrl" :alt="nowPlayingTrack.album" @error="onCoverError" />
-          </div>
-          <div class="music-now-playing-copy">
-            <span>{{ isNowPlayingCurrentTrack ? t('正在播放', 'NOW PLAYING') : t('曲目详情', 'TRACK DETAILS') }}</span>
-            <h2>{{ nowPlayingTrack.title }}</h2>
-            <p>{{ nowPlayingTrack.artist }} · {{ nowPlayingTrack.album }}</p>
-          </div>
-          <template v-if="isNowPlayingCurrentTrack">
-            <input class="music-now-playing-range" type="range" min="0" :max="Math.max(1, musicStore.runtime.duration || nowPlayingTrack.durationSec)" step="1" :value="musicStore.runtime.currentTime" :aria-label="t('播放进度', 'Playback progress')" @input="musicStore.seek($event.target.value)" />
-            <div class="music-now-playing-times">
-              <span>{{ formatDuration(musicStore.runtime.currentTime) }}</span
-              ><span>-{{ formatDuration(Math.max(0, (musicStore.runtime.duration || nowPlayingTrack.durationSec) - musicStore.runtime.currentTime)) }}</span>
+          <div class="music-now-playing-layout">
+            <div class="music-now-playing-visual">
+              <div
+                class="music-now-playing-art music-cover-fallback"
+                :style="coverStyle(nowPlayingTrack)"
+              >
+                <img
+                  v-if="nowPlayingTrack.coverUrl"
+                  :src="nowPlayingTrack.coverUrl"
+                  :alt="nowPlayingTrack.album"
+                  @error="onCoverError"
+                />
+              </div>
             </div>
-          </template>
-          <p v-else class="music-track-inspection-note">
-            {{ t('打开详情不会自动播放', 'Opening details does not start playback') }}
-          </p>
-          <div class="music-now-playing-controls">
-            <button v-if="isNowPlayingCurrentTrack" type="button" :title="t('上一首', 'Previous')" @click="musicStore.previous">
-              <i class="fas fa-backward-step" aria-hidden="true"></i>
-            </button>
-            <button class="music-play-button is-large" type="button" :title="isNowPlayingCurrentTrack && musicStore.isPlaying ? t('暂停', 'Pause') : t('播放', 'Play')" @click="toggleNowPlayingPlayback">
-              <i :class="isNowPlayingCurrentTrack && musicStore.isPlaying ? 'fas fa-pause' : 'fas fa-play'" aria-hidden="true"></i>
-            </button>
-            <button v-if="isNowPlayingCurrentTrack" type="button" :title="t('下一首', 'Next')" @click="musicStore.next">
-              <i class="fas fa-forward-step" aria-hidden="true"></i>
-            </button>
+            <div class="music-now-playing-stage">
+              <div class="music-now-playing-copy">
+                <span>{{
+                  isNowPlayingCurrentTrack
+                    ? t('正在播放', 'NOW PLAYING')
+                    : t('曲目详情', 'TRACK DETAILS')
+                }}</span>
+                <h2>{{ nowPlayingTrack.title }}</h2>
+                <p>{{ nowPlayingTrack.artist }} · {{ nowPlayingTrack.album }}</p>
+              </div>
+              <div class="music-now-playing-playback">
+                <template v-if="isNowPlayingCurrentTrack">
+                  <input
+                    class="music-now-playing-range"
+                    type="range"
+                    min="0"
+                    :max="Math.max(1, musicStore.runtime.duration || nowPlayingTrack.durationSec)"
+                    step="1"
+                    :value="musicStore.runtime.currentTime"
+                    :aria-label="t('播放进度', 'Playback progress')"
+                    @input="musicStore.seek($event.target.value)"
+                  />
+                  <div class="music-now-playing-times">
+                    <span>{{ formatDuration(musicStore.runtime.currentTime) }}</span
+                    ><span
+                      >-{{
+                        formatDuration(
+                          Math.max(
+                            0,
+                            (musicStore.runtime.duration || nowPlayingTrack.durationSec) -
+                              musicStore.runtime.currentTime,
+                          ),
+                        )
+                      }}</span
+                    >
+                  </div>
+                </template>
+                <p v-else class="music-track-inspection-note">
+                  {{ t('打开详情不会自动播放', 'Opening details does not start playback') }}
+                </p>
+                <div class="music-now-playing-controls">
+                  <button
+                    v-if="isNowPlayingCurrentTrack"
+                    type="button"
+                    :title="t('上一首', 'Previous')"
+                    @click="musicStore.previous"
+                  >
+                    <i class="fas fa-backward-step" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    class="music-play-button is-large"
+                    type="button"
+                    :title="
+                      isNowPlayingCurrentTrack && musicStore.isPlaying
+                        ? t('暂停', 'Pause')
+                        : t('播放', 'Play')
+                    "
+                    @click="toggleNowPlayingPlayback"
+                  >
+                    <i
+                      :class="
+                        isNowPlayingCurrentTrack && musicStore.isPlaying
+                          ? 'fas fa-pause'
+                          : 'fas fa-play'
+                      "
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+                  <button
+                    v-if="isNowPlayingCurrentTrack"
+                    type="button"
+                    :title="t('停止播放', 'Stop playback')"
+                    @click="musicStore.stop"
+                  >
+                    <i class="fas fa-stop" aria-hidden="true"></i>
+                  </button>
+                  <button
+                    v-if="isNowPlayingCurrentTrack"
+                    type="button"
+                    :title="t('下一首', 'Next')"
+                    @click="musicStore.next"
+                  >
+                    <i class="fas fa-forward-step" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="music-now-playing-actions">
+                <button
+                  type="button"
+                  data-testid="music-now-playing-favorite"
+                  :aria-label="
+                    musicStore.isFavorite(nowPlayingTrack.id)
+                      ? t('取消喜爱', 'Remove from Favorites')
+                      : t('加入喜爱', 'Add to Favorites')
+                  "
+                  :aria-pressed="musicStore.isFavorite(nowPlayingTrack.id)"
+                  :title="
+                    musicStore.isFavorite(nowPlayingTrack.id)
+                      ? t('取消喜爱', 'Remove from Favorites')
+                      : t('加入喜爱', 'Add to Favorites')
+                  "
+                  @click="toggleFavorite(nowPlayingTrack)"
+                >
+                  <i
+                    :class="
+                      musicStore.isFavorite(nowPlayingTrack.id) ? 'fas fa-heart' : 'far fa-heart'
+                    "
+                    aria-hidden="true"
+                  ></i
+                  ><span aria-live="polite">{{
+                    musicStore.isFavorite(nowPlayingTrack.id)
+                      ? t('已喜爱', 'Added')
+                      : t('喜爱', 'Favorite')
+                  }}</span>
+                </button>
+                <button
+                  v-if="canLoadLyrics && isNowPlayingCurrentTrack"
+                  type="button"
+                  :title="t('歌词', 'Lyrics')"
+                  data-testid="music-lyrics-open"
+                  @click="openLyrics"
+                >
+                  <i class="fas fa-align-left" aria-hidden="true"></i
+                  ><span>{{ t('歌词', 'Lyrics') }}</span>
+                </button>
+                <button
+                  type="button"
+                  :title="t('播放列表', 'Playlist')"
+                  @click="openPlaylistPicker(nowPlayingTrack)"
+                >
+                  <i class="fas fa-list-ul" aria-hidden="true"></i
+                  ><span>{{ t('播放列表', 'Playlist') }}</span>
+                </button>
+                <button
+                  type="button"
+                  :title="t('分享到聊天', 'Share to Chat')"
+                  data-testid="music-share-chat"
+                  @click="shareNowPlayingTrackToChat"
+                >
+                  <i class="fas fa-share-nodes" aria-hidden="true"></i
+                  ><span>{{ t('聊天', 'Chat') }}</span>
+                </button>
+                <button
+                  type="button"
+                  :title="t('播放队列', 'Queue')"
+                  data-testid="music-now-playing-queue"
+                  @click="openQueueFromNowPlaying"
+                >
+                  <i class="fas fa-bars-staggered" aria-hidden="true"></i
+                  ><span>{{ t('队列', 'Queue') }}</span>
+                </button>
+              </div>
+              <dl class="music-track-details">
+                <div>
+                  <dt>{{ t('音乐源', 'Source') }}</dt>
+                  <dd>{{ nowPlayingTrack.providerName }}</dd>
+                </div>
+                <div>
+                  <dt>{{ t('类型', 'Genre') }}</dt>
+                  <dd>{{ nowPlayingTrack.genre || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>{{ t('年份', 'Year') }}</dt>
+                  <dd>{{ nowPlayingTrack.year || '—' }}</dd>
+                </div>
+              </dl>
+            </div>
           </div>
-          <div class="music-now-playing-actions">
-            <button type="button" @click="toggleFavorite(nowPlayingTrack)">
-              <i :class="musicStore.isFavorite(nowPlayingTrack.id) ? 'fas fa-heart' : 'far fa-heart'" aria-hidden="true"></i><span>{{ t('喜爱', 'Favorite') }}</span>
-            </button>
-            <button v-if="canLoadLyrics && isNowPlayingCurrentTrack" type="button" data-testid="music-lyrics-open" @click="openLyrics">
-              <i class="fas fa-align-left" aria-hidden="true"></i><span>{{ t('歌词', 'Lyrics') }}</span>
-            </button>
-            <button type="button" @click="openPlaylistPicker(nowPlayingTrack)">
-              <i class="fas fa-list-ul" aria-hidden="true"></i><span>{{ t('播放列表', 'Playlist') }}</span>
-            </button>
-            <button type="button" data-testid="music-share-chat" @click="shareNowPlayingTrackToChat">
-              <i class="fas fa-share-nodes" aria-hidden="true"></i><span>{{ t('聊天', 'Chat') }}</span>
-            </button>
-            <button type="button" @click="queueOpen = true">
-              <i class="fas fa-bars-staggered" aria-hidden="true"></i><span>{{ t('队列', 'Queue') }}</span>
-            </button>
-          </div>
-          <dl class="music-track-details">
-            <div>
-              <dt>{{ t('音乐源', 'Source') }}</dt>
-              <dd>{{ nowPlayingTrack.providerName }}</dd>
-            </div>
-            <div>
-              <dt>{{ t('类型', 'Genre') }}</dt>
-              <dd>{{ nowPlayingTrack.genre || '—' }}</dd>
-            </div>
-            <div>
-              <dt>{{ t('年份', 'Year') }}</dt>
-              <dd>{{ nowPlayingTrack.year || '—' }}</dd>
-            </div>
-          </dl>
         </section>
       </div>
     </transition>
 
     <transition name="music-drawer">
-      <div v-if="lyricsOpen && playerTrack" class="music-overlay is-lyrics" @click.self="lyricsOpen = false">
+      <div
+        v-if="lyricsOpen && playerTrack"
+        class="music-overlay is-lyrics"
+        @click.self="lyricsOpen = false"
+      >
         <section class="music-lyrics-sheet" data-testid="music-lyrics-sheet">
           <header class="music-drawer-heading">
             <div>
@@ -1084,12 +1944,28 @@ onMounted(() => {
               <h2>{{ playerTrack.title }}</h2>
               <small>{{ playerTrack.artist }}</small>
             </div>
-            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="lyricsOpen = false">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('关闭', 'Close')"
+              @click="lyricsOpen = false"
+            >
               <i class="fas fa-xmark" aria-hidden="true"></i>
             </button>
           </header>
-          <div v-if="lyricTabs.length > 1" class="music-segmented is-lyrics-tabs" role="tablist" :aria-label="t('歌词版本', 'Lyric version')">
-            <button v-for="tab in lyricTabs" :key="tab.id" type="button" :class="{ 'is-active': lyricsMode === tab.id }" @click="lyricsMode = tab.id">
+          <div
+            v-if="lyricTabs.length > 1"
+            class="music-segmented is-lyrics-tabs"
+            role="tablist"
+            :aria-label="t('歌词版本', 'Lyric version')"
+          >
+            <button
+              v-for="tab in lyricTabs"
+              :key="tab.id"
+              type="button"
+              :class="{ 'is-active': lyricsMode === tab.id }"
+              @click="lyricsMode = tab.id"
+            >
               {{ tab.label }}
             </button>
           </div>
@@ -1097,7 +1973,10 @@ onMounted(() => {
             <p v-if="musicStore.lyricsState.status === 'loading'" class="music-empty-state">
               {{ t('正在读取歌词…', 'Loading lyrics...') }}
             </p>
-            <p v-else-if="musicStore.lyricsState.status === 'error'" class="music-empty-state is-error">
+            <p
+              v-else-if="musicStore.lyricsState.status === 'error'"
+              class="music-empty-state is-error"
+            >
               {{ currentProviderState?.message || t('歌词暂时不可用', 'Lyrics are unavailable') }}
             </p>
             <p v-else-if="musicStore.lyricsState.status === 'empty'" class="music-empty-state">
@@ -1117,17 +1996,45 @@ onMounted(() => {
               <span>{{ t('来自网易云音乐', 'FROM NETEASE') }}</span>
               <h2>{{ t('导入歌单', 'Import Playlist') }}</h2>
             </div>
-            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="playlistImportOpen = false">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('关闭', 'Close')"
+              @click="playlistImportOpen = false"
+            >
               <i class="fas fa-xmark" aria-hidden="true"></i>
             </button>
           </div>
           <form class="music-import-form" @submit.prevent="submitPlaylistImport">
-            <label>{{ t('歌单 ID', 'Playlist ID') }}<input v-model="playlistIdDraft" inputmode="numeric" autocomplete="off" placeholder="3778678" data-testid="music-playlist-id" /></label>
+            <label
+              >{{ t('歌单 ID', 'Playlist ID')
+              }}<input
+                v-model="playlistIdDraft"
+                inputmode="numeric"
+                autocomplete="off"
+                placeholder="3778678"
+                data-testid="music-playlist-id"
+            /></label>
             <p v-if="musicStore.playlistImportState.status === 'error'" class="music-form-error">
-              {{ currentProviderState?.message || t('无法导入这个歌单', 'This playlist could not be imported') }}
+              {{
+                currentProviderState?.message ||
+                t('无法导入这个歌单', 'This playlist could not be imported')
+              }}
             </p>
-            <button class="music-primary-button" type="submit" :disabled="!playlistIdDraft.trim() || musicStore.playlistImportState.status === 'loading'" data-testid="music-playlist-import-submit">
-              <i class="fas fa-cloud-arrow-down" aria-hidden="true"></i><span>{{ musicStore.playlistImportState.status === 'loading' ? t('导入中…', 'Importing...') : t('导入', 'Import') }}</span>
+            <button
+              class="music-primary-button"
+              type="submit"
+              :disabled="
+                !playlistIdDraft.trim() || musicStore.playlistImportState.status === 'loading'
+              "
+              data-testid="music-playlist-import-submit"
+            >
+              <i class="fas fa-cloud-arrow-down" aria-hidden="true"></i
+              ><span>{{
+                musicStore.playlistImportState.status === 'loading'
+                  ? t('导入中…', 'Importing...')
+                  : t('导入', 'Import')
+              }}</span>
             </button>
           </form>
         </section>
@@ -1142,20 +2049,43 @@ onMounted(() => {
               <span>{{ playlistTargetTrack ? t('加入', 'ADD TO') : t('新建', 'CREATE') }}</span>
               <h2>{{ t('播放列表', 'Playlist') }}</h2>
             </div>
-            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="playlistSheetOpen = false">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('关闭', 'Close')"
+              @click="playlistSheetOpen = false"
+            >
               <i class="fas fa-xmark" aria-hidden="true"></i>
             </button>
           </div>
-          <button v-for="playlist in musicStore.playlists" :key="playlist.id" type="button" class="music-playlist-choice" @click="addTargetTrackToPlaylist(playlist.id)">
-            <span class="music-playlist-choice-icon"><i class="fas fa-music" aria-hidden="true"></i></span
+          <button
+            v-for="playlist in musicStore.playlists"
+            :key="playlist.id"
+            type="button"
+            class="music-playlist-choice"
+            @click="addTargetTrackToPlaylist(playlist.id)"
+          >
+            <span class="music-playlist-choice-icon"
+              ><i class="fas fa-music" aria-hidden="true"></i></span
             ><span
               ><strong>{{ playlist.name }}</strong
-              ><small>{{ t(`${playlist.trackIds.length} 首歌曲`, `${playlist.trackIds.length} songs`) }}</small></span
+              ><small>{{
+                t(`${playlist.trackIds.length} 首歌曲`, `${playlist.trackIds.length} songs`)
+              }}</small></span
             ><i class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
           <form class="music-create-playlist-form" @submit.prevent="createPlaylistAndAdd">
-            <label>{{ t('新的播放列表', 'New Playlist') }}<input v-model="playlistNameDraft" maxlength="80" :placeholder="t('播放列表名称', 'Playlist name')" /></label
-            ><button class="music-primary-button" type="submit" :disabled="!playlistNameDraft.trim()">
+            <label
+              >{{ t('新的播放列表', 'New Playlist')
+              }}<input
+                v-model="playlistNameDraft"
+                maxlength="80"
+                :placeholder="t('播放列表名称', 'Playlist name')" /></label
+            ><button
+              class="music-primary-button"
+              type="submit"
+              :disabled="!playlistNameDraft.trim()"
+            >
               <i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('创建', 'Create') }}</span>
             </button>
           </form>
@@ -1171,14 +2101,26 @@ onMounted(() => {
               <span>{{ t('MUSIC', 'MUSIC') }}</span>
               <h2>{{ t('音乐设置', 'Music Settings') }}</h2>
             </div>
-            <button class="music-icon-button" type="button" :title="t('关闭', 'Close')" @click="closeSettings">
+            <button
+              class="music-icon-button"
+              type="button"
+              :title="t('关闭', 'Close')"
+              @click="closeSettings"
+            >
               <i class="fas fa-xmark" aria-hidden="true"></i>
             </button>
           </header>
           <div class="music-settings-body no-scrollbar">
             <aside class="music-provider-list">
-              <button class="music-settings-add-entry" type="button" :class="{ 'is-active': settingsPanel === 'add' }" data-testid="music-settings-add-entry" @click="openAddMusic">
-                <span class="music-settings-entry-icon"><i class="fas fa-file-audio" aria-hidden="true"></i></span
+              <button
+                class="music-settings-add-entry"
+                type="button"
+                :class="{ 'is-active': settingsPanel === 'add' }"
+                data-testid="music-settings-add-entry"
+                @click="openAddMusic"
+              >
+                <span class="music-settings-entry-icon"
+                  ><i class="fas fa-file-audio" aria-hidden="true"></i></span
                 ><span
                   ><strong>{{ t('添加音乐', 'Add Music') }}</strong
                   ><small>{{ t('URL 或本地文件', 'URL or local files') }}</small></span
@@ -1194,62 +2136,214 @@ onMounted(() => {
                 }"
                 @click="selectProviderDraft(profile)"
               >
-                <span class="music-source-dot" :class="{ 'is-online': profile.enabled && profile.baseUrl }"></span
+                <span
+                  class="music-source-dot"
+                  :class="{ 'is-online': profile.enabled && profile.baseUrl }"
+                ></span
                 ><span
                   ><strong>{{ profile.name }}</strong
-                  ><small>{{ profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ ? profile.platform : isRadioBrowserMusicProviderProfile(profile) ? t('直播电台', 'Live radio') : formatProviderHost(profile.baseUrl) }}</small></span
+                  ><small>{{
+                    profile.adapterKind === MUSIC_ADAPTER_KINDS.CHKSZ
+                      ? profile.platform
+                      : isRadioBrowserMusicProviderProfile(profile)
+                        ? t('直播电台', 'Live radio')
+                        : formatProviderHost(profile.baseUrl)
+                  }}</small></span
                 >
               </button>
-              <button class="music-add-source is-chksz" type="button" data-testid="music-add-chksz" @click="createChkszProviderDraft"><i class="fas fa-wave-square" aria-hidden="true"></i><span>ChKSz</span></button>
-              <button class="music-add-source is-radio" type="button" data-testid="music-add-radio-browser" @click="createRadioBrowserProviderDraft"><i class="fas fa-radio" aria-hidden="true"></i><span>Radio Browser</span></button>
-              <button class="music-add-source" type="button" data-testid="music-add-custom-source" @click="createNewProviderDraft">
-                <i class="fas fa-plus" aria-hidden="true"></i><span>{{ t('自定义 JSON', 'Custom JSON') }}</span>
+              <button
+                class="music-add-source is-chksz"
+                type="button"
+                data-testid="music-add-chksz"
+                @click="createChkszProviderDraft"
+              >
+                <i class="fas fa-wave-square" aria-hidden="true"></i><span>ChKSz</span>
+              </button>
+              <button
+                class="music-add-source is-radio"
+                type="button"
+                data-testid="music-add-radio-browser"
+                @click="createRadioBrowserProviderDraft"
+              >
+                <i class="fas fa-radio" aria-hidden="true"></i><span>Radio Browser</span>
+              </button>
+              <button
+                class="music-add-source"
+                type="button"
+                data-testid="music-add-custom-source"
+                @click="createNewProviderDraft"
+              >
+                <i class="fas fa-plus" aria-hidden="true"></i
+                ><span>{{ t('自定义 JSON', 'Custom JSON') }}</span>
               </button>
             </aside>
-            <div v-if="settingsPanel === 'add'" class="music-provider-form music-add-music-panel" data-testid="music-add-panel">
+            <div
+              v-if="settingsPanel === 'add'"
+              class="music-provider-form music-add-music-panel"
+              data-testid="music-add-panel"
+            >
               <section class="music-settings-section music-add-heading">
                 <div class="music-settings-section-heading">
                   <div>
                     <span>{{ t('添加音乐', 'ADD MUSIC') }}</span>
                     <h3>
-                      {{ addMusicMode === 'url' ? t('通过 URL 添加', 'Add from URL') : t('从本地导入', 'Import Local Files') }}
+                      {{
+                        addMusicMode === 'url'
+                          ? t('通过 URL 添加', 'Add from URL')
+                          : t('从本地导入', 'Import Local Files')
+                      }}
                     </h3>
                   </div>
                   <span class="music-import-count">{{ importedTrackCount }}</span>
                 </div>
-                <div class="music-add-segmented" role="tablist" :aria-label="t('添加方式', 'Add method')">
-                  <button type="button" role="tab" :aria-selected="addMusicMode === 'url'" :class="{ 'is-active': addMusicMode === 'url' }" data-testid="music-add-url-tab" @click="selectAddMusicMode('url')"><i class="fas fa-link" aria-hidden="true"></i><span>URL</span></button>
-                  <button type="button" role="tab" :aria-selected="addMusicMode === 'files'" :class="{ 'is-active': addMusicMode === 'files' }" data-testid="music-add-files-tab" @click="selectAddMusicMode('files')">
-                    <i class="fas fa-folder-open" aria-hidden="true"></i><span>{{ t('本地文件', 'Local Files') }}</span>
+                <div
+                  class="music-add-segmented"
+                  role="tablist"
+                  :aria-label="t('添加方式', 'Add method')"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="addMusicMode === 'url'"
+                    :class="{ 'is-active': addMusicMode === 'url' }"
+                    data-testid="music-add-url-tab"
+                    @click="selectAddMusicMode('url')"
+                  >
+                    <i class="fas fa-link" aria-hidden="true"></i><span>URL</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    :aria-selected="addMusicMode === 'files'"
+                    :class="{ 'is-active': addMusicMode === 'files' }"
+                    data-testid="music-add-files-tab"
+                    @click="selectAddMusicMode('files')"
+                  >
+                    <i class="fas fa-folder-open" aria-hidden="true"></i
+                    ><span>{{ t('本地文件', 'Local Files') }}</span>
                   </button>
                 </div>
               </section>
 
-              <form v-if="addMusicMode === 'url'" class="music-settings-section music-url-import-form" data-testid="music-url-import-form" @submit.prevent="submitDirectUrl">
+              <form
+                v-if="addMusicMode === 'url'"
+                class="music-settings-section music-url-import-form"
+                data-testid="music-url-import-form"
+                @submit.prevent="submitDirectUrl"
+              >
                 <div class="music-form-grid">
-                  <label class="is-wide">{{ t('音频 URL', 'Audio URL') }}<input v-model="directUrlDraft.audioUrl" type="url" inputmode="url" required placeholder="https://media.example.com/song.mp3" data-testid="music-direct-url" /></label>
-                  <label class="is-wide">{{ t('歌曲名称', 'Song Title') }}<input v-model="directUrlDraft.title" maxlength="180" required :placeholder="t('歌曲名称', 'Song title')" data-testid="music-direct-title" /></label>
-                  <label>{{ t('艺人', 'Artist') }}<input v-model="directUrlDraft.artist" maxlength="160" :placeholder="t('未知艺人', 'Unknown Artist')" /></label>
-                  <label>{{ t('专辑', 'Album') }}<input v-model="directUrlDraft.album" maxlength="180" :placeholder="t('未知专辑', 'Unknown Album')" /></label>
-                  <label class="is-wide">{{ t('封面 URL', 'Cover URL') }}<input v-model="directUrlDraft.coverUrl" type="url" inputmode="url" placeholder="https://media.example.com/cover.jpg" /></label>
+                  <label class="is-wide"
+                    >{{ t('音频 URL', 'Audio URL')
+                    }}<input
+                      v-model="directUrlDraft.audioUrl"
+                      type="url"
+                      inputmode="url"
+                      required
+                      placeholder="https://media.example.com/song.mp3"
+                      data-testid="music-direct-url"
+                  /></label>
+                  <label class="is-wide"
+                    >{{ t('歌曲名称', 'Song Title')
+                    }}<input
+                      v-model="directUrlDraft.title"
+                      maxlength="180"
+                      required
+                      :placeholder="t('歌曲名称', 'Song title')"
+                      data-testid="music-direct-title"
+                  /></label>
+                  <label
+                    >{{ t('艺人', 'Artist')
+                    }}<input
+                      v-model="directUrlDraft.artist"
+                      maxlength="160"
+                      :placeholder="t('未知艺人', 'Unknown Artist')"
+                  /></label>
+                  <label
+                    >{{ t('专辑', 'Album')
+                    }}<input
+                      v-model="directUrlDraft.album"
+                      maxlength="180"
+                      :placeholder="t('未知专辑', 'Unknown Album')"
+                  /></label>
+                  <label class="is-wide"
+                    >{{ t('封面 URL', 'Cover URL')
+                    }}<input
+                      v-model="directUrlDraft.coverUrl"
+                      type="url"
+                      inputmode="url"
+                      placeholder="https://media.example.com/cover.jpg"
+                  /></label>
                 </div>
                 <div class="music-add-submit-row">
-                  <button class="music-primary-button" type="submit" :disabled="addMusicState.status === 'loading'" data-testid="music-direct-add">
-                    <i class="fas fa-plus" aria-hidden="true"></i><span>{{ addMusicState.status === 'loading' ? t('正在读取…', 'Reading...') : t('添加歌曲', 'Add Song') }}</span>
+                  <button
+                    class="music-primary-button"
+                    type="submit"
+                    :disabled="addMusicState.status === 'loading'"
+                    data-testid="music-direct-add"
+                  >
+                    <i class="fas fa-plus" aria-hidden="true"></i
+                    ><span>{{
+                      addMusicState.status === 'loading'
+                        ? t('正在读取…', 'Reading...')
+                        : t('添加歌曲', 'Add Song')
+                    }}</span>
                   </button>
                 </div>
               </form>
 
-              <section v-else class="music-settings-section music-local-import" data-testid="music-local-import">
-                <label class="music-file-picker-button" :class="{ 'is-disabled': localFilesImporting }">
-                  <i :class="localFilesImporting ? 'fas fa-spinner fa-spin' : 'fas fa-folder-open'" aria-hidden="true"></i>
-                  <span>{{ localFilesImporting ? t('正在导入…', 'Importing...') : t('选择音频文件', 'Choose Audio Files') }}</span>
-                  <input ref="localFileInput" class="music-native-file-input" type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.oga,.wav,.flac" multiple :disabled="localFilesImporting" data-testid="music-local-files" @change="importLocalMusicFiles" />
+              <section
+                v-else
+                class="music-settings-section music-local-import"
+                data-testid="music-local-import"
+              >
+                <label
+                  class="music-file-picker-button"
+                  :class="{ 'is-disabled': localFilesImporting }"
+                >
+                  <i
+                    :class="localFilesImporting ? 'fas fa-spinner fa-spin' : 'fas fa-folder-open'"
+                    aria-hidden="true"
+                  ></i>
+                  <span>{{
+                    localFilesImporting
+                      ? t('正在导入…', 'Importing...')
+                      : t('选择音频文件', 'Choose Audio Files')
+                  }}</span>
+                  <input
+                    ref="localFileInput"
+                    class="music-native-file-input"
+                    type="file"
+                    accept="audio/*,.mp3,.m4a,.aac,.ogg,.oga,.wav,.flac"
+                    multiple
+                    :disabled="localFilesImporting"
+                    data-testid="music-local-files"
+                    @change="importLocalMusicFiles"
+                  />
                 </label>
-                <div class="music-local-format-row"><span>MP3</span><span>M4A</span><span>AAC</span><span>OGG</span><span>WAV</span><span>FLAC</span></div>
+                <div class="music-local-format-row">
+                  <span>MP3</span><span>M4A</span><span>AAC</span><span>OGG</span><span>WAV</span
+                  ><span>FLAC</span>
+                </div>
               </section>
 
-              <p v-if="addMusicState.message" class="music-add-status" :class="`is-${addMusicState.status}`" role="status"><i :class="addMusicState.status === 'error' ? 'fas fa-circle-exclamation' : addMusicState.status === 'warning' ? 'fas fa-triangle-exclamation' : 'fas fa-circle-check'" aria-hidden="true"></i>{{ addMusicState.message }}</p>
+              <p
+                v-if="addMusicState.message"
+                class="music-add-status"
+                :class="`is-${addMusicState.status}`"
+                role="status"
+              >
+                <i
+                  :class="
+                    addMusicState.status === 'error'
+                      ? 'fas fa-circle-exclamation'
+                      : addMusicState.status === 'warning'
+                        ? 'fas fa-triangle-exclamation'
+                        : 'fas fa-circle-check'
+                  "
+                  aria-hidden="true"
+                ></i
+                >{{ addMusicState.message }}
+              </p>
 
               <section class="music-settings-section music-imported-section">
                 <div class="music-settings-section-heading">
@@ -1258,26 +2352,67 @@ onMounted(() => {
                     <h3>{{ t('我的歌曲', 'My Songs') }}</h3>
                   </div>
                 </div>
-                <div v-if="musicStore.importedTracks.length" class="music-imported-list" data-testid="music-imported-list">
-                  <div v-for="track in musicStore.importedTracks" :key="track.id" class="music-imported-row">
-                    <span class="music-imported-art" :style="coverStyle(track)"><i v-if="!track.coverUrl" :class="track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE ? 'fas fa-file-audio' : 'fas fa-link'" aria-hidden="true"></i></span>
+                <div
+                  v-if="musicStore.importedTracks.length"
+                  class="music-imported-list"
+                  data-testid="music-imported-list"
+                >
+                  <div
+                    v-for="track in musicStore.importedTracks"
+                    :key="track.id"
+                    class="music-imported-row"
+                  >
+                    <span class="music-imported-art" :style="coverStyle(track)"
+                      ><i
+                        v-if="!track.coverUrl"
+                        :class="
+                          track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE
+                            ? 'fas fa-file-audio'
+                            : 'fas fa-link'
+                        "
+                        aria-hidden="true"
+                      ></i
+                    ></span>
                     <span class="music-imported-copy"
                       ><strong>{{ track.title }}</strong
                       ><small
-                        >{{ track.artist }}<template v-if="track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE && track.sourceRef.size"> · {{ formatFileSize(track.sourceRef.size) }}</template></small
+                        >{{ track.artist
+                        }}<template
+                          v-if="
+                            track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE &&
+                            track.sourceRef.size
+                          "
+                        >
+                          · {{ formatFileSize(track.sourceRef.size) }}</template
+                        ></small
                       ></span
                     >
-                    <span class="music-imported-kind">{{ track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE ? t('本地', 'LOCAL') : 'URL' }}</span>
-                    <button class="music-icon-button is-imported-action" type="button" :title="t('播放', 'Play')" @click="playTrack(track, musicStore.importedTracks)">
+                    <span class="music-imported-kind">{{
+                      track.sourceRef?.type === MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE
+                        ? t('本地', 'LOCAL')
+                        : 'URL'
+                    }}</span>
+                    <button
+                      class="music-icon-button is-imported-action"
+                      type="button"
+                      :title="t('播放', 'Play')"
+                      @click="playTrack(track, musicStore.importedTracks)"
+                    >
                       <i class="fas fa-play" aria-hidden="true"></i>
                     </button>
-                    <button class="music-icon-button is-imported-action is-remove" type="button" :title="t('移除', 'Remove')" @click="removeImportedMusic(track)">
+                    <button
+                      class="music-icon-button is-imported-action is-remove"
+                      type="button"
+                      :title="t('移除', 'Remove')"
+                      @click="removeImportedMusic(track)"
+                    >
                       <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                   </div>
                 </div>
                 <div v-else class="music-imported-empty">
-                  <i class="fas fa-music" aria-hidden="true"></i><span>{{ t('尚未添加歌曲', 'No imported songs') }}</span>
+                  <i class="fas fa-music" aria-hidden="true"></i
+                  ><span>{{ t('尚未添加歌曲', 'No imported songs') }}</span>
                 </div>
               </section>
             </div>
@@ -1288,10 +2423,21 @@ onMounted(() => {
                     <span>{{ t('当前音乐源', 'CURRENT SOURCE') }}</span>
                     <h3>{{ providerDraft.name || t('新音乐源', 'New Music Source') }}</h3>
                   </div>
-                  <span class="music-provider-badge" :class="`is-${currentProviderState?.status || 'idle'}`">{{ providerStatusCopy }}</span>
+                  <span
+                    class="music-provider-badge"
+                    :class="`is-${currentProviderState?.status || 'idle'}`"
+                    >{{ providerStatusCopy }}</span
+                  >
                 </div>
                 <div v-if="isChkszDraft" class="music-form-grid">
-                  <label>{{ t('名称', 'Name') }}<input v-model="providerDraft.name" maxlength="80" placeholder="ChKSz Music" data-testid="music-provider-name" /></label>
+                  <label
+                    >{{ t('名称', 'Name')
+                    }}<input
+                      v-model="providerDraft.name"
+                      maxlength="80"
+                      placeholder="ChKSz Music"
+                      data-testid="music-provider-name"
+                  /></label>
                   <label
                     >{{ t('音乐平台', 'Platform')
                     }}<select v-model="providerDraft.platform" data-testid="music-chksz-platform">
@@ -1307,7 +2453,11 @@ onMounted(() => {
                   <label
                     >{{ t('播放音质', 'Playback Quality')
                     }}<select v-model="providerDraft.quality" data-testid="music-chksz-quality">
-                      <option v-for="quality in chkszQualityOptions" :key="quality" :value="quality">
+                      <option
+                        v-for="quality in chkszQualityOptions"
+                        :key="quality"
+                        :value="quality"
+                      >
                         {{ quality }}
                       </option>
                     </select></label
@@ -1315,23 +2465,55 @@ onMounted(() => {
                   <div class="music-fixed-source">
                     <i class="fas fa-shield-halved" aria-hidden="true"></i
                     ><span
-                      ><strong>api.chksz.com</strong><small>{{ t('官方安全连接', 'Secure service endpoint') }}</small></span
+                      ><strong>api.chksz.com</strong
+                      ><small>{{ t('官方安全连接', 'Secure service endpoint') }}</small></span
                     >
                   </div>
                 </div>
-                <div v-else-if="isRadioBrowserDraft" class="music-form-grid" data-testid="music-radio-browser-form">
-                  <label>{{ t('名称', 'Name') }}<input v-model="providerDraft.name" maxlength="80" placeholder="Radio Browser" data-testid="music-provider-name" /></label>
+                <div
+                  v-else-if="isRadioBrowserDraft"
+                  class="music-form-grid"
+                  data-testid="music-radio-browser-form"
+                >
+                  <label
+                    >{{ t('名称', 'Name')
+                    }}<input
+                      v-model="providerDraft.name"
+                      maxlength="80"
+                      placeholder="Radio Browser"
+                      data-testid="music-provider-name"
+                  /></label>
                   <div class="music-fixed-source is-radio">
                     <i class="fas fa-radio" aria-hidden="true"></i
                     ><span
-                      ><strong>all.api.radio-browser.info</strong><small>{{ t('HTTPS · MP3 · 全球直播电台', 'HTTPS · MP3 · Global live radio') }}</small></span
+                      ><strong>all.api.radio-browser.info</strong
+                      ><small>{{
+                        t('HTTPS · MP3 · 全球直播电台', 'HTTPS · MP3 · Global live radio')
+                      }}</small></span
                     >
                   </div>
                 </div>
                 <div v-else class="music-form-grid">
-                  <label>{{ t('名称', 'Name') }}<input v-model="providerDraft.name" maxlength="80" :placeholder="t('我的音乐平台', 'My music service')" data-testid="music-provider-name" /></label>
-                  <label class="is-wide">{{ t('接口地址', 'Endpoint URL') }}<input v-model="providerDraft.baseUrl" inputmode="url" placeholder="https://api.example.com" data-testid="music-provider-url" /></label>
-                  <label>{{ t('搜索路径', 'Search Path') }}<input v-model="providerDraft.searchPath" placeholder="/search" /></label>
+                  <label
+                    >{{ t('名称', 'Name')
+                    }}<input
+                      v-model="providerDraft.name"
+                      maxlength="80"
+                      :placeholder="t('我的音乐平台', 'My music service')"
+                      data-testid="music-provider-name"
+                  /></label>
+                  <label class="is-wide"
+                    >{{ t('接口地址', 'Endpoint URL')
+                    }}<input
+                      v-model="providerDraft.baseUrl"
+                      inputmode="url"
+                      placeholder="https://api.example.com"
+                      data-testid="music-provider-url"
+                  /></label>
+                  <label
+                    >{{ t('搜索路径', 'Search Path')
+                    }}<input v-model="providerDraft.searchPath" placeholder="/search"
+                  /></label>
                   <label
                     >{{ t('请求方式', 'Method')
                     }}<select v-model="providerDraft.method">
@@ -1339,9 +2521,18 @@ onMounted(() => {
                       <option :value="MUSIC_PROVIDER_METHODS.POST">POST</option>
                     </select></label
                   >
-                  <label>{{ t('搜索参数', 'Query Parameter') }}<input v-model="providerDraft.queryParam" placeholder="q" /></label>
-                  <label>{{ t('数量参数', 'Limit Parameter') }}<input v-model="providerDraft.limitParam" placeholder="limit" /></label>
-                  <label class="is-wide">{{ t('歌曲数组路径', 'Track Array Path') }}<input v-model="providerDraft.resultPath" placeholder="data.tracks" /></label>
+                  <label
+                    >{{ t('搜索参数', 'Query Parameter')
+                    }}<input v-model="providerDraft.queryParam" placeholder="q"
+                  /></label>
+                  <label
+                    >{{ t('数量参数', 'Limit Parameter')
+                    }}<input v-model="providerDraft.limitParam" placeholder="limit"
+                  /></label>
+                  <label class="is-wide"
+                    >{{ t('歌曲数组路径', 'Track Array Path')
+                    }}<input v-model="providerDraft.resultPath" placeholder="data.tracks"
+                  /></label>
                 </div>
               </section>
 
@@ -1354,13 +2545,29 @@ onMounted(() => {
                   <i class="fas fa-lock" aria-hidden="true"></i>
                 </div>
                 <div v-if="isChkszDraft" class="music-form-grid">
-                  <label class="is-wide">ChKSz API Key<input v-model="providerCredentialDraft" type="password" autocomplete="off" placeholder="chksz_••••••••" data-testid="music-provider-key" /></label>
+                  <label class="is-wide"
+                    >ChKSz API Key<input
+                      v-model="providerCredentialDraft"
+                      type="password"
+                      autocomplete="off"
+                      placeholder="chksz_••••••••"
+                      data-testid="music-provider-key"
+                  /></label>
                 </div>
-                <div v-else-if="isRadioBrowserDraft" class="music-fixed-source is-radio is-wide" data-testid="music-radio-browser-no-key">
+                <div
+                  v-else-if="isRadioBrowserDraft"
+                  class="music-fixed-source is-radio is-wide"
+                  data-testid="music-radio-browser-no-key"
+                >
                   <i class="fas fa-unlock-keyhole" aria-hidden="true"></i
                   ><span
                     ><strong>{{ t('无需 API Key', 'No API key required') }}</strong
-                    ><small>{{ t('直接连接 Radio Browser 公共目录', 'Connects directly to the Radio Browser public directory') }}</small></span
+                    ><small>{{
+                      t(
+                        '直接连接 Radio Browser 公共目录',
+                        'Connects directly to the Radio Browser public directory',
+                      )
+                    }}</small></span
                   >
                 </div>
                 <div v-else class="music-form-grid">
@@ -1375,25 +2582,66 @@ onMounted(() => {
                       </option>
                     </select></label
                   >
-                  <label v-if="providerDraft.authMode === MUSIC_AUTH_MODES.CUSTOM">{{ t('请求头名称', 'Header Name') }}<input v-model="providerDraft.authHeader" placeholder="X-API-Key" /></label>
-                  <label v-if="providerDraft.authMode === MUSIC_AUTH_MODES.CUSTOM">{{ t('值前缀', 'Value Prefix') }}<input v-model="providerDraft.authPrefix" placeholder="Token " /></label>
-                  <label v-if="providerDraft.authMode !== MUSIC_AUTH_MODES.NONE" class="is-wide">{{ t('API 密钥', 'API Key') }}<input v-model="providerCredentialDraft" type="password" autocomplete="off" :placeholder="t('保存在当前设备', 'Stored on this device')" data-testid="music-provider-key" /></label>
+                  <label v-if="providerDraft.authMode === MUSIC_AUTH_MODES.CUSTOM"
+                    >{{ t('请求头名称', 'Header Name')
+                    }}<input v-model="providerDraft.authHeader" placeholder="X-API-Key"
+                  /></label>
+                  <label v-if="providerDraft.authMode === MUSIC_AUTH_MODES.CUSTOM"
+                    >{{ t('值前缀', 'Value Prefix')
+                    }}<input v-model="providerDraft.authPrefix" placeholder="Token "
+                  /></label>
+                  <label v-if="providerDraft.authMode !== MUSIC_AUTH_MODES.NONE" class="is-wide"
+                    >{{ t('API 密钥', 'API Key')
+                    }}<input
+                      v-model="providerCredentialDraft"
+                      type="password"
+                      autocomplete="off"
+                      :placeholder="t('保存在当前设备', 'Stored on this device')"
+                      data-testid="music-provider-key"
+                  /></label>
                 </div>
-                <p v-if="!isRadioBrowserDraft" class="music-field-note"><i class="fas fa-shield-halved" aria-hidden="true"></i>{{ t('密钥仅保存在当前设备，不会进入备份或分享内容。', 'The key stays on this device and is excluded from backups and sharing.') }}</p>
-                <p v-if="providerQuotaCopy" class="music-quota-line"><i class="fas fa-gauge-high" aria-hidden="true"></i>{{ providerQuotaCopy }}</p>
-                <p v-if="currentProviderState?.status === 'error' && currentProviderState.message" class="music-form-error">
+                <p v-if="!isRadioBrowserDraft" class="music-field-note">
+                  <i class="fas fa-shield-halved" aria-hidden="true"></i
+                  >{{
+                    t(
+                      '密钥仅保存在当前设备，不会进入备份或分享内容。',
+                      'The key stays on this device and is excluded from backups and sharing.',
+                    )
+                  }}
+                </p>
+                <p v-if="providerQuotaCopy" class="music-quota-line">
+                  <i class="fas fa-gauge-high" aria-hidden="true"></i>{{ providerQuotaCopy }}
+                </p>
+                <p
+                  v-if="currentProviderState?.status === 'error' && currentProviderState.message"
+                  class="music-form-error"
+                >
                   {{ currentProviderState.message }}
                 </p>
               </section>
 
               <details v-if="!isChkszDraft && !isRadioBrowserDraft" class="music-advanced-settings">
                 <summary>
-                  <span><i class="fas fa-code" aria-hidden="true"></i>{{ t('响应字段映射', 'Response Field Mapping') }}</span
+                  <span
+                    ><i class="fas fa-code" aria-hidden="true"></i
+                    >{{ t('响应字段映射', 'Response Field Mapping') }}</span
                   ><i class="fas fa-chevron-down" aria-hidden="true"></i>
                 </summary>
                 <div class="music-form-grid is-mapping">
-                  <label v-for="(_, key) in DEFAULT_MUSIC_FIELD_MAP" :key="key">{{ key }}<input v-model="providerDraft.fieldMap[key]" :placeholder="DEFAULT_MUSIC_FIELD_MAP[key]" /></label>
-                  <label class="is-wide">{{ t('附加请求头（JSON）', 'Additional Headers (JSON)') }}<textarea v-model="providerHeadersDraft" rows="4" spellcheck="false"></textarea></label>
+                  <label v-for="(_, key) in DEFAULT_MUSIC_FIELD_MAP" :key="key"
+                    >{{ key
+                    }}<input
+                      v-model="providerDraft.fieldMap[key]"
+                      :placeholder="DEFAULT_MUSIC_FIELD_MAP[key]"
+                  /></label>
+                  <label class="is-wide"
+                    >{{ t('附加请求头（JSON）', 'Additional Headers (JSON)')
+                    }}<textarea
+                      v-model="providerHeadersDraft"
+                      rows="4"
+                      spellcheck="false"
+                    ></textarea>
+                  </label>
                 </div>
               </details>
 
@@ -1405,9 +2653,11 @@ onMounted(() => {
                   </div>
                 </div>
                 <label class="music-toggle-row"
-                  ><span class="music-toggle-icon is-chat"><i class="fas fa-comment" aria-hidden="true"></i></span
+                  ><span class="music-toggle-icon is-chat"
+                    ><i class="fas fa-comment" aria-hidden="true"></i></span
                   ><span
-                    ><strong>Chat</strong><small>{{ t('允许分享歌曲卡片', 'Share track cards') }}</small></span
+                    ><strong>Chat</strong
+                    ><small>{{ t('允许分享歌曲卡片', 'Share track cards') }}</small></span
                   ><input
                     type="checkbox"
                     :checked="musicStore.state.integrationPolicy.chatShareEnabled"
@@ -1418,9 +2668,11 @@ onMounted(() => {
                     " /><span class="music-switch" aria-hidden="true"></span
                 ></label>
                 <label class="music-toggle-row"
-                  ><span class="music-toggle-icon is-map"><i class="fas fa-map-location-dot" aria-hidden="true"></i></span
+                  ><span class="music-toggle-icon is-map"
+                    ><i class="fas fa-map-location-dot" aria-hidden="true"></i></span
                   ><span
-                    ><strong>Map</strong><small>{{ t('允许显示正在播放', 'Show now playing') }}</small></span
+                    ><strong>Map</strong
+                    ><small>{{ t('允许显示正在播放', 'Show now playing') }}</small></span
                   ><input
                     type="checkbox"
                     :checked="musicStore.state.integrationPolicy.mapNowPlayingEnabled"
@@ -1434,13 +2686,35 @@ onMounted(() => {
 
               <p v-if="providerFormError" class="music-form-error">{{ providerFormError }}</p>
               <div class="music-settings-actions">
-                <button v-if="musicStore.profiles.some((profile) => profile.id === providerDraft.id)" class="music-danger-button" type="button" @click="deleteProvider">
-                  <i class="fas fa-trash" aria-hidden="true"></i><span>{{ t('移除', 'Remove') }}</span></button
+                <button
+                  v-if="musicStore.profiles.some((profile) => profile.id === providerDraft.id)"
+                  class="music-danger-button"
+                  type="button"
+                  @click="deleteProvider"
+                >
+                  <i class="fas fa-trash" aria-hidden="true"></i
+                  ><span>{{ t('移除', 'Remove') }}</span></button
                 ><span></span
-                ><button class="music-secondary-button" type="button" :disabled="providerTesting" data-testid="music-provider-test" @click="testProvider">
-                  <i class="fas fa-plug-circle-check" aria-hidden="true"></i><span>{{ providerTesting ? t('测试中…', 'Testing...') : t('测试连接', 'Test Connection') }}</span></button
-                ><button class="music-primary-button" type="button" :disabled="providerSaving" data-testid="music-provider-save" @click="saveProvider()">
-                  <i class="fas fa-check" aria-hidden="true"></i><span>{{ t('保存', 'Save') }}</span>
+                ><button
+                  class="music-secondary-button"
+                  type="button"
+                  :disabled="providerTesting"
+                  data-testid="music-provider-test"
+                  @click="testProvider"
+                >
+                  <i class="fas fa-plug-circle-check" aria-hidden="true"></i
+                  ><span>{{
+                    providerTesting ? t('测试中…', 'Testing...') : t('测试连接', 'Test Connection')
+                  }}</span></button
+                ><button
+                  class="music-primary-button"
+                  type="button"
+                  :disabled="providerSaving"
+                  data-testid="music-provider-save"
+                  @click="saveProvider()"
+                >
+                  <i class="fas fa-check" aria-hidden="true"></i
+                  ><span>{{ t('保存', 'Save') }}</span>
                 </button>
               </div>
             </div>
@@ -1453,13 +2727,13 @@ onMounted(() => {
 
 <style scoped>
 .music-app {
-  --music-bg: #f4f5f2;
+  --music-bg: #eef0ed;
   --music-paper: #ffffff;
   --music-ink: #181a1d;
-  --music-muted: #74777d;
-  --music-line: rgba(24, 26, 29, 0.12);
-  --music-accent: #da3f56;
-  --music-accent-dark: #ad253e;
+  --music-muted: #6f7478;
+  --music-line: rgba(24, 26, 29, 0.1);
+  --music-accent: #df3f5d;
+  --music-accent-dark: #b72a47;
   --music-teal: #2d7b76;
   --music-gold: #c79332;
   position: absolute;
@@ -1492,7 +2766,7 @@ summary:focus-visible {
 
 .music-shell {
   display: grid;
-  grid-template-columns: 214px minmax(0, 1fr);
+  grid-template-columns: 226px minmax(0, 1fr);
   height: 100%;
   padding-top: 32px;
 }
@@ -1503,9 +2777,9 @@ summary:focus-visible {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: 22px 16px 118px;
+  padding: 22px 16px 24px;
   color: #f7f7f5;
-  background: #181a1d;
+  background: #151719;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -1578,18 +2852,19 @@ summary:focus-visible {
 
 .music-nav-list {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .music-nav-item {
+  position: relative;
   display: grid;
-  grid-template-columns: 24px 1fr;
-  min-height: 46px;
+  grid-template-columns: 32px 1fr;
+  min-height: 50px;
   align-items: center;
   gap: 10px;
   border: 0;
-  border-radius: 6px;
-  padding: 0 13px;
+  border-radius: 7px;
+  padding: 0 12px;
   color: rgba(255, 255, 255, 0.65);
   background: transparent;
   text-align: left;
@@ -1598,16 +2873,66 @@ summary:focus-visible {
 
 .music-nav-item:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .music-nav-item.is-active {
   color: #fff;
-  background: rgba(218, 63, 86, 0.2);
+  background: rgba(255, 255, 255, 0.085);
 }
 
 .music-nav-item.is-active i {
-  color: #ff6c7f;
+  color: #fff;
+  background: var(--music-accent);
+}
+
+.music-nav-item i {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+}
+
+.music-nav-item.is-active::before {
+  position: absolute;
+  top: 13px;
+  bottom: 13px;
+  left: -16px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--music-accent);
+  content: '';
+}
+
+.music-sidebar-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.music-sidebar-footer button {
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  grid-template-columns: 32px 1fr;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 12px;
+  color: rgba(255, 255, 255, 0.62);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.music-sidebar-footer button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .music-source-status {
@@ -1674,13 +2999,13 @@ summary:focus-visible {
 }
 
 .music-topbar {
-  height: 68px;
+  height: 72px;
   justify-content: space-between;
-  gap: 20px;
+  gap: 18px;
   padding: 0 30px;
-  background: rgba(244, 245, 242, 0.92);
+  background: rgba(238, 240, 237, 0.9);
   border-bottom: 1px solid var(--music-line);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(18px) saturate(1.12);
 }
 
 .music-mobile-brand {
@@ -1709,10 +3034,50 @@ summary:focus-visible {
   gap: 2px;
 }
 
+.music-search-trigger {
+  display: flex;
+  width: min(420px, 42vw);
+  min-width: 180px;
+  height: 42px;
+  align-items: center;
+  gap: 11px;
+  margin-left: auto;
+  border: 1px solid rgba(24, 26, 29, 0.07);
+  border-radius: 8px;
+  padding: 0 15px;
+  color: var(--music-muted);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.88) inset;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.music-search-trigger:hover,
+.music-search-trigger.is-active {
+  border-color: rgba(223, 63, 93, 0.24);
+  color: var(--music-ink);
+  background: #fff;
+}
+
+.music-search-trigger.is-active i {
+  color: var(--music-accent);
+}
+
+.music-search-trigger span {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .music-scroll {
-  height: calc(100% - 68px);
+  height: calc(100% - 72px);
   overflow-y: auto;
-  padding: 30px 32px 148px;
+  padding: 26px 32px 148px;
   scroll-behavior: smooth;
 }
 
@@ -1767,37 +3132,73 @@ summary:focus-visible {
 .music-feature {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(180px, 29%) minmax(0, 1fr);
-  min-height: 320px;
+  min-height: 330px;
+  grid-template-columns: minmax(250px, 34%) minmax(0, 1fr);
+  align-items: center;
   max-width: 1120px;
   margin: 0 auto;
   overflow: hidden;
   color: #fff;
-  background: #202326;
+  background: #191c1f;
+  isolation: isolate;
+  box-shadow: 0 24px 60px rgba(24, 26, 29, 0.2);
 }
 
+.music-feature::before,
 .music-feature::after {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
   content: '';
   pointer-events: none;
 }
 
+.music-feature::before {
+  z-index: -1;
+  background: rgba(15, 17, 19, 0.66);
+}
+
+.music-feature::after {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+.music-feature-backdrop {
+  position: absolute;
+  z-index: -2;
+  inset: -42px;
+  opacity: 0.72;
+  background-color: #30363a;
+  background-position: center;
+  background-size: cover;
+  filter: blur(28px) saturate(1.06);
+  transform: scale(1.1);
+}
+
 .music-feature-art {
   position: relative;
-  min-height: 320px;
-  overflow: hidden;
+  z-index: 1;
+  display: block;
+  width: min(230px, calc(100% - 54px));
+  aspect-ratio: 1;
+  justify-self: center;
+  overflow: visible;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
   background-color: #3c4c50;
   background-size: cover;
   background-position: center;
+  cursor: pointer;
 }
 
 .music-feature-art::after {
   position: absolute;
+  z-index: 4;
   inset: 0;
-  background: rgba(15, 17, 19, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
   content: '';
+  pointer-events: none;
 }
 
 .music-feature-art img,
@@ -1812,20 +3213,31 @@ summary:focus-visible {
 
 .music-vinyl-groove {
   position: absolute;
-  right: -96px;
-  bottom: -96px;
+  top: 50%;
+  right: -50px;
   z-index: 1;
-  width: 210px;
-  height: 210px;
-  border: 42px double rgba(17, 18, 20, 0.72);
+  width: 204px;
+  height: 204px;
+  border: 44px double rgba(12, 13, 15, 0.94);
   border-radius: 50%;
   background: #161719;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.34);
+  transform: translateY(-50%);
+}
+
+.music-feature-art img {
+  position: relative;
+  z-index: 3;
+  border-radius: 8px;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
 }
 
 .music-feature-copy {
+  position: relative;
+  z-index: 2;
   align-self: center;
   max-width: 620px;
-  padding: 42px 54px;
+  padding: 46px 54px 46px 40px;
 }
 
 .music-kicker,
@@ -1844,14 +3256,14 @@ summary:focus-visible {
 .music-page-intro h1 {
   margin: 10px 0 0;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 48px;
+  font-size: 46px;
   line-height: 1.02;
   letter-spacing: 0;
 }
 
 .music-feature-artist {
   margin: 13px 0 0;
-  font-size: 18px;
+  font-size: 17px;
 }
 
 .music-feature-note {
@@ -1862,7 +3274,7 @@ summary:focus-visible {
 
 .music-feature-actions {
   gap: 10px;
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .music-primary-button,
@@ -1909,15 +3321,6 @@ summary:focus-visible {
   opacity: 0.45;
 }
 
-.music-feature-index {
-  position: absolute;
-  right: 22px;
-  bottom: 12px;
-  color: rgba(255, 255, 255, 0.08);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 92px;
-}
-
 .music-section-block,
 .music-page-intro,
 .music-search-page,
@@ -1930,11 +3333,134 @@ summary:focus-visible {
   margin-left: auto;
 }
 
+.music-listen-layout {
+  display: grid;
+  width: 100%;
+  max-width: 1120px;
+  grid-template-areas:
+    'feature feature'
+    'shortcuts shortcuts'
+    'albums recent';
+  grid-template-columns: minmax(0, 2.1fr) minmax(268px, 0.78fr);
+  gap: 34px 26px;
+  margin: 0 auto;
+}
+
+.music-listen-layout .music-feature {
+  grid-area: feature;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.music-album-section {
+  grid-area: albums;
+}
+
+.music-discovery-shortcuts {
+  display: grid;
+  grid-area: shortcuts;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 2px 0 0;
+}
+
+.music-discovery-shortcuts > button {
+  display: grid;
+  min-width: 0;
+  min-height: 72px;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(24, 26, 29, 0.06);
+  border-radius: 7px;
+  padding: 9px 13px 9px 9px;
+  color: var(--music-ink);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 100ms ease;
+}
+
+.music-discovery-shortcuts > button:hover {
+  border-color: rgba(24, 26, 29, 0.11);
+  background: #fff;
+}
+
+.music-discovery-shortcuts > button:active {
+  transform: scale(0.98);
+}
+
+.music-shortcut-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 17px;
+}
+
+.music-shortcut-icon.is-favorite {
+  background: #df3f5d;
+}
+
+.music-shortcut-icon.is-recent {
+  background: #367a76;
+}
+
+.music-shortcut-icon.is-playlist {
+  background: #7b5fa5;
+}
+
+.music-shortcut-icon.is-album {
+  background: #ba7a2f;
+}
+
+.music-discovery-shortcuts strong,
+.music-discovery-shortcuts small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-discovery-shortcuts strong {
+  font-size: 12px;
+}
+
+.music-discovery-shortcuts small {
+  color: var(--music-muted);
+  font-size: 11px;
+}
+
+.music-recent-section {
+  grid-area: recent;
+  align-self: stretch;
+  overflow: hidden;
+  border: 1px solid rgba(24, 26, 29, 0.07);
+  border-radius: 7px;
+  padding: 18px 16px 12px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+}
+
 .music-section-block {
   margin-top: 38px;
 }
 
+.music-listen-layout .music-section-block {
+  width: auto;
+  max-width: none;
+  margin: 0;
+}
+
 .music-section-heading {
+  display: flex;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 18px;
@@ -1951,13 +3477,32 @@ summary:focus-visible {
 }
 
 .music-section-heading > button {
+  display: inline-flex;
   min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 0;
+  border-radius: 6px;
+  padding: 0 10px;
   color: var(--music-accent);
   background: transparent;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 100ms ease;
+}
+
+.music-section-heading > button:hover {
+  color: var(--music-accent-dark);
+  background: rgba(218, 63, 86, 0.07);
+}
+
+.music-section-heading > button:active {
+  transform: scale(0.97);
 }
 
 .music-section-heading > button.is-danger {
@@ -1970,7 +3515,10 @@ summary:focus-visible {
   grid-auto-flow: column;
   gap: 18px;
   overflow-x: auto;
-  padding-bottom: 6px;
+  padding: 2px 18px 8px 2px;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: 2px;
+  scroll-snap-type: inline proximity;
 }
 
 .music-album-grid {
@@ -1985,6 +3533,7 @@ summary:focus-visible {
   border: 0;
   padding: 0;
   background: transparent;
+  scroll-snap-align: start;
   text-align: left;
   cursor: pointer;
 }
@@ -2000,6 +3549,14 @@ summary:focus-visible {
   background-size: cover;
   background-position: center;
   box-shadow: 0 10px 24px rgba(24, 26, 29, 0.12);
+}
+
+.music-album-cover img {
+  transition: transform 180ms ease;
+}
+
+.music-album-item:hover .music-album-cover img {
+  transform: scale(1.025);
 }
 
 .music-album-play {
@@ -2022,9 +3579,20 @@ summary:focus-visible {
 }
 
 .music-album-item:hover .music-album-play,
-.music-album-item:focus-visible .music-album-play {
+.music-album-item:focus-visible .music-album-play,
+.music-album-item.is-current .music-album-play {
   opacity: 1;
   transform: translateY(0);
+}
+
+.music-album-item.is-current .music-album-cover {
+  box-shadow:
+    0 0 0 2px var(--music-accent),
+    0 12px 28px rgba(24, 26, 29, 0.18);
+}
+
+.music-album-item.is-current > strong {
+  color: var(--music-accent);
 }
 
 .music-album-item > strong,
@@ -2059,6 +3627,11 @@ summary:focus-visible {
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--music-line);
+  transition: background-color 140ms ease;
+}
+
+.music-track-row:hover {
+  background: rgba(255, 255, 255, 0.54);
 }
 
 .music-track-row.is-current {
@@ -2093,8 +3666,13 @@ summary:focus-visible {
   display: none;
 }
 
-.music-track-row:hover .music-track-index:not(:disabled) i {
+.music-track-row:hover .music-track-index:not(:disabled) i,
+.music-track-row.is-current .music-track-index:not(:disabled) i {
   display: inline;
+}
+
+.music-track-row.is-current .music-track-index span {
+  display: none;
 }
 
 .music-track-index:disabled {
@@ -2151,6 +3729,46 @@ summary:focus-visible {
   margin-top: 3px;
 }
 
+.music-recent-section .music-section-heading {
+  align-items: center;
+  margin: 0 2px 8px;
+}
+
+.music-recent-section .music-section-heading h2 {
+  font-size: 20px;
+}
+
+.music-recent-section .music-section-action {
+  width: 38px;
+  min-width: 38px;
+  padding: 0;
+}
+
+.music-recent-section .music-section-action span {
+  display: none;
+}
+
+.music-recent-section .music-track-list {
+  border-top: 0;
+}
+
+.music-recent-section .music-track-row {
+  min-height: 60px;
+  grid-template-columns: 28px 40px minmax(0, 1fr) 36px;
+  gap: 8px;
+}
+
+.music-recent-section .music-track-cover {
+  width: 40px;
+  height: 40px;
+}
+
+.music-recent-section .music-track-album,
+.music-recent-section .music-track-duration,
+.music-recent-section .music-track-action:last-child {
+  display: none;
+}
+
 .music-track-album {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2170,6 +3788,180 @@ summary:focus-visible {
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
+}
+
+.music-catalog-hero,
+.music-library-hero {
+  position: relative;
+  width: 100%;
+  max-width: 1120px;
+  min-height: 250px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  background: #1c2023;
+  box-shadow: 0 22px 52px rgba(24, 26, 29, 0.16);
+}
+
+.music-catalog-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  align-items: center;
+  padding: 38px 48px;
+}
+
+.music-catalog-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.music-catalog-copy h1,
+.music-library-hero-copy h1 {
+  margin: 8px 0 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 44px;
+  line-height: 1;
+}
+
+.music-catalog-copy p,
+.music-library-hero-copy p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+}
+
+.music-catalog-copy .music-primary-button,
+.music-library-hero-copy .music-primary-button {
+  margin-top: 24px;
+}
+
+.music-catalog-stack {
+  position: relative;
+  height: 180px;
+}
+
+.music-catalog-stack span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 166px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  background-color: #34383b;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.32);
+}
+
+.music-catalog-stack .is-1 {
+  z-index: 3;
+  transform: translate(-50%, -50%) rotate(-2deg);
+}
+
+.music-catalog-stack .is-2 {
+  z-index: 2;
+  transform: translate(-10%, -46%) rotate(8deg);
+}
+
+.music-catalog-stack .is-3 {
+  z-index: 1;
+  transform: translate(-88%, -43%) rotate(-10deg);
+}
+
+.music-library-hero {
+  display: grid;
+  grid-template-columns: 190px minmax(260px, 1fr) minmax(290px, 0.84fr);
+  align-items: center;
+  gap: 34px;
+  padding: 34px 42px;
+}
+
+.music-library-mosaic {
+  display: grid;
+  width: 176px;
+  aspect-ratio: 1;
+  grid-template-columns: repeat(2, 1fr);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: #303539;
+  box-shadow: 0 20px 42px rgba(0, 0, 0, 0.32);
+}
+
+.music-library-mosaic span {
+  background-color: #34393d;
+  background-position: center;
+  background-size: cover;
+}
+
+.music-library-mosaic i {
+  display: grid;
+  grid-column: 1 / -1;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 36px;
+}
+
+.music-library-glance {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: stretch;
+  gap: 8px;
+}
+
+.music-library-glance button {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.055);
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 100ms ease;
+}
+
+.music-library-glance button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.music-library-glance button:active {
+  transform: scale(0.97);
+}
+
+.music-library-glance i {
+  color: #ff7990;
+  font-size: 15px;
+}
+
+.music-library-glance button:nth-child(2) i {
+  color: #70bcb5;
+}
+
+.music-library-glance button:nth-child(3) i {
+  color: #c5a1ec;
+}
+
+.music-library-glance strong {
+  color: #fff;
+  font-size: 20px;
+}
+
+.music-library-glance span {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .music-segmented {
@@ -2691,59 +4483,126 @@ input[type='range'] {
   font-size: 13px !important;
 }
 
+.music-overlay.is-now-playing {
+  background: rgba(10, 12, 14, 0.7);
+  backdrop-filter: blur(18px) saturate(0.8);
+}
+
 .music-now-playing-sheet {
   position: absolute;
   top: 18px;
   bottom: 18px;
   left: 50%;
-  width: min(520px, calc(100% - 36px));
-  overflow-y: auto;
+  isolation: isolate;
+  width: min(1040px, calc(100% - 36px));
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  padding: 24px 42px 36px;
   color: #f7f7f5;
-  background: #1b1d20;
-  box-shadow: 0 28px 70px rgba(12, 14, 15, 0.38);
+  background: #15181b;
+  box-shadow: 0 32px 90px rgba(5, 7, 9, 0.5);
   transform: translateX(-50%);
 }
 
+.music-now-playing-sheet::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(105deg, rgba(17, 20, 23, 0.66), rgba(17, 20, 23, 0.96) 58%);
+  content: '';
+}
+
+.music-now-playing-ambient {
+  position: absolute;
+  z-index: -2;
+  inset: -18%;
+  opacity: 0.42;
+  background-position: center;
+  background-size: cover;
+  filter: blur(58px) saturate(1.3);
+  transform: scale(1.12);
+}
+
 .music-icon-button.is-sheet-close {
-  display: grid;
-  margin: 0 auto 14px;
+  position: absolute;
+  z-index: 3;
+  top: 18px;
+  right: 18px;
+  margin: 0;
   color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.music-icon-button.is-sheet-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.music-now-playing-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  height: 100%;
+  grid-template-columns: minmax(320px, 0.94fr) minmax(420px, 1.06fr);
+}
+
+.music-now-playing-visual {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  padding: 64px 42px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .music-now-playing-art {
-  width: min(100%, 340px);
+  position: relative;
+  width: min(100%, 400px);
   aspect-ratio: 1;
-  margin: 0 auto;
   overflow: hidden;
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
   background-color: #414548;
   background-size: cover;
   background-position: center;
-  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.42);
+}
+
+.music-now-playing-stage {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 64px 56px 44px;
 }
 
 .music-now-playing-copy {
-  margin-top: 26px;
-  text-align: center;
+  text-align: left;
 }
 
 .music-now-playing-copy h2 {
-  margin: 7px 0 0;
+  margin: 9px 0 0;
+  overflow-wrap: anywhere;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 28px;
+  font-size: 40px;
+  line-height: 1.08;
 }
 
 .music-now-playing-copy p {
-  margin: 6px 0 0;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 11px;
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+}
+
+.music-now-playing-playback {
+  min-height: 136px;
+  margin-top: 30px;
 }
 
 .music-now-playing-range {
   width: 100%;
-  margin-top: 22px;
+  margin: 0;
 }
 
 .music-now-playing-times {
@@ -2753,43 +4612,84 @@ input[type='range'] {
 }
 
 .music-now-playing-controls {
-  justify-content: center;
-  gap: 22px;
-  margin-top: 10px;
+  justify-content: flex-start;
+  gap: 18px;
+  margin-top: 16px;
 }
 
 .music-now-playing-controls .is-large {
-  width: 58px;
-  height: 58px;
-  font-size: 18px;
+  width: 62px;
+  height: 62px;
+  font-size: 19px;
 }
 
 .music-now-playing-actions {
+  display: flex;
+  width: min(100%, 320px);
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 24px;
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .music-track-inspection-note {
-  margin-top: 18px;
+  margin: 0 0 18px;
   color: rgba(255, 255, 255, 0.58);
   font-size: 10px;
-  text-align: center;
+  text-align: left;
 }
 
 .music-now-playing-actions button {
   display: grid;
-  min-width: 82px;
-  min-height: 58px;
+  width: 56px;
+  min-width: 0;
+  min-height: 66px;
+  grid-template-rows: 42px auto;
   place-items: center;
-  gap: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  gap: 6px;
+  border: 0;
+  border-radius: 0;
   color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.04);
+  background: transparent;
   font-size: 9px;
   cursor: pointer;
+}
+
+.music-now-playing-actions button i {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.music-now-playing-actions button:hover i,
+.music-now-playing-actions button:focus-visible i {
+  border-color: rgba(255, 255, 255, 0.26);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.music-now-playing-actions button[aria-pressed='true'] {
+  color: #ffd9e2;
+}
+
+.music-now-playing-actions button[aria-pressed='true'] i {
+  border-color: #ff7898;
+  color: #fff;
+  background: #e84269;
+  box-shadow: 0 6px 18px rgba(232, 66, 105, 0.32);
+}
+
+.music-now-playing-actions button:active i {
+  transform: scale(0.92);
 }
 
 .music-lyrics-sheet {
@@ -2863,7 +4763,7 @@ input[type='range'] {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  margin: 24px 0 0;
+  margin: 28px 0 0;
   padding-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -2874,14 +4774,14 @@ input[type='range'] {
 
 .music-track-details dt {
   color: rgba(255, 255, 255, 0.42);
-  font-size: 8px;
+  font-size: 9px;
   text-transform: uppercase;
 }
 
 .music-track-details dd {
   margin: 4px 0 0;
   overflow: hidden;
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3480,54 +5380,85 @@ input[type='range'] {
 
   .music-sidebar {
     position: absolute;
-    right: 10px;
-    bottom: 18px;
-    left: 10px;
+    right: 0;
+    bottom: 0;
+    left: 0;
     z-index: 22;
     display: block;
-    height: 56px;
-    padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    background: rgba(25, 27, 30, 0.97);
-    box-shadow: 0 12px 30px rgba(15, 17, 19, 0.24);
+    height: 78px;
+    padding: 0 0 10px;
+    border: 0;
+    border-top: 1px solid rgba(24, 26, 29, 0.1);
+    border-radius: 0;
+    color: var(--music-ink);
+    background: rgba(250, 251, 249, 0.94);
+    box-shadow: 0 -8px 24px rgba(24, 26, 29, 0.08);
+    backdrop-filter: blur(18px) saturate(1.16);
   }
 
   .music-brand-block,
-  .music-source-status {
+  .music-source-status,
+  .music-sidebar-footer {
     display: none;
   }
 
   .music-nav-list {
     display: grid;
     height: 100%;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 0;
   }
 
   .music-nav-item {
     display: grid;
     min-width: 0;
-    min-height: 54px;
+    min-height: 64px;
     grid-template-columns: 1fr;
     place-items: center;
     align-content: center;
     gap: 4px;
     border-radius: 0;
     padding: 0 4px;
+    color: #777b80;
     text-align: center;
   }
 
   .music-nav-item span {
     width: 100%;
     overflow: hidden;
-    font-size: 9px;
+    font-size: 10px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .music-nav-item.is-active {
+    color: var(--music-ink);
     background: transparent;
+  }
+
+  .music-nav-item i {
+    width: 30px;
+    height: 30px;
+    color: #777b80;
+  }
+
+  .music-nav-item.is-active i {
+    color: #fff;
+  }
+
+  .music-nav-item:hover {
+    color: var(--music-ink);
+    background: transparent;
+  }
+
+  .music-nav-item.is-active::before {
+    top: auto;
+    bottom: 0;
+    left: 50%;
+    width: 24px;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    transform: translateX(-50%);
   }
 
   .music-content {
@@ -3535,19 +5466,20 @@ input[type='range'] {
   }
 
   .music-topbar {
-    height: 62px;
-    padding: 0 14px;
+    height: 66px;
+    gap: 8px;
+    padding: 0 10px;
   }
 
   .music-mobile-brand {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
   }
 
   .music-mobile-brand .music-wordmark {
-    gap: 6px;
-    font-size: 19px;
+    gap: 5px;
+    font-size: 17px;
   }
 
   .music-mobile-brand .music-wordmark i {
@@ -3560,29 +5492,62 @@ input[type='range'] {
   }
 
   .music-topbar-actions {
-    margin-left: auto;
+    flex: 0 0 auto;
   }
 
   .music-topbar-actions .music-icon-button:first-child {
-    display: none;
+    display: inline-grid;
+  }
+
+  .music-topbar-actions .music-icon-button {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .music-search-trigger {
+    width: auto;
+    min-width: 0;
+    height: 38px;
+    flex: 1 1 auto;
+    margin-left: 0;
+    padding: 0 12px;
   }
 
   .music-scroll {
-    height: calc(100% - 62px);
-    padding: 18px 16px 172px;
+    height: calc(100% - 66px);
+    padding: 18px 16px 158px;
+  }
+
+  .music-listen-layout {
+    grid-template-areas:
+      'feature'
+      'shortcuts'
+      'albums'
+      'recent';
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+
+  .music-listen-layout .music-section-block {
+    margin: 0;
+  }
+
+  .music-recent-section {
+    padding: 18px 14px 12px;
   }
 
   .music-feature {
-    grid-template-columns: 42% minmax(0, 1fr);
-    min-height: 220px;
+    min-height: 286px;
+    grid-template-columns: 230px minmax(0, 1fr);
   }
 
   .music-feature-art {
-    min-height: 220px;
+    width: 180px;
   }
 
   .music-feature-copy {
-    padding: 24px;
+    padding: 30px 30px 30px 8px;
   }
 
   .music-feature h1,
@@ -3590,12 +5555,73 @@ input[type='range'] {
     font-size: 34px;
   }
 
-  .music-feature-index {
-    font-size: 62px;
-  }
-
   .music-feature-actions .music-secondary-button {
     display: none;
+  }
+
+  .music-discovery-shortcuts {
+    gap: 4px;
+  }
+
+  .music-discovery-shortcuts > button {
+    min-height: 92px;
+    grid-template-columns: 1fr;
+    grid-template-rows: 54px auto;
+    place-items: center;
+    align-content: start;
+    gap: 6px;
+    border: 0;
+    padding: 0 2px;
+    background: transparent;
+    box-shadow: none;
+    text-align: center;
+  }
+
+  .music-discovery-shortcuts > button:hover {
+    background: transparent;
+  }
+
+  .music-shortcut-icon {
+    width: 54px;
+    height: 54px;
+  }
+
+  .music-discovery-shortcuts small {
+    display: none;
+  }
+
+  .music-discovery-shortcuts strong {
+    width: 100%;
+    font-size: 10px;
+  }
+
+  .music-catalog-hero {
+    min-height: 228px;
+    grid-template-columns: minmax(0, 1fr) 210px;
+    padding: 28px 32px;
+  }
+
+  .music-catalog-stack {
+    height: 150px;
+  }
+
+  .music-catalog-stack span {
+    width: 138px;
+  }
+
+  .music-library-hero {
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 24px;
+    padding: 28px 30px;
+  }
+
+  .music-library-mosaic {
+    width: 144px;
+  }
+
+  .music-library-glance {
+    min-height: 88px;
+    grid-column: 1 / -1;
   }
 
   .music-album-rail {
@@ -3614,7 +5640,7 @@ input[type='range'] {
 
   .music-player {
     right: 10px;
-    bottom: 80px;
+    bottom: 88px;
     left: 10px;
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: 72px;
@@ -3712,9 +5738,86 @@ input[type='range'] {
     overflow: visible;
     padding: 0 18px 34px;
   }
+
+  .music-now-playing-sheet {
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .music-now-playing-sheet::after {
+    background: rgba(17, 20, 23, 0.86);
+  }
+
+  .music-now-playing-ambient {
+    inset: 0;
+    transform: none;
+  }
+
+  .music-icon-button.is-sheet-close {
+    top: 16px;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .music-now-playing-layout {
+    min-height: 100%;
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .music-now-playing-visual {
+    padding: 66px 24px 0;
+    border-right: 0;
+    background: transparent;
+  }
+
+  .music-now-playing-art {
+    width: min(100%, 320px);
+  }
+
+  .music-now-playing-stage {
+    display: block;
+    overflow: visible;
+    padding: 28px 32px 40px;
+  }
+
+  .music-now-playing-copy {
+    text-align: center;
+  }
+
+  .music-now-playing-copy h2 {
+    font-size: 32px;
+  }
+
+  .music-now-playing-playback {
+    min-height: 0;
+    margin-top: 22px;
+  }
+
+  .music-now-playing-controls,
+  .music-now-playing-actions {
+    justify-content: center;
+  }
+
+  .music-track-inspection-note {
+    text-align: center;
+  }
 }
 
 @media (max-width: 560px) {
+  .music-mobile-brand .music-wordmark span {
+    display: none;
+  }
+
+  .music-search-trigger {
+    padding: 0 10px;
+  }
+
   .music-integration-banner {
     grid-template-columns: 36px minmax(0, 1fr) 36px;
   }
@@ -3725,30 +5828,95 @@ input[type='range'] {
   }
 
   .music-feature {
-    display: block;
-    min-height: 0;
+    display: grid;
+    min-height: 252px;
+    grid-template-columns: 42% minmax(0, 1fr);
   }
 
   .music-feature-art {
-    width: 100%;
+    width: 118px;
     min-height: 0;
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 1;
+  }
+
+  .music-vinyl-groove {
+    right: -26px;
+    width: 108px;
+    height: 108px;
+    border-width: 23px;
   }
 
   .music-feature-copy {
-    padding: 24px 22px 28px;
+    padding: 22px 14px 22px 2px;
   }
 
   .music-feature h1 {
-    font-size: 32px;
+    font-size: 27px;
   }
 
   .music-feature-artist {
-    font-size: 15px;
+    font-size: 14px;
   }
 
-  .music-feature-index {
+  .music-feature-actions {
+    margin-top: 18px;
+  }
+
+  .music-catalog-hero {
+    min-height: 214px;
+    grid-template-columns: minmax(0, 1fr) 124px;
+    padding: 24px 20px;
+  }
+
+  .music-catalog-copy h1,
+  .music-library-hero-copy h1 {
+    font-size: 34px;
+  }
+
+  .music-catalog-copy .music-primary-button {
+    width: 42px;
+    min-width: 42px;
+    padding: 0;
+  }
+
+  .music-catalog-copy .music-primary-button span {
     display: none;
+  }
+
+  .music-catalog-stack {
+    height: 118px;
+  }
+
+  .music-catalog-stack span {
+    width: 104px;
+  }
+
+  .music-library-hero {
+    grid-template-columns: 106px minmax(0, 1fr);
+    gap: 18px;
+    padding: 22px 18px;
+  }
+
+  .music-library-mosaic {
+    width: 104px;
+  }
+
+  .music-library-hero-copy .music-primary-button {
+    width: 42px;
+    min-width: 42px;
+    padding: 0;
+  }
+
+  .music-library-hero-copy .music-primary-button span {
+    display: none;
+  }
+
+  .music-library-glance {
+    min-height: 78px;
+  }
+
+  .music-library-glance strong {
+    font-size: 17px;
   }
 
   .music-section-block {
@@ -3810,23 +5978,21 @@ input[type='range'] {
   }
 
   .music-now-playing-sheet {
-    inset: 0;
-    width: 100%;
-    border-radius: 0;
-    padding: 18px 24px 34px;
+    left: 0;
     transform: none;
   }
 
   .music-now-playing-art {
-    width: min(100%, 320px);
+    width: min(100%, 300px);
+  }
+
+  .music-now-playing-stage {
+    padding: 26px 24px 28px;
   }
 
   .music-now-playing-actions {
-    gap: 7px;
-  }
-
-  .music-now-playing-actions button {
-    min-width: 62px;
+    width: 100%;
+    gap: 6px;
   }
 
   .music-lyrics-sheet {
@@ -3885,25 +6051,18 @@ input[type='range'] {
   }
 }
 
-@media (min-width: 561px) and (max-height: 820px) {
-  .music-now-playing-sheet {
-    padding-top: 18px;
-  }
-
-  .music-icon-button.is-sheet-close {
-    margin-bottom: 8px;
-  }
-
+@media (min-width: 841px) and (max-height: 820px) {
   .music-now-playing-art {
-    width: min(100%, 286px);
+    width: min(100%, 350px);
   }
 
-  .music-now-playing-copy {
-    margin-top: 16px;
+  .music-now-playing-stage {
+    padding-top: 48px;
+    padding-bottom: 36px;
   }
 
-  .music-now-playing-range {
-    margin-top: 14px;
+  .music-now-playing-playback {
+    margin-top: 24px;
   }
 }
 

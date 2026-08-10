@@ -109,6 +109,22 @@ describe('workflow governance', () => {
     expect(visualWorkflow).toContain('do not chain visual specialist skills by default')
   })
 
+  test('keeps product-grade visual intake and reference adaptation explicit', () => {
+    const visualWorkflow = readProjectFile('docs/process/VISUAL_WORKFLOW.md')
+    const designSystem = readProjectFile('docs/design/DESIGN.md')
+
+    expect(visualWorkflow).toContain('## 4. Product-Grade UI Gate')
+    expect(visualWorkflow).toContain('Information-depth map (L0/L1/L2/L3):')
+    expect(visualWorkflow).toContain('### 4.4 Control And Icon Gate')
+    expect(visualWorkflow).toContain('### 4.5 Visual Richness Gate')
+    expect(visualWorkflow).toContain('### 4.7 Visual Asset And Image-Generation Gate')
+    expect(visualWorkflow).toContain('## 5. Prototype And Reference Discovery')
+    expect(visualWorkflow).toContain('视觉专项：原型检索')
+    expect(designSystem).toContain('A functional scaffold is not a visually complete first implementation')
+    expect(designSystem).toContain('User experience is not construction narration')
+    expect(designSystem).toContain('Templates are scaffolds, not identities')
+  })
+
   test('keeps the cross-task execution contract thin and task-agnostic', () => {
     const aiWorkMode = readProjectFile('docs/process/AI_WORK_MODE.md')
 

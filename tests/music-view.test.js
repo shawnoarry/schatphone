@@ -11,6 +11,7 @@ import MusicView from '../src/views/MusicView.vue'
 
 class MockAudio {
   constructor() {
+    MockAudio.instance = this
     this.currentTime = 0
     this.duration = 240
     this.volume = 1
@@ -98,8 +99,8 @@ describe('MusicView', () => {
     const { wrapper } = await mountMusic()
     const store = useMusicStore()
 
-    expect(wrapper.get('[data-testid="music-feature"]').text()).toContain('Night Transit')
-    expect(wrapper.get('[data-testid="music-player"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="music-feature"]').text()).toContain("THIS WEEK'S PICK")
+    expect(wrapper.find('[data-testid="music-player"]').exists()).toBe(false)
     expect(wrapper.find('input[type="password"]').exists()).toBe(false)
 
     await wrapper.get('[data-testid="music-tab-search"]').trigger('click')
@@ -124,6 +125,105 @@ describe('MusicView', () => {
     await flushPromises()
     expect(store.profiles).toHaveLength(1)
     expect(wrapper.find('[data-testid="music-settings"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('uses consumer-facing primary spaces and keeps search as a top-level tool', async () => {
+    const { wrapper } = await mountMusic()
+    const primaryNavigation = wrapper.findAll('.music-nav-list .music-nav-item')
+
+    expect(primaryNavigation).toHaveLength(3)
+    expect(primaryNavigation.map((item) => item.text().trim())).toEqual([
+      'Discover',
+      'Albums',
+      'My Music',
+    ])
+    expect(wrapper.find('.music-nav-list [data-testid="music-tab-search"]').exists()).toBe(false)
+    expect(wrapper.get('.music-topbar [data-testid="music-tab-search"]').exists()).toBe(true)
+
+    await wrapper
+      .findAll('.music-discovery-shortcuts button')
+      .find((button) => button.text().includes('Favorites'))
+      .trigger('click')
+
+    expect(wrapper.get('[data-testid="music-tab-library"]').classes()).toContain('is-active')
+    expect(wrapper.get('.music-segmented button.is-active').text()).toBe('Favorites')
+
+    wrapper.unmount()
+  })
+
+  test('keeps Listen Now bounded and hands full listening history to Library', async () => {
+    const { wrapper } = await mountMusic()
+
+    expect(wrapper.get('[data-testid="music-listen-layout"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="music-recent-overview"] .music-track-row')).toHaveLength(
+      3,
+    )
+
+    await wrapper.get('[data-testid="music-recent-see-all"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="music-tab-library"]').classes()).toContain('is-active')
+    expect(wrapper.get('.music-segmented button.is-active').text()).toBe('Recently Played')
+
+    wrapper.unmount()
+  })
+
+  test('keeps recommendation content separate from the current player and syncs card controls', async () => {
+    const { wrapper } = await mountMusic()
+    const store = useMusicStore()
+    const recommendationTitle = wrapper.get('[data-testid="music-feature"] h1').text()
+
+    const heroToggle = wrapper.get('[data-testid="music-feature-play"]')
+    expect(heroToggle.attributes('title')).toBe('Play')
+    expect(heroToggle.get('i').classes()).toContain('fa-play')
+
+    await heroToggle.trigger('click')
+    await flushPromises()
+    expect(store.currentTrack?.title).toBe(recommendationTitle)
+    expect(wrapper.get('[data-testid="music-player"]').text()).toContain(recommendationTitle)
+    expect(wrapper.get('[data-testid="music-feature"] h1').text()).toBe(recommendationTitle)
+    expect(heroToggle.attributes('title')).toBe('Pause')
+    expect(heroToggle.get('i').classes()).toContain('fa-pause')
+
+    const toggle = wrapper.get('[data-testid="music-player-toggle"]')
+    expect(toggle.attributes('title')).toBe('Pause')
+    expect(toggle.get('i').classes()).toContain('fa-pause')
+
+    await heroToggle.trigger('click')
+    expect(MockAudio.instance.paused).toBe(true)
+    expect(wrapper.get('[data-testid="music-feature"] h1').text()).toBe(recommendationTitle)
+    expect(heroToggle.attributes('title')).toBe('Play')
+    expect(heroToggle.get('i').classes()).toContain('fa-play')
+    expect(toggle.attributes('title')).toBe('Play')
+    expect(toggle.get('i').classes()).toContain('fa-play')
+
+    await wrapper.get('[data-testid="music-player-stop"]').trigger('click')
+    expect(wrapper.get('[data-testid="music-feature"] h1').text()).toBe(recommendationTitle)
+    expect(wrapper.find('[data-testid="music-player"]').exists()).toBe(false)
+
+    const alternateTrack = MUSIC_DEMO_TRACKS.find((track) => track.title !== recommendationTitle)
+    const alternateAlbum = wrapper.get(`[data-testid="music-album-${alternateTrack.id}"]`)
+    await alternateAlbum.trigger('click')
+    await flushPromises()
+
+    expect(store.currentTrack?.id).toBe(alternateTrack.id)
+    expect(wrapper.get('[data-testid="music-player"]').text()).toContain(alternateTrack.title)
+    expect(wrapper.get('[data-testid="music-feature"] h1').text()).toBe(recommendationTitle)
+    expect(alternateAlbum.classes()).toContain('is-current')
+    expect(alternateAlbum.classes()).toContain('is-playing')
+    expect(alternateAlbum.get('.music-album-play i').classes()).toContain('fa-pause')
+
+    await alternateAlbum.trigger('click')
+    expect(alternateAlbum.classes()).toContain('is-current')
+    expect(alternateAlbum.classes()).not.toContain('is-playing')
+    expect(alternateAlbum.get('.music-album-play i').classes()).toContain('fa-play')
+
+    const trackToggle = wrapper.get(`[data-testid="music-track-toggle-${alternateTrack.id}"]`)
+    expect(trackToggle.attributes('title')).toBe('Play')
+    await trackToggle.trigger('click')
+    expect(trackToggle.attributes('title')).toBe('Pause')
+    expect(trackToggle.get('i').classes()).toContain('fa-pause')
 
     wrapper.unmount()
   })
@@ -186,6 +286,43 @@ describe('MusicView', () => {
         sourceId: 'demo_blue_hour',
       },
     })
+
+    wrapper.unmount()
+  })
+
+  test('shows a strong Now Playing favorite state and adds the track to Library favorites', async () => {
+    const { wrapper } = await mountMusic('/music?track=demo_blue_hour')
+    const store = useMusicStore()
+    const favoriteButton = wrapper.get('[data-testid="music-now-playing-favorite"]')
+
+    expect(favoriteButton.attributes('aria-pressed')).toBe('false')
+    expect(favoriteButton.text()).toContain('Favorite')
+    await favoriteButton.trigger('click')
+
+    expect(favoriteButton.attributes('aria-pressed')).toBe('true')
+    expect(favoriteButton.text()).toContain('Added')
+    expect(store.favoriteTracks.map((track) => track.id)).toContain('demo_blue_hour')
+
+    await wrapper.get('[data-testid="music-now-playing-sheet"] .music-icon-button').trigger('click')
+    await wrapper.get('[data-testid="music-tab-library"]').trigger('click')
+    const favoritesTab = wrapper
+      .findAll('.music-segmented button')
+      .find((button) => button.text().trim() === 'Favorites')
+    await favoritesTab.trigger('click')
+    expect(wrapper.get('.music-track-list.is-library-list').text()).toContain('Blue Hour Drive')
+    expect(localStorage.getItem('schatphone:store:system') || '').toContain('demo_blue_hour')
+
+    wrapper.unmount()
+  })
+
+  test('moves from Now Playing to Queue without stacking both layers', async () => {
+    const { wrapper } = await mountMusic('/music?track=demo_blue_hour')
+
+    expect(wrapper.get('[data-testid="music-now-playing-sheet"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="music-now-playing-queue"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="music-now-playing-sheet"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="music-queue"]').exists()).toBe(true)
 
     wrapper.unmount()
   })
@@ -270,6 +407,41 @@ describe('MusicView', () => {
       query: { from: 'home', homePage: '1' },
     })
     expect(wrapper.find('[data-testid="music-mini-player"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('docks the floating player at the Chat edge until controls are requested', async () => {
+    const router = createTestRouter()
+    const store = useMusicStore()
+    store.openFloatingPlayer()
+    store.setFloatingPlayerExpanded(true)
+    await router.push('/chat/1')
+    await router.isReady()
+
+    const wrapper = mount(MusicMiniPlayer, { global: { plugins: [router] } })
+    await flushPromises()
+
+    const player = wrapper.get('[data-testid="music-mini-player"]')
+    expect(player.classes()).toContain('is-chat-route')
+    expect(store.floatingPlayerExpanded).toBe(false)
+    expect(wrapper.find('[data-testid="music-floating-content"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="music-floating-expand"]').exists()).toBe(false)
+    expect(player.classes()).not.toContain('is-chat-controls-open')
+    expect(wrapper.find('.music-mini-controls').exists()).toBe(false)
+    expect(wrapper.get('.music-mini-track').attributes('aria-expanded')).toBe('false')
+
+    await wrapper.get('.music-mini-track').trigger('click')
+    expect(player.classes()).toContain('is-chat-controls-open')
+    expect(wrapper.get('.music-mini-track').attributes('aria-expanded')).toBe('true')
+    expect(wrapper.find('.music-mini-toggle').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="music-chat-collapse"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="music-floating-close"]').exists()).toBe(true)
+    expect(wrapper.findAll('.music-mini-controls button')).toHaveLength(3)
+
+    await wrapper.get('[data-testid="music-chat-collapse"]').trigger('click')
+    expect(player.classes()).not.toContain('is-chat-controls-open')
+    expect(wrapper.find('.music-mini-controls').exists()).toBe(false)
 
     wrapper.unmount()
   })

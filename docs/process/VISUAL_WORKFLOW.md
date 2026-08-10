@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-07-31
+Updated: 2026-08-10
 
 This document defines the `视觉专项` workflow.
 
@@ -32,6 +32,7 @@ Recommended variants:
 视觉专项：先审查，不改代码
 视觉专项：直接改 Home / Lock / Appearance
 视觉专项：只做设计规范，不推进功能
+视觉专项：原型检索，只提供参考包和适配建议
 视觉专项：参考 awesome-design-md，整理 SchatPhone 自己的 DESIGN.md
 ```
 
@@ -96,7 +97,213 @@ If a visual change needs functional code, keep the change minimal and explain wh
 25. World Pack activation/review stays in Settings -> WorldBook, but active-pack effects should not remain Settings-only. World app entries can appear in App Store/Home/App Library as launch context. Target apps should only change their own UI/UX when the binding includes an explicit app UI theme package; otherwise the launched app keeps its original interface and defaults.
 26. User customization sits above World Pack visual defaults. App/world-app visual scope should use stable shell data attributes such as `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` instead of utility classes, data-testid hooks, or generated DOM structure. Persisted scoped CSS remains runtime-compatible, but the current global Appearance surface does not author or export app-owned layers. Global Appearance packs carry global portable settings only; app icons, app skins, scoped CSS, Home layout/widgets, and Chat appearance remain with their owners.
 
-## 4. Entry-Context Audit
+## 4. Product-Grade UI Gate
+
+The first accepted implementation of a visible surface should already aim at the product target. Do not plan a generic functional page now and defer hierarchy, content presentation, assets, states, and identity to repeated cleanup rounds unless the user explicitly requests a wireframe or temporary scaffold.
+
+### 4.1 Design Intake Gate
+
+Before editing UI code, record or infer the following:
+
+```text
+Target surface and user entry:
+Primary user task:
+Behavior that must remain unchanged:
+Visual owner:
+Visual thesis in 2-4 words:
+Information-depth map (L0/L1/L2/L3):
+Required state matrix:
+Control and icon plan:
+Palette/material/background/media/motion plan:
+Mobile and wide-viewport composition:
+Reference and asset plan:
+Smallest product-complete slice:
+```
+
+Do not start from a component template and invent the product meaning afterward. A reference or template may support the plan, but the current feature contract decides the hierarchy and content.
+
+### 4.2 User-Facing Information Gate
+
+For every visible sentence, ask which user need it serves:
+
+- identify the current state;
+- explain a meaningful consequence or boundary;
+- help the user choose or act;
+- explain an error and recovery;
+- provide content the user came to consume.
+
+Remove or move out of the user surface any copy whose main purpose is to narrate construction, implementation ownership, architecture, storage, data flow, development status, future work, or internal limitations. Replace explanations with actual state presentation, controls, progressive disclosure, or visual media where possible.
+
+Short helper text is appropriate when it prevents a real mistake. It must not compensate for weak hierarchy, missing feedback, an absent visual, or an unclear control.
+
+### 4.3 Hierarchy And Container Gate
+
+Map the visible feature to information depth before choosing containers:
+
+- `L0 Overview`: immediate state, summary, and at most one-step deterministic actions;
+- `L1 Focus`: selected-item detail that preserves the current context, usually a sheet, drawer, or expansion;
+- `L2 Manage`: searching, filtering, full history, CRUD, configuration, or batch work in a focused subpage/full page;
+- `L3 Execute`: multi-step creation, AI-assisted work, checkout, transfer, or another dedicated execution flow.
+
+Container rules:
+
+- use inline controls for small, local, reversible changes;
+- use a sheet/drawer when the user must retain or compare the parent context;
+- use a modal only for a short blocking decision or confirmation;
+- use a subpage or route for complex management, authoring, or multi-step execution;
+- keep destructive actions out of the primary scan path unless danger management is the page's explicit purpose.
+
+A single long page containing overview, editing, diagnostics, history, destructive actions, and advanced configuration fails this gate even when every feature is technically reachable.
+
+### 4.4 Control And Icon Gate
+
+Run a control audit before acceptance:
+
+- familiar navigation and tool actions should use familiar icons when one exists;
+- compact toolbars should not become rows of text buttons;
+- primary or unfamiliar commands may use icon-plus-text;
+- text-only buttons are appropriate when the command is abstract, legally consequential, destructive, or not represented by a broadly understood symbol;
+- icon-only controls require accessible names, stable hit areas, focus states, and tooltips for unfamiliar symbols;
+- color alone must not communicate selection, status, or destructive meaning.
+
+Do not replace understandable product language with cryptic icons merely to reduce text. The target is semantic control design, not icon count.
+
+### 4.5 Visual Richness Gate
+
+Every visual plan must explicitly decide:
+
+1. palette and semantic accent use;
+2. surface material and edge treatment;
+3. background, wallpaper, illustration, photography, map, artwork, texture, or an intentional no-image treatment;
+4. depth hierarchy through spacing, contrast, border, shadow, blur, or highlight;
+5. interaction states and motion for navigation, selection, loading, success, failure, reveal, and dismissal.
+
+`None` is a valid decision only when the module role supports a restrained treatment. It must not be the automatic result of missing design effort. The static composition must remain legible without effects, while material and motion should make state and ownership clearer.
+
+For a content-rich or identity-bearing installed-app surface, simultaneously omitting a visual anchor/background or media treatment, meaningful material differentiation, and useful interaction motion fails this gate unless the user explicitly requests a utilitarian treatment.
+
+### 4.6 Distinctness And Template Gate
+
+Shared components should standardize behavior, accessibility, metrics, and system mechanics. They must not force every installed app into the same page composition.
+
+Before reusing a page template, state:
+
+- which mechanics should remain shared;
+- which content hierarchy is unique;
+- which visual anchor identifies this module;
+- how the interaction rhythm differs from sibling modules;
+- why reuse serves the product rather than implementation convenience.
+
+Changing only labels, accent color, and icon does not create a distinct installed-app identity. At least the content emphasis, spatial composition, media treatment, or key interaction pattern must respond to the module's function when a bespoke identity is warranted.
+
+### 4.7 Visual Asset And Image-Generation Gate
+
+Before replacing a visual subject with explanatory copy, decide whether the interface should show it directly. This applies especially to people, places, products, food, album art, journeys, collections, campaigns, atmospheres, and illustrated states.
+
+Use this source order:
+
+1. reviewed project assets;
+2. the confirmed local reference/asset library;
+3. user-selected or user-provided material;
+4. license-compatible external sources;
+5. generated candidate imagery.
+
+When suitable assets are missing and the design depends on them, proactively tell the user what visual slots are missing and propose concrete selection or generation options. Do not silently finalize a text-heavy substitute.
+
+When the user has already authorized visual implementation and the missing candidate can be generated safely within the accepted art direction, proceed with a focused generation round after stating that decision. Ask for a choice first only when subject matter, likeness, brand direction, licensing, or style would materially change the product result.
+
+When image generation is selected:
+
+- define subject, composition, aspect ratio, crop-safe region, palette, lighting/material, locale, and intended UI placement before generation;
+- generate candidates before wiring them into production;
+- review semantic match, legibility at rendered size, crop behavior, artifacts, embedded text, and style consistency;
+- keep rejected candidates out of runtime assets;
+- treat generated imagery as a visual candidate, not automatic product approval.
+
+If asset generation requires non-trivial visual judgment, run it as a focused asset round so the UI implementation round can use an approved asset contract without chaining multiple visual specialists.
+
+### 4.8 Acceptance Gate
+
+Unless the user explicitly requested a rough prototype, do not describe a surface as visually complete while any of these remain unresolved:
+
+- the first read and primary action are unclear;
+- construction or diagnostic narration dominates user content;
+- information depth is flattened into one page;
+- conventional tools are rendered as excessive text buttons;
+- palette, material, background/media, depth, or motion were never considered;
+- sibling modules reuse the same composition without a product reason;
+- a visually dependent surface lacks an asset plan;
+- only the happy/default state has been designed;
+- mobile is a squeezed desktop or wide desktop is a stretched phone page;
+- visible copy, accessibility, overflow, or theme evidence is missing.
+
+## 5. Prototype And Reference Discovery
+
+Use this stage when the user provides no prototype, provides only a partial reference, or asks for help adapting an external example.
+
+Trigger phrase:
+
+```text
+视觉专项：原型检索
+```
+
+The request may include:
+
+```text
+Target module or surface:
+Primary user task:
+Entry path:
+Behavior and ownership that must remain:
+Preferred or excluded styles:
+Reference-only or implementation-authorized:
+```
+
+Missing fields should first be inferred from repository evidence. Ask the user only when a missing choice would materially change the product direction.
+
+### 5.1 Search Order
+
+Prefer sources in this order:
+
+1. real shipped flows and public product evidence: App Store, Google Play, product sites, public walkthroughs, and free real-screen libraries;
+2. editable community prototypes and UI kits: Figma Community, Pixso, MasterGo, and Jishi Design;
+3. limited professional reference libraries such as Mobbin and Refero when their accessible results materially improve the search;
+4. official system guidance such as Apple Human Interface Guidelines and Material Design;
+5. local `awesome-design-md` and the confirmed external visual asset library;
+6. generated visual candidates when no suitable visual asset exists or the surface needs SchatPhone-owned imagery.
+
+Do not bypass login requirements, paywalls, CAPTCHAs, license restrictions, or download controls. Free viewing does not imply permission to ship the source asset.
+
+### 5.2 Candidate Selection
+
+Keep at most three serious candidates. Score them by:
+
+| Criterion | Weight |
+| --- | ---: |
+| Primary-task fit | 30% |
+| Information architecture and depth | 25% |
+| State and interaction completeness | 20% |
+| Compatibility with SchatPhone visual ownership | 15% |
+| Implementation and asset cost | 10% |
+
+A single beautiful first screen without a usable flow or state evidence may be kept as mood reference, but it cannot win the functional recommendation by itself.
+
+### 5.3 Reference Pack
+
+Before implementation, return a compact reference pack containing:
+
+- source links and current access/free boundary;
+- the relevant screen or flow nodes;
+- what each candidate solves;
+- principles and patterns worth borrowing;
+- brand-specific elements or business assumptions that must not be copied;
+- mapping to the current SchatPhone surface and its L0-L3 path;
+- missing states that still require original design;
+- one recommended direction or a clearly defined hybrid;
+- an asset/background/image-generation recommendation.
+
+User approval of a reference direction authorizes adaptation of the selected principles, not wholesale copying of the source product or copyrighted assets.
+
+## 6. Entry-Context Audit
 
 Before changing visual design, run this audit mentally or write it in task notes.
 
@@ -140,7 +347,7 @@ Examples:
 - Shopping child route: Installed App identity for the selected Shopping platform.
 - World Pack app binding in App Store: Native System/App Store container, with world-pack origin and target-app identity visible. Opening the entry moves into the target installed app's visual owner with world context applied.
 
-## 5. Visible Copy Audit
+## 7. Visible Copy Audit
 
 Visual work reviews the words users can actually see, not only layout, color, and motion.
 
@@ -168,7 +375,7 @@ System-language rules for visible UX:
 4. Review text and media as one semantic unit in every supported language. Category names, product names, descriptions, ingredients, icons, and photography must describe the same subject; do not place coffee under a fruit-only label or pair unrelated food copy with an asset.
 5. When a locale has no authored translation yet, use the product's documented fallback instead of exposing translation keys, empty copy, or implementation labels.
 
-## 6. Installed Skills
+## 8. Installed Skills
 
 The current visual workflow expects these skills.
 
@@ -183,12 +390,22 @@ These are expected in `.agents/skills` for repo-local visual work:
 - `image-to-code`
   - pixel-level restoration from a provided UI image, screenshot, Figma export, or long design image into code and high-resolution PNG slices.
 
+### Machine-provided capabilities
+
+- `browser`
+  - read-only discovery and inspection of public product screens, flows, design systems, and editable-template communities. It gathers evidence; it does not decide product ownership or authorize copying.
+- `imagegen`
+  - production of candidate bitmap backgrounds, illustrations, product imagery, textures, and other visual assets when the surface needs SchatPhone-owned media rather than more explanatory text.
+
 ### Skill routing guidance
 
 - choose at most one specialist skill for a visual work round;
 - use `frontend-logic-design` when the problem is page structure, grouping, entry placement, or inconsistent interaction logic;
 - use `frontend-design` when a surface needs visual rebuilding or a deliberate polish pass;
 - use `image-to-code` when the source image itself is the contract and the task needs 750px 1:1 restoration, transparent PNG slices, or strict screenshot/design-export matching;
+- use Browser during a reference-only discovery round when current public evidence is needed;
+- use `imagegen` during a focused asset-production round when imagery is required and no approved asset exists;
+- separate reference discovery, non-trivial asset generation, and UI implementation when combining them would hide a user decision or chain multiple visual specialists;
 - skip specialist skills for routine CSS, copy, spacing, or accessibility fixes with clear acceptance;
 - do not chain visual specialist skills by default.
 
@@ -199,6 +416,8 @@ Do not add a new visual skill only because one screen needs more polish. First u
 - `frontend-logic-design` for information structure;
 - `frontend-design` for stronger screen composition;
 - `image-to-code` for source-image-to-code restoration and high-resolution slicing;
+- `imagegen` for candidate raster assets when missing imagery is the actual gap;
+- Browser for public reference discovery when the user asks for current examples;
 - `playwright-testing` when browser screenshots or journeys are needed.
 
 Add a new project-local skill only when there is a repeated workflow gap that the current stack does not cover. Use `find-skills` and the Skills CLI from the confirmed SchatPhone project root:
@@ -210,7 +429,7 @@ npx.cmd skills add <owner/repo@skill>
 
 Before recommending or installing a skill, verify source reputation and install count. After installing, confirm `.agents\skills` and `skills-lock.json`, then document the new dependency in this file and in `docs/process/DEVELOPMENT_TOOLING.md`.
 
-## 7. Reference Library
+## 9. Reference Library
 
 The current machine keeps the `awesome-design-md` reference library here:
 
@@ -227,7 +446,7 @@ Usage:
 The current machine also keeps an external visual asset reference library here:
 
 ```text
-H:\SchatPhone\美化包
+D:\github\美化包
 ```
 
 Reference:
@@ -243,7 +462,7 @@ Usage:
 - before copying any image or code reference into SchatPhone, confirm the concrete product use, rename/compress it, and place it under a purpose-specific project asset folder;
 - on another PC, ask the machine owner to confirm the local asset-library path before relying on it.
 
-## 8. Recommended Project Artifacts
+## 10. Recommended Project Artifacts
 
 Visual work should eventually create or maintain:
 
@@ -266,7 +485,7 @@ Suggested content:
 - accessibility and responsive constraints;
 - visible UI copy rules.
 
-## 9. Reuse On Another PC
+## 11. Reuse On Another PC
 
 To reuse this workflow on another machine:
 
@@ -294,32 +513,39 @@ Rules:
 - run `npx.cmd skills add ...` from the confirmed SchatPhone project root;
 - do not assume every PC has a `D:` drive or the same global Codex skill location.
 
-## 10. Standard Work Sequence
+## 12. Standard Work Sequence
 
 Use this sequence for visual work unless the user asks for a narrower path:
 
 1. Read `docs/process/VISUAL_WORKFLOW.md` and the relevant design docs.
 2. Decide the target surface and scope: system shell, installed app, hybrid surface, or project documentation only.
-3. If external visual references are useful, confirm the local visual asset library path using `docs/references/VISUAL_ASSET_LIBRARY.md`.
-4. Run the entry-context audit.
-5. Translate implementation terms into product-facing terms before discussing the work with the user or writing UI copy. For Home desktop work, avoid exposing route names, component names, tile kinds, or fake folder categories.
-6. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
-7. Choose zero or one specialist skill: `frontend-logic-design` for IA, `frontend-design` for visual rebuild or polish, or `image-to-code` only when a source image is the contract.
-8. For interactive or editor surfaces, define the key state matrix before styling: normal, edit idle, panel open with no selection, item selected, compatible targets, incompatible targets, picker/replace state, success, empty, and error states.
-9. Define the smallest useful change slice before editing.
-10. Implement only visual, layout, motion, copy, or light interaction-support changes needed for that slice.
-11. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, and implementation explanations are not rendered to users.
-12. If themes are touched, verify both `default` and `zen`.
-13. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
-14. Verify with `git diff --check`, then lint/build/test when code changed.
-15. Sync visual package/PM/roadmap docs only when the work changes IA, ownership, active scope, or priority; routine visual-only polish can skip roadmap sync.
-16. Summarize:
+3. Run the entry-context audit.
+4. Complete the Product-Grade Design Intake Gate: primary task, visual thesis, hierarchy, states, controls, style/media plan, responsive behavior, and smallest product-complete slice.
+5. Map the surface to L0/L1/L2/L3 and choose inline, sheet/drawer, modal, subpage, or dedicated route containers by task depth.
+6. Define the key state matrix before styling: normal, loading, empty, error, selected/edit, success, destructive, and any feature-specific intermediate states.
+7. Translate implementation terms into product-facing terms before discussing the work with the user or writing UI copy. For Home desktop work, avoid exposing route names, component names, tile kinds, or fake folder categories.
+8. Decide whether current external references are needed. When they are, run Prototype And Reference Discovery and return the reference pack before implementation.
+9. Confirm the local visual asset library path when it is relevant, and make an explicit background/media/image-generation decision. If a required visual is missing, propose sourcing or generation instead of silently substituting explanatory text.
+10. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
+11. Choose zero or one design/implementation specialist: `frontend-logic-design` for IA, `frontend-design` for visual rebuild or polish, or `image-to-code` only when a source image is the contract. Use a separate focused round for non-trivial image generation.
+12. Define the smallest product-complete change slice before editing. A slice may be narrow, but its primary journey and required visible states cannot remain generic scaffolding.
+13. Implement only visual, layout, motion, copy, asset, or light interaction-support changes needed for that slice.
+14. Audit controls for excessive text buttons, missing conventional icons, accessible names, hit areas, and clear selected/pressed/destructive states.
+15. Audit palette, material, background/media, depth, and motion against the declared visual thesis; remove effects that do not clarify hierarchy or feedback.
+16. Audit visible copy so developer notes, TODOs, debug text, route/store/component names, construction narration, and implementation explanations are not rendered to users.
+17. If themes are touched, verify both `default` and `zen`.
+18. If navigation or return controls are touched, check `docs/process/NAVIGATION_RETURN_CONTRACT.md`.
+19. Verify with `git diff --check`, then lint/build/test when code changed.
+20. Sync visual package/PM/roadmap docs only when the work changes IA, ownership, active scope, or priority; routine visual-only polish can skip roadmap sync.
+21. Summarize:
    - changed surfaces;
    - visual-owner decisions;
+   - reference and asset decisions;
+   - product-grade gate evidence;
    - remaining risks;
    - next visual slice.
 
-## 11. First Prompt Templates
+## 13. First Prompt Templates
 
 Audit-first visual session:
 
@@ -327,10 +553,16 @@ Audit-first visual session:
 视觉专项：先读取 docs/process/VISUAL_WORKFLOW.md，然后只围绕视觉设计工作。先确认本机 awesome-design-md 参考库路径；如果不存在或路径未知，先询问我。本轮不推进功能路线。先审查 [页面/模块] 的上级入口属于【本机系统】还是【装载 App】，再输出问题清单、设计方向和最小改造切片。同时审查前端显示文案，禁止把开发注释、TODO、调试提示、实现说明显示给用户。
 ```
 
+Prototype discovery and adaptation:
+
+```text
+视觉专项：原型检索。目标是 [页面/模块/用户任务]。先检查当前实现、入口归属、L0-L3 信息深度和必须保留的功能边界，再从免费真实产品流程、可编辑原型社区、官方设计系统和本地参考库中筛选最多三个候选。输出链接、免费边界、关键流程、可借鉴与不可复制内容、SchatPhone 适配映射、缺失状态、素材/底图/生图建议和一个推荐方向。本轮不改代码。
+```
+
 Direct implementation:
 
 ```text
-视觉专项：参考 docs/process/VISUAL_WORKFLOW.md，直接改 [页面/模块] 的视觉表现。先确认用户实际入口和父级上下文；保持现有功能行为，只做必要的样式、布局、动效和轻量交互支持。改完后检查页面真实显示文字，不能出现开发注释、临时说明或内部命名。
+视觉专项：参考 docs/process/VISUAL_WORKFLOW.md，直接改 [页面/模块] 的视觉表现。先完成产品级设计门槛，确认用户实际入口、父级上下文、信息层级、状态矩阵、图标控制、配色材质、底图/素材和动效方案；保持现有功能行为，只做必要的视觉、布局、动效、素材和轻量交互支持。缺少关键视觉素材时先提出选图或生图建议，不要用说明文字代替。改完后检查页面真实显示文字，不能出现开发注释、建设阐述、临时说明或内部命名。
 ```
 
 Hybrid or cross-module surface:
@@ -339,7 +571,7 @@ Hybrid or cross-module surface:
 视觉专项：先做入口归属排查。目标：[页面/弹层/卡片]。我希望你不要只看代码或数据来源，而是判断用户看到它时仍然处于哪个上级入口。如果它在装载 App 内，就保持该 App 的沉浸式视觉逻辑。同时检查该表面的可见文字是否是用户文案，而不是开发说明。
 ```
 
-## 12. Verification
+## 14. Verification
 
 For documentation-only visual planning:
 
@@ -359,6 +591,19 @@ npm run test:visual
 `test:visual` is the single default visual-quality check. It currently covers Home, Settings, and Appearance across `default` and `zen` in desktop and mobile Chromium. It blocks page errors, horizontal overflow, and critical axe violations, and attaches screenshots plus the full axe report to Playwright results.
 
 For visual-heavy changes, also run the app and inspect the changed screens in desktop and mobile-sized viewports. Do not add another visual tool unless a repeated gap cannot be covered by Playwright.
+
+Product-grade verification must include evidence for the decisions made in the intake gate:
+
+- the primary task and first read are clear in the initial viewport;
+- the L0-L3 path uses the intended inline/sheet/drawer/modal/subpage/route containers;
+- required loading, empty, error, selected/edit, success, and destructive states are intentionally presented;
+- conventional tool actions use appropriate icons, with accessible names and stable hit areas;
+- user-facing copy contains no construction narration or text standing in for missing interaction/visuals;
+- palette, material, background/media, depth, and motion match the visual thesis in both static and interactive states;
+- required images load, crop safely, remain legible at rendered size, and match the surrounding copy;
+- reused components do not make unrelated installed apps look like label-swapped copies;
+- mobile and wide layouts are both composed intentionally rather than mechanically stretched or collapsed;
+- reduced-motion behavior preserves state clarity when motion is disabled.
 
 For Home desktop and template-edit work, inspect at least these states:
 
