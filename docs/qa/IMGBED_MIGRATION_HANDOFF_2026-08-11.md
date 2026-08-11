@@ -67,7 +67,7 @@ The approved complete plan and its credential-free results remain local and Git-
 - `SchatPhone-Project-Publisher` is the long-lived upload/list-only credential. It has no expiry and no delete/manage permission, and exists only in ignored `.env.local` until the owner adds it to a password manager.
 - The project-brief smoke published one protected master plus public poster and thumbnail in a single batch, then re-downloaded and verified all three objects.
 - Browser runtime construction now goes through `src/lib/project-assets.js`; `schatphone-source/` is never used as a runtime origin.
-- The migration archive at `I:\Schatphone-Asset-Archive\masters\2026-08-11` verified and removed 972 planned source/alias files totaling 1,219,569,601 bytes. The separate project-brief archive verified and removed 3 files totaling 1,907,552 bytes.
+- The device-local migration archive verified and removed 972 planned source/alias files totaling 1,219,569,601 bytes. The separate project-brief archive verified and removed 3 files totaling 1,907,552 bytes. Its home-PC path is deliberately not tracked because it is backup storage, not project configuration.
 - PWA/install/offline bootstrap resources and every file outside the approved plans remain in place. Git history was not rewritten.
 - SchatPhone commits `f654b81` and `ffae433` are pushed to `origin/main`. GitHub Pages Run `31537206567` passed the full release gate and deploy job; Vercel and Cloudflare Workers Builds both reported success for the final commit.
 - Production browser smoke passed at `https://shawnoarry.github.io/schatphone/`, `https://schatphone.vercel.app`, and `https://schatphone.noarry.workers.dev`: each host returned `200`, unlocked to Food Delivery, loaded all 18 observed image-bed images, and reported no page errors, console errors, or failed requests.
@@ -118,7 +118,7 @@ The future in-app Gallery token is not this project token. It remains device-loc
 - `npm.cmd run assets:publish -- --plan .imgbed-publish/<id>.plan.json --execute`
 - `npm.cmd run assets:check`
 - `npm.cmd run imgbed:registry-sync -- --plan <path> --results <path> --batch <id> --execute`
-- `npm.cmd run imgbed:archive -- --plan <path> --results <path> --destination I:\Schatphone-Asset-Archive\masters\2026-08-11 --execute`
+- `npm.cmd run imgbed:archive -- --plan <path> --results <path> --destination <device-local-archive-root> --execute`
 - `npm.cmd run imgbed:archive-remove -- --manifest <path> --plan <path> --results <path> --references-migrated --execute`
 
 The upload command does not delete local files. It rejects remote conflicts and verifies public anonymous download integrity after upload.

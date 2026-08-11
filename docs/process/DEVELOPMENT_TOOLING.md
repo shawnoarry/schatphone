@@ -134,7 +134,7 @@ Repository-owned artwork uses the personal SchatPhone image bed as its developme
 - a byte-identical master and runtime export are uploaded once, under the public runtime key;
 - PWA/install/offline bootstrap icons remain in Git.
 
-Project publishing uses a long-lived `SCHATPHONE_IMGBED_PROJECT_TOKEN` with `upload + list` only. It has no `delete + manage` permission, is stored only in ignored `.env.local`, and is distinct from both the temporary migration token and the future Gallery device token.
+Project publishing uses a long-lived `SCHATPHONE_IMGBED_PROJECT_TOKEN` with `upload + list` only. It has no `delete + manage` permission and is distinct from both the temporary migration token and the future Gallery device token. Every workstation that publishes configures this token in its own ignored `.env.local`; neither the token nor any workstation-specific archive path is project configuration.
 
 The repeatable flow is:
 
@@ -153,7 +153,7 @@ npm.cmd run assets:publish -- --plan .imgbed-publish/<id>.plan.json --execute
 
 The publisher automatically splits work into batches of at most 10 files and 40 MiB, verifies the server response, downloads every public/protected object from the configured image-bed origin, compares byte length and SHA-256, and updates `config/project-assets.json` only after verification. Interrupted jobs can rerun the same plan; deterministic keys and server-side hashes make matching uploads idempotent.
 
-The one-time repository migration has two additional offline controls:
+The one-time repository migration has two additional offline controls. Its `--destination` is always supplied explicitly for the current device; a workstation that does not keep a local master archive does not need that directory.
 
 ```powershell
 npm.cmd run imgbed:registry-sync -- --plan <path> --results <path> --batch <id> --execute

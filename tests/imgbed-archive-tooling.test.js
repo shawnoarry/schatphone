@@ -51,7 +51,7 @@ describe('image-bed migration archive', () => {
   it('treats a destination on another Windows drive as outside the repository', () => {
     expect(isInside(
       'H:\\SchatPhone\\schatphone',
-      'I:\\Schatphone-Asset-Archive\\masters',
+      'I:\\Device-Local-Archive\\masters',
     )).toBe(false)
   })
 
