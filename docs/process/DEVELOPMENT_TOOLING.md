@@ -134,24 +134,33 @@ Repository-owned artwork uses the personal SchatPhone image bed as its developme
 - a byte-identical master and runtime export are uploaded once, under the public runtime key;
 - PWA/install/offline bootstrap icons remain in Git.
 
-Project publishing uses a long-lived `SCHATPHONE_IMGBED_PROJECT_TOKEN` with `upload + list` only. It has no `delete + manage` permission and is distinct from both the temporary migration token and the future Gallery device token. Every workstation that publishes configures this token in its own ignored `.env.local`; neither the token nor any workstation-specific archive path is project configuration.
+Project publishing uses a long-lived `SCHATPHONE_IMGBED_PROJECT_TOKEN` with `upload + list` only. It has no `delete + manage` permission and is distinct from both the retired migration token and the future Gallery device token. The owner keeps the shared value in the password-manager entry for `cloudflare-imgbed-7z3.pages.dev` named `SchatPhone-Project-Publisher`. Every workstation that publishes retrieves that same value and configures it in its own ignored `.env.local`; neither the token nor any workstation-specific archive path is project configuration.
 
-The repeatable flow is:
+One-time setup is portable across the home and office PCs:
+
+1. pull the repository and run `npm install` so the tracked Git hook is active;
+2. create or update that workstation's ignored `.env.local` from `.env.example` without copying another workstation's unrelated local settings;
+3. retrieve `SchatPhone-Project-Publisher` from the owner's synchronized password manager and set only `SCHATPHONE_IMGBED_PROJECT_TOKEN` to its password value;
+4. keep `SCHATPHONE_IMGBED_BASE_URL` at the tracked example value unless the image-bed deployment itself changes.
+
+Normal project publishing does not use `SCHATPHONE_IMGBED_TOKEN`, the Hugging Face repository credential, or a local archive path. A workstation that only runs the application needs none of these credentials; a workstation that publishes new repository-owned artwork needs only `SCHATPHONE_IMGBED_PROJECT_TOKEN`.
+
+The repeatable production flow is identical on both PCs and does not require a manual upload command:
 
 1. Generate assets under ignored `output/imagegen/`.
-2. Prepare an explicitly approved plan with one or more repeated `--runtime <local>=<remote>` and `--source <local>=<remote>` mappings:
+2. Queue accepted assets in an explicitly approved local plan with one or more repeated `--runtime <local>=<remote>` and `--source <local>=<remote>` mappings. The plan is a small credential-free JSON document that references the original files; it is not another copy of their bytes:
 
 ```powershell
 npm.cmd run assets:prepare -- --batch <id> --runtime <local>=<remote> --source <local>=<remote> --approve --approval-source <decision>
 ```
 
-3. Publish the approved plan:
+3. Create the Git commit normally. The tracked pre-commit hook discovers approved plans and automatically publishes them before the commit is finalized.
 
-```powershell
-npm.cmd run assets:publish -- --plan .imgbed-publish/<id>.plan.json --execute
-```
+For a pending plan, the hook splits work into batches of at most 10 files and 40 MiB, verifies the server response, downloads every public/protected object into memory, compares byte length and SHA-256, updates and stages `config/project-assets.json`, then removes the verified plan, result record, and exact `output/imagegen/` source paths. The verification download does not create another local image copy.
 
-The publisher automatically splits work into batches of at most 10 files and 40 MiB, verifies the server response, downloads every public/protected object from the configured image-bed origin, compares byte length and SHA-256, and updates `config/project-assets.json` only after verification. Interrupted jobs can rerun the same plan; deterministic keys and server-side hashes make matching uploads idempotent.
+If the project token is missing or the network/upload/remote-verification step is temporarily unavailable, the hook does not block the commit. It force-stages only the approved plan and its exact `output/imagegen/` entries as a credential-free Git fallback so another PC can pull and continue. Every later commit retries the same idempotent upload. After a successful retry, the hook stages deletion of those temporary Git files and keeps only the registry-backed image-bed references. Invalid plans, conflicting remote keys, duplicate bytes under different keys, and a local file changed after plan approval remain hard failures rather than fallback conditions. The fallback deliberately trades a rare temporary increase in Git history for uninterrupted cross-PC handoff.
+
+`npm.cmd run assets:publish -- --plan .imgbed-publish/<id>.plan.json --execute` remains available as a repair/diagnostic command, but it is not part of the normal user workflow.
 
 The one-time repository migration has two additional offline controls. Its `--destination` is always supplied explicitly for the current device; a workstation that does not keep a local master archive does not need that directory.
 
@@ -165,9 +174,9 @@ Registry sync refuses incomplete or mismatched verification results. Archive fir
 
 An independently approved follow-up batch may share a dated archive root by adding `--manifest-name <batch>-archive-manifest.json`. The archive tool rejects repository-local destinations, including cross-drive path ambiguities, and never replaces the default manifest unless that exact name is requested.
 
-The tracked `.githooks/pre-commit` runs `assets:check --staged`. It never reads a token or performs a network upload; it blocks staged runtime/generated media until the explicit publish step has finished. `npm install` activates the shared hooks through the repository `prepare` script. CI runs `assets:check` over the complete tracked tree and likewise needs no credential.
+The tracked `.githooks/pre-commit` runs automatic pending publication before `assets:check --staged`. With no approved pending plan it performs no network request and does not require a token. `npm install` activates the shared hooks through the repository `prepare` script. CI never receives the token or uploads; its offline check accepts only fallback media covered exactly by a tracked approved plan and rejects all other local project media.
 
-Do not commit `.imgbed-publish/`, `.env.local`, generated source files, or any token. Do not use a protected `schatphone-source/` URL as a browser runtime source.
+Do not commit `.env.local`, any token, or generated source files outside the hook's exact temporary fallback. Do not use a protected `schatphone-source/` URL as a browser runtime source.
 
 ## 5. OpenCLI
 

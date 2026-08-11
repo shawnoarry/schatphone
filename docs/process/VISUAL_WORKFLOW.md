@@ -464,10 +464,11 @@ Usage:
 
 Cross-machine handoff rule:
 
-- any image, prompt/request, manifest, hash, contact sheet, source/license record, accepted master, or runtime derivative required by a later machine must live in a Git-eligible repository path;
-- handoff and acceptance docs must cite repository-relative paths, never a machine-local absolute path as the only evidence;
-- `output/imagegen/<feature>/<batch>/` is the traceable candidate/master location and the owning `public/images/ui-assets/` subtree is the runtime location;
-- uncommitted or unpushed files must be marked `PENDING_GIT_COMMIT`; being present in one checkout does not make them available on another machine.
+- accepted repository-owned generated media starts under `output/imagegen/<feature>/<batch>/` and must enter an approved project-asset plan; public runtime derivatives publish to `schatphone-assets/`, while a distinct valuable master may publish to protected `schatphone-source/`;
+- `git commit` automatically publishes approved plans, re-downloads and verifies every object, stages `config/project-assets.json`, and removes the verified local generated files; the committed registry and canonical image-bed URL are the normal cross-machine handoff rather than a local absolute path;
+- when publication is temporarily unavailable, the hook force-stages only the credential-free approved plan and its exact generated files as a Git fallback; a later commit on either PC retries publication and removes the fallback after success;
+- prompts, requests, source/license records, acceptance notes, and other text evidence required by a later machine remain Git-eligible repository documents; handoff docs must never use a machine-local absolute path as their only evidence;
+- a generated file that is neither registered remotely nor present in a tracked fallback plan is local-only and cannot be treated as cross-machine evidence.
 
 ## 10. Recommended Project Artifacts
 
@@ -533,7 +534,7 @@ Use this sequence for visual work unless the user asks for a narrower path:
 6. Define the key state matrix before styling: normal, loading, empty, error, selected/edit, success, destructive, and any feature-specific intermediate states.
 7. Translate implementation terms into product-facing terms before discussing the work with the user or writing UI copy. For Home desktop work, avoid exposing route names, component names, tile kinds, or fake folder categories.
 8. Decide whether current external references are needed. When they are, run Prototype And Reference Discovery and return the reference pack before implementation.
-9. Use a local visual asset library only when it is available and relevant, and make an explicit background/media/image-generation decision. If a required visual is missing, propose sourcing or generation instead of silently substituting explanatory text; place every later-machine dependency in a Git-eligible repository path.
+9. Use a local visual asset library only when it is available and relevant, and make an explicit background/media/image-generation decision. If a required visual is missing, propose sourcing or generation instead of silently substituting explanatory text; queue every accepted repository-owned generated asset for automatic image-bed publication so another machine receives either its registered remote object or the exact tracked fallback.
 10. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
 11. Choose zero or one design/implementation specialist: `frontend-logic-design` for IA, `frontend-design` for visual rebuild or polish, or `image-to-code` only when a source image is the contract. Use a separate focused round for non-trivial image generation.
 12. Define the smallest product-complete change slice before editing. A slice may be narrow, but its primary journey and required visible states cannot remain generic scaffolding.

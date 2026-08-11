@@ -1,16 +1,21 @@
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { spawnSync } from 'node:child_process'
+import { copyFile, mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  assertAutomaticPublishPlan,
   assertBatchUploadResult,
+  assertCompletedPublishResult,
   assertPublishPlan,
+  assertPublishQueueCompatible,
   buildBatchManifest,
   buildPublishPlan,
   chunkPublishEntries,
   createEmptyAssetRegistry,
   mergeVerifiedAssets,
   normalizeImageBedBaseUrl,
+  registryCoversPublishPlan,
   stagedAssetViolations,
   validateAssetRegistry,
 } from '../scripts/imgbed-publish-lib.mjs'
@@ -20,6 +25,41 @@ async function fixtureRepo() {
   await mkdir(join(root, 'output/imagegen/poster'), { recursive: true })
   await writeFile(join(root, 'output/imagegen/poster/runtime.png'), 'runtime')
   await writeFile(join(root, 'output/imagegen/poster/master.png'), 'master')
+  return root
+}
+
+function runFixtureCommand(root, command, args) {
+  return spawnSync(command, args, {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, SCHATPHONE_IMGBED_PROJECT_TOKEN: '' },
+  })
+}
+
+function runFixtureGit(root, args) {
+  const result = runFixtureCommand(root, 'git', args)
+  if (result.status !== 0) throw new Error(result.stderr || `git ${args.join(' ')} failed`)
+  return result.stdout
+}
+
+async function fixturePublishCliRepo() {
+  const root = await fixtureRepo()
+  await mkdir(join(root, 'scripts'), { recursive: true })
+  await mkdir(join(root, 'config'), { recursive: true })
+  await mkdir(join(root, '.imgbed-publish'), { recursive: true })
+  for (const name of ['imgbed-publish.mjs', 'imgbed-publish-lib.mjs', 'imgbed-migration-lib.mjs']) {
+    await copyFile(resolve(process.cwd(), 'scripts', name), join(root, 'scripts', name))
+  }
+  await writeFile(join(root, '.gitignore'), '.imgbed-publish/\noutput/imagegen/\n')
+  await writeFile(
+    join(root, 'config/project-assets.json'),
+    `${JSON.stringify(createEmptyAssetRegistry(), null, 2)}\n`,
+  )
+  runFixtureGit(root, ['init'])
+  runFixtureGit(root, ['config', 'user.name', 'SchatPhone Test'])
+  runFixtureGit(root, ['config', 'user.email', 'test@schatphone.invalid'])
+  runFixtureGit(root, ['add', '.gitignore', 'config/project-assets.json'])
+  runFixtureGit(root, ['commit', '-m', 'fixture baseline'])
   return root
 }
 
@@ -55,6 +95,22 @@ describe('image-bed project publishing', () => {
       approved: true,
       approvalSource: 'test',
     })).rejects.toThrow('Identical bytes must be published once')
+  })
+
+  it('limits automatic publishing and cleanup to generated output', async () => {
+    const repoRoot = await fixtureRepo()
+    const plan = await buildPublishPlan({
+      repoRoot,
+      batchId: 'automatic-output',
+      runtime: ['output/imagegen/poster/runtime.png=briefings/runtime.png'],
+      approved: true,
+      approvalSource: 'test',
+    })
+    expect(assertAutomaticPublishPlan(plan)).toBe(plan)
+    plan.entries[0].path = 'public/images/runtime.png'
+    expect(() => assertAutomaticPublishPlan(plan)).toThrow(
+      'Automatic publishing only accepts generated output',
+    )
   })
 
   it('splits large jobs into bounded batches', () => {
@@ -95,6 +151,40 @@ describe('image-bed project publishing', () => {
     }]
     const merged = mergeVerifiedAssets(registry, plan, verified)
     expect(validateAssetRegistry(merged).assets).toHaveLength(1)
+  })
+
+  it('recognizes completed plans and rejects queue conflicts before upload', async () => {
+    const repoRoot = await fixtureRepo()
+    const plan = await buildPublishPlan({
+      repoRoot,
+      batchId: 'completed-plan',
+      runtime: ['output/imagegen/poster/runtime.png=briefings/runtime.png'],
+      approved: true,
+      approvalSource: 'test',
+    })
+    const result = {
+      schemaVersion: 1,
+      completedChunks: 1,
+      totalChunks: 1,
+      results: plan.entries.map((entry) => ({
+        ...entry,
+        status: 'verified',
+        verifiedAt: '2026-08-12T00:00:00.000Z',
+      })),
+    }
+    const verified = assertCompletedPublishResult(plan, result)
+    const registry = createEmptyAssetRegistry(plan.baseUrl)
+    expect(registryCoversPublishPlan(registry, plan)).toBe(false)
+    const merged = mergeVerifiedAssets(registry, plan, verified)
+    expect(registryCoversPublishPlan(merged, plan)).toBe(true)
+
+    const conflicting = structuredClone(plan)
+    conflicting.batchId = 'conflicting-plan'
+    conflicting.entries[0].remoteKey = 'schatphone-assets/briefings/duplicate.png'
+    conflicting.entries[0].downloadUrl = `${plan.baseUrl}/file/${conflicting.entries[0].remoteKey}`
+    expect(() => assertPublishQueueCompatible(registry, [plan, conflicting])).toThrow(
+      'Pending asset bytes already use another key',
+    )
   })
 
   it('rejects unsafe image-bed URLs and plan download URL substitution', async () => {
@@ -146,5 +236,88 @@ describe('image-bed project publishing', () => {
       'output/imagegen/poster/master.png',
       'public/images/poster.png',
     ])
+    expect(stagedAssetViolations(
+      ['output/imagegen/poster/master.png', 'public/images/poster.png'],
+      ['output/imagegen/poster/master.png'],
+    )).toEqual(['public/images/poster.png'])
+  })
+
+  it('runs automatic publication before the offline commit gate', async () => {
+    const hook = await readFile(resolve(process.cwd(), '.githooks/pre-commit'), 'utf8')
+    expect(hook).toContain(
+      'publish-pending --stage-registry --cleanup-local --fallback-to-git',
+    )
+    expect(hook.indexOf('publish-pending')).toBeLessThan(hook.indexOf('check --staged'))
+  })
+
+  it('commits an exact fallback and cleans it after verified recovery', async () => {
+    const repoRoot = await fixturePublishCliRepo()
+    const plan = await buildPublishPlan({
+      repoRoot,
+      batchId: 'cross-pc-fallback',
+      runtime: ['output/imagegen/poster/runtime.png=briefings/fallback.png'],
+      approved: true,
+      approvalSource: 'test-approved',
+    })
+    const planPath = '.imgbed-publish/cross-pc-fallback.plan.json'
+    await writeFile(join(repoRoot, planPath), `${JSON.stringify(plan, null, 2)}\n`)
+
+    const deferred = runFixtureCommand(repoRoot, process.execPath, [
+      'scripts/imgbed-publish.mjs',
+      'publish-pending',
+      '--stage-registry',
+      '--cleanup-local',
+      '--fallback-to-git',
+    ])
+    expect(deferred.status).toBe(0)
+    expect(deferred.stderr).toContain('deferred-to-next-commit')
+    expect(runFixtureGit(repoRoot, ['diff', '--cached', '--name-only'])).toContain(planPath)
+    expect(runFixtureGit(repoRoot, ['diff', '--cached', '--name-only'])).toContain(
+      'output/imagegen/poster/runtime.png',
+    )
+    const fallbackCheck = runFixtureCommand(repoRoot, process.execPath, [
+      'scripts/imgbed-publish.mjs', 'check', '--staged',
+    ])
+    expect(fallbackCheck.status).toBe(0)
+    runFixtureGit(repoRoot, ['commit', '-m', 'carry pending asset'])
+
+    const verified = plan.entries.map((entry) => ({
+      ...entry,
+      status: 'verified',
+      verifiedAt: '2026-08-12T00:00:00.000Z',
+    }))
+    await writeFile(
+      join(repoRoot, '.imgbed-publish/cross-pc-fallback.results.json'),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        completedChunks: 1,
+        totalChunks: 1,
+        results: verified,
+      }, null, 2)}\n`,
+    )
+    await writeFile(join(repoRoot, 'output/imagegen/poster/runtime.png'), 'changed-after-plan')
+    const unsafeCleanup = runFixtureCommand(repoRoot, process.execPath, [
+      'scripts/imgbed-publish.mjs',
+      'publish-pending',
+      '--stage-registry',
+      '--cleanup-local',
+      '--fallback-to-git',
+    ])
+    expect(unsafeCleanup.status).toBe(1)
+    expect(unsafeCleanup.stderr).toContain('Local asset changed after verified publication')
+    await writeFile(join(repoRoot, 'output/imagegen/poster/runtime.png'), 'runtime')
+    const recovered = runFixtureCommand(repoRoot, process.execPath, [
+      'scripts/imgbed-publish.mjs',
+      'publish-pending',
+      '--stage-registry',
+      '--cleanup-local',
+      '--fallback-to-git',
+    ])
+    expect(recovered.status).toBe(0)
+    expect(recovered.stdout).toContain('already-complete')
+    const staged = runFixtureGit(repoRoot, ['diff', '--cached', '--name-status'])
+    expect(staged).toContain('M\tconfig/project-assets.json')
+    expect(staged).toContain(`D\t${planPath}`)
+    expect(staged).toContain('D\toutput/imagegen/poster/runtime.png')
   })
 })

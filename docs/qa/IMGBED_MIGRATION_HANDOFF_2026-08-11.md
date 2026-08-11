@@ -64,7 +64,7 @@ The approved complete plan and its credential-free results remain local and Git-
 - 771 unique objects are verified by remote key, byte length, and SHA-256: 377 public runtime assets and 394 protected unique sources.
 - The committed registry contains those objects plus the three-object project-brief smoke batch: 774 unique remote keys and 774 unique digests.
 - Image-bed commit `75bde8f62c930c01881a3700b0e5c94d08c6bdbd` deployed the authenticated `/upload/batch` endpoint; its production workflow and anonymous `401` check passed.
-- `SchatPhone-Project-Publisher` is the long-lived upload/list-only credential. It has no expiry and no delete/manage permission, and exists only in ignored `.env.local` until the owner adds it to a password manager.
+- `SchatPhone-Project-Publisher` is the long-lived upload/list-only credential. It has no expiry and no delete/manage permission, is saved in the owner's synchronized password manager, and is copied only into each publishing workstation's ignored `.env.local`.
 - The project-brief smoke published one protected master plus public poster and thumbnail in a single batch, then re-downloaded and verified all three objects.
 - Browser runtime construction now goes through `src/lib/project-assets.js`; `schatphone-source/` is never used as a runtime origin.
 - The device-local migration archive verified and removed 972 planned source/alias files totaling 1,219,569,601 bytes. The separate project-brief archive verified and removed 3 files totaling 1,907,552 bytes. Its home-PC path is deliberately not tracked because it is backup storage, not project configuration.
@@ -104,7 +104,7 @@ The completed migration uses a separate long-lived project publisher token:
 - permissions: `upload + list`;
 - denied permissions: `delete + manage`;
 - expiry: none, by the owner's explicit decision;
-- storage: ignored `.env.local` and the owner's password manager only.
+- storage: the owner's synchronized password manager plus each publishing workstation's ignored `.env.local` only; the repository never records the value or a workstation-specific path.
 
 The future in-app Gallery token is not this project token. It remains device-local and belongs to the separately approved `schatphone-user/` Adapter slice.
 
@@ -115,6 +115,7 @@ The future in-app Gallery token is not this project token. It remains device-loc
 - `npm.cmd run imgbed:preflight -- --require-token`
 - `npm.cmd run imgbed:upload -- --plan <approved-plan> --execute`
 - `npm.cmd run assets:prepare -- --batch <id> [--runtime <local>=<remote>] [--source <local>=<remote>] --approve --approval-source <decision>`
+- `npm.cmd run assets:publish-pending -- --stage-registry --cleanup-local --fallback-to-git`
 - `npm.cmd run assets:publish -- --plan .imgbed-publish/<id>.plan.json --execute`
 - `npm.cmd run assets:check`
 - `npm.cmd run imgbed:registry-sync -- --plan <path> --results <path> --batch <id> --execute`
@@ -123,7 +124,7 @@ The future in-app Gallery token is not this project token. It remains device-loc
 
 The upload command does not delete local files. It rejects remote conflicts and verifies public anonymous download integrity after upload.
 
-The project publisher batches at most 10 files and 40 MiB per request, verifies public and protected downloads by size and SHA-256, and records verified objects in `config/project-assets.json`. The shared pre-commit hook and CI only perform offline checks; they block unpublished local media but never receive a token or upload during commit.
+The project publisher batches at most 10 files and 40 MiB per request, verifies public and protected downloads by size and SHA-256, and records verified objects in `config/project-assets.json`. The shared pre-commit hook automatically publishes approved pending plans, stages the registry, and cleans verified generated files. With no pending plan it stays offline. A temporary credential/network/transport failure stages only the credential-free plan and its exact generated files so another PC can continue; the next commit retries and removes that fallback after success. CI remains offline and receives no token.
 
 Migration archive and removal are separate operations. Removal rechecks the archive against the approved plan and complete result document, verifies archive and source hashes again, and cannot expand beyond plan `path` and `aliasPaths`. `--manifest-name <file.json>` keeps independently approved follow-up batches in the same dated archive without overwriting the main migration manifest.
 

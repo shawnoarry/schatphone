@@ -197,6 +197,16 @@ export function assertPublishPlan(plan) {
   return plan
 }
 
+export function assertAutomaticPublishPlan(plan) {
+  assertPublishPlan(plan)
+  for (const entry of plan.entries) {
+    if (!entry.path.startsWith('output/imagegen/')) {
+      throw new Error(`Automatic publishing only accepts generated output: ${entry.path}`)
+    }
+  }
+  return plan
+}
+
 export function chunkPublishEntries(entries) {
   const chunks = []
   let current = []
@@ -251,6 +261,39 @@ export function assertBatchUploadResult(entries, result) {
   return result
 }
 
+export function assertCompletedPublishResult(plan, result) {
+  assertPublishPlan(plan)
+  const expectedChunks = chunkPublishEntries(plan.entries).length
+  if (
+    result?.schemaVersion !== 1
+    || Number(result.completedChunks) !== expectedChunks
+    || Number(result.totalChunks) !== expectedChunks
+    || !Array.isArray(result.results)
+    || result.results.length !== plan.entries.length
+  ) {
+    throw new Error(`Project asset publish result is incomplete: ${plan.batchId}`)
+  }
+
+  const byRemoteKey = new Map(result.results.map((entry) => [entry?.remoteKey, entry]))
+  const verified = plan.entries.map((entry) => {
+    const completed = byRemoteKey.get(entry.remoteKey)
+    if (
+      !completed
+      || completed.status !== 'verified'
+      || completed.path !== entry.path
+      || completed.access !== entry.access
+      || completed.downloadUrl !== entry.downloadUrl
+      || completed.sha256 !== entry.sha256
+      || Number(completed.bytes) !== entry.bytes
+      || !String(completed.verifiedAt || '').trim()
+    ) {
+      throw new Error(`Project asset publish result failed verification: ${entry.remoteKey}`)
+    }
+    return completed
+  })
+  return verified
+}
+
 export function createEmptyAssetRegistry(baseUrl = DEFAULT_IMAGE_BED_URL) {
   return {
     schemaVersion: 1,
@@ -293,6 +336,63 @@ export function mergeVerifiedAssets(registry, plan, verifiedEntries) {
   }
 }
 
+export function registryCoversPublishPlan(registry, plan) {
+  validateAssetRegistry(registry)
+  assertPublishPlan(plan)
+  if (normalizeImageBedBaseUrl(registry.baseUrl) !== plan.baseUrl) {
+    throw new Error(`Project asset plan uses a different image-bed origin: ${plan.batchId}`)
+  }
+
+  const byRemoteKey = new Map(registry.assets.map((entry) => [entry.remoteKey, entry]))
+  const keyByDigest = new Map(registry.assets.map((entry) => [entry.sha256, entry.remoteKey]))
+  let covered = true
+  for (const entry of plan.entries) {
+    const registered = byRemoteKey.get(entry.remoteKey)
+    if (!registered) {
+      const existingKey = keyByDigest.get(entry.sha256)
+      if (existingKey) {
+        throw new Error(`Registry already contains these bytes at ${existingKey}`)
+      }
+      covered = false
+      continue
+    }
+    if (
+      registered.sha256 !== entry.sha256
+      || Number(registered.bytes) !== entry.bytes
+      || registered.access !== entry.access
+      || registered.downloadUrl !== entry.downloadUrl
+    ) {
+      throw new Error(`Registry conflicts with pending asset: ${entry.remoteKey}`)
+    }
+  }
+  return covered
+}
+
+export function assertPublishQueueCompatible(registry, plans) {
+  validateAssetRegistry(registry)
+  const keyToDigest = new Map(registry.assets.map((entry) => [entry.remoteKey, entry.sha256]))
+  const digestToKey = new Map(registry.assets.map((entry) => [entry.sha256, entry.remoteKey]))
+  for (const plan of plans) {
+    assertPublishPlan(plan)
+    if (normalizeImageBedBaseUrl(registry.baseUrl) !== plan.baseUrl) {
+      throw new Error(`Project asset plan uses a different image-bed origin: ${plan.batchId}`)
+    }
+    for (const entry of plan.entries) {
+      const existingDigest = keyToDigest.get(entry.remoteKey)
+      if (existingDigest && existingDigest !== entry.sha256) {
+        throw new Error(`Pending asset key has conflicting bytes: ${entry.remoteKey}`)
+      }
+      const existingKey = digestToKey.get(entry.sha256)
+      if (existingKey && existingKey !== entry.remoteKey) {
+        throw new Error(`Pending asset bytes already use another key: ${existingKey}`)
+      }
+      keyToDigest.set(entry.remoteKey, entry.sha256)
+      digestToKey.set(entry.sha256, entry.remoteKey)
+    }
+  }
+  return plans
+}
+
 export function validateAssetRegistry(registry) {
   if (registry?.schemaVersion !== 1 || !Array.isArray(registry?.assets)) {
     throw new Error('Project asset registry has an unsupported schema')
@@ -319,9 +419,11 @@ export function validateAssetRegistry(registry) {
   return registry
 }
 
-export function stagedAssetViolations(paths) {
+export function stagedAssetViolations(paths, allowedPendingPaths = []) {
+  const allowed = new Set(allowedPendingPaths.map(normalizeRepoPath))
   return paths
     .map(normalizeRepoPath)
     .filter((path) => isMediaPath(path))
     .filter((path) => path.startsWith('public/images/') || path.startsWith('output/imagegen/'))
+    .filter((path) => !allowed.has(path))
 }

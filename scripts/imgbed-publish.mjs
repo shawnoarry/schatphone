@@ -1,11 +1,14 @@
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 import {
+  assertAutomaticPublishPlan,
   assertPublishPlan,
   assertBatchUploadResult,
+  assertCompletedPublishResult,
+  assertPublishQueueCompatible,
   buildBatchManifest,
   buildBatchUploadUrl,
   buildPublishPlan,
@@ -14,6 +17,7 @@ import {
   mergeVerifiedAssets,
   normalizeImageBedBaseUrl,
   PROJECT_ASSET_REGISTRY_PATH,
+  registryCoversPublishPlan,
   stagedAssetViolations,
   validateAssetRegistry,
 } from './imgbed-publish-lib.mjs'
@@ -25,6 +29,7 @@ import {
 } from './imgbed-migration-lib.mjs'
 
 const repoRoot = resolve(import.meta.dirname, '..')
+const publishQueueDirectory = '.imgbed-publish'
 
 function parseArguments(values) {
   const [command = 'help', ...rest] = values
@@ -66,6 +71,95 @@ async function readRegistry(baseUrl) {
   const registryPath = resolve(repoRoot, PROJECT_ASSET_REGISTRY_PATH)
   if (!existsSync(registryPath)) return createEmptyAssetRegistry(baseUrl)
   return validateAssetRegistry(JSON.parse(await readFile(registryPath, 'utf8')))
+}
+
+function resultPathForPlan(planPath) {
+  return planPath.replace(/\.plan\.json$/, '.results.json')
+}
+
+async function readJsonIfPresent(path) {
+  const absolutePath = resolve(repoRoot, path)
+  if (!existsSync(absolutePath)) return null
+  try {
+    return JSON.parse(await readFile(absolutePath, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+async function discoverApprovedPublishPlans() {
+  const absoluteDirectory = resolve(repoRoot, publishQueueDirectory)
+  if (!existsSync(absoluteDirectory)) return []
+  const names = (await readdir(absoluteDirectory))
+    .filter((name) => name.endsWith('.plan.json'))
+    .sort((left, right) => left.localeCompare(right))
+  const queue = []
+  for (const name of names) {
+    const planPath = `${publishQueueDirectory}/${name}`
+    const candidate = JSON.parse(await readFile(resolve(repoRoot, planPath), 'utf8'))
+    if (candidate?.approved !== true || candidate?.status !== 'APPROVED') continue
+    const plan = assertAutomaticPublishPlan(candidate)
+    const resultPath = resultPathForPlan(planPath)
+    queue.push({
+      planPath,
+      resultPath,
+      plan,
+      result: await readJsonIfPresent(resultPath),
+    })
+  }
+  return queue
+}
+
+async function trackedPendingAssetPaths() {
+  const trackedPlanPaths = runGit(repoRoot, [
+    'ls-files', '-z', '--', `${publishQueueDirectory}/*.plan.json`,
+  ]).split('\0').filter(Boolean)
+  const allowed = []
+  for (const planPath of trackedPlanPaths) {
+    const plan = assertAutomaticPublishPlan(
+      JSON.parse(await readFile(resolve(repoRoot, planPath), 'utf8')),
+    )
+    allowed.push(...plan.entries.map((entry) => entry.path))
+  }
+  return allowed
+}
+
+function stageRegistry() {
+  runGit(repoRoot, ['add', '--', PROJECT_ASSET_REGISTRY_PATH])
+}
+
+function stageFallback(queue) {
+  const paths = [...new Set(queue.flatMap(({ planPath, plan }) => [
+    planPath,
+    ...plan.entries.map((entry) => entry.path),
+  ]))]
+  if (paths.length > 0) runGit(repoRoot, ['add', '-f', '--', ...paths])
+  return paths
+}
+
+async function cleanupPublishedQueue(queue) {
+  for (const { plan } of queue) {
+    for (const entry of plan.entries) {
+      const absolutePath = resolve(repoRoot, entry.path)
+      if (existsSync(absolutePath) && await sha256File(absolutePath) !== entry.sha256) {
+        throw new Error(`Local asset changed after verified publication: ${entry.path}`)
+      }
+    }
+  }
+  const paths = [...new Set(queue.flatMap(({ planPath, resultPath, plan }) => [
+    planPath,
+    resultPath,
+    ...plan.entries.map((entry) => entry.path),
+  ]))]
+  const tracked = new Set(runGit(repoRoot, ['ls-files', '-z', '--', ...paths])
+    .split('\0').filter(Boolean))
+  if (tracked.size > 0) {
+    runGit(repoRoot, ['rm', '-f', '--', ...tracked])
+  }
+  await Promise.all(paths
+    .filter((path) => !tracked.has(path))
+    .map((path) => rm(resolve(repoRoot, path), { force: true })))
+  return paths.length
 }
 
 async function runPrepare(options) {
@@ -182,6 +276,83 @@ async function runPublish(options) {
     verifiedFiles: uploaded.length,
     registry: resolve(repoRoot, PROJECT_ASSET_REGISTRY_PATH),
   }))
+  return { batchId: plan.batchId, verifiedFiles: uploaded.length }
+}
+
+async function runPublishPending(options) {
+  const queue = await discoverApprovedPublishPlans()
+  if (queue.length === 0) {
+    console.log(JSON.stringify({ automaticPublish: 'skipped', reason: 'no-pending-assets' }))
+    return
+  }
+
+  let registry = await readRegistry(queue[0].plan.baseUrl)
+  assertPublishQueueCompatible(registry, queue.map(({ plan }) => plan))
+  const pending = []
+  let registryChanged = false
+
+  for (const item of queue) {
+    if (registryCoversPublishPlan(registry, item.plan)) {
+      continue
+    }
+    let verified = null
+    if (item.result) {
+      try {
+        verified = assertCompletedPublishResult(item.plan, item.result)
+      } catch {
+        verified = null
+      }
+    }
+    if (verified) {
+      registry = mergeVerifiedAssets(registry, item.plan, verified)
+      registryChanged = true
+    } else {
+      pending.push(item)
+    }
+  }
+
+  if (registryChanged) await writeJson(PROJECT_ASSET_REGISTRY_PATH, registry)
+
+  let publishedPlans = 0
+  let verifiedFiles = 0
+  try {
+    for (const item of pending) {
+      const published = await runPublish({
+        execute: true,
+        plan: item.planPath,
+        output: item.resultPath,
+      })
+      publishedPlans += 1
+      verifiedFiles += published.verifiedFiles
+    }
+  } catch (error) {
+    if (options['stage-registry'] === true && (registryChanged || publishedPlans > 0)) {
+      stageRegistry()
+    }
+    if (options['fallback-to-git'] !== true) throw error
+    const fallbackPaths = stageFallback(pending)
+    console.warn(JSON.stringify({
+      automaticPublish: 'deferred-to-next-commit',
+      reason: error.message,
+      stagedFallbackFiles: fallbackPaths.length,
+    }))
+    return
+  }
+
+  registry = await readRegistry(queue[0].plan.baseUrl)
+  for (const item of queue) registryCoversPublishPlan(registry, item.plan)
+  if (options['stage-registry'] === true && (registryChanged || publishedPlans > 0)) {
+    stageRegistry()
+  }
+  const cleanedLocalFiles = options['cleanup-local'] === true
+    ? await cleanupPublishedQueue(queue)
+    : 0
+  console.log(JSON.stringify({
+    automaticPublish: publishedPlans > 0 ? 'completed' : 'already-complete',
+    publishedPlans,
+    verifiedFiles,
+    cleanedLocalFiles,
+  }))
 }
 
 async function runCheck(options) {
@@ -191,7 +362,7 @@ async function runCheck(options) {
       .split('\0').filter(Boolean)
     : runGit(repoRoot, ['ls-files', '-z']).split('\0').filter(Boolean)
       .filter((path) => existsSync(resolve(repoRoot, path)))
-  const violations = stagedAssetViolations(stagedPaths)
+  const violations = stagedAssetViolations(stagedPaths, await trackedPendingAssetPaths())
   if (violations.length > 0) {
     throw new Error(`Local project media must be published before commit:\n${violations.join('\n')}`)
   }
@@ -237,6 +408,7 @@ Commands:
   prepare --batch <id> [--runtime <local>=<remote>] [--source <local>=<remote>]
           [--approve --approval-source <text>] [--output <path>]
   publish --plan <path> --execute [--output <path>]
+  publish-pending [--stage-registry] [--cleanup-local] [--fallback-to-git]
   import-migration --plan <path> --results <path> --batch <id> --execute
   check [--staged]
 
@@ -248,6 +420,7 @@ const { command, options } = parseArguments(process.argv.slice(2))
 try {
   if (command === 'prepare') await runPrepare(options)
   else if (command === 'publish') await runPublish(options)
+  else if (command === 'publish-pending') await runPublishPending(options)
   else if (command === 'import-migration') await runImportMigration(options)
   else if (command === 'check') await runCheck(options)
   else printHelp()

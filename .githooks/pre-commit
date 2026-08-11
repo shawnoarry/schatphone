@@ -1,4 +1,5 @@
 #!/bin/sh
 set -eu
 
+node scripts/imgbed-publish.mjs publish-pending --stage-registry --cleanup-local --fallback-to-git
 node scripts/imgbed-publish.mjs check --staged
