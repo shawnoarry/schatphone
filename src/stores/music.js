@@ -189,6 +189,9 @@ export const useMusicStore = defineStore('music', () => {
       null,
   )
   const savedTracks = computed(() => state.value.savedTracks || [])
+  const recentTracks = computed(() => state.value.recentTracks || [])
+  const playlists = computed(() => state.value.playlists || [])
+  const queue = computed(() => state.value.queue || [])
   const importedTracks = computed(() =>
     savedTracks.value.filter((track) =>
       [MUSIC_TRACK_SOURCE_TYPES.DIRECT_URL, MUSIC_TRACK_SOURCE_TYPES.LOCAL_FILE].includes(
@@ -200,13 +203,27 @@ export const useMusicStore = defineStore('music', () => {
   const libraryTracks = computed(() =>
     dedupeTracks([...savedTracks.value, ...demoTracks.value], MUSIC_LIMITS.savedTracks),
   )
+  const myMusicTracks = computed(() => {
+    const tracksById = new Map(
+      [...libraryTracks.value, ...recentTracks.value, ...queue.value].map((track) => [
+        track.id,
+        track,
+      ]),
+    )
+    const personalTrackIds = [
+      ...savedTracks.value.map((track) => track.id),
+      ...(state.value.favoriteTrackIds || []),
+      ...playlists.value.flatMap((playlist) => playlist.trackIds || []),
+    ]
+    return dedupeTracks(
+      personalTrackIds.map((trackId) => tracksById.get(trackId)).filter(Boolean),
+      MUSIC_LIMITS.savedTracks,
+    )
+  })
   const favoriteTracks = computed(() => {
     const favorites = new Set(state.value.favoriteTrackIds || [])
-    return libraryTracks.value.filter((track) => favorites.has(track.id))
+    return myMusicTracks.value.filter((track) => favorites.has(track.id))
   })
-  const recentTracks = computed(() => state.value.recentTracks || [])
-  const playlists = computed(() => state.value.playlists || [])
-  const queue = computed(() => state.value.queue || [])
   const currentTrack = computed(() => runtime.track)
   const currentQueueIndex = computed(() => {
     if (!currentTrack.value) return -1
@@ -1373,6 +1390,7 @@ export const useMusicStore = defineStore('music', () => {
     importedTracks,
     demoTracks,
     libraryTracks,
+    myMusicTracks,
     favoriteTracks,
     recentTracks,
     playlists,

@@ -188,6 +188,27 @@ describe('music store', () => {
     expect(store.savedTracks.map((item) => item.id)).toContain('remote_track')
   })
 
+  test('projects My Music from saved, favorite, and playlist membership without demo catalog leakage', () => {
+    const store = useMusicStore()
+    const favoriteDemo = MUSIC_DEMO_TRACKS[0]
+    const playlistDemo = MUSIC_DEMO_TRACKS[1]
+
+    expect(store.libraryTracks.length).toBeGreaterThan(0)
+    expect(store.myMusicTracks).toEqual([])
+
+    expect(store.toggleFavorite(favoriteDemo)).toBe(true)
+    const playlist = store.createPlaylist('Personal Mix')
+    expect(store.addTrackToPlaylist(playlist.id, playlistDemo)).toBe(true)
+
+    expect(store.myMusicTracks.map((track) => track.id)).toEqual([
+      favoriteDemo.id,
+      playlistDemo.id,
+    ])
+
+    expect(store.toggleFavorite(favoriteDemo)).toBe(false)
+    expect(store.myMusicTracks.map((track) => track.id)).toEqual([playlistDemo.id])
+  })
+
   test('keeps an active buffering session pausable and restores playing status', async () => {
     const store = useMusicStore()
 

@@ -1,6 +1,6 @@
 # Visual And IA Governance Implementation Workstreams / 视觉与信息架构治理实施工作流
 
-Updated: 2026-08-10
+Updated: 2026-08-11
 
 ## 1. Workstream A: Shell And Entry Ownership
 
@@ -40,6 +40,8 @@ Updated: 2026-08-10
 - Book may later edit structured Mini Scene transform profiles as `structured_json`, but the editor must validate profile scope/rules and preview through the shared Module rather than executing regex or HTML inside Book/WorldBook.
 - Camera's embedded Gallery picker remains a host-owned sheet. Candidate Download, Keep in Gallery, and Discard actions must stay distinct, and Gallery People curation must be promoted separately from the completed capture/settings shell.
 - Music provider fields remain progressively disclosed behind listening surfaces. Search/loading/empty/unplayable/error states, queue, expanded Now Playing, Track Details sharing, floating-player collapsed/expanded/dismissed states, and explicit Chat/Map handoff confirmation must remain product states rather than diagnostic copy blocks; a Chat return never masquerades as active playback, and a Map panel close never masquerades as Stop.
+- Music album and track objects use one interaction grammar: the object body opens its focused detail, while Play/Pause, Favorite, Queue, and Playlist remain explicit icon-led actions. Phone Album Detail hides primary navigation as a drill-down without dismissing the active in-app player; wider layouts retain the record-library context.
+- Music catalog, playback history, and personal collection remain distinct projections. My Music Songs is populated only through save, favorite, or playlist membership; Recent shows real history, empty states stay explicit, glance counts remain L0 information, and category tabs provide the sole L1 navigation.
 
 ## 3. Workstream C: Visual Rebuild Queue
 

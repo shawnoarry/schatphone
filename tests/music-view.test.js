@@ -153,10 +153,38 @@ describe('MusicView', () => {
     wrapper.unmount()
   })
 
-  test('keeps Listen Now bounded and hands full listening history to Library', async () => {
+  test('keeps a new My Music collection empty and uses categories as its only navigation', async () => {
     const { wrapper } = await mountMusic()
 
+    await wrapper.get('[data-testid="music-tab-library"]').trigger('click')
+
+    expect(wrapper.get('.music-library-hero').text()).toContain('0 songs')
+    expect(wrapper.findAll('.music-library-glance button')).toHaveLength(0)
+    expect(wrapper.findAll('.music-library-stat')).toHaveLength(3)
+    expect(wrapper.get('.music-track-list.is-library-list .music-empty-state').text()).toBe(
+      'Save a song or add it to a playlist',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('keeps Listen Now bounded and hands full listening history to Library', async () => {
+    const { wrapper } = await mountMusic()
+    const store = useMusicStore()
+
     expect(wrapper.get('[data-testid="music-listen-layout"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid="music-recent-overview"] .music-track-row')).toHaveLength(
+      0,
+    )
+    expect(wrapper.get('[data-testid="music-recent-overview"] .music-empty-state').text()).toBe(
+      'Songs you play will appear here',
+    )
+
+    for (const track of MUSIC_DEMO_TRACKS.slice(0, 4)) {
+      await store.playTrack(track)
+    }
+    await flushPromises()
+
     expect(wrapper.findAll('[data-testid="music-recent-overview"] .music-track-row')).toHaveLength(
       3,
     )
@@ -204,7 +232,16 @@ describe('MusicView', () => {
 
     const alternateTrack = MUSIC_DEMO_TRACKS.find((track) => track.title !== recommendationTitle)
     const alternateAlbum = wrapper.get(`[data-testid="music-album-${alternateTrack.id}"]`)
-    await alternateAlbum.trigger('click')
+    await alternateAlbum
+      .get(`[data-testid="music-album-open-${alternateTrack.id}"]`)
+      .trigger('click')
+    expect(wrapper.get('[data-testid="music-album-detail"]').text()).toContain(alternateTrack.album)
+    expect(wrapper.get('[data-testid="music-album-detail-back"]').attributes('title')).toBe(
+      'Back to Discover',
+    )
+    expect(store.currentTrack).toBeNull()
+
+    await wrapper.get('[data-testid="music-album-detail-play"]').trigger('click')
     await flushPromises()
 
     expect(store.currentTrack?.id).toBe(alternateTrack.id)
@@ -214,7 +251,7 @@ describe('MusicView', () => {
     expect(alternateAlbum.classes()).toContain('is-playing')
     expect(alternateAlbum.get('.music-album-play i').classes()).toContain('fa-pause')
 
-    await alternateAlbum.trigger('click')
+    await wrapper.get('[data-testid="music-album-detail-play"]').trigger('click')
     expect(alternateAlbum.classes()).toContain('is-current')
     expect(alternateAlbum.classes()).not.toContain('is-playing')
     expect(alternateAlbum.get('.music-album-play i').classes()).toContain('fa-play')
@@ -224,6 +261,47 @@ describe('MusicView', () => {
     await trackToggle.trigger('click')
     expect(trackToggle.attributes('title')).toBe('Pause')
     expect(trackToggle.get('i').classes()).toContain('fa-pause')
+
+    wrapper.unmount()
+  })
+
+  test('keeps album browsing, playback, collection, and track inspection as separate actions', async () => {
+    const { wrapper } = await mountMusic()
+    const store = useMusicStore()
+    const albumTrack = MUSIC_DEMO_TRACKS[0]
+
+    await wrapper.get('[data-testid="music-tab-browse"]').trigger('click')
+    await wrapper.get(`[data-testid="music-album-open-${albumTrack.id}"]`).trigger('click')
+
+    const detail = wrapper.get('[data-testid="music-album-detail"]')
+    expect(detail.text()).toContain(albumTrack.album)
+    expect(detail.text()).toContain(albumTrack.artist)
+    expect(detail.get('[data-testid="music-album-detail-back"]').attributes('title')).toBe(
+      'Back to Albums',
+    )
+    expect(store.runtime.sessionActive).toBe(false)
+
+    await detail.get('[data-testid="music-album-detail-favorite"]').trigger('click')
+    expect(store.isFavorite(albumTrack.id)).toBe(true)
+    expect(
+      detail.get('[data-testid="music-album-detail-favorite"]').attributes('aria-pressed'),
+    ).toBe('true')
+
+    await detail.get('[data-testid="music-album-detail-queue"]').trigger('click')
+    expect(store.queue.map((track) => track.id)).toContain(albumTrack.id)
+    expect(detail.get('[data-testid="music-album-detail-queue"]').text()).toContain('Added')
+
+    await detail.get(`[data-testid="music-album-track-open-${albumTrack.id}"]`).trigger('click')
+    expect(wrapper.get('[data-testid="music-now-playing-sheet"]').text()).toContain(
+      albumTrack.title,
+    )
+    expect(store.runtime.sessionActive).toBe(false)
+
+    await wrapper.get('[data-testid="music-now-playing-sheet"] .music-icon-button').trigger('click')
+    expect(wrapper.get('[data-testid="music-album-detail"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="music-album-detail-back"]').trigger('click')
+    expect(wrapper.find('[data-testid="music-album-detail"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="music-tab-browse"]').classes()).toContain('is-active')
 
     wrapper.unmount()
   })
@@ -267,7 +345,7 @@ describe('MusicView', () => {
     expect(wrapper.get('[data-testid="music-now-playing-sheet"]').text()).toContain(
       'Blue Hour Drive',
     )
-    expect(wrapper.get('[data-testid="music-now-playing-sheet"]').text()).toContain(
+    expect(wrapper.get('[data-testid="music-now-playing-sheet"]').text()).not.toContain(
       'Opening details does not start playback',
     )
     expect(store.runtime.sessionActive).toBe(false)
@@ -305,6 +383,10 @@ describe('MusicView', () => {
 
     await wrapper.get('[data-testid="music-now-playing-sheet"] .music-icon-button').trigger('click')
     await wrapper.get('[data-testid="music-tab-library"]').trigger('click')
+    expect(wrapper.get('.music-library-hero').text()).toContain('1 songs')
+    expect(wrapper.findAll('.music-library-glance button')).toHaveLength(0)
+    expect(wrapper.findAll('.music-library-stat')).toHaveLength(3)
+    expect(wrapper.get('.music-track-list.is-library-list').text()).toContain('Blue Hour Drive')
     const favoritesTab = wrapper
       .findAll('.music-segmented button')
       .find((button) => button.text().trim() === 'Favorites')

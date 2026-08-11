@@ -167,9 +167,8 @@ const handleReloadPersistenceNotice = async (page) => {
   if (!(await recovery.isVisible())) return
 
   const status = await page.evaluate(async () => {
-    const { getPersistenceRuntimeStatus } = await import(
-      '/schatphone/src/lib/persistence-runtime-status.js'
-    )
+    const { getPersistenceRuntimeStatus } =
+      await import('/schatphone/src/lib/persistence-runtime-status.js')
     return getPersistenceRuntimeStatus()
   })
   if (status.primaryCause === 'active_writer') {
@@ -281,10 +280,27 @@ test('Music completes Home, playback, source settings, and shell continuity flow
     contentType: 'image/png',
   })
 
+  await page.locator('[data-testid^="music-album-open-"]').first().click()
+  await expect(page.getByTestId('music-album-detail')).toBeVisible()
+  await expect(page.getByTestId('music-album-detail')).toContainText('Track list')
+  await expect(page.getByTestId('music-player')).toHaveCount(0)
+  if (testInfo.project.name === 'mobile-chrome') {
+    await expect(page.locator('.music-sidebar')).toBeHidden()
+  }
+  await expectNoOverflow(page)
+  await testInfo.attach(`music-album-detail-${testInfo.project.name}.png`, {
+    body: await page.screenshot({ animations: 'disabled' }),
+    contentType: 'image/png',
+  })
+  await page.getByTestId('music-album-detail-back').click()
+  await expect(page.getByTestId('music-album-detail')).toHaveCount(0)
+  await expect(page.getByTestId('music-tab-browse')).toHaveClass(/is-active/)
+
   await page.getByTestId('music-tab-library').click()
   await expect(page.getByTestId('music-tab-library')).toHaveClass(/is-active/)
   await expect(page.locator('.music-library-hero')).toContainText('YOUR MUSIC')
-  await expect(page.locator('.music-library-glance button')).toHaveCount(3)
+  await expect(page.locator('.music-library-glance button')).toHaveCount(0)
+  await expect(page.locator('.music-library-stat')).toHaveCount(3)
   await expect(page.locator('.music-segmented')).toBeVisible()
   await expectNoOverflow(page)
   await testInfo.attach(`music-library-${testInfo.project.name}.png`, {

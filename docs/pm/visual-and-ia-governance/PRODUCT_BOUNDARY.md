@@ -1,6 +1,6 @@
 # Visual And IA Product Boundary / 视觉与信息架构治理边界
 
-Updated: 2026-08-10
+Updated: 2026-08-11
 
 ## 1. Core Rule
 
@@ -44,7 +44,9 @@ It also owns:
   - Camera Download, Keep in Gallery, and Discard are distinct outcomes, and Keep does not automatically classify an image as a person reference.
 - how Music owns its installed-app experience:
   - `/music` is listening-first and keeps provider configuration behind a Music-owned settings sheet rather than becoming another native-system API page;
-  - Listen Now, Browse, Library, Search, queue, Now Playing, and the global collapsed/expanded floating player use Music's visual identity while preserving shell return, safe-area, and bottom-control clearance;
+  - Discover, Albums, My Music, Search, queue, Now Playing, and the global collapsed/expanded floating player use Music's visual identity while preserving shell return, safe-area, and bottom-control clearance;
+  - My Music derives Songs from saved tracks plus resolvable favorite and playlist membership. Untouched demo catalog tracks and playback history alone remain outside that personal projection; its glance statistics are informational, while one category control owns local navigation;
+  - album cards expose separate inspect and Play targets. Album Detail is a Music-owned drill-down with cover-led context, synchronized album/track playback, favorite/queue/playlist actions, and an explicit return; track bodies open Track Details instead of silently starting playback;
   - Chat and Map may open Music or consume bounded projections, but their data source does not transfer outer visual ownership. Map may present a traveling/paused-only focused media panel and delegate an explicit user click to Music; it never receives a stream URL or playback ownership.
   - an open Map journey-media panel stays above the Music floating player. Closing either surface affects only that surface, and closing the Map panel never stops playback or dismisses the float;
   - Music Track Details owns the first user-visible share entry; Chat owns recipient selection, confirmation, message history, and quoting, while a card return opens the same track detail without auto-play.

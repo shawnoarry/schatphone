@@ -1,6 +1,7 @@
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import MusicAlbumDetail from '../components/music/MusicAlbumDetail.vue'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import {
@@ -46,6 +47,8 @@ const addMusicMode = ref('url')
 const queueOpen = ref(false)
 const nowPlayingOpen = ref(false)
 const inspectedTrack = ref(null)
+const selectedAlbumId = ref('')
+const queuedAlbumNoticeId = ref('')
 const playlistSheetOpen = ref(false)
 const playlistTargetTrack = ref(null)
 const playlistNameDraft = ref('')
@@ -88,6 +91,11 @@ const activeSectionLabel = computed(() => {
     navItems.value.find((item) => item.id === activeSection.value)?.label || t('发现', 'Discover')
   )
 })
+const albumDetailReturnLabel = computed(() =>
+  activeSection.value === 'listen'
+    ? t('返回发现', 'Back to Discover')
+    : t('返回专辑', 'Back to Albums'),
+)
 
 const libraryModes = computed(() => [
   { id: 'tracks', label: t('全部歌曲', 'Songs') },
@@ -115,6 +123,9 @@ const allAlbums = computed(() => {
   })
   return [...groups.values()]
 })
+const selectedAlbum = computed(
+  () => allAlbums.value.find((album) => album.id === selectedAlbumId.value) || null,
+)
 
 const playerTrack = computed(() => musicStore.currentTrack)
 const recommendationTrack = computed(() =>
@@ -153,15 +164,13 @@ const selectedPlaylist = computed(
 const selectedPlaylistTracks = computed(() =>
   selectedPlaylist.value ? musicStore.tracksForPlaylist(selectedPlaylist.value.id) : [],
 )
-const recentVisibleTracks = computed(() =>
-  musicStore.recentTracks.length ? musicStore.recentTracks : musicStore.demoTracks.slice(0, 4),
-)
+const recentVisibleTracks = computed(() => musicStore.recentTracks)
 const recentOverviewTracks = computed(() => recentVisibleTracks.value.slice(0, 3))
 const libraryArtworkTracks = computed(() => {
   const candidates = [
     ...musicStore.favoriteTracks,
     ...musicStore.recentTracks,
-    ...musicStore.libraryTracks,
+    ...musicStore.myMusicTracks,
   ]
   return candidates
     .filter((track, index, list) => list.findIndex((item) => item.id === track.id) === index)
@@ -171,7 +180,16 @@ const libraryVisibleTracks = computed(() => {
   if (libraryMode.value === 'favorites') return musicStore.favoriteTracks
   if (libraryMode.value === 'recent') return musicStore.recentTracks
   if (libraryMode.value === 'playlists') return selectedPlaylistTracks.value
-  return musicStore.libraryTracks
+  return musicStore.myMusicTracks
+})
+const libraryEmptyMessage = computed(() => {
+  if (libraryMode.value === 'favorites') {
+    return t('还没有喜欢的歌曲', 'Favorite songs will appear here')
+  }
+  if (libraryMode.value === 'recent') {
+    return t('播放过的歌曲会出现在这里', 'Songs you play will appear here')
+  }
+  return t('收藏歌曲或加入歌单后，它们会出现在这里', 'Save a song or add it to a playlist')
 })
 const currentProviderState = computed(() => musicStore.providerStateById[providerDraft.id] || null)
 const hasConnectedProvider = computed(() => Boolean(musicStore.activeProfile?.baseUrl))
@@ -289,6 +307,7 @@ const onCoverError = (event) => {
 const setSection = (sectionId) => {
   if (!sectionIds.has(sectionId)) return
   activeSection.value = sectionId
+  selectedAlbumId.value = ''
   queueOpen.value = false
   if (sectionId === 'search') {
     void nextTick(() => searchInput.value?.focus())
@@ -360,6 +379,41 @@ const toggleAlbumPlayback = async (album) => {
     return
   }
   await playTrack(album.tracks[0], album.tracks)
+}
+
+const openAlbumDetail = (album) => {
+  if (!album?.id) return
+  selectedAlbumId.value = album.id
+  queueOpen.value = false
+}
+
+const closeAlbumDetail = () => {
+  selectedAlbumId.value = ''
+}
+
+const toggleAlbumTrackPlayback = (track) => {
+  if (!selectedAlbum.value) return
+  void toggleTrackPlayback(track, selectedAlbum.value.tracks)
+}
+
+const toggleAlbumFavorite = (album) => {
+  if (!album?.tracks?.length) return
+  const shouldFavorite = album.tracks.some((track) => !musicStore.isFavorite(track.id))
+  album.tracks.forEach((track) => {
+    if (musicStore.isFavorite(track.id) !== shouldFavorite) musicStore.toggleFavorite(track)
+  })
+}
+
+let queuedAlbumNoticeTimer = null
+const addAlbumToQueue = (album) => {
+  if (!album?.tracks?.length) return
+  album.tracks.forEach((track) => musicStore.addToQueue(track))
+  queuedAlbumNoticeId.value = album.id
+  if (queuedAlbumNoticeTimer) clearTimeout(queuedAlbumNoticeTimer)
+  queuedAlbumNoticeTimer = setTimeout(() => {
+    queuedAlbumNoticeId.value = ''
+    queuedAlbumNoticeTimer = null
+  }, 1800)
 }
 
 const toggleRecommendationPlayback = async () => {
@@ -815,10 +869,14 @@ onMounted(() => {
     selectedPlaylistId.value = musicStore.playlists[0].id
   }
 })
+
+onBeforeUnmount(() => {
+  if (queuedAlbumNoticeTimer) clearTimeout(queuedAlbumNoticeTimer)
+})
 </script>
 
 <template>
-  <main class="music-app" data-testid="music-app">
+  <main class="music-app" :class="{ 'is-album-detail': selectedAlbum }" data-testid="music-app">
     <div class="music-shell">
       <aside class="music-sidebar" aria-label="Music navigation">
         <div class="music-brand-block">
@@ -1053,41 +1111,53 @@ onMounted(() => {
                   </button>
                 </div>
                 <div class="music-album-rail no-scrollbar">
-                  <button
+                  <article
                     v-for="album in allAlbums"
                     :key="album.id"
-                    type="button"
                     class="music-album-item"
                     :class="{
                       'is-current': isAlbumCurrent(album),
                       'is-playing': isAlbumPlaying(album),
                     }"
-                    :title="albumPlaybackLabel(album)"
-                    :aria-label="`${albumPlaybackLabel(album)}：${album.title}`"
                     :data-testid="`music-album-${album.tracks[0].id}`"
-                    @click="toggleAlbumPlayback(album)"
                   >
-                    <span
-                      class="music-album-cover music-cover-fallback"
-                      :style="coverStyle(album.tracks[0])"
+                    <button
+                      class="music-album-open"
+                      type="button"
+                      :title="t('查看专辑', 'View album')"
+                      :aria-label="`${t('查看专辑', 'View album')}：${album.title}`"
+                      :data-testid="`music-album-open-${album.tracks[0].id}`"
+                      @click="openAlbumDetail(album)"
                     >
-                      <img
-                        v-if="album.coverUrl"
-                        :src="album.coverUrl"
-                        :alt="album.title"
-                        loading="lazy"
-                        @error="onCoverError"
-                      />
-                      <span class="music-album-play"
-                        ><i
-                          :class="isAlbumPlaying(album) ? 'fas fa-pause' : 'fas fa-play'"
-                          aria-hidden="true"
-                        ></i
-                      ></span>
-                    </span>
-                    <strong>{{ album.title }}</strong>
-                    <span>{{ album.artist }}</span>
-                  </button>
+                      <span
+                        class="music-album-cover music-cover-fallback"
+                        :style="coverStyle(album.tracks[0])"
+                      >
+                        <img
+                          v-if="album.coverUrl"
+                          :src="album.coverUrl"
+                          :alt="album.title"
+                          loading="lazy"
+                          @error="onCoverError"
+                        />
+                      </span>
+                      <strong>{{ album.title }}</strong>
+                      <span>{{ album.artist }}</span>
+                    </button>
+                    <button
+                      class="music-album-play"
+                      type="button"
+                      :title="albumPlaybackLabel(album)"
+                      :aria-label="`${albumPlaybackLabel(album)}：${album.title}`"
+                      :data-testid="`music-album-play-${album.tracks[0].id}`"
+                      @click="toggleAlbumPlayback(album)"
+                    >
+                      <i
+                        :class="isAlbumPlaying(album) ? 'fas fa-pause' : 'fas fa-play'"
+                        aria-hidden="true"
+                      ></i>
+                    </button>
+                  </article>
                 </div>
               </section>
 
@@ -1123,6 +1193,7 @@ onMounted(() => {
                       type="button"
                       :disabled="!musicStore.canPlayTrack(track)"
                       :title="trackPlaybackLabel(track)"
+                      :aria-label="`${trackPlaybackLabel(track)}：${track.title}`"
                       :data-testid="`music-track-toggle-${track.id}`"
                       @click="toggleTrackPlayback(track, recentOverviewTracks)"
                     >
@@ -1132,20 +1203,31 @@ onMounted(() => {
                         aria-hidden="true"
                       ></i>
                     </button>
-                    <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)">
-                      <img
-                        v-if="track.coverUrl"
-                        :src="track.coverUrl"
-                        :alt="track.album"
-                        loading="lazy"
-                        @error="onCoverError"
-                      />
-                    </span>
-                    <div class="music-track-meta">
-                      <strong>{{ track.title }}</strong
-                      ><span>{{ track.artist }}</span>
-                    </div>
-                    <span class="music-track-album">{{ track.album }}</span>
+                    <button
+                      class="music-track-info"
+                      type="button"
+                      :title="t('查看歌曲详情', 'View track details')"
+                      :data-testid="`music-track-open-${track.id}`"
+                      @click="openNowPlaying(track)"
+                    >
+                      <span
+                        class="music-track-cover music-cover-fallback"
+                        :style="coverStyle(track)"
+                      >
+                        <img
+                          v-if="track.coverUrl"
+                          :src="track.coverUrl"
+                          :alt="track.album"
+                          loading="lazy"
+                          @error="onCoverError"
+                        />
+                      </span>
+                      <span class="music-track-meta">
+                        <strong>{{ track.title }}</strong
+                        ><span>{{ track.artist }}</span>
+                      </span>
+                      <span class="music-track-album">{{ track.album }}</span>
+                    </button>
                     <span class="music-track-duration">{{
                       formatDuration(track.durationSec)
                     }}</span>
@@ -1173,6 +1255,9 @@ onMounted(() => {
                       <i class="fas fa-plus" aria-hidden="true"></i>
                     </button>
                   </article>
+                  <p v-if="!recentOverviewTracks.length" class="music-empty-state">
+                    {{ t('播放过的歌曲会出现在这里', 'Songs you play will appear here') }}
+                  </p>
                 </div>
               </section>
             </div>
@@ -1213,44 +1298,56 @@ onMounted(() => {
               </div>
             </section>
             <section class="music-album-grid">
-              <button
+              <article
                 v-for="album in allAlbums"
                 :key="album.id"
-                type="button"
                 class="music-album-item"
                 :class="{
                   'is-current': isAlbumCurrent(album),
                   'is-playing': isAlbumPlaying(album),
                 }"
-                :title="albumPlaybackLabel(album)"
-                :aria-label="`${albumPlaybackLabel(album)}：${album.title}`"
-                @click="toggleAlbumPlayback(album)"
               >
-                <span
-                  class="music-album-cover music-cover-fallback"
-                  :style="coverStyle(album.tracks[0])"
+                <button
+                  class="music-album-open"
+                  type="button"
+                  :title="t('查看专辑', 'View album')"
+                  :aria-label="`${t('查看专辑', 'View album')}：${album.title}`"
+                  :data-testid="`music-album-open-${album.tracks[0].id}`"
+                  @click="openAlbumDetail(album)"
                 >
-                  <img
-                    v-if="album.coverUrl"
-                    :src="album.coverUrl"
-                    :alt="album.title"
-                    loading="lazy"
-                    @error="onCoverError"
-                  />
-                  <span class="music-album-play"
-                    ><i
-                      :class="isAlbumPlaying(album) ? 'fas fa-pause' : 'fas fa-play'"
-                      aria-hidden="true"
-                    ></i
-                  ></span>
-                </span>
-                <strong>{{ album.title }}</strong
-                ><span>{{ album.artist }}</span>
-                <small
-                  >{{ album.genre
-                  }}<template v-if="album.year"> · {{ album.year }}</template></small
+                  <span
+                    class="music-album-cover music-cover-fallback"
+                    :style="coverStyle(album.tracks[0])"
+                  >
+                    <img
+                      v-if="album.coverUrl"
+                      :src="album.coverUrl"
+                      :alt="album.title"
+                      loading="lazy"
+                      @error="onCoverError"
+                    />
+                  </span>
+                  <strong>{{ album.title }}</strong>
+                  <span>{{ album.artist }}</span>
+                  <small
+                    >{{ album.genre
+                    }}<template v-if="album.year"> · {{ album.year }}</template></small
+                  >
+                </button>
+                <button
+                  class="music-album-play"
+                  type="button"
+                  :title="albumPlaybackLabel(album)"
+                  :aria-label="`${albumPlaybackLabel(album)}：${album.title}`"
+                  :data-testid="`music-album-play-${album.tracks[0].id}`"
+                  @click="toggleAlbumPlayback(album)"
                 >
-              </button>
+                  <i
+                    :class="isAlbumPlaying(album) ? 'fas fa-pause' : 'fas fa-play'"
+                    aria-hidden="true"
+                  ></i>
+                </button>
+              </article>
             </section>
           </template>
 
@@ -1270,8 +1367,8 @@ onMounted(() => {
                 <p>
                   {{
                     t(
-                      `${musicStore.libraryTracks.length} 首歌曲 · ${musicStore.playlists.length} 个歌单`,
-                      `${musicStore.libraryTracks.length} songs · ${musicStore.playlists.length} playlists`,
+                      `${musicStore.myMusicTracks.length} 首歌曲 · ${musicStore.playlists.length} 个歌单`,
+                      `${musicStore.myMusicTracks.length} songs · ${musicStore.playlists.length} playlists`,
                     )
                   }}
                 </p>
@@ -1286,21 +1383,21 @@ onMounted(() => {
                 </button>
               </div>
               <div class="music-library-glance">
-                <button type="button" @click="openLibraryMode('favorites')">
+                <div class="music-library-stat">
                   <i class="fas fa-heart" aria-hidden="true"></i>
                   <strong>{{ musicStore.favoriteTracks.length }}</strong>
                   <span>{{ t('我喜欢', 'Favorites') }}</span>
-                </button>
-                <button type="button" @click="openRecentLibrary">
+                </div>
+                <div class="music-library-stat">
                   <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
                   <strong>{{ musicStore.recentTracks.length }}</strong>
                   <span>{{ t('最近播放', 'Recent') }}</span>
-                </button>
-                <button type="button" @click="openLibraryMode('playlists')">
+                </div>
+                <div class="music-library-stat">
                   <i class="fas fa-list-ul" aria-hidden="true"></i>
                   <strong>{{ musicStore.playlists.length }}</strong>
                   <span>{{ t('我的歌单', 'Playlists') }}</span>
-                </button>
+                </div>
               </div>
             </section>
             <div
@@ -1396,6 +1493,7 @@ onMounted(() => {
                   type="button"
                   :disabled="!musicStore.canPlayTrack(track)"
                   :title="trackPlaybackLabel(track)"
+                  :aria-label="`${trackPlaybackLabel(track)}：${track.title}`"
                   :data-testid="`music-track-toggle-${track.id}`"
                   @click="toggleTrackPlayback(track, libraryVisibleTracks)"
                 >
@@ -1405,20 +1503,28 @@ onMounted(() => {
                     aria-hidden="true"
                   ></i>
                 </button>
-                <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"
-                  ><img
-                    v-if="track.coverUrl"
-                    :src="track.coverUrl"
-                    :alt="track.album"
-                    loading="lazy"
-                    @error="onCoverError"
-                /></span>
-                <div class="music-track-meta">
-                  <strong>{{ track.title }}</strong
-                  ><span>{{ track.artist }}</span>
-                </div>
-                <span class="music-track-album">{{ track.album }}</span
-                ><span class="music-track-duration">{{ formatDuration(track.durationSec) }}</span>
+                <button
+                  class="music-track-info"
+                  type="button"
+                  :title="t('查看歌曲详情', 'View track details')"
+                  :data-testid="`music-track-open-${track.id}`"
+                  @click="openNowPlaying(track)"
+                >
+                  <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"
+                    ><img
+                      v-if="track.coverUrl"
+                      :src="track.coverUrl"
+                      :alt="track.album"
+                      loading="lazy"
+                      @error="onCoverError"
+                  /></span>
+                  <span class="music-track-meta">
+                    <strong>{{ track.title }}</strong
+                    ><span>{{ track.artist }}</span>
+                  </span>
+                  <span class="music-track-album">{{ track.album }}</span>
+                </button>
+                <span class="music-track-duration">{{ formatDuration(track.durationSec) }}</span>
                 <button
                   class="music-track-action"
                   type="button"
@@ -1444,7 +1550,7 @@ onMounted(() => {
                 </button>
               </article>
               <p v-if="!libraryVisibleTracks.length" class="music-empty-state">
-                {{ t('这里还没有歌曲', 'No songs here yet') }}
+                {{ libraryEmptyMessage }}
               </p>
             </div>
           </template>
@@ -1515,6 +1621,11 @@ onMounted(() => {
                       ? trackPlaybackLabel(track)
                       : t('没有播放地址', 'No playable URL')
                   "
+                  :aria-label="`${
+                    musicStore.canPlayTrack(track)
+                      ? trackPlaybackLabel(track)
+                      : t('没有播放地址', 'No playable URL')
+                  }：${track.title}`"
                   :data-testid="`music-track-toggle-${track.id}`"
                   @click="toggleTrackPlayback(track, musicStore.searchResults)"
                 >
@@ -1524,19 +1635,27 @@ onMounted(() => {
                     aria-hidden="true"
                   ></i>
                 </button>
-                <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"
-                  ><img
-                    v-if="track.coverUrl"
-                    :src="track.coverUrl"
-                    :alt="track.album"
-                    loading="lazy"
-                    @error="onCoverError"
-                /></span>
-                <div class="music-track-meta">
-                  <strong>{{ track.title }}</strong
-                  ><span>{{ track.artist }}</span>
-                </div>
-                <span class="music-track-album">{{ track.album }}</span>
+                <button
+                  class="music-track-info"
+                  type="button"
+                  :title="t('查看歌曲详情', 'View track details')"
+                  :data-testid="`music-track-open-${track.id}`"
+                  @click="openNowPlaying(track)"
+                >
+                  <span class="music-track-cover music-cover-fallback" :style="coverStyle(track)"
+                    ><img
+                      v-if="track.coverUrl"
+                      :src="track.coverUrl"
+                      :alt="track.album"
+                      loading="lazy"
+                      @error="onCoverError"
+                  /></span>
+                  <span class="music-track-meta">
+                    <strong>{{ track.title }}</strong
+                    ><span>{{ track.artist }}</span>
+                  </span>
+                  <span class="music-track-album">{{ track.album }}</span>
+                </button>
                 <span class="music-track-duration">{{
                   track.durationSec
                     ? formatDuration(track.durationSec)
@@ -1571,6 +1690,28 @@ onMounted(() => {
             </div>
           </template>
         </div>
+
+        <transition name="music-album-detail">
+          <MusicAlbumDetail
+            v-if="selectedAlbum"
+            :album="selectedAlbum"
+            :back-label="albumDetailReturnLabel"
+            :current-track-id="musicStore.currentTrack?.id || ''"
+            :favorite-track-ids="musicStore.state.favoriteTrackIds"
+            :playing="musicStore.isPlaying"
+            :queue-added="queuedAlbumNoticeId === selectedAlbum.id"
+            :playback-error="playbackErrorText"
+            :can-play-track="musicStore.canPlayTrack"
+            @close="closeAlbumDetail"
+            @toggle-album="toggleAlbumPlayback"
+            @toggle-album-favorite="toggleAlbumFavorite"
+            @add-queue="addAlbumToQueue"
+            @toggle-track="toggleAlbumTrackPlayback"
+            @open-track="openNowPlaying"
+            @toggle-favorite="toggleFavorite"
+            @add-playlist="openPlaylistPicker"
+          />
+        </transition>
       </section>
     </div>
 
@@ -1796,9 +1937,6 @@ onMounted(() => {
                     >
                   </div>
                 </template>
-                <p v-else class="music-track-inspection-note">
-                  {{ t('打开详情不会自动播放', 'Opening details does not start playback') }}
-                </p>
                 <div class="music-now-playing-controls">
                   <button
                     v-if="isNowPlayingCurrentTrack"
@@ -2993,6 +3131,7 @@ summary:focus-visible {
 }
 
 .music-content {
+  position: relative;
   min-width: 0;
   height: 100%;
   overflow: hidden;
@@ -3529,11 +3668,19 @@ summary:focus-visible {
 }
 
 .music-album-item {
+  position: relative;
+  min-width: 0;
+  container-type: inline-size;
+  scroll-snap-align: start;
+}
+
+.music-album-open {
+  display: block;
+  width: 100%;
   min-width: 0;
   border: 0;
   padding: 0;
   background: transparent;
-  scroll-snap-align: start;
   text-align: left;
   cursor: pointer;
 }
@@ -3562,11 +3709,12 @@ summary:focus-visible {
 .music-album-play {
   position: absolute;
   right: 10px;
-  bottom: 10px;
+  top: calc(100cqw - 50px);
   display: grid;
   width: 40px;
   height: 40px;
   place-items: center;
+  border: 0;
   border-radius: 50%;
   color: #fff;
   background: var(--music-accent);
@@ -3579,7 +3727,8 @@ summary:focus-visible {
 }
 
 .music-album-item:hover .music-album-play,
-.music-album-item:focus-visible .music-album-play,
+.music-album-open:focus-visible + .music-album-play,
+.music-album-play:focus-visible,
 .music-album-item.is-current .music-album-play {
   opacity: 1;
   transform: translateY(0);
@@ -3591,26 +3740,26 @@ summary:focus-visible {
     0 12px 28px rgba(24, 26, 29, 0.18);
 }
 
-.music-album-item.is-current > strong {
+.music-album-item.is-current .music-album-open > strong {
   color: var(--music-accent);
 }
 
-.music-album-item > strong,
-.music-album-item > span:not(.music-album-cover),
-.music-album-item > small {
+.music-album-open > strong,
+.music-album-open > span:not(.music-album-cover),
+.music-album-open > small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.music-album-item > strong {
+.music-album-open > strong {
   margin-top: 11px;
   font-size: 13px;
 }
 
-.music-album-item > span:not(.music-album-cover),
-.music-album-item > small {
+.music-album-open > span:not(.music-album-cover),
+.music-album-open > small {
   margin-top: 3px;
   color: var(--music-muted);
   font-size: 11px;
@@ -3622,7 +3771,7 @@ summary:focus-visible {
 
 .music-track-row {
   display: grid;
-  grid-template-columns: 34px 44px minmax(150px, 1.4fr) minmax(110px, 1fr) 52px 36px 36px;
+  grid-template-columns: 34px minmax(260px, 1fr) 52px 36px 36px;
   min-height: 64px;
   align-items: center;
   gap: 12px;
@@ -3649,6 +3798,21 @@ summary:focus-visible {
   place-items: center;
   color: var(--music-muted);
   background: transparent;
+  cursor: pointer;
+}
+
+.music-track-info {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 44px minmax(150px, 1.4fr) minmax(110px, 1fr);
+  align-items: center;
+  gap: 12px;
+  align-self: stretch;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -3754,7 +3918,12 @@ summary:focus-visible {
 
 .music-recent-section .music-track-row {
   min-height: 60px;
-  grid-template-columns: 28px 40px minmax(0, 1fr) 36px;
+  grid-template-columns: 28px minmax(0, 1fr) 36px;
+  gap: 8px;
+}
+
+.music-recent-section .music-track-info {
+  grid-template-columns: 40px minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -3763,7 +3932,7 @@ summary:focus-visible {
   height: 40px;
 }
 
-.music-recent-section .music-track-album,
+.music-recent-section .music-track-info .music-track-album,
 .music-recent-section .music-track-duration,
 .music-recent-section .music-track-action:last-child {
   display: none;
@@ -3912,7 +4081,7 @@ summary:focus-visible {
   gap: 8px;
 }
 
-.music-library-glance button {
+.music-library-stat {
   display: grid;
   min-width: 0;
   place-items: center;
@@ -3922,20 +4091,6 @@ summary:focus-visible {
   border-radius: 7px;
   color: rgba(255, 255, 255, 0.72);
   background: rgba(255, 255, 255, 0.055);
-  cursor: pointer;
-  transition:
-    color 140ms ease,
-    background-color 140ms ease,
-    transform 100ms ease;
-}
-
-.music-library-glance button:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.music-library-glance button:active {
-  transform: scale(0.97);
 }
 
 .music-library-glance i {
@@ -3943,11 +4098,11 @@ summary:focus-visible {
   font-size: 15px;
 }
 
-.music-library-glance button:nth-child(2) i {
+.music-library-stat:nth-child(2) i {
   color: #70bcb5;
 }
 
-.music-library-glance button:nth-child(3) i {
+.music-library-stat:nth-child(3) i {
   color: #c5a1ec;
 }
 
@@ -5352,8 +5507,15 @@ input[type='range'] {
 .music-drawer-enter-active,
 .music-drawer-leave-active,
 .music-settings-enter-active,
-.music-settings-leave-active {
+.music-settings-leave-active,
+.music-album-detail-enter-active,
+.music-album-detail-leave-active {
   transition: opacity 180ms ease;
+}
+
+.music-album-detail-enter-active > *,
+.music-album-detail-leave-active > * {
+  transition: transform 220ms ease;
 }
 
 .music-drawer-enter-active .music-queue-drawer,
@@ -5364,8 +5526,15 @@ input[type='range'] {
 .music-drawer-enter-from,
 .music-drawer-leave-to,
 .music-settings-enter-from,
-.music-settings-leave-to {
+.music-settings-leave-to,
+.music-album-detail-enter-from,
+.music-album-detail-leave-to {
   opacity: 0;
+}
+
+.music-album-detail-enter-from > *,
+.music-album-detail-leave-to > * {
+  transform: translateY(10px);
 }
 
 .music-drawer-enter-from .music-queue-drawer,
@@ -5628,12 +5797,30 @@ input[type='range'] {
     grid-auto-columns: 148px;
   }
 
+  .music-album-play {
+    opacity: 1;
+    transform: none;
+  }
+
+  .music-app.is-album-detail .music-sidebar {
+    display: none;
+  }
+
+  .music-app.is-album-detail .music-player {
+    bottom: 10px;
+  }
+
   .music-track-row {
-    grid-template-columns: 30px 42px minmax(0, 1fr) 40px 36px;
+    grid-template-columns: 30px minmax(0, 1fr) 40px 36px;
     gap: 9px;
   }
 
-  .music-track-album,
+  .music-track-info {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .music-track-info .music-track-album,
   .music-track-row .music-track-action:last-child {
     display: none;
   }
