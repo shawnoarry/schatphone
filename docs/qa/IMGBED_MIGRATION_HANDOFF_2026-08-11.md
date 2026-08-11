@@ -2,7 +2,7 @@
 
 Updated: 2026-08-12
 
-Status: `MIGRATION_AND_LOCAL_ARCHIVE_COMPLETE / THREE-HOST_RELEASE_PENDING`
+Status: `MIGRATION_ARCHIVE_AND_THREE_HOST_RELEASE_COMPLETE`
 
 ## 1. One Decision
 
@@ -69,6 +69,10 @@ The approved complete plan and its credential-free results remain local and Git-
 - Browser runtime construction now goes through `src/lib/project-assets.js`; `schatphone-source/` is never used as a runtime origin.
 - The migration archive at `I:\Schatphone-Asset-Archive\masters\2026-08-11` verified and removed 972 planned source/alias files totaling 1,219,569,601 bytes. The separate project-brief archive verified and removed 3 files totaling 1,907,552 bytes.
 - PWA/install/offline bootstrap resources and every file outside the approved plans remain in place. Git history was not rewritten.
+- SchatPhone commits `f654b81` and `ffae433` are pushed to `origin/main`. GitHub Pages Run `31537206567` passed the full release gate and deploy job; Vercel and Cloudflare Workers Builds both reported success for the final commit.
+- Production browser smoke passed at `https://shawnoarry.github.io/schatphone/`, `https://schatphone.vercel.app`, and `https://schatphone.noarry.workers.dev`: each host returned `200`, unlocked to Food Delivery, loaded all 18 observed image-bed images, and reported no page errors, console errors, or failed requests.
+- A public runtime object returned `200 image/png` with its registered byte length, while an anonymous `schatphone-source/` request returned `401` as required.
+- The temporary `SchatPhone-Migration` token was revoked after release proof. The long-lived `SchatPhone-Project-Publisher` token remains active with upload/list only and no expiry.
 
 ## 5. Required Order
 
@@ -90,9 +94,9 @@ Never replace a runtime reference with a `schatphone-source/` URL.
 - Administrator login: `https://cloudflare-imgbed-7z3.pages.dev/adminLogin`
 - Image-bed repository: `H:\SchatPhone\CloudFlare-ImgBed`
 - Required hardening commit: `0030ddfd8b4b7291bf8ff71509682fef85a124ad`
-- Temporary token entry: `SchatPhone-Migration` in the synced password manager.
+- Revoked temporary token entry: `SchatPhone-Migration`; it was removed from the image bed after the three-host release proof.
 
-Never paste the token into chat or commit it. Store it only as `SCHATPHONE_IMGBED_TOKEN` in ignored `.env.local` or a process environment variable. The temporary token has `upload` and `list` permissions, expires around 2026-08-18, and has no delete permission.
+Never paste a token into chat or commit it. Any future migration token must stay in ignored `.env.local` or a process environment variable, use only the permissions required by that migration, and be revoked after its verified release.
 
 The completed migration uses a separate long-lived project publisher token:
 
