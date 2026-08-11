@@ -26,15 +26,21 @@ const chooseEvaAndOpenThread = async (page) => {
   await expect(page.getByTestId('chat-internal-share-composer-status')).toBeVisible()
 }
 
+const expectTrackDetailsWithoutPlayback = async (page, trackTitle) => {
+  const sheet = page.getByTestId('music-now-playing-sheet')
+  await expect(sheet).toContainText(trackTitle)
+  await expect(sheet).toContainText(/曲目详情|TRACK DETAILS/)
+  await expect(sheet.getByRole('button', { name: /^(播放|Play)$/ })).toBeVisible()
+  await expect(sheet.getByRole('button', { name: /^(暂停|Pause)$/ })).toHaveCount(0)
+  await expect(page.getByTestId('music-mini-player')).toHaveCount(0)
+}
+
 test('Music shares a track into Chat, survives refresh, supports quoting, and returns without autoplay', async ({
   page,
 }) => {
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/music?track=demo_blue_hour')
-  await expect(page.getByTestId('music-now-playing-sheet')).toContainText('Blue Hour Drive')
-  await expect(page.getByTestId('music-now-playing-sheet')).toContainText(
-    /打开详情不会自动播放|Opening details does not start playback/,
-  )
+  await expectTrackDetailsWithoutPlayback(page, 'Blue Hour Drive')
 
   await page.getByTestId('music-share-chat').click()
   await waitForAppRouteReady(page, '/chat?share=internal')
@@ -75,10 +81,7 @@ test('Music shares a track into Chat, survives refresh, supports quoting, and re
   await shareCard.getByRole('button', { name: /在音乐中查看|View in Music/ }).click()
   await waitForAppRouteReady(page, '/music')
   await expect(page).toHaveURL(/#\/music\?source=chat&track=demo_blue_hour$/)
-  await expect(page.getByTestId('music-now-playing-sheet')).toContainText('Blue Hour Drive')
-  await expect(page.getByTestId('music-now-playing-sheet')).toContainText(
-    /打开详情不会自动播放|Opening details does not start playback/,
-  )
+  await expectTrackDetailsWithoutPlayback(page, 'Blue Hour Drive')
   await expectNoHorizontalOverflow(page)
 })
 
