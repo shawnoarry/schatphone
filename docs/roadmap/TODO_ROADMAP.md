@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-08-10
+Updated: 2026-08-12
 
 This is the only live execution board for implementation order.
 
@@ -175,6 +175,7 @@ Completed in the 2026-07-16 workflow-layering round:
    - the Gallery/backup product gate, complete-backup/recovery contract, Batch 2A Repository technical gate, Batch 2B foundation, and Book reference cutover are complete;
    - `Other-owner storage runtime implementation/activation = NOT_APPROVED`: no R2, Gallery schema, non-Book migration, dual write, garbage collection, or legacy Book deletion follows from the Book cutover.
 2. `P0 Security/toolchain maintenance` - `PARTIAL_DONE`
+   - `LOCAL_DONE / RELEASE_PENDING 2026-08-12`: repository-owned artwork is externalized to the personal image bed without making it a shared user service. The 771-object migration plus a three-object project-brief batch are remotely verified and registered; authenticated batch publishing, centralized public runtime URLs, separate project/migration/Gallery credential boundaries, offline Git/CI gates, and copy-verify-remove home-PC archival are complete. The current SchatPhone commit/push, three-host release proof, and temporary migration-token revocation remain;
    - `DONE 2026-07-21`: updated the direct Vite 7 line to 7.3.6 and refreshed only its compatible root transitive toolchain to esbuild 0.28.1, Rollup 4.62.2, and required lockfile metadata;
    - `DONE 2026-07-22`: migrated Vitest 1.6.1 to the official-registry current stable 4.1.10 line; Vitest now reuses root Vite 7.3.6 and the nested Vite 5.4.21/esbuild 0.21.5 chain is removed;
    - `DONE 2026-07-22`: the isolated Vitest migration reduced full audit from 14 advisories (3 moderate, 10 high, 1 critical) to 10 (1 moderate, 9 high, 0 critical) without changing the direct Vite line;
@@ -437,6 +438,7 @@ Remaining stages are not implied by this completed slice:
 - Gallery `People / 人物` smart views and user/role reference curation;
 - automatic person/intent reference resolution and separate confirmation before a kept image becomes a person reference;
 - Chat, Community, Map, and other source-module callers;
+- `ACCEPTED FOLLOW-UP 2026-08-11`: add an explicit personal image-bed storage action for Gallery. It uses a device-local scoped token, uploads to the owner's `schatphone-user/` prefix, and admits the returned HTTPS URL without retaining a second local binary. It is separate from ordinary local `Keep`, never uploads silently, and requires a link-accessibility warning until private authenticated media is implemented;
 - prompt-assistant management UI, hosted proxy security/deployment, true-device validation, and opt-in hosted-provider smoke.
 
 Primary packages:
@@ -728,7 +730,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 1. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 2. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.
-3. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; Gallery People curation and source-module callers require separately promoted follow-ups.
+3. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; the personal Gallery image-bed Adapter is accepted as an explicit separately promoted follow-up, while Gallery People curation and source-module callers remain separate.
 4. `P2 PARTIAL_DONE / CHKSZ_RADIO_BROWSER_LOCAL_AND_MAP_MEDIA_INTEGRATED_LOCAL`: 4.13 Music has the installed app, browser playback, library/queue/search, generic JSON, no-key Radio Browser live radio, and ChKSz sources, direct HTTPS URL songs, Music-owned local-file import, Home/App Store integration, a global floating player, Chat track sharing, and an active-journey Map music/radio caller. Live-station uptime remains external; real-key rights/CORS smoke, true-device media behavior, optional local-binary backup/relink, Chat search, and external Map queue requests remain separately promoted work.
 5. `P1 DONE 2026-08-10`: the explicit custom role -> Chat journey, Wallet exact-money/card-pack foundations, role receiving-account V1, one ordinary Shopping life-consequence flow, focused Wallet quote explainability, Wallet Activity search/monthly statements/verified payees, Wallet receipt sharing, configurable multi-screen Home release curation, the six-facade Shopping pseudo-folder expansion, and the 15-entry Food Delivery real-shop expansion with five Map-owned Seoul destinations are complete at local desktop/simulated-mobile acceptance.
 6. `P1 PARTIAL_DONE 2026-08-09` 4.9/4.5 hosted release proof: GitHub Pages Run #31294272595, base-path smoke, and the prior direct-provider Chat/reload flow pass. Commit `a1418ed` is deployed through the Git-connected Vercel and Cloudflare builds; both restricted relay backends passed a no-secret upstream probe plus a GitHub Pages real-provider model-list and Chat smoke (`6` models, reply `OK`). Installed-PWA/relaunch, backup round trip, external protection checks, and named true-device evidence remain.

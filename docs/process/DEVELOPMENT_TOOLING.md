@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-08-10
+Updated: 2026-08-11
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -123,6 +123,51 @@ npm.cmd run build
    - `vue-router`
    - `pinia`
 5. After dependency changes, update `package-lock.json` in the same batch and record validation in the active roadmap item.
+
+### 4.1 Project Asset Publishing
+
+Repository-owned artwork uses the personal SchatPhone image bed as its development and production source.
+
+- public runtime files use `schatphone-assets/`;
+- valuable masters that are not byte-identical to a runtime file may use protected `schatphone-source/`;
+- owner Gallery media will use `schatphone-user/` through a separate future application Adapter;
+- a byte-identical master and runtime export are uploaded once, under the public runtime key;
+- PWA/install/offline bootstrap icons remain in Git.
+
+Project publishing uses a long-lived `SCHATPHONE_IMGBED_PROJECT_TOKEN` with `upload + list` only. It has no `delete + manage` permission, is stored only in ignored `.env.local`, and is distinct from both the temporary migration token and the future Gallery device token.
+
+The repeatable flow is:
+
+1. Generate assets under ignored `output/imagegen/`.
+2. Prepare an explicitly approved plan with one or more repeated `--runtime <local>=<remote>` and `--source <local>=<remote>` mappings:
+
+```powershell
+npm.cmd run assets:prepare -- --batch <id> --runtime <local>=<remote> --source <local>=<remote> --approve --approval-source <decision>
+```
+
+3. Publish the approved plan:
+
+```powershell
+npm.cmd run assets:publish -- --plan .imgbed-publish/<id>.plan.json --execute
+```
+
+The publisher automatically splits work into batches of at most 10 files and 40 MiB, verifies the server response, downloads every public/protected object from the configured image-bed origin, compares byte length and SHA-256, and updates `config/project-assets.json` only after verification. Interrupted jobs can rerun the same plan; deterministic keys and server-side hashes make matching uploads idempotent.
+
+The one-time repository migration has two additional offline controls:
+
+```powershell
+npm.cmd run imgbed:registry-sync -- --plan <path> --results <path> --batch <id> --execute
+npm.cmd run imgbed:archive -- --plan <path> --results <path> --destination <archive-root> --execute
+npm.cmd run imgbed:archive-remove -- --manifest <path> --plan <path> --results <path> --references-migrated --execute
+```
+
+Registry sync refuses incomplete or mismatched verification results. Archive first copies every primary and alias path, checks destination capacity, recomputes size and SHA-256, copies credential-free records, and writes an archive manifest. Removal is deliberately separate: it revalidates the archive manifest against the original approved plan and complete result document, rechecks both archive and source bytes, and accepts only paths named by that plan.
+
+An independently approved follow-up batch may share a dated archive root by adding `--manifest-name <batch>-archive-manifest.json`. The archive tool rejects repository-local destinations, including cross-drive path ambiguities, and never replaces the default manifest unless that exact name is requested.
+
+The tracked `.githooks/pre-commit` runs `assets:check --staged`. It never reads a token or performs a network upload; it blocks staged runtime/generated media until the explicit publish step has finished. `npm install` activates the shared hooks through the repository `prepare` script. CI runs `assets:check` over the complete tracked tree and likewise needs no credential.
+
+Do not commit `.imgbed-publish/`, `.env.local`, generated source files, or any token. Do not use a protected `schatphone-source/` URL as a browser runtime source.
 
 ## 5. OpenCLI
 

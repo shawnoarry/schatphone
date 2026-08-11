@@ -36,6 +36,7 @@ import {
   findFoodDeliveryCategory,
 } from '../lib/planned-module-registry'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { projectUiAssetUrl } from '../lib/project-assets'
 import { convertLegacyCentsToMoney, convertMoneyToLegacyCents } from '../lib/currency-system'
 import { runFoodDeliveryRandomOrderEventPilot } from '../lib/simulation/adapters/food-delivery-events'
 import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
@@ -329,7 +330,7 @@ const peachCloudSearchQuery = ref('')
 const peachCloudSearchInputRef = ref(null)
 const peachCloudNewCarouselRef = ref(null)
 const peachCloudNewCarouselIndex = ref(0)
-const uiAssetUrl = (path) => `${import.meta.env.BASE_URL || '/'}images/ui-assets/${path}`
+const uiAssetUrl = (path) => projectUiAssetUrl(path)
 const foodDeliveryUiAsset = (path) => uiAssetUrl(`apps/food-delivery/${path}`)
 const platformMissingAssetPlaceholderUrl = foodDeliveryUiAsset(
   'platform/diagnostics/missing-asset-placeholder.svg',

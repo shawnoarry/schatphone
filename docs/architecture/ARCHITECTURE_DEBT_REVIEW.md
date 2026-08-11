@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 > Scope and authority note
 >
@@ -201,6 +201,7 @@ Verified on 2026-07-22:
 - Settings backup serializes `settings` directly, including the configured AI API key;
 - the push relay has permissive CORS, JSON-file secrets/subscriptions/schedules, and no authentication;
 - PR CI and main Pages build definitions run lint, unit, build, separate production/full audits, and one full Playwright collection that includes the focused visual suite;
+- repository artwork externalization now has local batch/registry/archive tooling plus offline commit and CI gates; production endpoint activation, runtime URL cutover, archive removal, and three-host proof remain pending the 771-object verification gate;
 - GitHub Pages deploy requires the verified build job and still does not deploy the push relay;
 - the repository has no coverage threshold.
 

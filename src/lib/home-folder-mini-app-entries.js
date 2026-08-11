@@ -8,6 +8,7 @@ import {
   SHOPPING_PLATFORM_APP_ENTRIES,
 } from './planned-module-registry'
 import { resolveFoodShopDefaultIdentity } from './food-shop-presentation'
+import { projectUiAssetUrl } from './project-assets'
 
 export const FOOD_DELIVERY_PLATFORM_ENTRY_KEY = 'food_delivery_platform'
 
@@ -19,8 +20,7 @@ export const buildShoppingShopEntryId = (serviceKey = '') =>
 
 const normalizeList = (value = []) => (Array.isArray(value) ? value : [])
 
-const uiAssetUrl = (path = '') =>
-  `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
+const uiAssetUrl = (path = '') => projectUiAssetUrl(path)
 
 const FOOD_SHOP_FOLDER_ENTRY_ORDER = Object.freeze([
   'food_seed_moon_bistro',

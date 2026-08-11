@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-10
+Updated: 2026-08-11
 
 ## 1. Architecture Goals
 
@@ -42,6 +42,11 @@ Browser / static SPA
 GitHub Pages
   hosts only the built static SPA
 
+Personal project image bed
+  serves project-owned runtime artwork from public schatphone-assets/ URLs
+  protects optional unique masters under schatphone-source/
+  is not the shared writable Gallery store for all users
+
 Optional Node push relay
   stores VAPID config, subscriptions, and schedules in local JSON
   sends Web Push payloads
@@ -49,6 +54,8 @@ Optional Node push relay
 ```
 
 The application uses Vue Router hash history and Vite base `/schatphone/`, so static hosting does not need server route rewriting.
+
+Development, preview, and production use the same public project-image origin. PWA/install/offline bootstrap icons remain local; external runtime artwork is an online dependency and must never point at the authenticated `schatphone-source/` prefix. Future owner Gallery uploads use a separate device credential and `schatphone-user/` Adapter boundary.
 
 ## 3. Technical Stack
 

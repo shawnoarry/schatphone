@@ -30,6 +30,7 @@ Implemented on 2026-07-29:
 Still deferred:
 
 - Gallery `People / 人物` smart views and person-to-reference curation truth;
+- an explicit personal image-bed Gallery storage Adapter that uploads with a device-local scoped token and retains the returned URL without a second local binary;
 - automatic person/intent reference resolution and role/user policy editing;
 - Chat, Community, Map, and other source-module generation callers;
 - prompt-assistant management UI, Camera routing/security acceptance through the deployed shared proxy, expiring remote-result materialization, true-device checks, and opt-in hosted-provider smoke.

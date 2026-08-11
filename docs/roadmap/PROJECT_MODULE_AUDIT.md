@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 > **Candidate pool only / 仅候选池**
 >
@@ -76,6 +76,7 @@ Priority meanings:
 - `DONE 2026-08-07`: remote Pages gate and deployed `/schatphone/` base-path smoke;
 - `PARTIAL_DONE 2026-08-09`: Git-connected Vercel root-path app and restricted dynamic relay are deployed from `a1418ed`; GitHub Pages direct-provider model/connection/real-Chat/reload proof and real-provider model-list/Chat smoke through Vercel both pass. PWA/relaunch, external protection, and true-device evidence remain.
 - `DEPLOYED_BASELINE 2026-08-09`: Git-connected Cloudflare Worker/static-assets root path is live at `https://schatphone.noarry.workers.dev`; shared proxy-core tests, root build, Wrangler dry-run, automatic Workers Build, root/static smoke, no-secret dynamic-target probe, and GitHub Pages real-provider 6-model/Chat-`OK` relay proof pass for `a1418ed`.
+- `IN_PROGRESS 2026-08-11`: move repository-owned artwork to the personal image bed with a public runtime prefix, optional protected unique-master prefix, a separate upload/list-only project publisher, verified registry, bounded batch endpoint, offline Git/CI checks, and copy-verify-remove home-PC archival. Production activation and release proof wait for the approved 771-object upload to verify completely.
 
 ### Persistence And Recovery
 

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { expectHomeReady, navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const expectNoHorizontalOverflow = async (page) => {
@@ -70,23 +71,16 @@ test('Verdant Day keeps its minimalist light-food identity through detail, bag, 
     { length: 12 },
     (_, index) => `verdant-day/products/verdant-day-item-${String(index + 1).padStart(2, '0')}.png`,
   )
-  const deliveredProductAssetResults = await page.evaluate(async (assetPaths) => {
-    return Promise.all(
-      assetPaths.map(
-        (assetPath) =>
-          new Promise((resolve) => {
-            const image = new Image()
-            image.onload = () =>
-              resolve({ assetPath, loaded: image.naturalWidth > 0 && image.naturalHeight > 0 })
-            image.onerror = () => resolve({ assetPath, loaded: false })
-            image.src = new URL(
-              `images/ui-assets/apps/food-delivery/${assetPath}`,
-              document.baseURI,
-            ).href
-          }),
-      ),
+  const deliveredProductAssetResults = []
+  for (const assetPath of deliveredProductAssets) {
+    const response = await page.request.get(
+      projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
     )
-  }, deliveredProductAssets)
+    deliveredProductAssetResults.push({
+      assetPath,
+      loaded: response.ok() && response.headers()['content-type']?.startsWith('image/'),
+    })
+  }
   expect(deliveredProductAssetResults).toEqual(
     deliveredProductAssets.map((assetPath) => ({ assetPath, loaded: true })),
   )

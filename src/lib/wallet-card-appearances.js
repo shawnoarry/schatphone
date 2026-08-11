@@ -1,3 +1,5 @@
+import { projectUiAssetUrl } from './project-assets'
+
 const APPEARANCE_SERIES = new Set([
   'standard',
   'licensed_ip',
@@ -17,7 +19,7 @@ const APPEARANCE_UNLOCK_SOURCES = new Set([
 ])
 
 const walletCardAssetUrl = (fileName = '') =>
-  `${import.meta.env.BASE_URL || '/'}images/ui-assets/apps/wallet/cards/${String(fileName).replace(/^\/+/, '')}`
+  projectUiAssetUrl(`apps/wallet/cards/${String(fileName).replace(/^\/+/, '')}`)
 
 const normalizeText = (value, fallback = '', maxLength = 160) => {
   if (typeof value !== 'string') return fallback

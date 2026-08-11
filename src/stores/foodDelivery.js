@@ -11,6 +11,7 @@ import {
   normalizeMoneyQuote,
 } from '../lib/currency-system'
 import { normalizeImageSource } from '../lib/image-source-contract'
+import { projectUiAssetUrl } from '../lib/project-assets'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
   FOOD_DELIVERY_SOURCE_KEYS,
@@ -806,9 +807,8 @@ const buildFoodDeliveryEventSummary = (order = {}, event = {}) => {
   return `Food Delivery updated ${foodOrderTitle(order)}.`
 }
 
-const FOOD_DELIVERY_UI_ASSET_ROOT = 'images/ui-assets/apps/food-delivery/'
 const foodDeliveryUiAsset = (path) =>
-  `${import.meta.env.BASE_URL || '/'}${FOOD_DELIVERY_UI_ASSET_ROOT}${path}`
+  projectUiAssetUrl(`apps/food-delivery/${path}`)
 
 const LEGACY_REMOTE_SEED_IMAGE_BY_ID = Object.freeze({
   [RIVER_NOODLES_SEED_RESTAURANT_ID]:

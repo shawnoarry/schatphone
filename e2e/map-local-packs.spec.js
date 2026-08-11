@@ -1,14 +1,12 @@
-import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import {
   navigateInsideUnlockedApp,
   unlockToHome,
 } from './helpers/navigation'
 
 const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
-const CUSTOM_MAP_FIXTURE = fileURLToPath(
-  new URL('../public/images/ui-assets/apps/map/seoul-street-map-v1.webp', import.meta.url),
-)
+const CUSTOM_MAP_FIXTURE_URL = projectUiAssetUrl('apps/map/seoul-street-map-v1.webp')
 const DETERMINISTIC_STYLE = {
   version: 8,
   name: 'SchatPhone deterministic map style',
@@ -515,7 +513,13 @@ test.describe('world-bound narrative maps', () => {
 
     await page.getByTestId('map-open-import').click()
     const dialog = page.getByTestId('map-import-dialog')
-    await dialog.locator('input[type="file"]').setInputFiles(CUSTOM_MAP_FIXTURE)
+    const fixtureResponse = await page.request.get(CUSTOM_MAP_FIXTURE_URL)
+    expect(fixtureResponse.ok()).toBe(true)
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: 'seoul-street-map-v1.webp',
+      mimeType: 'image/webp',
+      buffer: await fixtureResponse.body(),
+    })
     await dialog.getByTestId('map-import-name').fill('Test story district')
     await dialog.getByTestId('map-import-confirm').click()
     await expect(dialog).toHaveCount(0)

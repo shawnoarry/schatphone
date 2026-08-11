@@ -7,6 +7,7 @@ import {
   FOOD_DELIVERY_ORDER_STATUS,
   useFoodDeliveryStore,
 } from '../src/stores/foodDelivery'
+import { projectUiAssetUrl } from '../src/lib/project-assets'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'schatphone:store:food-delivery'
 
@@ -902,7 +903,7 @@ describe('food delivery store', () => {
     )
   })
 
-  test('migrates legacy Verdant Day built-in image paths to the configured app base', () => {
+  test('migrates legacy Verdant Day built-in image paths to the project image bed', () => {
     persistLegacyFoodDeliveryState({
       restaurants: [
         {
@@ -930,13 +931,15 @@ describe('food delivery store', () => {
     setActivePinia(createPinia())
 
     const store = useFoodDeliveryStore()
-    const assetBaseUrl = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')
-
     expect(store.findRestaurantById('food_seed_verdant_day')?.image.url).toBe(
-      `${assetBaseUrl}images/ui-assets/apps/food-delivery/verdant-day/cover/verdant-day-cover-01.png`,
+      projectUiAssetUrl(
+        'apps/food-delivery/verdant-day/cover/verdant-day-cover-01.png',
+      ),
     )
     expect(store.findMenuItemById('food_menu_verdant_aegean_garden')?.image.url).toBe(
-      `${assetBaseUrl}images/ui-assets/apps/food-delivery/verdant-day/products/verdant-day-item-01.png`,
+      projectUiAssetUrl(
+        'apps/food-delivery/verdant-day/products/verdant-day-item-01.png',
+      ),
     )
   })
 

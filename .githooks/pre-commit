@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+node scripts/imgbed-publish.mjs check --staged

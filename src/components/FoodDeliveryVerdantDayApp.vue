@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from '../composables/useI18n'
 import { resolveFoodDeliveryAssetUrl } from '../lib/food-shop-presentation'
+import { projectUiAssetUrl } from '../lib/project-assets'
 
 const props = defineProps({
   restaurant: { type: Object, required: true },
@@ -56,7 +57,7 @@ const fallbackSectionOption = Object.freeze({
 const knownSectionKeys = new Set(sectionOptions.map((section) => section.key))
 
 const verdantAssetUrl = (assetPath) =>
-  `${import.meta.env.BASE_URL || '/'}images/ui-assets/apps/food-delivery/${assetPath}`
+  projectUiAssetUrl(`apps/food-delivery/${assetPath}`)
 const brandHeroAssetPath = 'verdant-day/brand/verdant-day-brand-hero-preview-02.png'
 const brandHeroArtAssetPath = 'verdant-day/brand/verdant-day-brand-hero-art-01.png'
 const lunchMomentAssetPath = 'verdant-day/promotions/verdant-day-promo-lunch-moment-01.png'

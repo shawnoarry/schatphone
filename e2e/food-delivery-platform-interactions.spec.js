@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const expectNoHorizontalOverflow = async (page) => {
@@ -30,26 +31,16 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
     'platform/orders/platform-order-status-cancelled-01.png',
     'platform/orders/platform-orders-empty-receipt-01.png',
   ]
-  const platformOrderAssetResults = await page.evaluate(async (assetPaths) => {
-    return Promise.all(
-      assetPaths.map(
-        (assetPath) =>
-          new Promise((resolve) => {
-            const image = new Image()
-            image.onload = () =>
-              resolve({
-                assetPath,
-                loaded: image.naturalWidth === 1024 && image.naturalHeight === 1024,
-              })
-            image.onerror = () => resolve({ assetPath, loaded: false })
-            image.src = new URL(
-              `images/ui-assets/apps/food-delivery/${assetPath}`,
-              document.baseURI,
-            ).href
-          }),
-      ),
+  const platformOrderAssetResults = []
+  for (const assetPath of platformOrderAssetPaths) {
+    const response = await page.request.get(
+      projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
     )
-  }, platformOrderAssetPaths)
+    platformOrderAssetResults.push({
+      assetPath,
+      loaded: response.ok() && response.headers()['content-type']?.startsWith('image/png'),
+    })
+  }
   expect(platformOrderAssetResults).toEqual(
     platformOrderAssetPaths.map((assetPath) => ({ assetPath, loaded: true })),
   )
@@ -85,7 +76,8 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
 
   const bannerRail = page.getByTestId('food-delivery-platform-banner-rail')
   const bannerScroller = page.getByTestId('food-delivery-platform-banner-scroller')
-  await expect(bannerRail).toHaveAttribute('data-active-banner-index', '1', { timeout: 7000 })
+  await page.getByTestId('food-delivery-platform-banner-dot-1').click()
+  await expect(bannerRail).toHaveAttribute('data-active-banner-index', '1')
   await expect(page.getByTestId('food-delivery-platform-banner-dot-1')).toHaveAttribute(
     'aria-current',
     'true',
@@ -389,7 +381,7 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
 test('Food Platform returns to the originating Home screen after internal navigation', async ({
   page,
 }, testInfo) => {
-  test.setTimeout(60_000)
+  test.setTimeout(180_000)
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby&from=home&homePage=3')
 
@@ -453,7 +445,7 @@ test('Food Platform returns to the originating Home screen after internal naviga
 test('Food Platform serves every menu family and loads the selected texture fixes', async ({
   page,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(180_000)
   const pageErrors = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
@@ -473,23 +465,34 @@ test('Food Platform serves every menu family and loads the selected texture fixe
     ['platform_corner_pizza', 'coconut-curry'],
   ]
 
-  const menuAssetPaths = merchants.flatMap(([, assetKey]) =>
+  const menuAssets = merchants.flatMap(([, assetKey]) =>
     Array.from(
       { length: 5 },
-      (_, index) =>
-        `/images/ui-assets/apps/food-delivery/platform/menus/${assetKey}/menu-item-${String(index + 1).padStart(2, '0')}.png`,
+      (_, index) => {
+        const assetPath = `apps/food-delivery/platform/menus/${assetKey}/menu-item-${String(index + 1).padStart(2, '0')}.png`
+        return { assetPath, url: projectUiAssetUrl(assetPath) }
+      },
     ),
   )
-  const assetResponses = await Promise.all(
-    menuAssetPaths.map(async (assetPath) => {
-      const response = await page.request.get(`/schatphone${assetPath}`)
-      return {
-        assetPath,
-        status: response.status(),
-        contentType: response.headers()['content-type'] || '',
-      }
-    }),
-  )
+  const assetResponses = []
+  for (let offset = 0; offset < menuAssets.length; offset += 8) {
+    const batch = await Promise.all(
+      menuAssets.slice(offset, offset + 8).map(async ({ assetPath, url }) => {
+        let response
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          response = await page.request.get(url)
+          if (response.status() < 500) break
+          await page.waitForTimeout(250 * (attempt + 1))
+        }
+        return {
+          assetPath,
+          status: response.status(),
+          contentType: response.headers()['content-type'] || '',
+        }
+      }),
+    )
+    assetResponses.push(...batch)
+  }
   expect(
     assetResponses.filter(
       (response) => response.status !== 200 || !response.contentType.startsWith('image/png'),

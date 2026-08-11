@@ -27,6 +27,7 @@ import {
   findShoppingServicePreset,
 } from '../lib/planned-module-registry'
 import { pushReturnTarget } from '../lib/navigation-return'
+import { projectUiAssetUrl } from '../lib/project-assets'
 import { convertLegacyCentsToMoney } from '../lib/currency-system'
 import { useAssetsStore } from '../stores/assets'
 import { useCalendarStore } from '../stores/calendar'
@@ -57,9 +58,7 @@ const productImagePreviewMap = reactive({})
 const shopEntryCoverPreviewMap = reactive({})
 const shoppingMiniAppEntryId = (serviceKey = '') => (serviceKey ? `shop_app_shopping_${serviceKey}` : '')
 const shoppingBrandAssetUrl = (path = '') =>
-  path
-    ? `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
-    : ''
+  projectUiAssetUrl(path)
 const productDraft = reactive({
   title: '',
   category: 'mall',

@@ -57,6 +57,7 @@ import {
   SHOPPING_PLATFORM_APP_ENTRIES,
   buildShoppingAppRoute,
 } from '../lib/planned-module-registry'
+import { projectUiAssetUrl } from '../lib/project-assets'
 import { useGalleryStore } from '../stores/gallery'
 import { useSystemStore } from '../stores/system'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
@@ -91,7 +92,7 @@ const HARBOR_ROAST_DEFAULT_COVER_URL = resolveFoodDeliveryAssetUrl(
   '/images/ui-assets/apps/food-delivery/harbor-roast/cover/harbor-roast-cover-01.png',
 )
 const resolveShoppingAssetUrl = (path = '') =>
-  `${import.meta.env.BASE_URL || '/'}images/ui-assets/${String(path).replace(/^\/+/, '')}`
+  projectUiAssetUrl(path)
 const APP_STORE_FILTERS = [
   'all',
   'home',

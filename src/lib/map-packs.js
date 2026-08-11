@@ -2,11 +2,9 @@ import { SEOUL_ADDITIONAL_PLACES } from './seoul-map-places'
 import { SEOUL_EVERYDAY_PLACES } from './seoul-map-everyday-places'
 import { SEOUL_COMMUNITY_PLACES } from './seoul-map-community-places'
 import { SEOUL_FOOD_DELIVERY_PLACES } from './seoul-map-food-places'
+import { projectAssetUrl } from './project-assets'
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0))
-const localAssetUrl = (relativePath) =>
-  `${import.meta.env.BASE_URL || '/'}${String(relativePath || '').replace(/^\/+/, '')}`
-
 export const DEFAULT_MAP_PACK_ID = 'real-seoul-v1'
 export const FICTIONAL_MAP_PACK_ID = 'cyber-wasteland-v1'
 
@@ -41,7 +39,7 @@ const MAP_PACKS = Object.freeze([
     shortLabelEn: 'Seoul',
     descriptionZh: '基于真实街道、江流、绿地与城市轮廓的现代世界地图。',
     descriptionEn: 'A modern-world map grounded in real streets, waterways, green space, and city form.',
-    assetUrl: localAssetUrl('images/ui-assets/apps/map/seoul-street-map-v1.webp'),
+    assetUrl: projectAssetUrl('images/ui-assets/apps/map/seoul-street-map-v1.webp'),
     assetWidth: 4096,
     assetHeight: 3319,
     bounds: SEOUL_GEO_BOUNDS,
@@ -143,7 +141,7 @@ const MAP_PACKS = Object.freeze([
     shortLabelEn: 'Wasteland',
     descriptionZh: '赛博遗迹与荒原聚落叠合的封闭城市，四个阵营共同争夺水、能源和数据网。',
     descriptionEn: 'A sealed city of cyber ruins and wasteland settlements where four factions contest water, power, and the data grid.',
-    assetUrl: localAssetUrl('images/ui-assets/apps/map/cyber-wasteland-city-v1.svg'),
+    assetUrl: projectAssetUrl('images/ui-assets/apps/map/cyber-wasteland-city-v1.svg'),
     assetWidth: 1600,
     assetHeight: 1280,
     distanceScaleKm: 42,

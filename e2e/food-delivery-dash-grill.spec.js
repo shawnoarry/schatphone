@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const expectNoHorizontalOverflow = async (page) => {
@@ -57,23 +58,16 @@ test('Dash Grill keeps its quick-service identity through menu, bag, checkout, a
     'dash-grill/combos/dash-grill-double-stack-combo-01.png',
     'dash-grill/combos/dash-grill-golden-chicken-combo-01.png',
   ]
-  const deliveredDashAssetResults = await page.evaluate(async (assetPaths) => {
-    return Promise.all(
-      assetPaths.map(
-        (assetPath) =>
-          new Promise((resolve) => {
-            const image = new Image()
-            image.onload = () =>
-              resolve({ assetPath, loaded: image.naturalWidth > 0 && image.naturalHeight > 0 })
-            image.onerror = () => resolve({ assetPath, loaded: false })
-            image.src = new URL(
-              `images/ui-assets/apps/food-delivery/${assetPath}`,
-              document.baseURI,
-            ).href
-          }),
-      ),
+  const deliveredDashAssetResults = []
+  for (const assetPath of deliveredDashAssets) {
+    const response = await page.request.get(
+      projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
     )
-  }, deliveredDashAssets)
+    deliveredDashAssetResults.push({
+      assetPath,
+      loaded: response.ok() && response.headers()['content-type']?.startsWith('image/'),
+    })
+  }
   expect(deliveredDashAssetResults).toEqual(
     deliveredDashAssets.map((assetPath) => ({ assetPath, loaded: true })),
   )

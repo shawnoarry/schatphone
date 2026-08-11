@@ -43,6 +43,9 @@ jobs:
       - name: Audit all dependencies
         run: npm audit --registry=https://registry.npmjs.org/
 
+      - name: Verify project assets are published
+        run: npm run assets:check
+
       - name: Lint
         run: npm run lint
 

@@ -1,32 +1,38 @@
 import { normalizeShopEntryTemplateId } from './app-entry-presentation'
+import { projectAssetUrl } from './project-assets'
 
-const FOOD_DELIVERY_PUBLIC_ASSET_PREFIX = '/images/ui-assets/apps/food-delivery/'
+const FOOD_DELIVERY_PUBLIC_ASSET_PATH = 'images/ui-assets/apps/food-delivery/'
+
+const localFoodDeliveryAssetPath = (value = '') => {
+  const normalized = String(value).replaceAll('\\', '/')
+  const markerIndex = normalized.indexOf(FOOD_DELIVERY_PUBLIC_ASSET_PATH)
+  if (markerIndex < 0) return ''
+  const prefix = normalized.slice(0, markerIndex)
+  if (prefix && !prefix.endsWith('/')) return ''
+  return normalized.slice(markerIndex).split(/[?#]/, 1)[0]
+}
 
 export const resolveFoodDeliveryAssetUrl = (
   value,
   {
-    baseUrl = import.meta.env.BASE_URL || '/',
     origin = typeof window !== 'undefined' ? window.location.origin : '',
   } = {},
 ) => {
   if (typeof value !== 'string' || !value.trim()) return ''
   const url = value.trim()
-  const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
-
-  if (url.startsWith(FOOD_DELIVERY_PUBLIC_ASSET_PREFIX)) {
-    return `${normalizedBaseUrl}${url.slice(1)}`
+  if (!/^https?:\/\//i.test(url)) {
+    const assetPath = localFoodDeliveryAssetPath(url)
+    if (!assetPath) return url
+    const suffix = url.slice(url.indexOf(assetPath) + assetPath.length)
+    return `${projectAssetUrl(assetPath)}${suffix}`
   }
 
-  if (!origin || !/^https?:\/\//i.test(url)) return url
+  if (!origin) return url
   try {
     const parsed = new URL(url)
-    if (
-      parsed.origin !== origin ||
-      !parsed.pathname.startsWith(FOOD_DELIVERY_PUBLIC_ASSET_PREFIX)
-    ) {
-      return url
-    }
-    return `${normalizedBaseUrl}${parsed.pathname.slice(1)}${parsed.search}${parsed.hash}`
+    const assetPath = localFoodDeliveryAssetPath(parsed.pathname)
+    if (parsed.origin !== origin || !assetPath) return url
+    return `${projectAssetUrl(assetPath)}${parsed.search}${parsed.hash}`
   } catch {
     return url
   }

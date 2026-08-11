@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 > **Frozen execution status / 非执行看板**
 >
@@ -93,6 +93,7 @@ Current evidence:
 - Vercel serves the root app and commit `a1418ed` restricted relay Functions for per-user OpenAI-compatible URLs/keys/models while keeping Direct as default; production passed a no-secret upstream probe plus a real-provider 6-model/Chat-`OK` smoke from GitHub Pages.
 - the third Git-connected Cloudflare Worker/static-assets root path shares the proxy core and is deployed at `https://schatphone.noarry.workers.dev`; commit `a1418ed` passed the root/static checks, a no-secret dynamic-target probe, and the same real-provider 6-model/Chat-`OK` GitHub Pages smoke.
 - GitHub Pages has deployed-browser evidence for one direct user-configured provider: five models discovered, connection test `OK`, one real Chat reply, and message persistence after reload/reopen.
+- repository-owned artwork externalization is active but not yet released: local tooling now separates the temporary migration credential, long-lived project publisher, and future Gallery device credential; verified registry import, bounded batch publishing, offline commit/CI checks, and copy-verify-remove archival are implemented locally. Wait for 771/771 before production batch deployment, runtime URL cutover, archival removal, and release proof.
 
 Safe sequence:
 

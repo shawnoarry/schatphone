@@ -22,6 +22,9 @@ output/imagegen/schatphone-deployment-brand/vercel-maskable-master-v3.png
 !.env.example
 .vercel
 server/data/*.json
+.imgbed-migration/
+.imgbed-publish/
+output/imagegen/
 
 # Editor directories and files
 .vscode/*

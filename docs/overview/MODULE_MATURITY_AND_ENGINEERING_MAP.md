@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-08-09
+Updated: 2026-08-11
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -133,6 +133,7 @@ Gaps:
 - Music's generic provider seam has simulated-browser coverage but no opt-in real-provider/CORS or true-device audio-focus/interruption proof;
 - production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; local and remote workflow evidence enforce that baseline, while independently rerunnable audit proof remains separate.
 - product-level save-failed/read-only recovery, same-container writer protection with calm active-writer previews and automatic cooperative handoff, and the release-local complete v3 package/rollback/crash-recovery boundary are implemented. Predictive capacity reporting, cross-owner atomic Repository activation, legacy unavailable-media presentation, and personal R2 transport remain separate work.
+- repository-owned artwork externalization is in progress: the approved 771-object migration, batch publisher, verified registry, two-stage home-PC archive, and offline Git/CI gates are prepared locally. Runtime URL cutover, production batch activation, poster smoke, archive removal, and three-host proof remain pending.
 
 ## 5. Module Engineering Guidance
 
