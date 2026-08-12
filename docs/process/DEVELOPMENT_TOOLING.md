@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -238,6 +238,8 @@ Workflow ownership is split like this:
 
 Global machine-local skills may also exist outside the repo. Those can support work on the current machine, but they are not required for repo portability unless explicitly documented.
 
+The OpenAI Product Design plugin is one such optional machine-provided visual capability. `docs/process/VISUAL_WORKFLOW.md` may use it for consequential direction exploration, flow audit, interaction prototyping, or design QA, but ordinary SchatPhone UI work must not depend on the plugin, Figma, or Pencil being installed. Cross-PC continuity comes from Git-eligible accepted briefs, reference images, generated assets, prototype decisions, and validation evidence; another machine may continue the same product path with the repo-local skills and normal browser/image tooling.
+
 ## 7. Current Project-Local Skill Inventory
 
 The current externally sourced repo-local skills recorded in `.agents/skills` and `skills-lock.json` are:
@@ -249,6 +251,9 @@ The current externally sourced repo-local skills recorded in `.agents/skills` an
 | `frontend-design` | Building or reshaping frontend surfaces with stronger design direction | `docs/process/VISUAL_WORKFLOW.md` |
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
 | `image-to-code` | Pixel-level 750px source-image, screenshot, or design-export restoration into code plus high-resolution PNG slices | `docs/process/VISUAL_WORKFLOW.md` |
+| `redesign-existing-projects` | Audit-first visual refinement of an existing app without replacing its framework, behavior, or product hierarchy | `docs/process/VISUAL_WORKFLOW.md` |
+| `ui-ux-pro-max` | Local searchable UI/UX reference data for product patterns, palettes, typography, accessibility, Vue guidance, icons, charts, and motion | `docs/process/VISUAL_WORKFLOW.md` |
+| `gsap-core`, `gsap-frameworks`, `gsap-performance`, `gsap-plugins`, `gsap-scrolltrigger`, `gsap-timeline`, `gsap-utils` | Official GSAP API, Vue lifecycle, plugin, sequencing, scroll-motion, utility, reduced-motion, and performance guidance | `docs/process/VISUAL_WORKFLOW.md` |
 | `improve-codebase-architecture` | Refactor seams, ownership review, decomposition planning | module-architecture package; `EVENT_WORKFLOW.md` for event seams |
 | `music` | ElevenLabs music-generation prototypes, composition plans, and inpainting experiments | `docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md`; product integration remains separately gated |
 | `pinia` | Store shape, actions, hydration, persistence patterns | owning task package; `EVENT_WORKFLOW.md` for event runtime |
@@ -269,7 +274,7 @@ These workflow docs already wire skills in a clear way:
   - explicit invocation matrix for `pinia`, `vue-pinia-best-practices`, `unit-test-vue-pinia`, `playwright-testing`, `game-engine`, `improve-codebase-architecture`, and `frontend-logic-design`.
 - `docs/process/VISUAL_WORKFLOW.md`
   - explicit installed-skills section;
-  - mutually exclusive routing for `frontend-design` and `frontend-logic-design`, with `image-to-code` reserved for strict source-image work;
+  - narrow, mutually exclusive routing across IA, visual design, existing-surface redesign, searchable UI/UX reference, source-image restoration, and focused GSAP motion work;
   - Playwright plus `@axe-core/playwright` is the single default visual-quality verification path.
 
 ### 7.2 What Must Not Be Lost In Future Cleanup
@@ -333,7 +338,45 @@ After installing or updating project-local skills:
    - why the existing stack was insufficient;
    - the install command needed on another PC.
 
-### 8.1 Chinese Novelist Skill
+### 8.1 Visual Design And Motion Skills
+
+The visual capability additions reviewed on 2026-08-12 are vendored project-local skills:
+
+```text
+Taste Skill source: https://github.com/leonxlnx/taste-skill
+Installed skill: redesign-existing-projects
+
+UI/UX Pro Max source: https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+Installed skill: ui-ux-pro-max
+
+GSAP source: https://github.com/greensock/gsap-skills
+Installed skills: gsap-core, gsap-frameworks, gsap-performance, gsap-plugins,
+                  gsap-scrolltrigger, gsap-timeline, gsap-utils
+```
+
+`redesign-existing-projects` was selected from the Taste Skill repository because SchatPhone is an existing Vue product and the skill is specifically audit-first. Its upstream visual prescriptions remain suggestions: SchatPhone's product boundaries, existing icon family, design tokens, information-depth rules, mobile composition, and accessibility contracts win when they differ.
+
+`ui-ux-pro-max` vendors its searchable CSV data and standard-library Python scripts. The reviewed copy performs local reads and searches. It makes no network calls, reads no credentials, and starts no subprocesses. Its optional `--persist` mode can write a generated `design-system/` tree, so do not use `--persist` during normal SchatPhone work. Existing `docs/design/*` files remain the design authority; any deliberate persistent design-document change must follow the normal documentation workflow.
+
+For a bounded local query, invoke the vendored script from the project root:
+
+```text
+python .agents/skills/ui-ux-pro-max/scripts/search.py "mobile social app" --stack vue
+```
+
+The seven GSAP skills are documentation and implementation guidance only. They do not install the `gsap` npm runtime. Add or update that dependency only in an explicitly approved implementation slice, then run the dependency and behavior validation required by `docs/process/AI_WORK_MODE.md`.
+
+Normal secondary-PC setup must not reinstall these skills from moving upstream branches. Commit and push `.agents/skills`, `skills-lock.json`, and these workflow updates; the other PC receives the reviewed copies through `git pull`, then restarts Codex or reopens the project task.
+
+Use these commands only for a deliberate reviewed refresh of the vendored copies:
+
+```text
+npx.cmd -y skills add https://github.com/leonxlnx/taste-skill --skill redesign-existing-projects --copy
+npx.cmd -y skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git --skill ui-ux-pro-max --copy
+npx.cmd -y skills add https://github.com/greensock/gsap-skills --skill gsap-core gsap-frameworks gsap-performance gsap-plugins gsap-scrolltrigger gsap-timeline gsap-utils --copy
+```
+
+### 8.2 Chinese Novelist Skill
 
 `chinese-novelist` is a repo-local optional writing-support skill.
 
@@ -390,7 +433,7 @@ The `skills-lock.json` entry should record:
 
 After installation, restart Codex or the agent host before expecting the skill to appear in the active skill list.
 
-### 8.2 Image To Code Skill
+### 8.3 Image To Code Skill
 
 `image-to-code` is a repo-local visual production skill.
 

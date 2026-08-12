@@ -38,6 +38,15 @@ const RETIRED_VISUAL_MECHANISMS = [
 const SPECIALIST_SKILLS = [
   'frontend-design',
   'frontend-logic-design',
+  'redesign-existing-projects',
+  'ui-ux-pro-max',
+  'gsap-core',
+  'gsap-frameworks',
+  'gsap-performance',
+  'gsap-plugins',
+  'gsap-scrolltrigger',
+  'gsap-timeline',
+  'gsap-utils',
   'image-to-code',
   'game-engine',
   'unit-test-vue-pinia',
@@ -107,6 +116,12 @@ describe('workflow governance', () => {
       'skip specialist skills for routine CSS, copy, spacing, or accessibility fixes with clear acceptance',
     )
     expect(visualWorkflow).toContain('do not chain visual specialist skills by default')
+    expect(visualWorkflow).toContain(
+      'do not use `ui-ux-pro-max --persist` in the normal visual workflow',
+    )
+    expect(visualWorkflow).toContain(
+      'do not add the `gsap` runtime dependency merely because the skills are installed',
+    )
   })
 
   test('keeps product-grade visual intake and reference adaptation explicit', () => {
@@ -118,11 +133,26 @@ describe('workflow governance', () => {
     expect(visualWorkflow).toContain('### 4.4 Control And Icon Gate')
     expect(visualWorkflow).toContain('### 4.5 Visual Richness Gate')
     expect(visualWorkflow).toContain('### 4.7 Visual Asset And Image-Generation Gate')
-    expect(visualWorkflow).toContain('## 5. Prototype And Reference Discovery')
+    expect(visualWorkflow).toContain('## 5. Work Path And Reference Discovery')
     expect(visualWorkflow).toContain('视觉专项：原型检索')
     expect(designSystem).toContain('A functional scaffold is not a visually complete first implementation')
     expect(designSystem).toContain('User experience is not construction narration')
     expect(designSystem).toContain('Templates are scaffolds, not identities')
+  })
+
+  test('keeps visual work adaptive without turning vague requests into user homework', () => {
+    const visualWorkflow = readProjectFile('docs/process/VISUAL_WORKFLOW.md')
+    const briefTemplate = readProjectFile('docs/templates/VISUAL_REDESIGN_BRIEF_TEMPLATE.md')
+
+    expect(visualWorkflow).toContain('That is valid intake')
+    expect(visualWorkflow).toContain('This is an assistant-owned reasoning artifact')
+    expect(visualWorkflow).toContain('Match expressive complexity to the product role')
+    expect(visualWorkflow).toContain('### 5.1 Direct Product Path')
+    expect(visualWorkflow).toContain('### 5.2 Direction Exploration Path')
+    expect(visualWorkflow).toContain('### 5.3 Experience Prototype Path')
+    expect(visualWorkflow).toContain('does not require Figma or Pencil')
+    expect(visualWorkflow).toContain('it is not automatically the best example')
+    expect(briefTemplate).toContain('optional communication aid, not required user homework')
   })
 
   test('keeps the cross-task execution contract thin and task-agnostic', () => {

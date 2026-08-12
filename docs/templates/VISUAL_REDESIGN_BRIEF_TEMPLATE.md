@@ -2,6 +2,8 @@
 
 Purpose: provide a reusable brief for page beautification, style unification, immersive visual upgrades, and polished UI rebuild work.
 
+This template is an optional communication aid, not required user homework. A user may give only a feature idea, a feeling, a problem, or one reference. The assistant should infer the rest from the current product, owning package, implementation, and design evidence, and should ask only about a choice that would materially change product meaning or direction.
+
 Use this when the main question is:
 
 - beauty
@@ -17,8 +19,30 @@ Best practice:
 - if you cannot describe style clearly, write `like / unlike / key words`
 - if layout may change, say so explicitly
 - for SchatPhone, describe the user entry path before deciding the visual style
+- treat examples as clues, not templates or automatic best practices
+- let the product role determine whether the result should be restrained, expressive, immersive, tactile, or highly interactive
 
-## 1. What You Can Provide
+## 1. Minimal User Request
+
+Any one of these is enough to begin:
+
+```md
+- I need this feature, but I do not know what the UI should be.
+- This page feels plain, dense, generic, or unfinished.
+- I like this example for a particular quality, but do not copy it.
+- I want this experience to feel more intimate, tactile, alive, calm, efficient, or surprising.
+```
+
+The assistant then owns discovery of:
+
+- the surface's role in the larger product journey;
+- what the user should understand, do, and feel;
+- what belongs on the overview versus a detail, management, or execution layer;
+- what should be shown directly through content, imagery, scene, or interaction;
+- which states, controls, assets, motion, sound, haptics, or other sensory treatment are justified;
+- whether the shortest direct implementation path is sufficient or a consequential direction/prototype decision needs user input.
+
+## 2. What You Can Provide
 
 Any subset is useful:
 
@@ -30,7 +54,7 @@ Any subset is useful:
 6. text keywords
 7. "like / unlike" statements
 
-## 2. Quick Version
+## 3. Quick Version
 
 ```md
 # Quick Visual Brief
@@ -46,6 +70,9 @@ Any subset is useful:
 - Current problem:
   e.g. too plain, too messy, too much like a dashboard, hierarchy unclear
 
+- Product role:
+  e.g. supporting utility / frequent tool / core workflow / immersive moment / experience climax
+
 - Desired feeling:
   e.g. more like a real phone, more delicate, more immersive, more like a social app
 
@@ -57,9 +84,12 @@ Any subset is useful:
 
 - Must avoid:
   e.g. too white, too form-like, too office-software-like
+
+- AI should decide:
+  e.g. layout, page depth, visual direction, asset plan, and appropriate interaction complexity
 ```
 
-## 3. Full Version
+## 4. Full Version
 
 ```md
 # Visual Redesign Brief
@@ -95,6 +125,10 @@ Any subset is useful:
 - Key words:
 - Emotion:
   e.g. believable, delicate, restrained, warm, immersive, native
+- Experience promise:
+  e.g. what the user should understand, accomplish, or feel
+- Product importance and interaction intensity:
+  supporting / frequent / core / immersive / high-consequence
 
 ## 5) Visual Details
 - Background style:
@@ -104,6 +138,10 @@ Any subset is useful:
 - Icon style:
 - Motion style:
 - Density:
+- Direct presentation:
+  e.g. people, products, place, scene, collection, status, journey, or atmosphere that should be shown instead of explained
+- Sensory interaction, only when justified:
+  e.g. direct touch, drag, ambient response, sound, haptics, dynamic background
 
 ## 6) Structure Flexibility
 - Can layout change?
@@ -131,7 +169,7 @@ Any subset is useful:
 - Areas where AI should decide:
 ```
 
-## 4. Good Prompt Examples
+## 5. Good Prompt Examples
 
 Example 1:
 
@@ -145,7 +183,8 @@ Example 3:
 
 - "The WorldBook summary inside Chat should not become a system-settings surface. The user is still in Chat, so it should feel like a thread info panel."
 
-## 5. Recommended Use
+## 6. Recommended Use
 
 - use this when the main issue is visual quality or immersion
 - if the main issue is entry confusion, combine it with `ENTRY_NAVIGATION_AUDIT_TEMPLATE.md`
+- do not ask the user to complete the full version when repository evidence and a short request are enough
