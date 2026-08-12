@@ -18,11 +18,15 @@ const normalizeStableId = (value, fallback = '') => {
 
 const normalizeCurrencyList = (value, fallback = []) => {
   const currencies = Array.isArray(value) ? value : fallback
-  return [...new Set(currencies.map((currency) => normalizeCurrencyCode(currency, '')).filter(Boolean))]
+  return [
+    ...new Set(currencies.map((currency) => normalizeCurrencyCode(currency, '')).filter(Boolean)),
+  ]
 }
 
 const normalizeLastFour = (value, fallback = '0000') => {
-  const normalized = String(value ?? '').replace(/\D/g, '').slice(-4)
+  const normalized = String(value ?? '')
+    .replace(/\D/g, '')
+    .slice(-4)
   return normalized.length === 4 ? normalized : fallback
 }
 
@@ -94,6 +98,15 @@ export const WALLET_BANK_INSTITUTIONS = Object.freeze([
     countryCode: 'KR',
     regionZh: '韩国',
     regionEn: 'South Korea',
+  }),
+  Object.freeze({
+    id: 'american-express',
+    nameZh: '美国运通',
+    nameEn: 'American Express',
+    shortName: 'AMEX',
+    countryCode: 'US',
+    regionZh: '美国',
+    regionEn: 'United States',
   }),
 ])
 
@@ -306,6 +319,25 @@ const DEFAULT_PAYMENT_CARDS = Object.freeze([
     sortOrder: 70,
     source: 'system_seed',
   }),
+  Object.freeze({
+    id: 'wallet_card_amex_usd_global_credit',
+    institutionId: 'american-express',
+    accountId: '',
+    nameZh: 'World Passage 环球信用卡',
+    nameEn: 'World Passage Global Credit',
+    kind: 'credit',
+    network: 'Amex',
+    last4: '1881',
+    supportedCurrencies: Object.freeze(['USD', 'CNY', 'KRW', 'EUR', 'JPY', 'HKD']),
+    settlementCurrency: 'USD',
+    creditLimitMinor: 2000000,
+    creditLimitCurrency: 'USD',
+    theme: 'cobalt',
+    status: 'active',
+    isDefault: false,
+    sortOrder: 80,
+    source: 'system_seed',
+  }),
 ])
 
 const normalizeBankAccount = (raw = {}, fallback = {}) => {
@@ -345,7 +377,10 @@ const normalizeBankAccount = (raw = {}, fallback = {}) => {
     currencies,
     primaryCurrency: currencies.includes(primaryCurrency) ? primaryCurrency : currencies[0],
     isDefaultForCurrency: source.isDefaultForCurrency ?? baseline.isDefaultForCurrency ?? false,
-    sortOrder: normalizePositiveInteger(source.sortOrder, normalizePositiveInteger(baseline.sortOrder)),
+    sortOrder: normalizePositiveInteger(
+      source.sortOrder,
+      normalizePositiveInteger(baseline.sortOrder),
+    ),
     source: normalizeStableId(source.source, normalizeStableId(baseline.source, 'user')),
   }
 }
@@ -414,7 +449,10 @@ const normalizePaymentCard = (raw = {}, fallback = {}) => {
     theme,
     status,
     isDefault: source.isDefault ?? baseline.isDefault ?? false,
-    sortOrder: normalizePositiveInteger(source.sortOrder, normalizePositiveInteger(baseline.sortOrder)),
+    sortOrder: normalizePositiveInteger(
+      source.sortOrder,
+      normalizePositiveInteger(baseline.sortOrder),
+    ),
     source: normalizeStableId(source.source, normalizeStableId(baseline.source, 'user')),
   }
 }
@@ -427,7 +465,6 @@ const mergeSeedRecords = (defaults, rawRecords, normalizer) => {
     const normalized = normalizer(record, record)
     if (normalized) byId.set(normalized.id, normalized)
   })
-
   ;(Array.isArray(rawRecords) ? rawRecords : []).forEach((record) => {
     if (!record || typeof record !== 'object') return
     const id = normalizeStableId(record.id, '')
@@ -499,9 +536,10 @@ const createRolePayeeAccountNumber = ({ institutionId, profileId, roleId }) => {
 const createDefaultRolePayeeAccount = ({ profileId = 0, roleId = '' } = {}) => {
   const numericProfileId = normalizePositiveInteger(profileId)
   if (!numericProfileId) return null
-  const preset = numericProfileId === 1
-    ? { institutionId: 'icbc', currency: 'CNY', sortOrder: 10 }
-    : { institutionId: 'kb-kookmin', currency: 'KRW', sortOrder: 20 }
+  const preset =
+    numericProfileId === 1
+      ? { institutionId: 'icbc', currency: 'CNY', sortOrder: 10 }
+      : { institutionId: 'kb-kookmin', currency: 'KRW', sortOrder: 20 }
   const accountNumber = createRolePayeeAccountNumber({
     institutionId: preset.institutionId,
     profileId: numericProfileId,
@@ -580,9 +618,8 @@ export const normalizeRolePayeeAccounts = (rawAccounts = [], context = {}) => {
   if (context.entityType === 'self_profile') return []
   const defaults = createDefaultRolePayeeAccounts(context)
   const defaultsById = new Map(defaults.map((account) => [account.id, account]))
-  const sourceAccounts = Array.isArray(rawAccounts) && rawAccounts.length > 0
-    ? rawAccounts
-    : defaults
+  const sourceAccounts =
+    Array.isArray(rawAccounts) && rawAccounts.length > 0 ? rawAccounts : defaults
   const seenIds = new Set()
   let accounts = sourceAccounts
     .map((account) => {

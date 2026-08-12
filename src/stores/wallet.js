@@ -44,6 +44,7 @@ import {
   normalizeOwnedWalletCardAppearanceIds,
   normalizeSelectedWalletCardAppearances,
   normalizeWalletCardAppearanceProgress,
+  WALLET_CARD_APPEARANCE_OWNERSHIP_VERSION,
 } from '../lib/wallet-card-appearances'
 
 export {
@@ -420,7 +421,8 @@ export const useWalletStore = defineStore('wallet', () => {
       ...item,
       isOwned: owned.has(item.id),
       isSelected: item.id === selectedId,
-      isEquippable: item.assetStatus === 'ready' && owned.has(item.id),
+      isEquippable:
+        item.assetStatus === 'ready' && item.equipSupported !== false && owned.has(item.id),
       progress: cardAppearanceProgress.value[item.id] || null,
     }))
   }
@@ -440,6 +442,7 @@ export const useWalletStore = defineStore('wallet', () => {
       !item ||
       item.paymentCardId !== card.id ||
       item.assetStatus !== 'ready' ||
+      item.equipSupported === false ||
       !ownedCardAppearanceIds.value.includes(item.id)
     ) {
       return null
@@ -1198,6 +1201,7 @@ export const useWalletStore = defineStore('wallet', () => {
     )
     ownedCardAppearanceIds.value = normalizeOwnedWalletCardAppearanceIds(
       sourceObject.ownedCardAppearanceIds,
+      { ownershipVersion: Number(sourceObject.cardAppearanceOwnershipVersion) || 0 },
     )
     selectedAppearanceByCardId.value = normalizeSelectedWalletCardAppearances(
       sourceObject.selectedAppearanceByCardId,
@@ -1258,6 +1262,7 @@ export const useWalletStore = defineStore('wallet', () => {
       supportedCurrencies: [...card.supportedCurrencies],
     })),
     ownedCardAppearanceIds: [...ownedCardAppearanceIds.value],
+    cardAppearanceOwnershipVersion: WALLET_CARD_APPEARANCE_OWNERSHIP_VERSION,
     selectedAppearanceByCardId: { ...selectedAppearanceByCardId.value },
     cardAppearanceProgress: Object.fromEntries(
       Object.entries(cardAppearanceProgress.value).map(([id, progress]) => [id, { ...progress }]),

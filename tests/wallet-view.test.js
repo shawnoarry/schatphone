@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import WalletView from '../src/views/WalletView.vue'
 import { useChatStore } from '../src/stores/chat'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
 
 const DummyView = { template: '<div />' }
@@ -556,22 +557,54 @@ describe('WalletView', () => {
     wrapper.unmount()
   })
 
-  test('renders seven bank cards and exposes the Hana multi-currency credit card', async () => {
+  test('renders eight bank cards and exposes the two global credit cards', async () => {
     const walletStore = useWalletStore()
     const { wrapper } = await mountWalletView()
 
-    expect(wrapper.findAll('[data-testid^="wallet-payment-card-"]')).toHaveLength(7)
+    expect(wrapper.findAll('[data-testid^="wallet-payment-card-"]')).toHaveLength(8)
     expect(
-      wrapper.get('[data-testid="wallet-payment-card-wallet_card_hana_global_credit"]').text(),
+      wrapper.get('[data-testid="wallet-payment-card-wallet_card_hana_global_credit"]').attributes(
+        'aria-label',
+      ),
     ).toContain('Global One')
     expect(
       walletStore.findPaymentCardById('wallet_card_hana_global_credit')?.supportedCurrencies,
     ).toHaveLength(6)
+    expect(
+      wrapper.get('[data-testid="wallet-payment-card-wallet_card_amex_usd_global_credit"]').attributes(
+        'aria-label',
+      ),
+    ).toContain('World Passage')
     expect(wrapper.get('[data-testid="wallet-card-deck"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="wallet-card-carousel"]').exists()).toBe(false)
     expect(wrapper.findAll('[data-wallet-card-id]').at(-1).attributes('data-wallet-card-id')).toBe(
       walletStore.activeCardId,
     )
+
+    await wrapper
+      .get('[data-testid="wallet-payment-card-wallet_card_hana_global_credit"]')
+      .trigger('click')
+    await flushUi()
+    expect(
+      wrapper.get('[data-testid="wallet-card-account-summary-wallet_card_hana_global_credit-home"]').text(),
+    ).toContain('Global One')
+    expect(
+      wrapper.get('[data-testid="wallet-card-account-summary-wallet_card_hana_global_credit-home"]').text(),
+    ).toContain('KRW 15,000,000')
+
+    wrapper.unmount()
+  })
+
+  test('uses the real zen system theme for the Wallet night palette', async () => {
+    const systemStore = useSystemStore()
+    systemStore.setTheme('zen')
+    const { wrapper } = await mountWalletView()
+
+    expect(wrapper.get('[data-app="wallet"]').classes()).toContain('is-night')
+
+    systemStore.setTheme('default')
+    await flushUi()
+    expect(wrapper.get('[data-app="wallet"]').classes()).not.toContain('is-night')
 
     wrapper.unmount()
   })
@@ -599,6 +632,93 @@ describe('WalletView', () => {
     wrapper.unmount()
   })
 
+  test('opens the active card appearance collection directly from Wallet home', async () => {
+    const walletStore = useWalletStore()
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-payment-card-wallet_card_chase_usd"]').trigger('click')
+    await wrapper.get('[data-testid="wallet-open-active-card-appearances"]').trigger('click')
+
+    expect(walletStore.activeCardId).toBe('wallet_card_chase_usd')
+    expect(wrapper.get('[data-testid="wallet-card-appearance-collection"]').text()).toContain(
+      '美元标准卡',
+    )
+    expect(wrapper.get('[data-testid="wallet-header-back"]').text()).toContain('钱包')
+
+    await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-card-deck"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('presents source apps distinctly in recent Wallet activity', async () => {
+    const walletStore = useWalletStore()
+    const shopping = walletStore.addTransaction({
+      type: 'expense',
+      title: 'Shopping order',
+      counterparty: '29CM',
+      amount: '88.00',
+      currency: 'CNY',
+      sourceModule: 'shopping_wallet_expense',
+      sourceId: 'shopping-home-source-1',
+      createdAt: new Date('2026-05-17T07:00:00.000Z').getTime(),
+    })
+    const food = walletStore.addTransaction({
+      type: 'expense',
+      title: 'Dinner order',
+      counterparty: 'Harbor Roast',
+      amount: '36.00',
+      currency: 'CNY',
+      sourceModule: 'food_delivery_wallet_expense',
+      sourceId: 'food-home-source-1',
+      createdAt: new Date('2026-05-17T06:00:00.000Z').getTime(),
+    })
+    const chat = walletStore.addTransaction({
+      type: 'income',
+      title: 'Shared expense',
+      counterparty: 'Eva',
+      amount: '25.00',
+      currency: 'CNY',
+      sourceModule: 'chat_transfer',
+      sourceId: 'chat-home-source-1',
+      createdAt: new Date('2026-05-17T05:00:00.000Z').getTime(),
+    })
+    const { wrapper } = await mountWalletView()
+
+    expect(
+      wrapper.get(`[data-testid="wallet-transaction-source-${shopping.id}"]`).attributes(),
+    ).toMatchObject({
+      'data-source-kind': 'shopping',
+      title: 'Shopping',
+    })
+    expect(
+      wrapper.get(`[data-testid="wallet-transaction-source-${food.id}"]`).attributes(),
+    ).toMatchObject({
+      'data-source-kind': 'food',
+      title: 'Food Delivery',
+    })
+    expect(
+      wrapper.get(`[data-testid="wallet-transaction-source-${chat.id}"]`).attributes(),
+    ).toMatchObject({
+      'data-source-kind': 'chat',
+      title: 'Chat',
+    })
+    expect(
+      wrapper.get(`[data-testid="wallet-open-home-transaction-${shopping.id}"]`).text(),
+    ).toContain('29CM')
+
+    await wrapper
+      .get(`[data-testid="wallet-open-home-transaction-${shopping.id}"]`)
+      .trigger('click')
+    expect(wrapper.get('[data-testid="wallet-transaction-detail"]').text()).toContain('Shopping')
+    expect(wrapper.get('[data-testid="wallet-header-back"]').text()).toContain('钱包')
+
+    await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-card-deck"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
   test('opens one card exclusive appearance catalog and equips an owned design', async () => {
     const walletStore = useWalletStore()
     const { wrapper } = await mountWalletView()
@@ -607,22 +727,114 @@ describe('WalletView', () => {
     await wrapper.get('[data-testid="wallet-open-active-card"]').trigger('click')
 
     const appearanceEntry = wrapper.get('[data-testid="wallet-open-card-appearances"]')
-    expect(appearanceEntry.text()).toContain('2 / 3')
+    expect(appearanceEntry.text()).toContain('2 / 4')
     expect(appearanceEntry.text()).toContain('欧元标准卡')
 
     await appearanceEntry.trigger('click')
     expect(wrapper.get('[data-testid="wallet-card-appearance-collection"]').exists()).toBe(true)
-    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-"]')).toHaveLength(4)
-    expect(wrapper.get('[data-testid="wallet-card-appearance-bnp_sealed_01"]').text()).toContain(
-      '尚未揭晓',
-    )
+    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-"]')).toHaveLength(7)
+    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-placeholder-"]')).toHaveLength(2)
+    expect(wrapper.get('[data-testid="wallet-appearance-six-slot-grid"]').exists()).toBe(true)
     expect(
-      wrapper.find('[data-testid="wallet-equip-card-appearance-bnp_sealed_01"]').exists(),
-    ).toBe(false)
+      wrapper
+        .get('[data-testid="wallet-payment-card-wallet_card_bnp_eur-appearance-current"]')
+        .attributes('data-presentation'),
+    ).toBe('collector')
+    expect(
+      wrapper
+        .get('[data-testid="wallet-payment-card-wallet_card_bnp_eur-appearance-bnp_euro_standard"]')
+        .attributes('data-complete-artwork'),
+    ).toBe('true')
+    expect(
+      wrapper
+        .get(
+          '[data-testid="wallet-payment-card-wallet_card_bnp_eur-appearance-bnp_little_prince_arcade"]',
+        )
+        .attributes('data-complete-artwork'),
+    ).toBe('true')
+    expect(wrapper.get('[data-testid="wallet-card-appearance-bnp_sealed_01"]').text()).toContain(
+      '星辰远航',
+    )
+    expect(wrapper.get('[data-testid="wallet-card-appearance-bnp_sealed_01"]').text()).toContain(
+      '待解锁',
+    )
+    expect(wrapper.find('[data-testid^="wallet-equip-card-appearance-"]').exists()).toBe(false)
 
     await wrapper
-      .get('[data-testid="wallet-equip-card-appearance-bnp_paris_rain"]')
+      .get('[data-testid="wallet-preview-card-appearance-bnp_little_prince_arcade"]')
       .trigger('click')
+    const lockedCollectorPreview = wrapper.get(
+      '[data-testid="wallet-payment-card-wallet_card_bnp_eur-appearance-current"]',
+    )
+    expect(lockedCollectorPreview.attributes('data-presentation')).toBe('collector')
+    expect(lockedCollectorPreview.attributes('data-complete-artwork')).toBe('true')
+    expect(wrapper.get('.wallet-appearance-current__plaque').text()).toContain('待解锁')
+    expect(wrapper.find('[data-testid="wallet-equip-previewed-card-appearance"]').exists()).toBe(
+      false,
+    )
+
+    await wrapper.get('[data-testid="wallet-appearance-preview-account"]').trigger('click')
+    const lockedWalletPreview = wrapper.get(
+      '[data-testid="wallet-payment-card-wallet_card_bnp_eur-appearance-current"]',
+    )
+    expect(lockedWalletPreview.attributes('data-presentation')).toBe('account')
+    expect(lockedWalletPreview.attributes('data-complete-artwork')).toBe('true')
+    expect(lockedWalletPreview.find('.wallet-bank-card__chip').exists()).toBe(false)
+    expect(
+      wrapper
+        .get(
+          '[data-testid="wallet-card-account-summary-wallet_card_bnp_eur-appearance-account"]',
+        )
+        .text(),
+    ).toContain('0.00 EUR')
+    expect(wrapper.get('.wallet-appearance-current__plaque').text()).toContain('待解锁')
+    expect(wrapper.find('[data-testid="wallet-equip-previewed-card-appearance"]').exists()).toBe(
+      false,
+    )
+
+    await wrapper.get('[data-testid="wallet-appearance-preview-collector"]').trigger('click')
+    expect(
+      wrapper
+        .get('[data-testid="wallet-payment-card-wallet_card_bnp_eur-appearance-current"]')
+        .attributes('data-complete-artwork'),
+    ).toBe('true')
+    expect(
+      wrapper.find(
+        '[data-testid="wallet-card-account-summary-wallet_card_bnp_eur-appearance-account"]',
+      ).exists(),
+    ).toBe(false)
+
+    await wrapper.get('[data-testid="wallet-appearance-filter-owned"]').trigger('click')
+    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-placeholder-"]')).toHaveLength(4)
+    expect(wrapper.get('[data-testid="wallet-card-appearance-bnp_paris_rain"]').text()).toContain(
+      'No. 02',
+    )
+    expect(wrapper.find('[data-testid="wallet-card-appearance-bnp_sealed_01"]').exists()).toBe(
+      false,
+    )
+    expect(wrapper.text()).not.toContain('封存栏位')
+
+    await wrapper.get('[data-testid="wallet-appearance-filter-locked"]').trigger('click')
+    expect(
+      wrapper.get('[data-testid="wallet-card-appearance-bnp_little_prince_arcade"]').text(),
+    ).toContain('No. 03')
+
+    await wrapper.get('[data-testid="wallet-appearance-filter-all"]').trigger('click')
+
+    await wrapper
+      .get('[data-testid="wallet-appearance-card-wallet_card_mufg_jpy"]')
+      .trigger('click')
+    expect(
+      wrapper.get('[data-testid="wallet-card-appearance-mufg_moonlit_makie"]').text(),
+    ).toContain('月夜莳绘')
+
+    await wrapper.get('[data-testid="wallet-appearance-card-wallet_card_bnp_eur"]').trigger('click')
+
+    await wrapper.get('[data-testid="wallet-preview-card-appearance-bnp_paris_rain"]').trigger('click')
+    expect(wrapper.get('.wallet-appearance-current__plaque').text()).toContain('正在预览')
+    expect(walletStore.findSelectedCardAppearance('wallet_card_bnp_eur')?.id).toBe('bnp_euro_standard')
+
+    await wrapper.get('[data-testid="wallet-equip-previewed-card-appearance"]').trigger('click')
     await flushUi()
 
     expect(walletStore.findSelectedCardAppearance('wallet_card_bnp_eur')?.id).toBe('bnp_paris_rain')
@@ -637,6 +849,38 @@ describe('WalletView', () => {
 
     await wrapper.get('[data-testid="wallet-header-back"]').trigger('click')
     expect(wrapper.get('[data-testid="wallet-open-card-appearances"]').text()).toContain('巴黎雨夜')
+
+    wrapper.unmount()
+  })
+
+  test('keeps exactly six collection slots per page without dropping a bank larger catalog', async () => {
+    const { wrapper } = await mountWalletView()
+
+    await wrapper.get('[data-testid="wallet-open-active-card-appearances"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="wallet-appearance-six-slot-grid"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-"]')).toHaveLength(7)
+    expect(wrapper.get('[data-testid="wallet-card-appearance-icbc_peony_standard"]').exists()).toBe(
+      true,
+    )
+    expect(wrapper.get('[data-testid="wallet-card-appearance-icbc_secret_garden"]').exists()).toBe(
+      true,
+    )
+    expect(wrapper.find('[data-testid="wallet-card-appearance-icbc_sealed_02"]').exists()).toBe(
+      false,
+    )
+
+    await wrapper.get('[data-testid="wallet-appearance-page-2"]').trigger('click')
+
+    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-"]')).toHaveLength(7)
+    expect(wrapper.get('[data-testid="wallet-card-appearance-icbc_sealed_02"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="wallet-card-appearance-icbc_sealed_03"]').exists()).toBe(true)
+    expect(wrapper.findAll('[data-testid^="wallet-card-appearance-placeholder-"]')).toHaveLength(4)
+    expect(wrapper.get('.wallet-appearance-current__plaque').text()).toContain('宫阙仙鹤')
+
+    await wrapper.get('[data-testid="wallet-preview-card-appearance-icbc_sealed_03"]').trigger('click')
+    expect(wrapper.get('[data-testid="wallet-card-appearance-current-mystery"]').exists()).toBe(true)
+    expect(wrapper.get('.wallet-appearance-current__plaque').text()).toContain('尚未揭晓')
 
     wrapper.unmount()
   })

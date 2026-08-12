@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { WALLET_TRANSACTION_SOURCE_FILTERS, useWalletStore } from '../src/stores/wallet'
 import { createDefaultRolePayeeAccounts } from '../src/lib/wallet-banking'
+import { WALLET_CARD_APPEARANCES } from '../src/lib/wallet-card-appearances'
 
 describe('wallet store', () => {
   beforeEach(() => {
@@ -495,13 +496,13 @@ describe('wallet store', () => {
     expect(store.exchangeRateRows.find((row) => row.code === 'CRD')?.rateToCnyLabel).toBe('0.2500')
   })
 
-  test('seeds one bank account per system currency and a multi-currency credit card', () => {
+  test('seeds one bank account per system currency and two global credit cards', () => {
     const store = useWalletStore()
     store.resetForTesting()
 
-    expect(store.bankInstitutions).toHaveLength(7)
+    expect(store.bankInstitutions).toHaveLength(8)
     expect(store.bankAccounts).toHaveLength(6)
-    expect(store.paymentCards).toHaveLength(7)
+    expect(store.paymentCards).toHaveLength(8)
     expect(store.bankAccounts.map((account) => account.primaryCurrency).sort()).toEqual([
       'CNY',
       'EUR',
@@ -519,6 +520,17 @@ describe('wallet store', () => {
       creditLimitMinor: 15000000,
     })
     expect(creditCard.supportedCurrencies).toEqual(['KRW', 'CNY', 'USD', 'EUR', 'JPY', 'HKD'])
+
+    expect(store.findPaymentCardById('wallet_card_amex_usd_global_credit')).toMatchObject({
+      institutionId: 'american-express',
+      kind: 'credit',
+      settlementCurrency: 'USD',
+      creditLimitMinor: 2000000,
+    })
+    expect(store.findSelectedCardAppearance('wallet_card_amex_usd_global_credit')).toMatchObject({
+      id: 'amex_world_passage',
+      titleEn: 'World Passage',
+    })
   })
 
   test('maps legacy currency-only records into the default bank account without duplicating balances', () => {
@@ -610,9 +622,9 @@ describe('wallet store', () => {
     const mufgCatalog = store.listCardAppearances('wallet_card_mufg_jpy')
     const kbCatalog = store.listCardAppearances('wallet_card_kb_krw')
 
-    expect(bnpCatalog).toHaveLength(3)
+    expect(bnpCatalog).toHaveLength(4)
     expect(mufgCatalog).toHaveLength(3)
-    expect(kbCatalog).toHaveLength(2)
+    expect(kbCatalog).toHaveLength(3)
     expect(bnpCatalog.find((item) => item.id === 'bnp_paris_rain')).toMatchObject({
       paymentCardId: 'wallet_card_bnp_eur',
       assetStatus: 'ready',
@@ -621,14 +633,90 @@ describe('wallet store', () => {
       isEquippable: true,
     })
     expect(bnpCatalog.find((item) => item.id === 'bnp_sealed_01')).toMatchObject({
-      artwork: '',
-      assetStatus: 'pending',
+      titleEn: 'Celestial Voyage',
+      assetStatus: 'ready',
       isOwned: false,
       isEquippable: false,
+    })
+    expect(bnpCatalog.find((item) => item.id === 'bnp_little_prince_arcade')).toMatchObject({
+      paymentCardId: 'wallet_card_bnp_eur',
+      collectorArtwork: expect.stringContaining('bnp-little-prince-arcade-complete.webp'),
+      collectorArtworkVerified: true,
+      isOwned: false,
+      isEquippable: false,
+    })
+    expect(kbCatalog.find((item) => item.id === 'kb_kakao_city')).toMatchObject({
+      paymentCardId: 'wallet_card_kb_krw',
+      collectorArtwork: expect.stringContaining('kb-kakao-city-complete.webp'),
+      collectorArtworkVerified: true,
+    })
+
+    const completeStandardAppearanceIds = [
+      ['wallet_card_icbc_cny', 'icbc_peony_standard'],
+      ['wallet_card_kb_krw', 'kb_seoul_standard'],
+      ['wallet_card_chase_usd', 'chase_usd_standard'],
+      ['wallet_card_bnp_eur', 'bnp_euro_standard'],
+      ['wallet_card_mufg_jpy', 'mufg_jpy_standard'],
+      ['wallet_card_hsbc_hkd', 'hsbc_hkd_standard'],
+      ['wallet_card_hana_global_credit', 'hana_global_standard'],
+    ]
+    completeStandardAppearanceIds.forEach(([cardId, appearanceId]) => {
+      expect(store.listCardAppearances(cardId).find((item) => item.id === appearanceId)).toMatchObject(
+        {
+          artwork: expect.stringContaining('/cards/collector/'),
+          collectorArtwork: expect.stringContaining('/cards/collector/'),
+          collectorArtworkVerified: true,
+        },
+      )
+    })
+    expect(
+      store
+        .listCardAppearances('wallet_card_amex_usd_global_credit')
+        .find((item) => item.id === 'amex_world_passage'),
+    ).toMatchObject({
+      artwork: expect.stringContaining('/cards/amex-world-passage.webp'),
+      collectorArtwork: '',
+      collectorArtworkVerified: false,
+    })
+
+    expect(
+      WALLET_CARD_APPEARANCES.filter((item) => item.collectorArtworkVerified)
+        .map((item) => item.id)
+        .sort(),
+    ).toEqual(
+      [
+        'bnp_little_prince_arcade',
+        'bnp_euro_standard',
+        'chase_peanuts_rooftop',
+        'chase_usd_standard',
+        'hana_global_standard',
+        'hsbc_hkd_standard',
+        'icbc_blue_hour',
+        'icbc_gilded_muse',
+        'icbc_hello_kitty_gift',
+        'icbc_peony_standard',
+        'icbc_secret_garden',
+        'kb_kakao_city',
+        'kb_seoul_standard',
+        'mufg_jpy_standard',
+      ].sort(),
+    )
+    WALLET_CARD_APPEARANCES.filter((item) => item.collectorArtworkVerified).forEach((item) => {
+      expect(item.artwork).toContain('/cards/collector/')
+      expect(item.collectorArtwork).toContain('/cards/collector/')
+      expect(item.artwork).toBe(item.collectorArtwork)
     })
 
     expect(store.equipCardAppearance('wallet_card_mufg_jpy', 'bnp_paris_rain')).toBeNull()
     expect(store.equipCardAppearance('wallet_card_bnp_eur', 'bnp_sealed_01')).toBeNull()
+    expect(store.unlockCardAppearance('bnp_sealed_01')).toMatchObject({
+      id: 'bnp_sealed_01',
+      isOwned: true,
+    })
+    expect(store.equipCardAppearance('wallet_card_bnp_eur', 'bnp_sealed_01')).toMatchObject({
+      id: 'bnp_sealed_01',
+      isSelected: true,
+    })
     expect(store.equipCardAppearance('wallet_card_bnp_eur', 'bnp_paris_rain')).toMatchObject({
       id: 'bnp_paris_rain',
       isSelected: true,
@@ -657,7 +745,7 @@ describe('wallet store', () => {
         ownedCardAppearanceIds: ['bnp_paris_rain'],
         selectedAppearanceByCardId: {
           wallet_card_bnp_eur: 'mufg_moonlit_makie',
-          wallet_card_mufg_jpy: 'mufg_sealed_01',
+          wallet_card_mufg_jpy: 'mufg_retired_preview',
         },
         transactions: [],
       }),
