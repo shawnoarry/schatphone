@@ -1,6 +1,6 @@
 # Contacts Role Hub Information Architecture / 通讯录角色中枢信息架构
 
-Updated: 2026-06-02
+Updated: 2026-08-12
 
 This document defines the product-facing information architecture for `Contacts / 通讯录` as a role-centered hub.
 
@@ -82,7 +82,7 @@ Bound roles can jump to their Chat thread. Unbound Main Role/NPC profiles can ju
 
 The linked-activity summary is only a summary surface. Source records still belong to their owning modules.
 
-Below the summary, preferences, life pattern, and social graph sections now split their entries into Manual details and Event-attached groups. Event-attached entries remain locked from direct deletion and can open the linked memory detail when a `memoryKey` is present. Manual entries can now be edited inline in place. Inside the memory detail itself, Contacts now shows a source-audit layer with per-module source cards, cleanup coverage hints, source record IDs, a short supporting-event list, and lightweight review facts. The memory list itself now supports basic source filtering and sort mode.
+Below the summary, preferences, life pattern, and social graph sections now split their entries into Manual details and Event-attached groups. Event-attached entries remain locked from direct deletion and can open the linked memory detail when a `memoryKey` is present. Manual entries can now be edited inline in place. Inside the memory detail itself, Contacts now shows a source-audit layer with per-module source cards, cleanup coverage hints, source record IDs, a short supporting-event list, and lightweight review facts. The memory list itself supports basic source filtering and sort mode. Above those controls, a read-only memory-care card translates Relationship Runtime's full-set pressure projection into `状态稳定 / 记忆开始变多 / 建议查看`. Suggested memories open the existing detail/source-audit path even when they are outside the current filter or visible list cap; the card never calls AI or changes memory automatically.
 
 ### 3.1 Overview / 概览
 
@@ -128,11 +128,22 @@ Shows:
 
 - memory groups
 - memory summaries
+- a plain-language memory-care state without technical thresholds
+- suggested existing memories that open the normal detail/source-audit flow
 - source/sort review controls
 - source-module hints
 - source-audit cards for module ownership and cleanup coverage
 - supporting relationship-event drill-down
 - delete-memory entry
+
+Memory-care rules:
+
+- this is progressive disclosure: status first, optional suggested-memory drill-down second, existing detail and provenance audit third;
+- status is derived from the complete Relationship Runtime memory set for the selected role, not only the filtered or currently visible rows;
+- Contacts owns the presentation only. Relationship Runtime remains the memory and projection truth owner;
+- no state may imply that an automatic cleanup is pending or has happened;
+- opening a suggestion is read-only until the user deliberately uses an existing review or destructive action;
+- no AI call, automatic summary, rewrite, archival, deletion, or candidate persistence belongs to this surface.
 
 ### 3.6 Social Graph / 人物关系网
 
@@ -266,5 +277,7 @@ Required product meaning:
 - users can understand the role without opening code-like panels
 - users can see the difference between manual and event-attached items
 - users can find memory review in the role detail page
+- users can understand whether memories are settled, growing, or worth reviewing without seeing technical thresholds
+- suggested memories open the existing detail and source evidence without changing stored relationship state
 - users can tell whether this role is already a Chat target
 - dangerous actions are clearly separated from normal editing

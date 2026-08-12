@@ -1,6 +1,6 @@
 # World Setting Architecture Contract
 
-Updated: 2026-07-22
+Updated: 2026-08-12
 
 Status: `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`
 
@@ -51,6 +51,12 @@ A WorldBook-owned definition of fields expected by a world. Contacts owns the co
 
 A capability definition owned by the World Pack Module. It may provide reviewed app bindings, service-account templates, terminology, economy suggestions, relationship registries, and compatibility evidence. It may recommend related setting material, but it cannot own or silently activate that material.
 
+### World Suite
+
+A convenience manifest that coordinates installation of independently installable owner resources for one coherent experience. A suite may reference Book assets, WorldBook candidates, profile templates, capability Packs, Map packs, App Store entries, commerce facades, service-account templates, Event Runtime packs, Calendar templates, Music catalogs, Gallery asset packs, or later Mini Scene profiles. It owns only the manifest, dependency/order metadata, version expectations, origin tracking, bounded installed-resource evidence, and resumable install/update/uninstall checkpoints. Every referenced resource keeps its native owner, stable owner resource ID, independent installation path, activation state, records, and history.
+
+`src/lib/world-suite-manifest.js` provides pure planning, `src/lib/world-suite-inventory.js` normalizes the persistent coordination evidence, and `src/lib/world-suite-owner-adapters.js` executes either a whole Suite plan or one independent resource plan through the same native Owner Adapter Interface. Native truth is inspected before and after mutations, so a retry can repair a lost install/remove checkpoint without repeating an already completed Owner mutation; partial operations retain completed/pending resource IDs for safe retry. `src/lib/book-world-suite-owner-adapter.js` is the first concrete production Adapter: Book Catalog resolves the asset body, Book persists one native asset plus explicit resource/catalog/version/fingerprint provenance, and independent/Suite origins share it. Existing built-ins and user assets are not claimed, WorldBook links protect current/history use, Catalog version remains separate from Book edit version, and failed legacy or Repository writes roll in-memory truth back. No built-in K-pop Suite, UI, activation command, or non-Book production Adapter exists yet.
+
 ### World Context Snapshot
 
 An immutable, consumer-specific projection resolved through one Interface. It separates identity, narrative context, structured context, profile-template context, capabilities, and diagnostics. Consuming modules read this snapshot instead of interpreting mutable `systemStore` fields directly.
@@ -70,6 +76,10 @@ The current implementation is a valid single-world Stage W1 compatibility baseli
 | World Packs can retain legacy `bookSourceLinkIds`, `encyclopediaEntryIds`, and `profileTemplateIds`. | `src/lib/world-pack-schema.js` | Missing optional references are non-blocking diagnostics, never activation ownership. |
 | Pack activation changes capability state only; it neither toggles content nor blocks on missing optional content references. | `src/stores/system.js`, `src/lib/world-pack-schema.js` | This non-binding behavior must be preserved. |
 | Book assets/categories are stored in the Book section while WorldBook links, Packs, entries, and templates are stored in the System user section. | `src/composables/useSettingsBackupWorkflow.js` | Complete backup/restore must verify both owners and their cross-references as one activation unit. |
+| World Suite coordination evidence is stored under `user.worldSuiteInventory` in the existing System carrier and current complete-backup `user` section. | `src/stores/system.js`, `src/lib/world-suite-inventory.js` | The inventory is durable and resumable but cannot contain native resource bodies or activation truth; legacy saves normalize to empty. |
+| Book Catalog/Suite installation uses one Book-native Adapter and transactional managed-mutation Interface. | `src/lib/book-world-suite-owner-adapter.js`, `src/stores/book.js` | Catalog text never enters the manifest or inventory; Book persistence, capacity, collision, user-edit, and WorldBook-reference rules remain authoritative for independent and Suite installs alike. |
+| Gallery and Map Catalog/Suite installation have production-backed Owner Adapters over native transactional mutation Interfaces. | `src/lib/gallery-world-suite-owner-adapter.js`, `src/lib/map-world-suite-owner-adapter.js`, `src/stores/gallery.js`, `src/stores/map.js` | Gallery owns stable folders/assets and reference-safe lifecycle; Map owns map metadata/authored places and only consumes a Gallery asset ID. Both share independent/Suite execution, explicit provenance, collision/edit/use checks, and exact native rollback. Map additionally protects topology and Map/Event/Chat current-history references. |
+| One typed Catalog and explicitly constructed product installation runtime compose the verified Book, Gallery, and Map owners without activating them. | `src/lib/world-resource-catalog.js`, `src/lib/map-gallery-world-suite-runtime.js`, `src/lib/production-world-suite-runtime.js` | Catalog bodies stay outside manifests/inventory; Gallery installs before Map and uninstalls after it; System persistence receipts gate every coordination checkpoint. There is no built-in K-pop registration, startup caller, UI, activation, world binding, relocation, or Journey mutation. The default standalone Map inspection remains read-only. |
 
 One remaining documentation label is legacy-imprecise and must not guide new code: the persistence inventory describes Book data as including WorldBook source links even though links are physically and logically WorldBook-owned.
 
@@ -84,6 +94,7 @@ One remaining documentation label is legacy-imprecise and must not guide new cod
 | Profile-template definitions and world association | WorldBook | Contacts fills concrete values without changing template ownership. |
 | Concrete user/role/NPC profile values | Contacts | WorldBook defines expected fields only. |
 | Pack definitions, compatibility, app bindings, service templates, terminology | World Pack Module | WorldBook records reviewed per-world enablement. |
+| World Suite manifest, dependency order, version expectations, install origins, and resumable checkpoints | World Suite Module | Native owners install, update, enable, disable, and remove only their own resources; independent and Suite paths reuse the same Adapter. |
 | Per-world Pack enablement and review evidence | WorldBook | Pack and consuming modules read the confirmed result. |
 | Module records such as messages, routes, events, schedules, orders, and relationship truth | The source module named by the record | Read world context but never move record truth into WorldBook. |
 | World-context projection and diagnostics | World Setting Module | Adapters resolve owner data behind one Interface. |
@@ -171,6 +182,13 @@ Existing profile-template values that use a Pack ID remain discoverable through 
 6. Pack catalog presence, compatibility recommendation, enablement, or activation cannot toggle any setting layer.
 7. Legacy Pack content-reference fields may be displayed as review evidence. They cannot block a capability-only Pack merely because optional content is absent, and new Pack definitions must not use those fields as required content ownership.
 8. Mini Scene profile binding and per-module mode remain separate explicit choices. A world, Book asset, or Pack cannot silently enable a popup.
+9. Installing a World Suite and enabling its resources are separate actions. A suite may recommend enablement but cannot silently activate WorldBook text, a capability Pack, a Map pack, an App entry, an Event pack, or Mini Scene behavior.
+10. Every Suite resource must remain independently installable through its native product entry, such as Book import, App Store installation, Map import/selection, or the owning module's catalog. The Suite reuses the same owner installation Interface rather than maintaining a second copy.
+11. Uninstalling a Suite first detaches that Suite's origin. Shared/independently installed resources, user-modified resources, resources still in use, and resources referenced by history are retained. Existing messages, orders, routes, events, relationships, memories, schedules, and other owner histories are never deleted by Suite uninstall.
+12. An installed-resource row is not installation truth by itself. The native Owner Adapter must re-inspect the resource after install, update, keep, or remove, and the coordination inventory advances only after that evidence matches the manifest's native ID and required version.
+13. Interrupted Suite operations retain completed and pending resource IDs. Retry recomputes the plan from native installed evidence and cannot replay a completed owner command merely because the former batch did not finish.
+14. A Book Catalog resource is installed only when source kind, logical resource ID, Catalog ID, Catalog version, and installed managed fingerprint match. A same-ID built-in, user, or other-resource asset is a collision, not installed evidence.
+15. Book Catalog updates require a pristine managed asset with no enabled WorldBook link; removal additionally requires zero historical WorldBook links. Book favorite, status, and locked state remain Book-owned and survive a pristine Catalog update.
 
 ## 7. Consumer Contract
 
@@ -197,6 +215,7 @@ Every consumer declares a stable `consumerKey`. Consumer-specific limits and pro
 5. A missing Book asset does not cause silent substitution, link deletion, Pack fallback, or newest-timestamp arbitration. The unresolved link and its diagnostic evidence remain reviewable.
 6. `worldId`, Book asset IDs, source-link IDs, entry IDs, template IDs, and Pack IDs remain stable across successful complete restore.
 7. Cross-container restore transfers one current save. It does not merge two saves or discover another container automatically.
+8. The current complete-backup `user` section includes `worldSuiteInventory`. Legacy v1/v2 backups have no Suite provenance and restore an empty inventory; they are never upgraded into a claim that current built-in K-pop defaults were installed by a Suite.
 
 ### Standalone Book export
 

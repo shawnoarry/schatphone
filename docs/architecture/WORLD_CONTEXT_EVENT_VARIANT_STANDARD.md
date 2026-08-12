@@ -117,7 +117,7 @@ Example:
     adapterKey: 'food_delivery.add_order_event',
     payloadSchema: 'FoodDeliveryOrderEventInput'
   },
-  surfaces: ['food_delivery.order_card', 'chat.food_delivery_service']
+  surfaces: ['food_delivery.order_timeline', 'chat.food_delivery_service']
 }
 ```
 
@@ -294,7 +294,7 @@ Recommended adapter result:
   variantId: 'food_delivery.rider_delay.sci_fi.drone_lane_queue.v1',
   targetId: 'food_order_123',
   mutationId: 'food_event_456',
-  visibleSurface: 'food_delivery.order_card'
+  visibleSurface: 'food_delivery.order_timeline'
 }
 ```
 

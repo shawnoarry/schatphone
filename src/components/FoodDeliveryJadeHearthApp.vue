@@ -18,7 +18,6 @@ const props = defineProps({
   activeOrder: { type: Object, default: null },
   activeOrderEvents: { type: Array, default: () => [] },
   activeWalletSuggestion: { type: Object, default: null },
-  eventFeedback: { type: String, default: '' },
   page: { type: String, default: 'home' },
   etaText: { type: String, default: '' },
   feeText: { type: String, default: '' },
@@ -34,7 +33,6 @@ const emit = defineEmits([
   'add-item',
   'update-cart',
   'checkout',
-  'check-update',
   'mark-delivered',
   'record-wallet',
 ])
@@ -1257,16 +1255,6 @@ watch(
 
               <div class="mt-4 flex flex-wrap gap-2">
                 <button
-                  v-if="activeOrder.status !== 'cancelled'"
-                  type="button"
-                  class="inline-flex min-h-11 items-center gap-2 border border-[var(--jade-green)] px-3 text-[11px] font-black text-[var(--jade-green)]"
-                  :data-testid="`food-delivery-jade-check-update-${activeOrder.id}`"
-                  @click="emit('check-update', activeOrder.id)"
-                >
-                  <i class="fas fa-arrows-rotate text-[10px]"></i>
-                  {{ t('查看配送更新', 'Check for update') }}
-                </button>
-                <button
                   v-if="activeOrder.status !== 'delivered' && activeOrder.status !== 'cancelled'"
                   type="button"
                   class="inline-flex min-h-11 items-center gap-2 bg-[var(--jade-green)] px-3 text-[11px] font-black text-white"
@@ -1277,15 +1265,6 @@ watch(
                   {{ t('确认送达', 'Confirm delivery') }}
                 </button>
               </div>
-
-              <p
-                v-if="eventFeedback"
-                class="mt-3 break-words text-[11px] font-bold text-[var(--jade-cinnabar)]"
-                data-testid="food-delivery-jade-event-feedback"
-                aria-live="polite"
-              >
-                {{ eventFeedback }}
-              </p>
 
               <div v-if="activeOrderEvents.length" class="mt-4 divide-y divide-[var(--jade-line)]">
                 <article

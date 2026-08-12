@@ -1,4 +1,5 @@
 import { extractAssistantPayloadText, parseAssistantJsonPayload } from '../chat-response'
+import { createAiContextEnvelope } from '../ai-context-envelope'
 import {
   EVENT_INSTANCE_LIFECYCLE,
   EVENT_TEXT_FAILURE_CODE,
@@ -140,13 +141,17 @@ const serializeBoundedRequest = (request) => {
     : null
 }
 
-const buildSystemPrompt = () =>
-  [
+const buildPromptContext = () =>
+  createAiContextEnvelope({
+    stableBlocks: [[
     'You compose display text for one SchatPhone event whose logic is already fixed locally.',
     'Return JSON only with keys: locale, title, opening, environment, dialogue, choiceLabels, consequenceByOutcomeId.',
     'Use every supplied choice ID exactly once and never invent choices, outcomes, participants, effects, places, facts, commands, HTML, or URLs.',
     'Do not change money, relationships, schedules, inventory, location, or any other canonical value.',
-  ].join(' ')
+    ].join(' ')],
+    cacheNamespace: 'event-text',
+    cacheIdentity: 'composer',
+  })
 
 const createFallbackText = (instanceOrText, failureCode, provenance = {}) => {
   const baseText = instanceOrText?.text || instanceOrText
@@ -297,12 +302,14 @@ export const composeEventTextV1 = async ({
   ]
 
   try {
+    const promptContext = buildPromptContext()
     const response = await callWithTimeout(
       providerCall,
       {
         eventRequest: boundedRequest.request,
         messages: [{ role: 'user', content: boundedRequest.serialized }],
-        systemPrompt: buildSystemPrompt(),
+        systemPrompt: promptContext.systemPrompt,
+        contextEnvelope: promptContext,
         settings: providerSettings,
       },
       Math.min(

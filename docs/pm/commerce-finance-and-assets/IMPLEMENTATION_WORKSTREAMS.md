@@ -23,6 +23,8 @@ Updated: 2026-08-10
 - service-account pushes
 - route context consumption
 - order and order-event notifications into the Food Delivery Dispatch service account
+- EVE-4A is a completed technical spike with product acceptance withdrawn: no Food Delivery Event Surface host, `Dispatch brief`, expansion/acknowledgement, or manual query-that-manufactures-delay remains
+- keep exact one-to-one owner-validated order/event/runtime-log lineage; legitimate Runtime delivery exceptions update the Food Delivery-owned ETA and native timeline, then use the existing Chat dispatch notification
 - World Pack dispatch context for Food Delivery, including built-in `救援调度` and confirmed nonstandard `dispatch_board` entries, currently limited to hero/banner, Nearby default view, and route context preservation
 - App Store can expose Food Delivery restaurants as `food_delivery`-bound folder mini-app facades and control whether they appear in the Food Delivery folder list, but Food Delivery still owns restaurants, menus, cart, checkout, orders, delivery events, browsing filters, favorites/recent lists, and service notifications
 - App Store `Add mini app` can hand off to Food Delivery with `createShop=1`; the real restaurant record is created by Food Delivery's custom restaurant flow
@@ -80,3 +82,4 @@ Treat these as bugs:
 10. A card limit is counted as cash, or changing the display currency moves balances between bank accounts
 11. A Chat account card, AI reply, or account request deducts money before explicit Wallet confirmation
 12. A confirmed role transfer is treated as proof of an NPC-owned spendable balance or triggers automatic currency conversion
+13. Food Delivery adds a generic Event Surface instead of using native fulfillment state, accepts injected/reused runtime lineage, or lets an update query manufacture a delivery exception

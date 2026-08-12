@@ -9,6 +9,7 @@ Updated: 2026-08-10
 - condition evaluator
 - simulation store
 - adapter seams
+- body-free Map-pack current/history reference projection for World Suite safety; Event Runtime retains every event body and exposes only stable reference IDs plus `mapPackId`
 - landed Chat social-event review seam for role-initiated greeting, refusal, block, restore, and unblock proposals, including Chat AI output and the narrow foreground/session runtime greeting source
 
 ## 2. Workstream B: Relationship Runtime
@@ -62,6 +63,7 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 
 ## 6. Workstream F: Event Surface Projection And Host Entries
 
+- distinguish event-chain participation from Event Surface registration: owner-native messages, state changes, calls, posts, feeds, journeys, and Map encounters may carry a chain without a generic card
 - EVE-1 is landed as a pure bounded projection over existing Map Journey/Chat social proposal and runtime-log truth plus caller-supplied current source references; it adds no Event route and no duplicate persistent record
 - strict stable-place, provider-neutral geographic, and normalized-canvas anchors, expansion targets, allowlisted request descriptors, source staleness, bilingual/accessibility copy, and deterministic output are normalized in `src/lib/simulation/event-surface-projection.js`
 - host registration remains empty by default in `src/lib/simulation/event-surface-host-registry.js`; Map, Chat, Calendar, World Hub, and later callers must opt in with bounded source/state/anchor/expansion/action capabilities
@@ -69,6 +71,10 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - before a location-aware family is promoted, name its authored activation scope, discoverability, accepted position provenance, place-entry requirement, module permission, intensity behavior, and no-event path; do not overload EVE-1 stale-source availability with eligibility
 - ordinary place focus and event-pin selection remain distinct host paths; a place card has no permanent Event button and Map `Enter` remains a Map-owned transition
 - EVE-3 is complete: Event Notebook reads owner/runtime truth through stable refs, fails safely when linked hot records rotate, and retains exact notes without becoming a second event store, Reminders queue, Calendar plan list, or Cheats editing surface
+- EVE-4A is `TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN`: remove the Food Delivery production host, order-card `Dispatch brief`, local expansion/acknowledgement, and manual query-that-manufactures-delay path
+- preserve exact one-to-one Food Delivery order/event/runtime-log lineage, reject injected/reused/mismatched links, and keep lineage linking inside the Food Delivery owner action
+- legitimate `rider_delay` or `eta_update` execution updates Food Delivery's canonical order ETA, appends the native order timeline, and may push the existing Chat dispatch notification; it is not a no-mutation projection
+- reset later EVE-4 work to an owner-approved causal chain with real native behavior; do not treat a generic card as evidence that a Module participates in the event ecosystem
 - richer expansion uses the Mini Scene Interface only after its separate persistence, Settings, and Presenter gates
 
 ## 7. Workstream G: Map Journey Checkpoint Collaboration
@@ -128,3 +134,4 @@ Treat these as bugs:
 17. a host event card becomes a second event record or an authorization token
 18. a Map event anchor creates or mutates place, pin, discovery, role-position, or journey truth
 19. World Hub event review becomes a general task/reminder system or silently gains Cheats privileges
+20. a production host accepts `host_detail` expansion for another host, or a source record can inject/reuse a runtime-log ID and pass it off as exact lineage

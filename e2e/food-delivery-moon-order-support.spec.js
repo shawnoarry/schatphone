@@ -126,7 +126,8 @@ test('Moon Bistro order support stays folded until opened and records a delivere
   await expect(page.getByTestId('food-delivery-map-handoff-distance')).toContainText(/min/)
 
   const drawerText = await drawer.innerText()
-  expect(drawerText).toMatch(/Check for update|查看配送更新/)
+  expect(drawerText).not.toMatch(/Check for update|查看配送更新/)
+  expect(drawerText).not.toMatch(/Dispatch brief|配送简报/)
   expect(drawerText).toMatch(/Confirm delivery|确认已送达/)
   expect(drawerText).toMatch(/Remove from history|从记录中移除/)
   expect(drawerText).toMatch(/Save to Wallet|保存到 Wallet/)
@@ -140,10 +141,11 @@ test('Moon Bistro order support stays folded until opened and records a delivere
   await expect(orderCard).toContainText('Moon Bistro')
   await expect(orderCard).toContainText(itemTitle)
 
-  const checkForUpdate = page.getByTestId(`food-delivery-trigger-event-${orderId}`)
+  await expect(page.getByTestId(`food-delivery-trigger-event-${orderId}`)).toHaveCount(0)
+  await expect(page.locator('[data-testid^="food-delivery-event-surface-"]')).toHaveCount(0)
   const confirmDelivery = page.getByTestId(`food-delivery-mark-delivered-${orderId}`)
   const removeFromHistory = page.getByTestId(`food-delivery-delete-order-${orderId}`)
-  for (const control of [checkForUpdate, confirmDelivery, removeFromHistory]) {
+  for (const control of [confirmDelivery, removeFromHistory]) {
     await expectMinimumControlSize(control)
   }
 
@@ -151,8 +153,8 @@ test('Moon Bistro order support stays folded until opened and records a delivere
     const style = window.getComputedStyle(element)
     return { boxShadow: style.boxShadow, outlineStyle: style.outlineStyle }
   })
-  await checkForUpdate.focus()
-  await page.keyboard.press('Tab')
+  await removeFromHistory.focus()
+  await page.keyboard.press('Shift+Tab')
   await expect(confirmDelivery).toBeFocused()
   const focusedStyle = await confirmDelivery.evaluate((element) => {
     const style = window.getComputedStyle(element)
@@ -163,22 +165,9 @@ test('Moon Bistro order support stays folded until opened and records a delivere
       focusedStyle.outlineStyle !== unfocusedStyle.outlineStyle,
     'keyboard focus should visibly change the control treatment',
   ).toBe(true)
-  expect(await checkForUpdate.evaluate((element) => getComputedStyle(element).transitionProperty)).toBe(
-    'none',
-  )
-
-  await checkForUpdate.click()
-  await expect(page.getByTestId('food-delivery-event-feedback')).toContainText(
-    /Delivery update added|配送更新已添加/,
-  )
-  await expect(
-    orderCard.locator('[data-testid^="food-delivery-order-event-"]'),
-  ).toHaveCount(1)
-  const mapSnapshot = orderCard
-    .locator('aside[data-testid^="food-delivery-event-map-context-"]')
-    .first()
-  await expect(mapSnapshot).toContainText(/Delivery route|配送路线/)
-  await expect(mapSnapshot).toContainText(/min/)
+  expect(
+    await confirmDelivery.evaluate((element) => getComputedStyle(element).transitionProperty),
+  ).toBe('none')
 
   const walletBefore = await readPersistedData(page, WALLET_STORAGE_KEY)
   const walletCountBefore = walletBefore?.transactions?.length || 0

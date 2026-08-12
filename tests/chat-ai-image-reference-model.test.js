@@ -166,8 +166,8 @@ describe('Chat AI image reference model interface', () => {
       label: 'Large Context',
       sourceUrl: '',
     })
-    expect(references[0].note).toContain('large local image')
-    expect(references[0].note).toContain('Local image too large')
+    expect(references[0].note).toBe('large local image')
+    expect(references[0].note).not.toContain('Local image too large')
     expect(references[1]).toMatchObject({
       label: 'Explicit Context',
       note: 'explicit caption',
@@ -175,7 +175,7 @@ describe('Chat AI image reference model interface', () => {
     })
     expect(references[2]).toMatchObject({
       label: 'Resolved Context',
-      note: 'From chat context',
+      note: 'Shared by the user in this conversation',
       sourceUrl: 'data:image/png;base64,context_resolved',
     })
     expect(galleryStore.getAssetAiReferenceUrl).toHaveBeenCalledTimes(2)
@@ -220,14 +220,14 @@ describe('Chat AI image reference model interface', () => {
       'folder_dynamic',
     ])
     expect(references.find((item) => item.assetId === 'role_emoji')).toBeUndefined()
-    expect(references[0].note).toBe('From role-bound asset (Mina)')
-    expect(references[2].note).toBe('From role-bound asset (Reference · Mina)')
+    expect(references[0].note).toBe('Visual reference for Mina')
+    expect(references[2].note).toBe('Visual reference for Mina (Reference)')
     expect(references[3]).toMatchObject({
       sourceUrl: '',
       label: 'Folder Dynamic',
     })
-    expect(references[3].note).toContain('Dynamic · Mina')
-    expect(references[3].note).toContain('Local image too large')
+    expect(references[3].note).toBe('Visual reference for Mina (Dynamic)')
+    expect(references[3].note).not.toContain('Local image too large')
     expect(galleryStore.getAssetAiReferenceUrl).toHaveBeenCalledWith('pack_ref', {
       maxBytes: CHAT_AI_IMAGE_REFERENCE_LIMITS.maxReferenceImageBytes,
     })

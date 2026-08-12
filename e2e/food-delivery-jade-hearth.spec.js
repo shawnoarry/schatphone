@@ -174,7 +174,10 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
   )
   const orderId = new URL(page.url()).hash.match(/shopOrderId=([^&]+)/)?.[1] || ''
   expect(orderId).not.toBe('')
-  await expect(page.getByTestId(`food-delivery-jade-check-update-${orderId}`)).toBeVisible()
+  await expect(page.getByTestId(`food-delivery-jade-check-update-${orderId}`)).toHaveCount(0)
+  await expect(page.getByTestId('food-delivery-jade-order-page')).not.toContainText(
+    /Dispatch brief|配送简报/,
+  )
   await page.getByTestId(`food-delivery-jade-mark-delivered-${orderId}`).click()
   await expect(page.getByTestId(`food-delivery-jade-wallet-${orderId}`)).toBeVisible()
   await page.getByTestId(`food-delivery-jade-record-wallet-${orderId}`).click()

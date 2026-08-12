@@ -1,6 +1,8 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { selectMemoryRecall } from '../lib/memory-recall'
+import { projectMemoryConsolidationPressure } from '../lib/memory-consolidation-pressure'
 
 export const RELATIONSHIP_RUNTIME_STORAGE_KEY = 'store:relationship-runtime'
 export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 1
@@ -695,6 +697,34 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     }
   }
 
+  const projectMemoryConsolidationPressureForTarget = (target = {}, options = {}) => {
+    const ownerKey = buildRelationshipEntityKey(target)
+    const ownerKind = ownerKey.startsWith('role:')
+      ? 'role'
+      : ownerKey.startsWith('contact:')
+        ? 'contact'
+        : normalizeText(target?.kind, 'relationship_target', 40)
+    const memories = listMemoryAggregatesForTarget(
+      target,
+      RELATIONSHIP_MEMORY_AGGREGATE_LIMIT,
+      { sortMode: 'recent' },
+    ).map((memory) => {
+      const detail = getMemoryGroupDetail(target, memory.memoryKey)
+      return {
+        ...memory,
+        sourceRefs: Array.isArray(detail?.sourceRefs)
+          ? detail.sourceRefs.map((ref) => ({ ...ref }))
+          : [],
+      }
+    })
+    return projectMemoryConsolidationPressure({
+      ownerKind,
+      ownerKey,
+      memories,
+      thresholds: options?.thresholds,
+    })
+  }
+
   const updateMemoryReviewForTarget = (target = {}, memoryKey = '', updates = {}) => {
     const key = buildRelationshipEntityKey(target)
     const normalizedMemoryKey = normalizeMemoryKey(memoryKey)
@@ -1175,66 +1205,77 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     }
   }
 
-  const buildPromptContextForTarget = (target = {}, options = {}) => {
-    if (!settings.value.enabled && options.includeDisabled !== true) return ''
+  const recallMemoriesForTarget = (target = {}, options = {}) => {
+    if (!settings.value.enabled && options.includeDisabled !== true) {
+      return {
+        items: [],
+        text: '',
+        candidateCount: 0,
+        relevantCount: 0,
+        querySignalCount: 0,
+        characterCount: 0,
+      }
+    }
+    const memories = listMemoryAggregatesForTarget(
+      target,
+      RELATIONSHIP_MEMORY_AGGREGATE_LIMIT,
+      { sortMode: 'recent' },
+    )
+    return selectMemoryRecall({
+      memories,
+      queryText: options.queryText,
+      limit: options.limit,
+      characterBudget: options.characterBudget,
+      includeArchived: options.includeArchivedMemories === true,
+    })
+  }
+
+  const buildPromptProjectionForTarget = (target = {}, options = {}) => {
+    if (!settings.value.enabled && options.includeDisabled !== true) {
+      return { text: '', memoryRecall: recallMemoriesForTarget(target, options) }
+    }
     const snapshot = summarizeEntityForTarget(target, {
       eventLimit: options.eventLimit ?? 3,
       memoryLimit: options.memoryLimit ?? 3,
       includeArchivedMemories: options.includeArchivedMemories === true,
     })
-    if (!snapshot) return ''
-    if (!snapshot.exists && options.includeNeutral !== true) return ''
+    if (!snapshot || (!snapshot.exists && options.includeNeutral !== true)) {
+      return { text: '', memoryRecall: recallMemoriesForTarget(target, options) }
+    }
 
     const metrics = snapshot.metrics
     const milestones = snapshot.milestones.map((item) => item.label).slice(0, 3).join('; ') || 'none'
     const traits = snapshot.growthTraits.slice(0, 6).join(', ') || 'none'
-    const hiddenArchivedMemoryKeys =
-      options.includeArchivedMemories === true
-        ? new Set()
-        : new Set(
-            snapshot.memorySummaries
-              .filter((item) => item.reviewStatus === RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED)
-              .map((item) => item.memoryKey)
-              .filter(Boolean),
-          )
     const recentEvents = summarizeEventsForPrompt(
       snapshot.recentEvents.filter(
         (event) =>
           event.status === RELATIONSHIP_EVENT_STATUS.APPLIED &&
-          event.effectApplied !== false &&
-          (!event.memoryKey || !hiddenArchivedMemoryKeys.has(event.memoryKey)),
+          event.effectApplied !== false,
       ),
     )
-    const promptMemorySummaries = snapshot.memorySummaries
-      .filter((item) =>
-        options.includeArchivedMemories === true
-          ? true
-          : item.reviewStatus !== RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
-      )
-      .sort((left, right) => compareMemorySummaryEntries(left, right))
-    const memories = promptMemorySummaries.length > 0
-      ? promptMemorySummaries
-          .slice(0, 3)
-          .map((item) =>
-            item.recallSummary ||
-            item.displaySummary ||
-            item.primarySummary ||
-            item.latestSummary ||
-            item.memoryKey ||
-            'memory',
-          )
-          .join('; ')
-      : 'none'
+    const memoryRecall = recallMemoriesForTarget(target, {
+      queryText: options.recallQuery ?? options.queryText,
+      limit: options.memoryLimit ?? 3,
+      characterBudget: options.memoryCharacterBudget,
+      includeArchivedMemories: options.includeArchivedMemories === true,
+    })
+    const memories = memoryRecall.text || 'none'
 
-    return [
-      `Relationship runtime snapshot: ${snapshot.displayName || 'unknown target'}.`,
-      `Stage: ${snapshot.relationshipStage}; metrics affinity/trust/intimacy/tension/dependency: ${metrics.affinity}/${metrics.trust}/${metrics.intimacy}/${metrics.tension}/${metrics.dependency}.`,
-      `Milestones: ${milestones}.`,
-      `Growth traits: ${traits}.`,
-      `Memory summaries: ${memories}.`,
-      `Recent relationship events: ${recentEvents}.`,
-    ].join('\n')
+    return {
+      text: [
+        `Relationship runtime snapshot: ${snapshot.displayName || 'unknown target'}.`,
+        `Stage: ${snapshot.relationshipStage}; metrics affinity/trust/intimacy/tension/dependency: ${metrics.affinity}/${metrics.trust}/${metrics.intimacy}/${metrics.tension}/${metrics.dependency}.`,
+        `Milestones: ${milestones}.`,
+        `Growth traits: ${traits}.`,
+        `Memory summaries: ${memories}.`,
+        `Recent relationship events: ${recentEvents}.`,
+      ].join('\n'),
+      memoryRecall,
+    }
   }
+
+  const buildPromptContextForTarget = (target = {}, options = {}) =>
+    buildPromptProjectionForTarget(target, options).text
 
   const setRuntimeEnabled = (enabled) => {
     settings.value.enabled = enabled !== false
@@ -1373,6 +1414,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     listMemoryGroupsForTarget,
     listSourceRefsForTarget,
     getMemoryGroupDetail,
+    projectMemoryConsolidationPressureForTarget,
     updateMemoryReviewForTarget,
     upsertEntity,
     recordRelationshipFact,
@@ -1385,6 +1427,8 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     resetRelationshipForTarget,
     deleteRuntimeForTarget,
     summarizeEntityForTarget,
+    recallMemoriesForTarget,
+    buildPromptProjectionForTarget,
     buildPromptContextForTarget,
     setRuntimeEnabled,
     setAutoApplyLowImpact,

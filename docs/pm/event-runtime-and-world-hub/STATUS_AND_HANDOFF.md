@@ -6,7 +6,7 @@ This file is the handoff page for event runtime, relationship runtime, World Hub
 
 ## 1. Current Status
 
-Status: `PARTIAL_DONE / EVE-3_DONE_2026-08-12`
+Status: `PARTIAL_DONE / EVE-4A_TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN / EVE-4_RESET_2026-08-12`
 
 Confirmed persistence dependency for future work:
 
@@ -15,6 +15,7 @@ Confirmed persistence dependency for future work:
 - reversible cold archival may remove old evidence from the hot runtime set while keeping World Hub review and restore semantics available;
 - Event Runtime owns event/proposal definitions and provenance; Relationship Runtime remains the sole owner/writer of long-term relationship truth.
 - normalized proposals, validation/review outcomes, and minimal provenance are durable; full AI prompts, raw responses, uncommitted candidates, and transport payloads remain temporary. Approved output that becomes a formal post, scene, long-form, performance, or state-history record is handed to and persisted by its target owner.
+- Map World Suite inspection consumes `src/lib/simulation/map-pack-reference-projection.js` as a body-free external reference projection. Active Event Instances and pending Map Journey proposals count as current use; terminal instances and reviewed/applied/dismissed proposals remain historical protection. Only stable reference IDs and `mapPackId` cross the seam.
 
 What is already landed:
 
@@ -44,6 +45,7 @@ What is already landed:
 24. EVE-2B implements the reusable runtime foundation in `src/lib/simulation/event-contracts.js`, `event-registry.js`, `kpop-realism-event-pack.js`, `event-instance-materializer.js`, and `event-text-composer.js`. Durable untruncated `eventInstances`, monotonic instance updates, independent default `local_only` text mode, invalid-restore reporting, and required backup/rollback participation remain intact. The optional Composer accepts an injected existing provider call shape, sends bounded safe context only after entry, validates exact choice/outcome/participant IDs, caches success or terminal local fallback, and performs no retry on reopen.
 25. EVE-2C is complete with Map V3 position provenance/place sessions, exactly one Map host, zero-token invitation/no-event behavior, explicit `Enter` and expansion, three Map-validated `canonicalMutation: none` choices, fail-closed anchors, clustering/stacking, layer coexistence, and return context.
 26. EVE-3 is complete in `src/lib/simulation/event-notebook.js`, `src/stores/simulation.js`, and `src/views/ControlCenterView.vue`: one deterministic read model merges explicitly linked runtime truth without duplicating it; `store:simulation` V3 persists stable event-scoped review notes with V1/V2 migration and backup/restore; World Hub provides counts, source/module/status filters, selected-event lineage and stale-source detail, plus add/edit/delete note actions. Notes survive event-log rotation and cannot be moved across event references. Notebook interaction does not execute Adapters, retrigger events, mutate logs/proposals/instances, create Reminders/Calendar plans, or grant Cheats authority.
+27. EVE-4A is retained only as a completed technical spike; product acceptance is withdrawn. The generic Food Delivery host, order-card `Dispatch brief`, local expansion/acknowledgement, and manual update action that manufactured a delay are removed. The valuable seam remains: Food Delivery's owner action stores only an exact successful Runtime log reference, rejects injection/rebinding/log reuse, writes `rider_delay` / `eta_update` into canonical `order.etaMinutes` plus the native order timeline, and uses the existing Chat dispatch notification. Event Runtime coordinates the cause and audit; Food Delivery owns the business mutation and presentation.
 
 MJE-3 validation is complete for the non-blocking pending-update revision: the focused Journey/Event/Map-view set passes 5 files / 64 tests; the full Vitest suite passes 200 files / 1363 tests; lint, production build, governance (2 files / 12 tests), and `git diff --check` pass; and the focused Map E2E passes 12/12 across desktop Chromium and Pixel 5.
 
@@ -57,6 +59,8 @@ EVE-2C validation is complete: the focused Map/Event set passes 8 files / 109 te
 
 EVE-3 validation is complete: the focused Notebook/Simulation/World Hub/persistence set passes 4 files / 37 tests; the bounded-worker full Vitest suite passes 239 files / 1767 tests; full lint, production build, governance at 2 files / 13 tests, and dedicated Playwright pass. The browser flow passes 2/2 across desktop Chromium and simulated Pixel 5 with critical Axe, page/console-error, source-immutability, reopen, and zero-horizontal-overflow checks. Four screenshots cover note-present and note-empty states. This is not physical-device evidence. Default high-concurrency Vitest exposed one unrelated 5-second image-bed fixture timeout; the file passes 12/12 alone and the complete suite passes with two workers.
 
+The original EVE-4A card validation remains historical spike evidence only and no longer establishes product acceptance. The correction removes those dedicated surface tests/screenshots and replaces them with focused owner-chain coverage for canonical ETA, native timeline, Chat notification, exact lineage, backup compatibility, injection/rebinding/log-reuse rejection, and absence of the manual trigger/`Dispatch brief`. Final correction validation passes 6 focused files / 143 tests; the complete Vitest suite passes 245 files / 1821 tests with two workers; lint, production build, governance at 2 files / 14 tests, and `git diff --check` pass. The owner-native Moon Bistro and Jade Hearth flows pass 4/4 across desktop Chromium and simulated Pixel 5, including absence of the withdrawn Surface/manual trigger, minimum control sizing, real keyboard focus visibility, reduced-motion behavior, critical accessibility checks where covered, page-error checks, and zero horizontal overflow where covered. The default high-concurrency full run first reached 243 files / 1819 tests and hit unrelated fixed-five-second timeouts in image-bed fixture and persistence bootstrap tests; both files passed independently before the bounded-worker full suite passed. This is not physical-device evidence, and the withdrawn surface screenshots must not be reused as current product proof.
+
 Still incomplete:
 
 1. broad affinity/funds/unlock/freeform override controls remain deferred;
@@ -65,7 +69,7 @@ Still incomplete:
 4. the named high-risk relationship gate presets are now consumed by the Chat social-event review policy for relationship-aware audit/review decisions; broader high-impact romance/conflict automation is still deferred.
 5. deeper generated social behavior is still incomplete: broader social-event types, richer scheduling, and relationship-stage effects should build on the landed review seam instead of writing directly to Chat or relationship runtime.
 6. Mini Scene trigger integration remains unimplemented; the shared pure foundation is ready, but a named event family and the later persistence/presenter/source-Adapter prerequisites must still be promoted.
-7. exactly one Map Event Surface host is registered for the frozen production-arrival-briefing archetype; additional hosts and event families remain unimplemented and separately gated under EVE-4.
+7. exactly one production Event Surface host remains registered: Map for the frozen production-arrival-briefing archetype. Food Delivery participates through owner-native order state/timeline plus Chat notification without a Surface. Additional hosts and event families remain unimplemented and separately gated under EVE-4.
 8. Destination change, event-driven cancellation, high-impact outcomes, active exploration events, generic popup infrastructure, and Agenda Journey scheduling remain unimplemented.
 9. Agenda Journey, Activity Session, Schedule Orchestrator, their Event Runtime adapters, automatic-resolution implementation, and Narrative Timeline remain unimplemented; the accepted CJA contract is documentation only.
 10. no locked-teaser family, Focus Companion runtime, or Activity Session media caller is implemented; the completed location-aware family remains limited to interior production arrival briefing.
@@ -83,7 +87,7 @@ Current safe sequence after the user's event-lane reprioritization:
 4. preserve the completed EVE-2C Map V3 provenance/place-session boundary, single explicit host, ordinary-place/event selection split, zero-token no-event path, and no-external-mutation owner validation.
 5. keep runtime-trigger explanation readable whenever a new Adapter is explicitly promoted.
 6. preserve the completed EVE-3 Notebook as a read model over owner truth: keep notes event-scoped, durable, and independently deletable; do not turn it into Reminders, Calendar planning, source mutation, or Cheats.
-7. treat EVE-4 additional host Modules/templates/content packs as the next separately approved event stage; each owner must name trigger, source truth, Adapter request, visible surface, side effects, reversibility, persistence, fallback, and tests before implementation.
+7. preserve the EVE-4A lineage and Food Delivery owner-mutation seam, but do not restore its withdrawn host/card/manual-trigger product slice. Restart EVE-4 only with a separately accepted causal chain that names every participating Module, trigger/checkpoint, owner truth, Adapter request, native presentation, real user/system behavior, downstream conditions, side effects, reversibility, persistence, fallback, and tests.
 8. deepen Chat social scheduling only through the existing audit/review seam and with visible cooldown/cap policy.
 9. keep Cheats, CG generation, additional world packs, and closed-page autonomy as separate decisions.
 10. when roadmap 4.8 reaches a source-Adapter stage, keep Event Runtime limited to eligibility/provenance and call the shared Interface rather than adding runtime-owned regex or HTML.
@@ -107,6 +111,7 @@ Current safe sequence after the user's event-lane reprioritization:
 14. Do not let World Hub event notes become general reminders, or let a World Hub session inherit Cheats authority.
 15. Do not call a text model during ordinary ticks, distance updates, place focus, eligibility filtering, or compact invitation rendering; optional text materialization begins only at an approved event-entry/presentation checkpoint and must have a local fallback.
 16. Do not put K-pop terminology, place IDs, provider fields, image payloads, or CG policy into the generic Event Runtime engine.
+17. Do not let a host accept a projection whose `host_detail.hostKey` points at another host, and do not treat a source-created or duplicated runtime-log ID as valid lineage.
 
 ## 4. Must Sync When Working Here
 

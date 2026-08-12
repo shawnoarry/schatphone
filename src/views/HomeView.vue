@@ -10,6 +10,7 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
 import AppIconVisual from '../components/shared/AppIconVisual.vue'
+import BuiltInWidgetVisual from '../components/widgets/BuiltInWidgetVisual.vue'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 import {
   HOME_LAYOUT_TEMPLATES,
@@ -156,6 +157,16 @@ const dragGhostHeight = ref(72)
 const openFolderTileId = ref('')
 const openFolderPageIndex = ref(0)
 const folderPanelRef = ref(null)
+const widgetPhotoPickerIndex = ref(-1)
+const widgetPhotoPickerPanelRef = ref(null)
+const widgetPhotoPickerPreviewUrls = ref({})
+const memoryBoardPhotoUrls = ref(['', '', ''])
+const widgetWeatherMode = ref('sun')
+const widgetMoodIndex = ref(0)
+const widgetSelectedDayIndex = ref(3)
+const widgetSceneMode = ref('day')
+const widgetFocusActive = ref(false)
+const widgetFocusSeconds = ref(25 * 60)
 const folderPointerId = ref(null)
 const folderPointerStartX = ref(0)
 const folderPointerStartY = ref(0)
@@ -165,6 +176,7 @@ let lastDragPageSwitchAt = 0
 let layoutToastTimerId = null
 let droppedTileTimerId = null
 let widgetEntryLongPressTimerId = null
+let widgetFocusTimerId = null
 let folderWheelLockedUntil = 0
 let folderEntryOpenBlockedUntil = 0
 
@@ -176,10 +188,10 @@ const DRAG_PAGE_SWITCH_COOLDOWN_MS = 260
 const FOLDER_PAGE_SIZE = 9
 const FOLDER_SWIPE_THRESHOLD = 42
 const FOLDER_WHEEL_COOLDOWN_MS = 240
+const MEMORY_BOARD_PREVIEW_SCOPE_ID = 'home-widget-memory-board'
+const WIDGET_PHOTO_PICKER_SCOPE_ID = 'home-widget-photo-picker'
 const LAYOUT_SLOT_COLUMNS = 4
 const LAYOUT_SLOT_ROWS = 6
-const LAYOUT_SLOT_GAP = 12
-const LAYOUT_SLOT_HEIGHT = 78
 const WIDGET_APP_TILE_ID = 'app_widgets'
 const LEFT_PAGE_RESERVED_SLOT_COUNT = 3
 const LAYOUT_EDIT_LOCAL_STORAGE_KEY = 'schatphone:layout_edit_enabled'
@@ -356,6 +368,14 @@ const homeReturnPageForCurrentView = computed(() =>
   currentPage.value < DEFAULT_HOME_RETURN_PAGE ? DEFAULT_HOME_RETURN_PAGE : currentPage.value,
 )
 const today = computed(() => new Date())
+const memoryBoardPhotoAssetIds = computed(() => {
+  const ids = settings.value.appearance.builtInWidgetPreferences?.memory_board?.photoAssetIds
+  return Array.from({ length: 3 }, (_, index) => (typeof ids?.[index] === 'string' ? ids[index] : ''))
+})
+const widgetPhotoPickerAssets = computed(() =>
+  (Array.isArray(galleryStore.assets) ? galleryStore.assets : []).slice(0, 30),
+)
+const isWidgetPhotoPickerOpen = computed(() => widgetPhotoPickerIndex.value >= 0)
 
 const tilePageIndexMap = computed(() => {
   const map = new Map()
@@ -1019,6 +1039,146 @@ const openAppById = (tileId) => {
   triggerLayoutToast(t(`「${tile.label}」暂不可用`, `"${tile.label}" is unavailable`))
 }
 
+const openWidgetApp = (tileId) => {
+  if (tileId === CONTROL_CENTER_HOME_APP_ID && !isWorldHubAvailable.value) {
+    triggerLayoutToast(t('入口未开放', 'Entry locked'))
+    return
+  }
+  openAppById(tileId)
+}
+
+const stopWidgetFocusTimer = () => {
+  if (!widgetFocusTimerId) return
+  clearInterval(widgetFocusTimerId)
+  widgetFocusTimerId = null
+}
+
+const startWidgetFocusTimer = () => {
+  stopWidgetFocusTimer()
+  widgetFocusTimerId = setInterval(() => {
+    if (!widgetFocusActive.value) return
+    widgetFocusSeconds.value = Math.max(0, widgetFocusSeconds.value - 1)
+    if (widgetFocusSeconds.value > 0) return
+    widgetFocusActive.value = false
+    stopWidgetFocusTimer()
+    triggerLayoutToast(t('专注完成', 'Focus complete'))
+  }, 1000)
+}
+
+const toggleWidgetFocus = () => {
+  if (widgetFocusSeconds.value <= 0) widgetFocusSeconds.value = 25 * 60
+  widgetFocusActive.value = !widgetFocusActive.value
+  if (widgetFocusActive.value) startWidgetFocusTimer()
+  else stopWidgetFocusTimer()
+  maybeVibrate(8)
+}
+
+const handleBuiltInWidgetActivate = (tileId) => {
+  if (layoutEditMode.value) return
+  const interaction = tileMeta(tileId)?.interaction
+  if (interaction === 'toggle_weather') {
+    widgetWeatherMode.value = widgetWeatherMode.value === 'rain' ? 'sun' : 'rain'
+  } else if (interaction === 'focus_timer') {
+    toggleWidgetFocus()
+  } else if (interaction === 'mood_window') {
+    widgetMoodIndex.value = (widgetMoodIndex.value + 1) % 4
+  } else if (interaction === 'open_map') {
+    openWidgetApp('app_map')
+  } else if (interaction === 'open_calendar') {
+    openWidgetApp('app_calendar')
+  } else if (interaction === 'toggle_scene') {
+    widgetSceneMode.value = widgetSceneMode.value === 'night' ? 'day' : 'night'
+  } else if (interaction === 'open_world_hub') {
+    openWidgetApp(CONTROL_CENTER_HOME_APP_ID)
+  } else if (interaction === 'cycle_day') {
+    widgetSelectedDayIndex.value = (widgetSelectedDayIndex.value + 1) % 7
+  }
+  maybeVibrate(6)
+}
+
+const handleBuiltInWidgetAction = async (tileId, payload = {}) => {
+  if (layoutEditMode.value) return
+  if (payload.action === 'toggle-playback') {
+    await musicStore.togglePlayback()
+  } else if (payload.action === 'previous') {
+    await musicStore.previous()
+  } else if (payload.action === 'next') {
+    await musicStore.next()
+  } else if (payload.action === 'open-music') {
+    openWidgetApp(MUSIC_HOME_APP_ID)
+  } else if (payload.action === 'select-day') {
+    widgetSelectedDayIndex.value = Math.min(6, Math.max(0, Number(payload.index) || 0))
+  } else if (payload.action === 'select-photo') {
+    await openWidgetPhotoPicker(payload.index)
+  } else {
+    handleBuiltInWidgetActivate(tileId)
+  }
+  maybeVibrate(6)
+}
+
+const builtInWidgetIsInteractive = (tileId) => Boolean(tileMeta(tileId)?.interaction)
+const builtInWidgetHasRootAction = (tileId) =>
+  !['music_controls', 'select_photos', 'cycle_day'].includes(tileMeta(tileId)?.interaction)
+
+const loadMemoryBoardPhotoUrls = async () => {
+  galleryStore.releaseAssetPreviewScope(MEMORY_BOARD_PREVIEW_SCOPE_ID)
+  const assetIds = memoryBoardPhotoAssetIds.value
+  const urls = await Promise.all(
+    assetIds.map((assetId) =>
+      assetId
+        ? galleryStore.getAssetPreviewUrl(assetId, { scopeId: MEMORY_BOARD_PREVIEW_SCOPE_ID })
+        : '',
+    ),
+  )
+  memoryBoardPhotoUrls.value = urls.map((url) => (typeof url === 'string' ? url : ''))
+}
+
+const loadWidgetPhotoPickerPreviewUrls = async () => {
+  galleryStore.releaseAssetPreviewScope(WIDGET_PHOTO_PICKER_SCOPE_ID)
+  const entries = await Promise.all(
+    widgetPhotoPickerAssets.value.map(async (asset) => [
+      asset.id,
+      await galleryStore.getAssetPreviewUrl(asset.id, { scopeId: WIDGET_PHOTO_PICKER_SCOPE_ID }),
+    ]),
+  )
+  widgetPhotoPickerPreviewUrls.value = Object.fromEntries(
+    entries.filter(([, url]) => typeof url === 'string' && url),
+  )
+}
+
+async function openWidgetPhotoPicker(index) {
+  const normalizedIndex = Number(index)
+  if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0 || normalizedIndex > 2) return
+  widgetPhotoPickerIndex.value = normalizedIndex
+  await loadWidgetPhotoPickerPreviewUrls()
+  await nextTick()
+  widgetPhotoPickerPanelRef.value?.focus()
+}
+
+const closeWidgetPhotoPicker = () => {
+  widgetPhotoPickerIndex.value = -1
+  widgetPhotoPickerPreviewUrls.value = {}
+  galleryStore.releaseAssetPreviewScope(WIDGET_PHOTO_PICKER_SCOPE_ID)
+}
+
+const selectWidgetPhotoAsset = (assetId = '') => {
+  if (!isWidgetPhotoPickerOpen.value) return
+  systemStore.setBuiltInWidgetPhotoAsset('memory_board', widgetPhotoPickerIndex.value, assetId)
+  systemStore.saveNow()
+  closeWidgetPhotoPicker()
+}
+
+const openGalleryFromWidgetPhotoPicker = () => {
+  closeWidgetPhotoPicker()
+  openWidgetApp('app_gallery')
+}
+
+watch(
+  () => memoryBoardPhotoAssetIds.value.join('|'),
+  () => void loadMemoryBoardPhotoUrls(),
+  { immediate: true },
+)
+
 const openCustomWidgetAction = (tileId) => {
   if (layoutEditMode.value) return
   if (Date.now() < ignoreAppOpenUntil.value) return
@@ -1407,9 +1567,13 @@ const getSlotIndexFromPoint = (gridElement, clientX, clientY) => {
   const localX = Math.min(Math.max(0, clientX - rect.left), rect.width)
   const localY = Math.min(Math.max(0, clientY - rect.top), rect.height)
 
-  const slotWidth = (rect.width - LAYOUT_SLOT_GAP * (LAYOUT_SLOT_COLUMNS - 1)) / LAYOUT_SLOT_COLUMNS
-  const cellWidth = slotWidth + LAYOUT_SLOT_GAP
-  const cellHeight = LAYOUT_SLOT_HEIGHT + LAYOUT_SLOT_GAP
+  const gridStyle = window.getComputedStyle(gridElement)
+  const columnGap = Number.parseFloat(gridStyle.columnGap) || 0
+  const rowGap = Number.parseFloat(gridStyle.rowGap) || 0
+  const slotWidth = (rect.width - columnGap * (LAYOUT_SLOT_COLUMNS - 1)) / LAYOUT_SLOT_COLUMNS
+  const slotHeight = (rect.height - rowGap * (LAYOUT_SLOT_ROWS - 1)) / LAYOUT_SLOT_ROWS
+  const cellWidth = slotWidth + columnGap
+  const cellHeight = slotHeight + rowGap
 
   const col = Math.min(LAYOUT_SLOT_COLUMNS - 1, Math.max(0, Math.floor(localX / cellWidth)))
   const row = Math.min(LAYOUT_SLOT_ROWS - 1, Math.max(0, Math.floor(localY / cellHeight)))
@@ -1755,9 +1919,12 @@ watch(() => [route.query.widgetEdit, route.query.homePage, route.query.libraryTi
 onBeforeUnmount(() => {
   clearLongPressTimer()
   clearWidgetEntryLongPressTimer()
+  stopWidgetFocusTimer()
   resetDragState()
   closeHomeFolder()
   closeSlotContentSheet()
+  closeWidgetPhotoPicker()
+  galleryStore.releaseAssetPreviewScope(MEMORY_BOARD_PREVIEW_SCOPE_ID)
   if (layoutToastTimerId) clearTimeout(layoutToastTimerId)
   if (droppedTileTimerId) clearTimeout(droppedTileTimerId)
 })
@@ -1816,15 +1983,15 @@ onBeforeUnmount(() => {
           <i class="fas fa-layer-group" aria-hidden="true"></i>
           <span>{{ t('库', 'Library') }} {{ homeLibraryCandidateCount }}</span>
         </button>
-        <button
-          type="button"
-          class="home-edit-btn is-primary"
-          data-testid="home-edit-done"
-          @click="exitLayoutMode"
-        >
-          {{ t('完成', 'Done') }}
-        </button>
       </div>
+      <button
+        type="button"
+        class="home-edit-btn is-primary home-edit-done"
+        data-testid="home-edit-done"
+        @click="exitLayoutMode"
+      >
+        {{ t('完成', 'Done') }}
+      </button>
     </div>
 
     <div v-if="layoutToastText" class="home-layout-toast" aria-live="polite">
@@ -1880,31 +2047,20 @@ onBeforeUnmount(() => {
           @click="selectHomeLibraryCandidate(candidate.tileId)"
         >
           <div v-if="candidate.kind === 'widget'" class="home-content-library-preview" :class="`is-${candidate.variant}`">
-            <div v-if="candidate.variant === 'weather'" class="home-slot-preview-widget is-weather">
-              <span><i class="fas fa-location-dot"></i>{{ t('东京', 'Tokyo') }}</span>
-              <strong>18°</strong>
-              <small>{{ t('晴朗', 'Clear') }}</small>
-            </div>
-            <div v-else-if="candidate.variant === 'calendar'" class="home-slot-preview-widget is-calendar">
-              <span>{{ today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' }) }}</span>
-              <strong>{{ today.getDate() }}</strong>
-            </div>
-            <div v-else-if="candidate.variant === 'music'" class="home-slot-preview-widget is-music">
-              <span></span>
-              <div>
-                <strong>{{ t('晚间电台', 'Evening Radio') }}</strong>
-                <small>{{ t('日常播放列表', 'Daily Mix') }}</small>
-                <i></i>
-              </div>
-            </div>
-            <div v-else-if="candidate.variant === 'system'" class="home-slot-preview-widget is-system">
-              <span><i class="fas fa-microchip"></i>{{ t('系统', 'System') }}</span>
-              <strong>{{ t('电量 86%', 'Battery 86%') }}</strong>
-              <i></i>
-            </div>
-            <div v-else class="home-slot-preview-widget is-quick">
-              <i :class="candidate.icon"></i>
-            </div>
+            <BuiltInWidgetVisual
+              :variant="candidate.variant"
+              :language="languageBase"
+              compact
+              :weekday="today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })"
+              :day="today.getDate()"
+              :location="t('东京', 'Tokyo')"
+              :condition="t('晴朗', 'Clear')"
+              :system-label="t('系统', 'System')"
+              :battery-label="t('电量 86%', 'Battery 86%')"
+              :music-status="t('继续播放', 'Listen Again')"
+              :music-title="t('晚间电台', 'Evening Radio')"
+              :music-artist="t('日常播放列表', 'Daily Mix')"
+            />
           </div>
           <div v-else-if="candidate.kind === 'custom_widget'" class="home-content-library-preview is-custom-widget">
             <iframe
@@ -1986,31 +2142,20 @@ onBeforeUnmount(() => {
           @click="placeTileInSlotTarget(candidate.tileId)"
         >
           <div v-if="candidate.kind === 'widget'" class="home-slot-content-preview" :class="`is-${candidate.variant}`">
-            <div v-if="candidate.variant === 'weather'" class="home-slot-preview-widget is-weather">
-              <span><i class="fas fa-location-dot"></i>{{ t('东京', 'Tokyo') }}</span>
-              <strong>18°</strong>
-              <small>{{ t('晴朗', 'Clear') }}</small>
-            </div>
-            <div v-else-if="candidate.variant === 'calendar'" class="home-slot-preview-widget is-calendar">
-              <span>{{ today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' }) }}</span>
-              <strong>{{ today.getDate() }}</strong>
-            </div>
-            <div v-else-if="candidate.variant === 'music'" class="home-slot-preview-widget is-music">
-              <span></span>
-              <div>
-                <strong>{{ t('晚间电台', 'Evening Radio') }}</strong>
-                <small>{{ t('日常播放列表', 'Daily Mix') }}</small>
-                <i></i>
-              </div>
-            </div>
-            <div v-else-if="candidate.variant === 'system'" class="home-slot-preview-widget is-system">
-              <span><i class="fas fa-microchip"></i>{{ t('系统', 'System') }}</span>
-              <strong>{{ t('电量 86%', 'Battery 86%') }}</strong>
-              <i></i>
-            </div>
-            <div v-else class="home-slot-preview-widget is-quick">
-              <i :class="candidate.icon"></i>
-            </div>
+            <BuiltInWidgetVisual
+              :variant="candidate.variant"
+              :language="languageBase"
+              compact
+              :weekday="today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })"
+              :day="today.getDate()"
+              :location="t('东京', 'Tokyo')"
+              :condition="t('晴朗', 'Clear')"
+              :system-label="t('系统', 'System')"
+              :battery-label="t('电量 86%', 'Battery 86%')"
+              :music-status="t('继续播放', 'Listen Again')"
+              :music-title="t('晚间电台', 'Evening Radio')"
+              :music-artist="t('日常播放列表', 'Daily Mix')"
+            />
           </div>
           <div v-else-if="candidate.kind === 'custom_widget'" class="home-slot-content-preview is-custom-widget">
             <iframe
@@ -2229,78 +2374,35 @@ onBeforeUnmount(() => {
                   {{ tileSizeKeyForId(placement.tileId) }}
                 </div>
 
-                <template v-if="tileMeta(placement.tileId)?.kind === 'widget'">
-                  <div class="home-widget-card is-weather" v-if="tileMeta(placement.tileId)?.variant === 'weather'">
-                    <div class="home-widget-topline">
-                      <i class="fas fa-location-dot"></i>
-                      <span>{{ t('东京', 'Tokyo') }}</span>
-                    </div>
-                    <div class="home-widget-temp">18°</div>
-                    <div class="home-widget-bottomline">
-                      <i class="fas fa-sun home-accent"></i>
-                      <span>{{ t('晴朗', 'Clear') }}</span>
-                    </div>
-                  </div>
-
-                  <div class="home-widget-card home-widget-center is-calendar" v-else-if="tileMeta(placement.tileId)?.variant === 'calendar'">
-                    <span class="home-calendar-week">{{
-                      today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })
-                    }}</span>
-                    <span class="home-calendar-day">{{ today.getDate() }}</span>
-                  </div>
-
-                  <button
-                    v-else-if="tileMeta(placement.tileId)?.variant === 'music'"
-                    type="button"
-                    class="home-widget-card home-widget-music is-music"
-                    :aria-label="t('打开音乐', 'Open Music')"
-                    @click.stop="openAppById(MUSIC_HOME_APP_ID)"
-                  >
-                    <div
-                      class="home-music-cover"
-                      :style="homeMusicTrack?.coverUrl ? { backgroundImage: `url(${JSON.stringify(homeMusicTrack.coverUrl)})` } : undefined"
-                    ></div>
-                    <div class="home-music-meta">
-                      <span class="home-widget-topline">{{ musicStore.isPlaying ? t('正在播放', 'Now Playing') : t('继续播放', 'Listen Again') }}</span>
-                      <h3>{{ homeMusicTrack?.title || t('晚间电台', 'Evening Radio') }}</h3>
-                      <p>{{ homeMusicTrack?.artist || t('日常播放列表', 'Daily Mix') }}</p>
-                      <div class="home-progress">
-                        <div class="home-progress-fill" :style="{ width: `${homeMusicProgress}%` }"></div>
-                      </div>
-                    </div>
-                  </button>
-
-                  <div class="home-widget-card is-system" v-else-if="tileMeta(placement.tileId)?.variant === 'system'">
-                    <div class="home-widget-topline">
-                      <i class="fas fa-microchip"></i>
-                      <span>{{ t('系统', 'System') }}</span>
-                    </div>
-                    <div class="home-widget-bottomline">
-                      <span>{{ t('电量 86%', 'Battery 86%') }}</span>
-                    </div>
-                    <div class="home-progress">
-                      <div class="home-progress-fill home-progress-fill-system"></div>
-                    </div>
-                  </div>
-
-                  <button
-                    v-else-if="tileMeta(placement.tileId)?.variant === 'heart'"
-                    type="button"
-                    class="home-widget-card home-widget-quick is-heart"
-                    :aria-label="t('快捷爱心组件', 'Quick Heart widget')"
-                  >
-                    <i class="fas fa-heart" aria-hidden="true"></i>
-                  </button>
-
-                  <button
-                    v-else-if="tileMeta(placement.tileId)?.variant === 'disc'"
-                    type="button"
-                    class="home-widget-card home-widget-quick is-disc"
-                    :aria-label="t('快捷唱片组件', 'Quick Disc widget')"
-                  >
-                    <i class="fas fa-compact-disc" aria-hidden="true"></i>
-                  </button>
-                </template>
+                <BuiltInWidgetVisual
+                  v-if="tileMeta(placement.tileId)?.kind === 'widget'"
+                  :variant="tileMeta(placement.tileId)?.variant"
+                  :language="languageBase"
+                  :interactive="builtInWidgetIsInteractive(placement.tileId)"
+                  :root-actionable="builtInWidgetHasRootAction(placement.tileId)"
+                  :aria-label="tileMeta(placement.tileId)?.label || ''"
+                  :weekday="today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })"
+                  :day="today.getDate()"
+                  :location="t('东京', 'Tokyo')"
+                  :condition="t('晴朗', 'Clear')"
+                  :weather-mode="widgetWeatherMode"
+                  :system-label="t('系统', 'System')"
+                  :battery-label="t('电量 86%', 'Battery 86%')"
+                  :music-status="musicStore.isPlaying ? t('正在播放', 'Now Playing') : t('继续播放', 'Listen Again')"
+                  :music-title="homeMusicTrack?.title || t('晚间电台', 'Evening Radio')"
+                  :music-artist="homeMusicTrack?.artist || t('日常播放列表', 'Daily Mix')"
+                  :music-cover-url="homeMusicTrack?.coverUrl || ''"
+                  :music-progress="homeMusicProgress"
+                  :music-playing="musicStore.isPlaying"
+                  :focus-active="widgetFocusActive"
+                  :focus-seconds="widgetFocusSeconds"
+                  :mood-index="widgetMoodIndex"
+                  :selected-day-index="widgetSelectedDayIndex"
+                  :scene-mode="widgetSceneMode"
+                  :photo-urls="memoryBoardPhotoUrls"
+                  @activate="handleBuiltInWidgetActivate(placement.tileId)"
+                  @action="handleBuiltInWidgetAction(placement.tileId, $event)"
+                />
 
                 <button class="home-app-tile" v-else-if="tileMeta(placement.tileId)?.kind === 'app'" @click="openAppById(placement.tileId)">
                   <AppIconVisual
@@ -2566,6 +2668,80 @@ onBeforeUnmount(() => {
     </div>
 
     <div
+      v-if="isWidgetPhotoPickerOpen"
+      class="home-widget-photo-picker-overlay"
+      data-testid="home-widget-photo-picker"
+      data-no-layout-longpress
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('选择组件照片', 'Choose widget photo')"
+      @click.self="closeWidgetPhotoPicker"
+      @keydown.esc.stop.prevent="closeWidgetPhotoPicker"
+      @touchstart.stop
+      @touchmove.stop
+      @touchend.stop
+      @touchcancel.stop
+      @mousedown.stop
+      @mousemove.stop
+      @mouseup.stop
+    >
+      <section
+        ref="widgetPhotoPickerPanelRef"
+        class="home-widget-photo-picker-panel"
+        tabindex="-1"
+      >
+        <header class="home-widget-photo-picker-head">
+          <div>
+            <span>{{ t('彩色记忆墙', 'Color Memory Wall') }}</span>
+            <h2>{{ t('选择一张照片', 'Choose a photo') }}</h2>
+          </div>
+          <button type="button" :aria-label="t('关闭', 'Close')" @click="closeWidgetPhotoPicker">
+            <i class="fas fa-xmark" aria-hidden="true"></i>
+          </button>
+        </header>
+
+        <div v-if="widgetPhotoPickerAssets.length" class="home-widget-photo-picker-grid">
+          <button
+            v-for="asset in widgetPhotoPickerAssets"
+            :key="asset.id"
+            type="button"
+            class="home-widget-photo-picker-item"
+            :class="{
+              'is-selected': memoryBoardPhotoAssetIds[widgetPhotoPickerIndex] === asset.id,
+            }"
+            :aria-label="asset.name || t('照片', 'Photo')"
+            :data-testid="`home-widget-photo-${asset.id}`"
+            @click="selectWidgetPhotoAsset(asset.id)"
+          >
+            <img
+              v-if="widgetPhotoPickerPreviewUrls[asset.id]"
+              :src="widgetPhotoPickerPreviewUrls[asset.id]"
+              :alt="asset.name || t('照片', 'Photo')"
+            />
+            <span v-else aria-hidden="true"><i class="fas fa-image"></i></span>
+            <i class="fas fa-check" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div v-else class="home-widget-photo-picker-empty">
+          <i class="fas fa-images" aria-hidden="true"></i>
+          <strong>{{ t('相册里还没有可用照片', 'No photos are available yet') }}</strong>
+          <button type="button" @click="openGalleryFromWidgetPhotoPicker">
+            <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+            <span>{{ t('打开相册', 'Open Gallery') }}</span>
+          </button>
+        </div>
+
+        <footer v-if="widgetPhotoPickerAssets.length" class="home-widget-photo-picker-actions">
+          <button type="button" @click="selectWidgetPhotoAsset('')">
+            <i class="fas fa-eraser" aria-hidden="true"></i>
+            <span>{{ t('清除照片', 'Clear photo') }}</span>
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <div
       v-if="openedFolderMeta?.kind === HOME_FOLDER_TILE_KIND"
       class="home-folder-overlay"
       data-testid="home-folder-overlay"
@@ -2684,9 +2860,9 @@ onBeforeUnmount(() => {
   left: 10px;
   right: 10px;
   z-index: 50;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 9px 10px;
   border-radius: 20px;
@@ -2701,6 +2877,10 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.home-edit-done {
+  white-space: nowrap;
 }
 
 .home-edit-mode-pill {
@@ -2755,6 +2935,35 @@ onBeforeUnmount(() => {
   font-size: 10px;
   line-height: 1.1;
   font-weight: 700;
+}
+
+@media (max-width: 560px) and (min-height: 500px) {
+  .home-edit-topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    row-gap: 7px;
+  }
+
+  .home-edit-mode-pill {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .home-edit-title-wrap {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .home-edit-done {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .home-edit-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-end;
+  }
+
 }
 
 .home-layout-toast {
@@ -3255,148 +3464,6 @@ onBeforeUnmount(() => {
   display: block;
   background: transparent;
   pointer-events: none;
-}
-
-.home-slot-preview-widget {
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  border-radius: inherit;
-  color: rgba(255, 255, 255, 0.92);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.home-slot-preview-widget.is-weather {
-  padding: 11px;
-  display: grid;
-  align-content: space-between;
-  background:
-    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.42), transparent 24%),
-    linear-gradient(145deg, rgba(129, 155, 166, 0.88), rgba(49, 66, 78, 0.82));
-}
-
-.home-slot-preview-widget.is-weather span,
-.home-slot-preview-widget.is-system span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  font-size: 9px;
-  font-weight: 850;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.78;
-}
-
-.home-slot-preview-widget.is-weather strong {
-  align-self: center;
-  font-size: 30px;
-  line-height: 1;
-  font-weight: 300;
-}
-
-.home-slot-preview-widget.is-weather small,
-.home-slot-preview-widget.is-music small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  font-weight: 750;
-  opacity: 0.76;
-}
-
-.home-slot-preview-widget.is-calendar {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 2px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(190, 206, 212, 0.58));
-  color: rgba(35, 45, 52, 0.9);
-}
-
-.home-slot-preview-widget.is-calendar span {
-  color: rgba(116, 88, 98, 0.88);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.home-slot-preview-widget.is-calendar strong {
-  font-size: 36px;
-  line-height: 0.95;
-  font-weight: 320;
-}
-
-.home-slot-preview-widget.is-music {
-  padding: 10px;
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  align-items: center;
-  gap: 11px;
-  background: linear-gradient(135deg, rgba(54, 67, 78, 0.9), rgba(125, 101, 112, 0.78));
-}
-
-.home-slot-preview-widget.is-music > span {
-  width: 54px;
-  height: 54px;
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.88), transparent 29%),
-    linear-gradient(135deg, rgba(205, 223, 229, 0.88), rgba(77, 97, 108, 0.9));
-  box-shadow: 0 8px 16px rgba(8, 13, 22, 0.18);
-}
-
-.home-slot-preview-widget.is-music div {
-  min-width: 0;
-}
-
-.home-slot-preview-widget.is-music strong {
-  display: block;
-  min-width: 0;
-  margin-bottom: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  line-height: 1.15;
-}
-
-.home-slot-preview-widget.is-music i,
-.home-slot-preview-widget.is-system i:last-child {
-  display: block;
-  width: 100%;
-  height: 4px;
-  margin-top: 8px;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.82) 0 42%, rgba(255, 255, 255, 0.22) 43%),
-    rgba(255, 255, 255, 0.18);
-}
-
-.home-slot-preview-widget.is-system {
-  padding: 11px;
-  display: grid;
-  align-content: center;
-  gap: 9px;
-  background: linear-gradient(145deg, rgba(30, 40, 52, 0.86), rgba(90, 112, 122, 0.68));
-}
-
-.home-slot-preview-widget.is-system strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-}
-
-.home-slot-preview-widget.is-quick {
-  display: grid;
-  place-items: center;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(177, 196, 202, 0.4));
-  color: rgba(105, 76, 88, 0.96);
-  font-size: 20px;
 }
 
 .home-slot-content-copy {
@@ -3976,7 +4043,7 @@ onBeforeUnmount(() => {
 }
 
 .home-grid.is-editing {
-  min-height: calc(6 * 78px + 5 * 12px);
+  min-height: calc(6 * var(--home-grid-row-height) + 5 * var(--home-grid-gap));
 }
 
 .home-smart-panel {
@@ -4063,8 +4130,8 @@ onBeforeUnmount(() => {
   z-index: 3;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(6, 78px);
-  gap: 12px;
+  grid-template-rows: repeat(6, var(--home-grid-row-height));
+  gap: var(--home-grid-gap);
   pointer-events: none;
 }
 
@@ -4104,8 +4171,8 @@ onBeforeUnmount(() => {
   pointer-events: none;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(6, 78px);
-  gap: 12px;
+  grid-template-rows: repeat(6, var(--home-grid-row-height));
+  gap: var(--home-grid-gap);
 }
 
 .home-template-slot {
@@ -4147,8 +4214,8 @@ onBeforeUnmount(() => {
   z-index: 4;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: repeat(6, 78px);
-  gap: 12px;
+  grid-template-rows: repeat(6, var(--home-grid-row-height));
+  gap: var(--home-grid-gap);
   pointer-events: none;
 }
 
@@ -4434,6 +4501,170 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
 }
 
+.home-widget-photo-picker-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 86;
+  display: flex;
+  align-items: flex-end;
+  padding: 18px 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(12, 17, 23, 0.54);
+  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  animation: home-folder-overlay-in 160ms ease-out;
+}
+
+.home-widget-photo-picker-panel {
+  width: 100%;
+  max-height: min(72%, 560px);
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 22px;
+  padding: 15px;
+  color: rgba(42, 43, 42, 0.96);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.84), transparent 28%),
+    linear-gradient(145deg, rgba(248, 243, 233, 0.98), rgba(224, 218, 207, 0.98));
+  box-shadow: 0 24px 54px rgba(7, 11, 16, 0.32);
+  outline: none;
+  animation: home-photo-picker-panel-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  overscroll-behavior: contain;
+}
+
+.home-widget-photo-picker-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 13px;
+}
+
+.home-widget-photo-picker-head span {
+  display: block;
+  color: rgba(82, 77, 70, 0.66);
+  font: 700 9px Georgia, serif;
+  text-transform: uppercase;
+}
+
+.home-widget-photo-picker-head h2 {
+  margin: 4px 0 0;
+  font: 700 20px Georgia, serif;
+  line-height: 1.1;
+}
+
+.home-widget-photo-picker-head button {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(77, 73, 68, 0.12);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: rgba(58, 57, 54, 0.9);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.home-widget-photo-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.home-widget-photo-picker-item {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 0;
+  background: rgba(116, 134, 136, 0.18);
+  box-shadow: 0 4px 9px rgba(54, 52, 48, 0.12);
+}
+
+.home-widget-photo-picker-item img,
+.home-widget-photo-picker-item > span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  object-fit: cover;
+}
+
+.home-widget-photo-picker-item > span {
+  color: rgba(66, 78, 80, 0.52);
+  background: linear-gradient(145deg, #cbd8d9, #e9e4d9);
+}
+
+.home-widget-photo-picker-item > .fa-check {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: none;
+  place-items: center;
+  color: #fff;
+  background: #397a7c;
+  box-shadow: 0 2px 6px rgba(22, 45, 47, 0.28);
+  font-size: 8px;
+}
+
+.home-widget-photo-picker-item.is-selected {
+  border-color: #397a7c;
+}
+
+.home-widget-photo-picker-item.is-selected > .fa-check {
+  display: grid;
+}
+
+.home-widget-photo-picker-empty {
+  min-height: 170px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  text-align: center;
+  color: rgba(74, 70, 65, 0.78);
+}
+
+.home-widget-photo-picker-empty > i {
+  font-size: 30px;
+  color: #73999c;
+}
+
+.home-widget-photo-picker-empty strong {
+  font: 700 14px Georgia, serif;
+}
+
+.home-widget-photo-picker-empty button,
+.home-widget-photo-picker-actions button {
+  min-height: 36px;
+  border: 1px solid rgba(61, 88, 89, 0.18);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: #315f61;
+  background: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.home-widget-photo-picker-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.home-widget-photo-picker-panel :is(button):focus-visible {
+  outline: 2px solid #397a7c;
+  outline-offset: 2px;
+}
+
 .home-folder-overlay {
   position: absolute;
   inset: 0;
@@ -4688,6 +4919,17 @@ onBeforeUnmount(() => {
   }
 }
 
+@keyframes home-photo-picker-panel-in {
+  from {
+    opacity: 0.7;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes home-folder-page-in {
   from {
     opacity: 0.45;
@@ -4729,6 +4971,23 @@ onBeforeUnmount(() => {
   100% {
     transform: scale(1);
     filter: brightness(1);
+  }
+}
+
+@media (max-width: 560px) and (min-height: 500px) {
+  .home-recovery-cue,
+  .home-content-library {
+    top: 150px;
+  }
+
+  .home-layout-toast {
+    top: 212px;
+  }
+}
+
+@media (max-height: 499px) {
+  .home-layout-toast {
+    top: 160px;
   }
 }
 </style>

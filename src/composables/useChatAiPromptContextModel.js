@@ -3,9 +3,17 @@ import {
   buildWorldPromptBlock,
   resolveWorldContextForConsumer,
 } from '../lib/world-interface'
+import { createAiContextEnvelope } from '../lib/ai-context-envelope'
+import {
+  CHAT_CONTEXT_BUDGET_DEFAULTS,
+  projectChatContextBudget,
+} from '../lib/chat-context-budget'
+import { buildMemoryRecallQuery } from '../lib/memory-recall'
+import { buildRoleIdentityProjection } from '../lib/role-identity-projection'
 
 export const CHAT_AI_PROMPT_CONTEXT_LIMITS = Object.freeze({
   quotePreviewChars: 240,
+  conversationCharacters: CHAT_CONTEXT_BUDGET_DEFAULTS.characters,
   smartReplyHistoryMessages: 5,
   automationFingerprintMessages: 6,
   automationFingerprintChars: 1200,
@@ -219,6 +227,29 @@ export const useChatAiPromptContextModel = ({
   const resolveAssistantImageBlockPolicy = (aiPrefs, imageReferences = []) =>
     resolveChatAssistantImageBlockPolicy(aiPrefs, imageReferences)
 
+  const isRoleContact = (contact) => (contact?.kind || 'role') === 'role'
+
+  const resolveRoleProfile = (contact) =>
+    isRoleContact(contact) && contact?.profileId && typeof chatStore?.getRoleProfileById === 'function'
+      ? chatStore.getRoleProfileById(contact.profileId)
+      : null
+
+  const buildRelationshipTarget = (contact) =>
+    isRoleContact(contact)
+      ? {
+          entityKey:
+            contact?.profileId > 0
+              ? `role:${contact.profileId}`
+              : contact?.id > 0
+                ? `contact:${contact.id}`
+                : '',
+          profileId: contact?.profileId,
+          contactId: contact?.id,
+          kind: contact?.kind,
+          name: contact?.name,
+        }
+      : null
+
   const visibleSelfProfileValuesForRole = (visibilityLimit = 'familiar') => {
     const profiles = Array.isArray(chatStore?.roleProfiles) ? chatStore.roleProfiles : []
     const selfProfile = profiles.find((profile) => profile.entityType === 'self_profile')
@@ -249,31 +280,58 @@ export const useChatAiPromptContextModel = ({
     ].join('\n')
   }
 
-  const buildRelationshipRuntimePromptBlock = (contact) => {
-    const isRoleContact = (contact?.kind || 'role') === 'role'
-    const target = {
-      entityKey:
-        contact?.profileId > 0
-          ? `role:${contact.profileId}`
-          : contact?.id > 0
-            ? `contact:${contact.id}`
-            : '',
-      profileId: contact?.profileId,
-      contactId: contact?.id,
-      kind: contact?.kind,
-      name: contact?.name,
+  const buildRelationshipRuntimeProjection = (contact, options = {}) => {
+    if (!isRoleContact(contact)) return { promptText: '', recalledMemories: [] }
+    const target = buildRelationshipTarget(contact)
+    const recallQuery = buildMemoryRecallQuery(options.contextMessages)
+    if (typeof relationshipRuntimeStore?.buildPromptProjectionForTarget === 'function') {
+      const projection = relationshipRuntimeStore.buildPromptProjectionForTarget(target, {
+        eventLimit: 3,
+        recallQuery,
+        includeNeutral: true,
+      })
+      return {
+        promptText:
+          projection?.text || 'Relationship runtime snapshot: neutral / no stored cross-module facts yet.',
+        recalledMemories: Array.isArray(projection?.memoryRecall?.items)
+          ? projection.memoryRecall.items
+          : [],
+      }
     }
-    const promptText =
-      typeof relationshipRuntimeStore?.buildPromptContextForTarget === 'function'
-        ? relationshipRuntimeStore.buildPromptContextForTarget(target, {
+    const memoryRecall = typeof relationshipRuntimeStore?.recallMemoriesForTarget === 'function'
+      ? relationshipRuntimeStore.recallMemoriesForTarget(target, { queryText: recallQuery })
+      : { items: [] }
+    const promptText = typeof relationshipRuntimeStore?.buildPromptContextForTarget === 'function'
+      ? relationshipRuntimeStore.buildPromptContextForTarget(target, {
             eventLimit: 3,
-            includeNeutral: isRoleContact,
+            recallQuery,
+            includeNeutral: true,
           })
-        : ''
-    return promptText || (isRoleContact ? 'Relationship runtime snapshot: neutral / no stored cross-module facts yet.' : '')
+      : ''
+    return {
+      promptText: promptText || 'Relationship runtime snapshot: neutral / no stored cross-module facts yet.',
+      recalledMemories: Array.isArray(memoryRecall?.items) ? memoryRecall.items : [],
+    }
   }
 
-  const buildWorldKernelPromptBlock = (contact) => {
+  const buildRelationshipRuntimePromptBlock = (contact, options = {}) =>
+    buildRelationshipRuntimeProjection(contact, options).promptText
+
+  const buildRoleIdentityPromptBlocks = (contact, options = {}) => {
+    const profile = resolveRoleProfile(contact)
+    if (!profile) return { stableText: '', dynamicText: '' }
+    return buildRoleIdentityProjection({
+      contact,
+      profile,
+      profileTemplates: options.profileTemplates,
+      recalledMemories: options.recalledMemories,
+    })
+  }
+
+  const buildRoleContinuityPromptBlocks = (contact, options = {}) =>
+    buildRoleIdentityPromptBlocks(contact, options)
+
+  const resolveWorldKernelProjection = (contact, options = {}) => {
     const worldContext = resolveWorldContextForConsumer({
       systemStore,
       chatStore,
@@ -281,21 +339,27 @@ export const useChatAiPromptContextModel = ({
       contact,
       consumer: 'chat',
     })
-    const profile =
-      contact?.profileId && typeof chatStore?.getRoleProfileById === 'function'
-        ? chatStore.getRoleProfileById(contact.profileId)
-        : null
-    const roleProfileValues = profile?.profileValues || []
-    const visibleSelfValues = visibleSelfProfileValuesForRole('familiar')
+    const visibleSelfValues = options.includeSelfProfile === false
+      ? []
+      : visibleSelfProfileValuesForRole('familiar')
 
-    return [
-      buildWorldPromptBlock(worldContext),
-      `Current role profile values: ${formatProfileValuesForPrompt(roleProfileValues)}.`,
-      `Visible user self-profile values: ${formatProfileValuesForPrompt(visibleSelfValues)}.`,
-    ].join('\n')
+    return {
+      promptText: [
+        buildWorldPromptBlock(worldContext),
+        options.includeSelfProfile === false
+          ? ''
+          : `Visible user self-profile values: ${formatProfileValuesForPrompt(visibleSelfValues)}.`,
+      ].filter(Boolean).join('\n'),
+      profileTemplates: Array.isArray(worldContext?.profiles?.enabledTemplates)
+        ? worldContext.profiles.enabledTemplates
+        : [],
+    }
   }
 
-  const buildSystemPrompt = (contact, aiPrefs, options = {}) => {
+  const buildWorldKernelPromptBlock = (contact, options = {}) =>
+    resolveWorldKernelProjection(contact, options).promptText
+
+  const buildPromptContext = (contact, aiPrefs, options = {}) => {
     const contactKind = contact.kind || 'role'
     const typeLabel =
       contactKind === 'group' ? 'group chat' : contactKind === 'service' ? 'service account' : contactKind === 'official' ? 'official account' : 'role chat'
@@ -369,27 +433,33 @@ export const useChatAiPromptContextModel = ({
     const proactiveInstruction = options.isProactive
       ? 'This is a proactive opener scene. Start naturally and do not mention trigger mechanics.'
       : 'This is a normal reply scene. Respond based on context naturally.'
-    const worldKernelInstruction = buildWorldKernelPromptBlock(contact)
+    const worldKernel = resolveWorldKernelProjection(contact, {
+      includeSelfProfile: !anonymousIdentity,
+    })
+    const worldKernelInstruction = worldKernel.promptText
     const truthInstruction = buildTruthPromptBlock(contact)
-    const relationshipRuntimeInstruction = buildRelationshipRuntimePromptBlock(contact)
+    const relationshipRuntime = buildRelationshipRuntimeProjection(contact, options)
+    const relationshipRuntimeInstruction = relationshipRuntime.promptText
+    const roleIdentity = buildRoleIdentityPromptBlocks(contact, {
+      profileTemplates: worldKernel.profileTemplates,
+      recalledMemories: relationshipRuntime.recalledMemories,
+    })
     const imagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, options.imageReferences)
     const imageReferenceCount = imagePolicy.referenceCount
-    const providerCapabilities =
-      options.providerCapabilities && typeof options.providerCapabilities === 'object'
-        ? options.providerCapabilities
-        : null
     const imageReferenceInstruction =
       imageReferenceCount > 0
-        ? `Image references available in user context: ${imageReferenceCount}. Treat them as visual cues and avoid hallucinating details not supported by cues.`
+        ? [
+            `Visual references accompany this turn: ${imageReferenceCount}.`,
+            'Use only details actually present in the visual input or its supplied caption.',
+            'If exact visual details are unavailable, respond naturally to the user\'s act of sharing and to the supplied caption or label.',
+            'Do not claim to have seen unavailable details, and do not mention model, provider, transport, attachment processing, or technical limitations.',
+          ].join(' ')
         : 'No explicit image references were provided in this turn.'
     const imageBlockInstruction = imagePolicy.allowImageVirtual
       ? imagePolicy.allowWithoutReference
         ? 'image_virtual blocks are allowed. Even without explicit references, generated visual imagination is permitted for this thread.'
         : 'image_virtual blocks are allowed only when reference cues are present in this turn.'
       : 'image_virtual blocks are disallowed in this turn. Describe visuals in text instead of sending image_virtual blocks.'
-    const providerCapabilityInstruction = providerCapabilities
-      ? `Image-reference transport mode: ${providerCapabilities.preferredImageReferenceMode || 'none'} (provider: ${providerCapabilities.kind || 'unknown'}).`
-      : 'Image-reference transport mode: unknown.'
     const userIdentityBlock = anonymousIdentity
       ? [
           'User identity: hidden.',
@@ -398,20 +468,13 @@ export const useChatAiPromptContextModel = ({
         ].join('\n')
       : userAiContext.promptText
 
-    return `
+    const stablePrompt = `
 ${worldKernelInstruction}
-${userIdentityBlock}
+${roleIdentity.stableText}
 Conversation type: ${typeLabel}
-Your role: ${contact.name} (${contact.role})
-${serviceInstruction}
+${roleIdentity.roleBound ? '' : `Your role: ${contact.name} (${contact.role})`}
+${roleIdentity.roleBound ? '' : serviceInstruction}
 ${groupInstruction}
-Response style: ${responseStyle}
-Target reply count: ${targetReplyCount}
-${proactiveInstruction}
-${truthInstruction}
-${relationshipRuntimeInstruction}
-${imageReferenceInstruction}
-${providerCapabilityInstruction}
 Stay in character and never claim you are an AI model.
 
 You MUST return valid JSON object and never use markdown wrappers.
@@ -432,12 +495,7 @@ JSON schema:
 }
 
 Rules:
-- Keep messages length close to ${targetReplyCount}.
-- ${quoteRule}
-- ${bilingualRule}
-- ${voiceRule}
 - Always respect primary worldview rules, current role profile values, visible user self-profile values, and supplemental role-bound knowledge points.
-- ${imageBlockInstruction}
 - Optional block types: module_link, transfer_virtual, image_virtual, mini_scene.
 - Never invent, guess, or output a bank name paired with an account number, card number, routing number, IBAN, or other receiving-account credential. Verified receiving-account cards are created only by the system from the persisted role profile; ask the user to use the Chat account-card action when an account is needed.
 - Never claim that merely discussing or requesting a transfer moved money. Only a Wallet-confirmed receipt represents a completed transfer.
@@ -445,7 +503,40 @@ Rules:
 - socialEvents is optional. Use it only in role conversations when the character is proposing a communication-state change.
 - socialEvents is a proposal only: never claim the state already changed, never include it for services, groups, or the user themself, and never use it for ordinary mood or relationship flavor.
 `
+
+    const dynamicPrompt = `
+${userIdentityBlock}
+Response style: ${responseStyle}
+Target reply count: ${targetReplyCount}
+${proactiveInstruction}
+${truthInstruction}
+${relationshipRuntimeInstruction}
+${roleIdentity.dynamicText}
+${imageReferenceInstruction}
+
+Current response rules:
+- Keep messages length close to ${targetReplyCount}.
+- ${quoteRule}
+- ${bilingualRule}
+- ${voiceRule}
+- ${imageBlockInstruction}
+`
+
+    const cacheIdentity =
+      isRoleContact(contact) && contact?.profileId > 0
+        ? `role:${contact.profileId}`
+        : `${contactKind}:${Math.max(0, Number(contact?.id) || 0)}`
+
+    return createAiContextEnvelope({
+      stableBlocks: [stablePrompt],
+      dynamicBlocks: [dynamicPrompt],
+      cacheNamespace: 'chat',
+      cacheIdentity,
+    })
   }
+
+  const buildSystemPrompt = (contact, aiPrefs, options = {}) =>
+    buildPromptContext(contact, aiPrefs, options).systemPrompt
 
   const extractMessageTextForContext = (message) => {
     if (!message) return ''
@@ -523,13 +614,22 @@ Rules:
       content: extractMessageTextForContext(item),
     }))
 
+  const projectAiRequestContext = (contactId, options = {}) => {
+    const candidateSourceMessages = getContextSourceMessages(contactId, options)
+    return projectChatContextBudget({
+      sourceMessages: candidateSourceMessages,
+      aiMessages: toAiCallMessages(candidateSourceMessages),
+      characterBudget:
+        options.characterBudget ?? CHAT_AI_PROMPT_CONTEXT_LIMITS.conversationCharacters,
+    })
+  }
+
   const toAiMessages = (contactId, untilMessageId = '', options = {}) =>
-    toAiCallMessages(
-      getContextSourceMessages(contactId, {
-        untilMessageId,
-        contextTurns: options.contextTurns,
-      }),
-    )
+    projectAiRequestContext(contactId, {
+      untilMessageId,
+      contextTurns: options.contextTurns,
+      characterBudget: options.characterBudget,
+    }).aiMessages
 
   const getSmartReplyHistory = (contactId) =>
     toAiMessages(contactId, '', { contextTurns: 4 }).slice(
@@ -544,9 +644,12 @@ Rules:
       .slice(0, CHAT_AI_PROMPT_CONTEXT_LIMITS.automationFingerprintChars)
 
   return {
+    buildPromptContext,
     buildSystemPrompt,
     buildTruthPromptBlock,
     buildRelationshipRuntimePromptBlock,
+    buildRoleIdentityPromptBlocks,
+    buildRoleContinuityPromptBlocks,
     buildWorldKernelPromptBlock,
     clampContextTurns,
     clampReplyCount,
@@ -556,6 +659,7 @@ Rules:
     getSmartReplyHistory,
     hasRichMessageBlocks: hasChatPromptRichMessageBlocks,
     normalizeResponseStyle,
+    projectAiRequestContext,
     resolveAssistantImageBlockPolicy,
     toAiCallMessages,
     toAiMessages,

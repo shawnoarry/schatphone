@@ -49,7 +49,8 @@ describe('ai image reference helpers', () => {
     expect(text).toContain('[Reference Images]')
     expect(text).toContain('City night')
     expect(text).toContain('Neon rain street')
-    expect(text).toContain('https://example.com/city.png')
+    expect(text).not.toContain('https://example.com/city.png')
+    expect(text).not.toContain('assetId')
   })
 
   it('prefers native-url mode on openai-compatible provider when url refs exist', () => {
@@ -97,6 +98,21 @@ describe('ai image reference helpers', () => {
     })
 
     expect(capabilities.kind).toBe('gemini')
+    expect(capabilities.supportsNativeImageReference).toBe(false)
+    expect(capabilities.preferredImageReferenceMode).toBe('context_only')
+  })
+
+  it('does not assume arbitrary OpenAI-compatible gateways accept image inputs', () => {
+    const capabilities = getAiProviderCapabilities({
+      settings: {
+        api: {
+          url: 'https://gateway.example.com/v1/chat/completions',
+        },
+      },
+      imageReferences: [{ label: 'scene', sourceUrl: 'https://example.com/scene.png' }],
+    })
+
+    expect(capabilities.kind).toBe('openai_compatible')
     expect(capabilities.supportsNativeImageReference).toBe(false)
     expect(capabilities.preferredImageReferenceMode).toBe('context_only')
   })

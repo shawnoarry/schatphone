@@ -11,7 +11,6 @@ import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useMapStore } from '../src/stores/map'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
-import { useSimulationStore } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
 import {
@@ -4010,6 +4009,9 @@ describe('FoodDeliveryView', () => {
       `[data-testid="food-delivery-order-event-${order.id}-${event.id}"]`,
     )
     expect(eventCard.text()).toContain('Rider is delayed by rain.')
+    expect(eventCard.text()).not.toMatch(/Dispatch brief|配送简报/)
+    expect(wrapper.find('[data-testid^="food-delivery-event-surface-"]').exists()).toBe(false)
+    expect(store.findOrderById(order.id).etaMinutes).toBe(42)
     const mapContext = wrapper.get(
       `[data-testid="food-delivery-event-map-context-${order.id}-${event.id}"]`,
     )
@@ -4042,49 +4044,6 @@ describe('FoodDeliveryView', () => {
     expect(mapStore.tripHistory).toHaveLength(0)
     expect(store.orderCount).toBe(1)
     expect(store.cartQuantity).toBe(0)
-    wrapper.unmount()
-  })
-
-  test('can trigger a safe delivery event from an order card through the simulation pilot', async () => {
-    const router = createTestRouter()
-    const store = useFoodDeliveryStore()
-    const activeRestaurant = store.listRestaurantsByCategory('restaurants')[0]
-    const menuItem = store.listMenuByRestaurant(activeRestaurant.id)[0]
-    store.addToCart(menuItem.id)
-    const order = store.checkoutCart({
-      deliveryAddress: 'Map Pin B',
-      note: 'Random event pilot.',
-    })
-
-    await router.push(
-      `/food-delivery?category=restaurants&restaurantId=${activeRestaurant.id}&entry=shop`,
-    )
-    await router.isReady()
-
-    const wrapper = mount(FoodDeliveryView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    await wrapper.get(`[data-testid="food-delivery-trigger-event-${order.id}"]`).trigger('click')
-    await flushPromises()
-
-    expect(store.orders[0]?.events).toHaveLength(1)
-    expect([
-      FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE,
-      FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
-    ]).toContain(store.orders[0]?.events[0]?.type)
-    expect(wrapper.get('[data-testid="food-delivery-event-feedback"]').text()).toMatch(
-      /Delivery update added\.|配送更新已添加。/,
-    )
-    expect(
-      wrapper
-        .find(
-          `[data-testid="food-delivery-order-event-${order.id}-${store.orders[0].events[0].id}"]`,
-        )
-        .exists(),
-    ).toBe(true)
     wrapper.unmount()
   })
 
@@ -4143,7 +4102,6 @@ describe('FoodDeliveryView', () => {
   test('keeps Moon order support folded and presents consumer delivery controls', async () => {
     const router = createTestRouter()
     const store = useFoodDeliveryStore()
-    const simulationStore = useSimulationStore()
     const activeRestaurant = store.findRestaurantById('food_seed_moon_bistro')
     const menuItem = store.listMenuByRestaurant(activeRestaurant.id)[0]
 
@@ -4180,7 +4138,8 @@ describe('FoodDeliveryView', () => {
 
     const drawerText = drawer.text()
     expect(drawerText).toMatch(/Delivery details|配送详情/)
-    expect(drawerText).toMatch(/Check for update|查看配送更新/)
+    expect(drawerText).not.toMatch(/Check for update|查看配送更新/)
+    expect(drawerText).not.toMatch(/Dispatch brief|配送简报/)
     expect(drawerText).toMatch(/Confirm delivery|确认已送达/)
     expect(drawerText).toMatch(/Remove from history|从记录中移除/)
     expect(drawerText).toMatch(/Save to Wallet|保存到 Wallet/)
@@ -4202,26 +4161,20 @@ describe('FoodDeliveryView', () => {
       '[overflow-wrap:anywhere]',
     )
 
-    const checkForUpdate = wrapper.get(`[data-testid="food-delivery-trigger-event-${order.id}"]`)
+    expect(wrapper.find(`[data-testid="food-delivery-trigger-event-${order.id}"]`).exists()).toBe(
+      false,
+    )
+    expect(wrapper.find('[data-testid="food-delivery-event-feedback"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid^="food-delivery-event-surface-"]').exists()).toBe(false)
     const confirmDelivery = wrapper.get(`[data-testid="food-delivery-mark-delivered-${order.id}"]`)
     const removeFromHistory = wrapper.get(`[data-testid="food-delivery-delete-order-${order.id}"]`)
-    for (const control of [checkForUpdate, confirmDelivery, removeFromHistory]) {
+    for (const control of [confirmDelivery, removeFromHistory]) {
       expect(control.classes()).toContain('min-h-11')
       expect(control.classes()).toContain('focus-visible:ring-2')
       expect(control.classes()).toContain('motion-reduce:transition-none')
       expect(control.classes()).toContain('[overflow-wrap:anywhere]')
     }
-
-    simulationStore.setModuleEventsEnabled('food_delivery', false)
-    await checkForUpdate.trigger('click')
-    await flushPromises()
     expect(store.findOrderById(order.id).events).toHaveLength(0)
-    expect(wrapper.get('[data-testid="food-delivery-event-feedback"]').text()).toMatch(
-      /Delivery updates are unavailable right now\.|配送更新当前不可用。/,
-    )
-    expect(
-      wrapper.get('[data-testid="food-delivery-event-feedback"]').attributes('aria-live'),
-    ).toBe('polite')
 
     wrapper.unmount()
   })

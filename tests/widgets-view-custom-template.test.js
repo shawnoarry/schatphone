@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import WidgetsView from '../src/views/WidgetsView.vue'
 import { OFFICIAL_WIDGET_STYLE_PRESETS } from '../src/lib/widget-style-presets'
+import { BUILT_IN_HOME_WIDGETS } from '../src/lib/home-widgets'
 import { VALID_WIDGET_SIZES } from '../src/lib/widget-schema'
 import { useSystemStore } from '../src/stores/system'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
@@ -106,6 +107,15 @@ describe('Widgets custom template starters', () => {
     expect(text).toContain('Calendar')
     expect(text).toContain('Music')
     expect(text).toContain('System Status')
+    expect(text).toContain('Daily Steps')
+    expect(text).toContain('Mood Window')
+    expect(text).toContain('Commute Rail')
+    expect(text).toContain('Today Agenda')
+    expect(text).toContain('Paper Moon Week')
+    expect(text).toContain('Color Memory Wall')
+    expect(text).toContain('Aurora Waveform')
+    expect(text).toContain('Day & Night Veil')
+    expect(text).toContain('World Pulse')
     expect(text).toContain('2x2')
     expect(text).toContain('4x2')
     expect(text).toContain('Evening Radio')
@@ -162,10 +172,16 @@ describe('Widgets custom template starters', () => {
     await nextTick()
 
     const marketCards = wrapper.findAll('.widgets-market-card')
-    expect(marketCards).toHaveLength(1)
-    expect(marketCards[0].text()).toContain('Theme Board')
-    expect(marketCards[0].text()).toContain('4x3')
-    expect(wrapper.text()).toContain('1 items')
+    expect(marketCards).toHaveLength(3)
+    expect(marketCards.map((card) => card.text())).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Theme Board'),
+        expect.stringContaining('Paper Moon Week'),
+        expect.stringContaining('World Pulse'),
+      ]),
+    )
+    expect(marketCards.every((card) => card.text().includes('4x3'))).toBe(true)
+    expect(wrapper.text()).toContain('3 items')
     expect(wrapper.text()).not.toContain('Weather')
 
     wrapper.unmount()
@@ -490,6 +506,8 @@ describe('Widgets custom template starters', () => {
       name: 'Preview Card',
       size: '1x1',
       code: '<div style="height:100%;display:grid;place-items:center;">Demo</div>',
+      pageIndex: null,
+      placeOnHome: false,
     })
 
     const wrapper = await mountWidgetsView()
@@ -502,8 +520,93 @@ describe('Widgets custom template starters', () => {
     expect(wrapper.find('.widgets-created-grid').exists()).toBe(true)
     expect(createdItem.classes()).toContain('widgets-created-card')
     expect(createdItem.find('.widgets-created-preview iframe').exists()).toBe(true)
+    expect(createdItem.text()).toContain('Choose Slot')
+    expect(createdItem.find('.widgets-created-actions .fa-table-cells').exists()).toBe(true)
     expect(createdItem.find('.widgets-created-actions .fa-pen').exists()).toBe(true)
     expect(createdItem.find('.widgets-created-actions .fa-trash').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('routes saved widgets and newly imported widgets into matching Home slots', async () => {
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    const savedWidgetId = store.addCustomWidget({
+      name: 'Saved Card',
+      size: '2x2',
+      code: '<div>Saved</div>',
+      pageIndex: null,
+      placeOnHome: false,
+    })
+    const wrapper = await mountWidgetsView()
+
+    await wrapper.find('#widgets-tab-custom').trigger('click')
+    await nextTick()
+    await wrapper.find(`[data-testid="widgets-choose-slot-${savedWidgetId}"]`).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.vm.$router.currentRoute.value.path).toBe('/home')
+    expect(wrapper.vm.$router.currentRoute.value.query).toMatchObject({
+      widgetEdit: '1',
+      libraryTile: savedWidgetId,
+    })
+
+    wrapper.unmount()
+
+    const importWrapper = await mountWidgetsView()
+    await importWrapper.find('#widgets-tab-import').trigger('click')
+    await nextTick()
+    await importWrapper.find('.widgets-import-textarea').setValue(
+      JSON.stringify([
+        {
+          name: 'Imported Card',
+          size: '4x1',
+          code: '<div>Imported</div>',
+        },
+      ]),
+    )
+    await importWrapper.find('.widgets-import-actions .widgets-primary-btn').trigger('click')
+    await nextTick()
+
+    const importedWidgetId = store.settings.appearance.customWidgets.at(-1).id
+    const feedbackAction = importWrapper.find('[data-testid="widgets-feedback-choose-slot"]')
+    expect(feedbackAction.exists()).toBe(true)
+    await feedbackAction.trigger('click')
+    await flushPromises()
+
+    expect(importWrapper.vm.$router.currentRoute.value.path).toBe('/home')
+    expect(importWrapper.vm.$router.currentRoute.value.query).toMatchObject({
+      widgetEdit: '1',
+      libraryTile: importedWidgetId,
+    })
+
+    importWrapper.unmount()
+  })
+
+  test('routes placed saved widgets back to their Home entry', async () => {
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    const widgetId = store.addCustomWidget({
+      name: 'Placed Card',
+      size: '2x2',
+      code: '<div>Placed</div>',
+      pageIndex: 1,
+      placeOnHome: true,
+    })
+    const wrapper = await mountWidgetsView()
+
+    await wrapper.find('#widgets-tab-custom').trigger('click')
+    await nextTick()
+    const action = wrapper.find(`[data-testid="widgets-choose-slot-${widgetId}"]`)
+    expect(action.text()).toContain('Edit Home')
+    await action.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.vm.$router.currentRoute.value.query).toMatchObject({
+      widgetEdit: '1',
+      focusTile: widgetId,
+    })
+    expect(wrapper.vm.$router.currentRoute.value.query.libraryTile).toBeUndefined()
 
     wrapper.unmount()
   })
@@ -528,5 +631,28 @@ describe('Widgets custom template starters', () => {
       expect(preset.code).not.toContain('<script')
       expect(preset.code).not.toMatch(/\son[a-z0-9_-]+\s*=/i)
     })
+  })
+
+  test('built-in widgets cover every supported Home slot size with explicit visual variants', () => {
+    expect(new Set(BUILT_IN_HOME_WIDGETS.map((widget) => widget.size))).toEqual(
+      new Set(VALID_WIDGET_SIZES),
+    )
+    expect(BUILT_IN_HOME_WIDGETS.map((widget) => widget.id)).toEqual(
+      expect.arrayContaining([
+        'focus_pulse',
+        'daily_steps',
+        'photo_note',
+        'commute_strip',
+        'today_agenda',
+        'week_rhythm',
+        'memory_board',
+        'music_wave',
+        'ambient_scene',
+        'world_pulse',
+      ]),
+    )
+    expect(new Set(BUILT_IN_HOME_WIDGETS.map((widget) => widget.variant)).size).toBe(
+      BUILT_IN_HOME_WIDGETS.length,
+    )
   })
 })

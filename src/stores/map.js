@@ -15,11 +15,13 @@ import {
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import {
+  CUSTOM_MAP_PACK_LIMIT,
   DEFAULT_MAP_PACK_ID,
   calculateMapDistanceKm,
   getMapPackById,
   getRecommendedMapPackIdForWorldPack,
   listMapPacks,
+  normalizeMapCatalogProvenance,
   normalizeCustomMapPack,
   normalizeCustomMapPacks,
   normalizeMapPosition,
@@ -1299,6 +1301,8 @@ export const useMapStore = defineStore('map', () => {
   let mapEventTextProviderRunnerOverride = null
   let journeyCheckpointEventEvaluationEnabled = false
   let journeyEventRandomValueOverride
+  let skipNextManagedMapPackWatchedWrite = false
+  let storageInitializationPromise = Promise.resolve()
   const hasFinishedStorageHydration = ref(false)
 
   const activeMapPack = computed(() => findMapPackInList(mapPacks.value, activeMapPackId.value))
@@ -2877,7 +2881,9 @@ export const useMapStore = defineStore('map', () => {
     if (mapPacks.value.some((pack) => pack.id === id)) return null
     const pack = normalizeCustomMapPack({ ...input, id }, customMapPacks.value.length)
     if (!pack) return null
-    customMapPacks.value = normalizeCustomMapPacks([...customMapPacks.value, pack])
+    customMapPacks.value = normalizeCustomMapPacks([...customMapPacks.value, pack], {
+      preserveCatalogProvenance: true,
+    })
     return customMapPacks.value.find((item) => item.id === pack.id) || null
   }
 
@@ -3230,10 +3236,11 @@ export const useMapStore = defineStore('map', () => {
       const providerAdapter =
         typeof mapEventTextProviderRunnerOverride === 'function'
           ? mapEventTextProviderRunnerOverride
-          : ({ messages, systemPrompt, signal }) =>
+          : ({ messages, systemPrompt, contextEnvelope, signal }) =>
               callAI({
                 messages,
                 systemPrompt,
+                contextEnvelope,
                 signal,
                 settings: systemStore.settings,
                 withMeta: true,
@@ -3994,7 +4001,9 @@ export const useMapStore = defineStore('map', () => {
   const applyPersistedSource = (source) => {
     if (!source || typeof source !== 'object') return false
 
-    customMapPacks.value = normalizeCustomMapPacks(source.customMapPacks)
+    customMapPacks.value = normalizeCustomMapPacks(source.customMapPacks, {
+      preserveCatalogProvenance: true,
+    })
     worldMapPackBindings.value = normalizeWorldMapPackBindings(
       source.worldMapPackBindings,
       mapPacks.value,
@@ -4098,7 +4107,11 @@ export const useMapStore = defineStore('map', () => {
     customMapPacks: customMapPacks.value.map((pack) => ({
       ...pack,
       factions: pack.factions.map((faction) => ({ ...faction, position: { ...faction.position } })),
-      places: [],
+      places: pack.places.map((place) => ({
+        ...place,
+        position: { ...place.position },
+        aliases: Array.isArray(place.aliases) ? [...place.aliases] : [],
+      })),
     })),
     worldMapPackBindings: { ...worldMapPackBindings.value },
     mapPlaceKnowledgeByWorld: normalizeMapPlaceKnowledgeByWorld(
@@ -4178,19 +4191,143 @@ export const useMapStore = defineStore('map', () => {
   }
 
   const persistToStorage = () => {
-    writePersistedState(
+    return writePersistedState(
       MAP_STORAGE_KEY,
       createBackupSnapshot(),
       { version: MAP_STORAGE_VERSION, migrate: migrateMapStorage },
     )
   }
 
-  const saveNow = () => {
-    persistToStorage()
+  const saveNow = () => persistToStorage()
+
+  const commitManagedMapPackMutation = async ({
+    operation,
+    mapPackId,
+    pack,
+    patch = {},
+  } = {}) => {
+    await storageInitializationPromise
+
+    const normalizedMapPackId = typeof mapPackId === 'string' ? mapPackId.trim() : ''
+    if (!normalizedMapPackId) return { ok: false, code: 'invalid_map_pack_id' }
+
+    const existingIndex = customMapPacks.value.findIndex(
+      (item) => item.id === normalizedMapPackId,
+    )
+    const existingPack = existingIndex >= 0 ? customMapPacks.value[existingIndex] : null
+    const beforeMutation = customMapPacks.value
+    let nextPack = null
+
+    if (operation === 'create') {
+      if (mapPacks.value.some((item) => item.id === normalizedMapPackId)) {
+        return { ok: false, code: 'identity_collision' }
+      }
+      if (customMapPacks.value.length >= CUSTOM_MAP_PACK_LIMIT) {
+        return { ok: false, code: 'capacity_reached' }
+      }
+      nextPack = normalizeCustomMapPack(
+        { ...pack, id: normalizedMapPackId },
+        customMapPacks.value.length,
+        { preserveCatalogProvenance: true },
+      )
+      if (!nextPack || nextPack.id !== normalizedMapPackId) {
+        return { ok: false, code: 'invalid_map_pack' }
+      }
+      if (!normalizeMapCatalogProvenance(nextPack.provenance)) {
+        return { ok: false, code: 'invalid_managed_provenance' }
+      }
+      customMapPacks.value = [...customMapPacks.value, nextPack]
+    } else if (operation === 'update') {
+      if (!existingPack) {
+        return {
+          ok: false,
+          code: mapPacks.value.some((item) => item.id === normalizedMapPackId)
+            ? 'built_in'
+            : 'not_found',
+        }
+      }
+      const currentProvenance = normalizeMapCatalogProvenance(existingPack.provenance)
+      if (!currentProvenance) {
+        return { ok: false, code: 'not_managed' }
+      }
+      nextPack = normalizeCustomMapPack(
+        {
+          ...existingPack,
+          ...patch,
+          id: normalizedMapPackId,
+          createdAt: existingPack.createdAt,
+        },
+        existingIndex,
+        { preserveCatalogProvenance: true },
+      )
+      const nextProvenance = normalizeMapCatalogProvenance(nextPack?.provenance)
+      if (!nextPack || nextPack.id !== normalizedMapPackId || !nextProvenance) {
+        return { ok: false, code: 'invalid_managed_provenance' }
+      }
+      if (
+        nextProvenance.resourceId !== currentProvenance.resourceId ||
+        nextProvenance.catalogId !== currentProvenance.catalogId
+      ) {
+        return { ok: false, code: 'managed_identity_mismatch' }
+      }
+      customMapPacks.value = customMapPacks.value.map((item, index) =>
+        index === existingIndex ? nextPack : item,
+      )
+    } else if (operation === 'delete') {
+      if (!existingPack) {
+        return {
+          ok: false,
+          code: mapPacks.value.some((item) => item.id === normalizedMapPackId)
+            ? 'built_in'
+            : 'not_found',
+        }
+      }
+      if (!normalizeMapCatalogProvenance(existingPack.provenance)) {
+        return { ok: false, code: 'not_managed' }
+      }
+      customMapPacks.value = customMapPacks.value.filter(
+        (item) => item.id !== normalizedMapPackId,
+      )
+    } else {
+      return { ok: false, code: 'unsupported_operation' }
+    }
+
+    skipNextManagedMapPackWatchedWrite = true
+    queueMicrotask(() => {
+      skipNextManagedMapPackWatchedWrite = false
+    })
+    const persistenceResult = persistToStorage()
+    if (persistenceResult?.ok !== true) {
+      customMapPacks.value = beforeMutation
+      return {
+        ok: false,
+        code: persistenceResult?.error || 'persistence_failed',
+        persistence: persistenceResult || null,
+      }
+    }
+
+    return {
+      ok: true,
+      code: '',
+      mapPack: nextPack
+        ? {
+            ...nextPack,
+            factions: nextPack.factions.map((faction) => ({
+              ...faction,
+              position: { ...faction.position },
+            })),
+            places: nextPack.places.map((place) => ({
+              ...place,
+              position: { ...place.position },
+              aliases: Array.isArray(place.aliases) ? [...place.aliases] : [],
+            })),
+          }
+        : null,
+    }
   }
 
   const hydratedFromLocal = hydrateFromStorage()
-  void (async () => {
+  storageInitializationPromise = (async () => {
     if (!hydratedFromLocal) {
       await hydrateFromStorageAsync()
     }
@@ -4199,6 +4336,7 @@ export const useMapStore = defineStore('map', () => {
     scheduleTripArrivalCheck()
     persistToStorage()
   })()
+  void storageInitializationPromise
 
   watch(
     [
@@ -4219,6 +4357,10 @@ export const useMapStore = defineStore('map', () => {
     ],
     () => {
       if (!hasFinishedStorageHydration.value) return
+      if (skipNextManagedMapPackWatchedWrite) {
+        skipNextManagedMapPackWatchedWrite = false
+        return
+      }
       persistToStorage()
     },
     { deep: true },
@@ -4374,5 +4516,6 @@ export const useMapStore = defineStore('map', () => {
     setJourneyCheckpointEventEvaluationEnabled,
     setJourneyEventRandomValueForTesting,
     saveNow,
+    commitManagedMapPackMutation,
   }
 })

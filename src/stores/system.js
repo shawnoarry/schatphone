@@ -42,6 +42,7 @@ import {
   validateWidgetAppearanceCode,
   validateWidgetImportPayload,
 } from '../lib/widget-schema'
+import { BUILT_IN_HOME_WIDGET_BY_ID, BUILT_IN_HOME_WIDGET_IDS } from '../lib/home-widgets'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl, normalizeAiTransportMode } from '../lib/ai'
 import {
@@ -105,6 +106,11 @@ import {
   buildWorldServiceAccountTemplateFromProposal,
   buildWorldServiceTemplateProposalReview as buildWorldServiceTemplateProposalReviewPayload,
 } from '../lib/world-service-template-proposals'
+import {
+  createEmptyWorldSuiteInventory,
+  listInstalledWorldResources,
+  normalizeWorldSuiteInventory,
+} from '../lib/world-suite-inventory'
 
 const AVAILABLE_THEMES = [
   {
@@ -124,6 +130,31 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
+  [
+    'weather',
+    'photo_note',
+    'music',
+    'focus_pulse',
+    'app_wallet',
+    'app_themes',
+    'app_gallery',
+    CAMERA_HOME_APP_ID,
+  ],
+  [
+    'app_phone',
+    'app_map',
+    MUSIC_HOME_APP_ID,
+    'app_calendar',
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+  ],
+  ['system', 'quick_heart', 'quick_disc'],
+  [],
+  [],
+]
+
+const PRE_WIDGET_VISUAL_DEFAULT_WIDGET_PAGES = [
   ['weather', 'calendar', 'music', 'app_wallet', 'app_themes', 'app_gallery', CAMERA_HOME_APP_ID],
   [
     'app_phone',
@@ -244,12 +275,7 @@ const HOME_TILE_ALIASES = {
 }
 
 const CORE_HOME_TILE_IDS = [
-  'weather',
-  'calendar',
-  'music',
-  'system',
-  'quick_heart',
-  'quick_disc',
+  ...BUILT_IN_HOME_WIDGET_IDS,
   'app_network',
   'app_wallet',
   'app_themes',
@@ -274,9 +300,7 @@ const CORE_HOME_TILE_IDS = [
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
 const OPTIONAL_HOME_TILE_IDS = new Set()
-const BUILT_IN_WIDGET_TILE_IDS = CORE_HOME_TILE_IDS.filter(
-  (tileId) => typeof tileId === 'string' && !tileId.startsWith('app_'),
-)
+const BUILT_IN_WIDGET_TILE_IDS = [...BUILT_IN_HOME_WIDGET_IDS]
 
 const MIN_HOME_PAGES = 5
 const MIN_VISIBLE_HOME_PAGES = 2
@@ -415,7 +439,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 5
+const HOME_DESKTOP_SETUP_VERSION = 6
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -1136,8 +1160,8 @@ const normalizeHomeWidgetPages = (pages, customWidgetIds = [], options = {}) => 
 }
 
 const builtInHomeTileSizeKey = (tileId) => {
-  if (tileId === 'music') return '4x2'
-  if (tileId === 'quick_heart' || tileId === 'quick_disc') return '1x1'
+  const builtInWidgetSize = BUILT_IN_HOME_WIDGET_BY_ID[tileId]?.size
+  if (builtInWidgetSize) return builtInWidgetSize
   if (isWorldAppHomeTileId(tileId)) return '1x1'
   if (typeof tileId === 'string' && tileId.startsWith('app_')) return '1x1'
   return '2x2'
@@ -1183,6 +1207,25 @@ const normalizeThemeId = (themeId, fallback = AVAILABLE_THEMES[0]?.id || 'defaul
 
 const normalizeWallpaperAssetId = (value) =>
   typeof value === 'string' ? value.trim().slice(0, 160) : ''
+
+const normalizeBuiltInWidgetPreferences = (value) => {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const memoryBoard =
+    source.memory_board && typeof source.memory_board === 'object'
+      ? source.memory_board
+      : {}
+  const photoAssetIds = Array.isArray(memoryBoard.photoAssetIds)
+    ? memoryBoard.photoAssetIds
+    : []
+
+  return {
+    memory_board: {
+      photoAssetIds: Array.from({ length: 3 }, (_, index) =>
+        normalizeWallpaperAssetId(photoAssetIds[index]),
+      ),
+    },
+  }
+}
 
 const isLegacyThemeWallpaper = (value) =>
   typeof value === 'string' && LEGACY_THEME_WALLPAPERS.has(value.trim())
@@ -1467,6 +1510,7 @@ export const useSystemStore = defineStore('system', () => {
       homeLayoutTemplateIds: cloneDefaultHomeLayoutTemplateIds(),
       homeLayoutSlotPlacements: cloneDefaultHomeLayoutSlotPlacements(),
       customWidgets: [],
+      builtInWidgetPreferences: normalizeBuiltInWidgetPreferences(),
       lockClockStyle: DEFAULT_LOCK_CLOCK_STYLE,
       chat: normalizeChatAppearance(),
     },
@@ -1516,6 +1560,7 @@ export const useSystemStore = defineStore('system', () => {
     knowledgePoints: [],
     encyclopediaEntries: [],
     profileTemplates: createDefaultProfileTemplatePresets(),
+    worldSuiteInventory: createEmptyWorldSuiteInventory(),
   })
   user.knowledgePoints = user.encyclopediaEntries
 
@@ -2068,6 +2113,21 @@ export const useSystemStore = defineStore('system', () => {
     return changed
   }
 
+  const setBuiltInWidgetPhotoAsset = (widgetId, slotIndex, assetId = '') => {
+    if (widgetId !== 'memory_board') return false
+    const normalizedSlotIndex = Number(slotIndex)
+    if (!Number.isInteger(normalizedSlotIndex) || normalizedSlotIndex < 0 || normalizedSlotIndex > 2) {
+      return false
+    }
+
+    const current = normalizeBuiltInWidgetPreferences(
+      settings.appearance.builtInWidgetPreferences,
+    )
+    current.memory_board.photoAssetIds[normalizedSlotIndex] = normalizeWallpaperAssetId(assetId)
+    settings.appearance.builtInWidgetPreferences = current
+    return true
+  }
+
   const setCustomVar = (variableName, variableValue) => {
     if (!variableName) return
     settings.appearance.customVars = {
@@ -2110,6 +2170,10 @@ export const useSystemStore = defineStore('system', () => {
       normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION
     const shouldResetToCleanSetup =
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_WIDGET_VISUAL_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MUSIC_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
@@ -2136,6 +2200,10 @@ export const useSystemStore = defineStore('system', () => {
   const recommendHomeDesktopRefresh = computed(() => {
     if (
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_WIDGET_VISUAL_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MUSIC_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
@@ -4236,6 +4304,9 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.chat = normalizeChatAppearance(appearance.chat)
 
       settings.appearance.customWidgets = normalizeCustomWidgets(appearance.customWidgets)
+      settings.appearance.builtInWidgetPreferences = normalizeBuiltInWidgetPreferences(
+        appearance.builtInWidgetPreferences,
+      )
       settings.appearance.homeWidgetPages = normalizeHomeWidgetPagesForCurrentSettings(
         appearance.homeWidgetPages,
         currentCustomWidgetIds(),
@@ -4348,6 +4419,9 @@ export const useSystemStore = defineStore('system', () => {
     user.encyclopediaEntries = normalizedWorldKernel.encyclopediaEntries
     user.knowledgePoints = user.encyclopediaEntries
     user.profileTemplates = normalizedWorldKernel.profileTemplates
+    user.worldSuiteInventory = normalizeWorldSuiteInventory(
+      persistedUser?.worldSuiteInventory,
+    )
     if (typeof user.chatStatus !== 'string') {
       user.chatStatus = 'idle'
     }
@@ -4562,6 +4636,9 @@ export const useSystemStore = defineStore('system', () => {
               ...widget,
               action: normalizeCustomWidgetAction(widget.action),
             })),
+            builtInWidgetPreferences: normalizeBuiltInWidgetPreferences(
+              settings.appearance.builtInWidgetPreferences,
+            ),
           },
           system: { ...settings.system },
           more: {
@@ -4643,6 +4720,7 @@ export const useSystemStore = defineStore('system', () => {
               }))
             : [],
           profileTemplates: normalizeProfileTemplates(user.profileTemplates).map(cloneProfileTemplate),
+          worldSuiteInventory: normalizeWorldSuiteInventory(user.worldSuiteInventory),
         },
         notifications: notifications.value.map((note) => ({ ...note })),
         apiReports: apiReports.value.map((report) => ({ ...report })),
@@ -4674,6 +4752,17 @@ export const useSystemStore = defineStore('system', () => {
     if (!hasFinishedStorageHydration.value) storageWriteRequestedBeforeHydration = true
     return persistToStorage({ allowBeforeHydration: true })
   }
+
+  const getWorldSuiteInventorySnapshot = () =>
+    normalizeWorldSuiteInventory(user.worldSuiteInventory)
+
+  const replaceWorldSuiteInventory = (inventory = {}) => {
+    user.worldSuiteInventory = normalizeWorldSuiteInventory(inventory)
+    return getWorldSuiteInventorySnapshot()
+  }
+
+  const getInstalledWorldResources = () =>
+    listInstalledWorldResources(user.worldSuiteInventory)
 
   const hydratedFromLocal = hydrateFromStorage()
   void (async () => {
@@ -4724,6 +4813,7 @@ export const useSystemStore = defineStore('system', () => {
     exportAppearancePack,
     importAppearancePack,
     setChatAppearance,
+    setBuiltInWidgetPhotoAsset,
     setCustomVar,
     removeCustomVar,
     recommendHomeDesktopRefresh,
@@ -4823,6 +4913,9 @@ export const useSystemStore = defineStore('system', () => {
     installSoftwareUpdate,
     postponeSoftwareUpdate,
     finishSoftwareUpdateRestart,
+    getWorldSuiteInventorySnapshot,
+    replaceWorldSuiteInventory,
+    getInstalledWorldResources,
     lockPhone,
     unlockPhone,
     saveNow,

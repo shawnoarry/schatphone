@@ -64,6 +64,31 @@ async function fixturePublishCliRepo() {
 }
 
 describe('image-bed project publishing', () => {
+  it('accepts the asset-upload-list confirmation CLI language', async () => {
+    const repoRoot = await fixturePublishCliRepo()
+    const prepared = runFixtureCommand(repoRoot, process.execPath, [
+      'scripts/imgbed-publish.mjs',
+      'prepare',
+      '--batch',
+      'confirmed-list',
+      '--runtime',
+      'output/imagegen/poster/runtime.png=briefings/confirmed.png',
+      '--confirm',
+      '--confirmation-source',
+      'test-confirmed',
+    ])
+    expect(prepared.status).toBe(0)
+    const plan = JSON.parse(await readFile(
+      join(repoRoot, '.imgbed-publish/confirmed-list.plan.json'),
+      'utf8',
+    ))
+    expect(plan).toMatchObject({
+      status: 'APPROVED',
+      approved: true,
+      approvalSource: 'test-confirmed',
+    })
+  }, 15_000)
+
   it('builds an approved runtime/source plan with distinct destinations', async () => {
     const repoRoot = await fixtureRepo()
     const plan = await buildPublishPlan({

@@ -4,7 +4,9 @@ Updated: 2026-08-12
 
 ## 1. Core Rule
 
-The runtime lane is a coordination layer, not a replacement for module-owned records.
+The runtime lane coordinates cross-module causal chains; it is not a replacement for module-owned records or a universal card system.
+
+An event chain may begin in one Module, be evaluated and audited by Event Runtime, write canonical truth through another owner's Adapter, and continue through later owner-native records. A Module can participate in that chain without registering an Event Surface. Messages, order state, calls, posts, information feeds, journeys, Map encounters, and later scene presentations are owner-native forms; an Event Surface is only one optional Presentation Adapter when the host interaction has been separately accepted.
 
 ## 2. Ownership Split
 
@@ -80,7 +82,7 @@ Map remains the source owner for the journey, checkpoint plan, pins, places, tra
 
 This first collaboration is user-accepted and integrated locally. Destination change, event-driven cancellation, money, assets, relationships, identity, schedules, Agenda Journey behavior, and active exploration events remain outside MJE-3.
 
-### Event Surface Projection And Host Cards
+### Event Chains, Native Presentation, And Optional Event Surfaces
 
 EVE-1's landed pure Interface in `src/lib/simulation/event-surface-projection.js` derives a bounded read model over existing Map Journey or Chat social proposal/log truth plus a caller-supplied current source reference. It normalizes identity, ownership, display state, risk/review state, bilingual/accessibility copy, allowlisted request descriptors, an expansion target, and optional strict stable-place/geographic/canvas anchors. `src/lib/simulation/event-surface-host-registry.js` stays empty by default and validates every explicit host capability before a projection may be consumed. Neither Module adds an Event route, duplicate event record, source effect, or host UI.
 
@@ -91,6 +93,10 @@ Location-aware templates retain authored activation scope and discoverability se
 EVE-2A freezes the first concrete Interface and EVE-2B implements its Event Runtime side: `EventTemplateV2` and `EventInstanceV1` remain Event Runtime truth; strict registries/local materialization, Simulation-owned durable instances, and optional bounded one-call text composition do not write Map or another domain owner. EVE-2C supplies the Map-owned `MapPlaceSessionCheckpointV1`, current stable place/session revision with manual or journey-arrival provenance, and exact `map.place_session.validate_event_resolution` validation for the three approved production-arrival-briefing choices with `canonicalMutation: none`. The read-only Seoul semantic overlay remains Map-pack content, not an Event Runtime branch or a migration of current place records.
 
 EVE-3 adds the Event Notebook inside World Hub as a deterministic read model over existing runtime truth; it does not persist a duplicate event projection. Simulation-owned notes carry stable event/source/module/target references, survive bounded log rotation and backup/restore, and remain authoritative audit context until explicit deletion. Notes and selection do not execute Adapters or mutate Event Instances, logs, proposals, or source records. Reminders owns raw cues, Calendar owns confirmed plans, and Cheats owns any future privileged overrides.
+
+EVE-4A's Food Delivery Event Surface was completed as a technical spike, but product acceptance is withdrawn. It incorrectly treated a business event as a generic order-card brief and exposed a user action that queried by manufacturing a delay. The Food Delivery host registration, `Dispatch brief`, expansion/acknowledgement UI, and that manual trigger are removed.
+
+The useful owner seam remains: Food Delivery may persist the exact successful Event Runtime log reference on its canonical order event only through its validated one-to-one owner action. A legitimate foreground/session Tick or later approved system checkpoint may trigger `food_delivery.rider_delay.v1`; Food Delivery then updates its own `order.etaMinutes`, appends the native order event, and uses its existing Chat dispatch notification. The ETA change is canonical Food Delivery mutation, not `canonicalMutation: none`. Current Phone, courier contact, platform messaging, and expedite/customer-service behaviors are not implemented, so no fake choices are exposed.
 
 ### Agenda Journey And Activity Session Collaboration
 

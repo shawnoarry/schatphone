@@ -479,6 +479,9 @@ describe('canonical persistence-owner inventory', () => {
     const worldBook = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'worldbook.world-context',
     )
+    const worldSuite = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'world-suite.installation-inventory',
+    )
     const reminders = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'reminders.reminder-records',
     )
@@ -501,6 +504,13 @@ describe('canonical persistence-owner inventory', () => {
 
     expect(contacts).toMatchObject({ logicalOwner: 'Contacts', storageKeys: ['store:chat'] })
     expect(worldBook).toMatchObject({ logicalOwner: 'WorldBook', storageKeys: ['store:system'] })
+    expect(worldSuite).toMatchObject({
+      logicalOwner: 'World Suite',
+      storageKeys: ['store:system'],
+      backupRequirement: 'required',
+      backupSectionId: 'system-user',
+    })
+    expect(worldSuite.referenceRule).toContain('coordination evidence only')
     expect(reminders).toMatchObject({ logicalOwner: 'Reminders', storageKeys: ['store:reminders'] })
     expect(calendar.referenceRule).toContain('import compatibility only')
     expect(music).toMatchObject({ logicalOwner: 'Music', storageKeys: ['store:system'] })
@@ -553,8 +563,12 @@ describe('canonical persistence-owner inventory', () => {
       (section) => section.coverage === 'known_gap',
     ).flatMap((section) => section.dataClassIds)
 
-    expect(namedRequiredGapClassIds).toEqual(['chat.module-identity-settings'])
+    expect(namedRequiredGapClassIds).toEqual([
+      'chat.module-identity-settings',
+      'world-suite.installation-inventory',
+    ])
     expect(coveredRequiredClassIds.has('chat.module-identity-settings')).toBe(false)
+    expect(coveredRequiredClassIds.has('world-suite.installation-inventory')).toBe(false)
 
     for (const entry of relevantDataClasses) {
       const coverage = registeredClassCoverage.get(entry.id)
@@ -590,6 +604,10 @@ describe('canonical persistence-owner inventory', () => {
         {
           sectionId: 'chat-module-identity-known-gap',
           dataClassIds: ['chat.module-identity-settings'],
+        },
+        {
+          sectionId: 'world-suite-inventory-known-gap',
+          dataClassIds: ['world-suite.installation-inventory'],
         },
       ],
     })

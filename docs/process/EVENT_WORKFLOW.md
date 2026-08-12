@@ -13,7 +13,8 @@ Use it when the team is designing or implementing:
 - event logs;
 - surprise-mode behavior;
 - cross-module event handoff;
-- host-embedded event cards and optional Map coordinate anchors;
+- owner-native cross-module event chains;
+- optional host-embedded event cards and Map coordinate anchors;
 - World Hub runtime review behavior tied to the event engine.
 
 This workflow is separate from:
@@ -80,41 +81,43 @@ If an event change needs visual work, first decide visual ownership through `doc
 ## 3. Default Working Rules
 
 1. Preserve module ownership. Events orchestrate; domain modules still own their own state.
-2. Every event must name:
+2. Treat the event chain as the product unit. Event cards and tabs are optional presentation forms, not the definition of event participation.
+3. Every event must name:
    - trigger source;
    - module owner;
    - adapter action;
    - visible surface;
    - side effects;
    - tests.
-3. Manual, condition-driven, random, scheduled, and AI-assisted events should share one event-template shape.
-4. Random events must have cooldowns, daily caps, user controls, and deterministic test paths.
-5. Important or negative events must be explainable to the user and dismissible or reviewable where appropriate.
-6. Chat and notifications are display surfaces unless the event explicitly belongs to Chat.
-7. Map may provide location, ETA, distance, and route context, but should not own another module's order or payment lifecycle.
-8. Wallet, Calendar, Gallery, Files, and Assets should remain downstream consumers unless their own module action creates the event.
-9. AI may enrich copy or suggest event candidates later, but should not become the first source of state mutation.
-10. Store persistence, backup/restore, and migration safety must be considered before closing an event slice.
-11. Tests must avoid flaky randomness. Use fixed seeds or injected random values.
-12. Event logs should be readable by future AI assistants, not only rendered to users.
-13. World-aware events must follow `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
-14. Runtime event triggers should use local event variant packs by default. API calls may generate/refresh packs or optionally materialize bounded text after an approved explicit event-entry/presentation checkpoint, but never run for every random event, Tick, distance update, place focus, eligibility check, or compact invitation.
-15. World Hub review should keep event-log explanations read-only and inspectable by module, status, trigger source, reason, adapter boundary, target, and world variant context.
-16. Relationship event gating must consume saved role-profile classification fields (`primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit metadata), not raw `relationshipLabelText` or `relationshipLabelNote`.
-17. Low-risk relationship facts may attach classification gate metadata as soft-reference audit context and still allow the fact. High-risk hard-gate behavior must remain explicit, testable, and review/confirmation-oriented before any high-impact automation is enabled.
-18. Future high-risk relationship event packs should consume named gate presets from `src/lib/relationship-event-gating.js` instead of duplicating hard-gate rule objects in module adapters.
-19. Generated Chat social events such as role-initiated greetings, refusal, blocks, restores, and unblocks must use the explicit event-runtime review/audit seam before mutating Chat channel state. Low-risk greetings may auto-apply with audit; high-risk communication changes must stay review-first in World Hub. World Hub should explain proposal source, trigger policy, and the rule that Chat owns final communication reachability while Contacts and Relationship Runtime stay separate.
-20. Event Surface Projections are bounded read models, not a second event store or an authorization token. A host card may expose an explicit expansion command, but every outcome still returns through the owning Module Adapter.
-21. Map coordinate anchors are presentation context only. They cannot create places, reveal discoveries, change visibility, move role/journey truth, or invent a fallback position for invalid/stale events.
-22. Cross-module event history, pending review, explanations, and event-scoped notes use the existing World Hub hidden entry. Event receives no normal Home app; Cheats keeps separate privileged authority.
-23. Location-aware templates keep an authored activation scope. Distance may satisfy or fail that scope, but it never converts an onsite/interior event into a remote event.
-24. Map owns place relation, manual-versus-journey position provenance, and place-entry sessions. A place `Enter` action may submit an event checkpoint, but Event Runtime does not own or fabricate presence.
-25. Optional event permission, random-event intensity, and presentation mode are separate controls. Disabling optional events cannot remove deterministic schedule, journey, activity, deadline, or safety behavior.
-26. The first product content target is the current modern K-pop realism world, but engine templates, place capabilities, instance lifecycle, choice IDs, and effect requests remain world-neutral. Do not build parallel world packs before the first K-pop vertical slice is accepted.
-27. V1 runtime AI is optional and text-only. It cannot create executable actions, effect identifiers, unbounded numbers, image/audio payloads, external media URLs, or direct domain writes; accepted normalized text is cached per Event Instance and always has a local fallback.
-28. Place/scene imagery primarily follows Map/world asset packs. Event Runtime stores stable references and minimal semantic media intent only. Later CG uses a separately permissioned image-generation/media-resolution Adapter and is not a reason to add V1 provider fields or empty controls.
-29. EVE-3 Event Notebook composition must remain a deterministic read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals. Do not persist a second event projection or use Notebook selection as authorization.
-30. Event-scoped notes belong to Simulation durability, carry stable source references, survive bounded log rotation and backup/restore, and change only through explicit note create/update/delete actions. They are not Reminders, Calendar plans, source-owner mutations, or Cheats controls.
+4. Manual, condition-driven, random, scheduled, and AI-assisted events should share one event-template shape.
+5. Random events must have cooldowns, daily caps, user controls, and deterministic test paths.
+6. Important or negative events must be explainable to the user and dismissible or reviewable where appropriate.
+7. Chat and notifications are display surfaces unless the event explicitly belongs to Chat.
+8. Map may provide location, ETA, distance, and route context, but should not own another module's order or payment lifecycle.
+9. Wallet, Calendar, Gallery, Files, and Assets should remain downstream consumers unless their own module action creates the event.
+10. AI may enrich copy or suggest event candidates later, but should not become the first source of state mutation.
+11. Store persistence, backup/restore, and migration safety must be considered before closing an event slice.
+12. Tests must avoid flaky randomness. Use fixed seeds or injected random values.
+13. Event logs should be readable by future AI assistants, not only rendered to users.
+14. World-aware events must follow `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
+15. Runtime event triggers should use local event variant packs by default. API calls may generate/refresh packs or optionally materialize bounded text after an approved explicit event-entry/presentation checkpoint, but never run for every random event, Tick, distance update, place focus, eligibility check, or compact invitation.
+16. World Hub review should keep event-log explanations read-only and inspectable by module, status, trigger source, reason, adapter boundary, target, and world variant context.
+17. Relationship event gating must consume saved role-profile classification fields (`primaryRelationshipCategoryId`, `relationshipModifierIds`, and classification audit metadata), not raw `relationshipLabelText` or `relationshipLabelNote`.
+18. Low-risk relationship facts may attach classification gate metadata as soft-reference audit context and still allow the fact. High-risk hard-gate behavior must remain explicit, testable, and review/confirmation-oriented before any high-impact automation is enabled.
+19. Future high-risk relationship event packs should consume named gate presets from `src/lib/relationship-event-gating.js` instead of duplicating hard-gate rule objects in module adapters.
+20. Generated Chat social events such as role-initiated greetings, refusal, blocks, restores, and unblocks must use the explicit event-runtime review/audit seam before mutating Chat channel state. Low-risk greetings may auto-apply with audit; high-risk communication changes must stay review-first in World Hub. World Hub should explain proposal source, trigger policy, and the rule that Chat owns final communication reachability while Contacts and Relationship Runtime stay separate.
+21. Event Surface Projections are bounded read models, not a second event store or an authorization token. A host card may expose an explicit expansion command, but every outcome still returns through the owning Module Adapter.
+22. Map coordinate anchors are presentation context only. They cannot create places, reveal discoveries, change visibility, move role/journey truth, or invent a fallback position for invalid/stale events.
+23. Cross-module event history, pending review, explanations, and event-scoped notes use the existing World Hub hidden entry. Event receives no normal Home app; Cheats keeps separate privileged authority.
+24. Location-aware templates keep an authored activation scope. Distance may satisfy or fail that scope, but it never converts an onsite/interior event into a remote event.
+25. Map owns place relation, manual-versus-journey position provenance, and place-entry sessions. A place `Enter` action may submit an event checkpoint, but Event Runtime does not own or fabricate presence.
+26. Optional event permission, random-event intensity, and presentation mode are separate controls. Disabling optional events cannot remove deterministic schedule, journey, activity, deadline, or safety behavior.
+27. The first product content target is the current modern K-pop realism world, but engine templates, place capabilities, instance lifecycle, choice IDs, and effect requests remain world-neutral. Do not build parallel world packs before the first K-pop vertical slice is accepted.
+28. V1 runtime AI is optional and text-only. It cannot create executable actions, effect identifiers, unbounded numbers, image/audio payloads, external media URLs, or direct domain writes; accepted normalized text is cached per Event Instance and always has a local fallback.
+29. Place/scene imagery primarily follows Map/world asset packs. Event Runtime stores stable references and minimal semantic media intent only. Later CG uses a separately permissioned image-generation/media-resolution Adapter and is not a reason to add V1 provider fields or empty controls.
+30. EVE-3 Event Notebook composition must remain a deterministic read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals. Do not persist a second event projection or use Notebook selection as authorization.
+31. Event-scoped notes belong to Simulation durability, carry stable source references, survive bounded log rotation and backup/restore, and change only through explicit note create/update/delete actions. They are not Reminders, Calendar plans, source-owner mutations, or Cheats controls.
+32. Every production host must be explicitly registered, and `host_detail.hostKey` must match the consuming host. Register a host only when the approved interaction truly needs an Event Surface; a Module may participate through native records without one. Source owners may persist a runtime-log reference only through an owner-validated one-to-one lineage action; source input, duplicate records, or reused logs cannot manufacture valid lineage.
 
 ## 4. Event Entry Audit
 
@@ -188,7 +191,7 @@ Future event templates should be close to this shape:
     adapterKey: 'food_delivery.add_order_event',
     payloadSchema: 'FoodDeliveryOrderEventInput',
   },
-  surfaces: ['food_delivery.order_card', 'chat.food_delivery_service'],
+  surfaces: ['food_delivery.order_timeline', 'chat.food_delivery_service'],
 }
 ```
 
@@ -255,7 +258,7 @@ Use this sequence for event work unless the user asks for a narrower path:
 7. Choose skills from Section 6.1 before editing.
 8. Run the event entry audit.
 9. Prefer the smallest useful module adapter before broad cross-module orchestration.
-10. Roadmap 4.14 EVE-1's pure projection/host-registration contract, EVE-2A frozen contracts/fixtures, EVE-2B reusable runtime, EVE-2C first Map/K-pop vertical slice, and EVE-3 World Hub Event Notebook are landed. Keep projections free of persistence/effect authority, preserve the single Map host and frozen archetype, and keep Notebook notes event-scoped without Reminder/Calendar/Cheats authority. EVE-4 and EVE-5 require separate approval.
+10. Roadmap 4.14 EVE-1's pure projection/host-registration contract, EVE-2A frozen contracts/fixtures, EVE-2B reusable runtime, EVE-2C first Map/K-pop vertical slice, and EVE-3 World Hub Event Notebook are landed. EVE-4A's Food Delivery host/card is withdrawn while its exact-lineage owner seam remains. Keep projections free of persistence/effect authority, keep Map as the only production Surface host, and require a separately accepted owner-native causal chain before later EVE-4 or EVE-5 work.
 11. Add deterministic tests before adding random trigger behavior.
 12. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
 13. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
@@ -312,3 +315,5 @@ For random-event work, verify:
 - user-visible surfaces explain the event without exposing implementation labels;
 - world-aware events use local variant packs at runtime and do not call an API on every random trigger.
 - optional event text generation occurs only after the accepted entry/presentation checkpoint, validates against local allowlists, caches by Event Instance, and proves local fallback/provider failure without live network dependence.
+- any production host registration is exercised by its actual UI path, `host_detail` cannot target a different host, and stale/missing/duplicated/reused source-to-log lineage fails closed;
+- owner-native chains prove canonical mutation, native presentation, lineage, later conditions, and no fake user action; expand/acknowledge/reopen tests apply only when an approved Surface actually defines those presentation states.

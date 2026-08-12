@@ -657,6 +657,87 @@ describe('relationship runtime store', () => {
     expect(promptWithArchived).toContain('Archived memory should stay out of default prompt recall.')
   })
 
+  test('recalls a relevant older memory without changing stored memory order', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const target = { profileId: 58, name: 'Context Recall' }
+
+    store.recordRelationshipFact({
+      target,
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'recall_birthday_gift',
+      memoryKey: 'birthday_necklace',
+      factType: 'gift_purchased',
+      summary: 'You gave Context Recall a silver birthday necklace.',
+      metricDeltas: { affinity: 2 },
+      createdAt: Date.parse('2026-05-01T10:00:00.000Z'),
+    })
+    store.recordRelationshipFact({
+      target,
+      sourceModule: 'relationship_phone_call',
+      sourceId: 'recall_recent_call',
+      memoryKey: 'recent_work_call',
+      factType: 'completed_call',
+      summary: 'You had a recent phone call about work.',
+      metricDeltas: { trust: 2 },
+      createdAt: Date.parse('2026-05-17T10:00:00.000Z'),
+    })
+
+    const storedOrder = store
+      .listMemoryAggregatesForTarget(target, 10)
+      .map((item) => item.memoryKey)
+    const recall = store.recallMemoriesForTarget(target, {
+      queryText: 'Do you remember the birthday necklace?',
+      limit: 1,
+    })
+    const prompt = store.buildPromptContextForTarget(target, {
+      recallQuery: 'Do you remember the birthday necklace?',
+      memoryLimit: 1,
+    })
+
+    expect(storedOrder).toEqual(['recent_work_call', 'birthday_necklace'])
+    expect(recall.items.map((item) => item.memoryKey)).toEqual(['birthday_necklace'])
+    expect(prompt).toContain('Memory summaries: You gave Context Recall a silver birthday necklace.')
+    expect(prompt).not.toContain('Memory summaries: You had a recent phone call about work.')
+  })
+
+  test('returns one shared prompt projection and excludes memories while runtime is disabled', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const target = { profileId: 59, name: 'Disabled Recall' }
+
+    store.recordRelationshipFact({
+      target,
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'disabled_recall_gift',
+      memoryKey: 'disabled_gift',
+      factType: 'gift_purchased',
+      summary: 'A disabled runtime memory.',
+      metricDeltas: { affinity: 2 },
+    })
+    const enabledProjection = store.buildPromptProjectionForTarget(target, {
+      recallQuery: 'disabled runtime memory',
+    })
+    store.setRuntimeEnabled(false)
+    const disabledProjection = store.buildPromptProjectionForTarget(target, {
+      recallQuery: 'disabled runtime memory',
+    })
+
+    expect(enabledProjection.text).toContain(enabledProjection.memoryRecall.text)
+    expect(enabledProjection.memoryRecall.items).toHaveLength(1)
+    expect(disabledProjection).toEqual({
+      text: '',
+      memoryRecall: {
+        items: [],
+        text: '',
+        candidateCount: 0,
+        relevantCount: 0,
+        querySignalCount: 0,
+        characterCount: 0,
+      },
+    })
+  })
+
   test('summarizes recent events by createdAt instead of insertion order', () => {
     const store = useRelationshipRuntimeStore()
     store.resetForTesting()
@@ -827,5 +908,86 @@ describe('relationship runtime store', () => {
     expect(fullSummary.totalMemoryCount).toBe(55)
     expect(fullSummary.visibleMemoryCount).toBe(55)
     expect(fullSummary.archivedMemoryCount).toBe(2)
+  })
+
+  test('projects consolidation pressure per role without mutating relationship truth', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const targetA = { profileId: 71, name: 'Pressure A' }
+    const targetB = { profileId: 72, name: 'Pressure B' }
+
+    for (let index = 0; index < 55; index += 1) {
+      store.recordRelationshipFact({
+        target: targetA,
+        sourceModule: 'relationship_calendar_confirmed_event',
+        sourceId: `pressure_a_${index}:calendar_event:role_71`,
+        memoryKey: `pressure_a_memory_${index}`,
+        factType: 'scheduled_calendar_event',
+        summary: `Pressure A memory ${index}.`,
+        metricDeltas: {},
+        createdAt: Date.parse('2026-05-17T10:00:00.000Z') + index,
+      })
+    }
+    for (let index = 0; index < 5; index += 1) {
+      store.recordRelationshipFact({
+        target: targetB,
+        sourceModule: index % 2 === 0 ? 'relationship_phone_call' : 'relationship_map_shared_route',
+        sourceId: `pressure_b_source_${index}`,
+        memoryKey: 'pressure_b_dense_memory',
+        factType: 'shared_experience',
+        summary: `Pressure B evidence ${index}.`,
+        metricDeltas: {},
+        createdAt: Date.parse('2026-05-17T11:00:00.000Z') + index,
+      })
+    }
+    store.recordRelationshipFact({
+      target: targetB,
+      sourceModule: 'simulation_event_engine',
+      sourceId: 'event_audit_without_memory',
+      factType: 'eligibility_audit',
+      summary: 'An event audit record is not relationship memory.',
+      metricDeltas: {},
+    })
+    store.updateMemoryReviewForTarget(targetA, 'pressure_a_memory_0', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.ARCHIVED,
+    })
+    store.updateMemoryReviewForTarget(targetB, 'pressure_b_dense_memory', {
+      status: RELATIONSHIP_MEMORY_REVIEW_STATES.PINNED,
+    })
+
+    const before = store.createBackupSnapshot()
+    const pressureA = store.projectMemoryConsolidationPressureForTarget(targetA)
+    const pressureB = store.projectMemoryConsolidationPressureForTarget(targetB)
+    const after = store.createBackupSnapshot()
+
+    expect(pressureA).toMatchObject({
+      ownerKind: 'role',
+      ownerKey: 'role:71',
+      level: 'watch',
+      counts: { total: 55, active: 54, pinned: 0, archived: 1 },
+    })
+    expect(pressureA.candidates).toEqual([])
+    expect(pressureB).toMatchObject({
+      ownerKind: 'role',
+      ownerKey: 'role:72',
+      counts: { total: 1, active: 0, pinned: 1, archived: 0, sourceReferences: 5 },
+    })
+    expect(pressureB.candidates).toEqual([
+      expect.objectContaining({
+        memoryKey: 'pressure_b_dense_memory',
+        reasons: ['dense_evidence'],
+        reviewStatus: 'pinned',
+        supportingCount: 5,
+        sourceRefs: [
+          { sourceModule: 'relationship_map_shared_route', sourceId: 'pressure_b_source_1' },
+          { sourceModule: 'relationship_map_shared_route', sourceId: 'pressure_b_source_3' },
+          { sourceModule: 'relationship_phone_call', sourceId: 'pressure_b_source_0' },
+          { sourceModule: 'relationship_phone_call', sourceId: 'pressure_b_source_2' },
+          { sourceModule: 'relationship_phone_call', sourceId: 'pressure_b_source_4' },
+        ],
+      }),
+    ])
+    expect(pressureB.candidates[0].memoryKey).not.toContain('pressure_a')
+    expect(after).toEqual(before)
   })
 })

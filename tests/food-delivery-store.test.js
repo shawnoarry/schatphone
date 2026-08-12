@@ -1944,6 +1944,15 @@ describe('food delivery store', () => {
       etaMinutes: 35,
       sourceModule: 'food_delivery_dispatch',
     })
+    expect(store.orders[0]?.etaMinutes).toBe(35)
+
+    const riderDelayEvent = store.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
+      summary: 'The rider is taking a slower covered lane.',
+      etaMinutes: 41,
+    })
+    expect(riderDelayEvent?.etaMinutes).toBe(41)
+    expect(store.orders[0]?.etaMinutes).toBe(41)
 
     const addressEvent = store.addOrderEvent(order.id, {
       type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE,
@@ -1958,7 +1967,7 @@ describe('food delivery store', () => {
     })
     expect(cancelledEvent?.type).toBe(FOOD_DELIVERY_ORDER_EVENT_TYPE.RESTAURANT_CANCELLED)
     expect(store.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.CANCELLED)
-    expect(store.orders[0]?.events).toHaveLength(3)
+    expect(store.orders[0]?.events).toHaveLength(4)
     expect(store.addOrderEvent(order.id, { type: 'unknown' })).toBeNull()
     expect(
       store.addOrderEvent('missing', { type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY }),

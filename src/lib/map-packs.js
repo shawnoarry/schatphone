@@ -2,13 +2,25 @@ import { SEOUL_ADDITIONAL_PLACES } from './seoul-map-places'
 import { SEOUL_EVERYDAY_PLACES } from './seoul-map-everyday-places'
 import { SEOUL_COMMUNITY_PLACES } from './seoul-map-community-places'
 import { SEOUL_FOOD_DELIVERY_PLACES } from './seoul-map-food-places'
+import {
+  MAP_PLACE_ICON_TYPES,
+  getMapPlaceCategoryVisual,
+} from './map-place-categories'
 import { projectAssetUrl } from './project-assets'
 
 const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0))
 export const DEFAULT_MAP_PACK_ID = 'real-seoul-v1'
 export const FICTIONAL_MAP_PACK_ID = 'cyber-wasteland-v1'
+export const MAP_CATALOG_PROVENANCE_KIND = 'map_catalog'
 
-const CUSTOM_MAP_PACK_LIMIT = 12
+export const CUSTOM_MAP_PACK_LIMIT = 12
+export const CATALOG_MAP_PACK_PLACE_LIMIT = 500
+
+const MAP_PACK_ID_PATTERN = /^[a-z0-9][a-z0-9._:-]{0,179}$/i
+const MAP_PACK_FINGERPRINT_PATTERN = /^map_fp_[a-z0-9]+_[0-9]+$/i
+const MAP_FACTION_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,79}$/i
+const MAP_PLACE_ICON_PATTERN = /^fa[bsr] fa-[a-z0-9-]+$/i
+const MAP_PLACE_CATEGORY_IDS = new Set(MAP_PLACE_ICON_TYPES.map((category) => category.id))
 
 const WORLD_MAP_PACK_DEFAULTS = Object.freeze({
   default_world: DEFAULT_MAP_PACK_ID,
@@ -271,6 +283,77 @@ const normalizeMapPackText = (value, fallback = '', maxLength = 160) => {
   return (text || fallback).slice(0, maxLength)
 }
 
+const cloneMapPackValue = (value) => {
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(value)
+    } catch {
+      // Vue/Pinia proxies remain JSON-compatible even when structuredClone rejects them.
+    }
+  }
+  return JSON.parse(JSON.stringify(value))
+}
+
+const canonicalizeMapPackValue = (value) => {
+  if (Array.isArray(value)) return value.map(canonicalizeMapPackValue)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalizeMapPackValue(value[key])]),
+    )
+  }
+  return value
+}
+
+const computeMapPackTextFingerprint = (value = '') => {
+  const text = typeof value === 'string' ? value : ''
+  let hash = 0
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) >>> 0
+  }
+  return `map_fp_${hash.toString(36)}_${text.length}`
+}
+
+const buildManagedMapPackContent = (rawPack = {}) => {
+  const source = rawPack && typeof rawPack === 'object' ? rawPack : {}
+  const content = { ...cloneMapPackValue(source) }
+  delete content.assetUrl
+  delete content.createdAt
+  delete content.updatedAt
+  delete content.provenance
+  delete content.source
+  return canonicalizeMapPackValue(content)
+}
+
+export const computeManagedMapPackFingerprint = (pack = {}) =>
+  computeMapPackTextFingerprint(JSON.stringify(buildManagedMapPackContent(pack)))
+
+export const normalizeMapCatalogProvenance = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const kind = normalizeMapPackText(raw.kind, '', 40)
+  const resourceId = normalizeMapPackText(raw.resourceId, '', 180)
+  const catalogId = normalizeMapPackText(raw.catalogId, '', 180)
+  const catalogVersion = Math.max(0, Math.floor(Number(raw.catalogVersion) || 0))
+  const installedFingerprint = normalizeMapPackText(raw.installedFingerprint, '', 120)
+  if (
+    kind !== MAP_CATALOG_PROVENANCE_KIND ||
+    !MAP_PACK_ID_PATTERN.test(resourceId) ||
+    !MAP_PACK_ID_PATTERN.test(catalogId) ||
+    catalogVersion < 1 ||
+    !MAP_PACK_FINGERPRINT_PATTERN.test(installedFingerprint)
+  ) {
+    return null
+  }
+  return {
+    kind: MAP_CATALOG_PROVENANCE_KIND,
+    resourceId,
+    catalogId,
+    catalogVersion,
+    installedFingerprint,
+  }
+}
+
 const normalizeCustomFaction = (raw, index = 0) => {
   const label = normalizeMapPackText(raw?.label || raw?.labelZh || raw?.labelEn, '', 60)
   if (!label) return null
@@ -290,7 +373,98 @@ const normalizeCustomFaction = (raw, index = 0) => {
   }
 }
 
-export const normalizeCustomMapPack = (raw, index = 0) => {
+const normalizeCatalogMapPlace = (raw, factionIds) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const id = normalizeMapPackText(raw.id, '', 180).toLowerCase()
+  const name = normalizeMapPackText(raw.nameZh || raw.nameEn || raw.name, '', 100)
+  const category = normalizeMapPackText(raw.category, '', 80).toLowerCase()
+  const rawX = Number(raw.position?.x)
+  const rawY = Number(raw.position?.y)
+  if (
+    raw.position?.kind !== 'canvas' ||
+    !Number.isFinite(rawX) ||
+    !Number.isFinite(rawY) ||
+    rawX < 0 ||
+    rawX > 1 ||
+    rawY < 0 ||
+    rawY > 1
+  ) {
+    return null
+  }
+  const position = normalizeMapPosition(raw.position, 'canvas')
+  if (
+    !id ||
+    !MAP_PACK_ID_PATTERN.test(id) ||
+    !name ||
+    !MAP_PLACE_CATEGORY_IDS.has(category) ||
+    !position
+  ) {
+    return null
+  }
+  const factionId = normalizeMapPackText(raw.factionId, '', 80).toLowerCase()
+  if (factionId && !factionIds.has(factionId)) return null
+  const aliases = [
+    ...new Set(
+      (Array.isArray(raw.aliases) ? raw.aliases : [])
+        .map((alias) => normalizeMapPackText(alias, '', 80))
+        .filter(Boolean),
+    ),
+  ].slice(0, 16)
+  const categoryIcon = getMapPlaceCategoryVisual(category).icon
+  const icon = normalizeMapPackText(raw.icon, '', 80)
+  return {
+    id,
+    nameZh: normalizeMapPackText(raw.nameZh, name, 100),
+    nameEn: normalizeMapPackText(raw.nameEn, name, 100),
+    detailZh: normalizeMapPackText(raw.detailZh || raw.detail, '', 240),
+    detailEn: normalizeMapPackText(raw.detailEn || raw.detail, '', 240),
+    category,
+    factionId,
+    icon: MAP_PLACE_ICON_PATTERN.test(icon) ? icon : categoryIcon,
+    position,
+    aliases,
+  }
+}
+
+const normalizeCatalogMapPlaces = (rawPlaces, factions) => {
+  if (rawPlaces == null) return []
+  if (!Array.isArray(rawPlaces) || rawPlaces.length > CATALOG_MAP_PACK_PLACE_LIMIT) return null
+  const factionIds = new Set(factions.map((faction) => faction.id))
+  const normalized = rawPlaces.map((place) => normalizeCatalogMapPlace(place, factionIds))
+  if (normalized.some((place) => !place)) return null
+  const placeIds = normalized.map((place) => place.id)
+  if (new Set(placeIds).size !== placeIds.length) return null
+  return normalized
+}
+
+const catalogFactionInputsAreValid = (rawFactions, factions) => {
+  if (!Array.isArray(rawFactions) || rawFactions.length > 8) return false
+  if (rawFactions.length !== factions.length) return false
+  const factionIds = factions.map((faction) => faction.id)
+  if (new Set(factionIds).size !== factionIds.length) return false
+  return rawFactions.every((faction, index) => {
+    const rawId = normalizeMapPackText(faction?.id, '', 80).toLowerCase()
+    const x = Number(faction?.position?.x)
+    const y = Number(faction?.position?.y)
+    return (
+      MAP_FACTION_ID_PATTERN.test(rawId) &&
+      factions[index]?.id === rawId &&
+      faction?.position?.kind === 'canvas' &&
+      Number.isFinite(x) &&
+      Number.isFinite(y) &&
+      x >= 0 &&
+      x <= 1 &&
+      y >= 0 &&
+      y <= 1
+    )
+  })
+}
+
+export const normalizeCustomMapPack = (
+  raw,
+  index = 0,
+  { preserveCatalogProvenance = false } = {},
+) => {
   if (!raw || typeof raw !== 'object') return null
   const assetId = normalizeMapPackText(raw.assetId, '', 160)
   if (!assetId) return null
@@ -303,7 +477,13 @@ export const normalizeCustomMapPack = (raw, index = 0) => {
     .map((faction, factionIndex) => normalizeCustomFaction(faction, factionIndex))
     .filter(Boolean)
     .slice(0, 8)
-  return {
+  const provenance = preserveCatalogProvenance
+    ? normalizeMapCatalogProvenance(raw.provenance)
+    : null
+  if (provenance && !catalogFactionInputsAreValid(raw.factions || [], factions)) return null
+  const catalogPlaces = provenance ? normalizeCatalogMapPlaces(raw.places, factions) : []
+  if (catalogPlaces == null) return null
+  const pack = {
     id,
     version: Math.max(1, Math.floor(Number(raw.version) || 1)),
     kind: 'fictional',
@@ -323,16 +503,21 @@ export const normalizeCustomMapPack = (raw, index = 0) => {
     attributionZh: normalizeMapPackText(raw.attributionZh, '玩家地图 · 本地素材', 100),
     attributionEn: normalizeMapPackText(raw.attributionEn, 'Player map · Local asset', 100),
     factions: Object.freeze(factions),
-    places: Object.freeze([]),
+    places: Object.freeze(catalogPlaces),
     createdAt: Math.max(0, Math.floor(Number(raw.createdAt) || Date.now())),
     updatedAt: Math.max(0, Math.floor(Number(raw.updatedAt) || Date.now())),
   }
+  if (provenance) pack.provenance = provenance
+  return pack
 }
 
-export const normalizeCustomMapPacks = (rawPacks = []) => {
+export const normalizeCustomMapPacks = (
+  rawPacks = [],
+  { preserveCatalogProvenance = false } = {},
+) => {
   const byId = new Map()
   ;(Array.isArray(rawPacks) ? rawPacks : []).forEach((raw, index) => {
-    const pack = normalizeCustomMapPack(raw, index)
+    const pack = normalizeCustomMapPack(raw, index, { preserveCatalogProvenance })
     if (pack && !MAP_PACKS.some((builtIn) => builtIn.id === pack.id)) byId.set(pack.id, pack)
   })
   return [...byId.values()].slice(0, CUSTOM_MAP_PACK_LIMIT)
@@ -340,7 +525,7 @@ export const normalizeCustomMapPacks = (rawPacks = []) => {
 
 export const listMapPacks = (customPacks = []) => [
   ...MAP_PACKS,
-  ...normalizeCustomMapPacks(customPacks),
+  ...normalizeCustomMapPacks(customPacks, { preserveCatalogProvenance: true }),
 ]
 
 export const getMapPackById = (packId, customPacks = []) =>

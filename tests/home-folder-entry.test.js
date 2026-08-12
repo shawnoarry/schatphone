@@ -10,6 +10,7 @@ import ControlCenterView from '../src/views/ControlCenterView.vue'
 import { CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP } from '../src/lib/custom-widget-actions'
 import { buildWorldAppHomeTileId } from '../src/lib/world-pack-app-bindings'
 import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
+import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
@@ -73,8 +74,8 @@ describe('Home folder entries', () => {
     expect(wrapper.find('[data-home-tile-id="weather"] .home-widget-card').classes()).toContain(
       'is-weather',
     )
-    expect(wrapper.find('[data-home-tile-id="calendar"] .home-widget-card').classes()).toContain(
-      'is-calendar',
+    expect(wrapper.find('[data-home-tile-id="photo_note"] .home-widget-card').classes()).toContain(
+      'is-photo_note',
     )
     expect(wrapper.find('[data-home-tile-id="music"] .home-widget-card').classes()).toContain(
       'is-music',
@@ -602,6 +603,46 @@ describe('Home folder entries', () => {
     ).toContain('Poster')
     expect(wrapper.find('[data-testid="home-slot-candidate-app_gallery"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="home-slot-candidate-weather"]').exists()).toBe(false)
+    const weekRhythmCandidate = wrapper.find('[data-testid="home-slot-candidate-week_rhythm"]')
+    expect(weekRhythmCandidate.exists()).toBe(true)
+    expect(weekRhythmCandidate.find('.built-in-widget-visual.is-week_rhythm').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="home-slot-candidate-memory_board"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('offers the built-in memory board only to a matching 4x4 Home slot', async () => {
+    const router = createTestRouter()
+    await router.push('/home?widgetEdit=1&homePage=4')
+    await router.isReady()
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    store.setHomeWidgetPages([[], [], [], [], []])
+    store.setHomeLayoutTemplate(4, 'layout-g')
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="home-empty-slot-4-g-poster"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const memoryBoardCandidate = wrapper.find(
+      '[data-testid="home-slot-candidate-memory_board"]',
+    )
+    expect(memoryBoardCandidate.exists()).toBe(true)
+    expect(memoryBoardCandidate.text()).toContain('Color Memory Wall')
+    expect(memoryBoardCandidate.find('.built-in-widget-visual.is-memory_board').exists()).toBe(
+      true,
+    )
+    expect(wrapper.find('[data-testid="home-slot-candidate-week_rhythm"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="home-slot-candidate-today_agenda"]').exists()).toBe(false)
     wrapper.unmount()
   })
 
@@ -631,7 +672,134 @@ describe('Home folder entries', () => {
     expect(weatherCandidate.exists()).toBe(true)
     expect(weatherCandidate.classes()).toContain('is-widget-like')
     expect(weatherCandidate.find('.home-slot-content-preview.is-weather').exists()).toBe(true)
-    expect(weatherCandidate.find('.home-slot-preview-widget.is-weather').text()).toContain('18°')
+    expect(weatherCandidate.find('.home-widget-card.is-weather').text()).toContain('24°')
+
+    wrapper.unmount()
+  })
+
+  test('updates the selected built-in widget state directly on Home', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([['weather', 'photo_note', 'focus_pulse'], [], [], [], []])
+    store.setHomeLayoutTemplate(0, 'layout-c')
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-top-left', 'weather')).toBe(true)
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-top-right', 'photo_note')).toBe(true)
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-small-1', 'focus_pulse')).toBe(true)
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const weather = wrapper.find('[data-home-tile-id="weather"] .built-in-widget-visual')
+    expect(weather.text()).toContain('24°')
+    await weather.trigger('click')
+    expect(weather.text()).toContain('16°')
+    expect(weather.classes()).toContain('is-weather-rain')
+
+    const moodWindow = wrapper.find('[data-home-tile-id="photo_note"] .built-in-widget-visual')
+    expect(moodWindow.text()).toContain('01')
+    await moodWindow.trigger('click')
+    expect(moodWindow.text()).toContain('02')
+    expect(moodWindow.classes()).toContain('is-mood-cloud')
+
+    const focus = wrapper.find('[data-home-tile-id="focus_pulse"] .built-in-widget-visual')
+    await focus.trigger('click')
+    vi.advanceTimersByTime(1000)
+    await wrapper.vm.$nextTick()
+    expect(focus.text()).toContain('24:59')
+    expect(focus.classes()).toContain('is-focus-active')
+
+    wrapper.unmount()
+  })
+
+  test('opens Map from the commute rail widget', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([['commute_strip'], [], [], [], []])
+    store.setHomeLayoutTemplate(0, 'layout-f')
+    expect(store.setHomeLayoutSlotPlacement(0, 'f-strip', 'commute_strip')).toBe(true)
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper
+      .find('[data-home-tile-id="commute_strip"] .built-in-widget-visual')
+      .trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/map')
+    expect(router.currentRoute.value.query).toMatchObject({
+      from: 'home',
+      homePage: '0',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('lets each Color Memory Wall photo well choose a Gallery asset', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+    const galleryStore = useGalleryStore()
+    const imported = galleryStore.importAssetFromUrl({
+      url: 'https://example.com/widget-memory.jpg',
+      category: 'reference',
+      name: 'Widget Memory',
+    })
+    expect(imported.ok).toBe(true)
+    store.setHomeWidgetPages([['memory_board'], [], [], [], []])
+    store.setHomeLayoutTemplate(0, 'layout-g')
+    expect(store.setHomeLayoutSlotPlacement(0, 'g-poster', 'memory_board')).toBe(true)
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    await wrapper
+      .find('[data-home-tile-id="memory_board"] .widget-memory-photo.is-hero')
+      .trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="home-widget-photo-picker"]').exists()).toBe(true)
+    await wrapper.find(`[data-testid="home-widget-photo-${imported.assetId}"]`).trigger('click')
+    await flushPromises()
+
+    expect(
+      store.settings.appearance.builtInWidgetPreferences.memory_board.photoAssetIds[0],
+    ).toBe(imported.assetId)
+    expect(wrapper.find('[data-testid="home-widget-photo-picker"]').exists()).toBe(false)
+    expect(
+      wrapper
+        .find('[data-home-tile-id="memory_board"] .widget-memory-photo.is-hero')
+        .attributes('style'),
+    ).toContain('widget-memory.jpg')
 
     wrapper.unmount()
   })

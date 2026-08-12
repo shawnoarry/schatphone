@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-08-10
+Updated: 2026-08-12
 
 ## 1. Workstream A: Ownership Closure
 
@@ -32,6 +32,7 @@ Updated: 2026-08-10
 - preserve Music's split carriers: public library/provider/integration state uses required `system-settings` backup coverage, while `schatphone:music:credentials` remains device-local and excluded
 - keep one bounded internal App-to-Chat share draft excluded from backup; it may carry a normalized source snapshot and return route, but never provider credentials, stream URLs, source mutations, or a sent-message claim
 - preserve TTS's separate device-local configuration and credential carriers; preview audio remains runtime-only until a separately approved durable-media/message contract exists
+- keep World Suite installation evidence inside the existing System user carrier and complete-backup `user` section; legacy saves normalize it to empty, and no Suite persistence may copy native resource bodies or activation truth
 
 ## 4. Workstream D: Cleanup Debt
 
@@ -84,7 +85,21 @@ Updated: 2026-08-10
 - require complete-backup cross-reference verification and atomic rollback before any persisted identity migration
 - audit every world-sensitive owner before proposing multiple world definitions or runtime switching
 
-## 9. Semantic Guardrails
+## 9. Workstream I: Reusable World Suite Installation
+
+- keep manifest planning, durable coordination evidence, and native execution as separate deep Modules;
+- use the same Owner Adapter for a resource's independent catalog install and Suite install path;
+- inspect native owner truth before and after install, update, keep, or remove so retries can repair lost checkpoints without repeating completed Owner mutations;
+- checkpoint completed and pending resource IDs after every verified step so interrupted batches can safely retry;
+- keep installation separate from enablement/use and keep every activation command explicit in the native owner;
+- add concrete Owner Adapters one module at a time with native rollback/removal/history tests;
+- preserve the completed Book production Adapter: Catalog content stays outside the manifest, Book stores explicit resource/catalog/version/fingerprint provenance, Catalog version remains separate from Book edit version, current/historical WorldBook links block unsafe changes, and failed legacy/Repository writes roll memory back before inventory evidence advances;
+- preserve the completed Map read-only inspection Interface. It distinguishes built-in versus user/custom/Catalog identity; custom-pack metadata versus Gallery asset ownership; player and Catalog-authored places; active/world bindings; visibility; Footprints knowledge; current position/place session; active Journey; Journey history; capacity; and user modification behind one immutable seam;
+- preserve the completed Gallery and Map Owner Adapters: real content resolves outside manifests, Gallery folders/assets and Map authored places retain stable IDs/provenance, Map consumes Gallery rather than owning it, reference and topology changes fail closed, and native/inventory retry is proven;
+- preserve the typed/versioned Book/Gallery/Map Catalog and explicitly constructed production installation runtime. Every System checkpoint requires a successful persistence receipt, operations are serialized, independent/Suite paths share one native resource, and the runtime cannot activate or bind anything;
+- do not add a startup caller, UI, final K-pop manifest, or retroactive provenance until the referenced native Catalog records and stable IDs are explicitly audited.
+
+## 10. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -107,3 +122,4 @@ Treat these as bugs:
 17. Chat or Map receives a Music API key, provider endpoint/header, raw response, queue contents, or stream URL instead of a bounded Music reference/projection
 18. an external Music deep link starts playback without an explicit user gesture or changes the queue without the Music integration policy and confirmation boundary
 19. Chat or another caller sends provider-specific TTS payloads, persists preview blobs/raw audio encodings, copies credentials, or upgrades `voice_virtual` without an approved message/media contract
+20. a World Suite inventory copies native resource content, treats a missing Owner Adapter field as success, activates a resource implicitly, or claims built-in defaults were Suite-installed without verified provenance

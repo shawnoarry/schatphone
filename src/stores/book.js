@@ -293,7 +293,7 @@ export const useBookStore = defineStore('book', () => {
   }
 
   const persistToStorage = () => {
-    writePersistedState(BOOK_STORAGE_KEY, createBackupSnapshot(), {
+    return writePersistedState(BOOK_STORAGE_KEY, createBackupSnapshot(), {
       version: BOOK_STORAGE_VERSION,
     })
   }
@@ -351,8 +351,92 @@ export const useBookStore = defineStore('book', () => {
       })
       return persistToRepository()
     }
-    persistToStorage()
-    return { ok: true, code: 'legacy_saved' }
+    return persistToStorage()
+  }
+
+  const commitManagedAssetMutation = async ({ operation, assetId, asset, patch = {} } = {}) => {
+    await storageInitializationPromise
+    await repositoryWriteQueue.catch(() => ({ ok: false }))
+    if (storageReadOnly.value) {
+      return { ok: false, code: 'read_only_conflict' }
+    }
+
+    const normalizedAssetId = typeof assetId === 'string' ? assetId.trim() : ''
+    if (!normalizedAssetId) return { ok: false, code: 'invalid_asset_id' }
+    const beforeMutation = createBackupSnapshot()
+    let mutationResult = null
+
+    if (operation === 'create') {
+      if (assets.value.length >= BOOK_ASSET_LIMIT) {
+        return { ok: false, code: 'capacity_reached' }
+      }
+      if (findAssetById(normalizedAssetId)) {
+        return { ok: false, code: 'identity_collision' }
+      }
+      internalSnapshotApplyDepth += 1
+      const created = createAsset({ ...asset, id: normalizedAssetId })
+      queueMicrotask(() => {
+        internalSnapshotApplyDepth = Math.max(0, internalSnapshotApplyDepth - 1)
+      })
+      if (!created || created.id !== normalizedAssetId) {
+        applyPersistedSource(beforeMutation, { suppressWatchedPersistence: true })
+        return { ok: false, code: created ? 'identity_collision' : 'mutation_failed' }
+      }
+      mutationResult = { ok: true, asset: created }
+    } else if (operation === 'update') {
+      if (!assets.value.some((item) => item.id === normalizedAssetId)) {
+        return {
+          ok: false,
+          code: findAssetById(normalizedAssetId) ? 'built_in' : 'not_found',
+        }
+      }
+      internalSnapshotApplyDepth += 1
+      mutationResult = updateAsset(normalizedAssetId, patch, { force: true })
+      queueMicrotask(() => {
+        internalSnapshotApplyDepth = Math.max(0, internalSnapshotApplyDepth - 1)
+      })
+      if (!mutationResult?.ok) {
+        return { ok: false, code: mutationResult?.reason || 'mutation_failed' }
+      }
+    } else if (operation === 'delete') {
+      if (!assets.value.some((item) => item.id === normalizedAssetId)) {
+        return {
+          ok: false,
+          code: findAssetById(normalizedAssetId) ? 'built_in' : 'not_found',
+        }
+      }
+      internalSnapshotApplyDepth += 1
+      mutationResult = deleteAsset(normalizedAssetId, { force: true })
+      queueMicrotask(() => {
+        internalSnapshotApplyDepth = Math.max(0, internalSnapshotApplyDepth - 1)
+      })
+      if (!mutationResult?.ok) {
+        return { ok: false, code: mutationResult?.reason || 'mutation_failed' }
+      }
+    } else {
+      return { ok: false, code: 'unsupported_operation' }
+    }
+
+    const persistenceResult = storageMode.value === 'repository'
+      ? await persistToRepository(createBackupSnapshot())
+      : persistToStorage()
+    if (persistenceResult?.ok !== true) {
+      applyPersistedSource(beforeMutation, { suppressWatchedPersistence: true })
+      return {
+        ok: false,
+        code:
+          persistenceResult?.code ||
+          persistenceResult?.error ||
+          'persistence_failed',
+        persistence: persistenceResult || null,
+      }
+    }
+
+    return {
+      ok: true,
+      code: '',
+      asset: mutationResult?.asset ? cloneAsset(mutationResult.asset) : null,
+    }
   }
 
   const hydrateFromStorage = () => {
@@ -491,6 +575,7 @@ export const useBookStore = defineStore('book', () => {
     storageReadOnly,
     persistentStorageState,
     activeGenerationId,
+    assetLimit: BOOK_ASSET_LIMIT,
     assetCount,
     libraryAssets,
     worldbookSourceAssets,
@@ -509,6 +594,7 @@ export const useBookStore = defineStore('book', () => {
     createBackupSnapshotAsync,
     restoreFromBackup,
     saveNow,
+    commitManagedAssetMutation,
     requestBookPersistentStorage,
     upgradeBookStorage,
     refreshBookStorage,

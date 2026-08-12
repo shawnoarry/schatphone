@@ -18,7 +18,7 @@ import {
   FOOD_DELIVERY_ORDER_STATUS,
   useFoodDeliveryStore,
 } from '../stores/foodDelivery'
-import { callAI, formatApiErrorForUi, getAiProviderCapabilities } from '../lib/ai'
+import { callAI, formatApiErrorForUi } from '../lib/ai'
 import { stripCodeFence } from '../lib/chat-response'
 import {
   getRoleAssetFolderSlotKeysByCategory,
@@ -1244,14 +1244,13 @@ const messagePrimaryText = (message) => {
 getMessagePrimaryTextForQuote = messagePrimaryText
 
 const {
-  buildSystemPrompt,
+  buildPromptContext,
   clampReplyCount,
   extractMessageTextForContext,
   getAutomationBaseFingerprint,
-  getContextSourceMessages,
   getSmartReplyHistory,
+  projectAiRequestContext,
   resolveAssistantImageBlockPolicy,
-  toAiCallMessages,
   toQuoteCandidates,
 } = useChatAiPromptContextModel({
   chatStore,
@@ -1265,8 +1264,7 @@ const {
   getActiveMessageSenderName: activeMessageSenderName,
 })
 
-const { buildAssistantImageReferenceMeta, collectImageReferencesForAiCall } =
-  useChatAiImageReferenceModel({
+const { collectImageReferencesForAiCall } = useChatAiImageReferenceModel({
     chatStore,
     galleryStore,
     t,
@@ -1778,26 +1776,26 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
 
   const aiPrefs = chatStore.getConversationAiPrefs(contactId)
   const replyCount = clampReplyCount(options.replyCount ?? aiPrefs.replyCount)
-  const contextSourceMessages = getContextSourceMessages(contactId, {
+  const requestContext = projectAiRequestContext(contactId, {
     untilMessageId: triggerMessageId,
     contextTurns: aiPrefs.contextTurns,
   })
+  const contextSourceMessages = requestContext.sourceMessages
+  const aiCallMessages = requestContext.aiMessages
   const quoteCandidates = toQuoteCandidates(contextSourceMessages)
   const imageReferences = await collectImageReferencesForAiCall(contactId, contextSourceMessages)
-  const providerCapabilities = getAiProviderCapabilities({
-    settings: settings.value,
-    imageReferences,
-  })
   const requestedReferenceMode = normalizeImageReferenceMode(aiPrefs.imageReferenceMode)
+  const promptContext = buildPromptContext(contact, aiPrefs, {
+    replyCount,
+    isProactive: Boolean(options.isProactive),
+    imageReferences,
+    contextMessages: aiCallMessages,
+  })
 
   const replyResult = await callAI({
-    messages: toAiCallMessages(contextSourceMessages),
-    systemPrompt: buildSystemPrompt(contact, aiPrefs, {
-      replyCount,
-      isProactive: Boolean(options.isProactive),
-      imageReferences,
-      providerCapabilities,
-    }),
+    messages: aiCallMessages,
+    systemPrompt: promptContext.systemPrompt,
+    contextEnvelope: promptContext,
     settings: settings.value,
     signal: options.signal,
     imageReferences,
@@ -1806,13 +1804,6 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
   })
   const replyRaw =
     typeof replyResult === 'string' ? replyResult : replyResult?.text || ''
-  const callMeta =
-    replyResult && typeof replyResult === 'object' ? replyResult.meta || null : null
-  const imageReferenceMeta = buildAssistantImageReferenceMeta(
-    callMeta,
-    imageReferences.length,
-    providerCapabilities.kind,
-  )
   const assistantImagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, imageReferences)
 
   const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
@@ -1834,7 +1825,6 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
       aiMeta: {
         replyType: item.replyType,
         bilingual: Boolean(aiPrefs.bilingualEnabled),
-        ...imageReferenceMeta,
       },
       status: 'sent',
     })
@@ -1863,25 +1853,25 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
   if (!contact || !targetMessage) throw new Error('Contact not found')
 
   const aiPrefs = chatStore.getConversationAiPrefs(contactId)
-  const contextSourceMessages = getContextSourceMessages(contactId, {
+  const requestContext = projectAiRequestContext(contactId, {
     beforeMessageId: targetMessage.id,
     contextTurns: aiPrefs.contextTurns,
   })
+  const contextSourceMessages = requestContext.sourceMessages
+  const aiCallMessages = requestContext.aiMessages
   const quoteCandidates = toQuoteCandidates(contextSourceMessages)
   const imageReferences = await collectImageReferencesForAiCall(contactId, contextSourceMessages)
-  const providerCapabilities = getAiProviderCapabilities({
-    settings: settings.value,
-    imageReferences,
-  })
   const requestedReferenceMode = normalizeImageReferenceMode(aiPrefs.imageReferenceMode)
+  const promptContext = buildPromptContext(contact, aiPrefs, {
+    replyCount: 1,
+    isProactive: false,
+    imageReferences,
+    contextMessages: aiCallMessages,
+  })
   const replyResult = await callAI({
-    messages: toAiCallMessages(contextSourceMessages),
-    systemPrompt: buildSystemPrompt(contact, aiPrefs, {
-      replyCount: 1,
-      isProactive: false,
-      imageReferences,
-      providerCapabilities,
-    }),
+    messages: aiCallMessages,
+    systemPrompt: promptContext.systemPrompt,
+    contextEnvelope: promptContext,
     settings: settings.value,
     signal: options.signal,
     imageReferences,
@@ -1890,13 +1880,6 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
   })
   const replyRaw =
     typeof replyResult === 'string' ? replyResult : replyResult?.text || ''
-  const callMeta =
-    replyResult && typeof replyResult === 'object' ? replyResult.meta || null : null
-  const imageReferenceMeta = buildAssistantImageReferenceMeta(
-    callMeta,
-    imageReferences.length,
-    providerCapabilities.kind,
-  )
   const assistantImagePolicy = resolveAssistantImageBlockPolicy(aiPrefs, imageReferences)
 
   const parsed = parseAssistantResponse(replyRaw, aiPrefs, {
@@ -1919,7 +1902,6 @@ const generateRerollResponse = async (contactId, targetMessage, options = {}) =>
     aiMeta: {
       replyType: normalized.replyType,
       bilingual: Boolean(aiPrefs.bilingualEnabled),
-      ...imageReferenceMeta,
       rerollOf: targetMessage.id,
     },
   }
@@ -3409,15 +3391,6 @@ const messageMetaHintText = (message) => {
   const hints = []
   if (message.role === 'assistant' && message.aiMeta?.rerollOf) {
     hints.push(t('重新生成结果', 'Rerolled'))
-  }
-  if (message.role === 'assistant' && Number(message.aiMeta?.imageReferenceCount) > 0) {
-    if (message.aiMeta?.imageReferenceFallback) {
-      hints.push(t('参考图回退', 'Image fallback'))
-    } else if (message.aiMeta?.imageReferenceMode === 'native_url') {
-      hints.push(t('参考图已启用', 'Image refs on'))
-    } else {
-      hints.push(t('参考图线索', 'Image cues'))
-    }
   }
   if (message.editedAt) {
     hints.push(t('已编辑', 'Edited'))

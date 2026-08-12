@@ -31,6 +31,8 @@ Updated: 2026-08-10
 - staged Map Journey Runtime: MJE-1 transport selection/estimate/persistence compatibility, MJE-2 versioned lifecycle/checkpoints/pause-resume, MJE-3's first non-blocking checkpoint event adapter, and MJE-4 Footprints/place knowledge are user-accepted and integrated locally
 - MJE-3 persists only evaluated checkpoint IDs, one pending-review compatibility reference, and cumulative event-delay seconds in Map; proposal copy, eligibility, provenance, and audit stay in Event Runtime
 - later static transport catalog ownership in Map Settings; a Transit app remains a presentation candidate, never a second journey runtime
+- preserve `map-world-suite-inspection.js` plus the default production composition Adapter as the read-only Catalog/native seam: immutable identity, modification, owner-reference, Gallery, and capacity evidence only; Chat/Event projections expose stable reference IDs without bodies, and the default Adapter has no install/update/remove or implicit activation
+- preserve the completed trusted provenance/authored-place round-trip, structured persistence receipt, Gallery deletion/replacement hard-reference lifecycle, Event/Chat reference projection, `commitManagedMapPackMutation()` rollback proof, and the separately constructed resolver-backed Map Owner Adapter. Product promotion still requires real Map/Gallery Catalog and registry composition; keep Gallery installation, activation, world binding, current location, places, and Journey truth in their native owners
 
 ## 2. Workstream B: Footprints And Active Exploration
 

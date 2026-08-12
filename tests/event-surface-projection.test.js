@@ -512,6 +512,30 @@ describe('event surface host registry', () => {
         { code: EVENT_SURFACE_HOST_ERROR.ACTION_UNSUPPORTED, path: 'actions.0.kind' },
       ],
     })
+
+    expect(
+      registry.validateProjection(
+        'map',
+        normalizeEventSurfaceProjection(
+          buildGenericProjection({
+            expansion: {
+              kind: EVENT_SURFACE_EXPANSION_KIND.HOST_DETAIL,
+              hostKey: 'food_delivery',
+              targetId: 'proposal_1',
+            },
+          }),
+        ),
+      ),
+    ).toMatchObject({
+      ok: false,
+      projection: null,
+      errors: [
+        {
+          code: EVENT_SURFACE_HOST_ERROR.EXPANSION_HOST_MISMATCH,
+          path: 'expansion.hostKey',
+        },
+      ],
+    })
   })
 
   test('rejects unavailable, unanchored, and unsupported-anchor projections for Map', () => {

@@ -73,9 +73,38 @@ const chatSnapshot = {
   messagesByConversation: {},
 }
 
+const relationshipSnapshot = {
+  settings: {
+    enabled: true,
+    autoApplyLowImpact: true,
+    requireConfirmationForMajorEffects: true,
+  },
+  entities: [],
+  events: Array.from({ length: 5 }, (_, index) => ({
+    id: `relationship_event_phone_ui_${index}`,
+    entityKey: 'role:2',
+    memoryKey: 'phone_ui_shared_memory',
+    memoryRole: index === 0 ? 'primary' : 'supporting',
+    targetLabel: 'Main contact',
+    sourceModule: index % 2 === 0 ? 'relationship_phone_call' : 'relationship_calendar_confirmed_event',
+    sourceId: `phone_ui_source_${index}`,
+    factType: 'shared_experience',
+    summary: `Shared school-day memory ${index + 1}.`,
+    intensity: 1,
+    metricDeltas: {},
+    milestone: '',
+    growthTraits: [],
+    requiresConfirmation: false,
+    status: 'applied',
+    effectApplied: true,
+    createdAt: Date.UTC(2026, 7, 1, 8, index),
+  })),
+  memoryReviews: [],
+}
+
 const seedContactsSnapshot = async (page) => {
   await page.addInitScript(
-    ({ system, chat }) => {
+    ({ system, chat, relationship }) => {
       window.localStorage.setItem(
         'schatphone:store:system',
         JSON.stringify({
@@ -92,8 +121,16 @@ const seedContactsSnapshot = async (page) => {
           data: chat,
         }),
       )
+      window.localStorage.setItem(
+        'schatphone:store:relationship-runtime',
+        JSON.stringify({
+          version: 1,
+          savedAt: Date.now(),
+          data: relationship,
+        }),
+      )
     },
-    { system: systemSnapshot, chat: chatSnapshot },
+    { system: systemSnapshot, chat: chatSnapshot, relationship: relationshipSnapshot },
   )
 }
 
@@ -146,6 +183,12 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   await page.getByTestId('contacts-recent-2').click()
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Main contact')
   await expect(page.getByTestId('contacts-row-2')).toContainText('Main contact')
+  await expect(page.getByTestId('contacts-memory-health-status')).toContainText('Starting to fill up')
+  await expect(page.getByTestId('contacts-memory-health')).toContainText(
+    'Nothing will change automatically',
+  )
+  await page.getByTestId('contacts-memory-health-open-phone_ui_shared_memory').click()
+  await expect(page.getByTestId('contacts-memory-detail')).toContainText('Shared school-day memory 5.')
 
   await search.fill('World NPC')
   await expect(page.getByTestId('contacts-row-2')).toHaveCount(0)

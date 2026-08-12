@@ -352,6 +352,103 @@ describe('gallery store', () => {
     expect(mapStore.mapVisualSettings.assetId).toBe('')
   })
 
+  test('hard-blocks Gallery deletion while any custom Map pack references the asset', async () => {
+    const mapStore = useMapStore()
+    const store = useGalleryStore()
+    const imported = store.importAssetFromUrl({
+      url: 'https://example.com/map/world-pack.webp',
+      category: 'scenario',
+      name: 'World pack map',
+    })
+    expect(imported.ok).toBe(true)
+    expect(
+      mapStore.createCustomMapPack({
+        id: 'custom-world-pack-map',
+        assetId: imported.assetId,
+        labelZh: '世界包地图',
+      }),
+    ).toBeTruthy()
+
+    const guard = store.getAssetDeletionGuard(imported.assetId)
+    expect(guard).toMatchObject({
+      blocked: true,
+      hardBlocked: true,
+      forceAllowed: false,
+    })
+    expect(
+      guard.usages.some(
+        (usage) => usage.id === 'map:pack.custom-world-pack-map.asset' && usage.hard === true,
+      ),
+    ).toBe(true)
+
+    expect(await store.removeAsset(imported.assetId, { force: true })).toMatchObject({
+      ok: false,
+      reason: 'in_use',
+      forceAllowed: false,
+    })
+    expect(store.findAssetById(imported.assetId)).toBeTruthy()
+
+    expect(
+      await store.replaceAssetFromUrl(imported.assetId, {
+        url: 'https://example.com/map/replacement-world-pack.webp',
+      }),
+    ).toMatchObject({
+      ok: false,
+      reason: 'in_use',
+      forceAllowed: false,
+    })
+    expect(store.findAssetById(imported.assetId)).toMatchObject({
+      sourceUrl: 'https://example.com/map/world-pack.webp',
+    })
+
+    const replacementFile = new File(['replacement'], 'replacement-map.png', {
+      type: 'image/png',
+    })
+    expect(await store.replaceAssetFromFile(imported.assetId, replacementFile)).toMatchObject({
+      ok: false,
+      reason: 'in_use',
+      forceAllowed: false,
+    })
+
+    expect(mapStore.removeCustomMapPack('custom-world-pack-map')).toBe(true)
+    expect((await store.removeAsset(imported.assetId)).ok).toBe(true)
+    expect(store.findAssetById(imported.assetId)).toBeNull()
+  })
+
+  test('keeps the Map hard reference when the same asset is also the system wallpaper', async () => {
+    const systemStore = useSystemStore()
+    const mapStore = useMapStore()
+    const store = useGalleryStore()
+    const imported = store.importAssetFromUrl({
+      url: 'https://example.com/map/shared-wallpaper.webp',
+      category: 'scenario',
+      name: 'Shared map artwork',
+    })
+    expect(imported.ok).toBe(true)
+    systemStore.setAppearanceWallpaperAsset(imported.assetId)
+    expect(
+      mapStore.createCustomMapPack({
+        id: 'shared-wallpaper-map',
+        assetId: imported.assetId,
+        labelZh: '共享底图',
+      }),
+    ).toBeTruthy()
+
+    const guard = store.getAssetDeletionGuard(imported.assetId)
+    expect(guard.usages.map((usage) => usage.id)).toEqual(
+      expect.arrayContaining([
+        'system:appearance.wallpaper',
+        'map:pack.shared-wallpaper-map.asset',
+      ]),
+    )
+    expect(guard).toMatchObject({ hardBlocked: true, forceAllowed: false })
+    expect(await store.removeAsset(imported.assetId, { force: true })).toMatchObject({
+      ok: false,
+      reason: 'in_use',
+      forceAllowed: false,
+    })
+  })
+
   test('persists and restores folders with snapshot and storage hydration', () => {
     const store = useGalleryStore()
     const imported = store.importAssetFromUrl({

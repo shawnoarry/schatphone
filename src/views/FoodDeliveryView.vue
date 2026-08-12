@@ -25,9 +25,7 @@ import {
 import { useGalleryStore } from '../stores/gallery'
 import { useMapStore } from '../stores/map'
 import { useChatStore } from '../stores/chat'
-import { useBookStore } from '../stores/book'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
-import { useSimulationStore } from '../stores/simulation'
 import { useSystemStore } from '../stores/system'
 import { useWalletStore } from '../stores/wallet'
 import {
@@ -38,8 +36,6 @@ import {
 import { pushReturnTarget } from '../lib/navigation-return'
 import { projectUiAssetUrl } from '../lib/project-assets'
 import { convertLegacyCentsToMoney, convertMoneyToLegacyCents } from '../lib/currency-system'
-import { runFoodDeliveryRandomOrderEventPilot } from '../lib/simulation/adapters/food-delivery-events'
-import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
 import {
   SHOP_ENTRY_BINDING_TARGET,
   resolveEntryPresentationMeta,
@@ -196,11 +192,9 @@ const router = useRouter()
 const { t, languageBase, systemLanguage } = useI18n()
 const foodDeliveryStore = useFoodDeliveryStore()
 const chatStore = useChatStore()
-const bookStore = useBookStore()
 const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
-const simulationStore = useSimulationStore()
 const systemStore = useSystemStore()
 const walletStore = useWalletStore()
 const activeCurrency = computed(() => walletStore.primaryCurrency || 'CNY')
@@ -238,7 +232,6 @@ const resolveStoreTemplateForRestaurant = (restaurant = {}) => {
 }
 
 const customFeedback = ref('')
-const eventFeedback = ref('')
 const restaurantDraft = reactive({
   name: '',
   category: 'restaurants',
@@ -2974,52 +2967,6 @@ const foodOrderItemSummary = (order = {}) =>
     })
     .filter(Boolean)
     .join(' · ')
-
-const triggerOrderSurpriseEvent = (order) => {
-  eventFeedback.value = ''
-  const result = runFoodDeliveryRandomOrderEventPilot({
-    foodDeliveryStore,
-    simulationStore,
-    orderId: order?.id || '',
-    randomValue: 0,
-    seed: `${order?.id || 'food_order'}:${Date.now()}`,
-    worldContext: resolveWorldContextFromSystemStore(systemStore, {
-      bookStore,
-      sourceScope: 'module',
-      now: Date.now(),
-    }),
-    now: Date.now(),
-  })
-
-  if (result.ok) {
-    eventFeedback.value = t('配送更新已添加。', 'Delivery update added.')
-    return
-  }
-
-  const reason = result.reason || result.log?.reason || result.evaluation?.reason || ''
-  if (reason === 'cooldown_active') {
-    eventFeedback.value = t(
-      '暂时无法获取新进度，请稍后再试。',
-      'Updates are temporarily unavailable. Try again in a moment.',
-    )
-    return
-  }
-  if (reason === 'daily_limit_reached') {
-    eventFeedback.value = t(
-      '今天暂无更多配送更新，请稍后再试。',
-      'No more delivery updates are available today. Try again later.',
-    )
-    return
-  }
-  if (reason === 'module_events_disabled') {
-    eventFeedback.value = t('配送更新当前不可用。', 'Delivery updates are unavailable right now.')
-    return
-  }
-  eventFeedback.value = t(
-    '暂时没有新的配送进度，请稍后再试。',
-    'No delivery update is available right now. Try again later.',
-  )
-}
 
 const resetRestaurantDraft = () => {
   restaurantDraft.name = ''
@@ -7811,7 +7758,6 @@ onBeforeUnmount(() => {
           :active-order="activeJadeTableOrder"
           :active-order-events="activeJadeTableEventRows"
           :active-wallet-suggestion="activeJadeWalletSuggestion"
-          :event-feedback="eventFeedback"
           :page="jadeTablePageKey"
           :eta-text="activeStoreEtaText"
           :fee-text="activeStoreFeeText"
@@ -7829,7 +7775,6 @@ onBeforeUnmount(() => {
           @add-item="addMenuItemToCart"
           @update-cart="foodDeliveryStore.updateCartQuantity"
           @checkout="openCheckoutSheet"
-          @check-update="triggerOrderSurpriseEvent(activeJadeTableOrder)"
           @mark-delivered="markFoodOrderDelivered"
           @record-wallet="
             activeJadeWalletSuggestion && transferFoodSuggestionToWallet(activeJadeWalletSuggestion)
@@ -11971,14 +11916,6 @@ onBeforeUnmount(() => {
             data-testid="food-delivery-orders-panel"
           >
             <p class="text-sm font-bold">{{ t('本店订单', 'Shop orders') }}</p>
-            <p
-              v-if="eventFeedback"
-              class="mt-2 break-words rounded-2xl border border-orange-100 bg-orange-50 px-3 py-2 text-[11px] font-semibold leading-5 text-orange-700 [overflow-wrap:anywhere]"
-              data-testid="food-delivery-event-feedback"
-              aria-live="polite"
-            >
-              {{ eventFeedback }}
-            </p>
             <div v-if="recentOrders.length > 0" class="mt-3 space-y-2">
               <article
                 v-for="order in recentOrders"
@@ -12014,14 +11951,6 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <div class="mt-2 flex min-w-0 flex-wrap gap-2">
-                  <button
-                    type="button"
-                    class="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-normal rounded-2xl border border-orange-200 bg-white px-3 py-2 text-center text-[11px] font-semibold leading-4 text-orange-700 shadow-sm outline-none transition hover:border-orange-300 hover:bg-orange-50 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 motion-reduce:transition-none [overflow-wrap:anywhere]"
-                    :data-testid="`food-delivery-trigger-event-${order.id}`"
-                    @click="triggerOrderSurpriseEvent(order)"
-                  >
-                    {{ t('查看配送更新', 'Check for update') }}
-                  </button>
                   <button
                     v-if="
                       order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED &&

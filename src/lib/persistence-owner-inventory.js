@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 6
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 7
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -428,6 +428,20 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
       'World Pack, source-link, knowledge, and template IDs remain stable across restore.',
     referenceRule:
       'Consumers store stable IDs and projections; WorldBook remains the logical owner.',
+  },
+  {
+    id: 'world-suite.installation-inventory',
+    logicalOwner: 'World Suite',
+    dataClass: 'Installed resource origins, expected versions, and resumable Suite operation checkpoints',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:system'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-installation-registry',
+    backupRequirement: 'required',
+    backupSectionId: 'system-user',
+    stableIdRule: 'Suite IDs, manifest resource IDs, and native owner resource IDs remain stable.',
+    referenceRule:
+      'The inventory records coordination evidence only; native owners keep resource bodies, activation, use state, records, and history.',
   },
   {
     id: 'system.notifications',

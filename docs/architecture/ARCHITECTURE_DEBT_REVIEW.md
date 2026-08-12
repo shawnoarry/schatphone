@@ -115,6 +115,7 @@ What `systemStore` currently owns or coordinates:
 - notifications: notification stack, caps, read/remove/clear actions;
 - network and AI: API URL/key/model, provider kind, push server URL, API reports;
 - world context: global worldview, encyclopedia/knowledge-point compatibility, world packs, world profile state;
+- World Suite compatibility carrier: bounded install origins and resumable coordination checkpoints, while native owners retain all resource bodies and activation truth;
 - automation: AI automation queue, recent fingerprints, Chat truth events, Surprise Mode, module permissions;
 - backup: reminder interval, last-notified state, copy tone;
 - Music compatibility carrier: normalized public library/provider/integration state, while the Music Store remains the logical owner and credentials use a separate carrier;

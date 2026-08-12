@@ -751,6 +751,7 @@ const normalizeOrderEvent = (rawEvent, index = 0) => {
     deliveryAddress: normalizeText(rawEvent.deliveryAddress || rawEvent.address, '', 160),
     sourceModule: normalizeText(rawEvent.sourceModule, 'food_delivery_status_event', 80),
     sourceId: normalizeText(rawEvent.sourceId, '', 140),
+    runtimeLogId: normalizeText(rawEvent.runtimeLogId, '', 180),
     createdAt,
   }
 }
@@ -4219,6 +4220,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         ...eventInput,
         id: eventInput.id || createFoodOrderEventId(),
         createdAt: eventInput.createdAt || now,
+        runtimeLogId: '',
       },
       0,
     )
@@ -4236,9 +4238,45 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     if (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE && event.deliveryAddress) {
       order.deliveryAddress = event.deliveryAddress
     }
+    if (
+      (event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY ||
+        event.type === FOOD_DELIVERY_ORDER_EVENT_TYPE.ETA_UPDATE) &&
+      event.etaMinutes !== null
+    ) {
+      order.etaMinutes = clamp(toInt(event.etaMinutes, order.etaMinutes), 5, 180)
+      event.etaMinutes = order.etaMinutes
+    }
 
     order.updatedAt = Math.max(now, event.createdAt)
     pushFoodDeliveryEventServiceMessage(order, event)
+    return event
+  }
+
+  const linkOrderEventRuntimeLog = (orderId, eventId, runtimeLog = {}) => {
+    const normalizedOrderId = normalizeText(orderId, '', 140)
+    const normalizedEventId = normalizeText(eventId, '', 140)
+    const normalizedRuntimeLogId = normalizeText(runtimeLog.id, '', 180)
+    if (!normalizedOrderId || !normalizedEventId || !normalizedRuntimeLogId) return null
+    const order = orders.value.find((item) => item.id === normalizedOrderId)
+    const event = order?.events?.find((item) => item.id === normalizedEventId)
+    if (!event) return null
+    if (
+      normalizeText(runtimeLog.eventId, '', 160) !== event.sourceId ||
+      normalizeText(runtimeLog.moduleKey, '', 80) !== 'food_delivery' ||
+      normalizeText(runtimeLog.targetId, '', 160) !== normalizedOrderId ||
+      normalizeText(runtimeLog.adapterKey, '', 160) !== 'food_delivery.add_order_event' ||
+      normalizeText(runtimeLog.status, '', 40) !== 'triggered'
+    ) return null
+    if (event.runtimeLogId && event.runtimeLogId !== normalizedRuntimeLogId) return null
+    const logAlreadyBound = orders.value.some((item) =>
+      item.events?.some(
+        (storedEvent) =>
+          (item.id !== normalizedOrderId || storedEvent.id !== normalizedEventId) &&
+          storedEvent.runtimeLogId === normalizedRuntimeLogId,
+      ),
+    )
+    if (logAlreadyBound) return null
+    event.runtimeLogId = normalizedRuntimeLogId
     return event
   }
 
@@ -4662,6 +4700,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     checkoutCart,
     updateOrderStatus,
     addOrderEvent,
+    linkOrderEventRuntimeLog,
     removeOrder,
     neutralizeRelationshipOrder,
     cleanupRelationshipForProfile,

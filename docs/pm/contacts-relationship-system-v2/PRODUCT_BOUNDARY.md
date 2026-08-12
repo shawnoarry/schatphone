@@ -1,6 +1,6 @@
 # Contacts Relationship Product Boundary / 通讯录关系语义边界
 
-Updated: 2026-06-01
+Updated: 2026-08-12
 
 This document explains the current product meaning of each related module in plain language, so future engineers and AI assistants do not let the same field mean two different things.
 
@@ -18,10 +18,10 @@ The system can mirror or consume data across modules, but the product meaning mu
 
 | Module / 模块 | What it means to the user / 对用户的意思 | What it owns / 它拥有的语义 | What it must not own / 它不该拥有的语义 |
 | --- | --- | --- | --- |
-| `Contacts / 通讯录` | 人物档案库与角色中心 | global role archive, visible role ID, role detail fields, memory review, destructive relationship actions | chat-thread ownership, runtime internals, provider/service transport logic |
+| `Contacts / 通讯录` | 人物档案库与角色中心 | global role archive, visible role ID, role detail fields, memory review and memory-care presentation, destructive relationship actions | chat-thread ownership, relationship-memory or pressure-projection truth, provider/service transport logic |
 | `Chat Directory / 会话通讯录` | 谁能进入聊天、哪些是服务号 | chat-side role binding, service-account entries, open/unbind/delete chat target | current affinity/stage truth, role-centered destructive relationship management |
 | `Chat / 聊天` | 对话发生的地方 | conversations, messages, message deletion, thread prefs, prompt assembly | global role archive, relationship truth ownership |
-| `Relationship Runtime / 关系运行时` | 关系进度和共同记忆的后台真相层 | affinity, trust, intimacy, tension, dependency, relationship stage, milestones, growth traits, memory groups | visible role editing UI, general chat message ownership |
+| `Relationship Runtime / 关系运行时` | 关系进度和共同记忆的后台真相层 | affinity, trust, intimacy, tension, dependency, relationship stage, milestones, growth traits, memory groups, read-only per-role memory-pressure projection | visible role editing UI, general chat message ownership |
 | `World Hub / 世界中枢` | 可选的世界控制与运行时审查面板 | runtime review, cleanup orchestration, pending-event review | primary role authoring surface, visible role number authority |
 
 ## 3. Contacts / 通讯录
@@ -43,6 +43,7 @@ Owns:
 - display-only social-channel snapshots from Chat, such as pending message request, blocked, or blocked-by-role status
 - event-attached detail entries attached into role detail sections
 - memory review and memory deletion entry
+- plain-language presentation of Relationship Runtime's read-only memory-care state and suggested existing memories
 - role delete and relationship reset entry
 
 Must not own:
@@ -52,6 +53,8 @@ Must not own:
 - runtime-only internal identifiers as user-facing labels
 - eligibility or application of generated friend/block/refusal social events
 - confirmed Wallet transactions, receipts, account balances, or exchange behavior
+- memory-pressure thresholds or projection truth
+- automatic memory summarization, rewriting, archival, deletion, or persisted review candidates
 
 ## 4. Chat Directory / 会话通讯录
 
@@ -119,6 +122,7 @@ Owns:
 - `entityKey`
 - relationship metrics and stage
 - memory groups and memory summaries
+- read-only pressure projection over the complete per-target memory set
 - fact adapters and source-record references
 - current relationship truth, even when it later consumes saved profile classification as context
 
@@ -127,6 +131,11 @@ Must not own:
 - user-facing visible role-number formatting
 - role-profile editing UX
 - ordinary message history
+
+Reuse boundary:
+
+- a pure pressure-calculation Module may be reused by future world chronology or role-to-role knowledge systems;
+- reuse does not transfer ownership or permit mixed storage: each future system must provide its own Owner, records, review semantics, and persistence boundary.
 
 ## 7. World Hub / 世界中枢
 

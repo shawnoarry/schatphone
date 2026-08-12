@@ -17,6 +17,7 @@ export const EVENT_SURFACE_HOST_ERROR = Object.freeze({
   UNANCHORED_UNSUPPORTED: 'EVENT_SURFACE_UNANCHORED_UNSUPPORTED',
   ANCHOR_UNSUPPORTED: 'EVENT_SURFACE_ANCHOR_UNSUPPORTED',
   EXPANSION_UNSUPPORTED: 'EVENT_SURFACE_EXPANSION_UNSUPPORTED',
+  EXPANSION_HOST_MISMATCH: 'EVENT_SURFACE_EXPANSION_HOST_MISMATCH',
   ACTION_UNSUPPORTED: 'EVENT_SURFACE_ACTION_UNSUPPORTED',
 })
 
@@ -170,6 +171,15 @@ export const createEventSurfaceHostRegistry = (initialRegistrations = []) => {
       !registration.expansionKinds.includes(projection.expansion.kind)
     ) {
       errors.push({ code: EVENT_SURFACE_HOST_ERROR.EXPANSION_UNSUPPORTED, path: 'expansion.kind' })
+    }
+    if (
+      projection.expansion?.kind === EVENT_SURFACE_EXPANSION_KIND.HOST_DETAIL &&
+      normalizeId(projection.expansion.hostKey) !== registration.hostKey
+    ) {
+      errors.push({
+        code: EVENT_SURFACE_HOST_ERROR.EXPANSION_HOST_MISMATCH,
+        path: 'expansion.hostKey',
+      })
     }
     projection.actions.forEach((action, index) => {
       if (!registration.actionKinds.includes(action.kind)) {

@@ -262,6 +262,15 @@ describe('EVE-2B provider-neutral Event Text Composer', () => {
       cachePersisted: true,
     })
     expect(instanceStore.upsertEventInstance).toHaveBeenCalledWith(result.instance)
+    expect(providerAdapter.mock.calls[0][0].contextEnvelope).toMatchObject({
+      cache: {
+        key: expect.stringMatching(/^schatphone:event-text:v1:id-[a-f0-9]{8}$/),
+      },
+    })
+    expect(providerAdapter.mock.calls[0][0].contextEnvelope.cache.key).not.toContain('composer')
+    expect(providerAdapter.mock.calls[0][0].contextEnvelope.stablePrefix).toContain(
+      'logic is already fixed locally',
+    )
     expect(result.instance.text).toMatchObject({
       status: EVENT_TEXT_STATUS.SUCCEEDED,
       source: 'ai',

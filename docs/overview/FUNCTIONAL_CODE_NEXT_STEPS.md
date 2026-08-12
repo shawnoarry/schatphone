@@ -30,6 +30,7 @@ The best next work is:
 - Shopping/logistics/Food Delivery service notifications;
 - Book source library and WorldBook activation;
 - compatible World Packs, App Store world entries, reviewed app/service proposals;
+- reusable World Suite manifest planning, durable origin/checkpoint inventory, shared independent/Suite execution, and the first production Book Owner Adapter;
 - Shopping/Food Delivery/Calendar/Map world-app context;
 - Music installed-app playback/library/provider baseline, dedicated ChKSz Adapter with on-demand stream resolution plus NetEase lyrics/playlist intake, Home/App Store entry, global floating player, Chat track-share caller, active-journey Map music/radio caller, and bounded Chat/Map Interfaces;
 - global/scoped appearance ownership seams;
@@ -148,6 +149,8 @@ Run the real product loop:
 7. recovery after invalid CSS, missing source, or rejected proposal.
 
 Promote only the concrete failures found during testing. Do not broaden archetypes first.
+
+The World Suite foundation now coordinates production-backed Book, Gallery, and Map Owner Adapters while still having no Suite UI, activation flow, startup caller, or final K-pop manifest. A single typed/versioned Catalog keeps Book text, Gallery asset-pack bodies, and Map pack bodies outside manifests and inventory. Independent Catalog and Suite installs reuse the same native resources; Gallery owns stable folders/assets, installs before Map, and refuses conflicting or referenced material; Map owns map metadata/authored places, consumes only a Gallery asset ID, and protects current/history Map/Event/Chat references plus topology. `src/lib/production-world-suite-runtime.js` exposes preview/install/uninstall use cases over real Stores, serializes operations, and checkpoints System inventory only after a real persistence receipt; retries re-inspect native truth without duplicating completed mutations. This is a product installation seam, not yet a user-visible capability: it registers no built-in content and never activates WorldBook, binds a world/map, relocates a role, or changes Journey truth. The next safe content step is to audit and freeze stable IDs for one K-pop Catalog/manifest before adding a caller or UI; do not create a parallel Suite-only installer or infer provenance for existing defaults.
 
 ## 8. Candidate F: Cross-Module Mini Scene Next Gate
 

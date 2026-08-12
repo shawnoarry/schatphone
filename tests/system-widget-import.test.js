@@ -379,7 +379,7 @@ describe('system widget import safety', () => {
       slotId: 'b-small-7',
       tileId: 'app_food_delivery',
     })
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(5)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(6)
   })
 
   test('migrates the previous versioned default Home into the release layout', () => {
@@ -429,7 +429,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(5)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(6)
   })
 
   test('migrates the prior curated two-screen default to the configurable three-screen default', () => {
@@ -457,7 +457,7 @@ describe('system widget import safety', () => {
 
     expect(store.settings.appearance.homeWidgetPages[2]).toEqual(['system', 'quick_heart', 'quick_disc'])
     expect(store.settings.appearance.homeVisiblePageCount).toBe(3)
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(5)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(6)
   })
 
   test('keeps customized Home slot setup during setup-version hydration', () => {
@@ -492,7 +492,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[0]).toEqual(['weather'])
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_phone')
     expect(store.settings.appearance.homeVisiblePageCount).toBe(2)
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(5)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(6)
     expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
       slotId: 'c-top-left',
       tileId: 'weather',
@@ -526,7 +526,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(5)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(6)
   })
 
   test('World Hub Home entry is user-managed instead of controlled by legacy toggles', () => {

@@ -71,15 +71,17 @@ const createModel = ({
   contacts = [],
   roleProfiles = [],
   user = { name: 'Fallback User' },
+  relationshipRuntimeStore,
 } = {}) =>
   useChatAiPromptContextModel({
     chatStore: createChatStore({ messages, contacts, roleProfiles }),
     systemStore: createSystemStore(),
     bookStore: { assets: [] },
-    relationshipRuntimeStore: {
-      buildPromptContextForTarget: (target) =>
-        target.entityKey ? `Runtime facts for ${target.entityKey}` : '',
-    },
+    relationshipRuntimeStore:
+      relationshipRuntimeStore || {
+        buildPromptContextForTarget: (target) =>
+          target.entityKey ? `Runtime facts for ${target.entityKey}` : '',
+      },
     user: ref(user),
     responseStyleOptions: ref([
       { value: 'immersive' },
@@ -131,6 +133,32 @@ describe('Chat AI prompt context model interface', () => {
     })
     expect(model.getSmartReplyHistory(1)).toHaveLength(5)
     expect(model.getAutomationBaseFingerprint(1)).toContain('message 9')
+  })
+
+  test('uses the same bounded source and AI messages for normal and reroll request paths', () => {
+    const messages = [
+      { id: 'old', role: 'assistant', content: 'x'.repeat(120) },
+      { id: 'recent-user', role: 'user', content: 'Keep this request.' },
+      { id: 'target', role: 'assistant', content: 'Replace this answer.' },
+      { id: 'after-target', role: 'user', content: 'Must not enter reroll context.' },
+    ]
+    const model = createModel({ messages })
+
+    const normal = model.projectAiRequestContext(1, {
+      untilMessageId: 'recent-user',
+      contextTurns: 4,
+      characterBudget: 40,
+    })
+    const reroll = model.projectAiRequestContext(1, {
+      beforeMessageId: 'target',
+      contextTurns: 4,
+      characterBudget: 40,
+    })
+
+    expect(normal.sourceMessages.map((message) => message.id)).toEqual(['recent-user'])
+    expect(normal.aiMessages.map((message) => message.content)).toEqual(['Keep this request.'])
+    expect(reroll.sourceMessages.map((message) => message.id)).toEqual(['recent-user'])
+    expect(reroll.aiMessages).toEqual(normal.aiMessages)
   })
 
   test('extracts AI context from recalled, quoted, rich, service, and revised messages', () => {
@@ -219,9 +247,30 @@ describe('Chat AI prompt context model interface', () => {
     expect(rolePrompt).not.toContain('secret: hidden')
     expect(rolePrompt).toContain('Allow plain, quote_user. Disallow quote_self.')
     expect(rolePrompt).toContain('image_virtual blocks are allowed only when reference cues are present')
-    expect(rolePrompt).toContain('Image-reference transport mode: native_url (provider: openai).')
+    expect(rolePrompt).not.toContain('native_url')
+    expect(rolePrompt).not.toContain('provider: openai')
+    expect(rolePrompt).toContain('Do not claim to have seen unavailable details')
     expect(rolePrompt).toContain('Never invent, guess, or output a bank name paired with an account number')
     expect(rolePrompt).toContain('Only a Wallet-confirmed receipt represents a completed transfer')
+
+    const roleContext = model.buildPromptContext(
+      { id: 1, kind: 'role', name: 'Mina', role: 'idol', bio: 'Warm and precise.', profileId: 10 },
+      aiPrefs,
+      {
+        replyCount: 2,
+        imageReferences: [{ label: 'ref' }],
+        providerCapabilities: { preferredImageReferenceMode: 'native_url', kind: 'openai' },
+      },
+    )
+    expect(roleContext.cache.key).toMatch(/^schatphone:chat:v1:id-[a-f0-9]{8}$/)
+    expect(roleContext.cache.key).not.toContain('role:10')
+    expect(roleContext.stablePrefix).toContain('Role persona: Warm and precise.')
+    expect(roleContext.stablePrefix).not.toContain('Relationship truth stage: warm.')
+    expect(roleContext.dynamicContext).toContain('Relationship truth stage: warm.')
+    expect(roleContext.dynamicContext).toContain('Runtime facts for role:10')
+    expect(roleContext.systemPrompt.indexOf('Role persona: Warm and precise.')).toBeLessThan(
+      roleContext.systemPrompt.indexOf('Relationship truth stage: warm.'),
+    )
 
     const servicePrompt = model.buildSystemPrompt(
       { id: 9, kind: 'service', name: 'Daily Fresh', role: 'service', serviceTemplate: 'Helpful store account' },
@@ -250,10 +299,214 @@ describe('Chat AI prompt context model interface', () => {
       aiPrefs,
     )
     expect(anonymousPrompt).toContain('User identity: hidden.')
+    expect(anonymousPrompt).not.toContain('Visible user self-profile values:')
+    expect(anonymousPrompt).not.toContain('publicName: You')
 
     expect(resolveChatAssistantImageBlockPolicy(aiPrefs, [])).toMatchObject({
       allowImageVirtual: false,
       referenceCount: 0,
     })
+  })
+
+  test('passes only a bounded recent-chat query into one relationship projection', () => {
+    const relationshipRuntimeStore = {
+      buildPromptProjectionForTarget: (...args) => {
+        relationshipRuntimeStore.calls.push(args)
+        return { text: 'Runtime recall result', memoryRecall: { items: [] } }
+      },
+      calls: [],
+    }
+    const model = createModel({
+      relationshipRuntimeStore,
+      roleProfiles: [{ id: 10, name: 'Mina', profileValues: [], detailItems: [] }],
+    })
+
+    model.buildPromptContext(
+      { id: 7, kind: 'role', name: 'Mina', role: 'friend', profileId: 10 },
+      DEFAULT_CHAT_THREAD_AI_PREFS,
+      {
+        contextMessages: Array.from({ length: 6 }, (_, index) => ({
+          role: index % 2 === 0 ? 'user' : 'assistant',
+          content: `topic-${index + 1}`,
+        })),
+      },
+    )
+
+    expect(relationshipRuntimeStore.calls).toHaveLength(1)
+    expect(relationshipRuntimeStore.calls[0][1].recallQuery).toBe(
+      'topic-3\ntopic-4\ntopic-5\ntopic-6',
+    )
+  })
+
+  test('places manual role details in the stable prefix and linked event clues in the dynamic tail', () => {
+    const relationshipRuntimeStore = {
+      buildPromptProjectionForTarget: () => ({
+        text: 'Runtime memory: birthday necklace.',
+        memoryRecall: {
+          items: [
+            {
+              memoryKey: 'birthday_necklace',
+              recallText: 'Received a birthday necklace.',
+              reviewStatus: 'active',
+            },
+          ],
+        },
+      }),
+    }
+    const model = createModel({
+      relationshipRuntimeStore,
+      roleProfiles: [
+        {
+          id: 10,
+          name: 'Mina',
+          profileValues: [],
+          detailItems: [
+            {
+              id: 'manual-tea',
+              section: 'preferences',
+              sourceKind: 'manual',
+              title: 'Tea',
+              detail: 'Likes jasmine tea.',
+              updatedAt: 2,
+            },
+            {
+              id: 'event-ribbon',
+              section: 'lifePattern',
+              sourceKind: 'event_attached',
+              title: 'Ribbon',
+              detail: 'Kept the gift ribbon.',
+              memoryKey: 'birthday_necklace',
+              updatedAt: 1,
+            },
+            {
+              id: 'orphan',
+              section: 'lifePattern',
+              sourceKind: 'event_attached',
+              title: 'Orphan',
+              detail: 'Must not enter the prompt.',
+              memoryKey: 'missing_memory',
+              updatedAt: 3,
+            },
+          ],
+        },
+      ],
+    })
+
+    const context = model.buildPromptContext(
+      { id: 1, kind: 'role', name: 'Mina', role: 'friend', profileId: 10 },
+      DEFAULT_CHAT_THREAD_AI_PREFS,
+    )
+
+    expect(context.stablePrefix).toContain('Preferences: Tea: Likes jasmine tea.')
+    expect(context.stablePrefix).not.toContain('Kept the gift ribbon.')
+    expect(context.dynamicContext).toContain('Ribbon: Kept the gift ribbon.')
+    expect(context.dynamicContext).not.toContain('Must not enter the prompt.')
+  })
+
+  test('does not read role continuity for non-role contacts with stale profile ids', () => {
+    const relationshipRuntimeStore = {
+      buildPromptProjectionForTarget: () => {
+        throw new Error('non-role contacts must not read relationship memory')
+      },
+    }
+    const model = createModel({
+      relationshipRuntimeStore,
+      roleProfiles: [
+        {
+          id: 10,
+          profileValues: [{ label: 'Secret', value: 'Role-only value' }],
+          detailItems: [
+            {
+              id: 'role-only',
+              section: 'preferences',
+              sourceKind: 'manual',
+              title: 'Secret',
+              detail: 'Role-only detail',
+            },
+          ],
+        },
+      ],
+    })
+
+    const context = model.buildPromptContext(
+      { id: 90, kind: 'service', name: 'Service', role: 'helper', profileId: 10 },
+      DEFAULT_CHAT_THREAD_AI_PREFS,
+    )
+
+    expect(context.systemPrompt).not.toContain('Role-only value')
+    expect(context.systemPrompt).not.toContain('Role-only detail')
+  })
+
+  test('changes the cache key when stable role identity changes but not when relationship state changes', () => {
+    const roleProfiles = [
+      {
+        id: 10,
+        name: 'Mina',
+        role: 'friend',
+        bio: 'Quietly playful.',
+        profileValues: [{ fieldId: 'favorite', value: 'tea' }],
+        detailItems: [],
+      },
+    ]
+    const runtime = {
+      currentText: 'Relationship runtime snapshot: warm.',
+      buildPromptProjectionForTarget() {
+        return { text: this.currentText, memoryRecall: { items: [] } }
+      },
+    }
+    const model = createModel({ roleProfiles, relationshipRuntimeStore: runtime })
+    const contact = { id: 1, kind: 'role', name: 'Mina', role: 'friend', profileId: 10 }
+    const first = model.buildPromptContext(contact, DEFAULT_CHAT_THREAD_AI_PREFS)
+
+    runtime.currentText = 'Relationship runtime snapshot: conflict.'
+    const relationshipChanged = model.buildPromptContext(contact, DEFAULT_CHAT_THREAD_AI_PREFS)
+    roleProfiles[0].bio = 'Direct and teasing.'
+    const identityChanged = model.buildPromptContext(contact, DEFAULT_CHAT_THREAD_AI_PREFS)
+
+    expect(relationshipChanged.cache.key).toBe(first.cache.key)
+    expect(relationshipChanged.dynamicContext).not.toBe(first.dynamicContext)
+    expect(identityChanged.cache.key).not.toBe(first.cache.key)
+  })
+
+  test('keeps manual role facts but excludes relationship clues when runtime is disabled', () => {
+    const model = createModel({
+      relationshipRuntimeStore: {
+        buildPromptProjectionForTarget: () => ({
+          text: '',
+          memoryRecall: { items: [] },
+        }),
+      },
+      roleProfiles: [
+        {
+          id: 10,
+          profileValues: [],
+          detailItems: [
+            {
+              id: 'manual-tea',
+              section: 'preferences',
+              sourceKind: 'manual',
+              title: 'Tea',
+              detail: 'Likes jasmine tea.',
+            },
+            {
+              id: 'event-ribbon',
+              section: 'lifePattern',
+              sourceKind: 'event_attached',
+              title: 'Ribbon',
+              detail: 'Kept the gift ribbon.',
+              memoryKey: 'birthday_necklace',
+            },
+          ],
+        },
+      ],
+    })
+
+    const context = model.buildPromptContext(
+      { id: 1, kind: 'role', name: 'Mina', role: 'friend', profileId: 10 },
+      DEFAULT_CHAT_THREAD_AI_PREFS,
+    )
+
+    expect(context.stablePrefix).toContain('Tea: Likes jasmine tea.')
+    expect(context.dynamicContext).not.toContain('Kept the gift ribbon.')
   })
 })

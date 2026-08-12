@@ -164,14 +164,18 @@ async function cleanupPublishedQueue(queue) {
 
 async function runPrepare(options) {
   const batchId = String(options.batch || '').trim()
+  const confirmed = options.confirm === true || options.approve === true
+  const confirmationSource = options['confirmation-source'] || options['approval-source']
   const plan = await buildPublishPlan({
     repoRoot,
     batchId,
     runtime: optionList(options.runtime),
     source: optionList(options.source),
     baseUrl: process.env.SCHATPHONE_IMGBED_BASE_URL,
-    approved: options.approve === true,
-    approvalSource: options['approval-source'],
+    // Keep the version-1 plan fields for cross-PC and historical-plan compatibility.
+    // In project-facing language this is a confirmed asset upload list, not art approval.
+    approved: confirmed,
+    approvalSource: confirmationSource,
   })
   const output = options.output || `.imgbed-publish/${batchId}.plan.json`
   console.log(JSON.stringify({
@@ -221,7 +225,7 @@ async function runPublish(options) {
   for (const entry of plan.entries) {
     const absolutePath = resolve(repoRoot, entry.path)
     if (!existsSync(absolutePath) || await sha256File(absolutePath) !== entry.sha256) {
-      throw new Error(`Local asset changed after plan approval: ${entry.path}`)
+      throw new Error(`Local asset changed after upload-list confirmation: ${entry.path}`)
     }
   }
 
@@ -402,11 +406,11 @@ async function runImportMigration(options) {
 }
 
 function printHelp() {
-  console.log(`SchatPhone project asset publishing
+  console.log(`SchatPhone project asset publishing (asset upload lists / 素材上传清单)
 
 Commands:
   prepare --batch <id> [--runtime <local>=<remote>] [--source <local>=<remote>]
-          [--approve --approval-source <text>] [--output <path>]
+          [--confirm --confirmation-source <text>] [--output <path>]
   publish --plan <path> --execute [--output <path>]
   publish-pending [--stage-registry] [--cleanup-local] [--fallback-to-git]
   import-migration --plan <path> --results <path> --batch <id> --execute

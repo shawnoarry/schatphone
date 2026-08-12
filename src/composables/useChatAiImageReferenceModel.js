@@ -193,14 +193,11 @@ export const useChatAiImageReferenceModel = ({
         const assetId = trimText(block.assetId)
         const asset = assetId ? findAssetById(assetId) : null
         let sourceUrl = trimText(block.url)
-        let sourceReason = ''
 
         if (!sourceUrl && assetId) {
           const resolved = await resolveAssetAiReferenceUrl(assetId)
           if (resolved?.ok && trimText(resolved.url)) {
             sourceUrl = trimText(resolved.url)
-          } else if (resolved?.reason) {
-            sourceReason = resolved.reason
           }
         }
 
@@ -208,12 +205,10 @@ export const useChatAiImageReferenceModel = ({
           trimText(block.alt) ||
           trimText(asset?.name) ||
           translate('参考图', 'Reference image')
-        const noteBase =
-          trimText(block.caption) || translate('来自聊天上下文', 'From chat context')
-        const note =
-          sourceReason === 'blob_too_large'
-            ? `${noteBase} · ${translate('本地图片过大，按文字线索处理', 'Local image too large, using text-only cue')}`
-            : noteBase
+        const note = trimText(block.caption) || translate(
+          '用户在这段对话中分享的图片',
+          'Shared by the user in this conversation',
+        )
         const sourceKey = `${label}|${assetId}|${sourceUrl.slice(0, 120)}`
         if (seen.has(sourceKey)) continue
         seen.add(sourceKey)
@@ -256,7 +251,6 @@ export const useChatAiImageReferenceModel = ({
 
       const resolved = await resolveAssetAiReferenceUrl(assetId)
       const sourceUrl = resolved?.ok && trimText(resolved.url) ? trimText(resolved.url) : ''
-      const sourceReason = trimText(resolved?.reason)
 
       const sourceEntry = sourceByAssetId?.[assetId]
       const slotLabels =
@@ -264,19 +258,15 @@ export const useChatAiImageReferenceModel = ({
           ? sourceEntry.slotKeys.map((slotKey) => roleFolderSlotHintLabel(slotKey)).filter(Boolean)
           : []
       const slotHint = slotLabels.length > 0 ? slotLabels.join('/') : ''
-      const noteBase = slotHint
+      const note = slotHint
         ? translate(
-            `来自角色绑定素材（${slotHint}${profileName ? ` · ${profileName}` : ''}）`,
-            `From role-bound asset (${slotHint}${profileName ? ` · ${profileName}` : ''})`,
+            `${profileName || '角色'}的视觉参考（${slotHint}）`,
+            `Visual reference for ${profileName || 'the character'} (${slotHint})`,
           )
         : translate(
-            `来自角色绑定素材${profileName ? `（${profileName}）` : ''}`,
-            `From role-bound asset${profileName ? ` (${profileName})` : ''}`,
+            `${profileName || '角色'}的视觉参考`,
+            `Visual reference for ${profileName || 'the character'}`,
           )
-      const note =
-        sourceReason === 'blob_too_large'
-          ? `${noteBase} · ${translate('本地图片过大，按文字线索处理', 'Local image too large, using text-only cue')}`
-          : noteBase
       const label =
         trimText(asset?.name) || translate('角色参考图', 'Profile reference image')
 

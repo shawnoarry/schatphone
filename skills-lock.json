@@ -116,6 +116,18 @@
       "skillPath": "skills/redesign-skill/SKILL.md",
       "computedHash": "b405eee0e0e80fc243f731d9aa368bca307e356db7e6157d27101d369dac6726"
     },
+    "scene-distillation-zine-v1-3": {
+      "source": "Zeejay0/gathered-scenes-zine-skill",
+      "sourceType": "github",
+      "skillPath": "skills/scene-distillation-zine-v1-3/SKILL.md",
+      "computedHash": "1a85c74de13c14951de231512afd80cc1458e2121f62beedeb8d8262dc07cbd9"
+    },
+    "scenes-gathered-zine-v1-3": {
+      "source": "Zeejay0/gathered-scenes-zine-skill",
+      "sourceType": "github",
+      "skillPath": "skills/scenes-gathered-zine-v1-3/SKILL.md",
+      "computedHash": "1bca51ec05e2bf284118e438b65986b24c8c5c2c53b1f6632d6707732230f90c"
+    },
     "sound-effects": {
       "source": "elevenlabs/skills",
       "sourceType": "github",

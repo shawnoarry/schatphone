@@ -5,6 +5,7 @@ import {
   FOOD_DELIVERY_ORDER_STATUS,
   useFoodDeliveryStore,
 } from '../src/stores/foodDelivery'
+import { useChatStore } from '../src/stores/chat'
 import { useSimulationStore } from '../src/stores/simulation'
 import {
   FOOD_DELIVERY_EVENT_ADAPTER_KEY,
@@ -71,7 +72,9 @@ describe('food delivery event adapter', () => {
     ])
     expect(presets.every((preset) => preset.moduleKey === 'food_delivery')).toBe(true)
     expect(presets.every((preset) => preset.effect.adapterKey === FOOD_DELIVERY_EVENT_ADAPTER_KEY)).toBe(true)
+    expect(presets.every((preset) => preset.surfaces.includes('food_delivery.order_timeline'))).toBe(true)
     expect(presets.every((preset) => preset.surfaces.includes('chat.food_delivery_service'))).toBe(true)
+    expect(presets.every((preset) => !preset.surfaces.includes('food_delivery.order_card'))).toBe(true)
   })
 
   test('exposes only non-destructive presets for the random pilot', () => {
@@ -135,6 +138,7 @@ describe('food delivery event adapter', () => {
       id: event.id,
       type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
     })
+    expect(store.orders[0]?.etaMinutes).toBe(44)
     expect(store.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.PLACED)
   })
 
@@ -183,9 +187,16 @@ describe('food delivery event adapter', () => {
 
   test('runs Food Delivery presets through the shared event engine seam', () => {
     const foodDeliveryStore = useFoodDeliveryStore()
+    const chatStore = useChatStore()
     const simulationStore = useSimulationStore()
     foodDeliveryStore.resetForTesting()
     simulationStore.resetForTesting()
+    const serviceContact = chatStore.addContact({
+      name: 'Food Delivery Dispatch',
+      kind: 'service',
+      role: 'Service account',
+      foodDeliveryServiceKey: 'food_delivery_dispatch',
+    })
     const order = createOrder(foodDeliveryStore)
 
     const randomSkipped = runFoodDeliveryOrderEventPreset({
@@ -215,6 +226,7 @@ describe('food delivery event adapter', () => {
       presetId: FOOD_DELIVERY_ORDER_EVENT_PRESET_ID.RIDER_DELAY,
       triggerSource: 'manual',
       summary: 'Engine runner delayed this order.',
+      etaMinutes: 47,
       now: Date.now(),
     })
     expect(manualTriggered).toMatchObject({
@@ -224,10 +236,27 @@ describe('food delivery event adapter', () => {
     expect(manualTriggered.adapterResult).toMatchObject({
       type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
       sourceModule: 'simulation_food_delivery_event_engine',
+      runtimeLogId: manualTriggered.log.id,
     })
     expect(foodDeliveryStore.orders[0]?.events[0]).toMatchObject({
       id: manualTriggered.adapterResult.id,
       summary: 'Engine runner delayed this order.',
+      etaMinutes: 47,
+      runtimeLogId: manualTriggered.log.id,
+    })
+    expect(foodDeliveryStore.orders[0]?.etaMinutes).toBe(47)
+    expect(
+      chatStore.findServiceNotificationBySource(
+        serviceContact.id,
+        'food_delivery_chat_push',
+        order.id,
+        manualTriggered.adapterResult.id,
+      )?.blocks[0],
+    ).toMatchObject({
+      kind: 'food_delivery_update',
+      sourceId: order.id,
+      sourceEventId: manualTriggered.adapterResult.id,
+      statusLabel: 'Delayed',
     })
     expect(simulationStore.isCoolingDown(FOOD_DELIVERY_ORDER_EVENT_PRESET_ID.RIDER_DELAY, { targetId: order.id })).toBe(true)
     expect(
@@ -236,6 +265,86 @@ describe('food delivery event adapter', () => {
         limit: 2,
       }).count,
     ).toBe(1)
+  })
+
+  test('reports a failed result when exact runtime lineage cannot be linked', () => {
+    const foodDeliveryStore = useFoodDeliveryStore()
+    const simulationStore = useSimulationStore()
+    foodDeliveryStore.resetForTesting()
+    simulationStore.resetForTesting()
+    const order = createOrder(foodDeliveryStore)
+    foodDeliveryStore.linkOrderEventRuntimeLog = vi.fn(() => null)
+
+    const result = runFoodDeliveryOrderEventPreset({
+      foodDeliveryStore,
+      simulationStore,
+      orderId: order.id,
+      presetId: FOOD_DELIVERY_ORDER_EVENT_PRESET_ID.RIDER_DELAY,
+      triggerSource: 'manual',
+      now: Date.now(),
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      status: 'failed',
+      reason: 'runtime_lineage_link_failed',
+    })
+    expect(foodDeliveryStore.orders[0].events[0].runtimeLogId).toBe('')
+  })
+
+  test('keeps validated runtime lineage backup-compatible and ignores external injection', () => {
+    const foodDeliveryStore = useFoodDeliveryStore()
+    const simulationStore = useSimulationStore()
+    foodDeliveryStore.resetForTesting()
+    simulationStore.resetForTesting()
+    const order = createOrder(foodDeliveryStore)
+    const result = runFoodDeliveryOrderEventPreset({
+      foodDeliveryStore,
+      simulationStore,
+      orderId: order.id,
+      presetId: FOOD_DELIVERY_ORDER_EVENT_PRESET_ID.RIDER_DELAY,
+      triggerSource: 'manual',
+      etaMinutes: 45,
+      now: Date.now(),
+    })
+
+    const sourceEvent = foodDeliveryStore.orders[0].events[0]
+    expect(sourceEvent.runtimeLogId).toBe(result.log.id)
+    expect(
+      foodDeliveryStore.linkOrderEventRuntimeLog(order.id, sourceEvent.id, {
+        ...result.log,
+        id: 'different-log',
+      }),
+    ).toBeNull()
+    expect(sourceEvent.runtimeLogId).toBe(result.log.id)
+
+    const injectedEvent = foodDeliveryStore.addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_DELAY,
+      sourceId: FOOD_DELIVERY_ORDER_EVENT_PRESET_ID.RIDER_DELAY,
+      runtimeLogId: result.log.id,
+      summary: 'Injected lineage must be ignored.',
+      etaMinutes: 46,
+    })
+    expect(injectedEvent.runtimeLogId).toBe('')
+    expect(
+      foodDeliveryStore.linkOrderEventRuntimeLog(order.id, injectedEvent.id, result.log),
+    ).toBeNull()
+
+    const snapshot = foodDeliveryStore.createBackupSnapshot()
+    foodDeliveryStore.resetForTesting()
+    expect(foodDeliveryStore.restoreFromBackup(snapshot)).toBe(true)
+    expect(
+      foodDeliveryStore.orders[0].events.find((event) => event.id === sourceEvent.id)?.runtimeLogId,
+    ).toBe(result.log.id)
+
+    const legacySnapshot = foodDeliveryStore.createBackupSnapshot()
+    legacySnapshot.orders[0].events = legacySnapshot.orders[0].events.map((event) => {
+      const legacyEvent = { ...event }
+      delete legacyEvent.runtimeLogId
+      return legacyEvent
+    })
+    expect(foodDeliveryStore.restoreFromBackup(legacySnapshot)).toBe(true)
+    expect(foodDeliveryStore.orders[0].events.every((event) => event.runtimeLogId === '')).toBe(true)
   })
 
   test('runs a low-frequency random pilot against active Food Delivery orders', () => {
@@ -266,6 +375,7 @@ describe('food delivery event adapter', () => {
       sourceModule: 'simulation_food_delivery_random_pilot',
     })
     expect(foodDeliveryStore.orders[0]?.status).toBe(FOOD_DELIVERY_ORDER_STATUS.PLACED)
+    expect(foodDeliveryStore.orders[0]?.etaMinutes).toBe(result.adapterResult.etaMinutes)
     expect(foodDeliveryStore.orders[0]?.events).toHaveLength(1)
     expect(simulationStore.isCoolingDown(FOOD_DELIVERY_RANDOM_PILOT_EVENT_ID, { targetId: order.id })).toBe(true)
     expect(

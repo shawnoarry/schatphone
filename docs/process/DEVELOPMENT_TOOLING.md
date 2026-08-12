@@ -129,7 +129,7 @@ npm.cmd run build
 Repository-owned artwork uses the personal SchatPhone image bed as its development and production source.
 
 - public runtime files use `schatphone-assets/`;
-- valuable masters that are not byte-identical to a runtime file may use protected `schatphone-source/`;
+- masters, generation sources, and visual candidates that are not byte-identical to a runtime file use protected `schatphone-source/`;
 - owner Gallery media will use `schatphone-user/` through a separate future application Adapter;
 - a byte-identical master and runtime export are uploaded once, under the public runtime key;
 - PWA/install/offline bootstrap icons remain in Git.
@@ -145,20 +145,20 @@ One-time setup is portable across the home and office PCs:
 
 Normal project publishing does not use `SCHATPHONE_IMGBED_TOKEN`, the Hugging Face repository credential, or a local archive path. A workstation that only runs the application needs none of these credentials; a workstation that publishes new repository-owned artwork needs only `SCHATPHONE_IMGBED_PROJECT_TOKEN`.
 
-The repeatable production flow is identical on both PCs and does not require a manual upload command:
+The repeatable production flow is identical on both PCs and does not require a manual upload command. Its small JSON work item is called an **asset upload list** (`素材上传清单`). Confirming this list only tells the automated publisher which local bytes and destinations to process; it is not artwork approval, does not mean the image is final, and does not prevent later replacement. A changed image is uploaded as new SHA-256 content and the registry/runtime reference is updated in the later change.
 
 1. Generate assets under ignored `output/imagegen/`.
-2. Queue accepted assets in an explicitly approved local plan with one or more repeated `--runtime <local>=<remote>` and `--source <local>=<remote>` mappings. The plan is a small credential-free JSON document that references the original files; it is not another copy of their bytes:
+2. Add the relevant visual assets to a confirmed local asset upload list with one or more repeated `--runtime <local>=<remote>` and `--source <local>=<remote>` mappings. The list is a small credential-free JSON document that references the original files; it is not another copy of their bytes. Runtime artwork goes to `schatphone-assets/`; masters, generation sources, and candidates go to `schatphone-source/`. Audit screenshots, Playwright reports, contact sheets, prompts, JSON/JSONL request records, and acceptance notes are not image-bed payloads:
 
 ```powershell
-npm.cmd run assets:prepare -- --batch <id> --runtime <local>=<remote> --source <local>=<remote> --approve --approval-source <decision>
+npm.cmd run assets:prepare -- --batch <id> --runtime <local>=<remote> --source <local>=<remote> --confirm --confirmation-source <reason>
 ```
 
-3. Create the Git commit normally. The tracked pre-commit hook discovers approved plans and automatically publishes them before the commit is finalized.
+3. Create the Git commit normally. The tracked pre-commit hook discovers confirmed asset upload lists and automatically publishes them before the commit is finalized.
 
 For a pending plan, the hook splits work into batches of at most 10 files and 40 MiB, verifies the server response, downloads every public/protected object into memory, compares byte length and SHA-256, updates and stages `config/project-assets.json`, then removes the verified plan, result record, and exact `output/imagegen/` source paths. The verification download does not create another local image copy.
 
-If the project token is missing or the network/upload/remote-verification step is temporarily unavailable, the hook does not block the commit. It force-stages only the approved plan and its exact `output/imagegen/` entries as a credential-free Git fallback so another PC can pull and continue. Every later commit retries the same idempotent upload. After a successful retry, the hook stages deletion of those temporary Git files and keeps only the registry-backed image-bed references. Invalid plans, conflicting remote keys, duplicate bytes under different keys, and a local file changed after plan approval remain hard failures rather than fallback conditions. The fallback deliberately trades a rare temporary increase in Git history for uninterrupted cross-PC handoff.
+If the project token is missing or the network/upload/remote-verification step is temporarily unavailable, the hook does not block the commit. It force-stages only the confirmed upload list and its exact `output/imagegen/` entries as a credential-free Git fallback so another PC can pull and continue. Every later commit retries the same idempotent upload. After a successful retry, the hook stages deletion of those temporary Git files and keeps only the registry-backed image-bed references. Invalid lists, conflicting remote keys, duplicate bytes under different keys, and a local file changed after list confirmation remain hard failures rather than fallback conditions. The fallback deliberately trades a rare temporary increase in Git history for uninterrupted cross-PC handoff.
 
 `npm.cmd run assets:publish -- --plan .imgbed-publish/<id>.plan.json --execute` remains available as a repair/diagnostic command, but it is not part of the normal user workflow.
 
@@ -174,7 +174,7 @@ Registry sync refuses incomplete or mismatched verification results. Archive fir
 
 An independently approved follow-up batch may share a dated archive root by adding `--manifest-name <batch>-archive-manifest.json`. The archive tool rejects repository-local destinations, including cross-drive path ambiguities, and never replaces the default manifest unless that exact name is requested.
 
-The tracked `.githooks/pre-commit` runs automatic pending publication before `assets:check --staged`. With no approved pending plan it performs no network request and does not require a token. `npm install` activates the shared hooks through the repository `prepare` script. CI never receives the token or uploads; its offline check accepts only fallback media covered exactly by a tracked approved plan and rejects all other local project media.
+The tracked `.githooks/pre-commit` runs automatic pending publication before `assets:check --staged`. With no confirmed pending upload list it performs no network request and does not require a token. `npm install` activates the shared hooks through the repository `prepare` script. CI never receives the token or uploads; its offline check accepts only fallback media covered exactly by a tracked confirmed list and rejects all other local project media. Version-1 JSON keeps the internal `approved` and `approvalSource` field names solely for compatibility with existing lists on either PC; project language and behavior use “asset upload list,” and those fields never represent an art-final decision.
 
 Do not commit `.env.local`, any token, or generated source files outside the hook's exact temporary fallback. Do not use a protected `schatphone-source/` URL as a browser runtime source.
 

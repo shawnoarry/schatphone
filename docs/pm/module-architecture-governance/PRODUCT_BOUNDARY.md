@@ -1,6 +1,6 @@
 # Module Architecture Governance Boundary / 模块架构治理边界
 
-Updated: 2026-08-10
+Updated: 2026-08-12
 
 ## 1. Core Rule
 
@@ -18,6 +18,7 @@ Behavior extraction is not product expansion. A governance slice can move workfl
 - complete-package, integrity, capacity, staged-restore, migration, and rollback acceptance
 - shared Mini Scene ownership, request/artifact Interfaces, world-profile resolution, transform safety, presenter seams, and persistence prerequisites
 - the World Setting Module Interface, canonical world identity, owner/reference rules, consumer projections, and migration stop conditions
+- the World Suite manifest, bounded installation-origin/checkpoint inventory, shared native Owner Adapter execution seam, and its persistence/backup classification
 - the shared Image Generation Module contract, adapter boundary, public-configuration persistence, device-local credential/candidate classification, and backup exclusion rules
 - the Music provider/playback/cross-module Interface contract, public-state persistence, device-local credential classification, and Chat/Map projection boundary
 - the shared Text To Speech provider/Adapter contract, Cloudflare Workers AI boundary, device-local configuration/credential classification, temporary-media lifecycle, and future-caller boundary
@@ -42,3 +43,7 @@ Text To Speech is a shared runtime Module. Chat Settings exposes its current con
 The accepted Mini Scene contract is a cross-package architecture decision requested as product scope, not a cleanup side effect. This package owns the shared Module contract and stop conditions. Calendar, Map, Chat, future streaming modules, Event Runtime, Book/WorldBook, and Settings retain their own product meaning at their respective seams.
 
 The world-setting architecture similarly defines the shared Interface and ownership rules without taking over owner data. Book keeps text assets; WorldBook keeps current-world identity and setting activation; the World Pack Module keeps capability definitions; Contacts keeps concrete profile values; source modules keep their own records. `activeWorldPackId` is never a canonical `worldId`, and a future world definition is never an independent save slot by implication.
+
+World Suite coordination is narrower still: it owns manifests, dependency plans, install origins, expected versions, and resumable checkpoints. Native modules remain the only owners of resource bodies, activation/use state, records, history, and deletion policy. A Suite inventory row is coordination evidence, not permission to fabricate, activate, replace, or delete native truth.
+
+The first concrete proof is Book. The Book Owner Adapter may resolve a Catalog record, write/update/remove the matching Book-native asset, and report inspection evidence, but it cannot store text in the Suite manifest, activate a WorldBook link, reinterpret Book edit version as Catalog version, claim a built-in/user asset, or bypass Book persistence/read-only/capacity rules. Current and historical WorldBook links remain WorldBook-owned protection evidence. Map and every later owner require their own equally explicit native inspection and rollback contract.

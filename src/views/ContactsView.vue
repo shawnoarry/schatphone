@@ -726,6 +726,8 @@ const selectedDeleteImpact = computed(() =>
 const {
   availableMemorySourceFilters,
   visibleMemoryGroups,
+  selectedMemoryHealthSummary,
+  selectedMemoryHealthCandidates,
   memoryListSummaryText,
   selectedMemoryListCountLabel,
   selectedMemoryListOverflowText,
@@ -736,6 +738,8 @@ const {
   t,
   getRelationshipTarget: (profile) => profileRelationshipTarget(profile),
   listMemoryGroupsForTarget: (...args) => relationshipRuntimeStore.listMemoryGroupsForTarget(...args),
+  projectMemoryConsolidationPressureForTarget: (...args) =>
+    relationshipRuntimeStore.projectMemoryConsolidationPressureForTarget(...args),
   formatSourceModuleLabel: (sourceModule) => relationshipSourceModuleLabel(sourceModule),
 })
 
@@ -3588,6 +3592,55 @@ onBeforeUnmount(() => {
               <p class="text-sm font-bold">{{ t('记忆', 'Memories') }}</p>
               <span class="text-[10px] text-gray-500">{{ selectedMemoryListCountLabel }}</span>
             </div>
+            <div
+              class="contacts-memory-health"
+              :class="`contacts-memory-health-${selectedMemoryHealthSummary.tone}`"
+              data-testid="contacts-memory-health"
+            >
+              <div class="contacts-memory-health-header">
+                <div class="contacts-memory-health-mark" aria-hidden="true">
+                  <i class="fa-solid fa-heart-pulse"></i>
+                </div>
+                <div class="min-w-0">
+                  <p class="contacts-role-hub-label">{{ t('记忆状态', 'Memory care') }}</p>
+                  <p class="contacts-memory-health-title" data-testid="contacts-memory-health-status">
+                    {{ selectedMemoryHealthSummary.statusLabel }}
+                  </p>
+                </div>
+                <span class="contacts-memory-health-count">
+                  {{ selectedMemoryHealthSummary.countText }}
+                </span>
+              </div>
+              <p class="contacts-memory-health-detail">
+                {{ selectedMemoryHealthSummary.detail }}
+              </p>
+              <div
+                v-if="selectedMemoryHealthCandidates.length"
+                class="contacts-memory-health-candidates"
+                data-testid="contacts-memory-health-candidates"
+              >
+                <div class="contacts-memory-health-candidate-head">
+                  <p class="contacts-role-hub-label">
+                    {{ t('建议查看', 'Suggested memories') }}
+                  </p>
+                  <span>{{ selectedMemoryHealthCandidates.length }}</span>
+                </div>
+                <button
+                  v-for="candidate in selectedMemoryHealthCandidates"
+                  :key="candidate.memoryKey"
+                  type="button"
+                  class="contacts-memory-health-candidate"
+                  :data-testid="`contacts-memory-health-open-${candidate.memoryKey}`"
+                  @click="selectMemoryGroup(candidate)"
+                >
+                  <span class="min-w-0">
+                    <strong>{{ candidate.summary }}</strong>
+                    <small>{{ candidate.reasonLabel }}</small>
+                  </span>
+                  <span class="contacts-small-action">{{ t('查看', 'Open') }}</span>
+                </button>
+              </div>
+            </div>
             <div class="contacts-memory-toolbar" data-testid="contacts-memory-toolbar">
               <label class="contacts-memory-toolbar-field">
                 <span>{{ t('来源', 'Source') }}</span>
@@ -4843,6 +4896,136 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.contacts-memory-health {
+  display: grid;
+  gap: 9px;
+  border: 1px solid rgba(66, 111, 143, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(236, 245, 248, 0.92), rgba(255, 255, 255, 0.76)),
+    rgba(255, 255, 255, 0.78);
+  padding: 11px;
+}
+
+.contacts-memory-health-watch {
+  border-color: rgba(177, 126, 67, 0.24);
+  background:
+    linear-gradient(135deg, rgba(250, 241, 225, 0.94), rgba(255, 251, 244, 0.8)),
+    rgba(255, 255, 255, 0.78);
+}
+
+.contacts-memory-health-review {
+  border-color: rgba(165, 91, 66, 0.28);
+  background:
+    linear-gradient(135deg, rgba(249, 231, 222, 0.94), rgba(255, 247, 241, 0.82)),
+    rgba(255, 255, 255, 0.78);
+}
+
+.contacts-memory-health-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.contacts-memory-health-mark {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(66, 111, 143, 0.12);
+  color: var(--contacts-accent-strong);
+  font-size: 13px;
+}
+
+.contacts-memory-health-watch .contacts-memory-health-mark {
+  background: rgba(177, 126, 67, 0.13);
+  color: #94632f;
+}
+
+.contacts-memory-health-review .contacts-memory-health-mark {
+  background: rgba(165, 91, 66, 0.13);
+  color: #9d583e;
+}
+
+.contacts-memory-health-title {
+  margin-top: 2px;
+  color: var(--contacts-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.contacts-memory-health-count {
+  min-width: 0;
+  margin-left: auto;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.contacts-memory-health-detail {
+  color: var(--contacts-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.contacts-memory-health-candidates {
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.contacts-memory-health-candidate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contacts-memory-health-candidate-head > span {
+  color: var(--contacts-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.contacts-memory-health-candidate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid rgba(49, 64, 86, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.64);
+  padding: 7px 8px 7px 10px;
+  text-align: left;
+}
+
+.contacts-memory-health-candidate strong,
+.contacts-memory-health-candidate small {
+  display: block;
+}
+
+.contacts-memory-health-candidate strong {
+  overflow: hidden;
+  color: var(--contacts-text);
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contacts-memory-health-candidate small {
+  margin-top: 2px;
+  color: var(--contacts-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .contacts-memory-toolbar-field {
   display: grid;
   gap: 4px;
@@ -5224,6 +5407,17 @@ onBeforeUnmount(() => {
 
   .contacts-runtime-audit-grid {
     grid-template-columns: 1fr;
+  }
+
+  .contacts-memory-health-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .contacts-memory-health-count {
+    width: 100%;
+    margin-left: 43px;
+    text-align: left;
   }
 
   .contacts-seed-grid {

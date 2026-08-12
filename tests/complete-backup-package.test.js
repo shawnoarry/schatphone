@@ -23,6 +23,24 @@ const createPayload = ({ includeMaterial = true } = {}) => {
   }
 
   for (const path of COMPLETE_BACKUP_SECTION_PATHS) payload[path] = {}
+  payload.user = {
+    worldSuiteInventory: {
+      schemaVersion: 1,
+      resources: [
+        {
+          id: 'map.demo-city',
+          type: 'map_pack',
+          owner: 'map',
+          ownerResourceId: 'demo-city-map',
+          catalogId: 'demo-city-map',
+          version: 1,
+          installed: true,
+          origins: [{ kind: 'suite', id: 'demo_suite' }],
+        },
+      ],
+      suiteStates: [],
+    },
+  }
   payload.notifications = []
   payload.apiReports = []
   payload.roleProfiles = []
@@ -84,6 +102,10 @@ describe('complete backup package', () => {
     expect(packaged.backupMeta.manifest.binaries.items[0].sha256).toMatch(/^[a-f0-9]{64}$/)
     expect(packaged.moduleIdentity.nickname).toBe('Backup user')
     expect(packaged.moduleAvatarOverrides.defaultContactAvatar).toContain('contact.png')
+    expect(packaged.user.worldSuiteInventory.resources[0]).toMatchObject({
+      id: 'map.demo-city',
+      ownerResourceId: 'demo-city-map',
+    })
     expect(inspection).toMatchObject({
       ok: true,
       classification: 'current_complete',

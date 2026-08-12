@@ -8,7 +8,8 @@ This document records the architecture direction for SchatPhone's immersive even
 - condition-triggered events
 - scheduled simulation
 - module-owned side effects through adapters
-- host-embedded event cards with optional location anchors
+- owner-native cross-module causal chains
+- optional host-embedded event cards with location anchors where separately accepted
 
 Persistence boundary:
 
@@ -17,6 +18,7 @@ Persistence boundary:
 - durable evidence may move out of the hot runtime set only through reversible cold archival with World Hub review/restore semantics.
 - full AI prompts, raw responses, uncommitted candidates, and transport payloads are not event truth; persist normalized proposals/outcomes and minimum provenance, with full capture limited to explicit temporary diagnostics;
 - when an approved event formally publishes a social/forum record, offline scene, long-form artifact, performance/episode record, or character-state history, the target owner persists the canonical committed content and Event Runtime keeps references/provenance rather than copying the body.
+- owner-safe lifecycle inspection may project a bounded reference such as `{ owner, kind, referenceId, mapPackId, active }`; this projection cannot include event text, proposal copy, participants, source snapshots, or outcome bodies. Active Event Instances and pending Map Journey proposals protect current Map use, while terminal records remain historical references.
 
 ## 1. Goal
 
@@ -42,7 +44,7 @@ This architecture is not:
 - a reason to expose a normal Home app named Event, Simulation, Files, or Backend
 - permission to mutate important user data without explanation or control
 
-The event foundation is an internal coordination layer.
+The event foundation is an internal coordination layer. The primary product unit is a causal chain across owner Modules, not an Event Card. A Module may participate by producing a checkpoint, applying canonical truth through its Adapter, publishing a native message/status/call/post/journey record, or supplying a later condition without ever registering an Event Surface.
 
 User-facing immersion should still appear through existing modules such as:
 
@@ -136,6 +138,8 @@ A bounded read model for presenting one runtime proposal or applied event inside
 - an explicit expansion target: host detail, World Hub review, or the shared Mini Scene Interface.
 
 The projection is not a second event store and is never an authorization token. It should be derived from Event Runtime proposal/log truth plus bounded source-owner facts. Every requested outcome still returns through the registered Module Adapter and is validated by the owning module.
+
+Production hosts are explicitly allowlisted and must validate that any `host_detail` expansion points back to the host currently consuming the projection. The current production allowlist contains only `map`. EVE-4A briefly registered Food Delivery as a technical spike, but product acceptance was withdrawn because the generic brief duplicated native order truth and its manual update action manufactured the exception it claimed to query. Exact Food Delivery runtime lineage remains at the owner Adapter seam without a host projection.
 
 ### Location-Aware Event Card
 
@@ -294,7 +298,7 @@ Example event template:
     adapterKey: 'food_delivery.add_order_event',
     payloadSchema: 'FoodDeliveryOrderEventInput',
   },
-  surfaces: ['food_delivery.order_card', 'chat.food_delivery_service'],
+  surfaces: ['food_delivery.order_timeline', 'chat.food_delivery_service'],
 }
 ```
 
@@ -366,9 +370,9 @@ EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation
 7. build adapter payload
 8. call the module adapter
 9. write event log to the simulation store
-10. derive a bounded Event Surface Projection when a registered host needs one
-11. let existing module views, Chat service accounts, notifications, or reminders display the result
-12. route any user choice back through the owning Module Adapter
+10. let the owner persist canonical truth and expose the result through its native state, message, call, post, journey, or other accepted form
+11. derive a bounded Event Surface Projection only when a separately registered host interaction needs one
+12. route any user choice or later chain node through the responsible owning Module Adapter
 
 ## 7. Ownership Rules
 
@@ -378,6 +382,9 @@ EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation
 - may receive triggered events through an adapter
 - Chat may display Food Delivery service-account cards
 - Map may provide address or ETA context, not order ownership
+- may retain the exact successful Event Runtime log ID on its canonical order-event record through a dedicated owner action, but rejects external injection, rebinding, cross-order/event reuse, or mismatched template/module/target/adapter lineage
+- applies legitimate `rider_delay` and `eta_update` values to canonical order ETA, appends the native order timeline, and may use the existing Chat dispatch notification
+- does not register an Event Surface in the corrected EVE-4A product state; asking for an update cannot manufacture a delivery exception
 
 ### Shopping
 
@@ -439,7 +446,7 @@ The next event work is staged separately from richer event content:
 3. `EVE-2B DONE 2026-08-10`: reusable template/variant/instance normalizers and registries, persistence/reopen/backup, a local K-pop fallback pack, and an optional validated/cached after-entry Event Text Composer are implemented without host UI or external domain effects.
 4. `EVE-2C DONE 2026-08-10`: exactly one bounded Map host renders the selected K-pop vertical slice with Map V3 provenance/place sessions, zero-token invitation/no-event paths, explicit entry/expansion, local or cached optional text, three Map-validated no-mutation choices, fail-closed anchors, clustering/stacking, and return context.
 5. `EVE-3 DONE 2026-08-12`: World Hub now provides a deterministic Event Notebook over Event Instances, runtime logs, Chat social proposals, and Map Journey proposals. It exposes all/pending/noted counts, source/module/status filters, selected-event lineage and stale-source review, and durable event-scoped note create/update/delete actions. It adds no second event record, event retrigger, Adapter execution, source mutation, Reminder/Calendar ownership, freeform value editing, or Cheats authority.
-6. `EVE-4`: register additional host projections, templates, and content packs only as their source modules are approved.
+6. `EVE-4 RESET / EVE-4A TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN 2026-08-12`: exact Food Delivery lineage and owner mutation remain, while the second host, `Dispatch brief`, local acknowledgement, and manual trigger are removed. Further EVE-4 work requires a separately accepted owner-native causal chain rather than another generic card.
 7. `EVE-5`: use the shared Mini Scene Interface for richer expansion only after its persistence, Settings, and Presenter gates are complete; later CG remains a separate image-generation/media-resolution stage.
 
 ## 9. Randomness Policy
@@ -554,6 +561,9 @@ Already landed:
 - `src/lib/simulation/adapters/map-place-session-events.js` evaluates the frozen arrival-briefing family from Map-owned session checkpoints and validates exact no-mutation results through the Map owner boundary
 - `src/stores/map.js` storage V3 persists manual-versus-journey-arrival position evidence and explicit place-session state while deriving Event Surface projections instead of storing duplicate event truth
 - the Map route registers one Event Surface host and provides zero-token invitation/no-event behavior, explicit `Enter` / `Leave` / expansion, three allowlisted choices, geographic/canvas stacking, layer coexistence, and return context
+- Map remains the only registered production Event Surface host for the frozen production-arrival-briefing archetype
+- Food Delivery's owner action stores the exact Runtime log reference, prevents injection/reuse/rebinding, and makes link failure explicit without deriving a second UI projection
+- legitimate Food Delivery delay/ETA events update canonical order ETA, append the native timeline, and use the existing Chat dispatch notification; the withdrawn `Dispatch brief` and manual query path are absent
 - World Hub's Chat social proposal panel explains source, trigger policy, and ownership boundaries for AI output and foreground/session runtime proposals
 - World Hub's Event Notebook reviews Event Instances, logs, Chat social proposals, and Map Journey proposals by source/module/status, shows stable lineage and stale links, and manages event-scoped notes without event execution or domain mutation
 - Settings backup/import/rollback and storage diagnostics include `store:simulation`
@@ -562,6 +572,7 @@ Recommended next step:
 
 - keep the landed EVE-1 projection contract free of persistence and effect authority, and keep the completed EVE-2C Map host bounded to the one frozen production-arrival-briefing archetype
 - preserve the EVE-3 Notebook as a read model over owner truth with durable event-scoped notes; every new adapter should remain explainable by source, module, status, trigger, reason, adapter boundary, target, variant, and stable lineage before stronger controls are added
+- preserve EVE-4A's exact-lineage Food Delivery owner seam, but do not restore its withdrawn host/card/manual trigger; require a new owner-scoped causal-chain approval for every later EVE-4 slice
 - preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.
 - deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes; V1 runtime greetings are intentionally narrow, and richer scheduling or high-risk communication changes still need explicit review semantics
 

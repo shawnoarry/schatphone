@@ -35,7 +35,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Area | Judgment | Main remaining work |
 | --- | --- | --- |
 | Book / WorldBook | integrated V1, K-pop 2 + 6 + 1 content landed | phone hardening and later separate Mini Scene transform-profile authoring |
-| World Pack / App Store | integrated V1, partial acceptance | true-device loop, target-app hardening, next archetype decision |
+| World Pack / App Store / World Suite | integrated V1 Pack/App Store plus reusable Suite planning/inventory, production-backed Book/Gallery/Map Adapters, typed Catalog, and a real-Store installation runtime | reviewed K-pop Catalog/manifest, startup/product caller, later native Owner Adapters, activation UI, true-device loop, and target-app hardening |
 | Map / Calendar / Reminders | world-bound local-map baseline; OpenFreeMap renderer integrated | preserve local fictional/custom rendering while adding only separately approved true-device, offline-cache, authoring, PMTiles, transit, or broader real-life handoff slices |
 | Shopping / Food Delivery / Logistics | integrated V1 with five independent shop facades | prove the ordinary cross-module consequence flow; keep facade polish subordinate to the live roadmap |
 | Wallet | stable support | cleanup/explainability and later economy decisions |
@@ -133,7 +133,7 @@ Gaps:
 - Music's generic provider seam has simulated-browser coverage but no opt-in real-provider/CORS or true-device audio-focus/interruption proof;
 - production and full dependency audits are both clean after a compatible transitive lock refresh with no direct, override/resolution, or major changes; local and remote workflow evidence enforce that baseline, while independently rerunnable audit proof remains separate.
 - product-level save-failed/read-only recovery, same-container writer protection with calm active-writer previews and automatic cooperative handoff, and the release-local complete v3 package/rollback/crash-recovery boundary are implemented. Predictive capacity reporting, cross-owner atomic Repository activation, legacy unavailable-media presentation, and personal R2 transport remain separate work.
-- repository-owned artwork externalization is in progress: the approved 771-object migration, batch publisher, verified registry, two-stage home-PC archive, and offline Git/CI gates are prepared locally. Runtime URL cutover, production batch activation, poster smoke, archive removal, and three-host proof remain pending.
+- repository-owned artwork externalization is complete at the current boundary: the registry contains 843 verified objects split between public runtime artwork and protected masters/sources/candidates; batch publishing, centralized runtime URLs, cross-PC fallback, device-local copy/verify archives, and the initial three-host proof are established. New visual work uses a confirmed asset upload list (`素材上传清单`), which authorizes transfer without declaring the artwork final; audit and test evidence is excluded from image-bed payloads.
 
 ## 5. Module Engineering Guidance
 
@@ -155,7 +155,7 @@ Ten Contacts read-model seams already exist. Contacts 4.1 and relationship-memor
 
 ### Book / WorldBook / World Pack
 
-Three WorldBook display models already exist. Current risks are Optional capability Packs panel density, end-to-end phone comprehension, and content-carrier governance. The K-pop 2 + 6 + 1 Book/WorldBook content slice is landed; its prose rule remains separate from the future structured Mini Scene transform profile.
+Three WorldBook display models already exist. Current risks are Optional capability Packs panel density, end-to-end phone comprehension, and content-carrier governance. The K-pop 2 + 6 + 1 Book/WorldBook content slice is landed; its prose rule remains separate from the future structured Mini Scene transform profile. The shared World Suite plan/inventory/execution Modules, Book/Gallery/Map Owner Adapters, typed/versioned Catalog, and explicitly constructed real-Store installation runtime are landed. Book Catalog/Suite paths share one persisted asset with collision, modification, WorldBook-reference, capacity/read-only, and rollback protection. Gallery owns stable asset folders and native-use protection; Map consumes Gallery IDs, preserves normalized authored places/provenance, and blocks current/history/topology risks. System checkpoints require successful persistence and retry from Owner truth. The default standalone Map inspection remains read-only; a reviewed K-pop Catalog/manifest, startup/product caller, later Owner Adapters, UI, activation, and true-device proof remain separate product slices.
 
 ### Map / Calendar / Reminders
 

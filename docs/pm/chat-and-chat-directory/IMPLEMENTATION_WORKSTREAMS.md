@@ -5,6 +5,7 @@ Updated: 2026-08-10
 ## 1. Workstream A: Chat Thread Behavior
 
 - reply trigger and manual AI invocation
+- provider-neutral transient AI message-window budgeting shared by normal reply and regeneration, without mutating Chat history or adding a persisted setting
 - message actions
 - delete vs recall behavior for ordinary role/group messages
 - rich message surfaces
@@ -14,6 +15,7 @@ Updated: 2026-08-10
 - messaging-app style first-level shell and thread-list controls
 - bounded auto-growing multiline composer with `Enter` send, `Shift+Enter` newline, IME-safe keyboard handling, in-context AI stop, and cancellation-to-retry recovery
 - internal source-App structured sharing with lock-screen continuation, conversation selection, explicit `share_card` confirmation, bounded draft expiry, cancel-to-source, exact detail return, and send/cancel cleanup
+- body-free historical Map-pack reference projection from persisted `location_share` cards for owner-safe World Suite inspection; malformed, external, non-Map, or non-location routes fail closed
 - Wallet `wallet_receipt_share` finalization that attaches the actual receiving conversation only at send time, preserving the transaction's original Chat lineage while making Wallet return to the card's conversation
 - release-level rich-message acceptance for structured edit, media type/size recovery, one-off and Gallery-backed images, accessibility labels, persistence, source actions, and inert legacy Mini Scene history
 - Chat Settings for Chat-local appearance entry points, diagnostics, and default-behavior surfaces

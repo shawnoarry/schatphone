@@ -13,6 +13,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { nextTick } from 'vue'
 import ChatView from '../src/views/ChatView.vue'
+import { CHAT_AI_PROMPT_CONTEXT_LIMITS } from '../src/composables/useChatAiPromptContextModel'
 import { callAI } from '../src/lib/ai'
 import { useChatStore } from '../src/stores/chat'
 import { useSystemStore } from '../src/stores/system'
@@ -138,6 +139,44 @@ describe('Chat composer behavior', () => {
       'Recovered assistant reply',
     )
     expect(wrapper.find('[data-testid="chat-cancel-reply"]').exists()).toBe(false)
+
+    wrapper.unmount()
+  })
+
+  test('bounds the provider context without changing Chat history', async () => {
+    vi.mocked(callAI).mockResolvedValueOnce('Bounded context reply')
+    const { wrapper, chatStore, contactId } = await mountActiveChat()
+    const appended = Array.from({ length: 5 }, (_, index) =>
+      chatStore.appendMessage(contactId, {
+        role: index % 2 === 0 ? 'user' : 'assistant',
+        content: `${index === 0 ? 'oldest-budget-message' : `context-${index}`} ${'x'.repeat(2_900)} ${
+          index === 4 ? 'keep this latest intent.' : 'older context.'
+        }`,
+        status: index % 2 === 0 ? 'delivered' : 'sent',
+      }),
+    )
+    const before = appended.map((message) => ({ id: message.id, content: message.content }))
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-trigger-reply"]').trigger('click')
+    await flushUi()
+
+    expect(callAI).toHaveBeenCalledTimes(1)
+    const payload = vi.mocked(callAI).mock.calls[0][0]
+    const projectedMessage = payload.messages.at(-1)
+    expect(
+      payload.messages.reduce((total, message) => total + message.content.length, 0),
+    ).toBeLessThanOrEqual(CHAT_AI_PROMPT_CONTEXT_LIMITS.conversationCharacters)
+    expect(projectedMessage.content).toContain('keep this latest intent.')
+    expect(payload.messages.some((message) => message.content.includes('oldest-budget-message'))).toBe(
+      false,
+    )
+    expect(
+      before.map(({ id }) => ({
+        id,
+        content: chatStore.getMessagesByContactId(contactId).find((item) => item.id === id)?.content,
+      })),
+    ).toEqual(before)
 
     wrapper.unmount()
   })

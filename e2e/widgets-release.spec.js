@@ -33,6 +33,74 @@ const openWidgetCenter = async (page) => {
 }
 
 test.describe('Widgets release flow', () => {
+  test('uses the same built-in visual composition in Market and Home', async ({ page }, testInfo) => {
+    await openWidgetCenter(page)
+
+    const marketWeather = page.locator(
+      '[data-testid="widgets-market-built-in-weather"] .built-in-widget-visual.is-weather',
+    )
+    await expect(marketWeather).toBeVisible()
+    await expect(marketWeather).toContainText('24°')
+    await testInfo.attach(`widgets-market-${testInfo.project.name}.png`, {
+      body: await page.screenshot({ animations: 'disabled' }),
+      contentType: 'image/png',
+    })
+
+    await page.locator('.widgets-section-head .widgets-secondary-btn').click()
+    await waitForHashRoute(page, '/home')
+    const homeWeather = page.locator('[data-home-tile-id="weather"] .built-in-widget-visual.is-weather')
+    await expect(homeWeather).toBeVisible()
+    await expect(homeWeather).toContainText('24°')
+  })
+
+  test('presents the expanded built-in size range and hands a large widget to Home', async ({
+    page,
+  }, testInfo) => {
+    const pageErrors = []
+    page.on('pageerror', (error) => pageErrors.push(error.message))
+    await openWidgetCenter(page)
+
+    const expectedVisuals = [
+      ['focus_pulse', 'is-focus_pulse', 'FOCUS'],
+      ['daily_steps', 'is-daily_steps', '6,842'],
+      ['photo_note', 'is-photo_note', 'MOOD'],
+      ['commute_strip', 'is-commute_strip', '18 min'],
+      ['today_agenda', 'is-today_agenda', 'Design review'],
+      ['week_rhythm', 'is-week_rhythm', 'SEVEN DAYS'],
+      ['memory_board', 'is-memory_board', 'Keep today in color'],
+      ['music_wave', 'is-music_wave', 'Evening Radio'],
+      ['ambient_scene', 'is-ambient_scene', 'MORNING VEIL'],
+      ['world_pulse', 'is-world_pulse', 'WORLD PULSE'],
+    ]
+
+    for (const [widgetId, variantClass, visibleCopy] of expectedVisuals) {
+      const visual = page.locator(
+        `[data-testid="widgets-market-built-in-${widgetId}"] .built-in-widget-visual.${variantClass}`,
+      )
+      await visual.scrollIntoViewIfNeeded()
+      await expect(visual).toBeVisible()
+      await expect(visual).toContainText(visibleCopy)
+    }
+
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+    ).toBe(true)
+    await testInfo.attach(`widgets-expanded-market-${testInfo.project.name}.png`, {
+      body: await page.screenshot({ animations: 'disabled', fullPage: true }),
+      contentType: 'image/png',
+    })
+
+    await page.locator('[data-testid="widgets-built-in-action-week_rhythm"]').click()
+    await waitForHashRoute(page, '/home')
+    await expect(page.locator('.home-edit-topbar')).toBeVisible()
+    const selectedWeekRhythm = page.locator(
+      '[data-testid="home-library-candidate-week_rhythm"].is-active .built-in-widget-visual.is-week_rhythm',
+    )
+    await expect(selectedWeekRhythm).toBeVisible()
+    await expect(selectedWeekRhythm).toContainText('SEVEN DAYS')
+    expect(pageErrors).toEqual([])
+  })
+
   test('restores preview focus and hands Home placement to edit mode', async ({ page }) => {
     const pageErrors = []
     page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -130,8 +198,26 @@ test.describe('Widgets release flow', () => {
       await expect(importOpenButton).toBeFocused()
     }
 
-    await page.locator('#widgets-tab-custom').click()
-    await expect(page.locator('.widgets-created-item')).toContainText('Release Card')
+    await page.locator('[data-testid="widgets-feedback-choose-slot"]').click()
+    const leaveDialog = page.locator('.app-dialog-panel')
+    await expect(leaveDialog).toContainText('Leave Widget Center')
+    await leaveDialog.getByRole('button', { name: 'Leave', exact: true }).click()
+    await waitForHashRoute(page, '/home')
+    await expect(page.locator('.home-edit-topbar')).toBeVisible()
+    await expect(page.locator('.home-content-library-item.is-active')).toContainText('Release Card')
+    if (isMobile) {
+      const [topbarBox, libraryBox] = await Promise.all([
+        page.locator('.home-edit-topbar').boundingBox(),
+        page.locator('.home-content-library').boundingBox(),
+      ])
+      expect(libraryBox.y).toBeGreaterThanOrEqual(topbarBox.y + topbarBox.height)
+    }
+    const compatibleSlots = page.locator('.home-empty-slot-action.is-compatible')
+    expect(await compatibleSlots.count()).toBeGreaterThan(0)
+    expect(await compatibleSlots.evaluateAll((slots) => slots.map((slot) => slot.ariaLabel))).toEqual(
+      expect.arrayContaining(['Place Release Card']),
+    )
+
     expect(pageErrors).toEqual([])
   })
 })

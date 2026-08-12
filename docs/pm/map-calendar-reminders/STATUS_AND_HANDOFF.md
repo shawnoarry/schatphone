@@ -1,12 +1,14 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-08-10
+Updated: 2026-08-12
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
+
+The Map World Suite read-only audit, production evidence composition, native transactional mutation, and Catalog-backed Owner Adapter are complete. `src/lib/map-world-suite-inspection.js` classifies native pack identity and managed edits; `src/lib/production-map-world-suite-inspection-adapter.js` composes real Map, Gallery, Event Runtime, and Chat evidence behind the same immutable Interface; and `src/lib/map-world-suite-owner-adapter.js` supplies `install/update/remove` for shared independent/Suite execution. Catalog records remain outside manifests, may carry at most 500 strictly normalized authored canvas places, and reference a Gallery-owned asset. Gallery now owns a matching stable-folder/stable-asset Adapter with provenance, duplicate ID/URL protection, exact rollback, and native/other-folder reference review. A typed Book/Gallery/Map Catalog and explicitly constructed product installation runtime install Gallery before Map, reverse dependency order on uninstall, persist every System checkpoint through a real receipt, and retry from native truth without duplicate mutation. Ordinary custom-map creation still strips forged provenance and authored Catalog places. The runtime does not activate, bind, relocate, alter Journey/place state, let Map write Gallery, or delete history. There is no built-in K-pop Catalog/manifest, startup caller, or UI; the default standalone production inspection continues to report `mutationAdapterAvailable: false` and `canInstall: false`.
 
 Map's first internal Chat share caller is integrated locally. Place Details creates a source-owned `location_share`; Chat owns recipient selection, confirmation, history, and quoting; cancel and sent-card navigation restore the same `placeId`. Desktop and simulated Pixel 5 prove that source return does not change current location or create a journey.
 
@@ -194,6 +196,7 @@ Current safe candidates after the user's event-lane reprioritization:
 6. deepen the confirmed-event relationship Adapter without changing Calendar, Chat, or relationship-runtime ownership.
 6. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family.
 7. decide whether to approve, revise, or reject the read-only Calendar carrier candidate before any schema or migration work; keep Calendar and Map changes in separate owner slices.
+8. for World Suite/Map only, preserve the completed provenance/authored-place reopen proof, Gallery-owned asset-pack lifecycle, typed Catalog, explicit production runtime composition, real persistence receipts, Event/Chat external-reference projection, rollback-safe native mutation Interfaces, serialized execution, and retry from native truth. The next content slice is a reviewed stable-ID K-pop Catalog/manifest; startup caller/UI/activation, binding, relocation, and MJE-5 remain separate gates.
 
 ## 3. Do Not Do
 
@@ -212,6 +215,7 @@ Current safe candidates after the user's event-lane reprioritization:
 13. Do not start the next MJE stage before the current stage is user-accepted and the roadmap status is updated.
 14. Do not merge Calendar's `Agenda / 日程` view, the future `Agenda Journey / 行程` app, and Map Journey into one owner or infer activity completion from Map arrival alone.
 15. Do not treat CJA-0 documentation acceptance as authorization to implement CJA-1 or any later CJA stage.
+16. Do not make the standalone Map inspection Adapter mutation-capable or treat native identity/capacity eligibility as permission to install. Mutations are available only through the explicitly constructed Catalog-backed runtime, and that runtime is not activation authority.
 
 ## 4. Must Sync When Working Here
 

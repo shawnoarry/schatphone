@@ -136,7 +136,7 @@ export async function buildPublishPlan({
   }
 
   const normalizedApprovalSource = String(approvalSource || '').trim()
-  if (approved && !normalizedApprovalSource) throw new Error('An approval source is required')
+  if (approved && !normalizedApprovalSource) throw new Error('A confirmation source is required')
   return {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
@@ -157,13 +157,13 @@ export async function buildPublishPlan({
 
 export function assertPublishPlan(plan) {
   if (plan?.schemaVersion !== 1 || plan?.approved !== true || plan?.status !== 'APPROVED') {
-    throw new Error('Project asset plan is not explicitly approved')
+    throw new Error('Project asset upload list is not explicitly confirmed')
   }
   if (!plan.batchId || !Array.isArray(plan.entries) || plan.entries.length === 0) {
     throw new Error('Project asset plan is incomplete')
   }
   if (!String(plan.approvalSource || '').trim()) {
-    throw new Error('Project asset plan has no approval source')
+    throw new Error('Project asset upload list has no confirmation source')
   }
   const baseUrl = normalizeImageBedBaseUrl(plan.baseUrl)
   if (plan.baseUrl !== baseUrl) {

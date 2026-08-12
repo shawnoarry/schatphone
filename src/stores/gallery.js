@@ -12,10 +12,16 @@ import {
   summarizeMediaLimitPolicy,
   validateMediaFileBySize,
 } from '../lib/media-policy'
+import {
+  GALLERY_ASSET_CATEGORIES,
+  normalizeCatalogManagedGalleryAssetPack,
+  normalizeGalleryCatalogAssetProvenance,
+  normalizeGalleryCatalogPackProvenance,
+} from '../lib/gallery-catalog-assets'
 import { useMapStore } from './map'
 import { useSystemStore } from './system'
 
-export const GALLERY_ASSET_CATEGORIES = Object.freeze(['wallpaper', 'emoji', 'reference', 'scenario'])
+export { GALLERY_ASSET_CATEGORIES }
 
 const GALLERY_STORAGE_KEY = 'store:gallery'
 const GALLERY_STORAGE_VERSION = 1
@@ -136,7 +142,11 @@ const fileLooksLikeSupportedImage = (file) => {
   return typeAllowed || extAllowed
 }
 
-const normalizeAssetRecord = (rawAsset, index = 0) => {
+const normalizeAssetRecord = (
+  rawAsset,
+  index = 0,
+  { preserveCatalogProvenance = false } = {},
+) => {
   if (!rawAsset || typeof rawAsset !== 'object') return null
 
   const sourceType = rawAsset.sourceType === 'file' ? 'file' : 'url'
@@ -178,16 +188,24 @@ const normalizeAssetRecord = (rawAsset, index = 0) => {
     createdAt: Math.max(0, toInt(rawAsset.createdAt, Date.now())),
     updatedAt: Math.max(0, toInt(rawAsset.updatedAt, Date.now())),
   }
+  const provenance = preserveCatalogProvenance
+    ? normalizeGalleryCatalogAssetProvenance(rawAsset.provenance)
+    : null
+  if (provenance) normalized.provenance = provenance
   return normalized
 }
 
-const normalizeFolderRecord = (rawFolder, index = 0, { existingAssetIds } = {}) => {
+const normalizeFolderRecord = (
+  rawFolder,
+  index = 0,
+  { existingAssetIds, preserveCatalogProvenance = false } = {},
+) => {
   if (!rawFolder || typeof rawFolder !== 'object') return null
   const id =
     typeof rawFolder.id === 'string' && rawFolder.id.trim()
       ? rawFolder.id.trim()
       : `folder_legacy_${Date.now()}_${index}`
-  return {
+  const folder = {
     id,
     name: normalizeFolderName(rawFolder.name),
     category: normalizeFolderCategory(rawFolder.category, 'all'),
@@ -195,6 +213,11 @@ const normalizeFolderRecord = (rawFolder, index = 0, { existingAssetIds } = {}) 
     createdAt: Math.max(0, toInt(rawFolder.createdAt, Date.now())),
     updatedAt: Math.max(0, toInt(rawFolder.updatedAt, Date.now())),
   }
+  const provenance = preserveCatalogProvenance
+    ? normalizeGalleryCatalogPackProvenance(rawFolder.provenance)
+    : null
+  if (provenance) folder.provenance = provenance
+  return folder
 }
 
 const cloneAsset = (asset) => ({
@@ -210,6 +233,7 @@ const cloneAsset = (asset) => ({
   fingerprint: asset.fingerprint,
   createdAt: asset.createdAt,
   updatedAt: asset.updatedAt,
+  ...(asset.provenance ? { provenance: { ...asset.provenance } } : {}),
 })
 
 const cloneFolder = (folder) => ({
@@ -219,6 +243,7 @@ const cloneFolder = (folder) => ({
   assetIds: [...folder.assetIds],
   createdAt: folder.createdAt,
   updatedAt: folder.updatedAt,
+  ...(folder.provenance ? { provenance: { ...folder.provenance } } : {}),
 })
 
 const clampPositiveInteger = (value, fallback, minimum = 1) => {
@@ -380,6 +405,8 @@ export const useGalleryStore = defineStore('gallery', () => {
   const previewObjectUrlCache = new Map()
   const previewScopeAssetIds = new Map()
   const previewAssetScopes = new Map()
+  let skipNextManagedAssetPackWatchedWrite = false
+  let storageInitializationPromise = Promise.resolve()
 
   const categoryCounts = computed(() => {
     const counts = {
@@ -903,6 +930,15 @@ export const useGalleryStore = defineStore('gallery', () => {
         reason: 'not_found',
       }
     }
+    const replacementGuard = getAssetDeletionGuard(asset.id)
+    if (replacementGuard.hardBlocked) {
+      return {
+        ok: false,
+        reason: 'in_use',
+        forceAllowed: false,
+        usages: replacementGuard.usages,
+      }
+    }
 
     const normalizedUrl = normalizeHttpUrl(url)
     if (!normalizedUrl) {
@@ -952,6 +988,15 @@ export const useGalleryStore = defineStore('gallery', () => {
       return {
         ok: false,
         reason: 'not_found',
+      }
+    }
+    const replacementGuard = getAssetDeletionGuard(asset.id)
+    if (replacementGuard.hardBlocked) {
+      return {
+        ok: false,
+        reason: 'in_use',
+        forceAllowed: false,
+        usages: replacementGuard.usages,
       }
     }
     if (!(file instanceof File) || !fileLooksLikeSupportedImage(file)) {
@@ -1076,7 +1121,6 @@ export const useGalleryStore = defineStore('gallery', () => {
         targetKey: 'appearance.wallpaper',
         label: 'System wallpaper',
       })
-      return runtimeUsages
     }
 
     if (wallpaperMode === 'url' && asset.sourceType === 'url' && asset.sourceUrl && wallpaper && wallpaper === asset.sourceUrl) {
@@ -1103,6 +1147,17 @@ export const useGalleryStore = defineStore('gallery', () => {
       })
     }
 
+    const mapPackUsages = (Array.isArray(mapStore.customMapPacks) ? mapStore.customMapPacks : [])
+      .filter((pack) => typeof pack?.assetId === 'string' && pack.assetId.trim() === asset.id)
+      .map((pack) => ({
+        id: `map:pack.${pack.id}.asset`,
+        moduleKey: 'map',
+        targetKey: `pack.${pack.id}.asset`,
+        label: 'Map pack artwork',
+        hard: true,
+      }))
+    runtimeUsages.push(...mapPackUsages)
+
     return runtimeUsages
   }
 
@@ -1118,10 +1173,13 @@ export const useGalleryStore = defineStore('gallery', () => {
     }
 
     const usages = getAssetUsageList(assetId)
+    const hardBlocked = usages.some((usage) => usage.hard === true)
     return {
       ok: true,
       reason: usages.length > 0 ? 'in_use' : '',
       blocked: usages.length > 0,
+      hardBlocked,
+      forceAllowed: !hardBlocked,
       usages,
     }
   }
@@ -1134,10 +1192,11 @@ export const useGalleryStore = defineStore('gallery', () => {
         reason: 'not_found',
       }
     }
-    if (guard.blocked && !force) {
+    if (guard.blocked && (!force || guard.hardBlocked)) {
       return {
         ok: false,
         reason: 'in_use',
+        forceAllowed: guard.forceAllowed,
         usages: guard.usages,
       }
     }
@@ -1184,13 +1243,18 @@ export const useGalleryStore = defineStore('gallery', () => {
     if (!snapshot || typeof snapshot !== 'object') return false
     const sourceAssets = Array.isArray(snapshot.assets) ? snapshot.assets : []
     const nextAssets = sourceAssets
-      .map((asset, index) => normalizeAssetRecord(asset, index))
+      .map((asset, index) => normalizeAssetRecord(asset, index, {
+        preserveCatalogProvenance: true,
+      }))
       .filter(Boolean)
     const existingAssetIds = new Set(nextAssets.map((asset) => asset.id))
     const sourceFolders = Array.isArray(snapshot.folders) ? snapshot.folders : []
     const seenFolderIds = new Set()
     const nextFolders = sourceFolders
-      .map((folder, index) => normalizeFolderRecord(folder, index, { existingAssetIds }))
+      .map((folder, index) => normalizeFolderRecord(folder, index, {
+        existingAssetIds,
+        preserveCatalogProvenance: true,
+      }))
       .filter((folder) => {
         if (!folder) return false
         if (seenFolderIds.has(folder.id)) return false
@@ -1221,7 +1285,7 @@ export const useGalleryStore = defineStore('gallery', () => {
   }
 
   const persistToStorage = () => {
-    writePersistedState(
+    return writePersistedState(
       GALLERY_STORAGE_KEY,
       {
         assets: assets.value.map((asset) => cloneAsset(asset)),
@@ -1231,8 +1295,153 @@ export const useGalleryStore = defineStore('gallery', () => {
     )
   }
 
-  const saveNow = () => {
-    persistToStorage()
+  const saveNow = () => persistToStorage()
+
+  const commitManagedAssetPackMutation = async ({
+    operation,
+    folderId,
+    assetPack,
+  } = {}) => {
+    await storageInitializationPromise
+
+    const normalizedFolderId = typeof folderId === 'string' ? folderId.trim() : ''
+    if (!normalizedFolderId) return { ok: false, code: 'invalid_folder_id' }
+
+    const existingFolder = findFolderById(normalizedFolderId)
+    const beforeMutation = createBackupSnapshot()
+    let nextPack = null
+
+    if (operation === 'create' || operation === 'update') {
+      nextPack = normalizeCatalogManagedGalleryAssetPack(assetPack)
+      if (!nextPack || nextPack.folder.id !== normalizedFolderId) {
+        return { ok: false, code: 'invalid_managed_asset_pack' }
+      }
+    }
+
+    if (operation === 'create') {
+      if (
+        existingFolder ||
+        nextPack.assets.some(
+          (asset) => findAssetById(asset.id) || findAssetByFingerprint(asset.fingerprint),
+        )
+      ) {
+        return { ok: false, code: 'identity_collision' }
+      }
+    } else if (operation === 'update' || operation === 'delete') {
+      if (!existingFolder) return { ok: false, code: 'not_found' }
+      const currentProvenance = normalizeGalleryCatalogPackProvenance(
+        existingFolder.provenance,
+      )
+      if (!currentProvenance) return { ok: false, code: 'not_managed' }
+      const currentAssets = existingFolder.assetIds.map((assetId) => findAssetById(assetId))
+      const managedAssetIds = new Set(existingFolder.assetIds)
+      const hasExternalFolderReferences = folders.value.some(
+        (folder) =>
+          folder.id !== normalizedFolderId &&
+          folder.assetIds.some((assetId) => managedAssetIds.has(assetId)),
+      )
+      if (
+        currentAssets.some((asset) => {
+          const provenance = normalizeGalleryCatalogAssetProvenance(asset?.provenance)
+          return (
+            !asset ||
+            !provenance ||
+            provenance.resourceId !== currentProvenance.resourceId ||
+            provenance.catalogId !== currentProvenance.catalogId ||
+            provenance.folderId !== normalizedFolderId
+          )
+        })
+      ) {
+        return { ok: false, code: 'managed_pack_incomplete' }
+      }
+      if (
+        operation === 'update' &&
+        (
+          nextPack.folder.provenance.resourceId !== currentProvenance.resourceId ||
+          nextPack.folder.provenance.catalogId !== currentProvenance.catalogId
+        )
+      ) {
+        return { ok: false, code: 'managed_identity_mismatch' }
+      }
+      if (
+        hasExternalFolderReferences ||
+        currentAssets.some((asset) => getAssetDeletionGuard(asset.id).blocked) ||
+        (operation === 'update' && nextPack.assets.some((asset) => {
+          const identityCollision = findAssetById(asset.id)
+          const fingerprintCollision = findAssetByFingerprint(asset.fingerprint)
+          return (
+            (identityCollision && !existingFolder.assetIds.includes(identityCollision.id)) ||
+            (fingerprintCollision && !existingFolder.assetIds.includes(fingerprintCollision.id))
+          )
+        }))
+      ) {
+        return {
+          ok: false,
+          code: operation === 'update' ? 'resource_in_use_or_collision' : 'resource_in_use',
+        }
+      }
+    } else {
+      return { ok: false, code: 'unsupported_operation' }
+    }
+
+    if (operation === 'delete') {
+      const removedAssetIds = new Set(existingFolder.assetIds)
+      removedAssetIds.forEach((assetId) => revokeAssetPreviewUrl(assetId))
+      assets.value = assets.value.filter((asset) => !removedAssetIds.has(asset.id))
+      folders.value = folders.value.filter((folder) => folder.id !== normalizedFolderId)
+      removedAssetIds.forEach((assetId) => {
+        delete usageRegistry[assetId]
+      })
+    } else {
+      const previousAssetIds = new Set(existingFolder?.assetIds || [])
+      const existingAssetById = new Map(
+        assets.value
+          .filter((asset) => previousAssetIds.has(asset.id))
+          .map((asset) => [asset.id, asset]),
+      )
+      const nextAssets = nextPack.assets.map((asset) => ({
+        ...asset,
+        createdAt: existingAssetById.get(asset.id)?.createdAt || asset.createdAt,
+        updatedAt: asset.updatedAt,
+      }))
+      const nextFolder = {
+        ...nextPack.folder,
+        createdAt: existingFolder?.createdAt || nextPack.folder.createdAt,
+        updatedAt: nextPack.folder.updatedAt,
+      }
+      previousAssetIds.forEach((assetId) => revokeAssetPreviewUrl(assetId))
+      assets.value = [
+        ...nextAssets,
+        ...assets.value.filter((asset) => !previousAssetIds.has(asset.id)),
+      ]
+      folders.value = [
+        nextFolder,
+        ...folders.value.filter((folder) => folder.id !== normalizedFolderId),
+      ]
+    }
+
+    skipNextManagedAssetPackWatchedWrite = true
+    queueMicrotask(() => {
+      skipNextManagedAssetPackWatchedWrite = false
+    })
+    const persistenceResult = persistToStorage()
+    if (persistenceResult?.ok !== true) {
+      hydrateFromSnapshot(beforeMutation)
+      return {
+        ok: false,
+        code: persistenceResult?.error || 'persistence_failed',
+        persistence: persistenceResult || null,
+      }
+    }
+
+    return {
+      ok: true,
+      code: '',
+      folder: nextPack ? cloneFolder(findFolderById(normalizedFolderId)) : null,
+      assets: nextPack
+        ? nextPack.folder.assetIds.map((assetId) => cloneAsset(findAssetById(assetId)))
+        : [],
+    }
   }
 
   const resetForTesting = () => {
@@ -1471,18 +1680,23 @@ export const useGalleryStore = defineStore('gallery', () => {
   }
 
   const hydratedFromLocal = hydrateFromStorage()
-  void (async () => {
+  storageInitializationPromise = (async () => {
     if (!hydratedFromLocal) {
       await hydrateFromStorageAsync()
     }
     hasFinishedStorageHydration.value = true
     persistToStorage()
   })()
+  void storageInitializationPromise
 
   watch(
     [assets, folders],
     () => {
       if (!hasFinishedStorageHydration.value) return
+      if (skipNextManagedAssetPackWatchedWrite) {
+        skipNextManagedAssetPackWatchedWrite = false
+        return
+      }
       persistToStorage()
     },
     { deep: true },
@@ -1529,5 +1743,6 @@ export const useGalleryStore = defineStore('gallery', () => {
     restoreFromBackupAsync,
     resetForTesting,
     saveNow,
+    commitManagedAssetPackMutation,
   }
 })

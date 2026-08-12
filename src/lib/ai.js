@@ -1,3 +1,5 @@
+import { resolveAiContextEnvelope } from './ai-context-envelope'
+
 const OPENAI_DEFAULT_CHAT_URL = 'https://api.openai.com/v1/chat/completions'
 const OPENAI_DEFAULT_MODEL = 'gpt-4o-mini'
 const GEMINI_DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta'
@@ -339,8 +341,6 @@ export const buildImageReferenceContextText = (input = []) => {
   references.forEach((item, index) => {
     const parts = [`${index + 1}) ${item.label}`]
     if (item.note) parts.push(`note: ${item.note}`)
-    if (item.sourceUrl) parts.push(`url: ${item.sourceUrl}`)
-    if (item.assetId) parts.push(`assetId: ${item.assetId}`)
     lines.push(parts.join(' | '))
   })
   return lines.join('\n')
@@ -426,7 +426,15 @@ export const getAiProviderCapabilities = ({ settings, imageReferences = [] } = {
   const kind = detectApiKindFromUrl(settings?.api?.url)
   const references = normalizeImageReferences(imageReferences)
   const nativeUrlReferenceCount = references.filter((item) => item.sourceUrl).length
-  const supportsNativeImageReference = kind === 'openai_compatible'
+  let supportsNativeImageReference = false
+  if (kind === 'openai_compatible') {
+    try {
+      const parsed = ensureUrl(settings?.api?.url, OPENAI_DEFAULT_CHAT_URL)
+      supportsNativeImageReference = isOfficialOpenAiHostName(parsed.hostname)
+    } catch {
+      supportsNativeImageReference = false
+    }
+  }
   const preferredImageReferenceMode =
     supportsNativeImageReference && nativeUrlReferenceCount > 0
       ? IMAGE_REFERENCE_MODE_NATIVE_URL
@@ -755,6 +763,89 @@ const extractResponsesText = (data) => {
     .join('\n')
 }
 
+const nullableTokenCount = (value) => {
+  if (value === null || value === undefined || value === '') return null
+  const count = Number(value)
+  return Number.isFinite(count) && count >= 0 ? Math.floor(count) : null
+}
+
+export const extractOpenAiTokenUsage = (data, apiKind) => {
+  const usage = data?.usage && typeof data.usage === 'object' ? data.usage : null
+  if (!usage) {
+    return {
+      inputTokens: null,
+      outputTokens: null,
+      totalTokens: null,
+      cachedTokens: null,
+      cacheWriteTokens: null,
+    }
+  }
+
+  const isResponses = apiKind === 'openai_responses' || apiKind === 'azure_openai_responses'
+  const details = isResponses ? usage.input_tokens_details : usage.prompt_tokens_details
+  return {
+    inputTokens: nullableTokenCount(isResponses ? usage.input_tokens : usage.prompt_tokens),
+    outputTokens: nullableTokenCount(isResponses ? usage.output_tokens : usage.completion_tokens),
+    totalTokens: nullableTokenCount(usage.total_tokens),
+    cachedTokens: nullableTokenCount(details?.cached_tokens),
+    cacheWriteTokens: nullableTokenCount(details?.cache_write_tokens),
+  }
+}
+
+const hasOfficialOpenAiEndpoint = (settings) => {
+  try {
+    return new URL(normalizeUrl(settings?.api?.url)).hostname.toLowerCase() === 'api.openai.com'
+  } catch {
+    return false
+  }
+}
+
+const supportsExplicitOpenAiPromptCache = (model) => /^gpt-5\.6(?:$|-)/i.test(String(model || '').trim())
+
+export const resolveOpenAiPromptCachePlan = ({ settings, apiKind, promptContext }) => {
+  const supportedApiKind = apiKind === 'openai_compatible' || apiKind === 'openai_responses'
+  const enabled = Boolean(
+    supportedApiKind &&
+      hasOfficialOpenAiEndpoint(settings) &&
+      promptContext?.stablePrefix &&
+      promptContext?.cacheKey,
+  )
+  const explicit = enabled && supportsExplicitOpenAiPromptCache(settings?.api?.model)
+  return {
+    enabled,
+    explicit,
+    cacheKey: enabled ? promptContext.cacheKey : '',
+  }
+}
+
+const buildOpenAiSystemContent = (promptContext, type) => {
+  if (!promptContext?.stablePrefix) return promptContext?.systemPrompt || ''
+  if (!promptContext?.explicit) return promptContext.systemPrompt
+
+  return [
+    {
+      type,
+      text: promptContext.stablePrefix,
+      prompt_cache_breakpoint: { mode: 'explicit' },
+    },
+    ...(promptContext.dynamicContext
+      ? [{ type, text: promptContext.dynamicContext }]
+      : []),
+  ]
+}
+
+const applyOpenAiPromptCacheMeta = (executionMeta, data, apiKind, plan) => {
+  const usage = extractOpenAiTokenUsage(data, apiKind)
+  executionMeta.usage = usage
+  executionMeta.promptCache = {
+    requested: plan.enabled,
+    strategy: plan.enabled ? (plan.explicit ? 'explicit' : 'automatic') : 'unmanaged',
+    keyApplied: plan.enabled,
+    breakpointApplied: plan.explicit,
+    hit: !plan.enabled || usage.cachedTokens === null ? null : usage.cachedTokens > 0,
+  }
+}
+
 export async function fetchAvailableModels({ settings }) {
   const key = settings.api.key?.trim()
   if (!key && requiresApiKeyForUrl(settings.api.url)) {
@@ -901,6 +992,7 @@ const buildCallPayload = (text, meta, withMeta = false) => (withMeta ? { text, m
 export async function callAI({
   messages,
   systemPrompt,
+  contextEnvelope = null,
   settings,
   signal,
   imageReferences = [],
@@ -926,6 +1018,12 @@ export async function callAI({
 
   try {
     const normalizedReferences = normalizeImageReferences(imageReferences)
+    const promptContext = resolveAiContextEnvelope(systemPrompt, contextEnvelope)
+    const promptCachePlan = resolveOpenAiPromptCachePlan({ settings, apiKind, promptContext })
+    const openAiPromptContext = {
+      ...promptContext,
+      explicit: promptCachePlan.explicit,
+    }
     const providerCapabilities = getAiProviderCapabilities({
       settings,
       imageReferences: normalizedReferences,
@@ -940,7 +1038,11 @@ export async function callAI({
         ? 'none'
         : requestedImageReferenceMode === IMAGE_REFERENCE_MODE_CONTEXT_ONLY
           ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY
-          : providerCapabilities.preferredImageReferenceMode
+          : requestedImageReferenceMode === IMAGE_REFERENCE_MODE_NATIVE_URL
+            ? apiKind === 'openai_compatible' && providerCapabilities.nativeUrlReferenceCount > 0
+              ? IMAGE_REFERENCE_MODE_NATIVE_URL
+              : IMAGE_REFERENCE_MODE_CONTEXT_ONLY
+            : providerCapabilities.preferredImageReferenceMode
     const executionMeta = {
       apiKind,
       requestedImageReferenceMode,
@@ -956,6 +1058,18 @@ export async function callAI({
           : resolvedImageReferenceMode === IMAGE_REFERENCE_MODE_CONTEXT_ONLY
             ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY
             : 'none',
+      usage: extractOpenAiTokenUsage(null, apiKind),
+      promptCache: {
+        requested: promptCachePlan.enabled,
+        strategy: promptCachePlan.enabled
+          ? promptCachePlan.explicit
+            ? 'explicit'
+            : 'automatic'
+          : 'unmanaged',
+        keyApplied: promptCachePlan.enabled,
+        breakpointApplied: promptCachePlan.explicit,
+        hit: null,
+      },
     }
     const baseMessages = Array.isArray(messages) ? messages : []
     const contextEnhancedMessages =
@@ -973,7 +1087,7 @@ export async function callAI({
 
       const payload = {
         contents: geminiContents,
-        systemInstruction: { parts: [{ text: systemPrompt }] },
+        systemInstruction: { parts: [{ text: promptContext.systemPrompt }] },
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 500,
@@ -1023,7 +1137,7 @@ export async function callAI({
           },
           body: JSON.stringify({
             model: settings.api.model || ANTHROPIC_DEFAULT_MODEL,
-            system: systemPrompt,
+            system: promptContext.systemPrompt,
             messages: contextEnhancedMessages.map((message) => ({
               role: message.role === 'assistant' ? 'assistant' : 'user',
               content: message.content,
@@ -1067,9 +1181,18 @@ export async function callAI({
           },
           body: JSON.stringify({
             model: settings.api.model || OPENAI_DEFAULT_MODEL,
-            input: toResponsesInput(contextEnhancedMessages, systemPrompt),
+            input: toResponsesInput(
+              contextEnhancedMessages,
+              buildOpenAiSystemContent(openAiPromptContext, 'input_text'),
+            ),
             temperature: 0.7,
             max_output_tokens: 500,
+            ...(promptCachePlan.enabled
+              ? { prompt_cache_key: promptCachePlan.cacheKey }
+              : {}),
+            ...(promptCachePlan.explicit
+              ? { prompt_cache_options: { mode: 'explicit' } }
+              : {}),
           }),
           signal,
         },
@@ -1092,6 +1215,7 @@ export async function callAI({
       }
       executionMeta.finalTransportMode =
         normalizedReferences.length > 0 ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY : 'none'
+      applyOpenAiPromptCacheMeta(executionMeta, data, apiKind, promptCachePlan)
       return buildCallPayload(extractResponsesText(data), executionMeta, withMeta)
     }
 
@@ -1106,7 +1230,7 @@ export async function callAI({
             'api-key': key,
           },
           body: JSON.stringify({
-            input: toResponsesInput(contextEnhancedMessages, systemPrompt),
+            input: toResponsesInput(contextEnhancedMessages, promptContext.systemPrompt),
             temperature: 0.7,
             max_output_tokens: 500,
           }),
@@ -1131,6 +1255,7 @@ export async function callAI({
       }
       executionMeta.finalTransportMode =
         normalizedReferences.length > 0 ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY : 'none'
+      applyOpenAiPromptCacheMeta(executionMeta, data, apiKind, promptCachePlan)
       return buildCallPayload(extractResponsesText(data), executionMeta, withMeta)
     }
 
@@ -1145,7 +1270,10 @@ export async function callAI({
             'api-key': key,
           },
           body: JSON.stringify({
-            messages: [{ role: 'system', content: systemPrompt }, ...contextEnhancedMessages],
+            messages: [
+              { role: 'system', content: promptContext.systemPrompt },
+              ...contextEnhancedMessages,
+            ],
             temperature: 0.7,
             max_tokens: 500,
             stream: false,
@@ -1171,6 +1299,7 @@ export async function callAI({
       }
       executionMeta.finalTransportMode =
         normalizedReferences.length > 0 ? IMAGE_REFERENCE_MODE_CONTEXT_ONLY : 'none'
+      applyOpenAiPromptCacheMeta(executionMeta, data, apiKind, promptCachePlan)
       return buildCallPayload(data.choices?.[0]?.message?.content || '', executionMeta, withMeta)
     }
 
@@ -1178,9 +1307,21 @@ export async function callAI({
     const requestOpenAi = async (bodyMessages) => {
       const payload = {
         model: settings.api.model || OPENAI_DEFAULT_MODEL,
-        messages: [{ role: 'system', content: systemPrompt }, ...bodyMessages],
+        messages: [
+          {
+            role: 'system',
+            content: buildOpenAiSystemContent(openAiPromptContext, 'text'),
+          },
+          ...bodyMessages,
+        ],
         temperature: 0.7,
         stream: false,
+        ...(promptCachePlan.enabled
+          ? { prompt_cache_key: promptCachePlan.cacheKey }
+          : {}),
+        ...(promptCachePlan.explicit
+          ? { prompt_cache_options: { mode: 'explicit' } }
+          : {}),
       }
       const transport = buildOpenAiTransportRequest({
         settings,
@@ -1235,6 +1376,7 @@ export async function callAI({
     } catch {
       throw createApiError('OpenAI API invalid JSON', 'PARSE_ERROR')
     }
+    applyOpenAiPromptCacheMeta(executionMeta, data, apiKind, promptCachePlan)
     return buildCallPayload(data.choices?.[0]?.message?.content || '', executionMeta, withMeta)
   } catch (error) {
     if (signal?.aborted) {

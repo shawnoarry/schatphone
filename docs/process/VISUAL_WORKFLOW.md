@@ -537,9 +537,10 @@ Usage:
 
 Cross-machine handoff rule:
 
-- accepted repository-owned generated media starts under `output/imagegen/<feature>/<batch>/` and must enter an approved project-asset plan; public runtime derivatives publish to `schatphone-assets/`, while a distinct valuable master may publish to protected `schatphone-source/`;
-- `git commit` automatically publishes approved plans, re-downloads and verifies every object, stages `config/project-assets.json`, and removes the verified local generated files; the committed registry and canonical image-bed URL are the normal cross-machine handoff rather than a local absolute path;
-- when publication is temporarily unavailable, the hook force-stages only the credential-free approved plan and its exact generated files as a Git fallback; a later commit on either PC retries publication and removes the fallback after success;
+- repository-owned generated media starts under `output/imagegen/<feature>/<batch>/` and enters a confirmed **asset upload list** (`素材上传清单`); public runtime artwork publishes to `schatphone-assets/`, while masters, generation sources, and visual candidates publish to protected `schatphone-source/`; uploading a candidate does not make it final and a later revision is registered as new SHA-256 content;
+- audit screenshots, Playwright reports, contact sheets, prompts, JSON/JSONL request records, and acceptance notes are not uploaded as image-bed assets;
+- `git commit` automatically publishes confirmed upload lists, re-downloads and verifies every object, stages `config/project-assets.json`, and removes the verified local generated files; the committed registry and canonical image-bed URL are the normal cross-machine handoff rather than a local absolute path;
+- when publication is temporarily unavailable, the hook force-stages only the credential-free confirmed upload list and its exact generated files as a Git fallback; a later commit on either PC retries publication and removes the fallback after success;
 - prompts, requests, source/license records, acceptance notes, and other text evidence required by a later machine remain Git-eligible repository documents; handoff docs must never use a machine-local absolute path as their only evidence;
 - a generated file that is neither registered remotely nor present in a tracked fallback plan is local-only and cannot be treated as cross-machine evidence.
 

@@ -46,6 +46,7 @@ Priority meanings:
 | Book | integrated V1 long-text library; K-pop 2 + 6 + 1 landed | phone hardening and structured Mini Scene profile authoring | becoming Files/reader/runtime-activation owner | validate separate structured transform profiles only through the shared Mini Scene contract | P1 staged |
 | WorldBook | integrated V1, very large | Optional capability Packs panel density | universal control-console drift | extract one unrepeated pack display seam | P1 |
 | World Pack | partial V1 acceptance | true-device product loop | generating arbitrary apps/rules | harden current four paths before another archetype | P1 |
+| World Suite | reusable plan/inventory/execution, production-backed Book/Gallery/Map Owner Adapters, one typed/versioned resource Catalog, and a real-Store product installation runtime with persistent checkpoints | startup caller, reviewed K-pop Catalog/manifest content, later native Owner Adapters, UI/activation, and user-visible batch proof | becoming a second content owner, inventing provenance for defaults, or treating an uncalled runtime as a shipped install surface | preserve native provenance/reference/rollback gates, then freeze one reviewed K-pop Catalog/manifest and expose preview/install only through the shared runtime | P1 staged |
 | Map | world-bound local-pack baseline; OpenFreeMap renderer integrated | true-device gestures/offline-cache proof, then later package authoring, PMTiles, transit adapters, and additional cities | provider identity or network renderer becoming canonical place truth | continue only from the Map handoff; preserve `MapSceneCanvas` and local fallback contracts | P1 partial |
 | Calendar | stable confirmed-event owner | adapter depth and event-management polish | direct cross-store knowledge | deeper confirmed-event relationship interface | P1 |
 | Reminders | stable raw-cue owner | future objective/task clarity | collapsing back into Calendar | refine only when a real cue family needs it | P2 |
@@ -112,6 +113,7 @@ Priority meanings:
 - one large-view state seam;
 - deeper Calendar relationship adapter;
 - incremental contract types.
+- preserve the World Suite plan/inventory/Owner-Adapter seam and keep concrete owner integrations local to their native modules.
 
 ### Product Validation
 

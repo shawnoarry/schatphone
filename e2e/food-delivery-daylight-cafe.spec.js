@@ -46,22 +46,26 @@ test('Daylight Cafe loads its complete bright-morning asset pack without destruc
 
   const productImages = page.locator('[data-testid^="food-delivery-menu-open-"] img')
   await expect(productImages).toHaveCount(3)
-  const productResults = await productImages.evaluateAll((images) =>
-    images.map((image) => ({
-      complete: image.complete,
-      width: image.naturalWidth,
-      height: image.naturalHeight,
-      src: image.getAttribute('src'),
-    })),
+  await expect
+    .poll(() =>
+      productImages.evaluateAll((images) =>
+        images.map((image) => ({
+          complete: image.complete,
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        })),
+      ),
+    )
+    .toEqual(Array.from({ length: 3 }, () => ({ complete: true, width: 768, height: 768 })))
+  const productSources = await productImages.evaluateAll((images) =>
+    images.map((image) => image.getAttribute('src')),
   )
-  expect(productResults.every((image) => image.complete)).toBe(true)
-  expect(productResults.every((image) => image.width === 768 && image.height === 768)).toBe(true)
   expect(
-    productResults.every((image) =>
-      image.src?.includes('/images/ui-assets/apps/food-delivery/daylight-cafe/products/'),
+    productSources.every((source) =>
+      source?.includes('/images/ui-assets/apps/food-delivery/daylight-cafe/products/'),
     ),
   ).toBe(true)
-  expect(new Set(productResults.map((image) => image.src)).size).toBe(3)
+  expect(new Set(productSources).size).toBe(3)
 
   await testInfo.attach(`daylight-cafe-menu-${testInfo.project.name}`, {
     body: await page.screenshot(),

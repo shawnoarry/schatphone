@@ -32,7 +32,7 @@ const ACTIVE_ORDER_STATUSES = Object.freeze([
 ])
 
 const DELIVERY_ACTIVE_SURFACES = Object.freeze([
-  'food_delivery.order_card',
+  'food_delivery.order_timeline',
   'chat.food_delivery_service',
 ])
 
@@ -520,7 +520,7 @@ export const runFoodDeliveryOrderEventPreset = ({
     }
   }
 
-  return runEventAdapter({
+  const result = runEventAdapter({
     template: preset,
     context: buildFoodDeliveryOrderEventContext(order),
     adapters: {
@@ -547,6 +547,24 @@ export const runFoodDeliveryOrderEventPreset = ({
     variantPack,
     worldContext,
   })
+  if (!result.ok || !result.adapterResult?.id || !result.log?.id) return result
+  const linkedEvent = foodDeliveryStore?.linkOrderEventRuntimeLog?.(
+    normalizedOrderId,
+    result.adapterResult.id,
+    result.log,
+  )
+  if (!linkedEvent) {
+    return {
+      ...result,
+      ok: false,
+      status: 'failed',
+      reason: 'runtime_lineage_link_failed',
+    }
+  }
+  return {
+    ...result,
+    adapterResult: linkedEvent,
+  }
 }
 
 export const runFoodDeliveryRandomOrderEventPilot = ({

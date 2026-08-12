@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-11
+Updated: 2026-08-12
 
 ## 1. Architecture Goals
 
@@ -197,11 +197,33 @@ The text/conversation transport supports:
 - Azure OpenAI;
 - local/server-auth gateway URL shapes.
 
+`src/lib/ai-context-envelope.js` is the provider-neutral transient context boundary for text AI callers. A caller supplies an ordered stable prefix (world rules, role identity, and output contract) followed by dynamic context (current scene, relationship/memory projection, and turn capabilities). The compiler does not own or persist facts, summarize memories, read Store internals, or change caller limits; domain owners remain responsible for the bounded projections they provide. Chat replies and Event Text Composer use this same boundary, and future world, schedule, or narrative callers must reuse it instead of creating provider-specific prompt assembly.
+
+`src/lib/chat-context-budget.js` is Chat's provider-neutral transient message-window Module. After rich and recalled records are normalized into AI-visible text, it preserves a contiguous newest-first window under both the thread turn limit and a conservative character ceiling. The latest oversized message is represented by a deterministic head/tail projection, while the stored Chat record remains untouched. The same selected source references drive quote candidates and image-reference collection, and the same selected AI text drives Relationship Runtime recall and provider transport, preventing those views of the current turn from drifting when users switch models or providers. Its contiguous-recency policy is Chat-specific; Event and world knowledge retain their own priority rules while reusing the shared envelope and owner-projection pattern.
+
+`src/lib/memory-recall.js` is the deterministic recall Module used at that context seam. It ranks owner-supplied memory summaries against a bounded recent-context query, keeps pinned memories first, excludes archived memories by default, and enforces item/character budgets without another AI call. Relationship Runtime remains the sole owner of relationship memories and exposes the recall Interface; Chat supplies recent visible message text but does not copy, rewrite, summarize, archive, or delete memories. Event and future world/narrative callers may reuse this Interface only through owner-provided projections and their own explicit knowledge/permission rules.
+
+`src/lib/memory-consolidation-pressure.js` is a provider-neutral, read-only pressure projection over owner-supplied memory groups. It counts the complete working set, active/pinned/archived groups, original source references, and summary characters, then reports stable watch/review reasons plus existing `memoryKey` candidates whose explicit group has dense evidence or an unusually long summary. It does not merge similar text across keys, create a replacement summary, call AI, persist candidates, or mutate review/evidence state. Relationship Runtime exposes this Interface for one target at a time and remains the sole owner of relationship memories. Future world chronology and role-to-role knowledge must provide separate Owner Adapters and data even if they reuse the pressure Module.
+
+`src/lib/role-continuity-projection.js` combines Contacts-owned role details with recalled Relationship Runtime summaries without becoming another truth owner. User-authored manual Preferences, Life Pattern, and Social Graph details form bounded stable character facts. Event-attached detail is dynamic supporting context only when its `memoryKey` matches a memory selected for the current turn; orphan or non-recalled clues stay out, and duplicate clue text is suppressed. This preserves the product rule that event clues cannot override confirmed role details while making Contacts authoring materially affect role Chat.
+
+`src/lib/role-identity-projection.js` is the read-only Contacts-to-Chat identity projection. For a bound role it resolves the current profile name, role, bio, template-labelled concrete values, relationship premise, stable manual details, and recalled event continuity behind one Interface. Service, official, group, missing-profile, and Self Profile records fail closed to no role projection. Relationship Runtime remains dynamic truth, WorldBook remains template/world knowledge owner, Contacts remains profile-value owner, and the projection adds no persistence field or copied character Store.
+
+`src/lib/ai.js` may translate that boundary into provider cache hints only for the official `api.openai.com` endpoint. GPT-5.6 uses an explicit breakpoint after the stable prefix; other official OpenAI models receive only the compatible cache key and keep automatic caching. Azure, Gemini, Anthropic, local models, and third-party OpenAI-compatible endpoints retain their existing request shape and are reported as unmanaged rather than unsupported. Cache status is true only when managed official-OpenAI usage reports cached input tokens; requesting a key or receiving an unverified compatible-provider field is not a SchatPhone-managed cache hit. Cache keys use opaque stable identities plus a fingerprint of the stable prefix, so model/provider switches and relationship/message changes reuse the same key while edits to role identity or world rules invalidate it. Normalized input/output/cache-read/cache-write usage is transient call metadata and never includes the prompt.
+
+Image-reference transport also fails closed. Automatic mode attempts native image input only on the currently supported official OpenAI Adapter; unknown compatible endpoints and other providers receive label/caption cues without source URLs, Gallery asset IDs, provider names, transport modes, or storage-error language. A user's explicit native-image preference may still request one compatible native attempt and falls back on supported request-shape errors. Execution diagnostics stay transient and are not rendered beneath ordinary Chat messages; the role is instructed to respond naturally without claiming unavailable visual detail or exposing model limitations.
+
 The Image Generation Module normalizes OpenAI-compatible Images/Edit, OpenAI-compatible Chat image output, and Grsai asynchronous generation behind one request/task/candidate boundary. Public provider/default/routing configuration participates in backup and rollback; API keys, proxy tokens, and temporary candidates remain device-local and excluded from ordinary backup.
 
 Views and source stores may build domain prompts/context and decide why a request exists, but they must not implement provider HTTP calls independently of the matching shared transport module.
 
 Full assembled prompts, raw provider responses, headers, and transport payloads are transient transport/diagnostic material rather than persistent product truth. Any artifact that an owning module formally publishes, confirms, applies, or admits into revisitable/continuity-bearing history becomes that module's durable canonical content regardless of user/AI/system origin. Durable storage therefore includes committed module content, authoritative state/facts, cross-module references, validated structured proposals/effects, and minimum provenance. Full-payload capture requires an explicit temporary diagnostic mode with hard limits and user clearing.
+
+Event Text Composer's durable terminal reuse of already materialized event copy is separate from provider prompt caching. The former prevents another provider call for the same Event Instance; the latter may reduce billed input for repeated stable prefixes and must never be reported without provider usage evidence.
+
+Automatic memory consolidation remains a separate future persistence decision. The landed pressure projection can identify review candidates but does not authorize summarization, replacement, archival, or deletion. Any later consolidation must preserve original evidence, distinguish role memory from world chronology and role-to-role knowledge, support review/rollback, and cannot use prompt-cache metadata as memory truth.
+
+Role continuity is available only to role conversations. Service, official, and group conversations never inherit role profile or Relationship Runtime context from a stale/imported `profileId`; disabling Relationship Runtime removes its memory recall and event-attached clues while leaving Contacts-authored manual character facts intact.
 
 ### Music
 
@@ -412,6 +434,29 @@ WorldBook reviewed World Pack
   -> target app resolves presentation/defaults
   -> target store remains record owner
 ```
+
+### World Suite Installation
+
+```text
+World Suite manifest
+  -> validate stable resource IDs, native owners, versions, and dependencies
+  -> build an idempotent install/update/review plan
+  -> the same native owner Adapter performs Suite or independent installation
+  -> verify the native owner result before recording installed evidence
+  -> checkpoint completed resources so an interrupted operation can resume safely
+  -> installed resource stays independently manageable and separately enableable
+  -> suite uninstall detaches origin and preserves shared, modified, in-use, and historical truth
+```
+
+`src/lib/world-suite-manifest.js` is the pure reusable planning Module. `src/lib/world-suite-inventory.js` stores only stable native IDs, versions, install origins, bounded owner evidence, and resumable Suite checkpoints inside the existing System user carrier. `src/lib/world-suite-owner-adapters.js` provides the shared execution Interface for both Suite and independent catalog installation, verifies native owner truth before and after mutations, and checkpoints only completed work. If a native install or removal succeeded but its inventory checkpoint was interrupted, retry repairs the coordination evidence from native truth without repeating the Owner mutation. The inventory is required in current complete backup through the existing `user` section; legacy backups restore an empty inventory instead of claiming historical Suite provenance.
+
+Book is the first production implementation of this flow. A manifest names the logical Book resource, Book-native ID, Catalog ID, and Catalog version but never carries the text. The Book Catalog resolves the body; `book-world-suite-owner-adapter.js` verifies explicit provenance and current WorldBook references; `bookStore.commitManagedAssetMutation()` commits one create/update/remove through the active legacy or Repository carrier and restores the prior in-memory snapshot on write failure. Independent catalog and Suite origins therefore share one Book asset without claiming existing built-ins or user documents.
+
+These Modules deliberately contain no built-in K-pop manifest, startup registration, UI, or activation policy. `src/lib/map-world-suite-inspection.js` supplies the Map read-only Interface, and `src/lib/production-map-world-suite-inspection-adapter.js` composes Map, Gallery, Event Runtime, and Chat owner evidence behind that seam. It classifies built-in, user-custom, correctly Catalog-managed, other-Catalog, ambiguous, and absent native identity; computes a managed topology/metadata fingerprint; inventories Gallery references, player places, active/world binding, visibility, Footprints knowledge, position/place session, active/history Map Journeys, current/history Event records, persisted Chat location cards, and 12-pack capacity; and returns immutable evidence without copying chat/event bodies. Trusted Catalog provenance round-trips through restore/save/reopen, Map returns the real persistence result, Gallery hard-blocks deletion and in-place replacement of assets referenced by custom Map packs, and `mapStore.commitManagedMapPackMutation()` commits one trusted managed create/update/delete while restoring the exact pre-mutation snapshot on persistence failure.
+
+`src/lib/map-world-suite-owner-adapter.js` is the separately constructed Map mutation Adapter. It resolves the real Catalog record rather than reading content from the manifest, accepts at most 500 strictly normalized authored canvas places only under trusted Catalog provenance, requires the referenced Gallery asset to be installed first, and reuses the shared independent/Suite Owner Adapter execution Interface. `src/lib/gallery-world-suite-owner-adapter.js` gives Gallery the matching stable-folder/stable-URL-asset Adapter; Gallery persists pack/asset provenance, refuses ID or URL collisions, treats other-folder membership and native consumers as use, and rolls failed managed mutations back exactly. Map never installs or removes Gallery content. Both Adapters fail closed for user modification and native references, and Map additionally blocks topology replacement without an explicit migration.
+
+`src/lib/world-resource-catalog.js` is the typed/versioned Book/Gallery/Map Catalog seam. `src/lib/map-gallery-world-suite-runtime.js` composes the Gallery-before-Map dependency registry, and `src/lib/production-world-suite-runtime.js` adds Book plus product use cases for preview, independent install, Suite install, and Suite uninstall over the real Owner Stores and System-owned durable inventory. Each checkpoint must receive a successful System persistence receipt; a failed checkpoint does not claim success, and the next attempt re-inspects native truth instead of repeating an already completed Owner mutation. Only one operation may run at a time. This runtime is explicitly constructed rather than invoked at app startup, contains no built-in Catalog or K-pop manifest, and never activates a resource, binds a world or Map, relocates a role, changes Journey truth, or deletes owner history. The ordinary product Map inspection remains read-only unless this explicit runtime supplies the mutation Adapter, so existing defaults are never retroactively marked as Suite-installed.
 
 ### Music Integration
 

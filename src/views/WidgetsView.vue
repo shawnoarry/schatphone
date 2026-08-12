@@ -19,6 +19,7 @@ import {
 import { buildCustomWidgetSrcDoc } from '../lib/custom-widget-preview'
 import { OFFICIAL_WIDGET_STYLE_PRESETS } from '../lib/widget-style-presets'
 import { BUILT_IN_HOME_WIDGETS } from '../lib/home-widgets'
+import BuiltInWidgetVisual from '../components/widgets/BuiltInWidgetVisual.vue'
 import {
   CUSTOM_WIDGET_ACTION_APP_TARGETS,
   CUSTOM_WIDGET_ACTION_SYSTEM_TARGETS,
@@ -49,7 +50,7 @@ const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
 const { settings } = storeToRefs(systemStore)
-const { t } = useI18n()
+const { languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
 const activePanel = ref('library')
@@ -78,6 +79,7 @@ const importJsonText = ref('')
 const importFeedbackType = ref('')
 const importFeedbackMessage = ref('')
 const importFeedbackDetails = ref([])
+const feedbackPlacementWidgetId = ref('')
 
 let savedTimerId = null
 let copiedTimerId = null
@@ -497,18 +499,23 @@ const openHomeWidgetEdit = () => {
   )
 }
 
-const chooseBuiltInWidgetSlot = (tileId) => {
+const chooseWidgetSlot = (tileId) => {
   const normalizedTileId = typeof tileId === 'string' ? tileId.trim() : ''
   if (!normalizedTileId) return
 
+  const isPlaced = homeWidgetPages.value.some(
+    (page) => Array.isArray(page) && page.includes(normalizedTileId),
+  )
   router.push(
     buildRouteWithReturnSource('/home', 'home', {
       widgetEdit: '1',
-      libraryTile: normalizedTileId,
+      ...(isPlaced ? { focusTile: normalizedTileId } : { libraryTile: normalizedTileId }),
       ...(returnHomePage.value ? { homePage: returnHomePage.value } : {}),
     }),
   )
 }
+
+const chooseBuiltInWidgetSlot = chooseWidgetSlot
 
 const addOfficialStylePreset = (preset) => {
   if (!preset?.code) return
@@ -528,7 +535,12 @@ const addOfficialStylePreset = (preset) => {
     setImportFeedback('error', t('这个样式无法加入组件库。', 'This style cannot be added to the library.'))
     return
   }
-  setImportFeedback('success', t('样式已加入自定义组件库。', 'Style added to the custom widget library.'))
+  setImportFeedback(
+    'success',
+    t('样式已加入自定义组件库。', 'Style added to the custom widget library.'),
+    [],
+    widgetId,
+  )
   triggerSaved()
 }
 
@@ -684,12 +696,13 @@ const submitCustomWidget = () => {
   }
 
   if (editingWidgetId.value) {
+    const updatedWidgetId = editingWidgetId.value
     const ok = systemStore.updateCustomWidget(editingWidgetId.value, payload)
     if (!ok) {
       setImportFeedback('error', t('这个组件无法更新。', 'This widget cannot be updated.'))
       return
     }
-    setImportFeedback('success', t('组件已更新。', 'Widget updated.'))
+    setImportFeedback('success', t('组件已更新。', 'Widget updated.'), [], updatedWidgetId)
     triggerSaved()
     resetCustomWidgetForm()
     return
@@ -706,7 +719,7 @@ const submitCustomWidget = () => {
     setImportFeedback('error', message)
     return
   }
-  setImportFeedback('success', t('组件已加入库。', 'Widget added to the library.'))
+  setImportFeedback('success', t('组件已加入库。', 'Widget added to the library.'), [], widgetId)
   triggerSaved()
   resetCustomWidgetForm()
 }
@@ -773,12 +786,15 @@ const clearImportFeedback = () => {
   importFeedbackType.value = ''
   importFeedbackMessage.value = ''
   importFeedbackDetails.value = []
+  feedbackPlacementWidgetId.value = ''
 }
 
-const setImportFeedback = (type, message, details = []) => {
+const setImportFeedback = (type, message, details = [], placementWidgetId = '') => {
   importFeedbackType.value = type
   importFeedbackMessage.value = message
   importFeedbackDetails.value = Array.isArray(details) ? details : []
+  feedbackPlacementWidgetId.value =
+    typeof placementWidgetId === 'string' ? placementWidgetId.trim() : ''
 }
 
 const formatImportError = (error) => {
@@ -897,7 +913,12 @@ const importCustomWidgets = () => {
           `已导入 ${result.importedCount} 个组件。`,
           `Imported ${result.importedCount} widgets.`,
         )
-  setImportFeedback(warningCount > 0 ? 'warning' : 'success', message, details)
+  setImportFeedback(
+    warningCount > 0 ? 'warning' : 'success',
+    message,
+    details,
+    result.importedIds?.[0] || '',
+  )
   importJsonText.value = ''
   closeImportEditor()
   triggerSaved()
@@ -1132,37 +1153,19 @@ onBeforeUnmount(() => {
             :data-testid="`widgets-market-built-in-${widget.id}`"
           >
             <div class="widgets-preview-stage" :class="`preview-${widget.preview}`">
-              <div v-if="widget.preview === 'weather'" class="widget-preview weather-preview">
-                <div>
-                  <span>{{ t('东京 · 晴朗', 'Tokyo · Clear') }}</span>
-                  <strong>18°</strong>
-                </div>
-                <i class="fas fa-cloud-sun"></i>
-              </div>
-              <div v-else-if="widget.preview === 'calendar'" class="widget-preview calendar-preview">
-                <span>{{ widgetPreviewWeekday }}</span>
-                <strong>{{ widgetPreviewDate.getDate() }}</strong>
-                <small>{{ t('日历', 'Calendar') }}</small>
-              </div>
-              <div v-else-if="widget.preview === 'music'" class="widget-preview music-preview">
-                <span class="music-art"><i class="fas fa-music"></i></span>
-                <div>
-                  <strong>{{ t('晚间电台', 'Evening Radio') }}</strong>
-                  <small>{{ t('日常播放列表', 'Daily Mix') }}</small>
-                </div>
-                <span class="music-control"><i class="fas fa-play"></i></span>
-              </div>
-              <div v-else-if="widget.preview === 'system'" class="widget-preview system-preview">
-                <span><i class="fas fa-microchip"></i>{{ t('系统', 'System') }}</span>
-                <span><i class="fas fa-battery-three-quarters"></i>86%</span>
-                <div></div>
-              </div>
-              <div v-else-if="widget.preview === 'heart'" class="widget-preview square-preview heart-preview">
-                <i class="fas fa-heart"></i>
-              </div>
-              <div v-else class="widget-preview square-preview disc-preview">
-                <i class="fas fa-compact-disc"></i>
-              </div>
+              <BuiltInWidgetVisual
+                :variant="widget.variant"
+                :language="languageBase"
+                :weekday="widgetPreviewWeekday"
+                :day="widgetPreviewDate.getDate()"
+                :location="t('东京', 'Tokyo')"
+                :condition="t('晴朗', 'Clear')"
+                :system-label="t('系统', 'System')"
+                :battery-label="t('电量 86%', 'Battery 86%')"
+                :music-status="t('继续播放', 'Listen Again')"
+                :music-title="t('晚间电台', 'Evening Radio')"
+                :music-artist="t('日常播放列表', 'Daily Mix')"
+              />
             </div>
             <div class="widgets-market-info">
               <div>
@@ -1535,6 +1538,19 @@ onBeforeUnmount(() => {
                 </div>
               </div>
               <div class="widgets-created-actions">
+                <button
+                  type="button"
+                  class="is-primary"
+                  :data-testid="`widgets-choose-slot-${widget.id}`"
+                  @click="chooseWidgetSlot(widget.id)"
+                >
+                  <i class="fas fa-table-cells" aria-hidden="true"></i>
+                  <span>{{
+                    homeWidgetPages.some((page) => page.includes(widget.id))
+                      ? t('编辑主屏', 'Edit Home')
+                      : t('选择槽位', 'Choose Slot')
+                  }}</span>
+                </button>
                 <button type="button" @click="startEditCustomWidget(widget)">
                   <i class="fas fa-pen"></i>
                   <span>{{ t('编辑', 'Edit') }}</span>
@@ -1793,6 +1809,16 @@ onBeforeUnmount(() => {
     >
       <p>{{ importFeedbackMessage }}</p>
       <span v-for="(detail, idx) in importFeedbackDetails" :key="`widget-feedback-${idx}`">{{ detail }}</span>
+      <button
+        v-if="feedbackPlacementWidgetId"
+        type="button"
+        class="widgets-feedback-action"
+        data-testid="widgets-feedback-choose-slot"
+        @click="chooseWidgetSlot(feedbackPlacementWidgetId)"
+      >
+        <i class="fas fa-table-cells" aria-hidden="true"></i>
+        <span>{{ t('选择槽位', 'Choose Slot') }}</span>
+      </button>
     </div>
 
   </div>
@@ -2747,6 +2773,46 @@ onBeforeUnmount(() => {
   box-shadow: inset 0 -1px 0 var(--system-subtle-border);
 }
 
+.widgets-preview-stage > .built-in-widget-visual {
+  height: auto;
+  max-width: 100%;
+}
+
+.widgets-market-card.size-1-1 .widgets-preview-stage > .built-in-widget-visual {
+  width: min(100%, 104px);
+  aspect-ratio: 1;
+}
+
+.widgets-market-card.size-2-2 .widgets-preview-stage > .built-in-widget-visual {
+  width: min(100%, 142px);
+  aspect-ratio: 1;
+}
+
+.widgets-market-card.size-2-1 .widgets-preview-stage > .built-in-widget-visual {
+  width: min(100%, 190px);
+  aspect-ratio: 2 / 1;
+}
+
+.widgets-market-card.size-4-1 .widgets-preview-stage > .built-in-widget-visual {
+  width: 100%;
+  aspect-ratio: 4 / 1;
+}
+
+.widgets-market-card.size-4-2 .widgets-preview-stage > .built-in-widget-visual {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
+.widgets-market-card.size-4-3 .widgets-preview-stage > .built-in-widget-visual {
+  width: min(100%, 470px);
+  aspect-ratio: 4 / 3;
+}
+
+.widgets-market-card.size-4-4 .widgets-preview-stage > .built-in-widget-visual {
+  width: min(100%, 380px);
+  aspect-ratio: 1;
+}
+
 .widgets-preview-open {
   width: 100%;
   border: 0;
@@ -2794,152 +2860,6 @@ onBeforeUnmount(() => {
   box-shadow:
     0 14px 30px rgba(16, 24, 40, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.36);
-}
-
-.weather-preview {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 16px;
-  background: linear-gradient(145deg, #8db7c8, #526d79 70%);
-}
-
-.weather-preview span,
-.weather-preview small,
-.music-preview small,
-.calendar-preview small {
-  font-size: 11px;
-  font-weight: 750;
-  opacity: 0.76;
-}
-
-.weather-preview strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 32px;
-  line-height: 1;
-}
-
-.weather-preview i {
-  font-size: 25px;
-  opacity: 0.92;
-}
-
-.calendar-preview {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 6px;
-  padding: 14px;
-  background: linear-gradient(160deg, #f1efea, #b9c2c7);
-  color: #28323a;
-}
-
-.calendar-preview span {
-  border-radius: 999px;
-  padding: 4px 9px;
-  background: rgba(255, 255, 255, 0.52);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.calendar-preview strong {
-  font-size: 42px;
-  line-height: 0.9;
-}
-
-.music-preview {
-  min-height: 104px;
-  display: grid;
-  grid-template-columns: 78px minmax(0, 1fr) 38px;
-  align-items: center;
-  gap: 12px;
-  padding: 13px;
-  background: linear-gradient(135deg, #2b3037, #65716d);
-}
-
-.music-art,
-.music-control {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.music-art {
-  width: 78px;
-  height: 78px;
-  border-radius: 18px;
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.88) 0 9%, transparent 10%),
-    conic-gradient(from 120deg, #d6c8ad, #536a75, #1e252b, #d6c8ad);
-}
-
-.music-preview strong {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 15px;
-  line-height: 1.2;
-}
-
-.music-control {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.system-preview {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-content: center;
-  gap: 10px;
-  padding: 14px;
-  background: linear-gradient(145deg, #58666c, #26333c);
-}
-
-.system-preview span {
-  min-height: 38px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.14);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.system-preview div {
-  grid-column: 1 / -1;
-  height: 12px;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.84) 0 68%, rgba(255, 255, 255, 0.18) 68% 100%),
-    rgba(255, 255, 255, 0.16);
-}
-
-.square-preview {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 1;
-  min-height: 0;
-  width: min(100%, 98px);
-  height: auto;
-  margin: auto;
-  font-size: 28px;
-}
-
-.heart-preview {
-  background: linear-gradient(145deg, #d7a5a2, #8f5e65);
-}
-
-.disc-preview {
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.82) 0 8%, rgba(44, 51, 59, 0.86) 9% 21%, transparent 22%),
-    conic-gradient(from 40deg, #c4cdd2, #6c7779, #2f3a43, #c4cdd2);
 }
 
 .style-preview {
@@ -3761,6 +3681,12 @@ onBeforeUnmount(() => {
   border-color: rgba(184, 83, 83, 0.22);
 }
 
+.widgets-created-actions button.is-primary {
+  color: var(--system-accent-strong);
+  border-color: color-mix(in srgb, var(--system-accent) 38%, var(--system-control-border));
+  background: var(--system-accent-soft);
+}
+
 .widgets-import-showcase {
   border: 1px solid var(--system-subtle-border);
   border-radius: 26px;
@@ -4232,6 +4158,22 @@ onBeforeUnmount(() => {
   line-height: 1.35;
 }
 
+.widgets-feedback-action {
+  min-height: 34px;
+  margin-top: 9px;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 10%, var(--system-control-bg));
+  font-size: 11px;
+  font-weight: 750;
+}
+
 .widgets-shell :is(button, input, select, textarea):focus-visible {
   outline: 2px solid var(--system-accent);
   outline-offset: 2px;
@@ -4506,14 +4448,5 @@ onBeforeUnmount(() => {
     grid-column: auto;
   }
 
-  .music-preview {
-    grid-template-columns: 56px minmax(0, 1fr) 34px;
-  }
-
-  .music-art {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-  }
 }
 </style>

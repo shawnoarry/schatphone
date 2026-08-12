@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-08-06
+Updated: 2026-08-12
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
@@ -48,6 +48,8 @@ Current cross-device handoff and execution record:
 - Persistence may page or reversibly cold-archive older role/relationship records, but it cannot silently or irreversibly delete role profiles, archived-role state, accepted facts, memories, or the evidence needed to review persistent truth.
 - Relationship runtime remains the owner of current metrics, stage, milestones, and memories; profile-side classification is saved context, not current relationship truth.
 - Relationship runtime summary counts are canonical: `totalMemoryCount`, `visibleMemoryCount`, and `archivedMemoryCount` describe the full target state even when the caller requests only a small memory-summary list.
+- Relationship Runtime also owns the read-only memory-pressure projection over its complete per-role memory set. Contacts translates that projection into the user-facing `状态稳定 / 记忆开始变多 / 建议查看` care card and opens nominated existing memories through the normal detail/source-audit flow; it does not expose technical thresholds, call AI, or automatically summarize, rewrite, archive, or delete anything.
+- The pressure Module may later be reused for world chronology or role-to-role knowledge, but those systems must supply their own Owner and data. Contacts relationship memory must not become a mixed store for the whole world.
 - Chat social events such as message requests, blocks, and being-blocked states may be displayed in Contacts as role-level reachability/status snapshots, but Contacts must not judge eligibility or apply generated outcomes. Chat owns the applied channel state, Event Runtime and World Hub own generated-event review/audit, and relationship runtime owns confirmed relationship facts or memories.
 - `World Hub` is an optional review and cleanup surface, not the main role-authoring page.
 - `WorldBook` should define profile-template rules; `Contacts` should store concrete profile values.
