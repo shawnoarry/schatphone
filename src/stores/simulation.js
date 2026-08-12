@@ -29,13 +29,19 @@ import {
   normalizeEventInstancesV1,
 } from '../lib/simulation/event-contracts'
 import {
+  createEventNotebookRefKey,
+  normalizeEventNotebookRef,
+  normalizeEventReviewNote,
+  normalizeEventReviewNotes,
+} from '../lib/simulation/event-notebook'
+import {
   readPersistedState,
   readPersistedStateAsync,
   writePersistedState,
 } from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
-const SIMULATION_STORAGE_VERSION = 2
+const SIMULATION_STORAGE_VERSION = 3
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
 const SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT = 120
@@ -84,6 +90,7 @@ const CHAT_SOCIAL_RUNTIME_SUCCESS_STATUSES = new Set([
 ])
 
 let eventLogSequence = 0
+let eventReviewNoteSequence = 0
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -197,12 +204,19 @@ const normalizeSimulationSettings = (rawSettings = {}) => {
 }
 
 export const migrateSimulationStorage = ({ version, data } = {}) => {
-  if (Number(version) !== 1 || !data || typeof data !== 'object' || Array.isArray(data)) {
+  const storedVersion = Number(version)
+  if (
+    ![1, 2].includes(storedVersion) ||
+    !data ||
+    typeof data !== 'object' ||
+    Array.isArray(data)
+  ) {
     return null
   }
   return {
     ...data,
-    eventInstances: [],
+    eventInstances: storedVersion === 1 ? [] : data.eventInstances || [],
+    eventReviewNotes: [],
     settings: {
       ...(data.settings && typeof data.settings === 'object' ? data.settings : {}),
       eventTextMode: EVENT_TEXT_MODE.LOCAL_ONLY,
@@ -249,6 +263,15 @@ const normalizeEventLogs = (rawLogs) => {
     normalized.push(log)
   })
   return normalized.sort((a, b) => b.at - a.at).slice(0, SIMULATION_EVENT_LOG_LIMIT)
+}
+
+const createEventReviewNoteId = (eventRef, at = Date.now()) => {
+  eventReviewNoteSequence += 1
+  const refKey = createEventNotebookRefKey(eventRef).replace(/[^a-zA-Z0-9_.-]/g, '_')
+  return `event_review_note_${normalizeTimestamp(at)}_${eventReviewNoteSequence}_${refKey}`.slice(
+    0,
+    220,
+  )
 }
 
 const normalizeCooldown = (rawCooldown, fallbackKey = '') => {
@@ -480,6 +503,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const eventLogs = ref([])
   const eventInstances = ref([])
   const eventInstanceRestoreReport = ref({ inputCount: 0, restoredCount: 0, rejected: [] })
+  const eventReviewNotes = ref([])
   const cooldownsByEvent = ref({})
   const dailyCounters = ref({})
   const chatSocialEventProposals = ref([])
@@ -489,6 +513,7 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   const eventLogCount = computed(() => eventLogs.value.length)
   const eventInstanceCount = computed(() => eventInstances.value.length)
+  const eventReviewNoteCount = computed(() => eventReviewNotes.value.length)
   const recentEventLogs = computed(() => eventLogs.value.slice(0, 24))
   const activeCooldownCount = computed(() => {
     const now = Date.now()
@@ -585,6 +610,51 @@ export const useSimulationStore = defineStore('simulation', () => {
       ...eventInstances.value.filter((item) => item.id !== instance.id),
     ]
     return instance
+  }
+
+  const upsertEventReviewNote = (rawNote = {}, { at = Date.now() } = {}) => {
+    const requestedId = normalizeText(rawNote.id, '', 220)
+    const existing = requestedId
+      ? eventReviewNotes.value.find((note) => note.id === requestedId)
+      : null
+    const eventRef = existing?.eventRef || normalizeEventNotebookRef(rawNote.eventRef)
+    if (!eventRef) return null
+    if (
+      existing &&
+      rawNote.eventRef &&
+      createEventNotebookRefKey(rawNote.eventRef) !== createEventNotebookRefKey(existing.eventRef)
+    ) {
+      return null
+    }
+    const normalizedAt = normalizeTimestamp(at)
+    const note = normalizeEventReviewNote({
+      id: existing?.id || requestedId || createEventReviewNoteId(eventRef, normalizedAt),
+      eventRef,
+      body: rawNote.body,
+      createdAt: existing?.createdAt || normalizedAt,
+      updatedAt: normalizedAt,
+    })
+    if (!note) return null
+    eventReviewNotes.value = [
+      note,
+      ...eventReviewNotes.value.filter((item) => item.id !== note.id),
+    ].sort((left, right) => right.updatedAt - left.updatedAt || left.id.localeCompare(right.id))
+    return note
+  }
+
+  const deleteEventReviewNote = (noteId) => {
+    const id = normalizeText(noteId, '', 220)
+    if (!id || !eventReviewNotes.value.some((note) => note.id === id)) return false
+    eventReviewNotes.value = eventReviewNotes.value.filter((note) => note.id !== id)
+    return true
+  }
+
+  const listEventReviewNotesForRef = (rawRef) => {
+    const refKey = createEventNotebookRefKey(rawRef)
+    if (!refKey) return []
+    return eventReviewNotes.value.filter(
+      (note) => createEventNotebookRefKey(note.eventRef) === refKey,
+    )
   }
 
   const recordEventLog = (input = {}) => {
@@ -992,6 +1062,7 @@ export const useSimulationStore = defineStore('simulation', () => {
       restoredCount: eventInstanceResult.instances.length,
       rejected: eventInstanceResult.rejected,
     }
+    eventReviewNotes.value = normalizeEventReviewNotes(rawSource.eventReviewNotes)
     cooldownsByEvent.value = normalizeCooldowns(rawSource.cooldownsByEvent || rawSource.cooldowns)
     dailyCounters.value = normalizeDailyCounters(rawSource.dailyCounters)
     chatSocialEventProposals.value = normalizeChatSocialEventProposals(
@@ -1023,6 +1094,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const createBackupSnapshot = () => ({
     eventLogs: eventLogs.value.map((item) => ({ ...item })),
     eventInstances: eventInstances.value.map((item) => cloneEventValue(item)),
+    eventReviewNotes: eventReviewNotes.value.map((item) => cloneEventValue(item)),
     cooldownsByEvent: Object.fromEntries(
       Object.entries(cooldownsByEvent.value).map(([key, item]) => [key, { ...item }]),
     ),
@@ -1072,6 +1144,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLogs.value = []
     eventInstances.value = []
     eventInstanceRestoreReport.value = { inputCount: 0, restoredCount: 0, rejected: [] }
+    eventReviewNotes.value = []
     cooldownsByEvent.value = {}
     dailyCounters.value = {}
     chatSocialEventProposals.value = []
@@ -1093,6 +1166,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     [
       eventLogs,
       eventInstances,
+      eventReviewNotes,
       cooldownsByEvent,
       dailyCounters,
       chatSocialEventProposals,
@@ -1110,6 +1184,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLogs,
     eventInstances,
     eventInstanceRestoreReport,
+    eventReviewNotes,
     cooldownsByEvent,
     dailyCounters,
     chatSocialEventProposals,
@@ -1117,6 +1192,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     settings,
     eventLogCount,
     eventInstanceCount,
+    eventReviewNoteCount,
     recentEventLogs,
     activeCooldownCount,
     surpriseMode,
@@ -1134,6 +1210,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     setForegroundSessionTickIntervalMs,
     getEventInstance,
     upsertEventInstance,
+    upsertEventReviewNote,
+    deleteEventReviewNote,
+    listEventReviewNotesForRef,
     recordEventLog,
     recordEventTrigger,
     markCooldown,

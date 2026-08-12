@@ -237,6 +237,161 @@ describe('ControlCenterView', () => {
     wrapper.unmount()
   })
 
+  test('reviews unified Event Notebook sources and manages event-scoped notes only', async () => {
+    const systemStore = useSystemStore()
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    systemStore.setMoreFeatureToggle('control_center', true)
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+
+    const log = simulationStore.recordEventLog({
+      id: 'notebook_runtime_log_1',
+      eventId: 'workplace.arrival_briefing',
+      moduleKey: 'map',
+      targetId: 'seoul-mbc-hq',
+      adapterKey: 'map.place_session.validate_event_resolution',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.CONDITION,
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      reason: 'place_session_event_eligible',
+      at: Date.now(),
+    })
+    const profile = chatStore.addRoleProfile({
+      roleId: '8810',
+      name: 'Notebook Role',
+      role: 'Contact',
+    })
+    const contact = chatStore.bindRoleProfile(profile.id, { chatSocialState: 'connected' })
+    const proposal = simulationStore.submitChatSocialEventProposal(
+      {
+        contactId: contact.id,
+        eventType: CHAT_SOCIAL_EVENT_TYPES.ROLE_BLOCK_USER,
+        triggerSource: SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
+        explanation: 'A pending proposal used only to verify Notebook source review.',
+      },
+      { chatStore, at: Date.now() - 1000 },
+    )
+    const logBeforeMount = structuredClone(log)
+    const proposalBeforeMount = structuredClone(proposal)
+
+    const { wrapper } = await mountControlCenterView()
+    const panel = wrapper.get('[data-testid="control-center-event-log-panel"]')
+    expect(panel.text()).toContain('Event Notebook')
+    expect(panel.text()).toContain('Runtime log')
+    expect(panel.text()).toContain('Chat proposal')
+    expect(wrapper.get('[data-testid="control-center-event-notebook-summary"]').text()).toContain(
+      'Pending',
+    )
+
+    await wrapper
+      .get('[data-testid="control-center-event-notebook-source-filter"]')
+      .setValue('event_log')
+    await flushUi()
+    expect(wrapper.findAll('[data-testid="control-center-event-log-item"]')).toHaveLength(2)
+    expect(
+      wrapper
+        .findAll('[data-testid="control-center-event-log-item"]')
+        .every((row) => row.text().includes('Runtime log')),
+    ).toBe(true)
+    expect(wrapper.findAll('[data-testid="control-center-event-log-item"]')[0].text()).toContain(
+      'workplace.arrival_briefing',
+    )
+
+    const eventLogCountBeforeSelection = simulationStore.eventLogCount
+    await wrapper.findAll('[data-testid="control-center-event-log-item"]')[0].trigger('click')
+    await flushUi()
+    expect(simulationStore.eventLogCount).toBe(eventLogCountBeforeSelection)
+    expect(simulationStore.eventLogs.find((item) => item.id === log.id)).toEqual(logBeforeMount)
+    expect(
+      simulationStore.chatSocialEventProposals.find((item) => item.id === proposal.id),
+    ).toEqual(proposalBeforeMount)
+
+    const input = wrapper.get('[data-testid="control-center-event-review-note-input"]')
+    await input.setValue('Check the owner result before the next production block.')
+    await wrapper.get('[data-testid="control-center-event-review-note-form"]').trigger('submit')
+    await flushUi()
+
+    expect(simulationStore.eventReviewNotes).toHaveLength(1)
+    const created = simulationStore.eventReviewNotes[0]
+    expect(created.eventRef).toMatchObject({
+      sourceKind: 'event_log',
+      sourceId: log.id,
+      moduleKey: 'map',
+    })
+    expect(wrapper.get('[data-testid="control-center-event-review-note"]').text()).toContain(
+      'Check the owner result',
+    )
+    expect(panel.text()).toContain('not Reminders, Calendar plans, or Cheats controls')
+    expect(panel.find('[data-testid*="reminder"]').exists()).toBe(false)
+    expect(panel.find('[data-testid*="calendar"]').exists()).toBe(false)
+    expect(panel.find('[data-testid*="cheat"]').exists()).toBe(false)
+
+    await wrapper
+      .get(`[data-testid="control-center-event-review-note-edit-${created.id}"]`)
+      .trigger('click')
+    await flushUi()
+    await input.setValue('Updated event-only audit context.')
+    await wrapper.get('[data-testid="control-center-event-review-note-form"]').trigger('submit')
+    await flushUi()
+    expect(simulationStore.eventReviewNotes).toHaveLength(1)
+    expect(simulationStore.eventReviewNotes[0]).toMatchObject({
+      id: created.id,
+      body: 'Updated event-only audit context.',
+      createdAt: created.createdAt,
+    })
+
+    await wrapper
+      .get(`[data-testid="control-center-event-review-note-delete-${created.id}"]`)
+      .trigger('click')
+    await flushUi()
+    expect(simulationStore.eventReviewNotes).toEqual([])
+    expect(panel.text()).toContain('No review notes for this event yet')
+    expect(simulationStore.eventLogs.find((item) => item.id === log.id)).toEqual(logBeforeMount)
+    expect(
+      simulationStore.chatSocialEventProposals.find((item) => item.id === proposal.id),
+    ).toEqual(proposalBeforeMount)
+
+    wrapper.unmount()
+  })
+
+  test('shows a filtered Notebook empty state without deleting existing runtime truth', async () => {
+    const systemStore = useSystemStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const simulationStore = useSimulationStore()
+    systemStore.settings.system.language = 'en-US'
+    relationshipRuntimeStore.resetForTesting()
+    simulationStore.resetForTesting()
+    simulationStore.recordEventLog({
+      id: 'notebook_filter_log',
+      eventId: 'simulation.session_tick.v1',
+      moduleKey: 'simulation',
+      targetId: 'global',
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      at: Date.now(),
+    })
+    simulationStore.recordEventLog({
+      id: 'notebook_filter_other',
+      eventId: 'shopping.logistics.package_arrived.v1',
+      moduleKey: 'shopping',
+      targetId: 'order-filter',
+      status: SIMULATION_EVENT_STATUS.SKIPPED,
+      at: Date.now() - 1000,
+    })
+
+    const { wrapper } = await mountControlCenterView()
+    await wrapper.get('[data-testid="control-center-event-log-module-filter"]').setValue('simulation')
+    await wrapper.get('[data-testid="control-center-event-log-status-filter"]').setValue('skipped')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="control-center-event-log-panel"]').text()).toContain(
+      'No events match the current Notebook filters',
+    )
+    expect(simulationStore.eventLogs).toHaveLength(2)
+    wrapper.unmount()
+  })
+
   test('applies and dismisses pending relationship events from World Hub review', async () => {
     const systemStore = useSystemStore()
     const relationshipRuntimeStore = useRelationshipRuntimeStore()

@@ -57,7 +57,9 @@ Event does not receive a normal Home app. Its user-facing cards remain embedded 
 1. World Hub may list event history, pending review, source/adapter explanations, map anchors, and event-scoped review notes.
 2. Ordinary reminders, calendar plans, source records, and event execution remain with their owning Modules.
 3. Event Runtime remains the hidden coordination Module behind this review surface.
-4. A future Event Notebook is a World Hub view over runtime truth, not a new desktop entry or second event store.
+4. The landed EVE-3 Event Notebook is a World Hub view over Event Instances, logs, Chat social proposals, and Map Journey proposals, not a new desktop entry or second event store.
+5. Event-scoped notes are durable audit context in `store:simulation` V3. They survive bounded runtime-log rotation and backup/restore, remain attached to one stable event reference, and change only through explicit note actions.
+6. Notebook selection and notes never retrigger an event, execute an Adapter, mutate source truth, create a Reminder/Calendar plan, or grant Cheats authority.
 
 ## 6. Merge Decision For Cheats
 

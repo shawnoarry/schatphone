@@ -41,6 +41,10 @@ import {
   CHAT_SOCIAL_EVENT_TYPES,
 } from '../lib/chat-social-event-review'
 import { CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID } from '../lib/chat-social-runtime-source'
+import {
+  EVENT_NOTEBOOK_SOURCE_KIND,
+  buildEventNotebook,
+} from '../lib/simulation/event-notebook'
 import { CONTROL_CENTER_HOME_APP_ID } from '../lib/planned-module-registry'
 
 const router = useRouter()
@@ -60,7 +64,10 @@ const simulationStore = useSimulationStore()
 
 const eventLogModuleFilter = ref('all')
 const eventLogStatusFilter = ref('all')
+const eventNotebookSourceFilter = ref('all')
 const selectedEventLogId = ref('')
+const eventReviewNoteDraft = ref('')
+const editingEventReviewNoteId = ref('')
 const relationshipEventStatusFilter = ref('all')
 const relationshipEventSourceFilter = ref('all')
 const selectedRelationshipEventId = ref('')
@@ -72,6 +79,11 @@ const {
   pendingEventCount: pendingRelationshipEventCount,
 } = storeToRefs(relationshipRuntimeStore)
 const {
+  eventLogs,
+  eventInstances,
+  eventReviewNotes,
+  chatSocialEventProposals,
+  mapJourneyEventProposals,
   eventLogCount,
   recentEventLogs,
   activeCooldownCount,
@@ -230,10 +242,37 @@ const simulationEventStatusLabel = (status = '') => {
   return status || t('Unknown', 'Unknown')
 }
 
-const simulationEventStatusClass = (status = '') => {
-  if (status === SIMULATION_EVENT_STATUS.TRIGGERED) return 'bg-emerald-300/15 text-emerald-100'
-  if (status === SIMULATION_EVENT_STATUS.FAILED) return 'bg-rose-300/15 text-rose-100'
-  return 'bg-amber-300/15 text-amber-100'
+const eventNotebookSourceLabel = (sourceKind = '') => {
+  if (sourceKind === EVENT_NOTEBOOK_SOURCE_KIND.EVENT_INSTANCE)
+    return t('Event Instance', 'Event Instance')
+  if (sourceKind === EVENT_NOTEBOOK_SOURCE_KIND.EVENT_LOG)
+    return t('Runtime log', 'Runtime log')
+  if (sourceKind === EVENT_NOTEBOOK_SOURCE_KIND.CHAT_SOCIAL_PROPOSAL)
+    return t('Chat proposal', 'Chat proposal')
+  if (sourceKind === EVENT_NOTEBOOK_SOURCE_KIND.MAP_JOURNEY_PROPOSAL)
+    return t('Map Journey proposal', 'Map Journey proposal')
+  return sourceKind || t('Unknown source', 'Unknown source')
+}
+
+const eventNotebookStatusLabel = (status = '') => {
+  if (status === 'active') return t('Active', 'Active')
+  if (status === 'resolved') return t('Resolved', 'Resolved')
+  if (status === 'dismissed') return t('Dismissed', 'Dismissed')
+  if (status === 'unavailable' || status === 'source_missing')
+    return t('Unavailable', 'Unavailable')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) return t('Pending review', 'Pending review')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.READY_TO_APPLY) return t('Ready to apply', 'Ready to apply')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.APPLIED) return t('Applied', 'Applied')
+  if (status === CHAT_SOCIAL_EVENT_STATUS.BLOCKED) return t('Blocked', 'Blocked')
+  return simulationEventStatusLabel(status)
+}
+
+const eventNotebookStatusClass = (statusGroup = '') => {
+  if (statusGroup === 'pending') return 'bg-amber-300/15 text-amber-100'
+  if (statusGroup === 'completed') return 'bg-emerald-300/15 text-emerald-100'
+  if (statusGroup === 'failed') return 'bg-rose-300/15 text-rose-100'
+  if (statusGroup === 'unavailable') return 'bg-slate-300/15 text-slate-200'
+  return 'bg-white/10 text-slate-300'
 }
 
 const simulationEventReasonLabel = (reason = '') => {
@@ -320,33 +359,6 @@ const simulationEventReviewExplanation = (log = {}) => {
     'This row is a read-only event-log record from the shared simulation runtime.',
     'This row is a read-only event-log record from the shared simulation runtime.',
   )
-}
-
-const simulationEventSafetyNotes = (log = {}) => {
-  const notes = [
-    t(
-      'World Hub is reviewing the log only; selecting this row does not trigger the event again.',
-      'World Hub is reviewing the log only; selecting this row does not trigger the event again.',
-    ),
-    log.adapterKey
-      ? t(
-          `Adapter boundary: ${log.adapterKey}`,
-          `Adapter boundary: ${log.adapterKey}`,
-        )
-      : t(
-          'No adapter boundary was recorded for this log.',
-          'No adapter boundary was recorded for this log.',
-        ),
-  ]
-  if (log.variantId || log.variantPackId || log.worldContextId) {
-    notes.push(
-      t(
-        'World-aware context is present, so the event can be reviewed against its active variant data.',
-        'World-aware context is present, so the event can be reviewed against its active variant data.',
-      ),
-    )
-  }
-  return notes
 }
 
 const chatSocialEventTypeLabel = (eventType = '') => {
@@ -797,21 +809,43 @@ const relationshipRuntimeEntityRows = computed(() =>
   }),
 )
 
+const eventNotebook = computed(() =>
+  buildEventNotebook({
+    eventLogs: eventLogs.value,
+    eventInstances: eventInstances.value,
+    chatSocialEventProposals: chatSocialEventProposals.value,
+    mapJourneyEventProposals: mapJourneyEventProposals.value,
+    eventReviewNotes: eventReviewNotes.value,
+    filters: {
+      sourceKind: eventNotebookSourceFilter.value,
+      moduleKey: eventLogModuleFilter.value,
+      status: eventLogStatusFilter.value,
+    },
+  }),
+)
+
+const eventNotebookSourceOptions = computed(() => [
+  { value: 'all', label: t('All sources', 'All sources') },
+  ...eventNotebook.value.options.sourceKinds.map(({ value }) => ({
+    value,
+    label: eventNotebookSourceLabel(value),
+  })),
+])
+
 const eventLogModuleOptions = computed(() => [
   { value: 'all', label: t('All modules', 'All modules') },
-  ...[...new Set(recentEventLogs.value.map((log) => log.moduleKey).filter(Boolean))]
-    .sort()
-    .map((moduleKey) => ({
-      value: moduleKey,
-      label: simulationModuleLabel(moduleKey),
-    })),
+  ...eventNotebook.value.options.moduleKeys.map(({ value }) => ({
+    value,
+    label: simulationModuleLabel(value),
+  })),
 ])
 
 const eventLogStatusOptions = computed(() => [
   { value: 'all', label: t('All statuses', 'All statuses') },
-  { value: SIMULATION_EVENT_STATUS.TRIGGERED, label: simulationEventStatusLabel(SIMULATION_EVENT_STATUS.TRIGGERED) },
-  { value: SIMULATION_EVENT_STATUS.SKIPPED, label: simulationEventStatusLabel(SIMULATION_EVENT_STATUS.SKIPPED) },
-  { value: SIMULATION_EVENT_STATUS.FAILED, label: simulationEventStatusLabel(SIMULATION_EVENT_STATUS.FAILED) },
+  ...eventNotebook.value.options.statuses.map(({ value }) => ({
+    value,
+    label: eventNotebookStatusLabel(value),
+  })),
 ])
 
 const relationshipEventStatusOptions = computed(() => [
@@ -898,38 +932,105 @@ const relationshipRuntimeEventRows = computed(() =>
     })),
 )
 
-const recentRuntimeLogs = computed(() =>
-  recentEventLogs.value
-    .filter((log) =>
-      eventLogModuleFilter.value === 'all'
-        ? true
-        : log.moduleKey === eventLogModuleFilter.value,
-    )
-    .filter((log) =>
-      eventLogStatusFilter.value === 'all'
-        ? true
-        : log.status === eventLogStatusFilter.value,
-    )
-    .slice(0, 12)
-    .map((log) => ({
-      ...log,
-      eventLabel: simulationEventLabel(log.eventId),
-      moduleLabel: simulationModuleLabel(log.moduleKey),
-      triggerSourceLabel: simulationTriggerSourceLabel(log.triggerSource),
-      statusLabel: simulationEventStatusLabel(log.status),
-      statusClass: simulationEventStatusClass(log.status),
-      reasonLabel: simulationEventReasonLabel(log.reason),
-      targetLabel: simulationEventTargetLabel(log),
-      variantLabel: simulationEventVariantLabel(log),
-      createdAtLabel: formatRuntimeTime(log.at),
-      explanation: simulationEventReviewExplanation(log),
-      safetyNotes: simulationEventSafetyNotes(log),
-    })),
+const eventNotebookRows = computed(() =>
+  eventNotebook.value.filteredEntries.slice(0, 24).map((entry) => {
+    const primaryLog = entry.logs[entry.logs.length - 1] || entry.logs[0] || null
+    const proposal = entry.proposal
+    const instance = entry.instance
+    const title =
+      instance?.text?.normalizedCopy?.title ||
+      proposal?.titleEn ||
+      proposal?.titleZh ||
+      simulationEventLabel(entry.eventId)
+    const detail =
+      instance?.text?.normalizedCopy?.opening ||
+      proposal?.explanation ||
+      proposal?.summaryEn ||
+      proposal?.summaryZh ||
+      simulationEventReviewExplanation(primaryLog || { status: entry.status })
+    const adapterKey = instance?.outcome?.adapterKey || primaryLog?.adapterKey || ''
+    const variantLabel = instance
+      ? [instance.world?.worldContextId, instance.selection?.variantId, instance.world?.variantPackId]
+          .filter(Boolean)
+          .join(' / ')
+      : simulationEventVariantLabel(primaryLog || proposal?.provenance || {})
+    const triggerSource =
+      primaryLog?.triggerSource || proposal?.triggerSource || proposal?.provenance?.triggerSource || ''
+    return {
+      ...entry,
+      eventLabel: title,
+      moduleLabel: simulationModuleLabel(entry.moduleKey),
+      sourceLabel: eventNotebookSourceLabel(entry.sourceKind),
+      triggerSourceLabel: simulationTriggerSourceLabel(triggerSource),
+      statusLabel: eventNotebookStatusLabel(entry.status),
+      statusClass: eventNotebookStatusClass(entry.statusGroup),
+      reasonLabel: simulationEventReasonLabel(
+        primaryLog?.reason || proposal?.resolutionReason || proposal?.reason || instance?.outcome?.ownerResultCode,
+      ),
+      targetLabel: simulationEventTargetLabel(entry),
+      variantLabel,
+      adapterKey,
+      createdAtLabel: formatRuntimeTime(entry.occurredAt),
+      explanation: detail,
+      safetyNotes: [
+        t(
+          'Selecting this entry only changes the notebook selection; it does not trigger the event or mutate source records.',
+          'Selecting this entry only changes the notebook selection; it does not trigger the event or mutate source records.',
+        ),
+        adapterKey
+          ? t(`Adapter boundary: ${adapterKey}`, `Adapter boundary: ${adapterKey}`)
+          : t('No Adapter boundary was recorded for this entry.', 'No Adapter boundary was recorded for this entry.'),
+        entry.lineageState === 'stale'
+          ? t(
+              'Some linked runtime records are no longer available; the surviving entry and notes remain reviewable without inventing replacement truth.',
+              'Some linked runtime records are no longer available; the surviving entry and notes remain reviewable without inventing replacement truth.',
+            )
+          : t(
+              'Lineage links point to existing Event Runtime records.',
+              'Lineage links point to existing Event Runtime records.',
+            ),
+      ],
+    }
+  }),
 )
+
+const recentRuntimeLogs = computed(() => eventNotebookRows.value)
 
 const selectedRuntimeLog = computed(
   () => recentRuntimeLogs.value.find((log) => log.id === selectedEventLogId.value) || recentRuntimeLogs.value[0] || null,
 )
+
+const selectedEventReviewNotes = computed(() => selectedRuntimeLog.value?.notes || [])
+
+const submitEventReviewNote = () => {
+  if (!selectedRuntimeLog.value) return
+  const existing = editingEventReviewNoteId.value
+    ? selectedEventReviewNotes.value.find((note) => note.id === editingEventReviewNoteId.value)
+    : null
+  const note = simulationStore.upsertEventReviewNote({
+    id: existing?.id || '',
+    eventRef: existing?.eventRef || selectedRuntimeLog.value.refs[0],
+    body: eventReviewNoteDraft.value,
+  })
+  if (!note) return
+  eventReviewNoteDraft.value = ''
+  editingEventReviewNoteId.value = ''
+}
+
+const editEventReviewNote = (note) => {
+  editingEventReviewNoteId.value = note.id
+  eventReviewNoteDraft.value = note.body
+}
+
+const cancelEventReviewNoteEdit = () => {
+  editingEventReviewNoteId.value = ''
+  eventReviewNoteDraft.value = ''
+}
+
+const deleteEventReviewNote = (noteId) => {
+  simulationStore.deleteEventReviewNote(noteId)
+  if (editingEventReviewNoteId.value === noteId) cancelEventReviewNoteEdit()
+}
 
 const selectedRelationshipEvent = computed(
   () =>
@@ -950,6 +1051,10 @@ watch(recentRuntimeLogs, (logs) => {
     selectedEventLogId.value = logs[0]?.id || ''
   }
 }, { immediate: true })
+
+watch(selectedEventLogId, () => {
+  cancelEventReviewNoteEdit()
+})
 
 watch(relationshipRuntimeEventRows, (events) => {
   if (!events.some((event) => event.id === selectedRelationshipEventId.value)) {
@@ -1708,13 +1813,53 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
         data-testid="control-center-event-log-panel"
       >
         <div class="flex items-center justify-between gap-3">
-          <p class="text-xs font-semibold text-slate-200">{{ t('Recent Event Logs', 'Recent Event Logs') }}</p>
-          <span class="text-[11px] text-slate-500">{{ t('Filtered review', 'Filtered review') }}</span>
+          <div>
+            <p class="text-sm font-semibold text-slate-100">{{ t('Event Notebook', 'Event Notebook') }}</p>
+            <p class="mt-1 text-[11px] leading-4 text-slate-500">
+              {{ t('Review Event Runtime truth and keep event-scoped notes. Notebook actions never retrigger an event.', 'Review Event Runtime truth and keep event-scoped notes. Notebook actions never retrigger an event.') }}
+            </p>
+          </div>
+          <span class="shrink-0 rounded-full bg-cyan-200/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">
+            {{ t('Review only', 'Review only') }}
+          </span>
         </div>
         <div
-          class="mt-3 grid grid-cols-2 gap-2"
+          class="mt-3 grid grid-cols-3 gap-2 text-center"
+          data-testid="control-center-event-notebook-summary"
+        >
+          <span class="min-w-0 rounded-xl bg-white/8 px-2 py-2 text-[11px] text-slate-300">
+            <strong class="block text-sm text-white">{{ eventNotebook.counts.all }}</strong>
+            {{ t('All', 'All') }}
+          </span>
+          <span class="min-w-0 rounded-xl bg-amber-300/8 px-2 py-2 text-[11px] text-amber-100">
+            <strong class="block text-sm">{{ eventNotebook.counts.pending }}</strong>
+            {{ t('Pending', 'Pending') }}
+          </span>
+          <span class="min-w-0 rounded-xl bg-cyan-300/8 px-2 py-2 text-[11px] text-cyan-100">
+            <strong class="block text-sm">{{ eventNotebook.counts.noted }}</strong>
+            {{ t('Noted', 'Noted') }}
+          </span>
+        </div>
+        <div
+          class="mt-3 grid gap-2 sm:grid-cols-3"
           data-testid="control-center-event-log-filters"
         >
+          <label class="min-w-0 text-[11px] text-slate-400">
+            {{ t('Source', 'Source') }}
+            <select
+              v-model="eventNotebookSourceFilter"
+              class="mt-1 w-full min-w-0 rounded-xl border border-white/10 bg-slate-950 px-2 py-2 text-xs text-white"
+              data-testid="control-center-event-notebook-source-filter"
+            >
+              <option
+                v-for="option in eventNotebookSourceOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
           <label class="text-[11px] text-slate-400">
             {{ t('Module', 'Module') }}
             <select
@@ -1749,19 +1894,20 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
           </label>
         </div>
         <div v-if="recentRuntimeLogs.length" class="mt-3 space-y-2">
-          <article
+          <button
             v-for="log in recentRuntimeLogs"
             :key="log.id"
-            class="rounded-2xl border p-3"
+            type="button"
+            class="block w-full min-w-0 rounded-2xl border p-3 text-left"
             :class="selectedRuntimeLog?.id === log.id ? 'border-cyan-200/70 bg-cyan-200/10' : 'border-white/10 bg-white/8'"
             data-testid="control-center-event-log-item"
             @click="selectedEventLogId = log.id"
           >
             <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold text-white">{{ log.eventLabel }}</p>
-                <p class="mt-1 text-[11px] text-slate-500">
-                  {{ log.moduleLabel }} / {{ log.triggerSourceLabel }} / {{ log.targetLabel }}
+              <div class="min-w-0">
+                <p class="break-words text-xs font-semibold text-white">{{ log.eventLabel }}</p>
+                <p class="mt-1 break-words text-[11px] text-slate-500">
+                  {{ log.sourceLabel }} / {{ log.moduleLabel }} / {{ log.targetLabel }}
                 </p>
               </div>
               <span
@@ -1774,16 +1920,21 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
             <p class="mt-2 text-[11px] leading-4 text-slate-400">
               {{ log.reasonLabel }}
             </p>
-            <p v-if="log.variantLabel" class="mt-1 text-[11px] leading-4 text-cyan-100/80">
+            <p v-if="log.noteCount" class="mt-1 text-[11px] font-semibold leading-4 text-cyan-100">
+              {{ log.noteCount }} {{ t('review note(s)', 'review note(s)') }}
+            </p>
+            <p v-if="log.variantLabel" class="mt-1 break-words text-[11px] leading-4 text-cyan-100/80">
               {{ t('Variant', 'Variant') }}: {{ log.variantLabel }}
             </p>
-            <p class="mt-1 text-[10px] leading-4 text-slate-600">
-              {{ log.createdAtLabel }} / eventId={{ log.eventId || '-' }} / adapter={{ log.adapterKey || '-' }}
+            <p class="mt-1 break-all text-[10px] leading-4 text-slate-600">
+              {{ log.createdAtLabel }} / eventId={{ log.eventId || '-' }}
             </p>
-          </article>
+          </button>
         </div>
         <p v-else class="mt-3 rounded-2xl bg-white/8 px-3 py-3 text-xs leading-5 text-slate-400">
-          {{ t('No event logs yet. Run a diagnostics tick or a module event to see read-only records here.', 'No event logs yet. Run a diagnostics tick or a module event to see read-only records here.') }}
+          {{ eventNotebook.counts.all > 0
+            ? t('No events match the current Notebook filters.', 'No events match the current Notebook filters.')
+            : t('No event logs yet. Run a diagnostics tick or a module event to see read-only records here.', 'No event logs yet. Run a diagnostics tick or a module event to see read-only records here.') }}
         </p>
         <article
           v-if="selectedRuntimeLog"
@@ -1792,9 +1943,9 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
         >
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-xs font-semibold text-white">{{ t('Event log detail', 'Event log detail') }}</p>
+              <p class="text-xs font-semibold text-white">{{ t('Selected event', 'Selected event') }}</p>
               <p class="mt-1 text-[11px] text-slate-400">
-                {{ selectedRuntimeLog.eventLabel }} / {{ selectedRuntimeLog.moduleLabel }}
+                {{ selectedRuntimeLog.sourceLabel }} / {{ selectedRuntimeLog.moduleLabel }}
               </p>
             </div>
             <span
@@ -1808,6 +1959,10 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
             {{ selectedRuntimeLog.explanation }}
           </p>
           <div class="mt-3 grid gap-2 text-[11px]">
+            <span class="break-all rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Stable source', 'Stable source') }}:
+              {{ selectedRuntimeLog.sourceKind }} / {{ selectedRuntimeLog.sourceId }}
+            </span>
             <span class="rounded-xl bg-white/8 px-3 py-2">
               {{ t('Reason', 'Reason') }}: {{ selectedRuntimeLog.reasonLabel }}
             </span>
@@ -1816,6 +1971,15 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
             </span>
             <span class="rounded-xl bg-white/8 px-3 py-2">
               {{ t('Trigger source', 'Trigger source') }}: {{ selectedRuntimeLog.triggerSourceLabel }}
+            </span>
+            <span class="break-all rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Adapter', 'Adapter') }}: {{ selectedRuntimeLog.adapterKey || '-' }}
+            </span>
+            <span class="break-all rounded-xl bg-white/8 px-3 py-2">
+              {{ t('Lineage', 'Lineage') }}:
+              instance={{ selectedRuntimeLog.lineage.instanceId || '-' }} /
+              proposal={{ selectedRuntimeLog.lineage.proposalId || '-' }} /
+              logs={{ selectedRuntimeLog.lineage.logIds.join(', ') || '-' }}
             </span>
             <span
               v-if="selectedRuntimeLog.variantLabel"
@@ -1832,6 +1996,88 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
               {{ note }}
             </li>
           </ul>
+          <div
+            class="mt-4 border-t border-white/10 pt-4"
+            data-testid="control-center-event-review-notes"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-white">{{ t('Event review notes', 'Event review notes') }}</p>
+                <p class="mt-1 text-[11px] leading-4 text-slate-500">
+                  {{ t('Notes stay scoped to this stable event reference. They are not Reminders, Calendar plans, or Cheats controls.', 'Notes stay scoped to this stable event reference. They are not Reminders, Calendar plans, or Cheats controls.') }}
+                </p>
+              </div>
+              <span class="shrink-0 text-[11px] text-slate-500">{{ selectedEventReviewNotes.length }}</span>
+            </div>
+            <div v-if="selectedEventReviewNotes.length" class="mt-3 space-y-2">
+              <article
+                v-for="note in selectedEventReviewNotes"
+                :key="note.id"
+                class="rounded-xl bg-slate-950/60 px-3 py-3"
+                data-testid="control-center-event-review-note"
+              >
+                <p class="whitespace-pre-wrap break-words text-[11px] leading-5 text-slate-200">{{ note.body }}</p>
+                <p class="mt-2 text-[10px] text-slate-600">{{ formatRuntimeTime(note.updatedAt) }}</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-slate-200"
+                    :data-testid="`control-center-event-review-note-edit-${note.id}`"
+                    @click="editEventReviewNote(note)"
+                  >
+                    {{ t('Edit', 'Edit') }}
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-full bg-rose-300/15 px-3 py-1.5 text-[11px] font-semibold text-rose-100"
+                    :data-testid="`control-center-event-review-note-delete-${note.id}`"
+                    @click="deleteEventReviewNote(note.id)"
+                  >
+                    {{ t('Delete', 'Delete') }}
+                  </button>
+                </div>
+              </article>
+            </div>
+            <p v-else class="mt-3 rounded-xl bg-white/8 px-3 py-3 text-[11px] leading-4 text-slate-400">
+              {{ t('No review notes for this event yet.', 'No review notes for this event yet.') }}
+            </p>
+            <form class="mt-3" data-testid="control-center-event-review-note-form" @submit.prevent="submitEventReviewNote">
+              <label class="block text-[11px] font-semibold text-slate-300" for="control-center-event-review-note-input">
+                {{ editingEventReviewNoteId ? t('Edit note', 'Edit note') : t('Add event note', 'Add event note') }}
+              </label>
+              <textarea
+                id="control-center-event-review-note-input"
+                v-model="eventReviewNoteDraft"
+                rows="4"
+                maxlength="4000"
+                class="mt-2 w-full resize-y rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs leading-5 text-white outline-none focus:border-cyan-200/70"
+                :placeholder="t('Write audit context for this event only…', 'Write audit context for this event only…')"
+                data-testid="control-center-event-review-note-input"
+              />
+              <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <span class="text-[10px] text-slate-600">{{ eventReviewNoteDraft.length }}/4000</span>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-if="editingEventReviewNoteId"
+                    type="button"
+                    class="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-slate-200"
+                    data-testid="control-center-event-review-note-cancel"
+                    @click="cancelEventReviewNoteEdit"
+                  >
+                    {{ t('Cancel', 'Cancel') }}
+                  </button>
+                  <button
+                    type="submit"
+                    class="rounded-full bg-cyan-200 px-3 py-1.5 text-[11px] font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+                    :disabled="!eventReviewNoteDraft.trim()"
+                    data-testid="control-center-event-review-note-submit"
+                  >
+                    {{ editingEventReviewNoteId ? t('Save note', 'Save note') : t('Add note', 'Add note') }}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
         </article>
       </section>
 

@@ -1,6 +1,6 @@
 # Optional Runtime Control / World Hub App
 
-Updated: 2026-08-10
+Updated: 2026-08-12
 
 ## Decision
 
@@ -61,7 +61,7 @@ World Hub is a coordination layer, not the owner of domain records.
 
 ## Current Implementation Status
 
-Status: baseline landed.
+Status: baseline plus EVE-3 Event Notebook landed.
 
 Current World Hub capabilities:
 
@@ -70,11 +70,12 @@ Current World Hub capabilities:
 3. reads relationship runtime status and top snapshots;
 4. can approve or dismiss pending relationship events when that review path is enabled;
 5. consumes primary-led relationship-memory recall summaries while preserving source-audit detail;
-6. can filter event logs by module/status and inspect selected logs with trigger, reason, adapter, target, and world-variant explanations;
+6. exposes one Event Notebook over Event Instances, runtime logs, Chat social proposals, and Map Journey proposals, with source/module/status filters, all/pending/noted counts, stable lineage, stale-source explanation, and selected-event detail;
 7. can filter relationship facts by status/source and inspect selected facts with metric-delta, source-record, pending-effect, and supporting-only explanations;
 8. can review pending generated Chat social proposals before high-risk communication state changes are applied in Chat, and can explain proposal source, trigger policy, and ownership boundaries for AI-sourced and foreground/session runtime proposals;
-9. does not yet expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface.
-10. is the accepted integrated hidden entry for the future cross-module Event Notebook/review slice; Event still receives no ordinary Home app.
+9. persists event-scoped review notes through Simulation V3, backup/restore, and bounded runtime-log rotation, with explicit create/update/delete actions only;
+10. Notebook selection and notes do not retrigger events, execute Adapters, mutate source records, create Reminders/Calendar plans, or grant Cheats authority;
+11. does not expose broad freeform value editing, funds editing, unlock editing, or a completed Cheats surface. Event still receives no ordinary Home app.
 
 ## Relationship To Cheats
 
@@ -94,6 +95,6 @@ Important rule:
 
 ## Next Recommended Slice
 
-1. implement EVE-1's pure Event Surface Projection before changing World Hub persistence or adding Map cards;
-2. add the future Event Notebook as a World Hub view over existing proposal/log truth, with event-scoped notes but no general reminder ownership;
-3. keep Cheats separately gated after the World Hub event-review hierarchy is proven.
+1. preserve EVE-3 as a read model and event-note surface, not a second event store or source editor;
+2. require separate EVE-4 approval before registering another host, template, or content pack;
+3. keep Cheats and EVE-5 Mini Scene/media expansion separately gated.

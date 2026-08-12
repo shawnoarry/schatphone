@@ -271,6 +271,9 @@ describe('canonical persistence-owner inventory', () => {
     expect(simulationTarget.migrate({ version: 1, data: { marker: 'legacy-events' } })).toEqual({
       marker: 'legacy-events',
     })
+    expect(simulationTarget.migrate({ version: 2, data: { marker: 'instance-events' } })).toEqual({
+      marker: 'instance-events',
+    })
 
     for (const carrier of PERSISTED_STORE_CARRIERS) {
       const source = readSource(carrier.sourceFile)

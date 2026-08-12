@@ -438,7 +438,7 @@ The next event work is staged separately from richer event content:
 2. `EVE-2A DONE 2026-08-10`: the reusable template/instance/place-capability/text/media/persistence contracts, Map place-session input Interface, first K-pop archetype, and six representative fixture cases are frozen under `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` and `tests/fixtures/events/kpop-realism-v1/`. This stage added no runtime writes.
 3. `EVE-2B DONE 2026-08-10`: reusable template/variant/instance normalizers and registries, persistence/reopen/backup, a local K-pop fallback pack, and an optional validated/cached after-entry Event Text Composer are implemented without host UI or external domain effects.
 4. `EVE-2C DONE 2026-08-10`: exactly one bounded Map host renders the selected K-pop vertical slice with Map V3 provenance/place sessions, zero-token invitation/no-event paths, explicit entry/expansion, local or cached optional text, three Map-validated no-mutation choices, fail-closed anchors, clustering/stacking, and return context.
-5. `EVE-3`: add a World Hub event notebook/review slice over existing logs/proposals, including event-scoped notes and filters but no general reminder ownership or freeform value editing.
+5. `EVE-3 DONE 2026-08-12`: World Hub now provides a deterministic Event Notebook over Event Instances, runtime logs, Chat social proposals, and Map Journey proposals. It exposes all/pending/noted counts, source/module/status filters, selected-event lineage and stale-source review, and durable event-scoped note create/update/delete actions. It adds no second event record, event retrigger, Adapter execution, source mutation, Reminder/Calendar ownership, freeform value editing, or Cheats authority.
 6. `EVE-4`: register additional host projections, templates, and content packs only as their source modules are approved.
 7. `EVE-5`: use the shared Mini Scene Interface for richer expansion only after its persistence, Settings, and Presenter gates are complete; later CG remains a separate image-generation/media-resolution stage.
 
@@ -496,11 +496,11 @@ Landed:
 
 Landed in the first product slice:
 
-- EVE-2A contract/fixtures, EVE-2B reusable runtime, and the EVE-2C first Map/K-pop vertical slice under `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`.
+- EVE-2A contract/fixtures, EVE-2B reusable runtime, the EVE-2C first Map/K-pop vertical slice under `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`, and the EVE-3 World Hub Event Notebook.
 
 Next, only after separate acceptance:
 
-- EVE-3 through EVE-5 in Section 8;
+- EVE-4 and EVE-5 in Section 8;
 - additional Shopping, logistics, Phone, Calendar/Reminders, Map, and Gallery event families only after an owning source slice is approved;
 - evaluate XState/statecharts only if transition complexity truly warrants it;
 - use a game engine only for true minigame or Canvas/WebGL surfaces, not ordinary module events.
@@ -549,17 +549,19 @@ Already landed:
 - `src/lib/simulation/event-contracts.js` and `event-registry.js` normalize the frozen EVE-2 Interfaces and register world-neutral templates plus compatible world/content packs with fail-closed schema, Adapter, choice, and outcome checks
 - `src/lib/simulation/kpop-realism-event-pack.js` and `event-instance-materializer.js` provide the first complete bilingual local fallback and deterministic durable instance materialization for semantic workplace categories/capabilities rather than Seoul place IDs
 - `src/lib/simulation/event-text-composer.js` accepts an injected provider/call adapter only after entry, sends bounded context, performs at most one request, validates normalized copy against frozen IDs and limits, caches success or terminal local fallback, and never regenerates on reopen
-- `src/stores/simulation.js` storage V2 persists untruncated Event Instances plus the independent `local_only`/`optional_ai_after_entry` text mode, migrates V1 without losing existing runtime data, reports rejected restore records, and includes instances in backup/rollback snapshots
+- `src/stores/simulation.js` storage V3 persists untruncated Event Instances plus independent `local_only`/`optional_ai_after_entry` text mode and authoritative event-scoped review notes; it migrates V1/V2 without losing existing runtime data, reports rejected instance restores, includes notes and instances in backup/rollback snapshots, and does not drop notes when bounded runtime logs rotate
+- `src/lib/simulation/event-notebook.js` builds stable Notebook entries by explicit Instance/proposal/log lineage, adds note-only stale-source rows instead of inventing replacement truth, and provides deterministic filtering/counts without taking ownership of source records
 - `src/lib/simulation/adapters/map-place-session-events.js` evaluates the frozen arrival-briefing family from Map-owned session checkpoints and validates exact no-mutation results through the Map owner boundary
 - `src/stores/map.js` storage V3 persists manual-versus-journey-arrival position evidence and explicit place-session state while deriving Event Surface projections instead of storing duplicate event truth
 - the Map route registers one Event Surface host and provides zero-token invitation/no-event behavior, explicit `Enter` / `Leave` / expansion, three allowlisted choices, geographic/canvas stacking, layer coexistence, and return context
 - World Hub's Chat social proposal panel explains source, trigger policy, and ownership boundaries for AI output and foreground/session runtime proposals
+- World Hub's Event Notebook reviews Event Instances, logs, Chat social proposals, and Map Journey proposals by source/module/status, shows stable lineage and stale links, and manages event-scoped notes without event execution or domain mutation
 - Settings backup/import/rollback and storage diagnostics include `store:simulation`
 
 Recommended next step:
 
 - keep the landed EVE-1 projection contract free of persistence and effect authority, and keep the completed EVE-2C Map host bounded to the one frozen production-arrival-briefing archetype
-- preserve the World Hub filtered review-pack baseline for every new adapter, so each event log remains explainable by module, status, trigger source, reason, adapter boundary, target, and world variant context before stronger controls are added
+- preserve the EVE-3 Notebook as a read model over owner truth with durable event-scoped notes; every new adapter should remain explainable by source, module, status, trigger, reason, adapter boundary, target, variant, and stable lineage before stronger controls are added
 - preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.
 - deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes; V1 runtime greetings are intentionally narrow, and richer scheduling or high-risk communication changes still need explicit review semantics
 

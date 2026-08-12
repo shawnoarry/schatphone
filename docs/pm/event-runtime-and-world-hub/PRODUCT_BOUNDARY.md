@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-08-10
+Updated: 2026-08-12
 
 ## 1. Core Rule
 
@@ -51,8 +51,9 @@ Owns:
 - optional runtime review
 - narrow override/review actions
 - future GM-like control entry
-- filtered event-log and relationship-fact review details
-- future event history/notebook projection, pending review, event-scoped notes, and location-aware explanations
+- filtered Event Notebook and relationship-fact review details
+- event history/notebook projection over existing Event Instances, logs, Chat social proposals, and Map Journey proposals
+- stable event-scoped review notes and location-aware explanations
 - read-only relationship classification gate audit review
 
 Does not own:
@@ -87,9 +88,9 @@ EVE-2 lets Map consume that Interface for one low-risk approved family. Map owns
 
 Location-aware templates retain authored activation scope and discoverability separately from the EVE-1 projection's source/anchor availability. Map supplies bounded current distance relation, place-session state, position provenance, and journey/arrival references; Event Runtime evaluates them but never changes them. Distance cannot convert an onsite/interior template into a remote event. A Map place card shows an invitation only for an eligible event or approved locked teaser and never reserves an empty permanent Event entry.
 
-EVE-2A freezes the first concrete Interface and EVE-2B implements its Event Runtime side: `EventTemplateV2` and `EventInstanceV1` remain Event Runtime truth; strict registries/local materialization, Simulation-owned durable instances, and optional bounded one-call text composition do not write Map or another domain owner. A future Map-owned `MapPlaceSessionCheckpointV1` supplies one current stable place/session revision with manual or journey-arrival provenance, and `map.place_session.validate_event_resolution` may only validate the three approved production-arrival-briefing choices and return `canonicalMutation: none`. The read-only Seoul semantic overlay is Map-pack content, not an Event Runtime branch or a migration of current place records. Map session fields, Adapter execution, host registration, and UI remain EVE-2C.
+EVE-2A freezes the first concrete Interface and EVE-2B implements its Event Runtime side: `EventTemplateV2` and `EventInstanceV1` remain Event Runtime truth; strict registries/local materialization, Simulation-owned durable instances, and optional bounded one-call text composition do not write Map or another domain owner. EVE-2C supplies the Map-owned `MapPlaceSessionCheckpointV1`, current stable place/session revision with manual or journey-arrival provenance, and exact `map.place_session.validate_event_resolution` validation for the three approved production-arrival-briefing choices with `canonicalMutation: none`. The read-only Seoul semantic overlay remains Map-pack content, not an Event Runtime branch or a migration of current place records.
 
-EVE-3 may add an Event Notebook view inside World Hub over existing runtime truth. Event-scoped review notes remain audit context; Reminders owns raw cues, Calendar owns confirmed plans, and Cheats owns any future privileged overrides.
+EVE-3 adds the Event Notebook inside World Hub as a deterministic read model over existing runtime truth; it does not persist a duplicate event projection. Simulation-owned notes carry stable event/source/module/target references, survive bounded log rotation and backup/restore, and remain authoritative audit context until explicit deletion. Notes and selection do not execute Adapters or mutate Event Instances, logs, proposals, or source records. Reminders owns raw cues, Calendar owns confirmed plans, and Cheats owns any future privileged overrides.
 
 ### Agenda Journey And Activity Session Collaboration
 

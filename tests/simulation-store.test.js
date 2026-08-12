@@ -13,6 +13,7 @@ import {
   SIMULATION_TRIGGER_SOURCE,
   useSimulationStore,
 } from '../src/stores/simulation'
+import { EVENT_NOTEBOOK_SOURCE_KIND } from '../src/lib/simulation/event-notebook'
 
 describe('simulation store', () => {
   beforeEach(() => {
@@ -160,6 +161,127 @@ describe('simulation store', () => {
     expect(restoredFromStorage.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.OFF)
     expect(restoredFromStorage.isModuleEventsEnabled('shopping')).toBe(false)
     expect(restoredFromStorage.createBackupSnapshot().settings.surpriseMode).toBe(SIMULATION_SURPRISE_MODE.OFF)
+  })
+
+  test('creates, updates, deletes, and restores event-scoped review notes without mutating sources', () => {
+    const store = useSimulationStore()
+    store.resetForTesting()
+    const log = store.recordEventLog({
+      id: 'event_log_notebook_1',
+      eventId: 'map.production_arrival_briefing.v1',
+      moduleKey: 'map',
+      targetId: 'place-session-1',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.MANUAL,
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      at: Date.now(),
+    })
+    const sourceBefore = structuredClone(log)
+    const eventRef = {
+      eventId: log.eventId,
+      sourceKind: EVENT_NOTEBOOK_SOURCE_KIND.EVENT_LOG,
+      sourceId: log.id,
+      moduleKey: log.moduleKey,
+      targetId: log.targetId,
+    }
+
+    const created = store.upsertEventReviewNote(
+      { eventRef, body: 'First line\n\nSecond line' },
+      { at: Date.now() + 1 },
+    )
+    expect(created).toMatchObject({ eventRef, body: 'First line\n\nSecond line' })
+    expect(store.eventReviewNoteCount).toBe(1)
+    expect(store.listEventReviewNotesForRef(eventRef)).toHaveLength(1)
+    expect(store.eventLogs[0]).toEqual(sourceBefore)
+
+    const updated = store.upsertEventReviewNote(
+      { id: created.id, eventRef, body: 'Updated audit note.' },
+      { at: Date.now() + 2 },
+    )
+    expect(updated).toMatchObject({
+      id: created.id,
+      body: 'Updated audit note.',
+      createdAt: created.createdAt,
+    })
+    expect(
+      store.upsertEventReviewNote({
+        id: created.id,
+        eventRef: { ...eventRef, sourceId: 'another-log' },
+        body: 'Cannot move a note to another event.',
+      }),
+    ).toBeNull()
+    expect(store.upsertEventReviewNote({ eventRef, body: '' })).toBeNull()
+    expect(store.upsertEventReviewNote({ eventRef, body: 'x'.repeat(4001) })).toBeNull()
+
+    const snapshot = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup({ simulation: snapshot })).toBe(true)
+    expect(store.eventReviewNotes).toEqual([updated])
+    expect(store.deleteEventReviewNote(updated.id)).toBe(true)
+    expect(store.deleteEventReviewNote(updated.id)).toBe(false)
+  })
+
+  test('keeps authoritative review notes after bounded runtime logs rotate', () => {
+    const store = useSimulationStore()
+    store.resetForTesting()
+    const firstLog = store.recordEventLog({
+      id: 'rotating_log_0',
+      eventId: 'simulation.session_tick.v1',
+      moduleKey: 'simulation',
+      targetId: 'global',
+      status: SIMULATION_EVENT_STATUS.SKIPPED,
+      at: 1,
+    })
+    const note = store.upsertEventReviewNote({
+      eventRef: {
+        eventId: firstLog.eventId,
+        sourceKind: EVENT_NOTEBOOK_SOURCE_KIND.EVENT_LOG,
+        sourceId: firstLog.id,
+        moduleKey: firstLog.moduleKey,
+        targetId: firstLog.targetId,
+      },
+      body: 'Preserve this review after the transient log window rotates.',
+    })
+
+    for (let index = 1; index <= 240; index += 1) {
+      store.recordEventLog({
+        id: `rotating_log_${index}`,
+        eventId: 'simulation.session_tick.v1',
+        moduleKey: 'simulation',
+        targetId: 'global',
+        status: SIMULATION_EVENT_STATUS.SKIPPED,
+        at: index + 1,
+      })
+    }
+
+    expect(store.eventLogs.some((log) => log.id === firstLog.id)).toBe(false)
+    expect(store.eventReviewNotes).toEqual([note])
+  })
+
+  test('migrates Simulation v1 and v2 envelopes to v3 review-note storage', () => {
+    const legacyData = {
+      eventLogs: [],
+      settings: { surpriseMode: SIMULATION_SURPRISE_MODE.BALANCED },
+    }
+    localStorage.setItem(
+      'schatphone:store:simulation',
+      JSON.stringify({ version: 1, savedAt: Date.now(), data: legacyData }),
+    )
+    let store = useSimulationStore()
+    expect(store.eventInstances).toEqual([])
+    expect(store.eventReviewNotes).toEqual([])
+
+    setActivePinia(createPinia())
+    localStorage.setItem(
+      'schatphone:store:simulation',
+      JSON.stringify({
+        version: 2,
+        savedAt: Date.now(),
+        data: { ...legacyData, eventInstances: [] },
+      }),
+    )
+    store = useSimulationStore()
+    expect(store.eventInstances).toEqual([])
+    expect(store.eventReviewNotes).toEqual([])
   })
 
   test('persists foreground session tick controls without creating event logs', () => {

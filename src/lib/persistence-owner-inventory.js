@@ -269,8 +269,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:simulation',
-    schemaVersion: 2,
-    legacySchemaVersions: [1],
+    schemaVersion: 3,
+    legacySchemaVersions: [1, 2],
     labelZh: '事件模拟',
     labelEn: 'Simulation events',
     sourceFile: 'src/stores/simulation.js',

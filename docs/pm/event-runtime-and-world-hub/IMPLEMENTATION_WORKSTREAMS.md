@@ -40,6 +40,8 @@ Current landed guardrail:
 - Relationship fact detail may show gate audit metadata read-only; World Hub must not become the main relationship classification editor.
 - World Hub now reviews pending generated Chat social proposals before high-risk communication states are applied in Chat.
 - World Pack nonstandard-app proposal review remains a WorldBook/appBinding seam; it must not create runtime triggers, event rules, or World Hub editing responsibilities.
+- EVE-3 adds the Event Notebook read model over Event Instances, logs, Chat social proposals, and Map Journey proposals, with all/pending/noted counts plus source/module/status filters and stable lineage detail.
+- Event-scoped notes are durable Simulation-owned audit context with explicit create/update/delete actions, V1/V2-to-V3 migration, backup/restore, and survival across bounded log rotation. Selection and notes do not retrigger events, execute Adapters, mutate source truth, create Reminders/Calendar plans, or grant Cheats authority.
 
 ## 4. Workstream D: Cheats / 金手指
 
@@ -63,10 +65,10 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - EVE-1 is landed as a pure bounded projection over existing Map Journey/Chat social proposal and runtime-log truth plus caller-supplied current source references; it adds no Event route and no duplicate persistent record
 - strict stable-place, provider-neutral geographic, and normalized-canvas anchors, expansion targets, allowlisted request descriptors, source staleness, bilingual/accessibility copy, and deterministic output are normalized in `src/lib/simulation/event-surface-projection.js`
 - host registration remains empty by default in `src/lib/simulation/event-surface-host-registry.js`; Map, Chat, Calendar, World Hub, and later callers must opt in with bounded source/state/anchor/expansion/action capabilities
-- EVE-2 lets Map own coordinate-card placement, clustering/stacking, selection, text fit, and return context while Event Runtime and source Modules keep their existing ownership
+- EVE-2C lets Map own coordinate-card placement, clustering/stacking, selection, text fit, and return context while Event Runtime and source Modules keep their existing ownership
 - before a location-aware family is promoted, name its authored activation scope, discoverability, accepted position provenance, place-entry requirement, module permission, intensity behavior, and no-event path; do not overload EVE-1 stale-source availability with eligibility
 - ordinary place focus and event-pin selection remain distinct host paths; a place card has no permanent Event button and Map `Enter` remains a Map-owned transition
-- EVE-3 adds event history, pending review, explanations, and event-scoped notes inside World Hub; it does not create a Reminders queue or Cheats editing authority
+- EVE-3 is complete: Event Notebook reads owner/runtime truth through stable refs, fails safely when linked hot records rotate, and retains exact notes without becoming a second event store, Reminders queue, Calendar plan list, or Cheats editing surface
 - richer expansion uses the Mini Scene Interface only after its separate persistence, Settings, and Presenter gates
 
 ## 7. Workstream G: Map Journey Checkpoint Collaboration
@@ -101,7 +103,7 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - keep place/scene imagery in Map/world asset packs where practical; Event Runtime stores only stable references and bounded semantic media intent
 - preserve later CG as a separate, independently permissioned image-generation/media-resolution Adapter; do not add V1 provider fields, automatic generation, empty controls, or image payload persistence
 - do not implement parallel non-K-pop content packs in V1, but keep templates and capabilities independent of K-pop names, exact Seoul place IDs, and icons
-- EVE-2C Map provenance/session fields and the first Map vertical slice still require separate acceptance after the completed EVE-2B runtime foundation
+- EVE-2C is complete: Map V3 owns provenance/place sessions and the first production-arrival-briefing vertical slice through the single registered Map host; additional hosts and event families remain separately gated under EVE-4
 
 ## 10. Semantic Guardrails
 

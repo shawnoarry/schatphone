@@ -113,6 +113,8 @@ If an event change needs visual work, first decide visual ownership through `doc
 26. The first product content target is the current modern K-pop realism world, but engine templates, place capabilities, instance lifecycle, choice IDs, and effect requests remain world-neutral. Do not build parallel world packs before the first K-pop vertical slice is accepted.
 27. V1 runtime AI is optional and text-only. It cannot create executable actions, effect identifiers, unbounded numbers, image/audio payloads, external media URLs, or direct domain writes; accepted normalized text is cached per Event Instance and always has a local fallback.
 28. Place/scene imagery primarily follows Map/world asset packs. Event Runtime stores stable references and minimal semantic media intent only. Later CG uses a separately permissioned image-generation/media-resolution Adapter and is not a reason to add V1 provider fields or empty controls.
+29. EVE-3 Event Notebook composition must remain a deterministic read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals. Do not persist a second event projection or use Notebook selection as authorization.
+30. Event-scoped notes belong to Simulation durability, carry stable source references, survive bounded log rotation and backup/restore, and change only through explicit note create/update/delete actions. They are not Reminders, Calendar plans, source-owner mutations, or Cheats controls.
 
 ## 4. Event Entry Audit
 
@@ -253,7 +255,7 @@ Use this sequence for event work unless the user asks for a narrower path:
 7. Choose skills from Section 6.1 before editing.
 8. Run the event entry audit.
 9. Prefer the smallest useful module adapter before broad cross-module orchestration.
-10. Roadmap 4.14 EVE-1's pure projection/host-registration contract is landed, EVE-2A has frozen the reusable contracts/fixtures, and EVE-2B has implemented strict runtime normalizers/registries, durable instances, local materialization, and optional one-call cached text composition. Keep EVE-1 empty-by-default and free of persistence/effect authority; EVE-2C Map provenance/session and UI still require separate implementation approval.
+10. Roadmap 4.14 EVE-1's pure projection/host-registration contract, EVE-2A frozen contracts/fixtures, EVE-2B reusable runtime, EVE-2C first Map/K-pop vertical slice, and EVE-3 World Hub Event Notebook are landed. Keep projections free of persistence/effect authority, preserve the single Map host and frozen archetype, and keep Notebook notes event-scoped without Reminder/Calendar/Cheats authority. EVE-4 and EVE-5 require separate approval.
 11. Add deterministic tests before adding random trigger behavior.
 12. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
 13. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
