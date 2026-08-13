@@ -230,6 +230,9 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   ).toBeVisible()
 
   await navigateInsideUnlockedApp(page, '/contacts')
+  await page.getByTestId('contacts-row-1').click()
+  await expect(page.getByTestId('contacts-role-detail')).toContainText('Eva')
+  await page.getByTestId('contacts-open-memories-sheet').click()
   const memoryRow = page.getByTestId(`contacts-memory-open-${relationshipMemoryKey}`)
   await expect(memoryRow).toContainText('Gift purchased for Eva')
   await expect(memoryRow).toContainText('2 item(s)')
