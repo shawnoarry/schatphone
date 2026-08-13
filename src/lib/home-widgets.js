@@ -52,6 +52,17 @@ export const BUILT_IN_HOME_WIDGETS = Object.freeze([
     nameEn: 'System Status',
   },
   {
+    id: 'breath_halo',
+    variant: 'breath_halo',
+    size: '2x2',
+    icon: 'fas fa-circle-dot',
+    preview: 'breath-halo',
+    family: 'spectrum',
+    interaction: 'cycle_breath',
+    nameZh: '潮汐呼吸',
+    nameEn: 'Tidal Breath',
+  },
+  {
     id: 'quick_heart',
     variant: 'heart',
     size: '1x1',

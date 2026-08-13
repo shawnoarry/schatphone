@@ -25,6 +25,7 @@ const props = defineProps({
   moodIndex: { type: Number, default: 0 },
   selectedDayIndex: { type: Number, default: 3 },
   sceneMode: { type: String, default: 'day' },
+  breathIndex: { type: Number, default: 0 },
   photoUrls: { type: Array, default: () => [] },
   ariaLabel: { type: String, default: '' },
 })
@@ -44,6 +45,18 @@ const focusTime = computed(() => {
   return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
 })
 const mood = computed(() => ['sun', 'cloud', 'rain', 'calm'][Math.abs(props.moodIndex) % 4])
+const BREATH_MODES = Object.freeze([
+  { id: 'calm', zh: '放松', en: 'RELAX', seconds: 4 },
+  { id: 'balance', zh: '平衡', en: 'BALANCE', seconds: 6 },
+  { id: 'deep', zh: '深眠', en: 'DEEP', seconds: 8 },
+])
+const breathModeIndex = computed(() => Math.abs(props.breathIndex) % BREATH_MODES.length)
+const breathMode = computed(() => BREATH_MODES[breathModeIndex.value].id)
+const breathLabel = computed(() => {
+  const mode = BREATH_MODES[breathModeIndex.value]
+  return localize(mode.zh, mode.en)
+})
+const breathSeconds = computed(() => `${BREATH_MODES[breathModeIndex.value].seconds}s`)
 const weekdays = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const waveBars = [20, 34, 54, 28, 68, 42, 82, 52, 30, 62, 88, 48, 72, 38, 58, 24, 44, 76, 46, 30, 66, 40, 22]
 
@@ -72,6 +85,7 @@ const handleRootKeydown = (event) => {
       variant === 'weather' ? `is-weather-${weatherMode}` : null,
       variant === 'photo_note' ? `is-mood-${mood}` : null,
       variant === 'ambient_scene' ? `is-scene-${sceneMode}` : null,
+      variant === 'breath_halo' ? `is-breath-${breathMode}` : null,
       {
         'is-compact': compact,
         'is-interactive': interactive,
@@ -174,6 +188,28 @@ const handleRootKeydown = (event) => {
         <span class="is-left"></span><span class="is-right"></span>
       </div>
       <div class="widget-shutter-footer"><span>{{ localize('今日心情', 'MOOD') }}</span><i></i><b>{{ ['01', '02', '03', '04'][Math.abs(moodIndex) % 4] }}</b></div>
+    </template>
+
+    <template v-else-if="variant === 'breath_halo'">
+      <div class="widget-breath-stage" aria-hidden="true">
+        <span
+          v-for="index in 3"
+          :key="index"
+          class="widget-breath-ring"
+          :style="{ '--ring-index': index }"
+        ></span>
+        <i class="widget-breath-orb"></i>
+        <b class="widget-breath-star is-one"></b>
+        <b class="widget-breath-star is-two"></b>
+      </div>
+      <div class="widget-breath-copy">
+        <small>{{ breathLabel }}</small>
+        <strong>{{ breathSeconds }}</strong>
+        <span>{{ localize('轻触切换潮汐', 'tap to shift the tide') }}</span>
+      </div>
+      <div class="widget-breath-dots" aria-hidden="true">
+        <i v-for="index in 3" :key="index" :class="{ 'is-active': index - 1 === breathModeIndex }"></i>
+      </div>
     </template>
 
     <template v-else-if="variant === 'commute_strip'">
@@ -354,6 +390,23 @@ const handleRootKeydown = (event) => {
 .widget-shutter-window > span { position: absolute; top: 0; bottom: 0; width: 34%; z-index: 2; background: repeating-linear-gradient(90deg, #f4f0e7 0 5px, #d8d2c7 6px 7px); border: 1px solid rgba(78,80,76,.16); transition: transform 420ms cubic-bezier(.2,.9,.2,1); }.widget-shutter-window .is-left { left: 0; transform: translateX(-78%); }.widget-shutter-window .is-right { right: 0; transform: translateX(78%); }.is-mood-cloud .widget-shutter-window .is-left, .is-mood-cloud .widget-shutter-window .is-right { transform: translateX(0); }
 .widget-shutter-footer { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 7px; font-size: 7px; font-weight: 750; }.widget-shutter-footer i { width: 14px; aspect-ratio: 1; border-radius: 50%; background: #a895c4; border: 2px solid #eee9df; box-shadow: 0 2px 4px rgba(0,0,0,.2); }.widget-shutter-footer b { font-size: 8px; color: #8a8a84; }
 
+.is-breath_halo { --breath-glow: #6ee0db; --breath-halo: rgba(110, 224, 219, .38); --breath-speed: 4s; display: grid; grid-template-rows: minmax(0,1fr) auto; padding: 10px; color: #eef7f8; background: radial-gradient(circle at 24% 14%, rgba(110,224,219,.14), transparent 38%), linear-gradient(150deg, #1b2631, #0a0f16 74%); transition: background 480ms ease; }
+.is-breath-balance { --breath-glow: #c3a5f5; --breath-halo: rgba(195,165,245,.36); --breath-speed: 6s; background: radial-gradient(circle at 76% 14%, rgba(195,165,245,.16), transparent 38%), linear-gradient(150deg, #221d33, #0c0a16 74%); }
+.is-breath-deep { --breath-glow: #7fa9e8; --breath-halo: rgba(127,169,232,.36); --breath-speed: 8s; background: radial-gradient(circle at 30% 82%, rgba(127,169,232,.14), transparent 42%), linear-gradient(150deg, #16202f, #070b12 78%); }
+.widget-breath-stage { position: relative; min-height: 0; display: grid; place-items: center; }
+.widget-breath-ring { position: absolute; width: 32%; aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--breath-glow); opacity: 0; animation: widget-breath-ring var(--breath-speed) ease-out infinite; animation-delay: calc(var(--ring-index) * var(--breath-speed) / -3); transition: border-color 480ms ease; }
+.widget-breath-orb { position: relative; width: 32%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.94), var(--breath-glow) 44%, rgba(10,16,22,.4) 80%); box-shadow: 0 0 16px var(--breath-halo), 0 0 42px var(--breath-halo); animation: widget-breath-orb var(--breath-speed) ease-in-out infinite; transition: background 480ms ease, box-shadow 480ms ease; }
+.widget-breath-star { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #fff; box-shadow: 0 0 6px var(--breath-glow); animation: widget-breath-twinkle 2.6s ease-in-out infinite; }
+.widget-breath-star.is-one { left: 16%; top: 20%; }
+.widget-breath-star.is-two { right: 14%; bottom: 24%; animation-delay: -1.3s; }
+.widget-breath-copy { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 0 8px; }
+.widget-breath-copy small { font-size: 7px; font-weight: 800; color: var(--breath-glow); transition: color 480ms ease; }
+.widget-breath-copy strong { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 21px; line-height: .9; }
+.widget-breath-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 7px; color: rgba(226,240,242,.55); }
+.widget-breath-dots { position: absolute; right: 10px; top: 10px; display: flex; gap: 4px; }
+.widget-breath-dots i { width: 4px; height: 4px; border-radius: 50%; background: rgba(235,245,246,.3); transition: 300ms ease; }
+.widget-breath-dots i.is-active { background: var(--breath-glow); box-shadow: 0 0 6px var(--breath-glow); }
+
 .is-commute_strip { display: grid; grid-template-columns: auto minmax(80px,1fr) auto auto; align-items: center; gap: 8px; padding: 7px 10px; color: #25292b; background: linear-gradient(145deg, #f6f2ea, #e1ddd3); }
 .widget-rail-home { color: #e75c46; font-size: 12px; }.widget-rail-line { position: relative; height: 26px; display: flex; align-items: center; justify-content: space-between; }.widget-rail-line::before { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: #444a4c; }.widget-rail-line > i { position: relative; width: 6px; height: 6px; border-radius: 50%; background: #454b4d; }.widget-rail-train { position: absolute; left: 36%; width: 41px; height: 22px; display: flex; align-items: center; justify-content: center; gap: 3px; border-radius: 8px; background: #e8e5dd; border: 1px solid #afb2ad; box-shadow: 0 4px 7px rgba(33,38,39,.18); transition: left 420ms ease; }.is-interactive:hover .widget-rail-train { left: 58%; }.widget-rail-train b { width: 8px; height: 6px; border-radius: 2px; background: #214d7e; }.widget-rail-copy { display: grid; }.widget-rail-copy strong { font-size: 12px; }.widget-rail-copy small { font-size: 7px; color: #6c706f; }.widget-rail-target { width: 12px; aspect-ratio: 1; border: 3px solid #e75c46; border-radius: 50%; }
 
@@ -369,6 +422,7 @@ const handleRootKeydown = (event) => {
 .home-widget-card.built-in-widget-visual.is-focus_pulse,
 .home-widget-card.built-in-widget-visual.is-daily_steps,
 .home-widget-card.built-in-widget-visual.is-photo_note,
+.home-widget-card.built-in-widget-visual.is-breath_halo,
 .home-widget-card.built-in-widget-visual.is-commute_strip,
 .home-widget-card.built-in-widget-visual.is-today_agenda,
 .home-widget-card.built-in-widget-visual.is-week_rhythm,
@@ -388,7 +442,11 @@ const handleRootKeydown = (event) => {
 
 .is-world_pulse { display:grid;grid-template-columns:minmax(86px,.9fr) minmax(0,1.25fr);grid-template-rows:minmax(0,1fr) auto;gap:8px;padding:9px;color:#252b2d;background:linear-gradient(145deg,#f8f8f5,#e8e8e3); }.widget-world-image{position:relative;min-height:0;display:grid;align-content:end;padding:8px;border-radius:10px;color:#fff;background:linear-gradient(180deg,transparent 34%,rgba(10,30,37,.7)),linear-gradient(145deg,#80b4cb,#dbe1d2 48%,#4b796e);overflow:hidden}.widget-world-image::before{content:'';position:absolute;left:43%;bottom:0;width:9px;height:72%;background:#e95743;clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);opacity:.82}.widget-world-image span,.widget-world-image strong{position:relative;z-index:1}.widget-world-image span{font-size:8px;font-weight:800}.widget-world-image strong{font-size:12px}.widget-world-events{display:grid;align-content:start;gap:5px}.widget-world-events header{display:flex;justify-content:space-between;align-items:center}.widget-world-events header strong{font-size:8px}.widget-world-events header i{width:5px;height:5px;border-radius:50%;background:#ef5b47}.widget-world-events article{display:grid;grid-template-columns:6px minmax(0,1fr);gap:6px;align-items:center;padding:5px 6px;border-radius:7px;background:#fff;box-shadow:0 2px 5px rgba(42,47,48,.09)}.widget-world-events article>b{width:5px;height:15px;border-radius:99px}.widget-world-events .is-coral{background:#ee5c47}.widget-world-events .is-lilac{background:#a26bb8}.widget-world-events .is-blue{background:#3d86bd}.widget-world-events article span{display:grid;min-width:0}.widget-world-events article strong{font-size:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.widget-world-events article small{font-size:6px;color:#787d7e}.widget-world-people{grid-column:1/-1;display:flex;align-items:center}.widget-world-people i{width:16px;height:16px;margin-left:-3px;border:2px solid #f5f5f1;border-radius:50%;background:linear-gradient(145deg,#d59d8f,#394d54)}.widget-world-people i:first-child{margin-left:0}.widget-world-people span{margin-left:5px;font-size:7px;color:#6d7273}
 
-.is-compact { border-radius: 12px; padding: 6px; }.is-compact .widget-prism-copy strong{font-size:17px}.is-compact .widget-prism-copy span,.is-compact .widget-prism-copy small{font-size:6px}.is-compact .widget-orbit-date{width:42px}.is-compact .widget-orbit-date strong{font-size:16px}.is-compact .widget-paper-cover{border-width:3px}.is-compact .widget-paper-player-copy strong{font-size:10px}.is-compact .widget-paper-player-copy small,.is-compact .widget-paper-player-copy span{font-size:6px}.is-compact .widget-media-controls{grid-template-columns:repeat(3,20px)}.is-compact .widget-media-controls button,.is-compact .widget-media-controls>span{width:20px;height:20px}.is-compact .widget-paper-week-head,.is-compact .widget-memory-note,.is-compact .widget-world-people{display:none}.is-compact.is-week_rhythm{grid-template-rows:minmax(0,1fr) 22px}.is-compact .widget-paper-week-grid{gap:3px}.is-compact .widget-world-events article:nth-of-type(3){display:none}.is-compact .widget-world-events article{padding:3px}.is-compact .widget-ambient-copy span{display:none}
+.is-compact { border-radius: 12px; padding: 6px; }.is-compact .widget-prism-copy strong{font-size:17px}.is-compact .widget-prism-copy span,.is-compact .widget-prism-copy small{font-size:6px}.is-compact .widget-orbit-date{width:42px}.is-compact .widget-orbit-date strong{font-size:16px}.is-compact .widget-paper-cover{border-width:3px}.is-compact .widget-paper-player-copy strong{font-size:10px}.is-compact .widget-paper-player-copy small,.is-compact .widget-paper-player-copy span{font-size:6px}.is-compact .widget-media-controls{grid-template-columns:repeat(3,20px)}.is-compact .widget-media-controls button,.is-compact .widget-media-controls>span{width:20px;height:20px}.is-compact .widget-paper-week-head,.is-compact .widget-memory-note,.is-compact .widget-world-people{display:none}.is-compact.is-week_rhythm{grid-template-rows:minmax(0,1fr) 22px}.is-compact .widget-paper-week-grid{gap:3px}.is-compact .widget-world-events article:nth-of-type(3){display:none}.is-compact .widget-world-events article{padding:3px}.is-compact .widget-ambient-copy span{display:none}.is-compact .widget-breath-copy strong{font-size:15px}.is-compact .widget-breath-copy span{display:none}
+
+@keyframes widget-breath-ring { 0% { transform: scale(.6); opacity: 0 } 18% { opacity: .8 } 100% { transform: scale(2.2); opacity: 0 } }
+@keyframes widget-breath-orb { 0%,100% { transform: scale(.84) } 42%,58% { transform: scale(1.05) } }
+@keyframes widget-breath-twinkle { 0%,100% { opacity: .25; transform: scale(.7) } 50% { opacity: 1; transform: scale(1.2) } }
 
 @keyframes widget-wave { from { transform:scaleY(.58);opacity:.62 } to { transform:scaleY(1);opacity:1 } }
 @keyframes widget-focus-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }

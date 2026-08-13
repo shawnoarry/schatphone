@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
@@ -165,6 +165,7 @@ const widgetWeatherMode = ref('sun')
 const widgetMoodIndex = ref(0)
 const widgetSelectedDayIndex = ref(3)
 const widgetSceneMode = ref('day')
+const widgetBreathIndex = ref(0)
 const widgetFocusActive = ref(false)
 const widgetFocusSeconds = ref(25 * 60)
 const folderPointerId = ref(null)
@@ -1092,6 +1093,8 @@ const handleBuiltInWidgetActivate = (tileId) => {
     openWidgetApp(CONTROL_CENTER_HOME_APP_ID)
   } else if (interaction === 'cycle_day') {
     widgetSelectedDayIndex.value = (widgetSelectedDayIndex.value + 1) % 7
+  } else if (interaction === 'cycle_breath') {
+    widgetBreathIndex.value = (widgetBreathIndex.value + 1) % 3
   }
   maybeVibrate(6)
 }
@@ -2399,6 +2402,7 @@ onBeforeUnmount(() => {
                   :mood-index="widgetMoodIndex"
                   :selected-day-index="widgetSelectedDayIndex"
                   :scene-mode="widgetSceneMode"
+                  :breath-index="widgetBreathIndex"
                   :photo-urls="memoryBoardPhotoUrls"
                   @activate="handleBuiltInWidgetActivate(placement.tileId)"
                   @action="handleBuiltInWidgetAction(placement.tileId, $event)"

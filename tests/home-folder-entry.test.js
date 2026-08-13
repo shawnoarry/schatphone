@@ -721,6 +721,44 @@ describe('Home folder entries', () => {
     wrapper.unmount()
   })
 
+  test('cycles the tidal breath widget pace on Home', async () => {
+    const router = createTestRouter()
+    await router.push('/home')
+    await router.isReady()
+    const store = useSystemStore()
+    store.setHomeWidgetPages([['breath_halo'], [], [], [], []])
+    store.setHomeLayoutTemplate(0, 'layout-c')
+    expect(store.setHomeLayoutSlotPlacement(0, 'c-top-left', 'breath_halo')).toBe(true)
+
+    const wrapper = mount(HomeView, {
+      props: {
+        currentDate: 'Jan 1',
+        currentTime: '09:00',
+      },
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushPromises()
+
+    const breath = wrapper.find('[data-home-tile-id="breath_halo"] .built-in-widget-visual')
+    expect(breath.text()).toContain('4s')
+    expect(breath.classes()).toContain('is-breath-calm')
+
+    await breath.trigger('click')
+    expect(breath.text()).toContain('6s')
+    expect(breath.classes()).toContain('is-breath-balance')
+
+    await breath.trigger('click')
+    expect(breath.text()).toContain('8s')
+    expect(breath.classes()).toContain('is-breath-deep')
+
+    await breath.trigger('click')
+    expect(breath.text()).toContain('4s')
+
+    wrapper.unmount()
+  })
+
   test('opens Map from the commute rail widget', async () => {
     const router = createTestRouter()
     await router.push('/home')
