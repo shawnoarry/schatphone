@@ -105,6 +105,11 @@ const normalizeText = (value, fallback = '', maxLength = 500) => {
   return text.slice(0, maxLength)
 }
 
+const normalizeWorldContextText = (value, fallback = '') => {
+  const text = typeof value === 'string' ? value.trim() : ''
+  return text || fallback
+}
+
 const normalizeId = (value, fallback = '') => {
   const text = normalizeText(value, fallback, 160).toLowerCase()
   const normalized = text.replace(/[^a-z0-9_:-]+/g, '_').replace(/^_+|_+$/g, '')
@@ -164,7 +169,7 @@ export const buildWorldAppTemplateExtractionPrompt = ({ worldContextText = '' } 
     'Whitelist:',
     templateLines,
     'World context:',
-    normalizeText(worldContextText, '(empty)', 6000),
+    normalizeWorldContextText(worldContextText, '(empty)'),
   ].join('\n')
 }
 

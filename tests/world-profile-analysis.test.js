@@ -18,6 +18,15 @@ describe('world profile analysis', () => {
     expect(prompt).toContain('Do not enable any pack')
   })
 
+  test('keeps the complete world context in the analysis prompt', () => {
+    const tail = 'WORLD_PROFILE_CONTEXT_TAIL'
+    const prompt = buildWorldProfileAnalysisPrompt({
+      worldContextText: `${'context '.repeat(900)}${tail}`,
+    })
+
+    expect(prompt).toContain(tail)
+  })
+
   test('parses assistant JSON into a normalized world profile', () => {
     const profile = parseWorldProfileAnalysisResponse({
       choices: [

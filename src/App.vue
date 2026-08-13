@@ -6,6 +6,7 @@ import AppDialogHost from './components/AppDialogHost.vue'
 import MusicMiniPlayer from './components/MusicMiniPlayer.vue'
 import PersistenceRecoverySheet from './components/PersistenceRecoverySheet.vue'
 import { useSystemStore } from './stores/system'
+import { useBookStore } from './stores/book'
 import { useChatStore } from './stores/chat'
 import { useGalleryStore } from './stores/gallery'
 import { useMapStore } from './stores/map'
@@ -44,6 +45,7 @@ import {
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
+const bookStore = useBookStore()
 const chatStore = useChatStore()
 const galleryStore = useGalleryStore()
 const mapStore = useMapStore()
@@ -634,6 +636,7 @@ const ensureSimulationForegroundTickLifecycle = () => {
     foodDeliveryStore,
     chatStore,
     systemStore,
+    bookStore,
     route,
     documentRef: typeof document !== 'undefined' ? document : null,
     writeReport: (report) => {

@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 import {
+  buildWorldServiceTemplateExtractionPrompt,
   buildWorldServiceAccountTemplateFromProposal,
   buildWorldServiceTemplateProposalReview,
   extractWorldServiceTemplateProposals,
@@ -25,6 +26,16 @@ const survivalPack = {
 }
 
 describe('world service template proposals', () => {
+  test('keeps the complete world context in the extraction prompt', () => {
+    const tail = 'WORLD_SERVICE_CONTEXT_TAIL'
+    const prompt = buildWorldServiceTemplateExtractionPrompt({
+      worldContextText: `${'context '.repeat(900)}${tail}`,
+      worldPack: survivalPack,
+    })
+
+    expect(prompt).toContain(tail)
+  })
+
   test('separates confirmable service candidates from unsafe proposals', () => {
     const review = buildWorldServiceTemplateProposalReview({
       worldPack: survivalPack,

@@ -14,6 +14,7 @@ import {
   useSimulationStore,
 } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
+import { useBookStore } from '../src/stores/book'
 
 const createFakeControllerFactory = () => {
   const controllers = []
@@ -81,6 +82,7 @@ describe('foreground session tick lifecycle', () => {
   test('starts with normalized interval only when the phone is foreground and unlocked', () => {
     const simulationStore = useSimulationStore()
     const systemStore = useSystemStore()
+    const bookStore = useBookStore()
     systemStore.unlockPhone()
     simulationStore.setForegroundSessionTickEnabled(true)
     simulationStore.setForegroundSessionTickIntervalMs(1)
@@ -89,6 +91,7 @@ describe('foreground session tick lifecycle', () => {
     const lifecycle = createForegroundSessionTickLifecycle({
       simulationStore,
       systemStore,
+      bookStore,
       route: { path: '/home' },
       documentRef: { hidden: false, visibilityState: 'visible' },
       createController: factory,
@@ -100,6 +103,8 @@ describe('foreground session tick lifecycle', () => {
     expect(result.intervalMs).toBe(SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS)
     expect(factory).toHaveBeenCalledTimes(1)
     expect(controllers[0].options.intervalMs).toBe(SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS)
+    expect(controllers[0].options.systemStore).toBe(systemStore)
+    expect(controllers[0].options.bookStore).toBe(bookStore)
     expect(lifecycle.getState().running).toBe(true)
   })
 

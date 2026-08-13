@@ -45,11 +45,55 @@ describe('Book and WorldBook source linking', () => {
     })
 
     expect(context.worldview).toContain('Linked World: Linked world rules.')
-    expect(context.worldview).toContain('Fallback city baseline.')
+    expect(context.worldview).not.toContain('Fallback city baseline.')
     expect(context.worldview).not.toContain('Not selected.')
     expect(context.linkedBookSourceCount).toBe(1)
     expect(context.activeBookSourceCount).toBe(1)
     expect(context.missingBookSourceCount).toBe(0)
+  })
+
+  test('keeps all enabled Book manuscript text without falling back or truncating the tail', () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const firstTail = 'FIRST_MANUSCRIPT_TAIL'
+    const secondTail = 'SECOND_MANUSCRIPT_TAIL'
+    systemStore.setGlobalWorldview('Old fallback must stay inactive.')
+
+    const firstAsset = bookStore.createAsset({
+      id: 'asset_long_world_a',
+      title: 'Long World A',
+      content: `${'A'.repeat(3200)}${firstTail}`,
+    })
+    const secondAsset = bookStore.createAsset({
+      id: 'asset_long_world_b',
+      title: 'Long World B',
+      content: `${'B'.repeat(3200)}${secondTail}`,
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: firstAsset.id,
+      role: 'main_worldview',
+      priority: 1,
+      sourceFingerprint: firstAsset.contentFingerprint,
+      ...buildWorldBookSourceSnapshot(firstAsset.content),
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: secondAsset.id,
+      role: 'world_rule',
+      priority: 2,
+      sourceFingerprint: secondAsset.contentFingerprint,
+      ...buildWorldBookSourceSnapshot(secondAsset.content),
+    })
+
+    const context = resolveWorldContextForConsumer({
+      systemStore,
+      bookStore,
+      consumer: 'chat',
+    })
+
+    expect(context.worldview).toContain(firstTail)
+    expect(context.worldview).toContain(secondTail)
+    expect(context.worldview).not.toContain('Old fallback must stay inactive.')
+    expect(context.worldviewCharCount).toBeGreaterThan(6400)
   })
 
   test('disabled Book source is excluded from world context', () => {

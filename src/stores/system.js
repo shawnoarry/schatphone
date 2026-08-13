@@ -386,11 +386,9 @@ const DEFAULT_API_MODEL =
     ? import.meta.env.VITE_API_MODEL.trim() || 'gpt-4o-mini'
     : 'gpt-4o-mini'
 const DEFAULT_API_RESOLVED_KIND = detectApiKindFromUrl(DEFAULT_API_URL)
-const MAX_GLOBAL_WORLDVIEW_CHARS = 6000
 const MAX_KNOWLEDGE_POINTS = 200
 const MAX_KNOWLEDGE_POINT_ID_CHARS = 64
 const MAX_KNOWLEDGE_POINT_TITLE_CHARS = 80
-const MAX_KNOWLEDGE_POINT_CONTENT_CHARS = 1600
 const MAX_KNOWLEDGE_POINT_TAGS = 12
 const MAX_KNOWLEDGE_POINT_TAG_CHARS = 24
 const KNOWLEDGE_POINT_MATCH_STOP_WORDS = new Set([
@@ -710,10 +708,7 @@ const createKnowledgePointId = () => `kp_${Date.now()}_${Math.random().toString(
 
 const normalizeWorldText = (value, fallback = '') => {
   if (typeof value !== 'string') return typeof fallback === 'string' ? fallback : ''
-  const trimmed = value.trim()
-  return trimmed.length <= MAX_GLOBAL_WORLDVIEW_CHARS
-    ? trimmed
-    : trimmed.slice(0, MAX_GLOBAL_WORLDVIEW_CHARS)
+  return value.trim()
 }
 
 const normalizeKnowledgePointTags = (rawTags) => {
@@ -735,7 +730,7 @@ const normalizeKnowledgePoint = (rawPoint = {}, fallbackIndex = 0) => {
       : ''
   const content =
     typeof source.content === 'string'
-      ? source.content.trim().slice(0, MAX_KNOWLEDGE_POINT_CONTENT_CHARS)
+      ? source.content.trim()
       : ''
   if (!title && !content) return null
 
@@ -773,9 +768,10 @@ const normalizeKnowledgePointList = (rawPoints) => {
   return output.slice(0, MAX_KNOWLEDGE_POINTS)
 }
 
-const normalizeKnowledgePointMatchValue = (value, maxLength = 240) => {
+const normalizeKnowledgePointMatchValue = (value, maxLength) => {
   if (typeof value !== 'string') return ''
-  return value.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, maxLength)
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, ' ')
+  return Number.isFinite(maxLength) ? normalized.slice(0, maxLength) : normalized
 }
 
 const tokenizeKnowledgePointMatchText = (value) => {
@@ -2654,7 +2650,6 @@ export const useSystemStore = defineStore('system', () => {
         const title = normalizeKnowledgePointMatchValue(item.title, MAX_KNOWLEDGE_POINT_TITLE_CHARS)
         const content = normalizeKnowledgePointMatchValue(
           item.content,
-          MAX_KNOWLEDGE_POINT_CONTENT_CHARS,
         )
         const tags = normalizeEncyclopediaEntryTags(item.tags).map((tag) => tag.toLowerCase())
         let score = 0

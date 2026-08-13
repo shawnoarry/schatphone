@@ -1,6 +1,6 @@
 # World Setting Architecture Contract
 
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Status: `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`
 
@@ -70,6 +70,7 @@ The current implementation is a valid single-world Stage W1 compatibility baseli
 | `user.activeWorldPackId` selects the active capability Pack. | `src/stores/system.js` | This field remains a Pack identifier only. |
 | WorldBook and Contacts read current identity and enabled templates through `world-interface.js`. | `src/views/WorldBookView.vue`, `src/views/ContactsView.vue` | Pack changes no longer change displayed world identity or template selection. |
 | `resolveCurrentWorldContext()` returns `legacy_single_world` plus separate narrative, encyclopedia, profile, capability, and diagnostic projections. | `src/lib/world-interface.js` | Consumers no longer need to interpret Pack state as world identity. |
+| Enabled readable Book source links resolve in priority order as the complete active narrative. Base worldview text is used only when no enabled readable Book text resolves. | `src/lib/world-interface.js`, `src/lib/book-text-schema.js` | Active Book text is not mixed with stale fallback text and is not silently truncated by the application; bounded cards and change-review previews are presentation only. |
 | `worldBookSourceLinks` has no `worldId` and is stored as one current-save global list. | `src/lib/book-text-schema.js`, `src/stores/system.js` | It is the source-link set for the one current world, not a multi-world model. |
 | Structured encyclopedia entries are a current-save global list with item-level `enabled`. | `src/stores/system.js` | Their current enabled state is single-world compatibility state. |
 | Historical world profile templates may contain Pack-shaped `worldId` values; new W1 writes use the stable `legacy_single_world` compatibility scope sentinel. | `src/views/WorldBookView.vue`, `src/views/ContactsView.vue` | Existing values remain reviewable and require an explicit W2 migration; no active Pack ID is written by new flows. |
@@ -153,6 +154,14 @@ The Interface must support at least:
 3. a readiness/diagnostic projection for the World Setting Workspace;
 4. immutable return values or defensive copies so callers cannot mutate owner state.
 
+Narrative resolution rules:
+
+1. enabled readable Book sources are concatenated in explicit priority order and replace the compatibility fallback;
+2. fallback text is used only when no enabled readable Book source resolves to content;
+3. Book bodies, fallback worldview text, and structured encyclopedia bodies have no application-level character limit in storage or active context resolution;
+4. a consumer may abbreviate an on-screen preview, but it cannot silently shorten the saved or effective text;
+5. long-context provider limits must surface as an explicit request failure or a separately designed user-visible processing flow, never as silent source deletion.
+
 ### 5.2 Write Interfaces
 
 WorldBook commands remain explicit and user-confirmed:
@@ -176,7 +185,7 @@ Existing profile-template values that use a Pack ID remain discoverable through 
 
 1. A valid current world may have zero enabled Packs.
 2. The built-in `default_world` Pack means no extra Pack capabilities in compatibility code. It is not canonical world identity.
-3. A valid current world may have zero Book source links and use only explicit fallback text, or may have multiple independent links.
+3. A valid current world may have zero Book source links and use only explicit fallback text, or may have multiple independent links. When at least one enabled readable link resolves, its complete text replaces rather than mixes with fallback text.
 4. A valid current world may select any Book encyclopedia subset, including zero.
 5. Structured encyclopedia entries, Book encyclopedia manuscripts, and profile templates are separate optional layers.
 6. Pack catalog presence, compatibility recommendation, enablement, or activation cannot toggle any setting layer.
@@ -202,7 +211,7 @@ Existing profile-template values that use a Pack ID remain discoverable through 
 | World-capability adapters | Confirmed Pack capability projection | Their source-module records and user actions. |
 | Mini Scene Module | Explicit world identity, resolved content/profile references, caller request | Validation, transforms, artifact/presenter/fallback flow under its separate contract. |
 
-Every consumer declares a stable `consumerKey`. Consumer-specific limits and projections live behind the Interface. Consumers must not independently concatenate Book text, filter templates by `activeWorldPackId`, or read Pack content-reference fields as activation truth.
+Every consumer declares a stable `consumerKey`. Consumer-specific projections live behind the Interface. Consumers must not independently concatenate or truncate Book text, filter templates by `activeWorldPackId`, or read Pack content-reference fields as activation truth. Map and foreground Event Runtime resolve the current Book-backed context at the moment they evaluate an action or tick, so an accepted Book change does not require an app restart or controller rebuild.
 
 ## 8. Backup, Restore, And Portable Export
 

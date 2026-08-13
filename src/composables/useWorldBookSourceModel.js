@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import {
   buildWorldBookSourceSnapshot,
+  computeBookContentFingerprint,
   diffWorldBookSourceText,
   resolveWorldBookSourceText,
 } from '../lib/book-text-schema'
@@ -105,6 +106,9 @@ export function useWorldBookSourceModel({
       const currentSourceText = resolveWorldBookSourceText(asset, link.sectionIds)
       const snapshotText = typeof link.sourceSnapshotText === 'string' ? link.sourceSnapshotText : ''
       const snapshotIsPartial = Number(link.sourceSnapshotCharCount || 0) > snapshotText.length
+      const snapshotFingerprintChanged = link.sourceSnapshotFingerprint
+        ? link.sourceSnapshotFingerprint !== computeBookContentFingerprint(currentSourceText)
+        : null
       return {
         ...link,
         asset,
@@ -117,7 +121,9 @@ export function useWorldBookSourceModel({
           Boolean(link.sourceFingerprint) &&
           Boolean(asset.contentFingerprint) &&
           link.sourceFingerprint !== asset.contentFingerprint &&
-          (snapshotIsPartial || snapshotText !== currentSourceText),
+          (snapshotFingerprintChanged === null
+            ? snapshotIsPartial || snapshotText !== currentSourceText
+            : snapshotFingerprintChanged),
         usageLabel: getSourceRoleLabel(link.role || link.usage),
         sectionSummary: describeBookLinkSections(asset, link.sectionIds),
         builtIn: isBuiltInBookTextAssetId(link.assetId),

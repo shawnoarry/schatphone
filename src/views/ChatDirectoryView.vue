@@ -1537,14 +1537,13 @@ const buildWorldServiceTemplateContextText = () => {
   const knowledgeLines = systemStore
     .listKnowledgePoints()
     .filter((point) => point.enabled !== false)
-    .slice(0, 6)
-    .map((point) => `- ${point.title || point.id}: ${String(point.content || '').trim().slice(0, 360)}`)
+    .map((point) => `- ${point.title || point.id}: ${String(point.content || '').trim()}`)
 
   return [
     `Active World Pack: ${pack.title || pack.name || pack.id || 'default_world'}`,
     bindingLines.length ? ['Existing world app bindings:', ...bindingLines].join('\n') : 'Existing world app bindings: none',
     templateLines.length ? ['Existing service templates:', ...templateLines].join('\n') : 'Existing service templates: none',
-    worldview ? `World context:\n${worldview.slice(0, 2600)}` : 'World context: empty',
+    worldview ? `World context:\n${worldview}` : 'World context: empty',
     knowledgeLines.length ? ['Enabled knowledge:', ...knowledgeLines].join('\n') : 'Enabled knowledge: none',
   ].join('\n\n')
 }

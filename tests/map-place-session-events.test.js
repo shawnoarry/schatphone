@@ -24,8 +24,10 @@ import {
 } from '../src/lib/simulation/kpop-realism-event-pack'
 import { EVENT_TEXT_MODE } from '../src/lib/simulation/event-contracts'
 import { migrateMapStorage, useMapStore } from '../src/stores/map'
+import { useBookStore } from '../src/stores/book'
 import { useSimulationStore } from '../src/stores/simulation'
 import { useSystemStore } from '../src/stores/system'
+import { buildWorldBookSourceSnapshot } from '../src/lib/book-text-schema'
 
 const NOW = Date.parse('2026-08-10T10:00:00.000Z')
 const clonePlain = (value) => JSON.parse(JSON.stringify(value))
@@ -494,6 +496,47 @@ describe('EVE-2C Map Store integration', () => {
     expect(mapStore.enterPlace(place.placeId, { now: NOW })).toMatchObject({
       ok: true,
       session: { presence: { provenance: MAP_EVENT_POSITION_PROVENANCE.MANUAL } },
+    })
+  })
+
+  test('uses the latest active Book text when checking a place event', () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const asset = bookStore.createAsset({
+      id: 'map_world_source',
+      title: 'Map world',
+      content: 'A science fiction city with orbital transit and delivery drones.',
+    })
+    systemStore.addWorldBookSourceLink({
+      assetId: asset.id,
+      role: 'main_worldview',
+      sourceFingerprint: asset.contentFingerprint,
+      ...buildWorldBookSourceSnapshot(asset.content),
+    })
+
+    const mapStore = useMapStore()
+    const place = mapStore.activeMapPlaces.find((item) => item.placeId === 'seoul-mbc-hq')
+    mapStore.setCurrentLocation({
+      label: place.nameEn,
+      detail: place.detailEn,
+      mapPackId: place.mapPackId,
+      placeId: place.placeId,
+      position: place.position,
+    })
+    expect(mapStore.enterPlace(place.placeId, { now: NOW }).ok).toBe(true)
+    expect(mapStore.getPlaceSessionEventInvitation({ locale: 'en', at: NOW })).toMatchObject({
+      eligible: false,
+      reason: 'event_pack_incompatible',
+    })
+
+    expect(
+      bookStore.updateAsset(asset.id, {
+        content: 'Present-day Seoul with realistic K-pop production and everyday city life.',
+      }),
+    ).toMatchObject({ ok: true })
+    expect(mapStore.getPlaceSessionEventInvitation({ locale: 'en', at: NOW })).toMatchObject({
+      eligible: true,
+      reason: 'place_session_event_eligible',
     })
   })
 

@@ -1,4 +1,5 @@
 import { runSimulationEventTick } from './event-tick-runner'
+import { resolveWorldContextFromSystemStore } from './world-context'
 export {
   SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
   SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
@@ -24,6 +25,8 @@ export const createForegroundSessionTickController = ({
   simulationStore,
   foodDeliveryStore,
   chatStore,
+  systemStore,
+  bookStore,
   intervalMs = SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
   seed = 'foreground-session',
   setTimer = globalThis.setInterval?.bind(globalThis),
@@ -45,10 +48,12 @@ export const createForegroundSessionTickController = ({
   const execute = () => {
     const runAt = Number(now())
     const safeRunAt = Number.isFinite(runAt) && runAt >= 0 ? Math.floor(runAt) : Date.now()
+    const worldContext = resolveWorldContextFromSystemStore(systemStore, { bookStore })
     const result = runTick({
       simulationStore,
       foodDeliveryStore,
       chatStore,
+      worldContext,
       now: safeRunAt,
       seed: `${resolvedSeed}:${safeRunAt}`,
     })

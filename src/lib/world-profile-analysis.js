@@ -2,10 +2,10 @@ import { callAI as defaultCallAI } from './ai'
 import { extractAssistantPayloadText, parseAssistantJsonPayload } from './chat-response'
 import { normalizeWorldProfile } from './world-pack-compatibility'
 
-const normalizeText = (value, fallback = '', maxLength = 6000) => {
+const normalizeText = (value, fallback = '') => {
   const text = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
   if (!text) return fallback
-  return text.slice(0, maxLength)
+  return text
 }
 
 const parsePayload = (response) => {
@@ -31,7 +31,7 @@ export const buildWorldProfileAnalysisPrompt = ({ worldContextText = '' } = {}) 
     'Use concise lowercase English trait ids such as modern, school, entertainment, business_family, urban, supernatural, realistic, resource_scarce, real_world.',
     'Do not enable any pack, create records, create apps, create routes, or make product decisions. This is advisory classification only.',
     'World context:',
-    normalizeText(worldContextText, '(empty)', 6000),
+    normalizeText(worldContextText, '(empty)'),
   ].join('\n')
 
 export const parseWorldProfileAnalysisResponse = (response) => {

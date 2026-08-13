@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 import {
+  buildWorldAppTemplateExtractionPrompt,
   buildWorldAppBindingFromTemplateProposal,
   buildWorldAppTemplateExtractionReview,
   extractWorldAppTemplateProposals,
@@ -7,6 +8,15 @@ import {
 } from '../src/lib/world-app-template-registry'
 
 describe('world app template registry', () => {
+  test('keeps the complete world context in the extraction prompt', () => {
+    const tail = 'WORLD_APP_CONTEXT_TAIL'
+    const prompt = buildWorldAppTemplateExtractionPrompt({
+      worldContextText: `${'context '.repeat(900)}${tail}`,
+    })
+
+    expect(prompt).toContain(tail)
+  })
+
   test('lists only reviewed target-module templates', () => {
     const templates = listWorldAppTemplateRegistry()
 

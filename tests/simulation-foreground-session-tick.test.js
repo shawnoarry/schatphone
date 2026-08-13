@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useSimulationStore } from '../src/stores/simulation'
 import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
+import { useBookStore } from '../src/stores/book'
+import { useSystemStore } from '../src/stores/system'
+import { buildWorldBookSourceSnapshot } from '../src/lib/book-text-schema'
 import {
   SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
   SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
@@ -93,6 +96,43 @@ describe('foreground session simulation tick controller', () => {
       lastRunAt: Date.now(),
       lastResult: result,
     })
+  })
+
+  test('reads the latest active Book text on every execution', () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const asset = bookStore.createAsset({
+      id: 'foreground_world_source',
+      title: 'Foreground world',
+      content: 'A science fiction city with high technology and orbital transit.',
+    })
+    systemStore.setGlobalWorldview('An ordinary city fallback.')
+    systemStore.addWorldBookSourceLink({
+      assetId: asset.id,
+      role: 'main_worldview',
+      sourceFingerprint: asset.contentFingerprint,
+      ...buildWorldBookSourceSnapshot(asset.content),
+    })
+    const runTick = vi.fn(() => ({ ok: false, reason: 'no_event_triggered' }))
+    const controller = createForegroundSessionTickController({
+      simulationStore: useSimulationStore(),
+      foodDeliveryStore: useFoodDeliveryStore(),
+      systemStore,
+      bookStore,
+      runTick,
+    })
+
+    controller.execute()
+    expect(runTick.mock.calls[0][0].worldContext.genreTags[0]).toBe('sci_fi')
+
+    expect(
+      bookStore.updateAsset(asset.id, {
+        content: 'An apocalypse world with sealed shelters, infection, and scarce supplies.',
+      }),
+    ).toMatchObject({ ok: true })
+    controller.execute()
+
+    expect(runTick.mock.calls[1][0].worldContext.genreTags[0]).toBe('apocalypse')
   })
 
   test('can run once immediately when start requests it', () => {

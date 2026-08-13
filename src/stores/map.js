@@ -105,6 +105,7 @@ import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useSimulationStore } from './simulation'
 import { useSystemStore } from './system'
+import { useBookStore } from './book'
 
 const MAP_STORAGE_KEY = 'store:map'
 const MAP_STORAGE_VERSION = 3
@@ -1270,6 +1271,7 @@ const normalizeMapProviderVisualResult = (rawText) => {
 
 export const useMapStore = defineStore('map', () => {
   const getSystemStore = () => useSystemStore()
+  const getBookStore = () => useBookStore()
   const getSimulationStore = () => useSimulationStore()
   const getSystemApiReports = () => useSystemApiReports({ systemStore: getSystemStore() })
   const getSystemNotifications = () => useSystemNotifications({ systemStore: getSystemStore() })
@@ -2235,7 +2237,9 @@ export const useMapStore = defineStore('map', () => {
     const simulationStore = getSimulationStore()
     const systemStore = getSystemStore()
     const activeWorldPack = systemStore.getActiveWorldPack?.() || {}
-    const worldContext = resolveWorldContextFromSystemStore(systemStore)
+    const worldContext = resolveWorldContextFromSystemStore(systemStore, {
+      bookStore: getBookStore(),
+    })
     let nextState = state
 
     for (const checkpoint of candidates) {
@@ -3111,7 +3115,10 @@ export const useMapStore = defineStore('map', () => {
       }
     }
     const template = getMapPlaceSessionEventTemplate()
-    const worldContext = resolveWorldContextFromSystemStore(getSystemStore(), { locale })
+    const worldContext = resolveWorldContextFromSystemStore(getSystemStore(), {
+      bookStore: getBookStore(),
+      locale,
+    })
     const dayKey = new Date(Math.max(0, Number(at) || Date.now())).toISOString().slice(0, 10)
     return evaluateMapPlaceSessionEventInvitation({
       session: checkpoint,
@@ -3147,7 +3154,10 @@ export const useMapStore = defineStore('map', () => {
     const checkpoint = invitationResult.checkpoint
     const place = findMapPlaceById(checkpoint.placeId, checkpoint.mapPackId)
     const systemStore = getSystemStore()
-    const worldContext = resolveWorldContextFromSystemStore(systemStore, { locale })
+    const worldContext = resolveWorldContextFromSystemStore(systemStore, {
+      bookStore: getBookStore(),
+      locale,
+    })
     const textContext = {
       worldContextDigest: [
         worldContext.genreTags.join(', '),

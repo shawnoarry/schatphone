@@ -89,6 +89,7 @@ export const createForegroundSessionTickLifecycle = ({
   foodDeliveryStore,
   chatStore,
   systemStore,
+  bookStore,
   route,
   documentRef,
   createController = createForegroundSessionTickController,
@@ -133,6 +134,8 @@ export const createForegroundSessionTickLifecycle = ({
       simulationStore,
       foodDeliveryStore,
       chatStore,
+      systemStore,
+      bookStore,
       intervalMs: normalizeForegroundSessionTickIntervalMs(
         simulationStore?.settings?.foregroundSessionTickIntervalMs,
       ),

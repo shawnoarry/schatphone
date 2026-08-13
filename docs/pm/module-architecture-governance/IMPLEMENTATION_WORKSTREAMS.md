@@ -81,6 +81,8 @@ Updated: 2026-08-12
 - preserve stable `legacy_single_world` compatibility identity/scope independently from `activeWorldPackId`
 - keep WorldBook and Contacts current-world reads on the shared Interface before adding persisted world definitions
 - keep Book assets reusable and WorldBook source links explicit; any Book encyclopedia subset, including zero, remains valid
+- preserve complete active Book/fallback/encyclopedia text without application-level character truncation; enabled readable Book sources replace fallback text, while bounded UI and change-review previews remain presentation only
+- resolve current Book-backed context when Map actions and foreground Event Runtime ticks execute rather than caching narrative context at app startup
 - keep Pack definitions capability-only for activation purposes; legacy content references are review evidence, not ownership or automatic binding
 - require complete-backup cross-reference verification and atomic rollback before any persisted identity migration
 - audit every world-sensitive owner before proposing multiple world definitions or runtime switching

@@ -25,7 +25,8 @@ const PORTABLE_MARKDOWN_MARKER = 'schatphoneBookText'
 
 export const WORLDBOOK_SOURCE_USAGES = WORLDBOOK_SOURCE_ROLES
 
-export const WORLDBOOK_SOURCE_SNAPSHOT_CHAR_LIMIT = 12000
+export const WORLDBOOK_SOURCE_REVIEW_PREVIEW_CHAR_LIMIT = 12000
+export const WORLDBOOK_SOURCE_SNAPSHOT_CHAR_LIMIT = WORLDBOOK_SOURCE_REVIEW_PREVIEW_CHAR_LIMIT
 export const WORLDBOOK_SOURCE_DIFF_BLOCK_LIMIT = 120
 
 const BOOK_TEXT_FORMAT_SET = new Set(BOOK_TEXT_FORMATS)
@@ -135,9 +136,9 @@ const readTitleFromFileName = (fileName = '') => {
   return dotIndex > 0 ? leaf.slice(0, dotIndex) : leaf
 }
 
-const normalizeSnapshotText = (value = '') => {
+const normalizeSnapshotPreviewText = (value = '') => {
   const text = typeof value === 'string' ? value : ''
-  return text.slice(0, WORLDBOOK_SOURCE_SNAPSHOT_CHAR_LIMIT)
+  return text.slice(0, WORLDBOOK_SOURCE_REVIEW_PREVIEW_CHAR_LIMIT)
 }
 
 const splitMarkdownFrontMatter = (content = '') => {
@@ -430,7 +431,8 @@ export const resolveWorldBookSourceText = (asset, sectionIds = []) => {
 export const buildWorldBookSourceSnapshot = (text = '', now = Date.now()) => {
   const sourceText = typeof text === 'string' ? text : ''
   return {
-    sourceSnapshotText: normalizeSnapshotText(sourceText),
+    sourceSnapshotText: normalizeSnapshotPreviewText(sourceText),
+    sourceSnapshotFingerprint: computeBookContentFingerprint(sourceText),
     sourceSnapshotUpdatedAt: toInt(now, Date.now()),
     sourceSnapshotCharCount: sourceText.length,
   }
@@ -536,7 +538,7 @@ export const normalizeWorldBookSourceLink = (raw, index = 0) => {
     .filter(Boolean)
   const createdAt = toInt(source.createdAt, Date.now())
   const rawSnapshotText = typeof source.sourceSnapshotText === 'string' ? source.sourceSnapshotText : ''
-  const sourceSnapshotText = normalizeSnapshotText(rawSnapshotText)
+  const sourceSnapshotText = normalizeSnapshotPreviewText(rawSnapshotText)
   const role = pickCanonicalField(
     source,
     ['role', 'usage'],
@@ -557,6 +559,7 @@ export const normalizeWorldBookSourceLink = (raw, index = 0) => {
     sourceVersion: toInt(source.sourceVersion, 0),
     sourceFingerprint: normalizeInlineText(source.sourceFingerprint, '', 80),
     sourceSnapshotText,
+    sourceSnapshotFingerprint: normalizeInlineText(source.sourceSnapshotFingerprint, '', 80),
     sourceSnapshotUpdatedAt: toInt(source.sourceSnapshotUpdatedAt, 0),
     sourceSnapshotCharCount: toInt(source.sourceSnapshotCharCount, rawSnapshotText.length),
     warning: normalizeInlineText(source.warning, '', 240),

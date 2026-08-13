@@ -311,7 +311,7 @@ describe('world interface', () => {
     expect(overview.worldPackServiceTemplateCount).toBe(1)
   })
 
-  test('resolves enabled, disabled, missing, and overflow role-bound knowledge', () => {
+  test('resolves all enabled role-bound knowledge unless a caller explicitly limits it', () => {
     const enabledPoints = Array.from({ length: 9 }, (_, index) => ({
       id: `kp_${index + 1}`,
       title: `Point ${index + 1}`,
@@ -347,16 +347,16 @@ describe('world interface', () => {
       roleBound: true,
       profileName: 'Nova',
       configuredCount: 11,
-      injectedCount: 8,
+      injectedCount: 9,
       disabledCount: 1,
       missingCount: 1,
-      overflowCount: 1,
+      overflowCount: 0,
     })
     expect(state.injectedPoints.map((point) => point.id)).toEqual(
-      enabledPoints.slice(0, 8).map((point) => point.id),
+      enabledPoints.map((point) => point.id),
     )
     expect(state.injectedEntries?.map((entry) => entry.id)).toEqual(
-      enabledPoints.slice(0, 8).map((point) => point.id),
+      enabledPoints.map((point) => point.id),
     )
   })
 

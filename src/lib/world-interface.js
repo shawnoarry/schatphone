@@ -1,12 +1,10 @@
 import {
+  computeBookContentFingerprint,
   normalizeWorldBookSourceLinks,
   resolveWorldBookSourceText,
 } from './book-text-schema'
 import { DEFAULT_WORLD_PACK_ID } from './world-pack-schema'
 
-export const WORLD_CONTEXT_PROMPT_KNOWLEDGE_LIMIT = 8
-export const WORLD_CONTEXT_BOOK_SOURCE_CHAR_LIMIT = 2400
-export const WORLD_CONTEXT_BOOK_SOURCE_ITEM_CHAR_LIMIT = 1200
 export const LEGACY_SINGLE_WORLD_ID = 'legacy_single_world'
 
 const createImmutableSnapshot = (value) => {
@@ -48,9 +46,10 @@ export const WORLD_INTERFACE_CONSUMERS = createImmutableSnapshot([
   { key: 'runtime', label: 'Event Runtime', title: '事件运行时', consumesPromptContext: true },
 ])
 
-const clampLimit = (value, fallback = WORLD_CONTEXT_PROMPT_KNOWLEDGE_LIMIT) => {
+const normalizeOptionalLimit = (value) => {
+  if (value === undefined || value === null || value === '') return null
   const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return fallback
+  if (!Number.isFinite(numeric)) return null
   return Math.max(1, Math.min(24, Math.floor(numeric)))
 }
 
@@ -61,12 +60,6 @@ const normalizePreview = (value, maxLength = 120) => {
   const normalized = normalizeText(value).replace(/\s+/g, ' ')
   if (!normalized) return ''
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}...` : normalized
-}
-
-const clampText = (value, maxLength = WORLD_CONTEXT_BOOK_SOURCE_ITEM_CHAR_LIMIT) => {
-  const normalized = normalizeText(value)
-  if (!normalized) return ''
-  return normalized.length > maxLength ? `${normalized.slice(0, maxLength).trim()}...` : normalized
 }
 
 const normalizeEncyclopediaEntry = (entry = {}) => ({
@@ -175,15 +168,21 @@ const resolveActiveBookSources = ({ systemStore, bookStore } = {}) => {
     }
 
     const rawContent = resolveWorldBookSourceText(asset, link.sectionIds)
-    const promptText = clampText(rawContent)
+    const promptText = normalizeText(rawContent)
     const hasSnapshot = link.sourceSnapshotUpdatedAt > 0 || typeof link.sourceSnapshotText === 'string'
+    const currentSnapshotFingerprint = computeBookContentFingerprint(rawContent)
+    const snapshotFingerprintChanged = link.sourceSnapshotFingerprint
+      ? link.sourceSnapshotFingerprint !== currentSnapshotFingerprint
+      : null
     const snapshotIsPartial =
       Number(link.sourceSnapshotCharCount || 0) > String(link.sourceSnapshotText || '').length
     const changed =
       Boolean(link.sourceFingerprint) &&
       Boolean(asset.contentFingerprint) &&
       link.sourceFingerprint !== asset.contentFingerprint &&
-      (!hasSnapshot || snapshotIsPartial || String(link.sourceSnapshotText || '') !== rawContent)
+      (snapshotFingerprintChanged === null
+        ? !hasSnapshot || snapshotIsPartial || String(link.sourceSnapshotText || '') !== rawContent
+        : snapshotFingerprintChanged)
 
     return {
       ...link,
@@ -199,25 +198,20 @@ const resolveActiveBookSources = ({ systemStore, bookStore } = {}) => {
     }
   })
 
-  const promptChunks = []
-  let remaining = WORLD_CONTEXT_BOOK_SOURCE_CHAR_LIMIT
-  resolved
+  const promptText = resolved
     .filter((item) => !item.missing && item.promptText)
     .sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt)
-    .forEach((item) => {
-      if (remaining <= 0) return
+    .map((item) => {
       const label = item.title ? `${item.title}: ` : ''
-      const chunk = clampText(`${label}${item.promptText}`, remaining)
-      if (!chunk) return
-      promptChunks.push(chunk)
-      remaining -= chunk.length
+      return `${label}${item.promptText}`
     })
+    .join('\n\n')
 
   return {
     links,
     activeLinks,
     resolved,
-    promptText: promptChunks.join('\n\n'),
+    promptText,
     linkedSourceCount: links.length,
     activeSourceCount: activeLinks.length,
     resolvedSourceCount: resolved.filter((item) => !item.missing && item.promptText).length,
@@ -246,7 +240,7 @@ export const resolveWorldviewText = (systemStore, options = {}) => {
     bookStore: options.bookStore,
   })
   if (!bookSources.promptText) return fallback
-  return [bookSources.promptText, fallback].filter(Boolean).join('\n\n')
+  return bookSources.promptText
 }
 
 const buildWorldSettingProjection = ({
@@ -329,9 +323,9 @@ export const resolveRoleKnowledgeState = ({
   systemStore,
   chatStore,
   contact,
-  limit = WORLD_CONTEXT_PROMPT_KNOWLEDGE_LIMIT,
+  limit,
 } = {}) => {
-  const promptLimit = clampLimit(limit)
+  const promptLimit = normalizeOptionalLimit(limit)
   const empty = {
     roleBound: false,
     profileName: '',
@@ -393,7 +387,7 @@ export const resolveRoleKnowledgeState = ({
     enabledPoints.push(normalizeKnowledgePoint(point))
   })
 
-  const injectedPoints = enabledPoints.slice(0, promptLimit)
+  const injectedPoints = promptLimit === null ? enabledPoints : enabledPoints.slice(0, promptLimit)
 
   return {
     roleBound: true,
@@ -407,7 +401,7 @@ export const resolveRoleKnowledgeState = ({
     injectedCount: injectedPoints.length,
     disabledCount,
     missingCount,
-    overflowCount: Math.max(0, enabledPoints.length - injectedPoints.length),
+    overflowCount: promptLimit === null ? 0 : Math.max(0, enabledPoints.length - injectedPoints.length),
   }
 }
 
@@ -417,7 +411,7 @@ export const resolveCurrentWorldContext = ({
   bookStore,
   contact,
   consumer = 'chat',
-  limit = WORLD_CONTEXT_PROMPT_KNOWLEDGE_LIMIT,
+  limit,
 } = {}) => {
   const bookSources = resolveActiveBookSources({ systemStore, bookStore })
   const activePack = resolveActiveWorldPack(systemStore)

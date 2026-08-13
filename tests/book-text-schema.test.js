@@ -6,6 +6,7 @@ import {
   buildBookAssetPortableExport,
   buildWorldBookSourceSnapshot,
   buildBookAssetFromImportedText,
+  computeBookContentFingerprint,
   diffWorldBookSourceText,
   extractMarkdownSections,
   normalizeBookTextAsset,
@@ -390,6 +391,7 @@ describe('book text schema helpers', () => {
 
     expect(snapshot).toMatchObject({
       sourceSnapshotText: 'Rule one.\n\nRule two.',
+      sourceSnapshotFingerprint: computeBookContentFingerprint('Rule one.\n\nRule two.'),
       sourceSnapshotUpdatedAt: 1770000000000,
       sourceSnapshotCharCount: 20,
     })

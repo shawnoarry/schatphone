@@ -144,4 +144,31 @@ describe('system world kernel', () => {
     expect(store.user.globalWorldview).toBe('Global baseline v2')
     expect(store.user.worldBook).toBe('Global baseline v2')
   })
+
+  test('preserves complete worldview and encyclopedia text', () => {
+    const store = useSystemStore()
+    const worldviewTail = 'WORLDBOOK_WORLDVIEW_TAIL'
+    const encyclopediaTail = 'WORLDBOOK_ENCYCLOPEDIA_TAIL'
+    const worldview = `${'world '.repeat(1400)}${worldviewTail}`
+    const encyclopediaContent = `${'archive '.repeat(300)}${encyclopediaTail}`
+
+    expect(store.setGlobalWorldview(worldview)).toBe(worldview)
+    expect(store.user.globalWorldview).toContain(worldviewTail)
+    expect(store.user.worldBook).toBe(store.user.globalWorldview)
+
+    const entry = store.upsertEncyclopediaEntry({
+      title: 'Complete archive',
+      content: encyclopediaContent,
+      tags: ['archive'],
+    })
+
+    expect(entry.content).toBe(encyclopediaContent)
+    expect(store.getEncyclopediaEntryById(entry.id)?.content).toContain(encyclopediaTail)
+    expect(
+      store.findRelevantKnowledgePoints({
+        texts: [encyclopediaTail],
+        limit: 1,
+      }).map((item) => item.id),
+    ).toEqual([entry.id])
+  })
 })
