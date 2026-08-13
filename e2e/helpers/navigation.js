@@ -25,6 +25,7 @@ const routeReadySelectors = {
   '/map/settings': '[data-testid="map-settings-view"]',
   '/map/settings/places': '[data-testid="map-pin-settings-view"]',
   '/music': '[data-testid="music-app"]',
+  '/phone': '[data-testid="phone-call-list"], [data-testid="phone-empty-state"]',
   '/settings': '[data-settings-menu-title="World Book"]',
   '/shopping': '.shopping-storefront-header',
   '/widgets': '.widgets-shell',
