@@ -62,6 +62,8 @@ describe('Contacts social-channel snapshot', () => {
     await flushUi()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
+    await wrapper.get('[data-testid="contacts-open-relationship-sheet"]').trigger('click')
+    await flushUi()
 
     const panel = wrapper.get('[data-testid="contacts-chat-social-snapshot"]')
     expect(panel.text()).toContain('Chat communication')

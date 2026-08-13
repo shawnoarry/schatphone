@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -76,6 +76,7 @@ What is already landed:
 58. Non-self role profiles now carry stable fictional receiving-account definitions used by Chat's system-generated payee cards. Contacts remains the lifecycle owner of that original profile data: formal role deletion also clears Wallet's disclosed payee references, while relationship reset preserves the account because the role profile remains. Contacts does not own Wallet balances, confirmation, receipts, or NPC wealth.
 59. Relationship Runtime now exposes `projectMemoryConsolidationPressureForTarget()` over the complete memory-group set for one target. The shared pure Module reports stable capacity reasons and existing-group candidates for dense evidence or long summaries, preserves pinned state and original source references, counts archived groups without re-nominating them, and leaves Store backup state byte-for-byte unchanged. This is a read-only pressure check, not automatic summarization, archival, deletion, candidate persistence, or an AI call. Similar text under different `memoryKey` values remains separate. Future world chronology and role-to-role knowledge require their own Owners and data even if they reuse the same projection Module.
 60. Contacts now presents that projection as a compact user-facing memory-care card above the existing memory filters. It uses only `状态稳定 / 记忆开始变多 / 建议查看`, never exposes technical thresholds, and states that nothing changes automatically. Suggested rows are drawn from the complete role-memory set even when a source filter or the 12-item display cap hides them from the ordinary list; opening one reuses the existing memory detail and source audit. The card performs no AI call and does not summarize, rewrite, archive, delete, or persist candidates.
+61. Contacts detail now uses a dedicated role-page hierarchy. The list no longer preselects or appends a role detail; selecting a person opens a route-addressable role overview, and Relationship, World fields, Memories, Character details, Linked activity, and Manage open as mutually exclusive focused sections. Each section starts at the top of the detail viewport, names the selected person and current section, and returns explicitly to the role card. The same flow is constrained to a readable centered width on wide screens and remains overflow-free at 390px. This presentation change does not alter profile, Chat binding, relationship-runtime, memory, source-cleanup, or destructive-action ownership.
 
 Still incomplete:
 
@@ -222,6 +223,9 @@ The older cross-device plans remain implementation history. They are not current
 - `npm.cmd run governance:check`: pass on 2026-08-12; 2 files / 13 tests.
 - `npm.cmd run build`: pass on 2026-08-12. Vite reports only its existing large-chunk advisory.
 - Full `npm.cmd run test` on 2026-08-12 reached 235/238 files and 1754/1757 tests with two unrelated 5-second timeouts plus one deferred persistence-mirror timing assertion. A second full run with `--testTimeout=15000` reached 237/238 files and 1756/1757 tests; only the same persistence-mirror timing assertion remained under full-suite concurrency. The three affected files pass separately with a 15-second timeout: `persistence-write-result` 13/13, `imgbed-publishing-tooling` 12/12, and `persistence-layer-reconcile` 27/27. No failure is in the Contacts or memory-pressure slice.
+- Focused Contacts Vitest passes on 2026-08-13 for the dedicated role page and mutually exclusive section navigation: 9 files / 53 tests.
+- Contacts, WorldBook -> Contacts, and Contacts -> Chat Playwright flows pass on 2026-08-13 across desktop Chromium and simulated Pixel 5: 6 tests. The Contacts flow proves list-first entry, focused Memories presentation in the first detail viewport, return to the role card, return to the contact list, and no horizontal overflow.
+- Focused lint, `git diff --check`, production build, and in-browser visual inspection pass on 2026-08-13. Relationship, World fields, Memories, Character details, Linked activity, and Manage all start at the top of the 390px detail viewport without horizontal overflow; the wide role page is centered at a readable maximum width.
 
 ## 5. Must Sync When Working Here
 

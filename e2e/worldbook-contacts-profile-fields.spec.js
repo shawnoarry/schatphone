@@ -103,7 +103,7 @@ test('WorldBook profile template can be filled as concrete Contacts values', asy
 
   await expect(modal).toHaveCount(0)
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Template E2E Role')
-  await page.getByTestId('contacts-edit-world-profile-fields').click()
+  await page.getByTestId('contacts-open-world-fields-sheet').click()
 
   await expect(page.getByTestId('contacts-world-profile-fields-editor')).toBeVisible()
   await expect(page.getByTestId('contacts-profile-template-select')).toContainText('ABO Profile')

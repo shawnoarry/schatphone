@@ -49,6 +49,16 @@ const selectProfile = async (wrapper, profile) => {
   await flushUi()
 }
 
+const openDetailSheet = async (wrapper, sheet) => {
+  const backButton = wrapper.find('[data-testid="contacts-detail-sheet-back"]')
+  if (backButton.exists()) {
+    await backButton.trigger('click')
+    await flushUi()
+  }
+  await wrapper.get(`[data-testid="contacts-open-${sheet}-sheet"]`).trigger('click')
+  await flushUi()
+}
+
 const createRoleWithBinding = (chatStore, payload = {}) => {
   const profile = chatStore.addRoleProfile({
     roleId: payload.roleId || '950A',
@@ -131,6 +141,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'memories')
     await wrapper.get('[data-testid="contacts-memory-open-one_memory"]').trigger('click')
     await flushUi()
 
@@ -206,6 +217,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'details')
 
     const preferences = wrapper.get('[data-testid="contacts-detail-section-preferences"]')
     expect(preferences.get('[data-testid="contacts-detail-group-preferences-manual"]').text()).toContain(
@@ -265,6 +277,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'memories')
     await wrapper.get('[data-testid="contacts-memory-open-audit_memory"]').trigger('click')
     await flushUi()
 
@@ -336,6 +349,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'details')
 
     const manualItem = chatStore.listRoleDetailItems(profile.id, 'preferences')[0]
     await wrapper.get(`[data-testid="contacts-detail-edit-open-${manualItem.id}"]`).trigger('click')
@@ -352,6 +366,7 @@ describe('ContactsView relationship danger flows', () => {
       'Prefers pour-over coffee.',
     )
 
+    await openDetailSheet(wrapper, 'activity')
     const linkedActivity = wrapper.get('[data-testid="contacts-linked-activity-list"]')
     expect(linkedActivity.text()).toContain('Life Pattern')
     expect(linkedActivity.text()).toContain('Calendar event')
@@ -403,6 +418,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'memories')
 
     const toolbar = wrapper.get('[data-testid="contacts-memory-toolbar"]')
     expect(toolbar.text()).toContain('All sources')
@@ -461,6 +477,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'memories')
     await wrapper.get('[data-testid="contacts-memory-open-lifecycle_memory"]').trigger('click')
     await flushUi()
 
@@ -531,6 +548,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'memories')
 
     const toolbar = wrapper.get('[data-testid="contacts-memory-toolbar"]')
     await toolbar.get('select').setValue('relationship_map_shared_route')
@@ -655,6 +673,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'danger')
 
     const { dialogState, submitDialog, setDialogInputValue } = useDialog()
     await wrapper.get('[data-testid="contacts-delete-role"]').trigger('click')
@@ -801,6 +820,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'danger')
 
     const { dialogState, submitDialog, setDialogInputValue } = useDialog()
     await wrapper.get('[data-testid="contacts-reset-relationship"]').trigger('click')
@@ -928,6 +948,7 @@ describe('ContactsView relationship danger flows', () => {
 
     const wrapper = await mountContactsView()
     await selectProfile(wrapper, profile)
+    await openDetailSheet(wrapper, 'danger')
     await wrapper.get('[data-testid="contacts-danger-include-linked-records"]').setValue(true)
     await flushUi()
 

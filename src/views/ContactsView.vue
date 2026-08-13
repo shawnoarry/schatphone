@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
@@ -105,6 +105,18 @@ const editingProfileId = ref(0)
 const selectedProfileId = ref(0)
 const contactsSearchQuery = ref('')
 const isProfileTemplateEditorOpen = ref(false)
+const showProfileBindings = ref(false)
+const CONTACTS_DETAIL_SHEETS = Object.freeze({
+  OVERVIEW: 'overview',
+  RELATIONSHIP: 'relationship',
+  WORLD_FIELDS: 'world-fields',
+  MEMORIES: 'memories',
+  DETAILS: 'details',
+  ACTIVITY: 'activity',
+  DANGER: 'danger',
+})
+const activeDetailSheet = ref(CONTACTS_DETAIL_SHEETS.OVERVIEW)
+const profileScrollElement = ref(null)
 const dangerIncludeLinkedRecords = ref(false)
 const selectedMemoryKey = ref('')
 const assetPackCategory = ref('reference')
@@ -443,9 +455,27 @@ const availableKnowledgePoints = computed(() => {
   return source.slice(0, 160)
 })
 
-const selectedProfile = computed(
-  () => chatStore.getRoleProfileById(selectedProfileId.value) || roleProfiles.value[0] || null,
+const selectedProfile = computed(() =>
+  selectedProfileId.value ? chatStore.getRoleProfileById(selectedProfileId.value) || null : null,
 )
+
+const isProfileOpen = computed(() => Boolean(selectedProfile.value))
+
+const isContactsDetailSheetOpen = computed(
+  () => isProfileOpen.value && activeDetailSheet.value !== CONTACTS_DETAIL_SHEETS.OVERVIEW,
+)
+
+const activeDetailSheetTitle = computed(() => {
+  const titles = {
+    [CONTACTS_DETAIL_SHEETS.RELATIONSHIP]: t('关系', 'Relationship'),
+    [CONTACTS_DETAIL_SHEETS.WORLD_FIELDS]: t('世界字段', 'World fields'),
+    [CONTACTS_DETAIL_SHEETS.MEMORIES]: t('记忆', 'Memories'),
+    [CONTACTS_DETAIL_SHEETS.DETAILS]: t('人物细节', 'Character details'),
+    [CONTACTS_DETAIL_SHEETS.ACTIVITY]: t('关联活动', 'Linked activity'),
+    [CONTACTS_DETAIL_SHEETS.DANGER]: t('管理', 'Manage'),
+  }
+  return titles[activeDetailSheet.value] || ''
+})
 
 const activeWorldRelationshipRegistry = computed(() => {
   const activePackId = user.value.activeWorldPackId || CONTACTS_FALLBACK_WORLD_ID
@@ -909,20 +939,80 @@ const getNextRoleIdDraft = () => {
   return next
 }
 
+const buildContactsListQuery = () => {
+  const nextQuery = { ...route.query }
+  delete nextQuery.profileId
+  return nextQuery
+}
+
+const replaceContactsQuery = async (query = {}) => {
+  const nextQuery = Object.fromEntries(
+    Object.entries(query).filter(([, value]) => value !== undefined && value !== null && value !== ''),
+  )
+  const currentQuery = route.query || {}
+  const currentKeys = Object.keys(currentQuery)
+  const nextKeys = Object.keys(nextQuery)
+  const unchanged =
+    currentKeys.length === nextKeys.length &&
+    nextKeys.every((key) => String(currentQuery[key] ?? '') === String(nextQuery[key] ?? ''))
+  if (unchanged) return
+  await router.replace({
+    path: '/contacts',
+    query: nextQuery,
+  })
+}
+
 const selectProfile = (profile) => {
   if (!profile?.id) return
   selectedProfileId.value = Number(profile.id)
   dangerIncludeLinkedRecords.value = false
   selectedMemoryKey.value = ''
+  activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
+  void replaceContactsQuery({
+    ...route.query,
+    profileId: String(profile.id),
+  })
+}
+
+const closeSelectedProfile = () => {
+  selectedProfileId.value = 0
+  dangerIncludeLinkedRecords.value = false
+  selectedMemoryKey.value = ''
+  activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
+  isProfileTemplateEditorOpen.value = false
+  void replaceContactsQuery(buildContactsListQuery())
+}
+
+const openDetailSheet = (sheet = CONTACTS_DETAIL_SHEETS.OVERVIEW) => {
+  activeDetailSheet.value = Object.values(CONTACTS_DETAIL_SHEETS).includes(sheet)
+    ? sheet
+    : CONTACTS_DETAIL_SHEETS.OVERVIEW
+  void nextTick(() => {
+    if (profileScrollElement.value) profileScrollElement.value.scrollTop = 0
+  })
+}
+
+const closeDetailSheet = () => {
+  activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
+  void nextTick(() => {
+    if (profileScrollElement.value) profileScrollElement.value.scrollTop = 0
+  })
+}
+
+const openWorldFieldsSheet = () => {
+  openDetailSheet(CONTACTS_DETAIL_SHEETS.WORLD_FIELDS)
+  openProfileTemplateEditor()
 }
 
 const selectMemoryGroup = (memory) => {
   selectedMemoryKey.value = memory?.memoryKey || ''
+  openDetailSheet(CONTACTS_DETAIL_SHEETS.MEMORIES)
 }
 
 const openLinkedMemoryFromDetailItem = (item) => {
   if (!item?.memoryKey) return
   selectedMemoryKey.value = item.memoryKey
+  openDetailSheet(CONTACTS_DETAIL_SHEETS.MEMORIES)
 }
 
 const updateSelectedMemoryReview = (updates = {}) => {
@@ -1417,6 +1507,7 @@ const openCreateProfile = () => {
   profileModalMode.value = 'create'
   editingProfileId.value = 0
   resetProfileDraft()
+  showProfileBindings.value = false
   showProfileModal.value = true
 }
 
@@ -1440,6 +1531,7 @@ const openEditProfile = (profile) => {
   profileDraft.assetFolderBindings = cloneAssetFolderBindings(profile.assetFolderBindings || {})
   assetPackCategory.value = 'reference'
   clearDraftPreviewMap()
+  showProfileBindings.value = false
   showProfileModal.value = true
 }
 
@@ -1687,8 +1779,7 @@ const deleteSelectedProfile = async () => {
     return
   }
   walletStore.removeKnownPayeeAccountsForProfile(profile.id)
-  selectedProfileId.value = roleProfiles.value[0]?.id || 0
-  dangerIncludeLinkedRecords.value = false
+  closeSelectedProfile()
   setUiNotice('success', t('角色档案已删除。', 'Role profile deleted.'))
 }
 
@@ -1892,6 +1983,65 @@ const {
   formatEntityTypeLabel: contactsEntityTypeLabel,
 })
 
+const selectedProfileStatusChips = computed(() => {
+  if (!selectedProfile.value) return []
+  return [
+    {
+      key: 'chat',
+      label: selectedChatSocialSnapshot.value.label || selectedRoleHubCards.value.find((card) => card.key === 'chat')?.value || '',
+    },
+    {
+      key: 'relationship',
+      label: relationshipStageLabel(selectedRelationshipSnapshot.value?.relationshipStage),
+    },
+    {
+      key: 'memory',
+      label: t(
+        `记忆 ${selectedRoleHubStats.value.memoryCount}`,
+        `${selectedRoleHubStats.value.memoryCount} memories`,
+      ),
+    },
+    {
+      key: 'world',
+      label: t(
+        `世界字段 ${selectedRoleHubStats.value.worldFieldCount}`,
+        `${selectedRoleHubStats.value.worldFieldCount} world fields`,
+      ),
+    },
+  ].filter((chip) => chip.label)
+})
+
+const selectedWorldFieldPreviewText = computed(() => {
+  const filledRows = selectedProfileWorldFieldRows.value.filter((row) => row.displayValue)
+  if (!filledRows.length) return t('还没有填写世界字段。', 'No world profile fields filled yet.')
+  return filledRows
+    .slice(0, 2)
+    .map((row) => `${row.title}: ${row.displayValue}`)
+    .join(' · ')
+})
+
+const selectedMemoryPreviewText = computed(() => {
+  const primary =
+    selectedRelationshipSnapshot.value?.primaryMemory?.displaySummary ||
+    selectedRelationshipSnapshot.value?.primaryMemory?.primarySummary ||
+    selectedRelationshipSnapshot.value?.primaryMemory?.latestSummary ||
+    ''
+  if (primary) return primary
+  return selectedMemoryHealthSummary.value.detail
+})
+
+const selectedDetailPreviewText = computed(() => {
+  const sections = selectedDetailSectionRows.value || []
+  if (!sections.length) return t('还没有人物细节。', 'No character details yet.')
+  return sections
+    .map((section) => `${section.title} ${section.stats?.total || 0}`)
+    .join(' · ')
+})
+
+const selectedRelationshipPreviewText = computed(() =>
+  profileRelationshipLatestSummary(selectedProfile.value),
+)
+
 const contactListStatusHint = (profile = {}) => {
   if (profile.entityType === CONTACTS_ENTITY_TYPES.SELF_PROFILE) {
     const worldFieldCount = contactWorldFieldCount(profile)
@@ -1946,11 +2096,20 @@ watch(
       ? profiles.find((profile) => Number(profile.id) === Number(normalizedRouteProfileId))
       : null
     if (requestedProfile) {
-      selectedProfileId.value = Number(requestedProfile.id)
+      if (Number(selectedProfileId.value) !== Number(requestedProfile.id)) {
+        selectedProfileId.value = Number(requestedProfile.id)
+        dangerIncludeLinkedRecords.value = false
+        selectedMemoryKey.value = ''
+        activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
+      }
       return
     }
-    if (profiles.some((profile) => Number(profile.id) === Number(selectedProfileId.value))) return
-    selectedProfileId.value = profiles[0]?.id || 0
+    if (selectedProfileId.value) {
+      selectedProfileId.value = 0
+      dangerIncludeLinkedRecords.value = false
+      selectedMemoryKey.value = ''
+      activeDetailSheet.value = CONTACTS_DETAIL_SHEETS.OVERVIEW
+    }
   },
   { immediate: true },
 )
@@ -2133,6 +2292,20 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <button
+          type="button"
+          class="contacts-small-action self-start"
+          data-testid="contacts-toggle-profile-bindings"
+          @click="showProfileBindings = !showProfileBindings"
+        >
+          {{
+            showProfileBindings
+              ? t('收起更多绑定', 'Hide more bindings')
+              : t('更多绑定', 'More bindings')
+          }}
+        </button>
+
+        <div v-show="showProfileBindings" class="space-y-3">
         <div class="rounded-xl border border-gray-200 p-3 space-y-2">
           <div class="flex items-center justify-between">
             <p class="text-xs font-semibold text-gray-700">
@@ -2503,6 +2676,7 @@ onBeforeUnmount(() => {
             </span>
           </div>
         </div>
+        </div>
       </div>
     </div>
 
@@ -2576,7 +2750,6 @@ onBeforeUnmount(() => {
             class="contacts-row contacts-row-self"
             role="button"
             tabindex="0"
-            :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
             :data-testid="`contacts-row-${contact.id}`"
             @click="selectProfile(contact)"
             @keydown.enter="selectProfile(contact)"
@@ -2593,7 +2766,6 @@ onBeforeUnmount(() => {
               <p class="contacts-row-meta">{{ t('Self Profile', 'Self Profile') }} · ID {{ normalizeRoleId(contact.roleId, contact.id) }}</p>
               <p class="contacts-row-hint">{{ contactListStatusHint(contact) }}</p>
             </div>
-            <button type="button" @click.stop="openEditProfile(contact)" class="contacts-row-edit">{{ t('编辑', 'Edit') }}</button>
             <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
           </div>
         </section>
@@ -2639,7 +2811,6 @@ onBeforeUnmount(() => {
             class="contacts-row"
             role="button"
             tabindex="0"
-            :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
             :data-testid="`contacts-row-${contact.id}`"
             @click="selectProfile(contact)"
             @keydown.enter="selectProfile(contact)"
@@ -2662,7 +2833,6 @@ onBeforeUnmount(() => {
                 {{ profileRelationshipSummary(contact) }}
               </p>
             </div>
-            <button type="button" @click.stop="openEditProfile(contact)" class="contacts-row-edit">{{ t('编辑', 'Edit') }}</button>
             <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
           </div>
         </section>
@@ -2678,7 +2848,6 @@ onBeforeUnmount(() => {
             class="contacts-row"
             role="button"
             tabindex="0"
-            :class="Number(selectedProfileId) === Number(contact.id) ? 'contacts-row-active' : ''"
             :data-testid="`contacts-row-${contact.id}`"
             @click="selectProfile(contact)"
             @keydown.enter="selectProfile(contact)"
@@ -2701,7 +2870,6 @@ onBeforeUnmount(() => {
                 {{ profileRelationshipSummary(contact) }}
               </p>
             </div>
-            <button type="button" @click.stop="openEditProfile(contact)" class="contacts-row-edit">{{ t('编辑', 'Edit') }}</button>
             <i class="fas fa-chevron-right contacts-row-chevron" aria-hidden="true"></i>
           </div>
         </section>
@@ -2721,51 +2889,193 @@ onBeforeUnmount(() => {
             )
           }}
         </p>
+      </div>
+    </div>
 
-        <div
-          v-if="selectedProfile"
-          class="contacts-detail mt-5 space-y-3"
-          data-testid="contacts-role-detail"
+    <div
+      v-if="selectedProfile"
+      class="contacts-profile-layer"
+      data-testid="contacts-role-detail"
+    >
+      <div class="contacts-profile-header">
+        <button
+          type="button"
+          class="contacts-nav-button text-blue-500 text-sm flex items-center gap-1"
+          data-testid="contacts-profile-back"
+          @click="closeSelectedProfile"
         >
-          <section class="contacts-detail-section">
-            <div class="flex items-start gap-3">
-              <div class="w-14 h-14 rounded-full bg-gray-200 overflow-hidden shrink-0">
-                <img
-                  :src="selectedProfileHeader.avatarUrl"
-                  :alt="selectedProfileHeader.name"
-                  class="w-full h-full object-cover"
-                />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-[11px] uppercase text-gray-400 font-bold">{{ selectedProfileHeader.eyebrow }}</p>
-                <h2 class="text-lg font-bold truncate">{{ selectedProfileHeader.name }}</h2>
-                <p class="text-xs text-gray-500 truncate">
-                  {{ selectedProfileHeader.metaText }}
-                </p>
-                <p class="text-[11px] text-gray-500 mt-1 line-clamp-3">
-                  {{ selectedProfileHeader.bioText }}
-                </p>
-              </div>
-              <button @click="openEditProfile(selectedProfile)" class="contacts-small-action">
-                {{ t('编辑', 'Edit') }}
-              </button>
+          <i class="fas fa-chevron-left"></i> {{ t('通讯录', 'Contacts') }}
+        </button>
+        <span class="font-bold truncate">{{ selectedProfileHeader.name }}</span>
+        <button
+          type="button"
+          class="contacts-small-action"
+          @click="openEditProfile(selectedProfile)"
+        >
+          {{ t('编辑', 'Edit') }}
+        </button>
+      </div>
+
+      <div ref="profileScrollElement" class="contacts-profile-scroll">
+        <div v-if="!isContactsDetailSheetOpen" class="contacts-profile-overview space-y-3">
+          <section class="contacts-detail-section contacts-profile-hero">
+          <div class="flex items-start gap-3">
+            <div class="w-16 h-16 rounded-full bg-gray-200 overflow-hidden shrink-0">
+              <img
+                :src="selectedProfileHeader.avatarUrl"
+                :alt="selectedProfileHeader.name"
+                class="w-full h-full object-cover"
+              />
             </div>
-            <div v-if="selectedProfileHeader.isNpc" class="mt-3 space-y-2">
-              <button
-                type="button"
-                class="contacts-primary-action"
-                data-testid="contacts-upgrade-npc"
-                @click="upgradeSelectedNpcToMainRole"
-              >
-                {{ t('Upgrade to main role', 'Upgrade to main role') }}
-              </button>
-              <p class="text-xs text-gray-500">
-                {{ selectedProfileHeader.upgradeHint }}
+            <div class="min-w-0 flex-1">
+              <p class="text-[11px] uppercase text-gray-400 font-bold">{{ selectedProfileHeader.eyebrow }}</p>
+              <h2 class="text-lg font-bold truncate">{{ selectedProfileHeader.name }}</h2>
+              <p class="text-xs text-gray-500 truncate">
+                {{ selectedProfileHeader.metaText }}
+              </p>
+              <p class="text-[11px] text-gray-500 mt-1 line-clamp-3">
+                {{ selectedProfileHeader.bioText }}
               </p>
             </div>
+          </div>
+          <div class="contacts-profile-actions">
+            <button
+              v-if="selectedRoleChatContact && selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
+              type="button"
+              class="contacts-primary-action"
+              data-testid="contacts-open-chat"
+              @click="openSelectedChatTarget"
+            >
+              {{ t('打开 Chat', 'Open Chat') }}
+            </button>
+            <button
+              v-else-if="selectedProfileCanStartChat"
+              type="button"
+              class="contacts-primary-action"
+              data-testid="contacts-start-chat"
+              @click="openSelectedChatTarget"
+            >
+              {{ t('开始聊天', 'Start Chat') }}
+            </button>
+            <button
+              type="button"
+              class="contacts-small-action"
+              @click="openEditProfile(selectedProfile)"
+            >
+              {{ t('编辑档案', 'Edit profile') }}
+            </button>
+          </div>
+          <div v-if="selectedProfileStatusChips.length" class="contacts-profile-chips">
+            <span
+              v-for="chip in selectedProfileStatusChips"
+              :key="chip.key"
+              class="contacts-source-chip"
+            >
+              {{ chip.label }}
+            </span>
+          </div>
+          <div v-if="selectedProfileHeader.isNpc" class="mt-3 space-y-2">
+            <button
+              type="button"
+              class="contacts-primary-action"
+              data-testid="contacts-upgrade-npc"
+              @click="upgradeSelectedNpcToMainRole"
+            >
+              {{ t('Upgrade to main role', 'Upgrade to main role') }}
+            </button>
+            <p class="text-xs text-gray-500">
+              {{ selectedProfileHeader.upgradeHint }}
+            </p>
+          </div>
           </section>
 
+          <div class="contacts-scan-grid">
+          <button
+            type="button"
+            class="contacts-scan-card"
+            data-testid="contacts-open-relationship-sheet"
+            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.RELATIONSHIP)"
+          >
+            <p class="contacts-role-hub-label">{{ t('关系', 'Relationship') }}</p>
+            <p class="contacts-role-hub-value">{{ relationshipStageLabel(selectedRelationshipSnapshot?.relationshipStage) }}</p>
+            <p class="contacts-role-hub-detail">{{ selectedRelationshipPreviewText }}</p>
+          </button>
+          <button
+            type="button"
+            class="contacts-scan-card"
+            data-testid="contacts-open-world-fields-sheet"
+            @click="openWorldFieldsSheet"
+          >
+            <p class="contacts-role-hub-label">{{ t('世界字段', 'World fields') }}</p>
+            <p class="contacts-role-hub-value">{{ selectedRoleHubStats.worldFieldCount }}</p>
+            <p class="contacts-role-hub-detail">{{ selectedWorldFieldPreviewText }}</p>
+          </button>
+          <button
+            type="button"
+            class="contacts-scan-card"
+            data-testid="contacts-open-memories-sheet"
+            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.MEMORIES)"
+          >
+            <p class="contacts-role-hub-label">{{ t('记忆', 'Memories') }}</p>
+            <p class="contacts-role-hub-value">{{ selectedMemoryHealthSummary.statusLabel }}</p>
+            <p class="contacts-role-hub-detail">{{ selectedMemoryPreviewText }}</p>
+          </button>
+          <button
+            type="button"
+            class="contacts-scan-card"
+            data-testid="contacts-open-details-sheet"
+            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.DETAILS)"
+          >
+            <p class="contacts-role-hub-label">{{ t('人物细节', 'Character details') }}</p>
+            <p class="contacts-role-hub-value">{{ selectedRoleHubStats.manual + selectedRoleHubStats.eventAttached }}</p>
+            <p class="contacts-role-hub-detail">{{ selectedDetailPreviewText }}</p>
+          </button>
+          <button
+            type="button"
+            class="contacts-scan-card"
+            data-testid="contacts-open-activity-sheet"
+            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.ACTIVITY)"
+          >
+            <p class="contacts-role-hub-label">{{ t('关联活动', 'Linked activity') }}</p>
+            <p class="contacts-role-hub-value">{{ selectedLinkedActivitySummary.eventAttachedCount }}</p>
+            <p class="contacts-role-hub-detail">{{ selectedLinkedActivitySummary.sourceText }}</p>
+          </button>
+          <button
+            type="button"
+            class="contacts-scan-card contacts-scan-card-danger"
+            data-testid="contacts-open-danger-sheet"
+            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.DANGER)"
+          >
+            <p class="contacts-role-hub-label">{{ t('管理', 'Manage') }}</p>
+            <p class="contacts-role-hub-value">{{ t('重置或删除', 'Reset or delete') }}</p>
+            <p class="contacts-role-hub-detail">{{ t('危险操作单独放在这里。', 'Destructive actions stay here.') }}</p>
+          </button>
+          </div>
+        </div>
+
+        <div
+          v-else
+          class="contacts-detail-sheet space-y-3"
+          :data-testid="`contacts-detail-sheet-${activeDetailSheet}`"
+        >
+          <div class="contacts-detail-sheet-header">
+            <button
+              type="button"
+              class="contacts-detail-sheet-back"
+              data-testid="contacts-detail-sheet-back"
+              :aria-label="t('返回人物卡', 'Back to card')"
+              @click="closeDetailSheet"
+            >
+              <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <div class="min-w-0">
+              <p class="contacts-role-hub-label">{{ selectedProfileHeader.name }}</p>
+              <h2 class="contacts-detail-sheet-title">{{ activeDetailSheetTitle }}</h2>
+            </div>
+          </div>
+
           <section
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.RELATIONSHIP"
             class="contacts-detail-section contacts-role-hub-overview space-y-3"
             data-testid="contacts-role-hub-summary"
           >
@@ -2774,26 +3084,6 @@ onBeforeUnmount(() => {
                 <p class="text-[11px] uppercase text-gray-400 font-bold">{{ t('角色中枢', 'Role Hub') }}</p>
                 <h3 class="text-sm font-bold">{{ contactsEntityTypeLabel(selectedProfileEntityType) }}</h3>
                 <p class="text-[11px] text-gray-500 mt-1">{{ selectedChatStateDetail }}</p>
-              </div>
-              <div class="contacts-chat-actions">
-                <button
-                  v-if="selectedRoleChatContact && selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
-                  type="button"
-                  class="contacts-small-action"
-                  data-testid="contacts-open-chat"
-                  @click="openSelectedChatTarget"
-                >
-                  {{ t('打开 Chat', 'Open Chat') }}
-                </button>
-                <button
-                  v-else-if="selectedProfileCanStartChat"
-                  type="button"
-                  class="contacts-small-action"
-                  data-testid="contacts-start-chat"
-                  @click="openSelectedChatTarget"
-                >
-                  {{ t('开始聊天', 'Start Chat') }}
-                </button>
               </div>
             </div>
             <div class="contacts-role-hub-grid">
@@ -2839,6 +3129,7 @@ onBeforeUnmount(() => {
           </section>
 
           <section
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.RELATIONSHIP"
             class="contacts-detail-section contacts-relationship-panel"
             data-testid="contacts-relationship-runtime-snapshot"
           >
@@ -2901,6 +3192,7 @@ onBeforeUnmount(() => {
           </section>
 
           <section
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.RELATIONSHIP"
             class="contacts-detail-section contacts-relationship-premise space-y-3"
             data-testid="contacts-relationship-premise-form"
           >
@@ -3077,6 +3369,7 @@ onBeforeUnmount(() => {
           </section>
 
           <section
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.ACTIVITY"
             class="contacts-detail-section contacts-linked-activity space-y-2"
             data-testid="contacts-linked-activity-summary"
           >
@@ -3152,7 +3445,7 @@ onBeforeUnmount(() => {
           </section>
 
           <section
-            v-if="selectedProfile"
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.WORLD_FIELDS"
             class="contacts-detail-section contacts-world-profile-fields space-y-3"
             data-testid="contacts-world-profile-fields-section"
           >
@@ -3435,6 +3728,7 @@ onBeforeUnmount(() => {
 
           <section
             v-for="section in selectedDetailSectionRows"
+            v-show="activeDetailSheet === CONTACTS_DETAIL_SHEETS.DETAILS"
             :key="section.key"
             class="contacts-detail-section space-y-2"
             :data-testid="`contacts-detail-section-${section.key}`"
@@ -3587,7 +3881,10 @@ onBeforeUnmount(() => {
             </div>
           </section>
 
-          <section class="contacts-detail-section space-y-2">
+          <section
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.MEMORIES"
+            class="contacts-detail-section space-y-2"
+          >
             <div class="flex items-center justify-between">
               <p class="text-sm font-bold">{{ t('记忆', 'Memories') }}</p>
               <span class="text-[10px] text-gray-500">{{ selectedMemoryListCountLabel }}</span>
@@ -3888,7 +4185,10 @@ onBeforeUnmount(() => {
             </div>
           </section>
 
-          <section class="contacts-detail-section contacts-danger-zone space-y-3">
+          <section
+            v-if="activeDetailSheet === CONTACTS_DETAIL_SHEETS.DANGER"
+            class="contacts-detail-section contacts-danger-zone space-y-3"
+          >
             <div>
               <p class="text-sm font-bold">{{ t('危险区', 'Danger Zone') }}</p>
               <p class="text-[11px] text-gray-500 mt-1">
@@ -4365,6 +4665,100 @@ onBeforeUnmount(() => {
   color: var(--contacts-muted);
   font-size: 12px;
   text-align: center;
+}
+
+.contacts-profile-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 16;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(75, 124, 154, 0.16), transparent 35%),
+    radial-gradient(circle at 92% 14%, rgba(191, 115, 84, 0.13), transparent 34%),
+    linear-gradient(180deg, #f8faf9 0%, #eef4f6 54%, #e8edf2 100%);
+}
+
+.contacts-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 48px 16px 10px;
+  border-bottom: 1px solid var(--contacts-border);
+  background: rgba(251, 253, 252, 0.82);
+  backdrop-filter: blur(var(--system-blur-md));
+  -webkit-backdrop-filter: blur(var(--system-blur-md));
+}
+
+.contacts-profile-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.contacts-profile-overview,
+.contacts-detail-sheet {
+  width: min(100%, 860px);
+  margin: 0 auto;
+}
+
+.contacts-profile-actions,
+.contacts-profile-chips,
+.contacts-scan-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.contacts-scan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.contacts-scan-card {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 18px;
+  background: var(--contacts-surface-strong);
+  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+  padding: 14px;
+  text-align: left;
+}
+
+.contacts-scan-card-danger {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 244, 240, 0.86)),
+    var(--contacts-surface-strong);
+}
+
+.contacts-detail-sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 2px 2px;
+}
+
+.contacts-detail-sheet-back {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 12px;
+  background: var(--contacts-accent-soft);
+  color: var(--contacts-accent-strong);
+}
+
+.contacts-detail-sheet-title {
+  margin: 1px 0 0;
+  color: var(--contacts-text);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .contacts-detail-section {

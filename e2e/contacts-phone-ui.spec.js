@@ -179,10 +179,17 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   expect(positions.main).toBeGreaterThan(positions.recent)
   expect(positions.npc).toBeGreaterThan(positions.main)
 
+  await expect(page.getByTestId('contacts-role-detail')).toHaveCount(0)
   await expect(page.getByTestId('contacts-recent-2')).toContainText('Main contact')
   await page.getByTestId('contacts-recent-2').click()
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Main contact')
-  await expect(page.getByTestId('contacts-row-2')).toContainText('Main contact')
+  await page.getByTestId('contacts-open-memories-sheet').click()
+  await expect(page.getByTestId('contacts-open-relationship-sheet')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-detail-sheet-memories')).toBeVisible()
+  const memorySheetTop = await page
+    .getByTestId('contacts-detail-sheet-memories')
+    .evaluate((element) => element.getBoundingClientRect().top)
+  expect(memorySheetTop).toBeLessThan(130)
   await expect(page.getByTestId('contacts-memory-health-status')).toContainText('Starting to fill up')
   await expect(page.getByTestId('contacts-memory-health')).toContainText(
     'Nothing will change automatically',
@@ -190,6 +197,10 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   await page.getByTestId('contacts-memory-health-open-phone_ui_shared_memory').click()
   await expect(page.getByTestId('contacts-memory-detail')).toContainText('Shared school-day memory 5.')
 
+  await page.getByTestId('contacts-detail-sheet-back').click()
+  await expect(page.getByTestId('contacts-open-memories-sheet')).toBeVisible()
+  await page.getByTestId('contacts-profile-back').click()
+  await expect(page.getByTestId('contacts-row-2')).toContainText('Main contact')
   await search.fill('World NPC')
   await expect(page.getByTestId('contacts-row-2')).toHaveCount(0)
   await expect(page.getByTestId('contacts-row-3')).toContainText('World NPC')

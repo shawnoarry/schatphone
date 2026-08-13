@@ -54,6 +54,8 @@ const mountContactsView = async () => {
 const selectProfile = async (wrapper, profile) => {
   await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
   await flushUi()
+  await wrapper.get('[data-testid="contacts-open-relationship-sheet"]').trigger('click')
+  await flushUi()
 }
 
 describe('Contacts relationship classification UI', () => {

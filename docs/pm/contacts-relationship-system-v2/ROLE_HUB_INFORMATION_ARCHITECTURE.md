@@ -1,6 +1,6 @@
 # Contacts Role Hub Information Architecture / 通讯录角色中枢信息架构
 
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 This document defines the product-facing information architecture for `Contacts / 通讯录` as a role-centered hub.
 
@@ -47,28 +47,25 @@ Current landed list-page baseline:
 
 Each role needs its own detail page.
 
-Recommended section order:
+Current detail hierarchy:
 
-1. overview
-2. role hub summary
-3. relationship snapshot
-4. linked activity summary
-5. profile basics and WorldBook fields
-6. preferences
-7. life pattern
-8. social graph
-9. memories
-10. danger zone
+1. a dedicated role overview with identity, visible role ID, Chat/profile actions, and compact status chips;
+2. six scan-first entries: Relationship, World fields, Memories, Character details, Linked activity, and Manage;
+3. one focused section at a time, replacing the overview instead of extending one long detail page;
+4. an explicit section header that names the person and section and returns to the role card;
+5. a separate return from the role page to the contact list.
+
+Relationship contains the Role Hub summary, current runtime snapshot, and editable profile-side premise. Character details contains Preferences, Life Pattern, and Social Graph. Manage contains reset and delete actions. This grouping preserves all established ownership while keeping destructive actions out of the normal scan path.
 
 ## 3. Section Meaning
 
 ### 3.0 Current Landed IA Baseline
 
-The selected Contacts detail page now starts with a Role Hub summary before deeper sections.
+The selected Contacts detail now opens as a dedicated role page. The first viewport shows the person's identity, primary Chat/profile actions, status chips, and six section previews; it does not repeat the contact list or pre-open a management section.
 
 The Contacts entry page now uses a phone-contact IA before the detail page: Search -> My Profile -> Recent interactions -> Main Roles -> NPC / World Roles. This keeps the first screen focused on finding a person, while preserving the Role Hub as the selected-person detail flow.
 
-The landed baseline shows:
+The Relationship section shows the established Role Hub summary:
 
 - profile entity type: Self Profile, Main Role, or NPC;
 - Chat-bound state without implying Chat Directory owns the role;
@@ -82,7 +79,9 @@ Bound roles can jump to their Chat thread. Unbound Main Role/NPC profiles can ju
 
 The linked-activity summary is only a summary surface. Source records still belong to their owning modules.
 
-Below the summary, preferences, life pattern, and social graph sections now split their entries into Manual details and Event-attached groups. Event-attached entries remain locked from direct deletion and can open the linked memory detail when a `memoryKey` is present. Manual entries can now be edited inline in place. Inside the memory detail itself, Contacts now shows a source-audit layer with per-module source cards, cleanup coverage hints, source record IDs, a short supporting-event list, and lightweight review facts. The memory list itself supports basic source filtering and sort mode. Above those controls, a read-only memory-care card translates Relationship Runtime's full-set pressure projection into `状态稳定 / 记忆开始变多 / 建议查看`. Suggested memories open the existing detail/source-audit path even when they are outside the current filter or visible list cap; the card never calls AI or changes memory automatically.
+The six focused sections are mutually exclusive. Opening one resets the detail scroll position so the selected content begins in the first viewport; returning restores the role overview. On wide screens, the role overview and focused sections use a centered readable maximum width. At phone width, the overview keeps a stable two-column scan grid and focused sections use the available width without horizontal overflow.
+
+Inside Character details, preferences, life pattern, and social graph split their entries into Manual details and Event-attached groups. Event-attached entries remain locked from direct deletion and can open the linked memory detail when a `memoryKey` is present. Manual entries can be edited inline in place. Inside Memories, Contacts shows source-audit cards, cleanup coverage hints, source record IDs, supporting events, review facts, source filtering, sorting, and the read-only memory-care projection. Suggested memories reuse the existing detail/source-audit path and never call AI or change memory automatically.
 
 ### 3.1 Overview / 概览
 
@@ -281,3 +280,6 @@ Required product meaning:
 - suggested memories open the existing detail and source evidence without changing stored relationship state
 - users can tell whether this role is already a Chat target
 - dangerous actions are clearly separated from normal editing
+- opening a role section replaces the overview and starts at the top of the detail viewport
+- users can return from a focused section to the role card, then from the role page to the contact list
+- wide and phone-sized layouts keep readable line lengths and avoid horizontal overflow

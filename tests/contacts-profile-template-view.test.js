@@ -55,6 +55,16 @@ const mountContactsView = async (initialRoute = '/contacts') => {
   return wrapper
 }
 
+const openDetailSheet = async (wrapper, sheet) => {
+  const backButton = wrapper.find('[data-testid="contacts-detail-sheet-back"]')
+  if (backButton.exists()) {
+    await backButton.trigger('click')
+    await flushUi()
+  }
+  await wrapper.get(`[data-testid="contacts-open-${sheet}-sheet"]`).trigger('click')
+  await flushUi()
+}
+
 describe('Contacts profile template entity UI', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -205,6 +215,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
 
     expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain('White tea')
     expect(wrapper.get('[data-testid="contacts-role-detail"]').text()).toContain('Familiar')
@@ -228,9 +239,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView('/contacts?from=worldbook&focus=profile_templates')
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-
-    await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
-    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
 
     expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(template.id)
 
@@ -272,9 +281,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-
-    await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
-    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
 
     const select = wrapper.get('[data-testid="contacts-profile-template-select"]')
     expect(select.element.value).toBe('preset_basic_modern')
@@ -341,8 +348,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-    await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
-    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
 
     expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(template.id)
     expect(wrapper.get('[data-testid="contacts-profile-template-field-public_persona"]').text()).toContain('Choice')
@@ -445,8 +451,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-    await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
-    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
 
     expect(wrapper.get('[data-testid="contacts-profile-template-select"]').element.value).toBe(oldTemplate.id)
 
@@ -535,8 +540,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
-    await wrapper.get('[data-testid="contacts-edit-world-profile-fields"]').trigger('click')
-    await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
 
     await wrapper.get('[data-testid="contacts-ai-draft-world-profile-fields"]').trigger('click')
     await flushUi()
@@ -628,6 +632,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
+    await openDetailSheet(wrapper, 'world-fields')
 
     const adaptation = wrapper.get('[data-testid="contacts-template-adaptation-review"]')
     expect(adaptation.text()).toContain('another world template')
@@ -730,6 +735,7 @@ describe('Contacts profile template entity UI', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
+    await openDetailSheet(wrapper, 'relationship')
 
     const summary = wrapper.get('[data-testid="contacts-role-hub-summary"]').text()
     expect(summary).toContain('Main Role')
@@ -738,6 +744,7 @@ describe('Contacts profile template entity UI', () => {
     expect(summary).toContain('Event-attached')
     expect(summary).toContain('World fields')
 
+    await openDetailSheet(wrapper, 'activity')
     const activity = wrapper.get('[data-testid="contacts-linked-activity-summary"]').text()
     expect(activity).toContain('relationship_map_shared_route')
     expect(activity).toContain('Event-attached')

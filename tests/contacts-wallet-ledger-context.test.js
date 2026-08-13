@@ -92,6 +92,8 @@ describe('ContactsView wallet ledger context', () => {
     )
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
+    await wrapper.get('[data-testid="contacts-open-relationship-sheet"]').trigger('click')
+    await flushUi()
 
     expect(wrapper.text()).toContain('First shared expense')
 

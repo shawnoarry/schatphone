@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-08-12
+Updated: 2026-08-13
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
@@ -64,4 +64,5 @@ Current cross-device handoff and execution record:
 - Formal role deletion removes Wallet's disclosed payee references for that profile; relationship reset keeps the profile account because the person still exists.
 - Eligible Main Role/NPC profiles can now start Chat directly from Contacts through the Chat-owned seam; bound targets are reused, invalid route context is discarded, and Network recovery returns to the same role without making WorldBook content mandatory.
 - Contacts first opens like a phone contact list: Search, My Profile, Recent interactions, Main Roles, and NPC / World Roles. Recent interactions is only a shortcut layer; it does not remove roles/NPCs from the complete lists.
+- Selecting a person now opens a dedicated role page instead of appending detail below the contact list. The role page keeps identity and primary Chat/profile actions in its overview, then opens Relationship, World fields, Memories, Character details, Linked activity, and Manage as mutually exclusive focused sections with an explicit return to the role card. Wide viewports keep the content at a readable centered width; phone viewports keep the two-column scan grid without horizontal overflow.
 - Relationship memory 4.2 currently treats explicit source-id lineage as the safe merge boundary: Phone callbacks, Shopping/Food order support, Map route follow-ups, and confirmed Calendar follow-ups should enrich one shared memory instead of creating competing top-level memories.

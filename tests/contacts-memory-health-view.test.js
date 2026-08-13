@@ -80,6 +80,8 @@ describe('Contacts memory care surface', () => {
     const wrapper = await mountContactsView()
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()
+    await wrapper.get('[data-testid="contacts-open-memories-sheet"]').trigger('click')
+    await flushUi()
 
     expect(wrapper.get('[data-testid="contacts-memory-health-status"]').text()).toContain(
       'Starting to fill up',
