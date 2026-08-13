@@ -186,7 +186,7 @@ describe('chat worldbook binding visibility', () => {
     expect(wrapper.get('[data-testid="thread-worldbook-summary"]').text()).toContain(
       'Night market protocol: # Night market protocol',
     )
-    expect(wrapper.get('[data-testid="thread-worldbook-summary"]').text()).toContain(
+    expect(wrapper.get('[data-testid="thread-worldbook-summary"]').text()).not.toContain(
       'Night city baseline. Formal',
     )
     expect(wrapper.get('[data-testid="thread-worldbook-active-count"]').text()).toContain('1 / 2')
@@ -218,7 +218,7 @@ describe('chat worldbook binding visibility', () => {
 
     expect(systemPrompt).toContain('Primary worldview rules: Night market protocol: # Night market protocol')
     expect(systemPrompt).toContain('Linked Book source governs lantern passwords.')
-    expect(systemPrompt).toContain('Night city baseline. Formal etiquette in public.')
+    expect(systemPrompt).not.toContain('Night city baseline. Formal etiquette in public.')
     expect(systemPrompt).toContain('User profile context:')
     expect(systemPrompt).toContain('Occupation: Courier')
     expect(systemPrompt).toContain('Relationship setting: Trusted partner')

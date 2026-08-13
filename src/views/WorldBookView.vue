@@ -577,20 +577,11 @@ const injectExistingWorldCurrency = (currency = {}) => {
 
 const buildWorldAppTemplateContextText = () => {
   const activePack = worldOverview.value.activePack || systemStore.getActiveWorldPack()
-  const worldview = String(globalWorldview.value || '').trim()
-  const sourceLines = linkedBookSources.value
-    .filter((link) => link.enabled !== false && !link.missing)
-    .slice(0, 4)
-    .map((link) => {
-      const text = String(link.currentSourceText || '').trim().replace(/\s+/g, ' ')
-      return `- ${link.title} (${link.role || link.usage || 'source'}): ${text.slice(0, 1200)}`
-    })
-  const knowledgeLines = knowledgePoints.value
-    .filter((point) => point.enabled !== false)
-    .slice(0, 8)
+  const worldview = String(worldOverview.value.narrative?.promptText || '').trim()
+  const knowledgeLines = (worldOverview.value.encyclopedia?.selectedEntries || [])
     .map((point) => {
       const tags = Array.isArray(point.tags) && point.tags.length ? ` [${point.tags.join(', ')}]` : ''
-      return `- ${point.title || point.id}${tags}: ${String(point.content || '').trim().slice(0, 500)}`
+      return `- ${point.title || point.id}${tags}: ${String(point.content || '').trim()}`
     })
   const bindingLines = activeWorldPackAppBindingRows.value.map(
     (row) => `- ${row.id}: ${row.archetype} -> ${row.targetLabel} (${row.route || 'no route'})`,
@@ -599,8 +590,7 @@ const buildWorldAppTemplateContextText = () => {
   return [
     `Active World Pack: ${activePack?.title || activePack?.name || activePack?.id || 'default_world'}`,
     bindingLines.length ? ['Existing app bindings:', ...bindingLines].join('\n') : 'Existing app bindings: none',
-    worldview ? `Fallback worldview:\n${worldview.slice(0, 2200)}` : 'Fallback worldview: empty',
-    sourceLines.length ? ['Active Book sources:', ...sourceLines].join('\n') : 'Active Book sources: none',
+    worldview ? `Active setting text:\n${worldview}` : 'Active setting text: empty',
     knowledgeLines.length ? ['Enabled encyclopedia:', ...knowledgeLines].join('\n') : 'Enabled encyclopedia: none',
   ].join('\n\n')
 }
