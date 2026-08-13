@@ -1246,6 +1246,7 @@ getMessagePrimaryTextForQuote = messagePrimaryText
 const {
   buildPromptContext,
   clampReplyCount,
+  estimateNextAiRequest,
   extractMessageTextForContext,
   getAutomationBaseFingerprint,
   getSmartReplyHistory,
@@ -1263,6 +1264,10 @@ const {
   getMessagePrimaryText: messagePrimaryText,
   getActiveMessageSenderName: activeMessageSenderName,
 })
+
+const activeThreadTokenEstimate = computed(() =>
+  estimateNextAiRequest(activeChat.value, activeAiPrefs.value),
+)
 
 const { collectImageReferencesForAiCall } = useChatAiImageReferenceModel({
     chatStore,
@@ -4173,6 +4178,7 @@ onBeforeUnmount(() => {
         :subscription-muted="activeServiceIsMuted"
         :subscription-folded="activeServiceIsFolded"
         :world-kernel-state="activeThreadWorldKernelState"
+        :token-estimate="activeThreadTokenEstimate"
         :thread-identity-draft="threadIdentityDraft"
         :thread-settings-draft="threadSettingsDraft"
         :reply-mode-options="REPLY_MODE_OPTIONS"

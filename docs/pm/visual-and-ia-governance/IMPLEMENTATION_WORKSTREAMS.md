@@ -1,6 +1,6 @@
 # Visual And IA Governance Implementation Workstreams / 视觉与信息架构治理实施工作流
 
-Updated: 2026-08-11
+Updated: 2026-08-13
 
 ## 1. Workstream A: Shell And Entry Ownership
 
@@ -33,6 +33,7 @@ Updated: 2026-08-11
 - app-scoped CSS and world-app-scoped CSS should remain predictable when they target the same element: app scope provides the broad app layer, while world-app scope is narrower and emitted later for the selected `data-world-pack`/`data-world-app`.
 - Network & API setup should keep the URL-first flow: endpoint input and saved API configuration loading are the main path; provider-brand templates can exist as helper data but should not render as first-level buttons.
 - Book/WorldBook content carriers keep core texts and encyclopedia manuscripts independent. WorldBook source links are created only by explicit per-manuscript user action and must preserve arbitrary subsets, including zero encyclopedia selections.
+- WorldBook overview token guidance is an approximate, model-dependent visibility aid for enabled setting text only. It must not become a character/token cap, automatic source toggle, silent truncation rule, or substitute for Chat's full next-request estimate.
 - Book writing/storage/export and WorldBook activation now share one world-setting workspace flow. The workspace uses parallel setting layers rather than a mandatory sequence, provides a direct Book handoff and return path, and keeps every activation action explicit.
 - Book portable export provides strict versioned/lossless `.worldbook.json`, editable/re-importable `.md`, and body-only `.txt`; portable files do not carry WorldBook activation state.
 - Pure Book/encyclopedia content does not create a World Pack. A future pack must be justified by separately approved grouped app, service, runtime, or similar capability behavior.

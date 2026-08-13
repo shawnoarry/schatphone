@@ -23,6 +23,15 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  tokenEstimate: {
+    type: Object,
+    default: () => ({
+      totalTokens: 0,
+      worldContextTokens: 0,
+      supportingContextTokens: 0,
+      recentConversationTokens: 0,
+    }),
+  },
   threadIdentityDraft: {
     type: Object,
     required: true,
@@ -95,7 +104,28 @@ const emit = defineEmits([
   'update-thread-setting',
 ])
 
-const { t } = useI18n()
+const { systemLanguage, t } = useI18n()
+
+const formatNumber = (value) =>
+  new Intl.NumberFormat(systemLanguage.value).format(Math.max(0, Number(value) || 0))
+
+const tokenEstimateRows = computed(() => [
+  {
+    id: 'world',
+    label: t('世界设定', 'World setting'),
+    tokens: props.tokenEstimate.worldContextTokens,
+  },
+  {
+    id: 'supporting',
+    label: t('人物、记忆与回复规则', 'People, memory, and reply rules'),
+    tokens: props.tokenEstimate.supportingContextTokens,
+  },
+  {
+    id: 'conversation',
+    label: t('最近对话', 'Recent conversation'),
+    tokens: props.tokenEstimate.recentConversationTokens,
+  },
+])
 
 const sourceRoleName = computed(
   () => props.worldKernelState.profileName || props.activeChat?.name || '',
@@ -239,7 +269,10 @@ const updateNumberSetting = (key, value) => {
     </template>
 
     <details class="group py-1">
-      <summary class="flex cursor-pointer list-none items-center justify-between py-3 text-sm font-medium text-gray-900">
+      <summary
+        class="flex cursor-pointer list-none items-center justify-between py-3 text-sm font-medium text-gray-900"
+        data-testid="thread-ai-world-summary-toggle"
+      >
         <span>{{ t('AI 与世界设定', 'AI and world context') }}</span>
         <span class="flex items-center gap-2 text-[11px] font-normal text-gray-500">
           {{ worldKernelState.injectedCount }} / {{ worldKernelState.configuredCount }}
@@ -250,6 +283,43 @@ const updateNumberSetting = (key, value) => {
         class="mb-4 space-y-2 rounded-xl bg-blue-50/70 p-3"
         data-testid="thread-worldbook-summary"
       >
+      <div
+        class="rounded-lg border border-blue-100 bg-white p-3"
+        data-testid="thread-token-estimate"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-[11px] font-medium text-gray-600">
+              {{ t('下一次请求预计输入', 'Estimated input for the next request') }}
+            </p>
+            <p class="mt-0.5 text-lg font-bold leading-tight text-gray-950">
+              {{ t(`约 ${formatNumber(tokenEstimate.totalTokens)} tokens`, `About ${formatNumber(tokenEstimate.totalTokens)} tokens`) }}
+            </p>
+          </div>
+          <i class="fas fa-gauge-high mt-1 text-sm text-blue-500" aria-hidden="true"></i>
+        </div>
+        <div class="mt-3 grid grid-cols-1 gap-1.5 text-[11px]">
+          <div
+            v-for="row in tokenEstimateRows"
+            :key="row.id"
+            class="flex items-center justify-between gap-3"
+            :data-testid="`thread-token-estimate-${row.id}`"
+          >
+            <span class="text-gray-500">{{ row.label }}</span>
+            <strong class="font-semibold text-gray-800">
+              {{ t(`约 ${formatNumber(row.tokens)}`, `About ${formatNumber(row.tokens)}`) }}
+            </strong>
+          </div>
+        </div>
+        <p class="mt-3 border-t border-gray-100 pt-2 text-[10px] leading-4 text-gray-500">
+          {{
+            t(
+              '按当前聊天记录和已保存设置估算。不同模型会有差异；图片本身未计入，也不会因此限制或删减文本。',
+              'Based on current history and saved settings. Counts vary by model; images are not included, and no text is limited or removed.',
+            )
+          }}
+        </p>
+      </div>
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
           <p class="font-semibold text-sm text-gray-900">

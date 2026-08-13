@@ -1,6 +1,6 @@
 # Chat And Chat Directory Product Boundary
 
-Updated: 2026-08-10
+Updated: 2026-08-13
 
 This file defines the ownership boundary between Chat, Chat Directory, and Contacts.
 
@@ -27,6 +27,7 @@ Chat owns:
 - legacy product-card compatibility display while the active Shopping send path migrates to `share_card`
 - Chat-local saved-message flags for ordinary role/group threads
 - AI reply trigger and prompt assembly
+- approximate, non-persisted next-request text-token visibility derived from the same prompt/context projection, without owning provider billing or introducing content limits
 - the user-facing Chat App shell for message entry and thread-level controls
 - Chat Settings as the Chat-local behavior, appearance-entry, and diagnostics surface
 - Chat Settings as the entry surface for shared TTS provider configuration and temporary preview, without taking ownership of TTS transport, credentials, or audio truth

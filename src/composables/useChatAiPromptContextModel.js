@@ -10,6 +10,11 @@ import {
 } from '../lib/chat-context-budget'
 import { buildMemoryRecallQuery } from '../lib/memory-recall'
 import { buildRoleIdentityProjection } from '../lib/role-identity-projection'
+import {
+  estimateChatMessagesTokens,
+  estimateChatRequestTokens,
+  estimateTextTokens,
+} from '../lib/ai-token-estimate'
 
 export const CHAT_AI_PROMPT_CONTEXT_LIMITS = Object.freeze({
   quotePreviewChars: 240,
@@ -624,6 +629,49 @@ Current response rules:
     })
   }
 
+  const estimateNextAiRequest = (contact, aiPrefs, options = {}) => {
+    if (!contact?.id) {
+      return {
+        totalTokens: 0,
+        worldContextTokens: 0,
+        supportingContextTokens: 0,
+        recentConversationTokens: 0,
+        messageCount: 0,
+      }
+    }
+
+    const requestContext = projectAiRequestContext(contact.id, {
+      contextTurns: aiPrefs?.contextTurns,
+      characterBudget: options.characterBudget,
+    })
+    const promptContext = buildPromptContext(contact, aiPrefs || defaultThreadAiPrefs, {
+      replyCount: aiPrefs?.replyCount,
+      isProactive: false,
+      imageReferences: [],
+      contextMessages: requestContext.aiMessages,
+    })
+    const worldPromptText = buildWorldKernelPromptBlock(contact, {
+      includeSelfProfile: false,
+    })
+    const totalTokens = estimateChatRequestTokens({
+      systemPrompt: promptContext.systemPrompt,
+      messages: requestContext.aiMessages,
+    })
+    const worldContextTokens = estimateTextTokens(worldPromptText)
+    const recentConversationTokens = estimateChatMessagesTokens(requestContext.aiMessages)
+
+    return {
+      totalTokens,
+      worldContextTokens,
+      supportingContextTokens: Math.max(
+        0,
+        totalTokens - worldContextTokens - recentConversationTokens,
+      ),
+      recentConversationTokens,
+      messageCount: requestContext.aiMessages.length,
+    }
+  }
+
   const toAiMessages = (contactId, untilMessageId = '', options = {}) =>
     projectAiRequestContext(contactId, {
       untilMessageId,
@@ -653,6 +701,7 @@ Current response rules:
     buildWorldKernelPromptBlock,
     clampContextTurns,
     clampReplyCount,
+    estimateNextAiRequest,
     extractMessageTextForContext,
     getAutomationBaseFingerprint,
     getContextSourceMessages,

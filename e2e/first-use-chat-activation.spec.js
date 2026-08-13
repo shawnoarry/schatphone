@@ -199,6 +199,15 @@ test('fresh storage reaches the first successful Chat reply through Network setu
   await expect(chatInput).toHaveJSProperty('tagName', 'TEXTAREA')
   await expect(page.getByTestId('chat-network-readiness')).toHaveCount(0)
 
+  await page.getByTestId('chat-thread-menu-toggle').click()
+  await page.getByTestId('thread-ai-world-summary-toggle').click()
+  await expect(page.getByTestId('thread-token-estimate')).toContainText(/下一次请求预计输入|Estimated input for the next request/)
+  await expect(page.getByTestId('thread-token-estimate-world')).toBeVisible()
+  await expect(page.getByTestId('thread-token-estimate-supporting')).toBeVisible()
+  await expect(page.getByTestId('thread-token-estimate-conversation')).toBeVisible()
+  await expect(page.getByTestId('thread-token-estimate')).toContainText(/图片本身未计入|images are not included/)
+  await page.getByRole('button', { name: /^(关闭|Close)$/ }).click()
+
   const oneLineInputHeight = await chatInput.evaluate((input) => input.getBoundingClientRect().height)
   await chatInput.press('Shift+Enter')
   await chatInput.type(draftSecondLine)

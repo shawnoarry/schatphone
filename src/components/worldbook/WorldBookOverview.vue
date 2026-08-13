@@ -15,6 +15,10 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  tokenEstimate: {
+    type: Object,
+    default: () => ({ totalTokens: 0, parts: [] }),
+  },
   saved: {
     type: Boolean,
     default: false,
@@ -23,7 +27,16 @@ const props = defineProps({
 
 const emit = defineEmits(['open-category'])
 
-const { t } = useI18n()
+const { systemLanguage, t } = useI18n()
+
+const formatNumber = (value) =>
+  new Intl.NumberFormat(systemLanguage.value).format(Math.max(0, Number(value) || 0))
+
+const tokenParts = computed(() =>
+  Array.isArray(props.tokenEstimate?.parts)
+    ? props.tokenEstimate.parts.filter((part) => Number(part?.tokens) > 0)
+    : [],
+)
 
 const promptConsumers = computed(() =>
   Array.isArray(props.overview.consumers)
@@ -80,9 +93,36 @@ const textCategories = computed(() =>
     </div>
 
     <div class="worldbook-overview__context-total" data-testid="worldbook-overview-context-total">
-      <span>{{ t('能起作用的文本字数', 'Active context text') }}</span>
-      <strong>{{ activeTextCharCount }}</strong>
-      <small>{{ t('只统计已启用文稿', 'Enabled manuscripts only') }}</small>
+      <div class="worldbook-overview__context-metrics">
+        <div>
+          <span>{{ t('已启用文本', 'Enabled text') }}</span>
+          <strong>{{ formatNumber(activeTextCharCount) }}</strong>
+          <small>{{ t('字', 'characters') }}</small>
+        </div>
+        <div data-testid="worldbook-overview-token-estimate">
+          <span>{{ t('每次请求约增加', 'Added per request') }}</span>
+          <strong>{{ t(`约 ${formatNumber(tokenEstimate.totalTokens)} tokens`, `About ${formatNumber(tokenEstimate.totalTokens)} tokens`) }}</strong>
+          <small>{{ t('仅文字输入', 'Text input only') }}</small>
+        </div>
+      </div>
+      <div v-if="tokenParts.length > 0" class="worldbook-overview__token-parts">
+        <span
+          v-for="part in tokenParts"
+          :key="part.id"
+          :data-testid="`worldbook-overview-token-part-${part.id}`"
+        >
+          <em>{{ part.label }}</em>
+          <b>{{ t(`约 ${formatNumber(part.tokens)}`, `About ${formatNumber(part.tokens)}`) }}</b>
+        </span>
+      </div>
+      <small class="worldbook-overview__estimate-note">
+        {{
+          t(
+            '不同模型的计算方式会有差异。这里只提示用量，不限制或删减文本。',
+            'Token counts vary by model. This estimate does not limit or remove text.',
+          )
+        }}
+      </small>
     </div>
 
     <div class="worldbook-overview__text-grid" data-testid="worldbook-overview-text-categories">
@@ -201,22 +241,69 @@ const textCategories = computed(() =>
   background: var(--system-control-bg);
 }
 
-.worldbook-overview__context-total span {
+.worldbook-overview__context-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.worldbook-overview__context-metrics > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.worldbook-overview__context-metrics > div + div {
+  border-left: 1px solid var(--system-control-border);
+  padding-left: 12px;
+}
+
+.worldbook-overview__context-metrics span {
   color: var(--system-text-muted);
   font-size: 11px;
   font-weight: 760;
 }
 
-.worldbook-overview__context-total strong {
+.worldbook-overview__context-metrics strong {
   color: var(--system-text);
-  font-size: 28px;
-  line-height: 1;
+  font-size: 20px;
+  line-height: 1.15;
   font-weight: 900;
 }
 
-.worldbook-overview__context-total small {
+.worldbook-overview__context-metrics small,
+.worldbook-overview__estimate-note {
   color: var(--system-text-soft);
   font-size: 10px;
+}
+
+.worldbook-overview__token-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  border-top: 1px solid var(--system-control-border);
+  padding-top: 8px;
+}
+
+.worldbook-overview__token-parts span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--system-text-muted);
+  font-size: 10px;
+}
+
+.worldbook-overview__token-parts em {
+  font-style: normal;
+}
+
+.worldbook-overview__token-parts b {
+  color: var(--system-text);
+  font-weight: 800;
+}
+
+.worldbook-overview__estimate-note {
+  line-height: 1.45;
 }
 
 .worldbook-overview__text-grid {
@@ -321,6 +408,14 @@ const textCategories = computed(() =>
 }
 
 @media (max-width: 430px) {
+  .worldbook-overview__context-metrics {
+    grid-template-columns: 0.8fr 1.2fr;
+  }
+
+  .worldbook-overview__context-metrics strong {
+    font-size: 18px;
+  }
+
   .worldbook-overview__text-grid {
     grid-template-columns: 1fr;
   }

@@ -1,11 +1,12 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-08-10
+Updated: 2026-08-13
 
 ## 1. Workstream A: Chat Thread Behavior
 
 - reply trigger and manual AI invocation
 - provider-neutral transient AI message-window budgeting shared by normal reply and regeneration, without mutating Chat history or adding a persisted setting
+- approximate next-request text-token visibility derived from that transient projection, with readable world/supporting/recent-conversation parts, explicit model variance and image exclusion, and no content limit or prompt persistence
 - message actions
 - delete vs recall behavior for ordinary role/group messages
 - rich message surfaces

@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-08-11
+Updated: 2026-08-13
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -31,6 +31,7 @@ Current visual pass:
 - WorldBook Setting Text selection and changed-text review use layered sheets instead of stretching the Settings page inline.
 - WorldBook's Setting Text panel answers which Book text AI reads now. WorldBook chooses active context; Book owns writing/editing. Unused or missing text references live in Advanced management, while active changed text stays in the active list with a confirm-new-version action.
 - WorldBook's workspace presents those concerns as parallel setting layers rather than a required progression. Book writing/storage and WorldBook activation form one visible workflow, while structured encyclopedia entries, profile templates, capability packs, and fallback text remain independently optional.
+- WorldBook's current-world overview shows the approximate text-token cost added by enabled setting manuscripts, with source-category detail and explicit wording that the estimate neither limits nor removes text. Chat thread details separately show the approximate next-request total, so fixed world-setting cost and conversation-specific request cost stay distinct.
 - WorldBook's Profile Templates panel now has a clear Contacts handoff: WorldBook defines the fields a world needs, while `通讯录 / Contacts` owns filling concrete role, user, and NPC profile values; Contacts recognizes the handoff route, shows a focused entry note, and role detail has a V1 inline editor for those concrete values.
 - Contacts now has a phone-like first entry pass: Search, My Profile, Recent interactions, Main Roles, and NPC / World Roles appear in the order users expect from a real contacts app, while deeper role hub work stays in the selected profile detail.
 - Contacts world-field editing now gives dynamic worldview-template fields stable visual controls, so different world content can vary without creating a separate custom screen for every world.

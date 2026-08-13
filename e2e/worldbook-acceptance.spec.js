@@ -102,6 +102,9 @@ test('Settings entry separates the WorldBook overview from optional capability P
   await expect(page.getByTestId('worldbook-overview')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-world')).toContainText('当前世界设定')
   await expect(page.getByTestId('worldbook-overview-context-total')).toBeVisible()
+  await expect(page.getByTestId('worldbook-overview-token-estimate')).toContainText('每次请求约增加')
+  await expect(page.getByTestId('worldbook-overview-token-estimate')).toContainText('约')
+  await expect(page.getByTestId('worldbook-overview')).toContainText('不限制或删减文本')
   await expect(page.getByTestId('worldbook-overview-text-category-worldview')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-text-category-rules')).toBeVisible()
   await expect(page.getByTestId('worldbook-overview-text-category-encyclopedia')).toBeVisible()
@@ -175,6 +178,7 @@ test('WorldBook overview stays readable on mobile viewport', async ({ page }) =>
   await navigateInsideUnlockedApp(page, '/worldbook')
 
   await expect(page.getByTestId('worldbook-overview')).toBeVisible()
+  await expect(page.getByTestId('worldbook-overview-token-estimate')).toBeVisible()
   await page.getByTestId('worldbook-panel-tab-pack').click()
   await expect(page.getByTestId('worldbook-current-pack')).toBeVisible()
   await page.getByTestId('worldbook-panel-tab-kernel').click()

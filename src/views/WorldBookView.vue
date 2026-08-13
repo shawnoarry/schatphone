@@ -19,6 +19,7 @@ import { extractWorldAppTemplateProposals } from '../lib/world-app-template-regi
 import { analyzeWorldProfileWithAI } from '../lib/world-profile-analysis'
 import { buildWorldServiceTemplateGenerationRowsForPacks } from '../lib/world-pack-service-accounts'
 import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
+import { estimateTextTokens, estimateTokenParts } from '../lib/ai-token-estimate'
 import { useWorldBookKnowledgeModel } from '../composables/useWorldBookKnowledgeModel'
 import { useWorldBookProfileTemplateModel } from '../composables/useWorldBookProfileTemplateModel'
 import { useWorldBookSourceModel } from '../composables/useWorldBookSourceModel'
@@ -206,6 +207,32 @@ const {
   sourcePicker,
   sourceReview,
   t,
+})
+const worldBookTokenEstimate = computed(() => {
+  const promptText = String(worldOverview.value.narrative?.promptText || '')
+  const sourceParts = contextTextCategories.value
+    .map((category) => ({
+      id: category.id,
+      label: category.label,
+      text: category.enabledLinks
+        .filter((link) => link.currentSourceText)
+        .map((link) => `${link.title}: ${link.currentSourceText}`)
+        .join('\n\n'),
+    }))
+    .filter((part) => part.text)
+
+  if (sourceParts.length === 0 && promptText) {
+    sourceParts.push({
+      id: 'worldview',
+      label: t('世界观', 'Worldview'),
+      text: promptText,
+    })
+  }
+
+  return {
+    totalTokens: estimateTextTokens(promptText),
+    parts: estimateTokenParts(sourceParts).parts,
+  }
 })
 const knowledgeSearchKeyword = ref('')
 const knowledgeTagFilter = ref('all')
@@ -1211,6 +1238,7 @@ onBeforeUnmount(() => {
         :overview="worldOverview"
         :text-categories="contextTextCategories"
         :active-text-char-count="activeContextTextCharCount"
+        :token-estimate="worldBookTokenEstimate"
         :saved="saved"
         @open-category="openSourceDirectory"
       />

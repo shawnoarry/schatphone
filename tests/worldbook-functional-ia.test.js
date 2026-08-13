@@ -77,6 +77,13 @@ describe('WorldBook functional IA', () => {
     expect(overview.get('[data-testid="worldbook-overview-context-total"]').text()).toContain(
       String(worldview.length),
     )
+    expect(overview.get('[data-testid="worldbook-overview-token-estimate"]').text()).toContain(
+      'About',
+    )
+    expect(overview.get('[data-testid="worldbook-overview-token-part-worldview"]').text()).toContain(
+      'Worldview',
+    )
+    expect(overview.text()).toContain('does not limit or remove text')
     expect(overview.get('[data-testid="worldbook-overview-text-category-worldview"]').text()).toContain(
       'Not set',
     )
@@ -131,6 +138,9 @@ describe('WorldBook functional IA', () => {
 
     expect(wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').text()).toContain(
       'Agency Glossary',
+    )
+    expect(wrapper.get('[data-testid="worldbook-overview-token-part-encyclopedia"]').text()).toContain(
+      'About',
     )
 
     await wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').trigger('click')

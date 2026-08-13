@@ -7,6 +7,7 @@ import { useChatStore } from '../src/stores/chat'
 import { useBookStore } from '../src/stores/book'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
+import { estimateChatRequestTokens } from '../src/lib/ai-token-estimate'
 
 const aiMockState = vi.hoisted(() => ({
   calls: [],
@@ -193,12 +194,27 @@ describe('chat worldbook binding visibility', () => {
       'City etiquette',
     )
     expect(wrapper.find('[data-testid="thread-worldbook-empty"]').exists()).toBe(false)
+    const tokenEstimate = wrapper.get('[data-testid="thread-token-estimate"]')
+    expect(tokenEstimate.text()).toContain('下一次请求预计输入')
+    expect(tokenEstimate.text()).toContain('世界设定')
+    expect(tokenEstimate.text()).toContain('人物、记忆与回复规则')
+    expect(tokenEstimate.text()).toContain('最近对话')
+    expect(tokenEstimate.text()).toContain('图片本身未计入')
+    expect(tokenEstimate.text()).toContain('不会因此限制或删减文本')
+    const displayedEstimate = Number(
+      tokenEstimate.text().match(/约\s*([\d,]+)\s*tokens/)?.[1]?.replaceAll(',', ''),
+    )
 
     await wrapper.get('[data-testid="chat-trigger-reply"]').trigger('click')
     await flushUi()
 
     expect(aiMockState.calls).toHaveLength(1)
     const systemPrompt = aiMockState.calls[0]?.systemPrompt || ''
+    const requestEstimate = estimateChatRequestTokens({
+      systemPrompt,
+      messages: aiMockState.calls[0]?.messages,
+    })
+    expect(Math.abs(displayedEstimate - requestEstimate)).toBeLessThanOrEqual(24)
 
     expect(systemPrompt).toContain('Primary worldview rules: Night market protocol: # Night market protocol')
     expect(systemPrompt).toContain('Linked Book source governs lantern passwords.')
