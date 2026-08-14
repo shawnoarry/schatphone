@@ -54,7 +54,7 @@ export {
 } from '../lib/currency-system'
 
 const WALLET_STORAGE_KEY = 'store:wallet'
-const WALLET_STORAGE_VERSION = 1
+const WALLET_STORAGE_VERSION = 2
 const WALLET_TRANSACTION_LIMIT = 200
 const WALLET_KNOWN_PAYEE_LIMIT = 200
 const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
@@ -67,6 +67,7 @@ export const WALLET_TRANSACTION_SOURCE_FILTERS = Object.freeze({
 const WALLET_TRANSACTION_TYPES = new Set(['income', 'expense', 'transfer'])
 const WALLET_TRANSFER_DIRECTIONS = new Set(['incoming', 'outgoing'])
 const WALLET_TRANSFER_STATUSES = new Set(['completed'])
+const WALLET_COMMERCE_PAYMENT_STATUSES = new Set(['completed', 'reversed', 'refunded'])
 const WALLET_TRANSACTION_SOURCE_FILTER_VALUES = new Set(
   Object.values(WALLET_TRANSACTION_SOURCE_FILTERS),
 )
@@ -152,7 +153,9 @@ const isChatTransferTransaction = (transaction) =>
 
 const isOrderExpenseTransaction = (transaction) =>
   transaction?.sourceModule === 'shopping_wallet_expense' ||
-  transaction?.sourceModule === 'food_delivery_wallet_expense'
+  transaction?.sourceModule === 'food_delivery_wallet_expense' ||
+  transaction?.sourceModule === 'wallet_commerce_payment' ||
+  transaction?.paymentKind === 'commerce_order'
 
 const normalizeCounterpartyKey = (value) => normalizeText(value, '', 120).toLowerCase()
 
@@ -286,6 +289,12 @@ const normalizeWalletTransaction = (
     sourceModule: normalizeText(rawTransaction.sourceModule, 'wallet', 40),
     sourceId: normalizeText(rawTransaction.sourceId, '', 140),
     transferStatus,
+    paymentKind: normalizeText(rawTransaction.paymentKind, '', 60),
+    paymentStatus: WALLET_COMMERCE_PAYMENT_STATUSES.has(rawTransaction.paymentStatus)
+      ? rawTransaction.paymentStatus
+      : '',
+    idempotencyKey: normalizeText(rawTransaction.idempotencyKey, '', 180),
+    relatedTransactionId: normalizeText(rawTransaction.relatedTransactionId, '', 140),
     receiptNumber: normalizeText(rawTransaction.receiptNumber, '', 40),
     payeeAccountId: normalizeText(rawTransaction.payeeAccountId, '', 140),
     recipientProfileId: normalizePositiveInt(rawTransaction.recipientProfileId),
@@ -308,6 +317,13 @@ const normalizeWalletTransaction = (
     createdAt,
     updatedAt: Math.max(0, toInt(rawTransaction.updatedAt, createdAt)),
   }
+}
+
+export const migrateWalletStorage = ({ version, data } = {}) => {
+  if (version === 1) {
+    return data && typeof data === 'object' ? { ...data } : null
+  }
+  return null
 }
 
 const normalizeWalletTransactions = (rawTransactions, fallbackCurrency = DEFAULT_CURRENCY) => {
@@ -857,6 +873,151 @@ export const useWalletStore = defineStore('wallet', () => {
     return transaction
   }
 
+  const findCommercePaymentByIdempotencyKey = (idempotencyKey = '') => {
+    const key = normalizeText(idempotencyKey, '', 180)
+    if (!key) return null
+    return (
+      transactions.value.find(
+        (transaction) =>
+          transaction.paymentKind === 'commerce_order' &&
+          transaction.idempotencyKey === key &&
+          transaction.paymentStatus === 'completed',
+      ) || null
+    )
+  }
+
+  const commitCommercePayment = ({
+    amount,
+    amountCents,
+    currency = '',
+    accountId = '',
+    cardId = '',
+    counterparty = '',
+    note = '',
+    sourceModule = 'wallet_commerce_payment',
+    sourceId = '',
+    idempotencyKey = '',
+    quoteSnapshot = null,
+    createdAt = Date.now(),
+  } = {}) => {
+    const normalizedKey = normalizeText(idempotencyKey, '', 180)
+    const normalizedSourceId = normalizeText(sourceId, '', 140)
+    if (!normalizedKey || !normalizedSourceId) {
+      return { ok: false, reason: 'payment_identity_invalid', transaction: null }
+    }
+
+    const existing = findCommercePaymentByIdempotencyKey(normalizedKey)
+    if (existing) return { ok: true, reason: 'idempotent_replay', transaction: existing }
+
+    const normalizedCurrency = normalizeCurrency(currency || primaryCurrency.value, '')
+    const normalizedAmountCents = Number.isFinite(Number(amountCents))
+      ? Math.floor(Number(amountCents))
+      : normalizeAmountCents(amount)
+    if (!normalizedCurrency || normalizedAmountCents <= 0) {
+      return { ok: false, reason: 'amount_invalid', transaction: null }
+    }
+
+    const account =
+      (accountId && findBankAccountById(accountId)) ||
+      findDefaultBankAccountForCurrency(normalizedCurrency)
+    if (!account || !account.currencies.includes(normalizedCurrency)) {
+      return { ok: false, reason: 'account_unavailable', transaction: null }
+    }
+
+    const balance = bankAccountSummaries.value
+      .find((item) => item.id === account.id)
+      ?.balances.find((item) => item.currency === normalizedCurrency)?.amountCents || 0
+    if (normalizedAmountCents > balance) {
+      return { ok: false, reason: 'insufficient_funds', transaction: null }
+    }
+
+    const requestedCard = cardId ? findPaymentCardById(cardId) : null
+    const paymentCard =
+      requestedCard &&
+      requestedCard.status === 'active' &&
+      requestedCard.supportedCurrencies.includes(normalizedCurrency) &&
+      (!requestedCard.accountId || requestedCard.accountId === account.id)
+        ? requestedCard
+        : paymentCards.value.find(
+            (card) =>
+              card.status === 'active' &&
+              card.supportedCurrencies.includes(normalizedCurrency) &&
+              (!card.accountId || card.accountId === account.id),
+          )
+    if (!paymentCard) {
+      return { ok: false, reason: 'payment_card_unavailable', transaction: null }
+    }
+
+    const transaction = addTransaction({
+      type: 'expense',
+      direction: 'outgoing',
+      title: 'Food Delivery payment',
+      amountCents: normalizedAmountCents,
+      currency: normalizedCurrency,
+      accountId: account.id,
+      cardId: paymentCard.id,
+      counterparty: normalizeText(counterparty, 'Food Delivery', 120),
+      note,
+      sourceModule: normalizeText(sourceModule, 'wallet_commerce_payment', 60),
+      sourceId: normalizedSourceId,
+      paymentKind: 'commerce_order',
+      paymentStatus: 'completed',
+      idempotencyKey: normalizedKey,
+      quoteSnapshot,
+      transferStatus: 'completed',
+      receiptNumber: createWalletReceiptNumber(createdAt),
+      createdAt,
+    })
+
+    return transaction
+      ? { ok: true, reason: '', transaction }
+      : { ok: false, reason: 'transaction_invalid', transaction: null }
+  }
+
+  const reverseCommercePayment = ({
+    transactionId = '',
+    reason = '',
+    createdAt = Date.now(),
+  } = {}) => {
+    const original = findTransactionById(transactionId)
+    if (!original || original.paymentKind !== 'commerce_order') {
+      return { ok: false, reason: 'payment_not_found', transaction: null }
+    }
+    if (original.paymentStatus !== 'completed') {
+      return { ok: false, reason: 'payment_not_reversible', transaction: null }
+    }
+
+    const existing = transactions.value.find(
+      (transaction) =>
+        transaction.paymentKind === 'commerce_reversal' &&
+        transaction.relatedTransactionId === original.id,
+    )
+    if (existing) return { ok: true, reason: 'idempotent_replay', transaction: existing }
+
+    const transaction = addTransaction({
+      type: 'income',
+      direction: 'incoming',
+      title: 'Food Delivery payment reversal',
+      amountCents: original.amountCents,
+      currency: original.currency,
+      accountId: original.accountId,
+      cardId: original.cardId,
+      counterparty: original.counterparty,
+      note: normalizeText(reason, 'Order persistence compensation', 240),
+      sourceModule: 'wallet_commerce_reversal',
+      sourceId: original.id,
+      paymentKind: 'commerce_reversal',
+      paymentStatus: 'reversed',
+      relatedTransactionId: original.id,
+      transferStatus: 'completed',
+      receiptNumber: createWalletReceiptNumber(createdAt),
+      createdAt,
+    })
+    return transaction
+      ? { ok: true, reason: '', transaction }
+      : { ok: false, reason: 'transaction_invalid', transaction: null }
+  }
+
   const addTransferTransaction = ({
     amount,
     currency = '',
@@ -1231,6 +1392,7 @@ export const useWalletStore = defineStore('wallet', () => {
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(WALLET_STORAGE_KEY, {
       version: WALLET_STORAGE_VERSION,
+      migrate: migrateWalletStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -1238,6 +1400,7 @@ export const useWalletStore = defineStore('wallet', () => {
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(WALLET_STORAGE_KEY, {
       version: WALLET_STORAGE_VERSION,
+      migrate: migrateWalletStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -1294,6 +1457,7 @@ export const useWalletStore = defineStore('wallet', () => {
   const persistToStorage = () => {
     writePersistedState(WALLET_STORAGE_KEY, createBackupSnapshot(), {
       version: WALLET_STORAGE_VERSION,
+      migrate: migrateWalletStorage,
     })
   }
 
@@ -1399,6 +1563,9 @@ export const useWalletStore = defineStore('wallet', () => {
     setDefaultPaymentCard,
     togglePaymentCardFrozen,
     addTransaction,
+    findCommercePaymentByIdempotencyKey,
+    commitCommercePayment,
+    reverseCommercePayment,
     addTransferTransaction,
     addRolePayeeTransfer,
     addChatTransferTransaction,

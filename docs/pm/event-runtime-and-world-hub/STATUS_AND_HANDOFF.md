@@ -1,12 +1,12 @@
 # Event Runtime And World Hub Status And Handoff
 
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 This file is the handoff page for event runtime, relationship runtime, World Hub, and future Cheats work.
 
 ## 1. Current Status
 
-Status: `PARTIAL_DONE / EVE-4A_TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN / EVE-4_RESET_2026-08-12`
+Status: `PARTIAL_DONE / EVE-4A_TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN / EVE-4B_OWNER_NATIVE_FOOD_CHAIN_IMPLEMENTED 2026-08-14`
 
 Confirmed persistence dependency for future work:
 
@@ -62,6 +62,8 @@ EVE-3 validation is complete: the focused Notebook/Simulation/World Hub/persiste
 
 The original EVE-4A card validation remains historical spike evidence only and no longer establishes product acceptance. The correction removes those dedicated surface tests/screenshots and replaces them with focused owner-chain coverage for canonical ETA, native timeline, Chat notification, exact lineage, backup compatibility, injection/rebinding/log-reuse rejection, and absence of the manual trigger/`Dispatch brief`. Final correction validation passes 6 focused files / 143 tests; the complete Vitest suite passes 245 files / 1821 tests with two workers; lint, production build, governance at 2 files / 14 tests, and `git diff --check` pass. The owner-native Moon Bistro and Jade Hearth flows pass 4/4 across desktop Chromium and simulated Pixel 5, including absence of the withdrawn Surface/manual trigger, minimum control sizing, real keyboard focus visibility, reduced-motion behavior, critical accessibility checks where covered, page-error checks, and zero horizontal overflow where covered. The default high-concurrency full run first reached 243 files / 1819 tests and hit unrelated fixed-five-second timeouts in image-bed fixture and persistence bootstrap tests; both files passed independently before the bounded-worker full suite passed. This is not physical-device evidence, and the withdrawn surface screenshots must not be reused as current product proof.
 
+EVE-4B is implemented as the first accepted owner-native causal chain: paid Food Delivery checkout creates the Wallet commerce payment and Map-owned courier journey; a deterministic Runtime gate records either a durable no-event path or the `food_delivery.delivery_address_change_escalation.v1` lineage; Food Delivery owns the native order conversation and timeout state; Phone owns the text-call shell and transcript; Food Delivery validates the address revision and Map reroute; delivery completion closes the chain. `store:simulation` V4 persists only owner references and audit checkpoints (`canonicalMutation: none`) and does not register a Food Delivery Event Surface or copy order/payment/message/transcript/route bodies. Focused owner/runtime tests pass; the full Vitest suite passes 262 files / 1928 tests; lint, build, governance, and `git diff --check` pass. The direct Moon Bistro owner-native browser flow passes on desktop Chromium and simulated Pixel 5; a full Playwright run was bounded separately and is not claimed as complete. This is not physical-device evidence.
+
 Still incomplete:
 
 1. broad affinity/funds/unlock/freeform override controls remain deferred;
@@ -70,7 +72,7 @@ Still incomplete:
 4. the named high-risk relationship gate presets are now consumed by the Chat social-event review policy for relationship-aware audit/review decisions; broader high-impact romance/conflict automation is still deferred.
 5. deeper generated social behavior is still incomplete: broader social-event types, richer scheduling, and relationship-stage effects should build on the landed review seam instead of writing directly to Chat or relationship runtime.
 6. Mini Scene trigger integration remains unimplemented; the shared pure foundation is ready, but a named event family and the later persistence/presenter/source-Adapter prerequisites must still be promoted.
-7. exactly one production Event Surface host remains registered: Map for the frozen production-arrival-briefing archetype. Food Delivery participates through owner-native order state/timeline plus Chat notification without a Surface. Additional hosts and event families remain unimplemented and separately gated under EVE-4.
+7. exactly one production Event Surface host remains registered: Map for the frozen production-arrival-briefing archetype. Food Delivery now participates through the EVE-4B owner-native order conversation, system notification, text-call shell, Wallet payment reference, and Map courier reroute without a Surface. Additional hosts and event families remain unimplemented and separately gated under EVE-4.
 8. Destination change, event-driven cancellation, high-impact outcomes, active exploration events, generic popup infrastructure, and Agenda Journey scheduling remain unimplemented.
 9. Agenda Journey, Activity Session, Schedule Orchestrator, their Event Runtime adapters, automatic-resolution implementation, and Narrative Timeline remain unimplemented; the accepted CJA contract is documentation only.
 10. no locked-teaser family, Focus Companion runtime, or Activity Session media caller is implemented; the completed location-aware family remains limited to interior production arrival briefing.
@@ -88,7 +90,7 @@ Current safe sequence after the user's event-lane reprioritization:
 4. preserve the completed EVE-2C Map V3 provenance/place-session boundary, single explicit host, ordinary-place/event selection split, zero-token no-event path, and no-external-mutation owner validation.
 5. keep runtime-trigger explanation readable whenever a new Adapter is explicitly promoted.
 6. preserve the completed EVE-3 Notebook as a read model over owner truth: keep notes event-scoped, durable, and independently deletable; do not turn it into Reminders, Calendar planning, source mutation, or Cheats.
-7. preserve the EVE-4A lineage and Food Delivery owner-mutation seam, but do not restore its withdrawn host/card/manual-trigger product slice. Restart EVE-4 only with a separately accepted causal chain that names every participating Module, trigger/checkpoint, owner truth, Adapter request, native presentation, real user/system behavior, downstream conditions, side effects, reversibility, persistence, fallback, and tests.
+7. preserve the EVE-4A lineage and the accepted EVE-4B Food Delivery owner-native chain, but do not restore the withdrawn host/card/manual-trigger product slice. Any later EVE-4 work must be separately accepted with named participating Modules, trigger/checkpoints, owner truth, Adapter requests, native presentation, real user/system behavior, downstream conditions, side effects, reversibility, persistence, fallback, and tests.
 8. deepen Chat social scheduling only through the existing audit/review seam and with visible cooldown/cap policy.
 9. keep Cheats, CG generation, additional world packs, and closed-page autonomy as separate decisions.
 10. when roadmap 4.8 reaches a source-Adapter stage, keep Event Runtime limited to eligibility/provenance and call the shared Interface rather than adding runtime-owned regex or HTML.

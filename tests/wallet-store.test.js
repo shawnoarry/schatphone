@@ -936,4 +936,96 @@ describe('wallet store', () => {
     expect(store.removeKnownPayeeAccountsForProfile(1)).toBe(1)
     expect(store.findKnownPayeeAccountById(knownPayee.id)).toBeNull()
   })
+
+  test('commits idempotent commerce payments with balance, card, and receipt validation', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+    store.addTransaction({
+      type: 'income',
+      title: 'Opening balance',
+      amount: '100.00',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+    })
+
+    const first = store.commitCommercePayment({
+      amount: '32.80',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+      cardId: 'wallet_card_icbc_cny',
+      counterparty: 'Myeongdong Kyoja',
+      sourceModule: 'wallet_commerce_payment',
+      sourceId: 'food_order_1',
+      idempotencyKey: 'food_checkout_1',
+    })
+
+    expect(first).toMatchObject({ ok: true, reason: '' })
+    expect(first.transaction).toMatchObject({
+      type: 'expense',
+      paymentKind: 'commerce_order',
+      paymentStatus: 'completed',
+      idempotencyKey: 'food_checkout_1',
+      sourceId: 'food_order_1',
+    })
+    expect(first.transaction.receiptNumber).toMatch(/^SP20260101\d{6}$/)
+    expect(store.primaryBalance.amountCents).toBe(6720)
+
+    const replay = store.commitCommercePayment({
+      amount: '32.80',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+      cardId: 'wallet_card_icbc_cny',
+      counterparty: 'Myeongdong Kyoja',
+      sourceModule: 'wallet_commerce_payment',
+      sourceId: 'food_order_1',
+      idempotencyKey: 'food_checkout_1',
+    })
+    expect(replay).toMatchObject({ ok: true, reason: 'idempotent_replay' })
+    expect(store.transactions.filter((item) => item.paymentKind === 'commerce_order')).toHaveLength(1)
+
+    expect(
+      store.commitCommercePayment({
+        amount: '100.00',
+        currency: 'CNY',
+        accountId: 'wallet_account_icbc_cny',
+        cardId: 'wallet_card_icbc_cny',
+        sourceId: 'food_order_2',
+        idempotencyKey: 'food_checkout_2',
+      }),
+    ).toMatchObject({ ok: false, reason: 'insufficient_funds' })
+  })
+
+  test('records a linked reversal instead of deleting a commerce payment', () => {
+    const store = useWalletStore()
+    store.resetForTesting()
+    store.addTransaction({
+      type: 'income',
+      title: 'Opening balance',
+      amount: '50.00',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+    })
+    const payment = store.commitCommercePayment({
+      amount: '12.00',
+      currency: 'CNY',
+      accountId: 'wallet_account_icbc_cny',
+      cardId: 'wallet_card_icbc_cny',
+      sourceId: 'food_order_rollback',
+      idempotencyKey: 'food_checkout_rollback',
+    })
+
+    const reversal = store.reverseCommercePayment({
+      transactionId: payment.transaction.id,
+      reason: 'Order persistence compensation',
+    })
+    expect(reversal).toMatchObject({ ok: true })
+    expect(reversal.transaction).toMatchObject({
+      type: 'income',
+      paymentKind: 'commerce_reversal',
+      paymentStatus: 'reversed',
+      relatedTransactionId: payment.transaction.id,
+    })
+    expect(store.findTransactionById(payment.transaction.id)).toBeTruthy()
+    expect(store.primaryBalance.amountCents).toBe(5000)
+  })
 })

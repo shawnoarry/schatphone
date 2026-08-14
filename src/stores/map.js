@@ -108,7 +108,7 @@ import { useSystemStore } from './system'
 import { useBookStore } from './book'
 
 const MAP_STORAGE_KEY = 'store:map'
-const MAP_STORAGE_VERSION = 3
+const MAP_STORAGE_VERSION = 4
 const MAP_JOURNEY_POSITION_EVIDENCE_AUTHORIZATION = Symbol('map_journey_position_evidence')
 const MAP_PIN_VISIBILITY_CATEGORY_LIMIT = 80
 const MAP_PIN_VISIBILITY_PLACE_LIMIT = 500
@@ -125,6 +125,23 @@ const MAP_PROVIDER_VISUAL_MODE_SKIPPED_NO_RUNNER = 'skipped_no_runner'
 const MAP_PROVIDER_VISUAL_MODE_FAILED = 'provider_failed'
 const MAP_PROVIDER_VISUAL_MODE_TEXT = 'provider_text'
 const MAP_PROVIDER_VISUAL_MODE_IMAGE_URL = 'provider_image_url'
+export const MAP_DELIVERY_JOURNEY_PHASE = Object.freeze({
+  CREATED: 'created',
+  HEADING_TO_PICKUP: 'heading_to_pickup',
+  RIDER_PICKUP: 'rider_pickup',
+  EN_ROUTE: 'en_route',
+  REROUTING: 'rerouting',
+  ARRIVED: 'arrived',
+  CANCELLED: 'cancelled',
+})
+const MAP_DELIVERY_JOURNEY_ACTIVE_PHASES = new Set([
+  MAP_DELIVERY_JOURNEY_PHASE.CREATED,
+  MAP_DELIVERY_JOURNEY_PHASE.HEADING_TO_PICKUP,
+  MAP_DELIVERY_JOURNEY_PHASE.RIDER_PICKUP,
+  MAP_DELIVERY_JOURNEY_PHASE.EN_ROUTE,
+  MAP_DELIVERY_JOURNEY_PHASE.REROUTING,
+])
+const MAP_DELIVERY_JOURNEY_LIMIT = 120
 const ROUTE_FAMILIARITY_LIMIT = 8
 const ROUTE_FAMILIARITY_TIERS = [
   {
@@ -387,6 +404,108 @@ const normalizeAddressRecord = (item, index = 0, mapPacks = listMapPacks()) => {
     category: normalizeAddressCategory(item.category),
     mapPackId,
     position,
+  }
+}
+
+const normalizeDeliveryAnchor = (rawAnchor, mapPacks = listMapPacks()) => {
+  if (!rawAnchor || typeof rawAnchor !== 'object') return null
+  const id = typeof rawAnchor.id === 'string' ? rawAnchor.id.trim().slice(0, 180) : ''
+  const label = typeof rawAnchor.label === 'string' ? rawAnchor.label.trim().slice(0, 120) : ''
+  const detail = typeof rawAnchor.detail === 'string' ? rawAnchor.detail.trim().slice(0, 180) : ''
+  const mapPackId =
+    typeof rawAnchor.mapPackId === 'string' && rawAnchor.mapPackId.trim()
+      ? findMapPackInList(mapPacks, rawAnchor.mapPackId.trim()).id
+      : DEFAULT_MAP_PACK_ID
+  const pack = findMapPackInList(mapPacks, mapPackId)
+  const position = normalizeMapPosition(rawAnchor.position, pack.coordinateKind)
+  if (!id || !label || !detail || !position) return null
+  return {
+    id,
+    kind: rawAnchor.kind === 'place' ? 'place' : 'address',
+    label,
+    detail,
+    mapPackId: pack.id,
+    mapPackVersion: Math.max(1, toInt(rawAnchor.mapPackVersion, pack.version || 1)),
+    placeId: typeof rawAnchor.placeId === 'string' ? rawAnchor.placeId.trim().slice(0, 180) : '',
+    addressId: Number.isFinite(Number(rawAnchor.addressId)) ? Math.trunc(Number(rawAnchor.addressId)) : 0,
+    coordinateKind: pack.coordinateKind,
+    position,
+    revision: Math.max(1, toInt(rawAnchor.revision, 1)),
+    createdAt: Math.max(0, toInt(rawAnchor.createdAt, Date.now())),
+    updatedAt: Math.max(0, toInt(rawAnchor.updatedAt, Date.now())),
+  }
+}
+
+const normalizeDeliveryJourney = (rawJourney, mapPacks = listMapPacks()) => {
+  if (!rawJourney || typeof rawJourney !== 'object') return null
+  const id = typeof rawJourney.id === 'string' ? rawJourney.id.trim().slice(0, 180) : ''
+  const orderId = typeof rawJourney.orderId === 'string' ? rawJourney.orderId.trim().slice(0, 140) : ''
+  const destination = normalizeDeliveryAnchor(rawJourney.destination, mapPacks)
+  if (!id || !orderId || !destination) return null
+  const phase = Object.values(MAP_DELIVERY_JOURNEY_PHASE).includes(rawJourney.phase)
+    ? rawJourney.phase
+    : MAP_DELIVERY_JOURNEY_PHASE.CREATED
+  return {
+    id,
+    orderId,
+    ownerModule: 'food_delivery',
+    phase,
+    restaurant: normalizeDeliveryAnchor(rawJourney.restaurant, mapPacks),
+    destination,
+    courier: {
+      id: typeof rawJourney.courier?.id === 'string' ? rawJourney.courier.id.trim().slice(0, 120) : '',
+      name: typeof rawJourney.courier?.name === 'string' ? rawJourney.courier.name.trim().slice(0, 80) : '',
+      phoneNumber:
+        typeof rawJourney.courier?.phoneNumber === 'string'
+          ? rawJourney.courier.phoneNumber.trim().slice(0, 40)
+          : '',
+    },
+    mapPackId: destination.mapPackId,
+    mapPackVersion: destination.mapPackVersion,
+    distanceKm: Math.max(0, Number(rawJourney.distanceKm) || 0),
+    etaMinutes: Math.max(1, toInt(rawJourney.etaMinutes, 30)),
+    createdAt: Math.max(0, toInt(rawJourney.createdAt, Date.now())),
+    pickupAt: Math.max(0, toInt(rawJourney.pickupAt, 0)),
+    riderPickupAt: Math.max(0, toInt(rawJourney.riderPickupAt, 0)),
+    etaAt: Math.max(0, toInt(rawJourney.etaAt, 0)),
+    arrivedAt: Math.max(0, toInt(rawJourney.arrivedAt, 0)),
+    addressRevision: Math.max(1, toInt(rawJourney.addressRevision, destination.revision)),
+    routeRevision: Math.max(1, toInt(rawJourney.routeRevision, 1)),
+    updatedAt: Math.max(0, toInt(rawJourney.updatedAt, Date.now())),
+  }
+}
+
+const normalizeDeliveryJourneys = (rawJourneys, mapPacks = listMapPacks()) => {
+  if (!Array.isArray(rawJourneys)) return []
+  const seen = new Set()
+  return rawJourneys
+    .map((item) => normalizeDeliveryJourney(item, mapPacks))
+    .filter((item) => {
+      if (!item || seen.has(item.id)) return false
+      seen.add(item.id)
+      return true
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, MAP_DELIVERY_JOURNEY_LIMIT)
+}
+
+const createDeliveryJourneyId = (orderId, now = Date.now()) =>
+  `map_delivery_journey_${String(orderId || 'order').trim().slice(0, 80)}_${now}`
+
+const interpolateMapPosition = (from, to, progress, coordinateKind) => {
+  const clamped = Math.max(0, Math.min(1, Number(progress) || 0))
+  if (!from || !to) return to || from || null
+  if (coordinateKind === 'geo') {
+    return {
+      kind: 'geo',
+      lat: from.lat + (to.lat - from.lat) * clamped,
+      lng: from.lng + (to.lng - from.lng) * clamped,
+    }
+  }
+  return {
+    kind: 'canvas',
+    x: from.x + (to.x - from.x) * clamped,
+    y: from.y + (to.y - from.y) * clamped,
   }
 }
 
@@ -796,13 +915,25 @@ const migrateMapCurrentLocationV3 = (data = {}, { migratedAt = Date.now() } = {}
 }
 
 export const migrateMapStorage = ({ version, data, savedAt } = {}) => {
-  if (Number(version) !== 2 || !data || typeof data !== 'object' || Array.isArray(data)) {
+  if (
+    ![2, 3].includes(Number(version)) ||
+    !data ||
+    typeof data !== 'object' ||
+    Array.isArray(data)
+  ) {
     return null
+  }
+  if (Number(version) === 3) {
+    return {
+      ...data,
+      deliveryJourneys: Array.isArray(data.deliveryJourneys) ? data.deliveryJourneys : [],
+    }
   }
   return {
     ...data,
     currentLocation: migrateMapCurrentLocationV3(data, { migratedAt: savedAt }),
     placeSession: createEmptyMapPlaceSession(),
+    deliveryJourneys: [],
   }
 }
 
@@ -1290,6 +1421,7 @@ export const useMapStore = defineStore('map', () => {
   const tripForm = reactive(createDefaultTripForm())
   const tripState = ref(createIdleTripState())
   const tripHistory = ref([])
+  const deliveryJourneys = ref([])
   const mapCalendarReminderPreferences = ref({})
   const mapVisualSettings = ref(createDefaultMapVisualSettings())
   const mapAutomationRuntime = ref(createDefaultMapAutomationRuntime())
@@ -3423,6 +3555,274 @@ export const useMapStore = defineStore('map', () => {
     addresses.splice(index, 1)
   }
 
+  const listDeliveryAnchors = ({ mapPackId = activeMapPackId.value } = {}) => {
+    const pack = getAvailableMapPackById(mapPackId)
+    const anchors = buildMapPlacesForPack(pack)
+      .map((place) =>
+        normalizeDeliveryAnchor(
+          {
+            id: `place:${place.placeId || place.id}`,
+            kind: 'place',
+            label: place.nameZh || place.nameEn || place.label || place.placeId || place.id,
+            detail: place.detailZh || place.detailEn || place.address || place.detail || '',
+            mapPackId: pack.id,
+            mapPackVersion: pack.version,
+            placeId: place.placeId || place.id,
+            addressId: place.source === 'user' ? place.id : 0,
+            position: place.position,
+            revision: 1,
+          },
+          mapPacks.value,
+        ),
+      )
+      .filter(Boolean)
+
+    const current = normalizeCurrentLocation(currentLocation.value, mapPacks.value)
+    if (current.mapPackId === pack.id && current.position) {
+      anchors.unshift(
+        normalizeDeliveryAnchor(
+          {
+            id: `current:${current.placeId || current.detail}`,
+            kind: 'address',
+            label: current.label,
+            detail: current.detail,
+            mapPackId: pack.id,
+            mapPackVersion: pack.version,
+            placeId: current.placeId,
+            position: current.position,
+            revision: 1,
+          },
+          mapPacks.value,
+        ),
+      )
+    }
+
+    const seen = new Set()
+    return anchors.filter((anchor) => {
+      if (!anchor || seen.has(anchor.id)) return false
+      seen.add(anchor.id)
+      return true
+    })
+  }
+
+  const findDeliveryAnchorById = (anchorId = '') =>
+    listDeliveryAnchors().find((anchor) => anchor.id === String(anchorId || '').trim()) || null
+
+  const createDeliveryAddress = ({
+    label = '',
+    detail = '',
+    category = 'other',
+    mapPackId = activeMapPackId.value,
+    position = null,
+  } = {}) => {
+    const pack = getAvailableMapPackById(mapPackId)
+    const normalizedPosition = normalizeMapPosition(position, pack.coordinateKind)
+    if (!label.trim() || !detail.trim() || !normalizedPosition) {
+      return { ok: false, reason: 'delivery_anchor_invalid', anchor: null }
+    }
+    const addressId = Date.now()
+    addresses.push({
+      id: addressId,
+      label: label.trim(),
+      detail: detail.trim(),
+      category: normalizeAddressCategory(category),
+      mapPackId: pack.id,
+      position: normalizedPosition,
+    })
+    const anchor = normalizeDeliveryAnchor(
+      {
+        id: `address:${addressId}`,
+        kind: 'address',
+        label,
+        detail,
+        mapPackId: pack.id,
+        mapPackVersion: pack.version,
+        addressId,
+        placeId: `address:${addressId}`,
+        position: normalizedPosition,
+        revision: 1,
+      },
+      mapPacks.value,
+    )
+    return anchor
+      ? { ok: true, reason: '', anchor }
+      : { ok: false, reason: 'delivery_anchor_invalid', anchor: null }
+  }
+
+  const findDeliveryJourneyById = (journeyId = '') =>
+    deliveryJourneys.value.find((journey) => journey.id === String(journeyId || '').trim()) || null
+
+  const findDeliveryJourneyByOrderId = (orderId = '') =>
+    deliveryJourneys.value.find((journey) => journey.orderId === String(orderId || '').trim()) || null
+
+  const createDeliveryJourney = ({
+    orderId = '',
+    restaurantAnchor = null,
+    destinationAnchor = null,
+    courier = {},
+    etaMinutes = 30,
+    now = Date.now(),
+  } = {}) => {
+    const normalizedOrderId = String(orderId || '').trim()
+    const destination = normalizeDeliveryAnchor(destinationAnchor, mapPacks.value)
+    const restaurant = normalizeDeliveryAnchor(restaurantAnchor, mapPacks.value)
+    if (!normalizedOrderId || !destination) {
+      return { ok: false, reason: 'delivery_journey_anchor_invalid', journey: null }
+    }
+    const existing = findDeliveryJourneyByOrderId(normalizedOrderId)
+    if (existing) return { ok: true, reason: 'idempotent_replay', journey: existing }
+
+    const normalizedEtaMinutes = Math.max(1, Math.round(Number(etaMinutes) || 30))
+    const pickupAt = now + Math.max(1, Math.round(normalizedEtaMinutes * 0.35 * 60 * 1000))
+    const riderPickupAt = pickupAt + 1000
+    const etaAt = now + normalizedEtaMinutes * 60 * 1000
+    const journey = normalizeDeliveryJourney(
+      {
+        id: createDeliveryJourneyId(normalizedOrderId, now),
+        orderId: normalizedOrderId,
+        phase: MAP_DELIVERY_JOURNEY_PHASE.CREATED,
+        restaurant,
+        destination,
+        courier: {
+          id: courier?.id || `courier_${normalizedOrderId}`,
+          name: courier?.name || 'Food Delivery rider',
+          phoneNumber: courier?.phoneNumber || '',
+        },
+        mapPackId: destination.mapPackId,
+        mapPackVersion: destination.mapPackVersion,
+        etaMinutes: normalizedEtaMinutes,
+        createdAt: now,
+        pickupAt,
+        riderPickupAt,
+        etaAt,
+        addressRevision: destination.revision,
+        routeRevision: 1,
+        updatedAt: now,
+      },
+      mapPacks.value,
+    )
+    if (!journey) return { ok: false, reason: 'delivery_journey_invalid', journey: null }
+    deliveryJourneys.value = [journey, ...deliveryJourneys.value].slice(0, MAP_DELIVERY_JOURNEY_LIMIT)
+    return { ok: true, reason: '', journey }
+  }
+
+  const reconcileDeliveryJourneys = (now = Date.now()) => {
+    const changed = []
+    deliveryJourneys.value = deliveryJourneys.value.map((journey) => {
+      if (!MAP_DELIVERY_JOURNEY_ACTIVE_PHASES.has(journey.phase)) return journey
+      let phase = journey.phase
+      if (now >= journey.etaAt) phase = MAP_DELIVERY_JOURNEY_PHASE.ARRIVED
+      else if (now >= journey.riderPickupAt) phase = MAP_DELIVERY_JOURNEY_PHASE.EN_ROUTE
+      else if (now >= journey.pickupAt) phase = MAP_DELIVERY_JOURNEY_PHASE.RIDER_PICKUP
+      else if (now >= journey.createdAt) phase = MAP_DELIVERY_JOURNEY_PHASE.HEADING_TO_PICKUP
+      if (phase === journey.phase) return journey
+      const next = {
+        ...journey,
+        phase,
+        arrivedAt: phase === MAP_DELIVERY_JOURNEY_PHASE.ARRIVED ? now : journey.arrivedAt,
+        updatedAt: now,
+      }
+      changed.push(next)
+      return next
+    })
+    return changed
+  }
+
+  const getDeliveryJourneyProjection = (journeyId = '', now = Date.now()) => {
+    const journey = findDeliveryJourneyById(journeyId)
+    if (!journey) return null
+    reconcileDeliveryJourneys(now)
+    const latest = findDeliveryJourneyById(journey.id) || journey
+    const totalMs = Math.max(1, latest.etaAt - latest.createdAt)
+    const progress = Math.max(0, Math.min(1, (now - latest.createdAt) / totalMs))
+    const position = interpolateMapPosition(
+      latest.restaurant?.position,
+      latest.destination.position,
+      progress,
+      latest.destination.coordinateKind,
+    )
+    return {
+      journeyId: latest.id,
+      orderId: latest.orderId,
+      phase: latest.phase,
+      progress,
+      courier: { ...latest.courier },
+      pickup: latest.restaurant ? { ...latest.restaurant } : null,
+      destination: { ...latest.destination },
+      position,
+      etaAt: latest.etaAt,
+      etaMinutes: Math.max(0, Math.ceil((latest.etaAt - now) / 60000)),
+      addressRevision: latest.addressRevision,
+      routeRevision: latest.routeRevision,
+    }
+  }
+
+  const prepareDeliveryReroute = ({
+    journeyId = '',
+    destinationAnchor = null,
+    expectedAddressRevision = 0,
+  } = {}) => {
+    const journey = findDeliveryJourneyById(journeyId)
+    const destination = normalizeDeliveryAnchor(destinationAnchor, mapPacks.value)
+    if (!journey || !destination) return { ok: false, reason: 'delivery_journey_not_found', proposal: null }
+    if (expectedAddressRevision && journey.addressRevision !== expectedAddressRevision) {
+      return { ok: false, reason: 'delivery_journey_revision_stale', proposal: null }
+    }
+    if (journey.phase === MAP_DELIVERY_JOURNEY_PHASE.ARRIVED || journey.phase === MAP_DELIVERY_JOURNEY_PHASE.CANCELLED) {
+      return { ok: false, reason: 'delivery_journey_closed', proposal: null }
+    }
+    return {
+      ok: true,
+      reason: '',
+      proposal: {
+        journeyId: journey.id,
+        orderId: journey.orderId,
+        previousDestination: { ...journey.destination },
+        destination,
+        expectedAddressRevision: journey.addressRevision,
+        nextAddressRevision: journey.addressRevision + 1,
+        expectedRouteRevision: journey.routeRevision,
+      },
+    }
+  }
+
+  const commitDeliveryReroute = ({ proposal = {}, now = Date.now(), etaMinutes = 30 } = {}) => {
+    const journey = findDeliveryJourneyById(proposal.journeyId)
+    const destination = normalizeDeliveryAnchor(proposal.destination, mapPacks.value)
+    if (!journey || !destination) return { ok: false, reason: 'delivery_reroute_invalid', journey: null }
+    if (
+      journey.addressRevision !== proposal.expectedAddressRevision ||
+      journey.routeRevision !== proposal.expectedRouteRevision
+    ) {
+      return { ok: false, reason: 'delivery_reroute_stale', journey: null }
+    }
+    const normalizedEtaMinutes = Math.max(1, Math.round(Number(etaMinutes) || journey.etaMinutes))
+    const next = normalizeDeliveryJourney(
+      {
+        ...journey,
+        destination: { ...destination, revision: proposal.nextAddressRevision },
+        phase: MAP_DELIVERY_JOURNEY_PHASE.REROUTING,
+        etaMinutes: normalizedEtaMinutes,
+        etaAt: now + normalizedEtaMinutes * 60 * 1000,
+        addressRevision: proposal.nextAddressRevision,
+        routeRevision: journey.routeRevision + 1,
+        updatedAt: now,
+      },
+      mapPacks.value,
+    )
+    if (!next) return { ok: false, reason: 'delivery_reroute_invalid', journey: null }
+    deliveryJourneys.value = deliveryJourneys.value.map((item) => (item.id === next.id ? next : item))
+    return { ok: true, reason: '', journey: next }
+  }
+
+  const cancelDeliveryJourney = (journeyId = '', now = Date.now()) => {
+    const journey = findDeliveryJourneyById(journeyId)
+    if (!journey) return false
+    journey.phase = MAP_DELIVERY_JOURNEY_PHASE.CANCELLED
+    journey.updatedAt = now
+    return true
+  }
+
   const buildFoodDeliveryMapHandoff = ({ restaurant = {}, categoryKey = '' } = {}) => {
     const current = normalizeCurrentLocation(currentLocation.value, mapPacks.value)
     const restaurantContext = normalizeFoodDeliveryRestaurantContext(restaurant)
@@ -4068,6 +4468,8 @@ export const useMapStore = defineStore('map', () => {
         .slice(0, TRIP_HISTORY_LIMIT)
     }
 
+    deliveryJourneys.value = normalizeDeliveryJourneys(source.deliveryJourneys, mapPacks.value)
+
     mapCalendarReminderPreferences.value =
       normalizeMapCalendarReminderPreferences(source.mapCalendarReminderPreferences)
     mapVisualSettings.value = normalizeMapVisualSettings(source.mapVisualSettings)
@@ -4170,6 +4572,12 @@ export const useMapStore = defineStore('map', () => {
         ? [...item.eventCheckpointIds]
         : [],
     })),
+    deliveryJourneys: deliveryJourneys.value.map((journey) => ({
+      ...journey,
+      restaurant: journey.restaurant ? { ...journey.restaurant, position: { ...journey.restaurant.position } } : null,
+      destination: { ...journey.destination, position: { ...journey.destination.position } },
+      courier: { ...journey.courier },
+    })),
     mapCalendarReminderPreferences: normalizeMapCalendarReminderPreferences(
       mapCalendarReminderPreferences.value,
     ),
@@ -4182,6 +4590,7 @@ export const useMapStore = defineStore('map', () => {
     clearTripArrivalTimer()
     tripState.value = createIdleTripState()
     tripHistory.value = []
+    deliveryJourneys.value = []
     mapCalendarReminderPreferences.value = {}
     activeMapPackId.value = DEFAULT_MAP_PACK_ID
     mapPinVisibilityByPack.value = {}
@@ -4362,6 +4771,7 @@ export const useMapStore = defineStore('map', () => {
       tripForm,
       tripState,
       tripHistory,
+      deliveryJourneys,
       mapCalendarReminderPreferences,
       mapVisualSettings,
     ],
@@ -4448,6 +4858,7 @@ export const useMapStore = defineStore('map', () => {
     tripState,
     tripRuntime,
     tripHistory,
+    deliveryJourneys,
     routeFamiliarity,
     mapAreaUnlocks,
     mapAreaFeedback,
@@ -4484,6 +4895,17 @@ export const useMapStore = defineStore('map', () => {
     addAddress,
     updateAddress,
     removeAddress,
+    listDeliveryAnchors,
+    findDeliveryAnchorById,
+    createDeliveryAddress,
+    findDeliveryJourneyById,
+    findDeliveryJourneyByOrderId,
+    createDeliveryJourney,
+    reconcileDeliveryJourneys,
+    getDeliveryJourneyProjection,
+    prepareDeliveryReroute,
+    commitDeliveryReroute,
+    cancelDeliveryJourney,
     buildFoodDeliveryMapHandoff,
     buildDeliveryEventMapHandoff,
     startTrip,

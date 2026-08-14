@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useDialog } from '../composables/useDialog'
@@ -11,6 +11,8 @@ import {
 } from '../lib/relationship-fact-adapters'
 import { useChatStore } from '../stores/chat'
 import { PHONE_CALL_DIRECTION, usePhoneStore } from '../stores/phone'
+import { useFoodDeliveryStore } from '../stores/foodDelivery'
+import { FOOD_DELIVERY_CAUSAL_CHAIN_NODE } from '../stores/simulation'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
 const CALL_FILTER = Object.freeze({
@@ -50,8 +52,9 @@ const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const chatStore = useChatStore()
 const phoneStore = usePhoneStore()
+const foodDeliveryStore = useFoodDeliveryStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
-const { callCount, missedCallCount, completedCallCount, recentCalls } = storeToRefs(phoneStore)
+const { callCount, missedCallCount, completedCallCount, recentCalls, activeSession } = storeToRefs(phoneStore)
 
 const callDraft = ref({
   contactId: '',
@@ -598,7 +601,78 @@ const requestRemoveCall = async (call) => {
   void restoreOverlayFocus()
 }
 
+const foodCallMessageDraft = ref('')
+const foodCallContext = computed(() => {
+  if (route.query.source !== 'food_delivery' || typeof route.query.orderId !== 'string') return null
+  return foodDeliveryStore.getOrderCallContext(route.query.orderId)
+})
+const isFoodDeliveryCall = computed(() => Boolean(foodCallContext.value))
+
+const startFoodDeliveryCall = () => {
+  const context = foodCallContext.value
+  if (!context) return
+  const result = phoneStore.startCallSession({
+    participant: context.courier,
+    sourceModule: 'food_delivery',
+    sourceId: context.orderId,
+    orderId: context.orderId,
+    conversationId: context.conversationId,
+    journeyId: foodDeliveryStore.findOrderById(context.orderId)?.deliveryJourneyId || '',
+  })
+  if (result?.ok && result.session?.id) {
+    foodDeliveryStore.recordOrderCausalCheckpoint({
+      orderId: context.orderId,
+      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED,
+      phoneSessionId: result.session.id,
+      reason: 'phone_call_started',
+      resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED,
+      now: Date.now(),
+    })
+  }
+}
+
+const sendFoodCallMessage = () => {
+  const text = foodCallMessageDraft.value.trim()
+  if (!text) return
+  const result = phoneStore.sendCallText({ text, now: Date.now() })
+  if (result?.ok && result.proposal?.kind === 'address_change_accepted') {
+    foodDeliveryStore.recordOrderCausalCheckpoint({
+      orderId: activeSession.value?.orderId,
+      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_RESOLUTION_PROPOSED,
+      phoneSessionId: activeSession.value?.id,
+      reason: 'call_resolution_proposed',
+      resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_RESOLUTION_PROPOSED,
+      now: Date.now(),
+    })
+  }
+  foodCallMessageDraft.value = ''
+}
+
+const acceptFoodCallResolution = () => {
+  const session = activeSession.value
+  const order = session?.orderId ? foodDeliveryStore.findOrderById(session.orderId) : null
+  const destination = order?.fulfillment?.addressChangeRequestId
+    ? foodDeliveryStore.findOrderConversationByOrderId(order.id)?.messages
+        ?.find((message) => message.id === order.fulfillment.addressChangeRequestId)?.destinationAnchor
+    : null
+  if (order && destination) {
+    foodDeliveryStore.commitOrderAddressChange({ orderId: order.id, destinationAnchor: destination, now: Date.now() })
+  }
+}
+
+const endFoodDeliveryCall = () => {
+  const result = phoneStore.endCallSession({ now: Date.now() })
+  const orderId = result?.session?.orderId || route.query.orderId
+  phoneStore.clearCallSession()
+  if (orderId) {
+    router.replace({ path: '/food-delivery', query: { orderId, conversation: '1' } })
+  }
+}
+
 onBeforeUnmount(clearSessionTimers)
+onMounted(() => {
+  if (route.query.source === 'food_delivery') startFoodDeliveryCall()
+})
 </script>
 
 <template>
@@ -625,6 +699,28 @@ onBeforeUnmount(clearSessionTimers)
 
     <main class="phone-scroll no-scrollbar">
       <div class="phone-content">
+        <section v-if="isFoodDeliveryCall" class="phone-food-call" data-testid="phone-food-delivery-call">
+          <div class="phone-food-call__head">
+            <div><p class="phone-kicker">Food Delivery call</p><h2>{{ activeSession?.participant?.name || 'Delivery rider' }}</h2><p>{{ activeSession?.participant?.phoneNumber }}</p></div>
+            <span class="phone-food-call__live">LIVE</span>
+          </div>
+          <div class="phone-food-call__transcript" data-testid="phone-food-delivery-transcript">
+            <div v-for="turn in activeSession?.turns || []" :key="turn.id" class="phone-food-call__turn" :class="`is-${turn.speaker}`">
+              <small>{{ turn.speaker === 'user' ? 'You' : 'Rider' }}</small><p>{{ turn.text }}</p>
+            </div>
+          </div>
+          <div class="phone-food-call__composer">
+            <textarea v-model="foodCallMessageDraft" rows="2" data-testid="phone-food-delivery-input" placeholder="Speak to the rider in text…"></textarea>
+            <button type="button" data-testid="phone-food-delivery-send" @click="sendFoodCallMessage">Send</button>
+          </div>
+          <p v-if="activeSession?.resolutionProposal?.kind === 'address_change_accepted'" class="phone-food-call__proposal" data-testid="phone-food-delivery-proposal">
+            The rider accepted the address change proposal.
+          </p>
+          <div class="phone-food-call__actions">
+            <button v-if="activeSession?.resolutionProposal?.kind === 'address_change_accepted'" type="button" data-testid="phone-food-delivery-accept" @click="acceptFoodCallResolution">Update Food Delivery route</button>
+            <button type="button" class="is-end" data-testid="phone-food-delivery-hangup" @click="endFoodDeliveryCall">Hang up</button>
+          </div>
+        </section>
         <p
           v-if="feedback"
           class="phone-feedback"
@@ -2882,4 +2978,8 @@ onBeforeUnmount(clearSessionTimers)
     transition-duration: 0s !important;
   }
 }
+.phone-food-call { margin-bottom: 1rem; padding: 1rem; border: 1px solid rgba(119, 210, 255, .28); border-radius: 1.4rem; color: #edf7ff; background: linear-gradient(145deg, #18263a, #0c1421); box-shadow: 0 18px 42px rgba(6, 18, 35, .22); }
+.phone-food-call__head, .phone-food-call__actions { display: flex; align-items: center; justify-content: space-between; gap: .8rem; }.phone-food-call__head h2 { margin: .2rem 0 0; font-size: 1.1rem; }.phone-food-call__head p:last-child { margin: .2rem 0 0; color: #9db3c9; font-size: .72rem; }.phone-food-call__live { padding: .25rem .45rem; border-radius: 999px; color: #071620; background: #7ce4c7; font-size: .6rem; font-weight: 900; letter-spacing: .08em; }
+.phone-food-call__transcript { display: grid; gap: .55rem; max-height: 19rem; margin: .9rem 0; overflow-y: auto; padding: .2rem; }.phone-food-call__turn { max-width: 88%; padding: .6rem .7rem; border-radius: .85rem; background: rgba(255,255,255,.07); }.phone-food-call__turn.is-user { justify-self: end; color: #06211e; background: #a4f2e3; }.phone-food-call__turn small { display: block; margin-bottom: .2rem; color: #9fb0c2; font-size: .58rem; font-weight: 900; text-transform: uppercase; }.phone-food-call__turn.is-user small { color: #28645d; }.phone-food-call__turn p { margin: 0; font-size: .74rem; line-height: 1.45; }
+.phone-food-call__composer { display: grid; gap: .45rem; }.phone-food-call__composer textarea { width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,.12); border-radius: .8rem; color: #edf7ff; background: rgba(255,255,255,.06); padding: .6rem; font: inherit; font-size: .74rem; resize: vertical; }.phone-food-call__composer button, .phone-food-call__actions button { min-height: 2.5rem; padding: .55rem .75rem; border: 0; border-radius: .75rem; color: #06211e; background: #7ce4c7; font-size: .72rem; font-weight: 900; }.phone-food-call__actions { margin-top: .65rem; }.phone-food-call__actions .is-end { color: #ffe9ed; background: #a54154; }.phone-food-call__proposal { margin: .65rem 0 0; padding: .6rem .7rem; border-radius: .75rem; color: #d9fff3; background: rgba(92, 224, 197, .12); font-size: .72rem; }
 </style>

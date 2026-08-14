@@ -204,8 +204,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:map',
-    schemaVersion: 3,
-    legacySchemaVersions: [2],
+    schemaVersion: 4,
+    legacySchemaVersions: [2, 3],
     labelZh: '地图存档',
     labelEn: 'Map state',
     sourceFile: 'src/stores/map.js',
@@ -261,7 +261,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:food-delivery',
-    schemaVersion: 1,
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '外卖记录',
     labelEn: 'Food delivery records',
     sourceFile: 'src/stores/foodDelivery.js',
@@ -269,8 +270,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:simulation',
-    schemaVersion: 3,
-    legacySchemaVersions: [1, 2],
+    schemaVersion: 4,
+    legacySchemaVersions: [1, 2, 3],
     labelZh: '事件模拟',
     labelEn: 'Simulation events',
     sourceFile: 'src/stores/simulation.js',
@@ -286,7 +287,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:wallet',
-    schemaVersion: 1,
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '钱包账本',
     labelEn: 'Wallet ledger',
     sourceFile: 'src/stores/wallet.js',
@@ -294,7 +296,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:phone',
-    schemaVersion: 1,
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '电话记录',
     labelEn: 'Phone logs',
     sourceFile: 'src/stores/phone.js',

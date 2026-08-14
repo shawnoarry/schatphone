@@ -9,6 +9,7 @@ import FoodDeliveryEditorialTemplate from '../components/FoodDeliveryEditorialTe
 import FoodDeliveryHarborRoastApp from '../components/FoodDeliveryHarborRoastApp.vue'
 import FoodDeliveryJadeHearthApp from '../components/FoodDeliveryJadeHearthApp.vue'
 import FoodDeliveryVerdantDayApp from '../components/FoodDeliveryVerdantDayApp.vue'
+import FoodDeliveryOrderChainSurface from '../components/FoodDeliveryOrderChainSurface.vue'
 import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   buildFoodDeliverySharedMealRelationshipMemoryKey,
@@ -265,6 +266,8 @@ const dashComboDrinkKey = ref(DASH_GRILL_DEFAULT_COMBO_DRINK)
 const dashSauceKey = ref(DASH_GRILL_DEFAULT_SAUCE)
 const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
+const selectedFoodDeliveryAnchorId = ref('')
+const deliveryOrderFeedback = ref('')
 const showStoreCartPanel = ref(false)
 const platformSearchQuery = ref('')
 const platformSearchInputRef = ref(null)
@@ -2698,6 +2701,49 @@ const activeMapHandoff = computed(() =>
     categoryKey: activeCategory.value?.key || '',
   }),
 )
+const foodDeliveryAnchorOptions = computed(() => mapStore.listDeliveryAnchors().slice(0, 32))
+const selectedFoodDeliveryAnchor = computed(() => {
+  const selected = foodDeliveryAnchorOptions.value.find(
+    (anchor) => anchor.id === selectedFoodDeliveryAnchorId.value,
+  )
+  if (selected) return selected
+  const currentDetail = activeMapHandoff.value.deliveryAddress || ''
+  const matching = foodDeliveryAnchorOptions.value.find((anchor) => anchor.detail === currentDetail)
+  if (matching) return matching
+  const fallback =
+    foodDeliveryAnchorOptions.value.find((anchor) => anchor.kind === 'address') ||
+    foodDeliveryAnchorOptions.value[0] ||
+    null
+  return currentDetail && fallback && currentDetail !== fallback.detail
+    ? { ...fallback, id: `current:${currentDetail}`, label: currentDetail, detail: currentDetail }
+    : fallback
+})
+const deliveryOrderId = computed(() =>
+  typeof route.query.orderId === 'string' ? route.query.orderId.trim() : '',
+)
+const deliveryOrder = computed(() =>
+  deliveryOrderId.value ? foodDeliveryStore.findOrderById(deliveryOrderId.value) : null,
+)
+const deliveryOrderConversation = computed(() =>
+  deliveryOrder.value ? foodDeliveryStore.findOrderConversationByOrderId(deliveryOrder.value.id) : null,
+)
+watch(
+  deliveryOrder,
+  (order) => {
+    if (!order) return
+    foodDeliveryStore.ensureOrderConversation(order.id)
+    if (order.deliveryAnchor?.id) selectedFoodDeliveryAnchorId.value = order.deliveryAnchor.id
+  },
+  { immediate: true },
+)
+const deliveryOrderJourney = computed(() => {
+  const id = deliveryOrder.value?.deliveryJourneyId
+  if (!id) return null
+  return mapStore.getDeliveryJourneyProjection(id, Date.now())
+})
+const isDeliveryOrderSurface = computed(
+  () => Boolean(deliveryOrder.value && route.query.conversation === '1'),
+)
 const deliveryMapRouteSummary = (handoff = {}) =>
   languageBase.value === 'zh'
     ? handoff.routeSummaryZh || handoff.routeSummaryEn || ''
@@ -3644,11 +3690,62 @@ const openCheckoutSheet = () => {
     checkoutFeedback.value = t('请先选择一份菜品。', 'Choose a dish first.')
     return
   }
+  selectedFoodDeliveryAnchorId.value = selectedFoodDeliveryAnchor.value?.id || ''
   checkoutSheetOpen.value = true
 }
 
 const closeCheckoutSheet = () => {
   checkoutSheetOpen.value = false
+}
+
+const openDeliveryOrderSurface = (orderId) =>
+  router.push({
+    path: '/food-delivery',
+    query: { ...route.query, orderId, conversation: '1' },
+  })
+
+const refreshDeliveryOrder = () => {
+  if (!deliveryOrder.value) return
+  foodDeliveryStore.reconcileFoodDeliveryRuntime(Date.now())
+}
+
+const requestDeliveryAddressChange = ({ text, destinationAnchor }) => {
+  if (!deliveryOrder.value) return
+  const result = foodDeliveryStore.sendOrderMessage({
+    orderId: deliveryOrder.value.id,
+    text,
+    intent: 'request_address_change',
+    destinationAnchor,
+    clientMessageId: `${deliveryOrder.value.id}:address_request:${Date.now()}`,
+    now: Date.now(),
+  })
+  deliveryOrderFeedback.value = result.ok
+    ? t('已发送给配送员，等待回应。', 'Sent to the rider. Waiting for a reply.')
+    : t('消息未发送，请稍后重试。', 'Message was not sent. Try again.')
+}
+
+const keepOriginalDeliveryAddress = () => {
+  if (!deliveryOrder.value) return
+  foodDeliveryStore.sendOrderMessage({
+    orderId: deliveryOrder.value.id,
+    text: t('保持原地址配送。', 'Please keep the original address.'),
+    intent: 'keep_original_address',
+    clientMessageId: `${deliveryOrder.value.id}:keep_original:${Date.now()}`,
+    now: Date.now(),
+  })
+}
+
+const callDeliveryRider = () => {
+  if (!deliveryOrder.value) return
+  router.push({
+    path: '/phone',
+    query: {
+      source: 'food_delivery',
+      orderId: deliveryOrder.value.id,
+      conversationId: deliveryOrder.value.conversationId,
+      journeyId: deliveryOrder.value.deliveryJourneyId,
+    },
+  })
 }
 
 const checkoutFoodDelivery = (checkoutOptions = {}) => {
@@ -3672,7 +3769,7 @@ const checkoutFoodDelivery = (checkoutOptions = {}) => {
   const relationshipTarget = activeRestaurant.value
     ? selectedSharedMealContact(activeRestaurant.value.id)
     : null
-  const order = foodDeliveryStore.checkoutCart({
+  const checkoutInput = {
     restaurantId: activeRestaurant.value.id,
     deliveryAddress:
       fulfillmentMode === 'pickup'
@@ -3694,8 +3791,19 @@ const checkoutFoodDelivery = (checkoutOptions = {}) => {
       : null,
     sourceModule: mapHandoff.sourceModule,
     sourceId: mapHandoff.sourceId,
-  })
-  if (!order) {
+  }
+  const checkoutResult =
+    fulfillmentMode === 'delivery'
+      ? foodDeliveryStore.checkoutPaidCart({
+          ...checkoutInput,
+          deliveryAnchor: selectedFoodDeliveryAnchor.value,
+          accountId: walletStore.activePaymentCard?.accountId || '',
+          cardId: walletStore.activePaymentCard?.id || '',
+          idempotencyKey: `food_delivery_ui:${activeRestaurant.value.id}:${Date.now()}`,
+        })
+      : { ok: Boolean(foodDeliveryStore.checkoutCart(checkoutInput)), order: foodDeliveryStore.orders[0] }
+  const order = checkoutResult?.order || null
+  if (!checkoutResult?.ok || !order) {
     checkoutFeedback.value = t(
       '订单没有提交，请确认购物车。',
       'Order was not placed. Check the cart.',
@@ -4267,6 +4375,26 @@ onBeforeUnmount(() => {
       class="mx-auto min-w-0 w-full max-w-md"
       :class="usesFullBleedStoreShell ? 'space-y-0' : 'space-y-4'"
     >
+      <FoodDeliveryOrderChainSurface
+        v-if="isDeliveryOrderSurface"
+        :order="deliveryOrder"
+        :conversation="deliveryOrderConversation"
+        :journey="deliveryOrderJourney"
+        :anchor-options="foodDeliveryAnchorOptions"
+        :selected-anchor-id="selectedFoodDeliveryAnchor?.id || ''"
+        @update:selected-anchor-id="selectedFoodDeliveryAnchorId = $event"
+        @request-address-change="requestDeliveryAddressChange"
+        @call-rider="callDeliveryRider"
+        @keep-original-address="keepOriginalDeliveryAddress"
+        @refresh="refreshDeliveryOrder"
+      />
+      <p
+        v-if="isDeliveryOrderSurface && deliveryOrderFeedback"
+        class="rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+        data-testid="food-delivery-order-feedback"
+      >
+        {{ deliveryOrderFeedback }}
+      </p>
       <section
         v-if="!isStoreMode && platformPageKey === 'home'"
         class="relative -mx-4 -mt-4 min-w-0 overflow-hidden bg-gradient-to-b from-[#2ec4bd] via-[#27b8b1] to-[#17a39c] pb-5 pt-[2.25rem] text-white"
@@ -11579,6 +11707,23 @@ onBeforeUnmount(() => {
                   t('当前 Map 配送地址', 'Current Map delivery address')
                 }}
               </p>
+              <label class="mt-3 block text-[10px] font-black uppercase tracking-wide opacity-70" for="food-delivery-checkout-address">
+                {{ t('Map 配送地址', 'Map delivery address') }}
+              </label>
+              <select
+                id="food-delivery-checkout-address"
+                v-model="selectedFoodDeliveryAnchorId"
+                class="mt-1 min-h-10 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs outline-none"
+                data-testid="food-delivery-checkout-address-select"
+              >
+                <option v-for="anchor in foodDeliveryAnchorOptions" :key="anchor.id" :value="anchor.id">
+                  {{ anchor.label }} / {{ anchor.detail }}
+                </option>
+              </select>
+              <p class="mt-2 text-[10px] font-semibold opacity-70">
+                {{ t('付款将写入 Wallet 流水', 'Payment is recorded in Wallet ledger') }} ·
+                {{ walletStore.activePaymentCard?.label || walletStore.activePaymentCard?.id || 'Wallet card' }}
+              </p>
             </div>
             <button
               type="button"
@@ -11951,6 +12096,14 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <div class="mt-2 flex min-w-0 flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-[11px] font-semibold text-slate-700 shadow-sm"
+                    :data-testid="`food-delivery-open-order-${order.id}`"
+                    @click="openDeliveryOrderSurface(order.id)"
+                  >
+                    {{ t('打开订单消息', 'Open order messages') }}
+                  </button>
                   <button
                     v-if="
                       order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED &&

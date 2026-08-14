@@ -12,8 +12,18 @@ import {
 } from '../lib/relationship-cleanup-helpers'
 
 const PHONE_STORAGE_KEY = 'store:phone'
-const PHONE_STORAGE_VERSION = 1
+const PHONE_STORAGE_VERSION = 2
 const PHONE_CALL_LIMIT = 200
+
+export const PHONE_CALL_SESSION_STATUS = Object.freeze({
+  DIALING: 'dialing',
+  RINGING: 'ringing',
+  CONNECTED: 'connected',
+  ENDED: 'ended',
+  FAILED: 'failed',
+})
+
+const PHONE_CALL_TURN_LIMIT = 80
 
 export const PHONE_CALL_DIRECTION = Object.freeze({
   INCOMING: 'incoming',
@@ -124,6 +134,61 @@ const normalizeCallLogs = (rawCalls) => {
     .slice(0, PHONE_CALL_LIMIT)
 }
 
+const normalizeCallTurn = (rawTurn, index = 0) => {
+  if (!rawTurn || typeof rawTurn !== 'object') return null
+  const text = normalizeText(rawTurn.text || rawTurn.spokenText, '', 800)
+  if (!text) return null
+  return {
+    id: normalizeText(rawTurn.id, `phone_turn_${Date.now()}_${index}`, 160),
+    speaker: normalizeText(rawTurn.speaker, 'rider', 30),
+    text,
+    spokenText: normalizeText(rawTurn.spokenText, text, 800),
+    voiceTone: normalizeText(rawTurn.voiceTone, '', 120),
+    soundscape: normalizeText(rawTurn.soundscape, '', 160),
+    delivery: normalizeText(rawTurn.delivery, 'text', 30),
+    createdAt: Math.max(0, toInt(rawTurn.createdAt, Date.now() + index)),
+  }
+}
+
+const normalizeCallSession = (rawSession) => {
+  if (!rawSession || typeof rawSession !== 'object') return null
+  const id = normalizeText(rawSession.id, '', 160)
+  const participantName = normalizeText(rawSession.participant?.name || rawSession.contactName, '', 80)
+  if (!id || !participantName) return null
+  const turns = Array.isArray(rawSession.turns)
+    ? rawSession.turns.map(normalizeCallTurn).filter(Boolean).slice(-PHONE_CALL_TURN_LIMIT)
+    : []
+  return {
+    id,
+    status: Object.values(PHONE_CALL_SESSION_STATUS).includes(rawSession.status)
+      ? rawSession.status
+      : PHONE_CALL_SESSION_STATUS.ENDED,
+    participant: {
+      id: normalizeText(rawSession.participant?.id, '', 120),
+      name: participantName,
+      phoneNumber: normalizeText(rawSession.participant?.phoneNumber || rawSession.phoneNumber, '', 40),
+    },
+    sourceModule: normalizeText(rawSession.sourceModule, 'phone', 60),
+    sourceId: normalizeText(rawSession.sourceId, '', 160),
+    orderId: normalizeText(rawSession.orderId, '', 140),
+    conversationId: normalizeText(rawSession.conversationId, '', 180),
+    journeyId: normalizeText(rawSession.journeyId, '', 180),
+    resolutionProposal: rawSession.resolutionProposal && typeof rawSession.resolutionProposal === 'object'
+      ? { ...rawSession.resolutionProposal }
+      : null,
+    turns,
+    startedAt: Math.max(0, toInt(rawSession.startedAt, Date.now())),
+    connectedAt: Math.max(0, toInt(rawSession.connectedAt, 0)),
+    endedAt: Math.max(0, toInt(rawSession.endedAt, 0)),
+    updatedAt: Math.max(0, toInt(rawSession.updatedAt, Date.now())),
+  }
+}
+
+export const migratePhoneStorage = ({ version, data } = {}) => {
+  if (Number(version) !== 1 || !data || typeof data !== 'object' || Array.isArray(data)) return null
+  return { ...data, activeSession: null }
+}
+
 const createSeedCalls = () => {
   const now = Date.now()
   return normalizeCallLogs([
@@ -155,6 +220,7 @@ const createSeedCalls = () => {
 
 export const usePhoneStore = defineStore('phone', () => {
   const calls = ref([])
+  const activeSession = ref(null)
   const hasFinishedStorageHydration = ref(false)
 
   const callCount = computed(() => calls.value.length)
@@ -167,6 +233,7 @@ export const usePhoneStore = defineStore('phone', () => {
     calls.value.filter((item) => item.status === PHONE_CALL_STATUS.COMPLETED).length,
   )
   const recentCalls = computed(() => calls.value.slice(0, 20))
+  const callSessionActive = computed(() => Boolean(activeSession.value))
 
   const findCallById = (callId) => {
     const id = typeof callId === 'string' ? callId.trim() : ''
@@ -288,20 +355,140 @@ export const usePhoneStore = defineStore('phone', () => {
     }
   }
 
+  const persistSession = () => {
+    if (hasFinishedStorageHydration.value) persistToStorage()
+  }
+
+  const startCallSession = ({
+    participant = {},
+    sourceModule = 'phone',
+    sourceId = '',
+    orderId = '',
+    conversationId = '',
+    journeyId = '',
+    now = Date.now(),
+  } = {}) => {
+    const name = normalizeText(participant.name, '', 80)
+    if (!name) return { ok: false, reason: 'participant_required', session: null }
+    if (activeSession.value && activeSession.value.status !== PHONE_CALL_SESSION_STATUS.ENDED) {
+      return { ok: true, reason: 'active_session', session: activeSession.value }
+    }
+    const session = normalizeCallSession({
+      id: `phone_session_${now}_${Math.random().toString(36).slice(2, 8)}`,
+      status: PHONE_CALL_SESSION_STATUS.CONNECTED,
+      participant,
+      sourceModule,
+      sourceId,
+      orderId,
+      conversationId,
+      journeyId,
+      startedAt: now,
+      connectedAt: now,
+      updatedAt: now,
+    })
+    if (!session) return { ok: false, reason: 'session_invalid', session: null }
+    session.turns.push(normalizeCallTurn({
+      speaker: 'rider',
+      text: '(engine hum) Hello, this is your delivery rider.',
+      spokenText: 'Hello, this is your delivery rider.',
+      voiceTone: 'careful, slightly rushed',
+      soundscape: 'engine hum',
+      createdAt: now,
+    }))
+    activeSession.value = session
+    persistSession()
+    return { ok: true, reason: '', session }
+  }
+
+  const appendCallTurn = ({ speaker = 'user', text = '', spokenText = '', voiceTone = '', soundscape = '', delivery = 'text', now = Date.now() } = {}) => {
+    if (!activeSession.value) return null
+    const turn = normalizeCallTurn({
+      id: `phone_turn_${now}_${Math.random().toString(36).slice(2, 8)}`,
+      speaker,
+      text,
+      spokenText,
+      voiceTone,
+      soundscape,
+      delivery,
+      createdAt: now,
+    })
+    if (!turn) return null
+    activeSession.value.turns = [...activeSession.value.turns, turn].slice(-PHONE_CALL_TURN_LIMIT)
+    activeSession.value.updatedAt = now
+    persistSession()
+    return turn
+  }
+
+  const sendCallText = ({ text = '', now = Date.now() } = {}) => {
+    const userText = normalizeText(text, '', 800)
+    if (!activeSession.value || !userText) return { ok: false, reason: 'session_unavailable', reply: null, proposal: null }
+    appendCallTurn({ speaker: 'user', text: userText, spokenText: userText, now })
+    const addressIntent = /address|change|wrong|studio|楼|号|路|地址/i.test(userText)
+    const replyText = addressIntent
+      ? '(paper rustle; engine hum) I can update the delivery address. Please confirm the new location in Food Delivery.'
+      : '(road noise) I am checking the order details now. Please tell me the address you want to use.'
+    const reply = appendCallTurn({
+      speaker: 'rider',
+      text: replyText,
+      spokenText: replyText.replace(/^\([^)]*\)\s*/, ''),
+      voiceTone: addressIntent ? 'focused and reassuring' : 'polite and attentive',
+      soundscape: addressIntent ? 'paper rustle; engine hum' : 'road noise',
+      now: now + 1,
+    })
+    const proposal = addressIntent
+      ? { kind: 'address_change_accepted', orderId: activeSession.value.orderId, sourceSessionId: activeSession.value.id }
+      : { kind: 'needs_clarification', orderId: activeSession.value.orderId, sourceSessionId: activeSession.value.id }
+    activeSession.value.resolutionProposal = proposal
+    activeSession.value.updatedAt = now + 1
+    persistSession()
+    return { ok: true, reason: '', reply, proposal }
+  }
+
+  const endCallSession = ({ now = Date.now(), status = PHONE_CALL_SESSION_STATUS.ENDED } = {}) => {
+    if (!activeSession.value) return null
+    activeSession.value.status = status
+    activeSession.value.endedAt = now
+    activeSession.value.updatedAt = now
+    const durationSec = activeSession.value.connectedAt
+      ? Math.max(0, Math.floor((now - activeSession.value.connectedAt) / 1000))
+      : 0
+    const call = addCallLog({
+      contactName: activeSession.value.participant.name,
+      phoneNumber: activeSession.value.participant.phoneNumber,
+      direction: PHONE_CALL_DIRECTION.OUTGOING,
+      status: status === PHONE_CALL_SESSION_STATUS.ENDED ? PHONE_CALL_STATUS.COMPLETED : PHONE_CALL_STATUS.FAILED,
+      durationSec,
+      summary: activeSession.value.resolutionProposal?.kind || 'Food Delivery rider call',
+      sourceModule: 'phone_call_session',
+      sourceId: activeSession.value.id,
+      startedAt: activeSession.value.startedAt,
+    })
+    persistSession()
+    return { session: activeSession.value, call }
+  }
+
+  const clearCallSession = () => {
+    activeSession.value = null
+    persistSession()
+  }
+
   const applyPersistedSource = (source) => {
-    const sourceCalls = Array.isArray(source)
-      ? source
+    const sourceObject = Array.isArray(source)
+      ? { calls: source }
       : source && typeof source === 'object'
-        ? source.calls || source.callLogs
+        ? source
         : null
+    const sourceCalls = sourceObject?.calls || sourceObject?.callLogs
     if (!Array.isArray(sourceCalls)) return false
     calls.value = normalizeCallLogs(sourceCalls)
+    activeSession.value = normalizeCallSession(sourceObject?.activeSession)
     return true
   }
 
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(PHONE_STORAGE_KEY, {
       version: PHONE_STORAGE_VERSION,
+      migrate: migratePhoneStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -309,12 +496,23 @@ export const usePhoneStore = defineStore('phone', () => {
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(PHONE_STORAGE_KEY, {
       version: PHONE_STORAGE_VERSION,
+      migrate: migratePhoneStorage,
     })
     return applyPersistedSource(persisted)
   }
 
   const createBackupSnapshot = () => ({
     calls: calls.value.map((item) => ({ ...item })),
+    activeSession: activeSession.value
+      ? {
+          ...activeSession.value,
+          participant: { ...activeSession.value.participant },
+          resolutionProposal: activeSession.value.resolutionProposal
+            ? { ...activeSession.value.resolutionProposal }
+            : null,
+          turns: activeSession.value.turns.map((turn) => ({ ...turn })),
+        }
+      : null,
   })
 
   const createBackupSnapshotAsync = async () => createBackupSnapshot()
@@ -330,6 +528,7 @@ export const usePhoneStore = defineStore('phone', () => {
   const persistToStorage = () => {
     writePersistedState(PHONE_STORAGE_KEY, createBackupSnapshot(), {
       version: PHONE_STORAGE_VERSION,
+      migrate: migratePhoneStorage,
     })
   }
 
@@ -339,6 +538,7 @@ export const usePhoneStore = defineStore('phone', () => {
 
   const resetForTesting = () => {
     calls.value = []
+    activeSession.value = null
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -355,7 +555,7 @@ export const usePhoneStore = defineStore('phone', () => {
   })()
 
   watch(
-    calls,
+    [calls, activeSession],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -365,6 +565,8 @@ export const usePhoneStore = defineStore('phone', () => {
 
   return {
     calls,
+    activeSession,
+    callSessionActive,
     callCount,
     missedCallCount,
     completedCallCount,
@@ -379,6 +581,11 @@ export const usePhoneStore = defineStore('phone', () => {
     removeCallLog,
     anonymizeCallLog,
     cleanupRelationshipForProfile,
+    startCallSession,
+    appendCallTurn,
+    sendCallText,
+    endCallSession,
+    clearCallSession,
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,
