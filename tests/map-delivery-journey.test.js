@@ -70,13 +70,28 @@ describe('map delivery journey owner', () => {
     })
 
     expect(proposal).toMatchObject({ ok: true })
-    const committed = store.commitDeliveryReroute({ proposal: proposal.proposal, etaMinutes: 8 })
+    const initialEstimate = store.getDeliveryJourneyEstimateReference(created.journey.id, Date.now())
+    const rerouteAt = Date.now() + 1000
+    const committed = store.commitDeliveryReroute({
+      proposal: proposal.proposal,
+      etaMinutes: 8,
+      now: rerouteAt,
+    })
     expect(committed).toMatchObject({ ok: true })
     expect(committed.journey).toMatchObject({
       phase: 'rerouting',
       addressRevision: 2,
       routeRevision: 2,
       destination: { detail: 'Studio 2F' },
+    })
+    expect(initialEstimate).toMatchObject({ journeyRevision: 1, sourceModule: 'map' })
+    expect(store.getDeliveryJourneyEstimateReference(created.journey.id, rerouteAt)).toMatchObject({
+      journeyRevision: 2,
+      state: 'rerouting',
+      etaAt: rerouteAt + 8 * 60 * 1000,
+      remainingSeconds: 8 * 60,
+      calculatedAt: rerouteAt,
+      sourceModule: 'map',
     })
     expect(
       store.prepareDeliveryReroute({

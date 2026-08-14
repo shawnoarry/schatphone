@@ -11,6 +11,7 @@ import {
   normalizeMoneyQuote,
 } from '../lib/currency-system'
 import { normalizeImageSource } from '../lib/image-source-contract'
+import { resolveLocalizedText } from '../lib/locale'
 import { projectUiAssetUrl } from '../lib/project-assets'
 import {
   FOOD_DELIVERY_CATEGORY_ENTRIES,
@@ -26,20 +27,35 @@ import {
 import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from './chat'
 import { DEFAULT_WALLET_CURRENCY, normalizeWalletCurrency, useWalletStore } from './wallet'
 import { MAP_DELIVERY_JOURNEY_PHASE, useMapStore } from './map'
+import { usePhoneStore } from './phone'
 import { useSystemStore } from './system'
+import { useSimulationStore } from './simulation'
 import {
-  FOOD_DELIVERY_CAUSAL_CHAIN_NODE,
-  useSimulationStore,
-} from './simulation'
+  COMMERCE_INTERACTION_ENTRY_SURFACE,
+  COMMERCE_SERVICE_CASE_STATUS,
+  DESTINATION_CHANGE_RESOLUTION_OUTCOME,
+  normalizeCommerceInteractionTriggerV1,
+  normalizeCommerceOrderReferenceV1,
+  normalizeCommerceServiceCaseReferenceV1,
+  normalizeInteractionResolutionV1,
+  normalizeMapJourneyEstimateReferenceV1,
+  normalizeOwnerFactV1,
+} from '../lib/simulation/commerce-interaction-contracts'
+import {
+  COMMERCE_EVENT_TEMPLATE_ID,
+  COMMERCE_OWNER_ACTION_KEY,
+} from '../lib/simulation/commerce-event-templates'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
-const FOOD_DELIVERY_STORAGE_VERSION = 2
+const FOOD_DELIVERY_STORAGE_VERSION = 3
 const FOOD_RESTAURANT_LIMIT = 120
 const FOOD_USER_MENU_ITEM_LIMIT = 360
 const FOOD_CART_LINE_LIMIT = 40
 const FOOD_ORDER_LIMIT = 120
 const FOOD_ORDER_EVENT_LIMIT = 24
+const FOOD_SERVICE_CASE_LIMIT = 160
+const FOOD_INTERACTION_TRIGGER_LIMIT = 240
 const DEFAULT_CURRENCY = DEFAULT_WALLET_CURRENCY
 const MOON_BISTRO_SEED_RESTAURANT_ID = 'food_seed_moon_bistro'
 const RIVER_NOODLES_SEED_RESTAURANT_ID = 'food_seed_river_noodles'
@@ -334,6 +350,10 @@ const createFoodOrderEventId = () =>
 const createFoodOrderConversationId = (orderId) => `food_order_conversation_${orderId}`
 const createFoodOrderMessageId = () =>
   `food_order_message_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+const createFoodInteractionId = (orderId = '', messageId = '') =>
+  `food_interaction_${normalizeText(orderId, 'order', 80)}_${normalizeText(messageId, Date.now().toString(), 100)}`
+const createFoodServiceCaseId = (orderId = '', caseType = 'support') =>
+  `food_service_case_${normalizeText(orderId, 'order', 100)}_${normalizeText(caseType, 'support', 80)}`
 
 const normalizePaymentRef = (rawRef) => {
   if (!rawRef || typeof rawRef !== 'object') return null
@@ -457,6 +477,76 @@ const normalizeOrderConversations = (rawConversations) => {
       seen.add(conversation.id)
       return true
     })
+}
+
+const normalizeFoodServiceCase = (rawCase, index = 0) => {
+  if (!rawCase || typeof rawCase !== 'object') return null
+  const orderId = normalizeText(rawCase.orderId, '', 180)
+  const caseType = normalizeText(rawCase.caseType, '', 120).toLowerCase()
+  const sourceInteractionId = normalizeText(rawCase.sourceInteractionId, '', 220)
+  if (!orderId || !caseType || !sourceInteractionId) return null
+  const createdAt = Math.max(0, toInt(rawCase.createdAt, Date.now() + index))
+  const requestedDestination = normalizeDeliveryAnchorSnapshot(
+    rawCase.requestedDestination || rawCase.destinationAnchor,
+  )
+  const reference = normalizeCommerceServiceCaseReferenceV1({
+    schemaVersion: 1,
+    ownerModule: 'food_delivery',
+    caseId: normalizeText(rawCase.id || rawCase.caseId, createFoodServiceCaseId(orderId, caseType), 220),
+    orderId,
+    caseType,
+    status: rawCase.status || COMMERCE_SERVICE_CASE_STATUS.OPEN,
+    sourceInteractionId,
+    ownerRevision: Math.max(1, toInt(rawCase.ownerRevision, 1)),
+  })
+  if (!reference) return null
+  return {
+    id: reference.caseId,
+    orderId: reference.orderId,
+    caseType: reference.caseType,
+    status: reference.status,
+    channel: normalizeText(rawCase.channel, 'rider', 40).toLowerCase(),
+    requestedDestination,
+    sourceInteractionId: reference.sourceInteractionId,
+    sourceMessageRef: {
+      ownerModule: normalizeText(rawCase.sourceMessageRef?.ownerModule, 'food_delivery', 80).toLowerCase(),
+      messageId: normalizeText(rawCase.sourceMessageRef?.messageId, '', 220),
+    },
+    ownerRevision: reference.ownerRevision,
+    eventInstanceId: normalizeText(rawCase.eventInstanceId, '', 220),
+    phoneSessionId: normalizeText(rawCase.phoneSessionId, '', 220),
+    resolutionCode: normalizeText(rawCase.resolutionCode, '', 160).toLowerCase(),
+    createdAt,
+    updatedAt: Math.max(createdAt, toInt(rawCase.updatedAt, createdAt)),
+  }
+}
+
+const normalizeFoodServiceCases = (rawCases) => {
+  if (!Array.isArray(rawCases)) return []
+  const seen = new Set()
+  return rawCases
+    .map(normalizeFoodServiceCase)
+    .filter((serviceCase) => {
+      if (!serviceCase || seen.has(serviceCase.id)) return false
+      seen.add(serviceCase.id)
+      return true
+    })
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, FOOD_SERVICE_CASE_LIMIT)
+}
+
+const normalizeFoodInteractionTriggers = (rawTriggers) => {
+  if (!Array.isArray(rawTriggers)) return []
+  const seen = new Set()
+  return rawTriggers
+    .map(normalizeCommerceInteractionTriggerV1)
+    .filter((trigger) => {
+      if (!trigger || trigger.orderRef.ownerModule !== 'food_delivery' || seen.has(trigger.id)) return false
+      seen.add(trigger.id)
+      return true
+    })
+    .sort((a, b) => b.occurredAt - a.occurredAt)
+    .slice(0, FOOD_INTERACTION_TRIGGER_LIMIT)
 }
 
 const normalizeRestaurant = (rawRestaurant, index = 0) => {
@@ -1381,7 +1471,9 @@ const normalizeFoodOrder = (rawOrder, index = 0) => {
     paymentStatus: paymentRef?.status || 'unpaid',
     deliveryAnchor,
     addressRevision,
+    ownerRevision: Math.max(1, toInt(rawOrder.ownerRevision, addressRevision)),
     deliveryJourneyId: normalizeText(rawOrder.deliveryJourneyId, '', 180),
+    mapEstimateRef: normalizeMapJourneyEstimateReferenceV1(rawOrder.mapEstimateRef),
     courier,
     conversationId: normalizeText(
       rawOrder.conversationId,
@@ -1410,12 +1502,15 @@ const normalizeFoodOrders = (rawOrders) => {
 }
 
 export const migrateFoodDeliveryStorage = ({ version, data } = {}) => {
-  if (Number(version) !== 1 || !data || typeof data !== 'object' || Array.isArray(data)) {
+  const storedVersion = Number(version)
+  if (![1, 2].includes(storedVersion) || !data || typeof data !== 'object' || Array.isArray(data)) {
     return null
   }
   return {
     ...data,
     orderConversations: Array.isArray(data.orderConversations) ? data.orderConversations : [],
+    serviceCases: [],
+    interactionTriggers: [],
   }
 }
 
@@ -3580,8 +3675,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const getChatStore = () => useChatStore()
   const getWalletStore = () => useWalletStore()
   const getMapStore = () => useMapStore()
+  const getPhoneStore = () => usePhoneStore()
   const getSystemStore = () => useSystemStore()
   const getSimulationStore = () => useSimulationStore()
+  const resolveCommerceCopy = ({ zh = '', en = '', ko = '' } = {}) =>
+    resolveLocalizedText(getSystemStore().settings?.system?.language, {
+      zh,
+      en,
+      ko,
+      fallback: en || zh,
+    })
   const addSystemNotification = (payload = {}) =>
     useSystemNotifications({ systemStore: getSystemStore() }).addNotification(payload)
   const primaryCurrency = ref(DEFAULT_CURRENCY)
@@ -3593,6 +3696,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const platformOrders = ref([])
   const orders = ref([])
   const orderConversations = ref([])
+  const serviceCases = ref([])
+  const interactionTriggers = ref([])
   const hasFinishedStorageHydration = ref(false)
 
   const quoteLegacyAmount = (
@@ -3886,6 +3991,60 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const id = normalizeFoodId(orderId)
     if (!id) return null
     return orders.value.find((order) => order.id === id) || null
+  }
+
+  const getCommerceOrderReference = (orderId = '') => {
+    const order = findOrderById(orderId)
+    if (!order) return null
+    return normalizeCommerceOrderReferenceV1(
+      {
+        schemaVersion: 1,
+        ownerModule: 'food_delivery',
+        orderId: order.id,
+        merchantId: order.restaurantId,
+        fulfillmentId: order.deliveryJourneyId,
+        lineItemIds: order.items.map((item) => item.id),
+        ownerRevision: order.ownerRevision,
+        sourceRoute: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
+      },
+      { mutationCapable: true },
+    )
+  }
+
+  const getOrderMapEstimateReference = (
+    orderId = '',
+    { now = Date.now(), maxAgeMs = 2 * 60 * 1000, refresh = true } = {},
+  ) => {
+    const order = findOrderById(orderId)
+    if (!order?.deliveryJourneyId) return { reference: null, stale: true }
+    const current = refresh
+      ? getMapStore().getDeliveryJourneyEstimateReference(order.deliveryJourneyId, now)
+      : null
+    if (current) order.mapEstimateRef = current
+    const reference = current || normalizeMapJourneyEstimateReferenceV1(order.mapEstimateRef)
+    if (!reference) return { reference: null, stale: true }
+    const journey = getMapStore().findDeliveryJourneyById(reference.journeyId)
+    const stale =
+      now - reference.calculatedAt > Math.max(1000, Number(maxAgeMs) || 0) ||
+      !journey ||
+      journey.routeRevision !== reference.journeyRevision
+    return { reference, stale }
+  }
+
+  const findServiceCaseById = (caseId = '') => {
+    const id = normalizeText(caseId, '', 220)
+    return serviceCases.value.find((item) => item.id === id) || null
+  }
+
+  const findOpenServiceCaseByOrder = (orderId = '', caseType = '') => {
+    const normalizedOrderId = normalizeText(orderId, '', 180)
+    const normalizedCaseType = normalizeText(caseType, '', 120).toLowerCase()
+    return serviceCases.value.find(
+      (item) =>
+        item.orderId === normalizedOrderId &&
+        (!normalizedCaseType || item.caseType === normalizedCaseType) &&
+        ![COMMERCE_SERVICE_CASE_STATUS.RESOLVED, COMMERCE_SERVICE_CASE_STATUS.CLOSED].includes(item.status),
+    ) || null
   }
 
   const listRestaurantsByCategory = (category = '') => {
@@ -4551,6 +4710,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     })
     if (journeyResult.ok) {
       order.deliveryJourneyId = journeyResult.journey.id
+      order.mapEstimateRef = mapStore.getDeliveryJourneyEstimateReference(
+        journeyResult.journey.id,
+        now,
+      )
       order.fulfillment.journeyPending = false
       order.fulfillment.nextCheckpointAt = journeyResult.journey.riderPickupAt
     } else {
@@ -4633,6 +4796,194 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return message
   }
 
+  const upsertServiceCase = (rawCase) => {
+    const serviceCase = normalizeFoodServiceCase(rawCase)
+    if (!serviceCase) return null
+    const existing = findServiceCaseById(serviceCase.id)
+    if (
+      existing &&
+      (existing.orderId !== serviceCase.orderId ||
+        existing.caseType !== serviceCase.caseType ||
+        existing.sourceInteractionId !== serviceCase.sourceInteractionId ||
+        serviceCase.ownerRevision < existing.ownerRevision)
+    ) {
+      return null
+    }
+    serviceCases.value = [
+      serviceCase,
+      ...serviceCases.value.filter((item) => item.id !== serviceCase.id),
+    ].slice(0, FOOD_SERVICE_CASE_LIMIT)
+    return serviceCase
+  }
+
+  const buildServiceCaseReference = (serviceCase) =>
+    serviceCase
+      ? normalizeCommerceServiceCaseReferenceV1({
+          schemaVersion: 1,
+          ownerModule: 'food_delivery',
+          caseId: serviceCase.id,
+          orderId: serviceCase.orderId,
+          caseType: serviceCase.caseType,
+          status: serviceCase.status,
+          sourceInteractionId: serviceCase.sourceInteractionId,
+          ownerRevision: serviceCase.ownerRevision,
+        })
+      : null
+
+  const recordFoodOwnerFact = ({
+    serviceCase = null,
+    type = '',
+    resultCode = '',
+    causationId = '',
+    refs = {},
+    now = Date.now(),
+  } = {}) => {
+    if (!serviceCase) return null
+    const fact = normalizeOwnerFactV1({
+      schemaVersion: 1,
+      id: `fact_${causationId || serviceCase.id}_${resultCode}`,
+      type,
+      sourceModule: 'food_delivery',
+      subjectRef: {
+        kind: 'service_case',
+        id: serviceCase.id,
+        revision: serviceCase.ownerRevision,
+      },
+      correlationId: serviceCase.eventInstanceId,
+      causationId: causationId || serviceCase.sourceInteractionId,
+      resultCode,
+      refs: { service_case_id: serviceCase.id, order_id: serviceCase.orderId, ...refs },
+      occurredAt: now,
+    })
+    if (!fact) return null
+    return getSimulationStore().recordOwnerFactAndAdvance(fact, { now })
+  }
+
+  const upsertInteractionTrigger = (rawTrigger) => {
+    const trigger = normalizeCommerceInteractionTriggerV1(rawTrigger)
+    if (!trigger || trigger.orderRef.ownerModule !== 'food_delivery') return null
+    const existing = interactionTriggers.value.find((item) => item.id === trigger.id)
+    if (existing) return JSON.stringify(existing) === JSON.stringify(trigger) ? existing : null
+    interactionTriggers.value = [trigger, ...interactionTriggers.value].slice(
+      0,
+      FOOD_INTERACTION_TRIGGER_LIMIT,
+    )
+    return trigger
+  }
+
+  const beginOrderServiceInteraction = ({
+    order = null,
+    message = null,
+    userAction = '',
+    fulfillmentPhase = '',
+    channel = 'rider',
+    entrySurface = COMMERCE_INTERACTION_ENTRY_SURFACE.OWNER_APP,
+    sourceMessageRef = null,
+    destinationAnchor = null,
+    interactionId = '',
+    randomValue,
+    now = Date.now(),
+  } = {}) => {
+    const sourceFulfillmentPhase = normalizeText(
+      fulfillmentPhase,
+      order?.fulfillment?.phase || 'created',
+      80,
+    )
+    const orderRef = order ? getCommerceOrderReference(order.id) : null
+    const sourceRef = sourceMessageRef || {
+      ownerModule: entrySurface === COMMERCE_INTERACTION_ENTRY_SURFACE.CHAT_SERVICE_ACCOUNT
+        ? 'chat'
+        : 'food_delivery',
+      messageId: message?.id || '',
+    }
+    const trigger = upsertInteractionTrigger({
+      schemaVersion: 1,
+      id: interactionId || createFoodInteractionId(order?.id, sourceRef.messageId),
+      kind: 'commerce.user_service_interaction',
+      initiatedBy: 'user',
+      entrySurface,
+      channel,
+      userAction,
+      orderRef,
+      sourceMessageRef: sourceRef,
+      occurredAt: now,
+    })
+    if (!trigger || !order) return { ok: false, reason: 'interaction_trigger_invalid', trigger: null, serviceCase: null, instance: null }
+
+    const caseType = userAction === 'destination_change_requested' ? 'destination_change' : userAction
+    const existing = findOpenServiceCaseByOrder(order.id, caseType)
+    const normalizedDestination = normalizeDeliveryAnchorSnapshot(destinationAnchor)
+    const serviceCase = upsertServiceCase({
+      ...(existing || {}),
+      id: existing?.id || createFoodServiceCaseId(order.id, caseType),
+      orderId: order.id,
+      caseType,
+      status: COMMERCE_SERVICE_CASE_STATUS.OPEN,
+      channel,
+      requestedDestination: normalizedDestination || existing?.requestedDestination,
+      sourceInteractionId: existing?.sourceInteractionId || trigger.id,
+      sourceMessageRef: existing?.sourceMessageRef?.messageId
+        ? existing.sourceMessageRef
+        : trigger.sourceMessageRef,
+      ownerRevision: existing ? existing.ownerRevision + 1 : 1,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    })
+    if (!serviceCase) return { ok: false, reason: 'service_case_invalid', trigger, serviceCase: null, instance: null }
+
+    const simulationStore = getSimulationStore()
+    let instance = serviceCase.eventInstanceId
+      ? simulationStore.getEventInstanceV2(serviceCase.eventInstanceId)
+      : null
+    if (
+      userAction === 'destination_change_requested' &&
+      normalizedDestination &&
+      simulationStore.isModuleEventsEnabled('food_delivery') &&
+      simulationStore.surpriseMode !== 'off'
+    ) {
+      const journey = order.deliveryJourneyId
+        ? getMapStore().findDeliveryJourneyById(order.deliveryJourneyId)
+        : null
+      const instanceId = serviceCase.eventInstanceId || `commerce_event_${serviceCase.id}`
+      const started = simulationStore.startEventInstanceV2({
+        id: instanceId,
+        templateId: COMMERCE_EVENT_TEMPLATE_ID.DESTINATION_CHANGE_AFTER_FULFILLMENT,
+        contextRefs: {
+          order_id: order.id,
+          order_revision: order.ownerRevision,
+          service_case_id: serviceCase.id,
+          fulfillment_phase: sourceFulfillmentPhase,
+          journey_id: journey?.id || '',
+          expected_journey_revision: journey?.routeRevision || 0,
+          destination_anchor_id: normalizedDestination.id,
+        },
+        randomValues: { rider_response_disposition: randomValue },
+        now,
+      })
+      instance = started.instance
+      if (instance && serviceCase.eventInstanceId !== instance.id) {
+        serviceCase.eventInstanceId = instance.id
+        serviceCase.updatedAt = now
+      }
+    }
+
+    recordFoodOwnerFact({
+      serviceCase,
+      type: 'food_delivery.address_change_requested',
+      resultCode: 'request_recorded',
+      causationId: trigger.id,
+      now,
+    })
+    return {
+      ok: true,
+      reason: '',
+      trigger,
+      serviceCase,
+      serviceCaseRef: buildServiceCaseReference(serviceCase),
+      instance,
+    }
+  }
+
   const sendOrderMessage = (orderIdOrInput, options = {}) => {
     const input =
       orderIdOrInput && typeof orderIdOrInput === 'object'
@@ -4644,6 +4995,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       intent = '',
       destinationAnchor = null,
       clientMessageId = '',
+      entrySurface = COMMERCE_INTERACTION_ENTRY_SURFACE.OWNER_APP,
+      sourceMessageRef = null,
+      interactionId = '',
+      randomValue,
       now = Date.now(),
     } = input
     const order = findOrderById(orderId)
@@ -4665,17 +5020,56 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     if (!message) return { ok: false, reason: 'message_invalid', message: null, reply: null }
 
     let reply = null
+    let serviceCase = null
+    let trigger = null
+    let instance = null
     if (normalizedIntent === 'request_address_change') {
       const anchor = normalizeDeliveryAnchorSnapshot(destinationAnchor)
+      const sourceFulfillmentPhase = order.fulfillment?.phase || 'created'
       order.fulfillment = {
         ...normalizeFulfillment(order.fulfillment, order.status),
         phase: FOOD_DELIVERY_FULFILLMENT_PHASE.ADDRESS_CHANGE_PENDING,
-        responseDeadlineAt: now + 60 * 1000,
+        responseDeadlineAt: 0,
         addressChangeRequestId: message.id,
         callAvailable: false,
         lastReconciledAt: now,
       }
       order.updatedAt = now
+      const interaction = beginOrderServiceInteraction({
+        order,
+        message,
+        userAction: 'destination_change_requested',
+        fulfillmentPhase: sourceFulfillmentPhase,
+        channel: 'rider',
+        entrySurface,
+        sourceMessageRef,
+        destinationAnchor: anchor,
+        interactionId,
+        randomValue,
+        now,
+      })
+      if (!interaction.ok) {
+        return { ok: false, reason: interaction.reason, message, reply: null, serviceCase: null, trigger: null, instance: null }
+      }
+      serviceCase = interaction.serviceCase
+      trigger = interaction.trigger
+      instance = interaction.instance
+      if (!instance) {
+        const beforePickup = ['created', 'cooking', 'heading_to_pickup'].includes(
+          sourceFulfillmentPhase,
+        )
+        if (beforePickup) {
+          commitOrderAddressChange({
+            orderId: order.id,
+            destinationAnchor: anchor,
+            serviceCaseId: serviceCase.id,
+            fulfillmentPhase: sourceFulfillmentPhase,
+            now,
+          })
+        } else {
+          order.fulfillment.responseDeadlineAt = now + 60 * 1000
+        }
+      }
       const event = addOrderEvent(order.id, {
         type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE_REQUESTED,
         title: FOOD_DELIVERY_ORDER_EVENT_TITLES[FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE_REQUESTED],
@@ -4687,23 +5081,22 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       })
       reply = appendOrderMessage(order.id, {
         sender: FOOD_DELIVERY_MESSAGE_SENDER.PLATFORM,
-        text: 'Your address change request was sent to the rider.',
+        text: resolveCommerceCopy({
+          zh: '改址请求已记录，后续进展会继续显示在当前订单会话中。',
+          en: 'Your address change request was recorded. Updates will stay in this order thread.',
+        }),
         intent: 'platform_acknowledged',
         clientMessageId: `${message.id}:platform_ack`,
         createdAt: now + 1,
       })
-      recordOrderCausalCheckpoint({
-        orderId: order.id,
-        node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CHANGE_REQUESTED,
-        reason: 'address_change_requested',
-        resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CHANGE_REQUESTED,
-        now,
-      })
       if (event) {
         addSystemNotification({
           id: `food_delivery_address_request:${order.id}:${message.id}`,
-          title: 'Food Delivery',
-          content: 'Your address change request was sent to the rider.',
+          title: resolveCommerceCopy({ zh: '外卖', en: 'Food Delivery' }),
+          content: resolveCommerceCopy({
+            zh: '改址请求已记录在当前订单会话中。',
+            en: 'Your address change request was recorded in the order thread.',
+          }),
           icon: 'fas fa-location-dot',
           source: 'food_delivery_address_request',
           route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
@@ -4716,50 +5109,387 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       order.fulfillment.callAvailable = false
       order.updatedAt = now
     }
-    return { ok: true, reason: '', message, reply }
+    if (serviceCase?.eventInstanceId) {
+      reconcileCommerceEventRuntime(now, { randomValue })
+      instance = getSimulationStore().getEventInstanceV2(serviceCase.eventInstanceId)
+    }
+    return { ok: true, reason: '', message, reply, serviceCase, trigger, instance }
   }
 
-  const recordOrderCausalCheckpoint = ({
+  const beginChatServiceInteraction = ({
+    contactId = 0,
+    messageId = '',
     orderId = '',
-    node = '',
-    phoneSessionId = '',
-    reason = '',
-    resultCode = '',
+    userAction = '',
+    destinationAnchor = null,
+    interactionId = '',
+    randomValue,
+    now = Date.now(),
+  } = {}) => {
+    const chatStore = getChatStore()
+    const link = chatStore.getServiceAccountLinkContract(contactId)
+    const message = chatStore
+      .getMessagesByContactId(contactId)
+      .find((item) => item.id === messageId && item.role === 'user')
+    const order = findOrderById(orderId)
+    if (
+      !link ||
+      link.sourceBindings.foodDeliveryServiceKey !== 'food_delivery_dispatch' ||
+      !message ||
+      !order
+    ) {
+      return { ok: false, reason: 'ordinary_support', trigger: null, serviceCase: null, instance: null }
+    }
+    const destination = normalizeDeliveryAnchorSnapshot(destinationAnchor)
+    if (userAction === 'destination_change_requested' && !destination) {
+      return { ok: false, reason: 'delivery_anchor_required', trigger: null, serviceCase: null, instance: null }
+    }
+    const interaction = beginOrderServiceInteraction({
+      order,
+      message: null,
+      userAction,
+      channel: 'platform',
+      entrySurface: COMMERCE_INTERACTION_ENTRY_SURFACE.CHAT_SERVICE_ACCOUNT,
+      sourceMessageRef: { ownerModule: 'chat', messageId: message.id },
+      destinationAnchor: destination,
+      interactionId: interactionId || createFoodInteractionId(order.id, message.id),
+      randomValue,
+      now,
+    })
+    if (!interaction.ok) return interaction
+    appendOrderMessage(order.id, {
+      sender: FOOD_DELIVERY_MESSAGE_SENDER.PLATFORM,
+      text: resolveCommerceCopy({
+        zh: '来自关联 Chat 服务号的请求已附加到当前订单。',
+        en: 'A request from the linked Chat service account was attached to this order.',
+      }),
+      intent: 'chat_service_interaction_attached',
+      clientMessageId: `${message.id}:owner_ack`,
+      createdAt: now,
+    })
+    reconcileCommerceEventRuntime(now, { randomValue })
+    return {
+      ...interaction,
+      instance: interaction.serviceCase?.eventInstanceId
+        ? getSimulationStore().getEventInstanceV2(interaction.serviceCase.eventInstanceId)
+        : null,
+    }
+  }
+
+  const commitOrderAddressChange = ({
+    orderId = '',
+    destinationAnchor = null,
+    serviceCaseId = '',
+    expectedOwnerRevision = 0,
+    fulfillmentPhase = '',
+    reroute = true,
     now = Date.now(),
   } = {}) => {
     const order = findOrderById(orderId)
-    if (!order) return { ok: false, changed: false, reason: 'order_missing', chain: null }
-    return getSimulationStore().recordFoodDeliveryCausalCheckpoint({
-      orderId: order.id,
-      node,
-      ownerRecords: {
-        foodOrderId: order.id,
-        walletTransactionId: order.paymentRef?.transactionId || order.paymentRef?.ledgerId || '',
-        mapJourneyId: order.deliveryJourneyId,
-        conversationId: order.conversationId,
-        phoneSessionId,
-      },
-      reason,
+    const destination = normalizeDeliveryAnchorSnapshot(destinationAnchor)
+    if (!order || !destination) return { ok: false, reason: 'address_change_invalid', order: null, journey: null }
+    if ([FOOD_DELIVERY_ORDER_STATUS.DELIVERED, FOOD_DELIVERY_ORDER_STATUS.CANCELLED].includes(order.status)) {
+      return { ok: false, reason: 'order_closed', order: null, journey: null }
+    }
+    if (expectedOwnerRevision && order.ownerRevision !== expectedOwnerRevision) {
+      return { ok: false, reason: 'order_revision_stale', order: null, journey: null }
+    }
+    const mapStore = getMapStore()
+    const journey = order.deliveryJourneyId
+      ? mapStore.findDeliveryJourneyById(order.deliveryJourneyId)
+      : null
+    let reroutedJourney = null
+    let nextAddressRevision = order.addressRevision + 1
+    if (reroute && journey) {
+      const prepared = mapStore.prepareDeliveryReroute({
+        journeyId: journey.id,
+        destinationAnchor: destination,
+        expectedJourneyRevision: journey.routeRevision,
+      })
+      if (!prepared.ok) return { ok: false, reason: prepared.reason, order: null, journey: null }
+      const committed = mapStore.commitDeliveryReroute({
+        proposal: prepared.proposal,
+        now,
+        etaMinutes: Math.max(5, journey.etaMinutes || 30),
+      })
+      if (!committed.ok) return { ok: false, reason: committed.reason, order: null, journey: null }
+      reroutedJourney = committed.journey
+      nextAddressRevision = committed.journey.addressRevision
+    }
+    order.deliveryAnchor = { ...destination, revision: nextAddressRevision }
+    order.deliveryAddress = destination.detail
+    order.addressRevision = nextAddressRevision
+    order.ownerRevision += 1
+    order.mapEstimateRef = reroutedJourney || journey
+      ? mapStore.getDeliveryJourneyEstimateReference((reroutedJourney || journey).id, now)
+      : null
+    const previousPhase = normalizeText(
+      fulfillmentPhase,
+      order.fulfillment?.phase || '',
+      80,
+    )
+    order.fulfillment = {
+      ...normalizeFulfillment(order.fulfillment, order.status),
+      phase: ['created', 'cooking', 'heading_to_pickup'].includes(previousPhase)
+        ? previousPhase
+        : FOOD_DELIVERY_FULFILLMENT_PHASE.EN_ROUTE,
+      responseDeadlineAt: 0,
+      callAvailable: false,
+      addressChangeRequestId: '',
+      lastReconciledAt: now,
+    }
+    order.updatedAt = now
+    const serviceCase = findServiceCaseById(serviceCaseId) || findOpenServiceCaseByOrder(order.id, 'destination_change')
+    if (serviceCase) {
+      serviceCase.status = reroute && journey
+        ? COMMERCE_SERVICE_CASE_STATUS.RESOLVED
+        : COMMERCE_SERVICE_CASE_STATUS.WAITING_OWNER
+      serviceCase.ownerRevision += 1
+      serviceCase.resolutionCode = reroute && journey ? 'delivery_rerouted' : 'destination_change_committed'
+      serviceCase.updatedAt = now
+    }
+    addOrderEvent(order.id, {
+      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE_CONFIRMED,
+      title: FOOD_DELIVERY_ORDER_EVENT_TITLES[FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE_CONFIRMED],
+      summary: `Delivery address updated to ${destination.detail}.`,
+      deliveryAddress: destination.detail,
+      sourceModule: serviceCase ? 'food_delivery_service_case' : 'food_delivery_order_conversation',
+      sourceId: serviceCase?.id || order.conversationId,
+      createdAt: now,
+    })
+    appendOrderMessage(order.id, {
+      sender: FOOD_DELIVERY_MESSAGE_SENDER.SYSTEM,
+      text: reroute && journey
+        ? resolveCommerceCopy({
+            zh: `配送地址已改为 ${destination.detail}，Map 已重新计算路线与预计送达时间。`,
+            en: `The delivery address is now ${destination.detail}. Map recalculated the route and ETA.`,
+          })
+        : resolveCommerceCopy({
+            zh: `配送地址已改为 ${destination.detail}，路线仍待确认。`,
+            en: `The delivery address is now ${destination.detail}. Route confirmation is pending.`,
+          }),
+      intent: reroute && journey ? 'address_change_confirmed' : 'address_change_committed',
+      clientMessageId: `${order.id}:address_change_committed:${order.ownerRevision}`,
+      createdAt: now,
+    })
+    persistToStorage()
+    return { ok: true, reason: '', order, journey: reroutedJourney }
+  }
+
+  const executeFoodOwnerActionRequest = ({ instanceId = '', request = null, now = Date.now() } = {}) => {
+    const serviceCase = request ? findServiceCaseById(request.contextRefs.service_case_id) : null
+    const order = serviceCase ? findOrderById(serviceCase.orderId) : null
+    if (!request || !serviceCase || !order || serviceCase.eventInstanceId !== instanceId) {
+      return { ok: false, reason: 'service_case_request_invalid', fact: null }
+    }
+    let type = 'food_delivery.owner_action_rejected'
+    let resultCode = 'owner_action_rejected'
+    let ok = false
+    if (request.actionKey === COMMERCE_OWNER_ACTION_KEY.RECORD_RIDER_ACCEPTANCE) {
+      appendOrderMessage(order.id, {
+        sender: FOOD_DELIVERY_MESSAGE_SENDER.RIDER,
+        text: resolveCommerceCopy({
+          zh: '我看到改址请求了，可以送到新地址。',
+          en: 'I saw the request and can deliver to the new address.',
+        }),
+        intent: 'rider_accepted_destination_change',
+        clientMessageId: `${request.id}:reply`,
+        createdAt: now,
+      })
+      serviceCase.status = COMMERCE_SERVICE_CASE_STATUS.WAITING_OWNER
+      serviceCase.ownerRevision += 1
+      serviceCase.updatedAt = now
+      type = 'food_delivery.rider_response_recorded'
+      resultCode = 'rider_accepted_destination_change'
+      ok = true
+    } else if (request.actionKey === COMMERCE_OWNER_ACTION_KEY.RECORD_RIDER_DECLINE) {
+      appendOrderMessage(order.id, {
+        sender: FOOD_DELIVERY_MESSAGE_SENDER.RIDER,
+        text: resolveCommerceCopy({
+          zh: '现在无法更改路线，订单会继续送往原地址。',
+          en: 'I cannot change the route now. The order will continue to the original address.',
+        }),
+        intent: 'rider_declined_destination_change',
+        clientMessageId: `${request.id}:reply`,
+        createdAt: now,
+      })
+      serviceCase.status = COMMERCE_SERVICE_CASE_STATUS.RESOLVED
+      serviceCase.ownerRevision += 1
+      serviceCase.resolutionCode = 'change_declined'
+      serviceCase.updatedAt = now
+      type = 'food_delivery.rider_response_recorded'
+      resultCode = 'rider_declined_destination_change'
+      ok = true
+    } else if (request.actionKey === COMMERCE_OWNER_ACTION_KEY.OFFER_PHONE_CONTACT) {
+      order.fulfillment = {
+        ...normalizeFulfillment(order.fulfillment, order.status),
+        phase: FOOD_DELIVERY_FULFILLMENT_PHASE.CALL_AVAILABLE,
+        callAvailable: true,
+        responseDeadlineAt: 0,
+        lastReconciledAt: now,
+      }
+      serviceCase.status = COMMERCE_SERVICE_CASE_STATUS.WAITING_USER
+      serviceCase.ownerRevision += 1
+      serviceCase.updatedAt = now
+      appendOrderMessage(order.id, {
+        sender: FOOD_DELIVERY_MESSAGE_SENDER.PLATFORM,
+        text: resolveCommerceCopy({
+          zh: '配送员暂未回复，你可以从当前订单拨打配送员电话。',
+          en: 'The rider has not replied. You can call the rider from this order.',
+        }),
+        intent: 'phone_contact_offered',
+        clientMessageId: `${request.id}:phone_offer`,
+        createdAt: now,
+      })
+      addSystemNotification({
+        id: `food_delivery_phone_offer:${serviceCase.id}`,
+        title: resolveCommerceCopy({ zh: '外卖', en: 'Food Delivery' }),
+        content: resolveCommerceCopy({
+          zh: '配送员暂未回复，当前订单已开放电话联系。',
+          en: 'The rider has not replied. Phone contact is now available in the order.',
+        }),
+        icon: 'fas fa-phone',
+        source: 'food_delivery_phone_offer',
+        route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
+        createdAt: now,
+      })
+      type = 'food_delivery.phone_contact_offered'
+      resultCode = 'phone_contact_offered'
+      ok = true
+    } else if (request.actionKey === COMMERCE_OWNER_ACTION_KEY.VALIDATE_PHONE_RESOLUTION) {
+      const resolution = normalizeInteractionResolutionV1(
+        getPhoneStore().getInteractionResolution(serviceCase.phoneSessionId),
+      )
+      const acceptedCommitment = resolution?.commitments.find(
+        (item) =>
+          item.action === 'change_destination' &&
+          item.objectRef === serviceCase.requestedDestination?.id &&
+          item.status === 'accepted' &&
+          item.evidenceMessageIds.length > 0,
+      )
+      ok = Boolean(
+        resolution &&
+        resolution.status === 'proposed' &&
+        resolution.outcomeCode === DESTINATION_CHANGE_RESOLUTION_OUTCOME.ACCEPTED &&
+        acceptedCommitment,
+      )
+      type = ok
+        ? 'food_delivery.phone_resolution_validated'
+        : 'food_delivery.phone_resolution_rejected'
+      resultCode = ok ? 'phone_resolution_validated' : 'phone_resolution_rejected'
+      serviceCase.status = ok
+        ? COMMERCE_SERVICE_CASE_STATUS.WAITING_OWNER
+        : COMMERCE_SERVICE_CASE_STATUS.RESOLVED
+      serviceCase.ownerRevision += 1
+      serviceCase.resolutionCode = ok ? '' : 'change_request_expired'
+      serviceCase.updatedAt = now
+    } else if (request.actionKey === COMMERCE_OWNER_ACTION_KEY.APPLY_DESTINATION_CHANGE) {
+      const result = commitOrderAddressChange({
+        orderId: order.id,
+        destinationAnchor: serviceCase.requestedDestination,
+        serviceCaseId: serviceCase.id,
+        expectedOwnerRevision: Number(request.contextRefs.order_revision) || 0,
+        fulfillmentPhase: request.contextRefs.fulfillment_phase,
+        reroute: false,
+        now,
+      })
+      ok = result.ok
+      type = ok
+        ? 'food_delivery.destination_change_committed'
+        : 'food_delivery.destination_change_rejected'
+      resultCode = ok ? 'destination_change_committed' : 'destination_change_rejected'
+    }
+    const factResult = recordFoodOwnerFact({
+      serviceCase,
+      type,
       resultCode,
-      at: now,
+      causationId: request.id,
+      refs: { owner_request_id: request.id },
+      now,
+    })
+    return { ok, reason: ok ? '' : resultCode, fact: factResult?.fact || null }
+  }
+
+  const finalizeCommerceServiceCases = (now = Date.now()) => {
+    const simulationStore = getSimulationStore()
+    serviceCases.value.forEach((serviceCase) => {
+      if (!serviceCase.eventInstanceId) return
+      const instance = simulationStore.getEventInstanceV2(serviceCase.eventInstanceId)
+      if (!instance || instance.lifecycle === 'active') return
+      const resultCode = instance.resultCodes.at(-1) || serviceCase.resolutionCode
+      if (
+        serviceCase.status !== COMMERCE_SERVICE_CASE_STATUS.RESOLVED &&
+        serviceCase.status !== COMMERCE_SERVICE_CASE_STATUS.CLOSED
+      ) {
+        serviceCase.status = instance.lifecycle === 'failed'
+          ? COMMERCE_SERVICE_CASE_STATUS.CLOSED
+          : COMMERCE_SERVICE_CASE_STATUS.RESOLVED
+        serviceCase.ownerRevision += 1
+        serviceCase.updatedAt = now
+      }
+      serviceCase.resolutionCode = resultCode
+      const order = findOrderById(serviceCase.orderId)
+      if (!order) return
+      const copyByResult = {
+        changed_before_pickup: resolveCommerceCopy({
+          zh: '订单取餐前已完成改址。',
+          en: 'The address was changed before pickup.',
+        }),
+        changed_after_pickup: resolveCommerceCopy({
+          zh: '配送员已同意改址，Map 已更新路线。',
+          en: 'The rider accepted the new address and Map updated the route.',
+        }),
+        change_declined: resolveCommerceCopy({
+          zh: '配送员未同意改址，订单会继续送往原地址。',
+          en: 'The rider declined the address change. Delivery continues to the original address.',
+        }),
+        change_request_expired: resolveCommerceCopy({
+          zh: '改址请求已失效，订单会继续送往原地址。',
+          en: 'The address change request expired. Delivery continues to the original address.',
+        }),
+        delivered_to_original_after_unresolved_change: resolveCommerceCopy({
+          zh: '改址完成前，Map 已记录订单抵达原路线地址。',
+          en: 'Map recorded arrival at the original routed address before the change was resolved.',
+        }),
+        destination_change_rejected: resolveCommerceCopy({
+          zh: '改址未能应用，订单会继续送往原地址。',
+          en: 'The address change could not be applied. Delivery continues to the original address.',
+        }),
+      }
+      const text = copyByResult[resultCode]
+      if (text) {
+        appendOrderMessage(order.id, {
+          sender: FOOD_DELIVERY_MESSAGE_SENDER.PLATFORM,
+          text,
+          intent: resultCode,
+          clientMessageId: `${serviceCase.id}:terminal:${resultCode}`,
+          createdAt: now,
+        })
+      }
     })
   }
 
-  const reconcileFoodDeliveryRuntime = (now = Date.now(), runtimeOptions = {}) => {
+  const reconcileCommerceEventRuntime = (now = Date.now(), runtimeOptions = {}) => {
     const mapStore = getMapStore()
+    const simulationStore = getSimulationStore()
     const journeyChanges = mapStore.reconcileDeliveryJourneys(now)
     const changedOrders = []
+
     orders.value.forEach((order) => {
       const journey = order.deliveryJourneyId
         ? mapStore.findDeliveryJourneyById(order.deliveryJourneyId)
         : null
       if (journey) {
+        order.mapEstimateRef = mapStore.getDeliveryJourneyEstimateReference(journey.id, now)
         if (
           [MAP_DELIVERY_JOURNEY_PHASE.RIDER_PICKUP, MAP_DELIVERY_JOURNEY_PHASE.EN_ROUTE].includes(journey.phase) &&
           order.status === FOOD_DELIVERY_ORDER_STATUS.PLACED
         ) {
           order.status = FOOD_DELIVERY_ORDER_STATUS.RIDER_PICKUP
-          order.fulfillment.phase = FOOD_DELIVERY_FULFILLMENT_PHASE.RIDER_PICKUP
+          if (order.fulfillment.phase !== FOOD_DELIVERY_FULFILLMENT_PHASE.ADDRESS_CHANGE_PENDING) {
+            order.fulfillment.phase = FOOD_DELIVERY_FULFILLMENT_PHASE.RIDER_PICKUP
+          }
+          order.ownerRevision += 1
           order.updatedAt = now
           addOrderEvent(order.id, {
             type: FOOD_DELIVERY_ORDER_EVENT_TYPE.STATUS_UPDATE,
@@ -4769,240 +5499,171 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
             sourceId: journey.id,
             createdAt: now,
           })
-          changedOrders.push(order)
-        }
-
-        if (
-          [MAP_DELIVERY_JOURNEY_PHASE.RIDER_PICKUP, MAP_DELIVERY_JOURNEY_PHASE.EN_ROUTE].includes(journey.phase) &&
-          !getSimulationStore().getFoodDeliveryCausalChain(order.id)
-        ) {
-          const causalResult = getSimulationStore().evaluateFoodDeliveryCausalChain({
-            orderSnapshot: {
-              id: order.id,
-              status: order.status,
-              journeyPhase: journey.phase,
-              paymentRef: order.paymentRef,
-              deliveryJourneyId: journey.id,
-              conversationId: order.conversationId,
-            },
-            checkpoint: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_PICKUP,
-            triggerSource: 'condition',
-            randomValue: runtimeOptions.randomValue,
-            randomSeed: runtimeOptions.randomSeed,
-            at: now,
+          addSystemNotification({
+            id: `food_delivery_rider_pickup:${order.id}:${journey.id}`,
+            title: 'Food Delivery',
+            content: 'The rider picked up your order. It is on the way.',
+            icon: 'fas fa-motorcycle',
+            source: 'food_delivery_rider_pickup',
+            route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
+            createdAt: now,
           })
-          if (causalResult.status === 'triggered') {
-            order.fulfillment = {
-              ...normalizeFulfillment(order.fulfillment, order.status),
-              phase: FOOD_DELIVERY_FULFILLMENT_PHASE.ADDRESS_CONFIRMATION_REQUIRED,
-              lastReconciledAt: now,
-            }
-            addOrderEvent(order.id, {
-              type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CONFIRMATION_REQUIRED,
-              title: FOOD_DELIVERY_ORDER_EVENT_TITLES[FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CONFIRMATION_REQUIRED],
-              summary: 'The rider has picked up the order. Confirm the delivery address before it is too late.',
-              sourceModule: 'simulation_food_delivery_causal_chain',
-              sourceId: causalResult.chain?.id || order.id,
-              createdAt: now,
-            })
-            addSystemNotification({
-              id: `food_delivery_address_confirmation_required:${order.id}`,
-              title: 'Food Delivery',
-              content: 'The rider has picked up your order. Please confirm the delivery address.',
-              icon: 'fas fa-location-dot',
-              source: 'food_delivery_address_confirmation_required',
-              route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
-              createdAt: now,
-            })
-          } else {
-            addSystemNotification({
-              id: `food_delivery_rider_pickup:${order.id}:${journey.id}`,
-              title: 'Food Delivery',
-              content: 'The rider has picked up your order. It is on the way.',
-              icon: 'fas fa-motorcycle',
-              source: 'food_delivery_rider_pickup',
-              route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
-              createdAt: now,
-            })
-          }
           changedOrders.push(order)
         }
         if (journey.phase === MAP_DELIVERY_JOURNEY_PHASE.ARRIVED && order.status !== FOOD_DELIVERY_ORDER_STATUS.DELIVERED) {
           order.status = FOOD_DELIVERY_ORDER_STATUS.DELIVERED
           order.fulfillment.phase = FOOD_DELIVERY_FULFILLMENT_PHASE.DELIVERED
           order.fulfillment.callAvailable = false
+          order.ownerRevision += 1
           order.updatedAt = now
           addOrderEvent(order.id, {
             type: FOOD_DELIVERY_ORDER_EVENT_TYPE.DELIVERY_COMPLETED,
             title: FOOD_DELIVERY_ORDER_EVENT_TITLES[FOOD_DELIVERY_ORDER_EVENT_TYPE.DELIVERY_COMPLETED],
-            summary: 'The delivery journey reached the destination.',
+            summary: 'Map recorded arrival at the routed destination.',
             sourceModule: 'map_delivery_journey',
             sourceId: journey.id,
             createdAt: now,
           })
           appendOrderMessage(order.id, {
             sender: FOOD_DELIVERY_MESSAGE_SENDER.SYSTEM,
-            text: 'The order was delivered.',
-            intent: 'delivery_completed',
-            clientMessageId: `${order.id}:delivery_completed`,
-            createdAt: now,
-          })
-          recordOrderCausalCheckpoint({
-            orderId: order.id,
-            node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-            reason: 'delivery_journey_arrived',
-            resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-            now,
-          })
-          addSystemNotification({
-            id: `food_delivery_delivery_completed:${order.id}:${journey.id}`,
-            title: 'Food Delivery',
-            content: 'Your order has arrived.',
-            icon: 'fas fa-check',
-            source: 'food_delivery_delivery_completed',
-            route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
+            text: 'Map recorded arrival at the routed destination.',
+            intent: 'delivery_arrived_at_routed_anchor',
+            clientMessageId: `${order.id}:delivery_arrived:${journey.routeRevision}`,
             createdAt: now,
           })
           changedOrders.push(order)
         }
       }
 
-      const fulfillment = normalizeFulfillment(order.fulfillment, order.status)
+      const serviceCase = findOpenServiceCaseByOrder(order.id, 'destination_change')
       if (
-        fulfillment.phase === FOOD_DELIVERY_FULFILLMENT_PHASE.ADDRESS_CHANGE_PENDING &&
-        fulfillment.responseDeadlineAt > 0 &&
-        now >= fulfillment.responseDeadlineAt &&
-        fulfillment.callAvailable !== true
+        !serviceCase?.eventInstanceId &&
+        order.fulfillment.phase === FOOD_DELIVERY_FULFILLMENT_PHASE.ADDRESS_CHANGE_PENDING &&
+        order.fulfillment.responseDeadlineAt > 0 &&
+        now >= order.fulfillment.responseDeadlineAt &&
+        !order.fulfillment.callAvailable
       ) {
-        order.fulfillment = {
-          ...fulfillment,
-          phase: FOOD_DELIVERY_FULFILLMENT_PHASE.CALL_AVAILABLE,
-          callAvailable: true,
-          lastReconciledAt: now,
-        }
-        addOrderEvent(order.id, {
-          type: FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_NON_RESPONSE,
-          title: FOOD_DELIVERY_ORDER_EVENT_TITLES[FOOD_DELIVERY_ORDER_EVENT_TYPE.RIDER_NON_RESPONSE],
-          summary: 'The rider has not replied yet. You can call the rider.',
-          sourceModule: 'food_delivery_order_conversation',
-          sourceId: fulfillment.addressChangeRequestId,
-          createdAt: now,
-        })
-        recordOrderCausalCheckpoint({
-          orderId: order.id,
-          node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_RESPONSE_TIMEOUT,
-          reason: 'rider_response_timeout',
-          resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_RESPONSE_TIMEOUT,
-          now,
-        })
+        order.fulfillment.phase = FOOD_DELIVERY_FULFILLMENT_PHASE.CALL_AVAILABLE
+        order.fulfillment.callAvailable = true
+        order.fulfillment.responseDeadlineAt = 0
+        serviceCase.status = COMMERCE_SERVICE_CASE_STATUS.WAITING_USER
+        serviceCase.ownerRevision += 1
+        serviceCase.updatedAt = now
         appendOrderMessage(order.id, {
-          sender: FOOD_DELIVERY_MESSAGE_SENDER.SYSTEM,
-          text: 'The rider has not replied yet. You can call the rider from this order.',
-          intent: 'rider_non_response',
-          clientMessageId: `${order.id}:rider_non_response`,
-          createdAt: now,
-        })
-        addSystemNotification({
-          id: `food_delivery_rider_non_response:${order.id}:${fulfillment.addressChangeRequestId}`,
-          title: 'Food Delivery',
-          content: 'The rider has not replied. You can call the rider now.',
-          icon: 'fas fa-phone',
-          source: 'food_delivery_rider_non_response',
-          route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
+          sender: FOOD_DELIVERY_MESSAGE_SENDER.PLATFORM,
+          text: resolveCommerceCopy({
+            zh: '配送员暂未回复，你可以从当前订单拨打配送员电话。',
+            en: 'The rider has not replied. You can call the rider from this order.',
+          }),
+          intent: 'phone_contact_offered',
+          clientMessageId: `${serviceCase.id}:runtime_off_phone_offer`,
           createdAt: now,
         })
         changedOrders.push(order)
       }
       order.fulfillment.lastReconciledAt = now
     })
+
+    simulationStore.eventInstancesV2
+      .filter((instance) => instance.lifecycle === 'active')
+      .forEach((instance) => {
+        simulationStore.advanceStoredEventInstanceV2({
+          instanceId: instance.id,
+          randomValues: { rider_response_disposition: runtimeOptions.randomValue },
+          now,
+        })
+      })
+
+    for (let pass = 0; pass < 20; pass += 1) {
+      const foodRequests = simulationStore.listPendingOwnerActionRequests('food_delivery')
+      const mapRequests = simulationStore.listPendingOwnerActionRequests('map')
+      if (foodRequests.length === 0 && mapRequests.length === 0) break
+      let processed = 0
+      foodRequests.forEach(({ instanceId, request }) => {
+        executeFoodOwnerActionRequest({ instanceId, request, now: now + processed })
+        processed += 1
+      })
+      mapRequests.forEach(({ instanceId, request }) => {
+        const serviceCase = findServiceCaseById(request.contextRefs.service_case_id)
+        if (!serviceCase || serviceCase.eventInstanceId !== instanceId) return
+        const result = mapStore.handleCommerceOwnerActionRequest({
+          request,
+          destinationAnchor: serviceCase.requestedDestination,
+          now: now + processed,
+        })
+        if (result.ok && result.journey) {
+          const order = findOrderById(serviceCase.orderId)
+          if (order) {
+            order.mapEstimateRef = mapStore.getDeliveryJourneyEstimateReference(
+              result.journey.id,
+              now + processed,
+            )
+            if (!changedOrders.includes(order)) changedOrders.push(order)
+          }
+        }
+        if (result.fact) simulationStore.recordOwnerFactAndAdvance(result.fact, { now: now + processed })
+        processed += 1
+      })
+      if (!processed) break
+    }
+
+    finalizeCommerceServiceCases(now)
     if (journeyChanges.length || changedOrders.length) persistToStorage()
     return { journeyChanges, changedOrders }
   }
 
+  const reconcileFoodDeliveryRuntime = (now = Date.now(), runtimeOptions = {}) =>
+    reconcileCommerceEventRuntime(now, runtimeOptions)
+
   const getOrderCallContext = (orderId = '') => {
     const order = findOrderById(orderId)
-    if (!order || !order.fulfillment?.callAvailable) return null
+    const serviceCase = order ? findOpenServiceCaseByOrder(order.id, 'destination_change') : null
+    if (!order || !serviceCase || !order.fulfillment?.callAvailable) return null
     return {
       orderId: order.id,
       conversationId: order.conversationId,
       courier: { ...order.courier },
       addressRevision: order.addressRevision,
-      deliveryAnchor: order.deliveryAnchor ? { ...order.deliveryAnchor, position: { ...order.deliveryAnchor.position } } : null,
+      deliveryAnchor: order.deliveryAnchor
+        ? { ...order.deliveryAnchor, position: { ...order.deliveryAnchor.position } }
+        : null,
+      requestedDestination: serviceCase.requestedDestination
+        ? { ...serviceCase.requestedDestination, position: { ...serviceCase.requestedDestination.position } }
+        : null,
+      serviceCaseId: serviceCase.id,
+      eventInstanceId: serviceCase.eventInstanceId,
     }
   }
 
-  const commitOrderAddressChange = ({ orderId = '', destinationAnchor = null, now = Date.now() } = {}) => {
-    const order = findOrderById(orderId)
-    const destination = normalizeDeliveryAnchorSnapshot(destinationAnchor)
-    if (!order || !destination) return { ok: false, reason: 'address_change_invalid', order: null, journey: null }
-    if (order.status === FOOD_DELIVERY_ORDER_STATUS.DELIVERED || order.status === FOOD_DELIVERY_ORDER_STATUS.CANCELLED) {
-      return { ok: false, reason: 'order_closed', order: null, journey: null }
+  const recordPhoneCallLifecycleFacts = ({ orderId = '', sessionId = '', now = Date.now() } = {}) => {
+    const serviceCase = findOpenServiceCaseByOrder(orderId, 'destination_change')
+    if (!serviceCase?.eventInstanceId) return { ok: false, reason: 'service_case_event_missing', facts: [] }
+    serviceCase.phoneSessionId = sessionId
+    serviceCase.ownerRevision += 1
+    serviceCase.updatedAt = now
+    getSimulationStore().mergeEventInstanceV2ContextRefs(
+      serviceCase.eventInstanceId,
+      { phone_session_id: sessionId },
+      { at: now },
+    )
+    const facts = getPhoneStore().createCallLifecycleFacts(sessionId, now)
+    facts.forEach((fact, index) => {
+      getSimulationStore().recordOwnerFactAndAdvance(fact, { now: now + index })
+    })
+    reconcileCommerceEventRuntime(now)
+    return { ok: facts.length > 0, reason: facts.length > 0 ? '' : 'phone_facts_missing', facts }
+  }
+
+  const recordPhoneInteractionResolution = ({ orderId = '', sessionId = '', now = Date.now() } = {}) => {
+    const serviceCase = findOpenServiceCaseByOrder(orderId, 'destination_change')
+    if (!serviceCase?.eventInstanceId || serviceCase.phoneSessionId !== sessionId) {
+      return { ok: false, reason: 'phone_session_mismatch', fact: null }
     }
-    const mapStore = getMapStore()
-    const journey = order.deliveryJourneyId ? mapStore.findDeliveryJourneyById(order.deliveryJourneyId) : null
-    if (!journey) return { ok: false, reason: 'delivery_journey_missing', order: null, journey: null }
-    const proposal = mapStore.prepareDeliveryReroute({
-      journeyId: journey.id,
-      destinationAnchor: destination,
-      expectedAddressRevision: order.addressRevision,
-    })
-    if (!proposal.ok) return { ok: false, reason: proposal.reason, order: null, journey: null }
-    const reroute = mapStore.commitDeliveryReroute({ proposal: proposal.proposal, now, etaMinutes: Math.max(5, order.etaMinutes) })
-    if (!reroute.ok) return { ok: false, reason: reroute.reason, order: null, journey: null }
-    order.deliveryAnchor = { ...destination, revision: proposal.proposal.nextAddressRevision }
-    order.deliveryAddress = destination.detail
-    order.addressRevision = proposal.proposal.nextAddressRevision
-    order.etaMinutes = reroute.journey.etaMinutes
-    order.fulfillment = {
-      ...normalizeFulfillment(order.fulfillment, order.status),
-      phase: FOOD_DELIVERY_FULFILLMENT_PHASE.EN_ROUTE,
-      responseDeadlineAt: 0,
-      callAvailable: false,
-      addressChangeRequestId: '',
-      lastReconciledAt: now,
-    }
-    order.updatedAt = now
-    addOrderEvent(order.id, {
-      type: FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE_CONFIRMED,
-      title: FOOD_DELIVERY_ORDER_EVENT_TITLES[FOOD_DELIVERY_ORDER_EVENT_TYPE.ADDRESS_CHANGE_CONFIRMED],
-      summary: `Delivery address updated to ${destination.detail}.`,
-      deliveryAddress: destination.detail,
-      sourceModule: 'phone_call_session',
-      sourceId: order.conversationId,
-      createdAt: now,
-    })
-    appendOrderMessage(order.id, {
-      sender: FOOD_DELIVERY_MESSAGE_SENDER.SYSTEM,
-      text: `The rider accepted the new address: ${destination.detail}. ETA updated.`,
-      intent: 'address_change_confirmed',
-      clientMessageId: `${order.id}:address_change_confirmed:${order.addressRevision}`,
-      createdAt: now,
-    })
-    recordOrderCausalCheckpoint({
-      orderId: order.id,
-      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_REVISION_COMMITTED,
-      reason: 'address_revision_committed',
-      resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_REVISION_COMMITTED,
-      now,
-    })
-    recordOrderCausalCheckpoint({
-      orderId: order.id,
-      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_REROUTED,
-      reason: 'delivery_rerouted',
-      resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_REROUTED,
-      now,
-    })
-    addSystemNotification({
-      id: `food_delivery_address_confirmed:${order.id}:${order.addressRevision}`,
-      title: 'Food Delivery',
-      content: 'The rider accepted the new address. The route and ETA were updated.',
-      icon: 'fas fa-route',
-      source: 'food_delivery_address_confirmed',
-      route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
-      createdAt: now,
-    })
-    persistToStorage()
-    return { ok: true, reason: '', order, journey: reroute.journey }
+    const fact = getPhoneStore().createInteractionResolutionFact(sessionId, now)
+    if (!fact) return { ok: false, reason: 'phone_resolution_missing', fact: null }
+    getSimulationStore().recordOwnerFactAndAdvance(fact, { now })
+    reconcileCommerceEventRuntime(now)
+    return { ok: true, reason: '', fact }
   }
 
   const updateOrderStatus = (orderId, status) => {
@@ -5324,6 +5985,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     platformOrders.value = normalizePlatformOrders(rawSource.platformOrders)
     orders.value = normalizeFoodOrders(rawSource.orders)
     orderConversations.value = normalizeOrderConversations(rawSource.orderConversations)
+    serviceCases.value = normalizeFoodServiceCases(rawSource.serviceCases)
+    interactionTriggers.value = normalizeFoodInteractionTriggers(rawSource.interactionTriggers)
     primaryCurrency.value = normalizeCurrency(
       rawSource.primaryCurrency || rawSource.defaultCurrency || rawSource.settings?.primaryCurrency,
       primaryCurrency.value,
@@ -5393,6 +6056,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         : null,
       courier: order.courier ? { ...order.courier } : null,
       fulfillment: order.fulfillment ? { ...order.fulfillment } : null,
+      mapEstimateRef: order.mapEstimateRef ? { ...order.mapEstimateRef } : null,
     })),
     orderConversations: orderConversations.value.map((conversation) => ({
       ...conversation,
@@ -5410,6 +6074,26 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
               : null,
           }))
         : [],
+    })),
+    serviceCases: serviceCases.value.map((serviceCase) => ({
+      ...serviceCase,
+      requestedDestination: serviceCase.requestedDestination
+        ? {
+            ...serviceCase.requestedDestination,
+            position: serviceCase.requestedDestination.position
+              ? { ...serviceCase.requestedDestination.position }
+              : null,
+          }
+        : null,
+      sourceMessageRef: { ...serviceCase.sourceMessageRef },
+    })),
+    interactionTriggers: interactionTriggers.value.map((trigger) => ({
+      ...trigger,
+      orderRef: {
+        ...trigger.orderRef,
+        lineItemIds: [...trigger.orderRef.lineItemIds],
+      },
+      sourceMessageRef: { ...trigger.sourceMessageRef },
     })),
   })
 
@@ -5443,6 +6127,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     platformOrders.value = []
     orders.value = []
     orderConversations.value = []
+    serviceCases.value = []
+    interactionTriggers.value = []
   }
 
   const setPrimaryCurrency = (currency = '') => {
@@ -5476,6 +6162,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       platformOrders,
       orders,
       orderConversations,
+      serviceCases,
+      interactionTriggers,
       primaryCurrency,
     ],
     () => {
@@ -5494,6 +6182,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     platformOrders,
     orders,
     orderConversations,
+    serviceCases,
+    interactionTriggers,
     primaryCurrency,
     restaurantCount,
     menuItemCount,
@@ -5520,6 +6210,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     findRestaurantById,
     findMenuItemById,
     findOrderById,
+    getCommerceOrderReference,
+    getOrderMapEstimateReference,
+    findServiceCaseById,
+    findOpenServiceCaseByOrder,
     listRestaurantsByCategory,
     listMenuByRestaurant,
     upsertRestaurant,
@@ -5543,10 +6237,13 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     ensureOrderConversation,
     appendOrderMessage,
     sendOrderMessage,
-    recordOrderCausalCheckpoint,
+    beginOrderServiceInteraction,
+    beginChatServiceInteraction,
     reconcileFoodDeliveryRuntime,
     getOrderCallContext,
     commitOrderAddressChange,
+    recordPhoneCallLifecycleFacts,
+    recordPhoneInteractionResolution,
     updateOrderStatus,
     addOrderEvent,
     linkOrderEventRuntimeLog,

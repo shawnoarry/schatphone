@@ -19,7 +19,6 @@ import {
   normalizeMapJourneyEventProposal,
   normalizeMapJourneyEventProposals,
 } from '../lib/simulation/adapters/map-journey-events'
-import { evaluateRandomGate } from '../lib/simulation/random'
 import {
   EVENT_INSTANCE_LIFECYCLE,
   EVENT_TEXT_MODE,
@@ -29,6 +28,18 @@ import {
   normalizeEventInstanceV1,
   normalizeEventInstancesV1,
 } from '../lib/simulation/event-contracts'
+import {
+  EVENT_INSTANCE_V2_LIFECYCLE,
+  OWNER_ACTION_REQUEST_STATUS,
+  normalizeEventInstanceV2,
+  normalizeEventInstancesV2,
+  normalizeOwnerFactV1,
+} from '../lib/simulation/commerce-interaction-contracts'
+import {
+  advanceEventInstanceV2,
+  createEventInstanceV2,
+} from '../lib/simulation/event-instance-v2'
+import { getBuiltInCommerceEventTemplate } from '../lib/simulation/commerce-event-templates'
 import {
   createEventNotebookRefKey,
   normalizeEventNotebookRef,
@@ -42,88 +53,26 @@ import {
 } from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
-const SIMULATION_STORAGE_VERSION = 4
+const SIMULATION_STORAGE_VERSION = 5
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
 const SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT = 120
 const SIMULATION_MAP_JOURNEY_PROPOSAL_LIMIT = 120
+const SIMULATION_EVENT_INSTANCE_V2_LIMIT = 240
+const SIMULATION_OWNER_FACT_LIMIT = 480
+const SIMULATION_LEGACY_COMMERCE_AUDIT_LIMIT = 120
 export const SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS = 10 * 60 * 1000
 export const SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS = 60 * 1000
 export const SIMULATION_EVENT_TEXT_MODE = EVENT_TEXT_MODE
 
-export const FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID =
+const LEGACY_FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID =
   'food_delivery.delivery_address_change_escalation.v1'
-
-export const FOOD_DELIVERY_CAUSAL_CHAIN_NODE = Object.freeze({
-  RIDER_PICKUP: 'rider_pickup',
-  ADDRESS_CONFIRMATION_REQUIRED: 'address_confirmation_required',
-  ADDRESS_CHANGE_REQUESTED: 'address_change_requested',
-  RIDER_RESPONSE_TIMEOUT: 'rider_response_timeout',
-  CALL_STARTED: 'call_started',
-  CALL_RESOLUTION_PROPOSED: 'call_resolution_proposed',
-  ADDRESS_REVISION_COMMITTED: 'address_revision_committed',
-  DELIVERY_REROUTED: 'delivery_rerouted',
-  DELIVERY_COMPLETED: 'delivery_completed',
-})
-
-export const FOOD_DELIVERY_CAUSAL_CHAIN_STATUS = Object.freeze({
-  ACTIVE: 'active',
-  RESOLVED: 'resolved',
-  SKIPPED: 'skipped',
-  FAILED: 'failed',
-})
-
-export const FOOD_DELIVERY_CAUSAL_CHAIN_COOLDOWN_MS = 30 * 60 * 1000
-export const FOOD_DELIVERY_CAUSAL_CHAIN_DAILY_LIMIT = 1
-
-const FOOD_DELIVERY_CAUSAL_CHAIN_TRANSITIONS = Object.freeze({
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_PICKUP]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CONFIRMATION_REQUIRED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CONFIRMATION_REQUIRED]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CHANGE_REQUESTED,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_RESPONSE_TIMEOUT,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CHANGE_REQUESTED]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_RESPONSE_TIMEOUT,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_RESPONSE_TIMEOUT]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_RESOLUTION_PROPOSED,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_RESOLUTION_PROPOSED]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_REVISION_COMMITTED,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_REVISION_COMMITTED]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_REROUTED,
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_REROUTED]: new Set([
-    FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-  ]),
-  [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED]: new Set(),
-})
 
 export const SIMULATION_SURPRISE_MODE = Object.freeze({
   OFF: 'off',
   LOW: 'low',
   BALANCED: 'balanced',
   HIGH: 'high',
-})
-
-const FOOD_DELIVERY_CAUSAL_CHAIN_PROBABILITY_BY_SURPRISE_MODE = Object.freeze({
-  [SIMULATION_SURPRISE_MODE.OFF]: 0,
-  [SIMULATION_SURPRISE_MODE.LOW]: 0.28,
-  [SIMULATION_SURPRISE_MODE.BALANCED]: 0.55,
-  [SIMULATION_SURPRISE_MODE.HIGH]: 0.82,
 })
 
 export const SIMULATION_TRIGGER_SOURCE = Object.freeze({
@@ -219,85 +168,80 @@ const normalizeTextList = (rawItems, maxItems = 16, maxLength = 160) => {
   return output.slice(0, maxItems)
 }
 
-const FOOD_DELIVERY_CAUSAL_CHAIN_NODE_VALUES = new Set(
-  Object.values(FOOD_DELIVERY_CAUSAL_CHAIN_NODE),
-)
-const FOOD_DELIVERY_CAUSAL_CHAIN_STATUS_VALUES = new Set(
-  Object.values(FOOD_DELIVERY_CAUSAL_CHAIN_STATUS),
-)
-
-const normalizeFoodDeliveryCausalChainNode = (value, fallback = FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_PICKUP) => {
-  const normalized = normalizeText(value, fallback, 80)
-  return FOOD_DELIVERY_CAUSAL_CHAIN_NODE_VALUES.has(normalized) ? normalized : fallback
-}
-
-const normalizeFoodDeliveryCausalChainStatus = (
-  value,
-  fallback = FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.ACTIVE,
-) => {
-  const normalized = normalizeText(value, fallback, 40)
-  return FOOD_DELIVERY_CAUSAL_CHAIN_STATUS_VALUES.has(normalized) ? normalized : fallback
-}
-
-const normalizeFoodDeliveryCausalChain = (rawChain, index = 0) => {
-  if (!rawChain || typeof rawChain !== 'object') return null
-  const targetId = normalizeText(rawChain.targetId || rawChain.ownerRecords?.foodOrderId, '', 160)
+const normalizeLegacyCommerceAuditEntry = (rawEntry, index = 0) => {
+  if (!rawEntry || typeof rawEntry !== 'object') return null
+  const targetId = normalizeText(rawEntry.targetId || rawEntry.ownerRecords?.foodOrderId, '', 180)
   if (!targetId) return null
-  const createdAt = normalizeTimestamp(rawChain.createdAt, Date.now() - index)
-  const id = normalizeText(
-    rawChain.id,
-    `food_delivery_causal_chain_${targetId}`,
-    220,
-  )
-  const ownerRecords = rawChain.ownerRecords && typeof rawChain.ownerRecords === 'object'
-    ? rawChain.ownerRecords
-    : {}
-  const randomGate = rawChain.randomGate && typeof rawChain.randomGate === 'object'
-    ? rawChain.randomGate
-    : {}
-
+  const createdAt = normalizeTimestamp(rawEntry.createdAt, Date.now() - index)
   return {
-    id,
-    eventId: normalizeText(rawChain.eventId, FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID, 180),
+    id: normalizeText(rawEntry.id, `legacy_commerce_audit_${targetId}`, 220),
+    sourceKind: 'legacy_food_delivery_causal_chain',
     targetId,
-    triggerSource: normalizeTriggerSource(rawChain.triggerSource, SIMULATION_TRIGGER_SOURCE.CONDITION),
-    currentNode: normalizeFoodDeliveryCausalChainNode(rawChain.currentNode),
-    status: normalizeFoodDeliveryCausalChainStatus(rawChain.status),
-    randomSeed: normalizeText(rawChain.randomSeed, '', 180),
-    randomGate: {
-      probability: Math.min(1, Math.max(0, Number(randomGate.probability) || 0)),
-      randomValue: Math.min(1, Math.max(0, Number(randomGate.randomValue) || 0)),
-      randomSource: normalizeText(randomGate.randomSource, 'missing', 40),
-      passed: randomGate.passed === true,
-    },
-    reason: normalizeText(rawChain.reason, '', 220),
-    cooldownMs: normalizePositiveMs(rawChain.cooldownMs),
-    dailyLimit: normalizePositiveLimit(rawChain.dailyLimit),
-    canonicalMutation: 'none',
+    templateId: normalizeText(
+      rawEntry.templateId || rawEntry.eventId,
+      LEGACY_FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID,
+      220,
+    ),
+    provenance: 'legacy_reference_trigger',
+    status: normalizeText(rawEntry.status, 'legacy', 60),
+    currentNode: normalizeText(rawEntry.currentNode, '', 120),
     ownerRecords: {
-      foodOrderId: normalizeText(ownerRecords.foodOrderId, targetId, 160),
-      walletTransactionId: normalizeText(ownerRecords.walletTransactionId, '', 180),
-      mapJourneyId: normalizeText(ownerRecords.mapJourneyId, '', 180),
-      conversationId: normalizeText(ownerRecords.conversationId, '', 180),
-      phoneSessionId: normalizeText(ownerRecords.phoneSessionId, '', 180),
+      foodOrderId: normalizeText(rawEntry.ownerRecords?.foodOrderId, targetId, 180),
+      walletTransactionId: normalizeText(rawEntry.ownerRecords?.walletTransactionId, '', 220),
+      mapJourneyId: normalizeText(rawEntry.ownerRecords?.mapJourneyId, '', 220),
+      conversationId: normalizeText(rawEntry.ownerRecords?.conversationId, '', 220),
+      phoneSessionId: normalizeText(rawEntry.ownerRecords?.phoneSessionId, '', 220),
     },
-    resultCodes: normalizeTextList(rawChain.resultCodes, 24, 120),
+    resultCodes: normalizeTextList(
+      ['legacy_reference_trigger', ...(Array.isArray(rawEntry.resultCodes) ? rawEntry.resultCodes : [])],
+      32,
+      160,
+    ),
     createdAt,
-    updatedAt: normalizeTimestamp(rawChain.updatedAt, createdAt),
+    updatedAt: normalizeTimestamp(rawEntry.updatedAt, createdAt),
   }
 }
 
-const normalizeFoodDeliveryCausalChains = (rawChains) => {
-  if (!Array.isArray(rawChains)) return []
+const normalizeLegacyCommerceAuditEntries = (rawEntries) => {
+  if (!Array.isArray(rawEntries)) return []
   const seen = new Set()
-  return rawChains
-    .map((item, index) => normalizeFoodDeliveryCausalChain(item, index))
+  return rawEntries
+    .map((item, index) => normalizeLegacyCommerceAuditEntry(item, index))
     .filter((item) => {
       if (!item || seen.has(item.id)) return false
       seen.add(item.id)
       return true
     })
     .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, SIMULATION_LEGACY_COMMERCE_AUDIT_LIMIT)
+}
+
+const migrateLegacyFoodDeliveryCausalChains = (rawChains) =>
+  (Array.isArray(rawChains) ? rawChains : [])
+    .map((chain, index) =>
+      normalizeLegacyCommerceAuditEntry(
+        {
+          ...chain,
+          id: `legacy_audit_${normalizeText(chain?.id, `chain_${index}`, 200)}`,
+          templateId: chain?.eventId || LEGACY_FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID,
+        },
+        index,
+      ),
+    )
+    .filter(Boolean)
+
+const normalizeOwnerFacts = (rawFacts) => {
+  if (!Array.isArray(rawFacts)) return []
+  const seen = new Set()
+  return rawFacts
+    .map(normalizeOwnerFactV1)
+    .filter((fact) => {
+      if (!fact || seen.has(fact.id)) return false
+      seen.add(fact.id)
+      return true
+    })
+    .sort((a, b) => b.occurredAt - a.occurredAt)
+    .slice(0, SIMULATION_OWNER_FACT_LIMIT)
 }
 
 const createDayKey = (at = Date.now()) => {
@@ -356,18 +300,24 @@ const normalizeSimulationSettings = (rawSettings = {}) => {
 export const migrateSimulationStorage = ({ version, data } = {}) => {
   const storedVersion = Number(version)
   if (
-    ![1, 2, 3].includes(storedVersion) ||
+    ![1, 2, 3, 4].includes(storedVersion) ||
     !data ||
     typeof data !== 'object' ||
     Array.isArray(data)
   ) {
     return null
   }
+  const { foodDeliveryCausalChains: legacyFoodDeliveryCausalChains, ...currentData } = data
   return {
-    ...data,
+    ...currentData,
     eventInstances: storedVersion === 1 ? [] : data.eventInstances || [],
     eventReviewNotes: storedVersion >= 3 ? data.eventReviewNotes || [] : [],
-    foodDeliveryCausalChains: data.foodDeliveryCausalChains || [],
+    eventInstancesV2: data.eventInstancesV2 || [],
+    ownerFacts: data.ownerFacts || [],
+    legacyCommerceAuditEntries: [
+      ...(Array.isArray(data.legacyCommerceAuditEntries) ? data.legacyCommerceAuditEntries : []),
+      ...migrateLegacyFoodDeliveryCausalChains(legacyFoodDeliveryCausalChains),
+    ],
     settings: {
       ...(data.settings && typeof data.settings === 'object' ? data.settings : {}),
       eventTextMode:
@@ -653,14 +603,77 @@ const canAdvanceEventInstance = (current, next) => {
   return true
 }
 
+const EVENT_INSTANCE_V2_LIFECYCLE_TRANSITIONS = Object.freeze({
+  [EVENT_INSTANCE_V2_LIFECYCLE.ACTIVE]: new Set(Object.values(EVENT_INSTANCE_V2_LIFECYCLE)),
+  [EVENT_INSTANCE_V2_LIFECYCLE.RESOLVED]: new Set([EVENT_INSTANCE_V2_LIFECYCLE.RESOLVED]),
+  [EVENT_INSTANCE_V2_LIFECYCLE.FAILED]: new Set([EVENT_INSTANCE_V2_LIFECYCLE.FAILED]),
+  [EVENT_INSTANCE_V2_LIFECYCLE.CANCELLED]: new Set([EVENT_INSTANCE_V2_LIFECYCLE.CANCELLED]),
+})
+
+const isStablePrefix = (currentItems, nextItems, createKey) =>
+  currentItems.every((currentItem, index) => {
+    const nextItem = nextItems[index]
+    return nextItem && createKey(currentItem) === createKey(nextItem)
+  })
+
+const canAdvanceEventInstanceV2 = (current, next) => {
+  if (
+    current.id !== next.id ||
+    current.templateId !== next.templateId ||
+    current.createdAt !== next.createdAt ||
+    next.updatedAt < current.updatedAt ||
+    !EVENT_INSTANCE_V2_LIFECYCLE_TRANSITIONS[current.lifecycle]?.has(next.lifecycle)
+  ) {
+    return false
+  }
+  if (
+    Object.entries(current.contextRefs).some(([key, value]) =>
+      JSON.stringify(next.contextRefs[key]) !== JSON.stringify(value),
+    )
+  ) {
+    return false
+  }
+  if (
+    !isStablePrefix(current.decisionLedger, next.decisionLedger, (item) =>
+      JSON.stringify({ key: item.key, outcome: item.outcome, randomValue: item.randomValue, seed: item.seed, decidedAt: item.decidedAt }),
+    ) ||
+    !isStablePrefix(current.deadlines, next.deadlines, (item) =>
+      JSON.stringify({ id: item.id, dueAt: item.dueAt }),
+    ) ||
+    !isStablePrefix(current.pendingOwnerRequests, next.pendingOwnerRequests, (item) =>
+      JSON.stringify({
+        id: item.id,
+        actionKey: item.actionKey,
+        targetModule: item.targetModule,
+        requestedByInstanceId: item.requestedByInstanceId,
+        contextRefs: item.contextRefs,
+        idempotencyKey: item.idempotencyKey,
+        requestedAt: item.requestedAt,
+      }),
+    )
+  ) {
+    return false
+  }
+  if (
+    current.observedFactIds.some((id) => !next.observedFactIds.includes(id)) ||
+    current.resultCodes.some((code) => !next.resultCodes.includes(code))
+  ) {
+    return false
+  }
+  return true
+}
+
 export const useSimulationStore = defineStore('simulation', () => {
   const eventLogs = ref([])
   const eventInstances = ref([])
   const eventInstanceRestoreReport = ref({ inputCount: 0, restoredCount: 0, rejected: [] })
+  const eventInstancesV2 = ref([])
+  const eventInstanceV2RestoreReport = ref({ inputCount: 0, restoredCount: 0, rejected: [] })
+  const ownerFacts = ref([])
+  const legacyCommerceAuditEntries = ref([])
   const eventReviewNotes = ref([])
   const cooldownsByEvent = ref({})
   const dailyCounters = ref({})
-  const foodDeliveryCausalChains = ref([])
   const chatSocialEventProposals = ref([])
   const mapJourneyEventProposals = ref([])
   const settings = ref(normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS))
@@ -668,6 +681,7 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   const eventLogCount = computed(() => eventLogs.value.length)
   const eventInstanceCount = computed(() => eventInstances.value.length)
+  const eventInstanceV2Count = computed(() => eventInstancesV2.value.length)
   const eventReviewNoteCount = computed(() => eventReviewNotes.value.length)
   const recentEventLogs = computed(() => eventLogs.value.slice(0, 24))
   const activeCooldownCount = computed(() => {
@@ -765,6 +779,159 @@ export const useSimulationStore = defineStore('simulation', () => {
       ...eventInstances.value.filter((item) => item.id !== instance.id),
     ]
     return instance
+  }
+
+  const getEventInstanceV2 = (instanceId) => {
+    const normalizedId = normalizeText(instanceId, '', 220)
+    return eventInstancesV2.value.find((item) => item.id === normalizedId) || null
+  }
+
+  const upsertEventInstanceV2 = (rawInstance) => {
+    const instance = normalizeEventInstanceV2(rawInstance)
+    if (!instance) return null
+    const current = getEventInstanceV2(instance.id)
+    if (current && !canAdvanceEventInstanceV2(current, instance)) return null
+    eventInstancesV2.value = [
+      instance,
+      ...eventInstancesV2.value.filter((item) => item.id !== instance.id),
+    ].slice(0, SIMULATION_EVENT_INSTANCE_V2_LIMIT)
+    return instance
+  }
+
+  const mergeEventInstanceV2ContextRefs = (instanceId, contextRefs = {}, { at = Date.now() } = {}) => {
+    const existing = getEventInstanceV2(instanceId)
+    if (!existing || !contextRefs || typeof contextRefs !== 'object' || Array.isArray(contextRefs)) return null
+    return upsertEventInstanceV2({
+      ...existing,
+      contextRefs: { ...existing.contextRefs, ...contextRefs },
+      updatedAt: Math.max(existing.updatedAt, normalizeTimestamp(at)),
+    })
+  }
+
+  const closeEventInstanceV2 = ({
+    instanceId = '',
+    lifecycle = EVENT_INSTANCE_V2_LIFECYCLE.CANCELLED,
+    resultCode = '',
+    now = Date.now(),
+  } = {}) => {
+    const existing = getEventInstanceV2(instanceId)
+    const normalizedResultCode = normalizeEventId(resultCode, 160)
+    if (
+      !existing ||
+      existing.lifecycle !== EVENT_INSTANCE_V2_LIFECYCLE.ACTIVE ||
+      ![EVENT_INSTANCE_V2_LIFECYCLE.RESOLVED, EVENT_INSTANCE_V2_LIFECYCLE.FAILED, EVENT_INSTANCE_V2_LIFECYCLE.CANCELLED].includes(lifecycle) ||
+      !normalizedResultCode
+    ) {
+      return null
+    }
+    return upsertEventInstanceV2({
+      ...existing,
+      lifecycle,
+      resultCodes: existing.resultCodes.includes(normalizedResultCode)
+        ? existing.resultCodes
+        : [...existing.resultCodes, normalizedResultCode],
+      updatedAt: Math.max(existing.updatedAt, normalizeTimestamp(now)),
+    })
+  }
+
+  const recordOwnerFact = (rawFact) => {
+    const fact = normalizeOwnerFactV1(rawFact)
+    if (!fact) return null
+    const existing = ownerFacts.value.find((item) => item.id === fact.id)
+    if (existing) return JSON.stringify(existing) === JSON.stringify(fact) ? existing : null
+    ownerFacts.value = [fact, ...ownerFacts.value].slice(0, SIMULATION_OWNER_FACT_LIMIT)
+    return fact
+  }
+
+  const advanceStoredEventInstanceV2 = ({
+    instanceId = '',
+    randomValues = {},
+    now = Date.now(),
+  } = {}) => {
+    const existing = getEventInstanceV2(instanceId)
+    const template = existing ? getBuiltInCommerceEventTemplate(existing.templateId) : null
+    if (!existing || !template) {
+      return { ok: false, changed: false, reason: 'instance_or_template_missing', instance: null }
+    }
+    const runtimeNow = Math.max(existing.updatedAt, normalizeTimestamp(now))
+    const result = advanceEventInstanceV2({
+      instance: existing,
+      template,
+      ownerFacts: ownerFacts.value,
+      randomValues,
+      now: runtimeNow,
+    })
+    if (!result.ok || !result.instance) return result
+    const stored = upsertEventInstanceV2(result.instance)
+    if (!stored) return { ok: false, changed: false, reason: 'instance_update_rejected', instance: existing }
+    if (result.changed) {
+      recordEventLog({
+        id: `${stored.id}:${stored.currentNodeId}:${stored.updatedAt}`,
+        eventId: stored.templateId,
+        moduleKey: 'commerce',
+        targetId: stored.contextRefs.order_id || stored.contextRefs.service_case_id || stored.id,
+        adapterKey: 'simulation.event_instance_v2',
+        triggerSource: SIMULATION_TRIGGER_SOURCE.SYSTEM,
+        status:
+          stored.lifecycle === EVENT_INSTANCE_V2_LIFECYCLE.ACTIVE
+            ? SIMULATION_EVENT_STATUS.TRIGGERED
+            : SIMULATION_EVENT_STATUS.RESOLVED,
+        reason: stored.resultCodes.at(-1) || stored.currentNodeId,
+        at: stored.updatedAt,
+      })
+    }
+    return { ...result, instance: stored }
+  }
+
+  const startEventInstanceV2 = ({
+    id = '',
+    templateId = '',
+    contextRefs = {},
+    randomValues = {},
+    now = Date.now(),
+  } = {}) => {
+    const existing = getEventInstanceV2(id)
+    if (existing) {
+      return advanceStoredEventInstanceV2({ instanceId: existing.id, randomValues, now })
+    }
+    const template = getBuiltInCommerceEventTemplate(templateId)
+    const instance = createEventInstanceV2({ id, template, contextRefs, now })
+    const stored = instance ? upsertEventInstanceV2(instance) : null
+    if (!stored) return { ok: false, changed: false, reason: 'instance_create_rejected', instance: null }
+    recordEventLog({
+      id: `${stored.id}:created`,
+      eventId: stored.templateId,
+      moduleKey: 'commerce',
+      targetId: stored.contextRefs.order_id || stored.contextRefs.service_case_id || stored.id,
+      adapterKey: 'simulation.event_instance_v2',
+      triggerSource: SIMULATION_TRIGGER_SOURCE.MANUAL,
+      status: SIMULATION_EVENT_STATUS.TRIGGERED,
+      reason: 'user_service_interaction',
+      at: stored.createdAt,
+    })
+    return advanceStoredEventInstanceV2({ instanceId: stored.id, randomValues, now })
+  }
+
+  const recordOwnerFactAndAdvance = (rawFact, { randomValues = {}, now = Date.now() } = {}) => {
+    const fact = recordOwnerFact(rawFact)
+    if (!fact) return { ok: false, changed: false, reason: 'owner_fact_rejected', fact: null, instance: null }
+    const instance = fact.correlationId ? getEventInstanceV2(fact.correlationId) : null
+    if (!instance) return { ok: true, changed: false, reason: 'fact_recorded_without_instance', fact, instance: null }
+    const result = advanceStoredEventInstanceV2({ instanceId: instance.id, randomValues, now })
+    return { ...result, fact }
+  }
+
+  const listPendingOwnerActionRequests = (targetModule = '') => {
+    const normalizedTarget = normalizeModuleKey(targetModule, '')
+    return eventInstancesV2.value.flatMap((instance) =>
+      instance.pendingOwnerRequests
+        .filter(
+          (request) =>
+            request.status === OWNER_ACTION_REQUEST_STATUS.PENDING &&
+            (!normalizedTarget || request.targetModule === normalizedTarget),
+        )
+        .map((request) => ({ instanceId: instance.id, request })),
+    )
   }
 
   const upsertEventReviewNote = (rawNote = {}, { at = Date.now() } = {}) => {
@@ -1204,255 +1371,6 @@ export const useSimulationStore = defineStore('simulation', () => {
     return stored
   }
 
-  const getFoodDeliveryCausalChain = (orderId = '') => {
-    const normalizedOrderId = normalizeText(orderId, '', 160)
-    if (!normalizedOrderId) return null
-    return (
-      foodDeliveryCausalChains.value.find(
-        (chain) => chain.targetId === normalizedOrderId || chain.ownerRecords.foodOrderId === normalizedOrderId,
-      ) || null
-    )
-  }
-
-  const upsertFoodDeliveryCausalChain = (rawChain) => {
-    const normalized = normalizeFoodDeliveryCausalChain(rawChain)
-    if (!normalized) return null
-    foodDeliveryCausalChains.value = [
-      normalized,
-      ...foodDeliveryCausalChains.value.filter((chain) => chain.id !== normalized.id),
-    ]
-    return normalized
-  }
-
-  const normalizeFoodDeliveryOwnerRecords = (rawRecords = {}, fallbackOrderId = '') => {
-    const records = rawRecords && typeof rawRecords === 'object' ? rawRecords : {}
-    return {
-      foodOrderId: normalizeText(records.foodOrderId, fallbackOrderId, 160),
-      walletTransactionId: normalizeText(records.walletTransactionId, '', 180),
-      mapJourneyId: normalizeText(records.mapJourneyId, '', 180),
-      conversationId: normalizeText(records.conversationId, '', 180),
-      phoneSessionId: normalizeText(records.phoneSessionId, '', 180),
-    }
-  }
-
-  const recordFoodDeliveryCausalCheckpoint = ({
-    orderId = '',
-    node = '',
-    ownerRecords = {},
-    reason = '',
-    resultCode = '',
-    at = Date.now(),
-  } = {}) => {
-    const existing = getFoodDeliveryCausalChain(orderId)
-    if (!existing) return { ok: false, changed: false, reason: 'causal_chain_missing', chain: null }
-    if (existing.status === FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.SKIPPED) {
-      return { ok: true, changed: false, reason: 'no_event', chain: existing }
-    }
-    if (existing.status === FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.RESOLVED) {
-      return { ok: true, changed: false, reason: 'already_resolved', chain: existing }
-    }
-
-    const nextNode = normalizeFoodDeliveryCausalChainNode(node, '')
-    if (!nextNode || nextNode === existing.currentNode) {
-      return { ok: true, changed: false, reason: 'checkpoint_already_recorded', chain: existing }
-    }
-    if (!FOOD_DELIVERY_CAUSAL_CHAIN_TRANSITIONS[existing.currentNode]?.has(nextNode)) {
-      return { ok: false, changed: false, reason: 'checkpoint_out_of_order', chain: existing }
-    }
-
-    const normalizedAt = normalizeTimestamp(at)
-    const normalizedOwnerRecords = normalizeFoodDeliveryOwnerRecords(ownerRecords, existing.targetId)
-    const mergedOwnerRecords = Object.fromEntries(
-      Object.entries({ ...existing.ownerRecords, ...normalizedOwnerRecords }).map(([key, value]) => [
-        key,
-        value || existing.ownerRecords[key] || '',
-      ]),
-    )
-    const nextStatus = nextNode === FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED
-      ? FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.RESOLVED
-      : FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.ACTIVE
-    const nextChain = upsertFoodDeliveryCausalChain({
-      ...existing,
-      currentNode: nextNode,
-      status: nextStatus,
-      ownerRecords: mergedOwnerRecords,
-      reason: normalizeText(reason, existing.reason, 220),
-      resultCodes: [
-        ...existing.resultCodes,
-        normalizeText(resultCode, nextNode, 120),
-      ],
-      updatedAt: normalizedAt,
-    })
-    if (!nextChain) return { ok: false, changed: false, reason: 'causal_chain_invalid', chain: existing }
-
-    recordEventLog({
-      id: `${existing.id}:${nextNode}`,
-      eventId: existing.eventId,
-      moduleKey: 'food_delivery',
-      targetId: existing.targetId,
-      adapterKey: 'food_delivery.causal_chain.checkpoint',
-      triggerSource: SIMULATION_TRIGGER_SOURCE.SYSTEM,
-      status: SIMULATION_EVENT_STATUS.TRIGGERED,
-      reason: normalizeText(reason, nextNode, 220),
-      at: normalizedAt,
-    })
-    return { ok: true, changed: true, reason: '', chain: nextChain }
-  }
-
-  const evaluateFoodDeliveryCausalChain = ({
-    orderSnapshot = {},
-    checkpoint = FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_PICKUP,
-    triggerSource = SIMULATION_TRIGGER_SOURCE.CONDITION,
-    randomValue,
-    randomSeed = '',
-    at = Date.now(),
-    cooldownMs = FOOD_DELIVERY_CAUSAL_CHAIN_COOLDOWN_MS,
-    dailyLimit = FOOD_DELIVERY_CAUSAL_CHAIN_DAILY_LIMIT,
-  } = {}) => {
-    const order = orderSnapshot && typeof orderSnapshot === 'object' ? orderSnapshot : {}
-    const orderId = normalizeText(order.id || order.orderId, '', 160)
-    if (!orderId) return { ok: false, status: SIMULATION_EVENT_STATUS.SKIPPED, reason: 'order_missing', chain: null }
-
-    const existing = getFoodDeliveryCausalChain(orderId)
-    if (existing) {
-      return {
-        ok: existing.status === FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.ACTIVE,
-        status: existing.status === FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.ACTIVE
-          ? SIMULATION_EVENT_STATUS.TRIGGERED
-          : SIMULATION_EVENT_STATUS.SKIPPED,
-        reason: existing.status === FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.SKIPPED ? 'no_event' : 'chain_exists',
-        chain: existing,
-      }
-    }
-
-    const normalizedAt = normalizeTimestamp(at)
-    const normalizedCheckpoint = normalizeFoodDeliveryCausalChainNode(checkpoint, '')
-    const ownerRecords = normalizeFoodDeliveryOwnerRecords(
-      {
-        foodOrderId: orderId,
-        walletTransactionId: order.walletTransactionId || order.paymentTransactionId || order.paymentRef?.transactionId,
-        mapJourneyId: order.mapJourneyId || order.deliveryJourneyId,
-        conversationId: order.conversationId,
-      },
-      orderId,
-    )
-    const createSkippedChain = (reason, randomGate = {}) => {
-      const chain = upsertFoodDeliveryCausalChain({
-        id: `food_delivery_causal_chain_${orderId}`,
-        eventId: FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID,
-        targetId: orderId,
-        triggerSource,
-        currentNode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_PICKUP,
-        status: FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.SKIPPED,
-        randomSeed,
-        randomGate,
-        reason,
-        cooldownMs,
-        dailyLimit,
-        ownerRecords,
-        resultCodes: [reason],
-        createdAt: normalizedAt,
-        updatedAt: normalizedAt,
-      })
-      const log = recordEventLog({
-        id: `${chain?.id || `food_delivery_causal_chain_${orderId}`}:eligibility`,
-        eventId: FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID,
-        moduleKey: 'food_delivery',
-        targetId: orderId,
-        adapterKey: 'food_delivery.causal_chain',
-        triggerSource,
-        status: SIMULATION_EVENT_STATUS.SKIPPED,
-        reason,
-        at: normalizedAt,
-      })
-      return { ok: false, status: SIMULATION_EVENT_STATUS.SKIPPED, reason, chain, log }
-    }
-
-    if (normalizedCheckpoint !== FOOD_DELIVERY_CAUSAL_CHAIN_NODE.RIDER_PICKUP) {
-      return createSkippedChain('checkpoint_not_eligible')
-    }
-    if (['delivered', 'cancelled'].includes(normalizeText(order.status, '', 40))) {
-      return createSkippedChain('order_closed')
-    }
-    if (order.journeyPhase && !['rider_pickup', 'en_route'].includes(order.journeyPhase)) {
-      return createSkippedChain('journey_not_at_pickup')
-    }
-    if (!isModuleEventsEnabled('food_delivery')) return createSkippedChain('module_disabled')
-    if (surpriseMode.value === SIMULATION_SURPRISE_MODE.OFF) return createSkippedChain('surprise_mode_off')
-
-    const cooldownActive = isCoolingDown(FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID, {
-      targetId: orderId,
-      at: normalizedAt,
-    })
-    if (cooldownActive) return createSkippedChain('cooldown_active')
-    const dailyLimitReached = !canUseDailyQuota(FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID, {
-      targetId: 'global',
-      dayKey: createDayKey(normalizedAt),
-      limit: dailyLimit,
-    })
-    if (dailyLimitReached) return createSkippedChain('daily_limit_reached')
-
-    const probability = FOOD_DELIVERY_CAUSAL_CHAIN_PROBABILITY_BY_SURPRISE_MODE[surpriseMode.value] || 0
-    const resolvedSeed = normalizeText(
-      randomSeed,
-      `${FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID}:${orderId}:${createDayKey(normalizedAt)}`,
-      180,
-    )
-    const randomGate = evaluateRandomGate({ probability, randomValue, seed: resolvedSeed })
-    if (!randomGate.passed) {
-      return createSkippedChain(randomGate.reason, {
-        probability: randomGate.probability,
-        randomValue: randomGate.randomValue,
-        randomSource: randomGate.randomSource,
-        passed: false,
-      })
-    }
-
-    const log = recordEventTrigger({
-      eventId: FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID,
-      moduleKey: 'food_delivery',
-      targetId: orderId,
-      adapterKey: 'food_delivery.causal_chain',
-      triggerSource,
-      status: SIMULATION_EVENT_STATUS.TRIGGERED,
-      reason: 'rider_pickup_checkpoint',
-      cooldownMs,
-      dailyLimit,
-      cooldownTargetId: orderId,
-      dailyTargetId: 'global',
-      at: normalizedAt,
-    })
-    const chain = upsertFoodDeliveryCausalChain({
-      id: `food_delivery_causal_chain_${orderId}`,
-      eventId: FOOD_DELIVERY_CAUSAL_CHAIN_EVENT_ID,
-      targetId: orderId,
-      triggerSource,
-      currentNode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CONFIRMATION_REQUIRED,
-      status: FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.ACTIVE,
-      randomSeed: resolvedSeed,
-      randomGate: {
-        probability: randomGate.probability,
-        randomValue: randomGate.randomValue,
-        randomSource: randomGate.randomSource,
-        passed: true,
-      },
-      reason: 'rider_pickup_checkpoint',
-      cooldownMs,
-      dailyLimit,
-      ownerRecords,
-      resultCodes: [FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CONFIRMATION_REQUIRED],
-      createdAt: normalizedAt,
-      updatedAt: normalizedAt,
-    })
-    return {
-      ok: Boolean(chain),
-      status: chain ? SIMULATION_EVENT_STATUS.TRIGGERED : SIMULATION_EVENT_STATUS.FAILED,
-      reason: chain ? '' : 'causal_chain_invalid',
-      chain,
-      log,
-    }
-  }
-
   const clearEventLogs = () => {
     eventLogs.value = []
   }
@@ -1472,12 +1390,23 @@ export const useSimulationStore = defineStore('simulation', () => {
       restoredCount: eventInstanceResult.instances.length,
       rejected: eventInstanceResult.rejected,
     }
+    const eventInstanceV2Result = normalizeEventInstancesV2(rawSource.eventInstancesV2)
+    eventInstancesV2.value = eventInstanceV2Result.instances
+    eventInstanceV2RestoreReport.value = {
+      inputCount: eventInstanceV2Result.inputCount,
+      restoredCount: eventInstanceV2Result.instances.length,
+      rejected: eventInstanceV2Result.rejected,
+    }
+    ownerFacts.value = normalizeOwnerFacts(rawSource.ownerFacts)
+    legacyCommerceAuditEntries.value = normalizeLegacyCommerceAuditEntries([
+      ...(Array.isArray(rawSource.legacyCommerceAuditEntries)
+        ? rawSource.legacyCommerceAuditEntries
+        : []),
+      ...migrateLegacyFoodDeliveryCausalChains(rawSource.foodDeliveryCausalChains),
+    ])
     eventReviewNotes.value = normalizeEventReviewNotes(rawSource.eventReviewNotes)
     cooldownsByEvent.value = normalizeCooldowns(rawSource.cooldownsByEvent || rawSource.cooldowns)
     dailyCounters.value = normalizeDailyCounters(rawSource.dailyCounters)
-    foodDeliveryCausalChains.value = normalizeFoodDeliveryCausalChains(
-      rawSource.foodDeliveryCausalChains,
-    )
     chatSocialEventProposals.value = normalizeChatSocialEventProposals(
       rawSource.chatSocialEventProposals,
     )
@@ -1507,6 +1436,11 @@ export const useSimulationStore = defineStore('simulation', () => {
   const createBackupSnapshot = () => ({
     eventLogs: eventLogs.value.map((item) => ({ ...item })),
     eventInstances: eventInstances.value.map((item) => cloneEventValue(item)),
+    eventInstancesV2: eventInstancesV2.value.map((item) => cloneEventValue(item)),
+    ownerFacts: ownerFacts.value.map((item) => cloneEventValue(item)),
+    legacyCommerceAuditEntries: legacyCommerceAuditEntries.value.map((item) =>
+      cloneEventValue(item),
+    ),
     eventReviewNotes: eventReviewNotes.value.map((item) => cloneEventValue(item)),
     cooldownsByEvent: Object.fromEntries(
       Object.entries(cooldownsByEvent.value).map(([key, item]) => [key, { ...item }]),
@@ -1514,12 +1448,6 @@ export const useSimulationStore = defineStore('simulation', () => {
     dailyCounters: Object.fromEntries(
       Object.entries(dailyCounters.value).map(([key, item]) => [key, { ...item }]),
     ),
-    foodDeliveryCausalChains: foodDeliveryCausalChains.value.map((chain) => ({
-      ...chain,
-      randomGate: { ...chain.randomGate },
-      ownerRecords: { ...chain.ownerRecords },
-      resultCodes: [...chain.resultCodes],
-    })),
     chatSocialEventProposals: chatSocialEventProposals.value.map((item) => ({
       ...item,
       relationshipGate: item.relationshipGate ? { ...item.relationshipGate } : null,
@@ -1563,10 +1491,13 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLogs.value = []
     eventInstances.value = []
     eventInstanceRestoreReport.value = { inputCount: 0, restoredCount: 0, rejected: [] }
+    eventInstancesV2.value = []
+    eventInstanceV2RestoreReport.value = { inputCount: 0, restoredCount: 0, rejected: [] }
+    ownerFacts.value = []
+    legacyCommerceAuditEntries.value = []
     eventReviewNotes.value = []
     cooldownsByEvent.value = {}
     dailyCounters.value = {}
-    foodDeliveryCausalChains.value = []
     chatSocialEventProposals.value = []
     mapJourneyEventProposals.value = []
     settings.value = normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS)
@@ -1586,10 +1517,12 @@ export const useSimulationStore = defineStore('simulation', () => {
     [
       eventLogs,
       eventInstances,
+      eventInstancesV2,
+      ownerFacts,
+      legacyCommerceAuditEntries,
       eventReviewNotes,
       cooldownsByEvent,
       dailyCounters,
-      foodDeliveryCausalChains,
       chatSocialEventProposals,
       mapJourneyEventProposals,
       settings,
@@ -1605,15 +1538,19 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventLogs,
     eventInstances,
     eventInstanceRestoreReport,
+    eventInstancesV2,
+    eventInstanceV2RestoreReport,
+    ownerFacts,
+    legacyCommerceAuditEntries,
     eventReviewNotes,
     cooldownsByEvent,
     dailyCounters,
-    foodDeliveryCausalChains,
     chatSocialEventProposals,
     mapJourneyEventProposals,
     settings,
     eventLogCount,
     eventInstanceCount,
+    eventInstanceV2Count,
     eventReviewNoteCount,
     recentEventLogs,
     activeCooldownCount,
@@ -1632,6 +1569,15 @@ export const useSimulationStore = defineStore('simulation', () => {
     setForegroundSessionTickIntervalMs,
     getEventInstance,
     upsertEventInstance,
+    getEventInstanceV2,
+    upsertEventInstanceV2,
+    mergeEventInstanceV2ContextRefs,
+    closeEventInstanceV2,
+    startEventInstanceV2,
+    advanceStoredEventInstanceV2,
+    recordOwnerFact,
+    recordOwnerFactAndAdvance,
+    listPendingOwnerActionRequests,
     upsertEventReviewNote,
     deleteEventReviewNote,
     listEventReviewNotesForRef,
@@ -1643,9 +1589,6 @@ export const useSimulationStore = defineStore('simulation', () => {
     incrementDailyCounter,
     getDailyCounterState,
     canUseDailyQuota,
-    getFoodDeliveryCausalChain,
-    evaluateFoodDeliveryCausalChain,
-    recordFoodDeliveryCausalCheckpoint,
     upsertMapJourneyEventProposal,
     getMapJourneyEventProposal,
     reviewMapJourneyEventProposal,

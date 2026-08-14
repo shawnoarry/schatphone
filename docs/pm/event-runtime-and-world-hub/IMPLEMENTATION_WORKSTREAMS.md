@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-08-10
+Updated: 2026-08-14
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -111,7 +111,22 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - do not implement parallel non-K-pop content packs in V1, but keep templates and capabilities independent of K-pop names, exact Seoul place IDs, and icons
 - EVE-2C is complete: Map V3 owns provenance/place sessions and the first production-arrival-briefing vertical slice through the single registered Map host; additional hosts and event families remain separately gated under EVE-4
 
-## 10. Semantic Guardrails
+## 10. Workstream J: User-Initiated Commerce Interaction Events
+
+- status is `EVE-4C DONE / VALIDATED 2026-08-14`
+- treat EVE-4B as historical reference evidence; production writes now use the explicit user trigger, shared owner contracts, generic Event Instance V2, and legacy audit migration
+- preserve the frozen order reference, user interaction trigger, Service Case reference, owner fact, owner request, Phone resolution, and Map journey-estimate Interfaces
+- make native platform and registered Chat service-account entry converge idempotently on one commerce-owned Service Case
+- keep ordinary order messaging, support, address change, Map ETA/reroute, Wallet settlement, and Phone session behavior functional when optional events are disabled
+- generic Event Instance V2 progression now handles condition, branch, one-time random decision, fact wait, absolute timeout, owner request, and terminal nodes without changing frozen Event Instance V1 meaning
+- advance only after correlated owner facts; an owner request, Chat message, model classification, or Phone summary is not canonical proof by itself
+- retain Phone transcript/summary in Phone, Chat history in Chat, order/case truth in the commerce owner, journey/ETA in Map, and ledger truth in Wallet
+- keep both Food Delivery and Shopping owner Adapters covered so the commerce seam does not collapse back into Food Delivery-specific code
+- keep the user-reported issue fixture and latent-positive fulfillment fixture proving the Runtime is not hard-coded to destination change
+- keep Food Safety handling deterministic and owner-native; do not turn it into an optional random dismissal path
+- follow `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`
+
+## 11. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -135,3 +150,7 @@ Treat these as bugs:
 18. a Map event anchor creates or mutates place, pin, discovery, role-position, or journey truth
 19. World Hub event review becomes a general task/reminder system or silently gains Cheats privileges
 20. a production host accepts `host_detail` expansion for another host, or a source record can inject/reuse a runtime-log ID and pass it off as exact lineage
+21. an order-related commerce event is created from coordinates, saved-address inference, purchase history, model classification, or free-form text without an explicit user service interaction and valid owner context
+22. an event recipe becomes the only way ordinary commerce messaging, support, address editing, ETA, reroute, calling, or payment can work
+23. Phone summary text, Chat service-account copy, or an unconfirmed owner request is treated as proof that a business mutation succeeded
+24. the EVE-4B specialized causal-chain field is renamed and reused as the generic Runtime instead of receiving a versioned migration

@@ -253,7 +253,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:shopping',
-    schemaVersion: 1,
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '购物记录',
     labelEn: 'Shopping records',
     sourceFile: 'src/stores/shopping.js',
@@ -261,8 +262,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:food-delivery',
-    schemaVersion: 2,
-    legacySchemaVersions: [1],
+    schemaVersion: 3,
+    legacySchemaVersions: [1, 2],
     labelZh: '外卖记录',
     labelEn: 'Food delivery records',
     sourceFile: 'src/stores/foodDelivery.js',
@@ -270,8 +271,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:simulation',
-    schemaVersion: 4,
-    legacySchemaVersions: [1, 2, 3],
+    schemaVersion: 5,
+    legacySchemaVersions: [1, 2, 3, 4],
     labelZh: '事件模拟',
     labelEn: 'Simulation events',
     sourceFile: 'src/stores/simulation.js',
@@ -296,8 +297,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:phone',
-    schemaVersion: 2,
-    legacySchemaVersions: [1],
+    schemaVersion: 3,
+    legacySchemaVersions: [1, 2],
     labelZh: '电话记录',
     labelEn: 'Phone logs',
     sourceFile: 'src/stores/phone.js',

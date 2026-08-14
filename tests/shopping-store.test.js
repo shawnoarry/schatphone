@@ -590,5 +590,60 @@ describe('shopping store', () => {
       },
     })
     expect(store.findOrderById(order.id)?.note).toContain('Someone')
+    })
   })
-})
+
+  test('implements the shared commerce order and Service Case seam independently', () => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({
+      id: 'shopping_adapter_item',
+      title: 'Adapter Parcel',
+      category: 'mall',
+      serviceKey: 'schat_mall',
+      price: '18.00',
+    })
+    store.addToCart(product.id, 1)
+    const order = store.checkoutCart({ recipient: 'User' })
+    const destination = {
+      id: 'address:office',
+      label: 'Office',
+      detail: '12 River Road',
+      mapPackId: 'real-seoul-v1',
+      placeId: 'address:office',
+      revision: 1,
+    }
+
+    expect(store.getCommerceOrderReference(order.id)).toMatchObject({
+      schemaVersion: 1,
+      ownerModule: 'shopping',
+      orderId: order.id,
+      ownerRevision: 1,
+    })
+    const opened = store.beginOrderServiceInteraction({
+      orderId: order.id,
+      userAction: 'destination_change_requested',
+      destinationAnchor: destination,
+      now: Date.now(),
+    })
+    expect(opened).toMatchObject({
+      ok: true,
+      trigger: { initiatedBy: 'user', orderRef: { ownerModule: 'shopping' } },
+      serviceCase: { caseType: 'destination_change', status: 'open' },
+    })
+    const committed = store.commitOrderDestinationChange({
+      caseId: opened.serviceCase.id,
+      destinationAnchor: destination,
+      expectedOwnerRevision: 1,
+      now: Date.now() + 1,
+    })
+    expect(committed).toMatchObject({
+      ok: true,
+      order: { deliveryAddress: '12 River Road', ownerRevision: 2 },
+      serviceCase: { status: 'resolved', resolutionCode: 'destination_changed' },
+    })
+    expect(store.beginOrderServiceInteraction({ orderId: '', userAction: 'destination_change_requested' })).toMatchObject({
+      ok: false,
+      reason: 'order_missing_or_closed',
+    })
+  })

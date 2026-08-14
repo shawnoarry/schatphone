@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-08-10
+Updated: 2026-08-14
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -379,6 +379,7 @@ EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation
 ### Food Delivery
 
 - owns restaurants, menus, cart, orders, order status, and order event records
+- owns order-scoped merchant/rider/platform interactions and future canonical Service Cases
 - may receive triggered events through an adapter
 - Chat may display Food Delivery service-account cards
 - Map may provide address or ETA context, not order ownership
@@ -389,6 +390,7 @@ EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation
 ### Shopping
 
 - owns products, cart, orders, checkout, store identity, promotion candidates, and logistics entry state
+- owns Shopping order interactions and future canonical Service Cases rather than copying them into Event Runtime or Chat
 - store/service accounts may push promotions or arrivals
 - logistics messaging does not become Shopping order ownership
 
@@ -410,6 +412,7 @@ EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation
 - owns conversations, contacts, service-account bindings, and visible message surfaces
 - the first implementation should not write arbitrary free-form chat messages directly from the event engine
 - Chat can display read-only event cards that route users to the owning module
+- a registered service-account message may submit a bounded order-interaction request through a source Adapter, but Chat keeps the message while the commerce owner creates or reuses the canonical Service Case
 
 ### Calendar / Reminders
 
@@ -447,7 +450,9 @@ The next event work is staged separately from richer event content:
 4. `EVE-2C DONE 2026-08-10`: exactly one bounded Map host renders the selected K-pop vertical slice with Map V3 provenance/place sessions, zero-token invitation/no-event paths, explicit entry/expansion, local or cached optional text, three Map-validated no-mutation choices, fail-closed anchors, clustering/stacking, and return context.
 5. `EVE-3 DONE 2026-08-12`: World Hub now provides a deterministic Event Notebook over Event Instances, runtime logs, Chat social proposals, and Map Journey proposals. It exposes all/pending/noted counts, source/module/status filters, selected-event lineage and stale-source review, and durable event-scoped note create/update/delete actions. It adds no second event record, event retrigger, Adapter execution, source mutation, Reminder/Calendar ownership, freeform value editing, or Cheats authority.
 6. `EVE-4 RESET / EVE-4A TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN 2026-08-12`: exact Food Delivery lineage and owner mutation remain, while the second host, `Dispatch brief`, local acknowledgement, and manual trigger are removed. Further EVE-4 work requires a separately accepted owner-native causal chain rather than another generic card.
-7. `EVE-5`: use the shared Mini Scene Interface for richer expansion only after its persistence, Settings, and Presenter gates are complete; later CG remains a separate image-generation/media-resolution stage.
+7. `EVE-4B REFERENCE_VERTICAL_DONE 2026-08-14`: Wallet payment, Map courier journey/reroute, Food Delivery-native order conversation, Phone text-call presentation, owner validation, persistence, and exact lineage prove one non-card chain can work. Product review supersedes its pickup-time random address-confirmation trigger and specialized causal-chain persistence as the final reusable Interface.
+8. `EVE-4C DONE 2026-08-14`: user-initiated commerce service events now begin from explicit order-scoped interaction; shared contracts, generic Event Instance V2 progression, owner facts/requests, native and registered Chat service-account convergence, Phone resolution proposals, Map estimate/reroute references, and separate Food Delivery/Shopping owner Adapters are implemented and validated. Read `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
+9. `EVE-5`: use the shared Mini Scene Interface for richer expansion only after its persistence, Settings, and Presenter gates are complete; later CG remains a separate image-generation/media-resolution stage.
 
 ## 9. Randomness Policy
 
@@ -556,7 +561,7 @@ Already landed:
 - `src/lib/simulation/event-contracts.js` and `event-registry.js` normalize the frozen EVE-2 Interfaces and register world-neutral templates plus compatible world/content packs with fail-closed schema, Adapter, choice, and outcome checks
 - `src/lib/simulation/kpop-realism-event-pack.js` and `event-instance-materializer.js` provide the first complete bilingual local fallback and deterministic durable instance materialization for semantic workplace categories/capabilities rather than Seoul place IDs
 - `src/lib/simulation/event-text-composer.js` accepts an injected provider/call adapter only after entry, sends bounded context, performs at most one request, validates normalized copy against frozen IDs and limits, caches success or terminal local fallback, and never regenerates on reopen
-- `src/stores/simulation.js` storage V4 persists untruncated Event Instances, authoritative event-scoped review notes, and minimal owner-reference-only Food Delivery causal chains; it migrates V1/V2/V3 without dropping existing notes or runtime data, reports rejected instance restores, and includes notes, instances, and causal lineage in backup/rollback snapshots
+- `src/stores/simulation.js` storage V5 preserves Event Instance V1, adds durable generic Event Instance V2 progression and immutable owner facts/action requests, migrates V1/V2/V3/V4, and converts legacy Food Delivery causal chains into read-only audit lineage without fabricating user initiation
 - `src/lib/simulation/event-notebook.js` builds stable Notebook entries by explicit Instance/proposal/log lineage, adds note-only stale-source rows instead of inventing replacement truth, and provides deterministic filtering/counts without taking ownership of source records
 - `src/lib/simulation/adapters/map-place-session-events.js` evaluates the frozen arrival-briefing family from Map-owned session checkpoints and validates exact no-mutation results through the Map owner boundary
 - `src/stores/map.js` storage V4 persists manual-versus-journey-arrival position evidence, explicit place-session state, and Map-owned delivery journeys while deriving Event Surface projections instead of storing duplicate event truth
@@ -564,7 +569,7 @@ Already landed:
 - Map remains the only registered production Event Surface host for the frozen production-arrival-briefing archetype
 - Food Delivery's owner action stores the exact Runtime log reference, prevents injection/reuse/rebinding, and makes link failure explicit without deriving a second UI projection
 - legitimate Food Delivery delay/ETA events update canonical order ETA, append the native timeline, and use the existing Chat dispatch notification; the withdrawn `Dispatch brief` and manual query path are absent
-- EVE-4B's owner-native Food Delivery chain uses `food_delivery.delivery_address_change_escalation.v1`: a deterministic pickup gate has a durable no-event path, while the triggered path records only owner IDs across Food Delivery, Wallet, Map, and Phone; owner actions render the native order conversation and text-call shell, and only owner adapters mutate payment/order/route truth
+- EVE-4C supersedes the EVE-4B pickup-time trigger in production writes: an explicit order-thread or registered Chat service-account action creates/reuses one Food Delivery Service Case, Event Instance V2 persists the one-time response decision/deadline/action lineage, Phone proposes a structured resolution, Food Delivery validates it, and Map alone commits a revision-aware reroute. Shopping separately implements the shared order/interaction/Service Case owner seam.
 - World Hub's Chat social proposal panel explains source, trigger policy, and ownership boundaries for AI output and foreground/session runtime proposals
 - World Hub's Event Notebook reviews Event Instances, logs, Chat social proposals, and Map Journey proposals by source/module/status, shows stable lineage and stale links, and manages event-scoped notes without event execution or domain mutation
 - Settings backup/import/rollback and storage diagnostics include `store:simulation`
@@ -573,7 +578,7 @@ Recommended next step:
 
 - keep the landed EVE-1 projection contract free of persistence and effect authority, and keep the completed EVE-2C Map host bounded to the one frozen production-arrival-briefing archetype
 - preserve the EVE-3 Notebook as a read model over owner truth with durable event-scoped notes; every new adapter should remain explainable by source, module, status, trigger, reason, adapter boundary, target, variant, and stable lineage before stronger controls are added
-- preserve EVE-4A's exact-lineage Food Delivery owner seam and EVE-4B's owner-native causal-chain boundary, but do not restore the withdrawn host/card/manual trigger or add another generic event surface; require a separately accepted owner-scoped causal chain for every later EVE-4 slice
+- preserve the landed EVE-4C user-initiated commerce contracts, owner-native Service Cases, generic Event Instance V2 progression, and legacy audit migration; do not restore the withdrawn host/card/manual trigger, add another generic Event Surface, silently rewrite Event Instance V1, or advance EVE-5 without separate acceptance
 - preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.
 - deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes; V1 runtime greetings are intentionally narrow, and richer scheduling or high-risk communication changes still need explicit review semantics
 
@@ -669,3 +674,28 @@ Event Runtime is the logical owner. EVE-2B adds `eventInstances` to the existing
 Migration from Simulation storage V1 to V2 initializes `eventInstances: []` and preserves all current logs, ledgers, proposals, and settings. Restore normalizes each versioned instance, preserves valid records, reports invalid entries, and does not silently reinterpret unknown schemas. A missing source, pack, or asset leaves the instance reviewable with frozen text but disables new choice execution where source validation is impossible.
 
 V1 applies no automatic count/time truncation to Event Instances. Resolved instances remain durable until a separately accepted reversible archive or user deletion policy exists. Projection/UI queries may be bounded without deleting authoritative records. Full prompts, raw responses, temporary media candidates, and provider transport data are never part of retention.
+
+## 15. EVE-4C User-Initiated Commerce Interaction Direction
+
+Status: `IMPLEMENTED / VALIDATED 2026-08-14`.
+
+The first reusable commerce event family begins from an explicit user service interaction in the owner App or a registered Chat service account with valid order context. The trigger is the user action, not a model guess, coordinate, saved address, purchase history, or random pickup prompt.
+
+The landed architecture adds a deep commerce-interaction seam around these Interfaces:
+
+- versioned order references;
+- user interaction triggers;
+- commerce-owned Service Case references;
+- immutable owner facts;
+- idempotent owner action requests;
+- Phone-owned structured interaction resolutions;
+- Map-owned journey-estimate references;
+- generic versioned Event Instance progression for condition, branch, one-time decision, fact wait, timeout, owner request, and terminal nodes.
+
+Event Instance V1 remains frozen for the accepted Map/K-pop contracts. EVE-4C adds Event Instance V2 plus Simulation V5 migration from the specialized EVE-4B causal-chain field. Legacy lineage and owner references become read-only audit entries without fabricating user initiation for pickup-triggered reference records.
+
+The deletion test is explicit: disabling Event Runtime must leave order messaging, Service Cases, address editing, Map ETA/reroute, Wallet settlement, and Phone sessions functional. Runtime creates leverage by centralizing decision persistence, deadlines, fact correlation, owner requests, and audit rather than by owning those capabilities.
+
+Food Delivery is the first owner Adapter and Shopping is the second owner Adapter. Native owner entry and registered Chat service-account entry converge idempotently on one commerce-owned Service Case. User-reported issue and latent-positive fulfillment fixtures prove the Runtime is not hard-coded to address change.
+
+The complete contract, migration order, Interfaces, reference recipe, acceptance, and do-not-do rules are in `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.

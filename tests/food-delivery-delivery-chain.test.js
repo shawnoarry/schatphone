@@ -5,9 +5,8 @@ import { useMapStore } from '../src/stores/map'
 import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
 import { usePhoneStore } from '../src/stores/phone'
+import { useChatStore } from '../src/stores/chat'
 import {
-  FOOD_DELIVERY_CAUSAL_CHAIN_NODE,
-  FOOD_DELIVERY_CAUSAL_CHAIN_STATUS,
   SIMULATION_SURPRISE_MODE,
   useSimulationStore,
 } from '../src/stores/simulation'
@@ -86,8 +85,49 @@ describe('food delivery owner chain', () => {
     expect(map.deliveryJourneys).toHaveLength(0)
   })
 
+  test('uses the original fulfillment phase for a pre-pickup address change', () => {
+    const { food, map, result } = createPaidOrder()
+    const simulation = useSimulationStore()
+    simulation.setSurpriseMode(SIMULATION_SURPRISE_MODE.BALANCED)
+    const nextDestination = map.createDeliveryAddress({
+      label: 'Office',
+      detail: 'Office Tower, 12 River Road',
+      mapPackId: result.order.deliveryAnchor.mapPackId,
+      position: result.order.deliveryAnchor.position,
+    })
+    const initialFulfillmentPhase = result.order.fulfillment.phase
+
+    const interaction = food.sendOrderMessage({
+      orderId: result.order.id,
+      text: 'Please change this order to my office before pickup.',
+      intent: 'request_address_change',
+      destinationAnchor: nextDestination.anchor,
+      clientMessageId: 'food-chain-before-pickup-address-request',
+      now: Date.now(),
+    })
+
+    expect(interaction.instance).toMatchObject({
+      lifecycle: 'resolved',
+      resultCodes: ['changed_before_pickup'],
+      contextRefs: { fulfillment_phase: initialFulfillmentPhase },
+    })
+    expect(food.findOrderById(result.order.id)).toMatchObject({
+      deliveryAddress: nextDestination.anchor.detail,
+      fulfillment: { phase: initialFulfillmentPhase },
+      mapEstimateRef: {
+        journeyRevision: 2,
+        sourceModule: 'map',
+      },
+    })
+    expect(map.findDeliveryJourneyById(result.order.deliveryJourneyId)).toMatchObject({
+      destination: { id: nextDestination.anchor.id },
+      routeRevision: 2,
+    })
+  })
+
   test('keeps the order conversation native, exposes call after timeout, and commits reroute', () => {
     const { food, map, result } = createPaidOrder()
+    useSimulationStore().setSurpriseMode(SIMULATION_SURPRISE_MODE.OFF)
     const nextDestination = map.createDeliveryAddress({
       label: 'Studio',
       detail: 'Studio 2F, 18 Willow Walk',
@@ -139,7 +179,7 @@ describe('food delivery owner chain', () => {
     expect(food.findOrderById(result.order.id).status).toBe('delivered')
     expect(food.findOrderConversationByOrderId(result.order.id).messages.at(-1)).toMatchObject({
       sender: FOOD_DELIVERY_MESSAGE_SENDER.SYSTEM,
-      intent: 'delivery_completed',
+      intent: 'delivery_arrived_at_routed_anchor',
     })
     expect(system.notifications).toHaveLength(0)
   })
@@ -158,26 +198,40 @@ describe('food delivery owner chain', () => {
     })
     const pickupAt = result.journey.riderPickupAt
 
-    food.reconcileFoodDeliveryRuntime(pickupAt, { randomValue: 0 })
+    food.reconcileFoodDeliveryRuntime(pickupAt)
     expect(food.findOrderById(result.order.id).fulfillment.phase).toBe(
-      FOOD_DELIVERY_FULFILLMENT_PHASE.ADDRESS_CONFIRMATION_REQUIRED,
+      FOOD_DELIVERY_FULFILLMENT_PHASE.RIDER_PICKUP,
     )
-    expect(simulation.getFoodDeliveryCausalChain(result.order.id)).toMatchObject({
-      currentNode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.ADDRESS_CONFIRMATION_REQUIRED,
-      status: FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.ACTIVE,
-      canonicalMutation: 'none',
-    })
+    expect(food.findOpenServiceCaseByOrder(result.order.id, 'destination_change')).toBeNull()
+    expect(simulation.eventInstancesV2).toHaveLength(0)
 
-    food.sendOrderMessage({
+    const interaction = food.sendOrderMessage({
       orderId: result.order.id,
       text: 'Please change the delivery address to my studio.',
       intent: 'request_address_change',
       destinationAnchor: nextDestination.anchor,
       clientMessageId: 'food-chain-runtime-address-request',
+      randomValue: 0.9,
       now: pickupAt,
+    })
+    expect(interaction.serviceCase).toMatchObject({
+      orderId: result.order.id,
+      caseType: 'destination_change',
+      sourceMessageRef: { ownerModule: 'food_delivery' },
+    })
+    expect(interaction.instance).toMatchObject({
+      schemaVersion: 2,
+      currentNodeId: 'rider_response_timeout',
+      lifecycle: 'active',
+      decisionLedger: [{ key: 'rider_response_disposition', outcome: 'no_response' }],
     })
     food.reconcileFoodDeliveryRuntime(pickupAt + 61 * 1000)
     const callContext = food.getOrderCallContext(result.order.id)
+    expect(callContext).toMatchObject({
+      serviceCaseId: interaction.serviceCase.id,
+      eventInstanceId: interaction.instance.id,
+      requestedDestination: { id: nextDestination.anchor.id },
+    })
     const call = phone.startCallSession({
       participant: callContext.courier,
       sourceModule: 'food_delivery',
@@ -185,39 +239,127 @@ describe('food delivery owner chain', () => {
       orderId: result.order.id,
       conversationId: callContext.conversationId,
       journeyId: result.order.deliveryJourneyId,
+      serviceCaseId: callContext.serviceCaseId,
+      eventInstanceId: callContext.eventInstanceId,
+      destinationAnchorId: callContext.requestedDestination.id,
     })
-    food.recordOrderCausalCheckpoint({
+    food.recordPhoneCallLifecycleFacts({
       orderId: result.order.id,
-      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED,
-      phoneSessionId: call.session.id,
+      sessionId: call.session.id,
+      now: pickupAt + 61 * 1000,
     })
-    const callReply = phone.sendCallText({ text: 'The address is wrong. Change it to my studio.' })
-    expect(callReply.proposal.kind).toBe('address_change_accepted')
-    food.recordOrderCausalCheckpoint({
-      orderId: result.order.id,
-      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_RESOLUTION_PROPOSED,
-      phoneSessionId: call.session.id,
-    })
-    const committed = food.commitOrderAddressChange({
-      orderId: result.order.id,
-      destinationAnchor: nextDestination.anchor,
+    const callReply = phone.sendCallText({
+      text: 'The address is wrong. Change it to my studio.',
       now: pickupAt + 62 * 1000,
     })
-    expect(committed.ok).toBe(true)
-    expect(simulation.getFoodDeliveryCausalChain(result.order.id)).toMatchObject({
-      currentNode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_REROUTED,
-      ownerRecords: { phoneSessionId: call.session.id },
+    expect(callReply.proposal).toMatchObject({
+      status: 'proposed',
+      outcomeCode: 'accepted_new_destination',
+    })
+    food.recordPhoneInteractionResolution({
+      orderId: result.order.id,
+      sessionId: call.session.id,
+      now: pickupAt + 62 * 1000 + 1,
+    })
+    const committedOrder = food.findOrderById(result.order.id)
+    const reroutedJourney = map.findDeliveryJourneyById(result.order.deliveryJourneyId)
+    expect(committedOrder).toMatchObject({
+      deliveryAddress: nextDestination.anchor.detail,
+      addressRevision: 2,
+      mapEstimateRef: {
+        journeyRevision: 2,
+        state: 'rerouting',
+        sourceModule: 'map',
+      },
+    })
+    expect(
+      food.getOrderMapEstimateReference(result.order.id, {
+        now: pickupAt + 62 * 1000 + 1,
+        refresh: false,
+      }),
+    ).toMatchObject({ stale: false, reference: { journeyRevision: 2 } })
+    expect(reroutedJourney).toMatchObject({
+      destination: { id: nextDestination.anchor.id },
+      routeRevision: 2,
+      phase: 'rerouting',
+    })
+    expect(simulation.getEventInstanceV2(interaction.instance.id)).toMatchObject({
+      lifecycle: 'resolved',
+      resultCodes: ['changed_after_pickup'],
     })
 
-    const completionAt = committed.journey.etaAt + 1
+    const completionAt = reroutedJourney.etaAt + 1
     food.reconcileFoodDeliveryRuntime(completionAt)
     const notificationCount = system.notifications.length
     food.reconcileFoodDeliveryRuntime(completionAt)
     expect(system.notifications).toHaveLength(notificationCount)
     expect(food.findOrderById(result.order.id).status).toBe('delivered')
-    expect(simulation.getFoodDeliveryCausalChain(result.order.id)).toMatchObject({
-      currentNode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.DELIVERY_COMPLETED,
-      status: FOOD_DELIVERY_CAUSAL_CHAIN_STATUS.RESOLVED,
+    expect(food.findServiceCaseById(interaction.serviceCase.id)).toMatchObject({
+      status: 'resolved',
+      resolutionCode: 'changed_after_pickup',
     })
+  })
+
+  test('converges native and registered Chat service entry on one owner Service Case', () => {
+    const { food, map, result } = createPaidOrder()
+    const chat = useChatStore()
+    const simulation = useSimulationStore()
+    simulation.setSurpriseMode(SIMULATION_SURPRISE_MODE.OFF)
+    const pickupAt = result.journey.riderPickupAt
+    food.reconcileFoodDeliveryRuntime(pickupAt)
+    const destination = map.createDeliveryAddress({
+      label: 'Office',
+      detail: 'Office Tower, 12 River Road',
+      mapPackId: result.order.deliveryAnchor.mapPackId,
+      position: result.order.deliveryAnchor.position,
+    }).anchor
+
+    const native = food.sendOrderMessage({
+      orderId: result.order.id,
+      text: 'Please change this order to my office.',
+      intent: 'request_address_change',
+      destinationAnchor: destination,
+      clientMessageId: 'native-address-change',
+      now: pickupAt,
+    })
+    const service = chat.addContact({
+      kind: 'service',
+      name: 'Food Delivery Dispatch',
+      foodDeliveryServiceKey: 'food_delivery_dispatch',
+    })
+    const chatMessage = chat.appendMessage(service.id, {
+      role: 'user',
+      content: 'Use the selected order and change its address.',
+      createdAt: pickupAt + 1,
+    })
+    const fromChat = food.beginChatServiceInteraction({
+      contactId: service.id,
+      messageId: chatMessage.id,
+      orderId: result.order.id,
+      userAction: 'destination_change_requested',
+      destinationAnchor: destination,
+      now: pickupAt + 1,
+    })
+
+    expect(fromChat.ok).toBe(true)
+    expect(fromChat.serviceCase.id).toBe(native.serviceCase.id)
+    expect(food.serviceCases).toHaveLength(1)
+    expect(food.interactionTriggers).toHaveLength(2)
+    expect(
+      food.findOrderConversationByOrderId(result.order.id).messages.some(
+        (message) => message.text === chatMessage.content,
+      ),
+    ).toBe(false)
+
+    const missingReference = food.beginChatServiceInteraction({
+      contactId: service.id,
+      messageId: chatMessage.id,
+      orderId: '',
+      userAction: 'destination_change_requested',
+      destinationAnchor: destination,
+      now: pickupAt + 2,
+    })
+    expect(missingReference).toMatchObject({ ok: false, reason: 'ordinary_support' })
+    expect(food.serviceCases).toHaveLength(1)
   })
 })

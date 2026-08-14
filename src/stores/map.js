@@ -100,6 +100,11 @@ import {
   EVENT_TEXT_MODE,
   normalizeEventInstanceV1,
 } from '../lib/simulation/event-contracts'
+import {
+  normalizeMapJourneyEstimateReferenceV1,
+  normalizeOwnerActionRequestV1,
+  normalizeOwnerFactV1,
+} from '../lib/simulation/commerce-interaction-contracts'
 import { resolveWorldContextFromSystemStore } from '../lib/simulation/world-context'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
@@ -3757,15 +3762,34 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
+  const getDeliveryJourneyEstimateReference = (journeyId = '', now = Date.now()) => {
+    const journey = findDeliveryJourneyById(journeyId)
+    if (!journey) return null
+    return normalizeMapJourneyEstimateReferenceV1({
+      schemaVersion: 1,
+      journeyId: journey.id,
+      journeyRevision: journey.routeRevision,
+      state: journey.phase,
+      etaAt: journey.etaAt,
+      remainingSeconds: Math.max(0, Math.ceil((journey.etaAt - now) / 1000)),
+      calculatedAt: now,
+      sourceModule: 'map',
+    })
+  }
+
   const prepareDeliveryReroute = ({
     journeyId = '',
     destinationAnchor = null,
     expectedAddressRevision = 0,
+    expectedJourneyRevision = 0,
   } = {}) => {
     const journey = findDeliveryJourneyById(journeyId)
     const destination = normalizeDeliveryAnchor(destinationAnchor, mapPacks.value)
     if (!journey || !destination) return { ok: false, reason: 'delivery_journey_not_found', proposal: null }
     if (expectedAddressRevision && journey.addressRevision !== expectedAddressRevision) {
+      return { ok: false, reason: 'delivery_journey_revision_stale', proposal: null }
+    }
+    if (expectedJourneyRevision && journey.routeRevision !== expectedJourneyRevision) {
       return { ok: false, reason: 'delivery_journey_revision_stale', proposal: null }
     }
     if (journey.phase === MAP_DELIVERY_JOURNEY_PHASE.ARRIVED || journey.phase === MAP_DELIVERY_JOURNEY_PHASE.CANCELLED) {
@@ -3813,6 +3837,66 @@ export const useMapStore = defineStore('map', () => {
     if (!next) return { ok: false, reason: 'delivery_reroute_invalid', journey: null }
     deliveryJourneys.value = deliveryJourneys.value.map((item) => (item.id === next.id ? next : item))
     return { ok: true, reason: '', journey: next }
+  }
+
+  const handleCommerceOwnerActionRequest = ({
+    request: rawRequest = {},
+    destinationAnchor = null,
+    now = Date.now(),
+    etaMinutes = 30,
+  } = {}) => {
+    const request = normalizeOwnerActionRequestV1(rawRequest)
+    if (!request || request.targetModule !== 'map') {
+      return { ok: false, reason: 'owner_request_invalid', fact: null, journey: null }
+    }
+    if (request.actionKey !== 'map.delivery_journey.request_reroute') {
+      return { ok: false, reason: 'owner_action_unsupported', fact: null, journey: null }
+    }
+    const destination = normalizeDeliveryAnchor(destinationAnchor, mapPacks.value)
+    const journeyId = String(request.contextRefs.journey_id || '').trim()
+    const expectedJourneyRevision = Math.max(
+      0,
+      Number(request.contextRefs.expected_journey_revision) || 0,
+    )
+    const anchorId = String(request.contextRefs.destination_anchor_id || '').trim()
+    const proposalResult =
+      destination && (!anchorId || destination.id === anchorId)
+        ? prepareDeliveryReroute({
+            journeyId,
+            destinationAnchor: destination,
+            expectedJourneyRevision,
+          })
+        : { ok: false, reason: 'delivery_anchor_mismatch', proposal: null }
+    const commitResult = proposalResult.ok
+      ? commitDeliveryReroute({ proposal: proposalResult.proposal, now, etaMinutes })
+      : { ok: false, reason: proposalResult.reason, journey: null }
+    const subjectJourney = commitResult.journey || findDeliveryJourneyById(journeyId)
+    const resultCode = commitResult.ok ? 'delivery_rerouted' : 'delivery_reroute_rejected'
+    const fact = normalizeOwnerFactV1({
+      schemaVersion: 1,
+      id: `fact_${request.id}_${resultCode}`,
+      type: commitResult.ok ? 'map.delivery_rerouted' : 'map.delivery_reroute_rejected',
+      sourceModule: 'map',
+      subjectRef: {
+        kind: 'journey',
+        id: journeyId,
+        revision: subjectJourney?.routeRevision || expectedJourneyRevision,
+      },
+      correlationId: request.requestedByInstanceId,
+      causationId: request.id,
+      resultCode,
+      refs: {
+        owner_request_id: request.id,
+        service_case_id: request.contextRefs.service_case_id || '',
+      },
+      occurredAt: now,
+    })
+    return {
+      ok: commitResult.ok,
+      reason: commitResult.reason || '',
+      fact,
+      journey: commitResult.journey || null,
+    }
   }
 
   const cancelDeliveryJourney = (journeyId = '', now = Date.now()) => {
@@ -4903,8 +4987,10 @@ export const useMapStore = defineStore('map', () => {
     createDeliveryJourney,
     reconcileDeliveryJourneys,
     getDeliveryJourneyProjection,
+    getDeliveryJourneyEstimateReference,
     prepareDeliveryReroute,
     commitDeliveryReroute,
+    handleCommerceOwnerActionRequest,
     cancelDeliveryJourney,
     buildFoodDeliveryMapHandoff,
     buildDeliveryEventMapHandoff,

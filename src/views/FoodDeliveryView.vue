@@ -3720,7 +3720,10 @@ const requestDeliveryAddressChange = ({ text, destinationAnchor }) => {
     now: Date.now(),
   })
   deliveryOrderFeedback.value = result.ok
-    ? t('已发送给配送员，等待回应。', 'Sent to the rider. Waiting for a reply.')
+    ? t(
+        '改址请求已记录在此订单中，后续处理会继续显示在这里。',
+        'Address request recorded. Updates will stay in this order thread.',
+      )
     : t('消息未发送，请稍后重试。', 'Message was not sent. Try again.')
 }
 
@@ -4382,6 +4385,7 @@ onBeforeUnmount(() => {
         :journey="deliveryOrderJourney"
         :anchor-options="foodDeliveryAnchorOptions"
         :selected-anchor-id="selectedFoodDeliveryAnchor?.id || ''"
+        :language-base="languageBase"
         @update:selected-anchor-id="selectedFoodDeliveryAnchorId = $event"
         @request-address-change="requestDeliveryAddressChange"
         @call-rider="callDeliveryRider"

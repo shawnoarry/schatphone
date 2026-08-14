@@ -54,8 +54,8 @@ Wallet 的昼夜表现跟随 SchatPhone 全局主题，不增加 Wallet 独立�
 - `public/images/ui-assets/apps/wallet/cards/collector/` 保留七张旧标准完整卡和七张已核验的完整副卡。七张旧标准完整卡与当前默认主页 artwork 不是同一母版，已从运行时默认外观解绑但没有删除；若未来重新使用，必须作为独立新外观重新命名、绑定与策展。
 - 当前允许使用完整收藏图的已核验配对只有：ICBC `Hello Kitty Gift / Blue Hour / Gilded Muse / Secret Garden`、KB `Kakao City`、Chase `Peanuts Rooftop`、BNP `Little Prince Arcade`。
 - `public/images/ui-assets/apps/wallet/cards/home/` 当前含上述七张旧完整副卡的主页无字衍生背景。
-- 这些新增本地 WebP 还没有完成正式图床发布登记。当前只用于本机预览；在提交前必须回到项目素材上传链路，完成远端对象、登记与回读校验。
-- 独立高保真原型仍位于 `tmp/wallet-card-collection-concept/`，只保留为视觉证据，不是 Wallet 运行时页面，不应提交。
+- 这些新增 collector WebP 已完成正式图床发布、登记与远端回读校验，运行时使用项目资产 URL；checkout 中曾存在的同字节副本不再承担运行时或交接职责。
+- 独立高保真原型与本机审计副本已于 2026-08-14 移出 checkout，保留在设备本地素材归档中；它们只作视觉证据，不是 Wallet 运行时页面或跨机器交接依赖。
 
 ### 本轮新增并通过目视检查的候选
 
@@ -96,7 +96,7 @@ cardAppearanceProgress
 
 ## 5. 接下来三步
 
-1. 把本轮 `collector/` 与 `home/` 新增 WebP 走完正式图床上传、登记与远端回读校验，再把本地临时 URL 切换为项目资产 URL；不改变当前卡面与目录策展。
+1. 后续卡面修订继续通过素材上传清单登记新的 SHA-256 内容，并保持运行时只读取项目资产 URL；不要恢复 checkout 内临时素材副本。
 2. 在 Wallet 自身范围内只选择一张现有外观接入首个累计消费解锁闭环，并让收藏册铭牌显示真实进度；其他 `event`、`draw`、`service_reward` 继续只保留数据能力。
 3. 继续打磨卡面收藏册的细节状态，重点是超窄屏文字、完整图加载失败回退和日夜模式视觉验收；不扩展到 Chat、电话、会员卡或其他跨 App 解锁生产者。
 

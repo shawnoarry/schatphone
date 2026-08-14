@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 ## 1. Core Rule
 
@@ -96,7 +96,17 @@ EVE-3 adds the Event Notebook inside World Hub as a deterministic read model ove
 
 EVE-4A's Food Delivery Event Surface was completed as a technical spike, but product acceptance is withdrawn. It incorrectly treated a business event as a generic order-card brief and exposed a user action that queried by manufacturing a delay. The Food Delivery host registration, `Dispatch brief`, expansion/acknowledgement UI, and that manual trigger are removed.
 
-The useful owner seam remains: Food Delivery may persist the exact successful Event Runtime log reference on its canonical order event only through its validated one-to-one owner action. A legitimate foreground/session Tick or later approved system checkpoint may trigger `food_delivery.rider_delay.v1`; Food Delivery then updates its own `order.etaMinutes`, appends the native order event, and uses its existing Chat dispatch notification. The ETA change is canonical Food Delivery mutation, not `canonicalMutation: none`. Current Phone, courier contact, platform messaging, and expedite/customer-service behaviors are not implemented, so no fake choices are exposed.
+The useful owner seam remains: Food Delivery may persist the exact successful Event Runtime log reference on its canonical order event only through its validated one-to-one owner action. A legitimate foreground/session Tick or later approved system checkpoint may trigger `food_delivery.rider_delay.v1`; Food Delivery then updates its own `order.etaMinutes`, appends the native order event, and uses its existing Chat dispatch notification. The ETA change is canonical Food Delivery mutation, not `canonicalMutation: none`. That EVE-4A seam itself exposes no fake Phone, courier, platform, or expedite choice; EVE-4B separately implements reference owner-native conversation, call, and reroute capabilities.
+
+### User-Initiated Commerce Service Events
+
+EVE-4B proves that Food Delivery, Wallet, Map, and Phone can participate in one owner-native chain, but its pickup-time random address-confirmation trigger and `foodDeliveryCausalChains` persistence are reference implementation scaffolding rather than the final reusable Interface.
+
+EVE-4C implements that replacement direction. An order-related commerce event begins only after an explicit user interaction inside the owning platform or a registered Chat service account with a valid order reference. The commerce owner creates or reuses the canonical Service Case and publishes bounded owner facts. Chat owns its message history, Phone owns call/transcript/structured-resolution records, Map owns journey/ETA/reroute truth, Wallet owns settlement, and Event Runtime owns generic Event Instance progression, persisted decisions, deadlines, owner requests, provenance, and terminal results.
+
+Free-form text or AI classification may propose an intent or result but cannot create order truth or authorize a mutation. Existing fulfillment state is read from its owner rather than randomized at branch time. Event Runtime advances only after a correlated owner fact confirms an owner request. Native commerce support remains complete when optional events are disabled or no recipe matches.
+
+Event Instance V1 remains frozen for EVE-2A/2B/2C. Event Instance V2 and Simulation V5 now preserve generic progression plus legacy EVE-4B audit lineage without fabricating user initiation. Food Delivery and Shopping provide separate owner Adapters for the shared commerce seam. Read `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
 
 ### Agenda Journey And Activity Session Collaboration
 

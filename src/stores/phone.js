@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
+import { resolveLocalizedText } from '../lib/locale'
 import { useCalendarStore } from './calendar'
 import { useSystemStore } from './system'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
@@ -10,10 +11,16 @@ import {
   clearRelationshipBinding,
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
+import {
+  DESTINATION_CHANGE_RESOLUTION_OUTCOME,
+  normalizeInteractionResolutionV1,
+  normalizeOwnerFactV1,
+} from '../lib/simulation/commerce-interaction-contracts'
 
 const PHONE_STORAGE_KEY = 'store:phone'
-const PHONE_STORAGE_VERSION = 2
+const PHONE_STORAGE_VERSION = 3
 const PHONE_CALL_LIMIT = 200
+const PHONE_INTERACTION_RESOLUTION_LIMIT = 120
 
 export const PHONE_CALL_SESSION_STATUS = Object.freeze({
   DIALING: 'dialing',
@@ -173,9 +180,15 @@ const normalizeCallSession = (rawSession) => {
     orderId: normalizeText(rawSession.orderId, '', 140),
     conversationId: normalizeText(rawSession.conversationId, '', 180),
     journeyId: normalizeText(rawSession.journeyId, '', 180),
-    resolutionProposal: rawSession.resolutionProposal && typeof rawSession.resolutionProposal === 'object'
-      ? { ...rawSession.resolutionProposal }
-      : null,
+    serviceCaseId: normalizeText(rawSession.serviceCaseId, '', 180),
+    eventInstanceId: normalizeText(rawSession.eventInstanceId, '', 220),
+    destinationAnchorId: normalizeText(rawSession.destinationAnchorId, '', 220),
+    resolutionContractKey: normalizeText(
+      rawSession.resolutionContractKey,
+      rawSession.orderId ? 'commerce.destination_change.v1' : '',
+      180,
+    ),
+    resolutionProposal: normalizeInteractionResolutionV1(rawSession.resolutionProposal),
     turns,
     startedAt: Math.max(0, toInt(rawSession.startedAt, Date.now())),
     connectedAt: Math.max(0, toInt(rawSession.connectedAt, 0)),
@@ -185,8 +198,27 @@ const normalizeCallSession = (rawSession) => {
 }
 
 export const migratePhoneStorage = ({ version, data } = {}) => {
-  if (Number(version) !== 1 || !data || typeof data !== 'object' || Array.isArray(data)) return null
-  return { ...data, activeSession: null }
+  const storedVersion = Number(version)
+  if (![1, 2].includes(storedVersion) || !data || typeof data !== 'object' || Array.isArray(data)) return null
+  return {
+    ...data,
+    activeSession: storedVersion === 1 ? null : data.activeSession || null,
+    interactionResolutions: [],
+  }
+}
+
+const normalizeInteractionResolutions = (rawResolutions) => {
+  if (!Array.isArray(rawResolutions)) return []
+  const seen = new Set()
+  return rawResolutions
+    .map(normalizeInteractionResolutionV1)
+    .filter((resolution) => {
+      if (!resolution || seen.has(resolution.sessionId)) return false
+      seen.add(resolution.sessionId)
+      return true
+    })
+    .sort((a, b) => b.resolvedAt - a.resolvedAt)
+    .slice(0, PHONE_INTERACTION_RESOLUTION_LIMIT)
 }
 
 const createSeedCalls = () => {
@@ -221,7 +253,15 @@ const createSeedCalls = () => {
 export const usePhoneStore = defineStore('phone', () => {
   const calls = ref([])
   const activeSession = ref(null)
+  const interactionResolutions = ref([])
   const hasFinishedStorageHydration = ref(false)
+  const resolvePhoneCopy = ({ zh = '', en = '', ko = '' } = {}) =>
+    resolveLocalizedText(useSystemStore().settings?.system?.language, {
+      zh,
+      en,
+      ko,
+      fallback: en || zh,
+    })
 
   const callCount = computed(() => calls.value.length)
   const missedCallCount = computed(() =>
@@ -234,6 +274,23 @@ export const usePhoneStore = defineStore('phone', () => {
   )
   const recentCalls = computed(() => calls.value.slice(0, 20))
   const callSessionActive = computed(() => Boolean(activeSession.value))
+
+  const getInteractionResolution = (sessionId = '') => {
+    const id = normalizeText(sessionId, '', 220)
+    return interactionResolutions.value.find((item) => item.sessionId === id) || null
+  }
+
+  const upsertInteractionResolution = (rawResolution) => {
+    const resolution = normalizeInteractionResolutionV1(rawResolution)
+    if (!resolution) return null
+    const existing = getInteractionResolution(resolution.sessionId)
+    if (existing && JSON.stringify(existing) !== JSON.stringify(resolution)) return null
+    interactionResolutions.value = [
+      resolution,
+      ...interactionResolutions.value.filter((item) => item.sessionId !== resolution.sessionId),
+    ].slice(0, PHONE_INTERACTION_RESOLUTION_LIMIT)
+    return resolution
+  }
 
   const findCallById = (callId) => {
     const id = typeof callId === 'string' ? callId.trim() : ''
@@ -366,6 +423,10 @@ export const usePhoneStore = defineStore('phone', () => {
     orderId = '',
     conversationId = '',
     journeyId = '',
+    serviceCaseId = '',
+    eventInstanceId = '',
+    destinationAnchorId = '',
+    resolutionContractKey = 'commerce.destination_change.v1',
     now = Date.now(),
   } = {}) => {
     const name = normalizeText(participant.name, '', 80)
@@ -382,15 +443,23 @@ export const usePhoneStore = defineStore('phone', () => {
       orderId,
       conversationId,
       journeyId,
+      serviceCaseId,
+      eventInstanceId,
+      destinationAnchorId,
+      resolutionContractKey,
       startedAt: now,
       connectedAt: now,
       updatedAt: now,
     })
     if (!session) return { ok: false, reason: 'session_invalid', session: null }
+    const greetingText = resolvePhoneCopy({
+      zh: '【引擎声】你好，我是负责这笔订单的配送员。',
+      en: '(engine hum) Hello, this is your delivery rider.',
+    })
     session.turns.push(normalizeCallTurn({
       speaker: 'rider',
-      text: '(engine hum) Hello, this is your delivery rider.',
-      spokenText: 'Hello, this is your delivery rider.',
+      text: greetingText,
+      spokenText: greetingText.replace(/^(?:\([^)]*\)|【[^】]*】)\s*/, ''),
       voiceTone: 'careful, slightly rushed',
       soundscape: 'engine hum',
       createdAt: now,
@@ -398,6 +467,37 @@ export const usePhoneStore = defineStore('phone', () => {
     activeSession.value = session
     persistSession()
     return { ok: true, reason: '', session }
+  }
+
+  const createCallLifecycleFacts = (sessionId = activeSession.value?.id, now = Date.now()) => {
+    const session = activeSession.value?.id === sessionId ? activeSession.value : null
+    if (!session || !session.eventInstanceId) return []
+    return [
+      normalizeOwnerFactV1({
+        schemaVersion: 1,
+        id: `fact_${session.id}_call_started`,
+        type: 'phone.call_started',
+        sourceModule: 'phone',
+        subjectRef: { kind: 'call_session', id: session.id, revision: 1 },
+        correlationId: session.eventInstanceId,
+        causationId: session.serviceCaseId,
+        resultCode: 'call_started',
+        refs: { service_case_id: session.serviceCaseId },
+        occurredAt: session.startedAt || now,
+      }),
+      normalizeOwnerFactV1({
+        schemaVersion: 1,
+        id: `fact_${session.id}_call_connected`,
+        type: 'phone.call_connected',
+        sourceModule: 'phone',
+        subjectRef: { kind: 'call_session', id: session.id, revision: 2 },
+        correlationId: session.eventInstanceId,
+        causationId: session.serviceCaseId,
+        resultCode: 'call_connected',
+        refs: { service_case_id: session.serviceCaseId },
+        occurredAt: session.connectedAt || now,
+      }),
+    ].filter(Boolean)
   }
 
   const appendCallTurn = ({ speaker = 'user', text = '', spokenText = '', voiceTone = '', soundscape = '', delivery = 'text', now = Date.now() } = {}) => {
@@ -423,25 +523,91 @@ export const usePhoneStore = defineStore('phone', () => {
     const userText = normalizeText(text, '', 800)
     if (!activeSession.value || !userText) return { ok: false, reason: 'session_unavailable', reply: null, proposal: null }
     appendCallTurn({ speaker: 'user', text: userText, spokenText: userText, now })
-    const addressIntent = /address|change|wrong|studio|楼|号|路|地址/i.test(userText)
-    const replyText = addressIntent
-      ? '(paper rustle; engine hum) I can update the delivery address. Please confirm the new location in Food Delivery.'
-      : '(road noise) I am checking the order details now. Please tell me the address you want to use.'
+    const declineIntent = /cannot|can't|won't|decline|refuse|too far|不改|不能|拒绝/i.test(userText)
+    const addressIntent = /address|change|wrong|studio|location|楼|号|路|地址|改到|改送/i.test(userText)
+    const outcomeCode = declineIntent
+      ? DESTINATION_CHANGE_RESOLUTION_OUTCOME.DECLINED
+      : addressIntent && activeSession.value.destinationAnchorId
+        ? DESTINATION_CHANGE_RESOLUTION_OUTCOME.ACCEPTED
+        : DESTINATION_CHANGE_RESOLUTION_OUTCOME.UNCLEAR
+    const replyText = outcomeCode === DESTINATION_CHANGE_RESOLUTION_OUTCOME.ACCEPTED
+      ? resolvePhoneCopy({
+          zh: '【纸张翻动声，远处有引擎声】可以，我会改送到新地址。请返回外卖订单查看处理结果。',
+          en: '(paper rustle; engine hum) I can update the delivery address. Please return to Food Delivery for confirmation.',
+        })
+      : outcomeCode === DESTINATION_CHANGE_RESOLUTION_OUTCOME.DECLINED
+        ? resolvePhoneCopy({
+            zh: '【道路环境声】现在无法更改路线，订单会继续送往原地址。',
+            en: '(road noise) I cannot change the route now. The order will continue to the original address.',
+          })
+        : resolvePhoneCopy({
+            zh: '【道路环境声】我正在核对订单，请告诉我需要改送到哪个地址。',
+            en: '(road noise) I am checking the order details now. Please tell me the address you want to use.',
+          })
     const reply = appendCallTurn({
       speaker: 'rider',
       text: replyText,
-      spokenText: replyText.replace(/^\([^)]*\)\s*/, ''),
-      voiceTone: addressIntent ? 'focused and reassuring' : 'polite and attentive',
-      soundscape: addressIntent ? 'paper rustle; engine hum' : 'road noise',
+      spokenText: replyText.replace(/^(?:\([^)]*\)|【[^】]*】)\s*/, ''),
+      voiceTone: outcomeCode === DESTINATION_CHANGE_RESOLUTION_OUTCOME.ACCEPTED
+        ? 'focused and reassuring'
+        : 'polite and attentive',
+      soundscape: outcomeCode === DESTINATION_CHANGE_RESOLUTION_OUTCOME.ACCEPTED
+        ? 'paper rustle; engine hum'
+        : 'road noise',
       now: now + 1,
     })
-    const proposal = addressIntent
-      ? { kind: 'address_change_accepted', orderId: activeSession.value.orderId, sourceSessionId: activeSession.value.id }
-      : { kind: 'needs_clarification', orderId: activeSession.value.orderId, sourceSessionId: activeSession.value.id }
+    const proposal = upsertInteractionResolution({
+      schemaVersion: 1,
+      ownerModule: 'phone',
+      sessionId: activeSession.value.id,
+      resolutionContractKey: activeSession.value.resolutionContractKey,
+      outcomeCode,
+      status: 'proposed',
+      commitments: outcomeCode === DESTINATION_CHANGE_RESOLUTION_OUTCOME.ACCEPTED
+        ? [
+            {
+              actorRef: activeSession.value.participant.id || activeSession.value.participant.name,
+              action: 'change_destination',
+              objectRef: activeSession.value.destinationAnchorId,
+              status: 'accepted',
+              evidenceMessageIds: [reply.id],
+            },
+          ]
+        : outcomeCode === DESTINATION_CHANGE_RESOLUTION_OUTCOME.DECLINED
+          ? [
+              {
+                actorRef: activeSession.value.participant.id || activeSession.value.participant.name,
+                action: 'change_destination',
+                objectRef: activeSession.value.destinationAnchorId || activeSession.value.orderId,
+                status: 'declined',
+                evidenceMessageIds: [reply.id],
+              },
+            ]
+          : [],
+      resolvedAt: now + 1,
+    })
     activeSession.value.resolutionProposal = proposal
     activeSession.value.updatedAt = now + 1
     persistSession()
     return { ok: true, reason: '', reply, proposal }
+  }
+
+  const createInteractionResolutionFact = (sessionId = activeSession.value?.id, now = Date.now()) => {
+    const session = activeSession.value?.id === sessionId ? activeSession.value : null
+    const resolution = getInteractionResolution(sessionId)
+    if (!session || !resolution || !session.eventInstanceId) return null
+    return normalizeOwnerFactV1({
+      schemaVersion: 1,
+      id: `fact_${session.id}_interaction_resolution`,
+      type: 'phone.interaction_resolution_proposed',
+      sourceModule: 'phone',
+      subjectRef: { kind: 'interaction_resolution', id: session.id, revision: 1 },
+      correlationId: session.eventInstanceId,
+      causationId: session.serviceCaseId,
+      resultCode: resolution.outcomeCode,
+      refs: { service_case_id: session.serviceCaseId },
+      occurredAt: resolution.resolvedAt || now,
+    })
   }
 
   const endCallSession = ({ now = Date.now(), status = PHONE_CALL_SESSION_STATUS.ENDED } = {}) => {
@@ -458,7 +624,7 @@ export const usePhoneStore = defineStore('phone', () => {
       direction: PHONE_CALL_DIRECTION.OUTGOING,
       status: status === PHONE_CALL_SESSION_STATUS.ENDED ? PHONE_CALL_STATUS.COMPLETED : PHONE_CALL_STATUS.FAILED,
       durationSec,
-      summary: activeSession.value.resolutionProposal?.kind || 'Food Delivery rider call',
+      summary: activeSession.value.resolutionProposal?.outcomeCode || 'Food Delivery rider call',
       sourceModule: 'phone_call_session',
       sourceId: activeSession.value.id,
       startedAt: activeSession.value.startedAt,
@@ -482,6 +648,9 @@ export const usePhoneStore = defineStore('phone', () => {
     if (!Array.isArray(sourceCalls)) return false
     calls.value = normalizeCallLogs(sourceCalls)
     activeSession.value = normalizeCallSession(sourceObject?.activeSession)
+    interactionResolutions.value = normalizeInteractionResolutions(
+      sourceObject?.interactionResolutions,
+    )
     return true
   }
 
@@ -503,6 +672,13 @@ export const usePhoneStore = defineStore('phone', () => {
 
   const createBackupSnapshot = () => ({
     calls: calls.value.map((item) => ({ ...item })),
+    interactionResolutions: interactionResolutions.value.map((item) => ({
+      ...item,
+      commitments: item.commitments.map((commitment) => ({
+        ...commitment,
+        evidenceMessageIds: [...commitment.evidenceMessageIds],
+      })),
+    })),
     activeSession: activeSession.value
       ? {
           ...activeSession.value,
@@ -539,6 +715,7 @@ export const usePhoneStore = defineStore('phone', () => {
   const resetForTesting = () => {
     calls.value = []
     activeSession.value = null
+    interactionResolutions.value = []
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -555,7 +732,7 @@ export const usePhoneStore = defineStore('phone', () => {
   })()
 
   watch(
-    [calls, activeSession],
+    [calls, activeSession, interactionResolutions],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -566,6 +743,7 @@ export const usePhoneStore = defineStore('phone', () => {
   return {
     calls,
     activeSession,
+    interactionResolutions,
     callSessionActive,
     callCount,
     missedCallCount,
@@ -582,8 +760,11 @@ export const usePhoneStore = defineStore('phone', () => {
     anonymizeCallLog,
     cleanupRelationshipForProfile,
     startCallSession,
+    createCallLifecycleFacts,
     appendCallTurn,
     sendCallText,
+    getInteractionResolution,
+    createInteractionResolutionFact,
     endCallSession,
     clearCallSession,
     createBackupSnapshot,

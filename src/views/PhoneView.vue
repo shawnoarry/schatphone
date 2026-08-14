@@ -12,7 +12,6 @@ import {
 import { useChatStore } from '../stores/chat'
 import { PHONE_CALL_DIRECTION, usePhoneStore } from '../stores/phone'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
-import { FOOD_DELIVERY_CAUSAL_CHAIN_NODE } from '../stores/simulation'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
 const CALL_FILTER = Object.freeze({
@@ -606,26 +605,35 @@ const foodCallContext = computed(() => {
   if (route.query.source !== 'food_delivery' || typeof route.query.orderId !== 'string') return null
   return foodDeliveryStore.getOrderCallContext(route.query.orderId)
 })
-const isFoodDeliveryCall = computed(() => Boolean(foodCallContext.value))
+const isFoodDeliveryCall = computed(
+  () =>
+    route.query.source === 'food_delivery' ||
+    activeSession.value?.sourceModule === 'food_delivery',
+)
 
 const startFoodDeliveryCall = () => {
   const context = foodCallContext.value
   if (!context) return
   const result = phoneStore.startCallSession({
-    participant: context.courier,
+    participant: {
+      ...context.courier,
+      name: context.courier?.name === 'Food Delivery rider'
+        ? t('外卖配送员', 'Food Delivery rider')
+        : context.courier?.name,
+    },
     sourceModule: 'food_delivery',
     sourceId: context.orderId,
     orderId: context.orderId,
     conversationId: context.conversationId,
     journeyId: foodDeliveryStore.findOrderById(context.orderId)?.deliveryJourneyId || '',
+    serviceCaseId: context.serviceCaseId,
+    eventInstanceId: context.eventInstanceId,
+    destinationAnchorId: context.requestedDestination?.id || '',
   })
   if (result?.ok && result.session?.id) {
-    foodDeliveryStore.recordOrderCausalCheckpoint({
+    foodDeliveryStore.recordPhoneCallLifecycleFacts({
       orderId: context.orderId,
-      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED,
-      phoneSessionId: result.session.id,
-      reason: 'phone_call_started',
-      resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_STARTED,
+      sessionId: result.session.id,
       now: Date.now(),
     })
   }
@@ -635,29 +643,14 @@ const sendFoodCallMessage = () => {
   const text = foodCallMessageDraft.value.trim()
   if (!text) return
   const result = phoneStore.sendCallText({ text, now: Date.now() })
-  if (result?.ok && result.proposal?.kind === 'address_change_accepted') {
-    foodDeliveryStore.recordOrderCausalCheckpoint({
+  if (result?.ok && result.proposal) {
+    foodDeliveryStore.recordPhoneInteractionResolution({
       orderId: activeSession.value?.orderId,
-      node: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_RESOLUTION_PROPOSED,
-      phoneSessionId: activeSession.value?.id,
-      reason: 'call_resolution_proposed',
-      resultCode: FOOD_DELIVERY_CAUSAL_CHAIN_NODE.CALL_RESOLUTION_PROPOSED,
+      sessionId: activeSession.value?.id,
       now: Date.now(),
     })
   }
   foodCallMessageDraft.value = ''
-}
-
-const acceptFoodCallResolution = () => {
-  const session = activeSession.value
-  const order = session?.orderId ? foodDeliveryStore.findOrderById(session.orderId) : null
-  const destination = order?.fulfillment?.addressChangeRequestId
-    ? foodDeliveryStore.findOrderConversationByOrderId(order.id)?.messages
-        ?.find((message) => message.id === order.fulfillment.addressChangeRequestId)?.destinationAnchor
-    : null
-  if (order && destination) {
-    foodDeliveryStore.commitOrderAddressChange({ orderId: order.id, destinationAnchor: destination, now: Date.now() })
-  }
 }
 
 const endFoodDeliveryCall = () => {
@@ -701,24 +694,23 @@ onMounted(() => {
       <div class="phone-content">
         <section v-if="isFoodDeliveryCall" class="phone-food-call" data-testid="phone-food-delivery-call">
           <div class="phone-food-call__head">
-            <div><p class="phone-kicker">Food Delivery call</p><h2>{{ activeSession?.participant?.name || 'Delivery rider' }}</h2><p>{{ activeSession?.participant?.phoneNumber }}</p></div>
-            <span class="phone-food-call__live">LIVE</span>
+            <div><p class="phone-kicker">{{ t('外卖配送通话', 'Food Delivery call') }}</p><h2>{{ activeSession?.participant?.name || t('配送员', 'Delivery rider') }}</h2><p>{{ activeSession?.participant?.phoneNumber }}</p></div>
+            <span class="phone-food-call__live">{{ t('通话中', 'LIVE') }}</span>
           </div>
           <div class="phone-food-call__transcript" data-testid="phone-food-delivery-transcript">
             <div v-for="turn in activeSession?.turns || []" :key="turn.id" class="phone-food-call__turn" :class="`is-${turn.speaker}`">
-              <small>{{ turn.speaker === 'user' ? 'You' : 'Rider' }}</small><p>{{ turn.text }}</p>
+              <small>{{ turn.speaker === 'user' ? t('你', 'You') : t('配送员', 'Rider') }}</small><p>{{ turn.text }}</p>
             </div>
           </div>
           <div class="phone-food-call__composer">
-            <textarea v-model="foodCallMessageDraft" rows="2" data-testid="phone-food-delivery-input" placeholder="Speak to the rider in text…"></textarea>
-            <button type="button" data-testid="phone-food-delivery-send" @click="sendFoodCallMessage">Send</button>
+            <textarea v-model="foodCallMessageDraft" rows="2" data-testid="phone-food-delivery-input" :placeholder="t('用文字与配送员通话……', 'Speak to the rider in text…')"></textarea>
+            <button type="button" data-testid="phone-food-delivery-send" @click="sendFoodCallMessage">{{ t('发送', 'Send') }}</button>
           </div>
-          <p v-if="activeSession?.resolutionProposal?.kind === 'address_change_accepted'" class="phone-food-call__proposal" data-testid="phone-food-delivery-proposal">
-            The rider accepted the address change proposal.
+          <p v-if="activeSession?.resolutionProposal?.outcomeCode === 'accepted_new_destination'" class="phone-food-call__proposal" data-testid="phone-food-delivery-proposal">
+            {{ t('配送员已同意改址，外卖正在核验订单与 Map 路线。', 'The rider agreed to the address change. Food Delivery is validating the order and Map route.') }}
           </p>
           <div class="phone-food-call__actions">
-            <button v-if="activeSession?.resolutionProposal?.kind === 'address_change_accepted'" type="button" data-testid="phone-food-delivery-accept" @click="acceptFoodCallResolution">Update Food Delivery route</button>
-            <button type="button" class="is-end" data-testid="phone-food-delivery-hangup" @click="endFoodDeliveryCall">Hang up</button>
+            <button type="button" class="is-end" data-testid="phone-food-delivery-hangup" @click="endFoodDeliveryCall">{{ t('挂断并返回订单', 'Hang up and return to order') }}</button>
           </div>
         </section>
         <p

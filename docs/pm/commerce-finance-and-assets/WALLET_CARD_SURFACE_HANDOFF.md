@@ -50,7 +50,7 @@ American Express `World Passage` 当前仍是唯一没有完整成品卡的支�
 schatphone-assets/images/ui-assets/apps/wallet/cards/collector/
 ```
 
-素材注册表由 `config/project-assets.json` 持有。曾用于主页让位的 7 张裁切图已退出运行时，未上传为正式素材，也没有删除；当前机器的审计副本位于 `tmp/wallet-card-collection-concept/runtime-exports-20260812/home-crops-retired/`。
+素材注册表由 `config/project-assets.json` 持有。曾用于主页让位的 7 张裁切图已退出运行时，并以受保护源对象完成登记；同字节审计副本已于 2026-08-14 移出 checkout，保留在设备本地素材归档中。本机绝对路径不属于项目合同或跨机器交接依赖。
 
 ## 固定设计规则
 

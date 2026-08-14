@@ -17,13 +17,22 @@ import {
 import { useCalendarStore } from './calendar'
 import { CHAT_SERVICE_NOTIFICATION_KIND, useChatStore } from './chat'
 import { useWalletStore } from './wallet'
+import {
+  COMMERCE_INTERACTION_ENTRY_SURFACE,
+  COMMERCE_SERVICE_CASE_STATUS,
+  normalizeCommerceInteractionTriggerV1,
+  normalizeCommerceOrderReferenceV1,
+  normalizeCommerceServiceCaseReferenceV1,
+} from '../lib/simulation/commerce-interaction-contracts'
 
 const SHOPPING_STORAGE_KEY = 'store:shopping'
-const SHOPPING_STORAGE_VERSION = 1
+const SHOPPING_STORAGE_VERSION = 2
 const SHOPPING_PRODUCT_LIMIT = 220
 const SHOPPING_CART_LINE_LIMIT = 60
 const SHOPPING_ORDER_LIMIT = 120
 const SHOPPING_ORDER_EVENT_LIMIT = 32
+const SHOPPING_SERVICE_CASE_LIMIT = 120
+const SHOPPING_INTERACTION_TRIGGER_LIMIT = 180
 const DEFAULT_CURRENCY = 'CNY'
 
 export const SHOPPING_ORDER_STATUS = Object.freeze({
@@ -419,6 +428,87 @@ const summarizeOrderTotals = (items) => {
     .sort((a, b) => a.currency.localeCompare(b.currency))
 }
 
+const normalizeShoppingDestination = (rawDestination) => {
+  if (!rawDestination || typeof rawDestination !== 'object') return null
+  const id = normalizeText(rawDestination.id || rawDestination.placeId, '', 220)
+  const detail = normalizeText(rawDestination.detail || rawDestination.address, '', 220)
+  if (!id || !detail) return null
+  return {
+    id,
+    label: normalizeText(rawDestination.label, detail, 120),
+    detail,
+    mapPackId: normalizeText(rawDestination.mapPackId, '', 140),
+    placeId: normalizeText(rawDestination.placeId, id, 220),
+    revision: Math.max(1, toInt(rawDestination.revision, 1)),
+  }
+}
+
+const normalizeShoppingServiceCase = (rawCase, index = 0) => {
+  if (!rawCase || typeof rawCase !== 'object') return null
+  const orderId = normalizeText(rawCase.orderId, '', 180)
+  const caseType = normalizeText(rawCase.caseType, '', 120).toLowerCase()
+  const sourceInteractionId = normalizeText(rawCase.sourceInteractionId, '', 220)
+  if (!orderId || !caseType || !sourceInteractionId) return null
+  const reference = normalizeCommerceServiceCaseReferenceV1({
+    schemaVersion: 1,
+    ownerModule: 'shopping',
+    caseId: normalizeText(
+      rawCase.id || rawCase.caseId,
+      `shopping_service_case_${orderId}_${caseType}`,
+      220,
+    ),
+    orderId,
+    caseType,
+    status: rawCase.status || COMMERCE_SERVICE_CASE_STATUS.OPEN,
+    sourceInteractionId,
+    ownerRevision: Math.max(1, toInt(rawCase.ownerRevision, 1)),
+  })
+  if (!reference) return null
+  const createdAt = Math.max(0, toInt(rawCase.createdAt, Date.now() + index))
+  return {
+    id: reference.caseId,
+    orderId,
+    caseType,
+    status: reference.status,
+    requestedDestination: normalizeShoppingDestination(rawCase.requestedDestination),
+    sourceInteractionId,
+    sourceMessageRef: {
+      ownerModule: normalizeText(rawCase.sourceMessageRef?.ownerModule, 'shopping', 80).toLowerCase(),
+      messageId: normalizeText(rawCase.sourceMessageRef?.messageId, '', 220),
+    },
+    ownerRevision: reference.ownerRevision,
+    resolutionCode: normalizeText(rawCase.resolutionCode, '', 160).toLowerCase(),
+    createdAt,
+    updatedAt: Math.max(createdAt, toInt(rawCase.updatedAt, createdAt)),
+  }
+}
+
+const normalizeShoppingServiceCases = (rawCases) => {
+  if (!Array.isArray(rawCases)) return []
+  const seen = new Set()
+  return rawCases
+    .map(normalizeShoppingServiceCase)
+    .filter((serviceCase) => {
+      if (!serviceCase || seen.has(serviceCase.id)) return false
+      seen.add(serviceCase.id)
+      return true
+    })
+    .slice(0, SHOPPING_SERVICE_CASE_LIMIT)
+}
+
+const normalizeShoppingInteractionTriggers = (rawTriggers) => {
+  if (!Array.isArray(rawTriggers)) return []
+  const seen = new Set()
+  return rawTriggers
+    .map(normalizeCommerceInteractionTriggerV1)
+    .filter((trigger) => {
+      if (!trigger || trigger.orderRef.ownerModule !== 'shopping' || seen.has(trigger.id)) return false
+      seen.add(trigger.id)
+      return true
+    })
+    .slice(0, SHOPPING_INTERACTION_TRIGGER_LIMIT)
+}
+
 const normalizeShoppingOrder = (rawOrder, index = 0) => {
   if (!rawOrder || typeof rawOrder !== 'object') return null
   const items = Array.isArray(rawOrder.items)
@@ -449,6 +539,9 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
     quoteSnapshot,
     note: normalizeText(rawOrder.note, '', 240),
     recipient: normalizeText(rawOrder.recipient, '', 120),
+    deliveryAddress: normalizeText(rawOrder.deliveryAddress, '', 220),
+    deliveryAnchor: normalizeShoppingDestination(rawOrder.deliveryAnchor),
+    ownerRevision: Math.max(1, toInt(rawOrder.ownerRevision, 1)),
     giftRecipient: normalizeGiftRecipient(rawOrder),
     events: normalizeOrderEvents(rawOrder.events || rawOrder.logisticsEvents || rawOrder.statusEvents),
     sourceModule: normalizeText(rawOrder.sourceModule, 'shopping_checkout', 40),
@@ -456,6 +549,11 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
     createdAt,
     updatedAt: Math.max(0, toInt(rawOrder.updatedAt, createdAt)),
   }
+}
+
+export const migrateShoppingStorage = ({ version, data } = {}) => {
+  if (Number(version) !== 1 || !data || typeof data !== 'object' || Array.isArray(data)) return null
+  return { ...data, serviceCases: [], interactionTriggers: [] }
 }
 
 const normalizeShoppingOrders = (rawOrders) => {
@@ -956,6 +1054,8 @@ export const useShoppingStore = defineStore('shopping', () => {
   const favoriteProductIds = ref([])
   const cartItems = ref([])
   const orders = ref([])
+  const serviceCases = ref([])
+  const interactionTriggers = ref([])
   const hasFinishedStorageHydration = ref(false)
 
   const productMap = computed(() => new Map(products.value.map((product) => [product.id, product])))
@@ -1021,6 +1121,131 @@ export const useShoppingStore = defineStore('shopping', () => {
     const id = normalizeText(orderId, '', 140)
     if (!id) return null
     return orders.value.find((order) => order.id === id) || null
+  }
+
+  const getCommerceOrderReference = (orderId = '') => {
+    const order = findOrderById(orderId)
+    if (!order) return null
+    return normalizeCommerceOrderReferenceV1(
+      {
+        schemaVersion: 1,
+        ownerModule: 'shopping',
+        orderId: order.id,
+        merchantId: order.items[0]?.serviceKey || '',
+        lineItemIds: order.items.map((item) => item.productId || item.id),
+        ownerRevision: order.ownerRevision,
+        sourceRoute: `/shopping?orderId=${encodeURIComponent(order.id)}`,
+      },
+      { mutationCapable: true },
+    )
+  }
+
+  const findServiceCaseById = (caseId = '') => {
+    const id = normalizeText(caseId, '', 220)
+    return serviceCases.value.find((item) => item.id === id) || null
+  }
+
+  const beginOrderServiceInteraction = ({
+    orderId = '',
+    userAction = '',
+    destinationAnchor = null,
+    entrySurface = COMMERCE_INTERACTION_ENTRY_SURFACE.OWNER_APP,
+    sourceMessageRef = null,
+    interactionId = '',
+    now = Date.now(),
+  } = {}) => {
+    const order = findOrderById(orderId)
+    const orderRef = getCommerceOrderReference(orderId)
+    if (!order || !orderRef || [SHOPPING_ORDER_STATUS.COMPLETED, SHOPPING_ORDER_STATUS.CANCELLED].includes(order.status)) {
+      return { ok: false, reason: 'order_missing_or_closed', trigger: null, serviceCase: null }
+    }
+    const sourceRef = sourceMessageRef || {
+      ownerModule: entrySurface === COMMERCE_INTERACTION_ENTRY_SURFACE.CHAT_SERVICE_ACCOUNT
+        ? 'chat'
+        : 'shopping',
+      messageId: `shopping_action_${order.id}_${normalizeText(userAction, 'support', 80)}`,
+    }
+    const trigger = normalizeCommerceInteractionTriggerV1({
+      schemaVersion: 1,
+      id: interactionId || `shopping_interaction_${order.id}_${sourceRef.messageId}`,
+      kind: 'commerce.user_service_interaction',
+      initiatedBy: 'user',
+      entrySurface,
+      channel: 'platform',
+      userAction,
+      orderRef,
+      sourceMessageRef: sourceRef,
+      occurredAt: now,
+    })
+    if (!trigger) return { ok: false, reason: 'interaction_trigger_invalid', trigger: null, serviceCase: null }
+    const existingTrigger = interactionTriggers.value.find((item) => item.id === trigger.id)
+    if (existingTrigger && JSON.stringify(existingTrigger) !== JSON.stringify(trigger)) {
+      return { ok: false, reason: 'interaction_trigger_conflict', trigger: null, serviceCase: null }
+    }
+    if (!existingTrigger) {
+      interactionTriggers.value = [trigger, ...interactionTriggers.value].slice(
+        0,
+        SHOPPING_INTERACTION_TRIGGER_LIMIT,
+      )
+    }
+    const caseType = userAction === 'destination_change_requested' ? 'destination_change' : userAction
+    const caseId = `shopping_service_case_${order.id}_${caseType}`
+    const existing = findServiceCaseById(caseId)
+    const serviceCase = normalizeShoppingServiceCase({
+      ...(existing || {}),
+      id: caseId,
+      orderId: order.id,
+      caseType,
+      status: COMMERCE_SERVICE_CASE_STATUS.OPEN,
+      requestedDestination: destinationAnchor || existing?.requestedDestination,
+      sourceInteractionId: existing?.sourceInteractionId || trigger.id,
+      sourceMessageRef: existing?.sourceMessageRef?.messageId
+        ? existing.sourceMessageRef
+        : trigger.sourceMessageRef,
+      ownerRevision: existing ? existing.ownerRevision + 1 : 1,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    })
+    if (!serviceCase) return { ok: false, reason: 'service_case_invalid', trigger, serviceCase: null }
+    serviceCases.value = [
+      serviceCase,
+      ...serviceCases.value.filter((item) => item.id !== serviceCase.id),
+    ].slice(0, SHOPPING_SERVICE_CASE_LIMIT)
+    return { ok: true, reason: '', trigger: existingTrigger || trigger, serviceCase }
+  }
+
+  const commitOrderDestinationChange = ({
+    caseId = '',
+    destinationAnchor = null,
+    expectedOwnerRevision = 0,
+    now = Date.now(),
+  } = {}) => {
+    const serviceCase = findServiceCaseById(caseId)
+    const order = serviceCase ? findOrderById(serviceCase.orderId) : null
+    const destination = normalizeShoppingDestination(
+      destinationAnchor || serviceCase?.requestedDestination,
+    )
+    if (!serviceCase || !order || !destination) return { ok: false, reason: 'destination_change_invalid', order: null, serviceCase: null }
+    if (expectedOwnerRevision && order.ownerRevision !== expectedOwnerRevision) {
+      return { ok: false, reason: 'order_revision_stale', order: null, serviceCase }
+    }
+    order.deliveryAnchor = { ...destination, revision: order.ownerRevision + 1 }
+    order.deliveryAddress = destination.detail
+    order.ownerRevision += 1
+    order.updatedAt = now
+    serviceCase.status = COMMERCE_SERVICE_CASE_STATUS.RESOLVED
+    serviceCase.requestedDestination = destination
+    serviceCase.ownerRevision += 1
+    serviceCase.resolutionCode = 'destination_changed'
+    serviceCase.updatedAt = now
+    addOrderEvent(order.id, {
+      type: SHOPPING_ORDER_EVENT_TYPE.STATUS_UPDATE,
+      title: 'Delivery address updated',
+      summary: `The order will be delivered to ${destination.detail}.`,
+      deliveryAddress: destination.detail,
+      createdAt: now,
+    })
+    return { ok: true, reason: '', order, serviceCase }
   }
 
   const listProductsByCategory = (category = '') => {
@@ -1430,12 +1655,15 @@ export const useShoppingStore = defineStore('shopping', () => {
     )
     cartItems.value = normalizeCartItems(rawSource.cartItems || rawSource.cart, productIds)
     orders.value = normalizeShoppingOrders(rawSource.orders)
+    serviceCases.value = normalizeShoppingServiceCases(rawSource.serviceCases)
+    interactionTriggers.value = normalizeShoppingInteractionTriggers(rawSource.interactionTriggers)
     return true
   }
 
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(SHOPPING_STORAGE_KEY, {
       version: SHOPPING_STORAGE_VERSION,
+      migrate: migrateShoppingStorage,
     })
     return applyPersistedSource(persisted, { includeMissingSeeds: true })
   }
@@ -1443,6 +1671,7 @@ export const useShoppingStore = defineStore('shopping', () => {
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(SHOPPING_STORAGE_KEY, {
       version: SHOPPING_STORAGE_VERSION,
+      migrate: migrateShoppingStorage,
     })
     return applyPersistedSource(persisted, { includeMissingSeeds: true })
   }
@@ -1463,6 +1692,19 @@ export const useShoppingStore = defineStore('shopping', () => {
       items: order.items.map((item) => ({ ...item })),
       totals: order.totals.map((item) => ({ ...item })),
       events: Array.isArray(order.events) ? order.events.map((event) => ({ ...event })) : [],
+      deliveryAnchor: order.deliveryAnchor ? { ...order.deliveryAnchor } : null,
+    })),
+    serviceCases: serviceCases.value.map((serviceCase) => ({
+      ...serviceCase,
+      requestedDestination: serviceCase.requestedDestination
+        ? { ...serviceCase.requestedDestination }
+        : null,
+      sourceMessageRef: { ...serviceCase.sourceMessageRef },
+    })),
+    interactionTriggers: interactionTriggers.value.map((trigger) => ({
+      ...trigger,
+      orderRef: { ...trigger.orderRef, lineItemIds: [...trigger.orderRef.lineItemIds] },
+      sourceMessageRef: { ...trigger.sourceMessageRef },
     })),
   })
 
@@ -1479,6 +1721,7 @@ export const useShoppingStore = defineStore('shopping', () => {
   const persistToStorage = () => {
     writePersistedState(SHOPPING_STORAGE_KEY, createBackupSnapshot(), {
       version: SHOPPING_STORAGE_VERSION,
+      migrate: migrateShoppingStorage,
     })
   }
 
@@ -1491,6 +1734,8 @@ export const useShoppingStore = defineStore('shopping', () => {
     favoriteProductIds.value = []
     cartItems.value = []
     orders.value = []
+    serviceCases.value = []
+    interactionTriggers.value = []
   }
 
   const hydratedFromLocal = hydrateFromStorage()
@@ -1507,7 +1752,7 @@ export const useShoppingStore = defineStore('shopping', () => {
   })()
 
   watch(
-    [products, favoriteProductIds, cartItems, orders],
+    [products, favoriteProductIds, cartItems, orders, serviceCases, interactionTriggers],
     () => {
       if (!hasFinishedStorageHydration.value) return
       persistToStorage()
@@ -1520,6 +1765,8 @@ export const useShoppingStore = defineStore('shopping', () => {
     favoriteProductIds,
     cartItems,
     orders,
+    serviceCases,
+    interactionTriggers,
     productCount,
     favoriteCount,
     cartItemCount,
@@ -1532,6 +1779,10 @@ export const useShoppingStore = defineStore('shopping', () => {
     hasFinishedStorageHydration,
     findProductById,
     findOrderById,
+    getCommerceOrderReference,
+    findServiceCaseById,
+    beginOrderServiceInteraction,
+    commitOrderDestinationChange,
     listProductsByCategory,
     listProductsByService,
     listFavoriteProductsByService,

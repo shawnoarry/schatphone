@@ -1,0 +1,102 @@
+{
+  "fixtureSchemaVersion": 1,
+  "orderRef": {
+    "schemaVersion": 1,
+    "ownerModule": "food_delivery",
+    "orderId": "order_123",
+    "merchantId": "merchant_9",
+    "fulfillmentId": "fulfillment_4",
+    "lineItemIds": ["line_2"],
+    "ownerRevision": 3,
+    "sourceRoute": "/food-delivery?orderId=order_123"
+  },
+  "trigger": {
+    "schemaVersion": 1,
+    "id": "interaction_trigger_123",
+    "kind": "commerce.user_service_interaction",
+    "initiatedBy": "user",
+    "entrySurface": "owner_app",
+    "channel": "rider",
+    "userAction": "destination_change_requested",
+    "orderRef": {
+      "schemaVersion": 1,
+      "ownerModule": "food_delivery",
+      "orderId": "order_123",
+      "ownerRevision": 3
+    },
+    "sourceMessageRef": {
+      "ownerModule": "food_delivery",
+      "messageId": "message_8"
+    },
+    "occurredAt": 1786720000000
+  },
+  "serviceCaseRef": {
+    "schemaVersion": 1,
+    "ownerModule": "food_delivery",
+    "caseId": "case_123",
+    "orderId": "order_123",
+    "caseType": "destination_change",
+    "status": "open",
+    "sourceInteractionId": "interaction_trigger_123",
+    "ownerRevision": 1
+  },
+  "ownerFact": {
+    "schemaVersion": 1,
+    "id": "fact_123",
+    "type": "map.delivery_rerouted",
+    "sourceModule": "map",
+    "subjectRef": {
+      "kind": "journey",
+      "id": "journey_4",
+      "revision": 3
+    },
+    "correlationId": "event_instance_123",
+    "causationId": "owner_request_event_instance_123_request_reroute",
+    "resultCode": "delivery_rerouted",
+    "occurredAt": 1786720001000
+  },
+  "ownerRequest": {
+    "schemaVersion": 1,
+    "id": "owner_request_event_instance_123_request_reroute",
+    "actionKey": "map.delivery_journey.request_reroute",
+    "targetModule": "map",
+    "requestedByInstanceId": "event_instance_123",
+    "contextRefs": {
+      "journey_id": "journey_4",
+      "destination_anchor_id": "anchor_8",
+      "expected_journey_revision": 2,
+      "service_case_id": "case_123"
+    },
+    "idempotencyKey": "event_instance_123:request_reroute",
+    "status": "pending",
+    "requestedAt": 1786720000000
+  },
+  "resolution": {
+    "schemaVersion": 1,
+    "ownerModule": "phone",
+    "sessionId": "phone_session_4",
+    "resolutionContractKey": "commerce.destination_change.v1",
+    "outcomeCode": "accepted_new_destination",
+    "status": "proposed",
+    "commitments": [
+      {
+        "actorRef": "rider_7",
+        "action": "change_destination",
+        "objectRef": "anchor_8",
+        "status": "accepted",
+        "evidenceMessageIds": ["phone_message_11"]
+      }
+    ],
+    "resolvedAt": 1786720000000
+  },
+  "mapEstimate": {
+    "schemaVersion": 1,
+    "journeyId": "journey_4",
+    "journeyRevision": 2,
+    "state": "en_route",
+    "etaAt": 1786720900000,
+    "remainingSeconds": 900,
+    "calculatedAt": 1786720000000,
+    "sourceModule": "map"
+  }
+}

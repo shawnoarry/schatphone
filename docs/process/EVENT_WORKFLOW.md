@@ -1,6 +1,6 @@
 # SchatPhone Event Workflow
 
-Updated: 2026-08-10
+Updated: 2026-08-14
 
 This document defines the `事件专项` workflow.
 
@@ -51,6 +51,7 @@ When this phrase appears, treat the task as event-system work, not as visual pol
   - `docs/architecture/SIMULATION_EVENT_ENGINE.md`
   - `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`
   - `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`
+  - `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`
 - frozen event reference docs:
   - `docs/overview/IMMERSIVE_EVENT_TODO.md`
 - live event handoff docs:
@@ -118,6 +119,10 @@ If an event change needs visual work, first decide visual ownership through `doc
 30. EVE-3 Event Notebook composition must remain a deterministic read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals. Do not persist a second event projection or use Notebook selection as authorization.
 31. Event-scoped notes belong to Simulation durability, carry stable source references, survive bounded log rotation and backup/restore, and change only through explicit note create/update/delete actions. They are not Reminders, Calendar plans, source-owner mutations, or Cheats controls.
 32. Every production host must be explicitly registered, and `host_detail.hostKey` must match the consuming host. Register a host only when the approved interaction truly needs an Event Surface; a Module may participate through native records without one. Source owners may persist a runtime-log reference only through an owner-validated one-to-one lineage action; source input, duplicate records, or reused logs cannot manufacture valid lineage.
+33. User-initiated commerce service events begin only from an explicit user interaction in the owner App or a registered Chat service account with valid owner context. Coordinates, saved addresses, purchase history, free-form text, and model classification cannot independently establish human intent or create an order-specific event.
+34. Ordinary commerce messaging, Service Cases, address editing, Map ETA/reroute, Wallet settlement, and Phone sessions remain owner capabilities when optional events are disabled or no recipe matches. Event Runtime orchestrates optional progression; it is not the feature implementation.
+35. Randomness may choose a response disposition or timing only after a valid trigger. Existing pickup/order/journey/call facts come from their owners, and every random decision is persisted once rather than rerolled on refresh or retry.
+36. Phone summaries, Chat service-account replies, and AI classifications are bounded proposals or evidence. A source owner validates exact references/revisions and publishes the confirming owner fact before an Event Instance advances or canonical truth changes.
 
 ## 4. Event Entry Audit
 
@@ -127,9 +132,13 @@ Before changing event code, record or mentally check:
 Event name:
 Event archetype:
 Trigger source: manual | condition | random | scheduled | AI-assisted | system
+User-initiation requirement: none | explicit_owner_action | explicit_registered_service_interaction
 Module owner:
 Adapter action:
 Input context:
+Order/source reference requirement:
+Canonical Service Case / interaction owner:
+Entry surface: owner_app | chat_service_account | other_owner_native | not_applicable
 World context:
 Variant pack:
 Variant id:
@@ -168,6 +177,8 @@ Decision rules:
 6. A surprising event should still feel fair: the user should understand why it happened and what changed.
 7. A place card exposes an event invitation only when an eligible event or approved locked teaser exists; do not reserve an empty permanent Event button.
 8. A deterministic scheduled activity remains executable when no event template is eligible or when optional event permission is off.
+9. For user-initiated commerce events, the user action opens the owner interaction/Service Case first. Model classification may choose a candidate recipe or follow-up question, but `unknown` remains a valid ordinary-support result and cannot authorize mutation.
+10. An owner request is not proof of completion. Advance only after the correlated owner fact confirms success, rejection, expiration, or another normalized result.
 
 ## 5. Event Template Draft
 
@@ -247,23 +258,24 @@ Use this sequence for event work unless the user asks for a narrower path:
 2. Read `docs/architecture/SIMULATION_EVENT_ENGINE.md`.
 3. If the event depends on WorldBook, worldview, or AI-generated copy, read `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
 4. For the current default K-pop content lane or any EVE-2A/2B/2C work, read `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`.
-5. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` as frozen reference, then check `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` for active status.
-6. Identify whether the task is:
+5. For EVE-4C or user-initiated commerce service events, read `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
+6. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` as frozen reference, then check `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` for active status.
+7. Identify whether the task is:
    - documentation-only;
    - store/library foundation;
    - module adapter;
    - user-facing surface;
    - browser journey;
    - game-loop work.
-7. Choose skills from Section 6.1 before editing.
-8. Run the event entry audit.
-9. Prefer the smallest useful module adapter before broad cross-module orchestration.
-10. Roadmap 4.14 EVE-1's pure projection/host-registration contract, EVE-2A frozen contracts/fixtures, EVE-2B reusable runtime, EVE-2C first Map/K-pop vertical slice, and EVE-3 World Hub Event Notebook are landed. EVE-4A's Food Delivery host/card is withdrawn while its exact-lineage owner seam remains. Keep projections free of persistence/effect authority, keep Map as the only production Surface host, and require a separately accepted owner-native causal chain before later EVE-4 or EVE-5 work.
-11. Add deterministic tests before adding random trigger behavior.
-12. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
-13. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
-14. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` without turning this workflow into a second roadmap.
-15. Verify with `git diff --check`, then run targeted tests for touched stores/views.
+8. Choose skills from Section 6.1 before editing.
+9. Run the event entry audit.
+10. Prefer the smallest useful module adapter before broad cross-module orchestration.
+11. Roadmap 4.14 EVE-1's pure projection/host-registration contract, EVE-2A frozen contracts/fixtures, EVE-2B reusable runtime, EVE-2C first Map/K-pop vertical slice, EVE-3 World Hub Event Notebook, and EVE-4C user-initiated commerce interaction foundation are landed. EVE-4A's Food Delivery host/card remains withdrawn and EVE-4B remains reference evidence. Keep projections free of persistence/effect authority, keep Map as the only production Surface host, preserve owner-native commerce truth, and do not treat EVE-4C completion as EVE-5 authorization.
+12. Add deterministic tests before adding random trigger behavior.
+13. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
+14. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
+15. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` without turning this workflow into a second roadmap.
+16. Verify with `git diff --check`, then run targeted tests for touched stores/views.
 
 ## 8. First Prompt Templates
 

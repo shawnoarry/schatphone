@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-08-12
+Updated: 2026-08-14
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, and override-lane design.
 
@@ -10,7 +10,9 @@ Confirmed AI-artifact boundary: Event Runtime persists normalized proposals, rev
 
 Current Map World Suite reference boundary: persisted Event Instances and Map Journey Event Proposals expose a pure current/history Map-pack reference projection. It carries stable runtime reference IDs and `mapPackId` only; event copy, text materialization, participant facts, and source bodies remain Event Runtime-owned and are not copied into Map inspection.
 
-Current handoff: EVE-4A is `TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN`, and EVE-4 is reset for a real owner-native causal chain. Event Runtime coordinates causes, eligibility, progression, provenance, and audit; owner Adapters write canonical truth; each owner presents the result through its native form. Participating in an event chain does not require registering an Event Surface. World Hub still exposes one Event Notebook read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals, with source/module/status filters, stable lineage review, stale-source fail-safe rows, and event-scoped notes. `store:simulation` V3 owns those durable notes, migrates V1/V2, includes them in backup/restore, and does not discard them when bounded runtime logs rotate. Notebook selection and note actions do not retrigger an event, mutate source records, create Reminders or Calendar plans, or inherit Cheats authority.
+Current handoff: EVE-4A is `TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN`; EVE-4B is an implemented owner-native reference vertical; EVE-4C is `DONE 2026-08-14`. Event Runtime coordinates causes, eligibility, generic Event Instance V2 progression, provenance, and audit; owner Adapters write canonical truth; each owner presents the result through its native form. Participating in an event chain does not require registering an Event Surface. World Hub still exposes one Event Notebook read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals, with source/module/status filters, stable lineage review, stale-source fail-safe rows, and event-scoped notes. `store:simulation` V5 preserves V1 instances and notes, adds V2 instances/facts/requests, migrates V1-V4, includes them in backup/restore, and does not discard durable review truth when bounded runtime logs rotate. Notebook selection and note actions do not retrigger an event, mutate source records, create Reminders or Calendar plans, or inherit Cheats authority.
+
+Landed EVE-4C direction: the EVE-4B Food Delivery/Wallet/Map/Phone chain remains historical reference evidence, while production initiation now comes from an explicit order-scoped interaction in the owner app or a registered Chat service account. Food Delivery owns the canonical Service Case and native messages, Phone owns the call transcript and structured resolution proposal, Map owns estimate/reroute truth, Wallet owns payment, and Runtime persists one-time decisions/deadlines/action requests and advances only after correlated owner facts. Shopping implements the same shared owner seam independently. Ordinary messaging, Service Cases, address editing, Map ETA/reroute, Wallet settlement, and Phone sessions remain owner capabilities when optional events are off. The detailed contract is `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
 
 Landed Map collaboration boundary: MJE-3 submits bounded canonical snapshots only for completed `en_route` and `near_arrival` checkpoints while Map is mounted. Event Runtime owns Map permission, Surprise Mode, deterministic/random gates, cooldowns, caps, persistent proposal review/provenance, and logs; Map owns journey truth, validates exact result lineage, and applies only no ETA change or a bounded 120-second delay. A proposal remains pending and visible without pausing Map Journey or opening detail automatically; ordinary arrival can dismiss an unreviewed proposal. Missing, stale, or non-pending proposals clear safely, and Map remains able to complete without an event. MJE-3 and the MJE-4 Footprints/place-knowledge follow-up are user-accepted and integrated locally. Read `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`.
 
@@ -35,6 +37,7 @@ Future Mini Scene dependency: Event Runtime may be a trigger-policy/provenance c
 3. `WORLD_HUB_AND_CHEATS.md`
 4. `IMPLEMENTATION_WORKSTREAMS.md`
 5. `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` for the current EVE-2/default-content direction
+6. `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md` for the EVE-4C user-triggered commerce reference and migration direction
 
 Also read when needed:
 
