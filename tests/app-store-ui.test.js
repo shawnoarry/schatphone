@@ -256,6 +256,7 @@ describe('App Store entry management UI', () => {
     expect(wrapper.find('.app-store-view').exists()).toBe(true)
     expect(wrapper.text()).toContain('App Store')
     expect(wrapper.findAll('.app-store-item').length).toBeGreaterThanOrEqual(15)
+    expect(wrapper.find('[data-testid="app-store-item-app_weather"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-detail"]').exists()).toBe(true)
     const appStoreItem = wrapper.find('[data-testid="app-store-item-app_store"]')
     expect(appStoreItem.exists()).toBe(true)

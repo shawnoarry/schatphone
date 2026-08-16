@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useWeatherStore } from '../stores/weather'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import {
@@ -28,6 +29,11 @@ import {
   CUSTOM_WIDGET_ACTION_TYPE_OPEN_SYSTEM,
   normalizeCustomWidgetAction,
 } from '../lib/custom-widget-actions'
+import {
+  WEATHER_WIDGET_ACTION_EXPAND,
+  WEATHER_WIDGET_ACTION_NONE,
+  WEATHER_WIDGET_ACTION_OPEN,
+} from '../lib/weather-contract'
 
 const WIDGET_SIZE_FILTER_ALL = 'all'
 const CUSTOM_SIZE_OPTIONS = [...VALID_WIDGET_SIZES]
@@ -49,7 +55,10 @@ const WIDGET_TEMPLATE_CODE = `<style>
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
+const weatherStore = useWeatherStore()
 const { settings } = storeToRefs(systemStore)
+const { activeForecast: widgetWeatherForecastData, displayLocationName: widgetWeatherDisplayLocation } =
+  storeToRefs(weatherStore)
 const { languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
@@ -140,6 +149,30 @@ const widgetPreviewDate = computed(() => new Date())
 const widgetPreviewWeekday = computed(() =>
   widgetPreviewDate.value.toLocaleString(undefined, { weekday: 'short' }),
 )
+const widgetWeatherCurrent = computed(() => widgetWeatherForecastData.value?.current || null)
+const widgetWeatherLocation = computed(() => widgetWeatherDisplayLocation.value)
+const widgetWeatherCondition = computed(() => {
+  const condition = widgetWeatherCurrent.value?.condition
+  if (!condition) return t('晴朗', 'Clear')
+  return languageBase.value === 'zh' ? condition.labelZh : condition.labelEn
+})
+const widgetWeatherForecast = computed(() =>
+  (widgetWeatherForecastData.value?.hourly || []).slice(0, 3).map((item, index) => {
+    if (index === 0) return t(`现在 ${item.temperature}°`, `Now ${item.temperature}°`)
+    return languageBase.value === 'zh'
+      ? `+${index}小时 ${item.temperature}°`
+      : `+${index}h ${item.temperature}°`
+  }),
+)
+const widgetWeatherActionOptions = computed(() => [
+  { id: WEATHER_WIDGET_ACTION_OPEN, label: t('打开天气', 'Open Weather') },
+  { id: WEATHER_WIDGET_ACTION_EXPAND, label: t('展开预报', 'Expand forecast') },
+  { id: WEATHER_WIDGET_ACTION_NONE, label: t('无点击动作', 'No tap action') },
+])
+const widgetWeatherAction = computed({
+  get: () => settings.value.weather?.widgetAction || WEATHER_WIDGET_ACTION_OPEN,
+  set: (value) => systemStore.setWeatherWidgetAction(value),
+})
 const customWidgetActionTypes = computed(() => [
   { id: CUSTOM_WIDGET_ACTION_TYPE_NONE, label: t('无动作', 'No action') },
   { id: CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP, label: t('打开 APP', 'Open app') },
@@ -929,6 +962,7 @@ watch(customWidgetCode, () => {
 })
 
 onMounted(() => {
+  void weatherStore.refresh()
   if (typeof window.matchMedia !== 'function') return
   widgetsMobileMediaQuery = window.matchMedia('(max-width: 719px)')
   const syncMobileLayout = () => {
@@ -1158,8 +1192,12 @@ onBeforeUnmount(() => {
                 :language="languageBase"
                 :weekday="widgetPreviewWeekday"
                 :day="widgetPreviewDate.getDate()"
-                :location="t('东京', 'Tokyo')"
-                :condition="t('晴朗', 'Clear')"
+                :location="widgetWeatherLocation"
+                :condition="widgetWeatherCondition"
+                :temperature="widgetWeatherCurrent?.temperature ?? 24"
+                :weather-state="widgetWeatherCurrent?.visualState || 'auto'"
+                :weather-is-night="widgetWeatherCurrent ? widgetWeatherCurrent.isDay === false : false"
+                :weather-forecast="widgetWeatherForecast"
                 :system-label="t('系统', 'System')"
                 :battery-label="t('电量 86%', 'Battery 86%')"
                 :music-status="t('继续播放', 'Listen Again')"
@@ -1187,6 +1225,14 @@ onBeforeUnmount(() => {
                 <span>{{ t('选择槽位', 'Choose Slot') }}</span>
               </button>
             </div>
+            <label v-if="widget.id === 'weather'" class="widgets-weather-action" @click.stop>
+              <span><i class="fas fa-arrow-pointer"></i>{{ t('点击组件时', 'When tapped') }}</span>
+              <select v-model="widgetWeatherAction" data-testid="widgets-weather-action-select">
+                <option v-for="option in widgetWeatherActionOptions" :key="option.id" :value="option.id">
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
           </article>
         </div>
       </section>
@@ -3378,6 +3424,43 @@ onBeforeUnmount(() => {
 
 .widgets-home-state i {
   color: var(--system-success);
+}
+
+.widgets-weather-action {
+  min-height: 43px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 12px;
+  border-top: 1px solid var(--system-subtle-border);
+  padding-top: 9px;
+}
+
+.widgets-weather-action > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--system-text-muted);
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.widgets-weather-action select {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 31px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .widgets-created-item p {

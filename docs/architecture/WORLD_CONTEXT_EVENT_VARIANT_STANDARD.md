@@ -1,6 +1,6 @@
 # World Context Event Variant Standard
 
-Updated: 2026-05-19
+Updated: 2026-08-15
 
 Purpose: define the shared standard for making SchatPhone events world-aware without breaking current ownership boundaries or turning runtime execution into an API-dependent black box.
 
@@ -11,23 +11,26 @@ Use this file together with:
 - `docs/strategy/BACKGROUND_ACTIVITY_STRATEGY.md`
 - `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 - `docs/product-decisions/OPTIONAL_RUNTIME_CONTROL_WORLD_HUB_APP.md`
+- `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`
 
 Core rule:
 
 > world-aware flavor should change how an event feels, not who owns the resulting truth.
+
+`worldContext` is static/slow-changing setting context. It is not dynamic player state, an evolving-world ledger, a social-media database, or proof that a claimed incident occurred.
 
 ## 1. Standard Runtime Chain
 
 World-aware events should follow this shared chain:
 
 ```text
-WorldBook bindings
--> world context summary
+WorldBook bindings + bounded Player Context / owner facts
+-> world context summary and eligibility snapshot
 -> local event variant pack
 -> shared event engine
 -> module adapter
 -> module-owned store action
--> visible module / Chat / notification surface
+-> visible owner-native module / Chat / notification / future publication surface
 ```
 
 Important baseline:
@@ -55,6 +58,7 @@ This standard does not exist to:
 4. move ordinary product ownership into the event engine;
 5. make `World Hub` the normal authoring surface for event data;
 6. reopen old ownership confusion such as `Calendar` absorbing raw reminder-cue meaning.
+7. treat WorldBook, Event Runtime, or an API response as the universal owner of dynamic player/world truth.
 
 ## 4. Required Shared Concepts
 
@@ -179,6 +183,17 @@ Recommended shape:
 }
 ```
 
+### 4.5 Dynamic Player And World Context
+
+Dynamic eligibility inputs are separate from `worldContext`:
+
+- Contacts Self Profile may provide stable structured identity such as user-confirmed occupation, affiliation, public identity, and visibility-scoped world fields;
+- existing domain owners provide current canonical facts such as a schedule, call, trip, payment, order, or relationship state;
+- volatile cross-module values use their natural owner or a future minimal Player State owner only when no existing owner is honest;
+- durable ownerless world incidents or long-running arc state may require a future World State And Arc Ledger after a separate architecture gate.
+
+Event Runtime consumes bounded references/snapshots. It does not copy those records or infer missing identity from free text. A future forum/social/news publication belongs to a Community/Media owner and must preserve the difference between a canonical fact, an unverified claim, and the committed post that presents it.
+
 ## 5. Ownership Rules
 
 World-aware flavor must not break module ownership.
@@ -192,6 +207,8 @@ Current ownership reminders:
 - `Calendar` owns confirmed schedule/date meaning.
 - `Reminders` owns raw cues, callbacks, follow-ups, logistics reminders, and task-like prompts.
 - `relationship runtime` owns relationship truth and compact memory groups.
+- `Contacts Self Profile` owns stable structured user identity, not volatile simulation values or event decisions.
+- a future `Community/Media` Module owns committed accounts/posts/news/replies/subscriptions; a post is not proof that its claim is true.
 - `World Hub` may review runtime state, but it is not the default authoring surface.
 
 Important correction:
@@ -204,14 +221,15 @@ Important correction:
 The ordinary runtime flow should not depend on a live API call:
 
 1. resolve active `worldContext`;
-2. load a matching local `eventVariantPack`;
-3. find eligible event templates for the module;
-4. select the best available variant;
-5. evaluate conditions, random gate, cooldowns, and caps;
-6. call the module adapter;
-7. let the adapter call the owning module store action;
-8. write a runtime log with world metadata;
-9. let existing product surfaces display the result.
+2. resolve only the bounded Player Context and owner facts required by the named event family;
+3. load a matching local `eventVariantPack`;
+4. find eligible event templates for the module;
+5. select the best available variant;
+6. evaluate conditions, random gate, cooldowns, and caps;
+7. call the module adapter;
+8. let the adapter call the owning module store action;
+9. write a runtime log with world/context references and minimum frozen eligibility evidence;
+10. let existing or future owner-native product surfaces display the result.
 
 If no specific pack exists, use the built-in `daily` fallback family.
 
@@ -225,6 +243,7 @@ Good API moments:
 - advanced tooling asks AI to draft or expand variant families;
 - future moderation or review flow wants improved copy for a selected variant.
 - an already eligible event reaches an explicitly approved entry/presentation checkpoint and an optional text Composer materializes bounded prose for one cached Event Instance.
+- a separately approved world-incident or information-propagation flow requests bounded incident, claim, or publication wording after local structured eligibility and before target-owner validation.
 
 Bad default pattern:
 
@@ -246,6 +265,8 @@ WorldBook changed
 ```
 
 For the accepted default K-pop realism V1, an optional after-entry text request is an enrichment path rather than a runtime dependency. Eligibility, invitation copy, choice/effect allowlists, outcome calculation, and local fallback remain available without the request. The normalized result is cached per Event Instance and is not regenerated on reopen. Images/audio are not generated by this path.
+
+For player-context/world-evolution/information-propagation work, generated output remains a candidate. It cannot establish the user's occupation, create a canonical user action or world fact, change numeric state, directly publish a post, or turn a claim into truth. The relevant owner validates and commits any accepted fact, request, or publication.
 
 ## 8. World Context Priority
 
@@ -356,16 +377,17 @@ The first product-focused content pack is `kpop_realism`, layered over the ordin
 
 Current baseline:
 
-- world-aware event variants already exist as a supported architectural direction;
-- Food Delivery is the first meaningful pilot lane;
-- runtime triggering still stays local-first;
-- destructive random execution remains blocked.
+- world-aware variants, Event Instance V1/V2, the local K-pop pack, the Map production-arrival-briefing host, the World Hub Event Notebook, and user-initiated commerce progression are implemented at their named accepted stages;
+- runtime triggering and ordinary no-event paths stay local-first;
+- destructive random execution remains blocked;
+- Player Context V1 identity eligibility is implemented; dynamic world evolution and information propagation remain documentation only.
 
 Current limits:
 
 - not every module is world-aware yet;
 - persisted user-authored or AI-authored variant packs are still a future step;
-- Event Instance persistence, optional after-entry text materialization, normalized place capabilities, and the default K-pop event pack remain unimplemented;
+- no general dynamic Player State owner, World State And Arc Ledger, Community/Media owner, claim/post Interface, investigation/clue owner, or identity-conditioned incident creation is implemented; the landed Player Context V1 seam is read-only and K-pop-allowlist bounded;
+- Map remains the only registered production Event Surface host, and the only completed Map content family remains the frozen production-arrival-briefing archetype;
 - ordinary runtime triggering still must not rely on network availability.
 
 ## 14. Acceptance Checklist
@@ -385,12 +407,14 @@ Before a world-aware event adapter is treated as complete:
 
 1. preserve EVE-2A's frozen template/instance/place-capability/text/media contracts, production-arrival-briefing archetype, and fixtures;
 2. preserve the completed EVE-2B local K-pop pack, durable instance persistence, and optional cached after-entry text materialization behind local validation and deterministic provider-failure tests;
-3. after separate EVE-2C acceptance, implement that one Map vertical slice before parallel world-pack breadth;
-4. expand to the next safest Adapters through the same contract;
-5. deepen explanation and review quality before broader automation or CG generation.
+3. preserve the completed EVE-2C Map vertical slice before parallel host or world-pack breadth;
+4. preserve Player Context V1 as a separately accepted read-only foundation, and treat actual identity-conditioned incidents plus world-evolution/information-propagation as future owner-native families rather than implied EVE-5 work;
+5. expand to the next safest Adapters through the same contract;
+6. deepen explanation and review quality before broader automation or CG generation.
 
 ## 16. Change Log
 
 1. 2026-05-16: created as the first world-aware event standard.
 2. 2026-05-19: rewritten to remove mixed-encoding residue, align with the current Calendar/Reminders split, preserve module ownership, and keep world-aware flavor clearly separated from runtime truth ownership.
 3. 2026-08-10: recorded the K-pop-realism-first product focus, optional cached after-entry text materialization, zero-token trigger/invitation rule, authored Map/world-pack media direction, and later separate CG extension.
+4. 2026-08-15: separated static WorldBook context from structured Player Context, dynamic world state, fact/claim/publication truth, and future Community/Media ownership; then implemented only the revision-aware K-pop Player Context V1 eligibility foundation without authorizing incidents, world evolution, publication, or EVE-5.

@@ -19,8 +19,32 @@ describe('Contacts profile entity model', () => {
     })
 
     expect(profile.entityType).toBe(CONTACTS_ENTITY_TYPES.SELF_PROFILE)
+    expect(profile.revision).toBe(1)
     expect(profile.capabilities.canAppearInChatDirectory).toBe(false)
     expect(profile.profileValues[0]).toMatchObject({ fieldId: 'pheromone', value: 'White tea' })
+  })
+
+  test('increments the persisted profile revision through profile-owned write seams', () => {
+    const store = useChatStore()
+    const profile = store.addRoleProfile({
+      roleId: '1005',
+      name: 'Revision profile',
+      entityType: CONTACTS_ENTITY_TYPES.SELF_PROFILE,
+    })
+
+    expect(profile.revision).toBe(1)
+    expect(store.updateRoleProfile(profile.id, { bio: 'Updated profile copy' })).toBe(true)
+    expect(profile.revision).toBe(2)
+
+    store.addRoleDetailItem(profile.id, 'preferences', {
+      title: 'Tea',
+      detail: 'Likes jasmine tea.',
+    })
+    expect(profile.revision).toBe(3)
+
+    store.saveNow()
+    const persisted = JSON.parse(localStorage.getItem('schatphone:store:chat') || '{}')
+    expect(persisted.data.roleProfiles.find((item) => item.id === profile.id)?.revision).toBe(3)
   })
 
   test('does not bind self profile as a Chat target', () => {

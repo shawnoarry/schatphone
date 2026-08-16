@@ -65,6 +65,27 @@ const normalizeFolderName = (value, fallback = 'Untitled Folder') => {
   return trimmed.slice(0, 64)
 }
 
+const MAX_ASSET_PERSON_IDS = 20
+
+const normalizeAssetPersonIds = (value) => {
+  if (!Array.isArray(value)) return []
+  const seen = new Set()
+  const ids = []
+  value.forEach((item) => {
+    const id = typeof item === 'string' || typeof item === 'number' ? String(item).trim() : ''
+    if (!id || seen.has(id)) return
+    seen.add(id)
+    ids.push(id)
+  })
+  return ids.slice(0, MAX_ASSET_PERSON_IDS)
+}
+
+const normalizeAssetPlaceId = (value) =>
+  typeof value === 'string' ? value.trim().slice(0, 180) : ''
+
+const normalizeAssetPlaceText = (value) =>
+  typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, 80) : ''
+
 const readExtension = (value = '') => {
   if (typeof value !== 'string') return ''
   const trimmed = value.trim()
@@ -187,6 +208,9 @@ const normalizeAssetRecord = (
           : `file:${id}`,
     createdAt: Math.max(0, toInt(rawAsset.createdAt, Date.now())),
     updatedAt: Math.max(0, toInt(rawAsset.updatedAt, Date.now())),
+    personIds: normalizeAssetPersonIds(rawAsset.personIds),
+    placeId: normalizeAssetPlaceId(rawAsset.placeId),
+    placeText: normalizeAssetPlaceText(rawAsset.placeText),
   }
   const provenance = preserveCatalogProvenance
     ? normalizeGalleryCatalogAssetProvenance(rawAsset.provenance)
@@ -233,6 +257,9 @@ const cloneAsset = (asset) => ({
   fingerprint: asset.fingerprint,
   createdAt: asset.createdAt,
   updatedAt: asset.updatedAt,
+  personIds: [...(Array.isArray(asset.personIds) ? asset.personIds : [])],
+  placeId: asset.placeId || '',
+  placeText: asset.placeText || '',
   ...(asset.provenance ? { provenance: { ...asset.provenance } } : {}),
 })
 
@@ -805,6 +832,9 @@ export const useGalleryStore = defineStore('gallery', () => {
       fingerprint,
       createdAt: now,
       updatedAt: now,
+      personIds: [],
+      placeId: '',
+      placeText: '',
     }
     assets.value = [asset, ...assets.value]
     return {
@@ -882,6 +912,9 @@ export const useGalleryStore = defineStore('gallery', () => {
         fingerprint,
         createdAt: now,
         updatedAt: now,
+        personIds: [],
+        placeId: '',
+        placeText: '',
       }
 
       importedAssets.push(asset)
@@ -918,6 +951,23 @@ export const useGalleryStore = defineStore('gallery', () => {
     const asset = findAssetById(assetId)
     if (!asset) return false
     asset.name = normalizeAssetName(nextName, asset.name)
+    asset.updatedAt = Date.now()
+    return true
+  }
+
+  const setAssetPersons = (assetId, personIds = []) => {
+    const asset = findAssetById(assetId)
+    if (!asset) return false
+    asset.personIds = normalizeAssetPersonIds(personIds)
+    asset.updatedAt = Date.now()
+    return true
+  }
+
+  const setAssetPlace = (assetId, { placeId = '', placeText = '' } = {}) => {
+    const asset = findAssetById(assetId)
+    if (!asset) return false
+    asset.placeId = normalizeAssetPlaceId(placeId)
+    asset.placeText = normalizeAssetPlaceText(placeText)
     asset.updatedAt = Date.now()
     return true
   }
@@ -1731,6 +1781,8 @@ export const useGalleryStore = defineStore('gallery', () => {
     replaceAssetFromUrl,
     replaceAssetFromFile,
     renameAsset,
+    setAssetPersons,
+    setAssetPlace,
     moveAssetToCategory,
     bindAssetUsage,
     unbindAssetUsage,

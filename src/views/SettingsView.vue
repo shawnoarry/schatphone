@@ -6,6 +6,10 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../stores/simulation'
+import {
+  ACTIVITY_SESSION_EVENT_MODULE_KEY,
+  ACTIVITY_SESSION_EVENT_PRESENTATION_MODE,
+} from '../lib/activity-session-event-interface'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useSettingsBackupWorkflow } from '../composables/useSettingsBackupWorkflow'
@@ -658,6 +662,45 @@ const simulationModuleEventControls = computed(() => [
       'Allows low-impact checks only at explicit journey stages; Map still validates choices and preserves uneventful arrival.',
     ),
   },
+  {
+    id: ACTIVITY_SESSION_EVENT_MODULE_KEY,
+    moduleKey: ACTIVITY_SESSION_EVENT_MODULE_KEY,
+    label: t(
+      '活动专注事件 / Activity Session events',
+      'Activity Session events / 活动专注事件',
+    ),
+    enabled: simulationStore.isModuleEventsEnabled(ACTIVITY_SESSION_EVENT_MODULE_KEY),
+    status: simulationStore.isModuleEventsEnabled(ACTIVITY_SESSION_EVENT_MODULE_KEY)
+      ? t('允许 / Allowed', 'Allowed / 允许')
+      : t('关闭 / Off', 'Off / 关闭'),
+    detail: t(
+      '只在明确的活动计时里程碑检查低影响事件；关闭权限不会暂停或移除基础活动。',
+      'Checks low-impact events only at explicit activity-timer milestones; disabling permission never pauses or removes the base activity.',
+    ),
+  },
+])
+
+const simulationEventPresentationControls = computed(() => [
+  {
+    id: ACTIVITY_SESSION_EVENT_MODULE_KEY,
+    moduleKey: ACTIVITY_SESSION_EVENT_MODULE_KEY,
+    label: t('活动专注事件', 'Activity Session events'),
+    value: simulationStore.getEventPresentationMode(ACTIVITY_SESSION_EVENT_MODULE_KEY),
+    detail: t(
+      '关闭呈现时仍执行事件资格检查，命中后只自动保持原节奏；文字模式在 Focus Companion 内显示两个选择。',
+      'When presentation is off, eligibility still runs and a hit automatically keeps the current rhythm. Text mode shows two choices inside Focus Companion.',
+    ),
+    options: [
+      {
+        value: ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF,
+        label: t('关闭呈现（自动保持节奏）', 'Off (automatically keep rhythm)'),
+      },
+      {
+        value: ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.TEXT,
+        label: t('文字互动', 'Text interaction'),
+      },
+    ],
+  },
 ])
 
 const updateSimulationSurpriseMode = (mode) => {
@@ -666,6 +709,10 @@ const updateSimulationSurpriseMode = (mode) => {
 
 const updateSimulationModuleEventsEnabled = (moduleKey, enabled) => {
   simulationStore.setModuleEventsEnabled(moduleKey, enabled)
+}
+
+const updateSimulationEventPresentationMode = (moduleKey, mode) => {
+  simulationStore.setEventPresentationMode(moduleKey, mode)
 }
 
 const updateSimulationForegroundTickEnabled = (enabled) => {
@@ -937,6 +984,7 @@ if (initialMenu) {
             :simulation-surprise-mode-options="simulationSurpriseModeOptions"
             :simulation-surprise-mode-runtime-label="simulationSurpriseModeRuntimeLabel"
             :simulation-module-event-controls="simulationModuleEventControls"
+            :simulation-event-presentation-controls="simulationEventPresentationControls"
             :automation-saved="automationSaved"
             @update-automation-field="updateAutomationField"
             @update-module-enabled="updateAutomationModuleEnabled"
@@ -945,6 +993,7 @@ if (initialMenu) {
             @update-simulation-foreground-tick-interval-minutes="updateSimulationForegroundTickIntervalMinutes"
             @update-simulation-surprise-mode="updateSimulationSurpriseMode"
             @update-simulation-module-events-enabled="updateSimulationModuleEventsEnabled"
+            @update-simulation-event-presentation-mode="updateSimulationEventPresentationMode"
             @open-chat-automation="openChatAutomation"
             @open-world-hub="openWorldHub"
             @open-network-reports="openNetworkReports"

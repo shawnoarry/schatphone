@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -83,7 +83,7 @@ describe('WorldBook functional IA', () => {
     expect(overview.get('[data-testid="worldbook-overview-token-part-worldview"]').text()).toContain(
       'Worldview',
     )
-    expect(overview.text()).toContain('does not limit or remove text')
+    expect(overview.text()).toContain('limits or removes your text')
     expect(overview.get('[data-testid="worldbook-overview-text-category-worldview"]').text()).toContain(
       'Not set',
     )
@@ -182,12 +182,12 @@ describe('WorldBook functional IA', () => {
     expect(workspace.text()).toContain('World setting workspace')
     expect(workspace.text()).toContain('Book owns writing and storage')
     expect(workspace.text()).toContain('every setting layer is independent and optional')
-    expect(workspace.text()).toContain('Setting texts')
-    expect(workspace.text()).toContain('Structured encyclopedia')
+    expect(workspace.text()).toContain('Book texts')
+    expect(workspace.text()).toContain('Encyclopedia notes')
     expect(workspace.text()).toContain('Profile templates')
-    expect(workspace.text()).toContain('Capabilities and apps')
-    expect(workspace.text()).toContain('Compatibility fallback')
-    expect(workspace.text()).toContain('never contains or auto-binds Book text')
+    expect(workspace.text()).toContain('Apps & features')
+    expect(workspace.text()).toContain('Fallback worldview')
+    expect(workspace.text()).toContain('independent from the bookshelf')
     expect(wrapper.get('[data-testid="world-setting-workspace-metric-active-texts"]').text()).toContain('0')
     expect(wrapper.get('[data-testid="world-setting-workspace-metric-book-catalog"]').text()).not.toContain('0')
     expect(wrapper.get('[data-testid="worldbook-panel-sources"]').element.style.display).not.toBe(
@@ -212,7 +212,7 @@ describe('WorldBook functional IA', () => {
       'none',
     )
     expect(wrapper.get('[data-testid="worldbook-world-kernel"]').text()).toContain(
-      'Advanced compatibility',
+      'Fallback worldview note',
     )
 
     await wrapper.get('[data-testid="worldbook-panel-tab-sources"]').trigger('click')

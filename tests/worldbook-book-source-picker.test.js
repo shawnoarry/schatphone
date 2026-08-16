@@ -57,12 +57,12 @@ describe('WorldBook setting text picker', () => {
     expect(fallback.text()).toContain('Base worldview')
     expect(fallback.text()).toContain('Fallback city rules')
     expect(bookStore.assetCount).toBe(0)
-    expect(wrapper.get('[data-testid="worldbook-book-source-add"]').text()).toContain('Add setting text')
+    expect(wrapper.get('[data-testid="worldbook-book-source-add"]').text()).toContain('Add from Book')
     expect(wrapper.get('[data-testid="worldbook-onboarding-card"]').text()).toContain(
       'Choose worldbook text from Book',
     )
     expect(wrapper.get('[data-testid="worldbook-source-stats"]').text()).toContain(
-      'No Book setting text is active',
+      'No books active yet',
     )
 
     await wrapper.get('[data-testid="worldbook-open-book-library"]').trigger('click')
@@ -137,6 +137,79 @@ describe('WorldBook setting text picker', () => {
     await nextTick()
 
     expect(systemStore.listWorldBookSourceLinks()[0].enabled).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('enabling a second worldview requires confirmation and switches atomically', async () => {
+    const systemStore = useSystemStore()
+    const bookStore = useBookStore()
+    const secondWorldview = bookStore.createAsset({
+      id: 'asset_second_worldview',
+      title: 'Parallel City Worldview',
+      category: 'worldview',
+      content: 'A different world premise.',
+    })
+
+    const { wrapper } = await mountWorldBook()
+
+    // 启用第一份世界观（内置主世界观），无冲突时直接生效
+    await wrapper.get('[data-testid="worldbook-book-source-add"]').trigger('click')
+    await nextTick()
+    await wrapper
+      .get('[data-testid="worldbook-source-picker-card-built_in_modern_seoul_kpop_main_worldview"]')
+      .trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-source-picker-confirm"]').trigger('click')
+    await nextTick()
+
+    const firstLink = systemStore
+      .listWorldBookSourceLinks()
+      .find((link) => (link.role || link.usage) === 'main_worldview')
+    expect(firstLink).toMatchObject({
+      assetId: 'built_in_modern_seoul_kpop_main_worldview',
+      enabled: true,
+    })
+
+    // 启用第二份世界观：必须先经过切换确认
+    await wrapper.get('[data-testid="worldbook-book-source-add"]').trigger('click')
+    await nextTick()
+    await wrapper
+      .get(`[data-testid="worldbook-source-picker-card-${secondWorldview.id}"]`)
+      .trigger('click')
+    await nextTick()
+    await wrapper.get('[data-testid="worldbook-source-picker-confirm"]').trigger('click')
+    await flushPromises()
+    await nextTick()
+
+    expect(dialogState.visible).toBe(true)
+    expect(dialogState.title).toContain('Switch worldview')
+    // 确认前状态不变
+    expect(systemStore.listWorldBookSourceLinks().filter((link) => link.enabled !== false)).toHaveLength(1)
+    expect(systemStore.listWorldBookSourceLinks().some((link) => link.assetId === secondWorldview.id)).toBe(false)
+
+    // 取消：不切换
+    useDialog().cancelDialog()
+    await flushPromises()
+    await nextTick()
+    expect(systemStore.listWorldBookSourceLinks().some((link) => link.assetId === secondWorldview.id)).toBe(false)
+
+    // 再次确认：旧版停用，新版启用，全程唯一生效
+    await wrapper.get('[data-testid="worldbook-source-picker-confirm"]').trigger('click')
+    await flushPromises()
+    await nextTick()
+    expect(dialogState.visible).toBe(true)
+    useDialog().submitDialog()
+    await flushPromises()
+    await nextTick()
+
+    const links = systemStore.listWorldBookSourceLinks()
+    const activeWorldviews = links.filter(
+      (link) => (link.role || link.usage) === 'main_worldview' && link.enabled !== false,
+    )
+    expect(activeWorldviews).toHaveLength(1)
+    expect(activeWorldviews[0].assetId).toBe(secondWorldview.id)
+    expect(links.find((link) => link.id === firstLink.id)?.enabled).toBe(false)
 
     wrapper.unmount()
   })
@@ -263,14 +336,12 @@ describe('WorldBook setting text picker', () => {
     await wrapper.get('[data-testid="worldbook-overview-text-category-encyclopedia"]').trigger('click')
     await nextTick()
 
+    // 百科可多选：目录行点按即启用，不再经过卡片菜单
     await wrapper
       .get(
         '[data-testid="worldbook-source-directory-asset-built_in_modern_seoul_kpop_industry_career_operation"]',
       )
       .trigger('click')
-    await nextTick()
-
-    await wrapper.get('[data-testid="worldbook-source-directory-enable"]').trigger('click')
     await nextTick()
 
     expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
@@ -285,6 +356,35 @@ describe('WorldBook setting text picker', () => {
     expect(wrapper.get('[data-testid="worldbook-overview-text-category-worldview"]').text()).toContain(
       'Not set',
     )
+
+    // 再次点按即停用
+    await wrapper
+      .get(
+        '[data-testid="worldbook-source-directory-asset-built_in_modern_seoul_kpop_industry_career_operation"]',
+      )
+      .trigger('click')
+    await nextTick()
+
+    expect(systemStore.listWorldBookSourceLinks()[0]).toMatchObject({
+      assetId: 'built_in_modern_seoul_kpop_industry_career_operation',
+      enabled: false,
+    })
+
+    // 批量启用/停用
+    await wrapper.get('[data-testid="worldbook-source-directory-enable-all"]').trigger('click')
+    await nextTick()
+    const enabledLinks = systemStore
+      .listWorldBookSourceLinks()
+      .filter((link) => link.role === 'encyclopedia' && link.enabled !== false)
+    expect(enabledLinks.length).toBeGreaterThan(1)
+
+    await wrapper.get('[data-testid="worldbook-source-directory-disable-all"]').trigger('click')
+    await nextTick()
+    expect(
+      systemStore
+        .listWorldBookSourceLinks()
+        .filter((link) => link.role === 'encyclopedia' && link.enabled !== false),
+    ).toHaveLength(0)
 
     wrapper.unmount()
   })
@@ -445,10 +545,10 @@ describe('WorldBook setting text picker', () => {
 
     const { wrapper } = await mountWorldBook()
 
-    expect(wrapper.get('[data-testid="worldbook-source-stats"]').text()).toContain('1 text(s) in use')
+    expect(wrapper.get('[data-testid="worldbook-source-stats"]').text()).toContain('Reading 1 book(s)')
     expect(wrapper.get('[data-testid="worldbook-active-source-list"]').text()).toContain('Active Setting Text')
     expect(wrapper.find(`[data-testid="worldbook-book-source-maintenance-${activeLink.id}"]`).exists()).toBe(false)
-    expect(wrapper.get('[data-testid="worldbook-source-maintenance"]').text()).toContain('1 unused')
+    expect(wrapper.get('[data-testid="worldbook-source-maintenance"]').text()).toContain('1 inactive')
     expect(wrapper.get(`[data-testid="worldbook-book-source-maintenance-${disabledLink.id}"]`).text()).toContain(
       'Unused Setting Text',
     )

@@ -32,6 +32,7 @@ const createTestRouter = () =>
       { path: '/gallery', component: DummyView },
       { path: '/widgets', component: DummyView },
       { path: '/app-store', component: DummyView },
+      { path: '/weather', component: DummyView },
     ],
   })
 
@@ -682,6 +683,7 @@ describe('Home folder entries', () => {
     await router.push('/home')
     await router.isReady()
     const store = useSystemStore()
+    store.setWeatherWidgetAction('toggle_details')
     store.setHomeWidgetPages([['weather', 'photo_note', 'focus_pulse'], [], [], [], []])
     store.setHomeLayoutTemplate(0, 'layout-c')
     expect(store.setHomeLayoutSlotPlacement(0, 'c-top-left', 'weather')).toBe(true)
@@ -701,9 +703,31 @@ describe('Home folder entries', () => {
 
     const weather = wrapper.find('[data-home-tile-id="weather"] .built-in-widget-visual')
     expect(weather.text()).toContain('24°')
+    expect(weather.attributes('data-weather-state')).toBe('clear')
+    expect(weather.findAll('.widget-terrarium-layer')).toHaveLength(5)
+    expect(weather.find('.widget-terrarium-scene').attributes('src')).toContain(
+      'widgets/weather-terrarium/weather-terrarium-base.webp',
+    )
+    expect(weather.find('.widget-terrarium-glass').attributes('src')).toContain(
+      'widgets/weather-terrarium/weather-terrarium-glass.webp',
+    )
+    expect(weather.findAll('.widget-terrarium-clouds img')).toHaveLength(2)
+    expect(weather.find('.widget-terrarium-clouds img').attributes('src')).toContain(
+      'widgets/weather-terrarium/weather-terrarium-clouds.webp',
+    )
+    expect(weather.find('.widget-terrarium-atmosphere').attributes('src')).toContain(
+      'widgets/weather-terrarium/weather-terrarium-atmosphere-alpha-v3.webp',
+    )
+    expect(weather.attributes('aria-expanded')).toBe('false')
+    await wrapper.setProps({ currentTime: '22:00' })
+    expect(weather.attributes('data-weather-state')).toBe('night')
+    expect(weather.find('.widget-terrarium-scene').attributes('src')).toContain(
+      'widgets/weather-terrarium/weather-terrarium-night-scene.webp',
+    )
     await weather.trigger('click')
-    expect(weather.text()).toContain('16°')
-    expect(weather.classes()).toContain('is-weather-rain')
+    expect(weather.text()).toContain('现在 24°')
+    expect(weather.classes()).toContain('is-weather-detail')
+    expect(weather.attributes('aria-expanded')).toBe('true')
 
     const moodWindow = wrapper.find('[data-home-tile-id="photo_note"] .built-in-widget-visual')
     expect(moodWindow.text()).toContain('01')
@@ -718,6 +742,26 @@ describe('Home folder entries', () => {
     expect(focus.text()).toContain('24:59')
     expect(focus.classes()).toContain('is-focus-active')
 
+    wrapper.unmount()
+  })
+
+  test('opens Weather from the default widget action and preserves the Home return page', async () => {
+    const router = createTestRouter()
+    await router.push('/home?homePage=0')
+    await router.isReady()
+
+    const store = useSystemStore()
+    store.setWeatherWidgetAction('open_weather')
+    const wrapper = mount(HomeView, {
+      props: { currentDate: 'Aug 15', currentTime: '16:00' },
+      global: { plugins: [router] },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-home-tile-id="weather"] .built-in-widget-visual').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.fullPath).toBe('/weather?from=home&homePage=0')
     wrapper.unmount()
   })
 

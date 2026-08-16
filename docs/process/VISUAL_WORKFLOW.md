@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-08-12
+Updated: 2026-08-15
 
 This document defines the `视觉专项` workflow.
 
@@ -443,6 +443,8 @@ These are expected in `.agents/skills` for repo-local visual work:
   - information architecture, navigation depth, MECE grouping, and interaction consistency.
 - `image-to-code`
   - pixel-level restoration from a provided UI image, screenshot, Figma export, or long design image into code and high-resolution PNG slices.
+- `gpt-image`
+  - scenario-specific prompt-pattern and edit-invariant lookup across the vendored GPT Image reference atlas; use it to shape SchatPhone-owned generation requests, not as a production runtime dependency.
 - `redesign-existing-projects`
   - audit-first refinement when an existing screen or group of screens reads as generic, inconsistent, or visually under-resolved but its current framework and behavior should remain intact.
 - `ui-ux-pro-max`
@@ -467,6 +469,9 @@ These are expected in `.agents/skills` for repo-local visual work:
 - use `redesign-existing-projects` when the primary task is auditing and improving an existing surface without replacing its product structure or framework;
 - use `ui-ux-pro-max` when a design choice needs a bounded local evidence lookup across product patterns, typography, color, accessibility, Vue, charts, icons, or motion;
 - use `image-to-code` when the source image itself is the contract and the task needs 750px 1:1 restoration, transparent PNG slices, or strict screenshot/design-export matching;
+- use `gpt-image` when a dedicated asset-production round needs a close prompt pattern for product/food imagery, brand systems, posters, UI mockups, information graphics, illustration, character work, or reference-image editing; load only the nearest atlas category and rewrite the result for the accepted SchatPhone art direction;
+- treat `gpt-image` as a reference and prompt-craft specialist. Project-native `imagegen` or `codex-image` remains the default execution path; do not run the bundled CLI, read a local `.env`, use its moving-`main` `uvx` fallback, or make a billable API call unless the user explicitly approves that local-key execution and cost boundary;
+- treat gallery author/source links as provenance for reference discovery, not as permission to ship copied prompts, brands, characters, likenesses, or source images;
 - treat the installed GSAP skills as one motion-specialist family and load only the members required by the accepted motion slice; do not add the `gsap` runtime dependency merely because the skills are installed;
 - for actual Vue GSAP work, pair the smallest relevant API topic with `gsap-frameworks`, preserve component cleanup, and keep reduced-motion behavior functional;
 - do not use `ui-ux-pro-max --persist` in the normal visual workflow. Its generated `design-system/` tree would duplicate project design authority; persistent decisions belong in the existing `docs/design/*` contracts through normal review;
@@ -488,6 +493,7 @@ Do not add a new visual skill only because one screen needs more polish. First u
 - `redesign-existing-projects` for audit-first improvement of existing product surfaces;
 - `ui-ux-pro-max` for local searchable UI/UX evidence when the decision space is broader than the current docs;
 - `image-to-code` for source-image-to-code restoration and high-resolution slicing;
+- `gpt-image` for a bounded scene-specific prompt/reference lookup before a separately governed generation call;
 - the official GSAP skill family for a separately scoped motion implementation or performance problem;
 - `imagegen` for candidate raster assets when missing imagery is the actual gap;
 - Browser for public reference discovery when the user asks for current examples;

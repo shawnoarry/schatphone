@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-08-12
+Updated: 2026-08-15
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -251,6 +251,7 @@ The current externally sourced repo-local skills recorded in `.agents/skills` an
 | `frontend-design` | Building or reshaping frontend surfaces with stronger design direction | `docs/process/VISUAL_WORKFLOW.md` |
 | `frontend-logic-design` | Information architecture, navigation depth, and interaction-logic review | `docs/process/VISUAL_WORKFLOW.md` and `docs/process/EVENT_WORKFLOW.md` when event surfaces need IA cleanup |
 | `image-to-code` | Pixel-level 750px source-image, screenshot, or design-export restoration into code plus high-resolution PNG slices | `docs/process/VISUAL_WORKFLOW.md` |
+| `gpt-image` | Scenario-specific GPT Image prompt/reference atlas for product, food, brand, poster, UI, infographic, illustration, character, and edit workflows; execution remains separately governed | `docs/process/VISUAL_WORKFLOW.md` |
 | `redesign-existing-projects` | Audit-first visual refinement of an existing app without replacing its framework, behavior, or product hierarchy | `docs/process/VISUAL_WORKFLOW.md` |
 | `ui-ux-pro-max` | Local searchable UI/UX reference data for product patterns, palettes, typography, accessibility, Vue guidance, icons, charts, and motion | `docs/process/VISUAL_WORKFLOW.md` |
 | `gsap-core`, `gsap-frameworks`, `gsap-performance`, `gsap-plugins`, `gsap-scrolltrigger`, `gsap-timeline`, `gsap-utils` | Official GSAP API, Vue lifecycle, plugin, sequencing, scroll-motion, utility, reduced-motion, and performance guidance | `docs/process/VISUAL_WORKFLOW.md` |
@@ -376,7 +377,30 @@ npx.cmd -y skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.gi
 npx.cmd -y skills add https://github.com/greensock/gsap-skills --skill gsap-core gsap-frameworks gsap-performance gsap-plugins gsap-scrolltrigger gsap-timeline gsap-utils --copy
 ```
 
-### 8.2 Chinese Novelist Skill
+### 8.2 GPT Image Prompt Atlas Skill
+
+`gpt-image` is a vendored project-local prompt/reference specialist, not an application runtime or deployment dependency. The reviewed 2026-08-15 snapshot is upstream commit `068dd9e24aadc8731e46f38548ca4dcd94515d35`; the repository was MIT-licensed and its reputation check recorded 4,555 GitHub stars, 393 forks, and 366 Skills CLI installs at review time.
+
+The useful production surface is its routed 162-prompt atlas and prompt-craft guidance. It covers several recurring SchatPhone asset families that the generic image-generation capability does not organize by itself: product and food photography, brand systems, typography/posters, UI mockups, infographics, technical illustration, character design, photography, and reference-image edits.
+
+Project policy narrows the upstream runbook:
+
+- use the vendored reference files to find a close pattern, then rewrite it for the accepted SchatPhone subject, composition, crop, locale, and ownership constraints;
+- keep `imagegen` or `codex-image` as the normal execution path;
+- do not invoke the bundled Python CLI, load `OPENAI_API_KEY` from `.env`/`~/.env`, or use the launcher's moving-`main` `uvx` fallback without explicit user approval for local-key use and billable API execution;
+- do not inherit the upstream CLI's `moderation=low` default as project policy;
+- treat external author/source links as reference provenance, not licensing or approval to reproduce a prompt, public brand, character, likeness, or source image;
+- generated files still enter SchatPhone's existing candidate review and asset-upload-list flow; the skill does not bypass image-bed, registry, acceptance, or archival rules.
+
+The reviewed install command is:
+
+```text
+npx.cmd -y skills@latest add wuyoscar/gpt_image_2_skill --skill gpt-image --agent codex --copy --yes
+```
+
+Normal secondary-PC setup receives the vendored directory and lock entry through Git. A deliberate refresh must repeat the source/security review and update the recorded commit/hash before replacing the reviewed copy.
+
+### 8.3 Chinese Novelist Skill
 
 `chinese-novelist` is a repo-local optional writing-support skill.
 
@@ -433,7 +457,7 @@ The `skills-lock.json` entry should record:
 
 After installation, restart Codex or the agent host before expecting the skill to appear in the active skill list.
 
-### 8.3 Image To Code Skill
+### 8.4 Image To Code Skill
 
 `image-to-code` is a repo-local visual production skill.
 
@@ -485,7 +509,7 @@ The `skills-lock.json` entry should record:
 
 After installation, restart Codex or the agent host before expecting the skill to appear in the active skill list.
 
-### 8.3 ElevenLabs Audio Skills
+### 8.5 ElevenLabs Audio Skills
 
 The project vendors exactly three optional ElevenLabs development Skills:
 

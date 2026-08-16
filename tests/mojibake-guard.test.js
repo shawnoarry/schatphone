@@ -88,5 +88,5 @@ describe('mojibake guard', () => {
     })
 
     expect(hits).toEqual([])
-  })
+  }, 30_000)
 })

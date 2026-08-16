@@ -1,4 +1,6 @@
 import { useAssetsStore } from '../stores/assets'
+import { useAgendaJourneyStore } from '../stores/agendaJourney'
+import { useActivitySessionStore } from '../stores/activitySession'
 import { useBookStore } from '../stores/book'
 import { useCalendarStore } from '../stores/calendar'
 import { useChatStore } from '../stores/chat'
@@ -10,6 +12,7 @@ import { useMapStore } from '../stores/map'
 import { usePhoneStore } from '../stores/phone'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useRemindersStore } from '../stores/reminders'
+import { useScheduleOrchestratorStore } from '../stores/scheduleOrchestrator'
 import { useShoppingStore } from '../stores/shopping'
 import { useSimulationStore } from '../stores/simulation'
 import { useStockStore } from '../stores/stock'
@@ -28,6 +31,9 @@ export const createBackupRestoreStoreSet = (pinia) => ({
   chat: useChatStore(pinia),
   map: useMapStore(pinia),
   calendar: useCalendarStore(pinia),
+  agendaJourney: useAgendaJourneyStore(pinia),
+  activitySession: useActivitySessionStore(pinia),
+  scheduleOrchestrator: useScheduleOrchestratorStore(pinia),
   reminders: useRemindersStore(pinia),
   gallery: useGalleryStore(pinia),
   files: useFilesStore(pinia),
@@ -66,6 +72,9 @@ export const restoreBackupRollbackSnapshot = async (stores, snapshot) => {
     ['chat', snapshot.chat],
     ['map', snapshot.map],
     ['calendar', snapshot.calendar],
+    ['agendaJourney', snapshot.agendaJourney],
+    ['activitySession', snapshot.activitySession],
+    ['scheduleOrchestrator', snapshot.scheduleOrchestrator],
     ['reminders', snapshot.reminders],
     ['gallery', snapshot.gallery],
     ['files', snapshot.files],

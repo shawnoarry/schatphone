@@ -1,6 +1,6 @@
 # SchatPhone Event Workflow
 
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 This document defines the `事件专项` workflow.
 
@@ -52,6 +52,7 @@ When this phrase appears, treat the task as event-system work, not as visual pol
   - `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`
   - `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`
   - `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`
+  - `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`
 - frozen event reference docs:
   - `docs/overview/IMMERSIVE_EVENT_TODO.md`
 - live event handoff docs:
@@ -123,6 +124,9 @@ If an event change needs visual work, first decide visual ownership through `doc
 34. Ordinary commerce messaging, Service Cases, address editing, Map ETA/reroute, Wallet settlement, and Phone sessions remain owner capabilities when optional events are disabled or no recipe matches. Event Runtime orchestrates optional progression; it is not the feature implementation.
 35. Randomness may choose a response disposition or timing only after a valid trigger. Existing pickup/order/journey/call facts come from their owners, and every random decision is persisted once rather than rerolled on refresh or retry.
 36. Phone summaries, Chat service-account replies, and AI classifications are bounded proposals or evidence. A source owner validates exact references/revisions and publishes the confirming owner fact before an Event Instance advances or canonical truth changes.
+37. Identity-conditioned events consume structured, revision-aware Contacts Self Profile projections and named owner facts. Raw biography, coordinates, free text, or model classification cannot independently establish occupation, intent, behavior, guilt, relationship, or world truth.
+38. Dynamic player/world values remain with their natural owners or separately justified minimal owners. WorldBook is static setting context, Event Runtime is orchestration/audit, and neither becomes a universal dynamic-state Store.
+39. Future forum/social/news propagation separates owner-confirmed facts, account/person claims, and committed posts. Community/Media owns publication bodies; Runtime may retain requests, decisions, references, and provenance only.
 
 ## 4. Event Entry Audit
 
@@ -140,6 +144,10 @@ Order/source reference requirement:
 Canonical Service Case / interaction owner:
 Entry surface: owner_app | chat_service_account | other_owner_native | not_applicable
 World context:
+Player context requirement and exact Self Profile fields/revision:
+Dynamic player/world state inputs and owners:
+World fact / claim / publication references:
+Community/Media or investigation target owner, if applicable:
 Variant pack:
 Variant id:
 Conditions:
@@ -257,25 +265,26 @@ Use this sequence for event work unless the user asks for a narrower path:
 1. Read `docs/process/EVENT_WORKFLOW.md`.
 2. Read `docs/architecture/SIMULATION_EVENT_ENGINE.md`.
 3. If the event depends on WorldBook, worldview, or AI-generated copy, read `docs/architecture/WORLD_CONTEXT_EVENT_VARIANT_STANDARD.md`.
-4. For the current default K-pop content lane or any EVE-2A/2B/2C work, read `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`.
-5. For EVE-4C or user-initiated commerce service events, read `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
-6. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` as frozen reference, then check `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` for active status.
-7. Identify whether the task is:
+4. If the event depends on Self Profile identity, dynamic player/world state, a multi-occurrence world arc, forum/social/news propagation, claims, or clues, read `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
+5. For the current default K-pop content lane or any EVE-2A/2B/2C work, read `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md`.
+6. For EVE-4C or user-initiated commerce service events, read `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
+7. Check `docs/overview/IMMERSIVE_EVENT_TODO.md` as frozen reference, then check `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` for active status.
+8. Identify whether the task is:
    - documentation-only;
    - store/library foundation;
    - module adapter;
    - user-facing surface;
    - browser journey;
    - game-loop work.
-8. Choose skills from Section 6.1 before editing.
-9. Run the event entry audit.
-10. Prefer the smallest useful module adapter before broad cross-module orchestration.
-11. Roadmap 4.14 EVE-1's pure projection/host-registration contract, EVE-2A frozen contracts/fixtures, EVE-2B reusable runtime, EVE-2C first Map/K-pop vertical slice, EVE-3 World Hub Event Notebook, and EVE-4C user-initiated commerce interaction foundation are landed. EVE-4A's Food Delivery host/card remains withdrawn and EVE-4B remains reference evidence. Keep projections free of persistence/effect authority, keep Map as the only production Surface host, preserve owner-native commerce truth, and do not treat EVE-4C completion as EVE-5 authorization.
-12. Add deterministic tests before adding random trigger behavior.
-13. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
-14. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
-15. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` without turning this workflow into a second roadmap.
-16. Verify with `git diff --check`, then run targeted tests for touched stores/views.
+9. Choose skills from Section 6.1 before editing.
+10. Run the event entry audit.
+11. Prefer the smallest useful module adapter before broad cross-module orchestration.
+12. Roadmap 4.14 EVE-1's pure projection/host-registration contract, EVE-2A frozen contracts/fixtures, EVE-2B reusable runtime, EVE-2C first Map/K-pop vertical slice, EVE-3 World Hub Event Notebook, EVE-4C user-initiated commerce interaction foundation, and Player Context V1 read-only K-pop identity seam are landed. EVE-4A's Food Delivery host/card remains withdrawn and EVE-4B remains reference evidence. Keep projections free of effect authority, keep Map as the only production Surface host, preserve owner-native commerce truth, and do not treat Player Context eligibility as incident creation, world evolution, publication, or EVE-5 authorization.
+13. Add deterministic tests before adding random trigger behavior.
+14. Preserve backup/restore and storage diagnostics when new persistent data is introduced.
+15. Amend `docs/overview/IMMERSIVE_EVENT_TODO.md` only for frozen-baseline clarification or candidate-history cleanup; do not use it as the live next-task board.
+16. If the task becomes active implementation work, update `docs/roadmap/TODO_ROADMAP.md` and the event package `STATUS_AND_HANDOFF.md` without turning this workflow into a second roadmap.
+17. Verify with `git diff --check`, then run targeted tests for touched stores/views.
 
 ## 8. First Prompt Templates
 

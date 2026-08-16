@@ -38,6 +38,30 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  departureProjection: {
+    type: Object,
+    default: null,
+  },
+  departureTransportModes: {
+    type: Array,
+    default: () => [],
+  },
+  selectedDepartureMode: {
+    type: String,
+    default: '',
+  },
+  activeJourney: {
+    type: Object,
+    default: null,
+  },
+  otherJourneyActive: {
+    type: Boolean,
+    default: false,
+  },
+  departureFeedback: {
+    type: Object,
+    default: null,
+  },
   relationshipContactOptions: {
     type: Array,
     default: () => [],
@@ -66,6 +90,14 @@ defineProps({
     type: Function,
     required: true,
   },
+  formatClockTime: {
+    type: Function,
+    required: true,
+  },
+  getDepartureTransportLabel: {
+    type: Function,
+    required: true,
+  },
 })
 
 const emit = defineEmits([
@@ -73,12 +105,66 @@ const emit = defineEmits([
   'shift-starts-at',
   'reset-starts-at',
   'delete-event',
+  'update-departure-mode',
+  'start-travel',
+  'open-journey',
   'open-worldbook',
   'update-relationship-contact',
   'record-relationship',
 ])
 
 const { t } = useI18n()
+
+const recurrenceLabel = (value) => {
+  if (value === 'daily') return t('每天重复', 'Repeats daily')
+  if (value === 'weekly') return t('每周重复', 'Repeats weekly')
+  if (value === 'monthly') return t('每月重复', 'Repeats monthly')
+  if (value === 'yearly') return t('每年重复', 'Repeats yearly')
+  return t('不重复', 'Does not repeat')
+}
+
+const reminderLeadLabel = (minutes) => {
+  const lead = Math.max(0, Number(minutes) || 0)
+  if (lead === 0) return t('开始时提醒', 'Reminder at start')
+  if (lead % 10080 === 0) {
+    const weeks = lead / 10080
+    return t(`提前 ${weeks} 周提醒`, `${weeks} week${weeks === 1 ? '' : 's'} before`)
+  }
+  if (lead % 1440 === 0) {
+    const days = lead / 1440
+    return t(`提前 ${days} 天提醒`, `${days} day${days === 1 ? '' : 's'} before`)
+  }
+  if (lead % 60 === 0) {
+    const hours = lead / 60
+    return t(`提前 ${hours} 小时提醒`, `${hours} hour${hours === 1 ? '' : 's'} before`)
+  }
+  return t(`提前 ${lead} 分钟提醒`, `${lead} minutes before`)
+}
+
+const departureUnavailableCopy = (code) => {
+  if (code === 'map_pack_mismatch') {
+    return t(
+      '当前位置与预约地点不在同一张地图，不能跨世界猜测路线。',
+      'The current position and appointment are on different maps, so no cross-world route is inferred.',
+    )
+  }
+  if (code === 'destination_stale' || code === 'destination_off_pack') {
+    return t(
+      '预约地点已失效或不属于当前地图，请先修正地点。',
+      'The appointment place is stale or outside the current map. Update it before departing.',
+    )
+  }
+  if (code === 'current_position_missing') {
+    return t(
+      '地图还没有可用于估算的当前位置。',
+      'Map does not have a current position that can be used for an estimate yet.',
+    )
+  }
+  return t(
+    '当前无法生成可靠的出发估算。',
+    'A reliable departure estimate is not available right now.',
+  )
+}
 </script>
 
 <template>
@@ -111,11 +197,199 @@ const { t } = useI18n()
       {{ t(event.summaryZh, event.summaryEn) }}
     </p>
 
+    <div class="calendar-event-card__meta" data-testid="calendar-event-meta">
+      <span :class="event.requirement === 'optional' ? 'calendar-status--neutral' : 'calendar-status--info'">
+        <i :class="event.requirement === 'optional' ? 'far fa-circle' : 'fas fa-circle-check'" aria-hidden="true"></i>
+        {{ event.requirement === 'optional' ? t('可选', 'Optional') : t('必需', 'Required') }}
+      </span>
+      <span>
+        <i :class="event.allDay ? 'far fa-sun' : 'far fa-clock'" aria-hidden="true"></i>
+        {{ event.allDay ? t('全天', 'All day') : t('有明确时段', 'Timed') }}
+      </span>
+      <span>
+        <i class="fas fa-rotate" aria-hidden="true"></i>
+        {{ recurrenceLabel(event.recurrence) }}
+      </span>
+      <span>
+        <i class="far fa-bell" aria-hidden="true"></i>
+        {{ reminderLeadLabel(event.reminderLeadMinutes) }}
+      </span>
+      <span v-if="event.locationRef">
+        <i class="fas fa-location-dot" aria-hidden="true"></i>
+        {{ t(event.locationRef.labelZh, event.locationRef.labelEn) }}
+      </span>
+    </div>
+
+    <section v-if="event.notesZh || event.notesEn" class="calendar-event-section calendar-event-notes">
+      <p class="calendar-event-section__label">{{ t('备注', 'Notes') }}</p>
+      <p>{{ t(event.notesZh, event.notesEn) }}</p>
+    </section>
+
+    <section
+      v-if="event.locationRef && !event.allDay"
+      class="calendar-event-section calendar-event-departure"
+      :data-testid="`calendar-event-departure-${event.id}`"
+    >
+      <div class="calendar-event-departure__header">
+        <div>
+          <p class="calendar-event-section__label">{{ t('出发准备', 'Departure readiness') }}</p>
+          <p
+            v-if="activeJourney"
+            class="calendar-event-departure__headline"
+            :data-testid="`calendar-event-departure-status-${event.id}`"
+          >
+            {{
+              activeJourney.status === 'arrived'
+                ? t('已到达，等待确认', 'Arrived, awaiting review')
+                : t('已从当前位置出发', 'Journey started from the current position')
+            }}
+          </p>
+          <p
+            v-else-if="departureProjection?.ready"
+            class="calendar-event-departure__headline"
+            :data-testid="`calendar-event-departure-status-${event.id}`"
+          >
+            {{ departureProjection.origin.labelZh || departureProjection.origin.detail }}
+            <span aria-hidden="true">→</span>
+            {{ t(departureProjection.destination.labelZh, departureProjection.destination.labelEn) }}
+          </p>
+          <p v-else class="calendar-event-departure__headline">
+            {{ t(event.locationRef.labelZh || '预约地点', event.locationRef.labelEn || 'Appointment place') }}
+          </p>
+        </div>
+        <span
+          v-if="activeJourney"
+          class="calendar-event-badge calendar-status--info"
+        >
+          {{ activeJourney.status === 'arrived' ? t('已到达', 'Arrived') : t('行程中', 'In transit') }}
+        </span>
+        <span
+          v-else-if="departureProjection?.ready"
+          class="calendar-event-badge"
+          :class="departureProjection.isLate ? 'calendar-status--danger' : departureProjection.shouldDepartNow ? 'calendar-status--warning' : 'calendar-status--success'"
+        >
+          {{
+            departureProjection.isLate
+              ? t(`预计迟到 ${departureProjection.lateByMinutes} 分钟`, `About ${departureProjection.lateByMinutes} min late`)
+              : departureProjection.shouldDepartNow
+                ? t('现在出发可准时到达', 'Leave now to arrive on time')
+                : t(
+                    `建议 ${formatClockTime(departureProjection.recommendedDepartureAt)} 出发`,
+                    `Leave at ${formatClockTime(departureProjection.recommendedDepartureAt)}`,
+                  )
+          }}
+        </span>
+        <span v-else class="calendar-event-badge calendar-status--neutral">
+          {{ t('暂时无法估算', 'Estimate unavailable') }}
+        </span>
+      </div>
+
+      <template v-if="activeJourney">
+        <p class="calendar-event-departure__summary">
+          {{ activeJourney.fromLabel || activeJourney.from }}
+          <span aria-hidden="true">→</span>
+          {{ activeJourney.toLabel || activeJourney.to }}
+          <span aria-hidden="true">·</span>
+          {{ t('预计到达', 'ETA') }} {{ formatClockTime(activeJourney.etaAt) }}
+        </p>
+        <button
+          type="button"
+          class="calendar-event-action calendar-event-action--departure"
+          :data-testid="`calendar-event-open-journey-${event.id}`"
+          @click="emit('open-journey', event)"
+        >
+          <i class="fas fa-map-location-dot" aria-hidden="true"></i>
+          <span>{{ t('查看地图行程', 'View Map journey') }}</span>
+        </button>
+      </template>
+
+      <template v-else-if="departureProjection?.ready">
+        <p class="calendar-event-departure__summary" aria-live="polite">
+          {{ t('预计到达', 'Predicted arrival') }}
+          {{ formatClockTime(departureProjection.predictedArrivalAt) }}
+          <span aria-hidden="true">·</span>
+          {{ departureProjection.estimate.minutes }} {{ t('分钟', 'min') }}
+        </p>
+
+        <details class="calendar-event-departure__details">
+          <summary :data-testid="`calendar-event-departure-expand-${event.id}`">
+            <span>{{ t('查看路线估算', 'Review route estimate') }}</span>
+            <i class="fas fa-chevron-down" aria-hidden="true"></i>
+          </summary>
+          <div class="calendar-event-departure__detail-body">
+            <label
+              class="calendar-event-section__label"
+              :for="`calendar-event-departure-mode-${event.id}`"
+            >
+              {{ t('交通方式', 'Transport') }}
+            </label>
+            <select
+              :id="`calendar-event-departure-mode-${event.id}`"
+              class="calendar-event-departure__select"
+              :data-testid="`calendar-event-departure-mode-${event.id}`"
+              :value="selectedDepartureMode"
+              @change="emit('update-departure-mode', event, $event.target.value)"
+            >
+              <option
+                v-for="mode in departureTransportModes"
+                :key="mode.id"
+                :value="mode.id"
+              >
+                {{ getDepartureTransportLabel(mode, departureProjection) }}
+              </option>
+            </select>
+            <dl class="calendar-event-departure__metrics">
+              <div>
+                <dt>{{ t('当前起点', 'Current origin') }}</dt>
+                <dd>{{ departureProjection.origin.labelZh || departureProjection.origin.detail }}</dd>
+              </div>
+              <div>
+                <dt>{{ t('预约时间', 'Appointment') }}</dt>
+                <dd>{{ formatClockTime(event.startsAt) }}</dd>
+              </div>
+              <div>
+                <dt>{{ t('预计到达', 'Predicted arrival') }}</dt>
+                <dd>{{ formatClockTime(departureProjection.predictedArrivalAt) }}</dd>
+              </div>
+            </dl>
+          </div>
+        </details>
+
+        <button
+          type="button"
+          class="calendar-event-action calendar-event-action--departure"
+          :disabled="otherJourneyActive"
+          :data-testid="`calendar-event-start-travel-${event.id}`"
+          @click="emit('start-travel', event)"
+        >
+          <i class="fas fa-person-walking-arrow-right" aria-hidden="true"></i>
+          <span>{{ otherJourneyActive ? t('已有其他行程', 'Another journey is active') : t('现在出发', 'Leave now') }}</span>
+        </button>
+      </template>
+
+      <p v-else class="calendar-event-departure__unavailable" role="status">
+        {{ departureUnavailableCopy(departureProjection?.code) }}
+      </p>
+
+      <p
+        v-if="departureFeedback"
+        class="calendar-event-departure__feedback"
+        :class="`calendar-feedback--${departureFeedback.tone}`"
+        role="status"
+      >
+        {{ t(departureFeedback.messageZh, departureFeedback.messageEn) }}
+      </p>
+    </section>
+
     <section class="calendar-event-section calendar-event-section--schedule">
-      <label class="calendar-event-section__label" :for="`calendar-event-time-${event.id}`">
-        {{ t('提醒时间', 'Reminder time') }}
+      <label v-if="!event.allDay" class="calendar-event-section__label" :for="`calendar-event-time-${event.id}`">
+        {{ t('开始时间', 'Start time') }}
       </label>
+      <p v-else class="calendar-event-section__label">
+        {{ t('日期范围', 'Date range') }}
+      </p>
       <input
+        v-if="!event.allDay"
         :id="`calendar-event-time-${event.id}`"
         type="datetime-local"
         class="calendar-event-time-input"
@@ -123,7 +397,10 @@ const { t } = useI18n()
         :value="formattedInputStartsAt"
         @change="emit('update-starts-at', event, $event.target.value)"
       />
-      <div class="calendar-event-time-actions">
+      <p v-else class="calendar-event-all-day-note">
+        {{ t('全天安排请通过“编辑”调整日期范围。', 'Use Edit to change an all-day date range.') }}
+      </p>
+      <div v-if="!event.allDay" class="calendar-event-time-actions">
         <button
           v-for="option in quickShiftOptions"
           :key="option.key"
@@ -149,7 +426,7 @@ const { t } = useI18n()
         </button>
       </div>
       <p
-        v-if="isTimeEdited"
+        v-if="isTimeEdited && !event.allDay"
         class="calendar-event-time-feedback"
         :data-testid="`calendar-event-time-feedback-${event.id}`"
         aria-live="polite"
@@ -393,6 +670,38 @@ const { t } = useI18n()
   line-height: 1.65;
 }
 
+.calendar-event-card__meta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.calendar-event-card__meta span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
+  font-size: 9px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.calendar-event-notes p:last-child,
+.calendar-event-all-day-note {
+  margin: 5px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 .calendar-event-section {
   margin-top: 12px;
   padding-top: 12px;
@@ -404,6 +713,143 @@ const { t } = useI18n()
   color: var(--system-text-muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+.calendar-event-departure {
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--system-accent) 22%, var(--system-subtle-border));
+  border-radius: var(--system-radius-sm);
+  background: color-mix(in srgb, var(--system-accent-soft) 54%, var(--system-control-bg));
+}
+
+.calendar-event-departure__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.calendar-event-departure__header > div {
+  min-width: 0;
+}
+
+.calendar-event-departure__headline,
+.calendar-event-departure__summary,
+.calendar-event-departure__unavailable,
+.calendar-event-departure__feedback,
+.calendar-event-departure__metrics dt,
+.calendar-event-departure__metrics dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.calendar-event-departure__headline {
+  margin-top: 4px;
+  color: var(--system-text);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 720;
+}
+
+.calendar-event-departure__summary,
+.calendar-event-departure__unavailable,
+.calendar-event-departure__feedback {
+  margin-top: 8px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.calendar-event-departure__details {
+  margin-top: 8px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-control-bg);
+}
+
+.calendar-event-departure__details summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  list-style: none;
+  color: var(--system-text);
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calendar-event-departure__details summary::-webkit-details-marker {
+  display: none;
+}
+
+.calendar-event-departure__details summary i {
+  transition: transform var(--system-motion-fast);
+}
+
+.calendar-event-departure__details[open] summary i {
+  transform: rotate(180deg);
+}
+
+.calendar-event-departure__detail-body {
+  padding: 0 11px 11px;
+}
+
+.calendar-event-departure__select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-sm);
+  color: var(--system-text);
+  background: var(--system-control-bg-strong);
+  font: inherit;
+  font-size: 12px;
+}
+
+.calendar-event-departure__metrics {
+  margin: 10px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calendar-event-departure__metrics div {
+  min-width: 0;
+  padding: 8px;
+  border-radius: calc(var(--system-radius-sm) - 2px);
+  background: var(--system-surface-muted);
+}
+
+.calendar-event-departure__metrics dt {
+  color: var(--system-text-soft);
+  font-size: 9px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.calendar-event-departure__metrics dd {
+  margin-top: 3px;
+  color: var(--system-text);
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 680;
+}
+
+.calendar-event-action--departure {
+  width: 100%;
+  margin-top: 9px;
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+}
+
+.calendar-feedback--warning {
+  color: var(--system-warning);
 }
 
 .calendar-event-time-input,
@@ -687,6 +1133,14 @@ const { t } = useI18n()
   }
 
   .calendar-event-relationship__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-event-departure__header {
+    flex-direction: column;
+  }
+
+  .calendar-event-departure__metrics {
     grid-template-columns: 1fr;
   }
 

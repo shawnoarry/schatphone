@@ -130,9 +130,10 @@ const layers = computed(() =>
 
 .world-setting-workspace__head h2 {
   margin-top: 3px;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 18px;
   line-height: 1.25;
-  font-weight: 850;
+  font-weight: 900;
   overflow-wrap: anywhere;
 }
 
@@ -322,10 +323,10 @@ const layers = computed(() =>
   flex-shrink: 0;
   min-height: 44px;
   padding: 0 13px;
-  border: 1px solid var(--system-accent);
+  border: 1px solid var(--system-text);
   border-radius: var(--system-radius-md);
-  background: var(--system-accent);
-  color: var(--system-on-accent);
+  background: var(--system-text);
+  color: var(--system-text-inverse);
   font-size: 12px;
   font-weight: 820;
 }

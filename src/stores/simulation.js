@@ -20,6 +20,15 @@ import {
   normalizeMapJourneyEventProposals,
 } from '../lib/simulation/adapters/map-journey-events'
 import {
+  normalizeActivitySessionEventRecord,
+  normalizeActivitySessionEventRecords,
+} from '../lib/simulation/adapters/activity-session-events'
+import {
+  ACTIVITY_SESSION_EVENT_MODULE_KEY,
+  ACTIVITY_SESSION_EVENT_PRESENTATION_MODE,
+  ACTIVITY_SESSION_EVENT_STATUS,
+} from '../lib/activity-session-event-interface'
+import {
   EVENT_INSTANCE_LIFECYCLE,
   EVENT_TEXT_MODE,
   EVENT_TEXT_STATUS,
@@ -53,11 +62,12 @@ import {
 } from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
-const SIMULATION_STORAGE_VERSION = 5
+const SIMULATION_STORAGE_VERSION = 6
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
 const SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT = 120
 const SIMULATION_MAP_JOURNEY_PROPOSAL_LIMIT = 120
+const SIMULATION_ACTIVITY_SESSION_EVENT_RECORD_LIMIT = 240
 const SIMULATION_EVENT_INSTANCE_V2_LIMIT = 240
 const SIMULATION_OWNER_FACT_LIMIT = 480
 const SIMULATION_LEGACY_COMMERCE_AUDIT_LIMIT = 120
@@ -94,17 +104,28 @@ const SURPRISE_MODE_VALUES = new Set(Object.values(SIMULATION_SURPRISE_MODE))
 const TRIGGER_SOURCE_VALUES = new Set(Object.values(SIMULATION_TRIGGER_SOURCE))
 const EVENT_STATUS_VALUES = new Set(Object.values(SIMULATION_EVENT_STATUS))
 const EVENT_TEXT_MODE_VALUES = new Set(Object.values(EVENT_TEXT_MODE))
+const EVENT_PRESENTATION_MODE_VALUES = new Set(
+  Object.values(ACTIVITY_SESSION_EVENT_PRESENTATION_MODE),
+)
 const DEFAULT_SIMULATION_SETTINGS = Object.freeze({
   surpriseMode: SIMULATION_SURPRISE_MODE.LOW,
   enabledModules: Object.freeze({}),
   foregroundSessionTickEnabled: false,
   foregroundSessionTickIntervalMs: SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
   eventTextMode: EVENT_TEXT_MODE.LOCAL_ONLY,
+  eventPresentationModes: Object.freeze({
+    [ACTIVITY_SESSION_EVENT_MODULE_KEY]: ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF,
+  }),
 })
 const CHAT_SOCIAL_RUNTIME_SUCCESS_STATUSES = new Set([
   CHAT_SOCIAL_EVENT_STATUS.APPLIED,
   CHAT_SOCIAL_EVENT_STATUS.READY_TO_APPLY,
   CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW,
+])
+const ACTIVITY_SESSION_EVENT_TERMINAL_STATUSES = new Set([
+  ACTIVITY_SESSION_EVENT_STATUS.NO_EVENT,
+  ACTIVITY_SESSION_EVENT_STATUS.RESOLVED,
+  ACTIVITY_SESSION_EVENT_STATUS.FAILED,
 ])
 
 let eventLogSequence = 0
@@ -278,6 +299,21 @@ const normalizeEnabledModules = (rawModules) => {
   )
 }
 
+const normalizeEventPresentationModes = (rawModes) => {
+  const source = rawModes && typeof rawModes === 'object' && !Array.isArray(rawModes)
+    ? rawModes
+    : {}
+  const normalized = Object.fromEntries(
+    Object.entries(source)
+      .map(([key, mode]) => [normalizeModuleKey(key, ''), normalizeText(mode, '', 40)])
+      .filter(([key, mode]) => Boolean(key) && EVENT_PRESENTATION_MODE_VALUES.has(mode)),
+  )
+  return {
+    [ACTIVITY_SESSION_EVENT_MODULE_KEY]: ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF,
+    ...normalized,
+  }
+}
+
 const normalizeSimulationSettings = (rawSettings = {}) => {
   const source = rawSettings && typeof rawSettings === 'object' ? rawSettings : {}
   return {
@@ -294,13 +330,14 @@ const normalizeSimulationSettings = (rawSettings = {}) => {
     eventTextMode: EVENT_TEXT_MODE_VALUES.has(source.eventTextMode)
       ? source.eventTextMode
       : EVENT_TEXT_MODE.LOCAL_ONLY,
+    eventPresentationModes: normalizeEventPresentationModes(source.eventPresentationModes),
   }
 }
 
 export const migrateSimulationStorage = ({ version, data } = {}) => {
   const storedVersion = Number(version)
   if (
-    ![1, 2, 3, 4].includes(storedVersion) ||
+    ![1, 2, 3, 4, 5].includes(storedVersion) ||
     !data ||
     typeof data !== 'object' ||
     Array.isArray(data)
@@ -312,6 +349,7 @@ export const migrateSimulationStorage = ({ version, data } = {}) => {
     ...currentData,
     eventInstances: storedVersion === 1 ? [] : data.eventInstances || [],
     eventReviewNotes: storedVersion >= 3 ? data.eventReviewNotes || [] : [],
+    activitySessionEventRecords: data.activitySessionEventRecords || [],
     eventInstancesV2: data.eventInstancesV2 || [],
     ownerFacts: data.ownerFacts || [],
     legacyCommerceAuditEntries: [
@@ -324,6 +362,9 @@ export const migrateSimulationStorage = ({ version, data } = {}) => {
         storedVersion >= 3 && EVENT_TEXT_MODE_VALUES.has(data.settings?.eventTextMode)
           ? data.settings.eventTextMode
           : EVENT_TEXT_MODE.LOCAL_ONLY,
+      eventPresentationModes: normalizeEventPresentationModes(
+        data.settings?.eventPresentationModes,
+      ),
     },
   }
 }
@@ -676,6 +717,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const dailyCounters = ref({})
   const chatSocialEventProposals = ref([])
   const mapJourneyEventProposals = ref([])
+  const activitySessionEventRecords = ref([])
   const settings = ref(normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS))
   const hasFinishedStorageHydration = ref(false)
 
@@ -705,6 +747,11 @@ export const useSimulationStore = defineStore('simulation', () => {
   )
   const pendingMapJourneyEventProposalCount = computed(
     () => pendingMapJourneyEventProposals.value.length,
+  )
+  const pendingActivitySessionEventRecords = computed(() =>
+    activitySessionEventRecords.value.filter(
+      (item) => item.status === ACTIVITY_SESSION_EVENT_STATUS.PENDING,
+    ),
   )
 
   const isModuleEventsEnabled = (moduleKey) => {
@@ -742,6 +789,28 @@ export const useSimulationStore = defineStore('simulation', () => {
       eventTextMode: nextMode,
     }
     return nextMode
+  }
+
+  const getEventPresentationMode = (moduleKey) => {
+    const normalizedModuleKey = normalizeModuleKey(moduleKey, '')
+    if (!normalizedModuleKey) return ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF
+    const mode = settings.value.eventPresentationModes[normalizedModuleKey]
+    return EVENT_PRESENTATION_MODE_VALUES.has(mode)
+      ? mode
+      : ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF
+  }
+
+  const setEventPresentationMode = (moduleKey, mode) => {
+    const normalizedModuleKey = normalizeModuleKey(moduleKey, '')
+    if (!normalizedModuleKey || !EVENT_PRESENTATION_MODE_VALUES.has(mode)) return null
+    settings.value = {
+      ...settings.value,
+      eventPresentationModes: {
+        ...settings.value.eventPresentationModes,
+        [normalizedModuleKey]: mode,
+      },
+    }
+    return mode
   }
 
   const setForegroundSessionTickEnabled = (enabled = true) => {
@@ -1118,6 +1187,51 @@ export const useSimulationStore = defineStore('simulation', () => {
     return log
   }
 
+  const getActivitySessionEventRecord = (recordId) => {
+    const id = normalizeText(recordId, '', 720)
+    if (!id) return null
+    return activitySessionEventRecords.value.find((item) => item.id === id) || null
+  }
+
+  const findActivitySessionEventForSession = (activitySessionId, { pendingOnly = false } = {}) => {
+    const sessionId = normalizeText(activitySessionId, '', 220)
+    if (!sessionId) return null
+    return (
+      activitySessionEventRecords.value.find(
+        (item) =>
+          item.activitySessionId === sessionId &&
+          (!pendingOnly || item.status === ACTIVITY_SESSION_EVENT_STATUS.PENDING),
+      ) || null
+    )
+  }
+
+  const upsertActivitySessionEventRecord = (rawRecord = {}) => {
+    const record = normalizeActivitySessionEventRecord(rawRecord)
+    if (!record) return null
+    const existing = getActivitySessionEventRecord(record.id)
+    if (existing) {
+      if (
+        ACTIVITY_SESSION_EVENT_TERMINAL_STATUSES.has(existing.status) &&
+        JSON.stringify(existing) !== JSON.stringify(record)
+      ) {
+        return null
+      }
+      if (
+        record.createdAt !== existing.createdAt ||
+        record.updatedAt < existing.updatedAt ||
+        record.activitySessionId !== existing.activitySessionId ||
+        record.checkpointId !== existing.checkpointId
+      ) {
+        return null
+      }
+    }
+    activitySessionEventRecords.value = [
+      record,
+      ...activitySessionEventRecords.value.filter((item) => item.id !== record.id),
+    ].slice(0, SIMULATION_ACTIVITY_SESSION_EVENT_RECORD_LIMIT)
+    return record
+  }
+
   const upsertMapJourneyEventProposal = (proposal = {}) => {
     const normalized = normalizeMapJourneyEventProposal(proposal, 0)
     if (!normalized) return null
@@ -1413,6 +1527,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     mapJourneyEventProposals.value = normalizeMapJourneyEventProposals(
       rawSource.mapJourneyEventProposals,
     )
+    activitySessionEventRecords.value = normalizeActivitySessionEventRecords(
+      rawSource.activitySessionEventRecords,
+    ).slice(0, SIMULATION_ACTIVITY_SESSION_EVENT_RECORD_LIMIT)
     settings.value = normalizeSimulationSettings(rawSource.settings)
     return true
   }
@@ -1463,12 +1580,19 @@ export const useSimulationStore = defineStore('simulation', () => {
         activeWorldBookIds: [...item.provenance.activeWorldBookIds],
       },
     })),
+    activitySessionEventRecords: activitySessionEventRecords.value.map((item) => ({
+      ...item,
+      allowedOutcomes: [...item.allowedOutcomes],
+      source: { ...item.source },
+      provenance: { ...item.provenance },
+    })),
     settings: {
       surpriseMode: settings.value.surpriseMode,
       enabledModules: { ...settings.value.enabledModules },
       foregroundSessionTickEnabled: settings.value.foregroundSessionTickEnabled === true,
       foregroundSessionTickIntervalMs: settings.value.foregroundSessionTickIntervalMs,
       eventTextMode: settings.value.eventTextMode,
+      eventPresentationModes: { ...settings.value.eventPresentationModes },
     },
   })
 
@@ -1500,6 +1624,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     dailyCounters.value = {}
     chatSocialEventProposals.value = []
     mapJourneyEventProposals.value = []
+    activitySessionEventRecords.value = []
     settings.value = normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS)
   }
 
@@ -1525,6 +1650,7 @@ export const useSimulationStore = defineStore('simulation', () => {
       dailyCounters,
       chatSocialEventProposals,
       mapJourneyEventProposals,
+      activitySessionEventRecords,
       settings,
     ],
     () => {
@@ -1547,6 +1673,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     dailyCounters,
     chatSocialEventProposals,
     mapJourneyEventProposals,
+    activitySessionEventRecords,
     settings,
     eventLogCount,
     eventInstanceCount,
@@ -1560,11 +1687,14 @@ export const useSimulationStore = defineStore('simulation', () => {
     pendingChatSocialEventProposalCount,
     pendingMapJourneyEventProposals,
     pendingMapJourneyEventProposalCount,
+    pendingActivitySessionEventRecords,
     hasFinishedStorageHydration,
     isModuleEventsEnabled,
     setModuleEventsEnabled,
     setSurpriseMode,
     setEventTextMode,
+    getEventPresentationMode,
+    setEventPresentationMode,
     setForegroundSessionTickEnabled,
     setForegroundSessionTickIntervalMs,
     getEventInstance,
@@ -1589,6 +1719,9 @@ export const useSimulationStore = defineStore('simulation', () => {
     incrementDailyCounter,
     getDailyCounterState,
     canUseDailyQuota,
+    getActivitySessionEventRecord,
+    findActivitySessionEventForSession,
+    upsertActivitySessionEventRecord,
     upsertMapJourneyEventProposal,
     getMapJourneyEventProposal,
     reviewMapJourneyEventProposal,

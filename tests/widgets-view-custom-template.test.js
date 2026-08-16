@@ -126,6 +126,25 @@ describe('Widgets custom template starters', () => {
     wrapper.unmount()
   })
 
+  test('configures Weather tap behavior without changing Home placement', async () => {
+    const store = useSystemStore()
+    store.settings.system.language = 'en-US'
+    const originalPages = store.settings.appearance.homeWidgetPages.map((page) => [...page])
+    const wrapper = await mountWidgetsView()
+
+    const actionSelect = wrapper.get('[data-testid="widgets-weather-action-select"]')
+    expect(actionSelect.element.value).toBe('open_weather')
+
+    await actionSelect.setValue('toggle_details')
+    expect(store.settings.weather.widgetAction).toBe('toggle_details')
+
+    await actionSelect.setValue('none')
+    expect(store.settings.weather.widgetAction).toBe('none')
+    expect(store.settings.appearance.homeWidgetPages).toEqual(originalPages)
+
+    wrapper.unmount()
+  })
+
   test('routes hidden built-in widgets into Home slot selection instead of restore', async () => {
     const router = createTestRouter()
     await router.push('/widgets?from=home&homePage=3')

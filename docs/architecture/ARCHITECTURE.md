@@ -476,10 +476,10 @@ Provider keys, endpoints, headers, stream URLs, queue contents, local media IDs,
 ```text
 confirmed Calendar event
   -> hidden Schedule Orchestrator reaches the materialization window
-  -> future Agenda Journey instance and activity steps
-  -> optional Map Journey and/or Activity Session evidence
-  -> Event Runtime eligibility, outcome, and audit
-  -> owning modules validate effects
+  -> Agenda Journey instance with separate travel/activity steps
+  -> optional Map Journey evidence and later Activity Session evidence
+  -> explicit Agenda Journey outcome
+  -> later Event Runtime eligibility, outcome, and audit after a registered Adapter
   -> future bounded Narrative Timeline projection
 ```
 
@@ -488,7 +488,7 @@ Calendar remains the long-range planned truth; Agenda Journey is short-range exe
 ### Mini Scene Request
 
 ```text
-Calendar / Map / Chat / future Agenda Journey / future registered caller
+Calendar / Map / Chat / Agenda Journey / future registered caller
   -> source-owned eligibility and canonical facts
   -> optional Event Runtime trigger policy/provenance
   -> Mini Scene request Interface

@@ -3,6 +3,7 @@ const HOME_RETURN_ROUTE = '/home'
 const SOURCE_RETURN_TARGETS = Object.freeze({
   chat: '/chat',
   calendar: '/calendar',
+  'agenda-journey': '/agenda-journey',
   map: '/map',
   'map-settings': '/map/settings',
   worldbook: '/worldbook',
@@ -11,6 +12,7 @@ const SOURCE_RETURN_TARGETS = Object.freeze({
 const SOURCE_RETURN_LABELS = Object.freeze({
   chat: 'Chat',
   calendar: 'Calendar',
+  'agenda-journey': 'Agenda Journey',
   map: 'Map',
   'map-settings': 'Map settings',
   worldbook: 'WorldBook',
@@ -60,6 +62,14 @@ export const normalizeContactsProfileIdQuery = (value) => {
   return String(profileId)
 }
 
+export const normalizeAgendaJourneyIdQuery = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (typeof raw !== 'string') return ''
+  const id = raw.trim()
+  if (!id || id.length > 170 || !/^[a-z0-9][a-z0-9:._-]*$/i.test(id)) return ''
+  return id
+}
+
 const normalizeCrossModuleSource = (value) => {
   const raw = Array.isArray(value) ? value[0] : value
   return typeof raw === 'string' ? raw.trim().toLowerCase() : ''
@@ -89,6 +99,19 @@ const buildMapReturnTarget = (route) => {
   return {
     path: SOURCE_RETURN_TARGETS.map,
     query: { from: 'home', homePage },
+  }
+}
+
+const buildAgendaJourneyReturnTarget = (route) => {
+  const journeyId = normalizeAgendaJourneyIdQuery(route?.query?.journeyId)
+  const homePage = normalizeHomePageQuery(route?.query?.homePage)
+  const query = {
+    ...(journeyId ? { journeyId } : {}),
+    ...(homePage ? { from: 'home', homePage } : {}),
+  }
+  return {
+    path: SOURCE_RETURN_TARGETS['agenda-journey'],
+    ...(Object.keys(query).length ? { query } : {}),
   }
 }
 
@@ -205,6 +228,7 @@ export const resolveReturnTarget = (route, fallback = HOME_RETURN_ROUTE) => {
   if (source === 'home') return buildHomeReturnTarget(route)
   const routeSource = normalizeCrossModuleSource(route?.query?.source)
   if (routeSource === 'chat') return resolveChatReturnTarget(route) || SOURCE_RETURN_TARGETS.chat
+  if (routeSource === 'agenda-journey') return buildAgendaJourneyReturnTarget(route)
   if (routeSource === 'map') return buildMapReturnTarget(route)
   if (SOURCE_RETURN_TARGETS[routeSource]) return SOURCE_RETURN_TARGETS[routeSource]
   return fallback

@@ -1,6 +1,6 @@
 # Calendar And Reminders Split
 
-Updated: 2026-08-10
+Updated: 2026-08-16
 
 Audience: product managers, designers, engineers, QA, and future AI assistants.
 
@@ -14,8 +14,8 @@ SchatPhone splits the old combined cue-and-calendar surface into two product con
 | --- | --- |
 | `Calendar` | the schedule/date app for confirmed plans, dates, anniversaries, and timed life events |
 | `Reminders` | the follow-up and cue queue for callbacks, logistics updates, low-commitment prompts, and cross-module attention items |
-| `Agenda Journey` | the future short-range execution app for today's or the near-term plan, activity progress, performance, and outcomes |
-| `Activity Session` | the future timestamp-based duration and focus-companion runtime for one executable activity step |
+| `Agenda Journey` | the short-range execution app for today's or the near-term plan, activity progress, evidence, and outcomes |
+| `Activity Session` | the timestamp-based duration and focus-companion runtime for one executable activity step |
 
 Short version:
 
@@ -49,18 +49,22 @@ Current project state:
 
 | Area | Current behavior |
 | --- | --- |
-| `src/stores/calendar.js` | owns confirmed events, event-time editing, and real push scheduling state |
+| `src/stores/calendar.js` | owns confirmed events, event-time editing, real push scheduling state, and optional stable Map destination references |
 | `src/stores/reminders.js` | owns Phone/Shopping/Stock-style cue intake plus reminder persistence and confirmation flow |
 | `src/views/CalendarView.vue` world-app UX | may read `reservation -> Calendar` context for title/boundary presentation only |
 | `src/views/MapView.vue` world-app UX | may read `transit -> Map` context for title/boundary presentation only |
-| `src/views/CalendarView.vue` | schedule-first surface with reminder summary link |
+| `src/views/CalendarView.vue` | schedule-first surface with reminder summary link and current-origin departure readiness for location-bound events |
+| `src/stores/agendaJourney.js` | owns persisted manual/Calendar-derived near-term execution plans, travel/activity steps, evidence references, and outcomes |
+| `src/stores/activitySession.js` | owns one persisted absolute-time activity session per stable Agenda activity-step ID, pause/completion policy, checkpoints, and Agenda acknowledgement evidence |
+| `src/views/AgendaJourneyView.vue` | today/near-term execution surface with explicit departure and activity actions |
 | `src/views/RemindersView.vue` | user-facing cue inbox |
 | `/calendar` | confirmed schedule, event editing, push status |
+| `/agenda-journey` | short-range execution, linked Map travel, and explicit activity confirmation |
 | `/reminders` | cross-module follow-ups and cue confirmation |
 
 This document records the target meaning and the refactor direction. It is not claiming that every historical compatibility seam has been deleted.
 
-The current Calendar frontend is a real Home app, but it is a list-first baseline rather than a conventional visual calendar. It presents summary metrics, confirmed-event cards, push state, a Reminders handoff, and related Map context. It does not yet provide month/week/date-grid navigation, multi-day event spans, or a selected-day planner.
+The current Calendar frontend is a real Home app and a conventional schedule workspace. CJA-1 presents Month, Week, and Agenda views, selected-day and selected-event detail, all-day/multi-day/recurring occurrence projection, full manual create/edit/delete, push/reminder policy, a Reminders handoff, and related Map departure context. These are views over Calendar-owned source events, not copied schedule records.
 
 ## 4. Target Responsibilities
 
@@ -74,6 +78,7 @@ Calendar should own:
 - world or story date entries if later enabled
 - timed push scheduling for confirmed events
 - relationship facts only when the event is truly schedule-like
+- stable destination identity through an optional Map-owned `locationRef`, without copying coordinates, ETA, or route truth
 
 Calendar's target visible views are:
 
@@ -97,15 +102,15 @@ Calendar should not own:
 
 ### Agenda Journey
 
-Agenda Journey is a separately planned short-range execution app. It may materialize confirmed Calendar commitments into a day or near-term plan, add occupation/world-aware steps, request Map travel or an Activity Session, and record completed, missed, skipped, or cancelled execution.
+Agenda Journey is a separately implemented short-range execution app. CJA-3 materializes confirmed Calendar occurrences into near-term plans, accepts manual plans through the next 14 days, requests Map travel for stable destination steps, and records completed, missed, skipped, or cancelled execution. Occupation/world-aware templates and Activity Session remain later extensions.
 
 It does not replace Calendar's long-range planning. A multi-day Calendar event such as an August 4-7 concert may create separate linked Agenda Journeys for each day while Calendar preserves the original four-day commitment.
 
-The hidden Schedule Orchestrator coordinates this handoff. It is not a Home app and cannot copy or take ownership of Calendar, Journey, Map, Event Runtime, relationship, Wallet, or profile records.
+The hidden Schedule Orchestrator coordinates this handoff. CJA-2 implements deterministic occurrence materialization/deadline requests, acknowledgement seams, persistence, backup, and resume reconciliation without creating an Agenda Journey record itself. CJA-3 consumes and acknowledges those requests in the separate Agenda Journey owner. The orchestrator is not a Home app and cannot copy or take ownership of Calendar, Agenda Journey, Map, Event Runtime, relationship, Wallet, or profile records.
 
-For a location-bound commitment, Calendar keeps the appointment start/duration/place while Agenda Journey owns separate travel and activity steps. Map recalculates a suggested departure from the current role position rather than treating the planning-origin hint as actual truth. After explicit departure confirmation, Map creates the one canonical Map Journey; opening Map shows that same journey. Validated arrival may satisfy presence and, for an explicitly approved indoor appointment, Map may enter the place session automatically. Arrival never proves the meeting, class, rehearsal, or other activity completed.
+For a location-bound commitment, Calendar keeps the appointment start/duration/place. The landed direct V1 handoff asks Map to recalculate a suggested departure from the current role position and selected transport rather than treating the planning-origin hint as actual truth. After explicit departure confirmation, Map creates or reuses the one canonical Map Journey and Calendar retains only the stable source link. This direct path creates no Agenda Journey step. In the CJA-3 flow, Agenda Journey owns separate travel and activity steps and Map retains only `sourceAgendaJourneyStepId` lineage. Validated arrival completes travel and unlocks activity; automatic place entry remains later, and arrival never proves the meeting, class, rehearsal, or other activity completed.
 
-Activity Session owns the later activity timer and completion policy. Its Focus Companion presentation may offer Pomodoro or continuous modes, built-in scenes, and stable Gallery/Music/companion references, but it does not move those media assets or playback truth into Calendar or Event Runtime. Optional activity events remain checkpoint-driven and user-controlled; disabling them cannot remove the scheduled activity's base execution path.
+Activity Session owns the activity timer and completion policy. CJA-4 follows the Agenda step duration, supports explicit `duration_sufficient` or `user_confirmation`, bounded pause/resume or continuous timing, absolute-time reopen reconciliation, and one built-in quiet Focus Companion scene. CJA-5 adds one midpoint-only optional event whose `off` mode automatically keeps rhythm and whose inline `text` mode may request only a 2-minute recovery buffer after Activity Session validates exact lineage. Later Pomodoro/custom modes and stable Gallery/Music/companion references remain separate extensions; media assets and playback truth do not move into Calendar, Activity Session, or Event Runtime. Disabling optional activity events cannot remove the scheduled activity's base execution path.
 
 ### Reminders
 
@@ -182,9 +187,14 @@ Recommended sequence and current status:
 | 8 | Keep regression coverage for Map/Phone/Shopping/Stock cue behavior | PARTIAL_DONE |
 | 9 | Allow Calendar confirmed events to write low-impact relationship facts | DONE |
 | 10 | Record Calendar versus Agenda Journey versus hidden Schedule Orchestrator ownership | DONE |
-| 11 | Rebuild the list-first Calendar surface into month/week/Agenda views with selected-day authoring | TODO / SEPARATE_USER_ACCEPTANCE_REQUIRED |
-| 12 | Implement Agenda Journey, Activity Session, or Calendar-to-Journey materialization | TODO / STAGED_IN_LIVE_ROADMAP_ONLY |
-| 13 | Record dynamic current-position departure, validated appointment entry, and Focus Companion boundaries | DONE / DOCUMENTATION_ONLY |
+| 11 | Rebuild the list-first Calendar surface into month/week/Agenda views with selected-day authoring | DONE / 2026-08-15 |
+| 12 | Implement the hidden Calendar-occurrence materialization/deadline coordination seam | DONE / CJA-2 / 2026-08-16 |
+| 13 | Record dynamic current-position departure, validated appointment entry, and Focus Companion boundaries | DONE |
+| 14 | Implement stable Calendar destination reference, current-origin departure readiness, and explicit one-Journey Map handoff | DONE / 2026-08-15 |
+| 15 | Implement Agenda Journey V1 records, orchestration consumption, Map travel evidence, and visible execution UI | DONE / CJA-3 / 2026-08-16 |
+| 16 | Implement one Activity Session owner and restrained Focus Companion baseline | DONE / CJA-4 / 2026-08-16 |
+| 17 | Implement one midpoint-only low-impact Activity Session Event Runtime collaboration | DONE / CJA-5 / 2026-08-16 |
+| 18 | Implement appointment auto-entry, broader event families, media callers/richer companions, interactive HTML, or Narrative Timeline | TODO / STAGED_IN_LIVE_ROADMAP_ONLY |
 
 Implementation notes:
 
@@ -193,6 +203,11 @@ Implementation notes:
 - Calendar still contains compatibility seams where needed, but raw cue ownership no longer belongs there conceptually.
 - Raw reminders do not directly write relationship facts; they must first become meaningful confirmed Calendar events.
 - When a confirmed Calendar event comes from a Map cue with explicit `sourceTripId`, Calendar should preserve that lineage so relationship runtime can attach the event as supporting context to the existing route memory.
+- Calendar storage V3 migrates V1/V2 events and adds explicit ranges, all-day state, recurrence, requirement, notes, reminder lead time, and optional `locationRef`. It does not infer a destination from title, summary, coordinates, current position, or a usual address.
+- Map Journey stores `sourceCalendarEventId` for direct Calendar travel or `sourceAgendaJourneyStepId` for CJA-3 travel, recomputes transport/lateness from current Map truth, blocks a second unrelated active journey, and returns to the matching source context. Auto-entry and Map/Agenda event collaboration remain separate from the landed Activity Session midpoint family.
+- Schedule Orchestrator storage V1 retains deterministic source IDs, occurrence timing, Calendar fingerprints, request/acknowledgement evidence, and acknowledged Agenda Journey IDs. It does not persist Calendar titles/notes, Agenda steps, Map estimates, or downstream effects; older backups without the nested child restore an empty owner state for deterministic rebuilding.
+- Agenda Journey storage V1 retains manual/Calendar source identity, execution snapshots, travel/activity state, bounded Map evidence references, source-retirement review, and outcomes. Its backup is nested under the existing Calendar section, while Map continues to own route state and arrival truth.
+- Activity Session storage V2 retains stable Agenda Journey references, absolute timing, pause/completion policy, deterministic checkpoints, presentation-minimized state, bounded owner-validated event resolutions, and Agenda acknowledgement evidence; V1 migrates with an empty resolution ledger. Its backup is nested under the existing Calendar section. Simulation V6 separately owns CJA-5 event records and `off | text` policy. Focus Companion remains embedded in Agenda Journey and creates no second Home app, Map clock, media owner, or event system.
 
 ## 7. Guardrails
 
@@ -202,7 +217,7 @@ Implementation notes:
 - Do not make World Hub mandatory for users who prefer a light phone-life simulation.
 - Do not auto-schedule every cue into push.
 - Do not add high-impact relationship/world effects from reminders until runtime review is stronger.
-- Do not present the current list-first Calendar baseline as if a month/week grid already exists.
+- Do not let occurrence projections, selected-day rows, or Agenda entries become copied Calendar records.
 - Do not create another long-range planner inside Agenda Journey.
 - Do not use unqualified `Journey` in architecture, persistence, or event contracts when Map Journey and Agenda Journey could both apply.
 - Do not make the Schedule Orchestrator a visible app or a new owner of downstream records.

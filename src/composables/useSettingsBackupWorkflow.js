@@ -3,6 +3,9 @@ import { storeToRefs } from 'pinia'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useCalendarStore } from '../stores/calendar'
+import { useAgendaJourneyStore } from '../stores/agendaJourney'
+import { useActivitySessionStore } from '../stores/activitySession'
+import { useScheduleOrchestratorStore } from '../stores/scheduleOrchestrator'
 import { useRemindersStore } from '../stores/reminders'
 import { useMapStore } from '../stores/map'
 import { useGalleryStore } from '../stores/gallery'
@@ -140,6 +143,10 @@ export const useSettingsBackupWorkflow = (options = {}) => {
   const systemStore = options.systemStore || useSystemStore()
   const chatStore = options.chatStore || useChatStore()
   const calendarStore = options.calendarStore || useCalendarStore()
+  const agendaJourneyStore = options.agendaJourneyStore || useAgendaJourneyStore()
+  const activitySessionStore = options.activitySessionStore || useActivitySessionStore()
+  const scheduleOrchestratorStore =
+    options.scheduleOrchestratorStore || useScheduleOrchestratorStore()
   const remindersStore = options.remindersStore || useRemindersStore()
   const mapStore = options.mapStore || useMapStore()
   const galleryStore = options.galleryStore || useGalleryStore()
@@ -408,6 +415,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       },
       calendar: {
         ...calendarStore.createBackupSnapshot(),
+        agendaJourney: agendaJourneyStore.createBackupSnapshot(),
+        activitySession: activitySessionStore.createBackupSnapshot(),
+        scheduleOrchestrator: scheduleOrchestratorStore.createBackupSnapshot(),
       },
       reminders: remindersStore.createBackupSnapshot(),
       gallery: gallerySnapshot,
@@ -648,6 +658,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       calendar: {
         ...deepClone(calendarStore.createBackupSnapshot()),
       },
+      agendaJourney: agendaJourneyStore.createBackupSnapshot(),
+      activitySession: activitySessionStore.createBackupSnapshot(),
+      scheduleOrchestrator: scheduleOrchestratorStore.createBackupSnapshot(),
       reminders: remindersStore.createBackupSnapshot(),
       gallery,
       files: filesStore.createBackupSnapshot(),
@@ -680,6 +693,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     chat: chatStore,
     map: mapStore,
     calendar: calendarStore,
+    agendaJourney: agendaJourneyStore,
+    activitySession: activitySessionStore,
+    scheduleOrchestrator: scheduleOrchestratorStore,
     reminders: remindersStore,
     gallery: galleryStore,
     files: filesStore,
@@ -703,6 +719,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     chatStore,
     mapStore,
     calendarStore,
+    agendaJourneyStore,
+    activitySessionStore,
+    scheduleOrchestratorStore,
     remindersStore,
     galleryStore,
     filesStore,
@@ -772,6 +791,15 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       const chatOk = chatStore.restoreFromBackup(parsed)
       const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
       const calendarOk = calendarStore.restoreFromBackup(parsed.calendar || parsed)
+      const agendaJourneyOk = agendaJourneyStore.restoreFromBackup(
+        parsed.calendar?.agendaJourney || parsed.agendaJourney || {},
+      )
+      const activitySessionOk = activitySessionStore.restoreFromBackup(
+        parsed.calendar?.activitySession || parsed.activitySession || {},
+      )
+      const scheduleOrchestratorOk = scheduleOrchestratorStore.restoreFromBackup(
+        parsed.calendar?.scheduleOrchestrator || parsed.scheduleOrchestrator || {},
+      )
       const remindersOk = remindersStore.restoreFromBackup(
         parsed.reminders || parsed.calendar || parsed,
       )
@@ -804,6 +832,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         !chatOk ||
         !mapOk ||
         !calendarOk ||
+        !agendaJourneyOk ||
+        !activitySessionOk ||
+        !scheduleOrchestratorOk ||
         !remindersOk ||
         !galleryRestoreResult?.ok ||
         !filesOk ||

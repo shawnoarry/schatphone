@@ -581,6 +581,12 @@ const toggleHapticFeedback = () => {
   triggerSaved()
 }
 
+const toggleSoundEffects = () => {
+  settings.value.appearance.soundEffectsEnabled =
+    settings.value.appearance.soundEffectsEnabled !== false ? false : true
+  triggerSaved()
+}
+
 const toggleSmartPanel = () => {
   systemStore.setMoreFeatureToggle('smart_panel', !smartPanelEnabled.value)
   triggerSaved()
@@ -1097,6 +1103,26 @@ onBeforeUnmount(() => {
             <span
               class="absolute top-1 w-5 h-5 rounded-full bg-white transition"
               :class="settings.appearance.hapticFeedbackEnabled !== false ? 'left-6' : 'left-1'"
+            ></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-semibold">{{ t('交互音效', 'Interaction Sounds') }}</p>
+            <p class="text-[11px] text-gray-500">{{ t('通知到达、消息发送与主屏操作时的提示音', 'Cues for notifications, message sends, and home actions') }}</p>
+          </div>
+          <button
+            type="button"
+            class="relative w-12 h-7 rounded-full transition"
+            :class="settings.appearance.soundEffectsEnabled !== false ? 'bg-blue-500' : 'bg-gray-300'"
+            @click="toggleSoundEffects"
+          >
+            <span
+              class="absolute top-1 w-5 h-5 rounded-full bg-white transition"
+              :class="settings.appearance.soundEffectsEnabled !== false ? 'left-6' : 'left-1'"
             ></span>
           </button>
         </div>

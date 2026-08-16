@@ -1,4 +1,6 @@
 import {
+  AGENDA_JOURNEY_HOME_APP_ID,
+  AGENDA_JOURNEY_ROUTE,
   ASSETS_HOME_APP_ID,
   ASSETS_ROUTE,
   CAMERA_HOME_APP_ID,
@@ -11,6 +13,8 @@ import {
   MUSIC_ROUTE,
   SHOPPING_HOME_APP_ID,
   SHOPPING_ROUTE,
+  WEATHER_HOME_APP_ID,
+  WEATHER_ROUTE,
 } from './planned-module-registry'
 
 export const HOME_FOLDER_TILE_KIND = 'folder'
@@ -49,12 +53,26 @@ export const HOME_FOLDER_REGISTRY = Object.freeze({
 })
 
 export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
+  [AGENDA_JOURNEY_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-route',
+    label: 'Agenda Journey',
+    accent: 'cool',
+    route: AGENDA_JOURNEY_ROUTE,
+  }),
   [MUSIC_HOME_APP_ID]: Object.freeze({
     kind: 'app',
     icon: 'fas fa-music',
     label: 'Music',
     accent: 'warm',
     route: MUSIC_ROUTE,
+  }),
+  [WEATHER_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-cloud-sun',
+    label: 'Weather',
+    accent: 'cool',
+    route: WEATHER_ROUTE,
   }),
   [CAMERA_HOME_APP_ID]: Object.freeze({
     kind: 'app',
@@ -80,7 +98,9 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
 })
 
 export const HOME_PLANNED_TILE_IDS = Object.freeze([
+  AGENDA_JOURNEY_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
+  WEATHER_HOME_APP_ID,
   CAMERA_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,

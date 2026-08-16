@@ -712,8 +712,48 @@ const clearWorldAppTemplateProposalReview = () => {
 
 const getPrimaryRoleForCategory = (category) => category?.roles?.[0] || 'main_worldview'
 
-const enableDirectoryAsset = (asset = selectedDirectoryAsset.value) => {
-  if (!asset || !selectedTextCategory.value) return
+// 世界观暂时唯一启用：两套世界观同时生效可能互踩，启用第二份前必须确认原子切换
+const activeWorldviewLinks = computed(() =>
+  systemStore
+    .listWorldBookSourceLinks()
+    .filter((link) => (link.role || link.usage) === 'main_worldview' && link.enabled !== false),
+)
+
+const confirmUniqueWorldviewSwitch = async (asset) => {
+  const others = activeWorldviewLinks.value.filter((link) => link.assetId !== asset.id)
+  if (others.length === 0) return true
+  const currentTitles = others.map(
+    (link) => bookStore.findAssetById(link.assetId)?.title || link.assetId,
+  )
+  const confirmed = await confirmDialog({
+    title: t('切换世界观', 'Switch worldview'),
+    message: t(
+      '世界观暂时只支持唯一启用，两套世界观同时生效可能互相冲突。',
+      'Only one worldview can be active for now; two at once may conflict.',
+    ),
+    details: [
+      `${t('当前生效', 'Active now')}: ${currentTitles.join(t('、', ', '))}`,
+      `${t('即将启用', 'About to enable')}: ${asset.title}`,
+      t('想保留两者？可以先在 Book 中把两份设定融合成一份，再回来启用。', 'Want both? Merge the two texts in Book first, then enable the merged one.'),
+    ],
+    confirmText: t('停用旧版并启用这份', 'Disable current and enable this'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'warning',
+  })
+  if (!confirmed) return false
+  others.forEach((link) => {
+    systemStore.updateWorldBookSourceLink(link.id, { enabled: false })
+    syncBookAssetSourceStatus(link.assetId)
+  })
+  return true
+}
+
+const enableDirectoryAsset = async (asset = selectedDirectoryAsset.value) => {
+  if (!asset || !selectedTextCategory.value) return false
+  if (selectedTextCategory.value.id === 'worldview') {
+    const allowed = await confirmUniqueWorldviewSwitch(asset)
+    if (!allowed) return false
+  }
   const role = getPrimaryRoleForCategory(selectedTextCategory.value)
   const link = systemStore.addWorldBookSourceLink({
     assetId: asset.id,
@@ -730,7 +770,9 @@ const enableDirectoryAsset = (asset = selectedDirectoryAsset.value) => {
     bookStore.saveNow()
     sourceDirectory.notice = t('已启用这份文稿。', 'Manuscript enabled.')
     pulseSaved(t('文稿已加入当前世界背景。', 'Text added to current world context.'))
+    return true
   }
+  return false
 }
 
 const disableDirectoryAsset = (asset = selectedDirectoryAsset.value) => {
@@ -744,7 +786,37 @@ const disableDirectoryAsset = (asset = selectedDirectoryAsset.value) => {
   sourceDirectory.notice = t('已停用这份文稿。', 'Manuscript disabled.')
 }
 
-const createDirectoryImportedAsset = ({ enable = false } = {}) => {
+// 世界观是唯一槽位，保留卡片弹窗确认；规则/百科可多选，列表内直接开关
+const isMultiSelectDirectory = computed(() => selectedTextCategory.value?.id !== 'worldview')
+
+const toggleDirectoryAsset = (asset) => {
+  if (!asset || !isMultiSelectDirectory.value) return
+  if (directoryLinkForAsset(asset.id)) {
+    disableDirectoryAsset(asset)
+    return
+  }
+  enableDirectoryAsset(asset)
+}
+
+const enableAllDirectoryAssets = () => {
+  const category = selectedTextCategory.value
+  if (!category || !isMultiSelectDirectory.value) return
+  category.availableAssets.forEach((asset) => {
+    if (!directoryLinkForAsset(asset.id)) enableDirectoryAsset(asset)
+  })
+  sourceDirectory.notice = t('已全部启用。', 'All manuscripts enabled.')
+}
+
+const disableAllDirectoryAssets = () => {
+  const category = selectedTextCategory.value
+  if (!category || !isMultiSelectDirectory.value) return
+  category.availableAssets.forEach((asset) => {
+    if (directoryLinkForAsset(asset.id)) disableDirectoryAsset(asset)
+  })
+  sourceDirectory.notice = t('已全部停用。', 'All manuscripts disabled.')
+}
+
+const createDirectoryImportedAsset = async ({ enable = false } = {}) => {
   const category = selectedTextCategory.value
   const title = String(sourceDirectory.draftTitle || '').trim()
   const content = String(sourceDirectory.draftContent || '').trim()
@@ -764,11 +836,14 @@ const createDirectoryImportedAsset = ({ enable = false } = {}) => {
       categoryId: category.id,
     },
   })
-  if (enable) enableDirectoryAsset(asset)
+  if (!asset) return null
+  const enabled = enable ? await enableDirectoryAsset(asset) : false
   sourceDirectory.assetId = asset.id
   sourceDirectory.menu = 'asset'
   sourceDirectory.notice = enable
-    ? t('已导入并启用。', 'Imported and enabled.')
+    ? enabled
+      ? t('已导入并启用。', 'Imported and enabled.')
+      : t('已导入文稿，未启用。', 'Imported, not enabled.')
     : t('已导入文稿。', 'Manuscript imported.')
   return asset
 }
@@ -888,7 +963,7 @@ const syncBookAssetSourceStatus = (assetId = '') => {
   }
 }
 
-const linkPickedBookSource = () => {
+const linkPickedBookSource = async () => {
   const asset = sourcePickerAsset.value
   if (!asset) return
   const selectedSectionIds =
@@ -896,6 +971,10 @@ const linkPickedBookSource = () => {
   if (sourcePicker.mode === 'sections' && sourcePickerSections.value.length > 0 && selectedSectionIds.length === 0) {
     uiNotice.value = t('请至少选择一个段落。', 'Select at least one section.')
     return
+  }
+  if (sourcePicker.role === 'main_worldview') {
+    const allowed = await confirmUniqueWorldviewSwitch(asset)
+    if (!allowed) return
   }
   const link = systemStore.addWorldBookSourceLink({
     assetId: asset.id,
@@ -1215,13 +1294,25 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="worldbook-shell w-full h-full bg-[#f2f2f7] text-black flex flex-col">
-    <div class="worldbook-header pt-12 pb-3 px-4 border-b border-gray-200 bg-white/80 backdrop-blur flex items-center gap-3">
-      <button @click="goSettings" class="worldbook-nav-button text-blue-500 text-sm flex items-center gap-1">
+  <div class="worldbook-shell w-full h-full flex flex-col">
+    <header class="worldbook-header">
+      <button @click="goSettings" class="worldbook-nav-button">
         <i class="fas fa-chevron-left"></i> {{ returnButtonLabel }}
       </button>
-      <h1 class="font-bold text-xl">{{ t('世界书', 'World Book') }}</h1>
-    </div>
+      <div class="worldbook-brand">
+        <small>WORLD&nbsp;ARCHIVE</small>
+        <h1>{{ t('世界书', 'World Book') }}</h1>
+      </div>
+      <button
+        type="button"
+        class="worldbook-book-link"
+        :aria-label="t('打开文本库', 'Open Book')"
+        data-testid="worldbook-topbar-open-book"
+        @click="openBookLibrary"
+      >
+        <i class="fas fa-book-bookmark" aria-hidden="true"></i>
+      </button>
+    </header>
 
     <div class="worldbook-scroll flex-1 px-4 py-4 overflow-y-auto no-scrollbar space-y-4">
       <WorldBookOverview
@@ -1271,6 +1362,21 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <div v-if="isMultiSelectDirectory" class="worldbook-source-directory__batch">
+          <span>
+            {{ t('可多选 · 点按即启用', 'Multi-select · tap to toggle') }} ·
+            {{ selectedTextCategory.enabledLinks.length }}/{{ selectedTextCategory.availableAssets.length }}
+          </span>
+          <div>
+            <button type="button" class="worldbook-inline-action" data-testid="worldbook-source-directory-enable-all" @click="enableAllDirectoryAssets">
+              {{ t('全部启用', 'Enable all') }}
+            </button>
+            <button type="button" class="worldbook-inline-action" data-testid="worldbook-source-directory-disable-all" @click="disableAllDirectoryAssets">
+              {{ t('全部停用', 'Disable all') }}
+            </button>
+          </div>
+        </div>
+
         <div class="worldbook-source-directory__list" data-testid="worldbook-source-directory-list">
           <button
             type="button"
@@ -1288,8 +1394,9 @@ onBeforeUnmount(() => {
             type="button"
             class="worldbook-source-directory__row"
             :class="{ 'is-enabled': Boolean(directoryLinkForAsset(asset.id)) }"
+            :aria-pressed="isMultiSelectDirectory ? Boolean(directoryLinkForAsset(asset.id)) : undefined"
             :data-testid="`worldbook-source-directory-asset-${asset.id}`"
-            @click="openDirectoryAssetMenu(asset)"
+            @click="isMultiSelectDirectory ? toggleDirectoryAsset(asset) : openDirectoryAssetMenu(asset)"
           >
             <span>
               <strong>{{ asset.title }}</strong>
@@ -1298,7 +1405,16 @@ onBeforeUnmount(() => {
                 {{ Array.isArray(asset.sections) ? asset.sections.length : 0 }} {{ t('段落', 'sections') }}
               </small>
             </span>
-            <em>{{ directoryLinkForAsset(asset.id) ? t('已启用', 'Enabled') : t('可选', 'Available') }}</em>
+            <span v-if="isMultiSelectDirectory" class="worldbook-directory-toggle">
+              <span
+                :class="['worldbook-directory-switch', { 'is-on': Boolean(directoryLinkForAsset(asset.id)) }]"
+                aria-hidden="true"
+              >
+                <i></i>
+              </span>
+              <em>{{ directoryLinkForAsset(asset.id) ? t('已启用', 'Enabled') : t('可选', 'Available') }}</em>
+            </span>
+            <em v-else>{{ directoryLinkForAsset(asset.id) ? t('已启用', 'Enabled') : t('可选', 'Available') }}</em>
           </button>
         </div>
 
@@ -1459,22 +1575,22 @@ onBeforeUnmount(() => {
         <div class="worldbook-source-head">
           <div>
             <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              {{ t('AI 会读取的设定', 'Setting text AI reads') }}
+              {{ t('聊天会读到的内容', 'Read in chats') }}
             </p>
             <h2 class="text-lg font-semibold">
-              {{ t('正在使用的世界设定文本', 'World setting text in use') }}
+              {{ t('这个世界正在读的书', 'Books this world is reading') }}
             </h2>
             <p class="text-sm text-gray-500">
               {{
                 t(
-                  '这里决定哪些文本会进入对话和事件运行的世界背景；文本内容本身仍在 Book 里编辑。',
-                  'Choose which text enters Chat and event runtime world context; the text itself is still edited in Book.',
+                  '选中的书会成为聊天和事件里的世界背景；内容本身仍在 Book 里编辑。',
+                  'Chosen books become the world background in chats and events; the text itself is still edited in Book.',
                 )
               }}
             </p>
           </div>
           <button type="button" class="worldbook-secondary-action" data-testid="worldbook-book-source-add" @click="addFirstBookSource">
-            {{ sourcePickerAssets.length > 0 ? t('添加设定文本', 'Add setting text') : t('打开文本库', 'Open Book') }}
+            {{ sourcePickerAssets.length > 0 ? t('从书架添加', 'Add from Book') : t('打开文本库', 'Open Book') }}
           </button>
         </div>
 
@@ -1483,34 +1599,34 @@ onBeforeUnmount(() => {
             <strong>
               {{
                 activeBookSourceCount > 0
-                  ? t(`${activeBookSourceCount} 份文本正在使用`, `${activeBookSourceCount} text(s) in use`)
-                  : t('还没有启用 Book 设定文本', 'No Book setting text is active')
+                  ? t(`正在读 ${activeBookSourceCount} 本书`, `Reading ${activeBookSourceCount} book(s)`)
+                  : t('还没有启用任何书', 'No books active yet')
               }}
             </strong>
             <small>
               {{
                 t(
-                  'Book 文稿可以按需添加到当前世界；不添加也不影响其他设定层。',
-                  'Add Book manuscripts to the current world when needed; every other setting layer remains available without one.',
+                  '书架上的书可以按需加入这个世界；一本不加也不影响其他设定。',
+                  'Add books from the shelf as needed; everything else works fine without one.',
                 )
               }}
             </small>
           </span>
           <span v-if="bookSourceIssueCount > 0" class="is-warning">
-            <strong>{{ t(`${bookSourceIssueCount} 份文本需要确认更新`, `${bookSourceIssueCount} text(s) need update confirmation`) }}</strong>
-            <small>{{ t('原文本在 Book 里有变化，确认后会记录新的版本基线。', 'The Book text changed; confirming stores the new review baseline.') }}</small>
+            <strong>{{ t(`${bookSourceIssueCount} 份文稿有更新`, `${bookSourceIssueCount} text(s) updated`) }}</strong>
+            <small>{{ t('原文在 Book 里改过，确认后聊天就读新内容。', 'The original changed in Book; once confirmed, chats read the new text.') }}</small>
           </span>
           <span v-else-if="disabledBookSourceCount > 0">
-            <strong>{{ t(`${disabledBookSourceCount} 份文本未使用`, `${disabledBookSourceCount} text(s) not in use`) }}</strong>
-            <small>{{ t('未使用文本已收进下方高级管理，不影响 AI 当前背景。', 'Unused text lives in advanced management and does not affect the current AI context.') }}</small>
+            <strong>{{ t(`${disabledBookSourceCount} 本书未启用`, `${disabledBookSourceCount} book(s) not in use`) }}</strong>
+            <small>{{ t('没启用的书收在下方「更多管理」里，不影响当前聊天。', 'Inactive books live under More management and do not affect current chats.') }}</small>
           </span>
         </div>
 
         <details class="worldbook-fallback-compat" data-testid="worldbook-fallback-compat">
           <summary>
             <span>
-              <strong>{{ t('高级兼容：基础世界观', 'Advanced compatibility: base worldview') }}</strong>
-              <small>{{ t('没有启用 Book 文本时，才把这段短说明作为兼容兜底。', 'Only used as a short fallback when no Book text is active.') }}</small>
+              <strong>{{ t('备用：基础世界观', 'Fallback: base worldview') }}</strong>
+              <small>{{ t('书架没有启用任何文本时，才会用到这段短说明。', 'Only used when no book is active on the shelf.') }}</small>
             </span>
             <em>{{ worldBookCount }} {{ t('字', 'chars') }}</em>
           </summary>
@@ -1673,7 +1789,7 @@ onBeforeUnmount(() => {
         <div v-if="linkedBookSources.length === 0" class="worldbook-source-empty" data-testid="worldbook-book-source-empty">
           <span><i class="fas fa-link-slash"></i></span>
           <strong>{{ t('还没有添加设定文本', 'No setting text added yet') }}</strong>
-          <p>{{ t('可在 Book 写作或导入文稿，再按需添加到当前世界；不添加也可以继续使用其他设定层。', 'Write or import manuscripts in Book and add any of them here when needed; the other setting layers remain usable without one.') }}</p>
+          <p>{{ t('去 Book 写一本或导入文稿，回到这里启用；不启用也不影响其他设定。', 'Write or import a book in Book and enable it here; everything else works without one.') }}</p>
         </div>
 
         <div v-else-if="activeBookSources.length > 0" class="worldbook-source-list" data-testid="worldbook-active-source-list">
@@ -1704,7 +1820,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="worldbook-source-card__actions">
             <button v-if="link.changed && !link.missing" type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-review-${link.id}`" @click="openBookSourceReview(link)">
-              {{ t('确认新版', 'Confirm update') }}
+              {{ t('改用新版', 'Use new version') }}
             </button>
             <button type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-toggle-${link.id}`" @click="toggleBookSource(link)">
               {{ t('从当前背景移除', 'Remove from context') }}
@@ -1721,8 +1837,8 @@ onBeforeUnmount(() => {
 
         <div v-else class="worldbook-source-empty" data-testid="worldbook-active-source-empty">
           <span><i class="fas fa-book"></i></span>
-          <strong>{{ t('没有正在使用的长文本', 'No long setting text in use') }}</strong>
-          <p>{{ t('重新启用下方未使用文本，或从 Book 添加新的设定文本。', 'Re-enable unused text below, or add new setting text from Book.') }}</p>
+          <strong>{{ t('当前没有生效的书', 'No book is active right now') }}</strong>
+          <p>{{ t('从下方「更多管理」重新启用，或从 Book 添加新的。', 'Re-enable one under More management, or add a new one from Book.') }}</p>
         </div>
 
         <details
@@ -1731,12 +1847,12 @@ onBeforeUnmount(() => {
           data-testid="worldbook-source-maintenance"
         >
           <summary>
-            <span>{{ t('高级管理', 'Advanced management') }}</span>
+            <span>{{ t('更多管理', 'More management') }}</span>
             <small>
               {{
                 t(
-                  `${sourceMaintenanceLinks.length} 份未使用或需确认的文本`,
-                  `${sourceMaintenanceLinks.length} unused or review-needed text(s)`,
+                  `${sourceMaintenanceLinks.length} 份未启用或有更新的文稿`,
+                  `${sourceMaintenanceLinks.length} inactive or updated text(s)`,
                 )
               }}
             </small>
@@ -1770,7 +1886,7 @@ onBeforeUnmount(() => {
               </div>
               <div class="worldbook-source-card__actions">
                 <button v-if="link.changed && !link.missing" type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-review-maintenance-${link.id}`" @click="openBookSourceReview(link)">
-                  {{ t('确认新版', 'Confirm update') }}
+                  {{ t('改用新版', 'Use new version') }}
                 </button>
                 <button v-if="!link.missing" type="button" class="worldbook-secondary-action" :data-testid="`worldbook-book-source-toggle-maintenance-${link.id}`" @click="toggleBookSource(link)">
                   {{ link.enabled === false ? t('加入当前背景', 'Use in context') : t('从当前背景移除', 'Remove from context') }}
@@ -1802,14 +1918,14 @@ onBeforeUnmount(() => {
           <div class="worldbook-source-review-head">
             <div>
               <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {{ t('设定文本更新确认', 'Setting text update review') }}
+                {{ t('文稿有更新', 'Text updated') }}
               </p>
               <h3>{{ reviewingBookSource.title }}</h3>
               <p>
                 {{
                   sourceReviewDiff.hasPreviousSnapshot
-                    ? t('下面只展示这份文本会影响世界背景的内容变化。', 'Only changes that affect the world context are shown below.')
-                    : t('这条旧引用没有可对比的旧版快照，可以把当前内容设为新的复核基线。', 'This older reference has no previous snapshot. You can accept the current text as the new review baseline.')
+                    ? t('只列出会影响世界背景的变化。', 'Only changes that affect the world background are listed.')
+                    : t('这份引用没有旧内容可对比，可以把现在的内容当作比较基准。', 'No previous version to compare against; you can treat the current text as the baseline.')
                 }}
               </p>
             </div>
@@ -1821,7 +1937,7 @@ onBeforeUnmount(() => {
           <div class="worldbook-source-review-summary" data-testid="worldbook-book-source-review-summary">
             <span>{{ sourceReviewSummary }}</span>
             <span v-if="reviewingBookSource.snapshotIsPartial || sourceReviewDiff.truncated">
-              {{ t('长文本仅展示前段预览，接受新版会记录新的基线。', 'Long text is previewed partially; accepting stores the new baseline.') }}
+              {{ t('长文只预览前段；接受后以当前内容为准。', 'Long text is previewed partially; accepting adopts the current text.') }}
             </span>
           </div>
 
@@ -1853,7 +1969,7 @@ onBeforeUnmount(() => {
               data-testid="worldbook-book-source-review-accept"
               @click="acceptReviewedBookSource"
             >
-              {{ t('接受新版', 'Accept new version') }}
+              {{ t('使用新内容', 'Use new text') }}
             </button>
           </div>
         </div>
@@ -1867,13 +1983,13 @@ onBeforeUnmount(() => {
       >
         <div class="worldbook-kernel-hero">
           <div>
-            <p>{{ t('兼容兜底', 'Compatibility fallback') }}</p>
-            <h2>{{ t('高级兼容设置', 'Advanced compatibility') }}</h2>
+            <p>{{ t('备用说明', 'Fallback note') }}</p>
+            <h2>{{ t('备用世界观说明', 'Fallback worldview note') }}</h2>
             <span>
               {{
                 t(
-                  '这里只保留无 Book 设定文本时使用的短说明；完整世界书请在 Book 编辑，再回到设定文本面板启用。',
-                  'Only keep a short note for cases with no Book setting text; edit the full worldbook in Book, then enable it from Setting text.',
+                  '书架一本书都没启用时，聊天会读这段简短说明。想认真写世界观，请到 Book 里编辑。',
+                  'When no book is active, chats read this short note instead. For a real worldview, write it in Book.',
                 )
               }}
             </span>
@@ -1889,13 +2005,13 @@ onBeforeUnmount(() => {
           data-testid="worldbook-global-worldview"
           :placeholder="
             t(
-              '例如：没有启用 Book 文本时，默认使用的极短世界说明...',
-              'Example: a very short world note used only when no Book text is active...',
+              '例如：一句话说清这个世界的基本前提……',
+              'Example: one sentence that states the world premise...',
             )
           "
         ></textarea>
         <div class="worldbook-kernel-actions">
-          <p>{{ t('这不是世界书编辑器；需要反复修改、分段或版本管理的设定，请放进 Book。', 'This is not the worldbook editor; use Book for editable, sectioned, or versioned setting text.') }}</p>
+          <p>{{ t('这里只写简短的备用说明；要认真经营世界观，请去 Book。', 'Just a short fallback note here; for serious worldbuilding, use Book.') }}</p>
           <button
             type="button"
             class="worldbook-primary-action"
@@ -1903,7 +2019,7 @@ onBeforeUnmount(() => {
             data-testid="worldbook-save-worldview"
             @click="saveWorldBook"
           >
-            {{ saved ? t('已保存', 'Saved') : t('保存兼容说明', 'Save compatibility note') }}
+            {{ saved ? t('已保存', 'Saved') : t('保存备用说明', 'Save fallback note') }}
           </button>
           <button
             type="button"
@@ -1911,7 +2027,7 @@ onBeforeUnmount(() => {
             data-testid="worldbook-clear-worldview"
             @click="clearGlobalWorldview"
           >
-            {{ t('清空兼容说明', 'Clear compatibility note') }}
+            {{ t('清空备用说明', 'Clear fallback note') }}
           </button>
         </div>
       </div>
@@ -2340,30 +2456,127 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* 书房档案馆主题：局部覆盖 --system-* 调色板，整页（含 worldbook 子组件）随之换肤 */
 .worldbook-shell {
+  --system-page-bg:
+    radial-gradient(90% 55% at 50% 0%, #f5f0e6 0%, transparent 60%),
+    linear-gradient(180deg, #faf9f6 0%, #f2f0e9 100%);
+  --system-chrome-bg: rgba(250, 249, 246, 0.92);
+  --system-panel-bg: rgba(255, 255, 255, 0.92);
+  --system-panel-bg-solid: #fbfaf5;
+  --system-elevated-bg: rgba(255, 255, 255, 0.97);
+  --system-control-bg: rgba(255, 255, 255, 0.88);
+  --system-control-bg-strong: #ffffff;
+  --system-surface-muted: rgba(240, 238, 231, 0.85);
+  --system-border: rgba(38, 34, 27, 0.1);
+  --system-card-border: rgba(38, 34, 27, 0.08);
+  --system-control-border: rgba(38, 34, 27, 0.12);
+  --system-subtle-border: rgba(38, 34, 27, 0.08);
+  --system-text: #26221b;
+  --system-text-muted: rgba(38, 34, 27, 0.62);
+  --system-text-soft: rgba(38, 34, 27, 0.44);
+  --system-accent: #c8452c;
+  --system-accent-strong: #a83a25;
+  --system-accent-soft: rgba(200, 69, 44, 0.1);
+  --system-success: #5e8a4c;
+  --system-success-soft: rgba(94, 138, 76, 0.12);
+  --system-warning: #a77736;
+  --system-warning-soft: rgba(167, 119, 54, 0.13);
+  --system-danger: #b8453a;
+  --system-danger-soft: rgba(184, 69, 58, 0.11);
+  --system-info: #c8452c;
+  --system-info-soft: rgba(200, 69, 44, 0.09);
+  --system-hover-bg: rgba(200, 69, 44, 0.07);
+  --system-pressed-bg: rgba(200, 69, 44, 0.11);
+  --system-focus-ring: rgba(200, 69, 44, 0.16);
+  --system-shadow-chrome: 0 10px 28px rgba(38, 34, 27, 0.07);
+  --system-shadow-card: 0 12px 28px rgba(38, 34, 27, 0.08);
+  --system-shadow-control: 0 8px 18px rgba(38, 34, 27, 0.09);
   background: var(--system-page-bg);
   color: var(--system-text);
 }
 
 .worldbook-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(40px + env(safe-area-inset-top)) 18px 12px;
   border-bottom: 1px solid var(--system-border);
   background: var(--system-chrome-bg);
   box-shadow: var(--system-shadow-chrome);
-  backdrop-filter: blur(var(--system-blur-md));
-  -webkit-backdrop-filter: blur(var(--system-blur-md));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.worldbook-brand {
+  flex: 1;
+  min-width: 0;
+}
+
+.worldbook-brand small {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--system-accent);
 }
 
 .worldbook-header h1 {
-  font-size: 22px;
-  line-height: 1.15;
-  letter-spacing: 0;
+  margin: 1px 0 0;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
   color: var(--system-text);
 }
 
 .worldbook-nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 36px;
-  color: var(--system-accent);
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--system-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.worldbook-book-link {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--system-control-border);
+  border-radius: 50%;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+
+.worldbook-book-link:active {
+  transform: scale(0.94);
+}
+
+/* 各面板大标题统一衬线展示字，呼应 Book 的书房气质 */
+.worldbook-onboarding-card h2,
+.worldbook-source-head h2,
+.worldbook-kernel-hero h2,
+.worldbook-template-hero h2,
+.worldbook-knowledge-hero h2,
+.worldbook-sheet-head h3,
+.worldbook-source-review-head h3 {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  letter-spacing: 0.01em;
 }
 
 .worldbook-scroll {
@@ -3120,6 +3333,73 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.worldbook-source-directory__batch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px 0;
+}
+
+.worldbook-source-directory__batch > span {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.worldbook-source-directory__batch > div {
+  display: flex;
+  gap: 6px;
+}
+
+.worldbook-directory-toggle {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.worldbook-directory-toggle em {
+  color: var(--system-text-soft);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.worldbook-directory-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--system-text-soft) 45%, transparent);
+  transition: background 160ms ease;
+}
+
+.worldbook-directory-switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(38, 34, 27, 0.24);
+  transition: left 160ms ease;
+}
+
+.worldbook-directory-switch.is-on {
+  background: var(--system-accent);
+}
+
+.worldbook-directory-switch.is-on i {
+  left: 19px;
+}
+
+.worldbook-source-directory__row.is-enabled .worldbook-directory-toggle em {
+  color: var(--system-accent);
+}
+
 .worldbook-source-directory__row,
 .worldbook-source-directory__import {
   display: grid;
@@ -3706,13 +3986,21 @@ onBeforeUnmount(() => {
 
 .worldbook-secondary-action {
   flex-shrink: 0;
-  border: 1px solid rgba(99, 102, 241, 0.28);
-  border-radius: 8px;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-sm);
   padding: 6px 10px;
   font-size: 12px;
-  font-weight: 600;
-  color: #4338ca;
-  background: rgba(238, 242, 255, 0.9);
+  font-weight: 700;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  transition:
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast);
+}
+
+.worldbook-secondary-action:hover {
+  border-color: color-mix(in srgb, var(--system-accent) 36%, var(--system-control-border));
+  background: var(--system-accent-soft);
 }
 
 .worldbook-danger-action {

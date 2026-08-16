@@ -36,8 +36,8 @@ export function buildContactsProfileHeader(
     bioText: profile.bio || t('\u6682\u65e0\u6863\u6848\u7b80\u4ecb\u3002', 'No profile intro yet.'),
     isNpc: profile.entityType === CONTACTS_ENTITY_TYPES.NPC,
     upgradeHint: chatBound
-      ? t('Existing Chat binding will be preserved.', 'Existing Chat binding will be preserved.')
-      : t('Upgrade will not force Chat Directory binding.', 'Upgrade will not force Chat Directory binding.'),
+      ? t('已有的聊天绑定会保留。', 'Existing Chat binding will be preserved.')
+      : t('升级不会强制绑定到 Chat 通讯录。', 'Upgrade will not force Chat Directory binding.'),
   }
 }
 

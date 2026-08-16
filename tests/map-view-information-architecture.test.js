@@ -721,6 +721,31 @@ describe('MapView information architecture', () => {
     )
   })
 
+  test('keeps the generic checkpoint route event disabled on the production Map surface', async () => {
+    const mapStore = useMapStore()
+    const simulationStore = useSimulationStore()
+    simulationStore.resetForTesting()
+    simulationStore.setSurpriseMode(SIMULATION_SURPRISE_MODE.HIGH)
+    mapStore.setJourneyEventRandomValueForTesting(0)
+    mapStore.setTripEndpoint('from', 'Home')
+    mapStore.setTripEndpoint('to', 'Office')
+    mapStore.setTripTransportMode('public_transit')
+    expect(mapStore.startTrip().ok).toBe(true)
+
+    const checkpointAt =
+      mapStore.tripState.startedAt +
+      Math.ceil(mapStore.tripState.durationSeconds * 0.4) * 1000
+    vi.setSystemTime(checkpointAt)
+    mapStore.tickTripRuntime(checkpointAt)
+    await flushPromises()
+    await nextTick()
+
+    expect(mapStore.tripState.phase).toBe('en_route')
+    expect(simulationStore.mapJourneyEventProposals).toHaveLength(0)
+    expect(wrapper.find('[data-testid="map-primary-journey-event"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="map-journey-event-card"]').exists()).toBe(false)
+  })
+
   test('keeps moving with a visible checkpoint update and applies review without blocking', async () => {
     const mapStore = useMapStore()
     const simulationStore = useSimulationStore()
@@ -731,6 +756,7 @@ describe('MapView information architecture', () => {
     mapStore.setTripEndpoint('to', 'Office')
     mapStore.setTripTransportMode('public_transit')
     expect(mapStore.startTrip().ok).toBe(true)
+    mapStore.setJourneyCheckpointEventEvaluationEnabled(true)
 
     const checkpointAt =
       mapStore.tripState.startedAt +
@@ -793,6 +819,7 @@ describe('MapView information architecture', () => {
     mapStore.setTripEndpoint('to', 'Office')
     mapStore.setTripTransportMode('public_transit')
     expect(mapStore.startTrip().ok).toBe(true)
+    mapStore.setJourneyCheckpointEventEvaluationEnabled(true)
 
     const checkpointAt =
       mapStore.tripState.startedAt +

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
@@ -1352,17 +1352,31 @@ const openWorldBookProfileTemplates = () => {
   router.push('/worldbook')
 }
 
+const selectedProfilePhotoCount = computed(() => {
+  const profileId = selectedProfile.value?.id
+  if (profileId == null) return 0
+  return galleryStore.sortedAssets.filter((asset) =>
+    (Array.isArray(asset.personIds) ? asset.personIds : []).some((id) => String(id) === String(profileId)),
+  ).length
+})
+
+const openSelectedProfileAlbum = () => {
+  const profileId = selectedProfile.value?.id
+  if (profileId == null) return
+  router.push({ path: '/gallery', query: { person: String(profileId) } })
+}
+
 const upgradeSelectedNpcToMainRole = async () => {
   const profile = selectedProfile.value
   if (!profile || profile.entityType !== CONTACTS_ENTITY_TYPES.NPC) return
   const confirmed = await confirmDialog({
-    title: t('Upgrade to main role', 'Upgrade to main role'),
+    title: t('升级为主要角色', 'Upgrade to main role'),
     message: t(
-      'This preserves the NPC profile, linked activity, and existing chat binding while unlocking main-role capabilities. Lightweight relationship is used by default.',
+      '升级后保留 NPC 档案、关联活动和已有的聊天绑定，并解锁主要角色的能力；关系先按轻量模式建立。',
       'This preserves the NPC profile, linked activity, and existing chat binding while unlocking main-role capabilities. Lightweight relationship is used by default.',
     ),
-    confirmText: t('Upgrade', 'Upgrade'),
-    cancelText: t('Cancel', 'Cancel'),
+    confirmText: t('升级', 'Upgrade'),
+    cancelText: t('取消', 'Cancel'),
     tone: 'primary',
   })
   if (!confirmed) return
@@ -1370,7 +1384,7 @@ const upgradeSelectedNpcToMainRole = async () => {
     relationshipMode: 'lightweight',
   })
   if (upgraded) {
-    setUiNotice('success', t('NPC upgraded to main role.', 'NPC upgraded to main role.'))
+    setUiNotice('success', t('已升级为主要角色。', 'NPC upgraded to main role.'))
     chatStore.saveNow?.()
   }
 }
@@ -1872,6 +1886,12 @@ const relationshipStageLabel = (stage) => {
   return t('陌生/未展开', 'Stranger / unset')
 }
 
+const meterPercent = (value) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return 50
+  return Math.max(0, Math.min(100, Math.round(numeric)))
+}
+
 const {
   selectedDangerImpactText,
   resetRelationshipDialogDetails,
@@ -1917,11 +1937,11 @@ const profileRelationshipArchiveHint = (snapshot = null) => {
 
 const profileRelationshipSummary = (profile) => {
   const snapshot = profileRelationshipSnapshot(profile)
-  if (!snapshot) return t('关系快照：暂不可用', 'Relationship snapshot unavailable')
+  if (!snapshot) return t('关系：暂无记录', 'Relationship: no record yet')
   const metrics = snapshot.metrics || {}
   return t(
-    `关系快照：${relationshipStageLabel(snapshot.relationshipStage)} · 好感 ${metrics.affinity ?? 50} · 信任 ${metrics.trust ?? 50}`,
-    `Relationship snapshot: ${relationshipStageLabel(snapshot.relationshipStage)} · affinity ${metrics.affinity ?? 50} · trust ${metrics.trust ?? 50}`,
+    `关系：${relationshipStageLabel(snapshot.relationshipStage)} · 好感 ${metrics.affinity ?? 50} · 信任 ${metrics.trust ?? 50}`,
+    `Relationship: ${relationshipStageLabel(snapshot.relationshipStage)} · affinity ${metrics.affinity ?? 50} · trust ${metrics.trust ?? 50}`,
   )
 }
 
@@ -2153,7 +2173,10 @@ onBeforeUnmount(() => {
       <button @click="goHome" class="contacts-nav-button text-blue-500 text-sm flex items-center gap-1">
         <i class="fas fa-chevron-left"></i> {{ t('首页', 'Home') }}
       </button>
-      <span class="font-bold">{{ t('联系人', 'Contacts') }}</span>
+      <div class="contacts-brand">
+        <small>ADDRESS&nbsp;BOOK</small>
+        <span>{{ t('联系人', 'Contacts') }}</span>
+      </div>
       <button
         type="button"
         class="contacts-add-button text-blue-500 text-xl"
@@ -2688,7 +2711,7 @@ onBeforeUnmount(() => {
             v-model="contactsSearchQuery"
             data-testid="contacts-search-input"
             type="search"
-            :placeholder="t('搜索姓名、角色 ID 或世界字段', 'Search name, role ID, or world fields')"
+            :placeholder="t('搜索姓名、ID 或资料', 'Search name, ID, or profile info')"
             :aria-label="t('搜索联系人', 'Search contacts')"
           />
         </label>
@@ -2741,7 +2764,7 @@ onBeforeUnmount(() => {
             <div class="min-w-0 flex-1">
               <p class="contacts-row-name">{{ user.name }}</p>
               <p class="contacts-row-meta">{{ t('当前用户名片', 'Current user card') }}</p>
-              <p class="contacts-row-hint">{{ t('可在通讯录中创建自我档案后填写世界字段。', 'Create a self profile in Contacts to fill world fields.') }}</p>
+              <p class="contacts-row-hint">{{ t('创建自己的档案后，就能填写更多资料。', 'Create a self profile to fill in more details.') }}</p>
             </div>
           </div>
           <div
@@ -2884,8 +2907,8 @@ onBeforeUnmount(() => {
         <p class="contacts-boundary-copy" data-testid="contacts-boundary-copy">
           {{
             t(
-              'Contacts 是角色档案库与角色中枢。角色可以只存在于这里；需要聊天时可从档案直接开始，已绑定对象与 Chat 内资料仍在 Chat Directory 管理。',
-              'Contacts is the role archive and role hub. A role can live here without a Chat thread; start chatting from its profile, while Chat Directory manages existing targets and Chat-local details.',
+              '这里是所有角色的家——不聊天也可以先建档；想聊天时点进档案就能开始。已经和 Chat 关联的资料，仍在 Chat 通讯录里维护。',
+              'Every role lives here — no chat needed. Open a profile to start chatting; anything already linked stays in Chat Directory.',
             )
           }}
         </p>
@@ -2919,26 +2942,50 @@ onBeforeUnmount(() => {
       <div ref="profileScrollElement" class="contacts-profile-scroll">
         <div v-if="!isContactsDetailSheetOpen" class="contacts-profile-overview space-y-3">
           <section class="contacts-detail-section contacts-profile-hero">
-          <div class="flex items-start gap-3">
-            <div class="w-16 h-16 rounded-full bg-gray-200 overflow-hidden shrink-0">
+          <div class="contacts-hero-card">
+            <div class="contacts-hero-avatar">
               <img
                 :src="selectedProfileHeader.avatarUrl"
                 :alt="selectedProfileHeader.name"
                 class="w-full h-full object-cover"
               />
             </div>
-            <div class="min-w-0 flex-1">
-              <p class="text-[11px] uppercase text-gray-400 font-bold">{{ selectedProfileHeader.eyebrow }}</p>
-              <h2 class="text-lg font-bold truncate">{{ selectedProfileHeader.name }}</h2>
-              <p class="text-xs text-gray-500 truncate">
-                {{ selectedProfileHeader.metaText }}
-              </p>
-              <p class="text-[11px] text-gray-500 mt-1 line-clamp-3">
-                {{ selectedProfileHeader.bioText }}
-              </p>
-            </div>
+            <p class="contacts-hero-eyebrow">{{ selectedProfileHeader.eyebrow }}</p>
+            <h2 class="contacts-hero-name">{{ selectedProfileHeader.name }}</h2>
+            <p class="contacts-hero-meta">{{ selectedProfileHeader.metaText }}</p>
+            <p v-if="selectedProfileHeader.bioText" class="contacts-hero-bio">
+              {{ selectedProfileHeader.bioText }}
+            </p>
           </div>
-          <div class="contacts-profile-actions">
+
+          <button
+            v-if="selectedRelationshipSnapshot"
+            type="button"
+            class="contacts-relation-meter"
+            data-testid="contacts-relationship-meter"
+            @click="openDetailSheet(CONTACTS_DETAIL_SHEETS.RELATIONSHIP)"
+          >
+            <span class="contacts-relation-meter__head">
+              <em>{{ relationshipStageLabel(selectedRelationshipSnapshot?.relationshipStage) }}</em>
+              <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            </span>
+            <span class="contacts-relation-meter__row">
+              <em>{{ t('好感', 'Affinity') }}</em>
+              <span class="contacts-relation-meter__bar">
+                <i :style="{ width: `${meterPercent(selectedRelationshipSnapshot?.metrics?.affinity)}%` }"></i>
+              </span>
+              <b>{{ meterPercent(selectedRelationshipSnapshot?.metrics?.affinity) }}</b>
+            </span>
+            <span class="contacts-relation-meter__row">
+              <em>{{ t('信任', 'Trust') }}</em>
+              <span class="contacts-relation-meter__bar">
+                <i :style="{ width: `${meterPercent(selectedRelationshipSnapshot?.metrics?.trust)}%` }"></i>
+              </span>
+              <b>{{ meterPercent(selectedRelationshipSnapshot?.metrics?.trust) }}</b>
+            </span>
+          </button>
+
+          <div class="contacts-profile-actions contacts-hero-actions">
             <button
               v-if="selectedRoleChatContact && selectedProfileEntityType !== CONTACTS_ENTITY_TYPES.SELF_PROFILE"
               type="button"
@@ -2981,7 +3028,7 @@ onBeforeUnmount(() => {
               data-testid="contacts-upgrade-npc"
               @click="upgradeSelectedNpcToMainRole"
             >
-              {{ t('Upgrade to main role', 'Upgrade to main role') }}
+              {{ t('升级为主要角色', 'Upgrade to main role') }}
             </button>
             <p class="text-xs text-gray-500">
               {{ selectedProfileHeader.upgradeHint }}
@@ -3039,6 +3086,16 @@ onBeforeUnmount(() => {
             <p class="contacts-role-hub-label">{{ t('关联活动', 'Linked activity') }}</p>
             <p class="contacts-role-hub-value">{{ selectedLinkedActivitySummary.eventAttachedCount }}</p>
             <p class="contacts-role-hub-detail">{{ selectedLinkedActivitySummary.sourceText }}</p>
+          </button>
+          <button
+            type="button"
+            class="contacts-scan-card"
+            data-testid="contacts-open-gallery-album"
+            @click="openSelectedProfileAlbum"
+          >
+            <p class="contacts-role-hub-label">{{ t('相册', 'Photos') }}</p>
+            <p class="contacts-role-hub-value">{{ selectedProfilePhotoCount }} {{ t('张', 'photos') }}</p>
+            <p class="contacts-role-hub-detail">{{ t('在相册中标记为该角色的照片。', 'Photos tagged as this role in Gallery.') }}</p>
           </button>
           <button
             type="button"
@@ -3154,7 +3211,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="contacts-runtime-audit-grid">
               <div>
-                <p class="contacts-role-hub-label">{{ t('Milestones', 'Milestones') }}</p>
+                <p class="contacts-role-hub-label">{{ t('里程碑', 'Milestones') }}</p>
                 <p class="contacts-role-hub-detail">
                   {{
                     selectedRelationshipSnapshot?.milestones?.length
@@ -3167,7 +3224,7 @@ onBeforeUnmount(() => {
                 </p>
               </div>
               <div>
-                <p class="contacts-role-hub-label">{{ t('Recent facts', 'Recent facts') }}</p>
+                <p class="contacts-role-hub-label">{{ t('近期动态', 'Recent facts') }}</p>
                 <p class="contacts-role-hub-detail">
                   {{
                     selectedRelationshipSnapshot?.recentEvents?.length
@@ -3180,7 +3237,7 @@ onBeforeUnmount(() => {
                 </p>
               </div>
               <div>
-                <p class="contacts-role-hub-label">{{ t('Primary memory', 'Primary memory') }}</p>
+                <p class="contacts-role-hub-label">{{ t('主要记忆', 'Primary memory') }}</p>
                 <p class="contacts-role-hub-detail">
                   {{
                     relationshipMemoryReviewSummaryText(selectedRelationshipSnapshot?.primaryMemory) ||
@@ -3331,7 +3388,7 @@ onBeforeUnmount(() => {
               class="contacts-classification-audit"
               data-testid="contacts-relationship-classification-audit"
             >
-              <p class="contacts-role-hub-label">{{ t('Classification audit', 'Classification audit') }}</p>
+              <p class="contacts-role-hub-label">{{ t('分类依据', 'Classification audit') }}</p>
               <p class="contacts-role-hub-detail">
                 {{ selectedProfile.classificationExplanation }}
               </p>
@@ -3381,7 +3438,7 @@ onBeforeUnmount(() => {
                 <p class="text-sm font-semibold">{{ selectedLinkedActivitySummary.sourceText }}</p>
               </div>
               <span class="contacts-source-chip">
-                {{ t('Memories', 'Memories') }} {{ selectedRoleHubStats.memoryCount }}
+                {{ t('记忆', 'Memories') }} {{ selectedRoleHubStats.memoryCount }}
               </span>
             </div>
             <div class="contacts-linked-activity-grid">
@@ -4236,22 +4293,22 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .contacts-shell {
-  --contacts-text: #172033;
-  --contacts-muted: rgba(23, 32, 51, 0.62);
-  --contacts-soft: rgba(23, 32, 51, 0.42);
-  --contacts-accent: #426f8f;
-  --contacts-accent-strong: #315f7c;
-  --contacts-accent-soft: rgba(66, 111, 143, 0.13);
-  --contacts-warm: #bf7354;
-  --contacts-warm-soft: rgba(191, 115, 84, 0.12);
-  --contacts-border: rgba(49, 64, 86, 0.12);
-  --contacts-surface: rgba(255, 255, 255, 0.84);
-  --contacts-surface-strong: rgba(255, 255, 255, 0.94);
-  --contacts-shadow: 0 14px 34px rgba(45, 63, 89, 0.1);
+  /* 名片夹/档案柜主题：暖纸 + 墨色 + 朱墨，与 Book/世界书同一书房体系 */
+  --contacts-text: #26221b;
+  --contacts-muted: rgba(38, 34, 27, 0.62);
+  --contacts-soft: rgba(38, 34, 27, 0.44);
+  --contacts-accent: #c8452c;
+  --contacts-accent-strong: #a83a25;
+  --contacts-accent-soft: rgba(200, 69, 44, 0.1);
+  --contacts-warm: #b07a4a;
+  --contacts-warm-soft: rgba(176, 122, 74, 0.12);
+  --contacts-border: rgba(38, 34, 27, 0.1);
+  --contacts-surface: rgba(255, 255, 255, 0.86);
+  --contacts-surface-strong: rgba(255, 255, 255, 0.95);
+  --contacts-shadow: 0 14px 34px rgba(38, 34, 27, 0.09);
   background:
-    radial-gradient(circle at 12% 0%, rgba(75, 124, 154, 0.16), transparent 35%),
-    radial-gradient(circle at 92% 14%, rgba(191, 115, 84, 0.13), transparent 34%),
-    linear-gradient(180deg, #f8faf9 0%, #eef4f6 54%, #e8edf2 100%);
+    radial-gradient(90% 55% at 50% 0%, #f5f0e6 0%, transparent 60%),
+    linear-gradient(180deg, #faf9f6 0%, #f2f0e9 100%);
   color: var(--contacts-text);
 }
 
@@ -4275,10 +4332,26 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.contacts-header span {
-  font-size: 17px;
-  line-height: 1.2;
-  letter-spacing: 0;
+.contacts-brand {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.contacts-brand small {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--contacts-accent);
+}
+
+.contacts-brand span {
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
   color: var(--contacts-text);
 }
 
@@ -4474,23 +4547,36 @@ onBeforeUnmount(() => {
 
 .contacts-list-section {
   display: grid;
-  gap: 2px;
+  gap: 0;
+  border: 1px solid var(--contacts-border);
+  border-radius: 18px;
+  background: var(--contacts-surface-strong);
+  box-shadow: var(--contacts-shadow);
 }
 
 .contacts-my-profile-section {
-  gap: 6px;
+  gap: 0;
+}
+
+.contacts-my-profile-section .contacts-my-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 14px 12px;
 }
 
 .contacts-section-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2px 4px;
+  padding: 10px 12px 7px;
+  border-bottom: 1px solid var(--contacts-border);
   color: var(--contacts-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 0;
-  text-transform: none;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .contacts-section-title small {
@@ -4564,8 +4650,8 @@ onBeforeUnmount(() => {
   gap: 10px;
   min-height: 64px;
   width: 100%;
-  padding: 9px 2px;
-  border-bottom: 1px solid rgba(49, 64, 86, 0.08);
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--contacts-border);
   border-radius: 0;
   background: transparent;
   text-align: left;
@@ -4575,9 +4661,13 @@ onBeforeUnmount(() => {
     transform var(--system-motion-fast);
 }
 
+.contacts-row:last-child {
+  border-bottom: 0;
+}
+
 .contacts-row:active {
   transform: scale(0.992);
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--contacts-accent-soft);
 }
 
 .contacts-row-active {
@@ -4674,9 +4764,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(circle at 12% 0%, rgba(75, 124, 154, 0.16), transparent 35%),
-    radial-gradient(circle at 92% 14%, rgba(191, 115, 84, 0.13), transparent 34%),
-    linear-gradient(180deg, #f8faf9 0%, #eef4f6 54%, #e8edf2 100%);
+    radial-gradient(90% 55% at 50% 0%, #f5f0e6 0%, transparent 60%),
+    linear-gradient(180deg, #faf9f6 0%, #f2f0e9 100%);
 }
 
 .contacts-profile-header {
@@ -4720,12 +4809,20 @@ onBeforeUnmount(() => {
 
 .contacts-scan-card {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 18px;
+  border: 1px solid var(--contacts-border);
+  border-radius: 14px;
   background: var(--contacts-surface-strong);
-  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+  box-shadow: var(--contacts-shadow);
   padding: 14px;
   text-align: left;
+  transition:
+    transform var(--system-motion-fast),
+    border-color var(--system-motion-fast);
+}
+
+.contacts-scan-card:active {
+  transform: scale(0.98);
+  border-color: color-mix(in srgb, var(--contacts-accent) 36%, var(--contacts-border));
 }
 
 .contacts-scan-card-danger {
@@ -4762,11 +4859,152 @@ onBeforeUnmount(() => {
 }
 
 .contacts-detail-section {
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--contacts-border);
   border-radius: 18px;
   background: var(--contacts-surface-strong);
-  box-shadow: 0 10px 24px rgba(45, 63, 89, 0.07);
+  box-shadow: var(--contacts-shadow);
   padding: 14px;
+}
+
+/* 档案名片 hero */
+.contacts-profile-hero {
+  padding: 22px 16px 16px;
+}
+
+.contacts-hero-card {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.contacts-hero-avatar {
+  width: 88px;
+  height: 88px;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: linear-gradient(135deg, #efe9dd, #fbfaf5);
+  box-shadow:
+    0 14px 28px rgba(38, 34, 27, 0.16),
+    0 0 0 1px var(--contacts-border);
+}
+
+.contacts-hero-eyebrow {
+  margin: 10px 0 0;
+  color: var(--contacts-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.contacts-hero-name {
+  margin: 2px 0 0;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--contacts-text);
+  overflow-wrap: anywhere;
+}
+
+.contacts-hero-meta {
+  margin: 3px 0 0;
+  color: var(--contacts-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.contacts-hero-bio {
+  margin: 8px 0 0;
+  max-width: 46ch;
+  color: var(--contacts-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.contacts-hero-actions {
+  justify-content: center;
+}
+
+/* 关系仪表：好感/信任可视化 */
+.contacts-relation-meter {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--contacts-border);
+  border-radius: 14px;
+  background: var(--contacts-surface);
+  color: var(--contacts-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--system-motion-fast);
+}
+
+.contacts-relation-meter:active {
+  border-color: color-mix(in srgb, var(--contacts-accent) 36%, var(--contacts-border));
+}
+
+.contacts-relation-meter__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.contacts-relation-meter__head em {
+  font-style: normal;
+  color: var(--contacts-accent-strong);
+}
+
+.contacts-relation-meter__head i {
+  color: var(--contacts-soft);
+  font-size: 10px;
+}
+
+.contacts-relation-meter__row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 8px;
+}
+
+.contacts-relation-meter__row em {
+  color: var(--contacts-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.contacts-relation-meter__row b {
+  color: var(--contacts-text);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.contacts-relation-meter__bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(38, 34, 27, 0.1);
+}
+
+.contacts-relation-meter__bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--contacts-warm), var(--contacts-accent));
+  transition: width 300ms ease;
 }
 
 .contacts-role-hub-overview {
@@ -5212,10 +5450,15 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.contacts-small-action,
-.contacts-primary-action {
+.contacts-small-action {
   color: var(--contacts-accent-strong);
   background: var(--contacts-accent-soft);
+}
+
+.contacts-primary-action {
+  color: #fff;
+  background: var(--contacts-text);
+  box-shadow: 0 10px 20px rgba(38, 34, 27, 0.14);
 }
 
 .contacts-ai-draft-action {

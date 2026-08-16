@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookStore } from '../stores/book'
 import { useSystemStore } from '../stores/system'
@@ -7,8 +7,14 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget, resolveReturnLabel } from '../lib/navigation-return'
 import { BOOK_TEXT_ASSET_TYPES } from '../lib/book-text-schema'
-import { getBookTextCategoryLabel } from '../lib/world-taxonomy'
+import { getBookTextCategoryLabel, normalizeBookTextCategory } from '../lib/world-taxonomy'
 import { isBuiltInBookTextAssetId } from '../lib/built-in-book-assets'
+import { getBookCompletenessRating } from '../lib/book-rating'
+import BookShelfPane from '../components/book/BookShelfPane.vue'
+import BookDetailPane from '../components/book/BookDetailPane.vue'
+import BookEditorSheet from '../components/book/BookEditorSheet.vue'
+import BookExportSheet from '../components/book/BookExportSheet.vue'
+import BookToolsSheet from '../components/book/BookToolsSheet.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,15 +23,23 @@ const systemStore = useSystemStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 
+const SHELF_STATE_KEY = 'schatphone:book:shelf-open'
+
 const searchQuery = ref('')
 const typeFilter = ref('all')
 const selectedAssetId = ref(typeof route.query.asset === 'string' ? route.query.asset : '')
-const shelfOpen = ref(!selectedAssetId.value)
+const storedShelfState = typeof localStorage === 'undefined' ? null : localStorage.getItem(SHELF_STATE_KEY)
+const shelfOpen = ref(
+  selectedAssetId.value
+    ? false
+    : storedShelfState === null
+      ? true
+      : storedShelfState === '1',
+)
 const editMode = ref(false)
 const editGuardVisible = ref(false)
 const importFeedback = ref('')
 const importFeedbackTone = ref('info')
-const importInput = ref(null)
 const aiToolsOpen = ref(false)
 const aiToolMode = ref('summary')
 const exportSheetOpen = ref(false)
@@ -34,6 +48,14 @@ const draft = ref({
   category: 'worldview',
   tags: '',
   content: '',
+})
+
+watch(shelfOpen, (open) => {
+  try {
+    localStorage.setItem(SHELF_STATE_KEY, open ? '1' : '0')
+  } catch {
+    /* storage may be unavailable */
+  }
 })
 
 const returnButtonLabel = computed(() =>
@@ -49,8 +71,8 @@ const exportFormatOptions = computed(() => [
     extension: '.worldbook.json',
     title: t('完整数据文件', 'Lossless data file'),
     detail: t(
-      '保留分类、标签、段落与版本信息，适合在其他设备重新导入 Book。',
-      'Preserves category, tags, sections, and version metadata for re-importing into Book.',
+      '完整备份（含分类、标签和目录），适合换设备后恢复书架。',
+      'Full backup with category, tags, and outline — best for moving your library to another device.',
     ),
   },
   {
@@ -82,43 +104,43 @@ const storageBusy = computed(() =>
 const storageStatusCopy = computed(() => {
   if (bookStore.storageState === 'checking') {
     return {
-      title: t('正在检查存储', 'Checking storage'),
-      detail: t('正在确认当前 Book 数据来源。', 'Confirming the current Book data source.'),
+      title: t('正在检查书架', 'Checking your library'),
+      detail: t('正在确认书籍保存在哪里。', 'Confirming where your books are kept.'),
     }
   }
   if (bookStore.storageState === 'upgrading') {
     return {
-      title: t('正在升级 Book 存储', 'Upgrading Book storage'),
-      detail: t('旧数据会保留到验证完成。', 'Legacy data stays in place until verification completes.'),
+      title: t('正在升级书架存档', 'Upgrading library storage'),
+      detail: t('升级完成前，原来的书都还在。', 'Your books stay in place until the upgrade completes.'),
     }
   }
   if (bookStore.storageState === 'saving') {
     return {
       title: t('正在保存', 'Saving'),
-      detail: t('正在写入新的 Repository 版本。', 'Writing a new Repository version.'),
+      detail: t('正在把最新改动写入存档。', 'Writing the latest changes.'),
     }
   }
   if (bookStore.storageState === 'read_only_conflict') {
     return {
-      title: t('当前页面为只读', 'This page is read-only'),
-      detail: t('另一个页面正在写入同一存档。', 'Another page is writing to this save.'),
+      title: t('暂时只能查看', 'Read-only for now'),
+      detail: t('另一个页面正在编辑书架，稍后再试。', 'Another page is editing the library. Try again shortly.'),
     }
   }
   if (bookStore.storageState === 'error') {
     return {
-      title: t('Book 存储需要恢复', 'Book storage needs recovery'),
-      detail: t('当前数据保持只读，避免产生两个存档来源。', 'Data remains read-only to avoid creating two save sources.'),
+      title: t('书架存档需要恢复', 'Library storage needs recovery'),
+      detail: t('为避免书籍丢失，当前只能查看。', 'Books are read-only to keep them safe.'),
     }
   }
   if (bookStore.storageMode === 'repository') {
     return {
-      title: t('Repository 已启用', 'Repository active'),
-      detail: t('旧 Book 存储已保留，可用于故障回退。', 'Legacy Book storage is retained for recovery.'),
+      title: t('书架存档已升级', 'Library storage upgraded'),
+      detail: t('原数据已保留备份，可放心使用。', 'A backup of the original data is kept.'),
     }
   }
   return {
-    title: t('使用旧版 Book 存储', 'Using legacy Book storage'),
-    detail: t('可升级到经过验证的 IndexedDB 存储。', 'Upgrade to verified IndexedDB storage.'),
+    title: t('书架存档可升级', 'Library upgrade available'),
+    detail: t('升级后保存更可靠，建议有空时点一下。', 'Upgrading keeps your books safer. Recommended when you have a moment.'),
   }
 })
 
@@ -132,8 +154,13 @@ const statusLabels = {
   archived: { zh: '归档', en: 'Archived' },
 }
 
-const typeOptions = computed(() => [
-  { id: 'all', label: t('全部分类', 'All categories') },
+const categoryLabelOf = (category) => {
+  const normalized = normalizeBookTextCategory(category)
+  return t(typeLabels[normalized]?.zh || normalized, typeLabels[normalized]?.en || normalized)
+}
+
+const shelfTabs = computed(() => [
+  { id: 'all', label: t('书架', 'Shelf') },
   ...BOOK_TEXT_ASSET_TYPES.map((type) => ({
     id: type,
     label: t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type),
@@ -147,6 +174,39 @@ const filteredAssets = computed(() => {
     category: typeFilter.value === 'all' ? '' : typeFilter.value,
   }
   return bookStore.listAssets(filters)
+})
+
+const worldBookLinkCounts = computed(() => {
+  const counts = new Map()
+  systemStore.listWorldBookSourceLinks().forEach((link) => {
+    counts.set(link.assetId, (counts.get(link.assetId) || 0) + 1)
+  })
+  return counts
+})
+
+const toShelfItem = (asset) => {
+  const category = normalizeBookTextCategory(asset.category || asset.assetType)
+  return {
+    id: asset.id,
+    title: asset.title,
+    category,
+    categoryLabel: categoryLabelOf(category),
+    status: asset.status || 'draft',
+    rating: getBookCompletenessRating(asset, worldBookLinkCounts.value.get(asset.id) || 0),
+  }
+}
+
+const shelfGroups = computed(() => {
+  const categories = typeFilter.value === 'all' ? BOOK_TEXT_ASSET_TYPES : [typeFilter.value]
+  return categories
+    .map((category) => ({
+      id: category,
+      label: categoryLabelOf(category),
+      items: filteredAssets.value
+        .filter((asset) => normalizeBookTextCategory(asset.category || asset.assetType) === category)
+        .map(toShelfItem),
+    }))
+    .filter((group) => group.items.length > 0)
 })
 
 const selectedAsset = computed(() =>
@@ -179,10 +239,9 @@ const selectedWorldBookUsageSummary = computed(() => {
   )
 })
 
-const selectedAssetTypeLabel = computed(() => {
-  const type = selectedAsset.value?.category || selectedAsset.value?.assetType || 'encyclopedia'
-  return t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type)
-})
+const selectedAssetTypeLabel = computed(() =>
+  categoryLabelOf(selectedAsset.value?.category || selectedAsset.value?.assetType || 'encyclopedia'),
+)
 
 const selectedStatusLabel = computed(() => {
   const status = selectedAsset.value?.status || 'draft'
@@ -190,6 +249,30 @@ const selectedStatusLabel = computed(() => {
 })
 
 const selectedAssetIsBuiltIn = computed(() => isBuiltInBookTextAssetId(selectedAsset.value?.id))
+
+const selectedRating = computed(() =>
+  getBookCompletenessRating(selectedAsset.value, selectedWorldBookLinks.value.length),
+)
+
+const selectedUpdatedText = computed(() => {
+  const ts = Number(selectedAsset.value?.updatedAt || 0)
+  if (!ts) return ''
+  const diff = Date.now() - ts
+  const days = Math.floor(diff / 86400000)
+  if (days >= 1) return t(`${days} 天前更新`, `${days}d ago`)
+  const hours = Math.floor(diff / 3600000)
+  if (hours >= 1) return t(`${hours} 小时前更新`, `${hours}h ago`)
+  return t('刚刚更新', 'Just updated')
+})
+
+const selectedIntroText = computed(() => {
+  const text = String(selectedAsset.value?.content || '')
+    .replace(/^#+\s+/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!text) return t('这份文本还没有内容。', 'This source has no content yet.')
+  return text.length > 220 ? `${text.slice(0, 220)}…` : text
+})
 
 const aiToolOptions = computed(() => [
   {
@@ -215,12 +298,6 @@ const aiToolOptions = computed(() => [
 ])
 
 const selectedContentText = computed(() => String(selectedAsset.value?.content || '').trim())
-
-const selectedLineCount = computed(() => {
-  const text = String(selectedAsset.value?.content || '').trim()
-  if (!text) return 0
-  return text.split(/\r?\n/).filter((line) => line.trim()).length
-})
 
 const aiSummaryText = computed(() => {
   const text = selectedContentText.value.replace(/\s+/g, ' ')
@@ -337,10 +414,6 @@ const toggleAiTools = () => {
   aiToolsOpen.value = !aiToolsOpen.value
 }
 
-const selectAiTool = (toolId) => {
-  aiToolMode.value = toolId
-}
-
 const beginEdit = () => {
   const asset = selectedAsset.value
   if (!asset) return
@@ -424,9 +497,53 @@ const saveEdit = () => {
       : t('保存失败。', 'Save failed.')
 }
 
-const triggerImport = () => {
-  if (bookStore.storageReadOnly) return
-  importInput.value?.click()
+const toggleFavorite = () => {
+  const asset = selectedAsset.value
+  if (!asset || selectedAssetIsBuiltIn.value || bookStore.storageReadOnly) return
+  const result = bookStore.updateAsset(
+    asset.id,
+    { favorite: !asset.favorite },
+    { force: true, preserveVersion: true },
+  )
+  if (!result.ok) {
+    importFeedbackTone.value = 'error'
+    importFeedback.value = t('收藏失败。', 'Favorite failed.')
+  }
+}
+
+const requestDelete = async () => {
+  const asset = selectedAsset.value
+  if (!asset || selectedAssetIsBuiltIn.value || bookStore.storageReadOnly) return
+  const confirmed = await confirmDialog({
+    title: t('删除文本来源', 'Delete text source'),
+    message:
+      asset.status === 'active_source'
+        ? t(
+            '这份文本正在被 WorldBook 引用，删除后对应引用会失效。确认删除吗？',
+            'This text is linked by WorldBook; deleting it breaks those links. Delete anyway?',
+          )
+        : t('删除后不可恢复。确认从书架移除这本书吗？', 'This cannot be undone. Remove this book from the shelf?'),
+    details: [`${t('标题', 'Title')}: ${asset.title}`],
+    confirmText: t('删除', 'Delete'),
+    cancelText: t('取消', 'Cancel'),
+    tone: 'danger',
+  })
+  if (!confirmed) return
+  const result = bookStore.deleteAsset(asset.id, { force: true })
+  if (result.ok) {
+    selectedAssetId.value = ''
+    editMode.value = false
+    editGuardVisible.value = false
+    shelfOpen.value = true
+    importFeedbackTone.value = 'success'
+    importFeedback.value = t('已删除文本来源。', 'Text source deleted.')
+    return
+  }
+  importFeedbackTone.value = 'error'
+  importFeedback.value =
+    result.reason === 'built_in'
+      ? t('内置文本不能删除。', 'Built-in text cannot be deleted.')
+      : t('删除失败。', 'Delete failed.')
 }
 
 const showStorageFeedback = (tone, message) => {
@@ -437,10 +554,10 @@ const showStorageFeedback = (tone, message) => {
 const upgradeBookStorage = async () => {
   if (storageBusy.value || bookStore.storageMode === 'repository') return
   const confirmed = await confirmDialog({
-    title: t('升级 Book 存储', 'Upgrade Book storage'),
+    title: t('升级书架存档', 'Upgrade library storage'),
     message: t(
-      'Book 数据会先完整复制并验证，再切换到新存储。旧存储不会删除，WorldBook 选择也不会改变。',
-      'Book data will be copied and verified before switching. Legacy storage stays intact and WorldBook selections do not change.',
+      '我们会先完整备份并检查你的书籍，再切换到新存档。原数据不会删除，世界书里的启用状态也不受影响。',
+      'Your books are fully backed up and verified before switching. Nothing is deleted, and WorldBook activations stay unchanged.',
     ),
     confirmText: t('检查并升级', 'Check and upgrade'),
     cancelText: t('取消', 'Cancel'),
@@ -452,14 +569,14 @@ const upgradeBookStorage = async () => {
   if (persistence.capacity?.status === 'insufficient') {
     showStorageFeedback(
       'error',
-      t('浏览器可用空间不足，Book 存储没有切换。', 'Browser storage is too full. Book storage was not switched.'),
+      t('浏览器可用空间不足，没有进行升级。', 'Not enough browser space. Nothing was changed.'),
     )
     return
   }
   if (persistence.capacity?.status === 'unknown') {
     showStorageFeedback(
       'error',
-      t('无法确认可用空间，Book 存储没有切换。', 'Available capacity could not be verified. Book storage was not switched.'),
+      t('暂时无法确认可用空间，没有进行升级。', 'Available space could not be confirmed. Nothing was changed.'),
     )
     return
   }
@@ -467,10 +584,10 @@ const upgradeBookStorage = async () => {
   let allowBestEffort = persistence.state === 'persistent'
   if (!allowBestEffort) {
     allowBestEffort = await confirmDialog({
-      title: t('持久存储未获确认', 'Persistent storage not confirmed'),
+      title: t('浏览器未承诺长期保护', 'No long-term protection'),
       message: t(
-        '浏览器没有授予持久存储保护。仍可继续使用普通 IndexedDB，但系统清理站点数据时风险更高。',
-        'The browser did not grant persistent protection. You can continue with regular IndexedDB, with a higher risk if site data is cleared.',
+        '浏览器没有承诺长期保护这些数据。仍可继续，但清理浏览器数据时书籍有丢失风险。',
+        'The browser did not promise long-term protection. You can continue, but clearing site data may lose books.',
       ),
       confirmText: t('仍然继续', 'Continue anyway'),
       cancelText: t('暂不升级', 'Not now'),
@@ -483,12 +600,12 @@ const upgradeBookStorage = async () => {
   let result = await bookStore.upgradeBookStorage({ allowBestEffort, worldBookSourceLinks })
   if (result.code === 'legacy_recovery_candidate') {
     const useMirror = await confirmDialog({
-      title: t('发现可恢复的 Book 副本', 'Recoverable Book copy found'),
+      title: t('找到一份可恢复的备份', 'Recoverable backup found'),
       message: t(
-        '本地旧数据不可用，但浏览器镜像中有可读取副本。是否明确使用该副本完成升级？',
-        'The local legacy data is unavailable, but a readable browser mirror exists. Use that copy for this upgrade?',
+        '本地存档暂时读不出来，但浏览器里留有一份备份。用这份备份完成升级吗？',
+        'The local data is unreadable, but a browser backup exists. Use it for this upgrade?',
       ),
-      confirmText: t('使用镜像副本', 'Use mirror copy'),
+      confirmText: t('使用备份', 'Use backup'),
       cancelText: t('取消', 'Cancel'),
       tone: 'warning',
     })
@@ -503,13 +620,13 @@ const upgradeBookStorage = async () => {
   if (result.ok) {
     showStorageFeedback(
       'success',
-      t('Book 已切换到 Repository，旧存储仍保留。', 'Book now uses Repository. Legacy storage is still retained.'),
+      t('书架存档升级完成，原数据已保留备份。', 'Library storage upgraded. A backup of the original data is kept.'),
     )
     return
   }
   showStorageFeedback(
     'error',
-    t(`Book 存储升级失败：${result.code}`, `Book storage upgrade failed: ${result.code}`),
+    t('升级没有成功，书籍仍保留在原存档。', 'Upgrade did not complete. Your books remain in the original storage.'),
   )
 }
 
@@ -519,7 +636,7 @@ const retryBookStorageWrite = async () => {
     result.ok ? 'success' : 'error',
     result.ok
       ? t('Book 已保存。', 'Book saved.')
-      : t(`重试失败：${result.code}`, `Retry failed: ${result.code}`),
+      : t('保存没有成功，请再试一次。', 'Save did not complete. Please try again.'),
   )
 }
 
@@ -529,7 +646,7 @@ const refreshBookStorage = async () => {
     result.ok ? 'success' : 'error',
     result.ok
       ? t('已刷新为当前存档。', 'Refreshed to the current save.')
-      : t(`刷新失败：${result.code}`, `Refresh failed: ${result.code}`),
+      : t('刷新没有成功，请稍后再试。', 'Refresh did not complete. Please try again shortly.'),
   )
 }
 
@@ -616,2157 +733,304 @@ const exportSelected = (format = 'worldbook_json') => {
     importFeedback.value = t(`已下载 ${file.fileName}。`, `${file.fileName} downloaded.`)
   }
 }
+
+const onKeydown = (event) => {
+  if (event.key !== 'Escape') return
+  if (editMode.value) {
+    cancelEdit()
+    return
+  }
+  if (exportSheetOpen.value) {
+    exportSheetOpen.value = false
+    return
+  }
+  if (aiToolsOpen.value) {
+    aiToolsOpen.value = false
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <div class="book-shell">
-    <div class="book-ambient" aria-hidden="true">
-      <span class="book-ambient-leaf is-left"></span>
-      <span class="book-ambient-leaf is-right"></span>
-      <span class="book-ambient-grid"></span>
-    </div>
     <header class="book-topbar">
       <button type="button" class="book-back" data-testid="book-back" @click="goBack">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
         <span>{{ returnButtonLabel }}</span>
       </button>
-      <div class="book-title-lockup">
-        <span class="book-brand-mark" aria-hidden="true">
-          <i class="fas fa-book-bookmark"></i>
-        </span>
-        <div>
-          <p>{{ t('文本来源', 'Text Sources') }}</p>
-          <h1>{{ t('文本库', 'Book') }}</h1>
-        </div>
+      <div class="book-brand">
+        <small>TEXT&nbsp;LIBRARY</small>
+        <h1>{{ t('文本库', 'Book') }}</h1>
       </div>
       <div class="book-topbar-actions">
         <button
           type="button"
-          class="book-icon-button is-quiet book-shelf-trigger"
-          :aria-label="t('资料架', 'Shelf')"
-          @click="openShelf"
+          class="book-topbar-button is-quiet book-shelf-trigger"
+          :aria-label="t('书架', 'Shelf')"
           data-testid="book-open-shelf"
+          @click="openShelf"
         >
           <i class="fas fa-layer-group" aria-hidden="true"></i>
         </button>
         <button
           type="button"
-          class="book-icon-button is-quiet"
-          :aria-label="t('Book AI', 'Book AI')"
+          class="book-topbar-button is-quiet"
+          :aria-label="t('智能工具', 'Smart tools')"
           :disabled="!selectedAsset"
-          @click="toggleAiTools"
           data-testid="book-ai-trigger"
+          @click="toggleAiTools"
         >
           <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
         </button>
-        <button type="button" class="book-icon-button" :aria-label="t('新建', 'New')" :disabled="bookStore.storageReadOnly || storageBusy" @click="createBlankAsset" data-testid="book-create">
+        <button
+          type="button"
+          class="book-topbar-button"
+          :aria-label="t('新建', 'New')"
+          :disabled="bookStore.storageReadOnly || storageBusy"
+          data-testid="book-create"
+          @click="createBlankAsset"
+        >
           <i class="fas fa-plus" aria-hidden="true"></i>
         </button>
       </div>
     </header>
 
     <main :class="['book-main', { 'is-shelf-open': shelfOpen || !selectedAsset }]">
-      <aside class="book-library" data-testid="book-library">
-        <div class="book-library-head">
-          <span>{{ t('资料架', 'Shelf') }}</span>
-          <strong>{{ filteredAssets.length }}</strong>
-          <button
-            v-if="selectedAssetId"
-            type="button"
-            class="book-library-close"
-            :aria-label="t('关闭资料架', 'Close shelf')"
-            @click="shelfOpen = false"
-          >
-            <i class="fas fa-xmark" aria-hidden="true"></i>
-          </button>
-        </div>
-        <div class="book-search-row">
-          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-          <input v-model="searchQuery" type="search" :placeholder="t('搜索文本', 'Search text')" data-testid="book-search" />
-        </div>
-        <select v-model="typeFilter" class="book-filter" data-testid="book-type-filter">
-          <option v-for="option in typeOptions" :key="option.id" :value="option.id">
-            {{ option.label }}
-          </option>
-        </select>
+      <BookShelfPane
+        v-model:search-query="searchQuery"
+        v-model:active-tab="typeFilter"
+        :groups="shelfGroups"
+        :total-count="filteredAssets.length"
+        :tabs="shelfTabs"
+        :selected-id="selectedAsset?.id || ''"
+        :storage-state="bookStore.storageState"
+        :storage-mode="bookStore.storageMode"
+        :storage-busy="storageBusy"
+        :storage-read-only="bookStore.storageReadOnly"
+        :storage-status-copy="storageStatusCopy"
+        :import-feedback="importFeedback"
+        :import-feedback-tone="importFeedbackTone"
+        @select="selectAsset"
+        @import-file="importFile"
+        @upgrade-storage="upgradeBookStorage"
+        @retry-storage="retryBookStorageWrite"
+        @refresh-storage="refreshBookStorage"
+        @close="shelfOpen = false"
+      />
 
-        <div class="book-category-rail">
-          <button
-            v-for="option in typeOptions.slice(0, 6)"
-            :key="option.id"
-            type="button"
-            :class="['book-category-button', { 'is-active': typeFilter === option.id }]"
-            @click="typeFilter = option.id"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-
-        <section
-          :class="['book-storage-status', `is-${bookStore.storageState}`]"
-          data-testid="book-storage-status"
-          :data-storage-mode="bookStore.storageMode"
-          :data-storage-state="bookStore.storageState"
-          aria-live="polite"
-        >
-          <span class="book-storage-icon" aria-hidden="true">
-            <i :class="bookStore.storageMode === 'repository' ? 'fas fa-database' : 'fas fa-hard-drive'"></i>
-          </span>
-          <div>
-            <strong>{{ storageStatusCopy.title }}</strong>
-            <small>{{ storageStatusCopy.detail }}</small>
-          </div>
-          <button
-            v-if="bookStore.storageMode === 'legacy' && bookStore.storageState !== 'read_only_conflict'"
-            type="button"
-            class="book-storage-action"
-            :disabled="storageBusy"
-            data-testid="book-storage-upgrade"
-            @click="upgradeBookStorage"
-          >
-            {{ t('升级', 'Upgrade') }}
-          </button>
-          <div v-else-if="bookStore.storageState === 'read_only_conflict'" class="book-storage-conflict-actions">
-            <button type="button" class="book-storage-action" data-testid="book-storage-retry" @click="retryBookStorageWrite">
-              {{ t('重试', 'Retry') }}
-            </button>
-            <button type="button" class="book-storage-action is-secondary" data-testid="book-storage-refresh" @click="refreshBookStorage">
-              {{ t('刷新', 'Refresh') }}
-            </button>
-          </div>
-        </section>
-
-        <button type="button" class="book-import-button" :disabled="bookStore.storageReadOnly || storageBusy" @click="triggerImport" data-testid="book-import-trigger">
-          <i class="fas fa-file-import" aria-hidden="true"></i>
-          <span>{{ t('导入文本', 'Import text') }}</span>
-        </button>
-        <input
-          ref="importInput"
-          class="book-hidden-input"
-          type="file"
-          accept=".txt,.md,.markdown,.json,.worldbook.json"
-          data-testid="book-import-input"
-          @change="importFile"
-        />
-
-        <p v-if="importFeedback" :class="['book-feedback', `is-${importFeedbackTone}`]" data-testid="book-import-feedback">
-          {{ importFeedback }}
-        </p>
-
-        <div v-if="filteredAssets.length === 0" class="book-empty" data-testid="book-empty">
-          <div class="book-empty-visual" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <strong>{{ t('还没有文本来源', 'No text sources yet') }}</strong>
-          <span>{{ t('创建或导入世界书、规则、术语和参考资料。', 'Create or import worldbooks, rules, glossary, and references.') }}</span>
-        </div>
-
-        <button
-          v-for="asset in filteredAssets"
-          :key="asset.id"
-          type="button"
-          :class="['book-list-item', { 'is-active': selectedAsset?.id === asset.id }]"
-          :data-testid="`book-asset-${asset.id}`"
-          @click="selectAsset(asset.id)"
-        >
-          <span class="book-list-mark" aria-hidden="true">
-            <i class="fas fa-bookmark"></i>
-          </span>
-          <span class="book-list-copy">
-            <strong>{{ asset.title }}</strong>
-            <small>{{ t(typeLabels[asset.category || asset.assetType]?.zh || asset.category || asset.assetType, typeLabels[asset.category || asset.assetType]?.en || asset.category || asset.assetType) }} · {{ asset.content.length }} {{ t('字', 'chars') }}</small>
-          </span>
-          <i v-if="asset.locked" class="fas fa-lock" aria-hidden="true"></i>
-          <i v-else class="fas fa-chevron-right" aria-hidden="true"></i>
-        </button>
-      </aside>
-
-      <section v-if="selectedAsset" class="book-detail" data-testid="book-detail">
-        <div class="book-detail-header">
-          <span class="book-detail-seal" aria-hidden="true">
-            <i class="fas fa-seedling"></i>
-          </span>
-          <div>
-            <p>{{ selectedAssetTypeLabel }} · {{ selectedStatusLabel }}</p>
-            <h2>{{ selectedAsset.title }}</h2>
-          </div>
-          <div class="book-detail-actions">
-            <button type="button" class="book-secondary-button book-detail-shelf-button" @click="openShelf" data-testid="book-detail-open-shelf">
-              <i class="fas fa-layer-group" aria-hidden="true"></i>
-              <span>{{ t('资料架', 'Shelf') }}</span>
-            </button>
-            <button type="button" class="book-secondary-button" @click="openExportSheet" data-testid="book-export">
-              <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
-              <span>{{ t('导出', 'Export') }}</span>
-            </button>
-            <button v-if="!editMode" type="button" class="book-primary-button" :disabled="bookStore.storageReadOnly || storageBusy" @click="beginEdit" data-testid="book-edit">
-              <i class="fas fa-pen" aria-hidden="true"></i>
-              <span>{{ t('编辑', 'Edit') }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="book-meta-row">
-          <span>{{ selectedAsset.content.length }} {{ t('字', 'chars') }}</span>
-          <span>{{ selectedSections.length }} {{ t('段落', 'sections') }}</span>
-          <span v-if="selectedAsset.locked">{{ t('已锁定', 'Locked') }}</span>
-          <span v-if="selectedAsset.status === 'active_source'">{{ t('正在影响世界书', 'Used by WorldBook') }}</span>
-        </div>
-
-        <div class="book-stat-strip" aria-label="Book source overview">
-          <span>
-            <strong>{{ selectedAsset.content.length }}</strong>
-            <small>{{ t('字数', 'chars') }}</small>
-          </span>
-          <span>
-            <strong>{{ selectedSections.length }}</strong>
-            <small>{{ t('目录段', 'sections') }}</small>
-          </span>
-          <span>
-            <strong>{{ selectedLineCount }}</strong>
-            <small>{{ t('有效行', 'lines') }}</small>
-          </span>
-          <span>
-            <strong>{{ selectedWorldBookLinks.length }}</strong>
-            <small>{{ t('引用', 'links') }}</small>
-          </span>
-        </div>
-
-        <div v-if="selectedWorldBookLinks.length > 0" class="book-usage-card" data-testid="book-worldbook-usage">
-          <div>
-            <strong>{{ t('正在被 WorldBook 使用', 'Used by WorldBook') }}</strong>
-            <span>{{ selectedWorldBookUsageSummary }}</span>
-          </div>
-          <button type="button" class="book-secondary-button" @click="openWorldBookUsage">
-            {{ t('查看启用设置', 'View activation') }}
-          </button>
-        </div>
-
-        <div v-if="selectedTags.length > 0" class="book-tags">
-          <span v-for="tag in selectedTags" :key="tag">{{ tag }}</span>
-        </div>
-
-        <div v-if="editGuardVisible" class="book-guard" data-testid="book-edit-guard">
-          <strong>
-            {{
-              selectedAssetIsBuiltIn
-                ? t('这是内置来源', 'This is a built-in source')
-                : t('这是启用或锁定的来源', 'This source is active or locked')
-            }}
-          </strong>
-          <p>
-            {{
-              selectedAssetIsBuiltIn
-                ? t('继续后会创建一份可编辑副本，内置模板本身不会被改动。', 'Continuing creates an editable copy; the built-in template stays unchanged.')
-                : t('编辑前请确认：保存后可能改变之后的世界书上下文。', 'Confirm before editing: saving may change future WorldBook context.')
-            }}
-          </p>
-          <button type="button" class="book-primary-button" :disabled="bookStore.storageReadOnly || storageBusy" @click="confirmGuardedEdit" data-testid="book-edit-guard-confirm">
-            {{ selectedAssetIsBuiltIn ? t('复制后编辑', 'Copy and edit') : t('继续编辑', 'Continue editing') }}
-          </button>
-        </div>
-
-        <div v-if="!editMode" class="book-read-mode" data-testid="book-read-mode">
-          <div v-if="selectedSections.length > 0" class="book-outline">
-            <strong>{{ t('目录', 'Outline') }}</strong>
-            <span v-for="section in selectedSections" :key="section.id">
-              {{ section.title }}
-            </span>
-          </div>
-          <pre>{{ selectedAsset.content }}</pre>
-        </div>
-      </section>
+      <BookDetailPane
+        v-if="selectedAsset"
+        :asset="selectedAsset"
+        :type-label="selectedAssetTypeLabel"
+        :status-label="selectedStatusLabel"
+        :updated-text="selectedUpdatedText"
+        :rating="selectedRating"
+        :summary="selectedIntroText"
+        :tags="selectedTags"
+        :sections="selectedSections"
+        :link-count="selectedWorldBookLinks.length"
+        :usage-summary="selectedWorldBookUsageSummary"
+        :is-built-in="selectedAssetIsBuiltIn"
+        :favorite="selectedAsset.favorite === true"
+        :action-disabled="bookStore.storageReadOnly || storageBusy"
+        :edit-guard-visible="editGuardVisible"
+        @edit="beginEdit"
+        @confirm-guard="confirmGuardedEdit"
+        @export="openExportSheet"
+        @delete="requestDelete"
+        @toggle-favorite="toggleFavorite"
+        @open-usage="openWorldBookUsage"
+        @open-shelf="openShelf"
+      />
     </main>
 
-    <div v-if="exportSheetOpen" class="book-export-backdrop" @click="exportSheetOpen = false"></div>
-    <section
-      v-if="selectedAsset && exportSheetOpen"
-      class="book-export-sheet"
-      data-testid="book-export-sheet"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('导出文稿', 'Export manuscript')"
-    >
-      <div class="book-export-sheet__head">
-        <div>
-          <p>{{ t('导出文稿', 'Export manuscript') }}</p>
-          <h3>{{ selectedAsset.title }}</h3>
-        </div>
-        <button
-          type="button"
-          class="book-icon-button is-quiet"
-          :aria-label="t('关闭', 'Close')"
-          data-testid="book-export-close"
-          @click="exportSheetOpen = false"
-        >
-          <i class="fas fa-xmark" aria-hidden="true"></i>
-        </button>
-      </div>
-      <p class="book-export-sheet__intro">
-        {{ t('选择这一次需要的文件；不会改变 Book 文稿或 WorldBook 启用状态。', 'Choose the file you need. Exporting never changes Book text or WorldBook activation.') }}
-      </p>
-      <div class="book-export-options">
-        <button
-          v-for="option in exportFormatOptions"
-          :key="option.id"
-          type="button"
-          :data-testid="`book-export-format-${option.id}`"
-          @click="exportSelected(option.id)"
-        >
-          <span class="book-export-options__icon" aria-hidden="true">
-            <i :class="option.icon"></i>
-          </span>
-          <span>
-            <strong>{{ option.title }}</strong>
-            <small>{{ option.detail }}</small>
-          </span>
-          <em>{{ option.extension }}</em>
-        </button>
-      </div>
-    </section>
+    <BookExportSheet
+      :open="exportSheetOpen && !!selectedAsset"
+      :title="selectedAsset?.title || ''"
+      :options="exportFormatOptions"
+      @close="exportSheetOpen = false"
+      @select="exportSelected"
+    />
 
-    <div v-if="editMode" class="book-editor-backdrop" @click="cancelEdit"></div>
-    <form
-      v-if="editMode"
-      class="book-editor book-editor-sheet"
-      data-testid="book-editor"
-      role="dialog"
-      aria-modal="true"
-      @submit.prevent="saveEdit"
-    >
-      <div class="book-editor-head">
-        <div>
-          <p>{{ t('文本编辑', 'Text editor') }}</p>
-          <h3>{{ draft.title || t('未命名来源', 'Untitled source') }}</h3>
-        </div>
-        <button type="button" class="book-icon-button is-quiet" :aria-label="t('关闭', 'Close')" @click="cancelEdit">
-          <i class="fas fa-xmark" aria-hidden="true"></i>
-        </button>
-      </div>
-      <label>
-        <span>{{ t('标题', 'Title') }}</span>
-        <input v-model="draft.title" data-testid="book-edit-title" />
-      </label>
-      <label>
-        <span>{{ t('分类', 'Category') }}</span>
-        <select v-model="draft.category" data-testid="book-edit-type">
-          <option v-for="type in BOOK_TEXT_ASSET_TYPES" :key="type" :value="type">
-            {{ t(typeLabels[type]?.zh || type, typeLabels[type]?.en || type) }}
-          </option>
-        </select>
-      </label>
-      <label>
-        <span>{{ t('标签', 'Tags') }}</span>
-        <input v-model="draft.tags" data-testid="book-edit-tags" />
-      </label>
-      <label class="book-editor-content">
-        <span>{{ t('内容', 'Content') }}</span>
-        <textarea v-model="draft.content" data-testid="book-edit-content"></textarea>
-      </label>
-      <div class="book-editor-actions">
-        <button type="button" class="book-secondary-button" @click="cancelEdit" data-testid="book-cancel">
-          {{ t('取消', 'Cancel') }}
-        </button>
-        <button type="submit" class="book-primary-button" :disabled="bookStore.storageReadOnly || storageBusy" data-testid="book-save">
-          {{ t('保存', 'Save') }}
-        </button>
-      </div>
-    </form>
+    <BookEditorSheet
+      :open="editMode"
+      v-model="draft"
+      :disabled="bookStore.storageReadOnly || storageBusy"
+      @save="saveEdit"
+      @cancel="cancelEdit"
+    />
 
-    <div v-if="selectedAsset && aiToolsOpen" class="book-ai-backdrop" @click="aiToolsOpen = false"></div>
-    <section v-if="selectedAsset && aiToolsOpen" class="book-ai-sheet" data-testid="book-ai-sheet" aria-live="polite">
-      <div class="book-ai-handle"></div>
-      <div class="book-ai-head">
-        <div>
-          <p>{{ t('Book AI', 'Book AI') }}</p>
-          <h2>{{ selectedAsset.title }}</h2>
-        </div>
-        <button type="button" class="book-icon-button is-quiet" :aria-label="t('关闭', 'Close')" @click="aiToolsOpen = false">
-          <i class="fas fa-xmark" aria-hidden="true"></i>
-        </button>
-      </div>
-      <div class="book-ai-tools">
-        <button
-          v-for="tool in aiToolOptions"
-          :key="tool.id"
-          type="button"
-          :class="['book-ai-tool', { 'is-active': aiToolMode === tool.id }]"
-          :data-testid="`book-ai-tool-${tool.id}`"
-          @click="selectAiTool(tool.id)"
-        >
-          <i :class="tool.icon" aria-hidden="true"></i>
-          <span>{{ tool.label }}</span>
-        </button>
-      </div>
-      <pre class="book-ai-result" data-testid="book-ai-result">{{ aiToolResultText }}</pre>
-    </section>
+    <BookToolsSheet
+      :open="aiToolsOpen && !!selectedAsset"
+      :title="selectedAsset?.title || ''"
+      :tools="aiToolOptions"
+      :active-tool="aiToolMode"
+      :result-text="aiToolResultText"
+      @close="aiToolsOpen = false"
+      @select="aiToolMode = $event"
+    />
   </div>
 </template>
 
 <style scoped>
 .book-shell {
+  /* 明亮书城风 token：暖纸白底 + 墨色 + 朱砂强调 + 评分金 */
+  --book-paper: #faf9f6;
+  --book-card: #ffffff;
+  --book-field: #f0eee8;
+  --book-ink: #26221b;
+  --book-ink-2: #6f6a5e;
+  --book-ink-3: #a39d8f;
+  --book-line: rgba(38, 34, 27, 0.08);
+  --book-accent: #c8452c;
+  --book-accent-soft: #fdf0ec;
+  --book-gold: #d9a441;
+  --book-wv-a: #1e5f52;
+  --book-wv-b: #0f3d34;
+  --book-en-a: #c96f2e;
+  --book-en-b: #8f4a1a;
+  --book-wr-a: #3b4a6b;
+  --book-wr-b: #232f4a;
+  --book-radius-sm: 8px;
+  --book-radius-md: 14px;
+  --book-radius-lg: 22px;
+  --book-shadow-soft: 0 14px 34px rgba(38, 34, 27, 0.08);
+  --book-shadow-deep: 0 28px 80px rgba(38, 34, 27, 0.28);
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  color: #14171c;
+  overflow: hidden;
+  color: var(--book-ink);
   background:
-    linear-gradient(180deg, rgba(247, 248, 250, 0.94), rgba(230, 235, 240, 0.96)),
-    radial-gradient(circle at 12% 8%, rgba(111, 143, 179, 0.2), transparent 34%);
+    radial-gradient(90% 60% at 50% 0%, #f5f0e6 0%, transparent 60%),
+    var(--book-paper);
 }
 
 .book-topbar {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: calc(40px + env(safe-area-inset-top)) 18px 14px;
-  border-bottom: 1px solid rgba(145, 157, 172, 0.28);
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(18px);
-}
-
-.book-topbar > div {
-  min-width: 0;
-  flex: 1;
-}
-
-.book-topbar p {
-  margin: 0;
-  color: #6a7380;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.book-topbar h1 {
-  margin: 1px 0 0;
-  font-size: 24px;
-  line-height: 1.1;
-}
-
-.book-back,
-.book-icon-button,
-.book-primary-button,
-.book-secondary-button,
-.book-import-button {
-  border: 0;
-  cursor: pointer;
-  font: inherit;
+  padding: calc(40px + env(safe-area-inset-top)) 18px 12px;
+  border-bottom: 1px solid var(--book-line);
+  background: rgba(250, 249, 246, 0.9);
+  backdrop-filter: blur(14px);
 }
 
 .book-back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #2466a8;
+  padding: 6px 0;
+  border: 0;
   background: transparent;
+  color: var(--book-ink);
+  font: inherit;
   font-size: 14px;
   font-weight: 700;
+  cursor: pointer;
 }
 
-.book-icon-button {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  color: white;
-  background: #2b6f9f;
-}
-
-.book-main {
-  min-height: 0;
+.book-brand {
   flex: 1;
-  display: grid;
-  grid-template-columns: minmax(180px, 34%) 1fr;
-  gap: 14px;
-  padding: 14px;
+  min-width: 0;
 }
 
-.book-library,
-.book-detail {
-  min-height: 0;
-  overflow: auto;
-  border: 1px solid rgba(145, 157, 172, 0.24);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 45px rgba(29, 43, 59, 0.08);
-}
-
-.book-library {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-}
-
-.book-search-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border-radius: 12px;
-  background: #eef2f6;
-}
-
-.book-search-row input,
-.book-filter,
-.book-editor input,
-.book-editor select,
-.book-editor textarea {
-  width: 100%;
-  border: 0;
-  outline: none;
-  color: #14171c;
-  background: transparent;
-  font: inherit;
-}
-
-.book-search-row input {
-  height: 40px;
-}
-
-.book-filter {
-  height: 40px;
-  padding: 0 10px;
-  border-radius: 12px;
-  background: #eef2f6;
-}
-
-.book-import-button,
-.book-list-item,
-.book-primary-button,
-.book-secondary-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 12px;
-  font-size: 13px;
+.book-brand small {
+  display: block;
+  font-size: 10px;
   font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--book-accent);
 }
 
-.book-import-button {
-  min-height: 40px;
-  color: #245985;
-  background: #dbeaf5;
-}
-
-.book-hidden-input {
-  display: none;
-}
-
-.book-feedback {
-  margin: 0;
-  padding: 9px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.book-feedback.is-success {
-  color: #176144;
-  background: #dff5ea;
-}
-
-.book-feedback.is-error {
-  color: #9c2525;
-  background: #fee2e2;
-}
-
-.book-empty {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  min-height: 180px;
-  padding: 18px;
-  color: #606b78;
-  text-align: center;
-}
-
-.book-empty i {
+.book-brand h1 {
+  margin: 1px 0 0;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 26px;
-  color: #2b6f9f;
-}
-
-.book-empty strong {
-  color: #1c232b;
-}
-
-.book-list-item {
-  justify-content: space-between;
-  min-height: 58px;
-  padding: 10px 12px;
-  color: #1c232b;
-  text-align: left;
-  background: #f6f8fa;
-}
-
-.book-list-item.is-active {
-  color: #0f416b;
-  background: #dcecf8;
-}
-
-.book-list-item span {
-  min-width: 0;
-  display: grid;
-  gap: 3px;
-}
-
-.book-list-item strong,
-.book-list-item small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.book-list-item small {
-  color: #687482;
-  font-size: 11px;
-}
-
-.book-detail {
-  padding: 16px;
-}
-
-.book-detail-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.book-detail-header p,
-.book-detail-header h2 {
-  margin: 0;
-}
-
-.book-detail-header p {
-  color: #6a7380;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.book-detail-header h2 {
-  margin-top: 3px;
-  font-size: 24px;
-  line-height: 1.16;
-}
-
-.book-detail-actions,
-.book-editor-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.book-primary-button,
-.book-secondary-button {
-  min-height: 38px;
-  padding: 0 13px;
-}
-
-.book-primary-button {
-  color: white;
-  background: #1f6b9c;
-}
-
-.book-secondary-button {
-  color: #1f4f78;
-  background: #e7eef5;
-}
-
-.book-meta-row,
-.book-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.book-meta-row span,
-.book-tags span {
-  padding: 5px 8px;
-  border-radius: 10px;
-  color: #536171;
-  background: #eef2f6;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.book-usage-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-  padding: 12px;
-  border: 1px solid var(--system-control-border);
-  border-radius: var(--system-radius-md);
-  background: var(--system-surface-muted);
-}
-
-.book-usage-card div {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.book-usage-card strong {
-  color: var(--system-text);
-  font-size: 13px;
-}
-
-.book-usage-card span {
-  color: var(--system-text-muted);
-  font-size: 12px;
-}
-
-.book-guard {
-  margin-top: 14px;
-  padding: 13px;
-  border: 1px solid #f1c977;
-  border-radius: 14px;
-  background: #fff4d7;
-}
-
-.book-guard p {
-  margin: 6px 0 12px;
-  color: #7a5a17;
-  font-size: 13px;
-}
-
-.book-editor {
-  display: grid;
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.book-editor label {
-  display: grid;
-  gap: 6px;
-  color: #536171;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.book-editor input,
-.book-editor select,
-.book-editor textarea {
-  min-height: 42px;
-  padding: 9px 11px;
-  border: 1px solid rgba(145, 157, 172, 0.24);
-  border-radius: 12px;
-  background: #f7f9fb;
-}
-
-.book-editor textarea {
-  min-height: 240px;
-  resize: vertical;
-  line-height: 1.55;
-}
-
-.book-read-mode {
-  display: grid;
-  gap: 14px;
-  margin-top: 14px;
-}
-
-.book-outline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 14px;
-  background: #eef5fa;
-}
-
-.book-outline strong,
-.book-outline span {
-  padding: 5px 8px;
-  border-radius: 9px;
-  background: white;
-  font-size: 12px;
-}
-
-.book-read-mode pre {
-  min-height: 240px;
-  margin: 0;
-  padding: 16px;
-  overflow: auto;
-  border-radius: 14px;
-  color: #18202a;
-  background: #f8fafc;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.62;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
-}
-
-@media (max-width: 720px) {
-  .book-main {
-    grid-template-columns: 1fr;
-    overflow: auto;
-  }
-
-  .book-library,
-  .book-detail {
-    overflow: visible;
-  }
-
-  .book-detail-header {
-    display: grid;
-  }
-}
-
-.book-shell {
-  --book-sage: #B0BC98;
-  --book-stone: #C7CCB9;
-  --book-leaf: #CAE2BC;
-  --book-ink: #46351D;
-  --book-ink-soft: rgba(70, 53, 29, 0.68);
-  --book-paper: #F7F8F1;
-  --book-paper-strong: #FBFCF6;
-  --book-line: rgba(70, 53, 29, 0.14);
-  --book-shadow: 0 20px 52px rgba(70, 53, 29, 0.12);
-  position: relative;
-  overflow: hidden;
-  color: var(--book-ink);
-  background:
-    radial-gradient(circle at 18% 6%, rgba(202, 226, 188, 0.48), transparent 34%),
-    linear-gradient(155deg, #f8faf2 0%, #eef2e8 45%, #dde3d0 100%);
-}
-
-.book-topbar {
-  border-bottom: 1px solid var(--book-line);
-  background: rgba(247, 248, 241, 0.82);
-  box-shadow: 0 10px 28px rgba(70, 53, 29, 0.08);
-}
-
-.book-topbar > div {
-  min-width: 0;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
 }
 
 .book-topbar-actions {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
 }
 
-.book-topbar p {
-  color: var(--book-ink-soft);
-  letter-spacing: 0;
-}
-
-.book-topbar h1 {
-  color: var(--book-ink);
-  letter-spacing: 0;
-}
-
-.book-back {
-  color: var(--book-ink);
-}
-
-.book-icon-button {
-  display: inline-grid;
-  flex: 0 0 auto;
+.book-topbar-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
   place-items: center;
-  border: 1px solid rgba(70, 53, 29, 0.18);
-  color: var(--book-leaf);
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
   background: var(--book-ink);
-  box-shadow: 0 10px 20px rgba(70, 53, 29, 0.16);
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    background 160ms ease;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 160ms ease;
 }
 
-.book-icon-button.is-quiet {
+.book-topbar-button.is-quiet {
+  border: 1px solid var(--book-line);
   color: var(--book-ink);
-  background: rgba(251, 252, 246, 0.72);
-  box-shadow: none;
+  background: var(--book-card);
 }
 
-.book-icon-button:disabled {
+.book-topbar-button:disabled {
   cursor: default;
   opacity: 0.42;
 }
 
-.book-icon-button:not(:disabled):active,
-.book-primary-button:active,
-.book-secondary-button:active,
-.book-import-button:active,
-.book-list-item:active,
-.book-category-button:active,
-.book-ai-tool:active {
-  transform: scale(0.985);
+.book-topbar-button:not(:disabled):active {
+  transform: scale(0.94);
 }
 
 .book-main {
-  grid-template-columns: minmax(188px, 32%) minmax(0, 1fr);
-  gap: 12px;
-  padding: 12px;
-}
-
-.book-library,
-.book-detail {
-  border: 1px solid var(--book-line);
-  background: rgba(251, 252, 246, 0.78);
-  box-shadow: var(--book-shadow);
-  backdrop-filter: blur(18px);
-}
-
-.book-library {
-  gap: 9px;
-  padding: 10px;
-  background: rgba(199, 204, 185, 0.46);
-}
-
-.book-search-row,
-.book-filter,
-.book-editor input,
-.book-editor select,
-.book-editor textarea {
-  border: 1px solid rgba(70, 53, 29, 0.11);
-  color: var(--book-ink);
-  background: rgba(251, 252, 246, 0.74);
-  box-shadow: inset 0 1px 0 rgba(251, 252, 246, 0.68);
-}
-
-.book-search-row {
-  min-height: 40px;
-  color: var(--book-ink-soft);
-}
-
-.book-filter {
-  flex-shrink: 0;
-  color: var(--book-ink-soft);
-}
-
-.book-category-rail {
-  display: flex;
-  gap: 7px;
-  padding: 2px 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.book-category-rail::-webkit-scrollbar {
-  display: none;
-}
-
-.book-category-button {
-  min-height: 30px;
-  flex: 0 0 auto;
-  border: 1px solid rgba(70, 53, 29, 0.12);
-  border-radius: 999px;
-  padding: 0 10px;
-  color: var(--book-ink-soft);
-  background: rgba(251, 252, 246, 0.58);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.book-category-button.is-active {
-  color: var(--book-leaf);
-  background: var(--book-ink);
-}
-
-.book-import-button {
-  border: 1px solid rgba(70, 53, 29, 0.14);
-  color: var(--book-ink);
-  background: linear-gradient(180deg, rgba(202, 226, 188, 0.92), rgba(176, 188, 152, 0.86));
-}
-
-.book-feedback {
-  border: 1px solid rgba(70, 53, 29, 0.12);
-}
-
-.book-feedback.is-success {
-  color: #37512a;
-  background: rgba(202, 226, 188, 0.7);
-}
-
-.book-feedback.is-error {
-  color: #7c2525;
-  background: rgba(253, 231, 225, 0.86);
-}
-
-.book-empty {
-  color: var(--book-ink-soft);
-}
-
-.book-empty i,
-.book-empty strong {
-  color: var(--book-ink);
-}
-
-.book-list-item {
-  border: 1px solid transparent;
-  color: var(--book-ink);
-  background: rgba(251, 252, 246, 0.62);
-  box-shadow: none;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    transform 160ms ease;
-}
-
-.book-list-item:hover {
-  border-color: rgba(70, 53, 29, 0.16);
-  background: rgba(251, 252, 246, 0.86);
-}
-
-.book-list-item.is-active {
-  border-color: rgba(70, 53, 29, 0.24);
-  color: var(--book-ink);
-  background: linear-gradient(180deg, rgba(202, 226, 188, 0.9), rgba(176, 188, 152, 0.72));
-}
-
-.book-list-item small {
-  color: var(--book-ink-soft);
-}
-
-.book-detail {
-  padding: 18px;
-  background:
-    linear-gradient(180deg, rgba(251, 252, 246, 0.9), rgba(247, 248, 241, 0.82)),
-    linear-gradient(90deg, rgba(202, 226, 188, 0.18), transparent 34%);
-}
-
-.book-detail-header p {
-  color: var(--book-ink-soft);
-}
-
-.book-detail-header h2 {
-  max-width: 18ch;
-  color: var(--book-ink);
-}
-
-.book-primary-button,
-.book-secondary-button {
-  border: 1px solid rgba(70, 53, 29, 0.14);
-  transition:
-    transform 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease;
-}
-
-.book-primary-button {
-  color: var(--book-leaf);
-  background: var(--book-ink);
-  box-shadow: 0 12px 24px rgba(70, 53, 29, 0.14);
-}
-
-.book-secondary-button {
-  color: var(--book-ink);
-  background: rgba(199, 204, 185, 0.34);
-}
-
-.book-meta-row span,
-.book-tags span {
-  color: var(--book-ink);
-  background: rgba(199, 204, 185, 0.36);
-}
-
-.book-usage-card {
-  border-color: rgba(70, 53, 29, 0.14);
-  background: rgba(202, 226, 188, 0.42);
-}
-
-.book-usage-card strong {
-  color: var(--book-ink);
-}
-
-.book-usage-card span {
-  color: var(--book-ink-soft);
-}
-
-.book-guard {
-  border-color: rgba(70, 53, 29, 0.18);
-  color: var(--book-ink);
-  background: rgba(202, 226, 188, 0.42);
-}
-
-.book-guard p {
-  color: var(--book-ink-soft);
-}
-
-.book-editor {
-  padding: 12px;
-  border: 1px solid rgba(70, 53, 29, 0.12);
-  border-radius: 16px;
-  background: rgba(251, 252, 246, 0.64);
-}
-
-.book-editor label {
-  color: var(--book-ink-soft);
-}
-
-.book-editor textarea {
-  min-height: 280px;
-}
-
-.book-read-mode {
-  gap: 12px;
-}
-
-.book-outline {
-  border: 1px solid rgba(70, 53, 29, 0.1);
-  background: rgba(199, 204, 185, 0.26);
-}
-
-.book-outline strong,
-.book-outline span {
-  color: var(--book-ink);
-  background: rgba(251, 252, 246, 0.74);
-}
-
-.book-read-mode pre {
-  min-height: 360px;
-  border: 1px solid rgba(70, 53, 29, 0.1);
-  color: var(--book-ink);
-  background:
-    linear-gradient(90deg, rgba(199, 204, 185, 0.18) 1px, transparent 1px) 0 0 / 28px 100%,
-    rgba(251, 252, 246, 0.86);
-  font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
-  font-size: 14px;
-}
-
-.book-ai-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: rgba(70, 53, 29, 0.12);
-}
-
-.book-ai-sheet {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom));
-  z-index: 21;
+  min-height: 0;
+  flex: 1;
   display: grid;
-  gap: 12px;
-  max-height: min(420px, 58%);
-  padding: 10px 14px 14px;
-  border: 1px solid rgba(70, 53, 29, 0.18);
-  border-radius: 24px;
-  color: var(--book-ink);
-  background: rgba(251, 252, 246, 0.96);
-  box-shadow: 0 -24px 58px rgba(70, 53, 29, 0.18);
-  backdrop-filter: blur(22px);
-}
-
-.book-ai-handle {
-  width: 42px;
-  height: 5px;
-  border-radius: 999px;
-  justify-self: center;
-  background: rgba(70, 53, 29, 0.2);
-}
-
-.book-ai-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.book-ai-head p,
-.book-ai-head h2 {
-  margin: 0;
-}
-
-.book-ai-head p {
-  color: var(--book-ink-soft);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.book-ai-head h2 {
-  margin-top: 2px;
-  font-size: 18px;
-  line-height: 1.2;
-}
-
-.book-ai-tools {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.book-ai-tool {
-  display: grid;
-  gap: 6px;
-  justify-items: center;
-  min-height: 62px;
-  border: 1px solid rgba(70, 53, 29, 0.12);
-  border-radius: 15px;
-  color: var(--book-ink);
-  background: rgba(199, 204, 185, 0.26);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.book-ai-tool.is-active {
-  color: var(--book-leaf);
-  background: var(--book-ink);
-}
-
-.book-ai-result {
-  min-height: 86px;
-  max-height: 150px;
-  margin: 0;
-  overflow: auto;
-  border: 1px solid rgba(70, 53, 29, 0.1);
-  border-radius: 16px;
-  padding: 12px;
-  color: var(--book-ink);
-  background: rgba(202, 226, 188, 0.24);
-  white-space: pre-wrap;
-  word-break: break-word;
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-@media (max-width: 720px) {
-  .book-shell {
-    overflow: auto;
-  }
-
-  .book-main {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 10px;
-    overflow: auto;
-  }
-
-  .book-library {
-    max-height: 48vh;
-    overflow: auto;
-  }
-
-  .book-detail {
-    min-height: 58vh;
-    overflow: auto;
-  }
-
-  .book-category-rail {
-    display: none;
-  }
-
-  .book-read-mode pre {
-    min-height: 280px;
-  }
-
-  .book-ai-tools {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .book-ai-sheet {
-    max-height: 64%;
-  }
-}
-
-/* Book A1 visual lift: botanical archive, stronger app identity. */
-.book-shell {
-  --book-paper: #F5F7EC;
-  --book-paper-strong: #FBFCF4;
-  --book-shadow-deep: 0 26px 70px rgba(70, 53, 29, 0.18);
-  --book-shadow-soft: 0 14px 34px rgba(70, 53, 29, 0.1);
-  isolation: isolate;
-  background:
-    linear-gradient(90deg, rgba(70, 53, 29, 0.035) 0 1px, transparent 1px 100%) 0 0 / 26px 26px,
-    linear-gradient(180deg, #fbfcf4 0%, #edf3e4 46%, #dfe7d3 100%);
-}
-
-.book-ambient {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.book-ambient-grid {
-  position: absolute;
-  inset: 112px 22px 70px;
-  border: 1px solid rgba(70, 53, 29, 0.06);
-  border-radius: 36px;
-  background:
-    linear-gradient(90deg, rgba(70, 53, 29, 0.04) 0 1px, transparent 1px 100%) 0 0 / 38px 38px,
-    linear-gradient(180deg, rgba(70, 53, 29, 0.035) 0 1px, transparent 1px 100%) 0 0 / 38px 38px;
-  opacity: 0.42;
-}
-
-.book-ambient-leaf {
-  position: absolute;
-  width: 170px;
-  height: 250px;
-  border: 1px solid rgba(70, 53, 29, 0.08);
-  border-radius: 68% 0 68% 0;
-  background: linear-gradient(135deg, rgba(202, 226, 188, 0.34), rgba(176, 188, 152, 0.08));
-  opacity: 0.62;
-}
-
-.book-ambient-leaf::after {
-  content: "";
-  position: absolute;
-  inset: 22px 50% 22px auto;
-  width: 1px;
-  background: rgba(70, 53, 29, 0.1);
-  transform: rotate(18deg);
-}
-
-.book-ambient-leaf.is-left {
-  left: -86px;
-  top: 168px;
-  transform: rotate(-18deg);
-}
-
-.book-ambient-leaf.is-right {
-  right: -92px;
-  bottom: 108px;
-  transform: rotate(164deg);
-}
-
-.book-topbar,
-.book-main,
-.book-ai-backdrop,
-.book-ai-sheet {
-  position: relative;
-  z-index: 1;
-}
-
-.book-topbar {
-  padding-right: 20px;
-  background: linear-gradient(180deg, rgba(251, 252, 244, 0.92), rgba(245, 247, 236, 0.82));
-}
-
-.book-title-lockup {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.book-title-lockup > div {
-  min-width: 0;
-}
-
-.book-brand-mark {
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  width: 48px;
-  height: 58px;
-  border: 1px solid rgba(70, 53, 29, 0.16);
-  border-radius: 18px 18px 10px 10px;
-  color: var(--book-leaf);
-  background:
-    linear-gradient(90deg, rgba(202, 226, 188, 0.22) 0 8px, transparent 8px),
-    linear-gradient(155deg, #5a4426, var(--book-ink));
-  box-shadow:
-    inset 0 1px 0 rgba(251, 252, 244, 0.18),
-    0 16px 28px rgba(70, 53, 29, 0.18);
-}
-
-.book-title-lockup h1 {
-  font-size: 34px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.book-back {
-  gap: 7px;
-  padding: 8px 0;
-}
-
-.book-icon-button {
-  width: 44px;
-  height: 44px;
-  border-radius: 17px;
-}
-
-.book-main {
-  grid-template-columns: minmax(220px, 34%) minmax(0, 1fr);
-  gap: 16px;
-  padding: 18px;
+  grid-template-columns: minmax(320px, 38%) minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
 }
 
 .book-main:not(:has(.book-detail)) {
   grid-template-columns: 1fr;
 }
 
-.book-main:not(:has(.book-detail)) .book-library {
-  width: min(100%, 680px);
+.book-main:not(:has(.book-detail)) .book-shelf {
+  width: min(100%, 720px);
   margin: 0 auto;
 }
 
-.book-library,
-.book-detail {
-  border-color: rgba(70, 53, 29, 0.16);
-  border-radius: 30px;
-  background:
-    linear-gradient(180deg, rgba(251, 252, 244, 0.9), rgba(239, 244, 230, 0.78)),
-    var(--book-paper);
-  box-shadow: var(--book-shadow-soft);
-}
-
-.book-library {
-  position: relative;
-  gap: 12px;
-  padding: 18px;
-}
-
-.book-library::before {
-  content: "";
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  bottom: 18px;
-  height: 24px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(70, 53, 29, 0.08), transparent);
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-.book-library-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 34px;
-  color: var(--book-ink);
-}
-
-.book-library-head span {
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0;
-}
-
-.book-library-head strong {
-  display: grid;
-  place-items: center;
-  min-width: 34px;
-  height: 28px;
-  border: 1px solid rgba(70, 53, 29, 0.14);
-  border-radius: 999px;
-  color: var(--book-ink);
-  background: rgba(202, 226, 188, 0.45);
-  font-size: 13px;
-}
-
-.book-search-row,
-.book-filter {
-  min-height: 50px;
-  border: 1px solid rgba(70, 53, 29, 0.12);
-  border-radius: 18px;
-  background: rgba(251, 252, 244, 0.78);
-  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.86);
-}
-
-.book-search-row i {
-  color: rgba(70, 53, 29, 0.62);
-  font-size: 18px;
-}
-
-.book-filter {
-  padding-inline: 14px;
-}
-
-.book-import-button {
-  min-height: 50px;
-  border: 1px solid rgba(70, 53, 29, 0.18);
-  border-radius: 18px;
-  color: var(--book-ink);
-  background: linear-gradient(180deg, rgba(202, 226, 188, 0.86), rgba(176, 188, 152, 0.72));
-  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.62);
-}
-
-.book-empty {
-  position: relative;
-  min-height: 320px;
-  padding: 30px 24px;
-  border: 1px dashed rgba(70, 53, 29, 0.2);
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(251, 252, 244, 0.68), rgba(199, 204, 185, 0.28)),
-    linear-gradient(90deg, rgba(70, 53, 29, 0.04) 0 1px, transparent 1px 100%) 0 0 / 22px 22px;
-}
-
-.book-empty-visual {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 8px;
-  width: 142px;
-  height: 104px;
-  margin-bottom: 4px;
-}
-
-.book-empty-visual::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(70, 53, 29, 0.16);
-}
-
-.book-empty-visual span {
-  position: relative;
-  z-index: 1;
-  width: 30px;
-  border: 1px solid rgba(70, 53, 29, 0.18);
-  border-radius: 9px 9px 5px 5px;
-  background: linear-gradient(180deg, #fbfcf4, var(--book-stone));
-  box-shadow: 0 12px 20px rgba(70, 53, 29, 0.12);
-}
-
-.book-empty-visual span:nth-child(1) {
-  height: 74px;
-  transform: rotate(-6deg);
-}
-
-.book-empty-visual span:nth-child(2) {
-  height: 94px;
-  background: linear-gradient(180deg, var(--book-leaf), var(--book-sage));
-}
-
-.book-empty-visual span:nth-child(3) {
-  height: 64px;
-  transform: rotate(5deg);
-}
-
-.book-list-item {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 18px;
-  min-height: 76px;
-  padding: 12px;
-  border: 1px solid rgba(70, 53, 29, 0.1);
-  border-radius: 22px;
-  background: rgba(251, 252, 244, 0.62);
-  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.72);
-}
-
-.book-list-item:hover {
-  border-color: rgba(70, 53, 29, 0.2);
-  background: rgba(251, 252, 244, 0.86);
-}
-
-.book-list-item.is-active {
-  border-color: rgba(70, 53, 29, 0.24);
-  color: var(--book-ink);
-  background: linear-gradient(180deg, rgba(202, 226, 188, 0.62), rgba(176, 188, 152, 0.36));
-}
-
-.book-list-mark {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 48px;
-  border-radius: 11px 11px 7px 7px;
-  color: var(--book-ink);
-  background:
-    linear-gradient(90deg, rgba(251, 252, 244, 0.36) 0 7px, transparent 7px),
-    var(--book-stone);
-}
-
-.book-list-item.is-active .book-list-mark {
-  color: var(--book-leaf);
-  background:
-    linear-gradient(90deg, rgba(202, 226, 188, 0.22) 0 7px, transparent 7px),
-    var(--book-ink);
-}
-
-.book-list-copy {
-  align-self: center;
-}
-
-.book-list-copy strong {
-  font-size: 14px;
-  line-height: 1.15;
-}
-
-.book-list-copy small {
-  color: rgba(70, 53, 29, 0.62);
-  font-size: 11px;
-}
-
-.book-detail {
-  position: relative;
-  padding: 22px;
-  background:
-    linear-gradient(90deg, rgba(70, 53, 29, 0.08) 0 1px, transparent 1px) 54px 0 / 1px 100% no-repeat,
-    linear-gradient(180deg, rgba(251, 252, 244, 0.96), rgba(245, 247, 236, 0.88));
-  box-shadow: var(--book-shadow-deep);
-}
-
-.book-detail::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 34px;
-  width: 46px;
-  height: 58px;
-  border-radius: 0 0 14px 14px;
-  background: linear-gradient(180deg, var(--book-leaf), var(--book-sage));
-  box-shadow: 0 10px 18px rgba(70, 53, 29, 0.12);
-  opacity: 0.8;
-}
-
-.book-detail-header {
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.book-detail-seal {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(70, 53, 29, 0.14);
-  border-radius: 16px;
-  color: var(--book-ink);
-  background: rgba(202, 226, 188, 0.56);
-}
-
-.book-detail-header h2 {
-  max-width: 13ch;
-  font-size: 30px;
-  font-weight: 900;
-}
-
-.book-detail-actions {
-  padding-right: 60px;
-}
-
-.book-primary-button,
-.book-secondary-button {
-  border-radius: 16px;
-}
-
-.book-primary-button {
-  color: var(--book-leaf);
-  background: linear-gradient(180deg, #574124, var(--book-ink));
-  box-shadow: 0 12px 22px rgba(70, 53, 29, 0.16);
-}
-
-.book-secondary-button {
-  border: 1px solid rgba(70, 53, 29, 0.12);
-  color: var(--book-ink);
-  background: rgba(251, 252, 244, 0.7);
-}
-
-.book-meta-row span,
-.book-tags span {
-  border: 1px solid rgba(70, 53, 29, 0.1);
-  color: rgba(70, 53, 29, 0.72);
-  background: rgba(199, 204, 185, 0.28);
-}
-
-.book-outline {
-  border: 1px solid rgba(70, 53, 29, 0.1);
-  background: rgba(202, 226, 188, 0.24);
-}
-
-.book-outline strong,
-.book-outline span {
-  color: var(--book-ink);
-  background: rgba(251, 252, 244, 0.78);
-}
-
-.book-read-mode pre,
-.book-editor textarea {
-  border: 1px solid rgba(70, 53, 29, 0.12);
-  border-radius: 24px;
-  color: var(--book-ink);
-  background:
-    linear-gradient(180deg, rgba(70, 53, 29, 0.045) 0 1px, transparent 1px) 0 31px / 100% 32px,
-    linear-gradient(180deg, #fbfcf4, #f6f8ef);
-  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.86);
-  line-height: 1.78;
-}
-
-.book-read-mode pre {
-  min-height: 360px;
-  padding: 24px 24px 24px 32px;
-  font-family: "Iowan Old Style", "Songti SC", "Noto Serif SC", Georgia, serif;
-  font-size: 14px;
-}
-
-.book-editor input,
-.book-editor select {
-  border-radius: 16px;
-  border-color: rgba(70, 53, 29, 0.12);
-  background: rgba(251, 252, 244, 0.78);
-}
-
-.book-ai-backdrop {
-  background: rgba(70, 53, 29, 0.26);
-}
-
-.book-ai-sheet {
-  border-color: rgba(70, 53, 29, 0.18);
-  border-radius: 30px 30px 0 0;
-  background:
-    linear-gradient(180deg, rgba(251, 252, 244, 0.98), rgba(232, 239, 221, 0.96)),
-    var(--book-paper);
-}
-
-.book-ai-handle {
-  background: rgba(70, 53, 29, 0.22);
-}
-
-.book-ai-tool {
-  border-radius: 18px;
-  background: rgba(251, 252, 244, 0.72);
-}
-
-.book-ai-tool.is-active {
-  color: var(--book-leaf);
-  background: var(--book-ink);
-}
-
-.book-ai-result {
-  border-color: rgba(70, 53, 29, 0.12);
-  background:
-    linear-gradient(180deg, rgba(202, 226, 188, 0.34), rgba(251, 252, 244, 0.72));
-}
-
-@media (max-width: 720px) {
-  .book-ambient-grid {
-    inset: 118px 10px 42px;
-    border-radius: 28px;
-  }
-
-  .book-topbar {
-    align-items: center;
-    padding: calc(34px + env(safe-area-inset-top)) 18px 16px;
-  }
-
-  .book-title-lockup {
-    gap: 10px;
-  }
-
-  .book-brand-mark {
-    width: 42px;
-    height: 50px;
-    border-radius: 16px 16px 9px 9px;
-  }
-
-  .book-title-lockup h1 {
-    font-size: 30px;
-  }
-
-  .book-main {
-    display: flex;
-    flex-direction: column;
-    flex: 0 0 auto;
-    gap: 12px;
-    padding: 12px;
-    overflow: visible;
-  }
-
-  .book-main:not(:has(.book-detail)) .book-library,
-  .book-library {
-    width: auto;
-    max-height: none;
-    margin: 0;
-  }
-
-  .book-library,
-  .book-detail {
-    flex: 0 0 auto;
-    border-radius: 28px;
-    overflow: visible;
-  }
-
-  .book-empty {
-    min-height: 420px;
-  }
-
-  .book-detail {
-    padding: 18px;
-  }
-
-  .book-detail::before {
-    right: 26px;
-  }
-
-  .book-detail-header {
-    grid-template-columns: 42px minmax(0, 1fr);
-  }
-
-  .book-detail-actions {
-    grid-column: 1 / -1;
-    padding-right: 0;
-  }
-
-  .book-detail-header h2 {
-    max-width: 100%;
-    font-size: 26px;
-  }
-
-  .book-read-mode pre {
-    min-height: 340px;
-  }
-}
-
-.book-shelf-trigger,
-.book-detail-shelf-button,
-.book-library-close {
+.book-shelf-trigger {
   display: none;
 }
 
-.book-library-close {
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid rgba(70, 53, 29, 0.12);
-  border-radius: 12px;
-  color: var(--book-ink);
-  background: rgba(251, 252, 244, 0.72);
-}
-
-.book-stat-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin: 14px 0 2px;
-}
-
-.book-stat-strip span {
-  display: grid;
-  gap: 3px;
-  min-height: 72px;
-  padding: 13px 14px;
-  border: 1px solid rgba(70, 53, 29, 0.1);
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(251, 252, 244, 0.78), rgba(202, 226, 188, 0.22)),
-    rgba(251, 252, 244, 0.54);
-  box-shadow: inset 0 1px 0 rgba(251, 252, 244, 0.82);
-}
-
-.book-stat-strip strong {
-  color: var(--book-ink);
-  font-size: 20px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.book-stat-strip small {
-  color: rgba(70, 53, 29, 0.58);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.book-export-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 76;
-  background: rgba(70, 53, 29, 0.28);
-  backdrop-filter: blur(10px);
-}
-
-.book-export-sheet {
-  position: fixed;
-  left: max(18px, env(safe-area-inset-left));
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(18px, env(safe-area-inset-bottom));
-  z-index: 77;
-  display: grid;
-  gap: 12px;
-  width: min(620px, calc(100% - 36px));
-  max-height: min(680px, calc(100dvh - 36px));
-  margin: 0 auto;
-  padding: 16px;
-  overflow-y: auto;
-  border: 1px solid rgba(70, 53, 29, 0.16);
-  border-radius: 8px;
-  color: var(--book-ink);
-  background:
-    linear-gradient(180deg, rgba(251, 252, 244, 0.98), rgba(236, 242, 226, 0.98)),
-    var(--book-paper);
-  box-shadow: 0 28px 80px rgba(70, 53, 29, 0.28);
-}
-
-.book-export-sheet__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.book-export-sheet__head > div {
-  min-width: 0;
-}
-
-.book-export-sheet__head p,
-.book-export-sheet__head h3,
-.book-export-sheet__intro {
-  margin: 0;
-}
-
-.book-export-sheet__head p {
-  color: var(--book-ink-soft);
-  font-size: 11px;
-  font-weight: 850;
-}
-
-.book-export-sheet__head h3 {
-  margin-top: 3px;
-  font-size: 19px;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.book-export-sheet__intro {
-  color: var(--book-ink-soft);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.book-export-options {
-  display: grid;
-  gap: 8px;
-}
-
-.book-export-options > button {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  min-height: 74px;
-  padding: 11px;
-  border: 1px solid rgba(70, 53, 29, 0.14);
-  border-radius: 8px;
-  color: var(--book-ink);
-  background: rgba(251, 252, 244, 0.78);
-  text-align: left;
-}
-
-.book-export-options > button:focus-visible {
-  outline: 2px solid var(--book-ink);
-  outline-offset: 2px;
-}
-
-.book-export-options__icon {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  color: var(--book-ink);
-  background: rgba(202, 226, 188, 0.58);
-}
-
-.book-export-options > button > span:nth-child(2) {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-}
-
-.book-export-options strong {
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.book-export-options small {
-  color: var(--book-ink-soft);
-  font-size: 11px;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.book-export-options em {
-  color: var(--book-ink-soft);
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 800;
-}
-
-.book-editor-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  background: rgba(70, 53, 29, 0.32);
-  backdrop-filter: blur(12px);
-}
-
-.book-editor-sheet {
-  position: fixed;
-  top: max(24px, env(safe-area-inset-top));
-  left: max(18px, env(safe-area-inset-left));
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(18px, env(safe-area-inset-bottom));
-  z-index: 81;
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(190px, 0.7fr) minmax(190px, 0.7fr);
-  gap: 14px;
-  max-width: 980px;
-  max-height: none;
-  margin: 0 auto;
-  padding: 18px;
-  overflow: auto;
-  border: 1px solid rgba(70, 53, 29, 0.16);
-  border-radius: 30px;
-  background:
-    linear-gradient(180deg, rgba(251, 252, 244, 0.98), rgba(236, 242, 226, 0.96)),
-    var(--book-paper);
-  box-shadow: 0 28px 80px rgba(70, 53, 29, 0.28);
-}
-
-.book-editor-head,
-.book-editor-content,
-.book-editor-actions {
-  grid-column: 1 / -1;
-}
-
-.book-editor-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  padding-bottom: 4px;
-}
-
-.book-editor-head p {
-  margin: 0;
-  color: rgba(70, 53, 29, 0.58);
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.book-editor-head h3 {
-  margin: 2px 0 0;
-  color: var(--book-ink);
-  font-size: 22px;
-  line-height: 1.16;
-}
-
-.book-editor-sheet .book-editor-content textarea {
-  min-height: min(44dvh, 420px);
-  resize: vertical;
-}
-
-.book-storage-status {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 9px;
-  padding: 10px;
-  border: 1px solid rgba(70, 53, 29, 0.16);
-  border-radius: 8px;
-  background: rgba(251, 252, 246, 0.7);
-}
-
-.book-storage-status.is-read_only_conflict,
-.book-storage-status.is-error {
-  border-color: rgba(151, 61, 45, 0.42);
-  background: rgba(253, 231, 225, 0.76);
-}
-
-.book-storage-icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--book-leaf);
-  background: var(--book-ink);
-}
-
-.book-storage-status > div:not(.book-storage-conflict-actions) {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.book-storage-status strong,
-.book-storage-status small {
-  overflow-wrap: anywhere;
-}
-
-.book-storage-status strong {
-  color: var(--book-ink);
-  font-size: 12px;
-}
-
-.book-storage-status small {
-  color: var(--book-ink-soft);
-  font-size: 10px;
-  line-height: 1.35;
-}
-
-.book-storage-action {
-  min-width: 44px;
-  min-height: 44px;
-  border: 0;
-  border-radius: 8px;
-  padding: 0 10px;
-  color: var(--book-leaf);
-  background: var(--book-ink);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.book-storage-action.is-secondary {
-  color: var(--book-ink);
-  background: var(--book-stone);
-}
-
-.book-storage-action:disabled,
-.book-import-button:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.book-storage-action:focus-visible {
-  outline: 2px solid var(--system-accent);
-  outline-offset: 2px;
-}
-
-.book-storage-conflict-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
 @media (max-width: 720px) {
-  .book-topbar-actions {
-    gap: 8px;
+  .book-topbar {
+    padding: calc(34px + env(safe-area-inset-top)) 18px 12px;
   }
 
-  .book-shelf-trigger {
-    display: grid;
-  }
-
-  .book-detail-shelf-button {
-    display: flex;
+  .book-brand h1 {
+    font-size: 24px;
   }
 
   .book-main {
-    min-height: calc(100dvh - 132px);
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 10px;
   }
 
-  .book-main:not(.is-shelf-open) .book-library {
+  .book-main:not(.is-shelf-open) .book-shelf {
     display: none;
   }
 
@@ -2774,72 +1038,8 @@ const exportSelected = (format = 'worldbook_json') => {
     display: none;
   }
 
-  .book-library-close {
+  .book-shelf-trigger {
     display: grid;
-  }
-
-  .book-library-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 8px;
-  }
-
-  .book-detail-actions {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .book-detail-actions .book-secondary-button,
-  .book-detail-actions .book-primary-button {
-    min-width: 0;
-    justify-content: center;
-  }
-
-  .book-stat-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .book-storage-status {
-    grid-template-columns: 34px minmax(0, 1fr);
-  }
-
-  .book-storage-status > .book-storage-action,
-  .book-storage-conflict-actions {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-
-  .book-storage-conflict-actions .book-storage-action {
-    flex: 1 1 120px;
-  }
-
-  .book-editor-sheet {
-    top: calc(58px + env(safe-area-inset-top));
-    left: 0;
-    right: 0;
-    bottom: 0;
-    grid-template-columns: 1fr;
-    max-height: none;
-    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
-    border-radius: 28px 28px 0 0;
-  }
-
-  .book-export-sheet {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    max-height: calc(100dvh - 62px - env(safe-area-inset-top));
-    padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
-    border-radius: 8px 8px 0 0;
-  }
-
-  .book-export-options > button {
-    grid-template-columns: 40px minmax(0, 1fr);
-  }
-
-  .book-export-options em {
-    grid-column: 2;
   }
 }
 </style>

@@ -88,7 +88,7 @@ export function useWorldSettingWorkspaceModel({
         {
           id: 'sources',
           icon: 'fas fa-book-open',
-          title: t('设定文本', 'Setting texts'),
+          title: t('书籍设定', 'Book texts'),
           kind: 'independent',
           state: issueCount > 0 ? 'attention' : activeTextCount > 0 ? 'active' : 'empty',
           status:
@@ -98,14 +98,14 @@ export function useWorldSettingWorkspaceModel({
                 ? t(`${activeTextCount} 份已启用`, `${activeTextCount} active`)
                 : t('尚未启用', 'None active'),
           detail: t(
-            `Book 中共有 ${catalogTextCount} 份可选文稿；在这里逐份决定当前世界使用哪些。`,
-            `${catalogTextCount} manuscript(s) are available in Book; independently choose any combination, including none.`,
+            `书架里有 ${catalogTextCount} 本书可选；在这里决定这个世界要读哪几本。`,
+            `${catalogTextCount} book(s) on the shelf; choose which ones this world reads.`,
           ),
         },
         {
           id: 'knowledge',
           icon: 'fas fa-sitemap',
-          title: t('结构化百科条目', 'Structured encyclopedia'),
+          title: t('百科便签', 'Encyclopedia notes'),
           kind: 'optional',
           state: enabledKnowledgeCount > 0 ? 'active' : 'optional',
           status:
@@ -113,8 +113,8 @@ export function useWorldSettingWorkspaceModel({
               ? t(`${enabledKnowledgeCount} / ${knowledgeCount} 已启用`, `${enabledKnowledgeCount} / ${knowledgeCount} enabled`)
               : t('可选', 'Optional'),
           detail: t(
-            '供角色按需引用的短条目；与 Book 中可整篇启用的百科文稿分开管理。',
-            'Short entries for role-specific recall, managed separately from full encyclopedia manuscripts in Book.',
+            '写给角色的短条目；绑定给谁，谁聊天时就能想起来。',
+            'Short notes for roles; once bound, that role recalls them in chat.',
           ),
         },
         {
@@ -128,14 +128,14 @@ export function useWorldSettingWorkspaceModel({
               ? t(`${profileTemplateCount} 个模板`, `${profileTemplateCount} template(s)`)
               : t('可选', 'Optional'),
           detail: t(
-            '定义这个世界需要哪些角色字段，具体人物资料仍由通讯录填写。',
-            'Defines fields this world needs; Contacts still owns each person\'s values.',
+            '定义这个世界里的角色需要填哪些资料；具体内容到通讯录里写。',
+            'Decide which profile fields this world needs; the actual values are filled in Contacts.',
           ),
         },
         {
           id: 'pack',
           icon: 'fas fa-puzzle-piece',
-          title: t('功能与应用', 'Capabilities and apps'),
+          title: t('功能与应用', 'Apps & features'),
           kind: 'optional',
           state: hasActivePackLayer ? 'active' : 'optional',
           status:
@@ -145,14 +145,14 @@ export function useWorldSettingWorkspaceModel({
                 ? t(`${capabilityCount} 项能力`, `${capabilityCount} capabilities`)
                 : t('可选', 'Optional'),
           detail: t(
-            '仅管理应用入口、服务模板等已审核能力，不承载或自动绑定 Book 文稿。',
-            'Only manages reviewed app and service capabilities; it never contains or auto-binds Book text.',
+            '管理这个世界里能用的应用和功能；和书架上的书互不影响。',
+            'Manage the apps and features available in this world; independent from the bookshelf.',
           ),
         },
         {
           id: 'kernel',
           icon: 'fas fa-shield-halved',
-          title: t('兼容兜底', 'Compatibility fallback'),
+          title: t('备用世界观', 'Fallback worldview'),
           kind: 'advanced',
           state: fallbackCharCount > 0 ? 'active' : 'optional',
           status:
@@ -160,8 +160,8 @@ export function useWorldSettingWorkspaceModel({
               ? t(`${fallbackCharCount} 字`, `${fallbackCharCount} chars`)
               : t('未设置', 'Not set'),
           detail: t(
-            '只在没有启用 Book 设定文本时提供短说明，不是第二套世界书。',
-            'A short fallback only when no Book text is active, not a second worldbook system.',
+            '书架没有启用任何文本时，临时顶替的一段简短说明。',
+            'A short note that fills in only when no book is active.',
           ),
         },
       ],

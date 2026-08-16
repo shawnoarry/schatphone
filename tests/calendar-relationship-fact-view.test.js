@@ -6,6 +6,7 @@ import { nextTick } from 'vue'
 import CalendarView from '../src/views/CalendarView.vue'
 import { useCalendarStore } from '../src/stores/calendar'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { useSystemStore } from '../src/stores/system'
 
 const DummyView = { template: '<div />' }
 
@@ -46,6 +47,7 @@ describe('CalendarView relationship facts', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-17T08:00:00.000Z'))
     setActivePinia(createPinia())
+    useSystemStore().settings.system.language = 'en-US'
     useCalendarStore().resetForTesting()
     useRelationshipRuntimeStore().resetForTesting()
   })
@@ -134,7 +136,7 @@ describe('CalendarView relationship facts', () => {
     expect(review).toContain('Eva')
     expect(review).toContain('Shared route completed with Eva: Dorm to City core.')
     expect(review).toContain('2 linked records: Shared route, Calendar plan')
-    expect(review).toContain('未重复增加关系数值')
+    expect(review).toContain('no duplicate relationship growth')
     expect(review).toContain('trip_hist_calendar_review')
     expect(relationshipRuntimeStore.summarizeEntityForTarget(target).metrics).toMatchObject({
       affinity: 55,

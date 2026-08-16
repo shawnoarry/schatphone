@@ -1,8 +1,18 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-08-12
+Updated: 2026-08-16
 
 This file is the handoff page for Map, Calendar, and Reminders work.
+
+## Place Media Governance Pilot
+
+Status: `INTEGRATED_LOCAL / 7_REAL_DERIVATIVES_REMOTE_VERIFIED / 1_FICTIONAL_FALLBACK`
+
+The 106-place Seoul catalog now resolves media through a separate V1 registry rather than adding image fields to canonical place records. The place detail sheet has a stable `16:9` hero slot, visible exact/area/generated/category truth labeling, accessible alt text, author/source/license/change attribution, and a code-rendered load-error/category fallback. The first pilot approves exact-place photos for Gyeongbokgung, Seoul Station, Seoul Forest, and Starfield COEX Mall; clearly labeled area atmosphere for SM Entertainment HQ, Myeongdong Kyoja Main Store, and Sillim-dong compact housing; and a category fallback for fictional Helix Spire. Every remaining built-in or player place also resolves the same explicit fallback.
+
+Seven untouched source candidates remain in the Git-ignored local archive at `output/imagegen/map-place-media-pilot-20260815/source-candidates/`. Only separately cropped/compressed runtime WebPs were published. Batch `map-place-media-pilot-20260815` uploaded and re-downloaded all seven public objects, verified their byte length and SHA-256, and registered them in `config/project-assets.json`. The audit rejected an apparent SM candidate when visual inspection showed it was not established as the Seoul headquarters area. No map-service screenshot, news/social image, or unclear corporate media entered runtime. See `docs/design/MAP_PLACE_MEDIA_GOVERNANCE.md` and `docs/qa/MAP_PLACE_MEDIA_PILOT_2026-08-15.md`.
+
+Current validation passes 4 focused files / 59 tests, the bounded two-worker full suite at 268 files / 1962 tests, governance at 2 files / 14 tests, production build, asset-registry validation at 855 tracked assets / 0 violations, scoped ESLint, and targeted Playwright at 2/2 across desktop Chromium and simulated Pixel 5. Direct screenshot review confirms exact-photo, area-atmosphere, and player-place fallback presentation with no horizontal overflow; the widened desktop sheet cap keeps the primary action in the initial view without changing the mobile composition. Repository-wide ESLint remains blocked only by pre-existing untracked `tmp/widgets-weather-prism-review/*.cjs` CommonJS-global errors; those unrelated user files were not modified.
 
 ## 1. Current Status
 
@@ -34,41 +44,47 @@ EVE-2C passes 8 focused files / 109 tests and the full 228-file / 1671-test Vite
 
 ## Calendar, Agenda Journey, And Event Orchestration Direction
 
-Status: `CJA-0_DONE_DOCUMENTATION_ONLY / CJA-1_USER_ACCEPTANCE_REQUIRED`
+Status: `CJA-0_DONE / CALENDAR_DEPARTURE_READINESS_V1_DONE_2026-08-15 / CJA-1_DONE_2026-08-15 / CJA-2_DONE_2026-08-16 / CJA-3_DONE_2026-08-16 / CJA-4_DONE_2026-08-16 / CJA-5_DONE_2026-08-16`
 
 The accepted direction is recorded in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md` and roadmap 4.12:
 
-1. Calendar is already a real Home app, but its current frontend is list-first: confirmed-event cards, push state, and a Reminders summary rather than a conventional date grid;
-2. the target Calendar frontend may later add Month, Week, and Agenda views over the same Calendar-owned confirmed events; `Agenda / 日程` is a Calendar view, not another planning app;
-3. `Agenda Journey / 行程` is a future separate Home app for today and near-term execution, while `Map Journey / 地图行程` remains the Map-owned city-travel flow;
-4. a hidden Schedule Orchestrator may later materialize confirmed Calendar commitments into linked Agenda Journey instances without copying or taking ownership of Calendar, Map, Event Runtime, or downstream value truth;
-5. Activity Session, event checkpoints, automatic resolution, and a future Narrative Timeline are architecture contracts only. No route, store, timer, popup, persistence field, migration, or visible Story/Diary surface is implemented or authorized;
-6. CJA-0 documentation is complete. CJA-1 Calendar information architecture requires a separate user acceptance decision before `/calendar` changes.
-7. The accepted documentation refinement defines dynamic current-origin departure estimates, explicit creation of one linked Map Journey, validated appointment-driven place entry, and arrival as presence rather than activity completion. It also keeps Activity Session/Focus Companion independent from optional event eligibility and media ownership.
+1. Calendar is a real Home app whose CJA-1 frontend now provides Month, Week, and Agenda views over the same Calendar-owned confirmed events;
+2. `Agenda / 日程` is a Calendar view, not another planning app; selected-day and selected-event detail remain projections over the source event rather than copied records;
+3. `Agenda Journey / 行程` is now a separate Home/App Store app for today and near-term execution, while `Map Journey / 地图行程` remains the Map-owned city-travel flow;
+4. the hidden Schedule Orchestrator persists deterministic per-occurrence materialization/deadline requests, refreshes or retires them from Calendar truth, and reconciles after startup or resume; the CJA-3 owner consumes and acknowledges those requests without copying Calendar records;
+5. CJA-4 implements Activity Session timing and the restrained Focus Companion baseline. CJA-5 adds one midpoint-only Event Runtime collaboration with silent `off` resolution or inline `text` choice; broader event checkpoints, appointment auto-entry, and a future Narrative Timeline remain separately gated, and no visible Story/Diary surface is added;
+6. CJA-1 is complete: Calendar storage V3 migrates V1/V2 and owns explicit start/end, all-day, recurrence, participation requirement, notes, reminder lead time, and optional stable Map `locationRef`; the UI adds Monday-first 42-day Month, Week, Agenda, selected-day/detail, and complete manual create/edit/delete.
+7. Map recomputes origin, transport estimate, recommended departure, predicted arrival, and lateness for the selected occurrence without rewriting Calendar time. Explicit `Leave now` creates or reuses one canonical Map Journey linked to the source Calendar event ID; another active journey blocks creation and Map returns to Calendar.
+8. Focused Calendar coverage passes 10 files / 35 tests. Calendar plus Map focused Playwright passes 6/6 across desktop Chromium and simulated Pixel 5, including default/zen visual evidence, CRUD, recurrence, multi-day spans, Map place selection, departure handoff, critical Axe, page-error, and zero-horizontal-overflow checks. No physical-device evidence is claimed.
+9. CJA-2 adds `store:schedule-orchestrator` V1, a pure occurrence reconciliation contract, startup/Calendar-change/timer/resume runtime, nested Calendar-section backup, and legacy missing-child restore. Focused orchestrator tests cover deterministic identity, recurring/multi-day materialization, update/removal retirement, once-only deadlines, acknowledgement, backup, and reopen behavior; no UI/E2E or physical-device claim applies to this hidden slice.
+10. CJA-3 adds schema-V1 `store:agenda-journey`, one stable route/Home/App Store identity, Calendar-occurrence materialization plus manual plans within the next 14 days, strict travel/activity step separation, explicit required/optional outcomes, source-retirement/deadline reconciliation, and nested Calendar-section backup with rollback-safe restore. A travel step can create or reuse exactly one Map Journey carrying `sourceAgendaJourneyStepId`; Map arrival completes travel and unlocks activity but never proves activity completion. Focused unit coverage plus desktop Chromium and simulated Pixel 5 Playwright protect creation, execution, Map return context, accessibility, text fitting, and zero horizontal overflow. No physical-device evidence is claimed.
+11. CJA-4 adds schema-V1 `store:activity-session`, one deterministic session per stable Agenda activity-step ID, absolute timestamps, explicit pause and completion policy, deterministic checkpoint reconciliation, owner-validated completion evidence, nested Calendar backup and rollback recovery, and startup/pageshow/visibility reconciliation. Agenda Journey hosts one quiet built-in Focus Companion with pause/resume, minimize/reopen, explicit completion, and no-event baseline behavior. CJA-5 then adds schema-V2 Activity Session owner validation plus one durable midpoint event family in Simulation V6, with `off | text` presentation and only a 0/2-minute timer result. Travel steps fail closed, Map-owned duration is never copied, and Gallery backgrounds, Music/ambient callers, richer companions, appointment auto-entry, broader event families, and exact closed-app interaction remain absent. Focused CJA-4 plus persistence coverage passes 9 files / 65 tests; focused CJA-5/persistence coverage passes 10 files / 66 tests; the current bounded two-worker full suite passes 290 files / 2047 tests; desktop Chromium and simulated Pixel 5 Agenda/Activity Playwright passes 4/4 for CJA-4 and 4/4 for CJA-5. No physical-device evidence is claimed.
 
 This documentation lane does not modify, replace, or block the current Map implementation or roadmap 4.11 MJE work. Cross-module terms must qualify `Agenda Journey` and `Map Journey`; user-facing copy may use `行程` where the containing app makes the meaning clear.
 
 ## Journey, Footprints, And Exploration Direction
 
-Status: `APPROVED / MJE-1_THROUGH_MJE-4_USER_ACCEPTED_INTEGRATED_LOCAL`
+Status: `APPROVED / MJE-1_MJE-2_MJE-4_INTEGRATED / MJE-3_ADAPTER_RETAINED_PRODUCTION_TRIGGER_SUSPENDED`
 
 The approved direction is recorded in `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md` and promoted in roadmap 4.11:
 
 1. Map remains the player entry and canonical source owner for journeys and later active area exploration;
 2. transport selection belongs to journey planning, while a separate Transit app stays deferred until it has independent network utility;
 3. the current Explore points, route familiarity, area unlocks, and static feedback are the passive Footprints foundation rather than active spatial exploration;
-4. the first journey event family runs only at completed `en_route` and `near_arrival` checkpoints while Map is mounted, with Event Runtime owning eligibility/audit and Map validating every reviewed result;
+4. the first journey checkpoint adapter remains available only behind an explicit compatibility/test hook; the production Map does not enable its generic route-obstruction trigger after product review;
 5. ordinary journeys may complete without an event;
 6. MJE-1 transport-aware estimates plus compatible active/history journey snapshots are user-accepted and integrated locally;
 7. MJE-2 implemented a versioned Map-owned active lifecycle, deterministic duration-based checkpoints, safe pause/resume, and the ordinary uneventful completion path. The user accepted it by explicitly authorizing MJE-3; it still does not authorize companions, transit topology, or active exploration.
-8. MJE-3 implements one low-impact, world-aware route-condition family. Event Runtime owns Map permission, Surprise Mode, random gate, cooldown/cap, persistent proposals, provenance, and audit; Map accepts only no ETA change or a bounded 120-second delay after validating exact source lineage. Pending review does not pause timing or automatic arrival, and missing, stale, non-pending, or arrival-expired proposals clear safely.
+8. MJE-3 retains one low-impact, world-aware route-condition adapter and its exact-lineage/no-event/recovery tests, but production evaluation is suspended. The rejected generic presentation described a temporary obstruction without establishing who was obstructed, what a selected transport could actually do, or which schedule owner would absorb the consequence. A future replacement must start from a real transport/actor capability and owner-native consequence instead of relabeling the same two-minute mutation.
 9. The MJE-3 acceptance revision makes journey state visible through a persistent primary map card with route, phase, progress, remaining time, ETA, and an on-demand pending-update entry. Journey, Places, and Footprints remain three independent primary map buttons; each opens only its focused drawer content instead of repeating the same navigation inside the drawer. GPS-like recenter wording becomes canonical role position, add/manage actions stay inside Places, and the optional shared-route relationship record appears only at arrived-journey acknowledgement. It does not add companion truth to the active journey.
 10. Journey schema V3 safely migrates V2 active journeys that were paused by the earlier MJE-3 proposal behavior back to active timing while preserving remaining duration, proposal lineage, checkpoints, delay totals, and reminder rescheduling.
 11. MJE-4 relabels the passive Map progress entry and dashboard as Footprints, preserving points, route familiarity, area unlocks, feedback, and history. Map Settings now owns a per-world `all_known` or `footprint_gated` place-knowledge choice. In gated mode, undiscovered convenience stores and pharmacy districts are absent from all map catalogs until a completed positioned journey reveals up to four nearby authored facilities within 1.2 km. Knowledge evidence is world/map/trip scoped and backed up; marker visibility remains separate; manual role-position changes and cancellations reveal nothing.
 
-MJE-1 was independently reviewed and accepted by the user. The user accepted MJE-2 by explicitly authorizing the next stage, accepted MJE-3 after confirming that its sample event appears without pausing travel, and accepted MJE-4 after verifying its per-world knowledge choice and nearby-place discovery flow. MJE-1 through MJE-4 are now integrated locally; this acceptance does not authorize MJE-5.
+MJE-1 was independently reviewed and accepted by the user. The user accepted MJE-2 by explicitly authorizing the next stage, and MJE-4 after verifying its per-world knowledge choice and nearby-place discovery flow. MJE-3's technical adapter remains integrated, but the generic production presentation is withdrawn after later product review. This correction does not authorize MJE-5.
 
-MJE-3 validation is complete for the non-blocking pending-update revision: the focused Journey/Event/Map-view set passes 5 files / 64 tests; the full Vitest suite passes 200 files / 1363 tests; lint, production build, governance (2 files / 12 tests), and `git diff --check` pass; and the focused Map E2E passes 12/12 across desktop Chromium and Pixel 5.
+MJE-3 compatibility coverage remains focused on exact lineage, bounded owner validation, no-event behavior, and safe recovery. The production Map explicitly disables checkpoint-event evaluation, and the earlier generic route-event screenshots have been removed so they cannot be reused as current product evidence.
+
+Calendar departure-readiness V1 validation passes 3 focused files / 39 tests plus targeted lint. Dedicated Playwright passes 2/2 across desktop Chromium and simulated Pixel 5, covering a supermarket as the actual current origin, public-transit/walking estimate differences, explicit lateness, 44px controls, keyboard focus, zero horizontal overflow, one explicit linked Journey, and Map-to-Calendar return. Four screenshots provide simulated-device evidence; no physical-device proof is claimed.
 
 MJE-4 final validation passes: the focused endpoint/discovery set passes 3 files / 45 tests; the repository-wide Vitest suite passes 202 files / 1401 tests; lint, production build, governance, and `git diff --check` pass; and the complete Map E2E passes 14/14 across desktop Chromium and Pixel 5. Browser inspection confirms the saved role-position address/coordinate is used for trip distance, with Gangnam Station to Samsung Town resolving to 0.3 km, zero document/drawer overflow, and no console errors.
 
@@ -151,10 +167,12 @@ What is already landed:
 24. Place Details now exposes a Map-owned `system` / Chinese / English / bilingual display preference. The persisted mode applies to authored marker labels, search results, Places rows, and place-detail names/addresses without mutating canonical place data, coordinates, search indexing, or existing journeys. Bilingual mode uses one primary marker label and progressive secondary text in browse/detail surfaces; player pins with only one available language are deduplicated. OpenFreeMap basemap labels remain provider-style output and are not switched by this control. Focused unit coverage plus desktop and simulated Pixel 5 Playwright protect language switching, refresh persistence, legacy fallback, and horizontal overflow.
 25. Five reality-anchored restaurant records now extend Seoul V1 through `src/lib/seoul-map-food-places.js`. Each has a stable Map/place ID, bilingual name and address, aliases/search terms, `restaurant` category, and reviewed provider-neutral latitude/longitude. They are searchable, focusable, and valid journey destinations through the existing Map contracts. Food Delivery stores only the stable `sourceId`; restaurant menus, bags, orders, and delivery events do not enter Map. Focused Map tests cover all five queries/coordinates, and desktop Chromium plus simulated Pixel 5 Playwright covers search, focus/detail, and destination selection with no page error or horizontal overflow.
 26. EVE-4B extends Map storage to V4 with Map-owned `deliveryJourneys` for paid Food Delivery orders. Map stores only the courier route phase, anchors, progress, ETA, and address-revision lineage; Food Delivery remains the owner of order/payment/conversation truth, and Runtime stores only cross-owner references. Player movement and manual position evidence cannot create or complete a delivery journey.
+27. Place media V1 keeps canonical place records unchanged while resolving a verified hero asset or explicit category fallback. Seven reviewed real-photo derivatives cover the initial exact/area pilot, and every source page, author, license, source hash, runtime hash, alt text, truth grade, and disclosed crop/conversion is retained in the registry/audit contract.
+28. Calendar storage V3 migrates V1/V2 and adds explicit range, all-day, recurrence, requirement, notes, reminder lead, and stable optional `locationRef` fields. Month/Week/Agenda and selected-day/detail views derive occurrences from the source event; the selected occurrence derives departure readiness from Map's canonical current position and selected transport, then starts/reuses one Map Journey only after explicit user action. Map Journey and history retain `sourceCalendarEventId`, and the Map back action restores Calendar context.
 
 Still incomplete:
 
-1. Calendar still lacks conventional Month/Week/Agenda views, selected-day detail, multi-day visual spans, and the fuller event-authoring contract described by CJA-1;
+1. CJA-6 Narrative Timeline remains unimplemented and separately gated; appointment auto-entry, broader Agenda/Activity event families, media callers, richer companions, and interactive HTML are also still unimplemented;
 2. Reminders can still use stronger product clarity when a real objective/task cue family is promoted;
 3. Full map-package manifest import/export, topology validation, georeferencing, calibrated scale tools, editable faction polygons, and seed-place authoring are not implemented; current import/generation accepts one image plus lightweight pack metadata;
 4. route/date/follow-up handoff rules will need more real-world coverage as modules deepen;
@@ -166,9 +184,10 @@ Still incomplete:
 10. additional real-city packs, true-device gesture/weak-network proof, and large-package/offline-cache validation remain separate and are not started.
 11. public-transit lines, stations, schedules, realtime arrivals, fares, and transfer routing are not implemented. A later slice must separately choose a licensed/versioned static topology source and decide whether any keyed realtime adapter is justified without turning provider IDs into Map identity.
 12. Footprints remains passive progression with only deterministic authored nearby-facility reveal; no active area exploration or generated discovery candidate exists yet.
-13. MJE-1 transport planning, MJE-2 lifecycle/checkpoints, MJE-3's first checkpoint Event Runtime adapter, and MJE-4 Footprints/place knowledge are user-accepted and integrated locally.
-14. Agenda Journey, Schedule Orchestrator, Activity Session, their event adapters, and Narrative Timeline are not implemented; roadmap 4.12 is architecture-only.
-15. ordinary place-focus overview/detail Stage 1 is implemented; explicit onsite/inside sessions, `Enter`/leave behavior, manual-versus-journey provenance, scheduled-travel handoff, appointment auto-entry, Focus Companion, media callers, and location-aware place-entry events remain documentation-only and unimplemented.
+13. MJE-1 transport planning, MJE-2 lifecycle/checkpoints, and MJE-4 Footprints/place knowledge are integrated locally; MJE-3's first checkpoint Event Runtime adapter is retained as compatibility evidence with its production trigger suspended.
+14. Agenda Journey V1 is implemented as a separate execution owner and app, CJA-4 adds the separate Activity Session timing owner plus embedded Focus Companion baseline, and CJA-5 adds one midpoint-only Activity Session/Event Runtime adapter. Broader Agenda Journey event adapters, appointment auto-entry, Gallery/Music activity callers, richer companions, and Narrative Timeline are not implemented; the direct CJA-1 Calendar-to-Map departure path remains independently valid.
+15. ordinary place-focus overview/detail, explicit onsite/inside sessions, `Enter`/leave behavior, manual-versus-journey provenance, and the first location-aware place-entry event are implemented; appointment auto-entry and Activity Session media callers remain unimplemented.
+16. the place-media pilot covers seven real-photo derivatives and one fictional fallback; expanding reviewed photography across the remaining Seoul catalog, adding any generated reconstruction, user-selected Gallery media, periodic license revalidation, and true-device image/network evidence remain separate work.
 
 ### Read-Only Calendar Carrier Candidate
 
@@ -193,7 +212,7 @@ Current safe candidates after the user's event-lane reprioritization:
 1. preserve EVE-2C's one-host boundary, Map V3 provenance/session ownership, frozen `MapPlaceSessionCheckpointV1` and resolution validation, and derived projection model.
 2. preserve the frozen read-only legacy/exact place-semantic overlay and do not mutate existing place records merely to implement event lookup.
 3. do not add another Event host/archetype, EVE-3 World Hub notebook, EVE-4 effect family, EVE-5 Mini Scene/CG surface, or MJE-5 behavior without separate acceptance.
-4. after separate user acceptance, define CJA-1 Calendar Month/Week/Agenda information architecture without implementing Agenda Journey or changing Map.
+4. preserve CJA-1 Calendar planned truth, CJA-2's hidden coordination-only owner, CJA-3's separate execution truth plus one-step Map lineage, CJA-4's time-only Activity Session owner, and CJA-5's single midpoint/0-or-2-minute boundary; do not begin broader event families, appointment auto-entry, Gallery/Music activity callers, richer companion state, interactive HTML, or CJA-6 Narrative Timeline without separate user acceptance.
 5. user-test Calendar reservation and Map transit world context on a real phone as presentation only.
 6. deepen the confirmed-event relationship Adapter without changing Calendar, Chat, or relationship-runtime ownership.
 6. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family.
@@ -216,7 +235,7 @@ Current safe candidates after the user's event-lane reprioritization:
 12. Do not create a separate Transit app before it has independent network utility, and never let it create a second journey runtime.
 13. Do not start the next MJE stage before the current stage is user-accepted and the roadmap status is updated.
 14. Do not merge Calendar's `Agenda / 日程` view, the future `Agenda Journey / 行程` app, and Map Journey into one owner or infer activity completion from Map arrival alone.
-15. Do not treat CJA-0 documentation acceptance as authorization to implement CJA-1 or any later CJA stage.
+15. Do not treat CJA-2 completion as implementation or authorization of Agenda Journey, Activity Session, event collaboration, or any later CJA stage.
 16. Do not make the standalone Map inspection Adapter mutation-capable or treat native identity/capacity eligibility as permission to install. Mutations are available only through the explicitly constructed Catalog-backed runtime, and that runtime is not activation authority.
 
 ## 4. Must Sync When Working Here

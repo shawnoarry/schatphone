@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 ## 1. Core Rule
 
@@ -23,6 +23,7 @@ Owns:
 - reusable event-template eligibility and normalized Event Instance lifecycle/provenance once separately implemented
 - optional event-text materialization policy and validation, while local variants remain the required fallback
 - generated social-event eligibility/review/audit for role-initiated greetings, refusal, block, restore, and unblock proposals
+- future bounded player-context eligibility, world-arc progression references, and information-publication requests only after their separate Interfaces and owners are accepted
 
 Does not own:
 
@@ -31,6 +32,7 @@ Does not own:
 - K-pop terminology/assets, Map/world-pack image binaries, Gallery assets, provider-specific image generation, or future CG candidates
 - arbitrary AI-generated choice IDs, Adapter keys, numeric effects, domain mutations, external media URLs, or full-prompt/raw-response retention by default
 - applied Chat channel state after a social event is confirmed
+- Contacts Self Profile values, arbitrary dynamic player/world state, owner-confirmed world facts, future Community/Media publication bodies, or investigation/clue records
 
 ### Relationship Runtime / 关系运行时
 
@@ -76,11 +78,11 @@ World Pack nonstandard-app template extraction is outside runtime ownership in t
 
 ### Map Journey Checkpoint Collaboration
 
-A Map-owned Map Journey Runtime may submit a bounded source snapshot at an explicit journey or exploration checkpoint. Event Runtime owns event-template eligibility, deterministic/random selection, cooldowns, caps, proposal/review state, minimum provenance, and event logs. MJE-3 implements the first narrow family only for completed `en_route` and `near_arrival` checkpoints while Map is mounted; a pending proposal cannot pause the journey, and its reviewed result may request only no ETA change or a bounded 120-second delay.
+A Map-owned Map Journey Runtime may submit a bounded source snapshot at an explicit journey or exploration checkpoint. Event Runtime owns event-template eligibility, deterministic/random selection, cooldowns, caps, proposal/review state, minimum provenance, and event logs. MJE-3 retains the first narrow compatibility family for completed `en_route` and `near_arrival` checkpoints, but production Map mounting keeps it disabled after the generic route-obstruction presentation failed product review. Deterministic tests may explicitly enable only no ETA change or the legacy bounded 120-second delay.
 
 Map remains the source owner for the journey, checkpoint plan, pins, places, transport snapshot, ETA, arrival, and cancellation. Event Runtime cannot write those records directly, run journey eligibility on every animation tick, require every journey to produce an event, or convert proposal review into a pause. Map validates and applies any requested result through its own adapter. High-impact money, asset, relationship, identity, and schedule outcomes retain their existing owner and confirmation boundaries.
 
-This first collaboration is user-accepted and integrated locally. Destination change, event-driven cancellation, money, assets, relationships, identity, schedules, Agenda Journey behavior, and active exploration events remain outside MJE-3.
+This first collaboration remains technical compatibility evidence rather than an active production event family. Destination change, event-driven cancellation, money, assets, relationships, identity, schedules, Agenda Journey behavior, and active exploration events remain outside MJE-3.
 
 ### Event Chains, Native Presentation, And Optional Event Surfaces
 
@@ -108,17 +110,29 @@ Free-form text or AI classification may propose an intent or result but cannot c
 
 Event Instance V1 remains frozen for EVE-2A/2B/2C. Event Instance V2 and Simulation V5 now preserve generic progression plus legacy EVE-4B audit lineage without fabricating user initiation. Food Delivery and Shopping provide separate owner Adapters for the shared commerce seam. Read `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
 
+### Player Context, World Evolution, And Information Propagation
+
+Status: `PLAYER_CONTEXT_V1_FOUNDATION_IMPLEMENTED / WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_DOCUMENTATION_ONLY`.
+
+Contacts Self Profile owns the user's stable, structured, visibility-scoped identity in the current world. Event Runtime now has one bounded profile/world/template/revision projection for K-pop manager/public-idol eligibility. It reads only manual visible allowlisted fields and body-free owner references; free-text biography, event-attached values, or model classification cannot independently establish occupation, intent, behavior, guilt, relationship, or another canonical fact.
+
+Dynamic values remain with their natural owners. A minimal Player State Module is considered only for approved cross-module user-state values that have no existing owner. A future World State And Arc Ledger is considered only for durable ownerless world facts or multi-occurrence arc state that must outlive one Event Instance. Neither owner is implied by this package.
+
+Future forum, X/Weibo-like, social-feed, and subscription-news records belong to a Community/Media Module. An owner-confirmed `World Fact`, an account's `Claim`, and the committed `Post` that presents it are different records. Runtime may coordinate eligibility, one-time decisions, requests, references, and provenance; it cannot turn a claim into truth or persist the publication body.
+
+Investigation/clue retention requires a separate owner that stores post/claim/fact references and user deductions. World Hub remains an audit surface, not the normal authoring or feed surface for any of these records. The full direction and implementation gates are in `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
+
 ### Agenda Journey And Activity Session Collaboration
 
-A future Agenda Journey or Activity Session may submit a bounded source snapshot only at an explicit execution checkpoint such as step start, a duration milestone, completion, or deadline reconciliation. Event Runtime owns template eligibility, deterministic/random selection, cooldowns, caps, module permission, presentation-mode policy, automatic-resolution policy, proposal/review state, minimum provenance, and event logs.
+Agenda Journey or Activity Session may submit a bounded source snapshot only after a separately approved Event Adapter exists and only at an explicit execution checkpoint such as step start, a duration milestone, completion, or deadline reconciliation. Event Runtime owns template eligibility, deterministic/random selection, cooldowns, caps, module permission, presentation-mode policy, automatic-resolution policy, proposal/review state, minimum provenance, and event logs.
 
 Agenda Journey remains the owner of near-term steps and execution outcomes; Activity Session remains the owner of timestamp-based duration and checkpoint truth; Calendar remains the owner of confirmed long-range plans; Map remains the owner of travel and arrival evidence. Event Runtime cannot infer non-travel completion from elapsed time or Map arrival, evaluate on each countdown tick, or write any of those records directly. Each owner validates the requested result before applying it.
 
 When Mini Scene presentation is `off`, eligibility still runs and only an explicitly approved low-impact result may auto-resolve. High-impact money, asset, relationship, identity, communication, or schedule changes still require their normal confirmation/review path. Suspension is reconciled idempotently from source timestamps after resume; exact interactive delivery while the browser/PWA is closed or OS-suspended is not guaranteed.
 
-This collaboration is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY`. No Agenda Journey route/store, Activity Session timer, Schedule Orchestrator, event adapter, Settings permission, or persistence field is implemented.
+This collaboration is `ARCHITECTURE_ACCEPTED / CJA-5_ACTIVITY_SESSION_MIDPOINT_FAMILY_IMPLEMENTED`. Calendar departure-readiness V1 remains implemented directly between Calendar and Map without Event Runtime participation. CJA-5 implements exactly one `activity_session.focus_reset.v1` family with durable Simulation V6 records, Activity Session V2 owner validation, an Activity Session module permission, and independent `off | text` presentation. No Agenda Journey event family, appointment auto-entry, interactive HTML/Mini Scene, high-impact effect, or Narrative Timeline is implemented.
 
-Module event permission, random-event intensity, and presentation mode remain separate. Optional event suppression cannot remove a deterministic Agenda Journey step, Activity Session, Map Journey, deadline, or safety behavior. Activity Session owns its timer and completion policy; a future Focus Companion surface may consume stable media references but Event Runtime owns neither that presentation nor Gallery/Music assets.
+Module event permission, random-event intensity, and presentation mode remain separate. Optional event suppression cannot remove a deterministic Agenda Journey step, Activity Session, Map Journey, deadline, or safety behavior. Activity Session owns its timer and completion policy; Focus Companion owns the inline CJA-5 presentation, while Event Runtime owns neither that presentation nor Gallery/Music assets.
 
 ### Mini Scene Collaboration
 

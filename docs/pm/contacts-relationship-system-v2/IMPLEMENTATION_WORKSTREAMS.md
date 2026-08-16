@@ -1,6 +1,6 @@
 # Contacts Relationship V2 Implementation Workstreams / 通讯录关系系统 V2 实施工作流
 
-Updated: 2026-06-02
+Updated: 2026-08-15
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
 
@@ -24,6 +24,7 @@ Main tasks:
 8. keep the AI classification seam limited to `src/lib/ai.js`, shared JSON parsing, registry normalization, and confidence/save-policy output.
 9. keep Contacts relationship classification controls as profile-side editing only: runtime snapshot is read first, while event judgement remains outside Contacts.
 10. allow Contacts to read/display Chat social-channel snapshots only; do not let Contacts decide or apply friend/block/refusal social events.
+11. keep stable structured Self Profile identity available only through a future bounded profile/world/revision projection when a named event family is separately accepted; keep volatile player/world state and publication records outside Contacts.
 
 Semantic traps to avoid:
 
@@ -32,6 +33,8 @@ Semantic traps to avoid:
 - reading raw relationship premise prose as an event condition instead of stored classification fields;
 - allowing AI, confirmed AI, or world-template writes to silently overwrite a `user_edited` classification;
 - treating Chat social-channel state as relationship truth or as a Contacts-authored event outcome;
+- using free-text Self Profile prose or model classification as canonical occupation/event eligibility;
+- turning Contacts into the owner of reputation, media heat, fatigue, world arcs, or forum/news posts;
 - letting one event create several competing memories.
 
 ## 2. Workstream B: Delete / Reset / Memory Cleanup Orchestration
@@ -130,6 +133,7 @@ Main tasks:
 4. keep module naming aligned with `docs/pm/MODULE_NAME_GLOSSARY.md`;
 5. keep this package workflow aligned with the cross-task contract in `docs/process/AI_WORK_MODE.md`; load optional skills only when the current slice needs them.
 6. when relationship classification changes, sync the profile-owner vs runtime-owner boundary in README, status, product boundary, workstreams, roadmap, PM status, and relationship-growth architecture docs.
+7. when Self Profile event eligibility or dynamic player/world ownership changes, sync `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` and the Event Runtime package without adding implementation from Contacts alone.
 
 ## 5. Semantic Drift Watchlist
 

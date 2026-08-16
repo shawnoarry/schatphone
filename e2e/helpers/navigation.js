@@ -15,6 +15,7 @@ const routeScopeFromPath = (routePath) => {
 }
 
 const routeReadySelectors = {
+  '/agenda-journey': '[data-testid="agenda-journey-view"]',
   '/app-store': '[data-testid="app-store-search"]',
   '/camera': '[data-testid="camera-view"]',
   '/chat-contacts': '[data-testid="chat-directory-section-service"]',
@@ -29,6 +30,7 @@ const routeReadySelectors = {
   '/settings': '[data-settings-menu-title="World Book"]',
   '/shopping': '.shopping-storefront-header',
   '/widgets': '.widgets-shell',
+  '/weather': '[data-testid="weather-view"]',
   '/worldbook': '[data-testid="worldbook-overview"]',
 }
 

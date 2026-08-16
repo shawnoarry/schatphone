@@ -2,6 +2,8 @@ export const SHOPPING_HOME_APP_ID = 'app_shopping'
 export const SHOPPING_ROUTE = '/shopping'
 export const REMINDERS_HOME_APP_ID = 'app_reminders'
 export const REMINDERS_ROUTE = '/reminders'
+export const AGENDA_JOURNEY_HOME_APP_ID = 'app_agenda_journey'
+export const AGENDA_JOURNEY_ROUTE = '/agenda-journey'
 export const FOOD_DELIVERY_HOME_APP_ID = 'app_food_delivery'
 export const FOOD_DELIVERY_ROUTE = '/food-delivery'
 export const ASSETS_HOME_APP_ID = 'app_assets'
@@ -16,6 +18,8 @@ export const CAMERA_HOME_APP_ID = 'app_camera'
 export const CAMERA_ROUTE = '/camera'
 export const MUSIC_HOME_APP_ID = 'app_music'
 export const MUSIC_ROUTE = '/music'
+export const WEATHER_HOME_APP_ID = 'app_weather'
+export const WEATHER_ROUTE = '/weather'
 
 export const SHOPPING_CATEGORY_ENTRIES = Object.freeze([
   {

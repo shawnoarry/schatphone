@@ -42,6 +42,10 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  simulationEventPresentationControls: {
+    type: Array,
+    default: () => [],
+  },
   automationSaved: {
     type: Boolean,
     default: false,
@@ -57,6 +61,7 @@ defineEmits([
   'update-simulation-foreground-tick-interval-minutes',
   'update-simulation-surprise-mode',
   'update-simulation-module-events-enabled',
+  'update-simulation-event-presentation-mode',
   'update-automation-field',
   'update-module-enabled',
   'update-module-priority',
@@ -218,6 +223,31 @@ const { t } = useI18n()
           :data-testid="`settings-simulation-module-events-${item.id}`"
           @change="$emit('update-simulation-module-events-enabled', item.moduleKey, $event.target.checked)"
         />
+      </label>
+    </div>
+
+    <div class="space-y-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3">
+      <p class="text-[11px] font-semibold text-gray-600">
+        {{ t('事件呈现方式 / Event presentation', 'Event presentation / 事件呈现方式') }}
+      </p>
+      <label
+        v-for="item in simulationEventPresentationControls"
+        :key="item.id"
+        class="block rounded-lg bg-white px-3 py-2"
+        :data-testid="`settings-simulation-event-presentation-row-${item.id}`"
+      >
+        <span class="block break-words text-xs font-semibold leading-4 text-gray-700">{{ item.label }}</span>
+        <span class="mt-1 block text-[10px] leading-4 text-gray-400">{{ item.detail }}</span>
+        <select
+          :value="item.value"
+          class="mt-2 w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs"
+          :data-testid="`settings-simulation-event-presentation-${item.id}`"
+          @change="$emit('update-simulation-event-presentation-mode', item.moduleKey, $event.target.value)"
+        >
+          <option v-for="option in item.options" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
       </label>
     </div>
   </div>

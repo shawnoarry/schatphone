@@ -139,6 +139,7 @@ describe('app icon presentation helpers', () => {
   test('resolves planned Shopping, Reminders, and Assets app metadata', () => {
     const shopping = resolveAppIconMeta('app_shopping', {}, 'zh-CN')
     const music = resolveAppIconMeta('app_music', {}, 'en-US')
+    const weather = resolveAppIconMeta('app_weather', {}, 'zh-CN')
     const reminders = resolveAppIconMeta('app_reminders', {}, 'en-US')
     const food = resolveAppIconMeta('app_food_delivery', {}, 'en-US')
     const assets = resolveAppIconMeta('app_assets', {}, 'en-US')
@@ -151,6 +152,9 @@ describe('app icon presentation helpers', () => {
     expect(music.label).toBe('Music')
     expect(music.icon).toBe('fas fa-music')
     expect(music.accent).toBe('warm')
+    expect(weather.label).toBe('天气')
+    expect(weather.icon).toBe('fas fa-cloud-sun')
+    expect(weather.accent).toBe('cool')
     expect(reminders.label).toBe('Reminders')
     expect(reminders.icon).toBe('fas fa-list-check')
     expect(reminders.accent).toBe('warm')

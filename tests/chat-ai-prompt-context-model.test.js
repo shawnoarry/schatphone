@@ -9,6 +9,10 @@ import {
   useChatAiPromptContextModel,
 } from '../src/composables/useChatAiPromptContextModel'
 import { DEFAULT_CHAT_THREAD_AI_PREFS } from '../src/composables/useChatActiveThreadModel'
+import {
+  WEATHER_DISPLAY_MODE_CUSTOM,
+  normalizeWeatherSettings,
+} from '../src/lib/weather-contract'
 
 const createChatStore = ({ messages = [], contacts = [], roleProfiles = [] } = {}) => ({
   roleProfiles,
@@ -72,17 +76,24 @@ const createModel = ({
   roleProfiles = [],
   user = { name: 'Fallback User' },
   relationshipRuntimeStore,
+  systemStore = createSystemStore(),
+  weatherStore,
+  mapStore,
+  systemLanguage,
 } = {}) =>
   useChatAiPromptContextModel({
     chatStore: createChatStore({ messages, contacts, roleProfiles }),
-    systemStore: createSystemStore(),
+    systemStore,
     bookStore: { assets: [] },
     relationshipRuntimeStore:
       relationshipRuntimeStore || {
         buildPromptContextForTarget: (target) =>
           target.entityKey ? `Runtime facts for ${target.entityKey}` : '',
       },
+    weatherStore,
+    mapStore,
     user: ref(user),
+    systemLanguage,
     responseStyleOptions: ref([
       { value: 'immersive' },
       { value: 'natural' },
@@ -94,6 +105,58 @@ const createModel = ({
   })
 
 describe('Chat AI prompt context model interface', () => {
+  test('projects mapped weather without exposing the private source city', () => {
+    const vancouver = {
+      id: 'open-meteo-6173331',
+      providerId: '6173331',
+      name: 'Vancouver',
+      nameZh: '温哥华',
+      nameEn: 'Vancouver',
+      country: 'Canada',
+      latitude: 49.2827,
+      longitude: -123.1207,
+      timezone: 'America/Vancouver',
+    }
+    const systemStore = createSystemStore()
+    systemStore.settings = {
+      system: { language: 'zh-CN' },
+      weather: normalizeWeatherSettings({
+        savedLocations: [vancouver],
+        activeLocationId: vancouver.id,
+        mapping: {
+          global: {
+            displayMode: WEATHER_DISPLAY_MODE_CUSTOM,
+            displayName: '伊莱西亚',
+            sourceLocationId: vancouver.id,
+            exposeSourceLocationToAi: false,
+          },
+        },
+      }),
+    }
+    const model = createModel({
+      systemStore,
+      weatherStore: {
+        activeForecast: {
+          current: {
+            temperature: 12,
+            apparentTemperature: 10,
+            precipitationProbability: 70,
+            condition: { labelZh: '小雨', labelEn: 'Light rain' },
+          },
+        },
+      },
+      mapStore: { currentLocation: { detail: '虚构城区' } },
+      systemLanguage: ref('zh-CN'),
+    })
+    const prompt = model.buildWeatherPromptBlock()
+
+    expect(prompt).toContain('伊莱西亚')
+    expect(prompt).toContain('小雨')
+    expect(prompt).not.toContain('温哥华')
+    expect(prompt).not.toContain('Vancouver')
+    expect(prompt).toContain('source location is private')
+  })
+
   test('normalizes prompt limits and truth event summaries', () => {
     expect(clampChatPromptContextTurns(1)).toBe(2)
     expect(clampChatPromptContextTurns(99)).toBe(20)

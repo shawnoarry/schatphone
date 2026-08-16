@@ -1,6 +1,6 @@
 # Contacts Relationship Product Boundary / 通讯录关系语义边界
 
-Updated: 2026-08-12
+Updated: 2026-08-15
 
 This document explains the current product meaning of each related module in plain language, so future engineers and AI assistants do not let the same field mean two different things.
 
@@ -45,6 +45,7 @@ Owns:
 - memory review and memory deletion entry
 - plain-language presentation of Relationship Runtime's read-only memory-care state and suggested existing memories
 - role delete and relationship reset entry
+- stable Self Profile identity and visibility-scoped world values that may later be projected read-only for event eligibility
 
 Must not own:
 
@@ -55,6 +56,13 @@ Must not own:
 - confirmed Wallet transactions, receipts, account balances, or exchange behavior
 - memory-pressure thresholds or projection truth
 - automatic memory summarization, rewriting, archival, deletion, or persisted review candidates
+- volatile reputation, media heat, fatigue, occupational pressure, ownerless world-arc state, event progression, or future forum/social/news publication records
+
+### 3.1 Self Profile Event Eligibility Boundary
+
+Self Profile now supplies one bounded, structured, revision-aware Player Context V1 projection containing only the K-pop allowlisted occupation, affiliation, public identity mode, and exact world/template references. Only manual `public` or matching-world `world_specific` template values qualify; the projection is read-only and body-free.
+
+Contacts remains the identity owner, not the event judge. Free-text biography or role prose cannot independently authorize an event, and Runtime must fail closed on stale/missing/mismatched references. Dynamic values remain with their natural owners or a separately justified minimal Player State owner. The full direction is `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
 
 ## 4. Chat Directory / 会话通讯录
 
@@ -212,3 +220,5 @@ If any of these happens, treat it as a product-semantic bug:
 9. A later AI or world-template classification silently overwrites an existing `user_edited` classification.
 10. Contacts lets the relationship premise form directly change current runtime metrics, stage, milestones, or memories.
 11. Contacts turns friend/block/refusal social snapshots into event decisions or relationship metrics.
+12. Contacts becomes the Store for volatile player/world state merely because the values describe the user.
+13. a future forum/social/news post or model classification is treated as canonical Self Profile identity or owner-confirmed world truth.

@@ -49,10 +49,9 @@ describe('Contacts and Chat Directory boundary copy', () => {
     await flushUi()
 
     const copy = wrapper.get('[data-testid="contacts-boundary-copy"]').text()
-    expect(copy).toContain('role archive')
-    expect(copy).toContain('role hub')
-    expect(copy).toContain('without a Chat thread')
-    expect(copy).toContain('start chatting from its profile')
+    expect(copy).toContain('Every role lives here')
+    expect(copy).toContain('no chat needed')
+    expect(copy).toContain('Open a profile to start chatting')
     expect(copy).toContain('Chat Directory')
 
     wrapper.unmount()

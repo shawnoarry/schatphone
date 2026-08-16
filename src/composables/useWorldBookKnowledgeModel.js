@@ -307,8 +307,8 @@ export function useWorldBookKnowledgeModel({
 
   const knowledgeDeepLinkSourceLabel = computed(() => {
     const source = readValue(knowledgeDeepLinkSource)
-    if (source === 'calendar') return t('Calendar', 'Calendar')
-    if (source === 'map') return t('Map', 'Map')
+    if (source === 'calendar') return t('日历', 'Calendar')
+    if (source === 'map') return t('地图', 'Map')
     if (source === 'chat') return t('Chat', 'Chat')
     return t('\u6a21\u5757\u4e0a\u4e0b\u6587', 'Module context')
   })

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import * as pushLib from '../src/lib/push'
 import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
-import { useCalendarStore } from '../src/stores/calendar'
+import { migrateCalendarStorage, useCalendarStore } from '../src/stores/calendar'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { useSystemStore } from '../src/stores/system'
 
@@ -514,5 +514,147 @@ describe('calendar event store', () => {
 
     expect(duplicateFirst).toEqual(duplicateSecond)
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
+  })
+
+  test('migrates V1 and V2 events into the V3 schedule contract', () => {
+    const startsAt = Date.now() + 2 * 60 * 60_000
+    const migrated = migrateCalendarStorage({
+      version: 2,
+      data: {
+        events: [
+          {
+            id: 'calendar_event_v2_location',
+            titleZh: '旧版地点预约',
+            startsAt,
+            locationRef: {
+              mapPackId: 'real-seoul-v1',
+              placeId: 'SEOUL-SM-HQ',
+              labelZh: 'SM 娱乐总部',
+            },
+          },
+        ],
+      },
+    })
+
+    expect(migrated.events[0]).toMatchObject({
+      endsAt: startsAt + 60 * 60_000,
+      allDay: false,
+      recurrence: 'none',
+      requirement: 'required',
+      reminderLeadMinutes: 0,
+      locationRef: {
+        owner: 'map',
+        mapPackId: 'real-seoul-v1',
+        placeId: 'seoul-sm-hq',
+      },
+    })
+
+    expect(migrateCalendarStorage({ version: 3, data: migrated })).toBeNull()
+    expect(migrateCalendarStorage({ version: 0, data: migrated })).toBeNull()
+  })
+
+  test('creates and edits complete manual events while preserving duration on quick shifts', () => {
+    const store = useCalendarStore()
+    const startsAt = Date.now() + 24 * 60 * 60_000
+    const endsAt = startsAt + 90 * 60_000
+    const event = store.createManualEvent({
+      titleZh: '舞台彩排',
+      titleEn: 'Stage rehearsal',
+      notesZh: '携带耳返\n提前签到',
+      startsAt,
+      endsAt,
+      recurrence: 'weekly',
+      recurrenceUntil: startsAt + 28 * 24 * 60 * 60_000,
+      requirement: 'required',
+      reminderLeadMinutes: 30,
+      locationRef: {
+        owner: 'map',
+        mapPackId: 'real-seoul-v1',
+        placeId: 'seoul-sm-hq',
+        labelZh: 'SM 娱乐总部',
+      },
+    })
+
+    expect(event).toMatchObject({
+      source: 'manual',
+      notesZh: '携带耳返\n提前签到',
+      endsAt,
+      recurrence: 'weekly',
+      requirement: 'required',
+      reminderLeadMinutes: 30,
+      status: 'confirmed',
+    })
+    expect(store.confirmedEvents).toHaveLength(1)
+
+    const shiftedStartsAt = startsAt + 2 * 60 * 60_000
+    expect(store.setEventStartsAt(event.id, shiftedStartsAt)).toBe(true)
+    expect(store.findEventById(event.id)).toMatchObject({
+      startsAt: shiftedStartsAt,
+      endsAt: shiftedStartsAt + 90 * 60_000,
+      originalStartsAt: startsAt,
+      originalEndsAt: endsAt,
+    })
+
+    const updated = store.updateEventDetails(event.id, {
+      requirement: 'optional',
+      reminderLeadMinutes: 60,
+      locationRef: null,
+    })
+    expect(updated).toMatchObject({
+      requirement: 'optional',
+      reminderLeadMinutes: 60,
+      locationRef: null,
+    })
+
+    const snapshot = store.createBackupSnapshot()
+    setActivePinia(createPinia())
+    const restoredStore = useCalendarStore()
+    expect(restoredStore.restoreFromBackup({ calendar: snapshot })).toBe(true)
+    expect(restoredStore.findEventById(event.id)).toMatchObject({
+      recurrence: 'weekly',
+      requirement: 'optional',
+      reminderLeadMinutes: 60,
+      notesZh: '携带耳返\n提前签到',
+    })
+  })
+
+  test('schedules real push from the selected reminder lead policy', async () => {
+    const store = useCalendarStore()
+    const systemStore = useSystemStore()
+    systemStore.setPushState({
+      realPushEnabled: true,
+      pushServerUrl: 'http://localhost:8787',
+      pushDeviceId: 'push_device_reminder_policy',
+      pushSubscriptionActive: true,
+    })
+    const scheduleSpy = vi
+      .spyOn(pushLib, 'schedulePushNotification')
+      .mockImplementation(async ({ scheduleId, deliverAt }) => ({
+        ok: true,
+        scheduleId,
+        deliverAt,
+      }))
+
+    const startsAt = Date.now() + 4 * 60 * 60_000
+    const event = store.createManualEvent({
+      titleZh: '提醒策略测试',
+      startsAt,
+      endsAt: startsAt + 60 * 60_000,
+      reminderLeadMinutes: 45,
+    })
+    const expectedReminderAt = startsAt - 45 * 60_000
+
+    const result = await store.ensureEventPushScheduled(event.id, {
+      source: 'calendar_reminder_policy_test',
+    })
+
+    expect(result).toMatchObject({ ok: true, deliverAt: expectedReminderAt })
+    expect(scheduleSpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        deliverAt: expectedReminderAt,
+        source: 'calendar_reminder_policy_test',
+      }),
+    )
+    expect(store.findEventById(event.id)?.scheduledPushAt).toBe(expectedReminderAt)
   })
 })

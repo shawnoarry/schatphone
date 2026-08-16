@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-10
+Updated: 2026-08-16
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -27,7 +27,7 @@ The current work is concentrated in five areas:
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus MJE-1 through MJE-4, 4.12 keeps Calendar/Agenda orchestration documentation-only, 4.13 has an integrated local Music first slice plus Chat track sharing and active-journey Map music/radio, 4.14 has completed EVE-2A contracts/fixtures, EVE-2B runtime, EVE-2C's first Map/K-pop vertical slice, and EVE-3's World Hub Event Notebook while EVE-4/EVE-5 remain separately gated, and 4.15 has a deployed first shared runtime TTS preview slice with stable provider quality/playback and durable Chat audio stages still gated.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus MJE-1 through MJE-4, 4.12 has implemented Calendar CJA-1, hidden orchestration CJA-2, and Agenda Journey CJA-3 while later activity/event stages remain gated, 4.13 has an integrated local Music first slice plus Chat track sharing and active-journey Map music/radio, 4.14 has completed EVE-2A contracts/fixtures, EVE-2B runtime, EVE-2C's first Map/K-pop vertical slice, and EVE-3's World Hub Event Notebook while EVE-4/EVE-5 remain separately gated, and 4.15 has a deployed first shared runtime TTS preview slice with stable provider quality/playback and durable Chat audio stages still gated.
 
 ## 2. Product Positioning
 
@@ -52,8 +52,8 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; optional Book/encyclopedia/template references are non-binding diagnostics, while broader hardening is pending |
 | Mini Scene | `Pure foundation landed, no runtime` | schemas, empty caller registry, Book profile/regex validation, and world resolution are tested; persistence, Settings, presenters, and source triggers remain separate |
-| Map / Reminders / Phone | `Map partial; MJE-1 through MJE-4 and EVE-2C integrated locally` | Map resolves one map per world and renders geographic packs through keyless OpenFreeMap + MapLibre, while fictional/custom packs and startup fallback remain local. Transport-aware planning, lifecycle/checkpoints, one non-blocking journey event family, Footprints, optional authored-place knowledge, ordinary place focus, durable place sessions, explicit `Enter`/`Leave`, and the first eligible-only K-pop event invitation/pin flow are integrated. Active exploration, additional Map event families, public-transit topology, and a standalone Transit app remain separately gated |
-| Calendar / Agenda Journey | `Calendar list baseline; orchestration architecture only` | Calendar is a visible list-first app for confirmed events, push state, and reminder context. Month/Week/Agenda views, the separate short-range Agenda Journey app, dynamic current-origin departure, linked Map travel, validated arrival/entry, Activity Session completion policy, Focus Companion, related event adapters, and Narrative Timeline have accepted ownership only; no CJA runtime or UI implementation has started |
+| Map / Reminders / Phone | `Map partial; MJE-1 through MJE-4, place media V1 pilot, and EVE-2C integrated locally` | Map resolves one map per world and renders geographic packs through keyless OpenFreeMap + MapLibre, while fictional/custom packs and startup fallback remain local. Transport-aware planning, lifecycle/checkpoints, one non-blocking journey event family, Footprints, optional authored-place knowledge, ordinary place focus, durable place sessions, explicit `Enter`/`Leave`, and the first eligible-only K-pop event invitation/pin flow are integrated. Place Details now adds a governed photo/fallback hero with exact-versus-area truth labels and source/license attribution; seven licensed Seoul derivatives are verified while all other, fictional, and player places fail safely to category visuals. Active exploration, broader photo coverage/generated reconstruction, additional Map event families, public-transit topology, and a standalone Transit app remain separately gated |
+| Calendar / Agenda Journey | `Calendar CJA-1 + hidden CJA-2 + Agenda Journey CJA-3 integrated` | Calendar V3 provides Month/Week/Agenda, authoring, recurrence, stable Map place selection, departure readiness, and explicit linked Map travel. The hidden Schedule Orchestrator persists deterministic occurrence materialization/deadline requests. The separate Agenda Journey app now consumes those requests or accepts manual plans within the next 14 days, separates Map travel from explicit activity completion, and owns execution outcomes. Appointment auto-entry, Activity Session, Focus Companion, event adapters, and Narrative Timeline remain separately gated |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | five independent Food Delivery shop facades share one Food Delivery runtime; the next roadmap-owned gap is one ordinary Food Delivery/Shopping consequence flow, while tracking and polish remain separate |
 | Wallet / Gallery | `Wallet card-pack + role-payee V1 + historical quote detail; Gallery support platform` | Wallet exposes six fictional single-currency accounts/debit cards and one fictional six-currency credit card over one ledger truth; verified role account cards lead to explicit same-currency confirmation and separate receipts, while every Activity row can open a general detail that presents saved quote provenance without re-quotation; display currency and rates stay in Wallet Settings, NPC balances and automatic exchange remain excluded, and Gallery's deeper Photos ambitions remain controlled |
 | Camera / Image Generation | `Focused V1, follow-ups staged` | Camera capture/configuration, three adapter families, bounded candidates, explicit Gallery keep, and public-config backup are implemented; Gallery People, other callers, hosted-provider and true-device proof remain |
@@ -99,8 +99,9 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 ### Life And Commerce Apps
 
 - use a world-bound real Seoul or cyber-wasteland map, render geographic Seoul through OpenFreeMap with a local fallback, search local places, add categorized pins, explicitly edit their coordinates in Map Settings, and manage trips without device location, provider POI, or live routing;
+- inspect place details with a licensed exact-place or clearly labeled area photograph where reviewed, visible author/license/change attribution, and an explicit category visual when no approved image exists;
 - bind another local map image or an explicitly accepted generated fictional map to the current world from Map Settings;
-- manage confirmed Calendar events through the current list-first Calendar surface, raw Reminders cues, and Phone callbacks;
+- manage confirmed Calendar events through Month/Week/Agenda views and selected-day/detail authoring, alongside raw Reminders cues and Phone callbacks;
 - browse and create Shopping/Food Delivery records, checkout, track updates, and produce downstream Wallet/relationship continuity;
 - use Gallery assets across modules;
 - use Wallet as a card-first app with six currency-specific virtual bank accounts/debit cards, one six-currency credit card, account-scoped transfers/receipts, Chat-disclosed role payees, activity, display-currency settings, and source-linked transactions whose saved historical quote details remain stable without automatic exchange;
@@ -116,7 +117,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 - Map gestures and large custom-map/offline behavior still need true-device testing; complete map-package validation, editing, georeferencing, and export are not implemented;
 - Map's Footprints dashboard remains passive progression with deterministic authored-place reveals, not active area exploration; MJE-1 through MJE-4 are user-accepted and integrated locally, while MJE-5 active exploration remains separately gated in roadmap 4.11;
 - cross-module Event Surface Projection, durable Event Instances, Map-owned place-entry sessions, and the first location-aware production-arrival-briefing invitation/pin flow are implemented, while World Hub now provides a unified Event Notebook with durable event-scoped notes. Additional host Modules and event families remain gated under EVE-4, and Mini Scene/media expansion remains gated under EVE-5;
-- Calendar does not yet provide conventional Month/Week/Agenda views or full event authoring; Agenda Journey, Schedule Orchestrator, current-origin travel handoff, appointment entry, Activity Session, Focus Companion/Pomodoro presentation, event collaboration, and Narrative Timeline are architecture-only under roadmap 4.12;
+- Calendar now provides conventional Month/Week/Agenda views, full manual event authoring, and the current-origin Map travel handoff; the hidden Schedule Orchestrator provides idempotent persisted materialization/deadline coordination; and Agenda Journey provides explicit near-term execution over separate travel/activity steps. Appointment auto-entry, Activity Session, Focus Companion/Pomodoro presentation, event collaboration, and Narrative Timeline remain gated under roadmap 4.12;
 - group chat has target/member/reply-mode V1, not full multi-speaker orchestration;
 - Assets and Stock remain less deep than core modules;
 - Music still needs opt-in real-provider/CORS proof, true-device audio interruption/media-control/PWA evidence, Chat search, and any external Map queue-request consumer;
@@ -266,19 +267,20 @@ Roadmap 4.15 is `PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`
 
 ### P2: Calendar And Agenda Journey Orchestration
 
-Roadmap 4.12 is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY / NOT_STARTED`:
+Roadmap 4.12 is `PARTIAL_DONE / CJA-1_CJA-2_CJA-3_IMPLEMENTED`:
 
-- keep Calendar as the visible long-range confirmed-plan app and later add Month, Week, and Agenda views over the same records;
-- treat `Agenda / 日程` as a Calendar view, while the future `Agenda Journey / 行程` app owns today and near-term execution;
+- keep Calendar as the visible long-range confirmed-plan app with the landed Month, Week, and Agenda views over the same records;
+- treat `Agenda / 日程` as a Calendar view, while the separate `Agenda Journey / 行程` app owns today and near-term execution;
 - keep `Map Journey / 地图行程` independently Map-owned and use its arrival only as travel/presence evidence, not proof of non-travel activity completion;
 - recalculate recommended departure from the canonical current Map position, create one linked Map Journey only after explicit confirmation, and reuse it when Map opens;
 - allow validated arrival to unlock or explicitly auto-enter an approved indoor appointment without treating manual relocation or inside presence as activity completion;
-- place idempotent Calendar-to-Journey materialization and deadline reconciliation behind a hidden Schedule Orchestrator;
+- retain the landed idempotent Calendar-to-Journey materialization and deadline reconciliation seam behind the hidden Schedule Orchestrator, with CJA-3 consuming and acknowledging those requests in its own execution owner;
+- keep travel and activity as separate Agenda Journey steps: explicit departure creates or reuses one Map-owned journey for the stable source step, validated arrival completes travel only, and activity start/completion/skip remains explicit;
 - use timestamp-based Activity Sessions with explicit completion policy and a separately owned Focus Companion presentation; Pomodoro is one preset, Gallery/Music remain media owners, and Map remains the clock owner for long journeys;
 - use explicit event checkpoints, with Event Runtime owning eligibility/provenance and source modules validating every requested result; optional-event permission, intensity, or presentation settings cannot remove the deterministic base activity;
 - keep future Story/Diary naming open while reserving a bounded, source-linked Narrative Timeline projection contract.
 
-CJA-0 documentation is complete. CJA-1 Calendar information architecture and every later implementation stage require separate user acceptance. This lane does not modify or block roadmap 4.11 Map work.
+CJA-0 documentation, CJA-1 Calendar, CJA-2 Schedule Orchestrator, CJA-3 Agenda Journey, and CJA-4 Activity Session are complete. CJA-4 adds one time-only persistence owner and an embedded restrained Focus Companion with absolute-time reopen reconciliation; it adds no Event Runtime caller, auto-entry, media caller, richer companion state, or second Map clock. CJA-5 and every later implementation stage still require separate user acceptance. This lane does not modify or block roadmap 4.11 Map work.
 
 ## 7. PM Decisions Still Needed
 

@@ -19,7 +19,7 @@ export function useContactsLinkedActivityModel({
   t = defaultT,
   listDetailItemsForSection = () => [],
   formatSourceModuleLabel = (sourceModule) => sourceModule || t('未标记来源', 'Unlabeled source'),
-  formatSourceModuleSummary = () => t('No linked activity yet', 'No linked activity yet'),
+  formatSourceModuleSummary = () => t('暂无关联活动', 'No linked activity yet'),
   formatMemoryReviewSummary = () => '',
   formatSectionLabel = (section) => defaultSectionLabel(section, t),
   toSourceRecordId = sourceRecordIdFromRelationshipSourceId,
@@ -80,7 +80,7 @@ export function useContactsLinkedActivityModel({
     const profile = selectedProfile?.value
     if (!profile?.id) {
       return {
-        sourceText: t('No linked activity yet', 'No linked activity yet'),
+        sourceText: t('暂无关联活动', 'No linked activity yet'),
         supportingCount: 0,
         eventAttachedCount: 0,
         latestSummary: '',
@@ -121,7 +121,7 @@ export function useContactsLinkedActivityModel({
       sourceText:
         Object.keys(sourceCounts).length > 0
           ? formatSourceModuleSummary(sourceCounts)
-          : t('No linked activity yet', 'No linked activity yet'),
+          : t('暂无关联活动', 'No linked activity yet'),
       supportingCount: Object.values(sourceCounts).reduce((sum, count) => sum + (Number(count) || 0), 0),
       eventAttachedCount: eventAttachedItems.value.length,
       latestSummary:

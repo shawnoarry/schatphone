@@ -32,6 +32,13 @@
       "skillPath": "skills/game-engine/SKILL.md",
       "computedHash": "20057f62cf7a8b2d9f940b3de0b18e5426e8f4bb50e236d36b1033aa0d42c4d8"
     },
+    "gpt-image": {
+      "source": "wuyoscar/gpt_image_2_skill",
+      "ref": "068dd9e24aadc8731e46f38548ca4dcd94515d35",
+      "sourceType": "github",
+      "skillPath": "skills/gpt-image/SKILL.md",
+      "computedHash": "1c73d140f8319d8e74be6fceef0cc36f091054d9beee3d689d74cfbccdf3e743"
+    },
     "grill-me": {
       "source": "mattpocock/skills",
       "sourceType": "github",

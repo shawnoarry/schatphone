@@ -88,7 +88,7 @@ describe('ContactsView wallet ledger context', () => {
     expect(wrapper.text()).toContain('38.00 CNY')
     expect(wrapper.text()).toMatch(/来自 Chat|from Chat/)
     expect(wrapper.get(`[data-testid="contacts-relationship-summary-${profile.id}"]`).text()).toMatch(
-      /关系快照|Relationship snapshot/,
+      /关系：|Relationship:/,
     )
     await wrapper.get(`[data-testid="contacts-row-${profile.id}"]`).trigger('click')
     await flushUi()

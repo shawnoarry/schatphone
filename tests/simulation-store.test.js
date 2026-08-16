@@ -14,6 +14,10 @@ import {
   useSimulationStore,
 } from '../src/stores/simulation'
 import { EVENT_NOTEBOOK_SOURCE_KIND } from '../src/lib/simulation/event-notebook'
+import {
+  ACTIVITY_SESSION_EVENT_MODULE_KEY,
+  ACTIVITY_SESSION_EVENT_PRESENTATION_MODE,
+} from '../src/lib/activity-session-event-interface'
 
 describe('simulation store', () => {
   beforeEach(() => {
@@ -33,6 +37,15 @@ describe('simulation store', () => {
     expect(store.setModuleEventsEnabled('food_delivery', false)).toBe(true)
     expect(store.isModuleEventsEnabled('food_delivery')).toBe(false)
     expect(store.isModuleEventsEnabled('shopping')).toBe(true)
+    expect(store.getEventPresentationMode(ACTIVITY_SESSION_EVENT_MODULE_KEY)).toBe(
+      ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF,
+    )
+    expect(
+      store.setEventPresentationMode(
+        ACTIVITY_SESSION_EVENT_MODULE_KEY,
+        ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.TEXT,
+      ),
+    ).toBe(ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.TEXT)
 
     const log = store.recordEventLog({
       eventId: 'food_delivery.rider_delay.v1',
@@ -310,6 +323,32 @@ describe('simulation store', () => {
     expect(restored.settings.foregroundSessionTickIntervalMs).toBe(
       SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
     )
+  })
+
+  test('migrates V5 storage with Activity Session presentation safely defaulted off', () => {
+    localStorage.setItem(
+      'schatphone:store:simulation',
+      JSON.stringify({
+        version: 5,
+        savedAt: Date.now(),
+        data: {
+          eventLogs: [],
+          settings: {
+            surpriseMode: SIMULATION_SURPRISE_MODE.BALANCED,
+            enabledModules: { [ACTIVITY_SESSION_EVENT_MODULE_KEY]: true },
+          },
+        },
+      }),
+    )
+
+    const store = useSimulationStore()
+    expect(store.activitySessionEventRecords).toEqual([])
+    expect(store.getEventPresentationMode(ACTIVITY_SESSION_EVENT_MODULE_KEY)).toBe(
+      ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF,
+    )
+    expect(store.createBackupSnapshot().settings.eventPresentationModes).toEqual({
+      [ACTIVITY_SESSION_EVENT_MODULE_KEY]: ACTIVITY_SESSION_EVENT_PRESENTATION_MODE.OFF,
+    })
   })
 
   test('stores generated Chat social proposals and applies only approved communication changes', () => {

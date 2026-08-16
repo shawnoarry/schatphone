@@ -32,9 +32,14 @@ if (typeof window !== 'undefined') {
 }
 
 const pinia = createPinia()
+let scheduleRuntimesReady = false
 if (typeof window !== 'undefined' && currentSaveWriteAccess?.ok === true) {
   const recovery = await recoverPendingBackupRestores({ pinia })
-  if (!recovery.ok) await closeCurrentSaveWriter()
+  if (!recovery.ok) {
+    await closeCurrentSaveWriter()
+  } else {
+    scheduleRuntimesReady = true
+  }
 }
 
 const runAfterFirstPaint = (task) => {
@@ -59,6 +64,19 @@ const registerPushServiceWorker = () => {
   if (typeof window === 'undefined' || window.isSecureContext !== true) return
   void ensurePushServiceWorkerRegistration().catch(() => {
     // Notification subscription is still user-driven in Settings.
+  })
+}
+
+const registerScheduleRuntimes = () => {
+  if (!scheduleRuntimesReady || import.meta.env.MODE === 'test') return
+  void Promise.all([
+    import('./lib/schedule-orchestrator-runtime'),
+    import('./lib/agenda-journey-runtime'),
+    import('./lib/activity-session-runtime'),
+  ]).then(([scheduleModule, agendaModule, activitySessionModule]) => {
+    scheduleModule.startScheduleOrchestratorRuntime({ pinia })
+    agendaModule.startAgendaJourneyRuntime({ pinia })
+    activitySessionModule.startActivitySessionRuntime({ pinia })
   })
 }
 
@@ -108,3 +126,4 @@ app.mount('#app')
 
 runAfterFirstPaint(loadDeferredIconStyles)
 runAfterFirstPaint(registerPushServiceWorker)
+runAfterFirstPaint(registerScheduleRuntimes)

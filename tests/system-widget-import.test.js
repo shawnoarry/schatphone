@@ -372,11 +372,12 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_shopping')
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_food_delivery')
     expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_music')
+    expect(store.settings.appearance.homeWidgetPages[1]).toContain('app_agenda_journey')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeLayoutSlotPlacements[1]).toContainEqual({
-      slotId: 'b-small-7',
+      slotId: 'b-small-8',
       tileId: 'app_food_delivery',
     })
     expect(store.settings.appearance.homeDesktopSetupVersion).toBe(6)

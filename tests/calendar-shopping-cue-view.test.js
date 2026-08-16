@@ -67,7 +67,7 @@ describe('CalendarView Shopping cue boundary', () => {
     await flushUi()
 
     expect(wrapper.get('[data-testid="calendar-schedule-overview"]').text()).toContain('日程中心')
-    expect(wrapper.get('[data-testid="calendar-reminder-summary"]').text()).toContain('待处理线索')
+    expect(wrapper.get('[data-testid="calendar-reminder-summary"]').text()).toContain('待确认事项')
     expect(wrapper.get('[data-testid="calendar-reminder-source-shopping"]').text()).toContain('1')
     expect(wrapper.find(`[data-testid="calendar-shopping-cue-card-${cue.id}"]`).exists()).toBe(false)
     expect(calendarStore.findShoppingDeliveryCueById(cue.id)?.status).toBe('suggested')

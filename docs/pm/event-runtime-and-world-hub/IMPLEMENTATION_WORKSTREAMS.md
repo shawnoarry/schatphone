@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -79,16 +79,18 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 
 ## 7. Workstream G: Map Journey Checkpoint Collaboration
 
-- MJE-3's first adapter and MJE-4 Footprints/place knowledge are user-accepted and integrated locally; later event cards must consume the landed EVE-1 contract and remain separately gated under EVE-2
-- receive bounded canonical Map facts only for completed `en_route` and `near_arrival` checkpoints while Map is mounted; do not evaluate on each animation tick
+- MJE-3's first adapter remains compatibility-tested while its generic route-obstruction production trigger is suspended; MJE-4 Footprints/place knowledge remains integrated locally, and later event cards must consume the landed EVE-1 contract
+- receive bounded canonical Map facts only for completed `en_route` and `near_arrival` checkpoints when an explicitly reviewed caller or deterministic compatibility test has enabled evaluation; do not evaluate on each animation tick
 - keep permission, Surprise Mode, eligibility, deterministic/random gate, cooldown/cap, persistent proposal review, provenance, and logs in Event Runtime
 - return only no ETA change or a bounded 120-second delay through the Map adapter and let Map validate exact proposal/event/journey/checkpoint lineage
 - keep proposals pending without pausing Map Journey or opening detail automatically; preserve tested no-event, adapter-failure, legacy blocked-journey recovery, arrival dismissal, and missing/stale-proposal paths
 - keep destination change, event-driven cancellation, relationship, money, asset, identity, schedule, active exploration, and Agenda Journey effects unimplemented
+- require any production replacement to name the affected actor, transport capability, actionable response, and owner-native consequence before enabling checkpoint evaluation
 
 ## 8. Workstream H: Agenda Journey And Activity Session Collaboration
 
-- status is `ARCHITECTURE_ACCEPTED / DOCUMENTATION_ONLY`; follow roadmap 4.12 CJA gates and do not infer implementation authorization from this package
+- status is `CALENDAR_DEPARTURE_READINESS_V1_DONE / CJA-5_ACTIVITY_SESSION_MIDPOINT_DONE`; follow roadmap 4.12 CJA gates and do not infer Agenda Journey families or CJA-6 authorization from this slice
+- Calendar departure readiness carries no Event Runtime Adapter: Calendar keeps the stable destination reference, Map derives current-origin transport/lateness truth, and explicit departure creates or reuses one Map Journey
 - receive bounded canonical Agenda Journey or Activity Session facts only at explicit start, milestone, completion, or deadline checkpoints; never evaluate on each countdown tick
 - keep eligibility, deterministic/random gate, cooldown/cap, module permission, presentation mode, automatic-resolution policy, proposal/review, provenance, and logs in Event Runtime
 - keep Agenda Journey state, Activity Session timestamps, Calendar commitments, Map arrival, and all downstream domain truth in their owning modules
@@ -96,7 +98,7 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - keep module permission, random-event intensity, presentation mode, and future per-session override independent; optional-event suppression never removes the base activity, travel, deadline, or safety path
 - keep Focus Companion timing/presentation outside Event Runtime and consume explicit Activity Session or Map Journey checkpoints instead of creating a second clock
 - reconcile overdue checkpoints idempotently after resume and do not promise exact interactive delivery while a browser/PWA is fully closed or OS-suspended
-- implement nothing until the matching CJA stage receives separate user acceptance and persistence/compatibility review
+- keep CJA-5 limited to `activity_session.focus_reset.v1`, the midpoint checkpoint, `off | text`, and the owner-approved 0/2-minute timer result; implement no Agenda Journey family, HTML/Mini Scene, media caller, high-impact effect, or CJA-6 projection without separate acceptance
 
 ## 9. Workstream I: Default K-pop Event Pack And Text Materialization
 
@@ -126,7 +128,20 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - keep Food Safety handling deterministic and owner-native; do not turn it into an optional random dismissal path
 - follow `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`
 
-## 11. Semantic Guardrails
+## 11. Workstream K: Player Context, World Evolution, And Information Propagation
+
+Status: `PLAYER_CONTEXT_V1_FOUNDATION_DONE / WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_NOT_STARTED`.
+
+- follow `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`
+- preserve the landed `player-context-projection.js` seam: stable structured user identity stays in Contacts Self Profile and crosses only through bounded profile/world/template/revision evidence
+- inventory every dynamic player/world value against existing owners before proposing a Player State Module or World State And Arc Ledger
+- separate owner-confirmed facts, account/person claims, and committed Community/Media posts
+- let Event Runtime coordinate eligibility, persisted decisions, fact waits, owner requests, references, and provenance without owning publication bodies or arbitrary world truth
+- keep ordinary no-event behavior and local deterministic eligibility available without an API
+- the first manager/public-idol eligibility policy and Contacts revision migration are landed; freeze a separately accepted owner-native incident recipe, persistence/audit rules, native product surface, no-event path, and deterministic fixtures before any random trigger, model call, or new EVE-stage proposal
+- do not infer authorization for EVE-5, CJA-6, a Forum/News app, Chat Me feed expansion, closed-page simulation, investigation storage, or high-impact reputation/identity mutation
+
+## 12. Semantic Guardrails
 
 Treat these as bugs:
 
@@ -154,3 +169,7 @@ Treat these as bugs:
 22. an event recipe becomes the only way ordinary commerce messaging, support, address editing, ETA, reroute, calling, or payment can work
 23. Phone summary text, Chat service-account copy, or an unconfirmed owner request is treated as proof that a business mutation succeeded
 24. the EVE-4B specialized causal-chain field is renamed and reused as the generic Runtime instead of receiving a versioned migration
+25. raw Self Profile prose, coordinates, model classification, or a social post are used to infer occupation, user intent, guilt, relationship, or canonical world truth
+26. volatile player/world state is pushed into Contacts, WorldBook, or Event Runtime because callers want one convenient Store
+27. a claim, post, Phone summary, or model output is treated as an owner-confirmed fact
+28. Event Runtime persists a future Community/Media publication body or a future clue system stores its deductions inside the event log

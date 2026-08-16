@@ -6,6 +6,7 @@ import {
   buildHomeSourceQuery,
   buildReturnSourceQuery,
   buildRouteWithReturnSource,
+  normalizeAgendaJourneyIdQuery,
   normalizeChatThreadIdQuery,
   normalizeContactsProfileIdQuery,
   normalizeHomePageQuery,
@@ -89,6 +90,32 @@ describe('navigation return helpers', () => {
     expect(resolveReturnLabel({ query: { source: 'map-settings' } }, 'Home')).toBe('Map settings')
     expect(resolveReturnTarget({ query: { source: 'worldbook' } }, '/home')).toBe('/worldbook')
     expect(resolveReturnLabel({ query: { source: 'worldbook' } }, 'Home')).toBe('WorldBook')
+  })
+
+  test('returns Map to one Agenda Journey while preserving the ancestor Home page', () => {
+    expect(normalizeAgendaJourneyIdQuery(' aj::calendar_event::123 ')).toBe(
+      'aj::calendar_event::123',
+    )
+    expect(normalizeAgendaJourneyIdQuery('../settings')).toBe('')
+    expect(
+      resolveReturnTarget({
+        query: {
+          source: 'agenda-journey',
+          journeyId: 'aj::calendar_event::123',
+          homePage: '2',
+        },
+      }),
+    ).toEqual({
+      path: '/agenda-journey',
+      query: {
+        journeyId: 'aj::calendar_event::123',
+        from: 'home',
+        homePage: '2',
+      },
+    })
+    expect(resolveReturnLabel({ query: { source: 'agenda-journey' } }, 'Home')).toBe(
+      'Agenda Journey',
+    )
   })
 
   test('returns Network to one validated Chat thread while preserving the ancestor Home page', () => {

@@ -1,9 +1,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { createMapPlaceMediaFallback } from '../../lib/map-place-media'
 
 const props = defineProps({
   place: { type: Object, required: true },
   visual: { type: Object, required: true },
+  media: { type: Object, default: null },
   name: { type: String, required: true },
   secondaryName: { type: String, default: '' },
   summary: { type: String, default: '' },
@@ -42,15 +44,46 @@ const emit = defineEmits([
 ])
 
 const level = ref('overview')
+const mediaLoadFailed = ref(false)
 
 watch(
   () => props.place?.placeId || props.place?.id,
   () => {
     level.value = 'overview'
+    mediaLoadFailed.value = false
+  },
+)
+
+watch(
+  () => props.media?.id,
+  () => {
+    mediaLoadFailed.value = false
   },
 )
 
 const isDetail = computed(() => level.value === 'detail')
+const displayedMedia = computed(() => (
+  mediaLoadFailed.value
+    ? createMapPlaceMediaFallback(props.place, props.media?.mapPackId)
+    : props.media
+))
+const hasMediaImage = computed(() => Boolean(displayedMedia.value?.asset?.url))
+const mediaLabel = computed(() => props.t(
+  displayedMedia.value?.labelZh || '',
+  displayedMedia.value?.labelEn || '',
+))
+const mediaNote = computed(() => props.t(
+  displayedMedia.value?.noteZh || '',
+  displayedMedia.value?.noteEn || '',
+))
+const mediaAlt = computed(() => props.t(
+  displayedMedia.value?.asset?.altZh || '',
+  displayedMedia.value?.asset?.altEn || '',
+))
+const mediaChanges = computed(() => props.t(
+  displayedMedia.value?.source?.changesZh || '',
+  displayedMedia.value?.source?.changesEn || '',
+))
 const primaryLabel = computed(() =>
   props.primaryAction === 'view_journey'
     ? props.t('查看当前行程', 'View current journey')
@@ -131,6 +164,50 @@ const runPrimaryAction = () => {
           <i class="fas fa-xmark" aria-hidden="true"></i>
         </button>
       </header>
+
+      <figure
+        v-if="media"
+        class="map-place-focus-media"
+        :class="`is-${displayedMedia.kind}`"
+        data-testid="map-place-media"
+      >
+        <div class="map-place-focus-media-frame">
+          <img
+            v-if="hasMediaImage"
+            :src="displayedMedia.asset.url"
+            :alt="mediaAlt"
+            width="1600"
+            height="900"
+            decoding="async"
+            data-testid="map-place-media-image"
+            @error="mediaLoadFailed = true"
+          />
+          <div v-else class="map-place-focus-media-fallback" data-testid="map-place-media-fallback">
+            <i :class="visual.icon" aria-hidden="true"></i>
+          </div>
+          <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
+        </div>
+        <figcaption>
+          <span>{{ mediaNote }}</span>
+          <span v-if="displayedMedia.source?.creator" class="map-place-focus-media-credit">
+            <a
+              :href="displayedMedia.source.sourcePageUrl"
+              target="_blank"
+              rel="noreferrer noopener"
+              :aria-label="t('打开照片来源', 'Open photo source')"
+            >{{ displayedMedia.source.creator }}</a>
+            <span aria-hidden="true">·</span>
+            <a
+              v-if="displayedMedia.source.licenseUrl"
+              :href="displayedMedia.source.licenseUrl"
+              target="_blank"
+              rel="noreferrer noopener"
+            >{{ displayedMedia.source.licenseId }}</a>
+            <span v-else>{{ displayedMedia.source.licenseId }}</span>
+            <span v-if="mediaChanges" class="map-place-focus-media-changes">· {{ mediaChanges }}</span>
+          </span>
+        </figcaption>
+      </figure>
 
       <template v-if="!isDetail">
         <p v-if="summary" class="map-place-focus-summary">{{ summary }}</p>
@@ -353,6 +430,90 @@ const runPrimaryAction = () => {
 .map-place-focus-secondary-name { margin-top: 2px; color: #53665c; font-size: 11px; font-weight: 750; }
 .map-place-focus-summary { margin-top: 13px; color: #5d6d64; font-size: 11px; line-height: 1.55; }
 
+.map-place-focus-media {
+  margin: 14px -18px 0;
+  border-top: 1px solid #e1e6e3;
+  border-bottom: 1px solid #e1e6e3;
+  background: #eef2ef;
+}
+
+.map-place-focus-media-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #e4eae6;
+}
+
+.map-place-focus-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.map-place-focus-media-fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  border-block: 1px solid color-mix(in srgb, var(--map-place-tone) 24%, transparent);
+  background: color-mix(in srgb, var(--map-place-tone) 12%, #edf2ee);
+  color: color-mix(in srgb, var(--map-place-tone) 74%, #27352e);
+}
+
+.map-place-focus-media-fallback::before {
+  position: absolute;
+  inset: 15% 9%;
+  border: 1px solid color-mix(in srgb, var(--map-place-tone) 26%, transparent);
+  content: '';
+}
+
+.map-place-focus-media-fallback i {
+  position: relative;
+  font-size: 38px;
+}
+
+.map-place-focus-media-kind {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 6px;
+  background: rgba(22, 31, 27, 0.78);
+  padding: 5px 7px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.map-place-focus-media figcaption {
+  display: grid;
+  gap: 3px;
+  padding: 8px 18px 9px;
+  color: #5c6b63;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.map-place-focus-media-credit {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0 4px;
+  color: #7a8780;
+}
+
+.map-place-focus-media-credit a {
+  color: #315f50;
+  font-weight: 750;
+  text-decoration: underline;
+  text-decoration-color: #a8bbb1;
+  text-underline-offset: 2px;
+}
+
+.map-place-focus-media-changes { color: #7a8780; }
+
 .map-place-focus-context,
 .map-place-focus-journey-note {
   display: flex;
@@ -464,6 +625,10 @@ const runPrimaryAction = () => {
 button:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
 
 @media (min-width: 720px) {
-  .map-place-focus-sheet { margin-bottom: 18px; border-radius: 8px; }
+  .map-place-focus-sheet {
+    max-height: min(92vh, 760px);
+    margin-bottom: 18px;
+    border-radius: 8px;
+  }
 }
 </style>

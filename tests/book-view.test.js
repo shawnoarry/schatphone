@@ -351,7 +351,7 @@ describe('BookView', () => {
       worldBookSourceLinks: systemStore.listWorldBookSourceLinks(),
     })
     expect(wrapper.get('[data-testid="book-storage-status"]').attributes('data-storage-mode')).toBe('repository')
-    expect(wrapper.get('[data-testid="book-import-feedback"]').text()).toContain('Repository')
+    expect(wrapper.get('[data-testid="book-import-feedback"]').text()).toContain('upgraded')
   })
 
   test('does not cut over after persistence denial when best-effort continuation is canceled', async () => {
@@ -367,7 +367,7 @@ describe('BookView', () => {
     useDialog().submitDialog()
     await flushPromises()
     expect(dialogState.visible).toBe(true)
-    expect(dialogState.title).toContain('Persistent storage')
+    expect(dialogState.title).toContain('No long-term protection')
 
     useDialog().cancelDialog()
     await flushPromises()

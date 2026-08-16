@@ -877,6 +877,11 @@ const normalizeAvatarImageSource = (rawSource = {}, legacyAvatar = '', fallbackA
 const avatarImageToLegacyAvatar = (avatarImage = {}) =>
   avatarImage?.sourceType === 'url' && typeof avatarImage.url === 'string' ? avatarImage.url : ''
 
+const normalizeRoleProfileRevision = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1
+}
+
 const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
   const parsedId = Number(rawProfile?.id)
   const id = Number.isFinite(parsedId) && parsedId > 0 ? Math.floor(parsedId) : nowTs() + fallbackIndex
@@ -932,6 +937,7 @@ const normalizeRoleProfile = (rawProfile, fallbackIndex = 0) => {
           .map((item) => (typeof item === 'string' ? item.trim() : ''))
           .filter(Boolean)
       : [],
+    revision: normalizeRoleProfileRevision(rawProfile?.revision),
     createdAt:
       typeof rawProfile?.createdAt === 'number' && Number.isFinite(rawProfile.createdAt)
         ? Math.max(0, Math.floor(rawProfile.createdAt))
@@ -1174,6 +1180,16 @@ export const useChatStore = defineStore('chat', () => {
   const getRoleProfileById = (profileId) =>
     roleProfiles.find((item) => Number(item.id) === Number(profileId)) || null
 
+  const touchRoleProfile = (profile) => {
+    if (!profile || typeof profile !== 'object') return null
+    profile.revision = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      normalizeRoleProfileRevision(profile.revision) + 1,
+    )
+    profile.updatedAt = nowTs()
+    return profile
+  }
+
   const getRoleProfileByRoleId = (roleId) => {
     const normalized = normalizeRoleId(roleId)
     if (!normalized) return null
@@ -1213,7 +1229,7 @@ export const useChatStore = defineStore('chat', () => {
       JSON.stringify(current) !== JSON.stringify(normalized)
     if (!changed) return false
     target.assetPack = normalized
-    target.updatedAt = nowTs()
+    touchRoleProfile(target)
     return true
   }
 
@@ -1225,7 +1241,7 @@ export const useChatStore = defineStore('chat', () => {
     const changed = JSON.stringify(current) !== JSON.stringify(normalized)
     if (!changed) return false
     target.assetFolderBindings = normalized
-    target.updatedAt = nowTs()
+    touchRoleProfile(target)
     return true
   }
 
@@ -1244,7 +1260,7 @@ export const useChatStore = defineStore('chat', () => {
     const item = createRoleDetailItem(section, input)
     if (!item) return null
     profile.detailItems = normalizeRoleDetailItems([item, ...(profile.detailItems || [])])
-    profile.updatedAt = nowTs()
+    touchRoleProfile(profile)
     return { ...item }
   }
 
@@ -1256,7 +1272,7 @@ export const useChatStore = defineStore('chat', () => {
     const next = current.filter((item) => item.id !== id)
     if (next.length === current.length) return false
     profile.detailItems = next
-    profile.updatedAt = nowTs()
+    touchRoleProfile(profile)
     return true
   }
 
@@ -1284,7 +1300,7 @@ export const useChatStore = defineStore('chat', () => {
     const next = [...current]
     next.splice(index, 1, nextItem)
     profile.detailItems = normalizeRoleDetailItems(next)
-    profile.updatedAt = nowTs()
+    touchRoleProfile(profile)
     return { ...nextItem }
   }
 
@@ -1298,7 +1314,7 @@ export const useChatStore = defineStore('chat', () => {
     const removedCount = current.length - next.length
     if (removedCount <= 0) return 0
     profile.detailItems = next
-    profile.updatedAt = nowTs()
+    touchRoleProfile(profile)
     return removedCount
   }
 
@@ -2699,7 +2715,7 @@ export const useChatStore = defineStore('chat', () => {
         }),
       )
     }
-    target.updatedAt = nowTs()
+    touchRoleProfile(target)
     return true
   }
 
@@ -2736,7 +2752,8 @@ export const useChatStore = defineStore('chat', () => {
         ? input.classificationUpdatedAt
         : nowTs(),
     })
-    Object.assign(target, normalized, { updatedAt: nowTs() })
+    Object.assign(target, normalized)
+    touchRoleProfile(target)
     return {
       ok: true,
       profile: {
@@ -2764,7 +2781,7 @@ export const useChatStore = defineStore('chat', () => {
       },
       CONTACTS_ENTITY_TYPES.MAIN_ROLE,
     )
-    target.updatedAt = nowTs()
+    touchRoleProfile(target)
     return target
   }
 

@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-08-13
+Updated: 2026-08-15
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
@@ -17,6 +17,7 @@ Also read these when needed:
 
 - `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md`
 - `docs/architecture/ROLE_BINDING_CONTRACT.md`
+- `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when the task touches Self Profile eligibility, dynamic player state, world incidents, social/news propagation, or clues
 
 Formal specs for the next profile-template design:
 
@@ -53,6 +54,7 @@ Current cross-device handoff and execution record:
 - Chat social events such as message requests, blocks, and being-blocked states may be displayed in Contacts as role-level reachability/status snapshots, but Contacts must not judge eligibility or apply generated outcomes. Chat owns the applied channel state, Event Runtime and World Hub own generated-event review/audit, and relationship runtime owns confirmed relationship facts or memories.
 - `World Hub` is an optional review and cleanup surface, not the main role-authoring page.
 - `WorldBook` should define profile-template rules; `Contacts` should store concrete profile values.
+- Self Profile's stable structured world identity is now consumable through the bounded read-only Player Context V1 projection for K-pop manager/public-idol eligibility. Contacts role profiles persist a monotonic revision; Runtime must present exact profile/world/template revision evidence and may read only manual visible allowlisted fields. Contacts does not own volatile reputation/media/fatigue/occupation-pressure values, world incidents, event decisions, or future forum/news posts. Read `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
 - Contacts world-field editing now uses stable field-type controls, so different worldview templates can show different field content while the UI stays predictable: single choice, long notes, comma-separated tags, and person/role reference fields each get their own copy and input behavior.
 - Contacts world-field editing now reviews template changes before saving: fields in the chosen template are updated, while old fields outside the chosen template stay visible as custom fields unless the user cleans them up separately.
 - Contacts world-field editing now has AI draft assistance: AI can suggest values for empty template fields inside the editor draft, but it skips existing/manual values and nothing is saved until the user reviews and presses Save.

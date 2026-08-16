@@ -15,6 +15,7 @@ import { useFoodDeliveryStore } from './stores/foodDelivery'
 import { useI18n } from './composables/useI18n'
 import { useDialog } from './composables/useDialog'
 import { useAppIconImagePreviews } from './composables/useAppIconImagePreviews'
+import { unlockUiSfx } from './lib/ui-sfx'
 import { useSystemApiReports } from './composables/useSystemApiReports'
 import { useSystemNotifications } from './composables/useSystemNotifications'
 import AppIconVisual from './components/shared/AppIconVisual.vue'
@@ -949,6 +950,8 @@ onMounted(() => {
     flushShellBannerQueue()
   }
   document.addEventListener('visibilitychange', shellBannerVisibilityHandler, { passive: true })
+  document.addEventListener('pointerdown', unlockUiSfx, { once: true, passive: true })
+  document.addEventListener('keydown', unlockUiSfx, { once: true, passive: true })
 })
 
 onBeforeUnmount(() => {

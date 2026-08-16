@@ -48,6 +48,7 @@ const SPECIALIST_SKILLS = [
   'gsap-timeline',
   'gsap-utils',
   'image-to-code',
+  'gpt-image',
   'game-engine',
   'unit-test-vue-pinia',
 ]

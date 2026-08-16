@@ -78,8 +78,8 @@ const textCategories = computed(() =>
         <p class="worldbook-overview__description">
           {{
             t(
-              '这里显示当前真正会进入上下文的文本。点一个类别管理它。',
-              'Shows the text currently active in context. Open a category to manage it.',
+              '这里显示聊天时真正会读到的内容。点一个类别管理它。',
+              'Shows what chats will actually read. Open a category to manage it.',
             )
           }}
         </p>
@@ -100,9 +100,9 @@ const textCategories = computed(() =>
           <small>{{ t('字', 'characters') }}</small>
         </div>
         <div data-testid="worldbook-overview-token-estimate">
-          <span>{{ t('每次请求约增加', 'Added per request') }}</span>
+          <span>{{ t('每次对话附带', 'Included per chat') }}</span>
           <strong>{{ t(`约 ${formatNumber(tokenEstimate.totalTokens)} tokens`, `About ${formatNumber(tokenEstimate.totalTokens)} tokens`) }}</strong>
-          <small>{{ t('仅文字输入', 'Text input only') }}</small>
+          <small>{{ t('仅文字部分', 'Text only') }}</small>
         </div>
       </div>
       <div v-if="tokenParts.length > 0" class="worldbook-overview__token-parts">
@@ -118,8 +118,8 @@ const textCategories = computed(() =>
       <small class="worldbook-overview__estimate-note">
         {{
           t(
-            '不同模型的计算方式会有差异。这里只提示用量，不限制或删减文本。',
-            'Token counts vary by model. This estimate does not limit or remove text.',
+            '不同模型算法不同，这里只是估算用量，不会限制或删减内容。',
+            'Estimates vary by model — nothing here limits or removes your text.',
           )
         }}
       </small>
@@ -202,10 +202,11 @@ const textCategories = computed(() =>
 
 .worldbook-overview__title {
   margin-top: 3px;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
   font-size: 22px;
   line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: 0;
+  font-weight: 900;
+  letter-spacing: 0.01em;
 }
 
 .worldbook-overview__description {

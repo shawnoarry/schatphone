@@ -1,5 +1,10 @@
 <script setup>
 import { computed } from 'vue'
+import { resolveWeatherWidgetState } from '../../lib/weather-widget-state'
+import {
+  WEATHER_TERRARIUM_ASSETS,
+  resolveWeatherSceneAsset,
+} from '../../lib/weather-visual-assets'
 
 const props = defineProps({
   variant: { type: String, required: true },
@@ -11,7 +16,11 @@ const props = defineProps({
   day: { type: [Number, String], default: '' },
   location: { type: String, default: 'Tokyo' },
   condition: { type: String, default: 'Clear' },
-  weatherMode: { type: String, default: 'sun' },
+  temperature: { type: [Number, String], default: 24 },
+  weatherState: { type: String, default: 'auto' },
+  weatherIsNight: { type: Boolean, default: false },
+  weatherForecast: { type: Array, default: () => [] },
+  weatherExpanded: { type: Boolean, default: false },
   systemLabel: { type: String, default: 'System' },
   batteryLabel: { type: String, default: 'Battery 86%' },
   musicStatus: { type: String, default: 'Listen Again' },
@@ -34,6 +43,27 @@ const emit = defineEmits(['activate', 'action'])
 
 const isChinese = computed(() => props.language.toLowerCase().startsWith('zh'))
 const localize = (zh, en) => (isChinese.value ? zh : en)
+const resolvedWeatherState = computed(() => resolveWeatherWidgetState({
+  state: props.weatherState,
+  condition: props.condition,
+  isNight: props.weatherIsNight,
+}))
+const weatherSceneAsset = computed(() => resolveWeatherSceneAsset(resolvedWeatherState.value))
+const weatherTemperature = computed(() => {
+  const value = String(props.temperature ?? '').trim().replace(/°+$/, '')
+  return value ? `${value}°` : '--°'
+})
+const defaultWeatherForecast = computed(() => [
+  localize(`现在 ${weatherTemperature.value}`, `Now ${weatherTemperature.value}`),
+  localize('15时 25°', '3 PM 25°'),
+  localize('16时 23°', '4 PM 23°'),
+])
+const resolvedWeatherForecast = computed(() => {
+  const items = Array.isArray(props.weatherForecast)
+    ? props.weatherForecast.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+    : []
+  return items.length > 0 ? items : defaultWeatherForecast.value
+})
 const normalizedProgress = computed(() => Math.min(100, Math.max(0, props.musicProgress || 0)))
 const musicCoverStyle = computed(() =>
   props.musicCoverUrl ? { backgroundImage: `url(${JSON.stringify(props.musicCoverUrl)})` } : undefined,
@@ -75,6 +105,31 @@ const handleRootKeydown = (event) => {
   event.preventDefault()
   handleRootClick()
 }
+
+const resetWeatherPointer = (target) => {
+  target.style.setProperty('--widget-tilt-x', '0deg')
+  target.style.setProperty('--widget-tilt-y', '0deg')
+  target.style.setProperty('--widget-pointer-x', '0px')
+  target.style.setProperty('--widget-pointer-y', '0px')
+}
+
+const handleRootPointerMove = (event) => {
+  if (props.variant !== 'weather' || !props.interactive) return
+  const target = event.currentTarget
+  const rect = target.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+  const x = (event.clientX - rect.left) / rect.width - 0.5
+  const y = (event.clientY - rect.top) / rect.height - 0.5
+  target.style.setProperty('--widget-tilt-x', `${(-y * 6).toFixed(2)}deg`)
+  target.style.setProperty('--widget-tilt-y', `${(x * 7).toFixed(2)}deg`)
+  target.style.setProperty('--widget-pointer-x', `${(x * 5).toFixed(2)}px`)
+  target.style.setProperty('--widget-pointer-y', `${(y * 4).toFixed(2)}px`)
+}
+
+const handleRootPointerReset = (event) => {
+  if (props.variant !== 'weather') return
+  resetWeatherPointer(event.currentTarget)
+}
 </script>
 
 <template>
@@ -82,7 +137,8 @@ const handleRootKeydown = (event) => {
     class="home-widget-card built-in-widget-visual"
     :class="[
       `is-${variant}`,
-      variant === 'weather' ? `is-weather-${weatherMode}` : null,
+      variant === 'weather' && weatherExpanded ? 'is-weather-detail' : null,
+      variant === 'weather' ? `is-weather-${resolvedWeatherState}` : null,
       variant === 'photo_note' ? `is-mood-${mood}` : null,
       variant === 'ambient_scene' ? `is-scene-${sceneMode}` : null,
       variant === 'breath_halo' ? `is-breath-${breathMode}` : null,
@@ -96,19 +152,74 @@ const handleRootKeydown = (event) => {
     :role="interactive && rootActionable ? 'button' : undefined"
     :tabindex="interactive && rootActionable ? 0 : undefined"
     :aria-label="interactive && rootActionable ? ariaLabel : undefined"
+    :aria-expanded="variant === 'weather' && interactive && rootActionable ? weatherExpanded : undefined"
+    :data-weather-state="variant === 'weather' ? resolvedWeatherState : undefined"
     @click="handleRootClick"
     @keydown="handleRootKeydown"
+    @pointermove="handleRootPointerMove"
+    @pointerleave="handleRootPointerReset"
+    @pointercancel="handleRootPointerReset"
   >
     <template v-if="variant === 'weather'">
-      <div class="widget-prism-sky" aria-hidden="true">
-        <span class="widget-prism-shape"></span>
-        <i class="widget-prism-light"></i>
-        <b class="widget-prism-rain"></b>
+      <div class="widget-terrarium-stage" aria-hidden="true">
+        <span class="widget-terrarium-aura"></span>
+        <img
+          class="widget-terrarium-layer widget-terrarium-scene"
+          :src="weatherSceneAsset"
+          alt=""
+          decoding="async"
+          draggable="false"
+        />
+        <span class="widget-terrarium-weather-volume"></span>
+        <span class="widget-terrarium-stars"></span>
+        <span class="widget-terrarium-moon"></span>
+        <span class="widget-terrarium-lightning"></span>
+        <span class="widget-terrarium-clouds is-back">
+          <img
+            class="widget-terrarium-layer"
+            :src="WEATHER_TERRARIUM_ASSETS.clouds"
+            alt=""
+            decoding="async"
+            draggable="false"
+          />
+        </span>
+        <img
+          class="widget-terrarium-layer widget-terrarium-glass"
+          :src="WEATHER_TERRARIUM_ASSETS.glass"
+          alt=""
+          decoding="async"
+          draggable="false"
+        />
+        <span class="widget-terrarium-clouds is-front">
+          <img
+            class="widget-terrarium-layer"
+            :src="WEATHER_TERRARIUM_ASSETS.clouds"
+            alt=""
+            decoding="async"
+            draggable="false"
+          />
+        </span>
+        <img
+          class="widget-terrarium-layer widget-terrarium-atmosphere"
+          :src="WEATHER_TERRARIUM_ASSETS.atmosphere"
+          alt=""
+          decoding="async"
+          draggable="false"
+        />
+        <span class="widget-terrarium-rainfall"></span>
+        <span class="widget-terrarium-mist"></span>
+        <span class="widget-terrarium-fireflies"></span>
+        <i class="widget-terrarium-glint"></i>
       </div>
-      <div class="widget-prism-copy">
-        <span>{{ location }}</span>
-        <strong>{{ weatherMode === 'rain' ? '16°' : '24°' }}</strong>
-        <small>{{ weatherMode === 'rain' ? localize('细雨', 'Soft rain') : condition }}</small>
+      <div class="widget-terrarium-data">
+        <span class="widget-terrarium-location"><i></i>{{ location }}</span>
+        <div class="widget-terrarium-reading">
+          <strong>{{ weatherTemperature }}</strong>
+          <small>{{ condition }}</small>
+        </div>
+        <div class="widget-terrarium-forecast" :aria-hidden="!weatherExpanded">
+          <span v-for="(item, index) in resolvedWeatherForecast" :key="`${index}-${item}`"><i></i>{{ item }}</span>
+        </div>
       </div>
     </template>
 
@@ -325,24 +436,166 @@ const handleRootKeydown = (event) => {
 .built-in-widget-visual.is-interactive:focus-visible { outline: 2px solid rgba(66, 173, 195, 0.92); outline-offset: 2px; }
 .built-in-widget-visual button { font: inherit; color: inherit; }
 
-.is-weather {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  padding: 10px;
-  color: #eef8fa;
-  background: radial-gradient(circle at 82% 10%, rgba(104, 228, 234, 0.2), transparent 34%), linear-gradient(145deg, #202a31, #0b1015 72%);
+.home-widget-card.built-in-widget-visual.is-weather {
+  --widget-tilt-x: 0deg;
+  --widget-tilt-y: 0deg;
+  --widget-pointer-x: 0px;
+  --widget-pointer-y: 0px;
+  --weather-scene-scale: 1.13;
+  --weather-scene-x: 0%;
+  --weather-scene-y: 0%;
+  --weather-aura-core: rgba(255,215,133,.78);
+  --weather-aura-edge: rgba(255,181,82,.22);
+  --weather-base-filter: saturate(1.02) brightness(1.01);
+  --weather-glass-filter: saturate(1.02) brightness(1.02);
+  --weather-cloud-filter: saturate(.92) brightness(1.03);
+  --weather-cloud-back-opacity: .68;
+  --weather-cloud-front-opacity: .82;
+  --weather-atmosphere-opacity: .42;
+  --weather-glass-opacity: .96;
+  --weather-glint-strength: 1;
+  --weather-effects-mask: radial-gradient(ellipse 31% 38% at 51% 48%, #000 0 88%, rgba(0,0,0,.84) 93%, transparent 100%);
+  --weather-volume-opacity: 0;
+  --weather-volume-fill: transparent;
+  --weather-accent: #ffd47f;
+  --weather-accent-shadow: rgba(255,199,89,.75);
+  --weather-forecast-start: rgba(255,205,107,.28);
+  --weather-forecast-end: #ffcf72;
+  --weather-panel-start: rgba(21,31,40,.88);
+  --weather-panel-end: rgba(9,15,22,.76);
+  --weather-stage-shadow: rgba(16,31,43,.25);
+  display: block;
+  padding: 0;
+  overflow: visible !important;
+  border: 0;
+  border-radius: 0;
+  color: #f8fbff;
+  background: transparent;
+  box-shadow: none;
+  perspective: 520px;
 }
-.widget-prism-sky { position: relative; min-height: 0; }
-.widget-prism-shape { position: absolute; width: 60%; aspect-ratio: 1.18; left: 22%; top: 7%; clip-path: polygon(50% 0, 100% 72%, 56% 100%, 0 68%); border: 1px solid rgba(218, 241, 246, 0.55); background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(79,171,188,.08) 45%, rgba(19,27,35,.2)); box-shadow: inset 12px -18px 28px rgba(112, 224, 232, .12); transform: rotate(-7deg); transition: 420ms ease; }
-.widget-prism-shape::before, .widget-prism-shape::after { content: ''; position: absolute; inset: 0; clip-path: polygon(50% 0, 56% 100%, 0 68%); border-right: 1px solid rgba(255,255,255,.35); background: linear-gradient(155deg, rgba(255,210,154,.2), transparent 62%); }
-.widget-prism-light { position: absolute; width: 22px; height: 22px; left: 46%; top: 42%; border-radius: 50%; background: #ffd899; box-shadow: 0 0 18px #ffd899, 0 0 42px rgba(255,183,89,.54); transition: 320ms ease; }
-.widget-prism-rain { position: absolute; inset: 12% 8%; opacity: 0; background: repeating-linear-gradient(102deg, transparent 0 12px, rgba(173,198,255,.34) 13px 14px); transform: skewX(-8deg); transition: 320ms ease; }
-.is-weather-rain .widget-prism-shape { transform: rotate(5deg); border-color: rgba(184,167,255,.52); background: linear-gradient(145deg, rgba(126,105,194,.22), rgba(37,50,78,.18)); }
-.is-weather-rain .widget-prism-light { width: 12px; height: 12px; background: #b7a7ff; box-shadow: 0 0 24px rgba(155,136,255,.75); }
-.is-weather-rain .widget-prism-rain { opacity: 1; }
-.widget-prism-copy { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 0 8px; }
-.widget-prism-copy span, .widget-prism-copy small { font-size: 8px; font-weight: 750; color: rgba(230,242,245,.7); }
-.widget-prism-copy strong { grid-row: 1 / span 2; grid-column: 2; font-size: 25px; line-height: .9; }
+.home-widget-card.built-in-widget-visual.is-weather-cloudy {
+  --weather-scene-scale: 1.06;
+  --weather-scene-x: 1%;
+  --weather-scene-y: 1%;
+  --weather-aura-core: rgba(201,222,229,.42);
+  --weather-aura-edge: rgba(143,177,190,.12);
+  --weather-base-filter: saturate(.88) brightness(.98) contrast(1.02);
+  --weather-glass-filter: saturate(.78) brightness(.88);
+  --weather-cloud-filter: saturate(.48) brightness(.72) contrast(1.08);
+  --weather-cloud-back-opacity: 0;
+  --weather-cloud-front-opacity: 0;
+  --weather-atmosphere-opacity: .14;
+  --weather-glass-opacity: 0;
+  --weather-glint-strength: .12;
+  --weather-effects-mask: radial-gradient(ellipse 39% 39% at 54% 51%, #000 0 84%, rgba(0,0,0,.78) 91%, transparent 100%);
+  --weather-volume-opacity: .5;
+  --weather-volume-fill: linear-gradient(155deg, rgba(194,215,223,.28), rgba(66,91,103,.34) 62%, transparent 82%);
+  --weather-accent: #b9d4dc;
+  --weather-accent-shadow: rgba(142,190,204,.66);
+  --weather-forecast-start: rgba(166,205,215,.2);
+  --weather-forecast-end: #9bc4cf;
+  --weather-panel-start: rgba(24,39,48,.92);
+  --weather-panel-end: rgba(10,20,27,.84);
+  --weather-stage-shadow: rgba(21,39,48,.34);
+}
+.home-widget-card.built-in-widget-visual.is-weather-rain {
+  --weather-scene-scale: 1.08;
+  --weather-scene-x: 0%;
+  --weather-scene-y: 1%;
+  --weather-aura-core: rgba(115,174,208,.28);
+  --weather-aura-edge: rgba(76,122,164,.08);
+  --weather-base-filter: saturate(.84) brightness(.92) contrast(1.08);
+  --weather-glass-filter: saturate(.76) brightness(.82) contrast(1.06);
+  --weather-cloud-filter: saturate(.5) brightness(.62) contrast(1.16);
+  --weather-cloud-back-opacity: 0;
+  --weather-cloud-front-opacity: 0;
+  --weather-atmosphere-opacity: .36;
+  --weather-glass-opacity: 0;
+  --weather-glint-strength: 0;
+  --weather-effects-mask: radial-gradient(ellipse 38% 34% at 54% 58%, #000 0 84%, rgba(0,0,0,.78) 91%, transparent 100%);
+  --weather-volume-opacity: .64;
+  --weather-volume-fill: linear-gradient(155deg, rgba(90,137,169,.34), rgba(23,48,68,.5) 60%, transparent 88%);
+  --weather-accent: #75c7ef;
+  --weather-accent-shadow: rgba(81,184,231,.72);
+  --weather-forecast-start: rgba(89,183,224,.22);
+  --weather-forecast-end: #69c3ec;
+  --weather-panel-start: rgba(14,34,48,.94);
+  --weather-panel-end: rgba(6,16,27,.88);
+  --weather-stage-shadow: rgba(8,25,39,.46);
+}
+.home-widget-card.built-in-widget-visual.is-weather-night {
+  --weather-scene-scale: 1.08;
+  --weather-scene-x: 0%;
+  --weather-scene-y: 1%;
+  --weather-aura-core: rgba(183,205,255,.5);
+  --weather-aura-edge: rgba(102,119,226,.15);
+  --weather-base-filter: saturate(1.08) brightness(.96) contrast(1.08);
+  --weather-glass-filter: saturate(.52) brightness(.68) contrast(1.1);
+  --weather-cloud-filter: saturate(.4) brightness(.58) contrast(1.08);
+  --weather-cloud-back-opacity: 0;
+  --weather-cloud-front-opacity: 0;
+  --weather-atmosphere-opacity: .05;
+  --weather-glass-opacity: 0;
+  --weather-glint-strength: .18;
+  --weather-effects-mask: radial-gradient(ellipse 39% 35% at 54% 57%, #000 0 84%, rgba(0,0,0,.78) 91%, transparent 100%);
+  --weather-volume-opacity: .5;
+  --weather-volume-fill: radial-gradient(circle at 48% 38%, rgba(169,193,255,.34), transparent 25%), linear-gradient(165deg, rgba(64,80,154,.68), rgba(14,23,68,.82));
+  --weather-accent: #b9c8ff;
+  --weather-accent-shadow: rgba(127,151,255,.72);
+  --weather-forecast-start: rgba(147,163,239,.2);
+  --weather-forecast-end: #a9baff;
+  --weather-panel-start: rgba(21,27,62,.94);
+  --weather-panel-end: rgba(8,12,34,.9);
+  --weather-stage-shadow: rgba(8,13,42,.5);
+}
+.home-widget-card.built-in-widget-visual.is-weather::before { display: none; }
+.widget-terrarium-stage { position: absolute; inset: -10px -9px -9px; z-index: 1; transform-style: preserve-3d; transform: rotateX(var(--widget-tilt-x)) rotateY(var(--widget-tilt-y)); filter: drop-shadow(0 12px 13px var(--weather-stage-shadow)); transition: transform 180ms cubic-bezier(.2,.8,.2,1), filter 680ms ease; animation: widget-terrarium-float 5.8s ease-in-out infinite; pointer-events: none; }
+.widget-terrarium-aura { position: absolute; inset: 18% 19% 27% 20%; z-index: 0; border-radius: 50%; background: radial-gradient(circle, var(--weather-aura-core), var(--weather-aura-edge) 34%, transparent 68%); filter: blur(7px); opacity: .7; transform: translate3d(var(--widget-pointer-x), var(--widget-pointer-y), 0); transition: background 680ms ease; animation: widget-terrarium-sun 3.8s ease-in-out infinite; }
+.widget-terrarium-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
+.widget-terrarium-scene { z-index: 1; filter: var(--weather-base-filter); transform: translate3d(var(--weather-scene-x), var(--weather-scene-y), 10px) scale(var(--weather-scene-scale)); transform-origin: 51% 55%; transition: filter 680ms ease, transform 680ms cubic-bezier(.2,.8,.2,1); animation: widget-terrarium-scene-breathe 6.8s ease-in-out infinite; }
+.widget-terrarium-weather-volume,
+.widget-terrarium-stars,
+.widget-terrarium-lightning,
+.widget-terrarium-rainfall,
+.widget-terrarium-mist,
+.widget-terrarium-fireflies { position: absolute; inset: 0; pointer-events: none; -webkit-mask-image: var(--weather-effects-mask); mask-image: var(--weather-effects-mask); }
+.widget-terrarium-weather-volume { z-index: 2; background: var(--weather-volume-fill); opacity: var(--weather-volume-opacity); transform: translateZ(14px); transition: opacity 680ms ease, background 680ms ease; }
+.is-weather-night .widget-terrarium-weather-volume { mix-blend-mode: color; }
+.widget-terrarium-stars { z-index: 2; opacity: 0; background-image: radial-gradient(circle at 35% 26%, rgba(255,255,255,.96) 0 1.5px, transparent 2px), radial-gradient(circle at 61% 22%, rgba(194,211,255,.92) 0 1.3px, transparent 1.9px), radial-gradient(circle at 70% 38%, rgba(255,255,255,.84) 0 1.1px, transparent 1.7px), radial-gradient(circle at 43% 46%, rgba(185,201,255,.88) 0 1.1px, transparent 1.7px), radial-gradient(circle at 56% 34%, rgba(255,255,255,.78) 0 1px, transparent 1.6px); filter: drop-shadow(0 0 4px rgba(161,183,255,.8)); transform: translateZ(16px); transition: opacity 680ms ease; animation: widget-terrarium-stars 3.8s ease-in-out infinite; }
+.is-weather-night .widget-terrarium-stars { opacity: .86; }
+.widget-terrarium-moon { position: absolute; left: 29%; top: 19%; width: 13%; aspect-ratio: 1; z-index: 3; border-radius: 50%; opacity: 0; background: radial-gradient(circle at 34% 28%, #f8fbff, #d5e3ff 58%, #99b4ee 100%); box-shadow: inset 5px -1px 0 .5px rgba(20,29,79,.94), 0 0 12px rgba(176,202,255,.58); filter: saturate(.86); transform: translateZ(22px) rotate(-18deg); transition: opacity 680ms ease; animation: widget-terrarium-moon 5.4s ease-in-out infinite; pointer-events: none; }
+.is-weather-night .widget-terrarium-moon { opacity: .92; }
+.widget-terrarium-lightning { z-index: 3; opacity: 0; background: radial-gradient(ellipse at 54% 39%, rgba(225,242,255,.88), rgba(118,172,213,.28) 18%, transparent 42%); mix-blend-mode: screen; transform: translateZ(21px); }
+.is-weather-rain .widget-terrarium-lightning { animation: widget-terrarium-lightning 7.2s steps(1, end) infinite; }
+.widget-terrarium-clouds { position: absolute; inset: 0; pointer-events: none; transform-style: preserve-3d; transition: opacity 680ms ease; }
+.widget-terrarium-clouds img { filter: var(--weather-cloud-filter); transition: filter 680ms ease; }
+.widget-terrarium-clouds.is-back { z-index: 2; clip-path: polygon(26% 3%, 100% 3%, 100% 49%, 27% 49%); transform: translateZ(17px); animation: widget-terrarium-cloud-back 7.4s ease-in-out infinite alternate; }
+.widget-terrarium-clouds.is-back { opacity: var(--weather-cloud-back-opacity); }
+.widget-terrarium-glass { z-index: 3; opacity: var(--weather-glass-opacity); filter: var(--weather-glass-filter); transform: translateZ(24px); transition: opacity 680ms ease, filter 680ms ease; }
+.widget-terrarium-clouds.is-front { z-index: 4; clip-path: polygon(0 25%, 100% 25%, 100% 90%, 0 90%); transform: translateZ(31px); animation: widget-terrarium-cloud-front 6.2s ease-in-out infinite alternate; }
+.widget-terrarium-clouds.is-front { opacity: var(--weather-cloud-front-opacity); }
+.widget-terrarium-atmosphere { z-index: 5; opacity: var(--weather-atmosphere-opacity); mix-blend-mode: screen; transform: translateZ(38px); transform-origin: 50% 73%; transition: opacity 680ms ease; animation: widget-terrarium-droplets 3.4s ease-in-out infinite; }
+.widget-terrarium-rainfall { z-index: 5; opacity: 0; background-image: repeating-linear-gradient(104deg, transparent 0 8px, rgba(140,205,240,.46) 9px, transparent 10px 18px), repeating-linear-gradient(104deg, transparent 0 13px, rgba(181,224,248,.26) 14px, transparent 15px 27px); background-position: 0 -32px, 7px -18px; background-size: 40px 48px, 56px 64px; mix-blend-mode: screen; transform: translateZ(39px); transition: opacity 420ms ease; animation: widget-terrarium-rainfall .92s linear infinite; }
+.is-weather-rain .widget-terrarium-rainfall { opacity: .62; }
+.widget-terrarium-mist { z-index: 5; opacity: 0; background: radial-gradient(ellipse at 44% 69%, rgba(176,216,229,.4), transparent 42%), linear-gradient(180deg, transparent 42%, rgba(120,161,179,.22) 72%, transparent 90%); filter: blur(3px); transform: translateZ(40px); transition: opacity 680ms ease; animation: widget-terrarium-mist 5.2s ease-in-out infinite alternate; }
+.is-weather-cloudy .widget-terrarium-mist { opacity: .56; }
+.is-weather-rain .widget-terrarium-mist { opacity: .64; }
+.widget-terrarium-fireflies { z-index: 5; opacity: 0; background-image: radial-gradient(circle at 39% 64%, #b8f2ff 0 1.5px, transparent 2.3px), radial-gradient(circle at 57% 67%, #d9b7ff 0 1.3px, transparent 2.1px), radial-gradient(circle at 68% 55%, #94cfff 0 1.2px, transparent 2px), radial-gradient(circle at 48% 73%, #c1f2ff 0 1px, transparent 1.8px); filter: drop-shadow(0 0 6px rgba(136,190,255,.9)); transform: translateZ(40px); animation: widget-terrarium-fireflies 4.2s ease-in-out infinite; }
+.is-weather-night .widget-terrarium-fireflies { opacity: .92; }
+.widget-terrarium-glint { position: absolute; inset: 14% 18% 18% 21%; z-index: 6; border-radius: 49% 51% 46% 54%; background: linear-gradient(112deg, transparent 22%, rgba(205,239,255,.02) 38%, rgba(225,248,255,.7) 49%, rgba(151,215,255,.06) 59%, transparent 72%); filter: opacity(var(--weather-glint-strength)); mix-blend-mode: screen; opacity: 0; transform: translateZ(42px) translateX(-42%); transition: filter 680ms ease; animation: widget-terrarium-glint 4.6s ease-in-out infinite; pointer-events: none; }
+.widget-terrarium-data { position: absolute; left: 7px; bottom: 5px; z-index: 8; width: 84px; padding: 7px 9px 6px; overflow: hidden; border: 1px solid rgba(230,241,255,.26); border-radius: 13px 16px 13px 11px; color: #f8fbff; background: linear-gradient(145deg, var(--weather-panel-start), var(--weather-panel-end)); box-shadow: inset 0 1px rgba(255,255,255,.12), 0 8px 14px rgba(10,20,28,.22); backdrop-filter: blur(8px) saturate(1.18); -webkit-backdrop-filter: blur(8px) saturate(1.18); transform: translate3d(calc(var(--widget-pointer-x) * -.3), calc(var(--widget-pointer-y) * -.25), 44px); transition: width 320ms cubic-bezier(.2,.8,.2,1), transform 180ms ease, background 680ms ease; pointer-events: none; }
+.widget-terrarium-location { display: flex; align-items: center; gap: 4px; overflow: hidden; color: rgba(235,242,250,.72); font-size: 8px; font-weight: 700; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
+.widget-terrarium-location > i { width: 4px; height: 4px; flex: 0 0 auto; border-radius: 50%; background: var(--weather-accent); box-shadow: 0 0 7px var(--weather-accent-shadow); transition: background 680ms ease, box-shadow 680ms ease; }
+.widget-terrarium-reading { display: flex; align-items: flex-end; gap: 5px; margin-top: 3px; }
+.widget-terrarium-reading strong { font-size: 24px; font-weight: 780; line-height: .86; letter-spacing: 0; }
+.widget-terrarium-reading small { max-width: 40px; padding-bottom: 0; overflow: hidden; color: rgba(239,244,249,.84); font-size: 7px; font-weight: 650; line-height: 1.05; white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.widget-terrarium-forecast { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; max-height: 0; margin-top: 0; opacity: 0; transform: translateY(6px); transition: max-height 280ms ease, margin-top 280ms ease, opacity 180ms ease, transform 280ms ease; }
+.widget-terrarium-forecast span { display: grid; gap: 2px; overflow: hidden; color: rgba(222,232,239,.7); font-size: 6px; line-height: 1; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.widget-terrarium-forecast i { width: 100%; height: 2px; border-radius: 99px; background: linear-gradient(90deg, var(--weather-forecast-start), var(--weather-forecast-end)); transition: background 680ms ease; }
+.is-weather-detail .widget-terrarium-data { width: 123px; }
+.is-weather-detail .widget-terrarium-forecast { max-height: 18px; margin-top: 6px; opacity: 1; transform: translateY(0); }
+.is-weather-detail .widget-terrarium-clouds.is-front { animation-duration: 2.8s; }
 
 .is-calendar { display: grid; place-items: center; padding: 10px; color: #e8eef3; background: radial-gradient(circle at 70% 18%, rgba(123,99,195,.2), transparent 34%), linear-gradient(145deg, #24242a, #0e1116 76%); }
 .widget-orbit-date { position: relative; z-index: 2; width: 56px; aspect-ratio: 1; display: grid; place-content: center; text-align: center; border-radius: 50%; background: rgba(16,18,23,.92); border: 1px solid rgba(231,235,242,.22); box-shadow: 0 10px 22px rgba(0,0,0,.3); }
@@ -442,7 +695,27 @@ const handleRootKeydown = (event) => {
 
 .is-world_pulse { display:grid;grid-template-columns:minmax(86px,.9fr) minmax(0,1.25fr);grid-template-rows:minmax(0,1fr) auto;gap:8px;padding:9px;color:#252b2d;background:linear-gradient(145deg,#f8f8f5,#e8e8e3); }.widget-world-image{position:relative;min-height:0;display:grid;align-content:end;padding:8px;border-radius:10px;color:#fff;background:linear-gradient(180deg,transparent 34%,rgba(10,30,37,.7)),linear-gradient(145deg,#80b4cb,#dbe1d2 48%,#4b796e);overflow:hidden}.widget-world-image::before{content:'';position:absolute;left:43%;bottom:0;width:9px;height:72%;background:#e95743;clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);opacity:.82}.widget-world-image span,.widget-world-image strong{position:relative;z-index:1}.widget-world-image span{font-size:8px;font-weight:800}.widget-world-image strong{font-size:12px}.widget-world-events{display:grid;align-content:start;gap:5px}.widget-world-events header{display:flex;justify-content:space-between;align-items:center}.widget-world-events header strong{font-size:8px}.widget-world-events header i{width:5px;height:5px;border-radius:50%;background:#ef5b47}.widget-world-events article{display:grid;grid-template-columns:6px minmax(0,1fr);gap:6px;align-items:center;padding:5px 6px;border-radius:7px;background:#fff;box-shadow:0 2px 5px rgba(42,47,48,.09)}.widget-world-events article>b{width:5px;height:15px;border-radius:99px}.widget-world-events .is-coral{background:#ee5c47}.widget-world-events .is-lilac{background:#a26bb8}.widget-world-events .is-blue{background:#3d86bd}.widget-world-events article span{display:grid;min-width:0}.widget-world-events article strong{font-size:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.widget-world-events article small{font-size:6px;color:#787d7e}.widget-world-people{grid-column:1/-1;display:flex;align-items:center}.widget-world-people i{width:16px;height:16px;margin-left:-3px;border:2px solid #f5f5f1;border-radius:50%;background:linear-gradient(145deg,#d59d8f,#394d54)}.widget-world-people i:first-child{margin-left:0}.widget-world-people span{margin-left:5px;font-size:7px;color:#6d7273}
 
-.is-compact { border-radius: 12px; padding: 6px; }.is-compact .widget-prism-copy strong{font-size:17px}.is-compact .widget-prism-copy span,.is-compact .widget-prism-copy small{font-size:6px}.is-compact .widget-orbit-date{width:42px}.is-compact .widget-orbit-date strong{font-size:16px}.is-compact .widget-paper-cover{border-width:3px}.is-compact .widget-paper-player-copy strong{font-size:10px}.is-compact .widget-paper-player-copy small,.is-compact .widget-paper-player-copy span{font-size:6px}.is-compact .widget-media-controls{grid-template-columns:repeat(3,20px)}.is-compact .widget-media-controls button,.is-compact .widget-media-controls>span{width:20px;height:20px}.is-compact .widget-paper-week-head,.is-compact .widget-memory-note,.is-compact .widget-world-people{display:none}.is-compact.is-week_rhythm{grid-template-rows:minmax(0,1fr) 22px}.is-compact .widget-paper-week-grid{gap:3px}.is-compact .widget-world-events article:nth-of-type(3){display:none}.is-compact .widget-world-events article{padding:3px}.is-compact .widget-ambient-copy span{display:none}.is-compact .widget-breath-copy strong{font-size:15px}.is-compact .widget-breath-copy span{display:none}
+.is-compact { border-radius: 12px; padding: 6px; }.is-compact.is-weather{padding:0}.is-compact .widget-terrarium-stage{inset:-6px}.is-compact .widget-terrarium-data{left:3px;bottom:2px;width:64px;padding:5px 6px}.is-compact .widget-terrarium-reading strong{font-size:18px}.is-compact .widget-terrarium-location,.is-compact .widget-terrarium-reading small{font-size:6px}.is-compact .widget-terrarium-reading small{max-width:28px}.is-compact .widget-terrarium-forecast{display:none}.is-compact.is-weather-detail .widget-terrarium-data{width:64px}.is-compact .widget-orbit-date{width:42px}.is-compact .widget-orbit-date strong{font-size:16px}.is-compact .widget-paper-cover{border-width:3px}.is-compact .widget-paper-player-copy strong{font-size:10px}.is-compact .widget-paper-player-copy small,.is-compact .widget-paper-player-copy span{font-size:6px}.is-compact .widget-media-controls{grid-template-columns:repeat(3,20px)}.is-compact .widget-media-controls button,.is-compact .widget-media-controls>span{width:20px;height:20px}.is-compact .widget-paper-week-head,.is-compact .widget-memory-note,.is-compact .widget-world-people{display:none}.is-compact.is-week_rhythm{grid-template-rows:minmax(0,1fr) 22px}.is-compact .widget-paper-week-grid{gap:3px}.is-compact .widget-world-events article:nth-of-type(3){display:none}.is-compact .widget-world-events article{padding:3px}.is-compact .widget-ambient-copy span{display:none}.is-compact .widget-breath-copy strong{font-size:15px}.is-compact .widget-breath-copy span{display:none}
+
+@keyframes widget-terrarium-float { 0%,100%{translate:0 0} 50%{translate:0 -3px} }
+@keyframes widget-terrarium-scene-breathe { 0%,100%{translate:0 0} 50%{translate:0 -2px} }
+.is-weather-cloudy .widget-terrarium-scene { animation-name: widget-terrarium-cloudy-breathe; animation-duration: 8.4s; }
+.is-weather-rain .widget-terrarium-scene { animation-name: widget-terrarium-rain-breathe; animation-duration: 5.2s; }
+.is-weather-night .widget-terrarium-scene { animation-name: widget-terrarium-night-breathe; animation-duration: 9.2s; }
+@keyframes widget-terrarium-cloudy-breathe { 0%,100%{translate:-1px 0} 50%{translate:2px -2px} }
+@keyframes widget-terrarium-rain-breathe { 0%,100%{translate:0 1px} 50%{translate:-1px -1px} }
+@keyframes widget-terrarium-night-breathe { 0%,100%{translate:0 0} 50%{translate:1px -2px} }
+@keyframes widget-terrarium-sun { 0%,100%{scale:.92;opacity:.56} 50%{scale:1.12;opacity:.84} }
+@keyframes widget-terrarium-cloud-back { from{transform:translateZ(17px) translateX(-2px) rotate(-.5deg)} to{transform:translateZ(17px) translateX(2px) rotate(.5deg)} }
+@keyframes widget-terrarium-cloud-front { from{transform:translateZ(31px) translateX(-2px) rotate(-.7deg)} to{transform:translateZ(31px) translateX(3px) rotate(.8deg)} }
+@keyframes widget-terrarium-droplets { 0%,100%{transform:translateZ(38px) rotate(-1deg)} 50%{transform:translateZ(38px) rotate(1.4deg)} }
+@keyframes widget-terrarium-glint { 0%,15%{transform:translateZ(42px) translateX(-44%);opacity:0} 30%{opacity:.72} 58%,100%{transform:translateZ(42px) translateX(48%);opacity:0} }
+@keyframes widget-terrarium-rainfall { from{background-position:0 -32px,7px -18px} to{background-position:0 30px,7px 44px} }
+@keyframes widget-terrarium-mist { from{translate:-3px 1px} to{translate:4px -2px} }
+@keyframes widget-terrarium-stars { 0%,100%{filter:drop-shadow(0 0 3px rgba(161,183,255,.54))} 50%{filter:drop-shadow(0 0 6px rgba(190,205,255,.9))} }
+@keyframes widget-terrarium-moon { 0%,100%{translate:0 0;filter:brightness(.94)} 50%{translate:1px -2px;filter:brightness(1.08)} }
+@keyframes widget-terrarium-lightning { 0%,8%,12%,100%{opacity:0} 9%{opacity:.82} 10%{opacity:.16} 11%{opacity:.58} }
+@keyframes widget-terrarium-fireflies { 0%,100%{filter:drop-shadow(0 0 3px rgba(136,190,255,.58));translate:0 0} 50%{filter:drop-shadow(0 0 8px rgba(190,207,255,.96));translate:1px -2px} }
 
 @keyframes widget-breath-ring { 0% { transform: scale(.6); opacity: 0 } 18% { opacity: .8 } 100% { transform: scale(2.2); opacity: 0 } }
 @keyframes widget-breath-orb { 0%,100% { transform: scale(.84) } 42%,58% { transform: scale(1.05) } }
@@ -450,5 +723,21 @@ const handleRootKeydown = (event) => {
 
 @keyframes widget-wave { from { transform:scaleY(.58);opacity:.62 } to { transform:scaleY(1);opacity:1 } }
 @keyframes widget-focus-breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
-@media (prefers-reduced-motion: reduce) { .built-in-widget-visual *, .built-in-widget-visual *::before, .built-in-widget-visual *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .built-in-widget-visual *,
+  .built-in-widget-visual *::before,
+  .built-in-widget-visual *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+  .widget-terrarium-stage,
+  .widget-terrarium-scene,
+  .widget-terrarium-aura,
+  .widget-terrarium-clouds,
+  .widget-terrarium-atmosphere,
+  .widget-terrarium-rainfall,
+  .widget-terrarium-mist,
+  .widget-terrarium-stars,
+  .widget-terrarium-moon,
+  .widget-terrarium-lightning,
+  .widget-terrarium-fireflies,
+  .widget-terrarium-glint { animation: none !important; }
+}
 </style>

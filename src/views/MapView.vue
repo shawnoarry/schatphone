@@ -28,6 +28,7 @@ import {
 } from '../lib/map-place-localization'
 import { searchMapPlaces, suggestMapPlaces } from '../lib/map-place-search'
 import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
+import { resolveMapPlaceMedia } from '../lib/map-place-media'
 import { createMapLocationShareObject } from '../lib/shareable-object'
 import {
   INTERNAL_CHAT_SHARE_ROUTE_QUERY,
@@ -290,6 +291,12 @@ const selectedPlaceSummary = computed(() => {
   return mapPlaceDetail(place)
 })
 
+const selectedPlaceMedia = computed(() => (
+  selectedMapPlace.value
+    ? resolveMapPlaceMedia(selectedMapPlace.value, activeMapPackId.value)
+    : null
+))
+
 const selectedPlaceContextTone = computed(() => {
   if (isSelectedPlaceInside.value) return 'current'
   if (isJourneyPlanningLocked.value) return 'journey'
@@ -351,6 +358,14 @@ const mapRouteEyebrow = computed(() =>
 const returnsToMapSettings = computed(() => {
   const source = Array.isArray(route.query.source) ? route.query.source[0] : route.query.source
   return source === 'map-settings'
+})
+const returnsToCalendar = computed(() => {
+  const source = Array.isArray(route.query.source) ? route.query.source[0] : route.query.source
+  return source === 'calendar'
+})
+const returnsToAgendaJourney = computed(() => {
+  const source = Array.isArray(route.query.source) ? route.query.source[0] : route.query.source
+  return source === 'agenda-journey'
 })
 
 const goHome = () => {
@@ -2125,7 +2140,7 @@ watch(mapPlaceCategoryOptions, (options) => {
 })
 
 onMounted(() => {
-  mapStore.setJourneyCheckpointEventEvaluationEnabled(true)
+  mapStore.setJourneyCheckpointEventEvaluationEnabled(false)
   tickRuntime()
   runtimeTimer = setInterval(() => {
     tickRuntime()
@@ -2154,7 +2169,7 @@ onBeforeUnmount(() => {
         type="button"
         class="map-topbar-button"
         data-testid="map-go-home"
-        :aria-label="returnsToMapSettings ? t('返回地图设置', 'Back to Map settings') : t('返回首页', 'Back to Home')"
+        :aria-label="returnsToMapSettings ? t('返回地图设置', 'Back to Map settings') : returnsToAgendaJourney ? t('返回行程', 'Back to Journey') : returnsToCalendar ? t('返回日历', 'Back to Calendar') : t('返回首页', 'Back to Home')"
         @click="goHome"
       >
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
@@ -2886,6 +2901,7 @@ onBeforeUnmount(() => {
       v-if="selectedMapPlace"
       :place="selectedMapPlace"
       :visual="mapPlaceVisual(selectedMapPlace)"
+      :media="selectedPlaceMedia"
       :name="mapPlaceName(selectedMapPlace)"
       :secondary-name="mapPlaceSecondaryName(selectedMapPlace)"
       :summary="selectedPlaceSummary"

@@ -8,6 +8,7 @@ import {
   schedulePushNotification,
 } from '../lib/push'
 import { FOOD_DELIVERY_SOURCE_KEYS, LOGISTICS_SOURCE_KEYS } from '../lib/planned-module-registry'
+import { projectCalendarDepartureReadiness } from '../lib/calendar-departure-readiness'
 import {
   anonymizeRelationshipText,
   bindingMatchesProfile,
@@ -346,6 +347,8 @@ const createIdleTripState = () => ({
   fromLabel: '',
   toLabel: '',
   destinationPlaceId: '',
+  sourceCalendarEventId: '',
+  sourceAgendaJourneyStepId: '',
   transportMode: '',
   estimateVersion: 0,
   distanceKm: 0,
@@ -710,6 +713,14 @@ const normalizeTripState = (raw) => {
       typeof raw.destinationPlaceId === 'string'
         ? raw.destinationPlaceId.trim().toLowerCase().slice(0, 180)
         : '',
+    sourceCalendarEventId:
+      typeof raw.sourceCalendarEventId === 'string'
+        ? raw.sourceCalendarEventId.trim().slice(0, 140)
+        : '',
+    sourceAgendaJourneyStepId:
+      typeof raw.sourceAgendaJourneyStepId === 'string'
+        ? raw.sourceAgendaJourneyStepId.trim().slice(0, 180)
+        : '',
     transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
     estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
     distanceKm: Math.max(0, Number(raw.distanceKm) || 0),
@@ -785,6 +796,14 @@ const normalizeTripHistoryItem = (raw, index = 0) => {
     destinationPlaceId:
       typeof raw.destinationPlaceId === 'string'
         ? raw.destinationPlaceId.trim().toLowerCase().slice(0, 180)
+        : '',
+    sourceCalendarEventId:
+      typeof raw.sourceCalendarEventId === 'string'
+        ? raw.sourceCalendarEventId.trim().slice(0, 140)
+        : '',
+    sourceAgendaJourneyStepId:
+      typeof raw.sourceAgendaJourneyStepId === 'string'
+        ? raw.sourceAgendaJourneyStepId.trim().slice(0, 180)
         : '',
     transportMode: normalizeMapTransportMode(raw.transportMode, LEGACY_MAP_TRANSPORT_MODE),
     estimateVersion: Math.max(0, toInt(raw.estimateVersion, 0)),
@@ -2536,6 +2555,8 @@ export const useMapStore = defineStore('map', () => {
       fromLabel: state.fromLabel,
       toLabel: state.toLabel,
       destinationPlaceId: state.destinationPlaceId,
+      sourceCalendarEventId: state.sourceCalendarEventId,
+      sourceAgendaJourneyStepId: state.sourceAgendaJourneyStepId,
       transportMode: state.transportMode,
       estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,
@@ -3175,6 +3196,96 @@ export const useMapStore = defineStore('map', () => {
     const mapPack = getAvailableMapPackById(mapPackId)
     if (mapPack.id !== mapPackId) return null
     return buildMapPlacesForPack(mapPack).find((place) => place.placeId === normalizedPlaceId) || null
+  }
+
+  const getScheduledTravelProjection = ({
+    startsAt = 0,
+    locationRef = null,
+    transportMode = '',
+    now = Date.now(),
+  } = {}) => {
+    const fail = (code) => ({
+      ready: false,
+      code,
+      status: 'unavailable',
+      origin: null,
+      destination: null,
+      transportMode: '',
+      estimate: null,
+      recommendedDepartureAt: 0,
+      predictedArrivalAt: 0,
+      minutesUntilDeparture: 0,
+      lateByMinutes: 0,
+      isLate: false,
+      shouldDepartNow: false,
+    })
+    if (!locationRef || typeof locationRef !== 'object') {
+      return fail('destination_missing')
+    }
+
+    const mapPackId =
+      typeof locationRef.mapPackId === 'string' ? locationRef.mapPackId.trim().slice(0, 120) : ''
+    const placeId =
+      typeof locationRef.placeId === 'string'
+        ? locationRef.placeId.trim().toLowerCase().slice(0, 180)
+        : ''
+    if (!mapPackId || !placeId) return fail('destination_missing')
+
+    const mapPack = getAvailableMapPackById(mapPackId)
+    if (mapPack.id !== mapPackId) return fail('destination_off_pack')
+
+    const current = normalizeCurrentLocation(currentLocation.value, mapPacks.value)
+    if (!current.position || !current.detail) return fail('current_position_missing')
+    if (current.mapPackId !== mapPackId) return fail('map_pack_mismatch')
+
+    const destination = findMapPlaceById(placeId, mapPackId)
+    if (!destination?.position) return fail('destination_stale')
+
+    const normalizedTransportMode = normalizeMapTransportMode(transportMode)
+    if (!normalizedTransportMode) return fail('transport_required')
+
+    const measuredDistanceKm = calculateMapDistanceKm(
+      mapPack,
+      current.position,
+      destination.position,
+    )
+    const destinationDetail =
+      destination.detailZh || destination.detailEn || destination.detail || destination.address || ''
+    const destinationLabelZh =
+      destination.nameZh || destination.label || destination.nameEn || destinationDetail
+    const destinationLabelEn =
+      destination.nameEn || destination.label || destination.nameZh || destinationDetail
+    const estimate = estimateMapJourney({
+      fromText: current.detail,
+      toText: destinationDetail,
+      measuredDistanceKm,
+      transportMode: normalizedTransportMode,
+    })
+
+    return projectCalendarDepartureReadiness({
+      now,
+      startsAt,
+      origin: {
+        mapPackId: current.mapPackId,
+        placeId: current.placeId,
+        labelZh: current.label,
+        labelEn: current.label,
+        detail: current.detail,
+        position: current.position,
+        provenance: current.positionEvidence?.provenance,
+        evidenceAt: current.positionEvidence?.evidenceAt,
+      },
+      destination: {
+        mapPackId,
+        placeId,
+        labelZh: destinationLabelZh,
+        labelEn: destinationLabelEn,
+        detail: destinationDetail,
+        position: destination.position,
+      },
+      transportMode: normalizedTransportMode,
+      estimate,
+    })
   }
 
   const enterPlace = (placeId, { now = Date.now() } = {}) => {
@@ -4019,33 +4130,23 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
-  const startTrip = () => {
-    refreshTripState(Date.now())
-    if (tripState.value.status === TRIP_STATUS_TRAVELING) {
-      return { ok: false, code: 'TRIP_ALREADY_IN_PROGRESS' }
-    }
-    if (tripState.value.status === TRIP_STATUS_ARRIVED) {
-      return { ok: false, code: 'TRIP_ARRIVAL_PENDING' }
-    }
-
-    const from = typeof tripForm.from === 'string' ? tripForm.from.trim() : ''
-    const to = typeof tripForm.to === 'string' ? tripForm.to.trim() : ''
-    if (!from || !to) return { ok: false, code: 'TRIP_ENDPOINT_EMPTY' }
-    if (from === to) return { ok: false, code: 'TRIP_ENDPOINT_SAME' }
-    const transportMode = normalizeMapTransportMode(tripForm.transportMode)
-    if (!transportMode) return { ok: false, code: 'TRIP_TRANSPORT_REQUIRED' }
-
-    const estimate = computeActiveTripEstimate(from, to, transportMode)
-    const startedAt = Date.now()
+  const commitTripStart = ({
+    from,
+    to,
+    transportMode,
+    estimate,
+    destinationPlaceId = '',
+    sourceCalendarEventId = '',
+    sourceAgendaJourneyStepId = '',
+    fromLabel = '',
+    toLabel = '',
+    startedAt = Date.now(),
+    pushSource = 'map_trip_start',
+  }) => {
     const etaAt = startedAt + estimate.durationSeconds * 1000
     const journeyId = createMapJourneyId(startedAt)
     const worldPackId = activeWorldPackId.value
     const mapPackId = activeMapPackId.value
-    const destinationPlace = findActivePlaceByText(to)
-    const destinationPlaceId =
-      destinationPlace?.mapPackId === mapPackId
-        ? destinationPlace.placeId || destinationPlace.id || ''
-        : ''
 
     tripState.value = {
       status: TRIP_STATUS_TRAVELING,
@@ -4062,9 +4163,11 @@ export const useMapStore = defineStore('map', () => {
       to,
       transportMode,
       estimateVersion: MAP_TRIP_ESTIMATE_VERSION,
-      fromLabel: resolveAddressLabel(from, '起点'),
-      toLabel: resolveAddressLabel(to, '目的地'),
+      fromLabel: fromLabel || resolveAddressLabel(from, '起点'),
+      toLabel: toLabel || resolveAddressLabel(to, '目的地'),
       destinationPlaceId,
+      sourceCalendarEventId,
+      sourceAgendaJourneyStepId,
       distanceKm: estimate.distanceKm,
       fare: estimate.fare,
       durationSeconds: estimate.durationSeconds,
@@ -4080,7 +4183,7 @@ export const useMapStore = defineStore('map', () => {
     runtimeNow.value = startedAt
     scheduleTripArrivalCheck()
     const remotePushPromise = ensureTripArrivalPushScheduled({
-      source: 'map_trip_start',
+      source: pushSource,
     })
     return {
       ok: true,
@@ -4090,7 +4193,124 @@ export const useMapStore = defineStore('map', () => {
       journeyId,
       worldPackId,
       mapPackId,
+      sourceCalendarEventId,
+      sourceAgendaJourneyStepId,
       remotePushPromise,
+    }
+  }
+
+  const startTrip = () => {
+    const startedAt = Date.now()
+    refreshTripState(startedAt)
+    if (tripState.value.status === TRIP_STATUS_TRAVELING) {
+      return { ok: false, code: 'TRIP_ALREADY_IN_PROGRESS' }
+    }
+    if (tripState.value.status === TRIP_STATUS_ARRIVED) {
+      return { ok: false, code: 'TRIP_ARRIVAL_PENDING' }
+    }
+
+    const from = typeof tripForm.from === 'string' ? tripForm.from.trim() : ''
+    const to = typeof tripForm.to === 'string' ? tripForm.to.trim() : ''
+    if (!from || !to) return { ok: false, code: 'TRIP_ENDPOINT_EMPTY' }
+    if (from === to) return { ok: false, code: 'TRIP_ENDPOINT_SAME' }
+    const transportMode = normalizeMapTransportMode(tripForm.transportMode)
+    if (!transportMode) return { ok: false, code: 'TRIP_TRANSPORT_REQUIRED' }
+
+    const estimate = computeActiveTripEstimate(from, to, transportMode)
+    const destinationPlace = findActivePlaceByText(to)
+    const destinationPlaceId =
+      destinationPlace?.mapPackId === activeMapPackId.value
+        ? destinationPlace.placeId || destinationPlace.id || ''
+        : ''
+    return commitTripStart({
+      from,
+      to,
+      transportMode,
+      estimate,
+      destinationPlaceId,
+      startedAt,
+    })
+  }
+
+  const startScheduledTravel = ({
+    calendarEventId = '',
+    agendaJourneyStepId = '',
+    startsAt = 0,
+    locationRef = null,
+    transportMode = '',
+    now = Date.now(),
+  } = {}) => {
+    const sourceCalendarEventId =
+      typeof calendarEventId === 'string' ? calendarEventId.trim().slice(0, 140) : ''
+    const sourceAgendaJourneyStepId =
+      typeof agendaJourneyStepId === 'string'
+        ? agendaJourneyStepId.trim().slice(0, 180)
+        : ''
+    if (!sourceCalendarEventId && !sourceAgendaJourneyStepId) {
+      return { ok: false, code: 'SCHEDULED_TRAVEL_SOURCE_MISSING' }
+    }
+
+    const startedAt = Math.max(0, toInt(now, Date.now()))
+    refreshTripState(startedAt)
+    const activeState = normalizeTripState(tripState.value)
+    if (activeState.status !== TRIP_STATUS_IDLE) {
+      const sourceMatches = sourceAgendaJourneyStepId
+        ? activeState.sourceAgendaJourneyStepId === sourceAgendaJourneyStepId
+        : activeState.sourceCalendarEventId === sourceCalendarEventId
+      if (sourceMatches) {
+        return {
+          ok: true,
+          code: 'SCHEDULED_TRIP_REUSED',
+          reused: true,
+          journeyId: activeState.journeyId,
+          etaAt: activeState.etaAt,
+          durationSeconds: activeState.durationSeconds,
+          transportMode: activeState.transportMode,
+          worldPackId: activeState.worldPackId,
+          mapPackId: activeState.mapPackId,
+          sourceCalendarEventId,
+          sourceAgendaJourneyStepId,
+        }
+      }
+      return {
+        ok: false,
+        code:
+          activeState.status === TRIP_STATUS_ARRIVED
+            ? 'TRIP_ARRIVAL_PENDING'
+            : 'TRIP_ALREADY_IN_PROGRESS',
+      }
+    }
+
+    const projection = getScheduledTravelProjection({
+      startsAt,
+      locationRef,
+      transportMode,
+      now: startedAt,
+    })
+    if (!projection.ready) {
+      return { ok: false, code: projection.code, projection }
+    }
+
+    tripForm.from = projection.origin.detail
+    tripForm.to = projection.destination.detail
+    tripForm.transportMode = projection.transportMode
+    return {
+      ...commitTripStart({
+        from: projection.origin.detail,
+        to: projection.destination.detail,
+        transportMode: projection.transportMode,
+        estimate: projection.estimate,
+        destinationPlaceId: projection.destination.placeId,
+        sourceCalendarEventId,
+        sourceAgendaJourneyStepId,
+        fromLabel: projection.origin.labelZh || projection.origin.detail,
+        toLabel: projection.destination.labelZh || projection.destination.detail,
+        startedAt,
+        pushSource: 'calendar_scheduled_trip_start',
+      }),
+      code: 'SCHEDULED_TRIP_STARTED',
+      reused: false,
+      projection,
     }
   }
 
@@ -4123,6 +4343,8 @@ export const useMapStore = defineStore('map', () => {
       fromLabel: state.fromLabel,
       toLabel: state.toLabel,
       destinationPlaceId: state.destinationPlaceId,
+      sourceCalendarEventId: state.sourceCalendarEventId,
+      sourceAgendaJourneyStepId: state.sourceAgendaJourneyStepId,
       transportMode: state.transportMode,
       estimateVersion: state.estimateVersion,
       distanceKm: state.distanceKm,
@@ -4975,6 +5197,8 @@ export const useMapStore = defineStore('map', () => {
     dismissPlaceSessionEvent,
     setTripEndpoint,
     setTripTransportMode,
+    getScheduledTravelProjection,
+    startScheduledTravel,
     applyAddressToTripEndpoint,
     addAddress,
     updateAddress,

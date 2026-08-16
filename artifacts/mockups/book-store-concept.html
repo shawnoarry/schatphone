@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Book · 明亮书城风打样</title>
+<style>
+  /* ============ 打样台（不属于产品 UI） ============ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 48px;
+    padding: 56px 40px;
+    background: #e8e6e1;
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .board-label {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #8a8578;
+    letter-spacing: 0.12em;
+  }
+  .frame {
+    width: 390px;
+    height: 844px;
+    border-radius: 44px;
+    overflow: hidden;
+    box-shadow: 0 40px 90px rgba(40, 36, 28, 0.28), 0 0 0 10px #1c1a17;
+    background: #fff;
+    flex: 0 0 auto;
+  }
+
+  /* ============ 设计 Token（明亮书城风） ============ */
+  .app {
+    --paper: #faf9f6;
+    --card: #ffffff;
+    --ink: #26221b;
+    --ink-2: #6f6a5e;
+    --ink-3: #a39d8f;
+    --line: rgba(38, 34, 27, 0.08);
+    --accent: #c8452c;            /* 朱砂红：书城主强调色 */
+    --accent-soft: #fdf0ec;
+    --gold: #d9a441;              /* 评分星 */
+    --wv-a: #1e5f52; --wv-b: #0f3d34;   /* 世界观：松烟绿 */
+    --en-a: #c96f2e; --en-b: #8f4a1a;   /* 百科：赭石橘 */
+    --wr-a: #3b4a6b; --wr-b: #232f4a;   /* 世界规则：黛蓝 */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  /* ============ 顶栏 ============ */
+  .topbar {
+    flex: 0 0 auto;
+    padding: 54px 20px 10px;
+  }
+  .topbar-row { display: flex; align-items: center; gap: 12px; }
+  .back {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    font-size: 14px;
+  }
+  .brand { flex: 1; min-width: 0; }
+  .brand small {
+    display: block; font-size: 10px; font-weight: 800;
+    letter-spacing: 0.22em; color: var(--accent);
+  }
+  .brand h1 {
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: 26px; font-weight: 900; letter-spacing: 0.02em;
+  }
+  .top-action {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--ink); color: #fff; font-size: 15px;
+  }
+  .search {
+    margin-top: 14px;
+    display: flex; align-items: center; gap: 8px;
+    height: 40px; padding: 0 14px;
+    border-radius: 999px;
+    background: #f0eee8;
+    color: var(--ink-3);
+    font-size: 13px;
+  }
+  .tabs {
+    margin-top: 14px;
+    display: flex; gap: 18px;
+    border-bottom: 1px solid var(--line);
+    padding: 0 2px;
+    font-size: 14px; font-weight: 700; color: var(--ink-3);
+  }
+  .tabs span { padding-bottom: 9px; position: relative; }
+  .tabs .on { color: var(--ink); }
+  .tabs .on::after {
+    content: ""; position: absolute; left: 50%; bottom: -1px;
+    width: 18px; height: 3px; border-radius: 2px;
+    background: var(--accent);
+    transform: translateX(-50%);
+  }
+
+  /* ============ 书架分区 ============ */
+  .shelves { flex: 1; overflow: hidden; padding: 6px 0 0; }
+  .shelf { margin-top: 20px; }
+  .shelf-head {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 0 20px;
+  }
+  .shelf-head h2 {
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: 18px; font-weight: 900;
+  }
+  .shelf-head small { font-size: 11px; color: var(--ink-3); font-weight: 700; }
+  .shelf-head a { margin-left: auto; font-size: 11px; color: var(--ink-2); font-weight: 700; }
+  .shelf-row {
+    display: flex; gap: 14px;
+    padding: 14px 20px 16px;
+  }
+
+  /* ============ 封面（纯 CSS 生成） ============ */
+  .book { width: 96px; flex: 0 0 auto; }
+  .cover {
+    position: relative;
+    width: 96px; height: 136px;
+    border-radius: 4px 10px 10px 4px;
+    overflow: hidden;
+    box-shadow:
+      inset 4px 0 8px rgba(0,0,0,0.18),
+      0 8px 18px rgba(38,34,27,0.18);
+    color: rgba(255,255,255,0.92);
+  }
+  .cover::before {  /* 书脊高光 */
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 7px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.28), transparent);
+  }
+  .cover::after {   /* 纸纹 */
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 5px);
+  }
+  .cover.wv { background: linear-gradient(160deg, var(--wv-a), var(--wv-b)); }
+  .cover.en { background: linear-gradient(160deg, var(--en-a), var(--en-b)); }
+  .cover.wr { background: linear-gradient(160deg, var(--wr-a), var(--wr-b)); }
+  .cover .motif {
+    position: absolute; right: -14px; bottom: -14px;
+    width: 74px; height: 74px; border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.25);
+  }
+  .cover .motif::after {
+    content: ""; position: absolute; inset: 14px;
+    border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.18);
+  }
+  .cover .cat {
+    position: absolute; top: 10px; left: 12px;
+    font-size: 8px; font-weight: 800; letter-spacing: 0.2em;
+    padding: 3px 6px; border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 3px;
+  }
+  .cover .ttl {
+    position: absolute; top: 34px; left: 12px; right: 10px;
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: 15px; font-weight: 900; line-height: 1.35;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .cover .band {  /* 状态绶带 */
+    position: absolute; left: 0; bottom: 12px;
+    font-size: 8px; font-weight: 800;
+    padding: 3px 8px 3px 10px;
+    background: var(--accent); color: #fff;
+    border-radius: 0 3px 3px 0;
+  }
+  .book .meta { padding: 8px 2px 0; }
+  .book .meta b {
+    display: block; font-size: 12px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .book .meta .rating { display: flex; align-items: center; gap: 4px; margin-top: 3px; }
+  .stars { color: var(--gold); font-size: 10px; letter-spacing: 1px; }
+  .stars .dim { color: #ddd8cc; }
+  .book .meta .rating i { font-style: normal; font-size: 10px; color: var(--ink-2); font-weight: 700; }
+
+  /* ============ 详情页 ============ */
+  .detail { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .hero {
+    position: relative;
+    padding: 18px 20px 22px;
+    background:
+      radial-gradient(120% 90% at 50% 0%, #f3ede2 0%, var(--paper) 68%);
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero .cover { width: 128px; height: 182px; margin: 0 auto; border-radius: 5px 12px 12px 5px; }
+  .hero .cover .ttl { font-size: 20px; top: 44px; }
+  .hero .cover .cat { font-size: 9px; }
+  .hero h2 {
+    margin-top: 16px;
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: 22px; font-weight: 900;
+  }
+  .hero .sub { margin-top: 5px; font-size: 12px; color: var(--ink-2); font-weight: 700; }
+  .hero .rate-row {
+    margin-top: 8px;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
+  }
+  .hero .rate-row .stars { font-size: 13px; }
+  .hero .rate-row b { font-size: 15px; color: var(--ink); }
+  .hero .rate-row small { font-size: 10px; color: var(--ink-3); }
+  .chips { margin-top: 12px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-size: 10px; font-weight: 700; color: var(--ink-2);
+    padding: 4px 10px; border-radius: 999px;
+    background: #f0eee8;
+  }
+  .chip.hot { color: var(--accent); background: var(--accent-soft); }
+
+  .detail-body { flex: 1; padding: 16px 20px; overflow: hidden; }
+  .sec-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 900;
+  }
+  .sec-title::before { content: ""; width: 3px; height: 12px; border-radius: 2px; background: var(--accent); }
+  .intro {
+    margin-top: 8px;
+    font-size: 13px; line-height: 1.75; color: var(--ink-2);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .facts {
+    margin-top: 16px;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--line); border-radius: 14px;
+    background: var(--card);
+    padding: 12px 0;
+  }
+  .facts div { text-align: center; }
+  .facts div + div { border-left: 1px solid var(--line); }
+  .facts b { display: block; font-size: 15px; font-weight: 900; }
+  .facts small { font-size: 10px; color: var(--ink-3); font-weight: 700; }
+
+  .actionbar {
+    flex: 0 0 auto;
+    display: flex; gap: 8px; align-items: center;
+    padding: 12px 16px 26px;
+    background: var(--card);
+    border-top: 1px solid var(--line);
+  }
+  .actionbar .ghost {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: grid; place-items: center;
+    border: 1px solid var(--line); background: var(--card);
+    color: var(--ink-2); font-size: 15px;
+  }
+  .actionbar .primary {
+    flex: 1; height: 42px; border-radius: 999px;
+    background: var(--ink); color: #fff;
+    font-size: 14px; font-weight: 800;
+    display: grid; place-items: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 画板 1：书架首页 ============ -->
+<div>
+  <div class="frame">
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar-row">
+          <div class="back">‹</div>
+          <div class="brand">
+            <small>TEXT&nbsp;LIBRARY</small>
+            <h1>文本库</h1>
+          </div>
+          <div class="top-action">＋</div>
+        </div>
+        <div class="search">🔍&nbsp;搜索书名、标签、内容</div>
+        <div class="tabs">
+          <span class="on">书架</span><span>世界观</span><span>百科</span><span>世界规则</span>
+        </div>
+      </header>
+
+      <main class="shelves">
+        <section class="shelf">
+          <div class="shelf-head"><h2>世界观</h2><small>3 本</small><a>全部 ›</a></div>
+          <div class="shelf-row">
+            <div class="book">
+              <div class="cover wv"><span class="motif"></span><span class="cat">世界观</span><span class="ttl">雾都九大城区志</span><span class="band">在读</span></div>
+              <div class="meta"><b>雾都九大城区志</b><div class="rating"><span class="stars">★★★★<span class="dim">★</span></span><i>4.6</i></div></div>
+            </div>
+            <div class="book">
+              <div class="cover wv"><span class="motif"></span><span class="cat">世界观</span><span class="ttl">龙脉与蒸汽纪元</span></div>
+              <div class="meta"><b>龙脉与蒸汽纪元</b><div class="rating"><span class="stars">★★★★<span class="dim">★</span></span><i>4.2</i></div></div>
+            </div>
+            <div class="book">
+              <div class="cover wv"><span class="motif"></span><span class="cat">世界观</span><span class="ttl">晨曦联邦编年史</span></div>
+              <div class="meta"><b>晨曦联邦编年史</b><div class="rating"><span class="stars">★★★<span class="dim">★★</span></span><i>3.5</i></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="shelf">
+          <div class="shelf-head"><h2>百科</h2><small>4 本</small><a>全部 ›</a></div>
+          <div class="shelf-row">
+            <div class="book">
+              <div class="cover en"><span class="motif"></span><span class="cat">百科</span><span class="ttl">咒术术语辞典</span><span class="band">在读</span></div>
+              <div class="meta"><b>咒术术语辞典</b><div class="rating"><span class="stars">★★★★★</span><i>4.9</i></div></div>
+            </div>
+            <div class="book">
+              <div class="cover en"><span class="motif"></span><span class="cat">百科</span><span class="ttl">大陆地理图志</span></div>
+              <div class="meta"><b>大陆地理图志</b><div class="rating"><span class="stars">★★★★<span class="dim">★</span></span><i>4.1</i></div></div>
+            </div>
+            <div class="book">
+              <div class="cover en"><span class="motif"></span><span class="cat">百科</span><span class="ttl">种族血脉图谱</span></div>
+              <div class="meta"><b>种族血脉图谱</b><div class="rating"><span class="stars">★★★<span class="dim">★★</span></span><i>3.2</i></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="shelf">
+          <div class="shelf-head"><h2>世界规则</h2><small>3 本</small><a>全部 ›</a></div>
+          <div class="shelf-row">
+            <div class="book">
+              <div class="cover wr"><span class="motif"></span><span class="cat">世界规则</span><span class="ttl">魔力守恒三定律</span></div>
+              <div class="meta"><b>魔力守恒三定律</b><div class="rating"><span class="stars">★★★★<span class="dim">★</span></span><i>4.4</i></div></div>
+            </div>
+            <div class="book">
+              <div class="cover wr"><span class="motif"></span><span class="cat">世界规则</span><span class="ttl">冒险者公会条例</span><span class="band">在读</span></div>
+              <div class="meta"><b>冒险者公会条例</b><div class="rating"><span class="stars">★★★★<span class="dim">★</span></span><i>4.0</i></div></div>
+            </div>
+            <div class="book">
+              <div class="cover wr"><span class="motif"></span><span class="cat">世界规则</span><span class="ttl">货币汇率通则</span></div>
+              <div class="meta"><b>货币汇率通则</b><div class="rating"><span class="stars">★★★<span class="dim">★★</span></span><i>3.0</i></div></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <p class="board-label">① 书架首页 · 按类目分区</p>
+</div>
+
+<!-- ============ 画板 2：书籍详情页 ============ -->
+<div>
+  <div class="frame">
+    <div class="app">
+      <header class="topbar" style="padding-bottom:0;">
+        <div class="topbar-row">
+          <div class="back">‹</div>
+          <div class="brand"></div>
+          <div class="top-action" style="background:transparent;color:var(--ink-2);border:1px solid var(--line);">♡</div>
+        </div>
+      </header>
+
+      <div class="detail">
+        <section class="hero">
+          <div class="cover wv"><span class="motif"></span><span class="cat">世界观</span><span class="ttl">雾都九大城区志</span><span class="band">在读</span></div>
+          <h2>雾都九大城区志</h2>
+          <p class="sub">世界观 · 草稿 · 3 天前更新</p>
+          <div class="rate-row">
+            <span class="stars">★★★★<span class="dim">★</span></span><b>4.6</b><small>资料完整度</small>
+          </div>
+          <div class="chips">
+            <span class="chip">雾都</span><span class="chip">蒸汽朋克</span><span class="chip">城区设定</span>
+            <span class="chip hot">● 正在影响世界书</span>
+          </div>
+        </section>
+
+        <section class="detail-body">
+          <h3 class="sec-title">内容简介</h3>
+          <p class="intro">雾都分为九大城区：上环的琥珀塔区终年点着鲸油灯，中环的齿轮巷是技师与学徒的聚集地，下环的雾底码头则是走私者与吟游诗人的地盘。每个城区有独立的守夜人编制与钟声时刻表……</p>
+
+          <div class="facts">
+            <div><b>12,480</b><small>字数</small></div>
+            <div><b>18</b><small>段落</small></div>
+            <div><b>3</b><small>世界书引用</small></div>
+            <div><b>5</b><small>标签</small></div>
+          </div>
+        </section>
+
+        <footer class="actionbar">
+          <div class="ghost">✎</div>
+          <div class="ghost">⇪</div>
+          <div class="ghost">🗑</div>
+          <div class="primary">开始阅读</div>
+        </footer>
+      </div>
+    </div>
+  </div>
+  <p class="board-label">② 书籍详情页 · 封面 + 简介 + 元数据 + 操作</p>
+</div>
+
+</body>
+</html>

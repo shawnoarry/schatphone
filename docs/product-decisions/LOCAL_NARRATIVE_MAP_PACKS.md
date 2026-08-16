@@ -1,6 +1,6 @@
 # Local Narrative Map Packs
 
-Updated: 2026-08-01
+Updated: 2026-08-15
 
 Status: `WORLD_BOUND_BASELINE_AND_OPENFREEMAP_RUNTIME_COMPLETE`
 
@@ -20,6 +20,8 @@ Both packs share local place search, player pins, trip state, ETA, history, Map-
 Seoul V1 includes 106 versioned read-only places. The catalog covers major entertainment agencies, broadcasters and media buildings, company headquarters, civic/cultural/event landmarks, named Cheongdam beauty-salon branches, general and luxury shopping, supermarkets, a deliberately small convenience-store set, nightlife, general and plastic-surgery hospitals, four housing tiers, major transport hubs, parks, universities, landmark hotels, pharmacy districts, sports facilities, cinemas, bank headquarters, public-safety institutions, and five reviewed restaurant branches linked from Food Delivery by stable Map ID. The original 2026-07-31 coordinate snapshot, the 2026-08-01 everyday/community-city expansions, and the 2026-08-10 restaurant expansion use public organization/branch addresses and provider-neutral geographic coordinates reviewed against public map geography. Pharmacy records intentionally represent established discovery districts rather than asserting that one frequently changing branch is permanent Map truth.
 
 These records are Map-owned content with stable IDs, bilingual address/search metadata, and provider-neutral geographic coordinates. They are not a live POI mirror, do not retain provider place IDs, and do not update silently when an organization moves. A future correction updates the reviewed catalog explicitly; topology changes still follow the separate map-pack versioning rule.
+
+Place media is versioned separately from this canonical catalog. The current V1 media registry binds one optional reviewed record to `mapPackId + placeId`; it cannot change identity, name, address, coordinate, category, visibility, discovery, or Journey behavior. Every place detail resolves a fixed `hero` presentation. Exact-place photos, area atmosphere, generated reconstruction, and category fallback are visibly distinct evidence grades. Licensed photo/reconstruction records require source or generation provenance, alt text, a verified public derivative, SHA-256, review state, and visible attribution/change disclosure. Original candidates stay in a local source archive and are never runtime URLs. Missing or failed media uses the category fallback instead of fabricating a photograph.
 
 The five Food Delivery-linked records are Myeongdong Kyoja Main Store, London Bagel Museum Anguk, Knotted Cheongdam, Kyochon Chicken Yeoksam No. 1, and EGGDROP Gangnam Woosung. Their Food Delivery `sourceId` linkage does not transfer place ownership: Map owns branch/address/coordinate truth, while Food Delivery owns every restaurant/menu/bag/order record. Public evidence is retained for review provenance and does not authorize official catalog, product, price, campaign, or affiliation claims.
 
@@ -74,6 +76,7 @@ The baseline does not use:
 - paid POI search;
 - Kakao, Google, Mapbox, or another keyed/commercial map SDK;
 - provider POI, geocoding, route, traffic, navigation, or canonical place identifiers.
+- map-service screenshots, news/social imagery, or unlicensed corporate media as place-detail artwork.
 
 Geographic packs request the public OpenFreeMap Liberty style and its attributed OpenMapTiles/OpenStreetMap data only when a geographic map is opened. MapLibre is isolated in a lazy production chunk. Fictional and custom packs do not request OpenFreeMap or MapLibre. External style, tile, or WebGL startup failure switches to the local pack fallback without changing canonical places, pins, trips, ETA, coordinates, or world binding.
 

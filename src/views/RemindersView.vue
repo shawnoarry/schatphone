@@ -184,21 +184,21 @@ watch(
     <main class="reminders-content">
       <section class="reminders-panel reminders-intro">
         <p class="reminders-eyebrow">
-          {{ t('跨模块线索收件箱', 'Cross-module cue inbox') }}
+          {{ t('值得留意的事', 'Worth your attention') }}
         </p>
         <h2 class="reminders-intro-title">
           {{
             t(
-              '提醒事项先承接线索，日历只保留确认后的日程。',
-              'Reminders catch cues first; Calendar keeps confirmed schedule events.',
+              '可能要做的事先放在这里，确认后再排进日历。',
+              'Things you might want to do land here first; confirm them to schedule in Calendar.',
             )
           }}
         </h2>
         <p class="reminders-intro-copy">
           {{
             t(
-              '来自地图、电话、购物与股票的线索会先汇总在这里；确认后再进入日历。',
-              'Cues from Map, Phone, Shopping, and Stock stay here until you confirm them for Calendar.',
+              '地图、电话、购物和股票里值得留意的事，会先汇总到这里。',
+              'Noteworthy things from Map, Phone, Shopping, and Stock gather here first.',
             )
           }}
         </p>
@@ -393,8 +393,8 @@ watch(
                   'Try another source or status. Confirmed reminders stay here as handling records and sync to Calendar.',
                 )
               : t(
-                  '地图地点反馈、未接来电、购物配送和股票复盘线索会先来到这里；确认后再进入日历日程。',
-                  'Map follow-ups, missed calls, Shopping delivery, and Stock review cues will land here first; confirmation sends them to Calendar.',
+                  '地图里的地点反馈、未接来电、购物配送和股票复盘会先来到这里；确认后排进日历。',
+                  'Map follow-ups, missed calls, Shopping delivery, and Stock reviews land here first; confirmation sends them to Calendar.',
                 )
           }}
         </p>
@@ -412,12 +412,12 @@ watch(
       <section class="reminders-panel reminders-boundary">
         <div class="reminders-boundary__layout">
           <div class="reminders-boundary__copy">
-            <p class="reminders-boundary__title">{{ t('日历边界', 'Calendar boundary') }}</p>
+            <p class="reminders-boundary__title">{{ t('和日历的分工', 'How this differs from Calendar') }}</p>
             <p class="reminders-boundary__description">
               {{
                 t(
-                  '日历保留已确认、有时间意义的日程；提醒事项保留仍需用户处理的线索。',
-                  'Calendar keeps confirmed timed schedule; Reminders keeps actionable cues.',
+                  '确认了时间的事去日历；还在等你处理的事留在这里。',
+                  'Confirmed items with a time go to Calendar; things still waiting for you stay here.',
                 )
               }}
             </p>

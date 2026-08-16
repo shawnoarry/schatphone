@@ -157,7 +157,7 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   const npcSection = page.getByTestId('contacts-section-npc')
 
   await expect(search).toBeVisible()
-  await expect(search).toHaveAttribute('placeholder', 'Search name, role ID, or world fields')
+  await expect(search).toHaveAttribute('placeholder', 'Search name, ID, or profile info')
   await expect(myProfile).toBeVisible()
   await expect(recent).toBeVisible()
   await expect(mainSection).toBeVisible()

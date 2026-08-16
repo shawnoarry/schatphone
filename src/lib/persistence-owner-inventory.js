@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 7
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 8
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -121,11 +121,25 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     durability: 'durable-legacy-fallback',
   },
   {
+    id: 'local:book-shelf-open-flag',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:book:shelf-open',
+    sourceFile: 'src/views/BookView.vue',
+    durability: 'durable-hint',
+  },
+  {
     id: 'local:home-layout-edit-flag',
     carrierType: 'localStorage',
     fullKey: 'schatphone:layout_edit_enabled',
     sourceFile: 'src/views/HomeView.vue',
     durability: 'durable-hint',
+  },
+  {
+    id: 'local:weather-cache',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:weather:cache',
+    sourceFile: 'src/stores/weather.js',
+    durability: 'durable-rebuildable-cache',
   },
   {
     id: 'session:chat-service-route-feedback',
@@ -213,11 +227,37 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:calendar',
-    schemaVersion: 1,
+    schemaVersion: 3,
+    legacySchemaVersions: [1, 2],
     labelZh: '日历存档',
     labelEn: 'Calendar state',
     sourceFile: 'src/stores/calendar.js',
     logicalOwners: ['Calendar'],
+  },
+  {
+    storageKey: 'store:schedule-orchestrator',
+    schemaVersion: 1,
+    labelZh: '时间编排记录',
+    labelEn: 'Schedule orchestration state',
+    sourceFile: 'src/stores/scheduleOrchestrator.js',
+    logicalOwners: ['Schedule Orchestrator'],
+  },
+  {
+    storageKey: 'store:agenda-journey',
+    schemaVersion: 1,
+    labelZh: '行程执行记录',
+    labelEn: 'Agenda Journey state',
+    sourceFile: 'src/stores/agendaJourney.js',
+    logicalOwners: ['Agenda Journey'],
+  },
+  {
+    storageKey: 'store:activity-session',
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
+    labelZh: '活动计时记录',
+    labelEn: 'Activity Session state',
+    sourceFile: 'src/stores/activitySession.js',
+    logicalOwners: ['Activity Session'],
   },
   {
     storageKey: 'store:reminders',
@@ -271,8 +311,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:simulation',
-    schemaVersion: 5,
-    legacySchemaVersions: [1, 2, 3, 4],
+    schemaVersion: 6,
+    legacySchemaVersions: [1, 2, 3, 4, 5],
     labelZh: '事件模拟',
     labelEn: 'Simulation events',
     sourceFile: 'src/stores/simulation.js',
@@ -367,6 +407,21 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupSectionId: 'system-user',
     stableIdRule: 'One current-user singleton per isolated client save.',
     referenceRule: 'Role projections refer to the current user without duplicating ownership.',
+  },
+  {
+    id: 'weather.forecast-cache',
+    logicalOwner: 'Weather',
+    dataClass: 'Normalized current, hourly, and seven-day forecasts for saved locations',
+    physicalCarrierIds: ['local:weather-cache'],
+    storageKeys: [],
+    durability: 'durable-rebuildable-cache',
+    growthClass: 'bounded-expiring-provider-cache',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Cache entries are keyed by the saved Weather location ID.',
+    referenceRule: 'Forecast data decorates Weather and Home but never becomes user-authored truth.',
+    exclusionReason: 'Forecasts expire quickly and can be fetched again from the configured provider.',
+    rebuildSource: 'Open-Meteo returns current forecast data after cache expiry or manual refresh.',
   },
   {
     id: 'music.library-and-provider-settings',
@@ -560,7 +615,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
   {
     id: 'calendar.events',
     logicalOwner: 'Calendar',
-    dataClass: 'Calendar events, itinerary links, and legacy reminder-cue compatibility',
+    dataClass:
+      'Confirmed Calendar events, time ranges, recurrence, reminder policy, stable Map place references, and legacy reminder-cue compatibility',
     physicalCarrierIds: layeredStoreCarriers,
     storageKeys: ['store:calendar'],
     durability: 'durable-authoritative-with-legacy-projection',
@@ -570,6 +626,53 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     stableIdRule: 'Calendar event and source-link IDs remain stable.',
     referenceRule:
       'Reminder cues are import compatibility only; Reminders owns canonical reminder truth.',
+  },
+  {
+    id: 'schedule-orchestrator.materialization-decisions',
+    logicalOwner: 'Schedule Orchestrator',
+    dataClass:
+      'Idempotent Calendar occurrence materialization decisions, stable Agenda Journey links, and deadline-evaluation request evidence',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:schedule-orchestrator'],
+    durability: 'durable-authoritative-coordination',
+    growthClass: 'bounded-event-growth',
+    backupRequirement: 'required',
+    backupSectionId: 'calendar',
+    stableIdRule:
+      'One deterministic orchestration ID per Calendar event ID and occurrence start timestamp.',
+    referenceRule:
+      'Records retain only source IDs, occurrence timing, fingerprints, and downstream stable links; Calendar and Agenda Journey remain truth owners.',
+  },
+  {
+    id: 'agenda-journey.execution-plans',
+    logicalOwner: 'Agenda Journey',
+    dataClass:
+      'Today and near-term execution plans, travel/activity steps, explicit completion state, and owner evidence references',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:agenda-journey'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-event-growth',
+    backupRequirement: 'required',
+    backupSectionId: 'calendar',
+    stableIdRule:
+      'Calendar-derived plans use deterministic occurrence IDs; manual plans and step IDs remain stable across restore.',
+    referenceRule:
+      'Calendar owns schedule facts and Map owns travel truth; Agenda Journey stores stable references and execution evidence without copying either owner record.',
+  },
+  {
+    id: 'activity-session.timing-records',
+    logicalOwner: 'Activity Session',
+    dataClass:
+      'Absolute activity timing, pause policy, deterministic checkpoints, owner-validated low-impact event resolutions, completion policy, and bounded Agenda Journey acknowledgement evidence',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:activity-session'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-event-growth',
+    backupRequirement: 'required',
+    backupSectionId: 'calendar',
+    stableIdRule: 'One deterministic Activity Session ID per stable Agenda Journey activity-step ID.',
+    referenceRule:
+      'Activity Session owns time only and validates Event Runtime requests only when they adjust its bounded timer; Agenda Journey validates completion evidence, while Map retains any linked travel clock and media owners retain their assets and playback truth.',
   },
   {
     id: 'reminders.reminder-records',
@@ -667,7 +770,8 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
   {
     id: 'event-runtime.simulation-state',
     logicalOwner: 'Event Runtime / World Hub',
-    dataClass: 'Simulation events, proposals, review state, and runtime clocks',
+    dataClass:
+      'Simulation events, Activity Session checkpoint records, proposals, review state, presentation policy, and runtime clocks',
     physicalCarrierIds: layeredStoreCarriers,
     storageKeys: ['store:simulation'],
     durability: 'durable-authoritative',

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-12T18:21:11.394Z",
+  "updatedAt": "2026-08-16T05:55:21.196Z",
   "assets": [
     {
       "batchId": "migration-2026-08-11",
@@ -4623,6 +4623,90 @@
       "verifiedAt": "2026-08-11T19:35:50.055Z"
     },
     {
+      "batchId": "map-place-media-pilot-20260815",
+      "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-forest-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-forest-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-forest-hero-v1.webp",
+      "bytes": 461012,
+      "sha256": "370551dbab81d2b6f9c0566ba5b5f9be2cbfe7face99dcc54affa94946a18621",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T05:53:15.046Z"
+    },
+    {
+      "batchId": "map-place-media-pilot-20260815",
+      "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-gyeongbokgung-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gyeongbokgung-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gyeongbokgung-hero-v1.webp",
+      "bytes": 277544,
+      "sha256": "c089f20156a36a07d19b97e93e6b3ae1d7de94de09e41aeb9d1c476f17abf645",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T05:53:13.456Z"
+    },
+    {
+      "batchId": "map-place-media-pilot-20260815",
+      "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-myeongdong-kyoja-main-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-myeongdong-kyoja-main-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-myeongdong-kyoja-main-hero-v1.webp",
+      "bytes": 279326,
+      "sha256": "06e64de8feb76cea09f50d7085de2140c042fddf2cba91e854ef8ed21bcd2578",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T05:53:14.535Z"
+    },
+    {
+      "batchId": "map-place-media-pilot-20260815",
+      "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-sillim-one-room-district-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sillim-one-room-district-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sillim-one-room-district-hero-v1.webp",
+      "bytes": 218206,
+      "sha256": "8f5277daf41a6a1f5164d3df16835bfe850b3d3f52c80577806cd3bae9d726c7",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T05:53:14.018Z"
+    },
+    {
+      "batchId": "map-place-media-pilot-20260815",
+      "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-sm-hq-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sm-hq-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sm-hq-hero-v1.webp",
+      "bytes": 214610,
+      "sha256": "dc86566f95d5c4a5e283b70cc6b82149c0fdd3af48cc7320cdb51ef4fd076a8a",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T05:53:14.999Z"
+    },
+    {
+      "batchId": "map-place-media-pilot-20260815",
+      "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-starfield-coex-mall-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-starfield-coex-mall-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-starfield-coex-mall-hero-v1.webp",
+      "bytes": 724282,
+      "sha256": "673325d09cb404e041b6a7db5e6789e71f3680842fb15ed23d4340f9f2b9ae53",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T05:53:15.076Z"
+    },
+    {
+      "batchId": "map-place-media-pilot-20260815",
+      "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-station-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-station-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-station-hero-v1.webp",
+      "bytes": 181962,
+      "sha256": "7ef6563c309e4f6fbacd9de713f58432a680ef1f5923be2eeca08edec849bb91",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T05:53:14.052Z"
+    },
+    {
       "batchId": "migration-2026-08-11",
       "path": "public/images/ui-assets/apps/map/seoul-street-map-v1.webp",
       "aliasPaths": [],
@@ -5331,6 +5415,66 @@
       "verifiedAt": "2026-08-12T14:59:14.030Z"
     },
     {
+      "batchId": "widgets-weather-terrarium-atmosphere-v3-20260815",
+      "path": "output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-atmosphere-alpha-v3.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-atmosphere-alpha-v3.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-atmosphere-alpha-v3.webp",
+      "bytes": 33192,
+      "sha256": "763fdd42847e390e82790ec361bfe1420ab1516bb1f410203b2d2b52fae66a72",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T06:34:03.190Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v1-20260815",
+      "path": "output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-atmosphere.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-atmosphere.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-atmosphere.webp",
+      "bytes": 25556,
+      "sha256": "ecf51db41cb39caeed72d68b48687bbed3fcea529c60f42e4a03b134399ce811",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T06:16:08.379Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v1-20260815",
+      "path": "output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-base.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-base.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-base.webp",
+      "bytes": 440646,
+      "sha256": "5a6d08b555486716dd169e33348729fb078804e49984cee7059885269caff731",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T06:16:08.951Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v1-20260815",
+      "path": "output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-clouds.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-clouds.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-clouds.webp",
+      "bytes": 191204,
+      "sha256": "7bdba8cffc5a04837a3796e79aefcd319f3d6a69ab0188983d0db7f05dca8efc",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T06:16:09.662Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v1-20260815",
+      "path": "output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-glass.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-glass.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/widgets/weather-terrarium/weather-terrarium-glass.webp",
+      "bytes": 298280,
+      "sha256": "eccc83db6bdb56bf5f147a35f81e8abc983c176b71e4058114a7b705c7bc7409",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T06:16:09.748Z"
+    },
+    {
       "batchId": "project-brief-2026-08-12",
       "path": "output/imagegen/project-brief/2026-08-12/schatphone-project-update-poster.webp",
       "aliasPaths": [],
@@ -5353,6 +5497,54 @@
       "sha256": "6d8e63fc8bbea3ecaba237ec3342eeb10a0c376160f6dfb6169375a5e4219362",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-11T20:14:05.779Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-atmosphere-v2-20260815",
+      "path": "output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-atmosphere-alpha-v2.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/widgets/weather-terrarium/weather-terrarium-atmosphere-alpha-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/widgets/weather-terrarium/weather-terrarium-atmosphere-alpha-v2.webp",
+      "bytes": 33150,
+      "sha256": "53042018d97ef0959f39de237086a77a83f7b11b1110ebc8d2da336f86da072c",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-15T06:32:27.851Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v2-20260816",
+      "path": "output/imagegen/widgets-weather-terrarium-v2/weather-terrarium-cloudy-scene.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/widgets/weather-terrarium/weather-terrarium-cloudy-scene.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/widgets/weather-terrarium/weather-terrarium-cloudy-scene.webp",
+      "bytes": 111138,
+      "sha256": "e9d1291e637b788ebd1fc840b57ce271c6741d41c0b5c5805aa05d465a16a55b",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-16T05:55:19.601Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v2-20260816",
+      "path": "output/imagegen/widgets-weather-terrarium-v2/weather-terrarium-night-scene.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/widgets/weather-terrarium/weather-terrarium-night-scene.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/widgets/weather-terrarium/weather-terrarium-night-scene.webp",
+      "bytes": 103820,
+      "sha256": "81bfb70b97c297b4cd29d7255418cea8fe725da3175d331420d83d8861ecba17",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-16T05:55:20.034Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v2-20260816",
+      "path": "output/imagegen/widgets-weather-terrarium-v2/weather-terrarium-rain-scene.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/widgets/weather-terrarium/weather-terrarium-rain-scene.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/widgets/weather-terrarium/weather-terrarium-rain-scene.webp",
+      "bytes": 140684,
+      "sha256": "cfea6bcf4f384ce2bd17a4976fef03b414acda6a996d9626bad3c5b3f1fbfbc3",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-16T05:55:20.038Z"
     },
     {
       "batchId": "migration-2026-08-11",
@@ -10497,6 +10689,18 @@
       "verifiedAt": "2026-08-12T18:21:01.372Z"
     },
     {
+      "batchId": "widgets-weather-terrarium-v1-20260815",
+      "path": "output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-layer-sheet.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-layer-sheet.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/output/imagegen/widgets-weather-terrarium-v1/weather-terrarium-layer-sheet.png",
+      "bytes": 1384169,
+      "sha256": "bebe128fd8370d4e9cc7e321cfb57e891f4005f59d5f7b22eb604e56489b891e",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-15T06:16:09.857Z"
+    },
+    {
       "batchId": "project-brief-2026-08-12",
       "path": "output/imagegen/project-brief/2026-08-12/schatphone-project-update-master.png",
       "aliasPaths": [],
@@ -10507,6 +10711,42 @@
       "sha256": "601ff571c00612a7ffb164a18d604831604ce46513d1e8bd9c37d5cfaeb4a5b8",
       "mimeType": "image/png",
       "verifiedAt": "2026-08-11T20:14:07.249Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v2-20260816",
+      "path": "output/imagegen/widgets-weather-terrarium-v2/weather-terrarium-cloudy-alpha.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/widgets/weather-terrarium-v2/weather-terrarium-cloudy-alpha.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/widgets/weather-terrarium-v2/weather-terrarium-cloudy-alpha.png",
+      "bytes": 1023392,
+      "sha256": "e37bc5240aa67f2334302acdcb84d7af81344c650b61ee64ca8259b5aa66b76c",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-16T05:55:21.182Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v2-20260816",
+      "path": "output/imagegen/widgets-weather-terrarium-v2/weather-terrarium-night-alpha.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/widgets/weather-terrarium-v2/weather-terrarium-night-alpha.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/widgets/weather-terrarium-v2/weather-terrarium-night-alpha.png",
+      "bytes": 678694,
+      "sha256": "2b8ecb5b87a2aea2c7357b77b170f8a6a207e1245061b0b861cfb825b21cc65f",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-16T05:55:20.733Z"
+    },
+    {
+      "batchId": "widgets-weather-terrarium-v2-20260816",
+      "path": "output/imagegen/widgets-weather-terrarium-v2/weather-terrarium-rain-alpha.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/widgets/weather-terrarium-v2/weather-terrarium-rain-alpha.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/widgets/weather-terrarium-v2/weather-terrarium-rain-alpha.png",
+      "bytes": 899335,
+      "sha256": "dee4c8597859c39dc72487dae07cccc8915be96a253b78a4c48a1a5d3f152b7c",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-16T05:55:20.383Z"
     }
   ]
 }

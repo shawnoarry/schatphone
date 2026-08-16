@@ -16,7 +16,7 @@ export const BUILT_IN_HOME_WIDGETS = Object.freeze([
     icon: 'fas fa-cloud-sun',
     preview: 'weather',
     family: 'spectrum',
-    interaction: 'toggle_weather',
+    interaction: 'toggle_weather_details',
     nameZh: '天气',
     nameEn: 'Weather',
   },

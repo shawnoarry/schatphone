@@ -1,10 +1,10 @@
 # Map Journey, Footprints, And Exploration Architecture
 
-Updated: 2026-08-10
+Updated: 2026-08-16
 
-Status: `APPROVED_DIRECTION / MJE-1_THROUGH_MJE-4_USER_ACCEPTED_INTEGRATED_LOCAL`
+Status: `APPROVED_DIRECTION / MJE-1_MJE-2_MJE-4_INTEGRATED / MJE-3_ADAPTER_RETAINED_PRODUCTION_TRIGGER_SUSPENDED`
 
-This contract defines how Map travel, transport choice, route familiarity, active exploration, and journey-triggered events fit together. In architecture and cross-module records, this domain is always `Map Journey`, distinct from the future `Agenda Journey / 行程` app defined in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`. `docs/roadmap/TODO_ROADMAP.md` remains the only live execution board. The stage identifiers below define acceptance boundaries; they do not authorize a later stage by themselves.
+This contract defines how Map travel, transport choice, route familiarity, active exploration, and journey-triggered events fit together. In architecture and cross-module records, this domain is always `Map Journey`, distinct from the `Agenda Journey / 行程` app defined in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`. `docs/roadmap/TODO_ROADMAP.md` remains the only live execution board. The stage identifiers below define acceptance boundaries; they do not authorize a later stage by themselves.
 
 ## 1. Product Decision
 
@@ -85,7 +85,7 @@ Journey planning and active exploration are focused execution flows. They collec
 
 ## 4. Map Journey Runtime Contract
 
-The Map Journey Runtime is a Map-owned domain Module, not the future Agenda Journey Home app and not an Event Runtime store. It owns canonical map-travel source records and validates every Map Journey transition. A future Agenda Journey step may request Map travel and retain a stable evidence reference, but it cannot write Map Journey state or make arrival prove completion of a non-travel activity.
+The Map Journey Runtime is a Map-owned domain Module, not the Agenda Journey Home app and not an Event Runtime store. It owns canonical map-travel source records and validates every Map Journey transition. An Agenda Journey travel step may request Map travel and retain a stable evidence reference, but it cannot write Map Journey state or make arrival prove completion of a non-travel activity.
 
 Target lifecycle:
 
@@ -114,9 +114,11 @@ The target record may eventually carry:
 
 MJE-1 implements only the minimum transport and compatibility fields needed by its acceptance criteria. MJE-1 through MJE-4 are user-accepted and integrated locally. MJE-2 implements only the versioned active-journey lifecycle, deterministic duration-based checkpoint plan, and Map-owned pause/resume data needed for its acceptance. MJE-3 adds only evaluated-checkpoint IDs, one pending-review reference, and cumulative event-delay seconds to journey truth. The persisted `activeInterruption` compatibility key now denotes a pending route-update review only and never authorizes an automatic pause. Journey schema V3 migrates V2 journeys previously blocked by an event back to active timing while retaining proposal lineage and remaining time. Event proposal copy, eligibility, provenance, and audit stay in Event Runtime; no event, leg, companion, destination-change, or broader outcome structure is prebuilt in Map. The existing optional shared-route relationship fact is selected only during arrived-journey acknowledgement; it records settlement context and is not active-journey companion or participant truth.
 
+Calendar departure-readiness V1 adds only an optional `sourceCalendarEventId` to active/history journey lineage. CJA-3 separately adds optional `sourceAgendaJourneyStepId` lineage to idle normalization, active/history records, start/reuse, arrival, cancellation, and restore. Map still creates and owns the journey after explicit user action, and repeated starts for the same Calendar event or Agenda Journey travel step reuse that journey. Neither field copies Calendar or Agenda Journey timing, title, notes, step state, or location records into Map.
+
 ## 5. Checkpoint-Driven Events
 
-Journey events are evaluated at explicit checkpoints, not on every animation tick. MJE-3 evaluates only the completed `en_route` and `near_arrival` checkpoints from MJE-2, and only while the Map view is mounted so a route update can become visibly pending. The primary active-journey card exposes that pending state without opening the detail drawer automatically or pausing progress. Trips that advance while Map is not active retain the ordinary no-event completion path. A simple duration/progress plan remains sufficient until a licensed static topology exists.
+Journey events may be evaluated only at explicit checkpoints, never on every animation tick. The retained MJE-3 compatibility adapter accepts only completed `en_route` and `near_arrival` checkpoints from MJE-2 while an explicitly approved caller has enabled evaluation. Production Map mounting currently keeps that evaluation disabled after product review rejected the generic route-obstruction presentation. Trips therefore follow the ordinary no-event path unless deterministic compatibility tests explicitly enable the adapter. A simple duration/progress plan remains sufficient until a licensed static topology exists.
 
 At a checkpoint, Map may submit a bounded source snapshot to Event Runtime containing only canonical facts needed for eligibility, such as:
 
@@ -137,11 +139,11 @@ Map owns the bounded presence facts supplied to Event Runtime: current world/map
 
 Entering a place creates an explicit checkpoint. Event Runtime may return no event, one invitation, or a bounded set of invitations. No event is a complete path. An invitation is a separate event surface with its own expansion action; it is not a second level of place management and does not make the place card the event record.
 
-A future Agenda Journey step may request Map travel and may carry an explicit arrival behavior such as arrival outside or validated automatic entry for an appointment inside a known place. Map still validates the exact active journey, destination, arrival evidence, and place session before changing presence. Arrival or entry can satisfy an Agenda Journey travel/presence requirement, but it cannot prove that a meeting, class, rehearsal, or other non-travel activity completed.
+An Agenda Journey travel step may request Map travel. CJA-3 implements arrival-outside behavior only: Map validates the exact active journey, stable source step, destination, and arrival evidence; Agenda Journey then validates that evidence before completing travel and unlocking activity. Validated automatic entry for an appointment inside a known place remains a later policy. Arrival or entry can satisfy only an Agenda Journey travel/presence requirement and cannot prove that a meeting, class, rehearsal, or other non-travel activity completed.
 
 ### Large-Map Event Card Direction
 
-The current MJE-3 route-update card remains the implemented baseline. The next cross-module event lane may add coordinate-anchored event cards to the existing Map UI without making Event a desktop app or making Map the event owner.
+The generic MJE-3 route-update card is not a production baseline. Its adapter/UI remain only as compatibility evidence behind an explicit test hook. The only current production Event Surface host is the EVE-2C place-session arrival-briefing flow. A later journey family must establish the affected actor, transport-specific capability, actionable response, and owner-native consequence before checkpoint presentation is re-enabled.
 
 Map owns:
 
@@ -214,7 +216,7 @@ Until that threshold is met, transport stays in Map Journey Planning and Map Set
 | Owner | Owns | Must not own |
 | --- | --- | --- |
 | Map / Map Journey Runtime | journey source record, phase, transport snapshot, checkpoints, arrival/cancellation, exploration and discovered places | Agenda Journey execution, event eligibility/cooldowns, confirmed schedules, relationship truth |
-| Future Agenda Journey | short-range activity plan, steps, completion/miss state, Map evidence references | Map Journey travel truth, Calendar history, event eligibility |
+| Agenda Journey | short-range activity plan, steps, completion/miss state, Map evidence references | Map Journey travel truth, Calendar history, event eligibility |
 | Event Runtime | eligibility, deterministic/random gate, cooldown/cap, proposal/review, provenance, event log, and source data for bounded surface projections | Map rendering, journey transitions, pins, routes, places |
 | Calendar | confirmed departure/arrival/follow-up schedule and push timing | active journey state or event eligibility |
 | Relationship Runtime | confirmed relationship facts, metrics and memory grouping | journey or event-source records |
@@ -245,15 +247,15 @@ Boundary: preserve `idle`, `traveling`, and `arrived` compatibility while adding
 
 ### MJE-3: First Journey Event Adapter
 
-Status: `USER_ACCEPTED / IMPLEMENTED_IN_CURRENT_TREE` (uncommitted; no integrated commit claimed).
+Status: `TECHNICAL_ADAPTER_RETAINED / PRODUCTION_TRIGGER_SUSPENDED_2026-08-15`.
 
-User-visible result: one low-impact, world-aware checkpoint event family can appear as a pending route update while the journey continues. The map-level journey card remains prominent, opens detail on demand, and makes clear that only accepting a bounded delay changes ETA. Uneventful completion remains covered.
+User-visible result: no generic checkpoint route event appears in production. Ordinary travel, transport-specific estimates, progress, ETA, and arrival remain available without an event. The prior pending-route-update surface is retained only for deterministic compatibility tests.
 
 Start gate: satisfied by the user's explicit MJE-3 authorization after accepting the MJE-2 behavior.
 
-Acceptance evidence: the user confirmed that the sample journey event appears during travel and does not pause the journey. Event copy/values and later transport, owned-vehicle, driving-ability, and other world-variable variants remain deferred to the separate project-event work.
+Product review: although the technical sample remained non-blocking, the generic obstruction did not identify who was affected, what a public-transit passenger versus walker or driver could actually do, or which schedule owner would receive the consequence. The production trigger is therefore suspended rather than cosmetically relabeled.
 
-Boundary: Event Runtime evaluates only completed `en_route` and `near_arrival` checkpoints while Map is mounted, using Map module permission, Surprise Mode, deterministic randomness, cooldown, daily cap, local world variants, persistent proposals, and audit logs. Map validates every reviewed result and accepts only no ETA change or a 120-second delay. Event eligibility never pauses the journey or opens the detail drawer automatically; a missing, stale, non-pending, or arrival-expired proposal can be cleared without changing journey truth. No generic popup system, Event Runtime tick integration, destination change, cancellation outcome, high-impact owner mutation, Agenda Journey integration, or active exploration is implemented.
+Boundary: the compatibility adapter may be enabled only by an explicitly reviewed caller or deterministic test. It still accepts only completed `en_route` and `near_arrival` checkpoints, keeps permission/random/cooldown/cap/proposal/audit truth in Event Runtime, and lets Map validate only no ETA change or the legacy 120-second delay. Production Map does not enable it. No generic popup system, Event Runtime tick integration, destination change, cancellation outcome, high-impact owner mutation, Agenda Journey event integration, or active exploration is implemented.
 
 ### MJE-4: Footprints Information Architecture
 
@@ -302,4 +304,4 @@ Treat these as bugs:
 
 ## 11. Validation Contract
 
-Each behavior stage requires focused unit coverage for normalization, transitions, persistence, and owner boundaries; full lint, unit, and production build gates; and targeted desktop plus simulated-mobile E2E for the visible Map flow. Event stages also require deterministic no-event, cooldown/cap, adapter failure, non-blocking pending review, legacy blocked-journey recovery, arrival dismissal, and audit-log coverage. EVE-2 additionally requires geographic plus fictional/custom anchor tests, stale/off-pack fallback, clustering/stacking, event-card text fit, layer coexistence, page-error checks, and zero horizontal overflow. Schema or dependency changes require the additional checks in `docs/process/AI_WORK_MODE.md`.
+Each behavior stage requires focused unit coverage for normalization, transitions, persistence, and owner boundaries; full lint, unit, and production build gates; and targeted desktop plus simulated-mobile E2E for the visible Map flow. The retained MJE-3 adapter keeps deterministic no-event, cooldown/cap, adapter failure, non-blocking review, legacy recovery, arrival dismissal, and audit-log coverage, while production-mount coverage must prove it stays disabled. Calendar departure readiness additionally requires current-origin recomputation, transport-mode differences, stable `locationRef`, unique `sourceCalendarEventId` journey lineage, return context, and zero horizontal overflow. EVE-2 requires geographic plus fictional/custom anchor tests, stale/off-pack fallback, clustering/stacking, event-card text fit, layer coexistence, page-error checks, and zero horizontal overflow. Schema or dependency changes require the additional checks in `docs/process/AI_WORK_MODE.md`.

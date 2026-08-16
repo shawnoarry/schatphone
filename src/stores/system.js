@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, reactive, ref, watch } from 'vue'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
+import { playUiCue } from '../lib/ui-sfx'
 import {
   createInitialSoftwareUpdateState,
   hasSoftwareUpdateCandidate,
@@ -25,6 +26,7 @@ import {
   setMiniAppEntryInstalled,
 } from '../lib/app-store-mini-app-placement'
 import {
+  AGENDA_JOURNEY_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
   BOOK_HOME_APP_ID,
@@ -34,8 +36,14 @@ import {
   MUSIC_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
+  WEATHER_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import { createDefaultMusicState, normalizeMusicState } from '../lib/music-contract'
+import {
+  createDefaultWeatherSettings,
+  normalizeWeatherSettings,
+  normalizeWeatherWidgetAction,
+} from '../lib/weather-contract'
 import {
   VALID_WIDGET_SIZES,
   sanitizeWidgetAppearanceCode,
@@ -145,6 +153,7 @@ const DEFAULT_WIDGET_PAGES = [
     'app_map',
     MUSIC_HOME_APP_ID,
     'app_calendar',
+    AGENDA_JOURNEY_HOME_APP_ID,
     REMINDERS_HOME_APP_ID,
     SHOPPING_HOME_APP_ID,
     FOOD_DELIVERY_HOME_APP_ID,
@@ -282,8 +291,10 @@ const CORE_HOME_TILE_IDS = [
   'app_widgets',
   'app_phone',
   'app_map',
+  WEATHER_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   'app_calendar',
+  AGENDA_JOURNEY_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
   'app_stock',
   'app_chat',
@@ -1493,6 +1504,7 @@ export const useSystemStore = defineStore('system', () => {
       wallpaper: AVAILABLE_THEMES[0].wallpaper,
       showStatusBar: true,
       hapticFeedbackEnabled: true,
+      soundEffectsEnabled: true,
       customCss: '',
       scopedCustomCss: normalizeScopedCustomCss(),
       appSkins: normalizeAppSkinSettings(),
@@ -1532,6 +1544,7 @@ export const useSystemStore = defineStore('system', () => {
     more: createDefaultMoreSettings(),
     aiAutomation: createDefaultAiAutomationSettings(),
     music: createDefaultMusicState(),
+    weather: createDefaultWeatherSettings(),
   })
 
   const user = reactive({
@@ -2065,6 +2078,7 @@ export const useSystemStore = defineStore('system', () => {
       typeof appearance.wallpaper === 'string' ? appearance.wallpaper : getThemeWallpaper(settings.appearance.currentTheme)
     settings.appearance.showStatusBar = appearance.showStatusBar !== false
     settings.appearance.hapticFeedbackEnabled = appearance.hapticFeedbackEnabled !== false
+    settings.appearance.soundEffectsEnabled = appearance.soundEffectsEnabled !== false
     settings.appearance.customCss = typeof appearance.customCss === 'string' ? appearance.customCss : ''
     settings.appearance.scopedCustomCss = normalizeScopedCustomCss(appearance.scopedCustomCss)
     settings.appearance.appSkins = normalizeAppSkinSettings(appearance.appSkins)
@@ -2123,6 +2137,34 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.builtInWidgetPreferences = current
     return true
   }
+
+  const setWeatherSettings = (updates = {}) => {
+    const current = normalizeWeatherSettings(settings.weather)
+    const patch = updates && typeof updates === 'object' && !Array.isArray(updates) ? updates : {}
+    const mappingPatch = patch.mapping && typeof patch.mapping === 'object' && !Array.isArray(patch.mapping)
+      ? patch.mapping
+      : null
+    settings.weather = normalizeWeatherSettings({
+      ...current,
+      ...patch,
+      savedLocations: Object.prototype.hasOwnProperty.call(patch, 'savedLocations')
+        ? patch.savedLocations
+        : current.savedLocations,
+      mapping: mappingPatch
+        ? {
+            ...current.mapping,
+            ...mappingPatch,
+            byWorld: Object.prototype.hasOwnProperty.call(mappingPatch, 'byWorld')
+              ? mappingPatch.byWorld
+              : current.mapping.byWorld,
+          }
+        : current.mapping,
+    })
+    return settings.weather
+  }
+
+  const setWeatherWidgetAction = (action) =>
+    setWeatherSettings({ widgetAction: normalizeWeatherWidgetAction(action) }).widgetAction
 
   const setCustomVar = (variableName, variableValue) => {
     if (!variableName) return
@@ -2574,6 +2616,13 @@ export const useSystemStore = defineStore('system', () => {
     if (!normalized) return ''
 
     notifications.value = [normalized, ...notifications.value].slice(0, MAX_NOTIFICATIONS)
+    if (
+      settings.appearance.soundEffectsEnabled !== false &&
+      typeof document !== 'undefined' &&
+      document.hidden === false
+    ) {
+      playUiCue('notification', { cooldownMs: 1500 })
+    }
     void dispatchNotificationToRealPush(normalized)
     return normalized.id
   }
@@ -4276,6 +4325,9 @@ export const useSystemStore = defineStore('system', () => {
       if (typeof appearance.hapticFeedbackEnabled === 'boolean') {
         settings.appearance.hapticFeedbackEnabled = appearance.hapticFeedbackEnabled
       }
+      if (typeof appearance.soundEffectsEnabled === 'boolean') {
+        settings.appearance.soundEffectsEnabled = appearance.soundEffectsEnabled
+      }
       if (typeof appearance.customCss === 'string') {
         settings.appearance.customCss = appearance.customCss
       }
@@ -4384,6 +4436,7 @@ export const useSystemStore = defineStore('system', () => {
     } else {
       settings.more = normalizeMoreSettings(settings.more)
     }
+    settings.weather = normalizeWeatherSettings(persisted.settings?.weather || settings.weather)
     normalizeCurrentHomeWidgetPages({ dynamicHomeTileIds: persistedWorldAppHomeTileIds })
 
     if (persisted.settings?.aiAutomation && typeof persisted.settings.aiAutomation === 'object') {
@@ -4641,6 +4694,7 @@ export const useSystemStore = defineStore('system', () => {
               ...normalizeMoreSettings(settings.more).featureToggles,
             },
           },
+          weather: normalizeWeatherSettings(settings.weather),
           aiAutomation: {
             ...settings.aiAutomation,
             modules: Object.fromEntries(
@@ -4809,6 +4863,8 @@ export const useSystemStore = defineStore('system', () => {
     importAppearancePack,
     setChatAppearance,
     setBuiltInWidgetPhotoAsset,
+    setWeatherSettings,
+    setWeatherWidgetAction,
     setCustomVar,
     removeCustomVar,
     recommendHomeDesktopRefresh,

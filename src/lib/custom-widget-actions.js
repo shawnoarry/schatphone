@@ -15,6 +15,7 @@ export const CUSTOM_WIDGET_ACTION_APP_TARGETS = Object.freeze([
   { id: 'app_camera', labelZh: '相机', labelEn: 'Camera' },
   { id: 'app_phone', labelZh: '电话', labelEn: 'Phone' },
   { id: 'app_map', labelZh: '地图', labelEn: 'Map' },
+  { id: 'app_weather', labelZh: '天气', labelEn: 'Weather' },
   { id: 'app_calendar', labelZh: '日历', labelEn: 'Calendar' },
   { id: 'app_reminders', labelZh: '提醒事项', labelEn: 'Reminders' },
   { id: 'app_stock', labelZh: '股票', labelEn: 'Stock' },

@@ -41,6 +41,7 @@ const MapView = () => import('../views/MapView.vue')
 const MapSettingsView = () => import('../views/MapSettingsView.vue')
 const MapSettingsPlacesView = () => import('../views/MapSettingsPlacesView.vue')
 const CalendarView = () => import('../views/CalendarView.vue')
+const AgendaJourneyView = () => import('../views/AgendaJourneyView.vue')
 const RemindersView = () => import('../views/RemindersView.vue')
 const WalletView = () => import('../views/WalletView.vue')
 const WorldBookView = () => import('../views/WorldBookView.vue')
@@ -54,6 +55,7 @@ const UserProfileView = () => import('../views/UserProfileView.vue')
 const FilesView = () => import('../views/FilesView.vue')
 const AppStoreView = () => import('../views/AppStoreView.vue')
 const MusicView = () => import('../views/MusicView.vue')
+const WeatherView = () => import('../views/WeatherView.vue')
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -94,6 +96,7 @@ const router = createRouter({
     { path: '/map/settings/places', component: MapSettingsPlacesView },
     { path: '/map/labs/kakao-compare', redirect: (to) => ({ path: '/map', query: to.query }) },
     { path: '/calendar', component: CalendarView },
+    { path: '/agenda-journey', component: AgendaJourneyView },
     { path: '/reminders', component: RemindersView },
     { path: '/wallet', component: WalletView },
     { path: '/worldbook', component: WorldBookView },
@@ -139,6 +142,7 @@ const router = createRouter({
     { path: '/files', component: FilesView },
     { path: '/app-store', component: AppStoreView },
     { path: '/music', component: MusicView },
+    { path: '/weather', component: WeatherView },
     { path: '/more', redirect: '/settings' },
   ],
 })

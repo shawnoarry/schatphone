@@ -248,16 +248,22 @@ const inspectIndexedDbDefinitionCoverage = (actual, expectedCarriers) => {
 }
 
 describe('canonical persistence-owner inventory', () => {
-  test('classifies every persisted store key found in source and keeps the 17-target audit order stable', () => {
+  test('classifies every persisted store key found in source and keeps the audit order stable', () => {
     const sourceStoreKeys = collectMatches(/["'`](store:[a-z0-9-]+)["'`]/g)
     const inventoriedStoreKeys = PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey).sort()
 
     expect(sourceStoreKeys).toEqual(inventoriedStoreKeys)
-    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(17)
+    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(20)
     expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toEqual(
       PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey),
     )
     expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toContain('store:book')
+    expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toContain(
+      'store:schedule-orchestrator',
+    )
+    expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toContain(
+      'store:activity-session',
+    )
 
     const mapTarget = PERSISTED_STATE_AUDIT_TARGETS.find((entry) => entry.key === 'store:map')
     expect(mapTarget.migrate({ version: 2, data: { marker: 'legacy-map' } })).toEqual({
@@ -486,6 +492,12 @@ describe('canonical persistence-owner inventory', () => {
       (entry) => entry.id === 'reminders.reminder-records',
     )
     const calendar = PERSISTENCE_OWNER_DATA_CLASSES.find((entry) => entry.id === 'calendar.events')
+    const agendaJourney = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'agenda-journey.execution-plans',
+    )
+    const activitySession = PERSISTENCE_OWNER_DATA_CLASSES.find(
+      (entry) => entry.id === 'activity-session.timing-records',
+    )
     const music = PERSISTENCE_OWNER_DATA_CLASSES.find(
       (entry) => entry.id === 'music.library-and-provider-settings',
     )
@@ -513,6 +525,18 @@ describe('canonical persistence-owner inventory', () => {
     expect(worldSuite.referenceRule).toContain('coordination evidence only')
     expect(reminders).toMatchObject({ logicalOwner: 'Reminders', storageKeys: ['store:reminders'] })
     expect(calendar.referenceRule).toContain('import compatibility only')
+    expect(agendaJourney).toMatchObject({
+      logicalOwner: 'Agenda Journey',
+      storageKeys: ['store:agenda-journey'],
+      backupSectionId: 'calendar',
+    })
+    expect(agendaJourney.referenceRule).toContain('Map owns travel truth')
+    expect(activitySession).toMatchObject({
+      logicalOwner: 'Activity Session',
+      storageKeys: ['store:activity-session'],
+      backupSectionId: 'calendar',
+    })
+    expect(activitySession.referenceRule).toContain('owns time only')
     expect(music).toMatchObject({ logicalOwner: 'Music', storageKeys: ['store:system'] })
     expect(musicCredentials).toMatchObject({
       logicalOwner: 'Music',

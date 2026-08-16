@@ -1,12 +1,14 @@
 # Simulation Event Engine
 
-Updated: 2026-08-14
+Updated: 2026-08-15
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
 - random surprises
 - condition-triggered events
 - scheduled simulation
+- player-context-conditioned incidents and longer-running world arcs
+- owner-native forum/social/news information propagation
 - module-owned side effects through adapters
 - owner-native cross-module causal chains
 - optional host-embedded event cards with location anchors where separately accepted
@@ -19,6 +21,8 @@ Persistence boundary:
 - full AI prompts, raw responses, uncommitted candidates, and transport payloads are not event truth; persist normalized proposals/outcomes and minimum provenance, with full capture limited to explicit temporary diagnostics;
 - when an approved event formally publishes a social/forum record, offline scene, long-form artifact, performance/episode record, or character-state history, the target owner persists the canonical committed content and Event Runtime keeps references/provenance rather than copying the body.
 - owner-safe lifecycle inspection may project a bounded reference such as `{ owner, kind, referenceId, mapPackId, active }`; this projection cannot include event text, proposal copy, participants, source snapshots, or outcome bodies. Active Event Instances and pending Map Journey proposals protect current Map use, while terminal records remain historical references.
+
+Player-context, dynamic-world, and information-propagation direction is defined in `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`. The bounded Player Context V1 foundation is implemented without adding a Store, route, Event Surface host, Community/Media Module, or EVE stage; dynamic world evolution and information propagation remain documentation-only.
 
 ## 1. Goal
 
@@ -82,17 +86,33 @@ Possible sources:
 - `ai_assisted`
 - `system`
 
+### Player Context Snapshot
+
+An identity-conditioned event reads a bounded, structured, revision-aware snapshot rather than raw Self Profile prose or a copied role record. Contacts Self Profile owns stable world-facing identity such as confirmed occupation, affiliation, public identity, and visibility-scoped profile values. Dynamic values stay with their natural owners or a future minimal Player State owner only when no existing owner is honest.
+
+`src/lib/simulation/player-context-projection.js` now implements the first pure V1 seam. It requires a monotonic Contacts profile revision, exact world/template/version evidence, `public` or `world_specific` manual values from the template-declared `occupation`, `affiliation`, and `public_identity` allowlist, and revision-matched body-free owner references. Its local K-pop evaluator proves only manager and public-idol family eligibility. The snapshot cannot create an incident, prove a user action, or mutate state; missing, stale, mismatched-world, conflicting, or unsupported references fail closed. The broader conceptual Interface and remaining gates are defined in `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
+
+### World Fact, Claim, And Publication
+
+World information propagation keeps three meanings separate:
+
+- a `World Fact` is canonical truth confirmed by its owner;
+- a `Claim` records that an account or person asserted something, with a truth relation such as confirmed, unverified, contradicted, or unknown;
+- a `Post` or news record is committed user-visible content owned by a future Community/Media Module.
+
+The existence of a claim or post may be a fact, but its content is not automatically true. Event Runtime may request publication and keep references/provenance; it does not persist the publication body or turn the post into canonical world truth.
+
 ### Map Journey Checkpoint Source
 
 Map journey/exploration events use a module-owned checkpoint as their trigger boundary. Map submits a bounded canonical snapshot only when the Map Journey Runtime reaches an explicit checkpoint. Event Runtime evaluates templates, deterministic/random gates, cooldowns, caps, permissions, and review policy, then returns a requested outcome through the Map adapter.
 
-The checkpoint source is not a timer tick. Event Runtime cannot mutate the journey, transport snapshot, place, pin, arrival, or cancellation record directly, and a journey must remain able to complete without an event. MJE-3 implements the first narrow adapter for completed `en_route` and `near_arrival` checkpoints while Map is mounted; a pending proposal never pauses Map Journey, Map validates the reviewed result, and only the bounded 120-second delay changes ETA. The staged source contract is defined in `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`.
+The checkpoint source is not a timer tick. Event Runtime cannot mutate the journey, transport snapshot, place, pin, arrival, or cancellation record directly, and a journey must remain able to complete without an event. MJE-3 retains the first narrow adapter for completed `en_route` and `near_arrival` checkpoints, but production Map mounting keeps evaluation disabled after product review rejected its generic route-obstruction presentation. Deterministic compatibility tests may explicitly enable it; a pending proposal still never pauses Map Journey, Map validates the reviewed result, and only the legacy bounded 120-second delay changes ETA. The staged source contract is defined in `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`.
 
 ### Agenda Journey And Activity Session Checkpoint Source
 
-Future Agenda Journey and Activity Session events use explicit execution checkpoints such as step start, a duration milestone, near completion, completion, or deadline reconciliation. The source owner submits only a bounded snapshot with stable Calendar, Agenda Journey step, Activity Session, and optional Map evidence references. Event Runtime evaluates eligibility, deterministic/random gates, cooldowns, caps, permissions, interaction policy, and provenance; Agenda Journey and every downstream domain owner validate the requested result before changing their own truth.
+Agenda Journey and Activity Session events use explicit execution checkpoints such as step start, a duration milestone, near completion, completion, or deadline reconciliation. The source owner submits only a bounded snapshot with stable Calendar, Agenda Journey step, Activity Session, and optional Map evidence references. Event Runtime evaluates eligibility, deterministic/random gates, cooldowns, caps, permissions, interaction policy, and provenance; Agenda Journey and every downstream domain owner validate the requested result before changing their own truth.
 
-An Activity Session's canonical progress comes from absolute timestamps rather than accumulated timer ticks. Event Runtime must not evaluate on each visual countdown tick, and elapsed time or Map arrival alone cannot prove completion of a rehearsal, broadcast, performance, class, meeting, or other non-travel activity. This collaboration is architecture-only under `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`; no Agenda Journey or Activity Session adapter is implemented.
+An Activity Session's canonical progress comes from absolute timestamps rather than accumulated timer ticks. Event Runtime must not evaluate on each visual countdown tick, and elapsed time or Map arrival alone cannot prove completion of a rehearsal, broadcast, performance, class, meeting, or other non-travel activity. CJA-5 implements only `activity_session.focus_reset.v1` at the processed midpoint checkpoint: Simulation owns durable `no_event | pending | resolved | failed` records and gate/provenance truth, while Activity Session validates an exact automatic/user choice and may apply only a 0/2-minute timer adjustment. A missing, disabled, stale, terminal, duplicate, or unresolved optional event never blocks the base activity.
 
 ### Event Engine
 
@@ -394,13 +414,20 @@ EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation
 - store/service accounts may push promotions or arrivals
 - logistics messaging does not become Shopping order ownership
 
+### Contacts Self Profile And Dynamic Player State
+
+- Contacts Self Profile owns stable, user-confirmed world-facing identity and visibility-scoped profile values
+- Event Runtime reads only bounded structured projections with exact profile/world/revision references
+- raw biography, occupation prose, or model classification cannot independently authorize an identity-conditioned event
+- volatile reputation, media heat, fatigue, occupational pressure, and similar values stay with their natural owners or a future minimal Player State Module; they do not become Contacts fields for convenience
+
 ### Map
 
 - owns location, route, distance, ETA, area context, canonical journey/exploration records, checkpoint transitions, and trip presentation
 - owns the current place relation, manual-versus-journey position provenance, explicit place-entry session, and validation of any future appointment-driven automatic entry
 - may provide context to Food Delivery, Shopping logistics, Assets, and Calendar
-- submits a bounded snapshot only at completed MJE-2 checkpoints while Map is mounted and validates the reviewed Event Runtime result
-- currently applies only no ETA change or a bounded 120-second delay; pending review remains non-blocking, and destination change plus event-driven cancellation remain unimplemented
+- may submit a bounded snapshot only at completed MJE-2 checkpoints while an explicitly reviewed caller has enabled evaluation, and validates the reviewed Event Runtime result
+- keeps the generic MJE-3 route-obstruction production trigger disabled; compatibility tests may still exercise only no ETA change or the legacy bounded 120-second delay, while destination change and event-driven cancellation remain unimplemented
 - keeps a valid no-event journey path; checkpoint eligibility never runs on every animation tick
 - owns large-map pin/card placement and overlap handling, but consumes event projections rather than copying Event Runtime proposal/log truth
 - treats place `Enter` as a Map transition that may submit a bounded checkpoint; Event Runtime may return zero, one, or a bounded set of invitations without owning the place session
@@ -413,6 +440,15 @@ EVE-1 implements this as a pure, non-persistent Interface in `src/lib/simulation
 - the first implementation should not write arbitrary free-form chat messages directly from the event engine
 - Chat can display read-only event cards that route users to the owning module
 - a registered service-account message may submit a bounded order-interaction request through a source Adapter, but Chat keeps the message while the commerce owner creates or reuses the canonical Service Case
+
+### Future World State And Community/Media
+
+- existing domain owners keep every world fact they can honestly own
+- a future World State And Arc Ledger is considered only for durable ownerless world facts or multi-occurrence arc state that cannot fit an existing owner; Event Runtime is not automatically that owner
+- a future Community/Media Module owns accounts, posts, replies, reposts, subscriptions, read state, and committed publication bodies
+- Runtime may coordinate an information-propagation request, but the target owner validates and publishes it
+- forum/social/news records are owner-native event-chain surfaces, not Event Surface projections or a second Event Instance store
+- future investigation/clue collection requires its own owner and stores references/deductions rather than treating posts as truth
 
 ### Calendar / Reminders
 
@@ -440,7 +476,7 @@ The foundation pilots are already landed:
 
 1. Food Delivery status/exception events proved deterministic eligibility, caps, adapters, source-owned order changes, and service surfaces.
 2. Chat social proposals proved low-risk auto-apply plus high-risk World Hub review before Chat-owned communication changes.
-3. Map Journey MJE-3 proved checkpoint-triggered, non-blocking proposals whose only current effect is a Map-validated bounded delay.
+3. Map Journey MJE-3 proved checkpoint-triggered, non-blocking proposals and exact owner validation, but its generic route-obstruction presentation is no longer production-enabled.
 
 The next event work is staged separately from richer event content:
 
@@ -484,6 +520,8 @@ AI should be optional and layered:
 - Phase 4: AI-assisted simulation is only explored after audit logs, user controls, and deterministic fallbacks exist
 
 AI should not be the first state mutator.
+
+For player-context and world-evolution events, AI may propose bounded incident, claim, or publication variants only after local structured eligibility. It cannot infer canonical occupation from prose, establish a user action or world fact, directly publish a post, change numeric state, or turn a claim into truth. The relevant owner must validate and commit the result.
 
 The accepted default K-pop realism V1 narrows runtime AI further:
 
@@ -557,7 +595,7 @@ Already landed:
 - `src/lib/simulation/event-engine.js` handles eligibility, random gates, cooldowns, daily caps, adapter execution, and event logging
 - `src/lib/simulation/event-tick-runner.js` can now run both the Food Delivery random pilot and the Chat runtime greeting pilot, with tick-level cooldown/daily caps
 - `src/lib/simulation/adapters/food-delivery-events.js` is the first real module adapter
-- `src/lib/simulation/adapters/map-journey-events.js` provides the first Map journey checkpoint adapter: local daily/sci-fi/apocalypse variants, permission and Surprise Mode checks, deterministic random selection, cooldown/cap, persistent proposal provenance, and a Map-owned validated return path
+- `src/lib/simulation/adapters/map-journey-events.js` retains the first Map journey checkpoint compatibility adapter: local daily/sci-fi/apocalypse variants, permission and Surprise Mode checks, deterministic random selection, cooldown/cap, persistent proposal provenance, and a Map-owned validated return path; production Map mounting does not enable it
 - `src/lib/simulation/event-contracts.js` and `event-registry.js` normalize the frozen EVE-2 Interfaces and register world-neutral templates plus compatible world/content packs with fail-closed schema, Adapter, choice, and outcome checks
 - `src/lib/simulation/kpop-realism-event-pack.js` and `event-instance-materializer.js` provide the first complete bilingual local fallback and deterministic durable instance materialization for semantic workplace categories/capabilities rather than Seoul place IDs
 - `src/lib/simulation/event-text-composer.js` accepts an injected provider/call adapter only after entry, sends bounded context, performs at most one request, validates normalized copy against frozen IDs and limits, caches success or terminal local fallback, and never regenerates on reopen
@@ -579,6 +617,8 @@ Recommended next step:
 - keep the landed EVE-1 projection contract free of persistence and effect authority, and keep the completed EVE-2C Map host bounded to the one frozen production-arrival-briefing archetype
 - preserve the EVE-3 Notebook as a read model over owner truth with durable event-scoped notes; every new adapter should remain explainable by source, module, status, trigger, reason, adapter boundary, target, variant, and stable lineage before stronger controls are added
 - preserve the landed EVE-4C user-initiated commerce contracts, owner-native Service Cases, generic Event Instance V2 progression, and legacy audit migration; do not restore the withdrawn host/card/manual trigger, add another generic Event Surface, silently rewrite Event Instance V1, or advance EVE-5 without separate acceptance
+- preserve the landed Player Context V1 seam as read-only eligibility evidence; do not turn its manager/public-idol gates into incident creation, random triggers, owner mutation, or a generic surface. Dynamic-state owners, fact/claim/publication Interfaces, persistence, and native product surfaces remain separately gated
+- keep the generic MJE-3 route-obstruction trigger production-disabled. Any replacement must begin from a reviewed transport/actor capability and owner-native consequence rather than relabeling the legacy two-minute result
 - preserve the relationship classification gate boundary: event/runtime rules read saved category/modifier classification fields, not free-text relationship labels or notes. Current low-impact relationship facts may store soft-reference gate audit metadata; named high-risk gate presets are available for future event packs, but should not enable new high-impact automation by themselves.
 - deepen generated Chat social-event sources through the landed proposal/review seam, not by direct Chat or Contacts writes; V1 runtime greetings are intentionally narrow, and richer scheduling or high-risk communication changes still need explicit review semantics
 

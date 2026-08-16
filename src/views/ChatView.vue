@@ -4,9 +4,11 @@ import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
+import { playUiCue } from '../lib/ui-sfx'
 import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
 import { useMapStore } from '../stores/map'
+import { useWeatherStore } from '../stores/weather'
 import { useGalleryStore } from '../stores/gallery'
 import { useWalletStore } from '../stores/wallet'
 import { useShoppingStore } from '../stores/shopping'
@@ -113,6 +115,7 @@ const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const bookStore = useBookStore()
 const mapStore = useMapStore()
+const weatherStore = useWeatherStore()
 const galleryStore = useGalleryStore()
 const walletStore = useWalletStore()
 const shoppingStore = useShoppingStore()
@@ -1258,7 +1261,10 @@ const {
   systemStore,
   bookStore,
   relationshipRuntimeStore,
+  weatherStore,
+  mapStore,
   user,
+  systemLanguage,
   responseStyleOptions: RESPONSE_STYLE_OPTIONS,
   defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
   getMessagePrimaryText: messagePrimaryText,
@@ -2683,6 +2689,9 @@ const sendTextMessage = () => {
   })
   if (!appended) return
 
+  if (systemStore.settings.appearance.soundEffectsEnabled !== false) {
+    playUiCue('send')
+  }
   inputMessage.value = ''
   chatStore.setConversationDraft(activeChat.value.id, '')
   closeUserActionPanel()

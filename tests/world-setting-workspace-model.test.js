@@ -63,7 +63,7 @@ describe('world setting workspace model', () => {
       state: 'empty',
     })
     expect(workspace.layers.find((layer) => layer.id === 'pack')).toMatchObject({
-      title: 'Capabilities and apps',
+      title: 'Apps & features',
       state: 'optional',
     })
   })

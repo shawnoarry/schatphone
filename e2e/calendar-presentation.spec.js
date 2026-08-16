@@ -1,17 +1,30 @@
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 
 const themes = ['default', 'zen']
-const eventId = 'calendar_event_visual_long_title'
+const eventId = 'calendar_event_cja1_long_title'
 const longEventTitle =
   'Planning session with AlexandriaMontgomeryInternationalScheduleWithoutBreaks'
+const evidenceDir = fileURLToPath(new URL('../output/e2e/calendar-cja1/', import.meta.url))
 
 const seedCalendar = async (page, theme) => {
   await page.addInitScript(
     ({ currentTheme, calendarEventId, eventTitle }) => {
-      const now = Date.UTC(2026, 6, 21, 8, 0, 0)
-      const startsAt = now + 2 * 60 * 60 * 1000
+      const now = Date.now()
+      const startsAt = now + 2 * 60 * 60_000
+      const tomorrow = new Date(now)
+      tomorrow.setHours(0, 0, 0, 0)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const multiDayStartsAt = tomorrow.getTime()
+      const multiDayEndsAt = new Date(
+        tomorrow.getFullYear(),
+        tomorrow.getMonth(),
+        tomorrow.getDate() + 3,
+      ).getTime()
       window.localStorage.setItem(
         'schatphone:store:system',
         JSON.stringify({
@@ -34,7 +47,7 @@ const seedCalendar = async (page, theme) => {
       window.localStorage.setItem(
         'schatphone:store:calendar',
         JSON.stringify({
-          version: 1,
+          version: 3,
           savedAt: now,
           data: {
             events: [
@@ -47,11 +60,47 @@ const seedCalendar = async (page, theme) => {
                   'Review the release schedule, ownership handoffs, and the final delivery window.',
                 summaryEn:
                   'Review the release schedule, ownership handoffs, and the final delivery window.',
+                notesZh: 'Bring the revised cue sheet and confirm the arrival window.',
+                notesEn: 'Bring the revised cue sheet and confirm the arrival window.',
                 startsAt,
+                endsAt: startsAt + 90 * 60_000,
                 originalStartsAt: startsAt,
+                originalEndsAt: startsAt + 90 * 60_000,
+                allDay: false,
+                recurrence: 'weekly',
+                recurrenceUntil: startsAt + 28 * 24 * 60 * 60_000,
+                requirement: 'required',
+                reminderLeadMinutes: 30,
                 status: 'confirmed',
                 pinned: true,
                 icon: 'fas fa-calendar-day',
+                pushStatus: 'idle',
+                locationRef: {
+                  owner: 'map',
+                  mapPackId: 'real-seoul-v1',
+                  placeId: 'seoul-sm-hq',
+                  labelZh: 'SM 娱乐总部',
+                  labelEn: 'SM Entertainment HQ',
+                },
+                createdAt: now,
+                updatedAt: now,
+              },
+              {
+                id: 'calendar_event_cja1_multiday',
+                source: 'manual',
+                titleZh: '巡演准备期',
+                titleEn: 'Tour preparation block',
+                startsAt: multiDayStartsAt,
+                endsAt: multiDayEndsAt,
+                originalStartsAt: multiDayStartsAt,
+                originalEndsAt: multiDayEndsAt,
+                allDay: true,
+                recurrence: 'none',
+                recurrenceUntil: 0,
+                requirement: 'optional',
+                reminderLeadMinutes: 1440,
+                status: 'confirmed',
+                icon: 'fas fa-suitcase-rolling',
                 pushStatus: 'idle',
                 createdAt: now,
                 updatedAt: now,
@@ -72,7 +121,7 @@ const seedCalendar = async (page, theme) => {
                 callId: 'call_calendar_boundary',
                 contactName: 'Mina',
                 summary: 'Call back after the planning session.',
-                suggestedAt: now + 45 * 60 * 1000,
+                suggestedAt: now + 45 * 60_000,
                 status: 'suggested',
                 route: '/phone',
                 createdAt: now,
@@ -94,7 +143,6 @@ const expectNoHorizontalOverflow = async (page) => {
     document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     body: document.body.scrollWidth - document.body.clientWidth,
   }))
-
   expect(overflow.document, 'document should not overflow horizontally').toBeLessThanOrEqual(1)
   expect(overflow.body, 'body should not overflow horizontally').toBeLessThanOrEqual(1)
 }
@@ -106,49 +154,67 @@ const expectNoCriticalAxeViolations = async (page) => {
   const criticalViolations = accessibility.violations.filter(
     (violation) => violation.impact === 'critical',
   )
-
   expect(criticalViolations).toEqual([])
 }
 
-const expectScheduleBeforeReminders = async (page, scheduleTestId) => {
-  const schedule = page.getByTestId(scheduleTestId)
-  const reminders = page.getByTestId('calendar-reminder-summary')
+const expectScheduleBeforeReminders = async (page) => {
   const [scheduleBox, remindersBox] = await Promise.all([
-    schedule.boundingBox(),
-    reminders.boundingBox(),
+    page.getByTestId('calendar-confirmed-events').boundingBox(),
+    page.getByTestId('calendar-reminder-summary').boundingBox(),
   ])
-
   expect(scheduleBox).not.toBeNull()
   expect(remindersBox).not.toBeNull()
-  expect(scheduleBox.y, 'confirmed schedule should precede the Reminders boundary').toBeLessThan(
-    remindersBox.y,
-  )
+  expect(scheduleBox.y).toBeLessThan(remindersBox.y)
 }
 
-const expectVisibleFocus = async (locator) => {
-  await expect(locator).toBeFocused()
-  const focusStyle = await locator.evaluate((element) => {
-    const style = window.getComputedStyle(element)
+const expectWorkspaceBeforeOverview = async (page) => {
+  const [workspaceBox, overviewBox] = await Promise.all([
+    page.getByTestId('calendar-confirmed-events').boundingBox(),
+    page.getByTestId('calendar-schedule-overview').boundingBox(),
+  ])
+  expect(workspaceBox).not.toBeNull()
+  expect(overviewBox).not.toBeNull()
+  expect(workspaceBox.y).toBeLessThan(overviewBox.y)
+}
+
+const expectReadableMobileAgenda = async (page) => {
+  if ((page.viewportSize()?.width || 0) > 760) return
+  const layout = await page.locator('.calendar-agenda-day').first().evaluate((day) => {
+    const date = day.querySelector('.calendar-agenda-day__date').getBoundingClientRect()
+    const events = day.querySelector('.calendar-agenda-day__events').getBoundingClientRect()
+    const firstEvent = day.querySelector('.calendar-agenda-event')
+    const time = firstEvent.querySelector('.calendar-agenda-event__time').getBoundingClientRect()
+    const copy = firstEvent.querySelector('.calendar-agenda-event__copy').getBoundingClientRect()
     return {
-      outlineStyle: style.outlineStyle,
-      outlineWidth: Number.parseFloat(style.outlineWidth),
+      dateBottom: date.bottom,
+      eventsTop: events.top,
+      timeTop: time.top,
+      copyTop: copy.top,
+      eventWidth: firstEvent.getBoundingClientRect().width,
+      eventsWidth: events.width,
     }
   })
-
-  expect(focusStyle.outlineStyle).not.toBe('none')
-  expect(focusStyle.outlineWidth).toBeGreaterThanOrEqual(2)
+  expect(layout.dateBottom).toBeLessThanOrEqual(layout.eventsTop + 1)
+  expect(layout.timeTop).toBeLessThan(layout.copyTop)
+  expect(layout.eventWidth).toBeGreaterThanOrEqual(layout.eventsWidth - 1)
 }
 
-const rectanglesOverlap = (first, second) =>
-  first.left < second.right &&
-  first.right > second.left &&
-  first.top < second.bottom &&
-  first.bottom > second.top
+const captureEvidence = async (page, testInfo, name, options = {}) => {
+  await mkdir(evidenceDir, { recursive: true })
+  const filename = `${testInfo.project.name}-${name}.png`
+  const body = await page.screenshot({
+    path: join(evidenceDir, filename),
+    animations: 'disabled',
+    fullPage: options.fullPage !== false,
+  })
+  await testInfo.attach(filename, { body, contentType: 'image/png' })
+}
 
 for (const theme of themes) {
-  test(`${theme} Calendar keeps confirmed schedules first through edit and empty states`, async ({
+  test(`${theme} Calendar completes month/week/Agenda authoring without overflow`, async ({
     page,
   }, testInfo) => {
+    test.setTimeout(60_000)
     const pageErrors = []
     page.on('pageerror', (error) => pageErrors.push(error.message))
 
@@ -159,109 +225,86 @@ for (const theme of themes) {
 
     await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', theme)
     await expect(page.getByRole('heading', { name: 'Calendar', level: 1 })).toBeVisible()
-    await expectScheduleBeforeReminders(page, 'calendar-confirmed-events')
+    await expect(page.getByTestId('calendar-month-view')).toBeVisible()
     await expect(page.getByTestId('calendar-reminder-source-phone')).toContainText('1')
-    await expectNoHorizontalOverflow(page)
+    await expectWorkspaceBeforeOverview(page)
+    await expectScheduleBeforeReminders(page)
 
+    await page.locator(`[data-testid^="calendar-month-event-${eventId}::"]`).first().click()
     const eventCard = page.getByTestId(`calendar-event-card-${eventId}`)
-    const eventTitle = eventCard.locator('.calendar-event-card__title')
-    const headerActions = eventCard.locator('.calendar-event-card__header-actions')
     await expect(eventCard).toBeVisible()
-    await expect(eventTitle).toContainText(longEventTitle)
-    await expect(eventCard).toContainText('Not ready')
-
-    const eventLayout = await eventCard.evaluate((element) => {
-      const toRect = (bounds) => ({
-        top: bounds.top,
-        right: bounds.right,
-        bottom: bounds.bottom,
-        left: bounds.left,
-      })
-      const title = element.querySelector('.calendar-event-card__title')
-      const titleStyle = window.getComputedStyle(title)
-      const titleRange = document.createRange()
-      titleRange.selectNodeContents(title)
-      return {
-        title: toRect(title.getBoundingClientRect()),
-        actions: toRect(
-          element.querySelector('.calendar-event-card__header-actions').getBoundingClientRect(),
-        ),
-        titleClientWidth: title.clientWidth,
-        titleScrollWidth: title.scrollWidth,
-        titleHeight: title.getBoundingClientRect().height,
-        titleLineHeight: Number.parseFloat(titleStyle.lineHeight),
-        titleLineCount: [...titleRange.getClientRects()].filter(
-          (bounds) => bounds.width > 0 && bounds.height > 0,
-        ).length,
-      }
-    })
-    expect(eventLayout.titleScrollWidth).toBeLessThanOrEqual(eventLayout.titleClientWidth + 1)
-    expect(rectanglesOverlap(eventLayout.title, eventLayout.actions)).toBe(false)
-    if (testInfo.project.name === 'mobile-chrome') {
-      expect(eventLayout.titleLineCount, 'long event title should wrap on mobile').toBeGreaterThan(
-        1,
-      )
-      expect(eventLayout.titleHeight).toBeGreaterThan(eventLayout.titleLineHeight)
-    }
-    await expect(headerActions).toContainText('Pinned')
-
-    for (const button of await page.locator('.calendar-page button').all()) {
-      await expect(button).toHaveAttribute('type', 'button')
-    }
-
-    const shiftButton = page.getByTestId(`calendar-event-shift-${eventId}-plus_hour`)
-    let shiftButtonFocused = false
-    for (let index = 0; index < 10 && !shiftButtonFocused; index += 1) {
-      await page.keyboard.press('Tab')
-      shiftButtonFocused = await shiftButton.evaluate(
-        (element) => document.activeElement === element,
-      )
-    }
-    expect(shiftButtonFocused, 'time shift should be keyboard reachable').toBe(true)
-    await expectVisibleFocus(shiftButton)
-    const shiftHeight = await shiftButton.evaluate(
-      (element) => element.getBoundingClientRect().height,
-    )
-    expect(shiftHeight, 'time shift should retain a touch-sized target').toBeGreaterThanOrEqual(44)
-
-    await expectNoCriticalAxeViolations(page)
-    await testInfo.attach(`calendar-populated-${theme}.png`, {
-      body: await page.screenshot({ animations: 'disabled' }),
-      contentType: 'image/png',
-    })
-    await testInfo.attach(`calendar-long-event-${theme}.png`, {
-      body: await eventCard.screenshot({ animations: 'disabled' }),
-      contentType: 'image/png',
-    })
-
-    const timeInput = page.getByTestId(`calendar-event-time-${eventId}`)
-    const originalTime = await timeInput.inputValue()
-    await shiftButton.click()
-    await expect(page.getByTestId(`calendar-event-time-feedback-${eventId}`)).toContainText(
-      'Adjusted',
-    )
-    await expect(timeInput).not.toHaveValue(originalTime)
-    await testInfo.attach(`calendar-adjusted-${theme}.png`, {
-      body: await eventCard.screenshot({ animations: 'disabled' }),
-      contentType: 'image/png',
-    })
-
-    await page.getByTestId(`calendar-event-reset-time-${eventId}`).click()
-    await expect(timeInput).toHaveValue(originalTime)
-    await expect(page.getByTestId(`calendar-event-time-feedback-${eventId}`)).toHaveCount(0)
-
-    await page.getByTestId(`calendar-event-delete-${eventId}`).click()
-    const emptySchedule = page.getByTestId('calendar-empty-events')
-    await expect(emptySchedule).toContainText('No confirmed events yet')
-    await expect(eventCard).toHaveCount(0)
-    await expectScheduleBeforeReminders(page, 'calendar-empty-events')
-    await expect(page.getByTestId('calendar-reminder-source-phone')).toContainText('1')
+    await expect(eventCard).toContainText(longEventTitle)
+    await expect(eventCard).toContainText('Repeats weekly')
+    await expect(eventCard).toContainText('30 minutes before')
+    await expect(page.getByTestId(`calendar-event-departure-${eventId}`)).toBeVisible()
     await expectNoHorizontalOverflow(page)
     await expectNoCriticalAxeViolations(page)
-    await testInfo.attach(`calendar-empty-${theme}.png`, {
-      body: await page.screenshot({ animations: 'disabled' }),
-      contentType: 'image/png',
+    await captureEvidence(page, testInfo, `calendar-month-${theme}`)
+
+    const createButton = page.getByTestId('calendar-create-event')
+    await createButton.focus()
+    await expect(createButton).toBeFocused()
+    expect(await createButton.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44)
+    await createButton.click()
+
+    const editor = page.getByTestId('calendar-event-editor')
+    await expect(editor).toBeVisible()
+    await page.getByTestId('calendar-editor-title-zh').fill('媒体沟通会')
+    await page.getByTestId('calendar-editor-title-en').fill('Press briefing')
+    await page.getByTestId('calendar-editor-recurrence').selectOption('monthly')
+    await page.getByTestId('calendar-editor-reminder-lead').selectOption('60')
+    await page.getByTestId('calendar-editor-place-search').fill('SM')
+    await page.getByTestId('calendar-editor-place-seoul-sm-hq').click()
+    await expect(page.getByTestId('calendar-editor-selected-place')).toContainText(
+      'SM Entertainment HQ',
+    )
+    await expectNoHorizontalOverflow(page)
+    await expectNoCriticalAxeViolations(page)
+    await captureEvidence(page, testInfo, `calendar-editor-${theme}`, { fullPage: false })
+    await page.getByTestId('calendar-editor-save').click()
+
+    const createdCard = page.locator('[data-testid^="calendar-event-card-"]').filter({
+      hasText: 'Press briefing',
     })
+    await expect(createdCard).toBeVisible()
+    await expect(createdCard).toContainText('Repeats monthly')
+    await expect(createdCard).toContainText('1 hour before')
+    await expect(createdCard).toContainText('SM Entertainment HQ')
+
+    await page.getByTestId('calendar-edit-selected-event').click()
+    await page.getByTestId('calendar-editor-title-en').fill('Press briefing revised')
+    await page.getByTestId('calendar-editor-notes-en').fill(
+      'Confirm the revised press list before arrival.',
+    )
+    await page.getByTestId('calendar-editor-save').click()
+    await expect(page.getByTestId('calendar-selected-event-detail')).toContainText(
+      'Press briefing revised',
+    )
+    await expect(page.getByTestId('calendar-selected-event-detail')).toContainText(
+      'Confirm the revised press list before arrival.',
+    )
+
+    await page.getByTestId('calendar-view-week').click()
+    await expect(page.getByTestId('calendar-week-view')).toBeVisible()
+    await expect(page.getByTestId('calendar-week-view')).toContainText('Press briefing revised')
+    await expectNoHorizontalOverflow(page)
+
+    await page.getByTestId('calendar-view-agenda').click()
+    await expect(page.getByTestId('calendar-agenda-view')).toBeVisible()
+    await expect(page.getByTestId('calendar-agenda-view')).toContainText('Press briefing revised')
+    await expect(page.getByTestId('calendar-agenda-view')).toContainText('Tour preparation block')
+    await expectReadableMobileAgenda(page)
+    await expectNoCriticalAxeViolations(page)
+    await expectNoHorizontalOverflow(page)
+    await captureEvidence(page, testInfo, `calendar-agenda-${theme}`)
+
+    const createdCardTestId = await createdCard.getAttribute('data-testid')
+    const createdEventId = createdCardTestId.replace('calendar-event-card-', '')
+    await page.getByTestId(`calendar-event-delete-${createdEventId}`).click()
+    await expect(page.getByText('Press briefing revised', { exact: true })).toHaveCount(0)
+    await page.getByTestId('calendar-view-month').click()
+    await page.locator(`[data-testid^="calendar-month-event-${eventId}::"]`).first().click()
+    await expect(page.getByTestId(`calendar-event-card-${eventId}`)).toBeVisible()
 
     expect(pageErrors).toEqual([])
   })

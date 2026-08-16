@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-08-13
+Updated: 2026-08-15
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -77,6 +77,8 @@ What is already landed:
 59. Relationship Runtime now exposes `projectMemoryConsolidationPressureForTarget()` over the complete memory-group set for one target. The shared pure Module reports stable capacity reasons and existing-group candidates for dense evidence or long summaries, preserves pinned state and original source references, counts archived groups without re-nominating them, and leaves Store backup state byte-for-byte unchanged. This is a read-only pressure check, not automatic summarization, archival, deletion, candidate persistence, or an AI call. Similar text under different `memoryKey` values remains separate. Future world chronology and role-to-role knowledge require their own Owners and data even if they reuse the same projection Module.
 60. Contacts now presents that projection as a compact user-facing memory-care card above the existing memory filters. It uses only `状态稳定 / 记忆开始变多 / 建议查看`, never exposes technical thresholds, and states that nothing changes automatically. Suggested rows are drawn from the complete role-memory set even when a source filter or the 12-item display cap hides them from the ordinary list; opening one reuses the existing memory detail and source audit. The card performs no AI call and does not summarize, rewrite, archive, delete, or persist candidates.
 61. Contacts detail now uses a dedicated role-page hierarchy. The list no longer preselects or appends a role detail; selecting a person opens a route-addressable role overview, and Relationship, World fields, Memories, Character details, Linked activity, and Manage open as mutually exclusive focused sections. Each section starts at the top of the detail viewport, names the selected person and current section, and returns explicitly to the role card. The same flow is constrained to a readable centered width on wide screens and remains overflow-free at 390px. This presentation change does not alter profile, Chat binding, relationship-runtime, memory, source-cleanup, or destructive-action ownership.
+62. The Player Context direction keeps Self Profile as the owner of stable structured, visibility-scoped user identity while volatile player/world state, event decisions, owner facts, Community/Media posts, and investigation clues remain outside Contacts. Read `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
+63. Contacts role profiles now carry a monotonic persisted `revision`; legacy records normalize to revision `1`, and every profile-owned write seam increments it. Event Runtime's pure Player Context V1 seam consumes exact Self Profile/world/template revision evidence and only manual `public` / matching-world `world_specific` values from the K-pop `occupation`, `affiliation`, and `public_identity` allowlist. Contacts does not judge manager/public-idol eligibility and exposes no biography, relationship prose, hidden values, event-attached values, or copied owner bodies through this Interface.
 
 Still incomplete:
 
@@ -85,6 +87,7 @@ Still incomplete:
 3. Contacts template adaptation is functional but the before/after preservation review can become a clearer visual diff;
 4. high-impact relationship automation remains deferred;
 5. the proposed K-pop role-template expansion is still part of roadmap 4.7 `DECISION`, not approved Contacts work.
+6. Player Context remains limited to the landed K-pop V1 read-only identity projection; no dynamic Player State owner, identity-conditioned event recipe, automatic incident, or social/news surface is implemented.
 
 ## 2. Recommended Next Slice
 
@@ -129,6 +132,8 @@ The older cross-device plans remain implementation history. They are not current
 7. Do not let Contacts, Chat, or raw relationship premise prose become the event-decision owner.
 8. Do not let Contacts apply role-initiated friend/block/refusal outcomes directly; generated social events must use the landed Chat social-event seam plus event-runtime audit.
 9. Do not remove a role receiving account during relationship reset, and do not leave its disclosed Wallet payee reference behind after formal role deletion.
+10. Do not store volatile reputation, media heat, fatigue, occupational pressure, world-arc state, or publication records in Self Profile for event convenience.
+11. Do not let free-text biography, occupation prose, or model classification act as canonical event eligibility when a structured owner field is required.
 
 ## 4. Validation
 
@@ -144,6 +149,7 @@ The older cross-device plans remain implementation history. They are not current
 - `npm.cmd test -- tests/contacts-relationship-classification-view.test.js tests/contacts-profile-template-view.test.js tests/contacts-detail-danger-flows.test.js`: pass on 2026-05-30 for relationship classification Round 3 Contacts UI.
 - `npm.cmd test -- tests/relationship-event-gating.test.js tests/relationship-fact-adapters.test.js tests/relationship-runtime-store.test.js tests/control-center-view.test.js`: pass on 2026-05-30 for relationship classification Round 4 event/runtime gating.
 - `npm.cmd run test -- tests/worldbook-profile-template-view.test.js tests/contacts-profile-template-view.test.js tests/worldbook-functional-ia.test.js`: pass on 2026-06-02 for the WorldBook Profile Templates -> Contacts handoff.
+- `npm.cmd run test -- tests/player-context-projection.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/simulation-condition-evaluator.test.js`: pass on 2026-08-15 for Contacts profile revision plus Player Context V1; 4 files / 20 tests. The bounded two-worker full suite passes 265 files / 1946 tests; lint, production build, governance at 2 files / 14 tests, and `git diff --check` pass. No E2E is required because no route or visible UI changed.
 - `npm.cmd run test -- tests/contacts-profile-template-view.test.js tests/contacts-profile-entities-store.test.js tests/profile-template-schema.test.js tests/worldbook-profile-templates-store.test.js`: pass on 2026-06-02 for Contacts World profile fields authoring V1.
 - `npm.cmd run lint`: pass on 2026-06-02 after the Contacts phone-like entry refactor.
 - `npm.cmd run test`: pass
@@ -239,3 +245,4 @@ At the end of a meaningful round, check and update:
 6. `IMPLEMENTATION_WORKSTREAMS.md` when the next recommended slice changed
 7. `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` when runtime meaning changed
 8. `docs/architecture/ROLE_BINDING_CONTRACT.md` when field semantics or binding meaning changed
+9. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when Self Profile eligibility, dynamic player-state ownership, or social/news world-participation meaning changes

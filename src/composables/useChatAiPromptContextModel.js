@@ -10,6 +10,7 @@ import {
 } from '../lib/chat-context-budget'
 import { buildMemoryRecallQuery } from '../lib/memory-recall'
 import { buildRoleIdentityProjection } from '../lib/role-identity-projection'
+import { buildWeatherWorldProjection } from '../lib/weather-world-projection'
 import {
   estimateChatMessagesTokens,
   estimateChatRequestTokens,
@@ -211,7 +212,10 @@ export const useChatAiPromptContextModel = ({
   systemStore,
   bookStore,
   relationshipRuntimeStore,
+  weatherStore,
+  mapStore,
   user,
+  systemLanguage,
   responseStyleOptions,
   defaultThreadAiPrefs = DEFAULT_CHAT_THREAD_AI_PREFS,
   maxAssistantQuotePreviewChars = CHAT_AI_PROMPT_CONTEXT_LIMITS.quotePreviewChars,
@@ -364,6 +368,22 @@ export const useChatAiPromptContextModel = ({
   const buildWorldKernelPromptBlock = (contact, options = {}) =>
     resolveWorldKernelProjection(contact, options).promptText
 
+  const buildWeatherPromptBlock = () => {
+    const worldContext = resolveWorldContextForConsumer({
+      systemStore,
+      chatStore,
+      bookStore,
+      consumer: 'chat',
+    })
+    return buildWeatherWorldProjection({
+      weatherSettings: systemStore?.settings?.weather,
+      worldId: worldContext?.identity?.worldId,
+      worldLocationName: mapStore?.currentLocation?.detail || mapStore?.currentLocation?.label || '',
+      forecast: valueOf(weatherStore?.activeForecast),
+      language: valueOf(systemLanguage) || systemStore?.settings?.system?.language || 'en',
+    }).promptText
+  }
+
   const buildPromptContext = (contact, aiPrefs, options = {}) => {
     const contactKind = contact.kind || 'role'
     const typeLabel =
@@ -445,6 +465,7 @@ export const useChatAiPromptContextModel = ({
     const truthInstruction = buildTruthPromptBlock(contact)
     const relationshipRuntime = buildRelationshipRuntimeProjection(contact, options)
     const relationshipRuntimeInstruction = relationshipRuntime.promptText
+    const weatherInstruction = buildWeatherPromptBlock()
     const roleIdentity = buildRoleIdentityPromptBlocks(contact, {
       profileTemplates: worldKernel.profileTemplates,
       recalledMemories: relationshipRuntime.recalledMemories,
@@ -516,6 +537,7 @@ Target reply count: ${targetReplyCount}
 ${proactiveInstruction}
 ${truthInstruction}
 ${relationshipRuntimeInstruction}
+${weatherInstruction}
 ${roleIdentity.dynamicText}
 ${imageReferenceInstruction}
 
@@ -699,6 +721,7 @@ Current response rules:
     buildRoleIdentityPromptBlocks,
     buildRoleContinuityPromptBlocks,
     buildWorldKernelPromptBlock,
+    buildWeatherPromptBlock,
     clampContextTurns,
     clampReplyCount,
     estimateNextAiRequest,

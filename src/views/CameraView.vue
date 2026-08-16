@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
 import { useGalleryStore } from '../stores/gallery'
+import { useChatStore } from '../stores/chat'
 import { useImageGenerationStore } from '../stores/imageGeneration'
 import {
   IMAGE_ASPECT_RATIOS,
@@ -16,6 +17,7 @@ const route = useRoute()
 const { t } = useI18n()
 const galleryStore = useGalleryStore()
 const imageStore = useImageGenerationStore()
+const chatStore = useChatStore()
 
 const previewScope = 'camera-reference-picker'
 const prompt = ref('')
@@ -26,6 +28,7 @@ const referencePreviewMap = ref({})
 const selectedCandidateId = ref('')
 const busy = ref(false)
 const feedback = ref({ tone: '', text: '' })
+const keepTagSuggestion = ref(null)
 
 const modes = computed(() => [
   { id: 'create', label: t('创作', 'Create'), icon: 'fas fa-wand-magic-sparkles' },
@@ -195,7 +198,36 @@ const keepCurrentCandidate = async () => {
     return
   }
   imageStore.markCandidateKept(candidate.id, galleryAssetId)
+  const suggestedPersonIds = [
+    ...new Set(
+      selectedReferences.value.flatMap((asset) =>
+        Array.isArray(asset.personIds) ? asset.personIds : [],
+      ),
+    ),
+  ]
+  if (suggestedPersonIds.length > 0) {
+    const names = suggestedPersonIds
+      .map((personId) =>
+        chatStore.roleProfiles.find((profile) => String(profile.id) === String(personId))?.name || '',
+      )
+      .filter(Boolean)
+    keepTagSuggestion.value = { assetId: galleryAssetId, personIds: suggestedPersonIds, names }
+  } else {
+    keepTagSuggestion.value = null
+  }
   setFeedback('success', t('已保留到相册，不会自动成为人物参考图。', 'Kept in Gallery without making it a person reference.'))
+}
+
+const applyKeepTagSuggestion = () => {
+  const suggestion = keepTagSuggestion.value
+  if (!suggestion) return
+  galleryStore.setAssetPersons(suggestion.assetId, suggestion.personIds)
+  keepTagSuggestion.value = null
+  setFeedback('success', t('已标记到人物相簿。', 'Tagged to people albums.'))
+}
+
+const dismissKeepTagSuggestion = () => {
+  keepTagSuggestion.value = null
 }
 
 const downloadCurrentCandidate = async () => {
@@ -390,6 +422,25 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScope))
       <p v-if="feedback.text" class="camera-feedback" :class="`is-${feedback.tone}`" role="status">
         {{ feedback.text }}
       </p>
+
+      <div v-if="keepTagSuggestion" class="camera-tag-suggestion" data-testid="camera-tag-suggestion">
+        <p>
+          {{
+            t(
+              `参考图关联了角色${keepTagSuggestion.names.length ? `（${keepTagSuggestion.names.join('、')}）` : ''}，要把这张照片标记到他们的人物相簿吗？`,
+              `References are linked to role(s)${keepTagSuggestion.names.length ? ` (${keepTagSuggestion.names.join(', ')})` : ''}. Tag this photo to their people albums?`,
+            )
+          }}
+        </p>
+        <div>
+          <button type="button" data-testid="camera-tag-suggestion-apply" @click="applyKeepTagSuggestion">
+            {{ t('标记', 'Tag') }}
+          </button>
+          <button type="button" data-testid="camera-tag-suggestion-dismiss" @click="dismissKeepTagSuggestion">
+            {{ t('忽略', 'Dismiss') }}
+          </button>
+        </div>
+      </div>
     </section>
 
     <transition name="camera-sheet">
@@ -834,6 +885,46 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScope))
 .camera-feedback.is-error { color: #ff7068; }
 .camera-feedback.is-warning { color: #ffd35a; }
 .camera-feedback.is-success { color: #64dc78; }
+
+.camera-tag-suggestion {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 211, 90, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 211, 90, 0.08);
+}
+
+.camera-tag-suggestion p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.camera-tag-suggestion div {
+  display: flex;
+  gap: 8px;
+}
+
+.camera-tag-suggestion button {
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #161513;
+  background: #ffd35a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.camera-tag-suggestion button + button {
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.12);
+}
 
 .camera-reference-sheet {
   position: absolute;

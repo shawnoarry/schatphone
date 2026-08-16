@@ -175,3 +175,26 @@ describe('appearance pack schema', () => {
     })
   })
 })
+
+describe('appearance pack sound effects field', () => {
+  test('exports and merges soundEffectsEnabled with other feedback fields', () => {
+    const pack = buildAppearancePack({
+      hapticFeedbackEnabled: false,
+      soundEffectsEnabled: false,
+    })
+    expect(pack.appearance.soundEffectsEnabled).toBe(false)
+    expect(pack.appearance.hapticFeedbackEnabled).toBe(false)
+
+    const merged = mergeAppearancePackIntoAppearance(
+      { soundEffectsEnabled: true, hapticFeedbackEnabled: true },
+      pack,
+    )
+    expect(merged.ok).toBe(true)
+    expect(merged.appearance.soundEffectsEnabled).toBe(false)
+  })
+
+  test('normalizes missing soundEffectsEnabled to enabled', () => {
+    const pack = buildAppearancePack({})
+    expect(pack.appearance.soundEffectsEnabled).toBe(true)
+  })
+})

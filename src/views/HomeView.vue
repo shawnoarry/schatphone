@@ -1,17 +1,19 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useGalleryStore } from '../stores/gallery'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useMusicStore } from '../stores/music'
+import { useWeatherStore } from '../stores/weather'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useAppIconImagePreviews } from '../composables/useAppIconImagePreviews'
 import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import BuiltInWidgetVisual from '../components/widgets/BuiltInWidgetVisual.vue'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
+import { playUiCue } from '../lib/ui-sfx'
 import {
   HOME_LAYOUT_TEMPLATES,
   assignHomeLayoutSlotPlacements,
@@ -34,6 +36,7 @@ import {
   buildShoppingFolderEntries,
 } from '../lib/home-folder-mini-app-entries'
 import {
+  AGENDA_JOURNEY_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
   BOOK_HOME_APP_ID,
@@ -43,6 +46,7 @@ import {
   FOOD_DELIVERY_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
+  WEATHER_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import {
   buildHomeSourceQuery,
@@ -63,6 +67,11 @@ import {
   HOME_WIDGET_SIZE_CLASS_MAP,
 } from '../lib/home-widgets'
 import { buildCustomWidgetSrcDoc } from '../lib/custom-widget-preview'
+import {
+  WEATHER_WIDGET_ACTION_EXPAND,
+  WEATHER_WIDGET_ACTION_NONE,
+  WEATHER_WIDGET_ACTION_OPEN,
+} from '../lib/weather-contract'
 
 const props = defineProps({
   currentTime: {
@@ -81,10 +90,13 @@ const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const musicStore = useMusicStore()
+const weatherStore = useWeatherStore()
 const { systemLanguage, languageBase, t } = useI18n()
 const { confirmDialog } = useDialog()
 
 const { settings, user, availableThemes } = storeToRefs(systemStore)
+const { activeForecast: homeWeatherForecastData, displayLocationName: homeWeatherDisplayLocation } =
+  storeToRefs(weatherStore)
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
 const homeMusicTrack = computed(() => musicStore.currentTrack || musicStore.featuredTrack)
@@ -161,7 +173,7 @@ const widgetPhotoPickerIndex = ref(-1)
 const widgetPhotoPickerPanelRef = ref(null)
 const widgetPhotoPickerPreviewUrls = ref({})
 const memoryBoardPhotoUrls = ref(['', '', ''])
-const widgetWeatherMode = ref('sun')
+const widgetWeatherExpanded = ref(false)
 const widgetMoodIndex = ref(0)
 const widgetSelectedDayIndex = ref(3)
 const widgetSceneMode = ref('day')
@@ -251,8 +263,10 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_widgets') return t('组件', 'Widgets')
   if (tileId === 'app_phone') return t('电话', 'Phone')
   if (tileId === 'app_map') return t('地图', 'Map')
+  if (tileId === WEATHER_HOME_APP_ID) return t('天气', 'Weather')
   if (tileId === MUSIC_HOME_APP_ID) return t('音乐', 'Music')
   if (tileId === 'app_calendar') return t('日历', 'Calendar')
+  if (tileId === AGENDA_JOURNEY_HOME_APP_ID) return t('行程', 'Agenda Journey')
   if (tileId === 'app_reminders') return t('提醒事项', 'Reminders')
   if (tileId === 'app_stock') return t('股票', 'Stock')
   if (tileId === 'app_chat') return t('聊天', 'Chat')
@@ -369,6 +383,35 @@ const homeReturnPageForCurrentView = computed(() =>
   currentPage.value < DEFAULT_HOME_RETURN_PAGE ? DEFAULT_HOME_RETURN_PAGE : currentPage.value,
 )
 const today = computed(() => new Date())
+const fallbackHomeWeatherIsNight = computed(() => {
+  const clockMatch = String(props.currentTime || '').match(/(\d{1,2})/)
+  const parsedHour = Number(clockMatch?.[1])
+  const hour = Number.isInteger(parsedHour) && parsedHour >= 0 && parsedHour <= 23
+    ? parsedHour
+    : new Date().getHours()
+  return hour < 6 || hour >= 19
+})
+const homeWeatherCurrent = computed(() => homeWeatherForecastData.value?.current || null)
+const homeWeatherLocation = computed(() => homeWeatherDisplayLocation.value)
+const homeWeatherCondition = computed(() => {
+  const condition = homeWeatherCurrent.value?.condition
+  if (!condition) return t('晴朗', 'Clear')
+  return languageBase.value === 'zh' ? condition.labelZh : condition.labelEn
+})
+const homeWeatherTemperature = computed(() => homeWeatherCurrent.value?.temperature ?? 24)
+const homeWeatherState = computed(() => homeWeatherCurrent.value?.visualState || 'auto')
+const homeWeatherIsNight = computed(() =>
+  homeWeatherCurrent.value ? homeWeatherCurrent.value.isDay === false : fallbackHomeWeatherIsNight.value,
+)
+const homeWeatherForecast = computed(() => {
+  const hourly = homeWeatherForecastData.value?.hourly || []
+  return hourly.slice(0, 3).map((item, index) => {
+    if (index === 0) return t(`现在 ${item.temperature}°`, `Now ${item.temperature}°`)
+    return languageBase.value === 'zh'
+      ? `+${index}小时 ${item.temperature}°`
+      : `+${index}h ${item.temperature}°`
+  })
+})
 const memoryBoardPhotoAssetIds = computed(() => {
   const ids = settings.value.appearance.builtInWidgetPreferences?.memory_board?.photoAssetIds
   return Array.from({ length: 3 }, (_, index) => (typeof ids?.[index] === 'string' ? ids[index] : ''))
@@ -672,7 +715,7 @@ const selectHomeLayoutTemplate = (templateId) => {
   closeHomeContentLibrary()
   systemStore.setHomeLayoutTemplate(homeReturnPageForCurrentView.value, templateId)
   templatePickerOpen.value = false
-  triggerLayoutToast(t('布局已更新', 'Layout updated'))
+  triggerLayoutToast(t('布局已更新', 'Layout updated'), 'success')
   maybeVibrate(10)
   systemStore.saveNow()
 }
@@ -892,7 +935,7 @@ const placeSelectedLibraryCandidateInSlot = (pageIndex, slot) => {
   if (!layoutEditMode.value || !slot || !libraryPlacementTileId.value) return
   const tileId = libraryPlacementTileId.value
   if (!canPlaceLibraryCandidateInSlot(slot)) {
-    triggerLayoutToast(t('尺寸不适合此槽位', 'Item does not fit this slot'))
+    triggerLayoutToast(t('尺寸不适合此槽位', 'Item does not fit this slot'), 'warning')
     maybeVibrate(6)
     return
   }
@@ -901,7 +944,7 @@ const placeSelectedLibraryCandidateInSlot = (pageIndex, slot) => {
   closeHomeContentLibrary()
   selectedTileId.value = tileId
   triggerDroppedTileFeedback(tileId)
-  triggerLayoutToast(t('已放入槽位', 'Added to slot'))
+  triggerLayoutToast(t('已放入槽位', 'Added to slot'), 'success')
   maybeVibrate(12)
   systemStore.saveNow()
 }
@@ -935,7 +978,7 @@ const placeTileInSlotTarget = (tileId) => {
   selectedTileId.value = tileId
   closeSlotContentSheet()
   triggerDroppedTileFeedback(tileId)
-  triggerLayoutToast(t('已放入槽位', 'Added to slot'))
+  triggerLayoutToast(t('已放入槽位', 'Added to slot'), 'success')
   maybeVibrate(12)
   systemStore.saveNow()
 }
@@ -965,7 +1008,7 @@ const clearSlotContentTarget = () => {
   systemStore.clearHomeLayoutSlotPlacement(target.pageIndex, target.slot.id)
   if (!removeTileFromHome(target.tileId)) return
   closeSlotContentSheet()
-  triggerLayoutToast(t('槽位已清空', 'Slot cleared'))
+  triggerLayoutToast(t('槽位已清空', 'Slot cleared'), 'success')
   maybeVibrate(10)
   systemStore.saveNow()
 }
@@ -991,8 +1034,14 @@ const maybeVibrate = (duration = 10) => {
   navigator.vibrate(duration)
 }
 
-const triggerLayoutToast = (text = t('布局已保存', 'Layout saved')) => {
+const maybePlayCue = (cue, options) => {
+  if (settings.value.appearance.soundEffectsEnabled === false) return
+  playUiCue(cue, options)
+}
+
+const triggerLayoutToast = (text = t('布局已保存', 'Layout saved'), cue = '') => {
   layoutToastText.value = text
+  if (cue) maybePlayCue(cue)
   if (layoutToastTimerId) clearTimeout(layoutToastTimerId)
   layoutToastTimerId = setTimeout(() => {
     layoutToastText.value = ''
@@ -1016,6 +1065,7 @@ const openAppById = (tileId) => {
 
   if (tile.kind === HOME_FOLDER_TILE_KIND) {
     maybeVibrate(8)
+    maybePlayCue('open')
     openFolderPageIndex.value = 0
     openFolderTileId.value = tileId
     nextTick(() => folderPanelRef.value?.focus())
@@ -1026,6 +1076,7 @@ const openAppById = (tileId) => {
 
   if (tile.route) {
     maybeVibrate(8)
+    maybePlayCue('open')
     if (tile.routeQuery) {
       router.push({
         path: tile.route,
@@ -1037,12 +1088,12 @@ const openAppById = (tileId) => {
     return
   }
 
-  triggerLayoutToast(t(`「${tile.label}」暂不可用`, `"${tile.label}" is unavailable`))
+  triggerLayoutToast(t(`「${tile.label}」暂不可用`, `"${tile.label}" is unavailable`), 'warning')
 }
 
 const openWidgetApp = (tileId) => {
   if (tileId === CONTROL_CENTER_HOME_APP_ID && !isWorldHubAvailable.value) {
-    triggerLayoutToast(t('入口未开放', 'Entry locked'))
+    triggerLayoutToast(t('入口未开放', 'Entry locked'), 'warning')
     return
   }
   openAppById(tileId)
@@ -1062,7 +1113,7 @@ const startWidgetFocusTimer = () => {
     if (widgetFocusSeconds.value > 0) return
     widgetFocusActive.value = false
     stopWidgetFocusTimer()
-    triggerLayoutToast(t('专注完成', 'Focus complete'))
+    triggerLayoutToast(t('专注完成', 'Focus complete'), 'success')
   }, 1000)
 }
 
@@ -1076,9 +1127,22 @@ const toggleWidgetFocus = () => {
 
 const handleBuiltInWidgetActivate = (tileId) => {
   if (layoutEditMode.value) return
+  if (tileId === 'weather') {
+    const action = settings.value.weather?.widgetAction || WEATHER_WIDGET_ACTION_OPEN
+    if (action === WEATHER_WIDGET_ACTION_OPEN) {
+      router.push({
+        path: '/weather',
+        query: buildHomeSourceQuery(homeReturnPageForCurrentView.value),
+      })
+    } else if (action === WEATHER_WIDGET_ACTION_EXPAND) {
+      widgetWeatherExpanded.value = !widgetWeatherExpanded.value
+    }
+    maybeVibrate(6)
+    return
+  }
   const interaction = tileMeta(tileId)?.interaction
-  if (interaction === 'toggle_weather') {
-    widgetWeatherMode.value = widgetWeatherMode.value === 'rain' ? 'sun' : 'rain'
+  if (interaction === 'toggle_weather_details') {
+    widgetWeatherExpanded.value = !widgetWeatherExpanded.value
   } else if (interaction === 'focus_timer') {
     toggleWidgetFocus()
   } else if (interaction === 'mood_window') {
@@ -1119,8 +1183,12 @@ const handleBuiltInWidgetAction = async (tileId, payload = {}) => {
   maybeVibrate(6)
 }
 
-const builtInWidgetIsInteractive = (tileId) => Boolean(tileMeta(tileId)?.interaction)
+const builtInWidgetIsInteractive = (tileId) =>
+  tileId === 'weather'
+    ? settings.value.weather?.widgetAction !== WEATHER_WIDGET_ACTION_NONE
+    : Boolean(tileMeta(tileId)?.interaction)
 const builtInWidgetHasRootAction = (tileId) =>
+  (tileId !== 'weather' || settings.value.weather?.widgetAction !== WEATHER_WIDGET_ACTION_NONE) &&
   !['music_controls', 'select_photos', 'cycle_day'].includes(tileMeta(tileId)?.interaction)
 
 const loadMemoryBoardPhotoUrls = async () => {
@@ -1190,11 +1258,11 @@ const openCustomWidgetAction = (tileId) => {
   if (action.type === CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP) {
     const tile = widgetRegistry[action.target]
     if (!tile) {
-      triggerLayoutToast(t('应用未安装', 'App not installed'))
+      triggerLayoutToast(t('应用未安装', 'App not installed'), 'warning')
       return
     }
     if (action.target === CONTROL_CENTER_HOME_APP_ID && !isWorldHubAvailable.value) {
-      triggerLayoutToast(t('入口未开放', 'Entry locked'))
+      triggerLayoutToast(t('入口未开放', 'Entry locked'), 'warning')
       return
     }
     openAppById(action.target)
@@ -1225,7 +1293,7 @@ const openLeftPageUtilityEntry = (entry) => {
 
   if (!entry?.installed || !entry.route) {
     maybeVibrate(6)
-    triggerLayoutToast(entry?.lockedMessage || t('入口未开放', 'Entry locked'))
+    triggerLayoutToast(entry?.lockedMessage || t('入口未开放', 'Entry locked'), 'warning')
     return
   }
 
@@ -1776,7 +1844,7 @@ const stopTileDrag = (event) => {
     const moved = moveTileToSlot(dragTileId.value, dragPreviewPageIndex.value, dragPreviewSlotIndex.value)
     if (moved) {
       triggerDroppedTileFeedback(dragTileId.value)
-      triggerLayoutToast(t('布局已保存', 'Layout saved'))
+      triggerLayoutToast(t('布局已保存', 'Layout saved'), 'success')
       maybeVibrate(12)
       systemStore.saveNow()
       ignoreAppOpenUntil.value = Date.now() + 220
@@ -1836,7 +1904,7 @@ const onGridClick = (pageIndex, event) => {
   const moved = moveTileToSlot(selectedTileId.value, pageIndex, slotIndex)
   if (moved) {
     triggerDroppedTileFeedback(selectedTileId.value)
-    triggerLayoutToast(t('布局已保存', 'Layout saved'))
+    triggerLayoutToast(t('布局已保存', 'Layout saved'), 'success')
     maybeVibrate(12)
     systemStore.saveNow()
   }
@@ -1851,7 +1919,7 @@ const onLayoutSlotClick = (pageIndex, slotIndex) => {
   const moved = moveTileToSlot(selectedTileId.value, pageIndex, slotIndex)
   if (moved) {
     triggerDroppedTileFeedback(selectedTileId.value)
-    triggerLayoutToast(t('布局已保存', 'Layout saved'))
+    triggerLayoutToast(t('布局已保存', 'Layout saved'), 'success')
     maybeVibrate(12)
     systemStore.saveNow()
   }
@@ -1861,7 +1929,7 @@ const hideTileFromHome = (tileId) => {
   if (!canFreelyMoveHomeTiles.value) return
   if (!removeTileFromHome(tileId)) return
   closeSlotContentSheet()
-  triggerLayoutToast(t('入口已移除', 'Entry removed'))
+  triggerLayoutToast(t('入口已移除', 'Entry removed'), 'success')
   maybeVibrate(10)
   systemStore.saveNow()
 }
@@ -1877,7 +1945,7 @@ const resetHomeLayout = async () => {
   if (!ok) return
   systemStore.resetHomeWidgetPages()
   systemStore.saveNow()
-  triggerLayoutToast(t('已恢复默认布局', 'Default layout restored'))
+  triggerLayoutToast(t('已恢复默认布局', 'Default layout restored'), 'success')
   maybeVibrate(14)
 }
 
@@ -1917,6 +1985,10 @@ const consumeWidgetEditRouteRequest = () => {
 
 watch(() => [route.query.widgetEdit, route.query.homePage, route.query.libraryTile, route.query.focusTile], consumeWidgetEditRouteRequest, {
   immediate: true,
+})
+
+onMounted(() => {
+  void weatherStore.refresh()
 })
 
 onBeforeUnmount(() => {
@@ -2056,8 +2128,12 @@ onBeforeUnmount(() => {
               compact
               :weekday="today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })"
               :day="today.getDate()"
-              :location="t('东京', 'Tokyo')"
-              :condition="t('晴朗', 'Clear')"
+              :location="homeWeatherLocation"
+              :condition="homeWeatherCondition"
+              :temperature="homeWeatherTemperature"
+              :weather-state="homeWeatherState"
+              :weather-is-night="homeWeatherIsNight"
+              :weather-forecast="homeWeatherForecast"
               :system-label="t('系统', 'System')"
               :battery-label="t('电量 86%', 'Battery 86%')"
               :music-status="t('继续播放', 'Listen Again')"
@@ -2151,8 +2227,12 @@ onBeforeUnmount(() => {
               compact
               :weekday="today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })"
               :day="today.getDate()"
-              :location="t('东京', 'Tokyo')"
-              :condition="t('晴朗', 'Clear')"
+              :location="homeWeatherLocation"
+              :condition="homeWeatherCondition"
+              :temperature="homeWeatherTemperature"
+              :weather-state="homeWeatherState"
+              :weather-is-night="homeWeatherIsNight"
+              :weather-forecast="homeWeatherForecast"
               :system-label="t('系统', 'System')"
               :battery-label="t('电量 86%', 'Battery 86%')"
               :music-status="t('继续播放', 'Listen Again')"
@@ -2386,9 +2466,13 @@ onBeforeUnmount(() => {
                   :aria-label="tileMeta(placement.tileId)?.label || ''"
                   :weekday="today.toLocaleString(languageBase === 'zh' ? 'zh-CN' : systemLanguage, { weekday: 'short' })"
                   :day="today.getDate()"
-                  :location="t('东京', 'Tokyo')"
-                  :condition="t('晴朗', 'Clear')"
-                  :weather-mode="widgetWeatherMode"
+                  :location="homeWeatherLocation"
+                  :condition="homeWeatherCondition"
+                  :temperature="homeWeatherTemperature"
+                  :weather-state="homeWeatherState"
+                  :weather-is-night="homeWeatherIsNight"
+                  :weather-forecast="homeWeatherForecast"
+                  :weather-expanded="widgetWeatherExpanded"
                   :system-label="t('系统', 'System')"
                   :battery-label="t('电量 86%', 'Battery 86%')"
                   :music-status="musicStore.isPlaying ? t('正在播放', 'Now Playing') : t('继续播放', 'Listen Again')"

@@ -1,6 +1,6 @@
 # Contacts V2 Role Profile Template Decision Log / 通讯录角色档案模板决策记录
 
-Updated: 2026-05-19
+Updated: 2026-08-15
 
 Status: `GRILL_DONE`
 
@@ -198,6 +198,14 @@ Self Profile can support:
 - passerby reactions;
 - user-related events;
 - AI familiarity tiers.
+
+Event eligibility boundary:
+
+- stable, structured, user-confirmed Self Profile fields are projected read-only through the bounded Player Context V1 K-pop allowlist;
+- free-text biography or occupation prose is not canonical eligibility by itself;
+- volatile reputation, media attention, fatigue, occupational pressure, world incidents/arcs, and publication records do not belong in Contacts merely because they concern the user;
+- Event Runtime coordinates eligibility/progression, while each dynamic value, fact, claim, and post retains its own owner;
+- the consolidated contract is `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`; only Player Context V1 identity eligibility is implemented, while dynamic world evolution and information propagation remain documentation-only.
 
 Self Profile must not be treated as:
 

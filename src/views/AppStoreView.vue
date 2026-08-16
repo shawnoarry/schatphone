@@ -46,6 +46,8 @@ import {
   resolveFoodShopDefaultTemplateId,
 } from '../lib/food-shop-presentation'
 import {
+  AGENDA_JOURNEY_HOME_APP_ID,
+  AGENDA_JOURNEY_ROUTE,
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
   BOOK_HOME_APP_ID,
@@ -55,6 +57,8 @@ import {
   MUSIC_HOME_APP_ID,
   MUSIC_ROUTE,
   SHOPPING_PLATFORM_APP_ENTRIES,
+  WEATHER_HOME_APP_ID,
+  WEATHER_ROUTE,
   buildShoppingAppRoute,
 } from '../lib/planned-module-registry'
 import { projectUiAssetUrl } from '../lib/project-assets'
@@ -229,6 +233,16 @@ const APP_STORE_ENTRIES = [
     descEn: 'Places, routes, and movement cues.',
   },
   {
+    id: WEATHER_HOME_APP_ID,
+    route: WEATHER_ROUTE,
+    labelZh: '天气',
+    labelEn: 'Weather',
+    categoryZh: '生活',
+    categoryEn: 'Life',
+    descZh: '现实天气、世界地点映射与逐时预报。',
+    descEn: 'Real forecasts, world-location mapping, and hourly outlooks.',
+  },
+  {
     id: 'app_calendar',
     route: '/calendar',
     labelZh: '日历',
@@ -237,6 +251,16 @@ const APP_STORE_ENTRIES = [
     categoryEn: 'Productivity',
     descZh: '日程、时间与提醒上下文。',
     descEn: 'Schedule, time, and reminder context.',
+  },
+  {
+    id: AGENDA_JOURNEY_HOME_APP_ID,
+    route: AGENDA_JOURNEY_ROUTE,
+    labelZh: '行程',
+    labelEn: 'Agenda Journey',
+    categoryZh: '效率',
+    categoryEn: 'Productivity',
+    descZh: '执行今天与近期计划，连接地图出发、抵达和活动确认。',
+    descEn: 'Execute today and near-term plans across Map departure, arrival, and activity confirmation.',
   },
   {
     id: 'app_reminders',

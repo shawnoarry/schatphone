@@ -1,6 +1,6 @@
 # Map Calendar Reminders Implementation Workstreams / 地图日历提醒事项实施工作流
 
-Updated: 2026-08-10
+Updated: 2026-08-16
 
 ## 1. Workstream A: Map Travel Core
 
@@ -12,6 +12,7 @@ Updated: 2026-08-10
 - Gallery-owned source images referenced by Map-owned custom-pack metadata
 - geographic coordinates for real packs and normalized canvas coordinates for fictional packs
 - dated, versioned real-place catalogs with stable Map IDs, bilingual address/search metadata, and locally maintained coordinates
+- a separate place-media registry keyed by `mapPackId + placeId`, with one fixed detail `hero` slot, exact/area/generated/category authenticity labels, accessible alt text, source/license/change attribution, verified public derivatives only, load-error fallback, and no mutation of canonical place records
 - reality-anchored restaurant additions use reviewed public branch/address evidence, stable Map IDs, bilingual aliases/search terms, and provider-neutral coordinates; Food Delivery may reference the place ID but Map alone owns the place record and never receives menu/cart/order state
 - Map-owned persisted place-name display mode with system-language, Chinese, English, and bilingual choices across authored pins/search/Places/details; canonical records, coordinates, search indexing, journeys, and provider-owned basemap labels remain unchanged
 - current-world positioned pack/player-pin search with a fully browsable empty-focus catalog except discovery-only categories, wrapped shared category filters, normalized ranked multi-term matching, optional aliases/search terms, and bounded Latin typo tolerance; new places inherit standard name/address/category search, selected matches retain coordinate focus, and unmatched text remains an explicit free-form destination without online POI/geocoding
@@ -28,8 +29,9 @@ Updated: 2026-08-10
 - canonical provider-neutral coordinates and Map-owned pins/trips/world bindings remain usable when external style, tile, or WebGL startup fails; `/map/labs/kakao-compare` is an inert compatibility redirect
 - no device location, live routing, or commercial POI dependency in the baseline
 - no public-transit topology, schedule, realtime-arrival, fare, or transfer-routing dependency in the baseline
-- staged Map Journey Runtime: MJE-1 transport selection/estimate/persistence compatibility, MJE-2 versioned lifecycle/checkpoints/pause-resume, MJE-3's first non-blocking checkpoint event adapter, and MJE-4 Footprints/place knowledge are user-accepted and integrated locally
+- staged Map Journey Runtime: MJE-1 transport selection/estimate/persistence compatibility, MJE-2 versioned lifecycle/checkpoints/pause-resume, and MJE-4 Footprints/place knowledge are integrated locally; MJE-3's first non-blocking checkpoint adapter remains compatibility-tested with its production trigger suspended
 - MJE-3 persists only evaluated checkpoint IDs, one pending-review compatibility reference, and cumulative event-delay seconds in Map; proposal copy, eligibility, provenance, and audit stay in Event Runtime
+- the MJE-3 adapter remains available behind an explicit compatibility/test hook, but the production Map keeps checkpoint-event evaluation disabled until a transport/actor-specific causal family with a real owner-native consequence is accepted
 - later static transport catalog ownership in Map Settings; a Transit app remains a presentation candidate, never a second journey runtime
 - preserve `map-world-suite-inspection.js` plus the default production composition Adapter as the read-only Catalog/native seam: immutable identity, modification, owner-reference, Gallery, and capacity evidence only; Chat/Event projections expose stable reference IDs without bodies, and the default Adapter has no install/update/remove or implicit activation
 - preserve the completed trusted provenance/authored-place round-trip, structured persistence receipt, Gallery deletion/replacement hard-reference lifecycle, Event/Chat reference projection, `commitManagedMapPackMutation()` rollback proof, and the separately constructed resolver-backed Map Owner Adapter. Product promotion still requires real Map/Gallery Catalog and registry composition; keep Gallery installation, activation, world binding, current location, places, and Journey truth in their native owners
@@ -47,29 +49,36 @@ Updated: 2026-08-10
 
 - confirmed event flows
 - schedule/date presentation
-- current frontend is a list-first baseline; later CJA-1 may add Month, Week, Agenda, selected-day, multi-day-span, and event-authoring IA only after user acceptance
+- CJA-1 provides Month, Week, Agenda, selected-day, multi-day-span, recurrence, and complete manual event-authoring IA over Calendar V3
 - `Agenda / 日程` remains a Calendar view; it is not a second long-range planning app
+- Calendar storage V3 may retain an optional stable Map-owned `locationRef`; the selected occurrence detail can derive current-origin departure readiness, transport-specific ETA, predicted lateness, and an explicit Map Journey handoff without inferring a place from title, prose, coordinates, or a usual address
+- explicit departure creates or reuses one Map-owned journey carrying the source Calendar event ID; Calendar does not own route truth, and CJA-1 still adds no Schedule Orchestrator, Agenda Journey, Activity Session, or appointment auto-entry
 - relationship-fact safe adapters only after confirmation
 - confirmed follow-ups should reuse upstream `sourceTripId` lineage when Map created the cue
 - `reservation -> Calendar` World Pack context can change title/context/boundary presentation only, including confirmed `reservation_board` appBindings; it must not change event storage, confirmation rules, or push scheduling
 
 ## 4. Workstream D: Schedule Orchestrator And Agenda Journey
 
-- begin with the CJA-2 pure Schedule Orchestrator Interface, idempotent Calendar-event materialization fixtures, deadline reconciliation, persistence owner, backup/restore, and legacy compatibility
+- CJA-2 implements the pure Schedule Orchestrator Interface, deterministic per-occurrence materialization fixtures, required-deadline reconciliation, schema-V1 persistence owner, startup/resume runtime, backup/restore, and missing-child legacy compatibility
+- expose only pending materialization/deadline requests and acknowledgement actions for the Agenda Journey owner; retain stable IDs, occurrence timing, fingerprints, request evidence, and Agenda Journey links rather than Calendar display content or downstream records
 - keep Schedule Orchestrator hidden; it links IDs and coordinates time but never becomes a Home app or owner of copied records
-- add Agenda Journey only in a later CJA-3 user-approved slice for short-range day/near-term steps, execution state, evidence references, and outcomes
+- CJA-3 implements `store:agenda-journey` V1, a separate Home/App Store route, Calendar-occurrence materialization, manual plans within the next 14 days, short-range travel/activity steps, explicit execution state, evidence references, and outcomes
+- keep source retirement and Calendar fingerprint changes reviewable after execution begins; do not silently rewrite or discard started history
 - keep Calendar as planned truth, Agenda Journey as execution truth, and Map Journey as travel truth
-- allow Map arrival to satisfy only an explicit arrival/presence requirement; it cannot prove a non-travel activity completed
+- create or reuse one Map Journey per Agenda Journey travel-step ID, retain `sourceAgendaJourneyStepId` through active/history/backup state, and allow Map arrival to complete only that travel step; it cannot prove a non-travel activity completed
 - preserve Calendar appointment time as planned truth while Map supplies dynamic current-origin estimates; explicit departure confirmation creates one canonical Map Journey and later Map opens reuse that journey
-- allow a linked indoor appointment to request validated automatic entry without making manual relocation equivalent to journey arrival
+- require explicit activity start and completion or skip after travel; required skips/deadlines become missed, while cancellation preserves terminal travel evidence
+- keep validated automatic entry as a later separately accepted policy and never make manual relocation equivalent to journey arrival
 
 ## 5. Workstream E: Activity Session And Narrative Projection
 
-- begin Activity Session only after Agenda Journey has a stable step owner
-- use absolute timestamps, explicit checkpoints, minimize/navigation continuity, and suspend/reopen reconciliation; do not promise exact interactive popups when the browser/PWA is closed or suspended
-- keep event eligibility and choices in Event Runtime and Mini Scene presentation; Activity Session owns time only
-- add explicit per-step completion policy and keep a no-event base activity path
-- treat Pomodoro as one Focus Companion presentation preset; later Gallery background, Music/ambient, and decorative companion references remain cross-owner references, not Activity Session assets
+- `CJA-4 DONE 2026-08-16`: Activity Session begins only from a stable Agenda Journey activity-step request and persists one deterministic session per step
+- CJA-4 uses absolute timestamps, deterministic checkpoints, minimize/navigation continuity, and suspend/reopen reconciliation; it does not promise exact interactive popups when the browser/PWA is closed or suspended
+- `CJA-5 DONE 2026-08-16`: submit one bounded snapshot only after the midpoint `duration_milestone`, persist one Simulation-owned runtime record, and keep every other checkpoint/event family unregistered
+- keep module permission, Surprise Mode intensity, and `off | text` presentation separate; `off` auto-selects only owner-approved `keep_rhythm`, while `text` stays inline in Focus Companion
+- Activity Session owns time only and validates exact event/session/journey/step/checkpoint lineage before applying the only approved 0/2-minute timer adjustment
+- explicit `duration_sufficient` and `user_confirmation` completion policy keep a complete no-event base activity path, with Agenda Journey validating bounded completion evidence
+- the restrained Focus Companion follows the Agenda-step duration and uses one built-in quiet scene; later Pomodoro/custom modes, Gallery background, Music/ambient, and decorative companion references remain cross-owner extensions, not Activity Session assets
 - when the same presentation is used during a flight or other long Map Journey, consume the Map-owned clock instead of creating a duplicate Activity Session
 - keep the future Narrative Timeline as a bounded source-linked projection until Story/Diary/Journal naming, route, owner, retention, backup, review, and AI-context policy are separately approved
 
@@ -88,15 +97,16 @@ Updated: 2026-08-10
 - Map receives a separate later Adapter and must use trip/location truth rather than Calendar or World Pack assumptions
 - callers never execute Book regex, render HTML, select profiles, or persist Mini Scene artifacts
 - user off/text/interactive policy and all fallback behavior stay behind the shared Mini Scene Interface
-- a future Agenda Journey caller registers only after its route, source records, persistence owner, and Adapter are approved; presentation `off` may auto-resolve only policy-approved low-impact outcomes and cannot bypass high-impact review
+- an Agenda Journey Mini Scene caller remains unregistered until its specific Adapter and presentation policy are separately approved; the landed route/source records/persistence owner do not authorize event collaboration, and presentation `off` may auto-resolve only policy-approved low-impact outcomes without bypassing high-impact review
 
 ## 8. Workstream H: Map Journey Checkpoint Event Collaboration
 
-- MJE-3's first adapter is user-accepted; its sample copy/values and later transport/asset/ability variants remain deferred to separate project-event work
-- submit bounded canonical Map snapshots only for completed `en_route` and `near_arrival` checkpoints while Map is mounted, never on each animation tick
+- MJE-3's adapter remains as compatibility evidence, but its generic route-obstruction production presentation is withdrawn; a future family must name the affected actor, transport capability, actionable response, and downstream owner consequence
+- when explicitly enabled by a reviewed caller or deterministic compatibility test, submit bounded canonical Map snapshots only for completed `en_route` and `near_arrival` checkpoints while Map is mounted, never on each animation tick
 - keep template eligibility, deterministic/random gates, cooldowns, caps, proposal/review, provenance, and logs in Event Runtime
 - return only no ETA change or a bounded 120-second delay to Map for exact source validation; pending review cannot pause the journey, and Event Runtime cannot mutate journey or place truth directly
 - keep an ordinary no-event journey and missing/stale-proposal recovery as covered outcomes
+- keep the ordinary no-event journey as the production default while the compatibility adapter is disabled
 
 ## 9. Workstream I: Large-Map Event Card Host
 
@@ -131,7 +141,7 @@ Treat these as bugs:
 15. Event Runtime mutates journey state directly or runs journey eligibility on every animation tick
 16. a separate Transit app creates its own trip state before independent network utility exists
 17. one MJE stage automatically starts the next before user acceptance and roadmap update
-18. the current list-first Calendar page is described as if Month/Week/date-grid IA already exists
+18. Calendar occurrence projections or selected-day UI are treated as a second source record instead of views over Calendar-owned events
 19. Agenda Journey becomes a second long-range planner or rewrites Calendar history after execution
 20. an unqualified `Journey` record, event, or audit field can refer to either Map Journey or Agenda Journey
 21. Schedule Orchestrator becomes a visible app or copies downstream truth instead of linking stable IDs

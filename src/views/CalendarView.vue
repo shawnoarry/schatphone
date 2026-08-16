@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
@@ -13,7 +13,22 @@ import { buildWorldBookRouteQuery } from '../lib/worldbook-navigation'
 import { pushReturnTarget } from '../lib/navigation-return'
 import { RELATIONSHIP_FACT_SOURCE_KEYS } from '../lib/relationship-fact-adapters'
 import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
+import { MAP_TRANSPORT_MODES } from '../lib/map-journey'
+import {
+  addCalendarDays,
+  addCalendarMonths,
+  calendarOccurrencesForDay,
+  endOfCalendarDay,
+  expandCalendarEventOccurrences,
+  getCalendarViewRange,
+  getNextCalendarEventReminderAt,
+  isSameCalendarDay,
+  normalizeCalendarViewMode,
+  startOfCalendarDay,
+} from '../lib/calendar-schedule'
 import CalendarEventCard from '../components/calendar/CalendarEventCard.vue'
+import CalendarEventEditor from '../components/calendar/CalendarEventEditor.vue'
+import CalendarWorkspace from '../components/calendar/CalendarWorkspace.vue'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
 const router = useRouter()
@@ -26,15 +41,74 @@ const remindersStore = useRemindersStore()
 const systemStore = useSystemStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const systemNotifications = useSystemNotifications({ systemStore })
-const { upcomingEvents } = storeToRefs(calendarStore)
+const { confirmedEvents } = storeToRefs(calendarStore)
 const { activeReminderItems } = storeToRefs(remindersStore)
-const { mapCalendarReminders, mapAreaFeedback } = storeToRefs(mapStore)
+const {
+  activeMapAllPlaces,
+  mapCalendarReminders,
+  mapAreaFeedback,
+  mapPacks,
+  tripRuntime,
+} = storeToRefs(mapStore)
 const { settings } = storeToRefs(systemStore)
 const calendarRelationshipDrafts = ref({})
 const relationshipFeedbackByEventId = ref({})
+const departureModeByEventId = ref({})
+const departureFeedbackByEventId = ref({})
+const departureNow = ref(Date.now())
+const calendarViewMode = ref(normalizeCalendarViewMode(route.query.view))
+const calendarAnchorAt = ref(startOfCalendarDay(Date.now()))
+const selectedCalendarDate = ref(startOfCalendarDay(Date.now()))
+const selectedEventId = ref('')
+const selectedOccurrenceId = ref('')
+const hasResolvedInitialCalendarSelection = ref(false)
+const editorOpen = ref(false)
+const editorMode = ref('create')
+const editorDraft = ref({})
+const editorValidationMessage = ref('')
+const editorSaving = ref(false)
+let departureClockTimer = null
 
-const visibleCalendarEvents = computed(() => upcomingEvents.value.slice(0, 4))
-const calendarEventCount = computed(() => upcomingEvents.value.length)
+const calendarEventCount = computed(() => confirmedEvents.value.length)
+const calendarViewRange = computed(() =>
+  getCalendarViewRange({
+    viewMode: calendarViewMode.value,
+    anchorAt: calendarAnchorAt.value,
+  }),
+)
+const calendarOccurrences = computed(() =>
+  expandCalendarEventOccurrences({
+    events: confirmedEvents.value,
+    rangeStart: calendarViewRange.value.rangeStart,
+    rangeEnd: calendarViewRange.value.rangeEnd,
+  }),
+)
+const selectedOccurrence = computed(
+  () =>
+    calendarOccurrences.value.find(
+      (occurrence) => occurrence.occurrenceId === selectedOccurrenceId.value,
+    ) || null,
+)
+const selectedSourceEvent = computed(() =>
+  selectedEventId.value ? calendarStore.findEventById(selectedEventId.value) : null,
+)
+const selectedEventPresentation = computed(() => {
+  const source = selectedSourceEvent.value
+  const occurrence = selectedOccurrence.value
+  if (!source || !occurrence || occurrence.sourceEventId !== source.id) return null
+  return {
+    ...source,
+    startsAt: occurrence.startsAt,
+    endsAt: occurrence.endsAt,
+    sourceEventId: source.id,
+    sourceStartsAt: source.startsAt,
+    sourceEndsAt: source.endsAt,
+    occurrenceId: occurrence.occurrenceId,
+    occurrenceIndex: occurrence.occurrenceIndex,
+    isRecurring: occurrence.isRecurring,
+    isMultiDay: occurrence.isMultiDay,
+  }
+})
 const calendarWorldAppContext = computed(() =>
   resolveWorldAppUxContext({
     systemStore,
@@ -60,8 +134,8 @@ const calendarOverviewTitle = computed(
 const calendarOverviewDescription = computed(() => {
   if (calendarWorldAppContext.value) return calendarWorldAppContext.value.boundaryCopy
   return t(
-    '未确认线索先进入提醒事项；进入日历后才会显示时间、调整排程并安排真实推送。',
-    'Unconfirmed cues go to Reminders first; Calendar shows timed events, edits, and real push scheduling.',
+    '还没确认的事会先进提醒事项；确认后在这里定好时间，到点提醒你。',
+    'Unconfirmed items go to Reminders first; once confirmed, they get a time here and remind you on schedule.',
   )
 })
 const calendarOverviewClass = computed(() =>
@@ -111,6 +185,95 @@ const eventTimeQuickShiftOptions = [
   { key: 'plus_hour', labelZh: '+1 小时', labelEn: '+1h', offsetMs: 60 * 60 * 1000 },
   { key: 'plus_day', labelZh: '+1 天', labelEn: '+1d', offsetMs: 24 * 60 * 60 * 1000 },
 ]
+const departureTransportModes = MAP_TRANSPORT_MODES
+const defaultDepartureTransportMode = 'public_transit'
+
+const getDepartureMode = (eventId) =>
+  departureModeByEventId.value[eventId] || defaultDepartureTransportMode
+
+const departureProjectionByEventId = computed(() =>
+  selectedEventPresentation.value?.locationRef && !selectedEventPresentation.value?.allDay
+    ? {
+        [selectedEventPresentation.value.id]: mapStore.getScheduledTravelProjection({
+          startsAt: selectedEventPresentation.value.startsAt,
+          locationRef: selectedEventPresentation.value.locationRef,
+          transportMode: getDepartureMode(selectedEventPresentation.value.id),
+          now: departureNow.value,
+        }),
+      }
+    : {},
+)
+
+const getDepartureProjection = (eventId) => departureProjectionByEventId.value[eventId] || null
+
+const getActiveJourneyForEvent = (eventId) => {
+  const state = tripRuntime.value || {}
+  if (state.status === 'idle' || state.sourceCalendarEventId !== eventId) return null
+  return state
+}
+
+const hasOtherActiveJourney = (eventId) => {
+  const state = tripRuntime.value || {}
+  return state.status !== 'idle' && state.sourceCalendarEventId !== eventId
+}
+
+const getDepartureFeedback = (eventId) => departureFeedbackByEventId.value[eventId] || null
+
+const setDepartureFeedback = (eventId, feedback = null) => {
+  const next = { ...departureFeedbackByEventId.value }
+  if (feedback) next[eventId] = feedback
+  else delete next[eventId]
+  departureFeedbackByEventId.value = next
+}
+
+const updateDepartureMode = (event, transportMode) => {
+  if (!event?.id || !MAP_TRANSPORT_MODES.some((mode) => mode.id === transportMode)) return
+  departureModeByEventId.value = {
+    ...departureModeByEventId.value,
+    [event.id]: transportMode,
+  }
+  departureNow.value = Date.now()
+  setDepartureFeedback(event.id, null)
+}
+
+const openEventJourney = (event) => {
+  const calendarEventId = event?.sourceEventId || event?.id
+  if (!calendarEventId) return
+  router.push({
+    path: '/map',
+    query: {
+      source: 'calendar',
+      calendarEventId,
+    },
+  })
+}
+
+const startEventTravel = (event) => {
+  const calendarEventId = event?.sourceEventId || event?.id
+  if (!calendarEventId) return
+  const result = mapStore.startScheduledTravel({
+    calendarEventId,
+    startsAt: event.startsAt,
+    locationRef: event.locationRef,
+    transportMode: getDepartureMode(event.id),
+    now: Date.now(),
+  })
+  if (result?.ok) {
+    openEventJourney(event)
+    return
+  }
+  setDepartureFeedback(event.id, {
+    tone: 'warning',
+    messageZh:
+      result?.code === 'TRIP_ALREADY_IN_PROGRESS' || result?.code === 'TRIP_ARRIVAL_PENDING'
+        ? '已有另一段行程正在处理，请先在地图中完成或取消。'
+        : '当前位置或预约地点已变化，暂时无法开始这段行程。',
+    messageEn:
+      result?.code === 'TRIP_ALREADY_IN_PROGRESS' || result?.code === 'TRIP_ARRIVAL_PENDING'
+        ? 'Another journey is active. Finish or cancel it in Map first.'
+        : 'The current position or appointment place changed, so this trip cannot start yet.',
+  })
+}
 const relationshipContactOptions = computed(() =>
   chatStore.contacts
     .filter((contact) => contact.kind !== 'service' && contact.kind !== 'official')
@@ -174,11 +337,49 @@ const calendarPushRuntime = computed(() => {
     ready: true,
     labelZh: '推送就绪',
     labelEn: 'Push ready',
-    detailZh: '已确认的 Calendar 事件会按事件时间安排真实推送。',
-    detailEn: 'Confirmed Calendar events schedule real push at their event time.',
+    detailZh: '已确认的 Calendar 事件会按各自的提前提醒策略安排真实推送。',
+    detailEn: 'Confirmed Calendar events schedule real push from their reminder policy.',
     toneClass: 'calendar-status--success',
   }
 })
+
+const selectCalendarOccurrence = (occurrence, dayStartsAt = occurrence?.startsAt) => {
+  if (!occurrence?.sourceEventId || !occurrence?.occurrenceId) return
+  hasResolvedInitialCalendarSelection.value = true
+  selectedEventId.value = occurrence.sourceEventId
+  selectedOccurrenceId.value = occurrence.occurrenceId
+  if (dayStartsAt) selectedCalendarDate.value = startOfCalendarDay(dayStartsAt)
+}
+
+const selectCalendarDay = (dayStartsAt) => {
+  if (!dayStartsAt) return
+  hasResolvedInitialCalendarSelection.value = true
+  selectedCalendarDate.value = startOfCalendarDay(dayStartsAt)
+}
+
+const updateCalendarView = (viewMode) => {
+  calendarViewMode.value = normalizeCalendarViewMode(viewMode)
+  calendarAnchorAt.value = selectedCalendarDate.value
+}
+
+const shiftCalendarPeriod = (direction) => {
+  hasResolvedInitialCalendarSelection.value = true
+  const amount = Number(direction) < 0 ? -1 : 1
+  if (calendarViewMode.value === 'week') {
+    calendarAnchorAt.value = addCalendarDays(calendarAnchorAt.value, amount * 7)
+    selectedCalendarDate.value = addCalendarDays(selectedCalendarDate.value, amount * 7)
+    return
+  }
+  calendarAnchorAt.value = addCalendarMonths(calendarAnchorAt.value, amount)
+  selectedCalendarDate.value = addCalendarMonths(selectedCalendarDate.value, amount)
+}
+
+const goToCalendarToday = () => {
+  hasResolvedInitialCalendarSelection.value = true
+  const today = startOfCalendarDay(Date.now())
+  calendarAnchorAt.value = today
+  selectedCalendarDate.value = today
+}
 
 const goHome = () => {
   pushReturnTarget(router, route, '/home')
@@ -247,7 +448,7 @@ const buildRelatedKnowledgePointIndex = (items = []) =>
   )
 
 const eventKnowledgePoints = computed(() =>
-  buildRelatedKnowledgePointIndex(visibleCalendarEvents.value),
+  buildRelatedKnowledgePointIndex(confirmedEvents.value),
 )
 
 const getRelatedKnowledgePoints = (collection, itemId) => {
@@ -457,11 +658,195 @@ const parseDateTimeInput = (value) => {
   return Number.isFinite(timestamp) ? timestamp : 0
 }
 
+const formatDateInput = (timestamp) => {
+  const ts = Number(timestamp)
+  if (!Number.isFinite(ts) || ts <= 0) return ''
+  const date = new Date(ts)
+  return [
+    date.getFullYear(),
+    '-',
+    padDatePart(date.getMonth() + 1),
+    '-',
+    padDatePart(date.getDate()),
+  ].join('')
+}
+
+const parseDateInput = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return 0
+  const timestamp = new Date(`${value}T00:00:00`).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+const getDefaultManualEventStart = (dayStartsAt) => {
+  const dayStart = startOfCalendarDay(dayStartsAt || Date.now())
+  const now = Date.now()
+  const date = new Date(dayStart)
+  if (isSameCalendarDay(dayStart, now)) {
+    const current = new Date(now)
+    const nextHalfHour = current.getMinutes() < 30 ? 30 : 60
+    date.setHours(current.getHours(), nextHalfHour, 0, 0)
+    if (nextHalfHour === 60) date.setMinutes(0)
+    return date.getTime()
+  }
+  date.setHours(9, 0, 0, 0)
+  return date.getTime()
+}
+
+const buildCalendarEditorDraft = ({ event = null, dayStartsAt = Date.now() } = {}) => {
+  const startsAt = event?.startsAt || getDefaultManualEventStart(dayStartsAt)
+  const endsAt = Math.max(startsAt + 60_000, event?.endsAt || startsAt + 60 * 60_000)
+  const allDay = event?.allDay === true
+  return {
+    eventId: event?.id || '',
+    titleZh: event?.titleZh || '',
+    titleEn: event?.titleEn || '',
+    notesZh: event?.notesZh || '',
+    notesEn: event?.notesEn || '',
+    allDay,
+    startsAtInput: formatDateTimeInput(startsAt),
+    endsAtInput: formatDateTimeInput(endsAt),
+    startDate: formatDateInput(startsAt),
+    endDate: formatDateInput(allDay ? Math.max(startsAt, endsAt - 1) : endsAt),
+    recurrence: event?.recurrence || 'none',
+    recurrenceUntilDate: formatDateInput(event?.recurrenceUntil || 0),
+    requirement: event?.requirement || 'required',
+    reminderLeadMinutes: Number(event?.reminderLeadMinutes || 0),
+    locationRef: event?.locationRef ? { ...event.locationRef } : null,
+  }
+}
+
+const openCreateCalendarEvent = (dayStartsAt = selectedCalendarDate.value) => {
+  editorMode.value = 'create'
+  editorValidationMessage.value = ''
+  editorDraft.value = buildCalendarEditorDraft({ dayStartsAt })
+  editorOpen.value = true
+}
+
+const openEditCalendarEvent = (event = selectedSourceEvent.value) => {
+  const source = event?.sourceEventId
+    ? calendarStore.findEventById(event.sourceEventId)
+    : calendarStore.findEventById(event?.id)
+  if (!source) return
+  editorMode.value = 'edit'
+  editorValidationMessage.value = ''
+  editorDraft.value = buildCalendarEditorDraft({ event: source })
+  editorOpen.value = true
+}
+
+const closeCalendarEventEditor = () => {
+  if (editorSaving.value) return
+  editorOpen.value = false
+  editorValidationMessage.value = ''
+}
+
+const saveCalendarEventEditor = () => {
+  const draft = editorDraft.value || {}
+  const titleZh = String(draft.titleZh || '').trim()
+  const titleEn = String(draft.titleEn || '').trim()
+  if (!titleZh && !titleEn) {
+    editorValidationMessage.value = t(
+      '请至少填写一个标题。',
+      'Enter at least one title.',
+    )
+    return
+  }
+
+  let startsAt = 0
+  let endsAt = 0
+  if (draft.allDay) {
+    startsAt = parseDateInput(draft.startDate)
+    const inclusiveEnd = parseDateInput(draft.endDate)
+    endsAt = inclusiveEnd ? addCalendarDays(inclusiveEnd, 1) : 0
+  } else {
+    startsAt = parseDateTimeInput(draft.startsAtInput)
+    endsAt = parseDateTimeInput(draft.endsAtInput)
+  }
+  if (!startsAt || !endsAt || endsAt <= startsAt) {
+    editorValidationMessage.value = t(
+      '结束时间必须晚于开始时间。',
+      'The end must be later than the start.',
+    )
+    return
+  }
+
+  const recurrence = draft.recurrence || 'none'
+  const recurrenceUntil =
+    recurrence === 'none' || !draft.recurrenceUntilDate
+      ? 0
+      : endOfCalendarDay(parseDateInput(draft.recurrenceUntilDate))
+  if (recurrenceUntil && recurrenceUntil < startsAt) {
+    editorValidationMessage.value = t(
+      '重复结束日期不能早于第一次安排。',
+      'The recurrence end cannot be before the first event.',
+    )
+    return
+  }
+
+  editorSaving.value = true
+  editorValidationMessage.value = ''
+  const payload = {
+    titleZh: titleZh || titleEn,
+    titleEn: titleEn || titleZh,
+    notesZh: String(draft.notesZh || '').trim(),
+    notesEn: String(draft.notesEn || '').trim(),
+    startsAt,
+    endsAt,
+    allDay: draft.allDay === true,
+    recurrence,
+    recurrenceUntil,
+    requirement: draft.requirement || 'required',
+    reminderLeadMinutes: Number(draft.reminderLeadMinutes || 0),
+    locationRef: draft.locationRef ? { ...draft.locationRef } : null,
+  }
+
+  const savedEvent =
+    editorMode.value === 'edit' && draft.eventId
+      ? calendarStore.updateEventDetails(draft.eventId, payload)
+      : calendarStore.createManualEvent(payload)
+
+  if (!savedEvent) {
+    editorSaving.value = false
+    editorValidationMessage.value = t(
+      '这项安排没有保存成功，请检查输入。',
+      'The event could not be saved. Check the entered values.',
+    )
+    return
+  }
+
+  if (editorMode.value === 'edit') {
+    void calendarStore.rescheduleEventPush(savedEvent.id, {
+      source: 'calendar_event_editor_update',
+    })
+  } else {
+    void calendarStore.ensureEventPushScheduled(savedEvent.id, {
+      source: 'calendar_event_editor_create',
+    })
+  }
+
+  calendarAnchorAt.value = startsAt
+  selectedCalendarDate.value = startOfCalendarDay(startsAt)
+  selectedEventId.value = savedEvent.id
+  selectedOccurrenceId.value = `${savedEvent.id}::${startsAt}`
+  editorSaving.value = false
+  editorOpen.value = false
+}
+
+const resolveSourceCalendarEvent = (event) =>
+  calendarStore.findEventById(event?.sourceEventId || event?.id)
+
+const updateEventOccurrenceStartsAt = (event, nextOccurrenceStartsAt) => {
+  const source = resolveSourceCalendarEvent(event)
+  if (!source || !event?.startsAt || !nextOccurrenceStartsAt) return false
+  const occurrenceDelta = nextOccurrenceStartsAt - event.startsAt
+  return calendarStore.setEventStartsAt(source.id, source.startsAt + occurrenceDelta)
+}
+
 const updateEventStartsAt = (event, value) => {
   const startsAt = parseDateTimeInput(value)
   if (startsAt <= 0) return
-  if (calendarStore.setEventStartsAt(event.id, startsAt)) {
-    void calendarStore.rescheduleEventPush(event.id, {
+  const source = resolveSourceCalendarEvent(event)
+  if (source && updateEventOccurrenceStartsAt(event, startsAt)) {
+    void calendarStore.rescheduleEventPush(source.id, {
       source: 'calendar_event_time_edit',
     })
   }
@@ -470,16 +855,18 @@ const updateEventStartsAt = (event, value) => {
 const shiftEventStartsAt = (event, offsetMs) => {
   const startsAt = Math.max(0, Number(event.startsAt || 0))
   if (startsAt <= 0) return
-  if (calendarStore.setEventStartsAt(event.id, startsAt + offsetMs)) {
-    void calendarStore.rescheduleEventPush(event.id, {
+  const source = resolveSourceCalendarEvent(event)
+  if (source && updateEventOccurrenceStartsAt(event, startsAt + offsetMs)) {
+    void calendarStore.rescheduleEventPush(source.id, {
       source: 'calendar_event_time_shift',
     })
   }
 }
 
 const resetEventStartsAt = (event) => {
-  if (calendarStore.resetEventStartsAt(event.id)) {
-    void calendarStore.rescheduleEventPush(event.id, {
+  const source = resolveSourceCalendarEvent(event)
+  if (source && calendarStore.resetEventStartsAt(source.id)) {
+    void calendarStore.rescheduleEventPush(source.id, {
       source: 'calendar_event_time_reset',
     })
   }
@@ -541,14 +928,16 @@ const formatPushReason = (reason) => {
 }
 
 const getCalendarPushStatusMeta = (event) => {
-  if (event.scheduledPushId && event.scheduledPushAt === event.startsAt) {
+  const source = resolveSourceCalendarEvent(event) || event
+  const expectedReminderAt = getNextCalendarEventReminderAt(source, departureNow.value)
+  if (source.scheduledPushId && source.scheduledPushAt === expectedReminderAt) {
     return {
       labelZh: '已排程',
       labelEn: 'Scheduled',
       className: 'calendar-status--success',
     }
   }
-  if (event.pushStatus === 'needs_reschedule') {
+  if (source.pushStatus === 'needs_reschedule') {
     return {
       labelZh: '待重排',
       labelEn: 'Reschedule pending',
@@ -556,9 +945,9 @@ const getCalendarPushStatusMeta = (event) => {
     }
   }
   if (
-    event.lastPushError ||
-    event.pushStatus === 'failed' ||
-    event.pushStatus === 'cancel_failed'
+    source.lastPushError ||
+    source.pushStatus === 'failed' ||
+    source.pushStatus === 'cancel_failed'
   ) {
     return {
       labelZh: '排程异常',
@@ -573,7 +962,7 @@ const getCalendarPushStatusMeta = (event) => {
       className: 'calendar-status--neutral',
     }
   }
-  if (event.pushStatus === 'cancelled') {
+  if (source.pushStatus === 'cancelled') {
     return {
       labelZh: '已取消',
       labelEn: 'Cancelled',
@@ -588,22 +977,24 @@ const getCalendarPushStatusMeta = (event) => {
 }
 
 const getCalendarPushDetail = (event) => {
-  if (event.scheduledPushId && event.scheduledPushAt === event.startsAt) {
+  const source = resolveSourceCalendarEvent(event) || event
+  const expectedReminderAt = getNextCalendarEventReminderAt(source, departureNow.value)
+  if (source.scheduledPushId && source.scheduledPushAt === expectedReminderAt) {
     return t(
-      `排程时间：${formatDateTime(event.scheduledPushAt)}`,
-      `Scheduled time: ${formatDateTime(event.scheduledPushAt)}`,
+      `提醒时间：${formatDateTime(source.scheduledPushAt)}`,
+      `Reminder time: ${formatDateTime(source.scheduledPushAt)}`,
     )
   }
-  if (event.lastPushError) {
+  if (source.lastPushError) {
     return t(
-      `原因：${formatPushReason(event.lastPushError)}`,
-      `Reason: ${formatPushReason(event.lastPushError)}`,
+      `原因：${formatPushReason(source.lastPushError)}`,
+      `Reason: ${formatPushReason(source.lastPushError)}`,
     )
   }
   if (!calendarPushRuntime.value.ready) {
     return t(calendarPushRuntime.value.detailZh, calendarPushRuntime.value.detailEn)
   }
-  if (event.pushStatus === 'cancelled') {
+  if (source.pushStatus === 'cancelled') {
     return t('最近一次排程已取消。', 'The most recent schedule was cancelled.')
   }
   return t(
@@ -629,6 +1020,39 @@ const formatDateTime = (timestamp) => {
   })
 }
 
+const formatCalendarEventRange = (event = {}) => {
+  const startsAt = Number(event.startsAt)
+  const endsAt = Number(event.endsAt)
+  if (!Number.isFinite(startsAt) || startsAt <= 0) return t('待定', 'TBD')
+  const startDate = new Date(startsAt)
+  const safeEndsAt = Number.isFinite(endsAt) && endsAt > startsAt ? endsAt : startsAt
+  const endDate = new Date(event.allDay ? Math.max(startsAt, safeEndsAt - 1) : safeEndsAt)
+  const sameDay = isSameCalendarDay(startsAt, endDate.getTime())
+  if (event.allDay) {
+    const startLabel = startDate.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    if (sameDay) return t(`${startLabel} · 全天`, `${startLabel} · All day`)
+    const endLabel = endDate.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    return t(`${startLabel} – ${endLabel} · 全天`, `${startLabel} – ${endLabel} · All day`)
+  }
+  if (sameDay) {
+    return `${startDate.toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  }
+  return `${formatDateTime(startsAt)} – ${formatDateTime(safeEndsAt)}`
+}
+
+const formatClockTime = (timestamp) => {
+  const ts = Number(timestamp)
+  if (!Number.isFinite(ts) || ts <= 0) return '--:--'
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const getDepartureTransportLabel = (mode, projection) => {
+  const mapPack = mapPacks.value.find((pack) => pack.id === projection?.origin?.mapPackId)
+  return mapPack?.kind === 'real'
+    ? t(mode.labelZh, mode.labelEn)
+    : t(mode.neutralLabelZh, mode.neutralLabelEn)
+}
+
 watch(
   mapCalendarReminders,
   (reminders) => {
@@ -636,6 +1060,87 @@ watch(
   },
   { immediate: true, deep: true },
 )
+
+watch(
+  [calendarOccurrences, selectedCalendarDate],
+  ([occurrences, dayStartsAt]) => {
+    const dayOccurrences = calendarOccurrencesForDay(occurrences, dayStartsAt)
+    const current = dayOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === selectedOccurrenceId.value,
+    )
+    if (current) {
+      hasResolvedInitialCalendarSelection.value = true
+      selectedEventId.value = current.sourceEventId
+      return
+    }
+    const first = dayOccurrences[0] || null
+    if (!first && !hasResolvedInitialCalendarSelection.value && occurrences.length > 0) {
+      const now = Date.now()
+      const nearest =
+        occurrences.find((occurrence) => occurrence.endsAt >= now) || occurrences[0]
+      selectedCalendarDate.value = startOfCalendarDay(nearest.startsAt)
+      selectedEventId.value = nearest.sourceEventId
+      selectedOccurrenceId.value = nearest.occurrenceId
+      hasResolvedInitialCalendarSelection.value = true
+      return
+    }
+    selectedEventId.value = first?.sourceEventId || ''
+    selectedOccurrenceId.value = first?.occurrenceId || ''
+    if (first) hasResolvedInitialCalendarSelection.value = true
+  },
+  { immediate: true },
+)
+
+watch(
+  [confirmedEvents, () => route.query.calendarEventId],
+  ([events, requestedEventId]) => {
+    const eventId = typeof requestedEventId === 'string' ? requestedEventId.trim() : ''
+    if (!eventId || selectedEventId.value === eventId) return
+    const event = events.find((candidate) => candidate.id === eventId)
+    if (!event) return
+    calendarAnchorAt.value = event.startsAt
+    selectedCalendarDate.value = startOfCalendarDay(event.startsAt)
+    selectedEventId.value = event.id
+    selectedOccurrenceId.value = `${event.id}::${event.startsAt}`
+    hasResolvedInitialCalendarSelection.value = true
+  },
+  { immediate: true },
+)
+
+watch(
+  [() => calendarPushRuntime.value.ready, () => calendarStore.hasFinishedStorageHydration],
+  ([ready, hydrated]) => {
+    if (!ready || !hydrated) return
+    const now = Date.now()
+    confirmedEvents.value.forEach((event) => {
+      const reminderAt = getNextCalendarEventReminderAt(event, now)
+      if (!reminderAt || reminderAt < now) return
+      if (event.scheduledPushId && event.scheduledPushAt !== reminderAt) {
+        void calendarStore.rescheduleEventPush(event.id, {
+          source: 'calendar_view_rearm',
+        })
+        return
+      }
+      void calendarStore.ensureEventPushScheduled(event.id, {
+        source: 'calendar_view_open',
+      })
+    })
+  },
+  { immediate: true },
+)
+
+onMounted(() => {
+  departureClockTimer = setInterval(() => {
+    departureNow.value = Date.now()
+  }, 30_000)
+})
+
+onBeforeUnmount(() => {
+  if (departureClockTimer) {
+    clearInterval(departureClockTimer)
+    departureClockTimer = null
+  }
+})
 </script>
 
 <template>
@@ -649,6 +1154,21 @@ watch(
     </header>
 
     <main class="calendar-content">
+      <CalendarWorkspace
+        :view-mode="calendarViewMode"
+        :anchor-at="calendarAnchorAt"
+        :selected-date="selectedCalendarDate"
+        :occurrences="calendarOccurrences"
+        :selected-event-id="selectedEventId"
+        :selected-occurrence-id="selectedOccurrenceId"
+        @update-view="updateCalendarView"
+        @shift-period="shiftCalendarPeriod"
+        @go-today="goToCalendarToday"
+        @select-day="selectCalendarDay"
+        @select-event="selectCalendarOccurrence"
+        @create-event="openCreateCalendarEvent"
+      />
+
       <section
         class="calendar-panel calendar-overview"
         :class="calendarOverviewClass"
@@ -714,18 +1234,24 @@ watch(
       </section>
 
       <section
-        v-if="visibleCalendarEvents.length > 0"
+        v-if="selectedEventPresentation"
         class="calendar-schedule-section"
-        data-testid="calendar-confirmed-events"
+        data-testid="calendar-selected-event-detail"
       >
-        <div class="calendar-section-header">
+        <div class="calendar-section-header calendar-section-header--detail">
           <div class="calendar-section-header__copy">
-            <p class="calendar-section-kicker">{{ t('已确认', 'Confirmed') }}</p>
-            <h2 class="calendar-section-title">{{ t('日历事件', 'Calendar events') }}</h2>
+            <p class="calendar-section-kicker">{{ t('选中安排', 'Selected event') }}</p>
+            <h2 class="calendar-section-title">{{ t('详情与准备', 'Details and preparation') }}</h2>
           </div>
-          <span class="calendar-section-count" aria-live="polite">
-            {{ t(`${visibleCalendarEvents.length} 条`, `${visibleCalendarEvents.length} events`) }}
-          </span>
+          <button
+            type="button"
+            class="calendar-action calendar-action--edit"
+            data-testid="calendar-edit-selected-event"
+            @click="openEditCalendarEvent(selectedEventPresentation)"
+          >
+            <i class="fas fa-pen" aria-hidden="true"></i>
+            <span>{{ t('编辑', 'Edit') }}</span>
+          </button>
         </div>
 
         <div class="calendar-push-summary">
@@ -743,55 +1269,42 @@ watch(
 
         <div class="calendar-event-list">
           <CalendarEventCard
-            v-for="event in visibleCalendarEvents"
-            :key="event.id"
-            :event="event"
-            :related-knowledge-points="getRelatedKnowledgePoints(eventKnowledgePoints, event.id)"
-            :formatted-starts-at="formatDateTime(event.startsAt)"
-            :formatted-input-starts-at="formatDateTimeInput(event.startsAt)"
-            :is-time-edited="isEventTimeEdited(event)"
+            :key="selectedEventPresentation.occurrenceId"
+            :event="selectedEventPresentation"
+            :related-knowledge-points="getRelatedKnowledgePoints(eventKnowledgePoints, selectedEventPresentation.id)"
+            :formatted-starts-at="formatCalendarEventRange(selectedEventPresentation)"
+            :formatted-input-starts-at="formatDateTimeInput(selectedEventPresentation.startsAt)"
+            :is-time-edited="isEventTimeEdited(selectedEventPresentation)"
             :quick-shift-options="eventTimeQuickShiftOptions"
-            :push-status-meta="getCalendarPushStatusMeta(event)"
-            :push-detail="getCalendarPushDetail(event)"
-            :push-history="getEventPushHistory(event)"
+            :push-status-meta="getCalendarPushStatusMeta(selectedEventPresentation)"
+            :push-detail="getCalendarPushDetail(selectedEventPresentation)"
+            :push-history="getEventPushHistory(selectedEventPresentation)"
+            :departure-projection="getDepartureProjection(selectedEventPresentation.id)"
+            :departure-transport-modes="departureTransportModes"
+            :selected-departure-mode="getDepartureMode(selectedEventPresentation.id)"
+            :active-journey="getActiveJourneyForEvent(selectedEventPresentation.id)"
+            :other-journey-active="hasOtherActiveJourney(selectedEventPresentation.id)"
+            :departure-feedback="getDepartureFeedback(selectedEventPresentation.id)"
             :relationship-contact-options="relationshipContactOptions"
-            :selected-relationship-contact-id="calendarRelationshipDrafts[event.id] || ''"
-            :relationship-suggestion="getEventRelationshipSuggestion(event)"
-            :relationship-review="getCalendarEventRelationshipReview(event)"
-            :relationship-feedback="getRelationshipFeedbackForEvent(event.id)"
+            :selected-relationship-contact-id="calendarRelationshipDrafts[selectedEventPresentation.id] || ''"
+            :relationship-suggestion="getEventRelationshipSuggestion(selectedEventPresentation)"
+            :relationship-review="getCalendarEventRelationshipReview(selectedEventPresentation)"
+            :relationship-feedback="getRelationshipFeedbackForEvent(selectedEventPresentation.id)"
             :format-push-history-entry="formatPushHistoryEntry"
             :format-date-time="formatDateTime"
+            :format-clock-time="formatClockTime"
+            :get-departure-transport-label="getDepartureTransportLabel"
             @update-starts-at="updateEventStartsAt"
             @shift-starts-at="shiftEventStartsAt"
             @reset-starts-at="resetEventStartsAt"
             @delete-event="deleteCalendarEvent"
+            @update-departure-mode="updateDepartureMode"
+            @start-travel="startEventTravel"
+            @open-journey="openEventJourney"
             @open-worldbook="(pointIds) => openWorldBook({ pointIds })"
             @update-relationship-contact="setEventRelationshipContact"
             @record-relationship="recordEventRelationship"
           />
-        </div>
-      </section>
-
-      <section
-        v-else
-        class="calendar-panel calendar-empty-events"
-        data-testid="calendar-empty-events"
-      >
-        <span class="calendar-empty-events__icon" aria-hidden="true">
-          <i class="fas fa-calendar-check"></i>
-        </span>
-        <div class="calendar-empty-events__copy">
-          <p class="calendar-empty-events__title">
-            {{ t('暂无已确认日程', 'No confirmed events yet') }}
-          </p>
-          <p class="calendar-empty-events__description">
-            {{
-              t(
-                '到提醒事项中确认线索后，它们会出现在这里。',
-                'Confirm cues in Reminders, and they will appear here.',
-              )
-            }}
-          </p>
         </div>
       </section>
 
@@ -802,7 +1315,7 @@ watch(
         <div class="calendar-section-header calendar-section-header--action">
           <div class="calendar-section-header__copy">
             <p class="calendar-section-kicker">{{ t('提醒事项', 'Reminders') }}</p>
-            <h2 class="calendar-section-title">{{ t('待处理线索', 'Pending cues') }}</h2>
+            <h2 class="calendar-section-title">{{ t('待确认事项', 'Waiting for confirmation') }}</h2>
           </div>
           <button
             type="button"
@@ -840,7 +1353,7 @@ watch(
         <div class="calendar-map-boundary__layout">
           <div class="calendar-map-boundary__copy">
             <p class="calendar-map-boundary__title">
-              {{ t('地图反馈池', 'Map feedback pool') }}
+              {{ t('地图反馈', 'Map feedback') }}
             </p>
             <p class="calendar-map-boundary__description">
               {{
@@ -857,6 +1370,17 @@ watch(
         </div>
       </section>
     </main>
+
+    <CalendarEventEditor
+      v-model="editorDraft"
+      :open="editorOpen"
+      :mode="editorMode"
+      :places="activeMapAllPlaces"
+      :validation-message="editorValidationMessage"
+      :saving="editorSaving"
+      @save="saveCalendarEventEditor"
+      @cancel="closeCalendarEventEditor"
+    />
   </div>
 </template>
 
@@ -1239,6 +1763,14 @@ watch(
   border-color: color-mix(in srgb, var(--system-warning) 26%, transparent);
   color: var(--system-warning);
   background: var(--system-warning-soft);
+}
+
+.calendar-action--edit {
+  flex: none;
+  gap: 7px;
+  border-color: color-mix(in srgb, var(--system-accent) 28%, transparent);
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
 }
 
 .calendar-cue-sources {

@@ -17,6 +17,15 @@ import {
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
+import {
+  getCalendarEventDurationMs,
+  getCalendarEventEndForStart,
+  getNextCalendarEventReminderAt,
+  normalizeCalendarRecurrence,
+  normalizeCalendarReminderLeadMinutes,
+  normalizeCalendarRequirement,
+} from '../lib/calendar-schedule'
+import { notifyScheduleOrchestratorCalendarChanged } from '../lib/schedule-orchestrator-calendar-signal'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useRemindersStore } from './reminders'
@@ -25,7 +34,7 @@ import { useRelationshipRuntimeStore } from './relationshipRuntime'
 import { useSystemStore } from './system'
 
 const CALENDAR_STORAGE_KEY = 'store:calendar'
-const CALENDAR_STORAGE_VERSION = 1
+const CALENDAR_STORAGE_VERSION = 3
 const CALENDAR_EVENT_LIMIT = 120
 const CALENDAR_EVENT_PUSH_HISTORY_LIMIT = 6
 const CALENDAR_EVENT_STATUS_CONFIRMED = 'confirmed'
@@ -55,7 +64,69 @@ const trimLine = (value, fallback = '', max = 160) => {
   return normalized.slice(0, max)
 }
 
+const trimText = (value, fallback = '', max = 1200) => {
+  if (typeof value !== 'string') return fallback
+  const normalized = value.trim().replace(/\r\n?/g, '\n')
+  if (!normalized) return fallback
+  return normalized.slice(0, max)
+}
+
 const normalizeEventId = (value) => trimLine(value, '', 140)
+
+export const normalizeCalendarEventLocationRef = (raw) => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const mapPackId = trimLine(raw.mapPackId, '', 120)
+  const placeId = trimLine(raw.placeId || raw.id, '', 180).toLowerCase()
+  if (!mapPackId || !placeId) return null
+  const labelZh = trimLine(raw.labelZh || raw.label, '', 120)
+  const labelEn = trimLine(raw.labelEn, labelZh, 120)
+  const detail = trimLine(raw.detail || raw.detailZh || raw.detailEn, '', 240)
+  return {
+    owner: 'map',
+    mapPackId,
+    placeId,
+    labelZh,
+    labelEn,
+    detail,
+  }
+}
+
+export const migrateCalendarStorage = ({ version, data } = {}) => {
+  const sourceVersion = Number(version)
+  if (
+    ![1, 2].includes(sourceVersion) ||
+    !data ||
+    typeof data !== 'object' ||
+    Array.isArray(data)
+  ) {
+    return null
+  }
+  return {
+    ...data,
+    events: Array.isArray(data.events)
+      ? data.events.map((event) => ({
+          ...event,
+          locationRef: normalizeCalendarEventLocationRef(
+            event?.locationRef || event?.destinationRef || event?.location,
+          ),
+          endsAt: Math.max(
+            0,
+            toInt(
+              event?.endsAt,
+              Math.max(0, toInt(event?.startsAt ?? event?.dueAt, 0)) + 60 * 60 * 1000,
+            ),
+          ),
+          allDay: event?.allDay === true,
+          recurrence: normalizeCalendarRecurrence(event?.recurrence),
+          recurrenceUntil: Math.max(0, toInt(event?.recurrenceUntil, 0)),
+          requirement: normalizeCalendarRequirement(event?.requirement),
+          reminderLeadMinutes: normalizeCalendarReminderLeadMinutes(
+            event?.reminderLeadMinutes,
+          ),
+        }))
+      : [],
+  }
+}
 
 const normalizeCalendarEventStatus = (value, fallback = CALENDAR_EVENT_STATUS_CONFIRMED) => {
   const normalized = typeof value === 'string' ? value.trim() : ''
@@ -129,6 +200,17 @@ const normalizeCalendarEventRecord = (raw, index = 0) => {
   const titleEn = trimLine(raw.titleEn, '', 100)
   const titleZh = trimLine(raw.titleZh, titleEn || '日历事件', 100)
   if (!id || !titleZh) return null
+  const allDay = raw.allDay === true
+  const defaultDuration = allDay ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000
+  const endsAt = startsAt
+    ? Math.max(startsAt + 60_000, toInt(raw.endsAt, startsAt + defaultDuration))
+    : 0
+  const originalEndsAt = startsAt
+    ? Math.max(
+        originalStartsAt + 60_000,
+        toInt(raw.originalEndsAt, endsAt),
+      )
+    : 0
 
   return {
     id,
@@ -136,13 +218,25 @@ const normalizeCalendarEventRecord = (raw, index = 0) => {
     sourceReminderId: normalizeEventId(raw.sourceReminderId),
     sourceAreaId: normalizeEventId(raw.sourceAreaId || raw.areaId),
     sourceTripId: normalizeEventId(raw.sourceTripId || raw.tripId),
+    locationRef: normalizeCalendarEventLocationRef(
+      raw.locationRef || raw.destinationRef || raw.location,
+    ),
     relationshipBinding: normalizeRelationshipBinding(raw.relationshipBinding),
     titleZh,
     titleEn: titleEn || titleZh,
     summaryZh: trimLine(raw.summaryZh, '', 240),
     summaryEn: trimLine(raw.summaryEn, '', 240),
+    notesZh: trimText(raw.notesZh || raw.notes, '', 1200),
+    notesEn: trimText(raw.notesEn, '', 1200),
     startsAt,
+    endsAt,
     originalStartsAt,
+    originalEndsAt,
+    allDay,
+    recurrence: normalizeCalendarRecurrence(raw.recurrence),
+    recurrenceUntil: Math.max(0, toInt(raw.recurrenceUntil, 0)),
+    requirement: normalizeCalendarRequirement(raw.requirement),
+    reminderLeadMinutes: normalizeCalendarReminderLeadMinutes(raw.reminderLeadMinutes),
     timeEditedAt: Math.max(0, toInt(raw.timeEditedAt, 0)),
     status: normalizeCalendarEventStatus(raw.status),
     pinned: raw.pinned === true,
@@ -193,6 +287,12 @@ export const useCalendarStore = defineStore('calendar', () => {
   const eventPushCancelPromises = new Map()
 
   const upcomingEvents = computed(() =>
+    sortCalendarEvents(
+      events.value.filter((event) => event.status === CALENDAR_EVENT_STATUS_CONFIRMED),
+    ),
+  )
+
+  const confirmedEvents = computed(() =>
     sortCalendarEvents(
       events.value.filter((event) => event.status === CALENDAR_EVENT_STATUS_CONFIRMED),
     ),
@@ -292,6 +392,68 @@ export const useCalendarStore = defineStore('calendar', () => {
     return findEventById(normalized.id)
   }
 
+  const createManualEvent = (input = {}) => {
+    const now = Date.now()
+    const id = `calendar_event_manual_${now}_${Math.random().toString(36).slice(2, 8)}`
+    return upsertEvent({
+      ...input,
+      id,
+      source: 'manual',
+      status: CALENDAR_EVENT_STATUS_CONFIRMED,
+      originalStartsAt: input.startsAt,
+      originalEndsAt: input.endsAt,
+      timeEditedAt: 0,
+      route: '',
+      icon: input.icon || 'fas fa-calendar-day',
+      tone: input.tone || 'blue',
+    })
+  }
+
+  const updateEventDetails = (eventId, patch = {}) => {
+    const event = findEventById(eventId)
+    if (!event) return null
+    const next = normalizeCalendarEventRecord(
+      {
+        ...event,
+        titleZh: patch.titleZh ?? event.titleZh,
+        titleEn: patch.titleEn ?? patch.titleZh ?? event.titleEn,
+        summaryZh: patch.summaryZh ?? event.summaryZh,
+        summaryEn: patch.summaryEn ?? event.summaryEn,
+        notesZh: patch.notesZh ?? event.notesZh,
+        notesEn: patch.notesEn ?? event.notesEn,
+        startsAt: patch.startsAt ?? event.startsAt,
+        endsAt: patch.endsAt ?? event.endsAt,
+        allDay: patch.allDay ?? event.allDay,
+        recurrence: patch.recurrence ?? event.recurrence,
+        recurrenceUntil: patch.recurrenceUntil ?? event.recurrenceUntil,
+        requirement: patch.requirement ?? event.requirement,
+        reminderLeadMinutes: patch.reminderLeadMinutes ?? event.reminderLeadMinutes,
+        locationRef:
+          Object.prototype.hasOwnProperty.call(patch, 'locationRef')
+            ? patch.locationRef
+            : event.locationRef,
+        updatedAt: Date.now(),
+      },
+      events.value.indexOf(event),
+    )
+    if (!next) return null
+    const oldReminderAt = getNextCalendarEventReminderAt(event)
+    const nextReminderAt = getNextCalendarEventReminderAt(next)
+    return upsertEvent({
+      ...next,
+      originalStartsAt: event.originalStartsAt || event.startsAt,
+      originalEndsAt: event.originalEndsAt || event.endsAt,
+      timeEditedAt:
+        next.startsAt !== event.startsAt || next.endsAt !== event.endsAt
+          ? Date.now()
+          : event.timeEditedAt,
+      pushStatus:
+        event.scheduledPushId && oldReminderAt !== nextReminderAt
+          ? 'needs_reschedule'
+          : event.pushStatus,
+    })
+  }
+
   const upsertEventFromMapReminder = (reminder = {}) => {
     const reminderId = normalizeEventId(reminder.id)
     if (!reminderId) return null
@@ -305,6 +467,7 @@ export const useCalendarStore = defineStore('calendar', () => {
       sourceReminderId: reminderId,
       sourceAreaId: reminder.areaId || '',
       sourceTripId: reminder.sourceTripId || reminder.tripId || '',
+      locationRef: reminder.locationRef || existing?.locationRef || null,
       titleZh: reminder.titleZh || '地图提醒',
       titleEn: reminder.titleEn || 'Map reminder',
       summaryZh: reminder.summaryZh || '',
@@ -763,12 +926,13 @@ export const useCalendarStore = defineStore('calendar', () => {
     if (!event || event.status !== CALENDAR_EVENT_STATUS_CONFIRMED) {
       return { ok: false, reason: 'event_missing' }
     }
-    if (!event.startsAt) return { ok: false, reason: 'deliver_at_invalid' }
+    const reminderAt = getNextCalendarEventReminderAt(event)
+    if (!reminderAt) return { ok: false, reason: 'deliver_at_invalid' }
     if (!canUseCalendarEventRealPush()) return { ok: false, reason: 'real_push_disabled' }
     if (eventPushSchedulePromises.has(event.id)) {
       return eventPushSchedulePromises.get(event.id)
     }
-    if (!force && event.scheduledPushId && event.scheduledPushAt === event.startsAt) {
+    if (!force && event.scheduledPushId && event.scheduledPushAt === reminderAt) {
       return {
         ok: true,
         reason: 'already_scheduled',
@@ -788,7 +952,7 @@ export const useCalendarStore = defineStore('calendar', () => {
         const result = await schedulePushNotification({
           serverUrl: systemStore.settings.system.pushServerUrl,
           deviceId: systemStore.settings.system.pushDeviceId,
-          deliverAt: event.startsAt,
+          deliverAt: reminderAt,
           scheduleId,
           source: source || 'calendar_event',
           category: 'calendar_event',
@@ -806,7 +970,7 @@ export const useCalendarStore = defineStore('calendar', () => {
             status: 'failed',
             source: source || 'calendar_event',
             scheduleId,
-            deliverAt: event.startsAt,
+            deliverAt: reminderAt,
             reason: result.reason || 'schedule_failed',
             message: result.message || '',
           })
@@ -826,7 +990,7 @@ export const useCalendarStore = defineStore('calendar', () => {
         const now = Date.now()
         markEventPushState(event.id, {
           scheduledPushId: result.scheduleId || scheduleId,
-          scheduledPushAt: result.deliverAt || event.startsAt,
+          scheduledPushAt: result.deliverAt || reminderAt,
           pushStatus: 'scheduled',
           pushUpdatedAt: now,
           lastPushScheduledAt: now,
@@ -836,7 +1000,7 @@ export const useCalendarStore = defineStore('calendar', () => {
           status: 'ok',
           source: source || 'calendar_event',
           scheduleId: result.scheduleId || scheduleId,
-          deliverAt: result.deliverAt || event.startsAt,
+          deliverAt: result.deliverAt || reminderAt,
         })
 
         getSystemApiReports().addReport({
@@ -852,7 +1016,7 @@ export const useCalendarStore = defineStore('calendar', () => {
         return {
           ok: true,
           scheduleId: result.scheduleId || scheduleId,
-          deliverAt: result.deliverAt || event.startsAt,
+          deliverAt: result.deliverAt || reminderAt,
         }
       } finally {
         eventPushSchedulePromises.delete(event.id)
@@ -866,7 +1030,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const rescheduleEventPush = async (eventId, { source = '' } = {}) => {
     const event = findEventById(eventId)
     if (!event) return { ok: false, reason: 'event_missing' }
-    if (event.scheduledPushId && event.scheduledPushAt !== event.startsAt) {
+    if (event.scheduledPushId && event.scheduledPushAt !== getNextCalendarEventReminderAt(event)) {
       await cancelEventPushScheduled({
         eventId: event.id,
         scheduleId: event.scheduledPushId,
@@ -883,13 +1047,21 @@ export const useCalendarStore = defineStore('calendar', () => {
     const event = findEventById(eventId)
     const normalizedStartsAt = Math.max(0, toInt(startsAt, 0))
     if (!event || normalizedStartsAt <= 0) return false
+    const normalizedEndsAt = getCalendarEventEndForStart(event, normalizedStartsAt)
+    const nextReminderAt = getNextCalendarEventReminderAt({
+      ...event,
+      startsAt: normalizedStartsAt,
+      endsAt: normalizedEndsAt,
+    })
     const needsReschedule =
-      event.scheduledPushId && Math.max(0, toInt(event.scheduledPushAt, 0)) !== normalizedStartsAt
+      event.scheduledPushId && Math.max(0, toInt(event.scheduledPushAt, 0)) !== nextReminderAt
     return Boolean(
       upsertEvent({
         ...event,
         startsAt: normalizedStartsAt,
+        endsAt: normalizedEndsAt,
         originalStartsAt: event.originalStartsAt || event.startsAt,
+        originalEndsAt: event.originalEndsAt || event.endsAt,
         timeEditedAt: Date.now(),
         pushStatus: needsReschedule ? 'needs_reschedule' : event.pushStatus || 'idle',
       }),
@@ -907,13 +1079,24 @@ export const useCalendarStore = defineStore('calendar', () => {
     if (!event) return false
     const originalStartsAt = Math.max(0, toInt(event.originalStartsAt || event.startsAt, 0))
     if (originalStartsAt <= 0) return false
+    const originalEndsAt = Math.max(
+      originalStartsAt + 60_000,
+      toInt(event.originalEndsAt, originalStartsAt + getCalendarEventDurationMs(event)),
+    )
+    const reminderAt = getNextCalendarEventReminderAt({
+      ...event,
+      startsAt: originalStartsAt,
+      endsAt: originalEndsAt,
+    })
     const needsReschedule =
-      event.scheduledPushId && Math.max(0, toInt(event.scheduledPushAt, 0)) !== originalStartsAt
+      event.scheduledPushId && Math.max(0, toInt(event.scheduledPushAt, 0)) !== reminderAt
     return Boolean(
       upsertEvent({
         ...event,
         startsAt: originalStartsAt,
+        endsAt: originalEndsAt,
         originalStartsAt,
+        originalEndsAt,
         timeEditedAt: 0,
         pushStatus: needsReschedule ? 'needs_reschedule' : event.pushStatus || 'idle',
       }),
@@ -924,6 +1107,20 @@ export const useCalendarStore = defineStore('calendar', () => {
     const event = findEventBySourceReminderId(reminderId)
     if (!event) return false
     return resetEventStartsAt(event.id)
+  }
+
+  const setEventLocationRef = (eventId, locationRef) => {
+    const event = findEventById(eventId)
+    if (!event) return false
+    const normalized = normalizeCalendarEventLocationRef(locationRef)
+    if (!normalized) return false
+    return Boolean(upsertEvent({ ...event, locationRef: normalized }))
+  }
+
+  const clearEventLocationRef = (eventId) => {
+    const event = findEventById(eventId)
+    if (!event || !event.locationRef) return false
+    return Boolean(upsertEvent({ ...event, locationRef: null }))
   }
 
   const buildEventRelationshipSuggestion = (eventId, target = null) => {
@@ -985,6 +1182,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(CALENDAR_STORAGE_KEY, {
       version: CALENDAR_STORAGE_VERSION,
+      migrate: migrateCalendarStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -992,6 +1190,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(CALENDAR_STORAGE_KEY, {
       version: CALENDAR_STORAGE_VERSION,
+      migrate: migrateCalendarStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -1018,9 +1217,12 @@ export const useCalendarStore = defineStore('calendar', () => {
   }
 
   const persistToStorage = () => {
-    writePersistedState(CALENDAR_STORAGE_KEY, createPersistedSnapshot(), {
+    const result = writePersistedState(CALENDAR_STORAGE_KEY, createPersistedSnapshot(), {
       version: CALENDAR_STORAGE_VERSION,
+      migrate: migrateCalendarStorage,
     })
+    notifyScheduleOrchestratorCalendarChanged()
+    return result
   }
 
   const saveNow = () => {
@@ -1059,6 +1261,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     activeStockMarketCues,
     activeShoppingDeliveryCues,
     upcomingEvents,
+    confirmedEvents,
     eventCount,
     phoneMissedCallCueCount,
     stockMarketCueCount,
@@ -1073,6 +1276,8 @@ export const useCalendarStore = defineStore('calendar', () => {
     findShoppingDeliveryCueById,
     findShoppingDeliveryCueByOrderId,
     upsertEvent,
+    createManualEvent,
+    updateEventDetails,
     upsertEventFromMapReminder,
     upsertPhoneMissedCallCue,
     upsertPhoneMissedCallCueFromCall,
@@ -1103,6 +1308,8 @@ export const useCalendarStore = defineStore('calendar', () => {
     setEventStartsAtBySourceReminderId,
     resetEventStartsAt,
     resetEventStartsAtBySourceReminderId,
+    setEventLocationRef,
+    clearEventLocationRef,
     buildEventRelationshipSuggestion,
     recordEventRelationshipFact,
     clearRelationshipBindingForEvent,

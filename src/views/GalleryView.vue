@@ -1,11 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { formatBytesCompact, summarizeMediaLimitPolicy, MEDIA_SIZE_SCENE } from '../lib/media-policy'
 import { pushReturnTarget } from '../lib/navigation-return'
 import { useChatStore } from '../stores/chat'
+import { useMapStore } from '../stores/map'
 import { GALLERY_ASSET_CATEGORIES, useGalleryStore } from '../stores/gallery'
 import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
@@ -14,11 +15,16 @@ const router = useRouter()
 const route = useRoute()
 const galleryStore = useGalleryStore()
 const chatStore = useChatStore()
+const mapStore = useMapStore()
 const { t } = useI18n()
 const { confirmDialog, promptDialog } = useDialog()
 
+const activeTab = ref('library')
 const activeCategory = ref('all')
 const activeAssetUsageFilter = ref('all')
+const albumView = ref(null)
+const addSheetOpen = ref(false)
+const detailAssetId = ref('')
 const localImportCategory = ref('reference')
 const localFileInput = ref(null)
 const replaceFileInput = ref(null)
@@ -32,14 +38,12 @@ const urlForm = reactive({
   name: '',
   category: 'reference',
 })
-const previewMap = reactive({})
-const GALLERY_ASSET_PREVIEW_SCOPE_ID = 'gallery-view'
-const activeFolderCategory = ref('all')
-const assetFolderDraftMap = reactive({})
 const folderForm = reactive({
   name: '',
   category: 'all',
 })
+const previewMap = reactive({})
+const GALLERY_ASSET_PREVIEW_SCOPE_ID = 'gallery-view'
 
 const categoryLabel = (key) => {
   if (key === 'all') return t('全部', 'All')
@@ -60,15 +64,8 @@ const categoryTabs = computed(() => [
 ])
 
 const categoryScopedAssets = computed(() => galleryStore.getAssetsByCategory(activeCategory.value))
-const folderCategoryTabs = computed(() => [
-  { key: 'all', label: t('全部文件夹', 'All folders') },
-  ...GALLERY_ASSET_CATEGORIES.map((key) => ({
-    key,
-    label: categoryLabel(key),
-  })),
-])
-const visibleFolders = computed(() => galleryStore.listFolders({ category: activeFolderCategory.value }))
 const allFolderOptions = computed(() => galleryStore.listFolders({ category: 'all' }).slice(0, 200))
+const allFolders = computed(() => galleryStore.listFolders({ category: 'all' }))
 const galleryImportLimitPolicy = summarizeMediaLimitPolicy(MEDIA_SIZE_SCENE.GALLERY_IMPORT)
 const importLimitHint = computed(() =>
   t(
@@ -93,8 +90,194 @@ const goHome = () => {
   pushReturnTarget(router, route, '/home')
 }
 
+/* ---------- 人物 / 地点智能相簿 ---------- */
+
+const personAlbums = computed(() => {
+  const grouped = new Map()
+  galleryStore.sortedAssets.forEach((asset) => {
+    ;(Array.isArray(asset.personIds) ? asset.personIds : []).forEach((personId) => {
+      if (!grouped.has(personId)) grouped.set(personId, [])
+      grouped.get(personId).push(asset)
+    })
+  })
+  return [...grouped.entries()]
+    .map(([personId, items]) => {
+      const profile = chatStore.roleProfiles.find((item) => String(item.id) === String(personId))
+      if (!profile) return null
+      return {
+        personId,
+        name: profile.name || `#${personId}`,
+        count: items.length,
+        cover: items[0] || null,
+      }
+    })
+    .filter(Boolean)
+})
+
+const mapPlaceLabel = (placeId = '') => {
+  const place = (mapStore.activeMapAllPlaces || []).find((item) => item.placeId === placeId)
+  return place?.label || place?.name || ''
+}
+
+const placeAlbums = computed(() => {
+  const grouped = new Map()
+  galleryStore.sortedAssets.forEach((asset) => {
+    const key = asset.placeId
+      ? `place:${asset.placeId}`
+      : asset.placeText
+        ? `text:${String(asset.placeText).toLowerCase()}`
+        : ''
+    if (!key) return
+    if (!grouped.has(key)) grouped.set(key, [])
+    grouped.get(key).push(asset)
+  })
+  return [...grouped.entries()].map(([key, items]) => {
+    const first = items[0]
+    const label = first.placeId
+      ? mapPlaceLabel(first.placeId) || first.placeText || first.placeId
+      : first.placeText
+    return {
+      key,
+      label,
+      count: items.length,
+      cover: first || null,
+    }
+  })
+})
+
+const albumTitle = computed(() => {
+  const view = albumView.value
+  if (!view) return ''
+  if (view.kind === 'person') {
+    return personAlbums.value.find((album) => album.personId === view.id)?.name || t('人物', 'Person')
+  }
+  if (view.kind === 'place') {
+    return placeAlbums.value.find((album) => album.key === view.id)?.label || t('地点', 'Place')
+  }
+  const folder = galleryStore.findFolderById(view.id)
+  return folder?.name || t('相簿', 'Album')
+})
+
+const albumAssets = computed(() => {
+  const view = albumView.value
+  if (!view) return []
+  if (view.kind === 'person') {
+    return galleryStore.sortedAssets.filter((asset) =>
+      (Array.isArray(asset.personIds) ? asset.personIds : []).includes(view.id),
+    )
+  }
+  if (view.kind === 'place') {
+    return galleryStore.sortedAssets.filter((asset) => {
+      const key = asset.placeId
+        ? `place:${asset.placeId}`
+        : asset.placeText
+          ? `text:${String(asset.placeText).toLowerCase()}`
+          : ''
+      return key === view.id
+    })
+  }
+  const folder = galleryStore.findFolderById(view.id)
+  if (!folder) return []
+  return (Array.isArray(folder.assetIds) ? folder.assetIds : [])
+    .map((assetId) => galleryStore.findAssetById(assetId))
+    .filter(Boolean)
+})
+
+const openAlbum = (kind, id) => {
+  albumView.value = { kind, id }
+}
+
+const closeAlbum = () => {
+  albumView.value = null
+}
+
+const openCategoryFromAlbums = (categoryKey) => {
+  activeCategory.value = categoryKey
+  activeTab.value = 'library'
+}
+
+/* ---------- 图片详情 ---------- */
+
+const detailAsset = computed(() => galleryStore.findAssetById(detailAssetId.value))
+
+const openAssetDetail = (asset) => {
+  detailAssetId.value = asset?.id || ''
+}
+
+const closeAssetDetail = () => {
+  detailAssetId.value = ''
+}
+
+const detailPersonIds = computed(() =>
+  Array.isArray(detailAsset.value?.personIds) ? detailAsset.value.personIds : [],
+)
+
+const detailPersonIdSet = computed(() => new Set(detailPersonIds.value.map(String)))
+
+const isDetailPersonOn = (personId) => detailPersonIdSet.value.has(String(personId))
+
+const toggleDetailPerson = (personId) => {
+  const asset = detailAsset.value
+  if (!asset) return
+  const key = String(personId)
+  const current = detailPersonIds.value.map(String)
+  const index = current.indexOf(key)
+  if (index >= 0) current.splice(index, 1)
+  else current.push(key)
+  galleryStore.setAssetPersons(asset.id, current)
+}
+
+const detailPlaceSelectValue = computed(() => detailAsset.value?.placeId || '')
+
+const setDetailPlaceFromMap = (placeId) => {
+  const asset = detailAsset.value
+  if (!asset) return
+  if (!placeId) {
+    galleryStore.setAssetPlace(asset.id, { placeId: '', placeText: asset.placeText || '' })
+    return
+  }
+  galleryStore.setAssetPlace(asset.id, { placeId, placeText: mapPlaceLabel(placeId) })
+}
+
+const setDetailPlaceText = (text) => {
+  const asset = detailAsset.value
+  if (!asset) return
+  galleryStore.setAssetPlace(asset.id, { placeId: '', placeText: text })
+}
+
+const clearDetailPlace = () => {
+  const asset = detailAsset.value
+  if (!asset) return
+  galleryStore.setAssetPlace(asset.id, { placeId: '', placeText: '' })
+}
+
+const mapPlaceOptions = computed(() =>
+  (mapStore.activeMapAllPlaces || [])
+    .filter((place) => place?.placeId && (place.label || place.name))
+    .slice(0, 60)
+    .map((place) => ({ id: place.placeId, label: place.label || place.name })),
+)
+
+const personOptions = computed(() =>
+  (chatStore.roleProfiles || []).slice(0, 60).map((profile) => ({
+    id: profile.id,
+    name: profile.name || `#${profile.id}`,
+  })),
+)
+
+/* ---------- 导入 / 添加 ---------- */
+
 const openLocalImport = () => {
   localFileInput.value?.click()
+}
+
+const openAddSheet = () => {
+  addSheetOpen.value = true
+}
+
+const goCamera = () => {
+  addSheetOpen.value = false
+  router.push({ path: '/camera', query: { from: 'gallery' } })
 }
 
 const handleLocalImport = async (event) => {
@@ -163,8 +346,11 @@ const importFromUrl = () => {
 
   urlForm.url = ''
   urlForm.name = ''
+  addSheetOpen.value = false
   setFeedback('success', t('URL 素材导入成功。', 'URL asset imported.'))
 }
+
+/* ---------- 素材操作 ---------- */
 
 const renameAsset = async (asset) => {
   const nextName = await promptDialog({
@@ -205,14 +391,16 @@ const createFolder = () => {
     return
   }
   folderForm.name = ''
-  setFeedback('success', t('文件夹已创建。', 'Folder created.'))
+  addSheetOpen.value = false
+  activeTab.value = 'albums'
+  setFeedback('success', t('相簿已创建。', 'Album created.'))
 }
 
 const renameFolder = async (folder) => {
   const nextName = await promptDialog({
-    title: t('重命名文件夹', 'Rename folder'),
-    message: t('输入新的文件夹名称。', 'Input a new folder name.'),
-    inputPlaceholder: t('文件夹名称', 'Folder name'),
+    title: t('重命名相簿', 'Rename album'),
+    message: t('输入新的相簿名称。', 'Input a new album name.'),
+    inputPlaceholder: t('相簿名称', 'Album name'),
     initialValue: folder?.name || '',
     confirmText: t('保存', 'Save'),
     cancelText: t('取消', 'Cancel'),
@@ -221,14 +409,7 @@ const renameFolder = async (folder) => {
   if (nextName == null) return
   const ok = galleryStore.renameFolder(folder.id, nextName)
   if (ok) {
-    setFeedback('success', t('文件夹名称已更新。', 'Folder name updated.'))
-  }
-}
-
-const updateFolderCategory = (folderId, category) => {
-  const ok = galleryStore.setFolderCategory(folderId, category)
-  if (ok) {
-    setFeedback('success', t('文件夹分类已更新。', 'Folder category updated.'))
+    setFeedback('success', t('相簿名称已更新。', 'Album name updated.'))
   }
 }
 
@@ -236,16 +417,16 @@ const removeFolder = async (folder) => {
   const assetCount = Array.isArray(folder?.assetIds) ? folder.assetIds.length : 0
   const roleBindingHits = getFolderRoleBindingHits(folder.id)
   const confirmed = await confirmDialog({
-    title: t('删除文件夹', 'Delete folder'),
+    title: t('删除相簿', 'Delete album'),
     message: t(
-      `确认删除文件夹“${folder?.name || ''}”吗？`,
-      `Delete folder "${folder?.name || ''}"?`,
+      `确认删除相簿“${folder?.name || ''}”吗？`,
+      `Delete album "${folder?.name || ''}"?`,
     ),
     details: [
       assetCount > 0
         ? t(
-            `该文件夹包含 ${assetCount} 项素材引用，删除后不会删除素材本体。`,
-            `This folder has ${assetCount} asset links. Deleting folder will not delete assets.`,
+            `该相簿包含 ${assetCount} 张照片引用，删除后照片仍在图库中。`,
+            `This album has ${assetCount} photo links. Deleting the album keeps the photos.`,
           )
         : t('删除后不可恢复。', 'Deletion cannot be undone.'),
       roleBindingHits.length > 0
@@ -262,8 +443,8 @@ const removeFolder = async (folder) => {
     const secondConfirmed = await confirmDialog({
       title: t('解除绑定并继续', 'Unbind and continue'),
       message: t(
-        '该文件夹已绑定角色档案。继续删除将自动解除这些绑定，是否继续？',
-        'This folder is bound to role profiles. Continue will auto-unbind these links. Continue?',
+        '该相簿已绑定角色档案。继续删除将自动解除这些绑定，是否继续？',
+        'This album is bound to role profiles. Continue will auto-unbind these links. Continue?',
       ),
       confirmText: t('继续删除', 'Continue'),
       cancelText: t('取消', 'Cancel'),
@@ -274,45 +455,46 @@ const removeFolder = async (folder) => {
 
   const ok = galleryStore.removeFolder(folder.id)
   if (!ok) {
-    setFeedback('error', t('文件夹删除失败，请重试。', 'Folder removal failed, please retry.'))
+    setFeedback('error', t('相簿删除失败，请重试。', 'Album removal failed, please retry.'))
     return
+  }
+  if (albumView.value?.kind === 'folder' && albumView.value?.id === folder.id) {
+    closeAlbum()
   }
   const clearedCount = clearDeletedFolderFromRoleProfiles(folder.id)
   setFeedback(
     'success',
     clearedCount > 0
-      ? t(`文件夹已删除，并自动清理 ${clearedCount} 个角色档案绑定。`, `Folder removed and ${clearedCount} role bindings were cleaned.`)
-      : t('文件夹已删除。', 'Folder removed.'),
+      ? t(`相簿已删除，并自动清理 ${clearedCount} 个角色档案绑定。`, `Album removed and ${clearedCount} role bindings were cleaned.`)
+      : t('相簿已删除。', 'Album removed.'),
   )
 }
 
-const addAssetToSelectedFolder = (asset) => {
-  const selectedFolderId =
-    typeof assetFolderDraftMap[asset.id] === 'string' ? assetFolderDraftMap[asset.id].trim() : ''
+const addAssetToSelectedFolder = (asset, folderId) => {
+  const selectedFolderId = typeof folderId === 'string' ? folderId.trim() : ''
   if (!selectedFolderId) {
-    setFeedback('warn', t('请先选择目标文件夹。', 'Please choose a target folder first.'))
+    setFeedback('warn', t('请先选择目标相簿。', 'Please choose a target album first.'))
     return
   }
 
   const folder = galleryStore.findFolderById(selectedFolderId)
   if (!folder) {
-    setFeedback('error', t('目标文件夹不存在。', 'Target folder not found.'))
+    setFeedback('error', t('目标相簿不存在。', 'Target album not found.'))
     return
   }
   const alreadyIncluded = Array.isArray(folder.assetIds) && folder.assetIds.includes(asset.id)
   const ok = galleryStore.addAssetToFolder(selectedFolderId, asset.id)
   if (!ok) {
-    setFeedback('error', t('加入文件夹失败，请重试。', 'Failed to add into folder, please retry.'))
+    setFeedback('error', t('加入相簿失败，请重试。', 'Failed to add into album, please retry.'))
     return
   }
-  assetFolderDraftMap[asset.id] = ''
   setFeedback(
     alreadyIncluded
       ? 'warn'
       : 'success',
     alreadyIncluded
-      ? t('该素材已在目标文件夹中。', 'This asset is already in target folder.')
-      : t('素材已加入文件夹。', 'Asset added to folder.'),
+      ? t('该照片已在目标相簿中。', 'This photo is already in target album.')
+      : t('已加入相簿。', 'Added to album.'),
   )
 }
 
@@ -322,18 +504,13 @@ const removeAssetFromFolder = (folderId, assetId) => {
     setFeedback('error', t('移除失败，请重试。', 'Failed to remove, please retry.'))
     return
   }
-  setFeedback('success', t('素材已从文件夹移除。', 'Asset removed from folder.'))
+  setFeedback('success', t('已从相簿移除。', 'Removed from album.'))
 }
 
-const getFolderPreviewAssets = (folder) => {
-  const sourceIds = Array.isArray(folder?.assetIds) ? folder.assetIds.slice(0, 8) : []
-  return sourceIds
-    .map((assetId) => galleryStore.findAssetById(assetId))
-    .filter(Boolean)
+const getFolderCoverAsset = (folder) => {
+  const firstId = Array.isArray(folder?.assetIds) ? folder.assetIds[0] : ''
+  return firstId ? galleryStore.findAssetById(firstId) : null
 }
-
-const getFolderAssetCount = (folder) => (Array.isArray(folder?.assetIds) ? folder.assetIds.length : 0)
-const getFolderPreviewOverflowCount = (folder) => Math.max(0, getFolderAssetCount(folder) - 8)
 
 const ROLE_ASSET_PACK_SLOT_DEFS = [
   { key: 'wallpaperAssetIds', label: () => t('壁纸', 'Wallpaper') },
@@ -486,6 +663,7 @@ const removeAsset = async (asset) => {
     return
   }
 
+  if (detailAssetId.value === asset.id) closeAssetDetail()
   const clearedCount = clearDeletedAssetFromRoleProfiles(asset.id)
   galleryStore.releaseAssetPreview(asset.id, GALLERY_ASSET_PREVIEW_SCOPE_ID)
   delete previewMap[asset.id]
@@ -535,15 +713,12 @@ const getAssetUsageLabels = (asset) => {
 
 const getAssetUsageChips = (asset) => getAssetUsageLabels(asset).slice(0, 3)
 
-const getAssetUsageOverflowCount = (asset) =>
-  Math.max(0, getAssetUsageLabels(asset).length - getAssetUsageChips(asset).length)
-
 const assetUsageFilterTabs = computed(() => {
   const sourceAssets = categoryScopedAssets.value
   const usedCount = sourceAssets.filter((asset) => getAssetUsageLabels(asset).length > 0).length
   const unusedCount = Math.max(0, sourceAssets.length - usedCount)
   return [
-    { key: 'all', label: t('全部照片', 'All Photos'), count: sourceAssets.length },
+    { key: 'all', label: t('全部', 'All'), count: sourceAssets.length },
     { key: 'in_use', label: t('已使用', 'Used'), count: usedCount },
     { key: 'unused', label: t('未使用', 'Unused'), count: unusedCount },
   ]
@@ -560,28 +735,7 @@ const visibleAssets = computed(() => {
   return sourceAssets
 })
 
-const assetEmptyStateText = computed(() => {
-  if (activeAssetUsageFilter.value === 'in_use') {
-    return t('当前相簿暂无已使用照片', 'No used photos in this album')
-  }
-  if (activeAssetUsageFilter.value === 'unused') {
-    return t('当前相簿暂无未使用照片', 'No unused photos in this album')
-  }
-  return t('当前相簿暂无照片', 'No photos in this album')
-})
-
-const activeUsageFilterMeta = computed(
-  () => assetUsageFilterTabs.value.find((tab) => tab.key === activeAssetUsageFilter.value) || assetUsageFilterTabs.value[0],
-)
-
-const heroPreviewAssets = computed(() => visibleAssets.value.slice(0, 5))
-
-const assetCurationSummary = computed(() =>
-  t(
-    `${categoryLabel(activeCategory.value)} · ${activeUsageFilterMeta.value?.label || ''} · ${visibleAssets.value.length} 张`,
-    `${categoryLabel(activeCategory.value)} · ${activeUsageFilterMeta.value?.label || ''} · ${visibleAssets.value.length} photos`,
-  ),
-)
+const gridAssets = computed(() => (albumView.value ? albumAssets.value : visibleAssets.value))
 
 const confirmAssetReplace = async (asset, modeLabel) => {
   const summary = buildAssetBindingSummary(asset)
@@ -698,6 +852,8 @@ const handleReplaceFileChange = async (event) => {
   setFeedback('success', t('素材已替换（本地文件）。', 'Asset replaced (local file).'))
 }
 
+/* ---------- 预览 ---------- */
+
 const hydrateAssetPreview = async (assetId) => {
   if (!assetId || previewMap[assetId]) return
   const previewUrl = await galleryStore.getAssetPreviewUrl(assetId, {
@@ -706,8 +862,25 @@ const hydrateAssetPreview = async (assetId) => {
   previewMap[assetId] = previewUrl || ''
 }
 
+const previewTargets = computed(() => {
+  const targets = [...gridAssets.value]
+  personAlbums.value.forEach((album) => album.cover && targets.push(album.cover))
+  placeAlbums.value.forEach((album) => album.cover && targets.push(album.cover))
+  allFolders.value.forEach((folder) => {
+    const cover = getFolderCoverAsset(folder)
+    if (cover) targets.push(cover)
+  })
+  if (detailAsset.value) targets.push(detailAsset.value)
+  const seen = new Set()
+  return targets.filter((asset) => {
+    if (!asset?.id || seen.has(asset.id)) return false
+    seen.add(asset.id)
+    return true
+  })
+})
+
 watch(
-  visibleAssets,
+  previewTargets,
   (list) => {
     const nextIds = new Set(list.map((item) => item.id))
     list.forEach((asset) => {
@@ -719,14 +892,17 @@ watch(
         delete previewMap[assetId]
       }
     })
-    Object.keys(assetFolderDraftMap).forEach((assetId) => {
-      if (!nextIds.has(assetId)) {
-        delete assetFolderDraftMap[assetId]
-      }
-    })
   },
   { immediate: true },
 )
+
+onMounted(() => {
+  const personId = typeof route.query.person === 'string' ? route.query.person : ''
+  if (personId) {
+    activeTab.value = 'albums'
+    albumView.value = { kind: 'person', id: personId }
+  }
+})
 
 onBeforeUnmount(() => {
   Object.keys(previewMap).forEach((assetId) => {
@@ -737,324 +913,87 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="gallery-immersive-root w-full h-full text-neutral-950 flex flex-col">
-    <div class="gallery-topbar pt-12 px-4 pb-2">
-      <div class="flex items-center justify-between">
-        <button @click="goHome" class="text-blue-500 text-lg">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <button @click="openLocalImport" class="text-blue-500 text-lg">
-          <i class="fas fa-plus"></i>
-        </button>
+  <div class="gallery-shell">
+    <header class="gallery-topbar">
+      <button type="button" class="gallery-nav" :aria-label="t('返回', 'Back')" @click="goHome">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="gallery-brand">
+        <small>PHOTOS</small>
+        <h1>{{ t('相册', 'Photos') }}</h1>
       </div>
-      <h1 class="mt-3 text-[34px] font-bold tracking-tight">{{ t('相册', 'Photos') }}</h1>
-    </div>
+      <button
+        type="button"
+        class="gallery-add-button"
+        :aria-label="t('添加', 'Add')"
+        data-testid="gallery-open-add"
+        @click="openAddSheet"
+      >
+        <i class="fas fa-plus"></i>
+      </button>
+    </header>
 
-    <div class="gallery-controls px-4 py-2 space-y-3">
-      <section class="gallery-hero rounded-[1.75rem] p-4">
-        <p class="text-[12px] font-semibold text-blue-500">{{ t('最近项目', 'Recents') }}</p>
-        <div class="mt-1 flex items-end justify-between gap-3">
-          <div>
-            <h2 class="text-3xl font-bold leading-tight">{{ galleryStore.categoryCounts.all }}</h2>
-            <p class="mt-1 text-xs text-neutral-500">
-              {{ t('照片会自动用于聊天、壁纸、地图和角色相簿。', 'Photos can be reused by chats, wallpapers, maps, and role albums.') }}
-            </p>
-          </div>
-          <button
-            @click="openLocalImport"
-            class="shrink-0 rounded-full bg-blue-500 px-3 py-2 text-xs font-semibold text-white shadow-sm"
-          >
-            <i class="fas fa-plus mr-1"></i>
-            {{ t('添加', 'Add') }}
-          </button>
-        </div>
-        <div class="mt-4 rounded-[1.35rem] border border-neutral-200 bg-white/80 px-3 py-2.5">
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-[10px] uppercase tracking-[0.18em] text-neutral-400">{{ t('当前视图', 'Current View') }}</p>
-              <p class="mt-1 text-xs text-neutral-700 truncate">{{ assetCurationSummary }}</p>
-            </div>
-            <div v-if="heroPreviewAssets.length > 0" class="flex -space-x-2 shrink-0">
-              <AssetThumbnailOption
-                v-for="asset in heroPreviewAssets"
-                :key="`hero-preview-${asset.id}`"
-                :asset="asset"
-                :preview-url="previewMap[asset.id]"
-                variant="mini"
-                :interactive="false"
-                :show-name="false"
-                class="rounded-xl border-2 border-white shadow-sm"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+    <nav class="gallery-tabs">
+      <button
+        type="button"
+        :class="['gallery-tab', { 'is-active': activeTab === 'library' && !albumView }]"
+        data-testid="gallery-tab-library"
+        @click="activeTab = 'library'; closeAlbum()"
+      >
+        {{ t('图库', 'Library') }}
+      </button>
+      <button
+        type="button"
+        :class="['gallery-tab', { 'is-active': activeTab === 'albums' || albumView }]"
+        data-testid="gallery-tab-albums"
+        @click="activeTab = 'albums'; closeAlbum()"
+      >
+        {{ t('相簿', 'Albums') }}
+      </button>
+    </nav>
 
-      <div class="grid grid-cols-5 gap-2">
+    <p v-if="feedback.text" class="gallery-feedback" :class="`is-${feedback.type || 'info'}`">
+      {{ feedback.text }}
+    </p>
+
+    <!-- 图库 -->
+    <main v-if="!albumView && activeTab === 'library'" class="gallery-scroll">
+      <div class="gallery-chip-row">
         <button
           v-for="tab in categoryTabs"
           :key="tab.key"
+          type="button"
+          :class="['gallery-chip', { 'is-active': activeCategory === tab.key }]"
           @click="activeCategory = tab.key"
-          class="gallery-filter-button rounded-xl px-2 py-2 text-[11px] border transition"
-          :class="
-            activeCategory === tab.key
-              ? 'is-active'
-              : ''
-          "
         >
-          <p class="font-medium">{{ tab.label }}</p>
-          <p class="text-[10px] mt-0.5">{{ tab.count }}</p>
+          {{ tab.label }} · {{ tab.count }}
         </button>
       </div>
-
-      <div class="grid grid-cols-3 gap-2">
+      <div class="gallery-chip-row is-sub">
         <button
           v-for="tab in assetUsageFilterTabs"
-          :key="`usage-filter-${tab.key}`"
+          :key="`usage-${tab.key}`"
+          type="button"
+          :class="['gallery-chip', 'is-small', { 'is-active': activeAssetUsageFilter === tab.key }]"
           @click="activeAssetUsageFilter = tab.key"
-          class="gallery-filter-button rounded-xl px-2 py-2 text-[11px] border transition"
-          :class="
-            activeAssetUsageFilter === tab.key
-              ? 'is-active'
-              : ''
-          "
         >
-          <p class="font-medium">{{ tab.label }}</p>
-          <p class="text-[10px] mt-0.5">{{ tab.count }}</p>
+          {{ tab.label }} · {{ tab.count }}
         </button>
       </div>
 
-      <div class="gallery-control-card rounded-2xl p-3 space-y-2">
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-xs font-semibold">{{ t('添加到相册', 'Add to Photos') }}</p>
-          <select
-            v-model="localImportCategory"
-            class="gallery-field text-xs rounded px-2 py-1"
-          >
-            <option
-              v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
-              :key="categoryKey"
-              :value="categoryKey"
-            >
-              {{ categoryLabel(categoryKey) }}
-            </option>
-          </select>
-        </div>
+      <div v-if="gridAssets.length === 0" class="gallery-empty">
+        <span class="gallery-empty__frame"><i class="fas fa-images"></i></span>
+        <strong>{{ t('还没有照片', 'No photos yet') }}</strong>
+        <p>{{ t('点右上角 + 上传、从链接添加，或去相机拍一张。', 'Tap + to upload, add from a link, or shoot with Camera.') }}</p>
+      </div>
+
+      <div v-else class="gallery-grid">
         <button
-          @click="openLocalImport"
-          class="w-full py-2.5 rounded-xl border border-dashed border-blue-200 text-blue-500 text-sm hover:bg-blue-50 transition"
-        >
-          <i class="fas fa-upload mr-1"></i>
-          {{ t('选择照片或 GIF', 'Choose photos or GIFs') }}
-        </button>
-        <p class="text-[11px] text-neutral-400">
-          {{ importLimitHint }}
-        </p>
-        <input
-          ref="localFileInput"
-          type="file"
-          class="hidden"
-          accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
-          multiple
-          @change="handleLocalImport"
-        />
-        <input
-          ref="replaceFileInput"
-          type="file"
-          class="hidden"
-          accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
-          @change="handleReplaceFileChange"
-        />
-      </div>
-
-      <div class="gallery-control-card rounded-2xl p-3 space-y-2">
-        <p class="text-xs font-semibold">{{ t('从链接添加', 'Add from Link') }}</p>
-        <input
-          v-model="urlForm.url"
-          type="url"
-          class="gallery-field w-full rounded-xl px-2 py-2 text-sm outline-none"
-          :placeholder="t('https://example.com/image.png', 'https://example.com/image.png')"
-        />
-        <div class="grid grid-cols-[1fr,110px] gap-2">
-          <input
-            v-model="urlForm.name"
-            type="text"
-            class="gallery-field w-full rounded-xl px-2 py-2 text-sm outline-none"
-            :placeholder="t('可选名称', 'Optional name')"
-          />
-          <select
-            v-model="urlForm.category"
-            class="gallery-field w-full rounded-xl px-2 py-2 text-xs"
-          >
-            <option
-              v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
-              :key="categoryKey"
-              :value="categoryKey"
-            >
-              {{ categoryLabel(categoryKey) }}
-            </option>
-          </select>
-        </div>
-        <button
-          @click="importFromUrl"
-          class="w-full py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition"
-        >
-          {{ t('添加到相册', 'Add to Photos') }}
-        </button>
-      </div>
-
-      <div class="gallery-control-card rounded-2xl p-3 space-y-2.5">
-        <div class="flex items-center justify-between">
-          <p class="text-xs font-semibold">{{ t('我的相簿', 'My Albums') }}</p>
-          <span class="text-[10px] text-neutral-400">
-            {{ t('总数', 'Total') }} {{ allFolderOptions.length }}
-          </span>
-        </div>
-
-        <div class="grid grid-cols-[1fr,108px,64px] gap-2">
-          <input
-            v-model="folderForm.name"
-            type="text"
-            class="gallery-field w-full rounded-xl px-2 py-2 text-sm outline-none"
-            :placeholder="t('新文件夹名称', 'New folder name')"
-          />
-          <select
-            v-model="folderForm.category"
-            class="gallery-field w-full rounded-xl px-2 py-2 text-xs"
-          >
-            <option value="all">{{ t('全部类型', 'All types') }}</option>
-            <option
-              v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
-              :key="`folder-create-${categoryKey}`"
-              :value="categoryKey"
-            >
-              {{ categoryLabel(categoryKey) }}
-            </option>
-          </select>
-          <button
-            @click="createFolder"
-            class="rounded-xl bg-blue-500 text-white text-xs px-2 py-2 font-semibold"
-          >
-            {{ t('新建', 'Create') }}
-          </button>
-        </div>
-
-        <div class="grid grid-cols-5 gap-1.5">
-          <button
-            v-for="tab in folderCategoryTabs"
-            :key="`folder-tab-${tab.key}`"
-            @click="activeFolderCategory = tab.key"
-            class="gallery-filter-button rounded-lg px-1.5 py-1 text-[10px] border transition"
-            :class="
-              activeFolderCategory === tab.key
-                ? 'is-active'
-                : ''
-            "
-          >
-            {{ tab.label }}
-          </button>
-        </div>
-
-        <div v-if="visibleFolders.length === 0" class="text-[11px] text-neutral-400 rounded-xl border border-dashed border-neutral-200 px-2 py-3 text-center">
-          {{ t('当前筛选下暂无相簿。', 'No albums under current filter.') }}
-        </div>
-
-        <div v-else class="space-y-2 max-h-56 overflow-y-auto pr-0.5">
-          <div
-            v-for="folder in visibleFolders"
-            :key="folder.id"
-            class="rounded-2xl border border-neutral-200 bg-white p-2.5 space-y-2"
-          >
-            <div class="flex items-center justify-between gap-2">
-              <p class="text-xs font-medium text-neutral-900 truncate">{{ folder.name }}</p>
-              <span class="text-[10px] text-neutral-400">{{ getFolderAssetCount(folder) }} {{ t('张', 'photos') }}</span>
-            </div>
-
-            <div class="grid grid-cols-[1fr,56px,56px] gap-1.5">
-              <select
-                :value="folder.category"
-                class="gallery-field text-[11px] rounded px-1.5 py-1"
-                @change="updateFolderCategory(folder.id, $event.target.value)"
-              >
-                <option value="all">{{ t('全部类型', 'All types') }}</option>
-                <option
-                  v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
-                  :key="`folder-update-${folder.id}-${categoryKey}`"
-                  :value="categoryKey"
-                >
-                  {{ categoryLabel(categoryKey) }}
-                </option>
-              </select>
-              <button
-                @click="renameFolder(folder)"
-                class="text-[11px] border border-neutral-200 rounded px-1.5 py-1 text-blue-500 hover:bg-blue-50"
-              >
-                {{ t('改名', 'Rename') }}
-              </button>
-              <button
-                @click="removeFolder(folder)"
-                class="text-[11px] border border-red-100 rounded px-1.5 py-1 text-red-500 hover:bg-red-50"
-              >
-                {{ t('删除', 'Delete') }}
-              </button>
-            </div>
-
-            <div v-if="getFolderAssetCount(folder) === 0" class="text-[10px] text-neutral-400">
-              {{ t('该相簿还没有照片。', 'This album has no photos yet.') }}
-            </div>
-
-            <div v-else class="flex flex-wrap gap-1.5">
-              <span
-                v-for="item in getFolderPreviewAssets(folder)"
-                :key="`folder-item-${folder.id}-${item.id}`"
-                class="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[10px] text-neutral-600"
-              >
-                <span class="max-w-[96px] truncate">{{ item.name }}</span>
-                <button
-                  @click="removeAssetFromFolder(folder.id, item.id)"
-                  class="text-neutral-400 hover:text-red-500"
-                  :title="t('从相簿移除', 'Remove from album')"
-                >
-                  <i class="fas fa-times"></i>
-                </button>
-              </span>
-              <span
-                v-if="getFolderPreviewOverflowCount(folder) > 0"
-                class="inline-flex items-center rounded-full border border-dashed border-neutral-200 px-2 py-0.5 text-[10px] text-neutral-400"
-              >
-                +{{ getFolderPreviewOverflowCount(folder) }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <p
-        v-if="feedback.text"
-        class="text-xs"
-        :class="
-          feedback.type === 'success'
-            ? 'text-emerald-600'
-            : feedback.type === 'warn'
-              ? 'text-amber-600'
-              : 'text-red-600'
-        "
-      >
-        {{ feedback.text }}
-      </p>
-    </div>
-
-    <div class="flex-1 overflow-y-auto p-4">
-      <div v-if="visibleAssets.length === 0" class="text-center text-neutral-400 text-sm pt-14">
-        <i class="fas fa-images text-2xl mb-3"></i>
-        <p>{{ assetEmptyStateText }}</p>
-      </div>
-
-      <div v-else class="grid grid-cols-3 gap-1 pb-8">
-        <div
-          v-for="asset in visibleAssets"
+          v-for="asset in gridAssets"
           :key="asset.id"
-          class="gallery-asset-card overflow-hidden"
+          type="button"
+          class="gallery-cell"
+          @click="openAssetDetail(asset)"
         >
           <AssetThumbnailOption
             :asset="asset"
@@ -1062,197 +1001,989 @@ onBeforeUnmount(() => {
             variant="square"
             :interactive="false"
             :show-name="false"
-          >
-            <template #overlay>
-            <button
-              @click="removeAsset(asset)"
-              class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/45 text-white text-xs hover:bg-black/60 transition"
-              :title="t('删除', 'Delete')"
-            >
-              <i class="fas fa-trash"></i>
-            </button>
-            </template>
-          </AssetThumbnailOption>
-
-          <div class="p-2 space-y-1.5 bg-white">
-            <p class="text-[11px] font-medium leading-tight line-clamp-1">{{ asset.name }}</p>
-            <p class="text-[10px] text-neutral-400">
-              {{ categoryLabel(asset.category) }} ·
-              {{
-                asset.sourceType === 'file'
-                  ? t('本地文件', 'Local file')
-                  : t('URL', 'URL')
-              }}
-            </p>
-            <div v-if="getAssetUsageChips(asset).length > 0" class="flex flex-wrap gap-1">
-              <AssetStatusBadge
-                v-for="label in getAssetUsageChips(asset)"
-                :key="`${asset.id}-usage-${label}`"
-                :label="label"
-                icon="fas fa-link"
-              />
-              <AssetStatusBadge
-                v-if="getAssetUsageOverflowCount(asset) > 0"
-                :label="`+${getAssetUsageOverflowCount(asset)}`"
-                tone="neutral"
-                :truncate="false"
-              />
-            </div>
-            <details class="photo-actions">
-              <summary class="cursor-pointer select-none text-[11px] text-blue-500">{{ t('选项', 'Options') }}</summary>
-              <div class="mt-2 space-y-2">
-                <div class="grid grid-cols-[1fr,72px] gap-2">
-                  <select
-                    :value="asset.category"
-                    class="gallery-field text-[11px] rounded px-1.5 py-1"
-                    @change="moveAssetToCategory(asset.id, $event.target.value)"
-                  >
-                    <option
-                      v-for="categoryKey in GALLERY_ASSET_CATEGORIES"
-                      :key="categoryKey"
-                      :value="categoryKey"
-                    >
-                      {{ categoryLabel(categoryKey) }}
-                    </option>
-                  </select>
-                  <button
-                    @click="renameAsset(asset)"
-                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-blue-500 hover:bg-blue-50"
-                  >
-                    {{ t('改名', 'Rename') }}
-                  </button>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                  <button
-                    @click="replaceAssetByUrl(asset)"
-                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-neutral-600 hover:bg-neutral-50"
-                  >
-                    {{ t('替换URL', 'Replace URL') }}
-                  </button>
-                  <button
-                    @click="openReplaceAssetFile(asset)"
-                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-neutral-600 hover:bg-neutral-50"
-                  >
-                    {{ t('替换文件', 'Replace file') }}
-                  </button>
-                </div>
-
-                <div v-if="allFolderOptions.length > 0" class="grid grid-cols-[1fr,56px] gap-2">
-                  <select
-                    v-model="assetFolderDraftMap[asset.id]"
-                    class="gallery-field text-[11px] rounded px-1.5 py-1"
-                  >
-                    <option value="">{{ t('选择相簿', 'Choose album') }}</option>
-                    <option
-                      v-for="folder in allFolderOptions"
-                      :key="`asset-folder-${asset.id}-${folder.id}`"
-                      :value="folder.id"
-                    >
-                      {{ folder.name }}
-                    </option>
-                  </select>
-                  <button
-                    @click="addAssetToSelectedFolder(asset)"
-                    class="text-[11px] border border-neutral-200 rounded px-2 py-1 text-blue-500 hover:bg-blue-50"
-                  >
-                    {{ t('加入', 'Add') }}
-                  </button>
-                </div>
-                <p v-else class="text-[10px] text-neutral-400">
-                  {{ t('先创建相簿后可归档照片。', 'Create albums first to organize photos.') }}
-                </p>
-              </div>
-            </details>
-          </div>
+          />
+          <span v-if="getAssetUsageChips(asset).length > 0" class="gallery-cell__badge">
+            <i class="fas fa-link"></i>
+          </span>
+        </button>
       </div>
-    </div>
+    </main>
+
+    <!-- 相簿 -->
+    <main v-else-if="!albumView" class="gallery-scroll">
+      <section v-if="personAlbums.length > 0" class="gallery-album-section">
+        <h2>{{ t('人物', 'People') }}</h2>
+        <div class="gallery-people-row">
+          <button
+            v-for="album in personAlbums"
+            :key="album.personId"
+            type="button"
+            class="gallery-person-card"
+            @click="openAlbum('person', album.personId)"
+          >
+            <span class="gallery-person-card__cover">
+              <img v-if="album.cover && previewMap[album.cover.id]" :src="previewMap[album.cover.id]" :alt="album.name" />
+              <i v-else class="fas fa-user"></i>
+            </span>
+            <strong>{{ album.name }}</strong>
+            <small>{{ album.count }} {{ t('张', 'photos') }}</small>
+          </button>
+        </div>
+      </section>
+
+      <section v-if="placeAlbums.length > 0" class="gallery-album-section">
+        <h2>{{ t('地点', 'Places') }}</h2>
+        <div class="gallery-album-grid">
+          <button
+            v-for="album in placeAlbums"
+            :key="album.key"
+            type="button"
+            class="gallery-album-card"
+            @click="openAlbum('place', album.key)"
+          >
+            <span class="gallery-album-card__cover">
+              <img v-if="album.cover && previewMap[album.cover.id]" :src="previewMap[album.cover.id]" :alt="album.label" />
+              <i v-else class="fas fa-location-dot"></i>
+            </span>
+            <strong>{{ album.label }}</strong>
+            <small>{{ album.count }} {{ t('张', 'photos') }}</small>
+          </button>
+        </div>
+      </section>
+
+      <section class="gallery-album-section">
+        <h2>{{ t('分类', 'Categories') }}</h2>
+        <div class="gallery-album-grid">
+          <button
+            v-for="tab in categoryTabs.filter((tab) => tab.key !== 'all')"
+            :key="tab.key"
+            type="button"
+            class="gallery-album-card"
+            @click="openCategoryFromAlbums(tab.key)"
+          >
+            <span class="gallery-album-card__cover is-icon">
+              <i :class="tab.key === 'wallpaper' ? 'fas fa-image' : tab.key === 'emoji' ? 'fas fa-face-smile' : tab.key === 'scenario' ? 'fas fa-mountain-sun' : 'fas fa-book-open'"></i>
+            </span>
+            <strong>{{ tab.label }}</strong>
+            <small>{{ tab.count }} {{ t('张', 'photos') }}</small>
+          </button>
+        </div>
+      </section>
+
+      <section class="gallery-album-section">
+        <div class="gallery-album-section__head">
+          <h2>{{ t('我的相簿', 'My Albums') }}</h2>
+          <button type="button" class="gallery-mini-action" @click="openAddSheet">
+            <i class="fas fa-plus"></i> {{ t('新建', 'New') }}
+          </button>
+        </div>
+        <div v-if="allFolders.length === 0" class="gallery-empty is-compact">
+          <p>{{ t('还没有相簿。点「新建」创建一个。', 'No albums yet. Tap New to create one.') }}</p>
+        </div>
+        <div v-else class="gallery-album-grid">
+          <div v-for="folder in allFolders" :key="folder.id" class="gallery-album-card is-folder">
+            <button type="button" class="gallery-album-card__open" @click="openAlbum('folder', folder.id)">
+              <span class="gallery-album-card__cover">
+                <img
+                  v-if="getFolderCoverAsset(folder) && previewMap[getFolderCoverAsset(folder).id]"
+                  :src="previewMap[getFolderCoverAsset(folder).id]"
+                  :alt="folder.name"
+                />
+                <i v-else class="fas fa-folder"></i>
+              </span>
+              <strong>{{ folder.name }}</strong>
+              <small>{{ Array.isArray(folder.assetIds) ? folder.assetIds.length : 0 }} {{ t('张', 'photos') }}</small>
+            </button>
+            <span class="gallery-album-card__tools">
+              <button type="button" :aria-label="t('重命名', 'Rename')" @click="renameFolder(folder)">
+                <i class="fas fa-pen"></i>
+              </button>
+              <button type="button" :aria-label="t('删除', 'Delete')" @click="removeFolder(folder)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 相簿钻取 -->
+    <main v-else class="gallery-scroll">
+      <div class="gallery-album-head">
+        <button type="button" class="gallery-mini-action" @click="closeAlbum">
+          <i class="fas fa-chevron-left"></i> {{ t('相簿', 'Albums') }}
+        </button>
+        <h2>{{ albumTitle }}</h2>
+        <small>{{ albumAssets.length }} {{ t('张', 'photos') }}</small>
+      </div>
+
+      <div v-if="albumAssets.length === 0" class="gallery-empty">
+        <span class="gallery-empty__frame"><i class="fas fa-images"></i></span>
+        <p>{{ t('这里还没有照片。', 'Nothing here yet.') }}</p>
+      </div>
+
+      <div v-else class="gallery-grid">
+        <div v-for="asset in albumAssets" :key="asset.id" class="gallery-cell-wrap">
+          <button type="button" class="gallery-cell" @click="openAssetDetail(asset)">
+            <AssetThumbnailOption
+              :asset="asset"
+              :preview-url="previewMap[asset.id]"
+              variant="square"
+              :interactive="false"
+              :show-name="false"
+            />
+          </button>
+          <button
+            v-if="albumView.kind === 'folder'"
+            type="button"
+            class="gallery-cell__remove"
+            :aria-label="t('从相簿移除', 'Remove from album')"
+            @click="removeAssetFromFolder(albumView.id, asset.id)"
+          >
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 添加弹层 -->
+    <div v-if="addSheetOpen" class="gallery-sheet-backdrop" @click="addSheetOpen = false"></div>
+    <section v-if="addSheetOpen" class="gallery-sheet" role="dialog" :aria-label="t('添加', 'Add')">
+      <div class="gallery-sheet__handle"></div>
+      <div class="gallery-sheet__head">
+        <h3>{{ t('添加到相册', 'Add to Photos') }}</h3>
+        <button type="button" class="gallery-sheet__close" :aria-label="t('关闭', 'Close')" @click="addSheetOpen = false">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="gallery-sheet__block">
+        <p class="gallery-sheet__label">{{ t('本地上传', 'Upload') }}</p>
+        <div class="gallery-sheet__row">
+          <select v-model="localImportCategory" class="gallery-field">
+            <option v-for="categoryKey in GALLERY_ASSET_CATEGORIES" :key="categoryKey" :value="categoryKey">
+              {{ categoryLabel(categoryKey) }}
+            </option>
+          </select>
+          <button type="button" class="gallery-primary-action" @click="openLocalImport">
+            <i class="fas fa-upload"></i> {{ t('选择照片或 GIF', 'Choose photos or GIFs') }}
+          </button>
+        </div>
+        <small class="gallery-sheet__hint">{{ importLimitHint }}</small>
+      </div>
+
+      <div class="gallery-sheet__block">
+        <p class="gallery-sheet__label">{{ t('从链接添加', 'Add from Link') }}</p>
+        <input v-model="urlForm.url" type="url" class="gallery-field" :placeholder="t('https://example.com/image.png', 'https://example.com/image.png')" />
+        <div class="gallery-sheet__row">
+          <input v-model="urlForm.name" type="text" class="gallery-field" :placeholder="t('可选名称', 'Optional name')" />
+          <select v-model="urlForm.category" class="gallery-field">
+            <option v-for="categoryKey in GALLERY_ASSET_CATEGORIES" :key="`url-${categoryKey}`" :value="categoryKey">
+              {{ categoryLabel(categoryKey) }}
+            </option>
+          </select>
+        </div>
+        <button type="button" class="gallery-primary-action" @click="importFromUrl">
+          {{ t('添加链接素材', 'Add link asset') }}
+        </button>
+      </div>
+
+      <div class="gallery-sheet__block">
+        <p class="gallery-sheet__label">{{ t('拍摄', 'Camera') }}</p>
+        <button type="button" class="gallery-primary-action is-camera" @click="goCamera">
+          <i class="fas fa-camera"></i> {{ t('去相机拍一张', 'Open Camera') }}
+        </button>
+      </div>
+
+      <div class="gallery-sheet__block">
+        <p class="gallery-sheet__label">{{ t('新建相簿', 'New album') }}</p>
+        <div class="gallery-sheet__row">
+          <input v-model="folderForm.name" type="text" class="gallery-field" :placeholder="t('相簿名称', 'Album name')" />
+          <select v-model="folderForm.category" class="gallery-field">
+            <option value="all">{{ t('全部类型', 'All types') }}</option>
+            <option v-for="categoryKey in GALLERY_ASSET_CATEGORIES" :key="`folder-${categoryKey}`" :value="categoryKey">
+              {{ categoryLabel(categoryKey) }}
+            </option>
+          </select>
+        </div>
+        <button type="button" class="gallery-primary-action" @click="createFolder">
+          {{ t('创建相簿', 'Create album') }}
+        </button>
+      </div>
+    </section>
+
+    <!-- 图片详情 -->
+    <div v-if="detailAsset" class="gallery-sheet-backdrop" @click="closeAssetDetail"></div>
+    <section v-if="detailAsset" class="gallery-sheet is-detail" role="dialog" :aria-label="detailAsset.name">
+      <div class="gallery-sheet__handle"></div>
+      <div class="gallery-sheet__head">
+        <h3>{{ detailAsset.name }}</h3>
+        <button type="button" class="gallery-sheet__close" :aria-label="t('关闭', 'Close')" @click="closeAssetDetail">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="gallery-detail__preview">
+        <img v-if="previewMap[detailAsset.id]" :src="previewMap[detailAsset.id]" :alt="detailAsset.name" />
+        <span v-else><i class="fas fa-image"></i></span>
+      </div>
+
+      <div class="gallery-detail__meta">
+        <span class="gallery-chip is-static">{{ categoryLabel(detailAsset.category) }}</span>
+        <span class="gallery-chip is-static">
+          {{ detailAsset.sourceType === 'file' ? t('本地文件', 'Local file') : t('URL', 'URL') }}
+        </span>
+        <AssetStatusBadge
+          v-for="label in getAssetUsageChips(detailAsset)"
+          :key="`detail-usage-${label}`"
+          :label="label"
+          icon="fas fa-link"
+        />
+      </div>
+
+      <div class="gallery-sheet__block">
+        <p class="gallery-sheet__label">{{ t('标记人物', 'Tag people') }}</p>
+        <div v-if="personOptions.length === 0" class="gallery-sheet__hint">
+          {{ t('还没有角色档案，先到联系人里创建。', 'No role profiles yet. Create one in Contacts first.') }}
+        </div>
+        <div v-else class="gallery-person-picker">
+          <button
+            v-for="option in personOptions"
+            :key="option.id"
+            type="button"
+            :class="['gallery-person-pick', { 'is-on': isDetailPersonOn(option.id) }]"
+            :aria-pressed="isDetailPersonOn(option.id)"
+            @click="toggleDetailPerson(option.id)"
+          >
+            <i :class="isDetailPersonOn(option.id) ? 'fas fa-circle-check' : 'far fa-circle'"></i>
+            {{ option.name }}
+          </button>
+        </div>
+      </div>
+
+      <div class="gallery-sheet__block">
+        <p class="gallery-sheet__label">{{ t('标记地点', 'Tag place') }}</p>
+        <div class="gallery-sheet__row">
+          <select
+            class="gallery-field"
+            :value="detailPlaceSelectValue"
+            @change="setDetailPlaceFromMap($event.target.value)"
+          >
+            <option value="">{{ t('选择地图地点', 'Choose a map place') }}</option>
+            <option v-for="place in mapPlaceOptions" :key="place.id" :value="place.id">
+              {{ place.label }}
+            </option>
+          </select>
+          <button
+            v-if="detailAsset.placeId || detailAsset.placeText"
+            type="button"
+            class="gallery-mini-action"
+            @click="clearDetailPlace"
+          >
+            {{ t('清除', 'Clear') }}
+          </button>
+        </div>
+        <input
+          v-if="!detailAsset.placeId"
+          type="text"
+          class="gallery-field"
+          :value="detailAsset.placeText"
+          :placeholder="t('或输入地点名（如：练习室）', 'Or type a place name')"
+          data-testid="gallery-detail-place-text"
+          @change="setDetailPlaceText($event.target.value)"
+        />
+      </div>
+
+      <div class="gallery-sheet__block">
+        <p class="gallery-sheet__label">{{ t('管理', 'Manage') }}</p>
+        <div class="gallery-sheet__row">
+          <select class="gallery-field" :value="detailAsset.category" @change="moveAssetToCategory(detailAsset.id, $event.target.value)">
+            <option v-for="categoryKey in GALLERY_ASSET_CATEGORIES" :key="`detail-cat-${categoryKey}`" :value="categoryKey">
+              {{ categoryLabel(categoryKey) }}
+            </option>
+          </select>
+          <button type="button" class="gallery-mini-action" @click="renameAsset(detailAsset)">
+            {{ t('改名', 'Rename') }}
+          </button>
+        </div>
+        <div v-if="allFolderOptions.length > 0" class="gallery-sheet__row">
+          <select class="gallery-field" @change="addAssetToSelectedFolder(detailAsset, $event.target.value); $event.target.value = ''">
+            <option value="">{{ t('加入相簿…', 'Add to album…') }}</option>
+            <option v-for="folder in allFolderOptions" :key="`detail-folder-${folder.id}`" :value="folder.id">
+              {{ folder.name }}
+            </option>
+          </select>
+        </div>
+        <div class="gallery-detail__tools">
+          <button type="button" class="gallery-mini-action" @click="replaceAssetByUrl(detailAsset)">
+            {{ t('替换 URL', 'Replace URL') }}
+          </button>
+          <button type="button" class="gallery-mini-action" @click="openReplaceAssetFile(detailAsset)">
+            {{ t('替换文件', 'Replace file') }}
+          </button>
+          <button type="button" class="gallery-mini-action is-danger" @click="removeAsset(detailAsset)">
+            {{ t('删除', 'Delete') }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <input
+      ref="localFileInput"
+      type="file"
+      class="gallery-hidden-input"
+      accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
+      multiple
+      @change="handleLocalImport"
+    />
+    <input
+      ref="replaceFileInput"
+      type="file"
+      class="gallery-hidden-input"
+      accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
+      @change="handleReplaceFileChange"
+    />
   </div>
-</div>
 </template>
 
 <style scoped>
-.gallery-immersive-root {
-  background:
-    radial-gradient(circle at 12% 0%, rgba(0, 122, 255, 0.08), transparent 28%),
-    linear-gradient(180deg, #fbfbfd 0%, #f2f2f7 42%, #ffffff 100%);
+.gallery-shell {
+  --gallery-ink: #1d1d1f;
+  --gallery-muted: rgba(29, 29, 31, 0.56);
+  --gallery-soft: rgba(29, 29, 31, 0.38);
+  --gallery-line: rgba(29, 29, 31, 0.09);
+  --gallery-blue: #0a84ff;
+  --gallery-blue-soft: rgba(10, 132, 255, 0.1);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  color: var(--gallery-ink);
 }
 
 .gallery-topbar {
-  background: linear-gradient(180deg, rgba(251, 251, 253, 0.96), rgba(251, 251, 253, 0.78));
-  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(40px + env(safe-area-inset-top)) 16px 10px;
 }
 
-.gallery-controls {
-  background: linear-gradient(180deg, rgba(251, 251, 253, 0.78), rgba(242, 242, 247, 0.3));
+.gallery-nav,
+.gallery-add-button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gallery-line);
+  border-radius: 50%;
+  color: var(--gallery-ink);
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
-.gallery-hero,
-.gallery-control-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(209, 213, 219, 0.72);
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(18px);
+.gallery-add-button {
+  border: 0;
+  color: #fff;
+  background: var(--gallery-blue);
+  box-shadow: 0 8px 18px rgba(10, 132, 255, 0.28);
 }
 
-.gallery-hero::before {
-  content: '';
-  position: absolute;
-  inset: -36% -18% auto auto;
-  width: 200px;
-  height: 200px;
+.gallery-brand {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.gallery-brand small {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--gallery-blue);
+}
+
+.gallery-brand h1 {
+  margin: 1px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.gallery-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 4px 16px 0;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(29, 29, 31, 0.06);
+}
+
+.gallery-tab {
+  min-height: 32px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--gallery-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gallery-tab.is-active {
+  background: #fff;
+  color: var(--gallery-ink);
+  box-shadow: 0 2px 8px rgba(29, 29, 31, 0.1);
+}
+
+.gallery-feedback {
+  margin: 8px 16px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gallery-feedback.is-success { color: #176144; background: #dff5ea; }
+.gallery-feedback.is-warn { color: #8a5a12; background: #fdf0d7; }
+.gallery-feedback.is-error { color: #9c2525; background: #fee2e2; }
+.gallery-feedback.is-info { color: var(--gallery-muted); background: rgba(29, 29, 31, 0.05); }
+
+.gallery-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+.gallery-chip-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.gallery-chip-row.is-sub {
+  margin-top: 2px;
+}
+
+.gallery-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.gallery-chip {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--gallery-line);
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(0, 122, 255, 0.16), transparent 62%);
-  pointer-events: none;
+  background: #fff;
+  color: var(--gallery-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.gallery-filter-button {
-  border-color: rgba(209, 213, 219, 0.8);
-  background: rgba(255, 255, 255, 0.76);
-  color: rgba(82, 82, 91, 0.86);
+.gallery-chip.is-small {
+  min-height: 26px;
+  font-size: 11px;
 }
 
-.gallery-filter-button.is-active {
-  border-color: rgba(0, 122, 255, 0.26);
-  background: rgba(0, 122, 255, 0.1);
-  color: #007aff;
-  box-shadow: 0 0 0 1px rgba(0, 122, 255, 0.08);
+.gallery-chip.is-active {
+  border-color: var(--gallery-blue);
+  color: var(--gallery-blue);
+  background: var(--gallery-blue-soft);
+}
+
+.gallery-chip.is-static {
+  cursor: default;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+  margin-top: 10px;
+}
+
+.gallery-cell {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(29, 29, 31, 0.06);
+  cursor: pointer;
+}
+
+.gallery-cell__badge {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(29, 29, 31, 0.55);
+  font-size: 8px;
+}
+
+.gallery-cell-wrap {
+  position: relative;
+}
+
+.gallery-cell__remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(29, 29, 31, 0.55);
+  cursor: pointer;
+}
+
+.gallery-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--gallery-muted);
+}
+
+.gallery-empty.is-compact {
+  padding: 18px;
+}
+
+.gallery-empty__frame {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border: 2px dashed rgba(29, 29, 31, 0.2);
+  border-radius: 18px;
+  color: var(--gallery-blue);
+  font-size: 24px;
+}
+
+.gallery-empty strong {
+  color: var(--gallery-ink);
+}
+
+.gallery-empty p {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.gallery-album-section {
+  margin-top: 18px;
+}
+
+.gallery-album-section:first-child {
+  margin-top: 4px;
+}
+
+.gallery-album-section h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.gallery-album-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.gallery-album-section__head h2 {
+  margin: 0;
+}
+
+.gallery-people-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.gallery-people-row::-webkit-scrollbar {
+  display: none;
+}
+
+.gallery-person-card {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  width: 76px;
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.gallery-person-card__cover {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(29, 29, 31, 0.07);
+  color: var(--gallery-muted);
+}
+
+.gallery-person-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-person-card strong {
+  max-width: 76px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-person-card small {
+  color: var(--gallery-soft);
+  font-size: 10px;
+}
+
+.gallery-album-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gallery-album-card {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gallery-album-card__cover {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1.25;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(29, 29, 31, 0.07);
+  color: var(--gallery-muted);
+  font-size: 22px;
+}
+
+.gallery-album-card__cover.is-icon {
+  color: var(--gallery-blue);
+  background: var(--gallery-blue-soft);
+}
+
+.gallery-album-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-album-card strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-album-card small {
+  color: var(--gallery-soft);
+  font-size: 11px;
+}
+
+.gallery-album-card.is-folder {
+  cursor: default;
+}
+
+.gallery-album-card__open {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gallery-album-card__tools {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 5px;
+}
+
+.gallery-album-card__tools button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(29, 29, 31, 0.5);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.gallery-album-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.gallery-album-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.gallery-album-head small {
+  color: var(--gallery-soft);
+  font-size: 11px;
+}
+
+.gallery-mini-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--gallery-line);
+  border-radius: 9px;
+  color: var(--gallery-blue);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gallery-mini-action.is-danger {
+  color: #c43c30;
+}
+
+.gallery-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(29, 29, 31, 0.32);
+  backdrop-filter: blur(8px);
+}
+
+.gallery-sheet {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 41;
+  display: grid;
+  gap: 12px;
+  width: min(560px, calc(100% - 24px));
+  max-height: min(640px, 82dvh);
+  margin: 0 auto;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  border: 1px solid var(--gallery-line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(29, 29, 31, 0.28);
+}
+
+.gallery-sheet__handle {
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  justify-self: center;
+  background: rgba(29, 29, 31, 0.18);
+}
+
+.gallery-sheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gallery-sheet__head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.gallery-sheet__close {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gallery-line);
+  border-radius: 50%;
+  color: var(--gallery-muted);
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.gallery-sheet__block {
+  display: grid;
+  gap: 8px;
+}
+
+.gallery-sheet__label {
+  margin: 0;
+  color: var(--gallery-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.gallery-sheet__hint {
+  color: var(--gallery-soft);
+  font-size: 11px;
+}
+
+.gallery-sheet__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
 }
 
 .gallery-field {
-  border: 1px solid rgba(209, 213, 219, 0.85);
-  background: rgba(255, 255, 255, 0.9);
-  color: #18181b;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--gallery-line);
+  border-radius: 10px;
+  outline: none;
+  color: var(--gallery-ink);
+  background: rgba(29, 29, 31, 0.04);
+  font: inherit;
+  font-size: 13px;
 }
 
-.gallery-field::placeholder {
-  color: rgba(113, 113, 122, 0.64);
+.gallery-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--gallery-blue);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
-.gallery-field option {
-  color: #18181b;
+.gallery-primary-action.is-camera {
+  color: var(--gallery-ink);
+  background: rgba(29, 29, 31, 0.08);
 }
 
-.gallery-asset-card {
-  position: relative;
-  border-radius: 0.85rem;
-  border: 1px solid rgba(229, 231, 235, 0.82);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-  transform: translateZ(0);
-}
-
-.gallery-asset-card::after {
-  content: none;
-}
-
-.photo-actions summary {
-  list-style: none;
-}
-
-.photo-actions summary::-webkit-details-marker {
+.gallery-hidden-input {
   display: none;
+}
+
+.gallery-detail__preview {
+  display: grid;
+  place-items: center;
+  max-height: 280px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(29, 29, 31, 0.05);
+  color: var(--gallery-soft);
+  font-size: 30px;
+}
+
+.gallery-detail__preview img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+.gallery-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.gallery-person-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.gallery-person-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--gallery-line);
+  border-radius: 999px;
+  color: var(--gallery-muted);
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gallery-person-pick.is-on {
+  border-color: var(--gallery-blue);
+  color: var(--gallery-blue);
+  background: var(--gallery-blue-soft);
+}
+
+.gallery-detail__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 </style>

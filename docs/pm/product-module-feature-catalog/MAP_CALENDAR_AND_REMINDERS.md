@@ -1,6 +1,6 @@
 # Map Calendar And Reminders Module Catalog
 
-Updated: 2026-07-31
+Updated: 2026-08-16
 
 Use this file for travel, schedule, reminders, and callback-style support surfaces.
 
@@ -12,7 +12,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | --- | --- | --- | --- |
 | Map | `/map` | Home app | map, journey, Footprints, and later active-exploration lane |
 | Calendar | `/calendar` | Home app | visible long-range calendar for confirmed schedule/date facts |
-| Agenda Journey | route not frozen | future Home app | short-range day/near-term activity execution, timers, and outcomes |
+| Agenda Journey | `/agenda-journey` | Home app | short-range day/near-term travel/activity execution, evidence, and outcomes |
 | Reminders | `/reminders` | Home app | raw cue and follow-up surface |
 | Phone | `/phone` | Home app | call log and callback-style support lane |
 
@@ -110,7 +110,7 @@ Important boundary:
 
 ## 3. Cross-Module Time Direction
 
-The accepted documentation-only direction is defined in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`:
+The accepted and partially implemented direction is defined in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`:
 
 ```text
 Reminders or direct entry
@@ -122,4 +122,4 @@ Reminders or direct entry
   -> future Narrative Timeline projection
 ```
 
-No Agenda Journey route, store, timer, popup, narrative store, or persistence migration is implemented by this catalog update.
+CJA-3 implements the Agenda Journey route, schema-V1 owner, Calendar materialization consumer, manual plans, Map travel evidence, and explicit activity outcomes. Activity Session timers, event popups, automatic place entry, and Narrative Timeline persistence remain unimplemented.

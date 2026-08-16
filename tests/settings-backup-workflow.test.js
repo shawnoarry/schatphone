@@ -160,6 +160,18 @@ describe('Settings backup workflow interface', () => {
       'https://example.com/default-contact.png',
     )
     expect(exported.imageGeneration.defaults.aspectRatio).toBe('4:5')
+    expect(exported.calendar.scheduleOrchestrator).toMatchObject({
+      schemaVersion: 1,
+      records: [],
+    })
+    expect(exported.calendar.agendaJourney).toMatchObject({
+      schemaVersion: 1,
+      journeys: [],
+    })
+    expect(exported.calendar.activitySession).toMatchObject({
+      schemaVersion: 2,
+      sessions: [],
+    })
     expect(JSON.stringify(exported.imageGeneration)).not.toContain('image-secret')
     expect(JSON.stringify(exported.imageGeneration)).not.toContain('proxy-secret')
     expect(JSON.stringify(exported.imageGeneration)).not.toContain('temporary-candidate')
