@@ -26,7 +26,53 @@ const seedEnglishLanguage = async (page) => {
   })
 }
 
+const mockDefaultWeatherForecast = async (page) => {
+  await page.route('https://api.open-meteo.com/v1/forecast**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        timezone: 'Asia/Tokyo',
+        utc_offset_seconds: 32400,
+        current: {
+          time: '2026-08-15T20:00',
+          temperature_2m: 24,
+          relative_humidity_2m: 73,
+          apparent_temperature: 27,
+          is_day: 1,
+          precipitation: 0,
+          rain: 0,
+          showers: 0,
+          snowfall: 0,
+          weather_code: 1,
+          cloud_cover: 20,
+          pressure_msl: 1010,
+          wind_speed_10m: 4,
+          wind_direction_10m: 160,
+          wind_gusts_10m: 8,
+        },
+        hourly: {
+          time: ['2026-08-15T20:00', '2026-08-15T21:00', '2026-08-15T22:00'],
+          temperature_2m: [24, 23, 23],
+          precipitation_probability: [8, 13, 18],
+          weather_code: [1, 1, 1],
+          is_day: [1, 0, 0],
+        },
+        daily: {
+          time: ['2026-08-15', '2026-08-16', '2026-08-17'],
+          weather_code: [1, 1, 1],
+          temperature_2m_max: [28, 27, 26],
+          temperature_2m_min: [22, 21, 21],
+          sunrise: ['2026-08-15T05:19', '2026-08-16T05:20', '2026-08-17T05:21'],
+          sunset: ['2026-08-15T18:37', '2026-08-16T18:36', '2026-08-17T18:35'],
+          precipitation_probability_max: [8, 18, 23],
+        },
+      }),
+    })
+  })
+}
+
 const openWidgetCenter = async (page) => {
+  await mockDefaultWeatherForecast(page)
   await seedEnglishLanguage(page)
   await unlockToHome(page)
   await openHomeDockApp(page, 'app_widgets', '/widgets')
