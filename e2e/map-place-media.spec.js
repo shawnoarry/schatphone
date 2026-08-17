@@ -3,7 +3,9 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { MAP_PLACE_MEDIA_RECORDS } from '../src/lib/map-place-media.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import { installProjectAssetRoute, prewarmProjectAssets } from './helpers/project-assets.js'
 
 const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
 const VISUAL_EVIDENCE_DIR = fileURLToPath(
@@ -93,6 +95,11 @@ test.describe('Map place media governance', () => {
     await mockOpenFreeMapStyle(page)
     await seedEnglish(page)
     await unlockToHome(page)
+    await prewarmProjectAssets(
+      page.request,
+      MAP_PLACE_MEDIA_RECORDS.map((record) => record.asset?.url).filter(Boolean),
+    )
+    await installProjectAssetRoute(page)
 
     for (const [placeId, filename, expectedKind] of REAL_TRIALS) {
       await navigateInsideUnlockedApp(

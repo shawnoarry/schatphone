@@ -1,10 +1,59 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  installProjectAssetRoute,
+  prewarmProjectAssets,
+} from './helpers/project-assets.js'
+
+const harborAssetPaths = [
+  'apps/food-delivery/harbor-roast/cover/harbor-roast-cover-01.png',
+  'apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png',
+  'apps/food-delivery/harbor-roast/brand/harbor-roast-captain-mascot-01.png',
+  ...['member', 'new', 'passport', 'pompompurin'].flatMap((campaign) => [
+    `apps/food-delivery/harbor-roast/campaigns/harbor-roast-carousel-${campaign}-01.png`,
+    `apps/food-delivery/harbor-roast/campaigns/harbor-roast-${campaign}-poster-01.png`,
+  ]),
+  ...Array.from(
+    { length: 13 },
+    (_, index) =>
+      `apps/food-delivery/harbor-roast/products/harbor-roast-item-${String(index + 1).padStart(2, '0')}.png`,
+  ),
+  'apps/food-delivery/harbor-roast/merchandise/harbor-roast-supply-hero-01.png',
+  'apps/food-delivery/harbor-roast/merchandise/harbor-roast-merch-captain-mug-01.png',
+  'apps/food-delivery/harbor-roast/merchandise/harbor-roast-merch-anchor-pin-01.png',
+  'apps/food-delivery/harbor-roast/merchandise/harbor-roast-merch-canvas-tote-01.png',
+  'apps/food-delivery/harbor-roast/merchandise/harbor-roast-merch-sticker-pack-01.png',
+  'apps/food-delivery/harbor-roast/packaging/harbor-roast-paper-cup-standard-01.png',
+  'apps/food-delivery/harbor-roast/packaging/harbor-roast-pompompurin-paper-cup-01.png',
+  'apps/food-delivery/harbor-roast/packaging/harbor-roast-pompompurin-sleeve-01.png',
+  'apps/food-delivery/harbor-roast/packaging/harbor-roast-pompompurin-carrier-01.png',
+  'apps/food-delivery/harbor-roast/states/harbor-roast-empty-bag-01.png',
+  'apps/food-delivery/harbor-roast/states/harbor-roast-empty-orders-01.png',
+  ...[
+    'received',
+    'crafting',
+    'delivery',
+    'pickup-ready',
+    'completed',
+    'cancelled',
+  ].map((status) => `apps/food-delivery/harbor-roast/orders/harbor-roast-order-${status}-01.png`),
+]
+
+const harborAssetUrls = harborAssetPaths.map((path) => projectUiAssetUrl(path))
 
 test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detail', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(180_000)
   await unlockToHome(page)
+  await navigateInsideUnlockedApp(
+    page,
+    '/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop',
+  )
+  await prewarmProjectAssets(page.request, harborAssetUrls)
+  await installProjectAssetRoute(page)
+  await navigateInsideUnlockedApp(page, '/settings')
   await navigateInsideUnlockedApp(
     page,
     '/food-delivery?category=cafe&restaurantId=food_seed_harbor_roast&entry=shop',

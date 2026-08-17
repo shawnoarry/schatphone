@@ -124,6 +124,7 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - advance only after correlated owner facts; an owner request, Chat message, model classification, or Phone summary is not canonical proof by itself
 - retain Phone transcript/summary in Phone, Chat history in Chat, order/case truth in the commerce owner, journey/ETA in Map, and ledger truth in Wallet
 - keep both Food Delivery and Shopping owner Adapters covered so the commerce seam does not collapse back into Food Delivery-specific code
+- treat the Shopping Adapter as seam proof only; do not describe it as a completed user-facing Shopping event or use it to close remaining Shopping product work until the Shopping owner accepts its product scenario
 - keep the user-reported issue fixture and latent-positive fulfillment fixture proving the Runtime is not hard-coded to destination change
 - keep Food Safety handling deterministic and owner-native; do not turn it into an optional random dismissal path
 - follow `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`

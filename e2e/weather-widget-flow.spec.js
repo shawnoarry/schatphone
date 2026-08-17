@@ -1,7 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
+import { WEATHER_TERRARIUM_ASSETS } from '../src/lib/weather-visual-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import { fetchProjectAsset, installProjectAssetRoute } from './helpers/project-assets.js'
 
 const WEATHER_CAPTURE_DIR = process.env.WEATHER_CAPTURE_DIR?.trim()
 
@@ -93,6 +95,16 @@ const WEATHER_STATE_SCENARIOS = [
 ]
 
 test.beforeEach(async ({ page }) => {
+  await installProjectAssetRoute(page)
+  const weatherAssetUrls = [
+    ...Object.values(WEATHER_TERRARIUM_ASSETS.scenes),
+    WEATHER_TERRARIUM_ASSETS.glass,
+    WEATHER_TERRARIUM_ASSETS.clouds,
+    WEATHER_TERRARIUM_ASSETS.atmosphere,
+  ]
+  for (const url of new Set(weatherAssetUrls)) {
+    await fetchProjectAsset(page.request, url)
+  }
   await page.route('https://geocoding-api.open-meteo.com/v1/search**', async (route) => {
     const query = new URL(route.request().url()).searchParams.get('name')
     const results = query === '溫哥華'

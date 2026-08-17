@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import { installProjectAssetRoute, prewarmProjectAssets } from './helpers/project-assets.js'
+
+const daylightProofAssetPaths = [
+  'apps/food-delivery/daylight-cafe/cover/daylight-cafe-cover-01.png',
+  ...Array.from(
+    { length: 3 },
+    (_, index) =>
+      `apps/food-delivery/daylight-cafe/products/daylight-cafe-item-${String(index + 1).padStart(2, '0')}.png`,
+  ),
+  'apps/food-delivery/daylight-cafe/products/daylight-cafe-item-09.png',
+]
 
 const expectNoHorizontalOverflow = async (page) => {
   const hasHorizontalOverflow = await page.evaluate(
@@ -11,6 +23,7 @@ const expectNoHorizontalOverflow = async (page) => {
 test('Daylight Cafe loads its complete bright-morning asset pack without destructive detail crops', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(120_000)
   const pageErrors = []
   const consoleErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -19,6 +32,16 @@ test('Daylight Cafe loads its complete bright-morning asset pack without destruc
   })
 
   await unlockToHome(page)
+  await prewarmProjectAssets(
+    page.request,
+    daylightProofAssetPaths.map((path) => projectUiAssetUrl(path)),
+  )
+  await installProjectAssetRoute(page)
+  await navigateInsideUnlockedApp(
+    page,
+    '/food-delivery?category=cafe&restaurantId=food_seed_daylight_cafe&entry=shop',
+  )
+  await navigateInsideUnlockedApp(page, '/settings')
   await navigateInsideUnlockedApp(
     page,
     '/food-delivery?category=cafe&restaurantId=food_seed_daylight_cafe&entry=shop',

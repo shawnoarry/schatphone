@@ -110,6 +110,8 @@ Free-form text or AI classification may propose an intent or result but cannot c
 
 Event Instance V1 remains frozen for EVE-2A/2B/2C. Event Instance V2 and Simulation V5 now preserve generic progression plus legacy EVE-4B audit lineage without fabricating user initiation. Food Delivery and Shopping provide separate owner Adapters for the shared commerce seam. Read `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md`.
 
+The current user-visible production stop line is Food Delivery's owner-native address-escalation chain. Shopping's Adapter is contract/interface proof only; it does not accept a user-facing Shopping address-change/after-sales event or close remaining Shopping product work. Those require a separate Shopping product and scenario acceptance before they can become an event case.
+
 ### Player Context, World Evolution, And Information Propagation
 
 Status: `PLAYER_CONTEXT_V1_FOUNDATION_IMPLEMENTED / WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_DOCUMENTATION_ONLY`.

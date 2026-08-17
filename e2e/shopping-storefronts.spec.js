@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test'
+import { SHOPPING_SERVICE_PRESETS } from '../src/lib/planned-module-registry.js'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import { installProjectAssetRoute, prewarmProjectAssets } from './helpers/project-assets.js'
 
 const STOREFRONTS = Object.freeze([
   {
@@ -75,11 +78,20 @@ const settleStorefrontMotion = async (page) => {
   })
 }
 
+const prepareShoppingProjectAssets = async (page) => {
+  await prewarmProjectAssets(
+    page.request,
+    SHOPPING_SERVICE_PRESETS.map((preset) => projectUiAssetUrl(preset.brandAssetPath)),
+  )
+  await installProjectAssetRoute(page)
+}
+
 test('Shopping folder keeps rounded, separated brand previews', async ({ page }) => {
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
   await unlockToHome(page)
+  await prepareShoppingProjectAssets(page)
   await navigateInsideUnlockedApp(page, '/home?homePage=1')
 
   const folder = page.getByTestId('home-folder-app_shopping')
@@ -154,6 +166,7 @@ test('six Shopping apps keep distinct routes, identities, carts, favorites, and 
   })
 
   await unlockToHome(page)
+  await prepareShoppingProjectAssets(page)
   await navigateInsideUnlockedApp(page, '/shopping?service=schat_mall&category=mall')
   await expect(page).toHaveURL(/\/shopping\/schat_mall\?category=mall$/)
   await expect(page.getByTestId('shopping-service-filter-panel')).toHaveCount(0)

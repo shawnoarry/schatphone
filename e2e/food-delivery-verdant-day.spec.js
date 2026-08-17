@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { expectHomeReady, navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  fetchProjectAsset,
+  installProjectAssetRoute,
+  prewarmProjectAssets,
+} from './helpers/project-assets.js'
 
 const expectNoHorizontalOverflow = async (page) => {
   const hasHorizontalOverflow = await page.evaluate(
@@ -12,12 +17,45 @@ const expectNoHorizontalOverflow = async (page) => {
 test('Verdant Day keeps its minimalist light-food identity through detail, bag, checkout, and order review', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(180_000)
   const pageErrors = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
   })
 
   await unlockToHome(page)
+  const featuredProductAssets = [
+    'verdant-day/products/verdant-day-item-01.png',
+    'verdant-day/products/verdant-day-item-04.png',
+    'verdant-day/products/verdant-day-item-07.png',
+  ]
+  const deliveredProductAssets = Array.from(
+    { length: 12 },
+    (_, index) => `verdant-day/products/verdant-day-item-${String(index + 1).padStart(2, '0')}.png`,
+  )
+  const verdantAssetPaths = [
+    'verdant-day/brand/verdant-day-brand-hero-preview-02.png',
+    ...deliveredProductAssets,
+    'verdant-day/promotions/verdant-day-promo-lunch-moment-01.png',
+    'verdant-day/promotions/verdant-day-promo-meal-spread-01.png',
+  ]
+  await navigateInsideUnlockedApp(
+    page,
+    '/food-delivery?category=restaurants&restaurantId=food_seed_verdant_day&entry=shop',
+  )
+  await prewarmProjectAssets(
+    page.request,
+    verdantAssetPaths.map((assetPath) => projectUiAssetUrl(`apps/food-delivery/${assetPath}`)),
+  )
+  for (let offset = 0; offset < verdantAssetPaths.length; offset += 2) {
+    await Promise.all(
+      verdantAssetPaths.slice(offset, offset + 2).map((assetPath) =>
+        fetchProjectAsset(page.request, projectUiAssetUrl(`apps/food-delivery/${assetPath}`)),
+      ),
+    )
+  }
+  await installProjectAssetRoute(page)
+  await navigateInsideUnlockedApp(page, '/settings')
   await navigateInsideUnlockedApp(
     page,
     '/food-delivery?category=restaurants&restaurantId=food_seed_verdant_day&entry=shop',
@@ -48,11 +86,6 @@ test('Verdant Day keeps its minimalist light-food identity through detail, bag, 
     )
     .toBe(true)
 
-  const featuredProductAssets = [
-    'verdant-day/products/verdant-day-item-01.png',
-    'verdant-day/products/verdant-day-item-04.png',
-    'verdant-day/products/verdant-day-item-07.png',
-  ]
   for (const assetPath of featuredProductAssets) {
     const productImage = page.locator(`[data-required-asset="${assetPath}"]`)
     await expect(productImage).toHaveCount(1)
@@ -67,20 +100,18 @@ test('Verdant Day keeps its minimalist light-food identity through detail, bag, 
       .toBe(true)
   }
 
-  const deliveredProductAssets = Array.from(
-    { length: 12 },
-    (_, index) => `verdant-day/products/verdant-day-item-${String(index + 1).padStart(2, '0')}.png`,
+  const deliveredProductAssetResults = await Promise.all(
+    deliveredProductAssets.map(async (assetPath) => {
+      const response = await fetchProjectAsset(
+        page.request,
+        projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
+      )
+      return {
+        assetPath,
+        loaded: response.status === 200 && response.headers['content-type']?.startsWith('image/'),
+      }
+    }),
   )
-  const deliveredProductAssetResults = []
-  for (const assetPath of deliveredProductAssets) {
-    const response = await page.request.get(
-      projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
-    )
-    deliveredProductAssetResults.push({
-      assetPath,
-      loaded: response.ok() && response.headers()['content-type']?.startsWith('image/'),
-    })
-  }
   expect(deliveredProductAssetResults).toEqual(
     deliveredProductAssets.map((assetPath) => ({ assetPath, loaded: true })),
   )

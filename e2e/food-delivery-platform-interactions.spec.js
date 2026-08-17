@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  fetchProjectAsset,
+  installProjectAssetRoute,
+  prewarmRequiredProjectAssets,
+} from './helpers/project-assets.js'
 
 const expectNoHorizontalOverflow = async (page) => {
   const hasHorizontalOverflow = await page.evaluate(
@@ -20,6 +25,7 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
 
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby')
+  await prewarmRequiredProjectAssets(page)
   await expectNoHorizontalOverflow(page)
 
   const platformOrderAssetPaths = [
@@ -30,20 +36,36 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
     'platform/orders/platform-order-status-delivered-01.png',
     'platform/orders/platform-order-status-cancelled-01.png',
     'platform/orders/platform-orders-empty-receipt-01.png',
+    'platform/orders/merchant-marks/platform-merchant-mark-hanwoo-01.png',
   ]
-  const platformOrderAssetResults = []
-  for (const assetPath of platformOrderAssetPaths) {
-    const response = await page.request.get(
-      projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
-    )
-    platformOrderAssetResults.push({
-      assetPath,
-      loaded: response.ok() && response.headers()['content-type']?.startsWith('image/png'),
-    })
-  }
+  const platformOrderAssetResults = await Promise.all(
+    platformOrderAssetPaths.map(async (assetPath) => {
+      const response = await fetchProjectAsset(
+        page.request,
+        projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
+      )
+      return {
+        assetPath,
+        loaded: response.status === 200 && response.headers['content-type']?.startsWith('image/png'),
+      }
+    }),
+  )
   expect(platformOrderAssetResults).toEqual(
     platformOrderAssetPaths.map((assetPath) => ({ assetPath, loaded: true })),
   )
+  const firstPlatformMenuAssetUrls = ['hanwoo-gukbap', 'sushi-hana'].flatMap((assetKey) =>
+    Array.from({ length: 5 }, (_, index) =>
+      projectUiAssetUrl(
+        `apps/food-delivery/platform/menus/${assetKey}/menu-item-${String(index + 1).padStart(2, '0')}.png`,
+      ),
+    ),
+  )
+  await Promise.all(
+    firstPlatformMenuAssetUrls.map((url) => fetchProjectAsset(page.request, url)),
+  )
+  await installProjectAssetRoute(page)
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby')
   const foodViewBox = await page.getByTestId('food-delivery-view').boundingBox()
   const platformBox = await page.getByTestId('food-delivery-platform').boundingBox()
   expect(foodViewBox).not.toBeNull()
@@ -384,6 +406,20 @@ test('Food Platform returns to the originating Home screen after internal naviga
   test.setTimeout(180_000)
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby&from=home&homePage=3')
+  await prewarmRequiredProjectAssets(page)
+  await Promise.all(
+    Array.from({ length: 5 }, (_, index) =>
+      fetchProjectAsset(
+        page.request,
+        projectUiAssetUrl(
+          `apps/food-delivery/platform/menus/sushi-hana/menu-item-${String(index + 1).padStart(2, '0')}.png`,
+        ),
+      ),
+    ),
+  )
+  await installProjectAssetRoute(page)
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, '/food-delivery?category=nearby&from=home&homePage=3')
 
   await page.getByTestId('food-delivery-platform-nav-search').click()
   await expect(page).toHaveURL(/platformView=search/)
@@ -478,16 +514,11 @@ test('Food Platform serves every menu family and loads the selected texture fixe
   for (let offset = 0; offset < menuAssets.length; offset += 8) {
     const batch = await Promise.all(
       menuAssets.slice(offset, offset + 8).map(async ({ assetPath, url }) => {
-        let response
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          response = await page.request.get(url)
-          if (response.status() < 500) break
-          await page.waitForTimeout(250 * (attempt + 1))
-        }
+        const response = await fetchProjectAsset(page.request, url)
         return {
           assetPath,
-          status: response.status(),
-          contentType: response.headers()['content-type'] || '',
+          status: response.status,
+          contentType: response.headers['content-type'] || '',
         }
       }),
     )
@@ -500,6 +531,7 @@ test('Food Platform serves every menu family and loads the selected texture fixe
   ).toEqual([])
 
   await unlockToHome(page)
+  await installProjectAssetRoute(page)
   const textureFixMerchants = [
     ['platform_hwadeok_pizza', 'hwadeok-pizza'],
     ['platform_chicken_crisp', 'chicken-crisp'],

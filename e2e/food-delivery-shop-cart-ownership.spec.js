@@ -1,6 +1,10 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  installProjectAssetRoute,
+  prewarmRequiredProjectAssets,
+} from './helpers/project-assets.js'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'schatphone:store:food-delivery'
 
@@ -61,6 +65,12 @@ test('independent shops keep separate carts from Home through Peach order detail
   await navigateInsideUnlockedApp(page, '/home?homePage=1')
   await openFoodDeliveryFolderEntry(page, 'shop_app_food_seed_moon_bistro')
   await expect(page).toHaveURL(/restaurantId=food_seed_moon_bistro/)
+  await prewarmRequiredProjectAssets(page)
+  await installProjectAssetRoute(page)
+  const moonRoute = await page.evaluate(() => window.location.hash.slice(1))
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, moonRoute)
+  await expect(page).toHaveURL(/restaurantId=food_seed_moon_bistro/)
   await expect(page).toHaveURL(/from=home/)
   await expect(page).toHaveURL(/homePage=1/)
 
@@ -73,6 +83,11 @@ test('independent shops keep separate carts from Home through Peach order detail
   await page.getByTestId('food-delivery-store-home').click()
   await expect(page).toHaveURL(/#\/home\?homePage=1$/)
   await openFoodDeliveryFolderEntry(page, 'shop_app_food_seed_harbor_roast')
+  await expect(page).toHaveURL(/restaurantId=food_seed_harbor_roast/)
+  await prewarmRequiredProjectAssets(page)
+  const harborRoute = await page.evaluate(() => window.location.hash.slice(1))
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, harborRoute)
   await expect(page).toHaveURL(/restaurantId=food_seed_harbor_roast/)
   await expect(page.getByTestId('food-delivery-foreign-cart-notice')).toHaveCount(0)
   await expect(page.getByTestId('food-delivery-cart-panel')).toHaveCount(0)

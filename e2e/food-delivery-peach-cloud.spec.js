@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  installProjectAssetRoute,
+  prewarmProjectAssets,
+  prewarmRequiredProjectAssets,
+} from './helpers/project-assets.js'
 
 const expectNoHorizontalOverflow = async (page) => {
   const hasHorizontalOverflow = await page.evaluate(
@@ -8,15 +14,42 @@ const expectNoHorizontalOverflow = async (page) => {
   expect(hasHorizontalOverflow).toBe(false)
 }
 
+const peachCloudProofAssetPaths = [
+  ...Array.from(
+    { length: 12 },
+    (_, index) => `apps/food-delivery/peach-cloud/products/peach-cloud-item-${String(index + 1).padStart(2, '0')}.png`,
+  ),
+  'apps/food-delivery/peach-cloud/promotions/peach-cloud-golden-pairing-01.png',
+  'apps/food-delivery/peach-cloud/promotions/peach-cloud-mascot-market-01.png',
+  'apps/food-delivery/peach-cloud/promotions/posters/peach-cloud-poster-white-peach-lime-dynamic-price-pilot-01.png',
+  'apps/food-delivery/peach-cloud/promotions/posters/peach-cloud-poster-waxberry-lychee-01.png',
+  'apps/food-delivery/peach-cloud/promotions/posters/peach-cloud-poster-mascot-plush-01.png',
+  'apps/food-delivery/peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-hero-01.webp',
+  'apps/food-delivery/peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-bubbles-01.webp',
+  'apps/food-delivery/peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-ingredients-01.webp',
+  'apps/food-delivery/peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-hero-01.webp',
+  'apps/food-delivery/peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-ice-01.webp',
+  'apps/food-delivery/peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-ingredients-01.webp',
+  'apps/food-delivery/peach-cloud/merchandise/peach-cloud-merch-plush-01.png',
+  'apps/food-delivery/peach-cloud/merchandise/peach-cloud-merch-bag-charm-01.png',
+  'apps/food-delivery/peach-cloud/merchandise/peach-cloud-merch-tote-01.png',
+]
+
 test('Peach Cloud keeps its own visual identity through browse, cart, checkout, and order review', async ({
   page,
 }, testInfo) => {
+  test.setTimeout(180_000)
   const pageErrors = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
   })
 
   await unlockToHome(page)
+  await prewarmProjectAssets(page.request, [
+    projectUiAssetUrl('apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg'),
+    ...peachCloudProofAssetPaths.map((path) => projectUiAssetUrl(path)),
+  ])
+  await installProjectAssetRoute(page)
   await page.locator('.home-dot').nth(1).click()
   await page.getByTestId('home-folder-app_food_delivery').click()
   const folderBrandMark = page.getByTestId(
@@ -28,6 +61,12 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
     /peach-cloud\/brand\/peach-cloud-mark-01\.svg/,
   )
   await expect.poll(() => folderBrandMark.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0)
+  await navigateInsideUnlockedApp(
+    page,
+    '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
+  )
+  await prewarmRequiredProjectAssets(page)
+  await navigateInsideUnlockedApp(page, '/settings')
   await navigateInsideUnlockedApp(
     page,
     '/food-delivery?category=dessert&restaurantId=food_seed_peach_cloud&entry=shop',
@@ -254,6 +293,9 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
     'peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-bubbles-01.webp',
     'peach-cloud/campaigns/peach-cloud-white-peach-lime-campaign-ingredients-01.webp',
   ])
+  for (const image of await whitePeachCampaignImages.all()) {
+    await image.scrollIntoViewIfNeeded()
+  }
   await expect
     .poll(() =>
       whitePeachCampaignImages.evaluateAll((images) =>
@@ -381,6 +423,9 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
     'peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-ice-01.webp',
     'peach-cloud/campaigns/peach-cloud-waxberry-lychee-campaign-ingredients-01.webp',
   ])
+  for (const image of await waxberryCampaignImages.all()) {
+    await image.scrollIntoViewIfNeeded()
+  }
   await expect
     .poll(() =>
       waxberryCampaignImages.evaluateAll((images) =>
@@ -459,6 +504,7 @@ test('Peach Cloud keeps its own visual identity through browse, cart, checkout, 
   )
   await page.getByTestId('food-delivery-peach-cloud-club-merch-action').click()
   await expect(page).toHaveURL(/shopView=merch/)
+  await prewarmRequiredProjectAssets(page)
   const merchandiseImages = page.locator(
     'img[data-required-asset^="peach-cloud/merchandise/peach-cloud-merch-"]',
   )

@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  installProjectAssetRoute,
+  prewarmProjectAssets,
+  prewarmRequiredProjectAssets,
+} from './helpers/project-assets.js'
 
 const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
 const DETERMINISTIC_STYLE = {
@@ -56,6 +62,23 @@ const openFoodFolderPageTwo = async (page) => {
 const readFoodDeliverySnapshot = async (page) =>
   page.evaluate(() => JSON.parse(window.localStorage.getItem('schatphone:store:food-delivery')))
 
+const foodFolderIconPaths = [
+  'apps/food-delivery/moon-bistro/brand/moon-bistro-app-icon-01.webp',
+  'apps/food-delivery/river-noodles/brand/river-noodles-app-icon-01.webp',
+  'apps/food-delivery/daylight-cafe/brand/daylight-cafe-app-icon-01.webp',
+  'apps/food-delivery/harbor-roast/brand/harbor-roast-app-icon-01.png',
+  'apps/food-delivery/sugar-lane/brand/sugar-lane-app-icon-01.webp',
+  'apps/food-delivery/peach-cloud/brand/peach-cloud-mark-01.svg',
+  'apps/food-delivery/dash-grill/brand/dash-grill-app-icon-01.webp',
+  'apps/food-delivery/jade-hearth/brand/jade-hearth-app-icon-01.webp',
+  'apps/food-delivery/verdant-day/brand/verdant-day-app-icon-01.webp',
+  'apps/food-delivery/myeongdong-kyoja/brand/myeongdong-kyoja-app-icon-01.webp',
+  'apps/food-delivery/london-bagel-museum/brand/london-bagel-museum-app-icon-01.webp',
+  'apps/food-delivery/knotted/brand/knotted-app-icon-01.webp',
+  'apps/food-delivery/kyochon-chicken/brand/kyochon-chicken-app-icon-01.webp',
+  'apps/food-delivery/eggdrop/brand/eggdrop-app-icon-01.webp',
+]
+
 test('Home page two opens real shops and keeps their bags and orders independent', async ({
   page,
 }, testInfo) => {
@@ -74,6 +97,11 @@ test('Home page two opens real shops and keeps their bags and orders independent
 
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/home?homePage=1')
+  await prewarmProjectAssets(
+    page.request,
+    foodFolderIconPaths.map((path) => projectUiAssetUrl(path)),
+  )
+  await installProjectAssetRoute(page)
   let panel = await openFoodFolderPageTwo(page)
 
   await page.getByTestId('home-folder-page-previous').click()
@@ -102,6 +130,11 @@ test('Home page two opens real shops and keeps their bags and orders independent
 
   await page.getByTestId('home-folder-entry-shop_app_food_seed_eggdrop').click()
   await expect(page).toHaveURL(/restaurantId=food_seed_eggdrop/)
+  await prewarmRequiredProjectAssets(page)
+  const eggdropRoute = await page.evaluate(() => window.location.hash.slice(1))
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, eggdropRoute)
+  await expect(page).toHaveURL(/restaurantId=food_seed_eggdrop/)
   await expect(page.getByTestId('food-delivery-store-shell')).toHaveAttribute(
     'data-store-template',
     'standard',
@@ -119,6 +152,11 @@ test('Home page two opens real shops and keeps their bags and orders independent
   await expect(page).toHaveURL(/#\/home\?homePage=1$/)
   panel = await openFoodFolderPageTwo(page)
   await page.getByTestId('home-folder-entry-shop_app_food_seed_kyochon_chicken').click()
+  await expect(page).toHaveURL(/restaurantId=food_seed_kyochon_chicken/)
+  await prewarmRequiredProjectAssets(page)
+  const kyochonRoute = await page.evaluate(() => window.location.hash.slice(1))
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, kyochonRoute)
   await expect(page).toHaveURL(/restaurantId=food_seed_kyochon_chicken/)
   const kyochonAdd = page.locator('[data-testid^="food-delivery-add-"]').first()
   const kyochonTitle = (await kyochonAdd.getAttribute('aria-label')).replace(/^Add /, '')
@@ -182,6 +220,7 @@ test('Map searches, focuses, and selects all five real shops as destinations', a
 
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/map')
+  await installProjectAssetRoute(page)
   const destination = page.getByTestId('map-destination-search')
   const searchResults = page.getByTestId('map-local-place-results')
   const cases = [

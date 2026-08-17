@@ -1,6 +1,10 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  installProjectAssetRoute,
+  prewarmRequiredProjectAssets,
+} from './helpers/project-assets.js'
 
 const FOOD_DELIVERY_STORAGE_KEY = 'schatphone:store:food-delivery'
 const WALLET_STORAGE_KEY = 'schatphone:store:wallet'
@@ -75,6 +79,12 @@ test('Moon Bistro order support stays folded until opened and records a delivere
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/home?homePage=1')
   await openFoodDeliveryFolderEntry(page, 'shop_app_food_seed_moon_bistro')
+  await expect(page).toHaveURL(/restaurantId=food_seed_moon_bistro/)
+  await prewarmRequiredProjectAssets(page)
+  await installProjectAssetRoute(page)
+  const moonRoute = await page.evaluate(() => window.location.hash.slice(1))
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, moonRoute)
   await expect(page).toHaveURL(/restaurantId=food_seed_moon_bistro/)
   await expect(page).toHaveURL(/from=home/)
   await expect(page).toHaveURL(/homePage=1/)

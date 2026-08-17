@@ -12,6 +12,8 @@ This contract defines the first reusable owner-native event-chain family built f
 
 The reference scenario is a delivery-address change, but the Interfaces are intended for Food Delivery, Shopping, and later commerce or appointment Modules that can expose an order or fulfillment reference. The scenario is evidence for the event architecture; it is not the reason the participating owner capabilities exist.
 
+Scope clarification: Food Delivery is the current user-visible production case. Shopping is included here as a second owner-Adapter/interface proof only; this contract does not accept a user-facing Shopping address-change/after-sales event or close remaining Shopping product work. That work requires a separate Shopping product and scenario acceptance.
+
 The core product rule is:
 
 > A user-initiated commerce service event begins only after the user performs an explicit service interaction inside the owning platform or a registered Chat service account with valid source context.
@@ -30,7 +32,7 @@ Post-implementation product review supersedes the EVE-4B trigger and Runtime sha
 - Food Delivery messaging, address editing, Map ETA/reroute, Wallet settlement, and Phone session/resolution remain owner capabilities that must work without an eligible optional event;
 - no Food Delivery Event Surface, Event Home app, generic popup, Mini Scene, Calendar effect, or Agenda Journey implementation is authorized.
 
-EVE-4C now extracts those reusable Interfaces in the current tree and migrates the reference recipe to explicit user initiation. It does not advance EVE-5.
+EVE-4C now extracts those reusable Interfaces in the current tree and migrates the reference recipe to explicit user initiation. EVE-5 is a later stage that requires separate acceptance.
 
 ## 3. Scope
 
@@ -483,11 +485,11 @@ Implementation acceptance requires tests to prove:
 8. owner requests are idempotent and Event Instances advance only after matching owner facts;
 9. Food Delivery displays Map-owned estimate truth with revision/freshness behavior and cannot silently invent ETA;
 10. legacy EVE-4B persistence migrates without dropping owner references or fabricating user intent;
-11. Food Delivery and Shopping satisfy the shared commerce Interface through separate Adapters;
+11. Food Delivery and Shopping satisfy the shared commerce Interface through separate Adapters; the Shopping result is seam proof and is not Shopping product acceptance;
 12. a user-reported issue fixture and a latent-positive fixture run through the generic Runtime without adding event-specific Simulation store methods;
 13. no Food Delivery Event Surface, Event Home app, Calendar/Agenda Journey mutation, direct Wallet write, or direct Chat/Phone/Map source mutation is introduced.
 
-The current tree implements all thirteen checks through the shared contract/fixture suite, Food Delivery/Shopping owner tests, Simulation V5 persistence/runtime tests, Phone/Map focused tests, and the desktop plus simulated Pixel 5 owner-native browser journey. Final repository-wide validation remains recorded in the package handoff and roadmap rather than duplicated here.
+The current tree implements all thirteen contract checks through the shared contract/fixture suite, Food Delivery/Shopping owner tests, Simulation V5 persistence/runtime tests, Phone/Map focused tests, and the desktop plus simulated Pixel 5 owner-native browser journey. The Shopping tests prove the reusable seam, not a completed Shopping product or a user-facing Shopping event. Final repository-wide validation remains recorded in the package handoff and roadmap rather than duplicated here.
 
 ## 15. Architecture Depth Checks
 

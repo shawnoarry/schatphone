@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  fetchProjectAsset,
+  installProjectAssetRoute,
+  prewarmRequiredProjectAssets,
+} from './helpers/project-assets.js'
 
 const expectNoHorizontalOverflow = async (page) => {
   const hasHorizontalOverflow = await page.evaluate(
@@ -18,6 +23,13 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
   })
 
   await unlockToHome(page)
+  await navigateInsideUnlockedApp(
+    page,
+    '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop',
+  )
+  await prewarmRequiredProjectAssets(page)
+  await installProjectAssetRoute(page)
+  await navigateInsideUnlockedApp(page, '/settings')
   await navigateInsideUnlockedApp(
     page,
     '/food-delivery?category=restaurants&restaurantId=food_seed_jade_hearth&entry=shop',
@@ -56,12 +68,13 @@ test('Jade Hearth keeps its Chinese table identity through feast, menu, checkout
   )
   const deliveredProductAssetResults = []
   for (const assetPath of deliveredProductAssets) {
-    const response = await page.request.get(
+    const response = await fetchProjectAsset(
+      page.request,
       projectUiAssetUrl(`apps/food-delivery/${assetPath}`),
     )
     deliveredProductAssetResults.push({
       assetPath,
-      loaded: response.ok() && response.headers()['content-type']?.startsWith('image/'),
+      loaded: response.status === 200 && response.headers['content-type']?.startsWith('image/'),
     })
   }
   expect(deliveredProductAssetResults).toEqual(

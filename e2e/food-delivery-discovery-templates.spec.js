@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import {
+  installProjectAssetRoute,
+  prewarmRequiredProjectAssets,
+} from './helpers/project-assets.js'
 
 const templateCases = [
   {
@@ -43,12 +47,21 @@ test('reusable discovery templates stay distinct and menu mosaic can be reassign
   })
 
   await unlockToHome(page)
+  const firstTemplate = templateCases[0]
+  const firstTemplatePath =
+    `/food-delivery?category=${firstTemplate.category}&restaurantId=${firstTemplate.restaurantId}&entry=shop`
+  await navigateInsideUnlockedApp(page, firstTemplatePath)
+  await prewarmRequiredProjectAssets(page)
+  await installProjectAssetRoute(page)
+  await navigateInsideUnlockedApp(page, '/settings')
+  await navigateInsideUnlockedApp(page, firstTemplatePath)
 
   for (const templateCase of templateCases) {
     await navigateInsideUnlockedApp(
       page,
       `/food-delivery?category=${templateCase.category}&restaurantId=${templateCase.restaurantId}&entry=shop`,
     )
+    await prewarmRequiredProjectAssets(page)
 
     const storeShell = page.getByTestId('food-delivery-store-shell')
     await expect(storeShell).toHaveAttribute('data-store-template', templateCase.templateId)
