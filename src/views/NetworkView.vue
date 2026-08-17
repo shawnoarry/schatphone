@@ -919,6 +919,52 @@ ensurePresetState()
   color: var(--system-danger);
 }
 
+.network-shell :deep(.text-emerald-500),
+.network-shell :deep(.text-emerald-600),
+.network-shell :deep(.text-emerald-700) {
+  color: var(--system-success);
+}
+
+.network-shell :deep(.bg-emerald-50),
+.network-shell :deep(.bg-emerald-100) {
+  background-color: var(--system-success-soft);
+}
+
+.network-shell :deep(.border-emerald-100),
+.network-shell :deep(.border-emerald-200) {
+  border-color: var(--system-success-soft);
+}
+
+.network-shell :deep(.text-amber-500),
+.network-shell :deep(.text-amber-600),
+.network-shell :deep(.text-amber-700) {
+  color: var(--system-warning);
+}
+
+.network-shell :deep(.bg-amber-50),
+.network-shell :deep(.bg-amber-100) {
+  background-color: var(--system-warning-soft);
+}
+
+.network-shell :deep(.border-amber-100),
+.network-shell :deep(.border-amber-200) {
+  border-color: var(--system-warning-soft);
+}
+
+.network-shell :deep(.text-indigo-500),
+.network-shell :deep(.text-indigo-600),
+.network-shell :deep(.text-indigo-700) {
+  color: var(--system-info);
+}
+
+.network-shell :deep(.border-indigo-200) {
+  border-color: var(--system-control-border);
+}
+
+.network-shell :deep(.hover\:bg-indigo-50:hover) {
+  background-color: var(--system-hover-bg);
+}
+
 .network-shell :deep(.border-gray-200),
 .network-shell :deep(.border-blue-200),
 .network-shell :deep(.border-red-200) {

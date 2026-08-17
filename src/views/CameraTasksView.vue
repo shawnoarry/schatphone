@@ -75,8 +75,8 @@ const openCandidate = (candidateId) => router.push({
 }
 
 .camera-task-heading:not(:first-child) { margin-top: 20px; }
-.camera-task-heading h2 { margin: 0; color: #7a7e86; font-size: 8px; }
-.camera-task-heading button { color: #c23a33; font-size: 9px; }
+.camera-task-heading h2 { margin: 0; color: var(--system-text-soft); font-size: 8px; }
+.camera-task-heading button { color: var(--system-danger); font-size: 9px; }
 
 .camera-candidate-grid {
   display: grid;
@@ -87,9 +87,9 @@ const openCandidate = (candidateId) => router.push({
 .camera-candidate-grid article {
   min-width: 0;
   overflow: hidden;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 7px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-candidate-image {
@@ -97,11 +97,11 @@ const openCandidate = (candidateId) => router.push({
   width: 100%;
   aspect-ratio: 1;
   overflow: hidden;
-  background: #17191d;
+  background: var(--system-surface-dark);
 }
 
 .camera-candidate-image img { width: 100%; height: 100%; object-fit: cover; }
-.camera-candidate-image span { position: absolute; right: 6px; bottom: 6px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #22964e; font-size: 8px; }
+.camera-candidate-image span { position: absolute; right: 6px; bottom: 6px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--system-on-success); background: var(--system-success); font-size: 8px; }
 
 .camera-candidate-copy {
   position: relative;
@@ -110,8 +110,8 @@ const openCandidate = (candidateId) => router.push({
 }
 
 .camera-candidate-copy p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
-.camera-candidate-copy small { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8b8e95; font-size: 7px; }
-.camera-candidate-copy button { position: absolute; top: 9px; right: 8px; width: 22px; height: 22px; color: #a9abb0; font-size: 9px; }
+.camera-candidate-copy small { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--system-text-soft); font-size: 7px; }
+.camera-candidate-copy button { position: absolute; top: 9px; right: 8px; width: 22px; height: 22px; color: var(--system-text-soft); font-size: 9px; }
 
 .camera-task-empty {
   min-height: 140px;
@@ -120,10 +120,10 @@ const openCandidate = (candidateId) => router.push({
   align-items: center;
   justify-content: center;
   gap: 9px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  color: #a0a3a9;
-  background: #fff;
+  color: var(--system-text-soft);
+  background: var(--system-panel-bg);
 }
 
 .camera-task-empty i { font-size: 22px; }
@@ -131,9 +131,9 @@ const openCandidate = (candidateId) => router.push({
 
 .camera-task-list {
   overflow: hidden;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-task-list article {
@@ -145,13 +145,13 @@ const openCandidate = (candidateId) => router.push({
   padding: 9px 12px;
 }
 
-.camera-task-list article + article { border-top: 1px solid rgba(17, 24, 39, 0.08); }
-.camera-task-list article > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #1570ef; font-size: 10px; }
-.camera-task-list article > span.is-failed { background: #cf4037; }
-.camera-task-list article > span.is-done { background: #259a54; }
+.camera-task-list article + article { border-top: 1px solid var(--system-subtle-border); }
+.camera-task-list article > span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; color: var(--system-on-accent); background: var(--system-accent); font-size: 10px; }
+.camera-task-list article > span.is-failed { background: var(--system-danger); }
+.camera-task-list article > span.is-done { background: var(--system-success); }
 .camera-task-list strong,
 .camera-task-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .camera-task-list strong { font-size: 10px; }
-.camera-task-list small { margin-top: 3px; color: #85888f; font-size: 8px; }
-.camera-task-session-note { margin: 0 4px; color: #7c7f87; font-size: 9px; line-height: 1.5; }
+.camera-task-list small { margin-top: 3px; color: var(--system-text-soft); font-size: 8px; }
+.camera-task-session-note { margin: 0 4px; color: var(--system-text-soft); font-size: 9px; line-height: 1.5; }
 </style>

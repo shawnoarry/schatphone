@@ -107,22 +107,22 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="tts-settings-page chat-shell" :class="chatShellClasses" data-testid="tts-settings-page">
-    <header class="tts-header">
+    <div class="chat-native-header pt-12 pb-3 px-4 flex items-center gap-3">
       <button
         type="button"
-        class="tts-icon-button"
+        class="chat-native-back text-sm flex items-center gap-1"
         :title="t('返回 Chat 设置', 'Back to Chat settings')"
         :aria-label="t('返回 Chat 设置', 'Back to Chat settings')"
         @click="router.push('/chat-settings')"
       >
-        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        <i class="fas fa-chevron-left"></i> {{ t('Chat 设置', 'Chat Settings') }}
       </button>
-      <div class="tts-header-copy">
-        <h1>{{ t('语音与朗读', 'Voice & Read Aloud') }}</h1>
-        <p>{{ providerMeta }}</p>
+      <div class="min-w-0 flex-1">
+        <h1 class="font-bold text-xl">{{ t('语音与朗读', 'Voice & Read Aloud') }}</h1>
+        <p class="tts-header-meta">{{ providerMeta }}</p>
       </div>
       <span class="tts-status-dot" :class="{ 'is-busy': ttsStore.preview.status === 'loading' }" aria-hidden="true"></span>
-    </header>
+    </div>
 
     <main class="tts-content">
       <div class="tts-provider-tabs" role="tablist" :aria-label="t('语音供应商', 'Speech provider')">
@@ -283,44 +283,32 @@ onBeforeUnmount(() => {
 .tts-settings-page {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  background: #f3f5f4;
-  color: #17211d;
+  background: var(--chat-page-bg);
+  color: var(--chat-ink);
 }
 
-.tts-header {
-  display: grid;
-  min-height: 96px;
-  grid-template-columns: 40px minmax(0, 1fr) 16px;
-  align-items: end;
-  gap: 12px;
-  border-bottom: 1px solid #dce3df;
-  background: #ffffff;
-  padding: 36px 18px 14px;
+.tts-header-meta {
+  margin-top: 2px;
+  color: var(--chat-muted-ink);
+  font-size: 10px;
+  line-height: 1.3;
 }
 
-.tts-icon-button {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border: 1px solid #d7dfda;
-  border-radius: 8px;
-  color: #33483e;
+.tts-status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--system-success);
 }
 
-.tts-icon-button:active { transform: scale(0.96); }
-.tts-icon-button:focus-visible,
-.tts-provider-tabs button:focus-visible,
-.tts-generate-button:focus-visible { outline: 2px solid #238765; outline-offset: 2px; }
-.tts-header-copy { min-width: 0; }
-.tts-header h1 { font-size: 19px; font-weight: 850; line-height: 1.25; }
-.tts-header p { margin-top: 3px; color: #6d7d74; font-size: 10px; line-height: 1.3; }
-.tts-status-dot { width: 8px; height: 8px; margin-bottom: 16px; border-radius: 50%; background: #238765; }
-.tts-status-dot.is-busy { background: #d1972a; }
+.tts-status-dot.is-busy { background: var(--system-warning); }
 
 .tts-content {
-  height: calc(100% - 96px);
+  flex: 1;
   overflow-y: auto;
   padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
 }
@@ -329,9 +317,9 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
-  border: 1px solid #d6ded9;
+  border: 1px solid var(--chat-panel-border);
   border-radius: 8px;
-  background: #e8ece9;
+  background: var(--chat-panel-muted-bg);
   padding: 4px;
 }
 
@@ -342,24 +330,27 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 7px;
   border-radius: 6px;
-  color: #68776f;
+  color: var(--chat-muted-ink);
   font-size: 11px;
   font-weight: 800;
 }
 
 .tts-provider-tabs button.is-active {
-  background: #ffffff;
-  color: #17664f;
-  box-shadow: 0 2px 8px rgba(31, 55, 43, 0.1);
+  background: var(--chat-panel-bg);
+  color: var(--chat-accent-ink);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--chat-ink) 10%, transparent);
 }
+
+.tts-provider-tabs button:focus-visible,
+.tts-generate-button:focus-visible { outline: 2px solid var(--chat-accent-ink); outline-offset: 2px; }
 
 .tts-section {
   display: grid;
   gap: 14px;
   margin-top: 14px;
-  border: 1px solid #dce3df;
+  border: 1px solid var(--chat-panel-border);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--chat-panel-bg);
   padding: 16px;
 }
 
@@ -372,45 +363,45 @@ onBeforeUnmount(() => {
 }
 
 .tts-section h2 { font-size: 13px; font-weight: 850; line-height: 1.3; }
-.tts-section-heading p { margin-top: 3px; color: #79877f; font-size: 9px; }
-.tts-provider-badge { flex: 0 0 auto; border-radius: 6px; background: #eef4f0; padding: 5px 7px; color: #17664f; font-size: 9px; font-weight: 800; }
-.tts-character-count { color: #7c8982; font-size: 10px; font-variant-numeric: tabular-nums; }
-.tts-character-count.is-over { color: #b33b32; }
+.tts-section-heading p { margin-top: 3px; color: var(--chat-muted-ink); font-size: 9px; }
+.tts-provider-badge { flex: 0 0 auto; border-radius: 6px; background: var(--chat-accent-soft); padding: 5px 7px; color: var(--chat-accent-ink); font-size: 9px; font-weight: 800; }
+.tts-character-count { color: var(--chat-muted-ink); font-size: 10px; font-variant-numeric: tabular-nums; }
+.tts-character-count.is-over { color: var(--system-danger); }
 
 .tts-field { display: grid; min-width: 0; gap: 6px; }
 .tts-field > span,
-.tts-range-field > span { color: #53645b; font-size: 10px; font-weight: 800; }
+.tts-range-field > span { color: var(--chat-muted-ink); font-size: 10px; font-weight: 800; }
 .tts-field input,
 .tts-field select,
 .tts-preview-section textarea {
   width: 100%;
   min-width: 0;
-  border: 1px solid #ccd7d1;
+  border: 1px solid var(--chat-panel-border);
   border-radius: 7px;
-  background: #fbfcfb;
+  background: var(--chat-input-field-bg);
   padding: 10px 11px;
-  color: #1e2d25;
+  color: var(--chat-ink);
   font-size: 11px;
   outline: none;
 }
 .tts-field input:focus,
 .tts-field select:focus,
-.tts-preview-section textarea:focus { border-color: #238765; box-shadow: 0 0 0 3px rgba(35, 135, 101, 0.12); }
+.tts-preview-section textarea:focus { border-color: var(--chat-accent-ink); box-shadow: 0 0 0 3px var(--chat-accent-soft); }
 .tts-two-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .tts-range-field { display: grid; grid-template-columns: 42px minmax(0, 1fr) 42px; align-items: center; gap: 8px; }
-.tts-range-field input { accent-color: #238765; }
-.tts-range-field output { color: #34483e; font-size: 10px; font-variant-numeric: tabular-nums; text-align: right; }
+.tts-range-field input { accent-color: var(--chat-accent-ink); }
+.tts-range-field output { color: var(--chat-muted-ink); font-size: 10px; font-variant-numeric: tabular-nums; text-align: right; }
 .tts-preview-section textarea { min-height: 112px; resize: vertical; line-height: 1.65; }
 
 .tts-feedback {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  border: 1px solid #e2b7b2;
+  border: 1px solid var(--system-danger-soft);
   border-radius: 7px;
-  background: #fff1ef;
+  background: var(--system-danger-soft);
   padding: 9px 10px;
-  color: #9c352f;
+  color: var(--system-danger);
   font-size: 10px;
   line-height: 1.5;
 }
@@ -423,14 +414,18 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 8px;
   border-radius: 7px;
-  background: #17664f;
-  color: #ffffff;
+  background: var(--chat-send-bg);
+  color: var(--chat-send-text);
   font-size: 11px;
   font-weight: 850;
+  transition:
+    filter var(--system-motion-fast),
+    transform var(--system-motion-fast);
 }
+.tts-generate-button:not(:disabled):hover { filter: brightness(1.04); }
 .tts-generate-button:disabled { cursor: not-allowed; opacity: 0.45; }
 .tts-generate-button:not(:disabled):active { transform: scale(0.985); }
-.tts-local-note { display: flex; align-items: flex-start; gap: 7px; margin: 12px 4px 0; color: #6d7a73; font-size: 9px; line-height: 1.5; }
+.tts-local-note { display: flex; align-items: flex-start; gap: 7px; margin: 12px 4px 0; color: var(--chat-muted-ink); font-size: 9px; line-height: 1.5; }
 
 @media (min-width: 760px) {
   .tts-content { width: min(680px, 100%); margin: 0 auto; padding-top: 24px; }
@@ -441,7 +436,6 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tts-icon-button,
   .tts-generate-button { transition: none; }
 }
 </style>

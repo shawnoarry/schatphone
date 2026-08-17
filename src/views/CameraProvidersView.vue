@@ -84,15 +84,15 @@ const openProfile = (profileId) => router.push({
   display: grid;
   place-items: center;
   border-radius: 50%;
-  color: #1570ef;
-  background: rgba(21, 112, 239, 0.1);
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
 }
 
 .camera-provider-list {
   overflow: hidden;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-provider-row {
@@ -107,7 +107,7 @@ const openProfile = (profileId) => router.push({
 }
 
 .camera-provider-row + .camera-provider-row {
-  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  border-top: 1px solid var(--system-subtle-border);
 }
 
 .camera-provider-mark {
@@ -116,13 +116,13 @@ const openProfile = (profileId) => router.push({
   display: grid;
   place-items: center;
   border-radius: 8px;
-  color: #666b74;
-  background: #eceef1;
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
 }
 
 .camera-provider-mark.is-active {
-  color: #fff;
-  background: #17191d;
+  color: var(--system-text-inverse);
+  background: var(--system-text);
 }
 
 .camera-provider-copy {
@@ -139,22 +139,22 @@ const openProfile = (profileId) => router.push({
 }
 
 .camera-provider-copy strong { font-size: 13px; }
-.camera-provider-copy small { margin-top: 3px; color: #666a73; font-size: 10px; }
-.camera-provider-copy em { margin-top: 3px; color: #9a9ca2; font-size: 8px; font-style: normal; }
+.camera-provider-copy small { margin-top: 3px; color: var(--system-text-muted); font-size: 10px; }
+.camera-provider-copy em { margin-top: 3px; color: var(--system-text-soft); font-size: 8px; font-style: normal; }
 
 .camera-provider-state {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #b2b4ba;
+  color: var(--system-text-soft);
   font-size: 10px;
 }
 
-.camera-provider-state .fa-check { color: #20944b; }
+.camera-provider-state .fa-check { color: var(--system-success); }
 
 .camera-provider-note {
   margin: 12px 5px 0;
-  color: #777a82;
+  color: var(--system-text-soft);
   font-size: 9px;
   line-height: 1.55;
 }

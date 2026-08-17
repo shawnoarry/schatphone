@@ -268,7 +268,7 @@ const removeProfile = async () => {
 <style scoped>
 .camera-provider-save {
   min-height: 32px;
-  color: #1570ef;
+  color: var(--system-accent);
   font-size: 12px;
   font-weight: 750;
 }
@@ -276,9 +276,9 @@ const removeProfile = async () => {
 .camera-form-group {
   overflow: hidden;
   margin-bottom: 16px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-form-row,
@@ -294,7 +294,7 @@ const removeProfile = async () => {
 .camera-form-row + .camera-form-row,
 .camera-toggle-row + .camera-form-row,
 .camera-form-row + .camera-toggle-row {
-  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  border-top: 1px solid var(--system-subtle-border);
 }
 
 .camera-form-row > span:first-child {
@@ -308,7 +308,7 @@ const removeProfile = async () => {
   min-width: 0;
   flex: 1;
   border: 0;
-  color: #383b42;
+  color: var(--system-text);
   background: transparent;
   text-align: right;
   font-size: 11px;
@@ -326,7 +326,7 @@ const removeProfile = async () => {
   min-height: 34px;
   padding: 0 10px;
   border-radius: 6px;
-  background: #f1f2f4;
+  background: var(--system-control-bg);
   text-align: left;
 }
 
@@ -338,13 +338,14 @@ const removeProfile = async () => {
   overflow: hidden;
   min-height: 36px;
   border-radius: 6px;
-  background: #f1f2f4;
+  background: var(--system-control-bg);
 }
 
 .camera-secret-field input,
 .camera-model-field input {
   min-width: 0;
   padding: 0 10px;
+  color: var(--system-text);
   background: transparent;
   font-size: 11px;
   outline: none;
@@ -355,25 +356,25 @@ const removeProfile = async () => {
   min-width: 38px;
   min-height: 36px;
   padding: 0 10px;
-  color: #1570ef;
+  color: var(--system-accent);
 }
 
 .camera-model-field button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border-left: 1px solid rgba(17, 24, 39, 0.08);
+  border-left: 1px solid var(--system-subtle-border);
   font-size: 10px;
 }
 
 .camera-form-hint {
   margin: 0;
   padding: 0 13px 10px;
-  color: #8a8d94;
+  color: var(--system-text-soft);
   font-size: 8px;
 }
 
-.camera-form-hint.is-warning { color: #a66b06; }
+.camera-form-hint.is-warning { color: var(--system-warning); }
 
 .camera-toggle-row > span {
   min-width: 0;
@@ -385,8 +386,8 @@ const removeProfile = async () => {
 }
 
 .camera-toggle-row strong { font-size: 11px; }
-.camera-toggle-row small { margin-top: 3px; color: #7b7e86; font-size: 8px; }
-.camera-toggle-row input { width: 18px; height: 18px; accent-color: #1570ef; }
+.camera-toggle-row small { margin-top: 3px; color: var(--system-text-soft); font-size: 8px; }
+.camera-toggle-row input { width: 18px; height: 18px; accent-color: var(--system-accent); }
 
 .camera-provider-actions {
   display: grid;
@@ -400,35 +401,35 @@ const removeProfile = async () => {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid rgba(21, 112, 239, 0.18);
+  border: 1px solid var(--system-accent-soft);
   border-radius: 7px;
-  color: #1566ce;
-  background: rgba(255, 255, 255, 0.78);
+  color: var(--system-accent);
+  background: var(--system-control-bg);
   font-size: 10px;
   font-weight: 700;
 }
 
-.camera-provider-actions button:disabled { color: #92959c; border-color: rgba(17, 24, 39, 0.08); }
+.camera-provider-actions button:disabled { color: var(--system-text-soft); border-color: var(--system-subtle-border); }
 
 .camera-provider-feedback {
   margin: 10px 3px 0;
-  color: #666a73;
+  color: var(--system-text-muted);
   font-size: 9px;
   line-height: 1.45;
 }
 
-.camera-provider-feedback.is-error { color: #c33932; }
-.camera-provider-feedback.is-warning { color: #996309; }
-.camera-provider-feedback.is-success { color: #187b40; }
+.camera-provider-feedback.is-error { color: var(--system-danger); }
+.camera-provider-feedback.is-warning { color: var(--system-warning); }
+.camera-provider-feedback.is-success { color: var(--system-success); }
 
 .camera-provider-delete {
   width: 100%;
   min-height: 44px;
   margin-top: 22px;
-  border: 1px solid rgba(210, 49, 41, 0.16);
+  border: 1px solid var(--system-danger-soft);
   border-radius: 7px;
-  color: #c5322c;
-  background: #fff;
+  color: var(--system-danger);
+  background: var(--system-panel-bg);
   font-size: 11px;
 }
 

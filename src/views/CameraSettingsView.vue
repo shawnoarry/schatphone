@@ -107,9 +107,9 @@ const openRow = (path) => router.push({ path, query: { ...route.query } })
   gap: 13px;
   min-height: 86px;
   padding: 14px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-settings-summary-icon {
@@ -118,8 +118,8 @@ const openRow = (path) => router.push({ path, query: { ...route.query } })
   display: grid;
   place-items: center;
   border-radius: 8px;
-  color: #fff;
-  background: #17191d;
+  color: var(--system-text-inverse);
+  background: var(--system-text);
   font-size: 20px;
 }
 
@@ -128,7 +128,7 @@ const openRow = (path) => router.push({ path, query: { ...route.query } })
 }
 
 .camera-settings-summary-copy span {
-  color: #7b7e86;
+  color: var(--system-text-soft);
   font-size: 8px;
   font-weight: 850;
 }
@@ -148,7 +148,7 @@ const openRow = (path) => router.push({ path, query: { ...route.query } })
 
 .camera-settings-summary-copy p {
   margin-top: 4px;
-  color: #767982;
+  color: var(--system-text-muted);
   font-size: 10px;
 }
 
@@ -156,17 +156,17 @@ const openRow = (path) => router.push({ path, query: { ...route.query } })
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #ff453a;
+  background: var(--system-danger);
 }
 
-.camera-settings-status.is-ready { background: #2ebd55; }
+.camera-settings-status.is-ready { background: var(--system-success); }
 
 .camera-settings-group {
   overflow: hidden;
   margin-top: 18px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-settings-row {
@@ -181,7 +181,7 @@ const openRow = (path) => router.push({ path, query: { ...route.query } })
 }
 
 .camera-settings-row + .camera-settings-row {
-  border-top: 1px solid rgba(17, 24, 39, 0.08);
+  border-top: 1px solid var(--system-subtle-border);
 }
 
 .camera-settings-row-icon {
@@ -218,18 +218,18 @@ const openRow = (path) => router.push({ path, query: { ...route.query } })
 
 .camera-settings-row-copy small {
   margin-top: 3px;
-  color: #7a7d85;
+  color: var(--system-text-soft);
   font-size: 9px;
 }
 
 .camera-settings-chevron {
-  color: #b1b3b8;
+  color: var(--system-text-soft);
   font-size: 10px;
 }
 
 .camera-settings-note {
   margin: 12px 5px 0;
-  color: #777a82;
+  color: var(--system-text-soft);
   font-size: 9px;
   line-height: 1.55;
 }

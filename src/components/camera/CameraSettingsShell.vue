@@ -40,17 +40,17 @@ const goBack = () => {
 
 <style scoped>
 .camera-settings-shell {
-  --camera-ink: #17181b;
-  --camera-muted: #74777f;
-  --camera-line: rgba(19, 24, 33, 0.1);
-  --camera-accent: #1570ef;
+  --camera-ink: var(--system-text);
+  --camera-muted: var(--system-text-muted);
+  --camera-line: var(--system-subtle-border);
+  --camera-accent: var(--system-accent);
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   color: var(--camera-ink);
-  background: #f4f5f7;
+  background: var(--system-page-bg);
 }
 
 .camera-settings-nav {
@@ -60,7 +60,7 @@ const goBack = () => {
   grid-template-columns: minmax(72px, 1fr) auto minmax(72px, 1fr);
   align-items: center;
   border-bottom: 1px solid var(--camera-line);
-  background: rgba(250, 250, 251, 0.9);
+  background: var(--system-chrome-bg);
   backdrop-filter: blur(24px);
   z-index: 2;
 }

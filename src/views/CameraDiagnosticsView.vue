@@ -61,9 +61,9 @@ const formatTime = (value) => value ? new Date(value).toLocaleString() : '—'
 .camera-privacy-list,
 .camera-diagnostics-list {
   overflow: hidden;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-privacy-list > div {
@@ -75,16 +75,16 @@ const formatTime = (value) => value ? new Date(value).toLocaleString() : '—'
   padding: 10px 13px;
 }
 
-.camera-privacy-list > div + div { border-top: 1px solid rgba(17, 24, 39, 0.08); }
-.camera-privacy-list span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 7px; color: #fff; }
-.camera-privacy-list span.is-green { background: #259a54; }
-.camera-privacy-list span.is-blue { background: #1570ef; }
-.camera-privacy-list span.is-gray { background: #666a73; }
+.camera-privacy-list > div + div { border-top: 1px solid var(--system-subtle-border); }
+.camera-privacy-list span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 7px; color: var(--system-on-accent); }
+.camera-privacy-list span.is-green { background: var(--system-success); }
+.camera-privacy-list span.is-blue { background: var(--system-accent); }
+.camera-privacy-list span.is-gray { background: var(--system-text-soft); }
 .camera-privacy-list p,
 .camera-privacy-list strong,
 .camera-privacy-list small { display: block; margin: 0; }
 .camera-privacy-list strong { font-size: 11px; }
-.camera-privacy-list small { margin-top: 3px; color: #777a82; font-size: 8px; line-height: 1.4; }
+.camera-privacy-list small { margin-top: 3px; color: var(--system-text-soft); font-size: 8px; line-height: 1.4; }
 
 .camera-diagnostics-heading {
   display: flex;
@@ -93,8 +93,8 @@ const formatTime = (value) => value ? new Date(value).toLocaleString() : '—'
   margin: 18px 4px 7px;
 }
 
-.camera-diagnostics-heading h2 { margin: 0; color: #7a7e86; font-size: 8px; }
-.camera-diagnostics-heading button { color: #c23a33; font-size: 9px; }
+.camera-diagnostics-heading h2 { margin: 0; color: var(--system-text-soft); font-size: 8px; }
+.camera-diagnostics-heading button { color: var(--system-danger); font-size: 9px; }
 
 .camera-diagnostics-list article {
   display: grid;
@@ -103,15 +103,15 @@ const formatTime = (value) => value ? new Date(value).toLocaleString() : '—'
   padding: 11px 13px;
 }
 
-.camera-diagnostics-list article + article { border-top: 1px solid rgba(17, 24, 39, 0.08); }
-.camera-diagnostic-dot { width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: #1570ef; }
-.camera-diagnostics-list article.is-error .camera-diagnostic-dot { background: #d84239; }
-.camera-diagnostics-list article.is-warning .camera-diagnostic-dot { background: #d3941d; }
+.camera-diagnostics-list article + article { border-top: 1px solid var(--system-subtle-border); }
+.camera-diagnostic-dot { width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: var(--system-accent); }
+.camera-diagnostics-list article.is-error .camera-diagnostic-dot { background: var(--system-danger); }
+.camera-diagnostics-list article.is-warning .camera-diagnostic-dot { background: var(--system-warning); }
 .camera-diagnostic-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .camera-diagnostic-title strong { font-size: 10px; }
-.camera-diagnostic-title time { color: #a0a3a9; font-size: 7px; }
-.camera-diagnostics-list p { margin: 4px 0 0; color: #555a63; font-size: 9px; line-height: 1.4; }
-.camera-diagnostics-list small { display: block; margin-top: 4px; color: #9699a0; font-size: 7px; }
+.camera-diagnostic-title time { color: var(--system-text-soft); font-size: 7px; }
+.camera-diagnostics-list p { margin: 4px 0 0; color: var(--system-text-muted); font-size: 9px; line-height: 1.4; }
+.camera-diagnostics-list small { display: block; margin-top: 4px; color: var(--system-text-soft); font-size: 7px; }
 
 .camera-diagnostics-empty {
   min-height: 150px;
@@ -120,12 +120,12 @@ const formatTime = (value) => value ? new Date(value).toLocaleString() : '—'
   align-items: center;
   justify-content: center;
   gap: 9px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  color: #259a54;
-  background: #fff;
+  color: var(--system-success);
+  background: var(--system-panel-bg);
 }
 
 .camera-diagnostics-empty i { font-size: 24px; }
-.camera-diagnostics-empty p { margin: 0; color: #777a82; font-size: 10px; }
+.camera-diagnostics-empty p { margin: 0; color: var(--system-text-soft); font-size: 10px; }
 </style>

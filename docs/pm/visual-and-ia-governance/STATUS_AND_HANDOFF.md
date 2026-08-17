@@ -1,12 +1,20 @@
 # Visual And IA Governance Status And Handoff
 
-Updated: 2026-08-16
+Updated: 2026-08-17
 
 This file is the handoff page for visual hierarchy, information architecture, and rebuild-vs-polish decisions.
+
+The sequenced visual-polish working plan (completed slices, the current Calendar/Reminders lane with the marker-system decision record, and the unscheduled backlog) now lives in `docs/pm/visual-and-ia-governance/VISUAL_POLISH_TODO.md`. It is a package-owned working plan, not a second roadmap; `docs/roadmap/TODO_ROADMAP.md` still owns priority.
 
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
+
+2026-08-17 Gallery token-parity slice: `GalleryView` now renders entirely from `--system-*` tokens instead of hard-coded light values, so Photos follows both `default` and `zen`; the asset-library empty state is an intentional icon/title/hint/primary-action block with a filter-reset recovery; the page now uses one scroll region under the persistent topbar so the albums card and photo grid remain reachable on phone-sized viewports (previously the controls region exceeded the viewport and the grid area collapsed to ~32px); icon buttons and all selects have accessible names; and the shared Playwright visual gate now covers Gallery alongside Home, Settings, and Appearance. Gallery People/Photos-first entry work remains deferred as recorded below.
+
+2026-08-17 Camera settings-family token-parity slice: `CameraSettingsShell` and all seven Camera settings views (Settings index, Tasks, Providers, Provider detail, Defaults, App Routing, Diagnostics) now render from `--system-*` tokens instead of hard-coded light surfaces, borders, grays, accent blues, and semantic status colors, so the whole Camera settings family follows both `default` and `zen`; category icon tiles stay as the app-owned iOS-style decorative palette, and the dark summary/provider-mark tiles now invert adaptively (`--system-text` ground with `--system-text-inverse` glyph). The Camera capture surface keeps its intentional always-dark app identity unchanged. Camera true-device evidence and prompt-assistant management UI remain separate as recorded below.
+
+2026-08-17 TTS voice settings Chat-alignment slice: `TtsSettingsView` now renders from the `--chat-*` shell variables instead of its one-off hard-coded green light theme, because the page is entered through Chat Settings and its visual owner is Chat. The header now uses the shared `chat-native-header`/`chat-native-back` pattern naming its actual return target, and the provider segmented control, cards, fields, badge, and preview CTA follow the active Chat appearance: Kakao yellow by default, blue under iMessage layout, green under WeChat layout, and any user Chat theme/custom CSS from now on. Chat appearance presets intentionally stay light under the `zen` system theme, so this page now matches Chat itself in every mode. TTS provider quality smoke, Chat read-aloud, and durable voice messages remain separate roadmap 4.15 gates.
 
 What is already landed:
 

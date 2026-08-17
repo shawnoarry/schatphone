@@ -117,7 +117,7 @@ const save = () => {
 <style scoped>
 .camera-default-save {
   min-height: 32px;
-  color: #1570ef;
+  color: var(--system-accent);
   font-size: 12px;
   font-weight: 750;
 }
@@ -128,7 +128,7 @@ const save = () => {
 
 .camera-default-section h2 {
   margin: 0 4px 7px;
-  color: #7a7e86;
+  color: var(--system-text-soft);
   font-size: 8px;
   font-weight: 850;
 }
@@ -139,9 +139,9 @@ const save = () => {
   flex-direction: column;
   gap: 8px;
   padding: 11px 13px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-default-select-row span {
@@ -154,8 +154,8 @@ const save = () => {
   min-height: 34px;
   padding: 0 9px;
   border-radius: 6px;
-  color: #3c3f46;
-  background: #f0f1f3;
+  color: var(--system-text);
+  background: var(--system-control-bg);
   font-size: 10px;
   outline: none;
 }
@@ -174,16 +174,16 @@ const save = () => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 7px;
-  color: #7a7e86;
-  background: #fff;
+  color: var(--system-text-muted);
+  background: var(--system-panel-bg);
 }
 
 .camera-ratio-grid button.is-active {
-  border-color: rgba(21, 112, 239, 0.5);
-  color: #1267d4;
-  background: rgba(21, 112, 239, 0.06);
+  border-color: var(--system-accent);
+  color: var(--system-accent-strong);
+  background: var(--system-accent-soft);
 }
 
 .camera-ratio-shape {
@@ -199,30 +199,30 @@ const save = () => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 3px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 7px;
-  background: #e8eaed;
+  background: var(--system-surface-muted);
 }
 
 .camera-resolution-control button {
   min-height: 34px;
   border-radius: 5px;
-  color: #6d7179;
+  color: var(--system-text-muted);
   font-size: 10px;
   font-weight: 750;
 }
 
 .camera-resolution-control button.is-active {
-  color: #17191d;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+  color: var(--system-text);
+  background: var(--system-elevated-bg);
+  box-shadow: var(--system-shadow-control);
 }
 
 .camera-default-provider-note {
   display: flex;
   gap: 8px;
   margin: -3px 3px 17px;
-  color: #737780;
+  color: var(--system-text-muted);
   font-size: 9px;
   line-height: 1.5;
 }
@@ -232,17 +232,17 @@ const save = () => {
   display: grid;
   grid-template-columns: 44px 1fr 44px;
   align-items: center;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-count-stepper button {
   height: 100%;
-  color: #1570ef;
+  color: var(--system-accent);
 }
 
-.camera-count-stepper button:disabled { color: #c2c4c8; }
+.camera-count-stepper button:disabled { color: var(--system-text-soft); }
 .camera-count-stepper strong { text-align: center; font-size: 16px; }
 
 @media (max-width: 390px) {

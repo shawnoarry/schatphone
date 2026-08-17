@@ -69,10 +69,10 @@ const updateRoute = (moduleKey, value) => {
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 12px;
   padding: 13px;
-  border: 1px solid rgba(21, 112, 239, 0.12);
+  border: 1px solid var(--system-accent-soft);
   border-radius: 8px;
-  color: #155fb9;
-  background: rgba(21, 112, 239, 0.06);
+  color: var(--system-accent-strong);
+  background: var(--system-accent-soft);
 }
 
 .camera-routing-intro > i {
@@ -81,21 +81,21 @@ const updateRoute = (moduleKey, value) => {
   display: grid;
   place-items: center;
   border-radius: 7px;
-  color: #fff;
-  background: #1570ef;
+  color: var(--system-on-accent);
+  background: var(--system-accent);
 }
 
 .camera-routing-intro h2,
 .camera-routing-intro p { margin: 0; }
 .camera-routing-intro h2 { font-size: 12px; }
-.camera-routing-intro p { margin-top: 5px; color: #55708d; font-size: 9px; line-height: 1.45; }
+.camera-routing-intro p { margin-top: 5px; color: var(--system-text-muted); font-size: 9px; line-height: 1.45; }
 
 .camera-routing-list {
   overflow: hidden;
   margin-top: 17px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid var(--system-subtle-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--system-panel-bg);
 }
 
 .camera-routing-row {
@@ -108,7 +108,7 @@ const updateRoute = (moduleKey, value) => {
   padding: 10px 13px;
 }
 
-.camera-routing-row + .camera-routing-row { border-top: 1px solid rgba(17, 24, 39, 0.08); }
+.camera-routing-row + .camera-routing-row { border-top: 1px solid var(--system-subtle-border); }
 
 .camera-routing-icon {
   width: 34px;
@@ -116,20 +116,20 @@ const updateRoute = (moduleKey, value) => {
   display: grid;
   place-items: center;
   border-radius: 7px;
-  color: #4a4f57;
-  background: #eceef1;
+  color: var(--system-text-muted);
+  background: var(--system-surface-muted);
 }
 
 .camera-routing-copy { min-width: 0; }
 .camera-routing-copy strong,
 .camera-routing-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .camera-routing-copy strong { font-size: 11px; }
-.camera-routing-copy small { margin-top: 3px; color: #85888f; font-size: 8px; }
+.camera-routing-copy small { margin-top: 3px; color: var(--system-text-soft); font-size: 8px; }
 
 .camera-routing-row select {
   max-width: 132px;
   min-width: 0;
-  color: #1566ce;
+  color: var(--system-accent);
   background: transparent;
   text-align: right;
   font-size: 9px;
@@ -140,7 +140,7 @@ const updateRoute = (moduleKey, value) => {
   position: absolute;
   top: 6px;
   right: 7px;
-  color: #23964f;
+  color: var(--system-success);
   font-size: 7px;
 }
 </style>

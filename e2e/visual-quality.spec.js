@@ -10,6 +10,7 @@ const surfaces = [
   { id: 'home', route: '/home' },
   { id: 'settings', route: '/settings' },
   { id: 'appearance', route: '/appearance' },
+  { id: 'gallery', route: '/gallery' },
 ]
 
 const themes = ['default', 'zen']
