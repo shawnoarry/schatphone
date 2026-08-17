@@ -1348,10 +1348,10 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .gallery-shell {
-  --gallery-ink: #1d1d1f;
-  --gallery-muted: rgba(29, 29, 31, 0.56);
-  --gallery-soft: rgba(29, 29, 31, 0.38);
-  --gallery-line: rgba(29, 29, 31, 0.09);
+  --gallery-ink: var(--system-text);
+  --gallery-muted: var(--system-text-muted);
+  --gallery-soft: var(--system-text-soft);
+  --gallery-line: var(--system-subtle-border);
   --gallery-blue: #0a84ff;
   --gallery-blue-soft: rgba(10, 132, 255, 0.1);
   width: 100%;
@@ -1359,7 +1359,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--system-page-bg);
   color: var(--gallery-ink);
 }
 
@@ -1380,7 +1380,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--gallery-line);
   border-radius: 50%;
   color: var(--gallery-ink);
-  background: #fff;
+  background: var(--system-control-bg);
   font: inherit;
   cursor: pointer;
 }
@@ -1420,7 +1420,7 @@ onBeforeUnmount(() => {
   margin: 4px 16px 0;
   padding: 3px;
   border-radius: 12px;
-  background: rgba(29, 29, 31, 0.06);
+  background: var(--system-surface-muted);
 }
 
 .gallery-tab {
@@ -1436,9 +1436,9 @@ onBeforeUnmount(() => {
 }
 
 .gallery-tab.is-active {
-  background: #fff;
+  background: var(--system-elevated-bg);
   color: var(--gallery-ink);
-  box-shadow: 0 2px 8px rgba(29, 29, 31, 0.1);
+  box-shadow: var(--system-shadow-control);
 }
 
 .gallery-feedback {
@@ -1449,10 +1449,10 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.gallery-feedback.is-success { color: #176144; background: #dff5ea; }
-.gallery-feedback.is-warn { color: #8a5a12; background: #fdf0d7; }
-.gallery-feedback.is-error { color: #9c2525; background: #fee2e2; }
-.gallery-feedback.is-info { color: var(--gallery-muted); background: rgba(29, 29, 31, 0.05); }
+.gallery-feedback.is-success { color: var(--system-success); background: var(--system-success-soft); }
+.gallery-feedback.is-warn { color: var(--system-warning); background: var(--system-warning-soft); }
+.gallery-feedback.is-error { color: var(--system-danger); background: var(--system-danger-soft); }
+.gallery-feedback.is-info { color: var(--gallery-muted); background: var(--system-surface-muted); }
 
 .gallery-scroll {
   flex: 1;
@@ -1483,7 +1483,7 @@ onBeforeUnmount(() => {
   padding: 0 12px;
   border: 1px solid var(--gallery-line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--system-control-bg);
   color: var(--gallery-muted);
   font: inherit;
   font-size: 12px;
@@ -1522,7 +1522,7 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 10px;
   overflow: hidden;
-  background: rgba(29, 29, 31, 0.06);
+  background: var(--system-surface-muted);
   cursor: pointer;
 }
 
@@ -1578,7 +1578,7 @@ onBeforeUnmount(() => {
   place-items: center;
   width: 76px;
   height: 76px;
-  border: 2px dashed rgba(29, 29, 31, 0.2);
+  border: 2px dashed var(--system-control-border);
   border-radius: 18px;
   color: var(--gallery-blue);
   font-size: 24px;
@@ -1651,7 +1651,7 @@ onBeforeUnmount(() => {
   height: 68px;
   border-radius: 50%;
   overflow: hidden;
-  background: rgba(29, 29, 31, 0.07);
+  background: var(--system-surface-muted);
   color: var(--gallery-muted);
 }
 
@@ -1698,7 +1698,7 @@ onBeforeUnmount(() => {
   aspect-ratio: 1.25;
   border-radius: 14px;
   overflow: hidden;
-  background: rgba(29, 29, 31, 0.07);
+  background: var(--system-surface-muted);
   color: var(--gallery-muted);
   font-size: 22px;
 }
@@ -1790,7 +1790,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--gallery-line);
   border-radius: 9px;
   color: var(--gallery-blue);
-  background: #fff;
+  background: var(--system-control-bg);
   font: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -1798,7 +1798,7 @@ onBeforeUnmount(() => {
 }
 
 .gallery-mini-action.is-danger {
-  color: #c43c30;
+  color: var(--system-danger);
 }
 
 .gallery-sheet-backdrop {
@@ -1824,8 +1824,8 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   border: 1px solid var(--gallery-line);
   border-radius: 22px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(29, 29, 31, 0.28);
+  background: var(--system-elevated-bg);
+  box-shadow: var(--system-shadow-strong);
 }
 
 .gallery-sheet__handle {
@@ -1833,7 +1833,7 @@ onBeforeUnmount(() => {
   height: 5px;
   border-radius: 999px;
   justify-self: center;
-  background: rgba(29, 29, 31, 0.18);
+  background: var(--system-text-soft);
 }
 
 .gallery-sheet__head {
@@ -1859,7 +1859,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--gallery-line);
   border-radius: 50%;
   color: var(--gallery-muted);
-  background: #fff;
+  background: var(--system-control-bg);
   cursor: pointer;
   font: inherit;
 }
@@ -1896,7 +1896,7 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   outline: none;
   color: var(--gallery-ink);
-  background: rgba(29, 29, 31, 0.04);
+  background: var(--system-control-bg);
   font: inherit;
   font-size: 13px;
 }
@@ -1920,7 +1920,7 @@ onBeforeUnmount(() => {
 
 .gallery-primary-action.is-camera {
   color: var(--gallery-ink);
-  background: rgba(29, 29, 31, 0.08);
+  background: var(--system-surface-muted);
 }
 
 .gallery-hidden-input {
@@ -1933,7 +1933,7 @@ onBeforeUnmount(() => {
   max-height: 280px;
   border-radius: 16px;
   overflow: hidden;
-  background: rgba(29, 29, 31, 0.05);
+  background: var(--system-surface-muted);
   color: var(--gallery-soft);
   font-size: 30px;
 }
@@ -1968,7 +1968,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--gallery-line);
   border-radius: 999px;
   color: var(--gallery-muted);
-  background: #fff;
+  background: var(--system-control-bg);
   font: inherit;
   font-size: 12px;
   font-weight: 700;
