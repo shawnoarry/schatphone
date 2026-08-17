@@ -17,6 +17,7 @@ const emit = defineEmits([
   'open-software-update',
   'open-automation',
   'open-notification',
+  'open-sound',
   'open-network',
   'open-chat-settings',
   'open-appearance',
@@ -137,8 +138,18 @@ const { t } = useI18n()
       subtitle-en="Message alerts and system notifications"
       icon="fas fa-bell"
       icon-class="bg-red-500"
-      :with-border="false"
       @select="emit('open-notification')"
+    />
+    <SettingsMenuItem
+      title-zh="声音与音效"
+      title-en="Sounds & Effects"
+      subtitle-zh="全局操作、消息与通知提示音"
+      subtitle-en="Global system, message, and notification sounds"
+      icon="fas fa-volume-high"
+      icon-class="bg-blue-500"
+      :with-border="false"
+      data-testid="settings-sound-entry"
+      @select="emit('open-sound')"
     />
   </div>
 </template>

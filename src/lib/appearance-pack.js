@@ -1,3 +1,5 @@
+import { DEFAULT_UI_SFX_PROFILE, normalizeUiSfxProfile } from './ui-sfx'
+
 export const APPEARANCE_PACK_KIND = 'schatphone.appearance-pack'
 export const APPEARANCE_PACK_VERSION = 1
 
@@ -9,6 +11,7 @@ const APPEARANCE_PACK_FIELD_KEYS = Object.freeze([
   'showStatusBar',
   'hapticFeedbackEnabled',
   'soundEffectsEnabled',
+  'soundEffectsProfile',
   'customCss',
   'customVars',
   'lockClockStyle',
@@ -50,6 +53,7 @@ export const normalizeAppearancePackAppearance = (appearance = {}) => {
     showStatusBar: normalizeBoolean(source.showStatusBar, true),
     hapticFeedbackEnabled: normalizeBoolean(source.hapticFeedbackEnabled, true),
     soundEffectsEnabled: normalizeBoolean(source.soundEffectsEnabled, true),
+    soundEffectsProfile: normalizeUiSfxProfile(source.soundEffectsProfile || DEFAULT_UI_SFX_PROFILE),
     customCss: normalizeLooseText(source.customCss, '', 50_000),
     customVars: normalizeStringRecord(source.customVars),
     lockClockStyle: normalizeText(source.lockClockStyle, 'classic', 40),

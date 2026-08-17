@@ -1,3 +1,5 @@
+import { normalizeUiSfxProfile } from './ui-sfx'
+
 export const CHAT_APPEARANCE_PRESETS = Object.freeze(['kakao_immersive'])
 export const CHAT_MESSAGE_LAYOUT_MODES = Object.freeze(['wechat', 'kakao', 'imessage'])
 export const CHAT_MESSAGE_AVATAR_MODES = Object.freeze(['layout', 'all', 'hidden'])
@@ -14,6 +16,8 @@ export const DEFAULT_CHAT_APPEARANCE = Object.freeze({
   messageBubbleMode: 'bubble',
   themeColorMode: 'layout',
   bubbleColorMode: 'theme',
+  soundEffectsEnabled: null,
+  soundEffectsProfile: '',
   customCss: '',
   customCssEnabled: false,
   customCssProfiles: Object.freeze([]),
@@ -111,6 +115,12 @@ export const normalizeChatAppearance = (input = {}) => {
     bubbleColorMode: CHAT_BUBBLE_COLOR_MODES.includes(bubbleColorMode)
       ? bubbleColorMode
       : DEFAULT_CHAT_APPEARANCE.bubbleColorMode,
+    soundEffectsEnabled:
+      typeof source.soundEffectsEnabled === 'boolean' ? source.soundEffectsEnabled : null,
+    soundEffectsProfile:
+      typeof source.soundEffectsProfile === 'string' && source.soundEffectsProfile.trim()
+        ? normalizeUiSfxProfile(source.soundEffectsProfile)
+        : '',
     customCss: selectedCustomCssProfile?.css || legacyCustomCss,
     customCssEnabled: source.customCssEnabled === true,
     customCssProfiles,

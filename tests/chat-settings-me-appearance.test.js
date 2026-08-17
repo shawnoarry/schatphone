@@ -26,6 +26,7 @@ import { useWalletStore } from '../src/stores/wallet'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { callAI } from '../src/lib/ai'
 import { getChatAppearanceClasses } from '../src/lib/chat-appearance'
+import * as uiSfx from '../src/lib/ui-sfx'
 
 const DummyView = { template: '<div />' }
 
@@ -210,6 +211,50 @@ describe('Chat settings, Me, and appearance routes', () => {
     wrapper.unmount()
   })
 
+  test('controls Chat message sounds and previews the selected profile', async () => {
+    const router = createTestRouter()
+    await router.push('/chat-settings')
+    await router.isReady()
+    const systemStore = useSystemStore()
+
+    const wrapper = mount(ChatSettingsView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    await wrapper.get('[data-testid="chat-settings-entry-sound"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value.query.section).toBe('sound')
+    expect(wrapper.get('[data-testid="chat-settings-sound"]')).toBeTruthy()
+
+    const previewSpy = vi.spyOn(uiSfx, 'playUiCue').mockReturnValue({ stop: vi.fn() })
+    const select = wrapper.get('[data-testid="chat-settings-sound-select"]')
+    await select.setValue('kakaotalk')
+    await flushUi()
+    expect(systemStore.settings.appearance.chat.soundEffectsProfile).toBe('kakaotalk')
+    expect(systemStore.settings.appearance.soundEffectsProfile).toBe('wechat')
+
+    await wrapper.get('[data-testid="chat-settings-sound-preview"]').trigger('click')
+    expect(previewSpy).toHaveBeenCalledWith(
+      'notification',
+      { profile: 'kakaotalk' },
+    )
+
+    const toggle = wrapper.get('[data-testid="chat-settings-sound-toggle"]')
+    expect(toggle.attributes('aria-checked')).toBe('true')
+    await toggle.trigger('click')
+    await flushUi()
+    expect(systemStore.settings.appearance.chat.soundEffectsEnabled).toBe(false)
+    expect(toggle.attributes('aria-checked')).toBe('false')
+    await toggle.trigger('click')
+    await flushUi()
+    expect(systemStore.settings.appearance.chat.soundEffectsEnabled).toBe(true)
+    expect(systemStore.settings.appearance.soundEffectsEnabled).toBe(true)
+
+    wrapper.unmount()
+  })
   test('shows disabled system notification state in Chat Settings', async () => {
     const router = createTestRouter()
     await router.push('/chat-settings')

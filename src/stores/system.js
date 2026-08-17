@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, reactive, ref, watch } from 'vue'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
-import { playUiCue } from '../lib/ui-sfx'
+import { DEFAULT_UI_SFX_PROFILE, normalizeUiSfxProfile, playUiCue } from '../lib/ui-sfx'
 import {
   createInitialSoftwareUpdateState,
   hasSoftwareUpdateCandidate,
@@ -1505,6 +1505,7 @@ export const useSystemStore = defineStore('system', () => {
       showStatusBar: true,
       hapticFeedbackEnabled: true,
       soundEffectsEnabled: true,
+      soundEffectsProfile: DEFAULT_UI_SFX_PROFILE,
       customCss: '',
       scopedCustomCss: normalizeScopedCustomCss(),
       appSkins: normalizeAppSkinSettings(),
@@ -2079,6 +2080,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.showStatusBar = appearance.showStatusBar !== false
     settings.appearance.hapticFeedbackEnabled = appearance.hapticFeedbackEnabled !== false
     settings.appearance.soundEffectsEnabled = appearance.soundEffectsEnabled !== false
+    settings.appearance.soundEffectsProfile = normalizeUiSfxProfile(appearance.soundEffectsProfile)
     settings.appearance.customCss = typeof appearance.customCss === 'string' ? appearance.customCss : ''
     settings.appearance.scopedCustomCss = normalizeScopedCustomCss(appearance.scopedCustomCss)
     settings.appearance.appSkins = normalizeAppSkinSettings(appearance.appSkins)
@@ -2621,7 +2623,10 @@ export const useSystemStore = defineStore('system', () => {
       typeof document !== 'undefined' &&
       document.hidden === false
     ) {
-      playUiCue('notification', { cooldownMs: 1500 })
+      playUiCue('notification', {
+        cooldownMs: 1500,
+        profile: settings.appearance.soundEffectsProfile,
+      })
     }
     void dispatchNotificationToRealPush(normalized)
     return normalized.id
@@ -4327,6 +4332,9 @@ export const useSystemStore = defineStore('system', () => {
       }
       if (typeof appearance.soundEffectsEnabled === 'boolean') {
         settings.appearance.soundEffectsEnabled = appearance.soundEffectsEnabled
+      }
+      if (typeof appearance.soundEffectsProfile === 'string') {
+        settings.appearance.soundEffectsProfile = normalizeUiSfxProfile(appearance.soundEffectsProfile)
       }
       if (typeof appearance.customCss === 'string') {
         settings.appearance.customCss = appearance.customCss

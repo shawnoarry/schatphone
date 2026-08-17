@@ -1036,7 +1036,7 @@ const maybeVibrate = (duration = 10) => {
 
 const maybePlayCue = (cue, options) => {
   if (settings.value.appearance.soundEffectsEnabled === false) return
-  playUiCue(cue, options)
+  playUiCue(cue, { ...options, profile: settings.value.appearance.soundEffectsProfile })
 }
 
 const triggerLayoutToast = (text = t('布局已保存', 'Layout saved'), cue = '') => {

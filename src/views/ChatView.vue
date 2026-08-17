@@ -1,10 +1,10 @@
-﻿<script setup>
+<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
-import { playUiCue } from '../lib/ui-sfx'
+import { playUiCue, resolveChatUiSfxSettings } from '../lib/ui-sfx'
 import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
 import { useMapStore } from '../stores/map'
@@ -2689,8 +2689,9 @@ const sendTextMessage = () => {
   })
   if (!appended) return
 
-  if (systemStore.settings.appearance.soundEffectsEnabled !== false) {
-    playUiCue('send')
+  const chatSoundSettings = resolveChatUiSfxSettings(systemStore.settings.appearance)
+  if (chatSoundSettings.enabled) {
+    playUiCue('send', { profile: chatSoundSettings.profile })
   }
   inputMessage.value = ''
   chatStore.setConversationDraft(activeChat.value.id, '')

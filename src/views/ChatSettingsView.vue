@@ -8,6 +8,14 @@ import { getChatAppearanceClasses } from '../lib/chat-appearance'
 import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
+import SettingsSoundSection from '../components/settings/SettingsSoundSection.vue'
+import {
+  UI_SFX_PROFILE_OPTIONS,
+  normalizeUiSfxProfile,
+  playUiCue,
+  resolveChatUiSfxSettings,
+  resolveGlobalUiSfxSettings,
+} from '../lib/ui-sfx'
 
 const route = useRoute()
 const router = useRouter()
@@ -51,6 +59,34 @@ const messageLayoutLabel = computed(() => {
   return t('Kakao 式', 'Kakao-like')
 })
 
+const soundEffectsProfileOptions = computed(() =>
+  UI_SFX_PROFILE_OPTIONS.filter((profile) => profile.visible !== false).map((profile) => ({
+    ...profile,
+    label: t(profile.labelZh, profile.labelEn),
+    description: t(profile.descriptionZh, profile.descriptionEn),
+  })),
+)
+const globalSoundEffectsSettings = computed(() =>
+  resolveGlobalUiSfxSettings(settings.value.appearance),
+)
+const chatSoundEffectsSettings = computed(() =>
+  resolveChatUiSfxSettings(settings.value.appearance),
+)
+const soundEffectsEnabled = computed(() => chatSoundEffectsSettings.value.enabled)
+const soundEffectsFollowsGlobal = computed(() => chatSoundEffectsSettings.value.followsGlobal)
+const soundEffectsProfileId = computed(() => chatSoundEffectsSettings.value.profile)
+const soundEffectsProfile = computed(
+  () =>
+    soundEffectsProfileOptions.value.find((profile) => profile.id === soundEffectsProfileId.value) ||
+    soundEffectsProfileOptions.value[0],
+)
+const soundEffectsMeta = computed(() => {
+  const profileLabel = soundEffectsProfile.value?.label || t('微信式', 'WeChat-like')
+  if (!soundEffectsEnabled.value) return t('已关闭', 'Off')
+  return soundEffectsFollowsGlobal.value
+    ? profileLabel + ' · ' + t('跟随全局', 'Follows global')
+    : profileLabel + ' · ' + t('Chat 专用', 'Chat only')
+})
 const openChatAppearance = () => {
   router.push('/chat-settings/appearance')
 }
@@ -67,6 +103,66 @@ const openBehaviorSection = () => {
   router.push({ path: '/chat-settings', query: { section: 'behavior' } })
 }
 
+const openSoundSection = () => {
+  router.push({ path: '/chat-settings', query: { section: 'sound' } })
+}
+
+const ensureChatSoundAppearance = () => {
+  if (!settings.value.appearance.chat || typeof settings.value.appearance.chat !== 'object') {
+    settings.value.appearance.chat = {}
+  }
+  return settings.value.appearance.chat
+}
+
+const saveChatSoundOverride = (enabled, profile) => {
+  const chatAppearance = ensureChatSoundAppearance()
+  chatAppearance.soundEffectsEnabled = enabled
+  chatAppearance.soundEffectsProfile = normalizeUiSfxProfile(profile)
+  systemStore.saveNow()
+}
+
+const toggleSoundEffects = () => {
+  const current = chatSoundEffectsSettings.value
+  saveChatSoundOverride(!current.enabled, current.profile)
+  showActionFeedback(
+    'success',
+    !current.enabled
+      ? t('Chat 消息音效已开启。', 'Chat message sounds are on.')
+      : t('Chat 消息音效已关闭。', 'Chat message sounds are off.'),
+  )
+}
+
+const toggleSoundEffectsFollowGlobal = () => {
+  const chatAppearance = ensureChatSoundAppearance()
+  if (chatSoundEffectsSettings.value.followsGlobal) {
+    chatAppearance.soundEffectsEnabled = globalSoundEffectsSettings.value.enabled
+    chatAppearance.soundEffectsProfile = globalSoundEffectsSettings.value.profile
+    showActionFeedback('success', t('Chat 已切换为独立音效设置。', 'Chat now uses independent sound settings.'))
+  } else {
+    chatAppearance.soundEffectsEnabled = null
+    chatAppearance.soundEffectsProfile = ''
+    showActionFeedback('success', t('Chat 已跟随全局音效设置。', 'Chat now follows global sound settings.'))
+  }
+  systemStore.saveNow()
+}
+
+const setSoundEffectsProfile = (eventOrProfileId) => {
+  const nextProfileId =
+    typeof eventOrProfileId === 'string' ? eventOrProfileId : eventOrProfileId?.target?.value
+  saveChatSoundOverride(chatSoundEffectsSettings.value.enabled, nextProfileId)
+  showActionFeedback('success', t('Chat 消息音效已更新。', 'Chat message sound updated.'))
+}
+
+const previewSoundEffects = () => {
+  if (!soundEffectsEnabled.value) {
+    showActionFeedback('warning', t('请先开启 Chat 音效。', 'Turn on Chat sounds first.'))
+    return
+  }
+  const playback = playUiCue('notification', { profile: soundEffectsProfileId.value })
+  if (!playback) {
+    showActionFeedback('warning', t('当前环境无法播放试听音效。', 'Sound preview is unavailable in this environment.'))
+  }
+}
 const normalizeAutoInvokeCheckpointsNow = () => {
   const touched = chatStore.normalizeAutoInvokeCheckpoints(Date.now())
   if (touched > 0) chatStore.saveNow()
@@ -157,6 +253,13 @@ const settingsEntries = computed(() => [
     title: t('Chat 外观', 'Chat Appearance'),
     meta: messageLayoutLabel.value,
     action: openChatAppearance,
+  },
+  {
+    id: 'sound',
+    icon: 'fas fa-volume-high',
+    title: t('消息音效', 'Message Sounds'),
+    meta: soundEffectsMeta.value,
+    action: openSoundSection,
   },
   {
     id: 'immersion',
@@ -257,6 +360,25 @@ const behaviorRows = computed(() => [
         </button>
       </section>
 
+      <SettingsSoundSection
+        :enabled="soundEffectsEnabled"
+        :profile-id="soundEffectsProfileId"
+        :profile-options="soundEffectsProfileOptions"
+        :profile="soundEffectsProfile"
+        :follows-global="soundEffectsFollowsGlobal"
+        :show-follow-global="true"
+        :global-profile-label="soundEffectsProfileOptions.find((profile) => profile.id === globalSoundEffectsSettings.profile)?.label || ''"
+        :active="activeSection === 'sound'"
+        title-zh="消息提示音"
+        title-en="Message Sounds"
+        description-zh="Chat 可以跟随全局音效，也可以单独设置；单独设置不会被全局覆盖。"
+        description-en="Chat can follow global sounds or use an independent choice that global changes will not override."
+        test-id-prefix="chat-settings"
+        @toggle="toggleSoundEffects"
+        @set-profile="setSoundEffectsProfile"
+        @preview="previewSoundEffects"
+        @toggle-follow-global="toggleSoundEffectsFollowGlobal"
+      />
       <section
         class="rounded-2xl border bg-white p-4 space-y-3"
         :class="activeSection === 'behavior' ? 'border-yellow-300 ring-2 ring-yellow-100' : 'border-gray-200'"

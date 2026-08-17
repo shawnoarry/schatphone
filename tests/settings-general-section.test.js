@@ -119,6 +119,33 @@ describe('SettingsView general section', () => {
     wrapper.unmount()
   })
 
+  test('edits global sound settings without creating a Chat override', async () => {
+    const store = useSystemStore()
+    store.settings.appearance.soundEffectsEnabled = true
+    store.settings.appearance.soundEffectsProfile = 'wechat'
+    const saveSpy = vi.spyOn(store, 'saveNow')
+
+    const { wrapper, router } = await mountSettingsView('/settings?menu=sound')
+
+    expect(router.currentRoute.value.query.menu).toBe('sound')
+    expect(wrapper.get('[data-testid="settings-sound"]')).toBeTruthy()
+    await wrapper.get('[data-testid="settings-sound-select"]').setValue('kakaotalk')
+    await flushUi()
+
+    expect(store.settings.appearance.soundEffectsProfile).toBe('kakaotalk')
+    expect(store.settings.appearance.chat.soundEffectsProfile).toBe('')
+    expect(saveSpy).toHaveBeenCalledTimes(1)
+
+    await wrapper.get('[data-testid="settings-sound-toggle"]').trigger('click')
+    await flushUi()
+    expect(store.settings.appearance.soundEffectsEnabled).toBe(false)
+    expect(store.settings.appearance.chat.soundEffectsEnabled).toBe(null)
+    expect(saveSpy).toHaveBeenCalledTimes(2)
+
+    wrapper.unmount()
+    saveSpy.mockRestore()
+  })
+
   test('updates message notifications through the notification settings subpage', async () => {
     const store = useSystemStore()
     const saveSpy = vi.spyOn(store, 'saveNow')

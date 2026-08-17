@@ -193,6 +193,19 @@ describe('appearance pack sound effects field', () => {
     expect(merged.appearance.soundEffectsEnabled).toBe(false)
   })
 
+  test('exports, imports, and defaults soundEffectsProfile', () => {
+    const pack = buildAppearancePack({ soundEffectsProfile: 'kakaotalk' })
+    expect(pack.appearance.soundEffectsProfile).toBe('kakaotalk')
+
+    const merged = mergeAppearancePackIntoAppearance(
+      { soundEffectsProfile: 'wechat' },
+      pack,
+    )
+    expect(merged.appearance.soundEffectsProfile).toBe('kakaotalk')
+
+    const fallback = buildAppearancePack({ soundEffectsProfile: 'unknown-profile' })
+    expect(fallback.appearance.soundEffectsProfile).toBe('wechat')
+  })
   test('normalizes missing soundEffectsEnabled to enabled', () => {
     const pack = buildAppearancePack({})
     expect(pack.appearance.soundEffectsEnabled).toBe(true)

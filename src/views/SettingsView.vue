@@ -27,6 +27,7 @@ import SettingsBackupSection from '../components/settings/SettingsBackupSection.
 import SettingsGeneralSection from '../components/settings/SettingsGeneralSection.vue'
 import SettingsLandingSection from '../components/settings/SettingsLandingSection.vue'
 import SettingsPushSection from '../components/settings/SettingsPushSection.vue'
+import SettingsSoundSection from '../components/settings/SettingsSoundSection.vue'
 import SettingsSoftwareUpdateSection from '../components/settings/SettingsSoftwareUpdateSection.vue'
 import SettingsStorageDiagnosticsSection from '../components/settings/SettingsStorageDiagnosticsSection.vue'
 import SettingsSubPageHeader from '../components/settings/SettingsSubPageHeader.vue'
@@ -37,6 +38,12 @@ import {
 import { runSimulationEventTick } from '../lib/simulation/event-tick-runner'
 import { SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS } from '../lib/simulation/foreground-session-tick'
 import { buildReturnSourceQuery, pushReturnTarget } from '../lib/navigation-return'
+import {
+  UI_SFX_PROFILE_OPTIONS,
+  normalizeUiSfxProfile,
+  playUiCue,
+  resolveGlobalUiSfxSettings,
+} from '../lib/ui-sfx'
 
 const router = useRouter()
 const route = useRoute()
@@ -93,6 +100,22 @@ const backupReminderIntervalLabel = createBackupReminderIntervalLabel(t)
 const softwareUpdateState = computed(() => settings.value.system?.softwareUpdate || {})
 const softwareUpdateReleaseNotes = SOFTWARE_UPDATE_RELEASE_NOTES
 const softwareUpdateBuildChannel = SCHATPHONE_BUILD_CHANNEL
+
+const soundEffectsProfileOptions = computed(() =>
+  UI_SFX_PROFILE_OPTIONS.filter((profile) => profile.visible !== false).map((profile) => ({
+    ...profile,
+    label: t(profile.labelZh, profile.labelEn),
+    description: t(profile.descriptionZh, profile.descriptionEn),
+  })),
+)
+const globalSoundEffectsSettings = computed(() =>
+  resolveGlobalUiSfxSettings(settings.value.appearance),
+)
+const globalSoundEffectsProfile = computed(
+  () =>
+    soundEffectsProfileOptions.value.find((profile) => profile.id === globalSoundEffectsSettings.value.profile) ||
+    soundEffectsProfileOptions.value[0],
+)
 
 const setSoftwareUpdateFeedback = (type, message, durationMs = 2200) => {
   softwareUpdateFeedbackType.value = type
@@ -362,7 +385,7 @@ const goHome = () => {
 
 const normalizeSettingsMenuFromQuery = (value) => {
   const raw = typeof value === 'string' ? value.trim() : ''
-  const allowed = new Set(['general', 'notification', 'automation', 'about', 'software-update'])
+  const allowed = new Set(['general', 'notification', 'automation', 'about', 'software-update', 'sound'])
   return allowed.has(raw) ? raw : ''
 }
 
@@ -412,6 +435,21 @@ const saveGeneralSettings = () => {
   generalSavedTimerId = setTimeout(() => {
     generalSaved.value = false
   }, 1200)
+}
+
+const toggleGlobalSoundEffects = () => {
+  settings.value.appearance.soundEffectsEnabled = !globalSoundEffectsSettings.value.enabled
+  systemStore.saveNow()
+}
+
+const setGlobalSoundEffectsProfile = (profileId) => {
+  settings.value.appearance.soundEffectsProfile = normalizeUiSfxProfile(profileId)
+  systemStore.saveNow()
+}
+
+const previewGlobalSoundEffects = () => {
+  if (!globalSoundEffectsSettings.value.enabled) return
+  playUiCue('notification', { profile: globalSoundEffectsSettings.value.profile })
 }
 
 const checkSoftwareUpdateNow = () => {
@@ -889,6 +927,7 @@ if (initialMenu) {
         @open-software-update="openSubPage('software-update')"
         @open-automation="openSubPage('automation')"
         @open-notification="openSubPage('notification')"
+        @open-sound="openSubPage('sound')"
         @open-network="openNetworkReports"
         @open-chat-settings="openChatAutomation"
         @open-appearance="openAppearanceStudio"
@@ -925,6 +964,30 @@ if (initialMenu) {
         class="hidden"
         @change="importData"
       />
+
+      <div v-if="activeMenu === 'sound'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
+        <SettingsSubPageHeader
+          title-zh="声音与音效"
+          title-en="Sounds & Effects"
+          @close="closeSubPage"
+        />
+        <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
+          <SettingsSoundSection
+            :enabled="globalSoundEffectsSettings.enabled"
+            :profile-id="globalSoundEffectsSettings.profile"
+            :profile-options="soundEffectsProfileOptions"
+            :profile="globalSoundEffectsProfile"
+            title-zh="全局声音与音效"
+            title-en="Global Sounds & Effects"
+            description-zh="控制 Home、系统操作、消息和通知的默认提示音。Chat 有单独设置时不会被这里覆盖。"
+            description-en="Set the default sounds for Home, system actions, messages, and notifications. Chat overrides remain independent."
+            test-id-prefix="settings"
+            @toggle="toggleGlobalSoundEffects"
+            @set-profile="setGlobalSoundEffectsProfile"
+            @preview="previewGlobalSoundEffects"
+          />
+        </div>
+      </div>
 
       <div v-if="activeMenu === 'general'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <SettingsGeneralSection
