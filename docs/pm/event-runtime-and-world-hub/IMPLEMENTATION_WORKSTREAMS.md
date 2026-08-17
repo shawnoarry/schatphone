@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-08-15
+Updated: 2026-08-17
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -89,7 +89,7 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 
 ## 8. Workstream H: Agenda Journey And Activity Session Collaboration
 
-- status is `CALENDAR_DEPARTURE_READINESS_V1_DONE / CJA-5_ACTIVITY_SESSION_MIDPOINT_DONE`; follow roadmap 4.12 CJA gates and do not infer Agenda Journey families or CJA-6 authorization from this slice
+- status is `CALENDAR_DEPARTURE_READINESS_V1_DONE / CJA-5_ACTIVITY_SESSION_MIDPOINT_DONE / CJA-6A_CONTRACT_DONE`; follow roadmap 4.12 CJA gates and do not infer Agenda Journey families or CJA-6B implementation authorization from this slice
 - Calendar departure readiness carries no Event Runtime Adapter: Calendar keeps the stable destination reference, Map derives current-origin transport/lateness truth, and explicit departure creates or reuses one Map Journey
 - receive bounded canonical Agenda Journey or Activity Session facts only at explicit start, milestone, completion, or deadline checkpoints; never evaluate on each countdown tick
 - keep eligibility, deterministic/random gate, cooldown/cap, module permission, presentation mode, automatic-resolution policy, proposal/review, provenance, and logs in Event Runtime
@@ -98,7 +98,7 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - keep module permission, random-event intensity, presentation mode, and future per-session override independent; optional-event suppression never removes the base activity, travel, deadline, or safety path
 - keep Focus Companion timing/presentation outside Event Runtime and consume explicit Activity Session or Map Journey checkpoints instead of creating a second clock
 - reconcile overdue checkpoints idempotently after resume and do not promise exact interactive delivery while a browser/PWA is fully closed or OS-suspended
-- keep CJA-5 limited to `activity_session.focus_reset.v1`, the midpoint checkpoint, `off | text`, and the owner-approved 0/2-minute timer result; implement no Agenda Journey family, HTML/Mini Scene, media caller, high-impact effect, or CJA-6 projection without separate acceptance
+- keep CJA-5 limited to `activity_session.focus_reset.v1`, the midpoint checkpoint, `off | text`, and the owner-approved 0/2-minute timer result; CJA-6A is documentation-only and adds no store/route/backup child; implement no Agenda Journey family, HTML/Mini Scene, media caller, high-impact effect, or CJA-6B projection without separate acceptance
 
 ## 9. Workstream I: Default K-pop Event Pack And Text Materialization
 
@@ -140,7 +140,7 @@ Status: `PLAYER_CONTEXT_V1_FOUNDATION_DONE / WORLD_EVOLUTION_AND_INFORMATION_PRO
 - let Event Runtime coordinate eligibility, persisted decisions, fact waits, owner requests, references, and provenance without owning publication bodies or arbitrary world truth
 - keep ordinary no-event behavior and local deterministic eligibility available without an API
 - the first manager/public-idol eligibility policy and Contacts revision migration are landed; freeze a separately accepted owner-native incident recipe, persistence/audit rules, native product surface, no-event path, and deterministic fixtures before any random trigger, model call, or new EVE-stage proposal
-- do not infer authorization for EVE-5, CJA-6, a Forum/News app, Chat Me feed expansion, closed-page simulation, investigation storage, or high-impact reputation/identity mutation
+- do not infer authorization for EVE-5, CJA-6B, a Forum/News app, Chat Me feed expansion, closed-page simulation, investigation storage, or high-impact reputation/identity mutation
 
 ## 12. Semantic Guardrails
 

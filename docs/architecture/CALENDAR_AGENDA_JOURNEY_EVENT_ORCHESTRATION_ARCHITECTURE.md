@@ -1,8 +1,8 @@
 # Calendar, Agenda Journey, Activity Session, And Event Orchestration Architecture
 
-Updated: 2026-08-16
+Updated: 2026-08-17
 
-Status: `ARCHITECTURE_ACCEPTED / CALENDAR_DEPARTURE_READINESS_V1_IMPLEMENTED / CJA-1_IMPLEMENTED / CJA-2_IMPLEMENTED / CJA-3_IMPLEMENTED / CJA-4_IMPLEMENTED / CJA-5_IMPLEMENTED`
+Status: `ARCHITECTURE_ACCEPTED / CALENDAR_DEPARTURE_READINESS_V1_IMPLEMENTED / CJA-1_IMPLEMENTED / CJA-2_IMPLEMENTED / CJA-3_IMPLEMENTED / CJA-4_IMPLEMENTED / CJA-5_IMPLEMENTED / CJA-6A_CONTRACT_DONE 2026-08-17`
 
 This contract defines how long-range schedule planning, short-range activity execution, map travel, timed activity sessions, runtime events, and future narrative summaries cooperate without becoming one owner.
 
@@ -300,21 +300,38 @@ Randomness may change flavor, severity within approved bounds, or follow-up oppo
 
 ## 11. Narrative Timeline
 
-The future visible product may be called Story, Diary, Journal, History, or something else. That naming and route are intentionally undecided.
+Status: `CJA-6A_CONTRACT_DONE 2026-08-17 / CJA-6B_PROJECTION_IMPLEMENTATION_TODO`
 
-The stable architecture concept is a Narrative Timeline projection that consumes only confirmed, source-linked summaries from owning modules. A projection entry may reference:
+The future visible product may be called Story, Diary, Journal, History, or something else. That naming, route, visibility, retention, and user-editing model remain intentionally undecided.
 
-- Calendar commitment;
-- Agenda Journey and step outcome;
-- Map Journey evidence;
-- Activity Session duration;
-- Event Runtime event and user/automatic choice;
-- confirmed effects from owning modules;
+The approved CJA-6A contract is a read-only, finite, source-linked Narrative Timeline projection. It is a cross-module account of confirmed outcomes, not a second business record, an Event Surface, a generic feed, or a universal event log. Calendar, Agenda Journey, Map Journey, Activity Session, Event Runtime, and every domain owner continue to own their canonical truth.
+
+A projection entry may reference only owner-confirmed or owner-committed summaries such as:
+
+- a Calendar commitment or retained occurrence outcome;
+- an Agenda Journey plan/step outcome;
+- Map Journey travel or arrival evidence;
+- Activity Session duration/checkpoint evidence;
+- an Event Runtime event, decision, or terminal outcome;
+- a confirmed effect recorded by its owning module;
 - involved role, place, and world identifiers.
 
-It must not replace source records or persist complete prompts/raw provider responses by default. Forum, Chat, and other AI callers should consume bounded summaries through a later context Interface with explicit recency, scope, permission, and token-budget rules.
+Every entry uses typed `sourceRefs` rather than copied business records. The contract shape is deliberately narrow:
 
-Until a persistence owner and visible product are separately approved, no new Narrative Timeline store, route, or backup section is authorized.
+```text
+NarrativeSourceRef {
+  owner: ModuleKey,
+  recordType: string,
+  recordId: string,
+  revision: string | null
+}
+```
+
+The source summary and references must be committed by the owner before they can enter the projection. Raw prompts, raw provider responses, unreviewed model output, pending proposals, free-form claims, and complete source bodies are not timeline inputs. If a source is deleted, retired, stale, inaccessible, or has a failed revision check, the projection fails closed and does not leave an orphaned narrative entry.
+
+Future Forum, Chat, and other AI callers may use a bounded read-only context Interface only after the caller supplies an explicit scope, permission, date/world range, recency rule, entry limit, and character/token budget. Ordinary Timeline reads must not call a provider, publish content, or write back to any owner; Timeline and AI context cannot authorize a domain mutation.
+
+CJA-6A approves this contract only. Until CJA-6B separately approves a persistence owner, visible product, retention/backup policy, review semantics, and implementation migration, no Narrative Timeline store, route, backup section, or user-facing App is authorized.
 
 ## 12. Stable Cross-Module References
 
@@ -330,7 +347,7 @@ CalendarEvent.id
   -> NarrativeEntry.sourceRefs[]
 ```
 
-CJA-3 implements the Agenda Journey V1 links through `sourceCalendarEventId`, `scheduleOrchestrationId`, step IDs, and Map's optional `sourceAgendaJourneyStepId`. CJA-4 implements `ActivitySession.agendaJourneyStepId` plus bounded completion evidence returned to Agenda Journey; RuntimeEvent and NarrativeEntry links remain future contracts. Legacy Calendar, Map, and pre-CJA-4 backups remain valid when the Activity Session child is absent.
+CJA-3 implements the Agenda Journey V1 links through `sourceCalendarEventId`, `scheduleOrchestrationId`, step IDs, and Map's optional `sourceAgendaJourneyStepId`. CJA-4 implements `ActivitySession.agendaJourneyStepId` plus bounded completion evidence returned to Agenda Journey. CJA-6A now defines the typed `NarrativeSourceRef` contract; RuntimeEvent and NarrativeEntry persistence/implementation remain future CJA-6B work. Legacy Calendar, Map, and pre-CJA-4 backups remain valid when the Activity Session child is absent.
 
 ## 13. Ownership Matrix
 
@@ -344,7 +361,7 @@ CJA-3 implements the Agenda Journey V1 links through `sourceCalendarEventId`, `s
 | Focus Companion surface | timer projection, scene preference, and stable Gallery/Music/companion references | source clocks, Event Runtime truth, media binaries/playback, or broad values |
 | Event Runtime | eligibility, random/deterministic policy, cooldown/cap, proposal/review, logs | source-module records and final owner state |
 | Mini Scene Module | presentation policy, validated artifact, Presenter/fallback, interaction audit | source-event truth and state mutation |
-| Narrative Timeline | bounded source-linked projection after approval | canonical schedule, journey, map, event, relationship, or finance truth |
+| Narrative Timeline | bounded source-linked projection contract; future read-only implementation | canonical schedule, journey, map, event, relationship, finance, or publication truth |
 
 ## 14. Staged Delivery Gates
 
@@ -357,7 +374,8 @@ These stages define dependency order only. Live status and priority remain in th
 4. `CJA-3`: implemented Agenda Journey V1 with manual/Calendar-derived near-term plans, explicit travel/activity execution, one linked Map Journey per travel step, persistence/backup, and no random event requirement.
 5. `CJA-4 DONE 2026-08-16`: one Activity Session with explicit completion policy, minimize/reopen reconciliation, and a restrained Focus Companion baseline; Gallery backgrounds, Music/ambient caller integration, richer companions, and broader event families remain separately promoted extensions.
 6. `CJA-5 DONE 2026-08-16`: one midpoint-only low-impact Event Runtime Adapter with `off` automatic `keep_rhythm`, inline Focus Companion `text` interaction, durable Runtime records, owner-validated 0/2-minute results, migration/backup, and reopen/idempotence coverage; interactive HTML remains separately gated by Mini Scene security.
-7. `CJA-6`: Narrative Timeline projection and bounded AI-context Interface after owner, retention, review, and backup contracts are approved.
+7. `CJA-6A DONE 2026-08-17`: Narrative Timeline contract, typed source references, owner-confirmed input rules, fail-closed invalid-source behavior, and bounded read-only AI-context Interface rules are documented; no persistence or UI is authorized.
+8. `CJA-6B TODO / SEPARATE_DECISION`: implement the projection only after a persistence owner, visible product, retention, review, migration, and backup contracts are separately approved.
 
 Each stage requires separate user acceptance before implementation begins. No stage authorizes the next automatically.
 

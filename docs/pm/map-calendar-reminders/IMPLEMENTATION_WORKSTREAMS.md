@@ -1,6 +1,6 @@
 # Map Calendar Reminders Implementation Workstreams / 地图日历提醒事项实施工作流
 
-Updated: 2026-08-16
+Updated: 2026-08-17
 
 ## 1. Workstream A: Map Travel Core
 
@@ -80,7 +80,8 @@ Updated: 2026-08-16
 - explicit `duration_sufficient` and `user_confirmation` completion policy keep a complete no-event base activity path, with Agenda Journey validating bounded completion evidence
 - the restrained Focus Companion follows the Agenda-step duration and uses one built-in quiet scene; later Pomodoro/custom modes, Gallery background, Music/ambient, and decorative companion references remain cross-owner extensions, not Activity Session assets
 - when the same presentation is used during a flight or other long Map Journey, consume the Map-owned clock instead of creating a duplicate Activity Session
-- keep the future Narrative Timeline as a bounded source-linked projection until Story/Diary/Journal naming, route, owner, retention, backup, review, and AI-context policy are separately approved
+- `CJA-6A DONE 2026-08-17`: document the bounded read-only Narrative Timeline contract, typed `sourceRefs`, owner-confirmed summary inputs, stale/deleted/unauthorized-source fail-closed behavior, and explicit recency/scope/permission/character-token limits for future AI context
+- keep `CJA-6B` as a separate implementation gate until Story/Diary/Journal naming, route, persistence owner, retention, backup, review, migration, and visible-product policy are approved; do not add a store, route, or backup child in this workstream
 
 ## 6. Workstream F: Reminders As Cue Layer
 

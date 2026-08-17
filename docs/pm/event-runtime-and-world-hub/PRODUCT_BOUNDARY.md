@@ -1,6 +1,6 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-08-15
+Updated: 2026-08-17
 
 ## 1. Core Rule
 
@@ -132,9 +132,15 @@ Agenda Journey remains the owner of near-term steps and execution outcomes; Acti
 
 When Mini Scene presentation is `off`, eligibility still runs and only an explicitly approved low-impact result may auto-resolve. High-impact money, asset, relationship, identity, communication, or schedule changes still require their normal confirmation/review path. Suspension is reconciled idempotently from source timestamps after resume; exact interactive delivery while the browser/PWA is closed or OS-suspended is not guaranteed.
 
-This collaboration is `ARCHITECTURE_ACCEPTED / CJA-5_ACTIVITY_SESSION_MIDPOINT_FAMILY_IMPLEMENTED`. Calendar departure-readiness V1 remains implemented directly between Calendar and Map without Event Runtime participation. CJA-5 implements exactly one `activity_session.focus_reset.v1` family with durable Simulation V6 records, Activity Session V2 owner validation, an Activity Session module permission, and independent `off | text` presentation. No Agenda Journey event family, appointment auto-entry, interactive HTML/Mini Scene, high-impact effect, or Narrative Timeline is implemented.
+This collaboration is `ARCHITECTURE_ACCEPTED / CJA-5_ACTIVITY_SESSION_MIDPOINT_FAMILY_IMPLEMENTED`. Calendar departure-readiness V1 remains implemented directly between Calendar and Map without Event Runtime participation. CJA-5 implements exactly one `activity_session.focus_reset.v1` family with durable Simulation V6 records, Activity Session V2 owner validation, an Activity Session module permission, and independent `off | text` presentation. CJA-6A documents the Narrative Timeline contract only; no Agenda Journey event family, appointment auto-entry, interactive HTML/Mini Scene, high-impact effect, or CJA-6B projection implementation is active.
 
 Module event permission, random-event intensity, and presentation mode remain separate. Optional event suppression cannot remove a deterministic Agenda Journey step, Activity Session, Map Journey, deadline, or safety behavior. Activity Session owns its timer and completion policy; Focus Companion owns the inline CJA-5 presentation, while Event Runtime owns neither that presentation nor Gallery/Music assets.
+
+### Narrative Timeline And AI Context
+
+CJA-6A defines Narrative Timeline as a future read-only projection of owner-confirmed summaries and typed `sourceRefs`. Event Runtime may contribute event decisions, terminal outcomes, and provenance references, but it does not own the projection's canonical schedule, journey, relationship, finance, publication, or domain records. Raw prompts, raw provider responses, unreviewed model output, pending proposals, and complete source bodies are not timeline inputs. Deleted, stale, inaccessible, or revision-mismatched sources fail closed rather than leaving an orphaned entry.
+
+Future Forum/Chat AI context is a bounded read-only caller contract with explicit caller, scope, permission, date/world range, recency, entry count, and character/token limits. It must not call a provider during ordinary Timeline reads, publish content, or write back to a source owner. CJA-6B remains the separate implementation gate for persistence, visible product, retention, review, migration, and backup.
 
 ### Mini Scene Collaboration
 

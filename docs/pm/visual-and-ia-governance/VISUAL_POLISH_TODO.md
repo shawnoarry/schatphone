@@ -16,18 +16,17 @@ Validation contract per slice (visual-only code change): `npm.cmd run lint`, `np
 
 2026-08-17 integration: local visual work was rebased onto `origin/main` (4 remote commits: EVE-4B food-delivery event chain, commerce event foundation, CJA-1..CJA-5 calendar/agenda/weather, widget e2e stabilization). Two conflicts resolved: package handoff (kept newer date line) and `GalleryView.vue` (adopted the remote redesigned IA wholesale — tabbed Library/Albums, People/Places, album detail — then re-applied tokenization as the follow-up slice below). `npm ci` was required for new remote dependencies (`uisfx`, `opencc-js`). Merged-baseline validation at that point: lint, **290 files / 2047 tests**, build, visual gate 16/16 — all green.
 
-Latest slice (same day): tokenized the redesigned Gallery (`--gallery-*` bridged to `--system-*`; surfaces/text/semantic colors on system tokens; `#0a84ff` kept as app-owned accent). Validation: lint, targeted gallery tests 30/30, build, default/zen screenshots. **Full suite NOT rerun after this last slice — run it on resume.**
+Latest slice (same day): tokenized the redesigned Gallery (`--gallery-*` bridged to `--system-*`; surfaces/text/semantic colors on system tokens; `#0a84ff` kept as app-owned accent). Validation now includes lint, the full **290 files / 2047 tests**, build, the default/zen visual gate **16/16**, targeted Gallery tests 30/30, and screenshots.
 
-Local git state: `main` ahead of `origin/main` by 2 commits (visual slices). The user's own uncommitted `tests/imgbed-archive-tooling.test.js` change is preserved as-is.
+Local git state after cross-PC sync: `main` matches `origin/main` at `d0a0b1d`; no tracked local changes remain, and only unrelated untracked temporary directories are present.
 
 Known flake: one intermittent single-test failure observed twice across many full runs (unidentified, always green on rerun).
 
 NOT done / open for the next session:
 
-1. Full test suite + build after the latest Gallery tokenization commit (`npm.cmd run test`).
-2. Re-evaluate the Calendar lane (section 2) against the now-integrated CJA implementation: remote already ships Month/Week/Agenda (`CalendarWorkspace.vue`, `CalendarEventEditor.vue`), the Agenda Journey app, Activity Session, and Weather. The drafted month-grid Slice A is likely obsolete — review `output/e2e/calendar-cja1/` screenshots and the new components first, then decide what (if anything) remains for the visual lane. The two `PENDING RE-CONFIRMATION` items (month-grid direction, cross-app date links) must be re-discussed with the user in this new context.
-3. The 12-marker system stays a user-approved idea, but its mapping target changed: it should attach to the remote `CalendarEventEditor`/workspace, not the old list cards. Do not start before the re-discussion in item 2.
-4. `npm run test:e2e` full run has not been executed on the merged baseline (only the 16-case visual gate passed).
+1. Re-evaluate the Calendar lane (section 2) against the now-integrated CJA implementation: remote already ships Month/Week/Agenda (`CalendarWorkspace.vue`, `CalendarEventEditor.vue`), the Agenda Journey app, Activity Session, and Weather. The drafted month-grid Slice A is likely obsolete — review `output/e2e/calendar-cja1/` screenshots and the new components first, then decide what (if anything) remains for the visual lane. The two `PENDING RE-CONFIRMATION` items (month-grid direction, cross-app date links) must be re-discussed with the user in this new context.
+2. The 12-marker system stays a user-approved idea, but its mapping target changed: it should attach to the remote `CalendarEventEditor`/workspace, not the old list cards. Do not start before the re-discussion in item 1.
+3. `npm run test:e2e` full run has not been executed on the merged baseline (only the 16-case visual gate and the focused event E2E set have passed).
 
 ## 1. Completed Slices
 
