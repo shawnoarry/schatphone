@@ -41,6 +41,7 @@ import {
   CHAT_SOCIAL_EVENT_TYPES,
 } from '../lib/chat-social-event-review'
 import { CHAT_SOCIAL_RUNTIME_GREETING_PILOT_ID } from '../lib/chat-social-runtime-source'
+import { recordChatSocialEventRelationshipFact } from '../lib/relationship-fact-adapters'
 import {
   EVENT_NOTEBOOK_SOURCE_KIND,
   buildEventNotebook,
@@ -1085,7 +1086,16 @@ const dismissRelationshipEvent = (eventId) => {
 }
 
 const approveChatSocialEvent = (proposalId) => {
-  simulationStore.approveChatSocialEventProposal(proposalId, { chatStore, at: Date.now() })
+  simulationStore.approveChatSocialEventProposal(proposalId, {
+    chatStore,
+    onApplied: (proposal) =>
+      recordChatSocialEventRelationshipFact({
+        relationshipRuntimeStore,
+        chatStore,
+        proposal,
+      }),
+    at: Date.now(),
+  })
 }
 
 const dismissChatSocialEvent = (proposalId) => {

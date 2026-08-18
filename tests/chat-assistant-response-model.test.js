@@ -104,6 +104,42 @@ describe('Chat assistant response model interface', () => {
     expect(parsed.socialEvents).toEqual([
       { eventType: 'role_block_user', explanation: 'conflict escalated' },
     ])
+    expect(parsed.disclosureCandidates).toEqual([])
+  })
+
+  test('parses review-only disclosure candidates without granting persistence access', () => {
+    const model = createModel()
+    const parsed = model.parseAssistantResponse(
+      JSON.stringify({
+        messages: [{ blocks: [{ type: 'text', text: '我会记得的。' }] }],
+        disclosureCandidates: [
+          {
+            messageId: 'user-1',
+            summary: '用户不喜欢医院的消毒水味。',
+            reason: '未来关怀时可能相关。',
+            memoryKey: 'forbidden',
+          },
+        ],
+      }),
+      baseAiPrefs,
+      {
+        disclosurePolicy: { mode: 'review' },
+        disclosureContext: {
+          contact: { id: 9, profileId: 21, kind: 'role', name: 'Sora' },
+          conversationId: 'conversation_9',
+          sourceMessages: [{ id: 'user-1', role: 'user' }],
+        },
+      },
+    )
+
+    expect(parsed.disclosureCandidates).toHaveLength(1)
+    expect(parsed.disclosureCandidates[0]).toMatchObject({
+      status: 'pending_review',
+      source: { messageId: 'user-1' },
+      target: { contactId: 9, profileId: 21, kind: 'role' },
+      effectPolicy: 'review_only',
+    })
+    expect(parsed.disclosureCandidates[0].memoryKey).toBeUndefined()
   })
 
   test('falls back to plain reply when requested quote is not allowed or unresolved', () => {

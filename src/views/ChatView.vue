@@ -22,6 +22,7 @@ import {
 } from '../stores/foodDelivery'
 import { callAI, formatApiErrorForUi } from '../lib/ai'
 import { stripCodeFence } from '../lib/chat-response'
+import { recordChatDisclosureRelationshipFact } from '../lib/relationship-fact-adapters'
 import {
   getRoleAssetFolderSlotKeysByCategory,
   resolveFolderBoundAssetIds,
@@ -312,12 +313,15 @@ const {
   defaultThreadAiPrefs: DEFAULT_THREAD_AI_PREFS,
 })
 
+const isActiveRoleChat = computed(() => Boolean(activeChat.value && activeChat.value.kind === 'role'))
+
 const {
   createAssistantReplyNotificationPayload,
   settleAssistantReplyResult,
 } = useChatAssistantResultModel({
   activeChatId,
   chatStore,
+  relationshipRuntimeStore,
   simulationStore,
   systemStore,
   t,
@@ -966,12 +970,14 @@ const {
   canEditMessage,
   canRerollMessage,
   canToggleSavedMessage,
+  canRememberRoleDisclosure,
   canRecallMessage,
   canRestoreSemanticRevision,
   messageActionButtonClass,
 } = useChatMessageActionSheetModel({
   activeMessages,
   isActiveServiceChat,
+  isActiveRoleChat,
   editableRichMessageTypes: CHAT_MESSAGE_EDITABLE_RICH_TYPES,
   closeUserActionPanel,
   t,
@@ -1796,11 +1802,14 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
   const quoteCandidates = toQuoteCandidates(contextSourceMessages)
   const imageReferences = await collectImageReferencesForAiCall(contactId, contextSourceMessages)
   const requestedReferenceMode = normalizeImageReferenceMode(aiPrefs.imageReferenceMode)
+  const disclosurePolicy =
+    options.disclosurePolicy && typeof options.disclosurePolicy === 'object' ? options.disclosurePolicy : {}
   const promptContext = buildPromptContext(contact, aiPrefs, {
     replyCount,
     isProactive: Boolean(options.isProactive),
     imageReferences,
     contextMessages: aiCallMessages,
+    disclosurePolicy,
   })
 
   const replyResult = await callAI({
@@ -1822,6 +1831,14 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     quoteCandidates,
     messagePolicy: {
       allowImageVirtual: assistantImagePolicy.allowImageVirtual,
+    },
+    disclosurePolicy,
+    disclosureContext: {
+      contact,
+      contactId,
+      conversationId: contactId,
+      sourceMessages: contextSourceMessages,
+      createdAt: Date.now(),
     },
   })
   const parsedMessages = parsed.messages.slice(0, replyCount)
@@ -1855,6 +1872,7 @@ const generateAIResponse = async (contactId, triggerMessageId, options = {}) => 
     count: result.count,
     messages: result.messages,
     socialEventCount: result.socialEventCount,
+    disclosureCandidates: parsed.disclosureCandidates,
     contactName: result.contactName,
   }
 }
@@ -1964,6 +1982,7 @@ const requestAiReply = async (contactId, triggerMessageId, options = {}) => {
         signal: controller.signal,
         replyCount,
         isProactive: Boolean(options.isProactive),
+        disclosurePolicy: options.disclosurePolicy,
       },
     )
     const notificationPayload = createAssistantReplyNotificationPayload({
@@ -2208,6 +2227,34 @@ const toggleSavedMessage = (message) => {
   closeMessageActions()
 }
 
+const rememberRoleDisclosure = (message) => {
+  if (!activeChat.value || !canRememberRoleDisclosure(message)) return
+  const event = recordChatDisclosureRelationshipFact({
+    relationshipRuntimeStore,
+    contact: activeChat.value,
+    conversationId: activeConversation.value?.id || `contact_${activeChat.value.id}`,
+    message,
+    createdAt: Date.now(),
+  })
+  if (!event) {
+    showUiNotice(
+      'warning',
+      t('这条消息暂时无法整理为角色记忆。', 'This message cannot be turned into role continuity yet.'),
+    )
+    closeMessageActions()
+    return
+  }
+
+  showUiNotice(
+    'success',
+    t(
+      `已让 ${activeChat.value.name || 'TA'} 记住这条信息。`,
+      `${activeChat.value.name || 'They'} will remember this detail.`,
+    ),
+  )
+  closeMessageActions()
+}
+
 const quoteMessage = (message) => {
   if (!setPendingQuoteMessage(message)) return
   closeMessageActions()
@@ -2404,6 +2451,8 @@ const handleMessageAction = (actionId, message) => {
     void copyMessage(message)
   } else if (actionId === CHAT_MESSAGE_ACTION_IDS.SAVE) {
     toggleSavedMessage(message)
+  } else if (actionId === CHAT_MESSAGE_ACTION_IDS.REMEMBER) {
+    rememberRoleDisclosure(message)
   } else if (actionId === CHAT_MESSAGE_ACTION_IDS.EDIT) {
     editMessage(message)
   } else if (actionId === CHAT_MESSAGE_ACTION_IDS.RESTORE) {

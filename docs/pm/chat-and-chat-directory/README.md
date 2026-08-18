@@ -1,6 +1,6 @@
 # Chat And Chat Directory Package
 
-Updated: 2026-08-13
+Updated: 2026-08-18
 
 Use this package for Chat thread behavior, Chat Directory, service accounts, role binding into Chat, and message-surface work.
 
@@ -39,6 +39,8 @@ Current group-chat note: group chats are first-class Chat targets backed by Chat
 Current relationship-compatibility note: Chat Directory still preserves legacy `relationshipLevel` and `relationshipNote` fields for binding compatibility, but the UI labels them as Chat-local tuning/note only. Current relationship truth stays in relationship runtime.
 
 Incoming social-event note: Chat social/channel state has a V1 applied shell for direct user actions such as greetings, request acceptance/decline, blocking, unblocking, and blocked-by-role markers. Generated role-initiated social events now enter the explicit review seam: Chat owns messaging accessibility and visible social-channel state, Contacts displays the role-level snapshot only, Event Runtime owns eligibility/review/audit, World Hub reviews high-risk proposals, and relationship runtime receives only confirmed relationship facts or memories.
+
+Current Chat disclosure note: a user may explicitly choose `让 TA 记住 / Remember for them` on one user-authored message in a role thread. Chat builds a role-bound proposal with the conversation id and message id, then its Owner Adapter records one supporting-only `relationship_chat_user_disclosure` fact through the existing Relationship Runtime seam. This action never analyzes ordinary messages, never accepts assistant-authored memory, never changes relationship metrics or stage, and is not the same as saving a message. Group/service threads, recalled messages, and contacts without a role profile are ineligible. A bounded `disclosureCandidates` parser now exists behind an explicit review policy: it can return a temporary candidate only when the model points to an exact user-authored message in the current role thread. It fixes the target role, source, and review-only status itself; it never accepts `memoryKey`, metric changes, or a persistence decision from the model. No UI, automatic enablement, or Relationship Runtime write is attached yet. Automatic free-text extraction and periodic consolidation remain future work.
 
 Current Chat preview note: the default Kakao, WeChat, and iMessage layouts each carry an explicit shell/thread palette. Chat Appearance previews label contact versus user messages, show the iMessage header identity row, and explain that letter avatars are replaceable placeholders.
 

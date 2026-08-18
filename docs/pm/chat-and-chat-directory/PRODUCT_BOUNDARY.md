@@ -1,6 +1,6 @@
 # Chat And Chat Directory Product Boundary
 
-Updated: 2026-08-13
+Updated: 2026-08-18
 
 This file defines the ownership boundary between Chat, Chat Directory, and Contacts.
 
@@ -20,6 +20,8 @@ Chat owns:
 - messages
 - thread preferences
 - message deletion
+- the explicit `让 TA 记住 / Remember for them` action on one user-authored message in one role thread, including its conversation/message source reference
+- a disabled-by-default `disclosureCandidates` parser for an explicit role-memory review checkpoint; it may return only a temporary, role-bound, exact-user-message candidate and must not persist or decide Relationship Runtime truth
 - message recall as a retained Chat event that hides original text and rich-block details from UI actions, AI context, quote previews, pending quote bars, and history review while preserving who recalled it
 - rich message display
 - internal source-App object sharing with recipient selection, one bounded device-local pending draft, explicit `share_card` send, cancel-to-source, refresh/lock recovery, and exact source-detail return
@@ -41,6 +43,8 @@ Chat does not own:
 - the global role archive
 - destructive role deletion
 - current relationship truth
+- Relationship Runtime memory aggregation, review state, metrics, or stage changes; Chat may call the shared disclosure Owner Adapter but does not write runtime state directly
+- accepting an AI disclosure candidate as durable memory; the parser is a validation seam, not a memory store or review decision
 - system-wide theme management or global custom CSS
 - event eligibility for generated social events
 - Shopping checkout, order truth, Wallet suggestions, or Assets transfer suggestions
@@ -164,5 +168,6 @@ They must not create, delete, or rewrite global Contacts role profiles. A future
 10. AI dialogue, a transfer request, or a `payee_account` card must not create Wallet ledger records or claim money moved
 11. Chat Appearance controls presentation only; any iMessage-like header note/status is Chat-local display context and must not be treated as current relationship truth
 12. an internal App share must not auto-send or become Chat history before the user selects a conversation and confirms; cancel returns to the source, and opening a sent card must not mutate source-owned state
+13. an AI `disclosureCandidates` payload must not choose a role/profile, memory key, relationship metric, or persistence result, and must not bypass an explicit review policy
 
 When `relationshipLevel` or `relationshipNote` appears in Chat Directory UI, label it as Chat-local tuning/note. Do not use "Affinity" or other copy that implies current relationship progress.

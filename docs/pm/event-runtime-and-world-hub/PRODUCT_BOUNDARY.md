@@ -1,12 +1,14 @@
 # Event Runtime Product Boundary / 事件运行时语义边界
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
 ## 1. Core Rule
 
 The runtime lane coordinates cross-module causal chains; it is not a replacement for module-owned records or a universal card system.
 
 An event chain may begin in one Module, be evaluated and audited by Event Runtime, write canonical truth through another owner's Adapter, and continue through later owner-native records. A Module can participate in that chain without registering an Event Surface. Messages, order state, calls, posts, information feeds, journeys, Map encounters, and later scene presentations are owner-native forms; an Event Surface is only one optional Presentation Adapter when the host interaction has been separately accepted.
+
+Role continuity is the primary product consumer of cross-module context, not Event Runtime itself. Event Runtime records event causality and provenance and may expose a bounded, role-scoped memory candidate after an owner-confirmed result. It never writes Chat memory, role memory, or relationship truth directly. Relationship Runtime decides whether a candidate becomes durable role memory. Public world evolution is a separate world-scoped knowledge projection; public knowledge may be available to same-world roles when relevant, but it is not copied into every role memory or injected into every Chat prompt.
 
 ## 2. Ownership Split
 
@@ -33,6 +35,7 @@ Does not own:
 - arbitrary AI-generated choice IDs, Adapter keys, numeric effects, domain mutations, external media URLs, or full-prompt/raw-response retention by default
 - applied Chat channel state after a social event is confirmed
 - Contacts Self Profile values, arbitrary dynamic player/world state, owner-confirmed world facts, future Community/Media publication bodies, or investigation/clue records
+- role memory or a universal role-awareness graph; event participants and public-knowledge consumers are references supplied to the relevant Owner or projection
 
 ### Relationship Runtime / 关系运行时
 

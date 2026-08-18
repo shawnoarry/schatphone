@@ -371,6 +371,29 @@ describe('Chat AI prompt context model interface', () => {
     })
   })
 
+  test('adds the disclosure candidate schema only for an explicit role review policy', () => {
+    const model = createModel()
+    const aiPrefs = { ...DEFAULT_CHAT_THREAD_AI_PREFS }
+    const role = { id: 1, kind: 'role', name: 'Mina', role: 'idol', bio: 'Warm.', profileId: 10 }
+
+    const defaultPrompt = model.buildSystemPrompt(role, aiPrefs)
+    expect(defaultPrompt).not.toContain('disclosureCandidates')
+
+    const reviewPrompt = model.buildSystemPrompt(role, aiPrefs, {
+      disclosurePolicy: { mode: 'review' },
+    })
+    expect(reviewPrompt).toContain('"disclosureCandidates"')
+    expect(reviewPrompt).toContain('Each disclosure candidate must use one exact user message ID')
+    expect(reviewPrompt).toContain('Never include contactId, profileId, memoryKey, metricDeltas')
+
+    const servicePrompt = model.buildSystemPrompt(
+      { id: 9, kind: 'service', name: 'Daily Fresh', role: 'service' },
+      aiPrefs,
+      { disclosurePolicy: { mode: 'review' } },
+    )
+    expect(servicePrompt).not.toContain('disclosureCandidates')
+  })
+
   test('passes only a bounded recent-chat query into one relationship projection', () => {
     const relationshipRuntimeStore = {
       buildPromptProjectionForTarget: (...args) => {

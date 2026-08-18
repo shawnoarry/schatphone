@@ -1,4 +1,6 @@
 export const CHAT_ASSISTANT_NOTIFICATION_PREVIEW_MAX_CHARS = 72
+import { recordChatSocialEventRelationshipFact } from '../lib/relationship-fact-adapters'
+
 export const CHAT_ASSISTANT_MANUAL_TRIGGER_ID = '__manual__'
 
 const translateWith = (t, zh, en) => (typeof t === 'function' ? t(zh, en) : en || zh)
@@ -67,6 +69,7 @@ export const createChatAssistantNotificationSummarizer = ({
 export const useChatAssistantResultModel = ({
   activeChatId,
   chatStore,
+  relationshipRuntimeStore = null,
   simulationStore,
   systemStore,
   manualTriggerId = CHAT_ASSISTANT_MANUAL_TRIGGER_ID,
@@ -126,6 +129,15 @@ export const useChatAssistantResultModel = ({
       .map((event) => {
         if (!event || typeof event !== 'object') return null
         if (typeof simulationStore?.submitChatSocialEventProposal !== 'function') return null
+        const options = { chatStore, at: currentTimestamp() }
+        if (relationshipRuntimeStore) {
+          options.onApplied = (proposal) =>
+            recordChatSocialEventRelationshipFact({
+              relationshipRuntimeStore,
+              chatStore,
+              proposal,
+            })
+        }
         return simulationStore.submitChatSocialEventProposal(
           {
             contactId,
@@ -139,7 +151,7 @@ export const useChatAssistantResultModel = ({
               runtimeLogId: sourceTriggerId,
             },
           },
-          { chatStore, at: currentTimestamp() },
+          options,
         )
       })
       .filter(Boolean)

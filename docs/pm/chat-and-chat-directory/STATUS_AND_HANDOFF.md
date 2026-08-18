@@ -1,6 +1,6 @@
 # Chat And Chat Directory Status And Handoff
 
-Updated: 2026-08-13
+Updated: 2026-08-18
 
 This file is the handoff page for Chat, Chat Directory, service accounts, and Chat-side role binding work.
 
@@ -16,6 +16,8 @@ Confirmed persistence dependency for future work:
 - Chat durably stores messages/rich records formally committed to Chat and minimum AI provenance, not the full assembled prompt, raw provider response, uncommitted candidate, or transport payload; future modules own their own committed content, and any full capture is an explicit temporary diagnostic concern.
 - Chat Settings now links to the shared TTS Module's device-local configuration and temporary preview surface. The first slice does not change Chat messages, `voice_virtual`, AI reply transport, automatic read-aloud behavior, or Chat persistence.
 - persisted Map `location_share` cards participate in Map World Suite uninstall-safety inspection through `src/lib/chat-map-pack-reference-projection.js`. The projection is historical and body-free: it exposes stable conversation/message/block reference IDs plus `mapPackId`, not message text, title, summary, participant, or AI context.
+
+Role continuity is Chat's primary cross-module consumer boundary. Chat may consume role-scoped memory projections from Relationship Runtime and relevant public world-knowledge projections, but it must not read raw Event Runtime logs or receive unrelated participants' event context. A formal event is not automatically a Chat memory: a role becomes eligible for a memory candidate only when the role participates, receives an explicit disclosure, or is otherwise granted a valid source projection. Public world knowledge can be retrieved by same-world roles when relevant without being copied into each role's personal memory.
 
 What is already landed:
 
@@ -60,6 +62,7 @@ Chat sound boundary: global Settings owns the default system/Home/notification s
 36. Chat now applies one provider-neutral transient request projection after rich/recalled messages become AI-visible text. The existing 2-20 turn setting remains the broad user control, while an internal 12,000-character ceiling keeps older oversized content out of the current call and represents an oversized latest message with a deterministic head/tail copy. Normal reply and regeneration use the same selected source records for quotes and image references, and the same selected text for memory recall and provider transport. Stored messages are never truncated, no new setting or persistence field is added, and changing model/provider does not change selection.
 37. Bound role identity now enters Chat through one read-only Contacts projection rather than separate contact/profile/detail reads. The current Contacts profile wins over stale Chat copies for name, role, bio, template-labelled values, relationship premise, and manual character facts; recalled event clues remain dynamic. Anonymous conversations omit Contacts Self Profile values as well as the global user identity block. Stable role/world edits refresh the opaque prompt-cache key, while model/provider switches and relationship/message changes keep the same stable identity key.
 38. Image capability differences now degrade behind the transport seam. Automatic mode attempts native image input only on the supported official OpenAI Adapter; unknown compatible and non-visual paths receive natural label/caption cues with no URL, Gallery asset ID, provider name, transport mode, or local-storage error language. An explicit native preference may still try a compatible endpoint once. Fallback diagnostics remain internal instead of appearing beneath ordinary assistant messages, and prompt rules prohibit claims about unavailable visual details or model limitations.
+39. Chat response parsing now has a disabled-by-default AI `disclosureCandidates` seam for an explicit future review checkpoint. The prompt schema is added only when that policy is explicitly supplied; normalization binds each candidate to the trusted role and an exact current user-message id, caps and trims the model text, and returns a temporary review-only object without persistence or Relationship Runtime writes.
 
 Still incomplete or risky:
 
@@ -73,7 +76,7 @@ Still incomplete or risky:
 8. direct Chat social/channel state has a V1 shell for greetings, request accept/decline, blocking, unblocking, and blocked-by-role markers. Generated role-initiated social events now have a reviewed V1 seam: assistant JSON may include optional `socialEvents`, Chat normalizes them, and the foreground/session event tick can also propose a conservative role greeting for stranger or declined role contacts. Event Runtime decides whether a low-risk greeting becomes an audited pending message request or a high-risk refusal/block/restore/unblock proposal waits for World Hub review before Chat applies the communication state. World Hub now explains the proposal source, trigger policy, and ownership rule so Chat remains the applied communication owner instead of hidden runtime logic.
 9. Chat Mini Scene integration is a later roadmap 4.8 Adapter stage after the shared foundation, persistence, and presenters; current `mini_scene` blocks are compatibility history only.
 10. role receiving-account V1 does not model NPC wealth, background settlement, automatic exchange, or AI-authored account data; deeper role banking remains a separately gated product decision.
-11. Chat still injects both legacy `systemStore` relationship-like activity values and the Relationship Runtime projection. The context envelope preserves them as separate dynamic compatibility blocks; it does not merge them or resolve ownership. Automatic memory summarization/consolidation, role-to-role relationship edges, per-role model routing, and world-model separation remain unimplemented; the transient message budget is not a substitute for any of them.
+11. Chat still injects both legacy `systemStore` relationship-like activity values and the Relationship Runtime projection. The context envelope preserves them as separate dynamic compatibility blocks; it does not merge them or resolve ownership. A bounded applied role-greeting continuity path now exists: the confirmed Chat social owner callback records a supporting-only Relationship Runtime fact with no metric delta. A second bounded path now lets the user explicitly mark one user-authored message in a role thread as `让 TA 记住 / Remember for them`; Chat binds the exact conversation/message source and its Owner Adapter records a supporting-only `relationship_chat_user_disclosure` fact with no metric delta. This is not message saving, does not inspect ordinary messages or assistant output, and does not create a general memory-candidate store. Chat also has a disabled-by-default `disclosureCandidates` parser for a future explicit review checkpoint: it validates the trusted role target and exact user-message source, returns only a temporary `pending_review` object, and cannot carry a model-selected role, memory key, metric delta, or persistence decision. No review UI or Relationship Runtime write is connected. Automatic free-text memory extraction/summarization, generic event-to-role candidates, role-to-role relationship edges, per-role model routing, and world-model separation remain unimplemented; the transient message budget is not a substitute for any of them.
 
 ## 2. Recommended Next Slice
 
@@ -86,6 +89,7 @@ Chat's 4.4 service-continuity baseline, World Pack service-template contract, 4.
 5. deepen generated social behavior only through Event Runtime audit and World Hub review;
 6. if roadmap 4.7 approves K-pop service accounts, add candidates/templates first and keep user subscription manual.
 7. when roadmap 4.8 reaches Chat, add one focused request Adapter and legacy-text compatibility path; do not build a Chat-specific HTML renderer.
+8. the bounded model-proposed candidate format is now an internal, disabled-by-default seam. The next product slice is a review/cleanup surface that can decide whether a candidate becomes a Relationship Runtime fact; keep provider fallback and ordinary-chat paths model-free, and do not let the parser write memory by itself.
 
 Do not start another broad Chat decomposition by inertia. GitHub Pages has configured-provider model discovery, connection, real multi-turn Chat reply, quote, regeneration, long-content, and reload-persistence evidence. The restricted Vercel and Cloudflare relays are deployed and have real model-discovery plus Chat smoke evidence. Installed-PWA/relaunch and named true-device rich-message/media/service-thread evidence remain the next roadmap 4.9 gate.
 
@@ -105,10 +109,13 @@ Do not start another broad Chat decomposition by inertia. GitHub Pages has confi
 12. Do not make Chat own currency definitions, exchange rates, transfer confirmation, receipts, or a separate ledger; Wallet owns those records, and Chat account cards must not deduct funds.
 13. Do not execute legacy `htmlSnippet`, accept raw generated HTML, or copy Mini Scene profile/regex/presenter logic into Chat.
 14. Do not persist TTS preview audio or provider payloads as Chat history, or treat the current settings preview as a durable voice-message implementation.
+15. Do not treat saved messages, assistant output, or ordinary message history as role memory. The only current Chat disclosure write path is the explicit user action on one user-authored message in one role thread.
 
 Current Chat preview note: the default Kakao, WeChat, and iMessage layouts each carry an explicit shell/thread palette. Chat Appearance previews label contact versus user messages, show the iMessage header identity row, and explain that letter avatars are replaceable placeholders.
 
 Current Chat sizing note: ordinary text rows shrink the bubble to content for short messages, cap long text at the message-column width with wrapping, and keep rich cards, images, and service notifications on a full available-width treatment.
+
+Validation evidence for the 2026-08-18 disclosure slice: focused Chat action, Chat UI, relationship-adapter, parser, and prompt tests pass; full Vitest passes 291 files / 2067 tests; ESLint, `git diff --check`, governance, and production build pass; the existing Chromium `chat-rich-messages` Playwright flow passes 2/2. The full suite still prints the project's existing jsdom media-element warnings, but exits successfully.
 
 ## 4. Must Sync When Working Here
 

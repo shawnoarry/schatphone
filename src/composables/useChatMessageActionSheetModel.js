@@ -4,6 +4,7 @@ export const CHAT_MESSAGE_ACTION_IDS = Object.freeze({
   QUOTE: 'quote',
   COPY: 'copy',
   SAVE: 'save',
+  REMEMBER: 'remember',
   EDIT: 'edit',
   RESTORE: 'restore',
   REROLL: 'reroll',
@@ -46,6 +47,7 @@ const canRestoreSemanticRevision = (message) =>
 export const useChatMessageActionSheetModel = ({
   activeMessages,
   isActiveServiceChat,
+  isActiveRoleChat,
   editableRichMessageTypes,
   closeUserActionPanel,
   t,
@@ -83,6 +85,14 @@ export const useChatMessageActionSheetModel = ({
         !isActiveServiceChat?.value &&
         (message.role === 'user' || message.role === 'assistant'),
     )
+  const canRememberRoleDisclosure = (message) =>
+    Boolean(
+      message &&
+        !isRecalledMessage(message) &&
+        !isActiveServiceChat?.value &&
+        isActiveRoleChat?.value &&
+        message.role === 'user',
+    )
   const canRecallMessage = (message) =>
     Boolean(
       message &&
@@ -116,6 +126,13 @@ export const useChatMessageActionSheetModel = ({
         label: message.savedAt ? translate('取消收藏', 'Unsave') : translate('收藏', 'Save'),
         tone: 'default',
         visible: canToggleSavedMessage(message),
+      },
+      {
+        id: CHAT_MESSAGE_ACTION_IDS.REMEMBER,
+        testId: 'chat-message-action-remember',
+        label: translate('让 TA 记住', 'Remember for them'),
+        tone: 'primary',
+        visible: canRememberRoleDisclosure(message),
       },
       {
         id: CHAT_MESSAGE_ACTION_IDS.EDIT,
@@ -180,6 +197,7 @@ export const useChatMessageActionSheetModel = ({
     canEditMessage: (message) => canEditMessage(message, editableRichMessageTypes),
     canRerollMessage,
     canToggleSavedMessage,
+    canRememberRoleDisclosure,
     canRecallMessage,
     canRestoreSemanticRevision,
     messageActionButtonClass,

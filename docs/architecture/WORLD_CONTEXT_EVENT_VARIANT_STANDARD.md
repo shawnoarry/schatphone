@@ -1,6 +1,6 @@
 # World Context Event Variant Standard
 
-Updated: 2026-08-15
+Updated: 2026-08-18
 
 Purpose: define the shared standard for making SchatPhone events world-aware without breaking current ownership boundaries or turning runtime execution into an API-dependent black box.
 
@@ -37,6 +37,13 @@ Important baseline:
 
 - ordinary runtime triggering should stay local by default;
 - API calls are allowed for generating or refreshing event material, not for every runtime tick.
+
+The world-aware chain has two different downstream paths:
+
+1. a local/participant-scoped event path that reaches the source Owner and, only when relevant, exposes a bounded role-memory candidate;
+2. a public-world path that may update a world-scoped fact or publication projection available to same-world roles when relevant.
+
+Neither path makes Event Runtime the owner of role memory or universal awareness. Public knowledge remains separate from personal role memory, and role-specific context selection remains the responsibility of the consuming continuity/projection seam.
 
 ## 2. Goals
 

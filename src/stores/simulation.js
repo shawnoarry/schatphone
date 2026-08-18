@@ -1337,7 +1337,7 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   const submitChatSocialEventProposal = (
     input = {},
-    { chatStore, registry = null, at = Date.now() } = {},
+    { chatStore, onApplied = null, registry = null, at = Date.now() } = {},
   ) => {
     const inputPolicy =
       input.policy && typeof input.policy === 'object' && !Array.isArray(input.policy)
@@ -1374,6 +1374,18 @@ export const useSimulationStore = defineStore('simulation', () => {
       withId.reviewMode === CHAT_SOCIAL_EVENT_REVIEW_MODE.AUTO_APPLY_WITH_AUDIT
     ) {
       const applied = applyChatSocialEventToChatStore({ chatStore, proposal: withId, at })
+      const appliedProposal = {
+        ...withId,
+        status: CHAT_SOCIAL_EVENT_STATUS.APPLIED,
+        appliedAt: applied ? normalizedAt : 0,
+      }
+      if (applied && typeof onApplied === 'function') {
+        try {
+          onApplied(appliedProposal)
+        } catch {
+          // Owner continuity is optional and must not undo an already-applied Chat state change.
+        }
+      }
       nextProposal = {
         ...withId,
         status: applied ? CHAT_SOCIAL_EVENT_STATUS.APPLIED : CHAT_SOCIAL_EVENT_STATUS.FAILED,
@@ -1450,13 +1462,29 @@ export const useSimulationStore = defineStore('simulation', () => {
     }
   }
 
-  const approveChatSocialEventProposal = (proposalId, { chatStore, at = Date.now() } = {}) => {
+  const approveChatSocialEventProposal = (
+    proposalId,
+    { chatStore, onApplied = null, at = Date.now() } = {},
+  ) => {
     const id = normalizeText(proposalId, '', 180)
     const existing = chatSocialEventProposals.value.find((item) => item.id === id)
     if (!existing || existing.status !== CHAT_SOCIAL_EVENT_STATUS.PENDING_REVIEW) return null
 
     const normalizedAt = normalizeTimestamp(at)
     const applied = applyChatSocialEventToChatStore({ chatStore, proposal: existing, at })
+    const appliedProposal = {
+      ...existing,
+      status: CHAT_SOCIAL_EVENT_STATUS.APPLIED,
+      reviewedAt: normalizedAt,
+      appliedAt: applied ? normalizedAt : 0,
+    }
+    if (applied && typeof onApplied === 'function') {
+      try {
+        onApplied(appliedProposal)
+      } catch {
+        // Owner continuity is optional and must not undo an already-applied Chat state change.
+      }
+    }
     const nextProposal = {
       ...existing,
       status: applied ? CHAT_SOCIAL_EVENT_STATUS.APPLIED : CHAT_SOCIAL_EVENT_STATUS.FAILED,

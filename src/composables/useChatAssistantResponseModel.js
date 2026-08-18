@@ -1,4 +1,5 @@
 import { normalizeChatAiSocialEvents } from '../lib/chat-ai-social-proposals'
+import { normalizeChatAiDisclosureCandidates } from '../lib/chat-ai-disclosure-proposals'
 import {
   extractAssistantPayloadText,
   parseAssistantJsonPayload,
@@ -438,6 +439,8 @@ export const useChatAssistantResponseModel = ({
     const fallbackTextValue = trimChatAssistantText(cleanText, maxTextChars, '...')
     const quoteCandidates = Array.isArray(options.quoteCandidates) ? options.quoteCandidates : []
     const messagePolicy = isObject(options.messagePolicy) ? options.messagePolicy : {}
+    const disclosurePolicy = isObject(options.disclosurePolicy) ? options.disclosurePolicy : {}
+    const disclosureContext = isObject(options.disclosureContext) ? options.disclosureContext : {}
     const parsedPayload = parseAssistantJsonPayload(cleanText)
     const normalizedFallback = () =>
       normalizeAssistantMessagePayload({}, aiPrefs, fallbackTextValue, {
@@ -446,7 +449,7 @@ export const useChatAssistantResponseModel = ({
       })
 
     if (!isObject(parsedPayload)) {
-      return { messages: [normalizedFallback()], socialEvents: [] }
+      return { messages: [normalizedFallback()], socialEvents: [], disclosureCandidates: [] }
     }
 
     const rawMessages = Array.isArray(parsedPayload.messages) ? parsedPayload.messages : [parsedPayload]
@@ -461,12 +464,13 @@ export const useChatAssistantResponseModel = ({
       .filter(Boolean)
 
     if (!normalizedMessages.length) {
-      return { messages: [normalizedFallback()], socialEvents: [] }
+      return { messages: [normalizedFallback()], socialEvents: [], disclosureCandidates: [] }
     }
 
     return {
       messages: normalizedMessages,
       socialEvents: normalizeChatAiSocialEvents(parsedPayload),
+      disclosureCandidates: normalizeChatAiDisclosureCandidates(parsedPayload, disclosureContext, disclosurePolicy),
     }
   }
 

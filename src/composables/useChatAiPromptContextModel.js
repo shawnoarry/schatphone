@@ -11,6 +11,7 @@ import {
 import { buildMemoryRecallQuery } from '../lib/memory-recall'
 import { buildRoleIdentityProjection } from '../lib/role-identity-projection'
 import { buildWeatherWorldProjection } from '../lib/weather-world-projection'
+import { CHAT_AI_DISCLOSURE_POLICY_MODES } from '../lib/chat-ai-disclosure-proposals'
 import {
   estimateChatMessagesTokens,
   estimateChatRequestTokens,
@@ -492,7 +493,24 @@ export const useChatAiPromptContextModel = ({
           'Treat the user as a stranger by default.',
           'Do not assume you know their name, background, occupation, or prior relationship unless this conversation explicitly reveals it.',
         ].join('\n')
-      : userAiContext.promptText
+        : userAiContext.promptText
+    const disclosureReviewEnabled =
+      contactKind === 'role' &&
+      (options.disclosurePolicy?.mode === CHAT_AI_DISCLOSURE_POLICY_MODES.REVIEW ||
+        options.disclosurePolicy?.enabled === true)
+    const disclosureSchemaBlock = disclosureReviewEnabled
+      ? `,
+  "disclosureCandidates": [
+    {"messageId":"exact user message ID from the current context","summary":"what this role may need to remember","reason":"short relevance reason"}
+  ]`
+      : ''
+    const disclosureRules = disclosureReviewEnabled
+      ? [
+          '- disclosureCandidates is optional and review-only. Use it only when a specific user-authored message contains a durable detail this role may need later.',
+          '- Each disclosure candidate must use one exact user message ID from the current context. If no message is clearly worth retaining, return an empty array.',
+          '- Never include contactId, profileId, memoryKey, metricDeltas, relationship changes, or a persistence decision in a disclosure candidate.',
+        ].join('\n')
+      : ''
 
     const stablePrompt = `
 ${worldKernelInstruction}
@@ -517,7 +535,7 @@ JSON schema:
   ],
   "socialEvents": [
     {"type":"role_greeting_request | role_refuse_messages | role_restore_messages | role_block_user | role_unblock_user","explanation":"short reason"}
-  ]
+  ]${disclosureSchemaBlock}
 }
 
 Rules:
@@ -528,6 +546,7 @@ Rules:
 - Each message must include at least one text block.
 - socialEvents is optional. Use it only in role conversations when the character is proposing a communication-state change.
 - socialEvents is a proposal only: never claim the state already changed, never include it for services, groups, or the user themself, and never use it for ordinary mood or relationship flavor.
+${disclosureRules}
 `
 
     const dynamicPrompt = `

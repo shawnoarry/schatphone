@@ -4,6 +4,8 @@ import {
   buildFoodDeliverySharedMealRelationshipMemoryKey,
   buildFoodDeliverySharedMealRelationshipSuggestion,
   buildCalendarConfirmedEventRelationshipSuggestion,
+  buildChatDisclosureRelationshipSuggestion,
+  buildChatSocialEventRelationshipSuggestion,
   buildRelationshipMemoryKey,
   buildMapSharedRouteRelationshipSuggestion,
   buildPhoneCallRelationshipSuggestion,
@@ -12,6 +14,8 @@ import {
   buildWalletSharedTransferRelationshipSuggestion,
   recordFoodDeliverySharedMealRelationshipFact,
   recordCalendarConfirmedEventRelationshipFact,
+  recordChatDisclosureRelationshipFact,
+  recordChatSocialEventRelationshipFact,
   recordMapSharedRouteRelationshipFact,
   recordPhoneCallRelationshipFact,
   recordShoppingGiftRelationshipFact,
@@ -324,6 +328,153 @@ describe('relationship fact adapters', () => {
     expect(summary.metrics.affinity).toBe(54)
     expect(summary.growthTraits).toContain('calendar-plan')
     expect(firstEvent.memoryKey).toBe(buildRelationshipMemoryKey('calendar_event', event.id))
+  })
+
+  test('records an applied role greeting as supporting-only Chat continuity', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const chatStore = {
+      getContactById: () => ({
+        id: 4,
+        profileId: 4,
+        kind: 'role',
+        name: 'Mina',
+      }),
+    }
+    const proposal = {
+      id: 'chat_social_proposal_greeting_1',
+      eventType: 'role_greeting_request',
+      status: 'applied',
+      targetContactId: 4,
+      targetProfileId: 4,
+    }
+
+    const suggestion = buildChatSocialEventRelationshipSuggestion({
+      relationshipRuntimeStore,
+      chatStore,
+      proposal,
+    })
+    const firstEvent = recordChatSocialEventRelationshipFact({
+      relationshipRuntimeStore,
+      chatStore,
+      proposal,
+    })
+    const secondEvent = recordChatSocialEventRelationshipFact({
+      relationshipRuntimeStore,
+      chatStore,
+      proposal,
+    })
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 4, contactId: 4 })
+
+    expect(suggestion).toMatchObject({
+      available: true,
+      imported: false,
+      sourceModule: 'relationship_chat_social_event',
+      targetName: 'Mina',
+    })
+    expect(secondEvent.id).toBe(firstEvent.id)
+    expect(firstEvent).toMatchObject({
+      factType: 'role_initiated_chat_greeting',
+      memoryRole: 'supporting',
+      effectApplied: false,
+      memoryKey: buildRelationshipMemoryKey('chat_social', 'role_greeting'),
+    })
+    expect(summary.metrics).toMatchObject({
+      affinity: 50,
+      trust: 50,
+      intimacy: 20,
+    })
+    expect(summary.totalMemoryCount).toBe(1)
+  })
+
+  test('records an explicit user disclosure for one role without changing relationship metrics', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const contact = {
+      id: 9,
+      profileId: 9,
+      kind: 'role',
+      name: 'Sora',
+    }
+    const message = {
+      id: 'msg_disclosure_1',
+      role: 'user',
+      content: '我不喜欢医院的消毒水味。',
+      createdAt: 12345,
+    }
+
+    const suggestion = buildChatDisclosureRelationshipSuggestion({
+      relationshipRuntimeStore,
+      contact,
+      conversationId: 'conv_9',
+      message,
+    })
+    const firstEvent = recordChatDisclosureRelationshipFact({
+      relationshipRuntimeStore,
+      contact,
+      conversationId: 'conv_9',
+      message,
+    })
+    const secondEvent = recordChatDisclosureRelationshipFact({
+      relationshipRuntimeStore,
+      contact,
+      conversationId: 'conv_9',
+      message,
+    })
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 9, contactId: 9 })
+
+    expect(suggestion).toMatchObject({
+      available: true,
+      imported: false,
+      sourceModule: 'relationship_chat_user_disclosure',
+      sourceId: 'conv_9:profile_9:message_msg_disclosure_1',
+      targetName: 'Sora',
+    })
+    expect(secondEvent.id).toBe(firstEvent.id)
+    expect(firstEvent).toMatchObject({
+      factType: 'user_disclosure',
+      memoryRole: 'supporting',
+      effectApplied: false,
+      memoryKey: 'chat_disclosure__user_shared',
+      summary: '我不喜欢医院的消毒水味。',
+      createdAt: 12345,
+    })
+    expect(summary.metrics).toMatchObject({
+      affinity: 50,
+      trust: 50,
+      intimacy: 20,
+    })
+    expect(summary.totalMemoryCount).toBe(1)
+  })
+
+  test('rejects disclosures that are not explicit user text for a role contact', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+
+    expect(
+      buildChatDisclosureRelationshipSuggestion({
+        relationshipRuntimeStore,
+        contact: { id: 10, profileId: 10, kind: 'group', name: 'Group' },
+        conversationId: 'group_10',
+        message: { id: 'msg_1', role: 'user', content: 'group detail' },
+      }).available,
+    ).toBe(false)
+    expect(
+      buildChatDisclosureRelationshipSuggestion({
+        relationshipRuntimeStore,
+        contact: { id: 11, profileId: 11, kind: 'role', name: 'Role' },
+        conversationId: 'conv_11',
+        message: { id: 'msg_2', role: 'assistant', content: 'assistant detail' },
+      }).available,
+    ).toBe(false)
+    expect(
+      buildChatDisclosureRelationshipSuggestion({
+        relationshipRuntimeStore,
+        contact: { id: 12, profileId: 12, kind: 'role', name: 'Role' },
+        conversationId: 'conv_12',
+        message: { id: 'msg_3', role: 'user', recalledAt: 1, content: 'recalled detail' },
+      }).available,
+    ).toBe(false)
   })
 
   test('reuses the same memory key when a phone callback becomes a calendar event', () => {

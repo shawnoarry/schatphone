@@ -1,6 +1,6 @@
 # Contacts Relationship V2 Implementation Workstreams / 通讯录关系系统 V2 实施工作流
 
-Updated: 2026-08-15
+Updated: 2026-08-18
 
 This document translates the Contacts/relationship package into execution-ready workstreams.
 
@@ -25,6 +25,7 @@ Main tasks:
 9. keep Contacts relationship classification controls as profile-side editing only: runtime snapshot is read first, while event judgement remains outside Contacts.
 10. allow Contacts to read/display Chat social-channel snapshots only; do not let Contacts decide or apply friend/block/refusal social events.
 11. keep stable structured Self Profile identity available only through a future bounded profile/world/revision projection when a named event family is separately accepted; keep volatile player/world state and publication records outside Contacts.
+12. keep the current Chat disclosure seam role-scoped and supporting-only: Chat supplies one explicit user-authored message source, the shared Relationship Adapter normalizes it, and Relationship Runtime remains the owner of memory aggregation and review state.
 
 Semantic traps to avoid:
 
@@ -36,6 +37,7 @@ Semantic traps to avoid:
 - using free-text Self Profile prose or model classification as canonical occupation/event eligibility;
 - turning Contacts into the owner of reputation, media heat, fatigue, world arcs, or forum/news posts;
 - letting one event create several competing memories.
+- treating a saved message, assistant reply, or ordinary Chat history as an accepted role-memory fact without the explicit disclosure action.
 
 ## 2. Workstream B: Delete / Reset / Memory Cleanup Orchestration
 
@@ -183,6 +185,7 @@ Current 4.2 baseline:
 11. 4.2 is `DONE` for current explicit-lineage acceptance; future fuzzy same-text merging should start from a separate product decision.
 12. runtime memory-count totals are full target-state counts, not capped by `memoryLimit`.
 13. fuzzy same-text merging remains out of scope until a separate product decision promotes it.
+14. explicit Chat disclosures reuse the existing memory-group seam and do not introduce a second candidate store. The new Chat AI disclosure parser is a temporary review-only seam, not a second durable store; automatic extraction, candidate review, and periodic consolidation remain separate future work.
 
 Why this first:
 

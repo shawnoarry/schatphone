@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-08-15
+Updated: 2026-08-18
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -21,6 +21,12 @@ Persistence boundary:
 - full AI prompts, raw responses, uncommitted candidates, and transport payloads are not event truth; persist normalized proposals/outcomes and minimum provenance, with full capture limited to explicit temporary diagnostics;
 - when an approved event formally publishes a social/forum record, offline scene, long-form artifact, performance/episode record, or character-state history, the target owner persists the canonical committed content and Event Runtime keeps references/provenance rather than copying the body.
 - owner-safe lifecycle inspection may project a bounded reference such as `{ owner, kind, referenceId, mapPackId, active }`; this projection cannot include event text, proposal copy, participants, source snapshots, or outcome bodies. Active Event Instances and pending Map Journey proposals protect current Map use, while terminal records remain historical references.
+
+Continuity boundary:
+
+- Role continuity is the primary product consumer of cross-module context. Event Runtime does not write Chat history, role memory, or relationship truth.
+- A confirmed event may emit a bounded role-scoped memory candidate through an existing Owner Adapter. Relationship Runtime decides whether the candidate becomes durable role memory, and Chat consumes only the resulting projection.
+- Local events remain participant-scoped by default. Public world evolution may produce a separate world-scoped knowledge projection that same-world roles can retrieve when relevant; it is not copied into every role memory or injected into every prompt.
 
 Player-context, dynamic-world, and information-propagation direction is defined in `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`. The bounded Player Context V1 foundation is implemented without adding a Store, route, Event Surface host, Community/Media Module, or a new EVE stage; dynamic world evolution and information propagation are documented for a later implementation stage.
 

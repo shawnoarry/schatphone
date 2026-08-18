@@ -1,12 +1,12 @@
 # Event Runtime And World Hub Status And Handoff
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
 This file is the handoff page for event runtime, relationship runtime, World Hub, and future Cheats work.
 
 ## 1. Current Status
 
-Status: `PARTIAL_DONE / EVE-4A_TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN / EVE-4B_REFERENCE_VERTICAL_DONE / EVE-4C_DONE 2026-08-14 / PLAYER_CONTEXT_V1_FOUNDATION_DONE 2026-08-15 / CJA-5_ACTIVITY_SESSION_MIDPOINT_DONE 2026-08-16 / CJA-6A_CONTRACT_DONE 2026-08-17`
+Status: `PARTIAL_DONE / EVE-4A_TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN / EVE-4B_REFERENCE_VERTICAL_DONE / EVE-4C_DONE 2026-08-14 / PLAYER_CONTEXT_V1_FOUNDATION_DONE 2026-08-15 / CJA-5_ACTIVITY_SESSION_MIDPOINT_DONE 2026-08-16 / CJA-6A_CONTRACT_DONE 2026-08-17 / CHAT_ROLE_GREETING_CONTINUITY_DONE 2026-08-18`
 
 Confirmed persistence dependency for future work:
 
@@ -16,6 +16,12 @@ Confirmed persistence dependency for future work:
 - Event Runtime owns event/proposal definitions and provenance; Relationship Runtime remains the sole owner/writer of long-term relationship truth.
 - normalized proposals, validation/review outcomes, and minimal provenance are durable; full AI prompts, raw responses, uncommitted candidates, and transport payloads remain temporary. Approved output that becomes a formal post, scene, long-form, performance, or state-history record is handed to and persisted by its target owner.
 - Map World Suite inspection consumes `src/lib/simulation/map-pack-reference-projection.js` as a body-free external reference projection. Active Event Instances and pending Map Journey proposals count as current use; terminal instances and reviewed/applied/dismissed proposals remain historical protection. Only stable reference IDs and `mapPackId` cross the seam.
+
+### Role continuity and public world knowledge boundary
+
+Role continuity is the primary product consumer of cross-module context. Event Runtime owns eligibility, lifecycle, provenance, review, and owner requests; it does not own Chat history, role memory, or relationship truth. A confirmed event may expose a bounded, role-scoped memory candidate through an existing Owner Adapter, but Relationship Runtime decides whether that candidate becomes durable role memory. Chat and Contacts consume the resulting projections rather than raw Event Runtime logs.
+
+Local events remain participant-scoped by default. Public world evolution is a separate world-scoped knowledge projection: same-world roles may retrieve public facts, claims, or publications when relevant, but public knowledge is not copied into every role memory and is not injected into every Chat prompt. A public knowledge entry is not a personal memory unless the role experiences, receives, or discusses it. Visible role IDs, profile IDs, runtime entity keys, event response endpoints, and Event Instance IDs remain distinct references; no new universal identity Store follows from this rule.
 
 What is already landed:
 
@@ -93,6 +99,9 @@ Planned follow-up / not yet landed:
 11. EVE-2C adds no authored workplace scene asset: Map/world media remains optional and the current text-only fallback is complete.
 12. Player Context is limited to the landed K-pop V1 read-only identity seam; no dynamic Player State owner, World State And Arc Ledger, Community/Media owner, fact/claim/post Interface, investigation/clue owner, or identity-conditioned incident creation is implemented.
 13. The Shopping event case remains outside the current user-visible event acceptance boundary; only its shared commerce Adapter/interface proof is landed. Remaining Shopping product work stays with the Shopping owner.
+14. An event-to-role memory-candidate seam is not yet implemented as a generic runtime feature. Until separately promoted, event Adapters may continue to create only their currently accepted owner facts and relationship facts; they must not write Chat memory or broadcast event context to unrelated roles.
+15. Calendar's confirmed-event relationship Adapter is an existing owner-native proof of the allowed pattern: it requires a confirmed Calendar record and an explicit role/contact target, derives a stable source id and reusable `memoryKey`, dedupes through Relationship Runtime, and supports primary/supporting aggregation. It is not a generic Event Runtime memory seam and must not be moved into `store:simulation` or generalized into an all-event broadcast path.
+16. A bounded Chat continuity slice is now landed: after an applied `role_greeting_request`, Event Runtime invokes an optional owner callback; Chat/World Hub calls `recordChatSocialEventRelationshipFact()` with the explicit role target and Proposal ID. The resulting relationship fact is supporting-only, has no metric delta, and dedupes under `chat_social__role_greeting`. High-risk social transitions, free-text message extraction, and a generic all-event candidate API remain unimplemented.
 
 ## 2. Recommended Next Slice
 

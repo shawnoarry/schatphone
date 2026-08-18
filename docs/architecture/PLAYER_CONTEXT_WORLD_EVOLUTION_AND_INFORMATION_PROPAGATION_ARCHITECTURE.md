@@ -1,6 +1,6 @@
 # Player Context, World Evolution, And Information Propagation Architecture
 
-Updated: 2026-08-15
+Updated: 2026-08-18
 
 Status: `PLAYER_CONTEXT_V1_FOUNDATION_IMPLEMENTED / WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_DOCUMENTATION_ONLY`
 
@@ -45,6 +45,8 @@ Relevant earlier decisions already exist in:
 
 The missing piece was one shared contract connecting those decisions to dynamic world state and formal information propagation.
 
+Role continuity is the primary product consumer of these sources. Event Runtime does not write Chat history, role memory, or relationship truth. A confirmed local event may expose a bounded, role-scoped memory candidate through an existing Owner Adapter, but Relationship Runtime decides whether it becomes durable role memory. A public world evolution may instead produce a world-scoped public-knowledge projection that same-world roles can retrieve when relevant; that projection is not copied into every role memory or injected into every Chat prompt.
+
 ## 3. Ownership Model
 
 One concept keeps one primary owner.
@@ -59,6 +61,7 @@ One concept keeps one primary owner.
 | ownerless dynamic world fact or long-running world arc | future World State And Arc Ledger, only if proven necessary | world-native facts, incident state, unresolved hooks, and arc lineage that must outlive one Event Instance and have no existing domain owner |
 | event eligibility and progression | Event Runtime | reads references/snapshots, persists decisions and progression, requests owner actions, and audits results |
 | published forum/social/news content | future Community/Media Module | accounts, channels, posts, replies, reposts, subscriptions, read state, moderation state, and committed publication bodies |
+| public world knowledge projection | future accepted world-history/knowledge owner, using confirmed world facts and publication references | same-world retrieval of bounded public facts/claims/publications; not a copy of every role's memory and not a universal Event Runtime awareness graph |
 | collected clues, deductions, and case notes | future Investigation/Knowledge owner | user-retained clue references and conclusions; Community/Media does not become the investigation notebook |
 
 ### 3.1 Self Profile Boundary
@@ -139,7 +142,36 @@ Rules:
 4. stale, missing, mismatched-world, or unsupported profile/state references fail closed;
 5. a snapshot may prove eligibility, but it does not itself create an incident or mutate state.
 
-## 5. Fact, Claim, And Publication Separation
+## 5. Continuity Routing Matrix
+
+The same user-visible situation can cross several modules, but it must not become several competing memory systems. Route each source through its natural owner first, then decide whether it deserves a role-scoped continuity effect.
+
+| Source | Canonical owner | Default visibility | Role-memory behavior | Chat behavior |
+| --- | --- | --- | --- | --- |
+| explicit user action and the resulting domain record | the module that accepted the action | user plus the owner-defined participants/receivers | may produce a candidate only after the owner confirms a result; the candidate is evaluated per affected role | Chat may show a notification or receive a user disclosure, but does not inherit raw event logs |
+| Chat message, promise, confession, apology, preference, or relationship disclosure | Chat for the message; Relationship Runtime for accepted relationship meaning | the addressed role(s) and any explicit recipients | can be more important than a low-impact formal event; Relationship Runtime may create or merge a memory group from the conversation | remains in Chat history and enters prompt context only through bounded role-continuity recall |
+| confirmed local module fact (call, order, trip, calendar occurrence, payment, etc.) | the module that confirmed it | participants, owner, and explicit downstream receivers | optional role-scoped candidate; supporting facts may merge under an existing `memoryKey` | consuming Chat turns may retrieve the accepted memory projection, not the entire source record |
+| public world fact | world-history/knowledge owner when one exists | world scope, subject to publication and visibility rules | no personal memory by default; a role may later receive a candidate only after experiencing, receiving, or discussing it | retrieve only when the current turn makes it relevant |
+| claim or committed post/news item | Community/Media or future publication owner | channel, followers, subscriptions, or other publication scope | existence is public knowledge only within that scope; truth status and personal relevance stay separate | Chat may mention it when the role has a valid exposure path or the user tells the role |
+| Event Runtime lifecycle, audit, cooldown, and provenance metadata | Event Runtime | internal tooling/World Hub review | never a role memory by itself | never inject raw runtime metadata into a normal Chat prompt |
+
+The default local-event rule is therefore: `participant/receiver scope first, role-memory decision second, prompt recall last`. A public-world path is different: `confirmed fact/claim/post -> public knowledge projection -> relevant role retrieval -> optional role-memory candidate if personally experienced`. Neither path requires a universal role-awareness graph.
+
+### 5.1 Candidate Lifecycle
+
+The first implementation seam, when separately accepted, should be a narrow source-linked request rather than a new memory store:
+
+```text
+owner-confirmed source record
+  -> bounded candidate { roleRef, sourceRef, memoryKey?, relevance, visibility }
+  -> Relationship Runtime accepts | merges | keeps supporting-only | rejects
+  -> role-continuity projection
+  -> bounded Chat recall for the addressed role
+```
+
+`relevance` is a relationship-memory signal, not Event Runtime severity. `visibility` is a delivery/knowledge boundary, not permission for unrelated roles to read the source. The first implementation should reuse the existing Relationship Runtime `recordRelationshipFact(input)` seam from an owner/Relationship Adapter rather than add a parallel candidate Store/API. Until that Adapter seam is explicitly promoted for a source, existing adapters may submit their already-accepted owner or relationship facts only; they must not write Chat memory or broadcast context.
+
+## 6. Fact, Claim, And Publication Separation
 
 World information features require three different meanings.
 
@@ -188,7 +220,7 @@ The Module owns:
 
 A post is not a second Event Instance, and an Event Surface projection is not a post.
 
-## 6. Event Families And Trigger Rules
+## 7. Event Families And Trigger Rules
 
 This direction supports several reusable event families.
 
@@ -240,7 +272,7 @@ Runtime stores the request, decision, and publication reference. Community/Media
 
 Reading a post may lead the user into another real capability such as replying, contacting a role, calling, opening Map, reviewing an order, or collecting a clue. The action starts in the owner surface and uses that owner's Interface. A generic event choice must not impersonate an unavailable capability.
 
-## 7. World Incidents And Long-Running Arcs
+## 8. World Incidents And Long-Running Arcs
 
 One Event Instance represents one bounded occurrence. A longer narrative may need several occurrences, pauses, owner facts, and publications.
 
@@ -266,7 +298,7 @@ Rules:
 
 Before implementation, the project must decide whether Event Instance V2 can provide enough arc progression with references or whether a separate World State And Arc Ledger is justified. This document does not preselect a Store shape.
 
-## 8. API Role
+## 9. API Role
 
 AI may help produce bounded candidates, but it is not a truth owner.
 
@@ -290,7 +322,7 @@ AI must not:
 
 Any accepted generated copy is normalized, bounded, and persisted by the owner of the committed record. Raw prompts, responses, discarded candidates, and transport payloads remain transient by default.
 
-## 9. Native Presentation
+## 10. Native Presentation
 
 Event progression is mostly invisible. The user sees owner-native consequences.
 
@@ -307,7 +339,7 @@ Possible presentation forms include:
 
 No presentation form is universal. A formal post should appear as a post, a call as a call, an order issue in the commerce owner, and a Map encounter in Map. Event Runtime does not require a Home card or Event app.
 
-## 10. Reference K-Pop Chains
+## 11. Reference K-Pop Chains
 
 ### 10.1 Manager Incident
 
@@ -347,7 +379,7 @@ Contacts Self Profile: occupation = idol / public figure
 
 The user may cooperate, ignore the issue, argue, make an unexpected statement, or contact someone else. Model conversation is not constrained to one scripted answer; event progression waits for structured owner facts rather than treating arbitrary summary text as canonical truth.
 
-## 11. Fantasy, Mystery, And Investigation Use
+## 12. Fantasy, Mystery, And Investigation Use
 
 The same fact/claim/post split supports other worlds:
 
@@ -358,7 +390,7 @@ The same fact/claim/post split supports other worlds:
 
 If the user saves a post as a clue, the future Investigation/Knowledge owner stores a reference to the post/claim/fact and the user's note. It must not copy the whole Community/Media database or silently mark the claim true.
 
-## 12. Persistence, Retention, And Backup
+## 13. Persistence, Retention, And Backup
 
 Durability follows ownership:
 
@@ -372,7 +404,7 @@ Durability follows ownership:
 
 Authoritative facts, accepted arc decisions, committed publications, and required provenance must not be silently or irreversibly truncated. Rebuildable feed projections, rankings, caches, and diagnostic logs may be bounded separately. Backup/restore must preserve stable references or report broken lineage honestly.
 
-## 13. Failure And Safety Rules
+## 14. Failure And Safety Rules
 
 1. Missing or stale Self Profile/context references fail closed for identity-conditioned eligibility.
 2. A missing Community/Media Module means no publication request is executed; Runtime may keep a reviewable pending/failed result without fabricating a post.
@@ -382,7 +414,7 @@ Authoritative facts, accepted arc decisions, committed publications, and require
 6. Optional event permission can suppress optional incidents, but it cannot disable ordinary owner capabilities or required safety behavior.
 7. World Hub may explain an arc but cannot become the normal authoring surface for Self Profile, posts, facts, or clues.
 
-## 14. Implementation Gates
+## 15. Implementation Gates
 
 Implementation requires separate user acceptance for each stage. The 2026-08-15 Player Context V1 foundation completes the first named-family field/visibility freeze and focused deterministic unit foundation only; the remaining gates stay closed:
 
@@ -396,7 +428,7 @@ Implementation requires separate user acceptance for each stage. The 2026-08-15 
 
 No further step is authorized merely because the read-only foundation is implemented. World evolution, dynamic Player State, world arcs, Community/Media, investigation/clues, random incidents, model enrichment, and user-facing native surfaces remain separately gated.
 
-## 15. Explicit Do-Not-Do Rules
+## 16. Explicit Do-Not-Do Rules
 
 1. Do not store volatile player stats in Contacts Self Profile for convenience.
 2. Do not treat WorldBook as dynamic world-state storage.

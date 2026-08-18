@@ -1,6 +1,6 @@
 # Relationship Growth Event System / 好感度、关系进展与角色成长事件系统
 
-Updated: 2026-07-15
+Updated: 2026-08-18
 
 ## 1. Purpose
 
@@ -59,6 +59,9 @@ Recommended ownership:
 - Generated social events such as role-initiated greetings, refusal, blocks, restore, or unblock must be reviewed/audited through event runtime before they mutate Chat channel state.
 - WorldBook owns worldview, lore, knowledge points, and world-specific rule inputs.
 - Map, Shopping, Food Delivery, Wallet, Phone, Calendar, Gallery, and Assets may submit structured facts through adapters.
+- Event Runtime owns event eligibility, lifecycle, provenance, and owner requests. It may expose a bounded role-scoped memory candidate after an owner-confirmed result, but it does not write Chat history, role memory, or relationship truth. Chat may separately expose a disabled-by-default AI disclosure candidate only under an explicit review policy; that candidate must be fixed to the current role and an exact user-authored message, and remains temporary until Relationship Runtime decides what (if anything) to retain.
+- Relationship Runtime is the decision point for durable role memory. A candidate can be rejected, merged into an existing `memoryKey`, retained as a supporting fact, or promoted to a primary memory according to relationship relevance rather than event severity.
+- Public world evolution is a separate world-scoped knowledge projection. Same-world roles may retrieve relevant facts, claims, or publications when context calls for them; public knowledge is not automatically a personal memory and is not injected into every Chat prompt.
 - World Hub reads, reviews, and later adjusts runtime state, but should not become the main data entry surface for role/world records.
 
 Do not:
@@ -69,6 +72,8 @@ Do not:
 - Let every module create its own standalone long-term memory for the same life event when a shared memory summary would be enough.
 - Treat a hot-list cap as permission to erase already-applied relationship evidence. Hot/runtime limits and durable audit retention are separate concerns.
 - Let Chat or Contacts directly apply generated friend/block/refusal social events without the event-runtime review seam.
+- Treat a formal Event Instance as an automatic role memory, or treat a public world-knowledge entry as a copy that must be stored in every role profile.
+- Use event severity as a substitute for relationship-memory importance, or allow raw Event Runtime logs to bypass the Relationship Runtime recall seam.
 
 ## 4. Core Data Concepts
 
@@ -85,6 +90,8 @@ Recommended concepts for the first implementation:
 - `milestones`: important confirmed moments, such as first call, first gift, confession, argument, reunion, shared trip, rescue, betrayal, promise.
 - `factEvents`: source facts submitted by other modules before relationship rules interpret them.
 - `relationshipEvents`: interpreted effects such as affinity increase, trust decrease, stage candidate, milestone candidate, growth trait update.
+- `memoryCandidate`: a bounded source-linked suggestion that a confirmed module fact may matter to one role's future continuity; it is not durable memory until Relationship Runtime accepts or merges it.
+- `aiDisclosureCandidate`: a bounded, review-only suggestion emitted from a Chat model response. It carries only a model summary/reason plus trusted role/source binding; it cannot carry a `memoryKey`, relationship deltas, target override, or persistence decision, and it is not durable memory.
 - `memoryKey`: optional shared key that lets multiple low-impact facts point at one life event.
 - `memoryAggregate`: a compact runtime summary built from several applied facts that share the same `memoryKey`.
 - `relationshipLabelText` and `relationshipLabelNote`: profile-side premise prose saved on the role profile.
@@ -332,7 +339,7 @@ Alternative same-size slice:
 Avoid next:
 
 - Do not add high-impact automatic romance or conflict events before the store, logs, and user confirmation model exist.
-- Do not put relationship controls directly into Chat as the first implementation.
+- Do not make Chat a second relationship runtime or let a message action mutate relationship metrics directly. A narrow explicit disclosure action may call the shared Owner Adapter seam and remain supporting-only.
 - Do not expand role-initiated friend/block/refusal events outside the landed Chat social-event review seam.
 - Do not make World Hub visible by default for all users.
 - Do not make Gallery or photo-memory intake part of the main relationship loop until the product can produce or capture image context with near-zero user effort.
@@ -342,6 +349,13 @@ Avoid next:
 Current reusable interface:
 
 - `recordRelationshipFact(input)`: module adapters submit facts with target, source module or id, fact type, summary, metric deltas, milestone, growth traits, world context, optional `memoryKey`, and optional confirmation requirement.
+- Existing proof: Calendar's confirmed-event Adapter already uses this seam correctly. It accepts only a confirmed event plus an explicit role/contact target, builds a stable source reference, reuses a lineage-aware `memoryKey` for phone/map/shopping follow-ups, and lets Relationship Runtime decide primary versus supporting memory. This is an Owner Adapter example, not authorization to route all Event Runtime records into role memory.
+- Bounded Chat proof: after a `role_greeting_request` is actually applied to Chat, the Chat/World Hub owner callback may call `recordChatSocialEventRelationshipFact()` with the applied Proposal ID and role target. The adapter writes one supporting-only fact under `chat_social__role_greeting`, with no metric delta; blocked, dismissed, pending, or high-risk social proposals do not enter this path.
+- Bounded Chat disclosure proof: on an explicit user action over one user-authored message in one role thread, Chat may call `recordChatDisclosureRelationshipFact()` with the exact conversation/message source and role target. The adapter writes one supporting-only fact under `chat_disclosure__user_shared`, with no metric delta or stage change. Saved messages, assistant output, group/service threads, recalled messages, and ordinary message history do not enter this path.
+- Bounded Chat AI disclosure seam: when an explicit review policy is supplied, Chat may normalize a model `disclosureCandidates` array into temporary `aiDisclosureCandidate` objects. The parser supplies the role target, conversation, exact current user-message source, pending-review status, and review-only effect policy; it ignores model-selected roles, profile ids, memory keys, metric deltas, and persistence decisions. No candidate is written to Relationship Runtime until a future review surface explicitly chooses an existing Owner Adapter path.
+- First candidate-memory implementation rule: do not add a parallel `submitMemoryCandidate()` Store/API. An owner Adapter may normalize an owner-confirmed result into the existing `recordRelationshipFact(input)` seam with one explicit role target, stable `sourceModule`/`sourceId`, optional `memoryKey`, and an explicit supporting-only or confirmation policy. The Runtime then decides whether the fact becomes a primary memory, a supporting fact, a pending item, or no durable effect.
+- Event Runtime must not call `recordRelationshipFact` as a shortcut for its own logs. The call belongs at the owner/Relationship Adapter after the source owner has confirmed the result; Event Runtime may carry the source reference and request the Adapter action.
+- Until a public-world knowledge owner exists, `visibility` remains a routing/documentation concern rather than a persisted universal-awareness field. A role-targeted fact is delivered only to the explicit target; public facts use the future world-knowledge projection and do not enter this relationship-memory path automatically.
 - `relationshipGate`: `recordRelationshipFact(input)` persists normalized gate metadata and respects `block` by dismissing without applying effects, and `confirm` by keeping the fact pending until review.
 - `buildRelationshipFactGateFromPreset(input)`: future high-risk event packs can build hard-gate metadata from a preset id while still reading saved role-profile category/modifier fields only.
 - `submitChatSocialEventProposal(input)`: event runtime can store generated role-side social proposals, auto-apply low-risk greetings with audit, and keep high-risk communication changes pending for World Hub review before Chat applies them.

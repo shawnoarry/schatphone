@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Package
 
-Updated: 2026-08-15
+Updated: 2026-08-18
 
 Use this package for work touching Contacts, Chat Directory boundary, role identity, relationship reset/delete, one-memory delete, role detail IA, or World Hub cleanup semantics tied to one role.
 
@@ -52,6 +52,8 @@ Current cross-device handoff and execution record:
 - Relationship Runtime also owns the read-only memory-pressure projection over its complete per-role memory set. Contacts translates that projection into the user-facing `状态稳定 / 记忆开始变多 / 建议查看` care card and opens nominated existing memories through the normal detail/source-audit flow; it does not expose technical thresholds, call AI, or automatically summarize, rewrite, archive, or delete anything.
 - The pressure Module may later be reused for world chronology or role-to-role knowledge, but those systems must supply their own Owner and data. Contacts relationship memory must not become a mixed store for the whole world.
 - Chat social events such as message requests, blocks, and being-blocked states may be displayed in Contacts as role-level reachability/status snapshots, but Contacts must not judge eligibility or apply generated outcomes. Chat owns the applied channel state, Event Runtime and World Hub own generated-event review/audit, and relationship runtime owns confirmed relationship facts or memories.
+- A user-selected Chat disclosure is a role-scoped supporting fact, not a Contacts profile field: Chat owns the explicit message action and source reference, the Relationship Adapter writes the fact, and Contacts only presents the resulting memory group through existing review/read-model surfaces.
+- Chat may also expose a disabled-by-default AI `disclosureCandidates` proposal for a future review checkpoint. Contacts/Relationship Runtime must treat it as temporary input only: the parser fixes the role and exact user-message source, while a future review surface decides whether any existing memory adapter should receive it.
 - `World Hub` is an optional review and cleanup surface, not the main role-authoring page.
 - `WorldBook` should define profile-template rules; `Contacts` should store concrete profile values.
 - Self Profile's stable structured world identity is now consumable through the bounded read-only Player Context V1 projection for K-pop manager/public-idol eligibility. Contacts role profiles persist a monotonic revision; Runtime must present exact profile/world/template revision evidence and may read only manual visible allowlisted fields. Contacts does not own volatile reputation/media/fatigue/occupation-pressure values, world incidents, event decisions, or future forum/news posts. Read `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.

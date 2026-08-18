@@ -1,6 +1,6 @@
 # World Setting Architecture Contract
 
-Updated: 2026-08-13
+Updated: 2026-08-18
 
 Status: `ARCHITECTURE_ACCEPTED / STAGE_W1_DONE`
 
@@ -53,7 +53,7 @@ A capability definition owned by the World Pack Module. It may provide reviewed 
 
 ### World Suite
 
-A convenience manifest that coordinates installation of independently installable owner resources for one coherent experience. A suite may reference Book assets, WorldBook candidates, profile templates, capability Packs, Map packs, App Store entries, commerce facades, service-account templates, Event Runtime packs, Calendar templates, Music catalogs, Gallery asset packs, or later Mini Scene profiles. It owns only the manifest, dependency/order metadata, version expectations, origin tracking, bounded installed-resource evidence, and resumable install/update/uninstall checkpoints. Every referenced resource keeps its native owner, stable owner resource ID, independent installation path, activation state, records, and history.
+A convenience manifest that coordinates installation of independently installable owner resources for one coherent experience. A suite may reference Book assets, WorldBook candidates, profile templates, capability Packs, Map packs, App Store entries, commerce facades, service-account templates, Event Runtime packs, Calendar templates, Music catalogs, Gallery asset packs, public-world knowledge resources, or later Mini Scene profiles. It owns only the manifest, dependency/order metadata, version expectations, origin tracking, bounded installed-resource evidence, and resumable install/update/uninstall checkpoints. Every referenced resource keeps its native owner, stable owner resource ID, independent installation path, activation state, records, and history. Suite installation does not copy public knowledge into each role memory or activate a universal role-awareness path.
 
 `src/lib/world-suite-manifest.js` provides pure planning, `src/lib/world-suite-inventory.js` normalizes the persistent coordination evidence, and `src/lib/world-suite-owner-adapters.js` executes either a whole Suite plan or one independent resource plan through the same native Owner Adapter Interface. Native truth is inspected before and after mutations, so a retry can repair a lost install/remove checkpoint without repeating an already completed Owner mutation; partial operations retain completed/pending resource IDs for safe retry. `src/lib/book-world-suite-owner-adapter.js` is the first concrete production Adapter: Book Catalog resolves the asset body, Book persists one native asset plus explicit resource/catalog/version/fingerprint provenance, and independent/Suite origins share it. Existing built-ins and user assets are not claimed, WorldBook links protect current/history use, Catalog version remains separate from Book edit version, and failed legacy or Repository writes roll in-memory truth back. No built-in K-pop Suite, UI, activation command, or non-Book production Adapter exists yet.
 

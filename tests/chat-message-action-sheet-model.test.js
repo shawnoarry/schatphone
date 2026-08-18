@@ -14,10 +14,16 @@ const editableRichTypes = new Set([
   'image_virtual',
 ])
 
-const createModel = ({ messages = [], isService = false, closeUserActionPanel = vi.fn() } = {}) =>
+const createModel = ({
+  messages = [],
+  isService = false,
+  isRole = false,
+  closeUserActionPanel = vi.fn(),
+} = {}) =>
   useChatMessageActionSheetModel({
     activeMessages: ref(messages),
     isActiveServiceChat: ref(isService),
+    isActiveRoleChat: ref(isRole),
     editableRichMessageTypes: editableRichTypes,
     closeUserActionPanel,
     t,
@@ -84,6 +90,31 @@ describe('Chat message action sheet model interface', () => {
     )
     expect(model.messageActionRows.value.find((action) => action.id === CHAT_MESSAGE_ACTION_IDS.REROLL)?.label).toBe(
       'Regenerate',
+    )
+  })
+
+  test('offers explicit role-memory capture only for user messages in a role thread', () => {
+    const model = createModel({
+      isRole: true,
+      messages: [{ id: 'm-disclosure', role: 'user', content: '我对花生过敏。' }],
+    })
+
+    model.openMessageActions('m-disclosure')
+
+    expect(model.messageActionRows.value.map((action) => action.id)).toContain(
+      CHAT_MESSAGE_ACTION_IDS.REMEMBER,
+    )
+    expect(model.messageActionRows.value.find((action) => action.id === CHAT_MESSAGE_ACTION_IDS.REMEMBER)?.label).toBe(
+      'Remember for them',
+    )
+
+    const assistantModel = createModel({
+      isRole: true,
+      messages: [{ id: 'm-assistant', role: 'assistant', content: '收到。' }],
+    })
+    assistantModel.openMessageActions('m-assistant')
+    expect(assistantModel.messageActionRows.value.map((action) => action.id)).not.toContain(
+      CHAT_MESSAGE_ACTION_IDS.REMEMBER,
     )
   })
 

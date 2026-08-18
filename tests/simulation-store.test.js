@@ -5,6 +5,8 @@ import {
   CHAT_SOCIAL_EVENT_TYPES,
 } from '../src/lib/chat-social-event-review'
 import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../src/stores/chat'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { recordChatSocialEventRelationshipFact } from '../src/lib/relationship-fact-adapters'
 import {
   SIMULATION_EVENT_STATUS,
   SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
@@ -353,8 +355,16 @@ describe('simulation store', () => {
 
   test('stores generated Chat social proposals and applies only approved communication changes', () => {
     const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
     const store = useSimulationStore()
     store.resetForTesting()
+    relationshipRuntimeStore.resetForTesting()
+    const onApplied = (proposal) =>
+      recordChatSocialEventRelationshipFact({
+        relationshipRuntimeStore,
+        chatStore,
+        proposal,
+      })
     store.setSurpriseMode(SIMULATION_SURPRISE_MODE.BALANCED)
 
     const profile = chatStore.addRoleProfile({
@@ -371,7 +381,7 @@ describe('simulation store', () => {
         eventType: CHAT_SOCIAL_EVENT_TYPES.ROLE_GREETING_REQUEST,
         triggerSource: SIMULATION_TRIGGER_SOURCE.AI_ASSISTED,
       },
-      { chatStore, at: Date.now() },
+      { chatStore, onApplied, at: Date.now() },
     )
 
     expect(greeting).toMatchObject({
@@ -382,6 +392,13 @@ describe('simulation store', () => {
     expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
       CHAT_CONTACT_SOCIAL_STATES.INCOMING_REQUEST,
     )
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+    expect(relationshipRuntimeStore.events[0]).toMatchObject({
+      sourceModule: 'relationship_chat_social_event',
+      factType: 'role_initiated_chat_greeting',
+      memoryRole: 'supporting',
+      effectApplied: false,
+    })
     expect(store.recentEventLogs[0]).toMatchObject({
       eventId: 'chat.social.role_greeting_request.v1',
       moduleKey: 'chat',
@@ -410,7 +427,11 @@ describe('simulation store', () => {
     )
     expect(store.pendingChatSocialEventProposalCount).toBe(1)
 
-    const approved = store.approveChatSocialEventProposal(block.id, { chatStore, at: Date.now() + 3 })
+    const approved = store.approveChatSocialEventProposal(block.id, {
+      chatStore,
+      onApplied,
+      at: Date.now() + 3,
+    })
     expect(approved?.status).toBe(CHAT_SOCIAL_EVENT_STATUS.APPLIED)
     expect(chatStore.getContactChatSocialState(chatStore.getContactById(contact.id))).toBe(
       CHAT_CONTACT_SOCIAL_STATES.CONTACT_BLOCKED,

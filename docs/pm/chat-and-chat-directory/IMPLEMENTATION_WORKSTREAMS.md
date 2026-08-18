@@ -1,6 +1,6 @@
 # Chat And Chat Directory Implementation Workstreams / 聊天与会话通讯录实施工作流
 
-Updated: 2026-08-13
+Updated: 2026-08-18
 
 ## 1. Workstream A: Chat Thread Behavior
 
@@ -8,6 +8,8 @@ Updated: 2026-08-13
 - provider-neutral transient AI message-window budgeting shared by normal reply and regeneration, without mutating Chat history or adding a persisted setting
 - approximate next-request text-token visibility derived from that transient projection, with readable world/supporting/recent-conversation parts, explicit model variance and image exclusion, and no content limit or prompt persistence
 - message actions
+- explicit role-disclosure action for one user-authored message, using a role-bound source reference and the shared Relationship Adapter
+- disabled-by-default AI `disclosureCandidates` normalization behind an explicit review policy; candidates are bound to the trusted role and an exact current user-message id, remain temporary, and do not write Relationship Runtime
 - delete vs recall behavior for ordinary role/group messages
 - rich message surfaces
 - thread-level preferences
@@ -37,6 +39,7 @@ Updated: 2026-08-13
 - chat-target lifecycle
 - direct Chat social-channel state for greeting requests, blocked, and blocked-by-role outcomes
 - generated social events only through the landed event-runtime review/audit seam
+- Chat disclosure facts remain supporting-only and never bypass Relationship Runtime memory aggregation; ordinary messages and assistant output are not scanned
 - unbind-only rules
 - Chat-local relationship compatibility annotations, labeled as tuning/note rather than current relationship truth
 
@@ -85,3 +88,4 @@ Treat these as bugs:
 12. Chat executes legacy/generated Mini Scene HTML or copies Book regex, profile resolution, artifact persistence, presenter, or fallback logic into Chat
 13. Chat Appearance presentation controls mutate message, relationship, or source-module truth, or expose a Chat-local header note as authoritative relationship progress
 14. the TTS preview is treated as a sent voice message, persisted in Chat, or allowed to upgrade `voice_virtual` without a separately approved Chat media contract
+15. saved messages, assistant replies, or ordinary Chat history are treated as role memory without the explicit disclosure action, or the disclosure action writes metrics/stage directly

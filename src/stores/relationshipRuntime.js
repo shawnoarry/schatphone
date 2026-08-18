@@ -390,6 +390,7 @@ const RELATIONSHIP_SOURCE_RECALL_LABELS = Object.freeze({
   relationship_map_shared_route: 'Shared route',
   relationship_wallet_shared_transfer: 'Wallet transfer',
   relationship_calendar_confirmed_event: 'Calendar plan',
+  relationship_chat_user_disclosure: 'Chat disclosure',
 })
 
 const formatMemorySourceModuleForRecall = (sourceModule = '') => {

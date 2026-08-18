@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -18,6 +18,7 @@ Updated: 2026-08-17
 - memory-group governance
 - pending confirmation logic
 - cleanup and recall rules
+- bounded applied Chat role-greeting continuity adapter: owner callback only, explicit role target and Proposal ID, supporting-only and metric-neutral
 
 Current landed guardrail:
 
@@ -138,6 +139,9 @@ Status: `PLAYER_CONTEXT_V1_FOUNDATION_DONE / WORLD_EVOLUTION_AND_INFORMATION_PRO
 - inventory every dynamic player/world value against existing owners before proposing a Player State Module or World State And Arc Ledger
 - separate owner-confirmed facts, account/person claims, and committed Community/Media posts
 - let Event Runtime coordinate eligibility, persisted decisions, fact waits, owner requests, references, and provenance without owning publication bodies or arbitrary world truth
+- keep role continuity as the primary consumer of cross-module context: Event Runtime may return a bounded, role-scoped memory candidate after owner confirmation, while Relationship Runtime decides whether it becomes durable memory and Chat consumes only the resulting projection
+- keep local-event visibility participant-scoped by default; public world evolution may produce a separate world-scoped fact/claim/publication projection for same-world retrieval without copying it into every role memory or prompt
+- keep event severity, world-publication reach, and role-memory importance as separate signals; a formal event is not automatically a durable memory, and a meaningful Chat disclosure is not required to be a formal Event Instance
 - keep ordinary no-event behavior and local deterministic eligibility available without an API
 - the first manager/public-idol eligibility policy and Contacts revision migration are landed; freeze a separately accepted owner-native incident recipe, persistence/audit rules, native product surface, no-event path, and deterministic fixtures before any random trigger, model call, or new EVE-stage proposal
 - do not infer authorization for EVE-5, CJA-6B, a Forum/News app, Chat Me feed expansion, closed-page simulation, investigation storage, or high-impact reputation/identity mutation
@@ -174,3 +178,6 @@ Treat these as bugs:
 26. volatile player/world state is pushed into Contacts, WorldBook, or Event Runtime because callers want one convenient Store
 27. a claim, post, Phone summary, or model output is treated as an owner-confirmed fact
 28. Event Runtime persists a future Community/Media publication body or a future clue system stores its deductions inside the event log
+29. Event Runtime writes Chat history, role memory, or relationship truth directly, or a consumer uses raw Event Runtime logs as an unfiltered prompt context
+30. a local event is broadcast to unrelated roles merely because it is persisted, or a public world-knowledge projection is copied into every role's personal memory
+31. event severity is reused as role-memory importance, or a low-impact formal event is allowed to outrank a meaningful user disclosure without a Relationship Runtime decision

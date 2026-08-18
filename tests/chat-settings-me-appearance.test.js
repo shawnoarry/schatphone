@@ -23,6 +23,7 @@ import { useChatStore } from '../src/stores/chat'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
 import { useWalletStore } from '../src/stores/wallet'
+import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { callAI } from '../src/lib/ai'
 import { getChatAppearanceClasses } from '../src/lib/chat-appearance'
@@ -442,6 +443,62 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(wrapper.find('[data-testid="chat-message-action-reroll"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="chat-message-action-recall"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="chat-message-action-delete"]').exists()).toBe(true)
+
+    wrapper.unmount()
+  })
+
+  test('lets the user explicitly add one user message to role continuity without changing metrics', async () => {
+    const router = createTestRouter()
+    const chatStore = useChatStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const roleProfile = chatStore.addRoleProfile({
+      name: 'Mina Memory',
+      role: 'Listener',
+      isMain: true,
+    })
+    const contact = chatStore.addContact({
+      kind: 'role',
+      profileId: roleProfile.id,
+      name: 'Mina Memory',
+      role: 'Listener',
+    })
+    const message = chatStore.appendMessage(contact.id, {
+      role: 'user',
+      content: '我不喜欢医院的消毒水味。',
+      status: 'delivered',
+    })
+
+    await router.push(`/chat/${contact.id}`)
+    await router.isReady()
+
+    const wrapper = mount(ChatView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    const row = wrapper.get(`[data-testid="chat-message-row-${message.id}"]`)
+    await row.get('[data-testid="chat-message-bubble"]').trigger('contextmenu')
+    await flushUi()
+
+    expect(wrapper.find('[data-testid="chat-message-action-remember"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="chat-message-action-remember"]').trigger('click')
+    await flushUi()
+
+    expect(relationshipRuntimeStore.events).toHaveLength(1)
+    expect(relationshipRuntimeStore.events[0]).toMatchObject({
+      sourceModule: 'relationship_chat_user_disclosure',
+      factType: 'user_disclosure',
+      memoryRole: 'supporting',
+      effectApplied: false,
+    })
+    expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: roleProfile.id }).metrics).toMatchObject({
+      affinity: 50,
+      trust: 50,
+      intimacy: 20,
+    })
 
     wrapper.unmount()
   })

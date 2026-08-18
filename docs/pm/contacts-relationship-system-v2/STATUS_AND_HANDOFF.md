@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-08-15
+Updated: 2026-08-18
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -13,6 +13,8 @@ Confirmed persistence dependency for future work:
 - role profiles, archived-role state, relationship facts, memories, and accepted audit evidence cannot be silently or irreversibly deleted for capacity management;
 - moving older records out of the hot working set is allowed only through reversible cold archival that preserves Contacts/World Hub review and restore semantics;
 - Relationship Runtime remains the sole truth owner; the storage package owns persistence mechanics and must not copy that truth into Contacts.
+
+Role continuity boundary: Contacts owns stable role identity, profile values, and visible role references; Relationship Runtime owns durable relationship facts and role memory groups; Chat consumes bounded projections. Event Runtime may provide a source reference or bounded role-memory candidate after an owner-confirmed event, but it does not write Contacts or role memory directly. Public world knowledge remains a shared world-scoped projection and is not copied into every role memory.
 
 What is already landed:
 
@@ -79,6 +81,7 @@ What is already landed:
 61. Contacts detail now uses a dedicated role-page hierarchy. The list no longer preselects or appends a role detail; selecting a person opens a route-addressable role overview, and Relationship, World fields, Memories, Character details, Linked activity, and Manage open as mutually exclusive focused sections. Each section starts at the top of the detail viewport, names the selected person and current section, and returns explicitly to the role card. The same flow is constrained to a readable centered width on wide screens and remains overflow-free at 390px. This presentation change does not alter profile, Chat binding, relationship-runtime, memory, source-cleanup, or destructive-action ownership.
 62. The Player Context direction keeps Self Profile as the owner of stable structured, visibility-scoped user identity while volatile player/world state, event decisions, owner facts, Community/Media posts, and investigation clues remain outside Contacts. Read `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
 63. Contacts role profiles now carry a monotonic persisted `revision`; legacy records normalize to revision `1`, and every profile-owned write seam increments it. Event Runtime's pure Player Context V1 seam consumes exact Self Profile/world/template revision evidence and only manual `public` / matching-world `world_specific` values from the K-pop `occupation`, `affiliation`, and `public_identity` allowlist. Contacts does not judge manager/public-idol eligibility and exposes no biography, relationship prose, hidden values, event-attached values, or copied owner bodies through this Interface.
+64. Chat now has one explicit user-disclosure Adapter proof: a user-authored message in a role thread can be marked for that role to remember, producing a role-scoped supporting-only Relationship Runtime fact keyed to the conversation/message source. Contacts remains the identity and memory-review owner; it does not parse Chat text, classify disclosures, or copy the message into profile fields. No metrics, stage, or global world knowledge changes from this path.
 
 Still incomplete:
 
@@ -87,7 +90,8 @@ Still incomplete:
 3. Contacts template adaptation is functional but the before/after preservation review can become a clearer visual diff;
 4. high-impact relationship automation remains deferred;
 5. the proposed K-pop role-template expansion is still part of roadmap 4.7 `DECISION`, not approved Contacts work.
-6. Player Context remains limited to the landed K-pop V1 read-only identity projection; no dynamic Player State owner, identity-conditioned event recipe, automatic incident, or social/news surface is implemented.
+6. Player Context remains limited to the landed K-pop V1 read-only identity projection; no dynamic Player State owner, identity-conditioned event recipe, automatic incident, or social/news surface is implemented. Public world knowledge and event-to-role memory candidates remain separate future projections.
+7. Chat now exposes only a disabled-by-default, role-bound AI disclosure candidate normalization seam. It accepts an exact user-message source and bounded model summary/reason, but does not choose a memory key, relationship effect, or persistence result; no candidate enters Relationship Runtime until a future review surface explicitly decides it. Automatic extraction, periodic role-memory consolidation, and the dedicated review surface remain future work; the current explicit Chat action is still the only active supporting-fact intake path.
 
 ## 2. Recommended Next Slice
 
@@ -232,6 +236,7 @@ The older cross-device plans remain implementation history. They are not current
 - Focused Contacts Vitest passes on 2026-08-13 for the dedicated role page and mutually exclusive section navigation: 9 files / 53 tests.
 - Contacts, WorldBook -> Contacts, and Contacts -> Chat Playwright flows pass on 2026-08-13 across desktop Chromium and simulated Pixel 5: 6 tests. The Contacts flow proves list-first entry, focused Memories presentation in the first detail viewport, return to the role card, return to the contact list, and no horizontal overflow.
 - Focused lint, `git diff --check`, production build, and in-browser visual inspection pass on 2026-08-13. Relationship, World fields, Memories, Character details, Linked activity, and Manage all start at the top of the 390px detail viewport without horizontal overflow; the wide role page is centered at a readable maximum width.
+- The 2026-08-18 Chat disclosure Adapter and AI-candidate parser proof passes focused action/UI/adapter/parser/prompt coverage plus the full 291-file / 2067-test Vitest suite; ESLint, governance, `git diff --check`, and production build pass. The slice does not add a Contacts route or change Contacts write ownership.
 
 ## 5. Must Sync When Working Here
 

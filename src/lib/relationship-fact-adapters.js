@@ -1,5 +1,11 @@
 import { SHOPPING_SOURCE_KEYS } from './planned-module-registry'
 import { buildRelationshipFactGate } from './relationship-event-gating'
+import { CHAT_SOCIAL_EVENT_STATUS, CHAT_SOCIAL_EVENT_TYPES } from './chat-social-event-review'
+import {
+  buildChatDisclosureProposal,
+  CHAT_DISCLOSURE_MEMORY_KEY,
+  CHAT_DISCLOSURE_SOURCE_MODULE,
+} from './chat-disclosure-proposals'
 
 export const RELATIONSHIP_FACT_SOURCE_KEYS = Object.freeze({
   SHOPPING_GIFT: 'relationship_shopping_gift',
@@ -9,6 +15,8 @@ export const RELATIONSHIP_FACT_SOURCE_KEYS = Object.freeze({
   MAP_SHARED_ROUTE: 'relationship_map_shared_route',
   WALLET_SHARED_TRANSFER: 'relationship_wallet_shared_transfer',
   CALENDAR_CONFIRMED_EVENT: 'relationship_calendar_confirmed_event',
+  CHAT_SOCIAL_EVENT: 'relationship_chat_social_event',
+  CHAT_USER_DISCLOSURE: CHAT_DISCLOSURE_SOURCE_MODULE,
 })
 
 const LOW_RISK_RELATIONSHIP_GATE_CATEGORIES = Object.freeze([
@@ -679,5 +687,157 @@ export const recordCalendarConfirmedEventRelationshipFact = ({
       target: suggestion.target,
       factType: 'scheduled_calendar_event',
     }),
+  })
+}
+
+export const buildChatSocialEventRelationshipSuggestion = ({
+  relationshipRuntimeStore,
+  chatStore,
+  proposal,
+} = {}) => {
+  const eventType = normalizeText(proposal?.eventType, '', 120)
+  const proposalId = normalizeText(proposal?.id, '', 180)
+  const contactId = toInt(proposal?.targetContactId, 0)
+  const contact =
+    contactId > 0 && typeof chatStore?.getContactById === 'function'
+      ? chatStore.getContactById(contactId)
+      : null
+  const resolvedTarget = resolveRelationshipTargetFromContact(contact)
+  const sourceId = buildRelationshipSourceId(proposalId, eventType, relationshipTargetKey(resolvedTarget))
+  const available = Boolean(
+    relationshipRuntimeStore &&
+      proposal?.status === CHAT_SOCIAL_EVENT_STATUS.APPLIED &&
+      eventType === CHAT_SOCIAL_EVENT_TYPES.ROLE_GREETING_REQUEST &&
+      proposalId &&
+      resolvedTarget?.kind === 'role' &&
+      sourceId,
+  )
+
+  return {
+    available,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_SOCIAL_EVENT,
+    sourceId,
+    target: resolvedTarget,
+    targetName: resolvedTarget?.name || normalizeText(proposal?.targetName, '', 100),
+    eventType,
+    imported: available
+      ? Boolean(
+          findRelationshipFactBySource(
+            relationshipRuntimeStore,
+            RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_SOCIAL_EVENT,
+            sourceId,
+          ),
+        )
+      : false,
+  }
+}
+
+export const recordChatSocialEventRelationshipFact = ({
+  relationshipRuntimeStore,
+  chatStore,
+  proposal,
+} = {}) => {
+  const suggestion = buildChatSocialEventRelationshipSuggestion({
+    relationshipRuntimeStore,
+    chatStore,
+    proposal,
+  })
+  if (!relationshipRuntimeStore || !suggestion.available) return null
+  const existing = findRelationshipFactBySource(
+    relationshipRuntimeStore,
+    RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_SOCIAL_EVENT,
+    suggestion.sourceId,
+  )
+  if (existing) return existing
+
+  const summary = `Role-initiated Chat greeting recorded with ${suggestion.targetName || 'a relationship contact'}.`
+  return relationshipRuntimeStore.recordRelationshipFact({
+    target: suggestion.target,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_SOCIAL_EVENT,
+    sourceId: suggestion.sourceId,
+    memoryKey: buildRelationshipMemoryKey('chat_social', 'role_greeting'),
+    factType: 'role_initiated_chat_greeting',
+    summary,
+    intensity: 1,
+    metricDeltas: {},
+    growthTraits: ['chat-social', 'role-initiated'],
+    forceSupportingMemory: true,
+    relationshipGate: proposal?.relationshipGate,
+  })
+}
+
+export const buildChatDisclosureRelationshipSuggestion = ({
+  relationshipRuntimeStore,
+  contact,
+  conversationId,
+  message,
+  summary,
+  createdAt,
+} = {}) => {
+  const proposal = buildChatDisclosureProposal({
+    contact,
+    conversationId,
+    message,
+    summary,
+    createdAt,
+  })
+  const imported = Boolean(
+    proposal &&
+      findRelationshipFactBySource(
+        relationshipRuntimeStore,
+        RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_USER_DISCLOSURE,
+        proposal.sourceId,
+      ),
+  )
+
+  return {
+    available: Boolean(proposal),
+    imported,
+    proposal,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_USER_DISCLOSURE,
+    sourceId: proposal?.sourceId || '',
+    target: proposal?.target || null,
+    targetName: proposal?.target?.name || '',
+  }
+}
+
+export const recordChatDisclosureRelationshipFact = ({
+  relationshipRuntimeStore,
+  contact,
+  conversationId,
+  message,
+  summary,
+  createdAt,
+} = {}) => {
+  const suggestion = buildChatDisclosureRelationshipSuggestion({
+    relationshipRuntimeStore,
+    contact,
+    conversationId,
+    message,
+    summary,
+    createdAt,
+  })
+  if (!relationshipRuntimeStore || !suggestion.available) return null
+  if (suggestion.imported) {
+    return findRelationshipFactBySource(
+      relationshipRuntimeStore,
+      RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_USER_DISCLOSURE,
+      suggestion.sourceId,
+    )
+  }
+
+  const proposal = suggestion.proposal
+  return relationshipRuntimeStore.recordRelationshipFact({
+    target: suggestion.target,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_USER_DISCLOSURE,
+    sourceId: suggestion.sourceId,
+    memoryKey: CHAT_DISCLOSURE_MEMORY_KEY,
+    factType: proposal.factType,
+    summary: proposal.summary,
+    intensity: 1,
+    metricDeltas: {},
+    growthTraits: ['chat-disclosure', 'user-shared'],
+    forceSupportingMemory: true,
+    createdAt: proposal.createdAt || undefined,
   })
 }

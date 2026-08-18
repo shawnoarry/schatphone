@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, override-lane design, the landed Player Context V1 eligibility foundation, and the still-documentation-only world-evolution/information-propagation contracts.
 
@@ -9,6 +9,8 @@ Confirmed persistence boundary: accepted relationship facts and the provenance n
 Confirmed AI-artifact boundary: Event Runtime persists normalized proposals, review decisions, applied/rejected status, and minimum source/provider provenance. It does not retain the complete AI prompt, raw provider response, or uncommitted generated content by default. If an approved event formally publishes a post, scene, episode/performance record, long-form artifact, or state history, the target module stores that committed canonical content while Event Runtime keeps provenance and outcome references.
 
 Current Map World Suite reference boundary: persisted Event Instances and Map Journey Event Proposals expose a pure current/history Map-pack reference projection. It carries stable runtime reference IDs and `mapPackId` only; event copy, text materialization, participant facts, and source bodies remain Event Runtime-owned and are not copied into Map inspection.
+
+Role continuity is the primary product consumer of cross-module context. Event Runtime may expose a bounded, role-scoped memory candidate after an owner-confirmed event, but it does not write Chat history, role memory, or relationship truth. Relationship Runtime remains the decision point for durable role memory. Public world evolution follows a separate world-scoped knowledge projection: same-world roles may retrieve relevant public facts, claims, or publications without receiving every Event Runtime log or storing a copy in personal memory.
 
 Current handoff: EVE-4A is `TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WITHDRAWN`; EVE-4B is an implemented owner-native reference vertical; EVE-4C is `DONE 2026-08-14`. Event Runtime coordinates causes, eligibility, generic Event Instance V2 progression, provenance, and audit; owner Adapters write canonical truth; each owner presents the result through its native form. Participating in an event chain does not require registering an Event Surface. World Hub still exposes one Event Notebook read model over existing Event Instances, logs, Chat social proposals, and Map Journey proposals, with source/module/status filters, stable lineage review, stale-source fail-safe rows, and event-scoped notes. `store:simulation` V6 preserves V1/V2 instances and notes, adds Activity Session checkpoint-event records plus independent presentation policy, migrates V1-V5, includes them in backup/restore, and does not discard durable review truth when bounded runtime logs rotate. Notebook selection and note actions do not retrigger an event, mutate source records, create Reminders or Calendar plans, or inherit Cheats authority.
 
