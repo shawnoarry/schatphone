@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from '../../composables/useI18n'
 
 const props = defineProps({
@@ -39,6 +39,10 @@ const props = defineProps({
   threadSettingsDraft: {
     type: Object,
     required: true,
+  },
+  threadSettingsDefaults: {
+    type: Object,
+    default: () => ({}),
   },
   replyModeOptions: {
     type: Array,
@@ -152,11 +156,26 @@ const updateIdentity = (key, value) => {
   emit('update-thread-identity', { key, value })
 }
 
+const threadSettingsDirty = ref(false)
+
+const isThreadSettingOverridden = (key) =>
+  Object.prototype.hasOwnProperty.call(props.threadSettingsDefaults, key) &&
+  props.threadSettingsDraft[key] !== props.threadSettingsDefaults[key]
+
+watch(
+  () => props.threadSettingsSaved,
+  (saved) => {
+    if (saved) threadSettingsDirty.value = false
+  },
+)
+
 const updateSetting = (key, value) => {
+  threadSettingsDirty.value = true
   emit('update-thread-setting', { key, value })
 }
 
 const updateNumberSetting = (key, value) => {
+  threadSettingsDirty.value = true
   const numericValue = Number(value)
   emit('update-thread-setting', {
     key,
@@ -167,7 +186,7 @@ const updateNumberSetting = (key, value) => {
 
 <template>
   <div
-    class="absolute inset-0 z-30 flex items-end bg-black/25"
+    class="chat-thread-menu-layer absolute inset-0 z-30 flex items-end bg-black/25"
     data-testid="chat-thread-details-layer"
     role="dialog"
     aria-modal="true"
@@ -194,7 +213,7 @@ const updateNumberSetting = (key, value) => {
         <span class="h-9 w-9" aria-hidden="true"></span>
       </header>
 
-      <div class="overflow-y-auto px-4 pb-6 pt-4 no-scrollbar">
+      <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4 no-scrollbar">
         <div class="flex flex-col items-center text-center">
           <span class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-lg font-semibold text-gray-600">
             <img v-if="contactAvatar" :src="contactAvatar" :alt="activeChat?.name || ''" class="h-full w-full object-cover" />
@@ -511,7 +530,7 @@ const updateNumberSetting = (key, value) => {
       </div>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('回复模式', 'Reply Mode') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('回复模式', 'Reply Mode') }}<em v-if="isThreadSettingOverridden('replyMode')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <select
           :value="threadSettingsDraft.replyMode"
           class="rounded-lg border border-gray-200 px-2 py-1"
@@ -522,7 +541,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('每次触发回复条数', 'Replies per trigger') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('每次触发回复条数', 'Replies per trigger') }}<em v-if="isThreadSettingOverridden('replyCount')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :value="threadSettingsDraft.replyCount"
           type="number"
@@ -534,7 +553,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('回复风格', 'Response style') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('回复风格', 'Response style') }}<em v-if="isThreadSettingOverridden('responseStyle')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <select
           :value="threadSettingsDraft.responseStyle"
           class="rounded-lg border border-gray-200 px-2 py-1"
@@ -545,7 +564,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('可选回复建议', 'Suggested replies') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('可选回复建议', 'Suggested replies') }}<em v-if="isThreadSettingOverridden('suggestedRepliesEnabled')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :checked="threadSettingsDraft.suggestedRepliesEnabled"
           type="checkbox"
@@ -555,7 +574,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('双语输出', 'Bilingual output') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('双语输出', 'Bilingual output') }}<em v-if="isThreadSettingOverridden('bilingualEnabled')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :checked="threadSettingsDraft.bilingualEnabled"
           type="checkbox"
@@ -565,7 +584,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3" v-if="threadSettingsDraft.bilingualEnabled">
-        <span>{{ t('第二语言', 'Secondary language') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('第二语言', 'Secondary language') }}<em v-if="isThreadSettingOverridden('secondaryLanguage')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :value="threadSettingsDraft.secondaryLanguage"
           type="text"
@@ -585,7 +604,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('允许引用自己', 'Allow self quote') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('允许引用自己', 'Allow self quote') }}<em v-if="isThreadSettingOverridden('allowSelfQuote')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :checked="threadSettingsDraft.allowSelfQuote"
           type="checkbox"
@@ -596,7 +615,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('虚拟语音', 'Virtual voice') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('虚拟语音', 'Virtual voice') }}<em v-if="isThreadSettingOverridden('virtualVoiceEnabled')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :checked="threadSettingsDraft.virtualVoiceEnabled"
           type="checkbox"
@@ -606,7 +625,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('读取上文轮数', 'Context turns') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('读取上文轮数', 'Context turns') }}<em v-if="isThreadSettingOverridden('contextTurns')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :value="threadSettingsDraft.contextTurns"
           type="number"
@@ -618,7 +637,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('参考图模式', 'Image reference mode') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('参考图模式', 'Image reference mode') }}<em v-if="isThreadSettingOverridden('imageReferenceMode')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <select
           :value="threadSettingsDraft.imageReferenceMode"
           class="rounded-lg border border-gray-200 px-2 py-1"
@@ -628,7 +647,7 @@ const updateNumberSetting = (key, value) => {
         </select>
       </label>
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('无参考图时允许图片消息', 'Allow image blocks without references') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('无参考图时允许图片消息', 'Allow image blocks without references') }}<em v-if="isThreadSettingOverridden('allowImageVirtualWithoutReference')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :checked="threadSettingsDraft.allowImageVirtualWithoutReference"
           type="checkbox"
@@ -660,7 +679,7 @@ const updateNumberSetting = (key, value) => {
       </p>
 
       <label class="flex items-center justify-between gap-3">
-        <span>{{ t('主动开场', 'Proactive opener') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('主动开场', 'Proactive opener') }}<em v-if="isThreadSettingOverridden('proactiveOpenerEnabled')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <input
           :checked="threadSettingsDraft.proactiveOpenerEnabled"
           type="checkbox"
@@ -670,7 +689,7 @@ const updateNumberSetting = (key, value) => {
       </label>
 
       <label class="flex items-center justify-between gap-3" v-if="threadSettingsDraft.proactiveOpenerEnabled">
-        <span>{{ t('主动策略', 'Proactive strategy') }}</span>
+        <span class="inline-flex items-center gap-1.5">{{ t('主动策略', 'Proactive strategy') }}<em v-if="isThreadSettingOverridden('proactiveOpenerStrategy')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
         <select
           :value="threadSettingsDraft.proactiveOpenerStrategy"
           class="rounded-lg border border-gray-200 px-2 py-1"
@@ -682,7 +701,7 @@ const updateNumberSetting = (key, value) => {
 
       <div class="border-t border-gray-200 pt-2 space-y-2">
         <div class="flex items-center justify-between gap-3">
-          <span>{{ t('定时自主调用', 'Timed autonomous invoke') }}</span>
+          <span class="inline-flex items-center gap-1.5">{{ t('定时自主调用', 'Timed autonomous invoke') }}<em v-if="isThreadSettingOverridden('autoInvokeEnabled')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
           <input
             :checked="threadSettingsDraft.autoInvokeEnabled"
             type="checkbox"
@@ -692,7 +711,7 @@ const updateNumberSetting = (key, value) => {
           />
         </div>
         <label class="flex items-center justify-between gap-3">
-          <span>{{ t('自主调用间隔（秒）', 'Invoke interval (sec)') }}</span>
+          <span class="inline-flex items-center gap-1.5">{{ t('自主调用间隔（秒）', 'Invoke interval (sec)') }}<em v-if="isThreadSettingOverridden('autoInvokeIntervalSec')" class="thread-override-chip">{{ t('已覆盖', 'Custom') }}</em></span>
           <input
             :value="threadSettingsDraft.autoInvokeIntervalSec"
             type="number"
@@ -733,20 +752,101 @@ const updateNumberSetting = (key, value) => {
         </p>
       </div>
 
-      <div class="flex justify-end gap-2 pt-1">
-        <button @click="$emit('close')" class="px-2.5 py-1 rounded-lg border border-gray-200">{{ t('取消', 'Cancel') }}</button>
-        <button
-          @click="$emit('save-thread-settings')"
-          class="px-2.5 py-1 rounded-lg border"
-          :class="threadSettingsSaved ? 'border-green-300 bg-green-50 text-green-700' : 'border-blue-300 bg-blue-50 text-blue-700'"
-        >
-          {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存设置', 'Save settings') }}
-        </button>
-      </div>
       </div>
     </details>
         </div>
       </div>
+
+      <footer class="chat-thread-menu-footer">
+        <p class="chat-thread-menu-footer__note">
+          {{ t('会话头像在上方「本会话头像」分区单独保存；上方修改偏好后可在此保存。', 'Thread avatars save in the Avatars section above; save preference edits here.') }}
+        </p>
+        <div class="chat-thread-menu-footer__actions">
+          <button type="button" class="chat-thread-menu-footer__cancel" @click="$emit('close')">
+            {{ t('取消', 'Cancel') }}
+          </button>
+          <button
+            type="button"
+            class="chat-thread-menu-footer__save"
+            :class="{ 'is-saved': threadSettingsSaved }"
+            data-testid="thread-settings-save"
+            @click="$emit('save-thread-settings')"
+          >
+            <span v-if="threadSettingsDirty && !threadSettingsSaved" class="chat-thread-menu-footer__dirty" aria-hidden="true"></span>
+            {{ threadSettingsSaved ? t('已保存', 'Saved') : t('保存设置', 'Save settings') }}
+          </button>
+        </div>
+      </footer>
     </section>
   </div>
 </template>
+
+<style scoped>
+.thread-override-chip {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--chat-accent-soft);
+  color: var(--chat-accent-ink);
+}
+
+.chat-thread-menu-footer {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--chat-panel-border);
+  background: var(--chat-panel-bg);
+}
+
+.chat-thread-menu-footer__note {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--chat-muted-ink);
+}
+
+.chat-thread-menu-footer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.chat-thread-menu-footer__cancel,
+.chat-thread-menu-footer__save {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--chat-panel-border);
+  background: var(--chat-panel-muted-bg);
+  color: var(--chat-muted-ink);
+  cursor: pointer;
+}
+
+.chat-thread-menu-footer__save {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: color-mix(in srgb, var(--chat-send-bg) 42%, transparent);
+  background: var(--chat-accent-soft);
+  color: var(--chat-accent-ink);
+}
+
+.chat-thread-menu-footer__save.is-saved {
+  border-color: var(--system-success-soft);
+  background: var(--system-success-soft);
+  color: var(--system-success);
+}
+
+.chat-thread-menu-footer__dirty {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--chat-accent-ink);
+}
+</style>

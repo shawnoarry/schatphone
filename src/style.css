@@ -2681,6 +2681,106 @@ select {
   color: #4b5563;
 }
 
+/* Thread menu card (会话内"⋯"设定卡): follows the active Chat appearance and
+   custom CSS instead of staying hard-coded white. */
+.chat-shell .chat-thread-menu-layer .bg-white {
+  background-color: var(--chat-panel-bg);
+}
+
+.chat-shell .chat-thread-menu-layer .bg-gray-100,
+.chat-shell .chat-thread-menu-layer .bg-gray-50 {
+  background-color: var(--chat-panel-muted-bg);
+}
+
+.chat-shell .chat-thread-menu-layer .bg-blue-50,
+.chat-shell .chat-thread-menu-layer .bg-blue-50\/70,
+.chat-shell .chat-thread-menu-layer .bg-violet-50 {
+  background-color: var(--chat-accent-soft);
+}
+
+.chat-shell .chat-thread-menu-layer .bg-green-50 {
+  background-color: var(--system-success-soft);
+}
+
+.chat-shell .chat-thread-menu-layer .bg-emerald-50 {
+  background-color: var(--system-success-soft);
+}
+
+.chat-shell .chat-thread-menu-layer .bg-slate-100 {
+  background-color: var(--chat-panel-muted-bg);
+}
+
+.chat-shell .chat-thread-menu-layer .text-gray-950,
+.chat-shell .chat-thread-menu-layer .text-gray-900,
+.chat-shell .chat-thread-menu-layer .text-gray-800 {
+  color: var(--chat-ink);
+}
+
+.chat-shell .chat-thread-menu-layer .text-gray-700,
+.chat-shell .chat-thread-menu-layer .text-gray-600,
+.chat-shell .chat-thread-menu-layer .text-gray-500,
+.chat-shell .chat-thread-menu-layer .text-gray-400 {
+  color: var(--chat-muted-ink);
+}
+
+.chat-shell .chat-thread-menu-layer .text-blue-500,
+.chat-shell .chat-thread-menu-layer .text-blue-700,
+.chat-shell .chat-thread-menu-layer .text-violet-700 {
+  color: var(--chat-accent-ink);
+}
+
+.chat-shell .chat-thread-menu-layer .text-emerald-600,
+.chat-shell .chat-thread-menu-layer .text-emerald-700,
+.chat-shell .chat-thread-menu-layer .text-green-700 {
+  color: var(--system-success);
+}
+
+.chat-shell .chat-thread-menu-layer .text-amber-600,
+.chat-shell .chat-thread-menu-layer .text-orange-500 {
+  color: var(--system-warning);
+}
+
+.chat-shell .chat-thread-menu-layer .border-gray-100,
+.chat-shell .chat-thread-menu-layer .border-gray-200 {
+  border-color: var(--chat-panel-border);
+}
+
+.chat-shell .chat-thread-menu-layer .divide-gray-100 > * {
+  border-color: var(--chat-panel-border);
+}
+
+.chat-shell .chat-thread-menu-layer .border-blue-100,
+.chat-shell .chat-thread-menu-layer .border-blue-200,
+.chat-shell .chat-thread-menu-layer .border-blue-300,
+.chat-shell .chat-thread-menu-layer .border-violet-200 {
+  border-color: color-mix(in srgb, var(--chat-send-bg) 42%, transparent);
+}
+
+.chat-shell .chat-thread-menu-layer .border-emerald-100,
+.chat-shell .chat-thread-menu-layer .border-emerald-200,
+.chat-shell .chat-thread-menu-layer .border-green-300 {
+  border-color: var(--system-success-soft);
+}
+
+.chat-shell .chat-thread-menu-layer .border-slate-300 {
+  border-color: var(--chat-panel-border);
+}
+
+.chat-shell .chat-thread-menu-layer .bg-gray-300 {
+  background-color: var(--chat-panel-border);
+}
+
+.chat-shell .chat-thread-menu-layer .hover\:bg-gray-100:hover {
+  background-color: color-mix(in srgb, var(--chat-ink) 8%, transparent);
+}
+
+@media (min-width: 720px) {
+  .chat-shell .chat-thread-menu-layer > section {
+    max-width: 560px;
+    margin-inline: auto;
+  }
+}
+
 .chat-me-recent-rail {
   display: flex;
   gap: 0.72rem;

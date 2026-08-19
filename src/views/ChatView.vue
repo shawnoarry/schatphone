@@ -258,6 +258,7 @@ const {
   threadIdentitySaved,
   threadSettingsDraft,
   threadIdentityDraft,
+  threadSettingsDefaults,
   syncThreadSettingsDraft,
   syncThreadIdentityDraft,
   closeThreadMenu,
@@ -4240,6 +4241,7 @@ onBeforeUnmount(() => {
         :token-estimate="activeThreadTokenEstimate"
         :thread-identity-draft="threadIdentityDraft"
         :thread-settings-draft="threadSettingsDraft"
+        :thread-settings-defaults="threadSettingsDefaults"
         :reply-mode-options="REPLY_MODE_OPTIONS"
         :response-style-options="RESPONSE_STYLE_OPTIONS"
         :image-reference-mode-options="IMAGE_REFERENCE_MODE_OPTIONS"

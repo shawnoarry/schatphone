@@ -253,6 +253,7 @@ export const useChatThreadMenuModel = ({
     threadIdentitySaved,
     threadSettingsDraft,
     threadIdentityDraft,
+    threadSettingsDefaults: defaults,
     syncThreadSettingsDraft,
     syncThreadIdentityDraft,
     openThreadMenu,

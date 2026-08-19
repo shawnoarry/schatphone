@@ -110,11 +110,35 @@ Remaining confirmations before Slice B starts:
 - V1 color control = curated swatch palette (both themes verified); V2 candidate = hue wheel storing hue-angle only, deriving per-theme values (see Slice B decision).
 - Later, unpromised: Calendar-scoped custom CSS (security review required), shareable packs.
 
+## 2A. Thread Menu Card (会话内"⋯"设定卡) Audit And Fix Slices
+
+User report 2026-08-19: the per-thread details card (top-right `⋯` in a conversation) is inconveniently positioned, many rows merely mirror global settings, and some threads cannot load dedicated knowledge points.
+
+Full problem list (audit of `ChatThreadMenuPanel.vue` + `useChatThreadMenuModel.js` + `role-binding-contract.js`):
+
+1. Container: bottom sheet is `absolute inset-0` inside the thread page — on phone it hides the conversation it configures; on wide viewports it stretches into a full-width sheet (wide-shell stretch again).
+2. "Global mirror" impression: the 16 AI prefs ARE thread-level drafts with their own save, but nothing marks "following global default" vs "overridden here", so users read them as mirrors and fear editing.
+3. Knowledge root cause: knowledge points bind to ROLE profiles only (`roleBound = contactKind === 'role' && profileId > 0` in `role-binding-contract.js`). A thread not bound to a role profile gets zero injected points; the card's WorldBook area is read-only (counts + preview + a link out) with no in-place repair, and the "disabled/missing/over-limit" note is not actionable.
+4. Mixed commit semantics in one card: subscription mute/fold apply instantly, AI prefs need manual save, avatars have their own separate save.
+5. The AI-prefs save row lives inside a collapsed `<details>` (invisible when collapsed) and shows no dirty indicator.
+6. The token-estimate block is prominent but read-only.
+7. Role threads lack quick management actions (those live in Chat Directory); service threads get only subscription toggles — asymmetric.
+8. 16 flat fields inside one disclosure mix overview/execution/diagnostics (violates the project's own container gate).
+9. The card is hard-coded `bg-white` + gray utilities, so it ignores custom CSS themes (e.g. stayed white under the starry-night experiment) — the `.chat-shell` override map did not cover it.
+
+Fix slices (sized):
+
+1. `DONE 2026-08-19` — Card follows Chat appearance: `.chat-shell`-scoped overrides now cover the thread-menu layer (panel/field surfaces, text, borders, blue/violet/emerald/green/amber/orange accents); wide viewports cap the sheet at 560px centered.
+2. `DONE 2026-08-19` — Clarity pass: per-field "已覆盖 / Custom" chips when a value differs from the global default (defaults exposed from the menu model), the AI-prefs save row moved to a sticky card footer (always visible), a dirty dot marks unsaved edits, and a one-line note clarifies that thread avatars save separately.
+- Validation for both: lint, chat-focused tests 48/48, full suite 293 files / 2074 tests, build, and live screenshots covering Kakao default, a custom-CSS dark theme (card now follows), wide desktop (capped/centered), the "已覆盖" chip, and the dirty footer dot.
+3. `TODO (medium)` — Make the WorldBook area repairable in place: the disabled/missing/over-limit counts become links to the owning binding surface.
+4. `TODO (needs product approval, NOT visual)` — Optional thread-level knowledge binding (thread-scoped point IDs) so a conversation without a role profile can still carry dedicated knowledge. Must go through the chat package product boundary, not this lane.
+
 ## 3. Visual Backlog (not scheduled, one slice at a time)
 
 1. Shopping platform identity (audit: remains generic; leverage six storefront brand icons).
 2. Chat supporting pages density alignment (ChatMe / ChatSettings / ChatGroups toward the main Chat identity).
-3. Network deep-form token cleanup (mix of system tokens and raw utility colors).
+3. ~~Network deep-form token cleanup~~ — done 2026-08-17 (see section 1).
 4. Contacts / WorldBook density polish (typography subtraction only; do not rebuild completed ownership loops).
 5. Wide-viewport shell contract (needs a contract decision before page-level work; Lock/notification evidence).
 6. Shared component residuals: `AssetThumbnailOption` placeholder ground and `AssetStatusBadge` pastel chips under `zen` (acceptable today; shared-component slice).
