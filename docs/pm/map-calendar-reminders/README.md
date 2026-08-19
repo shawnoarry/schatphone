@@ -34,7 +34,7 @@ The accepted scheduling refinement keeps appointment start/duration/place in Cal
 
 Optional capability Pack reminder: Calendar may consume `reservation -> Calendar` world app context for labels, accents, and boundary presentation, including confirmed `reservation_board` nonstandard-app proposals, but Calendar still owns confirmed events, time editing, reminder promotion, relationship-fact review, and push scheduling. Map may consume `transit -> Map` world app context for title/context/boundary presentation, but Map still owns route, trip, location, ETA, shared-route facts, and Map-derived Calendar handoff.
 
-Future Mini Scene reminder: Calendar and Map may each register a focused request Adapter under `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`. They keep confirmed-event/trip/location truth and decide request eligibility; they do not own world-profile selection, Book regex execution, artifacts, or text/HTML presenters.
+Future Mini Scene reminder: Calendar and Map may each contribute source facts through a focused Event Runtime Adapter under `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md`. They keep confirmed-event/trip/location truth and do not own scene authoring, world-profile selection, Book regex execution, artifacts, or text/HTML presenters.
 
 ## Read This Package In This Order
 

@@ -20,6 +20,7 @@ import { useStockStore } from '../stores/stock'
 import { useWalletStore } from '../stores/wallet'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useImageGenerationStore } from '../stores/imageGeneration'
+import { useMiniSceneStore } from '../stores/miniScene'
 import { useDialog } from './useDialog'
 import { useI18n } from './useI18n'
 import { useSystemApiReports } from './useSystemApiReports'
@@ -106,6 +107,7 @@ const hasRecognizableBackupSections = (payload) => {
   if (Array.isArray(payload.messagesByConversation)) return true
   if (payload.map && typeof payload.map === 'object') return true
   if (payload.calendar && typeof payload.calendar === 'object') return true
+  if (payload.miniScene && typeof payload.miniScene === 'object') return true
   if (payload.gallery && typeof payload.gallery === 'object') return true
   if (payload.files && typeof payload.files === 'object') return true
   if (payload.book && typeof payload.book === 'object') return true
@@ -162,6 +164,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
   const relationshipRuntimeStore =
     options.relationshipRuntimeStore || useRelationshipRuntimeStore()
   const imageGenerationStore = options.imageGenerationStore || useImageGenerationStore()
+  const miniSceneStore = options.miniSceneStore || useMiniSceneStore()
   const systemApiReports = options.systemApiReports || useSystemApiReports({ systemStore })
   const { t } = options.t ? { t: options.t } : useI18n()
   const { confirmDialog } = options.confirmDialog
@@ -419,6 +422,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         activitySession: activitySessionStore.createBackupSnapshot(),
         scheduleOrchestrator: scheduleOrchestratorStore.createBackupSnapshot(),
       },
+      miniScene: miniSceneStore.createBackupSnapshot(),
       reminders: remindersStore.createBackupSnapshot(),
       gallery: gallerySnapshot,
       files: filesStore.createBackupSnapshot(),
@@ -460,7 +464,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       }
     }
 
-    if (schemaVersion === COMPLETE_BACKUP_SCHEMA_VERSION) {
+    if ([3, COMPLETE_BACKUP_SCHEMA_VERSION].includes(schemaVersion)) {
       const inspection = await inspectCompleteBackupPackage(payload)
       if (!inspection.ok) {
         return {
@@ -658,6 +662,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       calendar: {
         ...deepClone(calendarStore.createBackupSnapshot()),
       },
+      miniScene: miniSceneStore.createBackupSnapshot(),
       agendaJourney: agendaJourneyStore.createBackupSnapshot(),
       activitySession: activitySessionStore.createBackupSnapshot(),
       scheduleOrchestrator: scheduleOrchestratorStore.createBackupSnapshot(),
@@ -693,6 +698,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     chat: chatStore,
     map: mapStore,
     calendar: calendarStore,
+    miniScene: miniSceneStore,
     agendaJourney: agendaJourneyStore,
     activitySession: activitySessionStore,
     scheduleOrchestrator: scheduleOrchestratorStore,
@@ -719,6 +725,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
     chatStore,
     mapStore,
     calendarStore,
+    miniSceneStore,
     agendaJourneyStore,
     activitySessionStore,
     scheduleOrchestratorStore,
@@ -791,6 +798,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       const chatOk = chatStore.restoreFromBackup(parsed)
       const mapOk = mapStore.restoreFromBackup(parsed.map || parsed)
       const calendarOk = calendarStore.restoreFromBackup(parsed.calendar || parsed)
+      const miniSceneOk = miniSceneStore.restoreFromBackup(parsed.miniScene || {})
       const agendaJourneyOk = agendaJourneyStore.restoreFromBackup(
         parsed.calendar?.agendaJourney || parsed.agendaJourney || {},
       )
@@ -805,9 +813,9 @@ export const useSettingsBackupWorkflow = (options = {}) => {
       )
       const galleryRestoreResult = await galleryStore.restoreFromBackupAsync(parsed.gallery || parsed, {
         restoreAssetPackage: true,
-        preserveCurrentOnlyAssets: preflight.schemaVersion >= COMPLETE_BACKUP_SCHEMA_VERSION,
+        preserveCurrentOnlyAssets: preflight.schemaVersion >= 3,
         requireCompleteAssetPackage:
-          preflight.schemaVersion >= COMPLETE_BACKUP_SCHEMA_VERSION &&
+          preflight.schemaVersion >= 3 &&
           parsed?.backupMeta?.galleryAssetPackage?.requested === true,
       })
       const filesOk = restoreOptionalBackupSection(filesStore, parsed.files)
@@ -832,6 +840,7 @@ export const useSettingsBackupWorkflow = (options = {}) => {
         !chatOk ||
         !mapOk ||
         !calendarOk ||
+        !miniSceneOk ||
         !agendaJourneyOk ||
         !activitySessionOk ||
         !scheduleOrchestratorOk ||

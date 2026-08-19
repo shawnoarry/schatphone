@@ -9,6 +9,7 @@ import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useGalleryStore } from '../stores/gallery'
 import { useImageGenerationStore } from '../stores/imageGeneration'
 import { useMapStore } from '../stores/map'
+import { useMiniSceneStore } from '../stores/miniScene'
 import { usePhoneStore } from '../stores/phone'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 import { useRemindersStore } from '../stores/reminders'
@@ -31,6 +32,7 @@ export const createBackupRestoreStoreSet = (pinia) => ({
   chat: useChatStore(pinia),
   map: useMapStore(pinia),
   calendar: useCalendarStore(pinia),
+  miniScene: useMiniSceneStore(pinia),
   agendaJourney: useAgendaJourneyStore(pinia),
   activitySession: useActivitySessionStore(pinia),
   scheduleOrchestrator: useScheduleOrchestratorStore(pinia),
@@ -72,6 +74,7 @@ export const restoreBackupRollbackSnapshot = async (stores, snapshot) => {
     ['chat', snapshot.chat],
     ['map', snapshot.map],
     ['calendar', snapshot.calendar],
+    ['miniScene', snapshot.miniScene || {}],
     ['agendaJourney', snapshot.agendaJourney],
     ['activitySession', snapshot.activitySession],
     ['scheduleOrchestrator', snapshot.scheduleOrchestrator],

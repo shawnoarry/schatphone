@@ -55,6 +55,7 @@ export const MINI_SCENE_LIMITS = Object.freeze({
   maxInputChars: 12_000,
   maxWorldScopes: 16,
   maxContentDimensions: 32,
+  requestTimeoutMs: 20_000,
 })
 
 export const MINI_SCENE_ERROR_CODES = Object.freeze({

@@ -59,7 +59,6 @@ The accepted direction is recorded in `docs/architecture/CALENDAR_AGENDA_JOURNEY
 9. CJA-2 adds `store:schedule-orchestrator` V1, a pure occurrence reconciliation contract, startup/Calendar-change/timer/resume runtime, nested Calendar-section backup, and legacy missing-child restore. Focused orchestrator tests cover deterministic identity, recurring/multi-day materialization, update/removal retirement, once-only deadlines, acknowledgement, backup, and reopen behavior; no UI/E2E or physical-device claim applies to this hidden slice.
 10. CJA-3 adds schema-V1 `store:agenda-journey`, one stable route/Home/App Store identity, Calendar-occurrence materialization plus manual plans within the next 14 days, strict travel/activity step separation, explicit required/optional outcomes, source-retirement/deadline reconciliation, and nested Calendar-section backup with rollback-safe restore. A travel step can create or reuse exactly one Map Journey carrying `sourceAgendaJourneyStepId`; Map arrival completes travel and unlocks activity but never proves activity completion. Focused unit coverage plus desktop Chromium and simulated Pixel 5 Playwright protect creation, execution, Map return context, accessibility, text fitting, and zero horizontal overflow. No physical-device evidence is claimed.
 11. CJA-4 adds schema-V1 `store:activity-session`, one deterministic session per stable Agenda activity-step ID, absolute timestamps, explicit pause and completion policy, deterministic checkpoint reconciliation, owner-validated completion evidence, nested Calendar backup and rollback recovery, and startup/pageshow/visibility reconciliation. Agenda Journey hosts one quiet built-in Focus Companion with pause/resume, minimize/reopen, explicit completion, and no-event baseline behavior. CJA-5 then adds schema-V2 Activity Session owner validation plus one durable midpoint event family in Simulation V6, with `off | text` presentation and only a 0/2-minute timer result. CJA-6A adds only the documentation contract for a bounded, source-linked Narrative Timeline and read-only AI context; CJA-6B remains unimplemented. Travel steps fail closed, Map-owned duration is never copied, and Gallery backgrounds, Music/ambient callers, richer companions, appointment auto-entry, broader event families, and exact closed-app interaction remain absent. Focused CJA-4 plus persistence coverage passes 9 files / 65 tests; focused CJA-5/persistence coverage passes 10 files / 66 tests; the current bounded two-worker full suite passes 290 files / 2047 tests; desktop Chromium and simulated Pixel 5 Agenda/Activity Playwright passes 4/4 for CJA-4 and 4/4 for CJA-5. No physical-device evidence is claimed.
-
 This documentation lane does not modify, replace, or block the current Map implementation or roadmap 4.11 MJE work. Cross-module terms must qualify `Agenda Journey` and `Map Journey`; user-facing copy may use `行程` where the containing app makes the meaning clear.
 
 ## Journey, Footprints, And Exploration Direction
@@ -178,8 +177,8 @@ Still incomplete:
 4. route/date/follow-up handoff rules will need more real-world coverage as modules deepen;
 5. Calendar and Map world-app presentation contexts need true-device testing together with WorldBook/App Store/Home entry flows;
 6. Calendar's relationship adapter still knows concrete Chat/relationship stores and is a candidate for a deeper neutral interface.
-7. the first planned Mini Scene source integration is a separately gated confirmed K-pop Calendar music-show-day Adapter; Map follows only through its own later slice.
-8. the Calendar-owned carrier described below is a read-only design candidate. No field, migration, Adapter, or schema implementation is approved or landed.
+7. Mini Scene content is not authored in Calendar or Map. A future event may consume bounded Calendar/Map owner facts only after Event Runtime establishes eligibility and calls the shared AI-required Module.
+8. the former Calendar-specific carrier/form proposal is withdrawn. No Mini Scene field, migration, generator button, or registered caller is approved or landed in Calendar.
 9. Seoul V1 keeps its fixed CC0 city street-map image as the local fallback. Building-level georeferencing or a local PMTiles upgrade remains a separate slice and must preserve existing place IDs and coordinates.
 10. additional real-city packs, true-device gesture/weak-network proof, and large-package/offline-cache validation remain separate and are not started.
 11. public-transit lines, stations, schedules, realtime arrivals, fares, and transfer routing are not implemented. A later slice must separately choose a licensed/versioned static topology source and decide whether any keyed realtime adapter is justified without turning provider IDs into Map identity.
@@ -189,15 +188,15 @@ Still incomplete:
 15. ordinary place-focus overview/detail, explicit onsite/inside sessions, `Enter`/leave behavior, manual-versus-journey provenance, and the first location-aware place-entry event are implemented; appointment auto-entry and Activity Session media callers remain unimplemented.
 16. the place-media pilot covers seven real-photo derivatives and one fictional fallback; expanding reviewed photography across the remaining Seoul catalog, adding any generated reconstruction, user-selected Gallery media, periodic license revalidation, and true-device image/network evidence remain separate work.
 
-### Read-Only Calendar Carrier Candidate
+### Withdrawn Calendar Carrier Proposal
 
-Status: `READ_ONLY_CANDIDATE / SEPARATE_APPROVAL_REQUIRED`
+Status: `REJECTED / DO_NOT_IMPLEMENT`
 
-The smallest reviewed comparison candidate adds four optional flat Calendar fields: `eventType`, `scheduleRole`, `schedulePhase`, and `schedulePlaceLabel`. Existing and ordinary events remain valid with all four fields absent. A future music-show-day Adapter would fail closed unless the source event is confirmed, has a valid start time and relationship binding, uses the exact approved event type, has a non-empty schedule role, and provides at least one schedule phase or place label.
+The former proposal added `eventType`, `scheduleRole`, `schedulePhase`, and `schedulePlaceLabel` to Calendar and used them to expose a user-invoked scene generator. Product review rejected this model because it made the user design a scene in a schedule editor instead of letting an actually triggered event request AI-generated interaction.
 
-This candidate stores only Calendar-owned schedule facts. It does not copy encyclopedia material, complete member lists, coordinates, WorldBook prose, a structured Mini Scene profile, World Pack membership, sensitive-content choices, or facts owned by Map, Contacts, or Event Runtime. It must not infer eligibility from the event title.
+Calendar remains V3 and owns only schedule truth. If a later Event Runtime family needs Calendar evidence, it must consume existing owner facts or add a separately justified domain field for Calendar's own scheduling behavior. It must not add character, phase, place, plot, choice, or scene-type fields merely to feed Mini Scene.
 
-The carrier could be reviewed independently from Mini Scene runtime because fields alone do not register a caller, resolve a world profile, create an artifact, or invoke a Presenter. Implementing the future Adapter still waits for the separately approved shared Module, Text Presenter, Settings, and persistence-policy stages. Map remains a different later Adapter and must not be combined into the Calendar slice.
+The valid future path is source owner facts -> Event Runtime trigger/eligibility -> `MiniSceneRequest` -> required AI generation -> validation -> Presenter. Calendar and Map do not resolve profiles, execute transforms, create artifacts, or invoke the Presenter directly.
 
 ## 2. Recommended Next Slice
 
@@ -216,7 +215,7 @@ Current safe candidates after the user's event-lane reprioritization:
 5. user-test Calendar reservation and Map transit world context on a real phone as presentation only.
 6. deepen the confirmed-event relationship Adapter without changing Calendar, Chat, or relationship-runtime ownership.
 6. keep Reminders as the only raw-cue inbox and add task/objective presentation only for a promoted cue family.
-7. decide whether to approve, revise, or reject the read-only Calendar carrier candidate before any schema or migration work; keep Calendar and Map changes in separate owner slices.
+7. preserve the rejection of the Calendar carrier/form proposal; any future Calendar/Map event evidence must be justified by its owner domain before Event Runtime consumes it.
 8. for World Suite/Map only, preserve the completed provenance/authored-place reopen proof, Gallery-owned asset-pack lifecycle, typed Catalog, explicit production runtime composition, real persistence receipts, Event/Chat external-reference projection, rollback-safe native mutation Interfaces, serialized execution, and retry from native truth. The next content slice is a reviewed stable-ID K-pop Catalog/manifest; startup caller/UI/activation, binding, relocation, and MJE-5 remain separate gates.
 
 ## 3. Do Not Do
@@ -226,7 +225,7 @@ Current safe candidates after the user's event-lane reprioritization:
 3. Do not let Map absorb order, ledger, or schedule ownership just because it can show route context.
 4. Do not let World Pack reservation or transit labels turn Calendar/Map into world-rule/event owners.
 5. Do not execute Mini Scene regex/rendering in Calendar or Map, and do not let scene failure or interaction bypass source-record validation.
-6. Do not treat the read-only carrier candidate as approved implementation, and do not derive its fields from titles or K-pop prose.
+6. Do not reintroduce the rejected Calendar Mini Scene carrier fields, scene form, or generator button, and do not derive event eligibility from titles or K-pop prose.
 7. Do not move WorldBook content, Mini Scene profiles, Pack state, sensitive choices, Map coordinates, Contacts identity, or Event Runtime provenance into Calendar-owned fields.
 8. Do not replace a versioned topology asset in place after player pins exist; publish a new map-pack version and preserve or explicitly migrate coordinates.
 9. Do not add a paid/live map SDK to provide visual atmosphere that a local map pack already owns.

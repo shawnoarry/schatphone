@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-15
+Updated: 2026-08-19
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -58,8 +58,9 @@ Current active architecture slice:
 - `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` is architecture-accepted as a later staged feature: one shared Module owns request validation, world/profile resolution, structured artifacts, safe transforms, presenter selection, fallback, and interaction audit while source modules retain trigger and record truth;
 - Mini Scene per-module modes are explicit user choices (`unconfigured/off`, `text`, or `interactive_html`), Book narrative rules and structured transform profiles are separate assets, World Pack references remain optional, and raw AI/legacy Chat HTML is never executed;
 - Mini Scene content dimensions, including sensitive dimensions, begin unconfigured and require an explicit per-world/profile include/exclude choice; they do not become a global filter;
-- Mini Scene Stage 1 pure foundation is landed in five unreferenced `src/lib` modules with four focused test files: the caller registry starts empty, Book profile/regex handling validates without executing, and world/profile resolution fails closed to neutral;
-- Mini Scene persistence, Settings controls, popup UI, regex execution, Text/HTML Presenters, and Calendar/Map/Chat triggers are not implemented and are not part of Batch 2B;
+- Mini Scene Stage 1 pure foundation remains landed: Book profile/regex handling validates without executing, and world/profile resolution fails closed to neutral;
+- the separately authorized 2026-08-19 AI/text shell adds `store:mini-scene` V1, complete-backup v4 with integrity-checked v3 compatibility, global `unconfigured | off | text` policy, an Event Runtime registration, AI-required exact-Draft validation/provenance, and a global accessible Text Presenter. It is not part of Batch 2B and does not add a Repository owner;
+- the rejected Calendar form/Adapter path has been removed. A production Event Runtime trigger Adapter, profile-binding UI, safe Book transform execution, HTML, and source-owner integrations remain unimplemented;
 - binary-excluded and legacy restores reuse exact matching local Gallery binaries before declaring media unavailable, and restoring an older backup never deletes or hides current-only material the user already kept locally;
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
 - a complete self-checking Cloudflare setup, backup, recovery, revocation, quota, and troubleshooting guide is required before this can become an implementation slice;
@@ -100,8 +101,8 @@ Current active architecture slice:
 | Persistence inventory and Repository contract | `BOOK_ACTIVE` | Canonical inventory includes the active Book Repository database/six stores and direct legacy fallback; exact schema, staging, policy, coordination, activation, reopen, and rollback gates pass. |
 | Storage runtime implementation | `BOOK_ONLY_DONE` | Book is the sole active Repository owner. Cloudflare connector, media offload, Gallery schema, legacy deletion, garbage collection, and every other owner migration remain unapproved. |
 | Unified world-setting architecture | `STAGE_W1_DONE` | `worldId` is distinct from `packId` and save identity. Book owns text, WorldBook owns activation/current-world context, Packs own optional capabilities, and consumers read an immutable shared projection. Persisted world definitions, W2 migration, and switching remain unapproved. |
-| Cross-module Mini Scene | `FOUNDATION_DONE` | Pure request/draft/artifact/policy schemas, empty-by-default caller registry, Book structured-profile/regex validation, and deterministic profile resolution are landed and tested. No caller or runtime path imports them yet. |
-| Mini Scene persistence/runtime | `NOT_STARTED / SEPARATE_APPROVAL` | Artifact/profile-binding/policy data classes, popup UI, safe regex engine, HTML sandbox, and each source Adapter remain staged work outside persistence Batch 2B. |
+| Cross-module Mini Scene | `AI_RUNTIME_AND_TEXT_SHELL_DONE_2026-08-19` | Pure contracts plus durable AI artifacts/policies, provider-neutral required-AI generation, Event Runtime registration, and the root Text Presenter are landed and tested. |
+| Mini Scene remaining depth | `PARTIAL / SEPARATELY_GATED` | Production event triggering, profile binding, safe Book transforms, HTML sandbox, and source-owner Adapters remain staged outside persistence Batch 2B. |
 
 Current inventory and validation posture:
 
@@ -438,13 +439,13 @@ Cross-package dependencies:
 
 ### P1: Cross-Module Mini Scene Foundation
 
-Status: `STAGE_1_DONE / STAGE_2_SEPARATE_APPROVAL`.
+Status: `STAGE_1_DONE / AI_RUNTIME_AND_TEXT_SHELL_DONE_2026-08-19 / PRODUCTION_TRIGGER_AND_HTML_GATED`.
 
 1. `DONE 2026-07-21`: pure Stage 1 request/draft/artifact/profile/module-policy schemas, dynamic caller registry, world/profile resolver, Book structured-profile validator, and 22 focused tests;
-2. preserve the empty caller registry and absence of regex execution, Settings UI, persistence, popup runtime, iframe rendering, AI calls, and source-module triggers;
-3. approve persistence ownership and complete-backup coverage separately after the Book Repository foundation before storing `mini_scene.artifact`, profile bindings, or module policies;
-4. add Text and HTML Presenter Adapters in separate stages, with interactive HTML blocked until sandbox/CSP/message-bridge/malicious-input tests pass;
-5. make the K-pop Calendar music-show day the first optional world-specific integration only after the shared Module is ready; Map, Chat, and future streaming each require a later focused Adapter slice.
+2. `DONE 2026-08-19`: persist bounded artifacts/policies/bindings/audit through `store:mini-scene` V1 and include them in complete-backup v4 plus rollback/crash recovery while retaining v3 manifest verification;
+3. `DONE SHELL 2026-08-19`: register Event Runtime as the only functional caller, require an injected AI provider and exact HTML-free structured Draft with provider provenance, fail closed without a deterministic substitute, and expose a global Text Presenter plus bounded owner-validation choice request;
+4. `REJECTED AND REMOVED 2026-08-19`: Calendar V4 carrier fields, Calendar generator entry, and deterministic Calendar scene construction. Calendar remains V3 and Settings edits presentation form only;
+5. preserve the absence of regex execution, iframe rendering, profile-binding UI, and production Map/Chat/Agenda Journey/Event Instance triggers; add each separately through its accepted owner/runtime Adapter.
 
 ### P1: Unified World Setting Identity
 

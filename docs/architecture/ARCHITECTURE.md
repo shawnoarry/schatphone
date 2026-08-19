@@ -251,16 +251,19 @@ The generic provider contract supports user-authorized JSON search APIs that ret
 
 ### Mini Scene
 
-`docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` defines an architecture-accepted shared Module whose pure Stage 1 foundation is now landed:
+`docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` defines an architecture-accepted shared Module whose pure Stage 1 foundation and first text baseline are now landed:
 
-- registered callers such as Calendar, Map, Chat, and future streaming modules submit bounded source facts through one request Interface and retain source-record/trigger truth;
+- source Apps retain source truth, Event Runtime establishes that an event occurred, and the current `simulation` registration submits one bounded request through the shared Interface;
 - Settings owns an explicit per-module unconfigured/off, text, or interactive-HTML choice; world/profile/caller suggestions cannot override it;
 - Book narrative rules remain independent from separate `structured_json` Mini Scene transform profiles, and WorldBook narrative activation remains independent from Mini Scene profile binding;
 - World Pack may reference a reviewed profile as an optional grouped capability but is not required for custom worlds and cannot auto-enable Book content;
-- the Module owns world/profile resolution, structured artifact validation, bounded safe transforms, presenter selection, text fallback, and interaction audit;
+- the Module owns world/profile resolution, AI-required structured artifact generation and validation, bounded safe transforms, presenter selection, the artifact's universal text representation, and interaction audit;
 - Text and sandboxed HTML Presenter Adapters form the presentation seam. Raw AI HTML and legacy Chat `htmlSnippet` remain inert;
-- `mini-scene-contract.js`, `mini-scene-schema.js`, `mini-scene-module-registry.js`, `mini-scene-transform-profile.js`, and `mini-scene-profile-resolver.js` provide unreferenced/test-only contracts; the caller registry is empty and the regex layer validates without executing;
-- no Mini Scene runtime or persistence is implemented yet, and its future owner/data classes are outside the approved Book Repository foundation pilot.
+- the Stage 1 contract/profile modules remain pure and the regex layer still validates without executing;
+- `store:mini-scene` V1 owns bounded durable artifacts, policies, bindings, and interaction audit; complete-backup v4 includes the `miniScene` section and still verifies complete v3 packages;
+- Event Runtime is the only functional registered caller. Missing AI, invalid Drafts, forbidden markup, or missing provider provenance create no artifact; the root Text Presenter records choices as owner-validation requests and returns to World Hub;
+- Calendar remains V3 and has no Mini Scene-specific authoring fields, generator button, or registered caller;
+- a production Event Runtime trigger Adapter, profile-binding UI, safe Book transform execution, interactive HTML, and source-owner integrations remain unimplemented.
 
 ### Role And Relationship
 
@@ -488,12 +491,12 @@ Calendar remains the long-range planned truth; Agenda Journey is short-range exe
 ### Mini Scene Request
 
 ```text
-Calendar / Map / Chat / Agenda Journey / future registered caller
-  -> source-owned eligibility and canonical facts
-  -> optional Event Runtime trigger policy/provenance
+Calendar / Map / Chat / Agenda Journey / future source owner
+  -> source-owned canonical facts
+  -> Event Runtime eligibility and trigger provenance
   -> Mini Scene request Interface
   -> explicit Settings mode + world/profile resolver
-  -> structured draft + optional bounded Book transform profile
+  -> required AI structured draft + optional bounded Book transform profile
   -> committed Mini Scene artifact
   -> Text Presenter or sandboxed HTML Presenter Adapter
   -> allowlisted interaction request

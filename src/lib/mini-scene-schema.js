@@ -128,6 +128,7 @@ export const normalizeMiniSceneWorldScope = (raw) => {
 export const normalizeMiniSceneWorldContext = (raw = {}) => {
   const source = isMiniScenePlainObject(raw) ? raw : {}
   return {
+    worldId: normalizeMiniSceneId(source.worldId, 'legacy_single_world'),
     mainWorldviewAssetId: normalizeMiniSceneId(source.mainWorldviewAssetId),
     activeWorldPackId: normalizeMiniSceneId(source.activeWorldPackId),
     manualScopeId: normalizeMiniSceneId(source.manualScopeId),
@@ -193,6 +194,7 @@ export const normalizeMiniSceneProfileBinding = (raw = {}, index = 0) => {
 
   return {
     id: normalizeMiniSceneId(source.id, `mini_scene_binding_${index + 1}`),
+    worldId: normalizeMiniSceneId(source.worldId, 'legacy_single_world'),
     profileId: normalizeMiniSceneId(source.profileId),
     scope,
     active: source.active === true,
@@ -385,6 +387,7 @@ export const normalizeMiniSceneArtifact = (raw = {}) => {
       eventId: normalizeMiniSceneId(sourceRef.eventId),
     },
     sceneType: normalizeMiniSceneId(source.sceneType),
+    worldId: normalizeMiniSceneId(source.worldId, 'legacy_single_world'),
     profileId: normalizeMiniSceneId(source.profileId),
     profileVersion: Math.max(0, Math.floor(Number(source.profileVersion) || 0)),
     content: normalizeMiniSceneDraft(source.content || source),
@@ -394,6 +397,9 @@ export const normalizeMiniSceneArtifact = (raw = {}) => {
     },
     provenance: {
       sourceKind: normalizeMiniSceneId(provenance.sourceKind),
+      providerId: normalizeMiniSceneInlineText(provenance.providerId, '', 160),
+      modelId: normalizeMiniSceneInlineText(provenance.modelId, '', 160),
+      requestId: normalizeMiniSceneInlineText(provenance.requestId, '', 180),
       generatedAt: Math.max(0, Math.floor(Number(provenance.generatedAt) || 0)),
     },
   }
@@ -414,6 +420,27 @@ export const validateMiniSceneArtifact = (raw = {}) => {
   }
   if (!artifact.sceneType) {
     errors.push({ code: MINI_SCENE_ERROR_CODES.ARTIFACT_INVALID, path: 'sceneType', reason: 'required' })
+  }
+  if (artifact.provenance.sourceKind !== 'ai') {
+    errors.push({
+      code: MINI_SCENE_ERROR_CODES.ARTIFACT_INVALID,
+      path: 'provenance.sourceKind',
+      reason: 'ai_required',
+    })
+  }
+  if (!artifact.provenance.providerId) {
+    errors.push({
+      code: MINI_SCENE_ERROR_CODES.ARTIFACT_INVALID,
+      path: 'provenance.providerId',
+      reason: 'required',
+    })
+  }
+  if (!artifact.provenance.generatedAt) {
+    errors.push({
+      code: MINI_SCENE_ERROR_CODES.ARTIFACT_INVALID,
+      path: 'provenance.generatedAt',
+      reason: 'required',
+    })
   }
   const draftResult = validateMiniSceneDraft(
     isMiniScenePlainObject(source.content) ? source.content : source,

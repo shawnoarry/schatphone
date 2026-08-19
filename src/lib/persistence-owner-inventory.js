@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 8
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 9
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -233,6 +233,14 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
     labelEn: 'Calendar state',
     sourceFile: 'src/stores/calendar.js',
     logicalOwners: ['Calendar'],
+  },
+  {
+    storageKey: 'store:mini-scene',
+    schemaVersion: 1,
+    labelZh: '小剧场产物与策略',
+    labelEn: 'Mini Scene artifacts and policies',
+    sourceFile: 'src/stores/miniScene.js',
+    logicalOwners: ['Mini Scene'],
   },
   {
     storageKey: 'store:schedule-orchestrator',
@@ -626,6 +634,21 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     stableIdRule: 'Calendar event and source-link IDs remain stable.',
     referenceRule:
       'Reminder cues are import compatibility only; Reminders owns canonical reminder truth.',
+  },
+  {
+    id: 'mini-scene.artifacts-and-policies',
+    logicalOwner: 'Mini Scene',
+    dataClass:
+      'Committed Mini Scene artifacts, module presentation policies, profile bindings, and bounded interaction audit',
+    physicalCarrierIds: layeredStoreCarriers,
+    storageKeys: ['store:mini-scene'],
+    durability: 'durable-authoritative',
+    growthClass: 'bounded-event-growth',
+    backupRequirement: 'required',
+    backupSectionId: 'mini-scene',
+    stableIdRule: 'Artifact IDs derive from the validated source request and presenter version.',
+    referenceRule:
+      'Artifacts retain stable Event Instance and source references; Event Runtime and source modules remain owners of trigger and source truth.',
   },
   {
     id: 'schedule-orchestrator.materialization-decisions',

@@ -46,6 +46,10 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  miniScenePresentationControls: {
+    type: Array,
+    default: () => [],
+  },
   automationSaved: {
     type: Boolean,
     default: false,
@@ -62,6 +66,7 @@ defineEmits([
   'update-simulation-surprise-mode',
   'update-simulation-module-events-enabled',
   'update-simulation-event-presentation-mode',
+  'update-mini-scene-presentation-mode',
   'update-automation-field',
   'update-module-enabled',
   'update-module-priority',
@@ -245,6 +250,45 @@ const { t } = useI18n()
           @change="$emit('update-simulation-event-presentation-mode', item.moduleKey, $event.target.value)"
         >
           <option v-for="option in item.options" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <div
+      v-if="miniScenePresentationControls.length"
+      class="space-y-2 rounded-xl border border-gray-100 bg-gray-50/80 p-3"
+      data-testid="settings-mini-scene-presentation-controls"
+    >
+      <div>
+        <p class="text-[11px] font-semibold text-gray-600">
+          {{ t('小剧场呈现 / Mini Scene presentation', 'Mini Scene presentation / 小剧场呈现') }}
+        </p>
+        <p class="mt-1 text-[10px] leading-4 text-gray-400">
+          {{ t('事件实际触发且需要小剧场时，内容由 AI 生成；这里仅决定是否展示。', 'When a triggered event needs a Mini Scene, AI generates its content; this area only controls whether it is shown.') }}
+        </p>
+      </div>
+      <label
+        v-for="item in miniScenePresentationControls"
+        :key="item.id"
+        class="block rounded-lg bg-white px-3 py-2"
+        :data-testid="`settings-mini-scene-presentation-row-${item.id}`"
+      >
+        <span class="block break-words text-xs font-semibold leading-4 text-gray-700">{{ item.label }}</span>
+        <span class="mt-1 block text-[10px] leading-4 text-gray-400">{{ item.detail }}</span>
+        <select
+          :value="item.value"
+          class="mt-2 w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs"
+          :data-testid="`settings-mini-scene-presentation-${item.id}`"
+          @change="$emit('update-mini-scene-presentation-mode', item.moduleKey, $event.target.value)"
+        >
+          <option
+            v-for="option in item.options"
+            :key="option.value"
+            :value="option.value"
+            :disabled="option.disabled"
+          >
             {{ option.label }}
           </option>
         </select>

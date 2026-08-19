@@ -253,7 +253,7 @@ describe('canonical persistence-owner inventory', () => {
     const inventoriedStoreKeys = PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey).sort()
 
     expect(sourceStoreKeys).toEqual(inventoriedStoreKeys)
-    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(20)
+    expect(PERSISTED_STATE_AUDIT_TARGETS).toHaveLength(21)
     expect(PERSISTED_STATE_AUDIT_TARGETS.map((entry) => entry.key)).toEqual(
       PERSISTED_STORE_CARRIERS.map((entry) => entry.storageKey),
     )
@@ -590,6 +590,7 @@ describe('canonical persistence-owner inventory', () => {
     expect(namedRequiredGapClassIds).toEqual([
       'chat.module-identity-settings',
       'world-suite.installation-inventory',
+      'mini-scene.artifacts-and-policies',
     ])
     expect(coveredRequiredClassIds.has('chat.module-identity-settings')).toBe(false)
     expect(coveredRequiredClassIds.has('world-suite.installation-inventory')).toBe(false)
@@ -632,6 +633,10 @@ describe('canonical persistence-owner inventory', () => {
         {
           sectionId: 'world-suite-inventory-known-gap',
           dataClassIds: ['world-suite.installation-inventory'],
+        },
+        {
+          sectionId: 'mini-scene-known-gap',
+          dataClassIds: ['mini-scene.artifacts-and-policies'],
         },
       ],
     })

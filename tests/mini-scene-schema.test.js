@@ -52,6 +52,7 @@ describe('mini scene schemas', () => {
       },
       sceneType: 'schedule.music_show_day',
       worldContext: {
+        worldId: 'legacy_single_world',
         mainWorldviewAssetId: 'world_1',
         activeWorldPackId: 'default_world',
         manualScopeId: '',
@@ -144,6 +145,7 @@ describe('mini scene schemas', () => {
       }),
     ).toEqual({
       id: 'binding_1',
+      worldId: 'legacy_single_world',
       profileId: 'profile_1',
       scope: { kind: 'book_worldview', id: 'world_1' },
       active: true,
@@ -169,6 +171,13 @@ describe('mini scene schemas', () => {
       sceneType: 'schedule.music_show_day',
       profileId: 'kpop.music_show.v1',
       profileVersion: 1,
+      provenance: {
+        sourceKind: 'ai',
+        providerId: 'openai_compatible',
+        modelId: 'test-model',
+        requestId: 'provider-request-1',
+        generatedAt: 1_787_180_000_000,
+      },
       content: {
         title: 'Backstage',
         textFallback: 'The group waits for the cue.',
@@ -195,6 +204,28 @@ describe('mini scene schemas', () => {
     expect(artifact.rawPrompt).toBeUndefined()
     expect(artifact.renderedHtml).toBeUndefined()
     expect(validateMiniSceneArtifact(artifact).ok).toBe(true)
+
+    expect(
+      validateMiniSceneArtifact({
+        ...artifact,
+        provenance: {
+          sourceKind: 'deterministic_calendar',
+          generatedAt: 1_787_180_000_000,
+        },
+      }),
+    ).toMatchObject({
+      ok: false,
+      errors: expect.arrayContaining([
+        expect.objectContaining({
+          path: 'provenance.sourceKind',
+          reason: 'ai_required',
+        }),
+        expect.objectContaining({
+          path: 'provenance.providerId',
+          reason: 'required',
+        }),
+      ]),
+    })
   })
 
   test('rejects duplicate ids and collection overflow instead of silently accepting ambiguity', () => {

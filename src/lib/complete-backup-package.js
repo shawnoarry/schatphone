@@ -1,7 +1,37 @@
 import { canonicalStringify, sha256Canonical, sha256Text } from './persistence-repository-schema'
 
 export const COMPLETE_BACKUP_MAGIC = 'schatphone-complete-backup'
-export const COMPLETE_BACKUP_SCHEMA_VERSION = 3
+export const COMPLETE_BACKUP_SCHEMA_VERSION = 4
+
+export const COMPLETE_BACKUP_V3_SECTION_PATHS = Object.freeze([
+  'settings',
+  'user',
+  'notifications',
+  'apiReports',
+  'truthState',
+  'moduleAvatarOverrides',
+  'moduleIdentity',
+  'roleProfiles',
+  'contacts',
+  'chatHistory',
+  'conversations',
+  'messagesByConversation',
+  'map',
+  'calendar',
+  'reminders',
+  'gallery',
+  'files',
+  'book',
+  'shopping',
+  'foodDelivery',
+  'simulation',
+  'assets',
+  'wallet',
+  'phone',
+  'stock',
+  'relationshipRuntime',
+  'imageGeneration',
+])
 
 export const COMPLETE_BACKUP_SECTION_PATHS = Object.freeze([
   'settings',
@@ -18,6 +48,7 @@ export const COMPLETE_BACKUP_SECTION_PATHS = Object.freeze([
   'messagesByConversation',
   'map',
   'calendar',
+  'miniScene',
   'reminders',
   'gallery',
   'files',
@@ -227,7 +258,14 @@ export const inspectCompleteBackupPackage = async (payload) => {
     return { ok: false, classification: 'invalid', errors: [{ code: 'CONTAINER_INVALID', detail: '' }] }
   }
   if (payload?.backupMeta?.magic !== COMPLETE_BACKUP_MAGIC) addError('CONTAINER_INVALID', 'magic')
-  if (Number(payload?.backupMeta?.schemaVersion) !== COMPLETE_BACKUP_SCHEMA_VERSION) {
+  const schemaVersion = Number(payload?.backupMeta?.schemaVersion)
+  const sectionPaths =
+    schemaVersion === COMPLETE_BACKUP_SCHEMA_VERSION
+      ? COMPLETE_BACKUP_SECTION_PATHS
+      : schemaVersion === 3
+        ? COMPLETE_BACKUP_V3_SECTION_PATHS
+        : null
+  if (!sectionPaths) {
     addError('SCHEMA_UNSUPPORTED', 'schemaVersion')
   }
   const manifest = payload?.backupMeta?.manifest
@@ -236,7 +274,7 @@ export const inspectCompleteBackupPackage = async (payload) => {
     return { ok: false, classification: 'invalid', errors }
   }
   if (manifest.packageId !== payload.backupMeta.packageId) addError('MANIFEST_INVALID', 'packageId')
-  if (Number(manifest.sectionCount) !== COMPLETE_BACKUP_SECTION_PATHS.length) {
+  if (Number(manifest.sectionCount) !== sectionPaths?.length) {
     addError('MANIFEST_INVALID', 'sectionCount')
   }
 
@@ -250,7 +288,7 @@ export const inspectCompleteBackupPackage = async (payload) => {
   const sectionByPath = new Map(
     (Array.isArray(manifest.sections) ? manifest.sections : []).map((section) => [section?.path, section]),
   )
-  for (const path of COMPLETE_BACKUP_SECTION_PATHS) {
+  for (const path of sectionPaths || []) {
     const resolved = readPath(payload, path)
     const declared = sectionByPath.get(path)
     if (!resolved.present || !isSectionValue(resolved.value) || !declared) {
@@ -269,7 +307,7 @@ export const inspectCompleteBackupPackage = async (payload) => {
   }
 
   try {
-    const sectionPayload = COMPLETE_BACKUP_SECTION_PATHS.reduce((result, path) => {
+    const sectionPayload = (sectionPaths || []).reduce((result, path) => {
       result[path] = readPath(payload, path).value
       return result
     }, {})
@@ -323,10 +361,15 @@ export const inspectCompleteBackupPackage = async (payload) => {
 
   return {
     ok: errors.length === 0,
-    classification: errors.length === 0 ? 'current_complete' : 'invalid',
+    classification:
+      errors.length === 0
+        ? schemaVersion === COMPLETE_BACKUP_SCHEMA_VERSION
+          ? 'current_complete'
+          : 'legacy_complete'
+        : 'invalid',
     packageId: payload?.backupMeta?.packageId || '',
-    schemaVersion: Number(payload?.backupMeta?.schemaVersion || 0),
-    verifiedSectionCount: COMPLETE_BACKUP_SECTION_PATHS.length - errors.filter((item) => item.code === 'REQUIRED_SECTION_MISSING' || item.code === 'SECTION_DIGEST_MISMATCH').length,
+    schemaVersion,
+    verifiedSectionCount: Math.max(0, (sectionPaths?.length || 0) - errors.filter((item) => item.code === 'REQUIRED_SECTION_MISSING' || item.code === 'SECTION_DIGEST_MISMATCH').length),
     binaryCount: binaryManifestItems.length,
     errors,
   }

@@ -586,7 +586,7 @@ describe('persistence layer freshness reconciliation', () => {
 })
 
 describe('persistence bootstrap ordering', () => {
-  test('acquires writer access before preparing 20 targets, app creation, and mount', async () => {
+  test('acquires writer access before preparing 21 targets, app creation, and mount', async () => {
     vi.resetModules()
     const events = []
     const initializeWriter = vi.fn(async () => {
@@ -595,11 +595,11 @@ describe('persistence bootstrap ordering', () => {
     })
     const prepare = vi.fn(async (targets) => {
       events.push('prepare')
-      expect(targets).toHaveLength(20)
+      expect(targets).toHaveLength(21)
       expect(targets.filter((target) => target.inspectOnly)).toEqual([
         expect.objectContaining({ key: 'store:book' }),
       ])
-      expect(targets.filter((target) => !target.inspectOnly)).toHaveLength(19)
+      expect(targets.filter((target) => !target.inspectOnly)).toHaveLength(20)
       return { ok: true }
     })
     const recover = vi.fn(async () => {
@@ -639,7 +639,7 @@ describe('persistence bootstrap ordering', () => {
   test('keeps every persistence target inspect-only when writer access is denied', async () => {
     vi.resetModules()
     const prepare = vi.fn(async (targets) => {
-      expect(targets).toHaveLength(20)
+      expect(targets).toHaveLength(21)
       expect(targets.every((target) => target.inspectOnly === true)).toBe(true)
       return { ok: true }
     })

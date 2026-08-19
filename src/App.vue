@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppDialogHost from './components/AppDialogHost.vue'
+import MiniSceneTextPresenter from './components/MiniSceneTextPresenter.vue'
 import MusicMiniPlayer from './components/MusicMiniPlayer.vue'
 import PersistenceRecoverySheet from './components/PersistenceRecoverySheet.vue'
 import { useSystemStore } from './stores/system'
@@ -1093,6 +1094,7 @@ const lockPhone = () => {
     </div>
   </div>
 
+  <MiniSceneTextPresenter />
   <AppDialogHost />
 </template>
 

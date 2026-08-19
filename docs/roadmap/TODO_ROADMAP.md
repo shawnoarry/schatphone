@@ -33,7 +33,7 @@ Roadmap interpretation:
 - 4.5 is the active maintenance/governance lane;
 - 4.6 has an integrated V1 but still needs product hardening;
 - 4.7 has a promoted Book/WorldBook content-carrier slice; its focused K-pop rule is the first planned content input for the separately staged Mini Scene Module;
-- 4.8 has an architecture-accepted cross-module Mini Scene direction, but no runtime, popup, regex execution, or source-module trigger is implemented yet.
+- 4.8 now has an AI-required text foundation: durable shared artifacts/policies, an Event Runtime caller contract, a provider-neutral structured generation pipeline, and a global Text Presenter are landed. No Calendar authoring field or source button exists; production event-trigger Adapters, profile binding, safe regex execution, and HTML remain staged.
 - 4.9 is now the product-control lane: turn the integrated modules into a usable product preview by closing first-value activation, current-save safety, one ordinary life loop, and deployed PWA proof before more infrastructure or feature breadth.
 - 4.11 is `P2 PARTIAL_DONE / MJE-1_MJE-2_MJE-4_INTEGRATED / MJE-3_ADAPTER_RETAINED_PRODUCTION_TRIGGER_SUSPENDED`: the generic MJE-3 route-obstruction adapter remains compatibility-tested but production Map mounting disables it after product review. MJE-4 presents passive progress as Footprints plus an optional per-world place-knowledge mode. In Footprints-gated worlds, completed positioned journeys can reveal a small deterministic set of nearby authored facilities; old saves remain all-known. MJE-5 remains separately gated.
 - 4.12 is `PARTIAL_DONE / CALENDAR_DEPARTURE_READINESS_V1_DONE 2026-08-15 / CJA-1_DONE 2026-08-15 / CJA-2_DONE 2026-08-16 / CJA-3_DONE 2026-08-16 / CJA-4_DONE 2026-08-16 / CJA-5_DONE 2026-08-16 / CJA-6A_CONTRACT_DONE 2026-08-17`: Calendar V3 supports Month/Week/Agenda and stable Map destinations; the hidden Schedule Orchestrator persists occurrence requests; the separate Agenda Journey app materializes or manually creates near-term execution plans; Activity Session owns absolute-time activity timing; one midpoint-only low-impact Event Runtime family supports silent `off` resolution or an inline Focus Companion text choice; and CJA-6A now freezes the read-only Narrative Timeline/source-reference contract. Appointment auto-entry, media callers/richer companions, and CJA-6B Timeline implementation remain unimplemented and separately gated.
@@ -303,31 +303,31 @@ Primary package for the promoted Book/WorldBook slice:
 
 ### 4.8 Cross-Module Mini Scene / 小剧场
 
-Status: `TODO`
+Status: `PARTIAL_DONE / AI_RUNTIME_AND_TEXT_SHELL_DONE_2026-08-19`
 
 Architecture accepted on 2026-07-21:
 
-1. one shared Mini Scene Module will serve explicitly registered callers such as Calendar, Map, Chat, Agenda Journey, and future streaming modules;
+1. one shared Mini Scene Module serves Event Runtime requests created after source-owned events occur; Calendar, Map, Chat, Agenda Journey, and future modules may later provide bounded event facts through separately reviewed source Adapters, but they do not author scenes;
 2. each registered module has an explicit user mode: unconfigured/off, plain text, or interactive HTML; unconfigured behaves as off, and no Book, WorldBook, World Pack, caller, or world profile may silently change the user's choice;
-3. calling modules and Event Runtime own trigger intent, source truth, eligibility, and provenance; the Mini Scene Module owns request validation, world-profile resolution, artifact creation, transforms, presentation, fallback, and interaction audit;
+3. source modules retain source truth, while Event Runtime owns trigger intent, eligibility, cooldown/caps, and request provenance; the Mini Scene Module owns request validation, AI-required structured artifact creation, world-profile resolution, transforms, presentation, and interaction audit;
 4. Book will keep narrative rules and separate `structured_json` Mini Scene transform-profile assets. WorldBook narrative activation and Mini Scene profile binding remain separate choices;
 5. World Pack may reference a reviewed profile as one optional grouped capability, but pure content is not repackaged, Book assets are not auto-enabled, and custom worlds do not require a World Pack;
 6. regex is a bounded optional transform over validated structured fields, not a full-response parser, sanitizer, trigger engine, or code-execution path;
 7. interactive output is a validated declarative document rendered by a sandboxed HTML Presenter Adapter with restrictive CSP and allowlisted interaction commands. Raw AI HTML and legacy Chat `htmlSnippet` remain inert;
-8. every interactive artifact carries a plain-text fallback, and any validation, transform, asset, or renderer failure downgrades visibly without changing source-module truth;
+8. every AI-generated artifact carries a plain-text representation. Missing providers, failed calls, or invalid drafts create no artifact; only a later interactive-renderer failure may downgrade an already validated artifact to its AI-generated text representation;
 9. profile-declared content dimensions, including sensitive dimensions, begin unconfigured and require an explicit per-world/profile include/exclude choice; they never become a global filter or restrict user-authored/imported content;
-10. committed Mini Scene artifacts and interaction state are future durable owner records, while prompts, raw provider responses, rendered iframe HTML, and failed drafts remain transient;
+10. committed Mini Scene artifacts and interaction state are durable owner records, while prompts, raw provider responses, rendered iframe HTML, and failed drafts remain transient;
 11. `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` owns the exact Interfaces, Book profile shape, world resolution, regex limits, presenter security, persistence prerequisites, delivery stages, tests, and stop conditions.
 
 Delivery order:
 
 1. `DONE`: architecture contract and cross-package routing only;
 2. `DONE 2026-07-21`: pure request/draft/artifact/profile/module-policy schemas, empty-by-default dynamic module registry, deterministic profile resolver, Book structured-profile/regex validator, and 22 focused tests, with no runtime or UI;
-3. `TODO / SEPARATE_APPROVAL_REQUIRED`: the Book Repository foundation prerequisite is complete; persistence-owner/backup contract and Settings policy foundation still require a separate approved Mini Scene slice;
-4. `TODO`: shared Module, Text Presenter Adapter, and per-module/profile Settings controls;
+3. `DONE 2026-08-19`: the separately authorized text baseline adds `store:mini-scene` V1, persistence inventory ownership, complete-backup v4 with integrity-checked v3 compatibility, rollback-safe restore ordering, canonical `legacy_single_world` request/binding identity, and dynamic registered-caller presentation policy;
+4. `DONE SHELL 2026-08-19`: Event Runtime is the only functional registered caller. The provider-neutral generation path requires AI, accepts bounded event facts and optional narrative rules, validates an exact HTML-free Draft, records AI provider provenance, commits only valid artifacts, and fails closed without a deterministic substitute. The root Text Presenter supports copy/close, records a bounded `mini_scene.choose` owner-validation request, and returns to World Hub; global Settings controls only `unconfigured/off | text` presentation;
 5. `TODO / SECURITY_REVIEW_REQUIRED`: sandboxed HTML Presenter Adapter and Book transform-profile editor/preview;
-6. `TODO`: first K-pop Calendar music-show-day Adapter and structured Book transform profile;
-7. `TODO`: separately reviewed Map and Chat Adapters;
+6. `TODO`: connect one real Event Runtime automatic/condition-trigger Adapter that builds the request from an existing Event Instance and source-owner facts, passes the configured AI provider, and validates any selected choice through the event/source owner. Calendar has no Mini Scene authoring fields, generator button, or registered caller;
+7. `TODO`: profile-binding UI, custom/manual-world proof, and separately reviewed Map/Chat/event-source Adapters;
 8. `ON_HOLD`: streaming Adapters until a streaming module has an approved product contract and source-record model.
 
 Primary package:
@@ -408,8 +408,8 @@ Delivery stages:
    - add deployed base-path, manifest/install, controlled online-to-offline relaunch, hosted-provider Chat, and complete backup export/import smoke evidence;
    - `PARTIAL_DONE 2026-08-09`: local desktop and simulated Pixel 5 automation prove rich-media type/size recovery, one-off/Gallery image rendering, and the first internal App collaboration flow. Map places, Music tracks, and Wallet role-transfer receipts support source-owned structured sharing through Chat recipient selection and explicit send/cancel; Map/Music also prove lock/reload recovery and quoting. Source return is exact: Music does not auto-play, Map does not change trip state, and a Wallet receipt returns to the conversation that received the card rather than the transaction's original Chat lineage. This is project-internal App collaboration, not an OS/PWA share target;
    - run a named true-device matrix for safe areas, browser chrome, keyboard/composer, touch, back navigation, file save/import, and PWA relaunch.
-5. `P2 Post-preview depth` - `ON_HOLD`
-   - Mini Scene Text Presenter and the first Calendar Adapter may resume only after the product-preview P0 gates; interactive HTML remains a later security stage;
+5. `P2 Post-preview depth` - `PARTIAL_DONE`
+   - `PARTIAL_DONE 2026-08-19`: after the product-preview P0 gates, the user separately resumed the Mini Scene foundation. Persistence, AI-required generation, global text presentation, and Event Runtime caller contracts are landed; a production event-trigger Adapter and interactive HTML remain separately gated;
    - personal R2, production push, Gallery schema, non-Book Repository migrations, World Setting W2, hotspot decomposition, broad typing, and secondary-app depth do not block the first usable product preview.
 
 Acceptance for 4.9:
@@ -772,7 +772,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 7. `P1` 4.6 true-device World Pack validation only where it overlaps the release device matrix; another archetype is not scheduled.
 8. `P1 PARTIAL_DONE / EVE-4C DONE 2026-08-14 / PLAYER_CONTEXT_V1_FOUNDATION_DONE 2026-08-15`: 4.14 retains the pure Event Surface Projection, frozen EVE-2A contracts/fixtures, EVE-2B reusable runtime, the first Map/K-pop vertical slice, the World Hub Event Notebook, the owner-native user-initiated commerce foundation, and revision-aware read-only Self Profile eligibility for K-pop manager/public-idol families. Food Delivery retains no Event Surface host. Dynamic world arcs, Community/Media publication, investigation clues, actual identity-conditioned incident creation, and EVE-5 Mini Scene/media expansion remain documentation-only or separately gated.
 9. `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: 4.15 has landed Cloudflare MeloTTS and device-key MiniMax behind the shared runtime TTS Module for temporary Chinese preview, and the bounded Worker route is deployed. Stable end-to-end provider playback proof, production gateway policy, Chat read-aloud, and durable voice messages remain separate gates.
-10. `P2` 4.8 Text Presenter and first Calendar integration after the product-preview P0 gates; HTML and additional callers remain separately gated.
+10. `P2 PARTIAL_DONE / MINI_SCENE_AI_RUNTIME_AND_TEXT_SHELL_DONE_2026-08-19`: 4.8 now has durable artifacts/policies, an AI-required structured generation runtime, an Event Runtime registration, and a root Text Presenter. Calendar authoring/entry was explicitly rejected and removed; a production event-trigger Adapter, profile binding, safe Book transforms, and HTML remain separately gated.
 11. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
 12. `P2 PARTIAL_DONE / MJE-1_MJE-2_MJE-4_INTEGRATED / MJE-3_PRODUCTION_TRIGGER_SUSPENDED / PLACE_MEDIA_V1_PILOT_INTEGRATED_LOCAL`: 4.11 retains transport planning, lifecycle/checkpoints, Footprints IA, optional per-world authored-facility discovery, and the first governed place-detail media pilot. The generic checkpoint obstruction remains compatibility-tested but is not production-enabled. Active exploration, event-driven place reveal, candidate-place ownership, broader place-photo coverage, generated reconstruction, transit topology, broader-city, and true-device stages remain gated.
 13. `P2 PARTIAL_DONE / CALENDAR_DEPARTURE_READINESS_V1_DONE 2026-08-15 / CJA-1_DONE 2026-08-15 / CJA-2_DONE 2026-08-16 / CJA-3_DONE 2026-08-16 / CJA-4_DONE 2026-08-16 / CJA-5_DONE 2026-08-16`: 4.12 now has Calendar V3 authoring and occurrence views, the direct Calendar-to-Map departure vertical, hidden persisted orchestration, the separate Agenda Journey execution app, one absolute-time Activity Session, and one midpoint-only low-impact Event Runtime family with restrained Focus Companion presentation. Appointment auto-entry, broader event families, media callers/richer companions, and Narrative Timeline remain unimplemented.

@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, override-lane design, the landed Player Context V1 eligibility foundation, and the still-documentation-only world-evolution/information-propagation contracts.
 
@@ -36,7 +36,7 @@ Landed scheduling boundary: Calendar remains the visible long-range confirmed-pl
 
 Activity timing and its Focus Companion presentation remain useful when optional events are disabled. Module permission, random-event intensity, and presentation mode are independent controls. A scheduled activity, travel step, deadline, or safety notice cannot disappear merely because optional events are quiet/off, and a passive event cannot take ownership of the source timer or media assets.
 
-Future Mini Scene dependency: Event Runtime may be a trigger-policy/provenance caller of the shared Mini Scene Module, but it does not own the generated artifact, world-profile/regex execution, presenter, or source-module record. Read `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` before promoting a runtime-triggered scene.
+Mini Scene foundation: Event Runtime is now the shared Module's only functional registered caller, and the provider-neutral shell requires a valid AI Draft before committing or presenting an artifact. It still does not own the generated artifact, world-profile/regex execution, presenter, or source-module record. No production Event Instance currently invokes this shell; the first automatic/condition-trigger Adapter remains separately gated. Read `docs/architecture/MINI_SCENE_MODULE_CONTRACT.md` before connecting one.
 
 ## Read This Package In This Order
 

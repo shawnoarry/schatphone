@@ -52,6 +52,20 @@ const baseProps = {
       ],
     },
   ],
+  miniScenePresentationControls: [
+    {
+      id: 'simulation',
+      moduleKey: 'simulation',
+      label: 'Event Mini Scenes',
+      detail: 'Event Runtime asks AI to generate scenes after an event occurs.',
+      value: 'unconfigured',
+      options: [
+        { value: 'unconfigured', label: 'Not configured (hidden)', disabled: true },
+        { value: 'off', label: 'Off' },
+        { value: 'text', label: 'Text modal' },
+      ],
+    },
+  ],
 }
 
 describe('Settings automation event controls', () => {
@@ -77,5 +91,21 @@ describe('Settings automation event controls', () => {
     expect(wrapper.emitted('update-simulation-event-presentation-mode')).toEqual([
       ['activity_session', 'text'],
     ])
+  })
+
+  test('renders Mini Scene settings only for registered caller rows', async () => {
+    const wrapper = mount(SettingsAutomationSection, { props: baseProps })
+    const presentation = wrapper.get(
+      '[data-testid="settings-mini-scene-presentation-simulation"]',
+    )
+    await presentation.setValue('off')
+    expect(wrapper.emitted('update-mini-scene-presentation-mode')).toEqual([
+      ['simulation', 'off'],
+    ])
+
+    await wrapper.setProps({ miniScenePresentationControls: [] })
+    expect(wrapper.find('[data-testid="settings-mini-scene-presentation-controls"]').exists()).toBe(
+      false,
+    )
   })
 })

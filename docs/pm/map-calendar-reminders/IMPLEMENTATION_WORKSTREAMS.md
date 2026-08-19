@@ -94,10 +94,10 @@ Updated: 2026-08-17
 ## 7. Workstream G: Mini Scene Request Adapters
 
 - begin only after the shared Mini Scene foundation and the specific source slice are promoted
-- Calendar's first candidate is one confirmed K-pop `schedule.music_show_day` event using existing event truth
-- Map receives a separate later Adapter and must use trip/location truth rather than Calendar or World Pack assumptions
+- Calendar's former scene-specific carrier/form candidate is rejected; Calendar may expose existing owner facts only after a separately approved Event Runtime family needs them
+- Map receives a separate later source Adapter and must use trip/location truth rather than Calendar or World Pack assumptions
 - callers never execute Book regex, render HTML, select profiles, or persist Mini Scene artifacts
-- user off/text/interactive policy and all fallback behavior stay behind the shared Mini Scene Interface
+- global off/text/interactive policy and AI-required generation/failure behavior stay behind the shared Mini Scene Interface
 - an Agenda Journey Mini Scene caller remains unregistered until its specific Adapter and presentation policy are separately approved; the landed route/source records/persistence owner do not authorize event collaboration, and presentation `off` may auto-resolve only policy-approved low-impact outcomes without bypassing high-impact review
 
 ## 8. Workstream H: Map Journey Checkpoint Event Collaboration

@@ -126,6 +126,7 @@ describe('Settings backup workflow interface', () => {
       'messagesByConversation',
       'map',
       'calendar',
+      'miniScene',
       'reminders',
       'gallery',
       'files',
@@ -142,7 +143,7 @@ describe('Settings backup workflow interface', () => {
     ])
     expect(exported.backupMeta).toMatchObject({
       magic: 'schatphone-complete-backup',
-      schemaVersion: 3,
+      schemaVersion: 4,
       exportMode: 'metadata_only',
     })
     expect(exported.backupMeta.manifest.sectionCount).toBeGreaterThan(20)
@@ -171,6 +172,11 @@ describe('Settings backup workflow interface', () => {
     expect(exported.calendar.activitySession).toMatchObject({
       schemaVersion: 2,
       sessions: [],
+    })
+    expect(exported.miniScene).toMatchObject({
+      schemaVersion: 1,
+      modulePolicies: [{ moduleKey: 'simulation', mode: 'unconfigured' }],
+      artifacts: [],
     })
     expect(JSON.stringify(exported.imageGeneration)).not.toContain('image-secret')
     expect(JSON.stringify(exported.imageGeneration)).not.toContain('proxy-secret')
@@ -318,7 +324,7 @@ describe('Settings backup workflow interface', () => {
     const exportedBlob = createObjectURL.mock.calls[0][0]
     const exported = JSON.parse(exportedBlob.parts.join(''))
     expect(exported.backupMeta).toMatchObject({
-      schemaVersion: 3,
+      schemaVersion: 4,
       exportMode: 'metadata_with_asset_package',
     })
     expect(exported.backupMeta.galleryAssetPackage).toMatchObject({
@@ -421,7 +427,7 @@ describe('Settings backup workflow interface', () => {
     expect(imageGenerationStore.defaults.aspectRatio).toBe('3:2')
   })
 
-  test('restores Chat identity from a verified v3 package and rejects corruption before mutation', async () => {
+  test('restores Chat identity from a verified v4 package and rejects corruption before mutation', async () => {
     const systemStore = useSystemStore()
     const chatStore = useChatStore()
     chatStore.setModuleIdentity({

@@ -6,6 +6,7 @@ import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { SIMULATION_SURPRISE_MODE, useSimulationStore } from '../stores/simulation'
+import { useMiniSceneStore } from '../stores/miniScene'
 import {
   ACTIVITY_SESSION_EVENT_MODULE_KEY,
   ACTIVITY_SESSION_EVENT_PRESENTATION_MODE,
@@ -51,6 +52,7 @@ const systemStore = useSystemStore()
 const chatStore = useChatStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const simulationStore = useSimulationStore()
+const miniSceneStore = useMiniSceneStore()
 const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const systemApiReports = useSystemApiReports({ systemStore })
@@ -741,6 +743,28 @@ const simulationEventPresentationControls = computed(() => [
   },
 ])
 
+const miniScenePresentationControls = computed(() =>
+  miniSceneStore.registeredModules.map((registration) => ({
+    id: registration.moduleKey,
+    moduleKey: registration.moduleKey,
+    label: t(registration.labelZh, registration.labelEn),
+    value: miniSceneStore.getModulePolicy(registration.moduleKey).mode,
+    detail: t(
+      '事件运行时会在事件实际发生并需要展开时请求 AI；这里不编辑人物、剧情或选项。',
+      'Event Runtime requests AI only after an event occurs and needs expansion; characters, plots, and choices are not authored here.',
+    ),
+    options: [
+      {
+        value: 'unconfigured',
+        label: t('未设置（不展示）', 'Not configured (hidden)'),
+        disabled: true,
+      },
+      { value: 'off', label: t('关闭呈现', 'Off') },
+      { value: 'text', label: t('文字弹窗', 'Text modal') },
+    ],
+  })),
+)
+
 const updateSimulationSurpriseMode = (mode) => {
   simulationStore.setSurpriseMode(mode)
 }
@@ -751,6 +775,10 @@ const updateSimulationModuleEventsEnabled = (moduleKey, enabled) => {
 
 const updateSimulationEventPresentationMode = (moduleKey, mode) => {
   simulationStore.setEventPresentationMode(moduleKey, mode)
+}
+
+const updateMiniScenePresentationMode = (moduleKey, mode) => {
+  miniSceneStore.setModulePresentationMode(moduleKey, mode)
 }
 
 const updateSimulationForegroundTickEnabled = (enabled) => {
@@ -827,6 +855,7 @@ const saveAutomationSettings = async () => {
   )
   updateSimulationForegroundTickIntervalMinutes(simulationForegroundTickIntervalMinutes.value)
   simulationStore.saveNow()
+  miniSceneStore.saveNow()
 
   systemStore.saveNow()
   automationSaved.value = true
@@ -1048,6 +1077,7 @@ if (initialMenu) {
             :simulation-surprise-mode-runtime-label="simulationSurpriseModeRuntimeLabel"
             :simulation-module-event-controls="simulationModuleEventControls"
             :simulation-event-presentation-controls="simulationEventPresentationControls"
+            :mini-scene-presentation-controls="miniScenePresentationControls"
             :automation-saved="automationSaved"
             @update-automation-field="updateAutomationField"
             @update-module-enabled="updateAutomationModuleEnabled"
@@ -1057,6 +1087,7 @@ if (initialMenu) {
             @update-simulation-surprise-mode="updateSimulationSurpriseMode"
             @update-simulation-module-events-enabled="updateSimulationModuleEventsEnabled"
             @update-simulation-event-presentation-mode="updateSimulationEventPresentationMode"
+            @update-mini-scene-presentation-mode="updateMiniScenePresentationMode"
             @open-chat-automation="openChatAutomation"
             @open-world-hub="openWorldHub"
             @open-network-reports="openNetworkReports"
