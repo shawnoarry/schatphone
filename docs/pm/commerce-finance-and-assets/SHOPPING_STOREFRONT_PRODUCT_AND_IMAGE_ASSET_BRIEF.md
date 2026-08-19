@@ -7,6 +7,8 @@
 > 范围：商品分类、候选扩充、商品摄影与店铺视觉素材。
 >
 > 不包含：改动稳定 ID、实现更多商品数据、继续生成 Batch 0A 以外的图片、接入运行时素材、调整购物流程或宣称真机验收完成。
+>
+> 后续视觉目标：`docs/design/SHOPPING_STOREFRONT_BRAND_UI_AND_ASSET_GUIDE.md` 已把六店方向扩展为完整网店 Home、Campaign、Collection、Product Detail、交易页与动效系统。本文的 90 张正式素材矩阵保留为该完整 812 槽创意母版库的最低子集，不再单独代表店铺装修完成。
 
 ## 1. 目标
 
