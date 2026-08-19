@@ -29,6 +29,7 @@ import SettingsGeneralSection from '../components/settings/SettingsGeneralSectio
 import SettingsLandingSection from '../components/settings/SettingsLandingSection.vue'
 import SettingsPushSection from '../components/settings/SettingsPushSection.vue'
 import SettingsSoundSection from '../components/settings/SettingsSoundSection.vue'
+import SettingsRingtoneSection from '../components/settings/SettingsRingtoneSection.vue'
 import SettingsSoftwareUpdateSection from '../components/settings/SettingsSoftwareUpdateSection.vue'
 import SettingsStorageDiagnosticsSection from '../components/settings/SettingsStorageDiagnosticsSection.vue'
 import SettingsSubPageHeader from '../components/settings/SettingsSubPageHeader.vue'
@@ -45,6 +46,13 @@ import {
   playUiCue,
   resolveGlobalUiSfxSettings,
 } from '../lib/ui-sfx'
+import {
+  DEFAULT_RINGTONE_ID,
+  RINGTONE_OPTIONS,
+  getRingtoneLabel,
+  normalizeRingtoneId,
+  playRingtone,
+} from '../lib/ringtone'
 
 const router = useRouter()
 const route = useRoute()
@@ -118,6 +126,18 @@ const globalSoundEffectsProfile = computed(
     soundEffectsProfileOptions.value.find((profile) => profile.id === globalSoundEffectsSettings.value.profile) ||
     soundEffectsProfileOptions.value[0],
 )
+
+const ringtoneOptions = computed(() =>
+  RINGTONE_OPTIONS.map((ringtone) => ({
+    ...ringtone,
+    label: getRingtoneLabel(ringtone.id, t),
+  })),
+)
+const globalRingtoneId = computed(() =>
+  normalizeRingtoneId(settings.value.appearance?.ringtoneId || DEFAULT_RINGTONE_ID),
+)
+const globalRingtoneEnabled = computed(() => settings.value.appearance?.ringtoneEnabled !== false)
+const globalRingtoneLabel = computed(() => getRingtoneLabel(globalRingtoneId.value, t))
 
 const setSoftwareUpdateFeedback = (type, message, durationMs = 2200) => {
   softwareUpdateFeedbackType.value = type
@@ -447,6 +467,22 @@ const toggleGlobalSoundEffects = () => {
 const setGlobalSoundEffectsProfile = (profileId) => {
   settings.value.appearance.soundEffectsProfile = normalizeUiSfxProfile(profileId)
   systemStore.saveNow()
+}
+
+const toggleGlobalRingtone = () => {
+  settings.value.appearance.ringtoneEnabled = !globalRingtoneEnabled.value
+  systemStore.saveNow()
+}
+
+const setGlobalRingtone = (ringtoneId) => {
+  settings.value.appearance.ringtoneId = normalizeRingtoneId(ringtoneId)
+  systemStore.saveNow()
+}
+
+const previewGlobalRingtone = () => {
+  if (!globalRingtoneEnabled.value) return
+  if (settings.value.appearance.soundEffectsEnabled === false) return
+  playRingtone(globalRingtoneId.value)
 }
 
 const previewGlobalSoundEffects = () => {
@@ -1014,6 +1050,17 @@ if (initialMenu) {
             @toggle="toggleGlobalSoundEffects"
             @set-profile="setGlobalSoundEffectsProfile"
             @preview="previewGlobalSoundEffects"
+          />
+
+          <SettingsRingtoneSection
+            :enabled="globalRingtoneEnabled"
+            :ringtone-id="globalRingtoneId"
+            :ringtone-options="ringtoneOptions"
+            :ringtone="{ label: globalRingtoneLabel }"
+            test-id-prefix="settings"
+            @toggle="toggleGlobalRingtone"
+            @set-ringtone="setGlobalRingtone"
+            @preview="previewGlobalRingtone"
           />
         </div>
       </div>

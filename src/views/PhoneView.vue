@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useDialog } from '../composables/useDialog'
@@ -10,7 +10,7 @@ import {
   recordPhoneCallRelationshipFact,
 } from '../lib/relationship-fact-adapters'
 import { useChatStore } from '../stores/chat'
-import { PHONE_CALL_DIRECTION, usePhoneStore } from '../stores/phone'
+import { PHONE_CALL_DIRECTION, PHONE_INCOMING_CALL_STATUS, usePhoneStore } from '../stores/phone'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
@@ -288,6 +288,56 @@ const callContact = (contact) => {
   startCall({ contact, phoneNumber: contactPhoneNumber(contact) })
 }
 
+const simulateIncomingCall = (contact) => {
+  if (!contact) return
+  const result = phoneStore.receiveIncomingCall({
+    name: contact.name,
+    phoneNumber: contactPhoneNumber(contact),
+    contactId: String(contact.id),
+    relationshipBinding: relationshipBindingForContact(contact),
+    sourceModule: 'phone_simulate',
+  })
+  if (!result?.ok) {
+    showFeedback('warning', t('已有来电等待接听。', 'An incoming call is already ringing.'))
+    return
+  }
+  showFeedback('success', t(`来自 ${contact.name} 的来电…`, `Incoming call from ${contact.name}…`))
+}
+
+const beginIncomingCall = (accepted) => {
+  clearSessionTimers()
+  sessionElapsedSec.value = 0
+  const contact = accepted.participant.id
+    ? relationshipContactOptions.value.find((item) => item.optionValue === accepted.participant.id) || null
+    : null
+  activeCall.value = {
+    contact,
+    contactName: accepted.participant.name,
+    phoneNumber: accepted.participant.phoneNumber,
+    startedAt: accepted.startedAt,
+    state: CALL_SESSION_STATE.CONNECTED,
+    direction: PHONE_CALL_DIRECTION.INCOMING,
+    relationshipBinding: accepted.relationshipBinding,
+    muted: false,
+    speaker: false,
+    keypadOpen: false,
+    tones: '',
+  }
+  beginConnectedCall()
+  void focusOverlay(activeCallRef)
+}
+
+watch(
+  () => phoneStore.incomingCall,
+  (incoming) => {
+    if (incoming?.status !== PHONE_INCOMING_CALL_STATUS.ACCEPTED) return
+    const accepted = phoneStore.consumeAcceptedIncomingCall()
+    if (!accepted) return
+    beginIncomingCall(accepted)
+  },
+  { immediate: true },
+)
+
 const callFromHistory = (call) => {
   if (!call) return
   startCall({
@@ -311,19 +361,22 @@ const saveCompletedSession = () => {
   if (!activeCall.value) return null
   const target = activeCall.value.contact
   const wasConnected = activeCall.value.state === CALL_SESSION_STATE.CONNECTED
+  const direction = activeCall.value.direction || PHONE_CALL_DIRECTION.OUTGOING
   const call = phoneStore.addCallLog({
     contactName: activeCall.value.contactName,
     phoneNumber: activeCall.value.phoneNumber,
-    direction: PHONE_CALL_DIRECTION.OUTGOING,
+    direction,
     status: wasConnected ? 'completed' : 'failed',
     durationSec: wasConnected ? sessionElapsedSec.value : 0,
     summary: wasConnected
       ? activeCall.value.tones
         ? t(`通话中输入：${activeCall.value.tones}`, `Keypad input: ${activeCall.value.tones}`)
-        : ''
+        : direction === PHONE_CALL_DIRECTION.INCOMING
+          ? t('接听的来电。', 'Answered incoming call.')
+          : ''
       : t('呼叫在接通前结束。', 'Call ended before connecting.'),
-    sourceModule: 'phone_session',
-    relationshipBinding: relationshipBindingForContact(target),
+    sourceModule: direction === PHONE_CALL_DIRECTION.INCOMING ? 'phone_session_incoming' : 'phone_session',
+    relationshipBinding: activeCall.value.relationshipBinding || relationshipBindingForContact(target),
     startedAt: activeCall.value.startedAt,
   })
   if (wasConnected && target && call) {
@@ -879,15 +932,27 @@ onMounted(() => {
                 <strong>{{ contact.name }}</strong>
                 <small>{{ contactPhoneNumber(contact) }}<template v-if="contact.role"> · {{ contact.role }}</template></small>
               </span>
-              <button
-                type="button"
-                :aria-label="t(`呼叫 ${contact.name}`, `Call ${contact.name}`)"
-                :title="t('呼叫', 'Call')"
-                :data-testid="`phone-call-contact-${contact.id}`"
-                @click="callContact(contact)"
-              >
-                <i class="fas fa-phone" aria-hidden="true"></i>
-              </button>
+              <span class="phone-contact-actions">
+                <button
+                  type="button"
+                  class="is-incoming"
+                  :aria-label="t(`模拟 ${contact.name} 来电`, `Simulate incoming call from ${contact.name}`)"
+                  :title="t('模拟来电', 'Simulate incoming call')"
+                  :data-testid="`phone-incoming-contact-${contact.id}`"
+                  @click="simulateIncomingCall(contact)"
+                >
+                  <i class="fas fa-phone-arrow-down-left" aria-hidden="true"></i>
+                </button>
+                <button
+                  type="button"
+                  :aria-label="t(`呼叫 ${contact.name}`, `Call ${contact.name}`)"
+                  :title="t('呼叫', 'Call')"
+                  :data-testid="`phone-call-contact-${contact.id}`"
+                  @click="callContact(contact)"
+                >
+                  <i class="fas fa-phone" aria-hidden="true"></i>
+                </button>
+              </span>
             </article>
           </div>
 
@@ -1901,7 +1966,7 @@ onMounted(() => {
   position: relative;
   display: grid;
   min-height: 76px;
-  grid-template-columns: 48px minmax(0, 1fr) 42px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
   align-items: center;
   gap: 13px;
   padding: 12px 12px 12px 14px;
@@ -1941,7 +2006,13 @@ onMounted(() => {
   font-variant-numeric: tabular-nums;
 }
 
-.phone-contact-row > button {
+.phone-contact-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phone-contact-actions button {
   display: grid;
   width: 40px;
   height: 40px;
@@ -1954,7 +2025,12 @@ onMounted(() => {
   transition: transform 160ms ease, background 160ms ease;
 }
 
-.phone-contact-row > button:active {
+.phone-contact-actions button.is-incoming {
+  background: rgba(109, 187, 138, 0.16);
+  color: #3f8a5c;
+}
+
+.phone-contact-actions button:active {
   transform: scale(0.94);
 }
 

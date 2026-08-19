@@ -30,6 +30,13 @@ export const PHONE_CALL_SESSION_STATUS = Object.freeze({
   FAILED: 'failed',
 })
 
+export const PHONE_INCOMING_CALL_STATUS = Object.freeze({
+  RINGING: 'ringing',
+  ACCEPTED: 'accepted',
+})
+
+const DEFAULT_INCOMING_RING_TIMEOUT_MS = 25_000
+
 const PHONE_CALL_TURN_LIMIT = 80
 
 export const PHONE_CALL_DIRECTION = Object.freeze({
@@ -342,6 +349,7 @@ export const usePhoneStore = defineStore('phone', () => {
     phoneNumber = '',
     summary = '',
     relationshipBinding = null,
+    sourceModule = 'phone_manual',
   } = {}) =>
     addCallLog({
       contactName,
@@ -350,7 +358,7 @@ export const usePhoneStore = defineStore('phone', () => {
       status: PHONE_CALL_STATUS.MISSED,
       durationSec: 0,
       summary,
-      sourceModule: 'phone_manual',
+      sourceModule,
       relationshipBinding,
     })
 
@@ -414,6 +422,129 @@ export const usePhoneStore = defineStore('phone', () => {
 
   const persistSession = () => {
     if (hasFinishedStorageHydration.value) persistToStorage()
+  }
+
+  const incomingCall = ref(null)
+  let incomingCallTimerId = null
+
+  const clearIncomingCallTimer = () => {
+    if (incomingCallTimerId) {
+      clearTimeout(incomingCallTimerId)
+      incomingCallTimerId = null
+    }
+  }
+
+  const logIncomingCall = ({ status, summary = '' } = {}) => {
+    if (!incomingCall.value) return null
+    return addCallLog({
+      contactName: incomingCall.value.participant.name,
+      phoneNumber: incomingCall.value.participant.phoneNumber,
+      direction: PHONE_CALL_DIRECTION.INCOMING,
+      status,
+      durationSec: 0,
+      summary,
+      sourceModule: incomingCall.value.sourceModule,
+      sourceId: incomingCall.value.id,
+      relationshipBinding: incomingCall.value.relationshipBinding,
+      startedAt: incomingCall.value.startedAt,
+    })
+  }
+
+  const finalizeIncomingCallAsMissed = () => {
+    if (!incomingCall.value || incomingCall.value.status !== PHONE_INCOMING_CALL_STATUS.RINGING) return null
+    clearIncomingCallTimer()
+    const contactName = incomingCall.value.participant.name
+    const call = logIncomingCall({
+      status: PHONE_CALL_STATUS.MISSED,
+      summary: `${contactName} tried to reach you.`,
+    })
+    incomingCall.value = null
+    persistSession()
+    if (!call) return null
+    const calendarStore = useCalendarStore()
+    const calendarCue = calendarStore.upsertPhoneMissedCallCueFromCall(call)
+    return {
+      call,
+      notificationId: notifyMissedCall(call),
+      calendarCueId: calendarCue?.id || '',
+    }
+  }
+
+  const receiveIncomingCall = ({
+    name = '',
+    phoneNumber = '',
+    contactId = '',
+    relationshipBinding = null,
+    ringTimeoutMs = DEFAULT_INCOMING_RING_TIMEOUT_MS,
+    sourceModule = 'phone_incoming',
+    sourceId = '',
+    now = Date.now(),
+  } = {}) => {
+    const contactName = normalizeText(name, '', 80)
+    if (!contactName) return { ok: false, reason: 'name_required', incomingCall: null }
+    if (incomingCall.value && incomingCall.value.status === PHONE_INCOMING_CALL_STATUS.RINGING) {
+      return { ok: false, reason: 'incoming_active', incomingCall: incomingCall.value }
+    }
+    clearIncomingCallTimer()
+    const timeoutMs = Number(ringTimeoutMs)
+    incomingCall.value = {
+      id: `phone_incoming_${now}_${Math.random().toString(36).slice(2, 8)}`,
+      status: PHONE_INCOMING_CALL_STATUS.RINGING,
+      participant: {
+        id: normalizeText(contactId, '', 120),
+        name: contactName,
+        phoneNumber: normalizeText(phoneNumber, '', 40),
+      },
+      relationshipBinding,
+      sourceModule: normalizeText(sourceModule, 'phone_incoming', 40),
+      sourceId: normalizeText(sourceId, '', 160),
+      startedAt: now,
+    }
+    if (Number.isFinite(timeoutMs) && timeoutMs > 0) {
+      incomingCallTimerId = setTimeout(() => {
+        finalizeIncomingCallAsMissed()
+      }, timeoutMs)
+    }
+    persistSession()
+    return { ok: true, reason: '', incomingCall: incomingCall.value }
+  }
+
+  const acceptIncomingCall = () => {
+    if (!incomingCall.value || incomingCall.value.status !== PHONE_INCOMING_CALL_STATUS.RINGING) {
+      return null
+    }
+    clearIncomingCallTimer()
+    incomingCall.value = {
+      ...incomingCall.value,
+      status: PHONE_INCOMING_CALL_STATUS.ACCEPTED,
+    }
+    persistSession()
+    return incomingCall.value
+  }
+
+  const consumeAcceptedIncomingCall = () => {
+    if (!incomingCall.value || incomingCall.value.status !== PHONE_INCOMING_CALL_STATUS.ACCEPTED) {
+      return null
+    }
+    const accepted = incomingCall.value
+    incomingCall.value = null
+    persistSession()
+    return accepted
+  }
+
+  const declineIncomingCall = () => {
+    if (!incomingCall.value || incomingCall.value.status !== PHONE_INCOMING_CALL_STATUS.RINGING) {
+      return null
+    }
+    clearIncomingCallTimer()
+    const contactName = incomingCall.value.participant.name
+    const call = logIncomingCall({
+      status: PHONE_CALL_STATUS.DECLINED,
+      summary: `Declined call from ${contactName}.`,
+    })
+    incomingCall.value = null
+    persistSession()
+    return call
   }
 
   const startCallSession = ({
@@ -713,8 +844,10 @@ export const usePhoneStore = defineStore('phone', () => {
   }
 
   const resetForTesting = () => {
+    clearIncomingCallTimer()
     calls.value = []
     activeSession.value = null
+    incomingCall.value = null
     interactionResolutions.value = []
   }
 
@@ -743,6 +876,7 @@ export const usePhoneStore = defineStore('phone', () => {
   return {
     calls,
     activeSession,
+    incomingCall,
     interactionResolutions,
     callSessionActive,
     callCount,
@@ -759,6 +893,11 @@ export const usePhoneStore = defineStore('phone', () => {
     removeCallLog,
     anonymizeCallLog,
     cleanupRelationshipForProfile,
+    receiveIncomingCall,
+    acceptIncomingCall,
+    consumeAcceptedIncomingCall,
+    declineIncomingCall,
+    finalizeIncomingCallAsMissed,
     startCallSession,
     createCallLifecycleFacts,
     appendCallTurn,
