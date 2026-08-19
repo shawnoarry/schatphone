@@ -7,6 +7,7 @@ import {
   CHAT_CUSTOM_CSS_PROFILE_LIMIT,
   CHAT_CUSTOM_CSS_PROFILE_NAME_MAX_CHARS,
   DEFAULT_CHAT_APPEARANCE,
+  MAX_CHAT_CUSTOM_CSS_CHARS,
   getChatAppearanceClasses,
   normalizeChatCssProfiles,
   normalizeChatAppearance,
@@ -347,6 +348,31 @@ const clearCustomCssDraft = () => {
   chatAppearanceDraft.customCssEnabled = false
   chatAppearanceDraft.activeCustomCssProfileId = ''
   customCssProfileName.value = ''
+}
+
+const customCssFileInput = ref(null)
+
+const openCustomCssFilePicker = () => {
+  customCssFileInput.value?.click()
+}
+
+const importCustomCssFile = async (event) => {
+  const target = event?.target
+  const file = target?.files?.[0]
+  if (target) target.value = ''
+  if (!file) return
+  try {
+    const text = await file.text()
+    chatAppearanceDraft.customCss = text.slice(0, MAX_CHAT_CUSTOM_CSS_CHARS)
+    chatAppearanceDraft.customCssEnabled = true
+    chatAppearanceDraft.activeCustomCssProfileId = ''
+    if (!customCssProfileName.value.trim()) {
+      customCssProfileName.value = normalizeCustomCssProfileName(file.name.replace(/\.[^.]+$/, ''))
+    }
+    showActionFeedback('success', t('已导入 CSS 文件内容。', 'CSS file content imported.'))
+  } catch {
+    showActionFeedback('error', t('文件读取失败，请重试。', 'Could not read the file. Please retry.'))
+  }
 }
 
 const removeCustomCssProfile = (profile) => {
@@ -876,6 +902,22 @@ const resetChatAppearance = () => {
           data-testid="chat-appearance-custom-css"
         ></textarea>
         <div class="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            class="px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 text-[11px]"
+            data-testid="chat-appearance-custom-css-import"
+            @click="openCustomCssFilePicker"
+          >
+            {{ t('从文件导入', 'Import file') }}
+          </button>
+          <input
+            ref="customCssFileInput"
+            type="file"
+            accept=".css,text/css"
+            class="hidden"
+            data-testid="chat-appearance-custom-css-file"
+            @change="importCustomCssFile"
+          />
           <button
             type="button"
             class="px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 text-[11px]"

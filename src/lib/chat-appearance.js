@@ -24,7 +24,7 @@ export const DEFAULT_CHAT_APPEARANCE = Object.freeze({
   activeCustomCssProfileId: '',
 })
 
-const MAX_CHAT_CUSTOM_CSS_CHARS = 20000
+export const MAX_CHAT_CUSTOM_CSS_CHARS = 20000
 
 const normalizeText = (value, maxLength = 120) => {
   if (typeof value !== 'string') return ''

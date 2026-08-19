@@ -224,3 +224,21 @@ test('Chat Appearance carries an iMessage layout into the active conversation', 
   expect(longBubbleMetrics.width).toBeLessThan(longBubbleMetrics.threadWidth)
   await expectNoHorizontalOverflow(page)
 })
+
+test('Chat Appearance imports a custom CSS file into the draft', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/chat-settings/appearance')
+
+  const cssContent = '.chat-shell { --chat-bg: #d8f3e8; }\n'
+  await page.getByTestId('chat-appearance-custom-css-file').setInputFiles({
+    name: 'mint-soda.css',
+    mimeType: 'text/css',
+    buffer: Buffer.from(cssContent, 'utf-8'),
+  })
+
+  await expect(page.getByTestId('chat-appearance-custom-css')).toHaveValue(/--chat-bg: #d8f3e8/)
+  await expect(page.getByTestId('chat-appearance-custom-css-enabled')).toBeChecked()
+  await expect(page.getByTestId('chat-appearance-css-profile-name')).toHaveValue('mint-soda')
+  await expectNoHorizontalOverflow(page)
+})
