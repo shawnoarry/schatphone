@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, realpath, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -96,10 +96,10 @@ describe('image-bed migration archive', () => {
       ...data,
       manifestName: 'project-brief-archive-manifest.json',
     })
-    expect(archived.manifestPath).toBe(join(
+    expect(await realpath(archived.manifestPath)).toBe(await realpath(join(
       data.archiveRoot,
       '_records/project-brief-archive-manifest.json',
-    ))
+    )))
   })
 
   it('stops before copying when source integrity changed', async () => {
