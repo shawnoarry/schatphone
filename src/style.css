@@ -2542,6 +2542,145 @@ select {
   background-color: color-mix(in srgb, var(--chat-send-bg) 22%, transparent);
 }
 
+/* Neutral text/surface utilities on Chat settings-family pages follow the
+   active Chat appearance too, so custom-CSS dark themes stay readable. The
+   branded hero card intentionally keeps its own light treatment. */
+.chat-settings-page .text-gray-950,
+.chat-settings-page .text-gray-900,
+.chat-me-page .text-gray-950,
+.chat-me-page .text-gray-900,
+.chat-feature-page .text-gray-950,
+.chat-feature-page .text-gray-900,
+.chat-appearance-page .text-gray-950,
+.chat-appearance-page .text-gray-900,
+.chat-groups-shell .text-gray-950,
+.chat-groups-shell .text-gray-900 {
+  color: var(--chat-ink);
+}
+
+.chat-settings-page .text-gray-600,
+.chat-settings-page .text-gray-500,
+.chat-settings-page .text-gray-400,
+.chat-me-page .text-gray-600,
+.chat-me-page .text-gray-500,
+.chat-me-page .text-gray-400,
+.chat-feature-page .text-gray-600,
+.chat-feature-page .text-gray-500,
+.chat-feature-page .text-gray-400,
+.chat-appearance-page .text-gray-600,
+.chat-appearance-page .text-gray-500,
+.chat-appearance-page .text-gray-400,
+.chat-groups-shell .text-gray-600,
+.chat-groups-shell .text-gray-500,
+.chat-groups-shell .text-gray-400 {
+  color: var(--chat-muted-ink);
+}
+
+.chat-settings-page .bg-gray-50,
+.chat-settings-page .bg-gray-100,
+.chat-settings-page .bg-gray-50\/70,
+.chat-me-page .bg-gray-50,
+.chat-me-page .bg-gray-100,
+.chat-me-page .bg-gray-50\/70,
+.chat-feature-page .bg-gray-50,
+.chat-feature-page .bg-gray-100,
+.chat-appearance-page .bg-gray-50,
+.chat-appearance-page .bg-gray-100,
+.chat-groups-shell .bg-gray-50,
+.chat-groups-shell .bg-gray-100 {
+  background-color: var(--chat-panel-muted-bg);
+}
+
+.chat-settings-page .border-gray-100,
+.chat-settings-page .border-gray-200,
+.chat-me-page .border-gray-100,
+.chat-me-page .border-gray-200,
+.chat-feature-page .border-gray-100,
+.chat-feature-page .border-gray-200,
+.chat-appearance-page .border-gray-100,
+.chat-appearance-page .border-gray-200,
+.chat-groups-shell .border-gray-100,
+.chat-groups-shell .border-gray-200 {
+  border-color: var(--chat-panel-border);
+}
+
+.chat-settings-page .bg-gray-900,
+.chat-me-page .bg-gray-900,
+.chat-feature-page .bg-gray-900,
+.chat-appearance-page .bg-gray-900,
+.chat-groups-shell .bg-gray-900 {
+  background-color: var(--chat-ink);
+  color: var(--chat-thread-bg);
+}
+
+.chat-settings-page .accent-blue-500,
+.chat-me-page .accent-blue-500,
+.chat-feature-page .accent-blue-500,
+.chat-appearance-page .accent-blue-500,
+.chat-groups-shell .accent-blue-500 {
+  accent-color: var(--chat-accent-ink);
+}
+
+.chat-settings-page .bg-blue-500,
+.chat-settings-page .bg-blue-600,
+.chat-me-page .bg-blue-500,
+.chat-me-page .bg-blue-600,
+.chat-feature-page .bg-blue-500,
+.chat-feature-page .bg-blue-600,
+.chat-appearance-page .bg-blue-500,
+.chat-appearance-page .bg-blue-600,
+.chat-groups-shell .bg-blue-500,
+.chat-groups-shell .bg-blue-600 {
+  background-color: var(--chat-accent-ink);
+}
+
+.chat-settings-page .bg-blue-50,
+.chat-settings-page .bg-blue-50\/70,
+.chat-me-page .bg-blue-50,
+.chat-me-page .bg-blue-50\/70,
+.chat-feature-page .bg-blue-50,
+.chat-feature-page .bg-blue-50\/70,
+.chat-appearance-page .bg-blue-50,
+.chat-appearance-page .bg-blue-50\/70,
+.chat-groups-shell .bg-blue-50,
+.chat-groups-shell .bg-blue-50\/70 {
+  background-color: var(--chat-accent-soft);
+}
+
+.chat-settings-page .border-blue-100,
+.chat-settings-page .border-blue-200,
+.chat-me-page .border-blue-100,
+.chat-me-page .border-blue-200,
+.chat-feature-page .border-blue-100,
+.chat-feature-page .border-blue-200,
+.chat-appearance-page .border-blue-100,
+.chat-appearance-page .border-blue-200,
+.chat-groups-shell .border-blue-100,
+.chat-groups-shell .border-blue-200 {
+  border-color: color-mix(in srgb, var(--chat-send-bg) 42%, transparent);
+}
+
+.chat-settings-page .text-blue-600,
+.chat-settings-page .text-blue-700,
+.chat-me-page .text-blue-600,
+.chat-me-page .text-blue-700,
+.chat-feature-page .text-blue-600,
+.chat-feature-page .text-blue-700,
+.chat-appearance-page .text-blue-600,
+.chat-appearance-page .text-blue-700,
+.chat-groups-shell .text-blue-600,
+.chat-groups-shell .text-blue-700 {
+  color: var(--chat-accent-ink);
+}
+
+.chat-settings-hero .text-gray-950 {
+  color: #1f2937;
+}
+
+.chat-settings-hero .text-gray-600 {
+  color: #4b5563;
+}
+
 .chat-me-recent-rail {
   display: flex;
   gap: 0.72rem;

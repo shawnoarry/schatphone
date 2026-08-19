@@ -39,8 +39,9 @@ NOT done / open for the next session:
 
 - User-reported defect: Chat Settings icon tiles (and sibling accents) were hard-coded `yellow-*` utilities, so switching Chat appearance to ocean/mint/coral (or WeChat/iMessage layouts) left clashing yellow chrome.
 - Fix lives in one place: a `.chat-shell`-scoped override map in `src/style.css` remaps legacy `yellow-*` utilities to `--chat-accent-soft` / `--chat-accent-ink` / `--chat-send-bg` / `--chat-send-text`, following the existing `section.bg-white` remap precedent. Zero template edits across ChatSettings/ChatMe/ChatGroups/ChatFeaturePlaceholder/ChatAppearance/ChatDirectory/ChatView.
+- Follow-up from the user's custom-CSS experiment (starry-night dark theme, `tmp/chat-css-starry-night.css`): the settings-family pages also carried raw neutral grays and blue toggles that broke under dark custom themes. Extended the same map with page-scoped neutral/blue coverage (`.chat-settings-page`, `.chat-me-page`, `.chat-feature-page`, `.chat-appearance-page`, `.chat-groups-shell`): gray text -> `--chat-ink`/`--chat-muted-ink`, gray/blue surfaces -> `--chat-panel-muted-bg`/`--chat-accent-soft`, blue switch tracks -> `--chat-accent-ink`, borders -> `--chat-panel-border`; the branded `chat-settings-hero` intentionally keeps its light treatment with pinned dark text.
 - Environmental fix: added `.codex/**` to `eslint.config.js` ignores (machine-local tool files rewritten 2026-08-18 broke `npm run lint`; `.agents/**` precedent).
-- Validation: lint, chat-focused tests 40/40, full suite 291 files / 2067 tests (green on rerun; one intermittent single-test flake recurs — known, see §0), build, screenshots across kakao/ocean/mint modes.
+- Validation: lint, chat-focused tests 45/45, full suite 291 files / 2067 tests (green on rerun; one intermittent single-test flake recurs — known, see §0), build, screenshots across kakao/ocean/mint modes plus live starry-night custom-CSS thread/settings checks.
 
 ### 2026-08-17 Gallery (Photos) token parity
 
