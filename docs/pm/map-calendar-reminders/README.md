@@ -1,6 +1,6 @@
 # Map Calendar Reminders Package
 
-Updated: 2026-08-17
+Updated: 2026-08-19
 
 Use this package for Map, Calendar, Agenda Journey, Activity Session, Reminders, route/date/callback/follow-up boundaries, and trip/schedule handoff rules.
 
@@ -44,6 +44,7 @@ Future Mini Scene reminder: Calendar and Map may each contribute source facts th
 
 Also read when needed:
 
+- `docs/design/MAP_PLACE_DETAIL_UI_REVIEW.md`
 - `docs/product-decisions/CALENDAR_REMINDERS_SPLIT.md`
 - `docs/product-decisions/LOCAL_NARRATIVE_MAP_PACKS.md`
 - `docs/architecture/MAP_JOURNEY_FOOTPRINTS_EXPLORATION_ARCHITECTURE.md`
