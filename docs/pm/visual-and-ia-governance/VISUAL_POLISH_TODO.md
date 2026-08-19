@@ -1,6 +1,6 @@
 # Visual Polish TODO (视觉专项切片计划)
 
-Updated: 2026-08-17
+Updated: 2026-08-19
 
 Owner package: `docs/pm/visual-and-ia-governance/`.
 
@@ -18,7 +18,7 @@ Validation contract per slice (visual-only code change): `npm.cmd run lint`, `np
 
 Latest slice (same day): tokenized the redesigned Gallery (`--gallery-*` bridged to `--system-*`; surfaces/text/semantic colors on system tokens; `#0a84ff` kept as app-owned accent). Validation now includes lint, the full **290 files / 2047 tests**, build, the default/zen visual gate **16/16**, targeted Gallery tests 30/30, and screenshots.
 
-Local git state after cross-PC sync: `main` matches `origin/main` at `d0a0b1d`; no tracked local changes remain, and only unrelated untracked temporary directories are present.
+Local git state after cross-PC sync: `main` matches `origin/main` at `7767ad4` (2026-08-19: plus Chat accent parity, neutral/blue mapping extension, Chat Appearance CSS file import, and the thread-menu card slices). No tracked local changes remain; only unrelated untracked temporary directories are present.
 
 Known flake: one intermittent single-test failure observed twice across many full runs (unidentified, always green on rerun).
 
