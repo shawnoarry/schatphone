@@ -30,6 +30,18 @@ NOT done / open for the next session:
 
 ## 1. Completed Slices
 
+### 2026-08-18 Gallery redesigned-IA token parity (post-integration)
+
+- The remote redesign (tabbed Library/Albums, People/Places, album detail, sheet UI) shipped hard-coded light (`#ffffff` surfaces, ink-derived grays). Bridged `--gallery-*` locals to `--system-*`, mapped surfaces/text/semantic feedback to system tokens, and kept `#0a84ff` as the app-owned Photos accent.
+- Validation: lint, targeted gallery tests 30/30, build, default/zen screenshots.
+
+### 2026-08-18 Chat accent parity across appearance modes
+
+- User-reported defect: Chat Settings icon tiles (and sibling accents) were hard-coded `yellow-*` utilities, so switching Chat appearance to ocean/mint/coral (or WeChat/iMessage layouts) left clashing yellow chrome.
+- Fix lives in one place: a `.chat-shell`-scoped override map in `src/style.css` remaps legacy `yellow-*` utilities to `--chat-accent-soft` / `--chat-accent-ink` / `--chat-send-bg` / `--chat-send-text`, following the existing `section.bg-white` remap precedent. Zero template edits across ChatSettings/ChatMe/ChatGroups/ChatFeaturePlaceholder/ChatAppearance/ChatDirectory/ChatView.
+- Environmental fix: added `.codex/**` to `eslint.config.js` ignores (machine-local tool files rewritten 2026-08-18 broke `npm run lint`; `.agents/**` precedent).
+- Validation: lint, chat-focused tests 40/40, full suite 291 files / 2067 tests (green on rerun; one intermittent single-test flake recurs — known, see §0), build, screenshots across kakao/ocean/mint modes.
+
 ### 2026-08-17 Gallery (Photos) token parity
 
 - `GalleryView` fully on `--system-*` tokens (was hard-coded light iOS); `default`/`zen` parity.

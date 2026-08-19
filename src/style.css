@@ -2506,6 +2506,42 @@ select {
   background: var(--chat-panel-bg);
 }
 
+/* Chat accent utilities: legacy hard-coded yellow accents inside any Chat page
+   follow the active Chat appearance (Kakao yellow, iMessage blue, WeChat green,
+   ocean/mint/coral, custom CSS) instead of staying Kakao-only. */
+.chat-shell .bg-yellow-50,
+.chat-shell .bg-yellow-100 {
+  background-color: var(--chat-accent-soft);
+}
+
+.chat-shell .text-yellow-700,
+.chat-shell .text-yellow-800 {
+  color: var(--chat-accent-ink);
+}
+
+.chat-shell .border-yellow-100,
+.chat-shell .border-yellow-200,
+.chat-shell .border-yellow-300 {
+  border-color: color-mix(in srgb, var(--chat-send-bg) 42%, transparent);
+}
+
+.chat-shell .bg-yellow-300 {
+  background-color: var(--chat-send-bg);
+  color: var(--chat-send-text);
+}
+
+.chat-shell .ring-yellow-100 {
+  --tw-ring-color: color-mix(in srgb, var(--chat-send-bg) 40%, transparent);
+}
+
+.chat-shell .focus\:border-yellow-300:focus {
+  border-color: var(--chat-accent-ink);
+}
+
+.chat-shell .hover\:bg-yellow-100:hover {
+  background-color: color-mix(in srgb, var(--chat-send-bg) 22%, transparent);
+}
+
 .chat-me-recent-rail {
   display: flex;
   gap: 0.72rem;

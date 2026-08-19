@@ -9,6 +9,7 @@ export default [
       'dist/**',
       'node_modules/**',
       '.agents/**',
+      '.codex/**',
       'test-results/**',
       'playwright-report/**',
       'tmp/brand-build/**',
