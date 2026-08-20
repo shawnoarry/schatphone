@@ -378,19 +378,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-03 DONE 2026-08-20` at `86270d8` |
-| Next dependency-safe items | `DCF-05` once PC-B is assigned; `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is an independent PC-B test-stability repair |
-| Active item | none; reserve the next exact slice before editing |
+| Next dependency-safe items | `DCF-05` is active on the controller fallback; `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is independently assignable only after non-overlapping paths are reserved |
+| Active item | `DCF-05 IN_PROGRESS` |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / controller; waiting at the `DCF-05` dependency gate |
-| PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
-| Source branch, base, and worktree | `main`; `CMG-03` base `ef9869e`, evidence `86270d8`; `D:\github\schatphone` |
+| PC-A physical machine / role | `SKY-20250212UBG` / controller and `DCF-05` fallback executor; `CMG-02` has not started |
+| PC-B physical machine / role | `UNASSIGNED`; no persistence work may run concurrently while the controller fallback owns `DCF-05` |
+| Source branch, base, and worktree | `main`; `DCF-05` base `5890911`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned Calendar edits in `e2e/calendar-presentation.spec.js`, `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; modified `output/e2e/calendar-cja1/*.png`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | No active implementation. `CMG-03` changed only transient Chat prompt assembly and its test; Stores, persistence, pages, provider transport, and relationship records remain unchanged. |
-| Reserved paths | none; the prior `CMG-03` reservation is released |
-| Acceptance | `CMG-03` accepted: Relationship Runtime appears once as current relationship truth, legacy relationship-like System Store values are absent, Chat activity remains, and Contacts premise stays non-current context. |
-| Validation evidence | focused Chat/role/world projection tests `3 files / 20 tests`; full Vitest `296 files / 2092 tests`; lint, production build, governance `2 files / 14 tests`, and `git diff --check` all passed. |
-| Integration state | `CMG-03 INTEGRATED_ON_MAIN`; PC-A waits for the `DCF-05` dependency before `CMG-02` |
-| Remote synchronization | controller pushes `86270d8` and this completion record together; the next PC must verify `origin/main` contains both before starting |
+| Risk lane | Deferred IndexedDB mirror scheduling and deterministic completion evidence only. No Store schema, persisted payload, page, provider transport, or relationship/event record changes are allowed. Completion must not resolve while a flush, timer, or follow-up batch remains. |
+| Reserved paths | `src/lib/persistence.js`; `tests/persistence-write-result.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
+| Acceptance | Replace the final fixed 40 ms test delay with a production persistence Interface that completes only after all scheduled, active, and follow-up deferred mirror work is idle. Do not increase an arbitrary timeout or change synchronous write-success meaning in this slice. |
+| Required checks | Repeated focused `persistence-write-result` runs; focused persistence tests; lint; full Vitest; production build; governance; `git diff --check`. |
+| Integration state | `DCF-05 IN_PROGRESS`; `CMG-02` remains blocked and no PC-B persistence slice may start concurrently |
+| Remote synchronization | push this reservation from base `5890911` before editing source; every other PC must verify the reservation commit on `origin/main` and avoid the reserved paths |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
