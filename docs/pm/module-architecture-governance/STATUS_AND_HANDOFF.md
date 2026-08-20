@@ -377,28 +377,29 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20`; documentation baseline committed and pushed as `fef7989` |
-| Next dependency-safe items | `DCF-05` and `CMG-01` |
-| Active item | `CMG-01 IN_PROGRESS` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` with implementation evidence `73672df` |
+| Next dependency-safe items | `DCF-05` once PC-B is assigned; `CMG-03` is dependency-safe on PC-A, but `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is an independent PC-B test-stability repair |
+| Active item | none; reserve the next exact slice before editing |
 | Integration controller PC | `SKY-20250212UBG` |
 | PC-A physical machine / role | `SKY-20250212UBG` / controller and shared-experience contract lane |
 | PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
-| Source branch, base, and worktree | `main` at `fef7989`; `D:\github\schatphone` |
+| Source branch, base, and worktree | `main`; `CMG-01` base `16f68b0`, evidence `73672df`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned Calendar edits in `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | Pure contract and fixture only: no Store wiring, storage/schema migration, retention-cap change, or page behavior change. Reject invalid contract input instead of silently truncating progress or owner references. |
-| Reserved paths | `src/lib/shared-experience-contract.js`; `tests/shared-experience-contract.test.js`; `tests/fixtures/relationships/shared-experience-v1/gift-experience-v1.json`; this handoff; the `CMG-01` roadmap row |
-| Acceptance | One gift experience normalizes to three ordered progress points, one concise role-memory summary, and stable Shopping/Wallet/Calendar/Phone owner-record references; duplicate, dangling, or silently shortened evidence fails closed. |
-| Required checks | focused Vitest; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; `npm.cmd run governance:check`; `git diff --check` |
-| Integration state | `ACTIVE_ON_PC_A`; no behavior implementation is ready for review yet |
-| Remote synchronization | `origin/main` confirmed at `fef7989` before `CMG-01` start; this reservation update must be pushed before source edits |
+| Risk lane | No active implementation. `CMG-01` changed only a pure contract, executable fixture, and focused test; Store wiring, persistence/schema, retention caps, and pages remain unchanged. |
+| Reserved paths | none; the prior `CMG-01` reservation is released |
+| Acceptance | `CMG-01` accepted: one gift experience, three ordered progress points, one role-memory summary, four stable owner-record references, and fail-closed evidence validation |
+| Validation evidence | focused `5/5`, lint, build, governance `14/14`, and `git diff --check` passed. Full Vitest attempts reached `2089/2091` then `2090/2091`: the first exposed known `DCF-05` plus `DCF-06`; the second exposed only `DCF-06`. Both independent files passed together in isolation `26/26`. |
+| Integration state | `CMG-01 INTEGRATED_ON_MAIN`; `DCF-05` and `DCF-06` remain explicit validation debt and do not alter the focused contract result |
+| Remote synchronization | controller pushes `73672df` and this completion record together; the next PC must verify `origin/main` contains both before starting |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
 Completion log:
 
 1. `CMG-00 DONE 2026-08-20`: accepted the one-shared-experience model, separated role memory from supporting owner records, inventoried all confirmed defects, froze dependency order and two-PC execution rules, and changed no behavior code. Validation belongs to this documentation round.
+2. `CMG-01 DONE 2026-08-20`: implementation `73672df` added `shared-experience-contract.js`, the Xia gift fixture, and five focused tests. One continuing gift experience now has three ordered progress updates and one concise role memory while Shopping, Wallet, Calendar, and Phone records stay separately owned and stably referenced. No runtime caller or persisted data was changed. Full-suite load also reproduced and logged `DCF-06`; the previously planned `DCF-05` remains open.
 
-Do not begin `CMG-02` before `DCF-05` and `CMG-01`; do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
+Do not begin `CMG-02` before `DCF-05` and `CMG-01`; do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
