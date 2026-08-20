@@ -25,6 +25,7 @@ import {
 import SettingsAboutInfoCard from '../components/settings/SettingsAboutInfoCard.vue'
 import SettingsAutomationSection from '../components/settings/SettingsAutomationSection.vue'
 import SettingsBackupSection from '../components/settings/SettingsBackupSection.vue'
+import SettingsCallAudioSection from '../components/settings/SettingsCallAudioSection.vue'
 import SettingsGeneralSection from '../components/settings/SettingsGeneralSection.vue'
 import SettingsLandingSection from '../components/settings/SettingsLandingSection.vue'
 import SettingsPushSection from '../components/settings/SettingsPushSection.vue'
@@ -46,6 +47,14 @@ import {
   playUiCue,
   resolveGlobalUiSfxSettings,
 } from '../lib/ui-sfx'
+import {
+  CALL_AUDIO_PROFILE_OPTIONS,
+  DEFAULT_CALL_AUDIO_PROFILE,
+  getCallAudioProfile,
+  normalizeCallAudioProfile,
+  playCallAudio,
+  resolveGlobalCallAudioSettings,
+} from '../lib/call-audio'
 import {
   DEFAULT_RINGTONE_ID,
   RINGTONE_OPTIONS,
@@ -138,6 +147,23 @@ const globalRingtoneId = computed(() =>
 )
 const globalRingtoneEnabled = computed(() => settings.value.appearance?.ringtoneEnabled !== false)
 const globalRingtoneLabel = computed(() => getRingtoneLabel(globalRingtoneId.value, t))
+
+const callAudioProfileOptions = computed(() =>
+  CALL_AUDIO_PROFILE_OPTIONS.map((profile) => ({
+    ...profile,
+    label: t(profile.labelZh, profile.labelEn),
+    description: t(profile.descriptionZh, profile.descriptionEn),
+  })),
+)
+const globalCallAudioSettings = computed(() =>
+  resolveGlobalCallAudioSettings(settings.value.appearance),
+)
+const globalCallAudioProfile = computed(
+  () =>
+    callAudioProfileOptions.value.find((profile) => profile.id === globalCallAudioSettings.value.profile) ||
+    callAudioProfileOptions.value[0] ||
+    getCallAudioProfile(DEFAULT_CALL_AUDIO_PROFILE),
+)
 
 const setSoftwareUpdateFeedback = (type, message, durationMs = 2200) => {
   softwareUpdateFeedbackType.value = type
@@ -481,8 +507,22 @@ const setGlobalRingtone = (ringtoneId) => {
 
 const previewGlobalRingtone = () => {
   if (!globalRingtoneEnabled.value) return
-  if (settings.value.appearance.soundEffectsEnabled === false) return
   playRingtone(globalRingtoneId.value)
+}
+
+const toggleGlobalCallAudio = () => {
+  settings.value.appearance.callAudioEnabled = !globalCallAudioSettings.value.enabled
+  systemStore.saveNow()
+}
+
+const setGlobalCallAudioProfile = (profileId) => {
+  settings.value.appearance.callAudioProfile = normalizeCallAudioProfile(profileId)
+  systemStore.saveNow()
+}
+
+const previewGlobalCallAudio = (cue) => {
+  if (!globalCallAudioSettings.value.enabled) return
+  playCallAudio(cue, { profile: globalCallAudioSettings.value.profile })
 }
 
 const previewGlobalSoundEffects = () => {
@@ -1057,10 +1097,25 @@ if (initialMenu) {
             :ringtone-id="globalRingtoneId"
             :ringtone-options="ringtoneOptions"
             :ringtone="{ label: globalRingtoneLabel }"
+            title-zh="电话模式来电铃声"
+            title-en="Phone mode ringtone"
+            description-zh="仅用于 Phone 模式的来电响铃，Chat 不会使用这组铃声。"
+            description-en="Used only for incoming calls in Phone mode; Chat does not use this ringtone."
             test-id-prefix="settings"
             @toggle="toggleGlobalRingtone"
             @set-ringtone="setGlobalRingtone"
             @preview="previewGlobalRingtone"
+          />
+
+          <SettingsCallAudioSection
+            :enabled="globalCallAudioSettings.enabled"
+            :profile-id="globalCallAudioSettings.profile"
+            :profile-options="callAudioProfileOptions"
+            :profile="globalCallAudioProfile"
+            test-id-prefix="settings"
+            @toggle="toggleGlobalCallAudio"
+            @set-profile="setGlobalCallAudioProfile"
+            @preview="previewGlobalCallAudio"
           />
         </div>
       </div>

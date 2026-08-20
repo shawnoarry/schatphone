@@ -146,6 +146,34 @@ describe('SettingsView general section', () => {
     saveSpy.mockRestore()
   })
 
+  test('keeps phone mode audio global and separate from Chat sound settings', async () => {
+    const store = useSystemStore()
+    store.settings.appearance.callAudioEnabled = true
+    store.settings.appearance.callAudioProfile = 'classic-telephone'
+    store.settings.appearance.chat.soundEffectsProfile = 'kakaotalk'
+    const saveSpy = vi.spyOn(store, 'saveNow')
+
+    const { wrapper } = await mountSettingsView('/settings?menu=sound')
+
+    expect(wrapper.get('[data-testid="settings-call-audio"]')).toBeTruthy()
+    await wrapper.get('[data-testid="settings-call-audio-select"]').setValue('mobile-carrier')
+    await flushUi()
+
+    expect(store.settings.appearance.callAudioProfile).toBe('mobile-carrier')
+    expect(store.settings.appearance.chat.soundEffectsProfile).toBe('kakaotalk')
+    expect(saveSpy).toHaveBeenCalledTimes(1)
+
+    await wrapper.get('[data-testid="settings-call-audio-toggle"]').trigger('click')
+    await flushUi()
+
+    expect(store.settings.appearance.callAudioEnabled).toBe(false)
+    expect(store.settings.appearance.soundEffectsEnabled).toBe(true)
+    expect(saveSpy).toHaveBeenCalledTimes(2)
+
+    wrapper.unmount()
+    saveSpy.mockRestore()
+  })
+
   test('updates message notifications through the notification settings subpage', async () => {
     const store = useSystemStore()
     const saveSpy = vi.spyOn(store, 'saveNow')

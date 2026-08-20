@@ -11,6 +11,11 @@ import {
   playRingtone,
   stopRingtone,
 } from '../../lib/ringtone'
+import {
+  playCallAudio,
+  resolveGlobalCallAudioSettings,
+  stopCallAudio,
+} from '../../lib/call-audio'
 
 const phoneStore = usePhoneStore()
 const systemStore = useSystemStore()
@@ -22,6 +27,9 @@ const { incomingCall } = storeToRefs(phoneStore)
 const isRinging = computed(() => incomingCall.value?.status === 'ringing')
 const callerName = computed(() => incomingCall.value?.participant?.name || '')
 const callerNumber = computed(() => incomingCall.value?.participant?.phoneNumber || '')
+const callAudioSettings = computed(() =>
+  resolveGlobalCallAudioSettings(settings.value.appearance),
+)
 
 const callerInitials = (name = '') => {
   const parts = String(name).trim().split(/\s+/).filter(Boolean)
@@ -62,6 +70,10 @@ const acceptCall = () => {
 
 const declineCall = () => {
   phoneStore.declineIncomingCall()
+  stopCallAudio()
+  if (callAudioSettings.value.enabled) {
+    playCallAudio('call-ended', { profile: callAudioSettings.value.profile })
+  }
 }
 </script>
 

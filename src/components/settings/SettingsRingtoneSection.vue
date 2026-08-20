@@ -18,6 +18,22 @@ defineProps({
     type: Object,
     default: () => ({}),
   },
+  titleZh: {
+    type: String,
+    default: '来电铃声',
+  },
+  titleEn: {
+    type: String,
+    default: 'Call Ringtone',
+  },
+  descriptionZh: {
+    type: String,
+    default: '来电响起时使用的铃声，可随时试听。',
+  },
+  descriptionEn: {
+    type: String,
+    default: 'The ringtone played for incoming calls, with preview.',
+  },
   testIdPrefix: {
     type: String,
     default: 'settings',
@@ -39,10 +55,8 @@ const setRingtone = (event) => {
   >
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
-        <p class="text-sm font-semibold text-gray-900">{{ t('来电铃声', 'Call Ringtone') }}</p>
-        <p class="mt-1 text-[11px] leading-4 text-gray-500">
-          {{ t('来电响起时使用的铃声，可随时试听。', 'The ringtone played for incoming calls, with preview.') }}
-        </p>
+        <p class="text-sm font-semibold text-gray-900">{{ t(titleZh, titleEn) }}</p>
+        <p class="mt-1 text-[11px] leading-4 text-gray-500">{{ t(descriptionZh, descriptionEn) }}</p>
       </div>
       <button
         type="button"

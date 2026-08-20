@@ -6,11 +6,17 @@ import { useDialog } from '../composables/useDialog'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import {
+  playCallAudio,
+  resolveGlobalCallAudioSettings,
+  stopCallAudio,
+} from '../lib/call-audio'
+import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   recordPhoneCallRelationshipFact,
 } from '../lib/relationship-fact-adapters'
 import { useChatStore } from '../stores/chat'
 import { PHONE_CALL_DIRECTION, PHONE_INCOMING_CALL_STATUS, usePhoneStore } from '../stores/phone'
+import { useSystemStore } from '../stores/system'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
 
@@ -51,9 +57,11 @@ const { t } = useI18n()
 const { confirmDialog } = useDialog()
 const chatStore = useChatStore()
 const phoneStore = usePhoneStore()
+const systemStore = useSystemStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
 const { callCount, missedCallCount, completedCallCount, recentCalls, activeSession } = storeToRefs(phoneStore)
+const { settings: systemSettings } = storeToRefs(systemStore)
 
 const callDraft = ref({
   contactId: '',
@@ -79,6 +87,18 @@ const feedbackType = ref('success')
 let overlayReturnTarget = null
 let connectTimer = null
 let durationTimer = null
+
+const callAudioSettings = computed(() =>
+  resolveGlobalCallAudioSettings(systemSettings.value.appearance),
+)
+
+const playPhoneAudio = (cue, options = {}) => {
+  if (!callAudioSettings.value.enabled) return null
+  return playCallAudio(cue, {
+    profile: callAudioSettings.value.profile,
+    ...options,
+  })
+}
 
 const relationshipContactOptions = computed(() =>
   chatStore.contacts
@@ -231,7 +251,9 @@ const clearSessionTimers = () => {
 
 const beginConnectedCall = () => {
   if (!activeCall.value) return
+  stopCallAudio()
   activeCall.value.state = CALL_SESSION_STATE.CONNECTED
+  playPhoneAudio('connected')
   sessionElapsedSec.value = 0
   durationTimer = window.setInterval(() => {
     sessionElapsedSec.value += 1
@@ -267,6 +289,7 @@ const startCall = ({ contact = null, name = '', phoneNumber = '' } = {}) => {
     tones: '',
   }
   void focusOverlay(activeCallRef)
+  playPhoneAudio('ringback', { loop: true })
   connectTimer = window.setTimeout(beginConnectedCall, 900)
 }
 
@@ -350,6 +373,7 @@ const callFromHistory = (call) => {
 const appendCallTone = (key) => {
   if (!activeCall.value || activeCall.value.tones.length >= 24) return
   activeCall.value.tones += key
+  playPhoneAudio('dtmf', { key })
 }
 
 const toggleCallControl = (control) => {
@@ -394,6 +418,8 @@ const endCall = () => {
   if (!activeCall.value) return
   const savedCall = saveCompletedSession()
   clearSessionTimers()
+  stopCallAudio()
+  playPhoneAudio('call-ended')
   activeCall.value = null
   dialValue.value = ''
   activeFilter.value = CALL_FILTER.ALL
@@ -708,6 +734,8 @@ const sendFoodCallMessage = () => {
 
 const endFoodDeliveryCall = () => {
   const result = phoneStore.endCallSession({ now: Date.now() })
+  stopCallAudio()
+  playPhoneAudio('call-ended')
   const orderId = result?.session?.orderId || route.query.orderId
   phoneStore.clearCallSession()
   if (orderId) {
@@ -715,9 +743,15 @@ const endFoodDeliveryCall = () => {
   }
 }
 
-onBeforeUnmount(clearSessionTimers)
+onBeforeUnmount(() => {
+  clearSessionTimers()
+  stopCallAudio()
+})
 onMounted(() => {
-  if (route.query.source === 'food_delivery') startFoodDeliveryCall()
+  if (route.query.source === 'food_delivery') {
+    startFoodDeliveryCall()
+    playPhoneAudio('connected')
+  }
 })
 </script>
 

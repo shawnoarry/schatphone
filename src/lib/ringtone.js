@@ -37,6 +37,30 @@ export const RINGTONE_OPTIONS = Object.freeze([
     labelEn: 'Gentle Chime',
     file: 'audio/ringtones/gentle-chime.wav',
   },
+  {
+    id: 'samsung-over-the-horizon',
+    labelZh: 'Samsung Over the Horizon',
+    labelEn: 'Samsung Over the Horizon',
+    file: 'audio/brand/samsung-over-the-horizon.mp3',
+  },
+  {
+    id: 'samsung-atomic-bell',
+    labelZh: 'Samsung Atomic Bell',
+    labelEn: 'Samsung Atomic Bell',
+    file: 'audio/brand/samsung-atomic-bell.mp3',
+  },
+  {
+    id: 'samsung-80s-phone',
+    labelZh: 'Samsung 80s Phone',
+    labelEn: 'Samsung 80s Phone',
+    file: 'audio/brand/samsung-80s-phone.mp3',
+  },
+  {
+    id: 'samsung-arcade',
+    labelZh: 'Samsung Arcade',
+    labelEn: 'Samsung Arcade',
+    file: 'audio/brand/samsung-arcade.mp3',
+  },
 ])
 
 const RINGTONE_VOLUME = 0.9

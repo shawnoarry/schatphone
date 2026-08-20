@@ -84,6 +84,26 @@ export const UI_SFX_PROFILE_OPTIONS = Object.freeze([
     customAudioPath: 'audio/ui-sfx/whatsapp-notification.mp3',
   },
   {
+    id: 'samsung-over-the-horizon',
+    labelZh: 'Samsung Over the Horizon',
+    labelEn: 'Samsung Over the Horizon',
+    descriptionZh: '熟悉的 Samsung 品牌旋律，作为较完整的基础消息提醒。',
+    descriptionEn: 'A familiar Samsung brand melody used as a fuller base notification.',
+    pack: 'soft',
+    customAudioPath: 'audio/brand/samsung-over-the-horizon.mp3',
+    customAudioDurationMs: 3200,
+  },
+  {
+    id: 'samsung-whistle',
+    labelZh: 'Samsung Whistle',
+    labelEn: 'Samsung Whistle',
+    descriptionZh: '短促、轻快的 Samsung 社区提示音，只用于消息通知。',
+    descriptionEn: 'A short, bright Samsung community cue for message notifications only.',
+    pack: 'soft',
+    customAudioPath: 'audio/brand/samsung-whistle.mp3',
+    customAudioDurationMs: 1800,
+  },
+  {
     id: 'minimal',
     labelZh: '系统提示',
     labelEn: 'System',
@@ -168,18 +188,29 @@ const resolveCustomAudio = (audioPath) => {
   return audio
 }
 
-const playCustomAudio = (audioPath) => {
+const playCustomAudio = (audioPath, { maxDurationMs = 0 } = {}) => {
   const audio = resolveCustomAudio(audioPath)
   if (!audio) return null
+  let stopTimer = null
+  const stop = () => {
+    if (stopTimer) clearTimeout(stopTimer)
+    stopTimer = null
+    try {
+      audio.pause()
+      audio.currentTime = 0
+    } catch {
+      // Stopping is best-effort when the browser has not created a media pipeline yet.
+    }
+  }
   try {
-    audio.pause()
-    audio.currentTime = 0
+    stop()
     Promise.resolve(audio.play()).catch(() => {})
+    const durationMs = Number(maxDurationMs)
+    if (Number.isFinite(durationMs) && durationMs > 0) {
+      stopTimer = setTimeout(stop, durationMs)
+    }
     return {
-      stop: () => {
-        audio.pause()
-        audio.currentTime = 0
-      },
+      stop,
     }
   } catch {
     return null
@@ -217,7 +248,9 @@ export const playUiCue = (cue, options = {}) => {
   if (typeof cue !== 'string' || !cue) return null
   const profile = resolveProfile(options.profile)
   if (profile.customAudioPath && cue === 'notification') {
-    return playCustomAudio(profile.customAudioPath)
+    return playCustomAudio(profile.customAudioPath, {
+      maxDurationMs: profile.customAudioDurationMs,
+    })
   }
   const playerOptions = { ...options }
   delete playerOptions.profile

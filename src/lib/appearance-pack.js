@@ -1,5 +1,6 @@
 import { DEFAULT_UI_SFX_PROFILE, normalizeUiSfxProfile } from './ui-sfx'
 import { DEFAULT_RINGTONE_ID, normalizeRingtoneId } from './ringtone'
+import { DEFAULT_CALL_AUDIO_PROFILE, normalizeCallAudioProfile } from './call-audio'
 
 export const APPEARANCE_PACK_KIND = 'schatphone.appearance-pack'
 export const APPEARANCE_PACK_VERSION = 1
@@ -15,6 +16,8 @@ const APPEARANCE_PACK_FIELD_KEYS = Object.freeze([
   'soundEffectsProfile',
   'ringtoneEnabled',
   'ringtoneId',
+  'callAudioEnabled',
+  'callAudioProfile',
   'customCss',
   'customVars',
   'lockClockStyle',
@@ -59,6 +62,8 @@ export const normalizeAppearancePackAppearance = (appearance = {}) => {
     soundEffectsProfile: normalizeUiSfxProfile(source.soundEffectsProfile || DEFAULT_UI_SFX_PROFILE),
     ringtoneEnabled: normalizeBoolean(source.ringtoneEnabled, true),
     ringtoneId: normalizeRingtoneId(source.ringtoneId || DEFAULT_RINGTONE_ID),
+    callAudioEnabled: normalizeBoolean(source.callAudioEnabled, true),
+    callAudioProfile: normalizeCallAudioProfile(source.callAudioProfile || DEFAULT_CALL_AUDIO_PROFILE),
     customCss: normalizeLooseText(source.customCss, '', 50_000),
     customVars: normalizeStringRecord(source.customVars),
     lockClockStyle: normalizeText(source.lockClockStyle, 'classic', 40),

@@ -17,13 +17,21 @@ describe('ringtone library', () => {
     expect(normalizeRingtoneId('')).toBe(DEFAULT_RINGTONE_ID)
   })
 
-  test('exposes six ringtones with localized labels and audio files', () => {
-    expect(RINGTONE_OPTIONS).toHaveLength(6)
+  test('exposes built-in and Samsung ringtones with localized labels and audio files', () => {
+    expect(RINGTONE_OPTIONS).toHaveLength(10)
     for (const ringtone of RINGTONE_OPTIONS) {
-      expect(ringtone.file).toMatch(/^audio\/ringtones\/.+\.wav$/)
+      expect(ringtone.file).toMatch(/^audio\/(ringtones|brand)\/.+\.(wav|mp3)$/)
       expect(getRingtoneLabel(ringtone.id)).toBeTruthy()
       expect(getRingtoneLabel(ringtone.id, (zh, en) => en)).toBe(ringtone.labelEn)
     }
+    expect(RINGTONE_OPTIONS.map((ringtone) => ringtone.id)).toEqual(
+      expect.arrayContaining([
+        'samsung-over-the-horizon',
+        'samsung-atomic-bell',
+        'samsung-80s-phone',
+        'samsung-arcade',
+      ]),
+    )
   })
 
   test('ringtone settings survive appearance pack export and import', () => {

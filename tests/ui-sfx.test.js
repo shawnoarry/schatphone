@@ -38,6 +38,8 @@ describe('ui-sfx service', () => {
     const fresh = await resetModuleState()
     expect(fresh.normalizeUiSfxProfile('arcade')).toBe('minimal')
     expect(fresh.getUiSfxProfile('arcade').visible).toBe(false)
+    expect(fresh.normalizeUiSfxProfile('samsung-whistle')).toBe('samsung-whistle')
+    expect(fresh.getUiSfxProfile('samsung-over-the-horizon').customAudioDurationMs).toBe(3200)
   })
 
   test('switches built-in packs when the profile changes', async () => {
@@ -156,6 +158,8 @@ describe('ui-sfx service', () => {
       line: 'audio/ui-sfx/line-messenger.mp3',
       discord: 'audio/ui-sfx/discord-sound-effect.mp3',
       whatsapp: 'audio/ui-sfx/whatsapp-notification.mp3',
+      'samsung-over-the-horizon': 'audio/brand/samsung-over-the-horizon.mp3',
+      'samsung-whistle': 'audio/brand/samsung-whistle.mp3',
     }
 
     Object.entries(expectedPaths).forEach(([profile, path]) => {

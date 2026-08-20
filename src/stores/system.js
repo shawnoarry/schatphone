@@ -4,6 +4,7 @@ import { readPersistedState, readPersistedStateAsync, writePersistedState } from
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 import { DEFAULT_UI_SFX_PROFILE, normalizeUiSfxProfile, playUiCue } from '../lib/ui-sfx'
 import { DEFAULT_RINGTONE_ID, normalizeRingtoneId } from '../lib/ringtone'
+import { DEFAULT_CALL_AUDIO_PROFILE, normalizeCallAudioProfile } from '../lib/call-audio'
 import {
   createInitialSoftwareUpdateState,
   hasSoftwareUpdateCandidate,
@@ -1510,6 +1511,8 @@ export const useSystemStore = defineStore('system', () => {
       soundEffectsProfile: DEFAULT_UI_SFX_PROFILE,
       ringtoneEnabled: true,
       ringtoneId: DEFAULT_RINGTONE_ID,
+      callAudioEnabled: true,
+      callAudioProfile: DEFAULT_CALL_AUDIO_PROFILE,
       customCss: '',
       scopedCustomCss: normalizeScopedCustomCss(),
       appSkins: normalizeAppSkinSettings(),
@@ -2088,6 +2091,8 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.soundEffectsProfile = normalizeUiSfxProfile(appearance.soundEffectsProfile)
     settings.appearance.ringtoneEnabled = appearance.ringtoneEnabled !== false
     settings.appearance.ringtoneId = normalizeRingtoneId(appearance.ringtoneId)
+    settings.appearance.callAudioEnabled = appearance.callAudioEnabled !== false
+    settings.appearance.callAudioProfile = normalizeCallAudioProfile(appearance.callAudioProfile)
     settings.appearance.customCss = typeof appearance.customCss === 'string' ? appearance.customCss : ''
     settings.appearance.scopedCustomCss = normalizeScopedCustomCss(appearance.scopedCustomCss)
     settings.appearance.appSkins = normalizeAppSkinSettings(appearance.appSkins)
@@ -4348,6 +4353,12 @@ export const useSystemStore = defineStore('system', () => {
       }
       if (typeof appearance.ringtoneId === 'string') {
         settings.appearance.ringtoneId = normalizeRingtoneId(appearance.ringtoneId)
+      }
+      if (typeof appearance.callAudioEnabled === 'boolean') {
+        settings.appearance.callAudioEnabled = appearance.callAudioEnabled
+      }
+      if (typeof appearance.callAudioProfile === 'string') {
+        settings.appearance.callAudioProfile = normalizeCallAudioProfile(appearance.callAudioProfile)
       }
       if (typeof appearance.customCss === 'string') {
         settings.appearance.customCss = appearance.customCss
