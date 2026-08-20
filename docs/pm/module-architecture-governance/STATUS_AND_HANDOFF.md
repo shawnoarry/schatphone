@@ -377,16 +377,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20`; documentation change not yet committed or pushed |
+| Plan baseline | `CMG-00 DONE 2026-08-20`; documentation baseline committed and pushed as `fef7989` |
 | Next dependency-safe items | `DCF-05` and `CMG-01` |
-| Active item | none |
-| Integration controller PC | `UNASSIGNED` |
-| PC-A physical machine / role | `UNASSIGNED` / suggested controller and relationship-persistence lane |
+| Active item | `CMG-01 IN_PROGRESS` |
+| Integration controller PC | `SKY-20250212UBG` |
+| PC-A physical machine / role | `SKY-20250212UBG` / controller and shared-experience contract lane |
 | PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
-| Source branch and base | record immediately before the first item starts |
-| Reserved paths | none; reserve exact source/test/docs paths before changing `TODO` to `IN_PROGRESS` |
-| Integration state | `PLANNED`; no behavior implementation is ready for review |
-| Remote synchronization | not authorized or performed by this planning round |
+| Source branch, base, and worktree | `main` at `fef7989`; `D:\github\schatphone` |
+| Existing dirty/untracked inventory | User-owned Calendar edits in `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
+| Risk lane | Pure contract and fixture only: no Store wiring, storage/schema migration, retention-cap change, or page behavior change. Reject invalid contract input instead of silently truncating progress or owner references. |
+| Reserved paths | `src/lib/shared-experience-contract.js`; `tests/shared-experience-contract.test.js`; `tests/fixtures/relationships/shared-experience-v1/gift-experience-v1.json`; this handoff; the `CMG-01` roadmap row |
+| Acceptance | One gift experience normalizes to three ordered progress points, one concise role-memory summary, and stable Shopping/Wallet/Calendar/Phone owner-record references; duplicate, dangling, or silently shortened evidence fails closed. |
+| Required checks | focused Vitest; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; `npm.cmd run governance:check`; `git diff --check` |
+| Integration state | `ACTIVE_ON_PC_A`; no behavior implementation is ready for review yet |
+| Remote synchronization | `origin/main` confirmed at `fef7989` before `CMG-01` start; this reservation update must be pushed before source edits |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 

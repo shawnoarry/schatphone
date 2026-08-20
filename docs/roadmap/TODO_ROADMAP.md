@@ -215,7 +215,7 @@ Acceptance for 4.5:
 
 #### 4.5-CMG Shared Experience, Memory, And Durable History Governance
 
-Status: `P0 IN_PROGRESS / CMG-00 DONE 2026-08-20 / BEHAVIOR CODE NOT STARTED`
+Status: `P0 IN_PROGRESS / CMG-00 DONE 2026-08-20 / CMG-01 IN_PROGRESS ON PC-A`
 
 This subsection is the only live execution checklist for this governance round. Other documents may describe product meaning or the current handoff, but they must reference these IDs instead of copying their status.
 
@@ -235,7 +235,7 @@ Implementation ledger:
 | --- | --- | --- | --- | --- | --- |
 | `CMG-00` | P0 | `DONE 2026-08-20` | Record the confirmed model, audited defects, numbered execution order, and cross-PC handoff rules. Documentation/governance checks must pass; no behavior code is changed. | none | module architecture / controller PC |
 | `DCF-05` | P0 | `TODO` | Replace the fixed 40 ms deferred-mirror wait with deterministic completion evidence. The persistence test must pass repeatedly and inside the full suite without increasing an arbitrary delay. | `CMG-00` | module architecture / PC-B |
-| `CMG-01` | P0 | `TODO` | Freeze executable fixtures for shared experience, progress, role memory, and supporting records. The gift example must produce one experience, three progress points, one role-memory summary, and stable references to the original owner records. This stage defines data meaning, not Store migration. | `CMG-00` | module architecture + Contacts/relationship + Event / PC-A |
+| `CMG-01` | P0 | `IN_PROGRESS` | Freeze executable fixtures for shared experience, progress, role memory, and supporting records. The gift example must produce one experience, three progress points, one role-memory summary, and stable references to the original owner records. This stage defines data meaning, not Store migration. | `CMG-00` | module architecture + Contacts/relationship + Event / PC-A (`SKY-20250212UBG`) |
 | `CMG-02` | P0 | `TODO` | Adopt persistence results for Relationship Runtime, Simulation/Event Instance V2, Mini Scene, and the Food Delivery interaction path. Quota, read-only, and reconciliation failures must never display durable success; retry must not duplicate the action. | `DCF-05`, `CMG-01` | module architecture + source owners / PC-A |
 | `CMG-03` | P0 | `TODO` | Remove the competing relationship truth from Chat prompt construction. Current relationship state appears exactly once and comes from Relationship Runtime; profile premise/classification remains context rather than a second current answer. | `CMG-01` | Contacts/relationship + Chat / PC-A |
 | `CMG-04` | P0 | `TODO` | Replace the single generic Chat-disclosure bucket with subject-aware role memory. Unrelated disclosures such as hospital dislike and birthday remain separately recallable; later statements about the same subject update one memory with source history preserved. | `CMG-01`, `CMG-02`, `CMG-03` | Contacts/relationship + Chat / PC-A |
