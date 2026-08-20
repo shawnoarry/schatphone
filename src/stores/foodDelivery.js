@@ -47,7 +47,7 @@ import {
 } from '../lib/simulation/commerce-event-templates'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 
-const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
+export const FOOD_DELIVERY_STORAGE_KEY = 'store:food-delivery'
 const FOOD_DELIVERY_STORAGE_VERSION = 3
 const FOOD_RESTAURANT_LIMIT = 120
 const FOOD_USER_MENU_ITEM_LIMIT = 360
@@ -3699,6 +3699,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
   const serviceCases = ref([])
   const interactionTriggers = ref([])
   const hasFinishedStorageHydration = ref(false)
+  let skipNextTransactionalWatchedWrite = false
 
   const quoteLegacyAmount = (
     amountCents = 0,
@@ -4609,7 +4610,49 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const quoteSnapshot = sourceMoney
       ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
       : null
+    const normalizedIdempotencyKey = normalizeText(idempotencyKey, '', 180)
+    const existingPayment = normalizedIdempotencyKey
+      ? walletStore.findCommercePaymentByIdempotencyKey(normalizedIdempotencyKey)
+      : null
+    if (existingPayment) {
+      const existingOrder = orders.value.find(
+        (item) => item.paymentRef?.transactionId === existingPayment.id,
+      ) || null
+      if (existingOrder) {
+        const identityMatches =
+          existingOrder.restaurantId === restaurant.id &&
+          existingPayment.amountCents === sourceTotalCents &&
+          existingPayment.currency === restaurant.currency
+        if (!identityMatches) {
+          return { ok: false, stage: 'payment', reason: 'payment_identity_conflict', order: null, payment: null, journey: null }
+        }
+        return {
+          ok: true,
+          reason: 'idempotent_replay',
+          order: existingOrder,
+          payment: { ok: true, reason: 'idempotent_replay', transaction: existingPayment },
+          journey: existingOrder.deliveryJourneyId
+            ? mapStore.findDeliveryJourneyById(existingOrder.deliveryJourneyId)
+            : null,
+        }
+      }
+      walletStore.reverseCommercePayment({
+        transactionId: existingPayment.id,
+        reason: 'Food Delivery payment has no confirmed order',
+        createdAt: now,
+      })
+      return {
+        ok: false,
+        stage: 'payment',
+        reason: 'payment_without_order_reversed',
+        order: null,
+        payment: { ok: true, reason: 'idempotent_replay', transaction: existingPayment },
+        journey: null,
+      }
+    }
     const orderId = createFoodOrderId()
+    const beforeFoodMutation = createBackupSnapshot()
+    const beforeMapMutation = mapStore.createBackupSnapshot()
     const payment = walletStore.commitCommercePayment({
       amountCents: sourceTotalCents,
       currency: restaurant.currency,
@@ -4619,7 +4662,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       note: note || `Food Delivery order ${orderId}`,
       sourceModule: 'wallet_commerce_payment',
       sourceId: orderId,
-      idempotencyKey: normalizeText(idempotencyKey, `food_checkout:${orderId}`, 180),
+      idempotencyKey: normalizedIdempotencyKey || `food_checkout:${orderId}`,
       quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
       createdAt: now,
     })
@@ -4721,9 +4764,13 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
     order.updatedAt = now
 
+    clearCartByRestaurant(restaurant.id)
+    armTransactionalWatchedWriteSkip()
     const persistenceResult = persistToStorage()
-    if (persistenceResult?.ok === false) {
-      orders.value = orders.value.filter((item) => item.id !== order.id)
+    if (persistenceResult?.ok !== true) {
+      applyPersistedSource(beforeFoodMutation, { applySeedMigrations: false })
+      mapStore.restoreFromBackup(beforeMapMutation)
+      mapStore.saveNow()
       walletStore.reverseCommercePayment({
         transactionId: payment.transaction.id,
         reason: 'Food Delivery order persistence failed',
@@ -4736,10 +4783,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         order: null,
         payment,
         journey: null,
+        persistence: persistenceResult || null,
       }
     }
 
-    clearCartByRestaurant(restaurant.id)
     pushFoodDeliveryOrderServiceMessage(order)
     return {
       ok: true,
@@ -4871,7 +4918,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return trigger
   }
 
-  const beginOrderServiceInteraction = ({
+  const beginOrderServiceInteractionInMemory = ({
     order = null,
     message = null,
     userAction = '',
@@ -4896,7 +4943,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         : 'food_delivery',
       messageId: message?.id || '',
     }
-    const trigger = upsertInteractionTrigger({
+    const triggerCandidate = normalizeCommerceInteractionTriggerV1({
       schemaVersion: 1,
       id: interactionId || createFoodInteractionId(order?.id, sourceRef.messageId),
       kind: 'commerce.user_service_interaction',
@@ -4908,6 +4955,40 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       sourceMessageRef: sourceRef,
       occurredAt: now,
     })
+    const existingTrigger = triggerCandidate
+      ? interactionTriggers.value.find((item) => item.id === triggerCandidate.id)
+      : null
+    if (existingTrigger) {
+      const stableTrigger = (item) => JSON.stringify({
+        id: item.id,
+        kind: item.kind,
+        initiatedBy: item.initiatedBy,
+        entrySurface: item.entrySurface,
+        channel: item.channel,
+        userAction: item.userAction,
+        orderId: item.orderRef?.orderId,
+        ownerModule: item.orderRef?.ownerModule,
+        sourceMessageRef: item.sourceMessageRef,
+      })
+      if (stableTrigger(existingTrigger) !== stableTrigger(triggerCandidate)) {
+        return { ok: false, reason: 'interaction_id_conflict', trigger: null, serviceCase: null, instance: null }
+      }
+      const existingCase = serviceCases.value.find(
+        (item) => item.sourceInteractionId === existingTrigger.id,
+      ) || null
+      return {
+        ok: true,
+        reason: 'interaction_already_recorded',
+        trigger: existingTrigger,
+        serviceCase: existingCase,
+        serviceCaseRef: buildServiceCaseReference(existingCase),
+        instance: existingCase?.eventInstanceId
+          ? getSimulationStore().getEventInstanceV2(existingCase.eventInstanceId)
+          : null,
+        committedAlready: true,
+      }
+    }
+    const trigger = upsertInteractionTrigger(triggerCandidate)
     if (!trigger || !order) return { ok: false, reason: 'interaction_trigger_invalid', trigger: null, serviceCase: null, instance: null }
 
     const caseType = userAction === 'destination_change_requested' ? 'destination_change' : userAction
@@ -4960,6 +5041,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         randomValues: { rider_response_disposition: randomValue },
         now,
       })
+      if (!started.ok) {
+        return {
+          ok: false,
+          reason: started.reason || 'event_instance_persistence_failed',
+          trigger: null,
+          serviceCase: null,
+          instance: null,
+          persistence: started.persistence || null,
+        }
+      }
       instance = started.instance
       if (instance && serviceCase.eventInstanceId !== instance.id) {
         serviceCase.eventInstanceId = instance.id
@@ -4967,13 +5058,23 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       }
     }
 
-    recordFoodOwnerFact({
+    const ownerFactResult = recordFoodOwnerFact({
       serviceCase,
       type: 'food_delivery.address_change_requested',
       resultCode: 'request_recorded',
       causationId: trigger.id,
       now,
     })
+    if (!ownerFactResult?.ok) {
+      return {
+        ok: false,
+        reason: ownerFactResult?.reason || 'owner_fact_persistence_failed',
+        trigger: null,
+        serviceCase: null,
+        instance: null,
+        persistence: ownerFactResult?.persistence || null,
+      }
+    }
     return {
       ok: true,
       reason: '',
@@ -4984,7 +5085,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
   }
 
-  const sendOrderMessage = (orderIdOrInput, options = {}) => {
+  const sendOrderMessageInMemory = (orderIdOrInput, options = {}) => {
     const input =
       orderIdOrInput && typeof orderIdOrInput === 'object'
         ? orderIdOrInput
@@ -5009,6 +5110,45 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     if (normalizedIntent === 'request_address_change' && !normalizeDeliveryAnchorSnapshot(destinationAnchor)) {
       return { ok: false, reason: 'delivery_anchor_required', message: null, reply: null }
     }
+    const normalizedClientMessageId = normalizeText(clientMessageId, '', 180)
+    const existingMessage = normalizedClientMessageId
+      ? findOrderConversationByOrderId(order.id)?.messages.find(
+          (item) => item.clientMessageId === normalizedClientMessageId,
+        ) || null
+      : null
+    if (existingMessage) {
+      const requestedDestination = normalizeDeliveryAnchorSnapshot(destinationAnchor)
+      if (
+        existingMessage.sender !== FOOD_DELIVERY_MESSAGE_SENDER.USER ||
+        existingMessage.text !== normalizeText(text, '', 800) ||
+        existingMessage.intent !== normalizedIntent ||
+        (existingMessage.destinationAnchor?.id || '') !== (requestedDestination?.id || '')
+      ) {
+        return { ok: false, reason: 'message_id_conflict', message: null, reply: null }
+      }
+      const existingTrigger = interactionId
+        ? interactionTriggers.value.find((item) => item.id === interactionId) || null
+        : interactionTriggers.value.find(
+            (item) => item.sourceMessageRef?.messageId === existingMessage.id,
+          ) || null
+      const existingCase = existingTrigger
+        ? serviceCases.value.find((item) => item.sourceInteractionId === existingTrigger.id) || null
+        : null
+      return {
+        ok: true,
+        reason: 'message_already_recorded',
+        message: existingMessage,
+        reply: findOrderConversationByOrderId(order.id)?.messages.find(
+          (item) => item.clientMessageId === `${existingMessage.id}:platform_ack`,
+        ) || null,
+        serviceCase: existingCase,
+        trigger: existingTrigger,
+        instance: existingCase?.eventInstanceId
+          ? getSimulationStore().getEventInstanceV2(existingCase.eventInstanceId)
+          : null,
+        committedAlready: true,
+      }
+    }
     const message = appendOrderMessage(order.id, {
       sender: FOOD_DELIVERY_MESSAGE_SENDER.USER,
       text,
@@ -5023,6 +5163,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     let serviceCase = null
     let trigger = null
     let instance = null
+    let notification = null
     if (normalizedIntent === 'request_address_change') {
       const anchor = normalizeDeliveryAnchorSnapshot(destinationAnchor)
       const sourceFulfillmentPhase = order.fulfillment?.phase || 'created'
@@ -5035,7 +5176,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         lastReconciledAt: now,
       }
       order.updatedAt = now
-      const interaction = beginOrderServiceInteraction({
+      const interaction = beginOrderServiceInteractionInMemory({
         order,
         message,
         userAction: 'destination_change_requested',
@@ -5059,13 +5200,24 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
           sourceFulfillmentPhase,
         )
         if (beforePickup) {
-          commitOrderAddressChange({
+          const committed = commitOrderAddressChangeInMemory({
             orderId: order.id,
             destinationAnchor: anchor,
             serviceCaseId: serviceCase.id,
             fulfillmentPhase: sourceFulfillmentPhase,
             now,
           })
+          if (!committed.ok) {
+            return {
+              ok: false,
+              reason: committed.reason,
+              message: null,
+              reply: null,
+              serviceCase: null,
+              trigger: null,
+              instance: null,
+            }
+          }
         } else {
           order.fulfillment.responseDeadlineAt = now + 60 * 1000
         }
@@ -5090,7 +5242,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         createdAt: now + 1,
       })
       if (event) {
-        addSystemNotification({
+        notification = {
           id: `food_delivery_address_request:${order.id}:${message.id}`,
           title: resolveCommerceCopy({ zh: '外卖', en: 'Food Delivery' }),
           content: resolveCommerceCopy({
@@ -5101,7 +5253,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
           source: 'food_delivery_address_request',
           route: `/food-delivery?orderId=${encodeURIComponent(order.id)}&conversation=1`,
           createdAt: now,
-        })
+        }
       }
     } else if (normalizedIntent === 'keep_original_address') {
       order.fulfillment.phase = FOOD_DELIVERY_FULFILLMENT_PHASE.EN_ROUTE
@@ -5113,10 +5265,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       reconcileCommerceEventRuntime(now, { randomValue })
       instance = getSimulationStore().getEventInstanceV2(serviceCase.eventInstanceId)
     }
-    return { ok: true, reason: '', message, reply, serviceCase, trigger, instance }
+    return { ok: true, reason: '', message, reply, serviceCase, trigger, instance, notification }
   }
 
-  const beginChatServiceInteraction = ({
+  const beginChatServiceInteractionInMemory = ({
     contactId = 0,
     messageId = '',
     orderId = '',
@@ -5144,7 +5296,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     if (userAction === 'destination_change_requested' && !destination) {
       return { ok: false, reason: 'delivery_anchor_required', trigger: null, serviceCase: null, instance: null }
     }
-    const interaction = beginOrderServiceInteraction({
+    const interaction = beginOrderServiceInteractionInMemory({
       order,
       message: null,
       userAction,
@@ -5176,7 +5328,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
   }
 
-  const commitOrderAddressChange = ({
+  const commitOrderAddressChangeInMemory = ({
     orderId = '',
     destinationAnchor = null,
     serviceCaseId = '',
@@ -5193,6 +5345,23 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
     if (expectedOwnerRevision && order.ownerRevision !== expectedOwnerRevision) {
       return { ok: false, reason: 'order_revision_stale', order: null, journey: null }
+    }
+    const existingServiceCase = findServiceCaseById(serviceCaseId) ||
+      findOpenServiceCaseByOrder(order.id, 'destination_change')
+    if (
+      existingServiceCase &&
+      ['delivery_rerouted', 'destination_change_committed'].includes(existingServiceCase.resolutionCode) &&
+      order.deliveryAnchor?.id === destination.id
+    ) {
+      return {
+        ok: true,
+        reason: 'address_change_already_committed',
+        order,
+        journey: order.deliveryJourneyId
+          ? getMapStore().findDeliveryJourneyById(order.deliveryJourneyId)
+          : null,
+        committedAlready: true,
+      }
     }
     const mapStore = getMapStore()
     const journey = order.deliveryJourneyId
@@ -5239,7 +5408,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       lastReconciledAt: now,
     }
     order.updatedAt = now
-    const serviceCase = findServiceCaseById(serviceCaseId) || findOpenServiceCaseByOrder(order.id, 'destination_change')
+    const serviceCase = existingServiceCase
     if (serviceCase) {
       serviceCase.status = reroute && journey
         ? COMMERCE_SERVICE_CASE_STATUS.RESOLVED
@@ -5272,9 +5441,38 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       clientMessageId: `${order.id}:address_change_committed:${order.ownerRevision}`,
       createdAt: now,
     })
-    persistToStorage()
     return { ok: true, reason: '', order, journey: reroutedJourney }
   }
+
+  const beginOrderServiceInteraction = (input = {}) =>
+    commitFoodDeliveryMutation(
+      () => beginOrderServiceInteractionInMemory(input),
+      { includeSimulation: true, includeMap: true },
+    )
+
+  const sendOrderMessage = (orderIdOrInput, options = {}) => {
+    const result = commitFoodDeliveryMutation(
+      () => sendOrderMessageInMemory(orderIdOrInput, options),
+      { includeSimulation: true, includeMap: true },
+    )
+    if (result.ok && result.notification) addSystemNotification(result.notification)
+    const publicResult = { ...result }
+    delete publicResult.notification
+    delete publicResult.committedAlready
+    return publicResult
+  }
+
+  const beginChatServiceInteraction = (input = {}) =>
+    commitFoodDeliveryMutation(
+      () => beginChatServiceInteractionInMemory(input),
+      { includeSimulation: true, includeMap: true },
+    )
+
+  const commitOrderAddressChange = (input = {}) =>
+    commitFoodDeliveryMutation(
+      () => commitOrderAddressChangeInMemory(input),
+      { includeSimulation: true, includeMap: true },
+    )
 
   const executeFoodOwnerActionRequest = ({ instanceId = '', request = null, now = Date.now() } = {}) => {
     const serviceCase = request ? findServiceCaseById(request.contextRefs.service_case_id) : null
@@ -6107,15 +6305,113 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return applyPersistedSource(source, { applySeedMigrations: false })
   }
 
-  const persistToStorage = () => {
+  const persistToStorage = () =>
     writePersistedState(FOOD_DELIVERY_STORAGE_KEY, createBackupSnapshot(), {
       version: FOOD_DELIVERY_STORAGE_VERSION,
     })
+
+  const armTransactionalWatchedWriteSkip = () => {
+    skipNextTransactionalWatchedWrite = true
+    queueMicrotask(() => {
+      skipNextTransactionalWatchedWrite = false
+    })
   }
 
-  const saveNow = () => {
-    persistToStorage()
+  const rollbackFoodDeliveryMutation = ({ food, simulation = null, map = null } = {}) => {
+    armTransactionalWatchedWriteSkip()
+    applyPersistedSource(food, { applySeedMigrations: false })
+
+    let simulationPersistence = null
+    if (simulation) {
+      const simulationStore = getSimulationStore()
+      if (JSON.stringify(simulationStore.createBackupSnapshot()) !== JSON.stringify(simulation)) {
+        simulationPersistence = simulationStore.restoreAndPersistSnapshot(simulation)
+      }
+    }
+
+    let mapPersistence = null
+    if (map) {
+      const mapStore = getMapStore()
+      if (JSON.stringify(mapStore.createBackupSnapshot()) !== JSON.stringify(map)) {
+        mapStore.restoreFromBackup(map)
+        mapPersistence = mapStore.saveNow()
+      }
+    }
+    return { simulationPersistence, mapPersistence }
   }
+
+  const commitFoodDeliveryMutation = (
+    mutate,
+    { includeSimulation = false, includeMap = false } = {},
+  ) => {
+    const beforeMutation = {
+      food: createBackupSnapshot(),
+      simulation: includeSimulation ? getSimulationStore().createBackupSnapshot() : null,
+      map: includeMap ? getMapStore().createBackupSnapshot() : null,
+    }
+    let result
+    try {
+      result = mutate()
+    } catch (error) {
+      rollbackFoodDeliveryMutation(beforeMutation)
+      throw error
+    }
+    if (result?.ok !== true) {
+      rollbackFoodDeliveryMutation(beforeMutation)
+      return result
+    }
+    if (result.committedAlready === true) return result
+
+    let mapPersistence = null
+    if (beforeMutation.map) {
+      const mapStore = getMapStore()
+      if (JSON.stringify(mapStore.createBackupSnapshot()) !== JSON.stringify(beforeMutation.map)) {
+        mapPersistence = mapStore.saveNow()
+        if (mapPersistence?.ok !== true) {
+          const rollback = rollbackFoodDeliveryMutation(beforeMutation)
+          return {
+            ...result,
+            ok: false,
+            stage: 'persistence',
+            reason: mapPersistence?.error || 'map_persistence_failed',
+            message: null,
+            reply: null,
+            serviceCase: null,
+            trigger: null,
+            instance: null,
+            order: null,
+            journey: null,
+            persistence: mapPersistence || null,
+            rollback,
+          }
+        }
+      }
+    }
+
+    armTransactionalWatchedWriteSkip()
+    const persistenceResult = persistToStorage()
+    if (persistenceResult?.ok === true) {
+      return { ...result, persistence: persistenceResult, mapPersistence }
+    }
+    const rollback = rollbackFoodDeliveryMutation(beforeMutation)
+    return {
+      ...result,
+      ok: false,
+      stage: 'persistence',
+      reason: persistenceResult?.error || 'persistence_failed',
+      message: null,
+      reply: null,
+      serviceCase: null,
+      trigger: null,
+      instance: null,
+      order: null,
+      journey: null,
+      persistence: persistenceResult || null,
+      rollback,
+    }
+  }
+
+  const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
     primaryCurrency.value = DEFAULT_CURRENCY
@@ -6168,6 +6464,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     ],
     () => {
       if (!hasFinishedStorageHydration.value) return
+      if (skipNextTransactionalWatchedWrite) {
+        skipNextTransactionalWatchedWrite = false
+        return
+      }
       persistToStorage()
     },
     { deep: true },

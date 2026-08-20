@@ -487,6 +487,42 @@ const cloneRelationshipEvent = (event) => ({
   relationshipGate: cloneRelationshipGate(event.relationshipGate),
 })
 
+const hasMatchingRelationshipEventIdentity = (left, right) =>
+  JSON.stringify({
+    entityKey: left?.entityKey,
+    memoryKey: left?.memoryKey,
+    forceSupportingMemory: left?.forceSupportingMemory,
+    targetLabel: left?.targetLabel,
+    sourceModule: left?.sourceModule,
+    sourceId: left?.sourceId,
+    factType: left?.factType,
+    summary: left?.summary,
+    intensity: left?.intensity,
+    metricDeltas: left?.metricDeltas,
+    milestone: left?.milestone,
+    growthTraits: left?.growthTraits,
+    requiresConfirmation: left?.requiresConfirmation,
+    worldContext: left?.worldContext,
+    relationshipGate: left?.relationshipGate,
+  }) ===
+  JSON.stringify({
+    entityKey: right?.entityKey,
+    memoryKey: right?.memoryKey,
+    forceSupportingMemory: right?.forceSupportingMemory,
+    targetLabel: right?.targetLabel,
+    sourceModule: right?.sourceModule,
+    sourceId: right?.sourceId,
+    factType: right?.factType,
+    summary: right?.summary,
+    intensity: right?.intensity,
+    metricDeltas: right?.metricDeltas,
+    milestone: right?.milestone,
+    growthTraits: right?.growthTraits,
+    requiresConfirmation: right?.requiresConfirmation,
+    worldContext: right?.worldContext,
+    relationshipGate: right?.relationshipGate,
+  })
+
 const buildSourceRefsFromEvents = (items = []) => {
   const seen = new Set()
   return items
@@ -519,6 +555,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const events = ref([])
   const memoryReviews = ref([])
   const hasFinishedStorageHydration = ref(false)
+  let skipNextTransactionalWatchedWrite = false
 
   const entityMap = computed(() => {
     const map = new Map()
@@ -894,6 +931,14 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     })
     if (!event) return null
 
+    const existing = events.value.find((item) => item.id === event.id)
+    if (existing) {
+      return hasMatchingRelationshipEventIdentity(existing, event)
+        ? cloneRelationshipEvent(existing)
+        : null
+    }
+    const beforeMutation = createBackupSnapshot()
+
     const major = settings.value.requireConfirmationForMajorEffects && isMajorRelationshipEvent(event)
     if (event.relationshipGate?.decision === 'block') {
       event.status = RELATIONSHIP_EVENT_STATUS.DISMISSED
@@ -932,6 +977,8 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (events.value.length > RELATIONSHIP_EVENT_LIMIT) {
       events.value.splice(RELATIONSHIP_EVENT_LIMIT)
     }
+    const persistenceResult = commitRelationshipMutation(beforeMutation)
+    if (persistenceResult?.ok !== true) return null
     return cloneRelationshipEvent(event)
   }
 
@@ -940,6 +987,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!id) return false
     const event = events.value.find((item) => item.id === id)
     if (!event || event.status !== RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) return false
+    const beforeMutation = createBackupSnapshot()
     event.status = RELATIONSHIP_EVENT_STATUS.APPLIED
     event.appliedAt = Date.now()
     const shouldApplyEffect = event.forceSupportingMemory !== true && !hasAppliedEffectForMemory(event)
@@ -948,7 +996,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (shouldApplyEffect) {
       applyEventToEntity(event)
     }
-    return true
+    return commitRelationshipMutation(beforeMutation)?.ok === true
   }
 
   const dismissRelationshipEvent = (eventId) => {
@@ -956,9 +1004,10 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     if (!id) return false
     const event = events.value.find((item) => item.id === id)
     if (!event || event.status !== RELATIONSHIP_EVENT_STATUS.PENDING_CONFIRMATION) return false
+    const beforeMutation = createBackupSnapshot()
     event.status = RELATIONSHIP_EVENT_STATUS.DISMISSED
     event.dismissedAt = Date.now()
-    return true
+    return commitRelationshipMutation(beforeMutation)?.ok === true
   }
 
   const listEventsForTarget = (target = {}, limit = 5) => {
@@ -1365,15 +1414,28 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
 
   const restoreFromBackup = (snapshot = {}) => applyPersistedSource(snapshot)
 
-  const persistToStorage = () => {
+  const persistToStorage = () =>
     writePersistedState(RELATIONSHIP_RUNTIME_STORAGE_KEY, createBackupSnapshot(), {
       version: RELATIONSHIP_RUNTIME_STORAGE_VERSION,
     })
+
+  const armTransactionalWatchedWriteSkip = () => {
+    skipNextTransactionalWatchedWrite = true
+    queueMicrotask(() => {
+      skipNextTransactionalWatchedWrite = false
+    })
   }
 
-  const saveNow = () => {
-    persistToStorage()
+  const commitRelationshipMutation = (beforeMutation) => {
+    armTransactionalWatchedWriteSkip()
+    const persistenceResult = persistToStorage()
+    if (persistenceResult?.ok !== true) {
+      applyPersistedSource(beforeMutation)
+    }
+    return persistenceResult
   }
+
+  const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
     settings.value = createDefaultSettings()
@@ -1396,6 +1458,10 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     [settings, entities, events, memoryReviews],
     () => {
       if (!hasFinishedStorageHydration.value) return
+      if (skipNextTransactionalWatchedWrite) {
+        skipNextTransactionalWatchedWrite = false
+        return
+      }
       persistToStorage()
     },
     { deep: true },

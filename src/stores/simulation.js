@@ -720,6 +720,7 @@ export const useSimulationStore = defineStore('simulation', () => {
   const activitySessionEventRecords = ref([])
   const settings = ref(normalizeSimulationSettings(DEFAULT_SIMULATION_SETTINGS))
   const hasFinishedStorageHydration = ref(false)
+  let skipNextTransactionalWatchedWrite = false
 
   const eventLogCount = computed(() => eventLogs.value.length)
   const eventInstanceCount = computed(() => eventInstances.value.length)
@@ -903,16 +904,20 @@ export const useSimulationStore = defineStore('simulation', () => {
     })
   }
 
-  const recordOwnerFact = (rawFact) => {
+  const recordOwnerFactInMemory = (rawFact) => {
     const fact = normalizeOwnerFactV1(rawFact)
-    if (!fact) return null
+    if (!fact) return { fact: null, isNew: false, conflict: false }
     const existing = ownerFacts.value.find((item) => item.id === fact.id)
-    if (existing) return JSON.stringify(existing) === JSON.stringify(fact) ? existing : null
+    if (existing) {
+      return JSON.stringify(existing) === JSON.stringify(fact)
+        ? { fact: existing, isNew: false, conflict: false }
+        : { fact: null, isNew: false, conflict: true }
+    }
     ownerFacts.value = [fact, ...ownerFacts.value].slice(0, SIMULATION_OWNER_FACT_LIMIT)
-    return fact
+    return { fact, isNew: true, conflict: false }
   }
 
-  const advanceStoredEventInstanceV2 = ({
+  const advanceStoredEventInstanceV2InMemory = ({
     instanceId = '',
     randomValues = {},
     now = Date.now(),
@@ -952,7 +957,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     return { ...result, instance: stored }
   }
 
-  const startEventInstanceV2 = ({
+  const startEventInstanceV2InMemory = ({
     id = '',
     templateId = '',
     contextRefs = {},
@@ -961,7 +966,28 @@ export const useSimulationStore = defineStore('simulation', () => {
   } = {}) => {
     const existing = getEventInstanceV2(id)
     if (existing) {
-      return advanceStoredEventInstanceV2({ instanceId: existing.id, randomValues, now })
+      const template = getBuiltInCommerceEventTemplate(templateId)
+      const requested = createEventInstanceV2({ id, template, contextRefs, now: existing.createdAt })
+      if (
+        !requested ||
+        existing.templateId !== requested.templateId ||
+        !Object.entries(requested.contextRefs).every(
+          ([key, value]) => existing.contextRefs[key] === value,
+        )
+      ) {
+        return {
+          ok: false,
+          changed: false,
+          reason: 'instance_id_conflict',
+          instance: existing,
+        }
+      }
+      return {
+        ok: true,
+        changed: false,
+        reason: 'instance_already_started',
+        instance: existing,
+      }
     }
     const template = getBuiltInCommerceEventTemplate(templateId)
     const instance = createEventInstanceV2({ id, template, contextRefs, now })
@@ -978,16 +1004,72 @@ export const useSimulationStore = defineStore('simulation', () => {
       reason: 'user_service_interaction',
       at: stored.createdAt,
     })
-    return advanceStoredEventInstanceV2({ instanceId: stored.id, randomValues, now })
+    return {
+      ...advanceStoredEventInstanceV2InMemory({ instanceId: stored.id, randomValues, now }),
+      created: true,
+    }
+  }
+
+  const recordOwnerFact = (rawFact) => {
+    const beforeMutation = createBackupSnapshot()
+    const recorded = recordOwnerFactInMemory(rawFact)
+    if (!recorded.fact) return null
+    if (!recorded.isNew) return recorded.fact
+    const committed = commitSimulationMutation(beforeMutation, {
+      ok: true,
+      changed: true,
+      reason: 'owner_fact_recorded',
+      fact: recorded.fact,
+      instance: null,
+    })
+    return committed.ok ? committed.fact : null
+  }
+
+  const advanceStoredEventInstanceV2 = (input = {}) => {
+    const beforeMutation = createBackupSnapshot()
+    const result = advanceStoredEventInstanceV2InMemory(input)
+    if (!result.ok || !result.changed) return result
+    return commitSimulationMutation(beforeMutation, result)
+  }
+
+  const startEventInstanceV2 = (input = {}) => {
+    const beforeMutation = createBackupSnapshot()
+    const result = startEventInstanceV2InMemory(input)
+    if (!result.ok || (!result.changed && !result.created)) return result
+    return commitSimulationMutation(beforeMutation, result)
   }
 
   const recordOwnerFactAndAdvance = (rawFact, { randomValues = {}, now = Date.now() } = {}) => {
-    const fact = recordOwnerFact(rawFact)
+    const beforeMutation = createBackupSnapshot()
+    const recorded = recordOwnerFactInMemory(rawFact)
+    const fact = recorded.fact
     if (!fact) return { ok: false, changed: false, reason: 'owner_fact_rejected', fact: null, instance: null }
     const instance = fact.correlationId ? getEventInstanceV2(fact.correlationId) : null
-    if (!instance) return { ok: true, changed: false, reason: 'fact_recorded_without_instance', fact, instance: null }
-    const result = advanceStoredEventInstanceV2({ instanceId: instance.id, randomValues, now })
-    return { ...result, fact }
+    if (!recorded.isNew) {
+      return {
+        ok: true,
+        changed: false,
+        reason: 'owner_fact_already_recorded',
+        fact,
+        instance,
+      }
+    }
+    if (!instance) {
+      return commitSimulationMutation(beforeMutation, {
+        ok: true,
+        changed: true,
+        reason: 'fact_recorded_without_instance',
+        fact,
+        instance: null,
+      })
+    }
+    const result = advanceStoredEventInstanceV2InMemory({ instanceId: instance.id, randomValues, now })
+    if (!result.ok) {
+      armTransactionalWatchedWriteSkip()
+      applyPersistedSource(beforeMutation)
+      return { ...result, fact: null }
+    }
+    return commitSimulationMutation(beforeMutation, { ...result, fact })
   }
 
   const listPendingOwnerActionRequests = (targetModule = '') => {
@@ -1628,16 +1710,47 @@ export const useSimulationStore = defineStore('simulation', () => {
 
   const restoreFromBackup = (snapshot = {}) => applyPersistedSource(snapshot)
 
-  const persistToStorage = () => {
+  const persistToStorage = () =>
     writePersistedState(SIMULATION_STORAGE_KEY, createBackupSnapshot(), {
       version: SIMULATION_STORAGE_VERSION,
       migrate: migrateSimulationStorage,
     })
+
+  const armTransactionalWatchedWriteSkip = () => {
+    skipNextTransactionalWatchedWrite = true
+    queueMicrotask(() => {
+      skipNextTransactionalWatchedWrite = false
+    })
   }
 
-  const saveNow = () => {
-    persistToStorage()
+  const commitSimulationMutation = (beforeMutation, result) => {
+    armTransactionalWatchedWriteSkip()
+    const persistenceResult = persistToStorage()
+    if (persistenceResult?.ok === true) {
+      return { ...result, persistence: persistenceResult }
+    }
+    const instanceId = result?.instance?.id || ''
+    applyPersistedSource(beforeMutation)
+    return {
+      ...result,
+      ok: false,
+      changed: false,
+      reason: persistenceResult?.error || 'persistence_failed',
+      fact: result?.fact ? null : result?.fact,
+      instance: instanceId ? getEventInstanceV2(instanceId) : null,
+      persistence: persistenceResult || null,
+    }
   }
+
+  const restoreAndPersistSnapshot = (snapshot = {}) => {
+    armTransactionalWatchedWriteSkip()
+    if (!applyPersistedSource(snapshot)) {
+      return { ok: false, error: 'snapshot_invalid', carrier: 'simulation' }
+    }
+    return persistToStorage()
+  }
+
+  const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
     eventLogs.value = []
@@ -1683,6 +1796,10 @@ export const useSimulationStore = defineStore('simulation', () => {
     ],
     () => {
       if (!hasFinishedStorageHydration.value) return
+      if (skipNextTransactionalWatchedWrite) {
+        skipNextTransactionalWatchedWrite = false
+        return
+      }
       persistToStorage()
     },
     { deep: true },
@@ -1763,6 +1880,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     createBackupSnapshot,
     createBackupSnapshotAsync,
     restoreFromBackup,
+    restoreAndPersistSnapshot,
     resetForTesting,
     saveNow,
   }

@@ -97,6 +97,7 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
   const interactionAudit = ref([])
   const activeArtifactId = ref('')
   const hasFinishedStorageHydration = ref(false)
+  let skipNextTransactionalWatchedWrite = false
 
   const registeredModules = computed(() => listRegisteredMiniSceneModules())
   const activeArtifact = computed(
@@ -259,6 +260,58 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
       version: MINI_SCENE_STORAGE_VERSION,
     })
 
+  const armTransactionalWatchedWriteSkip = () => {
+    skipNextTransactionalWatchedWrite = true
+    queueMicrotask(() => {
+      skipNextTransactionalWatchedWrite = false
+    })
+  }
+
+  const commitAndOpenArtifact = (rawArtifact) => {
+    const validated = validateMiniSceneArtifact(rawArtifact)
+    if (!validated.ok) return { ok: false, reason: 'artifact_invalid', artifact: null }
+
+    const beforeMutation = createPersistedSnapshot()
+    const previousActiveArtifactId = activeArtifactId.value
+    const existing = findArtifactById(validated.artifact.artifactId)
+    if (
+      existing &&
+      (
+        existing.requestId !== validated.artifact.requestId ||
+        JSON.stringify(existing.source) !== JSON.stringify(validated.artifact.source)
+      )
+    ) {
+      return { ok: false, reason: 'artifact_id_conflict', artifact: null }
+    }
+
+    const committed = existing || commitArtifact(validated.artifact)
+    if (!committed || !openArtifact(committed.artifactId)) {
+      armTransactionalWatchedWriteSkip()
+      applyPersistedSource(beforeMutation)
+      activeArtifactId.value = previousActiveArtifactId
+      return { ok: false, reason: 'commit_failed', artifact: null }
+    }
+
+    armTransactionalWatchedWriteSkip()
+    const persistenceResult = persistToStorage()
+    if (persistenceResult?.ok !== true) {
+      applyPersistedSource(beforeMutation)
+      activeArtifactId.value = previousActiveArtifactId
+      return {
+        ok: false,
+        reason: persistenceResult?.error || 'persistence_failed',
+        artifact: null,
+        persistence: persistenceResult || null,
+      }
+    }
+    return {
+      ok: true,
+      reason: '',
+      artifact: cloneMiniSceneValue(findArtifactById(committed.artifactId)),
+      persistence: persistenceResult,
+    }
+  }
+
   const saveNow = () => persistToStorage()
 
   const resetForTesting = () => {
@@ -280,6 +333,10 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
     [modulePolicies, profileBindings, artifacts, interactionAudit],
     () => {
       if (!hasFinishedStorageHydration.value) return
+      if (skipNextTransactionalWatchedWrite) {
+        skipNextTransactionalWatchedWrite = false
+        return
+      }
       persistToStorage()
     },
     { deep: true },
@@ -298,6 +355,7 @@ export const useMiniSceneStore = defineStore('miniScene', () => {
     getModulePolicy,
     setModulePresentationMode,
     commitArtifact,
+    commitAndOpenArtifact,
     openArtifact,
     closeActiveArtifact,
     chooseActiveArtifact,

@@ -287,10 +287,14 @@ export const generateAndPresentMiniScene = async (
     })
   }
 
-  const committed = miniSceneStore.commitArtifact(artifactResult.artifact)
-  if (!committed || !miniSceneStore.openArtifact(committed.artifactId)) {
-    return failedResult('commit_failed', { providerCallCount: 1 })
+  const committedResult = miniSceneStore.commitAndOpenArtifact(artifactResult.artifact)
+  if (!committedResult?.ok || !committedResult.artifact) {
+    return failedResult(committedResult?.reason || 'commit_failed', {
+      providerCallCount: 1,
+      persistence: committedResult?.persistence || null,
+    })
   }
+  const committed = committedResult.artifact
   return {
     ok: true,
     status: 'presented_text',
