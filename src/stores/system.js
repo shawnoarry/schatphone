@@ -97,6 +97,7 @@ import {
   normalizeProfileTemplates,
 } from '../lib/profile-template-schema'
 import { normalizeChatAppearance } from '../lib/chat-appearance'
+import { normalizeCalendarAppearance } from '../lib/calendar-markers'
 import { normalizeScopedCustomCss } from '../lib/appearance-scoped-css'
 import {
   normalizeAppSkinSettings,
@@ -1522,6 +1523,7 @@ export const useSystemStore = defineStore('system', () => {
       homeLayoutTemplateIds: cloneDefaultHomeLayoutTemplateIds(),
       homeLayoutSlotPlacements: cloneDefaultHomeLayoutSlotPlacements(),
       customWidgets: [],
+      calendar: normalizeCalendarAppearance(),
       builtInWidgetPreferences: normalizeBuiltInWidgetPreferences(),
       lockClockStyle: DEFAULT_LOCK_CLOCK_STYLE,
       chat: normalizeChatAppearance(),
@@ -4368,6 +4370,7 @@ export const useSystemStore = defineStore('system', () => {
         settings.appearance.lockClockStyle = normalizeLockClockStyle(appearance.lockClockStyle)
       }
       settings.appearance.chat = normalizeChatAppearance(appearance.chat)
+      settings.appearance.calendar = normalizeCalendarAppearance(appearance.calendar)
 
       settings.appearance.customWidgets = normalizeCustomWidgets(appearance.customWidgets)
       settings.appearance.builtInWidgetPreferences = normalizeBuiltInWidgetPreferences(
@@ -4588,6 +4591,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.scopedCustomCss = normalizeScopedCustomCss(settings.appearance.scopedCustomCss)
     settings.appearance.appSkins = normalizeAppSkinSettings(settings.appearance.appSkins)
     settings.appearance.chat = normalizeChatAppearance(settings.appearance.chat)
+    settings.appearance.calendar = normalizeCalendarAppearance(settings.appearance.calendar)
     settings.music = normalizeMusicState(settings.music)
     settings.system.notifications = settings.system.notifications !== false
     settings.system.realPushEnabled = settings.system.realPushEnabled === true

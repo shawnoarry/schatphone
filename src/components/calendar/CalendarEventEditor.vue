@@ -1,11 +1,13 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from '../../composables/useI18n'
+import { calendarMarkerColor } from '../../lib/calendar-markers'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
   mode: { type: String, default: 'create' },
   places: { type: Array, default: () => [] },
+  markers: { type: Array, default: () => [] },
   validationMessage: { type: String, default: '' },
   saving: { type: Boolean, default: false },
 })
@@ -79,6 +81,13 @@ const filteredPlaces = computed(() => {
     .filter((place) => terms.every((term) => place.searchText.includes(term)))
     .slice(0, 20)
 })
+
+const markerColorFor = (marker) => calendarMarkerColor(marker)
+
+const toggleMarker = (markerId) => {
+  if (!draft.value) return
+  draft.value.markerId = draft.value.markerId === markerId ? '' : markerId
+}
 
 const selectPlace = (place) => {
   draft.value.locationRef = {
@@ -315,6 +324,41 @@ watch(
             <option :value="10080">{{ t('提前 1 周', '1 week before') }}</option>
           </select>
         </label>
+      </section>
+
+      <section class="calendar-editor__section">
+        <div class="calendar-editor__section-heading">
+          <span class="calendar-editor__section-icon" aria-hidden="true">
+            <i class="fas fa-tag"></i>
+          </span>
+          <div>
+            <h3>{{ t('便签', 'Marker') }}</h3>
+            <p>{{ t('只影响日历里的颜色标识，不改变安排本身。', 'Only changes the color mark in Calendar; the event itself stays unchanged.') }}</p>
+          </div>
+        </div>
+
+        <div class="calendar-editor__marker-grid" role="radiogroup" :aria-label="t('便签', 'Marker')">
+          <button
+            v-for="marker in markers"
+            :key="marker.id"
+            type="button"
+            role="radio"
+            :aria-checked="draft.markerId === marker.id"
+            class="calendar-editor__marker-chip"
+            :class="{ 'is-selected': draft.markerId === marker.id }"
+            :style="{ '--calendar-marker-color': markerColorFor(marker) }"
+            :data-testid="`calendar-editor-marker-${marker.id}`"
+            @click="toggleMarker(marker.id)"
+          >
+            <i aria-hidden="true"></i>
+            <span>{{ t(marker.labelZh, marker.labelEn) }}</span>
+          </button>
+        </div>
+        <p v-if="draft.markerId" class="calendar-editor__marker-clear">
+          <button type="button" data-testid="calendar-editor-marker-clear" @click="toggleMarker(draft.markerId)">
+            {{ t('移除便签', 'Remove marker') }}
+          </button>
+        </p>
       </section>
 
       <section class="calendar-editor__section">
@@ -910,5 +954,55 @@ watch(
   .calendar-editor * {
     scroll-behavior: auto !important;
   }
+}
+
+.calendar-editor__marker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calendar-editor__marker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--system-control-border);
+  border-radius: 999px;
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calendar-editor__marker-chip i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--calendar-marker-color, var(--system-control-border));
+}
+
+.calendar-editor__marker-chip.is-selected {
+  border-color: var(--calendar-marker-color);
+  background: color-mix(in srgb, var(--calendar-marker-color) 14%, transparent);
+  box-shadow: 0 0 0 1px var(--calendar-marker-color);
+}
+
+.calendar-editor__marker-clear {
+  margin: 0;
+}
+
+.calendar-editor__marker-clear button {
+  border: 0;
+  padding: 0;
+  color: var(--system-accent);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
 }
 </style>

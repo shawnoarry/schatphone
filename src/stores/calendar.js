@@ -243,6 +243,7 @@ const normalizeCalendarEventRecord = (raw, index = 0) => {
     route: trimLine(raw.route, '', 120),
     icon: trimLine(raw.icon, 'fas fa-calendar-day', 80),
     tone: trimLine(raw.tone, 'blue', 40),
+    markerId: trimLine(raw.markerId, '', 60),
     scheduledPushId: trimLine(raw.scheduledPushId, '', 140),
     scheduledPushAt: Math.max(0, toInt(raw.scheduledPushAt, 0)),
     pushStatus: normalizeCalendarEventPushStatus(raw.pushStatus),
@@ -428,6 +429,10 @@ export const useCalendarStore = defineStore('calendar', () => {
         recurrenceUntil: patch.recurrenceUntil ?? event.recurrenceUntil,
         requirement: patch.requirement ?? event.requirement,
         reminderLeadMinutes: patch.reminderLeadMinutes ?? event.reminderLeadMinutes,
+        markerId:
+          Object.prototype.hasOwnProperty.call(patch, 'markerId')
+            ? patch.markerId
+            : event.markerId,
         locationRef:
           Object.prototype.hasOwnProperty.call(patch, 'locationRef')
             ? patch.locationRef

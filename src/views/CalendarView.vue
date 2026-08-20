@@ -51,6 +51,7 @@ const {
   tripRuntime,
 } = storeToRefs(mapStore)
 const { settings } = storeToRefs(systemStore)
+const calendarMarkers = computed(() => settings.value.appearance?.calendar?.markers || [])
 const calendarRelationshipDrafts = ref({})
 const relationshipFeedbackByEventId = ref({})
 const departureModeByEventId = ref({})
@@ -712,6 +713,7 @@ const buildCalendarEditorDraft = ({ event = null, dayStartsAt = Date.now() } = {
     requirement: event?.requirement || 'required',
     reminderLeadMinutes: Number(event?.reminderLeadMinutes || 0),
     locationRef: event?.locationRef ? { ...event.locationRef } : null,
+    markerId: event?.markerId || '',
   }
 }
 
@@ -797,6 +799,7 @@ const saveCalendarEventEditor = () => {
     requirement: draft.requirement || 'required',
     reminderLeadMinutes: Number(draft.reminderLeadMinutes || 0),
     locationRef: draft.locationRef ? { ...draft.locationRef } : null,
+    markerId: String(draft.markerId || '').trim(),
   }
 
   const savedEvent =
@@ -1161,6 +1164,7 @@ onBeforeUnmount(() => {
         :occurrences="calendarOccurrences"
         :selected-event-id="selectedEventId"
         :selected-occurrence-id="selectedOccurrenceId"
+        :markers="calendarMarkers"
         @update-view="updateCalendarView"
         @shift-period="shiftCalendarPeriod"
         @go-today="goToCalendarToday"
@@ -1376,6 +1380,7 @@ onBeforeUnmount(() => {
       :open="editorOpen"
       :mode="editorMode"
       :places="activeMapAllPlaces"
+      :markers="calendarMarkers"
       :validation-message="editorValidationMessage"
       :saving="editorSaving"
       @save="saveCalendarEventEditor"
