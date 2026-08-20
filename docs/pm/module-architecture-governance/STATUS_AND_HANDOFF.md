@@ -377,20 +377,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` with implementation evidence `73672df` |
-| Next dependency-safe items | `CMG-03` active on PC-A; `DCF-05` once PC-B is assigned; `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is an independent PC-B test-stability repair |
-| Active item | `CMG-03 IN_PROGRESS` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-03 DONE 2026-08-20` at `86270d8` |
+| Next dependency-safe items | `DCF-05` once PC-B is assigned; `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is an independent PC-B test-stability repair |
+| Active item | none; reserve the next exact slice before editing |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / controller and Chat relationship-prompt lane |
+| PC-A physical machine / role | `SKY-20250212UBG` / controller; waiting at the `DCF-05` dependency gate |
 | PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
-| Source branch, base, and worktree | `main` at `0163882`; `D:\github\schatphone` |
+| Source branch, base, and worktree | `main`; `CMG-03` base `ef9869e`, evidence `86270d8`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned Calendar edits in `e2e/calendar-presentation.spec.js`, `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; modified `output/e2e/calendar-cja1/*.png`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | Chat prompt projection only: keep chat activity counters/timestamps, remove System Store relationship stage/metrics from AI context, and keep Contacts relationship premise explicitly non-current. No Store mutation, persisted data, page, or provider transport changes. |
-| Reserved paths | `src/composables/useChatAiPromptContextModel.js`; `tests/chat-ai-prompt-context-model.test.js`; `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md`; this handoff; the `CMG-03` roadmap row |
-| Acceptance | A role prompt contains one current relationship projection from Relationship Runtime, contains no System Store relationship stage/metrics or warm/conflict timestamps, retains bounded Chat activity context, and keeps profile premise wording as premise rather than current truth. Non-role behavior remains unchanged. |
-| Required checks | focused Chat prompt Vitest; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; `npm.cmd run governance:check`; `git diff --check` |
-| Integration state | `ACTIVE_ON_PC_A`; no implementation is ready for review yet |
-| Remote synchronization | `origin/main` confirmed at `0163882`; this reservation update must be pushed before source edits |
+| Risk lane | No active implementation. `CMG-03` changed only transient Chat prompt assembly and its test; Stores, persistence, pages, provider transport, and relationship records remain unchanged. |
+| Reserved paths | none; the prior `CMG-03` reservation is released |
+| Acceptance | `CMG-03` accepted: Relationship Runtime appears once as current relationship truth, legacy relationship-like System Store values are absent, Chat activity remains, and Contacts premise stays non-current context. |
+| Validation evidence | focused Chat/role/world projection tests `3 files / 20 tests`; full Vitest `296 files / 2092 tests`; lint, production build, governance `2 files / 14 tests`, and `git diff --check` all passed. |
+| Integration state | `CMG-03 INTEGRATED_ON_MAIN`; PC-A waits for the `DCF-05` dependency before `CMG-02` |
+| Remote synchronization | controller pushes `86270d8` and this completion record together; the next PC must verify `origin/main` contains both before starting |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -398,6 +398,7 @@ Completion log:
 
 1. `CMG-00 DONE 2026-08-20`: accepted the one-shared-experience model, separated role memory from supporting owner records, inventoried all confirmed defects, froze dependency order and two-PC execution rules, and changed no behavior code. Validation belongs to this documentation round.
 2. `CMG-01 DONE 2026-08-20`: implementation `73672df` added `shared-experience-contract.js`, the Xia gift fixture, and five focused tests. One continuing gift experience now has three ordered progress updates and one concise role memory while Shopping, Wallet, Calendar, and Phone records stay separately owned and stably referenced. No runtime caller or persisted data was changed. Full-suite load also reproduced and logged `DCF-06`; the previously planned `DCF-05` remains open.
+3. `CMG-03 DONE 2026-08-20`: implementation `86270d8` removed System Store relationship stage/metrics and warm/conflict timestamps from Chat prompts. Bounded Chat activity remains, Contacts premise stays labelled as premise, and the same transient Relationship Runtime projection supplies the one current relationship answer plus recalled memory references. No persisted state or visible page changed.
 
 Do not begin `CMG-02` before `DCF-05` and `CMG-01`; do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
 

@@ -215,7 +215,7 @@ Acceptance for 4.5:
 
 #### 4.5-CMG Shared Experience, Memory, And Durable History Governance
 
-Status: `P0 IN_PROGRESS / CMG-00 AND CMG-01 DONE 2026-08-20 / CMG-03 IN_PROGRESS ON PC-A`
+Status: `P0 IN_PROGRESS / CMG-00, CMG-01, AND CMG-03 DONE 2026-08-20 / DCF-05 NEXT`
 
 This subsection is the only live execution checklist for this governance round. Other documents may describe product meaning or the current handoff, but they must reference these IDs instead of copying their status.
 
@@ -237,7 +237,7 @@ Implementation ledger:
 | `DCF-05` | P0 | `TODO` | Replace the fixed 40 ms deferred-mirror wait with deterministic completion evidence. The persistence test must pass repeatedly and inside the full suite without increasing an arbitrary delay. | `CMG-00` | module architecture / PC-B |
 | `CMG-01` | P0 | `DONE 2026-08-20` | Frozen by `73672df`: the executable gift fixture produces one experience, three ordered progress points, one evolving role-memory summary, and stable Shopping/Wallet/Calendar/Phone owner-record references. Invalid, duplicate, dangling, out-of-order, or silently shortened evidence fails closed; no Store, storage, retention, or page behavior changed. | `CMG-00` | module architecture + Contacts/relationship + Event / PC-A (`SKY-20250212UBG`) |
 | `CMG-02` | P0 | `TODO` | Adopt persistence results for Relationship Runtime, Simulation/Event Instance V2, Mini Scene, and the Food Delivery interaction path. Quota, read-only, and reconciliation failures must never display durable success; retry must not duplicate the action. | `DCF-05`, `CMG-01` | module architecture + source owners / PC-A |
-| `CMG-03` | P0 | `IN_PROGRESS` | Remove the competing relationship truth from Chat prompt construction. Current relationship state appears exactly once and comes from Relationship Runtime; profile premise/classification remains context rather than a second current answer. | `CMG-01` | Contacts/relationship + Chat / PC-A (`SKY-20250212UBG`) |
+| `CMG-03` | P0 | `DONE 2026-08-20` | Completed by `86270d8`: role Chat now receives current relationship state exactly once from Relationship Runtime. Legacy System Store relationship stage/metrics and warm/conflict timestamps no longer enter the prompt; bounded Chat activity counters/timestamps remain, and Contacts relationship premise stays explicitly labelled profile context. | `CMG-01` | Contacts/relationship + Chat / PC-A (`SKY-20250212UBG`) |
 | `CMG-04` | P0 | `TODO` | Replace the single generic Chat-disclosure bucket with subject-aware role memory. Unrelated disclosures such as hospital dislike and birthday remain separately recallable; later statements about the same subject update one memory with source history preserved. | `CMG-01`, `CMG-02`, `CMG-03` | Contacts/relationship + Chat / PC-A |
 | `CMG-05` | P0 | `TODO` | Add stable shared-experience identity and progress updates across the first accepted gift vertical. Shopping, Wallet, Calendar/delivery scheduling, Phone, Chat, and relationship records remain owner-native supporting records and do not become separate top-level memories. | `CMG-01`, `CMG-02`, `CMG-03` | Contacts/relationship + commerce + Chat/Event / PC-A |
 | `CMG-06` | P0 | `TODO` | Remove Relationship Runtime's global 500-row silent truncation through an approved storage/migration/rollback slice. All roles and statuses survive reopen and backup/restore; Contacts lists page without loading all history. | `CMG-02`, `CMG-04`, `CMG-05` | module architecture + Contacts/relationship / PC-A |
@@ -813,7 +813,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0 IN_PROGRESS / CMG-03 IN_PROGRESS ON PC-A`: continue 4.5-CMG by removing competing Chat relationship truth. `DCF-05` still awaits PC-B and blocks `CMG-02`; `DCF-06` remains an independent PC-B test-stability repair.
+1. `P0 IN_PROGRESS / CMG-00, CMG-01, AND CMG-03 DONE 2026-08-20`: continue 4.5-CMG from `DCF-05` on PC-B; `CMG-02` remains blocked until it completes, while `DCF-06` remains an independent PC-B test-stability repair.
 2. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 3. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.
 4. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; the personal Gallery image-bed Adapter is accepted as an explicit separately promoted follow-up, while Gallery People curation and source-module callers remain separate.
