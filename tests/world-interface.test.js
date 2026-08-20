@@ -346,11 +346,14 @@ describe('world interface', () => {
     expect(state).toMatchObject({
       roleBound: true,
       profileName: 'Nova',
+      profileId: 7,
       configuredCount: 11,
       injectedCount: 9,
       disabledCount: 1,
       missingCount: 1,
       overflowCount: 0,
+      disabledPointIds: ['kp_disabled'],
+      missingPointIds: ['kp_missing'],
     })
     expect(state.injectedPoints.map((point) => point.id)).toEqual(
       enabledPoints.map((point) => point.id),

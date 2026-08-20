@@ -1460,6 +1460,30 @@ const openWorldBookFromThreadContext = (pointId = '') => {
   })
 }
 
+const openWorldBookDisabledFromThread = () => {
+  const disabledPointIds = Array.isArray(activeThreadWorldKernelState.value.disabledPointIds)
+    ? activeThreadWorldKernelState.value.disabledPointIds
+    : []
+  router.push({
+    path: '/worldbook',
+    query: buildWorldBookRouteQuery({
+      source: 'chat',
+      homePage: route.query.homePage,
+      pointIds: disabledPointIds,
+      usage: 'all',
+    }),
+  })
+}
+
+const openContactsProfileFromThread = () => {
+  const profileId = Number(activeThreadWorldKernelState.value.profileId)
+  if (!Number.isFinite(profileId) || profileId <= 0) return
+  router.push({
+    path: '/contacts',
+    query: buildChatReturnSourceQuery(route, activeChat.value?.id, { profileId: String(profileId) }),
+  })
+}
+
 const clearAutoInvokeTimer = () => {
   if (!autoInvokeTimerId) return
   clearTimeout(autoInvokeTimerId)
@@ -4256,7 +4280,9 @@ onBeforeUnmount(() => {
         :thread-settings-saved="threadSettingsSaved"
         @apply-default-thread-preset="applyDefaultThreadPresetToDraft"
         @open-chat-directory="openChatDirectory"
+        @open-contacts-profile="openContactsProfileFromThread"
         @open-worldbook="openWorldBookFromThreadContext"
+        @open-worldbook-disabled="openWorldBookDisabledFromThread"
         @toggle-subscription-muted="toggleActiveServiceMuted"
         @toggle-subscription-folded="toggleActiveServiceFolded"
         @clear-thread-identity="clearThreadIdentityDraft"

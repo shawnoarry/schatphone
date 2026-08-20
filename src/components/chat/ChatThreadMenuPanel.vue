@@ -99,7 +99,9 @@ const emit = defineEmits([
   'close',
   'apply-default-thread-preset',
   'open-chat-directory',
+  'open-contacts-profile',
   'open-worldbook',
+  'open-worldbook-disabled',
   'save-thread-identity',
   'save-thread-settings',
   'toggle-subscription-muted',
@@ -441,22 +443,45 @@ const updateNumberSetting = (key, value) => {
           }}
         </p>
 
-        <p
+        <div
           v-if="
             worldKernelState.disabledCount > 0 ||
             worldKernelState.missingCount > 0 ||
             worldKernelState.overflowCount > 0
           "
-          class="mt-2 text-[10px] text-amber-600"
+          class="mt-2 flex flex-wrap items-center gap-1.5"
           data-testid="thread-worldbook-binding-note"
         >
-          {{
-            t(
-              `未注入：停用 ${worldKernelState.disabledCount} 条，缺失 ${worldKernelState.missingCount} 条，超出上限 ${worldKernelState.overflowCount} 条。`,
-              `Not injected: ${worldKernelState.disabledCount} disabled, ${worldKernelState.missingCount} missing, ${worldKernelState.overflowCount} over the limit.`,
-            )
-          }}
-        </p>
+          <span class="text-[10px] text-amber-600">{{ t('未注入：', 'Not injected:') }}</span>
+          <button
+            v-if="worldKernelState.disabledCount > 0"
+            type="button"
+            class="thread-repair-link"
+            data-testid="thread-worldbook-disabled-link"
+            @click="$emit('open-worldbook-disabled')"
+          >
+            {{ t(`停用 ${worldKernelState.disabledCount} 条`, `${worldKernelState.disabledCount} disabled`) }}
+          </button>
+          <button
+            v-if="worldKernelState.missingCount > 0"
+            type="button"
+            class="thread-repair-link"
+            data-testid="thread-worldbook-missing-link"
+            @click="$emit('open-contacts-profile')"
+          >
+            {{ t(`缺失 ${worldKernelState.missingCount} 条`, `${worldKernelState.missingCount} missing`) }}
+          </button>
+          <button
+            v-if="worldKernelState.overflowCount > 0"
+            type="button"
+            class="thread-repair-link"
+            data-testid="thread-worldbook-overflow-link"
+            @click="$emit('open-contacts-profile')"
+          >
+            {{ t(`超出上限 ${worldKernelState.overflowCount} 条`, `${worldKernelState.overflowCount} over the limit`) }}
+          </button>
+          <span class="text-[10px] text-gray-400">{{ t('点按可前往修复', 'Tap to repair') }}</span>
+        </div>
       </div>
       </div>
     </details>
@@ -789,6 +814,20 @@ const updateNumberSetting = (key, value) => {
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--chat-accent-soft);
+  color: var(--chat-accent-ink);
+}
+
+.thread-repair-link {
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--system-warning);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.thread-repair-link:hover {
   color: var(--chat-accent-ink);
 }
 

@@ -329,6 +329,7 @@ export const resolveRoleKnowledgeState = ({
   const empty = {
     roleBound: false,
     profileName: '',
+    profileId: 0,
     configuredCount: 0,
     enabledEntries: [],
     enabledPoints: [],
@@ -339,6 +340,8 @@ export const resolveRoleKnowledgeState = ({
     disabledCount: 0,
     missingCount: 0,
     overflowCount: 0,
+    disabledPointIds: [],
+    missingPointIds: [],
   }
 
   if (!contact || (contact.kind || 'role') !== 'role') return empty
@@ -361,6 +364,7 @@ export const resolveRoleKnowledgeState = ({
       ...empty,
       roleBound: true,
       profileName: normalizeText(profile.name, normalizeText(contact.name)),
+      profileId: Number.isFinite(Number(profile.id)) ? Number(profile.id) : 0,
     }
   }
 
@@ -371,6 +375,8 @@ export const resolveRoleKnowledgeState = ({
   )
 
   const enabledPoints = []
+  const disabledPointIds = []
+  const missingPointIds = []
   let disabledCount = 0
   let missingCount = 0
 
@@ -378,10 +384,12 @@ export const resolveRoleKnowledgeState = ({
     const point = pointMap.get(id)
     if (!point) {
       missingCount += 1
+      missingPointIds.push(id)
       return
     }
     if (point.enabled === false) {
       disabledCount += 1
+      disabledPointIds.push(id)
       return
     }
     enabledPoints.push(normalizeKnowledgePoint(point))
@@ -392,6 +400,7 @@ export const resolveRoleKnowledgeState = ({
   return {
     roleBound: true,
     profileName: normalizeText(profile.name, normalizeText(contact.name)),
+    profileId: Number.isFinite(Number(profile.id)) ? Number(profile.id) : 0,
     configuredCount: configuredIds.length,
     enabledEntries: enabledPoints,
     enabledPoints,
@@ -402,6 +411,8 @@ export const resolveRoleKnowledgeState = ({
     disabledCount,
     missingCount,
     overflowCount: promptLimit === null ? 0 : Math.max(0, enabledPoints.length - injectedPoints.length),
+    disabledPointIds,
+    missingPointIds,
   }
 }
 
