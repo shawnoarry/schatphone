@@ -72,13 +72,31 @@ NOT done / open for the next session:
 - The page shell was already tokenized; the actual residual lived in the two child panels' uncovered utility colors. Extended the existing `:deep()` override map in `NetworkView.vue` to cover `emerald` -> `--system-success*`, `amber` -> `--system-warning*`, and `indigo` -> `--system-info`/control tokens. Zero template/logic change, child components untouched.
 - Validation: lint, focused tests 29/29, full suite 258 files / 1913 tests, build, default/zen screenshots (status boxes now read as proper semantic tones in both themes).
 
-## 2. Current Lane: Calendar / Reminders Schedule Identity
+## 2. Current Lane: Calendar / Reminders Schedule Identity (RE-EVALUATED 2026-08-19 post-integration)
 
 Audit basis (visual package 2026-07-16 matrix): schedule surfaces read as generic status cards; Calendar/Reminders are targeted rebuild candidates. Hard constraints: Reminders stays the unconfirmed-cue inbox, Calendar stays the confirmed-schedule owner.
 
-**Course correction 2026-08-17 (USER-PROPOSED, PENDING RE-CONFIRMATION)**: the earlier "Quiet Timeline" agenda-list design reads as the future **Agenda Journey (行程)** surface, not Calendar. It is preserved below as reserved design language. The user proposed that the Calendar home should instead be a **perpetual month grid (万年历), iOS-Calendar-like**: month grid with tap-a-day selected-day detail. **Status: the user raised this direction and explicitly asked for it to be recorded as awaiting their re-confirmation — do not treat it as approved, do not sync it into `TODO_ROADMAP.md`, and re-confirm with the user before implementing the month-grid slice.** If confirmed, it would be the user's CJA-1 direction for roadmap 4.12 (Month view first, day-tap detail), and the month grid would ship as its own slice (new view-layer structure computed from existing event data) with targeted Playwright e2e.
+### 2.0 What the integrated baseline already ships (verified from code + `output/e2e/calendar-cja1/` screenshots)
 
-**Cross-app date links 2026-08-17 (USER-PROPOSED, PENDING RE-CONFIRMATION)**: the user proposed that Calendar, the future Agenda Journey app, and a future Diary app keep independent entries but carry mutual jump buttons. Assessment recorded: endorsed, with three rules — (1) deep links carry date context (`?date=`), so Calendar day detail links to that same day in Agenda Journey and vice versa, with return context per `docs/process/NAVIGATION_RETURN_CONTRACT.md`; (2) buttons are navigation only, never data copies — each app keeps owning its truth (Calendar commitments, Agenda Journey execution, Diary narrative); (3) a link appears only when its target app exists (no placeholder dead entries), and the Diary link is additionally gated on the roadmap 4.12 CJA-6 Diary approval (product name, route, persistence owner, retention, AI-context interface are all unapproved today). Product note: the three apps are three views of the same day (commitments / execution / reflection), so date is the natural link key.
+- **CJA-1 is landed**: Calendar has Month / Week / Agenda views over Calendar-owned events — Mon-first month grid with today accent circle and selected-day outline, neutral event indicator bars, month navigation plus Today, `+ New` event authoring in `CalendarEventEditor` (required/optional cards, reminder select, Map-place binding without coordinate copying), Agenda view with day-grouped cards. Zen parity verified.
+- **CJA-2..CJA-5 are landed**: hidden Schedule Orchestrator, the visible Agenda Journey app at `/agenda-journey` (own green-accent identity, travel steps, transport chooser, Map-linked journeys), Activity Session, and one low-impact event family.
+- No `markerId`/event-color concept exists anywhere in `src/` — the marker system below is still unbuilt and is the main remaining visual-lane item in this lane.
+
+### 2.1 Resolution of the two 2026-08-17 PENDING RE-CONFIRMATION items
+
+1. **Month-grid calendar home** — SUPERSEDED BY INTEGRATION. The user-proposed direction (iOS-like month grid + tap-a-day detail) is what the integrated CJA-1 shipped. No build work remains for the visual lane here; only polish-level review if issues are observed. This record stays as the decision trail.
+2. **Cross-app date links (日历↔行程↔日记)** — NOW ACTIONABLE IN PART. Agenda Journey exists (`/agenda-journey`), so Calendar day detail ↔ Agenda Journey same-day links can be implemented with `?date=` deep links and navigation-return context, following the three recorded rules (date-context deep links, navigation only, link appears only when the target exists). Diary remains gated on roadmap 4.12 CJA-6/CJA-6A approval. Still needs the user's re-confirmation before implementation.
+
+### 2.2 Remaining work in this lane (re-mapped)
+
+- **Slice B (12-marker 便签系统, user-approved model)** — mount points on the integrated UI: month-grid day cells get marker-colored dots (replacing/augmenting the neutral bars), Agenda/day-detail event rows get the marker color bar plus a small label chip, and `CalendarEventEditor` gains the marker picker field. Persisted shape still needs the user's explicit approval before Slice B starts: `settings.appearance.calendar.markers` (12 entries: id, label, colorKey) + optional event `markerId` (additive, backward compatible). Default labels: 约会(coral), 生日(pink), 事业活动(blue), 纪念日(violet), 重要会议(indigo), 其他(neutral), 自定义1..6.
+- **Slice C (Calendar appearance settings, needs explicit approval: new route + settings field)** — entry: Calendar header gear -> `/calendar/settings/appearance` (mirrors `/chat-settings/appearance`); Calendar owns its appearance layer like Chat does; excluded from global appearance packs; V1 = per-marker color swap from a curated both-themes-verified swatch palette, marker glyph style (bar / dot / icon-tint), 3 whole-set presets (default / muted / candy), reset all; persistence `settings.appearance.calendar` + small normalize lib + tests.
+- **Reminders polish** — Apple-style smart count row driving existing filters; reminder card = source icon tile + title + one-line time; primary action accent-filled; boundary panel demoted to a quiet strip. Verify the current integrated `RemindersView.vue` first (remote touched it) before editing.
+- **Quiet Timeline language** stays reserved for Agenda Journey's future depth (its current identity is green-accent travel/activity cards and does not use this language).
+
+### 2.3 Historical record (2026-08-17 planning, pre-integration)
+
+The original Slice A/B/C draft below was written before the CJA integration landed locally. It is kept as decision evidence; section 2.2 supersedes it for execution.
 
 Reserved design language (for the future Agenda Journey app, or Calendar's later Agenda view): today anchor block, day-grouped quiet timeline, time-column event rows. Do not build it into Calendar now.
 
