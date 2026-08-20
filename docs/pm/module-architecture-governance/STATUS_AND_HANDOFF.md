@@ -19,7 +19,7 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible;
-- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` is documentation-complete; behavior code has not started;
+- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00`, `CMG-01`, `CMG-03`, and `DCF-05` are complete; `CMG-02` is the next dependency-safe item but has not started;
 - any content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -377,20 +377,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-03 DONE 2026-08-20` at `86270d8` |
-| Next dependency-safe items | `DCF-05` is active on the controller fallback; `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is independently assignable only after non-overlapping paths are reserved |
-| Active item | `DCF-05 IN_PROGRESS` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557` |
+| Next dependency-safe items | `CMG-02` is unblocked for PC-A but must be reserved before implementation; `DCF-06` remains an independent PC-B test-stability repair |
+| Active item | none; reserve the next exact slice before editing |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / controller and `DCF-05` fallback executor; `CMG-02` has not started |
-| PC-B physical machine / role | `UNASSIGNED`; no persistence work may run concurrently while the controller fallback owns `DCF-05` |
-| Source branch, base, and worktree | `main`; `DCF-05` base `5890911`; `D:\github\schatphone` |
+| PC-A physical machine / role | `SKY-20250212UBG` / controller; ready to reserve `CMG-02` |
+| PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
+| Source branch, base, and worktree | `main`; `DCF-05` base `5890911`, reservation `2a4804d`, evidence `f140557`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned Calendar edits in `e2e/calendar-presentation.spec.js`, `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; modified `output/e2e/calendar-cja1/*.png`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | Deferred IndexedDB mirror scheduling and deterministic completion evidence only. No Store schema, persisted payload, page, provider transport, or relationship/event record changes are allowed. Completion must not resolve while a flush, timer, or follow-up batch remains. |
-| Reserved paths | `src/lib/persistence.js`; `tests/persistence-write-result.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` |
-| Acceptance | Replace the final fixed 40 ms test delay with a production persistence Interface that completes only after all scheduled, active, and follow-up deferred mirror work is idle. Do not increase an arbitrary timeout or change synchronous write-success meaning in this slice. |
-| Required checks | Repeated focused `persistence-write-result` runs; focused persistence tests; lint; full Vitest; production build; governance; `git diff --check`. |
-| Integration state | `DCF-05 IN_PROGRESS`; `CMG-02` remains blocked and no PC-B persistence slice may start concurrently |
-| Remote synchronization | push this reservation from base `5890911` before editing source; every other PC must verify the reservation commit on `origin/main` and avoid the reserved paths |
+| Risk lane | `DCF-05` changed only deferred mirror completion observation and its test. Store schemas, persisted payloads, synchronous write-success meaning, pages, provider transport, and relationship/event records remain unchanged. |
+| Reserved paths | none; the `DCF-05` reservation is released |
+| Acceptance | `DCF-05` accepted: callers can wait until scheduled, active, and follow-up deferred mirror work is idle, and the serialization test no longer guesses completion from fixed delays. Completion evidence does not relabel a failed write as successful. |
+| Validation evidence | focused test passed 10 consecutive runs at `1 file / 13 tests`; focused persistence coverage passed `10 files / 86 tests`; full Vitest passed `295/296 files` and `2091/2092 tests`, including `persistence-write-result`, with only the separately tracked `DCF-06` image-bed full-load timeout; that file passed alone at `1 file / 13 tests`. Lint, the 485-module production build, governance `2 files / 14 tests`, and `git diff --check` passed. |
+| Integration state | `DCF-05 INTEGRATED_ON_MAIN`; `CMG-02` is unblocked but not started |
+| Remote synchronization | controller pushes `f140557` and this completion record together; the next PC must verify `origin/main` contains both before starting |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -399,6 +399,7 @@ Completion log:
 1. `CMG-00 DONE 2026-08-20`: accepted the one-shared-experience model, separated role memory from supporting owner records, inventoried all confirmed defects, froze dependency order and two-PC execution rules, and changed no behavior code. Validation belongs to this documentation round.
 2. `CMG-01 DONE 2026-08-20`: implementation `73672df` added `shared-experience-contract.js`, the Xia gift fixture, and five focused tests. One continuing gift experience now has three ordered progress updates and one concise role memory while Shopping, Wallet, Calendar, and Phone records stay separately owned and stably referenced. No runtime caller or persisted data was changed. Full-suite load also reproduced and logged `DCF-06`; the previously planned `DCF-05` remains open.
 3. `CMG-03 DONE 2026-08-20`: implementation `86270d8` removed System Store relationship stage/metrics and warm/conflict timestamps from Chat prompts. Bounded Chat activity remains, Contacts premise stays labelled as premise, and the same transient Relationship Runtime projection supplies the one current relationship answer plus recalled memory references. No persisted state or visible page changed.
+4. `DCF-05 DONE 2026-08-20`: implementation `f140557` added deterministic deferred-mirror completion evidence and replaced fixed-delay test guesses with actual write-start and idle signals. The waiter includes writes queued while a slow batch is active; Store schemas, saved payloads, and synchronous write-success meaning remain unchanged. The target test passed 10 consecutive runs and inside the full suite; the only full-suite failure remains the separately tracked `DCF-06` image-bed tooling timeout, which passed alone.
 
 Do not begin `CMG-02` before `DCF-05` and `CMG-01`; do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
 
