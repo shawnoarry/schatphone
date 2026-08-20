@@ -3,9 +3,9 @@ import { ref } from 'vue'
 import {
   clampChatPromptContextTurns,
   clampChatPromptReplyCount,
-  formatChatTruthTimestampForPrompt,
+  formatChatActivityTimestampForPrompt,
   resolveChatAssistantImageBlockPolicy,
-  summarizeChatTruthEventsForPrompt,
+  summarizeChatActivityEventsForPrompt,
   useChatAiPromptContextModel,
 } from '../src/composables/useChatAiPromptContextModel'
 import { DEFAULT_CHAT_THREAD_AI_PREFS } from '../src/composables/useChatActiveThreadModel'
@@ -164,10 +164,10 @@ describe('Chat AI prompt context model interface', () => {
     expect(clampChatPromptReplyCount(0)).toBe(1)
     expect(clampChatPromptReplyCount(9)).toBe(3)
     expect(clampChatPromptReplyCount('bad')).toBe(DEFAULT_CHAT_THREAD_AI_PREFS.replyCount)
-    expect(formatChatTruthTimestampForPrompt(0)).toBe('none')
-    expect(formatChatTruthTimestampForPrompt(Date.UTC(2026, 0, 1))).toBe('2026-01-01T00:00:00.000Z')
+    expect(formatChatActivityTimestampForPrompt(0)).toBe('none')
+    expect(formatChatActivityTimestampForPrompt(Date.UTC(2026, 0, 1))).toBe('2026-01-01T00:00:00.000Z')
     expect(
-      summarizeChatTruthEventsForPrompt([
+      summarizeChatActivityEventsForPrompt([
         { at: Date.UTC(2026, 0, 2), action: 'resume_settlement', payload: { missedCycles: 2 } },
       ]),
     ).toContain('resume_settlement(2)')
@@ -328,11 +328,12 @@ describe('Chat AI prompt context model interface', () => {
     expect(roleContext.cache.key).toMatch(/^schatphone:chat:v1:id-[a-f0-9]{8}$/)
     expect(roleContext.cache.key).not.toContain('role:10')
     expect(roleContext.stablePrefix).toContain('Role persona: Warm and precise.')
-    expect(roleContext.stablePrefix).not.toContain('Relationship truth stage: warm.')
-    expect(roleContext.dynamicContext).toContain('Relationship truth stage: warm.')
+    expect(roleContext.dynamicContext).toContain('Chat activity counters user/assistant')
     expect(roleContext.dynamicContext).toContain('Runtime facts for role:10')
+    expect(roleContext.systemPrompt).not.toContain('Relationship truth stage: warm.')
+    expect(roleContext.systemPrompt).not.toContain('Metrics affinity/trust/distance')
     expect(roleContext.systemPrompt.indexOf('Role persona: Warm and precise.')).toBeLessThan(
-      roleContext.systemPrompt.indexOf('Relationship truth stage: warm.'),
+      roleContext.systemPrompt.indexOf('Runtime facts for role:10'),
     )
 
     const servicePrompt = model.buildSystemPrompt(
@@ -422,6 +423,43 @@ describe('Chat AI prompt context model interface', () => {
     expect(relationshipRuntimeStore.calls[0][1].recallQuery).toBe(
       'topic-3\ntopic-4\ntopic-5\ntopic-6',
     )
+  })
+
+  test('uses Relationship Runtime as the only current relationship answer', () => {
+    const runtimeText = 'Relationship runtime snapshot: current stage is close.'
+    const model = createModel({
+      relationshipRuntimeStore: {
+        buildPromptProjectionForTarget: () => ({
+          text: runtimeText,
+          memoryRecall: { items: [] },
+        }),
+      },
+      roleProfiles: [
+        {
+          id: 10,
+          name: 'Mina',
+          profileValues: [],
+          detailItems: [],
+          relationshipLabelText: 'childhood friend',
+          relationshipLabelNote: 'Grew up together',
+        },
+      ],
+    })
+
+    const context = model.buildPromptContext(
+      { id: 7, kind: 'role', name: 'Mina', role: 'friend', profileId: 10 },
+      DEFAULT_CHAT_THREAD_AI_PREFS,
+    )
+
+    expect(context.systemPrompt.split(runtimeText)).toHaveLength(2)
+    expect(context.stablePrefix).toContain('Relationship premise: childhood friend.')
+    expect(context.stablePrefix).toContain('Relationship premise note: Grew up together.')
+    expect(context.dynamicContext).toContain('Chat activity counters user/assistant')
+    expect(context.dynamicContext).toContain('Last chat interaction/user/assistant:')
+    expect(context.dynamicContext).toContain('Recent chat activity events:')
+    expect(context.systemPrompt).not.toContain('Relationship truth stage: warm.')
+    expect(context.systemPrompt).not.toContain('Metrics affinity/trust/distance')
+    expect(context.systemPrompt).not.toContain('Last interaction/user/assistant/warm/conflict')
   })
 
   test('places manual role details in the stable prefix and linked event clues in the dynamic tail', () => {

@@ -40,18 +40,18 @@ const truncatePromptPreview = (text, maxLength = 72) => {
   return `${normalized.slice(0, maxLength)}...`
 }
 
-export const formatChatTruthTimestampForPrompt = (timestamp) => {
+export const formatChatActivityTimestampForPrompt = (timestamp) => {
   const ts = Number(timestamp)
   if (!Number.isFinite(ts) || ts <= 0) return 'none'
   return new Date(ts).toISOString()
 }
 
-export const summarizeChatTruthEventsForPrompt = (events = []) => {
+export const summarizeChatActivityEventsForPrompt = (events = []) => {
   if (!Array.isArray(events) || events.length === 0) return 'none'
   return events
     .slice(0, 4)
     .map((event) => {
-      const at = formatChatTruthTimestampForPrompt(event?.at)
+      const at = formatChatActivityTimestampForPrompt(event?.at)
       const action = typeof event?.action === 'string' ? event.action : 'interaction'
       if (action === 'resume_settlement') {
         const cycles = Number(event?.payload?.missedCycles)
@@ -269,24 +269,21 @@ export const useChatAiPromptContextModel = ({
     return selfProfile.profileValues.filter((value) => allowed.has(value.visibilityLevel))
   }
 
-  const buildTruthPromptBlock = (contact) => {
+  const buildChatActivityPromptBlock = (contact) => {
     const snapshot =
       typeof systemStore?.getChatTruthSnapshot === 'function'
         ? systemStore.getChatTruthSnapshot(contact, { eventLimit: 4 })
         : null
-    if (!snapshot) return 'Relationship truth: unavailable.'
+    if (!snapshot) return 'Chat activity: unavailable.'
 
-    const relationship = snapshot.relationship || {}
     const counters = snapshot.counters || {}
     const timestamps = snapshot.timestamps || {}
-    const eventsSummary = summarizeChatTruthEventsForPrompt(snapshot.recentEvents || [])
+    const eventsSummary = summarizeChatActivityEventsForPrompt(snapshot.recentEvents || [])
 
     return [
-      `Relationship truth stage: ${relationship.stage || 'neutral'}.`,
-      `Metrics affinity/trust/distance/dependency/tension: ${relationship.affinity ?? 50}/${relationship.trust ?? 50}/${relationship.distance ?? 50}/${relationship.dependency ?? 20}/${relationship.tension ?? 10}.`,
-      `Counters user/assistant/manual/auto/reroll/notifyOnly/resumeSettle: ${counters.userMessageCount ?? 0}/${counters.assistantMessageCount ?? 0}/${counters.manualTriggerCount ?? 0}/${counters.autoTriggerCount ?? 0}/${counters.rerollCount ?? 0}/${counters.notifyOnlySkipCount ?? 0}/${counters.resumeSettlementCount ?? 0}.`,
-      `Last interaction/user/assistant/warm/conflict: ${formatChatTruthTimestampForPrompt(timestamps.lastInteractionAt)}/${formatChatTruthTimestampForPrompt(timestamps.lastUserMessageAt)}/${formatChatTruthTimestampForPrompt(timestamps.lastAssistantMessageAt)}/${formatChatTruthTimestampForPrompt(timestamps.lastWarmMomentAt)}/${formatChatTruthTimestampForPrompt(timestamps.lastConflictAt)}.`,
-      `Recent truth events: ${eventsSummary}.`,
+      `Chat activity counters user/assistant/manual/auto/reroll/notifyOnly/resumeSettle: ${counters.userMessageCount ?? 0}/${counters.assistantMessageCount ?? 0}/${counters.manualTriggerCount ?? 0}/${counters.autoTriggerCount ?? 0}/${counters.rerollCount ?? 0}/${counters.notifyOnlySkipCount ?? 0}/${counters.resumeSettlementCount ?? 0}.`,
+      `Last chat interaction/user/assistant: ${formatChatActivityTimestampForPrompt(timestamps.lastInteractionAt)}/${formatChatActivityTimestampForPrompt(timestamps.lastUserMessageAt)}/${formatChatActivityTimestampForPrompt(timestamps.lastAssistantMessageAt)}.`,
+      `Recent chat activity events: ${eventsSummary}.`,
     ].join('\n')
   }
 
@@ -302,7 +299,7 @@ export const useChatAiPromptContextModel = ({
       })
       return {
         promptText:
-          projection?.text || 'Relationship runtime snapshot: neutral / no stored cross-module facts yet.',
+          projection?.text || 'Relationship runtime snapshot: unavailable.',
         recalledMemories: Array.isArray(projection?.memoryRecall?.items)
           ? projection.memoryRecall.items
           : [],
@@ -319,7 +316,7 @@ export const useChatAiPromptContextModel = ({
           })
       : ''
     return {
-      promptText: promptText || 'Relationship runtime snapshot: neutral / no stored cross-module facts yet.',
+      promptText: promptText || 'Relationship runtime snapshot: unavailable.',
       recalledMemories: Array.isArray(memoryRecall?.items) ? memoryRecall.items : [],
     }
   }
@@ -463,7 +460,7 @@ export const useChatAiPromptContextModel = ({
       includeSelfProfile: !anonymousIdentity,
     })
     const worldKernelInstruction = worldKernel.promptText
-    const truthInstruction = buildTruthPromptBlock(contact)
+    const chatActivityInstruction = buildChatActivityPromptBlock(contact)
     const relationshipRuntime = buildRelationshipRuntimeProjection(contact, options)
     const relationshipRuntimeInstruction = relationshipRuntime.promptText
     const weatherInstruction = buildWeatherPromptBlock()
@@ -554,7 +551,7 @@ ${userIdentityBlock}
 Response style: ${responseStyle}
 Target reply count: ${targetReplyCount}
 ${proactiveInstruction}
-${truthInstruction}
+${chatActivityInstruction}
 ${relationshipRuntimeInstruction}
 ${weatherInstruction}
 ${roleIdentity.dynamicText}
@@ -735,7 +732,7 @@ Current response rules:
   return {
     buildPromptContext,
     buildSystemPrompt,
-    buildTruthPromptBlock,
+    buildChatActivityPromptBlock,
     buildRelationshipRuntimePromptBlock,
     buildRoleIdentityPromptBlocks,
     buildRoleContinuityPromptBlocks,
