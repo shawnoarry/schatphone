@@ -73,6 +73,7 @@ let indexedDbUnavailable = false
 let indexedDbUnavailableError = null
 let indexedDbWarned = false
 const pendingIndexedDbOps = new Map()
+const indexedDbFlushIdleWaiters = new Set()
 const persistedHeadStates = new Map()
 let indexedDbFlushTimerId = null
 let indexedDbFlushInProgress = false
@@ -702,12 +703,25 @@ const checkMirrorWritePrecondition = (existingRaw, incomingRaw, options = {}) =>
     : { ok: false, error: 'legacy_freshness_unknown' }
 }
 
+const isIndexedDbFlushIdle = () =>
+  indexedDbFlushTimerId === null &&
+  !indexedDbFlushInProgress &&
+  pendingIndexedDbOps.size === 0
+
+const resolveIndexedDbFlushIdleWaiters = () => {
+  if (!isIndexedDbFlushIdle() || indexedDbFlushIdleWaiters.size === 0) return
+  const waiters = Array.from(indexedDbFlushIdleWaiters)
+  indexedDbFlushIdleWaiters.clear()
+  waiters.forEach((resolve) => resolve())
+}
+
 const scheduleIndexedDbFlush = () => {
   if (
-    indexedDbFlushTimerId ||
+    indexedDbFlushTimerId !== null ||
     indexedDbFlushInProgress ||
     pendingIndexedDbOps.size === 0
   ) {
+    resolveIndexedDbFlushIdleWaiters()
     return
   }
   indexedDbFlushTimerId = setTimeout(() => {
@@ -790,6 +804,13 @@ const queueIndexedDbWrite = (key, fullKey, rawPayload, options = {}) => {
   if (!canUseLayeredPersistence()) return
   pendingIndexedDbOps.set(fullKey, { key, type: 'write', payload: rawPayload, options })
   scheduleIndexedDbFlush()
+}
+
+export const waitForPendingPersistedStateWrites = () => {
+  if (isIndexedDbFlushIdle()) return Promise.resolve()
+  return new Promise((resolve) => {
+    indexedDbFlushIdleWaiters.add(resolve)
+  })
 }
 
 const readLayerPair = async (fullKey) => {

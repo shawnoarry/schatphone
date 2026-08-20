@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 const installIndexedDbWriteMock = () => {
   const payloadByKey = new Map()
   const writeDelayByKey = new Map()
+  const startedWriteKeys = new Set()
+  const writeStartWaitersByKey = new Map()
   let hasStore = false
   let writeError = null
 
@@ -38,6 +40,10 @@ const installIndexedDbWriteMock = () => {
             },
             put(record) {
               const request = { error: null }
+              startedWriteKeys.add(record.key)
+              const writeStartWaiters = writeStartWaitersByKey.get(record.key) || []
+              writeStartWaitersByKey.delete(record.key)
+              writeStartWaiters.forEach((resolve) => resolve())
               setTimeout(() => {
                 if (writeError) {
                   request.error = writeError
@@ -90,6 +96,14 @@ const installIndexedDbWriteMock = () => {
     },
     failWritesWith(error) {
       writeError = error
+    },
+    waitForWriteStart(key) {
+      if (startedWriteKeys.has(key)) return Promise.resolve()
+      return new Promise((resolve) => {
+        const writeStartWaiters = writeStartWaitersByKey.get(key) || []
+        writeStartWaiters.push(resolve)
+        writeStartWaitersByKey.set(key, writeStartWaiters)
+      })
     },
   }
 }
@@ -421,6 +435,7 @@ describe('persistence write results', () => {
     const {
       readPersistedRawLayers,
       reconcilePersistedStateLayers,
+      waitForPendingPersistedStateWrites,
       writePersistedState,
     } = await import('../src/lib/persistence')
     await reconcilePersistedStateLayers('store:slow', { version: 1 })
@@ -428,12 +443,16 @@ describe('persistence write results', () => {
 
     expect(writePersistedState('store:slow', { marker: 'slow' })).toMatchObject({ ok: true })
     expect(writePersistedState('store:chat', { marker: 'older' })).toMatchObject({ ok: true })
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    const firstBatchCompleted = waitForPendingPersistedStateWrites()
+    await indexedDb.waitForWriteStart(slowKey)
     expect(writePersistedState('store:chat', { marker: 'newer' })).toMatchObject({ ok: true })
-    await new Promise((resolve) => setTimeout(resolve, 160))
+    await firstBatchCompleted
+    const firstBatchLayers = await readPersistedRawLayers('store:chat')
+    expect(firstBatchLayers.mirrorRaw).toBe(firstBatchLayers.localRaw)
+    expect(JSON.parse(firstBatchLayers.localRaw).data).toEqual({ marker: 'newer' })
 
     expect(writePersistedState('store:chat', { marker: 'latest' })).toMatchObject({ ok: true })
-    await new Promise((resolve) => setTimeout(resolve, 40))
+    await waitForPendingPersistedStateWrites()
     const layers = await readPersistedRawLayers('store:chat')
     expect(layers.mirrorRaw).toBe(layers.localRaw)
     expect(JSON.parse(layers.localRaw).data).toEqual({ marker: 'latest' })
