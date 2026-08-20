@@ -378,19 +378,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` with implementation evidence `73672df` |
-| Next dependency-safe items | `DCF-05` once PC-B is assigned; `CMG-03` is dependency-safe on PC-A, but `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is an independent PC-B test-stability repair |
-| Active item | none; reserve the next exact slice before editing |
+| Next dependency-safe items | `CMG-03` active on PC-A; `DCF-05` once PC-B is assigned; `CMG-02` remains blocked until `DCF-05` completes; `DCF-06` is an independent PC-B test-stability repair |
+| Active item | `CMG-03 IN_PROGRESS` |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / controller and shared-experience contract lane |
+| PC-A physical machine / role | `SKY-20250212UBG` / controller and Chat relationship-prompt lane |
 | PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
-| Source branch, base, and worktree | `main`; `CMG-01` base `16f68b0`, evidence `73672df`; `D:\github\schatphone` |
-| Existing dirty/untracked inventory | User-owned Calendar edits in `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | No active implementation. `CMG-01` changed only a pure contract, executable fixture, and focused test; Store wiring, persistence/schema, retention caps, and pages remain unchanged. |
-| Reserved paths | none; the prior `CMG-01` reservation is released |
-| Acceptance | `CMG-01` accepted: one gift experience, three ordered progress points, one role-memory summary, four stable owner-record references, and fail-closed evidence validation |
-| Validation evidence | focused `5/5`, lint, build, governance `14/14`, and `git diff --check` passed. Full Vitest attempts reached `2089/2091` then `2090/2091`: the first exposed known `DCF-05` plus `DCF-06`; the second exposed only `DCF-06`. Both independent files passed together in isolation `26/26`. |
-| Integration state | `CMG-01 INTEGRATED_ON_MAIN`; `DCF-05` and `DCF-06` remain explicit validation debt and do not alter the focused contract result |
-| Remote synchronization | controller pushes `73672df` and this completion record together; the next PC must verify `origin/main` contains both before starting |
+| Source branch, base, and worktree | `main` at `0163882`; `D:\github\schatphone` |
+| Existing dirty/untracked inventory | User-owned Calendar edits in `e2e/calendar-presentation.spec.js`, `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; modified `output/e2e/calendar-cja1/*.png`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
+| Risk lane | Chat prompt projection only: keep chat activity counters/timestamps, remove System Store relationship stage/metrics from AI context, and keep Contacts relationship premise explicitly non-current. No Store mutation, persisted data, page, or provider transport changes. |
+| Reserved paths | `src/composables/useChatAiPromptContextModel.js`; `tests/chat-ai-prompt-context-model.test.js`; `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md`; this handoff; the `CMG-03` roadmap row |
+| Acceptance | A role prompt contains one current relationship projection from Relationship Runtime, contains no System Store relationship stage/metrics or warm/conflict timestamps, retains bounded Chat activity context, and keeps profile premise wording as premise rather than current truth. Non-role behavior remains unchanged. |
+| Required checks | focused Chat prompt Vitest; `npm.cmd run lint`; `npm.cmd run test`; `npm.cmd run build`; `npm.cmd run governance:check`; `git diff --check` |
+| Integration state | `ACTIVE_ON_PC_A`; no implementation is ready for review yet |
+| Remote synchronization | `origin/main` confirmed at `0163882`; this reservation update must be pushed before source edits |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
