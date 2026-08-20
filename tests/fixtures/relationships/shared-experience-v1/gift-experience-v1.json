@@ -1,0 +1,90 @@
+{
+  "fixtureSchemaVersion": 1,
+  "experiences": [
+    {
+      "schemaVersion": 1,
+      "id": "gift_xia_august_2026",
+      "kind": "gift",
+      "lifecycle": "completed",
+      "title": "Gift for Xia",
+      "relationshipTarget": {
+        "entityKey": "role:101",
+        "kind": "role",
+        "displayName": "Xia"
+      },
+      "progress": [
+        {
+          "id": "gift_xia_august_2026:reserved",
+          "kind": "gift_reserved",
+          "summary": "Reserved a gift for Xia and scheduled its delivery.",
+          "occurredAt": 1786464000000,
+          "ownerRecordRefIds": [
+            "shopping:order:gift_xia_august_2026",
+            "wallet:transaction:gift_xia_august_2026"
+          ]
+        },
+        {
+          "id": "gift_xia_august_2026:delivered",
+          "kind": "gift_delivered",
+          "summary": "The gift was delivered to Xia on the scheduled day.",
+          "occurredAt": 1786723200000,
+          "ownerRecordRefIds": [
+            "shopping:order:gift_xia_august_2026",
+            "calendar:event:gift_xia_delivery"
+          ]
+        },
+        {
+          "id": "gift_xia_august_2026:feedback",
+          "kind": "recipient_feedback_received",
+          "summary": "Xia called and said she liked the gift.",
+          "occurredAt": 1786809600000,
+          "ownerRecordRefIds": [
+            "phone:call:xia_gift_feedback"
+          ]
+        }
+      ],
+      "roleMemory": {
+        "memoryKey": "shared_experience__gift_xia_august_2026",
+        "summary": "The gift for Xia arrived as planned, and she later called to say she liked it.",
+        "updatedAt": 1786809600000,
+        "sourceProgressIds": [
+          "gift_xia_august_2026:reserved",
+          "gift_xia_august_2026:delivered",
+          "gift_xia_august_2026:feedback"
+        ]
+      },
+      "ownerRecordRefs": [
+        {
+          "id": "shopping:order:gift_xia_august_2026",
+          "ownerModule": "shopping",
+          "recordType": "order",
+          "recordId": "shopping_order_gift_xia_august_2026",
+          "ownerRevision": 3
+        },
+        {
+          "id": "wallet:transaction:gift_xia_august_2026",
+          "ownerModule": "wallet",
+          "recordType": "transaction",
+          "recordId": "wallet_transaction_gift_xia_august_2026",
+          "ownerRevision": 1
+        },
+        {
+          "id": "calendar:event:gift_xia_delivery",
+          "ownerModule": "calendar",
+          "recordType": "event",
+          "recordId": "calendar_event_gift_xia_delivery",
+          "ownerRevision": 2
+        },
+        {
+          "id": "phone:call:xia_gift_feedback",
+          "ownerModule": "phone",
+          "recordType": "call",
+          "recordId": "phone_call_xia_gift_feedback",
+          "ownerRevision": 1
+        }
+      ],
+      "createdAt": 1786464000000,
+      "updatedAt": 1786809600000
+    }
+  ]
+}
