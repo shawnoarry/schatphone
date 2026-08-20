@@ -24,6 +24,27 @@ const APPROVED_STATUS = 'approved'
 const FALLBACK_STATUS = 'system_fallback'
 const SHA256_PATTERN = /^[a-f0-9]{64}$/
 
+const MAP_PLACE_FALLBACK_ASSETS = Object.freeze({
+  'real-seoul-v1': Object.freeze({
+    url: projectUiAssetUrl('apps/map/seoul-street-map-v1.webp'),
+    width: 4096,
+    height: 3319,
+    mimeType: 'image/webp',
+    sha256: 'f7c06dd333f67bee6064a8a320964c7acff54bf882ba6b1d65d84b92799be794',
+    altZh: '首尔街道与城市轮廓类别示意图',
+    altEn: 'Category visual based on Seoul streets and city form',
+  }),
+  'cyber-wasteland-v1': Object.freeze({
+    url: projectUiAssetUrl('apps/map/cyber-wasteland-city-v1.svg'),
+    width: 1600,
+    height: 1280,
+    mimeType: 'image/svg+xml',
+    sha256: 'f15c8837e7ad5274e2d17de1066160c483600001793bed5d666b921ebfab7fab',
+    altZh: '赛博废都地图类别示意图',
+    altEn: 'Category visual based on the Cyber Wasteland map',
+  }),
+})
+
 const MEDIA_KIND_TO_GRADE = Object.freeze({
   [MAP_PLACE_MEDIA_KIND.EXACT_PHOTO]: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
   [MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE]: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.AREA_ONLY,
@@ -71,6 +92,34 @@ const runtimeAsset = (filename, sha256) => ({
   mimeType: 'image/webp',
   sha256,
 })
+
+const fallbackRuntimeAsset = (mapPackId = '') => ({
+  ...(MAP_PLACE_FALLBACK_ASSETS[mapPackId] || MAP_PLACE_FALLBACK_ASSETS['real-seoul-v1']),
+})
+
+const fallbackSource = (mapPackId = '') => (
+  mapPackId === 'cyber-wasteland-v1'
+    ? {
+        type: FALLBACK_SOURCE_TYPE,
+        provider: 'schatphone',
+        creator: 'SchatPhone project artwork',
+        licenseId: 'project_owned',
+        attributionRequired: false,
+        changesZh: '作为类别示意裁切显示，不代表地点真实外观。',
+        changesEn: 'Displayed as a cropped category visual; it does not represent the place appearance.',
+      }
+    : {
+        type: FALLBACK_SOURCE_TYPE,
+        provider: 'vectormap_commons',
+        sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Seoul_South_Korea_street_map_SVG.svg',
+        creator: 'Kirill Shrayber / VectorMap',
+        licenseId: 'CC0 1.0',
+        licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+        attributionRequired: false,
+        changesZh: '项目将源 SVG 栅格化为 WebP；此处仅作类别示意，不代表地点真实外观。',
+        changesEn: 'The source SVG was rasterized to WebP; this is a category visual, not the place appearance.',
+      }
+)
 
 const licensedPhoto = ({
   id,
@@ -228,13 +277,8 @@ export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
     kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
     authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.GENERIC,
     ...MEDIA_PRESENTATION_COPY[MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK],
-    asset: null,
-    source: {
-      type: FALLBACK_SOURCE_TYPE,
-      provider: 'schatphone',
-      licenseId: 'not_applicable',
-      attributionRequired: false,
-    },
+    asset: fallbackRuntimeAsset('cyber-wasteland-v1'),
+    source: fallbackSource('cyber-wasteland-v1'),
     review: {
       status: FALLBACK_STATUS,
       reviewedAt: '2026-08-15',
@@ -266,7 +310,12 @@ export const validateMapPlaceMediaRecord = (record) => {
   if (!record.labelZh || !record.labelEn || !record.noteZh || !record.noteEn) errors.push('presentation_copy')
 
   if (record.kind === MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK) {
-    if (record.asset != null) errors.push('fallback_asset')
+    if (!record.asset || !isHttpsUrl(record.asset.url)) errors.push('fallback_asset_url')
+    if (!Number.isFinite(record.asset?.width) || record.asset.width <= 0) errors.push('fallback_width')
+    if (!Number.isFinite(record.asset?.height) || record.asset.height <= 0) errors.push('fallback_height')
+    if (!String(record.asset?.mimeType || '').startsWith('image/')) errors.push('fallback_mime')
+    if (!SHA256_PATTERN.test(record.asset?.sha256 || '')) errors.push('fallback_sha256')
+    if (!record.asset?.altZh || !record.asset?.altEn) errors.push('fallback_alt_text')
     if (record.source?.type !== FALLBACK_SOURCE_TYPE) errors.push('fallback_source')
     if (record.review?.status !== FALLBACK_STATUS) errors.push('fallback_review')
     return { valid: errors.length === 0, errors }
@@ -318,13 +367,8 @@ export const createMapPlaceMediaFallback = (place, fallbackMapPackId = '') => {
     kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
     authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.GENERIC,
     ...MEDIA_PRESENTATION_COPY[MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK],
-    asset: null,
-    source: {
-      type: FALLBACK_SOURCE_TYPE,
-      provider: 'schatphone',
-      licenseId: 'not_applicable',
-      attributionRequired: false,
-    },
+    asset: fallbackRuntimeAsset(mapPackId),
+    source: fallbackSource(mapPackId),
     review: {
       status: FALLBACK_STATUS,
     },

@@ -1,26 +1,11 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
+import { nextTick } from 'vue'
 import MapPlaceFocusSheet from '../src/components/map/MapPlaceFocusSheet.vue'
 
-const displayOptions = [
-  {
-    id: 'system',
-    labelZh: '系统',
-    labelEn: 'Auto',
-    titleZh: '跟随系统语言',
-    titleEn: 'Follow system language',
-  },
-  {
-    id: 'en',
-    labelZh: 'EN',
-    labelEn: 'EN',
-    titleZh: '显示英文地名',
-    titleEn: 'Show English place names',
-  },
-]
-
-const createWrapper = (overrides = {}) =>
+const createWrapper = (overrides = {}, mountOptions = {}) =>
   mount(MapPlaceFocusSheet, {
+    ...mountOptions,
     props: {
       place: { id: 'place-1', placeId: 'place-1', source: 'map_pack' },
       visual: { icon: 'fas fa-building', tone: '#17664f' },
@@ -51,29 +36,33 @@ const createWrapper = (overrides = {}) =>
       sourceLabel: 'World place',
       categoryLabel: 'Work',
       contextLabel: '2.4 km from current position',
-      displayMode: 'system',
-      displayOptions,
       t: (_zh, en) => en,
       ...overrides,
     },
   })
 
 describe('MapPlaceFocusSheet', () => {
-  test('keeps the overview concise and emits the Go command', async () => {
+  test('keeps the floating overview concise and emits the Go command', async () => {
     const wrapper = createWrapper()
 
-    expect(wrapper.text()).toContain('Broadcast center and meeting venue.')
-    expect(wrapper.text()).toContain('2.4 km from current position')
+    expect(wrapper.get('[data-testid="map-place-summary"]').text()).toContain(
+      'Broadcast center and meeting venue.',
+    )
+    expect(wrapper.get('[data-testid="map-place-context"]').text()).toContain(
+      '2.4 km from current position',
+    )
     expect(wrapper.find('[data-testid="map-place-detail-view"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="map-place-media-image"]').attributes('alt')).toBe('Place photo')
-    expect(wrapper.get('[data-testid="map-place-media"]').text()).toContain('Example Author')
+    expect(wrapper.get('[data-testid="map-place-use-destination"]').classes()).toContain(
+      'map-place-focus-primary',
+    )
 
     await wrapper.get('[data-testid="map-place-use-destination"]').trigger('click')
 
     expect(wrapper.emitted('go')).toHaveLength(1)
   })
 
-  test('keeps category fallbacks explicit and non-evidentiary', () => {
+  test('renders category fallbacks in the same stable image slot with an explicit truth label', () => {
     const wrapper = createWrapper({
       media: {
         id: 'fallback-place-1',
@@ -82,54 +71,91 @@ describe('MapPlaceFocusSheet', () => {
         labelEn: 'Category visual',
         noteZh: '仅表示地点类型，不代表真实外观。',
         noteEn: 'Represents the place category, not its real appearance.',
-        asset: null,
+        asset: {
+          url: 'https://example.test/category.webp',
+          altZh: '类别示意图',
+          altEn: 'Category visual',
+        },
         source: { licenseId: 'not_applicable' },
       },
     })
 
-    expect(wrapper.find('[data-testid="map-place-media-image"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="map-place-media-fallback"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-media"]').text()).toContain('not its real appearance')
+    expect(wrapper.get('[data-testid="map-place-media-image"]').attributes('src')).toBe(
+      'https://example.test/category.webp',
+    )
+    expect(wrapper.get('.map-place-focus-media').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-media"]').text()).toContain('Category visual')
+    expect(wrapper.text()).toContain('not its real appearance')
   })
 
-  test('downgrades a failed photo to the category fallback without stale attribution', async () => {
+  test('downgrades a failed photo to an image-backed category fallback without stale attribution', async () => {
     const wrapper = createWrapper()
 
     await wrapper.get('[data-testid="map-place-media-image"]').trigger('error')
 
-    expect(wrapper.find('[data-testid="map-place-media-image"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="map-place-media-fallback"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="map-place-media"]').text()).toContain('Category visual')
-    expect(wrapper.get('[data-testid="map-place-media"]').text()).toContain('not its real appearance')
-    expect(wrapper.get('[data-testid="map-place-media"]').text()).not.toContain('Example Author')
+    expect(wrapper.get('[data-testid="map-place-media-image"]').attributes('src')).toContain(
+      'seoul-street-map-v1.webp',
+    )
+    expect(wrapper.get('.map-place-focus-media').exists()).toBe(true)
+    expect(wrapper.text()).toContain('not its real appearance')
+    expect(wrapper.text()).not.toContain('Example Author')
   })
 
-  test('replaces the overview with details and returns without nesting a surface', async () => {
+  test('shows place content and source attribution in detail without diagnostics', async () => {
     const wrapper = createWrapper()
 
     await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
 
     expect(wrapper.get('[data-testid="map-place-detail-view"]').text()).toContain('1 Studio Road')
+    expect(wrapper.get('[data-testid="map-place-about-section"]').text()).toContain(
+      'About this place',
+    )
+    expect(wrapper.get('[data-testid="map-place-about-section"]').text()).toContain(
+      'Broadcast center and meeting venue.',
+    )
+    expect(wrapper.get('[data-testid="map-place-detail-media"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-media-source"]').attributes('open')).toBeUndefined()
+    expect(wrapper.get('[data-testid="map-place-media-source"] summary').text()).toContain(
+      'Image information',
+    )
+    expect(wrapper.get('[data-testid="map-place-media-source"]').text()).toContain('Example Author')
+    expect(wrapper.find('[data-testid="map-place-footprints-section"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="map-place-state-section"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="map-place-language-section"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
-
-    await wrapper.get('[data-testid="map-place-set-current"]').trigger('click')
-    expect(wrapper.emitted('set-current')).toHaveLength(1)
+    expect(wrapper.get('[data-testid="map-place-share-chat"]').exists()).toBe(true)
 
     await wrapper.get('[data-testid="map-place-detail-back"]').trigger('click')
     expect(wrapper.find('[data-testid="map-place-detail-view"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="map-place-use-destination"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-summary"]').exists()).toBe(true)
   })
 
-  test('offers the existing journey without exposing relocation while travel is locked', async () => {
+  test('copies the displayed detail address and reports success', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const wrapper = createWrapper()
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+    await wrapper.get('[data-testid="map-place-copy-address"]').trigger('click')
+
+    expect(writeText).toHaveBeenCalledWith('1 Studio Road')
+    expect(wrapper.get('[data-testid="map-place-address-copy-notice"]').text()).toBe(
+      'Address copied',
+    )
+  })
+
+  test('offers the existing journey without exposing sandbox relocation controls', async () => {
     const wrapper = createWrapper({
       primaryAction: 'view_journey',
-      journeyLocked: true,
-      contextLabel: 'Heading here',
+      contextLabel: 'Active journey · Browsing place',
       contextTone: 'journey',
     })
 
     expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="map-place-journey-lock"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-context"]').text()).toContain('Active journey')
 
     await wrapper.get('[data-testid="map-place-view-journey"]').trigger('click')
     expect(wrapper.emitted('view-journey')).toHaveLength(1)
@@ -144,27 +170,72 @@ describe('MapPlaceFocusSheet', () => {
     expect(worldPlace.find('[data-testid="map-place-manage-pin"]').exists()).toBe(false)
 
     const playerPlace = createWrapper({ canManage: true })
+    expect(playerPlace.find('[data-testid="map-place-manage-pin"]').exists()).toBe(false)
+    await playerPlace.get('[data-testid="map-place-open-detail"]').trigger('click')
     await playerPlace.get('[data-testid="map-place-manage-pin"]').trigger('click')
 
     expect(playerPlace.emitted('manage')).toHaveLength(1)
   })
 
-  test('uses explicit Enter and Leave commands for onsite place sessions', async () => {
-    const onsite = createWrapper({ primaryAction: 'enter', contextLabel: 'Current position' })
-    expect(onsite.get('[data-testid="map-place-enter"]').text()).toContain('Enter')
-    await onsite.get('[data-testid="map-place-enter"]').trigger('click')
+  test('keeps hidden-pin recovery as a direct interaction without exposing Footprints', async () => {
+    const wrapper = createWrapper({ pinVisible: false })
+
+    expect(wrapper.get('[data-testid="map-place-pin-hidden"]').text()).toContain('hidden from the map')
+    await wrapper.get('[data-testid="map-place-show-pin"]').trigger('click')
+    expect(wrapper.emitted('show-pin')).toHaveLength(1)
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+    expect(wrapper.get('[data-testid="map-place-pin-hidden"]').text()).toContain('Pin hidden')
+    expect(wrapper.find('[data-testid="map-place-footprints-section"]').exists()).toBe(false)
+  })
+
+  test('does not steal map focus, closes with Escape, and restores the opener', async () => {
+    const opener = document.createElement('button')
+    document.body.append(opener)
+    opener.focus()
+    const wrapper = createWrapper({}, { attachTo: document.body })
+    await nextTick()
+
+    expect(document.activeElement).toBe(opener)
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+    expect(document.activeElement).toBe(wrapper.get('[data-testid="map-place-detail-back"]').element)
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(wrapper.emitted('close')).toHaveLength(1)
+
+    wrapper.unmount()
+    expect(document.activeElement).toBe(opener)
+    opener.remove()
+  })
+
+  test('reserves one entry slot and switches it between unavailable, Enter, and Leave', async () => {
+    const remote = createWrapper({ entryAction: 'unavailable' })
+    const remoteEntry = remote.get('[data-testid="map-place-entry-action"]')
+    expect(remoteEntry.classes()).toContain('is-unavailable')
+    expect(remoteEntry.attributes('disabled')).toBeUndefined()
+    expect(remoteEntry.attributes('data-entry-state')).toBe('unavailable')
+    expect(remoteEntry.attributes('title')).toBe('You are not near this facility')
+    await remoteEntry.trigger('click')
+    expect(remote.get('[data-testid="map-place-entry-notice"]').text()).toContain(
+      'not near this facility',
+    )
+    expect(remote.emitted('enter')).toBeUndefined()
+
+    const onsite = createWrapper({ entryAction: 'enter', contextLabel: 'Current position' })
+    expect(onsite.get('.map-place-entry-action').text()).toContain('Enter')
+    await onsite.get('.map-place-entry-action').trigger('click')
     expect(onsite.emitted('enter')).toHaveLength(1)
 
-    const inside = createWrapper({ primaryAction: 'leave', contextLabel: 'Inside this place' })
-    expect(inside.get('[data-testid="map-place-leave"]').text()).toContain('Leave')
-    await inside.get('[data-testid="map-place-leave"]').trigger('click')
+    const inside = createWrapper({ entryAction: 'leave', contextLabel: 'Inside this place' })
+    expect(inside.get('.map-place-entry-action').text()).toContain('Leave')
+    await inside.get('.map-place-entry-action').trigger('click')
     expect(inside.emitted('leave')).toHaveLength(1)
   })
 
-  test('shows no permanent event placeholder and expands only an eligible invitation', async () => {
-    const noEvent = createWrapper({ primaryAction: 'enter' })
+  test('shows no permanent event placeholder and expands only an eligible interaction', async () => {
+    const noEvent = createWrapper({ entryAction: 'enter' })
     expect(noEvent.find('[data-testid="map-place-event-invitation"]').exists()).toBe(false)
-    expect(noEvent.text()).not.toContain('Expand event')
 
     const invited = createWrapper({
       primaryAction: 'leave',

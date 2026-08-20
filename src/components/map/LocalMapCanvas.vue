@@ -22,6 +22,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  selectedPosition: {
+    type: Object,
+    default: null,
+  },
   interactive: {
     type: Boolean,
     default: true,
@@ -36,7 +40,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['place-pin', 'select-pin', 'map-interact'])
+const emit = defineEmits(['place-pin', 'select-pin', 'selected-anchor', 'map-interact'])
 const { t } = useI18n()
 const sceneRootRef = ref(null)
 const mapAssetReady = computed(() => Boolean(props.mapPack?.assetUrl))
@@ -117,6 +121,20 @@ const getImageBounds = () => {
 const resolveFocusLatLng = () => {
   const point = mapPositionToNormalized(props.mapPack, props.focusPosition)
   return point ? normalizedToLatLng(point) : null
+}
+
+const emitSelectedAnchor = () => {
+  const point = mapPositionToNormalized(props.mapPack, props.selectedPosition)
+  if (!mapInstance || !sceneRootRef.value || !point) {
+    emit('selected-anchor', null)
+    return
+  }
+  const containerPoint = mapInstance.latLngToContainerPoint(normalizedToLatLng(point))
+  const bounds = sceneRootRef.value.getBoundingClientRect()
+  emit('selected-anchor', {
+    x: bounds.left + containerPoint.x,
+    y: bounds.top + containerPoint.y,
+  })
 }
 
 const clearLayers = () => {
@@ -233,10 +251,15 @@ const initializeMap = async () => {
     if (!position) return
     emit('place-pin', { position, point })
   })
+  mapInstance.on('move zoom', emitSelectedAnchor)
   renderMapPack()
+  emitSelectedAnchor()
 
   if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver(() => mapInstance?.invalidateSize({ animate: false }))
+    resizeObserver = new ResizeObserver(() => {
+      mapInstance?.invalidateSize({ animate: false })
+      emitSelectedAnchor()
+    })
     resizeObserver.observe(sceneRootRef.value)
   }
 }
@@ -266,6 +289,12 @@ watch(
 )
 
 watch(
+  () => props.selectedPosition,
+  emitSelectedAnchor,
+  { deep: true },
+)
+
+watch(
   () => [props.pins, props.pendingPosition, props.mapPack?.factions, props.allowPinPlacement],
   () => renderMarkers(),
   { deep: true },
@@ -290,6 +319,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  emit('selected-anchor', null)
   resizeObserver?.disconnect()
   resizeObserver = null
   clearLayers()

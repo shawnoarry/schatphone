@@ -186,8 +186,15 @@ test('recalculates a location-bound appointment and starts one Map Journey expli
   await expect(page).toHaveURL(new RegExp(`/map\\?source=calendar&calendarEventId=${eventId}`))
   await expect(page.getByTestId('map-active-journey')).toBeVisible()
   await expect(page.getByTestId('map-active-journey')).toContainText(/行程中|In transit/)
+  await expect(
+    page.getByTestId('map-active-journey').locator('span:not(.sr-only)'),
+  ).toHaveText(/查看行程|View journey/)
   await expect(page.getByTestId('map-primary-route-card')).toContainText('超市')
   await expect(page.getByTestId('map-primary-route-card')).toContainText('SM 娱乐总部')
+  const routeCardBox = await page.getByTestId('map-primary-route-card').boundingBox()
+  expect(routeCardBox).not.toBeNull()
+  expect(routeCardBox.width).toBeLessThanOrEqual(642)
+  expect(routeCardBox.height).toBeLessThanOrEqual(230)
   await expect(page.getByTestId('map-go-home')).toHaveAttribute(
     'aria-label',
     /返回日历|Back to Calendar/,

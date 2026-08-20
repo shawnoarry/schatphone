@@ -22,13 +22,11 @@ import {
   matchesMapPlaceCategoryFilter,
   resolveMapPlaceVisual,
 } from '../lib/map-place-categories'
-import {
-  MAP_PLACE_DISPLAY_MODE,
-  resolveMapPlacePresentation,
-} from '../lib/map-place-localization'
+import { resolveMapPlacePresentation } from '../lib/map-place-localization'
 import { searchMapPlaces, suggestMapPlaces } from '../lib/map-place-search'
 import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
 import { resolveMapPlaceMedia } from '../lib/map-place-media'
+import { resolveMapPlaceCopy } from '../lib/map-place-copy'
 import { createMapLocationShareObject } from '../lib/shareable-object'
 import {
   INTERNAL_CHAT_SHARE_ROUTE_QUERY,
@@ -104,6 +102,7 @@ const mapSearchSuggestionsOpen = ref(false)
 const rolePositionMode = ref(false)
 const rolePositionNotice = ref('')
 const selectedMapPlace = ref(null)
+const selectedPlaceAnchor = ref(null)
 const selectedPlaceCategory = ref('all')
 const selectedSearchCategory = ref('all')
 const defaultMapDestination = mapStore.addresses?.[1]?.detail || ''
@@ -152,36 +151,6 @@ const MAP_DRAWER_SECTIONS = Object.freeze([
   { key: 'visual', icon: 'fas fa-map', labelZh: '图层', labelEn: 'Layers' },
 ])
 
-const MAP_PLACE_DISPLAY_OPTIONS = Object.freeze([
-  {
-    id: MAP_PLACE_DISPLAY_MODE.SYSTEM,
-    labelZh: '系统',
-    labelEn: 'Auto',
-    titleZh: '跟随系统语言',
-    titleEn: 'Follow system language',
-  },
-  {
-    id: MAP_PLACE_DISPLAY_MODE.ZH,
-    labelZh: '中文',
-    labelEn: '中文',
-    titleZh: '显示中文地名',
-    titleEn: 'Show Chinese place names',
-  },
-  {
-    id: MAP_PLACE_DISPLAY_MODE.EN,
-    labelZh: 'EN',
-    labelEn: 'EN',
-    titleZh: '显示英文地名',
-    titleEn: 'Show English place names',
-  },
-  {
-    id: MAP_PLACE_DISPLAY_MODE.BILINGUAL,
-    labelZh: '双语',
-    labelEn: 'Both',
-    titleZh: '同时显示中英文地名',
-    titleEn: 'Show Chinese and English place names',
-  },
-])
 const MAP_PRIMARY_SECTIONS = MAP_DRAWER_SECTIONS.filter((section) => section.key !== 'visual')
 const activeWorldPack = computed(() => systemStore.getActiveWorldPack?.() || {
   id: 'default_world',
@@ -285,16 +254,19 @@ const isSelectedPlaceJourneyDestination = computed(() => {
 const selectedPlaceSummary = computed(() => {
   const place = selectedMapPlace.value
   if (!place) return ''
-  const zh = place.summaryZh || place.descriptionZh || ''
-  const en = place.summaryEn || place.descriptionEn || ''
-  if (zh || en) return t(zh || en, en || zh)
-  return mapPlaceDetail(place)
+  const category = resolveMapPlaceVisual(place, activeMapPack.value?.factions)
+  const copy = resolveMapPlaceCopy(place, activeMapPackId.value, category)
+  return t(copy.summaryZh, copy.summaryEn)
 })
 
 const selectedPlaceMedia = computed(() => (
   selectedMapPlace.value
     ? resolveMapPlaceMedia(selectedMapPlace.value, activeMapPackId.value)
     : null
+))
+
+const selectedPlacePinVisible = computed(() => (
+  selectedMapPlace.value ? mapStore.isMapPlaceVisible(selectedMapPlace.value) : true
 ))
 
 const selectedPlaceContextTone = computed(() => {
@@ -309,7 +281,15 @@ const selectedPlaceContextLabel = computed(() => {
   if (isSelectedPlaceJourneyDestination.value) return t('正在前往这里', 'Heading here')
   if (isJourneyPlanningLocked.value) return t('当前行程中 · 浏览地点', 'Active journey · Browsing place')
   if (isSelectedPlaceCurrentLocation.value) return t('当前位置', 'Current position')
-  if (!Number.isFinite(selectedPlaceDistanceKm.value)) return t('可用地点', 'Available place')
+  if (!selectedMapPlace.value?.position) return t('此地点暂无可用坐标', 'This place has no usable coordinates')
+  if (selectedMapPlace.value.mapPackId !== activeMapPackId.value) {
+    return t('此地点位于另一张地图', 'This place belongs to another map')
+  }
+  if (!currentLocation.value?.position) return t('设置角色位置后可查看距离', 'Set a role position to see distance')
+  if (currentLocation.value.mapPackId !== activeMapPackId.value) {
+    return t('角色位置位于另一张地图', 'Role position is on another map')
+  }
+  if (!Number.isFinite(selectedPlaceDistanceKm.value)) return t('暂时无法计算距离', 'Distance is currently unavailable')
   if (selectedPlaceDistanceKm.value < 1) {
     const meters = Math.max(1, Math.round(selectedPlaceDistanceKm.value * 1000))
     return t(`距当前位置 ${meters} 米`, `${meters} m from current position`)
@@ -319,15 +299,19 @@ const selectedPlaceContextLabel = computed(() => {
 })
 
 const selectedPlacePrimaryAction = computed(() => {
+  if (isJourneyPlanningLocked.value) return 'view_journey'
+  if (isSelectedPlaceCurrentLocation.value) return 'none'
+  return 'go'
+})
+
+const selectedPlaceEntryAction = computed(() => {
   if (isSelectedPlaceInside.value) return 'leave'
   if (
     isSelectedPlaceStableCurrentLocation.value &&
     !isTripTraveling.value &&
     (!isTripArrived.value || isSelectedPlaceJourneyDestination.value)
   ) return 'enter'
-  if (isJourneyPlanningLocked.value) return 'view_journey'
-  if (isSelectedPlaceCurrentLocation.value) return 'none'
-  return 'go'
+  return 'unavailable'
 })
 
 const selectedPlaceEventInvitationResult = computed(() => {
@@ -536,10 +520,6 @@ const mapPlaceDetail = (place) => mapPlacePresentation(place).detail
 
 const mapPlaceSecondaryDetail = (place) => mapPlacePresentation(place).secondaryDetail
 
-const setMapPlaceDisplayMode = (mode) => {
-  mapStore.setMapPlaceDisplayMode(mode)
-}
-
 const mapPlaceVisual = (place) =>
   resolveMapPlaceVisual(place, activeMapPack.value?.factions)
 
@@ -640,6 +620,12 @@ const toggleMapPlaceVisibility = (place) => {
   mapStore.setMapPlaceVisibility(place.placeId, !mapStore.isMapPlaceVisible(place))
 }
 
+const showSelectedPlacePin = () => {
+  const placeId = selectedMapPlace.value?.placeId || selectedMapPlace.value?.id
+  if (!placeId) return
+  mapStore.setMapPlaceVisibility(placeId, true)
+}
+
 const setAllMapPlaceVisibility = (visible) => {
   mapStore.setMapPlaceCategoryVisibility('all', visible)
 }
@@ -736,26 +722,6 @@ const selectMapDestination = (place) => {
   tripActionHint.value = { tone: '', message: '' }
 }
 
-const useMapPlaceAsCurrent = (place) => {
-  if (isJourneyPlanningLocked.value) return
-  mapStore.setCurrentLocation({
-    label: mapPlaceName(place),
-    detail: mapPlaceDetail(place),
-    source: place.source === 'user' ? 'saved' : 'map_pack',
-    mapPackId: activeMapPackId.value,
-    placeId: place.placeId || place.id,
-    position: place.position,
-    syncTripOrigin: true,
-  })
-  tripActionHint.value = { tone: '', message: '' }
-}
-
-const setTripFromMapPlace = (place) => {
-  if (isJourneyPlanningLocked.value) return
-  mapStore.setTripEndpoint('from', mapPlaceDetail(place) || mapPlaceName(place))
-  tripActionHint.value = { tone: '', message: '' }
-}
-
 const setTripToMapPlace = (place) => {
   selectMapDestination(place)
 }
@@ -773,7 +739,14 @@ const onMapPinSelected = (place) => {
     return
   }
   selectedMapPlace.value = place
+  selectedPlaceAnchor.value = null
   mapSearchSuggestionsOpen.value = false
+}
+
+const onSelectedPlaceAnchor = (anchor) => {
+  selectedPlaceAnchor.value = anchor && Number.isFinite(anchor.x) && Number.isFinite(anchor.y)
+    ? anchor
+    : null
 }
 
 const canSetRolePosition = computed(
@@ -824,6 +797,7 @@ const focusCurrentLocation = () => {
 
 const closePlaceDetail = () => {
   selectedMapPlace.value = null
+  selectedPlaceAnchor.value = null
 }
 
 const enterSelectedPlace = () => {
@@ -916,21 +890,9 @@ const openSelectedPlaceJourney = () => {
   openMapDrawer('trip')
 }
 
-const useSelectedPlaceAsCurrent = () => {
-  if (!selectedMapPlace.value) return
-  useMapPlaceAsCurrent(selectedMapPlace.value)
-  closePlaceDetail()
-}
-
 const useSelectedPlaceAsDestination = () => {
   if (!selectedMapPlace.value) return
   setTripToMapPlace(selectedMapPlace.value)
-  closePlaceDetail()
-}
-
-const useSelectedPlaceAsStart = () => {
-  if (!selectedMapPlace.value) return
-  setTripFromMapPlace(selectedMapPlace.value)
   closePlaceDetail()
 }
 
@@ -965,21 +927,6 @@ const shareSelectedPlaceToChat = () => {
     path: '/chat',
     query: { [INTERNAL_CHAT_SHARE_ROUTE_QUERY]: INTERNAL_CHAT_SHARE_ROUTE_VALUE },
   })
-}
-
-const removeSelectedPlace = async () => {
-  const place = selectedMapPlace.value
-  if (!place || place.source !== 'user') return
-  const confirmed = await confirmDialog({
-    title: t('删除地点', 'Delete place'),
-    message: t(`确定删除“${mapPlaceName(place)}”吗？`, `Delete “${mapPlaceName(place)}”?`),
-    confirmText: t('删除', 'Delete'),
-    cancelText: t('取消', 'Cancel'),
-    tone: 'danger',
-  })
-  if (!confirmed) return
-  mapStore.removeAddress(place.id)
-  closePlaceDetail()
 }
 
 const mapVisualAssetOptions = computed(() =>
@@ -2189,9 +2136,11 @@ onBeforeUnmount(() => {
           :map-pack="renderedActiveMapPack"
           :pins="mapScenePins"
           :focus-position="mapFocusPosition"
+          :selected-position="selectedMapPlace?.position || null"
           :allow-pin-placement="rolePositionMode"
           @place-pin="onRolePositionSelected"
           @select-pin="onMapPinSelected"
+          @selected-anchor="onSelectedPlaceAnchor"
           @map-interact="onMapInteraction"
         />
 
@@ -2392,7 +2341,7 @@ onBeforeUnmount(() => {
               <i :class="isTripPaused ? 'fas fa-pause' : isTripArrived ? 'fas fa-flag-checkered' : 'fas fa-circle'" aria-hidden="true"></i>
               {{ journeyPrimaryStatusLabel }}
             </span>
-            <small>{{ journeyPhaseLabel }}</small>
+            <small data-testid="map-primary-journey-phase">{{ journeyPhaseLabel }}</small>
           </div>
           <div
             v-if="mapWorldAppContext && !isTripTraveling && !isTripArrived"
@@ -2404,11 +2353,17 @@ onBeforeUnmount(() => {
             <i :class="mapWorldAppContext.icon" aria-hidden="true"></i>
             <p>{{ mapWorldAppContext.bindingTitle }}</p>
           </div>
-          <div class="map-route-summary">
+          <div class="map-route-summary" :class="{ 'is-active': isTripTraveling || isTripArrived }">
             <div class="min-w-0">
-              <p>{{ mapRouteEyebrow }}</p>
-              <h2>{{ mapPrimarySheetTitle }}</h2>
-              <span>{{ mapPrimarySheetDescription }}</span>
+              <p>{{ isTripTraveling || isTripArrived ? mapPrimarySheetTitle : mapRouteEyebrow }}</p>
+              <h2>{{ isTripTraveling || isTripArrived ? activeTripRouteLabel : mapPrimarySheetTitle }}</h2>
+              <span v-if="isTripTraveling || isTripArrived" class="map-route-supporting-line">
+                <i :class="selectedTripTransport?.icon || 'fas fa-route'" aria-hidden="true"></i>
+                {{ selectedTripTransportLabel }}
+                <span aria-hidden="true">·</span>
+                {{ t('预计到达', 'ETA') }} {{ formatTime(tripRuntime.etaAt) }}
+              </span>
+              <span v-else>{{ mapPrimarySheetDescription }}</span>
             </div>
             <div class="map-route-metrics">
               <strong>{{ isTripTraveling || isTripArrived ? journeyRemainingMetric : tripEstimate.transportMode ? tripEstimate.minutes : '--' }}</strong>
@@ -2429,21 +2384,17 @@ onBeforeUnmount(() => {
             <i v-if="isTripTraveling || isTripArrived" class="fas fa-lock" aria-hidden="true"></i>
             <i v-else class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
-          <div v-if="isTripTraveling || isTripArrived" class="mt-3">
-            <div class="mb-2 flex min-w-0 items-center justify-between gap-2 text-[10px] font-bold text-slate-500" data-testid="map-primary-journey-phase">
-              <span>{{ t('当前阶段', 'Current stage') }}</span>
-              <strong class="min-w-0 break-words text-right text-emerald-700">{{ journeyPhaseLabel }}</strong>
+          <div v-if="isTripTraveling || isTripArrived" class="map-journey-progress">
+            <div class="map-journey-progress-meta">
+              <span>{{ t('行程进度', 'Journey progress') }}</span>
+              <strong>{{ tripProgressPercent }}%</strong>
             </div>
-            <div class="h-2 overflow-hidden rounded-full bg-slate-200">
+            <div class="map-journey-progress-track">
               <div
-                class="h-full rounded-full bg-blue-500 transition-all duration-500"
+                class="map-journey-progress-value"
                 :style="{ width: `${tripProgressPercent}%` }"
               ></div>
             </div>
-            <p class="mt-1 text-[11px] text-slate-500">
-              {{ tripProgressPercent }}% · {{ t('剩余', 'Remaining') }} {{ formatSeconds(tripRuntime.remainingSeconds) }}
-              · {{ selectedTripTransportLabel }} · {{ t('预计到达', 'ETA') }} {{ formatTime(tripRuntime.etaAt) }}
-            </p>
           </div>
           <button
             v-if="hasPendingJourneyEventNotice"
@@ -2488,7 +2439,8 @@ onBeforeUnmount(() => {
               @click="openMapDrawer('trip')"
             >
               <i :class="hasPendingJourneyEventNotice ? 'fas fa-diamond-turn-right' : isTripArrived ? 'fas fa-flag-checkered' : 'fas fa-route'" aria-hidden="true"></i>
-              <span>{{ journeyPrimaryStatusLabel }} · {{ journeyPrimaryActionLabel }}</span>
+              <span class="sr-only">{{ journeyPrimaryStatusLabel }} · </span>
+              <span>{{ journeyPrimaryActionLabel }}</span>
               <i class="fas fa-chevron-right" aria-hidden="true"></i>
             </button>
           </div>
@@ -2912,11 +2864,11 @@ onBeforeUnmount(() => {
       :context-label="selectedPlaceContextLabel"
       :context-tone="selectedPlaceContextTone"
       :primary-action="selectedPlacePrimaryAction"
+      :entry-action="selectedPlaceEntryAction"
+      :anchor="selectedPlaceAnchor"
       :event-invitation="selectedPlaceEventInvitation"
-      :journey-locked="isJourneyPlanningLocked"
       :can-manage="selectedMapPlace.source === 'user'"
-      :display-mode="mapPlaceDisplayMode"
-      :display-options="MAP_PLACE_DISPLAY_OPTIONS"
+      :pin-visible="selectedPlacePinVisible"
       :t="t"
       @close="closePlaceDetail"
       @go="useSelectedPlaceAsDestination"
@@ -2926,10 +2878,7 @@ onBeforeUnmount(() => {
       @expand-event="openSelectedPlaceEvent"
       @share="shareSelectedPlaceToChat"
       @manage="openSelectedPlaceManager"
-      @set-display-mode="setMapPlaceDisplayMode"
-      @set-start="useSelectedPlaceAsStart"
-      @set-current="useSelectedPlaceAsCurrent"
-      @delete="removeSelectedPlace"
+      @show-pin="showSelectedPlacePin"
     />
 
     <MapEventSurfaceSheet
@@ -3797,10 +3746,11 @@ onBeforeUnmount(() => {
 
 .map-route-card {
   position: absolute;
-  right: 14px;
+  right: auto;
   bottom: 14px;
-  left: 14px;
+  left: 50%;
   z-index: 10;
+  width: min(calc(100% - 28px), 640px);
   border: 1px solid rgba(210, 219, 213, 0.95);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.97);
@@ -3808,11 +3758,18 @@ onBeforeUnmount(() => {
   color: #17211d;
   box-shadow: 0 14px 38px rgba(31, 48, 39, 0.17);
   backdrop-filter: blur(14px);
+  transform: translateX(-50%);
+  animation: map-route-card-enter 180ms cubic-bezier(0.2, 0.78, 0.32, 1) both;
+}
+
+@keyframes map-route-card-enter {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .map-route-card.is-active-journey {
   border-top: 3px solid #17664f;
-  padding-top: 9px;
+  padding: 10px 12px 12px;
   box-shadow: 0 18px 44px rgba(21, 71, 55, 0.22);
 }
 
@@ -3830,7 +3787,9 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+  border-bottom: 1px solid #e4e9e6;
+  padding-bottom: 7px;
   color: #17664f;
 }
 
@@ -3941,6 +3900,8 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.map-route-summary.is-active { grid-template-columns: minmax(0, 1fr) 62px; }
+
 .map-route-summary p {
   color: #718078;
   font-size: 8px;
@@ -3957,6 +3918,11 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.map-route-summary.is-active h2 {
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
 .map-route-summary > div > span {
   display: block;
   overflow: hidden;
@@ -3967,6 +3933,16 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.map-route-supporting-line {
+  display: flex !important;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.map-route-supporting-line > i { flex: 0 0 auto; color: #17664f; font-size: 9px; }
+.map-route-supporting-line > span { flex: 0 0 auto; }
+
 .map-route-metrics {
   display: flex;
   min-height: 46px;
@@ -3975,10 +3951,17 @@ onBeforeUnmount(() => {
   justify-content: center;
   border-left: 1px solid #e2e7e3;
   color: #17664f;
+  font-variant-numeric: tabular-nums;
 }
 
-.map-route-metrics strong { font-size: 18px; line-height: 1; }
+.map-route-metrics strong { font-size: 18px; line-height: 1; white-space: nowrap; }
 .map-route-metrics small { margin-top: 3px; font-size: 8px; font-weight: 800; }
+
+.map-journey-progress { margin-top: 9px; }
+.map-journey-progress-meta { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; color: #6f7d75; font-size: 9px; font-weight: 800; }
+.map-journey-progress-meta strong { color: #17664f; font-variant-numeric: tabular-nums; }
+.map-journey-progress-track { height: 5px; overflow: hidden; margin-top: 5px; border-radius: 3px; background: #e2e8e4; }
+.map-journey-progress-value { height: 100%; border-radius: inherit; background: #218263; transition: width 450ms cubic-bezier(0.2, 0.72, 0.32, 1); }
 
 .map-route-actions {
   display: grid;
@@ -3995,6 +3978,8 @@ onBeforeUnmount(() => {
   grid-template-columns: 18px minmax(0, 1fr) 12px;
   align-items: center;
   gap: 8px;
+  border: 1px solid #17664f;
+  background: #17664f;
   text-align: left;
 }
 
@@ -4032,6 +4017,12 @@ onBeforeUnmount(() => {
   border: 1px solid #dce2de;
   background: #f5f7f5;
   color: #26372f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-route-card { animation: none; }
+  .map-route-card.is-journey-moving .map-journey-live-status > span i { animation: none; }
+  .map-journey-progress-value { transition: none; }
 }
 
 .map-bottom-nav {

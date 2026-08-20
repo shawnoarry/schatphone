@@ -361,6 +361,27 @@ test.describe('world-bound narrative maps', () => {
   }) => {
     await mockOpenFreeMapStyle(page)
     await unlockToHome(page)
+    await navigateInsideUnlockedApp(page, '/map/settings')
+
+    const languageSettings = page.getByTestId('map-place-language-section')
+    await expect(languageSettings).toBeVisible()
+    await languageSettings.getByTestId('map-place-language-mode-en').click()
+    await expect(languageSettings.getByTestId('map-place-language-mode-en')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await languageSettings.getByTestId('map-place-language-mode-bilingual').click()
+    await expect(languageSettings.getByTestId('map-place-language-mode-bilingual')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    const settingsOverflow = await languageSettings.evaluate((element) => ({
+      document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      control: element.scrollWidth - element.clientWidth,
+    }))
+    expect(settingsOverflow.document).toBeLessThanOrEqual(1)
+    expect(settingsOverflow.control).toBeLessThanOrEqual(1)
+
     await navigateInsideUnlockedApp(page, '/map')
 
     const openYeouidoPark = async () => {
@@ -373,20 +394,10 @@ test.describe('world-bound narrative maps', () => {
       await parkResult.click()
       const detail = page.getByTestId('map-place-detail-sheet')
       await expect(detail).toBeVisible()
-      await detail.getByTestId('map-place-open-detail').click()
-      await expect(detail.getByTestId('map-place-detail-view')).toBeVisible()
       return detail
     }
 
     let detail = await openYeouidoPark()
-    await detail.getByTestId('map-place-language-mode-en').click()
-    await expect(detail.getByRole('heading', { level: 2 })).toHaveText('Yeouido Hangang Park')
-
-    await detail.getByTestId('map-place-language-mode-bilingual').click()
-    await expect(detail.getByTestId('map-place-language-mode-bilingual')).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
     await expect(detail.getByTestId('map-place-secondary-name')).toBeVisible()
     const bilingualNames = await Promise.all([
       detail.getByRole('heading', { level: 2 }).textContent(),
@@ -395,18 +406,12 @@ test.describe('world-bound narrative maps', () => {
     expect(bilingualNames.map((name) => name?.trim())).toContain('Yeouido Hangang Park')
     expect(new Set(bilingualNames.map((name) => name?.trim())).size).toBe(2)
 
-    const overflow = await detail.evaluate((element) => {
-      const segments = element.querySelector('.map-place-language-segments')
-      return {
-        document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-        detail: element.scrollWidth - element.clientWidth,
-        segments:
-          segments instanceof HTMLElement ? segments.scrollWidth - segments.clientWidth : 0,
-      }
-    })
+    const overflow = await detail.evaluate((element) => ({
+      document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      detail: element.scrollWidth - element.clientWidth,
+    }))
     expect(overflow.document).toBeLessThanOrEqual(1)
     expect(overflow.detail).toBeLessThanOrEqual(1)
-    expect(overflow.segments).toBeLessThanOrEqual(1)
 
     await expect
       .poll(() =>
@@ -421,10 +426,6 @@ test.describe('world-bound narrative maps', () => {
     await unlockToHome(page)
     await navigateInsideUnlockedApp(page, '/map')
     detail = await openYeouidoPark()
-    await expect(detail.getByTestId('map-place-language-mode-bilingual')).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
     await expect(detail.getByTestId('map-place-secondary-name')).toBeVisible()
     await expect(detail).toContainText('Yeouido Hangang Park')
   })
@@ -641,8 +642,8 @@ test.describe('world-bound narrative maps', () => {
     )
     await page.getByTestId('map-local-place-results').locator('.map-place-result').first().click()
     await expect(page.getByTestId('map-place-detail-sheet')).toBeVisible()
-    await expect(page.getByTestId('map-place-journey-lock')).toContainText(
-      /will not change the current journey|不会改变当前行程/,
+    await expect(page.getByTestId('map-place-view-journey')).toContainText(
+      /View journey|查看行程/,
     )
     await expect(page.getByTestId('map-place-use-destination')).toHaveCount(0)
     await expect(

@@ -98,4 +98,23 @@ describe('Map settings view', () => {
 
     wrapper.unmount()
   })
+
+  test('owns the global place-name language outside individual place cards', async () => {
+    const router = createTestRouter()
+    await router.push('/map/settings')
+    await router.isReady()
+    const wrapper = mount(MapSettingsView, { global: { plugins: [router] } })
+    const mapStore = useMapStore()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="map-place-language-mode-system"]').attributes('aria-pressed')).toBe('true')
+    await wrapper.get('[data-testid="map-place-language-mode-en"]').trigger('click')
+    expect(mapStore.mapPlaceDisplayMode).toBe('en')
+    expect(wrapper.get('[data-testid="map-place-language-mode-en"]').attributes('aria-pressed')).toBe('true')
+
+    await wrapper.get('[data-testid="map-place-language-mode-bilingual"]').trigger('click')
+    expect(mapStore.mapPlaceDisplayMode).toBe('bilingual')
+
+    wrapper.unmount()
+  })
 })

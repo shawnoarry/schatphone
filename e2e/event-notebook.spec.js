@@ -9,6 +9,12 @@ const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
 const VISUAL_EVIDENCE_DIR = fileURLToPath(
   new URL('../output/e2e/event-notebook/', import.meta.url),
 )
+const MBC_PLACE = {
+  placeId: 'seoul-mbc-hq',
+  label: 'MBC Sangam Headquarters',
+  detail: '267 Seongam-ro, Mapo-gu, Seoul',
+  position: { kind: 'geo', lat: 37.5811, lng: 126.8905 },
+}
 
 const deterministicStyle = {
   version: 8,
@@ -34,6 +40,8 @@ const mockOpenFreeMapStyle = async (page) => {
 
 const seedEnglishWorld = async (page) => {
   await page.addInitScript(() => {
+    const seedKey = 'e2e:event-notebook:world-seeded'
+    if (window.sessionStorage.getItem(seedKey) === '1') return
     const now = Date.now()
     window.localStorage.setItem(
       'schatphone:store:system',
@@ -51,6 +59,7 @@ const seedEnglishWorld = async (page) => {
         },
       }),
     )
+    window.sessionStorage.setItem(seedKey, '1')
   })
 }
 
@@ -76,10 +85,65 @@ const openMbcPlace = async (page) => {
 }
 
 const createKpopEventInstance = async (page) => {
-  await openMbcPlace(page)
-  await page.getByTestId('map-place-open-detail').click()
-  await page.getByTestId('map-place-set-current').click()
-  await expect(page.getByTestId('map-place-detail-sheet')).toHaveCount(0)
+  await page.goto('/schatphone/manifest.webmanifest')
+  await page.evaluate(async (place) => {
+    const key = 'schatphone:store:map'
+    const now = Date.now()
+    const envelope = JSON.parse(window.localStorage.getItem(key) || 'null') || {
+      version: 4,
+      savedAt: now,
+      data: {},
+    }
+    const data = envelope.data || envelope
+    data.activeMapPackId = 'real-seoul-v1'
+    data.currentLocation = {
+      source: 'saved',
+      label: place.label,
+      detail: place.detail,
+      mapPackId: 'real-seoul-v1',
+      placeId: place.placeId,
+      position: place.position,
+      positionEvidence: {
+        provenance: 'manual',
+        placeId: place.placeId,
+        evidenceAt: now,
+        journeyId: '',
+        journeyArrivedAt: 0,
+      },
+    }
+    data.tripForm = { ...(data.tripForm || {}), from: place.detail }
+    envelope.data = data
+    envelope.savedAt = now
+    if (envelope.generation?.lineage) {
+      envelope.generation = {
+        ...envelope.generation,
+        sequence: Math.max(0, Number(envelope.generation.sequence) || 0) + 1,
+      }
+    }
+    const raw = JSON.stringify(envelope)
+    window.localStorage.setItem(key, raw)
+
+    const db = await new Promise((resolve, reject) => {
+      const request = window.indexedDB.open('schatphone-layered-storage', 1)
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains('state')) {
+          request.result.createObjectStore('state', { keyPath: 'key' })
+        }
+      }
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => resolve(request.result)
+    })
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction('state', 'readwrite')
+      transaction.objectStore('state').put({ key, payload: raw, updatedAt: now })
+      transaction.oncomplete = resolve
+      transaction.onerror = () => reject(transaction.error)
+      transaction.onabort = () => reject(transaction.error)
+    })
+    db.close()
+  }, MBC_PLACE)
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/map')
   await openMbcPlace(page)
   await page.getByTestId('map-place-enter').click()
   await expect(page.getByTestId('map-place-event-invitation')).toBeVisible()

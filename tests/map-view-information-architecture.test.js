@@ -287,25 +287,22 @@ describe('MapView information architecture', () => {
     expect(detail.get('[data-testid="map-place-context"]').text()).toMatch(
       /from current position|距当前位置/,
     )
-    await detail.get('[data-testid="map-place-open-detail"]').trigger('click')
-    await nextTick()
-    expect(
-      detail.get('[data-testid="map-place-language-mode-system"]').attributes('aria-pressed'),
-    ).toBe('true')
-
-    await detail.get('[data-testid="map-place-language-mode-en"]').trigger('click')
+    expect(mapStore.mapPlaceDisplayMode).toBe('system')
+    mapStore.setMapPlaceDisplayMode('en')
     await nextTick()
     expect(detail.get('h2').text()).toBe('Yeouido Hangang Park')
     expect(
       mapScene.props('pins').find((item) => item.placeId === place.placeId)?.name,
     ).toBe('Yeouido Hangang Park')
 
-    await detail.get('[data-testid="map-place-language-mode-bilingual"]').trigger('click')
+    mapStore.setMapPlaceDisplayMode('bilingual')
     await nextTick()
     expect(detail.get('h2').text()).toBe('汝矣岛汉江公园')
     expect(detail.get('[data-testid="map-place-secondary-name"]').text()).toBe(
       'Yeouido Hangang Park',
     )
+    await detail.get('[data-testid="map-place-open-detail"]').trigger('click')
+    await nextTick()
     expect(detail.get('[data-testid="map-place-secondary-detail"]').text()).toBe(
       '330 Yeouidong-ro, Yeongdeungpo-gu, Seoul',
     )
@@ -332,6 +329,60 @@ describe('MapView information architecture', () => {
     )
     expect(wrapper.get('[data-testid="map-filtered-place-list"]').text()).toContain(
       'Yeouido Hangang Park',
+    )
+  })
+
+  test('restores a hidden selected pin without projecting trip history into the place card', async () => {
+    const mapStore = useMapStore()
+    const place = mapStore.activeMapPlaces.find(
+      (item) => item.placeId === 'seoul-gyeongbokgung',
+    )
+    const now = Date.now()
+    expect(mapStore.restoreFromBackup({
+      map: {
+        tripHistory: [
+          {
+            id: 'trip_hist_exact_gyeongbokgung',
+            status: 'arrived',
+            mapPackId: 'real-seoul-v1',
+            from: 'Seoul Station',
+            to: 'Gyeongbokgung Palace',
+            destinationPlaceId: 'seoul-gyeongbokgung',
+            durationSeconds: 900,
+            startedAt: now - 901_000,
+            endedAt: now - 1000,
+          },
+          {
+            id: 'trip_hist_legacy_text_only',
+            status: 'arrived',
+            mapPackId: 'real-seoul-v1',
+            from: 'Seoul Station',
+            to: 'Gyeongbokgung Palace',
+            durationSeconds: 900,
+            startedAt: now - 1_801_000,
+            endedAt: now - 901_000,
+          },
+        ],
+      },
+    })).toBe(true)
+    mapStore.setMapPlaceVisibility(place.placeId, false)
+    await nextTick()
+
+    wrapper.findComponent({ name: 'MapSceneCanvas' }).vm.$emit('select-pin', place)
+    await nextTick()
+
+    expect(wrapper.get('[data-testid="map-place-pin-hidden"]').text()).toMatch(
+      /hidden from the map|没有显示在地图上/,
+    )
+    await wrapper.get('[data-testid="map-place-show-pin"]').trigger('click')
+    await nextTick()
+    expect(mapStore.isMapPlaceVisible(place)).toBe(true)
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+    await nextTick()
+    expect(wrapper.find('[data-testid="map-place-footprints-section"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="map-place-detail-view"]').text()).not.toMatch(
+      /completed visit|次到访/,
     )
   })
 
@@ -664,13 +715,13 @@ describe('MapView information architecture', () => {
       .trigger('click')
     await nextTick()
 
-    expect(wrapper.get('[data-testid="map-place-journey-lock"]').text()).toMatch(
-      /will not change the current journey|不会改变当前行程/,
+    expect(wrapper.get('[data-testid="map-place-context"]').text()).toMatch(
+      /Active journey|当前行程中/,
     )
     expect(wrapper.find('[data-testid="map-place-use-destination"]').exists()).toBe(false)
     expect(wrapper.find('.map-place-detail-actions').exists()).toBe(false)
     expect(wrapper.get('[data-testid="map-place-view-journey"]').text()).toMatch(
-      /View current journey|查看当前行程/,
+      /View journey|查看行程/,
     )
     expect(mapStore.tripState.to).toBe(lockedDestination)
     expect(wrapper.get('[data-testid="map-primary-route-card"]').text()).toBe(routeCardBeforeBrowse)
@@ -899,6 +950,8 @@ describe('MapView information architecture', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="map-place-detail-sheet"]').text()).toContain('SM')
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+    await nextTick()
     await wrapper.get('[data-testid="map-place-share-chat"]').trigger('click')
     await nextTick()
     await flushPromises()

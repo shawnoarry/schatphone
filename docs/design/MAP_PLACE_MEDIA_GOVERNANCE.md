@@ -1,12 +1,12 @@
 # Map Place Media Governance
 
-Updated: 2026-08-15
+Updated: 2026-08-20
 
 ## Purpose
 
 Place media makes Map details visually recognizable without turning photography into place truth. Canonical place identity, name, address, coordinate, category, visibility, discovery, and Journey behavior remain in Map place records. Media is a separate reviewed projection keyed by `mapPackId + placeId`.
 
-The current implementation is `src/lib/map-place-media.js`. The current pilot evidence is `docs/qa/MAP_PLACE_MEDIA_PILOT_2026-08-15.md`.
+The current implementation is `src/lib/map-place-media.js`. The current pilot evidence is `docs/qa/MAP_PLACE_MEDIA_PILOT_2026-08-15.md`, and the catalog-wide acquisition plan is `docs/design/MAP_PLACE_MEDIA_INVENTORY.md`.
 
 ## Catalog Baseline
 
@@ -21,7 +21,7 @@ The current implementation is `src/lib/map-place-media.js`. The current pilot ev
 | `src/lib/seoul-map-food-places.js` | 5 | reviewed Food Delivery-linked restaurant branches |
 | **Total** | **106** | versioned Map-owned catalog |
 
-Every built-in or player place resolves one `hero` media presentation. An approved registry record wins; otherwise Map renders an explicit category fallback. Missing photography therefore never makes a place unusable and never fabricates photographic evidence.
+Every built-in or player place resolves one image-backed `hero` media presentation. An approved registry record wins; otherwise Map renders an explicit category fallback asset. Missing photography therefore never produces an empty card and never fabricates photographic evidence.
 
 ## Schema
 
@@ -35,7 +35,7 @@ Each reviewed record contains:
 | `slot` | currently `hero` |
 | `kind` | `exact_photo`, `area_atmosphere`, `generated_reconstruction`, or `category_fallback` |
 | `authenticityGrade` | `A`, `B`, `C`, or `D`, mapped exactly to `kind` |
-| `asset` | approved public runtime URL, dimensions, MIME, alt text, and SHA-256; `null` for code-rendered fallback |
+| `asset` | approved public runtime URL, dimensions, MIME, alt text, and SHA-256; category fallback also requires an image asset |
 | `source` | source type, provider, author/generator, license, source page, access date, source SHA-256, and disclosed changes |
 | `review` | status, date, reviewer, and source-archive batch |
 
@@ -43,12 +43,12 @@ The validator fails closed when identity, grade, runtime location, source page, 
 
 ## Detail Slots
 
-The place focus sheet owns four stable visual positions:
+The place focus card owns four stable visual positions:
 
-1. `hero frame`: fixed `16:9`; reviewed photo/reconstruction uses a `1600 x 900` WebP; category fallback is code-rendered.
+1. `hero frame`: every overview has the same image slot; the normal card uses a wide `16:7` crop and short phone view uses `16:5` so actions remain visible. Reviewed photo/reconstruction uses a `1600 x 900` WebP derivative, while category fallback uses a reviewed generic visual asset.
 2. `authenticity badge`: always names the representation before the user interprets it.
 3. `truth note`: distinguishes exact place, surrounding area, generated reconstruction, and generic category imagery.
-4. `attribution strip`: author, source page, license link, and disclosed crop/conversion change.
+4. `image-information disclosure`: a compact collapsed row that keeps author, source page, license link, truth note, and disclosed crop/conversion change reachable without competing with place content.
 
 Image failure returns to the same category fallback without shifting the sheet hierarchy or hiding place actions.
 
@@ -70,7 +70,7 @@ Use this order:
 1. a reusable exact-place photograph with a durable source page and explicit license;
 2. a reusable real area photograph, clearly downgraded to `area_atmosphere`;
 3. a separately reviewed generated reconstruction with durable generation provenance;
-4. the code-rendered category fallback.
+4. a reviewed project-owned category fallback asset with copy that clearly says it does not represent the place's real appearance.
 
 Accepted photo evidence must provide an explicit reuse license, author/creator, source page, access date, and unmodified-source hash. Current pilot discovery uses Wikimedia Commons file pages because each selected file exposes reusable-license metadata and attribution.
 
@@ -103,4 +103,6 @@ Map owns selection, truth labeling, detail placement, alt text, and attribution 
 
 ## Current Scope
 
-The first pilot approves seven real-photo derivatives and one explicit fictional category fallback. No generated reconstruction was needed in this batch. The remaining Seoul catalog uses the category fallback until a later record passes the same source and review gates.
+The first pilot approves seven real-photo derivatives and one explicit fictional category fallback. No generated reconstruction was needed in that batch. Every remaining Seoul place uses the approved CC0 Seoul category visual until a later record passes the same source and review gates; fictional/player places use the relevant project-owned map/category fallback. These assets fill the required image slot but never count as evidence of real appearance.
+
+The fixed built-in target is 113 place-specific decisions: 106 Seoul places and seven fictional places. Current place-specific completion is seven Seoul derivatives, leaving 99 licensed real-photo searches and seven generated fictional reconstructions. The inventory classifies 79 Seoul places as exact-photo preferred and 27 as area-atmosphere preferred, while preserving downgrade or upgrade decisions through review evidence rather than category alone.

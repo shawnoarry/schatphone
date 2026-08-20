@@ -3,7 +3,10 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
-import { MAP_PLACE_MEDIA_RECORDS } from '../src/lib/map-place-media.js'
+import {
+  MAP_PLACE_MEDIA_RECORDS,
+  createMapPlaceMediaFallback,
+} from '../src/lib/map-place-media.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 import { installProjectAssetRoute, prewarmProjectAssets } from './helpers/project-assets.js'
 
@@ -45,6 +48,15 @@ const mockOpenFreeMapStyle = async (page) => {
 const seedEnglish = async (page) => {
   await page.addInitScript(() => {
     const now = Date.now()
+    window.__copiedMapAddress = ''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          window.__copiedMapAddress = value
+        },
+      },
+    })
     window.localStorage.setItem(
       'schatphone:store:system',
       JSON.stringify({
@@ -97,10 +109,14 @@ test.describe('Map place media governance', () => {
     await unlockToHome(page)
     await prewarmProjectAssets(
       page.request,
-      MAP_PLACE_MEDIA_RECORDS.map((record) => record.asset?.url).filter(Boolean),
+      [
+        ...MAP_PLACE_MEDIA_RECORDS.map((record) => record.asset?.url),
+        createMapPlaceMediaFallback({ id: 'address:1' }, 'real-seoul-v1').asset.url,
+      ].filter(Boolean),
     )
     await installProjectAssetRoute(page)
 
+    let exactMediaHeight = 0
     for (const [placeId, filename, expectedKind] of REAL_TRIALS) {
       await navigateInsideUnlockedApp(
         page,
@@ -110,19 +126,55 @@ test.describe('Map place media governance', () => {
       const media = page.getByTestId('map-place-media')
       const image = page.getByTestId('map-place-media-image')
       await expect(sheet).toBeVisible()
+      await expect(sheet).toHaveAttribute('role', 'region')
       await expect(media).toContainText(expectedKind)
+      await expect(sheet.getByTestId('map-place-summary')).not.toHaveText(
+        /Museums, palaces|Companies, offices|Dining, entertainment/,
+      )
       await expect(image).toHaveAttribute('src', new RegExp(`${filename.replaceAll('.', '\\.')}($|\\?)`))
       await expect.poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true)
-      await expect(media.locator('a[href*="commons.wikimedia.org"]')).toHaveCount(1)
-      await expect(media.locator('a[href*="creativecommons.org"]')).toHaveCount(1)
       await expectNoHorizontalOverflow(page)
 
       if (placeId === 'seoul-gyeongbokgung') {
+        await expect(sheet.getByTestId('map-place-use-destination')).toBeInViewport({ ratio: 0.95 })
+        await expect(sheet.getByTestId('map-place-open-detail')).toBeInViewport({ ratio: 0.95 })
+        await expect(sheet.getByTestId('map-place-entry-action')).toBeInViewport({ ratio: 0.95 })
+        exactMediaHeight = await media.evaluate((element) => element.getBoundingClientRect().height)
         await captureVisualEvidence(page, testInfo, 'exact-place')
+        await sheet.getByTestId('map-place-open-detail').click()
+        await expect(page.getByTestId('map-place-detail-media')).toBeVisible()
+        await expect(page.getByTestId('map-place-about-section')).toBeVisible()
+        await expect(page.getByTestId('map-place-location-section')).toBeVisible()
+        await expect(page.getByTestId('map-place-state-section')).toHaveCount(0)
+        await expect(page.getByTestId('map-place-footprints-section')).toHaveCount(0)
+        await expect(page.getByTestId('map-place-language-section')).toHaveCount(0)
+        const mediaInfo = page.getByTestId('map-place-media-source')
+        await expect(mediaInfo).not.toHaveAttribute('open', '')
+        await expect(mediaInfo.locator('summary')).toContainText('Image information')
+        await expect(mediaInfo.locator('a[href*="commons.wikimedia.org"]')).not.toBeVisible()
+        await expectNoHorizontalOverflow(page)
+        await captureVisualEvidence(page, testInfo, 'place-detail')
+        await mediaInfo.locator('summary').click()
+        await expect(mediaInfo.locator('a[href*="commons.wikimedia.org"]')).toBeVisible()
+        await expect(mediaInfo.locator('a[href*="creativecommons.org"]')).toBeVisible()
+        await page.getByTestId('map-place-copy-address').click()
+        await expect(page.getByTestId('map-place-address-copy-notice')).toContainText(
+          'Address copied',
+        )
+        await expect.poll(() => page.evaluate(() => window.__copiedMapAddress)).toBe(
+          '161 Sajik-ro, Jongno-gu, Seoul',
+        )
+        await expectNoHorizontalOverflow(page)
+        await page.keyboard.press('Escape')
+        await expect(sheet).toHaveCount(0)
       }
       if (placeId === 'seoul-sm-hq') {
-        await expect(media).toContainText('not the exact facade')
+        await image.evaluate((element) => element.decode())
         await captureVisualEvidence(page, testInfo, 'area-atmosphere')
+        await sheet.getByTestId('map-place-open-detail').click()
+        await expect(sheet.getByTestId('map-place-media-source')).toContainText(
+          'not the exact facade',
+        )
       }
     }
 
@@ -131,10 +183,18 @@ test.describe('Map place media governance', () => {
       '/map?placeId=address%3A1&mapPackId=real-seoul-v1',
     )
     const fallback = page.getByTestId('map-place-media')
-    await expect(fallback).toContainText('Category visual')
-    await expect(fallback).toContainText('not its real appearance')
-    await expect(page.getByTestId('map-place-media-image')).toHaveCount(0)
-    await expect(page.getByTestId('map-place-media-fallback')).toBeVisible()
+    await expect(page.getByTestId('map-place-media-truth')).toContainText('not its real appearance')
+    const fallbackImage = page.getByTestId('map-place-media-image')
+    await expect(fallbackImage).toHaveAttribute('src', /seoul-street-map-v1\.webp$/)
+    await expect.poll(() => fallbackImage.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true)
+    await expect(page.locator('.map-place-focus-media')).toHaveCount(1)
+    const fallbackHeight = await fallback.evaluate((element) => element.getBoundingClientRect().height)
+    expect(exactMediaHeight).toBeGreaterThan(0)
+    expect(Math.abs(fallbackHeight - exactMediaHeight)).toBeLessThanOrEqual(2)
+    if (testInfo.project.name === 'mobile-chrome') {
+      await expect(page.getByTestId('map-place-open-detail')).toBeInViewport({ ratio: 0.95 })
+      await expect(page.getByTestId('map-place-enter')).toBeInViewport({ ratio: 0.95 })
+    }
     await expectNoHorizontalOverflow(page)
     await captureVisualEvidence(page, testInfo, 'player-place-fallback')
 

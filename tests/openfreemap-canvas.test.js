@@ -72,6 +72,10 @@ const maplibreMock = vi.hoisted(() => {
       this.zoom = options.zoom
     }
 
+    project([lng, lat]) {
+      return { x: lng, y: lat }
+    }
+
     resize() {}
 
     remove() {
@@ -266,6 +270,24 @@ describe('OpenFreeMap canvas', () => {
     })
 
     wrapper.unmount()
+  })
+
+  test('projects the selected place into a viewport anchor for the place card', async () => {
+    const selectedPosition = { kind: 'geo', lat: 37.58, lng: 127.03 }
+    const wrapper = mountCanvas({ selectedPosition })
+    await flushPromises()
+    await vi.waitFor(() => expect(maplibreMock.maps).toHaveLength(1))
+
+    maplibreMock.maps[0].emit('load')
+    await nextTick()
+
+    expect(wrapper.emitted('selected-anchor')?.at(-1)?.[0]).toEqual({
+      x: 127.03,
+      y: 37.58,
+    })
+
+    wrapper.unmount()
+    expect(wrapper.emitted('selected-anchor')?.at(-1)?.[0]).toBeNull()
   })
 
   test('reacts to pin, focus, and interaction prop updates without replacing map truth', async () => {

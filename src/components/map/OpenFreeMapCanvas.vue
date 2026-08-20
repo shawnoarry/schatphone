@@ -24,6 +24,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  selectedPosition: {
+    type: Object,
+    default: null,
+  },
   interactive: {
     type: Boolean,
     default: true,
@@ -34,7 +38,14 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['place-pin', 'select-pin', 'map-interact', 'renderer-status', 'fallback'])
+const emit = defineEmits([
+  'place-pin',
+  'select-pin',
+  'selected-anchor',
+  'map-interact',
+  'renderer-status',
+  'fallback',
+])
 const { t } = useI18n()
 const mapRootRef = ref(null)
 const rendererStatus = ref('loading')
@@ -95,6 +106,24 @@ const focusMapOnPosition = (rawPosition) => {
     zoom: Math.max(mapInstance.getZoom(), 13.4),
     duration: 360,
   })
+}
+
+const emitSelectedAnchor = () => {
+  const position = resolveGeoPosition(props.selectedPosition)
+  if (!position || !mapInstance || !mapLoaded.value || !mapRootRef.value) {
+    emit('selected-anchor', null)
+    return
+  }
+  try {
+    const point = mapInstance.project([position.lng, position.lat])
+    const bounds = mapRootRef.value.getBoundingClientRect()
+    emit('selected-anchor', {
+      x: bounds.left + point.x,
+      y: bounds.top + point.y,
+    })
+  } catch {
+    emit('selected-anchor', null)
+  }
 }
 
 const createMarkerElement = (pin, pending = false) => {
@@ -254,8 +283,10 @@ const initializeMap = async () => {
       startupTimer = null
       if (!renderMarkers()) return
       focusMapOnPosition(props.focusPosition)
+      emitSelectedAnchor()
       setRendererStatus('ready')
     })
+    mapInstance.on('move', emitSelectedAnchor)
     mapInstance.on('error', (event) => {
       // Let recoverable tile errors settle while the style is still starting.
       if (!mapLoaded.value && !event?.sourceId && !event?.tile) {
@@ -268,7 +299,10 @@ const initializeMap = async () => {
     )
 
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => mapInstance?.resize())
+      resizeObserver = new ResizeObserver(() => {
+        mapInstance?.resize()
+        emitSelectedAnchor()
+      })
       resizeObserver.observe(mapRootRef.value)
     }
   } catch (error) {
@@ -302,6 +336,12 @@ watch(
 )
 
 watch(
+  () => props.selectedPosition,
+  emitSelectedAnchor,
+  { deep: true },
+)
+
+watch(
   () => props.interactive,
   (interactive) => setInteractionEnabled(interactive),
 )
@@ -312,6 +352,7 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   resizeObserver = null
   clearMarkers()
+  emit('selected-anchor', null)
   destroyMap()
   maplibre = null
 })

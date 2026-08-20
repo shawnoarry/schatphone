@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "chinese-font-selector": {
+      "source": "Songzhi-lab/chinese-font-selector",
+      "sourceType": "github",
+      "skillPath": "chinese-font-selector/SKILL.md",
+      "computedHash": "4ef7281a607839a169cd5e7a85c90f6c0c4745355891d0c406c5fa539289d3b4"
+    },
     "chinese-novelist": {
       "source": "penglonghuang/chinese-novelist-skill",
       "sourceType": "github",
@@ -98,6 +104,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "2da1d23b8f53cfe67f2e0b68924ab9f4ec400bb6480de097007eeaeb517d1722"
+    },
+    "ip-as-logo": {
+      "source": "s1dashu/ip-as-logo-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "138baf7f477bcee42705bca199caa4e2d5f679781f49435075f8e91a984c98a9"
     },
     "music": {
       "source": "elevenlabs/skills",

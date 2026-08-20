@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createMapPlaceMediaFallback } from '../../lib/map-place-media'
 
 const props = defineProps({
@@ -15,16 +15,20 @@ const props = defineProps({
   categoryLabel: { type: String, default: '' },
   contextLabel: { type: String, required: true },
   contextTone: { type: String, default: 'remote' },
+  anchor: { type: Object, default: null },
   primaryAction: {
     type: String,
     default: 'go',
-    validator: (value) => ['go', 'view_journey', 'enter', 'leave', 'none'].includes(value),
+    validator: (value) => ['go', 'view_journey', 'none'].includes(value),
+  },
+  entryAction: {
+    type: String,
+    default: 'unavailable',
+    validator: (value) => ['unavailable', 'enter', 'leave'].includes(value),
   },
   eventInvitation: { type: Object, default: null },
-  journeyLocked: { type: Boolean, default: false },
   canManage: { type: Boolean, default: false },
-  displayMode: { type: String, required: true },
-  displayOptions: { type: Array, default: () => [] },
+  pinVisible: { type: Boolean, default: true },
   t: { type: Function, required: true },
 })
 
@@ -37,20 +41,57 @@ const emit = defineEmits([
   'expand-event',
   'share',
   'manage',
-  'set-display-mode',
-  'set-start',
-  'set-current',
-  'delete',
+  'show-pin',
 ])
 
 const level = ref('overview')
 const mediaLoadFailed = ref(false)
+const cardRef = ref(null)
+const scrollRef = ref(null)
+const detailBackRef = ref(null)
+const entryNotice = ref('')
+const addressCopyNotice = ref('')
+const viewportSize = ref({ width: 1024, height: 768 })
+const cardSize = ref({ width: 360, height: 340 })
+let opener = null
+let cardResizeObserver = null
+let entryNoticeTimer = null
+let addressCopyNoticeTimer = null
+
+const resetCardScroll = () => {
+  if (scrollRef.value) scrollRef.value.scrollTop = 0
+}
+
+const openDetail = async () => {
+  level.value = 'detail'
+  await nextTick()
+  resetCardScroll()
+  detailBackRef.value?.focus?.({ preventScroll: true })
+}
+
+const showOverview = async () => {
+  level.value = 'overview'
+  await nextTick()
+  resetCardScroll()
+}
+
+const closeCard = () => emit('close')
+
+const handleDocumentKeydown = (event) => {
+  if (event.key !== 'Escape' || event.defaultPrevented) return
+  event.preventDefault()
+  closeCard()
+}
 
 watch(
   () => props.place?.placeId || props.place?.id,
-  () => {
+  async () => {
     level.value = 'overview'
     mediaLoadFailed.value = false
+    entryNotice.value = ''
+    addressCopyNotice.value = ''
+    await nextTick()
+    resetCardScroll()
   },
 )
 
@@ -68,6 +109,7 @@ const displayedMedia = computed(() => (
     : props.media
 ))
 const hasMediaImage = computed(() => Boolean(displayedMedia.value?.asset?.url))
+const isCategoryFallback = computed(() => displayedMedia.value?.kind === 'category_fallback')
 const mediaLabel = computed(() => props.t(
   displayedMedia.value?.labelZh || '',
   displayedMedia.value?.labelEn || '',
@@ -84,551 +126,761 @@ const mediaChanges = computed(() => props.t(
   displayedMedia.value?.source?.changesZh || '',
   displayedMedia.value?.source?.changesEn || '',
 ))
+const addressToCopy = computed(() => props.detail || props.secondaryDetail || '')
 const primaryLabel = computed(() =>
   props.primaryAction === 'view_journey'
-    ? props.t('查看当前行程', 'View current journey')
-    : props.primaryAction === 'enter'
-      ? props.t('进入', 'Enter')
-      : props.primaryAction === 'leave'
-        ? props.t('离开', 'Leave')
-        : props.t('前往', 'Go'),
+    ? props.t('查看行程', 'View journey')
+    : props.t('前往', 'Go'),
 )
 const primaryIcon = computed(() =>
   props.primaryAction === 'view_journey'
     ? 'fas fa-route'
-    : props.primaryAction === 'enter'
-      ? 'fas fa-door-open'
-      : props.primaryAction === 'leave'
-        ? 'fas fa-arrow-right-from-bracket'
-        : 'fas fa-location-arrow',
+    : 'fas fa-location-arrow',
 )
-const overviewActionsClass = computed(() => ({
-  'has-management': props.canManage,
-}))
+const entryLabel = computed(() => (
+  props.entryAction === 'leave'
+    ? props.t('离开', 'Leave')
+    : props.t('进入', 'Enter')
+))
+const entryIcon = computed(() => (
+  props.entryAction === 'leave' ? 'fas fa-arrow-right-from-bracket' : 'fas fa-door-open'
+))
+
+const cardLayout = computed(() => {
+  const viewportWidth = Math.max(320, Number(viewportSize.value.width) || 1024)
+  const viewportHeight = Math.max(480, Number(viewportSize.value.height) || 768)
+  const cardWidth = Math.min(
+    Math.max(280, Number(cardSize.value.width) || 360),
+    viewportWidth - 24,
+  )
+  const anchorX = Number.isFinite(Number(props.anchor?.x))
+    ? Number(props.anchor.x)
+    : viewportWidth / 2
+  const anchorY = Number.isFinite(Number(props.anchor?.y))
+    ? Number(props.anchor.y)
+    : viewportHeight / 2
+  const safeTop = viewportWidth < 720 ? 162 : 24
+  const safeBottom = viewportWidth < 720 ? 82 : 24
+  const gap = 18
+  const availableAbove = Math.max(0, anchorY - safeTop - gap)
+  const availableBelow = Math.max(0, viewportHeight - safeBottom - anchorY - gap)
+  const placement = availableAbove >= availableBelow ? 'above' : 'below'
+  const availableHeight = Math.max(180, placement === 'above' ? availableAbove : availableBelow)
+  const renderedHeight = Math.min(
+    Math.max(180, Number(cardSize.value.height) || (isDetail.value ? 480 : 340)),
+    availableHeight,
+  )
+  const left = Math.min(
+    viewportWidth - cardWidth - 12,
+    Math.max(12, anchorX - cardWidth / 2),
+  )
+  const unclampedTop = placement === 'above'
+    ? anchorY - gap - renderedHeight
+    : anchorY + gap
+  const top = Math.min(
+    viewportHeight - safeBottom - renderedHeight,
+    Math.max(safeTop, unclampedTop),
+  )
+  const pointerX = Math.min(cardWidth - 24, Math.max(24, anchorX - left))
+
+  return {
+    placement,
+    style: {
+      left: `${Math.round(left)}px`,
+      top: `${Math.round(top)}px`,
+      width: `${Math.round(cardWidth)}px`,
+      maxHeight: `${Math.round(availableHeight)}px`,
+      '--map-place-pointer-x': `${Math.round(pointerX)}px`,
+    },
+  }
+})
 
 const runPrimaryAction = () => {
   if (props.primaryAction === 'view_journey') emit('view-journey')
   else if (props.primaryAction === 'go') emit('go')
-  else if (props.primaryAction === 'enter') emit('enter')
-  else if (props.primaryAction === 'leave') emit('leave')
 }
+
+const runEntryAction = () => {
+  if (props.entryAction === 'enter') {
+    emit('enter')
+    return
+  }
+  if (props.entryAction === 'leave') {
+    emit('leave')
+    return
+  }
+  entryNotice.value = props.t('当前不在设施附近', 'You are not near this facility')
+  clearTimeout(entryNoticeTimer)
+  entryNoticeTimer = setTimeout(() => { entryNotice.value = '' }, 2600)
+}
+
+const copyTextFallback = (value) => {
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.append(textarea)
+  textarea.select()
+  const copied = document.execCommand?.('copy') === true
+  textarea.remove()
+  return copied
+}
+
+const copyAddress = async () => {
+  const value = addressToCopy.value
+  if (!value) return
+
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value)
+    else if (!copyTextFallback(value)) throw new Error('clipboard_unavailable')
+    addressCopyNotice.value = props.t('地址已复制', 'Address copied')
+  } catch {
+    addressCopyNotice.value = props.t('复制失败，请稍后重试', 'Copy failed. Please try again.')
+  }
+
+  clearTimeout(addressCopyNoticeTimer)
+  addressCopyNoticeTimer = setTimeout(() => { addressCopyNotice.value = '' }, 2400)
+}
+
+const syncViewportSize = () => {
+  viewportSize.value = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }
+}
+
+onMounted(() => {
+  opener = document.activeElement
+  document.addEventListener('keydown', handleDocumentKeydown)
+  syncViewportSize()
+  window.addEventListener('resize', syncViewportSize)
+  if (typeof ResizeObserver !== 'undefined') {
+    cardResizeObserver = new ResizeObserver(([entry]) => {
+      if (!entry?.contentRect) return
+      cardSize.value = {
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      }
+    })
+    if (cardRef.value) cardResizeObserver.observe(cardRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleDocumentKeydown)
+  window.removeEventListener('resize', syncViewportSize)
+  cardResizeObserver?.disconnect()
+  clearTimeout(entryNoticeTimer)
+  clearTimeout(addressCopyNoticeTimer)
+  if (opener?.isConnected) opener.focus?.({ preventScroll: true })
+})
 </script>
 
 <template>
-  <div class="map-place-focus-backdrop" @click.self="emit('close')">
-    <section
-      class="map-place-focus-sheet"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="name"
-      :style="{ '--map-place-tone': visual.tone }"
-      data-testid="map-place-detail-sheet"
-      data-surface="place-focus"
-      tabindex="-1"
-      @keydown.esc="emit('close')"
-    >
-      <div class="map-place-focus-handle" aria-hidden="true"></div>
-
+  <section
+    ref="cardRef"
+    class="map-place-focus-card"
+    :class="{ 'is-detail': isDetail, 'is-category-fallback': isCategoryFallback }"
+    role="region"
+    :aria-labelledby="`map-place-title-${place.placeId || place.id}`"
+    :style="[cardLayout.style, { '--map-place-tone': visual.tone }]"
+    :data-placement="cardLayout.placement"
+    data-testid="map-place-detail-sheet"
+    data-surface="place-focus"
+  >
+    <span class="map-place-focus-pointer" aria-hidden="true"></span>
+    <div ref="scrollRef" class="map-place-focus-scroll">
       <header class="map-place-focus-head">
-        <button
-          v-if="isDetail"
-          type="button"
-          class="map-place-focus-icon-button"
-          :aria-label="t('返回地点概览', 'Back to place overview')"
-          data-testid="map-place-detail-back"
-          @click="level = 'overview'"
-        >
-          <i class="fas fa-chevron-left" aria-hidden="true"></i>
-        </button>
-        <span v-else class="map-place-focus-icon" aria-hidden="true">
-          <i :class="visual.icon"></i>
-        </span>
-
-        <div class="map-place-focus-heading">
-          <div class="map-place-focus-kicker">
-            <span>{{ sourceLabel }}</span>
-            <span v-if="categoryLabel">{{ categoryLabel }}</span>
-          </div>
-          <h2>{{ name }}</h2>
-          <p v-if="secondaryName" class="map-place-focus-secondary-name" data-testid="map-place-secondary-name">
-            {{ secondaryName }}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          class="map-place-focus-icon-button"
-          :aria-label="t('关闭', 'Close')"
-          @click="emit('close')"
-        >
-          <i class="fas fa-xmark" aria-hidden="true"></i>
-        </button>
-      </header>
-
-      <figure
-        v-if="media"
-        class="map-place-focus-media"
-        :class="`is-${displayedMedia.kind}`"
-        data-testid="map-place-media"
+      <button
+        v-if="isDetail"
+        ref="detailBackRef"
+        type="button"
+        class="map-place-focus-icon-button"
+        :aria-label="t('返回地点概览', 'Back to place overview')"
+        data-testid="map-place-detail-back"
+        @click="showOverview"
       >
-        <div class="map-place-focus-media-frame">
-          <img
-            v-if="hasMediaImage"
-            :src="displayedMedia.asset.url"
-            :alt="mediaAlt"
-            width="1600"
-            height="900"
-            decoding="async"
-            data-testid="map-place-media-image"
-            @error="mediaLoadFailed = true"
-          />
-          <div v-else class="map-place-focus-media-fallback" data-testid="map-place-media-fallback">
-            <i :class="visual.icon" aria-hidden="true"></i>
-          </div>
-          <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+      </button>
+      <span v-else class="map-place-focus-icon" aria-hidden="true">
+        <i :class="visual.icon"></i>
+      </span>
+
+      <div class="map-place-focus-heading">
+        <div class="map-place-focus-kicker">
+          <span>{{ categoryLabel || sourceLabel }}</span>
+          <span v-if="categoryLabel && sourceLabel">{{ sourceLabel }}</span>
         </div>
-        <figcaption>
-          <span>{{ mediaNote }}</span>
-          <span v-if="displayedMedia.source?.creator" class="map-place-focus-media-credit">
-            <a
-              :href="displayedMedia.source.sourcePageUrl"
-              target="_blank"
-              rel="noreferrer noopener"
-              :aria-label="t('打开照片来源', 'Open photo source')"
-            >{{ displayedMedia.source.creator }}</a>
-            <span aria-hidden="true">·</span>
-            <a
-              v-if="displayedMedia.source.licenseUrl"
-              :href="displayedMedia.source.licenseUrl"
-              target="_blank"
-              rel="noreferrer noopener"
-            >{{ displayedMedia.source.licenseId }}</a>
-            <span v-else>{{ displayedMedia.source.licenseId }}</span>
-            <span v-if="mediaChanges" class="map-place-focus-media-changes">· {{ mediaChanges }}</span>
-          </span>
-        </figcaption>
-      </figure>
+        <h2 :id="`map-place-title-${place.placeId || place.id}`">{{ name }}</h2>
+        <p v-if="secondaryName" class="map-place-focus-secondary-name" data-testid="map-place-secondary-name">
+          {{ secondaryName }}
+        </p>
+      </div>
 
-      <template v-if="!isDetail">
-        <p v-if="summary" class="map-place-focus-summary">{{ summary }}</p>
-
-        <div
-          class="map-place-focus-context"
-          :class="`is-${contextTone}`"
-          data-testid="map-place-context"
-        >
-          <i class="fas fa-location-dot" aria-hidden="true"></i>
-          <span>{{ contextLabel }}</span>
-        </div>
-
-        <div
-          v-if="journeyLocked"
-          class="map-place-focus-journey-note"
-          data-testid="map-place-journey-lock"
-        >
-          <i class="fas fa-eye" aria-hidden="true"></i>
-          <span>{{ t('浏览此地点不会改变当前行程', 'Viewing this place will not change the current journey') }}</span>
-        </div>
-
-        <section
-          v-if="eventInvitation"
-          class="map-place-event-invitation"
-          data-testid="map-place-event-invitation"
-          aria-labelledby="map-place-event-invitation-title"
-        >
-          <span class="map-place-event-invitation-icon" aria-hidden="true">
-            <i class="fas fa-bolt"></i>
-          </span>
-          <div>
-            <h3 id="map-place-event-invitation-title">{{ eventInvitation.copy.title }}</h3>
-            <p>{{ eventInvitation.copy.summary }}</p>
-          </div>
+        <div class="map-place-focus-head-actions">
           <button
+            v-if="isDetail"
             type="button"
-            :aria-label="t('展开事件', 'Expand event')"
-            data-testid="map-place-expand-event"
-            @click="emit('expand-event')"
+            class="map-place-focus-icon-button"
+            :aria-label="t('分享地点', 'Share place')"
+            :title="t('分享地点', 'Share place')"
+            data-testid="map-place-share-chat"
+            @click="emit('share')"
           >
-            <i class="fas fa-chevron-right" aria-hidden="true"></i>
-          </button>
-        </section>
-
-        <button
-          v-if="primaryAction !== 'none'"
-          type="button"
-          class="map-place-focus-primary"
-          :class="{ 'is-leave': primaryAction === 'leave' }"
-          :data-testid="primaryAction === 'go'
-            ? 'map-place-use-destination'
-            : primaryAction === 'view_journey'
-              ? 'map-place-view-journey'
-              : primaryAction === 'enter'
-                ? 'map-place-enter'
-                : 'map-place-leave'"
-          @click="runPrimaryAction"
-        >
-          <i :class="primaryIcon" aria-hidden="true"></i>
-          <span>{{ primaryLabel }}</span>
-          <i class="fas fa-chevron-right" aria-hidden="true"></i>
-        </button>
-
-        <div class="map-place-focus-actions" :class="overviewActionsClass">
-          <button type="button" data-testid="map-place-open-detail" @click="level = 'detail'">
-            <i class="fas fa-circle-info" aria-hidden="true"></i>
-            <span>{{ t('详情', 'Details') }}</span>
-          </button>
-          <button type="button" data-testid="map-place-share-chat" @click="emit('share')">
             <i class="fas fa-share-nodes" aria-hidden="true"></i>
-            <span>{{ t('分享', 'Share') }}</span>
           </button>
           <button
-            v-if="canManage"
+            v-if="isDetail && canManage"
             type="button"
+            class="map-place-focus-icon-button"
+            :aria-label="t('管理地点', 'Manage place')"
+            :title="t('管理地点', 'Manage place')"
             data-testid="map-place-manage-pin"
             @click="emit('manage')"
           >
             <i class="fas fa-pen-to-square" aria-hidden="true"></i>
-            <span>{{ t('管理', 'Manage') }}</span>
+          </button>
+          <button
+            type="button"
+            class="map-place-focus-icon-button"
+            :aria-label="t('关闭', 'Close')"
+            :title="t('关闭', 'Close')"
+            @click="closeCard"
+          >
+            <i class="fas fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
-      </template>
+      </header>
 
-      <div v-else class="map-place-focus-detail" data-testid="map-place-detail-view">
-        <div class="map-place-focus-detail-copy">
-          <span>{{ t('地点信息', 'Place information') }}</span>
-          <p v-if="detail">{{ detail }}</p>
-          <p
-            v-if="secondaryDetail && secondaryDetail !== detail"
-            class="map-place-focus-secondary-detail"
-            data-testid="map-place-secondary-detail"
+    <template v-if="!isDetail">
+      <div class="map-place-overview">
+        <figure class="map-place-focus-media" data-testid="map-place-media">
+          <div class="map-place-focus-media-frame">
+            <img
+              v-if="hasMediaImage"
+              :src="displayedMedia.asset.url"
+              :alt="mediaAlt"
+              width="1600"
+              height="900"
+              decoding="async"
+              data-testid="map-place-media-image"
+              @error="mediaLoadFailed = true"
+            />
+            <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
+          </div>
+        </figure>
+
+        <div class="map-place-overview-copy">
+          <div class="map-place-introduction">
+            <span class="map-place-section-label">{{ t('关于这里', 'About this place') }}</span>
+            <p class="map-place-focus-summary" data-testid="map-place-summary">{{ summary }}</p>
+          </div>
+
+          <div
+            class="map-place-focus-context"
+            :class="`is-${contextTone}`"
+            data-testid="map-place-context"
           >
-            {{ secondaryDetail }}
+            <i class="fas fa-location-dot" aria-hidden="true"></i>
+            <span>{{ contextLabel }}</span>
+          </div>
+
+          <p v-if="isCategoryFallback" class="map-place-media-truth" data-testid="map-place-media-truth">
+            <i class="fas fa-shapes" aria-hidden="true"></i>
+            <span>{{ mediaNote }}</span>
           </p>
         </div>
+      </div>
 
-        <div class="map-place-language-control">
-          <span class="map-place-language-label">
-            <i class="fas fa-language" aria-hidden="true"></i>
-            {{ t('地名显示', 'Place names') }}
-          </span>
-          <div class="map-place-language-segments" role="group" :aria-label="t('地名显示语言', 'Place-name language')">
-            <button
-              v-for="option in displayOptions"
-              :key="option.id"
-              type="button"
-              :class="{ 'is-active': displayMode === option.id }"
-              :data-testid="`map-place-language-mode-${option.id}`"
-              :aria-label="t(option.titleZh, option.titleEn)"
-              :title="t(option.titleZh, option.titleEn)"
-              :aria-pressed="displayMode === option.id"
-              @click="emit('set-display-mode', option.id)"
-            >
-              {{ t(option.labelZh, option.labelEn) }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="!journeyLocked" class="map-place-focus-detail-actions">
-          <button type="button" data-testid="map-place-use-start" @click="emit('set-start')">
-            <i class="fas fa-route" aria-hidden="true"></i>
-            <span>
-              <strong>{{ t('设为行程起点', 'Use as trip start') }}</strong>
-              <small>{{ t('用于下一段地图行程', 'For the next Map journey') }}</small>
-            </span>
-            <i class="fas fa-chevron-right" aria-hidden="true"></i>
-          </button>
-          <button type="button" data-testid="map-place-set-current" @click="emit('set-current')">
-            <i class="fas fa-crosshairs" aria-hidden="true"></i>
-            <span>
-              <strong>{{ t('立即修改位置', 'Relocate now') }}</strong>
-              <small>{{ t('跳过路程，不产生行程记录', 'Skips travel and creates no journey') }}</small>
-            </span>
-            <i class="fas fa-chevron-right" aria-hidden="true"></i>
-          </button>
-        </div>
-
-        <button
-          v-if="canManage"
-          type="button"
-          class="map-place-focus-delete"
-          data-testid="map-place-delete-pin"
-          @click="emit('delete')"
-        >
-          <i class="fas fa-trash-can" aria-hidden="true"></i>
-          {{ t('删除地点', 'Delete place') }}
+      <div
+        v-if="!pinVisible"
+        class="map-place-focus-pin-state"
+        data-testid="map-place-pin-hidden"
+      >
+        <i class="fas fa-eye-slash" aria-hidden="true"></i>
+        <span>{{ t('这个图钉当前没有显示在地图上', 'This pin is currently hidden from the map') }}</span>
+        <button type="button" data-testid="map-place-show-pin" @click="emit('show-pin')">
+          {{ t('恢复显示', 'Show pin') }}
         </button>
       </div>
-    </section>
-  </div>
+
+      <section
+        v-if="eventInvitation"
+        class="map-place-event-invitation"
+        data-testid="map-place-event-invitation"
+        aria-labelledby="map-place-event-invitation-title"
+      >
+        <span class="map-place-event-invitation-icon" aria-hidden="true">
+          <i class="fas fa-bolt"></i>
+        </span>
+        <div>
+          <h3 id="map-place-event-invitation-title">{{ eventInvitation.copy.title }}</h3>
+          <p>{{ eventInvitation.copy.summary }}</p>
+        </div>
+        <button
+          type="button"
+          :aria-label="t('打开互动', 'Open interaction')"
+          :title="t('打开互动', 'Open interaction')"
+          data-testid="map-place-expand-event"
+          @click="emit('expand-event')"
+        >
+          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </button>
+      </section>
+
+      <div class="map-place-focus-actions">
+        <button
+          v-if="['go', 'view_journey'].includes(primaryAction)"
+          type="button"
+          class="map-place-focus-primary"
+          :data-testid="primaryAction === 'go'
+            ? 'map-place-use-destination'
+            : 'map-place-view-journey'"
+          @click="runPrimaryAction"
+        >
+          <i :class="primaryIcon" aria-hidden="true"></i>
+          <span>{{ primaryLabel }}</span>
+        </button>
+
+        <button type="button" class="map-place-focus-secondary" data-testid="map-place-open-detail" @click="openDetail">
+          <i class="fas fa-circle-info" aria-hidden="true"></i>
+          <span>{{ t('地点详情', 'Place details') }}</span>
+        </button>
+        <div class="map-place-entry-slot">
+          <button
+            type="button"
+            class="map-place-entry-action"
+            :class="`is-${entryAction}`"
+            :aria-label="entryAction === 'unavailable'
+              ? t('进入地点，当前不在设施附近', 'Enter place, currently not near this facility')
+              : entryLabel"
+            :title="entryAction === 'unavailable'
+              ? t('当前不在设施附近', 'You are not near this facility')
+              : entryLabel"
+            :data-entry-state="entryAction"
+            :data-testid="entryAction === 'enter'
+              ? 'map-place-enter'
+              : entryAction === 'leave'
+                ? 'map-place-leave'
+                : 'map-place-entry-action'"
+            @click="runEntryAction"
+          >
+            <i :class="entryIcon" aria-hidden="true"></i>
+            <span>{{ entryLabel }}</span>
+          </button>
+          <p v-if="entryNotice" class="map-place-entry-notice" role="status" data-testid="map-place-entry-notice">
+            {{ entryNotice }}
+          </p>
+        </div>
+      </div>
+    </template>
+
+    <div v-else class="map-place-focus-detail" data-testid="map-place-detail-view">
+      <figure class="map-place-detail-media" data-testid="map-place-detail-media">
+        <img
+          v-if="hasMediaImage"
+          :src="displayedMedia.asset.url"
+          :alt="mediaAlt"
+          width="1600"
+          height="900"
+          decoding="async"
+          @error="mediaLoadFailed = true"
+        />
+        <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
+      </figure>
+
+      <div class="map-place-detail-copy">
+        <section class="map-place-detail-about" data-testid="map-place-about-section">
+          <span class="map-place-section-label">{{ t('关于这里', 'About this place') }}</span>
+          <p class="map-place-detail-summary">{{ summary }}</p>
+        </section>
+
+        <div class="map-place-detail-location" data-testid="map-place-location-section">
+          <i class="fas fa-location-dot" aria-hidden="true"></i>
+          <span class="map-place-detail-address-copy">
+            <strong v-if="detail">{{ detail }}</strong>
+            <small v-if="secondaryDetail && secondaryDetail !== detail" data-testid="map-place-secondary-detail">
+              {{ secondaryDetail }}
+            </small>
+            <small>{{ contextLabel }}</small>
+            <small
+              v-if="addressCopyNotice"
+              class="map-place-copy-notice"
+              role="status"
+              data-testid="map-place-address-copy-notice"
+            >{{ addressCopyNotice }}</small>
+          </span>
+          <button
+            v-if="addressToCopy"
+            type="button"
+            class="map-place-address-copy-button"
+            :aria-label="t('复制地址', 'Copy address')"
+            :title="t('复制地址', 'Copy address')"
+            data-testid="map-place-copy-address"
+            @click="copyAddress"
+          >
+            <i class="fas fa-copy" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <div
+          v-if="!pinVisible"
+          class="map-place-detail-inline-action"
+          data-testid="map-place-pin-hidden"
+        >
+          <span>{{ t('图钉已隐藏', 'Pin hidden') }}</span>
+          <button type="button" data-testid="map-place-show-pin" @click="emit('show-pin')">
+            {{ t('恢复显示', 'Show pin') }}
+          </button>
+        </div>
+
+        <details class="map-place-media-source" data-testid="map-place-media-source">
+          <summary>
+            <span>
+              <i class="fas fa-circle-info" aria-hidden="true"></i>
+              {{ t('图片信息', 'Image information') }}
+            </span>
+            <i class="fas fa-chevron-down map-place-media-source-chevron" aria-hidden="true"></i>
+          </summary>
+          <div class="map-place-media-source-content">
+            <span>{{ mediaNote }}</span>
+            <span class="map-place-media-links">
+              <a
+                v-if="displayedMedia.source?.sourcePageUrl"
+                :href="displayedMedia.source.sourcePageUrl"
+                target="_blank"
+                rel="noreferrer noopener"
+              >{{ displayedMedia.source.creator || t('照片来源', 'Photo source') }}</a>
+              <a
+                v-if="displayedMedia.source?.licenseUrl"
+                :href="displayedMedia.source.licenseUrl"
+                target="_blank"
+                rel="noreferrer noopener"
+              >{{ displayedMedia.source.licenseId }}</a>
+              <span v-if="mediaChanges">{{ mediaChanges }}</span>
+            </span>
+          </div>
+        </details>
+      </div>
+    </div>
+    </div>
+  </section>
 </template>
 
 <style scoped>
-.map-place-focus-backdrop {
+.map-place-focus-card {
   position: fixed;
-  inset: 0;
   z-index: 70;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(16, 27, 21, 0.24);
-}
-
-.map-place-focus-sheet {
-  width: min(100%, 720px);
-  max-height: min(76vh, 620px);
-  overflow-y: auto;
-  border: 1px solid #d9e1dc;
-  border-radius: 8px 8px 0 0;
-  background: #fbfcfb;
-  padding: 8px 18px calc(20px + env(safe-area-inset-bottom));
+  max-width: calc(100vw - 24px);
+  overflow: visible;
   color: #17211d;
-  box-shadow: 0 -14px 42px rgba(25, 39, 31, 0.18);
+  filter: drop-shadow(0 18px 34px rgba(18, 38, 27, 0.2));
+  animation: map-place-card-enter 170ms cubic-bezier(0.2, 0.78, 0.32, 1) both;
 }
 
-.map-place-focus-handle {
-  width: 38px;
-  height: 4px;
-  margin: 0 auto 12px;
-  border-radius: 999px;
-  background: #cbd3ce;
+.map-place-focus-scroll {
+  max-height: inherit;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(207, 219, 212, 0.94);
+  border-radius: 8px;
+  background: rgba(252, 253, 252, 0.96);
+  padding: 12px;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.map-place-focus-pointer {
+  position: absolute;
+  left: var(--map-place-pointer-x);
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border: solid rgba(207, 219, 212, 0.94);
+  background: rgba(252, 253, 252, 0.98);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.map-place-focus-card[data-placement='above'] .map-place-focus-pointer {
+  bottom: -6px;
+  border-width: 0 1px 1px 0;
+}
+
+.map-place-focus-card[data-placement='below'] .map-place-focus-pointer {
+  top: -6px;
+  border-width: 1px 0 0 1px;
+}
+
+@keyframes map-place-card-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .map-place-focus-head {
+  position: sticky;
+  top: -12px;
+  z-index: 3;
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 38px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: start;
-  gap: 11px;
+  gap: 10px;
+  margin: -2px -2px 0;
+  padding: 2px 2px 10px;
+  background: linear-gradient(to bottom, rgba(252, 253, 252, 0.99) 78%, rgba(252, 253, 252, 0));
 }
+
+.map-place-focus-head-actions { display: flex; align-items: center; gap: 5px; }
 
 .map-place-focus-icon,
 .map-place-focus-icon-button {
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .map-place-focus-icon {
-  width: 46px;
-  height: 46px;
-  background: color-mix(in srgb, var(--map-place-tone) 14%, white);
+  width: 40px;
+  height: 40px;
+  background: color-mix(in srgb, var(--map-place-tone) 13%, white);
   color: var(--map-place-tone);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .map-place-focus-icon-button {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border: 1px solid #dce3de;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
   color: #526158;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
+
+.map-place-focus-icon-button:hover { border-color: #b9cbc1; background: #f3f7f4; color: #17664f; }
+.map-place-focus-icon-button:active { transform: scale(0.96); }
 
 .map-place-focus-heading { min-width: 0; }
-.map-place-focus-kicker { display: flex; min-width: 0; flex-wrap: wrap; gap: 5px 8px; color: #718078; font-size: 9px; font-weight: 800; }
-.map-place-focus-kicker span + span::before { content: '/'; margin-right: 8px; color: #acb5af; }
-.map-place-focus-heading h2 { overflow-wrap: anywhere; margin-top: 3px; font-size: 18px; font-weight: 850; line-height: 1.25; }
-.map-place-focus-secondary-name { margin-top: 2px; color: #53665c; font-size: 11px; font-weight: 750; }
-.map-place-focus-summary { margin-top: 13px; color: #5d6d64; font-size: 11px; line-height: 1.55; }
+.map-place-focus-kicker { display: flex; min-width: 0; flex-wrap: wrap; gap: 4px 7px; color: #718078; font-size: 9px; font-weight: 800; }
+.map-place-focus-kicker span + span::before { content: '/'; margin-right: 7px; color: #acb5af; }
+.map-place-focus-heading h2 { overflow-wrap: anywhere; margin-top: 3px; font-size: 17px; font-weight: 850; line-height: 1.24; }
+.map-place-focus-secondary-name { margin-top: 2px; color: #607168; font-size: 10px; font-weight: 700; }
 
-.map-place-focus-media {
-  margin: 14px -18px 0;
-  border-top: 1px solid #e1e6e3;
-  border-bottom: 1px solid #e1e6e3;
-  background: #eef2ef;
-}
+.map-place-overview { min-width: 0; margin-top: 2px; }
 
-.map-place-focus-media-frame {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: #e4eae6;
-}
+.map-place-focus-media { min-width: 0; overflow: hidden; margin: 0 -12px; background: #e7ece9; }
+.map-place-focus-media-frame,
+.map-place-detail-media { position: relative; overflow: hidden; background: #e4eae6; }
+.map-place-focus-media-frame { aspect-ratio: 16 / 7; }
+.map-place-focus-media img,
+.map-place-detail-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-.map-place-focus-media img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.map-place-focus-media-fallback {
-  display: grid;
-  width: 100%;
-  height: 100%;
-  place-items: center;
-  border-block: 1px solid color-mix(in srgb, var(--map-place-tone) 24%, transparent);
-  background: color-mix(in srgb, var(--map-place-tone) 12%, #edf2ee);
-  color: color-mix(in srgb, var(--map-place-tone) 74%, #27352e);
-}
-
-.map-place-focus-media-fallback::before {
+.is-category-fallback .map-place-focus-media-frame::after,
+.is-category-fallback .map-place-detail-media::after {
   position: absolute;
-  inset: 15% 9%;
-  border: 1px solid color-mix(in srgb, var(--map-place-tone) 26%, transparent);
+  inset: 0;
+  background: color-mix(in srgb, var(--map-place-tone) 14%, transparent);
   content: '';
-}
-
-.map-place-focus-media-fallback i {
-  position: relative;
-  font-size: 38px;
+  pointer-events: none;
 }
 
 .map-place-focus-media-kind {
   position: absolute;
-  top: 10px;
-  left: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 6px;
-  background: rgba(22, 31, 27, 0.78);
-  padding: 5px 7px;
+  top: 7px;
+  left: 7px;
+  max-width: calc(100% - 14px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 5px;
+  background: rgba(21, 31, 26, 0.74);
+  padding: 4px 6px;
   color: #fff;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 850;
   line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
 }
 
-.map-place-focus-media figcaption {
-  display: grid;
-  gap: 3px;
-  padding: 8px 18px 9px;
-  color: #5c6b63;
-  font-size: 9px;
-  line-height: 1.4;
-}
+.map-place-overview-copy { display: flex; min-width: 0; flex-direction: column; padding-top: 11px; }
+.map-place-introduction { min-width: 0; }
+.map-place-section-label { display: block; margin-bottom: 4px; color: #76837c; font-size: 8px; font-weight: 850; letter-spacing: 0; }
+.map-place-focus-summary { display: -webkit-box; overflow: hidden; color: #3e4f46; font-size: 11px; font-weight: 650; line-height: 1.55; text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 
-.map-place-focus-media-credit {
+.map-place-focus-context {
   display: flex;
   min-width: 0;
-  flex-wrap: wrap;
-  gap: 0 4px;
-  color: #7a8780;
-}
-
-.map-place-focus-media-credit a {
-  color: #315f50;
-  font-weight: 750;
-  text-decoration: underline;
-  text-decoration-color: #a8bbb1;
-  text-underline-offset: 2px;
-}
-
-.map-place-focus-media-changes { color: #7a8780; }
-
-.map-place-focus-context,
-.map-place-focus-journey-note {
-  display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 13px;
-  border: 1px solid #dbe3de;
-  border-radius: 7px;
-  background: #f2f6f3;
-  padding: 9px 10px;
-  color: #466055;
+  gap: 7px;
+  margin-top: 8px;
+  color: #416052;
   font-size: 10px;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
-.map-place-focus-context i,
-.map-place-focus-journey-note i { flex: 0 0 auto; color: #17664f; }
-.map-place-focus-context.is-current { border-color: #b9d8c9; background: #edf7f1; color: #165741; }
-.map-place-focus-context.is-journey { border-color: #c7d7e2; background: #f0f5f8; color: #31576d; }
-.map-place-focus-journey-note { margin-top: 7px; background: #f7f9f7; color: #617068; font-weight: 700; }
+.map-place-focus-context i { flex: 0 0 auto; color: #17664f; }
+.map-place-focus-context.is-current { color: #165741; }
+.map-place-focus-context.is-journey { color: #31576d; }
+
+.map-place-media-truth { display: flex; min-width: 0; align-items: center; gap: 6px; margin-top: 7px; color: #7a8780; font-size: 8.5px; font-weight: 650; line-height: 1.35; }
+.map-place-media-truth i { flex: 0 0 auto; color: var(--map-place-tone); }
+
+.map-place-focus-pin-state,
+.map-place-detail-inline-action {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  border-top: 1px solid #e3e8e5;
+  padding-top: 9px;
+  color: #665f4c;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.map-place-focus-pin-state > i { color: #8c7032; }
+.map-place-focus-pin-state button,
+.map-place-detail-inline-action button { min-height: 30px; border: 1px solid #d9dfdb; border-radius: 6px; background: #fff; padding: 0 8px; color: #315246; font-size: 9px; font-weight: 850; }
 
 .map-place-event-invitation {
   display: grid;
   min-width: 0;
-  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
   align-items: center;
-  gap: 9px;
-  margin-top: 12px;
-  border: 1px solid #e3c893;
+  gap: 8px;
+  margin-top: 10px;
+  border: 1px solid #e4ca95;
   border-radius: 7px;
-  background: #fff9eb;
-  padding: 9px;
+  background: #fff9ec;
+  padding: 8px;
   color: #5b4318;
 }
 
-.map-place-event-invitation-icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 7px;
-  background: #b45309;
-  color: #fff;
-  font-size: 12px;
-}
-
+.map-place-event-invitation-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 6px; background: #a95a0c; color: #fff; font-size: 11px; }
 .map-place-event-invitation h3,
 .map-place-event-invitation p { overflow-wrap: anywhere; }
 .map-place-event-invitation h3 { font-size: 10px; font-weight: 850; line-height: 1.35; }
-.map-place-event-invitation p { margin-top: 2px; color: #765f34; font-size: 9px; line-height: 1.45; }
-.map-place-event-invitation button {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 7px;
-  background: #fff;
-  color: #8d4d09;
+.map-place-event-invitation p { margin-top: 2px; color: #765f34; font-size: 9px; line-height: 1.4; }
+.map-place-event-invitation button { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 6px; background: #fff; color: #8d4d09; }
+
+.map-place-focus-actions { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(70px, 0.72fr); align-items: center; gap: 7px; margin-top: 11px; border-top: 1px solid #e3e8e5; padding-top: 10px; }
+.map-place-focus-primary,
+.map-place-focus-secondary,
+.map-place-focus-tool,
+.map-place-entry-action { display: inline-flex; min-width: 0; height: 40px; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; font-size: 10px; font-weight: 850; transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
+.map-place-focus-primary { background: #17664f; padding: 0 12px; color: #fff; }
+.map-place-focus-secondary { border: 1px solid #dce3de; background: #fff; padding: 0 10px; color: #40544a; }
+.map-place-focus-secondary i { color: var(--map-place-tone); }
+.map-place-focus-tool { width: 40px; flex: 0 0 40px; border: 1px solid #dce3de; background: #fff; color: var(--map-place-tone); }
+.map-place-entry-slot { position: relative; min-width: 0; grid-column: 3; }
+.map-place-entry-action { width: 100%; border: 1px solid color-mix(in srgb, var(--map-place-tone) 50%, #dce3de); background: color-mix(in srgb, var(--map-place-tone) 12%, white); padding: 0 9px; color: var(--map-place-tone); }
+.map-place-focus-primary { grid-column: 1; }
+.map-place-focus-secondary { grid-column: 2; }
+.map-place-entry-action.is-unavailable { border-color: #dfe4e1; background: #f2f4f3; color: #9aa39e; }
+.map-place-entry-action.is-unavailable:hover { border-color: #d9dfdc; background: #eef1ef; color: #8f9994; }
+.map-place-entry-action.is-leave { border-color: #d8dedb; background: #fff; color: #536159; }
+.map-place-entry-notice { position: absolute; z-index: 4; right: 0; bottom: calc(100% + 7px); width: max-content; max-width: min(210px, calc(100vw - 32px)); margin: 0; border: 1px solid #ddd3bd; border-radius: 6px; background: #fffdf8; padding: 6px 8px; box-shadow: 0 5px 14px rgb(58 50 34 / 14%); color: #6f5a35; font-size: 9px; font-weight: 750; line-height: 1.35; pointer-events: none; text-align: left; }
+.map-place-entry-notice::after { position: absolute; right: 24px; bottom: -5px; width: 8px; height: 8px; border-right: 1px solid #ddd3bd; border-bottom: 1px solid #ddd3bd; background: #fffdf8; content: ''; transform: rotate(45deg); }
+.map-place-focus-primary:hover { background: #125640; }
+.map-place-focus-secondary:hover,
+.map-place-focus-tool:hover,
+.map-place-entry-action:hover { border-color: #b8c9bf; background: #f3f7f4; }
+.map-place-focus-primary:active,
+.map-place-focus-secondary:active,
+.map-place-focus-tool:active,
+.map-place-entry-action:active { transform: scale(0.97); }
+
+.map-place-focus-detail { margin-top: 2px; }
+.map-place-detail-media { aspect-ratio: 16 / 7; margin: 0 -12px; }
+.map-place-detail-copy { padding-top: 12px; }
+.map-place-detail-about { min-width: 0; }
+.map-place-detail-summary { color: #33483e; font-size: 11.5px; font-weight: 650; line-height: 1.62; text-wrap: pretty; }
+
+.map-place-detail-location { display: grid; min-width: 0; grid-template-columns: 18px minmax(0, 1fr) 34px; align-items: start; gap: 8px; margin-top: 12px; border-top: 1px solid #e3e8e5; padding-top: 11px; color: #43564d; }
+.map-place-detail-location > i { padding-top: 2px; color: #17664f; text-align: center; }
+.map-place-detail-address-copy { display: grid; min-width: 0; gap: 3px; }
+.map-place-detail-location strong { overflow-wrap: anywhere; font-size: 10px; line-height: 1.45; }
+.map-place-detail-location small { overflow-wrap: anywhere; color: #748179; font-size: 9px; font-weight: 650; line-height: 1.4; }
+.map-place-address-copy-button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid #dce3de; border-radius: 7px; background: #fff; color: #315f50; transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, transform 140ms ease; }
+.map-place-address-copy-button:hover { border-color: #b8c9bf; background: #f3f7f4; color: #17664f; }
+.map-place-address-copy-button:active { transform: scale(0.96); }
+.map-place-copy-notice { color: #17664f !important; font-weight: 800 !important; }
+.map-place-detail-inline-action { grid-template-columns: minmax(0, 1fr) auto; }
+
+.map-place-media-source { margin-top: 12px; border-top: 1px solid #e3e8e5; padding-top: 7px; color: #75827b; font-size: 8.5px; line-height: 1.4; }
+.map-place-media-source summary { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 10px; border-radius: 6px; padding: 0 7px; color: #526159; cursor: pointer; font-size: 9px; font-weight: 800; list-style: none; }
+.map-place-media-source summary::-webkit-details-marker { display: none; }
+.map-place-media-source summary:hover { background: #f3f6f4; color: #315f50; }
+.map-place-media-source summary > span { display: inline-flex; min-width: 0; align-items: center; gap: 7px; }
+.map-place-media-source summary > span i { color: #17664f; }
+.map-place-media-source-chevron { flex: 0 0 auto; color: #87938d; font-size: 8px; transition: transform 150ms ease; }
+.map-place-media-source[open] .map-place-media-source-chevron { transform: rotate(180deg); }
+.map-place-media-source-content { display: grid; gap: 5px; padding: 3px 7px 7px 25px; }
+.map-place-media-links { display: flex; min-width: 0; flex-wrap: wrap; gap: 4px 9px; }
+.map-place-media-source a { color: #315f50; font-weight: 750; text-decoration: underline; text-decoration-color: #a8bbb1; text-underline-offset: 2px; }
+button:focus-visible,
+a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .map-place-focus-card { animation: none; }
+  .map-place-focus-icon-button,
+  .map-place-focus-primary,
+  .map-place-focus-secondary,
+  .map-place-focus-tool,
+  .map-place-entry-action,
+  .map-place-address-copy-button,
+  .map-place-media-source-chevron { transition: none; }
 }
-
-.map-place-focus-primary {
-  display: grid;
-  width: 100%;
-  min-height: 48px;
-  grid-template-columns: 18px minmax(0, 1fr) 12px;
-  align-items: center;
-  gap: 9px;
-  margin-top: 14px;
-  border-radius: 7px;
-  background: #17664f;
-  padding: 0 14px;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 850;
-  text-align: left;
-}
-
-.map-place-focus-primary i:last-child { font-size: 8px; text-align: right; }
-.map-place-focus-primary.is-leave { border: 1px solid #d7dfda; background: #fff; color: #40544a; }
-.map-place-focus-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 8px; }
-.map-place-focus-actions.has-management { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.map-place-focus-actions button { display: flex; min-width: 0; min-height: 46px; align-items: center; justify-content: center; gap: 7px; border: 1px solid #dce3de; border-radius: 7px; background: #fff; color: #40544a; font-size: 10px; font-weight: 800; }
-.map-place-focus-actions button i { color: var(--map-place-tone); }
-
-.map-place-focus-detail { margin-top: 15px; }
-.map-place-focus-detail-copy { border-bottom: 1px solid #e2e7e3; padding-bottom: 13px; }
-.map-place-focus-detail-copy > span { color: #718078; font-size: 9px; font-weight: 850; }
-.map-place-focus-detail-copy p { margin-top: 5px; color: #405149; font-size: 11px; line-height: 1.55; overflow-wrap: anywhere; }
-.map-place-focus-detail-copy .map-place-focus-secondary-detail { color: #7a8780; font-size: 10px; }
-.map-place-language-control { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; margin-top: 13px; }
-.map-place-language-label { display: inline-flex; min-width: 0; align-items: center; gap: 6px; color: #52635a; font-size: 9px; font-weight: 800; white-space: nowrap; }
-.map-place-language-label i { color: #17664f; font-size: 11px; }
-.map-place-language-segments { display: grid; min-width: 0; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid #d7dfda; border-radius: 7px; background: #f4f7f5; }
-.map-place-language-segments button { min-width: 0; min-height: 34px; border-left: 1px solid #d7dfda; padding: 0 5px; color: #66746d; font-size: 9px; font-weight: 850; white-space: nowrap; }
-.map-place-language-segments button:first-child { border-left: 0; }
-.map-place-language-segments button.is-active { background: #17664f; color: #fff; }
-
-.map-place-focus-detail-actions { margin-top: 14px; border-top: 1px solid #e2e7e3; }
-.map-place-focus-detail-actions button { display: grid; width: 100%; min-height: 54px; grid-template-columns: 28px minmax(0, 1fr) 10px; align-items: center; gap: 9px; border-bottom: 1px solid #e2e7e3; color: #315246; text-align: left; }
-.map-place-focus-detail-actions button > i:first-child { color: #17664f; text-align: center; }
-.map-place-focus-detail-actions button > i:last-child { color: #9aa59f; font-size: 8px; }
-.map-place-focus-detail-actions strong,
-.map-place-focus-detail-actions small { display: block; }
-.map-place-focus-detail-actions strong { font-size: 10px; }
-.map-place-focus-detail-actions small { margin-top: 3px; color: #77847d; font-size: 9px; font-weight: 650; }
-.map-place-focus-delete { display: inline-flex; min-height: 40px; align-items: center; gap: 7px; margin-top: 12px; color: #a54238; font-size: 10px; font-weight: 800; }
-
-button:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
 
 @media (min-width: 720px) {
-  .map-place-focus-sheet {
-    max-height: min(92vh, 760px);
-    margin-bottom: 18px;
-    border-radius: 8px;
+  .map-place-focus-card { max-width: 408px; }
+}
+
+@media (min-width: 720px) and (max-height: 820px) {
+  .map-place-focus-media-frame { height: 128px; aspect-ratio: auto; }
+  .map-place-focus-summary { -webkit-line-clamp: 2; }
+  .map-place-media-truth { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .map-place-media-truth span { overflow: hidden; text-overflow: ellipsis; }
+  .map-place-focus-actions { margin-top: 8px; padding-top: 8px; }
+  .map-place-focus-primary,
+  .map-place-focus-secondary,
+  .map-place-entry-action { height: 38px; }
+}
+
+@media (max-width: 719px) and (max-height: 880px) {
+  .map-place-focus-head { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; padding-bottom: 7px; }
+  .map-place-focus-icon { width: 34px; height: 34px; }
+  .map-place-focus-icon-button { width: 32px; height: 32px; }
+  .map-place-focus-heading h2 { font-size: 15px; }
+  .map-place-focus-media-frame { height: 64px; aspect-ratio: auto; }
+  .map-place-overview-copy { padding-top: 7px; }
+  .map-place-section-label { margin-bottom: 2px; }
+  .map-place-focus-summary { font-size: 10.5px; line-height: 1.42; -webkit-line-clamp: 2; }
+  .is-category-fallback .map-place-focus-summary { -webkit-line-clamp: 1; }
+  .map-place-focus-context { margin-top: 5px; font-size: 9.5px; }
+  .map-place-media-truth { overflow: hidden; margin-top: 4px; text-overflow: ellipsis; white-space: nowrap; }
+  .map-place-media-truth span { overflow: hidden; text-overflow: ellipsis; }
+  .map-place-focus-actions { gap: 5px; margin-top: 5px; padding-top: 5px; }
+  .map-place-focus-primary,
+  .map-place-focus-secondary,
+  .map-place-entry-action { height: 34px; }
+
+  .map-place-focus-card.is-detail .map-place-focus-head {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
   }
+
+  .map-place-focus-card.is-detail .map-place-detail-media { aspect-ratio: 16 / 7; }
+  .map-place-focus-card.is-detail .map-place-detail-summary { font-size: 11.5px; line-height: 1.62; }
+}
+
+@media (max-width: 360px) {
+  .map-place-focus-actions { grid-template-columns: repeat(2, minmax(0, 1fr)) 68px; gap: 5px; }
+  .map-place-focus-primary,
+  .map-place-focus-secondary,
+  .map-place-entry-action { padding-inline: 8px; }
 }
 </style>

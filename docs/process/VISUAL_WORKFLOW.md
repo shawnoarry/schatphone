@@ -468,6 +468,8 @@ These are expected in `.agents/skills` for repo-local visual work:
 - use `frontend-design` when a surface needs visual rebuilding or a deliberate polish pass;
 - use `redesign-existing-projects` when the primary task is auditing and improving an existing surface without replacing its product structure or framework;
 - use `ui-ux-pro-max` when a design choice needs a bounded local evidence lookup across product patterns, typography, color, accessibility, Vue, charts, icons, or motion;
+- use `chinese-font-selector` when Chinese font licensing, CJK/Latin pairing, or Chinese typography hierarchy is the material design decision;
+- use `ip-as-logo` when the accepted slice needs a compact product-owned IP/mascot logo direction or candidate brief;
 - use `image-to-code` when the source image itself is the contract and the task needs 750px 1:1 restoration, transparent PNG slices, or strict screenshot/design-export matching;
 - use `gpt-image` when a dedicated asset-production round needs a close prompt pattern for product/food imagery, brand systems, posters, UI mockups, information graphics, illustration, character work, or reference-image editing; load only the nearest atlas category and rewrite the result for the accepted SchatPhone art direction;
 - treat `gpt-image` as a reference and prompt-craft specialist. Project-native `imagegen` or `codex-image` remains the default execution path; do not run the bundled CLI, read a local `.env`, use its moving-`main` `uvx` fallback, or make a billable API call unless the user explicitly approves that local-key execution and cost boundary;

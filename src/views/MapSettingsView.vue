@@ -5,6 +5,7 @@ import { useI18n } from '../composables/useI18n'
 import { normalizeHomePageQuery } from '../lib/navigation-return'
 import { getRecommendedMapPackIdForWorldPack } from '../lib/map-packs'
 import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
+import { MAP_PLACE_DISPLAY_MODE } from '../lib/map-place-localization'
 import { useGalleryStore } from '../stores/gallery'
 import { useImageGenerationStore } from '../stores/imageGeneration'
 import { useMapStore } from '../stores/map'
@@ -28,6 +29,13 @@ const customPreviewMap = reactive({})
 const generatedCandidate = ref(null)
 const generationBusy = ref(false)
 const feedback = ref({ tone: '', text: '' })
+
+const MAP_PLACE_DISPLAY_OPTIONS = Object.freeze([
+  { id: MAP_PLACE_DISPLAY_MODE.SYSTEM, labelZh: '系统', labelEn: 'Auto', titleZh: '跟随系统语言', titleEn: 'Follow system language' },
+  { id: MAP_PLACE_DISPLAY_MODE.ZH, labelZh: '中文', labelEn: '中文', titleZh: '显示中文地名', titleEn: 'Show Chinese place names' },
+  { id: MAP_PLACE_DISPLAY_MODE.EN, labelZh: 'EN', labelEn: 'EN', titleZh: '显示英文地名', titleEn: 'Show English place names' },
+  { id: MAP_PLACE_DISPLAY_MODE.BILINGUAL, labelZh: '双语', labelEn: 'Both', titleZh: '同时显示中英文地名', titleEn: 'Show Chinese and English place names' },
+])
 
 const importForm = reactive({
   name: '',
@@ -384,6 +392,33 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScopeId))
         </button>
       </section>
 
+      <section class="map-name-section" data-testid="map-place-language-section">
+        <div class="map-section-heading">
+          <div>
+            <span>{{ t('地图显示', 'Map display') }}</span>
+            <h2>{{ t('地名语言', 'Place-name language') }}</h2>
+          </div>
+        </div>
+        <p class="map-name-description">
+          {{ t('应用到图钉、地点搜索和地点卡，不改变地点本身的数据。', 'Used across pins, place search, and place cards without changing place data.') }}
+        </p>
+        <div class="map-place-language-segments" role="group" :aria-label="t('地名显示语言', 'Place-name language')">
+          <button
+            v-for="option in MAP_PLACE_DISPLAY_OPTIONS"
+            :key="option.id"
+            type="button"
+            :class="{ 'is-active': mapStore.mapPlaceDisplayMode === option.id }"
+            :data-testid="`map-place-language-mode-${option.id}`"
+            :aria-label="t(option.titleZh, option.titleEn)"
+            :title="t(option.titleZh, option.titleEn)"
+            :aria-pressed="mapStore.mapPlaceDisplayMode === option.id"
+            @click="mapStore.setMapPlaceDisplayMode(option.id)"
+          >
+            {{ t(option.labelZh, option.labelEn) }}
+          </button>
+        </div>
+      </section>
+
       <section class="map-knowledge-section" data-testid="map-place-knowledge-settings">
         <div class="map-section-heading">
           <div>
@@ -668,6 +703,7 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScopeId))
 }
 
 .map-world-band,
+.map-name-section,
 .map-knowledge-section,
 .map-source-section,
 .map-management-section,
@@ -702,6 +738,13 @@ onBeforeUnmount(() => galleryStore.releaseAssetPreviewScope(previewScopeId))
   font-size: 12px;
   font-weight: 800;
 }
+
+.map-name-description { margin: -3px 0 12px; color: var(--map-muted); font-size: 11px; line-height: 1.55; }
+.map-place-language-segments { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--map-line); border-radius: 8px; background: #e9eeeb; }
+.map-place-language-segments button { min-width: 0; min-height: 40px; border-left: 1px solid var(--map-line); padding: 0 5px; color: #647168; font-size: 10px; font-weight: 850; white-space: nowrap; }
+.map-place-language-segments button:first-child { border-left: 0; }
+.map-place-language-segments button.is-active { background: var(--map-accent); color: #fff; }
+.map-place-language-segments button:focus-visible { position: relative; outline: 2px solid #0f8061; outline-offset: -2px; }
 
 .map-knowledge-options {
   display: grid;

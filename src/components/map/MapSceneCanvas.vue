@@ -20,6 +20,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  selectedPosition: {
+    type: Object,
+    default: null,
+  },
   interactive: {
     type: Boolean,
     default: true,
@@ -30,7 +34,13 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['place-pin', 'select-pin', 'map-interact', 'renderer-status'])
+const emit = defineEmits([
+  'place-pin',
+  'select-pin',
+  'selected-anchor',
+  'map-interact',
+  'renderer-status',
+])
 const forceLocalFallback = ref(false)
 const usesOnlineBasemap = computed(
   () => props.mapPack?.coordinateKind === 'geo' && !forceLocalFallback.value,
@@ -43,6 +53,7 @@ watch(
 
 const forwardPlacePin = (payload) => emit('place-pin', payload)
 const forwardSelectedPin = (pin) => emit('select-pin', pin)
+const forwardSelectedAnchor = (anchor) => emit('selected-anchor', anchor)
 const forwardMapInteraction = () => emit('map-interact')
 const forwardRendererStatus = (payload) => emit('renderer-status', payload)
 const useLocalFallback = (payload) => {
@@ -58,10 +69,12 @@ const useLocalFallback = (payload) => {
     :pins="pins"
     :pending-position="pendingPosition"
     :focus-position="focusPosition"
+    :selected-position="selectedPosition"
     :interactive="interactive"
     :allow-pin-placement="allowPinPlacement"
     @place-pin="forwardPlacePin"
     @select-pin="forwardSelectedPin"
+    @selected-anchor="forwardSelectedAnchor"
     @map-interact="forwardMapInteraction"
     @renderer-status="forwardRendererStatus"
     @fallback="useLocalFallback"
@@ -72,11 +85,13 @@ const useLocalFallback = (payload) => {
     :pins="pins"
     :pending-position="pendingPosition"
     :focus-position="focusPosition"
+    :selected-position="selectedPosition"
     :interactive="interactive"
     :allow-pin-placement="allowPinPlacement"
     :provider-state="forceLocalFallback ? 'fallback' : 'local'"
     @place-pin="forwardPlacePin"
     @select-pin="forwardSelectedPin"
+    @selected-anchor="forwardSelectedAnchor"
     @map-interact="forwardMapInteraction"
   />
 </template>

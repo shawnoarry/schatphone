@@ -91,6 +91,7 @@ test('Map share can cancel back to the place, then send and reopen the same deta
   await expect(page.getByTestId('map-place-detail-sheet')).toContainText('SM')
   const initialLocation = await page.getByTestId('map-current-location').innerText()
 
+  await page.getByTestId('map-place-open-detail').click()
   await page.getByTestId('map-place-share-chat').click()
   await waitForAppRouteReady(page, '/chat?share=internal')
   await expect(page.getByTestId('chat-internal-share-recipient-picker')).toContainText('SM')
@@ -102,6 +103,7 @@ test('Map share can cancel back to the place, then send and reopen the same deta
     .poll(() => page.evaluate(() => localStorage.getItem('schatphone:chat:internal-share-draft')))
     .toBeNull()
 
+  await page.getByTestId('map-place-open-detail').click()
   await page.getByTestId('map-place-share-chat').click()
   await waitForAppRouteReady(page, '/chat?share=internal')
   await chooseEvaAndOpenThread(page)

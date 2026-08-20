@@ -20,13 +20,15 @@ const REAL_PILOT_PLACE_IDS = [
 ]
 
 describe('map place media governance', () => {
-  test('covers the complete 106-place Seoul catalog with a reviewed asset or explicit fallback', () => {
+  test('covers the complete 106-place Seoul catalog with an image-backed reviewed asset or fallback', () => {
     const seoulPlaces = getMapPackById('real-seoul-v1').places
     expect(seoulPlaces).toHaveLength(106)
     expect(new Set(seoulPlaces.map((place) => place.id)).size).toBe(106)
 
     for (const place of seoulPlaces) {
-      expect(validateMapPlaceMediaRecord(resolveMapPlaceMedia(place, 'real-seoul-v1')).valid).toBe(true)
+      const media = resolveMapPlaceMedia(place, 'real-seoul-v1')
+      expect(validateMapPlaceMediaRecord(media).valid).toBe(true)
+      expect(media.asset?.url).toMatch(/^https:\/\//)
     }
   })
 
@@ -70,12 +72,12 @@ describe('map place media governance', () => {
     expect(resolveMapPlaceMedia({ id: 'waste-helix-spire' }, 'cyber-wasteland-v1')).toMatchObject({
       kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
       authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.GENERIC,
-      asset: null,
+      asset: expect.objectContaining({ url: expect.stringContaining('cyber-wasteland-city-v1.svg') }),
     })
     expect(resolveMapPlaceMedia({ id: 'user-cafe', source: 'user' }, 'real-seoul-v1')).toMatchObject({
       placeId: 'user-cafe',
       kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
-      asset: null,
+      asset: expect.objectContaining({ url: expect.stringContaining('seoul-street-map-v1.webp') }),
     })
   })
 })

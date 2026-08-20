@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-08-15
+Updated: 2026-08-20
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -265,6 +265,8 @@ The current externally sourced repo-local skills recorded in `.agents/skills` an
 | `text-to-speech` | ElevenLabs speech and role-voice prototypes | `docs/process/ELEVENLABS_AUDIO_SKILLS_CROSS_PC_SETUP.md`; current Chat voice cards remain virtual |
 | `game-engine` | Real game-loop, Canvas/WebGL, minigame work only | `docs/process/EVENT_WORKFLOW.md` |
 | `chinese-novelist` | Chinese fiction craft helper for story-world text, character tension, dialogue, and scene texture; optional support for WorldBook source writing | `docs/process/DEVELOPMENT_TOOLING.md` |
+| `chinese-font-selector` | Chinese font selection, licensing-safe CJK pairing, and Chinese typography decisions | `docs/process/VISUAL_WORKFLOW.md` and owning task package |
+| `ip-as-logo` | Compact IP/mascot logo direction and candidate-generation brief for product-owned visual identity work | `docs/process/VISUAL_WORKFLOW.md` |
 
 ### 7.1 What Is Already Covered Well
 
