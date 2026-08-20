@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-12
+Updated: 2026-08-20
 
 ## 1. Architecture Goals
 
@@ -271,6 +271,8 @@ The generic provider contract supports user-authorized JSON search APIs that ret
 - `relationship-fact-adapters.js` accepts low-impact module facts;
 - `relationship-event-gating.js` reads stored category/modifier classifications, never raw premise prose;
 - relationship runtime owns memory grouping and current state;
+- one continuing matter is one shared experience with progress updates, a concise role-memory summary, and references to owner-native supporting records. Summaries are grouped by experience or subject, never by an arbitrary row count;
+- Chat consumes current relationship truth from Relationship Runtime exactly once. Profile premise/classification remains context and cannot become a competing current answer;
 - cleanup helpers remove or anonymize source-linked data through explicit handlers.
 
 ### Media And Sharing
@@ -320,6 +322,7 @@ Confirmed target direction and current non-active foundation:
 - IndexedDB becomes the primary structured store behind domain repository contracts, while `localStorage` becomes small hot state and recovery metadata;
 - authoritative history/evidence requires explicit user deletion and may otherwise move only into reversible cold archives;
 - committed content records are durable regardless of user/AI/system origin, while full AI transport payloads, uncommitted drafts, and rebuildable projections are not retained by default;
+- committed relationship facts, Event Instances, and Mini Scene artifacts cannot be removed by fixed row-count caps. User interfaces may page and AI callers may read bounded relevant summaries without deleting owner history;
 - optional remote backup uses separate user-owned Cloudflare R2 destinations rather than one project/workgroup cloud, keeps local state authoritative, and remains provider-neutral below the first officially guided R2 adapter;
 - each personal R2 destination is reached through that user's Cloudflare Worker gateway; the client may retain a revocable, scoped device token but must not retain an R2 API Secret;
 - remote backup is encrypted on the client and supports either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, losing both paths is irreversible, and setup must verify recovery before automatic backup is ready;

@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-08-12
+Updated: 2026-08-20
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -9,6 +9,7 @@ Current state:
 - domain ownership and shared `lib` contracts are strong enough to preserve;
 - browsers and installable PWAs are confirmed as complete first-class clients, with one isolated storage container owning one current save;
 - authoritative histories and relationship evidence require explicit user deletion; automatic capacity management is limited to reversible archival/compaction or rebuildable data;
+- roadmap 4.5-CMG is the active cross-PC governance plan for shared experiences, role memory, Event Instance and Mini Scene retention, confirmed persistence, and the audited direct defects. `TODO_ROADMAP.md` owns every item status; this package owns the current execution handoff and does not duplicate the ledger;
 - formally committed module content is durable regardless of user/AI/system origin; full AI prompts/raw responses, uncommitted drafts, and rebuildable projections remain temporary, while canonical content, authoritative state/facts, references, and minimum provenance persist;
 - optional remote backup is personal BYOS rather than one shared project cloud: Cloudflare R2 is the first officially guided target, each user owns a separate destination and personal Worker gateway, SchatPhone never retains the R2 API Secret, and browser/PWA automation is limited to launch and open-app execution;
 - personal remote backups are client-encrypted and use dual recovery: either a recovery password or separately downloaded recovery file can restore, while Cloudflare/Worker receives neither plaintext secret;

@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-16
+Updated: 2026-08-20
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -17,17 +17,18 @@ The core product can already support meaningful use and continued development:
 - backup/restore, storage diagnostics, push delivery, App Store entry management, and mobile-responsive flows exist;
 - release commit `a1418ed` has passing lint, 210 files / 1497 unit tests, production and Cloudflare builds, focused desktop/Pixel 5 restricted-relay evidence, Wrangler dry-run, governance, and GitHub Pages Run #31294272595. The deployed Vercel and Cloudflare relays each returned 6 real provider models and Chat smoke reply `OK` from GitHub Pages while preserving Direct as the default; installed PWA, external protections, and named physical-device proof remain open.
 
-The current work is concentrated in five areas:
+The current work is concentrated in six areas:
 
 1. preserving the completed first-value Chat activation and custom-role journey;
 2. preserving the completed current-save write/conflict safety and complete local v3 recovery point;
 3. one ordinary daily-life cross-module loop;
 4. deployed PWA, backup, external-protection, and true-device release proof; hosted direct-provider and optional compatibility-proxy Chat are proven.
 5. roadmap 4.14 Event Experience, with EVE-2A's reusable contracts/fixtures, EVE-2B's durable runtime, EVE-2C's first Map/K-pop vertical slice, and EVE-3's World Hub Event Notebook complete; additional hosts/content under EVE-4 and Mini Scene/media expansion under EVE-5 remain separately gated.
+6. roadmap 4.5-CMG continuity governance: one shared experience instead of row-counted pseudo-memories, one current relationship truth, confirmed durable saves, permanent committed history with bounded reading, and the audited direct defects. `CMG-00` has frozen the plan; behavior implementation has not started.
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
-Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a pure Mini Scene foundation with runtime still staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus MJE-1 through MJE-4, 4.12 has implemented Calendar CJA-1, hidden orchestration CJA-2, and Agenda Journey CJA-3 while later activity/event stages remain gated, 4.13 has an integrated local Music first slice plus Chat track sharing and active-journey Map music/radio, 4.14 has completed EVE-2A contracts/fixtures, EVE-2B runtime, EVE-2C's first Map/K-pop vertical slice, and EVE-3's World Hub Event Notebook while EVE-4/EVE-5 remain separately gated, and 4.15 has a deployed first shared runtime TTS preview slice with stable provider quality/playback and durable Chat audio stages still gated.
+Roadmap closure is concrete: 4.1 Contacts IA, 4.2 memory dedupe, 4.3 World Hub review, and 4.4 service-account continuity are complete at current acceptance. 4.5 maintenance is active with Book Repository cutover and World Setting Stage W1 complete, and its promoted 4.5-CMG continuity plan is now the active governance slice; 4.6 World Pack is partial, 4.7 has promoted the independent K-pop Book/WorldBook 2 + 6 + 1 content slice, 4.8 has a durable AI-required Mini Scene text shell while production triggers and HTML remain staged, 4.9 owns the usable-product-preview sequence, 4.10 has completed the first Camera/shared-image-generation slice while Gallery People and source callers remain deferred, 4.11 has landed world-bound real Seoul/cyber-wasteland maps plus MJE-1 through MJE-4, 4.12 has implemented Calendar CJA-1, hidden orchestration CJA-2, and Agenda Journey CJA-3 while later activity/event stages remain gated, 4.13 has an integrated local Music first slice plus Chat track sharing and active-journey Map music/radio, 4.14 has completed EVE-2A contracts/fixtures, EVE-2B runtime, EVE-2C's first Map/K-pop vertical slice, and EVE-3's World Hub Event Notebook while EVE-4/EVE-5 remain separately gated, and 4.15 has a deployed first shared runtime TTS preview slice with stable provider quality/playback and durable Chat audio stages still gated.
 
 ## 2. Product Positioning
 
@@ -48,10 +49,10 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
 | Settings / Network / backup | `Activation and local recovery usable` | Chat reaches Network and returns after save plus smoke success; root-shell recovery offers retry/reload, one page-level writer prevents unsafe later-page writes, and schema v3 complete backup now verifies required sections and Gallery binaries, restores Chat identity, rolls back failures, and recovers interrupted import before mount |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
-| Contacts / relationship | `Stable V2 baseline` | ownership, detail IA, memory review, classification, and cleanup are landed |
+| Contacts / relationship | `Stable V2 baseline; continuity governance active` | ownership, detail IA, memory review, classification, and cleanup are landed; 4.5-CMG now addresses the 500-row truncation, competing Chat truth, generic disclosure bucket, and shared-experience meaning |
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; optional Book/encyclopedia/template references are non-binding diagnostics, while broader hardening is pending |
-| Mini Scene | `Pure foundation landed, no runtime` | schemas, empty caller registry, Book profile/regex validation, and world resolution are tested; persistence, Settings, presenters, and source triggers remain separate |
+| Mini Scene | `AI/text shell landed; continuity hardening active` | durable text artifacts and one Event Runtime caller contract exist; 4.5-CMG now covers repeated-request provider calls and the 120-artifact truncation before another production trigger |
 | Map / Reminders / Phone | `Map partial; MJE-1 through MJE-4, place media V1 pilot, and EVE-2C integrated locally` | Map resolves one map per world and renders geographic packs through keyless OpenFreeMap + MapLibre, while fictional/custom packs and startup fallback remain local. Transport-aware planning, lifecycle/checkpoints, one non-blocking journey event family, Footprints, optional authored-place knowledge, ordinary place focus, durable place sessions, explicit `Enter`/`Leave`, and the first eligible-only K-pop event invitation/pin flow are integrated. Place Details now adds a governed photo/fallback hero with exact-versus-area truth labels and source/license attribution; seven licensed Seoul derivatives are verified while all other, fictional, and player places fail safely to category visuals. Active exploration, broader photo coverage/generated reconstruction, additional Map event families, public-transit topology, and a standalone Transit app remain separately gated |
 | Calendar / Agenda Journey | `Calendar CJA-1 + hidden CJA-2 + Agenda Journey CJA-3 integrated` | Calendar V3 provides Month/Week/Agenda, authoring, recurrence, stable Map place selection, departure readiness, and explicit linked Map travel. The hidden Schedule Orchestrator persists deterministic occurrence materialization/deadline requests. The separate Agenda Journey app now consumes those requests or accepts manual plans within the next 14 days, separates Map travel from explicit activity completion, and owns execution outcomes. Appointment auto-entry, Activity Session, Focus Companion, event adapters, and Narrative Timeline remain separately gated |
 | Shopping / Food Delivery / Logistics | `Integrated V1` | five independent Food Delivery shop facades share one Food Delivery runtime; the next roadmap-owned gap is one ordinary Food Delivery/Shopping consequence flow, while tracking and polish remain separate |
@@ -60,7 +61,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Music | `Focused first slice with Chat and Map callers, provider proof staged` | consumer playback, library, queue, search, user-owned generic JSON/ChKSz providers, no-key Radio Browser HTTPS/MP3 live radio, device-local excluded keys, Home/App Store entry, global floating player, Chat track sharing, and active-journey Map music/radio are implemented; live-station uptime remains external, while real-provider/CORS, true-device media, Chat search, and external Map queue requests remain |
 | Text To Speech | `Temporary preview V1 deployed, provider quality proof staged` | one runtime contract supports Cloudflare Workers AI MeloTTS and device-key MiniMax Chinese preview; the bounded Cloudflare Worker route is deployed, configuration/keys are backup-excluded, preview audio is runtime-only, and stable provider playback plus Chat read-aloud/durable voice messages remain unimplemented |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
-| Event Runtime / World Hub | `Partial / EVE-3 done 2026-08-12` | safe foreground review, pure Event Surface contracts, the single approved Map/K-pop host flow, durable Event Instances, and World Hub's unified Event Notebook with event-scoped notes are landed. Event receives no Home app; additional hosts/content, Cheats, Mini Scene/media expansion, and background autonomy remain separate |
+| Event Runtime / World Hub | `Partial; continuity governance active` | the approved runtime and World Hub review remain, while 4.5-CMG must remove the 240-instance silent truncation and prove long-running owner history before broader event expansion |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
 | QA / release | `Strong local and hosted baseline; device proof partial` | remote Pages/direct-provider Chat and the Vercel/Cloudflare `a1418ed` restricted relays pass, including real provider model-list and Chat smoke through both backends; external checks, installed PWA, and true-device QA remain open |
 
@@ -191,6 +192,13 @@ This is the only current product-completion sequence. It does not require a broa
 3. `DONE 2026-08-09` for the release-local boundary: independently importable schema v3 packages, required-section and Gallery-binary integrity, fail-closed local delivery, legacy compatibility, durable rollback checkpoints, crash recovery, and reopen proof; predictive capacity detail, cross-owner root-generation activation, and remote delivery remain separately staged;
 4. `DONE 2026-07-22`: the non-active Batch 2B Repository foundation and active Book-only cutover remain the reference pilot;
 5. move provider-neutral R2/Worker onboarding after the first usable local release; keep Gallery schema, dual write, legacy Book deletion, garbage collection, and every non-Book Repository migration separately approved.
+
+### P0: Shared Experience, Memory, And Durable History Governance
+
+1. `CMG-00 DONE 2026-08-20`: freeze the product model, confirmed defects, dependency order, and two-PC status protocol in the live roadmap;
+2. start only with `DCF-05` deterministic persistence-test completion and `CMG-01` executable shared-experience fixtures;
+3. require confirmed save results before removing any 500/240/120 limit or reporting durable success;
+4. keep detailed status only in roadmap 4.5-CMG and the current execution record in the module-architecture handoff.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract
 

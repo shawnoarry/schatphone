@@ -1,6 +1,6 @@
 # Functional Code Next Steps
 
-Updated: 2026-08-11
+Updated: 2026-08-20
 
 > **Frozen execution status / 非执行看板**
 >
@@ -12,18 +12,17 @@ Do not restart completed Contacts 4.1, memory 4.2, World Hub 4.3, or service-acc
 
 The best next work is:
 
-1. preserve the completed non-active IndexedDB/Book Batch 2B foundation, active Book-only reference cutover, browser evidence, and unchanged legacy fallback;
-2. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration separately approved;
-3. security/toolchain hardening;
-4. release-gate alignment and one measured architecture seam;
-5. the roadmap 4.8 Mini Scene persistence/policy contract after its completed pure foundation, followed by separately approved presenter and source-Adapter stages;
-6. later product/device/content work in dependency order.
+1. execute the promoted roadmap 4.5-CMG plan from `DCF-05` and `CMG-01`, preserving its dependency and cross-PC handoff rules;
+2. preserve the completed non-active IndexedDB/Book Batch 2B foundation, active Book-only reference cutover, browser evidence, and unchanged legacy fallback;
+3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and each non-Book owner migration separately approved inside the relevant CMG retention slice;
+4. security/toolchain hardening and release-gate alignment;
+5. later product/device/content work in dependency order.
 
 ## 2. Completed Enough To Stop Re-Listing
 
 - Calendar / Reminders product split;
 - Contacts V2 detail and cleanup baseline;
-- relationship runtime and explicit-lineage memory dedupe;
+- the original relationship-runtime and explicit-lineage memory-dedupe baseline; its newly audited retention, grouping, prompt-ownership, and shared-experience gaps are promoted separately as roadmap 4.5-CMG;
 - Calendar relationship review details;
 - filtered World Hub event/relationship review;
 - Chat generated social-event review V1;

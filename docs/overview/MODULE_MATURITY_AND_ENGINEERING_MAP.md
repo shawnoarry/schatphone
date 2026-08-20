@@ -1,6 +1,6 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-08-11
+Updated: 2026-08-20
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -12,9 +12,9 @@ SchatPhone is in:
 
 > internal personal development + core-system deepening + evolvable architecture construction
 
-The strongest loops are real and test protected. The main risk is uneven finish and concentrated implementation cost, not a missing framework.
+The strongest loops are real and test protected. The main risks are uneven finish, concentrated implementation cost, and continuity records whose current row caps or unconfirmed save paths do not yet match the durable-history product rule.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation and Music first slices, Music's Chat track-share and Map active-journey media callers, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete at their named local boundaries, while Gallery People/source callers, Music real-provider/remaining-caller proof, and broader capacity/data-lifecycle work remain deferred. The later cross-module Mini Scene direction is architecture-accepted but remains behind its own staged security and persistence gates.
+Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation and Music first slices, Music's Chat track-share and Map active-journey media callers, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete at their named local boundaries, while Gallery People/source callers, Music real-provider/remaining-caller proof, and broader capacity/data-lifecycle work remain deferred. The cross-module Mini Scene AI/text shell is landed, while production triggers, deterministic request reuse, unbounded committed-history retention, profile binding, safe transforms, and HTML remain behind their named gates.
 
 ## 2. Maturity Tiers
 
@@ -25,7 +25,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Lock / shell navigation | stable | preserve notification and lock-return contracts |
 | Home entry system | stable but large | treat as shell infrastructure; avoid domain logic |
 | Chat core | stable but very heavy | extract named seams before adding another side system |
-| Contacts / relationship baseline | stable V2 baseline | preserve runtime truth and guarded cleanup ownership |
+| Contacts / relationship baseline | stable V2 baseline with 4.5-CMG hardening active | preserve Relationship Runtime as the one current truth; replace row-count retention and generic disclosure grouping through the promoted plan |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
 | Image Generation | shared first slice implemented; Camera is the visible owner | keep provider protocols behind the shared module, back up public configuration only, keep credentials/candidates device-local, and require explicit Gallery retention |
 | persistence / backup / diagnostics | release-local v3 complete backup/recovery, product-level recovery, same-container one-writer/read-only-preview protection with automatic cooperative handoff, and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge; preserve non-Book cutover gates and pursue capacity/root-generation/R2 work only as separate architecture slices |
@@ -48,8 +48,8 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 
 | Area | Judgment | Constraint |
 | --- | --- | --- |
-| Event Runtime | guarded foreground baseline | conservative event families only |
-| Mini Scene | pure foundation landed, no runtime | persistence/policy, Text Presenter, HTML sandbox, and source Adapters remain staged; caller registry is empty |
+| Event Runtime | guarded foreground baseline with 4.5-CMG retention work promoted | conservative event families only; committed instances cannot rotate by row count |
+| Mini Scene | AI-required text shell landed; production triggers still gated | make request reuse deterministic and committed-artifact retention durable before another trigger; HTML and broader source Adapters remain staged |
 | World Hub | narrow review baseline | no broad value/funds/unlock/freeform editor |
 | Groups | target/member/reply-mode V1 | no full multi-speaker orchestration |
 | Phone | working support loop | not a main fantasy lane |

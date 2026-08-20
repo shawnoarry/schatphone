@@ -1,6 +1,6 @@
 # Architecture Debt Review
 
-Updated: 2026-08-11
+Updated: 2026-08-20
 
 > Scope and authority note
 >
@@ -36,6 +36,10 @@ Additional debt remains real:
 
 - store-to-store coupling still crosses domain lines;
 - the relationship-fact adapter seam exists, but some stores still have to pass concrete store instances into it;
+- Relationship Runtime, Event Instance V2, and Mini Scene silently truncate committed records at 500, 240, and 120 rows respectively, contradicting the accepted durable-history rule;
+- Chat can supply competing current relationship text, while explicit user disclosures are grouped too broadly under one memory key;
+- Relationship Runtime, Event Runtime, Mini Scene, and related owner flows can report a successful action without tying that message to the persistence result already available from the storage layer;
+- Mini Scene request identity does not yet prevent another provider call for the same committed request;
 - `src` has zero TypeScript files even though the project relies heavily on structured payloads and module contracts.
 - backup export currently includes `settings.api.key` through the full settings snapshot;
 - production and full dependency audits are clean after an isolated normal-resolver compatible transitive refresh, without direct, override/resolution, or major changes;

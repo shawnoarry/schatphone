@@ -1,6 +1,6 @@
 # SchatPhone Project Module Audit
 
-Updated: 2026-08-11
+Updated: 2026-08-20
 
 > **Candidate pool only / 仅候选池**
 >
@@ -64,6 +64,15 @@ Priority meanings:
 | Files | internal compatibility component | none for ordinary users | public file-manager drift | expand only for an internal consumer | Watch |
 | Push relay | working local delivery helper | auth/tenancy/operations | being mistaken for backend autonomy | production-backend decision | Decision |
 | QA / CI | local gates and restricted-relay desktop/Pixel 5 evidence pass; remote Pages/direct-provider Chat plus Vercel/Cloudflare `a1418ed` dynamic-relay model/Chat smoke are proven | verify external protections, installed-PWA/true-device flows, independent audit availability, and a coverage floor | treating browser-origin checks or instance-local limits as abuse-proof infrastructure | preserve current gates and add only the missing external/device proof | P0 |
+
+Promoted continuity audit, with execution status owned only by roadmap 4.5-CMG:
+
+- Relationship Runtime silently retains only 500 rows across roles and statuses;
+- Event Instance V2 retains only 240 rows and Mini Scene retains only 120 committed artifacts;
+- Chat currently combines a competing legacy relationship answer with Relationship Runtime and groups unrelated explicit disclosures under one generic memory key;
+- the same Mini Scene request may call the provider again and replace committed content;
+- several durable actions report success after an in-memory mutation without consuming the available persistence result;
+- WorldBook multi-entry navigation, large Chat CSS import, ringtone preview gating, incoming-call focus, and one fixed-delay persistence test have separate `DCF-*` items.
 
 ## 3. Cross-Cutting Candidates
 

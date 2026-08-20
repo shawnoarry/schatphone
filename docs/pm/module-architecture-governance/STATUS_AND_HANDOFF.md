@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-19
+Updated: 2026-08-20
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -19,6 +19,7 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible;
+- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` is documentation-complete; behavior code has not started;
 - any content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -367,6 +368,33 @@ Do not describe it as a production backend or closed-page simulation engine.
 ## 6. Recommended Next Slice
 
 Use the live roadmap order.
+
+### P0: 4.5-CMG Cross-PC Execution Handoff
+
+Canonical ledger: `docs/roadmap/TODO_ROADMAP.md`, subsection `4.5-CMG Shared Experience, Memory, And Durable History Governance`.
+
+Current execution record:
+
+| Field | Value |
+| --- | --- |
+| Plan baseline | `CMG-00 DONE 2026-08-20`; documentation change not yet committed or pushed |
+| Next dependency-safe items | `DCF-05` and `CMG-01` |
+| Active item | none |
+| Integration controller PC | `UNASSIGNED` |
+| PC-A physical machine / role | `UNASSIGNED` / suggested controller and relationship-persistence lane |
+| PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
+| Source branch and base | record immediately before the first item starts |
+| Reserved paths | none; reserve exact source/test/docs paths before changing `TODO` to `IN_PROGRESS` |
+| Integration state | `PLANNED`; no behavior implementation is ready for review |
+| Remote synchronization | not authorized or performed by this planning round |
+
+For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
+
+Completion log:
+
+1. `CMG-00 DONE 2026-08-20`: accepted the one-shared-experience model, separated role memory from supporting owner records, inventoried all confirmed defects, froze dependency order and two-PC execution rules, and changed no behavior code. Validation belongs to this documentation round.
+
+Do not begin `CMG-02` before `DCF-05` and `CMG-01`; do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
