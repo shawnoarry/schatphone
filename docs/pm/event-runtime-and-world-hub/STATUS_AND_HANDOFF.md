@@ -10,6 +10,8 @@ Status: `PARTIAL_DONE / EVE-4A_TECHNICAL_SPIKE_COMPLETE / PRODUCT_ACCEPTANCE_WIT
 
 Confirmed persistence dependency for future work:
 
+- `CMG-02 DONE 2026-08-20` at `208e1dc`: Event Instance V2 start/advance and owner-fact progression now confirm persistence, roll back on save failure, and treat a matching stable ID as an already-recorded action instead of advancing or deciding twice. Mini Scene presentation now occurs only after its committed artifact is saved; provider-call reuse and the 120-artifact limit remain `CMG-08`.
+
 - accepted relationship facts and the provenance needed to audit persistent relationship truth cannot be silently truncated or irreversibly deleted for capacity management;
 - ephemeral eligibility checks, rebuildable projections, and explicitly classified operational logs may rotate, but that policy must not erase evidence for already-applied truth;
 - reversible cold archival may remove old evidence from the hot runtime set while keeping World Hub review and restore semantics available;

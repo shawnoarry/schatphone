@@ -19,7 +19,7 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible;
-- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00`, `CMG-01`, `CMG-03`, and `DCF-05` are complete; `CMG-02` is the next dependency-safe item but has not started;
+- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00`, `CMG-01`, `CMG-02`, `CMG-03`, and `DCF-05` are complete; `CMG-04`, `CMG-05`, and `CMG-08` are dependency-safe but remain unstarted;
 - any content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -377,20 +377,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557` |
-| Next dependency-safe items | `CMG-02` is active on PC-A; `DCF-06` remains independently assignable only on non-overlapping paths |
-| Active item | `CMG-02 IN_PROGRESS` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557` |
+| Next dependency-safe items | `CMG-04`, `CMG-05`, and `CMG-08` remain `TODO`; `DCF-06` remains independently assignable only on non-overlapping paths |
+| Active item | none; the next item requires a new reservation |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / controller and `CMG-02` executor |
-| PC-B physical machine / role | `UNASSIGNED`; no work may touch the reserved Relationship Runtime, Simulation, Mini Scene, or Food Delivery paths |
-| Source branch, base, and worktree | `main`; `CMG-02` base `ceadff9`; `D:\github\schatphone` |
+| PC-A physical machine / role | `SKY-20250212UBG` / integration controller; `CMG-02` executor work is complete |
+| PC-B physical machine / role | `UNASSIGNED` |
+| Source branch, base, and worktree | `main`; `CMG-02` base `a59c77a`; implementation `208e1dc`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned Calendar edits in `e2e/calendar-presentation.spec.js`, `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; modified `output/e2e/calendar-cja1/*.png`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | Owner actions currently mutate Pinia state before their existing storage call is observed. `CMG-02` must prevent false durable success, restore owner state after quota/read-only/reconciliation failure, suppress redundant watched writes, and preserve stable-ID retry behavior across owner boundaries. No schema, retention cap, migration, provider-reuse, or unrelated UI change is allowed. |
-| Reserved paths | `src/stores/relationshipRuntime.js`; `src/stores/simulation.js`; `src/stores/miniScene.js`; `src/lib/mini-scene-runtime.js`; `src/stores/foodDelivery.js`; `tests/continuity-persistence-results.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`; Contacts, Event Runtime, and commerce package `STATUS_AND_HANDOFF.md` files |
-| Acceptance | Relationship facts/decisions, Event Instance V2 start/advance, Mini Scene artifact commit/presentation, and the Food Delivery interaction path report success only after their owner receives `{ ok: true }` from persistence. A failed write restores the owner's pre-action state, remains visible through the existing persistence recovery surface, and the same stable action ID can retry without a duplicate committed owner record. Existing storage shapes and the 500/240/120 limits remain unchanged; Mini Scene provider-call reuse remains `CMG-08`. |
-| Required checks | Focused owner/runtime tests plus quota, read-only, reconciliation, rollback, retry, and reopen coverage; lint; full Vitest; production build; governance; `git diff --check`. No Playwright is required unless a route/view changes. |
-| Integration state | `CMG-02 IN_PROGRESS`; later `CMG-04` through `CMG-08` remain dependency-gated |
-| Remote synchronization | push this reservation from base `ceadff9` before editing source; every other PC must verify it on `origin/main` and avoid the reserved paths |
+| Risk lane | `CMG-02` closed false durable success for the named owner actions. Retention caps, provider-call reuse, broader history pagination, and long-run migration remain owned by `CMG-06` through `CMG-10`. |
+| Reserved paths | none after `CMG-02` completion; every next item must record a new non-overlapping reservation |
+| Acceptance | Met by `208e1dc`: named owner actions confirm `{ ok: true }`, failed writes restore pre-action state and remain visible through recovery, and stable-ID retry does not duplicate committed records. Storage shapes and 500/240/120 limits remain unchanged; Mini Scene provider-call reuse remains `CMG-08`. |
+| Required checks | New coverage passed 4/4; the expanded focused set passed 18 files / 241 tests; lint, build, governance (2 files / 14 tests), and `git diff --check` passed. Full Vitest reached 296/297 files and 2095/2096 tests; only tracked `DCF-06` timed out under full-suite load and passed alone at 13/13. |
+| Integration state | `CMG-02 DONE 2026-08-20` at `208e1dc`; later items remain `TODO` until separately reserved |
+| Remote synchronization | implementation `208e1dc` is pushed to `origin/main`; this completion record is the serialized documentation follow-up |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -400,8 +400,9 @@ Completion log:
 2. `CMG-01 DONE 2026-08-20`: implementation `73672df` added `shared-experience-contract.js`, the Xia gift fixture, and five focused tests. One continuing gift experience now has three ordered progress updates and one concise role memory while Shopping, Wallet, Calendar, and Phone records stay separately owned and stably referenced. No runtime caller or persisted data was changed. Full-suite load also reproduced and logged `DCF-06`; the previously planned `DCF-05` remains open.
 3. `CMG-03 DONE 2026-08-20`: implementation `86270d8` removed System Store relationship stage/metrics and warm/conflict timestamps from Chat prompts. Bounded Chat activity remains, Contacts premise stays labelled as premise, and the same transient Relationship Runtime projection supplies the one current relationship answer plus recalled memory references. No persisted state or visible page changed.
 4. `DCF-05 DONE 2026-08-20`: implementation `f140557` added deterministic deferred-mirror completion evidence and replaced fixed-delay test guesses with actual write-start and idle signals. The waiter includes writes queued while a slow batch is active; Store schemas, saved payloads, and synchronous write-success meaning remain unchanged. The target test passed 10 consecutive runs and inside the full suite; the only full-suite failure remains the separately tracked `DCF-06` image-bed tooling timeout, which passed alone.
+5. `CMG-02 DONE 2026-08-20`: implementation `208e1dc` makes the named Relationship, Event Instance V2, Mini Scene, and Food Delivery actions report success only after confirmed persistence. Quota, read-only, and reconciliation failures restore pre-action state; stable-ID retry reuses the committed result without duplicate owner records. No schema, retention cap, provider-call reuse, or route/UI behavior changed. Focused coverage passed; full Vitest reproduced only tracked `DCF-06`, which passed alone at 13/13.
 
-Do not begin `CMG-02` before `DCF-05` and `CMG-01`; do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
+`CMG-02` is complete. Do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 

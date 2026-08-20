@@ -10,6 +10,8 @@ Status: `DONE`
 
 Confirmed persistence dependency for future work:
 
+- `CMG-02 DONE 2026-08-20` at `208e1dc`: Relationship Runtime now confirms persistence before accepting a new fact or an apply/dismiss decision. A failed save restores the prior relationship state, and retrying the same fact ID reuses one matching record while rejecting conflicting content. The 500-row retention change remains `CMG-06`.
+
 - role profiles, archived-role state, relationship facts, memories, and accepted audit evidence cannot be silently or irreversibly deleted for capacity management;
 - moving older records out of the hot working set is allowed only through reversible cold archival that preserves Contacts/World Hub review and restore semantics;
 - Relationship Runtime remains the sole truth owner; the storage package owns persistence mechanics and must not copy that truth into Contacts.

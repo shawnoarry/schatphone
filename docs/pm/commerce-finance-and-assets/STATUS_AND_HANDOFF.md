@@ -8,6 +8,8 @@ This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, As
 
 Status: `PARTIAL_DONE`
 
+Continuity update: `CMG-02 DONE 2026-08-20` at `208e1dc`. Food Delivery checkout and the address-change interaction now confirm owner persistence before success, restore order/cart/Map/Event state after a failed save, delay the success notification until confirmation, and prevent the same payment/message/interaction ID from creating a second committed result. Storage shapes and retention limits are unchanged.
+
 What is already landed:
 
 1. Shopping and Food Delivery both have solid order-lifecycle baselines;
