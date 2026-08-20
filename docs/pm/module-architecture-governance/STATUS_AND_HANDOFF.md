@@ -378,19 +378,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557` |
-| Next dependency-safe items | `CMG-02` is unblocked for PC-A but must be reserved before implementation; `DCF-06` remains an independent PC-B test-stability repair |
-| Active item | none; reserve the next exact slice before editing |
+| Next dependency-safe items | `CMG-02` is active on PC-A; `DCF-06` remains independently assignable only on non-overlapping paths |
+| Active item | `CMG-02 IN_PROGRESS` |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / controller; ready to reserve `CMG-02` |
-| PC-B physical machine / role | `UNASSIGNED` / suggested direct-fix and Event/Mini Scene lane |
-| Source branch, base, and worktree | `main`; `DCF-05` base `5890911`, reservation `2a4804d`, evidence `f140557`; `D:\github\schatphone` |
+| PC-A physical machine / role | `SKY-20250212UBG` / controller and `CMG-02` executor |
+| PC-B physical machine / role | `UNASSIGNED`; no work may touch the reserved Relationship Runtime, Simulation, Mini Scene, or Food Delivery paths |
+| Source branch, base, and worktree | `main`; `CMG-02` base `ceadff9`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned Calendar edits in `e2e/calendar-presentation.spec.js`, `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; modified `output/e2e/calendar-cja1/*.png`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | `DCF-05` changed only deferred mirror completion observation and its test. Store schemas, persisted payloads, synchronous write-success meaning, pages, provider transport, and relationship/event records remain unchanged. |
-| Reserved paths | none; the `DCF-05` reservation is released |
-| Acceptance | `DCF-05` accepted: callers can wait until scheduled, active, and follow-up deferred mirror work is idle, and the serialization test no longer guesses completion from fixed delays. Completion evidence does not relabel a failed write as successful. |
-| Validation evidence | focused test passed 10 consecutive runs at `1 file / 13 tests`; focused persistence coverage passed `10 files / 86 tests`; full Vitest passed `295/296 files` and `2091/2092 tests`, including `persistence-write-result`, with only the separately tracked `DCF-06` image-bed full-load timeout; that file passed alone at `1 file / 13 tests`. Lint, the 485-module production build, governance `2 files / 14 tests`, and `git diff --check` passed. |
-| Integration state | `DCF-05 INTEGRATED_ON_MAIN`; `CMG-02` is unblocked but not started |
-| Remote synchronization | controller pushes `f140557` and this completion record together; the next PC must verify `origin/main` contains both before starting |
+| Risk lane | Owner actions currently mutate Pinia state before their existing storage call is observed. `CMG-02` must prevent false durable success, restore owner state after quota/read-only/reconciliation failure, suppress redundant watched writes, and preserve stable-ID retry behavior across owner boundaries. No schema, retention cap, migration, provider-reuse, or unrelated UI change is allowed. |
+| Reserved paths | `src/stores/relationshipRuntime.js`; `src/stores/simulation.js`; `src/stores/miniScene.js`; `src/lib/mini-scene-runtime.js`; `src/stores/foodDelivery.js`; `tests/continuity-persistence-results.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`; Contacts, Event Runtime, and commerce package `STATUS_AND_HANDOFF.md` files |
+| Acceptance | Relationship facts/decisions, Event Instance V2 start/advance, Mini Scene artifact commit/presentation, and the Food Delivery interaction path report success only after their owner receives `{ ok: true }` from persistence. A failed write restores the owner's pre-action state, remains visible through the existing persistence recovery surface, and the same stable action ID can retry without a duplicate committed owner record. Existing storage shapes and the 500/240/120 limits remain unchanged; Mini Scene provider-call reuse remains `CMG-08`. |
+| Required checks | Focused owner/runtime tests plus quota, read-only, reconciliation, rollback, retry, and reopen coverage; lint; full Vitest; production build; governance; `git diff --check`. No Playwright is required unless a route/view changes. |
+| Integration state | `CMG-02 IN_PROGRESS`; later `CMG-04` through `CMG-08` remain dependency-gated |
+| Remote synchronization | push this reservation from base `ceadff9` before editing source; every other PC must verify it on `origin/main` and avoid the reserved paths |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
