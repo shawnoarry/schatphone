@@ -48,8 +48,10 @@ by a separate keep / keep-as-area / defer / re-source decision. `src/lib/map-pla
 The human review entry is the Git-ignored combined board
 `output/imagegen/map-place-media-search-20260821/review-zh.html`. It replaces long English
 file names with short Chinese place names plus stable candidate numbers, allows filtering
-by place, and exports a pasteable decision list for the second-pass Map review. This board
-is only a candidate-review aid; it does not write Map state or runtime assets.
+by place, and exports a pasteable decision list for the second-pass Map review. Its
+`周边环境` choice means the image represents the surrounding district rather than the
+exact place or storefront. This board is only a candidate-review aid; it does not write
+Map state or runtime assets.
 
 ## 1. Current Status
 

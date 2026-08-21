@@ -67,7 +67,8 @@ output/imagegen/map-place-media-search-20260821/review-zh.html
 ```
 
 It shows short Chinese place names and stable candidate numbers, supports place
-filtering, and provides `保留` / `区域氛围` / `不合适` / `不确定` buttons. The
+filtering, and provides `保留` / `周边环境` / `不合适` / `不确定` buttons. `周边环境`
+means the image shows the nearby district rather than the exact place or storefront. The
 `生成我的筛选结果` action produces lines such as `光化门广场 #01 保留`, which can
 be pasted back for the second-pass identity, license, and crop verification. The
 board is review tooling only and does not write Map data or the runtime media
