@@ -162,6 +162,22 @@ const resetFilters = () => {
   activeStatusFilter.value = 'all'
 }
 
+const toggleStatusFilterFromSummary = (key) => {
+  activeStatusFilter.value = activeStatusFilter.value === key ? 'all' : key
+}
+
+const SOURCE_TONES = Object.freeze({
+  map: '#14b8a6',
+  phone: '#d99413',
+  shopping: '#ea7f35',
+  stock: '#8b5cf6',
+})
+
+const reminderSourceToneStyle = (item) => {
+  const color = SOURCE_TONES[item?.source]
+  return color ? { '--reminder-source-color': color } : null
+}
+
 watch(
   activeReminderItems,
   () => {
@@ -203,18 +219,36 @@ watch(
           }}
         </p>
         <div class="reminders-summary-grid">
-          <div class="reminders-summary-item reminders-summary-item--pending">
+          <button
+            type="button"
+            class="reminders-summary-item reminders-summary-item--pending"
+            :class="{ 'is-active': activeStatusFilter === 'pending' }"
+            data-testid="reminders-summary-pending"
+            @click="toggleStatusFilterFromSummary('pending')"
+          >
             <p>{{ t('待处理', 'Suggested') }}</p>
             <strong>{{ suggestedReminderCount }}</strong>
-          </div>
-          <div class="reminders-summary-item reminders-summary-item--confirmed">
+          </button>
+          <button
+            type="button"
+            class="reminders-summary-item reminders-summary-item--confirmed"
+            :class="{ 'is-active': activeStatusFilter === 'confirmed' }"
+            data-testid="reminders-summary-confirmed"
+            @click="toggleStatusFilterFromSummary('confirmed')"
+          >
             <p>{{ t('已确认', 'Confirmed') }}</p>
             <strong>{{ confirmedReminderCount }}</strong>
-          </div>
-          <div class="reminders-summary-item reminders-summary-item--pinned">
+          </button>
+          <button
+            type="button"
+            class="reminders-summary-item reminders-summary-item--pinned"
+            :class="{ 'is-active': activeStatusFilter === 'pinned' }"
+            data-testid="reminders-summary-pinned"
+            @click="toggleStatusFilterFromSummary('pinned')"
+          >
             <p>{{ t('已固定', 'Pinned') }}</p>
             <strong>{{ pinnedReminderCount }}</strong>
-          </div>
+          </button>
         </div>
       </section>
 
@@ -236,12 +270,6 @@ watch(
               )
             }}
           </span>
-        </div>
-        <div class="reminders-source-summary">
-          <div v-for="source in sourceSummaryItems" :key="source.key" class="reminders-source-stat">
-            <p>{{ t(source.labelZh, source.labelEn) }}</p>
-            <strong>{{ source.count }}</strong>
-          </div>
         </div>
         <div class="reminders-filter-stack">
           <div
@@ -304,7 +332,7 @@ watch(
           :data-testid="`reminder-card-${item.key}`"
         >
           <div class="reminder-card__body">
-            <span class="reminder-card__icon" aria-hidden="true">
+            <span class="reminder-card__icon" :style="reminderSourceToneStyle(item)" aria-hidden="true">
               <i :class="item.icon"></i>
             </span>
             <div class="reminder-card__content">
@@ -424,7 +452,7 @@ watch(
           </div>
           <button
             type="button"
-            class="reminders-calendar-button bg-blue-500"
+            class="reminders-calendar-button"
             @click="openCalendar"
           >
             {{ t('打开日历', 'Open Calendar') }}
@@ -574,6 +602,18 @@ watch(
 .reminders-summary-item {
   min-width: 0;
   padding: 10px 12px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--system-motion-fast);
+}
+
+.reminders-summary-item.is-active {
+  background: var(--system-panel-bg);
+  box-shadow: inset 0 2px 0 0 currentColor;
 }
 
 .reminders-summary-item + .reminders-summary-item {
@@ -756,8 +796,8 @@ watch(
   align-items: center;
   justify-content: center;
   border-radius: var(--system-radius-sm);
-  color: var(--system-accent);
-  background: var(--system-accent-soft);
+  color: var(--reminder-source-color, var(--system-accent));
+  background: color-mix(in srgb, var(--reminder-source-color, var(--system-accent)) 14%, transparent);
 }
 
 .reminder-card__content,
@@ -870,27 +910,22 @@ watch(
 }
 
 .reminders-action--confirm {
-  border-color: color-mix(in srgb, var(--system-success) 24%, transparent);
-  color: var(--system-success);
-  background: var(--system-success-soft);
+  border-color: var(--system-success);
+  color: var(--system-on-success);
+  background: var(--system-success);
 }
 
-.reminders-action--pin {
-  border-color: color-mix(in srgb, var(--system-info) 24%, transparent);
-  color: var(--system-info);
-  background: var(--system-info-soft);
-}
-
+.reminders-action--pin,
 .reminders-action--source {
   border-color: var(--system-control-border);
-  color: var(--system-text);
-  background: var(--system-control-bg);
+  color: var(--system-text-muted);
+  background: transparent;
 }
 
 .reminders-action--dismiss {
-  border-color: color-mix(in srgb, var(--system-danger) 22%, transparent);
-  color: var(--system-danger);
-  background: var(--system-danger-soft);
+  border-color: transparent;
+  color: var(--system-text-soft);
+  background: transparent;
 }
 
 .reminders-hidden-count {
@@ -925,6 +960,12 @@ watch(
   background: var(--system-accent);
 }
 
+.reminders-boundary {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+
 .reminders-boundary__layout {
   display: flex;
   flex-wrap: wrap;
@@ -953,15 +994,27 @@ watch(
 
 .reminders-calendar-button {
   flex: none;
-  border-color: var(--system-accent);
-  color: var(--system-on-accent);
-  background: var(--system-accent);
+  min-height: 34px;
+  padding-inline: 6px;
+  border-color: transparent;
+  color: var(--system-accent);
+  background: transparent;
 }
 
 .reminders-back-button:hover,
 .reminders-filter:not(.is-active):hover,
+.reminders-summary-item:hover,
 .reminders-action:hover {
   background: var(--system-hover-bg);
+}
+
+.reminders-action--confirm:hover {
+  background: color-mix(in srgb, var(--system-success) 88%, var(--system-text));
+}
+
+.reminders-action--dismiss:hover {
+  color: var(--system-danger);
+  background: var(--system-danger-soft);
 }
 
 .reminders-page button:active {
