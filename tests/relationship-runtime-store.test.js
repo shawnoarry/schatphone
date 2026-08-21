@@ -4,6 +4,7 @@ import {
   RELATIONSHIP_MEMORY_REVIEW_STATES,
   useRelationshipRuntimeStore,
 } from '../src/stores/relationshipRuntime'
+import { writePersistedState } from '../src/lib/persistence'
 
 describe('relationship runtime store', () => {
   beforeEach(() => {
@@ -1034,5 +1035,182 @@ describe('relationship runtime store', () => {
     ])
     expect(pressureB.candidates[0].memoryKey).not.toContain('pressure_a')
     expect(after).toEqual(before)
+  })
+
+  test('keeps relationship facts above 500 and pages memory projections', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const events = Array.from({ length: 501 }, (_, index) => ({
+      id: `long_history_event_${index}`,
+      entityKey: 'role:501',
+      targetLabel: 'Long history',
+      sourceModule: 'relationship_test',
+      sourceId: `long_history_source_${index}`,
+      memoryKey: `long_history_memory_${index}`,
+      factType: 'history_note',
+      summary: `History item ${index}.`,
+      metricDeltas: {},
+      status: 'applied',
+      effectApplied: false,
+      createdAt: index,
+    }))
+
+    expect(store.restoreFromBackup({
+      entities: [{ entityKey: 'role:501', profileId: 501, kind: 'role', displayName: 'Long history' }],
+      events,
+    })).toBe(true)
+    expect(store.events).toHaveLength(501)
+    expect(store.summarizeEntityForTarget({ profileId: 501 }).totalMemoryCount).toBe(501)
+    const prompt = store.buildPromptProjectionForTarget(
+      { profileId: 501 },
+      { memoryLimit: 3, memoryCharacterBudget: 120 },
+    )
+    expect(prompt.memoryRecall.items).toHaveLength(3)
+    expect(prompt.memoryRecall.characterCount).toBeLessThanOrEqual(120)
+
+    const firstPage = store.listMemoryGroupPageForTarget(
+      { profileId: 501 },
+      { limit: 12, offset: 0 },
+    )
+    const lastPage = store.listMemoryGroupPageForTarget(
+      { profileId: 501 },
+      { limit: 12, offset: 500 },
+    )
+    expect(firstPage).toMatchObject({
+      totalCount: 501,
+      page: 1,
+      pageCount: 42,
+      hasPrevious: false,
+      hasNext: true,
+    })
+    expect(firstPage.items).toHaveLength(12)
+    expect(lastPage).toMatchObject({
+      totalCount: 501,
+      page: 42,
+      hasPrevious: true,
+      hasNext: false,
+    })
+    expect(lastPage.items).toHaveLength(1)
+    expect(lastPage.items[0].memoryKey).toBe('long_history_memory_0')
+
+    const manyRoles = Array.from({ length: 301 }, (_, index) => ({
+      entityKey: `role:long_history_${index}`,
+      profileId: 1000 + index,
+      kind: 'role',
+      displayName: `Long history role ${index}`,
+    }))
+    expect(store.restoreFromBackup({ entities: manyRoles, events: [] })).toBe(true)
+    expect(store.entities).toHaveLength(301)
+  })
+
+  test('keeps more than 500 facts after close/reopen and backup restore', async () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const events = Array.from({ length: 501 }, (_, index) => ({
+      id: `reopen_event_${index}`,
+      entityKey: 'role:502',
+      targetLabel: 'Reopen history',
+      sourceModule: 'relationship_test',
+      sourceId: `reopen_source_${index}`,
+      memoryKey: `reopen_memory_${index}`,
+      factType: 'history_note',
+      summary: `Reopen item ${index}.`,
+      metricDeltas: {},
+      status: 'applied',
+      effectApplied: false,
+      createdAt: index,
+    }))
+    store.restoreFromBackup({
+      entities: [{ entityKey: 'role:502', profileId: 502, kind: 'role', displayName: 'Reopen history' }],
+      events,
+    })
+    const backup = store.createBackupSnapshot()
+    expect(store.saveNow().ok).toBe(true)
+
+    setActivePinia(createPinia())
+    const reopened = useRelationshipRuntimeStore()
+    expect(reopened.events).toHaveLength(501)
+    expect(reopened.restoreFromBackup({ relationshipRuntime: backup })).toBe(true)
+    expect(reopened.events).toHaveLength(501)
+    expect(reopened.createBackupSnapshot().events).toHaveLength(501)
+    await Promise.resolve()
+  })
+
+  test('migrates a version 1 runtime payload without reapplying a retention cap', () => {
+    const legacyEvents = Array.from({ length: 501 }, (_, index) => ({
+      id: `legacy_event_${index}`,
+      entityKey: 'role:503',
+      targetLabel: 'Legacy history',
+      sourceModule: 'relationship_test',
+      sourceId: `legacy_source_${index}`,
+      memoryKey: `legacy_memory_${index}`,
+      factType: 'history_note',
+      summary: `Legacy item ${index}.`,
+      metricDeltas: {},
+      status: 'applied',
+      effectApplied: false,
+      createdAt: index,
+    }))
+    writePersistedState(
+      'store:relationship-runtime',
+      {
+        settings: {},
+        entities: [{ entityKey: 'role:503', profileId: 503, kind: 'role', displayName: 'Legacy history' }],
+        events: legacyEvents,
+      },
+      { version: 1 },
+    )
+
+    setActivePinia(createPinia())
+    const store = useRelationshipRuntimeStore()
+    expect(store.events).toHaveLength(501)
+    expect(store.createBackupSnapshot().events).toHaveLength(501)
+  })
+
+  test('restores the previous full history when the expanded save fails', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const events = Array.from({ length: 500 }, (_, index) => ({
+      id: `rollback_event_${index}`,
+      entityKey: 'role:504',
+      targetLabel: 'Rollback history',
+      sourceModule: 'relationship_test',
+      sourceId: `rollback_source_${index}`,
+      memoryKey: `rollback_memory_${index}`,
+      factType: 'history_note',
+      summary: `Rollback item ${index}.`,
+      metricDeltas: {},
+      status: 'applied',
+      effectApplied: false,
+      createdAt: index,
+    }))
+    store.restoreFromBackup({
+      entities: [{ entityKey: 'role:504', profileId: 504, kind: 'role', displayName: 'Rollback history' }],
+      events,
+    })
+    expect(store.saveNow().ok).toBe(true)
+    const setItem = Storage.prototype.setItem
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+      if (key === 'schatphone:store:relationship-runtime' && String(value).includes('rollback_new_event')) {
+        const error = new Error('quota')
+        error.name = 'QuotaExceededError'
+        throw error
+      }
+      return setItem.call(this, key, value)
+    })
+
+    expect(store.recordRelationshipFact({
+      id: 'rollback_new_event',
+      target: { profileId: 504, name: 'Rollback history' },
+      sourceModule: 'relationship_test',
+      sourceId: 'rollback_new_source',
+      memoryKey: 'rollback_new_memory',
+      factType: 'history_note',
+      summary: 'This write must be rejected without losing history.',
+      metricDeltas: {},
+    })).toBeNull()
+    expect(store.events).toHaveLength(500)
+    expect(store.events.some((event) => event.id === 'rollback_new_event')).toBe(false)
+    setItemSpy.mockRestore()
   })
 })

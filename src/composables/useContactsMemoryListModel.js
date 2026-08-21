@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const defaultT = (zh, en) => en || zh
 
@@ -30,19 +30,79 @@ export function useContactsMemoryListModel({
   t = defaultT,
   getRelationshipTarget = () => ({}),
   listMemoryGroupsForTarget = () => [],
+  listMemoryGroupPageForTarget = null,
+  listMemorySourceModulesForTarget = null,
   projectMemoryConsolidationPressureForTarget = () => createEmptyMemoryPressure(),
   formatSourceModuleLabel = (sourceModule) => sourceModule || '',
   visibleLimit = 12,
 } = {}) {
-  const selectedMemoryGroups = computed(() => {
+  const pageSize = Math.max(1, toSafeCount(visibleLimit) || 12)
+  const selectedMemoryPage = ref(1)
+  const usesRuntimePaging = typeof listMemoryGroupPageForTarget === 'function'
+
+  const selectedMemoryPageResult = computed(() => {
     const profile = selectedProfile?.value
-    if (!profile) return []
-    return listMemoryGroupsForTarget(getRelationshipTarget(profile), 50, {
+    if (!profile) {
+      return {
+        items: [],
+        totalCount: 0,
+        page: 1,
+        pageCount: 1,
+        hasPrevious: false,
+        hasNext: false,
+      }
+    }
+    const target = getRelationshipTarget(profile)
+    const sourceFilter = memorySourceFilter?.value || 'all'
+    if (usesRuntimePaging) {
+      return listMemoryGroupPageForTarget(target, {
+        limit: pageSize,
+        offset: (selectedMemoryPage.value - 1) * pageSize,
+        sourceModule: sourceFilter === 'all' ? '' : sourceFilter,
+        sortMode: memorySortMode?.value || 'recent',
+      }) || {
+        items: [],
+        totalCount: 0,
+        page: selectedMemoryPage.value,
+        pageCount: 1,
+        hasPrevious: selectedMemoryPage.value > 1,
+        hasNext: false,
+      }
+    }
+    const items = listMemoryGroupsForTarget(target, 50, {
       sortMode: memorySortMode?.value || 'recent',
     })
+    return {
+      items,
+      totalCount: items.length,
+      page: 1,
+      pageCount: 1,
+      hasPrevious: false,
+      hasNext: false,
+    }
+  })
+
+  const selectedMemoryGroups = computed(() => {
+    return Array.isArray(selectedMemoryPageResult.value?.items)
+      ? selectedMemoryPageResult.value.items
+      : []
   })
 
   const availableMemorySourceFilters = computed(() => {
+    const profile = selectedProfile?.value
+    if (profile && typeof listMemorySourceModulesForTarget === 'function') {
+      const modules = listMemorySourceModulesForTarget(getRelationshipTarget(profile))
+      return [
+        { value: 'all', label: t('全部来源', 'All sources') },
+        ...(Array.isArray(modules) ? modules : [])
+          .filter(Boolean)
+          .sort((left, right) => left.localeCompare(right))
+          .map((moduleKey) => ({
+            value: moduleKey,
+            label: formatSourceModuleLabel(moduleKey),
+          })),
+      ]
+    }
     const modules = new Set()
     selectedMemoryGroups.value.forEach((memory) => {
       ;(memory.sourceModules || []).forEach((moduleKey) => {
@@ -67,10 +127,53 @@ export function useContactsMemoryListModel({
       : selectedMemoryGroups.value.filter((memory) => (memory.sourceModules || []).includes(filterValue))
   })
 
-  const visibleMemoryGroups = computed(() => filteredMemoryGroups.value.slice(0, visibleLimit))
+  const visibleMemoryGroups = computed(() =>
+    usesRuntimePaging ? filteredMemoryGroups.value : filteredMemoryGroups.value.slice(0, pageSize),
+  )
   const visibleMemoryCount = computed(() => visibleMemoryGroups.value.length)
-  const totalMemoryCount = computed(() => filteredMemoryGroups.value.length)
+  const totalMemoryCount = computed(() =>
+    usesRuntimePaging
+      ? toSafeCount(selectedMemoryPageResult.value?.totalCount)
+      : filteredMemoryGroups.value.length,
+  )
   const hiddenMemoryCount = computed(() => Math.max(0, totalMemoryCount.value - visibleMemoryCount.value))
+  const hasPreviousMemoryPage = computed(() => Boolean(selectedMemoryPageResult.value?.hasPrevious))
+  const hasNextMemoryPage = computed(() => Boolean(selectedMemoryPageResult.value?.hasNext))
+  const memoryPageCount = computed(() =>
+    Math.max(1, toSafeCount(selectedMemoryPageResult.value?.pageCount) || 1),
+  )
+  const selectedMemoryPageSummaryText = computed(() => {
+    if (!usesRuntimePaging || memoryPageCount.value <= 1) return ''
+    return t(
+      `第 ${selectedMemoryPage.value} / ${memoryPageCount.value} 页 · 共 ${totalMemoryCount.value} 条`,
+      `Page ${selectedMemoryPage.value} / ${memoryPageCount.value} · ${totalMemoryCount.value} total`,
+    )
+  })
+
+  const goToPreviousMemoryPage = () => {
+    if (!hasPreviousMemoryPage.value) return
+    selectedMemoryPage.value = Math.max(1, selectedMemoryPage.value - 1)
+  }
+
+  const goToNextMemoryPage = () => {
+    if (!hasNextMemoryPage.value) return
+    selectedMemoryPage.value = Math.min(memoryPageCount.value, selectedMemoryPage.value + 1)
+  }
+
+  watch(
+    [selectedProfile, memorySourceFilter, memorySortMode],
+    () => {
+      selectedMemoryPage.value = 1
+    },
+  )
+  watch(
+    selectedMemoryPageResult,
+    (result) => {
+      const pageCount = Math.max(1, toSafeCount(result?.pageCount) || 1)
+      if (selectedMemoryPage.value > pageCount) selectedMemoryPage.value = pageCount
+    },
+    { immediate: true },
+  )
 
   const selectedMemoryPressure = computed(() => {
     const profile = selectedProfile?.value
@@ -194,6 +297,12 @@ export function useContactsMemoryListModel({
         `Showing ${visibleMemoryCount.value} memory groups.`,
       )
     }
+    if (usesRuntimePaging) {
+      return t(
+        `当前第 ${selectedMemoryPage.value} 页，共 ${totalMemoryCount.value} 条记忆组。`,
+        `Page ${selectedMemoryPage.value}; ${totalMemoryCount.value} memory groups in total.`,
+      )
+    }
     return t(
       `当前展示前 ${visibleMemoryCount.value} 条，另有 ${hiddenMemoryCount.value} 条符合筛选。`,
       `Showing the first ${visibleMemoryCount.value}; ${hiddenMemoryCount.value} more match the current filter.`,
@@ -201,13 +310,17 @@ export function useContactsMemoryListModel({
   })
 
   const selectedMemoryListCountLabel = computed(() =>
-    hiddenMemoryCount.value > 0
+    usesRuntimePaging && totalMemoryCount.value > pageSize
+      ? `${Math.min((selectedMemoryPage.value - 1) * pageSize + 1, totalMemoryCount.value)}-${Math.min(selectedMemoryPage.value * pageSize, totalMemoryCount.value)} / ${totalMemoryCount.value}`
+      : hiddenMemoryCount.value > 0
       ? `${visibleMemoryCount.value} / ${totalMemoryCount.value}`
       : String(visibleMemoryCount.value),
   )
 
   const selectedMemoryListOverflowText = computed(() =>
-    hiddenMemoryCount.value > 0
+    usesRuntimePaging
+      ? ''
+      : hiddenMemoryCount.value > 0
       ? t(
           `${hiddenMemoryCount.value} 条其余记忆已按当前排序保留在列表外，避免详情页过长。`,
           `${hiddenMemoryCount.value} additional memories stay outside the visible list to keep the detail page manageable.`,
@@ -217,6 +330,13 @@ export function useContactsMemoryListModel({
 
   return {
     selectedMemoryGroups,
+    selectedMemoryPage,
+    memoryPageCount,
+    hasPreviousMemoryPage,
+    hasNextMemoryPage,
+    selectedMemoryPageSummaryText,
+    goToPreviousMemoryPage,
+    goToNextMemoryPage,
     availableMemorySourceFilters,
     filteredMemoryGroups,
     visibleMemoryGroups,

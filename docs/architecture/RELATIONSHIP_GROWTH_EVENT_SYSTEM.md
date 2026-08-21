@@ -70,7 +70,7 @@ Do not:
 - Let AI directly mutate affinity/stage values without a local rule or user confirmation.
 - Let module adapters bypass the shared event engine for random or condition-driven relationship changes.
 - Let every module create its own standalone long-term memory for the same life event when a shared memory summary would be enough.
-- Treat a hot-list cap as permission to erase already-applied relationship evidence. Hot/runtime limits and durable audit retention are separate concerns.
+- Treat a hot-list cap as permission to erase already-applied relationship evidence. Hot/runtime limits and durable audit retention are separate concerns. `CMG-06` implements this for Relationship Runtime: the v2 carrier keeps the complete event/entity arrays, while Contacts and other list callers request bounded `limit / offset` projections. A v1 payload can be read and rewritten through the explicit compatibility migration, but rows already discarded by an older 500-event or 300-entity writer cannot be reconstructed.
 - Let Chat or Contacts directly apply generated friend/block/refusal social events without the event-runtime review seam.
 - Treat a formal Event Instance as an automatic role memory, or treat a public world-knowledge entry as a copy that must be stored in every role profile.
 - Use event severity as a substitute for relationship-memory importance, or allow raw Event Runtime logs to bypass the Relationship Runtime recall seam.
@@ -361,6 +361,8 @@ Current reusable interface:
 - `submitChatSocialEventProposal(input)`: event runtime can store generated role-side social proposals, auto-apply low-risk greetings with audit, and keep high-risk communication changes pending for World Hub review before Chat applies them.
 - `findEventBySource(sourceModule, sourceId)`: module adapters can dedupe imported facts before applying relationship effects.
 - `listMemoryAggregatesForTarget(target)`: runtime can group multiple applied facts under one shared memory summary when they point to the same `memoryKey`.
+- `listMemoryGroupPageForTarget(target, { limit, offset, sourceModule, sortMode })`: Contacts reads one source-filtered page with `totalCount`, `pageCount`, and next/previous flags. The page is a read projection; it never changes the authoritative events or memory reviews.
+- `listMemorySourceModulesForTarget(target)`: supplies the source-filter options without asking Contacts to load every memory group into its own list model.
 - UI consumers should filter from the full sorted aggregate list first and only then apply any visible-item cap; otherwise source-specific review flows can accidentally hide valid memory groups.
 - Runtime recent-event summaries should sort by event timestamp, not raw insertion order, so delayed imports or backfilled facts cannot replace the true latest relationship event in Chat or Contacts summaries.
 - Archived memories should behave like background history by default. They may remain inspectable and auditable, but callers must opt in before archived-only memories or their supporting events become headline summary content again.
@@ -372,6 +374,7 @@ Current reusable interface:
 - `buildPromptContextForTarget(target)`: Chat reads compact context for role conversations without triggering an API call.
 - `applyPendingRelationshipEvent(eventId)` and `dismissRelationshipEvent(eventId)`: future World Hub controls can approve or reject risky effects.
 - `createBackupSnapshot()` and `restoreFromBackup(snapshot)`: Settings backup and rollback can preserve relationship runtime state.
+- Relationship Runtime storage version 2 removes the old global 500-event and 300-entity writer/restore slices. Its transactional write still restores the pre-mutation snapshot on a failed save, and complete backup/restore carries the full retained arrays. Prompt recall remains bounded by its result-item and character budgets even when the source carrier is larger.
 
 Implementation guardrail:
 

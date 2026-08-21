@@ -22,6 +22,8 @@ const createModel = ({
     candidates: [],
   },
   visibleLimit,
+  pageAdapter = null,
+  sourceModules = null,
 } = {}) => {
   const calls = []
   const pressureCalls = []
@@ -39,6 +41,8 @@ const createModel = ({
       calls.push({ target, limit, options })
       return memories
     },
+    listMemoryGroupPageForTarget: pageAdapter,
+    listMemorySourceModulesForTarget: sourceModules ? () => sourceModules : null,
     projectMemoryConsolidationPressureForTarget: (target) => {
       pressureCalls.push(target)
       return pressure
@@ -209,6 +213,44 @@ describe('Contacts memory list model interface', () => {
         summary: 'Memory summary 14',
         reasonLabel: 'Many related experiences and a detailed description',
       }),
+    ])
+  })
+
+  test('uses runtime pagination so Contacts only reads the current page', () => {
+    const pageCalls = []
+    const memories = Array.from({ length: 27 }, (_, index) => createMemory(index + 1, ['calendar']))
+    const { model } = createModel({
+      memories,
+      sourceModules: ['calendar', 'phone'],
+      pageAdapter: (target, options) => {
+        pageCalls.push({ target, options })
+        const start = options.offset
+        const items = memories.slice(start, start + options.limit)
+        return {
+          items,
+          totalCount: memories.length,
+          page: start / options.limit + 1,
+          pageCount: Math.ceil(memories.length / options.limit),
+          hasPrevious: start > 0,
+          hasNext: start + items.length < memories.length,
+        }
+      },
+    })
+
+    expect(model.visibleMemoryGroups.value).toHaveLength(12)
+    expect(model.totalMemoryCount.value).toBe(27)
+    expect(model.hasNextMemoryPage.value).toBe(true)
+    expect(pageCalls[0].options).toMatchObject({ limit: 12, offset: 0, sourceModule: '' })
+
+    model.goToNextMemoryPage()
+    expect(model.selectedMemoryPage.value).toBe(2)
+    expect(model.visibleMemoryGroups.value[0].memoryKey).toBe('memory_13')
+    expect(pageCalls.at(-1).options.offset).toBe(12)
+
+    expect(model.availableMemorySourceFilters.value).toEqual([
+      { value: 'all', label: 'All sources' },
+      { value: 'calendar', label: 'Source: calendar' },
+      { value: 'phone', label: 'Source: phone' },
     ])
   })
 })

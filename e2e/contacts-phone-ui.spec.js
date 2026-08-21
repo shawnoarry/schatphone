@@ -80,25 +80,46 @@ const relationshipSnapshot = {
     requireConfirmationForMajorEffects: true,
   },
   entities: [],
-  events: Array.from({ length: 5 }, (_, index) => ({
-    id: `relationship_event_phone_ui_${index}`,
-    entityKey: 'role:2',
-    memoryKey: 'phone_ui_shared_memory',
-    memoryRole: index === 0 ? 'primary' : 'supporting',
-    targetLabel: 'Main contact',
-    sourceModule: index % 2 === 0 ? 'relationship_phone_call' : 'relationship_calendar_confirmed_event',
-    sourceId: `phone_ui_source_${index}`,
-    factType: 'shared_experience',
-    summary: `Shared school-day memory ${index + 1}.`,
-    intensity: 1,
-    metricDeltas: {},
-    milestone: '',
-    growthTraits: [],
-    requiresConfirmation: false,
-    status: 'applied',
-    effectApplied: true,
-    createdAt: Date.UTC(2026, 7, 1, 8, index),
-  })),
+  events: [
+    ...Array.from({ length: 5 }, (_, index) => ({
+      id: `relationship_event_phone_ui_${index}`,
+      entityKey: 'role:2',
+      memoryKey: 'phone_ui_shared_memory',
+      memoryRole: index === 0 ? 'primary' : 'supporting',
+      targetLabel: 'Main contact',
+      sourceModule: index % 2 === 0 ? 'relationship_phone_call' : 'relationship_calendar_confirmed_event',
+      sourceId: `phone_ui_source_${index}`,
+      factType: 'shared_experience',
+      summary: `Shared school-day memory ${index + 1}.`,
+      intensity: 1,
+      metricDeltas: {},
+      milestone: '',
+      growthTraits: [],
+      requiresConfirmation: false,
+      status: 'applied',
+      effectApplied: true,
+      createdAt: Date.UTC(2026, 7, 1, 10, index),
+    })),
+    ...Array.from({ length: 12 }, (_, index) => ({
+      id: `relationship_event_phone_ui_page_${index}`,
+      entityKey: 'role:2',
+      memoryKey: `phone_ui_page_memory_${index}`,
+      memoryRole: 'primary',
+      targetLabel: 'Main contact',
+      sourceModule: 'relationship_phone_call',
+      sourceId: `phone_ui_page_source_${index}`,
+      factType: 'shared_experience',
+      summary: `Paged school-day memory ${index + 1}.`,
+      intensity: 1,
+      metricDeltas: {},
+      milestone: '',
+      growthTraits: [],
+      requiresConfirmation: false,
+      status: 'applied',
+      effectApplied: true,
+      createdAt: Date.UTC(2026, 7, 1, 9, index),
+    })),
+  ],
   memoryReviews: [],
 }
 
@@ -196,6 +217,12 @@ test('Contacts opens as a phone contact list on mobile', async ({ page }) => {
   )
   await page.getByTestId('contacts-memory-health-open-phone_ui_shared_memory').click()
   await expect(page.getByTestId('contacts-memory-detail')).toContainText('Shared school-day memory 5.')
+  await expect(page.getByTestId('contacts-memory-pagination')).toBeVisible()
+  await page.getByTestId('contacts-memory-page-next').click()
+  await expect(page.getByTestId('contacts-memory-open-phone_ui_shared_memory')).toHaveCount(0)
+  await expect(page.getByTestId('contacts-memory-page-previous')).toBeEnabled()
+  await page.getByTestId('contacts-memory-page-previous').click()
+  await expect(page.getByTestId('contacts-memory-open-phone_ui_shared_memory')).toBeVisible()
 
   await page.getByTestId('contacts-detail-sheet-back').click()
   await expect(page.getByTestId('contacts-open-memories-sheet')).toBeVisible()

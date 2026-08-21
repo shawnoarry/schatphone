@@ -24,7 +24,7 @@ The current work is concentrated in six areas:
 3. one ordinary daily-life cross-module loop;
 4. deployed PWA, backup, external-protection, and true-device release proof; hosted direct-provider and optional compatibility-proxy Chat are proven.
 5. roadmap 4.14 Event Experience, with EVE-2A's reusable contracts/fixtures, EVE-2B's durable runtime, EVE-2C's first Map/K-pop vertical slice, and EVE-3's World Hub Event Notebook complete; additional hosts/content under EVE-4 and Mini Scene/media expansion under EVE-5 remain separately gated.
-6. roadmap 4.5-CMG continuity governance: one shared experience instead of row-counted pseudo-memories, one current relationship truth, confirmed durable saves, permanent committed history with bounded reading, and the audited direct defects. `CMG-00` has frozen the plan; behavior implementation has not started.
+6. roadmap 4.5-CMG continuity governance: one shared experience instead of row-counted pseudo-memories, one current relationship truth, confirmed durable saves, permanent committed history with bounded reading, and the audited direct defects. `CMG-00` has frozen the plan; `CMG-06` completed the Relationship Runtime retention/migration and Contacts paging slice on 2026-08-21.
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
@@ -49,7 +49,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Shell / Lock / Home | `Stable` | reliable foundation; final device polish remains |
 | Settings / Network / backup | `Activation and local recovery usable` | Chat reaches Network and returns after save plus smoke success; root-shell recovery offers retry/reload, one page-level writer prevents unsafe later-page writes, and schema v3 complete backup now verifies required sections and Gallery binaries, restores Chat identity, rolls back failures, and recovers interrupted import before mount |
 | Chat | `Stable core, structurally heavy` | deepest everyday loop; group orchestration and real-device media QA remain |
-| Contacts / relationship | `Stable V2 baseline; continuity governance active` | ownership, detail IA, memory review, classification, and cleanup are landed; 4.5-CMG now addresses the 500-row truncation, competing Chat truth, generic disclosure bucket, and shared-experience meaning |
+| Contacts / relationship | `Stable V2 baseline; CMG-06 done` | ownership, detail IA, memory review, classification, cleanup, permanent Relationship Runtime fact retention, and bounded Contacts reading are landed; competing Chat truth, generic disclosure grouping, and shared-experience meaning are already governed |
 | Book / WorldBook | `Integrated V1, World Setting W1 done` | long text and activation are correctly split; strict JSON plus editable Markdown/TXT export, stable Pack-independent compatibility identity, and the independent K-pop 2 + 6 + 1 catalog are landed |
 | World Pack / App Store | `Integrated V1, partial` | four target-app paths and reviewed proposals work; optional Book/encyclopedia/template references are non-binding diagnostics, while broader hardening is pending |
 | Mini Scene | `AI/text shell landed; continuity hardening active` | durable text artifacts and one Event Runtime caller contract exist; 4.5-CMG now covers repeated-request provider calls and the 120-artifact truncation before another production trigger |
@@ -197,7 +197,7 @@ This is the only current product-completion sequence. It does not require a broa
 
 1. `CMG-00 DONE 2026-08-20`: freeze the product model, confirmed defects, dependency order, and two-PC status protocol in the live roadmap;
 2. start only with `DCF-05` deterministic persistence-test completion and `CMG-01` executable shared-experience fixtures;
-3. require confirmed save results before removing any 500/240/120 limit or reporting durable success;
+3. require confirmed save results before removing any 500/240/120 limit or reporting durable success; `CMG-06` completed the first reserved retention slice with migration, failure, reopen, restore, and page evidence;
 4. keep detailed status only in roadmap 4.5-CMG and the current execution record in the module-architecture handoff.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract

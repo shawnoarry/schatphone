@@ -165,7 +165,7 @@ describe('RemindersView', () => {
       query: { from: 'home', homePage: '1' },
     })
     await flushUi()
-    await wrapper.get('button.bg-blue-500').trigger('click')
+    await wrapper.get('button.reminders-calendar-button').trigger('click')
     await flushUi()
 
     expect(router.currentRoute.value.path).toBe('/calendar')

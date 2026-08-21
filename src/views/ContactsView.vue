@@ -755,6 +755,11 @@ const selectedDeleteImpact = computed(() =>
 
 const {
   availableMemorySourceFilters,
+  hasPreviousMemoryPage,
+  hasNextMemoryPage,
+  selectedMemoryPageSummaryText,
+  goToPreviousMemoryPage,
+  goToNextMemoryPage,
   visibleMemoryGroups,
   selectedMemoryHealthSummary,
   selectedMemoryHealthCandidates,
@@ -768,6 +773,8 @@ const {
   t,
   getRelationshipTarget: (profile) => profileRelationshipTarget(profile),
   listMemoryGroupsForTarget: (...args) => relationshipRuntimeStore.listMemoryGroupsForTarget(...args),
+  listMemoryGroupPageForTarget: (...args) => relationshipRuntimeStore.listMemoryGroupPageForTarget(...args),
+  listMemorySourceModulesForTarget: (...args) => relationshipRuntimeStore.listMemorySourceModulesForTarget(...args),
   projectMemoryConsolidationPressureForTarget: (...args) =>
     relationshipRuntimeStore.projectMemoryConsolidationPressureForTarget(...args),
   formatSourceModuleLabel: (sourceModule) => relationshipSourceModuleLabel(sourceModule),
@@ -4053,6 +4060,31 @@ onBeforeUnmount(() => {
               <p v-if="selectedMemoryListOverflowText" class="text-[10px] text-gray-500">
                 {{ selectedMemoryListOverflowText }}
               </p>
+              <div
+                v-if="selectedMemoryPageSummaryText"
+                class="flex items-center justify-between gap-2"
+                data-testid="contacts-memory-pagination"
+              >
+                <button
+                  type="button"
+                  class="contacts-small-action"
+                  data-testid="contacts-memory-page-previous"
+                  :disabled="!hasPreviousMemoryPage"
+                  @click="goToPreviousMemoryPage"
+                >
+                  {{ t('上一页', 'Previous') }}
+                </button>
+                <span class="text-[10px] text-gray-500">{{ selectedMemoryPageSummaryText }}</span>
+                <button
+                  type="button"
+                  class="contacts-small-action"
+                  data-testid="contacts-memory-page-next"
+                  :disabled="!hasNextMemoryPage"
+                  @click="goToNextMemoryPage"
+                >
+                  {{ t('下一页', 'Next') }}
+                </button>
+              </div>
               <div
                 v-if="selectedMemoryDetail"
                 class="contacts-memory-detail space-y-2"

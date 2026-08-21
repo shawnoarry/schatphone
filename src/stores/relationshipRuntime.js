@@ -6,11 +6,10 @@ import { projectMemoryConsolidationPressure } from '../lib/memory-consolidation-
 import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 
 export const RELATIONSHIP_RUNTIME_STORAGE_KEY = 'store:relationship-runtime'
-export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 1
+export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 2
 
-const RELATIONSHIP_ENTITY_LIMIT = 300
-const RELATIONSHIP_EVENT_LIMIT = 500
-const RELATIONSHIP_MEMORY_AGGREGATE_LIMIT = RELATIONSHIP_EVENT_LIMIT
+export const RELATIONSHIP_EVENT_PAGE_SIZE = 50
+export const RELATIONSHIP_MEMORY_PAGE_SIZE = 50
 const METRIC_KEYS = ['affinity', 'trust', 'intimacy', 'tension', 'dependency']
 export const RELATIONSHIP_EVENT_STATUS = Object.freeze({
   APPLIED: 'applied',
@@ -31,6 +30,14 @@ const DEFAULT_RELATIONSHIP_METRICS = Object.freeze({
   dependency: 10,
 })
 const MAX_MEMORY_REVIEW_NOTE_LENGTH = 400
+
+const normalizeNonNegativeLimit = (value, fallback = 5) => {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return fallback
+  return Math.max(0, Math.floor(number))
+}
+
+const normalizeOffset = (value) => normalizeNonNegativeLimit(value, 0)
 
 const toInt = (value, fallback = 0) => {
   const num = Number(value)
@@ -492,6 +499,18 @@ const cloneRelationshipEvent = (event) => ({
   relationshipGate: cloneRelationshipGate(event.relationshipGate),
 })
 
+// Version 1 already stored the same logical records, but the old writer could
+// silently keep only the newest 500 events. Migration preserves every record
+// present in that payload; it cannot reconstruct rows that an older version had
+// already discarded.
+export const migrateRelationshipRuntimeStorage = ({ version, data } = {}) => {
+  const storedVersion = Number(version)
+  if (storedVersion === 1 || storedVersion === RELATIONSHIP_RUNTIME_STORAGE_VERSION) {
+    return data && typeof data === 'object' ? data : null
+  }
+  return null
+}
+
 const hasMatchingRelationshipEventIdentity = (left, right) =>
   JSON.stringify({
     entityKey: left?.entityKey,
@@ -680,8 +699,11 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const listMemoryAggregatesForTarget = (target = {}, limit = 5, options = {}) => {
     const key = buildRelationshipEntityKey(target)
     if (!key) return []
+    const sourceModule = normalizeText(options.sourceModule, '', 60)
+    const offset = normalizeOffset(options.offset)
     return [...memoryAggregateMap.value.values()]
       .filter((item) => item.entityKey === key)
+      .filter((item) => !sourceModule || item.sourceModules.includes(sourceModule))
       .map((item) => {
         const review = memoryReviewMap.value.get(buildMemoryAggregateMapKey(item.entityKey, item.memoryKey)) || {}
         const summary = {
@@ -714,11 +736,48 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         }
       })
       .sort((left, right) => compareMemorySummaryEntries(left, right, options))
-      .slice(0, clamp(toInt(limit, 5), 0, RELATIONSHIP_MEMORY_AGGREGATE_LIMIT))
+      .slice(offset, offset + normalizeNonNegativeLimit(limit, 5))
   }
 
   const listMemoryGroupsForTarget = (target = {}, limit = 50, options = {}) =>
     listMemoryAggregatesForTarget(target, limit, options)
+
+  const listMemorySourceModulesForTarget = (target = {}) => {
+    const key = buildRelationshipEntityKey(target)
+    if (!key) return []
+    const modules = new Set()
+    memoryAggregateMap.value.forEach((memory) => {
+      if (memory.entityKey !== key) return
+      memory.sourceModules.forEach((sourceModule) => {
+        if (sourceModule) modules.add(sourceModule)
+      })
+    })
+    return [...modules].sort((left, right) => left.localeCompare(right))
+  }
+
+  const listMemoryGroupPageForTarget = (target = {}, options = {}) => {
+    const limit = normalizeNonNegativeLimit(options.limit, RELATIONSHIP_MEMORY_PAGE_SIZE)
+    const offset = normalizeOffset(options.offset)
+    const sourceModule = normalizeText(options.sourceModule, '', 60)
+    const allItems = listMemoryAggregatesForTarget(target, Number.MAX_SAFE_INTEGER, {
+      ...options,
+      sourceModule,
+      offset: 0,
+    })
+    const items = allItems.slice(offset, offset + limit)
+    const page = limit > 0 ? Math.floor(offset / limit) + 1 : 1
+    const pageCount = limit > 0 ? Math.max(1, Math.ceil(allItems.length / limit)) : 1
+    return {
+      items,
+      totalCount: allItems.length,
+      offset,
+      limit,
+      page,
+      pageCount,
+      hasPrevious: offset > 0,
+      hasNext: offset + items.length < allItems.length,
+    }
+  }
 
   const listSourceRefsForTarget = (target = {}) => {
     const key = buildRelationshipEntityKey(target)
@@ -767,7 +826,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         : normalizeText(target?.kind, 'relationship_target', 40)
     const memories = listMemoryAggregatesForTarget(
       target,
-      RELATIONSHIP_MEMORY_AGGREGATE_LIMIT,
+      Number.MAX_SAFE_INTEGER,
       { sortMode: 'recent' },
     ).map((memory) => {
       const detail = getMemoryGroupDetail(target, memory.memoryKey)
@@ -832,9 +891,6 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     }
     const created = createDefaultEntity(meta)
     entities.value.unshift(created)
-    if (entities.value.length > RELATIONSHIP_ENTITY_LIMIT) {
-      entities.value.splice(RELATIONSHIP_ENTITY_LIMIT)
-    }
     return created
   }
 
@@ -997,9 +1053,6 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     }
 
     events.value.unshift(event)
-    if (events.value.length > RELATIONSHIP_EVENT_LIMIT) {
-      events.value.splice(RELATIONSHIP_EVENT_LIMIT)
-    }
     const persistenceResult = commitRelationshipMutation(beforeMutation)
     if (persistenceResult?.ok !== true) return null
     return cloneRelationshipEvent(event)
@@ -1195,7 +1248,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     const fallback = entity || createDefaultEntity(meta)
     const memoryLimit = clamp(toInt(options.memoryLimit, 3), 0, 20)
     const memorySortMode = normalizeText(options.memorySortMode, 'recent', 20)
-    const rawMemorySummaries = listMemoryAggregatesForTarget(meta, RELATIONSHIP_MEMORY_AGGREGATE_LIMIT, {
+    const rawMemorySummaries = listMemoryAggregatesForTarget(meta, Number.MAX_SAFE_INTEGER, {
       sortMode: memorySortMode,
     })
     const hiddenArchivedMemoryKeys = shouldIncludeArchivedMemories(options)
@@ -1291,7 +1344,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     }
     const memories = listMemoryAggregatesForTarget(
       target,
-      RELATIONSHIP_MEMORY_AGGREGATE_LIMIT,
+      Number.MAX_SAFE_INTEGER,
       { sortMode: 'recent' },
     )
     return selectMemoryRecall({
@@ -1385,12 +1438,10 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     entities.value = (rawEntities || [])
       .map(normalizeEntity)
       .filter(Boolean)
-      .slice(0, RELATIONSHIP_ENTITY_LIMIT)
     events.value = (rawEvents || [])
       .map(normalizeRelationshipEvent)
       .filter(Boolean)
       .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, RELATIONSHIP_EVENT_LIMIT)
     memoryReviews.value = normalizeMemoryReviewEntries(rawMemoryReviews || [])
     pruneMemoryReviews()
     return true
@@ -1399,6 +1450,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const hydrateFromStorage = () => {
     const persisted = readPersistedState(RELATIONSHIP_RUNTIME_STORAGE_KEY, {
       version: RELATIONSHIP_RUNTIME_STORAGE_VERSION,
+      migrate: migrateRelationshipRuntimeStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -1406,6 +1458,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const hydrateFromStorageAsync = async () => {
     const persisted = await readPersistedStateAsync(RELATIONSHIP_RUNTIME_STORAGE_KEY, {
       version: RELATIONSHIP_RUNTIME_STORAGE_VERSION,
+      migrate: migrateRelationshipRuntimeStorage,
     })
     return applyPersistedSource(persisted)
   }
@@ -1440,6 +1493,7 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
   const persistToStorage = () =>
     writePersistedState(RELATIONSHIP_RUNTIME_STORAGE_KEY, createBackupSnapshot(), {
       version: RELATIONSHIP_RUNTIME_STORAGE_VERSION,
+      migrate: migrateRelationshipRuntimeStorage,
     })
 
   const armTransactionalWatchedWriteSkip = () => {
@@ -1502,6 +1556,8 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
     findEventBySource,
     listMemoryAggregatesForTarget,
     listMemoryGroupsForTarget,
+    listMemoryGroupPageForTarget,
+    listMemorySourceModulesForTarget,
     listSourceRefsForTarget,
     getMemoryGroupDetail,
     projectMemoryConsolidationPressureForTarget,
