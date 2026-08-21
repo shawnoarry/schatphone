@@ -2,11 +2,45 @@ import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   COMMERCE_EVENT_TEMPLATE_ID,
+  getBuiltInCommerceEventTemplate,
 } from '../src/lib/simulation/commerce-event-templates'
+import {
+  EVENT_INSTANCE_V2_LIFECYCLE,
+} from '../src/lib/simulation/commerce-interaction-contracts'
+import { createEventInstanceV2 } from '../src/lib/simulation/event-instance-v2'
 import {
   migrateSimulationStorage,
   useSimulationStore,
 } from '../src/stores/simulation'
+
+const createRetentionFixtureInstances = (count = 241) => {
+  const template = getBuiltInCommerceEventTemplate(
+    COMMERCE_EVENT_TEMPLATE_ID.DESTINATION_CHANGE_AFTER_FULFILLMENT,
+  )
+  const baseTime = 1_800_000_000_000
+  return Array.from({ length: count }, (_, index) => {
+    const id = `event_retention_${index}`
+    const instance = createEventInstanceV2({
+      id,
+      template,
+      contextRefs: {
+        order_id: `food_order_retention_${index}`,
+        service_case_id:
+          index === count - 1 ? 'service_case_long_running' : `service_case_${index}`,
+        fulfillment_phase: 'en_route',
+      },
+      now: baseTime + index,
+    })
+    if (!instance) throw new Error(`Failed to create retention fixture ${id}`)
+    if (index !== count - 1) return instance
+    return {
+      ...instance,
+      lifecycle: EVENT_INSTANCE_V2_LIFECYCLE.RESOLVED,
+      resultCodes: ['address_change_closed'],
+      updatedAt: baseTime + index + 1,
+    }
+  })
+}
 
 describe('Simulation commerce Event Instance V2', () => {
   beforeEach(() => {
@@ -172,5 +206,116 @@ describe('Simulation commerce Event Instance V2', () => {
       restoredCount: 1,
       rejected: [],
     })
+  })
+
+  test('retains 241+ active and terminal instances through backup, close, and reopen', () => {
+    const store = useSimulationStore()
+    const instances = createRetentionFixtureInstances()
+    expect(store.restoreFromBackup({ eventInstancesV2: instances })).toBe(true)
+    expect(store.eventInstancesV2).toHaveLength(241)
+    expect(store.getEventInstanceV2('event_retention_0')).toMatchObject({ lifecycle: 'active' })
+    expect(store.getEventInstanceV2('event_retention_240')).toMatchObject({
+      lifecycle: 'resolved',
+      contextRefs: { service_case_id: 'service_case_long_running' },
+    })
+
+    for (let index = 0; index < 241; index += 1) {
+      store.recordEventLog({
+        id: `retention_log_${index}`,
+        eventId: 'simulation.retention.test.v1',
+        moduleKey: 'simulation',
+        targetId: 'retention',
+        status: 'skipped',
+        at: 1_800_000_000_000 + index,
+      })
+    }
+    expect(store.eventLogs).toHaveLength(240)
+
+    const backup = store.createBackupSnapshot()
+    store.resetForTesting()
+    expect(store.restoreFromBackup(backup)).toBe(true)
+    expect(store.eventInstancesV2).toHaveLength(241)
+    expect(store.saveNow()).toMatchObject({ ok: true })
+
+    setActivePinia(createPinia())
+    const reopened = useSimulationStore()
+    expect(reopened.eventInstancesV2).toHaveLength(241)
+    expect(reopened.getEventInstanceV2('event_retention_240')).toMatchObject({
+      lifecycle: 'resolved',
+      contextRefs: { service_case_id: 'service_case_long_running' },
+    })
+    expect(
+      reopened.closeEventInstanceV2({
+        instanceId: 'event_retention_0',
+        lifecycle: EVENT_INSTANCE_V2_LIFECYCLE.CANCELLED,
+        resultCode: 'address_change_cancelled',
+        now: 1_800_000_000_500,
+      }),
+    ).toMatchObject({ lifecycle: 'cancelled' })
+    expect(reopened.saveNow()).toMatchObject({ ok: true })
+
+    setActivePinia(createPinia())
+    const reopenedAfterClose = useSimulationStore()
+    expect(reopenedAfterClose.eventInstancesV2).toHaveLength(241)
+    expect(reopenedAfterClose.getEventInstanceV2('event_retention_0')).toMatchObject({
+      lifecycle: 'cancelled',
+      resultCodes: ['address_change_cancelled'],
+    })
+    expect(reopenedAfterClose.getEventInstanceV2('event_retention_240')).toMatchObject({
+      lifecycle: 'resolved',
+    })
+  })
+
+  test('migrates a V6 carrier without reapplying the former 240-instance cap', () => {
+    const instances = createRetentionFixtureInstances()
+    localStorage.setItem(
+      'schatphone:store:simulation',
+      JSON.stringify({
+        version: 6,
+        savedAt: Date.now(),
+        data: { eventInstancesV2: instances, settings: {} },
+      }),
+    )
+
+    const store = useSimulationStore()
+    expect(store.eventInstancesV2).toHaveLength(241)
+    expect(store.getEventInstanceV2('event_retention_240')).toMatchObject({
+      lifecycle: 'resolved',
+    })
+    expect(store.createBackupSnapshot().eventInstancesV2).toHaveLength(241)
+  })
+
+  test('restores the complete prior instance array when the expanded save fails', () => {
+    const store = useSimulationStore()
+    const instances = createRetentionFixtureInstances()
+    expect(store.restoreFromBackup({ eventInstancesV2: instances })).toBe(true)
+    expect(store.saveNow()).toMatchObject({ ok: true })
+    const originalSetItem = Storage.prototype.setItem
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+      key,
+      value,
+    ) {
+      if (key === 'schatphone:store:simulation') {
+        throw new DOMException('quota', 'QuotaExceededError')
+      }
+      return originalSetItem.call(this, key, value)
+    })
+
+    const result = store.startEventInstanceV2({
+      id: 'event_retention_241',
+      templateId: COMMERCE_EVENT_TEMPLATE_ID.DESTINATION_CHANGE_AFTER_FULFILLMENT,
+      contextRefs: {
+        order_id: 'food_order_retention_241',
+        service_case_id: 'service_case_241',
+        fulfillment_phase: 'en_route',
+      },
+      now: 1_800_000_000_600,
+    })
+
+    expect(result).toMatchObject({ ok: false, changed: false, reason: 'quota_exceeded' })
+    expect(store.eventInstancesV2).toHaveLength(241)
+    expect(store.getEventInstanceV2('event_retention_241')).toBeNull()
+    expect(store.getEventInstanceV2('event_retention_240')).not.toBeNull()
+    setItemSpy.mockRestore()
   })
 })

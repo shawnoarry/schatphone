@@ -1,6 +1,6 @@
 # Simulation Event Engine
 
-Updated: 2026-08-18
+Updated: 2026-08-21
 
 This document records the architecture direction for SchatPhone's immersive event foundation:
 
@@ -605,7 +605,7 @@ Already landed:
 - `src/lib/simulation/event-contracts.js` and `event-registry.js` normalize the frozen EVE-2 Interfaces and register world-neutral templates plus compatible world/content packs with fail-closed schema, Adapter, choice, and outcome checks
 - `src/lib/simulation/kpop-realism-event-pack.js` and `event-instance-materializer.js` provide the first complete bilingual local fallback and deterministic durable instance materialization for semantic workplace categories/capabilities rather than Seoul place IDs
 - `src/lib/simulation/event-text-composer.js` accepts an injected provider/call adapter only after entry, sends bounded context, performs at most one request, validates normalized copy against frozen IDs and limits, caches success or terminal local fallback, and never regenerates on reopen
-- `src/stores/simulation.js` storage V5 preserves Event Instance V1, adds durable generic Event Instance V2 progression and immutable owner facts/action requests, migrates V1/V2/V3/V4, and converts legacy Food Delivery causal chains into read-only audit lineage without fabricating user initiation
+- `src/stores/simulation.js` storage V7 preserves Event Instance V1, adds durable generic Event Instance V2 progression and immutable owner facts/action requests, migrates V1 through V6, and converts legacy Food Delivery causal chains into read-only audit lineage without fabricating user initiation; Event Instance V2 no longer has a global 240-instance writer cap
 - `src/lib/simulation/event-notebook.js` builds stable Notebook entries by explicit Instance/proposal/log lineage, adds note-only stale-source rows instead of inventing replacement truth, and provides deterministic filtering/counts without taking ownership of source records
 - `src/lib/simulation/adapters/map-place-session-events.js` evaluates the frozen arrival-briefing family from Map-owned session checkpoints and validates exact no-mutation results through the Map owner boundary
 - `src/stores/map.js` storage V4 persists manual-versus-journey-arrival position evidence, explicit place-session state, and Map-owned delivery journeys while deriving Event Surface projections instead of storing duplicate event truth
@@ -715,11 +715,11 @@ Resolution remains exact Map-pack asset, category asset in the active Map/world 
 
 ### Persistence, Backup, Migration, And Retention
 
-Event Runtime is the logical owner. EVE-2B adds `eventInstances` to the existing `store:simulation` owner, increments its storage version, and includes the full normalized array in the required `simulation` backup section and transactional rollback path. Map stores only its own place-session/current-location truth; an Event Instance stores source references and frozen evidence, not a copied Map session.
+Event Runtime is the logical owner. EVE-2B adds `eventInstances` to the existing `store:simulation` owner, increments its storage version, and includes the full normalized array in the required `simulation` backup section and transactional rollback path. The current Simulation carrier is V7: the V6 -> V7 migration carries every surviving `eventInstancesV2` row forward, and a save failure restores the complete prior array. Event Instance V2 has no global 240-instance writer or restore slice; the separate event-log, proposal, owner-fact, Activity Session, and Mini Scene limits remain independent. Map stores only its own place-session/current-location truth; an Event Instance stores source references and frozen evidence, not a copied Map session.
 
-Migration from Simulation storage V1 to V2 initializes `eventInstances: []` and preserves all current logs, ledgers, proposals, and settings. Restore normalizes each versioned instance, preserves valid records, reports invalid entries, and does not silently reinterpret unknown schemas. A missing source, pack, or asset leaves the instance reviewable with frozen text but disables new choice execution where source validation is impossible.
+Migration from Simulation storage V1 to V2 initializes `eventInstances: []` and preserves all current logs, ledgers, proposals, and settings. Later V1-V6 carrier migrations preserve the fields already present, including every valid Event Instance V2 row. Restore normalizes each versioned instance, preserves valid records, reports invalid entries, and does not silently reinterpret unknown schemas. A missing source, pack, or asset leaves the instance reviewable with frozen text but disables new choice execution where source validation is impossible.
 
-V1 applies no automatic count/time truncation to Event Instances. Resolved instances remain durable until a separately accepted reversible archive or user deletion policy exists. Projection/UI queries may be bounded without deleting authoritative records. Full prompts, raw responses, temporary media candidates, and provider transport data are never part of retention.
+Event Instance V2 applies no automatic global count/time truncation. Its decision, deadline, and pending-request arrays retain their separate contract-level bounds. Active and resolved instances remain durable until a separately accepted reversible archive or user deletion policy exists. Projection/UI queries may be bounded without deleting authoritative records. Full prompts, raw responses, temporary media candidates, and provider transport data are never part of retention.
 
 ## 15. EVE-4C User-Initiated Commerce Interaction Direction
 
@@ -738,7 +738,7 @@ The landed architecture adds a deep commerce-interaction seam around these Inter
 - Map-owned journey-estimate references;
 - generic versioned Event Instance progression for condition, branch, one-time decision, fact wait, timeout, owner request, and terminal nodes.
 
-Event Instance V1 remains frozen for the accepted Map/K-pop contracts. EVE-4C adds Event Instance V2 plus Simulation V5 migration from the specialized EVE-4B causal-chain field. Legacy lineage and owner references become read-only audit entries without fabricating user initiation for pickup-triggered reference records.
+Event Instance V1 remains frozen for the accepted Map/K-pop contracts. EVE-4C adds Event Instance V2 plus Simulation V5 migration from the specialized EVE-4B causal-chain field; CJA-5 extends that carrier to V6 for Activity Session checkpoint records, and CMG-07 carries it to V7 without the former V2 instance cap. Legacy lineage and owner references become read-only audit entries without fabricating user initiation for pickup-triggered reference records.
 
 The deletion test is explicit: disabling Event Runtime must leave order messaging, Service Cases, address editing, Map ETA/reroute, Wallet settlement, and Phone sessions functional. Runtime creates leverage by centralizing decision persistence, deadlines, fact correlation, owner requests, and audit rather than by owning those capabilities.
 

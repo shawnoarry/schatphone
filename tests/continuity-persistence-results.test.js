@@ -432,7 +432,7 @@ describe('CMG-02 confirmed persistence results', () => {
     expect(store.ownerFacts).toHaveLength(1)
 
     const key = 'store:simulation'
-    await reconcilePersistedStateLayers(key, { version: 6 })
+    await reconcilePersistedStateLayers(key, { version: 7 })
     const confirmedRaw = localStorage.getItem(storageKey(key))
     localStorage.setItem(storageKey(key), `${confirmedRaw} `)
 

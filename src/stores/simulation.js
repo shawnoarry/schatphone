@@ -62,13 +62,12 @@ import {
 } from '../lib/persistence'
 
 const SIMULATION_STORAGE_KEY = 'store:simulation'
-const SIMULATION_STORAGE_VERSION = 6
+const SIMULATION_STORAGE_VERSION = 7
 const SIMULATION_EVENT_LOG_LIMIT = 240
 const SIMULATION_LEDGER_LIMIT = 240
 const SIMULATION_CHAT_SOCIAL_PROPOSAL_LIMIT = 120
 const SIMULATION_MAP_JOURNEY_PROPOSAL_LIMIT = 120
 const SIMULATION_ACTIVITY_SESSION_EVENT_RECORD_LIMIT = 240
-const SIMULATION_EVENT_INSTANCE_V2_LIMIT = 240
 const SIMULATION_OWNER_FACT_LIMIT = 480
 const SIMULATION_LEGACY_COMMERCE_AUDIT_LIMIT = 120
 export const SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS = 10 * 60 * 1000
@@ -337,7 +336,7 @@ const normalizeSimulationSettings = (rawSettings = {}) => {
 export const migrateSimulationStorage = ({ version, data } = {}) => {
   const storedVersion = Number(version)
   if (
-    ![1, 2, 3, 4, 5].includes(storedVersion) ||
+    ![1, 2, 3, 4, 5, 6].includes(storedVersion) ||
     !data ||
     typeof data !== 'object' ||
     Array.isArray(data)
@@ -864,7 +863,7 @@ export const useSimulationStore = defineStore('simulation', () => {
     eventInstancesV2.value = [
       instance,
       ...eventInstancesV2.value.filter((item) => item.id !== instance.id),
-    ].slice(0, SIMULATION_EVENT_INSTANCE_V2_LIMIT)
+    ]
     return instance
   }
 
