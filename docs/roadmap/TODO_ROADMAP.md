@@ -215,7 +215,7 @@ Acceptance for 4.5:
 
 #### 4.5-CMG Shared Experience, Memory, And Durable History Governance
 
-Status: `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20`
+Status: `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20 / DCF-03 IN_PROGRESS`
 
 This subsection is the only live execution checklist for this governance round. Other documents may describe product meaning or the current handoff, but they must reference these IDs instead of copying their status.
 
@@ -247,7 +247,7 @@ Implementation ledger:
 | `CMG-10` | P0 | `TODO` | Close migration and recovery. Upgrade legacy rows without inventing links, report records that cannot be grouped, preserve current backup compatibility and rollback, and prove limits above 500/240/120, save failure, reopen, restore, and the complete gift journey in focused and full tests. Previously truncated data is recoverable only from surviving owner records or backup and must not be claimed otherwise. | `CMG-06` through `CMG-09` | module architecture / controller PC |
 | `DCF-01` | P1 | `TODO` | Preserve every requested WorldBook entry ID in multi-entry navigation; add direct and route-level regression coverage. | `CMG-00` | Chat + WorldBook / PC-B |
 | `DCF-02` | P1 | `TODO` | Stop silently truncating imported Chat CSS at 20,000 characters. Reject with a clear size result or accept the complete supported file; never report a partial import as success. | `CMG-00` | Chat / PC-B |
-| `DCF-03` | P1 | `TODO` | Make ringtone preview follow ringtone settings, matching actual incoming-call behavior rather than the unrelated system sound-effects toggle. | `CMG-00` | Phone + Settings / PC-B |
+| `DCF-03` | P1 | `IN_PROGRESS` | Verify and regression-protect the behavior already integrated by `42742e5`: ringtone preview follows the ringtone setting and no longer depends on the unrelated system sound-effects toggle. | `CMG-00` | Phone + Settings / PC-A (`SKY-20250212UBG`) |
 | `DCF-04` | P1 | `TODO` | Move keyboard focus into the incoming-call dialog, keep focus inside it, and restore focus after close; add focused accessibility coverage. | `CMG-00` | Phone / PC-B |
 | `DCF-06` | P1 | `TODO` | Make the image-bed fallback/recovery tooling test deterministic under full-suite load. The current multi-process test passes alone but repeatedly exceeds Vitest's default 5-second deadline in the full suite; add phase evidence or reduce redundant fixture/CLI work instead of hiding the problem behind a larger arbitrary timeout. | `CMG-00` | module architecture / PC-B |
 
@@ -813,7 +813,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20`: `CMG-02` is integrated at `208e1dc`. `CMG-04`, `CMG-05`, and `CMG-08` are dependency-safe but remain `TODO` until separately reserved; `DCF-06` remains independently assignable on non-overlapping paths.
+1. `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20 / DCF-03 IN_PROGRESS`: PC-A is verifying and regression-protecting the ringtone-preview correction already integrated at `42742e5`. `CMG-04`, `CMG-05`, and `CMG-08` remain `TODO`; `DCF-06` remains independently assignable on non-overlapping paths.
 2. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 3. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.
 4. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; the personal Gallery image-bed Adapter is accepted as an explicit separately promoted follow-up, while Gallery People curation and source-module callers remain separate.

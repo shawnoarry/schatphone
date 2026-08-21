@@ -378,19 +378,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557` |
-| Next dependency-safe items | `CMG-04`, `CMG-05`, and `CMG-08` remain `TODO`; `DCF-06` remains independently assignable only on non-overlapping paths |
-| Active item | none; the next item requires a new reservation |
+| Next dependency-safe items | `DCF-03` is active on PC-A; `CMG-04`, `CMG-05`, `CMG-08`, and `DCF-06` remain separately assignable only on non-overlapping paths |
+| Active item | `DCF-03 IN_PROGRESS` |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / integration controller; `CMG-02` executor work is complete |
+| PC-A physical machine / role | `SKY-20250212UBG` / integration controller and `DCF-03` verifier |
 | PC-B physical machine / role | `UNASSIGNED` |
-| Source branch, base, and worktree | `main`; `CMG-02` base `a59c77a`; implementation `208e1dc`; `D:\github\schatphone` |
-| Existing dirty/untracked inventory | User-owned Calendar edits in `e2e/calendar-presentation.spec.js`, `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/stores/calendar.js`, `src/stores/system.js`, `src/views/CalendarView.vue`, `src/lib/calendar-markers.js`, and `tests/calendar-markers.test.js`; modified `output/e2e/calendar-cja1/*.png`; untracked `tmp/**` visual experiments. Preserve and never stage them. |
-| Risk lane | `CMG-02` closed false durable success for the named owner actions. Retention caps, provider-call reuse, broader history pagination, and long-run migration remain owned by `CMG-06` through `CMG-10`. |
-| Reserved paths | none after `CMG-02` completion; every next item must record a new non-overlapping reservation |
-| Acceptance | Met by `208e1dc`: named owner actions confirm `{ ok: true }`, failed writes restore pre-action state and remain visible through recovery, and stable-ID retry does not duplicate committed records. Storage shapes and 500/240/120 limits remain unchanged; Mini Scene provider-call reuse remains `CMG-08`. |
-| Required checks | New coverage passed 4/4; the expanded focused set passed 18 files / 241 tests; lint, build, governance (2 files / 14 tests), and `git diff --check` passed. Full Vitest reached 296/297 files and 2095/2096 tests; only tracked `DCF-06` timed out under full-suite load and passed alone at 13/13. |
-| Integration state | `CMG-02 DONE 2026-08-20` at `208e1dc`; later items remain `TODO` until separately reserved |
-| Remote synchronization | implementation `208e1dc` is pushed to `origin/main`; this completion record is the serialized documentation follow-up |
+| Source branch, base, and worktree | `main`; `DCF-03` base `4431b64`; behavior source `42742e5`; `D:\github\schatphone` |
+| Existing dirty/untracked inventory | User-owned Calendar appearance work in `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/lib/calendar-markers.js`, `src/router/index.js`, `src/views/CalendarView.vue`, `tests/calendar-markers.test.js`, `src/views/CalendarAppearanceView.vue`, `tests/calendar-appearance-view.test.js`, and `tmp/calendar-appearance-visual/`; unrelated `tmp/**` experiments and `tmp/vitest-out.txt`. Preserve and never stage them. |
+| Risk lane | The behavior correction already exists in integrated commit `42742e5`, but `DCF-03` lacks an exact regression assertion and canonical governance closure. Do not reinterpret the separate global phone call-audio profile or change ringtone media. |
+| Reserved paths | `tests/settings-general-section.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`; completion-only note in `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
+| Acceptance | With system sound effects off and ringtone enabled, ringtone preview still invokes the selected ringtone. With ringtone disabled, preview remains unavailable. Incoming-call behavior continues to use the same `ringtoneEnabled` setting. |
+| Required checks | Focused Settings and ringtone/Phone Vitest; Phone audio Settings Playwright; lint; full Vitest; build; governance; `git diff --check`. The tracked `DCF-06` full-suite timeout remains a separate known baseline if reproduced unchanged. |
+| Integration state | `DCF-03 IN_PROGRESS`; no behavior rewrite is authorized unless the integrated correction fails acceptance |
+| Remote synchronization | reservation must be committed and synchronized before changing the focused regression test |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
