@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import { MAX_CHAT_CUSTOM_CSS_CHARS } from '../src/lib/chat-appearance.js'
 
 test.use({
   trace: 'off',
@@ -240,5 +241,27 @@ test('Chat Appearance imports a custom CSS file into the draft', async ({ page }
   await expect(page.getByTestId('chat-appearance-custom-css')).toHaveValue(/--chat-bg: #d8f3e8/)
   await expect(page.getByTestId('chat-appearance-custom-css-enabled')).toBeChecked()
   await expect(page.getByTestId('chat-appearance-css-profile-name')).toHaveValue('mint-soda')
+  await expectNoHorizontalOverflow(page)
+})
+
+test('Chat Appearance rejects an oversized custom CSS file without replacing the draft', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/chat-settings/appearance')
+
+  const existingCss = '.chat-shell { --chat-bg: #ffee66; }'
+  await page.getByTestId('chat-appearance-custom-css-enabled').check()
+  await page.getByTestId('chat-appearance-custom-css').fill(existingCss)
+  await page.getByTestId('chat-appearance-css-profile-name').fill('Existing style')
+  await page.getByTestId('chat-appearance-custom-css-file').setInputFiles({
+    name: 'too-large.css',
+    mimeType: 'text/css',
+    buffer: Buffer.alloc(MAX_CHAT_CUSTOM_CSS_CHARS + 1, 'a'),
+  })
+
+  await expect(page.getByTestId('chat-appearance-custom-css')).toHaveValue(existingCss)
+  await expect(page.getByTestId('chat-appearance-custom-css-enabled')).toBeChecked()
+  await expect(page.getByTestId('chat-appearance-css-profile-name')).toHaveValue('Existing style')
+  await expect(page.getByTestId('chat-appearance-action-feedback')).toContainText('20,000')
   await expectNoHorizontalOverflow(page)
 })

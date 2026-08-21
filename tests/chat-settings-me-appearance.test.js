@@ -26,7 +26,7 @@ import { useWalletStore } from '../src/stores/wallet'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { callAI } from '../src/lib/ai'
-import { getChatAppearanceClasses } from '../src/lib/chat-appearance'
+import { getChatAppearanceClasses, MAX_CHAT_CUSTOM_CSS_CHARS } from '../src/lib/chat-appearance'
 import * as uiSfx from '../src/lib/ui-sfx'
 
 const DummyView = { template: '<div />' }
@@ -1179,6 +1179,72 @@ describe('Chat settings, Me, and appearance routes', () => {
     expect(systemStore.settings.appearance.chat.customCssProfiles).toHaveLength(0)
     expect(systemStore.settings.appearance.chat.activeCustomCssProfileId).toBe('')
     expect(systemStore.settings.appearance.chat.customCss).toBe('')
+
+    wrapper.unmount()
+  })
+
+  test('imports a CSS file at the supported limit without truncation', async () => {
+    const router = createTestRouter()
+    await router.push('/chat-settings/appearance')
+    await router.isReady()
+    const wrapper = mount(ChatAppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    const css = 'a'.repeat(MAX_CHAT_CUSTOM_CSS_CHARS)
+    const file = {
+      name: 'limit.css',
+      type: 'text/css',
+      text: vi.fn(async () => css),
+    }
+    const input = wrapper.get('[data-testid="chat-appearance-custom-css-file"]')
+    Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+    await input.trigger('change')
+    await flushUi()
+
+    expect(file.text).toHaveBeenCalledOnce()
+    expect(wrapper.get('[data-testid="chat-appearance-custom-css"]').element.value).toBe(css)
+    expect(wrapper.get('[data-testid="chat-appearance-custom-css-enabled"]').element.checked).toBe(true)
+    expect(wrapper.get('[data-testid="chat-appearance-css-profile-name"]').element.value).toBe('limit')
+
+    wrapper.unmount()
+  })
+
+  test('rejects an oversized CSS file without changing the draft', async () => {
+    const router = createTestRouter()
+    await router.push('/chat-settings/appearance')
+    await router.isReady()
+    const wrapper = mount(ChatAppearanceView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    await flushUi()
+
+    const existingCss = '.chat-shell { --chat-bg: #ffee66; }'
+    await wrapper.get('[data-testid="chat-appearance-custom-css-enabled"]').setValue(true)
+    await wrapper.get('[data-testid="chat-appearance-custom-css"]').setValue(existingCss)
+    await wrapper.get('[data-testid="chat-appearance-css-profile-name"]').setValue('Existing style')
+    await flushUi()
+
+    const file = {
+      name: 'too-large.css',
+      type: 'text/css',
+      text: vi.fn(async () => 'a'.repeat(MAX_CHAT_CUSTOM_CSS_CHARS + 1)),
+    }
+    const input = wrapper.get('[data-testid="chat-appearance-custom-css-file"]')
+    Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+    await input.trigger('change')
+    await flushUi()
+
+    expect(file.text).toHaveBeenCalledOnce()
+    expect(wrapper.get('[data-testid="chat-appearance-custom-css"]').element.value).toBe(existingCss)
+    expect(wrapper.get('[data-testid="chat-appearance-custom-css-enabled"]').element.checked).toBe(true)
+    expect(wrapper.get('[data-testid="chat-appearance-css-profile-name"]').element.value).toBe('Existing style')
+    expect(wrapper.get('[data-testid="chat-appearance-action-feedback"]').text()).toContain('20,000')
 
     wrapper.unmount()
   })

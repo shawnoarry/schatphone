@@ -363,7 +363,17 @@ const importCustomCssFile = async (event) => {
   if (!file) return
   try {
     const text = await file.text()
-    chatAppearanceDraft.customCss = text.slice(0, MAX_CHAT_CUSTOM_CSS_CHARS)
+    if (text.length > MAX_CHAT_CUSTOM_CSS_CHARS) {
+      showActionFeedback(
+        'warning',
+        t(
+          `文件过大，最多支持 ${MAX_CHAT_CUSTOM_CSS_CHARS.toLocaleString()} 个字符。`,
+          `CSS file is too large. Files can contain up to ${MAX_CHAT_CUSTOM_CSS_CHARS.toLocaleString()} characters.`,
+        ),
+      )
+      return
+    }
+    chatAppearanceDraft.customCss = text
     chatAppearanceDraft.customCssEnabled = true
     chatAppearanceDraft.activeCustomCssProfileId = ''
     if (!customCssProfileName.value.trim()) {
@@ -511,6 +521,7 @@ const resetChatAppearance = () => {
       <div
         v-if="actionFeedbackMessage"
         class="rounded-xl border px-3 py-2 text-xs"
+        data-testid="chat-appearance-action-feedback"
         :class="
           actionFeedbackType === 'warning'
             ? 'border-amber-200 bg-amber-50 text-amber-700'
