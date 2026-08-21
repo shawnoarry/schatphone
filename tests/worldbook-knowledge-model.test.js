@@ -235,6 +235,26 @@ describe('WorldBook knowledge model interface', () => {
     expect(model.isDeepLinkedKnowledgePoint(fixture.points[2])).toBe(true)
   })
 
+  test('syncs every entry when the route query uses repeated array values', () => {
+    const fixture = createFixture()
+    const { model, state } = createModel(fixture)
+
+    model.syncWorldBookDeepLink({
+      source: 'map',
+      entries: ['kp_chat', 'kp_disabled'],
+    })
+
+    expect(state.knowledgeDeepLinkPointIds.value).toEqual(['kp_chat', 'kp_disabled'])
+    expect(model.knowledgeDeepLinkPoints.value.map((point) => point.id)).toEqual([
+      'kp_chat',
+      'kp_disabled',
+    ])
+    expect(model.visibleKnowledgePoints.value.map((point) => point.id)).toEqual([
+      'kp_disabled',
+      'kp_chat',
+    ])
+  })
+
   test('single-entry deep links seed search text from the entry title', () => {
     const fixture = createFixture()
     const { model, state } = createModel(fixture)

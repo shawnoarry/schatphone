@@ -188,6 +188,21 @@ test('WorldBook overview stays readable on mobile viewport', async ({ page }) =>
   await expectNoHorizontalOverflow(page)
 })
 
+test('WorldBook multi-entry deep links keep every requested entry visible', async ({ page }) => {
+  await unlockToHome(page)
+
+  await navigateInsideUnlockedApp(
+    page,
+    '/worldbook?source=map&entries=kp_city_etiquette,kp_disabled_secret',
+  )
+
+  await expect(page.getByTestId('knowledge-deeplink-point-kp_city_etiquette')).toBeVisible()
+  await expect(page.getByTestId('knowledge-deeplink-point-kp_disabled_secret')).toBeVisible()
+  await expect(page.getByTestId('knowledge-point-card')).toHaveCount(2)
+  await expectNoMojibake(page)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('world setting workspace hands writing to Book and exports an editable manuscript', async ({ page }, testInfo) => {
   await unlockToHome(page)
   await navigateInsideUnlockedApp(page, '/worldbook')

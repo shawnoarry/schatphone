@@ -43,6 +43,19 @@ describe('navigation return helpers', () => {
     })
   })
 
+  test('preserves every entry when a WorldBook deep link receives query arrays', () => {
+    expect(
+      buildWorldBookRouteQuery({
+        source: 'map',
+        pointIds: ['entry-a', ' entry-b ', '', 'entry-a', 42, 'entry-c'],
+      }),
+    ).toEqual({
+      source: 'map',
+      entries: 'entry-a,entry-b,entry-c',
+      points: 'entry-a,entry-b,entry-c',
+    })
+  })
+
   test('preserves Home page context across return targets', () => {
     expect(normalizeHomePageQuery(' 2 ')).toBe('2')
     expect(normalizeHomePageQuery(-1)).toBe('')

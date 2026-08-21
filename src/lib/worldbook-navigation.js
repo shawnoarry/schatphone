@@ -15,6 +15,14 @@ const normalizeQueryText = (raw) => {
   return ''
 }
 
+const normalizeQueryListText = (raw) => {
+  if (typeof raw === 'string') return raw
+  if (Array.isArray(raw)) {
+    return raw.filter((item) => typeof item === 'string').join(',')
+  }
+  return ''
+}
+
 const normalizeHomePageQuery = (raw) => {
   const value = normalizeQueryText(raw)
   if (!/^\d+$/.test(value)) return ''
@@ -22,7 +30,7 @@ const normalizeHomePageQuery = (raw) => {
 }
 
 export const normalizeWorldBookPointIds = (raw) =>
-  normalizeQueryText(raw)
+  normalizeQueryListText(raw)
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
