@@ -195,8 +195,26 @@ test.describe('Map place media governance', () => {
       await expect(page.getByTestId('map-place-open-detail')).toBeInViewport({ ratio: 0.95 })
       await expect(page.getByTestId('map-place-enter')).toBeInViewport({ ratio: 0.95 })
     }
+    const currentAction = page.getByTestId('map-place-current-location-action')
+    await expect(currentAction).toHaveAttribute('data-primary-state', 'current')
+    const targetFloor = testInfo.project.name === 'mobile-chrome' ? 44 : 40
+    for (const control of [
+      currentAction,
+      page.getByTestId('map-place-open-detail'),
+      page.getByTestId('map-place-enter'),
+    ]) {
+      const box = await control.boundingBox()
+      expect(box?.height || 0).toBeGreaterThanOrEqual(targetFloor)
+    }
     await expectNoHorizontalOverflow(page)
     await captureVisualEvidence(page, testInfo, 'player-place-fallback')
+
+    await currentAction.click()
+    await expect(page.getByTestId('map-place-primary-action-notice')).toContainText(
+      'You are currently here',
+    )
+    await expect(page.getByTestId('map-primary-route-card')).toHaveCount(0)
+    await captureVisualEvidence(page, testInfo, 'current-location-feedback')
 
     const accessibility = await new AxeBuilder({ page })
       .include('[data-testid="map-place-detail-sheet"]')

@@ -300,7 +300,7 @@ const selectedPlaceContextLabel = computed(() => {
 
 const selectedPlacePrimaryAction = computed(() => {
   if (isJourneyPlanningLocked.value) return 'view_journey'
-  if (isSelectedPlaceCurrentLocation.value) return 'none'
+  if (isSelectedPlaceCurrentLocation.value) return 'current'
   return 'go'
 })
 

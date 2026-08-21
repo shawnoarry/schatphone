@@ -19,7 +19,7 @@ const props = defineProps({
   primaryAction: {
     type: String,
     default: 'go',
-    validator: (value) => ['go', 'view_journey', 'none'].includes(value),
+    validator: (value) => ['go', 'current', 'view_journey', 'none'].includes(value),
   },
   entryAction: {
     type: String,
@@ -49,12 +49,14 @@ const mediaLoadFailed = ref(false)
 const cardRef = ref(null)
 const scrollRef = ref(null)
 const detailBackRef = ref(null)
+const primaryActionNotice = ref('')
 const entryNotice = ref('')
 const addressCopyNotice = ref('')
 const viewportSize = ref({ width: 1024, height: 768 })
 const cardSize = ref({ width: 360, height: 340 })
 let opener = null
 let cardResizeObserver = null
+let primaryActionNoticeTimer = null
 let entryNoticeTimer = null
 let addressCopyNoticeTimer = null
 
@@ -88,8 +90,10 @@ watch(
   async () => {
     level.value = 'overview'
     mediaLoadFailed.value = false
+    primaryActionNotice.value = ''
     entryNotice.value = ''
     addressCopyNotice.value = ''
+    clearTimeout(primaryActionNoticeTimer)
     await nextTick()
     resetCardScroll()
   },
@@ -99,6 +103,14 @@ watch(
   () => props.media?.id,
   () => {
     mediaLoadFailed.value = false
+  },
+)
+
+watch(
+  () => props.primaryAction,
+  () => {
+    primaryActionNotice.value = ''
+    clearTimeout(primaryActionNoticeTimer)
   },
 )
 
@@ -196,11 +208,26 @@ const cardLayout = computed(() => {
 })
 
 const runPrimaryAction = () => {
+  entryNotice.value = ''
+  clearTimeout(entryNoticeTimer)
+
+  if (props.primaryAction === 'current') {
+    primaryActionNotice.value = props.t('目前正在此处', 'You are currently here')
+    clearTimeout(primaryActionNoticeTimer)
+    primaryActionNoticeTimer = setTimeout(() => { primaryActionNotice.value = '' }, 2600)
+    return
+  }
+
+  primaryActionNotice.value = ''
+  clearTimeout(primaryActionNoticeTimer)
   if (props.primaryAction === 'view_journey') emit('view-journey')
   else if (props.primaryAction === 'go') emit('go')
 }
 
 const runEntryAction = () => {
+  primaryActionNotice.value = ''
+  clearTimeout(primaryActionNoticeTimer)
+
   if (props.entryAction === 'enter') {
     emit('enter')
     return
@@ -271,6 +298,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleDocumentKeydown)
   window.removeEventListener('resize', syncViewportSize)
   cardResizeObserver?.disconnect()
+  clearTimeout(primaryActionNoticeTimer)
   clearTimeout(entryNoticeTimer)
   clearTimeout(addressCopyNoticeTimer)
   if (opener?.isConnected) opener.focus?.({ preventScroll: true })
@@ -430,18 +458,37 @@ onBeforeUnmount(() => {
       </section>
 
       <div class="map-place-focus-actions">
-        <button
-          v-if="['go', 'view_journey'].includes(primaryAction)"
-          type="button"
-          class="map-place-focus-primary"
-          :data-testid="primaryAction === 'go'
-            ? 'map-place-use-destination'
-            : 'map-place-view-journey'"
-          @click="runPrimaryAction"
-        >
-          <i :class="primaryIcon" aria-hidden="true"></i>
-          <span>{{ primaryLabel }}</span>
-        </button>
+        <div v-if="['go', 'current', 'view_journey'].includes(primaryAction)" class="map-place-primary-slot">
+          <button
+            type="button"
+            class="map-place-focus-primary"
+            :class="{ 'is-current': primaryAction === 'current' }"
+            :aria-label="primaryAction === 'current'
+              ? t('前往，目前正在此处', 'Go, you are currently here')
+              : primaryLabel"
+            :title="primaryAction === 'current'
+              ? t('目前正在此处', 'You are currently here')
+              : primaryLabel"
+            :data-primary-state="primaryAction"
+            :data-testid="primaryAction === 'go'
+              ? 'map-place-use-destination'
+              : primaryAction === 'current'
+                ? 'map-place-current-location-action'
+                : 'map-place-view-journey'"
+            @click="runPrimaryAction"
+          >
+            <i :class="primaryIcon" aria-hidden="true"></i>
+            <span>{{ primaryLabel }}</span>
+          </button>
+          <p
+            v-if="primaryActionNotice"
+            class="map-place-primary-notice"
+            role="status"
+            data-testid="map-place-primary-action-notice"
+          >
+            {{ primaryActionNotice }}
+          </p>
+        </div>
 
         <button type="button" class="map-place-focus-secondary" data-testid="map-place-open-detail" @click="openDetail">
           <i class="fas fa-circle-info" aria-hidden="true"></i>
@@ -649,8 +696,8 @@ onBeforeUnmount(() => {
 }
 
 .map-place-focus-icon-button {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: 1px solid #dce3de;
   background: rgba(255, 255, 255, 0.9);
   color: #526158;
@@ -661,10 +708,10 @@ onBeforeUnmount(() => {
 .map-place-focus-icon-button:active { transform: scale(0.96); }
 
 .map-place-focus-heading { min-width: 0; }
-.map-place-focus-kicker { display: flex; min-width: 0; flex-wrap: wrap; gap: 4px 7px; color: #718078; font-size: 9px; font-weight: 800; }
+.map-place-focus-kicker { display: flex; min-width: 0; flex-wrap: wrap; gap: 4px 7px; color: #718078; font-size: 12px; font-weight: 800; }
 .map-place-focus-kicker span + span::before { content: '/'; margin-right: 7px; color: #acb5af; }
 .map-place-focus-heading h2 { overflow-wrap: anywhere; margin-top: 3px; font-size: 17px; font-weight: 850; line-height: 1.24; }
-.map-place-focus-secondary-name { margin-top: 2px; color: #607168; font-size: 10px; font-weight: 700; }
+.map-place-focus-secondary-name { margin-top: 2px; color: #607168; font-size: 12px; font-weight: 700; }
 
 .map-place-overview { min-width: 0; margin-top: 2px; }
 
@@ -695,9 +742,9 @@ onBeforeUnmount(() => {
   background: rgba(21, 31, 26, 0.74);
   padding: 4px 6px;
   color: #fff;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 850;
-  line-height: 1;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
   backdrop-filter: blur(8px);
@@ -705,8 +752,8 @@ onBeforeUnmount(() => {
 
 .map-place-overview-copy { display: flex; min-width: 0; flex-direction: column; padding-top: 11px; }
 .map-place-introduction { min-width: 0; }
-.map-place-section-label { display: block; margin-bottom: 4px; color: #76837c; font-size: 8px; font-weight: 850; letter-spacing: 0; }
-.map-place-focus-summary { display: -webkit-box; overflow: hidden; color: #3e4f46; font-size: 11px; font-weight: 650; line-height: 1.55; text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.map-place-section-label { display: block; margin-bottom: 4px; color: #76837c; font-size: 12px; font-weight: 850; letter-spacing: 0; }
+.map-place-focus-summary { display: -webkit-box; overflow: hidden; color: #3e4f46; font-size: 14px; font-weight: 650; line-height: 1.55; text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 
 .map-place-focus-context {
   display: flex;
@@ -715,7 +762,7 @@ onBeforeUnmount(() => {
   gap: 7px;
   margin-top: 8px;
   color: #416052;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.35;
 }
@@ -724,7 +771,7 @@ onBeforeUnmount(() => {
 .map-place-focus-context.is-current { color: #165741; }
 .map-place-focus-context.is-journey { color: #31576d; }
 
-.map-place-media-truth { display: flex; min-width: 0; align-items: center; gap: 6px; margin-top: 7px; color: #7a8780; font-size: 8.5px; font-weight: 650; line-height: 1.35; }
+.map-place-media-truth { display: flex; min-width: 0; align-items: center; gap: 6px; margin-top: 7px; color: #7a8780; font-size: 12px; font-weight: 650; line-height: 1.35; }
 .map-place-media-truth i { flex: 0 0 auto; color: var(--map-place-tone); }
 
 .map-place-focus-pin-state,
@@ -738,18 +785,18 @@ onBeforeUnmount(() => {
   border-top: 1px solid #e3e8e5;
   padding-top: 9px;
   color: #665f4c;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 750;
 }
 
 .map-place-focus-pin-state > i { color: #8c7032; }
 .map-place-focus-pin-state button,
-.map-place-detail-inline-action button { min-height: 30px; border: 1px solid #d9dfdb; border-radius: 6px; background: #fff; padding: 0 8px; color: #315246; font-size: 9px; font-weight: 850; }
+.map-place-detail-inline-action button { min-height: 40px; border: 1px solid #d9dfdb; border-radius: 6px; background: #fff; padding: 0 10px; color: #315246; font-size: 14px; font-weight: 850; }
 
 .map-place-event-invitation {
   display: grid;
   min-width: 0;
-  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  grid-template-columns: 32px minmax(0, 1fr) 40px;
   align-items: center;
   gap: 8px;
   margin-top: 10px;
@@ -763,29 +810,35 @@ onBeforeUnmount(() => {
 .map-place-event-invitation-icon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 6px; background: #a95a0c; color: #fff; font-size: 11px; }
 .map-place-event-invitation h3,
 .map-place-event-invitation p { overflow-wrap: anywhere; }
-.map-place-event-invitation h3 { font-size: 10px; font-weight: 850; line-height: 1.35; }
-.map-place-event-invitation p { margin-top: 2px; color: #765f34; font-size: 9px; line-height: 1.4; }
-.map-place-event-invitation button { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 6px; background: #fff; color: #8d4d09; }
+.map-place-event-invitation h3 { font-size: 14px; font-weight: 850; line-height: 1.35; }
+.map-place-event-invitation p { margin-top: 2px; color: #765f34; font-size: 12px; line-height: 1.4; }
+.map-place-event-invitation button { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 6px; background: #fff; color: #8d4d09; }
 
 .map-place-focus-actions { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(70px, 0.72fr); align-items: center; gap: 7px; margin-top: 11px; border-top: 1px solid #e3e8e5; padding-top: 10px; }
 .map-place-focus-primary,
 .map-place-focus-secondary,
 .map-place-focus-tool,
-.map-place-entry-action { display: inline-flex; min-width: 0; height: 40px; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; font-size: 10px; font-weight: 850; transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
-.map-place-focus-primary { background: #17664f; padding: 0 12px; color: #fff; }
+.map-place-entry-action { display: inline-flex; min-width: 0; height: 40px; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; font-size: 14px; font-weight: 850; transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
+.map-place-primary-slot { position: relative; min-width: 0; grid-column: 1; }
+.map-place-focus-primary { width: 100%; background: #17664f; padding: 0 12px; color: #fff; }
 .map-place-focus-secondary { border: 1px solid #dce3de; background: #fff; padding: 0 10px; color: #40544a; }
 .map-place-focus-secondary i { color: var(--map-place-tone); }
 .map-place-focus-tool { width: 40px; flex: 0 0 40px; border: 1px solid #dce3de; background: #fff; color: var(--map-place-tone); }
 .map-place-entry-slot { position: relative; min-width: 0; grid-column: 3; }
 .map-place-entry-action { width: 100%; border: 1px solid color-mix(in srgb, var(--map-place-tone) 50%, #dce3de); background: color-mix(in srgb, var(--map-place-tone) 12%, white); padding: 0 9px; color: var(--map-place-tone); }
-.map-place-focus-primary { grid-column: 1; }
 .map-place-focus-secondary { grid-column: 2; }
-.map-place-entry-action.is-unavailable { border-color: #dfe4e1; background: #f2f4f3; color: #9aa39e; }
-.map-place-entry-action.is-unavailable:hover { border-color: #d9dfdc; background: #eef1ef; color: #8f9994; }
+.map-place-focus-primary.is-current { border: 1px solid #dfe4e1; background: #f2f4f3; color: #59665f; }
+.map-place-entry-action.is-unavailable { border-color: #dfe4e1; background: #f2f4f3; color: #66736c; }
+.map-place-entry-action.is-unavailable:hover { border-color: #d9dfdc; background: #eef1ef; color: #59665f; }
 .map-place-entry-action.is-leave { border-color: #d8dedb; background: #fff; color: #536159; }
-.map-place-entry-notice { position: absolute; z-index: 4; right: 0; bottom: calc(100% + 7px); width: max-content; max-width: min(210px, calc(100vw - 32px)); margin: 0; border: 1px solid #ddd3bd; border-radius: 6px; background: #fffdf8; padding: 6px 8px; box-shadow: 0 5px 14px rgb(58 50 34 / 14%); color: #6f5a35; font-size: 9px; font-weight: 750; line-height: 1.35; pointer-events: none; text-align: left; }
+.map-place-entry-notice,
+.map-place-primary-notice { position: absolute; z-index: 4; bottom: calc(100% + 7px); width: max-content; max-width: min(210px, calc(100vw - 32px)); margin: 0; border: 1px solid #ddd3bd; border-radius: 6px; background: #fffdf8; padding: 7px 9px; box-shadow: 0 5px 14px rgb(58 50 34 / 14%); color: #6f5a35; font-size: 12px; font-weight: 750; line-height: 1.35; pointer-events: none; text-align: left; }
+.map-place-entry-notice { right: 0; }
+.map-place-primary-notice { left: 0; }
 .map-place-entry-notice::after { position: absolute; right: 24px; bottom: -5px; width: 8px; height: 8px; border-right: 1px solid #ddd3bd; border-bottom: 1px solid #ddd3bd; background: #fffdf8; content: ''; transform: rotate(45deg); }
+.map-place-primary-notice::after { position: absolute; bottom: -5px; left: 24px; width: 8px; height: 8px; border-right: 1px solid #ddd3bd; border-bottom: 1px solid #ddd3bd; background: #fffdf8; content: ''; transform: rotate(45deg); }
 .map-place-focus-primary:hover { background: #125640; }
+.map-place-focus-primary.is-current:hover { border-color: #d9dfdc; background: #eef1ef; color: #4f5c55; }
 .map-place-focus-secondary:hover,
 .map-place-focus-tool:hover,
 .map-place-entry-action:hover { border-color: #b8c9bf; background: #f3f7f4; }
@@ -798,21 +851,21 @@ onBeforeUnmount(() => {
 .map-place-detail-media { aspect-ratio: 16 / 7; margin: 0 -12px; }
 .map-place-detail-copy { padding-top: 12px; }
 .map-place-detail-about { min-width: 0; }
-.map-place-detail-summary { color: #33483e; font-size: 11.5px; font-weight: 650; line-height: 1.62; text-wrap: pretty; }
+.map-place-detail-summary { color: #33483e; font-size: 14px; font-weight: 650; line-height: 1.62; text-wrap: pretty; }
 
-.map-place-detail-location { display: grid; min-width: 0; grid-template-columns: 18px minmax(0, 1fr) 34px; align-items: start; gap: 8px; margin-top: 12px; border-top: 1px solid #e3e8e5; padding-top: 11px; color: #43564d; }
+.map-place-detail-location { display: grid; min-width: 0; grid-template-columns: 18px minmax(0, 1fr) 40px; align-items: start; gap: 8px; margin-top: 12px; border-top: 1px solid #e3e8e5; padding-top: 11px; color: #43564d; }
 .map-place-detail-location > i { padding-top: 2px; color: #17664f; text-align: center; }
 .map-place-detail-address-copy { display: grid; min-width: 0; gap: 3px; }
-.map-place-detail-location strong { overflow-wrap: anywhere; font-size: 10px; line-height: 1.45; }
-.map-place-detail-location small { overflow-wrap: anywhere; color: #748179; font-size: 9px; font-weight: 650; line-height: 1.4; }
-.map-place-address-copy-button { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid #dce3de; border-radius: 7px; background: #fff; color: #315f50; transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, transform 140ms ease; }
+.map-place-detail-location strong { overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
+.map-place-detail-location small { overflow-wrap: anywhere; color: #748179; font-size: 12px; font-weight: 650; line-height: 1.4; }
+.map-place-address-copy-button { display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid #dce3de; border-radius: 7px; background: #fff; color: #315f50; transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, transform 140ms ease; }
 .map-place-address-copy-button:hover { border-color: #b8c9bf; background: #f3f7f4; color: #17664f; }
 .map-place-address-copy-button:active { transform: scale(0.96); }
 .map-place-copy-notice { color: #17664f !important; font-weight: 800 !important; }
 .map-place-detail-inline-action { grid-template-columns: minmax(0, 1fr) auto; }
 
-.map-place-media-source { margin-top: 12px; border-top: 1px solid #e3e8e5; padding-top: 7px; color: #75827b; font-size: 8.5px; line-height: 1.4; }
-.map-place-media-source summary { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 10px; border-radius: 6px; padding: 0 7px; color: #526159; cursor: pointer; font-size: 9px; font-weight: 800; list-style: none; }
+.map-place-media-source { margin-top: 12px; border-top: 1px solid #e3e8e5; padding-top: 7px; color: #75827b; font-size: 12px; line-height: 1.4; }
+.map-place-media-source summary { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 10px; border-radius: 6px; padding: 0 7px; color: #526159; cursor: pointer; font-size: 14px; font-weight: 800; list-style: none; }
 .map-place-media-source summary::-webkit-details-marker { display: none; }
 .map-place-media-source summary:hover { background: #f3f6f4; color: #315f50; }
 .map-place-media-source summary > span { display: inline-flex; min-width: 0; align-items: center; gap: 7px; }
@@ -848,33 +901,43 @@ a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
   .map-place-focus-actions { margin-top: 8px; padding-top: 8px; }
   .map-place-focus-primary,
   .map-place-focus-secondary,
-  .map-place-entry-action { height: 38px; }
+  .map-place-entry-action { height: 40px; }
+}
+
+@media (max-width: 719px) {
+  .map-place-focus-head { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .map-place-focus-icon-button { width: 44px; height: 44px; }
+  .map-place-focus-primary,
+  .map-place-focus-secondary,
+  .map-place-entry-action { height: 44px; }
+  .map-place-event-invitation { grid-template-columns: 32px minmax(0, 1fr) 44px; }
+  .map-place-event-invitation button,
+  .map-place-address-copy-button { width: 44px; height: 44px; }
+  .map-place-detail-location { grid-template-columns: 18px minmax(0, 1fr) 44px; }
+  .map-place-focus-pin-state button,
+  .map-place-detail-inline-action button,
+  .map-place-media-source summary { min-height: 44px; }
 }
 
 @media (max-width: 719px) and (max-height: 880px) {
-  .map-place-focus-head { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; padding-bottom: 7px; }
+  .map-place-focus-scroll { padding-block: 4px 8px; }
+  .map-place-focus-head { top: -4px; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; padding-block: 0 2px; }
   .map-place-focus-icon { width: 34px; height: 34px; }
-  .map-place-focus-icon-button { width: 32px; height: 32px; }
   .map-place-focus-heading h2 { font-size: 15px; }
   .map-place-focus-media-frame { height: 64px; aspect-ratio: auto; }
-  .map-place-overview-copy { padding-top: 7px; }
-  .map-place-section-label { margin-bottom: 2px; }
-  .map-place-focus-summary { font-size: 10.5px; line-height: 1.42; -webkit-line-clamp: 2; }
-  .is-category-fallback .map-place-focus-summary { -webkit-line-clamp: 1; }
-  .map-place-focus-context { margin-top: 5px; font-size: 9.5px; }
-  .map-place-media-truth { overflow: hidden; margin-top: 4px; text-overflow: ellipsis; white-space: nowrap; }
+  .map-place-overview-copy { padding-top: 3px; }
+  .map-place-section-label { margin-bottom: 0; }
+  .map-place-focus-summary { font-size: 14px; line-height: 1.35; -webkit-line-clamp: 1; }
+  .map-place-focus-context { margin-top: 1px; font-size: 12px; line-height: 1.2; }
+  .map-place-media-truth { overflow: hidden; margin-top: 0; text-overflow: ellipsis; line-height: 1.2; white-space: nowrap; }
   .map-place-media-truth span { overflow: hidden; text-overflow: ellipsis; }
-  .map-place-focus-actions { gap: 5px; margin-top: 5px; padding-top: 5px; }
-  .map-place-focus-primary,
-  .map-place-focus-secondary,
-  .map-place-entry-action { height: 34px; }
-
+  .map-place-focus-actions { gap: 5px; margin-top: 0; padding-top: 2px; }
   .map-place-focus-card.is-detail .map-place-focus-head {
-    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
   }
 
   .map-place-focus-card.is-detail .map-place-detail-media { aspect-ratio: 16 / 7; }
-  .map-place-focus-card.is-detail .map-place-detail-summary { font-size: 11.5px; line-height: 1.62; }
+  .map-place-focus-card.is-detail .map-place-detail-summary { font-size: 14px; line-height: 1.62; }
 }
 
 @media (max-width: 360px) {
@@ -882,5 +945,8 @@ a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
   .map-place-focus-primary,
   .map-place-focus-secondary,
   .map-place-entry-action { padding-inline: 8px; }
+  .map-place-focus-primary span,
+  .map-place-focus-secondary span,
+  .map-place-entry-action span { overflow-wrap: anywhere; line-height: 1.15; }
 }
 </style>

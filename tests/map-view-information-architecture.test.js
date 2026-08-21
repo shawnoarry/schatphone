@@ -163,12 +163,28 @@ describe('MapView information architecture', () => {
     mapScene.vm.$emit('select-pin', place)
     await nextTick()
 
+    const destinationBeforeCurrentAction = mapStore.tripForm.to
+    const currentAction = wrapper.get('[data-testid="map-place-current-location-action"]')
+    expect(currentAction.text()).toMatch(/Go|前往/)
+    expect(currentAction.classes()).toContain('is-current')
+    await currentAction.trigger('click')
+    await nextTick()
+    expect(wrapper.get('[data-testid="map-place-primary-action-notice"]').text()).toMatch(
+      /You are currently here|目前正在此处/,
+    )
+    expect(mapStore.tripForm.to).toBe(destinationBeforeCurrentAction)
+    expect(wrapper.find('[data-testid="map-primary-route-card"]').exists()).toBe(false)
+
     expect(wrapper.get('[data-testid="map-place-enter"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="map-place-event-invitation"]').exists()).toBe(false)
     await wrapper.get('[data-testid="map-place-enter"]').trigger('click')
     await nextTick()
 
     expect(wrapper.get('[data-testid="map-place-event-invitation"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="map-place-current-location-action"]').classes()).toContain(
+      'is-current',
+    )
+    expect(wrapper.get('[data-testid="map-place-leave"]').exists()).toBe(true)
     expect(simulationStore.eventInstances).toHaveLength(0)
     await wrapper.get('[data-testid="map-place-expand-event"]').trigger('click')
     await flushPromises()

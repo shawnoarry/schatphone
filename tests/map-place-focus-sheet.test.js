@@ -62,6 +62,28 @@ describe('MapPlaceFocusSheet', () => {
     expect(wrapper.emitted('go')).toHaveLength(1)
   })
 
+  test('keeps Go visible at the current place and explains the state without emitting it', async () => {
+    const wrapper = createWrapper({
+      primaryAction: 'current',
+      contextLabel: 'Current position',
+      contextTone: 'current',
+    })
+
+    const currentAction = wrapper.get('[data-testid="map-place-current-location-action"]')
+    expect(currentAction.text()).toContain('Go')
+    expect(currentAction.classes()).toContain('is-current')
+    expect(currentAction.attributes('disabled')).toBeUndefined()
+    expect(currentAction.attributes('title')).toBe('You are currently here')
+
+    await currentAction.trigger('click')
+
+    expect(wrapper.get('[data-testid="map-place-primary-action-notice"]').text()).toBe(
+      'You are currently here',
+    )
+    expect(wrapper.emitted('go')).toBeUndefined()
+    expect(wrapper.emitted('view-journey')).toBeUndefined()
+  })
+
   test('renders category fallbacks in the same stable image slot with an explicit truth label', () => {
     const wrapper = createWrapper({
       media: {
