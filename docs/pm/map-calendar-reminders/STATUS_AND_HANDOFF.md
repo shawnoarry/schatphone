@@ -1,6 +1,6 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-08-20
+Updated: 2026-08-21
 
 This file is the handoff page for Map, Calendar, and Reminders work.
 
@@ -27,6 +27,8 @@ The 106-place Seoul catalog now resolves media through a separate V1 registry ra
 Seven untouched source candidates remain in the Git-ignored local archive at `output/imagegen/map-place-media-pilot-20260815/source-candidates/`. Only separately cropped/compressed runtime WebPs were published. Batch `map-place-media-pilot-20260815` uploaded and re-downloaded all seven public objects, verified their byte length and SHA-256, and registered them in `config/project-assets.json`. The audit rejected an apparent SM candidate when visual inspection showed it was not established as the Seoul headquarters area. No map-service screenshot, news/social image, or unclear corporate media entered runtime. See `docs/design/MAP_PLACE_MEDIA_GOVERNANCE.md`, `docs/design/MAP_PLACE_MEDIA_INVENTORY.md`, and `docs/qa/MAP_PLACE_MEDIA_PILOT_2026-08-15.md`.
 
 Current validation is included in the package-level results above. The focused media/card slice passes, full ESLint and production build pass, and dedicated place-media Playwright passes 2/2 across desktop Chromium and simulated Pixel 5. Direct review confirms exact-photo, area-atmosphere, and image-backed player-place fallback presentation with no horizontal overflow; short-phone media compression preserves the required image slot while keeping the overview actions in the initial card view.
+
+The 2026-08-21 media calibration pass re-downloaded the seven reviewed Seoul derivatives from the registered public URLs and matched every configured byte count and SHA-256. `docs/design/MAP_PLACE_MEDIA_CALIBRATION_2026-08-21.md` records provisional overview/detail focal guidance for the pilot images and the fictional fallback. This is evidence only: no runtime media registry, derivative dimensions, or final crop rule changed. The next gate is a focused focal-position comparison on desktop and Pixel 5 before adding per-place focal metadata or separate overview/detail derivatives.
 
 ## 1. Current Status
 
