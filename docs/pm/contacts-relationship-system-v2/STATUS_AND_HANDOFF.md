@@ -1,6 +1,6 @@
 # Contacts Relationship System V2 Status And Handoff
 
-Updated: 2026-08-18
+Updated: 2026-08-21
 
 This file is the handoff page for anyone continuing Contacts, role, relationship, or memory-management work.
 
@@ -11,6 +11,7 @@ Status: `DONE`
 Confirmed persistence dependency for future work:
 
 - `CMG-02 DONE 2026-08-20` at `208e1dc`: Relationship Runtime now confirms persistence before accepting a new fact or an apply/dismiss decision. A failed save restores the prior relationship state, and retrying the same fact ID reuses one matching record while rejecting conflicting content. The 500-row retention change remains `CMG-06`.
+- `CMG-04 DONE 2026-08-21` at `134f7f7`: new explicit Chat disclosures are grouped conservatively by subject instead of entering one generic memory. Hospital and birthday remain separate; later clinic/hospital detail updates the hospital memory with all exact message sources retained; unknown subjects stay separate; legacy generic records remain readable.
 
 - role profiles, archived-role state, relationship facts, memories, and accepted audit evidence cannot be silently or irreversibly deleted for capacity management;
 - moving older records out of the hot working set is allowed only through reversible cold archival that preserves Contacts/World Hub review and restore semantics;
@@ -84,6 +85,7 @@ What is already landed:
 62. The Player Context direction keeps Self Profile as the owner of stable structured, visibility-scoped user identity while volatile player/world state, event decisions, owner facts, Community/Media posts, and investigation clues remain outside Contacts. Read `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md`.
 63. Contacts role profiles now carry a monotonic persisted `revision`; legacy records normalize to revision `1`, and every profile-owned write seam increments it. Event Runtime's pure Player Context V1 seam consumes exact Self Profile/world/template revision evidence and only manual `public` / matching-world `world_specific` values from the K-pop `occupation`, `affiliation`, and `public_identity` allowlist. Contacts does not judge manager/public-idol eligibility and exposes no biography, relationship prose, hidden values, event-attached values, or copied owner bodies through this Interface.
 64. Chat now has one explicit user-disclosure Adapter proof: a user-authored message in a role thread can be marked for that role to remember, producing a role-scoped supporting-only Relationship Runtime fact keyed to the conversation/message source. Contacts remains the identity and memory-review owner; it does not parse Chat text, classify disclosures, or copy the message into profile fields. No metrics, stage, or global world knowledge changes from this path.
+65. `CMG-04` makes that explicit path subject-aware without adding a new memory owner. Recognized hospital and birthday details form separate role memories; later detail on the same recognized subject updates that memory while preserving every source message. Unrecognized details use separate stable keys rather than being guessed together, and existing `chat_disclosure__user_shared` records remain available without migration or deletion.
 
 Still incomplete:
 
@@ -239,6 +241,7 @@ The older cross-device plans remain implementation history. They are not current
 - Contacts, WorldBook -> Contacts, and Contacts -> Chat Playwright flows pass on 2026-08-13 across desktop Chromium and simulated Pixel 5: 6 tests. The Contacts flow proves list-first entry, focused Memories presentation in the first detail viewport, return to the role card, return to the contact list, and no horizontal overflow.
 - Focused lint, `git diff --check`, production build, and in-browser visual inspection pass on 2026-08-13. Relationship, World fields, Memories, Character details, Linked activity, and Manage all start at the top of the 390px detail viewport without horizontal overflow; the wide role page is centered at a readable maximum width.
 - The 2026-08-18 Chat disclosure Adapter and AI-candidate parser proof passes focused action/UI/adapter/parser/prompt coverage plus the full 291-file / 2067-test Vitest suite; ESLint, governance, `git diff --check`, and production build pass. The slice does not add a Contacts route or change Contacts write ownership.
+- `CMG-04` validation on 2026-08-21: focused Chat disclosure, Relationship Adapter, and Runtime coverage passes 4 files / 45 tests; ESLint, production build, governance at 2 files / 14 tests, and `git diff --check` pass. Full Vitest passes 299/300 files and 2115/2116 tests; only tracked `DCF-06` exceeds its 5-second full-suite limit, while the affected file passes alone at 13/13 in 2.44 seconds. No Contacts route or visible UI changed.
 
 ## 5. Must Sync When Working Here
 

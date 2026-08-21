@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-20
+Updated: 2026-08-21
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -19,7 +19,7 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible;
-- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00`, `CMG-01`, `CMG-02`, `CMG-03`, and `DCF-05` are complete; `CMG-04` is active on PC-A, while `CMG-05` waits for its overlapping Relationship Adapter work and `CMG-08` remains dependency-safe but unstarted;
+- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-04` and `DCF-05` are complete; no item is currently reserved, and `CMG-05`, `CMG-08`, or `DCF-06` may be claimed next only after recording an exact non-overlapping reservation;
 - any content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -377,20 +377,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0` |
-| Next dependency-safe items | `CMG-04` is active on PC-A; `CMG-05` waits for its overlapping Relationship Adapter work; `CMG-08` and `DCF-06` remain separately assignable only after a non-overlapping reservation |
-| Active item | `CMG-04 IN_PROGRESS` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0`; `CMG-04 DONE 2026-08-21` at `134f7f7` |
+| Next dependency-safe items | `CMG-05` may now be claimed; `CMG-08` and `DCF-06` remain separately assignable only after an exact non-overlapping reservation |
+| Active item | `NONE` |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / integration controller and `CMG-04` implementer |
+| PC-A physical machine / role | `SKY-20250212UBG` / integration controller; no implementation item currently claimed |
 | PC-B physical machine / role | `UNASSIGNED` |
-| Source branch, base, and worktree | `main`; `CMG-04` base `ae9a9b8`; `D:\github\schatphone` |
+| Source branch, base, and worktree | `main`; last completed implementation `134f7f7`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned `docs/design/MAP_PLACE_DETAIL_UI_REVIEW.md`; unrelated `tmp/**` experiments and `tmp/vitest-out.txt`. The Calendar appearance work was independently integrated at `4172741` during this round. Preserve and never stage remaining user files. |
-| Risk lane | Elevated because one dirty worktree contains unrelated user Map documentation and the slice changes the shared Chat-to-Relationship meaning across two packages. Preserve persistence shape and source dedupe; do not migrate the legacy `chat_disclosure__user_shared` group, scan ordinary Chat, enable AI candidates, change relationship metrics, or begin `CMG-05`/`CMG-06`. |
-| Reserved paths | `src/lib/chat-disclosure-proposals.js`; `src/lib/relationship-fact-adapters.js`; `tests/relationship-fact-adapters.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`; completion-only updates in `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md`, `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md`, and `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` |
-| Acceptance | Explicit hospital and birthday disclosures for one role create two separately recallable memory groups. A later hospital disclosure reuses the hospital memory group, updates its current summary, and preserves both exact Chat message sources. Unknown subjects fail safe into separate stable groups. Existing legacy generic memory remains readable and unchanged. |
-| Required checks | Focused Chat disclosure/Relationship Adapter and Runtime Vitest; lint; full Vitest; production build; governance; `git diff --check`. No route or visible control changes are planned, so no new Playwright path is required. |
-| Integration state | `CMG-04 IN_PROGRESS`; reservation only, no implementation committed yet |
-| Remote synchronization | This reservation must be committed and synchronized before source edits begin |
+| Risk lane | No active implementation slice. The next executor must reassess from the synchronized remote base, preserve unrelated dirty files, and reserve non-overlapping paths before editing. |
+| Reserved paths | `NONE` |
+| Acceptance | `CMG-04` acceptance is met: hospital and birthday memories stay separate; later clinic/hospital detail updates one hospital memory with both exact sources; unknown subjects stay separate; legacy generic memory remains readable. |
+| Required checks | The next item must record its own focused and full checks before implementation. This completion-only documentation round requires governance and `git diff --check`. |
+| Integration state | `CMG-04 DONE 2026-08-21`; implementation `134f7f7` is integrated on `main` |
+| Remote synchronization | Implementation `134f7f7` is present on `origin/main`; this completion record must be pushed before another PC claims the next item |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -402,8 +402,9 @@ Completion log:
 4. `DCF-05 DONE 2026-08-20`: implementation `f140557` added deterministic deferred-mirror completion evidence and replaced fixed-delay test guesses with actual write-start and idle signals. The waiter includes writes queued while a slow batch is active; Store schemas, saved payloads, and synchronous write-success meaning remain unchanged. The target test passed 10 consecutive runs and inside the full suite; the only full-suite failure remains the separately tracked `DCF-06` image-bed tooling timeout, which passed alone.
 5. `CMG-02 DONE 2026-08-20`: implementation `208e1dc` makes the named Relationship, Event Instance V2, Mini Scene, and Food Delivery actions report success only after confirmed persistence. Quota, read-only, and reconciliation failures restore pre-action state; stable-ID retry reuses the committed result without duplicate owner records. No schema, retention cap, provider-call reuse, or route/UI behavior changed. Focused coverage passed; full Vitest reproduced only tracked `DCF-06`, which passed alone at 13/13.
 6. `DCF-03 DONE 2026-08-21`: behavior source `42742e5` makes Settings ringtone preview and real incoming calls follow the same `ringtoneEnabled` switch rather than the unrelated system sound-effects switch. Regression evidence `e9607c0` covers preview playback with system effects off and preview disablement with ringtones off. Focused tests, 2/2 Phone audio Settings Playwright, lint, 300-file / 2114-test full Vitest, production build, governance, and diff checks passed. No ringtone media, phone call-audio profile, keypad tones, or Calendar behavior changed.
+7. `CMG-04 DONE 2026-08-21`: implementation `134f7f7` replaces the one generic new-disclosure memory bucket with conservative subject-aware keys. Hospital and birthday facts stay separately recallable; later clinic/hospital detail updates the same hospital memory and retains every exact Chat message source. Unknown subjects stay separate, and legacy `chat_disclosure__user_shared` data is neither migrated nor deleted. Focused tests passed 4 files / 45 tests; lint, production build, governance at 2 files / 14 tests, and diff checks passed. Full Vitest passed 299/300 files and 2115/2116 tests; only tracked `DCF-06` timed out at 5 seconds, while that file passed alone at 13/13 in 2.44 seconds. No UI, ordinary-message scan, AI-candidate activation, relationship metric, or persistence shape changed.
 
-`CMG-02` is complete. Do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Open direct fixes `DCF-01`, `DCF-02`, `DCF-04`, and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
+`CMG-04` is complete, so `CMG-05` may be claimed next. Do not begin `CMG-06` or remove the 500/240/120 caps before `CMG-05` and the named persistence, migration, rollback, pagination, and long-run gates are accepted. Open direct fixes `DCF-01`, `DCF-02`, `DCF-04`, and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
@@ -549,6 +550,13 @@ One slice must preserve storage shapes and product behavior, add focused tests, 
 39. do not let a World Suite inventory row stand in for native owner truth, copy a native resource body, or mark current defaults as Suite-installed without verified provenance.
 
 ## 8. Validation
+
+Current `CMG-04` validation on 2026-08-21:
+
+- focused Chat disclosure, Relationship Adapter, and Runtime coverage passes 4 files / 45 tests;
+- ESLint, production build, governance at 2 files / 14 tests, and `git diff --check` pass;
+- full Vitest passes 299/300 files and 2115/2116 tests. The only failure is tracked `DCF-06`, where `tests/imgbed-publishing-tooling.test.js` exceeded its 5-second full-suite limit; that file passes alone at 13/13 in 2.44 seconds;
+- no route or visible control changed, so no new Playwright path was required.
 
 Current TTS-1 validation on 2026-08-10:
 
