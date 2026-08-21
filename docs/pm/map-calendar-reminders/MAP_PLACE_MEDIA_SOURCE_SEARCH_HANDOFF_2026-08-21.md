@@ -32,10 +32,11 @@ The intended product direction is unchanged:
 - Special license follow-up remains required for Gwanghwamun Square #08 (KOGL Type 1),
   Incheon Airport Terminal 1 #07 (CC BY-SA 3.0 de), and Gocheok Sky Dome #07 (KOGL Type 1).
 
-## Local Artifacts
+## Local Artifacts (Not In Git)
 
-The following directory is Git-ignored and must be copied separately when moving to another
-PC. Do not add the original files to the repository:
+These artifacts were intentionally **not pushed**. The directory is Git-ignored because it
+contains large untouched source originals and temporary review output. It must be copied
+separately when moving to another PC. Do not add the original files to the repository:
 
 `output/imagegen/map-place-media-search-20260821/`
 
@@ -49,9 +50,8 @@ Important files inside it:
 - `download-selected-sources.mjs`: resumable source downloader.
 
 The ignored archive is not included in the Git commit. If it is unavailable on the remote
-PC, copy the whole directory before resuming; otherwise the downloader can be recreated
-from the tracked selection and source-review records only after those records are also
-copied.
+PC, the current 26-file progress and the first-pass selection board are unavailable there;
+the remote PC would have to recreate the selection data and redownload from the source.
 
 ## Git Handoff
 
@@ -64,10 +64,15 @@ copied.
 ## Resume Procedure
 
 1. On the remote PC, update `main` from the pushed commit with fast-forward-only pull.
-2. Copy `output/imagegen/map-place-media-search-20260821/` into the same relative path.
-3. From the repository root, run:
+2. Copy the complete `map-place-media-search-20260821` directory to any convenient location.
+   The drive letter, user name, and repository root do not need to match this PC. Keep the
+   directory's internal structure unchanged.
+3. Run the script from that copied directory, or pass its absolute path to Node:
 
-   `node output/imagegen/map-place-media-search-20260821/download-selected-sources.mjs`
+   `node <copied-batch-dir>\download-selected-sources.mjs`
+
+   For example, if the copied folder is `E:\SchatPhoneMedia\map-place-media-search-20260821`,
+   run `node E:\SchatPhoneMedia\map-place-media-search-20260821\download-selected-sources.mjs`.
 
 The script skips verified files, strips `utm_*` query parameters from Wikimedia original
 URLs, records bytes/SHA-256/SHA-1/license/source page/user role, and stops at the first
