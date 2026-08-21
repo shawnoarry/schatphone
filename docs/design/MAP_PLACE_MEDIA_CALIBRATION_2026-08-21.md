@@ -1,6 +1,6 @@
 # Map Place Media Calibration 2026-08-21
 
-Status: `CALIBRATION_EVIDENCE / PILOT_ASSETS_ONLY / NO_RUNTIME_MEDIA_CHANGE`
+Status: `ADAPTATION_CANDIDATES_READY / PILOT_ASSETS_ONLY / NO_RUNTIME_MEDIA_CHANGE`
 
 This round evaluates the seven reviewed Seoul derivatives and the explicit fictional
 fallback against the intended two-level card roles:
@@ -12,6 +12,26 @@ The observations below are provisional visual guidance from the complete `1600 x
 pilot derivatives. Focal percentages are review estimates, not a frozen CSS contract.
 The pilot source bytes and runtime hashes remain governed by
 `config/project-assets.json` and `MAP_PLACE_MEDIA_PILOT_2026-08-15.md`.
+
+## Candidate Batch
+
+Every current pilot input has now been adapted into two non-runtime candidates:
+
+- overview candidate: `1600 x 625` (`16:5`), using the provisional focal point;
+- detail candidate: `1600 x 700` (`16:7`), using the same source and focal point.
+
+The batch contains 16 WebP candidates for seven reviewed Seoul images plus the
+fictional/category fallback. The source images are unchanged and no generative edit
+was applied. The Git-ignored working files are available at:
+
+```text
+output/imagegen/map-place-media-calibration-20260821/candidates/
+```
+
+`manifest.json` records each candidate's source, focal point, crop rectangle, output
+dimensions, bytes, and SHA-256. `candidate-contact-sheet.png` provides the side-by-side
+overview/detail comparison. These files are adaptation evidence only and are not
+runtime asset-registry entries.
 
 ## Calibration Matrix
 
@@ -41,12 +61,18 @@ The pilot source bytes and runtime hashes remain governed by
    category visual is sufficient or whether a reviewed fictional reconstruction is
    worth producing.
 
+6. The first candidate pass does not reject any source yet. It makes the trade-offs
+   visible: Starfield COEX becomes ceiling-heavy in a shallow crop, Seoul Station's
+   entrance cue benefits from right-biased focus, and the B-grade area images remain
+   broader by design. Those are review prompts, not automatic re-generation decisions.
+
 ## Next Gate
 
-The next implementation experiment should apply the provisional focal positions to
-the existing card without changing the media registry schema, then compare overview
-and detail screenshots on desktop and Pixel 5. Accept or revise the focal positions
-before introducing a second derivative per place.
+The next review step is to compare the 16 candidates and classify each input as
+`keep`, `keep-as-area`, `defer`, or `re-source / re-generate`. Only after that
+classification should the next implementation experiment apply accepted focal
+positions to the existing card on desktop and Pixel 5. Do not add candidates to the
+runtime registry before that review.
 
 Do not count an asset as newly complete because it has a focal-point suggestion. The
 existing inventory remains authoritative: seven place-specific Seoul derivatives are
