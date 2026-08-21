@@ -377,20 +377,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557` |
-| Next dependency-safe items | `DCF-03` is active on PC-A; `CMG-04`, `CMG-05`, `CMG-08`, and `DCF-06` remain separately assignable only on non-overlapping paths |
-| Active item | `DCF-03 IN_PROGRESS` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0` |
+| Next dependency-safe items | `CMG-04`, `CMG-05`, `CMG-08`, and `DCF-06` remain separately assignable only after a new non-overlapping reservation |
+| Active item | `NONE`; `DCF-03` is closed and the next item must be explicitly reserved before implementation |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / integration controller and `DCF-03` verifier |
+| PC-A physical machine / role | `SKY-20250212UBG` / integration controller |
 | PC-B physical machine / role | `UNASSIGNED` |
-| Source branch, base, and worktree | `main`; `DCF-03` base `4431b64`; behavior source `42742e5`; `D:\github\schatphone` |
-| Existing dirty/untracked inventory | User-owned Calendar appearance work in `src/components/calendar/CalendarEventEditor.vue`, `src/components/calendar/CalendarWorkspace.vue`, `src/lib/calendar-markers.js`, `src/router/index.js`, `src/views/CalendarView.vue`, `tests/calendar-markers.test.js`, `src/views/CalendarAppearanceView.vue`, `tests/calendar-appearance-view.test.js`, and `tmp/calendar-appearance-visual/`; unrelated `tmp/**` experiments and `tmp/vitest-out.txt`. Preserve and never stage them. |
-| Risk lane | The behavior correction already exists in integrated commit `42742e5`, but `DCF-03` lacks an exact regression assertion and canonical governance closure. Do not reinterpret the separate global phone call-audio profile or change ringtone media. |
-| Reserved paths | `tests/settings-general-section.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`; completion-only note in `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md` |
-| Acceptance | With system sound effects off and ringtone enabled, ringtone preview still invokes the selected ringtone. With ringtone disabled, preview remains unavailable. Incoming-call behavior continues to use the same `ringtoneEnabled` setting. |
-| Required checks | Focused Settings and ringtone/Phone Vitest; Phone audio Settings Playwright; lint; full Vitest; build; governance; `git diff --check`. The tracked `DCF-06` full-suite timeout remains a separate known baseline if reproduced unchanged. |
-| Integration state | `DCF-03 IN_PROGRESS`; no behavior rewrite is authorized unless the integrated correction fails acceptance |
-| Remote synchronization | reservation must be committed and synchronized before changing the focused regression test |
+| Source branch, base, and worktree | `main`; `DCF-03` base `4431b64`; behavior source `42742e5`; regression evidence `e9607c0`; `D:\github\schatphone` |
+| Existing dirty/untracked inventory | User-owned `docs/design/MAP_PLACE_DETAIL_UI_REVIEW.md`; unrelated `tmp/**` experiments and `tmp/vitest-out.txt`. The Calendar appearance work was independently integrated at `4172741` during this round. Preserve and never stage remaining user files. |
+| Risk lane | `DCF-03` is closed. Future Phone or Settings work must preserve the shared `ringtoneEnabled` meaning and must not fold the separate phone call-audio profile, keypad tones, or system sound effects into it. |
+| Reserved paths | `NONE`; completion documents are released after the commit containing this record is synchronized |
+| Acceptance | Satisfied: with system sound effects off and ringtone enabled, preview invokes the selected ringtone; with ringtones off, preview is unavailable; incoming calls continue to follow the same `ringtoneEnabled` setting. |
+| Required checks | Passed: focused Settings and ringtone/Phone Vitest (4 files / 34 tests); Phone audio Settings Playwright (2/2 desktop and simulated mobile); lint; full Vitest (300 files / 2114 tests); production build; governance (2 files / 14 tests); `git diff --check`. The tracked `DCF-06` timeout did not reproduce. |
+| Integration state | `DCF-03 DONE 2026-08-21`; behavior `42742e5`, regression evidence `e9607c0`, no behavior rewrite |
+| Remote synchronization | Behavior and regression evidence are synchronized on `origin/main`; the completion record is synchronized by the commit containing this entry |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -401,8 +401,9 @@ Completion log:
 3. `CMG-03 DONE 2026-08-20`: implementation `86270d8` removed System Store relationship stage/metrics and warm/conflict timestamps from Chat prompts. Bounded Chat activity remains, Contacts premise stays labelled as premise, and the same transient Relationship Runtime projection supplies the one current relationship answer plus recalled memory references. No persisted state or visible page changed.
 4. `DCF-05 DONE 2026-08-20`: implementation `f140557` added deterministic deferred-mirror completion evidence and replaced fixed-delay test guesses with actual write-start and idle signals. The waiter includes writes queued while a slow batch is active; Store schemas, saved payloads, and synchronous write-success meaning remain unchanged. The target test passed 10 consecutive runs and inside the full suite; the only full-suite failure remains the separately tracked `DCF-06` image-bed tooling timeout, which passed alone.
 5. `CMG-02 DONE 2026-08-20`: implementation `208e1dc` makes the named Relationship, Event Instance V2, Mini Scene, and Food Delivery actions report success only after confirmed persistence. Quota, read-only, and reconciliation failures restore pre-action state; stable-ID retry reuses the committed result without duplicate owner records. No schema, retention cap, provider-call reuse, or route/UI behavior changed. Focused coverage passed; full Vitest reproduced only tracked `DCF-06`, which passed alone at 13/13.
+6. `DCF-03 DONE 2026-08-21`: behavior source `42742e5` makes Settings ringtone preview and real incoming calls follow the same `ringtoneEnabled` switch rather than the unrelated system sound-effects switch. Regression evidence `e9607c0` covers preview playback with system effects off and preview disablement with ringtones off. Focused tests, 2/2 Phone audio Settings Playwright, lint, 300-file / 2114-test full Vitest, production build, governance, and diff checks passed. No ringtone media, phone call-audio profile, keypad tones, or Calendar behavior changed.
 
-`CMG-02` is complete. Do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Direct fixes `DCF-01` through `DCF-04` and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
+`CMG-02` is complete. Do not remove the 500/240/120 caps before the named persistence, migration, rollback, pagination, and long-run gates for that owner are accepted. Open direct fixes `DCF-01`, `DCF-02`, `DCF-04`, and test repair `DCF-06` may run independently on PC-B only after exact paths are reserved and the controller confirms a non-overlapping base.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
