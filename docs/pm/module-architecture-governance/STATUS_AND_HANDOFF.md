@@ -378,7 +378,7 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0`; `CMG-04 DONE 2026-08-21` at `134f7f7`; `CMG-05 DONE 2026-08-21` at `d8662cb`; `DCF-02 DONE 2026-08-21` at `8ff85c7`; documentation handoff at `8ccfe12`; `DCF-01 DONE 2026-08-21` at `4654e02`; current base `4654e02` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0`; `CMG-04 DONE 2026-08-21` at `134f7f7`; `CMG-05 DONE 2026-08-21` at `d8662cb`; `DCF-02 DONE 2026-08-21` at `8ff85c7`; documentation handoff at `8ccfe12`; `DCF-01 DONE 2026-08-21` at `4654e02`; documentation handoff at `eb24430`; current base `eb24430` |
 | Next dependency-safe items | `CMG-08`, `DCF-04`, and `DCF-06` remain separately assignable only after new exact non-overlapping reservations |
 | Active item | none; `DCF-01 DONE 2026-08-21` |
 | Integration controller PC | `SKY-20250212UBG` |
@@ -390,7 +390,7 @@ Current execution record:
 | Reserved paths | none; DCF-01 paths are released after local integration. |
 | Acceptance | DCF-01 preserves every string-valued WorldBook entry ID from query arrays through route construction and WorldBook parsing, while retaining trim/dedupe/eight-ID behavior and single-value query semantics. |
 | Validation | Direct navigation/model Vitest passes 20/20; WorldBook Chromium E2E passes 8/8 across desktop and simulated mobile; changed-file ESLint, production build, governance, and `git diff --check` pass. Full Vitest passes 300/301 files and 2135/2136 tests with the tracked DCF-06 timeout as the only failure. Full lint remains blocked by unrelated generated `output/**/download-selected-sources.mjs:150` no-empty. |
-| Integration state | `INTEGRATED_LOCAL`; behavior commit `4654e02`; documentation handoff follows. |
+| Integration state | `INTEGRATED_LOCAL`; behavior commit `4654e02`; documentation handoff `eb24430`. |
 | Remote synchronization | `origin/main` is currently at `fc1bb3b`; no push operation is part of this round. |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
@@ -412,7 +412,7 @@ Completion log:
 
 12. `DCF-02 DONE 2026-08-21` at `8ff85c7`: Chat Appearance imports complete CSS files through the 20,000-character supported limit and rejects oversized files without replacing the draft, enabled state, or profile name. Focused Chat Appearance unit coverage passes 33/33; Chromium E2E passes 3/3; changed-file ESLint, production build, governance, and `git diff --check` pass. Full Vitest passes 300/301 files and 2133/2134 tests; only the tracked `DCF-06` image-bed tooling test exceeds the default full-suite timeout. No Chat storage shape, global CSS ownership, or route boundary changed.
 
-13. `DCF-01 DONE 2026-08-21` at `4654e02`: WorldBook navigation now preserves all string-valued query-array entry IDs before trimming, de-duplicating, and applying the existing eight-ID cap. Direct navigation/model coverage passes 20/20, and WorldBook Chromium coverage passes 8/8 across desktop and simulated mobile. Changed-file ESLint, production build, governance, and diff checks pass. Full Vitest passes 300/301 files and 2135/2136 tests; the only failure is the separately tracked DCF-06 image-bed publishing timeout. Full lint remains blocked by an unrelated generated `output/**/download-selected-sources.mjs:150` empty block. No WorldBook storage shape, ownership, or non-list query semantics changed.
+13. `DCF-01 DONE 2026-08-21` at `4654e02`, documented at `eb24430`: WorldBook navigation now preserves all string-valued query-array entry IDs before trimming, de-duplicating, and applying the existing eight-ID cap. Direct navigation/model coverage passes 20/20, and WorldBook Chromium coverage passes 8/8 across desktop and simulated mobile. Changed-file ESLint, production build, governance, and diff checks pass. Full Vitest passes 300/301 files and 2135/2136 tests; the only failure is the separately tracked DCF-06 image-bed publishing timeout. Full lint remains blocked by an unrelated generated `output/**/download-selected-sources.mjs:150` empty block. No WorldBook storage shape, ownership, or non-list query semantics changed.
 
 `CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the reserved Event Instance V2 retention/migration paths. `DCF-01` is integrated locally; `CMG-08`, open direct fix `DCF-04`, and test repair `DCF-06` remain separate and may not reuse these files or semantics without a new reservation.
 
