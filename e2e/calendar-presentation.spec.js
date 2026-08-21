@@ -309,3 +309,34 @@ for (const theme of themes) {
     expect(pageErrors).toEqual([])
   })
 }
+
+test('Calendar marker colors follow an event and persist durably', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await seedCalendar(page, 'default')
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/calendar')
+
+  await page.locator(`[data-testid^="calendar-month-event-${eventId}::"]`).first().click()
+  await page.getByTestId('calendar-edit-selected-event').click()
+  await page.getByTestId('calendar-editor-marker-marker_anniversary').click()
+  await page.getByTestId('calendar-editor-save').click()
+  await expect(page.getByTestId('calendar-event-editor')).toHaveCount(0)
+
+  // the marker write lands in a deferred mirror; poll the persisted record instead of
+  // assuming the hot localStorage value is already fresh
+  const readPersistedMarker = () =>
+    page.evaluate(() => {
+      const raw = window.localStorage.getItem('schatphone:store:calendar')
+      const events = raw ? JSON.parse(raw)?.data?.events || [] : []
+      return events.find((event) => event.id === 'calendar_event_cja1_long_title')?.markerId || ''
+    })
+  await expect.poll(readPersistedMarker).toBe('marker_anniversary')
+
+  await expect(page.locator('.calendar-month-event.has-marker').first()).toBeVisible()
+  await page.getByTestId('calendar-view-agenda').click()
+  await expect(page.getByTestId('calendar-agenda-view')).toContainText('Anniversary')
+
+  expect(pageErrors).toEqual([])
+})
