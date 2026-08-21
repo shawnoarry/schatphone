@@ -20,6 +20,8 @@ const props = defineProps({
   selectedEventId: { type: String, default: '' },
   selectedOccurrenceId: { type: String, default: '' },
   markers: { type: Array, default: () => [] },
+  colorPreset: { type: String, default: 'default' },
+  glyphStyle: { type: String, default: 'bar' },
 })
 
 const emit = defineEmits([
@@ -107,8 +109,11 @@ const markerFor = (event) => resolveCalendarMarker(props.markers, event?.markerI
 
 const markerStyleFor = (event) => {
   const marker = markerFor(event)
-  return marker ? { '--calendar-marker-color': calendarMarkerColor(marker) } : null
+  return marker ? { '--calendar-marker-color': calendarMarkerColor(marker, props.colorPreset) } : null
 }
+
+const markerDotClassFor = (event) =>
+  markerFor(event) ? `is-glyph-${props.glyphStyle}` : ''
 
 const markerLabelFor = (event) => {
   const marker = markerFor(event)
@@ -197,6 +202,7 @@ const markerLabelFor = (event) => {
                 'is-selected': selectedOccurrenceId === event.occurrenceId,
                 'is-multi-day': event.isMultiDay,
                 'has-marker': Boolean(markerFor(event)),
+                [markerDotClassFor(event)]: true,
               },
             ]"
             :style="markerStyleFor(event)"
@@ -258,11 +264,12 @@ const markerLabelFor = (event) => {
             :key="`${group.startsAt}-${event.occurrenceId}`"
             type="button"
             class="calendar-agenda-event"
-            :class="{ 'is-selected': selectedOccurrenceId === event.occurrenceId, 'has-marker': Boolean(markerFor(event)) }"
+            :class="{ 'is-selected': selectedOccurrenceId === event.occurrenceId, 'has-marker': Boolean(markerFor(event)), [markerDotClassFor(event)]: true }"
             :style="markerStyleFor(event)"
             :aria-pressed="selectedOccurrenceId === event.occurrenceId"
             @click="emit('select-event', event, group.startsAt)"
           >
+            <span v-if="markerFor(event) && glyphStyle === 'dot'" class="calendar-marker-dot" aria-hidden="true"></span>
             <span class="calendar-agenda-event__time">{{ eventRange(event) }}</span>
             <span class="calendar-agenda-event__copy">
               <strong>{{ eventTitle(event) }}</strong>
@@ -299,12 +306,13 @@ const markerLabelFor = (event) => {
           :key="event.occurrenceId"
           type="button"
           class="calendar-selected-row"
-          :class="{ 'is-selected': selectedOccurrenceId === event.occurrenceId, 'has-marker': Boolean(markerFor(event)) }"
+          :class="{ 'is-selected': selectedOccurrenceId === event.occurrenceId, 'has-marker': Boolean(markerFor(event)), [markerDotClassFor(event)]: true }"
           :style="markerStyleFor(event)"
           :aria-pressed="selectedOccurrenceId === event.occurrenceId"
           :data-testid="`calendar-event-row-${event.sourceEventId}`"
           @click="emit('select-event', event, selectedDate)"
         >
+          <span v-if="markerFor(event) && glyphStyle === 'dot'" class="calendar-marker-dot" aria-hidden="true"></span>
           <span class="calendar-selected-row__time">{{ eventRange(event) }}</span>
           <span class="calendar-selected-row__copy">
             <strong>{{ eventTitle(event) }}</strong>
@@ -518,6 +526,25 @@ const markerLabelFor = (event) => {
   color: color-mix(in srgb, var(--calendar-marker-color) 72%, var(--system-text));
   background: color-mix(in srgb, var(--calendar-marker-color) 16%, transparent);
 }
+
+.calendar-month-event.has-marker.is-glyph-dot {
+  color: var(--system-text);
+  background: transparent;
+}
+
+.calendar-month-event.has-marker.is-glyph-dot::before {
+  content: '';
+  flex: none;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--calendar-marker-color);
+}
+
+.calendar-month-event.has-marker.is-glyph-icon_tint {
+  background: color-mix(in srgb, var(--calendar-marker-color) 28%, transparent);
+}
 .calendar-month-event__time { flex: none; opacity: .78; }
 .calendar-month-event__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-month-more { display: block; margin-top: 3px; color: var(--system-text-muted); font-size: 9px; }
@@ -549,6 +576,11 @@ const markerLabelFor = (event) => {
 .calendar-agenda-day__events { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 7px; }
 .calendar-agenda-event { width: 100%; min-width: 0; gap: 10px; padding: 10px 12px; border: 1px solid var(--system-subtle-border); border-radius: 12px; color: var(--system-text); background: var(--system-panel-bg); font: inherit; text-align: left; cursor: pointer; }
 .calendar-agenda-event.has-marker { border-left: 3px solid var(--calendar-marker-color); }
+.calendar-agenda-event.has-marker.is-glyph-dot,
+.calendar-agenda-event.has-marker.is-glyph-icon_tint { border-left: 1px solid var(--system-subtle-border); }
+.calendar-agenda-event.has-marker.is-glyph-icon_tint {
+  background: color-mix(in srgb, var(--calendar-marker-color) 10%, var(--system-panel-bg));
+}
 .calendar-agenda-event.is-selected { border-color: var(--system-accent); background: var(--system-accent-soft); }
 .calendar-agenda-event__time { width: 78px; flex: none; color: var(--system-text-muted); font-size: 10px; }
 .calendar-agenda-event__copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
@@ -566,6 +598,20 @@ const markerLabelFor = (event) => {
 .calendar-selected-day__list { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
 .calendar-selected-row { width: 100%; min-width: 0; gap: 10px; padding: 11px 12px; border: 1px solid var(--system-subtle-border); border-radius: 12px; color: var(--system-text); background: var(--system-panel-bg); font: inherit; text-align: left; cursor: pointer; }
 .calendar-selected-row.has-marker { border-left: 3px solid var(--calendar-marker-color); }
+.calendar-selected-row.has-marker.is-glyph-dot,
+.calendar-selected-row.has-marker.is-glyph-icon_tint { border-left: 1px solid var(--system-subtle-border); }
+.calendar-selected-row.has-marker.is-glyph-icon_tint {
+  background: color-mix(in srgb, var(--calendar-marker-color) 10%, var(--system-panel-bg));
+}
+
+.calendar-marker-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  align-self: center;
+  border-radius: 50%;
+  background: var(--calendar-marker-color);
+}
 .calendar-selected-row.is-selected { border-color: var(--system-accent); background: var(--system-accent-soft); }
 .calendar-selected-row__time { width: 88px; flex: none; color: var(--system-text-muted); font-size: 10px; }
 .calendar-selected-row__copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
@@ -598,7 +644,10 @@ const markerLabelFor = (event) => {
   .calendar-workspace__header h2 { font-size: 18px; }
   .calendar-month-day { min-height: 76px; padding: 4px; }
   .calendar-month-event { display: block; height: 7px; padding: 0; overflow: hidden; border-radius: 999px; color: transparent; }
-  .calendar-month-event.has-marker { background: var(--calendar-marker-color); }
+  .calendar-month-event.has-marker,
+  .calendar-month-event.has-marker.is-glyph-dot,
+  .calendar-month-event.has-marker.is-glyph-icon_tint { background: var(--calendar-marker-color); }
+  .calendar-month-event.has-marker.is-glyph-dot::before { content: none; }
   .calendar-month-event.is-span-start { margin-right: -4px; border-radius: 999px 0 0 999px; }
   .calendar-month-event.is-span-middle { margin-inline: -4px; border-radius: 0; }
   .calendar-month-event.is-span-end { margin-left: -4px; border-radius: 0 999px 999px 0; }

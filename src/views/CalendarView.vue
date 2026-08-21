@@ -52,6 +52,15 @@ const {
 } = storeToRefs(mapStore)
 const { settings } = storeToRefs(systemStore)
 const calendarMarkers = computed(() => settings.value.appearance?.calendar?.markers || [])
+const calendarColorPreset = computed(
+  () => settings.value.appearance?.calendar?.colorPreset || 'default',
+)
+const calendarGlyphStyle = computed(
+  () => settings.value.appearance?.calendar?.glyphStyle || 'bar',
+)
+const openCalendarAppearance = () => {
+  router.push({ path: '/calendar/settings/appearance', query: { ...route.query } })
+}
 const calendarRelationshipDrafts = ref({})
 const relationshipFeedbackByEventId = ref({})
 const departureModeByEventId = ref({})
@@ -1154,6 +1163,16 @@ onBeforeUnmount(() => {
         <span>{{ t('首页', 'Home') }}</span>
       </button>
       <h1 class="calendar-page-title">{{ calendarTitle }}</h1>
+      <button
+        type="button"
+        class="calendar-appearance-button"
+        :aria-label="t('日历外观', 'Calendar appearance')"
+        :title="t('日历外观', 'Calendar appearance')"
+        data-testid="calendar-appearance-open"
+        @click="openCalendarAppearance"
+      >
+        <i class="fas fa-gear" aria-hidden="true"></i>
+      </button>
     </header>
 
     <main class="calendar-content">
@@ -1165,6 +1184,8 @@ onBeforeUnmount(() => {
         :selected-event-id="selectedEventId"
         :selected-occurrence-id="selectedOccurrenceId"
         :markers="calendarMarkers"
+        :color-preset="calendarColorPreset"
+        :glyph-style="calendarGlyphStyle"
         @update-view="updateCalendarView"
         @shift-period="shiftCalendarPeriod"
         @go-today="goToCalendarToday"
@@ -1381,6 +1402,7 @@ onBeforeUnmount(() => {
       :mode="editorMode"
       :places="activeMapAllPlaces"
       :markers="calendarMarkers"
+      :color-preset="calendarColorPreset"
       :validation-message="editorValidationMessage"
       :saving="editorSaving"
       @save="saveCalendarEventEditor"
@@ -1448,6 +1470,29 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 17px;
   font-weight: 750;
+  flex: 1;
+}
+
+.calendar-appearance-button {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--system-text-muted);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    color var(--system-motion-fast),
+    background var(--system-motion-fast);
+}
+
+.calendar-appearance-button:hover {
+  color: var(--system-accent);
+  background: var(--system-hover-bg);
 }
 
 .calendar-content {

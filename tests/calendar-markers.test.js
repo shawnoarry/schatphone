@@ -1,11 +1,15 @@
 import { describe, expect, test } from 'vitest'
 import {
+  CALENDAR_COLOR_PRESETS,
   CALENDAR_MARKER_COLORS,
   DEFAULT_CALENDAR_MARKERS,
   calendarMarkerColor,
   normalizeCalendarAppearance,
+  normalizeCalendarColorPreset,
+  normalizeCalendarGlyphStyle,
   normalizeCalendarMarkerColorKey,
   normalizeCalendarMarkers,
+  resolveCalendarColorPreset,
   resolveCalendarMarker,
 } from '../src/lib/calendar-markers'
 
@@ -44,12 +48,38 @@ describe('calendar markers', () => {
     expect(calendarMarkerColor(null)).toBe('#9aa3ad')
   })
 
-  test('normalizeCalendarAppearance keeps only the markers field', () => {
-    const appearance = normalizeCalendarAppearance({ markers: [{ id: 'marker_career', colorKey: 'green' }] })
+  test('normalizeCalendarAppearance normalizes markers, preset, and glyph style', () => {
+    const appearance = normalizeCalendarAppearance({
+      markers: [{ id: 'marker_career', colorKey: 'green' }],
+      colorPreset: 'candy',
+      glyphStyle: 'dot',
+    })
+    expect(appearance).toMatchObject({ colorPreset: 'candy', glyphStyle: 'dot' })
     const career = resolveCalendarMarker(appearance.markers, 'marker_career')
     expect(career.colorKey).toBe('green')
     expect(career.labelZh).toBe('事业活动')
+
+    expect(normalizeCalendarAppearance(null)).toMatchObject({ colorPreset: 'default', glyphStyle: 'bar' })
     expect(normalizeCalendarAppearance(null).markers).toHaveLength(12)
+  })
+
+  test('color presets recolor the same marker colorKey', () => {
+    const markers = normalizeCalendarMarkers()
+    const meeting = resolveCalendarMarker(markers, 'marker_meeting')
+    expect(calendarMarkerColor(meeting, 'default')).toBe('#6366f1')
+    expect(calendarMarkerColor(meeting, 'muted')).toBe('#8a90c0')
+    expect(calendarMarkerColor(meeting, 'candy')).toBe('#818cf8')
+    expect(calendarMarkerColor(meeting, 'unknown-preset')).toBe('#6366f1')
+  })
+
+  test('normalizers reject unknown preset and glyph values', () => {
+    expect(normalizeCalendarColorPreset('muted')).toBe('muted')
+    expect(normalizeCalendarColorPreset('rainbow')).toBe('default')
+    expect(normalizeCalendarGlyphStyle('dot')).toBe('dot')
+    expect(normalizeCalendarGlyphStyle('sparkle')).toBe('bar')
+    expect(resolveCalendarColorPreset('candy').id).toBe('candy')
+    expect(resolveCalendarColorPreset('nope').id).toBe('default')
+    expect(CALENDAR_COLOR_PRESETS).toHaveLength(3)
   })
 
   test('normalizeCalendarMarkerColorKey rejects unknown keys', () => {

@@ -41,6 +41,7 @@ const MapView = () => import('../views/MapView.vue')
 const MapSettingsView = () => import('../views/MapSettingsView.vue')
 const MapSettingsPlacesView = () => import('../views/MapSettingsPlacesView.vue')
 const CalendarView = () => import('../views/CalendarView.vue')
+const CalendarAppearanceView = () => import('../views/CalendarAppearanceView.vue')
 const AgendaJourneyView = () => import('../views/AgendaJourneyView.vue')
 const RemindersView = () => import('../views/RemindersView.vue')
 const WalletView = () => import('../views/WalletView.vue')
@@ -96,6 +97,7 @@ const router = createRouter({
     { path: '/map/settings/places', component: MapSettingsPlacesView },
     { path: '/map/labs/kakao-compare', redirect: (to) => ({ path: '/map', query: to.query }) },
     { path: '/calendar', component: CalendarView },
+    { path: '/calendar/settings/appearance', component: CalendarAppearanceView },
     { path: '/agenda-journey', component: AgendaJourneyView },
     { path: '/reminders', component: RemindersView },
     { path: '/wallet', component: WalletView },

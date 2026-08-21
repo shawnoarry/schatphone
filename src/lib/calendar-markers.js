@@ -19,6 +19,78 @@ export const CALENDAR_MARKER_COLORS = Object.freeze([
 
 const CALENDAR_MARKER_COLOR_KEYS = new Set(CALENDAR_MARKER_COLORS.map((entry) => entry.key))
 
+// Whole-set color presets: each preset redefines the 12 base hues.
+// Muted = desaturated reading tones; candy = brighter playful tones.
+export const CALENDAR_COLOR_PRESETS = Object.freeze([
+  {
+    id: 'default',
+    labelZh: '默认',
+    labelEn: 'Default',
+    colors: Object.freeze({
+      coral: '#e86657',
+      pink: '#ec5b8f',
+      violet: '#8b5cf6',
+      indigo: '#6366f1',
+      blue: '#3b82f6',
+      teal: '#14b8a6',
+      green: '#22a06b',
+      amber: '#d99413',
+      orange: '#ea7f35',
+      brown: '#a0724f',
+      slate: '#64748b',
+      neutral: '#9aa3ad',
+    }),
+  },
+  {
+    id: 'muted',
+    labelZh: '低饱和',
+    labelEn: 'Muted',
+    colors: Object.freeze({
+      coral: '#c47b72',
+      pink: '#c98aa5',
+      violet: '#9d8cc4',
+      indigo: '#8a90c0',
+      blue: '#7a9bc4',
+      teal: '#6fa8a0',
+      green: '#6fa188',
+      amber: '#b59b6e',
+      orange: '#c4977f',
+      brown: '#a08d80',
+      slate: '#87909b',
+      neutral: '#a8adb3',
+    }),
+  },
+  {
+    id: 'candy',
+    labelZh: '糖果',
+    labelEn: 'Candy',
+    colors: Object.freeze({
+      coral: '#ff5a4e',
+      pink: '#ff4fa8',
+      violet: '#a855f7',
+      indigo: '#818cf8',
+      blue: '#38bdf8',
+      teal: '#2dd4bf',
+      green: '#34d399',
+      amber: '#fbbf24',
+      orange: '#fb923c',
+      brown: '#b45309',
+      slate: '#475569',
+      neutral: '#94a3b8',
+    }),
+  },
+])
+
+const CALENDAR_COLOR_PRESET_IDS = new Set(CALENDAR_COLOR_PRESETS.map((preset) => preset.id))
+
+export const CALENDAR_GLYPH_STYLES = Object.freeze(['bar', 'dot', 'icon_tint'])
+
+export const normalizeCalendarColorPreset = (value, fallback = 'default') =>
+  CALENDAR_COLOR_PRESET_IDS.has(value) ? value : fallback
+
+export const normalizeCalendarGlyphStyle = (value, fallback = 'bar') =>
+  CALENDAR_GLYPH_STYLES.includes(value) ? value : fallback
+
 export const DEFAULT_CALENDAR_MARKERS = Object.freeze([
   { id: 'marker_date', labelZh: '约会', labelEn: 'Date', colorKey: 'coral' },
   { id: 'marker_birthday', labelZh: '生日', labelEn: 'Birthday', colorKey: 'pink' },
@@ -67,6 +139,8 @@ export const normalizeCalendarMarkers = (input) => {
 
 export const normalizeCalendarAppearance = (input = {}) => ({
   markers: normalizeCalendarMarkers(input?.markers),
+  colorPreset: normalizeCalendarColorPreset(input?.colorPreset),
+  glyphStyle: normalizeCalendarGlyphStyle(input?.glyphStyle),
 })
 
 export const resolveCalendarMarker = (markers, markerId) => {
@@ -76,7 +150,10 @@ export const resolveCalendarMarker = (markers, markerId) => {
   return list.find((marker) => marker.id === id) || null
 }
 
-export const calendarMarkerColor = (marker) => {
-  const entry = CALENDAR_MARKER_COLORS.find((item) => item.key === marker?.colorKey)
-  return entry?.color || CALENDAR_MARKER_COLORS.find((item) => item.key === 'neutral').color
+export const resolveCalendarColorPreset = (presetId) =>
+  CALENDAR_COLOR_PRESETS.find((preset) => preset.id === presetId) || CALENDAR_COLOR_PRESETS[0]
+
+export const calendarMarkerColor = (marker, presetId = 'default') => {
+  const preset = resolveCalendarColorPreset(presetId)
+  return preset.colors[marker?.colorKey] || preset.colors.neutral
 }

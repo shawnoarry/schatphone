@@ -8,6 +8,7 @@ const props = defineProps({
   mode: { type: String, default: 'create' },
   places: { type: Array, default: () => [] },
   markers: { type: Array, default: () => [] },
+  colorPreset: { type: String, default: 'default' },
   validationMessage: { type: String, default: '' },
   saving: { type: Boolean, default: false },
 })
@@ -82,7 +83,7 @@ const filteredPlaces = computed(() => {
     .slice(0, 20)
 })
 
-const markerColorFor = (marker) => calendarMarkerColor(marker)
+const markerColorFor = (marker) => calendarMarkerColor(marker, props.colorPreset)
 
 const toggleMarker = (markerId) => {
   if (!draft.value) return
