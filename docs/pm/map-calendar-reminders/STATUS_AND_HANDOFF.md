@@ -63,6 +63,17 @@ National Folk Museum, and Modern Seoul #01/#02 are unrelated Hyundai buildings. 
 candidates are not being promoted to runtime. Large original downloads are a separate
 next step because Wikimedia is currently responding slowly.
 
+The untouched-original archive has now been started at
+`output/imagegen/map-place-media-search-20260821/user-selected-source-candidates/source-candidates/`.
+Twenty-six of the 79 selected originals were downloaded with query parameters removed and their
+SHA-1 values match the recorded Commons source hashes. The resumable
+`download-manifest.json` keeps 52 records in `pending_download` state and one record in
+`rate_limited` retry state, retains
+the user role (`primary_candidate` or `surrounding_area_candidate`), and marks all five
+known identity mismatches as ineligible for exact-place use. Wikimedia then returned HTTP
+429 with `Retry-After: 600` for the next request; no thumbnail or proxy copy is being
+substituted, and runtime Map files remain unchanged until the rate-limit window clears.
+
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
