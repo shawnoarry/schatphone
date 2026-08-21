@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useSystemStore } from '../stores/system'
 import { playUiCue, resolveChatUiSfxSettings } from '../lib/ui-sfx'
+import { playHaptic } from '../lib/haptics'
 import { CHAT_CONTACT_SOCIAL_STATES, useChatStore } from '../stores/chat'
 import { useBookStore } from '../stores/book'
 import { useMapStore } from '../stores/map'
@@ -2766,6 +2767,9 @@ const sendTextMessage = () => {
   const chatSoundSettings = resolveChatUiSfxSettings(systemStore.settings.appearance)
   if (chatSoundSettings.enabled) {
     playUiCue('send', { profile: chatSoundSettings.profile })
+  }
+  if (systemStore.settings.appearance.hapticFeedbackEnabled !== false) {
+    playHaptic(8)
   }
   inputMessage.value = ''
   chatStore.setConversationDraft(activeChat.value.id, '')

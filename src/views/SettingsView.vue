@@ -27,6 +27,7 @@ import SettingsAutomationSection from '../components/settings/SettingsAutomation
 import SettingsBackupSection from '../components/settings/SettingsBackupSection.vue'
 import SettingsCallAudioSection from '../components/settings/SettingsCallAudioSection.vue'
 import SettingsGeneralSection from '../components/settings/SettingsGeneralSection.vue'
+import SettingsHapticsSection from '../components/settings/SettingsHapticsSection.vue'
 import SettingsLandingSection from '../components/settings/SettingsLandingSection.vue'
 import SettingsPushSection from '../components/settings/SettingsPushSection.vue'
 import SettingsSoundSection from '../components/settings/SettingsSoundSection.vue'
@@ -523,6 +524,12 @@ const setGlobalCallAudioProfile = (profileId) => {
 const previewGlobalCallAudio = (cue) => {
   if (!globalCallAudioSettings.value.enabled) return
   playCallAudio(cue, { profile: globalCallAudioSettings.value.profile })
+}
+
+const toggleHaptics = () => {
+  settings.value.appearance.hapticFeedbackEnabled =
+    settings.value.appearance.hapticFeedbackEnabled !== false ? false : true
+  systemStore.saveNow()
 }
 
 const previewGlobalSoundEffects = () => {
@@ -1072,8 +1079,8 @@ if (initialMenu) {
 
       <div v-if="activeMenu === 'sound'" class="settings-subpage fixed inset-0 bg-[#f2f2f7] z-20 flex flex-col animate-slide-in">
         <SettingsSubPageHeader
-          title-zh="声音与音效"
-          title-en="Sounds & Effects"
+          title-zh="声音与触感"
+          title-en="Sounds & Haptics"
           @close="closeSubPage"
         />
         <div class="settings-subpage-scroll p-4 space-y-4 overflow-y-auto no-scrollbar">
@@ -1116,6 +1123,12 @@ if (initialMenu) {
             @toggle="toggleGlobalCallAudio"
             @set-profile="setGlobalCallAudioProfile"
             @preview="previewGlobalCallAudio"
+          />
+
+          <SettingsHapticsSection
+            :enabled="settings.appearance.hapticFeedbackEnabled !== false"
+            test-id-prefix="settings"
+            @toggle="toggleHaptics"
           />
         </div>
       </div>

@@ -575,12 +575,6 @@ const toggleStatusBar = () => {
   triggerSaved()
 }
 
-const toggleHapticFeedback = () => {
-  settings.value.appearance.hapticFeedbackEnabled =
-    settings.value.appearance.hapticFeedbackEnabled !== false ? false : true
-  triggerSaved()
-}
-
 const toggleSoundEffects = () => {
   settings.value.appearance.soundEffectsEnabled =
     settings.value.appearance.soundEffectsEnabled !== false ? false : true
@@ -1083,26 +1077,6 @@ onBeforeUnmount(() => {
             <span
               class="absolute top-1 w-5 h-5 rounded-full bg-white transition"
               :class="settings.appearance.showStatusBar !== false ? 'left-6' : 'left-1'"
-            ></span>
-          </button>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl p-4 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-semibold">{{ t('触感反馈（振动）', 'Haptic Feedback (Vibration)') }}</p>
-            <p class="text-[11px] text-gray-500">{{ t('点击与位置调整时短震动（设备支持时）', 'Short vibration on taps and layout changes (if supported)') }}</p>
-          </div>
-          <button
-            type="button"
-            class="relative w-12 h-7 rounded-full transition"
-            :class="settings.appearance.hapticFeedbackEnabled !== false ? 'bg-blue-500' : 'bg-gray-300'"
-            @click="toggleHapticFeedback"
-          >
-            <span
-              class="absolute top-1 w-5 h-5 rounded-full bg-white transition"
-              :class="settings.appearance.hapticFeedbackEnabled !== false ? 'left-6' : 'left-1'"
             ></span>
           </button>
         </div>

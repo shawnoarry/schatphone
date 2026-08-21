@@ -16,6 +16,7 @@ import {
   resolveGlobalCallAudioSettings,
   stopCallAudio,
 } from '../../lib/call-audio'
+import { startRingVibration, stopRingVibration } from '../../lib/haptics'
 
 const phoneStore = usePhoneStore()
 const systemStore = useSystemStore()
@@ -48,18 +49,24 @@ watch(
   isRinging,
   (ringing) => {
     if (ringing) {
-      if (settings.value.appearance?.ringtoneEnabled === false) return
-      const ringtoneId = normalizeRingtoneId(settings.value.appearance?.ringtoneId || DEFAULT_RINGTONE_ID)
-      playRingtone(ringtoneId, { loop: true })
+      if (settings.value.appearance?.ringtoneEnabled !== false) {
+        const ringtoneId = normalizeRingtoneId(settings.value.appearance?.ringtoneId || DEFAULT_RINGTONE_ID)
+        playRingtone(ringtoneId, { loop: true })
+      }
+      startRingVibration({
+        enabled: settings.value.appearance?.hapticFeedbackEnabled !== false,
+      })
       return
     }
     stopRingtone()
+    stopRingVibration()
   },
   { immediate: true },
 )
 
 onBeforeUnmount(() => {
   stopRingtone()
+  stopRingVibration()
 })
 
 const acceptCall = () => {

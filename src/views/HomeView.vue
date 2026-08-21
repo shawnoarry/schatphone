@@ -14,6 +14,7 @@ import AppIconVisual from '../components/shared/AppIconVisual.vue'
 import BuiltInWidgetVisual from '../components/widgets/BuiltInWidgetVisual.vue'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 import { playUiCue } from '../lib/ui-sfx'
+import { playHaptic } from '../lib/haptics'
 import {
   HOME_LAYOUT_TEMPLATES,
   assignHomeLayoutSlotPlacements,
@@ -1029,9 +1030,7 @@ const clearTilePressed = () => {
 
 const maybeVibrate = (duration = 10) => {
   if (settings.value.appearance.hapticFeedbackEnabled === false) return
-  if (typeof navigator === 'undefined') return
-  if (typeof navigator.vibrate !== 'function') return
-  navigator.vibrate(duration)
+  playHaptic(duration)
 }
 
 const maybePlayCue = (cue, options) => {

@@ -141,10 +141,10 @@ const { t } = useI18n()
       @select="emit('open-notification')"
     />
     <SettingsMenuItem
-      title-zh="声音与音效"
-      title-en="Sounds & Effects"
-      subtitle-zh="全局操作、消息与通知提示音"
-      subtitle-en="Global system, message, and notification sounds"
+      title-zh="声音与触感"
+      title-en="Sounds & Haptics"
+      subtitle-zh="提示音、来电铃声、通话音效与振动"
+      subtitle-en="Alert sounds, ringtones, call audio, and vibration"
       icon="fas fa-volume-high"
       icon-class="bg-blue-500"
       :with-border="false"

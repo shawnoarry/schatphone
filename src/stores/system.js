@@ -4,6 +4,7 @@ import { readPersistedState, readPersistedStateAsync, writePersistedState } from
 import { DEFAULT_SYSTEM_LANGUAGE, normalizeSystemLanguage } from '../lib/locale'
 import { DEFAULT_UI_SFX_PROFILE, normalizeUiSfxProfile, playUiCue } from '../lib/ui-sfx'
 import { DEFAULT_RINGTONE_ID, normalizeRingtoneId } from '../lib/ringtone'
+import { HAPTIC_PATTERNS, playHaptic } from '../lib/haptics'
 import { DEFAULT_CALL_AUDIO_PROFILE, normalizeCallAudioProfile } from '../lib/call-audio'
 import {
   createInitialSoftwareUpdateState,
@@ -2630,15 +2631,16 @@ export const useSystemStore = defineStore('system', () => {
     if (!normalized) return ''
 
     notifications.value = [normalized, ...notifications.value].slice(0, MAX_NOTIFICATIONS)
-    if (
-      settings.appearance.soundEffectsEnabled !== false &&
-      typeof document !== 'undefined' &&
-      document.hidden === false
-    ) {
-      playUiCue('notification', {
-        cooldownMs: 1500,
-        profile: settings.appearance.soundEffectsProfile,
-      })
+    if (typeof document !== 'undefined' && document.hidden === false) {
+      if (settings.appearance.soundEffectsEnabled !== false) {
+        playUiCue('notification', {
+          cooldownMs: 1500,
+          profile: settings.appearance.soundEffectsProfile,
+        })
+      }
+      if (settings.appearance.hapticFeedbackEnabled !== false) {
+        playHaptic(HAPTIC_PATTERNS.message)
+      }
     }
     void dispatchNotificationToRealPush(normalized)
     return normalized.id
