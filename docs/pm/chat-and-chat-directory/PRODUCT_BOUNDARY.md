@@ -34,6 +34,7 @@ Chat owns:
 - Chat Settings as the Chat-local behavior, appearance-entry, and diagnostics surface
 - Chat Settings as the entry surface for shared TTS provider configuration and temporary preview, without taking ownership of TTS transport, credentials, or audio truth
 - Chat Appearance presentation settings for the shared Chat-owned route shell, message layout, independent avatar visibility, bubble treatments, content-fit sizing for ordinary text, and the iMessage-like thread-header identity presentation
+- Chat Appearance custom CSS file import with a complete 20,000-character supported limit; oversized files are rejected visibly and never stored as partial CSS
 - Chat Me as the Chat-local user identity, anonymity, and recent social-presence surface
 - confirmed Chat social/channel state once the social shell lands, such as whether a role can message, is pending friend confirmation, is blocked by the user, or has blocked the user
 - the idempotent role-binding and conversation-creation seam used by Chat Directory or an explicit Contacts `Start Chat` action

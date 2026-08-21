@@ -378,20 +378,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0`; `CMG-04 DONE 2026-08-21` at `134f7f7`; `CMG-05 DONE 2026-08-21` at `d8662cb` |
-| Next dependency-safe items | `CMG-08` and `DCF-06` remain separately assignable only after new exact non-overlapping reservations |
-| Active item | none; `CMG-07 DONE 2026-08-21` |
+| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0`; `CMG-04 DONE 2026-08-21` at `134f7f7`; `CMG-05 DONE 2026-08-21` at `d8662cb`; `DCF-02 DONE 2026-08-21` at `8ff85c7`; current base `8ff85c7` |
+| Next dependency-safe items | `CMG-08`, `DCF-01`, `DCF-04`, and `DCF-06` remain separately assignable only after new exact non-overlapping reservations |
+| Active item | none; `DCF-02 DONE 2026-08-21` |
 | Integration controller PC | `SKY-20250212UBG` |
 | PC-A physical machine / role | `SKY-20250212UBG` / integration controller |
 | PC-B physical machine / role | `UNASSIGNED` |
-| Source branch, base, and worktree | `main`; CMG-07 behavior commit `d8b46fc` from reservation base `f4f0b97`; `D:\github\schatphone` |
-| Existing dirty/untracked inventory | User-owned `src/views/RemindersView.vue` remains unstaged; `tmp/**` experiments, including `tmp/map-media-search-batch.mjs`, remain untracked and must not be staged, reset, or cleaned. |
-| Risk lane | Next unassigned slice is `CMG-08`: separate temporary Mini Scene presentation from explicit full-scene retention, add lookup-before-provider idempotence, remove the historical 120-artifact cap, and provide retained-scene management. Event results, approved memories, diary/timeline projections, owner audit evidence, backup compatibility, and visible save-failure/retry behavior must remain independent of the full-scene choice. |
-| Reserved paths | `src/stores/simulation.js`; `tests/simulation-store.test.js`; `tests/simulation-commerce-event-runtime.test.js`; `src/lib/persistence-owner-inventory.js`; this handoff; `docs/pm/event-runtime-and-world-hub/README.md`; `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md`; and `docs/architecture/SIMULATION_EVENT_ENGINE.md`. |
-| Acceptance | Event Instance V2 arrays survive 241+ active and terminal instances, close/reopen, complete backup restore, and v6 carrier migration; a long-running address-change Service Case remains inspectable; save failure restores the full prior instance array; unaffected 240/120 limits remain unchanged. |
-| Validation | Focused Simulation/Event Runtime coverage passes 19/19 across 3 files; full Vitest passes 301 files / 2132 tests; lint, production build, governance, and `git diff --check` pass. |
-| Integration state | `CMG-07 DONE 2026-08-21`; behavior commit `d8b46fc`; documentation handoff is the separate local commit immediately after it |
-| Remote synchronization | `origin/main` remains at reservation commit `11afb20` until a separate push is explicitly authorized. |
+| Source branch, base, and worktree | `main`; behavior commit `8ff85c7` from base `fc1bb3b`; `D:\github\schatphone` |
+| Existing dirty/untracked inventory | `tmp/**` user-owned experiments remain untracked and must not be staged, reset, or cleaned. |
+| Risk lane | Next unassigned slice is `CMG-08`: separate temporary Mini Scene presentation from explicit full-scene retention, add lookup-before-provider idempotence, remove the historical 120-artifact cap, and provide retained-scene management. |
+| Reserved paths | none; the next item requires a new exact non-overlapping reservation |
+| Acceptance | `DCF-02` is locally integrated; no active work item is reserved in this record. |
+| Validation | DCF-02 focused Chat Appearance unit coverage passes 33/33; Chat Appearance Chromium E2E passes 3/3; changed-file ESLint, production build, governance, and `git diff --check` pass. Full Vitest passes 300/301 files and 2133/2134 tests; tracked `DCF-06` remains the only failure. |
+| Integration state | `INTEGRATED_LOCAL`; behavior commit `8ff85c7`; documentation handoff commit follows |
+| Remote synchronization | `origin/main` is currently at `fc1bb3b`; no push operation is part of this round. |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -410,7 +410,9 @@ Completion log:
 
 11. `2026-08-21 Mini Scene product-contract refinement`: documentation now separates canonical event results and approved memories from optional full-scene retention. The current shell's all-artifacts-committed behavior is explicitly transitional; `CMG-08` must add occurrence/request reuse, explicit save/decline/archive/delete behavior, retained-scene paging/management, and no silent 120-artifact eviction. No behavior code changed in this documentation round.
 
-`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the reserved Event Instance V2 retention/migration paths. `CMG-08`, open direct fixes `DCF-01`, `DCF-02`, `DCF-04`, and test repair `DCF-06` remain separate and may not reuse these files or semantics without a new reservation.
+12. `DCF-02 DONE 2026-08-21` at `8ff85c7`: Chat Appearance imports complete CSS files through the 20,000-character supported limit and rejects oversized files without replacing the draft, enabled state, or profile name. Focused Chat Appearance unit coverage passes 33/33; Chromium E2E passes 3/3; changed-file ESLint, production build, governance, and `git diff --check` pass. Full Vitest passes 300/301 files and 2133/2134 tests; only the tracked `DCF-06` image-bed tooling test exceeds the default full-suite timeout. No Chat storage shape, global CSS ownership, or route boundary changed.
+
+`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the reserved Event Instance V2 retention/migration paths. `CMG-08`, open direct fixes `DCF-01` and `DCF-04`, and test repair `DCF-06` remain separate and may not reuse these files or semantics without a new reservation.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 

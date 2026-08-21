@@ -24,6 +24,7 @@ Updated: 2026-08-18
 - Chat Settings for Chat-local appearance entry points, diagnostics, and default-behavior surfaces
 - Chat Settings entry for shared TTS configuration and temporary Chinese preview; keep provider transport, credentials, audio lifecycle, and future caller behavior inside the TTS Module
 - Chat Appearance V1: layout classes, independent message avatar visibility, selectable bubble treatments, content-fit sizing for ordinary text with bounded rich-content rows, normalized persisted settings, shared preview rows, and iMessage-like thread-header identity presentation
+- Chat Appearance custom CSS file import: accept complete files through the supported 20,000-character limit and reject oversized files without silently saving a partial draft
 - Chat Appearance preview polish: a first-screen live header/thread/composer preview, compact layout/theme/bubble selectors, layout-specific default palettes, role legend, iMessage identity header, and replaceable-avatar placeholder guidance
 - Chat Appearance route-shell coverage: one shared class resolver and semantic page/sheet/panel/header/tab tokens across Messages, Contacts/Services, Groups, Me, Chat Settings, Chat Appearance, and retained feature routes while keeping bubble colors independently selectable
 - Chat Me for user identity/anonymity, recent interaction data, and derived social feed items
