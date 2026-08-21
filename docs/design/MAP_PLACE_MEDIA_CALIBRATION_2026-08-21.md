@@ -33,6 +33,31 @@ dimensions, bytes, and SHA-256. `candidate-contact-sheet.png` provides the side-
 overview/detail comparison. These files are adaptation evidence only and are not
 runtime asset-registry entries.
 
+## Catalog Search Batches
+
+The next step is now a catalog-wide search for the other Seoul place pins. Search
+results are kept separate from the pilot derivatives and are not accepted media yet.
+
+| Batch | Coverage | Records | Local screening state | Working evidence |
+| --- | --- | ---: | --- | --- |
+| 2026-08-21-01 | Gwanghwamun Square, Seoul City Hall, N Seoul Tower, Dongdaemun Design Plaza, Lotte World Tower, Incheon Airport T1, Gimpo Airport, Gangnam Station, Seoul Express Bus Terminal, Yongsan Station | 80 | `thumbnail_screening_only`; a small subset has local contact-sheet thumbnails | `output/imagegen/map-place-media-search-20260821-batch-01/` |
+| 2026-08-21-02 | National Assembly, 63 Square, Gocheok Sky Dome, National Museum of Korea, The Hyundai Seoul, Times Square Seoul, Lotte Department Store Main, Shinsegae Gangnam | 56 | `thumbnail_screening_only`; source pages and remote thumbnails only while Commons is rate-limited | `output/imagegen/map-place-media-search-20260821-batch-02/` |
+
+Every record includes a durable Commons file page, original URL, remote thumbnail URL,
+dimensions, MIME, source SHA-1, author, license, and access metadata. The records are
+candidate discovery evidence only: matching titles do not establish place identity,
+and no candidate is allowed into `src/lib/map-place-media.js` or the asset registry.
+The second batch's remaining queries (KSPO Dome, Galleria, Hyundai Apgujeong, Lotte
+Avenuel, Olympic Park, Yeouido Hangang Park, Seoul National University, Yonsei,
+Korea University, Four Seasons, Shilla, and Signiel) were deferred after the Commons
+API returned `429`; this is a retry queue, not a negative search result.
+
+The working search archive is Git-ignored. Once the source host is available again,
+the retry should restore thumbnails for visual review, then download untouched
+originals only for candidates that pass identity, privacy, architecture, crop, and
+license checks. Until that review is complete, all 136 records remain provisional and
+the seven-place-specific Seoul completion count is unchanged.
+
 ## Calibration Matrix
 
 | Place | Grade | Source composition | Overview guidance | Detail guidance | Current decision |

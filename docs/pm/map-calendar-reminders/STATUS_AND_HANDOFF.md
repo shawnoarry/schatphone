@@ -30,6 +30,19 @@ Current validation is included in the package-level results above. The focused m
 
 The 2026-08-21 media calibration pass re-downloaded the seven reviewed Seoul derivatives from the registered public URLs and matched every configured byte count and SHA-256. It then produced 16 Git-ignored deterministic candidates under `output/imagegen/map-place-media-calibration-20260821/candidates/`: one `16:5` overview and one `16:7` detail crop for each pilot image and the fictional/category fallback. `docs/design/MAP_PLACE_MEDIA_CALIBRATION_2026-08-21.md` records the provisional focal guidance and the review classification gate. This is evidence only: no runtime media registry, derivative dimensions, or final crop rule changed. The next gate is to classify each candidate as keep, area-only, defer, or re-source/re-generate before adding accepted focal metadata or separate runtime derivatives.
 
+The catalog search has now started for the other place pins. Two Wikimedia Commons discovery
+batches retain 136 provisional records across 18 Seoul places under the Git-ignored
+`output/imagegen/map-place-media-search-20260821-batch-01/` and
+`output/imagegen/map-place-media-search-20260821-batch-02/` archives. Each record keeps a
+source page, original and thumbnail URLs, dimensions, source SHA-1, author, and license;
+none is a runtime asset or an accepted place-specific decision. The first batch has local
+screening contact sheets; the second batch is source-metadata/remote-thumbnail evidence
+because Commons returned thumbnail/API `429` responses during collection. Twelve remaining
+second-batch queries are queued for retry. The next safe slice is visual screening plus
+untouched-original download for candidates that pass identity and license review, followed
+by a separate keep / keep-as-area / defer / re-source decision. `src/lib/map-place-media.js`,
+`config/project-assets.json`, and runtime image URLs remain unchanged.
+
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
@@ -68,7 +81,7 @@ The accepted direction is recorded in `docs/architecture/CALENDAR_AGENDA_JOURNEY
 2. `Agenda / 日程` is a Calendar view, not another planning app; selected-day and selected-event detail remain projections over the source event rather than copied records;
 3. `Agenda Journey / 行程` is now a separate Home/App Store app for today and near-term execution, while `Map Journey / 地图行程` remains the Map-owned city-travel flow;
 4. the hidden Schedule Orchestrator persists deterministic per-occurrence materialization/deadline requests, refreshes or retires them from Calendar truth, and reconciles after startup or resume; the CJA-3 owner consumes and acknowledges those requests without copying Calendar records;
-5. CJA-4 implements Activity Session timing and the restrained Focus Companion baseline. CJA-5 adds one midpoint-only Event Runtime collaboration with silent `off` resolution or inline `text` choice. CJA-6A now documents the read-only Narrative Timeline contract and bounded AI-context seam; CJA-6B projection implementation, broader event checkpoints, appointment auto-entry, and any visible Story/Diary surface remain separately gated;
+5. CJA-4 implements Activity Session timing and the restrained Focus Companion baseline. CJA-5 adds one midpoint-only Event Runtime collaboration with silent `off` resolution or inline `text` choice; its Simulation records were introduced in V6 and are carried by the current V7 schema. CJA-6A now documents the read-only Narrative Timeline contract and bounded AI-context seam; CJA-6B projection implementation, broader event checkpoints, appointment auto-entry, and any visible Story/Diary surface remain separately gated;
 6. CJA-1 is complete: Calendar storage V3 migrates V1/V2 and owns explicit start/end, all-day, recurrence, participation requirement, notes, reminder lead time, and optional stable Map `locationRef`; the UI adds Monday-first 42-day Month, Week, Agenda, selected-day/detail, and complete manual create/edit/delete.
 7. Map recomputes origin, transport estimate, recommended departure, predicted arrival, and lateness for the selected occurrence without rewriting Calendar time. Explicit `Leave now` creates or reuses one canonical Map Journey linked to the source Calendar event ID; another active journey blocks creation and Map returns to Calendar.
 8. Focused Calendar coverage passes 10 files / 35 tests. Calendar plus Map focused Playwright passes 6/6 across desktop Chromium and simulated Pixel 5, including default/zen visual evidence, CRUD, recurrence, multi-day spans, Map place selection, departure handoff, critical Axe, page-error, and zero-horizontal-overflow checks. No physical-device evidence is claimed.
