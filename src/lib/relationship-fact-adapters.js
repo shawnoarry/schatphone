@@ -3,7 +3,6 @@ import { buildRelationshipFactGate } from './relationship-event-gating'
 import { CHAT_SOCIAL_EVENT_STATUS, CHAT_SOCIAL_EVENT_TYPES } from './chat-social-event-review'
 import {
   buildChatDisclosureProposal,
-  CHAT_DISCLOSURE_MEMORY_KEY,
   CHAT_DISCLOSURE_SOURCE_MODULE,
 } from './chat-disclosure-proposals'
 
@@ -831,7 +830,7 @@ export const recordChatDisclosureRelationshipFact = ({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CHAT_USER_DISCLOSURE,
     sourceId: suggestion.sourceId,
-    memoryKey: CHAT_DISCLOSURE_MEMORY_KEY,
+    memoryKey: proposal.memoryKey,
     factType: proposal.factType,
     summary: proposal.summary,
     intensity: 1,

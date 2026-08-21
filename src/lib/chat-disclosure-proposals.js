@@ -1,7 +1,26 @@
 export const CHAT_DISCLOSURE_PROPOSAL_KIND = 'user_disclosure'
-export const CHAT_DISCLOSURE_MEMORY_KEY = 'chat_disclosure__user_shared'
+export const CHAT_DISCLOSURE_LEGACY_MEMORY_KEY = 'chat_disclosure__user_shared'
+export const CHAT_DISCLOSURE_MEMORY_KEY = CHAT_DISCLOSURE_LEGACY_MEMORY_KEY
+export const CHAT_DISCLOSURE_MEMORY_NAMESPACE = 'chat_disclosure'
 export const CHAT_DISCLOSURE_SOURCE_MODULE = 'relationship_chat_user_disclosure'
 export const CHAT_DISCLOSURE_MAX_SUMMARY_CHARS = 240
+
+const CHAT_DISCLOSURE_SUBJECT_RULES = Object.freeze([
+  Object.freeze({
+    key: 'hospital',
+    patterns: Object.freeze([
+      /医院|诊所|医务室|急诊|住院|病房|消毒水/u,
+      /\b(?:hospital|clinic|infirmary|emergency room|hospital ward|disinfectant)\b/i,
+    ]),
+  }),
+  Object.freeze({
+    key: 'birthday',
+    patterns: Object.freeze([
+      /生日|出生日期|生辰/u,
+      /\b(?:birthday|birth date|date of birth)\b/i,
+    ]),
+  }),
+])
 
 const normalizeText = (value, fallback = '', max = 160) => {
   if (typeof value !== 'string' && typeof value !== 'number') return fallback
@@ -15,6 +34,44 @@ const toInt = (value, fallback = 0) => {
 }
 
 const normalizeSummary = (value) => normalizeText(value, '', CHAT_DISCLOSURE_MAX_SUMMARY_CHARS)
+
+const normalizeSubjectSource = (value) => {
+  const text = normalizeSummary(value)
+  if (!text) return ''
+  return text
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
+const fingerprintSubjectSource = (value) => {
+  let hash = 0xcbf29ce484222325n
+  const prime = 0x100000001b3n
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= BigInt(value.charCodeAt(index))
+    hash = BigInt.asUintN(64, hash * prime)
+  }
+  return hash.toString(16).padStart(16, '0')
+}
+
+export const resolveChatDisclosureSubjectKey = (value) => {
+  const source = normalizeSubjectSource(value)
+  if (!source) return ''
+
+  const matchedRule = CHAT_DISCLOSURE_SUBJECT_RULES.find((rule) =>
+    rule.patterns.some((pattern) => pattern.test(source)),
+  )
+  if (matchedRule) return matchedRule.key
+
+  return `detail_${fingerprintSubjectSource(source)}`
+}
+
+export const buildChatDisclosureMemoryKey = (value) => {
+  const subjectKey = resolveChatDisclosureSubjectKey(value)
+  return subjectKey ? `${CHAT_DISCLOSURE_MEMORY_NAMESPACE}__${subjectKey}` : ''
+}
 
 const readBlockText = (block = {}) => {
   if (!block || typeof block !== 'object') return ''
@@ -62,6 +119,10 @@ export const buildChatDisclosureProposal = ({
   const kind = normalizeText(sourceContact.kind, profileId > 0 ? 'role' : '', 40)
   const messageId = normalizeText(message?.id, '', 120)
   const normalizedSummary = normalizeSummary(summary) || summarizeChatDisclosureMessage(message)
+  const subjectKey = resolveChatDisclosureSubjectKey(
+    summarizeChatDisclosureMessage(message) || normalizedSummary,
+  )
+  const memoryKey = subjectKey ? `${CHAT_DISCLOSURE_MEMORY_NAMESPACE}__${subjectKey}` : ''
   const sourceId = buildChatDisclosureSourceId({
     conversationId,
     contactId: normalizedContactId,
@@ -77,6 +138,7 @@ export const buildChatDisclosureProposal = ({
     Number(message?.recalledAt || 0) > 0 ||
     !messageId ||
     !normalizedSummary ||
+    !memoryKey ||
     !sourceId
   ) {
     return null
@@ -104,7 +166,8 @@ export const buildChatDisclosureProposal = ({
     sourceId,
     factType: 'user_disclosure',
     summary: normalizedSummary,
-    memoryKey: CHAT_DISCLOSURE_MEMORY_KEY,
+    subjectKey,
+    memoryKey,
     memoryRoleHint: 'supporting',
     effectPolicy: 'supporting_only',
     modelRequired: false,
