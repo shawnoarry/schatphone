@@ -1,6 +1,6 @@
 # SchatPhone Event Workflow
 
-Updated: 2026-08-18
+Updated: 2026-08-21
 
 This document defines the `事件专项` workflow.
 
@@ -133,6 +133,8 @@ If an event change needs visual work, first decide visual ownership through `doc
 43. Identity-conditioned events consume structured, revision-aware Contacts Self Profile projections and named owner facts. Raw biography, coordinates, free text, or model classification cannot independently establish occupation, intent, behavior, guilt, relationship, or world truth.
 44. Dynamic player/world values remain with their natural owners or separately justified minimal owners. WorldBook is static setting context, Event Runtime is orchestration/audit, and neither becomes a universal dynamic-state Store.
 45. Future forum/social/news propagation separates owner-confirmed facts, account/person claims, and committed posts. Community/Media owns publication bodies; Runtime may retain requests, decisions, references, and provenance only.
+46. Mini Scene presentation is separate from event truth. The source owner persists the confirmed event result, and approved Relationship Runtime/diary projections persist independently of whether the user keeps the full presentation. A declined or deleted full scene must not erase those records.
+47. One concrete event occurrence may generate one presentation revision. Reopen/retry reuses a retained artifact before any provider call; a new occurrence or explicit regeneration receives a new request/revision. Presenter format is an adapter choice, not a second event or memory owner.
 
 ## 4. Event Entry Audit
 

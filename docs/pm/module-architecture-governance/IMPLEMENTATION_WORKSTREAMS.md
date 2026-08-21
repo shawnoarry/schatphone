@@ -1,6 +1,6 @@
 # Module Architecture Governance Implementation Workstreams / 模块架构治理实施工作流
 
-Updated: 2026-08-12
+Updated: 2026-08-21
 
 ## 1. Workstream A: Ownership Closure
 
@@ -70,6 +70,9 @@ Updated: 2026-08-12
 - let World Pack reference a reviewed profile only as an optional grouped capability; custom worlds must work without a Pack
 - require a bounded safe regex engine and a validated structured draft before transforms
 - require both Text and sandboxed HTML Presenter Adapters, with a text fallback for every interactive artifact
+- keep presenter format separate from event truth: text is current, interactive HTML and other future forms are adapters, not the persistence model
+- persist the source event result plus approved role-memory/diary projections independently of the full-scene choice; only an explicit user decision retains the complete replayable presentation
+- key generation to one concrete event occurrence, look up retained artifacts before provider calls, use a new revision for explicit regeneration, and provide paged retained-scene management with explicit archive/delete and no silent 120-artifact eviction
 - stage pure schemas first, persistence/backup ownership second, text runtime third, HTML security fourth, and source-module Adapters one at a time
 - keep the first K-pop Calendar music-show-day integration an optional example rather than a global rule
 
@@ -117,11 +120,15 @@ Treat these as bugs:
 10. Book/WorldBook activation, World Pack activation, or catalog presence silently enables a Mini Scene popup
 11. raw AI HTML or legacy Chat `htmlSnippet` is executed, or unbounded native regex runs on the UI thread
 12. Mini Scene artifacts, profile bindings, or Settings policy are added to persistence Batch 2B without separate owner/backup approval
-13. `activeWorldPackId` or the built-in `default_world` Pack is treated as canonical world identity
-14. Pack activation changes Book source links, encyclopedia selection, profile-template selection, sensitive-content choices, or Mini Scene policy
-15. a future world definition is implemented as an internal save slot, workspace switcher, cross-container discovery, sync, or merge feature
-16. a consumer independently assembles world context or reads mutable owner arrays instead of using the shared World Setting Interface
-17. Chat or Map receives a Music API key, provider endpoint/header, raw response, queue contents, or stream URL instead of a bounded Music reference/projection
-18. an external Music deep link starts playback without an explicit user gesture or changes the queue without the Music integration policy and confirmation boundary
-19. Chat or another caller sends provider-specific TTS payloads, persists preview blobs/raw audio encodings, copies credentials, or upgrades `voice_virtual` without an approved message/media contract
-20. a World Suite inventory copies native resource content, treats a missing Owner Adapter field as success, activates a resource implicitly, or claims built-in defaults were Suite-installed without verified provenance
+13. a user declining or deleting a full Mini Scene also deletes the source event result, approved role memory, diary/timeline projection, or owner audit evidence
+14. a presenter format, Book rules/profile/templates, or the retained-scene list is treated as the canonical event-result or relationship-memory owner
+15. a repeated occurrence/request calls the provider again, or an explicit regeneration overwrites the prior retained presentation without a new revision/request
+16. a fixed 120-artifact cap silently evicts retained scenes, or a paging/management view is treated as data deletion
+17. `activeWorldPackId` or the built-in `default_world` Pack is treated as canonical world identity
+18. Pack activation changes Book source links, encyclopedia selection, profile-template selection, sensitive-content choices, or Mini Scene policy
+19. a future world definition is implemented as an internal save slot, workspace switcher, cross-container discovery, sync, or merge feature
+20. a consumer independently assembles world context or reads mutable owner arrays instead of using the shared World Setting Interface
+21. Chat or Map receives a Music API key, provider endpoint/header, raw response, queue contents, or stream URL instead of a bounded Music reference/projection
+22. an external Music deep link starts playback without an explicit user gesture or changes the queue without the Music integration policy and confirmation boundary
+23. Chat or another caller sends provider-specific TTS payloads, persists preview blobs/raw audio encodings, copies credentials, or upgrades `voice_virtual` without an approved message/media contract
+24. a World Suite inventory copies native resource content, treats a missing Owner Adapter field as success, activates a resource implicitly, or claims built-in defaults were Suite-installed without verified provenance

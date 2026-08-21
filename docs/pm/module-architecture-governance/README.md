@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-08-20
+Updated: 2026-08-21
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -8,9 +8,9 @@ Current state:
 
 - domain ownership and shared `lib` contracts are strong enough to preserve;
 - browsers and installable PWAs are confirmed as complete first-class clients, with one isolated storage container owning one current save;
-- authoritative histories and relationship evidence require explicit user deletion; automatic capacity management is limited to reversible archival/compaction or rebuildable data;
+- authoritative histories and relationship evidence require explicit user deletion; automatic capacity management is limited to reversible archival/compaction or rebuildable data. A complete Mini Scene is optional presentation history and may be explicitly removed without removing its event result or memory projections;
 - roadmap 4.5-CMG is the active cross-PC governance plan for shared experiences, role memory, Event Instance and Mini Scene retention, confirmed persistence, and the audited direct defects. `TODO_ROADMAP.md` owns every item status; this package owns the current execution handoff and does not duplicate the ledger;
-- formally committed module content is durable regardless of user/AI/system origin; full AI prompts/raw responses, uncommitted drafts, and rebuildable projections remain temporary, while canonical content, authoritative state/facts, references, and minimum provenance persist;
+- formally committed canonical module content is durable regardless of user/AI/system origin; full AI prompts/raw responses, uncommitted drafts, and rebuildable projections remain temporary, while canonical content, authoritative state/facts, references, and minimum provenance persist. A generated Mini Scene stays temporary until the user explicitly retains the complete presentation;
 - optional remote backup is personal BYOS rather than one shared project cloud: Cloudflare R2 is the first officially guided target, each user owns a separate destination and personal Worker gateway, SchatPhone never retains the R2 API Secret, and browser/PWA automation is limited to launch and open-app execution;
 - personal remote backups are client-encrypted and use dual recovery: either a recovery password or separately downloaded recovery file can restore, while Cloudflare/Worker receives neither plaintext secret;
 - the Gallery/material-library preservation contract now keeps accepted media locally first, separates `keep` from backup, uses one default-on whole-library inclusion choice instead of per-item backup selection, preserves URL sources as URLs, and keeps R2 backup-only rather than releasing local originals;
@@ -38,6 +38,7 @@ Current state:
 - the non-active Batch 2B foundation and the separately approved Book-only Repository cutover completed on 2026-07-22 with focused Vitest and real-Chromium coverage; Book keeps its byte-identical legacy fallback and never dual-writes, while Gallery/R2 and all other owner migrations remain unapproved;
 - the layered-persistence freshness foundation prepares all 17 inventory targets before Store mount, mutates only the 16 non-Book layered owners, orders valid heads by lineage/sequence rather than timestamps, fails closed on ambiguous/conflicting heads, verifies repairs, and bounds unavailable IndexedDB startup; product-level recovery aggregates structured failures in the root shell, one page-level writer keeps later same-container pages read-only, ordinary active-writer occupancy is presented as a calm preview and automatically retries after cooperative release, and the release-local v3 backup path now journals the previous complete metadata-plus-binary save and recovers interrupted restores before mount;
 - the cross-module Mini Scene direction now has its pure Stage 1 foundation plus a separately authorized AI/text shell: `store:mini-scene` V1, complete-backup v4/v3 compatibility, global `unconfigured | off | text` policy, an Event Runtime registration, provider-neutral AI-required Draft generation, and a root Text Presenter are landed;
+- the current shell has no prebuilt finished-scene library and no user-facing retained-scene manager. It currently commits each generated artifact before presentation; `CMG-08` must add one-occurrence reuse, optional full-scene retention, paging/management, and no silent 120-artifact eviction while event results and approved memories remain independent;
 - Mini Scene was not added to persistence Batch 2B and is not a Repository migration. Calendar authoring/entry was rejected and removed. A production event-trigger Adapter, profile-binding UI, safe Book transform execution, interactive HTML, and source-owner integrations remain unimplemented;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, especially the five-facade `FoodDeliveryView.vue`, `systemStore`, and direct cross-store coordination;

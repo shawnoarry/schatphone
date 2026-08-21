@@ -20,6 +20,8 @@ Persistence boundary:
 - durable evidence may move out of the hot runtime set only through reversible cold archival with World Hub review/restore semantics.
 - full AI prompts, raw responses, uncommitted candidates, and transport payloads are not event truth; persist normalized proposals/outcomes and minimum provenance, with full capture limited to explicit temporary diagnostics;
 - when an approved event formally publishes a social/forum record, offline scene, long-form artifact, performance/episode record, or character-state history, the target owner persists the canonical committed content and Event Runtime keeps references/provenance rather than copying the body.
+- A Mini Scene is presentation, not the canonical event result. The source owner persists the confirmed outcome, and Relationship Runtime plus any approved diary/timeline owner persists concise continuity projections whether or not the user keeps the complete presentation. Only an explicit user choice makes the full Mini Scene a retained replay artifact; declining or deleting it does not delete event, memory, or audit truth.
+- The same concrete event occurrence/request must not reroll or call the provider again after a retained artifact exists. A new occurrence or explicit regeneration receives a new request/revision. Retained Mini Scenes are paged/managed records, not a fixed-size rotating cache.
 - owner-safe lifecycle inspection may project a bounded reference such as `{ owner, kind, referenceId, mapPackId, active }`; this projection cannot include event text, proposal copy, participants, source snapshots, or outcome bodies. Active Event Instances and pending Map Journey proposals protect current Map use, while terminal records remain historical references.
 
 Continuity boundary:

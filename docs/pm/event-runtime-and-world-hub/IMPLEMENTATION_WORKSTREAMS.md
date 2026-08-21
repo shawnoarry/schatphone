@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Implementation Workstreams / 事件运行时与世界中枢实施工作流
 
-Updated: 2026-08-18
+Updated: 2026-08-21
 
 ## 1. Workstream A: Event Engine Foundation
 
@@ -61,6 +61,9 @@ World Hub may link to a separately unlocked Cheats surface and share selected-ev
 - keep eligibility, cooldown/cap, review, and provenance in Event Runtime
 - call the shared Mini Scene Interface with canonical source facts; do not copy world-profile, regex, artifact, or presenter logic into runtime adapters
 - treat interaction commands as requests that still pass the owning module's validation and any required runtime review
+- identify one concrete event occurrence and one request/revision; repeated delivery or reopen must look up a retained artifact before any provider call, while explicit regeneration creates a new revision
+- keep the source owner's confirmed event result and the Relationship Runtime/approved diary projection independent of whether the user retains the complete Mini Scene
+- present temporary validated content when the user declines full retention, and provide a future paged retained-scene management path with explicit archive/delete and no silent 120-artifact eviction
 
 ## 6. Workstream F: Event Surface Projection And Host Entries
 

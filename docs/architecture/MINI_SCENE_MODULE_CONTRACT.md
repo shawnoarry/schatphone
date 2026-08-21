@@ -1,10 +1,21 @@
 # Mini Scene Module Contract / 小剧场共享模块合同
 
-Updated: 2026-08-19
+Updated: 2026-08-21
 
 Status: `STAGE_1_FOUNDATION_DONE / AI_RUNTIME_AND_TEXT_SHELL_PARTIAL_DONE`
 
 This contract defines a reusable Mini Scene Module requested by Event Runtime after an event actually occurs. Calendar, Map, Chat, Agenda Journey, future streaming apps, and other source owners may later contribute bounded event facts through explicit Adapters, but users do not author the scene in those Apps and those Apps do not generate it themselves. This replaces both the earlier incomplete Chat-block assumption and the rejected Calendar form/card interpretation.
+
+The Module has two different kinds of durable information: the source owner keeps the event's confirmed result and the approved memory/diary projections, while the Mini Scene Module keeps the complete presentation only when the user explicitly chooses to retain it. The current AI/text shell commits every generated artifact before presentation; that is a transitional implementation behavior. `CMG-08` is the approved follow-up that separates temporary presentation from optional retained replay without weakening event-result or memory persistence.
+
+### 简单中文解释
+
+- **事件记录**：这件事实际发生了什么，以及数值、关系、订单或日程产生了什么结果。无论是否保存小剧场，都要保留。
+- **日记/角色记忆**：以后需要回忆时使用的简短总结。无论是否保存小剧场，都要保留。
+- **临时小剧场**：这次用来展示和互动的完整内容。不选择保存，结束后只释放这份完整内容。
+- **已保存小剧场**：用户主动保留后，未来可以回看的完整互动内容。它可以在回忆入口中分页、归档或删除，但不会删除事件结果和记忆。
+
+这里的“库”也分两种：Book 是可重复使用的规则/模板素材库；小剧场回忆入口是用户过去主动保存的内容，不是提前准备好的随机场景库。文字、HTML、动画或其他表现形式都只是展示方式，之后可以分别设计。
 
 The first planned world-specific example is the Modern Seoul K-pop music-show day. The Module itself must remain world-neutral and support user-authored or imported worlds.
 
@@ -22,6 +33,11 @@ The first planned world-specific example is the Modern Seoul K-pop music-show da
 10. A profile may declare optional content dimensions, including sensitive dimensions, but it cannot preset the user's choice. Each declared dimension begins `unconfigured`; the user may explicitly choose `include` or `exclude` per world/profile. This is not a global input filter.
 11. AI generation is mandatory for every newly committed Mini Scene. Event facts, narrative rules, and an optional validated transform profile constrain the generation, but no deterministic Calendar/source-module text builder may impersonate a generated scene.
 12. Missing provider configuration, provider failure, invalid JSON/schema, forbidden markup, or missing AI provenance fails closed without committing or opening an artifact. The required text representation is part of a valid AI artifact; it is not a locally fabricated provider-failure fallback.
+13. A Mini Scene is a presentation of one concrete event occurrence, not the event result itself. A new occurrence may generate a different scene; reopening the same retained occurrence must reuse its saved artifact; explicit regeneration creates a new request/revision.
+14. Event result, approved role-memory facts, and any diary/timeline projection are persisted by their owners regardless of whether the user retains the full Mini Scene. Declining full retention releases only the complete presentation payload.
+15. There is no prebuilt library of finished AI scenes or animations. Book is the reusable rules/profile/template source library; `store:mini-scene` is the store for user-retained past presentation artifacts. A future recall/library page is a management projection over retained artifacts, not a generator pool.
+16. Retained presentation artifacts have no silent row-count eviction. Lists and prompts may page or project bounded relevant data. The user may explicitly archive or delete a retained Mini Scene, but that action never deletes the source event result, role memory, diary/timeline projection, or owner audit evidence.
+17. Presenter formats are deliberately open-ended. Text is the current production presenter; trusted interactive HTML and other future presenters are adapters behind the same artifact contract and are not the definition of a Mini Scene.
 
 ## 2. Ownership And Interfaces
 
@@ -29,14 +45,14 @@ The first planned world-specific example is the Modern Seoul K-pop music-show da
 | --- | --- | --- |
 | Source module | source record and authoritative facts exposed through an approved Event Adapter | scene authoring, event eligibility, AI generation, regex execution, HTML security, Mini Scene artifact truth |
 | Event Runtime | event eligibility, cooldown/cap policy, trigger provenance, bounded `MiniSceneRequest`, and review when required | source-module records, generated artifact content, presenter behavior |
-| Mini Scene Module | request validation, profile resolution, AI-required structured artifact creation, transform execution, presentation selection, interaction audit | Calendar/Map/Chat/streaming business truth, event eligibility, WorldBook activation, Book asset editing |
+| Mini Scene Module | request validation, profile resolution, AI-required structured artifact creation, transform execution, presentation selection, optional retained-artifact lifecycle, interaction audit | Calendar/Map/Chat/streaming business truth, event eligibility, source-owner result/memory truth, WorldBook activation, Book asset editing |
 | Book | narrative rule assets and structured Mini Scene transform-profile source assets | runtime activation, popup mode, renderer execution, generated artifacts |
 | WorldBook | narrative context activation and review of Book source links | automatic Mini Scene profile binding, renderer policy, source-module events |
 | World Pack | optional reviewed capability references and world-specific suggestions | pure-content bundling, hidden Book selection, user-mode override, executable HTML |
 | Settings | global presentation policy, world/profile binding, validation status, preview/retry/reset controls | source-event truth, characters, plot, choices, Book content editing, generated scene history |
 | Gallery | reusable retained media and asset references admitted by the user | generated Mini Scene artifact truth or arbitrary iframe network access |
 
-The Mini Scene Module must be deep: callers submit one structured request and receive one structured outcome. If the Module were deleted, profile selection, regex safety, artifact validation, presentation, fallback, and interaction security would otherwise be duplicated across every caller.
+The Mini Scene Module must be deep: callers submit one structured request and receive one structured outcome. If the Module were deleted, profile selection, regex safety, artifact validation, presentation, optional retention, fallback, and interaction security would otherwise be duplicated across every caller.
 
 ### 2.1 Calling Interface
 
@@ -85,6 +101,15 @@ The Module returns one of:
 - `failed`: AI was unavailable, failed, or did not produce a valid artifact, with a stable error code and no committed substitute.
 
 Callers do not receive raw HTML and do not directly persist presenter state.
+
+### 2.3 Occurrence, Request, And Revision Identity
+
+The source `recordId`/`eventId` pair identifies one concrete event occurrence. `requestId` is the idempotency key for one scene-generation request within the configured retention window.
+
+- A repeat delivery, refresh, reopen, or retry for the same occurrence/request looks up the existing retained artifact before any provider call.
+- A new event occurrence receives a new request and may receive a different generated presentation.
+- User-requested regeneration is explicit and receives a new revision/request; it never overwrites the prior retained artifact silently.
+- If the user declines full retention, the occurrence still keeps its owner result and memory projections, but no complete Mini Scene artifact is available for later replay.
 
 ## 3. Event Runtime Registration And User Policy
 
@@ -238,10 +263,15 @@ source owner establishes facts
   -> bounded AI generation (required)
   -> MiniSceneDraft schema validation
   -> optional Book transform profile
-  -> MiniSceneArtifact validation and commit
-  -> Text Presenter or HTML Presenter Adapter
+  -> validated temporary presentation payload
+  -> Text Presenter or a future Presenter Adapter
   -> allowlisted interaction command
   -> owning source module validates any requested source action
+  -> owner persists canonical event result
+  -> Relationship Runtime / diary or timeline owner persists concise projections
+  -> user chooses full-scene retention
+      -> save receipt -> retained Mini Scene artifact and recall entry
+      -> decline -> release temporary presentation payload only
 ```
 
 Generation output is structured. It includes a title, text fallback, ordered beats, optional choices, template slots, source references, and minimum provenance. It does not include executable JavaScript or trusted HTML.
@@ -252,7 +282,7 @@ The transform stage can normalize world terminology, capture a bounded slot, or 
 
 ## 7. Presenter Adapters
 
-The presenter seam is real because it has two Adapters.
+The presenter seam is real because it has two current/future Adapters. More presenter forms may be added without changing event-result or memory ownership.
 
 ### 7.1 Text Presenter Adapter
 
@@ -288,13 +318,28 @@ The current Chat sanitizer that only removes `<script>` and `javascript:` is not
 
 ## 8. Artifact And Persistence Contract
 
-A committed Mini Scene artifact is durable because the user may revisit it and its choices may affect continuity. The V1 `mini-scene.artifacts-and-policies` owner stores:
+The V1 `mini-scene.artifacts-and-policies` owner stores only a retained full presentation artifact. The source owner and Relationship Runtime remain responsible for canonical event results and approved memory/diary projections. A generated payload can be presented temporarily without becoming a retained artifact.
+
+### 8.1 Retention And Replay Lifecycle
+
+| State | Durable complete scene? | What must remain durable |
+| --- | --- | --- |
+| `presenting` | no, unless already retained | validated temporary payload in the active presentation; source event is not changed by rendering |
+| `retained` | yes | complete structured artifact, interaction state, minimum provenance, source references, and audit |
+| `released` | no | confirmed event result, approved role-memory facts, diary/timeline projection, and owner audit/reference evidence |
+| `deleted` / `archived` | deleted or hidden by explicit user action | the source event result, memories, projections, and owner audit evidence remain |
+
+The user-facing choice to retain a full Mini Scene is separate from settling the event. It must not be phrased or implemented as a choice to keep/discard the event result. If a retained-scene write fails, the UI reports that the full replay was not saved and offers retry; it does not roll back a successfully persisted event result or memory.
+
+When a retained artifact is reopened, the presenter rebuilds its display from the stored structured data and does not call the provider. Explicit regeneration creates a new revision/request. No fixed row count may evict retained artifacts; management views use paging, filters, and bounded projections.
+
+The V1 `mini-scene.artifacts-and-policies` owner stores:
 
 - artifact id and schema version;
 - source module/record/event references;
 - scene type and resolved profile id/version;
 - canonical text fallback and structured document;
-- interaction state and audit summary;
+- retention state (`retained`, `archived`, or an explicit user-deleted tombstone where deletion/audit policy requires it), interaction state, and audit summary;
 - minimum provenance and timestamps.
 
 Minimum provenance for newly committed artifacts is `sourceKind: ai`, provider id, and generation timestamp. Optional model/request ids may be retained. A deterministic or manually authored artifact is rejected by the Store boundary.
@@ -308,9 +353,9 @@ Do not persist:
 - failed uncommitted drafts;
 - transient object URLs.
 
-Rendered HTML is a rebuildable projection. Source modules retain their own records and may store only the artifact reference plus a compact display snapshot.
+Rendered HTML or any other presenter output is a rebuildable projection. Source modules retain their own records and may store an artifact reference plus a compact display snapshot only when the user retained the full scene. An unsaved presentation must not leave a durable full-content copy in the Mini Scene Store.
 
-The 2026-08-19 text baseline adds `store:mini-scene` V1 to the persistence-owner inventory and layered persistence audit, adds a required `miniScene` section to complete-backup v4, preserves manifest verification for complete-backup v3, and includes the Store in staged restore, rollback, crash recovery, and save ordering. This remains a separately authorized roadmap 4.8 owner, not a retroactive addition to Batch 2B and not a Repository migration.
+The 2026-08-19 text baseline adds `store:mini-scene` V1 to the persistence-owner inventory and layered persistence audit, adds a required `miniScene` section to complete-backup v4, preserves manifest verification for complete-backup v3, and includes the Store in staged restore, rollback, crash recovery, and save ordering. `CMG-08` must extend this owner with explicit retention state, no silent artifact cap, idempotent lookup-before-provider, and a user-facing retained-scene management projection. This remains a separately authorized roadmap 4.8 owner, not a retroactive addition to Batch 2B and not a Repository migration.
 
 ## 9. Current Chat Compatibility
 
@@ -365,6 +410,7 @@ Status: `PARTIAL_DONE 2026-08-19`
 - add Repository Adapter/fixtures only after the Book foundation pilot is accepted;
 - `DONE`: add the dynamic registered-module Settings presentation policy model and migration defaults;
 - `DONE`: preserve `unconfigured -> off` policy resolution and complete-backup restore behavior;
+- `OPEN / CMG-08`: split temporary presentation from explicit full-scene retention, add lookup-before-provider idempotence, remove the historical 120-artifact cap, and add retained-scene management without weakening event-result or memory persistence;
 - `OPEN`: add profile-binding selection UI and any separately approved Repository Adapter/fixtures.
 
 ### Stage 3 - AI Core Module And Text Presenter
@@ -372,7 +418,7 @@ Status: `PARTIAL_DONE 2026-08-19`
 Status: `PARTIAL_DONE 2026-08-19`
 
 - `DONE SHELL`: register Event Runtime as the only functional caller and implement provider-neutral, AI-required structured generation. Missing providers, provider failures, invalid exact schema, forbidden markup, unsupported participant references, and missing provider provenance fail closed without a committed substitute;
-- `DONE SHELL`: implement durable AI artifact commit and a global accessible Text Presenter with copy, close, choice audit, an explicit `mini_scene.choose` owner-validation request, and generic return to World Hub;
+- `DONE SHELL`: implement AI artifact commit and a global accessible Text Presenter with copy, close, choice audit, an explicit `mini_scene.choose` owner-validation request, and generic return to World Hub. The shell currently commits every generated artifact; `CMG-08` changes full-scene retention to an explicit user choice;
 - `DONE SHELL`: add global Settings `unconfigured | off | text` presentation policy without plot/role/choice authoring;
 - `OPEN`: connect runtime profile resolution, add profile-binding UI, and prove custom/manual worlds work without a World Pack.
 
@@ -422,11 +468,14 @@ Required before first user-visible release:
 5. regex invalid/unsupported/limit/timeout tests plus deterministic repeated output;
 6. module-policy tests for unconfigured, off, text, interactive, pause-all, and interactive-to-text downgrade;
 7. persistence and complete-backup round-trip for settings, bindings, content-dimension choices, artifacts, and interaction state;
-8. iframe isolation tests for app DOM, storage, network, navigation, form, nested-frame, script, inline-handler, and forged-message attempts;
-9. text and HTML presenter accessibility, keyboard, focus containment, mobile overflow, safe area, reduced motion, and fallback;
-10. source event and Event Instance remain unchanged when provider lookup, generation, transform, commit, or presentation fails;
-11. custom world without World Pack, built-in K-pop world, and changed/missing profile coverage;
-12. legacy Chat `htmlSnippet` stays inert and cannot become executable through migration.
+8. one-occurrence/reopen/regeneration tests proving lookup-before-provider, no reroll on reopen, and a new revision only after explicit regeneration;
+9. save/decline/archive/delete tests proving full-scene retention is optional while event results, approved role memories, diary/timeline projections, and owner audit evidence remain;
+10. no-cap and paging tests above the historical 120-artifact baseline, including visible save failure/retry behavior;
+11. iframe isolation tests for app DOM, storage, network, navigation, form, nested-frame, script, inline-handler, and forged-message attempts;
+12. text and future presenter accessibility, keyboard, focus containment, mobile overflow, safe area, reduced motion, and fallback;
+13. source event and Event Instance remain unchanged when provider lookup, generation, transform, retention, or presentation fails;
+14. custom world without World Pack, built-in K-pop world, and changed/missing profile coverage;
+15. legacy Chat `htmlSnippet` stays inert and cannot become executable through migration.
 
 ## 12. Stop Conditions
 
@@ -439,6 +488,9 @@ Stop the current slice if it would:
 - require a World Pack for a custom world;
 - let World Pack override user mode or auto-bind encyclopedias;
 - let the Mini Scene Module mutate Calendar, Map, Chat, streaming, relationship, or runtime truth directly;
+- delete or discard a full Mini Scene by deleting the source event result, approved role memory, diary/timeline projection, or owner audit evidence;
+- treat Book's reusable rules/profile/template library as a library of previously generated user scenes;
+- make a presenter format, including HTML animation, the canonical event or memory record;
 - persist raw prompts/provider responses or rendered iframe HTML;
 - commit a deterministic, user-authored, or provider-less scene as if AI generated it;
 - add Mini Scene-specific character, phase, place, plot, or choice authoring fields to Calendar or another source App;

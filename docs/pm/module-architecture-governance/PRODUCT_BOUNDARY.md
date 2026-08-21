@@ -1,6 +1,6 @@
 # Module Architecture Governance Boundary / 模块架构治理边界
 
-Updated: 2026-08-12
+Updated: 2026-08-21
 
 ## 1. Core Rule
 
@@ -41,6 +41,8 @@ Text To Speech is a shared runtime Module. Chat Settings exposes its current con
 - user-facing multi-world management or switching, internal save slots, Book content decisions, WorldBook selection decisions, Pack catalog content, or concrete profile values
 
 The accepted Mini Scene contract is a cross-package architecture decision requested as product scope, not a cleanup side effect. This package owns the shared Module contract and stop conditions. Calendar, Map, Chat, future streaming modules, Event Runtime, Book/WorldBook, and Settings retain their own product meaning at their respective seams.
+
+Mini Scene retention is separate from event persistence. Source owners persist confirmed event results; Relationship Runtime and any approved diary/timeline projection owner persist concise continuity records. The Mini Scene Module may present a validated temporary payload, but only an explicit user choice makes the complete presentation a retained replay artifact. A future retained-scene manager may page, archive, or delete those optional artifacts without deleting canonical event, memory, diary, or audit records. Presenter format remains an adapter decision: current text does not make future HTML, animation, or another form the product's canonical data model.
 
 The world-setting architecture similarly defines the shared Interface and ownership rules without taking over owner data. Book keeps text assets; WorldBook keeps current-world identity and setting activation; the World Pack Module keeps capability definitions; Contacts keeps concrete profile values; source modules keep their own records. `activeWorldPackId` is never a canonical `worldId`, and a future world definition is never an independent save slot by implication.
 

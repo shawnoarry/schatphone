@@ -1,6 +1,6 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-20
+Updated: 2026-08-21
 
 ## 1. Architecture Goals
 
@@ -257,10 +257,11 @@ The generic provider contract supports user-authorized JSON search APIs that ret
 - Settings owns an explicit per-module unconfigured/off, text, or interactive-HTML choice; world/profile/caller suggestions cannot override it;
 - Book narrative rules remain independent from separate `structured_json` Mini Scene transform profiles, and WorldBook narrative activation remains independent from Mini Scene profile binding;
 - World Pack may reference a reviewed profile as an optional grouped capability but is not required for custom worlds and cannot auto-enable Book content;
-- the Module owns world/profile resolution, AI-required structured artifact generation and validation, bounded safe transforms, presenter selection, the artifact's universal text representation, and interaction audit;
+- the Module owns world/profile resolution, AI-required structured artifact generation and validation, bounded safe transforms, presenter selection, optional retained-artifact lifecycle, the artifact's universal text representation, and interaction audit;
 - Text and sandboxed HTML Presenter Adapters form the presentation seam. Raw AI HTML and legacy Chat `htmlSnippet` remain inert;
 - the Stage 1 contract/profile modules remain pure and the regex layer still validates without executing;
-- `store:mini-scene` V1 owns bounded durable artifacts, policies, bindings, and interaction audit; complete-backup v4 includes the `miniScene` section and still verifies complete v3 packages;
+- `store:mini-scene` V1 owns the current shell's durable artifacts, policies, bindings, and interaction audit; the target CMG-08 contract retains complete artifacts only after explicit user choice, removes silent row eviction, and exposes paged management. Complete-backup v4 includes the `miniScene` section and still verifies complete v3 packages;
+- source owners persist canonical event results, while Relationship Runtime and any approved diary/timeline projection owner persist concise memory/continuity records regardless of full-scene retention. There is no prebuilt library of finished AI scenes; Book is the reusable rules/profile/template source library, and retained Mini Scenes are user history;
 - Event Runtime is the only functional registered caller. Missing AI, invalid Drafts, forbidden markup, or missing provider provenance create no artifact; the root Text Presenter records choices as owner-validation requests and returns to World Hub;
 - Calendar remains V3 and has no Mini Scene-specific authoring fields, generator button, or registered caller;
 - a production Event Runtime trigger Adapter, profile-binding UI, safe Book transform execution, interactive HTML, and source-owner integrations remain unimplemented.
@@ -322,7 +323,7 @@ Confirmed target direction and current non-active foundation:
 - IndexedDB becomes the primary structured store behind domain repository contracts, while `localStorage` becomes small hot state and recovery metadata;
 - authoritative history/evidence requires explicit user deletion and may otherwise move only into reversible cold archives;
 - committed content records are durable regardless of user/AI/system origin, while full AI transport payloads, uncommitted drafts, and rebuildable projections are not retained by default;
-- committed relationship facts, Event Instances, and Mini Scene artifacts cannot be removed by fixed row-count caps. User interfaces may page and AI callers may read bounded relevant summaries without deleting owner history;
+- committed relationship facts, Event Instances, and retained Mini Scene artifacts cannot be removed by fixed row-count caps. User interfaces may page and AI callers may read bounded relevant summaries without deleting owner history; explicit user deletion of an optional retained Mini Scene never deletes the event result or memory projections;
 - optional remote backup uses separate user-owned Cloudflare R2 destinations rather than one project/workgroup cloud, keeps local state authoritative, and remains provider-neutral below the first officially guided R2 adapter;
 - each personal R2 destination is reached through that user's Cloudflare Worker gateway; the client may retain a revocable, scoped device token but must not retain an R2 API Secret;
 - remote backup is encrypted on the client and supports either a recovery password or a separately downloaded recovery file; Cloudflare/Worker receives no plaintext recovery secret, losing both paths is irreversible, and setup must verify recovery before automatic backup is ready;
@@ -500,10 +501,14 @@ Calendar / Map / Chat / Agenda Journey / future source owner
   -> Mini Scene request Interface
   -> explicit Settings mode + world/profile resolver
   -> required AI structured draft + optional bounded Book transform profile
-  -> committed Mini Scene artifact
-  -> Text Presenter or sandboxed HTML Presenter Adapter
+  -> validated temporary presentation payload
+  -> Text Presenter or future Presenter Adapter
   -> allowlisted interaction request
-  -> owning source module validates any source action
+  -> owning source module validates any source action and persists canonical result
+  -> Relationship Runtime / diary or timeline owner persists concise projections
+  -> explicit user retention choice
+      -> retained Mini Scene artifact and future recall entry
+      -> release temporary presentation payload only
 ```
 
 ## 9. Event Runtime And Push
