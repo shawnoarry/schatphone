@@ -1,0 +1,46 @@
+export const SHOPPING_STOREFRONT_PROPS = Object.freeze({
+  activeService: { type: Object, default: null },
+  activeCategory: { type: Object, default: null },
+  activeLabel: { type: String, default: '' },
+  activeDescription: { type: String, default: '' },
+  categoryCards: { type: Array, default: () => [] },
+  coverImageUrl: { type: String, default: '' },
+  brandAssetUrl: { type: String, default: '' },
+  mapReference: { type: Object, default: null },
+  languageBase: { type: String, default: 'zh' },
+  searchQuery: { type: String, default: '' },
+  favoriteCount: { type: Number, default: 0 },
+  cartQuantity: { type: Number, default: 0 },
+  orderCount: { type: Number, default: 0 },
+  favoritesOnly: { type: Boolean, default: false },
+  activeCategoryIsLogistics: { type: Boolean, default: false },
+  visibleProducts: { type: Array, default: () => [] },
+  highlightedProductId: { type: String, default: '' },
+  productImageUrl: { type: Function, required: true },
+  productDisplayTitle: { type: Function, required: true },
+  productDisplayDescription: { type: Function, required: true },
+  productStorefrontTemplate: { type: Function, required: true },
+  productServiceLabel: { type: Function, required: true },
+  productCategoryIcon: { type: Function, required: true },
+  stockStatusLabel: { type: Function, required: true },
+  stockStatusClass: { type: Function, required: true },
+  formatPrice: { type: Function, required: true },
+  isProductFavorite: { type: Function, required: true },
+})
+
+export const SHOPPING_STOREFRONT_EVENTS = Object.freeze([
+  'go-home',
+  'select-category',
+  'open-favorites',
+  'open-cart',
+  'open-orders',
+  'open-product',
+  'open-manager',
+  'show-all',
+  'toggle-favorite',
+  'add-to-cart',
+  'update:searchQuery',
+])
+
+export const localizeShoppingCopy = (languageBase, zh, en) =>
+  languageBase === 'zh' ? zh : en

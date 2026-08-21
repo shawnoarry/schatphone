@@ -1,4 +1,4 @@
-# Shopping 六店商品分类、扩充与生图素材 Brief
+# Shopping 六店历史商品分类、扩充与生图素材 Brief
 
 > 状态：分类补齐已落地；Batch 0A 三家 specialty store 的 12 张低质量风格图已作为仓库内备选记录，无 accepted 选择且 Git 交接待完成；其余商品扩充与素材仍为提案，非已批准实现队列。
 >
@@ -8,7 +8,7 @@
 >
 > 不包含：改动稳定 ID、实现更多商品数据、继续生成 Batch 0A 以外的图片、接入运行时素材、调整购物流程或宣称真机验收完成。
 >
-> 后续视觉目标：`docs/design/SHOPPING_STOREFRONT_BRAND_UI_AND_ASSET_GUIDE.md` 已把六店方向扩展为完整网店 Home、Campaign、Collection、Product Detail、交易页与动效系统。本文的 90 张正式素材矩阵保留为该完整 812 槽创意母版库的最低子集，不再单独代表店铺装修完成。
+> 后续视觉目标：`docs/design/SHOPPING_STOREFRONT_BRAND_UI_AND_ASSET_GUIDE.md` 已把十一店方向扩展为完整网店 Home、Campaign、Collection、Product Detail、交易页与动效系统。本文保留为 2026-08-10 六店基线与 Batch 0A 的历史证据，其中 31/41/72/90 等数量不再代表当前运行时或当前待建单；当前正式口径是 100 个稳定商品与 1493 槽十一店创意母版库。
 
 ## 1. 目标
 

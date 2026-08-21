@@ -152,6 +152,11 @@ describe('planned module registry', () => {
       'style_cloud',
       'nordhus_home',
       'mellow_care',
+      'traders_club',
+      'cu_24',
+      'musinsa_style',
+      'boon_select',
+      'galleria_luxury',
     ])
     expect(SHOPPING_PLATFORM_APP_ENTRIES.map((entry) => entry.key)).toEqual([
       'schat_mall',
@@ -160,15 +165,20 @@ describe('planned module registry', () => {
       'style_cloud',
       'nordhus_home',
       'mellow_care',
+      'traders_club',
+      'cu_24',
+      'musinsa_style',
+      'boon_select',
+      'galleria_luxury',
     ])
     expect(
       SHOPPING_SERVICE_PRESETS.filter((entry) => entry.storefrontKind === 'marketplace')
         .map((entry) => entry.key),
-    ).toEqual(['schat_mall', 'nova_digital', 'daily_fresh'])
+    ).toEqual(['schat_mall', 'nova_digital', 'daily_fresh', 'traders_club', 'musinsa_style'])
     expect(
       SHOPPING_SERVICE_PRESETS.filter((entry) => entry.storefrontKind === 'specialty')
         .map((entry) => entry.key),
-    ).toEqual(['style_cloud', 'nordhus_home', 'mellow_care'])
+    ).toEqual(['style_cloud', 'nordhus_home', 'mellow_care', 'cu_24', 'boon_select', 'galleria_luxury'])
     expect(findShoppingPlatformApp('daily_fresh')?.folderQuery).toEqual({
       category: 'grocery',
     })
@@ -184,6 +194,11 @@ describe('planned module registry', () => {
       buildShoppingShopEntryId('style_cloud'),
       buildShoppingShopEntryId('nordhus_home'),
       buildShoppingShopEntryId('mellow_care'),
+      buildShoppingShopEntryId('traders_club'),
+      buildShoppingShopEntryId('cu_24'),
+      buildShoppingShopEntryId('musinsa_style'),
+      buildShoppingShopEntryId('boon_select'),
+      buildShoppingShopEntryId('galleria_luxury'),
     ])
     expect(findShoppingServicePreset('nova_digital')?.key).toBe('nova_digital')
     expect('route' in findShoppingServicePreset('nova_digital')).toBe(false)
@@ -195,6 +210,11 @@ describe('planned module registry', () => {
       'WORKSOUT',
       'IKEA Korea',
       'OLIVE YOUNG',
+      'E-MART TRADERS',
+      'CU',
+      'MUSINSA',
+      'BOONTHESHOP',
+      'Galleria Luxury Hall',
     ])
 
     const seoulPlaceIds = new Set(getMapPackById(DEFAULT_MAP_PACK_ID).places.map((place) => place.id))

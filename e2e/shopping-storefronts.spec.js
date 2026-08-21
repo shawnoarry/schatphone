@@ -4,56 +4,16 @@ import { projectUiAssetUrl } from '../src/lib/project-assets.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
 import { installProjectAssetRoute, prewarmProjectAssets } from './helpers/project-assets.js'
 
-const STOREFRONTS = Object.freeze([
-  {
-    service: 'schat_mall',
-    category: 'mall',
-    categories: ['mall', 'gifts', 'home', 'fashion', 'beauty'],
-    name: 'Coupang',
-    template: 'city_market',
-    mapPlaceId: 'seoul-starfield-coex-mall',
-  },
-  {
-    service: 'nova_digital',
-    category: 'digital',
-    categories: ['digital', 'luxury', 'gifts'],
-    name: '29CM',
-    template: 'tech_catalog',
-    mapPlaceId: 'seoul-samsung-town',
-  },
-  {
-    service: 'daily_fresh',
-    category: 'grocery',
-    categories: ['grocery', 'home', 'mall'],
-    name: 'Kurly',
-    template: 'fresh_market',
-    mapPlaceId: 'seoul-lotte-mart-seoul-station',
-  },
-  {
-    service: 'style_cloud',
-    category: 'fashion',
-    categories: ['fashion', 'luxury', 'gifts'],
-    name: 'WORKSOUT',
-    template: 'fashion_editorial',
-    mapPlaceId: 'seoul-galleria-luxury-hall',
-  },
-  {
-    service: 'nordhus_home',
-    category: 'home',
-    categories: ['home', 'gifts'],
-    name: 'IKEA Korea',
-    template: 'room_planner',
-    mapPlaceId: 'seoul-the-hyundai-seoul',
-  },
-  {
-    service: 'mellow_care',
-    category: 'beauty',
-    categories: ['beauty', 'gifts'],
-    name: 'OLIVE YOUNG',
-    template: 'care_lab',
-    mapPlaceId: 'seoul-jennyhouse-cheongdam-hill',
-  },
-])
+const STOREFRONTS = Object.freeze(
+  SHOPPING_SERVICE_PRESETS.map((preset) => ({
+    service: preset.key,
+    category: preset.categoryKeys?.[0] || 'mall',
+    categories: preset.categoryKeys || ['mall'],
+    name: preset.en,
+    template: preset.storefrontTemplate,
+    mapPlaceId: preset.mapReferencePlaceId,
+  })),
+)
 
 const expectNoPageOverflow = async (page) => {
   await expect
@@ -81,7 +41,7 @@ const settleStorefrontMotion = async (page) => {
 const prepareShoppingProjectAssets = async (page) => {
   await prewarmProjectAssets(
     page.request,
-    SHOPPING_SERVICE_PRESETS.map((preset) => projectUiAssetUrl(preset.brandAssetPath)),
+    SHOPPING_SERVICE_PRESETS.map((preset) => projectUiAssetUrl(preset.brandAssetPath)).filter(Boolean),
   )
   await installProjectAssetRoute(page)
 }
@@ -141,7 +101,7 @@ test('Shopping folder keeps rounded, separated brand previews', async ({ page })
   expect(pageErrors).toEqual([])
 })
 
-test('six Shopping apps keep distinct routes, identities, carts, favorites, and orders', async ({
+test('Shopping apps keep distinct routes, identities, carts, favorites, and orders', async ({
   page,
 }, testInfo) => {
   test.slow()
@@ -205,19 +165,9 @@ test('six Shopping apps keep distinct routes, identities, carts, favorites, and 
       },
     )
 
-    for (const category of storefront.categories) {
-      await page.getByTestId(`shopping-category-${category}`).click()
-      await expect(page.getByTestId(`shopping-category-${category}`)).toHaveClass(/is-active/)
-      await expect
-        .poll(() => page.locator('#shopping-products .shopping-product-card').count())
-        .toBeGreaterThan(0)
-    }
-    await page.getByTestId(`shopping-category-${storefront.category}`).click()
-    await expect(page.getByTestId(`shopping-category-${storefront.category}`)).toHaveClass(
-      /is-active/,
-    )
   }
 
+  await navigateInsideUnlockedApp(page, '/shopping/mellow_care?category=beauty')
   const search = page.getByRole('searchbox', { name: 'Search products' })
   await search.fill('Mood Tint')
   const moodTint = page.getByTestId('shopping-product-shopping_seed_care_lip')
@@ -226,17 +176,27 @@ test('six Shopping apps keep distinct routes, identities, carts, favorites, and 
   await moodTint.getByRole('button', { name: 'Toggle favorite' }).click()
   await page.getByRole('button', { name: 'Favorites' }).click()
   await expect(moodTint).toBeVisible()
-  await moodTint.getByTestId('shopping-add-cart-shopping_seed_care_lip').click()
-  await expect(page.getByRole('button', { name: 'Cart', exact: true })).toContainText('1')
+  await moodTint.locator('.oy-media').click()
+  await expect(page).toHaveURL(/productId=shopping_seed_care_lip/)
+  await expect(page.getByTestId('shopping-store-specific-page')).toHaveAttribute(
+    'data-page',
+    'product',
+  )
+  await page.getByTestId('shopping-product-add').click()
+  await expect(page.getByTestId('shopping-page-cart')).toContainText('1')
 
   await navigateInsideUnlockedApp(page, '/shopping/nordhus_home?category=home')
   await expect(page).toHaveURL(/\/shopping\/nordhus_home\?category=home$/)
   await expect(page.getByRole('button', { name: 'Cart', exact: true })).not.toContainText('1')
-  await page.getByRole('button', { name: 'Favorites' }).click()
   await expect(page.getByTestId('shopping-product-shopping_seed_care_lip')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Show all products' }).click()
-  await page.getByTestId('shopping-add-cart-shopping_seed_nordhus_lamp').click()
-  const cartButton = page.getByRole('button', { name: 'Cart', exact: true })
+  await page.getByTestId('shopping-product-shopping_seed_nordhus_lamp').click()
+  await expect(page).toHaveURL(/productId=shopping_seed_nordhus_lamp/)
+  await expect(page.getByTestId('shopping-store-specific-page')).toHaveAttribute(
+    'data-page',
+    'product',
+  )
+  await page.getByTestId('shopping-product-add').click()
+  const cartButton = page.getByTestId('shopping-page-cart')
   await expect(cartButton).toContainText('1')
   await cartButton.click()
 
@@ -244,9 +204,11 @@ test('six Shopping apps keep distinct routes, identities, carts, favorites, and 
   await expect(cart).toContainText('Moonphase Bedside Lamp')
   await expect(cart).not.toContainText('Mood Tint Soft-Matte Lip Color')
   await cart.getByTestId('shopping-checkout').click()
-  await expect(page.locator('article[data-testid^="shopping-order-"]').first()).toContainText(
-    '1 items',
-  )
+  await expect(page).toHaveURL(/shopView=project-review/)
+  await expect(page.getByTestId('shopping-checkout-review')).toBeVisible()
+  await page.getByTestId('shopping-place-order').click()
+  await expect(page).toHaveURL(/shopView=projects/)
+  await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
 
   await navigateInsideUnlockedApp(page, '/shopping/mellow_care?category=beauty')
   await expect(page.getByRole('button', { name: 'Cart', exact: true })).toContainText('1')
@@ -255,12 +217,16 @@ test('six Shopping apps keep distinct routes, identities, carts, favorites, and 
   await expect(page.locator('#shopping-cart')).toContainText('Mood Tint Soft-Matte Lip Color')
   await expect(page.locator('#shopping-cart')).not.toContainText('Moonphase Bedside Lamp')
   await page.getByTestId('shopping-checkout').click()
-  await expect(page.locator('article[data-testid^="shopping-order-"]').first()).toContainText(
-    '1 items',
-  )
+  await expect(page).toHaveURL(/shopView=routine-review/)
+  await expect(page.getByTestId('shopping-checkout-review')).toBeVisible()
+  await page.getByTestId('shopping-place-order').click()
+  await expect(page).toHaveURL(/shopView=restocks/)
+  await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
 
   await navigateInsideUnlockedApp(page, '/shopping/nordhus_home?category=home')
   await expect(page.getByRole('button', { name: 'Cart', exact: true })).not.toContainText('1')
+  await page.getByRole('button', { name: /^Orders/ }).click()
+  await expect(page).toHaveURL(/shopView=projects/)
   await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
   await expectNoPageOverflow(page)
 
@@ -268,5 +234,179 @@ test('six Shopping apps keep distinct routes, identities, carts, favorites, and 
     body: await page.screenshot(),
     contentType: 'image/png',
   })
+  expect(pageErrors).toEqual([])
+})
+
+test('Coupang keeps detail, review checkout, and order creation as separate states', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'schatphone:store:system',
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        data: {
+          settings: {
+            system: {
+              language: 'en-US',
+            },
+          },
+        },
+      }),
+    )
+  })
+
+  await unlockToHome(page)
+  await prepareShoppingProjectAssets(page)
+  await navigateInsideUnlockedApp(page, '/shopping/schat_mall?category=mall')
+
+  const product = page.getByTestId('shopping-product-shopping_seed_mall_card')
+  await product.locator('.coupang-product-open').click()
+  await expect(page.getByTestId('shopping-store-specific-page')).toHaveAttribute('data-page', 'product')
+  await expect(page.getByTestId('shopping-product-add')).toBeVisible()
+  await page.locator('.cp-pdp-buy .cp-qty button').nth(1).click()
+  await page.getByTestId('shopping-product-add').click()
+
+  const cartButton = page.getByTestId('shopping-page-cart')
+  await expect(cartButton).toContainText('2')
+  await cartButton.click()
+  await page.getByTestId('shopping-checkout').click()
+  await expect(page).toHaveURL(/shopView=checkout/)
+  await expect(page.getByTestId('shopping-checkout-review')).toBeVisible()
+  await expect(page.getByTestId('shopping-checkout-review')).toContainText('CNY')
+  await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(0)
+
+  await page.getByTestId('shopping-place-order').click()
+  await expect(page).toHaveURL(/shopView=orders/)
+  await expect(page.getByTestId('shopping-checkout-review')).toHaveCount(0)
+  await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
+  await expectNoPageOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
+test('Six canonical storefronts expose their own interaction grammar', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'schatphone:store:system',
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        data: { settings: { system: { language: 'en-US' } } },
+      }),
+    )
+  })
+
+  await unlockToHome(page)
+  await prepareShoppingProjectAssets(page)
+  const routeFor = (template) => STOREFRONTS.find((storefront) => storefront.template === template)
+
+  const editorial = routeFor('tech_catalog')
+  await navigateInsideUnlockedApp(page, `/shopping/${editorial.service}?category=${editorial.category}`)
+  await page.getByTestId('shopping-29cm-mode-lookbook').click()
+  await expect(page.locator('.shopping-29cm-app')).toHaveAttribute('data-editorial-mode', 'lookbook')
+  await expect(page.locator('#shopping-products')).toHaveClass(/is-lookbook/)
+  await page.getByTestId('shopping-29cm-issue-toggle').click()
+  await expect(page.locator('.cm-issue-index')).toBeVisible()
+
+  const fresh = routeFor('fresh_market')
+  await navigateInsideUnlockedApp(page, `/shopping/${fresh.service}?category=${fresh.category}`)
+  await page.getByTestId('shopping-kurly-lane-frozen').click()
+  await expect(page.locator('.shopping-kurly-app')).toHaveAttribute('data-delivery-lane', 'frozen')
+  await expect(page.locator('.kurly-delivery-note')).toContainText('FROZEN')
+
+  const fashion = routeFor('fashion_editorial')
+  await navigateInsideUnlockedApp(page, `/shopping/${fashion.service}?category=${fashion.category}`)
+  await page.getByTestId('shopping-worksout-mode-lookbook').click()
+  await expect(page.locator('.shopping-worksout-app')).toHaveAttribute('data-display-mode', 'lookbook')
+  await expect(page.locator('#shopping-products')).toHaveClass(/is-lookbook/)
+
+  const home = routeFor('room_planner')
+  await navigateInsideUnlockedApp(page, `/shopping/${home.service}?category=${home.category}`)
+  await page.getByTestId('shopping-ikea-tone-night').click()
+  await expect(page.locator('.shopping-ikea-app')).toHaveAttribute('data-room-tone', 'night')
+  await expect(page.locator('.ikea-room-stage')).toHaveClass(/is-night/)
+
+  const care = routeFor('care_lab')
+  await navigateInsideUnlockedApp(page, `/shopping/${care.service}?category=${care.category}`)
+  await page.getByTestId('shopping-olive-routine-pm').click()
+  await expect(page.locator('.shopping-olive-young-app')).toHaveAttribute('data-routine', 'pm')
+  await page.locator('.olive-routine-add').first().click()
+  await expect(page.locator('.olive-routine-item')).toHaveCount(1)
+  await expectNoPageOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
+test('Five extended storefronts expose campaign-led, non-skin interaction grammar', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'schatphone:store:system',
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        data: { settings: { system: { language: 'en-US' } } },
+      }),
+    )
+  })
+
+  await unlockToHome(page)
+  await prepareShoppingProjectAssets(page)
+  const routeFor = (template) => STOREFRONTS.find((storefront) => storefront.template === template)
+
+  const traders = routeFor('member_warehouse')
+  await navigateInsideUnlockedApp(page, `/shopping/${traders.service}?category=${traders.category}`)
+  await expect(page.locator('.shopping-traders-app')).toHaveAttribute('data-warehouse-mode', 'pallet')
+  await page.getByTestId('shopping-traders-mode-list').click()
+  await expect(page.locator('.shopping-traders-app')).toHaveAttribute('data-warehouse-mode', 'list')
+  await expect(page.locator('#shopping-products')).toHaveClass(/is-list/)
+  await page.getByTestId('shopping-traders-campaign-family-stock').click()
+  await expect(page.getByTestId('shopping-traders-campaign-family-stock')).toHaveClass(/is-active/)
+  await page.getByTestId('shopping-traders-pack-split').click()
+  await expect(page.locator('.shopping-traders-app')).toHaveAttribute('data-pack-focus', 'split')
+
+  const cu = routeFor('neighborhood_convenience')
+  await navigateInsideUnlockedApp(page, `/shopping/${cu.service}?category=${cu.category}`)
+  await page.getByTestId('shopping-cu-mode-pickup').click()
+  await expect(page.locator('.shopping-cu-app')).toHaveAttribute('data-cu-mode', 'pickup')
+  await expect(page.locator('#shopping-products')).toHaveClass(/is-pickup/)
+  await page.getByTestId('shopping-cu-promo-hot-counter').click()
+  await expect(page.getByTestId('shopping-cu-promo-hot-counter')).toHaveClass(/is-active/)
+  await page.getByTestId('shopping-cu-pickup-scan').click()
+  await expect(page.locator('.shopping-cu-app')).toHaveAttribute('data-pickup-stage', 'scan')
+
+  const musinsa = routeFor('fashion_catalog')
+  await navigateInsideUnlockedApp(page, `/shopping/${musinsa.service}?category=${musinsa.category}`)
+  await page.getByTestId('shopping-musinsa-view-catalog').click()
+  await expect(page.locator('.shopping-musinsa-app')).toHaveAttribute('data-fashion-view', 'catalog')
+  await page.getByTestId('shopping-musinsa-campaign-after-dark').click()
+  await expect(page.locator('.shopping-musinsa-app')).toHaveAttribute('data-campaign', 'after-dark')
+  await page.getByTestId('shopping-musinsa-lookbook-01').click()
+  await expect(page.locator('.shopping-musinsa-app')).toHaveAttribute('data-lookbook', '01')
+
+  const boon = routeFor('buyer_atelier')
+  await navigateInsideUnlockedApp(page, `/shopping/${boon.service}?category=${boon.category}`)
+  await page.getByTestId('shopping-boon-mode-lookbook').click()
+  await expect(page.locator('.shopping-boon-app')).toHaveAttribute('data-atelier-mode', 'lookbook')
+  await page.getByTestId('shopping-boon-story-quiet-tailoring').click()
+  await expect(page.locator('.shopping-boon-app')).toHaveAttribute('data-story', 'quiet-tailoring')
+  await page.getByTestId('shopping-boon-material-wool').click()
+  await expect(page.locator('.shopping-boon-app')).toHaveAttribute('data-material', 'wool')
+
+  const galleria = routeFor('luxury_hall')
+  await navigateInsideUnlockedApp(page, `/shopping/${galleria.service}?category=${galleria.category}`)
+  await page.getByTestId('shopping-galleria-mode-selection').click()
+  await expect(page.locator('.shopping-galleria-app')).toHaveAttribute('data-hall-mode', 'selection')
+  await page.getByTestId('shopping-galleria-campaign-heirloom').click()
+  await page.getByTestId('shopping-galleria-hall-atelier').click()
+  await expect(page.locator('.shopping-galleria-app')).toHaveAttribute('data-hall', 'atelier')
+
+  await expectNoPageOverflow(page)
   expect(pageErrors).toEqual([])
 })

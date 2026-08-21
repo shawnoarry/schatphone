@@ -9,6 +9,7 @@ import AssetsView from '../src/views/AssetsView.vue'
 import ControlCenterView from '../src/views/ControlCenterView.vue'
 import { CUSTOM_WIDGET_ACTION_TYPE_OPEN_APP } from '../src/lib/custom-widget-actions'
 import { buildWorldAppHomeTileId } from '../src/lib/world-pack-app-bindings'
+import { SHOPPING_PLATFORM_APP_ENTRIES } from '../src/lib/planned-module-registry'
 import { useFoodDeliveryStore } from '../src/stores/foodDelivery'
 import { useGalleryStore } from '../src/stores/gallery'
 import { useSystemStore } from '../src/stores/system'
@@ -1518,7 +1519,24 @@ describe('Home folder entries', () => {
     expect(
       wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_style_cloud"]').exists(),
     ).toBe(true)
-    expect(wrapper.findAll('[data-testid^="home-folder-entry-shop_app_shopping_"]')).toHaveLength(6)
+    const firstPageShoppingEntries = wrapper.findAll(
+      '[data-testid^="home-folder-entry-shop_app_shopping_"]',
+    )
+    expect(firstPageShoppingEntries.length).toBeLessThan(SHOPPING_PLATFORM_APP_ENTRIES.length)
+    await wrapper.get('[data-testid="home-folder-page-next"]').trigger('click')
+    const secondPageShoppingEntries = wrapper.findAll(
+      '[data-testid^="home-folder-entry-shop_app_shopping_"]',
+    )
+    expect(firstPageShoppingEntries.length + secondPageShoppingEntries.length).toBe(
+      SHOPPING_PLATFORM_APP_ENTRIES.length,
+    )
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_boon_select"]').exists(),
+    ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="home-folder-entry-shop_app_shopping_galleria_luxury"]').exists(),
+    ).toBe(true)
+    await wrapper.get('[data-testid="home-folder-page-1"]').trigger('click')
     expect(
       wrapper
         .get('[data-testid="home-folder-entry-image-shop_app_shopping_style_cloud"]')

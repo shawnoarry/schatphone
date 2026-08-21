@@ -3,34 +3,28 @@ import { createPinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import ShoppingView from '../src/views/ShoppingView.vue'
-import { ASSET_SOURCE_KEYS } from '../src/lib/planned-module-registry'
-import { useAssetsStore } from '../src/stores/assets'
-import { useCalendarStore } from '../src/stores/calendar'
-import { useChatStore } from '../src/stores/chat'
-import { useGalleryStore } from '../src/stores/gallery'
-import { useMapStore } from '../src/stores/map'
-import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
-import {
-  SHOPPING_ORDER_EVENT_TYPE,
-  useShoppingStore,
-} from '../src/stores/shopping'
-import { useSystemStore } from '../src/stores/system'
-import { useWalletStore } from '../src/stores/wallet'
+import { SHOPPING_ORDER_EVENT_TYPE, useShoppingStore } from '../src/stores/shopping'
 
 const DummyView = { template: '<div />' }
+const createTestRouter = () => createRouter({
+  history: createMemoryHistory(),
+  routes: [
+    { path: '/home', component: DummyView },
+    { path: '/chat', component: DummyView },
+    { path: '/chat/:id', component: DummyView },
+    { path: '/reminders', component: DummyView },
+    { path: '/shopping/:serviceKey', component: ShoppingView },
+  ],
+})
 
-const createTestRouter = () =>
-  createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/chat', component: DummyView },
-      { path: '/chat/:id', component: DummyView },
-      { path: '/home', component: DummyView },
-      { path: '/shopping/:serviceKey', component: ShoppingView },
-    ],
-  })
+const mountShopping = async (url) => {
+  const router = createTestRouter()
+  await router.push(url)
+  await router.isReady()
+  return { router, wrapper: mount(ShoppingView, { global: { plugins: [router] } }) }
+}
 
-describe('ShoppingView', () => {
+describe('ShoppingView multi-page storefront contract', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.useFakeTimers()
@@ -38,560 +32,165 @@ describe('ShoppingView', () => {
     setActivePinia(createPinia())
   })
 
-  test('renders products for the active category and creates local orders', async () => {
-    const router = createTestRouter()
+  test('keeps store home focused on discovery', async () => {
     const store = useShoppingStore()
-    const assetsStore = useAssetsStore()
-    const chatStore = useChatStore()
-    const relationshipRuntimeStore = useRelationshipRuntimeStore()
-    const walletStore = useWalletStore()
     store.resetForTesting()
-    assetsStore.resetForTesting()
-    relationshipRuntimeStore.resetForTesting()
-    walletStore.resetForTesting()
-    const product = store.upsertProduct({
-      id: 'product_view_lens',
-      title: 'Mira Lens',
-      category: 'digital',
-      price: '1288.00',
-      assetEligible: true,
-      giftable: true,
-    })
-    const sourceContact = chatStore.getContactById(1)
-    await router.push(`/shopping/nova_digital?category=digital&productId=${product.id}&source=chat&intent=product_link&chatId=1`)
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.find(`[data-testid="shopping-product-${product.id}"]`).exists()).toBe(true)
-    expect(wrapper.find(`[data-testid="shopping-product-${product.id}"]`).classes()).toContain('is-highlighted')
-    expect(wrapper.find('[data-testid="shopping-chat-source-banner"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Mira Lens')
-    expect(wrapper.find('[data-testid="shopping-service-filter-panel"]').exists()).toBe(false)
+    const { wrapper } = await mountShopping('/shopping/schat_mall?category=mall')
+    expect(wrapper.get('h1').text()).toBe('Coupang')
     expect(wrapper.find('#shopping-products').exists()).toBe(true)
+    expect(wrapper.find('#shopping-cart').exists()).toBe(false)
+    expect(wrapper.find('#shopping-orders').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="shopping-product-quick-view"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('opens a route-backed catalog and full product page', async () => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({ id: 'route_product_coupang', serviceKey: 'schat_mall', title: 'Route Product', category: 'mall', price: '28.00' })
+    const { router, wrapper } = await mountShopping('/shopping/schat_mall?shopView=search&category=mall&page=1')
+    expect(wrapper.get('[data-testid="shopping-store-specific-page"]').classes()).toContain('coupang-pages')
+    await wrapper.get(`[data-testid="shopping-product-${product.id}"] .cp-title`).trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({ shopView: 'product', productId: product.id })
+    expect(wrapper.get('[data-testid="shopping-store-specific-page"]').text()).toContain(product.title)
+    await wrapper.get('[data-testid="shopping-product-add"]').trigger('click')
+    expect(store.getCartQuantityByService('schat_mall')).toBe(1)
+    wrapper.unmount()
+  })
+
+  test('uses independent page vocabulary for editorial storefronts', async () => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({ id: 'route_product_29cm', serviceKey: 'nova_digital', title: 'Editorial Object', category: 'digital', price: '128.00' })
+    const { router, wrapper } = await mountShopping('/shopping/nova_digital?shopView=objects&category=digital&page=1')
+    expect(wrapper.get('[data-testid="shopping-store-specific-page"]').classes()).toContain('cm-pages')
+    await wrapper.get(`[data-testid="shopping-product-${product.id}"] .cm-object-copy > button`).trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('object')
+    await wrapper.get('[data-testid="shopping-page-cart"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query.shopView).toBe('bag')
+    expect(wrapper.get('[data-testid="shopping-store-operation-page"]').classes()).toContain('cm-ops')
+    expect(wrapper.get('#shopping-cart').text()).toContain('CONSIDERED OBJECTS')
+    wrapper.unmount()
+  })
+
+  test.each([
+    ['schat_mall', 'cart', 'cp-ops'],
+    ['nova_digital', 'bag', 'cm-ops'],
+    ['daily_fresh', 'basket', 'k-ops'],
+    ['style_cloud', 'bag', 'wo-ops'],
+    ['nordhus_home', 'list', 'ik-ops'],
+    ['mellow_care', 'routine', 'oy-ops'],
+    ['traders_club', 'trolley', 'tr-ops'],
+    ['cu_24', 'pickup-bag', 'cu-ops'],
+    ['musinsa_style', 'bag', 'mu-ops'],
+    ['boon_select', 'fitting-list', 'boon-ops'],
+    ['galleria_luxury', 'request', 'gal-ops'],
+  ])('routes %s cart vocabulary to its own operation app', async (serviceKey, shopView, className) => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const { wrapper } = await mountShopping(`/shopping/${serviceKey}?shopView=${shopView}`)
+    expect(wrapper.get('[data-testid="shopping-store-operation-page"]').classes()).toContain(className)
+    expect(wrapper.find('.shopping-operation-section').exists()).toBe(false)
     expect(wrapper.find('#shopping-cart').exists()).toBe(true)
-    expect(wrapper.find('#shopping-orders').exists()).toBe(true)
-
-    await wrapper.find(`[data-testid="shopping-add-cart-${product.id}"]`).trigger('click')
-    expect(store.cartQuantity).toBe(1)
-    expect(wrapper.text()).toContain('1288.00 CNY')
-    expect(wrapper.find('[data-testid="shopping-gift-enabled"]').element.checked).toBe(true)
-
-    await wrapper.find('[data-testid="shopping-checkout"]').trigger('click')
-    expect(store.cartQuantity).toBe(0)
-    expect(store.orderCount).toBe(1)
-    expect(wrapper.text()).toContain('Mira Lens')
-    const order = store.orders[0]
-    expect(order.giftRecipient).toMatchObject({
-      name: sourceContact.name,
-      chatId: 1,
-      contactId: 1,
-      profileId: sourceContact.profileId,
-      kind: sourceContact.kind,
-      sourceModule: 'chat',
-    })
-    expect(wrapper.find(`[data-testid="shopping-order-gift-${order.id}"]`).text()).toContain(sourceContact.name)
-
-    expect(assetsStore.assetCount).toBe(0)
-    expect(wrapper.find(`[data-testid="shopping-asset-suggestion-${product.id}"]`).exists()).toBe(true)
-
-    await wrapper.find(`[data-testid="shopping-transfer-asset-${product.id}"]`).trigger('click')
-    const importedAsset = assetsStore.assetRecords.find((item) => item.sourceId.includes(product.id))
-
-    expect(importedAsset).toMatchObject({
-      name: 'Mira Lens',
-      category: 'special',
-      estimatedValueCents: 128800,
-      purchaseValueCents: 128800,
-      sourceModule: ASSET_SOURCE_KEYS.SHOPPING_PURCHASE,
-      tags: ['shopping'],
-    })
-    expect(wrapper.find(`[data-testid="shopping-transfer-asset-${product.id}"]`).attributes('disabled')).toBeDefined()
-
-    expect(walletStore.transactionCount).toBe(0)
-    expect(wrapper.find(`[data-testid="shopping-wallet-suggestion-${order.id}"]`).exists()).toBe(false)
-
-    store.markOrderCompleted(order.id)
-    await flushPromises()
-    expect(wrapper.find(`[data-testid="shopping-wallet-suggestion-${order.id}"]`).exists()).toBe(true)
-    expect(wrapper.get(`[data-testid="shopping-relationship-suggestion-${order.id}"]`).text()).toContain(
-      sourceContact.name,
-    )
-
-    await wrapper.find(`[data-testid="shopping-transfer-wallet-${order.id}"]`).trigger('click')
-    const walletTransaction = walletStore.findTransactionBySource('shopping_wallet_expense', order.id)
-    const relationshipSummary = relationshipRuntimeStore.summarizeEntityForTarget({
-      profileId: sourceContact.profileId,
-      contactId: sourceContact.id,
-      name: sourceContact.name,
-    })
-
-    expect(walletTransaction).toMatchObject({
-      type: 'expense',
-      title: 'Shopping order',
-      amountCents: 128800,
-      currency: 'CNY',
-      counterparty: 'Shopping',
-      sourceModule: 'shopping_wallet_expense',
-      sourceId: order.id,
-    })
-    expect(relationshipSummary.metrics.affinity).toBe(58)
-    expect(relationshipSummary.metrics.intimacy).toBe(24)
-    expect(relationshipSummary.latestEventSummary).toContain('Gift purchased')
-    expect(relationshipSummary.memorySummaries).toHaveLength(1)
-    expect(relationshipSummary.memorySummaries[0]).toMatchObject({
-      supportingCount: 3,
-      primarySourceModule: 'relationship_shopping_gift',
-    })
-    expect(relationshipSummary.memorySummaries[0].displaySummary).toContain('was delivered')
-    expect(relationshipSummary.memorySummaries[0].sourceModules).toContain('relationship_wallet_order_support')
-    expect(wrapper.find(`[data-testid="shopping-transfer-wallet-${order.id}"]`).attributes('disabled')).toBeDefined()
-
-    await wrapper.find('[data-testid="shopping-return-chat"]').trigger('click')
-    await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/chat/1')
     wrapper.unmount()
   })
 
-  test('uses live Wallet quotes for catalog and cart while recording the frozen checkout quote', async () => {
-    const router = createTestRouter()
+  test.each([
+    ['schat_mall', 'checkout', 'help', 'cp-service'],
+    ['nova_digital', 'review', 'care', 'cm-service'],
+    ['daily_fresh', 'dawn-review', 'market-help', 'k-service'],
+    ['style_cloud', 'release-check', 'support', 'wo-service'],
+    ['nordhus_home', 'project-review', 'service', 'ik-service'],
+    ['mellow_care', 'routine-review', 'care-desk', 'oy-service'],
+    ['traders_club', 'load-review', 'member-service', 'tr-service'],
+    ['cu_24', 'pickup-review', 'store-help', 'cu-service'],
+    ['musinsa_style', 'fit-review', 'returns', 'mu-service'],
+    ['boon_select', 'fitting-request', 'atelier-service', 'boon-service'],
+    ['galleria_luxury', 'concierge-review', 'concierge', 'gal-service'],
+  ])('routes %s checkout and service to independent page families', async (serviceKey, checkoutView, serviceView, className) => {
     const store = useShoppingStore()
-    const walletStore = useWalletStore()
     store.resetForTesting()
-    walletStore.resetForTesting()
-    walletStore.setPrimaryCurrency('USD')
-    const product = store.upsertProduct({
-      id: 'product_view_quote',
-      title: 'Currency Quote Gift',
-      category: 'gifts',
-      price: '39.00',
-      currency: 'CNY',
-    })
+    const checkoutMount = await mountShopping(`/shopping/${serviceKey}?shopView=${checkoutView}`)
+    expect(checkoutMount.wrapper.get('[data-testid="shopping-store-service-page"]').classes()).toContain(className)
+    expect(checkoutMount.wrapper.get('[data-testid="shopping-checkout-review"]').exists()).toBe(true)
+    checkoutMount.wrapper.unmount()
 
-    await router.push('/shopping/schat_mall?category=gifts')
-    await router.isReady()
-    const wrapper = mount(ShoppingView, {
-      global: { plugins: [router] },
-    })
+    const serviceMount = await mountShopping(`/shopping/${serviceKey}?shopView=${serviceView}`)
+    expect(serviceMount.wrapper.get('[data-testid="shopping-store-service-page"]').classes()).toContain(className)
+    expect(serviceMount.wrapper.get('[data-testid="shopping-service-page"]').exists()).toBe(true)
+    serviceMount.wrapper.unmount()
+  })
 
-    const productCard = wrapper.get(`[data-testid="shopping-product-${product.id}"]`)
-    expect(productCard.text()).toContain('5.42 USD')
-    expect(productCard.text()).toContain('39.00 CNY')
-
-    await wrapper.get(`[data-testid="shopping-add-cart-${product.id}"]`).trigger('click')
-    expect(wrapper.text()).toContain('5.42 USD · 39.00 CNY')
+  test('keeps gift checkout wired through a store-specific cart', async () => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({ id: 'route_product_galleria_gift', serviceKey: 'galleria_luxury', title: 'Private Gift Piece', category: 'luxury', price: '288.00' })
+    store.addToCart(product.id)
+    const { router, wrapper } = await mountShopping('/shopping/galleria_luxury?shopView=request')
+    await wrapper.get('[data-testid="shopping-gift-enabled"]').setValue(true)
+    await wrapper.get('[data-testid="shopping-gift-name"]').setValue('Minji')
     await wrapper.get('[data-testid="shopping-checkout"]').trigger('click')
-    const order = store.orders[0]
-    expect(order.quoteSnapshot?.quotedMoney).toEqual({ amountMinor: 542, currency: 'USD' })
-
-    walletStore.setPrimaryCurrency('EUR')
-    walletStore.setUsdCnyRate('10')
     await flushPromises()
-    expect(wrapper.get(`[data-testid="shopping-order-${order.id}"]`).text()).toContain('5.42 USD')
-
-    store.markOrderCompleted(order.id)
+    expect(router.currentRoute.value.query.shopView).toBe('concierge-review')
+    expect(store.listOrdersByService('galleria_luxury')).toHaveLength(0)
+    expect(wrapper.get('[data-testid="shopping-checkout-review"]').exists()).toBe(true)
+    await wrapper.get('[data-testid="shopping-place-order"]').trigger('click')
     await flushPromises()
-    await wrapper.get(`[data-testid="shopping-transfer-wallet-${order.id}"]`).trigger('click')
-    const transaction = walletStore.findTransactionBySource('shopping_wallet_expense', order.id)
-    expect(transaction).toMatchObject({
-      amountCents: 542,
-      currency: 'USD',
-      quoteSnapshot: order.quoteSnapshot,
-    })
-
+    expect(router.currentRoute.value.query.shopView).toBe('services')
+    expect(store.listOrdersByService('galleria_luxury')[0].giftRecipient?.name).toBe('Minji')
     wrapper.unmount()
   })
 
-  test('creates user custom products with URL and Gallery images', async () => {
-    const router = createTestRouter()
+  test('paginates growing catalogs through the route', async () => {
     const store = useShoppingStore()
-    const galleryStore = useGalleryStore()
     store.resetForTesting()
-    galleryStore.resetForTesting()
-    const imported = galleryStore.importAssetFromUrl({
-      url: 'https://example.com/gallery-cover.png',
-      name: 'Gallery Cover',
-      category: 'reference',
-    })
-
-    await router.push('/shopping/style_cloud?category=fashion')
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    await wrapper.get('[data-testid="shopping-custom-title"]').setValue('Nova Jacket')
-    await wrapper.get('[data-testid="shopping-custom-category"]').setValue('fashion')
-    await wrapper.get('[data-testid="shopping-custom-price"]').setValue('399.00')
-    expect(wrapper.get('[data-testid="shopping-custom-service"]').attributes('data-service-key')).toBe(
-      'style_cloud',
-    )
-    await wrapper.get('[data-testid="shopping-custom-image-source"]').setValue('url')
-    await wrapper.get('[data-testid="shopping-custom-image-url"]').setValue('https://example.com/nova-jacket.png')
-    await wrapper.get('[data-testid="shopping-custom-desc"]').setValue('Custom URL product')
-    await wrapper.get('[data-testid="shopping-create-custom-product"]').trigger('click')
+    for (let index = 0; index < 8; index += 1) {
+      store.upsertProduct({ id: `pagination_product_${index}`, serviceKey: 'schat_mall', title: `Pagination Product ${index}`, category: 'mall', price: `${20 + index}.00` })
+    }
+    const { router, wrapper } = await mountShopping('/shopping/schat_mall?shopView=search&category=mall&page=1')
+    const pagination = wrapper.get('[data-testid="shopping-pagination"]')
+    expect(pagination.exists()).toBe(true)
+    await pagination.findAll('button')[1].trigger('click')
     await flushPromises()
-
-    const urlProduct = store.products.find((item) => item.title === 'Nova Jacket')
-    expect(urlProduct).toMatchObject({
-      category: 'fashion',
-      origin: 'user',
-      serviceKey: 'style_cloud',
-      sourceModule: 'shopping_user_custom',
-      image: {
-        sourceType: 'url',
-        url: 'https://example.com/nova-jacket.png',
-      },
-    })
-    expect(router.currentRoute.value.query.productId).toBe(urlProduct.id)
-    expect(router.currentRoute.value.path).toBe('/shopping/style_cloud')
-    expect(router.currentRoute.value.query.service).toBeUndefined()
-    expect(wrapper.get(`[data-testid="shopping-product-${urlProduct.id}"] img`).attributes('src')).toBe(
-      'https://example.com/nova-jacket.png',
-    )
-    expect(wrapper.get(`[data-testid="shopping-product-${urlProduct.id}"]`).text()).toContain('WORKSOUT')
-
-    await router.push('/shopping/schat_mall?category=home')
-    await flushPromises()
-    await wrapper.get('[data-testid="shopping-custom-title"]').setValue('Gallery Lamp')
-    await wrapper.get('[data-testid="shopping-custom-category"]').setValue('home')
-    await wrapper.get('[data-testid="shopping-custom-price"]').setValue('88.00')
-    expect(wrapper.get('[data-testid="shopping-custom-service"]').attributes('data-service-key')).toBe(
-      'schat_mall',
-    )
-    await wrapper.get('[data-testid="shopping-custom-image-source"]').setValue('gallery')
-    expect(imported.ok).toBe(true)
-    await wrapper.get('[data-testid="shopping-custom-gallery-asset"]').setValue(imported.assetId)
-    await wrapper.get('[data-testid="shopping-create-custom-product"]').trigger('click')
-    await flushPromises()
-
-    const galleryProduct = store.products.find((item) => item.title === 'Gallery Lamp')
-    expect(galleryProduct).toMatchObject({
-      category: 'home',
-      origin: 'user',
-      serviceKey: 'schat_mall',
-      image: {
-        sourceType: 'gallery',
-        galleryAssetId: imported.assetId,
-      },
-    })
-    expect(router.currentRoute.value.query.productId).toBe(galleryProduct.id)
-    expect(wrapper.get(`[data-testid="shopping-product-${galleryProduct.id}"] img`).attributes('src')).toBe(
-      'https://example.com/gallery-cover.png',
-    )
-
-    await router.push('/shopping/style_cloud?category=fashion')
-    await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/shopping/style_cloud')
-    expect(wrapper.find(`[data-testid="shopping-product-${galleryProduct.id}"]`).exists()).toBe(false)
-    expect(wrapper.find('[data-testid="shopping-service-all"]').exists()).toBe(false)
-
+    expect(router.currentRoute.value.query.page).toBe('2')
     wrapper.unmount()
   })
 
-  test('shows App Store shop creation handoff without moving commerce ownership', async () => {
-    const router = createTestRouter()
+  test('opens orders and detail as focused routes', async () => {
     const store = useShoppingStore()
     store.resetForTesting()
-    await router.push('/shopping/schat_mall?category=mall&entry=shop&createShop=1&bindingTarget=shopping&source=app_store')
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.get('[data-testid="shopping-app-store-create-banner"]').text()).toContain(
-      'App Store 只保留安装入口',
-    )
-    expect(wrapper.get('[data-testid="shopping-app-store-create-banner"]').attributes('data-binding-target')).toBe(
-      'shopping',
-    )
-    expect(wrapper.find('[data-testid="shopping-custom-product-form"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="shopping-service-filter-panel"]').exists()).toBe(false)
-
-    wrapper.unmount()
-  })
-
-  test('presents a selected folder platform as the active shopping app', async () => {
-    const router = createTestRouter()
-    const store = useShoppingStore()
-    store.resetForTesting()
-    await router.push('/shopping/nova_digital?category=digital')
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.find('h1').text()).toBe('29CM')
-    expect(wrapper.text()).toContain('29CM')
-    expect(wrapper.find('[data-testid="shopping-service-nova_digital"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="shopping-category-digital"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="shopping-category-luxury"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="shopping-category-fashion"]').exists()).toBe(false)
-    expect(wrapper.get('[data-testid="shopping-map-reference"]').attributes('data-map-place-id')).toBe(
-      'seoul-samsung-town',
-    )
-    expect(wrapper.get('[data-testid="shopping-map-reference"]').text()).toContain('江南 · 瑞草')
-    wrapper.unmount()
-  })
-
-  test('keeps an installed app route independent from folder visibility state', async () => {
-    const router = createTestRouter()
-    const store = useShoppingStore()
-    const systemStore = useSystemStore()
-    store.resetForTesting()
-    systemStore.settings.system.language = 'en-US'
-    systemStore.setAppStoreMiniAppInstalled('shop_app_shopping_daily_fresh', false)
-    await router.push('/shopping/schat_mall')
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
-    expect(wrapper.find('[data-testid="shopping-service-schat_mall"]').exists()).toBe(false)
-
-    await router.push('/shopping/daily_fresh?category=grocery&entry=shop')
-    await flushPromises()
-
-    expect(wrapper.find('h1').text()).toBe('Kurly')
-    expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
-
-    wrapper.unmount()
-  })
-
-  test('uses App Store shop-entry facade while Shopping keeps product and order ownership', async () => {
-    const router = createTestRouter()
-    const store = useShoppingStore()
-    const systemStore = useSystemStore()
-    const galleryStore = useGalleryStore()
-    store.resetForTesting()
-    galleryStore.resetForTesting()
-    systemStore.settings.system.language = 'en-US'
-    const importedCover = galleryStore.importAssetFromUrl({
-      url: 'https://example.com/daily-fresh-cover.png',
-      name: 'Daily Fresh Cover',
-      category: 'reference',
-    })
-    expect(importedCover.ok).toBe(true)
-    expect(
-      systemStore.setEntryPresentationOverride('shop_app_shopping_daily_fresh', {
-        displayName: 'Neighborhood Fresh',
-        shortDescription: 'Daily groceries with local delivery.',
-        bindingTarget: 'shopping',
-        coverGalleryAssetId: importedCover.assetId,
-      }),
-    ).toBe(true)
-    await router.push(
-      '/shopping/daily_fresh?category=grocery&entry=shop&shopEntryId=shop_app_shopping_daily_fresh',
-    )
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.find('h1').text()).toBe('Neighborhood Fresh')
-    expect(wrapper.get('.shopping-storefront-header').attributes('data-storefront')).toBe('fresh_market')
-    expect(wrapper.text()).toContain('Daily groceries with local delivery.')
-    await flushPromises()
-    expect(wrapper.get('[data-testid="shopping-shop-cover"] img').attributes('src')).toBe(
-      'https://example.com/daily-fresh-cover.png',
-    )
-    expect(wrapper.find('[data-testid="shopping-service-daily_fresh"]').exists()).toBe(false)
-    expect(store.cartQuantity).toBe(0)
-    expect(store.orderCount).toBe(0)
-
-    wrapper.unmount()
-  })
-
-  test('shows active World Pack Shopping context without mutating commerce state', async () => {
-    const router = createTestRouter()
-    const store = useShoppingStore()
-    const systemStore = useSystemStore()
-    store.resetForTesting()
-    systemStore.settings.system.language = 'zh-CN'
-    systemStore.activateWorldPack('survival_city')
-
-    await router.push('/shopping/schat_mall?worldPack=survival_city&worldApp=survival_supply_board')
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.find('h1').text()).toBe('Coupang')
-    const banner = wrapper.get('[data-testid="shopping-world-app-context"]')
-    expect(banner.text()).toContain('补给站')
-    expect(banner.text()).toContain('灾后生存都市')
-    expect(banner.get('[data-testid="shopping-world-app-boundary"]').text()).toContain('Shopping 仍拥有商品')
-    expect(store.cartQuantity).toBe(0)
-    expect(store.orderCount).toBe(0)
-
-    await wrapper.get('[data-testid="shopping-world-app-apply-filter"]').trigger('click')
-    await flushPromises()
-
-    expect(router.currentRoute.value.query).toMatchObject({
-      worldPack: 'survival_city',
-      worldApp: 'survival_supply_board',
-      category: 'grocery',
-    })
-    expect(router.currentRoute.value.path).toBe('/shopping/daily_fresh')
-    expect(router.currentRoute.value.query.service).toBeUndefined()
-    expect(wrapper.get('[data-testid="shopping-category-grocery"]').classes()).toContain('border-orange-300')
-    expect(store.cartQuantity).toBe(0)
-    expect(store.orderCount).toBe(0)
-
-    wrapper.unmount()
-  })
-
-  test('highlights a gift order when opened from Chat gift context', async () => {
-    const router = createTestRouter()
-    const store = useShoppingStore()
-    const calendarStore = useCalendarStore()
-    store.resetForTesting()
-    calendarStore.resetForTesting()
-    const product = store.upsertProduct({
-      id: 'gift_order_lens',
-      title: 'Mira Lens',
-      category: 'digital',
-      price: '1288.00',
-      giftable: true,
-    })
+    const product = store.upsertProduct({ id: 'route_product_kurly', serviceKey: 'daily_fresh', title: 'Morning Produce', category: 'grocery', price: '18.00' })
     store.addToCart(product.id)
-    const order = store.checkoutCart({
-      giftRecipient: {
-        name: 'Mira',
-        chatId: 1,
-        contactId: 1,
-        sourceModule: 'chat',
-      },
-    })
-
-    await router.push(`/shopping/nova_digital?source=chat&intent=gift_order&chatId=1&orderId=${order.id}`)
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.get('[data-testid="shopping-chat-source-banner"]').text()).toContain('From Chat gift order')
-    expect(wrapper.get(`[data-testid="shopping-order-${order.id}"]`).classes()).toContain('border-rose-300')
-    expect(wrapper.get(`[data-testid="shopping-highlighted-order-${order.id}"]`).text()).toContain(
-      'Chat gift order context',
-    )
-    expect(wrapper.get(`[data-testid="shopping-order-gift-${order.id}"]`).text()).toContain('Mira')
-    expect(wrapper.get('[data-testid="shopping-order-detail-panel"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="shopping-order-detail-total"]').text()).toContain('1288.00 CNY')
-    expect(wrapper.get('[data-testid="shopping-order-detail-status"]').text()).toContain('Placed')
-    expect(wrapper.get(`[data-testid="shopping-order-detail-item-${product.id}"]`).text()).toContain('Mira Lens')
-    expect(wrapper.get('[data-testid="shopping-order-detail-gift"]').text()).toContain('Mira')
-
-    expect(calendarStore.findShoppingDeliveryCueByOrderId(order.id)?.status).toBe('suggested')
-    await wrapper.get('[data-testid="shopping-order-detail-complete"]').trigger('click')
-    expect(store.orders[0].status).toBe('completed')
-    expect(wrapper.get('[data-testid="shopping-order-detail-status"]').text()).toContain('Completed')
-    expect(calendarStore.findShoppingDeliveryCueByOrderId(order.id)?.status).toBe('dismissed')
-    expect(wrapper.get('[data-testid="shopping-order-detail-complete"]').attributes('disabled')).toBeDefined()
-    expect(wrapper.get('[data-testid="shopping-order-detail-cancel"]').attributes('disabled')).toBeDefined()
-
-    await wrapper.get('[data-testid="shopping-close-order-detail"]').trigger('click')
-    expect(wrapper.find('[data-testid="shopping-order-detail-panel"]').exists()).toBe(false)
+    const order = store.checkoutCart({ serviceKey: 'daily_fresh' })
+    const { router, wrapper } = await mountShopping('/shopping/daily_fresh?shopView=deliveries')
     await wrapper.get(`[data-testid="shopping-open-order-detail-${order.id}"]`).trigger('click')
-    expect(wrapper.get('[data-testid="shopping-order-detail-panel"]').exists()).toBe(true)
-
-    await wrapper.get('[data-testid="shopping-return-chat"]').trigger('click')
     await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/chat/1')
+    expect(router.currentRoute.value.query).toMatchObject({ shopView: 'delivery', orderId: order.id })
+    expect(wrapper.get('[data-testid="shopping-order-detail-panel"]').text()).toContain(order.items[0].title)
     wrapper.unmount()
   })
 
-  test('shows logistics as a peer Shopping entry backed by order delivery cues', async () => {
-    const router = createTestRouter()
+  test('keeps logistics out of every storefront home taxonomy', async () => {
     const store = useShoppingStore()
-    const calendarStore = useCalendarStore()
-    const mapStore = useMapStore()
     store.resetForTesting()
-    calendarStore.resetForTesting()
-    mapStore.resetTripRuntimeForTesting()
-    const product = store.upsertProduct({
-      id: 'logistics_order_lens',
-      title: 'Mira Lens',
-      category: 'digital',
-      price: '1288.00',
-      giftable: true,
-    })
+    const { wrapper } = await mountShopping('/shopping/cu_24?category=grocery')
+    expect(wrapper.find('[data-testid="shopping-category-logistics"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('keeps logistics isolated and route-backed', async () => {
+    const store = useShoppingStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({ id: 'route_product_logistics', serviceKey: 'nova_digital', title: 'Tracked Object', category: 'digital', price: '88.00' })
     store.addToCart(product.id)
-    const order = store.checkoutCart()
-    store.addOrderEvent(order.id, {
-      type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED,
-      summary: 'Standard courier picked up Mira Lens.',
-      carrierName: 'Standard Courier',
-      trackingCode: 'TRACK-MIRA-01',
-      pickupPoint: 'Standard Courier Station 8',
-      locationHint: 'North Hub',
-      etaDays: 2,
-    })
-
-    await router.push('/shopping/nova_digital?category=logistics')
-    await router.isReady()
-
-    const wrapper = mount(ShoppingView, {
-      global: {
-        plugins: [router],
-      },
-    })
-
-    expect(wrapper.get('[data-testid="shopping-logistics-panel"]').text()).toContain('物流')
-    expect(wrapper.find('[data-testid="shopping-custom-product-form"] option[value="logistics"]').exists()).toBe(
-      false,
-    )
-    expect(wrapper.get(`[data-testid="shopping-logistics-order-${order.id}"]`).text()).toContain('Mira Lens')
-    expect(wrapper.get(`[data-testid="shopping-logistics-latest-event-${order.id}"]`).text()).toContain(
-      'Standard courier picked up Mira Lens.',
-    )
-    expect(wrapper.get(`[data-testid="shopping-logistics-latest-event-${order.id}"]`).text()).toContain(
-      'TRACK-MIRA-01',
-    )
-    const mapContext = wrapper.get(`[data-testid="shopping-logistics-map-context-${order.id}"]`)
-    expect(mapContext.text()).toContain('Map route context')
-    expect(mapContext.text()).toContain('Shopping logistics')
-    expect(mapContext.text()).toContain('Standard Courier Station 8')
-    expect(mapContext.text()).toContain('TRACK-MIRA-01')
-    expect(mapContext.text()).toContain('does not start a trip')
-    expect(mapStore.tripState.status).toBe('idle')
-    expect(mapStore.tripHistory).toHaveLength(0)
-    expect(wrapper.get(`[data-testid="shopping-logistics-status-${order.id}"]`).text()).toContain(
-      'Pending follow-up',
-    )
-    expect(wrapper.get(`[data-testid="shopping-logistics-calendar-${order.id}"]`).exists()).toBe(true)
-    expect(wrapper.find(`[data-testid="shopping-product-${product.id}"]`).exists()).toBe(false)
-
-    await wrapper.get(`[data-testid="shopping-logistics-detail-${order.id}"]`).trigger('click')
-    expect(wrapper.get('[data-testid="shopping-order-detail-panel"]').exists()).toBe(true)
-    expect(calendarStore.findShoppingDeliveryCueByOrderId(order.id)?.status).toBe('suggested')
-
+    const order = store.checkoutCart({ serviceKey: 'nova_digital' })
+    store.addOrderEvent(order.id, { type: SHOPPING_ORDER_EVENT_TYPE.PACKAGE_SHIPPED, summary: 'Courier picked up the order.', trackingCode: 'TRACK-29-01' })
+    const { wrapper } = await mountShopping('/shopping/nova_digital?shopView=delivery&category=logistics')
+    expect(wrapper.get('[data-testid="shopping-logistics-panel"]').text()).toContain('TRACK-29-01')
+    expect(wrapper.find('[data-testid="shopping-collection-page"]').exists()).toBe(false)
     wrapper.unmount()
   })
 })

@@ -23,21 +23,27 @@ describe('shopping store', () => {
   test('seeds products for every allowed storefront category', () => {
     const store = useShoppingStore()
     const expectedCounts = {
-      schat_mall: 6,
-      nova_digital: 6,
-      daily_fresh: 4,
-      style_cloud: 5,
-      nordhus_home: 5,
-      mellow_care: 5,
+      schat_mall: 10,
+      nova_digital: 9,
+      daily_fresh: 8,
+      style_cloud: 9,
+      nordhus_home: 9,
+      mellow_care: 9,
+      traders_club: 10,
+      cu_24: 9,
+      musinsa_style: 9,
+      boon_select: 9,
+      galleria_luxury: 9,
     }
 
-    expect(store.productCount).toBe(31)
+    expect(store.productCount).toBe(100)
     expect(store.listProductsByCategory('digital').length).toBeGreaterThan(0)
     expect(store.listProductsByCategory('unknown').length).toBe(store.productCount)
 
     SHOPPING_SERVICE_PRESETS.forEach((service) => {
       const products = store.listProductsByService(service.key)
       expect(products, service.key).toHaveLength(expectedCounts[service.key])
+      expect(products.length, `${service.key}:catalog-depth`).toBeGreaterThanOrEqual(8)
       service.categoryKeys.forEach((categoryKey) => {
         const visibleProducts = categoryKey === 'mall'
           ? products
@@ -72,7 +78,7 @@ describe('shopping store', () => {
 
     const store = useShoppingStore()
 
-    expect(store.productCount).toBe(31)
+    expect(store.productCount).toBe(100)
     expect(store.findProductById('shopping_seed_mall_card')?.title).toBe('Saved Gift Card Title')
     expect(store.findProductById('shopping_seed_mall_runner')).toMatchObject({
       category: 'fashion',

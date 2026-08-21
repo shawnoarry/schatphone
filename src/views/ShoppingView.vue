@@ -1,7 +1,57 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ShoppingStorefrontHeader from '../components/ShoppingStorefrontHeader.vue'
+import '../components/shopping/shopping-brand-page-overrides.css'
+import ShoppingCoupangApp from '../components/shopping/ShoppingCoupangApp.vue'
+import Shopping29CmApp from '../components/shopping/Shopping29CmApp.vue'
+import ShoppingKurlyApp from '../components/shopping/ShoppingKurlyApp.vue'
+import ShoppingWorksoutApp from '../components/shopping/ShoppingWorksoutApp.vue'
+import ShoppingIkeaApp from '../components/shopping/ShoppingIkeaApp.vue'
+import ShoppingOliveYoungApp from '../components/shopping/ShoppingOliveYoungApp.vue'
+import ShoppingTradersApp from '../components/shopping/ShoppingTradersApp.vue'
+import ShoppingCuApp from '../components/shopping/ShoppingCuApp.vue'
+import ShoppingMusinsaApp from '../components/shopping/ShoppingMusinsaApp.vue'
+import ShoppingBoonTheShopApp from '../components/shopping/ShoppingBoonTheShopApp.vue'
+import ShoppingGalleriaApp from '../components/shopping/ShoppingGalleriaApp.vue'
+import ShoppingCollectionPage from '../components/shopping/ShoppingCollectionPage.vue'
+import ShoppingProductPage from '../components/shopping/ShoppingProductPage.vue'
+import ShoppingCoupangPages from '../components/shopping/pages/ShoppingCoupangPages.vue'
+import Shopping29CmPages from '../components/shopping/pages/Shopping29CmPages.vue'
+import ShoppingKurlyPages from '../components/shopping/pages/ShoppingKurlyPages.vue'
+import ShoppingWorksoutPages from '../components/shopping/pages/ShoppingWorksoutPages.vue'
+import ShoppingIkeaPages from '../components/shopping/pages/ShoppingIkeaPages.vue'
+import ShoppingOliveYoungPages from '../components/shopping/pages/ShoppingOliveYoungPages.vue'
+import ShoppingTradersPages from '../components/shopping/pages/ShoppingTradersPages.vue'
+import ShoppingCuPages from '../components/shopping/pages/ShoppingCuPages.vue'
+import ShoppingMusinsaPages from '../components/shopping/pages/ShoppingMusinsaPages.vue'
+import ShoppingBoonTheShopPages from '../components/shopping/pages/ShoppingBoonTheShopPages.vue'
+import ShoppingGalleriaPages from '../components/shopping/pages/ShoppingGalleriaPages.vue'
+import ShoppingCoupangOperations from '../components/shopping/operations/ShoppingCoupangOperations.vue'
+import Shopping29CmOperations from '../components/shopping/operations/Shopping29CmOperations.vue'
+import ShoppingKurlyOperations from '../components/shopping/operations/ShoppingKurlyOperations.vue'
+import ShoppingWorksoutOperations from '../components/shopping/operations/ShoppingWorksoutOperations.vue'
+import ShoppingIkeaOperations from '../components/shopping/operations/ShoppingIkeaOperations.vue'
+import ShoppingOliveYoungOperations from '../components/shopping/operations/ShoppingOliveYoungOperations.vue'
+import ShoppingTradersOperations from '../components/shopping/operations/ShoppingTradersOperations.vue'
+import ShoppingCuOperations from '../components/shopping/operations/ShoppingCuOperations.vue'
+import ShoppingMusinsaOperations from '../components/shopping/operations/ShoppingMusinsaOperations.vue'
+import ShoppingBoonTheShopOperations from '../components/shopping/operations/ShoppingBoonTheShopOperations.vue'
+import ShoppingGalleriaOperations from '../components/shopping/operations/ShoppingGalleriaOperations.vue'
+import ShoppingCoupangServicePages from '../components/shopping/services/ShoppingCoupangServicePages.vue'
+import Shopping29CmServicePages from '../components/shopping/services/Shopping29CmServicePages.vue'
+import ShoppingKurlyServicePages from '../components/shopping/services/ShoppingKurlyServicePages.vue'
+import ShoppingWorksoutServicePages from '../components/shopping/services/ShoppingWorksoutServicePages.vue'
+import ShoppingIkeaServicePages from '../components/shopping/services/ShoppingIkeaServicePages.vue'
+import ShoppingOliveYoungServicePages from '../components/shopping/services/ShoppingOliveYoungServicePages.vue'
+import ShoppingTradersServicePages from '../components/shopping/services/ShoppingTradersServicePages.vue'
+import ShoppingCuServicePages from '../components/shopping/services/ShoppingCuServicePages.vue'
+import ShoppingMusinsaServicePages from '../components/shopping/services/ShoppingMusinsaServicePages.vue'
+import ShoppingBoonTheShopServicePages from '../components/shopping/services/ShoppingBoonTheShopServicePages.vue'
+import ShoppingGalleriaServicePages from '../components/shopping/services/ShoppingGalleriaServicePages.vue'
+import {
+  resolveShoppingCanonicalPage,
+  resolveShoppingPageContract,
+} from '../components/shopping/shopping-experience-model'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import DeliveryRouteContextCard from '../components/map/DeliveryRouteContextCard.vue'
 import { useI18n } from '../composables/useI18n'
@@ -40,6 +90,58 @@ import { SHOPPING_ORDER_STATUS, useShoppingStore } from '../stores/shopping'
 import { useSystemStore } from '../stores/system'
 import { useWalletStore } from '../stores/wallet'
 
+const SHOPPING_STOREFRONT_COMPONENTS = Object.freeze({
+  city_market: ShoppingCoupangApp,
+  tech_catalog: Shopping29CmApp,
+  fresh_market: ShoppingKurlyApp,
+  fashion_editorial: ShoppingWorksoutApp,
+  room_planner: ShoppingIkeaApp,
+  care_lab: ShoppingOliveYoungApp,
+  member_warehouse: ShoppingTradersApp,
+  neighborhood_convenience: ShoppingCuApp,
+  fashion_catalog: ShoppingMusinsaApp,
+  buyer_atelier: ShoppingBoonTheShopApp,
+  luxury_hall: ShoppingGalleriaApp,
+})
+const SHOPPING_DEEP_PAGE_COMPONENTS = Object.freeze({
+  city_market: ShoppingCoupangPages,
+  tech_catalog: Shopping29CmPages,
+  fresh_market: ShoppingKurlyPages,
+  fashion_editorial: ShoppingWorksoutPages,
+  room_planner: ShoppingIkeaPages,
+  care_lab: ShoppingOliveYoungPages,
+  member_warehouse: ShoppingTradersPages,
+  neighborhood_convenience: ShoppingCuPages,
+  fashion_catalog: ShoppingMusinsaPages,
+  buyer_atelier: ShoppingBoonTheShopPages,
+  luxury_hall: ShoppingGalleriaPages,
+})
+const SHOPPING_OPERATION_PAGE_COMPONENTS = Object.freeze({
+  city_market: ShoppingCoupangOperations,
+  tech_catalog: Shopping29CmOperations,
+  fresh_market: ShoppingKurlyOperations,
+  fashion_editorial: ShoppingWorksoutOperations,
+  room_planner: ShoppingIkeaOperations,
+  care_lab: ShoppingOliveYoungOperations,
+  member_warehouse: ShoppingTradersOperations,
+  neighborhood_convenience: ShoppingCuOperations,
+  fashion_catalog: ShoppingMusinsaOperations,
+  buyer_atelier: ShoppingBoonTheShopOperations,
+  luxury_hall: ShoppingGalleriaOperations,
+})
+const SHOPPING_SERVICE_PAGE_COMPONENTS = Object.freeze({
+  city_market: ShoppingCoupangServicePages,
+  tech_catalog: Shopping29CmServicePages,
+  fresh_market: ShoppingKurlyServicePages,
+  fashion_editorial: ShoppingWorksoutServicePages,
+  room_planner: ShoppingIkeaServicePages,
+  care_lab: ShoppingOliveYoungServicePages,
+  member_warehouse: ShoppingTradersServicePages,
+  neighborhood_convenience: ShoppingCuServicePages,
+  fashion_catalog: ShoppingMusinsaServicePages,
+  buyer_atelier: ShoppingBoonTheShopServicePages,
+  luxury_hall: ShoppingGalleriaServicePages,
+})
 const route = useRoute()
 const router = useRouter()
 const { t, languageBase } = useI18n()
@@ -82,12 +184,45 @@ const giftDraft = reactive({
   contactId: '',
   name: '',
 })
+const selectedProductId = ref('')
 const selectedOrderId = ref('')
+
+const SHOPPING_PAGE_KEYS = new Set([
+  'home',
+  'category',
+  'product',
+  'cart',
+  'checkout',
+  'orders',
+  'order',
+  'logistics',
+  'service',
+  'manage',
+])
+const SHOPPING_CATALOG_PAGE_SIZE = 6
 
 const activeServiceKey = computed(() =>
   typeof route.params.serviceKey === 'string' ? route.params.serviceKey.trim() : '',
 )
 const activePlatformApp = computed(() => findShoppingPlatformApp(activeServiceKey.value))
+const activePageContract = computed(() =>
+  resolveShoppingPageContract(activePlatformApp.value?.storefrontTemplate || 'city_market'),
+)
+const shopPageKey = computed(() => {
+  const requested = typeof route.query.shopView === 'string' ? route.query.shopView.trim() : ''
+  const resolved = resolveShoppingCanonicalPage(
+    activePlatformApp.value?.storefrontTemplate || 'city_market',
+    requested,
+  )
+  if (SHOPPING_PAGE_KEYS.has(resolved)) return resolved
+  if (typeof route.query.productId === 'string' && route.query.productId.trim()) return 'product'
+  if (typeof route.query.orderId === 'string' && route.query.orderId.trim()) return 'order'
+  return 'home'
+})
+const catalogPage = computed(() => {
+  const requested = Number(route.query.page)
+  return Number.isFinite(requested) && requested > 0 ? Math.floor(requested) : 1
+})
 const activeCategoryKey = computed(() => {
   const requested = typeof route.query.category === 'string' ? route.query.category.trim() : ''
   const allowedKeys = Array.isArray(activePlatformApp.value?.categoryKeys)
@@ -226,6 +361,15 @@ const visibleProducts = computed(() => {
     ? searchResults.filter((product) => shoppingStore.isProductFavorite(product.id))
     : searchResults
 })
+const homeVisibleProducts = computed(() => visibleProducts.value.slice(0, 6))
+const catalogPageCount = computed(() =>
+  Math.max(1, Math.ceil(visibleProducts.value.length / SHOPPING_CATALOG_PAGE_SIZE)),
+)
+const paginatedProducts = computed(() => {
+  const safePage = Math.min(catalogPage.value, catalogPageCount.value)
+  const start = (safePage - 1) * SHOPPING_CATALOG_PAGE_SIZE
+  return visibleProducts.value.slice(start, start + SHOPPING_CATALOG_PAGE_SIZE)
+})
 const galleryImageOptions = computed(() =>
   galleryStore.assets
     .filter((asset) => ['reference', 'scenario', 'wallpaper'].includes(asset.category))
@@ -252,7 +396,23 @@ const recentOrders = computed(() => {
 const selectedOrder = computed(() =>
   selectedOrderId.value ? orders.value.find((order) => order.id === selectedOrderId.value) || null : null,
 )
-
+const selectedProduct = computed(() => {
+  if (!selectedProductId.value) return null
+  const product = shoppingStore.findProductById(selectedProductId.value)
+  return product?.serviceKey === activeServiceKey.value ? product : null
+})
+const relatedProducts = computed(() => {
+  const product = selectedProduct.value
+  if (!product) return []
+  const serviceProducts = shoppingStore.listProductsByService(activeServiceKey.value)
+  const sameCategory = serviceProducts.filter(
+    (item) => item.id !== product.id && item.category === product.category,
+  )
+  const remaining = serviceProducts.filter(
+    (item) => item.id !== product.id && item.category !== product.category,
+  )
+  return [...sameCategory, ...remaining].slice(0, 6)
+})
 const buildShoppingEventMapContext = (order, event = {}) =>
   mapStore.buildDeliveryEventMapHandoff({
     ownerModule: 'shopping',
@@ -334,13 +494,7 @@ const logisticsOrderRows = computed(() =>
     }
   }),
 )
-
-const logisticsStatusClass = (status) => {
-  if (status === 'confirmed') return 'bg-blue-50 text-blue-700'
-  if (status === 'dismissed' || status === SHOPPING_ORDER_STATUS.COMPLETED) return 'bg-emerald-50 text-emerald-700'
-  if (status === SHOPPING_ORDER_STATUS.CANCELLED) return 'bg-gray-100 text-gray-500'
-  return 'bg-orange-50 text-orange-700'
-}
+const logisticsMapRows = computed(() => logisticsOrderRows.value.filter((row) => row.mapHandoff))
 
 const logisticsStatusLabel = (status) => {
   if (status === 'confirmed') return t('Calendar confirmed', 'Calendar confirmed')
@@ -395,12 +549,24 @@ const platformCategoryCards = computed(() => {
     ? activePlatformApp.value.categoryKeys
     : []
   return categoryCards.value.filter(
-    (entry) => entry.key === 'logistics' || allowedKeys.includes(entry.key),
+    (entry) => entry.key !== 'logistics' && allowedKeys.includes(entry.key),
   )
 })
 
 const activeStorefrontTemplate = computed(
   () => activePlatformApp.value?.storefrontTemplate || 'shopping_hub',
+)
+const activeStorefrontComponent = computed(
+  () => SHOPPING_STOREFRONT_COMPONENTS[activeStorefrontTemplate.value] || ShoppingCoupangApp,
+)
+const activeDeepPageComponent = computed(
+  () => SHOPPING_DEEP_PAGE_COMPONENTS[activeStorefrontTemplate.value] || null,
+)
+const activeOperationPageComponent = computed(
+  () => SHOPPING_OPERATION_PAGE_COMPONENTS[activeStorefrontTemplate.value] || null,
+)
+const activeServicePageComponent = computed(
+  () => SHOPPING_SERVICE_PAGE_COMPONENTS[activeStorefrontTemplate.value] || null,
 )
 const activeBrandAssetUrl = computed(() =>
   shoppingBrandAssetUrl(activePlatformApp.value?.brandAssetPath || ''),
@@ -418,26 +584,73 @@ const goHome = () => {
   pushReturnTarget(router, route, '/home')
 }
 
-const scrollToShoppingSection = (sectionId) => {
-  if (typeof document === 'undefined') return
-  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+const buildStableShopQuery = () => {
+  const stableQuery = { ...route.query }
+  delete stableQuery.shopView
+  delete stableQuery.page
+  delete stableQuery.productId
+  delete stableQuery.orderId
+  delete stableQuery.saved
+  delete stableQuery.q
+  return stableQuery
+}
+
+const openShopPage = (pageKey = 'home', patch = {}) => {
+  const nextPageKey = SHOPPING_PAGE_KEYS.has(pageKey) ? pageKey : 'home'
+  const nextQuery = {
+    ...buildStableShopQuery(),
+    ...patch,
+  }
+  if (nextPageKey !== 'home') nextQuery.shopView = activePageContract.value[nextPageKey] || nextPageKey
+  if (nextPageKey !== 'category') delete nextQuery.page
+  if (nextPageKey !== 'product') delete nextQuery.productId
+  if (nextPageKey !== 'order') delete nextQuery.orderId
+  if (nextPageKey !== 'category') {
+    delete nextQuery.saved
+    delete nextQuery.q
+  }
+  return router.push({
+    path: buildShoppingAppRoute(activeServiceKey.value),
+    query: nextQuery,
+  })
+}
+
+const openShopHome = () => openShopPage('home')
+const openCartPage = () => openShopPage('cart')
+const openCheckoutPage = () => {
+  if (cartLineItems.value.length === 0) return
+  return openShopPage('checkout')
+}
+const openOrdersPage = () => openShopPage('orders')
+const openLogisticsPage = () => openShopPage('logistics')
+const openServicePage = () => openShopPage('service')
+
+const handleStorefrontProductClick = (event) => {
+  const target = event?.target
+  if (!(target instanceof Element) || target.closest('button, a, input, select, textarea')) return
+  const card = target.closest('[data-testid^="shopping-product-"]')
+  const testId = card?.getAttribute('data-testid') || ''
+  const productId = testId.replace(/^shopping-product-/, '')
+  if (productId) openProductDetail(productId)
 }
 
 const showFavoriteProducts = () => {
   favoritesOnly.value = true
-  scrollToShoppingSection('shopping-products')
+  void openShopPage('category', {
+    category: activeCategory.value?.key || activePlatformApp.value?.defaultCategory || 'mall',
+    saved: '1',
+    page: '1',
+  })
 }
 
 const showAllProducts = () => {
   favoritesOnly.value = false
-  scrollToShoppingSection('shopping-products')
+  void openShopHome()
 }
 
 const openCatalogManager = () => {
-  catalogManagerOpen.value = !catalogManagerOpen.value
-  if (catalogManagerOpen.value) {
-    requestAnimationFrame(() => scrollToShoppingSection('shopping-catalog-manager'))
-  }
+  catalogManagerOpen.value = true
+  void openShopPage('manage')
 }
 
 const goBackToChat = () => {
@@ -447,18 +660,28 @@ const goBackToChat = () => {
 
 const openCategory = (key) => {
   favoritesOnly.value = false
-  const returnQuery = {}
-  if (route.query.from === 'home') returnQuery.from = 'home'
-  if (typeof route.query.homePage === 'string') returnQuery.homePage = route.query.homePage
-  router.push({
-    path: buildShoppingAppRoute(activeServiceKey.value),
-    query: {
-      ...returnQuery,
-      category: key,
-      ...(activeShopEntryId.value
-        ? { entry: 'shop', shopEntryId: activeShopEntryId.value }
-        : {}),
-    },
+  void openShopPage(key === 'logistics' ? 'logistics' : 'category', {
+    category: key,
+    ...(key === 'logistics' ? {} : { page: '1' }),
+  })
+}
+
+const changeCatalogPage = (pageNumber) => {
+  const nextPage = Math.max(1, Math.min(catalogPageCount.value, Number(pageNumber) || 1))
+  void openShopPage('category', {
+    category: activeCategory.value?.key || activePlatformApp.value?.defaultCategory || 'mall',
+    page: String(nextPage),
+    ...(favoritesOnly.value ? { saved: '1' } : {}),
+    ...(productSearchQuery.value.trim() ? { q: productSearchQuery.value.trim() } : {}),
+  })
+}
+
+const submitCatalogSearch = () => {
+  void openShopPage('category', {
+    category: activeCategory.value?.key || activePlatformApp.value?.defaultCategory || 'mall',
+    page: '1',
+    ...(favoritesOnly.value ? { saved: '1' } : {}),
+    ...(productSearchQuery.value.trim() ? { q: productSearchQuery.value.trim() } : {}),
   })
 }
 
@@ -569,6 +792,7 @@ const createCustomProduct = () => {
     query: {
       category: product.category,
       productId: product.id,
+      shopView: 'product',
     },
   })
   resetProductDraft()
@@ -622,13 +846,6 @@ const orderStatusLabel = (status) => {
   return t('Placed', 'Placed')
 }
 
-const orderStatusClass = (status) => {
-  if (status === 'completed') return 'bg-emerald-50 text-emerald-700'
-  if (status === 'cancelled') return 'bg-gray-100 text-gray-500'
-  if (status === 'draft') return 'bg-blue-50 text-blue-700'
-  return 'bg-orange-50 text-orange-700'
-}
-
 const formatOrderTotal = (order) => {
   if (!order) return ''
   const totals = Array.isArray(order.totals) && order.totals.length > 0
@@ -653,8 +870,26 @@ const toggleFavorite = (productId) => {
   shoppingStore.toggleProductFavorite(productId)
 }
 
-const addToCart = (productId) => {
-  shoppingStore.addToCart(productId, 1, {
+const openProductDetail = (productId) => {
+  const product = shoppingStore.findProductById(productId)
+  if (!product || product.serviceKey !== activeServiceKey.value) return
+  selectedProductId.value = productId
+  void openShopPage('product', {
+    category: product.category,
+    productId,
+  })
+}
+
+const closeProductDetail = () => {
+  selectedProductId.value = ''
+  void openShopPage('category', {
+    category: activeCategory.value?.key || activePlatformApp.value?.defaultCategory || 'mall',
+    page: String(catalogPage.value),
+  })
+}
+
+const addToCart = (productId, quantity = 1) => {
+  shoppingStore.addToCart(productId, quantity, {
     sourceModule: SHOPPING_SOURCE_KEYS.CHAT_RECOMMENDATION,
   })
 }
@@ -679,16 +914,19 @@ const buildGiftCheckoutPayload = () => {
         sourceId: giftContact ? String(giftContact.id) : manualRecipient,
       }
     : null
-  giftDraft.enabled = false
-  giftDraft.contactId = ''
-  giftDraft.name = ''
   return {
     recipient: giftRecipient?.name || '',
     giftRecipient,
   }
 }
 
-const checkoutCart = () => {
+const clearGiftDraft = () => {
+  giftDraft.enabled = false
+  giftDraft.contactId = ''
+  giftDraft.name = ''
+}
+
+const commitCheckoutCart = () => {
   const order = shoppingStore.checkoutCart({
     serviceKey: activeServiceKey.value,
     ...buildGiftCheckoutPayload(),
@@ -701,6 +939,11 @@ const checkoutCart = () => {
       order,
     })
   }
+  if (order) {
+    clearGiftDraft()
+    void openShopPage('orders')
+  }
+  return order
 }
 
 const removeOrder = (orderId) => {
@@ -745,10 +988,14 @@ const cancelOrder = (orderId) => {
 
 const openOrderDetail = (orderId) => {
   selectedOrderId.value = typeof orderId === 'string' ? orderId : ''
+  if (selectedOrderId.value) {
+    void openShopPage('order', { orderId: selectedOrderId.value })
+  }
 }
 
 const closeOrderDetail = () => {
   selectedOrderId.value = ''
+  void openShopPage('orders')
 }
 
 const transferSuggestionToAsset = (suggestion) => {
@@ -814,8 +1061,36 @@ watch(
     productSearchQuery.value = ''
     favoritesOnly.value = false
     catalogManagerOpen.value = false
+    selectedProductId.value = ''
     selectedOrderId.value = ''
     resetProductDraft()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.query.q,
+  (query) => {
+    const nextQuery = typeof query === 'string' ? query : ''
+    if (productSearchQuery.value !== nextQuery) productSearchQuery.value = nextQuery
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.query.saved,
+  (saved) => {
+    favoritesOnly.value = saved === '1'
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.query.productId,
+  (productId) => {
+    const nextProductId = typeof productId === 'string' ? productId.trim() : ''
+    const product = nextProductId ? shoppingStore.findProductById(nextProductId) : null
+    selectedProductId.value = product?.serviceKey === activeServiceKey.value ? nextProductId : ''
   },
   { immediate: true },
 )
@@ -914,8 +1189,9 @@ onBeforeUnmount(() => {
     :data-storefront="activeStorefrontTemplate"
   >
     <div class="shopping-scroll flex-1 overflow-y-auto no-scrollbar">
-      <ShoppingStorefrontHeader
-        v-model:search-query="productSearchQuery"
+      <component
+        v-if="shopPageKey === 'home'"
+        :is="activeStorefrontComponent"
         :active-service="activePlatformApp"
         :active-category="activeCategory"
         :active-label="activeShoppingAppLabel"
@@ -925,18 +1201,235 @@ onBeforeUnmount(() => {
         :brand-asset-url="activeBrandAssetUrl"
         :map-reference="activeMapReference"
         :language-base="languageBase"
+        :search-query="productSearchQuery"
         :favorite-count="favoriteCount"
         :cart-quantity="cartQuantity"
         :order-count="orderCount"
+        :favorites-only="favoritesOnly"
+        :active-category-is-logistics="activeCategoryIsLogistics"
+        :visible-products="homeVisibleProducts"
+        :highlighted-product-id="highlightedProductId"
+        :product-image-url="productImageUrl"
+        :product-display-title="productDisplayTitle"
+        :product-display-description="productDisplayDescription"
+        :product-storefront-template="productStorefrontTemplate"
+        :product-service-label="productServiceLabel"
+        :product-category-icon="productCategoryIcon"
+        :stock-status-label="stockStatusLabel"
+        :stock-status-class="stockStatusClass"
+        :format-price="formatPrice"
+        :is-product-favorite="(productId) => shoppingStore.isProductFavorite(productId)"
+        @update:search-query="productSearchQuery = $event"
         @go-home="goHome"
         @select-category="openCategory"
         @open-favorites="showFavoriteProducts"
-        @open-cart="scrollToShoppingSection('shopping-cart')"
-        @open-orders="scrollToShoppingSection('shopping-orders')"
+        @open-cart="openCartPage"
+        @open-orders="openOrdersPage"
+        @open-product="openProductDetail"
         @open-manager="openCatalogManager"
+        @show-all="showAllProducts"
+        @toggle-favorite="toggleFavorite"
+        @add-to-cart="addToCart"
+        @click.capture="handleStorefrontProductClick"
       />
-
-      <div class="shopping-content px-4 py-4 space-y-4">
+      <component
+        :is="activeDeepPageComponent"
+        v-else-if="activeDeepPageComponent && ['category', 'product'].includes(shopPageKey)"
+        :page-key="shopPageKey"
+        :service-label="activeShoppingAppLabel"
+        :category="activeCategory"
+        :categories="productCategoryCards"
+        :products="paginatedProducts"
+        :page="Math.min(catalogPage, catalogPageCount)"
+        :page-count="catalogPageCount"
+        :total-count="visibleProducts.length"
+        :search-query="productSearchQuery"
+        :favorites-only="favoritesOnly"
+        :cart-quantity="cartQuantity"
+        :language-base="languageBase"
+        :product="selectedProduct"
+        :related-products="relatedProducts"
+        :product-image-url="productImageUrl"
+        :product-display-title="productDisplayTitle"
+        :product-display-description="productDisplayDescription"
+        :product-category-icon="productCategoryIcon"
+        :stock-status-label="stockStatusLabel"
+        :format-price="formatPrice"
+        :is-product-favorite="(productId) => shoppingStore.isProductFavorite(productId)"
+        @back="shopPageKey === 'product' ? closeProductDetail() : openShopHome()"
+        @select-category="openCategory"
+        @open-product="openProductDetail"
+        @add-to-cart="addToCart"
+        @toggle-favorite="toggleFavorite"
+        @open-cart="openCartPage"
+        @open-orders="openOrdersPage"
+        @change-page="changeCatalogPage"
+        @update:search-query="productSearchQuery = $event"
+        @submit-search="submitCatalogSearch"
+      />
+      <component
+        :is="activeOperationPageComponent"
+        v-else-if="activeOperationPageComponent && ['cart', 'orders', 'order', 'logistics'].includes(shopPageKey)"
+        :page-key="shopPageKey"
+        :service-label="activeShoppingAppLabel"
+        :language-base="languageBase"
+        :cart-items="cartLineItems"
+        :cart-quantity="cartQuantity"
+        :cart-total-label="formatLegacyMoneyQuote(cartPrimaryTotal.amountCents, cartPrimaryTotal.currency)"
+        :orders="recentOrders"
+        :selected-order="selectedOrder"
+        :logistics-rows="logisticsOrderRows"
+        :gift-enabled="giftDraft.enabled"
+        :gift-contact-id="giftDraft.contactId"
+        :gift-recipient-name="giftDraft.name"
+        :gift-recipient-options="giftRecipientOptions"
+        :product-image-url="productImageUrl"
+        :product-display-title="productDisplayTitle"
+        :product-category-icon="productCategoryIcon"
+        :format-order-total="formatOrderTotal"
+        :format-order-item-subtotal="formatOrderItemSubtotal"
+        :order-status-label="orderStatusLabel"
+        :logistics-status-label="logisticsStatusLabel"
+        :logistics-event-type-label="logisticsEventTypeLabel"
+        :format-logistics-date="formatLogisticsDate"
+        :can-complete-order="canCompleteOrder"
+        :can-cancel-order="canCancelOrder"
+        @back="shopPageKey === 'order' ? closeOrderDetail() : openShopHome()"
+        @open-cart="openCartPage"
+        @open-orders="openOrdersPage"
+        @open-logistics="openLogisticsPage"
+        @open-service="openServicePage"
+        @update-quantity="updateCartQuantity"
+        @checkout="openCheckoutPage"
+        @open-order="openOrderDetail"
+        @delete-order="removeOrder"
+        @close-order="closeOrderDetail"
+        @complete-order="markOrderCompleted"
+        @cancel-order="cancelOrder"
+        @update:gift-enabled="giftDraft.enabled = $event"
+        @update:gift-contact-id="giftDraft.contactId = $event"
+        @update:gift-recipient-name="giftDraft.name = $event"
+      />
+      <component
+        :is="activeServicePageComponent"
+        v-else-if="activeServicePageComponent && ['checkout', 'service'].includes(shopPageKey)"
+        :page-key="shopPageKey"
+        :service-label="activeShoppingAppLabel"
+        :language-base="languageBase"
+        :cart-items="cartLineItems"
+        :cart-quantity="cartQuantity"
+        :cart-total-label="formatLegacyMoneyQuote(cartPrimaryTotal.amountCents, cartPrimaryTotal.currency)"
+        :orders="recentOrders"
+        :selected-order="selectedOrder"
+        :logistics-rows="logisticsOrderRows"
+        :gift-enabled="giftDraft.enabled"
+        :gift-contact-id="giftDraft.contactId"
+        :gift-recipient-name="giftDraft.name"
+        :gift-recipient-options="giftRecipientOptions"
+        :product-image-url="productImageUrl"
+        :product-display-title="productDisplayTitle"
+        :product-category-icon="productCategoryIcon"
+        :format-order-total="formatOrderTotal"
+        :format-order-item-subtotal="formatOrderItemSubtotal"
+        :order-status-label="orderStatusLabel"
+        :logistics-status-label="logisticsStatusLabel"
+        :logistics-event-type-label="logisticsEventTypeLabel"
+        :format-logistics-date="formatLogisticsDate"
+        :can-complete-order="canCompleteOrder"
+        :can-cancel-order="canCancelOrder"
+        @back="shopPageKey === 'checkout' ? openCartPage() : openShopHome()"
+        @open-cart="openCartPage"
+        @open-orders="openOrdersPage"
+        @open-logistics="openLogisticsPage"
+        @open-service="openServicePage"
+        @place-order="commitCheckoutCart"
+        @open-order="openOrderDetail"
+      />
+      <ShoppingCollectionPage
+        v-else-if="shopPageKey === 'category'"
+        :storefront="activeStorefrontTemplate"
+        :service-label="activeShoppingAppLabel"
+        :category="activeCategory"
+        :categories="productCategoryCards"
+        :products="paginatedProducts"
+        :page="Math.min(catalogPage, catalogPageCount)"
+        :page-count="catalogPageCount"
+        :total-count="visibleProducts.length"
+        :search-query="productSearchQuery"
+        :favorites-only="favoritesOnly"
+        :cart-quantity="cartQuantity"
+        :language-base="languageBase"
+        :product-image-url="productImageUrl"
+        :product-display-title="productDisplayTitle"
+        :product-display-description="productDisplayDescription"
+        :product-category-icon="productCategoryIcon"
+        :stock-status-label="stockStatusLabel"
+        :format-price="formatPrice"
+        :is-product-favorite="(productId) => shoppingStore.isProductFavorite(productId)"
+        @back="openShopHome"
+        @select-category="openCategory"
+        @open-product="openProductDetail"
+        @add-to-cart="addToCart"
+        @toggle-favorite="toggleFavorite"
+        @open-cart="openCartPage"
+        @open-orders="openOrdersPage"
+        @change-page="changeCatalogPage"
+        @update:search-query="productSearchQuery = $event"
+        @submit-search="submitCatalogSearch"
+      />
+      <ShoppingProductPage
+        v-else-if="shopPageKey === 'product'"
+        :storefront="activeStorefrontTemplate"
+        :service-label="activeShoppingAppLabel"
+        :product="selectedProduct"
+        :related-products="relatedProducts"
+        :cart-quantity="cartQuantity"
+        :language-base="languageBase"
+        :product-image-url="productImageUrl"
+        :product-display-title="productDisplayTitle"
+        :product-display-description="productDisplayDescription"
+        :product-category-icon="productCategoryIcon"
+        :stock-status-label="stockStatusLabel"
+        :format-price="formatPrice"
+        :is-product-favorite="(productId) => shoppingStore.isProductFavorite(productId)"
+        @back="closeProductDetail"
+        @open-product="openProductDetail"
+        @add-to-cart="addToCart"
+        @toggle-favorite="toggleFavorite"
+        @open-cart="openCartPage"
+        @open-orders="openOrdersPage"
+      />
+      <div
+        v-if="['orders', 'logistics'].includes(shopPageKey) || shopPageKey === 'manage' || openedFromChatProductLink || openedFromChatGiftOrder || openedFromChatShoppingOrder || openedFromChatLogistics || openedFromAppStoreShopCreate || worldAppContext"
+        class="shopping-content px-4 py-4 space-y-4"
+      >
+        <header v-if="shopPageKey === 'manage'" class="shopping-subpage-header">
+          <button type="button" :aria-label="t('返回店铺首页', 'Back to store home')" @click="openShopHome">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          </button>
+          <div>
+            <span>{{ activeShoppingAppLabel }}</span>
+            <strong>
+              {{
+                shopPageKey === 'cart'
+                  ? t('购物车', 'Cart')
+                  : shopPageKey === 'orders'
+                    ? t('订单', 'Orders')
+                    : shopPageKey === 'order'
+                      ? t('订单详情', 'Order detail')
+                      : shopPageKey === 'logistics'
+                        ? t('物流', 'Logistics')
+                        : t('商品管理', 'Catalog manager')
+              }}
+            </strong>
+          </div>
+          <button v-if="shopPageKey !== 'cart'" type="button" :aria-label="t('打开购物车', 'Open cart')" @click="openCartPage">
+            <i class="fas fa-bag-shopping" aria-hidden="true"></i><b v-if="cartQuantity">{{ cartQuantity }}</b>
+          </button>
+          <button v-else type="button" :aria-label="t('打开订单', 'Open orders')" @click="openOrdersPage">
+            <i class="fas fa-receipt" aria-hidden="true"></i>
+          </button>
+        </header>
         <div
           v-if="activeShopEntryCoverImageUrl"
           class="sr-only"
@@ -1062,124 +1555,31 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="activeCategoryIsLogistics"
-        class="rounded-2xl border border-sky-100 bg-white p-4"
-        data-testid="shopping-logistics-panel"
+        v-if="shopPageKey === 'logistics' && logisticsMapRows.length"
+        class="shopping-owner-bridge"
+        data-testid="shopping-logistics-map-bridge"
       >
-        <div class="flex items-start justify-between gap-3">
+        <header>
           <div>
-            <p class="text-sm font-semibold">{{ t('物流跟踪', 'Logistics tracking') }}</p>
-            <p class="mt-1 text-[11px] leading-5 text-gray-500">
-              {{
-                t(
-                  '物流入口与购物品类平级，但只聚合订单配送状态；订单仍归 Shopping，提醒仍归 Calendar。',
-                  'Logistics is a peer Shopping entry, but only aggregates delivery state. Orders stay in Shopping; reminders stay in Calendar.',
-                )
-              }}
-            </p>
+            <span>SHOPPING → MAP</span>
+            <strong>{{ t('配送位置交接', 'Delivery location handoff') }}</strong>
           </div>
-          <span class="rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold text-sky-700">
-            {{ logisticsOrderRows.length }} {{ t('orders', 'orders') }}
-          </span>
-        </div>
-        <div class="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-          <div class="rounded-xl bg-orange-50 p-3 text-orange-700">
-            <p class="font-semibold">{{ t('Calendar', 'Calendar') }}</p>
-            <p class="mt-1 leading-4">{{ t('配送线索确认后成为日程和推送。', 'Delivery cues become events and pushes after confirmation.') }}</p>
-          </div>
-          <div class="rounded-xl bg-blue-50 p-3 text-blue-700">
-            <p class="font-semibold">{{ t('Map', 'Map') }}</p>
-            <p class="mt-1 leading-4">{{ t('后续可接配送地址和取件路线。', 'Can later consume delivery address and pickup routes.') }}</p>
-          </div>
-          <div class="rounded-xl bg-emerald-50 p-3 text-emerald-700">
-            <p class="font-semibold">{{ t('Chat', 'Chat') }}</p>
-            <p class="mt-1 leading-4">{{ t('店铺服务号可发送发货/到达提醒。', 'Shop service accounts can send shipment or arrival reminders.') }}</p>
-          </div>
-          <div class="rounded-xl bg-gray-50 p-3 text-gray-700">
-            <p class="font-semibold">{{ t('Wallet / Assets', 'Wallet / Assets') }}</p>
-            <p class="mt-1 leading-4">{{ t('消费和购买后拥有物仍由各自模块记录。', 'Expense and owned-object records stay in their own modules.') }}</p>
-          </div>
-        </div>
-        <div v-if="logisticsOrderRows.length === 0" class="mt-4 rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-400">
-          {{ t('暂无可跟踪物流的购物订单。', 'No Shopping orders are ready for logistics tracking yet.') }}
-        </div>
-        <div v-else class="mt-3 space-y-2">
-          <article
-            v-for="row in logisticsOrderRows"
-            :key="row.order.id"
-            class="rounded-xl border p-3"
-            :class="row.order.id === highlightedOrderId ? 'border-sky-300 bg-sky-50 shadow-sm' : 'border-sky-50 bg-sky-50/40'"
-            :data-testid="`shopping-logistics-order-${row.order.id}`"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate text-xs font-bold text-gray-950">{{ row.title }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">{{ row.total }} · {{ formatLogisticsDate(row.suggestedAt) }}</p>
-                <p class="mt-1 line-clamp-2 text-[11px] leading-4 text-gray-500">{{ row.summary }}</p>
-              </div>
-              <span
-                class="shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold"
-                :class="logisticsStatusClass(row.status)"
-                :data-testid="`shopping-logistics-status-${row.order.id}`"
-              >
-                {{ logisticsStatusLabel(row.status) }}
-              </span>
-            </div>
-            <div
-              v-if="row.latestEvent"
-              class="mt-2 rounded-lg border border-white bg-white/80 px-2.5 py-2 text-[11px] text-sky-800"
-              :data-testid="`shopping-logistics-latest-event-${row.order.id}`"
-            >
-              <p class="font-semibold">
-                {{ logisticsEventTypeLabel(row.latestEvent.type) }}
-                <span v-if="row.latestEvent.carrierName" class="font-normal text-sky-600">
-                  路 {{ row.latestEvent.carrierName }}
-                </span>
-              </p>
-              <p class="mt-1 line-clamp-2 leading-4 text-sky-600">
-                {{ row.latestEvent.summary || row.latestEvent.title }}
-              </p>
-              <p
-                v-if="row.latestEvent.trackingCode || row.latestEvent.pickupPoint || row.latestEvent.locationHint"
-                class="mt-1 text-[10px] text-sky-500"
-              >
-                {{
-                  [
-                    row.latestEvent.trackingCode,
-                    row.latestEvent.pickupPoint,
-                    row.latestEvent.locationHint,
-                  ].filter(Boolean).join(' · ')
-                }}
-              </p>
-            </div>
+          <b>{{ logisticsMapRows.length }}</b>
+        </header>
+        <div class="shopping-owner-bridge-list">
+          <article v-for="row in logisticsMapRows" :key="row.order.id">
+            <p>{{ row.title }}</p>
             <DeliveryRouteContextCard
               :context="row.mapHandoff"
               :test-id="`shopping-logistics-map-context-${row.order.id}`"
             />
-            <div class="mt-2 flex flex-wrap items-center gap-2">
-              <button
-                class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-sky-700"
-                :data-testid="`shopping-logistics-detail-${row.order.id}`"
-                @click="openOrderDetail(row.order.id)"
-              >
-                {{ t('查看订单', 'View order') }}
-              </button>
-              <button
-                v-if="row.cue?.id"
-                class="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-orange-700"
-                :data-testid="`shopping-logistics-calendar-${row.order.id}`"
-                @click="router.push('/reminders')"
-              >
-                {{ t('去提醒事项确认', 'Confirm in Reminders') }}
-              </button>
-            </div>
           </article>
         </div>
       </section>
 
       <section
         id="shopping-catalog-manager"
-        v-show="catalogManagerOpen || openedFromAppStoreShopCreate"
+        v-if="shopPageKey === 'manage'"
         class="shopping-management-panel rounded-lg bg-white border border-orange-100 p-4"
         data-testid="shopping-custom-product-form"
       >
@@ -1270,218 +1670,10 @@ onBeforeUnmount(() => {
         <p v-if="productFeedback" class="mt-2 text-[11px] text-orange-600">{{ productFeedback }}</p>
       </section>
 
-      <section id="shopping-products" class="shopping-products-section">
-        <div class="shopping-section-heading">
-          <div>
-            <p class="shopping-section-kicker">
-              {{ favoritesOnly ? t('我的收藏', 'Saved items') : activePlatformApp?.storefrontKind === 'specialty' ? t('店内精选', 'Store edit') : t('正在流行', 'Trending now') }}
-            </p>
-            <h2>{{ activeCategory?.label || t('Products', 'Products') }}</h2>
-          </div>
-          <button
-            v-if="favoritesOnly"
-            type="button"
-            class="shopping-clear-filter"
-            :aria-label="t('显示全部商品', 'Show all products')"
-            :title="t('显示全部商品', 'Show all products')"
-            @click="showAllProducts"
-          >
-            <i class="fas fa-xmark" aria-hidden="true"></i>
-          </button>
-          <span v-else>{{ visibleProducts.length }} {{ t('items', 'items') }}</span>
-        </div>
-        <div v-if="visibleProducts.length === 0" class="shopping-empty-state">
-          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-          <p>
-            {{ favoritesOnly ? t('这里还没有收藏商品。', 'No saved items here yet.') : productSearchQuery ? t('没有找到匹配商品。', 'No matching products found.') : t('这个分类还没有商品。', 'No products in this category yet.') }}
-          </p>
-        </div>
-        <div v-else class="shopping-product-grid">
-          <article
-            v-for="product in visibleProducts"
-            :key="product.id"
-            class="shopping-product-card"
-            :class="{ 'is-highlighted': product.id === highlightedProductId }"
-            :data-product-template="productStorefrontTemplate(product)"
-            :data-testid="`shopping-product-${product.id}`"
-          >
-            <div class="shopping-product-visual">
-              <img
-                v-if="productImageUrl(product)"
-                :src="productImageUrl(product)"
-                :alt="product.image?.alt || productDisplayTitle(product)"
-              />
-              <div v-else class="shopping-product-symbol" aria-hidden="true">
-                <i :class="productCategoryIcon(product)"></i>
-                <span>{{ findShoppingServicePreset(product.serviceKey)?.mark || 'S' }}</span>
-              </div>
-              <button
-                type="button"
-                class="shopping-favorite-button"
-                :class="{ 'is-favorite': shoppingStore.isProductFavorite(product.id) }"
-                :aria-label="t('收藏或取消收藏', 'Toggle favorite')"
-                :title="t('收藏或取消收藏', 'Toggle favorite')"
-                @click="toggleFavorite(product.id)"
-              >
-                <i class="fas fa-heart" aria-hidden="true"></i>
-              </button>
-            </div>
-            <div class="shopping-product-body">
-              <p class="shopping-product-brand">{{ productServiceLabel(product) }}</p>
-              <h3>{{ productDisplayTitle(product) }}</h3>
-              <p class="shopping-product-description">{{ productDisplayDescription(product) }}</p>
-              <div class="shopping-product-tags">
-                <span :class="stockStatusClass(product.stockStatus)">{{ stockStatusLabel(product.stockStatus) }}</span>
-                <span v-if="product.assetEligible">{{ t('可转资产', 'Asset-ready') }}</span>
-                <span v-else-if="product.giftable">{{ t('可赠礼', 'Giftable') }}</span>
-              </div>
-              <div class="shopping-product-footer">
-                <strong>{{ formatPrice(product) }}</strong>
-                <button
-                  type="button"
-                  class="shopping-add-button"
-                  :disabled="product.stockStatus === 'sold_out'"
-                  :aria-label="`${t('加入购物车', 'Add to cart')}: ${productDisplayTitle(product)}`"
-                  :title="t('加入购物车', 'Add to cart')"
-                  :data-testid="`shopping-add-cart-${product.id}`"
-                  @click="addToCart(product.id)"
-                >
-                  <i class="fas fa-plus" aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="shopping-cart" class="shopping-operation-section rounded-lg bg-white border border-gray-200 p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-sm font-semibold">{{ t('Cart', 'Cart') }}</p>
-            <p class="mt-1 text-[11px] text-gray-500">{{ t('确认商品和赠礼对象后提交订单。', 'Review items and gift recipient before checkout.') }}</p>
-          </div>
-          <span class="rounded-full bg-orange-50 px-3 py-1 text-[11px] font-semibold text-orange-600">
-            {{ formatLegacyMoneyQuote(cartPrimaryTotal.amountCents, cartPrimaryTotal.currency) }}
-          </span>
-        </div>
-        <div v-if="cartLineItems.length === 0" class="mt-4 rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-400">
-          {{ t('Cart is empty.', 'Cart is empty.') }}
-        </div>
-        <div v-else class="mt-3 space-y-2">
-          <article
-            v-for="line in cartLineItems"
-            :key="line.productId"
-            class="rounded-xl border border-gray-100 p-3"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate text-xs font-semibold">{{ productDisplayTitle(line.product) }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">
-                  {{ formatLegacyMoneyQuote(line.subtotalCents, line.currency) }}
-                </p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button class="w-7 h-7 rounded-full bg-gray-100 text-xs" :aria-label="t('减少数量', 'Decrease quantity')" @click="updateCartQuantity(line.productId, -1)">-</button>
-                <span class="w-5 text-center text-xs font-semibold">{{ line.quantity }}</span>
-                <button class="w-7 h-7 rounded-full bg-gray-100 text-xs" :aria-label="t('增加数量', 'Increase quantity')" @click="updateCartQuantity(line.productId, 1)">+</button>
-              </div>
-            </div>
-          </article>
-          <div class="rounded-xl border border-pink-100 bg-pink-50/50 p-3" data-testid="shopping-gift-recipient-panel">
-            <label class="flex items-center gap-2 text-[11px] font-semibold text-pink-700">
-              <input v-model="giftDraft.enabled" type="checkbox" data-testid="shopping-gift-enabled" />
-              {{ t('Send as gift to a contact', 'Send as gift to a contact') }}
-            </label>
-            <div v-if="giftDraft.enabled" class="mt-2 grid grid-cols-1 gap-2">
-              <select
-                v-model="giftDraft.contactId"
-                class="rounded-xl border border-pink-100 bg-white px-3 py-2 text-xs outline-none"
-                data-testid="shopping-gift-contact"
-              >
-                <option value="">{{ t('Manual recipient', 'Manual recipient') }}</option>
-                <option v-for="contact in giftRecipientOptions" :key="contact.id" :value="String(contact.id)">
-                  {{ contact.name }}
-                </option>
-              </select>
-              <input
-                v-model="giftDraft.name"
-                class="rounded-xl border border-pink-100 bg-white px-3 py-2 text-xs outline-none"
-                data-testid="shopping-gift-name"
-                :placeholder="t('Recipient name', 'Recipient name')"
-              />
-              <p class="text-[10px] leading-4 text-pink-600">{{ t('收件人会随订单保存，付款记录仍需在 Wallet 中确认。', 'The recipient is saved with the order; expense recording is confirmed later in Wallet.') }}</p>
-            </div>
-          </div>
-          <button
-            class="w-full rounded-xl bg-gray-950 py-2.5 text-sm font-semibold text-white"
-            data-testid="shopping-checkout"
-            @click="checkoutCart"
-          >
-            {{ t('去结算', 'Checkout') }}
-          </button>
-        </div>
-      </section>
-
-      <section id="shopping-orders" class="shopping-operation-section rounded-lg bg-white border border-gray-200 p-4">
-        <div class="flex items-center justify-between gap-3">
-          <p class="text-sm font-semibold">{{ t('Recent orders', 'Recent orders') }}</p>
-          <span class="text-[11px] text-gray-400">{{ orderCount }}</span>
-        </div>
-        <div v-if="recentOrders.length === 0" class="mt-4 rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-400">
-          {{ t('No orders yet.', 'No orders yet.') }}
-        </div>
-        <div v-else class="mt-3 space-y-2">
-          <article
-            v-for="order in recentOrders"
-            :key="order.id"
-            class="rounded-xl border p-3"
-            :class="order.id === highlightedOrderId ? 'border-rose-300 bg-rose-50 shadow-sm' : 'border-gray-100'"
-            :data-testid="`shopping-order-${order.id}`"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold">{{ order.itemCount }} {{ t('items', 'items') }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">
-                  {{ formatOrderTotal(order) }} · {{ orderStatusLabel(order.status) }}
-                </p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button
-                  class="rounded-full bg-gray-900 px-3 py-1.5 text-[11px] font-semibold text-white"
-                  :data-testid="`shopping-open-order-detail-${order.id}`"
-                  @click="openOrderDetail(order.id)"
-                >
-                  {{ t('Details', 'Details') }}
-                </button>
-                <button class="text-[11px] text-gray-400" @click="removeOrder(order.id)">
-                  {{ t('Delete', 'Delete') }}
-                </button>
-              </div>
-            </div>
-            <p
-              v-if="order.id === highlightedOrderId"
-              class="mt-2 inline-flex rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-600"
-              :data-testid="`shopping-highlighted-order-${order.id}`"
-            >
-              {{ t('Chat gift order context', 'Chat gift order context') }}
-            </p>
-            <p class="mt-2 line-clamp-1 text-[11px] text-gray-500">
-              {{ order.items.map((item) => item.title).join(' / ') }}
-            </p>
-            <p
-              v-if="order.giftRecipient?.name"
-              class="mt-1 text-[11px] font-semibold text-pink-600"
-              :data-testid="`shopping-order-gift-${order.id}`"
-            >
-              {{ t('Gift recipient', 'Gift recipient') }}: {{ order.giftRecipient.name }}
-            </p>
-          </article>
-        </div>
-      </section>
 
       <section
-        v-if="assetTransferSuggestions.length > 0"
-        class="shopping-operation-section rounded-lg bg-white border border-cyan-100 p-4"
+        v-if="shopPageKey === 'orders' && assetTransferSuggestions.length > 0"
+        class="shopping-owner-bridge rounded-lg border border-cyan-100 p-4"
       >
         <div class="flex items-start justify-between gap-3">
           <div>
@@ -1523,8 +1715,8 @@ onBeforeUnmount(() => {
       </section>
 
       <section
-        v-if="walletExpenseSuggestions.length > 0"
-        class="shopping-operation-section rounded-lg bg-white border border-emerald-100 p-4"
+        v-if="shopPageKey === 'orders' && walletExpenseSuggestions.length > 0"
+        class="shopping-owner-bridge rounded-lg border border-emerald-100 p-4"
       >
         <div class="flex items-start justify-between gap-3">
           <div>
@@ -1581,167 +1773,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <nav
-      v-if="activePlatformApp && !activeCategoryIsLogistics"
-      class="shopping-bottom-nav"
-      :aria-label="t('店内导航', 'Store navigation')"
-    >
-      <button type="button" :class="{ 'is-active': !favoritesOnly }" @click="showAllProducts">
-        <i class="fas fa-store" aria-hidden="true"></i>
-        <span>{{ t('逛店', 'Shop') }}</span>
-      </button>
-      <button type="button" :class="{ 'is-active': favoritesOnly }" @click="showFavoriteProducts">
-        <i class="fas fa-heart" aria-hidden="true"></i>
-        <span>{{ t('收藏', 'Saved') }}</span>
-      </button>
-      <button type="button" @click="scrollToShoppingSection('shopping-cart')">
-        <span class="shopping-bottom-icon">
-          <i class="fas fa-bag-shopping" aria-hidden="true"></i>
-          <small v-if="cartQuantity">{{ cartQuantity }}</small>
-        </span>
-        <span>{{ t('购物车', 'Bag') }}</span>
-      </button>
-      <button type="button" @click="scrollToShoppingSection('shopping-orders')">
-        <i class="fas fa-receipt" aria-hidden="true"></i>
-        <span>{{ t('订单', 'Orders') }}</span>
-      </button>
-    </nav>
 
-    <div
-      v-if="selectedOrder"
-      class="fixed inset-0 z-40 flex items-end bg-black/35 px-4 pb-4"
-      data-testid="shopping-order-detail-panel"
-      @click.self="closeOrderDetail"
-    >
-      <section class="w-full rounded-t-3xl bg-white p-5 shadow-2xl">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="text-base font-black text-gray-950">{{ t('Order details', 'Order details') }}</p>
-            <p class="mt-1 truncate text-[11px] text-gray-500">{{ selectedOrder.id }}</p>
-          </div>
-          <button
-            class="rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold text-gray-600"
-            data-testid="shopping-close-order-detail"
-            @click="closeOrderDetail"
-          >
-            {{ t('Close', 'Close') }}
-          </button>
-        </div>
-
-        <div class="mt-4 grid grid-cols-2 gap-2 text-[11px]">
-          <div class="rounded-2xl bg-orange-50 p-3">
-            <p class="text-orange-500">{{ t('Total', 'Total') }}</p>
-            <p class="mt-1 font-bold text-orange-800" data-testid="shopping-order-detail-total">
-              {{ formatOrderTotal(selectedOrder) }}
-            </p>
-          </div>
-          <div class="rounded-2xl bg-gray-50 p-3">
-            <p class="text-gray-500">{{ t('Status', 'Status') }}</p>
-            <p
-              class="mt-1 inline-flex rounded-full px-2 py-0.5 font-bold"
-              :class="orderStatusClass(selectedOrder.status)"
-              data-testid="shopping-order-detail-status"
-            >
-              {{ orderStatusLabel(selectedOrder.status) }}
-            </p>
-          </div>
-        </div>
-
-        <div class="mt-4 space-y-2">
-          <article
-            v-for="item in selectedOrder.items"
-            :key="item.id"
-            class="rounded-2xl border border-gray-100 p-3"
-            :data-testid="`shopping-order-detail-item-${item.productId}`"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate text-xs font-bold text-gray-950">{{ item.title }}</p>
-                <p class="mt-1 text-[11px] text-gray-500">
-                  {{ item.quantity }} × {{ formatSourceLegacyMoney(item.unitPriceCents, item.currency) }}
-                </p>
-              </div>
-              <span class="shrink-0 text-xs font-bold text-gray-900">
-                {{ formatOrderItemSubtotal(item) }}
-              </span>
-            </div>
-            <div class="mt-2 flex flex-wrap gap-1.5">
-              <span
-                v-if="item.giftable"
-                class="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] font-semibold text-pink-600"
-              >
-                {{ t('Giftable', 'Giftable') }}
-              </span>
-              <span
-                v-if="item.assetEligible"
-                class="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold text-cyan-700"
-              >
-                {{ t('Asset-ready', 'Asset-ready') }}
-              </span>
-            </div>
-          </article>
-        </div>
-
-        <div class="mt-4 rounded-2xl border border-pink-100 bg-pink-50/60 p-3 text-[11px]">
-          <p class="font-bold text-pink-700">{{ t('Gift context', 'Gift context') }}</p>
-          <p class="mt-1 text-pink-600" data-testid="shopping-order-detail-gift">
-            {{
-              selectedOrder.giftRecipient?.name
-                ? `${selectedOrder.giftRecipient.name} · ${selectedOrder.giftRecipient.sourceModule || 'shopping'}`
-                : t('No gift recipient attached.', 'No gift recipient attached.')
-            }}
-          </p>
-        </div>
-
-        <div class="mt-4 grid grid-cols-2 gap-2">
-          <button
-            class="rounded-2xl px-3 py-2.5 text-xs font-bold"
-            :class="canCompleteOrder(selectedOrder) ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-400'"
-            :disabled="!canCompleteOrder(selectedOrder)"
-            data-testid="shopping-order-detail-complete"
-            @click="markOrderCompleted(selectedOrder.id)"
-          >
-            {{ t('Mark completed', 'Mark completed') }}
-          </button>
-          <button
-            class="rounded-2xl px-3 py-2.5 text-xs font-bold"
-            :class="canCancelOrder(selectedOrder) ? 'bg-rose-50 text-rose-600' : 'bg-gray-100 text-gray-400'"
-            :disabled="!canCancelOrder(selectedOrder)"
-            data-testid="shopping-order-detail-cancel"
-            @click="cancelOrder(selectedOrder.id)"
-          >
-            {{ t('Cancel order', 'Cancel order') }}
-          </button>
-        </div>
-
-        <p class="mt-3 rounded-2xl bg-gray-50 p-3 text-[11px] leading-4 text-gray-500">
-          {{
-            t(
-              'Shopping owns order status. Completing or cancelling an order closes the Calendar delivery cue; Chat, Wallet, Assets, and Calendar only receive explicit handoffs.',
-              'Shopping owns order status. Completing or cancelling an order closes the Calendar delivery cue; Chat, Wallet, Assets, and Calendar only receive explicit handoffs.',
-            )
-          }}
-        </p>
-
-        <div class="mt-4 flex gap-2">
-          <button
-            v-if="sourceChatId"
-            class="flex-1 rounded-2xl bg-gray-950 py-2.5 text-sm font-bold text-white"
-            data-testid="shopping-order-detail-return-chat"
-            @click="goBackToChat"
-          >
-            {{ t('Return to Chat', 'Return to Chat') }}
-          </button>
-          <button
-            class="flex-1 rounded-2xl border border-gray-200 bg-white py-2.5 text-sm font-bold text-gray-700"
-            data-testid="shopping-order-detail-delete"
-            @click="removeOrder(selectedOrder.id)"
-          >
-            {{ t('Delete order', 'Delete order') }}
-          </button>
-        </div>
-      </section>
-    </div>
   </div>
 </template>
 
@@ -1808,6 +1840,56 @@ onBeforeUnmount(() => {
   --shop-line: rgba(109, 150, 29, 0.18);
 }
 
+.shopping-view-shell[data-storefront='member_warehouse'] {
+  --shop-bg: #edf0f4;
+  --shop-surface: #ffffff;
+  --shop-ink: #172033;
+  --shop-muted: #6f7989;
+  --shop-accent: #142d58;
+  --shop-accent-2: #f4b719;
+  --shop-line: rgba(20, 45, 88, 0.2);
+}
+
+.shopping-view-shell[data-storefront='neighborhood_convenience'] {
+  --shop-bg: #f6f3fa;
+  --shop-surface: #ffffff;
+  --shop-ink: #25142f;
+  --shop-muted: #75657c;
+  --shop-accent: #672b8f;
+  --shop-accent-2: #9bc53d;
+  --shop-line: rgba(103, 43, 143, 0.18);
+}
+
+.shopping-view-shell[data-storefront='fashion_catalog'] {
+  --shop-bg: #f3f3f3;
+  --shop-surface: #ffffff;
+  --shop-ink: #0a0a0a;
+  --shop-muted: #717171;
+  --shop-accent: #111111;
+  --shop-accent-2: #b7ff34;
+  --shop-line: rgba(0, 0, 0, 0.18);
+}
+
+.shopping-view-shell[data-storefront='buyer_atelier'] {
+  --shop-bg: #e8e2d8;
+  --shop-surface: #f9f7f2;
+  --shop-ink: #27221f;
+  --shop-muted: #716a63;
+  --shop-accent: #5b1f28;
+  --shop-accent-2: #be8c90;
+  --shop-line: rgba(91, 31, 40, 0.2);
+}
+
+.shopping-view-shell[data-storefront='luxury_hall'] {
+  --shop-bg: #12110f;
+  --shop-surface: #1c1a17;
+  --shop-ink: #eee7db;
+  --shop-muted: #aaa196;
+  --shop-accent: #bfa36b;
+  --shop-accent-2: #eee7db;
+  --shop-line: rgba(191, 163, 107, 0.28);
+}
+
 .shopping-scroll {
   scroll-behavior: smooth;
   background: var(--shop-bg);
@@ -1816,374 +1898,147 @@ onBeforeUnmount(() => {
 .shopping-content {
   max-width: 760px;
   margin: 0 auto;
-  padding-bottom: 92px;
+  padding-bottom: 32px;
   color: #111827;
 }
 
-.shopping-products-section {
-  scroll-margin-top: 12px;
-  padding: 10px 0 4px;
-}
-
-.shopping-section-heading {
-  min-height: 48px;
-  margin-bottom: 13px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--shop-ink);
-}
-
-.shopping-section-heading h2 {
-  margin: 2px 0 0;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 23px;
-  line-height: 1.05;
-  letter-spacing: 0;
-}
-
-.shopping-section-heading > span,
-.shopping-section-kicker {
-  margin: 0;
-  color: var(--shop-muted);
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0;
-}
-
-.shopping-clear-filter {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--shop-line);
-  border-radius: 50%;
-  color: var(--shop-ink);
-  background: var(--shop-surface);
-}
-
-.shopping-product-grid {
+.shopping-subpage-header {
+  min-height: 64px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  align-items: center;
   gap: 12px;
-}
-
-.shopping-product-card {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--shop-line);
-  border-radius: 7px;
-  color: var(--shop-ink);
-  background: var(--shop-surface);
-  transition: border-color 160ms ease, transform 160ms ease;
-}
-
-.shopping-product-card.is-highlighted {
-  border-color: var(--shop-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--shop-accent) 22%, transparent);
-}
-
-.shopping-product-visual {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
   border-bottom: 1px solid var(--shop-line);
-  background: #efe7da;
 }
 
-.shopping-product-visual img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-
-.shopping-product-symbol {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  background: #ed4b2d;
-}
-
-.shopping-product-symbol::before,
-.shopping-product-symbol::after {
-  content: '';
-  position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.52);
-}
-
-.shopping-product-symbol::before {
-  width: 66%;
-  height: 66%;
-  transform: rotate(7deg);
-}
-
-.shopping-product-symbol::after {
-  width: 36%;
-  height: 36%;
-  transform: rotate(-8deg);
-}
-
-.shopping-product-symbol i {
-  z-index: 1;
-  font-size: 31px;
-}
-
-.shopping-product-symbol span {
-  position: absolute;
-  right: 8px;
-  bottom: 7px;
-  z-index: 1;
-  font-size: 9px;
-  font-weight: 900;
-}
-
-[data-product-template='tech_catalog'] .shopping-product-symbol {
-  color: #ffffff;
-  background: #050505;
-}
-
-[data-product-template='fresh_market'] .shopping-product-symbol {
-  color: #ffffff;
-  background: #5f0080;
-}
-
-[data-product-template='fashion_editorial'] .shopping-product-symbol {
-  color: #ffda05;
-  background: #171a20;
-}
-
-[data-product-template='room_planner'] .shopping-product-symbol {
-  color: #ffffff;
-  background: #0058a3;
-}
-
-[data-product-template='care_lab'] .shopping-product-symbol {
-  color: #ffffff;
-  background: #6d961d;
-}
-
-.shopping-favorite-button {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(17, 24, 39, 0.12);
+.shopping-subpage-header > button {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--shop-line);
   border-radius: 50%;
-  color: #b4b7bc;
-  background: rgba(255, 255, 255, 0.9);
-}
-
-.shopping-favorite-button.is-favorite {
-  color: #d94050;
-}
-
-.shopping-product-body {
-  min-height: 174px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-}
-
-.shopping-product-brand {
-  margin: 0;
-  color: var(--shop-accent);
-  font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.shopping-product-body h3 {
-  min-height: 36px;
-  margin: 5px 0 0;
-  display: -webkit-box;
-  overflow: hidden;
   color: var(--shop-ink);
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 15px;
-  line-height: 1.22;
-  letter-spacing: 0;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.shopping-product-description {
-  min-height: 32px;
-  margin: 7px 0 0;
-  display: -webkit-box;
-  overflow: hidden;
-  color: var(--shop-muted);
-  font-size: 10px;
-  line-height: 1.55;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.shopping-product-tags {
-  min-height: 20px;
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.shopping-product-tags span {
-  padding: 3px 6px;
-  border-radius: 3px;
-  color: #4b5563;
-  background: #f3f4f6;
-  font-size: 8px;
-  font-weight: 800;
-}
-
-.shopping-product-footer {
-  min-height: 38px;
-  margin-top: auto;
-  padding-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.shopping-product-footer strong {
-  overflow-wrap: anywhere;
-  color: var(--shop-ink);
-  font-size: 12px;
-  line-height: 1.25;
-}
-
-.shopping-add-button {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  color: var(--shop-bg);
-  background: var(--shop-ink);
-}
-
-.shopping-add-button:disabled {
-  opacity: 0.35;
-}
-
-.shopping-empty-state {
-  min-height: 170px;
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  border: 1px dashed var(--shop-line);
-  border-radius: 7px;
-  color: var(--shop-muted);
-  text-align: center;
   background: var(--shop-surface);
 }
 
-.shopping-empty-state i {
-  font-size: 24px;
+.shopping-subpage-header > button b {
+  position: absolute;
+  top: -4px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: white;
+  background: var(--shop-accent);
+  font-size: 9px;
 }
 
-.shopping-empty-state p {
-  margin: 0;
-  font-size: 11px;
+.shopping-subpage-header > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.shopping-operation-section,
+.shopping-subpage-header span {
+  overflow: hidden;
+  color: var(--shop-muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shopping-subpage-header strong {
+  color: var(--shop-ink);
+  font-size: 15px;
+}
+
 .shopping-management-panel {
   scroll-margin-top: 12px;
 }
 
-.shopping-bottom-nav {
-  position: relative;
-  z-index: 20;
-  min-height: calc(62px + env(safe-area-inset-bottom));
-  padding: 6px 12px max(7px, env(safe-area-inset-bottom));
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: 1px solid var(--shop-line);
-  background: color-mix(in srgb, var(--shop-surface) 94%, transparent);
-  backdrop-filter: blur(16px);
+.shopping-owner-bridge {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  color: var(--shop-ink);
+  background: var(--shop-surface);
+  border-color: var(--shop-line);
 }
 
-.shopping-bottom-nav button {
-  min-width: 0;
-  min-height: 48px;
+.shopping-owner-bridge > header {
+  min-height: 58px;
+  padding: 12px 14px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--shop-line);
+}
+
+.shopping-owner-bridge > header span,
+.shopping-owner-bridge > header strong {
+  display: block;
+}
+
+.shopping-owner-bridge > header span {
+  color: var(--shop-accent);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.shopping-owner-bridge > header strong {
+  margin-top: 4px;
+  color: var(--shop-ink);
+  font-size: 13px;
+}
+
+.shopping-owner-bridge > header b {
+  min-width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--shop-surface);
+  background: var(--shop-accent);
+  font-size: 9px;
+}
+
+.shopping-owner-bridge-list {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.shopping-owner-bridge-list > article {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--shop-line);
+  background: color-mix(in srgb, var(--shop-surface) 92%, var(--shop-accent) 8%);
+}
+
+.shopping-owner-bridge-list > article > p {
+  margin: 0 0 8px;
+  overflow: hidden;
   color: var(--shop-muted);
   font-size: 9px;
   font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.shopping-bottom-nav button > i,
-.shopping-bottom-icon > i {
-  font-size: 16px;
-}
-
-.shopping-bottom-nav button.is-active {
-  color: var(--shop-accent);
-}
-
-.shopping-bottom-icon {
-  position: relative;
-}
-
-.shopping-bottom-icon small {
-  position: absolute;
-  top: -8px;
-  right: -12px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: #ffffff;
-  background: #dc3f45;
-  font-size: 8px;
-  font-weight: 900;
-}
-
-.shopping-clear-filter:focus-visible,
-.shopping-favorite-button:focus-visible,
-.shopping-add-button:focus-visible,
-.shopping-bottom-nav button:focus-visible {
-  outline: 3px solid var(--shop-accent-2);
-  outline-offset: 2px;
-}
-
-@media (min-width: 680px) {
-  .shopping-product-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 350px) {
-  .shopping-product-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 390px) {
+  .shopping-content {
+    padding-inline: 10px;
   }
 
-  .shopping-product-visual {
-    aspect-ratio: 16 / 10;
+  .shopping-owner-bridge {
+    border-radius: 0;
   }
 }
 
@@ -2191,9 +2046,12 @@ onBeforeUnmount(() => {
   .shopping-scroll {
     scroll-behavior: auto;
   }
+}
 
-  .shopping-product-card {
-    transition: none;
-  }
+</style>
+
+<style>
+.app-shell[data-statusbar='on'] .shopping-view-shell .shopping-scroll {
+  padding-top: 2rem;
 }
 </style>
