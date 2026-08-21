@@ -1,6 +1,6 @@
 # SchatPhone PM Status And TODO
 
-Updated: 2026-08-20
+Updated: 2026-08-21
 
 > **PM status mirror / 产品状态镜像**
 >
@@ -24,7 +24,7 @@ The current work is concentrated in six areas:
 3. one ordinary daily-life cross-module loop;
 4. deployed PWA, backup, external-protection, and true-device release proof; hosted direct-provider and optional compatibility-proxy Chat are proven.
 5. roadmap 4.14 Event Experience, with EVE-2A's reusable contracts/fixtures, EVE-2B's durable runtime, EVE-2C's first Map/K-pop vertical slice, and EVE-3's World Hub Event Notebook complete; additional hosts/content under EVE-4 and Mini Scene/media expansion under EVE-5 remain separately gated.
-6. roadmap 4.5-CMG continuity governance: one shared experience instead of row-counted pseudo-memories, one current relationship truth, confirmed durable saves, permanent committed history with bounded reading, and the audited direct defects. `CMG-00` has frozen the plan; `CMG-06` completed the Relationship Runtime retention/migration and Contacts paging slice on 2026-08-21.
+6. roadmap 4.5-CMG continuity governance: one shared experience instead of row-counted pseudo-memories, one current relationship truth, confirmed durable saves, permanent committed history with bounded reading, and the audited direct defects. `CMG-00` has frozen the plan; `CMG-06` completed the Relationship Runtime retention/migration and Contacts paging slice on 2026-08-21; `CMG-07` completed Event Instance V2 retention and recovery on 2026-08-21 at `d8b46fc`.
 
 The 2026-07-22 product-finish review intentionally moves personal R2, broad storage migration, hotspot decomposition, and secondary-module depth out of the first usable-product critical path. The product now advances by user-verifiable milestones rather than by accumulating architecture gates.
 
@@ -61,7 +61,7 @@ Normal use should stay inside the owning apps. World Hub, diagnostics, and advan
 | Music | `Focused first slice with Chat and Map callers, provider proof staged` | consumer playback, library, queue, search, user-owned generic JSON/ChKSz providers, no-key Radio Browser HTTPS/MP3 live radio, device-local excluded keys, Home/App Store entry, global floating player, Chat track sharing, and active-journey Map music/radio are implemented; live-station uptime remains external, while real-provider/CORS, true-device media, Chat search, and external Map queue requests remain |
 | Text To Speech | `Temporary preview V1 deployed, provider quality proof staged` | one runtime contract supports Cloudflare Workers AI MeloTTS and device-key MiniMax Chinese preview; the bounded Cloudflare Worker route is deployed, configuration/keys are backup-excluded, preview audio is runtime-only, and stable provider playback plus Chat read-aloud/durable voice messages remain unimplemented |
 | Assets / Stock | `Usable but shallow` | persisted MVPs, not yet headline product fantasies |
-| Event Runtime / World Hub | `Partial; continuity governance active` | the approved runtime and World Hub review remain, while 4.5-CMG must remove the 240-instance silent truncation and prove long-running owner history before broader event expansion |
+| Event Runtime / World Hub | `Partial; CMG-07 done` | the approved runtime and World Hub review remain; Event Instance V2 now retains long-running owner history through the V7 carrier while event logs and other bounded collections keep their separate limits |
 | Visual system | `Partial` | several polished surfaces exist, but the product is not visually final end to end |
 | QA / release | `Strong local and hosted baseline; device proof partial` | remote Pages/direct-provider Chat and the Vercel/Cloudflare `a1418ed` restricted relays pass, including real provider model-list and Chat smoke through both backends; external checks, installed PWA, and true-device QA remain open |
 
@@ -197,7 +197,7 @@ This is the only current product-completion sequence. It does not require a broa
 
 1. `CMG-00 DONE 2026-08-20`: freeze the product model, confirmed defects, dependency order, and two-PC status protocol in the live roadmap;
 2. start only with `DCF-05` deterministic persistence-test completion and `CMG-01` executable shared-experience fixtures;
-3. require confirmed save results before removing any 500/240/120 limit or reporting durable success; `CMG-06` completed the first reserved retention slice with migration, failure, reopen, restore, and page evidence;
+3. require confirmed save results before removing any 500/240/120 limit or reporting durable success; `CMG-06` and `CMG-07` completed the first two reserved retention slices with migration, failure, reopen, restore, and bounded-reading evidence;
 4. keep detailed status only in roadmap 4.5-CMG and the current execution record in the module-architecture handoff.
 
 ### P0: Security And Toolchain Maintenance After The Storage Contract
