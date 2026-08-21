@@ -43,12 +43,20 @@ The validator fails closed when identity, grade, runtime location, source page, 
 
 ## Detail Slots
 
-The place focus card owns four stable visual positions:
+The place focus card owns four media responsibilities. The current pilot has one
+runtime `hero` projection for every overview, but that projection does not freeze
+the final presentation ratio or require the overview and detail levels to reuse the
+same crop.
 
-1. `hero frame`: every overview has the same image slot; the normal card uses a wide `16:7` crop and short phone view uses `16:5` so actions remain visible. Reviewed photo/reconstruction uses a `1600 x 900` WebP derivative, while category fallback uses a reviewed generic visual asset.
-2. `authenticity badge`: always names the representation before the user interprets it.
-3. `truth note`: distinguishes exact place, surrounding area, generated reconstruction, and generic category imagery.
-4. `image-information disclosure`: a compact collapsed row that keeps author, source page, license link, truth note, and disclosed crop/conversion change reachable without competing with place content.
+1. `overview image`: a small, recognition-oriented image paired with category and a one-sentence introduction. Its final aspect ratio, crop, focal-point rule, and whether it needs a dedicated derivative remain open until the calibration batch is reviewed on desktop and mobile.
+2. `detail image`: a larger image for place inspection and atmosphere. It may reuse the source asset or use a distinct derivative, but its final aspect ratio, crop, focal-point rule, and height remain open until the same calibration evidence is accepted.
+3. `authenticity badge`: always names the representation before the user interprets it.
+4. `truth note` and `image-information disclosure`: distinguish exact place, surrounding area, generated reconstruction, and generic category imagery while keeping author, source page, license link, and disclosed source conversion reachable without competing with place content.
+
+The first pilot used a `1600 x 900` WebP derivative and tested wide overview
+presentation. That is a derivative-processing and evidence baseline for the pilot,
+not a global UI rule. A future batch may produce separate overview/detail derivatives
+or use a different crop when the source composition requires it.
 
 Image failure returns to the same category fallback without shifting the sheet hierarchy or hiding place actions.
 
@@ -89,7 +97,7 @@ Reject:
 2. Download the untouched candidate into `output/imagegen/<batch>/source-candidates/`. This directory is local and Git-ignored; runtime code must never reference it.
 3. Record source bytes and SHA-256, author, license, source page, access date, and intended truth grade.
 4. Review identity, location, license, attribution, privacy, architecture/FOP concerns, logos, and crop safety. Reject first; do not repair a false identity with copy.
-5. Produce a separate runtime derivative. The pilot performs EXIF transpose, a `16:9` crop, sRGB conversion, and WebP compression only.
+5. Produce a separate runtime derivative. The pilot performs EXIF transpose, a `16:9` crop, sRGB conversion, and WebP compression only. This describes the pilot batch; later batches may use different dimensions or more than one derivative after media calibration.
 6. Record derivative dimensions, bytes, SHA-256, and disclosed changes.
 7. Publish only reviewed runtime derivatives to `schatphone-assets/` through a confirmed asset upload list. Source candidates stay out of runtime.
 8. Add the verified public asset to the media registry and run schema, component, full catalog, and browser checks.

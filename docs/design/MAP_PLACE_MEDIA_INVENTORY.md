@@ -12,6 +12,11 @@ This inventory separates three different questions:
 
 The runtime fallback already prevents empty cards. It does not count as place-specific media and must not be presented as the real appearance of a place.
 
+This is an acquisition and review inventory, not a final card-layout contract. The
+counts below describe how many place-specific media decisions remain. They do not
+decide whether an approved source is shown as an overview thumbnail, a detail image,
+or both, and they do not freeze aspect ratio, crop, focal point, or derivative count.
+
 ## Count Baseline
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
@@ -67,6 +72,28 @@ These records describe a district, residential area, street cluster, privacy-sen
 Current usable coverage inside this group is two reviewed grade-B images: the Myeongdong street view for Myeongdong Kyoja and the Sillim residential-area view. This leaves 25 acquisition decisions in this group.
 
 An exact licensed photo may still replace an area target when the source page proves the branch or facade and the image passes privacy, trademark, architecture, and crop review. The reverse downgrade is also valid: a truthful grade B is preferable to an uncertain grade A.
+
+## Media Adaptation Record
+
+Before the next acquisition batch is accepted, each selected source should receive a
+small adaptation record in the working batch evidence. The record should answer the
+same questions for overview and detail so a source is judged by its actual UI role:
+
+| Field | Required decision |
+| --- | --- |
+| Source and truth grade | exact photo, area atmosphere, generated reconstruction, or category fallback |
+| Source composition | subject, orientation, subject position, and likely focal point |
+| Overview fit | recognition at the small card size; safe crop and legible truth label |
+| Detail fit | address/description remain discoverable beside or below the large image |
+| Derivative plan | one shared derivative or separate overview/detail derivatives |
+| Failure fallback | category fallback behavior without changing place identity |
+| Evidence | desktop and mobile screenshots plus source/license/hash references |
+
+The first calibration batch should cover representative exact, area, generated or
+fictional, fallback, failed-load, and player-place states before a shared crop rule is
+selected. A source can be approved for one level and deferred for the other; this
+does not change the place-specific completion count until the accepted media record is
+complete.
 
 ## Generated-image Plan
 
