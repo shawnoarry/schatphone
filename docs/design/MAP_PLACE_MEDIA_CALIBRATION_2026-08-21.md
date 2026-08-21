@@ -42,20 +42,22 @@ results are kept separate from the pilot derivatives and are not accepted media 
 | --- | --- | ---: | --- | --- |
 | 2026-08-21-01 | Gwanghwamun Square, Seoul City Hall, N Seoul Tower, Dongdaemun Design Plaza, Lotte World Tower, Incheon Airport T1, Gimpo Airport, Gangnam Station, Seoul Express Bus Terminal, Yongsan Station | 80 | `thumbnail_screening_only`; a small subset has local contact-sheet thumbnails | `output/imagegen/map-place-media-search-20260821-batch-01/` |
 | 2026-08-21-02 | National Assembly, 63 Square, Gocheok Sky Dome, National Museum of Korea, The Hyundai Seoul, Times Square Seoul, Lotte Department Store Main, Shinsegae Gangnam | 56 | `thumbnail_screening_only`; source pages and remote thumbnails only while Commons is rate-limited | `output/imagegen/map-place-media-search-20260821-batch-02/` |
+| 2026-08-21-03 | KSPO Dome, Galleria Luxury Hall, Hyundai Department Store Apgujeong, Olympic Park | 23 | `thumbnail_screening_only`; source pages and remote thumbnails only | `output/imagegen/map-place-media-search-20260821-batch-03/` |
 
 Every record includes a durable Commons file page, original URL, remote thumbnail URL,
 dimensions, MIME, source SHA-1, author, license, and access metadata. The records are
 candidate discovery evidence only: matching titles do not establish place identity,
 and no candidate is allowed into `src/lib/map-place-media.js` or the asset registry.
-The second batch's remaining queries (KSPO Dome, Galleria, Hyundai Apgujeong, Lotte
-Avenuel, Olympic Park, Yeouido Hangang Park, Seoul National University, Yonsei,
-Korea University, Four Seasons, Shilla, and Signiel) were deferred after the Commons
-API returned `429`; this is a retry queue, not a negative search result.
+The second batch initially deferred twelve queries after the Commons API returned
+`429`. Batch 03 retried KSPO Dome, Galleria, Hyundai Apgujeong, and Olympic Park and
+added 23 more provisional records. Lotte Avenuel currently has no Commons text-search
+hit, Yeouido Hangang Park needs a metadata retry, and the remaining university/hotel
+queries are still queued; none of those states is a negative media decision.
 
 The working search archive is Git-ignored. Once the source host is available again,
 the retry should restore thumbnails for visual review, then download untouched
 originals only for candidates that pass identity, privacy, architecture, crop, and
-license checks. Until that review is complete, all 136 records remain provisional and
+license checks. Until that review is complete, all 159 records remain provisional and
 the seven-place-specific Seoul completion count is unchanged.
 
 ## Calibration Matrix

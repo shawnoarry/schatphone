@@ -30,15 +30,17 @@ Current validation is included in the package-level results above. The focused m
 
 The 2026-08-21 media calibration pass re-downloaded the seven reviewed Seoul derivatives from the registered public URLs and matched every configured byte count and SHA-256. It then produced 16 Git-ignored deterministic candidates under `output/imagegen/map-place-media-calibration-20260821/candidates/`: one `16:5` overview and one `16:7` detail crop for each pilot image and the fictional/category fallback. `docs/design/MAP_PLACE_MEDIA_CALIBRATION_2026-08-21.md` records the provisional focal guidance and the review classification gate. This is evidence only: no runtime media registry, derivative dimensions, or final crop rule changed. The next gate is to classify each candidate as keep, area-only, defer, or re-source/re-generate before adding accepted focal metadata or separate runtime derivatives.
 
-The catalog search has now started for the other place pins. Two Wikimedia Commons discovery
-batches retain 136 provisional records across 18 Seoul places under the Git-ignored
+The catalog search has now started for the other place pins. Three Wikimedia Commons discovery
+batches retain 159 provisional records across 22 Seoul places under the Git-ignored
 `output/imagegen/map-place-media-search-20260821-batch-01/` and
-`output/imagegen/map-place-media-search-20260821-batch-02/` archives. Each record keeps a
+`output/imagegen/map-place-media-search-20260821-batch-02/` and
+`output/imagegen/map-place-media-search-20260821-batch-03/` archives. Each record keeps a
 source page, original and thumbnail URLs, dimensions, source SHA-1, author, and license;
 none is a runtime asset or an accepted place-specific decision. The first batch has local
-screening contact sheets; the second batch is source-metadata/remote-thumbnail evidence
-because Commons returned thumbnail/API `429` responses during collection. Twelve remaining
-second-batch queries are queued for retry. The next safe slice is visual screening plus
+screening contact sheets; the later batches are source-metadata/remote-thumbnail evidence
+because Commons returned thumbnail/API `429` responses during collection. Lotte Avenuel,
+Yeouido, and the remaining university/hotel queries are queued for retry or broader alias
+search. The next safe slice is visual screening plus
 untouched-original download for candidates that pass identity and license review, followed
 by a separate keep / keep-as-area / defer / re-source decision. `src/lib/map-place-media.js`,
 `config/project-assets.json`, and runtime image URLs remain unchanged.
