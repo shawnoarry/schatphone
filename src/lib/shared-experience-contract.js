@@ -91,6 +91,21 @@ const normalizeEvery = (items, normalizeItem) => {
 const listsMatch = (left, right) =>
   left.length === right.length && left.every((value, index) => value === right[index])
 
+export const normalizeSharedExperienceId = (value) => normalizeContractId(value)
+
+export const buildShoppingGiftExperienceId = (orderId) => {
+  const id = normalizeContractId(orderId)
+  return id ? `gift:${id}` : ''
+}
+
+export const resolveShoppingGiftExperienceId = (order = {}) => {
+  if (!isPlainObject(order) || !isPlainObject(order.giftRecipient)) return ''
+  const derivedId = buildShoppingGiftExperienceId(order.id)
+  if (!derivedId) return ''
+  const explicitId = normalizeSharedExperienceId(order.sharedExperienceId)
+  return explicitId && explicitId !== derivedId ? '' : explicitId || derivedId
+}
+
 export const buildSharedExperienceMemoryKey = (experienceId) => {
   const id = normalizeContractId(experienceId)
   return id ? `shared_experience__${id}` : ''
@@ -209,4 +224,235 @@ export const normalizeSharedExperiencesV1 = (rawExperiences) => {
   })
 
   return { experiences, rejected, inputCount: rawExperiences.length }
+}
+
+const normalizeRecordList = (value) => (Array.isArray(value) ? value.filter(isPlainObject) : [])
+
+const recordMatchesGiftExperience = (record, experienceId, orderId) => {
+  const linkedId = normalizeSharedExperienceId(record?.sharedExperienceId)
+  if (linkedId) return linkedId === experienceId
+  return normalizeText(record?.sourceId, 220) === orderId
+}
+
+const buildOwnerRecordRef = ({ ownerModule, recordType, record }) => {
+  const owner = normalizeContractId(ownerModule, 80)
+  const type = normalizeContractId(recordType, 80)
+  const recordId = normalizeText(record?.id, 220)
+  const idPart = normalizeContractId(recordId.toLowerCase(), 180)
+  if (!owner || !type || !recordId || !idPart) return null
+  const ref = {
+    id: `${owner}:${type}:${idPart}`,
+    ownerModule: owner,
+    recordType: type,
+    recordId,
+  }
+  if (Number.isSafeInteger(record?.ownerRevision) && record.ownerRevision > 0) {
+    ref.ownerRevision = record.ownerRevision
+  }
+  return ref
+}
+
+const recordTimestamp = (record = {}) => {
+  for (const value of [record.startedAt, record.createdAt, record.updatedAt]) {
+    const timestamp = normalizeTimestamp(value)
+    if (timestamp !== null) return timestamp
+  }
+  return null
+}
+
+const flattenChatMessages = (rawMessages) => {
+  if (Array.isArray(rawMessages)) return rawMessages.filter(isPlainObject)
+  if (!isPlainObject(rawMessages)) return []
+  return Object.values(rawMessages).flatMap((messages) => normalizeRecordList(messages))
+}
+
+const chatMessageMatchesGiftExperience = (message, experienceId, orderId) =>
+  normalizeRecordList(message?.blocks).some((block) => {
+    if (block.type !== 'service_notification') return false
+    const linkedId = normalizeSharedExperienceId(block.sharedExperienceId)
+    if (linkedId) return linkedId === experienceId
+    return normalizeText(block.sourceId, 220) === orderId
+  })
+
+const buildGiftTarget = (giftRecipient = {}) => {
+  const profileId = Number.isSafeInteger(Number(giftRecipient.profileId))
+    ? Math.max(0, Math.floor(Number(giftRecipient.profileId)))
+    : 0
+  const contactId = Number.isSafeInteger(Number(giftRecipient.contactId ?? giftRecipient.chatId))
+    ? Math.max(0, Math.floor(Number(giftRecipient.contactId ?? giftRecipient.chatId)))
+    : 0
+  const displayName = normalizeText(
+    giftRecipient.name || giftRecipient.displayName || giftRecipient.recipientName,
+    120,
+  )
+  if (!displayName) return null
+  const entityKey = profileId > 0
+    ? `role:${profileId}`
+    : contactId > 0
+      ? `contact:${contactId}`
+      : `name:${displayName.toLowerCase()}`
+  return {
+    entityKey,
+    kind: normalizeContractId(giftRecipient.kind, 40) || (profileId > 0 ? 'role' : 'contact'),
+    displayName,
+  }
+}
+
+const giftItemSummary = (order = {}) => {
+  const titles = normalizeRecordList(order.items)
+    .slice(0, 3)
+    .map((item) => normalizeText(item.title || item.name, 80))
+    .filter(Boolean)
+  return titles.join(' / ') || 'gift'
+}
+
+export const buildGiftSharedExperienceV1 = ({
+  order,
+  walletTransactions = [],
+  reminderCues = [],
+  calendarEvents = [],
+  phoneCalls = [],
+  chatMessages = [],
+} = {}) => {
+  const experienceId = resolveShoppingGiftExperienceId(order)
+  const target = buildGiftTarget(order?.giftRecipient)
+  const orderId = normalizeText(order?.id, 220)
+  const createdAt = normalizeTimestamp(order?.createdAt)
+  if (!experienceId || !target || !orderId || createdAt === null) return null
+
+  const ownerRecordRefs = []
+  const ownerRefIds = new Set()
+  const addOwnerRef = (ownerModule, recordType, record) => {
+    const ref = buildOwnerRecordRef({ ownerModule, recordType, record })
+    if (!ref || ownerRefIds.has(ref.id)) return ''
+    ownerRefIds.add(ref.id)
+    ownerRecordRefs.push(ref)
+    return ref.id
+  }
+
+  const orderRefId = addOwnerRef('shopping', 'order', order)
+  if (!orderRefId) return null
+  const reservedRefIds = [orderRefId]
+
+  normalizeRecordList(walletTransactions)
+    .filter((record) => recordMatchesGiftExperience(record, experienceId, orderId))
+    .forEach((record) => {
+      const refId = addOwnerRef('wallet', 'transaction', record)
+      if (refId) reservedRefIds.push(refId)
+    })
+  normalizeRecordList(reminderCues)
+    .filter((record) => recordMatchesGiftExperience(record, experienceId, orderId))
+    .forEach((record) => {
+      const refId = addOwnerRef('reminders', 'delivery_cue', record)
+      if (refId) reservedRefIds.push(refId)
+    })
+  normalizeRecordList(calendarEvents)
+    .filter((record) => recordMatchesGiftExperience(record, experienceId, orderId))
+    .forEach((record) => {
+      const refId = addOwnerRef('calendar', 'event', record)
+      if (refId) reservedRefIds.push(refId)
+    })
+  flattenChatMessages(chatMessages)
+    .filter((record) => chatMessageMatchesGiftExperience(record, experienceId, orderId))
+    .forEach((record) => {
+      const refId = addOwnerRef('chat', 'message', record)
+      if (refId) reservedRefIds.push(refId)
+    })
+
+  const progress = [
+    {
+      id: `${experienceId}:reserved`,
+      kind: 'gift_reserved',
+      summary: `Reserved ${giftItemSummary(order)} for ${target.displayName} and planned its delivery.`,
+      occurredAt: createdAt,
+      ownerRecordRefIds: reservedRefIds,
+    },
+  ]
+
+  const status = normalizeContractId(order?.status, 40)
+  const completedAt = normalizeTimestamp(order?.completedAt ?? order?.updatedAt)
+  if (status === 'completed') {
+    if (completedAt === null || completedAt < createdAt) return null
+    progress.push({
+      id: `${experienceId}:delivered`,
+      kind: 'gift_delivered',
+      summary: `The gift was delivered to ${target.displayName}.`,
+      occurredAt: completedAt,
+      ownerRecordRefIds: [orderRefId],
+    })
+  }
+
+  const linkedCalls = normalizeRecordList(phoneCalls)
+    .filter((record) => recordMatchesGiftExperience(record, experienceId, orderId))
+    .map((record) => ({ record, occurredAt: recordTimestamp(record) }))
+    .sort((left, right) => (left.occurredAt ?? 0) - (right.occurredAt ?? 0))
+  if (linkedCalls.length > 0) {
+    if (status !== 'completed' || linkedCalls.some((item) => item.occurredAt === null || item.occurredAt < completedAt)) {
+      return null
+    }
+    const phoneRefIds = linkedCalls
+      .map(({ record }) => addOwnerRef('phone', 'call', record))
+      .filter(Boolean)
+    if (phoneRefIds.length !== linkedCalls.length) return null
+    const latestCall = linkedCalls.at(-1).record
+    const feedback = normalizeText(latestCall.summary || latestCall.note, 240)
+    progress.push({
+      id: `${experienceId}:feedback`,
+      kind: 'recipient_feedback_received',
+      summary: feedback
+        ? `${target.displayName} called with gift feedback: ${feedback}`
+        : `${target.displayName} called with feedback about the gift.`,
+      occurredAt: linkedCalls.at(-1).occurredAt,
+      ownerRecordRefIds: phoneRefIds,
+    })
+  }
+
+  const cancelledAt = normalizeTimestamp(order?.cancelledAt ?? order?.updatedAt)
+  if (status === 'cancelled') {
+    if (cancelledAt === null || cancelledAt < createdAt) return null
+    progress.push({
+      id: `${experienceId}:cancelled`,
+      kind: 'gift_cancelled',
+      summary: `The gift order for ${target.displayName} was cancelled.`,
+      occurredAt: cancelledAt,
+      ownerRecordRefIds: [orderRefId],
+    })
+  }
+
+  const latestProgress = progress.at(-1)
+  const lifecycle = status === 'cancelled'
+    ? SHARED_EXPERIENCE_LIFECYCLE.CANCELLED
+    : linkedCalls.length > 0
+      ? SHARED_EXPERIENCE_LIFECYCLE.COMPLETED
+      : SHARED_EXPERIENCE_LIFECYCLE.ACTIVE
+  const roleMemorySummary = status === 'cancelled'
+    ? `The gift order for ${target.displayName} was cancelled.`
+    : linkedCalls.length > 0
+      ? `The gift for ${target.displayName} was delivered, and ${latestProgress.summary}`
+      : status === 'completed'
+        ? `The gift for ${target.displayName} was delivered.`
+        : `A gift for ${target.displayName} was ordered and delivery was planned.`
+  const updatedAt = Math.max(
+    latestProgress.occurredAt,
+    normalizeTimestamp(order?.updatedAt) ?? createdAt,
+  )
+
+  return normalizeSharedExperienceV1({
+    schemaVersion: SHARED_EXPERIENCE_SCHEMA_VERSION,
+    id: experienceId,
+    kind: 'gift',
+    lifecycle,
+    title: `Gift for ${target.displayName}`,
+    relationshipTarget: target,
+    progress,
+    roleMemory: {
+      memoryKey: buildSharedExperienceMemoryKey(experienceId),
+      summary: roleMemorySummary,
+      updatedAt: latestProgress.occurredAt,
+      sourceProgressIds: progress.map((item) => item.id),
+    },
+    ownerRecordRefs,
+    createdAt,
+    updatedAt,
+  })
 }

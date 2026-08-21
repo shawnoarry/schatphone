@@ -14,11 +14,13 @@ import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   recordPhoneCallRelationshipFact,
 } from '../lib/relationship-fact-adapters'
+import { resolveShoppingGiftExperienceId } from '../lib/shared-experience-contract'
 import { useChatStore } from '../stores/chat'
 import { PHONE_CALL_DIRECTION, PHONE_INCOMING_CALL_STATUS, usePhoneStore } from '../stores/phone'
 import { useSystemStore } from '../stores/system'
 import { useFoodDeliveryStore } from '../stores/foodDelivery'
 import { useRelationshipRuntimeStore } from '../stores/relationshipRuntime'
+import { useShoppingStore } from '../stores/shopping'
 
 const CALL_FILTER = Object.freeze({
   ALL: 'all',
@@ -60,6 +62,7 @@ const phoneStore = usePhoneStore()
 const systemStore = useSystemStore()
 const foodDeliveryStore = useFoodDeliveryStore()
 const relationshipRuntimeStore = useRelationshipRuntimeStore()
+const shoppingStore = useShoppingStore()
 const { callCount, missedCallCount, completedCallCount, recentCalls, activeSession } = storeToRefs(phoneStore)
 const { settings: systemSettings } = storeToRefs(systemStore)
 
@@ -70,6 +73,7 @@ const callDraft = ref({
   direction: PHONE_CALL_DIRECTION.OUTGOING,
   durationMinutes: '3',
   summary: '',
+  sharedExperienceId: '',
 })
 const activeTab = ref(PHONE_TAB.RECENTS)
 const activeFilter = ref(CALL_FILTER.ALL)
@@ -114,6 +118,55 @@ const selectedRelationshipContact = computed(() =>
   relationshipContactOptions.value.find(
     (contact) => contact.optionValue === String(callDraft.value.contactId || ''),
   ) || null,
+)
+
+const giftRecipientMatchesContact = (recipient, contact) => {
+  if (!recipient || !contact) return false
+  const profileId = Number(recipient.profileId || 0)
+  const contactId = Number(recipient.contactId ?? recipient.chatId ?? 0)
+  if (profileId > 0 && Number(contact.profileId || 0) === profileId) return true
+  if (contactId > 0 && Number(contact.id || 0) === contactId) return true
+  if (profileId > 0 || contactId > 0) return false
+  return Boolean(recipient.name && contact.name && recipient.name === contact.name)
+}
+
+const giftExperienceOptions = computed(() => {
+  const contact = selectedRelationshipContact.value
+  if (!contact || callDraft.value.direction !== PHONE_CALL_DIRECTION.INCOMING) return []
+  return shoppingStore.orders
+    .filter(
+      (order) =>
+        order.status === 'completed' &&
+        giftRecipientMatchesContact(order.giftRecipient, contact),
+    )
+    .map((order) => ({
+      experienceId: resolveShoppingGiftExperienceId(order),
+      order,
+      label:
+        order.items?.map((item) => item.title).filter(Boolean).slice(0, 2).join(' / ') ||
+        t('礼物订单', 'Gift order'),
+    }))
+    .filter((item) => item.experienceId)
+})
+
+const selectedGiftExperience = computed(() =>
+  giftExperienceOptions.value.find(
+    (item) => item.experienceId === callDraft.value.sharedExperienceId,
+  ) || null,
+)
+
+watch(
+  [() => callDraft.value.contactId, () => callDraft.value.direction, giftExperienceOptions],
+  () => {
+    if (
+      callDraft.value.sharedExperienceId &&
+      !giftExperienceOptions.value.some(
+        (item) => item.experienceId === callDraft.value.sharedExperienceId,
+      )
+    ) {
+      callDraft.value.sharedExperienceId = ''
+    }
+  },
 )
 
 const contactPhoneNumber = (contact) => {
@@ -461,6 +514,7 @@ const resetCallDraft = () => {
     direction: PHONE_CALL_DIRECTION.OUTGOING,
     durationMinutes: '3',
     summary: '',
+    sharedExperienceId: '',
   }
 }
 
@@ -614,6 +668,7 @@ const submitCallLog = () => {
   const relationshipTarget = selectedRelationshipContact.value
   const contactName = relationshipTarget?.name || callDraft.value.contactName
   const relationshipBinding = relationshipBindingForContact(relationshipTarget)
+  const giftExperience = selectedGiftExperience.value
   const created =
     direction === PHONE_CALL_DIRECTION.MISSED
       ? phoneStore.addMissedCallWithNotification({
@@ -629,6 +684,7 @@ const submitCallLog = () => {
           durationMinutes: callDraft.value.durationMinutes,
           summary: callDraft.value.summary,
           relationshipBinding,
+          sharedExperienceId: giftExperience?.experienceId || '',
         })
 
   if (!created) {
@@ -643,6 +699,7 @@ const submitCallLog = () => {
       relationshipRuntimeStore,
       call,
       target: relationshipTarget,
+      giftOrder: giftExperience?.order || null,
     })
   }
 
@@ -1216,6 +1273,30 @@ onMounted(() => {
               </span>
             </label>
 
+            <label
+              v-if="giftExperienceOptions.length > 0"
+              class="phone-field"
+              data-testid="phone-gift-experience-field"
+            >
+              <span>{{ t('礼物反馈', 'Gift feedback') }} <small>{{ t('选填', 'Optional') }}</small></span>
+              <span class="phone-select-wrap">
+                <select
+                  v-model="callDraft.sharedExperienceId"
+                  data-testid="phone-gift-experience"
+                >
+                  <option value="">{{ t('不关联礼物', 'No gift') }}</option>
+                  <option
+                    v-for="item in giftExperienceOptions"
+                    :key="item.experienceId"
+                    :value="item.experienceId"
+                  >
+                    {{ item.label }}
+                  </option>
+                </select>
+                <i class="fas fa-chevron-down" aria-hidden="true"></i>
+              </span>
+            </label>
+
             <label class="phone-field">
               <span>{{ t('通话备注', 'Call note') }} <small>{{ t('选填', 'Optional') }}</small></span>
               <textarea
@@ -1332,6 +1413,10 @@ onMounted(() => {
             <div v-if="selectedCall.summary">
               <dt>{{ t('备注', 'Note') }}</dt>
               <dd>{{ selectedCall.summary }}</dd>
+            </div>
+            <div v-if="selectedCall.sharedExperienceId">
+              <dt>{{ t('礼物经历', 'Gift experience') }}</dt>
+              <dd>{{ t('已关联到同一份礼物', 'Linked to the same gift') }}</dd>
             </div>
           </dl>
 

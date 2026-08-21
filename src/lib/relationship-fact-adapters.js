@@ -5,6 +5,12 @@ import {
   buildChatDisclosureProposal,
   CHAT_DISCLOSURE_SOURCE_MODULE,
 } from './chat-disclosure-proposals'
+import {
+  buildGiftSharedExperienceV1,
+  buildSharedExperienceMemoryKey,
+  normalizeSharedExperienceId,
+  resolveShoppingGiftExperienceId,
+} from './shared-experience-contract'
 
 export const RELATIONSHIP_FACT_SOURCE_KEYS = Object.freeze({
   SHOPPING_GIFT: 'relationship_shopping_gift',
@@ -111,6 +117,9 @@ const resolveShoppingCalendarOrderId = (event = {}) => {
 const resolveCalendarEventMemoryKey = (event = {}, fallbackSourceId = '') => {
   const source = normalizeText(event?.source, '', 80)
   const sourceReminderId = normalizeText(event?.sourceReminderId, '', 160)
+  const sharedExperienceId = normalizeSharedExperienceId(event?.sharedExperienceId)
+
+  if (sharedExperienceId) return buildSharedExperienceMemoryKey(sharedExperienceId)
 
   if (source === 'phone_missed_call') {
     const callId = stripKnownPrefix(sourceReminderId, 'phone_missed_call_cue_')
@@ -182,6 +191,7 @@ export const buildRelationshipMemoryKey = (...parts) =>
     .join('__')
 
 export const buildShoppingGiftRelationshipMemoryKey = (order = {}) =>
+  buildSharedExperienceMemoryKey(resolveShoppingGiftExperienceId(order)) ||
   buildRelationshipMemoryKey('shopping_gift', order?.id)
 
 export const buildFoodDeliverySharedMealRelationshipMemoryKey = (order = {}) =>
@@ -195,20 +205,24 @@ export const findRelationshipFactBySource = (relationshipRuntimeStore, sourceMod
 export const buildShoppingGiftRelationshipSuggestion = ({ relationshipRuntimeStore, order } = {}) => {
   const target = resolveRelationshipTargetFromGiftRecipient(order?.giftRecipient)
   const sourceId = buildRelationshipSourceId(order?.id, 'gift')
-  const available = Boolean(target && sourceId)
+  const sharedExperienceId = resolveShoppingGiftExperienceId(order)
+  const available = Boolean(target && sourceId && sharedExperienceId)
+  const existing = available
+    ? findRelationshipFactBySource(
+        relationshipRuntimeStore,
+        RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
+        sourceId,
+      )
+    : null
   return {
     available,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
     sourceId,
+    sharedExperienceId,
+    memoryKey: existing?.memoryKey || buildShoppingGiftRelationshipMemoryKey(order),
     target,
     targetName: target?.name || '',
-    imported: available
-      ? Boolean(findRelationshipFactBySource(
-          relationshipRuntimeStore,
-          RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
-          sourceId,
-        ))
-      : false,
+    imported: Boolean(existing),
   }
 }
 
@@ -234,14 +248,17 @@ export const recordShoppingGiftRelationshipFact = ({
   const summary = total
     ? `Gift purchased for ${suggestion.targetName || 'a relationship contact'}: ${itemSummary} (${total} ${currency}).`
     : `Gift purchased for ${suggestion.targetName || 'a relationship contact'}: ${itemSummary}.`
+  const experience = buildGiftSharedExperienceV1({ order })
 
   return relationshipRuntimeStore.recordRelationshipFact({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
     sourceId: suggestion.sourceId,
-    memoryKey: buildShoppingGiftRelationshipMemoryKey(order || { id: suggestion.sourceId }),
+    sharedExperienceId: suggestion.sharedExperienceId,
+    memoryKey: suggestion.memoryKey,
     factType: 'gift_purchased',
     summary,
+    memorySummary: experience?.roleMemory?.summary || '',
     intensity: 2,
     metricDeltas: {
       affinity: 8,
@@ -250,11 +267,55 @@ export const recordShoppingGiftRelationshipFact = ({
     },
     milestone: 'Gift purchase recorded',
     growthTraits: ['gift-memory', 'shopping'],
+    createdAt: toInt(order?.createdAt, 0) || undefined,
     worldContext,
     relationshipGate: lowRiskRelationshipGate({
       chatStore,
       target: suggestion.target,
       factType: 'gift_purchased',
+    }),
+  })
+}
+
+export const recordShoppingGiftDeliveryRelationshipFact = ({
+  chatStore,
+  relationshipRuntimeStore,
+  order,
+  worldContext,
+} = {}) => {
+  const suggestion = buildShoppingGiftRelationshipSuggestion({ relationshipRuntimeStore, order })
+  if (!relationshipRuntimeStore || !suggestion.available || order?.status !== 'completed') return null
+  const sourceId = buildRelationshipSourceId(order?.id, 'gift_delivered')
+  const existing = findRelationshipFactBySource(
+    relationshipRuntimeStore,
+    RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
+    sourceId,
+  )
+  if (existing) return existing
+
+  const experience = buildGiftSharedExperienceV1({ order })
+  const deliveredProgress = experience?.progress?.find((item) => item.kind === 'gift_delivered')
+  if (!experience || !deliveredProgress) return null
+
+  return relationshipRuntimeStore.recordRelationshipFact({
+    target: suggestion.target,
+    sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.SHOPPING_GIFT,
+    sourceId,
+    sharedExperienceId: suggestion.sharedExperienceId,
+    memoryKey: suggestion.memoryKey,
+    factType: 'gift_delivered',
+    summary: deliveredProgress.summary,
+    memorySummary: experience.roleMemory.summary,
+    intensity: 1,
+    metricDeltas: {},
+    growthTraits: ['gift-delivered', 'shopping'],
+    worldContext,
+    forceSupportingMemory: true,
+    createdAt: deliveredProgress.occurredAt,
+    relationshipGate: lowRiskRelationshipGate({
+      chatStore,
+      target: suggestion.target,
+      factType: 'gift_delivered',
     }),
   })
 }
@@ -345,10 +406,12 @@ export const buildPhoneCallRelationshipSuggestion = ({
   const resolvedTarget = resolveRelationshipTargetFromContact(target)
   const sourceId = buildRelationshipSourceId(call?.id, 'call', relationshipTargetKey(resolvedTarget))
   const available = Boolean(resolvedTarget && sourceId)
+  const sharedExperienceId = normalizeSharedExperienceId(call?.sharedExperienceId)
   return {
     available,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.PHONE_CALL,
     sourceId,
+    sharedExperienceId,
     target: resolvedTarget,
     targetName: resolvedTarget?.name || '',
     imported: available
@@ -366,6 +429,7 @@ export const recordPhoneCallRelationshipFact = ({
   relationshipRuntimeStore,
   call,
   target,
+  giftOrder,
   worldContext,
 } = {}) => {
   const suggestion = buildPhoneCallRelationshipSuggestion({ relationshipRuntimeStore, call, target })
@@ -380,19 +444,35 @@ export const recordPhoneCallRelationshipFact = ({
   const isMissed = call?.status === 'missed' || call?.direction === 'missed'
   const direction = normalizeText(call?.direction, isMissed ? 'missed' : 'completed', 40)
   const duration = formatDurationSummary(call?.durationSec)
-  const summary = isMissed
-    ? `Missed call noted from ${suggestion.targetName || 'a relationship contact'}.`
-    : `Call recorded with ${suggestion.targetName || 'a relationship contact'} (${direction}, ${duration}).`
+  const giftExperience = suggestion.sharedExperienceId && giftOrder
+    ? buildGiftSharedExperienceV1({ order: giftOrder, phoneCalls: [call] })
+    : null
+  const giftFeedback = giftExperience?.progress?.find(
+    (item) => item.kind === 'recipient_feedback_received',
+  )
+  const isGiftFeedback = Boolean(giftFeedback)
+  const summary = isGiftFeedback
+    ? giftFeedback.summary
+    : isMissed
+      ? `Missed call noted from ${suggestion.targetName || 'a relationship contact'}.`
+      : `Call recorded with ${suggestion.targetName || 'a relationship contact'} (${direction}, ${duration}).`
+  const giftMemoryKey = isGiftFeedback
+    ? buildShoppingGiftRelationshipSuggestion({ relationshipRuntimeStore, order: giftOrder }).memoryKey
+    : ''
 
   return relationshipRuntimeStore.recordRelationshipFact({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.PHONE_CALL,
     sourceId: suggestion.sourceId,
-    memoryKey: buildRelationshipMemoryKey('phone_call', call?.id || suggestion.sourceId),
-    factType: isMissed ? 'missed_call' : 'completed_call',
+    sharedExperienceId: isGiftFeedback ? suggestion.sharedExperienceId : '',
+    memoryKey: giftMemoryKey || buildRelationshipMemoryKey('phone_call', call?.id || suggestion.sourceId),
+    factType: isGiftFeedback ? 'recipient_feedback_received' : isMissed ? 'missed_call' : 'completed_call',
     summary,
+    memorySummary: isGiftFeedback ? giftExperience.roleMemory.summary : '',
     intensity: isMissed ? 1 : 2,
-    metricDeltas: isMissed
+    metricDeltas: isGiftFeedback
+      ? {}
+      : isMissed
       ? {
           tension: 2,
         }
@@ -401,13 +481,23 @@ export const recordPhoneCallRelationshipFact = ({
           trust: 2,
           intimacy: 2,
         },
-    milestone: isMissed ? '' : 'Call recorded',
-    growthTraits: isMissed ? ['missed-call', 'phone'] : ['call-memory', 'phone'],
+    milestone: isMissed || isGiftFeedback ? '' : 'Call recorded',
+    growthTraits: isGiftFeedback
+      ? ['gift-feedback', 'phone']
+      : isMissed
+        ? ['missed-call', 'phone']
+        : ['call-memory', 'phone'],
     worldContext,
+    forceSupportingMemory: isGiftFeedback,
+    createdAt: toInt(call?.startedAt || call?.createdAt, 0) || undefined,
     relationshipGate: lowRiskRelationshipGate({
       chatStore,
       target: suggestion.target,
-      factType: isMissed ? 'missed_call' : 'completed_call',
+      factType: isGiftFeedback
+        ? 'recipient_feedback_received'
+        : isMissed
+          ? 'missed_call'
+          : 'completed_call',
     }),
   })
 }
@@ -593,6 +683,7 @@ export const recordWalletOrderSupportRelationshipFact = ({
     target: resolvedTarget,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.WALLET_ORDER_SUPPORT,
     sourceId,
+    sharedExperienceId: normalizeSharedExperienceId(transaction?.sharedExperienceId),
     memoryKey: resolvedMemoryKey,
     factType: 'wallet_order_support',
     summary: normalizedSummary,
@@ -669,6 +760,7 @@ export const recordCalendarConfirmedEventRelationshipFact = ({
     target: suggestion.target,
     sourceModule: RELATIONSHIP_FACT_SOURCE_KEYS.CALENDAR_CONFIRMED_EVENT,
     sourceId: suggestion.sourceId,
+    sharedExperienceId: normalizeSharedExperienceId(event?.sharedExperienceId),
     memoryKey: resolveCalendarEventMemoryKey(event, suggestion.sourceId),
     factType: 'scheduled_calendar_event',
     summary,

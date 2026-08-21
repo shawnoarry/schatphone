@@ -23,6 +23,7 @@ describe('phone store', () => {
       direction: PHONE_CALL_DIRECTION.INCOMING,
       durationMinutes: '5',
       summary: 'Planning call',
+      sharedExperienceId: 'gift:shopping_order_mika_1',
     })
 
     expect(call).toMatchObject({
@@ -32,6 +33,7 @@ describe('phone store', () => {
       durationSec: 300,
       summary: 'Planning call',
       sourceModule: 'phone_manual',
+      sharedExperienceId: 'gift:shopping_order_mika_1',
     })
     expect(store.completedCallCount).toBe(1)
     expect(store.missedCallCount).toBe(0)

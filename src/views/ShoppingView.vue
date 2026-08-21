@@ -9,6 +9,7 @@ import {
   RELATIONSHIP_FACT_SOURCE_KEYS,
   buildShoppingGiftRelationshipMemoryKey,
   buildShoppingGiftRelationshipSuggestion,
+  recordShoppingGiftDeliveryRelationshipFact,
   recordShoppingGiftRelationshipFact,
   recordWalletOrderSupportRelationshipFact,
 } from '../lib/relationship-fact-adapters'
@@ -688,11 +689,18 @@ const buildGiftCheckoutPayload = () => {
 }
 
 const checkoutCart = () => {
-  shoppingStore.checkoutCart({
+  const order = shoppingStore.checkoutCart({
     serviceKey: activeServiceKey.value,
     ...buildGiftCheckoutPayload(),
     note: t('Local shopping baseline order', 'Local shopping baseline order'),
   })
+  if (order?.giftRecipient) {
+    recordShoppingGiftRelationshipFact({
+      chatStore,
+      relationshipRuntimeStore,
+      order,
+    })
+  }
 }
 
 const removeOrder = (orderId) => {
@@ -716,7 +724,19 @@ const canCancelOrder = (order) =>
   order?.status !== SHOPPING_ORDER_STATUS.CANCELLED && order?.status !== SHOPPING_ORDER_STATUS.COMPLETED
 
 const markOrderCompleted = (orderId) => {
-  shoppingStore.markOrderCompleted(orderId)
+  if (!shoppingStore.markOrderCompleted(orderId)) return
+  const order = shoppingStore.findOrderById(orderId)
+  if (!order?.giftRecipient) return
+  recordShoppingGiftRelationshipFact({
+    chatStore,
+    relationshipRuntimeStore,
+    order,
+  })
+  recordShoppingGiftDeliveryRelationshipFact({
+    chatStore,
+    relationshipRuntimeStore,
+    order,
+  })
 }
 
 const cancelOrder = (orderId) => {
@@ -759,6 +779,7 @@ const transferSuggestionToWallet = (suggestion) => {
     note: t('Manually imported from a Shopping order.', 'Manually imported from a Shopping order.'),
     sourceModule: SHOPPING_SOURCE_KEYS.WALLET_EXPENSE,
     sourceId: suggestion.sourceId,
+    sharedExperienceId: suggestion.order.sharedExperienceId,
     quoteSnapshot: suggestion.quoteSnapshot,
   })
   recordShoppingGiftRelationshipFact({
@@ -767,13 +788,20 @@ const transferSuggestionToWallet = (suggestion) => {
     order: suggestion.order,
     transaction,
   })
+  recordShoppingGiftDeliveryRelationshipFact({
+    chatStore,
+    relationshipRuntimeStore,
+    order: suggestion.order,
+  })
   if (suggestion.relationshipSuggestion?.available) {
     recordWalletOrderSupportRelationshipFact({
       chatStore,
       relationshipRuntimeStore,
       target: suggestion.relationshipSuggestion.target,
       transaction,
-      memoryKey: buildShoppingGiftRelationshipMemoryKey(suggestion.order),
+      memoryKey:
+        suggestion.relationshipSuggestion.memoryKey ||
+        buildShoppingGiftRelationshipMemoryKey(suggestion.order),
       summary: `Wallet expense recorded for the same Shopping gift with ${suggestion.relationshipTargetName || 'a relationship contact'}.`,
     })
   }

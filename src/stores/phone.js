@@ -2,6 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { resolveLocalizedText } from '../lib/locale'
+import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 import { useCalendarStore } from './calendar'
 import { useSystemStore } from './system'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
@@ -126,6 +127,7 @@ const normalizeCallLog = (rawCall, index = 0) => {
     summary: normalizeText(rawCall.summary || rawCall.note, '', 240),
     sourceModule: normalizeText(rawCall.sourceModule, 'phone', 40),
     sourceId: normalizeText(rawCall.sourceId, '', 140),
+    sharedExperienceId: normalizeSharedExperienceId(rawCall.sharedExperienceId),
     relationshipBinding: normalizeRelationshipBinding(rawCall.relationshipBinding),
     startedAt,
     createdAt: Math.max(0, toInt(rawCall.createdAt, startedAt)),
@@ -332,6 +334,7 @@ export const usePhoneStore = defineStore('phone', () => {
     durationMinutes = 0,
     summary = '',
     relationshipBinding = null,
+    sharedExperienceId = '',
   } = {}) =>
     addCallLog({
       contactName,
@@ -342,6 +345,7 @@ export const usePhoneStore = defineStore('phone', () => {
       summary,
       sourceModule: 'phone_manual',
       relationshipBinding,
+      sharedExperienceId,
     })
 
   const addMissedCall = ({

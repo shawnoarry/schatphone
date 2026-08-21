@@ -24,6 +24,7 @@ import {
   trimReminderLine,
 } from '../lib/reminder-cues'
 import { SHOPPING_SOURCE_KEYS, buildShoppingAppRoute } from '../lib/planned-module-registry'
+import { resolveShoppingGiftExperienceId } from '../lib/shared-experience-contract'
 import { useCalendarStore } from './calendar'
 import { useMapStore } from './map'
 
@@ -270,6 +271,7 @@ export const useRemindersStore = defineStore('reminders', () => {
     return upsertShoppingDeliveryCue({
       id: existing?.id || createShoppingDeliveryCueId(orderId),
       orderId,
+      sharedExperienceId: resolveShoppingGiftExperienceId(order),
       title: orderTitle,
       itemCount,
       totalCents,

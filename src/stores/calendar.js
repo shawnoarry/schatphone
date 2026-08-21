@@ -17,6 +17,7 @@ import {
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
 import { SHOPPING_SOURCE_KEYS } from '../lib/planned-module-registry'
+import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 import {
   getCalendarEventDurationMs,
   getCalendarEventEndForStart,
@@ -216,6 +217,7 @@ const normalizeCalendarEventRecord = (raw, index = 0) => {
     id,
     source: trimLine(raw.source, 'manual', 80),
     sourceReminderId: normalizeEventId(raw.sourceReminderId),
+    sharedExperienceId: normalizeSharedExperienceId(raw.sharedExperienceId),
     sourceAreaId: normalizeEventId(raw.sourceAreaId || raw.areaId),
     sourceTripId: normalizeEventId(raw.sourceTripId || raw.tripId),
     locationRef: normalizeCalendarEventLocationRef(
@@ -606,6 +608,7 @@ export const useCalendarStore = defineStore('calendar', () => {
       id: eventId,
       source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
       sourceReminderId: cueId,
+      sharedExperienceId: normalizeSharedExperienceId(cue.sharedExperienceId),
       sourceAreaId: '',
       titleZh: `购物跟进：${cue.title}`,
       titleEn: `Shopping follow-up: ${cue.title}`,

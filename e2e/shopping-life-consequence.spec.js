@@ -6,6 +6,7 @@ const STORAGE_KEYS = Object.freeze({
   chat: 'schatphone:store:chat',
   relationship: 'schatphone:store:relationship-runtime',
   reminders: 'schatphone:store:reminders',
+  phone: 'schatphone:store:phone',
   shopping: 'schatphone:store:shopping',
   wallet: 'schatphone:store:wallet',
 })
@@ -40,7 +41,7 @@ const expectNoHorizontalOverflow = async (page) => {
     .toBe(true)
 }
 
-test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship memory', async ({
+test('one Shopping gift reaches delivery and Phone feedback as one relationship memory', async ({
   page,
 }, testInfo) => {
   const pageErrors = []
@@ -102,6 +103,7 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   expect(shoppingOrder).toMatchObject({
     id: orderId,
     status: 'placed',
+    sharedExperienceId: `gift:${orderId}`,
     giftRecipient: {
       name: 'Eva',
       contactId: 1,
@@ -118,10 +120,23 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   await expect(
     page.getByTestId(`chat-service-notification-shopping_order_update-${orderId}`),
   ).toContainText('Order placed')
+  const chatNotification = await pollPersistedData(page, STORAGE_KEYS.chat, (snapshot) =>
+    Object.values(snapshot?.messagesByConversation || {})
+      .flat()
+      .flatMap((message) => message.blocks || [])
+      .find(
+        (block) =>
+          block.type === 'service_notification' &&
+          block.sourceId === orderId &&
+          block.sourceModule === 'shopping_order_update',
+      ),
+  )
+  expect(chatNotification.sharedExperienceId).toBe(shoppingOrder.sharedExperienceId)
 
   const shoppingCue = await pollPersistedData(page, STORAGE_KEYS.reminders, (snapshot) =>
     snapshot?.shoppingDeliveryCues?.find((cue) => cue.orderId === orderId),
   )
+  expect(shoppingCue.sharedExperienceId).toBe(shoppingOrder.sharedExperienceId)
   await navigateInsideUnlockedApp(page, '/reminders')
   const reminderCard = page.getByTestId(`reminder-card-shopping:${shoppingCue.id}`)
   await expect(reminderCard).toContainText('Shopping follow-up')
@@ -134,6 +149,7 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   expect(calendarEvent).toMatchObject({
     source: 'shopping_calendar_delivery',
     sourceReminderId: shoppingCue.id,
+    sharedExperienceId: shoppingOrder.sharedExperienceId,
     status: 'confirmed',
   })
 
@@ -164,26 +180,70 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
     quoteSnapshot: shoppingOrder.quoteSnapshot,
     sourceModule: 'shopping_wallet_expense',
     sourceId: orderId,
+    sharedExperienceId: shoppingOrder.sharedExperienceId,
   })
 
-  const relationshipMemoryKey = `shopping_gift__${orderId}`
+  const relationshipMemoryKey = `shared_experience__${shoppingOrder.sharedExperienceId}`
+  const relationshipEventsBeforeFeedback = await pollPersistedData(
+    page,
+    STORAGE_KEYS.relationship,
+    (snapshot) => {
+      const events =
+        snapshot?.events?.filter((event) => event.memoryKey === relationshipMemoryKey) || []
+      return events.length === 3 ? events : null
+    },
+  )
+  expect(relationshipEventsBeforeFeedback.map((event) => event.sourceModule).sort()).toEqual([
+    'relationship_shopping_gift',
+    'relationship_shopping_gift',
+    'relationship_wallet_order_support',
+  ])
+  expect(
+    relationshipEventsBeforeFeedback.find(
+      (event) => event.sourceModule === 'relationship_wallet_order_support',
+    )
+      ?.metricDeltas,
+  ).toEqual({})
+
+  await navigateInsideUnlockedApp(page, '/phone')
+  await page.getByTestId('phone-open-composer').click()
+  await page.getByTestId('phone-relationship-contact').selectOption('1')
+  await page.getByTestId('phone-direction-incoming').click()
+  await expect(page.getByTestId('phone-gift-experience')).toContainText(/Gift Card|礼品卡/)
+  await page.getByTestId('phone-gift-experience').selectOption(shoppingOrder.sharedExperienceId)
+  await page.getByTestId('phone-summary').fill('I love it.')
+  await page.getByTestId('phone-save-call').click()
+
+  const phoneCall = await pollPersistedData(page, STORAGE_KEYS.phone, (snapshot) =>
+    snapshot?.calls?.find(
+      (call) => call.sharedExperienceId === shoppingOrder.sharedExperienceId,
+    ),
+  )
+  expect(phoneCall).toMatchObject({
+    contactName: 'Eva',
+    direction: 'incoming',
+    summary: 'I love it.',
+    sharedExperienceId: shoppingOrder.sharedExperienceId,
+  })
+
   const relationshipEvents = await pollPersistedData(
     page,
     STORAGE_KEYS.relationship,
     (snapshot) => {
       const events =
         snapshot?.events?.filter((event) => event.memoryKey === relationshipMemoryKey) || []
-      return events.length === 2 ? events : null
+      return events.length === 4 ? events : null
     },
   )
-  expect(relationshipEvents.map((event) => event.sourceModule).sort()).toEqual([
-    'relationship_shopping_gift',
-    'relationship_wallet_order_support',
-  ])
+  expect(relationshipEvents).toHaveLength(4)
   expect(
-    relationshipEvents.find((event) => event.sourceModule === 'relationship_wallet_order_support')
-      ?.metricDeltas,
-  ).toEqual({})
+    relationshipEvents.find((event) => event.factType === 'recipient_feedback_received'),
+  ).toMatchObject({
+    sourceModule: 'relationship_phone_call',
+    sharedExperienceId: shoppingOrder.sharedExperienceId,
+    effectApplied: false,
+    metricDeltas: {},
+  })
 
   await navigateInsideUnlockedApp(page, '/wallet')
   await page.getByTestId('wallet-nav-activity').click()
@@ -234,13 +294,14 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   await expect(page.getByTestId('contacts-role-detail')).toContainText('Eva')
   await page.getByTestId('contacts-open-memories-sheet').click()
   const memoryRow = page.getByTestId(`contacts-memory-open-${relationshipMemoryKey}`)
-  await expect(memoryRow).toContainText('Gift purchased for Eva')
-  await expect(memoryRow).toContainText('2 item(s)')
+  await expect(memoryRow).toContainText('I love it.')
+  await expect(memoryRow).toContainText('4 item(s)')
   await memoryRow.click()
   await expect(page.getByTestId('contacts-memory-source-relationship_shopping_gift')).toBeVisible()
   await expect(
     page.getByTestId('contacts-memory-source-relationship_wallet_order_support'),
   ).toBeVisible()
+  await expect(page.getByTestId('contacts-memory-source-relationship_phone_call')).toBeVisible()
 
   await navigateInsideUnlockedApp(page, `/shopping?category=mall&orderId=${orderId}`)
   await page.getByTestId('shopping-close-order-detail').click()
@@ -256,6 +317,6 @@ test('Shopping gift order reaches Chat, Calendar, Wallet, and one relationship m
   ).toHaveLength(1)
   expect(
     finalRelationship.events.filter((event) => event.memoryKey === relationshipMemoryKey),
-  ).toHaveLength(2)
+  ).toHaveLength(4)
   expect(pageErrors).toEqual([])
 })

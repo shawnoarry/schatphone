@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { resolveAvatarWithHierarchy, sanitizeAvatarUrl } from '../lib/avatar'
 import { normalizeImageSource } from '../lib/image-source-contract'
+import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 import {
   FOOD_DELIVERY_SERVICE_PRESETS,
   LOGISTICS_SERVICE_PRESETS,
@@ -115,6 +116,7 @@ const SERVICE_NOTIFICATION_OPTIONAL_FIELDS = Object.freeze([
   'statusLabel',
   'amount',
   'sourceEventId',
+  'sharedExperienceId',
   'serviceKey',
   'serviceLabel',
   'route',
@@ -764,6 +766,7 @@ const normalizeMessageBlock = (rawBlock) => {
       sourceModule,
       sourceId,
       sourceEventId: normalizeSourceEventId(rawBlock.sourceEventId),
+      sharedExperienceId: normalizeSharedExperienceId(rawBlock.sharedExperienceId),
       serviceKey: normalizeSingleLineText(rawBlock.serviceKey, 80),
       serviceLabel: normalizeSingleLineText(rawBlock.serviceLabel, MAX_SHORT_LABEL_LENGTH),
       route: sanitizeRoutePath(rawBlock.route, SAFE_ROUTE_FALLBACK),

@@ -11,6 +11,7 @@ import {
   clearRelationshipBinding,
   normalizeRelationshipBinding,
 } from '../lib/relationship-cleanup-helpers'
+import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 import {
   DEFAULT_WALLET_CURRENCY,
   SYSTEM_WALLET_CURRENCIES,
@@ -288,6 +289,7 @@ const normalizeWalletTransaction = (
     cardId: normalizeText(rawTransaction.cardId, '', 120),
     sourceModule: normalizeText(rawTransaction.sourceModule, 'wallet', 40),
     sourceId: normalizeText(rawTransaction.sourceId, '', 140),
+    sharedExperienceId: normalizeSharedExperienceId(rawTransaction.sharedExperienceId),
     transferStatus,
     paymentKind: normalizeText(rawTransaction.paymentKind, '', 60),
     paymentStatus: WALLET_COMMERCE_PAYMENT_STATUSES.has(rawTransaction.paymentStatus)

@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { readPersistedState, readPersistedStateAsync, writePersistedState } from '../lib/persistence'
 import { selectMemoryRecall } from '../lib/memory-recall'
 import { projectMemoryConsolidationPressure } from '../lib/memory-consolidation-pressure'
+import { normalizeSharedExperienceId } from '../lib/shared-experience-contract'
 
 export const RELATIONSHIP_RUNTIME_STORAGE_KEY = 'store:relationship-runtime'
 export const RELATIONSHIP_RUNTIME_STORAGE_VERSION = 1
@@ -265,6 +266,7 @@ const normalizeRelationshipEvent = (rawEvent = {}, index = 0) => {
     id: normalizeText(source.id, `relationship_event_legacy_${createdAt}_${index}`, 120),
     entityKey: meta.entityKey,
     memoryKey: normalizeMemoryKey(source.memoryKey),
+    sharedExperienceId: normalizeSharedExperienceId(source.sharedExperienceId),
     memoryRole: normalizeText(source.memoryRole, '', 20),
     forceSupportingMemory: source.forceSupportingMemory === true,
     targetLabel: normalizeText(source.targetLabel || meta.displayName, '', 100),
@@ -272,6 +274,7 @@ const normalizeRelationshipEvent = (rawEvent = {}, index = 0) => {
     sourceId: normalizeText(source.sourceId, '', 140),
     factType: normalizeText(source.factType || source.type, 'relationship_fact', 80),
     summary: normalizeText(source.summary || source.note || source.title, '', 220),
+    memorySummary: normalizeText(source.memorySummary, '', 1000),
     intensity: clamp(toInt(source.intensity, 1), 1, 5),
     metricDeltas: normalizeMetricDeltas(source.metricDeltas),
     milestone: normalizeText(source.milestone, '', 100),
@@ -338,6 +341,8 @@ const buildDefaultMemoryAggregate = (memoryKey, entityKey = '') => ({
   reviewSummary: '',
   latestSummary: '',
   latestCreatedAt: 0,
+  latestMemorySummary: '',
+  latestMemorySummaryAt: 0,
 })
 
 const buildMemoryAggregateMapKey = (entityKey, memoryKey) => {
@@ -491,12 +496,14 @@ const hasMatchingRelationshipEventIdentity = (left, right) =>
   JSON.stringify({
     entityKey: left?.entityKey,
     memoryKey: left?.memoryKey,
+    sharedExperienceId: left?.sharedExperienceId,
     forceSupportingMemory: left?.forceSupportingMemory,
     targetLabel: left?.targetLabel,
     sourceModule: left?.sourceModule,
     sourceId: left?.sourceId,
     factType: left?.factType,
     summary: left?.summary,
+    memorySummary: left?.memorySummary,
     intensity: left?.intensity,
     metricDeltas: left?.metricDeltas,
     milestone: left?.milestone,
@@ -508,12 +515,14 @@ const hasMatchingRelationshipEventIdentity = (left, right) =>
   JSON.stringify({
     entityKey: right?.entityKey,
     memoryKey: right?.memoryKey,
+    sharedExperienceId: right?.sharedExperienceId,
     forceSupportingMemory: right?.forceSupportingMemory,
     targetLabel: right?.targetLabel,
     sourceModule: right?.sourceModule,
     sourceId: right?.sourceId,
     factType: right?.factType,
     summary: right?.summary,
+    memorySummary: right?.memorySummary,
     intensity: right?.intensity,
     metricDeltas: right?.metricDeltas,
     milestone: right?.milestone,
@@ -599,6 +608,13 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         existing.latestCreatedAt = event.createdAt
         existing.latestSummary = event.summary || existing.latestSummary
       }
+      if (
+        event.memorySummary &&
+        (!existing.latestMemorySummary || event.createdAt > existing.latestMemorySummaryAt)
+      ) {
+        existing.latestMemorySummaryAt = event.createdAt
+        existing.latestMemorySummary = event.memorySummary
+      }
       if (!existing.primarySourceModule && event.effectApplied !== false) {
         existing.primarySourceModule = event.sourceModule
       }
@@ -609,7 +625,11 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
         existing.primaryCreatedAt = event.createdAt
         existing.primarySummary = event.summary || existing.primarySummary
       }
-      existing.displaySummary = existing.primarySummary || existing.latestSummary || existing.displaySummary
+      existing.displaySummary =
+        existing.latestMemorySummary ||
+        existing.primarySummary ||
+        existing.latestSummary ||
+        existing.displaySummary
       map.set(aggregateKey, existing)
     })
     return map
@@ -677,9 +697,12 @@ export const useRelationshipRuntimeStore = defineStore('relationshipRuntime', ()
           primarySourceModule: item.primarySourceModule || '',
           primaryFactType: item.primaryFactType || '',
           primarySummary: item.primarySummary || '',
-          displaySummary: item.displaySummary || item.primarySummary || item.latestSummary || '',
+          displaySummary:
+            item.displaySummary || item.latestMemorySummary || item.primarySummary || item.latestSummary || '',
           latestSummary: item.latestSummary,
           latestCreatedAt: item.latestCreatedAt,
+          latestMemorySummary: item.latestMemorySummary || '',
+          latestMemorySummaryAt: item.latestMemorySummaryAt || 0,
           reviewStatus: review.status || RELATIONSHIP_MEMORY_REVIEW_STATES.ACTIVE,
           reviewNote: review.note || '',
           reviewUpdatedAt: review.updatedAt || item.latestCreatedAt,

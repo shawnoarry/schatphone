@@ -4,6 +4,9 @@ import { readPersistedState, readPersistedStateAsync, writePersistedState } from
 import { convertLegacyCentsToMoney, normalizeMoneyQuote } from '../lib/currency-system'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import {
+  resolveShoppingGiftExperienceId,
+} from '../lib/shared-experience-contract'
+import {
   SHOPPING_CATEGORY_ENTRIES,
   SHOPPING_SERVICE_PRESETS,
   SHOPPING_SOURCE_KEYS,
@@ -527,10 +530,18 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
   const quoteSnapshot = normalizeMoneyQuote(
     rawOrder.quoteSnapshot || rawOrder.moneyQuote || rawOrder.checkoutQuote,
   )
+  const id = normalizeText(rawOrder.id, `shopping_order_legacy_${now}_${index}`, 140)
+  const status = normalizeOrderStatus(rawOrder.status)
+  const giftRecipient = normalizeGiftRecipient(rawOrder)
+  const sharedExperienceId = resolveShoppingGiftExperienceId({
+    id,
+    giftRecipient,
+    sharedExperienceId: rawOrder.sharedExperienceId,
+  })
 
   return {
-    id: normalizeText(rawOrder.id, `shopping_order_legacy_${now}_${index}`, 140),
-    status: normalizeOrderStatus(rawOrder.status),
+    id,
+    status,
     items,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
     totals,
@@ -542,11 +553,20 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
     deliveryAddress: normalizeText(rawOrder.deliveryAddress, '', 220),
     deliveryAnchor: normalizeShoppingDestination(rawOrder.deliveryAnchor),
     ownerRevision: Math.max(1, toInt(rawOrder.ownerRevision, 1)),
-    giftRecipient: normalizeGiftRecipient(rawOrder),
+    giftRecipient,
+    sharedExperienceId,
     events: normalizeOrderEvents(rawOrder.events || rawOrder.logisticsEvents || rawOrder.statusEvents),
     sourceModule: normalizeText(rawOrder.sourceModule, 'shopping_checkout', 40),
     sourceId: normalizeText(rawOrder.sourceId, '', 140),
     createdAt,
+    completedAt:
+      status === SHOPPING_ORDER_STATUS.COMPLETED
+        ? Math.max(createdAt, toInt(rawOrder.completedAt, rawOrder.updatedAt || createdAt))
+        : 0,
+    cancelledAt:
+      status === SHOPPING_ORDER_STATUS.CANCELLED
+        ? Math.max(createdAt, toInt(rawOrder.cancelledAt, rawOrder.updatedAt || createdAt))
+        : 0,
     updatedAt: Math.max(0, toInt(rawOrder.updatedAt, createdAt)),
   }
 }
@@ -1427,6 +1447,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       amount: formatOrderAmount(order),
       sourceModule: SHOPPING_SOURCE_KEYS.ORDER_UPDATE,
       sourceId: order.id,
+      sharedExperienceId: order.sharedExperienceId,
       serviceKey,
       serviceLabel: resolveServiceLabel(serviceKey),
       route: buildShoppingOrderRoute(order),
@@ -1458,6 +1479,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       sourceModule: SHOPPING_SOURCE_KEYS.LOGISTICS_TRACKING,
       sourceId: order.id,
       sourceEventId: event.id,
+      sharedExperienceId: order.sharedExperienceId,
       serviceKey,
       serviceLabel: carrierLabel,
       route: buildShoppingLogisticsRoute(order),
@@ -1594,7 +1616,11 @@ export const useShoppingStore = defineStore('shopping', () => {
     if (!order || order.status === nextStatus) return false
 
     order.status = nextStatus
-    order.updatedAt = Date.now()
+    const now = Date.now()
+    order.updatedAt = now
+    order.ownerRevision = Math.max(1, toInt(order.ownerRevision, 1)) + 1
+    if (nextStatus === SHOPPING_ORDER_STATUS.COMPLETED) order.completedAt = now
+    if (nextStatus === SHOPPING_ORDER_STATUS.CANCELLED) order.cancelledAt = now
 
     if (
       nextStatus === SHOPPING_ORDER_STATUS.COMPLETED ||

@@ -214,6 +214,7 @@ describe('shopping store', () => {
         sourceModule: 'chat',
         sourceId: '1',
       },
+      sharedExperienceId: `gift:${order.id}`,
     })
     expect(order.items[0]).toMatchObject({
       productId: product.id,
@@ -224,6 +225,7 @@ describe('shopping store', () => {
     })
     const calendarCue = calendarStore.findShoppingDeliveryCueByOrderId(order.id)
     expect(calendarCue).toMatchObject({
+      sharedExperienceId: order.sharedExperienceId,
       orderId: order.id,
       status: 'suggested',
       source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
@@ -369,6 +371,7 @@ describe('shopping store', () => {
       id: completedOrder.id,
       status: 'completed',
     })
+    expect(store.orders[0].completedAt).toBe(Date.now())
     expect(calendarStore.findShoppingDeliveryCueByOrderId(completedOrder.id)?.status).toBe('dismissed')
 
     store.addToCart(product.id)
@@ -378,6 +381,7 @@ describe('shopping store', () => {
       id: cancelledOrder.id,
       status: 'cancelled',
     })
+    expect(store.orders[0].cancelledAt).toBe(Date.now())
     expect(calendarStore.findShoppingDeliveryCueByOrderId(cancelledOrder.id)?.status).toBe('dismissed')
     expect(store.updateOrderStatus(cancelledOrder.id, 'unknown')).toBe(false)
   })
@@ -533,7 +537,31 @@ describe('shopping store', () => {
         ],
         favoriteProductIds: ['product_backup'],
         cartItems: [{ productId: 'product_backup', quantity: 2 }],
-        orders: [],
+        orders: [
+          {
+            id: 'shopping_order_legacy_gift',
+            status: 'completed',
+            items: [
+              {
+                productId: 'product_backup',
+                title: 'Backup Gift',
+                quantity: 1,
+                unitPriceCents: 88800,
+                currency: 'CNY',
+              },
+            ],
+            giftRecipient: {
+              name: 'Xia',
+              contactId: 8,
+              profileId: 8,
+              kind: 'role',
+              sourceModule: 'chat',
+              sourceId: '8',
+            },
+            createdAt: 1000,
+            updatedAt: 2000,
+          },
+        ],
       },
     }
 
@@ -541,8 +569,14 @@ describe('shopping store', () => {
     expect(restoredStore.productCount).toBe(1)
     expect(restoredStore.favoriteCount).toBe(1)
     expect(restoredStore.cartQuantity).toBe(2)
+    expect(restoredStore.orders[0]).toMatchObject({
+      id: 'shopping_order_legacy_gift',
+      status: 'completed',
+      sharedExperienceId: 'gift:shopping_order_legacy_gift',
+      completedAt: 2000,
+    })
     expect(restoredStore.createBackupSnapshot().products[0]?.id).toBe('product_backup')
-    expect(restoredStore.createBackupSnapshot().orders).toEqual([])
+    expect(restoredStore.createBackupSnapshot().orders).toHaveLength(1)
   })
 
   test('neutralizes relationship-linked gift orders during cleanup without deleting the order', () => {

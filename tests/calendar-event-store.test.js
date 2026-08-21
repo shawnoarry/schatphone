@@ -224,6 +224,8 @@ describe('calendar event store', () => {
 
     const cue = store.upsertShoppingDeliveryCueFromOrder({
       id: 'shopping_order_nova',
+      sharedExperienceId: 'gift:shopping_order_nova',
+      giftRecipient: { name: 'Nova' },
       itemCount: 2,
       totalCents: 45600,
       currency: 'CNY',
@@ -239,6 +241,7 @@ describe('calendar event store', () => {
     expect(cue).toMatchObject({
       id: 'shopping_delivery_cue_shopping_order_nova',
       orderId: 'shopping_order_nova',
+      sharedExperienceId: 'gift:shopping_order_nova',
       status: 'suggested',
       source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
       totalCents: 45600,
@@ -251,6 +254,7 @@ describe('calendar event store', () => {
     expect(event).toMatchObject({
       source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
       sourceReminderId: cue.id,
+      sharedExperienceId: 'gift:shopping_order_nova',
       titleEn: 'Shopping follow-up: 2 Shopping items',
       route: '/shopping/schat_mall?category=logistics&orderId=shopping_order_nova',
       icon: 'fas fa-truck-fast',
@@ -266,6 +270,9 @@ describe('calendar event store', () => {
     expect(restoredStore.findShoppingDeliveryCueById(cue.id)?.status).toBe('confirmed')
     expect(restoredStore.findEventBySourceReminderId(cue.id)?.titleEn).toBe(
       'Shopping follow-up: 2 Shopping items',
+    )
+    expect(restoredStore.findEventBySourceReminderId(cue.id)?.sharedExperienceId).toBe(
+      'gift:shopping_order_nova',
     )
 
     expect(restoredStore.dismissShoppingDeliveryCue(cue.id)).toBe(true)

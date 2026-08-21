@@ -1,4 +1,5 @@
 import { SHOPPING_SOURCE_KEYS } from './planned-module-registry'
+import { normalizeSharedExperienceId } from './shared-experience-contract'
 
 export const REMINDERS_STORAGE_KEY = 'store:reminders'
 export const REMINDERS_STORAGE_VERSION = 1
@@ -135,6 +136,7 @@ export const normalizeShoppingDeliveryCue = (raw, index = 0) => {
   return {
     id: cueId,
     orderId,
+    sharedExperienceId: normalizeSharedExperienceId(raw.sharedExperienceId),
     title,
     itemCount: Math.max(0, toReminderInt(raw.itemCount, 0)),
     totalCents: Math.max(0, toReminderInt(raw.totalCents, 0)),

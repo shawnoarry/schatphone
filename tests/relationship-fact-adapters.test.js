@@ -18,11 +18,16 @@ import {
   recordChatSocialEventRelationshipFact,
   recordMapSharedRouteRelationshipFact,
   recordPhoneCallRelationshipFact,
+  recordShoppingGiftDeliveryRelationshipFact,
   recordShoppingGiftRelationshipFact,
   recordWalletOrderSupportRelationshipFact,
   recordWalletSharedTransferRelationshipFact,
 } from '../src/lib/relationship-fact-adapters'
 import { SHOPPING_SOURCE_KEYS } from '../src/lib/planned-module-registry'
+import {
+  buildShoppingGiftExperienceId,
+  buildSharedExperienceMemoryKey,
+} from '../src/lib/shared-experience-contract'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
 
 describe('relationship fact adapters', () => {
@@ -74,7 +79,9 @@ describe('relationship fact adapters', () => {
     expect(summary.metrics.affinity).toBe(58)
     expect(summary.metrics.intimacy).toBe(24)
     expect(summary.latestEventSummary).toContain('Gift purchased')
-    expect(firstEvent.memoryKey).toBe(buildRelationshipMemoryKey('shopping_gift', order.id))
+    expect(firstEvent.memoryKey).toBe(
+      buildSharedExperienceMemoryKey(buildShoppingGiftExperienceId(order.id)),
+    )
   })
 
   test('attaches saved relationship classification gate metadata to low-risk facts', () => {
@@ -684,6 +691,7 @@ describe('relationship fact adapters', () => {
         id: 'calendar_event_rin_gift_followup',
         source: SHOPPING_SOURCE_KEYS.CALENDAR_DELIVERY,
         sourceReminderId: 'shopping_delivery_cue_shopping_order_rin_1',
+        sharedExperienceId: buildShoppingGiftExperienceId(order.id),
         status: 'confirmed',
         titleEn: 'Gift delivery follow-up',
       },
@@ -693,7 +701,9 @@ describe('relationship fact adapters', () => {
     const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target)
     const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
 
-    expect(shoppingEvent.memoryKey).toBe(buildRelationshipMemoryKey('shopping_gift', order.id))
+    expect(shoppingEvent.memoryKey).toBe(
+      buildSharedExperienceMemoryKey(buildShoppingGiftExperienceId(order.id)),
+    )
     expect(calendarEvent.memoryKey).toBe(shoppingEvent.memoryKey)
     expect(memories).toHaveLength(1)
     expect(memories[0]).toMatchObject({
@@ -752,7 +762,9 @@ describe('relationship fact adapters', () => {
     const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target)
     const summary = relationshipRuntimeStore.summarizeEntityForTarget(target)
 
-    expect(shoppingEvent.memoryKey).toBe(buildRelationshipMemoryKey('shopping_gift', order.id))
+    expect(shoppingEvent.memoryKey).toBe(
+      buildSharedExperienceMemoryKey(buildShoppingGiftExperienceId(order.id)),
+    )
     expect(walletEvent.memoryKey).toBe(shoppingEvent.memoryKey)
     expect(walletEvent.effectApplied).toBe(false)
     expect(walletEvent.memoryRole).toBe('supporting')
@@ -767,6 +779,137 @@ describe('relationship fact adapters', () => {
       trust: 53,
       intimacy: 24,
     })
+  })
+
+  test('updates one gift memory through delivery and phone feedback without stacking metrics', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const experienceId = buildShoppingGiftExperienceId('shopping_order_xia_feedback')
+    const order = {
+      id: 'shopping_order_xia_feedback',
+      status: 'completed',
+      sharedExperienceId: experienceId,
+      totalCents: 8800,
+      currency: 'CNY',
+      giftRecipient: {
+        name: 'Xia',
+        contactId: 8,
+        profileId: 8,
+        kind: 'role',
+      },
+      items: [{ title: 'Moon Lamp', quantity: 1, unitPriceCents: 8800, currency: 'CNY' }],
+      createdAt: 100,
+      completedAt: 200,
+      updatedAt: 200,
+    }
+    const target = { id: 8, profileId: 8, kind: 'role', name: 'Xia' }
+
+    const purchased = recordShoppingGiftRelationshipFact({ relationshipRuntimeStore, order })
+    const delivered = recordShoppingGiftDeliveryRelationshipFact({
+      relationshipRuntimeStore,
+      order,
+    })
+    const call = {
+      id: 'phone_call_xia_gift_feedback',
+      direction: 'incoming',
+      status: 'completed',
+      durationSec: 180,
+      summary: 'I love it.',
+      sharedExperienceId: experienceId,
+      startedAt: 300,
+      createdAt: 300,
+    }
+    const feedback = recordPhoneCallRelationshipFact({
+      relationshipRuntimeStore,
+      call,
+      target,
+      giftOrder: order,
+    })
+    const retried = recordPhoneCallRelationshipFact({
+      relationshipRuntimeStore,
+      call,
+      target,
+      giftOrder: order,
+    })
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(target, { memoryLimit: 10 })
+
+    expect(purchased.memoryKey).toBe(buildSharedExperienceMemoryKey(experienceId))
+    expect(delivered.memoryKey).toBe(purchased.memoryKey)
+    expect(feedback).toMatchObject({
+      memoryKey: purchased.memoryKey,
+      sharedExperienceId: experienceId,
+      factType: 'recipient_feedback_received',
+      memoryRole: 'supporting',
+      effectApplied: false,
+    })
+    expect(retried.id).toBe(feedback.id)
+    expect(relationshipRuntimeStore.events).toHaveLength(3)
+    expect(summary.memorySummaries).toHaveLength(1)
+    expect(summary.memorySummaries[0]).toMatchObject({
+      memoryKey: purchased.memoryKey,
+      supportingCount: 3,
+    })
+    expect(summary.memorySummaries[0].displaySummary).toContain('I love it.')
+    expect(summary.metrics).toMatchObject({ affinity: 58, trust: 53, intimacy: 24 })
+  })
+
+  test('keeps an existing legacy Shopping gift memory readable when new progress arrives', () => {
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    relationshipRuntimeStore.resetForTesting()
+    const target = { id: 8, profileId: 8, contactId: 8, kind: 'role', name: 'Xia' }
+    const order = {
+      id: 'shopping_order_xia_legacy',
+      status: 'completed',
+      giftRecipient: target,
+      items: [{ title: 'Legacy Gift' }],
+      createdAt: 100,
+      completedAt: 200,
+      updatedAt: 200,
+    }
+    const legacyMemoryKey = buildRelationshipMemoryKey('shopping_gift', order.id)
+    relationshipRuntimeStore.recordRelationshipFact({
+      target,
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: `${order.id}:gift`,
+      memoryKey: legacyMemoryKey,
+      factType: 'gift_purchased',
+      summary: 'Legacy gift purchase.',
+      metricDeltas: { affinity: 8, trust: 3, intimacy: 4 },
+      createdAt: 100,
+    })
+
+    const purchase = recordShoppingGiftRelationshipFact({ relationshipRuntimeStore, order })
+    const delivery = recordShoppingGiftDeliveryRelationshipFact({
+      relationshipRuntimeStore,
+      order,
+    })
+    const call = {
+      id: 'phone_call_xia_legacy_feedback',
+      direction: 'incoming',
+      status: 'completed',
+      durationSec: 60,
+      summary: 'Still love it.',
+      sharedExperienceId: buildShoppingGiftExperienceId(order.id),
+      startedAt: 300,
+      createdAt: 300,
+    }
+    const feedback = recordPhoneCallRelationshipFact({
+      relationshipRuntimeStore,
+      call,
+      target,
+      giftOrder: order,
+    })
+    const memories = relationshipRuntimeStore.listMemoryAggregatesForTarget(target, 10)
+
+    expect(purchase.memoryKey).toBe(legacyMemoryKey)
+    expect(delivery.memoryKey).toBe(legacyMemoryKey)
+    expect(feedback.memoryKey).toBe(legacyMemoryKey)
+    expect(memories).toHaveLength(1)
+    expect(memories[0]).toMatchObject({
+      memoryKey: legacyMemoryKey,
+      supportingCount: 3,
+    })
+    expect(memories[0].displaySummary).toContain('Still love it.')
   })
 
   test('keeps food delivery wallet support inside the shared-meal memory without stacking metrics', () => {

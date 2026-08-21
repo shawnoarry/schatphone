@@ -7,6 +7,12 @@ import PhoneView from '../src/views/PhoneView.vue'
 import { resetDialogServiceForTest, useDialog } from '../src/composables/useDialog'
 import { usePhoneStore } from '../src/stores/phone'
 import { useRelationshipRuntimeStore } from '../src/stores/relationshipRuntime'
+import { useShoppingStore } from '../src/stores/shopping'
+import { useChatStore } from '../src/stores/chat'
+import {
+  recordShoppingGiftDeliveryRelationshipFact,
+  recordShoppingGiftRelationshipFact,
+} from '../src/lib/relationship-fact-adapters'
 
 const DummyView = { template: '<div />' }
 
@@ -47,6 +53,7 @@ describe('PhoneView', () => {
     resetDialogServiceForTest()
     usePhoneStore().resetForTesting()
     useRelationshipRuntimeStore().resetForTesting()
+    useShoppingStore().resetForTesting()
   })
 
   test('records a selected Chat contact call as a relationship fact', async () => {
@@ -75,6 +82,74 @@ describe('PhoneView', () => {
       status: 'applied',
     })
     expect(relationshipRuntimeStore.summarizeEntityForTarget({ profileId: 1, name: 'Eva' }).metrics.affinity).toBe(54)
+
+    wrapper.unmount()
+  })
+
+  test('links recipient feedback to the same delivered gift memory', async () => {
+    const shoppingStore = useShoppingStore()
+    const phoneStore = usePhoneStore()
+    const relationshipRuntimeStore = useRelationshipRuntimeStore()
+    const product = shoppingStore.upsertProduct({
+      id: 'product_xia_gift_feedback',
+      title: 'Moon Lamp',
+      category: 'gifts',
+      price: '88.00',
+      giftable: true,
+    })
+    shoppingStore.addToCart(product.id)
+    const order = shoppingStore.checkoutCart({
+      giftRecipient: {
+        name: 'Eva',
+        contactId: 1,
+        profileId: 1,
+        kind: 'role',
+        sourceModule: 'chat',
+        sourceId: '1',
+      },
+    })
+    shoppingStore.markOrderCompleted(order.id)
+    recordShoppingGiftRelationshipFact({ relationshipRuntimeStore, order })
+    recordShoppingGiftDeliveryRelationshipFact({ relationshipRuntimeStore, order })
+    const duplicateEva = useChatStore().addContact({
+      name: 'Eva',
+      kind: 'role',
+      role: 'Same-name test contact',
+    })
+
+    const { wrapper } = await mountPhoneView()
+    await wrapper.get('[data-testid="phone-open-composer"]').trigger('click')
+    await wrapper.get('[data-testid="phone-relationship-contact"]').setValue(String(duplicateEva.id))
+    await wrapper.get('[data-testid="phone-direction-incoming"]').trigger('click')
+    await flushUi()
+    expect(wrapper.find('[data-testid="phone-gift-experience"]').exists()).toBe(false)
+
+    await wrapper.get('[data-testid="phone-relationship-contact"]').setValue('1')
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="phone-gift-experience"]').text()).toContain('Moon Lamp')
+    await wrapper.get('[data-testid="phone-gift-experience"]').setValue(order.sharedExperienceId)
+    await wrapper.get('[data-testid="phone-summary"]').setValue('I love it.')
+    await wrapper.get('[data-testid="phone-composer-sheet"]').trigger('submit')
+    await flushUi()
+
+    expect(phoneStore.recentCalls[0]).toMatchObject({
+      contactName: 'Eva',
+      direction: 'incoming',
+      sharedExperienceId: order.sharedExperienceId,
+      summary: 'I love it.',
+    })
+    const summary = relationshipRuntimeStore.summarizeEntityForTarget(
+      { profileId: 1, contactId: 1, name: 'Eva' },
+      { memoryLimit: 10 },
+    )
+    expect(summary.memorySummaries).toHaveLength(1)
+    expect(summary.memorySummaries[0]).toMatchObject({
+      memoryKey: `shared_experience__${order.sharedExperienceId}`,
+      supportingCount: 3,
+    })
+    expect(summary.memorySummaries[0].displaySummary).toContain('I love it.')
+    expect(summary.metrics).toMatchObject({ affinity: 58, trust: 53, intimacy: 24 })
 
     wrapper.unmount()
   })

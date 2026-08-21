@@ -144,9 +144,10 @@ describe('ShoppingView', () => {
     expect(relationshipSummary.latestEventSummary).toContain('Gift purchased')
     expect(relationshipSummary.memorySummaries).toHaveLength(1)
     expect(relationshipSummary.memorySummaries[0]).toMatchObject({
-      supportingCount: 2,
+      supportingCount: 3,
       primarySourceModule: 'relationship_shopping_gift',
     })
+    expect(relationshipSummary.memorySummaries[0].displaySummary).toContain('was delivered')
     expect(relationshipSummary.memorySummaries[0].sourceModules).toContain('relationship_wallet_order_support')
     expect(wrapper.find(`[data-testid="shopping-transfer-wallet-${order.id}"]`).attributes('disabled')).toBeDefined()
 

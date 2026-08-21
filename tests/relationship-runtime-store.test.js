@@ -292,6 +292,51 @@ describe('relationship runtime store', () => {
     expect(store.events[1].memoryRole).toBe('primary')
   })
 
+  test('lets supporting progress update one memory summary without applying metrics again', () => {
+    const store = useRelationshipRuntimeStore()
+    store.resetForTesting()
+    const target = { profileId: 5, name: 'Aki' }
+
+    store.recordRelationshipFact({
+      target,
+      sourceModule: 'relationship_shopping_gift',
+      sourceId: 'shopping_order_aki_1:gift',
+      sharedExperienceId: 'gift:shopping_order_aki_1',
+      memoryKey: 'shared_experience__gift:shopping_order_aki_1',
+      factType: 'gift_purchased',
+      summary: 'Gift purchased for Aki.',
+      memorySummary: 'A gift for Aki was ordered and delivery was planned.',
+      metricDeltas: { affinity: 8 },
+      createdAt: 100,
+    })
+    const feedback = store.recordRelationshipFact({
+      target,
+      sourceModule: 'relationship_phone_call',
+      sourceId: 'phone_call_aki_1:call:role_5',
+      sharedExperienceId: 'gift:shopping_order_aki_1',
+      memoryKey: 'shared_experience__gift:shopping_order_aki_1',
+      factType: 'recipient_feedback_received',
+      summary: 'Aki called with gift feedback: I love it.',
+      memorySummary: 'The gift for Aki was delivered, and Aki called to say she loved it.',
+      metricDeltas: {},
+      forceSupportingMemory: true,
+      createdAt: 200,
+    })
+
+    const memory = store.listMemoryAggregatesForTarget(target)[0]
+    expect(feedback).toMatchObject({
+      sharedExperienceId: 'gift:shopping_order_aki_1',
+      memoryRole: 'supporting',
+      effectApplied: false,
+    })
+    expect(memory).toMatchObject({
+      supportingCount: 2,
+      displaySummary: 'The gift for Aki was delivered, and Aki called to say she loved it.',
+      primarySummary: 'Gift purchased for Aki.',
+    })
+    expect(store.summarizeEntityForTarget(target).metrics.affinity).toBe(58)
+  })
+
   test('builds recall summaries from the primary memory while exposing linked supporting facts', () => {
     const store = useRelationshipRuntimeStore()
     store.resetForTesting()
