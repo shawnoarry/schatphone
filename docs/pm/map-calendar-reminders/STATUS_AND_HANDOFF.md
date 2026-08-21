@@ -53,6 +53,16 @@ by place, and exports a pasteable decision list for the second-pass Map review. 
 exact place or storefront. This board is only a candidate-review aid; it does not write
 Map state or runtime assets.
 
+The pasted user result is normalized into
+`output/imagegen/map-place-media-search-20260821/user-selection.json` and the readable
+`user-selection.md`: 79 candidates remain for source review, with 22 primary-image
+candidates and 57 surrounding-area candidates. A metadata pre-review is recorded in
+`source-review.md` / `source-review.json`. It flags five apparent facility mismatches:
+Incheon Airport Terminal 1 #01/#02 are AREX station views, National Museum #07 is the
+National Folk Museum, and Modern Seoul #01/#02 are unrelated Hyundai buildings. These
+candidates are not being promoted to runtime. Large original downloads are a separate
+next step because Wikimedia is currently responding slowly.
+
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`

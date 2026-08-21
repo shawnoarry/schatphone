@@ -74,6 +74,33 @@ be pasted back for the second-pass identity, license, and crop verification. The
 board is review tooling only and does not write Map data or the runtime media
 registry.
 
+## User Selection And Source Pre-review
+
+The first user screening pass is recorded under:
+
+```text
+output/imagegen/map-place-media-search-20260821/user-selection.json
+output/imagegen/map-place-media-search-20260821/user-selection.md
+```
+
+It contains 79 provisional candidates: 22 marked as primary-image candidates and 57
+marked as surrounding-area candidates. The metadata pre-review currently identifies
+five facility mismatches that must not enter the exact-place image set: Incheon Airport
+Terminal 1 #01 and #02 are AREX station views, National Museum of Korea #07 is the
+National Folk Museum, and Modern Seoul #01 and #02 are Hyundai buildings unrelated to
+the named mall. The complete pre-review record is in:
+
+```text
+output/imagegen/map-place-media-search-20260821/source-review.md
+output/imagegen/map-place-media-search-20260821/source-review.json
+```
+
+These are still acquisition candidates, not runtime decisions. The next review stage
+opens the source page and untouched original for the remaining candidates, confirms
+visual identity and license terms, and only then creates one primary derivative plus
+optional detail-gallery derivatives. Wikimedia's large-file response is currently
+slow, so no runtime registry or canonical place record has changed.
+
 ## Calibration Matrix
 
 | Place | Grade | Source composition | Overview guidance | Detail guidance | Current decision |
