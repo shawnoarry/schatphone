@@ -19,7 +19,7 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible;
-- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00`, `CMG-01`, `CMG-02`, `CMG-03`, and `DCF-05` are complete; `CMG-04`, `CMG-05`, and `CMG-08` are dependency-safe but remain unstarted;
+- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00`, `CMG-01`, `CMG-02`, `CMG-03`, and `DCF-05` are complete; `CMG-04` is active on PC-A, while `CMG-05` waits for its overlapping Relationship Adapter work and `CMG-08` remains dependency-safe but unstarted;
 - any content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -378,19 +378,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0` |
-| Next dependency-safe items | `CMG-04`, `CMG-05`, `CMG-08`, and `DCF-06` remain separately assignable only after a new non-overlapping reservation |
-| Active item | `NONE`; `DCF-03` is closed and the next item must be explicitly reserved before implementation |
+| Next dependency-safe items | `CMG-04` is active on PC-A; `CMG-05` waits for its overlapping Relationship Adapter work; `CMG-08` and `DCF-06` remain separately assignable only after a non-overlapping reservation |
+| Active item | `CMG-04 IN_PROGRESS` |
 | Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / integration controller |
+| PC-A physical machine / role | `SKY-20250212UBG` / integration controller and `CMG-04` implementer |
 | PC-B physical machine / role | `UNASSIGNED` |
-| Source branch, base, and worktree | `main`; `DCF-03` base `4431b64`; behavior source `42742e5`; regression evidence `e9607c0`; `D:\github\schatphone` |
+| Source branch, base, and worktree | `main`; `CMG-04` base `ae9a9b8`; `D:\github\schatphone` |
 | Existing dirty/untracked inventory | User-owned `docs/design/MAP_PLACE_DETAIL_UI_REVIEW.md`; unrelated `tmp/**` experiments and `tmp/vitest-out.txt`. The Calendar appearance work was independently integrated at `4172741` during this round. Preserve and never stage remaining user files. |
-| Risk lane | `DCF-03` is closed. Future Phone or Settings work must preserve the shared `ringtoneEnabled` meaning and must not fold the separate phone call-audio profile, keypad tones, or system sound effects into it. |
-| Reserved paths | `NONE`; completion documents are released after the commit containing this record is synchronized |
-| Acceptance | Satisfied: with system sound effects off and ringtone enabled, preview invokes the selected ringtone; with ringtones off, preview is unavailable; incoming calls continue to follow the same `ringtoneEnabled` setting. |
-| Required checks | Passed: focused Settings and ringtone/Phone Vitest (4 files / 34 tests); Phone audio Settings Playwright (2/2 desktop and simulated mobile); lint; full Vitest (300 files / 2114 tests); production build; governance (2 files / 14 tests); `git diff --check`. The tracked `DCF-06` timeout did not reproduce. |
-| Integration state | `DCF-03 DONE 2026-08-21`; behavior `42742e5`, regression evidence `e9607c0`, no behavior rewrite |
-| Remote synchronization | Behavior and regression evidence are synchronized on `origin/main`; the completion record is synchronized by the commit containing this entry |
+| Risk lane | Elevated because one dirty worktree contains unrelated user Map documentation and the slice changes the shared Chat-to-Relationship meaning across two packages. Preserve persistence shape and source dedupe; do not migrate the legacy `chat_disclosure__user_shared` group, scan ordinary Chat, enable AI candidates, change relationship metrics, or begin `CMG-05`/`CMG-06`. |
+| Reserved paths | `src/lib/chat-disclosure-proposals.js`; `src/lib/relationship-fact-adapters.js`; `tests/relationship-fact-adapters.test.js`; `docs/roadmap/TODO_ROADMAP.md`; `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md`; completion-only updates in `docs/pm/contacts-relationship-system-v2/STATUS_AND_HANDOFF.md`, `docs/pm/chat-and-chat-directory/STATUS_AND_HANDOFF.md`, and `docs/architecture/RELATIONSHIP_GROWTH_EVENT_SYSTEM.md` |
+| Acceptance | Explicit hospital and birthday disclosures for one role create two separately recallable memory groups. A later hospital disclosure reuses the hospital memory group, updates its current summary, and preserves both exact Chat message sources. Unknown subjects fail safe into separate stable groups. Existing legacy generic memory remains readable and unchanged. |
+| Required checks | Focused Chat disclosure/Relationship Adapter and Runtime Vitest; lint; full Vitest; production build; governance; `git diff --check`. No route or visible control changes are planned, so no new Playwright path is required. |
+| Integration state | `CMG-04 IN_PROGRESS`; reservation only, no implementation committed yet |
+| Remote synchronization | This reservation must be committed and synchronized before source edits begin |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 

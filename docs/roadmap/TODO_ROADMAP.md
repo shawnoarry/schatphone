@@ -215,7 +215,7 @@ Acceptance for 4.5:
 
 #### 4.5-CMG Shared Experience, Memory, And Durable History Governance
 
-Status: `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20 / DCF-03 DONE 2026-08-21`
+Status: `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20 / DCF-03 DONE 2026-08-21 / CMG-04 IN_PROGRESS`
 
 This subsection is the only live execution checklist for this governance round. Other documents may describe product meaning or the current handoff, but they must reference these IDs instead of copying their status.
 
@@ -238,7 +238,7 @@ Implementation ledger:
 | `CMG-01` | P0 | `DONE 2026-08-20` | Frozen by `73672df`: the executable gift fixture produces one experience, three ordered progress points, one evolving role-memory summary, and stable Shopping/Wallet/Calendar/Phone owner-record references. Invalid, duplicate, dangling, out-of-order, or silently shortened evidence fails closed; no Store, storage, retention, or page behavior changed. | `CMG-00` | module architecture + Contacts/relationship + Event / PC-A (`SKY-20250212UBG`) |
 | `CMG-02` | P0 | `DONE 2026-08-20` | Completed by `208e1dc`: Relationship facts/decisions, Event Instance V2 start/advance and owner facts, Mini Scene commit/presentation, and the Food Delivery address-interaction path now confirm persistence before reporting success. Failed writes restore pre-action owner state, keep the existing recovery surface active, and stable-ID retries do not duplicate committed records. Storage shapes and the 500/240/120 limits are unchanged. | `DCF-05`, `CMG-01` | module architecture + source owners / PC-A (`SKY-20250212UBG`) |
 | `CMG-03` | P0 | `DONE 2026-08-20` | Completed by `86270d8`: role Chat now receives current relationship state exactly once from Relationship Runtime. Legacy System Store relationship stage/metrics and warm/conflict timestamps no longer enter the prompt; bounded Chat activity counters/timestamps remain, and Contacts relationship premise stays explicitly labelled profile context. | `CMG-01` | Contacts/relationship + Chat / PC-A (`SKY-20250212UBG`) |
-| `CMG-04` | P0 | `TODO` | Replace the single generic Chat-disclosure bucket with subject-aware role memory. Unrelated disclosures such as hospital dislike and birthday remain separately recallable; later statements about the same subject update one memory with source history preserved. | `CMG-01`, `CMG-02`, `CMG-03` | Contacts/relationship + Chat / PC-A |
+| `CMG-04` | P0 | `IN_PROGRESS` | Replace the single generic Chat-disclosure bucket with subject-aware role memory. Unrelated disclosures such as hospital dislike and birthday remain separately recallable; later statements about the same subject update one memory with source history preserved. | `CMG-01`, `CMG-02`, `CMG-03` | Contacts/relationship + Chat / PC-A (`SKY-20250212UBG`) |
 | `CMG-05` | P0 | `TODO` | Add stable shared-experience identity and progress updates across the first accepted gift vertical. Shopping, Wallet, Calendar/delivery scheduling, Phone, Chat, and relationship records remain owner-native supporting records and do not become separate top-level memories. | `CMG-01`, `CMG-02`, `CMG-03` | Contacts/relationship + commerce + Chat/Event / PC-A |
 | `CMG-06` | P0 | `TODO` | Remove Relationship Runtime's global 500-row silent truncation through an approved storage/migration/rollback slice. All roles and statuses survive reopen and backup/restore; Contacts lists page without loading all history. | `CMG-02`, `CMG-04`, `CMG-05` | module architecture + Contacts/relationship / PC-A |
 | `CMG-07` | P0 | `TODO` | Remove Event Instance V2's 240-row silent truncation through the same retention rules. Active and terminal instances remain inspectable, and the address-change Service Case survives long-run creation, reopen, and backup/restore. | `CMG-01`, `CMG-02`, `CMG-05` | Event Runtime + commerce / PC-B |
@@ -813,7 +813,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 
 ## 6. Current Execution Queue
 
-1. `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20 / DCF-03 DONE 2026-08-21`: the ringtone-preview correction from `42742e5` is regression-protected by `e9607c0` and fully validated. No governance item is currently reserved; `CMG-04`, `CMG-05`, and `CMG-08` remain `TODO`, while `DCF-06` remains independently assignable on non-overlapping paths.
+1. `P0 IN_PROGRESS / CMG-00, CMG-01, CMG-02, CMG-03, AND DCF-05 DONE 2026-08-20 / DCF-03 DONE 2026-08-21 / CMG-04 IN_PROGRESS`: PC-A is replacing the one generic Chat-disclosure memory bucket with conservative subject-aware grouping. `CMG-05` must wait for this overlapping Relationship Adapter work; `CMG-08` and `DCF-06` remain independently assignable only on non-overlapping paths.
 2. `P0 DONE 2026-07-22`: 4.9 first successful Chat activation loop.
 3. `P0 DONE 2026-08-09`: 4.9 current-save write/conflict safety and the release-local complete backup/recovery boundary; broader Repository migration, capacity reporting, and personal R2 remain separately reviewable architecture slices.
 4. `P1 PARTIAL_DONE`: 4.10 Camera and shared image-generation first slice is complete; the personal Gallery image-bed Adapter is accepted as an explicit separately promoted follow-up, while Gallery People curation and source-module callers remain separate.
