@@ -60,6 +60,19 @@ originals only for candidates that pass identity, privacy, architecture, crop, a
 license checks. Until that review is complete, all 159 records remain provisional and
 the seven-place-specific Seoul completion count is unchanged.
 
+For human screening, use the combined Chinese review board:
+
+```text
+output/imagegen/map-place-media-search-20260821/review-zh.html
+```
+
+It shows short Chinese place names and stable candidate numbers, supports place
+filtering, and provides `保留` / `区域氛围` / `不合适` / `不确定` buttons. The
+`生成我的筛选结果` action produces lines such as `光化门广场 #01 保留`, which can
+be pasted back for the second-pass identity, license, and crop verification. The
+board is review tooling only and does not write Map data or the runtime media
+registry.
+
 ## Calibration Matrix
 
 | Place | Grade | Source composition | Overview guidance | Detail guidance | Current decision |

@@ -45,6 +45,12 @@ untouched-original download for candidates that pass identity and license review
 by a separate keep / keep-as-area / defer / re-source decision. `src/lib/map-place-media.js`,
 `config/project-assets.json`, and runtime image URLs remain unchanged.
 
+The human review entry is the Git-ignored combined board
+`output/imagegen/map-place-media-search-20260821/review-zh.html`. It replaces long English
+file names with short Chinese place names plus stable candidate numbers, allows filtering
+by place, and exports a pasteable decision list for the second-pass Map review. This board
+is only a candidate-review aid; it does not write Map state or runtime assets.
+
 ## 1. Current Status
 
 Status: `PARTIAL_DONE`
