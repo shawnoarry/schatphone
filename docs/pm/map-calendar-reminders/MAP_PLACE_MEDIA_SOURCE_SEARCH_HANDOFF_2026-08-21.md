@@ -32,52 +32,55 @@ The intended product direction is unchanged:
 - Special license follow-up remains required for Gwanghwamun Square #08 (KOGL Type 1),
   Incheon Airport Terminal 1 #07 (CC BY-SA 3.0 de), and Gocheok Sky Dome #07 (KOGL Type 1).
 
-## Local Artifacts (Not In Git)
+## Artifacts And Git Boundary
 
-These artifacts were intentionally **not pushed**. The directory is Git-ignored because it
-contains large untouched source originals and temporary review output. It must be copied
-separately when moving to another PC. Do not add the original files to the repository:
+The large untouched source originals and temporary review output are intentionally **not
+pushed**. They remain under the Git-ignored batch directory:
 
 `output/imagegen/map-place-media-search-20260821/`
 
 Important files inside it:
 
-- `review-zh.html`: first-pass Chinese visual screening board;
-- `user-selection.json` / `user-selection.md`: normalized user decisions;
-- `source-review.json` / `source-review.md`: metadata pre-review and mismatch flags;
-- `user-selected-source-candidates/download-manifest.json`: resumable download state;
+- `review-zh.html`: first-pass Chinese visual screening board; local only;
+- `user-selection.json` / `user-selection.md`: normalized user decisions. The JSON is now
+  tracked for remote continuation; the Markdown board remains local;
+- `source-review.json` / `source-review.md`: metadata pre-review and mismatch flags. The
+  JSON is now tracked; the Markdown note remains local;
+- `user-selected-source-candidates/download-manifest.json`: resumable download state; the
+  JSON is now tracked;
 - `user-selected-source-candidates/source-candidates/`: untouched downloaded originals;
-- `download-selected-sources.mjs`: resumable source downloader.
+- `download-selected-sources.mjs`: resumable source downloader; the script is now tracked.
 
-The ignored archive is not included in the Git commit. If it is unavailable on the remote
-PC, the current 26-file progress and the first-pass selection board are unavailable there;
-the remote PC would have to recreate the selection data and redownload from the source.
+The 26 files under `source-candidates/`, the first-pass HTML board, and temporary review
+images are not in Git. They are optional for the first remote-PC continuation and can remain
+on this PC until the second-pass visual review.
 
 ## Git Handoff
 
 - Current branch: `main`.
-- This round's tracked commit contains only this handoff file and the Map package status
-  update. Do not stage the unrelated `tmp/` artifacts or other user work.
+- This round's next tracked commit will contain this handoff update plus the lightweight
+  source queue JSON and downloader helper. Do not stage the unrelated `tmp/` artifacts or
+  other user work.
 - After the push, the remote PC should run `git pull --ff-only origin main` and verify the
-  latest `origin/main` before copying the ignored artifact directory.
+  latest `origin/main`; no ignored original files need to be copied for the first download
+  continuation.
 
 ## Resume Procedure
 
 1. On the remote PC, update `main` from the pushed commit with fast-forward-only pull.
-2. Copy the complete `map-place-media-search-20260821` directory to any convenient location.
-   The drive letter, user name, and repository root do not need to match this PC. Keep the
-   directory's internal structure unchanged.
-3. Run the script from that copied directory, or pass its absolute path to Node:
+2. Run the tracked script with `--skip-archived`; no ignored files need to be copied:
 
-   `node <copied-batch-dir>\download-selected-sources.mjs`
+   `node output/imagegen/map-place-media-search-20260821/download-selected-sources.mjs --skip-archived`
 
-   For example, if the copied folder is `E:\SchatPhoneMedia\map-place-media-search-20260821`,
-   run `node E:\SchatPhoneMedia\map-place-media-search-20260821\download-selected-sources.mjs`.
+   The repository root may be on any drive or under any user directory; this command is
+   relative to that checkout.
 
-The script skips verified files, strips `utm_*` query parameters from Wikimedia original
-URLs, records bytes/SHA-256/SHA-1/license/source page/user role, and stops at the first
-HTTP 429 so the source host is not hammered. Do not replace originals with thumbnails or
-proxy-transformed images.
+The script skips the 26 archived records when `--skip-archived` is supplied, strips
+`utm_*` query parameters from Wikimedia original URLs, records bytes/SHA-256/SHA-1/license/
+source page/user role, and stops at the first HTTP 429 so the source host is not hammered.
+Do not replace originals with thumbnails or proxy-transformed images. When the original 26
+files are later copied into the batch directory, rerun without `--skip-archived` to restore
+exact local resume behavior.
 
 ## Next Safe Slice
 
