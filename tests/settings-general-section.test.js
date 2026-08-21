@@ -174,6 +174,28 @@ describe('SettingsView general section', () => {
     saveSpy.mockRestore()
   })
 
+  test('previews the ringtone independently from system sound effects', async () => {
+    const store = useSystemStore()
+    store.settings.appearance.soundEffectsEnabled = false
+    store.settings.appearance.ringtoneEnabled = true
+    store.settings.appearance.ringtoneId = 'classic-bell'
+    const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue()
+
+    const { wrapper } = await mountSettingsView('/settings?menu=sound')
+    const preview = wrapper.get('[data-testid="settings-ringtone-preview"]')
+
+    expect(preview.attributes('disabled')).toBeUndefined()
+    await preview.trigger('click')
+    expect(playSpy).toHaveBeenCalledTimes(1)
+
+    await wrapper.get('[data-testid="settings-ringtone-toggle"]').trigger('click')
+    await flushUi()
+    expect(store.settings.appearance.ringtoneEnabled).toBe(false)
+    expect(wrapper.get('[data-testid="settings-ringtone-preview"]').attributes('disabled')).toBeDefined()
+
+    wrapper.unmount()
+  })
+
   test('updates message notifications through the notification settings subpage', async () => {
     const store = useSystemStore()
     const saveSpy = vi.spyOn(store, 'saveNow')
