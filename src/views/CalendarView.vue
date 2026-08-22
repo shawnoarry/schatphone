@@ -1119,6 +1119,42 @@ watch(
   { immediate: true },
 )
 
+const applyCalendarDateQuery = (value) => {
+  if (route.query.calendarEventId) return
+  const raw = Array.isArray(value) ? value[0] : value
+  if (typeof raw !== 'string' || !raw.trim()) return
+  const parsed = parseDateInput(raw.trim().slice(0, 10))
+  if (!parsed) return
+  calendarAnchorAt.value = parsed
+  selectedCalendarDate.value = startOfCalendarDay(parsed)
+  hasResolvedInitialCalendarSelection.value = true
+}
+
+watch(
+  () => route.query.date,
+  (value) => {
+    if (value) applyCalendarDateQuery(value)
+  },
+  { immediate: true },
+)
+
+const formatCalendarDateQuery = (timestamp) => {
+  const date = new Date(timestamp)
+  const padValue = (part) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}-${padValue(date.getMonth() + 1)}-${padValue(date.getDate())}`
+}
+
+const openAgendaJourneyForSelectedDay = () => {
+  router.push({
+    path: '/agenda-journey',
+    query: {
+      source: 'calendar',
+      date: formatCalendarDateQuery(selectedCalendarDate.value),
+      ...(route.query.homePage ? { homePage: route.query.homePage } : {}),
+    },
+  })
+}
+
 watch(
   [() => calendarPushRuntime.value.ready, () => calendarStore.hasFinishedStorageHydration],
   ([ready, hydrated]) => {
@@ -1192,6 +1228,7 @@ onBeforeUnmount(() => {
         @select-day="selectCalendarDay"
         @select-event="selectCalendarOccurrence"
         @create-event="openCreateCalendarEvent"
+        @open-agenda-journey="openAgendaJourneyForSelectedDay"
       />
 
       <section

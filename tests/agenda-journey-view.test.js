@@ -146,4 +146,51 @@ describe('Agenda Journey view', () => {
     expect(wrapper.find('[data-testid="agenda-activity-complete"]').exists()).toBe(false)
     wrapper.unmount()
   })
+
+  test('focuses a journey from a Calendar date deep link', async () => {
+    const router = createTestRouter()
+    await router.push({ path: '/agenda-journey', query: { from: 'home' } })
+    await router.isReady()
+    const wrapper = mount(AgendaJourneyView, { global: { plugins: [router] } })
+    await flushUi()
+
+    // create a plan for tomorrow (2026-08-17 11:00 +08)
+    await wrapper.get('[data-testid="agenda-create-open"]').trigger('click')
+    await wrapper.get('[data-testid="agenda-create-title"]').setValue('明天排练')
+    await wrapper.get('[data-testid="agenda-create-start"]').setValue('2026-08-17T11:00')
+    await wrapper.get('[data-testid="agenda-create-save"]').trigger('submit')
+    await flushUi()
+
+    // Calendar deep link focuses the same date and selects the journey
+    await router.push({ path: '/agenda-journey', query: { source: 'calendar', date: '2026-08-17' } })
+    await flushUi()
+
+    const filterTabs = wrapper.findAll('.filter-row button')
+    const upcomingTab = filterTabs.find((tab) => tab.text().includes('近期'))
+    expect(upcomingTab?.attributes('aria-selected')).toBe('true')
+    expect(wrapper.get('[data-testid="agenda-activity-step"]').text()).toContain('明天排练')
+    wrapper.unmount()
+  })
+
+  test('opens Calendar at the selected journey day with return context', async () => {
+    const router = createTestRouter()
+    await router.push({ path: '/agenda-journey', query: { from: 'home' } })
+    await router.isReady()
+    const wrapper = mount(AgendaJourneyView, { global: { plugins: [router] } })
+    await flushUi()
+
+    await wrapper.get('[data-testid="agenda-create-open"]').trigger('click')
+    await wrapper.get('[data-testid="agenda-create-title"]').setValue('后天复盘')
+    await wrapper.get('[data-testid="agenda-create-start"]').setValue('2026-08-18T15:30')
+    await wrapper.get('[data-testid="agenda-create-save"]').trigger('submit')
+    await flushUi()
+
+    await wrapper.get('[data-testid="agenda-open-calendar"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/calendar',
+      query: { source: 'agenda-journey', date: '2026-08-18' },
+    })
+    wrapper.unmount()
+  })
 })

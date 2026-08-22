@@ -285,6 +285,50 @@ const clearSelectedJourney = () => {
 
 const goHome = () => pushReturnTarget(router, route, '/home')
 
+const formatDateQueryValue = (timestamp) => {
+  const date = new Date(timestamp)
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+const openCalendarForSelectedDay = () => {
+  const day = selectedJourney.value?.scheduledStartsAt || now.value
+  router.push({
+    path: '/calendar',
+    query: {
+      source: 'agenda-journey',
+      date: formatDateQueryValue(day),
+      ...(route.query.homePage ? { homePage: route.query.homePage } : {}),
+    },
+  })
+}
+
+const applyDateQuery = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (typeof raw !== 'string' || !raw.trim()) return
+  const parsed = new Date(`${raw.trim().slice(0, 10)}T00:00`).getTime()
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed)) return
+  const dayStart = startOfCalendarDay(parsed)
+  if (dayStart === todayStartsAt.value) selectedFilter.value = 'today'
+  else if (dayStart > todayStartsAt.value) selectedFilter.value = 'upcoming'
+  else selectedFilter.value = 'finished'
+  const journey = orderedJourneys.value.find(
+    (item) => startOfCalendarDay(item.scheduledStartsAt) === dayStart,
+  )
+  if (journey) {
+    selectedJourneyId.value = journey.id
+    // keep the journey deep link in the query so the journeyId watcher agrees
+    void router.replace({ path: route.path, query: { ...route.query, journeyId: journey.id } })
+  }
+}
+
+watch(
+  () => route.query.date,
+  (value) => {
+    if (value) applyDateQuery(value)
+  },
+  { immediate: true },
+)
+
 const openCreate = () => {
   const startsAt = createDefaultStart()
   createDraft.value = {
@@ -603,6 +647,16 @@ onBeforeUnmount(() => {
         <p>{{ t('今天与近期', 'Today & near term') }}</p>
         <h1>{{ t('行程', 'Agenda Journey') }}</h1>
       </div>
+      <button
+        class="calendar-link-button"
+        type="button"
+        :aria-label="t('在日历中查看这一天', 'View this day in Calendar')"
+        :title="t('在日历中查看这一天', 'View this day in Calendar')"
+        data-testid="agenda-open-calendar"
+        @click="openCalendarForSelectedDay"
+      >
+        <i class="fas fa-calendar-days" aria-hidden="true"></i>
+      </button>
       <button class="create-button" type="button" data-testid="agenda-create-open" :aria-label="t('新建计划', 'New plan')" @click="openCreate">
         <i class="fas fa-plus" aria-hidden="true"></i>
         <span>{{ t('新计划', 'New plan') }}</span>
@@ -915,18 +969,27 @@ onBeforeUnmount(() => {
 
 .icon-button,
 .create-button,
+.calendar-link-button,
 .journey-focus__mobile-nav button {
   border: 0;
   color: inherit;
   background: transparent;
 }
 
-.icon-button {
+.icon-button,
+.calendar-link-button {
   width: 42px;
   height: 42px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.74);
   box-shadow: 0 8px 20px rgba(28, 47, 42, 0.08);
+}
+
+.calendar-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .agenda-journey__identity { min-width: 0; }

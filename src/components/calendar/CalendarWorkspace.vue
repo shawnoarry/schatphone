@@ -31,6 +31,7 @@ const emit = defineEmits([
   'select-day',
   'select-event',
   'create-event',
+  'open-agenda-journey',
 ])
 
 const { t } = useI18n()
@@ -295,10 +296,21 @@ const markerLabelFor = (event) => {
           <p>{{ t('选中日期', 'Selected day') }}</p>
           <h3>{{ titleForDate(selectedDate, { weekday: 'long', month: 'long', day: 'numeric' }) }}</h3>
         </div>
-        <button type="button" @click="emit('create-event', selectedDate)">
-          <i class="fas fa-plus" aria-hidden="true"></i>
-          <span>{{ t('添加安排', 'Add event') }}</span>
-        </button>
+        <div class="calendar-selected-day__actions">
+          <button
+            type="button"
+            class="calendar-selected-day__journey-link"
+            data-testid="calendar-open-agenda-journey"
+            @click="emit('open-agenda-journey')"
+          >
+            <span>{{ t('看行程', 'View journey') }}</span>
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </button>
+          <button type="button" @click="emit('create-event', selectedDate)">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            <span>{{ t('添加安排', 'Add event') }}</span>
+          </button>
+        </div>
       </header>
       <div v-if="selectedDayOccurrences.length" class="calendar-selected-day__list">
         <button
@@ -383,6 +395,19 @@ const markerLabelFor = (event) => {
   margin-top: 3px;
   font-size: 20px;
   line-height: 1.25;
+}
+
+.calendar-selected-day__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-selected-day header .calendar-selected-day__journey-link {
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+  padding-inline: 12px;
 }
 
 .calendar-create-button,
