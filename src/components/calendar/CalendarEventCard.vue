@@ -1,10 +1,20 @@
 <script setup>
+import { computed } from 'vue'
 import { useI18n } from '../../composables/useI18n'
+import { calendarMarkerColor, resolveCalendarMarker } from '../../lib/calendar-markers'
 
-defineProps({
+const props = defineProps({
   event: {
     type: Object,
     required: true,
+  },
+  markers: {
+    type: Array,
+    default: () => [],
+  },
+  colorPreset: {
+    type: String,
+    default: 'default',
   },
   relatedKnowledgePoints: {
     type: Array,
@@ -115,6 +125,16 @@ const emit = defineEmits([
 
 const { t } = useI18n()
 
+const eventMarker = computed(() => resolveCalendarMarker(props.markers, props.event?.markerId))
+const eventMarkerLabel = computed(() =>
+  eventMarker.value ? t(eventMarker.value.labelZh, eventMarker.value.labelEn) : '',
+)
+const eventMarkerStyle = computed(() =>
+  eventMarker.value
+    ? { '--calendar-marker-color': calendarMarkerColor(eventMarker.value, props.colorPreset) }
+    : null,
+)
+
 const recurrenceLabel = (value) => {
   if (value === 'daily') return t('每天重复', 'Repeats daily')
   if (value === 'weekly') return t('每周重复', 'Repeats weekly')
@@ -201,6 +221,15 @@ const departureUnavailableCopy = (code) => {
       <span :class="event.requirement === 'optional' ? 'calendar-status--neutral' : 'calendar-status--info'">
         <i :class="event.requirement === 'optional' ? 'far fa-circle' : 'fas fa-circle-check'" aria-hidden="true"></i>
         {{ event.requirement === 'optional' ? t('可选', 'Optional') : t('必需', 'Required') }}
+      </span>
+      <span
+        v-if="eventMarker"
+        class="calendar-event-badge calendar-event-marker-chip"
+        :style="eventMarkerStyle"
+        :data-testid="`calendar-event-marker-${event.id}`"
+      >
+        <i class="fas fa-tag" aria-hidden="true"></i>
+        {{ eventMarkerLabel }}
       </span>
       <span>
         <i :class="event.allDay ? 'far fa-sun' : 'far fa-clock'" aria-hidden="true"></i>
@@ -660,6 +689,12 @@ const departureUnavailableCopy = (code) => {
   line-height: 1.3;
   font-weight: 700;
   text-align: center;
+}
+
+.calendar-event-marker-chip {
+  text-align: left;
+  color: color-mix(in srgb, var(--calendar-marker-color) 80%, var(--system-text));
+  background: color-mix(in srgb, var(--calendar-marker-color) 16%, transparent);
 }
 
 .calendar-event-card__summary {

@@ -1333,6 +1333,8 @@ onBeforeUnmount(() => {
           <CalendarEventCard
             :key="selectedEventPresentation.occurrenceId"
             :event="selectedEventPresentation"
+            :markers="calendarMarkers"
+            :color-preset="calendarColorPreset"
             :related-knowledge-points="getRelatedKnowledgePoints(eventKnowledgePoints, selectedEventPresentation.id)"
             :formatted-starts-at="formatCalendarEventRange(selectedEventPresentation)"
             :formatted-input-starts-at="formatDateTimeInput(selectedEventPresentation.startsAt)"
