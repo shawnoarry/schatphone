@@ -385,7 +385,7 @@ Current execution record:
 | PC-A physical machine / role | `SKY-20250212UBG` / integration controller |
 | PC-B physical machine / role | `UNASSIGNED` |
 | Source branch, base, and worktree | `main`; commit base `1d41869`; `D:\github\schatphone` |
-| Existing dirty/untracked inventory | Nine Calendar/Agenda screenshot files under `output/e2e/**`, `src/components/map/MapPlaceFocusSheet.vue`, `src/lib/map-place-media.js`, and `tmp/**` user-owned files remain untouched and must not be staged, reset, or cleaned. |
+| Existing dirty/untracked inventory | Nine Calendar/Agenda screenshot files under `output/e2e/**`, current Map work (including `MapPlaceFocusSheet.vue`, `map-place-media.js`, `MapView.vue`, and related tests), and `tmp/**` user-owned files remain untouched and must not be staged, reset, or cleaned. |
 | Risk lane | Elevated only because the shared worktree contains unrelated user-owned generated evidence; exact staging excluded that inventory. |
 | Reserved paths | none; DCF-04 and DCF-06 paths are released after local integration. |
 | Acceptance | DCF-04 moves focus into the incoming-call dialog, contains forward/reverse Tab navigation, and restores the prior connected focus target after close without changing ringtone or vibration behavior. DCF-06 gives fallback staging, unsafe-cleanup rejection, and verified recovery separate phase evidence while reducing redundant Git subprocesses and retaining the default test timeout. |
