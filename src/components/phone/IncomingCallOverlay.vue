@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { usePhoneStore } from '../../stores/phone'
@@ -24,6 +24,10 @@ const router = useRouter()
 const { t } = useI18n()
 const { settings } = storeToRefs(systemStore)
 const { incomingCall } = storeToRefs(phoneStore)
+const dialogElement = ref(null)
+
+let focusRestoreTarget = null
+let focusRequest = 0
 
 const isRinging = computed(() => incomingCall.value?.status === 'ringing')
 const callerName = computed(() => incomingCall.value?.participant?.name || '')
@@ -45,10 +49,59 @@ const avatarToneClass = (name = '') => {
   return tones[hash % tones.length]
 }
 
+const focusIncomingCallDialog = () => {
+  if (typeof document === 'undefined') return
+  const activeElement = document.activeElement
+  if (activeElement && activeElement !== document.body && typeof activeElement.focus === 'function') {
+    focusRestoreTarget = activeElement
+  }
+  const request = ++focusRequest
+  void nextTick(() => {
+    if (request !== focusRequest || !isRinging.value) return
+    dialogElement.value?.focus({ preventScroll: true })
+  })
+}
+
+const restoreIncomingCallFocus = () => {
+  const target = focusRestoreTarget
+  focusRestoreTarget = null
+  const request = ++focusRequest
+  void nextTick(() => {
+    if (request !== focusRequest || isRinging.value || !target?.isConnected) return
+    target.focus({ preventScroll: true })
+  })
+}
+
+const containDialogFocus = (event) => {
+  if (event.key !== 'Tab') return
+  const dialog = dialogElement.value
+  if (!dialog) return
+  const focusable = Array.from(dialog.querySelectorAll(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  ))
+  if (!focusable.length) {
+    event.preventDefault()
+    dialog.focus({ preventScroll: true })
+    return
+  }
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  const activeElement = document.activeElement
+  if (event.shiftKey && (activeElement === first || activeElement === dialog || !dialog.contains(activeElement))) {
+    event.preventDefault()
+    last.focus({ preventScroll: true })
+  } else if (!event.shiftKey && (activeElement === last || !dialog.contains(activeElement))) {
+    event.preventDefault()
+    first.focus({ preventScroll: true })
+  }
+}
+
 watch(
   isRinging,
   (ringing) => {
     if (ringing) {
+      focusIncomingCallDialog()
       if (settings.value.appearance?.ringtoneEnabled !== false) {
         const ringtoneId = normalizeRingtoneId(settings.value.appearance?.ringtoneId || DEFAULT_RINGTONE_ID)
         playRingtone(ringtoneId, { loop: true })
@@ -60,11 +113,13 @@ watch(
     }
     stopRingtone()
     stopRingVibration()
+    restoreIncomingCallFocus()
   },
   { immediate: true },
 )
 
 onBeforeUnmount(() => {
+  focusRequest += 1
   stopRingtone()
   stopRingVibration()
 })
@@ -86,7 +141,15 @@ const declineCall = () => {
 
 <template>
   <div v-if="isRinging" class="incoming-call" data-testid="incoming-call-overlay">
-    <section class="incoming-call__inner" role="dialog" aria-modal="true" :aria-label="t('来电', 'Incoming call')">
+    <section
+      ref="dialogElement"
+      class="incoming-call__inner"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
+      :aria-label="t('来电', 'Incoming call')"
+      @keydown="containDialogFocus"
+    >
       <p class="incoming-call__label">
         <i class="fas fa-phone-volume" aria-hidden="true"></i>
         {{ t('来电', 'Incoming call') }}

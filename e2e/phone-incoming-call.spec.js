@@ -47,11 +47,27 @@ test('declining an incoming call dismisses the overlay and records a declined ca
 
   const overlay = page.getByTestId('incoming-call-overlay')
   await expect(overlay).toBeVisible()
+  const dialog = overlay.getByRole('dialog', { name: /来电|Incoming call/ })
+  await expect(dialog).toBeFocused()
 
-  await page.getByTestId('incoming-call-decline').click()
+  const declineButton = page.getByTestId('incoming-call-decline')
+  const acceptButton = page.getByTestId('incoming-call-accept')
+  await page.keyboard.press('Tab')
+  await expect(declineButton).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(acceptButton).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(declineButton).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(acceptButton).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(declineButton).toBeFocused()
+
+  await page.keyboard.press('Enter')
 
   await expect(overlay).toHaveCount(0)
   await expect(page.getByTestId('phone-active-call')).toHaveCount(0)
+  await expect(incomingButton).toBeFocused()
 
   await page.getByTestId('phone-tab-recents').click()
   const callList = page.getByTestId('phone-call-list')
