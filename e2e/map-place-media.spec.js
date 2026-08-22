@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,9 +7,14 @@ import { expect, test } from '@playwright/test'
 import {
   MAP_PLACE_MEDIA_RECORDS,
   createMapPlaceMediaFallback,
+  getMapPlaceMediaGallery,
 } from '../src/lib/map-place-media.js'
 import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
-import { installProjectAssetRoute, prewarmProjectAssets } from './helpers/project-assets.js'
+import {
+  fetchProjectAsset,
+  installProjectAssetRoute,
+  prewarmProjectAssets,
+} from './helpers/project-assets.js'
 
 const OPENFREEMAP_HOST = 'tiles.openfreemap.org'
 const VISUAL_EVIDENCE_DIR = fileURLToPath(
@@ -98,6 +104,15 @@ const captureVisualEvidence = async (page, testInfo, name) => {
   await testInfo.attach(filename, { body, contentType: 'image/png' })
 }
 
+const expectVerifiedProjectImage = async (request, image, expectedAsset) => {
+  const url = await image.getAttribute('src')
+  expect(url).toBeTruthy()
+  const response = await fetchProjectAsset(request, url, { attempts: 1 })
+  expect(response.status).toBe(200)
+  expect(response.headers['content-type']).toContain(expectedAsset.mimeType)
+  expect(createHash('sha256').update(response.body).digest('hex')).toBe(expectedAsset.sha256)
+}
+
 test.describe('Map place media governance', () => {
   test('renders reviewed exact/area photos and an explicit player-place fallback', async ({ page }, testInfo) => {
     const pageErrors = []
@@ -185,17 +200,20 @@ test.describe('Map place media governance', () => {
       if (placeId === 'seoul-gwanghwamun') {
         await sheet.getByTestId('map-place-open-detail').click()
         const gallery = sheet.getByTestId('map-place-detail-media')
+        const galleryRecords = getMapPlaceMediaGallery('real-seoul-v1', placeId)
         await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 4')
         await expect(gallery).toContainText('Exact-place photo')
         await sheet.getByTestId('map-place-gallery-next').click()
         await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 4')
         await expect(gallery).toContainText('Area view')
         await expect(sheet.getByTestId('map-place-media-source')).toContainText('Richard Mortel')
+        const detailImage = sheet.getByTestId('map-place-detail-media-image')
         await expect.poll(() => (
-          sheet.getByTestId('map-place-detail-media-image').evaluate(
+          detailImage.evaluate(
             (element) => element.complete && element.naturalWidth > 0,
           )
         )).toBe(true)
+        await expectVerifiedProjectImage(page.request, detailImage, galleryRecords[1].asset)
         await expectNoHorizontalOverflow(page)
         await captureVisualEvidence(page, testInfo, 'detail-gallery')
       }
