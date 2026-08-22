@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process'
-import { copyFile, mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { copyFile, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   assertAutomaticPublishPlan,
   assertBatchUploadResult,
@@ -56,10 +56,12 @@ async function fixturePublishCliRepo() {
     `${JSON.stringify(createEmptyAssetRegistry(), null, 2)}\n`,
   )
   runFixtureGit(root, ['init'])
-  runFixtureGit(root, ['config', 'user.name', 'SchatPhone Test'])
-  runFixtureGit(root, ['config', 'user.email', 'test@schatphone.invalid'])
   runFixtureGit(root, ['add', '.gitignore', 'config/project-assets.json'])
-  runFixtureGit(root, ['commit', '-m', 'fixture baseline'])
+  runFixtureGit(root, [
+    '-c', 'user.name=SchatPhone Test',
+    '-c', 'user.email=test@schatphone.invalid',
+    'commit', '-m', 'fixture baseline',
+  ])
   return root
 }
 
@@ -275,74 +277,89 @@ describe('image-bed project publishing', () => {
     expect(hook.indexOf('publish-pending')).toBeLessThan(hook.indexOf('check --staged'))
   })
 
-  it('commits an exact fallback and cleans it after verified recovery', async () => {
-    const repoRoot = await fixturePublishCliRepo()
-    const plan = await buildPublishPlan({
-      repoRoot,
-      batchId: 'cross-pc-fallback',
-      runtime: ['output/imagegen/poster/runtime.png=briefings/fallback.png'],
-      approved: true,
-      approvalSource: 'test-approved',
-    })
+  describe.sequential('cross-PC fallback recovery phases', () => {
+    let repoRoot
+    let plan
     const planPath = '.imgbed-publish/cross-pc-fallback.plan.json'
-    await writeFile(join(repoRoot, planPath), `${JSON.stringify(plan, null, 2)}\n`)
 
-    const deferred = runFixtureCommand(repoRoot, process.execPath, [
-      'scripts/imgbed-publish.mjs',
-      'publish-pending',
-      '--stage-registry',
-      '--cleanup-local',
-      '--fallback-to-git',
-    ])
-    expect(deferred.status).toBe(0)
-    expect(deferred.stderr).toContain('deferred-to-next-commit')
-    expect(runFixtureGit(repoRoot, ['diff', '--cached', '--name-only'])).toContain(planPath)
-    expect(runFixtureGit(repoRoot, ['diff', '--cached', '--name-only'])).toContain(
-      'output/imagegen/poster/runtime.png',
-    )
-    const fallbackCheck = runFixtureCommand(repoRoot, process.execPath, [
-      'scripts/imgbed-publish.mjs', 'check', '--staged',
-    ])
-    expect(fallbackCheck.status).toBe(0)
-    runFixtureGit(repoRoot, ['commit', '-m', 'carry pending asset'])
+    beforeAll(async () => {
+      repoRoot = await fixturePublishCliRepo()
+      plan = await buildPublishPlan({
+        repoRoot,
+        batchId: 'cross-pc-fallback',
+        runtime: ['output/imagegen/poster/runtime.png=briefings/fallback.png'],
+        approved: true,
+        approvalSource: 'test-approved',
+      })
+      await writeFile(join(repoRoot, planPath), `${JSON.stringify(plan, null, 2)}\n`)
+    })
 
-    const verified = plan.entries.map((entry) => ({
-      ...entry,
-      status: 'verified',
-      verifiedAt: '2026-08-12T00:00:00.000Z',
-    }))
-    await writeFile(
-      join(repoRoot, '.imgbed-publish/cross-pc-fallback.results.json'),
-      `${JSON.stringify({
-        schemaVersion: 1,
-        completedChunks: 1,
-        totalChunks: 1,
-        results: verified,
-      }, null, 2)}\n`,
-    )
-    await writeFile(join(repoRoot, 'output/imagegen/poster/runtime.png'), 'changed-after-plan')
-    const unsafeCleanup = runFixtureCommand(repoRoot, process.execPath, [
-      'scripts/imgbed-publish.mjs',
-      'publish-pending',
-      '--stage-registry',
-      '--cleanup-local',
-      '--fallback-to-git',
-    ])
-    expect(unsafeCleanup.status).toBe(1)
-    expect(unsafeCleanup.stderr).toContain('Local asset changed after verified publication')
-    await writeFile(join(repoRoot, 'output/imagegen/poster/runtime.png'), 'runtime')
-    const recovered = runFixtureCommand(repoRoot, process.execPath, [
-      'scripts/imgbed-publish.mjs',
-      'publish-pending',
-      '--stage-registry',
-      '--cleanup-local',
-      '--fallback-to-git',
-    ])
-    expect(recovered.status).toBe(0)
-    expect(recovered.stdout).toContain('already-complete')
-    const staged = runFixtureGit(repoRoot, ['diff', '--cached', '--name-status'])
-    expect(staged).toContain('M\tconfig/project-assets.json')
-    expect(staged).toContain(`D\t${planPath}`)
-    expect(staged).toContain('D\toutput/imagegen/poster/runtime.png')
+    afterAll(async () => {
+      if (repoRoot) await rm(repoRoot, { recursive: true, force: true })
+    })
+
+    it('stages the exact fallback when publication is unavailable', () => {
+      const deferred = runFixtureCommand(repoRoot, process.execPath, [
+        'scripts/imgbed-publish.mjs',
+        'publish-pending',
+        '--stage-registry',
+        '--cleanup-local',
+        '--fallback-to-git',
+      ])
+      expect(deferred.status).toBe(0)
+      expect(deferred.stderr).toContain('deferred-to-next-commit')
+      const stagedPaths = runFixtureGit(repoRoot, ['diff', '--cached', '--name-only'])
+      expect(stagedPaths).toContain(planPath)
+      expect(stagedPaths).toContain('output/imagegen/poster/runtime.png')
+      const fallbackCheck = runFixtureCommand(repoRoot, process.execPath, [
+        'scripts/imgbed-publish.mjs', 'check', '--staged',
+      ])
+      expect(fallbackCheck.status).toBe(0)
+      runFixtureGit(repoRoot, ['commit', '-m', 'carry pending asset'])
+    })
+
+    it('rejects cleanup when the local asset changed after verification', async () => {
+      const verified = plan.entries.map((entry) => ({
+        ...entry,
+        status: 'verified',
+        verifiedAt: '2026-08-12T00:00:00.000Z',
+      }))
+      await writeFile(
+        join(repoRoot, '.imgbed-publish/cross-pc-fallback.results.json'),
+        `${JSON.stringify({
+          schemaVersion: 1,
+          completedChunks: 1,
+          totalChunks: 1,
+          results: verified,
+        }, null, 2)}\n`,
+      )
+      await writeFile(join(repoRoot, 'output/imagegen/poster/runtime.png'), 'changed-after-plan')
+      const unsafeCleanup = runFixtureCommand(repoRoot, process.execPath, [
+        'scripts/imgbed-publish.mjs',
+        'publish-pending',
+        '--stage-registry',
+        '--cleanup-local',
+        '--fallback-to-git',
+      ])
+      expect(unsafeCleanup.status).toBe(1)
+      expect(unsafeCleanup.stderr).toContain('Local asset changed after verified publication')
+    })
+
+    it('cleans the fallback after verified recovery', async () => {
+      await writeFile(join(repoRoot, 'output/imagegen/poster/runtime.png'), 'runtime')
+      const recovered = runFixtureCommand(repoRoot, process.execPath, [
+        'scripts/imgbed-publish.mjs',
+        'publish-pending',
+        '--stage-registry',
+        '--cleanup-local',
+        '--fallback-to-git',
+      ])
+      expect(recovered.status).toBe(0)
+      expect(recovered.stdout).toContain('already-complete')
+      const staged = runFixtureGit(repoRoot, ['diff', '--cached', '--name-status'])
+      expect(staged).toContain('M\tconfig/project-assets.json')
+      expect(staged).toContain(`D\t${planPath}`)
+      expect(staged).toContain('D\toutput/imagegen/poster/runtime.png')
+    })
   })
 })
