@@ -10,6 +10,7 @@ export default [
       'node_modules/**',
       '.agents/**',
       '.codex/**',
+      'output/**',
       'test-results/**',
       'playwright-report/**',
       'tmp/brand-build/**',

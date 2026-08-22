@@ -159,7 +159,7 @@ Fix slices (sized):
 3. ~~Network deep-form token cleanup~~ — done 2026-08-17 (see section 1).
 4. Contacts / WorldBook density polish (typography subtraction only; do not rebuild completed ownership loops).
 5. Wide-viewport shell contract (needs a contract decision before page-level work; Lock/notification evidence).
-6. Shared component residuals: `AssetThumbnailOption` placeholder ground and `AssetStatusBadge` pastel chips under `zen` (acceptable today; shared-component slice).
+6. ~~Shared component residuals~~ — `DONE 2026-08-19`: `AssetStatusBadge` tone palette moved to semantic tokens (neutral/amber/emerald/red -> muted/warning/success/danger soft pairs; default blue -> accent; sky-solid kept as its deliberate solid identity); `AssetThumbnailOption` placeholder frames, names, loading text, and selection frames moved to `--system-*` tokens (selection tones unify on accent/info/neutral; the cyan rail variant stays as-is for its dark media-surface context). Both follow the theme across their ~12 consuming surfaces (Gallery, Assets, Camera, Appearance, Contacts, Chat panels, Map panels, WorldBook, pickers). Validated: lint, 47 focused tests across the consuming surfaces, full suite green on rerun, build, default/zen screenshots. Note: the suite-wide intermittent single-test flake is getting more frequent as the suite grows (roughly 1-in-3 runs) and deserves its own investigation outside this lane.
 7. Visual gate extension policy: add surfaces only for repeated regression risk (Gallery added 2026-08-17).
 
 ## 4. Deferred / Do Not Do

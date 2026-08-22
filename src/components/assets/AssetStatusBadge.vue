@@ -38,12 +38,12 @@ const displayLabel = computed(() => {
 })
 
 const toneClass = computed(() => {
-  if (props.tone === 'neutral') return 'border-neutral-200 bg-neutral-50 text-neutral-400'
-  if (props.tone === 'amber') return 'border-amber-100 bg-amber-50 text-amber-600'
-  if (props.tone === 'emerald') return 'border-emerald-100 bg-emerald-50 text-emerald-600'
-  if (props.tone === 'red') return 'border-red-100 bg-red-50 text-red-500'
-  if (props.tone === 'sky-solid') return 'border-transparent bg-sky-500/90 text-white'
-  return 'border-blue-100 bg-blue-50 text-blue-500'
+  if (props.tone === 'neutral') return 'asset-status-badge--neutral'
+  if (props.tone === 'amber') return 'asset-status-badge--amber'
+  if (props.tone === 'emerald') return 'asset-status-badge--emerald'
+  if (props.tone === 'red') return 'asset-status-badge--red'
+  if (props.tone === 'sky-solid') return 'asset-status-badge--sky-solid'
+  return 'asset-status-badge--blue'
 })
 </script>
 
@@ -56,3 +56,41 @@ const toneClass = computed(() => {
     <span :class="truncate ? 'truncate' : ''">{{ displayLabel }}</span>
   </span>
 </template>
+
+<style scoped>
+.asset-status-badge--neutral {
+  border-color: var(--system-subtle-border);
+  background: var(--system-surface-muted);
+  color: var(--system-text-soft);
+}
+
+.asset-status-badge--amber {
+  border-color: var(--system-warning-soft);
+  background: var(--system-warning-soft);
+  color: var(--system-warning);
+}
+
+.asset-status-badge--emerald {
+  border-color: var(--system-success-soft);
+  background: var(--system-success-soft);
+  color: var(--system-success);
+}
+
+.asset-status-badge--red {
+  border-color: var(--system-danger-soft);
+  background: var(--system-danger-soft);
+  color: var(--system-danger);
+}
+
+.asset-status-badge--sky-solid {
+  border-color: transparent;
+  background: rgba(14, 165, 233, 0.9);
+  color: #ffffff;
+}
+
+.asset-status-badge--blue {
+  border-color: var(--system-accent-soft);
+  background: var(--system-accent-soft);
+  color: var(--system-accent);
+}
+</style>
