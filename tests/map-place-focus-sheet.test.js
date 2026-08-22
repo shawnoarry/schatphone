@@ -152,6 +152,73 @@ describe('MapPlaceFocusSheet', () => {
     expect(wrapper.get('[data-testid="map-place-summary"]').exists()).toBe(true)
   })
 
+  test('browses detail images with synchronized truth labels and attribution', async () => {
+    const wrapper = createWrapper({
+      mediaGallery: [
+        {
+          id: 'media-place-1',
+          kind: 'exact_photo',
+          labelZh: '地点实景',
+          labelEn: 'Exact-place photo',
+          noteZh: '照片直接展示这一地点。',
+          noteEn: 'This photograph directly shows the place.',
+          asset: {
+            url: 'https://example.test/place.webp',
+            altZh: '地点照片',
+            altEn: 'Place photo',
+          },
+          source: {
+            creator: 'Example Author',
+            sourcePageUrl: 'https://example.test/source',
+            licenseId: 'CC BY 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            changesZh: '已裁切。',
+            changesEn: 'Cropped.',
+          },
+        },
+        {
+          id: 'media-place-1-area',
+          kind: 'area_atmosphere',
+          labelZh: '周边实景',
+          labelEn: 'Area view',
+          noteZh: '展示周边环境。',
+          noteEn: 'Shows the surrounding area.',
+          asset: {
+            url: 'https://example.test/place-area.webp',
+            altZh: '地点周边照片',
+            altEn: 'Area around the place',
+          },
+          source: {
+            creator: 'Second Author',
+            sourcePageUrl: 'https://example.test/source-area',
+            licenseId: 'CC BY-SA 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+            changesZh: '已裁切。',
+            changesEn: 'Cropped.',
+          },
+        },
+      ],
+    })
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+    expect(wrapper.get('[data-testid="map-place-gallery-count"]').text()).toContain('1 / 2')
+
+    await wrapper.get('[data-testid="map-place-gallery-next"]').trigger('click')
+    expect(wrapper.get('[data-testid="map-place-detail-media-image"]').attributes('src')).toBe(
+      'https://example.test/place-area.webp',
+    )
+    expect(wrapper.get('[data-testid="map-place-detail-media"]').text()).toContain('Area view')
+    expect(wrapper.get('[data-testid="map-place-media-source"]').text()).toContain('Second Author')
+
+    await wrapper.get('[data-testid="map-place-detail-media"]').trigger('touchstart', {
+      changedTouches: [{ clientX: 180 }],
+    })
+    await wrapper.get('[data-testid="map-place-detail-media"]').trigger('touchend', {
+      changedTouches: [{ clientX: 240 }],
+    })
+    expect(wrapper.get('[data-testid="map-place-gallery-count"]').text()).toContain('1 / 2')
+  })
+
   test('copies the displayed detail address and reports success', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', {

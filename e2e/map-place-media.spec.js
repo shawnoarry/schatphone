@@ -28,6 +28,12 @@ const REAL_TRIALS = [
   ['seoul-starfield-coex-mall', 'seoul-starfield-coex-mall-hero-v1.webp', 'Exact-place photo'],
   ['seoul-myeongdong-kyoja-main', 'seoul-myeongdong-kyoja-main-hero-v1.webp', 'Area view'],
   ['seoul-sillim-one-room-district', 'seoul-sillim-one-room-district-hero-v1.webp', 'Area view'],
+  ['seoul-gwanghwamun', 'seoul-gwanghwamun-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-city-hall', 'seoul-city-hall-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-n-tower', 'seoul-n-tower-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-ddp', 'seoul-ddp-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-lotte-world-tower', 'seoul-lotte-world-tower-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-incheon-airport-t1', 'seoul-incheon-airport-t1-hero-v1.webp', 'Exact-place photo'],
 ]
 
 const mockOpenFreeMapStyle = async (page) => {
@@ -175,6 +181,23 @@ test.describe('Map place media governance', () => {
         await expect(sheet.getByTestId('map-place-media-source')).toContainText(
           'not the exact facade',
         )
+      }
+      if (placeId === 'seoul-gwanghwamun') {
+        await sheet.getByTestId('map-place-open-detail').click()
+        const gallery = sheet.getByTestId('map-place-detail-media')
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 4')
+        await expect(gallery).toContainText('Exact-place photo')
+        await sheet.getByTestId('map-place-gallery-next').click()
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 4')
+        await expect(gallery).toContainText('Area view')
+        await expect(sheet.getByTestId('map-place-media-source')).toContainText('Richard Mortel')
+        await expect.poll(() => (
+          sheet.getByTestId('map-place-detail-media-image').evaluate(
+            (element) => element.complete && element.naturalWidth > 0,
+          )
+        )).toBe(true)
+        await expectNoHorizontalOverflow(page)
+        await captureVisualEvidence(page, testInfo, 'detail-gallery')
       }
     }
 

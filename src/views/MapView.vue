@@ -25,7 +25,7 @@ import {
 import { resolveMapPlacePresentation } from '../lib/map-place-localization'
 import { searchMapPlaces, suggestMapPlaces } from '../lib/map-place-search'
 import { MAP_PLACE_KNOWLEDGE_MODE } from '../lib/map-place-discovery'
-import { resolveMapPlaceMedia } from '../lib/map-place-media'
+import { resolveMapPlaceMedia, resolveMapPlaceMediaGallery } from '../lib/map-place-media'
 import { resolveMapPlaceCopy } from '../lib/map-place-copy'
 import { createMapLocationShareObject } from '../lib/shareable-object'
 import {
@@ -263,6 +263,12 @@ const selectedPlaceMedia = computed(() => (
   selectedMapPlace.value
     ? resolveMapPlaceMedia(selectedMapPlace.value, activeMapPackId.value)
     : null
+))
+
+const selectedPlaceMediaGallery = computed(() => (
+  selectedMapPlace.value
+    ? resolveMapPlaceMediaGallery(selectedMapPlace.value, activeMapPackId.value)
+    : []
 ))
 
 const selectedPlacePinVisible = computed(() => (
@@ -2854,6 +2860,7 @@ onBeforeUnmount(() => {
       :place="selectedMapPlace"
       :visual="mapPlaceVisual(selectedMapPlace)"
       :media="selectedPlaceMedia"
+      :media-gallery="selectedPlaceMediaGallery"
       :name="mapPlaceName(selectedMapPlace)"
       :secondary-name="mapPlaceSecondaryName(selectedMapPlace)"
       :summary="selectedPlaceSummary"

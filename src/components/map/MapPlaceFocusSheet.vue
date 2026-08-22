@@ -6,6 +6,7 @@ const props = defineProps({
   place: { type: Object, required: true },
   visual: { type: Object, required: true },
   media: { type: Object, default: null },
+  mediaGallery: { type: Array, default: () => [] },
   name: { type: String, required: true },
   secondaryName: { type: String, default: '' },
   summary: { type: String, default: '' },
@@ -45,7 +46,9 @@ const emit = defineEmits([
 ])
 
 const level = ref('overview')
-const mediaLoadFailed = ref(false)
+const overviewMediaLoadFailed = ref(false)
+const detailMediaIndex = ref(0)
+const detailMediaLoadFailures = ref(new Set())
 const cardRef = ref(null)
 const scrollRef = ref(null)
 const detailBackRef = ref(null)
@@ -59,6 +62,7 @@ let cardResizeObserver = null
 let primaryActionNoticeTimer = null
 let entryNoticeTimer = null
 let addressCopyNoticeTimer = null
+let detailTouchStartX = null
 
 const resetCardScroll = () => {
   if (scrollRef.value) scrollRef.value.scrollTop = 0
@@ -66,6 +70,7 @@ const resetCardScroll = () => {
 
 const openDetail = async () => {
   level.value = 'detail'
+  detailMediaIndex.value = 0
   await nextTick()
   resetCardScroll()
   detailBackRef.value?.focus?.({ preventScroll: true })
@@ -89,7 +94,9 @@ watch(
   () => props.place?.placeId || props.place?.id,
   async () => {
     level.value = 'overview'
-    mediaLoadFailed.value = false
+    overviewMediaLoadFailed.value = false
+    detailMediaIndex.value = 0
+    detailMediaLoadFailures.value = new Set()
     primaryActionNotice.value = ''
     entryNotice.value = ''
     addressCopyNotice.value = ''
@@ -102,7 +109,17 @@ watch(
 watch(
   () => props.media?.id,
   () => {
-    mediaLoadFailed.value = false
+    overviewMediaLoadFailed.value = false
+    detailMediaIndex.value = 0
+    detailMediaLoadFailures.value = new Set()
+  },
+)
+
+watch(
+  () => props.mediaGallery.map((item) => item?.id).join('|'),
+  () => {
+    detailMediaIndex.value = 0
+    detailMediaLoadFailures.value = new Set()
   },
 )
 
@@ -116,12 +133,27 @@ watch(
 
 const isDetail = computed(() => level.value === 'detail')
 const displayedMedia = computed(() => (
-  mediaLoadFailed.value
+  overviewMediaLoadFailed.value
     ? createMapPlaceMediaFallback(props.place, props.media?.mapPackId)
     : props.media
 ))
+const detailGallery = computed(() => (
+  props.mediaGallery.length > 0
+    ? props.mediaGallery
+    : displayedMedia.value ? [displayedMedia.value] : []
+))
+const activeDetailMedia = computed(() => (
+  detailGallery.value[detailMediaIndex.value] || detailGallery.value[0] || displayedMedia.value
+))
+const displayedDetailMedia = computed(() => (
+  detailMediaLoadFailures.value.has(activeDetailMedia.value?.id)
+    ? createMapPlaceMediaFallback(props.place, activeDetailMedia.value?.mapPackId)
+    : activeDetailMedia.value
+))
 const hasMediaImage = computed(() => Boolean(displayedMedia.value?.asset?.url))
+const hasDetailMediaImage = computed(() => Boolean(displayedDetailMedia.value?.asset?.url))
 const isCategoryFallback = computed(() => displayedMedia.value?.kind === 'category_fallback')
+const isDetailCategoryFallback = computed(() => displayedDetailMedia.value?.kind === 'category_fallback')
 const mediaLabel = computed(() => props.t(
   displayedMedia.value?.labelZh || '',
   displayedMedia.value?.labelEn || '',
@@ -130,13 +162,25 @@ const mediaNote = computed(() => props.t(
   displayedMedia.value?.noteZh || '',
   displayedMedia.value?.noteEn || '',
 ))
+const detailMediaLabel = computed(() => props.t(
+  displayedDetailMedia.value?.labelZh || '',
+  displayedDetailMedia.value?.labelEn || '',
+))
+const detailMediaNote = computed(() => props.t(
+  displayedDetailMedia.value?.noteZh || '',
+  displayedDetailMedia.value?.noteEn || '',
+))
 const mediaAlt = computed(() => props.t(
   displayedMedia.value?.asset?.altZh || '',
   displayedMedia.value?.asset?.altEn || '',
 ))
-const mediaChanges = computed(() => props.t(
-  displayedMedia.value?.source?.changesZh || '',
-  displayedMedia.value?.source?.changesEn || '',
+const detailMediaAlt = computed(() => props.t(
+  displayedDetailMedia.value?.asset?.altZh || '',
+  displayedDetailMedia.value?.asset?.altEn || '',
+))
+const detailMediaChanges = computed(() => props.t(
+  displayedDetailMedia.value?.source?.changesZh || '',
+  displayedDetailMedia.value?.source?.changesEn || '',
 ))
 const addressToCopy = computed(() => props.detail || props.secondaryDetail || '')
 const primaryLabel = computed(() =>
@@ -157,6 +201,33 @@ const entryLabel = computed(() => (
 const entryIcon = computed(() => (
   props.entryAction === 'leave' ? 'fas fa-arrow-right-from-bracket' : 'fas fa-door-open'
 ))
+
+const moveDetailMedia = (direction) => {
+  const count = detailGallery.value.length
+  if (count < 2) return
+  detailMediaIndex.value = (detailMediaIndex.value + direction + count) % count
+}
+
+const markDetailMediaFailed = () => {
+  if (!activeDetailMedia.value?.id) return
+  detailMediaLoadFailures.value = new Set([
+    ...detailMediaLoadFailures.value,
+    activeDetailMedia.value.id,
+  ])
+}
+
+const beginDetailSwipe = (event) => {
+  detailTouchStartX = event.changedTouches?.[0]?.clientX ?? null
+}
+
+const finishDetailSwipe = (event) => {
+  const endX = event.changedTouches?.[0]?.clientX
+  if (!Number.isFinite(detailTouchStartX) || !Number.isFinite(endX)) return
+  const distance = endX - detailTouchStartX
+  detailTouchStartX = null
+  if (Math.abs(distance) < 40) return
+  moveDetailMedia(distance < 0 ? 1 : -1)
+}
 
 const cardLayout = computed(() => {
   const viewportWidth = Math.max(320, Number(viewportSize.value.width) || 1024)
@@ -393,7 +464,7 @@ onBeforeUnmount(() => {
               height="900"
               decoding="async"
               data-testid="map-place-media-image"
-              @error="mediaLoadFailed = true"
+              @error="overviewMediaLoadFailed = true"
             />
             <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
           </div>
@@ -524,17 +595,55 @@ onBeforeUnmount(() => {
     </template>
 
     <div v-else class="map-place-focus-detail" data-testid="map-place-detail-view">
-      <figure class="map-place-detail-media" data-testid="map-place-detail-media">
+      <figure
+        class="map-place-detail-media"
+        :class="{ 'is-category-fallback': isDetailCategoryFallback }"
+        data-testid="map-place-detail-media"
+        :tabindex="detailGallery.length > 1 ? 0 : undefined"
+        :aria-label="detailGallery.length > 1
+          ? t(`地点图片 ${detailMediaIndex + 1}，共 ${detailGallery.length} 张`, `Place image ${detailMediaIndex + 1} of ${detailGallery.length}`)
+          : undefined"
+        @keydown.left.prevent="moveDetailMedia(-1)"
+        @keydown.right.prevent="moveDetailMedia(1)"
+        @touchstart.passive="beginDetailSwipe"
+        @touchend.passive="finishDetailSwipe"
+      >
         <img
-          v-if="hasMediaImage"
-          :src="displayedMedia.asset.url"
-          :alt="mediaAlt"
+          v-if="hasDetailMediaImage"
+          :src="displayedDetailMedia.asset.url"
+          :alt="detailMediaAlt"
           width="1600"
           height="900"
           decoding="async"
-          @error="mediaLoadFailed = true"
+          data-testid="map-place-detail-media-image"
+          @error="markDetailMediaFailed"
         />
-        <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
+        <span class="map-place-focus-media-kind">{{ detailMediaLabel }}</span>
+        <template v-if="detailGallery.length > 1">
+          <button
+            type="button"
+            class="map-place-gallery-button is-previous"
+            :aria-label="t('上一张图片', 'Previous image')"
+            :title="t('上一张图片', 'Previous image')"
+            data-testid="map-place-gallery-previous"
+            @click="moveDetailMedia(-1)"
+          >
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <button
+            type="button"
+            class="map-place-gallery-button is-next"
+            :aria-label="t('下一张图片', 'Next image')"
+            :title="t('下一张图片', 'Next image')"
+            data-testid="map-place-gallery-next"
+            @click="moveDetailMedia(1)"
+          >
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+          <span class="map-place-gallery-count" aria-live="polite" data-testid="map-place-gallery-count">
+            {{ detailMediaIndex + 1 }} / {{ detailGallery.length }}
+          </span>
+        </template>
       </figure>
 
       <div class="map-place-detail-copy">
@@ -591,21 +700,21 @@ onBeforeUnmount(() => {
             <i class="fas fa-chevron-down map-place-media-source-chevron" aria-hidden="true"></i>
           </summary>
           <div class="map-place-media-source-content">
-            <span>{{ mediaNote }}</span>
+            <span>{{ detailMediaNote }}</span>
             <span class="map-place-media-links">
               <a
-                v-if="displayedMedia.source?.sourcePageUrl"
-                :href="displayedMedia.source.sourcePageUrl"
+                v-if="displayedDetailMedia.source?.sourcePageUrl"
+                :href="displayedDetailMedia.source.sourcePageUrl"
                 target="_blank"
                 rel="noreferrer noopener"
-              >{{ displayedMedia.source.creator || t('照片来源', 'Photo source') }}</a>
+              >{{ displayedDetailMedia.source.creator || t('照片来源', 'Photo source') }}</a>
               <a
-                v-if="displayedMedia.source?.licenseUrl"
-                :href="displayedMedia.source.licenseUrl"
+                v-if="displayedDetailMedia.source?.licenseUrl"
+                :href="displayedDetailMedia.source.licenseUrl"
                 target="_blank"
                 rel="noreferrer noopener"
-              >{{ displayedMedia.source.licenseId }}</a>
-              <span v-if="mediaChanges">{{ mediaChanges }}</span>
+              >{{ displayedDetailMedia.source.licenseId }}</a>
+              <span v-if="detailMediaChanges">{{ detailMediaChanges }}</span>
             </span>
           </div>
         </details>
@@ -723,7 +832,8 @@ onBeforeUnmount(() => {
 .map-place-detail-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 .is-category-fallback .map-place-focus-media-frame::after,
-.is-category-fallback .map-place-detail-media::after {
+.is-category-fallback .map-place-detail-media::after,
+.map-place-detail-media.is-category-fallback::after {
   position: absolute;
   inset: 0;
   background: color-mix(in srgb, var(--map-place-tone) 14%, transparent);
@@ -735,6 +845,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 7px;
   left: 7px;
+  z-index: 2;
   max-width: calc(100% - 14px);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.58);
@@ -848,7 +959,40 @@ onBeforeUnmount(() => {
 .map-place-entry-action:active { transform: scale(0.97); }
 
 .map-place-focus-detail { margin-top: 2px; }
-.map-place-detail-media { aspect-ratio: 16 / 7; margin: 0 -12px; }
+.map-place-detail-media { aspect-ratio: 16 / 7; margin: 0 -12px; outline: none; touch-action: pan-y; }
+.map-place-gallery-button {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 7px;
+  background: rgb(19 29 24 / 68%);
+  color: #fff;
+  transform: translateY(-50%);
+  backdrop-filter: blur(8px);
+}
+.map-place-gallery-button:hover { background: rgb(19 29 24 / 82%); }
+.map-place-gallery-button:active { transform: translateY(-50%) scale(0.96); }
+.map-place-gallery-button.is-previous { left: 7px; }
+.map-place-gallery-button.is-next { right: 7px; }
+.map-place-gallery-count {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  z-index: 2;
+  border-radius: 5px;
+  background: rgb(19 29 24 / 72%);
+  padding: 4px 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  backdrop-filter: blur(8px);
+}
 .map-place-detail-copy { padding-top: 12px; }
 .map-place-detail-about { min-width: 0; }
 .map-place-detail-summary { color: #33483e; font-size: 14px; font-weight: 650; line-height: 1.62; text-wrap: pretty; }
@@ -913,6 +1057,7 @@ a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
   .map-place-event-invitation { grid-template-columns: 32px minmax(0, 1fr) 44px; }
   .map-place-event-invitation button,
   .map-place-address-copy-button { width: 44px; height: 44px; }
+  .map-place-gallery-button { width: 44px; height: 44px; }
   .map-place-detail-location { grid-template-columns: 18px minmax(0, 1fr) 44px; }
   .map-place-focus-pin-state button,
   .map-place-detail-inline-action button,
