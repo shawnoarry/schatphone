@@ -21,10 +21,10 @@ or both, and they do not freeze aspect ratio, crop, focal point, or derivative c
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
 | --- | ---: | ---: | ---: | --- |
-| Seoul built-in catalog | 106 | 13 places with reviewed real-photo media | 93 | licensed real-photo search first |
+| Seoul built-in catalog | 106 | 23 places with reviewed real-photo media | 83 | licensed real-photo search first |
 | Fictional built-in catalog | 7 | 0 generated reconstructions | 7 | project-authored generation |
 | User-created places | unbounded | depends on user import/generation | one per created place when desired | user media first, optional generation |
-| **Fixed built-in target** | **113** | **7** | **106** | search real places; generate fictional places |
+| **Fixed built-in target** | **113** | **23** | **90** | search real places; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
 
@@ -53,7 +53,7 @@ These places have a named building, venue, campus, park, transport facility, or 
 | Banks | 4 | Bank of Korea Main Building; KB Kookmin Bank New Headquarters; Shinhan Bank Head Office; Woori Bank Head Office |
 | Public-safety institutions | 4 | Korean National Police Agency; Seoul Metropolitan Police Agency; Seoul Fire and Disaster Headquarters; Gangnam Fire Station |
 
-Current usable coverage inside this group is eleven places: ten grade-A exact heroes for Gyeongbokgung, Seoul Station, Seoul Forest, Starfield COEX Mall, Gwanghwamun Square, Seoul City Hall, N Seoul Tower, Dongdaemun Design Plaza, Lotte World Tower, and Incheon Airport Terminal 1, plus the reviewed grade-B Seongdong area image currently used for SM Entertainment HQ. The SM image remains valid as area atmosphere; replacing it is not required before other empty exact targets are covered. This leaves 68 acquisition decisions in this group.
+Current usable coverage inside this group is 21 places. Seventeen grade-A heroes cover Gyeongbokgung, Seoul Station, Seoul Forest, Starfield COEX Mall, Gwanghwamun Square, Seoul City Hall, N Seoul Tower, Dongdaemun Design Plaza, Lotte World Tower, Incheon Airport Terminal 1, Gimpo International Airport, Gangnam Station, Yongsan Station, 63 Square, National Museum of Korea, Times Square Seoul, and Olympic Park Seoul. Four reviewed grade-B images cover SM Entertainment HQ through its Seongsu district, Seoul Express Bus Terminal through its terminal frontage, Lotte Department Store Main through the Euljiro/Lotte district, and Hyundai Department Store Apgujeong Main through a source-identified in-store cafe. Truthful grade-B coverage is accepted without claiming an exact facade. This leaves 58 acquisition decisions in this group.
 
 ### Area-atmosphere preferred: 27 places
 

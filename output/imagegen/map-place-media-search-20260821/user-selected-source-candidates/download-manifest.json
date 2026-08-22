@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "batch": "map-place-media-search-20260821",
-  "generatedAt": "2026-08-21T08:58:23.376Z",
+  "generatedAt": "2026-08-22T17:07:36.304Z",
   "sourceSelection": "user-selection.json",
   "sourceReview": "source-review.json",
   "records": [
@@ -962,8 +962,16 @@
       "expectedHeight": 832,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-gimpo-airport__04__keep.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:06:30.1437184Z",
+      "bytes": 232167,
+      "mimeType": "image/jpeg",
+      "sha256": "29620a0b84da09bbb1bdb7326fb224d567db04b69c32bcb0ed05169da3dfed41",
+      "sha1": "3a849bd0db8b3b6c1634d34abac1eb7133694dcc",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/68/Gimpo_International_Airport_%281%29.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-gimpo-airport:1",
@@ -1112,8 +1120,16 @@
       "expectedHeight": 1944,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-gangnam-station__01__area_atmosphere.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:06:34.0616452Z",
+      "bytes": 839484,
+      "mimeType": "image/jpeg",
+      "sha256": "0be5606c6116f5aa969b37bf5e6e923f2cdf5828c52df154822402775f10d728",
+      "sha1": "dc534546040850b08807b95c24cc63f46ac57612",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/7c/D07_Gangnam_Station_Terminal_Platform.JPG",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-gangnam-station:2",
@@ -1187,8 +1203,16 @@
       "expectedHeight": 2554,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-express-bus-terminal__02__area_atmosphere.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 890686,
+      "mimeType": "image/jpeg",
+      "sha256": "ce189df75ec97763bf4ef331eea5585d4aeb17fe6278ee0bd106169da7476355",
+      "sha1": "9ed962678d3b47fc52172672b15674e3a7e3925e",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Gangnam_Seoul_Express_Bus_Terminal.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-express-bus-terminal:4",
@@ -1312,8 +1336,16 @@
       "expectedHeight": 2268,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-yongsan-station__07__keep.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 1846213,
+      "mimeType": "image/jpeg",
+      "sha256": "6992f7e55b476088a5496a31a472ac4198a2dbfeef1b55ac2b4de1891e867b5b",
+      "sha1": "be753844f41352405fed77d0068c48df4f4ad497",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/e8/Yongsan_Station_Sign.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-yongsan-station:1",
@@ -1462,8 +1494,16 @@
       "expectedHeight": 2160,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-63-square__01__keep.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 7196741,
+      "mimeType": "image/jpeg",
+      "sha256": "e000335d91aa1807dd34be8e4858e787a6af1187d04ec3b71ea9f4f07c541dbd",
+      "sha1": "7ae37527b676d56039aa2a38867b1e42b4c30416",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/63_Building.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-63-square:2",
@@ -1787,8 +1827,16 @@
       "expectedHeight": 2137,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-national-museum__04__area_atmosphere.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 3780321,
+      "mimeType": "image/jpeg",
+      "sha256": "e6c5aeef5e4758a3dfdb0540bb2f2ac240760c65b35fb271721519c01253df61",
+      "sha1": "7631457ed40a3998beaceb53330c8d309b948b99",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/32/Front_view_of_national_museum_of_korea.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-the-hyundai-seoul:1",
@@ -1862,8 +1910,16 @@
       "expectedHeight": 2448,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-times-square__01__area_atmosphere.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 2690735,
+      "mimeType": "image/jpeg",
+      "sha256": "fa3d99aafd66d604cdd40b018a95a91de966415403de228591e25b0ab5953008",
+      "sha1": "a1866d8a6cd44b641ad6875a5c978b38718059cf",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/8c/20140622_%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4_%EB%82%B4%EB%B6%80.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-lotte-department-main:2",
@@ -1937,8 +1993,16 @@
       "expectedHeight": 1067,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-lotte-department-main__03__area_atmosphere.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 502424,
+      "mimeType": "image/jpeg",
+      "sha256": "e27c018deada56182cd910668e6ca8b006ca704699bffad6058a7fe896ea3754",
+      "sha1": "03380609344283d97953f04d48e85d6e020f91be",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c9/Night_view_of_Euljiro_1-ga_intersection_and_the_Sogong-dong_Lotte_town.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-hyundai-apgujeong-main:1",
@@ -1962,8 +2026,16 @@
       "expectedHeight": 720,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-hyundai-apgujeong-main__01__area_atmosphere.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 213391,
+      "mimeType": "image/jpeg",
+      "sha256": "bb91164ea21d5e4f24b655c3e1209611fcf40a90e9fe3750c7fc571acd2a8996",
+      "sha1": "6947c31f0ff371e007ca2a4e5ac4d8c7bca8ce3e",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/36/%EB%B0%80%ED%83%91_%EC%95%95%EA%B5%AC%EC%A0%95%EC%A0%90.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-hyundai-apgujeong-main:6",
@@ -2012,8 +2084,16 @@
       "expectedHeight": 1200,
       "expectedMimeType": "image/jpeg",
       "relativePath": "user-selected-source-candidates/source-candidates/seoul-olympic-park__01__keep.jpg",
-      "status": "pending_download",
-      "downloaded": false
+      "status": "downloaded",
+      "downloaded": true,
+      "downloadedAt": "2026-08-22T17:07:36.304Z",
+      "bytes": 360237,
+      "mimeType": "image/jpeg",
+      "sha256": "aaac4e0abc01acc7cb498b1cf850bf06e0fe87052c1acc2dbbb7c7ab0e2ecf63",
+      "sha1": "22193435840576db4e9e62e371b33b95a3c94f6c",
+      "attempts": 1,
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/be/Seoul-Olympic.Park-04.jpg",
+      "sourceSha1Matches": true
     },
     {
       "selectionId": "seoul-olympic-park:6",

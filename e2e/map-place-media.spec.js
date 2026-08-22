@@ -40,6 +40,16 @@ const REAL_TRIALS = [
   ['seoul-ddp', 'seoul-ddp-hero-v1.webp', 'Exact-place photo'],
   ['seoul-lotte-world-tower', 'seoul-lotte-world-tower-hero-v1.webp', 'Exact-place photo'],
   ['seoul-incheon-airport-t1', 'seoul-incheon-airport-t1-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-gimpo-airport', 'seoul-gimpo-airport-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-gangnam-station', 'seoul-gangnam-station-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-express-bus-terminal', 'seoul-express-bus-terminal-hero-v1.webp', 'Area view'],
+  ['seoul-yongsan-station', 'seoul-yongsan-station-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-63-square', 'seoul-63-square-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-national-museum', 'seoul-national-museum-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-times-square', 'seoul-times-square-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-lotte-department-main', 'seoul-lotte-department-main-hero-v1.webp', 'Area view'],
+  ['seoul-hyundai-apgujeong-main', 'seoul-hyundai-apgujeong-main-hero-v1.webp', 'Area view'],
+  ['seoul-olympic-park', 'seoul-olympic-park-hero-v1.webp', 'Exact-place photo'],
 ]
 
 const mockOpenFreeMapStyle = async (page) => {
@@ -216,6 +226,14 @@ test.describe('Map place media governance', () => {
         await expectVerifiedProjectImage(page.request, detailImage, galleryRecords[1].asset)
         await expectNoHorizontalOverflow(page)
         await captureVisualEvidence(page, testInfo, 'detail-gallery')
+      }
+      if (placeId === 'seoul-gimpo-airport') {
+        await image.evaluate((element) => element.decode())
+        await captureVisualEvidence(page, testInfo, 'expansion-exact')
+      }
+      if (placeId === 'seoul-hyundai-apgujeong-main') {
+        await image.evaluate((element) => element.decode())
+        await captureVisualEvidence(page, testInfo, 'expansion-area')
       }
     }
 

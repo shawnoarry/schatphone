@@ -22,6 +22,19 @@ const REAL_PILOT_PLACE_IDS = [
   'seoul-sillim-one-room-district',
 ]
 
+const EXPANDED_PLACE_IDS = [
+  'seoul-gimpo-airport',
+  'seoul-gangnam-station',
+  'seoul-express-bus-terminal',
+  'seoul-yongsan-station',
+  'seoul-63-square',
+  'seoul-national-museum',
+  'seoul-times-square',
+  'seoul-lotte-department-main',
+  'seoul-hyundai-apgujeong-main',
+  'seoul-olympic-park',
+]
+
 const INTEGRATED_GALLERY_COUNTS = {
   'seoul-gwanghwamun': 4,
   'seoul-city-hall': 4,
@@ -45,7 +58,7 @@ describe('map place media governance', () => {
   })
 
   test('validates the reviewed media registry', () => {
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(32)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(42)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
@@ -104,10 +117,24 @@ describe('map place media governance', () => {
       'seoul-sm-hq',
       'seoul-myeongdong-kyoja-main',
       'seoul-sillim-one-room-district',
+      'seoul-express-bus-terminal',
+      'seoul-lotte-department-main',
+      'seoul-hyundai-apgujeong-main',
     ]) {
       expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
         kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
         authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.AREA_ONLY,
+      })
+    }
+
+    for (const placeId of EXPANDED_PLACE_IDS.filter((id) => ![
+      'seoul-express-bus-terminal',
+      'seoul-lotte-department-main',
+      'seoul-hyundai-apgujeong-main',
+    ].includes(id))) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
       })
     }
   })
