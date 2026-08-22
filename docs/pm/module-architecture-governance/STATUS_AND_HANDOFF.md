@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-21
+Updated: 2026-08-22
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
@@ -378,20 +378,20 @@ Current execution record:
 
 | Field | Value |
 | --- | --- |
-| Plan baseline | `CMG-00 DONE 2026-08-20` at `fef7989`; `CMG-01 DONE 2026-08-20` at `73672df`; `CMG-02 DONE 2026-08-20` at `208e1dc`; `CMG-03 DONE 2026-08-20` at `86270d8`; `DCF-05 DONE 2026-08-20` at `f140557`; `DCF-03 DONE 2026-08-21`, behavior at `42742e5` and regression evidence at `e9607c0`; `CMG-04 DONE 2026-08-21` at `134f7f7`; `CMG-05 DONE 2026-08-21` at `d8662cb`; `DCF-02 DONE 2026-08-21` at `8ff85c7`; documentation handoff at `8ccfe12`; `DCF-01 DONE 2026-08-21` at `4654e02`; documentation handoff at `eb24430`; current base `eb24430` |
-| Next dependency-safe items | `CMG-08`, `DCF-04`, and `DCF-06` remain separately assignable only after new exact non-overlapping reservations |
-| Active item | none; `DCF-01 DONE 2026-08-21` |
+| Plan baseline | `DCF-04 DONE 2026-08-22` at `26534bd`; `DCF-06 DONE 2026-08-22` at `ec31855`; both commits are based on synchronized Calendar-evidence baseline `1d41869`. Earlier CMG/DCF completion evidence remains in the completion log below. |
+| Next dependency-safe items | `CMG-08` remains separate; it is not part of this repair round. |
+| Active item | none; `DCF-04` and `DCF-06 DONE 2026-08-22` |
 | Integration controller PC | `SKY-20250212UBG` |
 | PC-A physical machine / role | `SKY-20250212UBG` / integration controller |
 | PC-B physical machine / role | `UNASSIGNED` |
-| Source branch, base, and worktree | `main`; behavior commit `4654e02` from base `8ccfe12`; `D:\github\schatphone` |
-| Existing dirty/untracked inventory | `docs/pm/map-calendar-reminders/STATUS_AND_HANDOFF.md` plus `tmp/**` user-owned changes remain untouched and must not be staged, reset, or cleaned. |
-| Risk lane | Next unassigned slice is `CMG-08`: separate temporary Mini Scene presentation from explicit full-scene retention, add lookup-before-provider idempotence, remove the historical 120-artifact cap, and provide retained-scene management. |
-| Reserved paths | none; DCF-01 paths are released after local integration. |
-| Acceptance | DCF-01 preserves every string-valued WorldBook entry ID from query arrays through route construction and WorldBook parsing, while retaining trim/dedupe/eight-ID behavior and single-value query semantics. |
-| Validation | Direct navigation/model Vitest passes 20/20; WorldBook Chromium E2E passes 8/8 across desktop and simulated mobile; changed-file ESLint, production build, governance, and `git diff --check` pass. Full Vitest passes 300/301 files and 2135/2136 tests with the tracked DCF-06 timeout as the only failure. Full lint remains blocked by unrelated generated `output/**/download-selected-sources.mjs:150` no-empty. |
-| Integration state | `INTEGRATED_LOCAL`; behavior commit `4654e02`; documentation handoff `eb24430`. |
-| Remote synchronization | `origin/main` is currently at `fc1bb3b`; no push operation is part of this round. |
+| Source branch, base, and worktree | `main`; commit base `1d41869`; `D:\github\schatphone` |
+| Existing dirty/untracked inventory | Nine Calendar/Agenda screenshot files under `output/e2e/**`, `src/components/map/MapPlaceFocusSheet.vue`, `src/lib/map-place-media.js`, and `tmp/**` user-owned files remain untouched and must not be staged, reset, or cleaned. |
+| Risk lane | Elevated only because the shared worktree contains unrelated user-owned generated evidence; exact staging excluded that inventory. |
+| Reserved paths | none; DCF-04 and DCF-06 paths are released after local integration. |
+| Acceptance | DCF-04 moves focus into the incoming-call dialog, contains forward/reverse Tab navigation, and restores the prior connected focus target after close without changing ringtone or vibration behavior. DCF-06 gives fallback staging, unsafe-cleanup rejection, and verified recovery separate phase evidence while reducing redundant Git subprocesses and retaining the default test timeout. |
+| Validation | Focused image-bed Vitest passes 15/15 in 2.52 seconds; focused Phone Playwright passes 4/4 across desktop and simulated mobile; full Vitest passes 302 files / 2165 tests; full lint, production build, governance at 2 files / 14 tests, and diff checks pass. |
+| Integration state | `INTEGRATED_LOCAL`; DCF-04 behavior commit `26534bd`; DCF-06 test commit `ec31855`; documentation completion follows in this handoff commit. |
+| Remote synchronization | `origin/main` is at `1d41869`; local `main` contains the two completion commits and no push operation is part of this round. |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -414,7 +414,11 @@ Completion log:
 
 13. `DCF-01 DONE 2026-08-21` at `4654e02`, documented at `eb24430`: WorldBook navigation now preserves all string-valued query-array entry IDs before trimming, de-duplicating, and applying the existing eight-ID cap. Direct navigation/model coverage passes 20/20, and WorldBook Chromium coverage passes 8/8 across desktop and simulated mobile. Changed-file ESLint, production build, governance, and diff checks pass. Full Vitest passes 300/301 files and 2135/2136 tests; the only failure is the separately tracked DCF-06 image-bed publishing timeout. Full lint remains blocked by an unrelated generated `output/**/download-selected-sources.mjs:150` empty block. No WorldBook storage shape, ownership, or non-list query semantics changed.
 
-`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the reserved Event Instance V2 retention/migration paths. `DCF-01` is integrated locally; `CMG-08`, open direct fix `DCF-04`, and test repair `DCF-06` remain separate and may not reuse these files or semantics without a new reservation.
+14. `DCF-04 DONE 2026-08-22` at `26534bd`: the incoming-call dialog now receives focus on open, contains forward and reverse Tab movement across its two actions, and restores the prior connected focus target after close. The focused desktop/simulated-mobile Phone Playwright suite passes 4/4; ringtone, vibration, call state, and visual layout remain unchanged.
+
+15. `DCF-06 DONE 2026-08-22` at `ec31855`: the image-bed fallback/recovery scenario now has three sequential phase tests for exact fallback staging, unsafe-cleanup rejection, and verified cleanup. Fixture setup removes two redundant Git configuration processes and duplicate staged-path inspection without increasing any timeout. Focused coverage passes 15/15 in 2.52 seconds, and the full suite passes 302 files / 2165 tests.
+
+`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the Event Instance V2 retention/migration paths; `DCF-04` and `DCF-06` are integrated locally at the commits above. `CMG-08` remains separate and may not reuse those files or semantics without a new reservation.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 
