@@ -87,7 +87,7 @@ describe('Map places and pins settings', () => {
 
     const guide = wrapper.get('[data-testid="map-pin-category-guide"]')
     expect(guide.findAll('[data-testid^="map-pin-category-guide-group-"]')).toHaveLength(14)
-    expect(guide.findAll('[data-testid^="map-pin-category-guide-icon-"]')).toHaveLength(31)
+    expect(guide.findAll('[data-testid^="map-pin-category-guide-icon-"]')).toHaveLength(32)
     expect(guide.text()).toContain('家、宿舍、公寓、住宅区与不同档次的居住地点')
     expect(guide.text()).toContain('公司、办公室与工作场所')
     expect(guide.text()).toContain('豪华住宅')
@@ -150,7 +150,7 @@ describe('Map places and pins settings', () => {
     await nextTick()
 
     const expectedLeisureCount = mapStore.activeMapPlaces.filter((place) =>
-      ['leisure', 'nightlife', 'fitness', 'cinema', 'park'].includes(place.category),
+      ['leisure', 'restaurant', 'nightlife', 'fitness', 'cinema', 'park'].includes(place.category),
     ).length
     expect(expectedLeisureCount).toBeGreaterThan(0)
     expect(wrapper.get('[data-testid="map-world-pin-list"]').findAll('.map-pin-row')).toHaveLength(
@@ -170,7 +170,7 @@ describe('Map places and pins settings', () => {
 
     await wrapper.get('[data-testid="map-pin-create-empty"]').trigger('click')
     expect(wrapper.findAll('[data-testid^="map-pin-icon-group-"]')).toHaveLength(14)
-    expect(wrapper.findAll('[data-testid^="map-pin-icon-type-"]')).toHaveLength(31)
+    expect(wrapper.findAll('[data-testid^="map-pin-icon-type-"]')).toHaveLength(32)
     await wrapper.get('[data-testid="map-pin-name"]').setValue('新住处')
     await wrapper.get('[data-testid="map-pin-detail"]').setValue('地图管理页创建')
     await wrapper.get('[data-testid="map-pin-icon-type-residence_luxury"]').trigger('click')

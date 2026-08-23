@@ -63,8 +63,8 @@ describe('local map pack foundation', () => {
       'other',
     ])
     expect(MAP_USER_PLACE_CATEGORIES).toBe(MAP_PLACE_ICON_TYPES)
-    expect(MAP_PLACE_ICON_TYPES).toHaveLength(31)
-    expect(new Set(MAP_PLACE_ICON_TYPES.map((category) => category.id)).size).toBe(31)
+    expect(MAP_PLACE_ICON_TYPES).toHaveLength(32)
+    expect(new Set(MAP_PLACE_ICON_TYPES.map((category) => category.id)).size).toBe(32)
     expect(MAP_PLACE_ICON_TYPES.map((category) => category.id)).toEqual(
       expect.arrayContaining([
         'home',
@@ -76,6 +76,7 @@ describe('local map pack foundation', () => {
         'mall_luxury',
         'plastic_surgery',
         'public_safety',
+        'restaurant',
         'story',
       ]),
     )
@@ -85,6 +86,7 @@ describe('local map pack foundation', () => {
     expect(getMapPlaceCategoryGroupId('home')).toBe('residence')
     expect(getMapPlaceCategoryGroupId('residence_luxury')).toBe('residence')
     expect(getMapPlaceCategoryGroupId('transit_hub')).toBe('transit')
+    expect(getMapPlaceCategoryGroupId('restaurant')).toBe('leisure')
     expect(getMapPlaceIconTypesForGroup('residence').map((category) => category.id)).toEqual([
       'home',
       'residence_budget',
@@ -156,6 +158,7 @@ describe('local map pack foundation', () => {
     expect(seoul.places.filter((place) => place.category === 'cinema')).toHaveLength(4)
     expect(seoul.places.filter((place) => place.category === 'bank')).toHaveLength(4)
     expect(seoul.places.filter((place) => place.category === 'public_safety')).toHaveLength(4)
+    expect(seoul.places.filter((place) => place.category === 'restaurant')).toHaveLength(5)
 
     seoul.places.forEach((place) => {
       expect(place.nameZh).toBeTruthy()

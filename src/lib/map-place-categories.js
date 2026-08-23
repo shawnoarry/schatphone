@@ -103,6 +103,17 @@ const CATEGORY_DEFINITIONS = Object.freeze({
     descriptionEn: 'Dining, entertainment, and social places',
     searchTerms: ['咖啡', '演出', '演唱会', '场馆', 'cafe', 'concert', 'venue'],
   }),
+  restaurant: Object.freeze({
+    id: 'restaurant',
+    order: 54,
+    icon: 'fas fa-utensils',
+    tone: '#ea580c',
+    labelZh: '餐饮',
+    labelEn: 'Dining',
+    descriptionZh: '餐厅、面包店、甜点店与日常用餐地点',
+    descriptionEn: 'Restaurants, bakeries, dessert shops, and everyday dining places',
+    searchTerms: ['餐厅', '饭店', '餐饮', '美食', 'restaurant', 'dining', 'eatery', 'bakery'],
+  }),
   nightlife: Object.freeze({
     id: 'nightlife',
     order: 51,
@@ -454,7 +465,14 @@ const CATEGORY_GROUP_DEFINITIONS = Object.freeze({
     labelEn: 'Leisure',
     descriptionZh: '餐饮、夜生活、运动、影院与公园',
     descriptionEn: 'Dining, nightlife, fitness, cinemas, and parks',
-    categoryIds: Object.freeze(['leisure', 'nightlife', 'fitness', 'cinema', 'park']),
+    categoryIds: Object.freeze([
+      'leisure',
+      'restaurant',
+      'nightlife',
+      'fitness',
+      'cinema',
+      'park',
+    ]),
   }),
   medical: Object.freeze({
     id: 'medical',

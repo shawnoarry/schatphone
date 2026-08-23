@@ -431,7 +431,7 @@ describe('MapView information architecture', () => {
     await wrapper.get('[data-testid="map-place-filter-leisure"]').trigger('click')
     await nextTick()
     const expectedLeisureCount = mapStore.activeMapPlaces.filter((place) =>
-      ['leisure', 'nightlife', 'fitness', 'cinema', 'park'].includes(place.category),
+      ['leisure', 'restaurant', 'nightlife', 'fitness', 'cinema', 'park'].includes(place.category),
     ).length
     expect(wrapper.get('[data-testid="map-filtered-place-list"]').findAll('.map-place-list-row')).toHaveLength(
       expectedLeisureCount,
