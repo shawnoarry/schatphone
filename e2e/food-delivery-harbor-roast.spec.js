@@ -237,6 +237,13 @@ test('Harbor Roast runs its branded campaigns, dine-in checkout, and order detai
   )
   await expect(page.getByTestId('food-delivery-checkout-sheet')).toHaveCount(0)
   await page.getByTestId('food-delivery-harbor-checkout-submit').click()
+  await expect(page.getByTestId('food-delivery-checkout-sheet')).toContainText(
+    /到店堂食|Dine in at the shop/,
+  )
+  await expect(
+    page.getByTestId('food-delivery-checkout-payment-wallet_card_icbc_cny'),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await page.getByTestId('food-delivery-checkout-submit').click()
   await expect(page.getByTestId('food-delivery-harbor-order-page')).toContainText(
     /到店堂食|Dine in/,
   )

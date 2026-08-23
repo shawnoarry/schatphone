@@ -11,8 +11,6 @@ const emit = defineEmits(SHOPPING_STOREFRONT_EVENTS)
 const localize = (zh, en) => localizeShoppingCopy(props.languageBase, zh, en)
 const searchChanged = (event) => emit('update:searchQuery', event.target.value)
 const displayMode = ref('drop')
-const activeCampaign = ref('seoul-transit')
-const activeLookbook = ref('01')
 const displayModeOptions = Object.freeze([
   { key: 'drop', zh: '上新', en: 'DROP' },
   { key: 'lookbook', zh: '造型册', en: 'LOOKBOOK' },
@@ -45,8 +43,6 @@ const worksoutTitle = () =>
     class="shopping-storefront-header shopping-worksout-app"
     :data-storefront="activeService?.storefrontTemplate || 'fashion_editorial'"
     :data-display-mode="displayMode"
-    :data-campaign="activeCampaign"
-    :data-lookbook="activeLookbook"
     data-storefront-kind="specialty"
   >
     <div class="worksout-topbar">
@@ -88,7 +84,7 @@ const worksoutTitle = () =>
           <i class="fas fa-bag-shopping" aria-hidden="true"></i>
           <b v-if="cartQuantity">{{ cartQuantity }}</b>
         </button>
-        <button type="button" class="worksout-icon" :aria-label="localize('我的发售记录', 'My release archive')" @click="emit('open-orders')">
+        <button type="button" class="worksout-icon" :aria-label="localize('订单', 'Orders')" @click="emit('open-orders')">
           <i class="fas fa-user" aria-hidden="true"></i>
           <b v-if="orderCount">{{ orderCount }}</b>
         </button>
@@ -108,15 +104,6 @@ const worksoutTitle = () =>
         />
         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
       </label>
-      <button
-        type="button"
-        class="worksout-manage"
-        :aria-label="localize('管理商品', 'Manage catalog')"
-        :title="localize('管理商品', 'Manage catalog')"
-        @click="emit('open-manager')"
-      >
-        <i class="fas fa-sliders" aria-hidden="true"></i>
-      </button>
     </div>
 
     <div class="worksout-cover" :class="{ 'is-lookbook': displayMode === 'lookbook' }">
@@ -131,7 +118,7 @@ const worksoutTitle = () =>
           :data-map-place-id="mapReference.placeId"
         >
           <i class="fas fa-location-dot" aria-hidden="true"></i>
-          <span>{{ localize('首尔场景锚点', 'SEOUL SETTING') }}</span>
+          <span>{{ localize('本期街区', 'NEIGHBORHOOD') }}</span>
           <strong>{{ mapReference.district }}</strong>
         </p>
       </div>
@@ -165,18 +152,18 @@ const worksoutTitle = () =>
     <section class="worksout-campaign-wall" :aria-label="localize('街头服饰广告专题', 'Streetwear campaign wall')">
       <div class="worksout-section-label"><span>DROP CAMPAIGN WALL / 03</span><strong>{{ localize('先进入场景，再看单品', 'ENTER THE SCENE BEFORE THE PIECE') }}</strong></div>
       <div class="worksout-campaign-grid">
-        <button v-for="campaign in campaigns" :key="campaign.key" type="button" class="worksout-campaign-card" :class="{ 'is-active': activeCampaign === campaign.key }" :data-testid="`shopping-worksout-campaign-${campaign.key}`" @click="activeCampaign = campaign.key"><span>{{ localize(campaign.tagZh, campaign.tagEn) }}</span><strong>{{ localize(campaign.titleZh, campaign.titleEn) }}</strong><small>{{ localize(campaign.subZh, campaign.subEn) }}</small><i :class="campaign.icon" aria-hidden="true"></i></button>
+        <article v-for="campaign in campaigns" :key="campaign.key" class="worksout-campaign-card" :data-testid="`shopping-worksout-campaign-${campaign.key}`"><span>{{ localize(campaign.tagZh, campaign.tagEn) }}</span><strong>{{ localize(campaign.titleZh, campaign.titleEn) }}</strong><small>{{ localize(campaign.subZh, campaign.subEn) }}</small><i :class="campaign.icon" aria-hidden="true"></i></article>
       </div>
     </section>
 
     <section class="worksout-lookbook-rail" :aria-label="localize('首尔画报章节', 'Seoul lookbook chapters')">
       <div class="worksout-section-label"><span>LOOKBOOK / SEOUL 08</span><strong>{{ localize('四帧连成一条移动路线', 'FOUR FRAMES / ONE MOVING ROUTE') }}</strong></div>
-      <div class="worksout-lookbook-track"><button v-for="frame in lookbookFrames" :key="frame.key" type="button" class="worksout-lookbook-frame" :class="{ 'is-active': activeLookbook === frame.key }" :data-testid="`shopping-worksout-lookbook-${frame.key}`" @click="activeLookbook = frame.key"><span>{{ frame.key }}</span><i :class="frame.icon" aria-hidden="true"></i><b>{{ localize(frame.titleZh, frame.titleEn) }}</b></button></div>
+      <div class="worksout-lookbook-track"><article v-for="frame in lookbookFrames" :key="frame.key" class="worksout-lookbook-frame" :data-testid="`shopping-worksout-lookbook-${frame.key}`"><span>{{ frame.key }}</span><i :class="frame.icon" aria-hidden="true"></i><b>{{ localize(frame.titleZh, frame.titleEn) }}</b></article></div>
     </section>
 
     <section class="worksout-style-notes" :aria-label="localize('造型笔记', 'Style notes')">
-      <div class="worksout-section-label"><span>STYLE NOTES / 08—21</span><strong>{{ localize('让广告位像一本可翻的街头杂志', 'MAKE THE AD SLOTS FEEL LIKE A STREET ZINE') }}</strong></div>
-      <div class="worksout-note-track"><button v-for="note in styleNotes" :key="note.key" type="button" class="worksout-note-card"><i :class="note.icon" aria-hidden="true"></i><span>{{ localize(note.zh, note.en) }}</span><b>OPEN NOTE / →</b></button></div>
+      <div class="worksout-section-label"><span>STYLE NOTES / 08—21</span><strong>{{ localize('材质、比例与夜行搭配', 'MATERIAL / PROPORTION / NIGHT ROUTES') }}</strong></div>
+      <div class="worksout-note-track"><article v-for="note in styleNotes" :key="note.key" class="worksout-note-card"><i :class="note.icon" aria-hidden="true"></i><span>{{ localize(note.zh, note.en) }}</span><b>STYLE FILE</b></article></div>
     </section>
 
     <div class="worksout-category-row">
@@ -236,14 +223,12 @@ const worksoutTitle = () =>
         :class="{ 'is-highlighted': product.id === highlightedProductId }"
         :data-product-template="productStorefrontTemplate(product)"
         :data-testid="`shopping-product-${product.id}`"
-        role="button"
-        tabindex="0"
-        @click="emit('open-product', product.id)"
-        @keydown.enter.prevent="emit('open-product', product.id)"
       >
         <div class="worksout-product-visual">
-          <img v-if="productImageUrl(product)" :src="productImageUrl(product)" :alt="product.image?.alt || productDisplayTitle(product)" />
-          <div v-else class="worksout-product-symbol" aria-hidden="true"><span>{{ String(index + 1).padStart(2, '0') }}</span><i :class="productCategoryIcon(product)"></i></div>
+          <button type="button" class="worksout-product-open" :aria-label="productDisplayTitle(product)" @click="emit('open-product', product.id)">
+            <img v-if="productImageUrl(product)" :src="productImageUrl(product)" :alt="product.image?.alt || productDisplayTitle(product)" />
+            <span v-else class="worksout-product-symbol" aria-hidden="true"><span>{{ String(index + 1).padStart(2, '0') }}</span><i :class="productCategoryIcon(product)"></i></span>
+          </button>
           <button
             type="button"
             class="worksout-favorite"
@@ -257,7 +242,7 @@ const worksoutTitle = () =>
         </div>
         <div class="worksout-product-body">
           <div class="worksout-product-index">NO.{{ String(index + 1).padStart(2, '0') }} / {{ productServiceLabel(product) }}</div>
-          <h3>{{ productDisplayTitle(product) }}</h3>
+          <button type="button" class="worksout-product-title" @click="emit('open-product', product.id)"><h3>{{ productDisplayTitle(product) }}</h3></button>
           <p>{{ productDisplayDescription(product) }}</p>
           <div class="worksout-product-tags">
             <span :class="stockStatusClass(product.stockStatus)">{{ stockStatusLabel(product.stockStatus) }}</span>
@@ -369,7 +354,8 @@ const worksoutTitle = () =>
 .worksout-product-card { overflow:hidden; border:1px solid var(--worksout-line); color:#f8f8f5; background:var(--worksout-surface); }
 .worksout-product-card.is-highlighted { border-color:var(--worksout-yellow); box-shadow:0 0 0 2px rgba(255,218,5,.16); }
 .worksout-product-visual { position:relative; aspect-ratio:1 / 1; overflow:hidden; background:#2b3039; }
-.worksout-product-visual img { width:100%; height:100%; display:block; object-fit:cover; }
+.worksout-product-open { width:100%; height:100%; display:block; text-align:left; }
+.worksout-product-open img { width:100%; height:100%; display:block; object-fit:cover; }
 .worksout-product-symbol { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--worksout-yellow); background:#101216; }
 .worksout-product-symbol span { position:absolute; top:9px; left:9px; color:var(--worksout-red); font:900 15px/1 Arial, sans-serif; }
 .worksout-product-symbol i { font-size:32px; }
@@ -377,6 +363,7 @@ const worksoutTitle = () =>
 .worksout-favorite.is-favorite { color:var(--worksout-yellow); }
 .worksout-product-body { min-height:175px; padding:11px; display:flex; flex-direction:column; }
 .worksout-product-index { color:var(--worksout-yellow); font:900 8px/1 Arial, sans-serif; letter-spacing:.05em; text-transform:uppercase; }
+.worksout-product-title { width:100%; color:inherit; text-align:left; }
 .worksout-product-body h3 { min-height:34px; margin:7px 0 0; display:-webkit-box; overflow:hidden; color:#f8f8f5; font:800 14px/1.2 Arial, sans-serif; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .worksout-product-body > p { min-height:31px; margin:7px 0 0; display:-webkit-box; overflow:hidden; color:var(--worksout-muted); font-size:10px; line-height:1.5; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .worksout-product-tags { min-height:19px; margin-top:7px; display:flex; flex-wrap:wrap; gap:4px; }
@@ -387,7 +374,7 @@ const worksoutTitle = () =>
 .worksout-add:disabled { opacity:.35; }
 .worksout-empty { min-height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--worksout-line); color:var(--worksout-muted); text-align:center; }
 .worksout-empty p { margin:0; font-size:11px; }
-.worksout-icon:focus-visible,.worksout-manage:focus-visible,.worksout-category:focus-visible,.worksout-store-nav button:focus-visible,.worksout-favorite:focus-visible,.worksout-add:focus-visible,.worksout-view-button:focus-visible,.worksout-campaign-card:focus-visible,.worksout-lookbook-frame:focus-visible,.worksout-note-card:focus-visible { outline:3px solid var(--worksout-yellow); outline-offset:2px; }
+.worksout-icon:focus-visible,.worksout-manage:focus-visible,.worksout-category:focus-visible,.worksout-store-nav button:focus-visible,.worksout-product-open:focus-visible,.worksout-product-title:focus-visible,.worksout-favorite:focus-visible,.worksout-add:focus-visible,.worksout-view-button:focus-visible,.worksout-campaign-card:focus-visible,.worksout-lookbook-frame:focus-visible,.worksout-note-card:focus-visible { outline:3px solid var(--worksout-yellow); outline-offset:2px; }
 @media (min-width:680px) { .worksout-product-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (max-width:350px) { .worksout-product-grid { grid-template-columns:1fr; } .worksout-products.is-lookbook .worksout-product-card { display:block; } .worksout-view-switch > span { display:none; } }
 .shopping-worksout-app{--worksout-yellow:#111;--worksout-red:#d62f2f;--worksout-bg:#fff;--worksout-surface:#f3f3f1;--worksout-muted:#686868;--worksout-line:rgba(0,0,0,.18);color:#111;background:#fff}.worksout-topbar{min-height:66px;padding-block:10px;border-bottom:1px solid #111}.worksout-icon,.worksout-manage{border-radius:0;color:#111}.worksout-mark{border:0;color:#fff;background:#111}.worksout-identity p{color:#686868}.worksout-search-row{padding-block:10px;background:#fff}.worksout-search input{color:#111}.worksout-search input::placeholder{color:#777}.worksout-cover{position:relative;min-height:500px;padding:0;display:block;border:0;background:#111;overflow:hidden}.worksout-cover-art{position:absolute;inset:0;min-height:0;border:0;background:linear-gradient(145deg,#d7d7d4,#404040)}.worksout-cover-art:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.76))}.worksout-cover-art img{filter:saturate(.68)}.worksout-cover-copy{position:absolute;z-index:2;right:18px;bottom:24px;left:18px;display:block}.worksout-cover-copy>p:first-child{color:#fff}.worksout-cover h2{max-width:9ch;color:#fff;font-size:50px}.worksout-cover-copy>span{display:block;max-width:34ch;color:#e8e8e5}.worksout-map-reference{max-width:290px;color:#ccc}.worksout-map-reference strong{color:#fff}.worksout-view-switch{padding-block:11px;color:#111;background:#fff}.worksout-view-button{border-radius:0}.worksout-view-button.is-active{color:#fff;background:#111;border-color:#111}.worksout-campaign-wall{padding-bottom:25px;background:#fff}.worksout-campaign-grid{grid-template-columns:repeat(6,1fr)}.worksout-campaign-card{grid-column:span 2;min-height:175px;color:#fff;background:#111}.worksout-campaign-card:first-child{grid-column:span 4}.worksout-campaign-card:nth-child(2){grid-column:span 2;color:#111;background:#e7e7e3}.worksout-campaign-card:nth-child(2) span,.worksout-campaign-card:nth-child(2) small{color:#555}.worksout-lookbook-rail{padding-bottom:26px;background:#f2f2ef}.worksout-lookbook-frame{min-width:145px;height:205px;filter:grayscale(1)}.worksout-style-notes{padding-bottom:22px;background:#fff}.worksout-note-track{grid-template-columns:repeat(3,1fr)}.worksout-category-row{padding-block:12px;color:#fff;background:#111}.worksout-category{color:#aaa;border-color:#444}.worksout-category.is-active{color:#fff;border-color:#fff}.worksout-store-nav{display:none}.worksout-products{padding-top:32px;color:#111;background:#fff}.worksout-products-heading p{color:#111}.worksout-product-card{border:0;background:#fff}.worksout-product-media{background:#eee}.worksout-product-body{padding-inline:0}.worksout-product-body h3{color:#111}.worksout-product-body>p{color:#666}.worksout-product-footer{border-color:#ccc}.worksout-add{color:#fff;background:#111}@media(max-width:520px){.worksout-campaign-card,.worksout-campaign-card:first-child,.worksout-campaign-card:nth-child(2){grid-column:span 3}.worksout-actions{gap:2px}.worksout-icon{width:32px;height:32px}}

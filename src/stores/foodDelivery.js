@@ -366,6 +366,8 @@ const normalizePaymentRef = (rawRef) => {
     idempotencyKey: normalizeText(rawRef.idempotencyKey, '', 180),
     sourceModule: normalizeText(rawRef.sourceModule, 'wallet_commerce_payment', 60),
     sourceId: normalizeText(rawRef.sourceId, '', 140),
+    accountId: normalizeText(rawRef.accountId, '', 140),
+    cardId: normalizeText(rawRef.cardId, '', 140),
     amountCents: Math.max(0, toInt(rawRef.amountCents, 0)),
     currency: normalizeCurrency(rawRef.currency),
     createdAt: Math.max(0, toInt(rawRef.createdAt, Date.now())),
@@ -893,6 +895,7 @@ const normalizePlatformOrder = (rawOrder, index = 0) => {
   const deliveryAnchor = normalizeDeliveryAnchorSnapshot(
     rawOrder.deliveryAnchor || rawOrder.deliveryAnchorSnapshot,
   )
+  const paymentRef = normalizePaymentRef(rawOrder.paymentRef)
 
   return {
     id: normalizeText(rawOrder.id, `platform_food_order_legacy_${now}_${index}`, 140),
@@ -914,6 +917,8 @@ const normalizePlatformOrder = (rawOrder, index = 0) => {
     addressRevision: Math.max(1, toInt(rawOrder.addressRevision, deliveryAnchor?.revision || 1)),
     note: normalizeText(rawOrder.note, '', 240),
     paymentMethod: normalizeText(rawOrder.paymentMethod, 'app_pay', 40),
+    paymentRef,
+    paymentStatus: paymentRef?.status || 'unpaid',
     etaMinutes: clamp(toInt(rawOrder.etaMinutes, 35), 5, 180),
     sourceModule: normalizeText(rawOrder.sourceModule, 'food_delivery_platform_checkout', 60),
     sourceId: normalizeText(rawOrder.sourceId, merchantId, 140),
@@ -4432,6 +4437,184 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     return order
   }
 
+  const checkoutPaidPlatformCart = ({
+    deliveryAnchor = null,
+    note = '',
+    deliveryFee = '0.00',
+    currency = '',
+    etaMinutes = 35,
+    accountId = '',
+    cardId = '',
+    idempotencyKey = '',
+    now = Date.now(),
+  } = {}) => {
+    if (platformCartItems.value.length === 0) {
+      return { ok: false, stage: 'order', reason: 'cart_empty', order: null, payment: null }
+    }
+    const normalizedAnchor = normalizeDeliveryAnchorSnapshot(deliveryAnchor)
+    if (!normalizedAnchor) {
+      return {
+        ok: false,
+        stage: 'map',
+        reason: 'delivery_anchor_required',
+        order: null,
+        payment: null,
+      }
+    }
+
+    const firstItem = platformCartItems.value[0]
+    const sourceCurrency = normalizeCurrency(currency || firstItem.currency)
+    const deliveryFeeCents = normalizeAmountCents(deliveryFee)
+    const itemsTotalCents = platformCartItems.value.reduce(
+      (sum, item) => sum + item.unitPriceCents * item.quantity,
+      0,
+    )
+    const sourceTotalCents = itemsTotalCents + deliveryFeeCents
+    const walletStore = getWalletStore()
+    const sourceMoney = convertLegacyCentsToMoney(
+      sourceTotalCents,
+      sourceCurrency,
+      walletStore.currencyOptions,
+    )
+    const quoteSnapshot = sourceMoney
+      ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
+      : null
+    const normalizedIdempotencyKey = normalizeText(idempotencyKey, '', 180)
+    const existingPayment = normalizedIdempotencyKey
+      ? walletStore.findCommercePaymentByIdempotencyKey(normalizedIdempotencyKey)
+      : null
+    if (existingPayment) {
+      const existingOrder = platformOrders.value.find(
+        (item) => item.paymentRef?.transactionId === existingPayment.id,
+      ) || null
+      if (existingOrder) {
+        const identityMatches =
+          existingOrder.merchantId === firstItem.merchantId &&
+          existingPayment.amountCents === sourceTotalCents &&
+          existingPayment.currency === sourceCurrency
+        if (!identityMatches) {
+          return {
+            ok: false,
+            stage: 'payment',
+            reason: 'payment_identity_conflict',
+            order: null,
+            payment: null,
+          }
+        }
+        return {
+          ok: true,
+          reason: 'idempotent_replay',
+          order: existingOrder,
+          payment: { ok: true, reason: 'idempotent_replay', transaction: existingPayment },
+        }
+      }
+      walletStore.reverseCommercePayment({
+        transactionId: existingPayment.id,
+        reason: 'Food Delivery platform payment has no confirmed order',
+        createdAt: now,
+      })
+      return {
+        ok: false,
+        stage: 'payment',
+        reason: 'payment_without_order_reversed',
+        order: null,
+        payment: { ok: true, reason: 'idempotent_replay', transaction: existingPayment },
+      }
+    }
+
+    const orderId = createPlatformOrderId()
+    const beforeFoodMutation = createBackupSnapshot()
+    const payment = walletStore.commitCommercePayment({
+      amountCents: sourceTotalCents,
+      currency: sourceCurrency,
+      accountId,
+      cardId,
+      counterparty: firstItem.merchantName,
+      note: note || `Food Delivery platform order ${orderId}`,
+      sourceModule: 'wallet_commerce_payment',
+      sourceId: orderId,
+      idempotencyKey: normalizedIdempotencyKey || `food_platform_checkout:${orderId}`,
+      quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
+      createdAt: now,
+    })
+    if (!payment.ok) {
+      return { ok: false, stage: 'payment', reason: payment.reason, order: null, payment }
+    }
+
+    const order = normalizePlatformOrder({
+      id: orderId,
+      status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
+      merchantId: firstItem.merchantId,
+      merchantName: firstItem.merchantName,
+      items: platformCartItems.value.map((item) => ({
+        id: `${item.itemId}_${item.addedAt}`,
+        itemId: item.itemId,
+        title: item.title,
+        quantity: item.quantity,
+        unitPriceCents: item.unitPriceCents,
+        currency: item.currency,
+      })),
+      deliveryAddress: normalizedAnchor.detail,
+      deliveryAnchor: normalizedAnchor,
+      addressRevision: normalizedAnchor.revision,
+      note,
+      paymentMethod: 'wallet_card',
+      paymentRef: {
+        transactionId: payment.transaction.id,
+        receiptNumber: payment.transaction.receiptNumber,
+        status: payment.transaction.paymentStatus,
+        idempotencyKey: payment.transaction.idempotencyKey,
+        sourceModule: payment.transaction.sourceModule,
+        sourceId: payment.transaction.sourceId,
+        accountId: payment.transaction.accountId,
+        cardId: payment.transaction.cardId,
+        amountCents: payment.transaction.amountCents,
+        currency: payment.transaction.currency,
+        createdAt: payment.transaction.createdAt,
+      },
+      deliveryFee,
+      etaMinutes,
+      currency: sourceCurrency,
+      quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
+      sourceModule: 'food_delivery_platform_checkout',
+      sourceId: firstItem.merchantId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    if (!order) {
+      walletStore.reverseCommercePayment({
+        transactionId: payment.transaction.id,
+        reason: 'Food Delivery platform order normalization failed',
+        createdAt: now,
+      })
+      return { ok: false, stage: 'order', reason: 'order_invalid', order: null, payment }
+    }
+    platformOrders.value.unshift(order)
+    if (platformOrders.value.length > FOOD_ORDER_LIMIT) {
+      platformOrders.value.splice(FOOD_ORDER_LIMIT)
+    }
+    clearPlatformCart()
+    armTransactionalWatchedWriteSkip()
+    const persistenceResult = persistToStorage()
+    if (persistenceResult?.ok !== true) {
+      applyPersistedSource(beforeFoodMutation, { applySeedMigrations: false })
+      walletStore.reverseCommercePayment({
+        transactionId: payment.transaction.id,
+        reason: 'Food Delivery platform order persistence failed',
+        createdAt: now,
+      })
+      return {
+        ok: false,
+        stage: 'persistence',
+        reason: persistenceResult?.error || 'persistence_failed',
+        order: null,
+        payment,
+        persistence: persistenceResult || null,
+      }
+    }
+    return { ok: true, reason: '', order, payment, persistence: persistenceResult }
+  }
+
   const pushFoodDeliveryOrderServiceMessage = (order = {}) => {
     const chatStore = getChatStore()
     const serviceContact = chatStore.findFoodDeliveryServiceContact('food_delivery_dispatch')
@@ -4570,11 +4753,14 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     note = '',
     accountId = '',
     cardId = '',
-  idempotencyKey = '',
-  relationshipBinding = null,
+    idempotencyKey = '',
+    relationshipBinding = null,
+    fulfillmentMode = 'delivery',
+    pickupMode = '',
+    pickupAddress = '',
     sourceModule = 'food_delivery_paid_checkout',
     sourceId = '',
-  now = Date.now(),
+    now = Date.now(),
   } = {}) => {
     const targetRestaurantId =
       normalizeFoodId(restaurantId) || cartLineItems.value[0]?.restaurant?.id || ''
@@ -4582,10 +4768,13 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const restaurant = restaurantMap.value.get(targetRestaurantId) || null
     const mapStore = getMapStore()
     const normalizedAnchor = normalizeDeliveryAnchorSnapshot(deliveryAnchor)
+    const normalizedFulfillmentMode = normalizeFulfillmentMode(fulfillmentMode)
+    const normalizedPickupMode =
+      normalizedFulfillmentMode === 'pickup' ? normalizePickupMode(pickupMode, 'takeout') : ''
     if (!restaurant || lines.length === 0) {
       return { ok: false, stage: 'order', reason: 'cart_empty', order: null, payment: null, journey: null }
     }
-    if (!normalizedAnchor) {
+    if (normalizedFulfillmentMode === 'delivery' && !normalizedAnchor) {
       return {
         ok: false,
         stage: 'map',
@@ -4596,7 +4785,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       }
     }
 
-    const deliveryFeeCents = restaurant.deliveryFeeCents
+    const deliveryFeeCents = normalizedFulfillmentMode === 'pickup' ? 0 : restaurant.deliveryFeeCents
     const sourceTotalCents = lines.reduce(
       (sum, line) => sum + line.sourceUnitPriceCents * line.quantity,
       deliveryFeeCents,
@@ -4670,20 +4859,22 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       return { ok: false, stage: 'payment', reason: payment.reason, order: null, payment, journey: null }
     }
 
-    const restaurantAnchor = mapStore
-      .listDeliveryAnchors()
-      .find((anchor) => anchor.placeId === restaurant.sourceId) || null
-    const courier = {
-      id: `courier_${orderId}`,
-      name: 'Food Delivery rider',
-      phoneNumber: `100${Math.max(1, orderId.length)}`,
-    }
+    const restaurantAnchor = normalizedFulfillmentMode === 'delivery'
+      ? mapStore.listDeliveryAnchors().find((anchor) => anchor.placeId === restaurant.sourceId) || null
+      : null
+    const courier = normalizedFulfillmentMode === 'delivery'
+      ? {
+          id: `courier_${orderId}`,
+          name: 'Food Delivery rider',
+          phoneNumber: `100${Math.max(1, orderId.length)}`,
+        }
+      : null
     const order = normalizeFoodOrder({
       id: orderId,
       status: FOOD_DELIVERY_ORDER_STATUS.PLACED,
       restaurantId: restaurant.id,
       restaurantName: restaurant.name,
-      deliveryFeeCents: restaurant.deliveryFeeCents,
+      deliveryFeeCents,
       currency: restaurant.currency,
       items: lines.map((line) => ({
         id: `${line.lineId}_${line.addedAt}`,
@@ -4704,11 +4895,16 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         unitPriceCents: line.sourceUnitPriceCents,
         currency: line.sourceCurrency,
       })),
-      deliveryAddress: normalizedAnchor.detail,
-      deliveryAnchor: normalizedAnchor,
-      addressRevision: normalizedAnchor.revision,
+      deliveryAddress:
+        normalizedFulfillmentMode === 'pickup'
+          ? normalizeText(pickupAddress, restaurant.address || restaurant.name, 160)
+          : normalizedAnchor.detail,
+      deliveryAnchor: normalizedFulfillmentMode === 'delivery' ? normalizedAnchor : null,
+      addressRevision:
+        normalizedFulfillmentMode === 'delivery' ? normalizedAnchor.revision : 1,
       note,
-      fulfillmentMode: 'delivery',
+      fulfillmentMode: normalizedFulfillmentMode,
+      pickupMode: normalizedPickupMode,
       relationshipBinding,
       quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
       paymentRef: {
@@ -4718,6 +4914,8 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
         idempotencyKey: payment.transaction.idempotencyKey,
         sourceModule: payment.transaction.sourceModule,
         sourceId: payment.transaction.sourceId,
+        accountId: payment.transaction.accountId,
+        cardId: payment.transaction.cardId,
         amountCents: payment.transaction.amountCents,
         currency: payment.transaction.currency,
         createdAt: payment.transaction.createdAt,
@@ -4743,15 +4941,17 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     }
 
     orders.value.unshift(order)
-    const journeyResult = mapStore.createDeliveryJourney({
-      orderId: order.id,
-      restaurantAnchor,
-      destinationAnchor: normalizedAnchor,
-      courier,
-      etaMinutes: restaurant.deliveryEtaMinutes,
-      now,
-    })
-    if (journeyResult.ok) {
+    const journeyResult = normalizedFulfillmentMode === 'delivery'
+      ? mapStore.createDeliveryJourney({
+          orderId: order.id,
+          restaurantAnchor,
+          destinationAnchor: normalizedAnchor,
+          courier,
+          etaMinutes: restaurant.deliveryEtaMinutes,
+          now,
+        })
+      : { ok: true, journey: null }
+    if (journeyResult.ok && journeyResult.journey) {
       order.deliveryJourneyId = journeyResult.journey.id
       order.mapEstimateRef = mapStore.getDeliveryJourneyEstimateReference(
         journeyResult.journey.id,
@@ -4759,7 +4959,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
       )
       order.fulfillment.journeyPending = false
       order.fulfillment.nextCheckpointAt = journeyResult.journey.riderPickupAt
-    } else {
+    } else if (normalizedFulfillmentMode === 'delivery') {
       order.fulfillment.journeyPending = true
     }
     order.updatedAt = now
@@ -4810,7 +5010,10 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     const conversation = normalizeOrderConversation({
       id: order.conversationId || createFoodOrderConversationId(order.id),
       orderId: order.id,
-      participant: order.courier,
+      participant:
+        order.fulfillmentMode === 'pickup'
+          ? { id: order.restaurantId, name: order.restaurantName, phoneNumber: '' }
+          : order.courier,
       messages: [],
       updatedAt: Date.now(),
     })
@@ -6229,6 +6432,13 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
           }
         : null,
       items: order.items.map((item) => ({ ...item })),
+      paymentRef: order.paymentRef ? { ...order.paymentRef } : null,
+      deliveryAnchor: order.deliveryAnchor
+        ? {
+            ...order.deliveryAnchor,
+            position: order.deliveryAnchor.position ? { ...order.deliveryAnchor.position } : null,
+          }
+        : null,
     })),
     orders: orders.value.map((order) => ({
       ...order,
@@ -6530,6 +6740,7 @@ export const useFoodDeliveryStore = defineStore('foodDelivery', () => {
     updatePlatformCartQuantity,
     clearPlatformCart,
     checkoutPlatformCart,
+    checkoutPaidPlatformCart,
     findPlatformOrderById,
     checkoutCart,
     checkoutPaidCart,

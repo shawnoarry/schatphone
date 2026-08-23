@@ -446,6 +446,25 @@ const normalizeShoppingDestination = (rawDestination) => {
   }
 }
 
+const normalizeShoppingPaymentRef = (rawRef) => {
+  if (!rawRef || typeof rawRef !== 'object') return null
+  const transactionId = normalizeText(rawRef.transactionId, '', 140)
+  if (!transactionId) return null
+  return {
+    transactionId,
+    receiptNumber: normalizeText(rawRef.receiptNumber, '', 40),
+    status: normalizeText(rawRef.status, 'completed', 32),
+    idempotencyKey: normalizeText(rawRef.idempotencyKey, '', 180),
+    sourceModule: normalizeText(rawRef.sourceModule, 'wallet_commerce_payment', 60),
+    sourceId: normalizeText(rawRef.sourceId, '', 140),
+    accountId: normalizeText(rawRef.accountId, '', 120),
+    cardId: normalizeText(rawRef.cardId, '', 120),
+    amountCents: Math.max(0, toInt(rawRef.amountCents, 0)),
+    currency: normalizeCurrency(rawRef.currency),
+    createdAt: Math.max(0, toInt(rawRef.createdAt, Date.now())),
+  }
+}
+
 const normalizeShoppingServiceCase = (rawCase, index = 0) => {
   if (!rawCase || typeof rawCase !== 'object') return null
   const orderId = normalizeText(rawCase.orderId, '', 180)
@@ -530,6 +549,7 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
   const quoteSnapshot = normalizeMoneyQuote(
     rawOrder.quoteSnapshot || rawOrder.moneyQuote || rawOrder.checkoutQuote,
   )
+  const paymentRef = normalizeShoppingPaymentRef(rawOrder.paymentRef)
   const id = normalizeText(rawOrder.id, `shopping_order_legacy_${now}_${index}`, 140)
   const status = normalizeOrderStatus(rawOrder.status)
   const giftRecipient = normalizeGiftRecipient(rawOrder)
@@ -550,8 +570,11 @@ const normalizeShoppingOrder = (rawOrder, index = 0) => {
     quoteSnapshot,
     note: normalizeText(rawOrder.note, '', 240),
     recipient: normalizeText(rawOrder.recipient, '', 120),
+    recipientPhone: normalizeText(rawOrder.recipientPhone, '', 40),
     deliveryAddress: normalizeText(rawOrder.deliveryAddress, '', 220),
     deliveryAnchor: normalizeShoppingDestination(rawOrder.deliveryAnchor),
+    paymentRef,
+    paymentStatus: paymentRef?.status || 'unpaid',
     ownerRevision: Math.max(1, toInt(rawOrder.ownerRevision, 1)),
     giftRecipient,
     sharedExperienceId,
@@ -1957,12 +1980,19 @@ export const useShoppingStore = defineStore('shopping', () => {
   }
 
   const checkoutCart = ({
+    orderId = '',
     serviceKey = '',
     note = '',
     recipient = '',
+    recipientPhone = '',
     giftRecipient = null,
+    deliveryAddress = '',
+    deliveryAnchor = null,
+    paymentRef = null,
+    quoteSnapshot: providedQuoteSnapshot = null,
     sourceModule = 'shopping_checkout',
     sourceId = '',
+    createdAt = Date.now(),
   } = {}) => {
     const requestedServiceKey = normalizeText(serviceKey, '', 40)
     const scopedServiceKey = normalizeExistingServiceKey(requestedServiceKey)
@@ -1971,7 +2001,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       ? listCartLineItemsByService(scopedServiceKey)
       : cartLineItems.value
     if (lines.length === 0) return null
-    const now = Date.now()
+    const now = Math.max(0, toInt(createdAt, Date.now()))
     const sourceTotal = scopedServiceKey
       ? getCartPrimaryTotalByService(scopedServiceKey)
       : cartPrimaryTotal.value
@@ -1981,11 +2011,11 @@ export const useShoppingStore = defineStore('shopping', () => {
       sourceTotal.currency,
       walletStore.currencyOptions,
     )
-    const quoteSnapshot = sourceMoney
+    const quoteSnapshot = normalizeMoneyQuote(providedQuoteSnapshot) || (sourceMoney
       ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
-      : null
+      : null)
     const order = normalizeShoppingOrder({
-      id: createShoppingOrderId(),
+      id: normalizeText(orderId, createShoppingOrderId(), 140),
       status: SHOPPING_ORDER_STATUS.PLACED,
       items: lines.map((line) => ({
         id: `${line.productId}_${line.addedAt}`,
@@ -2002,7 +2032,11 @@ export const useShoppingStore = defineStore('shopping', () => {
       })),
       note,
       recipient,
+      recipientPhone,
       giftRecipient,
+      deliveryAddress,
+      deliveryAnchor,
+      paymentRef,
       quoteSnapshot: quoteSnapshot?.ok ? quoteSnapshot : null,
       sourceModule: normalizeText(sourceModule, SHOPPING_SOURCE_KEYS.ORDER_UPDATE, 40),
       sourceId,
@@ -2016,6 +2050,132 @@ export const useShoppingStore = defineStore('shopping', () => {
     pushShoppingOrderServiceMessage(order)
     clearCart(scopedServiceKey)
     return order
+  }
+
+  const checkoutCartWithPayment = ({
+    serviceKey = '',
+    note = '',
+    recipient = '',
+    recipientPhone = '',
+    giftRecipient = null,
+    deliveryAnchor = null,
+    accountId = '',
+    cardId = '',
+    idempotencyKey = '',
+    sourceModule = 'shopping_paid_checkout',
+    sourceId = '',
+    now = Date.now(),
+  } = {}) => {
+    const scopedServiceKey = normalizeExistingServiceKey(normalizeText(serviceKey, '', 40))
+    const normalizedIdempotencyKey = normalizeText(idempotencyKey, '', 180)
+    const walletStore = getWalletStore()
+    const existingPayment = normalizedIdempotencyKey
+      ? walletStore.findCommercePaymentByIdempotencyKey(normalizedIdempotencyKey)
+      : null
+    if (existingPayment) {
+      const existingOrder = orders.value.find(
+        (item) => item.paymentRef?.transactionId === existingPayment.id,
+      ) || null
+      if (existingOrder) {
+        return {
+          ok: true,
+          reason: 'idempotent_replay',
+          order: existingOrder,
+          payment: { ok: true, reason: 'idempotent_replay', transaction: existingPayment },
+        }
+      }
+      walletStore.reverseCommercePayment({
+        transactionId: existingPayment.id,
+        reason: 'Shopping payment has no confirmed order',
+        createdAt: now,
+      })
+      return {
+        ok: false,
+        stage: 'payment',
+        reason: 'payment_without_order_reversed',
+        order: null,
+        payment: { ok: true, reason: 'idempotent_replay', transaction: existingPayment },
+      }
+    }
+    const lines = scopedServiceKey ? listCartLineItemsByService(scopedServiceKey) : []
+    const normalizedAnchor = normalizeShoppingDestination(deliveryAnchor)
+    if (!scopedServiceKey || lines.length === 0) {
+      return { ok: false, stage: 'order', reason: 'cart_empty', order: null, payment: null }
+    }
+    if (!normalizedAnchor) {
+      return { ok: false, stage: 'map', reason: 'delivery_anchor_required', order: null, payment: null }
+    }
+    if (!normalizeText(recipient, '', 120)) {
+      return { ok: false, stage: 'recipient', reason: 'recipient_required', order: null, payment: null }
+    }
+
+    const sourceTotal = getCartPrimaryTotalByService(scopedServiceKey)
+    const sourceMoney = convertLegacyCentsToMoney(
+      sourceTotal.amountCents,
+      sourceTotal.currency,
+      walletStore.currencyOptions,
+    )
+    const quoteSnapshot = sourceMoney
+      ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency, { quotedAt: now })
+      : null
+    if (!quoteSnapshot?.ok || !quoteSnapshot.quotedMoney?.amountMinor) {
+      return { ok: false, stage: 'payment', reason: 'quote_unavailable', order: null, payment: null }
+    }
+
+    const orderId = createShoppingOrderId()
+    const payment = walletStore.commitCommercePayment({
+      amountCents: quoteSnapshot.quotedMoney.amountMinor,
+      currency: quoteSnapshot.quotedMoney.currency,
+      accountId,
+      cardId,
+      counterparty: resolveServiceLabel(scopedServiceKey),
+      note: note || `Shopping order ${orderId}`,
+      sourceModule: SHOPPING_SOURCE_KEYS.WALLET_EXPENSE,
+      sourceId: orderId,
+      idempotencyKey: normalizedIdempotencyKey || `shopping_checkout:${orderId}`,
+      quoteSnapshot,
+      createdAt: now,
+    })
+    if (!payment.ok) {
+      return { ok: false, stage: 'payment', reason: payment.reason, order: null, payment }
+    }
+
+    const order = checkoutCart({
+      orderId,
+      serviceKey: scopedServiceKey,
+      note,
+      recipient,
+      recipientPhone,
+      giftRecipient,
+      deliveryAddress: normalizedAnchor.detail,
+      deliveryAnchor: normalizedAnchor,
+      paymentRef: {
+        transactionId: payment.transaction.id,
+        receiptNumber: payment.transaction.receiptNumber,
+        status: payment.transaction.paymentStatus,
+        idempotencyKey: payment.transaction.idempotencyKey,
+        sourceModule: payment.transaction.sourceModule,
+        sourceId: payment.transaction.sourceId,
+        accountId: payment.transaction.accountId,
+        cardId: payment.transaction.cardId,
+        amountCents: payment.transaction.amountCents,
+        currency: payment.transaction.currency,
+        createdAt: payment.transaction.createdAt,
+      },
+      quoteSnapshot,
+      sourceModule,
+      sourceId,
+      createdAt: now,
+    })
+    if (!order) {
+      walletStore.reverseCommercePayment({
+        transactionId: payment.transaction.id,
+        reason: 'Shopping order creation failed',
+        createdAt: now,
+      })
+      return { ok: false, stage: 'order', reason: 'order_invalid', order: null, payment }
+    }
+    return { ok: true, reason: '', order, payment }
   }
 
   const removeOrder = (orderId) => {
@@ -2182,6 +2342,7 @@ export const useShoppingStore = defineStore('shopping', () => {
       totals: order.totals.map((item) => ({ ...item })),
       events: Array.isArray(order.events) ? order.events.map((event) => ({ ...event })) : [],
       deliveryAnchor: order.deliveryAnchor ? { ...order.deliveryAnchor } : null,
+      paymentRef: order.paymentRef ? { ...order.paymentRef } : null,
     })),
     serviceCases: serviceCases.value.map((serviceCase) => ({
       ...serviceCase,
@@ -2290,6 +2451,7 @@ export const useShoppingStore = defineStore('shopping', () => {
     removeFromCart,
     clearCart,
     checkoutCart,
+    checkoutCartWithPayment,
     updateOrderStatus,
     markOrderCompleted,
     cancelOrder,

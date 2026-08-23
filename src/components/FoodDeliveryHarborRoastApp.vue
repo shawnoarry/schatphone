@@ -36,6 +36,7 @@ const emit = defineEmits([
   'redeem-merchandise',
   'update-cart',
   'checkout',
+  'open-support',
 ])
 
 const { t } = useI18n()
@@ -2101,6 +2102,14 @@ onBeforeUnmount(stopCarousel)
           <button
             type="button"
             class="harbor-secondary-button mt-5 w-full"
+            data-testid="food-delivery-harbor-order-support"
+            @click="emit('open-support', activeOrder.id)"
+          >
+            <i class="fas fa-headset"></i> {{ t('订单帮助与门店沟通', 'Order help & shop contact') }}
+          </button>
+          <button
+            type="button"
+            class="harbor-secondary-button mt-3 w-full"
             @click="emit('navigate', 'orders')"
           >
             <i class="fas fa-receipt"></i> {{ t('查看全部订单', 'View all orders') }}

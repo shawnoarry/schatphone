@@ -101,20 +101,13 @@ const oliveTitle = () =>
           @input="searchChanged"
         />
       </label>
-      <button
-        type="button"
-        class="olive-manage"
-        :aria-label="localize('管理商品', 'Manage catalog')"
-        :title="localize('管理商品', 'Manage catalog')"
-        @click="emit('open-manager')"
-      ><i class="fas fa-sliders" aria-hidden="true"></i></button>
     </div>
 
     <nav class="olive-store-nav" :aria-label="localize('店内导航', 'Store navigation')">
       <button type="button" :class="{ 'is-active': !favoritesOnly }" @click="emit('show-all')">{{ localize('排行榜', 'RANKING') }}</button>
       <button type="button" :class="{ 'is-active': favoritesOnly }" @click="emit('open-favorites')">{{ localize('心愿', 'WISHLIST') }}<b v-if="favoriteCount">{{ favoriteCount }}</b></button>
       <button type="button" @click="emit('open-cart')">{{ localize('购物袋', 'BAG') }}<b v-if="cartQuantity">{{ cartQuantity }}</b></button>
-      <button type="button" @click="emit('open-orders')">{{ localize('我的', 'MY') }}<b v-if="orderCount">{{ orderCount }}</b></button>
+      <button type="button" @click="emit('open-orders')">{{ localize('订单', 'ORDERS') }}<b v-if="orderCount">{{ orderCount }}</b></button>
     </nav>
 
     <div class="olive-hero">
@@ -129,7 +122,7 @@ const oliveTitle = () =>
           :data-map-place-id="mapReference.placeId"
         >
           <i class="fas fa-location-dot" aria-hidden="true"></i>
-          <span>{{ localize('首尔场景锚点', 'SEOUL SETTING') }}</span>
+          <span>{{ localize('附近门店', 'NEARBY STORE') }}</span>
           <strong>{{ mapReference.district }}</strong>
         </p>
       </div>
@@ -231,14 +224,12 @@ const oliveTitle = () =>
         :class="{ 'is-highlighted': product.id === highlightedProductId }"
         :data-product-template="productStorefrontTemplate(product)"
         :data-testid="`shopping-product-${product.id}`"
-        role="button"
-        tabindex="0"
-        @click="emit('open-product', product.id)"
-        @keydown.enter.prevent="emit('open-product', product.id)"
       >
         <div class="olive-product-visual">
-          <img v-if="productImageUrl(product)" :src="productImageUrl(product)" :alt="product.image?.alt || productDisplayTitle(product)" />
-          <div v-else class="olive-product-symbol" aria-hidden="true"><i :class="productCategoryIcon(product)"></i><span>{{ activeService?.mark || 'O' }}</span></div>
+          <button type="button" class="olive-product-open" :aria-label="productDisplayTitle(product)" @click="emit('open-product', product.id)">
+            <img v-if="productImageUrl(product)" :src="productImageUrl(product)" :alt="product.image?.alt || productDisplayTitle(product)" />
+            <span v-else class="olive-product-symbol" aria-hidden="true"><i :class="productCategoryIcon(product)"></i><span>{{ activeService?.mark || 'O' }}</span></span>
+          </button>
           <button
             type="button"
             class="olive-favorite"
@@ -251,7 +242,7 @@ const oliveTitle = () =>
         </div>
         <div class="olive-product-body">
           <p class="olive-product-brand">{{ productServiceLabel(product) }}</p>
-          <h3>{{ productDisplayTitle(product) }}</h3>
+          <button type="button" class="olive-product-title" @click="emit('open-product', product.id)"><h3>{{ productDisplayTitle(product) }}</h3></button>
           <p>{{ productDisplayDescription(product) }}</p>
           <div class="olive-product-tags">
             <span :class="stockStatusClass(product.stockStatus)">{{ stockStatusLabel(product.stockStatus) }}</span>
@@ -357,7 +348,8 @@ const oliveTitle = () =>
 .olive-product-card { overflow:hidden; border:1px solid var(--olive-line); border-radius:12px; color:var(--olive-ink); background:#fff; }
 .olive-product-card.is-highlighted { border-color:var(--olive-orange); box-shadow:0 0 0 2px rgba(245,130,32,.13); }
 .olive-product-visual { position:relative; aspect-ratio:1 / 1; overflow:hidden; background:#e6eed7; }
-.olive-product-visual img { width:100%; height:100%; display:block; object-fit:cover; }
+.olive-product-open { width:100%; height:100%; display:block; text-align:left; }
+.olive-product-open img { width:100%; height:100%; display:block; object-fit:cover; }
 .olive-product-symbol { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; background:var(--olive-green); font-size:29px; }
 .olive-product-symbol span { position:absolute; right:8px; bottom:7px; font-size:9px; font-weight:900; }
 .olive-favorite { position:absolute; top:8px; right:8px; width:31px; height:31px; border:1px solid rgba(109,150,29,.14); border-radius:50%; color:#aab19e; background:rgba(255,255,255,.92); }
@@ -365,6 +357,7 @@ const oliveTitle = () =>
 .olive-step-dot { position:absolute; bottom:8px; left:8px; width:13px; height:13px; border:3px solid #fff; border-radius:50%; background:var(--olive-orange); }
 .olive-product-body { min-height:169px; padding:11px; display:flex; flex-direction:column; }
 .olive-product-brand { margin:0; color:var(--olive-green); font-size:8px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.olive-product-title { width:100%; color:inherit; text-align:left; }
 .olive-product-body h3 { min-height:35px; margin:5px 0 0; display:-webkit-box; overflow:hidden; font:700 14px/1.2 Arial, sans-serif; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .olive-product-body > p:not(.olive-product-brand) { min-height:31px; margin:7px 0 0; display:-webkit-box; overflow:hidden; color:var(--olive-muted); font-size:10px; line-height:1.5; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .olive-product-tags { min-height:19px; margin-top:7px; display:flex; flex-wrap:wrap; gap:4px; }
@@ -378,7 +371,7 @@ const oliveTitle = () =>
 .olive-add:disabled { opacity:.35; }
 .olive-empty { min-height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--olive-line); border-radius:12px; color:var(--olive-muted); background:#fff; }
 .olive-empty p { margin:0; font-size:11px; }
-.olive-back:focus-visible,.olive-action:focus-visible,.olive-manage:focus-visible,.olive-category:focus-visible,.olive-store-nav button:focus-visible,.olive-favorite:focus-visible,.olive-add:focus-visible,.olive-routine-tabs button:focus-visible,.olive-routine-item:focus-visible,.olive-routine-add:focus-visible { outline:3px solid var(--olive-orange); outline-offset:2px; }
+.olive-back:focus-visible,.olive-action:focus-visible,.olive-manage:focus-visible,.olive-category:focus-visible,.olive-store-nav button:focus-visible,.olive-product-open:focus-visible,.olive-product-title:focus-visible,.olive-favorite:focus-visible,.olive-add:focus-visible,.olive-routine-tabs button:focus-visible,.olive-routine-item:focus-visible,.olive-routine-add:focus-visible { outline:3px solid var(--olive-orange); outline-offset:2px; }
 @media (min-width:680px) { .olive-product-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (max-width:350px) { .olive-product-grid { grid-template-columns:1fr; } }
 

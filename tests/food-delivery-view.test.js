@@ -30,6 +30,7 @@ const createTestRouter = () =>
     routes: [
       { path: '/home', component: DummyView },
       { path: '/food-delivery', component: FoodDeliveryView },
+      { path: '/wallet', component: DummyView },
     ],
   })
 
@@ -678,12 +679,14 @@ describe('FoodDeliveryView', () => {
     expect(wrapper.get('[data-testid="food-delivery-platform-address-menu"]').exists()).toBe(true)
 
     const alternateAddress = wrapper.get('[data-testid="food-delivery-platform-address-1"]')
-    const addressLabel = alternateAddress.text()
+    const addressLabel = alternateAddress.get('strong').text()
+    const addressDetail = alternateAddress.get('small').text()
     await alternateAddress.trigger('click')
 
     expect(locationButton.attributes('aria-expanded')).toBe('false')
     expect(wrapper.find('[data-testid="food-delivery-platform-address-menu"]').exists()).toBe(false)
     expect(locationButton.text()).toContain(addressLabel)
+    expect(locationButton.text()).toContain(addressDetail)
     wrapper.unmount()
   })
 
@@ -828,6 +831,17 @@ describe('FoodDeliveryView', () => {
       },
     })
     const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
+    const mapStore = useMapStore()
+    const platformPosition = { ...mapStore.currentLocation.position }
+    mapStore.setCurrentLocation({
+      label: 'Platform Home',
+      detail: 'Platform Street 18',
+      source: 'test',
+      mapPackId: mapStore.currentLocation.mapPackId,
+      position: platformPosition,
+    })
+    await flushPromises()
 
     await wrapper.get('[data-testid="food-delivery-platform-view-all"]').trigger('click')
     await wrapper
@@ -859,13 +873,13 @@ describe('FoodDeliveryView', () => {
     ).toBeUndefined()
     expect(wrapper.find('[data-testid="food-delivery-platform-bottom-nav"]').exists()).toBe(false)
 
-    await wrapper.get('[data-testid="food-delivery-platform-checkout-address-1"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-platform-checkout-address-0"]').trigger('click')
     await wrapper
       .get('[data-testid="food-delivery-platform-checkout-note"]')
       .setValue('少辣，放门口')
     await wrapper
-      .get('[data-testid="food-delivery-platform-payment-pay_on_delivery"] input')
-      .setValue()
+      .get('[data-testid="food-delivery-platform-payment-wallet_card_icbc_cny"]')
+      .trigger('click')
     await wrapper.get('[data-testid="food-delivery-platform-checkout-submit"]').trigger('click')
     await flushPromises()
 
@@ -873,9 +887,19 @@ describe('FoodDeliveryView', () => {
     expect(order).toMatchObject({
       merchantId: 'platform_hanwoo_gukbap',
       note: '少辣，放门口',
-      paymentMethod: 'pay_on_delivery',
-      deliveryAddress: '首尔市麻浦区延南洞 223-14',
+      paymentMethod: 'wallet_card',
+      paymentStatus: 'completed',
+      deliveryAddress: 'Platform Street 18',
       total: '58.00',
+      paymentRef: {
+        cardId: 'wallet_card_icbc_cny',
+        status: 'completed',
+      },
+    })
+    expect(walletStore.findTransactionById(order.paymentRef.transactionId)).toMatchObject({
+      paymentKind: 'commerce_order',
+      paymentStatus: 'completed',
+      sourceId: order.id,
     })
     expect(store.platformCartQuantity).toBe(0)
     expect(store.orders).toHaveLength(0)
@@ -888,6 +912,16 @@ describe('FoodDeliveryView', () => {
     )
     expect(wrapper.get('[data-testid="food-delivery-platform-order-summary"]').text()).toContain(
       '逆站洞一号韩牛汤饭',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-page"]').text()).toContain(
+      '中国工商银行',
+    )
+    await wrapper.get('[data-testid="food-delivery-platform-order-help"]').trigger('click')
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-help-panel"]').text()).toContain(
+      '付款凭证',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-platform-order-help-payment"]').exists()).toBe(
+      true,
     )
     expect(
       wrapper
@@ -1641,10 +1675,13 @@ describe('FoodDeliveryView', () => {
     })
     const store = useFoodDeliveryStore()
     const mapStore = useMapStore()
+    const studioPosition = { ...mapStore.currentLocation.position }
     mapStore.setCurrentLocation({
       label: 'Studio',
       detail: 'Studio Street 9',
       source: 'test',
+      mapPackId: mapStore.currentLocation.mapPackId,
+      position: studioPosition,
     })
     await flushPromises()
     const activeRestaurant = store.listRestaurantsByCategory('restaurants')[0]
@@ -1703,6 +1740,126 @@ describe('FoodDeliveryView', () => {
 
     expect(wrapper.find('[data-testid="food-delivery-orders-panel"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="food-delivery-wallet-suggestions"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  test('saves a checkout address into Map and selects it for the active shop', async () => {
+    const router = createTestRouter()
+    await router.push(
+      '/food-delivery?category=restaurants&restaurantId=food_seed_moon_bistro&entry=shop',
+    )
+    await router.isReady()
+
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const mapStore = useMapStore()
+    const currentPosition = { ...mapStore.currentLocation.position }
+    mapStore.setCurrentLocation({
+      label: 'Current pin',
+      detail: 'Current Pin Street 3',
+      source: 'test',
+      mapPackId: mapStore.currentLocation.mapPackId,
+      position: currentPosition,
+    })
+    const menuItem = store.listMenuByRestaurant('food_seed_moon_bistro')[0]
+    await wrapper.get(`[data-testid="food-delivery-add-${menuItem.id}"]`).trigger('click')
+    await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
+    await wrapper.get('[data-testid="food-delivery-checkout-new-address"]').trigger('click')
+    await wrapper
+      .get('[data-testid="food-delivery-checkout-address-editor"] input')
+      .setValue('Late studio')
+    await wrapper
+      .get('[data-testid="food-delivery-checkout-address-editor"] textarea')
+      .setValue('Late Studio Road 27, Room 4')
+    await wrapper.get('[data-testid="food-delivery-checkout-save-address"]').trigger('click')
+    await flushPromises()
+
+    expect(mapStore.addresses).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Late studio',
+          detail: 'Late Studio Road 27, Room 4',
+          position: currentPosition,
+        }),
+      ]),
+    )
+    expect(wrapper.get('[data-testid="food-delivery-checkout-address-select"]').element.value).toMatch(
+      /^address:/,
+    )
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      'Late Studio Road 27, Room 4',
+    )
+    wrapper.unmount()
+  })
+
+  test('routes every dedicated shop order-help entry into the shared real order thread', async () => {
+    const router = createTestRouter()
+    await router.push('/food-delivery?category=restaurants')
+    await router.isReady()
+    const wrapper = mount(FoodDeliveryView, {
+      global: {
+        plugins: [router],
+      },
+    })
+    const store = useFoodDeliveryStore()
+    const cases = [
+      {
+        restaurantId: 'food_seed_dash_grill',
+        category: 'fast_food',
+        supportTestId: 'food-delivery-quick-service-order-support',
+      },
+      {
+        restaurantId: 'food_seed_jade_hearth',
+        category: 'restaurants',
+        supportTestId: 'food-delivery-jade-order-support',
+      },
+      {
+        restaurantId: 'food_seed_verdant_day',
+        category: 'healthy',
+        supportTestId: 'food-delivery-light-order-support',
+      },
+      {
+        restaurantId: 'food_seed_harbor_roast',
+        category: 'cafe',
+        supportTestId: 'food-delivery-harbor-order-support',
+      },
+      {
+        restaurantId: 'food_seed_peach_cloud',
+        category: 'dessert',
+        supportTestId: 'food-delivery-peach-cloud-order-support',
+      },
+    ]
+
+    for (const shopCase of cases) {
+      const menuItem = store.listMenuByRestaurant(shopCase.restaurantId)[0]
+      store.addToCart(menuItem.id)
+      const order = store.checkoutCart({
+        restaurantId: shopCase.restaurantId,
+        deliveryAddress: 'Support Route Address',
+      })
+      await router.push({
+        path: '/food-delivery',
+        query: {
+          category: shopCase.category,
+          restaurantId: shopCase.restaurantId,
+          entry: 'shop',
+          shopView: 'order',
+          shopOrderId: order.id,
+        },
+      })
+      await flushPromises()
+
+      await wrapper.get(`[data-testid="${shopCase.supportTestId}"]`).trigger('click')
+      await flushPromises()
+      expect(router.currentRoute.value.query).toMatchObject({
+        orderId: order.id,
+        conversation: '1',
+      })
+    }
     wrapper.unmount()
   })
 
@@ -3176,11 +3333,19 @@ describe('FoodDeliveryView', () => {
     await wrapper.get('[data-testid="food-delivery-harbor-checkout-submit"]').trigger('click')
     await flushPromises()
 
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      'Dine in at the shop',
+    )
+    expect(wrapper.get('[data-testid="food-delivery-checkout-payment-wallet_card_icbc_cny"]').attributes('aria-pressed')).toBe('true')
+    await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
+    await flushPromises()
+
     const pickupOrder = store.orders[0]
     expect(pickupOrder).toMatchObject({
       restaurantId: 'food_seed_harbor_roast',
       fulfillmentMode: 'pickup',
       pickupMode: 'dine_in',
+      paymentStatus: 'completed',
       deliveryFeeCents: 0,
       itemCount: 4,
       items: expect.arrayContaining([
@@ -3231,6 +3396,12 @@ describe('FoodDeliveryView', () => {
     await wrapper.get('[data-testid="food-delivery-harbor-mode-delivery"]').trigger('click')
     await wrapper.get('[data-testid="food-delivery-checkout"]').trigger('click')
     await wrapper.get('[data-testid="food-delivery-harbor-checkout-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="food-delivery-checkout-sheet"]').text()).toContain(
+      'Delivery address',
+    )
+    await wrapper.get('[data-testid="food-delivery-checkout-submit"]').trigger('click')
     await flushPromises()
 
     const deliveryOrder = store.orders[0]

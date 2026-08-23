@@ -31,6 +31,7 @@ const emit = defineEmits([
   'add-item',
   'update-cart',
   'checkout',
+  'open-support',
 ])
 
 const { t } = useI18n()
@@ -953,6 +954,15 @@ watch(
               }}
             </p>
           </div>
+          <button
+            type="button"
+            class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 border border-black/15 bg-white px-4 text-xs font-black"
+            data-testid="food-delivery-quick-service-order-support"
+            @click="emit('open-support', activeOrder.id)"
+          >
+            <i class="fas fa-headset" aria-hidden="true"></i>
+            {{ t('订单帮助与配送沟通', 'Order help & delivery contact') }}
+          </button>
         </section>
         <section
           v-else

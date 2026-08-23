@@ -106,7 +106,11 @@ test('Shopping apps keep distinct routes, identities, carts, favorites, and orde
 }, testInfo) => {
   test.slow()
   const pageErrors = []
+  const consoleWarnings = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'warning') consoleWarnings.push(message.text())
+  })
 
   await page.addInitScript(() => {
     window.localStorage.setItem(
@@ -154,6 +158,8 @@ test('Shopping apps keep distinct routes, identities, carts, favorites, and orde
     await expect
       .poll(() => page.locator('#shopping-products .shopping-product-card').count())
       .toBeGreaterThanOrEqual(3)
+    await expect(page.locator('.shopping-product-card[role="button"]')).toHaveCount(0)
+    await expect(page.locator('.shopping-product-card button button')).toHaveCount(0)
     await expectNoPageOverflow(page)
     await settleStorefrontMotion(page)
 
@@ -189,7 +195,7 @@ test('Shopping apps keep distinct routes, identities, carts, favorites, and orde
   await expect(page).toHaveURL(/\/shopping\/nordhus_home\?category=home$/)
   await expect(page.getByRole('button', { name: 'Cart', exact: true })).not.toContainText('1')
   await expect(page.getByTestId('shopping-product-shopping_seed_care_lip')).toHaveCount(0)
-  await page.getByTestId('shopping-product-shopping_seed_nordhus_lamp').click()
+  await page.getByTestId('shopping-product-shopping_seed_nordhus_lamp').locator('.ikea-product-media').click()
   await expect(page).toHaveURL(/productId=shopping_seed_nordhus_lamp/)
   await expect(page.getByTestId('shopping-store-specific-page')).toHaveAttribute(
     'data-page',
@@ -206,7 +212,8 @@ test('Shopping apps keep distinct routes, identities, carts, favorites, and orde
   await cart.getByTestId('shopping-checkout').click()
   await expect(page).toHaveURL(/shopView=project-review/)
   await expect(page.getByTestId('shopping-checkout-review')).toBeVisible()
-  await page.getByTestId('shopping-place-order').click()
+  await page.getByTestId('shopping-checkout-recipient').fill('Nova')
+  await page.getByTestId('shopping-payment-submit').click()
   await expect(page).toHaveURL(/shopView=projects/)
   await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
 
@@ -219,7 +226,8 @@ test('Shopping apps keep distinct routes, identities, carts, favorites, and orde
   await page.getByTestId('shopping-checkout').click()
   await expect(page).toHaveURL(/shopView=routine-review/)
   await expect(page.getByTestId('shopping-checkout-review')).toBeVisible()
-  await page.getByTestId('shopping-place-order').click()
+  await page.getByTestId('shopping-checkout-recipient').fill('Nova')
+  await page.getByTestId('shopping-payment-submit').click()
   await expect(page).toHaveURL(/shopView=restocks/)
   await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
 
@@ -235,6 +243,7 @@ test('Shopping apps keep distinct routes, identities, carts, favorites, and orde
     contentType: 'image/png',
   })
   expect(pageErrors).toEqual([])
+  expect(consoleWarnings.filter((message) => message.includes('Extraneous non-emits event listeners'))).toEqual([])
 })
 
 test('Coupang keeps detail, review checkout, and order creation as separate states', async ({ page }) => {
@@ -266,6 +275,11 @@ test('Coupang keeps detail, review checkout, and order creation as separate stat
   await product.locator('.coupang-product-open').click()
   await expect(page.getByTestId('shopping-store-specific-page')).toHaveAttribute('data-page', 'product')
   await expect(page.getByTestId('shopping-product-add')).toBeVisible()
+  await page.getByRole('button', { name: 'Reviews', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'No buyer reviews yet' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Product overview' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Details', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Product overview' })).toBeVisible()
   await page.locator('.cp-pdp-buy .cp-qty button').nth(1).click()
   await page.getByTestId('shopping-product-add').click()
 
@@ -278,10 +292,16 @@ test('Coupang keeps detail, review checkout, and order creation as separate stat
   await expect(page.getByTestId('shopping-checkout-review')).toContainText('CNY')
   await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(0)
 
-  await page.getByTestId('shopping-place-order').click()
+  await page.getByTestId('shopping-checkout-recipient').fill('Nova')
+  await page.getByTestId('shopping-payment-submit').click()
   await expect(page).toHaveURL(/shopView=orders/)
   await expect(page.getByTestId('shopping-checkout-review')).toHaveCount(0)
   await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Confirm delete', exact: true })).toBeVisible()
+  await expect(page.locator('article[data-testid^="shopping-order-"]')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Confirm delete', exact: true })).toHaveCount(0)
   await expectNoPageOverflow(page)
   expect(pageErrors).toEqual([])
 })
@@ -356,7 +376,7 @@ test('Six canonical storefronts expose their own interaction grammar', async ({ 
   expect(pageErrors).toEqual([])
 })
 
-test('Five extended storefronts expose campaign-led, non-skin interaction grammar', async ({ page }) => {
+test('Five extended storefronts keep real browse controls and static editorial content', async ({ page }) => {
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
@@ -381,46 +401,43 @@ test('Five extended storefronts expose campaign-led, non-skin interaction gramma
   await page.getByTestId('shopping-traders-mode-list').click()
   await expect(page.locator('.shopping-traders-app')).toHaveAttribute('data-warehouse-mode', 'list')
   await expect(page.locator('#shopping-products')).toHaveClass(/is-list/)
-  await page.getByTestId('shopping-traders-campaign-family-stock').click()
-  await expect(page.getByTestId('shopping-traders-campaign-family-stock')).toHaveClass(/is-active/)
-  await page.getByTestId('shopping-traders-pack-split').click()
-  await expect(page.locator('.shopping-traders-app')).toHaveAttribute('data-pack-focus', 'split')
+  await expect(page.locator('.traders-campaign-card')).toHaveCount(3)
+  await expect(page.getByTestId('shopping-traders-pack-split')).toHaveCount(0)
 
   const cu = routeFor('neighborhood_convenience')
   await navigateInsideUnlockedApp(page, `/shopping/${cu.service}?category=${cu.category}`)
-  await page.getByTestId('shopping-cu-mode-pickup').click()
-  await expect(page.locator('.shopping-cu-app')).toHaveAttribute('data-cu-mode', 'pickup')
-  await expect(page.locator('#shopping-products')).toHaveClass(/is-pickup/)
-  await page.getByTestId('shopping-cu-promo-hot-counter').click()
-  await expect(page.getByTestId('shopping-cu-promo-hot-counter')).toHaveClass(/is-active/)
-  await page.getByTestId('shopping-cu-pickup-scan').click()
-  await expect(page.locator('.shopping-cu-app')).toHaveAttribute('data-pickup-stage', 'scan')
+  await expect(page.locator('.cu-moment-card')).toHaveCount(3)
+  await expect(page.getByTestId('shopping-cu-mode-pickup')).toHaveCount(0)
+  await page.getByTestId('shopping-cu-pickup-orders').click()
+  await expect(page).toHaveURL(/shopView=pickups/)
+  await expect(page.locator('.cu-ops[data-page="orders"]')).toBeVisible()
 
   const musinsa = routeFor('fashion_catalog')
   await navigateInsideUnlockedApp(page, `/shopping/${musinsa.service}?category=${musinsa.category}`)
   await page.getByTestId('shopping-musinsa-view-catalog').click()
   await expect(page.locator('.shopping-musinsa-app')).toHaveAttribute('data-fashion-view', 'catalog')
-  await page.getByTestId('shopping-musinsa-campaign-after-dark').click()
-  await expect(page.locator('.shopping-musinsa-app')).toHaveAttribute('data-campaign', 'after-dark')
-  await page.getByTestId('shopping-musinsa-lookbook-01').click()
-  await expect(page.locator('.shopping-musinsa-app')).toHaveAttribute('data-lookbook', '01')
+  await expect(page.getByTestId('shopping-musinsa-campaign-after-dark')).toHaveJSProperty('tagName', 'ARTICLE')
+  await expect(page.getByTestId('shopping-musinsa-lookbook-01')).toHaveJSProperty('tagName', 'ARTICLE')
+  await page.locator('.musinsa-product-open').first().click()
+  await expect(page.locator('.mu-pages[data-page="product"]')).toBeVisible()
 
   const boon = routeFor('buyer_atelier')
   await navigateInsideUnlockedApp(page, `/shopping/${boon.service}?category=${boon.category}`)
   await page.getByTestId('shopping-boon-mode-lookbook').click()
   await expect(page.locator('.shopping-boon-app')).toHaveAttribute('data-atelier-mode', 'lookbook')
-  await page.getByTestId('shopping-boon-story-quiet-tailoring').click()
-  await expect(page.locator('.shopping-boon-app')).toHaveAttribute('data-story', 'quiet-tailoring')
-  await page.getByTestId('shopping-boon-material-wool').click()
-  await expect(page.locator('.shopping-boon-app')).toHaveAttribute('data-material', 'wool')
+  await expect(page.getByTestId('shopping-boon-story-quiet-tailoring')).toHaveJSProperty('tagName', 'ARTICLE')
+  await expect(page.getByTestId('shopping-boon-material-wool')).toHaveJSProperty('tagName', 'ARTICLE')
+  await page.locator('.boon-visual').first().click()
+  await expect(page.locator('.boon-pages[data-page="product"]')).toBeVisible()
 
   const galleria = routeFor('luxury_hall')
   await navigateInsideUnlockedApp(page, `/shopping/${galleria.service}?category=${galleria.category}`)
   await page.getByTestId('shopping-galleria-mode-selection').click()
   await expect(page.locator('.shopping-galleria-app')).toHaveAttribute('data-hall-mode', 'selection')
-  await page.getByTestId('shopping-galleria-campaign-heirloom').click()
-  await page.getByTestId('shopping-galleria-hall-atelier').click()
-  await expect(page.locator('.shopping-galleria-app')).toHaveAttribute('data-hall', 'atelier')
+  await expect(page.getByTestId('shopping-galleria-campaign-heirloom')).toHaveJSProperty('tagName', 'ARTICLE')
+  await expect(page.getByTestId('shopping-galleria-hall-atelier')).toHaveJSProperty('tagName', 'ARTICLE')
+  await page.locator('.galleria-product-open').first().click()
+  await expect(page.locator('.gal-pages[data-page="product"]')).toBeVisible()
 
   await expectNoPageOverflow(page)
   expect(pageErrors).toEqual([])

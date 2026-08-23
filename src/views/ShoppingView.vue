@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import '../components/shopping/shopping-brand-page-overrides.css'
 import ShoppingCoupangApp from '../components/shopping/ShoppingCoupangApp.vue'
@@ -48,6 +48,7 @@ import ShoppingCuServicePages from '../components/shopping/services/ShoppingCuSe
 import ShoppingMusinsaServicePages from '../components/shopping/services/ShoppingMusinsaServicePages.vue'
 import ShoppingBoonTheShopServicePages from '../components/shopping/services/ShoppingBoonTheShopServicePages.vue'
 import ShoppingGalleriaServicePages from '../components/shopping/services/ShoppingGalleriaServicePages.vue'
+import ShoppingCheckoutSettlement from '../components/shopping/ShoppingCheckoutSettlement.vue'
 import {
   resolveShoppingCanonicalPage,
   resolveShoppingPageContract,
@@ -184,8 +185,18 @@ const giftDraft = reactive({
   contactId: '',
   name: '',
 })
+const checkoutDraft = reactive({
+  addressId: '',
+  recipientName: '',
+  recipientPhone: '',
+  paymentCardId: '',
+})
+const checkoutFeedback = ref('')
+const checkoutBusy = ref(false)
+const checkoutAttemptKey = ref('')
 const selectedProductId = ref('')
 const selectedOrderId = ref('')
+const shoppingScrollRef = ref(null)
 
 const SHOPPING_PAGE_KEYS = new Set([
   'home',
@@ -210,6 +221,13 @@ const activePageContract = computed(() =>
 )
 const shopPageKey = computed(() => {
   const requested = typeof route.query.shopView === 'string' ? route.query.shopView.trim() : ''
+  const isAppStoreSetup =
+    !requested &&
+    route.query.entry === 'shop' &&
+    route.query.createShop === '1' &&
+    (route.query.bindingTarget === SHOP_ENTRY_BINDING_TARGET.SHOPPING ||
+      route.query.source === 'app_store')
+  if (isAppStoreSetup) return 'manage'
   const resolved = resolveShoppingCanonicalPage(
     activePlatformApp.value?.storefrontTemplate || 'city_market',
     requested,
@@ -228,7 +246,7 @@ const activeCategoryKey = computed(() => {
   const allowedKeys = Array.isArray(activePlatformApp.value?.categoryKeys)
     ? activePlatformApp.value.categoryKeys
     : []
-  return requested && (requested === 'logistics' || allowedKeys.includes(requested))
+  return requested && allowedKeys.includes(requested)
     ? requested
     : activePlatformApp.value?.defaultCategory || 'mall'
 })
@@ -283,9 +301,9 @@ const worldAppDescription = computed(() => {
   const context = worldAppContext.value
   if (!context) return ''
   if (languageBase.value === 'zh' && context.bindingId === 'survival_supply_board') {
-    return '把 Shopping 作为当前世界里的补给站入口使用，优先引导到生鲜与日用补给视角。'
+    return '为当前环境整理的饮水、生鲜与日用品清单。'
   }
-  return context.description || 'This entry brings the active World Pack app context into Shopping.'
+  return context.description || 'A practical selection prepared for the current scene.'
 })
 const activeCategory = computed(() => findShoppingCategory(activeCategoryKey.value))
 const activeCategoryIsLogistics = computed(() => activeCategory.value?.key === 'logistics')
@@ -302,6 +320,80 @@ const cartQuantity = computed(() =>
 const cartPrimaryTotal = computed(() =>
   shoppingStore.getCartPrimaryTotalByService(activeServiceKey.value),
 )
+const checkoutQuote = computed(() => {
+  const sourceMoney = convertLegacyCentsToMoney(
+    cartPrimaryTotal.value.amountCents,
+    cartPrimaryTotal.value.currency,
+    walletStore.currencyOptions,
+  )
+  return sourceMoney ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency) : null
+})
+const checkoutTotalLabel = computed(() =>
+  checkoutQuote.value?.ok
+    ? walletStore.formatMoney(checkoutQuote.value.quotedMoney)
+    : formatLegacyMoneyQuote(cartPrimaryTotal.value.amountCents, cartPrimaryTotal.value.currency),
+)
+const checkoutAddressOptions = computed(() => {
+  const current = mapStore.currentLocation
+  const options = []
+  if (current?.detail && current?.position) {
+    options.push({
+      id: `current:${current.placeId || current.detail}`,
+      kind: 'current',
+      label: current.label || t('当前位置', 'Current location'),
+      detail: current.detail,
+      mapPackId: current.mapPackId || '',
+      placeId: current.placeId || `current:${current.detail}`,
+      position: current.position,
+      revision: 1,
+    })
+  }
+  mapStore.addresses.forEach((address) => {
+    if (!address?.detail || !address?.position) return
+    options.push({
+      id: `address:${address.id}`,
+      kind: 'saved',
+      label: address.label,
+      detail: address.detail,
+      mapPackId: address.mapPackId || '',
+      placeId: `address:${address.id}`,
+      position: address.position,
+      revision: 1,
+    })
+  })
+  const seen = new Set()
+  return options.filter((option) => {
+    if (seen.has(option.id)) return false
+    seen.add(option.id)
+    return true
+  })
+})
+const selectedCheckoutAddress = computed(() =>
+  checkoutAddressOptions.value.find((option) => option.id === checkoutDraft.addressId) || null,
+)
+const checkoutPaymentOptions = computed(() => {
+  const currency = checkoutQuote.value?.quotedMoney?.currency || walletStore.primaryCurrency
+  const amountCents = checkoutQuote.value?.quotedMoney?.amountMinor || 0
+  return walletStore.paymentCardSummaries.map((card) => {
+    const balance = card.account?.balances?.find((item) => item.currency === currency)
+    const active = card.status === 'active'
+    const supportsCurrency = card.supportedCurrencies?.includes(currency)
+    const hasFunds = Number(balance?.amountCents || 0) >= amountCents
+    const available = Boolean(active && supportsCurrency && hasFunds)
+    return {
+      cardId: card.id,
+      accountId: card.accountId,
+      available,
+      label: `${card.institution?.name || card.institutionId || 'Wallet'} · •••• ${card.last4 || ''}`,
+      balanceLabel: `${t('余额', 'Balance')} ${walletStore.formatMoney({ amountMinor: Math.max(0, Number(balance?.amountCents || 0)), currency })}`,
+      reasonLabel: !active
+        ? t('卡片已冻结', 'FROZEN')
+        : !supportsCurrency
+          ? t('币种不可用', 'CURRENCY')
+          : t('余额不足', 'LOW BALANCE'),
+    }
+  })
+})
 const orders = computed(() => shoppingStore.listOrdersByService(activeServiceKey.value))
 const orderCount = computed(() => orders.value.length)
 const activeShopEntryId = computed(() => {
@@ -444,7 +536,7 @@ const assetTransferSuggestions = computed(() =>
 )
 const walletExpenseSuggestions = computed(() =>
   orders.value
-    .filter((order) => order.status === SHOPPING_ORDER_STATUS.COMPLETED)
+    .filter((order) => order.status === SHOPPING_ORDER_STATUS.COMPLETED && !order.paymentRef)
     .map((order) => {
       const sourceId = order.id
       const walletImported = Boolean(walletStore.findTransactionBySource(SHOPPING_SOURCE_KEYS.WALLET_EXPENSE, sourceId))
@@ -609,6 +701,11 @@ const openShopPage = (pageKey = 'home', patch = {}) => {
     delete nextQuery.saved
     delete nextQuery.q
   }
+  if (nextPageKey !== 'manage') {
+    delete nextQuery.createShop
+    delete nextQuery.bindingTarget
+    if (nextQuery.source === 'app_store') delete nextQuery.source
+  }
   return router.push({
     path: buildShoppingAppRoute(activeServiceKey.value),
     query: nextQuery,
@@ -619,20 +716,21 @@ const openShopHome = () => openShopPage('home')
 const openCartPage = () => openShopPage('cart')
 const openCheckoutPage = () => {
   if (cartLineItems.value.length === 0) return
+  checkoutFeedback.value = ''
+  if (!checkoutDraft.recipientName && giftDraft.enabled && giftDraft.name.trim()) {
+    checkoutDraft.recipientName = giftDraft.name.trim()
+  }
+  if (!checkoutDraft.addressId || !checkoutAddressOptions.value.some((option) => option.id === checkoutDraft.addressId)) {
+    checkoutDraft.addressId = checkoutAddressOptions.value[0]?.id || ''
+  }
+  if (!checkoutDraft.paymentCardId || !checkoutPaymentOptions.value.some((option) => option.cardId === checkoutDraft.paymentCardId && option.available)) {
+    checkoutDraft.paymentCardId = checkoutPaymentOptions.value.find((option) => option.available)?.cardId || ''
+  }
   return openShopPage('checkout')
 }
 const openOrdersPage = () => openShopPage('orders')
 const openLogisticsPage = () => openShopPage('logistics')
 const openServicePage = () => openShopPage('service')
-
-const handleStorefrontProductClick = (event) => {
-  const target = event?.target
-  if (!(target instanceof Element) || target.closest('button, a, input, select, textarea')) return
-  const card = target.closest('[data-testid^="shopping-product-"]')
-  const testId = card?.getAttribute('data-testid') || ''
-  const productId = testId.replace(/^shopping-product-/, '')
-  if (productId) openProductDetail(productId)
-}
 
 const showFavoriteProducts = () => {
   favoritesOnly.value = true
@@ -646,11 +744,6 @@ const showFavoriteProducts = () => {
 const showAllProducts = () => {
   favoritesOnly.value = false
   void openShopHome()
-}
-
-const openCatalogManager = () => {
-  catalogManagerOpen.value = true
-  void openShopPage('manage')
 }
 
 const goBackToChat = () => {
@@ -927,12 +1020,56 @@ const clearGiftDraft = () => {
   giftDraft.name = ''
 }
 
+const saveCheckoutAddress = ({ label = '', detail = '' } = {}) => {
+  const current = mapStore.currentLocation
+  const result = mapStore.createDeliveryAddress({
+    label,
+    detail,
+    category: 'other',
+    mapPackId: current?.mapPackId,
+    position: current?.position,
+  })
+  if (!result.ok) {
+    checkoutFeedback.value = t('地址无法保存，请先在 Map 设置有效当前位置。', 'Address could not be saved. Set a valid current location in Map first.')
+    return null
+  }
+  checkoutDraft.addressId = result.anchor.id
+  checkoutFeedback.value = t('地址已保存到 Map 地址簿。', 'Address saved to Map.')
+  return result.anchor
+}
+
+const checkoutFailureLabel = (reason = '') => ({
+  delivery_anchor_required: t('请选择或保存一个有效收货地址。', 'Choose or save a valid delivery address.'),
+  recipient_required: t('请填写收件人姓名。', 'Enter the recipient name.'),
+  insufficient_funds: t('所选 Wallet 账户余额不足。', 'The selected Wallet account has insufficient funds.'),
+  payment_card_unavailable: t('所选卡片不可用于本次付款。', 'The selected card is unavailable for this payment.'),
+  account_unavailable: t('没有可用于该币种的 Wallet 账户。', 'No Wallet account is available for this currency.'),
+  quote_unavailable: t('当前汇率报价不可用，订单尚未创建。', 'The current quote is unavailable; no order was created.'),
+  cart_empty: t('购物车为空。', 'The cart is empty.'),
+}[reason] || t('付款未完成，订单和购物车均未变更。', 'Payment was not completed; the order and cart were not changed.'))
+
 const commitCheckoutCart = () => {
-  const order = shoppingStore.checkoutCart({
+  if (checkoutBusy.value) return null
+  const paymentOption = checkoutPaymentOptions.value.find(
+    (option) => option.cardId === checkoutDraft.paymentCardId,
+  )
+  checkoutBusy.value = true
+  checkoutFeedback.value = ''
+  if (!checkoutAttemptKey.value) {
+    checkoutAttemptKey.value = `shopping_checkout:${activeServiceKey.value}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`
+  }
+  const result = shoppingStore.checkoutCartWithPayment({
     serviceKey: activeServiceKey.value,
     ...buildGiftCheckoutPayload(),
-    note: t('Local shopping baseline order', 'Local shopping baseline order'),
+    recipient: checkoutDraft.recipientName,
+    recipientPhone: checkoutDraft.recipientPhone,
+    deliveryAnchor: selectedCheckoutAddress.value,
+    accountId: paymentOption?.accountId || '',
+    cardId: paymentOption?.cardId || '',
+    idempotencyKey: checkoutAttemptKey.value,
+    note: t('Shopping checkout', 'Shopping checkout'),
   })
+  const order = result.order
   if (order?.giftRecipient) {
     recordShoppingGiftRelationshipFact({
       chatStore,
@@ -942,8 +1079,13 @@ const commitCheckoutCart = () => {
   }
   if (order) {
     clearGiftDraft()
+    checkoutAttemptKey.value = ''
+    checkoutFeedback.value = ''
     void openShopPage('orders')
+  } else {
+    checkoutFeedback.value = checkoutFailureLabel(result.reason)
   }
+  checkoutBusy.value = false
   return order
 }
 
@@ -1064,6 +1206,10 @@ watch(
     catalogManagerOpen.value = false
     selectedProductId.value = ''
     selectedOrderId.value = ''
+    checkoutDraft.addressId = ''
+    checkoutDraft.paymentCardId = ''
+    checkoutFeedback.value = ''
+    checkoutAttemptKey.value = ''
     resetProductDraft()
   },
   { immediate: true },
@@ -1094,6 +1240,14 @@ watch(
     selectedProductId.value = product?.serviceKey === activeServiceKey.value ? nextProductId : ''
   },
   { immediate: true },
+)
+
+watch(
+  [shopPageKey, () => route.query.productId, () => route.query.orderId, catalogPage],
+  async () => {
+    await nextTick()
+    if (shoppingScrollRef.value) shoppingScrollRef.value.scrollTop = 0
+  },
 )
 
 watch(
@@ -1189,7 +1343,7 @@ onBeforeUnmount(() => {
     class="shopping-view-shell w-full h-full text-black flex flex-col"
     :data-storefront="activeStorefrontTemplate"
   >
-    <div class="shopping-scroll flex-1 overflow-y-auto no-scrollbar">
+    <div ref="shoppingScrollRef" class="shopping-scroll flex-1 overflow-y-auto no-scrollbar">
       <component
         v-if="shopPageKey === 'home'"
         :is="activeStorefrontComponent"
@@ -1227,12 +1381,10 @@ onBeforeUnmount(() => {
         @open-cart="openCartPage"
         @open-orders="openOrdersPage"
         @open-product="openProductDetail"
-        @open-manager="openCatalogManager"
         @submit-search="submitCatalogSearch"
         @show-all="showAllProducts"
         @toggle-favorite="toggleFavorite"
         @add-to-cart="addToCart"
-        @click.capture="handleStorefrontProductClick"
       />
       <component
         :is="activeDeepPageComponent"
@@ -1312,9 +1464,9 @@ onBeforeUnmount(() => {
         @update:gift-contact-id="giftDraft.contactId = $event"
         @update:gift-recipient-name="giftDraft.name = $event"
       />
-      <component
+      <template v-else-if="activeServicePageComponent && ['checkout', 'service'].includes(shopPageKey)">
+        <component
         :is="activeServicePageComponent"
-        v-else-if="activeServicePageComponent && ['checkout', 'service'].includes(shopPageKey)"
         :page-key="shopPageKey"
         :service-label="activeShoppingAppLabel"
         :language-base="languageBase"
@@ -1346,7 +1498,30 @@ onBeforeUnmount(() => {
         @open-service="openServicePage"
         @place-order="commitCheckoutCart"
         @open-order="openOrderDetail"
-      />
+        />
+        <ShoppingCheckoutSettlement
+          v-if="shopPageKey === 'checkout'"
+          class="shopping-checkout-settlement-host"
+          :storefront="activeStorefrontTemplate"
+          :language-base="languageBase"
+          :address-options="checkoutAddressOptions"
+          :selected-address-id="checkoutDraft.addressId"
+          :recipient-name="checkoutDraft.recipientName"
+          :recipient-phone="checkoutDraft.recipientPhone"
+          :payment-options="checkoutPaymentOptions"
+          :selected-payment-card-id="checkoutDraft.paymentCardId"
+          :current-location="mapStore.currentLocation"
+          :total-label="checkoutTotalLabel"
+          :feedback="checkoutFeedback"
+          :busy="checkoutBusy"
+          @update:selected-address-id="checkoutDraft.addressId = $event"
+          @update:recipient-name="checkoutDraft.recipientName = $event"
+          @update:recipient-phone="checkoutDraft.recipientPhone = $event"
+          @update:selected-payment-card-id="checkoutDraft.paymentCardId = $event"
+          @save-address="saveCheckoutAddress"
+          @submit="commitCheckoutCart"
+        />
+      </template>
       <ShoppingCollectionPage
         v-else-if="shopPageKey === 'category'"
         :storefront="activeStorefrontTemplate"
@@ -1454,23 +1629,23 @@ onBeforeUnmount(() => {
             >
               {{
                 openedFromChatGiftOrder
-                  ? t('From Chat gift order', 'From Chat gift order')
+                  ? t('来自聊天中的礼物订单', 'Gift order from Chat')
                   : openedFromChatLogistics
-                    ? t('From Chat logistics reminder', 'From Chat logistics reminder')
+                    ? t('来自聊天中的配送提醒', 'Delivery reminder from Chat')
                     : openedFromChatShoppingOrder
-                      ? t('From Chat service order notification', 'From Chat service order notification')
-                  : t('From Chat product link', 'From Chat product link')
+                      ? t('来自聊天中的订单提醒', 'Order reminder from Chat')
+                  : t('来自聊天分享的商品', 'Product shared from Chat')
               }}
             </p>
             <p class="mt-1 text-[11px] leading-5 text-gray-500">
               {{
                 openedFromChatGiftOrder
-                  ? t('Shopping owns the confirmed gift order; Chat only shows the gift context.', 'Shopping owns the confirmed gift order; Chat only shows the gift context.')
+                  ? t('继续核对商品、收件信息与订单状态。', 'Continue with the items, recipient details, and order status.')
                   : openedFromChatLogistics
-                    ? t('Shopping owns logistics review; Chat only surfaced the shop service-account reminder.', 'Shopping owns logistics review; Chat only surfaced the shop service-account reminder.')
+                    ? t('在这里查看订单记录与配送进度。', 'Review the order and delivery progress here.')
                     : openedFromChatShoppingOrder
-                      ? t('Shopping owns the order; Chat only keeps a service-account notification and source link.', 'Shopping owns the order; Chat only keeps a service-account notification and source link.')
-                  : t('Shopping owns browsing, cart, and checkout here; Chat only keeps discussion and recommendation records.', 'Shopping owns browsing, cart, and checkout here; Chat only keeps discussion and recommendation records.')
+                      ? t('订单详情、支付与配送信息以此页面为准。', 'Use this page for order details, payment, and delivery information.')
+                  : t('继续查看商品、规格、评价与购买选项。', 'Continue with product details, specifications, reviews, and purchase options.')
               }}
             </p>
           </div>
@@ -1481,7 +1656,7 @@ onBeforeUnmount(() => {
             class="shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
             :class="openedFromChatGiftOrder ? 'border-rose-200 text-rose-600' : openedFromChatLogistics ? 'border-sky-200 text-sky-600' : openedFromChatShoppingOrder ? 'border-indigo-200 text-indigo-600' : 'border-orange-200 text-orange-600'"
           >
-            {{ t('Back to Chat', 'Back to Chat') }}
+            {{ t('返回聊天', 'Back to Chat') }}
           </button>
         </div>
       </section>
@@ -1495,19 +1670,19 @@ onBeforeUnmount(() => {
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <p class="text-sm font-bold text-amber-900">
-              {{ t('From App Store folder mini app', 'From App Store folder mini app') }}
+              {{ t('创建本店商品目录', 'Set up this store catalog') }}
             </p>
             <p class="mt-2 text-xs leading-5 text-amber-700">
               {{
                 t(
-                  '当前购物 App 负责自己的商品、购物车、结算、订单和物流通知；App Store 只保留安装入口与外观设置。',
-                  'This shopping app owns its catalog, cart, checkout, orders, and logistics notifications; App Store only keeps installation and presentation settings.',
+                  '在这里添加或编辑本店商品。店铺在主屏幕上的名称、图标和安装位置可回到 App Store 调整。',
+                  'Add or edit this store’s products here. Return to App Store to change its Home name, icon, or placement.',
                 )
               }}
             </p>
           </div>
           <span class="shrink-0 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-amber-700">
-            shopping
+            {{ t('店铺设置', 'STORE SETUP') }}
           </span>
         </div>
       </section>
@@ -1520,7 +1695,7 @@ onBeforeUnmount(() => {
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <p class="text-xs font-semibold uppercase text-emerald-700">
-              {{ t('世界应用', 'World app') }}
+              {{ t('场景清单', 'FOR THIS SCENE') }}
             </p>
             <h2 class="mt-1 text-lg font-black text-gray-950" data-testid="shopping-world-app-title">
               {{ worldAppContext.bindingTitle }}
@@ -1534,8 +1709,8 @@ onBeforeUnmount(() => {
             <p class="mt-2 text-[11px] leading-5 text-emerald-800" data-testid="shopping-world-app-boundary">
               {{
                 t(
-                  'Shopping 仍拥有商品、购物车、结账、订单和下游建议；世界包只提供入口语义与筛选建议。',
-                  worldAppContext.boundaryCopy,
+                  '已按当前场景整理商品；库存、配送与结算条件仍以商品页和订单页为准。',
+                  'Items are curated for this scene; stock, delivery, and checkout terms remain on product and order pages.',
                 )
               }}
             </p>
@@ -1549,8 +1724,8 @@ onBeforeUnmount(() => {
           >
             {{
               worldAppFilterActive
-                ? t('已在补给筛选', 'Supply filter active')
-                : t('应用补给筛选', 'Apply supply filter')
+                ? t('正在显示推荐', 'Showing recommendations')
+                : t('查看推荐', 'View recommendations')
             }}
           </button>
         </div>
@@ -1563,8 +1738,8 @@ onBeforeUnmount(() => {
       >
         <header>
           <div>
-            <span>SHOPPING → MAP</span>
-            <strong>{{ t('配送位置交接', 'Delivery location handoff') }}</strong>
+            <span>DELIVERY MAP</span>
+            <strong>{{ t('查看配送地点', 'View delivery location') }}</strong>
           </div>
           <b>{{ logisticsMapRows.length }}</b>
         </header>
@@ -1790,6 +1965,22 @@ onBeforeUnmount(() => {
   --shop-line: rgba(30, 35, 41, 0.14);
   overflow: hidden;
   background: var(--shop-bg);
+}
+
+.shopping-checkout-settlement-host {
+  margin: -44px 18px 72px;
+  position: relative;
+  z-index: 3;
+}
+
+:deep([data-testid='shopping-checkout-review'] [data-testid='shopping-place-order']) {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .shopping-checkout-settlement-host {
+    margin: -42px 12px 64px;
+  }
 }
 
 .shopping-view-shell[data-storefront='tech_catalog'] {

@@ -15,7 +15,7 @@ const l = (zh, en) => localizeOperationPage(props.languageBase, zh, en)
     <header class="boon-service-bar">
       <button type="button" @click="emit('back')">←</button>
       <strong>BOONTHESHOP</strong>
-      <nav><button type="button" @click="emit('open-service')">ATELIER SERVICE</button></nav>
+      <nav><button type="button" @click="pageKey === 'checkout' ? emit('open-service') : emit('open-orders')">{{ pageKey === 'checkout' ? 'ATELIER SERVICE' : 'ORDERS' }}</button></nav>
     </header>
 
     <section v-if="pageKey === 'checkout'" class="boon-request" data-testid="shopping-checkout-review">
@@ -57,7 +57,7 @@ const l = (zh, en) => localizeOperationPage(props.languageBase, zh, en)
       </header>
       <section class="boon-service-ledger">
         <article><span>01</span><div><strong>{{ l('预约试衣', 'Fitting appointment') }}</strong><p>{{ l('查看已经创建的预约与购买记录。', 'Review created appointments and purchase records.') }}</p></div></article>
-        <article><span>02</span><div><strong>{{ l('修改建议', 'Alteration guidance') }}</strong><p>{{ l('记录建议，但不虚构尚未发生的人工沟通。', 'Record guidance without inventing live human contact.') }}</p></div></article>
+        <article><span>02</span><div><strong>{{ l('修改建议', 'Alteration guidance') }}</strong><p>{{ l('查看已记录的版型、长度与修改偏好。', 'Review recorded fit, length, and alteration preferences.') }}</p></div></article>
         <article><span>03</span><div><strong>{{ l('专属配送', 'Private delivery') }}</strong><p>{{ l('从本店配送页查看承运和交付事件。', 'Use this store’s delivery page for fulfillment events.') }}</p></div></article>
       </section>
       <section class="boon-care-orders">

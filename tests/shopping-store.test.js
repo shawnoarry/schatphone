@@ -242,6 +242,138 @@ describe('shopping store', () => {
     expect(store.orderCount).toBe(1)
   })
 
+  test('requires an address before paid checkout and leaves the cart untouched', () => {
+    const store = useShoppingStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({
+      id: 'shopping_paid_address_required',
+      title: 'Address Required Item',
+      category: 'mall',
+      serviceKey: 'schat_mall',
+      price: '18.00',
+    })
+    store.addToCart(product.id)
+    const transactionCount = walletStore.transactionCount
+
+    const result = store.checkoutCartWithPayment({
+      serviceKey: 'schat_mall',
+      recipient: 'Nova',
+      cardId: walletStore.activePaymentCard.id,
+      accountId: walletStore.activePaymentCard.accountId,
+      idempotencyKey: 'shopping-address-required',
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      stage: 'map',
+      reason: 'delivery_anchor_required',
+    })
+    expect(store.getCartQuantityByService('schat_mall')).toBe(1)
+    expect(store.orderCount).toBe(0)
+    expect(walletStore.transactionCount).toBe(transactionCount)
+  })
+
+  test('pays once, stores Map and Wallet references, and replays idempotently', () => {
+    const store = useShoppingStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({
+      id: 'shopping_paid_success',
+      title: 'Paid Checkout Item',
+      category: 'mall',
+      serviceKey: 'schat_mall',
+      price: '18.00',
+    })
+    store.addToCart(product.id)
+    const transactionCount = walletStore.transactionCount
+    const deliveryAnchor = {
+      id: 'address:home',
+      label: 'Home',
+      detail: '12 River Road, Seoul',
+      mapPackId: 'real-seoul-v1',
+      placeId: 'address:home',
+      revision: 1,
+    }
+    const paymentCard = walletStore.activePaymentCard
+
+    const first = store.checkoutCartWithPayment({
+      serviceKey: 'schat_mall',
+      recipient: 'Nova',
+      recipientPhone: '010-1234-5678',
+      deliveryAnchor,
+      cardId: paymentCard.id,
+      accountId: paymentCard.accountId,
+      idempotencyKey: 'shopping-paid-success',
+    })
+    const replay = store.checkoutCartWithPayment({
+      serviceKey: 'schat_mall',
+      recipient: 'Nova',
+      deliveryAnchor,
+      cardId: paymentCard.id,
+      accountId: paymentCard.accountId,
+      idempotencyKey: 'shopping-paid-success',
+    })
+
+    expect(first.ok).toBe(true)
+    expect(first.order).toMatchObject({
+      recipient: 'Nova',
+      recipientPhone: '010-1234-5678',
+      deliveryAddress: deliveryAnchor.detail,
+      deliveryAnchor,
+      paymentStatus: 'completed',
+      paymentRef: {
+        transactionId: first.payment.transaction.id,
+        accountId: paymentCard.accountId,
+        cardId: paymentCard.id,
+      },
+    })
+    expect(replay).toMatchObject({
+      ok: true,
+      reason: 'idempotent_replay',
+      order: { id: first.order.id },
+    })
+    expect(store.getCartQuantityByService('schat_mall')).toBe(0)
+    expect(walletStore.transactionCount).toBe(transactionCount + 1)
+  })
+
+  test('does not create an order or clear the cart when Wallet funds are insufficient', () => {
+    const store = useShoppingStore()
+    const walletStore = useWalletStore()
+    store.resetForTesting()
+    const product = store.upsertProduct({
+      id: 'shopping_paid_insufficient',
+      title: 'High Value Item',
+      category: 'luxury',
+      serviceKey: 'galleria_luxury',
+      price: '5000.00',
+    })
+    store.addToCart(product.id)
+    const transactionCount = walletStore.transactionCount
+    const paymentCard = walletStore.activePaymentCard
+
+    const result = store.checkoutCartWithPayment({
+      serviceKey: 'galleria_luxury',
+      recipient: 'Nova',
+      deliveryAnchor: {
+        id: 'address:home',
+        label: 'Home',
+        detail: '12 River Road, Seoul',
+        mapPackId: 'real-seoul-v1',
+        placeId: 'address:home',
+        revision: 1,
+      },
+      cardId: paymentCard.id,
+      accountId: paymentCard.accountId,
+      idempotencyKey: 'shopping-paid-insufficient',
+    })
+
+    expect(result).toMatchObject({ ok: false, stage: 'payment', reason: 'insufficient_funds' })
+    expect(store.getCartQuantityByService('galleria_luxury')).toBe(1)
+    expect(store.orderCount).toBe(0)
+    expect(walletStore.transactionCount).toBe(transactionCount)
+  })
+
   test('scopes favorites, carts, checkout, and order lists by shopping app', () => {
     const store = useShoppingStore()
     const calendarStore = useCalendarStore()

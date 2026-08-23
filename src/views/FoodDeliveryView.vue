@@ -267,6 +267,12 @@ const dashSauceKey = ref(DASH_GRILL_DEFAULT_SAUCE)
 const checkoutSheetOpen = ref(false)
 const checkoutFeedback = ref('')
 const selectedFoodDeliveryAnchorId = ref('')
+const selectedFoodPaymentCardId = ref('')
+const foodCheckoutAttemptKey = ref('')
+const foodCheckoutAddressEditorOpen = ref(false)
+const foodCheckoutAddressLabel = ref('')
+const foodCheckoutAddressDetail = ref('')
+const pendingFoodCheckoutOptions = reactive({ fulfillmentMode: 'delivery', pickupMode: '' })
 const deliveryOrderFeedback = ref('')
 const showStoreCartPanel = ref(false)
 const platformSearchQuery = ref('')
@@ -280,10 +286,15 @@ const platformBannerRailRef = ref(null)
 const platformActiveBannerIndex = ref(0)
 const platformBannerAutoplayPaused = ref(false)
 const platformAddressMenuOpen = ref(false)
-const selectedPlatformDeliveryAddress = ref('')
+const selectedPlatformDeliveryAnchorId = ref('')
 const platformCartFeedback = ref('')
 const platformCheckoutNote = ref('')
-const platformCheckoutPaymentMethod = ref('app_pay')
+const selectedPlatformPaymentCardId = ref('')
+const platformCheckoutAttemptKey = ref('')
+const platformAddressEditorOpen = ref(false)
+const platformAddressLabel = ref('')
+const platformAddressDetail = ref('')
+const platformOrderHelpOpen = ref(false)
 const platformCheckoutFeedback = ref('')
 const platformOrderCopyFeedback = ref('')
 const platformPageKey = computed(() => {
@@ -1725,19 +1736,17 @@ const platformHeroImageUrl = computed(() => selectedPlatformMerchant.value?.imag
 const platformHeroRestaurant = selectedPlatformMerchant
 const platformHeroMenuItem = computed(() => selectedPlatformMerchant.value?.menu?.[0] || null)
 const platformFeaturedRestaurants = platformFeaturedMerchants
-const defaultPlatformLocationLabel = computed(
-  () =>
-    activeMapHandoff.value?.deliveryAddress ||
-    t('首尔市江南区清潭洞 88-1', '88-1 Cheongdam-dong, Gangnam-gu, Seoul'),
+const selectedPlatformDeliveryAnchor = computed(() =>
+  foodDeliveryAnchorOptions.value.find(
+    (anchor) => anchor.id === selectedPlatformDeliveryAnchorId.value,
+  ) || null,
 )
-const platformLocationLabel = computed(
-  () => selectedPlatformDeliveryAddress.value || defaultPlatformLocationLabel.value,
-)
-const platformDeliveryAddressOptions = computed(() => [
-  defaultPlatformLocationLabel.value,
-  t('首尔市麻浦区延南洞 223-14', '223-14 Yeonnam-dong, Mapo-gu, Seoul'),
-  t('公司 · 首尔市中区乙支路 100', 'Work · 100 Eulji-ro, Jung-gu, Seoul'),
-])
+const platformLocationLabel = computed(() => {
+  const anchor = selectedPlatformDeliveryAnchor.value
+  if (!anchor) return t('请选择配送地址', 'Choose delivery address')
+  return anchor.label ? `${anchor.label} · ${anchor.detail}` : anchor.detail
+})
+const platformDeliveryAddressOptions = computed(() => foodDeliveryAnchorOptions.value)
 const platformCartMerchant = computed(() => {
   const merchantId = foodDeliveryStore.platformCartItems[0]?.merchantId || ''
   return FOOD_PLATFORM_MERCHANTS.find((merchant) => merchant.id === merchantId) || null
@@ -1758,6 +1767,50 @@ const platformCheckoutTotal = computed(() => {
     currency: quoted.currency,
   }
 })
+const platformCheckoutQuote = computed(() => {
+  const merchant = platformCartMerchant.value
+  if (!merchant) return null
+  const sourceAmountCents = foodDeliveryStore.platformCartItems.reduce(
+    (sum, item) => sum + item.unitPriceCents * item.quantity,
+    platformCheckoutDeliveryFeeCents.value,
+  )
+  const sourceMoney = convertLegacyCentsToMoney(
+    sourceAmountCents,
+    merchant.currency || 'CNY',
+    walletStore.currencyOptions,
+  )
+  return sourceMoney ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency) : null
+})
+const buildCheckoutPaymentOptions = (quote) => {
+  const currency = quote?.quotedMoney?.currency || walletStore.primaryCurrency
+  const amountCents = Number(quote?.quotedMoney?.amountMinor || 0)
+  return walletStore.paymentCardSummaries.map((card) => {
+    const balance = card.account?.balances?.find((item) => item.currency === currency)
+    const active = card.status === 'active'
+    const supportsCurrency = card.supportedCurrencies?.includes(currency)
+    const hasFunds = Number(balance?.amountCents || 0) >= amountCents
+    const available = Boolean(active && supportsCurrency && hasFunds)
+    const institutionLabel =
+      (languageBase.value === 'zh'
+        ? card.institution?.nameZh
+        : card.institution?.nameEn) ||
+      card.institution?.shortName ||
+      card.institutionId ||
+      'Wallet'
+    return {
+      cardId: card.id,
+      accountId: card.accountId,
+      available,
+      label: `${institutionLabel} · •••• ${card.last4 || ''}`,
+      balanceLabel: `${t('余额', 'Balance')} ${walletStore.formatMoney({ amountMinor: Math.max(0, Number(balance?.amountCents || 0)), currency })}`,
+      reasonLabel: !active
+        ? t('卡片已冻结', 'Frozen')
+        : !supportsCurrency
+          ? t('不支持该币种', 'Currency unavailable')
+          : t('余额不足', 'Low balance'),
+    }
+  })
+}
 const platformMinimumOrderSourceCents = (merchant = {}) => {
   const minimumOrderMoney = merchant.minimumOrderMoney
   if (!minimumOrderMoney) return 0
@@ -1776,23 +1829,9 @@ const platformCartMeetsMinimumOrder = computed(() => {
   )
   return itemsTotalCents >= minimumOrderCents
 })
-const platformCheckoutPaymentOptions = computed(() => [
-  {
-    key: 'app_pay',
-    icon: 'fas fa-mobile-screen-button',
-    label: t('平台支付', 'Platform pay'),
-    desc: t(
-      '快捷确认本次订单，提交后可随时查看进度。',
-      'Confirm quickly and follow the order after placing it.',
-    ),
-  },
-  {
-    key: 'pay_on_delivery',
-    icon: 'fas fa-money-bill-wave',
-    label: t('送达后支付', 'Pay on delivery'),
-    desc: t('骑手送达时再完成虚拟支付。', 'Complete the virtual payment when the rider arrives.'),
-  },
-])
+const platformCheckoutPaymentOptions = computed(() =>
+  buildCheckoutPaymentOptions(platformCheckoutQuote.value),
+)
 const activePlatformOrder = computed(() =>
   platformOrderId.value ? foodDeliveryStore.findPlatformOrderById(platformOrderId.value) : null,
 )
@@ -2701,23 +2740,79 @@ const activeMapHandoff = computed(() =>
     categoryKey: activeCategory.value?.key || '',
   }),
 )
-const foodDeliveryAnchorOptions = computed(() => mapStore.listDeliveryAnchors().slice(0, 32))
+const foodDeliveryAnchorOptions = computed(() => {
+  const options = []
+  const current = mapStore.currentLocation
+  if (current?.detail && current?.position) {
+    options.push({
+      id: `current:${current.placeId || current.detail}`,
+      kind: 'current',
+      label: current.label || t('当前位置', 'Current location'),
+      detail: current.detail,
+      mapPackId: current.mapPackId || '',
+      placeId: current.placeId || `current:${current.detail}`,
+      position: current.position,
+      revision: 1,
+    })
+  }
+  mapStore.addresses.forEach((address) => {
+    if (!address?.detail || !address?.position) return
+    options.push({
+      id: `address:${address.id}`,
+      kind: 'saved',
+      label: address.label,
+      detail: address.detail,
+      mapPackId: address.mapPackId || '',
+      placeId: `address:${address.id}`,
+      position: address.position,
+      revision: 1,
+    })
+  })
+  const seen = new Set()
+  return options.filter((option) => {
+    if (seen.has(option.id)) return false
+    seen.add(option.id)
+    return true
+  })
+})
 const selectedFoodDeliveryAnchor = computed(() => {
   const selected = foodDeliveryAnchorOptions.value.find(
     (anchor) => anchor.id === selectedFoodDeliveryAnchorId.value,
   )
   if (selected) return selected
-  const currentDetail = activeMapHandoff.value.deliveryAddress || ''
-  const matching = foodDeliveryAnchorOptions.value.find((anchor) => anchor.detail === currentDetail)
-  if (matching) return matching
-  const fallback =
-    foodDeliveryAnchorOptions.value.find((anchor) => anchor.kind === 'address') ||
-    foodDeliveryAnchorOptions.value[0] ||
-    null
-  return currentDetail && fallback && currentDetail !== fallback.detail
-    ? { ...fallback, id: `current:${currentDetail}`, label: currentDetail, detail: currentDetail }
-    : fallback
+  return foodDeliveryAnchorOptions.value[0] || null
 })
+const storeCheckoutSourceTotalCents = computed(() => {
+  const itemsTotal = activeStoreCartLineItems.value.reduce(
+    (sum, line) => sum + Number(line.sourceUnitPriceCents || 0) * Number(line.quantity || 0),
+    0,
+  )
+  return pendingFoodCheckoutOptions.fulfillmentMode === 'pickup'
+    ? itemsTotal
+    : itemsTotal + Number(activeRestaurant.value?.deliveryFeeCents || 0)
+})
+const storeCheckoutQuote = computed(() => {
+  const currency = activeRestaurant.value?.currency || 'CNY'
+  const sourceMoney = convertLegacyCentsToMoney(
+    storeCheckoutSourceTotalCents.value,
+    currency,
+    walletStore.currencyOptions,
+  )
+  return sourceMoney ? walletStore.quoteMoney(sourceMoney, walletStore.primaryCurrency) : null
+})
+const storeCheckoutPaymentOptions = computed(() =>
+  buildCheckoutPaymentOptions(storeCheckoutQuote.value),
+)
+const selectedStorePaymentOption = computed(() =>
+  storeCheckoutPaymentOptions.value.find(
+    (option) => option.cardId === selectedFoodPaymentCardId.value,
+  ) || null,
+)
+const storeCheckoutTotalLabel = computed(() =>
+  storeCheckoutQuote.value?.ok
+    ? walletStore.formatMoney(storeCheckoutQuote.value.quotedMoney)
+    : `${(storeCheckoutSourceTotalCents.value / 100).toFixed(2)} ${activeRestaurant.value?.currency || 'CNY'}`,
+)
 const deliveryOrderId = computed(() =>
   typeof route.query.orderId === 'string' ? route.query.orderId.trim() : '',
 )
@@ -3345,10 +3440,48 @@ const togglePlatformAddressMenu = () => {
   platformAddressMenuOpen.value = !platformAddressMenuOpen.value
 }
 
-const selectPlatformDeliveryAddress = (address) => {
-  selectedPlatformDeliveryAddress.value = address
+const selectPlatformDeliveryAddress = (anchorId) => {
+  selectedPlatformDeliveryAnchorId.value = anchorId
   platformAddressMenuOpen.value = false
 }
+
+const saveFoodDeliveryAddress = ({ scope = 'store', label = '', detail = '' } = {}) => {
+  const current = mapStore.currentLocation
+  const result = mapStore.createDeliveryAddress({
+    label,
+    detail,
+    category: 'other',
+    mapPackId: current?.mapPackId,
+    position: current?.position,
+  })
+  if (!result.ok) {
+    const message = t(
+      '地址无法保存，请先在 Map 设置有坐标的当前位置。',
+      'Address could not be saved. Set a positioned current location in Map first.',
+    )
+    if (scope === 'platform') platformCheckoutFeedback.value = message
+    else checkoutFeedback.value = message
+    return null
+  }
+  if (scope === 'platform') {
+    selectedPlatformDeliveryAnchorId.value = result.anchor.id
+    platformAddressEditorOpen.value = false
+    platformCheckoutFeedback.value = t('地址已保存到 Map 地址簿。', 'Address saved to Map.')
+  } else {
+    selectedFoodDeliveryAnchorId.value = result.anchor.id
+    foodCheckoutAddressEditorOpen.value = false
+    checkoutFeedback.value = t('地址已保存到 Map 地址簿。', 'Address saved to Map.')
+  }
+  return result.anchor
+}
+
+const checkoutFailureLabel = (reason = '') => ({
+  delivery_anchor_required: t('请选择或保存一个有效配送地址。', 'Choose or save a valid delivery address.'),
+  insufficient_funds: t('所选 Wallet 账户余额不足。', 'The selected Wallet account has insufficient funds.'),
+  payment_card_unavailable: t('所选卡片不可用于本次付款。', 'The selected card is unavailable for this payment.'),
+  account_unavailable: t('没有可用于该币种的 Wallet 账户。', 'No Wallet account is available for this currency.'),
+  cart_empty: t('购物袋为空。', 'The bag is empty.'),
+}[reason] || t('付款未完成，订单和购物袋均未变更。', 'Payment was not completed; the order and bag were not changed.'))
 
 const platformMenuItemId = (merchantId, itemIndex) => `${merchantId}_menu_${itemIndex + 1}`
 const platformMenuItemAssetPath = (merchant = {}, itemIndex = 0) =>
@@ -3523,6 +3656,7 @@ const openPlatformOrder = (orderId) => {
   const id = String(orderId || '').trim()
   if (!id) return
   platformAddressMenuOpen.value = false
+  platformOrderHelpOpen.value = false
   closePlatformUtilitySheet()
   router.push({
     path: '/food-delivery',
@@ -3592,6 +3726,24 @@ const openPlatformCheckout = () => {
     )
     return
   }
+  if (
+    !selectedPlatformDeliveryAnchorId.value ||
+    !platformDeliveryAddressOptions.value.some(
+      (option) => option.id === selectedPlatformDeliveryAnchorId.value,
+    )
+  ) {
+    selectedPlatformDeliveryAnchorId.value = platformDeliveryAddressOptions.value[0]?.id || ''
+  }
+  if (
+    !selectedPlatformPaymentCardId.value ||
+    !platformCheckoutPaymentOptions.value.some(
+      (option) => option.cardId === selectedPlatformPaymentCardId.value && option.available,
+    )
+  ) {
+    selectedPlatformPaymentCardId.value =
+      platformCheckoutPaymentOptions.value.find((option) => option.available)?.cardId || ''
+  }
+  platformCheckoutAttemptKey.value = ''
   closePlatformUtilitySheet()
   openPlatformPage('checkout')
 }
@@ -3613,28 +3765,66 @@ const submitPlatformOrder = () => {
     )
     return
   }
-  const order = foodDeliveryStore.checkoutPlatformCart({
-    deliveryAddress: platformLocationLabel.value,
+  const paymentOption = platformCheckoutPaymentOptions.value.find(
+    (option) => option.cardId === selectedPlatformPaymentCardId.value,
+  )
+  if (!platformCheckoutAttemptKey.value) {
+    platformCheckoutAttemptKey.value = `food_platform_checkout:${merchant.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`
+  }
+  const result = foodDeliveryStore.checkoutPaidPlatformCart({
+    deliveryAnchor: selectedPlatformDeliveryAnchor.value,
     note: platformCheckoutNote.value,
-    paymentMethod: platformCheckoutPaymentMethod.value,
     deliveryFee: merchant.deliveryFee,
     currency: merchant.currency,
     etaMinutes: merchant.deliveryEtaMinutes,
+    accountId: paymentOption?.accountId || '',
+    cardId: paymentOption?.cardId || '',
+    idempotencyKey: platformCheckoutAttemptKey.value,
   })
+  const order = result?.order || null
   if (!order) {
-    platformCheckoutFeedback.value = t(
-      '订单没有提交，请检查购物车。',
-      'The order was not placed. Check the cart.',
-    )
+    platformCheckoutFeedback.value = checkoutFailureLabel(result?.reason)
     return
   }
   platformCheckoutNote.value = ''
+  platformCheckoutAttemptKey.value = ''
   openPlatformOrder(order.id)
 }
 
-const platformPaymentMethodLabel = (paymentMethod) =>
-  platformCheckoutPaymentOptions.value.find((option) => option.key === paymentMethod)?.label ||
-  t('平台支付', 'Platform pay')
+const platformPaymentMethodLabel = (order = {}) => {
+  const card = walletStore.paymentCardSummaries.find(
+    (option) => option.id === order?.paymentRef?.cardId,
+  )
+  const institutionLabel =
+    (languageBase.value === 'zh'
+      ? card?.institution?.nameZh
+      : card?.institution?.nameEn) ||
+    card?.institution?.shortName ||
+    card?.institutionId ||
+    'Wallet'
+  return card
+    ? `${institutionLabel} · •••• ${card.last4 || ''}`
+    : order?.paymentStatus === 'completed'
+      ? t('Wallet 已付款', 'Paid with Wallet')
+      : t('未记录付款', 'Payment not recorded')
+}
+
+const openPlatformOrderHelp = () => {
+  const order = activePlatformOrder.value
+  if (!order) return
+  const supportContact = chatStore.findFoodDeliveryServiceContact('food_delivery_dispatch')
+  if (supportContact?.id) {
+    router.push({
+      path: `/chat/${supportContact.id}`,
+      query: {
+        source: 'food_delivery',
+        platformOrderId: order.id,
+      },
+    })
+    return
+  }
+  platformOrderHelpOpen.value = !platformOrderHelpOpen.value
+}
 
 const copyPlatformOrderNumber = async (order = {}) => {
   platformOrderCopyFeedback.value = ''
@@ -3680,7 +3870,7 @@ const addDashMenuItemDetailToCart = () => {
   return addMenuItemToCart(item.id, menuDetailQuantity.value, selectedDashCustomization.value)
 }
 
-const openCheckoutSheet = () => {
+const openCheckoutSheet = (checkoutOptions = {}) => {
   checkoutFeedback.value = ''
   if (!isStoreMode.value) {
     checkoutFeedback.value = t('请先进入一家小店。', 'Open a shop first.')
@@ -3690,7 +3880,31 @@ const openCheckoutSheet = () => {
     checkoutFeedback.value = t('请先选择一份菜品。', 'Choose a dish first.')
     return
   }
-  selectedFoodDeliveryAnchorId.value = selectedFoodDeliveryAnchor.value?.id || ''
+  pendingFoodCheckoutOptions.fulfillmentMode =
+    checkoutOptions?.fulfillmentMode === 'pickup' ? 'pickup' : 'delivery'
+  pendingFoodCheckoutOptions.pickupMode =
+    pendingFoodCheckoutOptions.fulfillmentMode === 'pickup' && checkoutOptions?.pickupMode === 'dine_in'
+      ? 'dine_in'
+      : pendingFoodCheckoutOptions.fulfillmentMode === 'pickup'
+        ? 'takeout'
+        : ''
+  if (pendingFoodCheckoutOptions.fulfillmentMode === 'delivery') {
+    const currentAnchor = foodDeliveryAnchorOptions.value.find(
+      (option) => option.kind === 'current',
+    )
+    selectedFoodDeliveryAnchorId.value =
+      currentAnchor?.id || foodDeliveryAnchorOptions.value[0]?.id || ''
+  }
+  if (
+    !selectedFoodPaymentCardId.value ||
+    !storeCheckoutPaymentOptions.value.some(
+      (option) => option.cardId === selectedFoodPaymentCardId.value && option.available,
+    )
+  ) {
+    selectedFoodPaymentCardId.value =
+      storeCheckoutPaymentOptions.value.find((option) => option.available)?.cardId || ''
+  }
+  foodCheckoutAttemptKey.value = ''
   checkoutSheetOpen.value = true
 }
 
@@ -3751,6 +3965,15 @@ const callDeliveryRider = () => {
   })
 }
 
+const openWalletPaymentRecord = (order = {}) => {
+  const transactionId = order?.paymentRef?.transactionId || ''
+  if (!transactionId) return
+  router.push({
+    path: '/wallet',
+    query: { transactionId, source: 'food_delivery' },
+  })
+}
+
 const checkoutFoodDelivery = (checkoutOptions = {}) => {
   checkoutFeedback.value = ''
   if (!activeRestaurant.value?.id || activeStoreCartLineItems.value.length === 0) {
@@ -3762,9 +3985,14 @@ const checkoutFoodDelivery = (checkoutOptions = {}) => {
     return
   }
   const mapHandoff = activeMapHandoff.value
-  const fulfillmentMode = checkoutOptions?.fulfillmentMode === 'pickup' ? 'pickup' : 'delivery'
+  const fulfillmentMode =
+    checkoutOptions?.fulfillmentMode === 'pickup' ||
+    pendingFoodCheckoutOptions.fulfillmentMode === 'pickup'
+      ? 'pickup'
+      : 'delivery'
   const pickupMode =
-    fulfillmentMode === 'pickup' && checkoutOptions?.pickupMode === 'dine_in'
+    fulfillmentMode === 'pickup' &&
+    (checkoutOptions?.pickupMode === 'dine_in' || pendingFoodCheckoutOptions.pickupMode === 'dine_in')
       ? 'dine_in'
       : fulfillmentMode === 'pickup'
         ? 'takeout'
@@ -3774,10 +4002,6 @@ const checkoutFoodDelivery = (checkoutOptions = {}) => {
     : null
   const checkoutInput = {
     restaurantId: activeRestaurant.value.id,
-    deliveryAddress:
-      fulfillmentMode === 'pickup'
-        ? t('Harbor Roast · 港湾店，滨港路 18 号', 'Harbor Roast · Harbor Store, 18 Harbor Road')
-        : mapHandoff.deliveryAddress || t('Map 当前配送地址', 'Current Map delivery address'),
     note:
       activeMapHandoffRouteSummary.value || t('外卖模块基础订单', 'Food Delivery baseline order'),
     fulfillmentMode,
@@ -3795,24 +4019,29 @@ const checkoutFoodDelivery = (checkoutOptions = {}) => {
     sourceModule: mapHandoff.sourceModule,
     sourceId: mapHandoff.sourceId,
   }
-  const checkoutResult =
-    fulfillmentMode === 'delivery'
-      ? foodDeliveryStore.checkoutPaidCart({
-          ...checkoutInput,
-          deliveryAnchor: selectedFoodDeliveryAnchor.value,
-          accountId: walletStore.activePaymentCard?.accountId || '',
-          cardId: walletStore.activePaymentCard?.id || '',
-          idempotencyKey: `food_delivery_ui:${activeRestaurant.value.id}:${Date.now()}`,
-        })
-      : { ok: Boolean(foodDeliveryStore.checkoutCart(checkoutInput)), order: foodDeliveryStore.orders[0] }
+  const paymentOption = storeCheckoutPaymentOptions.value.find(
+    (option) => option.cardId === selectedFoodPaymentCardId.value,
+  )
+  if (!foodCheckoutAttemptKey.value) {
+    foodCheckoutAttemptKey.value = `food_delivery_ui:${activeRestaurant.value.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`
+  }
+  const checkoutResult = foodDeliveryStore.checkoutPaidCart({
+    ...checkoutInput,
+    deliveryAnchor: fulfillmentMode === 'delivery' ? selectedFoodDeliveryAnchor.value : null,
+    pickupAddress: t(
+      'Harbor Roast · 港湾店，滨港路 18 号',
+      'Harbor Roast · Harbor Store, 18 Harbor Road',
+    ),
+    accountId: paymentOption?.accountId || '',
+    cardId: paymentOption?.cardId || '',
+    idempotencyKey: foodCheckoutAttemptKey.value,
+  })
   const order = checkoutResult?.order || null
   if (!checkoutResult?.ok || !order) {
-    checkoutFeedback.value = t(
-      '订单没有提交，请确认购物车。',
-      'Order was not placed. Check the cart.',
-    )
+    checkoutFeedback.value = checkoutFailureLabel(checkoutResult?.reason)
     return
   }
+  foodCheckoutAttemptKey.value = ''
   showStoreCartPanel.value = true
   checkoutSheetOpen.value = false
   checkoutFeedback.value = t(
@@ -4270,6 +4499,49 @@ watch(
 )
 
 watch(
+  foodDeliveryAnchorOptions,
+  (options) => {
+    if (!options.some((option) => option.id === selectedFoodDeliveryAnchorId.value)) {
+      selectedFoodDeliveryAnchorId.value = options[0]?.id || ''
+    }
+    if (!options.some((option) => option.id === selectedPlatformDeliveryAnchorId.value)) {
+      selectedPlatformDeliveryAnchorId.value = options[0]?.id || ''
+    }
+    if (!foodCheckoutAddressLabel.value) {
+      foodCheckoutAddressLabel.value = mapStore.currentLocation?.label || ''
+    }
+    if (!foodCheckoutAddressDetail.value) {
+      foodCheckoutAddressDetail.value = mapStore.currentLocation?.detail || ''
+    }
+    if (!platformAddressLabel.value) {
+      platformAddressLabel.value = mapStore.currentLocation?.label || ''
+    }
+    if (!platformAddressDetail.value) {
+      platformAddressDetail.value = mapStore.currentLocation?.detail || ''
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  storeCheckoutPaymentOptions,
+  (options) => {
+    if (options.some((option) => option.cardId === selectedFoodPaymentCardId.value && option.available)) return
+    selectedFoodPaymentCardId.value = options.find((option) => option.available)?.cardId || ''
+  },
+  { immediate: true },
+)
+
+watch(
+  platformCheckoutPaymentOptions,
+  (options) => {
+    if (options.some((option) => option.cardId === selectedPlatformPaymentCardId.value && option.available)) return
+    selectedPlatformPaymentCardId.value = options.find((option) => option.available)?.cardId || ''
+  },
+  { immediate: true },
+)
+
+watch(
   activeCategoryKey,
   () => {
     if (!restaurantDraft.name) restaurantDraft.category = activeCategory.value?.key || 'restaurants'
@@ -4391,6 +4663,7 @@ onBeforeUnmount(() => {
         @call-rider="callDeliveryRider"
         @keep-original-address="keepOriginalDeliveryAddress"
         @refresh="refreshDeliveryOrder"
+        @open-payment="openWalletPaymentRecord(deliveryOrder)"
       />
       <p
         v-if="isDeliveryOrderSurface && deliveryOrderFeedback"
@@ -4460,22 +4733,25 @@ onBeforeUnmount(() => {
               >
                 <button
                   v-for="(address, addressIndex) in platformDeliveryAddressOptions"
-                  :key="address"
+                  :key="address.id"
                   type="button"
                   class="flex w-full items-center gap-3 rounded-[0.8rem] px-3 py-2.5 text-left text-xs font-bold"
                   :class="
-                    platformLocationLabel === address
+                    selectedPlatformDeliveryAnchorId === address.id
                       ? 'bg-[#e5fbfa] text-[#128e89]'
                       : 'text-gray-700 hover:bg-gray-50'
                   "
-                  :aria-pressed="platformLocationLabel === address"
+                  :aria-pressed="selectedPlatformDeliveryAnchorId === address.id"
                   :data-testid="`food-delivery-platform-address-${addressIndex}`"
-                  @click="selectPlatformDeliveryAddress(address)"
+                  @click="selectPlatformDeliveryAddress(address.id)"
                 >
                   <i class="fas fa-location-dot w-4 text-center"></i>
-                  <span class="min-w-0 flex-1 leading-5">{{ address }}</span>
+                  <span class="min-w-0 flex-1 leading-5">
+                    <strong class="block">{{ address.label }}</strong>
+                    <small class="block truncate font-semibold text-gray-500">{{ address.detail }}</small>
+                  </span>
                   <i
-                    v-if="platformLocationLabel === address"
+                    v-if="selectedPlatformDeliveryAnchorId === address.id"
                     class="fas fa-check text-[10px]"
                   ></i>
                 </button>
@@ -6047,23 +6323,26 @@ onBeforeUnmount(() => {
             <div class="space-y-2">
               <button
                 v-for="(address, addressIndex) in platformDeliveryAddressOptions"
-                :key="address"
+                :key="address.id"
                 type="button"
                 class="flex w-full items-center gap-3 rounded-[0.95rem] bg-white px-3 py-3 text-left shadow-sm ring-1 ring-black/[0.04] transition active:scale-[0.99]"
-                :class="platformLocationLabel === address ? 'text-[#128e89]' : 'text-gray-700'"
-                :aria-pressed="platformLocationLabel === address"
+                :class="selectedPlatformDeliveryAnchorId === address.id ? 'text-[#128e89]' : 'text-gray-700'"
+                :aria-pressed="selectedPlatformDeliveryAnchorId === address.id"
                 :data-testid="`food-delivery-platform-profile-address-${addressIndex}`"
-                @click="selectPlatformDeliveryAddress(address)"
+                @click="selectPlatformDeliveryAddress(address.id)"
               >
                 <span
                   class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                  :class="platformLocationLabel === address ? 'bg-[#e5fbfa]' : 'bg-gray-100'"
+                  :class="selectedPlatformDeliveryAnchorId === address.id ? 'bg-[#e5fbfa]' : 'bg-gray-100'"
                   ><i class="fas fa-location-dot text-xs"></i
                 ></span>
-                <span class="min-w-0 flex-1 text-xs font-black leading-5">{{ address }}</span>
+                <span class="min-w-0 flex-1 text-xs leading-5">
+                  <strong class="block font-black">{{ address.label }}</strong>
+                  <small class="block truncate font-semibold text-gray-500">{{ address.detail }}</small>
+                </span>
                 <i
                   :class="
-                    platformLocationLabel === address ? 'fas fa-check' : 'fas fa-chevron-right'
+                    selectedPlatformDeliveryAnchorId === address.id ? 'fas fa-check' : 'fas fa-chevron-right'
                   "
                   class="text-[10px]"
                 ></i>
@@ -6111,8 +6390,8 @@ onBeforeUnmount(() => {
                 }}</span
                 ><span class="mt-0.5 block text-xs font-semibold text-gray-500">{{
                   t(
-                    '从配送中的订单联系骑手或小店',
-                    'Contact the rider or shop from an active order',
+                    '从订单详情查看地址、付款记录与配送进度',
+                    'Review address, payment, and delivery progress from each order',
                   )
                 }}</span></span
               >
@@ -6227,25 +6506,37 @@ onBeforeUnmount(() => {
               >
                 <button
                   v-for="(address, addressIndex) in platformDeliveryAddressOptions"
-                  :key="address"
+                  :key="address.id"
                   type="button"
                   class="shrink-0 rounded-full px-3 py-2 text-[11px] font-black ring-1 ring-inset"
                   :class="
-                    platformLocationLabel === address
+                    selectedPlatformDeliveryAnchorId === address.id
                       ? 'bg-[#24bcb7] text-white ring-[#24bcb7]'
                       : 'bg-gray-50 text-gray-600 ring-gray-200'
                   "
-                  :aria-pressed="platformLocationLabel === address"
+                  :aria-pressed="selectedPlatformDeliveryAnchorId === address.id"
                   :data-testid="`food-delivery-platform-checkout-address-${addressIndex}`"
-                  @click="selectPlatformDeliveryAddress(address)"
+                  @click="selectPlatformDeliveryAddress(address.id)"
                 >
-                  {{
-                    addressIndex === 0
-                      ? t('当前地址', 'Current')
-                      : addressIndex === 1
-                        ? t('常用地址', 'Saved')
-                        : t('公司', 'Work')
-                  }}
+                  {{ address.label }}
+                </button>
+              </div>
+              <button
+                type="button"
+                class="mt-3 text-[11px] font-black text-[#128e89]"
+                data-testid="food-delivery-platform-checkout-new-address"
+                @click="platformAddressEditorOpen = !platformAddressEditorOpen"
+              >
+                {{ platformAddressEditorOpen ? t('收起新地址', 'Close address form') : t('使用当前定位新增地址', 'Add address at current pin') }}
+              </button>
+              <div v-if="platformAddressEditorOpen" class="mt-3 rounded-[1rem] bg-gray-50 p-3" data-testid="food-delivery-platform-address-editor">
+                <p class="text-[10px] font-semibold leading-4 text-gray-500">
+                  {{ t('新地址会保存到 Map 地址簿，并绑定当前地图定位。', 'The new address is saved to Map and anchored to the current map position.') }}
+                </p>
+                <input v-model="platformAddressLabel" class="w-full rounded-xl bg-white px-3 py-2 text-xs ring-1 ring-gray-200" :placeholder="t('地址名称，例如：家', 'Label, for example Home')" />
+                <textarea v-model="platformAddressDetail" rows="2" class="mt-2 w-full resize-none rounded-xl bg-white px-3 py-2 text-xs ring-1 ring-gray-200" :placeholder="t('门牌、楼层与详细地址', 'Street, building, floor, and unit')"></textarea>
+                <button type="button" class="mt-2 min-h-10 w-full rounded-xl bg-[#24bcb7] px-3 text-xs font-black text-white disabled:opacity-40" :disabled="!platformAddressLabel.trim() || !platformAddressDetail.trim() || !mapStore.currentLocation?.position" data-testid="food-delivery-platform-save-address" @click="saveFoodDeliveryAddress({ scope: 'platform', label: platformAddressLabel.trim(), detail: platformAddressDetail.trim() })">
+                  {{ t('保存到 Map 地址簿', 'Save to Map') }}
                 </button>
               </div>
             </section>
@@ -6309,40 +6600,37 @@ onBeforeUnmount(() => {
             <section class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5">
               <p class="text-xs font-black text-gray-900">{{ t('支付方式', 'Payment method') }}</p>
               <div class="mt-3 space-y-2">
-                <label
+                <button
                   v-for="option in platformCheckoutPaymentOptions"
-                  :key="option.key"
-                  class="flex cursor-pointer items-center gap-3 rounded-[1rem] p-3 ring-1 ring-inset"
+                  :key="option.cardId"
+                  type="button"
+                  :disabled="!option.available"
+                  class="flex w-full items-center gap-3 rounded-[1rem] p-3 text-left ring-1 ring-inset disabled:opacity-45"
                   :class="
-                    platformCheckoutPaymentMethod === option.key
+                    selectedPlatformPaymentCardId === option.cardId
                       ? 'bg-[#e5fbfa] ring-[#24bcb7]'
                       : 'bg-gray-50 ring-gray-100'
                   "
-                  :data-testid="`food-delivery-platform-payment-${option.key}`"
+                  :aria-pressed="selectedPlatformPaymentCardId === option.cardId"
+                  :data-testid="`food-delivery-platform-payment-${option.cardId}`"
+                  @click="selectedPlatformPaymentCardId = option.cardId"
                 >
-                  <input
-                    v-model="platformCheckoutPaymentMethod"
-                    type="radio"
-                    name="food-delivery-platform-payment"
-                    :value="option.key"
-                    class="sr-only"
-                  />
                   <span
                     class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#159f9a] shadow-sm"
                   >
-                    <i :class="option.icon"></i>
+                    <i class="fas fa-credit-card"></i>
                   </span>
                   <span class="min-w-0 flex-1">
                     <span class="block text-sm font-black text-gray-950">{{ option.label }}</span>
                     <span class="mt-0.5 block text-[10px] font-semibold leading-4 text-gray-500">{{
-                      option.desc
+                      option.available ? option.balanceLabel : option.reasonLabel
                     }}</span>
                   </span>
                   <i
-                    v-if="platformCheckoutPaymentMethod === option.key"
+                    v-if="selectedPlatformPaymentCardId === option.cardId"
                     class="fas fa-circle-check text-[#159f9a]"
                   ></i>
-                </label>
+                </button>
               </div>
             </section>
 
@@ -6391,7 +6679,7 @@ onBeforeUnmount(() => {
                 type="button"
                 class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-[1rem] bg-[#24bcb7] px-4 text-sm font-black text-white transition active:scale-[0.99] disabled:bg-gray-300"
                 data-testid="food-delivery-platform-checkout-submit"
-                :disabled="!platformCartMeetsMinimumOrder"
+                :disabled="!platformCartMeetsMinimumOrder || !selectedPlatformDeliveryAnchor || !platformCheckoutPaymentOptions.some((option) => option.cardId === selectedPlatformPaymentCardId && option.available)"
                 @click="submitPlatformOrder"
               >
                 {{ t('提交订单', 'Place order') }}
@@ -6692,8 +6980,17 @@ onBeforeUnmount(() => {
                       {{ t('支付方式', 'Payment') }}
                     </p>
                     <p class="mt-1 text-xs font-bold text-gray-800">
-                      {{ platformPaymentMethodLabel(activePlatformOrder.paymentMethod) }}
+                      {{ platformPaymentMethodLabel(activePlatformOrder) }}
                     </p>
+                    <button
+                      v-if="activePlatformOrder.paymentRef?.transactionId"
+                      type="button"
+                      class="mt-2 text-[10px] font-black text-[#128e89]"
+                      data-testid="food-delivery-platform-order-payment"
+                      @click="openWalletPaymentRecord(activePlatformOrder)"
+                    >
+                      {{ t('查看 Wallet 付款记录', 'View Wallet payment') }}
+                    </button>
                   </div>
                 </div>
                 <div v-if="activePlatformOrder.note" class="flex gap-3">
@@ -6756,6 +7053,38 @@ onBeforeUnmount(() => {
                   </dd>
                 </div>
               </dl>
+            </section>
+
+            <button
+              type="button"
+              class="min-h-11 w-full rounded-[1rem] bg-[#e5fbfa] px-4 text-xs font-black text-[#128e89] ring-1 ring-inset ring-[#b7ece9]"
+              :aria-expanded="platformOrderHelpOpen"
+              data-testid="food-delivery-platform-order-help"
+              @click="openPlatformOrderHelp"
+            >
+              <i class="fas fa-headset mr-1.5" aria-hidden="true"></i>
+              {{ t('订单帮助', 'Order help') }}
+            </button>
+            <section
+              v-if="platformOrderHelpOpen"
+              class="rounded-[1.25rem] bg-white p-4 shadow-sm ring-1 ring-black/5"
+              data-testid="food-delivery-platform-order-help-panel"
+            >
+              <p class="text-sm font-black text-gray-950">
+                {{ t('先核对这笔订单的真实记录', 'Review the order records first') }}
+              </p>
+              <p class="mt-2 text-[11px] font-semibold leading-5 text-gray-500">
+                {{ t('配送地址、付款凭证和当前进度都以本页记录为准。需要留存时可复制订单号。', 'Delivery address, payment receipt, and current progress remain authoritative here. Copy the order number if you need a reference.') }}
+              </p>
+              <button
+                v-if="activePlatformOrder.paymentRef?.transactionId"
+                type="button"
+                class="mt-3 min-h-10 w-full rounded-xl bg-gray-950 px-3 text-xs font-black text-white"
+                data-testid="food-delivery-platform-order-help-payment"
+                @click="openWalletPaymentRecord(activePlatformOrder)"
+              >
+                {{ t('查看 Wallet 付款凭证', 'Open Wallet receipt') }}
+              </button>
             </section>
 
             <div class="grid grid-cols-2 gap-2">
@@ -7842,7 +8171,8 @@ onBeforeUnmount(() => {
               done?.(foodDeliveryStore.redeemHarborRoastMerchandise(merchandiseId))
           "
           @update-cart="foodDeliveryStore.updateCartQuantity"
-          @checkout="checkoutFoodDelivery"
+          @checkout="openCheckoutSheet"
+          @open-support="openDeliveryOrderSurface"
         />
 
         <FoodDeliveryVerdantDayApp
@@ -7875,6 +8205,7 @@ onBeforeUnmount(() => {
           @add-item="addMenuItemToCart"
           @update-cart="foodDeliveryStore.updateCartQuantity"
           @checkout="openCheckoutSheet"
+          @open-support="openDeliveryOrderSurface"
         />
 
         <FoodDeliveryJadeHearthApp
@@ -7911,6 +8242,7 @@ onBeforeUnmount(() => {
           @record-wallet="
             activeJadeWalletSuggestion && transferFoodSuggestionToWallet(activeJadeWalletSuggestion)
           "
+          @open-support="openDeliveryOrderSurface"
         />
 
         <FoodDeliveryDashGrillApp
@@ -7941,6 +8273,7 @@ onBeforeUnmount(() => {
           @add-item="addMenuItemToCart"
           @update-cart="foodDeliveryStore.updateCartQuantity"
           @checkout="openCheckoutSheet"
+          @open-support="openDeliveryOrderSurface"
         />
 
         <FoodDeliveryDiscoveryTemplate
@@ -9517,6 +9850,15 @@ onBeforeUnmount(() => {
                       )
                     }}
                   </p>
+                  <button
+                    type="button"
+                    class="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full border border-[var(--peach-cloud-ink)] px-4 text-xs font-black"
+                    data-testid="food-delivery-peach-cloud-order-support"
+                    @click="openDeliveryOrderSurface(activePeachCloudOrder.id)"
+                  >
+                    <i class="fas fa-headset" aria-hidden="true"></i>
+                    {{ t('订单帮助与配送沟通', 'Order help & delivery contact') }}
+                  </button>
                 </section>
               </template>
 
@@ -9662,7 +10004,7 @@ onBeforeUnmount(() => {
               class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
               :class="isDarkTrayStore ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-800'"
               data-testid="food-delivery-store-home"
-              :aria-label="t('杩斿洖鎵嬫満涓婚〉', 'Return to Home')"
+              :aria-label="t('返回手机主页', 'Return to Home')"
               @click="goHome"
             >
               <i class="fas fa-arrow-left text-sm"></i>
@@ -11707,27 +12049,41 @@ onBeforeUnmount(() => {
                 "
               >
                 {{
-                  activeMapHandoff.deliveryAddress ||
-                  t('当前 Map 配送地址', 'Current Map delivery address')
+                  pendingFoodCheckoutOptions.fulfillmentMode === 'pickup'
+                    ? pendingFoodCheckoutOptions.pickupMode === 'dine_in'
+                      ? t('到店堂食', 'Dine in at the shop')
+                      : t('到店外带', 'Pick up at the shop')
+                    : selectedFoodDeliveryAnchor?.detail || t('请选择配送地址', 'Choose delivery address')
                 }}
               </p>
-              <label class="mt-3 block text-[10px] font-black uppercase tracking-wide opacity-70" for="food-delivery-checkout-address">
-                {{ t('Map 配送地址', 'Map delivery address') }}
-              </label>
-              <select
-                id="food-delivery-checkout-address"
-                v-model="selectedFoodDeliveryAnchorId"
-                class="mt-1 min-h-10 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs outline-none"
-                data-testid="food-delivery-checkout-address-select"
-              >
-                <option v-for="anchor in foodDeliveryAnchorOptions" :key="anchor.id" :value="anchor.id">
-                  {{ anchor.label }} / {{ anchor.detail }}
-                </option>
-              </select>
-              <p class="mt-2 text-[10px] font-semibold opacity-70">
-                {{ t('付款将写入 Wallet 流水', 'Payment is recorded in Wallet ledger') }} ·
-                {{ walletStore.activePaymentCard?.label || walletStore.activePaymentCard?.id || 'Wallet card' }}
-              </p>
+              <template v-if="pendingFoodCheckoutOptions.fulfillmentMode === 'delivery'">
+                <label class="mt-3 block text-[10px] font-black uppercase tracking-wide opacity-70" for="food-delivery-checkout-address">
+                  {{ t('配送地址', 'Delivery address') }}
+                </label>
+                <select
+                  id="food-delivery-checkout-address"
+                  v-model="selectedFoodDeliveryAnchorId"
+                  class="mt-1 min-h-10 w-full rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs outline-none"
+                  data-testid="food-delivery-checkout-address-select"
+                >
+                  <option v-for="anchor in foodDeliveryAnchorOptions" :key="anchor.id" :value="anchor.id">
+                    {{ anchor.label }} / {{ anchor.detail }}
+                  </option>
+                </select>
+                <button type="button" class="mt-2 text-[10px] font-black underline underline-offset-2" data-testid="food-delivery-checkout-new-address" @click="foodCheckoutAddressEditorOpen = !foodCheckoutAddressEditorOpen">
+                  {{ foodCheckoutAddressEditorOpen ? t('收起新地址', 'Close address form') : t('使用当前定位新增地址', 'Add address at current pin') }}
+                </button>
+                <div v-if="foodCheckoutAddressEditorOpen" class="mt-2 rounded-xl bg-black/10 p-2" data-testid="food-delivery-checkout-address-editor">
+                  <p class="text-[10px] font-semibold leading-4 opacity-70">
+                    {{ t('新地址会保存到 Map 地址簿，并绑定当前地图定位。', 'The new address is saved to Map and anchored to the current map position.') }}
+                  </p>
+                  <input v-model="foodCheckoutAddressLabel" class="w-full rounded-lg border border-white/15 bg-white/90 px-2 py-2 text-xs text-gray-900" :placeholder="t('地址名称，例如：家', 'Label, for example Home')" />
+                  <textarea v-model="foodCheckoutAddressDetail" rows="2" class="mt-2 w-full resize-none rounded-lg border border-white/15 bg-white/90 px-2 py-2 text-xs text-gray-900" :placeholder="t('门牌、楼层与详细地址', 'Street, building, floor, and unit')"></textarea>
+                  <button type="button" class="mt-2 min-h-9 w-full rounded-lg bg-gray-950 px-3 text-[10px] font-black text-white disabled:opacity-40" :disabled="!foodCheckoutAddressLabel.trim() || !foodCheckoutAddressDetail.trim() || !mapStore.currentLocation?.position" data-testid="food-delivery-checkout-save-address" @click="saveFoodDeliveryAddress({ label: foodCheckoutAddressLabel.trim(), detail: foodCheckoutAddressDetail.trim() })">
+                    {{ t('保存地址', 'Save address') }}
+                  </button>
+                </div>
+              </template>
             </div>
             <button
               type="button"
@@ -11825,6 +12181,30 @@ onBeforeUnmount(() => {
             </article>
           </div>
 
+          <section class="mt-4 space-y-2" data-testid="food-delivery-checkout-payment-list">
+            <p class="text-[10px] font-black uppercase tracking-wide opacity-70">
+              {{ t('Wallet 付款', 'Wallet payment') }}
+            </p>
+            <button
+              v-for="option in storeCheckoutPaymentOptions"
+              :key="option.cardId"
+              type="button"
+              :disabled="!option.available"
+              class="flex min-h-12 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left disabled:opacity-40"
+              :class="selectedFoodPaymentCardId === option.cardId ? 'border-current bg-white/15' : 'border-white/10 bg-white/5'"
+              :aria-pressed="selectedFoodPaymentCardId === option.cardId"
+              :data-testid="`food-delivery-checkout-payment-${option.cardId}`"
+              @click="selectedFoodPaymentCardId = option.cardId"
+            >
+              <i class="fas fa-credit-card" aria-hidden="true"></i>
+              <span class="min-w-0 flex-1">
+                <strong class="block truncate text-xs">{{ option.label }}</strong>
+                <small class="mt-1 block text-[10px] opacity-70">{{ option.available ? option.balanceLabel : option.reasonLabel }}</small>
+              </span>
+              <i v-if="selectedFoodPaymentCardId === option.cardId" class="fas fa-circle-check" aria-hidden="true"></i>
+            </button>
+          </section>
+
           <div class="mt-4 grid grid-cols-3 gap-2">
             <div
               class="rounded-2xl p-3"
@@ -11854,9 +12234,9 @@ onBeforeUnmount(() => {
                           : 'text-slate-400'
                 "
               >
-                {{ t('预计送达', 'ETA') }}
+                {{ pendingFoodCheckoutOptions.fulfillmentMode === 'pickup' ? t('取餐方式', 'Pickup') : t('预计送达', 'ETA') }}
               </p>
-              <p class="mt-1 text-xs font-black">{{ activeStoreEtaText }}</p>
+              <p class="mt-1 text-xs font-black">{{ pendingFoodCheckoutOptions.fulfillmentMode === 'pickup' ? (pendingFoodCheckoutOptions.pickupMode === 'dine_in' ? t('堂食', 'Dine in') : t('外带', 'Takeout')) : activeStoreEtaText }}</p>
             </div>
             <div
               class="rounded-2xl p-3"
@@ -11888,7 +12268,7 @@ onBeforeUnmount(() => {
               >
                 {{ t('配送费', 'Fee') }}
               </p>
-              <p class="mt-1 text-xs font-black">{{ activeStoreFeeText }}</p>
+              <p class="mt-1 text-xs font-black">{{ pendingFoodCheckoutOptions.fulfillmentMode === 'pickup' ? t('免配送费', 'No fee') : activeStoreFeeText }}</p>
             </div>
             <div
               class="rounded-2xl p-3"
@@ -11921,8 +12301,7 @@ onBeforeUnmount(() => {
                 {{ t('合计', 'Total') }}
               </p>
               <p class="mt-1 text-xs font-black">
-                {{ activeStoreCartPrimaryTotal.amount }}
-                {{ activeStoreCartPrimaryTotal.currency }}
+                {{ storeCheckoutTotalLabel }}
               </p>
             </div>
           </div>
@@ -11962,9 +12341,10 @@ onBeforeUnmount(() => {
                         : 'bg-[#ff806f] text-white shadow-[0_14px_34px_rgba(255,128,111,0.26)]'
               "
               data-testid="food-delivery-checkout-submit"
+              :disabled="!selectedStorePaymentOption?.available || (pendingFoodCheckoutOptions.fulfillmentMode === 'delivery' && !selectedFoodDeliveryAnchor)"
               @click="checkoutFoodDelivery"
             >
-              {{ t('提交订单', 'Place order') }}
+              {{ t('付款并提交订单', 'Pay & place order') }}
             </button>
           </div>
         </article>

@@ -31,6 +31,7 @@ const emit = defineEmits([
   'add-item',
   'update-cart',
   'checkout',
+  'open-support',
 ])
 
 const { t } = useI18n()
@@ -1086,6 +1087,15 @@ watch(
               {{ t('包含本次配送费。', 'Includes delivery for this order.') }}
             </p>
           </div>
+          <button
+            type="button"
+            class="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-[var(--verdant-primary)] px-4 text-xs font-black text-[var(--verdant-leaf)]"
+            data-testid="food-delivery-light-order-support"
+            @click="emit('open-support', activeOrder.id)"
+          >
+            <i class="fas fa-headset" aria-hidden="true"></i>
+            {{ t('订单帮助与配送沟通', 'Order help & delivery contact') }}
+          </button>
         </section>
         <section v-else class="px-5 py-20 text-center">
           <i class="fas fa-receipt text-4xl text-[var(--verdant-leaf)]"></i>

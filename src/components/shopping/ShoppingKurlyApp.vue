@@ -9,359 +9,51 @@ import {
 const props = defineProps(SHOPPING_STOREFRONT_PROPS)
 const emit = defineEmits(SHOPPING_STOREFRONT_EVENTS)
 const localize = (zh, en) => localizeShoppingCopy(props.languageBase, zh, en)
-const searchChanged = (event) => emit('update:searchQuery', event.target.value)
-const deliveryLane = ref('chilled')
-const deliveryLaneOptions = Object.freeze([
-  { key: 'chilled', zh: '冷藏', en: 'CHILLED', icon: 'fas fa-snowflake' },
-  { key: 'frozen', zh: '冷冻', en: 'FROZEN', icon: 'fas fa-icicles' },
-  { key: 'ambient', zh: '常温', en: 'AMBIENT', icon: 'fas fa-box-open' },
+const packingGuide = ref('chilled')
+
+const packingGuides = Object.freeze([
+  { key: 'chilled', icon: 'fas fa-snowflake', zh: '冷藏食材', en: 'CHILLED', titleZh: '先收进冰箱', titleEn: 'REFRIGERATE FIRST', detailZh: '生鲜商品按商品页保存建议处理。', detailEn: 'Follow each item’s storage guidance.' },
+  { key: 'frozen', icon: 'fas fa-icicles', zh: '冷冻备餐', en: 'FROZEN', titleZh: '分开收纳', titleEn: 'PACK SEPARATELY', detailZh: '冷冻状态与分袋信息在结算时核对。', detailEn: 'Packing is reviewed at checkout.' },
+  { key: 'ambient', icon: 'fas fa-box-open', zh: '常温补给', en: 'PANTRY', titleZh: '最后归位', titleEn: 'PANTRY LAST', detailZh: '日用与常温商品独立整理。', detailEn: 'Pantry goods stay in their own group.' },
 ])
-const deliveryLaneCopy = computed(() => {
-  const lane = deliveryLaneOptions.find((option) => option.key === deliveryLane.value) || deliveryLaneOptions[0]
-  const copy = {
-    chilled: { titleZh: '冷鲜先到', titleEn: 'KEEP IT CHILLED', detailZh: '低温保管 · 分批打包', detailEn: 'LOW TEMP · BATCHED' },
-    frozen: { titleZh: '冻库待命', titleEn: 'READY FROM FROZEN', detailZh: '深冷保管 · 独立分区', detailEn: 'DEEP COLD · SEPARATE LANE' },
-    ambient: { titleZh: '常温备货', titleEn: 'PANTRY READY', detailZh: '干燥收纳 · 常温分区', detailEn: 'DRY STORAGE · AMBIENT LANE' },
-  }[lane.key]
-  return {
-    label: localize(lane.zh, lane.en),
-    icon: lane.icon,
-    title: localize(copy.titleZh, copy.titleEn),
-    detail: localize(copy.detailZh, copy.detailEn),
-    badge: localize(`${lane.zh}批次`, `${lane.en} BATCH`),
-  }
-})
+
+const activePackingGuide = computed(
+  () => packingGuides.find((item) => item.key === packingGuide.value) || packingGuides[0],
+)
+const searchChanged = (event) => emit('update:searchQuery', event.target.value)
 const iconForCategory = (category) => category.icon || 'fas fa-leaf'
-const kurlyTitle = () =>
-  props.languageBase === 'zh'
-    ? props.activeService?.heroZh || props.activeService?.zh || '让今天更新鲜'
-    : props.activeService?.heroEn || props.activeService?.en || 'Make today fresher'
+const homeProducts = computed(() => props.visibleProducts.slice(0, 4))
 </script>
 
 <template>
-  <header
-    class="shopping-storefront-header shopping-kurly-app"
-    :data-storefront="activeService?.storefrontTemplate || 'fresh_market'"
-    :data-delivery-lane="deliveryLane"
-    data-storefront-kind="marketplace"
-  >
-    <div class="kurly-topline">
-      <button
-        type="button"
-        class="kurly-back"
-        data-testid="shopping-go-home"
-        :aria-label="localize('返回主屏幕', 'Back to Home')"
-        :title="localize('返回主屏幕', 'Back to Home')"
-        @click="emit('go-home')"
-      >
-        <i class="fas fa-chevron-left" aria-hidden="true"></i>
-      </button>
-      <div class="kurly-brand">
-        <span class="kurly-mark"><img v-if="brandAssetUrl" :src="brandAssetUrl" alt="" /><template v-else>K</template></span>
-        <div>
-          <h1>{{ activeLabel || activeService?.en || activeService?.zh || 'Kurly' }}</h1>
-          <p>{{ localize('新鲜日常超市', 'FRESH DAILY MARKET') }}</p>
-        </div>
-      </div>
-      <button
-        type="button"
-        class="kurly-bag"
-        :aria-label="localize('购物车', 'Cart')"
-        :title="localize('购物车', 'Cart')"
-        @click="emit('open-cart')"
-      >
-        <i class="fas fa-basket-shopping" aria-hidden="true"></i>
-        <b v-if="cartQuantity">{{ cartQuantity }}</b>
-      </button>
-    </div>
+  <main class="kurly-home shopping-storefront-header shopping-kurly-app" data-storefront="fresh_market" data-storefront-kind="marketplace" :data-delivery-lane="packingGuide">
+    <header class="kurly-appbar">
+      <button type="button" data-testid="shopping-go-home" :aria-label="localize('返回主屏幕', 'Back to Home')" @click="emit('go-home')"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+      <div class="kurly-wordmark"><span><img v-if="brandAssetUrl" :src="brandAssetUrl" alt="" /><template v-else>K</template></span><h1>{{ activeLabel || 'Kurly' }}</h1></div>
+      <div class="kurly-app-actions"><button type="button" :aria-label="localize('订单', 'Orders')" @click="emit('open-orders')"><i class="fas fa-receipt"></i></button><button type="button" :aria-label="localize('购物篮', 'Basket')" @click="emit('open-cart')"><i class="fas fa-basket-shopping"></i><b v-if="cartQuantity">{{ cartQuantity }}</b></button></div>
+    </header>
 
-    <div class="kurly-search-wrap">
-      <label class="kurly-search">
-        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
-        <input
-          type="search"
-          role="searchbox"
-          :aria-label="localize('搜索商品', 'Search products')"
-          :placeholder="localize('搜索食材、日用和今日好物', 'Search ingredients, home, and daily picks')"
-          :value="searchQuery"
-          @input="searchChanged"
-        />
-      </label>
-      <button
-        type="button"
-        class="kurly-manage"
-        :aria-label="localize('管理商品', 'Manage catalog')"
-        :title="localize('管理商品', 'Manage catalog')"
-        @click="emit('open-manager')"
-      >
-        <i class="fas fa-sliders" aria-hidden="true"></i>
-      </button>
-    </div>
+    <div v-if="mapReference?.placeId" class="kurly-address" data-testid="shopping-map-reference" :data-map-place-id="mapReference.placeId"><i class="fas fa-location-dot"></i><span><small>{{ localize('配送区域', 'DELIVERY AREA') }}</small><strong>{{ mapReference.district }}</strong></span><em>{{ localize('具体地址在结算时选择', 'Choose the exact address at checkout') }}</em><i class="fas fa-location-crosshairs" aria-hidden="true"></i></div>
 
-    <div class="kurly-delivery-note">
-      <span><i :class="deliveryLaneCopy.icon" aria-hidden="true"></i>{{ deliveryLaneCopy.label }}</span>
-      <strong>{{ deliveryLaneCopy.title }}</strong>
-      <span>{{ deliveryLaneCopy.detail }}</span>
-    </div>
+    <form class="kurly-search" @submit.prevent="emit('submit-search')"><i class="fas fa-magnifying-glass"></i><input type="search" role="searchbox" :value="searchQuery" :placeholder="localize('搜索食材、早餐或日常补给', 'Search ingredients, breakfast, or pantry')" @input="searchChanged" /><button type="submit">{{ localize('搜索', 'Search') }}</button></form>
 
-    <div class="kurly-lane-selector" role="tablist" :aria-label="localize('配送分区预览', 'Fulfillment lane preview')">
-      <button
-        v-for="lane in deliveryLaneOptions"
-        :key="lane.key"
-        type="button"
-        class="kurly-lane-button"
-        :class="{ 'is-active': deliveryLane === lane.key }"
-        role="tab"
-        :aria-selected="deliveryLane === lane.key"
-        :data-testid="`shopping-kurly-lane-${lane.key}`"
-        @click="deliveryLane = lane.key"
-      >
-        <i :class="lane.icon" aria-hidden="true"></i>
-        <span>{{ localize(lane.zh, lane.en) }}</span>
-      </button>
-    </div>
+    <section class="kurly-hero">
+      <div class="kurly-hero-media"><img v-if="coverImageUrl" :src="coverImageUrl" :alt="localize('Kurly 今日餐桌', 'Kurly daily table')" /><div v-else class="kurly-hero-fallback"><i class="fas fa-bowl-food"></i><span>GOOD MORNING TABLE</span></div></div>
+      <div class="kurly-hero-copy"><small>CURATED FOR TOMORROW</small><h2>{{ localize('明天吃什么，今晚先选好', 'Choose tomorrow’s table tonight') }}</h2><p>{{ localize('从早餐、晚餐到日常补给，按一顿饭而不是货架来逛。', 'Shop by meal and routine, not by warehouse aisle.') }}</p><button type="button" @click="emit('select-category', 'grocery')">{{ localize('开始选食材', 'Shop fresh food') }} <i class="fas fa-arrow-right"></i></button></div>
+    </section>
 
-    <div class="kurly-hero">
-      <div class="kurly-hero-copy">
-        <p class="kurly-eyebrow">{{ localize('今日采集', 'HARVESTED TODAY') }}</p>
-        <h2>{{ kurlyTitle() }}</h2>
-        <p>{{ activeDescription || activeService?.descZh || activeService?.descEn || '' }}</p>
-        <p
-          v-if="mapReference?.placeId"
-          class="shopping-map-reference kurly-map-reference"
-          data-testid="shopping-map-reference"
-          :data-map-place-id="mapReference.placeId"
-        >
-          <i class="fas fa-location-dot" aria-hidden="true"></i>
-          <span>{{ localize('首尔场景锚点', 'SEOUL SETTING') }}</span>
-          <strong>{{ mapReference.district }}</strong>
-        </p>
-      </div>
-      <div class="kurly-hero-stage" aria-hidden="true">
-        <img v-if="coverImageUrl" :src="coverImageUrl" :alt="`${activeService?.en || 'Kurly'} cover`" />
-        <template v-else>
-          <div class="kurly-circle"><i :class="activeService?.icon || 'fas fa-leaf'"></i></div>
-          <span>{{ localize('从农场到餐桌', 'FROM FARM TO TABLE') }}</span>
-        </template>
-      </div>
-    </div>
+    <section class="kurly-meal-plans"><header><div><small>PLAN THE TABLE</small><h2>{{ localize('按生活场景开始', 'Start with a meal') }}</h2></div></header><div><button type="button" @click="emit('select-category', 'grocery')"><span>01</span><i class="fas fa-mug-hot"></i><strong>{{ localize('七日早餐', '7-day breakfast') }}</strong><small>{{ localize('牛奶、酸奶、面包与水果', 'Dairy, bread, fruit') }}</small></button><button type="button" @click="emit('select-category', 'grocery')"><span>02</span><i class="fas fa-bowl-food"></i><strong>{{ localize('今晚一锅', 'One-pot dinner') }}</strong><small>{{ localize('汤料、蔬菜与主食', 'Soup, greens, staples') }}</small></button><button type="button" @click="emit('select-category', 'home')"><span>03</span><i class="fas fa-boxes-stacked"></i><strong>{{ localize('厨房补仓', 'Pantry reset') }}</strong><small>{{ localize('常温与日常用品', 'Pantry and home') }}</small></button></div></section>
 
-    <div class="kurly-category-head">
-      <p>{{ localize('一站式备餐', 'ONE CART, MANY TABLES') }}</p>
-      <span>{{ activeCategory?.label || localize('全部', 'ALL') }}</span>
-    </div>
-    <div class="kurly-category-list">
-      <button
-        v-for="category in categoryCards"
-        :key="category.key"
-        type="button"
-        class="kurly-category"
-        :class="{ 'is-active': category.active, 'border-orange-300': category.active }"
-        :data-testid="`shopping-category-${category.key}`"
-        @click="emit('select-category', category.key)"
-      >
-        <span class="kurly-category-icon"><i :class="iconForCategory(category)" aria-hidden="true"></i></span>
-        <span>{{ category.label }}</span>
-        <small>{{ category.count }}</small>
-      </button>
-    </div>
+    <section class="kurly-packing"><header><small>PACKING GUIDE</small><h2>{{ localize('到家后的收纳顺序', 'Unpack in the right order') }}</h2></header><div class="kurly-packing-tabs" role="tablist" :aria-label="localize('收纳提示', 'Packing guide')"><button v-for="guide in packingGuides" :key="guide.key" type="button" role="tab" :aria-selected="packingGuide === guide.key" :class="{ active: packingGuide === guide.key }" :data-testid="`shopping-kurly-lane-${guide.key}`" @click="packingGuide = guide.key"><i :class="guide.icon"></i>{{ localize(guide.zh, guide.en) }}</button></div><article :key="activePackingGuide.key" class="kurly-delivery-note"><i :class="activePackingGuide.icon"></i><div><small>{{ localize(activePackingGuide.zh, activePackingGuide.en) }}</small><strong>{{ localize(activePackingGuide.titleZh, activePackingGuide.titleEn) }}</strong><p>{{ localize(activePackingGuide.detailZh, activePackingGuide.detailEn) }}</p></div><span>0{{ packingGuides.findIndex((item) => item.key === activePackingGuide.key) + 1 }}</span></article></section>
 
-  </header>
+    <section class="kurly-categories"><header><div><small>MARKET AISLES</small><h2>{{ localize('分类选购', 'Browse categories') }}</h2></div><span>{{ localize('按保存方式与餐桌计划挑选', 'Browse by storage and meal plan') }}</span></header><div><button v-for="category in categoryCards" :key="category.key" type="button" :class="{ active: category.active, 'is-active': category.active }" :data-testid="`shopping-category-${category.key}`" @click="emit('select-category', category.key)"><span><i :class="iconForCategory(category)"></i></span><strong>{{ category.label }}</strong><small>{{ category.count }}</small></button></div></section>
 
-  <section v-if="!activeCategoryIsLogistics" id="shopping-products" class="shopping-products-section kurly-products">
-    <div v-if="!favoritesOnly && !searchQuery" class="kurly-table-plan">
-      <article>
-        <span>{{ localize('晨间餐桌', 'MORNING TABLE') }}</span>
-        <strong>{{ localize('打开冰箱就能完成的一餐', 'A breakfast that starts in the fridge') }}</strong>
-        <small>{{ localize('冷藏食材 · 轻量准备', 'CHILLED · LIGHT PREP') }}</small>
-      </article>
-      <article>
-        <span>{{ localize('今晚吃什么', 'DINNER NOTE') }}</span>
-        <strong>{{ localize('三种温层，一次备齐', 'Three temperature lanes, one basket') }}</strong>
-        <small>{{ localize('按保存条件整理', 'SORTED BY STORAGE') }}</small>
-      </article>
-    </div>
-    <div class="kurly-products-heading">
-      <div>
-        <p>{{ favoritesOnly ? localize('收藏食材', 'SAVED INGREDIENTS') : localize('今天值得吃', 'GOOD TO EAT TODAY') }}</p>
-        <h2>{{ activeCategory?.label || localize('新鲜上架', 'Fresh arrivals') }}</h2>
-      </div>
-      <button
-        v-if="favoritesOnly"
-        type="button"
-        class="kurly-clear"
-        :aria-label="localize('显示全部商品', 'Show all products')"
-        :title="localize('显示全部商品', 'Show all products')"
-        @click="emit('show-all')"
-      >
-        <i class="fas fa-xmark" aria-hidden="true"></i>
-      </button>
-      <span v-else>{{ visibleProducts.length }} {{ localize('种', 'picks') }}</span>
-    </div>
-    <div v-if="visibleProducts.length === 0" class="kurly-empty">
-      <i class="fas fa-seedling" aria-hidden="true"></i>
-      <p>{{ favoritesOnly ? localize('这里还没有收藏商品。', 'No saved items here yet.') : searchQuery ? localize('没有找到匹配商品。', 'No matching products found.') : localize('这个分类还没有商品。', 'No products in this category yet.') }}</p>
-    </div>
-    <div v-else class="kurly-product-grid">
-      <article
-        v-for="product in visibleProducts"
-        :key="product.id"
-        class="shopping-product-card kurly-product-card"
-        :class="{ 'is-highlighted': product.id === highlightedProductId }"
-        :data-product-template="productStorefrontTemplate(product)"
-        :data-testid="`shopping-product-${product.id}`"
-        role="button"
-        tabindex="0"
-        @click="emit('open-product', product.id)"
-        @keydown.enter.prevent="emit('open-product', product.id)"
-      >
-        <div class="kurly-product-visual">
-          <img v-if="productImageUrl(product)" :src="productImageUrl(product)" :alt="product.image?.alt || productDisplayTitle(product)" />
-          <div v-else class="kurly-product-symbol" aria-hidden="true">
-            <i :class="productCategoryIcon(product)"></i><span>{{ activeService?.mark || 'K' }}</span>
-          </div>
-          <button
-            type="button"
-            class="kurly-favorite"
-            :class="{ 'is-favorite': isProductFavorite(product.id) }"
-            :aria-label="localize('收藏或取消收藏', 'Toggle favorite')"
-            :title="localize('收藏或取消收藏', 'Toggle favorite')"
-            @click.stop="emit('toggle-favorite', product.id)"
-          >
-            <i class="fas fa-heart" aria-hidden="true"></i>
-          </button>
-          <span class="kurly-cold-badge"><i :class="deliveryLaneCopy.icon" aria-hidden="true"></i>{{ deliveryLaneCopy.badge }}</span>
-        </div>
-        <div class="kurly-product-body">
-          <p class="kurly-product-brand">{{ productServiceLabel(product) }}</p>
-          <h3>{{ productDisplayTitle(product) }}</h3>
-          <p>{{ productDisplayDescription(product) }}</p>
-          <div class="kurly-product-tags">
-            <span :class="stockStatusClass(product.stockStatus)">{{ stockStatusLabel(product.stockStatus) }}</span>
-            <span v-if="product.giftable">{{ localize('可赠礼', 'Giftable') }}</span>
-          </div>
-          <div class="kurly-product-footer">
-            <strong>{{ formatPrice(product) }}</strong>
-            <button
-              type="button"
-              class="kurly-add"
-              :disabled="product.stockStatus === 'sold_out'"
-              :data-testid="`shopping-add-cart-${product.id}`"
-              :aria-label="`${localize('加入购物车', 'Add to cart')}: ${productDisplayTitle(product)}`"
-              @click.stop="emit('add-to-cart', product.id)"
-            >
-              <i class="fas fa-plus" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
-      </article>
-    </div>
-  </section>
+    <section id="shopping-products" class="kurly-products"><header><div><small>{{ favoritesOnly ? 'SAVED FOR LATER' : 'TODAY’S PICKS' }}</small><h2>{{ favoritesOnly ? localize('收藏清单', 'Saved list') : localize('今天值得带回家', 'Worth bringing home') }}</h2></div><button v-if="favoritesOnly" type="button" @click="emit('show-all')">{{ localize('返回精选', 'Back to picks') }}</button><button v-else type="button" @click="emit('select-category', activeCategory?.key || 'mall')">{{ localize('查看全部', 'View all') }} <i class="fas fa-chevron-right"></i></button></header><div v-if="!homeProducts.length" class="kurly-empty"><i class="fas fa-seedling"></i><strong>{{ localize('暂时没有匹配商品', 'No matching items') }}</strong><p>{{ localize('换一个关键词或分类继续查看。', 'Try another search or category.') }}</p></div><div v-else class="kurly-product-grid"><article v-for="product in homeProducts" :key="product.id" class="shopping-product-card" :class="{ highlighted: product.id === highlightedProductId }" :data-product-template="productStorefrontTemplate(product)" :data-testid="`shopping-product-${product.id}`"><button type="button" class="kurly-product-media" @click="emit('open-product', product.id)"><img v-if="productImageUrl(product)" :src="productImageUrl(product)" :alt="productDisplayTitle(product)" /><span v-else><i :class="productCategoryIcon(product)"></i></span></button><button type="button" class="kurly-favorite" :class="{ active: isProductFavorite(product.id) }" :aria-label="localize('收藏或取消收藏', 'Toggle favorite')" @click="emit('toggle-favorite', product.id)"><i class="fas fa-heart"></i></button><button type="button" class="kurly-product-copy" @click="emit('open-product', product.id)"><small>{{ productServiceLabel(product) }}</small><strong>{{ productDisplayTitle(product) }}</strong><p>{{ productDisplayDescription(product) }}</p></button><footer><div><span :class="stockStatusClass(product.stockStatus)">{{ stockStatusLabel(product.stockStatus) }}</span><strong>{{ formatPrice(product) }}</strong></div><button type="button" :disabled="product.stockStatus === 'sold_out'" :data-testid="`shopping-add-cart-${product.id}`" :aria-label="`${localize('加入购物篮', 'Add to basket')}: ${productDisplayTitle(product)}`" @click="emit('add-to-cart', product.id)"><i class="fas fa-basket-shopping"></i></button></footer></article></div></section>
 
-  <nav class="kurly-store-nav" :aria-label="localize('店内导航', 'Store navigation')">
-    <button type="button" :class="{ 'is-active': !favoritesOnly }" @click="emit('show-all')"><i class="fas fa-leaf" aria-hidden="true"></i><span>{{ localize('精选', 'Kurly') }}</span></button>
-    <button type="button" :class="{ 'is-active': favoritesOnly }" @click="emit('open-favorites')"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i><span>{{ localize('常买', 'Rebuy') }}</span><b v-if="favoriteCount">{{ favoriteCount }}</b></button>
-    <button type="button" @click="emit('open-cart')"><i class="fas fa-basket-shopping" aria-hidden="true"></i><span>{{ localize('购物篮', 'Basket') }}</span><b v-if="cartQuantity">{{ cartQuantity }}</b></button>
-    <button type="button" @click="emit('open-orders')"><i class="fas fa-box" aria-hidden="true"></i><span>{{ localize('晨配', 'Dawn') }}</span><b v-if="orderCount">{{ orderCount }}</b></button>
-  </nav>
+    <nav class="kurly-bottom-nav" :aria-label="localize('店内导航', 'Store navigation')"><button type="button" :class="{ active: !favoritesOnly }" @click="emit('show-all')"><i class="fas fa-house"></i><span>{{ localize('首页', 'Home') }}</span></button><button type="button" :class="{ active: favoritesOnly }" @click="emit('open-favorites')"><i class="fas fa-heart"></i><span>{{ localize('收藏', 'Saved') }}</span><b v-if="favoriteCount">{{ favoriteCount }}</b></button><button type="button" @click="emit('open-cart')"><i class="fas fa-basket-shopping"></i><span>{{ localize('购物篮', 'Basket') }}</span><b v-if="cartQuantity">{{ cartQuantity }}</b></button><button type="button" @click="emit('open-orders')"><i class="fas fa-receipt"></i><span>{{ localize('订单', 'Orders') }}</span><b v-if="orderCount">{{ orderCount }}</b></button></nav>
+  </main>
 </template>
 
 <style scoped>
-.shopping-kurly-app { --kurly-purple:#5f0080; --kurly-lime:#b5d948; --kurly-ink:#32113f; --kurly-muted:#74657a; --kurly-line:rgba(95,0,128,.16); display:block; color:var(--kurly-ink); background:#f7f3f8; }
-.kurly-topline,.kurly-search-wrap,.kurly-category-head,.kurly-products-heading,.kurly-product-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.kurly-topline { padding:14px 16px 10px; }
-.kurly-back,.kurly-bag,.kurly-manage { position:relative; width:35px; height:35px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--kurly-line); border-radius:50%; color:var(--kurly-purple); background:#fff; }
-.kurly-bag b { position:absolute; top:-4px; right:-4px; min-width:16px; height:16px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; color:#fff; background:var(--kurly-purple); font-size:8px; }
-.kurly-brand { min-width:0; flex:1; display:flex; align-items:center; gap:9px; }
-.kurly-mark { width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; overflow:hidden; border-radius:50%; color:#fff; background:var(--kurly-purple); font-weight:900; }
-.kurly-mark img { width:100%; height:100%; object-fit:cover; }
-.kurly-brand h1 { margin:0; overflow:hidden; font:800 17px/1 Georgia, 'Times New Roman', serif; text-overflow:ellipsis; white-space:nowrap; }
-.kurly-brand p,.kurly-category-head p,.kurly-products-heading p { margin:4px 0 0; color:var(--kurly-muted); font-size:8px; font-weight:900; letter-spacing:.09em; }
-.kurly-search-wrap { padding:0 16px 12px; }
-.kurly-search { min-width:0; flex:1; height:40px; display:flex; align-items:center; gap:9px; padding:0 12px; border:1px solid var(--kurly-line); border-radius:20px; color:var(--kurly-muted); background:#fff; }
-.kurly-search input { min-width:0; flex:1; border:0; outline:0; color:var(--kurly-ink); background:transparent; font-size:11px; }
-.kurly-delivery-note { margin:0 16px 14px; padding:9px 11px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-radius:8px; color:var(--kurly-purple); background:var(--kurly-lime); font-size:8px; font-weight:900; }
-.kurly-delivery-note span { display:flex; align-items:center; gap:4px; }
-.kurly-delivery-note strong { font-size:9px; }
-.kurly-lane-selector { margin:0 16px 14px; padding:4px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; border:1px solid var(--kurly-line); border-radius:9px; background:#fff; }
-.kurly-lane-button { min-height:34px; display:flex; align-items:center; justify-content:center; gap:5px; border-radius:6px; color:var(--kurly-muted); background:transparent; font-size:8px; font-weight:900; letter-spacing:.05em; }
-.kurly-lane-button.is-active { color:var(--kurly-purple); background:#f1e8f3; box-shadow:inset 0 -2px 0 var(--kurly-lime); }
-.kurly-hero { min-height:220px; padding:22px 16px 18px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(122px,.85fr); gap:15px; border-top:1px solid var(--kurly-line); border-bottom:1px solid var(--kurly-line); background:#fff; }
-.kurly-hero-copy { display:flex; flex-direction:column; justify-content:flex-end; }
-.kurly-eyebrow { margin:0 0 9px; color:var(--kurly-purple); font-size:9px; font-weight:900; letter-spacing:.12em; }
-.kurly-hero h2 { max-width:9ch; margin:0; font:800 31px/1.02 Georgia, 'Times New Roman', serif; }
-.kurly-hero-copy > p:not(.kurly-eyebrow):not(.shopping-map-reference) { max-width:26ch; margin:14px 0 0; color:var(--kurly-muted); font-size:11px; line-height:1.55; }
-.kurly-map-reference { margin-top:14px; padding-top:9px; display:grid; grid-template-columns:12px auto; gap:2px 7px; border-top:1px solid var(--kurly-line); color:var(--kurly-muted); }
-.kurly-map-reference i { grid-row:1 / span 2; align-self:center; color:var(--kurly-purple); }
-.kurly-map-reference span { font-size:8px; font-weight:900; letter-spacing:.08em; }
-.kurly-map-reference strong { color:var(--kurly-ink); font:700 12px/1.2 Georgia, 'Times New Roman', serif; }
-.kurly-hero-stage { position:relative; min-height:182px; overflow:hidden; display:flex; align-items:center; justify-content:center; border-radius:12px 12px 36px 12px; background:#eee5f0; }
-.kurly-hero-stage img { width:100%; height:100%; object-fit:cover; }
-.kurly-circle { width:112px; height:112px; display:flex; align-items:center; justify-content:center; border:12px solid var(--kurly-lime); border-radius:50%; color:var(--kurly-purple); background:#fff; font-size:38px; }
-.kurly-hero-stage > span { position:absolute; right:10px; bottom:10px; left:10px; color:var(--kurly-purple); font-size:8px; font-weight:900; text-align:center; letter-spacing:.1em; }
-.kurly-category-head { padding:15px 16px 8px; }
-.kurly-category-head p { margin:0; }
-.kurly-category-head span { color:var(--kurly-purple); font:700 20px/1 Georgia, 'Times New Roman', serif; }
-.kurly-category-list { padding:0 16px 14px; display:flex; gap:7px; overflow-x:auto; }
-.kurly-category { min-width:72px; padding:8px 8px 7px; display:flex; align-items:center; gap:5px; border:1px solid var(--kurly-line); border-radius:9px; color:var(--kurly-muted); background:#fff; font-size:9px; font-weight:800; white-space:nowrap; }
-.kurly-category-icon { width:20px; height:20px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; color:var(--kurly-purple); background:#f0e7f2; }
-.kurly-category small { margin-left:auto; font-size:8px; opacity:.6; }
-.kurly-category.is-active { border-color:var(--kurly-purple); color:var(--kurly-purple); box-shadow:0 0 0 2px rgba(95,0,128,.1); }
-.kurly-store-nav { margin:0 16px 4px; padding:5px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; border-radius:12px; background:#fff; box-shadow:0 4px 16px rgba(95,0,128,.08); }
-.kurly-store-nav button { position:relative; min-height:43px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:var(--kurly-muted); font-size:9px; font-weight:800; }
-.kurly-store-nav button.is-active { border-radius:8px; color:var(--kurly-purple); background:#f3eaf5; }
-.kurly-store-nav b { position:absolute; top:1px; right:18%; min-width:15px; height:15px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; color:#fff; background:var(--kurly-purple); font-size:8px; }
-.kurly-products { padding:13px 16px 26px; }
-.kurly-products-heading { min-height:45px; margin-bottom:11px; }
-.kurly-products-heading h2 { margin:5px 0 0; font:700 22px/1.05 Georgia, 'Times New Roman', serif; }
-.kurly-products-heading > span { color:var(--kurly-muted); font-size:9px; font-weight:900; }
-.kurly-clear { width:34px; height:34px; border:1px solid var(--kurly-line); border-radius:50%; color:var(--kurly-purple); background:#fff; }
-.kurly-product-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-.kurly-product-card { overflow:hidden; border:1px solid var(--kurly-line); border-radius:10px; color:var(--kurly-ink); background:#fff; }
-.kurly-product-card.is-highlighted { border-color:var(--kurly-purple); box-shadow:0 0 0 2px rgba(95,0,128,.13); }
-.kurly-product-visual { position:relative; aspect-ratio:1 / 1; overflow:hidden; background:#e7ddeb; }
-.kurly-product-visual img { width:100%; height:100%; display:block; object-fit:cover; }
-.kurly-product-symbol { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; background:var(--kurly-purple); font-size:28px; }
-.kurly-product-symbol span { position:absolute; right:8px; bottom:7px; font-size:9px; font-weight:900; }
-.kurly-favorite { position:absolute; top:8px; right:8px; width:31px; height:31px; border:1px solid rgba(95,0,128,.14); border-radius:50%; color:#a99aae; background:rgba(255,255,255,.92); }
-.kurly-favorite.is-favorite { color:var(--kurly-purple); }
-.kurly-cold-badge { position:absolute; bottom:8px; left:8px; padding:4px 6px; border-radius:5px; color:var(--kurly-purple); background:var(--kurly-lime); font-size:8px; font-weight:900; }
-.kurly-cold-badge i { margin-right:3px; }
-.kurly-product-body { min-height:169px; padding:11px; display:flex; flex-direction:column; }
-.kurly-product-brand { margin:0; color:var(--kurly-purple); font-size:8px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
-.kurly-product-body h3 { min-height:35px; margin:5px 0 0; display:-webkit-box; overflow:hidden; font:700 14px/1.2 Georgia, 'Times New Roman', serif; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.kurly-product-body > p:not(.kurly-product-brand) { min-height:31px; margin:7px 0 0; display:-webkit-box; overflow:hidden; color:var(--kurly-muted); font-size:10px; line-height:1.5; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.kurly-product-tags { min-height:19px; margin-top:7px; display:flex; flex-wrap:wrap; gap:4px; }
-.kurly-product-tags span { padding:3px 5px; border-radius:4px; color:var(--kurly-muted); background:#f5f1f6; font-size:8px; font-weight:800; }
-.kurly-product-footer { margin-top:auto; padding-top:8px; }
-.kurly-product-footer strong { font-size:12px; }
-.kurly-add { width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; color:#fff; background:var(--kurly-purple); }
-.kurly-add:disabled { opacity:.35; }
-.kurly-empty { min-height:160px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border:1px dashed var(--kurly-line); border-radius:10px; color:var(--kurly-muted); background:#fff; }
-.kurly-empty p { margin:0; font-size:11px; }
-.kurly-back:focus-visible,.kurly-bag:focus-visible,.kurly-manage:focus-visible,.kurly-category:focus-visible,.kurly-store-nav button:focus-visible,.kurly-favorite:focus-visible,.kurly-add:focus-visible,.kurly-lane-button:focus-visible { outline:3px solid var(--kurly-lime); outline-offset:2px; }
-@media (min-width:680px) { .kurly-product-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-@media (max-width:350px) { .kurly-product-grid { grid-template-columns:1fr; } }
-
-.kurly-hero { position:relative; min-height:310px; margin:0 16px 16px; padding:0; display:block; overflow:hidden; border:0; border-radius:20px 20px 8px 8px; background:#ece7ef; }
-.kurly-hero-stage { position:absolute; inset:0; min-height:0; border:0; border-radius:0; background:linear-gradient(145deg,#dce8cb,#77518c); }
-.kurly-hero-stage::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,transparent 34%,rgba(35,17,45,.7)); }
-.kurly-hero-copy { position:absolute; z-index:1; right:18px; bottom:17px; left:18px; display:block; color:#fff; }
-.kurly-hero h2 { max-width:12ch; font-size:29px; }
-.kurly-hero-copy > p:not(.kurly-eyebrow):not(.shopping-map-reference) { max-width:34ch; margin-top:9px; color:rgba(255,255,255,.8); }
-.kurly-map-reference { width:fit-content; margin-top:11px; padding:7px 9px; border:1px solid rgba(255,255,255,.35); border-radius:999px; color:#fff; background:rgba(38,20,48,.32); backdrop-filter:blur(7px); }
-.kurly-map-reference strong { color:#fff; }
-.kurly-delivery-note { margin:0 16px; border-radius:12px 12px 0 0; box-shadow:none; }
-.kurly-lane-selector { margin:0 16px 14px; padding:0 8px 9px; border-radius:0 0 12px 12px; background:#fff; }
-.kurly-table-plan { margin:0 0 18px; display:grid; grid-template-columns:1.15fr .85fr; gap:8px; }
-.kurly-table-plan article { min-height:132px; padding:15px 13px; display:flex; flex-direction:column; justify-content:flex-end; border-radius:14px; color:#fff; background:#4d2f5d; }
-.kurly-table-plan article:last-child { color:#2d2530; background:#dbe9b9; }
-.kurly-table-plan span { font-size:8px; font-weight:900; letter-spacing:.1em; }
-.kurly-table-plan strong { margin-top:13px; font:800 15px/1.25 Georgia,'Times New Roman',serif; }
-.kurly-table-plan small { margin-top:7px; font-size:8px; font-weight:800; opacity:.72; }
-.kurly-store-nav { position:sticky; z-index:8; bottom:0; margin:0; padding:7px 10px calc(7px + env(safe-area-inset-bottom)); border:0; border-top:1px solid rgba(77,47,93,.16); border-radius:0; background:rgba(255,255,255,.96); box-shadow:0 -9px 25px rgba(46,28,55,.08); backdrop-filter:blur(10px); }
-.kurly-store-nav button { min-height:48px; }
-.kurly-store-nav button.is-active { background:transparent; }
-.kurly-products { padding-bottom:18px; }
-@media (max-width:390px) { .kurly-hero { min-height:285px; } .kurly-table-plan { grid-template-columns:1fr 1fr; } }
+.kurly-home{--purple:#5f0080;--deep:#2f0a3b;--lime:#c7df5b;--ink:#211526;--muted:#756b79;--line:#e8e1ea;min-height:100%;padding-bottom:70px;color:var(--ink);background:#fff;font-family:"Noto Sans KR","Apple SD Gothic Neo",Arial,sans-serif}.kurly-appbar{height:58px;padding:0 16px;display:grid;grid-template-columns:40px 1fr auto;align-items:center;border-bottom:1px solid var(--line);background:#fff}.kurly-appbar button{position:relative;width:40px;height:40px}.kurly-wordmark{display:flex;align-items:center;gap:9px}.kurly-wordmark>span{width:31px;height:31px;display:grid;place-items:center;overflow:hidden;border-radius:50%;color:#fff;background:var(--purple);font:900 15px Georgia,serif}.kurly-wordmark img{width:100%;height:100%;object-fit:cover}.kurly-wordmark h1{margin:0;color:var(--purple);font:700 20px Georgia,"Noto Serif KR",serif}.kurly-app-actions{display:flex}.kurly-app-actions b,.kurly-bottom-nav b{position:absolute;top:1px;right:1px;min-width:16px;height:16px;padding:0 4px;display:grid;place-items:center;border-radius:9px;color:#fff;background:var(--purple);font-size:8px}.kurly-address{width:calc(100% - 32px);margin:10px 16px 8px;padding:10px 12px;display:grid;grid-template-columns:22px auto 1fr 14px;align-items:center;gap:7px;border-radius:10px;text-align:left;background:#f7f3f8}.kurly-address>i:first-child{color:var(--purple)}.kurly-address span small,.kurly-address span strong{display:block}.kurly-address small{font-size:7px;letter-spacing:.08em;color:var(--muted)}.kurly-address strong{margin-top:2px;font-size:10px}.kurly-address em{justify-self:end;color:var(--muted);font-size:8px;font-style:normal}.kurly-search{height:46px;margin:0 16px 14px;padding-left:14px;display:grid;grid-template-columns:20px 1fr auto;align-items:center;border:1px solid var(--purple);border-radius:7px;color:var(--purple)}.kurly-search input{min-width:0;border:0;outline:0;font-size:11px}.kurly-search button{height:34px;margin-right:5px;padding:0 13px;color:#fff;background:var(--purple);font-size:9px;font-weight:800}.kurly-hero{margin:0 16px 24px;display:grid;grid-template-columns:1.12fr .88fr;min-height:285px;overflow:hidden;border-radius:18px;background:var(--deep)}.kurly-hero-media{position:relative;min-height:285px;overflow:hidden}.kurly-hero-media::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 60%,var(--deep))}.kurly-hero-media img{width:100%;height:100%;object-fit:cover}.kurly-hero-fallback{height:100%;display:grid;place-items:center;color:var(--purple);background:radial-gradient(circle at 40% 35%,#f2f6d5 0 18%,#dce8a4 19% 32%,#ae7cb8 33% 52%,#4a1757 53%)}.kurly-hero-fallback i{font-size:52px}.kurly-hero-fallback span{position:absolute;bottom:16px;font-size:8px;font-weight:900;letter-spacing:.15em}.kurly-hero-copy{padding:24px 18px 22px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff}.kurly-hero-copy small,.kurly-meal-plans header small,.kurly-packing header small,.kurly-categories header small,.kurly-products>header small{font-size:8px;font-weight:900;letter-spacing:.13em}.kurly-hero-copy small{color:var(--lime)}.kurly-hero-copy h2{margin:10px 0 0;font:700 27px/1.08 Georgia,"Noto Serif KR",serif}.kurly-hero-copy p{margin:10px 0 16px;color:rgba(255,255,255,.72);font-size:9px;line-height:1.65}.kurly-hero-copy button{width:max-content;color:var(--lime);font-size:9px;font-weight:900}.kurly-meal-plans,.kurly-packing,.kurly-categories,.kurly-products{padding:0 16px 26px}.kurly-meal-plans header h2,.kurly-packing header h2,.kurly-categories header h2,.kurly-products>header h2{margin:5px 0 0;font:700 24px/1.1 Georgia,"Noto Serif KR",serif}.kurly-meal-plans>div{margin-top:14px;display:grid;grid-template-columns:1.1fr .95fr .95fr;gap:8px}.kurly-meal-plans button{position:relative;min-height:145px;padding:14px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;border-radius:13px;background:#f3eef4}.kurly-meal-plans button:first-child{color:#fff;background:var(--purple)}.kurly-meal-plans button:nth-child(2){background:#e8efbe}.kurly-meal-plans button span{font-size:8px;font-weight:900;opacity:.6}.kurly-meal-plans button i{margin-top:auto;font-size:22px}.kurly-meal-plans button strong{margin-top:10px;font-size:11px}.kurly-meal-plans button small{margin-top:4px;font-size:8px;opacity:.68}.kurly-packing{padding-top:24px;padding-bottom:28px;background:#f8f6f8}.kurly-packing-tabs{margin-top:14px;display:flex;gap:6px}.kurly-packing-tabs button{padding:9px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:#fff;font-size:8px;font-weight:800}.kurly-packing-tabs button i{margin-right:5px}.kurly-packing-tabs button.active{border-color:var(--purple);color:#fff;background:var(--purple)}.kurly-packing article{margin-top:10px;padding:17px;display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;border-radius:12px;color:#fff;background:var(--deep)}.kurly-packing article>i{color:var(--lime);font-size:24px}.kurly-packing article strong{font-size:12px}.kurly-packing article p{margin:5px 0 0;color:rgba(255,255,255,.68);font-size:8px}.kurly-packing article>span{font:700 28px Georgia,serif;color:var(--lime)}.kurly-categories{padding-top:26px}.kurly-categories>header,.kurly-products>header{display:flex;align-items:end;justify-content:space-between;gap:12px}.kurly-categories>header>button,.kurly-products>header>button{color:var(--purple);font-size:8px;font-weight:900}.kurly-categories>header>button i{margin-right:5px}.kurly-categories>div{margin-top:14px;display:flex;gap:12px;overflow-x:auto}.kurly-categories>div button{min-width:68px;text-align:center;color:var(--muted)}.kurly-categories>div span{width:52px;height:52px;margin:auto;display:grid;place-items:center;border-radius:50%;background:#f3eef4;font-size:17px}.kurly-categories>div strong,.kurly-categories>div small{display:block;margin-top:7px;font-size:8px}.kurly-categories>div small{margin-top:2px;opacity:.6}.kurly-categories>div button.active{color:var(--purple)}.kurly-categories>div button.active span{color:#fff;background:var(--purple)}.kurly-products{padding-bottom:24px}.kurly-product-grid{margin-top:15px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 10px}.kurly-product-grid article{position:relative;min-width:0}.kurly-product-grid article.highlighted{outline:2px solid var(--purple);outline-offset:4px}.kurly-product-media{width:100%;aspect-ratio:3/4;overflow:hidden;border-radius:9px;background:#eee8f0}.kurly-product-media img{width:100%;height:100%;object-fit:cover}.kurly-product-media>span{height:100%;display:grid;place-items:center;color:var(--purple);font-size:38px}.kurly-favorite{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;color:#aaa;background:rgba(255,255,255,.94)}.kurly-favorite.active{color:var(--purple)}.kurly-product-copy{width:100%;padding-top:10px;text-align:left}.kurly-product-copy small{color:var(--purple);font-size:7px;font-weight:900}.kurly-product-copy strong{min-height:34px;margin-top:5px;display:block;font-size:13px;line-height:1.35}.kurly-product-copy p{min-height:29px;margin:6px 0 0;display:-webkit-box;overflow:hidden;color:var(--muted);font-size:8px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:2}.kurly-product-grid footer{margin-top:8px;padding-top:8px;display:flex;align-items:end;justify-content:space-between;border-top:1px solid var(--line)}.kurly-product-grid footer span,.kurly-product-grid footer strong{display:block;font-size:8px}.kurly-product-grid footer strong{margin-top:4px;font-size:11px}.kurly-product-grid footer>button{width:36px;height:36px;border:1px solid var(--purple);border-radius:50%;color:var(--purple)}.kurly-product-grid footer>button:disabled{opacity:.35}.kurly-empty{min-height:170px;margin-top:14px;display:grid;place-items:center;align-content:center;gap:8px;color:var(--muted);background:#f8f6f8}.kurly-empty i{color:var(--purple);font-size:24px}.kurly-empty strong{font-size:11px}.kurly-empty p{margin:0;font-size:8px}.kurly-bottom-nav{position:sticky;z-index:20;bottom:0;padding:7px 10px calc(7px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}.kurly-bottom-nav button{position:relative;min-height:45px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:8px}.kurly-bottom-nav button.active{color:var(--purple)}.kurly-bottom-nav b{top:0;right:22%}.kurly-home button:focus-visible,.kurly-home input:focus-visible{outline:3px solid var(--lime);outline-offset:2px}@media(min-width:760px){.kurly-hero{grid-template-columns:1.25fr .75fr;min-height:330px}.kurly-hero-media{min-height:330px}.kurly-product-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:520px){.kurly-hero{grid-template-columns:1fr;min-height:430px}.kurly-hero-media{min-height:225px}.kurly-hero-media::after{background:linear-gradient(180deg,transparent 60%,var(--deep))}.kurly-hero-copy{padding-top:0}.kurly-meal-plans>div{grid-template-columns:1.15fr .85fr}.kurly-meal-plans button:last-child{grid-column:1/-1;min-height:105px}.kurly-address em{display:none}}
 </style>

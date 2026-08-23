@@ -16,7 +16,7 @@ const l = (zh, en) => localizeOperationPage(props.languageBase, zh, en)
       <button type="button" @click="emit('back')">←</button>
       <strong>MUSINSA</strong>
       <nav>
-        <button type="button" @click="emit('open-service')">RETURNS</button>
+        <button type="button" @click="pageKey === 'checkout' ? emit('open-service') : emit('open-orders')">{{ pageKey === 'checkout' ? 'RETURNS' : 'ORDERS' }}</button>
         <button type="button" @click="emit('open-cart')">BAG {{ cartQuantity || '' }}</button>
       </nav>
     </header>
@@ -73,7 +73,7 @@ const l = (zh, en) => localizeOperationPage(props.languageBase, zh, en)
       </header>
       <div class="mu-return-steps">
         <article><b>01</b><strong>{{ l('选择购买记录', 'Choose purchase') }}</strong><p>{{ l('从本店订单进入，不混入其他店铺。', 'Start from this store’s purchases only.') }}</p></article>
-        <article><b>02</b><strong>{{ l('核对尺码与状态', 'Review fit and status') }}</strong><p>{{ l('可取消与完成状态以 Shopping 订单为准。', 'Eligibility follows Shopping order truth.') }}</p></article>
+        <article><b>02</b><strong>{{ l('核对尺码与状态', 'Review size and status') }}</strong><p>{{ l('查看已选尺码、取消条件与当前订单进度。', 'Review selected sizes, cancellation terms, and current order progress.') }}</p></article>
         <article><b>03</b><strong>{{ l('进入配送记录', 'Open shipping record') }}</strong><p>{{ l('物流事件与退换判断分开呈现。', 'Shipping events stay separate from return decisions.') }}</p></article>
       </div>
       <section class="mu-return-orders">

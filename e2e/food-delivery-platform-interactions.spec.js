@@ -118,9 +118,11 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
   await locationButton.click()
   await expect(page.getByTestId('food-delivery-platform-address-menu')).toBeVisible()
   const alternateAddress = page.getByTestId('food-delivery-platform-address-1')
-  const alternateAddressText = (await alternateAddress.innerText()).trim()
+  const alternateAddressLabel = (await alternateAddress.locator('strong').innerText()).trim()
+  const alternateAddressDetail = (await alternateAddress.locator('small').innerText()).trim()
   await alternateAddress.click()
-  await expect(locationButton).toContainText(alternateAddressText)
+  await expect(locationButton).toContainText(alternateAddressLabel)
+  await expect(locationButton).toContainText(alternateAddressDetail)
   await expect(locationButton).toHaveAttribute('aria-expanded', 'false')
 
   await page.getByTestId('food-delivery-platform-notifications').click()
@@ -311,10 +313,10 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
   await expect(page.getByTestId('food-delivery-platform-bottom-nav')).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
 
-  await page.getByTestId('food-delivery-platform-checkout-address-1').click()
+  await page.getByTestId('food-delivery-platform-checkout-address-2').click()
   await expect(page.getByTestId('food-delivery-platform-checkout-address')).toContainText('麻浦区')
   await page.getByTestId('food-delivery-platform-checkout-note').fill('少辣，放门口')
-  await page.getByTestId('food-delivery-platform-payment-pay_on_delivery').click()
+  await page.getByTestId('food-delivery-platform-payment-wallet_card_icbc_cny').click()
   await page.getByTestId('food-delivery-platform-checkout-submit').click()
 
   await expect(page).toHaveURL(/platformView=order/)
@@ -345,6 +347,14 @@ test('Food Platform controls and checkout produce a complete in-app order flow',
     '逆站洞一号韩牛汤饭',
   )
   await expect(page.getByTestId('food-delivery-platform-order-summary')).toContainText('116.00')
+  await expect(page.getByTestId('food-delivery-platform-order-page')).toContainText(
+    '中国工商银行',
+  )
+  await expect(page.getByTestId('food-delivery-platform-order-payment')).toBeVisible()
+  await page.getByTestId('food-delivery-platform-order-help').click()
+  await expect(page.getByTestId('food-delivery-platform-order-help-panel')).toContainText(
+    '付款凭证',
+  )
   const orderId = await page
     .getByTestId('food-delivery-platform-order-id')
     .getAttribute('data-order-id')

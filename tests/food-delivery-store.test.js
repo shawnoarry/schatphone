@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useChatStore } from '../src/stores/chat'
+import { useMapStore } from '../src/stores/map'
 import { useWalletStore } from '../src/stores/wallet'
 import {
   FOOD_DELIVERY_ORDER_EVENT_TYPE,
@@ -2234,7 +2235,147 @@ describe('food delivery store', () => {
       total: '52.00',
     })
     expect(store.orders).toHaveLength(0)
+  })
+
+  test('pays a platform cart through Wallet and preserves payment and Map address snapshots', () => {
+    const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
+    const mapStore = useMapStore()
+    walletStore.resetForTesting()
+    walletStore.addTransaction({
+      type: 'income',
+      title: 'Platform checkout funding',
+      amount: '200.00',
+      currency: 'CNY',
+      createdAt: Date.now(),
     })
+    const paymentCard = walletStore.paymentCardSummaries.find(
+      (card) => card.status === 'active' && card.supportedCurrencies.includes('CNY'),
+    )
+    const deliveryAnchor = mapStore.listDeliveryAnchors().find(
+      (anchor) => anchor.kind === 'address',
+    )
+    store.addPlatformCartItem({
+      merchantId: 'platform_shop_paid',
+      merchantName: 'Platform Paid Shop',
+      itemId: 'platform_shop_paid_meal',
+      title: 'Platform Paid Meal',
+      price: '18.50',
+    })
+
+    const result = store.checkoutPaidPlatformCart({
+      deliveryAnchor,
+      deliveryFee: '3.00',
+      currency: 'CNY',
+      accountId: paymentCard.accountId,
+      cardId: paymentCard.id,
+      idempotencyKey: 'platform-paid-checkout-1',
+      now: Date.now(),
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      order: {
+        merchantId: 'platform_shop_paid',
+        deliveryAddress: deliveryAnchor.detail,
+        paymentMethod: 'wallet_card',
+        paymentStatus: 'completed',
+        paymentRef: {
+          accountId: paymentCard.accountId,
+          cardId: paymentCard.id,
+          status: 'completed',
+        },
+      },
+    })
+    expect(result.payment.transaction).toMatchObject({
+      amountCents: 2150,
+      currency: 'CNY',
+      paymentKind: 'commerce_order',
+      sourceId: result.order.id,
+    })
+    expect(store.platformCartQuantity).toBe(0)
+    expect(store.createBackupSnapshot().platformOrders[0]).toMatchObject({
+      paymentRef: { transactionId: result.payment.transaction.id },
+      deliveryAnchor: { detail: deliveryAnchor.detail },
+    })
+  })
+
+  test('fails a paid platform checkout closed when Wallet has insufficient funds', () => {
+    const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
+    const mapStore = useMapStore()
+    walletStore.resetForTesting()
+    const deliveryAnchor = mapStore.listDeliveryAnchors().find(
+      (anchor) => anchor.kind === 'address',
+    )
+    store.addPlatformCartItem({
+      merchantId: 'platform_shop_unfunded',
+      merchantName: 'Platform Unfunded Shop',
+      itemId: 'platform_shop_unfunded_meal',
+      title: 'Platform Unfunded Meal',
+      price: '18.50',
+    })
+
+    const result = store.checkoutPaidPlatformCart({
+      deliveryAnchor,
+      currency: 'CNY',
+      idempotencyKey: 'platform-paid-checkout-insufficient',
+      now: Date.now(),
+    })
+
+    expect(result).toMatchObject({
+      ok: false,
+      stage: 'payment',
+      reason: 'insufficient_funds',
+    })
+    expect(store.platformOrders).toHaveLength(0)
+    expect(store.platformCartQuantity).toBe(1)
+  })
+
+  test('pays a pickup order without creating a Map courier journey', () => {
+    const store = useFoodDeliveryStore()
+    const walletStore = useWalletStore()
+    const mapStore = useMapStore()
+    walletStore.resetForTesting()
+    walletStore.addTransaction({
+      type: 'income',
+      title: 'Pickup checkout funding',
+      amount: '300.00',
+      currency: 'CNY',
+      createdAt: Date.now(),
+    })
+    const paymentCard = walletStore.paymentCardSummaries.find(
+      (card) => card.status === 'active' && card.supportedCurrencies.includes('CNY'),
+    )
+    const restaurant = store.findRestaurantById('food_seed_harbor_roast')
+    const menuItem = store.findMenuItemById('food_menu_harbor_house_americano')
+    const journeyCount = mapStore.deliveryJourneys.length
+    store.addToCart(menuItem.id)
+
+    const result = store.checkoutPaidCart({
+      restaurantId: restaurant.id,
+      fulfillmentMode: 'pickup',
+      pickupMode: 'dine_in',
+      pickupAddress: 'Harbor Roast · Harbor Store',
+      accountId: paymentCard.accountId,
+      cardId: paymentCard.id,
+      idempotencyKey: 'harbor-paid-pickup-1',
+      now: Date.now(),
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      journey: null,
+      order: {
+        fulfillmentMode: 'pickup',
+        pickupMode: 'dine_in',
+        deliveryFeeCents: 0,
+        paymentStatus: 'completed',
+      },
+    })
+    expect(result.order.totalCents).toBe(menuItem.priceCents)
+    expect(result.order.deliveryAnchor).toBeNull()
+    expect(mapStore.deliveryJourneys).toHaveLength(journeyCount)
   })
 
   test('quotes Food Platform cart totals while keeping platform order source prices', () => {
@@ -2281,3 +2422,4 @@ describe('food delivery store', () => {
       },
     })
   })
+})

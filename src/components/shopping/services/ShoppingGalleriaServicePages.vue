@@ -15,7 +15,7 @@ const l = (zh, en) => localizeOperationPage(props.languageBase, zh, en)
     <header class="gal-service-bar">
       <button type="button" @click="emit('back')">←</button>
       <strong>GALLERIA</strong><span>LUXURY HALL</span>
-      <button type="button" @click="emit('open-service')">CONCIERGE</button>
+      <button type="button" @click="pageKey === 'checkout' ? emit('open-service') : emit('open-orders')">{{ pageKey === 'checkout' ? 'CONCIERGE' : 'ORDERS' }}</button>
     </header>
 
     <section v-if="pageKey === 'checkout'" class="gal-review" data-testid="shopping-checkout-review">
@@ -24,7 +24,7 @@ const l = (zh, en) => localizeOperationPage(props.languageBase, zh, en)
         <article>
           <span>CONCIERGE REVIEW / PRIVATE SALON</span>
           <h1>{{ l('由礼宾逐项确认鉴赏、呈现与交付', 'Concierge review for viewing, presentation, and delivery') }}</h1>
-          <p>{{ l('订单会在确认后创建；礼宾语言不改变 Shopping 的订单真相。', 'The order is created after confirmation; concierge language does not alter Shopping order truth.') }}</p>
+          <p>{{ l('确认商品、包装、收件信息与配送方式后创建订单。', 'The order is created after items, presentation, recipient details, and delivery are confirmed.') }}</p>
         </article>
       </header>
       <section class="gal-review-ritual">

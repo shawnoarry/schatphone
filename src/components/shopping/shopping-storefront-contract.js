@@ -35,7 +35,6 @@ export const SHOPPING_STOREFRONT_EVENTS = Object.freeze([
   'open-cart',
   'open-orders',
   'open-product',
-  'open-manager',
   'show-all',
   'toggle-favorite',
   'add-to-cart',
