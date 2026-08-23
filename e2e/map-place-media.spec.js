@@ -42,7 +42,7 @@ const REAL_TRIALS = [
   ['seoul-lotte-world-tower', 'seoul-lotte-world-tower-hero-v1.webp', 'Exact-place photo'],
   ['seoul-incheon-airport-t1', 'seoul-incheon-airport-t1-hero-v1.webp', 'Exact-place photo'],
   ['seoul-gimpo-airport', 'seoul-gimpo-airport-hero-v1.webp', 'Exact-place photo'],
-  ['seoul-gangnam-station', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-gangnam-station', 'seoul-gangnam-station-hero-v2.webp', 'Exact-place photo'],
   ['seoul-express-bus-terminal', 'seoul-express-bus-terminal-hero-v2.webp', 'Exact-place photo'],
   ['seoul-yongsan-station', 'seoul-yongsan-station-hero-v1.webp', 'Exact-place photo'],
   ['seoul-63-square', 'seoul-63-square-hero-v1.webp', 'Exact-place photo'],
@@ -63,6 +63,11 @@ const REAL_TRIALS = [
   ['seoul-sbs-hq', 'seoul-sbs-hq-hero-v1.webp', 'Exact-place photo'],
   ['seoul-amorepacific-hq', 'seoul-amorepacific-hq-hero-v1.webp', 'Exact-place photo'],
   ['seoul-gangnam-fire-station', 'seoul-gangnam-fire-station-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-samsung-town', 'seoul-samsung-town-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-jtbc-hq', 'seoul-jtbc-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-sk-seorin', 'seoul-sk-seorin-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-shinsegae-gangnam', 'seoul-shinsegae-gangnam-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-megabox-coex', 'seoul-megabox-coex-hero-v1.webp', 'Exact-place photo'],
   ['seoul-lotte-avenuel-world-tower', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-namdaemun-pharmacy-district', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-london-bagel-museum-anguk', 'seoul-street-map-v1.webp', 'Category visual'],
@@ -76,7 +81,6 @@ const AREA_DETAIL_MEDIA = {
   'seoul-sm-hq': 'seoul-sm-hq-hero-v1.webp',
   'seoul-myeongdong-kyoja-main': 'seoul-myeongdong-kyoja-main-hero-v1.webp',
   'seoul-sillim-one-room-district': 'seoul-sillim-one-room-district-hero-v1.webp',
-  'seoul-gangnam-station': 'seoul-gangnam-station-hero-v1.webp',
   'seoul-lotte-department-main': 'seoul-lotte-department-main-hero-v1.webp',
   'seoul-hyundai-apgujeong-main': 'seoul-hyundai-apgujeong-main-hero-v1.webp',
   'seoul-lotte-avenuel-world-tower': 'seoul-lotte-avenuel-world-tower-gallery-01-v1.webp',
@@ -336,6 +340,26 @@ test.describe('Map place media governance', () => {
           galleryRecords[2].asset,
         )
         await captureVisualEvidence(page, testInfo, 'times-square-gallery')
+      }
+      if (placeId === 'seoul-samsung-town') {
+        await sheet.getByTestId('map-place-open-detail').click()
+        const galleryRecords = getMapPlaceMediaGallery('real-seoul-v1', placeId)
+        const detailImage = sheet.getByTestId('map-place-detail-media-image')
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 3')
+        await sheet.getByTestId('map-place-gallery-next').click()
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 3')
+        await expect(sheet.getByTestId('map-place-detail-media')).toContainText('Area view')
+        await expectVerifiedProjectImage(page.request, detailImage, galleryRecords[1].asset)
+      }
+      if (placeId === 'seoul-gangnam-station') {
+        await sheet.getByTestId('map-place-open-detail').click()
+        const galleryRecords = getMapPlaceMediaGallery('real-seoul-v1', placeId)
+        const detailImage = sheet.getByTestId('map-place-detail-media-image')
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 5')
+        await sheet.getByTestId('map-place-gallery-next').click()
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 5')
+        await expect(sheet.getByTestId('map-place-detail-media')).toContainText('Exact-place photo')
+        await expectVerifiedProjectImage(page.request, detailImage, galleryRecords[1].asset)
       }
     }
 

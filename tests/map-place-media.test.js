@@ -80,11 +80,19 @@ const APPROVED_HERO_BATCH_04_IDS = [
   'seoul-gangnam-fire-station',
 ]
 
+const APPROVED_HERO_BATCH_06_IDS = [
+  'seoul-samsung-town',
+  'seoul-jtbc-hq',
+  'seoul-sk-seorin',
+  'seoul-shinsegae-gangnam',
+  'seoul-gangnam-station',
+  'seoul-megabox-coex',
+]
+
 const AREA_DETAIL_ONLY_PLACE_IDS = [
   'seoul-sm-hq',
   'seoul-myeongdong-kyoja-main',
   'seoul-sillim-one-room-district',
-  'seoul-gangnam-station',
   'seoul-lotte-department-main',
   'seoul-hyundai-apgujeong-main',
   'seoul-lotte-avenuel-world-tower',
@@ -104,7 +112,7 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-lotte-world-tower': 5,
   'seoul-incheon-airport-t1': 1,
   'seoul-gimpo-airport': 2,
-  'seoul-gangnam-station': 2,
+  'seoul-gangnam-station': 5,
   'seoul-express-bus-terminal': 4,
   'seoul-yongsan-station': 2,
   'seoul-63-square': 2,
@@ -138,6 +146,11 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-times-square': 3,
   'seoul-four-seasons-hotel': 2,
   ...Object.fromEntries(APPROVED_HERO_BATCH_04_IDS.map((placeId) => [placeId, 1])),
+  'seoul-samsung-town': 3,
+  'seoul-jtbc-hq': 1,
+  'seoul-sk-seorin': 2,
+  'seoul-shinsegae-gangnam': 1,
+  'seoul-megabox-coex': 3,
   'seoul-lotte-avenuel-world-tower': 1,
   'seoul-namdaemun-pharmacy-district': 1,
   'seoul-london-bagel-museum-anguk': 1,
@@ -163,7 +176,7 @@ describe('map place media governance', () => {
 
   test('validates the reviewed media registry', () => {
     const seoulPlaceIds = new Set(getMapPackById('real-seoul-v1').places.map((place) => place.id))
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(126)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(139)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
@@ -259,6 +272,15 @@ describe('map place media governance', () => {
     }
 
     for (const placeId of APPROVED_HERO_BATCH_02_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        placeId,
+        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+      })
+    }
+
+    for (const placeId of APPROVED_HERO_BATCH_06_IDS) {
       expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
         placeId,
         kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,

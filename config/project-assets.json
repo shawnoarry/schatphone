@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-23T16:28:06.888Z",
+  "updatedAt": "2026-08-23T17:31:09.290Z",
   "assets": [
     {
       "batchId": "migration-2026-08-11",
@@ -4971,6 +4971,30 @@
       "verifiedAt": "2026-08-23T11:58:00.984Z"
     },
     {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-gangnam-station-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-gallery-01-v1.webp",
+      "bytes": 313496,
+      "sha256": "76c0db9107e184f3fbfd0ce8fa65d589dbba9d33cd0d9d6dc800b4c61ada9c73",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:03.023Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-gangnam-station-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-gallery-02-v1.webp",
+      "bytes": 237050,
+      "sha256": "2923916bf3a0391b0176dce4caf984e6edb40f934946f0e0b546d2a8d98a30cc",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.524Z"
+    },
+    {
       "batchId": "map-place-media-gallery-expansion-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-gangnam-station-gallery-03-v1.webp",
       "aliasPaths": [],
@@ -4993,6 +5017,18 @@
       "sha256": "6b8487d656929b3d78048b375b330abe53fd4b8f047e6284b32bdbeff2ded9c7",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:44.017Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-gangnam-station-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-hero-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-hero-v2.webp",
+      "bytes": 350170,
+      "sha256": "7a7a7c7fdee0487e5b71e332dee41a7cc0d205d85e03cdb9d704f11ec3f6de14",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.690Z"
     },
     {
       "batchId": "map-place-media-gallery-expansion-20260822",
@@ -5209,6 +5245,18 @@
       "sha256": "d5ca0765b23c0b8383d89a742575af538355f0741d119cffe924dc97175ba2d0",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-23T08:55:17.571Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-jtbc-hq-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jtbc-hq-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jtbc-hq-hero-v1.webp",
+      "bytes": 472154,
+      "sha256": "b884c8fc35c4fbf71042a24e51f19616cf5467be0d3b6d01ce510e64f4443567",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.822Z"
     },
     {
       "batchId": "map-place-media-gallery-batches-01-02-20260823",
@@ -5461,6 +5509,42 @@
       "sha256": "3b50c07894313e500b7511508d15651a7b7b78cc3a22a76c6876dfd51e54b439",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T16:16:00.966Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-megabox-coex-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-megabox-coex-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-megabox-coex-gallery-01-v1.webp",
+      "bytes": 202414,
+      "sha256": "b9bc106b3257e209c66c2bedfa6fda4d78bb9cf5dd78ef391f3fef5214670ed4",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:07.837Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-megabox-coex-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-megabox-coex-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-megabox-coex-gallery-02-v1.webp",
+      "bytes": 192506,
+      "sha256": "def88139030178f398e5f722f1bd1a0326d4b347c750825319221bab75ec4017",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:09.278Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-megabox-coex-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-megabox-coex-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-megabox-coex-hero-v1.webp",
+      "bytes": 305458,
+      "sha256": "bd863c5bc479f15e453358eb31a14e5597426e96c4b3190614a7c013c9b1e075",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:08.042Z"
     },
     {
       "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
@@ -5811,6 +5895,42 @@
       "verifiedAt": "2026-08-22T17:18:41.917Z"
     },
     {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-samsung-town-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-samsung-town-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-samsung-town-gallery-01-v1.webp",
+      "bytes": 358318,
+      "sha256": "9c953a5dddf2a494688feb5f4538dee222c202ddedb2157b0f6ea24124143350",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:03.374Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-samsung-town-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-samsung-town-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-samsung-town-gallery-02-v1.webp",
+      "bytes": 374084,
+      "sha256": "022c310f57a30874c2390d81689c4622fb4da52b0c2937af8e5f4ea7ca2ab4ba",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.721Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-samsung-town-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-samsung-town-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-samsung-town-hero-v1.webp",
+      "bytes": 335856,
+      "sha256": "4357b21821ab51c1947647dc0e46e104ab394282247f07157338f7b2380c282f",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.747Z"
+    },
+    {
       "batchId": "map-place-media-area-gallery-batch-05-restored-20260823",
       "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-sanggye-jugong-district-gallery-01-v1.webp",
       "aliasPaths": [],
@@ -5907,6 +6027,18 @@
       "verifiedAt": "2026-08-23T11:57:59.155Z"
     },
     {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-shinsegae-gangnam-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shinsegae-gangnam-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shinsegae-gangnam-hero-v1.webp",
+      "bytes": 169798,
+      "sha256": "73dc13092d54b2466880eef44edde21570286b98551a93e29c3ad56bd18cadb8",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.358Z"
+    },
+    {
       "batchId": "map-place-media-pilot-20260815",
       "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-sillim-one-room-district-hero-v1.webp",
       "aliasPaths": [],
@@ -5917,6 +6049,30 @@
       "sha256": "8f5277daf41a6a1f5164d3df16835bfe850b3d3f52c80577806cd3bae9d726c7",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-15T05:53:14.018Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-sk-seorin-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sk-seorin-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sk-seorin-gallery-01-v1.webp",
+      "bytes": 468234,
+      "sha256": "62f739f1bed1d8d5f270944e949bce0607bdaadf5b99879982e2235415168c5a",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.838Z"
+    },
+    {
+      "batchId": "map-place-media-batch-06-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-06/seoul-sk-seorin-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sk-seorin-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sk-seorin-hero-v1.webp",
+      "bytes": 158514,
+      "sha256": "db10e41a6f94cacfa59a19c01ef244732f3da5fa7f11d2da607e1040843db5b8",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T17:31:02.412Z"
     },
     {
       "batchId": "map-place-media-pilot-20260815",
