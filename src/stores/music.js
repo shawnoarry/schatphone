@@ -56,8 +56,19 @@ const CREDENTIAL_STORAGE_KEY = 'schatphone:music:credentials'
 const CREDENTIAL_STORAGE_VERSION = 1
 const MAX_LOCAL_AUDIO_FILE_SIZE = 512 * 1024 * 1024
 const LOCAL_AUDIO_FILE_PATTERN = /\.(mp3|m4a|aac|ogg|oga|wav|flac)$/i
-const CHKSZ_RESOLVED_TRACK_TTL_MS = 24 * 60 * 60 * 1000
+const CHKSZ_RESOLVED_TRACK_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const CHKSZ_RESOLVED_TRACK_EXPIRY_SAFETY_MS = 5 * 60 * 1000
 const CHKSZ_RESOLVED_TRACK_CACHE_LIMIT = 50
+
+const resolveChkszPlaybackCacheExpiresAt = (providerExpiresAt, now) => {
+  const defaultExpiresAt = now + CHKSZ_RESOLVED_TRACK_TTL_MS
+  const explicitExpiresAt = Number(providerExpiresAt)
+  if (!Number.isFinite(explicitExpiresAt) || explicitExpiresAt <= 0) return defaultExpiresAt
+  return Math.min(
+    defaultExpiresAt,
+    Math.max(now, explicitExpiresAt - CHKSZ_RESOLVED_TRACK_EXPIRY_SAFETY_MS),
+  )
+}
 
 const canUseLocalStorage = () => {
   try {
@@ -136,6 +147,8 @@ const mergeMusicTrackMetadata = (trackInput, metadataInput) => {
   if (metadata.year) patch.year = metadata.year
   if (metadata.genre) patch.genre = metadata.genre
   if (metadata.providerName) patch.providerName = metadata.providerName
+  if (metadata.accessState) patch.accessState = metadata.accessState
+  if (metadata.accessReason) patch.accessReason = metadata.accessReason
   return normalizeMusicTrack({
     ...track,
     ...patch,
@@ -169,6 +182,12 @@ export const useMusicStore = defineStore('music', () => {
     romanized: '',
   })
   const playlistImportState = reactive({ status: 'idle', errorCode: '', importedPlaylistId: '' })
+  const playbackResolutionState = reactive({
+    trackId: '',
+    requestedQuality: '',
+    resolvedQuality: '',
+    qualityFallbackUsed: false,
+  })
   const activeJourneyStationId = ref('')
   const floatingPlayerRequested = ref(false)
   const floatingPlayerDismissed = ref(false)
@@ -359,6 +378,13 @@ export const useMusicStore = defineStore('music', () => {
     }
   }
 
+  const resetPlaybackResolutionState = () => {
+    playbackResolutionState.trackId = ''
+    playbackResolutionState.requestedQuality = ''
+    playbackResolutionState.resolvedQuality = ''
+    playbackResolutionState.qualityFallbackUsed = false
+  }
+
   const resolveChkszTrackForPlayback = async (profile, trackInput, options = {}) => {
     const track = normalizeMusicTrack(trackInput)
     const cacheKey = createMusicProviderCacheKey({
@@ -377,6 +403,9 @@ export const useMusicStore = defineStore('music', () => {
         quota: null,
         cacheKey,
         fromResolvedCache: true,
+        requestedQuality: cachedResolution.requestedQuality || profile.quality,
+        resolvedQuality: cachedResolution.resolvedQuality || profile.quality,
+        qualityFallbackUsed: cachedResolution.qualityFallbackUsed === true,
       }
     }
     if (cachedResolution) resolvedTrackCache.delete(cacheKey)
@@ -394,6 +423,7 @@ export const useMusicStore = defineStore('music', () => {
         profile,
         credential: getCredential(profile.id),
         track: enrichedTrack,
+        now,
         fetchImpl: options.fetchImpl,
         signal: options.signal,
         sleepImpl: options.sleepImpl,
@@ -401,7 +431,10 @@ export const useMusicStore = defineStore('music', () => {
       const resolvedTrack = mergeMusicTrackMetadata(enrichedTrack, result.track)
       cacheResolvedChkszTrack(cacheKey, {
         track: resolvedTrack,
-        expiresAt: now + CHKSZ_RESOLVED_TRACK_TTL_MS,
+        expiresAt: resolveChkszPlaybackCacheExpiresAt(result.playbackExpiresAt, now),
+        requestedQuality: result.requestedQuality,
+        resolvedQuality: result.resolvedQuality,
+        qualityFallbackUsed: result.qualityFallbackUsed === true,
       })
       const metadata = applyMetadataToKnownTracks(resolvedTrack)
       await writeProviderCache(
@@ -838,6 +871,7 @@ export const useMusicStore = defineStore('music', () => {
   const playTrack = async (trackInput, options = {}) => {
     if (options.preserveJourneyStation !== true) activeJourneyStationId.value = ''
     activeCachedChkszPlayback = null
+    resetPlaybackResolutionState()
     const unresolvedTrack = normalizeMusicTrack(trackInput)
     let track = unresolvedTrack
     let localPlaybackUrl = ''
@@ -915,6 +949,12 @@ export const useMusicStore = defineStore('music', () => {
     }
     const localSourceLoaded = result?.ok || result?.code === 'PLAYBACK_GESTURE_REQUIRED'
     if (localSourceLoaded) {
+      if (resolution) {
+        playbackResolutionState.trackId = track.id
+        playbackResolutionState.requestedQuality = resolution.requestedQuality || ''
+        playbackResolutionState.resolvedQuality = resolution.resolvedQuality || ''
+        playbackResolutionState.qualityFallbackUsed = resolution.qualityFallbackUsed === true
+      }
       if (options.preserveFloatingDismissal !== true) floatingPlayerDismissed.value = false
       activeLocalPlaybackUrl = localPlaybackUrl
       if (previousLocalPlaybackUrl && previousLocalPlaybackUrl !== localPlaybackUrl) {
@@ -1073,6 +1113,7 @@ export const useMusicStore = defineStore('music', () => {
   const stop = (options = {}) => {
     musicPlaybackRuntime.stop()
     activeCachedChkszPlayback = null
+    resetPlaybackResolutionState()
     revokeLocalPlaybackUrl(undefined, options.objectUrlApi)
     activeJourneyStationId.value = ''
     floatingPlayerRequested.value = false
@@ -1408,6 +1449,7 @@ export const useMusicStore = defineStore('music', () => {
     searchStatus,
     searchErrorCode,
     providerStateById,
+    playbackResolutionState,
     lyricsState,
     playlistImportState,
     integrationCapabilities,

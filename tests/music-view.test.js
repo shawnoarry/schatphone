@@ -1,9 +1,14 @@
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import MusicMiniPlayer from '../src/components/MusicMiniPlayer.vue'
-import { MUSIC_DEMO_TRACKS } from '../src/lib/music-contract'
+import {
+  MUSIC_ADAPTER_KINDS,
+  MUSIC_DEMO_TRACKS,
+  MUSIC_REPEAT_MODES,
+  normalizeMusicTrack,
+} from '../src/lib/music-contract'
 import { musicPlaybackRuntime } from '../src/lib/music-playback-runtime'
 import { useMusicStore } from '../src/stores/music'
 import { useSystemStore } from '../src/stores/system'
@@ -436,6 +441,97 @@ describe('MusicView', () => {
     wrapper.unmount()
   })
 
+  test('shows conservative access labels without disabling playback attempts', async () => {
+    const { wrapper } = await mountMusic()
+    const store = useMusicStore()
+    const tracks = [
+      normalizeMusicTrack({
+        id: 'provider_access:netease:1',
+        title: 'Member Track',
+        providerId: 'provider_access',
+        accessState: 'premium',
+        accessReason: 'provider_fee',
+        sourceRef: { type: MUSIC_ADAPTER_KINDS.CHKSZ, platform: 'netease', id: '1' },
+      }),
+      normalizeMusicTrack({
+        id: 'provider_access:netease:2',
+        title: 'Purchase Track',
+        providerId: 'provider_access',
+        accessState: 'purchase',
+        accessReason: 'provider_fee',
+        sourceRef: { type: MUSIC_ADAPTER_KINDS.CHKSZ, platform: 'netease', id: '2' },
+      }),
+    ]
+    store.searchResults = tracks
+    store.searchStatus = 'ready'
+    await wrapper.get('[data-testid="music-tab-search"]').trigger('click')
+
+    expect(wrapper.get(`[data-testid="music-track-access-${tracks[0].id}"]`).text()).toBe('VIP')
+    expect(wrapper.get(`[data-testid="music-track-access-${tracks[1].id}"]`).text()).toBe(
+      'Purchase',
+    )
+    expect(
+      wrapper.get(`[data-testid="music-track-toggle-${tracks[0].id}"]`).attributes('disabled'),
+    ).toBeUndefined()
+
+    const playSpy = vi.spyOn(store, 'playTrack').mockResolvedValue({
+      ok: false,
+      code: 'CHKSZ_PREMIUM_ACCESS_UNAVAILABLE',
+    })
+    await wrapper.get(`[data-testid="music-track-toggle-${tracks[0].id}"]`).trigger('click')
+    await flushPromises()
+    expect(playSpy).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('[data-testid="music-search-playback-error"]').text()).toContain(
+      'marked as premium',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('shows the actual fallback quality in the player without changing the preference', async () => {
+    const { wrapper } = await mountMusic()
+    const store = useMusicStore()
+    await store.playTrack(MUSIC_DEMO_TRACKS[0])
+    Object.assign(store.playbackResolutionState, {
+      trackId: MUSIC_DEMO_TRACKS[0].id,
+      requestedQuality: 'jymaster',
+      resolvedQuality: 'standard',
+      qualityFallbackUsed: true,
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="music-player-quality"]').text()).toBe(
+      'Playing in standard quality',
+    )
+
+    wrapper.unmount()
+  })
+
+  test('exposes automatic queue continuation and repeat modes in Now Playing', async () => {
+    const { wrapper } = await mountMusic()
+    const store = useMusicStore()
+    await store.playTrack(MUSIC_DEMO_TRACKS[0], { queue: MUSIC_DEMO_TRACKS.slice(0, 2) })
+    await wrapper.get('[data-testid="music-now-playing-open"]').trigger('click')
+
+    const modes = wrapper.get('[data-testid="music-now-playing-modes"]')
+    expect(modes.text()).toContain('Continue to the next track')
+
+    const repeat = wrapper.get('[data-testid="music-now-playing-repeat"]')
+    await repeat.trigger('click')
+    expect(store.state.playback.repeatMode).toBe(MUSIC_REPEAT_MODES.ALL)
+    expect(modes.text()).toContain('Restart the queue')
+    await repeat.trigger('click')
+    expect(store.state.playback.repeatMode).toBe(MUSIC_REPEAT_MODES.ONE)
+    expect(modes.text()).toContain('Replay the current track')
+
+    const shuffle = wrapper.get('[data-testid="music-now-playing-shuffle"]')
+    expect(shuffle.attributes('aria-pressed')).toBe('false')
+    await shuffle.trigger('click')
+    expect(shuffle.attributes('aria-pressed')).toBe('true')
+
+    wrapper.unmount()
+  })
+
   test('offers a no-key Radio Browser preset for HTTPS MP3 live stations', async () => {
     const { wrapper } = await mountMusic()
     const store = useMusicStore()
@@ -480,7 +576,10 @@ describe('MusicView', () => {
 
     await store.playTrack(MUSIC_DEMO_TRACKS[0], { queue: MUSIC_DEMO_TRACKS.slice(0, 2) })
     await flushPromises()
-    expect(wrapper.get('[data-testid="music-mini-player"]').text()).toContain('Afterglow Lines')
+    const player = wrapper.get('[data-testid="music-mini-player"]')
+    expect(player.text()).toContain('Afterglow Lines')
+    expect(player.classes()).toContain('is-collapsed')
+    expect(wrapper.findAll('.music-mini-controls button')).toHaveLength(3)
 
     await wrapper.get('.music-mini-track').trigger('click')
     await flushPromises()
@@ -537,13 +636,35 @@ describe('MusicView', () => {
 
     store.openFloatingPlayer()
     await flushPromises()
-    expect(wrapper.get('[data-testid="music-mini-player"]').exists()).toBe(true)
+    const player = wrapper.get('[data-testid="music-mini-player"]')
+    expect(player.exists()).toBe(true)
+    expect(player.classes()).toContain('is-collapsed')
     expect(wrapper.find('[data-testid="music-floating-content"]').exists()).toBe(false)
+    expect(wrapper.findAll('.music-mini-controls button')).toHaveLength(3)
 
     await wrapper.get('[data-testid="music-floating-expand"]').trigger('click')
     await flushPromises()
+    expect(player.classes()).toContain('is-expanded')
+    expect(player.classes()).not.toContain('is-collapsed')
     expect(wrapper.get('[data-testid="music-floating-content"]').exists()).toBe(true)
     expect(wrapper.findAll('[data-testid^="music-floating-track-"]')).toHaveLength(6)
+    expect(wrapper.get('[data-testid="music-floating-playback-policy"]').text()).toContain(
+      'Continue to the next track',
+    )
+
+    const repeat = wrapper.get('[data-testid="music-floating-repeat"]')
+    expect(repeat.text()).toContain('Play in order')
+    await repeat.trigger('click')
+    expect(store.state.playback.repeatMode).toBe(MUSIC_REPEAT_MODES.ALL)
+    expect(repeat.text()).toContain('Repeat all')
+    await repeat.trigger('click')
+    expect(store.state.playback.repeatMode).toBe(MUSIC_REPEAT_MODES.ONE)
+    expect(repeat.text()).toContain('Repeat one')
+
+    const shuffle = wrapper.get('[data-testid="music-floating-shuffle"]')
+    expect(shuffle.attributes('aria-pressed')).toBe('false')
+    await shuffle.trigger('click')
+    expect(shuffle.attributes('aria-pressed')).toBe('true')
 
     await wrapper.get('[data-testid="music-floating-radio-tab"]').trigger('click')
     await flushPromises()

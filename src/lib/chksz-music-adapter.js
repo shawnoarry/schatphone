@@ -2,6 +2,8 @@ import {
   CHKSZ_MUSIC_PLATFORMS,
   MUSIC_ADAPTER_KINDS,
   MUSIC_LIMITS,
+  MUSIC_TRACK_ACCESS_REASONS,
+  MUSIC_TRACK_ACCESS_STATES,
   normalizeMusicProviderProfile,
   normalizeMusicTrack,
   readMusicPath,
@@ -24,6 +26,12 @@ const CHKSZ_PATHS = Object.freeze({
     search: '/api/kugou_music',
     resolve: '/api/kugou_music',
   }),
+})
+
+const CHKSZ_BASE_QUALITY = Object.freeze({
+  [CHKSZ_MUSIC_PLATFORMS.NETEASE]: 'standard',
+  [CHKSZ_MUSIC_PLATFORMS.QQ]: 'mp3',
+  [CHKSZ_MUSIC_PLATFORMS.KUGOU]: 'mp3',
 })
 
 const ERROR_COPY = Object.freeze({
@@ -120,6 +128,66 @@ const releaseYear = (value) => {
   return match ? Number(match[0]) : 0
 }
 
+const absoluteExpiryTimestamp = (value) => {
+  if (value == null || value === '') return 0
+  const numeric = Number(value)
+  if (Number.isFinite(numeric)) {
+    if (numeric >= 1_000_000_000_000) return Math.floor(numeric)
+    if (numeric >= 1_000_000_000) return Math.floor(numeric * 1000)
+    return 0
+  }
+  const parsed = Date.parse(String(value))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const relativeExpiryTimestamp = (value, now) => {
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) return 0
+  return now + Math.floor(seconds * 1000)
+}
+
+const resolvePlaybackExpiresAt = ({ item, audioUrl, now }) => {
+  const absolute = absoluteExpiryTimestamp(
+    firstValue(item, [
+      'expiresAt',
+      'data.expiresAt',
+      'expireAt',
+      'data.expireAt',
+      'expiration',
+      'data.expiration',
+      'expires',
+      'data.expires',
+      'expire',
+      'data.expire',
+    ]),
+  )
+  if (absolute) return absolute
+
+  const relative = relativeExpiryTimestamp(
+    firstValue(item, [
+      'expiresIn',
+      'data.expiresIn',
+      'expires_in',
+      'data.expires_in',
+      'ttlSeconds',
+      'data.ttlSeconds',
+    ]),
+    now,
+  )
+  if (relative) return relative
+
+  try {
+    const url = new URL(audioUrl)
+    for (const key of ['expiresAt', 'expireAt', 'expiration', 'expires', 'expire']) {
+      const parsed = absoluteExpiryTimestamp(url.searchParams.get(key))
+      if (parsed) return parsed
+    }
+  } catch {
+    // URL validation is owned by track normalization; missing expiry metadata is allowed.
+  }
+  return 0
+}
+
 const resolveList = (payload, platform, operation = 'search') => {
   const candidates =
     operation === 'playlist'
@@ -169,6 +237,71 @@ const buildTrackSourceRef = ({ platform, item, index, query = '' }) => {
         : {}),
     ...(query ? { query } : {}),
   }
+}
+
+const normalizeChkszTrackAccess = (item, platform) => {
+  const unavailable = Number(
+    firstValue(item, ['st', 'privilege.st', 'data.st', 'data.privilege.st']),
+  )
+  if (Number.isFinite(unavailable) && unavailable < 0) {
+    return {
+      accessState: MUSIC_TRACK_ACCESS_STATES.RESTRICTED,
+      accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_UNAVAILABLE,
+    }
+  }
+
+  if (platform === CHKSZ_MUSIC_PLATFORMS.QQ) {
+    const pay = firstValue(item, ['pay', 'data.pay'])
+    const numericPay = Number(pay)
+    if (pay === 0 || pay === '0') {
+      return {
+        accessState: MUSIC_TRACK_ACCESS_STATES.OPEN,
+        accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_PAY,
+      }
+    }
+    if (/purchase|单独购买|购买|数字专辑/i.test(String(pay || ''))) {
+      return {
+        accessState: MUSIC_TRACK_ACCESS_STATES.PURCHASE,
+        accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_PAY,
+      }
+    }
+    if ((Number.isFinite(numericPay) && numericPay > 0) || /vip|会员|收费|付费/i.test(String(pay || ''))) {
+      return {
+        accessState: MUSIC_TRACK_ACCESS_STATES.PREMIUM,
+        accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_PAY,
+      }
+    }
+  }
+
+  if (platform === CHKSZ_MUSIC_PLATFORMS.NETEASE) {
+    const fee = Number(firstValue(item, ['fee', 'data.fee', 'privilege.fee', 'data.privilege.fee']))
+    if (fee === 0) {
+      return {
+        accessState: MUSIC_TRACK_ACCESS_STATES.OPEN,
+        accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_FEE,
+      }
+    }
+    if (fee === 1) {
+      return {
+        accessState: MUSIC_TRACK_ACCESS_STATES.PREMIUM,
+        accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_FEE,
+      }
+    }
+    if (fee === 4) {
+      return {
+        accessState: MUSIC_TRACK_ACCESS_STATES.PURCHASE,
+        accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_FEE,
+      }
+    }
+    if (fee === 8) {
+      return {
+        accessState: MUSIC_TRACK_ACCESS_STATES.RESTRICTED,
+        accessReason: MUSIC_TRACK_ACCESS_REASONS.PROVIDER_FEE,
+      }
+    }
+  }
+
+  return { accessState: MUSIC_TRACK_ACCESS_STATES.UNKNOWN }
 }
 
 const normalizeChkszTrack = ({ item, index, profile, query = '' }) => {
@@ -226,6 +359,7 @@ const normalizeChkszTrack = ({ item, index, profile, query = '' }) => {
       providerId: profile.id,
       providerName: profile.name,
       sourceRef,
+      ...normalizeChkszTrackAccess(item, platform),
     },
     { providerId: profile.id, providerName: profile.name, baseUrl: CHKSZ_API_BASE_URL },
   )
@@ -246,6 +380,7 @@ const buildUrl = ({
   limit = 30,
   track,
   playlistId = '',
+  quality = '',
 }) => {
   const path = CHKSZ_PATHS[profile.platform]?.[operation]
   if (!path) {
@@ -284,10 +419,10 @@ const buildUrl = ({
         })
       }
       endpoint.searchParams.set('id', sourceRef.id || '')
-      endpoint.searchParams.set('level', profile.quality)
+      endpoint.searchParams.set('level', quality || profile.quality)
     } else if (profile.platform === CHKSZ_MUSIC_PLATFORMS.QQ && sourceRef.mid) {
       endpoint.searchParams.set('mid', sourceRef.mid)
-      endpoint.searchParams.set('size', profile.quality)
+      endpoint.searchParams.set('size', quality || profile.quality)
     } else {
       if (!sourceRef.query && !track?.title) {
         throw createChkszError({
@@ -298,7 +433,7 @@ const buildUrl = ({
       endpoint.searchParams.set('msg', sourceRef.query || track?.title || '')
       endpoint.searchParams.set('n', String(sourceRef.selection || 1))
       if (profile.platform === CHKSZ_MUSIC_PLATFORMS.QQ)
-        endpoint.searchParams.set('size', profile.quality)
+        endpoint.searchParams.set('size', quality || profile.quality)
     }
   } else if (operation === 'lyrics') {
     if (!track?.sourceRef?.id) {
@@ -361,6 +496,7 @@ const requestChksz = async ({
   fetchImpl = globalThis.fetch,
   signal,
   sleepImpl = defaultSleep,
+  quality,
 }) => {
   const profile = normalizeProfile(profileInput)
   const apiKey = requireApiKey(credential)
@@ -370,7 +506,7 @@ const requestChksz = async ({
       message: 'Browser network access is unavailable.',
     })
   }
-  const url = buildUrl({ profile, apiKey, operation, query, limit, track, playlistId })
+  const url = buildUrl({ profile, apiKey, operation, query, limit, track, playlistId, quality })
   let retryCount = 0
   while (retryCount <= 1) {
     let response
@@ -437,81 +573,149 @@ export const searchChkszMusic = async (options = {}) => {
 
 export const resolveChkszMusicTrack = async (options = {}) => {
   const track = normalizeMusicTrack(options.track)
-  const result = await requestChksz({ ...options, track, operation: 'resolve' })
-  const item = Array.isArray(result.payload?.data) ? result.payload.data[0] || {} : result.payload
-  const audioUrl = firstValue(item, [
-    'url',
-    'data.url',
-    'song.url',
-    'audio.url',
-    'play_url',
-    'playUrl',
-  ])
-  const resolvedTrack = normalizeMusicTrack(
-    {
-      ...track,
-      title: firstValue(item, ['name', 'data.name', 'title']) || track.title,
-      artist:
-        firstValue(item, [
-          'singer',
-          'data.singer',
-          'artist',
-          'data.artist',
-          'artists',
-          'ar',
-          'data.ar',
-        ]) || track.artist,
-      album: firstValue(item, ['album', 'data.album', 'al', 'data.al']) || track.album,
-      coverUrl:
-        firstValue(item, [
-          'cover',
-          'data.cover',
-          'coverUrl',
-          'data.coverUrl',
-          'picUrl',
-          'data.picUrl',
-          'picurl',
-          'data.picurl',
-          'pic',
-          'data.pic',
-          'album.picUrl',
-          'data.album.picUrl',
-          'al.picUrl',
-          'data.al.picUrl',
-        ]) || track.coverUrl,
-      duration:
-        firstValue(item, [
-          'interval',
-          'data.interval',
-          'duration',
-          'data.duration',
-          'dt',
-          'data.dt',
-        ]) || track.durationSec,
-      year:
-        releaseYear(
-          firstValue(item, [
-            'year',
-            'data.year',
-            'publishTime',
-            'data.publishTime',
-            'album.publishTime',
-            'data.album.publishTime',
-          ]),
-        ) || track.year,
-      audioUrl,
-      sourceRef: track.sourceRef,
-    },
-    { providerId: track.providerId, providerName: track.providerName, baseUrl: CHKSZ_API_BASE_URL },
-  )
-  if (!resolvedTrack.audioUrl) {
-    throw createChkszError({
-      code: 'CHKSZ_AUDIO_URL_MISSING',
-      message: 'ChKSz returned song information without a playable audio URL.',
-      quota: result.quota,
+  const now = Math.max(0, Number(options.now) || Date.now())
+  const profile = normalizeProfile(options.profile)
+  const requestedQuality = profile.quality
+  const fallbackQuality = CHKSZ_BASE_QUALITY[profile.platform] || requestedQuality
+
+  const resolveAtQuality = async (quality) => {
+    const result = await requestChksz({
+      ...options,
+      profile,
+      track,
+      operation: 'resolve',
+      quality,
     })
+    const item = Array.isArray(result.payload?.data) ? result.payload.data[0] || {} : result.payload
+    const audioUrl = firstValue(item, [
+      'url',
+      'data.url',
+      'song.url',
+      'audio.url',
+      'play_url',
+      'playUrl',
+    ])
+    const resolvedTrack = normalizeMusicTrack(
+      {
+        ...track,
+        title: firstValue(item, ['name', 'data.name', 'title']) || track.title,
+        artist:
+          firstValue(item, [
+            'singer',
+            'data.singer',
+            'artist',
+            'data.artist',
+            'artists',
+            'ar',
+            'data.ar',
+          ]) || track.artist,
+        album: firstValue(item, ['album', 'data.album', 'al', 'data.al']) || track.album,
+        coverUrl:
+          firstValue(item, [
+            'cover',
+            'data.cover',
+            'coverUrl',
+            'data.coverUrl',
+            'picUrl',
+            'data.picUrl',
+            'picurl',
+            'data.picurl',
+            'pic',
+            'data.pic',
+            'album.picUrl',
+            'data.album.picUrl',
+            'al.picUrl',
+            'data.al.picUrl',
+          ]) || track.coverUrl,
+        duration:
+          firstValue(item, [
+            'interval',
+            'data.interval',
+            'duration',
+            'data.duration',
+            'dt',
+            'data.dt',
+          ]) || track.durationSec,
+        year:
+          releaseYear(
+            firstValue(item, [
+              'year',
+              'data.year',
+              'publishTime',
+              'data.publishTime',
+              'album.publishTime',
+              'data.album.publishTime',
+            ]),
+          ) || track.year,
+        audioUrl,
+        sourceRef: track.sourceRef,
+      },
+      { providerId: track.providerId, providerName: track.providerName, baseUrl: CHKSZ_API_BASE_URL },
+    )
+    if (!resolvedTrack.audioUrl) {
+      throw createChkszError({
+        code: 'CHKSZ_AUDIO_URL_MISSING',
+        message: 'ChKSz returned song information without a playable audio URL.',
+        quota: result.quota,
+      })
+    }
+    return {
+      ok: true,
+      track: resolvedTrack,
+      quota: result.quota,
+      playbackExpiresAt: resolvePlaybackExpiresAt({ item, audioUrl: resolvedTrack.audioUrl, now }),
+      requestedQuality,
+      resolvedQuality: quality,
+      qualityFallbackUsed: quality !== requestedQuality,
+    }
   }
-  return { ok: true, track: resolvedTrack, quota: result.quota }
+
+  const isFallbackEligible = (error) =>
+    error?.code === 'CHKSZ_AUDIO_URL_MISSING' ||
+    (error?.code === 'CHKSZ_BUSINESS_ERROR' &&
+      /quality|level|size|format|音质|格式|无可用.*(?:链接|地址)|无法获取.*(?:链接|地址)/i.test(
+        `${error?.apiMessage || ''} ${error?.message || ''}`,
+      ))
+
+  const withAccessMeaning = (error) => {
+    const accessError = {
+      [MUSIC_TRACK_ACCESS_STATES.PREMIUM]: {
+        code: 'CHKSZ_PREMIUM_ACCESS_UNAVAILABLE',
+        message: 'The provider marks this as premium content and returned no playable audio URL.',
+      },
+      [MUSIC_TRACK_ACCESS_STATES.PURCHASE]: {
+        code: 'CHKSZ_PURCHASE_ACCESS_UNAVAILABLE',
+        message: 'The provider marks this as separately purchased content and returned no playable audio URL.',
+      },
+      [MUSIC_TRACK_ACCESS_STATES.RESTRICTED]: {
+        code: 'CHKSZ_TRACK_RESTRICTED',
+        message: 'The provider marks this track as potentially restricted and returned no playable audio URL.',
+      },
+    }[track.accessState]
+    const explicitlyAccessRelated =
+      error?.code === 'CHKSZ_AUDIO_URL_MISSING' ||
+      (error?.code === 'CHKSZ_BUSINESS_ERROR' &&
+        /vip|member|premium|purchase|pay|fee|rights?|restricted|copyright|会员|购买|付费|收费|版权|受限|无版权/i.test(
+          `${error?.apiMessage || ''} ${error?.message || ''}`,
+        ))
+    if (!accessError || !explicitlyAccessRelated) {
+      return error
+    }
+    return createChkszError({ ...accessError, apiMessage: error?.apiMessage, quota: error?.quota })
+  }
+
+  try {
+    return await resolveAtQuality(requestedQuality)
+  } catch (error) {
+    if (requestedQuality !== fallbackQuality && isFallbackEligible(error)) {
+      try {
+        return await resolveAtQuality(fallbackQuality)
+      } catch (fallbackError) {
+        throw withAccessMeaning(fallbackError)
+      }
+    }
+    throw withAccessMeaning(error)
+  }
 }
 
 const lyricText = (value) => {

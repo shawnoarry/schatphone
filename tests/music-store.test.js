@@ -424,7 +424,7 @@ describe('music store', () => {
     expect(resolveFetch).toHaveBeenCalledTimes(1)
   })
 
-  test('reuses a ChKSz stream resolution for 24 hours and refreshes it after the memory TTL', async () => {
+  test('reuses a ChKSz stream resolution for seven days and refreshes it after the memory TTL', async () => {
     const store = useMusicStore()
     const { track } = createChkszTrackFixture(store, 'ttl')
     const providerCache = createProviderCacheStub()
@@ -455,7 +455,71 @@ describe('music store', () => {
     await store.playTrack(track, {
       ...providerCache,
       fetchImpl: resolveFetch,
-      now: 1000 + 24 * 60 * 60 * 1000 + 1,
+      now: 1000 + 7 * 24 * 60 * 60 * 1000 + 1,
+    })
+    expect(resolveFetch).toHaveBeenCalledTimes(2)
+  })
+
+  test('records one quality fallback in runtime state and reuses the resolved URL from memory', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'quality_fallback')
+    const providerCache = createProviderCacheStub()
+    const resolveFetch = vi
+      .fn()
+      .mockResolvedValueOnce(chkszResponse({ data: { url: '' } }))
+      .mockResolvedValueOnce(
+        chkszResponse({ data: { url: 'https://stream.example.com/standard.mp3' } }),
+      )
+
+    await expect(
+      store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 1000 }),
+    ).resolves.toEqual({ ok: true })
+    expect(store.playbackResolutionState).toMatchObject({
+      trackId: track.id,
+      requestedQuality: 'jymaster',
+      resolvedQuality: 'standard',
+      qualityFallbackUsed: true,
+    })
+    expect(resolveFetch).toHaveBeenCalledTimes(2)
+
+    store.stop()
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 2000 })
+    expect(resolveFetch).toHaveBeenCalledTimes(2)
+    expect(store.playbackResolutionState).toMatchObject({
+      resolvedQuality: 'standard',
+      qualityFallbackUsed: true,
+    })
+  })
+
+  test('caps ChKSz stream reuse at the provider expiry with a safety margin', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'provider_expiry')
+    const providerCache = createProviderCacheStub()
+    const now = 1_800_000_000_000
+    const providerExpiresAt = now + 2 * 60 * 60 * 1000
+    const resolveFetch = vi.fn(async () =>
+      chkszResponse({
+        data: {
+          url: 'https://stream.example.com/expiring.mp3',
+          expiresAt: Math.floor(providerExpiresAt / 1000),
+        },
+      }),
+    )
+
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now })
+    store.stop()
+    await store.playTrack(track, {
+      ...providerCache,
+      fetchImpl: resolveFetch,
+      now: now + 60 * 60 * 1000,
+    })
+    expect(resolveFetch).toHaveBeenCalledTimes(1)
+
+    store.stop()
+    await store.playTrack(track, {
+      ...providerCache,
+      fetchImpl: resolveFetch,
+      now: providerExpiresAt - 5 * 60 * 1000 + 1,
     })
     expect(resolveFetch).toHaveBeenCalledTimes(2)
   })
@@ -516,6 +580,32 @@ describe('music store', () => {
     ).resolves.toEqual({ ok: true })
     expect(resolveFetch).toHaveBeenCalledTimes(2)
     expect(store.currentTrack.audioUrl).toBe('https://stream.example.com/refreshed.mp3')
+  })
+
+  test('bounds cached-stream recovery when each provider resolution uses one quality fallback', async () => {
+    const store = useMusicStore()
+    const { track } = createChkszTrackFixture(store, 'fallback_retry')
+    const providerCache = createProviderCacheStub()
+    const resolveFetch = vi
+      .fn()
+      .mockResolvedValueOnce(chkszResponse({ data: { url: '' } }))
+      .mockResolvedValueOnce(
+        chkszResponse({ data: { url: 'https://stream.example.com/first-basic.mp3' } }),
+      )
+      .mockResolvedValueOnce(chkszResponse({ data: { url: '' } }))
+      .mockResolvedValueOnce(
+        chkszResponse({ data: { url: 'https://stream.example.com/refreshed-basic.mp3' } }),
+      )
+
+    await store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 1000 })
+    store.stop()
+    MockAudio.failNextPlay = true
+
+    await expect(
+      store.playTrack(track, { ...providerCache, fetchImpl: resolveFetch, now: 2000 }),
+    ).resolves.toEqual({ ok: true })
+    expect(resolveFetch).toHaveBeenCalledTimes(4)
+    expect(store.currentTrack.audioUrl).toBe('https://stream.example.com/refreshed-basic.mp3')
   })
 
   test('refreshes a cached ChKSz stream once after an asynchronous audio error', async () => {
@@ -592,7 +682,7 @@ describe('music store', () => {
     })
   })
 
-  test('plays a queue, advances tracks, and respects repeat-one', async () => {
+  test('automatically advances the queue and respects repeat-all and repeat-one', async () => {
     const store = useMusicStore()
     const queue = MUSIC_DEMO_TRACKS.slice(0, 2)
 
@@ -601,13 +691,18 @@ describe('music store', () => {
     expect(store.isPlaying).toBe(true)
     expect(store.runtime.sessionActive).toBe(true)
 
-    await store.next()
-    expect(store.currentTrack.id).toBe(queue[1].id)
+    MockAudio.instance.emit('ended')
+    await vi.waitFor(() => expect(store.currentTrack.id).toBe(queue[1].id))
+
+    store.state.playback.repeatMode = MUSIC_REPEAT_MODES.ALL
+    MockAudio.instance.emit('ended')
+    await vi.waitFor(() => expect(store.currentTrack.id).toBe(queue[0].id))
 
     store.state.playback.repeatMode = MUSIC_REPEAT_MODES.ONE
-    await store.next({ fromEnded: true })
-    expect(store.currentTrack.id).toBe(queue[1].id)
-    expect(store.recentTracks[0].id).toBe(queue[1].id)
+    MockAudio.instance.emit('ended')
+    await vi.waitFor(() => expect(store.runtime.status).toBe('playing'))
+    expect(store.currentTrack.id).toBe(queue[0].id)
+    expect(store.recentTracks[0].id).toBe(queue[0].id)
   })
 
   test('requires user confirmation or gesture for external queue and playback requests', async () => {

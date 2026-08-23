@@ -334,6 +334,21 @@ test('Music completes Home, playback, source settings, and shell continuity flow
 
   await page.getByTestId('music-now-playing-open').click()
   await expect(page.getByTestId('music-now-playing-sheet')).toBeVisible()
+  const repeatMode = page.getByTestId('music-now-playing-repeat')
+  await expect(repeatMode).toContainText('Play in order')
+  await repeatMode.click()
+  await expect(repeatMode).toContainText('Repeat all')
+  await repeatMode.click()
+  await expect(repeatMode).toContainText('Repeat one')
+  await repeatMode.click()
+  await expect(repeatMode).toContainText('Play in order')
+
+  const shuffleMode = page.getByTestId('music-now-playing-shuffle')
+  await expect(shuffleMode).toHaveAttribute('aria-pressed', 'false')
+  await shuffleMode.click()
+  await expect(shuffleMode).toHaveAttribute('aria-pressed', 'true')
+  await shuffleMode.click()
+  await expect(shuffleMode).toHaveAttribute('aria-pressed', 'false')
   await expectNoOverflow(page)
   await testInfo.attach(`music-now-playing-${testInfo.project.name}.png`, {
     body: await page.screenshot({ animations: 'disabled' }),
@@ -346,16 +361,28 @@ test('Music completes Home, playback, source settings, and shell continuity flow
   await page.getByTestId('music-queue').getByRole('button', { name: 'Close' }).click()
 
   await navigateInsideUnlockedApp(page, '/home')
-  await expect(page.getByTestId('music-mini-player')).toContainText(recommendationTitle)
+  const homePlayer = page.getByTestId('music-mini-player')
+  await expect(homePlayer).toContainText(recommendationTitle)
+  await expect(homePlayer).toHaveClass(/is-collapsed/)
   const homeBottomLayout = await page.evaluate(() => {
     const mini = document
       .querySelector('[data-testid="music-mini-player"]')
       ?.getBoundingClientRect()
     const dock = document.querySelector('.home-dock')?.getBoundingClientRect()
-    return mini && dock ? { miniBottom: mini.bottom, dockTop: dock.top } : null
+    const screen = document.querySelector('.screen')?.getBoundingClientRect()
+    return mini && dock && screen
+      ? {
+          miniBottom: mini.bottom,
+          dockTop: dock.top,
+          width: mini.width,
+          rightGap: screen.right - mini.right,
+        }
+      : null
   })
   expect(homeBottomLayout).not.toBeNull()
   expect(homeBottomLayout.miniBottom).toBeLessThanOrEqual(homeBottomLayout.dockTop - 4)
+  expect(homeBottomLayout.width).toBeLessThanOrEqual(304)
+  expect(homeBottomLayout.rightGap).toBeLessThanOrEqual(1)
   await testInfo.attach(`music-mini-home-${testInfo.project.name}.png`, {
     body: await page.screenshot({ animations: 'disabled' }),
     contentType: 'image/png',
@@ -616,6 +643,7 @@ test('Music searches, resolves, reads lyrics, and imports playlists through ChKS
                 ar: [{ name: 'Remote Artist' }],
                 al: { name: 'Cloud Album' },
                 dt: 180000,
+                fee: 1,
               },
             ],
           },
@@ -627,7 +655,9 @@ test('Music searches, resolves, reads lyrics, and imports playlists through ChKS
       await route.fulfill({
         status: 200,
         headers,
-        body: JSON.stringify({ data: { url: silentWav } }),
+        body: JSON.stringify({
+          data: { url: url.searchParams.get('level') === 'standard' ? silentWav : '' },
+        }),
       })
       return
     }
@@ -667,8 +697,12 @@ test('Music searches, resolves, reads lyrics, and imports playlists through ChKS
   await page.getByTestId('music-search-input').fill('API Song')
   await page.getByTestId('music-search-input').press('Enter')
   await expect(page.locator('.is-search-results')).toContainText('API Song')
+  await expect(page.locator('.is-search-results .music-track-access-badge')).toHaveText('VIP')
+  await expect(page.locator('.is-search-results .music-track-index').first()).toBeEnabled()
   await page.locator('.is-search-results .music-track-index').first().click()
   await expect(page.getByTestId('music-player')).toContainText('API Song')
+  await expect(page.getByTestId('music-player-quality')).toContainText('standard quality')
+  await expectNoOverflow(page)
 
   await page.getByTestId('music-now-playing-open').click()
   await page.getByTestId('music-now-playing-favorite').click()
@@ -707,7 +741,12 @@ test('Music searches, resolves, reads lyrics, and imports playlists through ChKS
   await page.getByTestId('music-tab-library').press('Enter')
   await page.getByRole('button', { name: 'Favorites', exact: true }).click()
   await expect(page.locator('.music-track-list.is-library-list')).toContainText('API Song')
-  expect(requestUrls).toHaveLength(4)
+  expect(requestUrls).toHaveLength(5)
+  expect(
+    requestUrls
+      .filter((value) => new URL(value).pathname === '/api/163_music')
+      .map((value) => new URL(value).searchParams.get('level')),
+  ).toEqual(['jymaster', 'standard'])
   expect(
     requestUrls.every(
       (value) => new URL(value).searchParams.get('apikey') === 'chksz_e2e_device_key',

@@ -237,6 +237,60 @@ const playbackErrorText = computed(() => {
   return t('音频暂时无法播放', 'Audio is temporarily unavailable')
 })
 
+const playbackQualityNotice = computed(() => {
+  const state = musicStore.playbackResolutionState
+  if (!state?.qualityFallbackUsed || state.trackId !== playerTrack.value?.id) return ''
+  const quality =
+    state.resolvedQuality === 'standard'
+      ? t('标准音质', 'standard quality')
+      : t('普通音质', 'basic quality')
+  return t(`已改用${quality}播放`, `Playing in ${quality}`)
+})
+
+const repeatModeLabel = computed(() => {
+  if (musicStore.state.playback.repeatMode === 'all') return t('列表循环', 'Repeat all')
+  if (musicStore.state.playback.repeatMode === 'one') return t('单曲循环', 'Repeat one')
+  return t('顺序播放', 'Play in order')
+})
+
+const playbackContinuationCopy = computed(() => {
+  if (musicStore.state.playback.repeatMode === 'all') {
+    return t('队列结束后从头继续', 'Restart the queue after its last track')
+  }
+  if (musicStore.state.playback.repeatMode === 'one') {
+    return t('当前歌曲结束后重新播放', 'Replay the current track when it ends')
+  }
+  return t('歌曲结束后自动播放下一首，队列末尾停止', 'Continue to the next track, then stop at the end')
+})
+
+const shuffleModeLabel = computed(() =>
+  musicStore.state.playback.shuffle ? t('随机播放已开启', 'Shuffle on') : t('按队列顺序播放', 'Queue order'),
+)
+
+const trackAccessLabel = (track) => {
+  if (track?.accessState === 'premium') return t('会员', 'VIP')
+  if (track?.accessState === 'purchase') return t('单独购买', 'Purchase')
+  if (track?.accessState === 'restricted') return t('可能受限', 'Limited')
+  return ''
+}
+
+const trackAccessTitle = (track) => {
+  if (track?.accessState === 'premium')
+    return t(
+      '上游标记为会员内容，仍可尝试播放',
+      'Marked as premium upstream; playback can still be tried',
+    )
+  if (track?.accessState === 'purchase')
+    return t(
+      '上游标记为单独购买内容，仍可尝试播放',
+      'Marked as a separate purchase upstream; playback can still be tried',
+    )
+  return t(
+    '上游标记为可能受限，仍可尝试播放',
+    'Marked as potentially restricted upstream; playback can still be tried',
+  )
+}
+
 const importedTrackCount = computed(() => musicStore.importedTracks.length)
 
 const providerStatusCopy = computed(() => {
@@ -338,16 +392,58 @@ const playTrack = async (track, tracks = musicStore.libraryTracks) => {
   playbackRequestError.value = ''
   const result = await musicStore.playTrack(track, { queue: tracks })
   if (!result?.ok) {
+    const messages = {
+      CHKSZ_KEY_MISSING: t(
+        '请先在音乐设置中填写 ChKSz API Key',
+        'Add your ChKSz API Key in Music Settings',
+      ),
+      CHKSZ_HTTP_401: t('ChKSz Key 无效或已失效', 'The ChKSz API Key is invalid or expired'),
+      CHKSZ_HTTP_402: t('ChKSz 请求额度已用尽', 'The ChKSz request quota is exhausted'),
+      CHKSZ_HTTP_403: t(
+        'ChKSz 拒绝了当前账号或网络的访问',
+        'ChKSz denied this account or network',
+      ),
+      CHKSZ_HTTP_429: t(
+        'ChKSz 请求过于频繁，请稍后再试',
+        'ChKSz is rate limiting requests; try again later',
+      ),
+      CHKSZ_HTTP_503: t(
+        'ChKSz 或所选音乐平台暂时不可用',
+        'ChKSz or the selected music service is unavailable',
+      ),
+      NETWORK_UNAVAILABLE: t(
+        '无法连接 ChKSz，请检查网络与浏览器访问',
+        'ChKSz could not be reached; check the network and browser access',
+      ),
+      CHKSZ_PREMIUM_ACCESS_UNAVAILABLE: t(
+        '上游将此曲目标记为会员内容，当前来源未返回播放地址',
+        'This is marked as premium upstream, and no playable URL was returned',
+      ),
+      CHKSZ_PURCHASE_ACCESS_UNAVAILABLE: t(
+        '上游将此曲目标记为单独购买内容，当前来源未返回播放地址',
+        'This is marked as a separate purchase upstream, and no playable URL was returned',
+      ),
+      CHKSZ_TRACK_RESTRICTED: t(
+        '此曲目可能受版权或地区限制，当前来源未返回播放地址',
+        'This track may be rights- or region-restricted, and no playable URL was returned',
+      ),
+      CHKSZ_AUDIO_URL_MISSING: t(
+        '当前来源未返回播放地址，可能与版权、会员权限或上游音源状态有关',
+        'No playable URL was returned; rights, membership, or upstream availability may be involved',
+      ),
+      CHKSZ_BUSINESS_ERROR: t(
+        '上游音乐服务拒绝了播放请求',
+        'The upstream music service rejected the playback request',
+      ),
+      LOCAL_MEDIA_MISSING: t(
+        '本地音频已不在此设备，请在音乐设置中重新导入',
+        'This local file is missing. Import it again in Music Settings',
+      ),
+    }
     playbackRequestError.value =
+      messages[result?.code] ||
       result?.error?.message ||
-      (result?.code === 'CHKSZ_KEY_MISSING'
-        ? t('请先在音乐设置中填写 ChKSz API Key', 'Add your ChKSz API Key in Music Settings')
-        : result?.code === 'LOCAL_MEDIA_MISSING'
-          ? t(
-              '本地音频已不在此设备，请在音乐设置中重新导入',
-              'This local file is missing. Import it again in Music Settings',
-            )
-          : t('这首歌暂时无法播放', 'This song is temporarily unavailable'))
+      t('这首歌暂时无法播放', 'This song is temporarily unavailable')
   }
   return result
 }
@@ -1602,6 +1698,14 @@ onBeforeUnmount(() => {
             >
               {{ searchStateCopy }}
             </p>
+            <p
+              v-if="playbackErrorText"
+              class="music-search-playback-error"
+              role="alert"
+              data-testid="music-search-playback-error"
+            >
+              {{ playbackErrorText }}
+            </p>
             <div v-if="musicStore.searchResults.length" class="music-track-list is-search-results">
               <article
                 v-for="(track, index) in musicStore.searchResults"
@@ -1651,7 +1755,16 @@ onBeforeUnmount(() => {
                       @error="onCoverError"
                   /></span>
                   <span class="music-track-meta">
-                    <strong>{{ track.title }}</strong
+                    <span class="music-track-title-line"
+                      ><strong>{{ track.title }}</strong
+                      ><small
+                        v-if="trackAccessLabel(track)"
+                        class="music-track-access-badge"
+                        :class="`is-${track.accessState}`"
+                        :title="trackAccessTitle(track)"
+                        :data-testid="`music-track-access-${track.id}`"
+                        >{{ trackAccessLabel(track) }}</small
+                      ></span
                     ><span>{{ track.artist }}</span>
                   </span>
                   <span class="music-track-album">{{ track.album }}</span>
@@ -1731,15 +1844,24 @@ onBeforeUnmount(() => {
         /></span>
         <span class="music-player-meta"
           ><strong>{{ playerTrack.title }}</strong
-          ><span>{{ playerTrack.artist }}</span></span
+          ><span>{{ playerTrack.artist }}</span
+          ><small
+            v-if="playbackQualityNotice"
+            class="music-player-quality"
+            data-testid="music-player-quality"
+            >{{ playbackQualityNotice }}</small
+          ></span
         >
       </button>
       <div class="music-player-center">
         <div class="music-player-controls">
           <button
             type="button"
+            data-testid="music-player-shuffle"
             :class="{ 'is-active': musicStore.state.playback.shuffle }"
-            :title="t('随机播放', 'Shuffle')"
+            :title="shuffleModeLabel"
+            :aria-label="shuffleModeLabel"
+            :aria-pressed="musicStore.state.playback.shuffle"
             @click="musicStore.toggleShuffle"
           >
             <i class="fas fa-shuffle" aria-hidden="true"></i>
@@ -1772,8 +1894,10 @@ onBeforeUnmount(() => {
           </button>
           <button
             type="button"
+            data-testid="music-player-repeat"
             :class="{ 'is-active': musicStore.state.playback.repeatMode !== 'off' }"
-            :title="t('循环模式', 'Repeat')"
+            :title="t(`当前：${repeatModeLabel}，点击切换`, `Current: ${repeatModeLabel}. Click to change`)"
+            :aria-label="t(`循环模式：${repeatModeLabel}`, `Repeat mode: ${repeatModeLabel}`)"
             @click="musicStore.cycleRepeatMode"
           >
             <i
@@ -1980,6 +2104,46 @@ onBeforeUnmount(() => {
                     @click="musicStore.next"
                   >
                     <i class="fas fa-forward-step" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <div
+                v-if="isNowPlayingCurrentTrack"
+                class="music-now-playing-modes"
+                data-testid="music-now-playing-modes"
+              >
+                <span>
+                  <strong>{{ repeatModeLabel }}</strong>
+                  <small>{{ playbackContinuationCopy }}</small>
+                </span>
+                <div>
+                  <button
+                    type="button"
+                    data-testid="music-now-playing-shuffle"
+                    :class="{ 'is-active': musicStore.state.playback.shuffle }"
+                    :aria-pressed="musicStore.state.playback.shuffle"
+                    :title="shuffleModeLabel"
+                    @click="musicStore.toggleShuffle"
+                  >
+                    <i class="fas fa-shuffle" aria-hidden="true"></i
+                    ><span>{{ shuffleModeLabel }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="music-now-playing-repeat"
+                    :class="{ 'is-active': musicStore.state.playback.repeatMode !== 'off' }"
+                    :title="t(`当前：${repeatModeLabel}，点击切换`, `Current: ${repeatModeLabel}. Click to change`)"
+                    @click="musicStore.cycleRepeatMode"
+                  >
+                    <i
+                      :class="
+                        musicStore.state.playback.repeatMode === 'one'
+                          ? 'fas fa-repeat'
+                          : 'fas fa-retweet'
+                      "
+                      aria-hidden="true"
+                    ></i
+                    ><span>{{ repeatModeLabel }}</span>
                   </button>
                 </div>
               </div>
@@ -3882,6 +4046,43 @@ summary:focus-visible {
   font-size: 12px;
 }
 
+.music-track-meta .music-track-title-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+}
+
+.music-track-title-line strong {
+  min-width: 0;
+}
+
+.music-track-meta .music-track-access-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  max-width: 82px;
+  min-height: 17px;
+  align-items: center;
+  border: 1px solid rgba(146, 92, 24, 0.2);
+  border-radius: 999px;
+  padding: 1px 6px;
+  overflow: hidden;
+  color: #8a5416;
+  background: rgba(239, 184, 93, 0.14);
+  font-size: 8px;
+  font-style: normal;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-track-meta .music-track-access-badge.is-restricted {
+  border-color: rgba(116, 85, 64, 0.18);
+  color: #725240;
+  background: rgba(116, 85, 64, 0.1);
+}
+
 .music-track-meta span,
 .music-track-album,
 .music-track-duration {
@@ -4374,6 +4575,17 @@ summary:focus-visible {
   font-size: 10px;
 }
 
+.music-player-quality {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #ffd18a;
+  font-size: 8px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .music-player-center {
   min-width: 0;
 }
@@ -4450,6 +4662,16 @@ input[type='range'] {
   margin: 0;
   color: #ff8a98;
   font-size: 8px;
+}
+
+.music-search-playback-error {
+  margin: 12px 0 0;
+  border-left: 2px solid #bb5964;
+  padding: 8px 10px;
+  color: #8f3540;
+  background: rgba(187, 89, 100, 0.08);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .music-overlay,
@@ -4776,6 +4998,62 @@ input[type='range'] {
   width: 62px;
   height: 62px;
   font-size: 19px;
+}
+
+.music-now-playing-modes {
+  display: grid;
+  width: min(100%, 440px);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 2px;
+  padding: 13px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.music-now-playing-modes > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.music-now-playing-modes strong {
+  color: #fff;
+  font-size: 11px;
+}
+
+.music-now-playing-modes small {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.music-now-playing-modes > div {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 6px;
+}
+
+.music-now-playing-modes button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0 11px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.music-now-playing-modes button.is-active {
+  border-color: rgba(255, 120, 152, 0.62);
+  color: #fff;
+  background: rgba(232, 66, 105, 0.3);
 }
 
 .music-now-playing-actions {
@@ -5991,6 +6269,10 @@ input[type='range'] {
     justify-content: center;
   }
 
+  .music-now-playing-modes {
+    width: 100%;
+  }
+
   .music-track-inspection-note {
     text-align: center;
   }
@@ -6175,6 +6457,15 @@ input[type='range'] {
 
   .music-now-playing-stage {
     padding: 26px 24px 28px;
+  }
+
+  .music-now-playing-modes {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .music-now-playing-modes > div {
+    justify-content: center;
   }
 
   .music-now-playing-actions {

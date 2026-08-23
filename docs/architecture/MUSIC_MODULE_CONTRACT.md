@@ -1,8 +1,8 @@
 # Music Module Contract
 
-Updated: 2026-08-11
+Updated: 2026-08-22
 
-Status: `CHKSZ_RADIO_BROWSER_AND_LOCAL_INTAKE_INTEGRATED_LOCAL / CHAT_TRACK_SHARE_AND_MAP_JOURNEY_MEDIA_CALLERS_INTEGRATED_LOCAL / REAL_CREDENTIAL_AND_REMAINING_CALLER_PROOF_DEFERRED`
+Status: `CHKSZ_PRIMARY_RADIO_BROWSER_AND_LOCAL_INTAKE_INTEGRATED_LOCAL / CHAT_TRACK_SHARE_AND_MAP_JOURNEY_MEDIA_CALLERS_INTEGRATED_LOCAL / REAL_CREDENTIAL_AND_REMAINING_CALLER_PROOF_DEFERRED`
 
 Authority note:
 
@@ -13,7 +13,7 @@ Authority note:
 
 ## 1. Goal
 
-Music is a first-class installed app, not a Settings dashboard. It provides a believable consumer listening experience while letting a user connect an authorized generic JSON API, use the no-key Radio Browser live-station preset, use the dedicated ChKSz multi-platform Adapter, add a stable HTTPS audio URL, or import audio files owned by Music on the current device.
+Music is a first-class installed app, not a Settings dashboard. It provides a believable consumer listening experience with the user-authorized ChKSz multi-platform Adapter as its primary online source, while still allowing a user to connect an authorized generic JSON API, use the no-key Radio Browser live-station preset, add a stable HTTPS audio URL, or import audio files owned by Music on the current device.
 
 The product model is:
 
@@ -30,14 +30,14 @@ Chat and Map never receive provider credentials, endpoints, request headers, or 
 The first slice includes:
 
 - `/music` as a Home and App Store installed-app route;
-- `Discover`, `Albums`, and `My Music` as the three primary listening spaces, with Search as a top utility rather than a fourth primary destination, plus favorites, recent tracks, playlists, queue, shuffle, repeat, seek, volume, mute, and expanded Now Playing;
+- `Discover`, `Albums`, and `My Music` as the three primary listening spaces, with Search as a top utility rather than a fourth primary destination, plus favorites, recent tracks, playlists, queue, explicit order/repeat-all/repeat-one/shuffle policy, seek, volume, mute, and expanded Now Playing;
 - a cover-led Album Detail subpage that separates album inspection from immediate playback, keeps album/track play state synchronized, and exposes bounded favorite, queue, playlist, and Track Details actions;
-- a Music-owned global floating player that preserves the in-memory playback session across unlocked routes and supports collapsed, expanded, and dismissed states; Chat routes constrain it to a right-edge dock that reveals controls only on request, while full browsing hands off to `/music`;
+- a Music-owned global floating player that preserves the in-memory playback session across unlocked routes and supports collapsed, expanded, and dismissed states; non-Chat routes default to a compact right-side capsule with track identity, play/pause, expand, and dismiss, while the expanded state owns skip, quick-track/radio, and playback-policy controls. Chat routes retain their narrower right-edge dock, while full browsing hands off to `/music`;
 - browser `Audio` playback plus Media Session metadata and play/pause/previous/next/seek handlers where supported;
 - built-in listening samples so the app remains usable before a provider is configured;
 - configurable GET or POST JSON search APIs with result-path and field mapping;
 - a focused Radio Browser preset that searches healthy HTTPS MP3 live stations without an API Key;
-- a dedicated ChKSz source preset for NetEase, QQ, and Kugou search, with playback resolution deferred until the user presses Play;
+- a dedicated primary-online-source ChKSz preset for NetEase, QQ, and Kugou search, with playback resolution deferred until the user presses Play;
 - a Music Settings `Add Music` surface with separate URL and local-file modes, compact imported-track management, and no Gallery/image-resource dependency;
 - validated direct HTTPS audio URLs with user-supplied title/artist/album/cover metadata;
 - multiple local audio-file import into a Music-owned IndexedDB carrier, with runtime object-URL creation/revocation and explicit missing-file feedback;
@@ -73,10 +73,11 @@ This slice does not claim provider catalog licensing, unrestricted stream rights
 6. Queue, playlist, favorite, destructive, empty, loading, connection-warning, missing-local-file, and playback-error states must remain explicit.
 7. Playback controls remain icon-led with accessible names and stable control dimensions.
 8. The primary information architecture is `Discover / Albums / My Music`. Search is a persistent top utility, while queue and Music Settings remain utility actions; none is duplicated as a primary tab. Discover leads with a full-width, cover-led weekly recommendation selected deterministically from playable catalog tracks, then exposes four explicit shortcuts for Favorites, Recent, Playlists, and Albums before the album shelf and bounded three-track Recently Played overview. Recently Played is real user history and must expose an empty state instead of filling itself with demo catalog tracks; `See All` hands the user to `My Music -> Recently Played` instead of expanding the overview in place. Albums uses a catalog-specific visual header and complete album grid; an album card body opens Album Detail without starting playback, while its dedicated Play control remains an immediate deterministic action. Album Detail owns the cover-led album summary, album-wide play/pause, favorite-all and queue actions, and the complete track list. A track row body opens Track Details, while its dedicated Play, Favorite, and Playlist controls retain their own actions. My Music owns personal collection summary, Favorites, Recent, Playlists, and the full track list. Its `Songs` projection contains saved tracks plus resolvable favorite and playlist members, never the untouched demo catalog or playback history alone. Hero counts and artwork follow that personal projection, top glance items are read-only statistics, and the category tabs are the sole local navigation. Each empty category states the user action that will populate it. Phone-sized Album Detail is a full Music-owned drill-down surface that hides the three-space navigation while preserving the active in-app player and an explicit Albums return; wider layouts retain the record-library sidebar. The recommendation stays independent from the current runtime track: activating it loads that recommendation into the Music-owned player, while playing something else changes only current-player surfaces. If the recommendation, album, or track represented by a visible control is current, that control must reflect playing versus paused state instead of always showing Play. Stop belongs to current-player controls, and the persistent in-app player renders only while the runtime owns a current track.
-9. The global floating player must not render on Lock or `/music`; it supports collapsed, expanded, and dismissed states, clears Home/app-owned bottom controls, and stays beneath an open Map journey-media panel. On Chat routes it auto-collapses into a cover-sized right-edge handle, removes queue-browsing and skip controls, and reveals the track entry, play/pause, edge-collapse, and dismiss actions only after an explicit click. Wide Chat reserves a matching edge lane so the resting handle does not overlap interactive Chat content; play/pause returns the control to its edge state.
-10. Route return context uses the shared navigation-return contract; Music must not invent an unrelated back stack.
-11. Map journey media appears only while a journey is traveling or paused. Closing that focused Map panel does not close Music's floating player or stop playback.
-12. Map radio labels are deterministic Music presets over playable library tracks. They do not embed or imply a third-party live-radio stream.
+9. The global floating player must not render on Lock or `/music`; it supports collapsed, expanded, and dismissed states, clears Home/app-owned bottom controls, and stays beneath an open Map journey-media panel. Outside Chat, collapsed means a compact right-side capsule that exposes only track identity, play/pause, expand, and dismiss; skip, quick-track/radio, and playback-policy controls require the expanded state. On Chat routes it auto-collapses into a cover-sized right-edge handle, removes queue-browsing and skip controls, and reveals the track entry, play/pause, edge-collapse, and dismiss actions only after an explicit click. Wide Chat reserves a matching edge lane so the resting handle does not overlap interactive Chat content; play/pause returns the control to its edge state.
+10. Playback policy is explicit wherever the user manages the current session. Order mode advances automatically on `ended` and stops at the queue boundary; repeat-all wraps at that boundary; repeat-one reloads the current track after `ended`; shuffle selects from the active queue without changing the repeat preference. The expanded floating player and phone Now Playing must expose these modes with visible state names and accessible pressed/current-state semantics.
+11. Route return context uses the shared navigation-return contract; Music must not invent an unrelated back stack.
+12. Map journey media appears only while a journey is traveling or paused. Closing that focused Map panel does not close Music's floating player or stop playback.
+13. Map radio labels are deterministic Music presets over playable library tracks. They do not embed or imply a third-party live-radio stream.
 
 ## 5. Track Contract
 
@@ -96,6 +97,8 @@ This slice does not claim provider catalog licensing, unrestricted stream rights
   "year": 2026,
   "genre": "Genre",
   "addedAt": 0,
+  "accessState": "premium",
+  "accessReason": "provider_fee",
   "sourceRef": null
 }
 ```
@@ -107,6 +110,7 @@ Rules:
 - only `http`, `https`, and local `blob:`/`data:audio/` playback sources are admitted;
 - durations normalize seconds or millisecond-like values and are bounded to 24 hours;
 - malformed URLs, years, and fields normalize to safe empty/default values rather than entering runtime unchecked.
+- optional `accessState` (`open`, `premium`, `purchase`, `restricted`, or `unknown`) and `accessReason` are bounded provider hints. They support presentation and failure diagnosis but never disable a ChKSz Play action by themselves;
 - ChKSz tracks carry only a bounded `sourceRef` (`type`, platform, stable id/mid or result selection, and the original bounded query); it contains no API Key or stream URL.
 - direct URL tracks carry `sourceRef.type = direct_url` and keep their stable HTTPS `audioUrl` in Music public state;
 - local-file tracks carry only `sourceRef.type = local_file`, a Music-owned `mediaId`, bounded filename/MIME/size metadata, and an empty durable `audioUrl`;
@@ -136,8 +140,8 @@ The generic Adapter intentionally supports common JSON APIs; it does not guess p
 Rules:
 
 1. the device-local API Key is added only as the required `apikey` query parameter on an outgoing ChKSz request;
-2. search normalizes NetEase, QQ, and Kugou results without resolving or persisting audio URLs; common nested artist/album fields, `picUrl`/`picurl` cover variants, duration, and publish-date variants may enrich the normalized track;
-3. Play resolves a selected track through the platform endpoint and gives the returned URL only to the active audio runtime. Same-track resolution is single-flight and may reuse one memory-only result for 24 hours; the Store retains at most the 50 most recently used resolutions. An immediate or asynchronous cached-stream playback failure invalidates that entry and retries provider resolution at most once;
+2. search normalizes NetEase, QQ, and Kugou results without resolving or persisting audio URLs; common nested artist/album fields, `picUrl`/`picurl` cover variants, duration, publish-date variants, QQ `pay`, and NetEase `fee`/availability variants may enrich the normalized track. Rights fields produce conservative `VIP`, `Purchase`, or `Limited` presentation hints but do not assert final playability;
+3. Play resolves a selected track through the platform endpoint and gives the returned URL only to the active audio runtime. If the selected non-basic quality returns no URL, or an explicit quality/format business error, the Adapter retries exactly once with `standard` for NetEase or `mp3` for QQ/Kugou without changing the user's saved quality preference. Authentication, quota, rate-limit, provider-unavailable HTTP, cancellation, and network errors do not trigger quality fallback. Same-track resolution is single-flight and may reuse one memory-only result for up to 7 days; the Store retains at most the 50 most recently used resolutions. When the response body or resolved URL exposes an absolute or relative expiry, reuse ends 5 minutes before that provider expiry and never exceeds the 7-day ceiling. An immediate or asynchronous cached-stream playback failure invalidates that entry and retries provider resolution at most once; even when both provider resolutions use their one allowed quality fallback, the total request path remains bounded;
 4. NetEase lyrics and playlist details are runtime/import operations owned by Music; playlist tracks remain unresolved until played. Lyrics and normalized provider metadata may use the separate rebuildable device cache described in section 8;
 5. `401`, `402`, `403`, `429`, and `503` preserve the API's bounded message after Key redaction, quota headers are runtime-only, and `429` retries at most once after `Retry-After`;
 6. QQ member Cookie input is not supported by this slice because it is a separate, more sensitive credential contract.
@@ -165,7 +169,7 @@ It owns:
 - active track/current time/duration snapshots;
 - Media Session metadata and supported action handlers.
 
-The Pinia store owns queue order, repeat/shuffle policy, recent history, journey-radio queues, floating-player state, which normalized track should load next, dedicated-Adapter resolution, request single-flight state, and Music-local binary resolution before runtime load. A local blob becomes an object URL only for the active playback session; the prior URL is revoked on track change, stop, removal, or Store disposal. Dismissing the floating player survives automatic ended-to-next transitions, while a later explicit user playback action may reveal it again. Direct external playback is never authorized by a Chat/Map request. Browser autoplay restrictions remain authoritative, so play requests must originate from a user gesture.
+The Pinia store owns queue order, repeat/shuffle policy, recent history, journey-radio queues, floating-player state, which normalized track should load next, dedicated-Adapter resolution, request single-flight state, and Music-local binary resolution before runtime load. An `ended` event advances in queue order by default, stops at the queue boundary, wraps only for repeat-all or an active journey station, and reloads the current track for repeat-one; shuffle changes selection order without silently changing the repeat preference. A local blob becomes an object URL only for the active playback session; the prior URL is revoked on track change, stop, removal, or Store disposal. Dismissing the floating player survives automatic ended-to-next transitions, while a later explicit user playback action may reveal it again. Direct external playback is never authorized by a Chat/Map request. Browser autoplay restrictions remain authoritative, so initial playback requests must originate from a user gesture; this contract does not promise page-load autoplay.
 
 The runtime persists no `Audio` object, signed media request, or closed-app worker. Navigating inside the live app preserves playback; terminating or suspending the browser/PWA may stop it.
 
@@ -194,7 +198,7 @@ Provider API keys use the separate `schatphone:music:credentials` device-local c
 
 Search-result presentation, resolved ChKSz stream URLs, quota/status data, active `Audio` state, current time, raw responses, and request diagnostics are runtime projections and do not enter backup. Saved ChKSz tracks, recent tracks, and queue entries retain their bounded `sourceRef` but always persist with an empty `audioUrl`.
 
-Normalized provider metadata and lyrics use the separate `schatphone-music-provider-cache` IndexedDB version-1 database and `entries` object store. The logical class `music.provider-cache` is Music-owned, device-local, expiring, rebuildable, and excluded from ordinary backup. Entries are keyed by cache kind, provider profile, platform, and stable source track reference; current TTL is 30 days. The cache contains no API Key, raw response, resolved stream URL, audio bytes, or cross-module payload. Clearing browser data or cache expiry safely falls back to the provider. Resolved ChKSz playback URLs remain outside this database and may exist only in the Store's 24-hour, 50-track LRU memory cache.
+Normalized provider metadata and lyrics use the separate `schatphone-music-provider-cache` IndexedDB version-1 database and `entries` object store. The logical class `music.provider-cache` is Music-owned, device-local, expiring, rebuildable, and excluded from ordinary backup. Entries are keyed by cache kind, provider profile, platform, and stable source track reference; current TTL is 30 days. The cache contains no API Key, raw response, resolved stream URL, audio bytes, or cross-module payload. Clearing browser data or cache expiry safely falls back to the provider. Resolved ChKSz playback URLs remain outside this database and may exist only in the Store's expiry-aware, up-to-7-day, 50-track LRU memory cache.
 
 Imported local audio uses the separate `schatphone-music-media` IndexedDB version-1 database and `audioBlobs` object store. The logical class `music.local-media-binaries` is Music-owned and current-device durable, follows the current-save writer boundary, and is excluded from the current ordinary backup slice. Public track metadata keeps only `mediaId`; Gallery does not own, index, or package these blobs. A restore or storage loss that leaves metadata without the binary returns `LOCAL_MEDIA_MISSING` and asks the user to import the source file again rather than substituting another resource. Same-track relink and optional binary backup packaging are later contracts.
 
@@ -227,6 +231,7 @@ Rules:
 - HTTPS deployments cannot play blocked mixed-content HTTP streams.
 - Expiring or signed media URLs may stop working after the provider's validity window; Music does not persist them or provider authorization material into another owner. A reused memory-only URL that fails immediately is invalidated and provider resolution is retried at most once.
 - Provider rate limits, geographic restrictions, DRM, cookies, referrer policy, and byte-range support remain provider/browser concerns.
+- QQ `pay` and NetEase `fee`/availability values are upstream hints rather than authorization proof. Music still lets the user try Play, and a final missing URL explains whether the upstream result was marked premium, separately purchased, or potentially restricted.
 - The generic Adapter sends credentials directly from the browser to the configured endpoint. A future proxy must be explicit and separately reviewed for authentication, SSRF, allowlisting, rate limits, redaction, and abuse controls.
 - User-supplied endpoint and media URLs must never be described as trusted SchatPhone content merely because normalization accepted their protocol.
 - direct URL intake requires HTTPS and probes browser-readable audio metadata before admission; browser codec, CORS, redirect, range, and host availability remain external constraints.
@@ -251,6 +256,10 @@ The active-journey Map media follow-up passes the current full 217-file / 1556-t
 The Radio Browser preset follow-up passes the current full 217-file / 1559-test Vitest suite, lint, production build, governance and diff checks, plus 12 focused Music and Map/Music Playwright cases across desktop Chromium and simulated Pixel 5. The two new Radio Browser cases prove no-key setup, fixed HTTPS/MP3 filtering, station normalization, search, and playback. Direct API inspection also returned HTTP 200 with wildcard CORS; individual live-station uptime remains external.
 
 The 2026-08-10 provider-cache and favorite-state follow-up passes 44 focused Adapter/Store/View/persistence-inventory tests, full lint, governance, production build, the full 225-file / 1635-test Vitest suite, and all 12 `music-app.spec.js` desktop/simulated-Pixel-5 cases. Store coverage proves 24-hour reuse, expiry refresh, the 50-track LRU boundary, same-track single-flight, synchronous and asynchronous cached-stream retry, and lyrics reuse. The ChKSz case also proves the explicit favorite state, Library admission, and refresh persistence with mocked provider responses; manual default-desktop and 393 x 852 inspection confirms the selected-heart treatment and zero document/sheet horizontal overflow.
+
+The 2026-08-22 ChKSz primary-source cache follow-up passes 4 focused Music files / 52 tests, lint, the full 303-file / 2175-test Vitest suite, production build across 594 modules with only the existing chunk-size warning, governance at 2 files / 14 tests, all 12 `music-app.spec.js` desktop/simulated-Pixel-5 cases, and `git diff --check`. Adapter/Store coverage proves the new up-to-7-day reuse ceiling, absolute URL expiry, absolute and relative response expiry, the 5-minute safety margin, existing 50-track LRU behavior, and the previously accepted synchronous/asynchronous one-refresh failure recovery. Resolved stream URLs remain memory-only and excluded from IndexedDB, public Music state, backup, and cross-module projections.
+
+The 2026-08-22 ChKSz access-diagnosis and quality-fallback follow-up passes 4 focused Music files / 61 tests, lint, the full 303-file / 2186-test Vitest suite, production build across 594 modules with only the existing chunk-size warning, governance at 2 files / 14 tests, all 12 `music-app.spec.js` desktop/simulated-Pixel-5 cases, the 16-case visual gate, and `git diff --check`. Adapter/Store/View/E2E coverage proves conservative QQ/NetEase access hints, enabled Play controls, explicit missing-URL reasons, one `jymaster -> standard` or `flac -> mp3` fallback, no fallback for authentication/quota/rate-limit/provider-unavailable HTTP or network failures, cached reuse of the actual resolved URL, and a bounded four-request ceiling when one cached-stream recovery contains two quality attempts. Direct local-browser inspection at 1280 x 800 and 393 x 852 confirms visible top Search, the desktop sidebar, the 78 px phone bottom bar, `rgb(119, 123, 128)` inactive labels, 7.17 px label-to-gesture-indicator clearance, and zero document/body horizontal overflow. This remains mocked-provider and simulated-device evidence; it does not claim that a real membership account authorizes browser playback.
 
 Still deferred:
 

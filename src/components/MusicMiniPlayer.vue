@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from '../composables/useI18n'
+import { MUSIC_REPEAT_MODES } from '../lib/music-contract'
 import { buildReturnSourceQuery, normalizeHomePageQuery } from '../lib/navigation-return'
 import { useMusicStore } from '../stores/music'
 import { useSystemStore } from '../stores/system'
@@ -43,6 +44,27 @@ const coverStyle = computed(() =>
   track.value?.coverUrl
     ? { backgroundImage: `url(${JSON.stringify(track.value.coverUrl)})` }
     : undefined,
+)
+const repeatModeLabel = computed(() => {
+  if (musicStore.state.playback.repeatMode === MUSIC_REPEAT_MODES.ALL) {
+    return t('列表循环', 'Repeat all')
+  }
+  if (musicStore.state.playback.repeatMode === MUSIC_REPEAT_MODES.ONE) {
+    return t('单曲循环', 'Repeat one')
+  }
+  return t('顺序播放', 'Play in order')
+})
+const playbackContinuationCopy = computed(() => {
+  if (musicStore.state.playback.repeatMode === MUSIC_REPEAT_MODES.ALL) {
+    return t('队列结束后从头继续', 'Restart the queue after its last track')
+  }
+  if (musicStore.state.playback.repeatMode === MUSIC_REPEAT_MODES.ONE) {
+    return t('当前歌曲结束后重新播放', 'Replay the current track when it ends')
+  }
+  return t('歌曲结束后自动播放下一首，队列末尾停止', 'Continue to the next track, then stop at the end')
+})
+const shuffleLabel = computed(() =>
+  musicStore.state.playback.shuffle ? t('随机播放', 'Shuffle on') : t('按队列顺序', 'Queue order'),
 )
 
 const musicRouteQuery = () => {
@@ -153,6 +175,7 @@ const playStation = (station) =>
         'is-chat-controls-open': isChatRoute && chatControlsExpanded,
         'has-bottom-controls': hasBottomControls,
         'is-expanded': musicStore.floatingPlayerExpanded,
+        'is-collapsed': !isChatRoute && !musicStore.floatingPlayerExpanded,
       }"
       data-testid="music-mini-player"
       :aria-label="t('音乐浮窗', 'Music floating player')"
@@ -179,7 +202,7 @@ const playStation = (station) =>
         </button>
 
         <div v-if="!isChatRoute || chatControlsExpanded" class="music-mini-controls">
-          <template v-if="!isChatRoute">
+          <template v-if="!isChatRoute && musicStore.floatingPlayerExpanded">
             <button type="button" :disabled="!track" :title="t('上一首', 'Previous')" @click="runPlaybackAction('previous', musicStore.previous)">
               <i class="fas fa-backward-step" aria-hidden="true"></i>
             </button>
@@ -203,7 +226,7 @@ const playStation = (station) =>
             <i class="fas fa-chevron-right" aria-hidden="true"></i>
           </button>
           <template v-if="!isChatRoute">
-            <button type="button" :disabled="!track" :title="t('下一首', 'Next')" @click="runPlaybackAction('next', () => musicStore.next())">
+            <button v-if="musicStore.floatingPlayerExpanded" type="button" :disabled="!track" :title="t('下一首', 'Next')" @click="runPlaybackAction('next', () => musicStore.next())">
               <i class="fas fa-forward-step" aria-hidden="true"></i>
             </button>
             <button
@@ -223,6 +246,34 @@ const playStation = (station) =>
       </div>
 
       <div v-if="musicStore.floatingPlayerExpanded && !isChatRoute" class="music-floating-content" data-testid="music-floating-content">
+        <div class="music-floating-playback-policy" data-testid="music-floating-playback-policy">
+          <span>
+            <strong>{{ repeatModeLabel }}</strong>
+            <small>{{ playbackContinuationCopy }}</small>
+          </span>
+          <div>
+            <button
+              type="button"
+              data-testid="music-floating-shuffle"
+              :class="{ 'is-active': musicStore.state.playback.shuffle }"
+              :aria-pressed="musicStore.state.playback.shuffle"
+              :title="shuffleLabel"
+              @click="musicStore.toggleShuffle"
+            >
+              <i class="fas fa-shuffle" aria-hidden="true"></i><span>{{ shuffleLabel }}</span>
+            </button>
+            <button
+              type="button"
+              data-testid="music-floating-repeat"
+              :class="{ 'is-active': musicStore.state.playback.repeatMode !== MUSIC_REPEAT_MODES.OFF }"
+              :title="t(`当前：${repeatModeLabel}，点击切换`, `Current: ${repeatModeLabel}. Click to change`)"
+              @click="musicStore.cycleRepeatMode"
+            >
+              <i :class="musicStore.state.playback.repeatMode === MUSIC_REPEAT_MODES.ONE ? 'fas fa-repeat' : 'fas fa-retweet'" aria-hidden="true"></i><span>{{ repeatModeLabel }}</span>
+            </button>
+          </div>
+        </div>
+
         <div class="music-floating-segments" role="tablist" :aria-label="t('音频类型', 'Audio type')">
           <button type="button" role="tab" :aria-selected="mode === 'music'" :class="{ 'is-active': mode === 'music' }" data-testid="music-floating-music-tab" @click="mode = 'music'">
             <i class="fas fa-music" aria-hidden="true"></i><span>{{ t('音乐', 'Music') }}</span>
@@ -279,27 +330,30 @@ const playStation = (station) =>
 <style scoped>
 .music-mini-player {
   position: absolute;
-  right: 12px;
+  right: 0;
   bottom: calc(24px + env(safe-area-inset-bottom));
-  left: 12px;
+  left: auto;
+  width: min(292px, calc(100% - 8px));
   z-index: 44;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 8px;
+  border-right: 0;
+  border-radius: 28px 0 0 28px;
   color: #f8fafc;
   background: rgba(20, 23, 28, 0.94);
   box-shadow: 0 18px 40px rgba(6, 9, 13, 0.3);
   backdrop-filter: blur(22px) saturate(1.2);
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1), right 180ms ease, border-radius 180ms ease, box-shadow 160ms ease;
 }
 
 .music-mini-player.is-home-route { bottom: calc(124px + env(safe-area-inset-bottom)); }
 .music-mini-player.has-bottom-controls { bottom: calc(78px + env(safe-area-inset-bottom)); }
 .music-mini-player.is-chat-route { top: 50%; right: 0; bottom: auto; left: auto; width: 44px; border-right: 0; border-radius: 8px 0 0 8px; box-shadow: -10px 12px 26px rgba(6, 9, 13, 0.24); transform: translateY(-50%); transition: width 180ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 160ms ease; }
 .music-mini-player.is-chat-route.is-chat-controls-open { width: min(244px, calc(100% - 10px)); box-shadow: -16px 16px 34px rgba(6, 9, 13, 0.3); }
-.music-mini-player.is-map-route { right: 14px; bottom: calc(224px + env(safe-area-inset-bottom)); left: auto; width: min(380px, calc(100% - 28px)); }
-.music-mini-player.is-expanded { max-height: min(620px, calc(100% - 48px)); }
-.music-mini-player.is-map-route.is-expanded { top: 124px; bottom: auto; max-height: calc(100% - 142px); }
+.music-mini-player.is-map-route { bottom: calc(224px + env(safe-area-inset-bottom)); }
+.music-mini-player.is-expanded { right: 12px; width: min(420px, calc(100% - 24px)); max-height: min(620px, calc(100% - 48px)); border-right: 1px solid rgba(255, 255, 255, 0.24); border-radius: 12px; box-shadow: 0 22px 54px rgba(6, 9, 13, 0.36); }
+.music-mini-player.is-map-route.is-expanded { top: 124px; right: 14px; bottom: auto; width: min(380px, calc(100% - 28px)); max-height: calc(100% - 142px); }
 
 .music-mini-bar { display: grid; min-height: 58px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
 .music-mini-track { display: grid; min-width: 0; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px 4px 8px 8px; color: inherit; text-align: left; }
@@ -316,6 +370,11 @@ const playStation = (station) =>
 .music-mini-controls button:active { transform: scale(0.92); }
 .music-mini-controls button:disabled { opacity: 0.28; }
 .music-mini-controls .music-mini-toggle { color: #fff; font-size: 14px; }
+.music-mini-player.is-collapsed .music-mini-controls { padding-right: 8px; }
+.music-mini-player.is-collapsed .music-mini-track { grid-template-columns: 38px minmax(0, 1fr); gap: 8px; padding: 8px 2px 8px 9px; }
+.music-mini-player.is-collapsed .music-mini-cover { width: 38px; height: 38px; border-radius: 50%; }
+.music-mini-player.is-collapsed .music-mini-copy strong { font-size: 12px; }
+.music-mini-player.is-collapsed .music-mini-copy small { font-size: 9px; }
 
 .music-mini-player.is-chat-route .music-mini-bar { min-height: 48px; }
 .music-mini-player.is-chat-route .music-mini-track { position: relative; }
@@ -333,6 +392,14 @@ const playStation = (station) =>
 .music-mini-player.is-chat-route button:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.92); outline-offset: -3px; }
 
 .music-floating-content { min-height: 0; overflow-y: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); background: #f6f8f6; color: #17211d; }
+.music-floating-playback-policy { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 12px 0; }
+.music-floating-playback-policy > span { display: grid; min-width: 0; gap: 2px; }
+.music-floating-playback-policy strong { color: #24372d; font-size: 10px; font-weight: 900; }
+.music-floating-playback-policy small { color: #748078; font-size: 8px; line-height: 1.35; }
+.music-floating-playback-policy > div { display: grid; grid-auto-flow: column; gap: 4px; }
+.music-floating-playback-policy button { display: inline-flex; min-height: 30px; align-items: center; justify-content: center; gap: 5px; border: 1px solid #dbe3de; border-radius: 999px; background: #fff; padding: 0 9px; color: #66736c; font-size: 8px; font-weight: 850; }
+.music-floating-playback-policy button.is-active { border-color: #8bb4a4; background: #e9f3ee; color: #17664f; }
+.music-floating-playback-policy button span { white-space: nowrap; }
 .music-floating-segments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; margin: 10px 12px 8px; border: 1px solid #dce3df; border-radius: 7px; background: #e9eeeb; padding: 3px; }
 .music-floating-segments button { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; gap: 6px; border-radius: 5px; color: #6c7972; font-size: 10px; font-weight: 850; }
 .music-floating-segments button.is-active { background: #fff; color: #17664f; box-shadow: 0 2px 7px rgba(28, 48, 37, 0.1); }
@@ -370,17 +437,22 @@ const playStation = (station) =>
 .music-mini-leave-to.is-chat-route { transform: translate(8px, -50%); }
 
 @media (min-width: 760px) {
-  .music-mini-player { right: 24px; bottom: 28px; left: auto; width: min(380px, calc(100vw - 48px)); }
+  .music-mini-player { right: 0; bottom: 28px; width: min(300px, calc(100vw - 24px)); }
+  .music-mini-player.is-expanded { right: 24px; width: min(420px, calc(100vw - 48px)); }
   .music-mini-player.is-home-route { bottom: calc(124px + env(safe-area-inset-bottom)); }
   :global(.screen:has(.music-mini-player.is-chat-route) .chat-shell) { padding-right: 44px; box-shadow: inset -44px 0 var(--chat-thread-bg); }
-  .music-mini-player.is-map-route { right: 24px; bottom: 24px; }
+  .music-mini-player.is-map-route { right: 0; bottom: 24px; }
+  .music-mini-player.is-map-route.is-expanded { right: 24px; }
   .music-mini-player.is-map-route.is-expanded { top: 126px; bottom: auto; }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 520px) {
+  .music-mini-player.is-collapsed { width: min(252px, calc(100% - 6px)); }
   .music-mini-controls button { width: 27px; }
   .music-mini-track { grid-template-columns: 38px minmax(0, 1fr); gap: 8px; }
   .music-mini-cover { width: 38px; height: 38px; }
+  .music-floating-playback-policy { grid-template-columns: 1fr; }
+  .music-floating-playback-policy > div { justify-content: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {

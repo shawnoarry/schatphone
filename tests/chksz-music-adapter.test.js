@@ -117,6 +117,47 @@ describe('ChKSz music adapter', () => {
     })
   })
 
+  test('keeps provider access hints conservative without disabling resolvable tracks', () => {
+    const netease = normalizeChkszSearchResponse(
+      {
+        result: {
+          songs: [
+            { id: 1, name: 'Open', fee: 0 },
+            { id: 2, name: 'Member', fee: 1 },
+            { id: 3, name: 'Purchase', fee: 4 },
+            { id: 4, name: 'Restricted', fee: 8 },
+            { id: 5, name: 'Unavailable', st: -1 },
+            { id: 6, name: 'Unknown' },
+          ],
+        },
+      },
+      createProfile(),
+      'Access',
+    )
+    const qq = normalizeChkszSearchResponse(
+      {
+        list: [
+          { mid: 'free', name: 'Free', pay: 0 },
+          { mid: 'vip', name: 'VIP', pay: '会员歌曲' },
+          { mid: 'album', name: 'Album', pay: '单独购买' },
+        ],
+      },
+      createProfile(CHKSZ_MUSIC_PLATFORMS.QQ),
+      'Access',
+    )
+
+    expect(netease.map((track) => track.accessState)).toEqual([
+      'open',
+      'premium',
+      'purchase',
+      'restricted',
+      'restricted',
+      'unknown',
+    ])
+    expect(qq.map((track) => track.accessState)).toEqual(['open', 'premium', 'purchase'])
+    expect([...netease, ...qq].every((track) => Boolean(track.sourceRef))).toBe(true)
+  })
+
   test('adds the device key only to the official outgoing query and returns quota metadata', async () => {
     const fetchImpl = vi.fn(async () =>
       response({
@@ -149,7 +190,7 @@ describe('ChKSz music adapter', () => {
     expect(JSON.stringify(result)).not.toContain('chksz_device_secret')
   })
 
-  test('resolves audio only when requested and keeps the stable source reference', async () => {
+  test('resolves audio only when requested and reports provider playback expiry metadata', async () => {
     const profile = createProfile()
     const track = normalizeChkszSearchResponse(
       { result: { songs: [{ id: 88, name: 'On Demand', ar: [{ name: 'Mira' }] }] } },
@@ -166,6 +207,7 @@ describe('ChKSz music adapter', () => {
             album: { name: 'Resolved Album' },
             picUrl: 'https://images.example.com/88.jpg',
             publishTime: Date.UTC(2020, 0, 1),
+            expiresAt: 1_900_000_000,
           },
         },
       }),
@@ -186,10 +228,192 @@ describe('ChKSz music adapter', () => {
       year: 2020,
       sourceRef: track.sourceRef,
     })
+    expect(result.playbackExpiresAt).toBe(1_900_000_000_000)
     const requestedUrl = new URL(fetchImpl.mock.calls[0][0])
     expect(requestedUrl.pathname).toBe('/api/163_music')
     expect(requestedUrl.searchParams.get('id')).toBe('88')
     expect(requestedUrl.searchParams.get('level')).toBe('jymaster')
+  })
+
+  test('reads absolute URL expiry and relative response expiry for playback reuse', async () => {
+    const profile = createProfile()
+    const track = normalizeChkszSearchResponse(
+      { result: { songs: [{ id: 89, name: 'Expiring', ar: [{ name: 'Mira' }] }] } },
+      profile,
+      'Expiring',
+    )[0]
+    const absoluteExpiry = await resolveChkszMusicTrack({
+      profile,
+      credential: { apiKey: 'chksz_device_secret' },
+      track,
+      fetchImpl: vi.fn(async () =>
+        response({
+          payload: {
+            data: { url: 'https://stream.example.com/89.mp3?expires=1900000000' },
+          },
+        }),
+      ),
+    })
+    expect(absoluteExpiry.playbackExpiresAt).toBe(1_900_000_000_000)
+
+    const now = 1_800_000_000_000
+    const relativeExpiry = await resolveChkszMusicTrack({
+      profile,
+      credential: { apiKey: 'chksz_device_secret' },
+      track,
+      now,
+      fetchImpl: vi.fn(async () =>
+        response({
+          payload: {
+            data: { url: 'https://stream.example.com/89.mp3', expires_in: 3600 },
+          },
+        }),
+      ),
+    })
+    expect(relativeExpiry.playbackExpiresAt).toBe(now + 60 * 60 * 1000)
+  })
+
+  test('falls back once from selected NetEase and QQ quality when no URL is returned', async () => {
+    const neteaseProfile = createProfile()
+    const neteaseTrack = normalizeChkszSearchResponse(
+      { result: { songs: [{ id: 90, name: 'Fallback' }] } },
+      neteaseProfile,
+      'Fallback',
+    )[0]
+    const neteaseFetch = vi
+      .fn()
+      .mockResolvedValueOnce(response({ payload: { data: { url: '' } } }))
+      .mockResolvedValueOnce(
+        response({ payload: { data: { url: 'https://stream.example.com/standard.mp3' } } }),
+      )
+
+    await expect(
+      resolveChkszMusicTrack({
+        profile: neteaseProfile,
+        credential: { apiKey: 'chksz_device_secret' },
+        track: neteaseTrack,
+        fetchImpl: neteaseFetch,
+      }),
+    ).resolves.toMatchObject({
+      requestedQuality: 'jymaster',
+      resolvedQuality: 'standard',
+      qualityFallbackUsed: true,
+      track: { audioUrl: 'https://stream.example.com/standard.mp3' },
+    })
+    expect(neteaseFetch.mock.calls.map(([url]) => new URL(url).searchParams.get('level'))).toEqual([
+      'jymaster',
+      'standard',
+    ])
+
+    const qqProfile = createProfile(CHKSZ_MUSIC_PLATFORMS.QQ)
+    const qqTrack = normalizeChkszSearchResponse(
+      { list: [{ mid: 'qq_fallback', name: 'QQ Fallback' }] },
+      qqProfile,
+      'QQ Fallback',
+    )[0]
+    const qqFetch = vi
+      .fn()
+      .mockResolvedValueOnce(response({ payload: { data: { url: '' } } }))
+      .mockResolvedValueOnce(
+        response({ payload: { data: { url: 'https://stream.example.com/qq-basic.mp3' } } }),
+      )
+    await expect(
+      resolveChkszMusicTrack({
+        profile: qqProfile,
+        credential: { apiKey: 'chksz_device_secret' },
+        track: qqTrack,
+        fetchImpl: qqFetch,
+      }),
+    ).resolves.toMatchObject({
+      requestedQuality: 'flac',
+      resolvedQuality: 'mp3',
+      qualityFallbackUsed: true,
+    })
+    expect(qqFetch.mock.calls.map(([url]) => new URL(url).searchParams.get('size'))).toEqual([
+      'flac',
+      'mp3',
+    ])
+  })
+
+  test('does not quality-fallback for base quality, access HTTP errors, or network failures', async () => {
+    const standardProfile = normalizeMusicProviderProfile({
+      ...createProfile(),
+      quality: 'standard',
+    })
+    const track = normalizeChkszSearchResponse(
+      { result: { songs: [{ id: 91, name: 'No Retry' }] } },
+      standardProfile,
+      'No Retry',
+    )[0]
+    const baseFetch = vi.fn(async () => response({ payload: { data: { url: '' } } }))
+    await expect(
+      resolveChkszMusicTrack({
+        profile: standardProfile,
+        credential: { apiKey: 'chksz_device_secret' },
+        track,
+        fetchImpl: baseFetch,
+      }),
+    ).rejects.toMatchObject({ code: 'CHKSZ_AUDIO_URL_MISSING' })
+    expect(baseFetch).toHaveBeenCalledTimes(1)
+
+    for (const status of [401, 402, 403, 429, 503]) {
+      const deniedFetch = vi.fn(async () => response({ status, payload: { msg: 'denied' } }))
+      await expect(
+        resolveChkszMusicTrack({
+          profile: createProfile(),
+          credential: { apiKey: 'chksz_device_secret' },
+          track,
+          fetchImpl: deniedFetch,
+        }),
+      ).rejects.toMatchObject({ code: `CHKSZ_HTTP_${status}` })
+      expect(deniedFetch).toHaveBeenCalledTimes(1)
+    }
+
+    const networkFetch = vi.fn(async () => {
+      throw new Error('offline')
+    })
+    await expect(
+      resolveChkszMusicTrack({
+        profile: createProfile(),
+        credential: { apiKey: 'chksz_device_secret' },
+        track,
+        fetchImpl: networkFetch,
+      }),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' })
+    expect(networkFetch).toHaveBeenCalledTimes(1)
+  })
+
+  test('reports provider access meaning after the bounded fallback also has no URL', async () => {
+    const profile = createProfile()
+    const track = normalizeChkszSearchResponse(
+      { result: { songs: [{ id: 92, name: 'Member Only', fee: 1 }] } },
+      profile,
+      'Member Only',
+    )[0]
+    const fetchImpl = vi.fn(async () => response({ payload: { data: { url: '' } } }))
+
+    await expect(
+      resolveChkszMusicTrack({
+        profile,
+        credential: { apiKey: 'chksz_device_secret' },
+        track,
+        fetchImpl,
+      }),
+    ).rejects.toMatchObject({ code: 'CHKSZ_PREMIUM_ACCESS_UNAVAILABLE' })
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+
+    const genericBusinessFetch = vi.fn(async () =>
+      response({ payload: { code: 500, msg: 'temporary upstream processing failure' } }),
+    )
+    await expect(
+      resolveChkszMusicTrack({
+        profile,
+        credential: { apiKey: 'chksz_device_secret' },
+        track,
+        fetchImpl: genericBusinessFetch,
+      }),
+    ).rejects.toMatchObject({ code: 'CHKSZ_BUSINESS_ERROR' })
+    expect(genericBusinessFetch).toHaveBeenCalledTimes(1)
   })
 
   test('redacts API keys from status errors and retries a 429 at most once', async () => {

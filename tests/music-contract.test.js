@@ -264,6 +264,25 @@ describe('music provider and integration contracts', () => {
     expect(JSON.stringify(state)).not.toContain('signed.example.com')
   })
 
+  test('whitelists bounded provider access hints on normalized tracks', () => {
+    expect(
+      normalizeMusicTrack({
+        id: 'access_track',
+        title: 'Access Track',
+        accessState: 'premium',
+        accessReason: 'provider_fee',
+      }),
+    ).toMatchObject({ accessState: 'premium', accessReason: 'provider_fee' })
+    const unsafeTrack = normalizeMusicTrack({
+      id: 'unsafe_access_track',
+      title: 'Unsafe Access Track',
+      accessState: 'subscriber_cookie_required',
+      accessReason: 'raw_provider_payload',
+    })
+    expect(unsafeTrack).not.toHaveProperty('accessState')
+    expect(unsafeTrack).not.toHaveProperty('accessReason')
+  })
+
   test('keeps URL tracks playable while local-file tracks persist only a Music-owned media reference', () => {
     const directTrack = normalizeMusicTrack({
       id: 'url_track',

@@ -35,6 +35,20 @@ export const MUSIC_TRACK_SOURCE_TYPES = Object.freeze({
   LOCAL_FILE: 'local_file',
 })
 
+export const MUSIC_TRACK_ACCESS_STATES = Object.freeze({
+  OPEN: 'open',
+  PREMIUM: 'premium',
+  PURCHASE: 'purchase',
+  RESTRICTED: 'restricted',
+  UNKNOWN: 'unknown',
+})
+
+export const MUSIC_TRACK_ACCESS_REASONS = Object.freeze({
+  PROVIDER_PAY: 'provider_pay',
+  PROVIDER_FEE: 'provider_fee',
+  PROVIDER_UNAVAILABLE: 'provider_unavailable',
+})
+
 export const RADIO_BROWSER_BASE_URL = 'https://all.api.radio-browser.info'
 export const RADIO_BROWSER_SEARCH_PATH =
   '/json/stations/search?hidebroken=true&order=clickcount&reverse=true&is_https=true&codec=MP3'
@@ -291,6 +305,12 @@ export const normalizeMusicTrack = (input = {}, options = {}) => {
     baseUrl,
     { allowLocal: true },
   )
+  const accessState = Object.values(MUSIC_TRACK_ACCESS_STATES).includes(source.accessState)
+    ? source.accessState
+    : ''
+  const accessReason = Object.values(MUSIC_TRACK_ACCESS_REASONS).includes(source.accessReason)
+    ? source.accessReason
+    : ''
   const normalized = {
     id: normalizeId(source.id || source.trackId || source.songId, ''),
     title,
@@ -320,6 +340,8 @@ export const normalizeMusicTrack = (input = {}, options = {}) => {
     genre: normalizeText(source.genre || source.category, '', 100),
     addedAt: Math.max(0, Math.floor(Number(source.addedAt) || 0)),
     sourceRef: normalizeMusicSourceRef(source.sourceRef),
+    ...(accessState ? { accessState } : {}),
+    ...(accessReason ? { accessReason } : {}),
   }
   normalized.id = normalizeId(normalized.id, `${providerId}:${stableTrackFallbackId(normalized)}`)
   return normalized
