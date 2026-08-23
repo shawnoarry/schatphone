@@ -1,6 +1,6 @@
 # Map Place Media Inventory
 
-Updated: 2026-08-22
+Updated: 2026-08-23
 
 ## Purpose
 
@@ -22,14 +22,14 @@ hero completion; they do not freeze aspect ratio, crop, focal point, or derivati
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
 | --- | ---: | ---: | ---: | --- |
-| Seoul built-in catalog | 106 | 23 places with reviewed real-photo media | 83 | licensed real-photo search first |
+| Seoul built-in catalog | 106 | 61 places with reviewed real-photo media | 45 | licensed real-photo search first |
 | Fictional built-in catalog | 7 | 0 generated reconstructions | 7 | project-authored generation |
 | User-created places | unbounded | depends on user import/generation | one per created place when desired | user media first, optional generation |
-| **Fixed built-in target** | **113** | **23** | **90** | search real places; generate fictional places |
+| **Fixed built-in target** | **113** | **61** | **52** | search real places; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
 
-Only 14 of the 23 Seoul places with reviewed media currently have an approved exact-photo hero. The other nine have detail-only area media and still require a card-hero decision, so 92 Seoul hero decisions remain.
+Forty-eight of the 61 Seoul places with reviewed media currently have an approved exact-photo hero. The other thirteen have detail-only area media and still require a card-hero decision, so 58 Seoul hero decisions remain.
 
 ## Seoul Search Plan
 
@@ -56,7 +56,7 @@ These places have a named building, venue, campus, park, transport facility, or 
 | Banks | 4 | Bank of Korea Main Building; KB Kookmin Bank New Headquarters; Shinhan Bank Head Office; Woori Bank Head Office |
 | Public-safety institutions | 4 | Korean National Police Agency; Seoul Metropolitan Police Agency; Seoul Fire and Disaster Headquarters; Gangnam Fire Station |
 
-Current media coverage inside this group is 21 places. Fourteen grade-A heroes cover Gyeongbokgung, Seoul Station, Seoul Forest, Starfield COEX Mall, Gwanghwamun Square, Seoul City Hall, N Seoul Tower, Dongdaemun Design Plaza, Lotte World Tower, Incheon Airport Terminal 1, Gimpo International Airport, Yongsan Station, 63 Square, and Olympic Park Seoul. Seven additional places have reviewed grade-B detail slides only: SM Entertainment HQ through its Seongsu district, Gangnam Station through a station-area image, Seoul Express Bus Terminal through its terminal frontage, National Museum of Korea through a museum-area view, Times Square Seoul through an interior-area view, Lotte Department Store Main through the Euljiro/Lotte district, and Hyundai Department Store Apgujeong Main through a source-identified in-store cafe. These seven cards remain on category fallback until an exact/generated hero is separately approved. This leaves 65 hero acquisition decisions in this group.
+Current media coverage inside this group is 53 places. Forty-eight grade-A heroes cover the previous hero set plus LG Twin Towers. Five additional places have reviewed grade-B detail slides only: SM Entertainment HQ through its Seongsu district, Gangnam Station through a station-area image, Lotte Department Store Main through the Euljiro/Lotte district, Hyundai Department Store Apgujeong Main through a source-identified in-store cafe, and Lotte Avenuel World Tower through its wider mall complex. These five cards remain on category fallback until an exact/generated hero is separately approved. This leaves 31 hero acquisition decisions in this group.
 
 ### Detail area-atmosphere candidates: 27 places
 
@@ -72,7 +72,7 @@ These records describe a district, residential area, street cluster, privacy-sen
 | Pharmacy districts | 3 | Jongno 5-ga Pharmacy Street; Namdaemun Pharmacy District; Gangnam Station Pharmacy District |
 | Restaurant branches | 5 | Myeongdong Kyoja Main Store; London Bagel Museum Anguk; Knotted Cheongdam; Kyochon Chicken Yeoksam No. 1; EGGDROP Gangnam Woosung |
 
-Current usable coverage inside this group is two reviewed grade-B detail images: the Myeongdong street view for Myeongdong Kyoja and the Sillim residential-area view. Both cards remain on category fallback until an exact/generated hero is separately approved. This leaves 25 area-detail acquisition decisions and all 27 card-hero decisions in this group.
+Current usable coverage inside this group is eight reviewed grade-B detail images: the Myeongdong street view for Myeongdong Kyoja, the Sillim residential-area view, the Hongdae night street, the Sanggye cityscape, the Banpo riverside view for Acro River Park, the Hannam/Itaewon cityscape, the Namdaemun Market alley for the pharmacy district, and the Bukchon/Anguk street for London Bagel Museum Anguk. All eight cards remain on category fallback until an exact/generated hero is separately approved. This leaves 19 area-detail acquisition decisions and all 27 card-hero decisions in this group.
 
 An exact licensed photo may satisfy the card hero when the source page proves the branch or facade and the image passes privacy, trademark, architecture, and crop review. A truthful grade B remains valuable detail context, but it cannot be promoted into the card merely because an exact photo is unavailable.
 
@@ -123,7 +123,7 @@ User-created places have no fixed generation count. Their preferred order is use
 1. Complete high-recognition exact landmarks and transport hubs that users are most likely to select.
 2. Cover parks, campuses, malls, event venues, and major public buildings.
 3. Cover company and medical destinations, accepting reviewed area views when exact licensing is weak.
-4. Cover the 25 remaining area-atmosphere targets with district-accurate, privacy-safe photography.
+4. Cover the 19 remaining area-atmosphere targets with district-accurate, privacy-safe photography.
 5. Generate and review the seven fictional reconstructions as one visually coherent but individually identifiable set.
 
 Every candidate follows `MAP_PLACE_MEDIA_GOVERNANCE.md`: untouched downloads stay only in the Git-ignored local source archive, and only reviewed derivatives may enter the runtime asset registry.

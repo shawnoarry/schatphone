@@ -35,16 +35,65 @@ const EXPANDED_PLACE_IDS = [
   'seoul-olympic-park',
 ]
 
+const APPROVED_HERO_BATCH_IDS = [
+  'seoul-national-assembly',
+  'seoul-coex',
+  'seoul-lotte-world',
+  'seoul-the-hyundai-seoul',
+  'seoul-national-university',
+  'seoul-yonsei-university',
+  'seoul-korea-university',
+  'seoul-jamsil-sports-complex',
+  'seoul-mokdong-sports-complex',
+  'seoul-jangchung-arena',
+]
+
+const APPROVED_HERO_BATCH_02_IDS = [
+  'seoul-cheongnyangni-station',
+  'seoul-bank-of-korea-main',
+  'seoul-national-museum',
+  'seoul-express-bus-terminal',
+  'seoul-national-university-hospital',
+  'seoul-severance-hospital',
+  'seoul-kbs-hq',
+  'seoul-shilla-hotel',
+  'seoul-woori-bank-headquarters',
+  'seoul-national-police-agency',
+]
+
+const APPROVED_HERO_BATCH_03_IDS = [
+  'seoul-metropolitan-police-agency',
+  'seoul-fire-disaster-headquarters',
+  'seoul-gocheok-dome',
+  'seoul-shinhan-bank-headquarters',
+  'seoul-ytn-newsquare',
+  'seoul-yeouido-hangang-park',
+  'seoul-times-square',
+  'seoul-four-seasons-hotel',
+]
+
+const APPROVED_HERO_BATCH_04_IDS = [
+  'seoul-asan-medical-center',
+  'seoul-kspo-dome',
+  'seoul-sbs-hq',
+  'seoul-amorepacific-hq',
+  'seoul-gangnam-fire-station',
+]
+
 const AREA_DETAIL_ONLY_PLACE_IDS = [
   'seoul-sm-hq',
   'seoul-myeongdong-kyoja-main',
   'seoul-sillim-one-room-district',
-  'seoul-express-bus-terminal',
   'seoul-gangnam-station',
   'seoul-lotte-department-main',
-  'seoul-national-museum',
-  'seoul-times-square',
   'seoul-hyundai-apgujeong-main',
+  'seoul-lotte-avenuel-world-tower',
+  'seoul-namdaemun-pharmacy-district',
+  'seoul-london-bagel-museum-anguk',
+  'seoul-hongdae',
+  'seoul-sanggye-jugong-district',
+  'seoul-acro-river-park',
+  'seoul-hannam-the-hill',
 ]
 
 const INTEGRATED_GALLERY_COUNTS = {
@@ -56,13 +105,47 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-incheon-airport-t1': 1,
   'seoul-gimpo-airport': 2,
   'seoul-gangnam-station': 2,
-  'seoul-express-bus-terminal': 2,
+  'seoul-express-bus-terminal': 4,
   'seoul-yongsan-station': 2,
   'seoul-63-square': 2,
-  'seoul-national-museum': 2,
-  'seoul-times-square': 2,
+  'seoul-national-museum': 5,
   'seoul-lotte-department-main': 2,
+  'seoul-hyundai-apgujeong-main': 2,
   'seoul-olympic-park': 2,
+  ...Object.fromEntries(APPROVED_HERO_BATCH_IDS.map((placeId) => [placeId, 1])),
+  ...Object.fromEntries(APPROVED_HERO_BATCH_02_IDS
+    .filter((placeId) => !['seoul-express-bus-terminal', 'seoul-national-museum'].includes(placeId))
+    .map((placeId) => [placeId, 1])),
+  'seoul-national-assembly': 2,
+  'seoul-coex': 2,
+  'seoul-lotte-world': 2,
+  'seoul-national-university': 2,
+  'seoul-yonsei-university': 2,
+  'seoul-korea-university': 2,
+  'seoul-jamsil-sports-complex': 2,
+  'seoul-mokdong-sports-complex': 2,
+  'seoul-cheongnyangni-station': 3,
+  'seoul-bank-of-korea-main': 2,
+  'seoul-national-university-hospital': 4,
+  'seoul-severance-hospital': 2,
+  'seoul-kbs-hq': 4,
+  'seoul-shilla-hotel': 3,
+  'seoul-woori-bank-headquarters': 2,
+  'seoul-national-police-agency': 3,
+  ...Object.fromEntries(APPROVED_HERO_BATCH_03_IDS.map((placeId) => [placeId, 1])),
+  'seoul-gocheok-dome': 3,
+  'seoul-yeouido-hangang-park': 3,
+  'seoul-times-square': 3,
+  'seoul-four-seasons-hotel': 2,
+  ...Object.fromEntries(APPROVED_HERO_BATCH_04_IDS.map((placeId) => [placeId, 1])),
+  'seoul-lotte-avenuel-world-tower': 1,
+  'seoul-namdaemun-pharmacy-district': 1,
+  'seoul-london-bagel-museum-anguk': 1,
+  'seoul-hongdae': 1,
+  'seoul-sanggye-jugong-district': 1,
+  'seoul-acro-river-park': 1,
+  'seoul-hannam-the-hill': 1,
+  'seoul-lg-twin-towers': 3,
 }
 
 describe('map place media governance', () => {
@@ -79,10 +162,16 @@ describe('map place media governance', () => {
   })
 
   test('validates the reviewed media registry', () => {
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(51)
+    const seoulPlaceIds = new Set(getMapPackById('real-seoul-v1').places.map((place) => place.id))
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(126)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
+    expect([
+      ...new Set(MAP_PLACE_MEDIA_RECORDS
+        .filter((record) => record.mapPackId === 'real-seoul-v1' && !seoulPlaceIds.has(record.placeId))
+        .map((record) => record.placeId)),
+    ]).toEqual([])
   })
 
   test('keeps exact heroes separate from detail-only area atmosphere', () => {
@@ -149,10 +238,8 @@ describe('map place media governance', () => {
     }
 
     for (const placeId of EXPANDED_PLACE_IDS.filter((id) => ![
-      'seoul-express-bus-terminal',
       'seoul-gangnam-station',
       'seoul-lotte-department-main',
-      'seoul-national-museum',
       'seoul-times-square',
       'seoul-hyundai-apgujeong-main',
     ].includes(id))) {
@@ -161,6 +248,40 @@ describe('map place media governance', () => {
         authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
       })
     }
+
+    for (const placeId of APPROVED_HERO_BATCH_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        placeId,
+        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+      })
+    }
+
+    for (const placeId of APPROVED_HERO_BATCH_02_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        placeId,
+        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+      })
+    }
+
+    expect(getMapPlaceMediaRecord('real-seoul-v1', 'seoul-lg-twin-towers')).toMatchObject({
+      kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+      authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+      slot: MAP_PLACE_MEDIA_SLOT.HERO,
+    })
+    expect(getMapPlaceMediaGallery('real-seoul-v1', 'seoul-lg-twin-towers').slice(1)).toEqual([
+      expect.objectContaining({
+        kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
+        slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+      }),
+      expect.objectContaining({
+        kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
+        slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+      }),
+    ])
   })
 
   test('rejects area atmosphere when a future record attempts to occupy the hero slot', () => {

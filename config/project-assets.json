@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-23T12:38:46.578Z",
+  "updatedAt": "2026-08-23T16:28:06.888Z",
   "assets": [
     {
       "batchId": "migration-2026-08-11",
@@ -4647,6 +4647,18 @@
       "verifiedAt": "2026-08-22T17:18:42.739Z"
     },
     {
+      "batchId": "map-place-media-area-gallery-batch-05-restored-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-acro-river-park-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-acro-river-park-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-acro-river-park-gallery-01-v1.webp",
+      "bytes": 166298,
+      "sha256": "6fb8e90d788eaf95f5a4a7bcf2272a68513525d5cd2a35840a1d5b325d3ac056",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T15:34:25.170Z"
+    },
+    {
       "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
       "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-04/seoul-amorepacific-hq-hero-v1.webp",
       "aliasPaths": [],
@@ -5103,6 +5115,30 @@
       "verifiedAt": "2026-08-15T05:53:13.456Z"
     },
     {
+      "batchId": "map-place-media-area-gallery-batch-05-restored-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-hannam-the-hill-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-hannam-the-hill-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-hannam-the-hill-gallery-01-v1.webp",
+      "bytes": 143796,
+      "sha256": "49b0f821b776db8cae536989d42bd9a14b194181b9ff7ae146bb9b2890ab0652",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T15:34:25.212Z"
+    },
+    {
+      "batchId": "map-place-media-area-gallery-batch-05-restored-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-hongdae-street-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-hongdae-street-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-hongdae-street-gallery-01-v1.webp",
+      "bytes": 339476,
+      "sha256": "08a949b45032335ce704ada77ea3bb67070664f8f76a34f7884d39e2084e03ae",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T15:34:25.636Z"
+    },
+    {
       "batchId": "map-place-media-hyundai-apgujeong-gallery-20260823",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-hyundai-apgujeong-main-gallery-06-v1.webp",
       "aliasPaths": [],
@@ -5199,6 +5235,18 @@
       "verifiedAt": "2026-08-23T10:23:25.050Z"
     },
     {
+      "batchId": "map-place-media-source-policy-recovery-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-source-policy-recovery/seoul-kbs-hq-gallery-04-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-gallery-04-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-gallery-04-v1.webp",
+      "bytes": 150160,
+      "sha256": "4be2263e447263a9408f7f191d6f06f503fd6f7c80bc6657873f7aeffae0cd77",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T16:28:06.718Z"
+    },
+    {
       "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
       "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-kbs-hq-hero-v1.webp",
       "aliasPaths": [],
@@ -5245,6 +5293,42 @@
       "sha256": "661067c93e39115d9e5847297464089e00c2c9209120f54d29b3c1462a9ab5eb",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-23T11:58:01.334Z"
+    },
+    {
+      "batchId": "map-place-media-source-policy-recovery-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-source-policy-recovery/seoul-lg-twin-towers-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lg-twin-towers-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lg-twin-towers-gallery-01-v1.webp",
+      "bytes": 187810,
+      "sha256": "a3798d13b5d5747f4a4f59da15abe99b9b64d94b14c85cae186cbf6bb370ce6c",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T16:28:06.881Z"
+    },
+    {
+      "batchId": "map-place-media-source-policy-recovery-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-source-policy-recovery/seoul-lg-twin-towers-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lg-twin-towers-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lg-twin-towers-gallery-02-v1.webp",
+      "bytes": 137402,
+      "sha256": "2210d114dae0afe5606bdb312f664a135df4cacb549d2c07fe3a696af3a68465",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T16:28:06.720Z"
+    },
+    {
+      "batchId": "map-place-media-source-policy-recovery-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-source-policy-recovery/seoul-lg-twin-towers-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lg-twin-towers-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lg-twin-towers-hero-v1.webp",
+      "bytes": 83556,
+      "sha256": "f5ffd510805791de87cce47bd3ca99dc661c816a6f7c6d01d31d448cace69eeb",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T16:28:06.628Z"
     },
     {
       "batchId": "map-place-media-area-gallery-batch-05-20260823",
@@ -5679,6 +5763,18 @@
       "verifiedAt": "2026-08-23T10:23:25.096Z"
     },
     {
+      "batchId": "map-place-media-source-policy-recovery-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-source-policy-recovery/seoul-national-university-hospital-gallery-04-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-gallery-04-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-gallery-04-v1.webp",
+      "bytes": 295552,
+      "sha256": "95ee97400d24f56992ead20edd94b57765220bb5e23993724359db22b4bf78bb",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T16:28:06.451Z"
+    },
+    {
       "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
       "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-national-university-hospital-hero-v1.webp",
       "aliasPaths": [],
@@ -5715,7 +5811,7 @@
       "verifiedAt": "2026-08-22T17:18:41.917Z"
     },
     {
-      "batchId": "map-place-media-area-gallery-batch-05-20260823",
+      "batchId": "map-place-media-area-gallery-batch-05-restored-20260823",
       "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-sanggye-jugong-district-gallery-01-v1.webp",
       "aliasPaths": [],
       "access": "public",
@@ -5724,7 +5820,7 @@
       "bytes": 307086,
       "sha256": "d3b3c1eaf41aaafea9acfa8a8ed65c10935a193c42ce7915608b277cdac9aeb4",
       "mimeType": "image/webp",
-      "verifiedAt": "2026-08-23T12:32:36.100Z"
+      "verifiedAt": "2026-08-23T15:34:25.480Z"
     },
     {
       "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",

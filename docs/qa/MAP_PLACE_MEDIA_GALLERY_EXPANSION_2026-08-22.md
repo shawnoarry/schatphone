@@ -1,16 +1,16 @@
 # Map Place Media Gallery Expansion 2026-08-22
 
-Date: 2026-08-22
+Date: 2026-08-23
 
-Status: `9_SECOND_SLIDES_PUBLISHED / 9_OF_10_RECENT_PLACES_HAVE_TWO_SLIDES / 1_OPEN`
+Status: `10_SECOND_SLIDES_PUBLISHED / 10_OF_10_RECENT_PLACES_HAVE_TWO_SLIDES / COMPLETE`
 
 ## Scope And Result
 
-This continuation adds nine reviewed Place Details slides to the recent ten-place
+This continuation adds ten reviewed Place Details slides to the recent ten-place
 batch. The source choices were already made by the user in the
 2026-08-21 visual review and were not searched or approved again.
 
-Two complete local originals were reused. Six missing originals were replaced by
+Two complete local originals were reused. Eight missing originals were replaced by
 official Wikimedia Commons-generated renditions to avoid repeated large transfers
 during throttling. Each rendition keeps the durable Commons file page, actual
 rendition URL in the local audit, downloaded rendition SHA-256, upstream Commons file
@@ -18,8 +18,8 @@ SHA-1, creator, and license. Runtime never references the source archive or Comm
 rendition directly.
 
 Each admitted source was EXIF-transposed, converted to sRGB, cropped to `16:9`, and
-encoded as a `1600 x 900` WebP without generative modification. Batch
-`map-place-media-gallery-expansion-20260822` published and read back all eight runtime
+encoded as a `1600 x 900` WebP without generative modification. The original
+expansion batches and the final Hyundai batch published and read back all ten runtime
 objects with matching byte lengths and SHA-256 values.
 
 ## Gallery Decisions
@@ -35,6 +35,7 @@ objects with matching byte lengths and SHA-256 values.
 | Lotte Department Store Main | #02 | exact photo | official 960px rendition |
 | Olympic Park Seoul | #06 | exact photo | official 960px rendition |
 | Times Square Seoul | new candidate B | exact photo | official 1280px rendition, user approved |
+| Hyundai Department Store Apgujeong Main | #06 | area atmosphere | official 960px rendition, user approved |
 
 The active slide continues to own its own truth label, alt text, creator, source page,
 license, and change disclosure. A second slide never inherits the hero label.
@@ -52,28 +53,24 @@ license, and change disclosure. A second slide never inherits the hero label.
 | `seoul-lotte-department-main` | `8e0124a405a0c1fc00042096c558f6986d97877e7bb2a601d579326e2927026f` |
 | `seoul-olympic-park` | `cacb2ffdfe68ead7660c5bf03b6ee9cbe2caa0b70ab1e0cd434928aeb81f3e2d` |
 | `seoul-times-square` | `dab075f1f2714f4ee20ad06c8177200876380fb02cf9df870e99b810c4ba5077` |
+| `seoul-hyundai-apgujeong-main` | `edec3ff85eb870698fa01ae79550d157c7c63e9e0deb7e028a4e12628b7fd475` |
 
 The Git-ignored machine-readable derivative audit is
 `output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery-manifest.json`.
 The final source-transfer audit is
 `output/imagegen/map-place-media-search-20260821/carousel-secondary-source-audit-final.json`.
 
-## Open Places
-
-- `seoul-hyundai-apgujeong-main`: candidate #06 remains user-approved as
-  `area_atmosphere`, but its Commons rendition did not complete during the bounded
-  single-attempt transfer. Do not re-run broad search or re-request approval.
 Times Square candidate B was approved by the user after reviewing the actual `16:9`
 crop. The source file page identifies the Times Square Yeongdeungpo interior;
 Narubaru7 publishes it under `CC BY 4.0`. Under the current hero/detail contract, the
 approved Times Square exact image remains a detail slide until separately approved for
-card use. Hyundai Apgujeong currently has one detail-only area slide and still awaits
-its already approved additional detail candidate.
+card use. Hyundai Apgujeong candidate #06 was transferred on 2026-08-23 through an
+official Commons 960px rendition, published through batch
+`map-place-media-hyundai-apgujeong-gallery-20260823`, and remains detail-only.
 
 ## Validation
 
-- project image-bed publication and readback: 9/9 objects across two batches;
-- asset registry: 906 tracked objects, 0 violations;
+- project image-bed publication and readback: 10/10 objects across three batches;
 - focused Map media/component tests: 2 files / 21 tests;
 - full Vitest: 303 files / 2175 tests;
 - desktop Chromium and simulated mobile gallery E2E: 2/2;

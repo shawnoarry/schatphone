@@ -32,6 +32,7 @@ const REAL_TRIALS = [
   ['seoul-forest', 'seoul-forest-hero-v1.webp', 'Exact-place photo'],
   ['seoul-sm-hq', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-starfield-coex-mall', 'seoul-starfield-coex-mall-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-coex', 'seoul-coex-convention-center-hero-v1.webp', 'Exact-place photo'],
   ['seoul-myeongdong-kyoja-main', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-sillim-one-room-district', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-gwanghwamun', 'seoul-gwanghwamun-hero-v1.webp', 'Exact-place photo'],
@@ -42,14 +43,33 @@ const REAL_TRIALS = [
   ['seoul-incheon-airport-t1', 'seoul-incheon-airport-t1-hero-v1.webp', 'Exact-place photo'],
   ['seoul-gimpo-airport', 'seoul-gimpo-airport-hero-v1.webp', 'Exact-place photo'],
   ['seoul-gangnam-station', 'seoul-street-map-v1.webp', 'Category visual'],
-  ['seoul-express-bus-terminal', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-express-bus-terminal', 'seoul-express-bus-terminal-hero-v2.webp', 'Exact-place photo'],
   ['seoul-yongsan-station', 'seoul-yongsan-station-hero-v1.webp', 'Exact-place photo'],
   ['seoul-63-square', 'seoul-63-square-hero-v1.webp', 'Exact-place photo'],
-  ['seoul-national-museum', 'seoul-street-map-v1.webp', 'Category visual'],
-  ['seoul-times-square', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-national-museum', 'seoul-national-museum-hero-v2.webp', 'Exact-place photo'],
+  ['seoul-times-square', 'seoul-times-square-hero-v2.webp', 'Exact-place photo'],
   ['seoul-lotte-department-main', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-hyundai-apgujeong-main', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-olympic-park', 'seoul-olympic-park-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-metropolitan-police-agency', 'seoul-metropolitan-police-agency-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-fire-disaster-headquarters', 'seoul-fire-disaster-headquarters-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-gocheok-dome', 'seoul-gocheok-dome-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-shinhan-bank-headquarters', 'seoul-shinhan-bank-headquarters-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-ytn-newsquare', 'seoul-ytn-newsquare-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-yeouido-hangang-park', 'seoul-yeouido-hangang-park-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-four-seasons-hotel', 'seoul-four-seasons-hotel-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-asan-medical-center', 'seoul-asan-medical-center-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-kspo-dome', 'seoul-kspo-dome-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-sbs-hq', 'seoul-sbs-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-amorepacific-hq', 'seoul-amorepacific-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-gangnam-fire-station', 'seoul-gangnam-fire-station-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-lotte-avenuel-world-tower', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-namdaemun-pharmacy-district', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-london-bagel-museum-anguk', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-hongdae', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-sanggye-jugong-district', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-acro-river-park', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-hannam-the-hill', 'seoul-street-map-v1.webp', 'Category visual'],
 ]
 
 const AREA_DETAIL_MEDIA = {
@@ -57,11 +77,15 @@ const AREA_DETAIL_MEDIA = {
   'seoul-myeongdong-kyoja-main': 'seoul-myeongdong-kyoja-main-hero-v1.webp',
   'seoul-sillim-one-room-district': 'seoul-sillim-one-room-district-hero-v1.webp',
   'seoul-gangnam-station': 'seoul-gangnam-station-hero-v1.webp',
-  'seoul-express-bus-terminal': 'seoul-express-bus-terminal-hero-v1.webp',
-  'seoul-national-museum': 'seoul-national-museum-hero-v1.webp',
-  'seoul-times-square': 'seoul-times-square-hero-v1.webp',
   'seoul-lotte-department-main': 'seoul-lotte-department-main-hero-v1.webp',
   'seoul-hyundai-apgujeong-main': 'seoul-hyundai-apgujeong-main-hero-v1.webp',
+  'seoul-lotte-avenuel-world-tower': 'seoul-lotte-avenuel-world-tower-gallery-01-v1.webp',
+  'seoul-namdaemun-pharmacy-district': 'seoul-namdaemun-pharmacy-district-gallery-01-v1.webp',
+  'seoul-london-bagel-museum-anguk': 'seoul-london-bagel-museum-anguk-gallery-01-v1.webp',
+  'seoul-hongdae': 'seoul-hongdae-street-gallery-01-v1.webp',
+  'seoul-sanggye-jugong-district': 'seoul-sanggye-jugong-district-gallery-01-v1.webp',
+  'seoul-acro-river-park': 'seoul-acro-river-park-gallery-01-v1.webp',
+  'seoul-hannam-the-hill': 'seoul-hannam-the-hill-gallery-01-v1.webp',
 }
 
 const mockOpenFreeMapStyle = async (page) => {
@@ -137,6 +161,7 @@ const expectVerifiedProjectImage = async (request, image, expectedAsset) => {
 
 test.describe('Map place media governance', () => {
   test('renders reviewed exact/area photos and an explicit player-place fallback', async ({ page }, testInfo) => {
+    test.setTimeout(180_000)
     const pageErrors = []
     const assetFailures = []
     page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -149,7 +174,6 @@ test.describe('Map place media governance', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await mockOpenFreeMapStyle(page)
     await seedEnglish(page)
-    await unlockToHome(page)
     await prewarmProjectAssets(
       page.request,
       [
@@ -158,10 +182,17 @@ test.describe('Map place media governance', () => {
       ].filter(Boolean),
     )
     await installProjectAssetRoute(page)
+    await unlockToHome(page)
 
     let exactMediaHeight = 0
     let overviewCardWidth = 0
     for (const [placeId, filename, expectedKind] of REAL_TRIALS) {
+      const existingSheet = page.getByTestId('map-place-detail-sheet')
+      if (await existingSheet.isVisible()) {
+        await page.keyboard.press('Escape')
+        await expect(existingSheet).toHaveCount(0)
+        await navigateInsideUnlockedApp(page, '/map')
+      }
       await navigateInsideUnlockedApp(
         page,
         `/map?placeId=${encodeURIComponent(placeId)}&mapPackId=real-seoul-v1`,
@@ -169,7 +200,7 @@ test.describe('Map place media governance', () => {
       const sheet = page.getByTestId('map-place-detail-sheet')
       const media = page.getByTestId('map-place-media')
       const image = page.getByTestId('map-place-media-image')
-      await expect(sheet).toBeVisible()
+      await expect(sheet, `Expected place sheet for ${placeId}`).toBeVisible()
       await expect(sheet).toHaveAttribute('role', 'region')
       await expect(media).toContainText(expectedKind)
       await expect(sheet.getByTestId('map-place-summary')).not.toHaveText(
@@ -282,16 +313,27 @@ test.describe('Map place media governance', () => {
         await captureVisualEvidence(page, testInfo, 'expansion-area')
       }
       if (placeId === 'seoul-times-square') {
+        await sheet.getByTestId('map-place-open-detail').click()
         const galleryRecords = getMapPlaceMediaGallery('real-seoul-v1', placeId)
-        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 2')
+        const detailImage = sheet.getByTestId('map-place-detail-media-image')
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 3')
+        await expect.poll(() => (
+          detailImage.evaluate((element) => element.complete && element.naturalWidth > 0)
+        )).toBe(true)
         await sheet.getByTestId('map-place-gallery-next').click()
-        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 2')
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 3')
+        await expect(sheet.getByTestId('map-place-detail-media')).toContainText('Area view')
+        await expect.poll(() => (
+          detailImage.evaluate((element) => element.complete && element.naturalWidth > 0)
+        )).toBe(true)
+        await sheet.getByTestId('map-place-gallery-next').click()
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('3 / 3')
         await expect(sheet.getByTestId('map-place-detail-media')).toContainText('Exact-place photo')
         await expect(sheet.getByTestId('map-place-media-source')).toContainText('Narubaru7')
         await expectVerifiedProjectImage(
           page.request,
-          sheet.getByTestId('map-place-detail-media-image'),
-          galleryRecords[1].asset,
+          detailImage,
+          galleryRecords[2].asset,
         )
         await captureVisualEvidence(page, testInfo, 'times-square-gallery')
       }

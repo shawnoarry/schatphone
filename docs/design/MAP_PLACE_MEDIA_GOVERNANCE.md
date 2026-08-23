@@ -87,11 +87,19 @@ Accepted photo evidence must provide an explicit reuse license, author/creator, 
 Reject:
 
 - map-service or street-view screenshots;
-- news, social-media, review-site, or influencer images;
+- images copied from news, social, review, corporate, or influencer pages without an explicit traceable reuse license;
 - corporate press/marketing images without explicit reusable terms;
 - search-result thumbnails without a durable source page;
 - images whose depicted location cannot be matched to the intended place or area;
 - files with unclear architecture, privacy, trademark, or other reuse restrictions.
+
+The original publishing platform is provenance, not an automatic rejection category.
+A Flickr, 500px, news, corporate, or other externally originated photograph may be
+considered when a durable source record preserves an explicit reusable license and the
+license history can be verified. User rejection of one candidate does not establish a
+source-wide ban. Architecture/FOP warnings must be recorded and evaluated against the
+project's actual use; they are not silently converted into a universal commercial-use
+policy or an automatic generation preference.
 
 ## Candidate To Runtime Flow
 
@@ -113,6 +121,6 @@ Map owns selection, truth labeling, detail placement, alt text, and attribution 
 
 ## Current Scope
 
-The integrated runtime contains 50 real-photo derivatives across 23 Seoul places plus one explicit fictional category fallback. Fourteen Seoul places currently have approved exact-photo heroes. Nine places have reviewed surrounding-area detail media but no approved hero: SM Entertainment HQ, Myeongdong Kyoja Main Store, Sillim-dong Compact Housing District, Gangnam Station, Seoul Express Bus Terminal, National Museum of Korea, Times Square Seoul, Lotte Department Store Main, and Hyundai Department Store Apgujeong Main. Their cards therefore use the approved CC0 Seoul category visual while their real area photos remain available only in Place Details. No generated reconstruction was needed in these batches.
+The integrated runtime contains 125 reviewed real-photo derivatives across 61 Seoul places plus one explicit fictional category fallback. Forty-eight Seoul places currently have approved exact-photo heroes. Thirteen places have reviewed surrounding-area detail media but no approved hero, so their cards continue to use the reviewed Seoul category fallback while their real area photos remain available only in Place Details. No generated reconstruction has been admitted.
 
-The fixed built-in target is 113 place-specific decisions: 106 Seoul places and seven fictional places. Twenty-three Seoul places have some reviewed real-photo media, but only fourteen currently have a card-eligible hero; 92 Seoul hero decisions therefore remain. Extra detail slides deepen a place without satisfying its card-hero requirement. The inventory's former “area-atmosphere preferred” group now describes detail acquisition only; every card still requires exact/generated identity evidence or the explicit fallback.
+The fixed built-in target is 113 place-specific decisions: 106 Seoul places and seven fictional places. Forty-five Seoul places still have no place-specific photo, and 58 Seoul hero decisions remain. Extra detail slides deepen a place without satisfying its card-hero requirement. `area_atmosphere` continues to describe detail acquisition only; every card still requires exact/generated identity evidence or the explicit fallback.
