@@ -1,12 +1,17 @@
 import { DEFAULT_UI_SFX_PROFILE, normalizeUiSfxProfile } from './ui-sfx'
 import { DEFAULT_RINGTONE_ID, normalizeRingtoneId } from './ringtone'
 import { DEFAULT_CALL_AUDIO_PROFILE, normalizeCallAudioProfile } from './call-audio'
+import {
+  DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+  normalizeSystemAppIconThemeId,
+} from './system-app-icon-theme'
 
 export const APPEARANCE_PACK_KIND = 'schatphone.appearance-pack'
 export const APPEARANCE_PACK_VERSION = 1
 
 const APPEARANCE_PACK_FIELD_KEYS = Object.freeze([
   'currentTheme',
+  'systemAppIconTheme',
   'wallpaperMode',
   'wallpaperAssetId',
   'wallpaper',
@@ -53,6 +58,10 @@ export const normalizeAppearancePackAppearance = (appearance = {}) => {
   const source = appearance && typeof appearance === 'object' ? appearance : {}
   return {
     currentTheme: normalizeText(source.currentTheme, 'default', 80),
+    systemAppIconTheme: normalizeSystemAppIconThemeId(
+      source.systemAppIconTheme ?? source.systemIconTheme,
+      DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+    ),
     wallpaperMode: normalizeText(source.wallpaperMode, 'theme', 40),
     wallpaperAssetId: normalizeText(source.wallpaperAssetId, '', 160),
     wallpaper: normalizeLooseText(source.wallpaper, '', 20_000),

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-23T18:13:08.404Z",
+  "updatedAt": "2026-08-23T19:03:52.172Z",
   "assets": [
     {
       "batchId": "migration-2026-08-11",
@@ -7683,6 +7683,54 @@
       "verifiedAt": "2026-08-11T19:35:50.055Z"
     },
     {
+      "batchId": "app-shell-brand-icons-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/runtime/jari-housing-app-icon-v1.png",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/jari-housing-app-icon-v1.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/jari-housing-app-icon-v1.png",
+      "bytes": 463572,
+      "sha256": "fa30b52424c41e82fb452ced5feac52399e13d7a798f349707c0ce0b51886ab6",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:33.733Z"
+    },
+    {
+      "batchId": "app-shell-brand-icons-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/runtime/ondam-care-app-icon-v1.png",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/ondam-care-app-icon-v1.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/ondam-care-app-icon-v1.png",
+      "bytes": 1091203,
+      "sha256": "028c85633f8aa92922f73a37b904ffd5cb087614c72370f97f01984f539be10d",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:33.869Z"
+    },
+    {
+      "batchId": "app-shell-brand-icons-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/runtime/prism-browser-app-icon-v1.png",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/prism-browser-app-icon-v1.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/prism-browser-app-icon-v1.png",
+      "bytes": 645663,
+      "sha256": "023139a632d9b0011f9b8270eb90c9b3f218dad96e344b9955f2144efc9caf48",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:33.164Z"
+    },
+    {
+      "batchId": "app-shell-brand-icons-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/runtime/ripple-community-app-icon-v1.png",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/ripple-community-app-icon-v1.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/ripple-community-app-icon-v1.png",
+      "bytes": 938565,
+      "sha256": "11743fc98237bba3af277b027d23cd49ffdb21568da3d843319ab2bfbc90059e",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:33.755Z"
+    },
+    {
       "batchId": "widgets-premium-candidates-20260812",
       "path": "output/imagegen/widgets-runtime-v1/ambient-scene-day.webp",
       "aliasPaths": [],
@@ -13123,6 +13171,138 @@
       "sha256": "601ff571c00612a7ffb164a18d604831604ce46513d1e8bd9c37d5cfaeb4a5b8",
       "mimeType": "image/png",
       "verifiedAt": "2026-08-11T20:14:07.249Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-1/A1-elephant-doctor-left.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/A1-elephant-doctor-left.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/A1-elephant-doctor-left.png",
+      "bytes": 1109641,
+      "sha256": "a0acb621989294f8192f8314e7267b218c679af65e7bd50962ba63718e1e4cc8",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:46.899Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-1/A2-elephant-doctor-right.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/A2-elephant-doctor-right.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/A2-elephant-doctor-right.png",
+      "bytes": 1054053,
+      "sha256": "f029befbf34f7bd87e0db9bc7db1d3a37217c4764d01c8bd43de2494ac1d401c",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:48.061Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-1/B1-otter-doctor-left.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/B1-otter-doctor-left.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/B1-otter-doctor-left.png",
+      "bytes": 1676420,
+      "sha256": "b0ceb2445d3549d6a6471e6d637a65309f0190ad079bd1f9859afefd9ed0b47e",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:48.631Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-1/B2-otter-doctor-right.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/B2-otter-doctor-right.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/B2-otter-doctor-right.png",
+      "bytes": 1273837,
+      "sha256": "29d3e5038683a2a80925730b505594b62d20929e9c0fd015c6942a1d81921ccd",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:48.001Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-1/C1-seal-doctor-left.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/C1-seal-doctor-left.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/C1-seal-doctor-left.png",
+      "bytes": 1163729,
+      "sha256": "7c4d303926db92cd309d7272ce9d166bc91fa933c813830ec27e93112f076a4a",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:47.958Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-1/C2-seal-doctor-right.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/C2-seal-doctor-right.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-1/C2-seal-doctor-right.png",
+      "bytes": 1183590,
+      "sha256": "ad3895be6f5a41cc80cd67ce76a5be87998d240fe19714013a7eb6c8c7c911cb",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:48.040Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-2-calm/A2-elephant-doctor-right.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/A2-elephant-doctor-right.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/A2-elephant-doctor-right.png",
+      "bytes": 914195,
+      "sha256": "d05836084b7559325d7a4013ab3cb8c7b05c8332672443a02db7a4ee68639df0",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:48.307Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-2-calm/B1-otter-doctor-left.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/B1-otter-doctor-left.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/B1-otter-doctor-left.png",
+      "bytes": 938412,
+      "sha256": "a3c4c15bfa77a47c10142703c1e8c774296c6b92a039f31a6f7b611a3d9664a6",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:48.273Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-2-calm/B2-otter-doctor-right.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/B2-otter-doctor-right.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/B2-otter-doctor-right.png",
+      "bytes": 1129376,
+      "sha256": "2fcfa652343adede038626f1e1f9abf8b7a8b84b062eb12c464164f70b333494",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:48.080Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-2-calm/C1-seal-doctor-left.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/C1-seal-doctor-left.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/C1-seal-doctor-left.png",
+      "bytes": 1098920,
+      "sha256": "f09d9fc40252a652d314565d5c24cc498bcaebf82a6f08d2d4fa293bde94456a",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:47.980Z"
+    },
+    {
+      "batchId": "app-shell-healthcare-mascots-20260823-v1",
+      "path": "output/imagegen/app-shell-brand-icons-20260823-v1/source/healthcare-round-2-calm/C2-seal-doctor-right.png",
+      "aliasPaths": [],
+      "access": "protected",
+      "remoteKey": "schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/C2-seal-doctor-right.png",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-source/visual-candidates/app-shell-icons/healthcare-doctor-ip-round-2-calm/C2-seal-doctor-right.png",
+      "bytes": 1147333,
+      "sha256": "84180625cfb0dcb8074ed75cae59be4ced3f4a42e3c979fe47611b2910aefa49",
+      "mimeType": "image/png",
+      "verifiedAt": "2026-08-23T19:03:52.158Z"
     },
     {
       "batchId": "widgets-weather-terrarium-v2-20260816",

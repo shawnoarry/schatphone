@@ -22,6 +22,14 @@ export const WEATHER_HOME_APP_ID = 'app_weather'
 export const WEATHER_ROUTE = '/weather'
 export const MAIL_HOME_APP_ID = 'app_daon_mail'
 export const MAIL_ROUTE = '/mail'
+export const BROWSER_HOME_APP_ID = 'app_browser'
+export const BROWSER_ROUTE = '/browser'
+export const COMMUNITY_HOME_APP_ID = 'app_community'
+export const COMMUNITY_ROUTE = '/community'
+export const HEALTHCARE_HOME_APP_ID = 'app_healthcare'
+export const HEALTHCARE_ROUTE = '/healthcare'
+export const HOUSING_HOME_APP_ID = 'app_jari_housing'
+export const HOUSING_ROUTE = '/housing'
 
 export const SHOPPING_CATEGORY_ENTRIES = Object.freeze([
   {

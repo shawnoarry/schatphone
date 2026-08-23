@@ -131,6 +131,41 @@ describe('navigation return helpers', () => {
     )
   })
 
+  test('returns owner deep links to the bounded Browser search context', () => {
+    expect(
+      resolveReturnTarget({
+        query: {
+          source: 'browser',
+          browserQuery: ' 上岩媒体中心 ',
+          browserResult: 'world-place-ytn',
+          browserScope: 'world',
+          homePage: '1',
+        },
+      }),
+    ).toEqual({
+      path: '/browser',
+      query: {
+        q: '上岩媒体中心',
+        result: 'world-place-ytn',
+        scope: 'world',
+        from: 'home',
+        homePage: '1',
+      },
+    })
+    expect(resolveReturnLabel({ query: { source: 'browser' } }, 'Home')).toBe('Browser')
+  })
+
+  test.each([
+    ['healthcare', '/healthcare', 'Ondam Care'],
+    ['housing', '/housing', 'Jari'],
+  ])('returns Map to %s while preserving the ancestor Home page', (source, path, label) => {
+    expect(resolveReturnTarget({ query: { source, homePage: '1' } })).toEqual({
+      path,
+      query: { from: 'home', homePage: '1' },
+    })
+    expect(resolveReturnLabel({ query: { source } }, 'Home')).toBe(label)
+  })
+
   test('returns Network to one validated Chat thread while preserving the ancestor Home page', () => {
     expect(normalizeChatThreadIdQuery(' 12 ')).toBe('12')
     expect(normalizeChatThreadIdQuery(4)).toBe('4')

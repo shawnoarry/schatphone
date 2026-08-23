@@ -171,7 +171,7 @@ defineEmits(['select', 'toggle-star', 'delete-draft', 'update:search-query'])
 }
 
 .daon-list-search__input:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: 1px;
 }
 
@@ -195,7 +195,7 @@ defineEmits(['select', 'toggle-star', 'delete-draft', 'update:search-query'])
 .daon-list-meta {
   padding: 6px 16px;
   font-size: 11.5px;
-  color: var(--daon-green-deep);
+  color: var(--daon-accent-text);
   background: var(--daon-green-soft);
   border-bottom: 1px solid var(--daon-line);
   font-variant-numeric: tabular-nums;
@@ -468,7 +468,7 @@ defineEmits(['select', 'toggle-star', 'delete-draft', 'update:search-query'])
 
 .daon-list-row:focus-visible,
 .daon-list-search__clear:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: -3px;
 }
 

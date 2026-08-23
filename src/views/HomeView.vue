@@ -40,11 +40,15 @@ import {
   AGENDA_JOURNEY_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
+  BROWSER_HOME_APP_ID,
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
   CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
+  COMMUNITY_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  HEALTHCARE_HOME_APP_ID,
+  HOUSING_HOME_APP_ID,
   MAIL_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
@@ -101,6 +105,7 @@ const { activeForecast: homeWeatherForecastData, displayLocationName: homeWeathe
   storeToRefs(weatherStore)
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
+const systemAppIconTheme = computed(() => settings.value.appearance.systemAppIconTheme)
 const homeMusicTrack = computed(() => musicStore.currentTrack || musicStore.featuredTrack)
 const homeMusicProgress = computed(() => {
   const duration = Number(musicStore.runtime.duration || homeMusicTrack.value?.durationSec || 0)
@@ -281,6 +286,10 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_assets') return t('资产', 'Assets')
   if (tileId === CONTROL_CENTER_HOME_APP_ID) return t('世界中枢', 'World Hub')
   if (tileId === MAIL_HOME_APP_ID) return t('邮件', 'Mail')
+  if (tileId === BROWSER_HOME_APP_ID) return t('浏览器', 'Browser')
+  if (tileId === COMMUNITY_HOME_APP_ID) return t('涟漪', 'Ripple')
+  if (tileId === HEALTHCARE_HOME_APP_ID) return t('温谈健康', 'Ondam Care')
+  if (tileId === HOUSING_HOME_APP_ID) return t('住处', 'Jari')
   if (tileId === APP_STORE_HOME_APP_ID) return t('应用商城', 'App Store')
   return fallback
 }
@@ -496,7 +505,12 @@ const tileMeta = (tileId) => {
   const builtIn = widgetRegistry[tileId]
   if (builtIn) {
     if (builtIn.kind === 'app') {
-      const resolvedIconMeta = resolveAppIconMeta(tileId, appIconOverrides.value, homeLocale.value)
+      const resolvedIconMeta = resolveAppIconMeta(
+        tileId,
+        appIconOverrides.value,
+        homeLocale.value,
+        systemAppIconTheme.value,
+      )
       return {
         ...builtIn,
         icon: resolvedIconMeta.icon,
@@ -505,7 +519,12 @@ const tileMeta = (tileId) => {
       }
     }
     if (builtIn.kind === HOME_FOLDER_TILE_KIND) {
-      const resolvedIconMeta = resolveAppIconMeta(tileId, appIconOverrides.value, homeLocale.value)
+      const resolvedIconMeta = resolveAppIconMeta(
+        tileId,
+        appIconOverrides.value,
+        homeLocale.value,
+        systemAppIconTheme.value,
+      )
       const childEntries =
         tileId === SHOPPING_HOME_APP_ID
           ? shoppingFolderChildEntries.value
@@ -1586,7 +1605,12 @@ const iconStyle = (accent = 'default') => {
 }
 
 const dockAppMeta = (appId) => {
-  const meta = resolveAppIconMeta(appId, appIconOverrides.value, homeLocale.value)
+  const meta = resolveAppIconMeta(
+    appId,
+    appIconOverrides.value,
+    homeLocale.value,
+    systemAppIconTheme.value,
+  )
   return {
     ...meta,
     label: resolveDisplayName(resolveAppTileLabel(appId, meta.label || appId), meta),
@@ -1868,7 +1892,10 @@ const openTileSlotContentSheet = (tileId) => {
 }
 
 const onTileClick = (tileId) => {
-  if (!layoutEditMode.value) return
+  if (!layoutEditMode.value) {
+    openAppById(tileId)
+    return
+  }
   if (Date.now() < ignoreAppOpenUntil.value) return
   openTileSlotContentSheet(tileId)
   if (slotContentTarget.value?.tileId === tileId) return
@@ -2493,7 +2520,7 @@ onBeforeUnmount(() => {
                   @action="handleBuiltInWidgetAction(placement.tileId, $event)"
                 />
 
-                <button class="home-app-tile" v-else-if="tileMeta(placement.tileId)?.kind === 'app'" @click="openAppById(placement.tileId)">
+                <button class="home-app-tile" v-else-if="tileMeta(placement.tileId)?.kind === 'app'">
                   <AppIconVisual
                     class="home-app-icon"
                     :data-testid="`home-app-icon-${placement.tileId}`"
@@ -2508,7 +2535,6 @@ onBeforeUnmount(() => {
                 <button
                   class="home-app-tile home-folder-tile"
                   v-else-if="tileMeta(placement.tileId)?.kind === HOME_FOLDER_TILE_KIND"
-                  @click="openAppById(placement.tileId)"
                   :data-testid="`home-folder-${placement.tileId}`"
                 >
                   <AppIconVisual

@@ -17,7 +17,7 @@
       </button>
 
       <div class="daon-mail-brand">
-        <span class="daon-mail-brand__mark" aria-hidden="true">다</span>
+        <span class="daon-mail-brand__mark" aria-hidden="true">D</span>
         <span class="daon-mail-brand__meta">
           <span class="daon-mail-brand__word">{{ isZh ? brand.wordmarkZh : brand.wordmarkEn }}</span>
           <span class="daon-mail-brand__tag">{{ isZh ? brand.taglineZh : brand.taglineEn }}</span>
@@ -42,7 +42,7 @@
         class="daon-mail-header__senders"
         :aria-label="t('发件人白名单设置', 'Sender whitelist settings')"
         data-testid="mail-senders-open"
-        @click="sendersSheetOpen = true"
+        @click="openSenderSettings"
       >
         <i class="fas fa-user-gear" aria-hidden="true"></i>
       </button>
@@ -156,8 +156,8 @@
           :cancel-text="t('取消', 'Cancel')"
           :save-draft-label="t('保存草稿', 'Save draft')"
           :save-draft-text="t('存草稿', 'Draft')"
-          :send-label="t('发送', 'Send')"
-          :send-text="t('发送', 'Send')"
+          :send-label="t('保存到本地发件箱（不会投递）', 'Save to local Sent (not delivered)')"
+          :send-text="t('存入发件箱', 'Save to Sent')"
           :to-label="t('收件人', 'To')"
           :to-placeholder="t('someone@example.kr', 'someone@example.kr')"
           :subject-label="t('主题', 'Subject')"
@@ -230,6 +230,15 @@
           :foot-note="isZh ? brand.taglineZh : brand.taglineEn"
           @select="selectFolder"
         />
+        <button
+          type="button"
+          class="daon-mail-drawer__settings"
+          data-testid="mail-drawer-senders-open"
+          @click="openSenderSettings"
+        >
+          <i class="fas fa-user-gear" aria-hidden="true"></i>
+          <span>{{ t('发件人设置', 'Sender settings') }}</span>
+        </button>
       </div>
     </div>
 
@@ -378,6 +387,7 @@ const folderRows = computed(() =>
 )
 
 const accountRow = computed(() => ({
+  avatarText: isZh.value ? '我' : 'Me',
   name: isZh.value ? MAIL_SHELL_ACCOUNT.nameZh : MAIL_SHELL_ACCOUNT.nameEn,
   address: MAIL_SHELL_ACCOUNT.address,
   plan: isZh.value ? MAIL_SHELL_ACCOUNT.planZh : MAIL_SHELL_ACCOUNT.planEn,
@@ -400,7 +410,7 @@ const threadToRow = (thread) => {
   return {
     id: thread.id,
     variant: 'fixture',
-    avatarText: Array.from(isZh.value ? thread.senderNameZh : thread.senderNameEn)[0] || '메',
+    avatarText: Array.from(isZh.value ? thread.senderNameZh : thread.senderNameEn)[0] || '邮',
     avatarTone: thread.avatarTone,
     title: isZh.value ? thread.senderNameZh : thread.senderNameEn,
     timeLabel: timeLabelForOffset(latest.offsetMinutes),
@@ -419,7 +429,7 @@ const draftOffsetMinutes = (at) => Math.round((at - nowMs.value) / 60_000)
 const draftToRow = (draft) => ({
   id: draft.id,
   variant: 'draft',
-  avatarText: '임',
+  avatarText: isZh.value ? '草' : 'D',
   avatarTone: 'slate',
   title: draft.to || t('（未填收件人）', '(no recipient)'),
   timeLabel: timeLabelForOffset(draftOffsetMinutes(draft.savedAt || draft.at)),
@@ -436,7 +446,7 @@ const draftToRow = (draft) => ({
 const sentToRow = (mail) => ({
   id: mail.id,
   variant: 'sent',
-  avatarText: '나',
+  avatarText: isZh.value ? '我' : 'M',
   avatarTone: 'green',
   title: mail.to || t('（未填收件人）', '(no recipient)'),
   timeLabel: timeLabelForOffset(draftOffsetMinutes(mail.sentAt || mail.at)),
@@ -452,7 +462,7 @@ const sentToRow = (mail) => ({
 const receivedToRow = (mail) => ({
   id: mail.id,
   variant: 'received',
-  avatarText: Array.from(mail.senderName)[0] || '메',
+  avatarText: Array.from(mail.senderName)[0] || (isZh.value ? '邮' : 'M'),
   avatarTone: senders.value.find((sender) => sender.address === mail.senderAddress)?.tone || 'slate',
   title: mail.senderName,
   timeLabel: timeLabelForOffset(draftOffsetMinutes(mail.arrivedAt)),
@@ -606,7 +616,7 @@ const detailView = computed(() => {
       archived: isThreadArchived(thread.id),
       senderName: isZh.value ? thread.senderNameZh : thread.senderNameEn,
       subject: isZh.value ? latest.subjectZh : latest.subjectEn,
-      avatarText: Array.from(isZh.value ? thread.senderNameZh : thread.senderNameEn)[0] || '메',
+      avatarText: Array.from(isZh.value ? thread.senderNameZh : thread.senderNameEn)[0] || '邮',
       chips: resolveChips(thread.labelIds),
       mails: thread.mails.map((mail) => ({
         id: mail.id,
@@ -657,7 +667,7 @@ const detailView = computed(() => {
       archived: isThreadArchived(received.id),
       senderName: received.senderName,
       subject: received.subject,
-      avatarText: Array.from(received.senderName)[0] || '메',
+      avatarText: Array.from(received.senderName)[0] || (isZh.value ? '邮' : 'M'),
       chips,
       mails: [
         {
@@ -670,7 +680,7 @@ const detailView = computed(() => {
         },
       ],
       mailCountLabel: received.providerModel
-        ? t(`다온메일 배달 · ${received.providerModel}`, `Delivered by Daon Mail · ${received.providerModel}`)
+        ? t(`由 Daon 邮件生成 · ${received.providerModel}`, `Delivered by Daon Mail · ${received.providerModel}`)
         : '',
     }
   }
@@ -689,7 +699,7 @@ const detailView = computed(() => {
       archived: false,
       senderName: `${t('发送至', 'Sent to')} ${sent.to || t('（未填收件人）', '(no recipient)')}`,
       subject: sent.subject || t('（无主题）', '(no subject)'),
-      avatarText: '나',
+      avatarText: isZh.value ? '我' : 'M',
       chips: [],
       mails: [
         {
@@ -701,7 +711,7 @@ const detailView = computed(() => {
           attachments: [],
         },
       ],
-      mailCountLabel: '',
+      mailCountLabel: t('仅存于本机发件箱 · 尚未投递', 'Local Sent only · not delivered'),
     }
   }
 
@@ -753,6 +763,11 @@ const openCompose = () => {
   composeSavedNote.value = ''
   rightPane.value = 'compose'
   railOpen.value = false
+}
+
+const openSenderSettings = () => {
+  railOpen.value = false
+  sendersSheetOpen.value = true
 }
 
 const cancelCompose = () => {
@@ -912,6 +927,14 @@ const openInvite = (path) => {
   --daon-green: #0e7a4e;
   --daon-green-deep: #0a5c3a;
   --daon-green-ink: #073f29;
+  --daon-action-bg: #0e7a4e;
+  --daon-action-hover: #0a5c3a;
+  --daon-accent-text: #0a5c3a;
+  --daon-focus: #0e7a4e;
+  --daon-header-start: #073f29;
+  --daon-header-mid: #0a5c3a;
+  --daon-header-end: #0e7a4e;
+  --daon-header-action-ink: #073f29;
   --daon-green-soft: #e4f0e8;
   --daon-paper: #f3f5f1;
   --daon-panel: #ffffff;
@@ -950,25 +973,33 @@ const openInvite = (path) => {
   min-height: 0;
   overflow: hidden;
   background: var(--daon-paper);
-  font-family: 'Noto Sans KR', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', -apple-system,
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', -apple-system,
     'Segoe UI', sans-serif;
   color: var(--daon-ink);
 }
 
 .daon-mail-app.is-night {
-  --daon-green: #3fbb82;
-  --daon-green-deep: #2e9a68;
-  --daon-green-ink: #eaf5ee;
-  --daon-green-soft: rgba(63, 187, 130, 0.14);
-  --daon-paper: #0e1410;
-  --daon-panel: #16211a;
-  --daon-panel-soft: #131d16;
-  --daon-line: #26332a;
-  --daon-line-strong: #3c4c40;
-  --daon-ink: #e9f0e9;
-  --daon-ink-soft: #aeb9ab;
-  --daon-ink-faint: #7d8b7a;
-  --daon-tone-green: #4cc58d;
+  --daon-green: #49c78d;
+  --daon-green-deep: #12583b;
+  --daon-green-ink: #092619;
+  --daon-action-bg: #176b48;
+  --daon-action-hover: #10563a;
+  --daon-accent-text: #83e2b7;
+  --daon-focus: #83e2b7;
+  --daon-header-start: #07130d;
+  --daon-header-mid: #0a3020;
+  --daon-header-end: #0d5b3a;
+  --daon-header-action-ink: #073c27;
+  --daon-green-soft: rgba(73, 199, 141, 0.18);
+  --daon-paper: #090f0c;
+  --daon-panel: #111a15;
+  --daon-panel-soft: #17221b;
+  --daon-line: #2d3d33;
+  --daon-line-strong: #4a6252;
+  --daon-ink: #f1f6f2;
+  --daon-ink-soft: #c2cec5;
+  --daon-ink-faint: #91a095;
+  --daon-tone-green: #72e0aa;
   --daon-tone-green-soft: rgba(76, 197, 141, 0.16);
   --daon-tone-blue: #74aade;
   --daon-tone-blue-soft: rgba(116, 170, 222, 0.16);
@@ -980,7 +1011,7 @@ const openInvite = (path) => {
   --daon-tone-violet-soft: rgba(169, 156, 224, 0.16);
   --daon-tone-teal: #5cbcc7;
   --daon-tone-teal-soft: rgba(92, 188, 199, 0.15);
-  --daon-tone-slate: #9aa894;
+  --daon-tone-slate: #c4d0c1;
   --daon-tone-slate-soft: rgba(154, 168, 148, 0.16);
   --daon-star: #e3b04b;
   --daon-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -995,10 +1026,14 @@ const openInvite = (path) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
-  background: linear-gradient(120deg, var(--daon-green-ink), var(--daon-green-deep) 55%, var(--daon-green));
+  padding: calc(34px + env(safe-area-inset-top)) 14px 10px;
+  background: linear-gradient(120deg, var(--daon-header-start), var(--daon-header-mid) 55%, var(--daon-header-end));
   color: #fff;
   flex: none;
+}
+
+:global(.app-shell[data-statusbar='off']) .daon-mail-header {
+  padding-top: calc(10px + env(safe-area-inset-top));
 }
 
 .daon-mail-header__back {
@@ -1084,7 +1119,7 @@ const openInvite = (path) => {
   gap: 8px;
   border: none;
   background: #fff;
-  color: var(--daon-green-ink);
+  color: var(--daon-header-action-ink);
   font: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -1152,7 +1187,7 @@ const openInvite = (path) => {
   padding: 7px 16px;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--daon-green-deep);
+  color: var(--daon-accent-text);
   background: var(--daon-green-soft);
   border-bottom: 1px solid var(--daon-line);
 }
@@ -1275,6 +1310,25 @@ const openInvite = (path) => {
   background: var(--daon-panel);
   border-right: 1px solid var(--daon-line);
   animation: daon-drawer-in 200ms var(--daon-ease) both;
+  display: flex;
+  flex-direction: column;
+}
+
+.daon-mail-drawer__settings {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  margin: 8px 10px calc(14px + env(safe-area-inset-bottom));
+  padding: 8px 14px;
+  border: 1px solid var(--daon-line);
+  border-radius: var(--daon-radius-sm);
+  background: var(--daon-panel-soft);
+  color: var(--daon-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 @keyframes daon-drawer-in {
@@ -1292,6 +1346,11 @@ const openInvite = (path) => {
 .daon-mail-header__rail-toggle:focus-visible,
 .daon-mail-header__compose:focus-visible {
   outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.daon-mail-drawer__settings:focus-visible {
+  outline: 3px solid var(--daon-focus);
   outline-offset: 2px;
 }
 
@@ -1329,9 +1388,42 @@ const openInvite = (path) => {
   }
 }
 
+@media (max-width: 700px) {
+  .daon-mail-header__senders {
+    display: none;
+  }
+
+  .daon-mail-drawer__settings {
+    display: flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .daon-mail-brand__meta {
+    display: none;
+  }
+
+  .daon-mail-header__compose {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .daon-mail-header__compose span,
+  .daon-mail-header__receive-text {
+    display: none;
+  }
+
+  .daon-mail-header__receive {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 390px) {
   .daon-mail-header {
-    padding: 8px 10px;
+    padding: calc(34px + env(safe-area-inset-top)) 10px 8px;
     gap: 8px;
   }
 
@@ -1346,10 +1438,6 @@ const openInvite = (path) => {
     font-size: 14.5px;
   }
 
-  .daon-mail-header__compose {
-    padding: 8px 12px;
-    font-size: 12.5px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

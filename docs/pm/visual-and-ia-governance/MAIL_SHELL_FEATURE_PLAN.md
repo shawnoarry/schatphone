@@ -1,4 +1,4 @@
-# Daon Mail Shell Feature Plan / 다온메일 壳功能梳理
+# Daon Mail Shell Feature Plan / Daon 邮件壳功能梳理
 
 Updated: 2026-08-23
 
@@ -10,7 +10,8 @@ This is the focused product file for the Daon Mail preview shell (roadmap 4.16).
 
 ### SHP-1 S1 fixture shell (DONE 2026-08-23)
 
-- fictional Korean portal-mail identity (다온메일 Daon Mail) with the portal-green system, folder rail, dense row list, reading pane, mobile drawer, compose/drafts/local-sent, search, and complete empty states;
+- fictional Korean portal-mail identity (Daon Mail) with the portal-green system, folder rail, dense row list, reading pane, mobile drawer, compose/drafts/local-sent, search, and complete empty states; system chrome and bundled fixtures follow the active Chinese/English system language instead of treating Korean as the Chinese locale, while Korean-world context remains in names, places, and addresses; local-sent actions and details explicitly say that the record stays on the device and is not delivered;
+- Chinese night mode uses a dedicated dark surface and contrast token set; desktop and simulated Pixel 5 evidence must pass WCAG AA color-contrast checks rather than relying on visual-darkening alone;
 - nine bilingual inbox fixture threads plus one spam fixture referencing the existing Seoul world;
 - device-local preview state under `schatphone:mail-shell:preview-state` (registered, excluded from backup);
 - Home formal page-2 entry through the `layout-h` default template, App Store entry, icon customization, and a `mail` return source so the Calendar invitation deep link round-trips.

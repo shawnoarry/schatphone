@@ -58,6 +58,10 @@ const AppStoreView = () => import('../views/AppStoreView.vue')
 const MusicView = () => import('../views/MusicView.vue')
 const WeatherView = () => import('../views/WeatherView.vue')
 const MailView = () => import('../views/MailView.vue')
+const BrowserView = () => import('../views/BrowserView.vue')
+const CommunityView = () => import('../views/CommunityView.vue')
+const HealthcareView = () => import('../views/HealthcareView.vue')
+const HousingView = () => import('../views/HousingView.vue')
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -147,6 +151,10 @@ const router = createRouter({
     { path: '/music', component: MusicView },
     { path: '/weather', component: WeatherView },
     { path: '/mail', component: MailView },
+    { path: '/browser', component: BrowserView },
+    { path: '/community', component: CommunityView },
+    { path: '/healthcare', component: HealthcareView },
+    { path: '/housing', component: HousingView },
     { path: '/more', redirect: '/settings' },
   ],
 })

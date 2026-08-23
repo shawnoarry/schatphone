@@ -211,6 +211,34 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     sourceFile: 'src/composables/useMailShellSenders.js',
     durability: 'durable-hint',
   },
+  {
+    id: 'local:browser-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:browser-shell:s1-state',
+    sourceFile: 'src/lib/browser-shell-data.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:community-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:community-shell:preview-state',
+    sourceFile: 'src/lib/community-shell-state.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:healthcare-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:healthcare-shell:s1',
+    sourceFile: 'src/composables/useHealthcareShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:housing-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:housing-shell:preview-state',
+    sourceFile: 'src/composables/useHousingShellState.js',
+    durability: 'durable-hint',
+  },
 ])
 
 export const PERSISTED_STORE_CARRIERS = freezeEntries([
@@ -1061,6 +1089,74 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     exclusionReason:
       'Shell preview state is not committed correspondence; loss resets the preview to fixture defaults without touching any owner record.',
     rebuildSource: 'The user repeats read/star/archive/draft/receive actions in the preview shell.',
+  },
+  {
+    id: 'browser.shell-preview-state',
+    logicalOwner: 'Browser shell preview',
+    dataClass: 'S1 fixture-shell history, bookmarks, recent visits, and restored local search context',
+    physicalCarrierIds: ['local:browser-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Help and public-world fixture result IDs stay stable; local arrays are normalized and bounded.',
+    referenceRule:
+      'The preview stores discovery state only and owns no Help document, WorldBook fact, Map place, external web result, or event record.',
+    exclusionReason:
+      'Loss resets local discovery convenience without changing any source owner or committed world record.',
+    rebuildSource: 'The user repeats searches, visits, and bookmark actions in the preview shell.',
+  },
+  {
+    id: 'community.shell-preview-state',
+    logicalOwner: 'Community shell preview',
+    dataClass: 'S1 fixture-shell follow, bookmark, and read markers over local public-content fixtures',
+    physicalCarrierIds: ['local:community-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Fixture account, channel, claim, fact-reference, and post IDs stay stable across refresh.',
+    referenceRule:
+      'The preview owns only local interaction markers; fixture posts do not become canonical Community publications, facts, claims, relationship memories, or Event Runtime records.',
+    exclusionReason:
+      'The S1 shell has no production Community owner, so its local markers are intentionally excluded from backup.',
+    rebuildSource: 'The user repeats follow, bookmark, and read actions in the preview shell.',
+  },
+  {
+    id: 'healthcare.shell-preview-state',
+    logicalOwner: 'Healthcare shell preview',
+    dataClass: 'S1 fixture-shell simulated appointments, local status changes, saved institutions, and report read markers',
+    physicalCarrierIds: ['local:healthcare-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Fixture institution, service, slot, appointment, and authored-report IDs remain stable.',
+    referenceRule:
+      'This preview owns no real health data, diagnosis, provider result, Calendar event, Wallet transaction, Phone call, Map place, or Event Runtime record.',
+    exclusionReason:
+      'The S1 shell contains fictional local preview actions rather than canonical healthcare records.',
+    rebuildSource: 'The user repeats simulated booking, rescheduling, cancellation, saving, and report-reading actions.',
+  },
+  {
+    id: 'housing.shell-preview-state',
+    logicalOwner: 'Housing shell preview',
+    dataClass: 'S1 fixture-shell saved listings, recent visits, filters, and local viewing drafts',
+    physicalCarrierIds: ['local:housing-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Fixture listing IDs remain distinct from stable Map area references; viewing draft IDs are generated once.',
+    referenceRule:
+      'This preview owns no property, residence, contract, application, Calendar event, Wallet transaction, Assets record, or Map place.',
+    exclusionReason:
+      'The S1 shell contains fictional browse and planning state rather than canonical housing records.',
+    rebuildSource: 'The user repeats filtering, saving, recent viewing, and viewing-draft actions.',
   },
 ])
 

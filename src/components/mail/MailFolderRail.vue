@@ -1,7 +1,7 @@
 <template>
   <nav class="daon-rail" :aria-label="railAriaLabel" data-testid="mail-folder-rail">
     <div class="daon-rail-account">
-      <div class="daon-rail-account__avatar" aria-hidden="true">나</div>
+      <div class="daon-rail-account__avatar" aria-hidden="true">{{ account.avatarText }}</div>
       <div class="daon-rail-account__meta">
         <p class="daon-rail-account__name">{{ account.name }}</p>
         <p class="daon-rail-account__address">{{ account.address }}</p>
@@ -77,7 +77,7 @@ defineEmits(['select'])
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--daon-green);
+  background: var(--daon-action-bg);
   color: #fff;
   font-size: 14px;
   font-weight: 800;
@@ -110,8 +110,8 @@ defineEmits(['select'])
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--daon-green-deep);
-  border: 1px solid var(--daon-green);
+  color: var(--daon-accent-text);
+  border: 1px solid var(--daon-accent-text);
   border-radius: 999px;
   padding: 2px 6px;
   white-space: nowrap;
@@ -151,7 +151,7 @@ defineEmits(['select'])
 }
 
 .daon-rail-folder.is-active {
-  background: var(--daon-green);
+  background: var(--daon-action-bg);
   color: #fff;
   font-weight: 700;
 }
@@ -200,7 +200,7 @@ defineEmits(['select'])
 
 .daon-rail-folder:focus-visible,
 .daon-rail-account:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: 2px;
 }
 

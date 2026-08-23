@@ -265,7 +265,13 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_control_center')
-    expect(store.settings.appearance.homeWidgetPages[2]).toEqual(['system', 'quick_heart', 'quick_disc'])
+    expect(store.settings.appearance.homeWidgetPages[2]).toEqual([
+      'system',
+      'quick_heart',
+      'quick_disc',
+      'app_browser',
+      'app_community',
+    ])
 
     store.setHomeWidgetPages([
       ['app_chat', 'app_files', 'weather', 'app_control_center'],
@@ -384,7 +390,23 @@ describe('system widget import safety', () => {
       slotId: 'h-small-9',
       tileId: 'app_daon_mail',
     })
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(7)
+    expect(store.settings.appearance.homeLayoutSlotPlacements[1]).toContainEqual({
+      slotId: 'h-small-10',
+      tileId: 'app_healthcare',
+    })
+    expect(store.settings.appearance.homeLayoutSlotPlacements[1]).toContainEqual({
+      slotId: 'h-small-11',
+      tileId: 'app_jari_housing',
+    })
+    expect(store.settings.appearance.homeLayoutSlotPlacements[2]).toContainEqual({
+      slotId: 'f-small-3',
+      tileId: 'app_browser',
+    })
+    expect(store.settings.appearance.homeLayoutSlotPlacements[2]).toContainEqual({
+      slotId: 'f-small-4',
+      tileId: 'app_community',
+    })
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(9)
   })
 
   test('migrates the previous versioned default Home into the release layout', () => {
@@ -434,7 +456,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(7)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(9)
   })
 
   test('migrates the prior curated two-screen default to the configurable three-screen default', () => {
@@ -460,9 +482,15 @@ describe('system widget import safety', () => {
 
     const store = useSystemStore()
 
-    expect(store.settings.appearance.homeWidgetPages[2]).toEqual(['system', 'quick_heart', 'quick_disc'])
+    expect(store.settings.appearance.homeWidgetPages[2]).toEqual([
+      'system',
+      'quick_heart',
+      'quick_disc',
+      'app_browser',
+      'app_community',
+    ])
     expect(store.settings.appearance.homeVisiblePageCount).toBe(3)
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(7)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(9)
   })
 
   test('keeps customized Home slot setup during setup-version hydration', () => {
@@ -497,7 +525,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages[0]).toEqual(['weather'])
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_phone')
     expect(store.settings.appearance.homeVisiblePageCount).toBe(2)
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(7)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(9)
     expect(store.settings.appearance.homeLayoutSlotPlacements[0]).toContainEqual({
       slotId: 'c-top-left',
       tileId: 'weather',
@@ -531,7 +559,7 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(store.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
-    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(7)
+    expect(store.settings.appearance.homeDesktopSetupVersion).toBe(9)
   })
 
   test('World Hub Home entry is user-managed instead of controlled by legacy toggles', () => {

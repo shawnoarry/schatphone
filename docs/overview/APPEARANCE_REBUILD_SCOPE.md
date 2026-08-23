@@ -51,11 +51,12 @@ Already implemented:
 5. status-bar and haptic toggles
 6. custom CSS entry
 7. app-icon preset and accent customization
-8. widget restore, custom widget creation, and import flow
-9. multi-page Home layout baseline with widgets and app entries
-10. lock-screen grouped notifications and in-shell banners
-11. Gallery asset categories and cross-module media reuse
-12. Map visual settings and optional AI visual refresh path
+8. system App icon themes with a curated native-app allowlist
+9. widget restore, custom widget creation, and import flow
+10. multi-page Home layout baseline with widgets and app entries
+11. lock-screen grouped notifications and in-shell banners
+12. Gallery asset categories and cross-module media reuse
+13. Map visual settings and optional AI visual refresh path
 
 Conclusion:
 
@@ -114,6 +115,7 @@ Why:
 Preserve:
 
 - theme, wallpaper, font, icon, and widget-setting semantics
+- system App icon themes affect only curated native-system entries; commercial/branded logos remain unchanged and explicit App Store per-app overrides win
 - save behavior and safety feedback
 - wallpaper source compatibility
 - app-icon fallback rules
@@ -124,6 +126,7 @@ Current interaction baseline:
 - phone-sized Appearance subpages should stay scan-first;
 - wallpaper source, advanced CSS, custom font-stack, and per-app icon/accent editing should open in focused sheets/drawers/subpages instead of stretching one long Settings-style scroll;
 - icon preset options must include all built-in app glyphs so default states remain visible and editable.
+- the first system-App-icon V1 extends the shared app-identity resolver with two vector-font mappings, covers Home, Dock, App Store, and notification presentation for an explicit native-system allowlist, persists independently from day/night theme, and falls back to the classic pack for missing or invalid values. In-page controls and commercial brand assets are outside this setting.
 
 ### 4.3 Mature Content Modules
 

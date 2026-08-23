@@ -10,6 +10,7 @@ describe('appearance pack schema', () => {
   test('exports only portable visual appearance fields', () => {
     const pack = buildAppearancePack({
       currentTheme: 'zen',
+      systemAppIconTheme: 'soft-rounded',
       wallpaperMode: 'url',
       wallpaper: 'https://example.com/wallpaper.jpg',
       customCss: '.app-shell { color: red; }',
@@ -41,6 +42,7 @@ describe('appearance pack schema', () => {
     expect(pack.kind).toBe(APPEARANCE_PACK_KIND)
     expect(pack.appearance).toMatchObject({
       currentTheme: 'zen',
+      systemAppIconTheme: 'soft-rounded',
       wallpaperMode: 'url',
       customCss: '.app-shell { color: red; }',
       customVars: {
@@ -62,6 +64,7 @@ describe('appearance pack schema', () => {
         name: 'Shared shell',
         appearance: {
           currentTheme: 'zen',
+          systemAppIconTheme: 'soft-rounded',
           customCss: '.shell { color: teal; }',
         },
       }),
@@ -71,6 +74,7 @@ describe('appearance pack schema', () => {
         name: 'Shared shell',
         appearance: {
           currentTheme: 'zen',
+          systemAppIconTheme: 'soft-rounded',
           customCss: '.shell { color: teal; }',
         },
       },

@@ -3,12 +3,20 @@ import {
   AGENDA_JOURNEY_ROUTE,
   ASSETS_HOME_APP_ID,
   ASSETS_ROUTE,
+  BROWSER_HOME_APP_ID,
+  BROWSER_ROUTE,
   CAMERA_HOME_APP_ID,
   CAMERA_ROUTE,
   CONTROL_CENTER_HOME_APP_ID,
   CONTROL_CENTER_ROUTE,
+  COMMUNITY_HOME_APP_ID,
+  COMMUNITY_ROUTE,
   FOOD_DELIVERY_HOME_APP_ID,
   FOOD_DELIVERY_ROUTE,
+  HEALTHCARE_HOME_APP_ID,
+  HEALTHCARE_ROUTE,
+  HOUSING_HOME_APP_ID,
+  HOUSING_ROUTE,
   MAIL_HOME_APP_ID,
   MAIL_ROUTE,
   MUSIC_HOME_APP_ID,
@@ -104,6 +112,34 @@ export const HOME_APP_REGISTRY_ADDITIONS = Object.freeze({
     accent: 'cool',
     route: MAIL_ROUTE,
   }),
+  [BROWSER_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-compass',
+    label: 'Browser',
+    accent: 'cool',
+    route: BROWSER_ROUTE,
+  }),
+  [COMMUNITY_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-wave-square',
+    label: 'Ripple',
+    accent: 'warm',
+    route: COMMUNITY_ROUTE,
+  }),
+  [HEALTHCARE_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-heart-pulse',
+    label: 'Ondam Care',
+    accent: 'cool',
+    route: HEALTHCARE_ROUTE,
+  }),
+  [HOUSING_HOME_APP_ID]: Object.freeze({
+    kind: 'app',
+    icon: 'fas fa-house-chimney-window',
+    label: 'Jari',
+    accent: 'warm',
+    route: HOUSING_ROUTE,
+  }),
 })
 
 export const HOME_PLANNED_TILE_IDS = Object.freeze([
@@ -116,6 +152,10 @@ export const HOME_PLANNED_TILE_IDS = Object.freeze([
   ASSETS_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   MAIL_HOME_APP_ID,
+  BROWSER_HOME_APP_ID,
+  COMMUNITY_HOME_APP_ID,
+  HEALTHCARE_HOME_APP_ID,
+  HOUSING_HOME_APP_ID,
 ])
 
 export const HOME_PLANNED_LOCKED_TILE_IDS = Object.freeze([

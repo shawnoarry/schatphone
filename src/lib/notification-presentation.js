@@ -123,10 +123,17 @@ const readPreviewText = (note) => {
   return ''
 }
 
-export const resolveNotificationModuleMeta = (note, locale = 'en-US', appIconOverrides = {}) => {
+export const resolveNotificationModuleMeta = (
+  note,
+  locale = 'en-US',
+  appIconOverrides = {},
+  systemAppIconTheme = 'classic',
+) => {
   const key = detectModuleKey(note)
   const appId = resolveNotificationModuleAppId(key)
-  const appMeta = appId ? resolveAppIconMeta(appId, appIconOverrides, locale) : null
+  const appMeta = appId
+    ? resolveAppIconMeta(appId, appIconOverrides, locale, systemAppIconTheme)
+    : null
   const fallbackToneClass =
     key === 'shopping'
       ? 'accent-warm'
@@ -160,7 +167,12 @@ export const buildExternalPushFallback = (
     typeof options?.displayMode === 'string' && options.displayMode.trim()
       ? options.displayMode.trim()
       : 'minimal'
-  const moduleMeta = resolveNotificationModuleMeta(note, locale, options?.appIconOverrides || {})
+  const moduleMeta = resolveNotificationModuleMeta(
+    note,
+    locale,
+    options?.appIconOverrides || {},
+    options?.systemAppIconTheme,
+  )
   const appName = readLocalizedCopy(MODULE_COPY.appName, locale)
   const standardBodyMap =
     MODULE_COPY.standardBodies[moduleMeta.key] || MODULE_COPY.standardBodies.system

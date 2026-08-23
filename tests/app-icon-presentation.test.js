@@ -172,6 +172,28 @@ describe('app icon presentation helpers', () => {
     expect(appStore.accent).toBe('default')
   })
 
+  test('resolves the accepted Browser, Community, Healthcare, and Housing brand images', () => {
+    const expected = {
+      app_browser: 'prism-browser-app-icon-v1.png',
+      app_community: 'ripple-community-app-icon-v1.png',
+      app_healthcare: 'ondam-care-app-icon-v1.png',
+      app_jari_housing: 'jari-housing-app-icon-v1.png',
+    }
+
+    Object.entries(expected).forEach(([appId, fileName]) => {
+      const meta = resolveAppIconMeta(appId, {}, 'zh-CN')
+      expect(meta.imageUrl).toContain(`/schatphone-assets/images/ui-assets/shared/app-icons/${fileName}`)
+    })
+
+    expect(
+      resolveAppIconMeta(
+        'app_healthcare',
+        { app_healthcare: { icon: 'fas fa-heart-pulse', accent: 'warm' } },
+        'zh-CN',
+      ).imageUrl,
+    ).toBe('')
+  })
+
   test('reuses app icon overrides in in-shell notification presentation', () => {
     const meta = resolveNotificationModuleMeta(
       {
@@ -191,5 +213,21 @@ describe('app icon presentation helpers', () => {
     expect(meta.label).toBe('Chat')
     expect(meta.icon).toBe('fas fa-paper-plane')
     expect(meta.toneClass).toBe('accent-dark')
+  })
+
+  test('reuses the selected system app icon pack in notification presentation', () => {
+    const meta = resolveNotificationModuleMeta(
+      {
+        source: 'chat_ai_reply',
+        route: '/chat/7',
+      },
+      'en-US',
+      {},
+      'soft-rounded',
+    )
+
+    expect(meta.appId).toBe('app_chat')
+    expect(meta.icon).toBe('fas fa-message')
+    expect(meta.toneClass).toBe('accent-cool')
   })
 })

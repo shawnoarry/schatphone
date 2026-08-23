@@ -84,10 +84,10 @@ describe('AppearanceView wallpaper source picker', () => {
 
     expect(wrapper.find('.appearance-overview-card').exists()).toBe(true)
     expect(wrapper.find('.appearance-layout-card').exists()).toBe(true)
-    expect(wrapper.findAll('.appearance-menu-card')).toHaveLength(2)
+    expect(wrapper.findAll('.appearance-menu-card')).toHaveLength(3)
     expect(wrapper.find('.appearance-menu-icon.is-theme').exists()).toBe(true)
     expect(wrapper.find('.appearance-menu-icon.is-font').exists()).toBe(true)
-    expect(wrapper.find('.appearance-menu-icon.is-icons').exists()).toBe(false)
+    expect(wrapper.find('.appearance-menu-icon.is-icons').exists()).toBe(true)
     expect(wrapper.find('.appearance-menu-icon.is-widget').exists()).toBe(false)
     expect(wrapper.text()).toContain('当前外观')
     expect(wrapper.text()).toContain('桌面模板')
@@ -107,7 +107,7 @@ describe('AppearanceView wallpaper source picker', () => {
     })
     await flushPromises()
 
-    await wrapper.findAll('.appearance-menu-card')[1].trigger('click')
+    await wrapper.get('[data-testid="appearance-font-entry"]').trigger('click')
     await wrapper.findAll('button').find((button) => button.text().includes('编辑自定义字体')).trigger('click')
     await flushPromises()
 
@@ -205,7 +205,7 @@ describe('AppearanceView wallpaper source picker', () => {
     expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_stock')
     expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_assets')
     expect(systemStore.settings.appearance.homeWidgetPages.flat()).not.toContain('app_store')
-    expect(systemStore.settings.appearance.homeDesktopSetupVersion).toBe(7)
+    expect(systemStore.settings.appearance.homeDesktopSetupVersion).toBe(9)
     expect(systemStore.settings.appearance.homeVisiblePageCount).toBe(3)
     expect(wrapper.get('[data-testid="appearance-home-layout-refresh-feedback"]').exists()).toBe(true)
 
@@ -257,6 +257,7 @@ describe('AppearanceView wallpaper source picker', () => {
     systemStore.settings.appearance.homeWidgetPages = [['local_widget'], [], [], [], []]
     systemStore.settings.appearance.chat = { bubbleStyle: 'compact' }
     systemStore.settings.appearance.customCss = '.shell { color: teal; }'
+    systemStore.settings.appearance.systemAppIconTheme = 'soft-rounded'
     systemStore.settings.appearance.scopedCustomCss.app = {
       enabled: true,
       target: 'contacts',
@@ -276,6 +277,7 @@ describe('AppearanceView wallpaper source picker', () => {
       kind: 'schatphone.appearance-pack',
       appearance: {
         customCss: '.shell { color: teal; }',
+        systemAppIconTheme: 'soft-rounded',
       },
     })
     expect(exported.appearance.scopedCustomCss).toBeUndefined()
@@ -288,6 +290,7 @@ describe('AppearanceView wallpaper source picker', () => {
       JSON.stringify({
         appearance: {
           currentTheme: 'zen',
+          systemAppIconTheme: 'classic',
           customCss: '.imported { color: green; }',
           scopedCustomCss: {
             worldApp: {
@@ -309,6 +312,7 @@ describe('AppearanceView wallpaper source picker', () => {
     await wrapper.get('[data-testid="appearance-pack-import"]').trigger('click')
 
     expect(systemStore.settings.appearance.currentTheme).toBe('zen')
+    expect(systemStore.settings.appearance.systemAppIconTheme).toBe('classic')
     expect(systemStore.settings.appearance.customCss).toBe('.imported { color: green; }')
     expect(systemStore.settings.appearance.scopedCustomCss.app).toMatchObject({
       enabled: true,

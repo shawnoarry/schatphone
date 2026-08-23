@@ -32,10 +32,14 @@ import {
   AGENDA_JOURNEY_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
   ASSETS_HOME_APP_ID,
+  BROWSER_HOME_APP_ID,
   BOOK_HOME_APP_ID,
   CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
+  COMMUNITY_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  HEALTHCARE_HOME_APP_ID,
+  HOUSING_HOME_APP_ID,
   MAIL_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
@@ -101,6 +105,10 @@ import {
 } from '../lib/profile-template-schema'
 import { normalizeChatAppearance } from '../lib/chat-appearance'
 import { normalizeCalendarAppearance } from '../lib/calendar-markers'
+import {
+  DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+  normalizeSystemAppIconThemeId,
+} from '../lib/system-app-icon-theme'
 import { normalizeScopedCustomCss } from '../lib/appearance-scoped-css'
 import {
   normalizeAppSkinSettings,
@@ -163,8 +171,10 @@ const DEFAULT_WIDGET_PAGES = [
     SHOPPING_HOME_APP_ID,
     FOOD_DELIVERY_HOME_APP_ID,
     MAIL_HOME_APP_ID,
+    HEALTHCARE_HOME_APP_ID,
+    HOUSING_HOME_APP_ID,
   ],
-  ['system', 'quick_heart', 'quick_disc'],
+  ['system', 'quick_heart', 'quick_disc', BROWSER_HOME_APP_ID, COMMUNITY_HOME_APP_ID],
   [],
   [],
 ]
@@ -189,6 +199,62 @@ const PRE_MAIL_DEFAULT_WIDGET_PAGES = [
     REMINDERS_HOME_APP_ID,
     SHOPPING_HOME_APP_ID,
     FOOD_DELIVERY_HOME_APP_ID,
+  ],
+  ['system', 'quick_heart', 'quick_disc'],
+  [],
+  [],
+]
+
+const PRE_BROWSER_COMMUNITY_DEFAULT_WIDGET_PAGES = [
+  [
+    'weather',
+    'photo_note',
+    'music',
+    'focus_pulse',
+    'app_wallet',
+    'app_themes',
+    'app_gallery',
+    CAMERA_HOME_APP_ID,
+  ],
+  [
+    'app_phone',
+    'app_map',
+    MUSIC_HOME_APP_ID,
+    'app_calendar',
+    AGENDA_JOURNEY_HOME_APP_ID,
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+    MAIL_HOME_APP_ID,
+  ],
+  ['system', 'quick_heart', 'quick_disc'],
+  [],
+  [],
+]
+
+const PRE_HEALTHCARE_HOUSING_DEFAULT_WIDGET_PAGES = [
+  [
+    'weather',
+    'photo_note',
+    'music',
+    'focus_pulse',
+    'app_wallet',
+    'app_themes',
+    'app_gallery',
+    CAMERA_HOME_APP_ID,
+  ],
+  [
+    'app_phone',
+    'app_map',
+    MUSIC_HOME_APP_ID,
+    'app_calendar',
+    AGENDA_JOURNEY_HOME_APP_ID,
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+    MAIL_HOME_APP_ID,
+    BROWSER_HOME_APP_ID,
+    COMMUNITY_HOME_APP_ID,
   ],
   ['system', 'quick_heart', 'quick_disc'],
   [],
@@ -340,6 +406,10 @@ const CORE_HOME_TILE_IDS = [
   CONTROL_CENTER_HOME_APP_ID,
   BOOK_HOME_APP_ID,
   MAIL_HOME_APP_ID,
+  BROWSER_HOME_APP_ID,
+  COMMUNITY_HOME_APP_ID,
+  HEALTHCARE_HOME_APP_ID,
+  HOUSING_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
@@ -481,7 +551,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 7
+const HOME_DESKTOP_SETUP_VERSION = 9
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -1532,6 +1602,7 @@ export const useSystemStore = defineStore('system', () => {
     },
     appearance: {
       currentTheme: 'default',
+      systemAppIconTheme: DEFAULT_SYSTEM_APP_ICON_THEME_ID,
       wallpaperMode: DEFAULT_WALLPAPER_MODE,
       wallpaperAssetId: '',
       wallpaper: AVAILABLE_THEMES[0].wallpaper,
@@ -2002,6 +2073,10 @@ export const useSystemStore = defineStore('system', () => {
     setTheme(availableThemes.value[nextIndex].id)
   }
 
+  const setSystemAppIconTheme = (themeId) => {
+    settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(themeId)
+  }
+
   const setCustomCss = (cssText) => {
     settings.appearance.customCss = cssText || ''
   }
@@ -2111,6 +2186,9 @@ export const useSystemStore = defineStore('system', () => {
 
     const appearance = result.appearance
     settings.appearance.currentTheme = normalizeThemeId(appearance.currentTheme)
+    settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
+      appearance.systemAppIconTheme ?? appearance.systemIconTheme,
+    )
     settings.appearance.wallpaperMode = normalizeWallpaperMode(appearance.wallpaperMode)
     settings.appearance.wallpaperAssetId = normalizeWallpaperAssetId(appearance.wallpaperAssetId)
     settings.appearance.wallpaper =
@@ -2252,6 +2330,14 @@ export const useSystemStore = defineStore('system', () => {
       normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION
     const shouldResetToCleanSetup =
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MAIL_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_BROWSER_COMMUNITY_DEFAULT_WIDGET_PAGES,
+      ) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_HEALTHCARE_HOUSING_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
@@ -2283,6 +2369,14 @@ export const useSystemStore = defineStore('system', () => {
   const recommendHomeDesktopRefresh = computed(() => {
     if (
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MAIL_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_BROWSER_COMMUNITY_DEFAULT_WIDGET_PAGES,
+      ) ||
+      areHomeTilePagesEqual(
+        settings.appearance.homeWidgetPages,
+        PRE_HEALTHCARE_HOUSING_DEFAULT_WIDGET_PAGES,
+      ) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
@@ -4348,6 +4442,9 @@ export const useSystemStore = defineStore('system', () => {
       if (typeof appearance.currentTheme === 'string') {
         settings.appearance.currentTheme = normalizeThemeId(appearance.currentTheme)
       }
+      settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
+        appearance.systemAppIconTheme ?? appearance.systemIconTheme,
+      )
       const inferredThemeWallpaper = getThemeWallpaper(settings.appearance.currentTheme)
       settings.appearance.wallpaperMode =
         typeof appearance.wallpaperMode === 'string'
@@ -4569,6 +4666,9 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     settings.appearance.currentTheme = normalizeThemeId(settings.appearance.currentTheme)
+    settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
+      settings.appearance.systemAppIconTheme ?? settings.appearance.systemIconTheme,
+    )
     const hasTheme = availableThemes.value.some((theme) => theme.id === settings.appearance.currentTheme)
     if (!hasTheme) {
       settings.appearance.currentTheme = availableThemes.value[0]?.id || 'default'
@@ -4911,6 +5011,7 @@ export const useSystemStore = defineStore('system', () => {
     activeAutoExecution,
     availableThemes,
     setTheme,
+    setSystemAppIconTheme,
     getThemeWallpaper,
     useThemeWallpaper,
     setAppearanceWallpaperUrl,

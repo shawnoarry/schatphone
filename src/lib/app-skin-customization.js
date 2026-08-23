@@ -24,6 +24,10 @@ export const APP_SKIN_TARGETS = Object.freeze([
   Object.freeze({ appId: 'app_shopping', scope: 'shopping', labelZh: '购物', labelEn: 'Shopping' }),
   Object.freeze({ appId: 'app_food_delivery', scope: 'food_delivery', labelZh: '外卖', labelEn: 'Food Delivery' }),
   Object.freeze({ appId: 'app_assets', scope: 'assets', labelZh: '资产', labelEn: 'Assets' }),
+  Object.freeze({ appId: 'app_browser', scope: 'browser', labelZh: '折光浏览器', labelEn: 'Prism Browser' }),
+  Object.freeze({ appId: 'app_community', scope: 'community', labelZh: '涟漪', labelEn: 'Ripple' }),
+  Object.freeze({ appId: 'app_healthcare', scope: 'healthcare', labelZh: '温谈健康', labelEn: 'Ondam Care' }),
+  Object.freeze({ appId: 'app_jari_housing', scope: 'housing', labelZh: '住处', labelEn: 'Jari' }),
   Object.freeze({ appId: 'app_themes', scope: 'appearance', labelZh: '外观', labelEn: 'Appearance' }),
   Object.freeze({ appId: 'app_widgets', scope: 'widgets', labelZh: '组件', labelEn: 'Widgets' }),
 ])

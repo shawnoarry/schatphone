@@ -102,8 +102,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useI18n } from '../../composables/useI18n'
+import { isValidSenderAddress } from '../../composables/useMailShellSenders'
 
-defineProps({
+const props = defineProps({
   senders: { type: Array, required: true },
   allowNewSenders: { type: Boolean, default: true },
 })
@@ -125,13 +126,16 @@ const originLabel = (origin) =>
 
 const submitAdd = () => {
   const name = newName.value.trim()
-  const address = newAddress.value.trim()
+  const address = newAddress.value.trim().toLowerCase()
   if (!name || !address) return
-  const accepted = emit('add', { name, address })
-  if (accepted === false) {
+  const duplicate = props.senders.some(
+    (sender) => typeof sender?.address === 'string' && sender.address.toLowerCase() === address,
+  )
+  if (!isValidSenderAddress(address) || duplicate) {
     addError.value = t('地址格式不正确，或已存在于名单中。', 'Invalid address, or it already exists in the list.')
     return
   }
+  emit('add', { name, address })
   addError.value = ''
   newName.value = ''
   newAddress.value = ''
@@ -343,13 +347,13 @@ const submitAdd = () => {
 }
 
 .daon-mail-sheet__input:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: 1px;
 }
 
 .daon-mail-sheet__add-btn {
   border: none;
-  background: var(--daon-green);
+  background: var(--daon-action-bg);
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -378,7 +382,7 @@ const submitAdd = () => {
   gap: 8px;
   border: none;
   background: transparent;
-  color: var(--daon-green-deep);
+  color: var(--daon-accent-text);
   font: inherit;
   font-size: 12.5px;
   font-weight: 700;
@@ -390,7 +394,7 @@ const submitAdd = () => {
 .daon-mail-sheet__remove:focus-visible,
 .daon-mail-sheet__add-btn:focus-visible,
 .daon-mail-sheet__restore:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: 2px;
 }
 

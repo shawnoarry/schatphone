@@ -168,7 +168,7 @@ const canSend = computed(() => Boolean(to.value.trim()) && hasContent.value)
   align-items: center;
   gap: 8px;
   border: none;
-  background: var(--daon-green);
+  background: var(--daon-action-bg);
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -181,7 +181,7 @@ const canSend = computed(() => Boolean(to.value.trim()) && hasContent.value)
 }
 
 .daon-compose-send:hover:not(:disabled) {
-  background: var(--daon-green-deep);
+  background: var(--daon-action-hover);
 }
 
 .daon-compose-send:disabled {
@@ -223,7 +223,7 @@ const canSend = computed(() => Boolean(to.value.trim()) && hasContent.value)
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.05em;
-  color: var(--daon-green-deep);
+  color: var(--daon-accent-text);
 }
 
 .daon-compose-field__input {
@@ -258,14 +258,14 @@ const canSend = computed(() => Boolean(to.value.trim()) && hasContent.value)
 
 .daon-compose-field__input:focus-visible,
 .daon-compose-field__textarea:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: 1px;
 }
 
 .daon-compose-note {
   margin: 14px 0 0;
   font-size: 12px;
-  color: var(--daon-green-deep);
+  color: var(--daon-accent-text);
   background: var(--daon-green-soft);
   border-radius: 999px;
   padding: 7px 14px;
@@ -274,7 +274,7 @@ const canSend = computed(() => Boolean(to.value.trim()) && hasContent.value)
 
 .daon-compose-tool:focus-visible,
 .daon-compose-send:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: 2px;
 }
 

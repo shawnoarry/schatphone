@@ -1,3 +1,9 @@
+import {
+  DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+  resolveSystemAppIconThemeOverride,
+} from './system-app-icon-theme'
+import { projectUiAssetUrl } from './project-assets'
+
 const normalizeLocaleBucket = (locale = '') => {
   const normalized = typeof locale === 'string' ? locale.trim().toLowerCase() : ''
   if (normalized.startsWith('zh')) return 'zh'
@@ -64,6 +70,30 @@ APP_ICON_LABELS.app_book = { zh: '文本库', en: 'Book', ko: 'Book' }
 BUILT_IN_APP_ICON_META.app_book = { icon: 'fas fa-book-open', accent: 'cool' }
 APP_ICON_LABELS.app_daon_mail = { zh: '邮件', en: 'Mail', ko: '메일' }
 BUILT_IN_APP_ICON_META.app_daon_mail = { icon: 'fas fa-envelope-open-text', accent: 'cool' }
+APP_ICON_LABELS.app_browser = { zh: '浏览器', en: 'Browser', ko: '브라우저' }
+BUILT_IN_APP_ICON_META.app_browser = {
+  icon: 'fas fa-compass',
+  accent: 'cool',
+  imageUrl: projectUiAssetUrl('shared/app-icons/prism-browser-app-icon-v1.png'),
+}
+APP_ICON_LABELS.app_community = { zh: '涟漪', en: 'Ripple', ko: '리플' }
+BUILT_IN_APP_ICON_META.app_community = {
+  icon: 'fas fa-wave-square',
+  accent: 'warm',
+  imageUrl: projectUiAssetUrl('shared/app-icons/ripple-community-app-icon-v1.png'),
+}
+APP_ICON_LABELS.app_healthcare = { zh: '温谈健康', en: 'Ondam Care', ko: '온담 케어' }
+BUILT_IN_APP_ICON_META.app_healthcare = {
+  icon: 'fas fa-heart-pulse',
+  accent: 'cool',
+  imageUrl: projectUiAssetUrl('shared/app-icons/ondam-care-app-icon-v1.png'),
+}
+APP_ICON_LABELS.app_jari_housing = { zh: '住处', en: 'Jari', ko: '자리' }
+BUILT_IN_APP_ICON_META.app_jari_housing = {
+  icon: 'fas fa-house-chimney-window',
+  accent: 'warm',
+  imageUrl: projectUiAssetUrl('shared/app-icons/jari-housing-app-icon-v1.png'),
+}
 
 export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
@@ -86,6 +116,10 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_control_center',
   'app_book',
   'app_daon_mail',
+  'app_browser',
+  'app_community',
+  'app_healthcare',
+  'app_jari_housing',
   'app_settings',
   'app_contacts',
   'app_store',
@@ -121,6 +155,10 @@ export const APP_ICON_PRESET_OPTIONS = [
   { value: 'fas fa-shapes', zh: '组合图形', en: 'Shapes', ko: '도형' },
   { value: 'fas fa-list-check', zh: '待办清单', en: 'Checklist', ko: 'Checklist' },
   { value: 'fas fa-book-open', zh: '打开的书', en: 'Open Book', ko: '펼친 책' },
+  { value: 'fas fa-compass', zh: '指南针', en: 'Compass', ko: '나침반' },
+  { value: 'fas fa-wave-square', zh: '信息涟漪', en: 'Signal Wave', ko: '정보 파동' },
+  { value: 'fas fa-heart-pulse', zh: '健康脉搏', en: 'Care Pulse', ko: '건강 맥박' },
+  { value: 'fas fa-house-chimney-window', zh: '住处', en: 'Home', ko: '주거' },
   { value: 'fas fa-wand-magic-sparkles', zh: '魔法光点', en: 'Magic Wand', ko: '마법 지팡이' },
   { value: 'fas fa-ellipsis-h', zh: '更多点', en: 'More Dots', ko: '더보기 점' },
 ]
@@ -208,24 +246,33 @@ export const normalizeAppIconOverrides = (input) => {
   return normalized
 }
 
-export const resolveAppIconMeta = (appId, overrides = {}, locale = 'en-US') => {
+export const resolveAppIconMeta = (
+  appId,
+  overrides = {},
+  locale = 'en-US',
+  systemAppIconTheme = DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+) => {
   const fallback = BUILT_IN_APP_ICON_META[appId] || {
     icon: 'fas fa-circle',
     accent: 'default',
   }
   const normalizedOverrides = normalizeAppIconOverrides(overrides)
   const override = normalizedOverrides[appId] || null
-
+  const fallbackImageUrl = typeof fallback.imageUrl === 'string' ? fallback.imageUrl.trim() : ''
+  const themeOverride = resolveSystemAppIconThemeOverride(appId, systemAppIconTheme)
+  const resolvedIcon = override?.icon || themeOverride?.icon || fallback.icon
+  const resolvedAccent = override?.accent || themeOverride?.accent || fallback.accent
   return {
     appId,
-    icon: override?.icon || fallback.icon,
-    accent: override?.accent || fallback.accent,
-    toneClass: `accent-${override?.accent || fallback.accent}`,
+    icon: resolvedIcon,
+    accent: resolvedAccent,
+    toneClass: `accent-${resolvedAccent}`,
     label: readLocalizedCopy(APP_ICON_LABELS[appId], locale, appId),
     displayName: override?.displayName || '',
     sourceType: override?.sourceType || 'preset',
     galleryAssetId: override?.sourceType === 'gallery' ? override.galleryAssetId : '',
     hasImageIcon: override?.sourceType === 'gallery' && Boolean(override.galleryAssetId),
+    imageUrl: override ? '' : fallbackImageUrl,
   }
 }
 

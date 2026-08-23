@@ -9,6 +9,11 @@ import AssetStatusBadge from '../components/assets/AssetStatusBadge.vue'
 import AssetThumbnailOption from '../components/assets/AssetThumbnailOption.vue'
 import ImageSourcePicker from '../components/shared/ImageSourcePicker.vue'
 import {
+  SYSTEM_APP_ICON_THEME_OPTIONS,
+  resolveSystemAppIconThemeMeta,
+} from '../lib/system-app-icon-theme'
+import { resolveAppIconMeta } from '../lib/app-icon-presentation'
+import {
   buildRouteWithReturnSource,
   normalizeHomePageQuery,
   pushReturnTarget,
@@ -136,6 +141,7 @@ const appearancePackStatusClass = computed(() => {
 
 const pageTitle = computed(() => {
   if (activeMenu.value === 'theme') return t('主题美化', 'Theme')
+  if (activeMenu.value === 'icons') return t('系统 App 图标', 'System App Icons')
   if (activeMenu.value === 'font') return t('字体设置', 'Font')
   return t('外观工坊', 'Appearance Studio')
 })
@@ -172,6 +178,9 @@ const currentWallpaperAsset = computed(() => {
 const currentThemeMeta = computed(
   () =>
     availableThemes.value.find((item) => item.id === settings.value.appearance.currentTheme) || null,
+)
+const currentSystemAppIconTheme = computed(() =>
+  resolveSystemAppIconThemeMeta(settings.value.appearance.systemAppIconTheme),
 )
 const selectedWallpaperAsset = computed(() => {
   const assetId =
@@ -456,6 +465,22 @@ const setTheme = (themeId) => {
   triggerSaved()
 }
 
+const setSystemAppIconTheme = (themeId) => {
+  systemStore.setSystemAppIconTheme(themeId)
+  triggerSaved()
+}
+
+const systemAppIconThemeLabel = (theme) => t(theme.labelZh, theme.labelEn)
+const systemAppIconThemeDescription = (theme) => t(theme.descriptionZh, theme.descriptionEn)
+const systemAppIconPreviewIds = Object.freeze([
+  'app_chat',
+  'app_contacts',
+  'app_settings',
+  'app_widgets',
+])
+const systemAppIconPreviewMeta = (appId, themeId) =>
+  resolveAppIconMeta(appId, {}, 'zh-CN', themeId)
+
 const openGallery = () => {
   router.push('/gallery')
 }
@@ -511,8 +536,8 @@ const exportAppearancePack = () => {
   const pack = systemStore.exportAppearancePack({
     name: t('SchatPhone 外观包', 'SchatPhone appearance pack'),
     description: t(
-      '仅包含全局主题、壁纸、字体变量与全局 CSS。',
-      'Includes global theme, wallpaper, font variables, and global CSS only.',
+      '仅包含全局主题、系统 App 图标风格、壁纸、字体变量与全局 CSS。',
+      'Includes global theme, system app icon style, wallpaper, font variables, and global CSS only.',
     ),
   })
   appearancePackExportText.value = JSON.stringify(pack, null, 2)
@@ -631,7 +656,7 @@ onBeforeUnmount(() => {
         <div class="appearance-overview-copy">
           <span>{{ t('当前外观', 'Current Look') }}</span>
           <h2>{{ themeDisplayName(currentThemeMeta) || t('默认系统', 'Default System') }}</h2>
-          <p>{{ currentWallpaperModeLabel }} · {{ t('桌面、锁屏与系统入口同步', 'Home, Lock, and system entries stay aligned') }}</p>
+          <p>{{ currentWallpaperModeLabel }} · {{ systemAppIconThemeLabel(currentSystemAppIconTheme) }}</p>
         </div>
         <div class="appearance-overview-actions">
           <button type="button" @click="openMenu('theme')">
@@ -787,6 +812,7 @@ onBeforeUnmount(() => {
       <div class="appearance-menu-stack">
         <button
           class="appearance-menu-card"
+          data-testid="appearance-theme-entry"
           @click="openMenu('theme')"
         >
           <div class="appearance-menu-icon is-theme">
@@ -801,6 +827,22 @@ onBeforeUnmount(() => {
 
         <button
           class="appearance-menu-card"
+          data-testid="appearance-system-icons-entry"
+          @click="openMenu('icons')"
+        >
+          <div class="appearance-menu-icon is-icons">
+            <i class="fas fa-icons"></i>
+          </div>
+          <div class="appearance-menu-copy">
+            <p>{{ t('系统 App 图标', 'System App Icons') }}</p>
+            <span>{{ t('整套切换系统自带 App，不改变商业 Logo', 'Restyle built-in apps without changing branded logos') }}</span>
+          </div>
+          <i class="fas fa-chevron-right appearance-menu-chevron"></i>
+        </button>
+
+        <button
+          class="appearance-menu-card"
+          data-testid="appearance-font-entry"
           @click="openMenu('font')"
         >
           <div class="appearance-menu-icon is-font">
@@ -813,6 +855,69 @@ onBeforeUnmount(() => {
           <i class="fas fa-chevron-right appearance-menu-chevron"></i>
         </button>
 
+      </div>
+    </div>
+
+    <div
+      v-else-if="activeMenu === 'icons'"
+      class="appearance-icon-theme-page flex-1 overflow-y-auto p-4 no-scrollbar"
+      data-testid="appearance-system-icons-page"
+    >
+      <section class="appearance-icon-theme-intro">
+        <div>
+          <span>{{ t('当前系统 App 图标', 'Current system app icons') }}</span>
+          <h2>{{ systemAppIconThemeLabel(currentSystemAppIconTheme) }}</h2>
+          <p>
+            {{
+              t(
+                '只统一聊天、联系人、设置、组件等系统自带 App。购物服务等商业 Logo 保持原样，单 App 自定义仍在 App Store 管理。',
+                'Only built-in apps such as Chat, Contacts, Settings, and Widgets change together. Branded logos stay untouched, and per-app customization remains in App Store.',
+              )
+            }}
+          </p>
+        </div>
+        <div class="appearance-icon-theme-intro__preview" aria-hidden="true">
+          <span
+            v-for="appId in systemAppIconPreviewIds.slice(0, 3)"
+            :key="appId"
+            class="appearance-system-app-icon"
+            :class="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).toneClass"
+          >
+            <i :class="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).icon"></i>
+          </span>
+        </div>
+      </section>
+
+      <div class="appearance-icon-theme-options">
+        <button
+          v-for="theme in SYSTEM_APP_ICON_THEME_OPTIONS"
+          :key="theme.id"
+          type="button"
+          class="appearance-icon-theme-option"
+          :class="{ 'is-selected': settings.appearance.systemAppIconTheme === theme.id }"
+          :aria-pressed="settings.appearance.systemAppIconTheme === theme.id"
+          :data-testid="`appearance-system-app-icon-theme-${theme.id}`"
+          @click="setSystemAppIconTheme(theme.id)"
+        >
+          <span class="appearance-icon-theme-option__preview" aria-hidden="true">
+            <span
+              v-for="appId in systemAppIconPreviewIds"
+              :key="appId"
+              class="appearance-system-app-icon"
+              :class="systemAppIconPreviewMeta(appId, theme.id).toneClass"
+            >
+              <i :class="systemAppIconPreviewMeta(appId, theme.id).icon"></i>
+            </span>
+          </span>
+          <span class="appearance-icon-theme-option__copy">
+            <strong>{{ systemAppIconThemeLabel(theme) }}</strong>
+            <small>{{ systemAppIconThemeDescription(theme) }}</small>
+          </span>
+          <i
+            v-if="settings.appearance.systemAppIconTheme === theme.id"
+            class="fas fa-circle-check appearance-icon-theme-option__check"
+          ></i>
+        </button>
       </div>
     </div>
 
@@ -1143,8 +1248,8 @@ onBeforeUnmount(() => {
                 <p class="text-[11px] leading-5 text-slate-500">
                   {{
                     t(
-                      '导出全局主题、壁纸、字体变量与全局 CSS；不包含 App 图标、单 App 皮肤、桌面布局、小组件或 Chat 外观。',
-                      'Exports global theme, wallpaper, font variables, and global CSS; excludes app icons, app skins, Home layout, widgets, and Chat appearance.',
+                      '导出全局主题、系统 App 图标风格、壁纸、字体变量与全局 CSS；不包含商业 Logo、单 App 自定义、桌面布局、小组件或 Chat 外观。',
+                      'Exports global theme, system app icon style, wallpaper, font variables, and global CSS; excludes branded logos, per-app customization, Home layout, widgets, and Chat appearance.',
                     )
                   }}
                 </p>
@@ -1410,6 +1515,165 @@ onBeforeUnmount(() => {
 
 .appearance-menu-icon.is-font {
   background: linear-gradient(135deg, #334155 0%, #111827 100%);
+}
+
+.appearance-menu-icon.is-icons {
+  background: linear-gradient(135deg, #2f7d70 0%, #245a68 100%);
+}
+
+.appearance-icon-theme-page {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.appearance-icon-theme-intro {
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  color: var(--system-text);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+}
+
+.appearance-icon-theme-intro span,
+.appearance-icon-theme-intro h2,
+.appearance-icon-theme-intro p {
+  margin: 0;
+}
+
+.appearance-icon-theme-intro span {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.appearance-icon-theme-intro h2 {
+  margin-top: 3px;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.appearance-icon-theme-intro p {
+  max-width: 460px;
+  margin-top: 7px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.appearance-icon-theme-intro__preview {
+  min-width: 118px;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.appearance-icon-theme-options {
+  display: grid;
+  gap: 10px;
+}
+
+.appearance-icon-theme-option {
+  width: 100%;
+  min-height: 82px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-md);
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 14px;
+  padding: 13px;
+  color: var(--system-text);
+  background: var(--system-panel-bg);
+  box-shadow: var(--system-shadow-card);
+  text-align: left;
+  transition:
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast),
+    transform var(--system-motion-fast);
+}
+
+.appearance-icon-theme-option.is-selected {
+  border-color: var(--system-accent);
+  background: color-mix(in srgb, var(--system-accent) 8%, var(--system-panel-bg));
+}
+
+.appearance-icon-theme-option:active {
+  transform: scale(0.992);
+}
+
+.appearance-icon-theme-option__preview {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+}
+
+.appearance-system-app-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  font-size: 17px;
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.14);
+}
+
+.appearance-system-app-icon.accent-default {
+  color: var(--home-icon-default-fg);
+  background: var(--home-icon-default-bg);
+}
+
+.appearance-system-app-icon.accent-warm {
+  color: var(--home-icon-warm-fg);
+  background: var(--home-icon-warm-bg);
+}
+
+.appearance-system-app-icon.accent-cool {
+  color: var(--home-icon-cool-fg);
+  background: var(--home-icon-cool-bg);
+}
+
+.appearance-system-app-icon.accent-light {
+  color: var(--home-icon-light-fg);
+  background: var(--home-icon-light-bg);
+}
+
+.appearance-system-app-icon.accent-dark {
+  color: var(--home-icon-dark-fg);
+  background: var(--home-icon-dark-bg);
+}
+
+.appearance-icon-theme-option__copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.appearance-icon-theme-option__copy strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.appearance-icon-theme-option__copy small {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.appearance-icon-theme-option__check {
+  color: var(--system-accent);
+  font-size: 18px;
 }
 
 .appearance-layout-card {
@@ -2046,6 +2310,23 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 719px) {
+  .appearance-icon-theme-intro {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .appearance-icon-theme-intro__preview {
+    width: 100%;
+  }
+
+  .appearance-icon-theme-option {
+    grid-template-columns: 1fr 24px;
+  }
+
+  .appearance-icon-theme-option__preview {
+    grid-column: 1 / -1;
+  }
+
   .appearance-layout-page-count {
     align-items: flex-start;
   }

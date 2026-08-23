@@ -58,8 +58,9 @@ describe('Mail S1 shell view', () => {
     const agencyRow = wrapper.get(
       '[data-testid="mail-thread-row-mail_fixture_hanul_schedule"]',
     )
-    expect(agencyRow.text()).toContain('한울 엔터테인먼트')
-    expect(agencyRow.text()).toContain('9월 컴백')
+    expect(agencyRow.text()).toContain('Hanul 娱乐')
+    expect(agencyRow.text()).toContain('9 月回归')
+    expect(wrapper.text()).not.toMatch(/[가-힣]/)
     expect(agencyRow.classes()).toContain('is-unread')
     wrapper.unmount()
   })
@@ -72,7 +73,7 @@ describe('Mail S1 shell view', () => {
     await flushPromises()
 
     const detail = wrapper.get('[data-testid="mail-thread-detail"]')
-    expect(detail.text()).toContain('9월 컴백 준비 스케줄 확정 안내')
+    expect(detail.text()).toContain('9 月回归准备日程已确认')
     expect(detail.text()).toContain('schedule@hanul-enter.kr')
     expect(detail.text()).toContain('2 封往来邮件')
 
@@ -94,7 +95,7 @@ describe('Mail S1 shell view', () => {
     await flushPromises()
     const rows = wrapper.findAll('[data-testid^="mail-thread-row-"]')
     expect(rows).toHaveLength(1)
-    expect(rows[0].text()).toContain('윤이서')
+    expect(rows[0].text()).toContain('Yun I-seo')
     wrapper.unmount()
   })
 
@@ -130,8 +131,8 @@ describe('Mail S1 shell view', () => {
     await wrapper.get('[data-testid="mail-compose-open"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="mail-compose-to"]').setValue('yunseo@daon.kr')
-    await wrapper.get('[data-testid="mail-compose-subject"]').setValue('리사이틀 답장')
-    await wrapper.get('[data-testid="mail-compose-body"]').setValue('갈게! 끝나고 저녁 먹자.')
+    await wrapper.get('[data-testid="mail-compose-subject"]').setValue('独奏会回复')
+    await wrapper.get('[data-testid="mail-compose-body"]').setValue('我会去！结束后一起吃晚饭吧。')
     await wrapper.get('[data-testid="mail-compose-save"]').trigger('click')
     await flushPromises()
 
@@ -142,12 +143,12 @@ describe('Mail S1 shell view', () => {
     await flushPromises()
     const draftRow = wrapper.get('[data-testid^="mail-thread-row-mail_draft_"]')
     expect(draftRow.text()).toContain('yunseo@daon.kr')
-    expect(draftRow.text()).toContain('리사이틀 답장')
+    expect(draftRow.text()).toContain('独奏会回复')
 
     await draftRow.trigger('click')
     await flushPromises()
     expect(wrapper.get('[data-testid="mail-compose-to"]').element.value).toBe('yunseo@daon.kr')
-    expect(wrapper.get('[data-testid="mail-compose-body"]').element.value).toContain('저녁')
+    expect(wrapper.get('[data-testid="mail-compose-body"]').element.value).toContain('晚饭')
     wrapper.unmount()
   })
 
@@ -156,14 +157,15 @@ describe('Mail S1 shell view', () => {
     await wrapper.get('[data-testid="mail-compose-open"]').trigger('click')
     await flushPromises()
     await wrapper.get('[data-testid="mail-compose-to"]').setValue('schedule@hanul-enter.kr')
-    await wrapper.get('[data-testid="mail-compose-subject"]').setValue('화요일 회의 자료 확인 완료')
-    await wrapper.get('[data-testid="mail-compose-body"]').setValue('자료 검토했습니다. 회의에서 뵙겠습니다.')
+    await wrapper.get('[data-testid="mail-compose-subject"]').setValue('周二会议资料已确认')
+    await wrapper.get('[data-testid="mail-compose-body"]').setValue('资料已经确认，我们会议上见。')
     await wrapper.get('[data-testid="mail-compose-send"]').trigger('click')
     await flushPromises()
 
     const detail = wrapper.get('[data-testid="mail-thread-detail"]')
     expect(detail.text()).toContain('schedule@hanul-enter.kr')
-    expect(detail.text()).toContain('화요일 회의 자료 확인 완료')
+    expect(detail.text()).toContain('周二会议资料已确认')
+    expect(detail.text()).toContain('仅存于本机发件箱')
 
     await wrapper.get('[data-testid="mail-folder-inbox"]').trigger('click')
     await flushPromises()
@@ -178,7 +180,7 @@ describe('Mail S1 shell view', () => {
     const { wrapper } = await mountMail()
     await wrapper.get('[data-testid="mail-compose-open"]').trigger('click')
     await flushPromises()
-    await wrapper.get('[data-testid="mail-compose-subject"]').setValue('버릴 초안')
+    await wrapper.get('[data-testid="mail-compose-subject"]').setValue('待删除草稿')
     await wrapper.get('[data-testid="mail-compose-save"]').trigger('click')
     await wrapper.get('[data-testid="mail-compose-cancel"]').trigger('click')
 
@@ -196,13 +198,13 @@ describe('Mail S1 shell view', () => {
 
   test('search filters fixture threads and reports an honest empty state', async () => {
     const { wrapper } = await mountMail()
-    await wrapper.get('[data-testid="mail-search-input"]').setValue('컴백')
+    await wrapper.get('[data-testid="mail-search-input"]').setValue('回归')
     await flushPromises()
     const rows = wrapper.findAll('[data-testid^="mail-thread-row-mail_fixture_"]')
     expect(rows.length).toBeGreaterThanOrEqual(1)
     expect(rows[0].attributes('data-testid')).toBe('mail-thread-row-mail_fixture_hanul_schedule')
 
-    await wrapper.get('[data-testid="mail-search-input"]').setValue('없는키워드12345')
+    await wrapper.get('[data-testid="mail-search-input"]').setValue('不存在的关键词12345')
     await flushPromises()
     expect(wrapper.get('[data-testid="mail-list-empty"]').text()).toContain('没有匹配')
 
@@ -271,10 +273,10 @@ describe('Mail S1 shell view', () => {
     systemStore.settings.api.key = 'test-key'
     setMailArrivalRunnerOverrideForTesting(async () => ({
       text: JSON.stringify({
-        senderName: '한울 엔터테인먼트',
+        senderName: 'Hanul 娱乐',
         senderAddress: 'schedule@hanul-enter.kr',
-        subject: '[공지] 리허설 시간 변경 안내',
-        body: ['리허설이 한 시간 앞당겨졌습니다.', '참고 부탁드립니다.'],
+        subject: '[公告] 彩排时间调整通知',
+        body: ['彩排时间提前一小时。', '请留意更新。'],
         label: 'schedule',
       }),
       model: 'test-model-a',
@@ -287,7 +289,7 @@ describe('Mail S1 shell view', () => {
     expect(wrapper.get('[data-testid="mail-arrival-status"]').text()).toContain('1')
     const receivedRow = wrapper.get('[data-testid^="mail-thread-row-mail_received_"]')
     expect(receivedRow.classes()).toContain('is-unread')
-    expect(receivedRow.text()).toContain('리허설')
+    expect(receivedRow.text()).toContain('彩排')
 
     await receivedRow.trigger('click')
     await flushPromises()
@@ -365,6 +367,29 @@ describe('Mail S1 shell view', () => {
     const sheet = wrapper.get('[data-testid="mail-sender-sheet"]')
     expect(sheet.text()).toContain('news@streamly.kr')
     expect(sheet.text()).toContain('AI 新增')
+    wrapper.unmount()
+  })
+
+  test('sender settings keep invalid and duplicate input visible with an honest error', async () => {
+    const { wrapper } = await mountMail()
+    await wrapper.get('[data-testid="mail-senders-open"]').trigger('click')
+
+    const nameInput = wrapper.get('[data-testid="mail-sender-add-name"]')
+    const addressInput = wrapper.get('[data-testid="mail-sender-add-address"]')
+    await nameInput.setValue('Broken Sender')
+    await addressInput.setValue('not-an-address')
+    await wrapper.get('[data-testid="mail-sender-add-submit"]').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="mail-sender-add-error"]').text()).toContain('地址格式')
+    expect(addressInput.element.value).toBe('not-an-address')
+
+    await addressInput.setValue('schedule@hanul-enter.kr')
+    await wrapper.get('[data-testid="mail-sender-add-submit"]').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="mail-sender-add-error"]').text()).toContain('已存在')
+    expect(addressInput.element.value).toBe('schedule@hanul-enter.kr')
     wrapper.unmount()
   })
 })

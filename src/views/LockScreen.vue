@@ -117,6 +117,7 @@ const resolveNotificationModuleMeta = (note) =>
     note,
     notificationLocale.value,
     settings.value.appearance?.appIconOverrides || {},
+    settings.value.appearance?.systemAppIconTheme,
   )
 const notificationIconImageUrl = (note) => appIconImageUrl(resolveNotificationModuleMeta(note).appId)
 

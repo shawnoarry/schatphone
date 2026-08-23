@@ -54,7 +54,9 @@
       <article class="daon-detail-article">
         <h2 class="daon-detail-subject">{{ subject }}</h2>
 
-        <p v-if="mailCountLabel" class="daon-detail-count">{{ mailCountLabel }}</p>
+        <p v-if="mailCountLabel" class="daon-detail-count" data-testid="mail-detail-status">
+          {{ mailCountLabel }}
+        </p>
 
         <div
           v-for="mail in orderedMails"
@@ -391,8 +393,8 @@ const orderedMails = computed(() => [...props.mails].sort((a, b) => b.offsetMinu
   gap: 12px;
   margin-top: 16px;
   padding: 13px 15px;
-  border: 1px solid var(--daon-green);
-  border-left: 4px solid var(--daon-green);
+  border: 1px solid var(--daon-accent-text);
+  border-left: 4px solid var(--daon-accent-text);
   border-radius: var(--daon-radius);
   background: var(--daon-green-soft);
 }
@@ -403,7 +405,7 @@ const orderedMails = computed(() => [...props.mails].sort((a, b) => b.offsetMinu
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: var(--daon-green);
+  background: var(--daon-action-bg);
   color: #fff;
   font-size: 16px;
 }
@@ -425,7 +427,7 @@ const orderedMails = computed(() => [...props.mails].sort((a, b) => b.offsetMinu
 .daon-invite__when {
   margin: 0;
   font-size: 12px;
-  color: var(--daon-green-deep);
+  color: var(--daon-accent-text);
   font-weight: 600;
 }
 
@@ -440,7 +442,7 @@ const orderedMails = computed(() => [...props.mails].sort((a, b) => b.offsetMinu
   align-items: center;
   gap: 7px;
   border: none;
-  background: var(--daon-green);
+  background: var(--daon-action-bg);
   color: #fff;
   font: inherit;
   font-size: 12.5px;
@@ -454,7 +456,7 @@ const orderedMails = computed(() => [...props.mails].sort((a, b) => b.offsetMinu
 }
 
 .daon-invite__action:hover {
-  background: var(--daon-green-deep);
+  background: var(--daon-action-hover);
 }
 
 .daon-detail-attachments {
@@ -499,7 +501,7 @@ const orderedMails = computed(() => [...props.mails].sort((a, b) => b.offsetMinu
 
 .daon-detail-tool:focus-visible,
 .daon-invite__action:focus-visible {
-  outline: 3px solid var(--daon-green);
+  outline: 3px solid var(--daon-focus);
   outline-offset: 2px;
 }
 

@@ -58,7 +58,13 @@ export const useAppIconImagePreviews = ({
 
   const appIconImageUrl = (appId) => {
     const normalizedId = typeof appId === 'string' ? appId.trim() : ''
-    return normalizedId ? previewUrls[normalizedId] || '' : ''
+    if (!normalizedId) return ''
+    if (previewUrls[normalizedId]) return previewUrls[normalizedId]
+    return resolveAppIconMeta(
+      normalizedId,
+      appIconOverrides?.value || {},
+      locale?.value || 'en-US',
+    ).imageUrl || ''
   }
 
   return {

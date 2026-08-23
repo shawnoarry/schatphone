@@ -50,10 +50,18 @@ import {
   AGENDA_JOURNEY_ROUTE,
   APP_STORE_HOME_APP_ID,
   APP_STORE_ROUTE,
+  BROWSER_HOME_APP_ID,
+  BROWSER_ROUTE,
   BOOK_HOME_APP_ID,
   BOOK_ROUTE,
   CAMERA_HOME_APP_ID,
   CAMERA_ROUTE,
+  COMMUNITY_HOME_APP_ID,
+  COMMUNITY_ROUTE,
+  HEALTHCARE_HOME_APP_ID,
+  HEALTHCARE_ROUTE,
+  HOUSING_HOME_APP_ID,
+  HOUSING_ROUTE,
   MAIL_HOME_APP_ID,
   MAIL_ROUTE,
   MUSIC_HOME_APP_ID,
@@ -193,6 +201,46 @@ const APP_STORE_ENTRIES = [
     categoryEn: 'Social',
     descZh: '다온메일：机构来信、预约通知与本地草稿。',
     descEn: 'Daon Mail: institutional letters, reservation notices, and local drafts.',
+  },
+  {
+    id: BROWSER_HOME_APP_ID,
+    route: BROWSER_ROUTE,
+    labelZh: '折光浏览器',
+    labelEn: 'Prism Browser',
+    categoryZh: '工具',
+    categoryEn: 'Utilities',
+    descZh: '搜索当前世界的公开资料、使用帮助与可辨认的外部网络入口。',
+    descEn: 'Find public world sources, product help, and clearly separated external web paths.',
+  },
+  {
+    id: COMMUNITY_HOME_APP_ID,
+    route: COMMUNITY_ROUTE,
+    labelZh: '涟漪',
+    labelEn: 'Ripple',
+    categoryZh: '社交',
+    categoryEn: 'Social',
+    descZh: '关注公开账号、媒体报道与社区观点，查看世界正在产生的回声。',
+    descEn: 'Follow public accounts, reporting, and community viewpoints as the world echoes outward.',
+  },
+  {
+    id: HEALTHCARE_HOME_APP_ID,
+    route: HEALTHCARE_ROUTE,
+    labelZh: '温谈健康',
+    labelEn: 'Ondam Care',
+    categoryZh: '生活',
+    categoryEn: 'Life',
+    descZh: '查找世界内医疗服务、管理本机模拟预约并查看虚构报告档案。',
+    descEn: 'Find in-world care, manage local simulated appointments, and review authored report records.',
+  },
+  {
+    id: HOUSING_HOME_APP_ID,
+    route: HOUSING_ROUTE,
+    labelZh: '住处',
+    labelEn: 'Jari',
+    categoryZh: '生活',
+    categoryEn: 'Life',
+    descZh: '浏览虚构房源、收藏住处并准备本机看房计划。',
+    descEn: 'Browse fictional listings, save homes, and prepare local viewing plans.',
   },
   {
     id: 'app_phone',
@@ -511,7 +559,12 @@ const appStoreItems = computed(() =>
             accent: entry.accent || 'default',
             toneClass: entry.toneClass || `accent-${entry.accent || 'default'}`,
           }
-        : resolveAppIconMeta(entry.id, appIconOverrides.value, locale.value)
+        : resolveAppIconMeta(
+            entry.id,
+            appIconOverrides.value,
+            locale.value,
+            settings.value.appearance.systemAppIconTheme,
+          )
     const bindingTarget = entry.shopAppEntry
       ? iconMeta.bindingTarget || entry.bindingTarget || entry.sourceModule || SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY
       : ''
@@ -1021,7 +1074,12 @@ const syncIdentityDraftFromSelectedApp = () => {
   if (!app) return
   const meta = app.shopAppEntry
     ? resolveEntryPresentationMeta(app, entryPresentationOverrides.value)
-    : resolveAppIconMeta(app.id, appIconOverrides.value, locale.value)
+    : resolveAppIconMeta(
+        app.id,
+        appIconOverrides.value,
+        locale.value,
+        settings.value.appearance.systemAppIconTheme,
+      )
   identityDraft.displayName = meta.displayName || ''
   identityDraft.sourceType = meta.hasImageIcon ? 'gallery' : 'preset'
   identityDraft.icon = meta.icon
@@ -1077,9 +1135,9 @@ const identityPreviewMeta = computed(() => {
       },
     },
     locale.value,
+    settings.value.appearance.systemAppIconTheme,
   )
 })
-
 const refreshIdentityDraftPreview = async () => {
   const currentVersion = identityDraftPreviewVersion + 1
   identityDraftPreviewVersion = currentVersion

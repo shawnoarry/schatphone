@@ -4,30 +4,30 @@
 
 export const MAIL_SHELL_BRAND = Object.freeze({
   id: 'daon_mail',
-  nameZh: '다온메일',
+  nameZh: 'Daon 邮件',
   nameEn: 'Daon Mail',
-  wordmarkZh: '다온메일',
+  wordmarkZh: 'Daon Mail',
   wordmarkEn: 'Daon Mail',
-  taglineZh: '모든 소식을 다 온편하게 · 把每条消息都稳稳收到',
+  taglineZh: '把每封邮件都稳稳送达',
   taglineEn: 'Every letter arrives calm and on time',
   domain: 'daon.kr',
 })
 
 export const MAIL_SHELL_ACCOUNT = Object.freeze({
   address: 'me@daon.kr',
-  nameZh: '나 (이등석)',
+  nameZh: '我（李登锡）',
   nameEn: 'Me (Lee Deungseok)',
-  planZh: '다온 메일 플러스',
+  planZh: 'Daon Mail Plus',
   planEn: 'Daon Mail Plus',
 })
 
 export const MAIL_SHELL_FOLDERS = Object.freeze([
-  { id: 'inbox', icon: 'fas fa-inbox', nameZh: '받은메일함 · 收件箱', nameEn: 'Inbox', shortZh: '收件箱', shortEn: 'Inbox' },
-  { id: 'starred', icon: 'fas fa-star', nameZh: '중요메일 · 星标邮件', nameEn: 'Starred', shortZh: '星标', shortEn: 'Starred' },
-  { id: 'sent', icon: 'fas fa-paper-plane', nameZh: '보낸메일함 · 已发送', nameEn: 'Sent', shortZh: '已发送', shortEn: 'Sent' },
-  { id: 'drafts', icon: 'fas fa-file-lines', nameZh: '임시보관함 · 草稿箱', nameEn: 'Drafts', shortZh: '草稿', shortEn: 'Drafts' },
-  { id: 'archive', icon: 'fas fa-box-archive', nameZh: '보관함 · 归档', nameEn: 'Archive', shortZh: '归档', shortEn: 'Archive' },
-  { id: 'spam', icon: 'fas fa-ban', nameZh: '스팸메일함 · 垃圾邮件', nameEn: 'Spam', shortZh: '垃圾', shortEn: 'Spam' },
+  { id: 'inbox', icon: 'fas fa-inbox', nameZh: '收件箱', nameEn: 'Inbox', shortZh: '收件箱', shortEn: 'Inbox' },
+  { id: 'starred', icon: 'fas fa-star', nameZh: '星标邮件', nameEn: 'Starred', shortZh: '星标', shortEn: 'Starred' },
+  { id: 'sent', icon: 'fas fa-paper-plane', nameZh: '已发送', nameEn: 'Sent', shortZh: '已发送', shortEn: 'Sent' },
+  { id: 'drafts', icon: 'fas fa-file-lines', nameZh: '草稿箱', nameEn: 'Drafts', shortZh: '草稿', shortEn: 'Drafts' },
+  { id: 'archive', icon: 'fas fa-box-archive', nameZh: '归档', nameEn: 'Archive', shortZh: '归档', shortEn: 'Archive' },
+  { id: 'spam', icon: 'fas fa-ban', nameZh: '垃圾邮件', nameEn: 'Spam', shortZh: '垃圾', shortEn: 'Spam' },
 ])
 
 export const MAIL_SHELL_LABELS = Object.freeze({
@@ -48,7 +48,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_hanul_schedule',
     folder: 'inbox',
-    senderNameZh: '한울 엔터테인먼트',
+    senderNameZh: 'Hanul 娱乐',
     senderNameEn: 'Hanul Entertainment',
     senderAddress: 'schedule@hanul-enter.kr',
     avatarTone: 'green',
@@ -58,12 +58,12 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_hanul_schedule_2',
         offsetMinutes: -36,
-        subjectZh: '[공지] 9월 컴백 준비 스케줄 확정 안내',
+        subjectZh: '[公告] 9 月回归准备日程已确认',
         subjectEn: '[Notice] September comeback preparation schedule confirmed',
         bodyZh: [
-          '안녕하세요, 매니저님. 9월 컴백 준비 스케줄이 확정되어 공유드립니다.',
-          '다음 주 화요일 오전 10시 연습실 전체 회의에서 최종 안무 버전을 확정하고, 목요일에는 의상/헤어 최종 피팅이 진행됩니다. 사전에 확인할 자료를 첨부와 함께 전달드리니 회의 전까지 검토 부탁드립니다.',
-          '변경 사항이 생길 경우 이 메일 주소로 다시 안내드립니다. 감사합니다.',
+          '您好，经纪人。9 月回归准备日程现已确认，具体安排如下。',
+          '下周二上午 10 点将在练习室召开全体会议，确认最终编舞版本；周四进行服装与发型的最终试装。相关资料已随邮件附上，请在会议前完成确认。',
+          '如有变更，我们会再次通过此邮箱通知。谢谢。',
         ],
         bodyEn: [
           'Hello, manager. The September comeback preparation schedule is now confirmed.',
@@ -74,11 +74,11 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_hanul_schedule_1',
         offsetMinutes: -1495,
-        subjectZh: '[사전 공지] 9월 컴백 일정 초안 수렴 중',
+        subjectZh: '[提前通知] 9 月回归日程草案正在汇总',
         subjectEn: '[Early notice] September comeback draft schedule converging',
         bodyZh: [
-          '컴백 일정 초안이 수렴 중입니다. 확정 안내는 별도 메일로 다시 전달드립니다.',
-          '이번 주 내로 확정될 예정이니, 수요일과 목요일의 이동 가능 시간을 확보해 주시면 감사하겠습니다.',
+          '回归日程草案正在汇总，确认后将通过另一封邮件正式通知。',
+          '预计本周内完成确认，请预留周三和周四可安排移动的时间。',
         ],
         bodyEn: [
           'The comeback draft schedule is converging. A confirmation will follow in a separate mail.',
@@ -90,7 +90,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_snuh_checkup',
     folder: 'inbox',
-    senderNameZh: '서울대학교병원',
+    senderNameZh: '首尔大学医院',
     senderNameEn: 'Seoul National University Hospital',
     senderAddress: 'reserve@snuh-health.kr',
     avatarTone: 'blue',
@@ -100,12 +100,12 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_snuh_checkup_1',
         offsetMinutes: -187,
-        subjectZh: '[예약 확정] 8/28(금) 종합건강검진 안내',
+        subjectZh: '[预约确认] 8 月 28 日综合健康体检',
         subjectEn: '[Confirmed] Comprehensive health checkup on Fri Aug 28',
         bodyZh: [
-          '예약이 확정되었습니다. 검진 센터 3층 접수처에서 신분증과 예약번호를 제시해 주세요.',
-          '검진 전 8시간 공복이 필요하며, 물은 조금 마셔도 괜찮습니다. 당일 오전 7시 50분까지 도착 부탁드립니다. 검진 소요 시간은 약 3시간입니다.',
-          '일정 변경이 필요하시면 이 메일에 회신하거나 예약 페이지에서 직접 변경하실 수 있습니다.',
+          '您的预约已经确认。请在体检中心 3 层接待处出示身份证件和预约编号。',
+          '体检前需要空腹 8 小时，可以少量饮水。请于当天上午 7:50 前到达，体检预计需要约 3 小时。',
+          '如需调整时间，可以回复此邮件或在预约页面直接修改。',
         ],
         bodyEn: [
           'Your reservation is confirmed. Please present your ID and reservation number at the checkup center, floor 3.',
@@ -114,11 +114,11 @@ export const MAIL_SHELL_THREADS = Object.freeze([
         ],
         invite: Object.freeze({
           route: '/calendar',
-          titleZh: '종합건강검진 · 综合健康体检',
+          titleZh: '综合健康体检',
           titleEn: 'Comprehensive health checkup',
-          whenZh: '8월 28일(금) 오전 7:50 · 8月28日（周五）上午 7:50',
+          whenZh: '8 月 28 日（周五）上午 7:50',
           whenEn: 'Fri Aug 28, 7:50 AM',
-          whereZh: '서울대학교병원 검진센터 3층 · 体检中心 3 层',
+          whereZh: '首尔大学医院体检中心 3 层',
           whereEn: 'SNUH checkup center, floor 3',
           actionZh: '日历中查看',
           actionEn: 'View in Calendar',
@@ -129,7 +129,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_bitnari_letter',
     folder: 'inbox',
-    senderNameZh: '빛나리 팬클럽',
+    senderNameZh: 'Bitnari 粉丝俱乐部',
     senderNameEn: 'Bitnari Fan Club',
     senderAddress: 'letter@bitnari-fan.kr',
     avatarTone: 'rose',
@@ -139,12 +139,12 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_bitnari_letter_1',
         offsetMinutes: -1682,
-        subjectZh: '주간 레터: 컴백 날짜 소문과 현장 이야기',
+        subjectZh: '每周来信：回归日期传闻与现场故事',
         subjectEn: 'Weekly letter: comeback-date rumor and scene stories',
         bodyZh: [
-          '이번 주 레터가 도착했습니다. 컴백 날쯤이라는 이야기가 커뮤니티에서 돌고 있지만, 소속사 공식 발표는 아직 없습니다. 이 메일의 날짜 이야기는 확인되지 않은 소문입니다.',
-          '대신 지난 주 음악 방송 현장 사진과 대기 준비 이야기, 그리고 팬들이 모은 응원 메시지를 정리해 전달합니다.',
-          '공식 일정이 나오면 레터에서 다시 정리해 드릴게요.',
+          '本周来信已经送达。社区中正在流传回归日期的说法，但经纪公司尚未正式公布；邮件中提到的日期仍是未经证实的传闻。',
+          '这次整理了上周音乐节目现场照片、候场准备故事，以及粉丝们收集的应援留言。',
+          '正式日程公布后，我们会在下一封来信中重新整理。',
         ],
         bodyEn: [
           'This week’s letter is here. Communities keep circulating a comeback-date rumor, but the agency has made no official announcement; the date talk in this mail is unverified.',
@@ -157,7 +157,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_daon_realty',
     folder: 'inbox',
-    senderNameZh: '다온부동산',
+    senderNameZh: 'Daon 房产',
     senderNameEn: 'Daon Realty',
     senderAddress: 'listing@daon-realty.kr',
     avatarTone: 'teal',
@@ -167,12 +167,12 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_daon_realty_1',
         offsetMinutes: -2950,
-        subjectZh: '요청하신 한남동 매물 알림 (신규 2건)',
+        subjectZh: '您关注的韩南洞房源更新（新增 2 套）',
         subjectEn: 'Requested Hannam-dong listing alert (2 new)',
         bodyZh: [
-          '말씀하신 조건(보증금 5천 이하 · 관리비 포함 · 지하철 10분)에 가까운 신규 매물 2건이 등록되었습니다.',
-          '한남동 4거리 쪽 반지하는 역까지 7분이지만 채광이 약하고, 이태원 방향 3층은 옥상 테라스가 있으며 관리비가 조금 높습니다. 자세한 사항은 첨부 요약을 확인해 주세요.',
-          '현장 예약을 원하시면 회신 주시면 시간표를 보내드립니다.',
+          '现有 2 套新房源接近您的筛选条件：保证金低于 5000 万韩元、包含管理费、步行 10 分钟内可到地铁。',
+          '韩南洞路口附近的半地下房源距离车站约 7 分钟，但采光较弱；梨泰院方向的 3 层房源带屋顶露台，管理费稍高。详情请查看附件摘要。',
+          '如需预约看房，请回复邮件，我们会发送可选时间。',
         ],
         bodyEn: [
           'Two new listings close to your request (deposit under 50M · maintenance included · 10 min to subway) have been registered.',
@@ -182,7 +182,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
         attachments: Object.freeze([
           attachment(
             'mail_fixture_daon_realty_att_1',
-            '한남동-매물요약-2608.pdf',
+            '韩南洞-房源摘要-2608.pdf',
             'pdf',
             '1.2 MB',
             '1.2 MB',
@@ -204,12 +204,12 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_kurly_shipped_1',
         offsetMinutes: -4390,
-        subjectZh: '주문하신 상품이 배송을 시작했습니다 (주문 2608-195-442)',
+        subjectZh: '您的订单已开始配送（订单 2608-195-442）',
         subjectEn: 'Your order has shipped (order 2608-195-442)',
         bodyZh: [
-          '주문하신 상품이 새벽 배송으로 출발했습니다. 내일 아침 7시 전 도착 예정입니다.',
-          '상품: 서울 우유 1L 2팩, 어니언 베이글 6입, 냉동 블루베리 500g. 결제 금액과 배송 기사 정보는 첨부 내역에서 확인하실 수 있습니다.',
-          '이 메일은 주문 상태 알림입니다. 주문 변경은 앱 내 주문 목록에서 가능합니다.',
+          '您的商品已进入清晨配送，预计明早 7 点前送达。',
+          '商品：首尔牛奶 1L ×2、洋葱贝果 ×6、冷冻蓝莓 500g。付款金额和配送员信息可在附件明细中查看。',
+          '此邮件仅用于通知订单状态；如需修改订单，请前往 App 内的订单列表。',
         ],
         bodyEn: [
           'Your order has left for dawn delivery and should arrive before 7:00 AM tomorrow.',
@@ -217,8 +217,8 @@ export const MAIL_SHELL_THREADS = Object.freeze([
           'This mail is an order-status notice; order changes are made in the app’s order list.',
         ],
         attachments: Object.freeze([
-          attachment('mail_fixture_kurly_att_1', '주문내역-2608194-442.pdf', 'pdf', '96 KB', '96 KB'),
-          attachment('mail_fixture_kurly_att_2', '배송안내-배송기사.jpg', 'img', '212 KB', '212 KB'),
+          attachment('mail_fixture_kurly_att_1', '订单明细-2608194-442.pdf', 'pdf', '96 KB', '96 KB'),
+          attachment('mail_fixture_kurly_att_2', '配送信息-配送员.jpg', 'img', '212 KB', '212 KB'),
         ]),
       },
     ]),
@@ -226,7 +226,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_daon_bank_statement',
     folder: 'inbox',
-    senderNameZh: '다온뱅크',
+    senderNameZh: 'Daon 银行',
     senderNameEn: 'Daon Bank',
     senderAddress: 'statement@daonbank.kr',
     avatarTone: 'violet',
@@ -236,18 +236,18 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_daon_bank_statement_1',
         offsetMinutes: -7180,
-        subjectZh: '7월 이용명세서가 준비되었습니다',
+        subjectZh: '您的 7 月账单已生成',
         subjectEn: 'Your July statement is ready',
         bodyZh: [
-          '7월 이용명세서가 준비되었습니다. 이번 달 지출은 카드 결제 중심이며, 구독 결제 3건이 포함되어 있습니다.',
-          '상세 내역은 첨부 명세서 또는 앱의 거래 내역에서 확인하실 수 있습니다. 이 메일에 금액을 직접 변경하거나 결제하는 기능은 없습니다.',
+          '您的 7 月账单已经生成。本月支出以银行卡支付为主，其中包含 3 笔订阅扣款。',
+          '详细内容可在附件账单或 App 交易记录中查看。此邮件不能直接修改金额或完成付款。',
         ],
         bodyEn: [
           'Your July statement is ready. This month’s spending is card-centered and includes three subscription charges.',
           'Details are in the attached statement or the in-app transaction list. This mail cannot change or make any payment.',
         ],
         attachments: Object.freeze([
-          attachment('mail_fixture_daon_bank_att_1', '다온뱅크-이용명세서-2026-07.pdf', 'pdf', '284 KB', '284 KB'),
+          attachment('mail_fixture_daon_bank_att_1', 'Daon银行-2026年7月账单.pdf', 'pdf', '284 KB', '284 KB'),
         ]),
       },
     ]),
@@ -255,7 +255,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_pharmacy_ready',
     folder: 'inbox',
-    senderNameZh: '빛나는약국',
+    senderNameZh: '闪耀药房',
     senderNameEn: 'Bitnaneun Pharmacy',
     senderAddress: 'care@bitnaneun-pharm.kr',
     avatarTone: 'green',
@@ -265,11 +265,11 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_pharmacy_ready_1',
         offsetMinutes: -8660,
-        subjectZh: '조제가 완료되었습니다 (처방번호 P-2608-114)',
+        subjectZh: '您的处方药已配好（处方编号 P-2608-114）',
         subjectEn: 'Your prescription is ready (P-2608-114)',
         bodyZh: [
-          '처방전에 따른 조제가 완료되었습니다. 영업 시간 내에 방문하셔서 처방번호를 말씀해 주시면 됩니다.',
-          '복용 시간은 식후 30분이며, 남은 일수는 5일입니다. 궁금한 점은 전화로도 문의하실 수 있습니다.',
+          '处方药已经配好。请在营业时间内到店，并向工作人员提供处方编号。',
+          '服药时间为饭后 30 分钟，疗程还剩 5 天。如有疑问，也可以通过电话咨询。',
         ],
         bodyEn: [
           'Your prescription has been prepared. Visit during opening hours and give the prescription number.',
@@ -281,7 +281,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_museum_member',
     folder: 'inbox',
-    senderNameZh: '국립중앙박물관',
+    senderNameZh: '韩国国立中央博物馆',
     senderNameEn: 'National Museum of Korea',
     senderAddress: 'member@mus.kr',
     avatarTone: 'slate',
@@ -291,11 +291,11 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_museum_member_1',
         offsetMinutes: -11530,
-        subjectZh: '회원님을 위한 9월 전시 안내',
+        subjectZh: '会员 9 月展览指南',
         subjectEn: 'September exhibitions for members',
         bodyZh: [
-          '9월 회원 우선 예약 전시 두 개가 열립니다. 상설관 야간 개관은 매달 마지막 주 금요일입니다.',
-          '회원 우선 예약은 일반 예약보다 3일 먼저 열립니다. 이 메일은 전시 소식 안내이며, 예약은 앱 또는 홈페이지에서 직접 진행해 주세요.',
+          '9 月将开放两场会员优先预约展览。常设展馆会在每月最后一个周五延长夜间开放时间。',
+          '会员预约比普通预约提前 3 天开放。此邮件仅用于展览通知，请通过 App 或官网完成预约。',
         ],
         bodyEn: [
           'Two member-priority exhibitions open in September. The permanent galleries stay open late on the last Friday of each month.',
@@ -307,7 +307,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_yeonseo_recital',
     folder: 'inbox',
-    senderNameZh: '윤이서',
+    senderNameZh: 'Yun I-seo',
     senderNameEn: 'Yun Seo',
     senderAddress: 'yunseo@daon.kr',
     avatarTone: 'rose',
@@ -317,11 +317,11 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_yeonseo_recital_1',
         offsetMinutes: -17110,
-        subjectZh: '다음 주 피아노 리사이틀 초대',
+        subjectZh: '邀请你参加下周的钢琴独奏会',
         subjectEn: 'Invitation to next week’s piano recital',
         bodyZh: [
-          '오래간만이야. 다음 주 토요일 저녁에 학교 리사이틀 무대에 서게 됐어.',
-          '시간 되면 와 줬으면 좋겠어. 프로그램 첫 곡은 네가 좋아하던 그 라흐마니노프야. 끝나고 근처에서 저녁 같이 먹자.',
+          '好久不见。下周六晚上我要参加学校的独奏会。',
+          '如果有时间，希望你能来。开场曲是你一直很喜欢的那首拉赫玛尼诺夫。结束后一起在附近吃晚饭吧。',
         ],
         bodyEn: [
           'It has been a while. I am on stage for the school recital next Saturday evening.',
@@ -333,7 +333,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_daon_welcome',
     folder: 'inbox',
-    senderNameZh: '다온메일',
+    senderNameZh: 'Daon 邮件',
     senderNameEn: 'Daon Mail',
     senderAddress: 'welcome@daon.kr',
     avatarTone: 'green',
@@ -343,11 +343,11 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_daon_welcome_1',
         offsetMinutes: -28760,
-        subjectZh: '다온메일에 오신 것을 환영합니다',
+        subjectZh: '欢迎使用 Daon 邮件',
         subjectEn: 'Welcome to Daon Mail',
         bodyZh: [
-          '다온메일을 시작해 주셔서 감사합니다. 받은메일함, 임시보관함, 보관함으로 편지를 정리하고, 별표로 중요한 소식을 모아둘 수 있습니다.',
-          '검색은 보낸 사람, 제목, 본문을 모두 찾아줍니다. 필요 없는 편지는 보관함으로 옮겨두세요.',
+          '感谢使用 Daon 邮件。你可以通过收件箱、草稿箱和归档整理邮件，也可以用星标收藏重要消息。',
+          '搜索范围包括发件人、主题和正文。暂时不需要的邮件可以移入归档。',
         ],
         bodyEn: [
           'Thank you for starting with Daon Mail. Organize letters with Inbox, Drafts, and Archive, and star what matters.',
@@ -359,7 +359,7 @@ export const MAIL_SHELL_THREADS = Object.freeze([
   {
     id: 'mail_fixture_lucky_spam',
     folder: 'spam',
-    senderNameZh: '럭키 이벤트',
+    senderNameZh: '幸运活动中心',
     senderNameEn: 'Lucky Event',
     senderAddress: 'winner@lucky-event-kr.biz',
     avatarTone: 'slate',
@@ -369,11 +369,11 @@ export const MAIL_SHELL_THREADS = Object.freeze([
       {
         id: 'mail_fixture_lucky_spam_1',
         offsetMinutes: -1380,
-        subjectZh: '축하합니다! 경품 당첨 안내 (확인 필요)',
+        subjectZh: '恭喜中奖！奖品领取通知（需要确认）',
         subjectEn: 'Congratulations! Prize win notice (confirm needed)',
         bodyZh: [
-          '귀하가 이벤트에 당첨되었습니다. 아래 링크에서 계좌와 신분 정보를 입력하시면 상품이 발송됩니다.',
-          '본 메일은 다온메일 스팸 필터에 의해 스팸함으로 분류된 예시 메일입니다. 링크를 누르지 마세요.',
+          '您已在本次活动中获奖。请在下方链接填写账户和身份信息，以便领取奖品。',
+          '此邮件是被 Daon 邮件垃圾过滤器识别的示例邮件，请勿点击其中的链接。',
         ],
         bodyEn: [
           'You won our event. Enter your account and ID details at the link below to claim the prize.',

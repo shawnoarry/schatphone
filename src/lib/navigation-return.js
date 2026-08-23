@@ -9,6 +9,9 @@ const SOURCE_RETURN_TARGETS = Object.freeze({
   worldbook: '/worldbook',
   camera: '/camera',
   mail: '/mail',
+  browser: '/browser',
+  healthcare: '/healthcare',
+  housing: '/housing',
 })
 const SOURCE_RETURN_LABELS = Object.freeze({
   chat: 'Chat',
@@ -19,6 +22,9 @@ const SOURCE_RETURN_LABELS = Object.freeze({
   worldbook: 'WorldBook',
   camera: 'Camera',
   mail: 'Mail',
+  browser: 'Browser',
+  healthcare: 'Ondam Care',
+  housing: 'Jari',
 })
 
 const normalizeReturnSource = (source) => {
@@ -114,6 +120,43 @@ const buildAgendaJourneyReturnTarget = (route) => {
   return {
     path: SOURCE_RETURN_TARGETS['agenda-journey'],
     ...(Object.keys(query).length ? { query } : {}),
+  }
+}
+
+const normalizeBrowserContextQuery = (value, maxLength = 180) => {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (typeof raw !== 'string') return ''
+  return Array.from(raw.trim())
+    .filter((character) => {
+      const codePoint = character.codePointAt(0)
+      return codePoint > 31 && codePoint !== 127
+    })
+    .join('')
+    .slice(0, maxLength)
+}
+
+const buildBrowserReturnTarget = (route) => {
+  const q = normalizeBrowserContextQuery(route?.query?.browserQuery)
+  const result = normalizeBrowserContextQuery(route?.query?.browserResult, 140)
+  const scope = normalizeBrowserContextQuery(route?.query?.browserScope, 40)
+  const homePage = normalizeHomePageQuery(route?.query?.homePage)
+  const query = {
+    ...(q ? { q } : {}),
+    ...(result ? { result } : {}),
+    ...(scope ? { scope } : {}),
+    ...(homePage ? { from: 'home', homePage } : {}),
+  }
+  return {
+    path: SOURCE_RETURN_TARGETS.browser,
+    ...(Object.keys(query).length ? { query } : {}),
+  }
+}
+
+const buildInstalledAppReturnTarget = (route, appSource) => {
+  const homePage = normalizeHomePageQuery(route?.query?.homePage)
+  return {
+    path: SOURCE_RETURN_TARGETS[appSource],
+    ...(homePage ? { query: { from: 'home', homePage } } : {}),
   }
 }
 
@@ -232,6 +275,10 @@ export const resolveReturnTarget = (route, fallback = HOME_RETURN_ROUTE) => {
   if (routeSource === 'chat') return resolveChatReturnTarget(route) || SOURCE_RETURN_TARGETS.chat
   if (routeSource === 'agenda-journey') return buildAgendaJourneyReturnTarget(route)
   if (routeSource === 'map') return buildMapReturnTarget(route)
+  if (routeSource === 'browser') return buildBrowserReturnTarget(route)
+  if (routeSource === 'healthcare' || routeSource === 'housing') {
+    return buildInstalledAppReturnTarget(route, routeSource)
+  }
   if (SOURCE_RETURN_TARGETS[routeSource]) return SOURCE_RETURN_TARGETS[routeSource]
   return fallback
 }

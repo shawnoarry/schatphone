@@ -12,6 +12,7 @@ Updated: 2026-08-13
 - `主屏 / 桌面 / Home` as a system desktop layer, not a user-facing app entry
 - `组件 / Widgets` as widget creation/import/action-config/edit entry, not a whole-page template catalog
 - `外观 / Appearance` as broader visual customization and possible template-management surface
+- Appearance system-App icon themes operate on an explicit native-system allowlist such as Chat, Contacts, Settings, Widgets, Phone, and Gallery. They are independent from light/dark themes, sit below explicit per-app overrides, and must never mutate commercial shop/service brand assets or in-page control glyphs such as Back, Search, and Close.
 - `应用商城 / App Store` as the standalone App Library-like entry-management host
 - App Library / App Store-like surface as app-entry visibility management only
 - World Pack global app-entry unlocks now have a first seam through the same Home/App Store/App Library ownership rules; Optional capability Packs may tell users that entries live in App Store's `World` section, but must not regress into Settings -> WorldBook-only launch links or App Store jump buttons
