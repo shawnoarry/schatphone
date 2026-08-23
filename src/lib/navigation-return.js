@@ -8,6 +8,7 @@ const SOURCE_RETURN_TARGETS = Object.freeze({
   'map-settings': '/map/settings',
   worldbook: '/worldbook',
   camera: '/camera',
+  mail: '/mail',
 })
 const SOURCE_RETURN_LABELS = Object.freeze({
   chat: 'Chat',
@@ -17,6 +18,7 @@ const SOURCE_RETURN_LABELS = Object.freeze({
   'map-settings': 'Map settings',
   worldbook: 'WorldBook',
   camera: 'Camera',
+  mail: 'Mail',
 })
 
 const normalizeReturnSource = (source) => {

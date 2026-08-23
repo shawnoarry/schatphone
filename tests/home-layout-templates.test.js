@@ -17,11 +17,11 @@ import {
 
 describe('home layout templates', () => {
   test('defines neutral templates that fit the 4x6 grid', () => {
-    expect(HOME_LAYOUT_TEMPLATES).toHaveLength(7)
+    expect(HOME_LAYOUT_TEMPLATES).toHaveLength(8)
 
     HOME_LAYOUT_TEMPLATES.forEach((template) => {
-      expect(template.id).toMatch(/^layout-[a-g]$/)
-      expect(template.key).toMatch(/^[A-G]$/)
+      expect(template.id).toMatch(/^layout-[a-h]$/)
+      expect(template.key).toMatch(/^[A-H]$/)
       expect(template.slots.length).toBeGreaterThan(0)
 
       template.slots.forEach((slot) => {

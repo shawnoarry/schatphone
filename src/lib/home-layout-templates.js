@@ -105,13 +105,32 @@ export const HOME_LAYOUT_TEMPLATES = Object.freeze([
       createSlot('g-bottom-right', 3, 5, 2, 2),
     ]),
   },
+  {
+    id: 'layout-h',
+    key: 'H',
+    slots: Object.freeze([
+      createSlot('h-hero', 1, 1, 4, 3),
+      createSlot('h-small-1', 1, 4, 1, 1),
+      createSlot('h-small-2', 2, 4, 1, 1),
+      createSlot('h-small-3', 3, 4, 1, 1),
+      createSlot('h-small-4', 4, 4, 1, 1),
+      createSlot('h-small-5', 1, 5, 1, 1),
+      createSlot('h-small-6', 2, 5, 1, 1),
+      createSlot('h-small-7', 3, 5, 1, 1),
+      createSlot('h-small-8', 4, 5, 1, 1),
+      createSlot('h-small-9', 1, 6, 1, 1),
+      createSlot('h-small-10', 2, 6, 1, 1),
+      createSlot('h-small-11', 3, 6, 1, 1),
+      createSlot('h-small-12', 4, 6, 1, 1),
+    ]),
+  },
 ])
 
 export const HOME_LAYOUT_TEMPLATE_IDS = Object.freeze(HOME_LAYOUT_TEMPLATES.map((template) => template.id))
 export const DEFAULT_HOME_LAYOUT_TEMPLATE_ID = 'layout-c'
 export const DEFAULT_HOME_LAYOUT_TEMPLATE_SEQUENCE = Object.freeze([
   'layout-c',
-  'layout-b',
+  'layout-h',
   'layout-f',
   'layout-d',
   'layout-e',

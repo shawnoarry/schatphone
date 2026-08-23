@@ -62,6 +62,8 @@ BUILT_IN_APP_ICON_META.app_control_center = {
 }
 APP_ICON_LABELS.app_book = { zh: '文本库', en: 'Book', ko: 'Book' }
 BUILT_IN_APP_ICON_META.app_book = { icon: 'fas fa-book-open', accent: 'cool' }
+APP_ICON_LABELS.app_daon_mail = { zh: '邮件', en: 'Mail', ko: '메일' }
+BUILT_IN_APP_ICON_META.app_daon_mail = { icon: 'fas fa-envelope-open-text', accent: 'cool' }
 
 export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
@@ -83,6 +85,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_assets',
   'app_control_center',
   'app_book',
+  'app_daon_mail',
   'app_settings',
   'app_contacts',
   'app_store',

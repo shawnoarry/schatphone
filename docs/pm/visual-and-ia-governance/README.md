@@ -84,6 +84,7 @@ The complete target is a believable phone system rather than one universal skin:
 
 Also read when needed:
 
+- `MAIL_SHELL_FEATURE_PLAN.md` for the Daon Mail preview shell's landed S1/AI-arrival product rules, sender-whitelist policy, and separately gated follow-ups (arrival notifications, world-pack backfill, S2 owner)
 - `WIDGETS_VISUAL_OPTIMIZATION_HANDOFF.md` for focused Widget Center visual continuation, release acceptance, and conditional follow-ups
 - `docs/design/DESIGN.md`
 - `docs/overview/APPEARANCE_REBUILD_SCOPE.md`

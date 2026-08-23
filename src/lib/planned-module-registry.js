@@ -20,6 +20,8 @@ export const MUSIC_HOME_APP_ID = 'app_music'
 export const MUSIC_ROUTE = '/music'
 export const WEATHER_HOME_APP_ID = 'app_weather'
 export const WEATHER_ROUTE = '/weather'
+export const MAIL_HOME_APP_ID = 'app_daon_mail'
+export const MAIL_ROUTE = '/mail'
 
 export const SHOPPING_CATEGORY_ENTRIES = Object.freeze([
   {

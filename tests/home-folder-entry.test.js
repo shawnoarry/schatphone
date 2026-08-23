@@ -344,7 +344,7 @@ describe('Home folder entries', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('.home-template-picker').exists()).toBe(true)
-    expect(wrapper.findAll('.home-template-card')).toHaveLength(7)
+    expect(wrapper.findAll('.home-template-card')).toHaveLength(8)
     expect(wrapper.findAll('.home-template-preview-slot').length).toBeGreaterThan(0)
     expect(wrapper.find('.home-template-slot small').text()).toMatch(/x/)
     expect(

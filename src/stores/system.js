@@ -36,6 +36,7 @@ import {
   CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  MAIL_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   REMINDERS_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
@@ -142,6 +143,33 @@ const AVAILABLE_THEMES = [
 ]
 
 const DEFAULT_WIDGET_PAGES = [
+  [
+    'weather',
+    'photo_note',
+    'music',
+    'focus_pulse',
+    'app_wallet',
+    'app_themes',
+    'app_gallery',
+    CAMERA_HOME_APP_ID,
+  ],
+  [
+    'app_phone',
+    'app_map',
+    MUSIC_HOME_APP_ID,
+    'app_calendar',
+    AGENDA_JOURNEY_HOME_APP_ID,
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+    MAIL_HOME_APP_ID,
+  ],
+  ['system', 'quick_heart', 'quick_disc'],
+  [],
+  [],
+]
+
+const PRE_MAIL_DEFAULT_WIDGET_PAGES = [
   [
     'weather',
     'photo_note',
@@ -311,6 +339,7 @@ const CORE_HOME_TILE_IDS = [
   ASSETS_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   BOOK_HOME_APP_ID,
+  MAIL_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
@@ -452,7 +481,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 6
+const HOME_DESKTOP_SETUP_VERSION = 7
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -2222,6 +2251,7 @@ export const useSystemStore = defineStore('system', () => {
     const hasOutdatedSetupVersion =
       normalizeHomeDesktopSetupVersion(persistedSetupVersion) < HOME_DESKTOP_SETUP_VERSION
     const shouldResetToCleanSetup =
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MAIL_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
@@ -2252,6 +2282,7 @@ export const useSystemStore = defineStore('system', () => {
 
   const recommendHomeDesktopRefresh = computed(() => {
     if (
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_MAIL_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,

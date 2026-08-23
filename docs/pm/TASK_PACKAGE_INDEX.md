@@ -1,6 +1,6 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-08-15
+Updated: 2026-08-23
 
 This file is the PM-facing and handoff-facing index for all current task packages.
 
@@ -25,6 +25,7 @@ Current routing note:
 - roadmap 4.14 cross-module Event Experience belongs primarily to `event-runtime-and-world-hub` for the Event Surface Projection, host registration, event review/notebook semantics, and World Hub/Cheats separation. Engage `map-calendar-reminders` only for EVE-2 Map anchor/card rendering and Map-owned interaction, `module-architecture-governance` only when shared persistence or Mini Scene Interfaces change, and a source package only when its event family is explicitly promoted.
 - the landed Player Context V1 eligibility seam and the still-documentation-only world-evolution/information-propagation direction route first to `event-runtime-and-world-hub`; engage `contacts-relationship-system-v2` for the Contacts-owned Self Profile revision and stable identity meaning. A future Community/Media or Investigation owner must receive its own accepted product package before routes, Stores, posts, feeds, or clues are implemented.
 - roadmap 4.15 shared runtime TTS belongs primarily to `module-architecture-governance` for provider Adapters, Cloudflare Worker behavior, persistence, credentials, preview-media lifecycle, and future caller contracts. Engage `chat-and-chat-directory` for the current Settings entry and any later read-aloud/voice-message behavior; development-time ElevenLabs Skills remain tooling rather than runtime ownership.
+- roadmap 4.16 app shell previews belong to `visual-and-ia-governance` for S1 fixture shells, entry/IA, and visual identity acceptance. Engage `module-architecture-governance` only when a shell is promoted from S1 fixture preview to S2 owner implementation, and `event-runtime-and-world-hub` only when a shell is promoted to an S3 event chain; a future shell's canonical owner must receive its own accepted product package before production routes, Stores, or schemas are implemented.
 
 ## 1. Standard Package Structure
 

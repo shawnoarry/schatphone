@@ -11,6 +11,7 @@ const surfaces = [
   { id: 'settings', route: '/settings' },
   { id: 'appearance', route: '/appearance' },
   { id: 'gallery', route: '/gallery' },
+  { id: 'mail', route: '/mail' },
 ]
 
 const themes = ['default', 'zen']

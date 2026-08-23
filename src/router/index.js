@@ -57,6 +57,7 @@ const FilesView = () => import('../views/FilesView.vue')
 const AppStoreView = () => import('../views/AppStoreView.vue')
 const MusicView = () => import('../views/MusicView.vue')
 const WeatherView = () => import('../views/WeatherView.vue')
+const MailView = () => import('../views/MailView.vue')
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -145,6 +146,7 @@ const router = createRouter({
     { path: '/app-store', component: AppStoreView },
     { path: '/music', component: MusicView },
     { path: '/weather', component: WeatherView },
+    { path: '/mail', component: MailView },
     { path: '/more', redirect: '/settings' },
   ],
 })

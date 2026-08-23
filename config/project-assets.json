@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-23T04:18:39.140Z",
+  "updatedAt": "2026-08-23T12:38:46.578Z",
   "assets": [
     {
       "batchId": "migration-2026-08-11",
@@ -4647,6 +4647,90 @@
       "verifiedAt": "2026-08-22T17:18:42.739Z"
     },
     {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-04/seoul-amorepacific-hq-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-amorepacific-hq-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-amorepacific-hq-hero-v1.webp",
+      "bytes": 298094,
+      "sha256": "de4e92c8e8c3eedeba08e79f2528cca929a552b5c66e4c2e0f7e97e930072339",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:01.063Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-04/seoul-asan-medical-center-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-asan-medical-center-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-asan-medical-center-hero-v1.webp",
+      "bytes": 395872,
+      "sha256": "4a0a7511e4d0a5a26a94496819dfd88ed9f1e06d2750c408eac326f54f496e25",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:01.200Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-bank-of-korea-main-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-bank-of-korea-main-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-bank-of-korea-main-gallery-02-v1.webp",
+      "bytes": 323044,
+      "sha256": "6454da6c423f9dca536b35de2118eb0439970ad2811898c06df9210ef4087e98",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:24.426Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-bank-of-korea-main-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-bank-of-korea-main-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-bank-of-korea-main-hero-v1.webp",
+      "bytes": 322220,
+      "sha256": "ff19b10000e070f541216c6e8186ce4dd569d73b22145aa3e2578bf89592254f",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:13.032Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-cheongnyangni-station-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cheongnyangni-station-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cheongnyangni-station-gallery-02-v1.webp",
+      "bytes": 274842,
+      "sha256": "5ee75cdd95e9f018945e26fad7ddac5e277359557fdd09252eec96c77942b2c3",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:14.135Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-cheongnyangni-station-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cheongnyangni-station-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cheongnyangni-station-gallery-03-v1.webp",
+      "bytes": 291370,
+      "sha256": "3cbe9debb8f667d2ee7b39ccc5191eb2405d96011645c13361b3e273bc714bbc",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:14.388Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-cheongnyangni-station-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cheongnyangni-station-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-cheongnyangni-station-hero-v1.webp",
+      "bytes": 217416,
+      "sha256": "33d5c6f8ffcf5f429241d406730e52ac0bf566da5d52aa44c949be863a838ee3",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:12.670Z"
+    },
+    {
       "batchId": "map-place-media-integration-20260822",
       "path": "output/imagegen/map-place-media-integration-20260822/runtime/seoul-city-hall-gallery-01-v1.webp",
       "aliasPaths": [],
@@ -4693,6 +4777,30 @@
       "sha256": "bbb7ff4862516df3fed709327128bf09cf307639d197daa0f530eef14d56fe1b",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T16:15:50.732Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-coex-convention-center-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-coex-convention-center-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-coex-convention-center-gallery-02-v1.webp",
+      "bytes": 138398,
+      "sha256": "2cb8b3c071989018f2a0117401da2b4139e2d6e3e8c57cfa57549231405c1fe7",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:13.938Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-coex-convention-center-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-coex-convention-center-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-coex-convention-center-hero-v1.webp",
+      "bytes": 292086,
+      "sha256": "553b6037fd6417b3ec8a6f08c2434bc3737f1bffbca8d80ff5776d4a38e9b419",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.795Z"
     },
     {
       "batchId": "map-place-media-integration-20260822",
@@ -4755,6 +4863,18 @@
       "verifiedAt": "2026-08-22T21:00:36.145Z"
     },
     {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-express-bus-terminal-gallery-04-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-express-bus-terminal-gallery-04-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-express-bus-terminal-gallery-04-v1.webp",
+      "bytes": 217716,
+      "sha256": "fae0cf01d984428c22e09acc8c027247b2d435451fd4840c270c8681dfd9da8c",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:25.039Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-express-bus-terminal-hero-v1.webp",
       "aliasPaths": [],
@@ -4767,6 +4887,30 @@
       "verifiedAt": "2026-08-22T17:18:41.684Z"
     },
     {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-express-bus-terminal-hero-v2.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-express-bus-terminal-hero-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-express-bus-terminal-hero-v2.webp",
+      "bytes": 155724,
+      "sha256": "1cff7c270b24a41c3ec0dd11a7658d23320726b0e4685bb7d5dc351988b5339a",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:12.959Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-fire-disaster-headquarters-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-fire-disaster-headquarters-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-fire-disaster-headquarters-hero-v1.webp",
+      "bytes": 291862,
+      "sha256": "9732cfda2c209a8d1c2295e754f8c3d32ee02f33e791c684fd8c7dc4f59cb2fc",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:58.586Z"
+    },
+    {
       "batchId": "map-place-media-pilot-20260815",
       "path": "output/imagegen/map-place-media-pilot-20260815/runtime/seoul-forest-hero-v1.webp",
       "aliasPaths": [],
@@ -4777,6 +4921,42 @@
       "sha256": "370551dbab81d2b6f9c0566ba5b5f9be2cbfe7face99dcc54affa94946a18621",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-15T05:53:15.046Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-four-seasons-hotel-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-four-seasons-hotel-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-four-seasons-hotel-gallery-02-v1.webp",
+      "bytes": 295290,
+      "sha256": "fce3b69377cfb006c5ac8e79223c43d642c27ecdd3a46f3bbadeeaff706f6073",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:59.087Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-four-seasons-hotel-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-four-seasons-hotel-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-four-seasons-hotel-hero-v1.webp",
+      "bytes": 549200,
+      "sha256": "6dcf96882ed555fc9a608d586e5dbb775c9fd34a64f67ed6f1c6b88120f818e0",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:59.398Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-04/seoul-gangnam-fire-station-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-fire-station-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-fire-station-hero-v1.webp",
+      "bytes": 195470,
+      "sha256": "0e6bf11ff51b95bee4ade1ff030fc567adc5af009b2a86953c33798d4bab92ce",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:00.984Z"
     },
     {
       "batchId": "map-place-media-gallery-expansion-20260822",
@@ -4825,6 +5005,42 @@
       "sha256": "efb9abe6ceffc9c7e5be26b2f00f9b2792bff399500ab33e23789791c23f9110",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:40.793Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-gocheok-dome-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gocheok-dome-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gocheok-dome-gallery-02-v1.webp",
+      "bytes": 324696,
+      "sha256": "ce5211c9d8758a4581ac7d5bfbe79c9c3dedcba3524a0f3dfdac87bcbae6544a",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:59.090Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-gocheok-dome-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gocheok-dome-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gocheok-dome-gallery-03-v1.webp",
+      "bytes": 245662,
+      "sha256": "868b2cb77cf6c777d7956b3ae888ee40b4d15f9cd81a6f3eacb08eb602225aae",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:59.120Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-gocheok-dome-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gocheok-dome-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gocheok-dome-hero-v1.webp",
+      "bytes": 298068,
+      "sha256": "3687768d635c5383820820eb8bbbf037d3b8172d727776a467a19b83af981a69",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:58.999Z"
     },
     {
       "batchId": "map-place-media-integration-20260822",
@@ -4887,6 +5103,18 @@
       "verifiedAt": "2026-08-15T05:53:13.456Z"
     },
     {
+      "batchId": "map-place-media-hyundai-apgujeong-gallery-20260823",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-hyundai-apgujeong-main-gallery-06-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-hyundai-apgujeong-main-gallery-06-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-hyundai-apgujeong-main-gallery-06-v1.webp",
+      "bytes": 243094,
+      "sha256": "edec3ff85eb870698fa01ae79550d157c7c63e9e0deb7e028a4e12628b7fd475",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T07:51:33.645Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-hyundai-apgujeong-main-hero-v1.webp",
       "aliasPaths": [],
@@ -4911,6 +5139,138 @@
       "verifiedAt": "2026-08-22T16:16:43.455Z"
     },
     {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-jamsil-sports-complex-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jamsil-sports-complex-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jamsil-sports-complex-gallery-02-v1.webp",
+      "bytes": 170946,
+      "sha256": "149f3948380fae026b115053874652acf8debbb2367ac105f697a275aedf7802",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:13.979Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-jamsil-sports-complex-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jamsil-sports-complex-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jamsil-sports-complex-hero-v1.webp",
+      "bytes": 441352,
+      "sha256": "ee34b6dd37c007829f41a7db8c6c12d0aff2bf0ed762f8b6c6dccea244259ed8",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.810Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-jangchung-arena-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jangchung-arena-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-jangchung-arena-hero-v1.webp",
+      "bytes": 486580,
+      "sha256": "d5ca0765b23c0b8383d89a742575af538355f0741d119cffe924dc97175ba2d0",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.571Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-kbs-hq-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-gallery-02-v1.webp",
+      "bytes": 195654,
+      "sha256": "aade064ddc3f595d09d635d69ad912355199ca5205e92eb6ab07f361b8146bef",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:25.214Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-kbs-hq-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-gallery-03-v1.webp",
+      "bytes": 202396,
+      "sha256": "5ea1776f43111dbd2eb4e19cb711bb991bcbae6b8307828d81392fa4c6648574",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:25.050Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-kbs-hq-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kbs-hq-hero-v1.webp",
+      "bytes": 263280,
+      "sha256": "7725277f4cc49f3957aba94391eda3da5a7b304e3c1bfd480df19ad246fed97b",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:13.239Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-korea-university-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-korea-university-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-korea-university-gallery-02-v1.webp",
+      "bytes": 200140,
+      "sha256": "367ebdaa854d6a636f3436950c1d0501e04ef8d48261e0333c38b126b9e5cdfe",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:14.012Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-korea-university-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-korea-university-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-korea-university-hero-v1.webp",
+      "bytes": 230030,
+      "sha256": "09cef08458b0df4d661a3c8158534117b17fff2eac2bb560d2f58d30d279e867",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.311Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-04/seoul-kspo-dome-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kspo-dome-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-kspo-dome-hero-v1.webp",
+      "bytes": 438328,
+      "sha256": "661067c93e39115d9e5847297464089e00c2c9209120f54d29b3c1462a9ab5eb",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:01.334Z"
+    },
+    {
+      "batchId": "map-place-media-area-gallery-batch-05-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-london-bagel-museum-anguk-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-london-bagel-museum-anguk-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-london-bagel-museum-anguk-gallery-01-v1.webp",
+      "bytes": 280824,
+      "sha256": "021f8c626a67ddd83119abc28d67392ce9b85a8becc5311028b7a86080d50812",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T12:32:36.860Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-04/seoul-lotte-avenuel-world-tower-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-avenuel-world-tower-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-avenuel-world-tower-gallery-01-v1.webp",
+      "bytes": 149182,
+      "sha256": "de6cc8d2f99125d51c917d6835cac5c2c46681d489ac0f44b0264fd8390caaa4",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:01.040Z"
+    },
+    {
       "batchId": "map-place-media-gallery-expansion-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-lotte-department-main-gallery-02-v1.webp",
       "aliasPaths": [],
@@ -4933,6 +5293,30 @@
       "sha256": "67be6208a9404f8f5406a95b1fba742c8f54ce5e2692fb1e8c74d2a9577853da",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:51.203Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-lotte-world-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-world-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-world-gallery-02-v1.webp",
+      "bytes": 131516,
+      "sha256": "4b9deaae58cb27e3a2b72872c8091d18693e4ee710e24b048b43d44cd09b8a20",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:13.937Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-lotte-world-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-world-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-world-hero-v1.webp",
+      "bytes": 637746,
+      "sha256": "27f0c1d77d6a27f8ae75aa3b0fa92e61dc6f58eb396db262f56a10e05dfde34d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.994Z"
     },
     {
       "batchId": "map-place-media-integration-20260822",
@@ -4993,6 +5377,42 @@
       "sha256": "3b50c07894313e500b7511508d15651a7b7b78cc3a22a76c6876dfd51e54b439",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T16:16:00.966Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-metropolitan-police-agency-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-metropolitan-police-agency-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-metropolitan-police-agency-hero-v1.webp",
+      "bytes": 161858,
+      "sha256": "3d86ca306938d1b2342f3556e9959bb20206cf6e1c08f088bbbbf323d575e463",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:58.929Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-mokdong-sports-complex-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-mokdong-sports-complex-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-mokdong-sports-complex-gallery-02-v1.webp",
+      "bytes": 136356,
+      "sha256": "441226cd937b00165c1ee597849c801ccefe7237326d8a0e3310f3352af08b4d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:13.942Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-mokdong-sports-complex-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-mokdong-sports-complex-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-mokdong-sports-complex-hero-v1.webp",
+      "bytes": 272126,
+      "sha256": "8127dd5e0202b381235cc1dee32ae79c5d2a4a400615851b6e2f68bcfae6a4d9",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.809Z"
     },
     {
       "batchId": "map-place-media-pilot-20260815",
@@ -5079,6 +5499,42 @@
       "verifiedAt": "2026-08-22T16:16:52.729Z"
     },
     {
+      "batchId": "map-place-media-area-gallery-batch-05-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-namdaemun-pharmacy-district-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-namdaemun-pharmacy-district-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-namdaemun-pharmacy-district-gallery-01-v1.webp",
+      "bytes": 326086,
+      "sha256": "4e67f8af9ae1c6bbefb8e717144b99f373f6b3a34a9007d1f72c5364434682ba",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T12:32:36.965Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-assembly-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-assembly-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-assembly-gallery-02-v1.webp",
+      "bytes": 178246,
+      "sha256": "acc6ee7a76f916187461355db5d0987f6e378137811335012c3ff7169453c99e",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:13.395Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-national-assembly-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-assembly-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-assembly-hero-v1.webp",
+      "bytes": 329440,
+      "sha256": "9a9d9aaa4ca6cafe50c2cb6f1a82b12ac8fa100f58a103eb46edf6efa13ae5d4",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:16.957Z"
+    },
+    {
       "batchId": "map-place-media-gallery-expansion-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-national-museum-gallery-03-v1.webp",
       "aliasPaths": [],
@@ -5091,6 +5547,30 @@
       "verifiedAt": "2026-08-22T21:00:36.045Z"
     },
     {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-museum-gallery-04-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-gallery-04-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-gallery-04-v1.webp",
+      "bytes": 187264,
+      "sha256": "a4ff4c820443bb00421576c4fe7447f9ff766240646879e9cceb35721283e4e2",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:24.853Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-museum-gallery-05-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-gallery-05-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-gallery-05-v1.webp",
+      "bytes": 233918,
+      "sha256": "6ded54c84ab9233750b132b9075640c77665427b65d3d18abfd0b546caaae122",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:25.046Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-national-museum-hero-v1.webp",
       "aliasPaths": [],
@@ -5101,6 +5581,114 @@
       "sha256": "31c1673aec68721bd32960363eff0517266de6520f46154cb9c3cc14516f2450",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:42.339Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-national-museum-hero-v2.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-hero-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-hero-v2.webp",
+      "bytes": 115984,
+      "sha256": "2422bee557e2f251daa6d482ada4707fac1480f0935ace96b6d9fa346836234e",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:12.785Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-police-agency-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-police-agency-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-police-agency-gallery-02-v1.webp",
+      "bytes": 129998,
+      "sha256": "11d7deb598b5b57ab161ec1f99350095aabe25d9f6d9b682a8bc6ad148024118",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:30.819Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-police-agency-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-police-agency-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-police-agency-gallery-03-v1.webp",
+      "bytes": 381910,
+      "sha256": "2ff52533a9327f6a66eb7141837503da69735643f91bb67a8d1dc820183b470c",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:31.136Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-national-police-agency-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-police-agency-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-police-agency-hero-v1.webp",
+      "bytes": 372342,
+      "sha256": "129687f867e495aeb37d4c75684382742a87852f24bbe869f302ffa45e674724",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:13.181Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-university-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-gallery-02-v1.webp",
+      "bytes": 60546,
+      "sha256": "b73a93cadd5c3290fd9dc73a6d4517e4bc05dbb20bcc465fc8e95288289985db",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:13.590Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-national-university-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hero-v1.webp",
+      "bytes": 227024,
+      "sha256": "bdc75e86f2301945148434337363176c191e42522139af231397d247f05a0bf5",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.741Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-university-hospital-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-gallery-02-v1.webp",
+      "bytes": 338436,
+      "sha256": "28cff21345514d11a7c7bca81d5ad76386575aa225cc909a5c9c9db1e7a9239d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:25.202Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-national-university-hospital-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-gallery-03-v1.webp",
+      "bytes": 143454,
+      "sha256": "f4c1f07238db70a78a339c27d531159693a5ffa81c608064cbc0c978a6c4788f",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:25.096Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-national-university-hospital-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-university-hospital-hero-v1.webp",
+      "bytes": 230312,
+      "sha256": "e96f245f04a823de9cc4ab95db9e5effc1249aaac2fbfd3b973f60372daef298",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:13.049Z"
     },
     {
       "batchId": "map-place-media-gallery-expansion-20260822",
@@ -5125,6 +5713,102 @@
       "sha256": "8fcb8854f6d10dade8b855b77662051276dd53f109a449e150cf1e60a9fe42c7",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:41.917Z"
+    },
+    {
+      "batchId": "map-place-media-area-gallery-batch-05-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-05/seoul-sanggye-jugong-district-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sanggye-jugong-district-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sanggye-jugong-district-gallery-01-v1.webp",
+      "bytes": 307086,
+      "sha256": "d3b3c1eaf41aaafea9acfa8a8ed65c10935a193c42ce7915608b277cdac9aeb4",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T12:32:36.100Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-04/seoul-sbs-hq-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sbs-hq-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-sbs-hq-hero-v1.webp",
+      "bytes": 97058,
+      "sha256": "d14bdbfdf4395a115ad40cd0f73578d842638fd2a5913a4ce1085b2ec619adab",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:00.965Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-severance-hospital-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-severance-hospital-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-severance-hospital-gallery-02-v1.webp",
+      "bytes": 198106,
+      "sha256": "dcbaa437332c2ccfeb59e131ac7c97756b0b50876c4eb27db5e79836af958619",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:24.916Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-severance-hospital-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-severance-hospital-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-severance-hospital-hero-v1.webp",
+      "bytes": 256696,
+      "sha256": "7c8c7cfe26c770ba33cbc6af776325a7f28659c67b0e2e2d8738df746a7bf07c",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:13.055Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-shilla-hotel-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shilla-hotel-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shilla-hotel-gallery-02-v1.webp",
+      "bytes": 139038,
+      "sha256": "b1e2788aa6eed101df9e86227ca888709bec87f0de4fd1aa13515242b9567eb3",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:25.223Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-shilla-hotel-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shilla-hotel-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shilla-hotel-gallery-03-v1.webp",
+      "bytes": 108776,
+      "sha256": "8b3274e5ba37856b16bf315fa9f6a9944a3da0b5d2ecd24acadd070549efa774",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:30.048Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-shilla-hotel-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shilla-hotel-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shilla-hotel-hero-v1.webp",
+      "bytes": 167450,
+      "sha256": "1cc645e5eae6e80b31d7db3236bf5b9e2c8880afc16bc17b71a095e0ae3a339b",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:12.970Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-shinhan-bank-headquarters-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shinhan-bank-headquarters-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-shinhan-bank-headquarters-hero-v1.webp",
+      "bytes": 258464,
+      "sha256": "5cb71a5240099b426117dec5d9af28b242b0a9d453f1dac731936d7f2154e787",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:59.155Z"
     },
     {
       "batchId": "map-place-media-pilot-20260815",
@@ -5175,6 +5859,18 @@
       "verifiedAt": "2026-08-15T05:53:14.052Z"
     },
     {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-the-hyundai-seoul-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-the-hyundai-seoul-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-the-hyundai-seoul-hero-v1.webp",
+      "bytes": 171532,
+      "sha256": "690249cc221579024d86c03629eed223dc541326a22f1bba122571bda71aeaca",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:17.559Z"
+    },
+    {
       "batchId": "map-place-media-times-square-gallery-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-times-square-gallery-02-v1.webp",
       "aliasPaths": [],
@@ -5199,6 +5895,78 @@
       "verifiedAt": "2026-08-22T17:18:47.811Z"
     },
     {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-times-square-hero-v2.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-times-square-hero-v2.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-times-square-hero-v2.webp",
+      "bytes": 350480,
+      "sha256": "a58f6f60c9ff0482d7001ac35fab6039e585e6fbd94d4a40a4a7fc216ca725f4",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:59.314Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-woori-bank-headquarters-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-woori-bank-headquarters-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-woori-bank-headquarters-gallery-02-v1.webp",
+      "bytes": 144468,
+      "sha256": "69b3b48dd4935bd504238e198f7110b741ee53b3542b1ee7b20cdd5ca03a9d4f",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:30.818Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-batch-02-runtime-v2-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes-batch-02/seoul-woori-bank-headquarters-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-woori-bank-headquarters-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-woori-bank-headquarters-hero-v1.webp",
+      "bytes": 148750,
+      "sha256": "f5335b8e947d7efdf9f9a99b2e5c897639afedc60f1ff060d89b7228745ea41d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T09:49:12.887Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-yeouido-hangang-park-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yeouido-hangang-park-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yeouido-hangang-park-gallery-02-v1.webp",
+      "bytes": 99632,
+      "sha256": "04a68d76ed23d8505ec95edca66f56eca8ccd7a38aa927017eea9317e3a5678d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:57:58.815Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-yeouido-hangang-park-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yeouido-hangang-park-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yeouido-hangang-park-gallery-03-v1.webp",
+      "bytes": 84198,
+      "sha256": "6d73b344b6f7b2f99e164171c5bab7841bd6bcaba708018100feb1e2f912bbff",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:01.035Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-yeouido-hangang-park-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yeouido-hangang-park-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yeouido-hangang-park-hero-v1.webp",
+      "bytes": 247448,
+      "sha256": "98c236f82878177c354859189ab9376a59a97fdeb63ea6288021d34e9ede3d02",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:01.156Z"
+    },
+    {
       "batchId": "map-place-media-gallery-expansion-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-yongsan-station-gallery-06-v1.webp",
       "aliasPaths": [],
@@ -5221,6 +5989,42 @@
       "sha256": "a32d7e8cfafc1af91600cde07f7c3cac7317604a6baf5b077c4683875b7a23a3",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:45.785Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-batches-01-02-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-gallery-batches-01-02/seoul-yonsei-university-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yonsei-university-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yonsei-university-gallery-02-v1.webp",
+      "bytes": 244924,
+      "sha256": "f35b7f7d2df25ae239856f70775570f3e08d6dfaf4d11bc13c3524b8607ea3a9",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T10:23:13.936Z"
+    },
+    {
+      "batchId": "map-place-media-heroes-10-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-heroes/seoul-yonsei-university-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yonsei-university-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yonsei-university-hero-v1.webp",
+      "bytes": 471678,
+      "sha256": "ee0b73d4cce9763169852e8226d792eda119f5dc82319fb7eabdebe4b0277a1b",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T08:55:18.126Z"
+    },
+    {
+      "batchId": "map-place-media-batches-03-04-corrected-paths-20260823",
+      "path": "output/imagegen/map-place-media-search-20260823/reviewed-runtime-batch-03/seoul-ytn-newsquare-hero-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-ytn-newsquare-hero-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-ytn-newsquare-hero-v1.webp",
+      "bytes": 339898,
+      "sha256": "82a0f0d34a9231afd68661f4088b7663c884dfb511ff792815e0c16eba0fbf93",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-23T11:58:01.001Z"
     },
     {
       "batchId": "migration-2026-08-11",

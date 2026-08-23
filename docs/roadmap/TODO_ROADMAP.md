@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-08-22
+Updated: 2026-08-23
 
 This is the only live execution board for implementation order.
 
@@ -40,6 +40,7 @@ Roadmap interpretation:
 - 4.13 is `PARTIAL_DONE / CHKSZ_PRIMARY_RADIO_BROWSER_LOCAL_AND_MAP_MEDIA_INTEGRATED_LOCAL`: Music is an installed listening app with browser playback, library/queue/search, ChKSz as the primary user-authorized online source, supplementary generic JSON configuration, a no-key Radio Browser HTTPS/MP3 live-station preset, direct HTTPS URL songs, Music-owned device-local file import, a global floating player, Chat track sharing, and an active-journey Map music/radio panel. ChKSz resolved playback URLs now use an expiry-aware memory cache for up to 7 days while retaining automatic invalidation and one bounded re-resolution. Live-station uptime remains external; real-key rights/CORS smoke, true-device media behavior, Chat search, and external Map queue requests remain separate gates.
 - 4.14 is `P1 PARTIAL_DONE / EVE-4B REFERENCE_VERTICAL_DONE / EVE-4C DONE 2026-08-14 / PLAYER_CONTEXT_V1_FOUNDATION_DONE 2026-08-15`: Event is a cross-module causal chain, not a universal card system. EVE-2A/2B/2C and EVE-3 remain landed; EVE-4A's Food Delivery host/card/manual trigger remains withdrawn. EVE-4C supersedes the EVE-4B pickup-time trigger and specialized Runtime shape with explicit owner-native user initiation, shared commerce contracts, Event Instance V2, Service Cases, owner facts/requests, Phone resolution proposals, Map estimate/reroute references, and separate Food Delivery/Shopping owner Adapters. The current user-visible commerce case stops at Food Delivery's address-escalation chain; Shopping is only an Adapter/interface proof and is not an accepted user-facing Shopping event case. Remaining Shopping product work stays with the Shopping owner as planned follow-up. Player Context V1 now provides revision-aware read-only K-pop manager/public-idol eligibility; dynamic world evolution and information propagation are planned later, and EVE-5 is a later separately gated stage.
 - 4.15 is `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: the first shared runtime TTS slice provides Cloudflare Workers AI MeloTTS and user-key MiniMax Chinese preview behind one contract. The bounded Worker route is deployed at `https://schatphone.noarry.workers.dev`; Chat message audio, automatic read-aloud, durable media, stable real-provider quality/playback proof, and production gateway hardening remain separately gated.
+- 4.16 is `P1 PARTIAL_DONE / SHP-1 MAIL_SHELL_S1_DONE 2026-08-23 / SHP-1B MAIL_AI_ARRIVAL_DONE 2026-08-23`: the user-promoted app-shell preview wave starts with a fixture-backed Mail S1 shell (`Daon Mail`) plus its explicit-entry AI arrival (one provider call per receive over a user-managed sender whitelist), establishing the reusable pattern for the everyday/fandom shells catalogued in `docs/pm/event-runtime-and-world-hub/EVENT_APP_SHELL_PRIORITY_MATRIX.md`; it does not displace `CMG-08` as the separately assignable P0 ledger item.
 
 ## 3. Completed Baselines
 
@@ -794,6 +795,59 @@ Focused contracts:
 - `docs/architecture/TTS_MODULE_CONTRACT.md`
 - `docs/process/TTS_PROVIDER_SETUP.md`
 
+### 4.16 Everyday App Shell Preview Wave
+
+Status: `P1 PARTIAL_DONE / SHP-1 MAIL_SHELL_S1_DONE 2026-08-23 / SHP-1B MAIL_AI_ARRIVAL_DONE 2026-08-23 / USER_PROMOTED 2026-08-23`
+
+Candidate source and grouping:
+
+- `docs/pm/event-runtime-and-world-hub/EVENT_ECOSYSTEM_APP_SHELLS_PLANNING_HANDOFF.md` owns the candidate decomposition, shared product rules, and workgroup acceptance template;
+- `docs/pm/event-runtime-and-world-hub/EVENT_APP_SHELL_PRIORITY_MATRIX.md` owns shell prototyping priority, the S0/S1/S2/S3 maturity model, and the recommended waves;
+- this lane is the roadmap authorization those documents deliberately do not provide. It does not modify their candidate list or supersede the `CMG-08` P0 ledger item.
+
+Goal:
+
+- turn the highest-value future app candidates into user-visible, high-visual-quality shells without waiting for full owner chains;
+- first-batch shells must reach at least matrix level S1: an ordinary no-event loop over local fixtures with stable IDs, complete empty/loading/failure/long-content states, day/night, zh/en, desktop and simulated Pixel 5, accessibility, and zero horizontal overflow;
+- visual completion is itself an acceptance bar: each shell needs its own visual argument and five-dimension differentiation under `docs/design/DESIGN.md`, and must not look like a generic admin interface;
+- each shell leaves explicit S2 (owner Store/schema/backup) and S3 (Event Runtime chain) seams without implementing them.
+
+Delivery stages:
+
+1. `SHP-1 Mail S1 shell (Daon Mail)` - `DONE 2026-08-23`
+   - a fictional Korean portal mail identity with fixture accounts, folders, and 8-10 bilingual threads referencing the existing Seoul world;
+   - inbox, thread detail, local compose/drafts, archive, star, search, and local-sent as an ordinary no-event loop;
+   - S1 preview state persists under a registered device-local key excluded from backup; no production Store, backup section, cross-owner write, notification write, or Event Runtime participation;
+   - Home page-2 entry, App Store presence, icon/customization registration, focused Vitest plus desktop and simulated Pixel 5 Playwright, and visual-gate coverage.
+2. `SHP-1B Mail AI arrival` - `DONE 2026-08-23 / EXPLICIT_ENTRY_PROVIDER_EXCEPTION`
+   - a header `Receive` action performs exactly one provider call per click through the shared `callAI` transport and the user's Network & API settings;
+   - the prompt carries bounded context only (user-managed sender whitelist, active world name plus a bounded worldview excerpt, Self Profile display name and public role, current system language); ordinary browsing stays zero-token and this receive action is the shell's only provider entry — the sole accepted exception to the S1 zero-provider checklist;
+   - strict JSON validation (sender shape, length caps, label allowlist, HTML rejection) gates one locally committed unread letter with provider/model provenance; missing provider surfaces honest recovery into Network & API, and provider failures or invalid drafts create no letter and never fall back to a deterministic substitute;
+   - the sender whitelist is user configuration (`schatphone:mail-shell:sender-whitelist`, registered and excluded from backup): fixture institutions by default, add/remove/restore in-app, and validated AI-invented senders enrolled with an explicit generated origin when `allowNewSenders` is on;
+   - generated letters are in-world display content: no relationship, metric, world, or other-owner writes. Product rules and gated follow-ups (arrival system notifications wait for the Notification Center shell; world-pack mailbox backfill; S2 owner) live in `docs/pm/visual-and-ia-governance/MAIL_SHELL_FEATURE_PLAN.md`.
+3. `SHP-2+ Healthcare / Housing / Community core shells` - `TODO / SEPARATE_PROMOTION_REQUIRED`
+   - follow the wave order in `EVENT_APP_SHELL_PRIORITY_MATRIX.md`; each later shell starts only after the user separately promotes it and records its reserved paths;
+   - Healthcare/Housing reuse the SHP-1 shell patterns with their own visual arguments; Community core additionally requires a Fact/Claim/Post fixture contract before any fandom facade starts.
+
+Acceptance for 4.16:
+
+- the matrix section 9 S1 checklist holds for every promoted shell: entry/route/return context, list + detail + primary action page, ordinary no-event operability, stable fixture IDs across refresh, empty/loading/failure/unavailable/long-content states, day/night plus zh/en plus desktop and simulated Pixel 5 with zero horizontal overflow, accessibility names/focus/targets, no internal architecture copy, no unimplemented buttons, no fake success states, no other-owner writes, no provider calls, no Event Surface registration;
+- visual quality is accepted against the storefront guide's five-dimension differentiation and the project visual gate, not against a component checklist alone;
+- S2/S3 seams are documented but unimplemented until separately accepted.
+
+Boundary:
+
+- this lane does not authorize Event Runtime integration, production Stores, backup sections, schema migration, CJA-6B implementation, a Community/Media owner, Notification Center system-layer work, or any promotion of shells the user has not separately accepted.
+
+Primary package:
+
+- `docs/pm/visual-and-ia-governance/STATUS_AND_HANDOFF.md`
+
+Secondary packages:
+
+- `docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md` only when a shell is promoted from S1 fixture preview to S2 owner implementation;
+- `docs/pm/event-runtime-and-world-hub/STATUS_AND_HANDOFF.md` only when a shell is promoted to an S3 event chain.
+
 ## 5. Guarded Or Deferred Directions
 
 ### Gallery-Driven Relationship Memory
@@ -835,8 +889,9 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 10. `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: 4.15 has landed Cloudflare MeloTTS and device-key MiniMax behind the shared runtime TTS Module for temporary Chinese preview, and the bounded Worker route is deployed. Stable end-to-end provider playback proof, production gateway policy, Chat read-aloud, and durable voice messages remain separate gates.
 11. `P2 PARTIAL_DONE / MINI_SCENE_AI_RUNTIME_AND_TEXT_SHELL_DONE_2026-08-19`: 4.8 now has durable artifacts/policies, an AI-required structured generation runtime, an Event Runtime registration, and a root Text Presenter. Calendar authoring/entry was explicitly rejected and removed; a production event-trigger Adapter, profile binding, safe Book transforms, and HTML remain separately gated.
 12. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
-13. `P2 PARTIAL_DONE / MJE-1_MJE-2_MJE-4_INTEGRATED / MJE-3_PRODUCTION_TRIGGER_SUSPENDED / PLACE_MEDIA_V1_23_SEOUL_PLACES_INTEGRATED_LOCAL`: 4.11 retains transport planning, lifecycle/checkpoints, Footprints IA, optional per-world authored-facility discovery, and governed place-detail media for 23 of 106 Seoul places. The generic checkpoint obstruction remains compatibility-tested but is not production-enabled. Active exploration, event-driven place reveal, candidate-place ownership, the remaining 83 Seoul photo decisions, generated reconstruction, transit topology, broader-city, and true-device stages remain gated.
+13. `P2 PARTIAL_DONE / MJE-1_MJE-2_MJE-4_INTEGRATED / MJE-3_PRODUCTION_TRIGGER_SUSPENDED / PLACE_MEDIA_V1_56_SEOUL_PLACES_INTEGRATED_LOCAL`: 4.11 retains transport planning, lifecycle/checkpoints, Footprints IA, optional per-world authored-facility discovery, and governed place-detail media for 56 of 106 Seoul places. The generic checkpoint obstruction remains compatibility-tested but is not production-enabled. Active exploration, event-driven place reveal, candidate-place ownership, the remaining 50 Seoul place-specific media decisions, generated reconstruction, transit topology, broader-city, and true-device stages remain gated.
 14. `P2 PARTIAL_DONE / CALENDAR_DEPARTURE_READINESS_V1_DONE 2026-08-15 / CJA-1_DONE 2026-08-15 / CJA-2_DONE 2026-08-16 / CJA-3_DONE 2026-08-16 / CJA-4_DONE 2026-08-16 / CJA-5_DONE 2026-08-16`: 4.12 now has Calendar V3 authoring and occurrence views, the direct Calendar-to-Map departure vertical, hidden persisted orchestration, the separate Agenda Journey execution app, one absolute-time Activity Session, and one midpoint-only low-impact Event Runtime family with restrained Focus Companion presentation. Appointment auto-entry, broader event families, media callers/richer companions, and Narrative Timeline remain unimplemented.
+15. `P1 PARTIAL_DONE / SHP-1 MAIL_SHELL_S1_DONE 2026-08-23 / SHP-1B MAIL_AI_ARRIVAL_DONE 2026-08-23 / USER_PROMOTED 2026-08-23`: 4.16's app-shell preview wave lands the Daon Mail S1 shell (portal-mail visual identity, Seoul-world fixture threads, local read/star/archive/drafts/sent loop, Calendar deep-link round trip, Home page-2 entry through the new `layout-h` default template, full visual-gate coverage) plus SHP-1B explicit-entry AI arrival: one provider call per `Receive` click over a user-managed sender whitelist, bounded world/persona prompt context, strict validation with provider provenance, and fail-closed recovery into Network & API. It adds no production Store, backup section, cross-owner write, or Event Runtime participation; arrival system notifications wait for the Notification Center shell, and it does not displace `CMG-08` as the next separately assignable P0 ledger item. Healthcare/Housing/Community shells each wait for separate user promotion.
 
 ## 7. Validation Rule
 

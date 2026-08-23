@@ -45,6 +45,7 @@ import {
   CAMERA_HOME_APP_ID,
   CONTROL_CENTER_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  MAIL_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
   WEATHER_HOME_APP_ID,
@@ -279,6 +280,7 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === 'app_food_delivery') return t('外卖', 'Food')
   if (tileId === 'app_assets') return t('资产', 'Assets')
   if (tileId === CONTROL_CENTER_HOME_APP_ID) return t('世界中枢', 'World Hub')
+  if (tileId === MAIL_HOME_APP_ID) return t('邮件', 'Mail')
   if (tileId === APP_STORE_HOME_APP_ID) return t('应用商城', 'App Store')
   return fallback
 }

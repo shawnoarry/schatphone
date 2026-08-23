@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 9
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 11
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -196,6 +196,20 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     fullKey: 'schatphone:tts:credentials',
     sourceFile: 'src/stores/tts.js',
     durability: 'durable-device-secret',
+  },
+  {
+    id: 'local:mail-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:mail-shell:preview-state',
+    sourceFile: 'src/composables/useMailShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:mail-shell-sender-whitelist',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:mail-shell:sender-whitelist',
+    sourceFile: 'src/composables/useMailShellSenders.js',
+    durability: 'durable-hint',
   },
 ])
 
@@ -1028,6 +1042,25 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     exclusionReason:
       'The draft is cleared after send or cancel and can be recreated by sharing again.',
     rebuildSource: 'The user repeats the sharing action in the source app.',
+  },
+  {
+    id: 'mail.shell-preview-state',
+    logicalOwner: 'Mail shell preview',
+    dataClass:
+      'S1 fixture-shell preview state: read/star/archive markers, local drafts, local-sent records, AI-arrival received letters, and the user-managed sender whitelist for the Daon Mail preview',
+    physicalCarrierIds: ['local:mail-shell-preview-state', 'local:mail-shell-sender-whitelist'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule:
+      'Fixture thread IDs stay stable; draft/sent/received record IDs and whitelist sender IDs are generated once and stored with the record.',
+    referenceRule:
+      'Overlay state for the roadmap 4.16 S1 shell only; it owns no canonical mail record and writes no other owner. AI-arrival letters carry provider/model provenance and never become relationship or world facts.',
+    exclusionReason:
+      'Shell preview state is not committed correspondence; loss resets the preview to fixture defaults without touching any owner record.',
+    rebuildSource: 'The user repeats read/star/archive/draft/receive actions in the preview shell.',
   },
 ])
 
