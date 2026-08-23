@@ -110,6 +110,48 @@ describe('MapPlaceFocusSheet', () => {
     expect(wrapper.text()).toContain('not its real appearance')
   })
 
+  test('does not carry the overview fallback treatment into a real detail-area slide', async () => {
+    const wrapper = createWrapper({
+      media: {
+        id: 'fallback-place-1',
+        kind: 'category_fallback',
+        labelZh: '类别示意',
+        labelEn: 'Category visual',
+        noteZh: '仅表示地点类型，不代表真实外观。',
+        noteEn: 'Represents the place category, not its real appearance.',
+        asset: {
+          url: 'https://example.test/category.webp',
+          altZh: '类别示意图',
+          altEn: 'Category visual',
+        },
+        source: { licenseId: 'not_applicable' },
+      },
+      mediaGallery: [{
+        id: 'area-place-1',
+        kind: 'area_atmosphere',
+        labelZh: '周边实景',
+        labelEn: 'Area view',
+        noteZh: '展示周边环境。',
+        noteEn: 'Shows the surrounding area.',
+        asset: {
+          url: 'https://example.test/place-area.webp',
+          altZh: '地点周边照片',
+          altEn: 'Area around the place',
+        },
+        source: { licenseId: 'CC BY 4.0' },
+      }],
+    })
+
+    await wrapper.get('[data-testid="map-place-open-detail"]').trigger('click')
+
+    expect(wrapper.get('[data-testid="map-place-detail-media"]').classes()).not.toContain(
+      'is-category-fallback',
+    )
+    expect(wrapper.get('[data-testid="map-place-detail-media-image"]').attributes('src')).toBe(
+      'https://example.test/place-area.webp',
+    )
+  })
+
   test('downgrades a failed photo to an image-backed category fallback without stale attribution', async () => {
     const wrapper = createWrapper()
 

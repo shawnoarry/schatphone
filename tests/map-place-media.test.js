@@ -35,6 +35,18 @@ const EXPANDED_PLACE_IDS = [
   'seoul-olympic-park',
 ]
 
+const AREA_DETAIL_ONLY_PLACE_IDS = [
+  'seoul-sm-hq',
+  'seoul-myeongdong-kyoja-main',
+  'seoul-sillim-one-room-district',
+  'seoul-express-bus-terminal',
+  'seoul-gangnam-station',
+  'seoul-lotte-department-main',
+  'seoul-national-museum',
+  'seoul-times-square',
+  'seoul-hyundai-apgujeong-main',
+]
+
 const INTEGRATED_GALLERY_COUNTS = {
   'seoul-gwanghwamun': 4,
   'seoul-city-hall': 4,
@@ -42,6 +54,15 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-ddp': 4,
   'seoul-lotte-world-tower': 5,
   'seoul-incheon-airport-t1': 1,
+  'seoul-gimpo-airport': 2,
+  'seoul-gangnam-station': 2,
+  'seoul-express-bus-terminal': 2,
+  'seoul-yongsan-station': 2,
+  'seoul-63-square': 2,
+  'seoul-national-museum': 2,
+  'seoul-times-square': 2,
+  'seoul-lotte-department-main': 2,
+  'seoul-olympic-park': 2,
 }
 
 describe('map place media governance', () => {
@@ -58,27 +79,28 @@ describe('map place media governance', () => {
   })
 
   test('validates the reviewed media registry', () => {
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(42)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(51)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
   })
 
-  test('keeps one hero per integrated place and exposes the reviewed detail gallery in order', () => {
+  test('keeps exact heroes separate from detail-only area atmosphere', () => {
     for (const [placeId, expectedCount] of Object.entries(INTEGRATED_GALLERY_COUNTS)) {
       const hero = getMapPlaceMediaRecord('real-seoul-v1', placeId)
       const gallery = getMapPlaceMediaGallery('real-seoul-v1', placeId)
 
-      expect(hero).toMatchObject({
-        placeId,
-        slot: MAP_PLACE_MEDIA_SLOT.HERO,
-        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
-      })
       expect(gallery).toHaveLength(expectedCount)
-      expect(gallery[0]).toBe(hero)
-      expect(gallery.slice(1).every((record) => (
-        record.slot === MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY
-      ))).toBe(true)
+      if (AREA_DETAIL_ONLY_PLACE_IDS.includes(placeId)) {
+        expect(hero).toBeNull()
+        expect(gallery.every((record) => record.slot === MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY)).toBe(true)
+      } else {
+        expect(hero).toMatchObject({ placeId, slot: MAP_PLACE_MEDIA_SLOT.HERO })
+        expect(gallery[0]).toBe(hero)
+        expect(gallery.slice(1).every((record) => (
+          record.slot === MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY
+        ))).toBe(true)
+      }
     }
   })
 
@@ -98,7 +120,7 @@ describe('map place media governance', () => {
 
   test('keeps every real pilot asset on the verified project image bed with traceable Commons attribution', () => {
     for (const placeId of REAL_PILOT_PLACE_IDS) {
-      const record = getMapPlaceMediaRecord('real-seoul-v1', placeId)
+      const record = getMapPlaceMediaGallery('real-seoul-v1', placeId)[0]
       expect(record).toBeTruthy()
       expect(record.asset.url).toMatch(/^https:\/\/cloudflare-imgbed-7z3\.pages\.dev\/file\/schatphone-assets\//)
       expect(record.source.provider).toBe('wikimedia_commons')
@@ -108,28 +130,30 @@ describe('map place media governance', () => {
     }
   })
 
-  test('distinguishes exact photos from honest area atmosphere', () => {
+  test('allows exact photos as heroes and confines area atmosphere to the detail gallery', () => {
     expect(getMapPlaceMediaRecord('real-seoul-v1', 'seoul-gyeongbokgung')).toMatchObject({
       kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
       authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
     })
-    for (const placeId of [
-      'seoul-sm-hq',
-      'seoul-myeongdong-kyoja-main',
-      'seoul-sillim-one-room-district',
-      'seoul-express-bus-terminal',
-      'seoul-lotte-department-main',
-      'seoul-hyundai-apgujeong-main',
-    ]) {
-      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+    for (const placeId of AREA_DETAIL_ONLY_PLACE_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toBeNull()
+      expect(resolveMapPlaceMedia({ id: placeId }, 'real-seoul-v1')).toMatchObject({
+        kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+      })
+      expect(getMapPlaceMediaGallery('real-seoul-v1', placeId)[0]).toMatchObject({
         kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
         authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.AREA_ONLY,
+        slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
       })
     }
 
     for (const placeId of EXPANDED_PLACE_IDS.filter((id) => ![
       'seoul-express-bus-terminal',
+      'seoul-gangnam-station',
       'seoul-lotte-department-main',
+      'seoul-national-museum',
+      'seoul-times-square',
       'seoul-hyundai-apgujeong-main',
     ].includes(id))) {
       expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
@@ -137,6 +161,16 @@ describe('map place media governance', () => {
         authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
       })
     }
+  })
+
+  test('rejects area atmosphere when a future record attempts to occupy the hero slot', () => {
+    const areaRecord = getMapPlaceMediaGallery('real-seoul-v1', 'seoul-sm-hq')[0]
+    const invalidHero = { ...areaRecord, slot: MAP_PLACE_MEDIA_SLOT.HERO }
+
+    expect(validateMapPlaceMediaRecord(invalidHero)).toMatchObject({
+      valid: false,
+      errors: expect.arrayContaining(['hero_kind', 'area_atmosphere_slot']),
+    })
   })
 
   test('uses a non-evidentiary category visual for fictional and player places without reviewed media', () => {

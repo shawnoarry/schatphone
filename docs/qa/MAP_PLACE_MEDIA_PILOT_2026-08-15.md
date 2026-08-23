@@ -4,6 +4,12 @@ Date: 2026-08-15
 
 Status: `7_REAL_DERIVATIVES_REMOTE_VERIFIED / 1_FICTIONAL_FALLBACK / RUNTIME_INTEGRATED_LOCAL / NO_GIT_COMMIT`
 
+Current presentation note (2026-08-22): the later hero/detail contract supersedes the
+pilot's permissive placement. SM Entertainment HQ, Myeongdong Kyoja Main Store, and
+Sillim-dong area photos remain valid grade-B sources but now appear only in Place
+Details; their overview cards use category fallback until a card-eligible hero is
+separately approved.
+
 ## Inventory Result
 
 - `real-seoul-v1` contains 106 unique read-only places.

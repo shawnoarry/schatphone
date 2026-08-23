@@ -12,10 +12,11 @@ This inventory separates three different questions:
 
 The runtime fallback already prevents empty cards. It does not count as place-specific media and must not be presented as the real appearance of a place.
 
-This is an acquisition and review inventory, not a final card-layout contract. The
-counts below describe how many place-specific media decisions remain. They do not
-decide whether an approved source is shown as an overview thumbnail, a detail image,
-or both, and they do not freeze aspect ratio, crop, focal point, or derivative count.
+This is an acquisition and review inventory. The presentation contract is fixed by
+`MAP_PLACE_MEDIA_GOVERNANCE.md`: `area_atmosphere` is detail-only, while the card hero
+accepts only exact photography, an explicitly generated reconstruction, or category
+fallback. The counts below distinguish any reviewed place media from card-eligible
+hero completion; they do not freeze aspect ratio, crop, focal point, or derivative count.
 
 ## Count Baseline
 
@@ -27,6 +28,8 @@ or both, and they do not freeze aspect ratio, crop, focal point, or derivative c
 | **Fixed built-in target** | **113** | **23** | **90** | search real places; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
+
+Only 14 of the 23 Seoul places with reviewed media currently have an approved exact-photo hero. The other nine have detail-only area media and still require a card-hero decision, so 92 Seoul hero decisions remain.
 
 ## Seoul Search Plan
 
@@ -53,9 +56,9 @@ These places have a named building, venue, campus, park, transport facility, or 
 | Banks | 4 | Bank of Korea Main Building; KB Kookmin Bank New Headquarters; Shinhan Bank Head Office; Woori Bank Head Office |
 | Public-safety institutions | 4 | Korean National Police Agency; Seoul Metropolitan Police Agency; Seoul Fire and Disaster Headquarters; Gangnam Fire Station |
 
-Current usable coverage inside this group is 21 places. Seventeen grade-A heroes cover Gyeongbokgung, Seoul Station, Seoul Forest, Starfield COEX Mall, Gwanghwamun Square, Seoul City Hall, N Seoul Tower, Dongdaemun Design Plaza, Lotte World Tower, Incheon Airport Terminal 1, Gimpo International Airport, Gangnam Station, Yongsan Station, 63 Square, National Museum of Korea, Times Square Seoul, and Olympic Park Seoul. Four reviewed grade-B images cover SM Entertainment HQ through its Seongsu district, Seoul Express Bus Terminal through its terminal frontage, Lotte Department Store Main through the Euljiro/Lotte district, and Hyundai Department Store Apgujeong Main through a source-identified in-store cafe. Truthful grade-B coverage is accepted without claiming an exact facade. This leaves 58 acquisition decisions in this group.
+Current media coverage inside this group is 21 places. Fourteen grade-A heroes cover Gyeongbokgung, Seoul Station, Seoul Forest, Starfield COEX Mall, Gwanghwamun Square, Seoul City Hall, N Seoul Tower, Dongdaemun Design Plaza, Lotte World Tower, Incheon Airport Terminal 1, Gimpo International Airport, Yongsan Station, 63 Square, and Olympic Park Seoul. Seven additional places have reviewed grade-B detail slides only: SM Entertainment HQ through its Seongsu district, Gangnam Station through a station-area image, Seoul Express Bus Terminal through its terminal frontage, National Museum of Korea through a museum-area view, Times Square Seoul through an interior-area view, Lotte Department Store Main through the Euljiro/Lotte district, and Hyundai Department Store Apgujeong Main through a source-identified in-store cafe. These seven cards remain on category fallback until an exact/generated hero is separately approved. This leaves 65 hero acquisition decisions in this group.
 
-### Area-atmosphere preferred: 27 places
+### Detail area-atmosphere candidates: 27 places
 
 These records describe a district, residential area, street cluster, privacy-sensitive destination, or small branch where a falsely precise facade photo would be riskier than a truthful licensed area view.
 
@@ -69,9 +72,9 @@ These records describe a district, residential area, street cluster, privacy-sen
 | Pharmacy districts | 3 | Jongno 5-ga Pharmacy Street; Namdaemun Pharmacy District; Gangnam Station Pharmacy District |
 | Restaurant branches | 5 | Myeongdong Kyoja Main Store; London Bagel Museum Anguk; Knotted Cheongdam; Kyochon Chicken Yeoksam No. 1; EGGDROP Gangnam Woosung |
 
-Current usable coverage inside this group is two reviewed grade-B images: the Myeongdong street view for Myeongdong Kyoja and the Sillim residential-area view. This leaves 25 acquisition decisions in this group.
+Current usable coverage inside this group is two reviewed grade-B detail images: the Myeongdong street view for Myeongdong Kyoja and the Sillim residential-area view. Both cards remain on category fallback until an exact/generated hero is separately approved. This leaves 25 area-detail acquisition decisions and all 27 card-hero decisions in this group.
 
-An exact licensed photo may still replace an area target when the source page proves the branch or facade and the image passes privacy, trademark, architecture, and crop review. The reverse downgrade is also valid: a truthful grade B is preferable to an uncertain grade A.
+An exact licensed photo may satisfy the card hero when the source page proves the branch or facade and the image passes privacy, trademark, architecture, and crop review. A truthful grade B remains valuable detail context, but it cannot be promoted into the card merely because an exact photo is unavailable.
 
 ## Media Adaptation Record
 
@@ -83,7 +86,7 @@ same questions for overview and detail so a source is judged by its actual UI ro
 | --- | --- |
 | Source and truth grade | exact photo, area atmosphere, generated reconstruction, or category fallback |
 | Source composition | subject, orientation, subject position, and likely focal point |
-| Overview fit | recognition at the small card size; safe crop and legible truth label |
+| Overview eligibility | exact/generated identity evidence or category fallback; area atmosphere is ineligible |
 | Detail fit | address/description remain discoverable beside or below the large image |
 | Derivative plan | one shared derivative or separate overview/detail derivatives |
 | Failure fallback | category fallback behavior without changing place identity |

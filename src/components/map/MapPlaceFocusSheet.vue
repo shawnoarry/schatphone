@@ -249,10 +249,9 @@ const cardLayout = computed(() => {
   const availableBelow = Math.max(0, viewportHeight - safeBottom - anchorY - gap)
   const placement = availableAbove >= availableBelow ? 'above' : 'below'
   const availableHeight = Math.max(180, placement === 'above' ? availableAbove : availableBelow)
-  const renderedHeight = Math.min(
-    Math.max(180, Number(cardSize.value.height) || (isDetail.value ? 480 : 340)),
-    availableHeight,
-  )
+  const renderedHeight = isDetail.value
+    ? Math.min(Math.max(180, Number(cardSize.value.height) || 480), availableHeight)
+    : Math.max(180, Number(cardSize.value.height) || 340)
   const left = Math.min(
     viewportWidth - cardWidth - 12,
     Math.max(12, anchorX - cardWidth / 2),
@@ -272,7 +271,7 @@ const cardLayout = computed(() => {
       left: `${Math.round(left)}px`,
       top: `${Math.round(top)}px`,
       width: `${Math.round(cardWidth)}px`,
-      maxHeight: `${Math.round(availableHeight)}px`,
+      maxHeight: isDetail.value ? `${Math.round(availableHeight)}px` : undefined,
       '--map-place-pointer-x': `${Math.round(pointerX)}px`,
     },
   }
@@ -453,23 +452,23 @@ onBeforeUnmount(() => {
       </header>
 
     <template v-if="!isDetail">
-      <div class="map-place-overview">
-        <figure class="map-place-focus-media" data-testid="map-place-media">
-          <div class="map-place-focus-media-frame">
-            <img
-              v-if="hasMediaImage"
-              :src="displayedMedia.asset.url"
-              :alt="mediaAlt"
-              width="1600"
-              height="900"
-              decoding="async"
-              data-testid="map-place-media-image"
-              @error="overviewMediaLoadFailed = true"
-            />
-            <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
-          </div>
-        </figure>
+      <figure class="map-place-focus-media" data-testid="map-place-media">
+        <div class="map-place-focus-media-frame">
+          <img
+            v-if="hasMediaImage"
+            :src="displayedMedia.asset.url"
+            :alt="mediaAlt"
+            width="1600"
+            height="900"
+            decoding="async"
+            data-testid="map-place-media-image"
+            @error="overviewMediaLoadFailed = true"
+          />
+          <span class="map-place-focus-media-kind">{{ mediaLabel }}</span>
+        </div>
+      </figure>
 
+      <div class="map-place-overview-content">
         <div class="map-place-overview-copy">
           <div class="map-place-introduction">
             <span class="map-place-section-label">{{ t('关于这里', 'About this place') }}</span>
@@ -490,43 +489,43 @@ onBeforeUnmount(() => {
             <span>{{ mediaNote }}</span>
           </p>
         </div>
-      </div>
 
-      <div
-        v-if="!pinVisible"
-        class="map-place-focus-pin-state"
-        data-testid="map-place-pin-hidden"
-      >
-        <i class="fas fa-eye-slash" aria-hidden="true"></i>
-        <span>{{ t('这个图钉当前没有显示在地图上', 'This pin is currently hidden from the map') }}</span>
-        <button type="button" data-testid="map-place-show-pin" @click="emit('show-pin')">
-          {{ t('恢复显示', 'Show pin') }}
-        </button>
-      </div>
-
-      <section
-        v-if="eventInvitation"
-        class="map-place-event-invitation"
-        data-testid="map-place-event-invitation"
-        aria-labelledby="map-place-event-invitation-title"
-      >
-        <span class="map-place-event-invitation-icon" aria-hidden="true">
-          <i class="fas fa-bolt"></i>
-        </span>
-        <div>
-          <h3 id="map-place-event-invitation-title">{{ eventInvitation.copy.title }}</h3>
-          <p>{{ eventInvitation.copy.summary }}</p>
-        </div>
-        <button
-          type="button"
-          :aria-label="t('打开互动', 'Open interaction')"
-          :title="t('打开互动', 'Open interaction')"
-          data-testid="map-place-expand-event"
-          @click="emit('expand-event')"
+        <div
+          v-if="!pinVisible"
+          class="map-place-focus-pin-state"
+          data-testid="map-place-pin-hidden"
         >
-          <i class="fas fa-chevron-right" aria-hidden="true"></i>
-        </button>
-      </section>
+          <i class="fas fa-eye-slash" aria-hidden="true"></i>
+          <span>{{ t('这个图钉当前没有显示在地图上', 'This pin is currently hidden from the map') }}</span>
+          <button type="button" data-testid="map-place-show-pin" @click="emit('show-pin')">
+            {{ t('恢复显示', 'Show pin') }}
+          </button>
+        </div>
+
+        <section
+          v-if="eventInvitation"
+          class="map-place-event-invitation"
+          data-testid="map-place-event-invitation"
+          aria-labelledby="map-place-event-invitation-title"
+        >
+          <span class="map-place-event-invitation-icon" aria-hidden="true">
+            <i class="fas fa-bolt"></i>
+          </span>
+          <div>
+            <h3 id="map-place-event-invitation-title">{{ eventInvitation.copy.title }}</h3>
+            <p>{{ eventInvitation.copy.summary }}</p>
+          </div>
+          <button
+            type="button"
+            :aria-label="t('打开互动', 'Open interaction')"
+            :title="t('打开互动', 'Open interaction')"
+            data-testid="map-place-expand-event"
+            @click="emit('expand-event')"
+          >
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </section>
+      </div>
 
       <div class="map-place-focus-actions">
         <div v-if="['go', 'current', 'view_journey'].includes(primaryAction)" class="map-place-primary-slot">
@@ -549,7 +548,7 @@ onBeforeUnmount(() => {
             @click="runPrimaryAction"
           >
             <i :class="primaryIcon" aria-hidden="true"></i>
-            <span>{{ primaryLabel }}</span>
+            <span class="map-place-action-label">{{ primaryLabel }}</span>
           </button>
           <p
             v-if="primaryActionNotice"
@@ -563,7 +562,7 @@ onBeforeUnmount(() => {
 
         <button type="button" class="map-place-focus-secondary" data-testid="map-place-open-detail" @click="openDetail">
           <i class="fas fa-circle-info" aria-hidden="true"></i>
-          <span>{{ t('地点详情', 'Place details') }}</span>
+          <span class="map-place-action-label">{{ t('地点详情', 'Place details') }}</span>
         </button>
         <div class="map-place-entry-slot">
           <button
@@ -585,7 +584,7 @@ onBeforeUnmount(() => {
             @click="runEntryAction"
           >
             <i :class="entryIcon" aria-hidden="true"></i>
-            <span>{{ entryLabel }}</span>
+            <span class="map-place-action-label">{{ entryLabel }}</span>
           </button>
           <p v-if="entryNotice" class="map-place-entry-notice" role="status" data-testid="map-place-entry-notice">
             {{ entryNotice }}
@@ -736,6 +735,7 @@ onBeforeUnmount(() => {
 }
 
 .map-place-focus-scroll {
+  box-sizing: border-box;
   max-height: inherit;
   overflow-x: hidden;
   overflow-y: auto;
@@ -746,6 +746,16 @@ onBeforeUnmount(() => {
   padding: 12px;
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.map-place-focus-card:not(.is-detail) .map-place-focus-scroll {
+  display: grid;
+  grid-template-rows: repeat(4, auto);
+  overflow: hidden;
+}
+
+.map-place-overview-content {
+  min-height: 0;
 }
 
 .map-place-focus-pointer {
@@ -822,8 +832,6 @@ onBeforeUnmount(() => {
 .map-place-focus-heading h2 { overflow-wrap: anywhere; margin-top: 3px; font-size: 17px; font-weight: 850; line-height: 1.24; }
 .map-place-focus-secondary-name { margin-top: 2px; color: #607168; font-size: 12px; font-weight: 700; }
 
-.map-place-overview { min-width: 0; margin-top: 2px; }
-
 .map-place-focus-media { min-width: 0; overflow: hidden; margin: 0 -12px; background: #e7ece9; }
 .map-place-focus-media-frame,
 .map-place-detail-media { position: relative; overflow: hidden; background: #e4eae6; }
@@ -832,7 +840,6 @@ onBeforeUnmount(() => {
 .map-place-detail-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 .is-category-fallback .map-place-focus-media-frame::after,
-.is-category-fallback .map-place-detail-media::after,
 .map-place-detail-media.is-category-fallback::after {
   position: absolute;
   inset: 0;
@@ -864,7 +871,7 @@ onBeforeUnmount(() => {
 .map-place-overview-copy { display: flex; min-width: 0; flex-direction: column; padding-top: 11px; }
 .map-place-introduction { min-width: 0; }
 .map-place-section-label { display: block; margin-bottom: 4px; color: #76837c; font-size: 12px; font-weight: 850; letter-spacing: 0; }
-.map-place-focus-summary { display: -webkit-box; overflow: hidden; color: #3e4f46; font-size: 14px; font-weight: 650; line-height: 1.55; text-wrap: pretty; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.map-place-focus-summary { color: #3e4f46; font-size: 14px; font-weight: 650; line-height: 1.55; text-wrap: pretty; }
 
 .map-place-focus-context {
   display: flex;
@@ -925,19 +932,19 @@ onBeforeUnmount(() => {
 .map-place-event-invitation p { margin-top: 2px; color: #765f34; font-size: 12px; line-height: 1.4; }
 .map-place-event-invitation button { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 6px; background: #fff; color: #8d4d09; }
 
-.map-place-focus-actions { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(70px, 0.72fr); align-items: center; gap: 7px; margin-top: 11px; border-top: 1px solid #e3e8e5; padding-top: 10px; }
+.map-place-focus-actions { position: relative; z-index: 2; display: grid; min-width: 0; grid-template-columns: repeat(3, 40px); align-items: center; justify-content: end; gap: 7px; margin-top: 11px; border-top: 1px solid #e3e8e5; background: rgba(252, 253, 252, 0.98); padding-top: 10px; }
 .map-place-focus-primary,
 .map-place-focus-secondary,
 .map-place-focus-tool,
-.map-place-entry-action { display: inline-flex; min-width: 0; height: 40px; align-items: center; justify-content: center; gap: 7px; border-radius: 7px; font-size: 14px; font-weight: 850; transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
-.map-place-primary-slot { position: relative; min-width: 0; grid-column: 1; }
-.map-place-focus-primary { width: 100%; background: #17664f; padding: 0 12px; color: #fff; }
-.map-place-focus-secondary { border: 1px solid #dce3de; background: #fff; padding: 0 10px; color: #40544a; }
+.map-place-entry-action { display: inline-flex; width: 40px; min-width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 7px; font-size: 14px; font-weight: 850; transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
+.map-place-primary-slot { position: relative; width: 40px; min-width: 40px; grid-column: 1; }
+.map-place-focus-primary { background: #17664f; padding: 0; color: #fff; }
+.map-place-focus-secondary { grid-column: 2; border: 1px solid #dce3de; background: #fff; padding: 0; color: #40544a; }
 .map-place-focus-secondary i { color: var(--map-place-tone); }
 .map-place-focus-tool { width: 40px; flex: 0 0 40px; border: 1px solid #dce3de; background: #fff; color: var(--map-place-tone); }
-.map-place-entry-slot { position: relative; min-width: 0; grid-column: 3; }
-.map-place-entry-action { width: 100%; border: 1px solid color-mix(in srgb, var(--map-place-tone) 50%, #dce3de); background: color-mix(in srgb, var(--map-place-tone) 12%, white); padding: 0 9px; color: var(--map-place-tone); }
-.map-place-focus-secondary { grid-column: 2; }
+.map-place-entry-slot { position: relative; width: 40px; min-width: 40px; grid-column: 3; }
+.map-place-entry-action { border: 1px solid color-mix(in srgb, var(--map-place-tone) 50%, #dce3de); background: color-mix(in srgb, var(--map-place-tone) 12%, white); padding: 0; color: var(--map-place-tone); }
+.map-place-action-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .map-place-focus-primary.is-current { border: 1px solid #dfe4e1; background: #f2f4f3; color: #59665f; }
 .map-place-entry-action.is-unavailable { border-color: #dfe4e1; background: #f2f4f3; color: #66736c; }
 .map-place-entry-action.is-unavailable:hover { border-color: #d9dfdc; background: #eef1ef; color: #59665f; }
@@ -1039,9 +1046,6 @@ a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
 
 @media (min-width: 720px) and (max-height: 820px) {
   .map-place-focus-media-frame { height: 128px; aspect-ratio: auto; }
-  .map-place-focus-summary { -webkit-line-clamp: 2; }
-  .map-place-media-truth { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .map-place-media-truth span { overflow: hidden; text-overflow: ellipsis; }
   .map-place-focus-actions { margin-top: 8px; padding-top: 8px; }
   .map-place-focus-primary,
   .map-place-focus-secondary,
@@ -1051,9 +1055,12 @@ a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
 @media (max-width: 719px) {
   .map-place-focus-head { grid-template-columns: 44px minmax(0, 1fr) auto; }
   .map-place-focus-icon-button { width: 44px; height: 44px; }
+  .map-place-focus-actions { grid-template-columns: repeat(3, 44px); }
   .map-place-focus-primary,
   .map-place-focus-secondary,
-  .map-place-entry-action { height: 44px; }
+  .map-place-entry-action { width: 44px; min-width: 44px; height: 44px; }
+  .map-place-primary-slot,
+  .map-place-entry-slot { width: 44px; min-width: 44px; }
   .map-place-event-invitation { grid-template-columns: 32px minmax(0, 1fr) 44px; }
   .map-place-event-invitation button,
   .map-place-address-copy-button { width: 44px; height: 44px; }
@@ -1069,14 +1076,13 @@ a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
   .map-place-focus-head { top: -4px; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; padding-block: 0 2px; }
   .map-place-focus-icon { width: 34px; height: 34px; }
   .map-place-focus-heading h2 { font-size: 15px; }
-  .map-place-focus-media-frame { height: 64px; aspect-ratio: auto; }
-  .map-place-overview-copy { padding-top: 3px; }
-  .map-place-section-label { margin-bottom: 0; }
-  .map-place-focus-summary { font-size: 14px; line-height: 1.35; -webkit-line-clamp: 1; }
-  .map-place-focus-context { margin-top: 1px; font-size: 12px; line-height: 1.2; }
-  .map-place-media-truth { overflow: hidden; margin-top: 0; text-overflow: ellipsis; line-height: 1.2; white-space: nowrap; }
-  .map-place-media-truth span { overflow: hidden; text-overflow: ellipsis; }
-  .map-place-focus-actions { gap: 5px; margin-top: 0; padding-top: 2px; }
+  .map-place-focus-media-frame { height: clamp(96px, 18vh, 130px); aspect-ratio: auto; }
+  .map-place-overview-copy { padding-top: 7px; }
+  .map-place-section-label { margin-bottom: 2px; }
+  .map-place-focus-summary { font-size: 13px; font-weight: 600; line-height: 1.45; }
+  .map-place-focus-context { margin-top: 4px; font-size: 12px; line-height: 1.25; }
+  .map-place-media-truth { margin-top: 3px; font-size: 11px; font-weight: 600; line-height: 1.25; }
+  .map-place-focus-actions { gap: 5px; margin-top: 5px; padding-top: 7px; }
   .map-place-focus-card.is-detail .map-place-focus-head {
     grid-template-columns: 44px minmax(0, 1fr) auto;
   }
@@ -1086,12 +1092,6 @@ a:focus-visible { outline: 2px solid #0f8061; outline-offset: 2px; }
 }
 
 @media (max-width: 360px) {
-  .map-place-focus-actions { grid-template-columns: repeat(2, minmax(0, 1fr)) 68px; gap: 5px; }
-  .map-place-focus-primary,
-  .map-place-focus-secondary,
-  .map-place-entry-action { padding-inline: 8px; }
-  .map-place-focus-primary span,
-  .map-place-focus-secondary span,
-  .map-place-entry-action span { overflow-wrap: anywhere; line-height: 1.15; }
+  .map-place-focus-actions { gap: 5px; }
 }
 </style>

@@ -53,6 +53,12 @@ const MEDIA_KIND_TO_GRADE = Object.freeze({
   [MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK]: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.GENERIC,
 })
 
+const HERO_MEDIA_KINDS = new Set([
+  MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+  MAP_PLACE_MEDIA_KIND.GENERATED_RECONSTRUCTION,
+  MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
+])
+
 const MEDIA_PRESENTATION_COPY = Object.freeze({
   [MAP_PLACE_MEDIA_KIND.EXACT_PHOTO]: Object.freeze({
     labelZh: '地点实景',
@@ -136,6 +142,7 @@ const licensedPhoto = ({
   licenseId,
   licenseUrl,
   sourceSha256,
+  attributionRequired = licenseId !== 'CC0' && licenseId !== 'Public domain',
   accessedAt = '2026-08-15',
   reviewedAt = '2026-08-15',
   sourceArchiveBatch = 'map-place-media-pilot-20260815',
@@ -160,7 +167,7 @@ const licensedPhoto = ({
     creator,
     licenseId,
     licenseUrl,
-    attributionRequired: licenseId !== 'CC0',
+    attributionRequired,
     accessedAt,
     sourceSha256,
     changesZh: '已裁切为 16:9 并转换为 WebP，未进行生成式修改。',
@@ -554,7 +561,8 @@ const MAP_PLACE_MEDIA_EXPANSION_20260822 = [
   {
     id: 'map-media-seoul-gangnam-station-hero-v1',
     placeId: 'seoul-gangnam-station',
-    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-gangnam-station-hero-v1.webp',
     runtimeSha256: '6b8487d656929b3d78048b375b330abe53fd4b8f047e6284b32bdbeff2ded9c7',
     altZh: '江南站地铁月台与屏蔽门',
@@ -568,6 +576,7 @@ const MAP_PLACE_MEDIA_EXPANSION_20260822 = [
   {
     id: 'map-media-seoul-express-bus-terminal-hero-v1',
     placeId: 'seoul-express-bus-terminal',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
     kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-express-bus-terminal-hero-v1.webp',
     runtimeSha256: '40b7dc465c3f0c6e10c1f046ee0ae539ff1bd86a3e35330e2606988af55c7b45',
@@ -610,7 +619,8 @@ const MAP_PLACE_MEDIA_EXPANSION_20260822 = [
   {
     id: 'map-media-seoul-national-museum-hero-v1',
     placeId: 'seoul-national-museum',
-    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-national-museum-hero-v1.webp',
     runtimeSha256: '31c1673aec68721bd32960363eff0517266de6520f46154cb9c3cc14516f2450',
     altZh: '国立中央博物馆建筑、镜池与亭子',
@@ -624,7 +634,8 @@ const MAP_PLACE_MEDIA_EXPANSION_20260822 = [
   {
     id: 'map-media-seoul-times-square-hero-v1',
     placeId: 'seoul-times-square',
-    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-times-square-hero-v1.webp',
     runtimeSha256: '84bce3293d8ca1c6303be149fbd3166a158dbc217564d8846b9bbc295dd345a0',
     altZh: '永登浦时代广场购物中心中庭',
@@ -638,6 +649,7 @@ const MAP_PLACE_MEDIA_EXPANSION_20260822 = [
   {
     id: 'map-media-seoul-lotte-department-main-hero-v1',
     placeId: 'seoul-lotte-department-main',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
     kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-lotte-department-main-hero-v1.webp',
     runtimeSha256: '67be6208a9404f8f5406a95b1fba742c8f54ce5e2692fb1e8c74d2a9577853da',
@@ -652,6 +664,7 @@ const MAP_PLACE_MEDIA_EXPANSION_20260822 = [
   {
     id: 'map-media-seoul-hyundai-apgujeong-main-hero-v1',
     placeId: 'seoul-hyundai-apgujeong-main',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
     kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-hyundai-apgujeong-main-hero-v1.webp',
     runtimeSha256: '77321cba43fc0aaa9406a434a4972aed4a718147eb5feec55882203ee8ed4e5c',
@@ -684,9 +697,153 @@ const MAP_PLACE_MEDIA_EXPANSION_20260822 = [
   sourceArchiveBatch: 'map-place-media-reviewed-10-20260822',
 }))
 
+const MAP_PLACE_MEDIA_GALLERY_EXPANSION_20260822 = [
+  {
+    id: 'map-media-seoul-gimpo-airport-gallery-01-v1',
+    placeId: 'seoul-gimpo-airport',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
+    filename: 'seoul-gimpo-airport-gallery-01-v1.webp',
+    runtimeSha256: '6975838a68c5cb1d5855a24432abae90ab399b35eb51e926ed495ba995d616c9',
+    altZh: '金浦国际机场停机坪、登机桥与地勤车辆',
+    altEn: 'Apron, jet bridges, and ground vehicles at Gimpo International Airport',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Gimpo-International-apron.JPG',
+    creator: 'Magicsgram',
+    licenseId: 'CC BY-SA 3.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+    sourceSha256: '81b42378ba0f3426ca51db057b39821f79f4d05df978e6b6d6c8aa63b1be6172',
+  },
+  {
+    id: 'map-media-seoul-gangnam-station-gallery-03-v1',
+    placeId: 'seoul-gangnam-station',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-gangnam-station-gallery-03-v1.webp',
+    runtimeSha256: 'cc532ff323c6baff8bcd7305de8f2262baacbc717d8003819c53e7fde02938e9',
+    altZh: '江南站地铁月台、站名牌与屏蔽门',
+    altEn: 'Platform, station sign, and screen doors inside Gangnam Station',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Seoul-metro-222-Gangnam-station-platform-20181121-142854.jpg',
+    creator: 'LERK',
+    licenseId: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    sourceSha256: '74d87769fe123b5f16e3826a5b88631f8d40ae573d719e323623ef7f975f884c',
+  },
+  {
+    id: 'map-media-seoul-express-bus-terminal-gallery-03-v1',
+    placeId: 'seoul-express-bus-terminal',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-express-bus-terminal-gallery-03-v1.webp',
+    runtimeSha256: '6ba2c44e0df9c22ba98ebdac2c02e7812b4cceb207cf521c8d20d5490fb5f446',
+    altZh: '高速客运站地铁月台与换乘通道',
+    altEn: 'Subway platform and transfer passage at Express Bus Terminal Station',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Seoul-metro-339-Express-bus-terminal-station-platform-20181123-133652.jpg',
+    creator: 'LERK',
+    licenseId: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    sourceSha256: '9f2195ca7ec7a68791c482006d9ddaadaede8f033b447aa9d9bc650c8e9424a6',
+  },
+  {
+    id: 'map-media-seoul-yongsan-station-gallery-06-v1',
+    placeId: 'seoul-yongsan-station',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-yongsan-station-gallery-06-v1.webp',
+    runtimeSha256: '4d379c1ae24706367778409d1517f4953cd372701e895143442376ac7d84a056',
+    altZh: '夜间的龙山站入口与站名灯牌',
+    altEn: 'Yongsan Station entrance and illuminated station sign at night',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Yongsan_Station_20230408_006.jpg',
+    creator: 'Mobius6',
+    licenseId: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    sourceSha256: 'b4c2124d70f952c7d996035d0577dcaa21a477cd2e6ae1a22bfdbd638c0766eb',
+  },
+  {
+    id: 'map-media-seoul-63-square-gallery-02-v1',
+    placeId: 'seoul-63-square',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
+    filename: 'seoul-63-square-gallery-02-v1.webp',
+    runtimeSha256: '380a480d266ebd70fc2ad695a12fd3164f4d397372768b2ced3b96135786341c',
+    altZh: '隔汉江远望六三大厦与周边天际线',
+    altEn: '63 Building and surrounding skyline viewed across the Han River',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:63_Building_-_panoramio.jpg',
+    creator: 'Maris Teteris',
+    licenseId: 'CC BY 3.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
+    sourceSha256: '4746da24cdb14a7e0f2adb4eb0a488ef672456d7367b9207b1dd851a6ee56674',
+  },
+  {
+    id: 'map-media-seoul-national-museum-gallery-03-v1',
+    placeId: 'seoul-national-museum',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-national-museum-gallery-03-v1.webp',
+    runtimeSha256: '31b9307e75098dd0b6243e4d6d52177a2c3a0a8376020ccc9075203df449576d',
+    altZh: '国立中央博物馆主建筑与入口广场',
+    altEn: 'Main building and entrance plaza of the National Museum of Korea',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Exterior_of_the_National_Museum_of_Korea_in_Seoul.jpg',
+    creator: 'Ethan Doyle White',
+    licenseId: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    sourceSha256: 'a65b7e514c10a5ea8007919a0abf60c7913320a4ce917439c43c34562d818d1b',
+  },
+  {
+    id: 'map-media-seoul-lotte-department-main-gallery-02-v1',
+    placeId: 'seoul-lotte-department-main',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-lotte-department-main-gallery-02-v1.webp',
+    runtimeSha256: '8e0124a405a0c1fc00042096c558f6986d97877e7bb2a601d579326e2927026f',
+    altZh: '乐天百货本店与 AVENUEL 外立面',
+    altEn: 'Lotte Department Store Main and AVENUEL exterior',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Lotte_Department_Main_Store.JPG',
+    creator: 'Abasaa',
+    licenseId: 'Public domain',
+    licenseUrl: 'https://commons.wikimedia.org/wiki/Commons:Copyright_tags#Public_domain',
+    sourceSha256: '9c5e49d048dca4db2d55a449b053d5d0003fabae4d4c89f95ea0fec3e2e3c1a2',
+  },
+  {
+    id: 'map-media-seoul-olympic-park-gallery-06-v1',
+    placeId: 'seoul-olympic-park',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-olympic-park-gallery-06-v1.webp',
+    runtimeSha256: 'cacb2ffdfe68ead7660c5bf03b6ee9cbe2caa0b70ab1e0cd434928aeb81f3e2d',
+    altZh: '从乐天世界塔俯瞰首尔奥林匹克公园',
+    altEn: 'Aerial view of Seoul Olympic Park from Lotte World Tower',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:Seoul_Olympic_Park_from_Lotte_World_Tower.jpg',
+    creator: 'Tristan Surtel',
+    licenseId: 'CC BY-SA 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+    sourceSha256: 'f49433d46c5d043b879fc9997d0a4a3e738bbec443be47e3aea9adbce2800069',
+  },
+  {
+    id: 'map-media-seoul-times-square-gallery-02-v1',
+    placeId: 'seoul-times-square',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-times-square-gallery-02-v1.webp',
+    runtimeSha256: 'dab075f1f2714f4ee20ad06c8177200876380fb02cf9df870e99b810c4ba5077',
+    altZh: '永登浦 Times Square 多层中庭与室内步行空间',
+    altEn: 'Multi-level atrium and indoor circulation space at Times Square Yeongdeungpo',
+    sourcePageUrl: 'https://commons.wikimedia.org/wiki/File:%EA%B2%BD%EB%B0%A9%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4_%EB%82%B4%EB%B6%80.jpg',
+    creator: 'Narubaru7',
+    licenseId: 'CC BY 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    sourceSha256: '4cfa30e690367e01832469f824fd84d7a05ac81bdeb5095d0db941e4672aeba9',
+  },
+].map((record) => licensedPhoto({
+  ...record,
+  accessedAt: '2026-08-22',
+  reviewedAt: '2026-08-22',
+  sourceArchiveBatch: 'map-place-media-reviewed-10-gallery-20260822',
+}))
+
 export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
   ...MAP_PLACE_MEDIA_BATCH_20260822,
   ...MAP_PLACE_MEDIA_EXPANSION_20260822,
+  ...MAP_PLACE_MEDIA_GALLERY_EXPANSION_20260822,
   licensedPhoto({
     id: 'map-media-seoul-gyeongbokgung-hero-v1',
     placeId: 'seoul-gyeongbokgung',
@@ -732,6 +889,7 @@ export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
   licensedPhoto({
     id: 'map-media-seoul-sm-hq-hero-v1',
     placeId: 'seoul-sm-hq',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
     kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-sm-hq-hero-v1.webp',
     runtimeSha256: 'dc86566f95d5c4a5e283b70cc6b82149c0fdd3af48cc7320cdb51ef4fd076a8a',
@@ -760,6 +918,7 @@ export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
   licensedPhoto({
     id: 'map-media-seoul-myeongdong-kyoja-main-hero-v1',
     placeId: 'seoul-myeongdong-kyoja-main',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
     kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-myeongdong-kyoja-main-hero-v1.webp',
     runtimeSha256: '06e64de8feb76cea09f50d7085de2140c042fddf2cba91e854ef8ed21bcd2578',
@@ -774,6 +933,7 @@ export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
   licensedPhoto({
     id: 'map-media-seoul-sillim-one-room-district-hero-v1',
     placeId: 'seoul-sillim-one-room-district',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
     kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
     filename: 'seoul-sillim-one-room-district-hero-v1.webp',
     runtimeSha256: '8f5277daf41a6a1f5164d3df16835bfe850b3d3f52c80577806cd3bae9d726c7',
@@ -806,7 +966,10 @@ export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
 
 const mediaByPlaceKey = new Map(
   MAP_PLACE_MEDIA_RECORDS
-    .filter((record) => record.slot === MAP_PLACE_MEDIA_SLOT.HERO)
+    .filter((record) => (
+      record.slot === MAP_PLACE_MEDIA_SLOT.HERO
+      && HERO_MEDIA_KINDS.has(record.kind)
+    ))
     .map((record) => [`${record.mapPackId}:${record.placeId}`, record]),
 )
 
@@ -838,6 +1001,15 @@ export const validateMapPlaceMediaRecord = (record) => {
   if (!Object.values(MAP_PLACE_MEDIA_KIND).includes(record.kind)) errors.push('kind')
   if (MEDIA_KIND_TO_GRADE[record.kind] !== record.authenticityGrade) errors.push('authenticity_grade')
   if (!record.labelZh || !record.labelEn || !record.noteZh || !record.noteEn) errors.push('presentation_copy')
+  if (record.slot === MAP_PLACE_MEDIA_SLOT.HERO && !HERO_MEDIA_KINDS.has(record.kind)) {
+    errors.push('hero_kind')
+  }
+  if (
+    record.kind === MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE
+    && record.slot !== MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY
+  ) {
+    errors.push('area_atmosphere_slot')
+  }
 
   if (record.kind === MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK) {
     if (record.slot !== MAP_PLACE_MEDIA_SLOT.HERO) errors.push('fallback_slot')

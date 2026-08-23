@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-22T17:18:54.119Z",
+  "updatedAt": "2026-08-22T21:28:13.803Z",
   "assets": [
     {
       "batchId": "migration-2026-08-11",
@@ -4623,6 +4623,18 @@
       "verifiedAt": "2026-08-11T19:35:50.055Z"
     },
     {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-63-square-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-63-square-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-63-square-gallery-02-v1.webp",
+      "bytes": 87068,
+      "sha256": "380a480d266ebd70fc2ad695a12fd3164f4d397372768b2ced3b96135786341c",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:35.851Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-63-square-hero-v1.webp",
       "aliasPaths": [],
@@ -4731,6 +4743,18 @@
       "verifiedAt": "2026-08-22T16:15:48.248Z"
     },
     {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-express-bus-terminal-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-express-bus-terminal-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-express-bus-terminal-gallery-03-v1.webp",
+      "bytes": 218676,
+      "sha256": "6ba2c44e0df9c22ba98ebdac2c02e7812b4cceb207cf521c8d20d5490fb5f446",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:36.145Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-express-bus-terminal-hero-v1.webp",
       "aliasPaths": [],
@@ -4755,6 +4779,18 @@
       "verifiedAt": "2026-08-15T05:53:15.046Z"
     },
     {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-gangnam-station-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gangnam-station-gallery-03-v1.webp",
+      "bytes": 204144,
+      "sha256": "cc532ff323c6baff8bcd7305de8f2262baacbc717d8003819c53e7fde02938e9",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:36.326Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-gangnam-station-hero-v1.webp",
       "aliasPaths": [],
@@ -4765,6 +4801,18 @@
       "sha256": "6b8487d656929b3d78048b375b330abe53fd4b8f047e6284b32bdbeff2ded9c7",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:44.017Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-gimpo-airport-gallery-01-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gimpo-airport-gallery-01-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-gimpo-airport-gallery-01-v1.webp",
+      "bytes": 115282,
+      "sha256": "6975838a68c5cb1d5855a24432abae90ab399b35eb51e926ed495ba995d616c9",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:35.412Z"
     },
     {
       "batchId": "map-place-media-reviewed-10-20260822",
@@ -4861,6 +4909,18 @@
       "sha256": "d4b89cd7394f2620fa120bcb0d7150661a08a128dcfb666c23342ce875704c4f",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T16:16:43.455Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-lotte-department-main-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-department-main-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-lotte-department-main-gallery-02-v1.webp",
+      "bytes": 177080,
+      "sha256": "8e0124a405a0c1fc00042096c558f6986d97877e7bb2a601d579326e2927026f",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:36.294Z"
     },
     {
       "batchId": "map-place-media-reviewed-10-20260822",
@@ -5019,6 +5079,18 @@
       "verifiedAt": "2026-08-22T16:16:52.729Z"
     },
     {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-national-museum-gallery-03-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-gallery-03-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-national-museum-gallery-03-v1.webp",
+      "bytes": 127064,
+      "sha256": "31b9307e75098dd0b6243e4d6d52177a2c3a0a8376020ccc9075203df449576d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:36.045Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-national-museum-hero-v1.webp",
       "aliasPaths": [],
@@ -5029,6 +5101,18 @@
       "sha256": "31c1673aec68721bd32960363eff0517266de6520f46154cb9c3cc14516f2450",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:42.339Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-olympic-park-gallery-06-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-olympic-park-gallery-06-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-olympic-park-gallery-06-v1.webp",
+      "bytes": 417050,
+      "sha256": "cacb2ffdfe68ead7660c5bf03b6ee9cbe2caa0b70ab1e0cd434928aeb81f3e2d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:36.378Z"
     },
     {
       "batchId": "map-place-media-reviewed-10-20260822",
@@ -5091,6 +5175,18 @@
       "verifiedAt": "2026-08-15T05:53:14.052Z"
     },
     {
+      "batchId": "map-place-media-times-square-gallery-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-times-square-gallery-02-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-times-square-gallery-02-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-times-square-gallery-02-v1.webp",
+      "bytes": 252764,
+      "sha256": "dab075f1f2714f4ee20ad06c8177200876380fb02cf9df870e99b810c4ba5077",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:28:13.790Z"
+    },
+    {
       "batchId": "map-place-media-reviewed-10-20260822",
       "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10/seoul-times-square-hero-v1.webp",
       "aliasPaths": [],
@@ -5101,6 +5197,18 @@
       "sha256": "84bce3293d8ca1c6303be149fbd3166a158dbc217564d8846b9bbc295dd345a0",
       "mimeType": "image/webp",
       "verifiedAt": "2026-08-22T17:18:47.811Z"
+    },
+    {
+      "batchId": "map-place-media-gallery-expansion-20260822",
+      "path": "output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-gallery/seoul-yongsan-station-gallery-06-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yongsan-station-gallery-06-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/apps/map/places/real-seoul-v1/seoul-yongsan-station-gallery-06-v1.webp",
+      "bytes": 135248,
+      "sha256": "4d379c1ae24706367778409d1517f4953cd372701e895143442376ac7d84a056",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-22T21:00:36.060Z"
     },
     {
       "batchId": "map-place-media-reviewed-10-20260822",

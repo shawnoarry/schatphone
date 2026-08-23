@@ -2,12 +2,13 @@
 
 Date: 2026-08-22
 
-Status: `10_HEROES_PUBLISHED / 7_EXACT_PHOTOS / 3_AREA_ATMOSPHERE`
+Status: `10_DERIVATIVES_PUBLISHED / 4_EXACT_HEROES / 6_DETAIL_ONLY_AREA_SLIDES / HERO_DETAIL_BOUNDARY_SUPERSEDED`
 
 ## Scope And Result
 
-This batch completes ten previously uncovered places from the reviewed 2026-08-21
-Wikimedia Commons source archive. Each original was matched to the Commons SHA-1,
+This batch published ten reviewed derivatives from the 2026-08-21 Wikimedia Commons
+source archive. The current media contract admits the four exact-place records as card
+heroes and confines the six area-atmosphere records to Place Details. Each original was matched to the Commons SHA-1,
 then EXIF-transposed, converted to sRGB, focal-cropped to `16:9`, and encoded as a
 `1600 x 900` WebP without a generative edit. The ten public runtime objects were
 uploaded to the project image bed and read back byte-for-byte with matching SHA-256.
@@ -21,14 +22,14 @@ the reviewed derivatives registered in `config/project-assets.json`.
 | Place ID | Truth | Review reason |
 | --- | --- | --- |
 | `seoul-gimpo-airport` | exact photo | source-identified airport check-in hall |
-| `seoul-gangnam-station` | exact photo | source-identified Gangnam Station platform |
+| `seoul-gangnam-station` | area atmosphere | detail-only station-area context; card uses category fallback |
 | `seoul-express-bus-terminal` | area atmosphere | terminal frontage and coach; avoids overstating a complete facade |
 | `seoul-yongsan-station` | exact photo | station exterior and name sign remain visible |
 | `seoul-63-square` | exact photo | 63 Building remains the clear recognition subject |
-| `seoul-national-museum` | exact photo | source title and image directly establish the museum |
-| `seoul-times-square` | exact photo | source title directly identifies the Yeongdeungpo Times Square interior |
-| `seoul-lotte-department-main` | area atmosphere | Euljiro/Lotte district view, not a precise storefront claim |
-| `seoul-hyundai-apgujeong-main` | area atmosphere | source-identified Mealtop cafe inside the store, not its facade |
+| `seoul-national-museum` | area atmosphere | detail-only museum-area context; card uses category fallback |
+| `seoul-times-square` | area atmosphere | detail-only interior context; card uses category fallback |
+| `seoul-lotte-department-main` | area atmosphere | detail-only Euljiro/Lotte district view, not a precise storefront claim |
+| `seoul-hyundai-apgujeong-main` | area atmosphere | detail-only source-identified Mealtop cafe, not the store facade |
 | `seoul-olympic-park` | exact photo | source-identified park landscape |
 
 ## Source And Runtime Audit
@@ -50,6 +51,10 @@ The machine-readable source pages, bilingual alt text, license links, source has
 and runtime hashes live in `src/lib/map-place-media.js`. The Git-ignored derivative
 audit is `output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-manifest.json`.
 
+This batch no longer implies that every derivative is a hero. Four exact photos satisfy
+card identity; six area photos supplement Place Details only. Additional reviewed slides
+are handled by `docs/qa/MAP_PLACE_MEDIA_GALLERY_EXPANSION_2026-08-22.md`.
+
 ## Validation
 
 - project image-bed readback: 10/10 objects, exact byte length and SHA-256;
@@ -58,5 +63,5 @@ audit is `output/imagegen/map-place-media-search-20260821/reviewed-runtime-10-ma
 - full Vitest: 303 files / 2173 tests;
 - desktop Chromium and simulated mobile Map media E2E: 2/2;
 - full ESLint, production build, and governance 14/14 pass;
-- direct screenshot review confirms the new exact and area images render inside the
-  pin-anchored card on desktop and mobile without horizontal overflow.
+- direct screenshot review confirms exact images render in the pin-anchored card while
+  area images appear only after opening Place Details, without horizontal overflow.
