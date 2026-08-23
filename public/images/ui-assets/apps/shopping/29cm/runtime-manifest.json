@@ -1,0 +1,639 @@
+{
+  "storefront": "29CM",
+  "serviceKey": "nova_digital",
+  "sourceIndex": "output/imagegen/shopping-29cm-product-grade/02-full-batch-20260822/manifests/final-master-index.json",
+  "acceptedMasterCount": 62,
+  "runtimeDerivativeCount": 63,
+  "records": [
+    {
+      "semanticId": "cm29-bedside-radio-context",
+      "sourceSha256": "19f45af7c541bec6530beb8325be82d9175c076d9c657e70bc0f67df44e2708d",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-bedside-radio-context.webp",
+      "runtimeSha256": "ff49426a88644c1955123f860848df46832803adcebbbe1b7e0314d75084bf0f",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 131888
+    },
+    {
+      "semanticId": "cm29-bedside-radio-detail",
+      "sourceSha256": "725acaef5d2f9a1b074da1f5edefce369871e99d8b46f30aabe20186fde78a0a",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-bedside-radio-detail.webp",
+      "runtimeSha256": "936d9f55ffb2664d8f23971ddb3797dbf3270ff866391b2ac4c57c6d81893091",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 119700
+    },
+    {
+      "semanticId": "cm29-bedside-radio-main",
+      "sourceSha256": "c5ea0a653087b91f8a307abc66a2b65704b9b1bf317e65486649e919afe61045",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-bedside-radio-main.webp",
+      "runtimeSha256": "302530e0690fef31a5797923bc6b5a8b63c1582c3fbe97597434aa8f8ae9471e",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 84482
+    },
+    {
+      "semanticId": "cm29-bedside-radio-owner-detail",
+      "sourceSha256": "0c314aa91ab3031afa500fba85ed2c8e159296e8e0853681880e6153325a74c7",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-bedside-radio-owner-detail.webp",
+      "runtimeSha256": "15d3878e4dcd4cab6b810432df0aa7511e54b2cfdba95a24d329b5702720fefd",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 101352
+    },
+    {
+      "semanticId": "cm29-bedside-radio-owner-scene",
+      "sourceSha256": "0afd72bf335d2eaaebb5ed5567a11d5648654a326565f299b88702d0acf2873b",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-bedside-radio-owner-scene.webp",
+      "runtimeSha256": "2581032208cedeb5b215651b0033a7c2bf6b9f2bde497d9dec073ec220008123",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 52162
+    },
+    {
+      "semanticId": "cm29-carry-on-context",
+      "sourceSha256": "faea0887312cd0ba18da96aaa72b8b641a974e9376a9335e897f6b67bef36401",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-carry-on-context.webp",
+      "runtimeSha256": "b76d976361c036ed2aca75e44b8752a4590a47e78237be28da2fd539202c56a5",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 49722
+    },
+    {
+      "semanticId": "cm29-carry-on-detail",
+      "sourceSha256": "288f2b4ce1de6b053247f07b448c99f5772ade3afad190d61bfcdcafb7b07d19",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-carry-on-detail.webp",
+      "runtimeSha256": "9d01357a2e146d37504cbb9983da666857c7470331bf799880d5d58eedeef77a",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 94578
+    },
+    {
+      "semanticId": "cm29-carry-on-main",
+      "sourceSha256": "0ad9e0923100246bf2db17f28d751b8b2e69f920da7c1d03fff9547a04904d7d",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-carry-on-main.webp",
+      "runtimeSha256": "7ad50dc22060e3781bb1ef46beca39208844ea071065086dad0fa647b0e03967",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 41114
+    },
+    {
+      "semanticId": "cm29-carry-on-owner-detail",
+      "sourceSha256": "f7d3e686ee0f57b8afa2b1b54d881b8600d4fe3fb86cbdd9b9d5a3a620a7449c",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-carry-on-owner-detail.webp",
+      "runtimeSha256": "223327765378dc63b130cdb08d7e495971e0e67689986c842c920f1c20d524fb",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 86558
+    },
+    {
+      "semanticId": "cm29-carry-on-owner-follow-up",
+      "sourceSha256": "befb0120d1bf2b19ae45209881ee96014c3963efc2a5949c0824b88c8d604824",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-carry-on-owner-follow-up.webp",
+      "runtimeSha256": "6f410b7847f42f189df8abe0928946c204965c8e25a0ebb1769cbb014e1f4f67",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 113726
+    },
+    {
+      "semanticId": "cm29-carry-on-owner-scene",
+      "sourceSha256": "3aea550d919dc8990d68996fa3fa4ff08d99203f7b14e257dc165cbfe3336395",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-carry-on-owner-scene.webp",
+      "runtimeSha256": "e9e7135e53b6d138b5067da187afeec60689103e32143f7ae859a27ac4c4a48d",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 67738
+    },
+    {
+      "semanticId": "cm29-digital-headphones-context",
+      "sourceSha256": "d6876722595843d21c1ae740d0250113549238ea75a726b2476178a5aae744ee",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-headphones-context.webp",
+      "runtimeSha256": "88b7641664f4a3fe0687627b5bb693afcb562ac61c95de9db0bf76fc8a6c7b86",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 67152
+    },
+    {
+      "semanticId": "cm29-digital-headphones-detail",
+      "sourceSha256": "19f80e10ec2ad30887ea9a3878ba7595798ab57e6c53ec59fbc3c09db9850b48",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-headphones-detail.webp",
+      "runtimeSha256": "076cd4560f0683fe7c3ecee9f97324f8ac9b8389f8b2d54608e8d728bb301d06",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 89994
+    },
+    {
+      "semanticId": "cm29-digital-headphones-main",
+      "sourceSha256": "80822d99cf0d6e7a5fb73581bc9d96cac9e38c58579ebd4b564ba725421518dc",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-headphones-main.webp",
+      "runtimeSha256": "e5de5322bcdb9da5bbd5c01483d7cf4db77163c0befde41a59c09fd262e6d307",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 97692
+    },
+    {
+      "semanticId": "cm29-digital-headphones-owner-detail",
+      "sourceSha256": "e305891652b645307074a83060e94ec6db55d35e23bdaf1c4ac699089faf5564",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-headphones-owner-detail.webp",
+      "runtimeSha256": "0dc43fb5853c9b9411fa29db48df5307bb0543f79bfafb4698466650bb7cee09",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 252424
+    },
+    {
+      "semanticId": "cm29-digital-headphones-owner-scene",
+      "sourceSha256": "1407e8693d58a33b237dc8225e0d1b9dcc1067e108f4611b0be7d19ef83a12d3",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-headphones-owner-scene.webp",
+      "runtimeSha256": "eef5c296e344c670c45661cb8310b20b4519b4b292a2cfaa10211b1985447a7d",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 147264
+    },
+    {
+      "semanticId": "cm29-digital-keyboard-context",
+      "sourceSha256": "e89ab03e3d067f22ba44db3d9abfed31f1d72676fbdb6b9ae5f112865dad3e62",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-keyboard-context.webp",
+      "runtimeSha256": "978eea4b50053d27e7499d8742939408044fb57bda3b19550ec348bfe5521aa5",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 193712
+    },
+    {
+      "semanticId": "cm29-digital-keyboard-detail",
+      "sourceSha256": "da1519e3deeb910691eca100c9968efde6f9d15c43d21211a02f50c72720de33",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-keyboard-detail.webp",
+      "runtimeSha256": "ec91fc7cfc955ffdf8ac1e11b7e6e005eaac5d885e63e26434190082a4bdbd77",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 113150
+    },
+    {
+      "semanticId": "cm29-digital-keyboard-main",
+      "sourceSha256": "18dcd0992a5c154b1a44c39e2769adfce69a5e220fd7115aa6d3c286c4abf334",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-keyboard-main.webp",
+      "runtimeSha256": "2676ce5fa13f9b0835e5c5d5ab35af4061f8ee443e3a47787beceefbe9082ef5",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 110530
+    },
+    {
+      "semanticId": "cm29-digital-keyboard-owner-detail",
+      "sourceSha256": "c31f6f6b1884d23f868e350ffc2d0bb4e4442349e0b25ab260b60ce743c6fcdd",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-keyboard-owner-detail.webp",
+      "runtimeSha256": "61b8f8385f9eb1fa11c6ed38e9a2dc662a828f3d25c02ea0fc986433aed4a60e",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 104604
+    },
+    {
+      "semanticId": "cm29-digital-keyboard-owner-follow-up",
+      "sourceSha256": "99c5f715e0814d2a011da754dfb8ec0992a8529f1f2eae56285fb173e3a3429f",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-keyboard-owner-follow-up.webp",
+      "runtimeSha256": "3d52da4d7b54af19f1754eb4af81b9932f20e6013dcff6c82fcbd525484c9d6b",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 168242
+    },
+    {
+      "semanticId": "cm29-digital-keyboard-owner-scene",
+      "sourceSha256": "91848b61a9f07b55f5954a9f0b4de834007cf622bc1eab181526315dd0a48176",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-keyboard-owner-scene.webp",
+      "runtimeSha256": "a1a1c625db11515fb6dc5aae9c10bde44406aecd4d99a3554073eed53a4b4945",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 146066
+    },
+    {
+      "semanticId": "cm29-digital-lens-context",
+      "sourceSha256": "84e194091705f72d0d6fa45496fe610c83c43aee6265e22df4eebfc3789e95c7",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-lens-context.webp",
+      "runtimeSha256": "7c780692bf930a3840a3589f7c2bacede2fcf72f97dc840d9c8e9055721f25d9",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 76852
+    },
+    {
+      "semanticId": "cm29-digital-lens-detail",
+      "sourceSha256": "58209979e304504beffc0b68bd5031a7cd2d01a0adfff1f1cd25489b43daa1e8",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-lens-detail.webp",
+      "runtimeSha256": "701440056e4ec1ec3936d387a7fd101f431087d522db025776d71f0b766dd854",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 65356
+    },
+    {
+      "semanticId": "cm29-digital-lens-main",
+      "sourceSha256": "eca296e1b11b33974e4cbcbca651ba70e71747e7af59c52a55ee1dc9bc06c3b0",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-lens-main.webp",
+      "runtimeSha256": "99396eaaee8188d8bef78c59d6b719ad33302f723dbcb5b2f3a452bf8c834d70",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 50484
+    },
+    {
+      "semanticId": "cm29-digital-lens-owner-detail",
+      "sourceSha256": "ca48cfcd6a56689a8ce60d00663383103eed84d6037e0cfb343e9f459ddf0ed0",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-lens-owner-detail.webp",
+      "runtimeSha256": "aa8ddd57d61b1d89886f14f963ccfc9fc1454337ffc62ee3bf49bd1aefce993c",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 102222
+    },
+    {
+      "semanticId": "cm29-digital-lens-owner-scene",
+      "sourceSha256": "e9e7b60f35cf0429dab15cf2543142ec3d506ab6499b19873d78eab0792266b2",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-lens-owner-scene.webp",
+      "runtimeSha256": "0c9f360b64cf457370c308915ede73c5369a6e4d09922d6b1ce636053739c893",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 83486
+    },
+    {
+      "semanticId": "cm29-digital-projector-context",
+      "sourceSha256": "4c7c857b0c6ba29ca940e093dae0e30a2e67915b7a2883ea0fce2b48dd396961",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-projector-context.webp",
+      "runtimeSha256": "4478670ffb4e7b6c6e9c35e75e40f3c6396ba105021f25f8056e2c5d7f9490cf",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 36546
+    },
+    {
+      "semanticId": "cm29-digital-projector-detail",
+      "sourceSha256": "ad1beb12d1a01426de8a1593dd7d5e302cf98a9ef538ced36d6fab75836e46b3",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-projector-detail.webp",
+      "runtimeSha256": "919d0077988ced8074b084e643dffeb3ed853409db02884f2ba6cbe35f862eb9",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 41038
+    },
+    {
+      "semanticId": "cm29-digital-projector-main",
+      "sourceSha256": "8348c9d303639dd9ade683b4f9adcb1374816e40191dc85356806ac3b1dbb3cb",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-digital-projector-main.webp",
+      "runtimeSha256": "0e0fc4aca0507f488f15ad3673e41e610edc18ca3d1ef1987dda797ee84361e4",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 56132
+    },
+    {
+      "semanticId": "cm29-digital-projector-owner-detail",
+      "sourceSha256": "f5c32834b7d6db480e159d7ea9f49e239f92b5166c62895e9dfaaaf305c76c5a",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-projector-owner-detail.webp",
+      "runtimeSha256": "d8eda4d17eb827c7e20e50ef52c3665b5c1c001eb953e3e49ce18a5bb402b122",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 113066
+    },
+    {
+      "semanticId": "cm29-digital-projector-owner-scene",
+      "sourceSha256": "2dcd40365a5fa19603f14301fb2f78f95024dd76704c29b507c877204f3131e6",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-digital-projector-owner-scene.webp",
+      "runtimeSha256": "63e8c2ad95893e4b1a3ad4b973f294d34721dd0ce22b19e99315cd66ac795472",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 43376
+    },
+    {
+      "semanticId": "cm29-editorial-departure-table",
+      "sourceSha256": "76d1a26375d5f36827b99e51f75cd39c4d912ae5baabc7dfad056ca41d048467",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/editorial/cm29-editorial-departure-table.webp",
+      "runtimeSha256": "072e3795a9be1e78d27d8bb40c297361dcf1fb9cdda226856321d3900ab6bbfb",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 73808
+    },
+    {
+      "semanticId": "cm29-editorial-desk-after-rain",
+      "sourceSha256": "cccaa49cf9d46ddb0de815fdba0e8e74db3f3d4f0c0d6e9196713a4cbd842022",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/editorial/cm29-editorial-desk-after-rain.webp",
+      "runtimeSha256": "fdd1dc8290ce926438f922efe6d46fc7c3d9e3bd4664a171f0ad04fc38932060",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 142158
+    },
+    {
+      "semanticId": "cm29-editorial-evening-wall",
+      "sourceSha256": "b8200dcc764aa85f67e1e73fa4610977e49b08e76be9b4abef3f4d847d774fe3",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/editorial/cm29-editorial-evening-wall.webp",
+      "runtimeSha256": "f28f4a72121b5140b750e4973d1e277565dbebb124182fea8569e40438412e53",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 49922
+    },
+    {
+      "semanticId": "cm29-fountain-pen-context",
+      "sourceSha256": "21262b1760a317526a7b98b7f5f10168ef3a234e9a08228a93eb985c1763ab56",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-fountain-pen-context.webp",
+      "runtimeSha256": "3823874c99994a867c248336c6afb06659293108c59aeaf8feb733c0665148e7",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 130370
+    },
+    {
+      "semanticId": "cm29-fountain-pen-detail",
+      "sourceSha256": "eedcb91effb98ad5232b2ecca90ff88a384628a478867de5faa2cbbc9d55b410",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-fountain-pen-detail.webp",
+      "runtimeSha256": "86033a64539e4ec164365d9be55a14ebd34ad76320baf5a07439b4aaad46e5eb",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 87492
+    },
+    {
+      "semanticId": "cm29-fountain-pen-main",
+      "sourceSha256": "1528f793b8329fb38271110925c898187b20ed2253de34673a129c7c0ccbd1e9",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-fountain-pen-main.webp",
+      "runtimeSha256": "33f46e7bbf5709782c124105decf884249fae0140cbd4d9b6b3bebd5faca040b",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 108868
+    },
+    {
+      "semanticId": "cm29-fountain-pen-owner-detail",
+      "sourceSha256": "f0032fe67221015c843e78fc1e70768d80052766344fb4466d41e13f13672589",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-fountain-pen-owner-detail.webp",
+      "runtimeSha256": "7151867acdea2dc3bd3ef6fdcf34718a2bed33a5318462d6843e82d118adec6c",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 160418
+    },
+    {
+      "semanticId": "cm29-fountain-pen-owner-scene",
+      "sourceSha256": "2a0594009a5493827613e9aaa8d18295172efffa9f47dac1879d74e1415a6609",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-fountain-pen-owner-scene.webp",
+      "runtimeSha256": "c7cb30eb03be07b56ded2620fc67b20f145d770392fb47cdd53c7f3e5f0ab249",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 91326
+    },
+    {
+      "semanticId": "cm29-issue-01-quiet-commute",
+      "sourceSha256": "6ae40f0c79053781c721f506a6692982d37561f696da2d9d2319c72187304207",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/issues/cm29-issue-01-quiet-commute.webp",
+      "runtimeSha256": "e306d5848931624a29e52e5efb4606f883c4c6bb9b5ef099f01730aa172487ea",
+      "width": 1024,
+      "height": 1365,
+      "frames": 1,
+      "bytes": 95494
+    },
+    {
+      "semanticId": "cm29-issue-02-listening-room",
+      "sourceSha256": "e7ef98c296d723df819807bd5a5edca703aace2bd34818380b12ccc4acc4da82",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/issues/cm29-issue-02-listening-room.webp",
+      "runtimeSha256": "1185497c96f5c924112275d01c9b971748a06b9282654984be967379bf8b3231",
+      "width": 1024,
+      "height": 1365,
+      "frames": 1,
+      "bytes": 116402
+    },
+    {
+      "semanticId": "cm29-issue-03-desk-ritual",
+      "sourceSha256": "52addcb3187ec153cfe2aef41a9e6b2faec14c0d9a5bfb4a8a9f375696dd2085",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/issues/cm29-issue-03-desk-ritual.webp",
+      "runtimeSha256": "2438bb3438174f9569d40827d3bc7fa7dfe8760ff00165d50e0c287330c7a662",
+      "width": 1024,
+      "height": 1365,
+      "frames": 1,
+      "bytes": 111126
+    },
+    {
+      "semanticId": "cm29-issue-04-objects-for-leaving",
+      "sourceSha256": "675fc593326e1dc6334be094f49a718bf1cd310a0b899ce3abbcf622dc040d05",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/issues/cm29-issue-04-objects-for-leaving.webp",
+      "runtimeSha256": "59125c086c67b3b0ae8262f0b1751fd8ddd8dd21d17b803aced3743f99691071",
+      "width": 1024,
+      "height": 1365,
+      "frames": 1,
+      "bytes": 67188
+    },
+    {
+      "semanticId": "cm29-letter-set-context",
+      "sourceSha256": "a43aed1c512fcbbd14e56d50a67030237cd56645109266b5eb829b2cf9bf941a",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-letter-set-context.webp",
+      "runtimeSha256": "9ed8808b14327cc773fced82083902307a566e83ae4471de069565be3ac1981a",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 107014
+    },
+    {
+      "semanticId": "cm29-letter-set-detail",
+      "sourceSha256": "287addf58831ac167afe7220fff13932de5c1344156cfe47b025d845460d4954",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-letter-set-detail.webp",
+      "runtimeSha256": "9480d7b1e46f8058609a696e21061873ede919f9b96d2df879b0db4f8d3a3611",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 98586
+    },
+    {
+      "semanticId": "cm29-letter-set-main",
+      "sourceSha256": "2c3174994322163c5f4928fcb18ead4595a54897a24dfb692383cbf43868b47c",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-letter-set-main.webp",
+      "runtimeSha256": "037a4880bd816a5301a84ad5f8e5fffab9cb453a3909b05bbbfd32a3a3732a56",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 78316
+    },
+    {
+      "semanticId": "cm29-letter-set-owner-detail",
+      "sourceSha256": "85e84e1917e3c97f3549be08ecdc89c0b29300b3becd5bfb119ebc89e9181d00",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-letter-set-owner-detail.webp",
+      "runtimeSha256": "4cbfa7d36b5a7b5bca833400e2a7e73654f7070ccc1f5fd6c7b9f0609fc811ff",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 130716
+    },
+    {
+      "semanticId": "cm29-letter-set-owner-scene",
+      "sourceSha256": "7d112d9386de8d6fb551ffd3663ed2181eaac0c4946337c99fcd9a8c0eb7654e",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-letter-set-owner-scene.webp",
+      "runtimeSha256": "f4fac02a465a626a8dfda0ea8845093f6bea02a7fe2eeff07c126164784a2f62",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 70380
+    },
+    {
+      "semanticId": "cm29-material-study-hard-surfaces",
+      "sourceSha256": "82f834243a6d167d9fece59136322f3417cbf91eefe156f6ef8a4f373e02f496",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/materials/cm29-material-study-hard-surfaces.webp",
+      "runtimeSha256": "9f86805e03406ca699f1480d55756aee4115e54fed2974151571c44c02e91ef3",
+      "width": 1365,
+      "height": 1024,
+      "frames": 1,
+      "bytes": 141948
+    },
+    {
+      "semanticId": "cm29-material-study-soft-records",
+      "sourceSha256": "a1c092c96d2ba633cbf4bdff6a174383485cc7432b73bb390e6915291a695852",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/materials/cm29-material-study-soft-records.webp",
+      "runtimeSha256": "b0b98731c5db9cd394f7d8a9d069e7795d76e219b99e7c02b2b93f22fc3f1210",
+      "width": 1365,
+      "height": 1024,
+      "frames": 1,
+      "bytes": 222592
+    },
+    {
+      "semanticId": "cm29-motion-light-across-objects",
+      "sourceSha256": "8b81ad563c39afa6f97a45ba322000ec888e9cd762287eeff02135cdc891d18a",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/motion/cm29-motion-light-across-objects.webp",
+      "runtimeSha256": "1f787b6f5ac397b1ee66c9e93b151157f50912c5ab3300cde9ae758cd0d6b4b3",
+      "width": 768,
+      "height": 512,
+      "frames": 36,
+      "bytes": 179582
+    },
+    {
+      "semanticId": "cm29-motion-light-across-objects-poster",
+      "sourceSha256": "556d35cbf9a10430ca82e998509b680a2c160d3281812510fddbc3b6f2e9e43b",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/motion/cm29-motion-light-across-objects-poster.webp",
+      "runtimeSha256": "edd240dc1157cf293a21699a83cf60ea240ca845806bc10224da15998b84520c",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 75116
+    },
+    {
+      "semanticId": "cm29-state-empty-archive",
+      "sourceSha256": "9a5b55b7bc8c91e46804e4665daf6a2b3de427a6bbb20e6e527c782849e04494",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/states/cm29-state-empty-archive.webp",
+      "runtimeSha256": "a93c41d954418348b9dccd2245d68710c685d28d648104de24629b2dcb3903cb",
+      "width": 1024,
+      "height": 1024,
+      "frames": 1,
+      "bytes": 130722
+    },
+    {
+      "semanticId": "cm29-state-empty-bag",
+      "sourceSha256": "fd3144b7e04da6276e91a8be202cb6ca40948e7da136026572c99a3988cb33c7",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/states/cm29-state-empty-bag.webp",
+      "runtimeSha256": "9f67fd195a07b367ce7a9944d678680ee3c3afd8de54cbf16d6436ac0689128a",
+      "width": 1024,
+      "height": 1024,
+      "frames": 1,
+      "bytes": 115530
+    },
+    {
+      "semanticId": "cm29-state-empty-collection",
+      "sourceSha256": "0e850c9be6a301a13b1bc3619de3cd7bf58bfb358cd3a6f7314a564e8ff11c34",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/states/cm29-state-empty-collection.webp",
+      "runtimeSha256": "ce0559cf9177630f759d1cc32b2b25a66ff41e14a363ebb8f420a152fd3f328c",
+      "width": 1024,
+      "height": 1024,
+      "frames": 1,
+      "bytes": 94898
+    },
+    {
+      "semanticId": "cm29-state-offline-media",
+      "sourceSha256": "4f54aed5ca4bf0b711d59b5bda0f5fd1b558f448dfa1af5caff66a140e3d1fbb",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/states/cm29-state-offline-media.webp",
+      "runtimeSha256": "e47ab123ae335981e06a8fd18b0bc1fcc2f5aa7d64955a78854c73e86dea8924",
+      "width": 1024,
+      "height": 1024,
+      "frames": 1,
+      "bytes": 132016
+    },
+    {
+      "semanticId": "cm29-stone-tray-context",
+      "sourceSha256": "f86b5d1d02e69c0161d31a533531aae1198b659dc45a9a191d945eba1db3e708",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-stone-tray-context.webp",
+      "runtimeSha256": "04ce11c56bf16f9f0a1b0297ef620b0cf1be558d54a627ea54e1c31f4dbbfb09",
+      "width": 1440,
+      "height": 960,
+      "frames": 1,
+      "bytes": 73348
+    },
+    {
+      "semanticId": "cm29-stone-tray-detail",
+      "sourceSha256": "cf1424e9cd03f5ad57fcca9a5ec45ccaaaeb07adfa961dcd5459a0094a844daf",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-stone-tray-detail.webp",
+      "runtimeSha256": "9754001d3e210b582bf550774e26a527a563b5bbb02a543c0164781aa73f8576",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 97010
+    },
+    {
+      "semanticId": "cm29-stone-tray-main",
+      "sourceSha256": "5b33add24ba72a9129e77a6fd4d0706ae34518cf176e6a8973961510d3637c1a",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/products/cm29-stone-tray-main.webp",
+      "runtimeSha256": "ba052e0b028d635be8dc8dabd5d83c3a4f1481c4f52e86b252a6b3ffe52efbb7",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 83098
+    },
+    {
+      "semanticId": "cm29-stone-tray-owner-detail",
+      "sourceSha256": "b0ecfa2d14eca4a7170f799c13733ce796b2a064021282bd3b11b2b2fc57d212",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-stone-tray-owner-detail.webp",
+      "runtimeSha256": "16841b5ddf0d63ccd2095541ccc6e54e60db48eb6391be22589bdc85020912de",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 141792
+    },
+    {
+      "semanticId": "cm29-stone-tray-owner-follow-up",
+      "sourceSha256": "573833f3e9954d7b5940eca7dff35de29956096d8e1a4ca0686355471b14341d",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-stone-tray-owner-follow-up.webp",
+      "runtimeSha256": "6a7fcd30e897a7e99f2a2bb158fb85bc8c0a4101f3a87bcf52af5b76f1beb5ba",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 97162
+    },
+    {
+      "semanticId": "cm29-stone-tray-owner-scene",
+      "sourceSha256": "9869487bb4ea431ea9093b3724cdf557c397006fca1e080b0713219652ad3cb5",
+      "runtimePath": "images/ui-assets/apps/shopping/29cm/owners/cm29-stone-tray-owner-scene.webp",
+      "runtimeSha256": "24a2a1e3a4582cfbb84c0e38fbc7a53e58f635b30c25bd5dceac39a0270852cc",
+      "width": 1024,
+      "height": 1280,
+      "frames": 1,
+      "bytes": 114244
+    }
+  ]
+}

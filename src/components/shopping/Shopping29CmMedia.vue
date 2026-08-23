@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
-defineProps({
+const props = defineProps({
   src: { type: String, default: '' },
   alt: { type: String, default: '' },
   eyebrow: { type: String, default: '29CM / MEDIA SLOT' },
@@ -9,9 +9,11 @@ defineProps({
   tone: { type: String, default: 'stone' },
   role: { type: String, default: 'object' },
   icon: { type: String, default: 'fas fa-cube' },
+  loading: { type: String, default: 'lazy' },
 })
 
 const failed = ref(false)
+watch(() => props.src, () => { failed.value = false })
 </script>
 
 <template>
@@ -20,7 +22,8 @@ const failed = ref(false)
       v-if="src && !failed"
       :src="src"
       :alt="alt"
-      loading="lazy"
+      :loading="loading"
+      decoding="async"
       @error="failed = true"
     />
     <div v-else class="cm-media-fallback" aria-hidden="true">

@@ -59,7 +59,7 @@ describe('ShoppingView multi-page storefront contract', () => {
     wrapper.unmount()
   })
 
-  test('uses independent page vocabulary for editorial storefronts', async () => {
+  test('keeps an independent 29CM shell with ordinary shopping vocabulary', async () => {
     const store = useShoppingStore()
     store.resetForTesting()
     const product = store.upsertProduct({ id: 'route_product_29cm', serviceKey: 'nova_digital', title: 'Editorial Object', category: 'digital', price: '128.00' })
@@ -72,7 +72,8 @@ describe('ShoppingView multi-page storefront contract', () => {
     await flushPromises()
     expect(router.currentRoute.value.query.shopView).toBe('bag')
     expect(wrapper.get('[data-testid="shopping-store-operation-page"]').classes()).toContain('cm-ops')
-    expect(wrapper.get('#shopping-cart').text()).toContain('CONSIDERED OBJECTS')
+    expect(wrapper.get('#shopping-cart').text()).toContain('SHOPPING BAG')
+    expect(wrapper.get('#shopping-cart').text()).not.toContain('CONSIDERED OBJECTS')
     wrapper.unmount()
   })
 

@@ -1,10 +1,12 @@
 # Shopping 29CM Product-Grade Execution Brief
 
-Status: `EXECUTION_READY / LUNA MAX`
+Status: `RUNTIME_INTEGRATED / ACCEPTED_MEDIA_CONNECTED`
 Prepared: 2026-08-22
 Executor: Luna Max
 Product lead and final reviewer: Codex
 Target storefront: 29CM / `nova_digital` / `tech_catalog`
+
+Completion update, 2026-08-22: the user accepted all 62 masters through the grouped contact sheets. The accepted media now ships as 63 optimized runtime derivatives, including the motion poster, with a project-owned hash manifest. Home, Collection/Search, all nine PDPs, `OWNERS' NOTES`, and downstream 29CM transaction/state pages use the semantic media contract. Full lint, 303 Vitest files / 2187 tests, production build, and the desktop/mobile Shopping storefront E2E gate pass.
 
 ## 1. Authority And Purpose
 
@@ -35,7 +37,7 @@ Create a complete “quiet editorial commerce” experience around fictional obj
 ### 2.2 In Scope
 
 - Recompose the 29CM Home, collection/search, PDP, Bag, Checkout, Orders, Order Detail, Delivery Journal, and Object Care pages.
-- Generate, review, publish, and integrate one focused first-release media pack of 41 creative masters.
+- Generate, review, publish, and integrate one focused first-release media pack of 62 creative masters, including 21 owner-review images for the future `OWNERS' NOTES` surface.
 - Add storefront-specific loading, empty, error, offline, and media-failure states.
 - Refine responsive composition, accessibility, motion, reduced motion, and missing-media fallbacks.
 - Add or update focused tests and visual evidence required by the changed route family.
@@ -48,7 +50,8 @@ Create a complete “quiet editorial commerce” experience around fictional obj
 - Changing Shopping persistence schema, product IDs, service IDs, order IDs, Wallet money contracts, or backup semantics.
 - Creating cross-store carts, mixed checkout, a Shopping aggregate hub, or an in-app storefront switcher.
 - Importing official 29CM campaigns, catalog, product images, advertisements, prices, copy, or logos into generated media.
-- Claiming official affiliation, current official services, delivery promises, designers, specifications, reviews, rankings, or endorsements.
+- Claiming official affiliation, current official services, delivery promises, designers, specifications, real-world reviews, rankings, or endorsements.
+- Treating seeded fictional owner notes as real-user endorsements, or building moderation, merchant-reply, social-follow, or cross-store review aggregation in this slice.
 - Completing the long-term 135-slot 29CM library in this slice.
 
 ### 2.4 Completion Acceptance
@@ -57,9 +60,9 @@ The work is complete only when all conditions below are true:
 
 1. Every route family has a distinct 29CM information hierarchy, not only matching colors.
 2. Home, collection/search, and PDP form one continuous editorial-to-commerce journey.
-3. All nine stable products have accepted main, detail, and context media.
+3. All nine stable products have accepted main, detail, context, owner-scene, and owner-detail media; keyboard, stone tray, and carry-on also have one accepted owner follow-up image each.
 4. Price, inventory, quantity, delivery facts, order status, controls, and localized variable copy remain code-native.
-5. The 41-master pack is reviewed through contact sheets before runtime promotion.
+5. The 62-master pack is reviewed through role-specific contact sheets before runtime promotion.
 6. Missing or failed media leaves every route usable and visually intentional.
 7. `zh-CN` and `en-US` remain accurate and do not mutate persisted user-authored records.
 8. Mobile and wide layouts pass visual review without horizontal overflow, clipped controls, or illegible text.
@@ -73,8 +76,9 @@ The work is complete only when all conditions below are true:
 | --- | --- | --- |
 | Template regression | Reusing generic hero, tabs, cards, and order panels with new colors | Design each page from 29CM’s product thesis and route purpose; do not export a shared facade |
 | Media-first decoration | Images look attractive but do not improve navigation or product understanding | Freeze IA and media roles before generating finals |
-| Premature batch generation | Forty-one finals are produced before direction is accepted | Stop at Gate B and Gate C for review |
-| Baked commerce truth | Price, discount, stock, buttons, ranking, delivery, or localized copy appears inside images | Keep generated media text-free except explicitly approved fixed editorial marks |
+| Uncontrolled batch publication | A large candidate batch is mistaken for accepted runtime media before the commerce, editorial, and owner-review roles are reviewed together | Allow dependency-wave candidate generation when explicitly authorized, but keep runtime publication behind consolidated contact-sheet review |
+| False community polish | Buyer-show media looks like another campaign shoot or carries fake social proof | Keep owner media visibly personal, text-free, and separate from code-rendered review identity, rating, and copy |
+| Baked commerce truth | Price, discount, stock, buttons, ranking, delivery, or other changing commerce facts appear inside images | Permit approved fixed fictional campaign copy, but keep changing facts and interactive commands code-native |
 | Brand copying | Official layouts, campaigns, products, logos, or visual assets are reproduced | Use real brands only as reference grammar; all content remains fictional |
 | Product inconsistency | The same fictional product changes form, color, material, or proportions across images | Freeze a product visual bible after calibration and use accepted main images as references |
 | Runtime/publishing drift | Accepted candidates differ from published derivatives or registry paths | Hash, compare, and record every promoted derivative |
@@ -322,15 +326,20 @@ Create an authored edition, not a storefront banner followed by a catalog.
    - Use the context image to show scale and use without inventing people-dependent claims.
 7. **Care**
    - Practical maintenance and storage guidance; link to Object Care.
-8. **Delivery and return facts**
+8. **Owners' Notes**
+   - Show a code-rendered review summary, common-use tags, and a small strip of accepted owner-review media.
+   - Owner photos are a third photographic mode, not alternate product mains or reused editorial context images.
+   - Seeded notes must be explicitly fictional SchatPhone world data; verified-purchase language is allowed only when linked to a Shopping-owned completed order.
+9. **Delivery and return facts**
    - Show only existing Shopping truth or neutral “confirmed at review” language.
-9. **Related objects**
+10. **Related objects**
    - Three to four items selected by explicit category/material logic.
    - Use media-led compact rows, not the same Home card component.
 
 ### PDP Continuity
 
 - Every product’s main, detail, and context images must depict the same object identity.
+- Owner-scene, owner-detail, and owner-follow-up images must preserve that identity while allowing personal framing, ordinary phone-camera exposure, natural clutter, and minor composition imperfection.
 - Preserve the collection/Issue source in navigation and return behavior where the current route contract permits.
 - Add-to-Bag confirmation should be a restrained bottom confirmation or inline state, not a blocking modal.
 - Long content must not push the purchase action off-screen without a recovery path.
@@ -488,8 +497,11 @@ Orange must not become a background default. Use it to locate action and editori
 - Prefer believable studio still life, tactile surfaces, natural shadows, and restrained modern-Seoul interiors.
 - Avoid glossy CGI, floating objects, impossible reflections, luxury clichés, and excessive orange props.
 - Preserve product shape and color across main/detail/context images.
-- Use text-free media by default.
-- Do not render fake labels, specifications, logos, prices, barcodes, or UI into product photography.
+- Product main/detail/context and owner-review media are normally advertising-free, but functional product markings that define the object are required where appropriate, such as coherent keyboard legends or control symbols.
+- Issue covers, campaign posters, editorial advertisements, and fixed brand-story graphics may bake exact approved fictional English, Chinese, or Korean campaign copy into the image when typography is part of the composition. English and Chinese are the default display languages for art-directed advertising because they better support the intended visual range; Korean is a selective world-building accent reserved for a minority of covers, labels, or micro-copy rather than a requirement for every Seoul-set campaign.
+- Record every baked string and language in prompt metadata, proofread it at full resolution, and generate language-specific variants when the campaign must localize; one raster asset must not pretend to translate dynamically.
+- Prices, discounts, inventory, delivery claims, ratings, specifications, review identity, interactive CTAs, and other changing commerce truth remain code-rendered even when the surrounding campaign art contains fixed copy.
+- Do not render fake labels, unapproved specifications, copied logos, barcodes, social-app chrome, or UI controls into product photography.
 
 ## 10. Motion System
 
@@ -520,7 +532,7 @@ Under `prefers-reduced-motion: reduce`:
 - remove non-essential transforms and smooth scrolling;
 - retain visible focus, selected state, and section position.
 
-## 11. Exact First-Release Media Manifest — 41 Masters
+## 11. Exact First-Release Media Manifest — 62 Masters
 
 All names below are semantic master IDs. Final file extensions and content hashes follow the project asset workflow.
 
@@ -559,7 +571,42 @@ Preferred ratios:
 - Detail: `1:1` or `4:5` according to the physical feature.
 - Context: `3:2`, with a mobile-safe `4:5` focal crop recorded in metadata.
 
-### 11.3 Collection And Editorial Images — 3
+### 11.3 Owner Review Media — 21
+
+Owner-review media is a separate community photographic mode. It may share the accepted product visual bible, but it must not reuse the polished lighting, exact framing, or controlled-set grammar of `main` and `context` media.
+
+Every stable product receives:
+
+- `owner-scene`: a believable personal-space image with the object naturally used or stored;
+- `owner-detail`: a closer phone-camera view of one practical interaction, surface, fit, or after-use condition;
+- `owner-follow-up`: one additional longer-use or post-trip image for keyboard, stone tray, and carry-on only.
+
+| Product ID | Owner Scene | Owner Detail | Owner Follow-Up |
+| --- | --- | --- | --- |
+| `shopping_seed_digital_lens` | `cm29-digital-lens-owner-scene` | `cm29-digital-lens-owner-detail` | — |
+| `shopping_seed_digital_headphones` | `cm29-digital-headphones-owner-scene` | `cm29-digital-headphones-owner-detail` | — |
+| `shopping_seed_digital_projector` | `cm29-digital-projector-owner-scene` | `cm29-digital-projector-owner-detail` | — |
+| `shopping_seed_digital_keyboard` | `cm29-digital-keyboard-owner-scene` | `cm29-digital-keyboard-owner-detail` | `cm29-digital-keyboard-owner-follow-up` |
+| `shopping_seed_nova_bedside_radio` | `cm29-bedside-radio-owner-scene` | `cm29-bedside-radio-owner-detail` | — |
+| `shopping_seed_nova_stone_tray` | `cm29-stone-tray-owner-scene` | `cm29-stone-tray-owner-detail` | `cm29-stone-tray-owner-follow-up` |
+| `shopping_seed_nova_letter_set` | `cm29-letter-set-owner-scene` | `cm29-letter-set-owner-detail` | — |
+| `shopping_seed_nova_carry_on` | `cm29-carry-on-owner-scene` | `cm29-carry-on-owner-detail` | `cm29-carry-on-owner-follow-up` |
+| `shopping_seed_nova_fountain_pen` | `cm29-fountain-pen-owner-scene` | `cm29-fountain-pen-owner-detail` | — |
+
+Preferred ratios:
+
+- Owner scene: native phone-photo portrait, normally `4:5` or `3:4`.
+- Owner detail: `1:1`, `4:5`, or `3:4` according to the practical subject; preserve the uncropped master ratio in metadata.
+- Owner follow-up: `4:5` preferred, with visibly different time, placement, or after-use condition from the first owner scene.
+
+Owner-review image rules:
+
+- Preserve the approved product identity, but allow ordinary placement, imperfect centering, mixed household light, subtle phone-camera noise, and personal surroundings.
+- Do not fake screenshots, usernames, ratings, timestamps, purchase badges, review text, or social-app chrome inside the bitmap.
+- Do not include recognizable faces, private documents, addresses, phone numbers, reflections of the photographer, or readable third-party branding.
+- Review identity, rating, variant, use duration, verified-purchase status, and written copy are code-rendered records, never inferred from the image.
+
+### 11.4 Collection And Editorial Images — 3
 
 | ID | Ratio | Direction | Use |
 | --- | --- | --- | --- |
@@ -567,7 +614,7 @@ Preferred ratios:
 | `cm29-editorial-evening-wall` | `3:2` | Projector glow, headphones, tray; quiet apartment wall | Listening collection |
 | `cm29-editorial-departure-table` | `3:2` | Carry-on, lens, letter set; leaving-home ritual | Travel/gift collection |
 
-### 11.4 Material Study Boards — 2
+### 11.5 Material Study Boards — 2
 
 | ID | Ratio | Direction | Use |
 | --- | --- | --- | --- |
@@ -576,7 +623,7 @@ Preferred ratios:
 
 The boards must not contain fake test results, dimensions, labels, or certificates.
 
-### 11.5 Branded State Illustrations — 4
+### 11.6 Branded State Illustrations — 4
 
 | ID | Ratio | State |
 | --- | --- | --- |
@@ -587,7 +634,7 @@ The boards must not contain fake test results, dimensions, labels, or certificat
 
 Use original abstract illustration with paper, ink, line, and one orange locating mark. No embedded explanatory text.
 
-### 11.6 Restrained Motion Loop — 1
+### 11.7 Restrained Motion Loop — 1
 
 | ID | Format | Direction | Use |
 | --- | --- | --- | --- |
@@ -686,9 +733,10 @@ Recommended structure:
 01-calibration/
 02-anchor-products/
 03-product-families/
-04-editorial/
-05-states/
-06-motion/
+04-owner-notes/
+05-editorial/
+06-states/
+07-motion/
 contact-sheets/
 manifests/
 acceptance/
@@ -703,6 +751,7 @@ Use project image-bed paths following existing project conventions, under a 29CM
 ```text
 images/ui-assets/apps/shopping/29cm/issues/
 images/ui-assets/apps/shopping/29cm/products/
+images/ui-assets/apps/shopping/29cm/reviews/
 images/ui-assets/apps/shopping/29cm/editorial/
 images/ui-assets/apps/shopping/29cm/materials/
 images/ui-assets/apps/shopping/29cm/states/
@@ -726,20 +775,24 @@ For every accepted master record:
 - alt-text intent in `zh-CN` and `en-US` where the image is meaningful;
 - focal point and crop-safe notes;
 - whether the image is decorative or content-bearing.
+- media mode: `commerce`, `editorial`, or `owner-review`;
+- for owner-review media, the fictional review fixture ID, privacy audit result, and confirmation that no review identity or rating is baked into the bitmap.
 
 ## 14. Image CLI Workflow
 
-Use `.agents/skills/gpt-image/SKILL.md` and the existing bundled `gpt-image` CLI or packaged `scripts/generate.py`. Do not write a new image generator.
+Use the machine-local `codex-image` skill and installed launcher at `%USERPROFILE%\.codex\skills\codex-image\scripts\codex-image.cmd`. It reads the active Codex provider configuration and authentication without copying credentials into the project. Use `gpt-image-2` as the image model, never the active chat model name. Do not use the legacy project `gpt-image` launcher for execution, write a new image generator, add project `.env` credentials, or print secrets into prompts, logs, manifests, or handoff documents.
+
+Batch execution update, user-approved 2026-08-22: candidate generation may run through dependency waves without stopping for subjective per-image approval. Generate canonical product mains first, then parallel identity-preserving detail/owner edits and independent landscape/editorial jobs. Present grouped contact sheets after the complete candidate batch. This authorization changes review timing only; no generated candidate becomes a runtime asset until the user completes consolidated visual selection.
 
 ### Phase 1 — Reference Distillation
 
 1. Inspect the current official/reference UI only to identify durable grammar.
 2. Search the bundled `references/gallery.md`.
 3. Read only the nearest category file and relevant craft guidance.
-4. Record three original visual directions:
-   - A: paper editorial still life;
-   - B: Seoul domestic object journal;
-   - C: graphic material archive.
+4. Record one coherent brand world with three role-specific photographic modes:
+   - commerce: controlled, product-readable main/detail imagery;
+   - editorial: naturally integrated Seoul domestic context imagery;
+   - owner-review: personal phone-camera imagery with believable imperfection and no fake social chrome.
 5. Do not copy gallery prompts wholesale.
 
 ### Phase 2 — Calibration Candidates
@@ -750,22 +803,25 @@ Generate low/medium-quality candidates for:
 - `shopping_seed_digital_keyboard` main;
 - `shopping_seed_nova_stone_tray` main;
 - `shopping_seed_nova_carry_on` main;
+- one anchor context image using the editorial mode;
+- one anchor owner-scene image using the owner-review mode;
 - one state illustration.
 
-Generate enough variation to compare composition and craft, not dozens of near-duplicates. Build a labeled contact sheet with consistent scale and candidate IDs.
+Generate enough variation to compare composition and craft, not dozens of near-duplicates. Build separate labeled contact sheets for commerce, editorial, and owner-review modes; do not present unrelated objects as a controlled A/B/C comparison.
 
-Stop for Gate B review.
+In user-authorized batch mode, record Gate B evidence but continue into the remaining candidate waves without pausing for per-image approval.
 
 ### Phase 3 — Anchor SKU Continuity
 
-After one direction is accepted:
+After the three media modes are accepted:
 
 1. Freeze the product visual bible.
 2. Generate main/detail/context sets for keyboard, stone tray, and carry-on.
-3. Generate one accepted Issue cover in the same world.
-4. Test the accepted images in actual Home, collection, and PDP containers before producing siblings.
+3. Generate owner-scene, owner-detail, and owner-follow-up sets for the same three anchor products.
+4. Generate one accepted Issue cover in the same world.
+5. Test the accepted images in actual Home, collection, PDP, and Owners' Notes containers before producing siblings.
 
-Stop for Gate C review.
+In user-authorized batch mode, record continuity evidence and continue through the remaining candidate manifest. Runtime publication still waits for consolidated review.
 
 ### Phase 4 — Remaining Product Families
 
@@ -775,10 +831,11 @@ Generate remaining products in coherent families:
 - Quiet Home: radio, stone tray.
 - Records And Travel: letter set, carry-on, fountain pen.
 
-Use accepted main images as references for detail/context generations. Retry rejected items only. Never regenerate accepted siblings blindly.
+Use accepted main images as identity references for detail/context generations. Generate owner-scene and owner-detail media for the remaining six products through the accepted owner-review mode. Retry rejected items only. Never regenerate accepted siblings blindly.
 
-### Phase 5 — Editorial, Material, State, Motion
+### Phase 5 — Owner Reviews, Editorial, Material, State, Motion
 
+- Complete and audit all 21 owner-review images, grouped by product rather than by visual similarity.
 - Generate the remaining Issue covers.
 - Generate three editorial scenes using accepted product identities.
 - Generate two text-free material boards.
@@ -790,7 +847,7 @@ Use accepted main images as references for detail/context generations. Retry rej
 - Use high quality only for accepted-direction finals.
 - Review full resolution for malformed geometry, gibberish, copied marks, inconsistent products, odd shadows, fake labels, and inaccessible crop.
 - Keep only serious candidates.
-- Build final contact sheets grouped by Issue, product family, editorial, materials, and states.
+- Build final contact sheets grouped by Issue, product family, owner reviews, editorial, materials, and states.
 - Record accept/reject reasons before runtime promotion.
 
 ## 15. Runtime Derivatives And Publication
@@ -937,21 +994,21 @@ Deliver:
 - final Home section order;
 - collection variants;
 - PDP content order;
-- exact mapping of the 41 semantic media IDs to runtime slots;
+- exact mapping of the 62 semantic media IDs to runtime slots;
 - list of code-native facts that will never be rasterized.
 
 Pass condition: no generic Home/category/PDP/transaction template remains in the proposed architecture.
 
-### Gate B — Three-Direction Calibration
+### Gate B — Three-Mode Calibration
 
 Deliver:
 
-- labeled contact sheet for directions A/B/C;
+- separate labeled contact sheets for commerce, editorial, and owner-review media modes;
 - candidate metadata and prompts;
-- one Issue cover, three anchor SKU mains, and one state illustration per useful direction;
+- one Issue cover, three anchor SKU mains, one anchor context, one anchor owner scene, and one state illustration across the useful modes;
 - recommendation with rejection reasons.
 
-Pass condition: one original, reproducible visual world is selected. No 41-final batch before this pass.
+Pass condition: one original, reproducible 29CM visual world and three distinct media roles are reviewable. Commerce images remain product-readable, editorial images feel physically integrated, and owner-review images feel personal without looking careless or fake. Explicitly authorized full candidate batches may exist before this pass, but they remain unpublished and replace per-image review with grouped contact sheets.
 
 ### Gate C — Anchor Continuity
 
@@ -959,7 +1016,8 @@ Deliver:
 
 - accepted Issue 01 cover;
 - main/detail/context for keyboard, stone tray, and carry-on;
-- actual Home/collection/PDP integration screenshots at mobile and wide sizes;
+- owner-scene/owner-detail/owner-follow-up for keyboard, stone tray, and carry-on;
+- actual Home/collection/PDP/Owners' Notes integration screenshots at mobile and wide sizes;
 - product consistency audit.
 
 Pass condition: editorial discovery, collection, and PDP feel continuous, and all three anchor products remain physically consistent.
@@ -968,21 +1026,22 @@ Pass condition: editorial discovery, collection, and PDP feel continuous, and al
 
 Deliver:
 
-- accepted main/detail/context for all nine products;
+- accepted main/detail/context plus owner-scene/owner-detail for all nine products;
+- accepted owner-follow-up media for keyboard, stone tray, and carry-on;
 - final grouped contact sheets;
 - rejection/retry log;
 - crop/focal metadata.
 
-Pass condition: all 27 product masters are internally consistent and runtime-safe.
+Pass condition: all 27 product masters and 21 owner-review masters are internally consistent, role-correct, privacy-audited, and runtime-safe.
 
 ### Gate E — Discovery And PDP Integration
 
 Deliver:
 
-- final Home, all collection variants, search, saved objects, and all nine PDPs;
+- final Home, all collection variants, search, saved objects, all nine PDPs, and the Owners' Notes summary/all-media states;
 - mobile/wide captures;
 - missing-media fallbacks;
-- interaction proof for Issue, pagination/chapter, search, save, and Add to Bag.
+- interaction proof for Issue, pagination/chapter, search, save, Add to Bag, review-media expansion, and return to the same PDP position.
 
 Pass condition: the storefront no longer reads as one page plus repeated product cards.
 
@@ -1031,10 +1090,11 @@ Pass condition: Codex can reproduce the result and verify the release without re
 - Do not make every hero “left text, right image” or “image with bottom-left white box.”
 - Do not render all products on one endless page; use collection depth and pagination/chapter navigation.
 - Do not ship a PDP with one image and generic description sections.
-- Do not batch-generate all 41 finals before Gate B/C approval.
+- Do not publish the 62-master candidate batch to runtime before consolidated Gate B/C review and explicit user selection.
 - Do not use official product photos, campaigns, logos, slogans, prices, or copied layouts.
 - Do not place prices, discounts, inventory, buttons, delivery claims, specifications, or localized variable copy inside generated images.
-- Do not invent designers, manufacturers, awards, specifications, reviews, rankings, ETAs, tracking, or human-support availability.
+- Do not remove necessary functional product markings merely to avoid generated text. Keyboard legends, control symbols, and similar identity-bearing details must remain coherent; fixed fictional campaign slogans are allowed only in approved advertising/editorial slots.
+- Do not invent real-world designers, manufacturers, awards, specifications, reviews, rankings, ETAs, tracking, or human-support availability. Seeded owner notes must remain explicitly fictional SchatPhone world data, and verified-purchase status requires Shopping-owned order lineage.
 - Do not change stable IDs, `serviceKey`, persisted schema, hydration, backup restore, Wallet quote behavior, or cross-module ownership.
 - Do not hardcode image-bed hosts in Vue components.
 - Do not commit credentials, `.env.local`, contact sheets, screenshots, or rejected candidates as runtime assets.
@@ -1063,7 +1123,8 @@ Architecture and route result:
 - States and reduced motion:
 
 Media result:
-- Accepted masters: __ / 41
+- Accepted masters: __ / 62
+- Accepted owner-review masters: __ / 21
 - Published runtime assets:
 - Rejected/retried assets:
 - Manifest/contact-sheet locations:

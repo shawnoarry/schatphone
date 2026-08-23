@@ -1,6 +1,6 @@
 # Commerce Finance And Assets Status And Handoff
 
-Updated: 2026-08-21
+Updated: 2026-08-22
 
 This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, Assets, and Stock work.
 
@@ -8,7 +8,7 @@ This file is the handoff page for Shopping, logistics, Food Delivery, Wallet, As
 
 Status: `PARTIAL_DONE`
 
-Continuity update: `SHOPPING-29CM-PRODUCT-GRADE-UI-01 IN_PROGRESS 2026-08-22`. The first product-grade 29CM slice now has storefront-owned Home, Collection/Search, PDP, Bag, Checkout, Archive, Delivery Journal, and Object Care surfaces, with a registered media contract that will carry accepted Issue, editorial, material, product, bag, checkout, and archive media through one route family. The implementation remains honest about the media gate: all 41 planned masters are still unpublished because this checkout has no usable `gpt-image` CLI/API credential, so code-native visual fallbacks remain active and no generated asset is claimed as final. The focused execution brief is `docs/design/SHOPPING_29CM_PRODUCT_GRADE_EXECUTION_BRIEF.md`; this slice does not change Shopping schema, service IDs, order ownership, or cross-store behavior.
+Continuity update: `SHOPPING-29CM-PRODUCT-GRADE-UI-01 DONE 2026-08-22`. The user accepted the complete 62-master batch after reviewing all six grouped contact sheets. Optimized WebP derivatives, one compact animated WebP, one reduced-motion poster, and exact source/runtime hashes now live under `public/images/ui-assets/apps/shopping/29cm/`. The storefront-owned media registry publishes all four Issue covers, five editorial/material studies, 27 product images, 21 owner-review images, four state illustrations, and motion media. Home, Collection/Search, and all nine PDPs now prioritize semantic 29CM media over generic product imagery; PDP includes a product-bound `OWNERS' NOTES` community preview, and Bag, Checkout, Archive, Order Detail, Delivery Journal, and Care retain the same product/state visual language. Prices, stock, identities, dates, notes, delivery facts, and controls remain code-rendered. Shopping schema, service IDs, order ownership, persistence, Wallet behavior, and cross-store isolation are unchanged. Full lint, 303 Vitest files / 2187 tests, production build, the ten-case desktop/mobile Shopping storefront E2E gate, governance, local mobile/wide media loading, console, and overflow checks pass. Named physical-device proof remains separate.
 
 Continuity update: `CMG-02 DONE 2026-08-20` at `208e1dc`. Food Delivery checkout and the address-change interaction now confirm owner persistence before success, restore order/cart/Map/Event state after a failed save, delay the success notification until confirmation, and prevent the same payment/message/interaction ID from creating a second committed result. Storage shapes and retention limits are unchanged.
 

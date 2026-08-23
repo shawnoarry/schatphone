@@ -663,6 +663,7 @@ const openCategory = (key) => {
   void openShopPage(key === 'logistics' ? 'logistics' : 'category', {
     category: key,
     ...(key === 'logistics' ? {} : { page: '1' }),
+    ...(key !== 'logistics' && productSearchQuery.value.trim() ? { q: productSearchQuery.value.trim() } : {}),
   })
 }
 
@@ -1227,6 +1228,7 @@ onBeforeUnmount(() => {
         @open-orders="openOrdersPage"
         @open-product="openProductDetail"
         @open-manager="openCatalogManager"
+        @submit-search="submitCatalogSearch"
         @show-all="showAllProducts"
         @toggle-favorite="toggleFavorite"
         @add-to-cart="addToCart"

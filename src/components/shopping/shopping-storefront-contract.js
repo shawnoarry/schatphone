@@ -39,6 +39,7 @@ export const SHOPPING_STOREFRONT_EVENTS = Object.freeze([
   'show-all',
   'toggle-favorite',
   'add-to-cart',
+  'submit-search',
   'update:searchQuery',
 ])
 
