@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Status And Handoff
 
-Updated: 2026-08-21
+Updated: 2026-08-23
 
 This file is the handoff page for event runtime, relationship runtime, World Hub, and future Cheats work.
 
@@ -105,6 +105,8 @@ Planned follow-up / not yet landed:
 14. An event-to-role memory-candidate seam is not yet implemented as a generic runtime feature. Until separately promoted, event Adapters may continue to create only their currently accepted owner facts and relationship facts; they must not write Chat memory or broadcast event context to unrelated roles.
 15. Calendar's confirmed-event relationship Adapter is an existing owner-native proof of the allowed pattern: it requires a confirmed Calendar record and an explicit role/contact target, derives a stable source id and reusable `memoryKey`, dedupes through Relationship Runtime, and supports primary/supporting aggregation. It is not a generic Event Runtime memory seam and must not be moved into `store:simulation` or generalized into an all-event broadcast path.
 16. A bounded Chat continuity slice is now landed: after an applied `role_greeting_request`, Event Runtime invokes an optional owner callback; Chat/World Hub calls `recordChatSocialEventRelationshipFact()` with the explicit role target and Proposal ID. The resulting relationship fact is supporting-only, has no metric delta, and dedupes under `chat_social__role_greeting`. High-risk social transitions, free-text message extraction, and a generic all-event candidate API remain unimplemented.
+17. `EVENT_ECOSYSTEM_APP_SHELLS_PLANNING_HANDOFF.md` now provides a workgroup-facing candidate decomposition for retained Mini Scene management, Community/Media and fandom facades, system notifications, Narrative Timeline, Messages/SMS, Investigation/Knowledge, Mail, Healthcare, Housing/Real Estate, Creator Rights/Works, scheduled production-activity templates, and a longer-range everyday-app catalog. It records V1 minimums, later optimization, ownership, dependencies, exclusions, and suggested order only. It does not authorize a new route, Store, package, schema, Event Surface host, CJA-6B implementation, Community/Media implementation, Investigation owner, or roadmap status change.
+18. `BROWSER_SEARCH_AND_HELP_CENTER_PLANNING_HANDOFF.md` now freezes the planning boundary for a Google-like Browser utility that can search source-labeled product Help, committed public current-world content, and optional real-Web provider results. Local Help/World search remains zero-token and useful without an API; private Mail/Chat/Phone/Healthcare/order/Wallet/Calendar/location data is excluded from the public index; search behavior is not event proof; Web search uses a provider-neutral backend boundary with quota, credential, privacy, cache, external-page handoff, and a dated cost snapshot. This documentation does not authorize a Browser route, owner Store, world index, Help publication system, provider purchase, shared API key, or roadmap status change.
 
 ## 2. Recommended Next Slice
 

@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-08-21
+Updated: 2026-08-23
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, override-lane design, the landed Player Context V1 eligibility foundation, and the still-documentation-only world-evolution/information-propagation contracts.
 
@@ -44,9 +44,11 @@ Mini Scene foundation: Event Runtime is now the shared Module's only functional 
 2. `PRODUCT_BOUNDARY.md`
 3. `WORLD_HUB_AND_CHEATS.md`
 4. `IMPLEMENTATION_WORKSTREAMS.md`
-5. `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` for the current EVE-2/default-content direction
-6. `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md` for the EVE-4C user-triggered commerce reference and migration direction
-7. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when work touches Self Profile eligibility, dynamic world incidents/arcs, forum/social/news propagation, claims, or clues
+5. `EVENT_ECOSYSTEM_APP_SHELLS_PLANNING_HANDOFF.md` when dividing future owner-native app shells, scheduled-activity templates, system notification surfaces, Community/Media and fandom facades, Healthcare, Housing, Creator Rights/Works, Narrative Timeline, Messages, Mail, Mini Scene retention, Browser/Search, or Investigation candidates across workgroups; this planning handoff is not implementation authorization or a second roadmap
+6. `BROWSER_SEARCH_AND_HELP_CENTER_PLANNING_HANDOFF.md` when work touches the Browser shell, product Help search, public current-world search, real Web Search providers, source labeling, search privacy, cost controls, or external-page handoff; this is a planning contract, not provider procurement or implementation authorization
+7. `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` for the current EVE-2/default-content direction
+8. `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md` for the EVE-4C user-triggered commerce reference and migration direction
+9. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when work touches Self Profile eligibility, dynamic world incidents/arcs, forum/social/news propagation, claims, or clues
 
 Also read when needed:
 
