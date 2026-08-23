@@ -38,10 +38,34 @@ export const RINGTONE_OPTIONS = Object.freeze([
     file: 'audio/ringtones/gentle-chime.wav',
   },
   {
+    id: 'nokia-tone',
+    labelZh: 'Nokia Tune',
+    labelEn: 'Nokia Tune',
+    file: 'audio/brand/nokia-tone.mp3',
+  },
+  {
+    id: 'iphone-marimba',
+    labelZh: 'iPhone Marimba',
+    labelEn: 'iPhone Marimba',
+    file: 'audio/brand/iphone-marimba.mp3',
+  },
+  {
+    id: 'old-phone-ring',
+    labelZh: '老式电话原声',
+    labelEn: 'Old Phone Ring',
+    file: 'audio/brand/old-phone-ring.mp3',
+  },
+  {
     id: 'samsung-over-the-horizon',
     labelZh: 'Samsung Over the Horizon',
     labelEn: 'Samsung Over the Horizon',
     file: 'audio/brand/samsung-over-the-horizon.mp3',
+  },
+  {
+    id: 'sony-ericsson-morning-glow',
+    labelZh: 'Sony Ericsson Morning Glow',
+    labelEn: 'Sony Ericsson Morning Glow',
+    file: 'audio/brand/sony-ericsson-morning-glow.mp3',
   },
   {
     id: 'samsung-atomic-bell',

@@ -17,8 +17,8 @@ describe('ringtone library', () => {
     expect(normalizeRingtoneId('')).toBe(DEFAULT_RINGTONE_ID)
   })
 
-  test('exposes built-in and Samsung ringtones with localized labels and audio files', () => {
-    expect(RINGTONE_OPTIONS).toHaveLength(10)
+  test('exposes built-in and familiar ringtones with localized labels and audio files', () => {
+    expect(RINGTONE_OPTIONS).toHaveLength(14)
     for (const ringtone of RINGTONE_OPTIONS) {
       expect(ringtone.file).toMatch(/^audio\/(ringtones|brand)\/.+\.(wav|mp3)$/)
       expect(getRingtoneLabel(ringtone.id)).toBeTruthy()
@@ -26,7 +26,11 @@ describe('ringtone library', () => {
     }
     expect(RINGTONE_OPTIONS.map((ringtone) => ringtone.id)).toEqual(
       expect.arrayContaining([
+        'nokia-tone',
+        'iphone-marimba',
+        'old-phone-ring',
         'samsung-over-the-horizon',
+        'sony-ericsson-morning-glow',
         'samsung-atomic-bell',
         'samsung-80s-phone',
         'samsung-arcade',
