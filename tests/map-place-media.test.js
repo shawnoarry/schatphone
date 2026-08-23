@@ -89,6 +89,13 @@ const APPROVED_HERO_BATCH_06_IDS = [
   'seoul-megabox-coex',
 ]
 
+const APPROVED_HERO_BATCH_06_SELECTED_IDS = [
+  'seoul-mbc-hq',
+  'seoul-cgv-yongsan-ipark',
+  'seoul-galleria-luxury-hall',
+  'seoul-hybe-hq',
+]
+
 const AREA_DETAIL_ONLY_PLACE_IDS = [
   'seoul-sm-hq',
   'seoul-myeongdong-kyoja-main',
@@ -151,6 +158,10 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-sk-seorin': 2,
   'seoul-shinsegae-gangnam': 1,
   'seoul-megabox-coex': 3,
+  'seoul-mbc-hq': 1,
+  'seoul-cgv-yongsan-ipark': 2,
+  'seoul-galleria-luxury-hall': 1,
+  'seoul-hybe-hq': 3,
   'seoul-lotte-avenuel-world-tower': 1,
   'seoul-namdaemun-pharmacy-district': 1,
   'seoul-london-bagel-museum-anguk': 1,
@@ -176,7 +187,7 @@ describe('map place media governance', () => {
 
   test('validates the reviewed media registry', () => {
     const seoulPlaceIds = new Set(getMapPackById('real-seoul-v1').places.map((place) => place.id))
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(139)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(146)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
@@ -286,6 +297,20 @@ describe('map place media governance', () => {
         kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
         authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
         slot: MAP_PLACE_MEDIA_SLOT.HERO,
+      })
+    }
+
+    for (const placeId of APPROVED_HERO_BATCH_06_SELECTED_IDS) {
+      expect(getMapPlaceMediaRecord('real-seoul-v1', placeId)).toMatchObject({
+        placeId,
+        kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+        authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+        slot: MAP_PLACE_MEDIA_SLOT.HERO,
+        source: {
+          type: 'source_traced_external_photo',
+          rightsStatus: 'source_traced_personal_project_use',
+          usageScope: 'personal_project',
+        },
       })
     }
 

@@ -68,6 +68,10 @@ const REAL_TRIALS = [
   ['seoul-sk-seorin', 'seoul-sk-seorin-hero-v1.webp', 'Exact-place photo'],
   ['seoul-shinsegae-gangnam', 'seoul-shinsegae-gangnam-hero-v1.webp', 'Exact-place photo'],
   ['seoul-megabox-coex', 'seoul-megabox-coex-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-mbc-hq', 'seoul-mbc-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-cgv-yongsan-ipark', 'seoul-cgv-yongsan-ipark-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-galleria-luxury-hall', 'seoul-galleria-luxury-hall-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-hybe-hq', 'seoul-hybe-hq-hero-v1.webp', 'Exact-place photo'],
   ['seoul-lotte-avenuel-world-tower', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-namdaemun-pharmacy-district', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-london-bagel-museum-anguk', 'seoul-street-map-v1.webp', 'Category visual'],
@@ -359,6 +363,24 @@ test.describe('Map place media governance', () => {
         await sheet.getByTestId('map-place-gallery-next').click()
         await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 5')
         await expect(sheet.getByTestId('map-place-detail-media')).toContainText('Exact-place photo')
+        await expectVerifiedProjectImage(page.request, detailImage, galleryRecords[1].asset)
+      }
+      if (placeId === 'seoul-cgv-yongsan-ipark') {
+        await sheet.getByTestId('map-place-open-detail').click()
+        const galleryRecords = getMapPlaceMediaGallery('real-seoul-v1', placeId)
+        const detailImage = sheet.getByTestId('map-place-detail-media-image')
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 2')
+        await sheet.getByTestId('map-place-gallery-next').click()
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 2')
+        await expectVerifiedProjectImage(page.request, detailImage, galleryRecords[1].asset)
+      }
+      if (placeId === 'seoul-hybe-hq') {
+        await sheet.getByTestId('map-place-open-detail').click()
+        const galleryRecords = getMapPlaceMediaGallery('real-seoul-v1', placeId)
+        const detailImage = sheet.getByTestId('map-place-detail-media-image')
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('1 / 3')
+        await sheet.getByTestId('map-place-gallery-next').click()
+        await expect(sheet.getByTestId('map-place-gallery-count')).toContainText('2 / 3')
         await expectVerifiedProjectImage(page.request, detailImage, galleryRecords[1].asset)
       }
     }

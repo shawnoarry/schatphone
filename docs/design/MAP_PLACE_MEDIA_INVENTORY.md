@@ -22,18 +22,18 @@ hero completion; they do not freeze aspect ratio, crop, focal point, or derivati
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
 | --- | ---: | ---: | ---: | --- |
-| Seoul built-in catalog | 106 | 66 places with reviewed real-photo media | 40 | licensed real-photo search first |
+| Seoul built-in catalog | 106 | 70 places with reviewed real-photo media | 36 | source-traced real-photo search first |
 | Fictional built-in catalog | 7 | 0 generated reconstructions | 7 | project-authored generation |
 | User-created places | unbounded | depends on user import/generation | one per created place when desired | user media first, optional generation |
-| **Fixed built-in target** | **113** | **66** | **47** | search real places; generate fictional places |
+| **Fixed built-in target** | **113** | **70** | **43** | search real places; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
 
-Fifty-four of the 66 Seoul places with reviewed media currently have an approved exact-photo hero. The other twelve have detail-only area media and still require a card-hero decision, so 52 Seoul hero decisions remain.
+Fifty-eight of the 70 Seoul places with reviewed media currently have an approved exact-photo hero. The other twelve have detail-only area media and still require a card-hero decision, so 48 Seoul hero decisions remain.
 
 ## Seoul Search Plan
 
-All 106 Seoul records are real-place search candidates. Search must start from a durable source page with explicit reuse permission; a search thumbnail is never a candidate record by itself.
+All 106 Seoul records are real-place search candidates. Search must start from a durable source page with a traceable creator or source owner; reusable-license metadata is recorded when present, while user-selected personal-project sources retain an explicit bounded-use status rather than a fabricated license. A search thumbnail is never a candidate record by itself.
 
 ### Exact-photo preferred: 79 places
 
@@ -56,7 +56,7 @@ These places have a named building, venue, campus, park, transport facility, or 
 | Banks | 4 | Bank of Korea Main Building; KB Kookmin Bank New Headquarters; Shinhan Bank Head Office; Woori Bank Head Office |
 | Public-safety institutions | 4 | Korean National Police Agency; Seoul Metropolitan Police Agency; Seoul Fire and Disaster Headquarters; Gangnam Fire Station |
 
-Current media coverage inside this group is 58 places. Fifty-four grade-A heroes cover the previous hero set plus Samsung Town, JTBC Sangam Building, SK Seorin Building, Shinsegae Department Store Gangnam, Gangnam Station, and Megabox COEX. Four additional places have reviewed grade-B detail slides only: SM Entertainment HQ through its Seongsu district, Lotte Department Store Main through the Euljiro/Lotte district, Hyundai Department Store Apgujeong Main through a source-identified in-store cafe, and Lotte Avenuel World Tower through its wider mall complex. These four cards remain on category fallback until an exact/generated hero is separately approved. This leaves 25 hero acquisition decisions in this group.
+Current media coverage inside this group is 62 places. Fifty-eight grade-A heroes cover the previous hero set plus MBC Sangam Headquarters, CGV Yongsan I'Park Mall, Galleria Luxury Hall, and HYBE HQ. Four additional places have reviewed grade-B detail slides only: SM Entertainment HQ through its Seongsu district, Lotte Department Store Main through the Euljiro/Lotte district, Hyundai Department Store Apgujeong Main through a source-identified in-store cafe, and Lotte Avenuel World Tower through its wider mall complex. These four cards remain on category fallback until an exact/generated hero is separately approved. This leaves 21 hero acquisition decisions in this group.
 
 ### Detail area-atmosphere candidates: 27 places
 
@@ -74,7 +74,7 @@ These records describe a district, residential area, street cluster, privacy-sen
 
 Current usable coverage inside this group is eight reviewed grade-B detail images: the Myeongdong street view for Myeongdong Kyoja, the Sillim residential-area view, the Hongdae night street, the Sanggye cityscape, the Banpo riverside view for Acro River Park, the Hannam/Itaewon cityscape, the Namdaemun Market alley for the pharmacy district, and the Bukchon/Anguk street for London Bagel Museum Anguk. All eight cards remain on category fallback until an exact/generated hero is separately approved. This leaves 19 area-detail acquisition decisions and all 27 card-hero decisions in this group.
 
-An exact licensed photo may satisfy the card hero when the source page proves the branch or facade and the image passes privacy, trademark, architecture, and crop review. A truthful grade B remains valuable detail context, but it cannot be promoted into the card merely because an exact photo is unavailable.
+An exact source-traced photo may satisfy the card hero when the source page proves the branch, facade, or documented interior and the image passes identity and crop review. A truthful grade B remains valuable detail context, but it cannot be promoted into the card merely because an exact photo is unavailable.
 
 ## Media Adaptation Record
 

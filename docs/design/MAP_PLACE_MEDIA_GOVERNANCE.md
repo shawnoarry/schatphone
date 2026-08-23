@@ -36,10 +36,10 @@ Each reviewed record contains:
 | `kind` | `exact_photo`, `area_atmosphere`, `generated_reconstruction`, or `category_fallback` |
 | `authenticityGrade` | `A`, `B`, `C`, or `D`, mapped exactly to `kind` |
 | `asset` | approved public runtime URL, dimensions, MIME, alt text, and SHA-256; category fallback also requires an image asset |
-| `source` | source type, provider, author/generator, license, source page, access date, source SHA-256, and disclosed changes |
+| `source` | source type, provider, author/generator, source page, access date, source SHA-256, disclosed changes, and either reusable-license metadata or the bounded personal-project usage scope |
 | `review` | status, date, reviewer, and source-archive batch |
 
-The validator fails closed when identity, grade, slot/kind compatibility, runtime location, source page, attribution, license, hash, alt text, or review evidence is incomplete. A future `area_atmosphere + hero` record is invalid even when every source and license field is otherwise complete.
+The validator fails closed when identity, grade, slot/kind compatibility, runtime location, source page, attribution, hash, alt text, review evidence, and the applicable reusable-license or personal-project usage fields are incomplete. A future `area_atmosphere + hero` record is invalid even when every source field is otherwise complete.
 
 ## Detail Slots
 
@@ -77,36 +77,38 @@ Grades are evidence labels, not quality scores. A clear `B` is preferable to a f
 
 Use this order by presentation role:
 
-1. card hero: a reusable exact-place photograph with a durable source page and explicit license;
+1. card hero: an exact-place photograph with a durable source page, recorded creator, and the applicable reusable-license or personal-project usage metadata;
 2. card hero when separately approved: a generated reconstruction with durable generation provenance and visible generated labeling;
 3. card hero fallback: the reviewed category asset with copy that clearly says it does not represent the place's real appearance;
-4. detail gallery supplement: a reusable real area photograph, clearly classified as `area_atmosphere` and never promoted to hero.
+4. detail gallery supplement: a source-traced real area photograph, clearly classified as `area_atmosphere` and never promoted to hero.
 
-Accepted photo evidence must provide an explicit reuse license, author/creator, source page, access date, and a byte hash for the locally archived source artifact. Current discovery uses Wikimedia Commons file pages because each selected file exposes reusable-license metadata and attribution. A previously reviewed candidate does not need to be re-selected or repeatedly downloaded: reuse a locally verified original when present; otherwise an official Commons-generated rendition may be archived when its durable file page, actual rendition URL, downloaded SHA-256, and upstream Commons SHA-1 identity are all recorded. The rendition is source evidence, not a runtime URL.
+Accepted photo evidence must provide an author/creator or source owner, durable source page, access date, and a byte hash for the locally archived source artifact. Record explicit reusable-license metadata whenever the source provides it. For this personal project, a user-selected source-traced photo may instead record `source_traced_personal_project_use`; this does not claim an open license and must not be rewritten as one. A previously reviewed candidate does not need to be re-selected or repeatedly downloaded: reuse a locally verified original or retained rendition when present. The archived file is source evidence, not a runtime URL.
+
+Candidate usability must be checked before a contact sheet is handed to the user. Once the user selects a candidate that the review page presented as usable, source archiving, derivation, upload, attribution, and registry completion are part of the same integration task. They cannot be converted into a new post-selection approval gate. If an actual identity mismatch, broken file, or technical failure appears later, preserve the selection and resolve or replace it before asking the user to repeat visual review.
 
 Reject:
 
 - map-service or street-view screenshots;
-- images copied from news, social, review, corporate, or influencer pages without an explicit traceable reuse license;
-- corporate press/marketing images without explicit reusable terms;
+- images copied from an unattributed repost when the original source or source owner cannot be traced;
 - search-result thumbnails without a durable source page;
 - images whose depicted location cannot be matched to the intended place or area;
 - files with unclear architecture, privacy, trademark, or other reuse restrictions.
 
 The original publishing platform is provenance, not an automatic rejection category.
-A Flickr, 500px, news, corporate, or other externally originated photograph may be
-considered when a durable source record preserves an explicit reusable license and the
-license history can be verified. User rejection of one candidate does not establish a
-source-wide ban. Architecture/FOP warnings must be recorded and evaluated against the
-project's actual use; they are not silently converted into a universal commercial-use
-policy or an automatic generation preference.
+A Flickr, 500px, news, corporate, tourism, design-publication, social, or other externally
+originated photograph may be considered when its durable original page and source owner
+can be traced. Record reusable-license metadata when present; otherwise identify the
+bounded personal-project usage scope without pretending that an open license exists.
+User rejection of one candidate does not establish a source-wide ban. Architecture/FOP
+warnings remain contextual notes rather than a universal commercial-use veto or an
+automatic generation preference.
 
 ## Candidate To Runtime Flow
 
 1. Discover a candidate and record the source page before download.
 2. Archive the candidate under `output/imagegen/<batch>/source-candidates/`. Prefer a complete locally verified original. When the original is absent or Commons throttling makes repeated original transfer wasteful, use one official Commons-generated rendition and retain its actual rendition URL. This directory is local and Git-ignored; runtime code must never reference it.
 3. Record archived bytes and SHA-256, author, license, source page, access date, intended truth grade, and the upstream Commons SHA-1. For a rendition, explicitly record that its SHA-256 identifies the rendition bytes rather than the original bytes.
-4. Review identity, location, license, attribution, privacy, architecture/FOP concerns, logos, and crop safety. Reject first; do not repair a false identity with copy.
+4. Review identity, location, attribution, source terms when present, privacy, architecture/FOP context, logos, and crop safety. Do not repair a false identity with copy.
 5. Produce a separate runtime derivative. The pilot performs EXIF transpose, a `16:9` crop, sRGB conversion, and WebP compression only. This describes the pilot batch; later batches may use different dimensions or more than one derivative after media calibration.
 6. Record derivative dimensions, bytes, SHA-256, and disclosed changes.
 7. Publish only reviewed runtime derivatives to `schatphone-assets/` through a confirmed asset upload list. Source candidates stay out of runtime.

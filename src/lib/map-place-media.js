@@ -19,6 +19,7 @@ export const MAP_PLACE_MEDIA_AUTHENTICITY_GRADE = Object.freeze({
 })
 
 const PHOTO_SOURCE_TYPE = 'licensed_external_photo'
+const TRACED_PHOTO_SOURCE_TYPE = 'source_traced_external_photo'
 const GENERATED_SOURCE_TYPE = 'generated_asset'
 const FALLBACK_SOURCE_TYPE = 'project_rendered'
 const APPROVED_STATUS = 'approved'
@@ -168,6 +169,57 @@ const licensedPhoto = ({
     licenseId,
     licenseUrl,
     attributionRequired,
+    accessedAt,
+    sourceSha256,
+    changesZh: '已裁切为 16:9 并转换为 WebP，未进行生成式修改。',
+    changesEn: 'Cropped to 16:9 and converted to WebP; no generative edit.',
+  },
+  review: {
+    status: APPROVED_STATUS,
+    reviewedAt,
+    reviewer: 'map_place_media_audit',
+    sourceArchiveBatch,
+  },
+})
+
+const sourceTracedPhoto = ({
+  id,
+  placeId,
+  slot = MAP_PLACE_MEDIA_SLOT.HERO,
+  kind,
+  filename,
+  runtimeSha256,
+  altZh,
+  altEn,
+  provider,
+  sourcePageUrl,
+  creator,
+  sourceSha256,
+  accessedAt = '2026-08-23',
+  reviewedAt = '2026-08-23',
+  sourceArchiveBatch = 'map-place-media-heroes-gallery-batch-06-selected-20260823',
+}) => deepFreeze({
+  schemaVersion: MAP_PLACE_MEDIA_SCHEMA_VERSION,
+  id,
+  mapPackId: 'real-seoul-v1',
+  placeId,
+  slot,
+  kind,
+  authenticityGrade: MEDIA_KIND_TO_GRADE[kind],
+  ...MEDIA_PRESENTATION_COPY[kind],
+  asset: {
+    ...runtimeAsset(filename, runtimeSha256),
+    altZh,
+    altEn,
+  },
+  source: {
+    type: TRACED_PHOTO_SOURCE_TYPE,
+    provider,
+    sourcePageUrl,
+    creator,
+    rightsStatus: 'source_traced_personal_project_use',
+    usageScope: 'personal_project',
+    attributionRequired: true,
     accessedAt,
     sourceSha256,
     changesZh: '已裁切为 16:9 并转换为 WebP，未进行生成式修改。',
@@ -2087,6 +2139,103 @@ const MAP_PLACE_MEDIA_BATCH_06_20260823 = [
   sourceArchiveBatch: 'map-place-media-heroes-gallery-batch-06-20260823',
 }))
 
+const MAP_PLACE_MEDIA_BATCH_06_SELECTED_20260823 = [
+  {
+    id: 'map-media-seoul-mbc-hq-hero-v1',
+    placeId: 'seoul-mbc-hq',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-mbc-hq-hero-v1.webp',
+    runtimeSha256: '334d1df4f16640fd50fb3dfc8ac0772f94bf7e63f971a1fce2ec2a135158c915',
+    altZh: 'MBC 上岩总部建筑群与园区广场',
+    altEn: 'MBC Sangam headquarters complex and plaza',
+    provider: 'visit_seoul',
+    sourcePageUrl: 'https://english.visitseoul.net/area/MBC/ENPnw1hit',
+    creator: 'Seoul Tourism Organization',
+    sourceSha256: '9261eee55887abb3720c9d32893ad38157038b252c0b38db548b9f3ad494d20b',
+  },
+  {
+    id: 'map-media-seoul-cgv-yongsan-ipark-hero-v1',
+    placeId: 'seoul-cgv-yongsan-ipark',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-cgv-yongsan-ipark-hero-v1.webp',
+    runtimeSha256: '06f24a6497a788854c8cef22b8ed6af8c0873849f2e743c174f6f6ef9495469e',
+    altZh: 'CGV 龙山 I-Park Mall 的沉浸式影厅入口空间',
+    altEn: 'Immersive cinema entrance space at CGV Yongsan I-Park Mall',
+    provider: 'cuz',
+    sourcePageUrl: 'https://cuz-art.com/en/cgv-yongsan/',
+    creator: 'CUZ project archive',
+    sourceSha256: 'd2a07220224d3f56184125515b68470f3e869953b66e0eedf5dfd1bbed79adf6',
+  },
+  {
+    id: 'map-media-seoul-cgv-yongsan-ipark-gallery-01-v1',
+    placeId: 'seoul-cgv-yongsan-ipark',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-cgv-yongsan-ipark-gallery-01-v1.webp',
+    runtimeSha256: '5201ee3d5ef440b7e9ccaf0cf1fe68e05b206be32ef175fbc0e4550c1265a7c9',
+    altZh: 'CGV 龙山 I-Park Mall 影厅内的环绕媒体装置',
+    altEn: 'Wraparound media installation inside CGV Yongsan I-Park Mall',
+    provider: 'cuz',
+    sourcePageUrl: 'https://cuz-art.com/en/cgv-yongsan/',
+    creator: 'CUZ project archive',
+    sourceSha256: '6a87fdc06ccfbc5e4546fd05a5f5a45dda41722a2e09523f03074273d9d553e8',
+  },
+  {
+    id: 'map-media-seoul-galleria-luxury-hall-hero-v1',
+    placeId: 'seoul-galleria-luxury-hall',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-galleria-luxury-hall-hero-v1.webp',
+    runtimeSha256: '9ece9e8b7511e78875f13009337903253a592772621f5a3e8aefd1c769cf4492',
+    altZh: '夜间点亮的 Galleria 名品馆东西馆外立面',
+    altEn: 'Illuminated east and west facades of Galleria Luxury Hall at night',
+    provider: 'visit_seoul',
+    sourcePageUrl: 'https://english.visitseoul.net/shopping/galleria-luxury-hall/ENP000475',
+    creator: 'Seoul Tourism Organization',
+    sourceSha256: '4c47311136bcdb8717d1dff9cfc88ddc23dcc8619a7b74948cb2479fa7496347',
+  },
+  {
+    id: 'map-media-seoul-hybe-hq-hero-v1',
+    placeId: 'seoul-hybe-hq',
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-hybe-hq-hero-v1.webp',
+    runtimeSha256: 'b74bbf9dd4f204d87a37b0db02c3e51e07f33dd43b3244157522d5299425435f',
+    altZh: 'HYBE 总部内部的挑高休息与交流空间',
+    altEn: 'Double-height lounge and gathering space inside HYBE headquarters',
+    provider: 'archdaily',
+    sourcePageUrl: 'https://www.archdaily.com/1016294/hybe-headquarters-office-com-plus-fhhh-friends',
+    creator: 'Texture on Texture',
+    sourceSha256: '3e1c37465ebf3e622814b5c2f8b1d779c80ce3d85dc2adb073c64fa5aeb38c07',
+  },
+  {
+    id: 'map-media-seoul-hybe-hq-gallery-01-v1',
+    placeId: 'seoul-hybe-hq',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-hybe-hq-gallery-01-v1.webp',
+    runtimeSha256: 'cb3ee77ba9ffe7ea599bdd7602aedb947deb6e17d16e30763ccd4a862a889f67',
+    altZh: 'HYBE 总部内部面向城市景观的公共休息区',
+    altEn: 'Shared lounge inside HYBE headquarters overlooking the city',
+    provider: 'archdaily',
+    sourcePageUrl: 'https://www.archdaily.com/1016294/hybe-headquarters-office-com-plus-fhhh-friends',
+    creator: 'Texture on Texture',
+    sourceSha256: 'bde9108f977d390807139e43fedf584245e916c4dfddbea27ff5b6d4062b4a28',
+  },
+  {
+    id: 'map-media-seoul-hybe-hq-gallery-02-v1',
+    placeId: 'seoul-hybe-hq',
+    slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
+    kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+    filename: 'seoul-hybe-hq-gallery-02-v1.webp',
+    runtimeSha256: '6328955b3e13a73a473761cd5f9f7a1850b18f4a7bf3b6708d04984a99f194aa',
+    altZh: 'HYBE 总部内部的开放式工作空间',
+    altEn: 'Open-plan workspace inside HYBE headquarters',
+    provider: 'archdaily',
+    sourcePageUrl: 'https://www.archdaily.com/1016294/hybe-headquarters-office-com-plus-fhhh-friends',
+    creator: 'Texture on Texture',
+    sourceSha256: '98e3eaad8edd5907647ef2ce5c88349639f82158e496d1d90de5d6328cf0c003',
+  },
+].map((record) => sourceTracedPhoto(record))
+
 const MAP_PLACE_MEDIA_SOURCE_POLICY_RECOVERY_20260823 = [
   {
     id: 'map-media-seoul-national-university-hospital-gallery-04-v1',
@@ -2171,6 +2320,7 @@ const MAP_PLACE_MEDIA_SOURCE_POLICY_RECOVERY_20260823 = [
 
 export const MAP_PLACE_MEDIA_RECORDS = deepFreeze([
   ...MAP_PLACE_MEDIA_SOURCE_POLICY_RECOVERY_20260823,
+  ...MAP_PLACE_MEDIA_BATCH_06_SELECTED_20260823,
   ...MAP_PLACE_MEDIA_BATCH_06_20260823,
   ...MAP_PLACE_MEDIA_BATCH_05_20260823,
   ...MAP_PLACE_MEDIA_BATCH_04_20260823,
@@ -2393,12 +2543,23 @@ export const validateMapPlaceMediaRecord = (record) => {
       errors.push('generated_provenance')
     }
   } else {
-    if (record.source?.type !== PHOTO_SOURCE_TYPE) errors.push('photo_source')
-    if (record.source?.provider !== 'wikimedia_commons') errors.push('photo_provider')
+    if (![PHOTO_SOURCE_TYPE, TRACED_PHOTO_SOURCE_TYPE].includes(record.source?.type)) {
+      errors.push('photo_source')
+    }
     if (!isHttpsUrl(record.source?.sourcePageUrl)) errors.push('source_page_url')
-    if (!record.source?.creator || !record.source?.licenseId) errors.push('attribution')
-    if (record.source?.licenseId !== 'CC0' && !isHttpsUrl(record.source?.licenseUrl)) {
-      errors.push('license_url')
+    if (!record.source?.provider || !record.source?.creator) errors.push('attribution')
+    if (record.source?.type === PHOTO_SOURCE_TYPE) {
+      if (record.source?.provider !== 'wikimedia_commons') errors.push('photo_provider')
+      if (!record.source?.licenseId) errors.push('license')
+      if (record.source?.licenseId !== 'CC0' && !isHttpsUrl(record.source?.licenseUrl)) {
+        errors.push('license_url')
+      }
+    }
+    if (record.source?.type === TRACED_PHOTO_SOURCE_TYPE) {
+      if (record.source?.rightsStatus !== 'source_traced_personal_project_use') {
+        errors.push('rights_status')
+      }
+      if (record.source?.usageScope !== 'personal_project') errors.push('usage_scope')
     }
     if (!SHA256_PATTERN.test(record.source?.sourceSha256 || '')) errors.push('source_sha256')
     if (!record.source?.accessedAt || !record.source?.changesEn) errors.push('source_audit')
