@@ -1,6 +1,6 @@
 # Map Place Media Inventory
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
 ## Purpose
 
@@ -22,14 +22,14 @@ hero completion; they do not freeze aspect ratio, crop, focal point, or derivati
 
 | Scope | Place count | Place-specific media now | Remaining place-specific decisions | Acquisition rule |
 | --- | ---: | ---: | ---: | --- |
-| Seoul built-in catalog | 106 | 70 places with reviewed real-photo media | 36 | source-traced real-photo search first |
+| Seoul built-in catalog | 106 | 81 places with reviewed real-photo media | 25 | source-traced real-photo search first |
 | Fictional built-in catalog | 7 | 0 generated reconstructions | 7 | project-authored generation |
 | User-created places | unbounded | depends on user import/generation | one per created place when desired | user media first, optional generation |
-| **Fixed built-in target** | **113** | **70** | **43** | search real places; generate fictional places |
+| **Fixed built-in target** | **113** | **81** | **32** | search real places; generate fictional places |
 
 The existing shared Seoul and fictional/category fallbacks fill the image slot but are not counted as place-specific completion.
 
-Fifty-eight of the 70 Seoul places with reviewed media currently have an approved exact-photo hero. The other twelve have detail-only area media and still require a card-hero decision, so 48 Seoul hero decisions remain.
+Seventy of the 81 Seoul places with reviewed media currently have an approved exact-photo hero. The other eleven have reviewed detail media but still require a card-hero decision, so 36 Seoul hero decisions remain. Ten of those eleven use grade-B area context; CGV Wangsimni instead has a grade-A interior detail photo whose composition is not sufficiently branch-identifying for the card.
 
 ## Seoul Search Plan
 
@@ -56,7 +56,7 @@ These places have a named building, venue, campus, park, transport facility, or 
 | Banks | 4 | Bank of Korea Main Building; KB Kookmin Bank New Headquarters; Shinhan Bank Head Office; Woori Bank Head Office |
 | Public-safety institutions | 4 | Korean National Police Agency; Seoul Metropolitan Police Agency; Seoul Fire and Disaster Headquarters; Gangnam Fire Station |
 
-Current media coverage inside this group is 62 places. Fifty-eight grade-A heroes cover the previous hero set plus MBC Sangam Headquarters, CGV Yongsan I'Park Mall, Galleria Luxury Hall, and HYBE HQ. Four additional places have reviewed grade-B detail slides only: SM Entertainment HQ through its Seongsu district, Lotte Department Store Main through the Euljiro/Lotte district, Hyundai Department Store Apgujeong Main through a source-identified in-store cafe, and Lotte Avenuel World Tower through its wider mall complex. These four cards remain on category fallback until an exact/generated hero is separately approved. This leaves 21 hero acquisition decisions in this group.
+Current media coverage inside this group is 73 places. Seventy grade-A heroes now also include Starship Entertainment HQ, Hyundai Department Store Apgujeong Main, Lotte Mart ZETTAPLEX Seoul Station, and ID Hospital. Three additional places remain detail-only: SM Entertainment HQ through its Seongsu district, Lotte Avenuel World Tower through its wider mall complex, and CGV Wangsimni through a source-confirmed interior view that is not sufficiently branch-identifying for the card. These three cards remain on category fallback until an exact/generated hero is separately approved. This leaves nine hero acquisition decisions in this group.
 
 ### Detail area-atmosphere candidates: 27 places
 

@@ -48,8 +48,8 @@ const REAL_TRIALS = [
   ['seoul-63-square', 'seoul-63-square-hero-v1.webp', 'Exact-place photo'],
   ['seoul-national-museum', 'seoul-national-museum-hero-v2.webp', 'Exact-place photo'],
   ['seoul-times-square', 'seoul-times-square-hero-v2.webp', 'Exact-place photo'],
-  ['seoul-lotte-department-main', 'seoul-street-map-v1.webp', 'Category visual'],
-  ['seoul-hyundai-apgujeong-main', 'seoul-street-map-v1.webp', 'Category visual'],
+  ['seoul-lotte-department-main', 'seoul-lotte-department-main-hero-v2.webp', 'Exact-place photo'],
+  ['seoul-hyundai-apgujeong-main', 'seoul-hyundai-apgujeong-main-hero-v2.webp', 'Exact-place photo'],
   ['seoul-olympic-park', 'seoul-olympic-park-hero-v1.webp', 'Exact-place photo'],
   ['seoul-metropolitan-police-agency', 'seoul-metropolitan-police-agency-hero-v1.webp', 'Exact-place photo'],
   ['seoul-fire-disaster-headquarters', 'seoul-fire-disaster-headquarters-hero-v1.webp', 'Exact-place photo'],
@@ -72,6 +72,17 @@ const REAL_TRIALS = [
   ['seoul-cgv-yongsan-ipark', 'seoul-cgv-yongsan-ipark-hero-v1.webp', 'Exact-place photo'],
   ['seoul-galleria-luxury-hall', 'seoul-galleria-luxury-hall-hero-v1.webp', 'Exact-place photo'],
   ['seoul-hybe-hq', 'seoul-hybe-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-jyp-hq', 'seoul-jyp-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-yg-hq', 'seoul-yg-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-cj-enm-center', 'seoul-cj-enm-center-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-samsung-medical-center', 'seoul-samsung-medical-center-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-signiel', 'seoul-signiel-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-kb-kookmin-headquarters', 'seoul-kb-kookmin-headquarters-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-lotte-cinema-world-tower', 'seoul-lotte-cinema-world-tower-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-starship-hq', 'seoul-starship-hq-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-lotte-mart-seoul-station', 'seoul-lotte-mart-seoul-station-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-id-hospital', 'seoul-id-hospital-hero-v1.webp', 'Exact-place photo'],
+  ['seoul-cgv-wangsimni', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-lotte-avenuel-world-tower', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-namdaemun-pharmacy-district', 'seoul-street-map-v1.webp', 'Category visual'],
   ['seoul-london-bagel-museum-anguk', 'seoul-street-map-v1.webp', 'Category visual'],
@@ -85,8 +96,6 @@ const AREA_DETAIL_MEDIA = {
   'seoul-sm-hq': 'seoul-sm-hq-hero-v1.webp',
   'seoul-myeongdong-kyoja-main': 'seoul-myeongdong-kyoja-main-hero-v1.webp',
   'seoul-sillim-one-room-district': 'seoul-sillim-one-room-district-hero-v1.webp',
-  'seoul-lotte-department-main': 'seoul-lotte-department-main-hero-v1.webp',
-  'seoul-hyundai-apgujeong-main': 'seoul-hyundai-apgujeong-main-hero-v1.webp',
   'seoul-lotte-avenuel-world-tower': 'seoul-lotte-avenuel-world-tower-gallery-01-v1.webp',
   'seoul-namdaemun-pharmacy-district': 'seoul-namdaemun-pharmacy-district-gallery-01-v1.webp',
   'seoul-london-bagel-museum-anguk': 'seoul-london-bagel-museum-anguk-gallery-01-v1.webp',
@@ -94,6 +103,11 @@ const AREA_DETAIL_MEDIA = {
   'seoul-sanggye-jugong-district': 'seoul-sanggye-jugong-district-gallery-01-v1.webp',
   'seoul-acro-river-park': 'seoul-acro-river-park-gallery-01-v1.webp',
   'seoul-hannam-the-hill': 'seoul-hannam-the-hill-gallery-01-v1.webp',
+  'seoul-cgv-wangsimni': 'seoul-cgv-wangsimni-gallery-01-v1.webp',
+}
+
+const DETAIL_ONLY_MEDIA_LABEL = {
+  'seoul-cgv-wangsimni': 'Exact-place photo',
 }
 
 const mockOpenFreeMapStyle = async (page) => {
@@ -229,7 +243,9 @@ test.describe('Map place media governance', () => {
         )
         await sheet.getByTestId('map-place-open-detail').click()
         const detailImage = sheet.getByTestId('map-place-detail-media-image')
-        await expect(sheet.getByTestId('map-place-detail-media')).toContainText('Area view')
+        await expect(sheet.getByTestId('map-place-detail-media')).toContainText(
+          DETAIL_ONLY_MEDIA_LABEL[placeId] || 'Area view',
+        )
         await expect(detailImage).toHaveAttribute(
           'src',
           new RegExp(`${AREA_DETAIL_MEDIA[placeId].replaceAll('.', '\\.')}($|\\?)`),

@@ -96,12 +96,28 @@ const APPROVED_HERO_BATCH_06_SELECTED_IDS = [
   'seoul-hybe-hq',
 ]
 
+const APPROVED_HERO_BATCH_07_IDS = [
+  'seoul-jyp-hq',
+  'seoul-yg-hq',
+  'seoul-cj-enm-center',
+  'seoul-samsung-medical-center',
+  'seoul-signiel',
+  'seoul-kb-kookmin-headquarters',
+  'seoul-lotte-cinema-world-tower',
+  'seoul-lotte-department-main',
+]
+
+const APPROVED_HERO_BATCH_08_IDS = [
+  'seoul-starship-hq',
+  'seoul-hyundai-apgujeong-main',
+  'seoul-lotte-mart-seoul-station',
+  'seoul-id-hospital',
+]
+
 const AREA_DETAIL_ONLY_PLACE_IDS = [
   'seoul-sm-hq',
   'seoul-myeongdong-kyoja-main',
   'seoul-sillim-one-room-district',
-  'seoul-lotte-department-main',
-  'seoul-hyundai-apgujeong-main',
   'seoul-lotte-avenuel-world-tower',
   'seoul-namdaemun-pharmacy-district',
   'seoul-london-bagel-museum-anguk',
@@ -109,6 +125,7 @@ const AREA_DETAIL_ONLY_PLACE_IDS = [
   'seoul-sanggye-jugong-district',
   'seoul-acro-river-park',
   'seoul-hannam-the-hill',
+  'seoul-cgv-wangsimni',
 ]
 
 const INTEGRATED_GALLERY_COUNTS = {
@@ -124,8 +141,6 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-yongsan-station': 2,
   'seoul-63-square': 2,
   'seoul-national-museum': 5,
-  'seoul-lotte-department-main': 2,
-  'seoul-hyundai-apgujeong-main': 2,
   'seoul-olympic-park': 2,
   ...Object.fromEntries(APPROVED_HERO_BATCH_IDS.map((placeId) => [placeId, 1])),
   ...Object.fromEntries(APPROVED_HERO_BATCH_02_IDS
@@ -162,6 +177,13 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-cgv-yongsan-ipark': 2,
   'seoul-galleria-luxury-hall': 1,
   'seoul-hybe-hq': 3,
+  ...Object.fromEntries(APPROVED_HERO_BATCH_07_IDS.map((placeId) => [placeId, 1])),
+  ...Object.fromEntries(APPROVED_HERO_BATCH_08_IDS.map((placeId) => [placeId, 1])),
+  'seoul-yg-hq': 3,
+  'seoul-samsung-medical-center': 2,
+  'seoul-signiel': 3,
+  'seoul-kb-kookmin-headquarters': 2,
+  'seoul-lotte-department-main': 3,
   'seoul-lotte-avenuel-world-tower': 1,
   'seoul-namdaemun-pharmacy-district': 1,
   'seoul-london-bagel-museum-anguk': 1,
@@ -170,6 +192,10 @@ const INTEGRATED_GALLERY_COUNTS = {
   'seoul-acro-river-park': 1,
   'seoul-hannam-the-hill': 1,
   'seoul-lg-twin-towers': 3,
+  'seoul-starship-hq': 2,
+  'seoul-hyundai-apgujeong-main': 3,
+  'seoul-id-hospital': 2,
+  'seoul-cgv-wangsimni': 1,
 }
 
 describe('map place media governance', () => {
@@ -187,7 +213,7 @@ describe('map place media governance', () => {
 
   test('validates the reviewed media registry', () => {
     const seoulPlaceIds = new Set(getMapPackById('real-seoul-v1').places.map((place) => place.id))
-    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(146)
+    expect(MAP_PLACE_MEDIA_RECORDS).toHaveLength(167)
     for (const record of MAP_PLACE_MEDIA_RECORDS) {
       expect(validateMapPlaceMediaRecord(record)).toEqual({ valid: true, errors: [] })
     }
@@ -254,12 +280,21 @@ describe('map place media governance', () => {
         kind: MAP_PLACE_MEDIA_KIND.CATEGORY_FALLBACK,
         slot: MAP_PLACE_MEDIA_SLOT.HERO,
       })
+      expect(getMapPlaceMediaGallery('real-seoul-v1', placeId).every((record) => (
+        record.slot === MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY
+      ))).toBe(true)
+    }
+
+    for (const placeId of AREA_DETAIL_ONLY_PLACE_IDS.filter((id) => id !== 'seoul-cgv-wangsimni')) {
       expect(getMapPlaceMediaGallery('real-seoul-v1', placeId)[0]).toMatchObject({
         kind: MAP_PLACE_MEDIA_KIND.AREA_ATMOSPHERE,
         authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.AREA_ONLY,
-        slot: MAP_PLACE_MEDIA_SLOT.DETAIL_GALLERY,
       })
     }
+    expect(getMapPlaceMediaGallery('real-seoul-v1', 'seoul-cgv-wangsimni')[0]).toMatchObject({
+      kind: MAP_PLACE_MEDIA_KIND.EXACT_PHOTO,
+      authenticityGrade: MAP_PLACE_MEDIA_AUTHENTICITY_GRADE.EXACT_PLACE,
+    })
 
     for (const placeId of EXPANDED_PLACE_IDS.filter((id) => ![
       'seoul-gangnam-station',
