@@ -116,6 +116,7 @@ const { appIconImageUrl } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
   locale: homeLocale,
+  systemAppIconTheme,
   scopeId: 'home-app-icons',
 })
 const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))

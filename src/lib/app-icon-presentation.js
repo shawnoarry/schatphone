@@ -66,6 +66,8 @@ BUILT_IN_APP_ICON_META.app_control_center = {
   icon: 'fas fa-wand-magic-sparkles',
   accent: 'dark',
 }
+APP_ICON_LABELS.app_agenda_journey = { zh: '行程', en: 'Agenda Journey', ko: '일정 여정' }
+BUILT_IN_APP_ICON_META.app_agenda_journey = { icon: 'fas fa-route', accent: 'cool' }
 APP_ICON_LABELS.app_book = { zh: '文本库', en: 'Book', ko: 'Book' }
 BUILT_IN_APP_ICON_META.app_book = { icon: 'fas fa-book-open', accent: 'cool' }
 APP_ICON_LABELS.app_daon_mail = { zh: '邮件', en: 'Mail', ko: '메일' }
@@ -108,6 +110,7 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_map',
   'app_weather',
   'app_calendar',
+  'app_agenda_journey',
   'app_reminders',
   'app_stock',
   'app_shopping',
@@ -122,8 +125,14 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_jari_housing',
   'app_settings',
   'app_contacts',
+  'app_files',
   'app_store',
 ]
+
+const APP_ICON_CUSTOMIZATION_TARGET_ID_SET = new Set(APP_ICON_CUSTOMIZATION_TARGET_IDS)
+
+export const isAppIconCustomizationTarget = (appId) =>
+  APP_ICON_CUSTOMIZATION_TARGET_ID_SET.has(appId)
 
 export const APP_ICON_PRESET_OPTIONS = [
   { value: 'fas fa-network-wired', zh: '网络节点', en: 'Network Nodes', ko: '네트워크 노드' },
@@ -260,6 +269,8 @@ export const resolveAppIconMeta = (
   const override = normalizedOverrides[appId] || null
   const fallbackImageUrl = typeof fallback.imageUrl === 'string' ? fallback.imageUrl.trim() : ''
   const themeOverride = resolveSystemAppIconThemeOverride(appId, systemAppIconTheme)
+  const themeImageUrl =
+    typeof themeOverride?.imageUrl === 'string' ? themeOverride.imageUrl.trim() : ''
   const resolvedIcon = override?.icon || themeOverride?.icon || fallback.icon
   const resolvedAccent = override?.accent || themeOverride?.accent || fallback.accent
   return {
@@ -272,7 +283,7 @@ export const resolveAppIconMeta = (
     sourceType: override?.sourceType || 'preset',
     galleryAssetId: override?.sourceType === 'gallery' ? override.galleryAssetId : '',
     hasImageIcon: override?.sourceType === 'gallery' && Boolean(override.galleryAssetId),
-    imageUrl: override ? '' : fallbackImageUrl,
+    imageUrl: override ? '' : themeImageUrl || fallbackImageUrl,
   }
 }
 

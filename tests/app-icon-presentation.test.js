@@ -1,11 +1,19 @@
 import { describe, expect, test } from 'vitest'
 import {
+  isAppIconCustomizationTarget,
   normalizeAppIconOverrides,
   resolveAppIconMeta,
 } from '../src/lib/app-icon-presentation'
 import { resolveNotificationModuleMeta } from '../src/lib/notification-presentation'
 
 describe('app icon presentation helpers', () => {
+  test('supports every independent App Store identity target', () => {
+    expect(isAppIconCustomizationTarget('app_chat')).toBe(true)
+    expect(isAppIconCustomizationTarget('app_agenda_journey')).toBe(true)
+    expect(isAppIconCustomizationTarget('app_files')).toBe(true)
+    expect(isAppIconCustomizationTarget('app_more')).toBe(false)
+  })
+
   test('normalizes only supported icon overrides', () => {
     const normalized = normalizeAppIconOverrides({
       app_chat: {
@@ -96,6 +104,27 @@ describe('app icon presentation helpers', () => {
 
     const meta = resolveAppIconMeta('app_chat', normalized, 'en-US')
     expect(meta.displayName).toBe('My Messages')
+  })
+
+  test('normalizes Agenda Journey and Files identity overrides', () => {
+    const normalized = normalizeAppIconOverrides({
+      app_agenda_journey: {
+        icon: 'fas fa-map-location-dot',
+        accent: 'warm',
+      },
+      app_files: {
+        displayName: 'My Files',
+      },
+    })
+
+    expect(normalized.app_agenda_journey).toMatchObject({
+      icon: 'fas fa-map-location-dot',
+      accent: 'warm',
+    })
+    expect(normalized.app_files).toMatchObject({
+      icon: 'fas fa-folder',
+      displayName: 'My Files',
+    })
   })
 
   test('resolves home app icon metadata with overrides', () => {
@@ -215,7 +244,7 @@ describe('app icon presentation helpers', () => {
     expect(meta.toneClass).toBe('accent-dark')
   })
 
-  test('reuses the selected system app icon pack in notification presentation', () => {
+  test('keeps independent Chat notification identity outside the system app icon pack', () => {
     const meta = resolveNotificationModuleMeta(
       {
         source: 'chat_ai_reply',
@@ -227,7 +256,7 @@ describe('app icon presentation helpers', () => {
     )
 
     expect(meta.appId).toBe('app_chat')
-    expect(meta.icon).toBe('fas fa-message')
-    expect(meta.toneClass).toBe('accent-cool')
+    expect(meta.icon).toBe('fas fa-comment')
+    expect(meta.toneClass).toBe('accent-default')
   })
 })

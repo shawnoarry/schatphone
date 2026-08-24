@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseUrl": "https://cloudflare-imgbed-7z3.pages.dev",
-  "updatedAt": "2026-08-24T16:16:01.776Z",
+  "updatedAt": "2026-08-24T17:12:56.723Z",
   "assets": [
     {
       "batchId": "map-place-media-batch-08-20260824",
@@ -7935,6 +7935,150 @@
       "verifiedAt": "2026-08-11T19:35:50.055Z"
     },
     {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-round2/appearance-crested-peacock.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/appearance-crested-peacock.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/appearance-crested-peacock.webp",
+      "bytes": 21420,
+      "sha256": "04809bb2b31380c416c9fbc1237cabb457fd57ec8d67fadd310d3c60ab39b684",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:48.846Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-v1/calendar-bear.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/calendar-bear.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/calendar-bear.webp",
+      "bytes": 51360,
+      "sha256": "5c64a9e7a4b57de4f7b9c2abb76f4b5107ac7a446f8b32cf9a2f61c88aa4fb9e",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:49.419Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-v1/camera-owl.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/camera-owl.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/camera-owl.webp",
+      "bytes": 55912,
+      "sha256": "adc671bb1e1a279046544af23ddda6ffe9e7f75c6f6fef0a90287d34622ca45a",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:49.752Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-round2/gallery-photo-wing-butterfly.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/gallery-photo-wing-butterfly.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/gallery-photo-wing-butterfly.webp",
+      "bytes": 24604,
+      "sha256": "9586dd10a7c7ebf414e19b015ab0d37ef176049ae2b35a4c890c17f0e231a98b",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:49.234Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-v1/map-turtle.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/map-turtle.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/map-turtle.webp",
+      "bytes": 77924,
+      "sha256": "435a229d02883c57a27a0134e0ebe70d9a88521c393162763016b6d5316b3a9a",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:50.076Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-round2/music-note-spout-whale.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/music-note-spout-whale.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/music-note-spout-whale.webp",
+      "bytes": 16672,
+      "sha256": "38eb7e0dbf4f5afeec196bfdf56d0da8d295cd580b03a3113a8c895bd53e1eb9",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:49.890Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-round2/network-wifi-clownfish.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/network-wifi-clownfish.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/network-wifi-clownfish.webp",
+      "bytes": 26094,
+      "sha256": "1439444670747815f49d05d1f3c23ae2cc696ab7fa193c99c3810e327b55b7ae",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:50.005Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-v1/phone-lop-rabbit.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/phone-lop-rabbit.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/phone-lop-rabbit.webp",
+      "bytes": 64664,
+      "sha256": "e9f9133e600388cb511fb59c781bd215c9dc323270bbce3456baaf606396efcb",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:49.912Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-v1/settings-gear-beetle.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/settings-gear-beetle.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/settings-gear-beetle.webp",
+      "bytes": 57390,
+      "sha256": "81e29f8c33894374c088ac4683bc6648b5644ef68c749f59e54c08a371eefe2c",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:56.098Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-round2/wallet-pouch-kangaroo.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/wallet-pouch-kangaroo.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/wallet-pouch-kangaroo.webp",
+      "bytes": 21992,
+      "sha256": "4b13192d1a9a76a7f10a2861c4dc61e4501c3f2e24c629d290895e0c2ac3905d",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:49.788Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-v1/weather-cloud-sheep.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/weather-cloud-sheep.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/weather-cloud-sheep.webp",
+      "bytes": 62700,
+      "sha256": "d57e5d0cb7067980b9cbeecd63a946ccf5423caf8d28bc31a017cccd0e1b4be2",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:56.619Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-animal-icons-accepted-round2/widgets-tile-shell-snail.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/widgets-tile-shell-snail.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/app-icons/cloud-pastel-animals-v1/widgets-tile-shell-snail.webp",
+      "bytes": 22890,
+      "sha256": "cab08940350c3e84ebe6ee336cde7b90172c7b35a62a5144e25585345cb83a29",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:49.450Z"
+    },
+    {
       "batchId": "app-shell-brand-icons-20260823-v1",
       "path": "output/imagegen/app-shell-brand-icons-20260823-v1/runtime/jari-housing-app-icon-v1.png",
       "aliasPaths": [],
@@ -7981,6 +8125,30 @@
       "sha256": "11743fc98237bba3af277b027d23cd49ffdb21568da3d843319ab2bfbc90059e",
       "mimeType": "image/png",
       "verifiedAt": "2026-08-23T19:03:33.755Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-appearance-assets-v1/cloud-pastel-day-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/backgrounds/cloud-pastel-day-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/backgrounds/cloud-pastel-day-v1.webp",
+      "bytes": 68758,
+      "sha256": "025d7b0e59102b23eb36318139a9bb4240ae47be96c9243eda6002b37b6b17aa",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:56.692Z"
+    },
+    {
+      "batchId": "cloud-pastel-appearance-20260824",
+      "path": "output/imagegen/cloud-pastel-appearance-assets-v1/cloud-pastel-night-v1.webp",
+      "aliasPaths": [],
+      "access": "public",
+      "remoteKey": "schatphone-assets/images/ui-assets/shared/backgrounds/cloud-pastel-night-v1.webp",
+      "downloadUrl": "https://cloudflare-imgbed-7z3.pages.dev/file/schatphone-assets/images/ui-assets/shared/backgrounds/cloud-pastel-night-v1.webp",
+      "bytes": 95324,
+      "sha256": "35e4efdea53c98fea08f5f783aef2e0f4d337f7579885284fa2a72e1570ecadf",
+      "mimeType": "image/webp",
+      "verifiedAt": "2026-08-24T17:12:56.717Z"
     },
     {
       "batchId": "widgets-premium-candidates-20260812",

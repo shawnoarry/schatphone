@@ -12,6 +12,10 @@ import {
   SYSTEM_APP_ICON_THEME_OPTIONS,
   resolveSystemAppIconThemeMeta,
 } from '../lib/system-app-icon-theme'
+import {
+  resolveAppearanceStyleKitStatus,
+  resolveSystemAppearanceThemeMeta,
+} from '../lib/system-appearance-theme'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
 import {
   buildRouteWithReturnSource,
@@ -53,7 +57,12 @@ const systemStore = useSystemStore()
 const galleryStore = useGalleryStore()
 const { t } = useI18n()
 
-const { settings, availableThemes } = storeToRefs(systemStore)
+const {
+  settings,
+  availableThemes,
+  availableSystemAppearanceThemes,
+  availableAppearanceStyleKits,
+} = storeToRefs(systemStore)
 
 const activeMenu = ref(ROOT_MENU)
 const saved = ref(false)
@@ -69,6 +78,7 @@ const wallpaperSourceTypeDraft = ref('')
 const appearancePackExportText = ref('')
 const appearancePackImportText = ref('')
 const appearancePackStatus = ref({ tone: '', message: '' })
+const applyStyleKitWallpaper = ref(true)
 const wallpaperQuickPreviewMap = reactive({})
 
 const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
@@ -126,10 +136,15 @@ const lockClockStyleLabel = (styleId) => {
 }
 
 const themeDisplayName = (theme) => {
-  if (theme?.id === 'default') return t('默认系统', 'Default System')
-  if (theme?.id === 'zen') return t('石墨静夜', 'Graphite Quiet')
+  if (theme?.colorMode === 'day' || theme?.id === 'default') return t('白天', 'Day')
+  if (theme?.colorMode === 'night' || theme?.id === 'zen') return t('黑夜', 'Night')
   return theme?.name || ''
 }
+
+const systemAppearanceThemeLabel = (theme) => t(theme.labelZh, theme.labelEn)
+const systemAppearanceThemeDescription = (theme) => t(theme.descriptionZh, theme.descriptionEn)
+const appearanceStyleKitLabel = (kit) => t(kit.labelZh, kit.labelEn)
+const appearanceStyleKitDescription = (kit) => t(kit.descriptionZh, kit.descriptionEn)
 
 const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
 const appearancePackStatusClass = computed(() => {
@@ -179,6 +194,12 @@ const currentThemeMeta = computed(
   () =>
     availableThemes.value.find((item) => item.id === settings.value.appearance.currentTheme) || null,
 )
+const currentSystemAppearanceTheme = computed(() =>
+  resolveSystemAppearanceThemeMeta(settings.value.appearance.systemTheme),
+)
+const currentAppearanceStyleKitStatus = computed(() =>
+  resolveAppearanceStyleKitStatus(settings.value.appearance),
+)
 const currentSystemAppIconTheme = computed(() =>
   resolveSystemAppIconThemeMeta(settings.value.appearance.systemAppIconTheme),
 )
@@ -218,7 +239,7 @@ const currentWallpaperPreviewUrl = computed(() => {
       ? settings.value.appearance.wallpaper.trim()
       : ''
   }
-  return systemStore.getThemeWallpaper(settings.value.appearance.currentTheme) || ''
+  return systemStore.getThemeWallpaper() || ''
 })
 const currentWallpaperModeLabel = computed(() => {
   if (currentWallpaperMode.value === 'gallery') return t('相册', 'Gallery')
@@ -245,8 +266,8 @@ const currentWallpaperPreviewDescription = computed(() => {
     )
   }
   return t(
-    `当前跟随主题壁纸：${themeDisplayName(currentThemeMeta.value) || settings.value.appearance.currentTheme}`,
-    `Currently following theme wallpaper: ${themeDisplayName(currentThemeMeta.value) || settings.value.appearance.currentTheme}`,
+    `当前跟随系统主题壁纸：${systemAppearanceThemeLabel(currentSystemAppearanceTheme.value)}`,
+    `Currently following system theme wallpaper: ${systemAppearanceThemeLabel(currentSystemAppearanceTheme.value)}`,
   )
 })
 const resetWallpaperButtonLabel = computed(() =>
@@ -278,10 +299,9 @@ const currentWallpaperSourceSummary = computed(() => {
           'Custom URL is empty, currently falling back to theme wallpaper',
         )
   }
-  const theme = availableThemes.value.find((item) => item.id === settings.value.appearance.currentTheme)
   return t(
-    `跟随主题：${themeDisplayName(theme) || settings.value.appearance.currentTheme}`,
-    `Follow Theme: ${themeDisplayName(theme) || settings.value.appearance.currentTheme}`,
+    `跟随系统主题：${systemAppearanceThemeLabel(currentSystemAppearanceTheme.value)}`,
+    `Follow System Theme: ${systemAppearanceThemeLabel(currentSystemAppearanceTheme.value)}`,
   )
 })
 
@@ -289,6 +309,9 @@ watch(
   () => [settings.value.appearance.wallpaperMode, settings.value.appearance.wallpaper],
   ([mode, value]) => {
     wallpaperSourceTypeDraft.value = mode || 'theme'
+    if (mode && mode !== 'theme') {
+      applyStyleKitWallpaper.value = false
+    }
     if (mode === 'url') {
       customWallpaperUrlInput.value = typeof value === 'string' ? value : ''
       return
@@ -444,6 +467,7 @@ const openMenu = (menu) => {
   if (menu === 'theme') {
     customWallpaperUrlInput.value =
       settings.value.appearance.wallpaperMode === 'url' ? settings.value.appearance.wallpaper || '' : ''
+    applyStyleKitWallpaper.value = settings.value.appearance.wallpaperMode === 'theme'
   }
 }
 
@@ -465,18 +489,30 @@ const setTheme = (themeId) => {
   triggerSaved()
 }
 
+const setSystemAppearanceTheme = (themeId) => {
+  systemStore.setSystemAppearanceTheme(themeId)
+  triggerSaved()
+}
+
 const setSystemAppIconTheme = (themeId) => {
   systemStore.setSystemAppIconTheme(themeId)
+  triggerSaved()
+}
+
+const applyAppearanceStyleKit = (kitId) => {
+  systemStore.applyAppearanceStyleKit(kitId, {
+    applyWallpaper: applyStyleKitWallpaper.value,
+  })
   triggerSaved()
 }
 
 const systemAppIconThemeLabel = (theme) => t(theme.labelZh, theme.labelEn)
 const systemAppIconThemeDescription = (theme) => t(theme.descriptionZh, theme.descriptionEn)
 const systemAppIconPreviewIds = Object.freeze([
-  'app_chat',
-  'app_contacts',
-  'app_settings',
-  'app_widgets',
+  'app_phone',
+  'app_camera',
+  'app_weather',
+  'app_map',
 ])
 const systemAppIconPreviewMeta = (appId, themeId) =>
   resolveAppIconMeta(appId, {}, 'zh-CN', themeId)
@@ -655,8 +691,11 @@ onBeforeUnmount(() => {
       <section class="appearance-overview-card">
         <div class="appearance-overview-copy">
           <span>{{ t('当前外观', 'Current Look') }}</span>
-          <h2>{{ themeDisplayName(currentThemeMeta) || t('默认系统', 'Default System') }}</h2>
-          <p>{{ currentWallpaperModeLabel }} · {{ systemAppIconThemeLabel(currentSystemAppIconTheme) }}</p>
+          <h2>{{ systemAppearanceThemeLabel(currentSystemAppearanceTheme) }}</h2>
+          <p>
+            {{ themeDisplayName(currentThemeMeta) }} ·
+            {{ systemAppIconThemeLabel(currentSystemAppIconTheme) }}
+          </p>
         </div>
         <div class="appearance-overview-actions">
           <button type="button" @click="openMenu('theme')">
@@ -870,8 +909,8 @@ onBeforeUnmount(() => {
           <p>
             {{
               t(
-                '只统一聊天、联系人、设置、组件等系统自带 App。购物服务等商业 Logo 保持原样，单 App 自定义仍在 App Store 管理。',
-                'Only built-in apps such as Chat, Contacts, Settings, and Widgets change together. Branded logos stay untouched, and per-app customization remains in App Store.',
+                '只统一联系人、设置、组件、电话等系统自带 App。Chat 与商业 App 保持独立，单 App 自定义仍在 App Store 管理。',
+                'Only built-in apps such as Contacts, Settings, Widgets, and Phone change together. Chat and branded apps stay independent, and per-app customization remains in App Store.',
               )
             }}
           </p>
@@ -883,7 +922,15 @@ onBeforeUnmount(() => {
             class="appearance-system-app-icon"
             :class="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).toneClass"
           >
-            <i :class="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).icon"></i>
+            <img
+              v-if="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).imageUrl"
+              :src="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).imageUrl"
+              alt=""
+            />
+            <i
+              v-else
+              :class="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).icon"
+            ></i>
           </span>
         </div>
       </section>
@@ -906,7 +953,12 @@ onBeforeUnmount(() => {
               class="appearance-system-app-icon"
               :class="systemAppIconPreviewMeta(appId, theme.id).toneClass"
             >
-              <i :class="systemAppIconPreviewMeta(appId, theme.id).icon"></i>
+              <img
+                v-if="systemAppIconPreviewMeta(appId, theme.id).imageUrl"
+                :src="systemAppIconPreviewMeta(appId, theme.id).imageUrl"
+                alt=""
+              />
+              <i v-else :class="systemAppIconPreviewMeta(appId, theme.id).icon"></i>
             </span>
           </span>
           <span class="appearance-icon-theme-option__copy">
@@ -922,8 +974,67 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else-if="activeMenu === 'theme'" class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+      <div class="bg-white rounded-xl p-4 shadow-sm space-y-3" data-testid="appearance-style-kit-section">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-sm font-bold">{{ t('一键风格套装', 'Style Kits') }}</div>
+            <p class="mt-1 text-[11px] leading-5 text-gray-500">
+              {{ t('一次应用配套界面、系统 App 图标与可选推荐壁纸，之后仍可分别调整。', 'Applies matching surfaces, system app icons, and an optional recommended wallpaper while keeping each setting editable.') }}
+            </p>
+          </div>
+          <span
+            v-if="currentAppearanceStyleKitStatus"
+            class="appearance-style-kit-status"
+            :class="{ 'is-customized': currentAppearanceStyleKitStatus.customized }"
+            data-testid="appearance-style-kit-status"
+          >
+            {{
+              currentAppearanceStyleKitStatus.customized
+                ? t('已自定义', 'Customized')
+                : t('套装已应用', 'Kit Applied')
+            }}
+          </span>
+        </div>
+        <label class="appearance-style-kit-wallpaper">
+          <input
+            v-model="applyStyleKitWallpaper"
+            type="checkbox"
+            data-testid="appearance-style-kit-wallpaper"
+          />
+          <span>{{ t('同时应用推荐壁纸', 'Apply recommended wallpaper') }}</span>
+        </label>
+        <button
+          v-for="kit in availableAppearanceStyleKits"
+          :key="kit.id"
+          type="button"
+          class="appearance-style-kit-option"
+          :class="{
+            'is-selected':
+              currentAppearanceStyleKitStatus?.kit?.id === kit.id &&
+              !currentAppearanceStyleKitStatus.customized,
+          }"
+          :aria-pressed="
+            currentAppearanceStyleKitStatus?.kit?.id === kit.id &&
+            !currentAppearanceStyleKitStatus.customized
+          "
+          :data-testid="`appearance-style-kit-${kit.id}`"
+          @click="applyAppearanceStyleKit(kit.id)"
+        >
+          <span>
+            <strong>{{ appearanceStyleKitLabel(kit) }}</strong>
+            <small>{{ appearanceStyleKitDescription(kit) }}</small>
+          </span>
+          <span class="appearance-style-kit-option__action">
+            {{ t('应用整套', 'Apply Kit') }}
+          </span>
+        </button>
+      </div>
+
       <div class="bg-white rounded-xl p-4 shadow-sm">
-        <div class="text-sm font-bold mb-3">{{ t('系统主题', 'System Theme') }}</div>
+        <div class="text-sm font-bold mb-1">{{ t('单独调整：明暗模式', 'Customize: Color Mode') }}</div>
+        <p class="text-[11px] leading-5 text-gray-500 mb-3">
+          {{ t('只切换当前系统主题的日间或夜间版本。', 'Switches only the day or night variant of the current system theme.') }}
+        </p>
         <div class="grid grid-cols-2 gap-3">
           <button
             v-for="theme in availableThemes"
@@ -932,12 +1043,48 @@ onBeforeUnmount(() => {
             class="h-24 rounded-lg border-2 flex items-center justify-center cursor-pointer"
             :class="settings.appearance.currentTheme === theme.id ? 'border-blue-500' : 'border-transparent'"
             :style="{ background: theme.preview }"
+            :aria-pressed="settings.appearance.currentTheme === theme.id"
+            :data-testid="`appearance-color-mode-${theme.colorMode}`"
           >
             <span class="text-xs font-bold" :class="theme.darkText ? 'text-black' : 'text-white'">
               {{ themeDisplayName(theme) }}
             </span>
           </button>
         </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 shadow-sm space-y-3" data-testid="appearance-system-theme-section">
+        <div>
+          <div class="text-sm font-bold">{{ t('单独调整：界面配色', 'Customize: Interface Theme') }}</div>
+          <p class="mt-1 text-[11px] leading-5 text-gray-500">
+            {{ t('仅修改全局色彩、系统材质、Dock、控件与系统背景，不替换图标包。', 'Changes global colors, system materials, Dock, controls, and system backgrounds without replacing the icon pack.') }}
+          </p>
+        </div>
+        <button
+          v-for="theme in availableSystemAppearanceThemes"
+          :key="theme.id"
+          type="button"
+          class="appearance-system-theme-option"
+          :class="{ 'is-selected': settings.appearance.systemTheme === theme.id }"
+          :aria-pressed="settings.appearance.systemTheme === theme.id"
+          :data-testid="`appearance-system-theme-${theme.id}`"
+          @click="setSystemAppearanceTheme(theme.id)"
+        >
+          <span
+            class="appearance-system-theme-option__preview"
+            :style="{ background: theme.previews?.[settings.appearance.colorMode] || theme.previews?.day }"
+            aria-hidden="true"
+          ></span>
+          <span class="appearance-system-theme-option__copy">
+            <strong>{{ systemAppearanceThemeLabel(theme) }}</strong>
+            <small>{{ systemAppearanceThemeDescription(theme) }}</small>
+          </span>
+          <i
+            v-if="settings.appearance.systemTheme === theme.id"
+            class="fas fa-circle-check"
+            aria-hidden="true"
+          ></i>
+        </button>
       </div>
 
       <div class="bg-white rounded-xl p-4 shadow-sm space-y-3">
@@ -1087,7 +1234,11 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="appearance-mobile-action-strip">
-          <button type="button" @click="openAppearanceSheet('wallpaper')">
+          <button
+            type="button"
+            data-testid="appearance-wallpaper-manage"
+            @click="openAppearanceSheet('wallpaper')"
+          >
             <i class="fas fa-sliders"></i>
             <span>{{ t('管理壁纸来源', 'Manage wallpaper source') }}</span>
           </button>
@@ -1141,6 +1292,7 @@ onBeforeUnmount(() => {
                     : useThemeWallpaperSource()
               "
               class="flex-1 px-3 py-2 rounded-md text-sm font-semibold bg-blue-500 text-white hover:bg-blue-600 transition"
+              data-testid="appearance-wallpaper-apply"
             >
               {{ t('应用壁纸来源', 'Apply Wallpaper Source') }}
             </button>
@@ -1618,6 +1770,7 @@ onBeforeUnmount(() => {
 }
 
 .appearance-system-app-icon {
+  overflow: hidden;
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -1627,6 +1780,13 @@ onBeforeUnmount(() => {
   flex: 0 0 40px;
   font-size: 17px;
   box-shadow: 0 5px 12px rgba(15, 23, 42, 0.14);
+}
+
+.appearance-system-app-icon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .appearance-system-app-icon.accent-default {
@@ -1674,6 +1834,122 @@ onBeforeUnmount(() => {
 .appearance-icon-theme-option__check {
   color: var(--system-accent);
   font-size: 18px;
+}
+
+.appearance-system-theme-option,
+.appearance-style-kit-option {
+  width: 100%;
+  border: 1px solid var(--system-control-border);
+  border-radius: var(--system-radius-md);
+  color: var(--system-text);
+  background: var(--system-control-bg);
+  text-align: left;
+  transition:
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast),
+    transform var(--system-motion-fast);
+}
+
+.appearance-system-theme-option {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+}
+
+.appearance-system-theme-option.is-selected {
+  border-color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.appearance-style-kit-option.is-selected {
+  border-color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.appearance-system-theme-option:active,
+.appearance-style-kit-option:active {
+  transform: scale(0.992);
+}
+
+.appearance-system-theme-option__preview {
+  width: 76px;
+  height: 54px;
+  border: 1px solid var(--system-border-light);
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 var(--system-edge-highlight);
+}
+
+.appearance-system-theme-option__copy,
+.appearance-style-kit-option > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.appearance-system-theme-option__copy strong,
+.appearance-style-kit-option strong {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.appearance-system-theme-option__copy small,
+.appearance-style-kit-option small {
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.appearance-style-kit-status {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--system-success);
+  background: var(--system-success-soft);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.appearance-style-kit-status.is-customized {
+  color: var(--system-warning);
+  background: var(--system-warning-soft);
+}
+
+.appearance-style-kit-wallpaper {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--system-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.appearance-style-kit-wallpaper input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--system-accent);
+}
+
+.appearance-style-kit-option {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px;
+}
+
+.appearance-style-kit-option__action {
+  flex: 0 0 auto;
+  border-radius: 10px;
+  padding: 8px 11px;
+  color: var(--system-on-accent);
+  background: var(--system-accent);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .appearance-layout-card {

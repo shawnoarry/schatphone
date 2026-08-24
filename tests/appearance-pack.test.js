@@ -10,6 +10,9 @@ describe('appearance pack schema', () => {
   test('exports only portable visual appearance fields', () => {
     const pack = buildAppearancePack({
       currentTheme: 'zen',
+      colorMode: 'night',
+      systemTheme: 'classic',
+      styleKitId: 'system-classic',
       systemAppIconTheme: 'soft-rounded',
       wallpaperMode: 'url',
       wallpaper: 'https://example.com/wallpaper.jpg',
@@ -42,6 +45,9 @@ describe('appearance pack schema', () => {
     expect(pack.kind).toBe(APPEARANCE_PACK_KIND)
     expect(pack.appearance).toMatchObject({
       currentTheme: 'zen',
+      colorMode: 'night',
+      systemTheme: 'classic',
+      styleKitId: 'system-classic',
       systemAppIconTheme: 'soft-rounded',
       wallpaperMode: 'url',
       customCss: '.app-shell { color: red; }',
@@ -55,6 +61,28 @@ describe('appearance pack schema', () => {
     expect(pack.appearance.customWidgets).toBeUndefined()
     expect(pack.appearance.homeWidgetPages).toBeUndefined()
     expect(pack.appearance.chat).toBeUndefined()
+  })
+
+  test('migrates legacy theme-only packs onto the new independent axes', () => {
+    const normalized = normalizeAppearancePack({
+      appearance: {
+        currentTheme: 'zen',
+        systemAppIconTheme: 'soft-rounded',
+      },
+    })
+
+    expect(normalized).toMatchObject({
+      ok: true,
+      pack: {
+        appearance: {
+          currentTheme: 'zen',
+          colorMode: 'night',
+          systemTheme: 'classic',
+          styleKitId: 'system-classic',
+          systemAppIconTheme: 'soft-rounded',
+        },
+      },
+    })
   })
 
   test('normalizes full packs and raw appearance payloads', () => {

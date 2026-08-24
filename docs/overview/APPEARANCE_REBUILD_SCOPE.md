@@ -44,7 +44,7 @@ The project is not starting from zero on appearance capability.
 
 Already implemented:
 
-1. theme switching and wallpaper fallback
+1. independent day/night mode and system-theme foundation, with legacy `default` / `zen` compatibility and theme wallpaper fallback
 2. wallpaper source modes: theme, gallery, and URL
 3. font presets and custom font stack
 4. lock-screen clock style selection
@@ -52,11 +52,12 @@ Already implemented:
 6. custom CSS entry
 7. app-icon preset and accent customization
 8. system App icon themes with a curated native-app allowlist
-9. widget restore, custom widget creation, and import flow
-10. multi-page Home layout baseline with widgets and app entries
-11. lock-screen grouped notifications and in-shell banners
-12. Gallery asset categories and cross-module media reuse
-13. Map visual settings and optional AI visual refresh path
+9. one-click style-kit composition for system theme, system App icon pack, and optional recommended wallpaper, with post-application customization detection
+10. widget restore, custom widget creation, and import flow
+11. multi-page Home layout baseline with widgets and app entries
+12. lock-screen grouped notifications and in-shell banners
+13. Gallery asset categories and cross-module media reuse
+14. Map visual settings and optional AI visual refresh path
 
 Conclusion:
 
@@ -115,6 +116,8 @@ Why:
 Preserve:
 
 - theme, wallpaper, font, icon, and widget-setting semantics
+- day/night mode, system-theme selection, system App icon pack, and style-kit source remain separate persisted concerns; a style kit does not become an immutable profile
+- personal Gallery/URL wallpaper survives style-kit application unless the user explicitly applies the recommended wallpaper
 - system App icon themes affect only curated native-system entries; commercial/branded logos remain unchanged and explicit App Store per-app overrides win
 - save behavior and safety feedback
 - wallpaper source compatibility

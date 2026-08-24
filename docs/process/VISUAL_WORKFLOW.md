@@ -565,6 +565,7 @@ Suggested content:
 - visual positioning for SchatPhone;
 - entry-context ownership rules for system, installed app, and hybrid surfaces;
 - color tokens and theme rules;
+- appearance-axis rules: day/night mode, system-theme tokens/materials, curated native-system App icon packs, and non-locking style-kit composition;
 - typography scale;
 - spacing, radius, border, blur, and shadow system;
 - Home icon and fixed widget-slot rules;

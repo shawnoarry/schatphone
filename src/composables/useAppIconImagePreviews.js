@@ -5,6 +5,7 @@ export const useAppIconImagePreviews = ({
   galleryStore,
   appIconOverrides,
   locale,
+  systemAppIconTheme,
   scopeId = 'app-icon-previews',
 } = {}) => {
   const previewUrls = reactive({})
@@ -13,6 +14,7 @@ export const useAppIconImagePreviews = ({
   const overrideSignature = computed(() =>
     JSON.stringify(appIconOverrides?.value || {}),
   )
+  const activeSystemAppIconTheme = computed(() => systemAppIconTheme?.value || 'classic')
 
   const refreshPreviews = async () => {
     const currentVersion = resolveVersion + 1
@@ -22,7 +24,12 @@ export const useAppIconImagePreviews = ({
 
     await Promise.all(
       Object.keys(overrides).map(async (appId) => {
-        const meta = resolveAppIconMeta(appId, overrides, locale?.value || 'en-US')
+        const meta = resolveAppIconMeta(
+          appId,
+          overrides,
+          locale?.value || 'en-US',
+          activeSystemAppIconTheme.value,
+        )
         if (!meta.hasImageIcon) return
 
         activeAppIds.add(appId)
@@ -47,7 +54,11 @@ export const useAppIconImagePreviews = ({
   }
 
   watch(
-    () => [overrideSignature.value, galleryStore?.hasFinishedStorageHydration],
+    () => [
+      overrideSignature.value,
+      activeSystemAppIconTheme.value,
+      galleryStore?.hasFinishedStorageHydration,
+    ],
     refreshPreviews,
     { immediate: true },
   )
@@ -64,6 +75,7 @@ export const useAppIconImagePreviews = ({
       normalizedId,
       appIconOverrides?.value || {},
       locale?.value || 'en-US',
+      activeSystemAppIconTheme.value,
     ).imageUrl || ''
   }
 

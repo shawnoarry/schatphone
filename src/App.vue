@@ -80,10 +80,12 @@ const notificationLocale = computed(() =>
   languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value,
 )
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
+const systemAppIconTheme = computed(() => settings.value.appearance?.systemAppIconTheme)
 const { appIconImageUrl } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
   locale: notificationLocale,
+  systemAppIconTheme,
   scopeId: 'app-shell-app-icons',
 })
 const resolveNotificationModuleMeta = (note) =>
@@ -189,8 +191,7 @@ const resolveCurrentWallpaper = async () => {
     typeof appearance.wallpaperAssetId === 'string' ? appearance.wallpaperAssetId.trim() : ''
   const customWallpaperUrl =
     typeof appearance.wallpaper === 'string' ? appearance.wallpaper.trim() : ''
-  const themeWallpaper =
-    systemStore.getThemeWallpaper(appearance.currentTheme) || customWallpaperUrl || ''
+  const themeWallpaper = systemStore.getThemeWallpaper() || customWallpaperUrl || ''
 
   galleryStore.releaseAssetPreviewScope(SHELL_WALLPAPER_PREVIEW_SCOPE)
 
@@ -381,6 +382,8 @@ watch(
 watch(
   () => [
     settings.value.appearance?.currentTheme,
+    settings.value.appearance?.colorMode,
+    settings.value.appearance?.systemTheme,
     settings.value.appearance?.wallpaperMode,
     settings.value.appearance?.wallpaperAssetId,
     settings.value.appearance?.wallpaper,
@@ -393,10 +396,16 @@ watch(
 )
 
 watch(
-  () => settings.value.appearance?.currentTheme,
-  (themeId) => {
+  () => [
+    settings.value.appearance?.currentTheme,
+    settings.value.appearance?.colorMode,
+    settings.value.appearance?.systemTheme,
+  ],
+  ([themeId, colorMode, systemTheme]) => {
     if (typeof document === 'undefined') return
     document.documentElement.setAttribute('data-theme', themeId || 'default')
+    document.documentElement.setAttribute('data-color-mode', colorMode || 'day')
+    document.documentElement.setAttribute('data-system-theme', systemTheme || 'classic')
   },
   { immediate: true },
 )
@@ -1025,6 +1034,8 @@ const lockPhone = () => {
   <div
     class="app-shell"
     :data-theme="settings.appearance.currentTheme"
+    :data-color-mode="settings.appearance.colorMode"
+    :data-system-theme="settings.appearance.systemTheme"
     :data-statusbar="showStatusBar ? 'on' : 'off'"
     :style="customVarStyle"
     v-bind="appShellScopeAttrs"

@@ -271,7 +271,7 @@ describe('App Store entry management UI', () => {
     expect(wrapper.find('[data-testid="app-store-item-app_book"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="app-store-item-app_book"]').text()).toContain('Book')
     expect(wrapper.find('[data-testid="app-store-item-app_book"]').text()).toContain('Ready for slot')
-    expect(wrapper.find('[data-testid="app-store-item-app_files"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="app-store-item-app_files"]').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('Experimental Toggles')
 
     wrapper.unmount()
@@ -326,6 +326,40 @@ describe('App Store entry management UI', () => {
       sourceType: 'preset',
       icon: 'fas fa-paper-plane',
       accent: 'dark',
+    })
+
+    wrapper.unmount()
+  })
+
+  test('App Store saves identities for Agenda Journey and Files', async () => {
+    const router = createTestRouter()
+    await router.push('/app-store')
+    await router.isReady()
+    const systemStore = useSystemStore()
+    systemStore.settings.system.language = 'en-US'
+
+    const wrapper = mount(AppStoreView, { global: { plugins: [router] } })
+
+    await wrapper.get('[data-testid="app-store-item-app_agenda_journey"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-icon-preset"]').setValue('fas fa-route')
+    await wrapper.get('[data-testid="app-store-identity-accent"]').setValue('warm')
+    await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.appIconOverrides.app_agenda_journey).toMatchObject({
+      icon: 'fas fa-route',
+      accent: 'warm',
+    })
+
+    await wrapper.get('[data-testid="app-store-item-app_files"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-open-identity"]').trigger('click')
+    await wrapper.get('[data-testid="app-store-identity-display-name"]').setValue('My Files')
+    await wrapper.get('[data-testid="app-store-identity-save"]').trigger('click')
+    await flushPromises()
+
+    expect(systemStore.settings.appearance.appIconOverrides.app_files).toMatchObject({
+      displayName: 'My Files',
     })
 
     wrapper.unmount()

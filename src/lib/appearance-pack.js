@@ -5,12 +5,23 @@ import {
   DEFAULT_SYSTEM_APP_ICON_THEME_ID,
   normalizeSystemAppIconThemeId,
 } from './system-app-icon-theme'
+import {
+  DEFAULT_APPEARANCE_STYLE_KIT_ID,
+  DEFAULT_SYSTEM_APPEARANCE_THEME_ID,
+  appearanceColorModeToLegacyThemeId,
+  normalizeAppearanceColorMode,
+  normalizeAppearanceStyleKitId,
+  normalizeSystemAppearanceThemeId,
+} from './system-appearance-theme'
 
 export const APPEARANCE_PACK_KIND = 'schatphone.appearance-pack'
-export const APPEARANCE_PACK_VERSION = 1
+export const APPEARANCE_PACK_VERSION = 2
 
 const APPEARANCE_PACK_FIELD_KEYS = Object.freeze([
   'currentTheme',
+  'colorMode',
+  'systemTheme',
+  'styleKitId',
   'systemAppIconTheme',
   'wallpaperMode',
   'wallpaperAssetId',
@@ -56,8 +67,18 @@ const normalizeStringRecord = (value = {}) => {
 
 export const normalizeAppearancePackAppearance = (appearance = {}) => {
   const source = appearance && typeof appearance === 'object' ? appearance : {}
+  const colorMode = normalizeAppearanceColorMode(source.colorMode ?? source.currentTheme)
   return {
-    currentTheme: normalizeText(source.currentTheme, 'default', 80),
+    currentTheme: appearanceColorModeToLegacyThemeId(colorMode),
+    colorMode,
+    systemTheme: normalizeSystemAppearanceThemeId(
+      source.systemTheme,
+      DEFAULT_SYSTEM_APPEARANCE_THEME_ID,
+    ),
+    styleKitId: normalizeAppearanceStyleKitId(
+      source.styleKitId,
+      DEFAULT_APPEARANCE_STYLE_KIT_ID,
+    ),
     systemAppIconTheme: normalizeSystemAppIconThemeId(
       source.systemAppIconTheme ?? source.systemIconTheme,
       DEFAULT_SYSTEM_APP_ICON_THEME_ID,

@@ -1,6 +1,6 @@
 # Visual And IA Governance Package
 
-Updated: 2026-08-13
+Updated: 2026-08-24
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
@@ -9,7 +9,7 @@ Current Home customization baseline:
 - `主屏 / 桌面 / Home` is the system desktop layer, not a user-facing app entry.
 - The desktop edit state owns per-page layout templates and fixed slot content editing.
 - `组件 / Widgets` owns widget creation, import, library state, and custom widget click-action configuration.
-- `外观 / Appearance` owns broader theme, wallpaper, and the shared icon style for a curated set of native system apps. Commercial/branded app logos and per-app identity overrides remain App Store-owned.
+- `外观 / Appearance` owns four independent global layers: day/night mode, system theme, the shared icon style for a curated set of native system apps, and one-click style kits that compose theme + icon pack + optional recommended wallpaper. Applying or later customizing a kit never changes Home layout/widgets, Chat appearance, app skins, global custom CSS, commercial/branded app logos, or App Store-owned per-app identity overrides.
 - `应用商城 / App Store` owns the app-entry management surface; `More` is no longer a Home app.
 - App Library / App Store-like surfaces own app-entry visibility only.
 - The default release Home shows three normal-mode pages: glanceable widgets and personal tools first, daily communication/planning/life apps including Music second, then System Status, Quick Heart, and Quick Disc. Appearance lets users choose two through five visible screens without altering any retained page template, slot placement, or content; Home edit mode always exposes all five pages.

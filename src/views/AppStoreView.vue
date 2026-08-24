@@ -20,6 +20,7 @@ import {
 } from '../lib/app-entry-presentation'
 import {
   APP_ICON_ACCENT_OPTIONS,
+  isAppIconCustomizationTarget,
   APP_ICON_PRESET_OPTIONS,
   resolveAppAccentLabel,
   resolveAppIconMeta,
@@ -86,6 +87,7 @@ const { settings } = storeToRefs(systemStore)
 
 const locale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
+const systemAppIconTheme = computed(() => settings.value.appearance?.systemAppIconTheme)
 const entryPresentationOverrides = computed(() => settings.value.appearance?.entryPresentationOverrides || {})
 const appStoreMiniAppPlacements = computed(() =>
   normalizeAppStoreMiniAppPlacements(settings.value.appearance?.appStoreMiniAppPlacements),
@@ -94,6 +96,7 @@ const { appIconImageUrl, refreshPreviews: refreshAppStoreIconPreviews } = useApp
   galleryStore,
   appIconOverrides,
   locale,
+  systemAppIconTheme,
   scopeId: 'app-store-app-icons',
 })
 const DOCK_APP_IDS = new Set(['app_chat', 'app_contacts', 'app_settings', 'app_widgets'])
@@ -383,6 +386,16 @@ const APP_STORE_ENTRIES = [
     categoryEn: 'Archive',
     descZh: '长期拥有物、记录与资产档案。',
     descEn: 'Owned things, records, and asset archive.',
+  },
+  {
+    id: 'app_files',
+    route: '/files',
+    labelZh: '文件',
+    labelEn: 'Files',
+    categoryZh: '资料',
+    categoryEn: 'Archive',
+    descZh: '浏览与管理手机中的文件入口。',
+    descEn: 'Browse and manage file entries on the phone.',
   },
   {
     id: 'app_themes',
@@ -1011,7 +1024,11 @@ const selectedWorldAppHandoff = computed(() => {
 })
 
 const selectedAppCanCustomizeIdentity = computed(() =>
-  Boolean(selectedApp.value && !selectedApp.value.worldAppEntry),
+  Boolean(
+    selectedApp.value &&
+      !selectedApp.value.worldAppEntry &&
+      (selectedApp.value.shopAppEntry || isAppIconCustomizationTarget(selectedApp.value.id)),
+  ),
 )
 const selectedAppCanEditShopBindingTarget = computed(() =>
   Boolean(selectedApp.value?.shopAppEntry && !selectedApp.value.sourceOwnedShopEntry),

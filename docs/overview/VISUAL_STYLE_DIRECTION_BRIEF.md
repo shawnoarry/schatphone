@@ -1,6 +1,6 @@
 # SchatPhone Visual Style Direction Brief
 
-Updated: 2026-07-16
+Updated: 2026-08-24
 
 Purpose: this document records the intended visual direction for the appearance rebuild.
 
@@ -29,6 +29,14 @@ Must avoid:
 2. generic webpage feeling
 3. flat settings piles without mobile hierarchy
 4. styles that break the illusion of being inside one phone
+
+Appearance theme direction:
+
+1. day/night is an independent display axis; every authored system theme should eventually provide both variants;
+2. system themes own global color, material, Dock, controls, radius, shadow, and system background tokens;
+3. curated native-system App icon packs remain independently selectable and keep the established per-app override priority;
+4. one-click style kits compose a system theme, icon pack, and optional recommended wallpaper without locking later customization;
+5. initial authored directions are Cloud Pastel, Dessert Bakery, and Misty Glass, but they remain visual follow-up work until their day/night tokens and icon assets are deliberately reviewed.
 
 ## 2. Module Direction Table
 

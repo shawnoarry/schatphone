@@ -109,6 +109,21 @@ import {
   DEFAULT_SYSTEM_APP_ICON_THEME_ID,
   normalizeSystemAppIconThemeId,
 } from '../lib/system-app-icon-theme'
+import {
+  APPEARANCE_COLOR_MODE_OPTIONS,
+  APPEARANCE_STYLE_KIT_OPTIONS,
+  DEFAULT_APPEARANCE_COLOR_MODE,
+  DEFAULT_APPEARANCE_STYLE_KIT_ID,
+  DEFAULT_SYSTEM_APPEARANCE_THEME_ID,
+  SYSTEM_APPEARANCE_THEME_OPTIONS,
+  appearanceColorModeToLegacyThemeId,
+  normalizeAppearanceColorMode,
+  normalizeAppearanceStyleKitId,
+  normalizeSystemAppearanceThemeId,
+  resolveAppearanceStyleKitMeta,
+  resolveAppearanceStyleKitStatus,
+  resolveSystemAppearanceThemeWallpaper,
+} from '../lib/system-appearance-theme'
 import { normalizeScopedCustomCss } from '../lib/appearance-scoped-css'
 import {
   normalizeAppSkinSettings,
@@ -133,22 +148,16 @@ import {
   normalizeWorldSuiteInventory,
 } from '../lib/world-suite-inventory'
 
-const AVAILABLE_THEMES = [
-  {
-    id: 'default',
-    name: 'Default System',
-    preview: 'linear-gradient(180deg, #f7f8fa 0%, #e2e8ed 52%, #aab8c3 100%)',
-    darkText: true,
-    wallpaper: '',
-  },
-  {
-    id: 'zen',
-    name: 'Graphite Quiet',
-    preview: 'linear-gradient(180deg, #25303a 0%, #151c24 54%, #0d1218 100%)',
-    darkText: false,
-    wallpaper: '',
-  },
-]
+const AVAILABLE_THEMES = APPEARANCE_COLOR_MODE_OPTIONS.map((option) => ({
+  id: option.legacyThemeId,
+  colorMode: option.id,
+  name: option.labelEn,
+  labelZh: option.labelZh,
+  labelEn: option.labelEn,
+  preview: option.preview,
+  darkText: option.darkText,
+  wallpaper: '',
+}))
 
 const DEFAULT_WIDGET_PAGES = [
   [
@@ -451,9 +460,6 @@ const VALID_LOCK_CLOCK_STYLES = ['classic', 'outline', 'mono']
 const DEFAULT_LOCK_CLOCK_STYLE = 'classic'
 const VALID_WALLPAPER_MODES = ['theme', 'url', 'gallery']
 const DEFAULT_WALLPAPER_MODE = 'theme'
-const LEGACY_THEME_MIGRATIONS = Object.freeze({
-  y2k: 'default',
-})
 const LEGACY_THEME_WALLPAPERS = new Set([
   'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=80',
 ])
@@ -1309,12 +1315,6 @@ const normalizeLockClockStyle = (value) =>
 const normalizeWallpaperMode = (value, fallback = DEFAULT_WALLPAPER_MODE) =>
   VALID_WALLPAPER_MODES.includes(value) ? value : fallback
 
-const normalizeThemeId = (themeId, fallback = AVAILABLE_THEMES[0]?.id || 'default') => {
-  const normalized = typeof themeId === 'string' ? themeId.trim() : ''
-  const migrated = LEGACY_THEME_MIGRATIONS[normalized] || normalized
-  return AVAILABLE_THEMES.some((theme) => theme.id === migrated) ? migrated : fallback
-}
-
 const normalizeWallpaperAssetId = (value) =>
   typeof value === 'string' ? value.trim().slice(0, 160) : ''
 
@@ -1587,6 +1587,8 @@ const normalizeTruthState = (rawTruthState) => {
 
 export const useSystemStore = defineStore('system', () => {
   const availableThemes = ref(AVAILABLE_THEMES)
+  const availableSystemAppearanceThemes = ref(SYSTEM_APPEARANCE_THEME_OPTIONS)
+  const availableAppearanceStyleKits = ref(APPEARANCE_STYLE_KIT_OPTIONS)
 
   const settings = reactive({
     api: {
@@ -1602,6 +1604,9 @@ export const useSystemStore = defineStore('system', () => {
     },
     appearance: {
       currentTheme: 'default',
+      colorMode: DEFAULT_APPEARANCE_COLOR_MODE,
+      systemTheme: DEFAULT_SYSTEM_APPEARANCE_THEME_ID,
+      styleKitId: DEFAULT_APPEARANCE_STYLE_KIT_ID,
       systemAppIconTheme: DEFAULT_SYSTEM_APP_ICON_THEME_ID,
       wallpaperMode: DEFAULT_WALLPAPER_MODE,
       wallpaperAssetId: '',
@@ -1656,6 +1661,28 @@ export const useSystemStore = defineStore('system', () => {
     music: createDefaultMusicState(),
     weather: createDefaultWeatherSettings(),
   })
+
+  watch(
+    () => settings.appearance.currentTheme,
+    (legacyThemeId) => {
+      const colorMode = normalizeAppearanceColorMode(legacyThemeId)
+      if (settings.appearance.colorMode !== colorMode) {
+        settings.appearance.colorMode = colorMode
+      }
+    },
+    { flush: 'sync' },
+  )
+
+  watch(
+    () => settings.appearance.colorMode,
+    (colorMode) => {
+      const legacyThemeId = appearanceColorModeToLegacyThemeId(colorMode)
+      if (settings.appearance.currentTheme !== legacyThemeId) {
+        settings.appearance.currentTheme = legacyThemeId
+      }
+    },
+    { flush: 'sync' },
+  )
 
   const user = reactive({
     name: 'V',
@@ -1795,20 +1822,17 @@ export const useSystemStore = defineStore('system', () => {
     keepOnlyExplicitlyPlacedHomeTilesOnPages([normalizedPageIndex])
   }
 
-  const getThemeById = (themeId = '') => {
-    const normalizedThemeId = normalizeThemeId(themeId, '')
-    if (!normalizedThemeId) return availableThemes.value[0] || null
-    return availableThemes.value.find((item) => item.id === normalizedThemeId) || null
-  }
-
   const getThemeWallpaper = (themeId = '') => {
-    return getThemeById(themeId || settings.appearance.currentTheme)?.wallpaper || ''
+    const colorMode = themeId
+      ? normalizeAppearanceColorMode(themeId)
+      : normalizeAppearanceColorMode(settings.appearance.colorMode ?? settings.appearance.currentTheme)
+    return resolveSystemAppearanceThemeWallpaper(settings.appearance.systemTheme, colorMode)
   }
 
   const useThemeWallpaper = () => {
     settings.appearance.wallpaperMode = DEFAULT_WALLPAPER_MODE
     settings.appearance.wallpaperAssetId = ''
-    settings.appearance.wallpaper = getThemeWallpaper(settings.appearance.currentTheme) || ''
+    settings.appearance.wallpaper = getThemeWallpaper() || ''
     return settings.appearance.wallpaper
   }
 
@@ -2055,14 +2079,18 @@ export const useSystemStore = defineStore('system', () => {
     return result
   }
 
-  const setTheme = (themeId) => {
-    const theme = getThemeById(normalizeThemeId(themeId))
-    if (!theme) return
-    settings.appearance.currentTheme = theme.id
+  const setAppearanceColorMode = (colorMode) => {
+    const normalizedColorMode = normalizeAppearanceColorMode(colorMode)
+    settings.appearance.colorMode = normalizedColorMode
+    settings.appearance.currentTheme = appearanceColorModeToLegacyThemeId(normalizedColorMode)
     if (settings.appearance.wallpaperMode === DEFAULT_WALLPAPER_MODE) {
       settings.appearance.wallpaperAssetId = ''
-      settings.appearance.wallpaper = theme.wallpaper
+      settings.appearance.wallpaper = getThemeWallpaper()
     }
+  }
+
+  const setTheme = (themeId) => {
+    setAppearanceColorMode(themeId)
   }
 
   const cycleTheme = () => {
@@ -2076,6 +2104,34 @@ export const useSystemStore = defineStore('system', () => {
   const setSystemAppIconTheme = (themeId) => {
     settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(themeId)
   }
+
+  const setSystemAppearanceTheme = (themeId) => {
+    settings.appearance.systemTheme = normalizeSystemAppearanceThemeId(themeId)
+    if (settings.appearance.wallpaperMode === DEFAULT_WALLPAPER_MODE) {
+      settings.appearance.wallpaperAssetId = ''
+      settings.appearance.wallpaper = getThemeWallpaper()
+    }
+  }
+
+  const applyAppearanceStyleKit = (kitId, options = {}) => {
+    const kit = resolveAppearanceStyleKitMeta(kitId)
+    settings.appearance.systemTheme = kit.systemTheme
+    settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
+      kit.systemAppIconTheme,
+    )
+    settings.appearance.styleKitId = kit.id
+
+    if (options.applyWallpaper === true) {
+      settings.appearance.wallpaperMode = DEFAULT_WALLPAPER_MODE
+      settings.appearance.wallpaperAssetId = ''
+      settings.appearance.wallpaper = getThemeWallpaper()
+    }
+
+    return resolveAppearanceStyleKitStatus(settings.appearance)
+  }
+
+  const getAppearanceStyleKitStatus = () =>
+    resolveAppearanceStyleKitStatus(settings.appearance)
 
   const setCustomCss = (cssText) => {
     settings.appearance.customCss = cssText || ''
@@ -2185,14 +2241,21 @@ export const useSystemStore = defineStore('system', () => {
     if (!result.ok) return result
 
     const appearance = result.appearance
-    settings.appearance.currentTheme = normalizeThemeId(appearance.currentTheme)
+    settings.appearance.colorMode = normalizeAppearanceColorMode(
+      appearance.colorMode ?? appearance.currentTheme,
+    )
+    settings.appearance.currentTheme = appearanceColorModeToLegacyThemeId(
+      settings.appearance.colorMode,
+    )
+    settings.appearance.systemTheme = normalizeSystemAppearanceThemeId(appearance.systemTheme)
+    settings.appearance.styleKitId = normalizeAppearanceStyleKitId(appearance.styleKitId)
     settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
       appearance.systemAppIconTheme ?? appearance.systemIconTheme,
     )
     settings.appearance.wallpaperMode = normalizeWallpaperMode(appearance.wallpaperMode)
     settings.appearance.wallpaperAssetId = normalizeWallpaperAssetId(appearance.wallpaperAssetId)
     settings.appearance.wallpaper =
-      typeof appearance.wallpaper === 'string' ? appearance.wallpaper : getThemeWallpaper(settings.appearance.currentTheme)
+      typeof appearance.wallpaper === 'string' ? appearance.wallpaper : getThemeWallpaper()
     settings.appearance.showStatusBar = appearance.showStatusBar !== false
     settings.appearance.hapticFeedbackEnabled = appearance.hapticFeedbackEnabled !== false
     settings.appearance.soundEffectsEnabled = appearance.soundEffectsEnabled !== false
@@ -4439,13 +4502,25 @@ export const useSystemStore = defineStore('system', () => {
       )
       settings.appearance.homeDesktopSetupVersion = persistedHomeDesktopSetupVersion
 
-      if (typeof appearance.currentTheme === 'string') {
-        settings.appearance.currentTheme = normalizeThemeId(appearance.currentTheme)
-      }
+      settings.appearance.colorMode = normalizeAppearanceColorMode(
+        appearance.colorMode ?? appearance.currentTheme,
+        settings.appearance.colorMode,
+      )
+      settings.appearance.currentTheme = appearanceColorModeToLegacyThemeId(
+        settings.appearance.colorMode,
+      )
+      settings.appearance.systemTheme = normalizeSystemAppearanceThemeId(
+        appearance.systemTheme,
+        settings.appearance.systemTheme,
+      )
+      settings.appearance.styleKitId = normalizeAppearanceStyleKitId(
+        appearance.styleKitId,
+        settings.appearance.styleKitId,
+      )
       settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
         appearance.systemAppIconTheme ?? appearance.systemIconTheme,
       )
-      const inferredThemeWallpaper = getThemeWallpaper(settings.appearance.currentTheme)
+      const inferredThemeWallpaper = getThemeWallpaper()
       settings.appearance.wallpaperMode =
         typeof appearance.wallpaperMode === 'string'
           ? normalizeWallpaperMode(appearance.wallpaperMode, settings.appearance.wallpaperMode)
@@ -4464,7 +4539,7 @@ export const useSystemStore = defineStore('system', () => {
       ) {
         settings.appearance.wallpaperMode = DEFAULT_WALLPAPER_MODE
         settings.appearance.wallpaperAssetId = ''
-        settings.appearance.wallpaper = getThemeWallpaper(settings.appearance.currentTheme)
+        settings.appearance.wallpaper = getThemeWallpaper()
       }
       if (typeof appearance.showStatusBar === 'boolean') {
         settings.appearance.showStatusBar = appearance.showStatusBar
@@ -4665,7 +4740,18 @@ export const useSystemStore = defineStore('system', () => {
       truthState.lastUpdatedAt = normalizedTruthState.lastUpdatedAt
     }
 
-    settings.appearance.currentTheme = normalizeThemeId(settings.appearance.currentTheme)
+    settings.appearance.colorMode = normalizeAppearanceColorMode(
+      settings.appearance.colorMode ?? settings.appearance.currentTheme,
+    )
+    settings.appearance.currentTheme = appearanceColorModeToLegacyThemeId(
+      settings.appearance.colorMode,
+    )
+    settings.appearance.systemTheme = normalizeSystemAppearanceThemeId(
+      settings.appearance.systemTheme,
+    )
+    settings.appearance.styleKitId = normalizeAppearanceStyleKitId(
+      settings.appearance.styleKitId,
+    )
     settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
       settings.appearance.systemAppIconTheme ?? settings.appearance.systemIconTheme,
     )
@@ -4681,7 +4767,7 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.wallpaperAssetId = normalizeWallpaperAssetId(
       settings.appearance.wallpaperAssetId,
     )
-    const resolvedThemeWallpaper = getThemeWallpaper(settings.appearance.currentTheme)
+    const resolvedThemeWallpaper = getThemeWallpaper()
     if (settings.appearance.wallpaperMode === DEFAULT_WALLPAPER_MODE) {
       settings.appearance.wallpaperAssetId = ''
       settings.appearance.wallpaper = resolvedThemeWallpaper || settings.appearance.wallpaper
@@ -5010,8 +5096,14 @@ export const useSystemStore = defineStore('system', () => {
     isLocked,
     activeAutoExecution,
     availableThemes,
+    availableSystemAppearanceThemes,
+    availableAppearanceStyleKits,
     setTheme,
+    setAppearanceColorMode,
+    setSystemAppearanceTheme,
     setSystemAppIconTheme,
+    applyAppearanceStyleKit,
+    getAppearanceStyleKitStatus,
     getThemeWallpaper,
     useThemeWallpaper,
     setAppearanceWallpaperUrl,

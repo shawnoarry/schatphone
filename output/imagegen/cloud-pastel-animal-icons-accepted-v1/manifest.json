@@ -1,0 +1,43 @@
+{
+  "id": "cloud-pastel-animal-icons-accepted-v1",
+  "acceptedAt": "2026-08-24",
+  "status": "approved-partial-masters",
+  "runtimeWired": false,
+  "targetCoverage": {
+    "accepted": 6,
+    "total": 20
+  },
+  "scheme": "animal-personification",
+  "assets": [
+    {
+      "appId": "app_phone",
+      "file": "phone-lop-rabbit.webp",
+      "sha256": "E9F9133E600388CB511FB59C781BD215C9DC323270BBCE3456BAAF606396EFCB"
+    },
+    {
+      "appId": "app_camera",
+      "file": "camera-owl.webp",
+      "sha256": "ADC671BB1E1A279046544AF23DDDA6FFE9E7F75C6F6FEF0A90287D34622CA45A"
+    },
+    {
+      "appId": "app_weather",
+      "file": "weather-cloud-sheep.webp",
+      "sha256": "D57E5D0CB7067980B9CBEECD63A946CCF5423CAF8D28BC31A017CCCD0E1B4BE2"
+    },
+    {
+      "appId": "app_calendar",
+      "file": "calendar-bear.webp",
+      "sha256": "5C64A9E7A4B57DE4F7B9C2ABB76F4B5107AC7A446F8B32CF9A2F61C88AA4FB9E"
+    },
+    {
+      "appId": "app_map",
+      "file": "map-turtle.webp",
+      "sha256": "435A229D02883C57A27A0134E0EBE70D9A88521C393162763016B6D5316B3A9A"
+    },
+    {
+      "appId": "app_settings",
+      "file": "settings-gear-beetle.webp",
+      "sha256": "81E29F8C33894374C088AC4683BC6648B5644EF68C749F59E54C08A371EEFE2C"
+    }
+  ]
+}
