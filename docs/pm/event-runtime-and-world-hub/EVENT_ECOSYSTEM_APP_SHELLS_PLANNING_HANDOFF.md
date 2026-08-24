@@ -1,6 +1,6 @@
 # Event Ecosystem App Shells Planning Handoff / 事件生态应用壳规划交接
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
 Status: `PLANNING_HANDOFF_ONLY / IMPLEMENTATION_NOT_AUTHORIZED_BY_THIS_DOCUMENT`
 
@@ -15,6 +15,8 @@ Status: `PLANNING_HANDOFF_ONLY / IMPLEMENTATION_NOT_AUTHORIZED_BY_THIS_DOCUMENT`
 1. 事件发生后，用户应该在哪种真实的手机媒介中看到它；
 2. 每个壳的第一版至少要具备什么，才不是只展示一张空皮；
 3. 各壳后续可以如何深化，同时不让 Event Runtime 夺走业务所有权。
+
+全部壳子的当前成熟度、已实现内容、下一阶段和详细文档入口统一从 `EVENT_APP_SHELL_PRIORITY_MATRIX.md` 的 `Current portfolio ledger / 当前壳子总账` 进入。本文档保留长期产品结构与后续优化细节，不再承担独立的实时进度总表。
 
 ## 2. Current Baseline / 当前已有基础
 
@@ -97,7 +99,10 @@ Event Runtime 只保留请求、决定、状态、稳定引用和必要来源，
 | Browser/Search/Help / 浏览器、搜索与使用帮助 | 待定 Browser + Help content owner | 高价值工具型壳候选 | WorldBook、Map、未来 Community/Media、owner deep links、外部 Search Provider | 否；先读 `BROWSER_SEARCH_AND_HELP_CENTER_PLANNING_HANDOFF.md` 并单独接受 S0/S1 |
 | Housing And Real Estate / 住房 | 待定生活服务 owner | 默认世界生活化候选 | Map、Calendar、Wallet、Contacts、合同 owner | 否；先接受普通找房/租赁 V1 |
 | Fandom Platform Facades / 粉丝平台多品牌壳 | Community/Media owner + facade manifests | K-pop 默认世界重点候选 | 账号、订阅、帖子、艺人消息、Wallet | 否；先接受 Community/Media owner |
-| Creator Rights And Works / 创作者版权与作品管理 | 待定行业业务 owner | 制作人/创作者职业候选 | 身份认证、作品、权利、usage、Wallet | 否；先冻结虚构/现实参照范围 |
+| Intercity Transport / 城际交通 | 待定 transport/booking owner | `联程 / VIA` 已完成 S1 | 班次、库存、票务、Wallet、Mail、Calendar、Map、Agenda | 否；S2 owner 仍需单独接受 |
+| Creator Rights And Works / 创作者版权与作品管理 | 待定行业业务 owner | `谱权 / CREDO` 已完成 S1 | 身份认证、作品、权利、usage、Wallet | 否；S2 owner 仍需冻结虚构/现实参照范围 |
+| Parcel And Post / 快递邮政 | 待定 logistics/shipment owner | `递送 / POSTA` 已完成 S1 | Shopping、地址、取件、签收、Map、通知 | 否；S2 owner 仍需单独接受 |
+| Jobs And Career / 职业机会 | 待定 opportunity/application owner | `机会 / NEXT` 已完成 S1 | Work Hub、组织凭证、Mail、Calendar、通知 | 否；S2 owner 仍需单独接受 |
 | Healthcare / 医疗健康 | 待定 Healthcare owner | 默认世界生活基础候选 | 医疗机构、预约、报告、药房、Wallet、Calendar | 否；需先接受模拟医疗与隐私边界 |
 | Production Activity Templates / 演出录制活动模板 | Calendar + Agenda Journey + Activity Session + domain templates | 应先于新增“工作 App” | 地点、检查点、完成规则、owner facts | 否；需单独接受首个 activity family |
 
@@ -888,17 +893,21 @@ owner checkpoint
 
 基础过程可以包含：进入场地、目标设定、练习/录制段落、休息、复盘和保存成果。可选事件可以是状态调整、成员缺席、设备故障、灵感机会或临时工作请求。
 
-### 16.5 When an independent work app becomes justified
+### 16.5 Organization Workplace is now justified
 
-只有当行业活动出现大量不依赖某次事件的重复功能时，才考虑独立 `Production / 工作` App，例如：
+后续产品讨论已经确认：组织成员、内部沟通、任务、排班提案、审批、报备、合同和跨 App 身份凭证具有大量不依赖某次事件的重复使用，因此独立 `Organization Workplace / 组织工作台` 已达到建壳阈值。它不是演出/录制过程本身，也不是 Calendar 或 Agenda Journey 的替代品。
+
+第一模板以经纪公司和艺人身份为中心，同时用共享模块支持经纪人、助理、制作人、普通职员、学生和教师。稳定能力包括：
 
 - call sheet 和工作人员通讯录；
+- 组织成员、团队和内部频道；
+- 任务、DDL、报备、请假和审批；
 - setlist、cue、台本、服装和素材检查；
 - 多个并行节目/演出的工作台；
 - 任务确认、文件、审批和变更历史；
 - 行业通知、出演邀约和结算引用。
 
-在达到这个阈值前，优先把活动模板和 Activity Session 做完整，避免再造一个只显示日程卡的空 App。
+Calendar 继续拥有确认时间，Agenda Journey 继续拥有出发/抵达/执行，Map 继续拥有地点与路线，Activity Session 继续拥有活动计时与完成证据。Workplace 只发起组织请求、显示只读投影并记录组织侧明确操作，不复制这些 owner 记录。详细规划见 `NOTIFICATION_WORKPLACE_FANDOM_TICKETS_TRAVEL_SHELL_PLAN.md`。
 
 ### 16.6 Event design rule
 

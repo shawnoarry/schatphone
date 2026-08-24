@@ -38,6 +38,7 @@ import {
   CONTROL_CENTER_HOME_APP_ID,
   COMMUNITY_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  FANDOM_HOME_APP_ID,
   HEALTHCARE_HOME_APP_ID,
   HOUSING_HOME_APP_ID,
   MAIL_HOME_APP_ID,
@@ -45,6 +46,13 @@ import {
   REMINDERS_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
   WEATHER_HOME_APP_ID,
+  WORKPLACE_HOME_APP_ID,
+  TICKETS_HOME_APP_ID,
+  TRAVEL_HOME_APP_ID,
+  INTERCITY_HOME_APP_ID,
+  CREATOR_RIGHTS_HOME_APP_ID,
+  PARCEL_HOME_APP_ID,
+  CAREER_HOME_APP_ID,
 } from '../lib/planned-module-registry'
 import { createDefaultMusicState, normalizeMusicState } from '../lib/music-contract'
 import {
@@ -159,7 +167,7 @@ const AVAILABLE_THEMES = APPEARANCE_COLOR_MODE_OPTIONS.map((option) => ({
   wallpaper: '',
 }))
 
-const DEFAULT_WIDGET_PAGES = [
+const PRE_FANDOM_DEFAULT_WIDGET_PAGES = [
   [
     'weather',
     'photo_note',
@@ -182,11 +190,29 @@ const DEFAULT_WIDGET_PAGES = [
     MAIL_HOME_APP_ID,
     HEALTHCARE_HOME_APP_ID,
     HOUSING_HOME_APP_ID,
+    WORKPLACE_HOME_APP_ID,
   ],
   ['system', 'quick_heart', 'quick_disc', BROWSER_HOME_APP_ID, COMMUNITY_HOME_APP_ID],
   [],
   [],
 ]
+
+const PRE_TICKETS_DEFAULT_WIDGET_PAGES = PRE_FANDOM_DEFAULT_WIDGET_PAGES.map((page) => [...page])
+PRE_TICKETS_DEFAULT_WIDGET_PAGES[2].push(FANDOM_HOME_APP_ID)
+
+const DEFAULT_WIDGET_PAGES = PRE_TICKETS_DEFAULT_WIDGET_PAGES.map((page) => [...page])
+DEFAULT_WIDGET_PAGES[2].push(TICKETS_HOME_APP_ID)
+
+const PRE_TRAVEL_DEFAULT_WIDGET_PAGES = DEFAULT_WIDGET_PAGES.map((page) => [...page])
+DEFAULT_WIDGET_PAGES[2].push(TRAVEL_HOME_APP_ID)
+
+const PRE_PORTFOLIO_DEFAULT_WIDGET_PAGES = DEFAULT_WIDGET_PAGES.map((page) => [...page])
+DEFAULT_WIDGET_PAGES[3].push(
+  INTERCITY_HOME_APP_ID,
+  CREATOR_RIGHTS_HOME_APP_ID,
+  PARCEL_HOME_APP_ID,
+  CAREER_HOME_APP_ID,
+)
 
 const PRE_MAIL_DEFAULT_WIDGET_PAGES = [
   [
@@ -266,6 +292,35 @@ const PRE_HEALTHCARE_HOUSING_DEFAULT_WIDGET_PAGES = [
     COMMUNITY_HOME_APP_ID,
   ],
   ['system', 'quick_heart', 'quick_disc'],
+  [],
+  [],
+]
+
+const PRE_WORKPLACE_DEFAULT_WIDGET_PAGES = [
+  [
+    'weather',
+    'photo_note',
+    'music',
+    'focus_pulse',
+    'app_wallet',
+    'app_themes',
+    'app_gallery',
+    CAMERA_HOME_APP_ID,
+  ],
+  [
+    'app_phone',
+    'app_map',
+    MUSIC_HOME_APP_ID,
+    'app_calendar',
+    AGENDA_JOURNEY_HOME_APP_ID,
+    REMINDERS_HOME_APP_ID,
+    SHOPPING_HOME_APP_ID,
+    FOOD_DELIVERY_HOME_APP_ID,
+    MAIL_HOME_APP_ID,
+    HEALTHCARE_HOME_APP_ID,
+    HOUSING_HOME_APP_ID,
+  ],
+  ['system', 'quick_heart', 'quick_disc', BROWSER_HOME_APP_ID, COMMUNITY_HOME_APP_ID],
   [],
   [],
 ]
@@ -419,6 +474,14 @@ const CORE_HOME_TILE_IDS = [
   COMMUNITY_HOME_APP_ID,
   HEALTHCARE_HOME_APP_ID,
   HOUSING_HOME_APP_ID,
+  WORKPLACE_HOME_APP_ID,
+  FANDOM_HOME_APP_ID,
+  TICKETS_HOME_APP_ID,
+  TRAVEL_HOME_APP_ID,
+  INTERCITY_HOME_APP_ID,
+  CREATOR_RIGHTS_HOME_APP_ID,
+  PARCEL_HOME_APP_ID,
+  CAREER_HOME_APP_ID,
   APP_STORE_HOME_APP_ID,
 ]
 const HIDDEN_FRONTEND_HOME_TILE_IDS = new Set(['app_files'])
@@ -428,7 +491,7 @@ const BUILT_IN_WIDGET_TILE_IDS = [...BUILT_IN_HOME_WIDGET_IDS]
 const MIN_HOME_PAGES = 5
 const MIN_VISIBLE_HOME_PAGES = 2
 const MAX_VISIBLE_HOME_PAGES = 5
-const DEFAULT_VISIBLE_HOME_PAGE_COUNT = 3
+const DEFAULT_VISIBLE_HOME_PAGE_COUNT = 4
 const DEFAULT_HOME_TILE_ORDER_PAGES = PREVIOUS_DEFAULT_WIDGET_PAGES.map((page) => [...page])
 const DEFAULT_APP_STORE_HOME_PAGE_INDEX = DEFAULT_HOME_TILE_ORDER_PAGES.findIndex((page) =>
   page.includes(APP_STORE_HOME_APP_ID),
@@ -557,7 +620,7 @@ const DEFAULT_CHAT_TRUTH_METRICS = Object.freeze({
 
 const SYSTEM_STORAGE_KEY = 'store:system'
 const SYSTEM_STORAGE_VERSION = 1
-const HOME_DESKTOP_SETUP_VERSION = 9
+const HOME_DESKTOP_SETUP_VERSION = 14
 
 const AI_AUTOMATION_MODULE_KEYS = ['chat', 'map', 'shopping']
 const DEFAULT_AI_AUTOMATION_SETTINGS = Object.freeze({
@@ -2401,6 +2464,11 @@ export const useSystemStore = defineStore('system', () => {
         settings.appearance.homeWidgetPages,
         PRE_HEALTHCARE_HOUSING_DEFAULT_WIDGET_PAGES,
       ) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_WORKPLACE_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_FANDOM_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_TICKETS_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_TRAVEL_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_PORTFOLIO_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,
@@ -2440,6 +2508,11 @@ export const useSystemStore = defineStore('system', () => {
         settings.appearance.homeWidgetPages,
         PRE_HEALTHCARE_HOUSING_DEFAULT_WIDGET_PAGES,
       ) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_WORKPLACE_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_FANDOM_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_TICKETS_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_TRAVEL_DEFAULT_WIDGET_PAGES) ||
+      areHomeTilePagesEqual(settings.appearance.homeWidgetPages, PRE_PORTFOLIO_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(settings.appearance.homeWidgetPages, LEGACY_DEFAULT_WIDGET_PAGES) ||
       areHomeTilePagesEqual(
         settings.appearance.homeWidgetPages,

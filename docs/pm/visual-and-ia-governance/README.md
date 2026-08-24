@@ -4,6 +4,12 @@ Updated: 2026-08-24
 
 Use this package for shell IA, visual ownership, page hierarchy, interaction consistency, and rebuild-vs-polish decisions.
 
+Current notification-system baseline: the unlocked Notification Center is a native phone shade, not an installed App. Status-bar tap/pull-down opens an App-grouped All/Unread surface over the existing persisted notification records; the shade uses shared system day/night/material tokens and live App icon identities, while Settings remains policy-only and owner deep links remain authoritative.
+
+Current organization-shell baseline: `工作台 / Work Hub` is a distinct installed workplace product, not an event card or generic admin dashboard. Its artist-first hierarchy is Today, Channels, Work, and Org; the visual language combines call sheets, backstage execution lists, paper-like scheduling surfaces, and a company credential. The Org page owns a lightweight display-name entry so a company, school, studio, or other persona context can quickly rename the App and its local organization heading. Home and App Store reuse the shared App-name override; the local heading never edits the canonical credential. Desktop uses a bounded two-column work layout, while mobile keeps the same product hierarchy without page-level horizontal overflow. Organization truth, credential grants, attendance, and fandom publishing remain outside this S1 visual shell.
+
+Current follow-on shell baseline: `联程 / VIA`, `谱权 / CREDO`, `递送 / POSTA`, and `机会 / NEXT` complete the accepted S1 shell portfolio with four deliberately different product hierarchies: timetable comparison, rights/works ledger, parcel tracking/inbox, and opportunity discovery/application preparation. Desktop and phone compositions preserve their own information priorities, day/night and zh/en remain readable, and success-sensitive actions are labelled as local drafts or previews rather than fake business completion.
+
 Current Home customization baseline:
 
 - `主屏 / 桌面 / Home` is the system desktop layer, not a user-facing app entry.
@@ -12,7 +18,7 @@ Current Home customization baseline:
 - `外观 / Appearance` owns four independent global layers: day/night mode, system theme, the shared icon style for a curated set of native system apps, and one-click style kits that compose theme + icon pack + optional recommended wallpaper. Applying or later customizing a kit never changes Home layout/widgets, Chat appearance, app skins, global custom CSS, commercial/branded app logos, or App Store-owned per-app identity overrides.
 - `应用商城 / App Store` owns the app-entry management surface; `More` is no longer a Home app.
 - App Library / App Store-like surfaces own app-entry visibility only.
-- The default release Home shows three normal-mode pages: glanceable widgets and personal tools first, daily communication/planning/life apps including Music second, then System Status, Quick Heart, and Quick Disc. Appearance lets users choose two through five visible screens without altering any retained page template, slot placement, or content; Home edit mode always exposes all five pages.
+- The pristine release Home shows four normal-mode pages after the accepted shell portfolio: the prior three product pages remain stable, while the fourth page hosts VIA, CREDO, POSTA, and NEXT. Existing customized layouts are preserved. Appearance lets users choose two through five visible screens without altering any retained page template, slot placement, or content; Home edit mode always exposes all five pages.
 
 The left-side Today View is a fixed native-system entry layer, not a selectable Home layout page; App Store stays there as the recovery entry when formal Home pages return items to their libraries.
 

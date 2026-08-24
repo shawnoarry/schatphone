@@ -12,6 +12,14 @@ const SOURCE_RETURN_TARGETS = Object.freeze({
   browser: '/browser',
   healthcare: '/healthcare',
   housing: '/housing',
+  workplace: '/workplace',
+  fandom: '/fandom',
+  tickets: '/tickets',
+  travel: '/travel',
+  intercity: '/intercity',
+  'creator-rights': '/creator-rights',
+  parcel: '/parcel',
+  career: '/career',
 })
 const SOURCE_RETURN_LABELS = Object.freeze({
   chat: 'Chat',
@@ -25,6 +33,14 @@ const SOURCE_RETURN_LABELS = Object.freeze({
   browser: 'Browser',
   healthcare: 'Ondam Care',
   housing: 'Jari',
+  workplace: 'Work Hub',
+  fandom: 'Aster',
+  tickets: 'GATE',
+  travel: 'ROAM',
+  intercity: 'VIA',
+  'creator-rights': 'CREDO',
+  parcel: 'POSTA',
+  career: 'NEXT',
 })
 
 const normalizeReturnSource = (source) => {
@@ -276,7 +292,7 @@ export const resolveReturnTarget = (route, fallback = HOME_RETURN_ROUTE) => {
   if (routeSource === 'agenda-journey') return buildAgendaJourneyReturnTarget(route)
   if (routeSource === 'map') return buildMapReturnTarget(route)
   if (routeSource === 'browser') return buildBrowserReturnTarget(route)
-  if (routeSource === 'healthcare' || routeSource === 'housing') {
+  if (routeSource === 'healthcare' || routeSource === 'housing' || routeSource === 'workplace' || routeSource === 'fandom' || routeSource === 'tickets' || routeSource === 'travel' || routeSource === 'intercity' || routeSource === 'creator-rights' || routeSource === 'parcel' || routeSource === 'career') {
     return buildInstalledAppReturnTarget(route, routeSource)
   }
   if (SOURCE_RETURN_TARGETS[routeSource]) return SOURCE_RETURN_TARGETS[routeSource]

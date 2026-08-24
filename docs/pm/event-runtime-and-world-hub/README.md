@@ -1,8 +1,22 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, override-lane design, the landed Player Context V1 eligibility foundation, and the still-documentation-only world-evolution/information-propagation contracts.
+
+Landed system-presentation handoff: the unlocked System Notification Center S1 is complete as a native status-bar shade over the existing persisted notification records. It groups by resolved App, supports All/Unread, read and dismissal operations, owner deep links, disabled/empty states, and shared App identity/theme resolution. It adds no Home/App Store entry, route, Store, owner-record mutation, or Event Runtime participation.
+
+Landed organization-shell handoff: `工作台 / Work Hub` is the Organization Workplace S1 reference. Its artist-first Today/Channels/Work/Org shell supports a fixture membership and roster, local channel messages, tasks, explicit status reports, schedule-proposal decisions, stable Calendar/Agenda Journey/Map handoffs, and a pending-only artist-community application. The Org workspace can change the App display name and a local organization heading without leaving the App; Home/App Store reuse the same App identity override, while the canonical affiliation credential remains unchanged. This is bounded device-local preview state, not a production organization owner: it does not grant credentials or publishing rights, write Calendar/attendance truth, call a provider, register an Event Surface, or participate in Event Runtime.
+
+Landed fandom-shell handoff: `星集 / Aster` is the unified fandom S1 reference. Its consumer workspace provides artist discovery, official public schedule projection, committed-platform message previews, My-space preferences, and stable post-ID views of Ripple public content while keeping artist publishing locked behind a future platform entitlement. Work Hub pending state can be inspected but never grants access. The shell stores only bounded device-local preview preferences and creates no Community publication copy, Wallet transaction, notification record, production owner, Event Surface, or Event Runtime chain. Tickets S1 has since landed as the next handoff below.
+
+Landed tickets-shell handoff: `入场 / GATE` is the Tickets S1 reference. It provides ordinary activity discovery, category/search/detail views, explicit sale/lottery/reservation/waitlist/sold-out states, and a local Passes area whose entries remain visibly non-authoritative intent drafts. Sold-out inventory fails closed. Map IDs are read-only venue references; no ticket, order, seat, lottery result, Wallet transaction, Calendar item, Map route, Agenda Journey, notification record, Event Surface, or Event Runtime chain is created.
+
+Landed travel-shell handoff: `漫泊 / ROAM` is the Travel/Hotel S1 reference. It provides destination and stay discovery, search/filter/detail, explicit available/limited/unavailable/stale-source states, local favorites/recent views, dates/guests/room selection, and a Trip book of visibly non-authoritative stay-intent drafts. Unavailable or stale sources fail closed. Stable Map place IDs remain read-only references; no reservation, room inventory, Wallet transaction, Mail confirmation, Calendar item, Map route, Agenda Journey, notification record, Event Surface, or Event Runtime chain is created.
+
+Landed remaining-shell portfolio handoff: `联程 / VIA`, `谱权 / CREDO`, `递送 / POSTA`, and `机会 / NEXT` complete the accepted S1 visible-shell wave. VIA compares intercity rail, flight, coach, and ferry options; CREDO exposes works, roles, rights-share previews, royalty statements, and annual-declaration drafts; POSTA provides parcel tracking, delivery inbox, pinning, and local send drafts; NEXT provides jobs, auditions, invitations, saved opportunities, and local application/profile drafts. Every success-sensitive action remains visibly local and non-authoritative, unavailable/stale/invite-only sources fail closed, and Map references remain read-only. No booking, ticket, copyright grant, institutional certification, shipment, application submission, Wallet/Calendar/Agenda/Map/notification write, provider call, Event Surface, or Event Runtime chain is implied.
+
+Next event-planning handoff: `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` proposes the next bounded chain as a Career-owned appointment change that reaches the user through NEXT, system notification, Mail, and Calendar, then hands confirmed execution to Agenda Journey and Map. It first requires a real Career Opportunity owner; the S1 shell and Self Profile text cannot grant invitation or organization authority.
 
 Confirmed persistence boundary: accepted relationship facts and the provenance needed to audit persistent truth cannot be silently or irreversibly truncated. Ephemeral/rebuildable runtime data may rotate, and older authoritative evidence may move into reversible cold archives while remaining reviewable from World Hub.
 
@@ -44,11 +58,14 @@ Mini Scene foundation: Event Runtime is now the shared Module's only functional 
 2. `PRODUCT_BOUNDARY.md`
 3. `WORLD_HUB_AND_CHEATS.md`
 4. `IMPLEMENTATION_WORKSTREAMS.md`
-5. `EVENT_ECOSYSTEM_APP_SHELLS_PLANNING_HANDOFF.md` when dividing future owner-native app shells, scheduled-activity templates, system notification surfaces, Community/Media and fandom facades, Healthcare, Housing, Creator Rights/Works, Narrative Timeline, Messages, Mail, Mini Scene retention, Browser/Search, or Investigation candidates across workgroups; this planning handoff is not implementation authorization or a second roadmap
-6. `BROWSER_SEARCH_AND_HELP_CENTER_PLANNING_HANDOFF.md` when work touches the Browser shell, product Help search, public current-world search, real Web Search providers, source labeling, search privacy, cost controls, or external-page handoff; this is a planning contract, not provider procurement or implementation authorization
-7. `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` for the current EVE-2/default-content direction
-8. `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md` for the EVE-4C user-triggered commerce reference and migration direction
-9. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when work touches Self Profile eligibility, dynamic world incidents/arcs, forum/social/news propagation, claims, or clues
+5. `EVENT_APP_SHELL_PRIORITY_MATRIX.md` as the single portfolio index for all accepted, planned, extension-first, gated, and explicitly non-App shell candidates; it projects current roadmap/package status but does not authorize implementation
+6. `EVENT_ECOSYSTEM_APP_SHELLS_PLANNING_HANDOFF.md` when dividing future owner-native app shells, scheduled-activity templates, system notification surfaces, Community/Media and fandom facades, Healthcare, Housing, Creator Rights/Works, Narrative Timeline, Messages, Mail, Mini Scene retention, Browser/Search, or Investigation candidates across workgroups; this planning handoff is not implementation authorization or a second roadmap
+7. `BROWSER_SEARCH_AND_HELP_CENTER_PLANNING_HANDOFF.md` when work touches the Browser shell, product Help search, public current-world search, real Web Search providers, source labeling, search privacy, cost controls, or external-page handoff; this is a planning contract, not provider procurement or implementation authorization
+8. `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` for the current EVE-2/default-content direction
+9. `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md` for the EVE-4C user-triggered commerce reference and migration direction
+10. `NOTIFICATION_WORKPLACE_FANDOM_TICKETS_TRAVEL_SHELL_PLAN.md` for the accepted next shell sequence, system Notification Center entry model, Organization Workplace boundary, unified fandom authorization, Tickets, and Travel decomposition
+11. `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` for the next proposed Career appointment-change owner and Event chain; this is a planning gate, not implementation authorization
+12. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when work touches Self Profile eligibility, dynamic world incidents/arcs, forum/social/news propagation, claims, or clues
 
 Also read when needed:
 

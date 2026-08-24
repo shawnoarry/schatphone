@@ -96,6 +96,22 @@ BUILT_IN_APP_ICON_META.app_jari_housing = {
   accent: 'warm',
   imageUrl: projectUiAssetUrl('shared/app-icons/jari-housing-app-icon-v1.png'),
 }
+APP_ICON_LABELS.app_workplace = { zh: '工作台', en: 'Work Hub', ko: '워크허브' }
+BUILT_IN_APP_ICON_META.app_workplace = { icon: 'fas fa-id-badge', accent: 'dark' }
+APP_ICON_LABELS.app_fandom = { zh: '星集', en: 'Aster', ko: '아스터' }
+BUILT_IN_APP_ICON_META.app_fandom = { icon: 'fas fa-star', accent: 'cool' }
+APP_ICON_LABELS.app_tickets = { zh: '入场', en: 'GATE', ko: '게이트' }
+BUILT_IN_APP_ICON_META.app_tickets = { icon: 'fas fa-ticket', accent: 'warm' }
+APP_ICON_LABELS.app_travel = { zh: '漫泊', en: 'ROAM', ko: '로우밍' }
+BUILT_IN_APP_ICON_META.app_travel = { icon: 'fas fa-suitcase-rolling', accent: 'cool' }
+APP_ICON_LABELS.app_intercity = { zh: '联程', en: 'VIA', ko: '비아' }
+BUILT_IN_APP_ICON_META.app_intercity = { icon: 'fas fa-train', accent: 'cool' }
+APP_ICON_LABELS.app_creator_rights = { zh: '谱权', en: 'CREDO', ko: '크레도' }
+BUILT_IN_APP_ICON_META.app_creator_rights = { icon: 'fas fa-copyright', accent: 'dark' }
+APP_ICON_LABELS.app_parcel = { zh: '递送', en: 'POSTA', ko: '포스타' }
+BUILT_IN_APP_ICON_META.app_parcel = { icon: 'fas fa-box', accent: 'warm' }
+APP_ICON_LABELS.app_career = { zh: '机会', en: 'NEXT', ko: '넥스트' }
+BUILT_IN_APP_ICON_META.app_career = { icon: 'fas fa-briefcase', accent: 'default' }
 
 export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_network',
@@ -123,6 +139,14 @@ export const APP_ICON_CUSTOMIZATION_TARGET_IDS = [
   'app_community',
   'app_healthcare',
   'app_jari_housing',
+  'app_workplace',
+  'app_fandom',
+  'app_tickets',
+  'app_travel',
+  'app_intercity',
+  'app_creator_rights',
+  'app_parcel',
+  'app_career',
   'app_settings',
   'app_contacts',
   'app_files',
@@ -308,10 +332,26 @@ export const resolveAppCustomizationTargetMeta = (appId, locale = 'en-US', overr
 export const resolveNotificationModuleAppId = (moduleKey) => {
   if (moduleKey === 'chat') return 'app_chat'
   if (moduleKey === 'map') return 'app_map'
+  if (moduleKey === 'calendar') return 'app_calendar'
+  if (moduleKey === 'agenda_journey') return 'app_agenda_journey'
   if (moduleKey === 'reminders') return 'app_reminders'
   if (moduleKey === 'gallery') return 'app_gallery'
   if (moduleKey === 'music') return 'app_music'
   if (moduleKey === 'camera') return 'app_camera'
+  if (moduleKey === 'phone') return 'app_phone'
+  if (moduleKey === 'wallet') return 'app_wallet'
+  if (moduleKey === 'mail') return 'app_daon_mail'
+  if (moduleKey === 'browser') return 'app_browser'
+  if (moduleKey === 'community') return 'app_community'
+  if (moduleKey === 'fandom') return 'app_fandom'
+  if (moduleKey === 'tickets') return 'app_tickets'
+  if (moduleKey === 'travel') return 'app_travel'
+  if (moduleKey === 'intercity') return 'app_intercity'
+  if (moduleKey === 'creator_rights') return 'app_creator_rights'
+  if (moduleKey === 'parcel') return 'app_parcel'
+  if (moduleKey === 'career') return 'app_career'
+  if (moduleKey === 'healthcare') return 'app_healthcare'
+  if (moduleKey === 'housing') return 'app_jari_housing'
   if (moduleKey === 'shopping') return 'app_shopping'
   if (moduleKey === 'food_delivery') return 'app_food_delivery'
   if (moduleKey === 'assets') return 'app_assets'

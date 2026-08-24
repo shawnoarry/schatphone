@@ -106,9 +106,24 @@ const detectModuleKey = (note) => {
 
   if (source.startsWith('chat_') || route.startsWith('/chat')) return 'chat'
   if (source.startsWith('map_') || route.startsWith('/map')) return 'map'
+  if (source.startsWith('calendar_') || route.startsWith('/calendar')) return 'calendar'
+  if (source.startsWith('agenda_') || route.startsWith('/agenda-journey')) return 'agenda_journey'
+  if (source.startsWith('reminder') || route.startsWith('/reminders')) return 'reminders'
   if (source.startsWith('gallery_') || route.startsWith('/gallery')) return 'gallery'
   if (source.startsWith('music_') || route.startsWith('/music')) return 'music'
+  if (source.startsWith('camera_') || route.startsWith('/camera')) return 'camera'
+  if (source.startsWith('phone_') || route.startsWith('/phone')) return 'phone'
+  if (source.startsWith('wallet_') || route.startsWith('/wallet')) return 'wallet'
+  if (source.startsWith('mail_') || route.startsWith('/mail')) return 'mail'
+  if (source.startsWith('browser_') || route.startsWith('/browser')) return 'browser'
+  if (source.startsWith('community_') || route.startsWith('/community')) return 'community'
+  if (source.startsWith('healthcare_') || route.startsWith('/healthcare')) return 'healthcare'
+  if (source.startsWith('housing_') || route.startsWith('/housing')) return 'housing'
+  if (source.startsWith('food_delivery_') || route.startsWith('/food-delivery')) {
+    return 'food_delivery'
+  }
   if (source.startsWith('shopping_') || route.startsWith('/shopping')) return 'shopping'
+  if (source.startsWith('assets_') || route.startsWith('/assets')) return 'assets'
   if (source.startsWith('forum_') || route.startsWith('/forum')) return 'forum'
   return 'system'
 }
@@ -150,7 +165,7 @@ export const resolveNotificationModuleMeta = (
   return {
     key,
     appId,
-    label: readLocalizedCopy(MODULE_COPY[key] || MODULE_COPY.system, locale),
+    label: appMeta?.label || readLocalizedCopy(MODULE_COPY[key] || MODULE_COPY.system, locale),
     icon:
       appMeta?.icon ||
       (typeof note?.icon === 'string' && note.icon.trim() ? note.icon.trim() : 'fas fa-bell'),

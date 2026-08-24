@@ -62,6 +62,14 @@ const BrowserView = () => import('../views/BrowserView.vue')
 const CommunityView = () => import('../views/CommunityView.vue')
 const HealthcareView = () => import('../views/HealthcareView.vue')
 const HousingView = () => import('../views/HousingView.vue')
+const WorkplaceView = () => import('../views/WorkplaceView.vue')
+const FandomView = () => import('../views/FandomView.vue')
+const TicketsView = () => import('../views/TicketsView.vue')
+const TravelView = () => import('../views/TravelView.vue')
+const IntercityView = () => import('../views/IntercityView.vue')
+const CreatorRightsView = () => import('../views/CreatorRightsView.vue')
+const ParcelView = () => import('../views/ParcelView.vue')
+const CareerView = () => import('../views/CareerView.vue')
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -155,6 +163,14 @@ const router = createRouter({
     { path: '/community', component: CommunityView },
     { path: '/healthcare', component: HealthcareView },
     { path: '/housing', component: HousingView },
+    { path: '/workplace', component: WorkplaceView },
+    { path: '/fandom', component: FandomView },
+    { path: '/tickets', component: TicketsView },
+    { path: '/travel', component: TravelView },
+    { path: '/intercity', component: IntercityView },
+    { path: '/creator-rights', component: CreatorRightsView },
+    { path: '/parcel', component: ParcelView },
+    { path: '/career', component: CareerView },
     { path: '/more', redirect: '/settings' },
   ],
 })

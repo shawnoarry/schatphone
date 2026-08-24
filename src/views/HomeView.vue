@@ -47,12 +47,28 @@ import {
   CONTROL_CENTER_HOME_APP_ID,
   COMMUNITY_HOME_APP_ID,
   FOOD_DELIVERY_HOME_APP_ID,
+  FANDOM_HOME_APP_ID,
+  FANDOM_ROUTE,
   HEALTHCARE_HOME_APP_ID,
   HOUSING_HOME_APP_ID,
   MAIL_HOME_APP_ID,
   MUSIC_HOME_APP_ID,
   SHOPPING_HOME_APP_ID,
   WEATHER_HOME_APP_ID,
+  WORKPLACE_HOME_APP_ID,
+  WORKPLACE_ROUTE,
+  TICKETS_HOME_APP_ID,
+  TICKETS_ROUTE,
+  TRAVEL_HOME_APP_ID,
+  TRAVEL_ROUTE,
+  INTERCITY_HOME_APP_ID,
+  INTERCITY_ROUTE,
+  CREATOR_RIGHTS_HOME_APP_ID,
+  CREATOR_RIGHTS_ROUTE,
+  PARCEL_HOME_APP_ID,
+  PARCEL_ROUTE,
+  CAREER_HOME_APP_ID,
+  CAREER_ROUTE,
 } from '../lib/planned-module-registry'
 import {
   buildHomeSourceQuery,
@@ -257,6 +273,14 @@ const widgetRegistry = {
   app_settings: { kind: 'app', icon: 'fas fa-cog', label: 'Settings', accent: 'dark', route: '/settings' },
   app_files: { kind: 'app', icon: 'fas fa-folder', label: 'Files', accent: 'cool', route: '/files' },
   [BOOK_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-book-open', label: 'Book', accent: 'cool', route: BOOK_ROUTE },
+  [WORKPLACE_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-id-badge', label: 'Work Hub', accent: 'dark', route: WORKPLACE_ROUTE },
+  [FANDOM_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-star', label: 'Aster', accent: 'cool', route: FANDOM_ROUTE },
+  [TICKETS_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-ticket', label: 'GATE', accent: 'warm', route: TICKETS_ROUTE },
+  [TRAVEL_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-suitcase-rolling', label: 'ROAM', accent: 'cool', route: TRAVEL_ROUTE },
+  [INTERCITY_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-train', label: 'VIA', accent: 'cool', route: INTERCITY_ROUTE },
+  [CREATOR_RIGHTS_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-copyright', label: 'CREDO', accent: 'dark', route: CREATOR_RIGHTS_ROUTE },
+  [PARCEL_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-box', label: 'POSTA', accent: 'warm', route: PARCEL_ROUTE },
+  [CAREER_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-briefcase', label: 'NEXT', accent: 'default', route: CAREER_ROUTE },
   ...HOME_APP_REGISTRY_ADDITIONS,
   ...HOME_FOLDER_REGISTRY,
   [APP_STORE_HOME_APP_ID]: { kind: 'app', icon: 'fas fa-store', label: 'App Store', accent: 'default', route: APP_STORE_ROUTE },
@@ -291,6 +315,14 @@ const resolveAppTileLabel = (tileId, fallback = '') => {
   if (tileId === COMMUNITY_HOME_APP_ID) return t('涟漪', 'Ripple')
   if (tileId === HEALTHCARE_HOME_APP_ID) return t('温谈健康', 'Ondam Care')
   if (tileId === HOUSING_HOME_APP_ID) return t('住处', 'Jari')
+  if (tileId === WORKPLACE_HOME_APP_ID) return t('工作台', 'Work Hub')
+  if (tileId === FANDOM_HOME_APP_ID) return t('星集', 'Aster')
+  if (tileId === TICKETS_HOME_APP_ID) return t('入场', 'GATE')
+  if (tileId === TRAVEL_HOME_APP_ID) return t('漫泊', 'ROAM')
+  if (tileId === INTERCITY_HOME_APP_ID) return t('联程', 'VIA')
+  if (tileId === CREATOR_RIGHTS_HOME_APP_ID) return t('谱权', 'CREDO')
+  if (tileId === PARCEL_HOME_APP_ID) return t('递送', 'POSTA')
+  if (tileId === CAREER_HOME_APP_ID) return t('机会', 'NEXT')
   if (tileId === APP_STORE_HOME_APP_ID) return t('应用商城', 'App Store')
   return fallback
 }

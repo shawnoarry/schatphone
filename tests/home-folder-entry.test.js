@@ -131,7 +131,7 @@ describe('Home folder entries', () => {
     })
 
     expect(wrapper.find('[data-testid="home-left-page"]').exists()).toBe(true)
-    expect(wrapper.findAll('.home-dot')).toHaveLength(3)
+    expect(wrapper.findAll('.home-dot')).toHaveLength(4)
     expect(wrapper.find('[data-testid="home-left-utility-panel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="home-left-shortcut-app-store"]').classes()).toContain(
       'is-installed',

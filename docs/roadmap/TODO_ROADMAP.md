@@ -1,6 +1,6 @@
 # SchatPhone TODO Roadmap
 
-Updated: 2026-08-23
+Updated: 2026-08-24
 
 This is the only live execution board for implementation order.
 
@@ -40,7 +40,7 @@ Roadmap interpretation:
 - 4.13 is `PARTIAL_DONE / CHKSZ_PRIMARY_RADIO_BROWSER_LOCAL_AND_MAP_MEDIA_INTEGRATED_LOCAL`: Music is an installed listening app with browser playback, library/queue/search, ChKSz as the primary user-authorized online source, supplementary generic JSON configuration, a no-key Radio Browser HTTPS/MP3 live-station preset, direct HTTPS URL songs, Music-owned device-local file import, a global floating player, Chat track sharing, and an active-journey Map music/radio panel. ChKSz resolved playback URLs now use an expiry-aware memory cache for up to 7 days while retaining automatic invalidation and one bounded re-resolution. Live-station uptime remains external; real-key rights/CORS smoke, true-device media behavior, Chat search, and external Map queue requests remain separate gates.
 - 4.14 is `P1 PARTIAL_DONE / EVE-4B REFERENCE_VERTICAL_DONE / EVE-4C DONE 2026-08-14 / PLAYER_CONTEXT_V1_FOUNDATION_DONE 2026-08-15`: Event is a cross-module causal chain, not a universal card system. EVE-2A/2B/2C and EVE-3 remain landed; EVE-4A's Food Delivery host/card/manual trigger remains withdrawn. EVE-4C supersedes the EVE-4B pickup-time trigger and specialized Runtime shape with explicit owner-native user initiation, shared commerce contracts, Event Instance V2, Service Cases, owner facts/requests, Phone resolution proposals, Map estimate/reroute references, and separate Food Delivery/Shopping owner Adapters. The current user-visible commerce case stops at Food Delivery's address-escalation chain; Shopping is only an Adapter/interface proof and is not an accepted user-facing Shopping event case. Remaining Shopping product work stays with the Shopping owner as planned follow-up. Player Context V1 now provides revision-aware read-only K-pop manager/public-idol eligibility; dynamic world evolution and information propagation are planned later, and EVE-5 is a later separately gated stage.
 - 4.15 is `P2 PARTIAL_DONE / TTS-1 DEPLOYED / PROVIDER QUALITY SMOKE PENDING`: the first shared runtime TTS slice provides Cloudflare Workers AI MeloTTS and user-key MiniMax Chinese preview behind one contract. The bounded Worker route is deployed at `https://schatphone.noarry.workers.dev`; Chat message audio, automatic read-aloud, durable media, stable real-provider quality/playback proof, and production gateway hardening remain separately gated.
-- 4.16 is `P1 PARTIAL_DONE / SHP-1 MAIL_SHELL_S1_DONE 2026-08-23 / SHP-1B MAIL_AI_ARRIVAL_DONE 2026-08-23 / SHP-2 BROWSER_COMMUNITY_HEALTHCARE_HOUSING_S1_DONE 2026-08-23`: the user-promoted app-shell preview wave now includes Daon Mail plus the zero-provider Prism Browser, Ripple Community Core, Ondam Care, and Jari Housing ordinary-use shells. Each remains an S1 preview with explicit S2/S3 seams and no Event Runtime promotion; this lane does not displace `CMG-08` as the separately assignable P0 ledger item.
+- 4.16 is `P1 INITIAL_SHELL_PORTFOLIO_DONE / SHP-1 THROUGH SHP-11 S1_DONE 2026-08-24`: the accepted shell-first wave now includes thirteen installed S1 Apps—Mail, Browser, Community, Healthcare, Housing, Workplace, Fandom, Tickets, Travel, Intercity, Creator Rights, Parcel, and Career—plus the unlocked native-system Notification Center. The four final shells are `联程 / VIA`, `谱权 / CREDO`, `递送 / POSTA`, and `机会 / NEXT`; each preserves local-preview/fail-closed semantics and explicit S2/S3 seams. This lane does not displace `CMG-08` as the separately assignable P0 ledger item.
 
 ## 3. Completed Baselines
 
@@ -136,6 +136,13 @@ Completed in the 2026-07-16 workflow-layering round:
 2. delegated domain reading order, workstreams, validation detail, and documentation sync to the seven task packages;
 3. kept specialist skill routing in event/runtime, visual/IA, and tooling workflow documents;
 4. added governance coverage that prevents task-specific workflow detail from returning to the cross-task contract.
+
+Completed in the 2026-08-24 Appearance foundation round:
+
+1. separated persisted day/night mode from the system-theme registry while retaining `default` / `zen` compatibility for existing saves, routes, CSS selectors, backups, and tests;
+2. kept curated native-system App icon packs as an independent axis under the frozen per-app override priority;
+3. added non-locking style-kit composition for system theme + system icon pack + optional recommended wallpaper, including `customized` status after users change a composed part;
+4. preserved personal Gallery/URL wallpaper unless the user explicitly applies a kit wallpaper, and kept Home layout/widgets, Chat appearance, app skins, global custom CSS, commercial logos, and per-app overrides outside style-kit mutation. Dedicated Playwright coverage passes 4/4 across desktop Chromium and simulated Pixel 5, including personal-wallpaper retention, persistence after reload, commercial-logo preservation, page-error checks, and horizontal-overflow checks; the full Vitest suite passes 314 files / 2326 tests, with lint, the 655-module production build, governance, and diff checks also passing. The first authored Cloud Pastel, Dessert Bakery, and Misty Glass visual assets remain follow-up work rather than part of this foundation slice.
 
 4.5 maintenance inventory follows. Section 6 owns the cross-lane execution order:
 
@@ -797,7 +804,7 @@ Focused contracts:
 
 ### 4.16 Everyday App Shell Preview Wave
 
-Status: `P1 PARTIAL_DONE / SHP-1 MAIL_SHELL_S1_DONE 2026-08-23 / SHP-1B MAIL_AI_ARRIVAL_DONE 2026-08-23 / SHP-2 BROWSER_COMMUNITY_HEALTHCARE_HOUSING_S1_DONE 2026-08-23 / USER_PROMOTED 2026-08-23`
+Status: `P1 INITIAL_SHELL_PORTFOLIO_DONE / SHP-1 MAIL / SHP-1B MAIL_AI_ARRIVAL / SHP-2 BROWSER_COMMUNITY_HEALTHCARE_HOUSING / SHP-3 NOTIFICATION / SHP-4 WORKPLACE / SHP-5 FANDOM / SHP-6 TICKETS / SHP-7 TRAVEL / SHP-8 INTERCITY / SHP-9 CREATOR_RIGHTS / SHP-10 PARCEL / SHP-11 CAREER DONE 2026-08-24`
 
 Candidate source and grouping:
 
@@ -832,6 +839,59 @@ Delivery stages:
    - `Jari / 住处`: rent/buy discovery, filters, favorites/recent, listing detail, local viewing drafts, and Map-owned residential-area handoff. Housing reuses the existing Map place catalog and never renders a fake map or listing coordinate;
    - shared `/browser`, `/community`, `/healthcare`, and `/housing` routes, Home/App Store entries, icon/skin registration, return context, version-9 pristine-default Home migration, and excluded preview-state inventory are integrated. Existing customized Home layouts remain untouched;
    - the lightweight UI structure review preserves four distinct product hierarchies and adds only discoverability corrections: visible Browser utilities, Community status guide, Healthcare appointment/report overview, and separate Housing area-filter/real-Map actions.
+4. `SHP-3 System Notification Center S1` - `DONE 2026-08-24`
+   - a native unlocked shade opens from the status bar by tap or downward gesture and reuses the existing bounded persisted notifications, foreground banner source, lock-screen records, and owner routes;
+   - notifications group by resolved App identity with All/Unread filters, mark-one/all-read, dismiss-one, clear-all, deep links, and honest disabled/empty states;
+   - dismissal changes notification presentation only; no owner record, Event Instance, Calendar item, Map state, Mail item, Home/App Store entry, route, or new Store is created or mutated;
+   - focused unit coverage passes 17/17 and dedicated Playwright passes 8/8 across desktop Chromium and simulated Pixel 5 with day/night, zh/en, accessibility, long text, owner-record non-mutation, and zero horizontal overflow. No physical-device evidence is claimed.
+5. `SHP-4 Organization Workplace S1` - `DONE 2026-08-24`
+   - `工作台 / Work Hub` is an independent artist-first agency App with Today, Channels, Work, and Org workspaces, one fixture membership/team roster, call-sheet and checkpoint reading, bounded local team messages, task completion, explicit status reports, and schedule-proposal decisions; the earlier `幕间 / Interlude` default is retired;
+   - Calendar, Agenda Journey, and Map receive stable references and return context only. Proposal acceptance remains waiting for scheduling staff, coordinates never create attendance, and no canonical owner record is copied or mutated;
+   - the artist-community action persists pending application state only and cannot grant artist publishing access. Manager, assistant, producer, employee, and student role templates prove reusable composition without claiming a production organization owner;
+   - route, Home/App Store entry, app skin/icon identity, pristine Home version-10 migration, return-source handling, and excluded preview-state inventory are integrated while customized Home layouts remain unchanged;
+   - the Org page can rename the App through the shared Home/App Store identity override and store a local organization display alias. Workplace preview V2 migrates V1 interactions; display naming never edits the canonical affiliation credential or grants authority;
+   - focused unit/integration tests pass 8 files / 112 tests and dedicated Playwright passes 10/10 across desktop Chromium and simulated Pixel 5 with day/night, zh/en, accessibility, naming persistence/reopen, unchanged credential truth, long text, owner-boundary checks, and zero page-level horizontal overflow. Screenshots are under `output/e2e/workplace-app-shell/`; no physical-device evidence is claimed.
+6. `SHP-5 Unified Fandom S1` - `DONE 2026-08-24`
+   - `星集 / Aster` is an installed one-brand fandom App with Home, Artists, Aster Notes, and My-space workspaces, plus local follow/bookmark/read/tab/alert preferences;
+   - public Ripple content is projected by stable post ID instead of copied into a second publication record, and artist subscription messages are presented as platform content rather than ordinary Chat DMs;
+   - the artist workspace remains hidden and fail-closed without a future platform entitlement. Work Hub pending state changes explanation and return context only; it never grants publishing authority;
+   - route, Home/App Store entry, shared App identity/skin, version-11 pristine Home migration, navigation return, and excluded preview-state inventory are integrated while customized Home layouts remain unchanged;
+   - focused Vitest passes 5 files / 77 tests and dedicated Playwright passes 10/10 across desktop Chromium and simulated Pixel 5 with day/night, zh/en, accessibility, reopen persistence, Work Hub return, locked publishing, and zero horizontal overflow. Screenshots are under `output/e2e/fandom-app-shell/`; no physical-device evidence is claimed;
+   - no Community owner, entitlement grant, paid subscription, Wallet record, notification write, provider/AI call, Event Surface, or Event Runtime chain is introduced. Tickets S1 has since landed; Fandom S2/S3 remains separately gated.
+7. `SHP-6 Tickets S1` - `DONE 2026-08-24`
+   - `入场 / GATE` is an installed independent Tickets App with Discover, Search, Passes, and My workspaces; five stable fixtures cover concerts, music shows, film, exhibitions, and fan events;
+   - availability is explicit across on-sale, lottery-open, reservation, waitlist, and sold-out states. Sold-out activity fails closed and cannot create a local draft;
+   - favorites, recent views, sale-alert preference, and admission-intent drafts remain bounded local preview state. Passes labels entries `LOCAL DRAFT` and never claims an order, payment, seat, lottery result, accepted waitlist, or valid ticket;
+   - venue Map IDs are read-only references. No Map place/route/presence, Calendar record, Agenda Journey, Wallet transaction, Mail receipt, notification, ticket owner, provider/AI call, Event Surface, or Event Runtime chain is created;
+   - route, Home/App Store entry, App identity/skin, navigation return, version-12 pristine Home migration, and persistence inventory V13 are integrated while customized Home layouts remain unchanged;
+   - focused Vitest passes 6 files / 85 tests and dedicated Playwright passes 8/8 across desktop Chromium and simulated Pixel 5 with drafting, sold-out fail-closed, reopen persistence, day/night, zh/en, accessibility, and zero horizontal overflow. Screenshots are under `output/e2e/tickets-app-shell/`; no physical-device evidence is claimed.
+8. `SHP-7 Travel / Hotel S1` - `DONE 2026-08-24`
+   - `漫泊 / ROAM` is an installed independent Travel App with Explore, Search, Trip book, and My workspaces; five stable fixtures cover city, coast, nature, and culture stays;
+   - availability is explicit across available, limited, unavailable, and source-stale states. Unavailable and stale entries fail closed and cannot create a local draft, waitlist, or invented inventory;
+   - favorites, recent views, deal-alert preference, dates, guests, room selection, and stay-intent drafts remain bounded local preview state. Trip book labels entries `LOCAL DRAFT` and never claims a reservation, payment, room hold, confirmation, Calendar stay, or valid itinerary;
+   - Map place IDs are read-only references. No Map place/route/position/presence, Calendar record, Agenda Journey, Wallet transaction, Mail confirmation, notification, travel owner, provider/AI call, Event Surface, or Event Runtime chain is created;
+   - route, Home/App Store entry, App identity/skin, navigation return, version-13 pristine Home migration, and persistence inventory V14 are integrated while customized Home layouts remain unchanged;
+   - focused Vitest passes 6 files / 86 tests and dedicated Playwright passes 8/8 across desktop Chromium and simulated Pixel 5 with drafting, stale-source fail-closed, reopen persistence, day/night, zh/en, accessibility, and zero horizontal overflow. Screenshots are under `output/e2e/travel-app-shell/`; no physical-device evidence is claimed.
+9. `SHP-8 Intercity S1` - `DONE 2026-08-24`
+   - `联程 / VIA` compares rail, flight, coach, and ferry options with explicit inventory/source states and local passenger/fare/trip-intent drafts;
+   - existing Map terminal IDs are read-only; no booking, ticket, seat, Wallet, Mail, Calendar, Agenda, Map Journey, notification, provider, or Event Runtime record is created.
+10. `SHP-9 Creator Rights S1` - `DONE 2026-08-24`
+   - `谱权 / CREDO` provides works, creator roles, rights-share previews, royalty statements, and annual declaration drafts;
+   - no copyright, certification, registration, signature, share mutation, Wallet settlement, provider, or Event Runtime result is created.
+11. `SHP-10 Parcel S1` - `DONE 2026-08-24`
+   - `递送 / POSTA` provides parcel lookup, delivery inbox, pinning, explicit logistics states, and local send drafts;
+   - no shipment, label, pickup, address mutation, signature, delivery proof, refund, notification, provider, or Event Runtime result is created.
+12. `SHP-11 Career S1` - `DONE 2026-08-24`
+   - `机会 / NEXT` provides jobs, auditions, invitations, saved opportunities, and local application/profile drafts; invite-only and stale sources fail closed;
+   - no submission, institution receipt, interview, offer, credential, Mail, Calendar, Work Hub, notification, provider, or Event Runtime result is created.
+
+Next Event production candidate:
+
+- `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` proposes Career appointment-change coordination as the next bounded event family. It first requires a Career Opportunity S2 owner and organization authority, then uses NEXT/system notification/Mail for presentation, Calendar for accepted scheduling truth, and Agenda Journey/Map for execution. This roadmap entry records the plan only; implementation remains separately gated.
+
+Portfolio navigation:
+
+- `docs/pm/event-runtime-and-world-hub/EVENT_APP_SHELL_PRIORITY_MATRIX.md` is the single index for current maturity, next work, and detailed-plan routing across completed, planned, extension-first, gated, and explicitly non-App shell candidates. It mirrors this roadmap/package status and does not create a second execution queue or authorize the next shell.
 
 Acceptance for 4.16:
 
@@ -841,7 +901,7 @@ Acceptance for 4.16:
 
 Boundary:
 
-- this lane does not authorize Event Runtime integration, production Stores, backup sections, schema migration, CJA-6B implementation, a Community/Media owner, Notification Center system-layer work, or any promotion of shells the user has not separately accepted.
+- this lane does not authorize Event Runtime integration, new production Stores, backup sections, schema migration, CJA-6B implementation, a Community/Media owner, per-App notification channels, physical-device push claims, or any promotion of shells the user has not separately accepted.
 
 Primary package:
 
@@ -895,7 +955,7 @@ The current relay delivers and schedules push payloads. It is not an authenticat
 12. `ON_HOLD` until after the first usable product preview: personal R2/Worker, production push, Gallery/non-Book migration, World Setting W2, hotspot decomposition, incremental typing, and secondary-module expansion.
 13. `P2 PARTIAL_DONE / MJE-1_MJE-2_MJE-4_INTEGRATED / MJE-3_PRODUCTION_TRIGGER_SUSPENDED / PLACE_MEDIA_V1_70_SEOUL_PLACES_INTEGRATED_LOCAL`: 4.11 retains transport planning, lifecycle/checkpoints, Footprints IA, optional per-world authored-facility discovery, and governed place-detail media for 70 of 106 Seoul places. The generic checkpoint obstruction remains compatibility-tested but is not production-enabled. Active exploration, event-driven place reveal, candidate-place ownership, the remaining 36 Seoul place-specific media decisions, generated reconstruction, transit topology, broader-city, and true-device stages remain gated.
 14. `P2 PARTIAL_DONE / CALENDAR_DEPARTURE_READINESS_V1_DONE 2026-08-15 / CJA-1_DONE 2026-08-15 / CJA-2_DONE 2026-08-16 / CJA-3_DONE 2026-08-16 / CJA-4_DONE 2026-08-16 / CJA-5_DONE 2026-08-16`: 4.12 now has Calendar V3 authoring and occurrence views, the direct Calendar-to-Map departure vertical, hidden persisted orchestration, the separate Agenda Journey execution app, one absolute-time Activity Session, and one midpoint-only low-impact Event Runtime family with restrained Focus Companion presentation. Appointment auto-entry, broader event families, media callers/richer companions, and Narrative Timeline remain unimplemented.
-15. `P1 PARTIAL_DONE / SHP-1 MAIL_SHELL_S1_DONE 2026-08-23 / SHP-1B MAIL_AI_ARRIVAL_DONE 2026-08-23 / SHP-2 BROWSER_COMMUNITY_HEALTHCARE_HOUSING_S1_DONE 2026-08-23 / USER_PROMOTED 2026-08-23`: 4.16 now lands five accepted everyday-app previews: Daon Mail, Prism Browser, Ripple Community Core, Ondam Care, and Jari Housing. Browser keeps Help/World/Web sources separate; Community keeps verified information, account claims, and committed posts legible; Healthcare provides local appointments and authored reports; Housing reuses Map-owned residential areas and opens the real Map rather than a fake listing map. Shared entries, return context, preview-state inventory, version-9 pristine Home migration, focused tests, desktop/simulated-Pixel-5 E2E, and visual checks are integrated. All five remain S1 previews with no production Store, backup section, cross-owner success claim, or Event Runtime participation; Mail's explicit Receive action remains the sole accepted provider exception, and `CMG-08` remains the next separately assignable P0 ledger item.
+15. `P1 INITIAL_SHELL_PORTFOLIO_DONE / SHP-1 THROUGH SHP-11 DONE 2026-08-24`: 4.16 now lands thirteen accepted installed-App previews plus the unlocked native-system Notification Center. The final four—VIA, CREDO, POSTA, and NEXT—add intercity transport, creator rights, parcel logistics, and career opportunity structures without inventing booking, rights, shipment, application, payment, scheduling, or event success. Focused tests, desktop/simulated-Pixel-5 E2E, visual comparison, and accessibility checks are integrated; no physical-device evidence is claimed. Mail's explicit Receive action remains the sole accepted S1 provider exception. The next proposed event chain is documented separately and first requires Career S2 ownership; `CMG-08` remains the next separately assignable P0 ledger item.
 
 ## 7. Validation Rule
 

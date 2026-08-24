@@ -1,4 +1,4 @@
-export const PERSISTENCE_OWNER_INVENTORY_VERSION = 11
+export const PERSISTENCE_OWNER_INVENTORY_VERSION = 15
 
 const freezeEntries = (entries) =>
   Object.freeze(
@@ -237,6 +237,62 @@ export const PERSISTENCE_PHYSICAL_CARRIERS = freezeEntries([
     carrierType: 'localStorage',
     fullKey: 'schatphone:housing-shell:preview-state',
     sourceFile: 'src/composables/useHousingShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:workplace-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:workplace-shell:preview-state',
+    sourceFile: 'src/composables/useWorkplaceShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:fandom-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:fandom-shell:preview-state',
+    sourceFile: 'src/composables/useFandomShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:tickets-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:tickets-shell:preview-state',
+    sourceFile: 'src/composables/useTicketsShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:travel-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:travel-shell:preview-state',
+    sourceFile: 'src/composables/useTravelShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:intercity-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:intercity-shell:preview-state',
+    sourceFile: 'src/composables/useIntercityShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:creator-rights-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:creator-rights-shell:preview-state',
+    sourceFile: 'src/composables/useCreatorRightsShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:parcel-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:parcel-shell:preview-state',
+    sourceFile: 'src/composables/useParcelShellState.js',
+    durability: 'durable-hint',
+  },
+  {
+    id: 'local:career-shell-preview-state',
+    carrierType: 'localStorage',
+    fullKey: 'schatphone:career-shell:preview-state',
+    sourceFile: 'src/composables/useCareerShellState.js',
     durability: 'durable-hint',
   },
 ])
@@ -1157,6 +1213,146 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     exclusionReason:
       'The S1 shell contains fictional browse and planning state rather than canonical housing records.',
     rebuildSource: 'The user repeats filtering, saving, recent viewing, and viewing-draft actions.',
+  },
+  {
+    id: 'workplace.shell-preview-state',
+    logicalOwner: 'Organization Workplace shell preview',
+    dataClass:
+      'S1 fixture-shell organization display alias, task confirmations, local team-channel messages, explicit status reports, schedule-proposal decisions, and pending artist-access applications',
+    physicalCarrierIds: ['local:workplace-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule:
+      'Fixture organization, membership, team, channel, task, proposal, Calendar, Agenda Journey, and Map reference IDs stay stable; local message/report/application IDs are generated once and stored with the record.',
+    referenceRule:
+      'This preview owns no canonical organization membership, credential, attendance, Calendar event, Agenda Journey, Map place/session, Mail or Chat history, community entitlement, or Event Runtime record.',
+    exclusionReason:
+      'The S1 shell contains local fixture interactions rather than production organization or authorization truth.',
+    rebuildSource:
+      'The user repeats task confirmations, channel messages, explicit status reports, proposal responses, and the pending artist-access application.',
+  },
+  {
+    id: 'fandom.shell-preview-state',
+    logicalOwner: 'Unified fandom shell preview',
+    dataClass:
+      'S1 fixture-shell artist follows, Community post bookmarks, subscription-message read markers, tab state, and local notification preference',
+    physicalCarrierIds: ['local:fandom-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule:
+      'Fixture artist, Community post-reference, subscription channel, and message IDs stay stable across refresh.',
+    referenceRule:
+      'This preview stores interaction markers only. It owns no Community publication, Chat message, Wallet subscription, organization credential, artist entitlement, notification record, or Event Runtime instance.',
+    exclusionReason:
+      'The S1 shell has no production fandom platform owner or paid entitlement truth, so local preview preferences are excluded from backup.',
+    rebuildSource:
+      'The user repeats follow, bookmark, read, tab, and local notification-preference actions.',
+  },
+  {
+    id: 'tickets.shell-preview-state',
+    logicalOwner: 'Tickets shell preview',
+    dataClass:
+      'S1 fixture-shell category, favorite, local admission-intent draft, recent-view, tab, and sale-alert preference markers',
+    physicalCarrierIds: ['local:tickets-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule:
+      'Fixture event IDs remain stable across refresh and retain explicit category, availability status, and Map place-reference metadata.',
+    referenceRule:
+      'This preview stores discovery and intent markers only. It owns no ticket, order, seat, lottery result, Wallet transaction, Calendar item, Map route, Agenda Journey, notification record, or Event Runtime instance.',
+    exclusionReason:
+      'The S1 shell has no production ticket or admission owner, so its local preview state is excluded from backup.',
+    rebuildSource:
+      'The user repeats category selection, saving, event viewing, local intent drafting, and alert-preference actions.',
+  },
+  {
+    id: 'travel.shell-preview-state',
+    logicalOwner: 'Travel shell preview',
+    dataClass:
+      'S1 fixture-shell destination filter, favorite, recent-view, room/date/guest stay-intent draft, tab, and deal-alert preference markers',
+    physicalCarrierIds: ['local:travel-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule:
+      'Fixture stay, room, and Map place-reference IDs remain stable across refresh with explicit availability and stale-source states.',
+    referenceRule:
+      'This preview stores discovery and stay-intent markers only. It owns no reservation, room inventory, Wallet transaction, Mail confirmation, Calendar item, Map route, Agenda Journey, notification record, or Event Runtime instance.',
+    exclusionReason:
+      'The S1 shell has no production travel or booking owner, so its local preview state is excluded from backup.',
+    rebuildSource:
+      'The user repeats filtering, saving, stay viewing, date/guest/room selection, local drafting, and alert-preference actions.',
+  },
+  {
+    id: 'intercity.shell-preview-state',
+    logicalOwner: 'Intercity transport shell preview',
+    dataClass: 'S1 fixture-shell mode, favorite, recent-view, fare/passenger travel-intent draft, tab, and fare-alert preference markers',
+    physicalCarrierIds: ['local:intercity-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Fixture service and fare IDs remain stable across refresh with explicit available, limited, sold-out, unavailable, and stale-source states.',
+    referenceRule: 'The preview stores comparison and travel-intent markers only. Existing Map place IDs are read-only terminal references; it owns no ticket, seat, order, payment, Calendar item, Map route, Agenda Journey, notification, or Event Runtime instance.',
+    exclusionReason: 'The S1 shell has no production transport or booking owner, so its local preview state is excluded from backup.',
+    rebuildSource: 'The user repeats service filtering, viewing, fare/passenger selection, local drafting, and preference actions.',
+  },
+  {
+    id: 'creator-rights.shell-preview-state',
+    logicalOwner: 'Creator Rights shell preview',
+    dataClass: 'S1 fixture-shell work watch markers, selected statement year, and annual declaration draft notes and work references',
+    physicalCarrierIds: ['local:creator-rights-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Fixture work IDs and authored rights-share rows remain stable across refresh.',
+    referenceRule: 'The preview grants no copyright, institution credential, registration approval, share mutation, royalty payment, contract signature, Wallet transaction, or Event Runtime result.',
+    exclusionReason: 'The S1 shell has no production works, rights, institution, or royalty owner, so its local preview state is excluded from backup.',
+    rebuildSource: 'The user repeats work watching, statement-year selection, and local declaration drafting.',
+  },
+  {
+    id: 'parcel.shell-preview-state',
+    logicalOwner: 'Parcel shell preview',
+    dataClass: 'S1 fixture-shell pinned tracking references, local send-draft fields, active tab, and pickup-reminder preference',
+    physicalCarrierIds: ['local:parcel-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Fixture shipment and tracking-code IDs remain stable across refresh with explicit stale-source state.',
+    referenceRule: 'The preview creates no shipment, shipping label, pickup booking, delivery proof, address mutation, refund, Map route, notification, or Event Runtime result.',
+    exclusionReason: 'The S1 shell has no production logistics or shipment owner, so its local preview state is excluded from backup.',
+    rebuildSource: 'The user repeats shipment pinning, local send-draft entry, and preference actions.',
+  },
+  {
+    id: 'career.shell-preview-state',
+    logicalOwner: 'Career shell preview',
+    dataClass: 'S1 fixture-shell saved opportunity IDs, local application drafts, active tab, and local career-card note',
+    physicalCarrierIds: ['local:career-shell-preview-state'],
+    storageKeys: [],
+    durability: 'durable-non-authoritative-hint',
+    growthClass: 'bounded-preview-state',
+    backupRequirement: 'excluded',
+    backupSectionId: '',
+    stableIdRule: 'Fixture job, audition, and invitation IDs remain stable across refresh with explicit open, invite-only, and stale-source states.',
+    referenceRule: 'The preview creates no application submission, institution receipt, interview, offer, credential, Calendar item, Mail message, notification, or Event Runtime result.',
+    exclusionReason: 'The S1 shell has no production jobs, audition, invitation, or organization owner, so its local preview state is excluded from backup.',
+    rebuildSource: 'The user repeats saving opportunities, writing local application drafts, and editing a local career-card note.',
   },
 ])
 

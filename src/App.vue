@@ -7,6 +7,7 @@ import IncomingCallOverlay from './components/phone/IncomingCallOverlay.vue'
 import MiniSceneTextPresenter from './components/MiniSceneTextPresenter.vue'
 import MusicMiniPlayer from './components/MusicMiniPlayer.vue'
 import PersistenceRecoverySheet from './components/PersistenceRecoverySheet.vue'
+import SystemNotificationShade from './components/SystemNotificationShade.vue'
 import { useSystemStore } from './stores/system'
 import { useBookStore } from './stores/book'
 import { useChatStore } from './stores/chat'
@@ -99,8 +100,15 @@ const notificationIconImageUrl = (note) => appIconImageUrl(resolveNotificationMo
 const shellBannerVisible = ref(false)
 const shellBannerNote = ref(null)
 const shellBannerQueue = ref([])
+const notificationShadeOpen = ref(false)
 const showShellBanner = computed(
-  () => Boolean(shellBannerVisible.value && shellBannerNote.value && !isLockRoute.value && !systemStore.isLocked),
+  () => Boolean(
+    shellBannerVisible.value &&
+      shellBannerNote.value &&
+      !notificationShadeOpen.value &&
+      !isLockRoute.value &&
+      !systemStore.isLocked,
+  ),
 )
 const persistenceStatus = ref(getPersistenceRuntimeStatus())
 const showPersistenceRecovery = computed(
@@ -265,9 +273,19 @@ const clearShellBannerTimer = () => {
 
 const canPresentForegroundBanner = () =>
   !systemStore.isLocked &&
+  !notificationShadeOpen.value &&
   route.path !== '/lock' &&
   typeof document !== 'undefined' &&
   document.visibilityState === 'visible'
+
+const handleNotificationShadeOpenChange = (open) => {
+  notificationShadeOpen.value = open === true
+  if (notificationShadeOpen.value) {
+    hideShellBanner()
+    return
+  }
+  flushShellBannerQueue()
+}
 
 const hideShellBanner = ({ clearQueue = false } = {}) => {
   clearShellBannerTimer()
@@ -1060,6 +1078,12 @@ const lockPhone = () => {
           </button>
         </div>
       </div>
+
+      <SystemNotificationShade
+        v-if="showStatusBar && !isLockRoute && !systemStore.isLocked"
+        :current-time="currentTime"
+        @open-change="handleNotificationShadeOpenChange"
+      />
 
       <transition name="shell-banner">
         <button
