@@ -148,9 +148,9 @@ const resetIdentityDisplay = () => {
 
 const homePageQuery = () => (route.query.homePage ? { homePage: route.query.homePage } : {})
 
-const openCalendar = () => router.push({
+const openCalendar = (proposalId = WORKPLACE_CALL_SHEET.calendarRef.recordId) => router.push({
   path: '/calendar',
-  query: { source: 'workplace', proposalId: WORKPLACE_CALL_SHEET.calendarRef.recordId, ...homePageQuery() },
+  query: { source: 'workplace', proposalId, ...homePageQuery() },
 })
 
 const openAgenda = () => router.push({
@@ -246,7 +246,7 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
             </li>
           </ol>
           <div class="workplace-handoffs">
-            <button type="button" data-testid="workplace-open-calendar" @click="openCalendar"><i class="fas fa-calendar-days" aria-hidden="true"></i>{{ t('查看日历', 'Calendar') }}</button>
+            <button type="button" data-testid="workplace-open-calendar" @click="openCalendar()"><i class="fas fa-calendar-days" aria-hidden="true"></i>{{ t('去日历确认', 'Review in Calendar') }}</button>
             <button type="button" data-testid="workplace-open-agenda" @click="openAgenda"><i class="fas fa-route" aria-hidden="true"></i>{{ t('查看行程', 'Journey') }}</button>
             <button type="button" data-testid="workplace-open-map" @click="openMap"><i class="fas fa-map-location-dot" aria-hidden="true"></i>{{ t('查看地点', 'Map') }}</button>
           </div>
@@ -343,7 +343,17 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
               <button type="button" :data-testid="`workplace-decline-${proposal.id}`" @click="decideProposal(proposal.id, 'declined')">{{ t('谢绝', 'Decline') }}</button>
               <button type="button" class="is-primary" :data-testid="`workplace-accept-${proposal.id}`" @click="decideProposal(proposal.id, 'accepted')">{{ t('接受提案', 'Accept proposal') }}</button>
             </div>
-            <div v-else class="workplace-decision" data-testid="workplace-proposal-decision"><i class="fas fa-circle-check" aria-hidden="true"></i>{{ workplaceState.proposalDecisions.value[proposal.id] === 'accepted' ? t('已接受 · 等待排期人员写入日历', 'Accepted · waiting for scheduling staff to add it to Calendar') : t('已谢绝', 'Declined') }}</div>
+            <div v-else class="workplace-decision" data-testid="workplace-proposal-decision">
+              <span><i class="fas fa-circle-check" aria-hidden="true"></i>{{ workplaceState.proposalDecisions.value[proposal.id] === 'accepted' ? t('已接受 · 尚未创建日程', 'Accepted · no Calendar event yet') : t('已谢绝', 'Declined') }}</span>
+              <button
+                v-if="workplaceState.proposalDecisions.value[proposal.id] === 'accepted'"
+                type="button"
+                :data-testid="`workplace-review-calendar-${proposal.id}`"
+                @click="openCalendar(proposal.id)"
+              >
+                {{ t('去日历确认', 'Review in Calendar') }}
+              </button>
+            </div>
           </article>
         </section>
       </div>
@@ -587,7 +597,9 @@ button { color: inherit; }
 .workplace-proposal__actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; }
 .workplace-proposal__actions button { min-height: 42px; padding: 0 14px; border: 1px solid var(--wp-line); border-radius: 11px; background: transparent; font-weight: 750; }
 .workplace-proposal__actions button.is-primary { color: #fff; border-color: var(--wp-coral); background: var(--wp-coral); }
-.workplace-decision { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; color: #52705a; background: rgba(125, 157, 130, .14); font-size: 11px; }
+.workplace-decision { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; color: #52705a; background: rgba(125, 157, 130, .14); font-size: 11px; }
+.workplace-decision span { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.workplace-decision button { min-height: 40px; flex: none; padding: 0 12px; border: 1px solid currentColor; border-radius: 10px; color: inherit; background: transparent; font: inherit; font-weight: 800; }
 
 .workplace-credential { position: relative; min-height: 300px; overflow: hidden; padding: 23px; border-radius: 24px; color: #f9f6ee; background: #17233a; box-shadow: 0 24px 54px rgba(23,35,58,.22); }
 .workplace-credential::after { content: ""; position: absolute; inset: -45% -20% auto auto; width: 250px; height: 250px; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; box-shadow: 0 0 0 42px rgba(255,255,255,.035), 0 0 0 84px rgba(255,255,255,.025); }
@@ -628,6 +640,8 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px
   .workplace-name-fields { grid-template-columns: 1fr; }
   .workplace-name-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .workplace-status-options { grid-template-columns: 1fr; }.workplace-status-options button { text-align: left; padding-inline: 12px; }
+  .workplace-decision { align-items: stretch; flex-direction: column; }
+  .workplace-decision button { width: 100%; min-height: 44px; }
   .workplace-team-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 19px 8px; }
   .workplace-channel-layout { grid-template-columns: 1fr; min-height: 640px; }
   .workplace-channel-list { display: flex; gap: 7px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--wp-line); scrollbar-width: none; }

@@ -65,7 +65,7 @@ Logical owner groups:
 | --- | --- |
 | `store:system` | Settings application settings; Settings current-user profile; WorldBook world context/packs/source links/templates; System notifications; Technical Governance API/storage audit reports; required legacy `truthState` |
 | `store:chat` | Contacts role profiles and lifecycle; Chat directory/conversation state; Chat user-visible messages; Chat module identity/anonymity/avatar settings |
-| `store:calendar` | Calendar events and legacy reminder-cue compatibility only |
+| `store:calendar` | Calendar events, bounded confirmed-event handoff source references, and legacy reminder-cue compatibility only |
 | `store:reminders` | canonical reminder records and reviewed reminder cues |
 | `store:gallery` plus Gallery binary DB | Gallery metadata/folders/source references plus user-retained local binaries |
 | other store keys | the corresponding Map, Files, Book, Shopping, Food Delivery, Event Runtime, Assets, Wallet, Phone, Stock, or Relationship Runtime owner |

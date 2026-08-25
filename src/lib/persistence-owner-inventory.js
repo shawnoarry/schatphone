@@ -325,8 +325,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:calendar',
-    schemaVersion: 3,
-    legacySchemaVersions: [1, 2],
+    schemaVersion: 4,
+    legacySchemaVersions: [1, 2, 3],
     labelZh: '日历存档',
     labelEn: 'Calendar state',
     sourceFile: 'src/stores/calendar.js',
@@ -723,7 +723,7 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     id: 'calendar.events',
     logicalOwner: 'Calendar',
     dataClass:
-      'Confirmed Calendar events, time ranges, recurrence, reminder policy, stable Map place references, and legacy reminder-cue compatibility',
+      'Confirmed Calendar events, time ranges, recurrence, reminder policy, stable Map place references, bounded schedule-handoff source references, and legacy reminder-cue compatibility',
     physicalCarrierIds: layeredStoreCarriers,
     storageKeys: ['store:calendar'],
     durability: 'durable-authoritative-with-legacy-projection',
@@ -732,7 +732,7 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     backupSectionId: 'calendar',
     stableIdRule: 'Calendar event and source-link IDs remain stable.',
     referenceRule:
-      'Reminder cues are import compatibility only; Reminders owns canonical reminder truth.',
+      'Reminder cues are import compatibility only; handoff references retain bounded source identity without source bodies; source owners and Reminders keep canonical source truth.',
   },
   {
     id: 'mini-scene.artifacts-and-policies',

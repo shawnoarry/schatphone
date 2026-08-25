@@ -27,6 +27,10 @@ import {
   normalizeCalendarRequirement,
 } from '../lib/calendar-schedule'
 import { notifyScheduleOrchestratorCalendarChanged } from '../lib/schedule-orchestrator-calendar-signal'
+import {
+  createScheduleHandoffEventSourceRefV1,
+  normalizeScheduleHandoffEventSourceRefV1,
+} from '../lib/schedule-handoff'
 import { useSystemApiReports } from '../composables/useSystemApiReports'
 import { useSystemNotifications } from '../composables/useSystemNotifications'
 import { useRemindersStore } from './reminders'
@@ -35,7 +39,7 @@ import { useRelationshipRuntimeStore } from './relationshipRuntime'
 import { useSystemStore } from './system'
 
 const CALENDAR_STORAGE_KEY = 'store:calendar'
-const CALENDAR_STORAGE_VERSION = 3
+const CALENDAR_STORAGE_VERSION = 4
 const CALENDAR_EVENT_LIMIT = 120
 const CALENDAR_EVENT_PUSH_HISTORY_LIMIT = 6
 const CALENDAR_EVENT_STATUS_CONFIRMED = 'confirmed'
@@ -92,10 +96,13 @@ export const normalizeCalendarEventLocationRef = (raw) => {
   }
 }
 
+export const normalizeCalendarEventSourceRef = (raw) =>
+  normalizeScheduleHandoffEventSourceRefV1(raw)
+
 export const migrateCalendarStorage = ({ version, data } = {}) => {
   const sourceVersion = Number(version)
   if (
-    ![1, 2].includes(sourceVersion) ||
+    ![1, 2, 3].includes(sourceVersion) ||
     !data ||
     typeof data !== 'object' ||
     Array.isArray(data)
@@ -110,6 +117,7 @@ export const migrateCalendarStorage = ({ version, data } = {}) => {
           locationRef: normalizeCalendarEventLocationRef(
             event?.locationRef || event?.destinationRef || event?.location,
           ),
+          sourceRef: normalizeCalendarEventSourceRef(event?.sourceRef),
           endsAt: Math.max(
             0,
             toInt(
@@ -220,6 +228,7 @@ const normalizeCalendarEventRecord = (raw, index = 0) => {
     sharedExperienceId: normalizeSharedExperienceId(raw.sharedExperienceId),
     sourceAreaId: normalizeEventId(raw.sourceAreaId || raw.areaId),
     sourceTripId: normalizeEventId(raw.sourceTripId || raw.tripId),
+    sourceRef: normalizeCalendarEventSourceRef(raw.sourceRef),
     locationRef: normalizeCalendarEventLocationRef(
       raw.locationRef || raw.destinationRef || raw.location,
     ),
@@ -330,6 +339,19 @@ export const useCalendarStore = defineStore('calendar', () => {
     return events.value.find((event) => event.sourceReminderId === sourceReminderId) || null
   }
 
+  const findEventByScheduleHandoffSource = (sourceOwner, sourceRecordId) => {
+    const owner = trimLine(sourceOwner, '', 40).toLowerCase()
+    const recordId = trimLine(sourceRecordId, '', 180)
+    if (!owner || !recordId) return null
+    return (
+      events.value.find(
+        (event) =>
+          event.sourceRef?.sourceOwner === owner &&
+          event.sourceRef?.sourceRecordId === recordId,
+      ) || null
+    )
+  }
+
   const findPhoneMissedCallCueById = (cueId) => {
     const id = normalizeEventId(cueId)
     if (!id) return null
@@ -402,6 +424,32 @@ export const useCalendarStore = defineStore('calendar', () => {
       ...input,
       id,
       source: 'manual',
+      status: CALENDAR_EVENT_STATUS_CONFIRMED,
+      originalStartsAt: input.startsAt,
+      originalEndsAt: input.endsAt,
+      timeEditedAt: 0,
+      route: '',
+      icon: input.icon || 'fas fa-calendar-day',
+      tone: input.tone || 'blue',
+    })
+  }
+
+  const createEventFromScheduleHandoff = ({ event: input = {}, handoffDraft } = {}) => {
+    const sourceRef = createScheduleHandoffEventSourceRefV1(handoffDraft)
+    if (!sourceRef) return null
+    const existing = findEventByScheduleHandoffSource(
+      sourceRef.sourceOwner,
+      sourceRef.sourceRecordId,
+    )
+    if (existing) {
+      return existing.sourceRef?.sourceRevision === sourceRef.sourceRevision ? existing : null
+    }
+    const now = Date.now()
+    return upsertEvent({
+      ...input,
+      id: `calendar_event_handoff_${now}_${Math.random().toString(36).slice(2, 8)}`,
+      source: 'schedule_handoff',
+      sourceRef,
       status: CALENDAR_EVENT_STATUS_CONFIRMED,
       originalStartsAt: input.startsAt,
       originalEndsAt: input.endsAt,
@@ -1277,6 +1325,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     hasFinishedStorageHydration,
     findEventById,
     findEventBySourceReminderId,
+    findEventByScheduleHandoffSource,
     findPhoneMissedCallCueById,
     findPhoneMissedCallCueByCallId,
     findStockMarketCueById,
@@ -1285,6 +1334,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     findShoppingDeliveryCueByOrderId,
     upsertEvent,
     createManualEvent,
+    createEventFromScheduleHandoff,
     updateEventDetails,
     upsertEventFromMapReminder,
     upsertPhoneMissedCallCue,

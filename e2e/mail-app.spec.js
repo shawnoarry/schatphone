@@ -215,11 +215,80 @@ test('thread detail, calendar deep link, and archive form an ordinary loop', asy
   await page.getByTestId('mail-thread-row-mail_fixture_snuh_checkup').click()
   await expect(page.getByTestId('mail-thread-detail')).toContainText('health checkup')
   await expect(page.getByTestId('mail-thread-detail')).toContainText('reserve@snuh-health.kr')
-  await page.getByTestId('mail-invite-open-mail_fixture_snuh_checkup_1').click()
+  const calendarAction = page.getByTestId('mail-invite-open-mail_fixture_snuh_checkup_1')
+  await expect(calendarAction).toContainText('Add to Calendar')
+  await calendarAction.click()
   await waitForAppRouteReady(page, '/calendar')
   await expect(page).toHaveURL(/source=mail/)
+  await expect(page).toHaveURL(/sourceRecordId=mail_fixture_snuh_checkup_1/)
+  await expect(page.getByTestId('calendar-source-handoff')).toContainText('No Calendar event yet')
+  const editor = page.getByTestId('calendar-event-editor')
+  await expect(editor).toBeVisible()
+  await expect(page.getByTestId('calendar-editor-title-en')).toHaveValue(
+    'Comprehensive health checkup',
+  )
+  await expect(page.getByTestId('calendar-editor-starts-at')).toHaveValue('2026-08-28T07:50')
+  await expect(page.getByTestId('calendar-editor-ends-at')).toHaveValue('2026-08-28T10:50')
+  await expect(page.getByTestId('calendar-editor-selected-place')).toContainText(
+    'Seoul National University Hospital',
+  )
+  await page.getByTestId('calendar-editor-cancel').click()
+  await expect(editor).toHaveCount(0)
+  await expectNoMailOverflow(page)
+  const calendarEventsAfterCancel = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('schatphone:store:calendar')
+    return raw ? JSON.parse(raw)?.data?.events || [] : []
+  })
+  expect(calendarEventsAfterCancel).toEqual([])
 
-  await navigateInsideUnlockedApp(page, '/mail')
+  await page.getByTestId('calendar-source-handoff-review').click()
+  await expect(editor).toBeVisible()
+  await page.getByTestId('calendar-editor-save').click()
+  await expect(editor).toHaveCount(0)
+  await expect(page.getByTestId('calendar-source-handoff')).toContainText(
+    'Linked Calendar event',
+  )
+  await expect(page.getByTestId('calendar-selected-event-detail')).toContainText(
+    'Comprehensive health checkup',
+  )
+  await page.getByTestId('calendar-source-handoff-return').click()
+  await waitForAppRouteReady(page, '/mail')
+  await expect(page.getByTestId('mail-thread-detail')).toContainText(
+    'Comprehensive health checkup',
+  )
+  await expect(calendarAction).toContainText('View in Calendar')
+
+  await page.reload()
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(
+    page,
+    '/mail?sourceRecordId=mail_fixture_snuh_checkup_1',
+  )
+  await expect(page.getByTestId('mail-thread-detail')).toContainText(
+    'Comprehensive health checkup',
+  )
+  await expect(calendarAction).toContainText('View in Calendar')
+  await calendarAction.click()
+  await waitForAppRouteReady(page, '/calendar')
+  await expect(editor).toHaveCount(0)
+  await expect(page.getByTestId('calendar-source-handoff')).toContainText(
+    'Linked Calendar event',
+  )
+  await expect(page.getByTestId('calendar-selected-event-detail')).toContainText(
+    'Comprehensive health checkup',
+  )
+  const linkedCalendarEvents = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('schatphone:store:calendar')
+    return raw ? JSON.parse(raw)?.data?.events || [] : []
+  })
+  expect(linkedCalendarEvents).toHaveLength(1)
+  await page.getByTestId('calendar-view-event-source').click()
+  await waitForAppRouteReady(page, '/mail')
+  await expect(page.getByTestId('mail-thread-detail')).toContainText(
+    'Comprehensive health checkup',
+  )
+  await page.getByTestId('mail-detail-back').click()
+
   await page.getByTestId('mail-thread-row-mail_fixture_kurly_shipped').click()
   await expect(page.getByTestId('mail-thread-detail')).toContainText('order 2608-195-442')
   await page.getByTestId('mail-detail-archive').click()

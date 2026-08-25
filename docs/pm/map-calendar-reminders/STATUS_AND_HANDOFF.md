@@ -1,8 +1,24 @@
 # Map Calendar Reminders Status And Handoff
 
-Updated: 2026-08-23
+Updated: 2026-08-25
 
 This file is the handoff page for Map, Calendar, and Reminders work.
+
+## Mail Calendar Prefill And Shared Handoff Draft Contract
+
+Status: `INTEGRATED_LOCAL / MAIL_PERSISTED_IDEMPOTENT_VERTICAL / CALENDAR_STORAGE_V4 / WORKPLACE_PREFILL_NOT_STARTED / NO_ROADMAP_STAGE_CHANGE`
+
+Mail's confirmed health-check fixture owns a structured appointment draft and passes only its stable mail record ID into Calendar. The validated draft contains a bilingual title, the local `2026-08-28 07:50-10:50` range, and the existing stable Map destination `real-seoul-v1 / seoul-national-university-hospital`; Calendar does not parse subject, body, displayed time, or displayed location prose. A bounded source resolver accepts the known Mail record and fails closed for unknown or forged IDs. Calendar opens its existing unified event editor with those values prefilled. Closing or cancelling the editor, using the backdrop, returning to Mail, or presenting an invalid ID creates no Calendar event, Agenda Journey, Map record, or source-side persistence. Only explicit Calendar Save creates the confirmed event.
+
+Calendar storage V4 persists one normalized `sourceRef` on that event: source owner, stable record ID, source revision, derived idempotency key, and owner-matched return context. It stores no source title, body, proposed time, participant profile, or Map coordinates. Same-source/same-revision entry resolves to and focuses the existing event instead of opening the editor or creating another record, including after full reload and backup/restore normalization. A changed revision returns no second event and does not overwrite the user's Calendar values. Mail reads this bounded Calendar projection to change the fixture CTA to `在日历中查看 / View in Calendar`; it does not mutate Calendar. Calendar detail exposes `查看来源 / View source`, and both directions restore the concrete source mail by stable record ID.
+
+Work Hub's call-sheet and accepted-proposal states still use `去日历确认 / Review in Calendar`, retain `尚未创建日程`, and carry the selected proposal ID into Calendar, but Work Hub prefill is not implemented. Its source landing and return action remain read-only and zero-write.
+
+`src/lib/schedule-handoff.js` retains the pure schema-V1 normalizer and conflict resolver shared by source callers. The normalizer accepts only six approved source Owners and their exact internal return routes, requires a stable record ID and revision, normalizes a bilingual proposed title plus valid time range, strictly validates optional Map-owned place references, keeps only bounded deduplicated Contacts participant references and scalar return query values, and strips every unknown/source-owned body field. The stable `idempotencyKey` is derived from `sourceOwner + sourceRecordId`; a separate `revisionFingerprint` changes with the source revision. The resolver sends a source without an existing Calendar reference to first review, reuses the same `calendarEventId` for matching identity and revision, converts revision changes to `source_changed` review while retaining that existing ID, and blocks creation for cancellation, identity mismatch, or forged confirmed references. Invalid inputs return `null`, and neither pure function mutates a Store or returns a Calendar event body.
+
+This slice intentionally derives Mail's linked state from Calendar's persisted reverse reference rather than adding a second Mail-owned copy of `calendarEventId` to the S1 fixture store. Source revision/cancellation decision UI is not implemented, and Work Hub still has no structured prefill caller. Therefore the same-revision idempotent Mail vertical is complete, while the remaining Phase 1 conflict-management paths are still open.
+
+Validation for the current persisted-link slice: focused handoff/Calendar Store/Mail/Calendar Vitest passes 4 files / 65 tests, and the full bounded Vitest suite passes 327 files / 2426 tests. Full ESLint and the production build pass. Targeted Mail-to-Calendar Playwright passes 2/2 across desktop Chromium and simulated Pixel 5, covering prefill, zero-write cancel, explicit Save, linked CTA after return and full reload, same-event reuse with no editor, exactly one persisted event, source return, and the remaining Mail archive flow. Governance passes 2 files / 14 tests, and `git diff --check` passes. JSDOM continues to emit known non-failing Canvas and media API warnings. No physical-device evidence is claimed.
 
 ## Place Detail And Active-Journey Card UI Optimization
 

@@ -49,7 +49,7 @@ Current project state:
 
 | Area | Current behavior |
 | --- | --- |
-| `src/stores/calendar.js` | owns confirmed events, event-time editing, real push scheduling state, and optional stable Map destination references |
+| `src/stores/calendar.js` | owns confirmed events, event-time editing, real push scheduling state, optional stable Map destination references, and bounded confirmed-event source references |
 | `src/stores/reminders.js` | owns Phone/Shopping/Stock-style cue intake plus reminder persistence and confirmation flow |
 | `src/views/CalendarView.vue` world-app UX | may read `reservation -> Calendar` context for title/boundary presentation only |
 | `src/views/MapView.vue` world-app UX | may read `transit -> Map` context for title/boundary presentation only |
@@ -79,6 +79,7 @@ Calendar should own:
 - timed push scheduling for confirmed events
 - relationship facts only when the event is truly schedule-like
 - stable destination identity through an optional Map-owned `locationRef`, without copying coordinates, ETA, or route truth
+- bounded source identity on confirmed handoff events, without copying or taking ownership of Mail, Work Hub, or other source records
 
 Calendar's target visible views are:
 

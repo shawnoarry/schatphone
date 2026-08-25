@@ -51,7 +51,7 @@ Updated: 2026-08-20
 - schedule/date presentation
 - CJA-1 provides Month, Week, Agenda, selected-day, multi-day-span, recurrence, and complete manual event-authoring IA over Calendar V3
 - `Agenda / 日程` remains a Calendar view; it is not a second long-range planning app
-- Calendar storage V3 may retain an optional stable Map-owned `locationRef`; the selected occurrence detail can derive current-origin departure readiness, transport-specific ETA, predicted lateness, and an explicit Map Journey handoff without inferring a place from title, prose, coordinates, or a usual address
+- Calendar storage V4 may retain an optional stable Map-owned `locationRef` plus a bounded confirmed-event `sourceRef`; the source reference keeps only owner/record/revision/idempotency/return identity, while the selected occurrence detail can derive current-origin departure readiness, transport-specific ETA, predicted lateness, and explicit Map or source handoffs without copying source bodies or inferring a place from title, prose, coordinates, or a usual address
 - explicit departure creates or reuses one Map-owned journey carrying the source Calendar event ID; Calendar does not own route truth, and CJA-1 still adds no Schedule Orchestrator, Agenda Journey, Activity Session, or appointment auto-entry
 - relationship-fact safe adapters only after confirmation
 - confirmed follow-ups should reuse upstream `sourceTripId` lineage when Map created the cue

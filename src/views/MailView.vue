@@ -256,10 +256,11 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
 import { useChatStore } from '../stores/chat'
+import { useCalendarStore } from '../stores/calendar'
 import { useI18n } from '../composables/useI18n'
 import { pushReturnTarget } from '../lib/navigation-return'
 import {
@@ -269,6 +270,7 @@ import {
   MAIL_SHELL_LABELS,
   MAIL_SHELL_THREADS,
   formatMailShellTime,
+  resolveMailScheduleHandoffDraftV1,
 } from '../lib/mail-shell-data'
 import {
   receiveMailArrival,
@@ -289,6 +291,7 @@ const route = useRoute()
 const router = useRouter()
 const systemStore = useSystemStore()
 const chatStore = useChatStore()
+const calendarStore = useCalendarStore()
 const { t, isZh, languageBase } = useI18n()
 
 const isNightTheme = computed(() => systemStore.settings.appearance.currentTheme === 'zen')
@@ -333,6 +336,24 @@ const nowMs = ref(Date.now())
 const receiveStatus = ref('idle')
 const receiveErrorCode = ref('')
 const sendersSheetOpen = ref(false)
+
+watch(
+  () => route.query.sourceRecordId,
+  (value) => {
+    const raw = Array.isArray(value) ? value[0] : value
+    const recordId = typeof raw === 'string' ? raw.trim() : ''
+    if (!recordId) return
+    const thread = MAIL_SHELL_THREADS.find((candidate) =>
+      candidate.mails.some((mail) => mail.id === recordId),
+    )
+    if (!thread) return
+    activeFolderId.value = thread.folder === 'spam' ? 'spam' : 'inbox'
+    selectedRowId.value = thread.id
+    rightPane.value = 'detail'
+    markThreadRead(thread.id)
+  },
+  { immediate: true },
+)
 
 const activeFolderIdValue = computed(() => activeFolderId.value)
 
@@ -618,27 +639,41 @@ const detailView = computed(() => {
       subject: isZh.value ? latest.subjectZh : latest.subjectEn,
       avatarText: Array.from(isZh.value ? thread.senderNameZh : thread.senderNameEn)[0] || '邮',
       chips: resolveChips(thread.labelIds),
-      mails: thread.mails.map((mail) => ({
-        id: mail.id,
-        offsetMinutes: mail.offsetMinutes,
-        timeLabel: timeLabelForOffset(mail.offsetMinutes),
-        body: isZh.value ? mail.bodyZh : mail.bodyEn,
-        invite: mail.invite
-          ? {
-              route: mail.invite.route,
-              title: isZh.value ? mail.invite.titleZh : mail.invite.titleEn,
-              when: isZh.value ? mail.invite.whenZh : mail.invite.whenEn,
-              where: isZh.value ? mail.invite.whereZh : mail.invite.whereEn,
-              action: isZh.value ? mail.invite.actionZh : mail.invite.actionEn,
-            }
-          : null,
-        attachments: (mail.attachments || []).map((file) => ({
-          id: file.id,
-          name: file.name,
-          kind: file.kind,
-          size: isZh.value ? file.sizeZh : file.sizeEn,
-        })),
-      })),
+      mails: thread.mails.map((mail) => {
+        const handoff = resolveMailScheduleHandoffDraftV1(mail.id)
+        const linkedEvent = handoff
+          ? calendarStore.findEventByScheduleHandoffSource(handoff.sourceOwner, handoff.sourceRecordId)
+          : null
+        const linkedCurrentRevision = Boolean(
+          linkedEvent && linkedEvent.sourceRef?.sourceRevision === handoff?.sourceRevision,
+        )
+        return {
+          id: mail.id,
+          offsetMinutes: mail.offsetMinutes,
+          timeLabel: timeLabelForOffset(mail.offsetMinutes),
+          body: isZh.value ? mail.bodyZh : mail.bodyEn,
+          invite: mail.invite
+            ? {
+                route: mail.invite.route,
+                title: isZh.value ? mail.invite.titleZh : mail.invite.titleEn,
+                when: isZh.value ? mail.invite.whenZh : mail.invite.whenEn,
+                where: isZh.value ? mail.invite.whereZh : mail.invite.whereEn,
+                action: linkedCurrentRevision
+                  ? t('在日历中查看', 'View in Calendar')
+                  : isZh.value
+                    ? mail.invite.actionZh
+                    : mail.invite.actionEn,
+                calendarEventId: linkedCurrentRevision ? linkedEvent.id : '',
+              }
+            : null,
+          attachments: (mail.attachments || []).map((file) => ({
+            id: file.id,
+            name: file.name,
+            kind: file.kind,
+            size: isZh.value ? file.sizeZh : file.sizeEn,
+          })),
+        }
+      }),
       mailCountLabel:
         thread.mails.length > 1
           ? t(`${thread.mails.length} 封往来邮件`, `${thread.mails.length} letters in thread`)
@@ -908,14 +943,22 @@ const openNetworkSettings = () => {
 
 const handleAddSender = (payload) => (addSender(payload) ? undefined : false)
 
-const openInvite = (path) => {
+const openInvite = (invite) => {
+  const path = invite?.path
+  const sourceRecordId = invite?.sourceRecordId
+  const calendarEventId = invite?.calendarEventId
   if (typeof path !== 'string' || !path.startsWith('/')) return
+  if (typeof sourceRecordId !== 'string' || !sourceRecordId.trim()) return
   const rawHomePage = route.query.homePage
   const homePage = Array.isArray(rawHomePage) ? rawHomePage[0] : rawHomePage
   router.push({
     path,
     query: {
       source: 'mail',
+      sourceRecordId: sourceRecordId.trim(),
+      ...(typeof calendarEventId === 'string' && calendarEventId.trim()
+        ? { calendarEventId: calendarEventId.trim() }
+        : {}),
       ...(typeof homePage === 'string' && homePage ? { homePage } : {}),
     },
   })

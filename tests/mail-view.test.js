@@ -4,7 +4,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import MailView from '../src/views/MailView.vue'
 import { useSystemStore } from '../src/stores/system'
-import { MAIL_SHELL_THREADS, formatMailShellTime } from '../src/lib/mail-shell-data'
+import { useCalendarStore } from '../src/stores/calendar'
+import {
+  MAIL_SHELL_THREADS,
+  formatMailShellTime,
+  resolveMailScheduleHandoffDraftV1,
+} from '../src/lib/mail-shell-data'
 import { setMailArrivalRunnerOverrideForTesting } from '../src/lib/mail-shell-arrival'
 import {
   MAIL_SHELL_PREVIEW_STATE_STORAGE_KEY,
@@ -24,12 +29,15 @@ const createTestRouter = () =>
     ],
   })
 
-const mountMail = async () => {
+const mountMail = async ({ initialRoute = '/mail', prepare = null } = {}) => {
   const router = createTestRouter()
-  await router.push('/mail')
+  const pinia = createPinia()
+  setActivePinia(pinia)
+  if (typeof prepare === 'function') prepare()
+  await router.push(initialRoute)
   await router.isReady()
   const wrapper = mount(MailView, {
-    global: { plugins: [router, createPinia()] },
+    global: { plugins: [router, pinia] },
   })
   return { router, wrapper }
 }
@@ -231,16 +239,64 @@ describe('Mail S1 shell view', () => {
     wrapper.unmount()
   })
 
-  test('invite card deep-links Calendar with the mail return source', async () => {
+  test('labels an uncreated invite honestly and deep-links Calendar with the mail return source', async () => {
     const { router, wrapper } = await mountMail()
     await wrapper.get('[data-testid="mail-thread-row-mail_fixture_snuh_checkup"]').trigger('click')
     await flushPromises()
-    await wrapper
-      .get('[data-testid="mail-invite-open-mail_fixture_snuh_checkup_1"]')
-      .trigger('click')
+    const calendarAction = wrapper.get(
+      '[data-testid="mail-invite-open-mail_fixture_snuh_checkup_1"]',
+    )
+    expect(calendarAction.text()).toContain('添加到日历')
+    await calendarAction.trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/calendar')
     expect(router.currentRoute.value.query.source).toBe('mail')
+    expect(router.currentRoute.value.query.sourceRecordId).toBe(
+      'mail_fixture_snuh_checkup_1',
+    )
+    wrapper.unmount()
+  })
+
+  test('restores the source mail and shows the persisted linked Calendar event', async () => {
+    let linkedEventId = ''
+    const { router, wrapper } = await mountMail({
+      initialRoute: '/mail?sourceRecordId=mail_fixture_snuh_checkup_1',
+      prepare: () => {
+        const calendarStore = useCalendarStore()
+        const handoffDraft = resolveMailScheduleHandoffDraftV1(
+          'mail_fixture_snuh_checkup_1',
+        )
+        const event = calendarStore.createEventFromScheduleHandoff({
+          handoffDraft,
+          event: {
+            titleZh: handoffDraft.proposedTitleZh,
+            titleEn: handoffDraft.proposedTitleEn,
+            startsAt: handoffDraft.proposedStartsAt,
+            endsAt: handoffDraft.proposedEndsAt,
+            locationRef: handoffDraft.proposedLocationRef,
+          },
+        })
+        linkedEventId = event.id
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="mail-thread-detail"]').text()).toContain('综合健康体检')
+    const calendarAction = wrapper.get(
+      '[data-testid="mail-invite-open-mail_fixture_snuh_checkup_1"]',
+    )
+    expect(calendarAction.text()).toContain('在日历中查看')
+    await calendarAction.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/calendar',
+      query: {
+        source: 'mail',
+        sourceRecordId: 'mail_fixture_snuh_checkup_1',
+        calendarEventId: linkedEventId,
+      },
+    })
     wrapper.unmount()
   })
 

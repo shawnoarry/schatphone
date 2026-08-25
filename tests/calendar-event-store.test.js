@@ -523,7 +523,7 @@ describe('calendar event store', () => {
     expect(scheduleSpy).toHaveBeenCalledTimes(1)
   })
 
-  test('migrates V1 and V2 events into the V3 schedule contract', () => {
+  test('migrates V1 through V3 events into the V4 schedule and source-reference contract', () => {
     const startsAt = Date.now() + 2 * 60 * 60_000
     const migrated = migrateCalendarStorage({
       version: 2,
@@ -556,8 +556,72 @@ describe('calendar event store', () => {
       },
     })
 
-    expect(migrateCalendarStorage({ version: 3, data: migrated })).toBeNull()
+    const migratedFromV3 = migrateCalendarStorage({ version: 3, data: migrated })
+    expect(migratedFromV3.events[0].sourceRef).toBeNull()
+    expect(migrateCalendarStorage({ version: 4, data: migratedFromV3 })).toBeNull()
     expect(migrateCalendarStorage({ version: 0, data: migrated })).toBeNull()
+  })
+
+  test('persists one bounded Mail source reference and reuses the same event idempotently', () => {
+    const store = useCalendarStore()
+    const startsAt = new Date(2026, 7, 28, 7, 50, 0, 0).getTime()
+    const handoffDraft = {
+      sourceOwner: 'mail',
+      sourceRecordId: 'mail_fixture_snuh_checkup_1',
+      sourceRevision: 'fixture-2026-08-25-v1',
+      proposedTitleZh: '综合健康体检',
+      proposedTitleEn: 'Comprehensive health checkup',
+      proposedStartsAt: startsAt,
+      proposedEndsAt: startsAt + 3 * 60 * 60_000,
+      proposedLocationRef: null,
+      participantRefs: [],
+      sourceReturnContext: {
+        path: '/mail',
+        query: { sourceRecordId: 'mail_fixture_snuh_checkup_1' },
+      },
+      proposalStatus: 'pending_review',
+    }
+    const input = {
+      titleZh: handoffDraft.proposedTitleZh,
+      titleEn: handoffDraft.proposedTitleEn,
+      startsAt: handoffDraft.proposedStartsAt,
+      endsAt: handoffDraft.proposedEndsAt,
+    }
+
+    const created = store.createEventFromScheduleHandoff({ event: input, handoffDraft })
+    const repeated = store.createEventFromScheduleHandoff({ event: input, handoffDraft })
+
+    expect(repeated.id).toBe(created.id)
+    expect(store.confirmedEvents).toHaveLength(1)
+    expect(created).toMatchObject({
+      source: 'schedule_handoff',
+      sourceRef: {
+        idempotencyKey: 'schedule_handoff::mail::mail_fixture_snuh_checkup_1',
+        sourceOwner: 'mail',
+        sourceRecordId: 'mail_fixture_snuh_checkup_1',
+        sourceRevision: 'fixture-2026-08-25-v1',
+        sourceReturnContext: {
+          path: '/mail',
+          query: { sourceRecordId: 'mail_fixture_snuh_checkup_1' },
+        },
+      },
+    })
+
+    expect(
+      store.createEventFromScheduleHandoff({
+        event: input,
+        handoffDraft: { ...handoffDraft, sourceRevision: 'fixture-2026-08-25-v2' },
+      }),
+    ).toBeNull()
+    expect(store.confirmedEvents).toHaveLength(1)
+
+    store.saveNow()
+    expect(JSON.parse(localStorage.getItem('schatphone:store:calendar')).version).toBe(4)
+    setActivePinia(createPinia())
+    const restoredStore = useCalendarStore()
+    expect(
+      restoredStore.findEventByScheduleHandoffSource('mail', handoffDraft.sourceRecordId),
+    ).toMatchObject({ id: created.id, sourceRef: created.sourceRef })
   })
 
   test('creates and edits complete manual events while preserving duration on quick shifts', () => {

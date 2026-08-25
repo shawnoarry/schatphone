@@ -74,9 +74,22 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
 
     await page.getByTestId('workplace-tab-tasks').click()
     await page.getByTestId('workplace-accept-proposal-radio-20260827').click()
-    await expect(page.getByTestId('workplace-proposal-decision')).toContainText('等待排期人员写入日历')
+    await expect(page.getByTestId('workplace-proposal-decision')).toContainText('尚未创建日程')
     await expectNoHorizontalOverflow(page)
     await page.screenshot({ path: join(evidenceDir, 'workplace-desktop-day.png'), fullPage: true })
+
+    await page.getByTestId('workplace-review-calendar-proposal-radio-20260827').click()
+    await expect(page).toHaveURL(/#\/calendar\?.*source=workplace/)
+    await expect(page.getByTestId('calendar-source-handoff')).toContainText('尚未创建日程')
+    await expect(page.getByTestId('calendar-source-handoff')).toContainText('来自工作台的排期提案')
+    await expectNoHorizontalOverflow(page)
+    const calendarEvents = await page.evaluate(() => {
+      const raw = window.localStorage.getItem('schatphone:store:calendar')
+      return raw ? JSON.parse(raw)?.data?.events || [] : []
+    })
+    expect(calendarEvents).toEqual([])
+    await page.getByTestId('calendar-source-handoff-return').click()
+    await expect(page).toHaveURL(/#\/workplace/)
   })
 
   test('owner handoffs carry references without manufacturing owner records', async ({ page }) => {

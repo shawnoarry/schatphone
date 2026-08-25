@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>墨记 · 电子手账</title>
+<style>
+/* ===== Design Tokens ===== */
+:root {
+  --c-text-primary: #1C1C1E;
+  --c-text-secondary: #8E91A0;
+  --c-text-tertiary: #55596A;
+  --c-yellow: #FFD02F;
+  --c-yellow-light: #FFF8E0;
+  --c-coral: #FF9999;
+  --c-teal: #0FBCB0;
+  --c-teal-light: #C3FAF5;
+  --c-rose: #FDE0F0;
+  --c-blue: #4262FF;
+  --c-card-bg: #FAFBFC;
+  --c-divider: #EEF0F3;
+  --c-white: #FFFFFF;
+  --c-black: #1C1C1E;
+  --c-bg-input: #F7F8F9;
+  --r-phone: 40px;
+  --r-card: 20px;
+  --r-pill: 36px;
+  --r-button: 9999px;
+  --font: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ===== Reset ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: var(--font);
+  background: #E8EAED;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Phone Shell ===== */
+.phone-shell {
+  position: relative;
+  width: 375px;
+  height: 812px;
+  background: var(--c-white);
+  border-radius: var(--r-phone);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 0 0 8px #1a1a1a, 0 0 0 9px #333;
+  flex-shrink: 0;
+  transform-origin: center center;
+}
+
+/* ===== Screens ===== */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  background: var(--c-white);
+}
+.screen.active { display: flex; }
+
+/* ===== Status Bar ===== */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 62px;
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+.status-time {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+.status-icons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ===== Content Area ===== */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.content::-webkit-scrollbar { display: none; }
+
+/* ===== Home Screen ===== */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.home-header-left { display: flex; flex-direction: column; gap: 2px; }
+.home-greeting { font-size: 24px; font-weight: 700; color: var(--c-text-primary); }
+.home-date { font-size: 13px; color: var(--c-text-secondary); }
+.avatar {
+  width: 44px; height: 44px; border-radius: 22px;
+  background: var(--c-yellow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 600; color: var(--c-text-primary);
+  flex-shrink: 0;
+}
+
+/* Mood Card */
+.mood-card {
+  background: var(--c-card-bg);
+  border-radius: var(--r-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.mood-title { font-size: 15px; font-weight: 500; color: var(--c-text-primary); }
+.mood-row {
+  display: flex;
+  justify-content: space-between;
+}
+.mood-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.mood-icon {
+  width: 44px; height: 44px; border-radius: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--c-white);
+  border: 2px solid transparent;
+  transition: all .2s;
+}
+.mood-item.active .mood-icon {
+  background: var(--c-yellow-light);
+  border-color: var(--c-yellow);
+}
+.mood-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-text-secondary);
+}
+.mood-item.active .mood-label {
+  color: var(--c-text-tertiary);
+  font-weight: 600;
+}
+
+/* Prompt Card */
+.prompt-card {
+  background: var(--c-yellow-light);
+  border-radius: var(--r-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.prompt-tag {
+  display: flex; align-items: center; gap: 6px;
+}
+.prompt-tag-text {
+  font-size: 11px; font-weight: 600;
+  color: #746119;
+}
+.prompt-text {
+  font-size: 17px; font-weight: 500;
+  color: var(--c-text-primary);
+  line-height: 1.4;
+}
+.prompt-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--c-black);
+  border-radius: var(--r-button);
+  color: var(--c-white);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  align-self: flex-start;
+  border: none;
+}
+.prompt-btn svg { width: 14px; height: 14px; }
+
+/* Recent Entries */
+.recent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.recent-title { font-size: 15px; font-weight: 600; color: var(--c-text-primary); }
+.recent-more { font-size: 12px; color: var(--c-blue); cursor: pointer; }
+.entry {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.entry-date-col {
+  width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.entry-day-num { font-size: 22px; font-weight: 700; color: var(--c-text-primary); }
+.entry-month { font-size: 10px; color: var(--c-text-secondary); }
+.entry-divider {
+  width: 1px;
+  height: 48px;
+  background: var(--c-divider);
+  flex-shrink: 0;
+}
+.entry-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.entry-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.entry-title { font-size: 15px; font-weight: 600; color: var(--c-text-primary); }
+.entry-mood-tag {
+  width: 20px; height: 20px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.entry-preview {
+  font-size: 13px; color: var(--c-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.entry-meta {
+  display: flex; gap: 8px; align-items: center;
+}
+.entry-weather { display: flex; gap: 3px; align-items: center; }
+.entry-weather-text, .entry-words {
+  font-size: 11px; color: var(--c-text-secondary);
+}
+
+/* ===== Write Screen ===== */
+.write-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.back-btn {
+  width: 36px; height: 36px; border-radius: 18px;
+  background: #F7F8F9;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none; flex-shrink: 0;
+}
+.write-header-right {
+  display: flex; gap: 8px; align-items: center;
+}
+.date-badge {
+  padding: 8px 12px;
+  background: var(--c-card-bg);
+  border-radius: var(--r-button);
+  font-size: 11px; font-weight: 500;
+  color: var(--c-text-tertiary);
+}
+.save-btn {
+  padding: 8px 12px;
+  background: var(--c-black);
+  border-radius: var(--r-button);
+  font-size: 12px; font-weight: 500;
+  color: var(--c-yellow);
+  border: none; cursor: pointer;
+}
+.title-input {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.title-text {
+  font-size: 22px; font-weight: 700;
+  color: var(--c-text-primary);
+}
+.title-line {
+  width: 100%; height: 1px;
+  background: var(--c-text-primary);
+}
+.meta-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--r-button);
+  font-size: 11px; font-weight: 500;
+}
+.mood-chip { background: var(--c-yellow-light); color: #746119; }
+.weather-chip { background: var(--c-card-bg); color: var(--c-text-tertiary); }
+.tag-chip { background: var(--c-card-bg); color: var(--c-text-tertiary); }
+.diary-body {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.diary-body p {
+  font-size: 15px; line-height: 1.6;
+  color: var(--c-text-primary);
+}
+.body-illustration {
+  width: 100%; height: 160px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  background: var(--c-teal-light);
+}
+.write-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 21px 21px;
+  background: var(--c-white);
+  flex-shrink: 0;
+}
+.tool-left {
+  display: flex; gap: 16px; align-items: center;
+}
+.tool-right {
+  display: flex; gap: 8px; align-items: center;
+}
+.tool-btn {
+  background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+}
+.word-count {
+  font-size: 11px; color: var(--c-text-secondary);
+}
+.done-btn {
+  padding: 6px 12px;
+  background: var(--c-black);
+  border-radius: var(--r-button);
+  color: var(--c-yellow);
+  font-size: 12px; font-weight: 500;
+  border: none; cursor: pointer;
+}
+
+/* ===== Calendar Screen ===== */
+.cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cal-month-title {
+  font-size: 20px; font-weight: 700;
+  color: var(--c-text-primary);
+}
+.cal-nav { display: flex; gap: 12px; align-items: center; }
+.cal-nav-btn {
+  width: 28px; height: 28px; border-radius: 14px;
+  background: var(--c-card-bg);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--c-text-secondary);
+}
+.cal-nav-today {
+  font-size: 12px; color: var(--c-text-secondary);
+  cursor: pointer;
+}
+.week-row {
+  display: flex;
+}
+.week-cell {
+  flex: 1;
+  text-align: center;
+  font-size: 12px; font-weight: 500;
+  color: var(--c-text-secondary);
+  padding: 6px 0;
+}
+.week-cell.weekend { color: var(--c-coral); }
+.cal-grid {
+  display: flex;
+  flex-direction: column;
+}
+.cal-row {
+  display: flex;
+}
+.cal-cell {
+  flex: 1;
+  height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  position: relative;
+}
+.cal-cell .date-num {
+  font-size: 14px; font-weight: 400;
+  color: var(--c-text-primary);
+}
+.cal-cell.other-month .date-num { color: #C6C8D0; }
+.cal-cell.today .date-num {
+  width: 28px; height: 28px; border-radius: 14px;
+  background: var(--c-yellow);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+}
+.mood-dot {
+  width: 6px; height: 6px; border-radius: 3px;
+}
+.mood-dot.yellow { background: var(--c-yellow); }
+.mood-dot.coral { background: var(--c-coral); }
+.mood-dot.teal { background: var(--c-teal); }
+.mood-dot.rose { background: #E891B0; }
+
+/* Mood Stats */
+.mood-stats {
+  background: var(--c-card-bg);
+  border-radius: var(--r-card);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stats-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--c-text-primary);
+}
+.stat-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stat-bar-label {
+  font-size: 12px;
+  color: var(--c-text-tertiary);
+  width: 36px;
+  flex-shrink: 0;
+}
+.stat-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #F0F1F3;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+.stat-bar-pct {
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Streak Card */
+.streak-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #FFF5C4;
+  border-radius: var(--r-card);
+  padding: 18px;
+}
+.streak-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.streak-title {
+  font-size: 16px; font-weight: 700;
+  color: var(--c-text-primary);
+}
+.streak-sub {
+  font-size: 11px; color: var(--c-text-tertiary);
+}
+
+/* ===== Profile Screen ===== */
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+.profile-avatar {
+  width: 56px; height: 56px; border-radius: 28px;
+  background: var(--c-yellow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: var(--c-text-primary);
+  flex-shrink: 0;
+}
+.profile-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.profile-name { font-size: 20px; font-weight: 600; color: var(--c-text-primary); }
+.profile-sig { font-size: 12px; color: var(--c-text-secondary); }
+.edit-btn {
+  width: 32px; height: 32px; border-radius: 16px;
+  background: var(--c-card-bg);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Stats Card */
+.stats-card {
+  display: flex;
+  background: var(--c-card-bg);
+  border-radius: var(--r-card);
+  padding: 16px 8px;
+}
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.stat-value { font-size: 20px; font-weight: 700; color: var(--c-text-primary); }
+.stat-label { font-size: 11px; color: var(--c-text-secondary); }
+
+/* Mood Trend */
+.mood-trend {
+  background: var(--c-card-bg);
+  border-radius: var(--r-card);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.trend-title { font-size: 14px; font-weight: 600; color: var(--c-text-primary); }
+.trend-sub { font-size: 11px; font-weight: 500; color: var(--c-teal); }
+.trend-bars {
+  display: flex;
+  gap: 8px;
+  height: 84px;
+  align-items: flex-end;
+}
+.trend-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.trend-bar {
+  width: 22px;
+  border-radius: 7px;
+}
+.trend-label { font-size: 10px; color: var(--c-text-secondary); }
+
+/* Achievements */
+.achv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.achv-title { font-size: 14px; font-weight: 600; color: var(--c-text-primary); }
+.badges-row {
+  display: flex;
+  justify-content: space-between;
+}
+.badge-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.badge-label { font-size: 10px; color: var(--c-text-secondary); }
+
+/* Settings */
+.settings-list {
+  background: var(--c-card-bg);
+  border-radius: var(--r-card);
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.settings-label { font-size: 14px; color: var(--c-text-primary); }
+.settings-sub {
+  flex: 1;
+  text-align: right;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+}
+
+/* ===== Tab Bar ===== */
+.tab-bar {
+  padding: 12px 21px 21px;
+  background: var(--c-white);
+  flex-shrink: 0;
+}
+.tab-pill {
+  display: flex;
+  gap: 0;
+  padding: 4px;
+  background: var(--c-white);
+  border-radius: var(--r-pill);
+  height: 62px;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 26px;
+  cursor: pointer;
+  transition: all .25s ease;
+}
+.tab-item.active {
+  background: var(--c-black);
+}
+.tab-item .tab-icon path,
+.tab-item .tab-icon rect,
+.tab-item .tab-icon circle {
+  fill: var(--c-text-secondary);
+  transition: all .25s ease;
+}
+.tab-item.active .tab-icon path,
+.tab-item.active .tab-icon rect,
+.tab-item.active .tab-icon circle {
+  fill: var(--c-yellow);
+}
+.tab-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--c-text-secondary);
+  transition: all .25s ease;
+}
+.tab-item.active .tab-label {
+  color: var(--c-yellow);
+  font-weight: 600;
+}
+
+/* Write screen has no tab bar, it has a toolbar */
+.write-screen .write-toolbar {
+  flex-shrink: 0;
+}
+
+/* ===== Responsive Scaling ===== */
+@media (max-height: 880px) {
+  .phone-shell {
+    transform: scale(calc((100vh - 40px) / 812));
+  }
+}
+@media (max-width: 420px) {
+  body { background: var(--c-white); }
+  .phone-shell {
+    border-radius: 0;
+    box-shadow: none;
+    width: 100vw;
+    height: 100vh;
+    transform: none;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="phone-shell" id="phoneShell">
+
+<!-- ===== Screen 1: 首页 ===== -->
+<div class="screen active" data-screen="home">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><rect x="1" y="7" width="3" height="5" rx="0.5" fill="#1C1C1E"/><rect x="6" y="4" width="3" height="8" rx="0.5" fill="#1C1C1E"/><rect x="11" y="1" width="3" height="11" rx="0.5" fill="#1C1C1E"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5C10.5 2.5 12.8 3.5 14.5 5.2L13 6.7C11.6 5.3 9.9 4.5 8 4.5S4.4 5.3 3 6.7L1.5 5.2C3.2 3.5 5.5 2.5 8 2.5z" fill="#1C1C1E"/><circle cx="8" cy="9" r="2" fill="#1C1C1E"/></svg>
+      <svg width="24" height="12" viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="#1C1C1E" stroke-width="1"/><rect x="3" y="4" width="14" height="4" rx="1" fill="#1C1C1E"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.5" fill="#1C1C1E"/></svg>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" style="padding-bottom: 100px;">
+    <!-- Header -->
+    <div class="home-header">
+      <div class="home-header-left">
+        <div class="home-greeting">早安，小墨</div>
+        <div class="home-date">8月25日 周二</div>
+      </div>
+      <div class="avatar">墨</div>
+    </div>
+
+    <!-- Mood Card -->
+    <div class="mood-card">
+      <div class="mood-title">今天心情如何？</div>
+      <div class="mood-row">
+        <div class="mood-item active" data-mood="happy">
+          <div class="mood-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#FFD02F"/><circle cx="10" cy="11" r="1.5" fill="#1C1C1E"/><circle cx="18" cy="11" r="1.5" fill="#1C1C1E"/><path d="M9 16 Q14 20 19 16" fill="none" stroke="#1C1C1E" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mood-label">开心</div>
+        </div>
+        <div class="mood-item" data-mood="calm">
+          <div class="mood-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#F0F1F3"/><circle cx="10" cy="11" r="1.5" fill="#8E91A0"/><circle cx="18" cy="11" r="1.5" fill="#8E91A0"/><line x1="10" y1="17" x2="18" y2="17" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mood-label">平静</div>
+        </div>
+        <div class="mood-item" data-mood="excited">
+          <div class="mood-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#F0F1F3"/><path d="M8 9 L12 13 M12 9 L8 13" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/><path d="M16 9 L20 13 M20 9 L16 13" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/><path d="M9 16 Q14 21 19 16" fill="none" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mood-label">兴奋</div>
+        </div>
+        <div class="mood-item" data-mood="sad">
+          <div class="mood-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#F0F1F3"/><circle cx="10" cy="11" r="1.5" fill="#8E91A0"/><circle cx="18" cy="11" r="1.5" fill="#8E91A0"/><path d="M9 19 Q14 15 19 19" fill="none" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mood-label">低落</div>
+        </div>
+        <div class="mood-item" data-mood="angry">
+          <div class="mood-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="#F0F1F3"/><path d="M8 9 L13 12 M13 9 L8 12" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/><path d="M15 9 L20 12 M20 9 L15 12" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/><path d="M9 18 Q14 14 19 18" fill="none" stroke="#8E91A0" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="mood-label">烦躁</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prompt Card -->
+    <div class="prompt-card">
+      <div class="prompt-tag">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1 L9.8 5.6 L14.5 6 L11 9.3 L12 14 L8 11.5 L4 14 L5 9.3 L1.5 6 L6.2 5.6 Z" fill="#FFD02F"/></svg>
+        <span class="prompt-tag-text">今日灵感</span>
+      </div>
+      <div class="prompt-text">记录一件让你微笑的小事</div>
+      <button class="prompt-btn" onclick="switchScreen('write')">
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 10.5 L8.5 4 L10 5.5 L3.5 12 L2 12 Z M9 3 L10.5 1.5 L12 3 L10.5 4.5 Z" fill="#FFD02F" stroke="#FFD02F" stroke-width="0.5"/></svg>
+        开始书写
+      </button>
+    </div>
+
+    <!-- Recent Header -->
+    <div class="recent-header">
+      <span class="recent-title">最近的日记</span>
+      <span class="recent-more">查看全部</span>
+    </div>
+
+    <!-- Entry 1 -->
+    <div class="entry">
+      <div class="entry-date-col">
+        <div class="entry-day-num">24</div>
+        <div class="entry-month">8月</div>
+      </div>
+      <div class="entry-divider"></div>
+      <div class="entry-content">
+        <div class="entry-title-row">
+          <span class="entry-title">海边的午后</span>
+          <div class="entry-mood-tag" style="background: #FFD02F;">
+            <svg width="14" height="14" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#FFD02F"/><circle cx="7" cy="8" r="1" fill="#1C1C1E"/><circle cx="13" cy="8" r="1" fill="#1C1C1E"/><path d="M6 12 Q10 15 14 12" fill="none" stroke="#1C1C1E" stroke-width="1" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div class="entry-preview">今天的阳光格外温暖，在海边散步时看到了一群海鸥飞过...</div>
+        <div class="entry-meta">
+          <div class="entry-weather">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="3" fill="#FFD02F"/><g stroke="#1C1C1E" stroke-width="0.8" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="2"/><line x1="6" y1="10" x2="6" y2="11"/><line x1="1" y1="6" x2="2" y2="6"/><line x1="10" y1="6" x2="11" y2="6"/><line x1="2.5" y1="2.5" x2="3" y2="3"/><line x1="9" y1="9" x2="9.5" y2="9.5"/><line x1="2.5" y1="9.5" x2="3" y2="9"/><line x1="9" y1="3" x2="9.5" y2="2.5"/></g></svg>
+            <span class="entry-weather-text">晴 28°</span>
+          </div>
+          <span class="entry-words">238字</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entry 2 -->
+    <div class="entry">
+      <div class="entry-date-col">
+        <div class="entry-day-num">23</div>
+        <div class="entry-month">8月</div>
+      </div>
+      <div class="entry-divider"></div>
+      <div class="entry-content">
+        <div class="entry-title-row">
+          <span class="entry-title">雨天读书</span>
+          <div class="entry-mood-tag" style="background: #C3FAF5;">
+            <svg width="14" height="14" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#C3FAF5"/><circle cx="7" cy="8" r="1" fill="#0FBCB0"/><circle cx="13" cy="8" r="1" fill="#0FBCB0"/><line x1="7" y1="13" x2="13" y2="13" stroke="#0FBCB0" stroke-width="1" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div class="entry-preview">下了一整天雨，窝在窗边读完了《小王子》，狐狸说驯养就是建立联系...</div>
+        <div class="entry-meta">
+          <div class="entry-weather">
+            <svg width="12" height="12" viewBox="0 0 12 12"><ellipse cx="6" cy="4" rx="4" ry="2.5" fill="#4262FF"/><line x1="4" y1="7" x2="3.5" y2="10" stroke="#4262FF" stroke-width="0.8" stroke-linecap="round"/><line x1="6" y1="7" x2="5.5" y2="10" stroke="#4262FF" stroke-width="0.8" stroke-linecap="round"/><line x1="8" y1="7" x2="7.5" y2="10" stroke="#4262FF" stroke-width="0.8" stroke-linecap="round"/></svg>
+            <span class="entry-weather-text">雨 22°</span>
+          </div>
+          <span class="entry-words">512字</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-pill">
+      <div class="tab-item active" data-tab="home" onclick="switchScreen('home')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><path d="M3 9 L10 3 L17 9 V17 H12 V12 H8 V17 H3 Z" fill="#FFD02F"/></svg>
+        <span class="tab-label">首页</span>
+      </div>
+      <div class="tab-item" data-tab="calendar" onclick="switchScreen('calendar')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="12" rx="2" fill="#8E91A0"/><rect x="3" y="5" width="14" height="3" rx="2" fill="#8E91A0"/><rect x="6" y="3" width="2" height="3" rx="1" fill="#8E91A0"/><rect x="12" y="3" width="2" height="3" rx="1" fill="#8E91A0"/><rect x="6" y="10" width="2" height="2" rx="0.5" fill="#fff"/><rect x="9" y="10" width="2" height="2" rx="0.5" fill="#fff"/><rect x="12" y="10" width="2" height="2" rx="0.5" fill="#fff"/></svg>
+        <span class="tab-label">日历</span>
+      </div>
+      <div class="tab-item" data-tab="write" onclick="switchScreen('write')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><path d="M3 16 L13 6 L16 9 L6 19 L3 19 Z M14 5 L16 3 L18 5 L16 7 Z" fill="#8E91A0"/></svg>
+        <span class="tab-label">写日记</span>
+      </div>
+      <div class="tab-item" data-tab="profile" onclick="switchScreen('profile')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="7" r="4" fill="#8E91A0"/><path d="M3 18 Q10 12 17 18 Z" fill="#8E91A0"/></svg>
+        <span class="tab-label">我的</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Screen 2: 写日记 ===== -->
+<div class="screen" data-screen="write">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><rect x="1" y="7" width="3" height="5" rx="0.5" fill="#1C1C1E"/><rect x="6" y="4" width="3" height="8" rx="0.5" fill="#1C1C1E"/><rect x="11" y="1" width="3" height="11" rx="0.5" fill="#1C1C1E"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5C10.5 2.5 12.8 3.5 14.5 5.2L13 6.7C11.6 5.3 9.9 4.5 8 4.5S4.4 5.3 3 6.7L1.5 5.2C3.2 3.5 5.5 2.5 8 2.5z" fill="#1C1C1E"/><circle cx="8" cy="9" r="2" fill="#1C1C1E"/></svg>
+      <svg width="24" height="12" viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="#1C1C1E" stroke-width="1"/><rect x="3" y="4" width="14" height="4" rx="1" fill="#1C1C1E"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.5" fill="#1C1C1E"/></svg>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" style="padding-bottom: 80px;">
+    <!-- Write Header -->
+    <div class="write-header">
+      <button class="back-btn" onclick="switchScreen('home')">
+        <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 2 L2 8 L8 14" fill="none" stroke="#1C1C1E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="write-header-right">
+        <div class="date-badge">8月25日 09:41</div>
+        <button class="save-btn">保存</button>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="title-input">
+      <div class="title-text">海边的午后</div>
+      <div class="title-line"></div>
+    </div>
+
+    <!-- Meta Chips -->
+    <div class="meta-row">
+      <div class="meta-chip mood-chip">
+        <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#FFD02F"/><circle cx="5" cy="6" r="0.8" fill="#1C1C1E"/><circle cx="9" cy="6" r="0.8" fill="#1C1C1E"/><path d="M4.5 8 Q7 10 9.5 8" fill="none" stroke="#1C1C1E" stroke-width="0.8" stroke-linecap="round"/></svg>
+        开心
+      </div>
+      <div class="meta-chip weather-chip">
+        <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="3.5" fill="#FFD02F"/><g stroke="#1C1C1E" stroke-width="0.6"><line x1="7" y1="1.5" x2="7" y2="2.5"/><line x1="7" y1="11.5" x2="7" y2="12.5"/><line x1="1.5" y1="7" x2="2.5" y2="7"/><line x1="11.5" y1="7" x2="12.5" y2="7"/></g></svg>
+        晴 28°
+      </div>
+      <div class="meta-chip tag-chip">
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7 L7 2 L12 7 L7 12 Z" fill="none" stroke="#8E91A0" stroke-width="1"/></svg>
+        旅行
+      </div>
+    </div>
+
+    <!-- Diary Body -->
+    <div class="diary-body">
+      <p>今天是难得的好天气，独自坐车去了海边。</p>
+      <p>海水很蓝，风吹过来带着淡淡的咸味。坐在礁石上发了很久的呆，看着海鸥一只接一只地从头顶飞过，远处有帆船缓缓移动。</p>
+
+      <!-- Inline Illustration -->
+      <div class="body-illustration">
+        <svg width="100%" height="100%" viewBox="0 0 335 160" preserveAspectRatio="xMidYMid slice">
+          <rect width="335" height="160" fill="#C3FAF5" rx="16"/>
+          <circle cx="270" cy="40" r="20" fill="#FFD02F" opacity="0.9"/>
+          <path d="M0 100 Q50 90 100 100 T200 100 T335 100 L335 160 L0 160 Z" fill="#0FBCB0" opacity="0.7"/>
+          <path d="M0 115 Q50 105 100 115 T200 115 T335 115 L335 160 L0 160 Z" fill="#0FBCB0" opacity="0.9"/>
+          <ellipse cx="60" cy="30" rx="25" ry="8" fill="#fff" opacity="0.6"/>
+          <ellipse cx="200" cy="25" rx="20" ry="6" fill="#fff" opacity="0.5"/>
+        </svg>
+      </div>
+
+      <p>这样的日子真好，什么都不用想，就让自己在阳光里慢慢融化。</p>
+      <p>傍晚时分的晚霞特别美，天空从橘红渐变成淡紫，最后消失在深蓝色的夜幕里。</p>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="write-toolbar">
+    <div class="tool-left">
+      <button class="tool-btn"><svg width="16" height="16" viewBox="0 0 16 16"><text x="2" y="13" font-size="13" font-weight="700" fill="#1C1C1E">B</text></svg></button>
+      <button class="tool-btn"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="#8E91A0" stroke-width="1.5"/><circle cx="6" cy="7" r="1.5" fill="#0FBCB0"/><path d="M9 10 L12 10 L12 8 Q12 6 10 6 Z" fill="#0FBCB0"/><path d="M2 13 L14 13" stroke="#0FBCB0" stroke-width="0.8"/></svg></button>
+      <button class="tool-btn"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M6.5 3.5 L3.5 12.5 L5.5 12.5 L6 10.5 L10 10.5 L10.5 12.5 L12.5 12.5 L9.5 3.5 Z M7 5.5 L8 8.5 L6.5 8.5 Z" fill="#8E91A0"/></svg></button>
+      <button class="tool-btn"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="3" y="4" width="10" height="1.5" rx="0.75" fill="#8E91A0"/><rect x="3" y="7.25" width="10" height="1.5" rx="0.75" fill="#8E91A0"/><rect x="3" y="10.5" width="7" height="1.5" rx="0.75" fill="#8E91A0"/></svg></button>
+    </div>
+    <div class="tool-right">
+      <span class="word-count">128字</span>
+      <button class="done-btn">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Screen 3: 日历心情 ===== -->
+<div class="screen" data-screen="calendar">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><rect x="1" y="7" width="3" height="5" rx="0.5" fill="#1C1C1E"/><rect x="6" y="4" width="3" height="8" rx="0.5" fill="#1C1C1E"/><rect x="11" y="1" width="3" height="11" rx="0.5" fill="#1C1C1E"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5C10.5 2.5 12.8 3.5 14.5 5.2L13 6.7C11.6 5.3 9.9 4.5 8 4.5S4.4 5.3 3 6.7L1.5 5.2C3.2 3.5 5.5 2.5 8 2.5z" fill="#1C1C1E"/><circle cx="8" cy="9" r="2" fill="#1C1C1E"/></svg>
+      <svg width="24" height="12" viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="#1C1C1E" stroke-width="1"/><rect x="3" y="4" width="14" height="4" rx="1" fill="#1C1C1E"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.5" fill="#1C1C1E"/></svg>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" style="padding-bottom: 100px; gap: 16px;">
+    <!-- Calendar Header -->
+    <div class="cal-header">
+      <div class="cal-month-title">8月 2026</div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn">‹</button>
+        <span class="cal-nav-today">今天</span>
+        <button class="cal-nav-btn">›</button>
+      </div>
+    </div>
+
+    <!-- Weekday Row -->
+    <div class="week-row">
+      <div class="week-cell weekend">日</div>
+      <div class="week-cell">一</div>
+      <div class="week-cell">二</div>
+      <div class="week-cell">三</div>
+      <div class="week-cell">四</div>
+      <div class="week-cell">五</div>
+      <div class="week-cell weekend">六</div>
+    </div>
+
+    <!-- Calendar Grid (Aug 2026: Aug 1 = Saturday) -->
+    <div class="cal-grid">
+      <!-- Row 1: 27 28 29 30 31 1 2 -->
+      <div class="cal-row">
+        <div class="cal-cell other-month"><span class="date-num">26</span></div>
+        <div class="cal-cell other-month"><span class="date-num">27</span></div>
+        <div class="cal-cell other-month"><span class="date-num">28</span></div>
+        <div class="cal-cell other-month"><span class="date-num">29</span></div>
+        <div class="cal-cell other-month"><span class="date-num">30</span></div>
+        <div class="cal-cell other-month"><span class="date-num">31</span></div>
+        <div class="cal-cell"><span class="date-num">1</span></div>
+      </div>
+      <!-- Row 2: 3 4 5 6 7 8 9 (Aug 2=Sun, 3=Mon... wait, Aug 1 2026 = Saturday) -->
+      <!-- Actually: Aug 1 = Sat, so Row1: 27 28 29 30 31 1(blank=1) ... Let me redo -->
+      <!-- Aug 2026: Aug 1 is a Saturday. So week starts on Sunday. -->
+      <!-- Row 1: (prev) 26 27 28 29 30 31 | 1(Sat) -->
+      <!-- Row 2: 2 3 4 5 6 7 8 -->
+      <div class="cal-row">
+        <div class="cal-cell"><span class="date-num">2</span><div class="mood-dot coral"></div></div>
+        <div class="cal-cell"><span class="date-num">3</span></div>
+        <div class="cal-cell"><span class="date-num">4</span><div class="mood-dot teal"></div></div>
+        <div class="cal-cell"><span class="date-num">5</span></div>
+        <div class="cal-cell"><span class="date-num">6</span><div class="mood-dot yellow"></div></div>
+        <div class="cal-cell"><span class="date-num">7</span></div>
+        <div class="cal-cell"><span class="date-num">8</span><div class="mood-dot yellow"></div></div>
+      </div>
+      <!-- Row 3: 9 10 11 12 13 14 15 -->
+      <div class="cal-row">
+        <div class="cal-cell"><span class="date-num">9</span></div>
+        <div class="cal-cell"><span class="date-num">10</span><div class="mood-dot coral"></div></div>
+        <div class="cal-cell"><span class="date-num">11</span></div>
+        <div class="cal-cell"><span class="date-num">12</span><div class="mood-dot teal"></div></div>
+        <div class="cal-cell"><span class="date-num">13</span></div>
+        <div class="cal-cell"><span class="date-num">14</span><div class="mood-dot yellow"></div></div>
+        <div class="cal-cell"><span class="date-num">15</span></div>
+      </div>
+      <!-- Row 4: 16 17 18 19 20 21 22 -->
+      <div class="cal-row">
+        <div class="cal-cell"><span class="date-num">16</span><div class="mood-dot yellow"></div></div>
+        <div class="cal-cell"><span class="date-num">17</span></div>
+        <div class="cal-cell"><span class="date-num">18</span><div class="mood-dot rose"></div></div>
+        <div class="cal-cell"><span class="date-num">19</span></div>
+        <div class="cal-cell"><span class="date-num">20</span><div class="mood-dot coral"></div></div>
+        <div class="cal-cell"><span class="date-num">21</span></div>
+        <div class="cal-cell"><span class="date-num">22</span><div class="mood-dot teal"></div></div>
+      </div>
+      <!-- Row 5: 23 24 25 26 27 28 29 -->
+      <div class="cal-row">
+        <div class="cal-cell"><span class="date-num">23</span><div class="mood-dot teal"></div></div>
+        <div class="cal-cell"><span class="date-num">24</span><div class="mood-dot yellow"></div></div>
+        <div class="cal-cell today"><span class="date-num">25</span></div>
+        <div class="cal-cell"><span class="date-num">26</span></div>
+        <div class="cal-cell"><span class="date-num">27</span></div>
+        <div class="cal-cell"><span class="date-num">28</span></div>
+        <div class="cal-cell"><span class="date-num">29</span></div>
+      </div>
+      <!-- Row 6: 30 31 (next month) -->
+      <div class="cal-row">
+        <div class="cal-cell"><span class="date-num">30</span></div>
+        <div class="cal-cell"><span class="date-num">31</span></div>
+        <div class="cal-cell other-month"><span class="date-num">1</span></div>
+        <div class="cal-cell other-month"><span class="date-num">2</span></div>
+        <div class="cal-cell other-month"><span class="date-num">3</span></div>
+        <div class="cal-cell other-month"><span class="date-num">4</span></div>
+        <div class="cal-cell other-month"><span class="date-num">5</span></div>
+      </div>
+    </div>
+
+    <!-- Mood Statistics -->
+    <div class="mood-stats">
+      <div class="stats-title">本月心情分布</div>
+      <div class="stat-bar">
+        <span class="stat-bar-label">开心</span>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 50%; background: #FFD02F;"></div></div>
+        <span class="stat-bar-pct">50%</span>
+      </div>
+      <div class="stat-bar">
+        <span class="stat-bar-label">平静</span>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 28%; background: #0FBCB0;"></div></div>
+        <span class="stat-bar-pct">28%</span>
+      </div>
+      <div class="stat-bar">
+        <span class="stat-bar-label">兴奋</span>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 16%; background: #FF9999;"></div></div>
+        <span class="stat-bar-pct">16%</span>
+      </div>
+      <div class="stat-bar">
+        <span class="stat-bar-label">幸福</span>
+        <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 6%; background: #E891B0;"></div></div>
+        <span class="stat-bar-pct">6%</span>
+      </div>
+    </div>
+
+    <!-- Streak Card -->
+    <div class="streak-card">
+      <svg width="36" height="36" viewBox="0 0 36 36"><path d="M18 4 C22 10 26 14 26 20 C26 26 22 30 18 30 C14 30 10 26 10 20 C10 17 12 14 14 12 C14 16 16 18 18 18 C16 14 16 8 18 4 Z" fill="#FF6B35"/><path d="M18 14 C20 18 22 20 22 24 C22 27 20 29 18 29 C16 29 14 27 14 24 C14 22 15 20 16 18 C16 20 17 21 18 21 C17 19 17 16 18 14 Z" fill="#FFD02F"/></svg>
+      <div class="streak-text">
+        <div class="streak-title">连续书写 12 天</div>
+        <div class="streak-sub">再坚持 3 天就能解锁「半个月」勋章</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-pill">
+      <div class="tab-item" data-tab="home" onclick="switchScreen('home')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><path d="M3 9 L10 3 L17 9 V17 H12 V12 H8 V17 H3 Z" fill="#8E91A0"/></svg>
+        <span class="tab-label">首页</span>
+      </div>
+      <div class="tab-item active" data-tab="calendar" onclick="switchScreen('calendar')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="12" rx="2" fill="#FFD02F"/><rect x="3" y="5" width="14" height="3" rx="2" fill="#FFD02F"/><rect x="6" y="3" width="2" height="3" rx="1" fill="#FFD02F"/><rect x="12" y="3" width="2" height="3" rx="1" fill="#FFD02F"/><rect x="6" y="10" width="2" height="2" rx="0.5" fill="#1C1C1E"/><rect x="9" y="10" width="2" height="2" rx="0.5" fill="#1C1C1E"/><rect x="12" y="10" width="2" height="2" rx="0.5" fill="#1C1C1E"/></svg>
+        <span class="tab-label">日历</span>
+      </div>
+      <div class="tab-item" data-tab="write" onclick="switchScreen('write')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><path d="M3 16 L13 6 L16 9 L6 19 L3 19 Z M14 5 L16 3 L18 5 L16 7 Z" fill="#8E91A0"/></svg>
+        <span class="tab-label">写日记</span>
+      </div>
+      <div class="tab-item" data-tab="profile" onclick="switchScreen('profile')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="7" r="4" fill="#8E91A0"/><path d="M3 18 Q10 12 17 18 Z" fill="#8E91A0"/></svg>
+        <span class="tab-label">我的</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Screen 4: 我的 ===== -->
+<div class="screen" data-screen="profile">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="18" height="12" viewBox="0 0 18 12"><rect x="1" y="7" width="3" height="5" rx="0.5" fill="#1C1C1E"/><rect x="6" y="4" width="3" height="8" rx="0.5" fill="#1C1C1E"/><rect x="11" y="1" width="3" height="11" rx="0.5" fill="#1C1C1E"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.5C10.5 2.5 12.8 3.5 14.5 5.2L13 6.7C11.6 5.3 9.9 4.5 8 4.5S4.4 5.3 3 6.7L1.5 5.2C3.2 3.5 5.5 2.5 8 2.5z" fill="#1C1C1E"/><circle cx="8" cy="9" r="2" fill="#1C1C1E"/></svg>
+      <svg width="24" height="12" viewBox="0 0 24 12"><rect x="1" y="2" width="20" height="8" rx="2" fill="none" stroke="#1C1C1E" stroke-width="1"/><rect x="3" y="4" width="14" height="4" rx="1" fill="#1C1C1E"/><rect x="22" y="4.5" width="1.5" height="3" rx="0.5" fill="#1C1C1E"/></svg>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" style="gap: 14px; padding-bottom: 100px;">
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar">墨</div>
+      <div class="profile-info">
+        <div class="profile-name">小墨</div>
+        <div class="profile-sig">把日子过成自己喜欢的样子</div>
+      </div>
+      <button class="edit-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16"><path d="M11 1.5 L14.5 5 L5.5 14 L2 14 L2 10.5 Z" fill="none" stroke="#8E91A0" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <!-- Stats Card -->
+    <div class="stats-card">
+      <div class="stat-item">
+        <div class="stat-value">128</div>
+        <div class="stat-label">篇日记</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">5.6万</div>
+        <div class="stat-label">总字数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">312</div>
+        <div class="stat-label">坚持天数</div>
+      </div>
+    </div>
+
+    <!-- Mood Trend -->
+    <div class="mood-trend">
+      <div class="trend-header">
+        <span class="trend-title">本周心情</span>
+        <span class="trend-sub">开心指数 ↑ 12%</span>
+      </div>
+      <div class="trend-bars">
+        <div class="trend-col">
+          <div class="trend-bar" style="height: 32px; background: #FF9999;"></div>
+          <div class="trend-label">一</div>
+        </div>
+        <div class="trend-col">
+          <div class="trend-bar" style="height: 44px; background: #FF9999;"></div>
+          <div class="trend-label">二</div>
+        </div>
+        <div class="trend-col">
+          <div class="trend-bar" style="height: 26px; background: #FF9999;"></div>
+          <div class="trend-label">三</div>
+        </div>
+        <div class="trend-col">
+          <div class="trend-bar" style="height: 48px; background: #FF9999;"></div>
+          <div class="trend-label">四</div>
+        </div>
+        <div class="trend-col">
+          <div class="trend-bar" style="height: 40px; background: #FF9999;"></div>
+          <div class="trend-label">五</div>
+        </div>
+        <div class="trend-col">
+          <div class="trend-bar" style="height: 56px; background: #FF9999;"></div>
+          <div class="trend-label">六</div>
+        </div>
+        <div class="trend-col">
+          <div class="trend-bar" style="height: 66px; background: #FFD02F;"></div>
+          <div class="trend-label">日</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Achievements -->
+    <div class="achv-section">
+      <div class="achv-title">我的勋章</div>
+      <div class="badges-row">
+        <div class="badge-group">
+          <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#FFD02F"/><circle cx="22" cy="22" r="6" fill="#1C1C1E"/><rect x="20.4" y="8" width="3.2" height="6" rx="1.6" fill="#1C1C1E"/><rect x="20.4" y="30" width="3.2" height="6" rx="1.6" fill="#1C1C1E"/><rect x="8" y="20.4" width="6" height="3.2" rx="1.6" fill="#1C1C1E"/><rect x="30" y="20.4" width="6" height="3.2" rx="1.6" fill="#1C1C1E"/></svg>
+          <span class="badge-label">早起鸟</span>
+        </div>
+        <div class="badge-group">
+          <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#0FBCB0"/><circle cx="22" cy="22" r="10" fill="#fff"/><circle cx="25" cy="19" r="8" fill="#0FBCB0"/></svg>
+          <span class="badge-label">夜猫子</span>
+        </div>
+        <div class="badge-group">
+          <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#FF9999"/><path d="M22 8a9 9 0 0 0-9 9c0 6.4 9 17 9 17s9-10.6 9-17a9 9 0 0 0-9-9zm0 11.4a2.6 2.6 0 1 1 0-5.2 2.6 2.6 0 0 1 0 5.2z" fill="#fff"/><circle cx="22" cy="17" r="2.6" fill="#FF9999"/></svg>
+          <span class="badge-label">旅行家</span>
+        </div>
+        <div class="badge-group">
+          <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#FDE0F0"/><path d="M22 31.5s-11-7.6-11-14.4c0-3.2 2.4-5.6 5.6-5.6 1.8 0 3.4.8 4.4 2.1 1-1.3 2.6-2.1 4.4-2.1 3.2 0 5.6 2.4 5.6 5.6 0 6.8-11 14.4-11 14.4z" fill="#1C1C1E"/></svg>
+          <span class="badge-label">治愈系</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings List -->
+    <div class="settings-list">
+      <div class="settings-row">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path d="M9 2.2A4.8 4.8 0 0 0 4.2 7v2.6l-1.6 2.7h12.8l-1.6-2.7V7A4.8 4.8 0 0 0 9 2.2z" fill="#8E91A0"/><rect x="7.6" y="13.4" width="2.8" height="1.8" rx="0.9" fill="#8E91A0"/></svg>
+        <span class="settings-label">日记提醒</span>
+        <span class="settings-sub">每天 21:00</span>
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M5.5 3 L9 7 L5.5 11" fill="none" stroke="#C6C8D0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="settings-row">
+        <svg width="18" height="18" viewBox="0 0 18 18"><rect x="6.7" y="3.4" width="4.6" height="3.6" rx="2.3" fill="#8E91A0"/><rect x="3.4" y="6.4" width="11.2" height="8.4" rx="2.2" fill="#8E91A0"/><circle cx="9" cy="10.4" r="1.5" fill="#fff"/></svg>
+        <span class="settings-label">隐私与密码</span>
+        <span class="settings-sub">已锁定</span>
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M5.5 3 L9 7 L5.5 11" fill="none" stroke="#C6C8D0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="settings-row">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="6.8" cy="8.4" r="3.4" fill="#8E91A0"/><circle cx="11" cy="8.8" r="3.8" fill="#8E91A0"/><rect x="6" y="5.6" width="6.4" height="5.6" rx="2.8" fill="#8E91A0"/><rect x="8.2" y="11.2" width="1.6" height="3.4" rx="0.8" fill="#8E91A0"/></svg>
+        <span class="settings-label">导出与备份</span>
+        <span class="settings-sub">已开启</span>
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M5.5 3 L9 7 L5.5 11" fill="none" stroke="#C6C8D0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="settings-row">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="#8E91A0"/><circle cx="6.4" cy="7.4" r="1.1" fill="#fff"/><circle cx="10.4" cy="6.6" r="1.1" fill="#fff"/><circle cx="12.2" cy="10" r="1.1" fill="#fff"/><rect x="8" y="11.8" width="2.6" height="1.8" rx="0.9" fill="#fff"/></svg>
+        <span class="settings-label">主题外观</span>
+        <span class="settings-sub">浅色</span>
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M5.5 3 L9 7 L5.5 11" fill="none" stroke="#C6C8D0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="settings-row">
+        <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6.5" fill="#8E91A0"/><rect x="8.2" y="7.8" width="1.6" height="4.6" rx="0.8" fill="#fff"/><circle cx="9" cy="5.7" r="1.2" fill="#fff"/></svg>
+        <span class="settings-label">关于我们</span>
+        <span class="settings-sub">v2.4.1</span>
+        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M5.5 3 L9 7 L5.5 11" fill="none" stroke="#C6C8D0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-pill">
+      <div class="tab-item" data-tab="home" onclick="switchScreen('home')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><path d="M3 9 L10 3 L17 9 V17 H12 V12 H8 V17 H3 Z" fill="#8E91A0"/></svg>
+        <span class="tab-label">首页</span>
+      </div>
+      <div class="tab-item" data-tab="calendar" onclick="switchScreen('calendar')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><rect x="3" y="5" width="14" height="12" rx="2" fill="#8E91A0"/><rect x="3" y="5" width="14" height="3" rx="2" fill="#8E91A0"/><rect x="6" y="3" width="2" height="3" rx="1" fill="#8E91A0"/><rect x="12" y="3" width="2" height="3" rx="1" fill="#8E91A0"/><rect x="6" y="10" width="2" height="2" rx="0.5" fill="#fff"/><rect x="9" y="10" width="2" height="2" rx="0.5" fill="#fff"/><rect x="12" y="10" width="2" height="2" rx="0.5" fill="#fff"/></svg>
+        <span class="tab-label">日历</span>
+      </div>
+      <div class="tab-item" data-tab="write" onclick="switchScreen('write')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><path d="M3 16 L13 6 L16 9 L6 19 L3 19 Z M14 5 L16 3 L18 5 L16 7 Z" fill="#8E91A0"/></svg>
+        <span class="tab-label">写日记</span>
+      </div>
+      <div class="tab-item active" data-tab="profile" onclick="switchScreen('profile')">
+        <svg class="tab-icon" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="7" r="4" fill="#FFD02F"/><path d="M3 18 Q10 12 17 18 Z" fill="#FFD02F"/></svg>
+        <span class="tab-label">我的</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /phone-shell -->
+
+<script>
+// ===== Tab Switching =====
+function switchScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.toggle('active', s.dataset.screen === name);
+  });
+  // Sync tab bars across all screens
+  document.querySelectorAll('.tab-item').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === name);
+  });
+  // Update tab icon colors
+  updateTabIcons();
+  // Scroll content to top
+  const activeScreen = document.querySelector('.screen.active');
+  if (activeScreen) {
+    const content = activeScreen.querySelector('.content');
+    if (content) content.scrollTop = 0;
+  }
+}
+
+function updateTabIcons() {
+  document.querySelectorAll('.tab-item').forEach(t => {
+    const svg = t.querySelector('svg');
+    if (!svg) return;
+    const isActive = t.classList.contains('active');
+    const shapes = svg.querySelectorAll('path, rect, circle');
+    // Handled by CSS transitions
+  });
+}
+
+// ===== Mood Selection =====
+document.querySelectorAll('.mood-item').forEach(item => {
+  item.addEventListener('click', () => {
+    item.parentElement.querySelectorAll('.mood-item').forEach(m => m.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+// ===== Responsive Scaling =====
+function scalePhone() {
+  const shell = document.getElementById('phoneShell');
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // On mobile, fill screen
+  if (vw < 420) return;
+  // Scale to fit height
+  const targetH = 812;
+  const targetW = 375 + 18; // 8px border * 2 + 1px outline
+  const scale = Math.min(vw / targetW, vh / (targetH + 4));
+  shell.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', scalePhone);
+scalePhone();
+</script>
+</body>
+</html>

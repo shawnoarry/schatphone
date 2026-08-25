@@ -73,6 +73,7 @@ Calendar owns:
 - real push scheduling and event-time edits
 - relationship-fact review for confirmed schedule events
 - an optional stable Map-owned appointment `locationRef` as schedule destination identity, without copying coordinates or route state
+- a bounded persisted schedule-handoff `sourceRef` on confirmed events, containing only source identity, revision, idempotency key, and safe return context
 
 Calendar is a visible Home app, not only an internal scheduling concept. Its CJA-1 frontend provides Month, Week, and Agenda views over Calendar-owned occurrences, selected-day and selected-event detail, all-day and multi-day spans, recurrence, complete manual event authoring, reminder policy, and stable Map place selection. A location-bound occurrence may show a derived departure-readiness projection from current Map truth and selected transport. `日程 / Agenda` is a Calendar view, not another long-range planning app.
 
@@ -89,6 +90,7 @@ Calendar does not own:
 - current-position, distance, ETA-calculation, or route truth
 - Schedule Orchestrator materialization state
 - generic Event Runtime or Narrative Timeline records
+- source Mail/Work Hub bodies, proposal truth, or authority to silently apply a changed/cancelled source revision
 
 Calendar may later request a Mini Scene from a confirmed event using canonical schedule, time, place, participant, and push-state facts. Generation or presentation failure cannot change the confirmed event, and an interaction that requests an event edit returns to Calendar validation.
 

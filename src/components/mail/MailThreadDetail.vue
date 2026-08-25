@@ -98,7 +98,11 @@
               type="button"
               class="daon-invite__action"
               :data-testid="`mail-invite-open-${mail.id}`"
-              @click="$emit('open-invite', mail.invite.route)"
+              @click="$emit('open-invite', {
+                path: mail.invite.route,
+                sourceRecordId: mail.id,
+                calendarEventId: mail.invite.calendarEventId,
+              })"
             >
               {{ mail.invite.action }}
               <i class="fas fa-arrow-right" aria-hidden="true"></i>

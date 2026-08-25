@@ -14,6 +14,11 @@ import { pushReturnTarget } from '../lib/navigation-return'
 import { RELATIONSHIP_FACT_SOURCE_KEYS } from '../lib/relationship-fact-adapters'
 import { resolveWorldAppUxContext } from '../lib/world-pack-app-bindings'
 import { MAP_TRANSPORT_MODES } from '../lib/map-journey'
+import { resolveScheduleHandoffSourceDraftV1 } from '../lib/schedule-handoff-sources'
+import {
+  SCHEDULE_HANDOFF_CONFLICT_DECISIONS,
+  resolveScheduleHandoffConflictV1,
+} from '../lib/schedule-handoff'
 import {
   addCalendarDays,
   addCalendarMonths,
@@ -77,6 +82,7 @@ const editorMode = ref('create')
 const editorDraft = ref({})
 const editorValidationMessage = ref('')
 const editorSaving = ref(false)
+const openedScheduleHandoffId = ref('')
 let departureClockTimer = null
 
 const calendarEventCount = computed(() => confirmedEvents.value.length)
@@ -151,6 +157,106 @@ const calendarOverviewDescription = computed(() => {
 const calendarOverviewClass = computed(() =>
   calendarWorldAppContext.value ? 'calendar-overview--world' : '',
 )
+const singleRouteQueryValue = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value
+  return typeof raw === 'string' ? raw.trim() : ''
+}
+const calendarScheduleHandoffDraft = computed(() =>
+  resolveScheduleHandoffSourceDraftV1({
+    sourceOwner: singleRouteQueryValue(route.query.source),
+    sourceRecordId: singleRouteQueryValue(route.query.sourceRecordId),
+  }),
+)
+const calendarScheduleHandoffExistingEvent = computed(() => {
+  const draft = calendarScheduleHandoffDraft.value
+  if (!draft) return null
+  return calendarStore.findEventByScheduleHandoffSource(draft.sourceOwner, draft.sourceRecordId)
+})
+const calendarScheduleHandoffResolution = computed(() => {
+  const draft = calendarScheduleHandoffDraft.value
+  if (!draft) return null
+  const existing = calendarScheduleHandoffExistingEvent.value
+  return resolveScheduleHandoffConflictV1({
+    draft,
+    existingReference: existing
+      ? {
+          ...existing.sourceRef,
+          calendarEventId: existing.id,
+        }
+      : null,
+  })
+})
+const calendarSourceHandoff = computed(() => {
+  const source = singleRouteQueryValue(route.query.source).toLowerCase()
+  const sourceRecordId = singleRouteQueryValue(route.query.sourceRecordId)
+  const draft = calendarScheduleHandoffDraft.value
+  const resolution = calendarScheduleHandoffResolution.value
+  const completed =
+    resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REUSE_CONFIRMED
+  const sourceChanged =
+    resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_SOURCE_CHANGE
+  if (source === 'mail') {
+    return {
+      source,
+      icon: 'fas fa-envelope',
+      eyebrowZh: completed ? '已关联日程' : sourceChanged ? '来源有更新' : '尚未创建日程',
+      eyebrowEn: completed
+        ? 'Linked Calendar event'
+        : sourceChanged
+          ? 'Source update available'
+          : 'No Calendar event yet',
+      titleZh: draft?.proposedTitleZh || '来自邮件的预约',
+      titleEn: draft?.proposedTitleEn || 'Appointment from Mail',
+      descriptionZh: completed
+        ? '这项预约已经关联到同一条日历安排，不会重复创建。'
+        : sourceChanged
+          ? '邮件预约内容已有新版本，现有日历安排不会被静默覆盖。'
+        : sourceRecordId && !draft
+          ? '无法验证这封邮件的预约信息，因此没有预填或创建日程。'
+          : draft
+            ? '预约信息已准备好，请在日历编辑器中核对；只有确认后才会创建日程。'
+            : '这封邮件目前只是来源引用，日历中还没有对应日程。',
+      descriptionEn: completed
+        ? 'This appointment is linked to the same Calendar event and will not be duplicated.'
+        : sourceChanged
+          ? 'Mail has a newer appointment revision. The existing Calendar event was not overwritten.'
+        : sourceRecordId && !draft
+          ? 'Calendar could not verify this Mail appointment, so nothing was prefilled or created.'
+          : draft
+            ? 'The appointment is ready for review. Calendar creates it only after you confirm.'
+            : 'This message is currently only a source reference; Calendar has no matching event yet.',
+      returnZh: '返回邮件',
+      returnEn: 'Return to Mail',
+      reviewZh: '审阅并添加',
+      reviewEn: 'Review and add',
+      canReview: Boolean(
+        draft &&
+          resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW &&
+          resolution.mayCreateAfterReview,
+      ),
+    }
+  }
+  if (source === 'workplace') {
+    return {
+      source,
+      icon: 'fas fa-briefcase',
+      eyebrowZh: '尚未创建日程',
+      eyebrowEn: 'No Calendar event yet',
+      titleZh: '来自工作台的排期提案',
+      titleEn: 'Schedule proposal from Work Hub',
+      descriptionZh: '这项提案目前只是工作台引用，日历中还没有对应日程。',
+      descriptionEn: 'This proposal is currently only a Work Hub reference; Calendar has no matching event yet.',
+      returnZh: '返回工作台',
+      returnEn: 'Return to Work Hub',
+    }
+  }
+  return null
+})
+const calendarBackLabel = computed(() => {
+  if (calendarSourceHandoff.value?.source === 'mail') return t('邮件', 'Mail')
+  if (calendarSourceHandoff.value?.source === 'workplace') return t('工作台', 'Work Hub')
+  return t('首页', 'Home')
+})
 const pendingReminderItems = computed(() =>
   activeReminderItems.value.filter((item) => item.status !== 'confirmed' && item.pinned !== true),
 )
@@ -392,7 +498,26 @@ const goToCalendarToday = () => {
 }
 
 const goHome = () => {
+  const context = calendarScheduleHandoffDraft.value?.sourceReturnContext
+  if (context?.path) {
+    router.push({
+      path: context.path,
+      query: {
+        ...(context.query || {}),
+        ...(singleRouteQueryValue(route.query.homePage)
+          ? { homePage: singleRouteQueryValue(route.query.homePage) }
+          : {}),
+      },
+    })
+    return
+  }
   pushReturnTarget(router, route, '/home')
+}
+
+const openSelectedEventSource = () => {
+  const context = selectedSourceEvent.value?.sourceRef?.sourceReturnContext
+  if (!context?.path) return
+  router.push({ path: context.path, query: { ...(context.query || {}) } })
 }
 
 const openMap = () => {
@@ -750,6 +875,64 @@ const closeCalendarEventEditor = () => {
   editorValidationMessage.value = ''
 }
 
+const openScheduleHandoffEditor = () => {
+  const handoff = calendarScheduleHandoffDraft.value
+  const resolution = calendarScheduleHandoffResolution.value
+  if (
+    !handoff ||
+    resolution?.decision !== SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW ||
+    !resolution.mayCreateAfterReview
+  ) {
+    return
+  }
+  editorMode.value = 'create'
+  editorValidationMessage.value = ''
+  editorDraft.value = {
+    ...buildCalendarEditorDraft({
+      event: {
+        titleZh: handoff.proposedTitleZh,
+        titleEn: handoff.proposedTitleEn,
+        startsAt: handoff.proposedStartsAt,
+        endsAt: handoff.proposedEndsAt,
+        locationRef: handoff.proposedLocationRef,
+      },
+    }),
+    scheduleHandoffId: handoff.id,
+  }
+  editorOpen.value = true
+}
+
+const focusCalendarEvent = (event) => {
+  if (!event?.id || !event.startsAt) return
+  calendarAnchorAt.value = event.startsAt
+  selectedCalendarDate.value = startOfCalendarDay(event.startsAt)
+  selectedEventId.value = event.id
+  selectedOccurrenceId.value = `${event.id}::${event.startsAt}`
+  hasResolvedInitialCalendarSelection.value = true
+}
+
+watch(
+  [calendarScheduleHandoffDraft, calendarScheduleHandoffResolution],
+  ([handoff, resolution]) => {
+    if (!handoff || !resolution) return
+    if (resolution.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REUSE_CONFIRMED) {
+      editorOpen.value = false
+      focusCalendarEvent(calendarScheduleHandoffExistingEvent.value)
+      return
+    }
+    const reviewId = `${handoff.id}::${handoff.sourceRevision}`
+    if (
+      resolution.decision !== SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW ||
+      openedScheduleHandoffId.value === reviewId
+    ) {
+      return
+    }
+    openedScheduleHandoffId.value = reviewId
+    openScheduleHandoffEditor()
+  },
+  { immediate: true },
+)
+
 const saveCalendarEventEditor = () => {
   const draft = editorDraft.value || {}
   const titleZh = String(draft.titleZh || '').trim()
@@ -811,10 +994,20 @@ const saveCalendarEventEditor = () => {
     markerId: String(draft.markerId || '').trim(),
   }
 
-  const savedEvent =
-    editorMode.value === 'edit' && draft.eventId
-      ? calendarStore.updateEventDetails(draft.eventId, payload)
-      : calendarStore.createManualEvent(payload)
+  let savedEvent = null
+  if (editorMode.value === 'edit' && draft.eventId) {
+    savedEvent = calendarStore.updateEventDetails(draft.eventId, payload)
+  } else if (
+    draft.scheduleHandoffId &&
+    draft.scheduleHandoffId === calendarScheduleHandoffDraft.value?.id
+  ) {
+    savedEvent = calendarStore.createEventFromScheduleHandoff({
+      event: payload,
+      handoffDraft: calendarScheduleHandoffDraft.value,
+    })
+  } else {
+    savedEvent = calendarStore.createManualEvent(payload)
+  }
 
   if (!savedEvent) {
     editorSaving.value = false
@@ -1196,7 +1389,7 @@ onBeforeUnmount(() => {
     <header class="calendar-header">
       <button type="button" class="calendar-back-button" @click="goHome">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
-        <span>{{ t('首页', 'Home') }}</span>
+        <span>{{ calendarBackLabel }}</span>
       </button>
       <h1 class="calendar-page-title">{{ calendarTitle }}</h1>
       <button
@@ -1230,6 +1423,41 @@ onBeforeUnmount(() => {
         @create-event="openCreateCalendarEvent"
         @open-agenda-journey="openAgendaJourneyForSelectedDay"
       />
+
+      <section
+        v-if="calendarSourceHandoff"
+        class="calendar-source-handoff"
+        data-testid="calendar-source-handoff"
+        :data-source="calendarSourceHandoff.source"
+      >
+        <span class="calendar-source-handoff__icon" aria-hidden="true">
+          <i :class="calendarSourceHandoff.icon"></i>
+        </span>
+        <div class="calendar-source-handoff__copy">
+          <p>{{ t(calendarSourceHandoff.eyebrowZh, calendarSourceHandoff.eyebrowEn) }}</p>
+          <h2>{{ t(calendarSourceHandoff.titleZh, calendarSourceHandoff.titleEn) }}</h2>
+          <span>{{ t(calendarSourceHandoff.descriptionZh, calendarSourceHandoff.descriptionEn) }}</span>
+        </div>
+        <div class="calendar-source-handoff__actions">
+          <button
+            v-if="calendarSourceHandoff.canReview"
+            type="button"
+            class="calendar-action calendar-source-handoff__review"
+            data-testid="calendar-source-handoff-review"
+            @click="openScheduleHandoffEditor"
+          >
+            {{ t(calendarSourceHandoff.reviewZh, calendarSourceHandoff.reviewEn) }}
+          </button>
+          <button
+            type="button"
+            class="calendar-action calendar-source-handoff__return"
+            data-testid="calendar-source-handoff-return"
+            @click="goHome"
+          >
+            {{ t(calendarSourceHandoff.returnZh, calendarSourceHandoff.returnEn) }}
+          </button>
+        </div>
+      </section>
 
       <section
         class="calendar-panel calendar-overview"
@@ -1305,15 +1533,27 @@ onBeforeUnmount(() => {
             <p class="calendar-section-kicker">{{ t('选中安排', 'Selected event') }}</p>
             <h2 class="calendar-section-title">{{ t('详情与准备', 'Details and preparation') }}</h2>
           </div>
-          <button
-            type="button"
-            class="calendar-action calendar-action--edit"
-            data-testid="calendar-edit-selected-event"
-            @click="openEditCalendarEvent(selectedEventPresentation)"
-          >
-            <i class="fas fa-pen" aria-hidden="true"></i>
-            <span>{{ t('编辑', 'Edit') }}</span>
-          </button>
+          <div class="calendar-section-header__actions">
+            <button
+              v-if="selectedEventPresentation.sourceRef"
+              type="button"
+              class="calendar-action calendar-action--source"
+              data-testid="calendar-view-event-source"
+              @click="openSelectedEventSource"
+            >
+              <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+              <span>{{ t('查看来源', 'View source') }}</span>
+            </button>
+            <button
+              type="button"
+              class="calendar-action calendar-action--edit"
+              data-testid="calendar-edit-selected-event"
+              @click="openEditCalendarEvent(selectedEventPresentation)"
+            >
+              <i class="fas fa-pen" aria-hidden="true"></i>
+              <span>{{ t('编辑', 'Edit') }}</span>
+            </button>
+          </div>
         </div>
 
         <div class="calendar-push-summary">
@@ -1553,6 +1793,82 @@ onBeforeUnmount(() => {
   box-shadow: var(--system-shadow-card);
 }
 
+.calendar-source-handoff {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--system-border);
+  border-left: 4px solid var(--system-accent);
+  border-radius: var(--system-radius-sm);
+  background: var(--system-surface-muted);
+}
+
+.calendar-source-handoff__icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.calendar-source-handoff__copy {
+  min-width: 0;
+}
+
+.calendar-source-handoff__copy p,
+.calendar-source-handoff__copy h2,
+.calendar-source-handoff__copy span {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.calendar-source-handoff__copy p {
+  color: var(--system-accent);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.calendar-source-handoff__copy h2 {
+  margin-top: 3px;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.calendar-source-handoff__copy span {
+  display: block;
+  margin-top: 4px;
+  color: var(--system-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.calendar-source-handoff__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-source-handoff__review,
+.calendar-source-handoff__return {
+  padding: 0 14px;
+  border: 1px solid var(--system-border);
+  border-radius: var(--system-radius-sm);
+  color: var(--system-accent);
+  background: var(--system-panel-bg);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.calendar-source-handoff__review {
+  border-color: var(--system-accent);
+  color: var(--system-accent-contrast, #fff);
+  background: var(--system-accent);
+}
+
 .calendar-overview__eyebrow,
 .calendar-overview__title,
 .calendar-overview__description,
@@ -1728,6 +2044,18 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+.calendar-section-header__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.calendar-section-header__actions .calendar-action {
+  max-width: none;
+}
+
 .calendar-section-kicker {
   color: var(--system-text-muted);
   font-size: 12px;
@@ -1854,12 +2182,19 @@ onBeforeUnmount(() => {
   background: var(--system-warning-soft);
 }
 
+.calendar-action--source,
 .calendar-action--edit {
   flex: none;
   gap: 7px;
   border-color: color-mix(in srgb, var(--system-accent) 28%, transparent);
   color: var(--system-accent);
   background: var(--system-accent-soft);
+}
+
+.calendar-action--source {
+  border-color: var(--system-border);
+  color: var(--system-text-muted);
+  background: var(--system-panel-bg);
 }
 
 .calendar-cue-sources {
@@ -1996,6 +2331,27 @@ onBeforeUnmount(() => {
 
   .calendar-panel {
     padding: 15px;
+  }
+
+  .calendar-source-handoff {
+    grid-template-columns: 36px minmax(0, 1fr);
+    padding: 13px;
+  }
+
+  .calendar-source-handoff__icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .calendar-source-handoff__actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
+  .calendar-source-handoff__review,
+  .calendar-source-handoff__return {
+    width: 100%;
   }
 }
 

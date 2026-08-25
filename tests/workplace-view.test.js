@@ -40,6 +40,7 @@ describe('Work Hub Organization Workplace S1 shell', () => {
     expect(wrapper.text()).toContain('Music Bank 预录')
     expect(wrapper.text()).toContain('向团队说明当前状态')
     expect(wrapper.get('[data-testid="workplace-open-calendar"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="workplace-open-calendar"]').text()).toContain('去日历确认')
     expect(wrapper.get('[data-testid="workplace-open-agenda"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="workplace-open-map"]').exists()).toBe(true)
     wrapper.unmount()
@@ -64,11 +65,23 @@ describe('Work Hub Organization Workplace S1 shell', () => {
     wrapper.unmount()
   })
 
-  test('accepting a schedule proposal waits for Calendar owner confirmation', async () => {
-    const { wrapper } = await mountWorkplace()
+  test('accepting a schedule proposal stays uncreated and offers Calendar review', async () => {
+    const { router, wrapper } = await mountWorkplace()
     await wrapper.get('[data-testid="workplace-tab-tasks"]').trigger('click')
     await wrapper.get('[data-testid="workplace-accept-proposal-radio-20260827"]').trigger('click')
-    expect(wrapper.get('[data-testid="workplace-proposal-decision"]').text()).toContain('等待排期人员写入日历')
+    expect(wrapper.get('[data-testid="workplace-proposal-decision"]').text()).toContain('尚未创建日程')
+    await wrapper
+      .get('[data-testid="workplace-review-calendar-proposal-radio-20260827"]')
+      .trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/calendar',
+      query: {
+        source: 'workplace',
+        proposalId: 'proposal-radio-20260827',
+        homePage: '1',
+      },
+    })
     wrapper.unmount()
   })
 

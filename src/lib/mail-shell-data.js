@@ -1,3 +1,5 @@
+import { normalizeScheduleHandoffDraftV1 } from './schedule-handoff'
+
 // Daon Mail S1 fixture data (roadmap 4.16 / SHP-1).
 // Static shell-preview fixtures only: no Store, no backup section, no cross-owner writes.
 // Fixture thread IDs are stable; the S1 preview state overlays read/star/archive/draft/sent on top.
@@ -120,8 +122,32 @@ export const MAIL_SHELL_THREADS = Object.freeze([
           whenEn: 'Fri Aug 28, 7:50 AM',
           whereZh: '首尔大学医院体检中心 3 层',
           whereEn: 'SNUH checkup center, floor 3',
-          actionZh: '日历中查看',
-          actionEn: 'View in Calendar',
+          actionZh: '添加到日历',
+          actionEn: 'Add to Calendar',
+          scheduleHandoffDraft: Object.freeze({
+            schemaVersion: 1,
+            sourceOwner: 'mail',
+            sourceRecordId: 'mail_fixture_snuh_checkup_1',
+            sourceRevision: 'fixture-2026-08-25-v1',
+            proposedTitleZh: '综合健康体检',
+            proposedTitleEn: 'Comprehensive health checkup',
+            proposedStartsAt: new Date(2026, 7, 28, 7, 50, 0, 0).getTime(),
+            proposedEndsAt: new Date(2026, 7, 28, 10, 50, 0, 0).getTime(),
+            proposedLocationRef: Object.freeze({
+              owner: 'map',
+              mapPackId: 'real-seoul-v1',
+              placeId: 'seoul-national-university-hospital',
+              labelZh: '首尔大学医院',
+              labelEn: 'Seoul National University Hospital',
+              detail: '体检中心 3 层 / Checkup center, floor 3',
+            }),
+            participantRefs: Object.freeze([]),
+            sourceReturnContext: Object.freeze({
+              path: '/mail',
+              query: Object.freeze({ sourceRecordId: 'mail_fixture_snuh_checkup_1' }),
+            }),
+            proposalStatus: 'pending_review',
+          }),
         }),
       },
     ]),
@@ -386,6 +412,18 @@ export const MAIL_SHELL_THREADS = Object.freeze([
 
 export const getMailShellThreadById = (threadId) =>
   MAIL_SHELL_THREADS.find((thread) => thread.id === threadId) || null
+
+export const resolveMailScheduleHandoffDraftV1 = (sourceRecordId) => {
+  const recordId = typeof sourceRecordId === 'string' ? sourceRecordId.trim() : ''
+  if (!recordId) return null
+  for (const thread of MAIL_SHELL_THREADS) {
+    const mail = thread.mails.find((candidate) => candidate.id === recordId)
+    if (mail?.invite?.scheduleHandoffDraft) {
+      return normalizeScheduleHandoffDraftV1(mail.invite.scheduleHandoffDraft)
+    }
+  }
+  return null
+}
 
 const WEEKDAY_ZH = ['日', '一', '二', '三', '四', '五', '六']
 const WEEKDAY_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
