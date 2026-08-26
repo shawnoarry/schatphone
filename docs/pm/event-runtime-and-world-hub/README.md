@@ -1,6 +1,6 @@
 # Event Runtime And World Hub Package
 
-Updated: 2026-08-24
+Updated: 2026-08-26
 
 Use this package for event runtime, relationship runtime, World Hub, Cheats planning, runtime review, override-lane design, the landed Player Context V1 eligibility foundation, and the still-documentation-only world-evolution/information-propagation contracts.
 
@@ -16,7 +16,7 @@ Landed travel-shell handoff: `漫泊 / ROAM` is the Travel/Hotel S1 reference. I
 
 Landed remaining-shell portfolio handoff: `联程 / VIA`, `谱权 / CREDO`, `递送 / POSTA`, and `机会 / NEXT` complete the accepted S1 visible-shell wave. VIA compares intercity rail, flight, coach, and ferry options; CREDO exposes works, roles, rights-share previews, royalty statements, and annual-declaration drafts; POSTA provides parcel tracking, delivery inbox, pinning, and local send drafts; NEXT provides jobs, auditions, invitations, saved opportunities, and local application/profile drafts. Every success-sensitive action remains visibly local and non-authoritative, unavailable/stale/invite-only sources fail closed, and Map references remain read-only. No booking, ticket, copyright grant, institutional certification, shipment, application submission, Wallet/Calendar/Agenda/Map/notification write, provider call, Event Surface, or Event Runtime chain is implied.
 
-Next event-planning handoff: `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` proposes the next bounded chain as a Career-owned appointment change that reaches the user through NEXT, system notification, Mail, and Calendar, then hands confirmed execution to Agenda Journey and Map. It first requires a real Career Opportunity owner; the S1 shell and Self Profile text cannot grant invitation or organization authority.
+Next event-planning handoff: `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` now supersedes the earlier NEXT-first recommendation. The accepted order is Work Hub correction and organization authority -> ordinary non-event organization work loop -> first Work Hub-native schedule-change event -> `生活志 / Chronicle`; Messages/SMS remains conditional on a concrete number/short-code need. Work Hub handles work inside an existing organization, while `NEXT / 机会` remains the surface for public jobs, external auditions, casting, headhunting, and cross-organization invitations. Neither the S1 fixture membership, Self Profile prose, local App naming, coordinates, nor model inference grants organization authority.
 
 Confirmed persistence boundary: accepted relationship facts and the provenance needed to audit persistent truth cannot be silently or irreversibly truncated. Ephemeral/rebuildable runtime data may rotate, and older authoritative evidence may move into reversible cold archives while remaining reviewable from World Hub.
 
@@ -64,7 +64,7 @@ Mini Scene foundation: Event Runtime is now the shared Module's only functional 
 8. `docs/architecture/KPOP_REALISM_EVENT_PACK_V1.md` for the current EVE-2/default-content direction
 9. `docs/architecture/USER_INITIATED_COMMERCE_INTERACTION_EVENT_ARCHITECTURE.md` for the EVE-4C user-triggered commerce reference and migration direction
 10. `NOTIFICATION_WORKPLACE_FANDOM_TICKETS_TRAVEL_SHELL_PLAN.md` for the accepted next shell sequence, system Notification Center entry model, Organization Workplace boundary, unified fandom authorization, Tickets, and Travel decomposition
-11. `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` for the next proposed Career appointment-change owner and Event chain; this is a planning gate, not implementation authorization
+11. `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` for the accepted Work Hub-first production order, internal-organization versus external-opportunity boundary, ordinary organization loop, and first proposed Work Hub-native event chain; this is a planning gate, not implementation authorization
 12. `docs/architecture/PLAYER_CONTEXT_WORLD_EVOLUTION_AND_INFORMATION_PROPAGATION_ARCHITECTURE.md` when work touches Self Profile eligibility, dynamic world incidents/arcs, forum/social/news propagation, claims, or clues
 
 Also read when needed:

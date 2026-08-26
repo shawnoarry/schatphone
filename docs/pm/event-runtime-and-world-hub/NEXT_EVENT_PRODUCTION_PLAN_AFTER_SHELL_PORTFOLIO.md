@@ -1,170 +1,182 @@
-# Next Event Production Plan After The Shell Portfolio / 壳子基座完成后的下一事件生产规划
+# Work Hub First Event Production Plan After The Shell Portfolio / 壳子基座完成后的 Work Hub 优先事件生产规划
 
-Updated: 2026-08-24
+Updated: 2026-08-26
 
 Status: `PLANNING_ONLY / NEXT_SLICE_REQUIRES_SEPARATE_ACCEPTANCE`
 
-## 1. Decision
+Supersession: this file preserves the 2026-08-24 `NEXT / 机会`-first career plan in repository history, but supersedes it as the default production recommendation. `NEXT` remains an external-opportunity product; it is not the normal work surface for a user who already belongs to a company, school, team, or other organization.
 
-下一条事件生产线建议选择：
+## 1. Accepted Product Boundary
 
-`职业机会确认 -> 机构临时改期 -> 用户处理 -> Calendar / Agenda Journey / Map 执行`
+- `Work Hub / 工作台` owns work **inside an organization**: affiliation, team, channels, tasks, reporting, schedule proposals, approval requests, and credential/authorization projections.
+- `NEXT / 机会` owns work **outside the current organization**: public jobs, external auditions, casting, headhunting, and cross-organization invitations.
+- Calendar owns confirmed time commitments. Agenda Journey owns today/near-term execution. Map owns place, route, departure, arrival, and place-session truth. Activity Session owns the timed activity itself.
+- `生活志 / Chronicle` will later project personal continuity from confirmed owner facts; it does not become a second schedule, event, work, Wallet, or relationship owner.
+- Messages/SMS remains conditional until a concrete phone-number or short-code flow cannot be represented honestly through Notification Center, Mail, Chat service accounts, or Phone.
 
-第一个产品案例使用 K-pop 默认世界中的“试镜或录制邀约临时改期”，但底层合同必须同时适用于普通职位面试、课程面谈、客户会议和校园活动。
+Internal recording, music-show, radio, performance, rehearsal, class, assignment, and company schedule changes therefore begin in Work Hub or another organization owner. They do not begin in NEXT merely because they are career-related.
 
-这不是一串预先播放的剧情代码。事件只协调一次性原因、等待、超时和来源；用户必须在对应 App 中真实阅读、接受、提出替代时间或拒绝，后续 owner 才能产生结果。
+## 2. Accepted Production Order
 
-## 2. Why This Is The Next Safe Event
+1. Correct and deepen Work Hub so its organization boundary, records, states, and actions are unambiguous.
+2. Establish one ordinary non-event organization work loop.
+3. Build the first Work Hub-native career event on top of that ordinary loop.
+4. Build `生活志 / Chronicle` after the event chain produces meaningful canonical facts worth reviewing.
+5. Add Messages/SMS only when a concrete number/short-code scenario proves the missing product need.
 
-- 用户已经可以在 `NEXT / 机会` 中理解职位、试镜与邀约，但当前 S1 只保存本机申请草稿；
-- `Work Hub` 已经有组织、成员、频道、任务和日程提案的 S1 形态；
-- Mail、系统通知中心、Calendar、Agenda Journey、Map 和 Phone 已有可复用入口；
-- 这个案例能验证“事件在不同原生媒介中呈现”，不需要 Event Home 或突然弹出的统一卡片；
-- 改期有明确的 owner 事实和数值条件，避免依赖模型从自由对话中猜测事件是否完成。
+This order does not declare any implementation complete or authorize a new production Store by itself.
 
 ## 3. Required Foundation Before The Event
 
-### 3.1 Career Opportunity Owner S2
+### 3.1 Organization owner and authority
 
-建立正式的职业机会 owner，至少拥有：
+The production Work Hub owner must provide at least:
 
-- `Opportunity`：职位、试镜、邀约或面谈的 canonical record；
-- `OrganizationRef`：稳定机构引用和发起权限；
-- `EligibilityPolicy`：公开、申请制、邀请制三类准入；
-- `Application`：用户明确提交后的正式申请记录；
-- `Invitation`：由有权限机构创建的受邀凭证；
-- `AppointmentProposal`：候选时间、地点、时区、期限和 revision；
-- `DecisionReceipt`：接受、替代时间或拒绝的 owner receipt；
-- stale、撤回、过期、重复提交和恢复语义；
-- schema migration、backup/restore、写失败回滚和 stable-ID dedupe。
+- stable `Organization`, `Membership`, `RoleAssignment`, `Team` and `Channel` identities;
+- versioned membership and credential state with explicit issuer, scope, expiry, revocation, and world/profile binding;
+- organization-owned `WorkNotice`, `Task`, `StatusReport`, `ScheduleProposal`, `ApprovalRequest`, and durable receipts;
+- stale, deleted, revoked, duplicate, cross-world, cross-profile, and revision-conflict behavior;
+- migration, backup/restore, write-failure rollback, and stable-ID dedupe.
 
-S1 的 `LOCAL DRAFT` 不能自动升级为申请、邀约或机构事实。升级必须经过用户明确提交和 owner 成功 receipt。
+Self Profile prose, an App display name, a local organization alias, fixture membership, coordinates, or model inference cannot grant affiliation or authority. The same authority model must support artist, manager, assistant, producer, employee, student, and teacher templates without hard-coding UI text as permission.
 
-### 3.2 Organization Authority
+### 3.2 Ordinary non-event organization loop
 
-- Work Hub 的本机 affiliation 文本不能授予机构发起权限；
-- 只有未来 organization membership/credential owner 能让某机构账号创建邀请或改期；
-- 艺人、经纪人、助理、普通职员和学生使用同一权限模型，不按 UI 文案猜身份；
-- 无凭证、过期凭证、跨世界或 revision 不匹配时 fail closed。
+Before Event Runtime participates, a user must be able to complete a normal organization workflow:
 
-### 3.3 Calendar And Journey Handoff
+`organization work notice/proposal -> Work Hub review and explicit decision -> Calendar review and explicit Save when time is involved -> Work Hub receipt/status -> Agenda Journey/Map/Activity only when their own materialization conditions are met`
 
-- Career owner 只提交时间/地点提案；
-- 用户接受后，Calendar owner 才创建或修改 canonical event；
-- Agenda Journey 只从已确认 Calendar occurrence materialize 执行计划；
-- Map 只负责地点、路线、出发、到达和 place session，不根据坐标推断参加、迟到或完成；
-- 用户拒绝或未响应时不得创建 Calendar、Agenda Journey 或 Map Journey。
+The first ordinary loop should prove:
 
-## 4. First Event Family
+- an authorized organization source can create a work notice or schedule proposal;
+- Work Hub presents the source, revision, deadline, affected work, and available actions;
+- accepting a proposal does not silently create Calendar truth;
+- Calendar receives a structured handoff and only explicit Save creates or updates the canonical event;
+- Work Hub derives the linked state from Calendar instead of storing a second event;
+- declining, cancelling, leaving, closing, invalid source, or failed write shows no fake success.
+
+## 4. First Work Hub-Native Event Family
 
 Event family ID candidate:
 
-`career.appointment_schedule_change.v1`
+`organization.work_schedule_change.v1`
+
+First product case:
+
+`existing organization work -> institution changes a confirmed or proposed schedule -> user handles the change in Work Hub -> Calendar confirms the resulting commitment -> Agenda Journey -> Map/Activity execution`
+
+The K-pop example may be a recording, music-show, radio, rehearsal, performance, or company call-time change. The contract must also support a class change, assignment deadline, shift, client meeting, or ordinary company task.
 
 ### 4.1 Trigger
 
-必须同时满足：
+All of the following are required:
 
-1. 存在 owner-confirmed `Invitation` 或已接受的 `Application`；
-2. 存在一个尚未结束的 confirmed appointment；
-3. 发起机构凭证有效；
-4. Event Runtime 通过 cooldown、cap、world/revision 和 one-time gate；
-5. owner 提交明确的 schedule-change request，而不是 Runtime 自己改时间。
+1. an active owner-confirmed organization membership and permitted issuer;
+2. a stable work record and a current schedule proposal or Calendar-linked commitment;
+3. an explicit organization-owned change request with revision and deadline;
+4. Event Runtime eligibility, cooldown/cap, world/profile binding, and one-time decision gates;
+5. exact lineage back to the organization record. Runtime does not invent the schedule change.
 
-### 4.2 Native Presentation
+### 4.2 Native presentation
 
-事件不注册新 Event Surface，也不显示统一事件卡。
+The event does not create an Event Home, a generic event card host, or a second event record.
 
-- 系统通知中心：显示“机构更新了时间”，点击回到 `NEXT` 对应机会；
-- NEXT：在机会详情内显示原时间、新时间、地点、期限和操作；
-- Mail：可选投影同一机构正式通知的稳定引用，不复制第二份 appointment；
-- Work Hub：仅当用户与该机构存在正式 membership 时显示组织侧提案；
-- Calendar：只在接受成功后显示新安排；
-- Agenda Journey / Map：只在 Calendar owner 确认后参与执行。
+- Notification Center may surface a bounded alert and deep-link to the exact Work Hub record.
+- Work Hub shows the organization-native notice, affected task/activity, old/new values, deadline, source, and actions.
+- Mail is an optional formal projection when the organization workflow calls for it; it does not own the work decision.
+- Calendar shows only the review/update flow for time commitments and remains the canonical schedule owner.
+- Agenda Journey, Map, and Activity Session participate only after their existing owner conditions are satisfied.
+- Chronicle later shows a read-only summary of confirmed facts and stable owner links.
 
-### 4.3 User Choices
+### 4.3 User actions and no-response
 
-固定三种 owner action：
+The first family should use a small allowlist appropriate to the organization request, for example:
 
-1. `Accept new time / 接受新时间`
-2. `Propose another time / 提出替代时间`
+1. `Accept / 接受`
+2. `Request adjustment / 申请调整`
 3. `Decline / 拒绝`
 
-没有“保持不变”这种模糊选择。原预约是否仍有效必须由 request 明确说明：
+The request must state whether the old arrangement remains valid, is replaced, or was cancelled. No click is not acceptance, refusal, attendance, absence, lateness, or work completion. On timeout, the organization owner records an explicit expired/unresolved receipt; Event Runtime may coordinate the deadline but cannot invent a disciplinary, relationship, payment, or public consequence.
 
-- `replacement_required`：原时间已撤销，用户不处理则预约进入未确认/过期；
-- `optional_alternative`：原时间仍有效，用户不处理则维持原安排；
-- `organization_cancelled`：原安排已取消，只能接受新时间、提出替代或结束。
+## 5. NEXT Participation Rule
 
-### 4.4 No-Response And Timeout
+`NEXT / 机会` participates only when the user is discovering or responding to an opportunity outside the current organization, including:
 
-- Runtime 可记录 deadline 和等待状态，但不能替用户作决定；
-- deadline 到期后由 Career owner 生成 `expired` receipt；
-- Calendar 是否保留原记录由 request 的 replacement policy 决定；
-- “没有点击”不能被解释为接受、拒绝、迟到或爽约；
-- 超时结果可以通过 NEXT 状态与系统通知呈现，不创建惩罚性关系值变化。
+- public job applications;
+- external auditions or casting;
+- headhunting;
+- invitations issued by another organization;
+- the pre-affiliation path that may later produce a verified organization membership.
 
-## 5. AI Boundary
-
-首个事件不需要 AI 才能成立。
-
-- 固定机构通知、时间、地点、期限、操作和结果全部使用结构化 owner 数据；
-- AI 后续只能为机构说明、用户替代时间说明或通话内容生成候选文本；
-- AI 不能决定受邀资格、机构权限、用户选择、Calendar 写入或事件完成；
-- 如果未来 Phone 参与，通话摘要只能提出结构化 resolution proposal，仍需 Career owner 验证并落 receipt。
+If an external opportunity succeeds and affiliation is formally created, subsequent internal work moves to Work Hub. NEXT remains useful, but it is not promoted as the default event hub for an already signed artist, enrolled student, or employed user.
 
 ## 6. Delivery Slices
 
-### EVT-NEXT-1 — Career owner foundation
+### EVT-WORK-1 — Work Hub owner correction
 
-- schema、Store、repository、migration、backup；
-- fixture import 与 S1 local-draft reconciliation；
-- opportunity/application/invitation/appointment proposal；
-- invite-only fail-closed；
-- focused unit and owner-interface tests。
+- define canonical organization, membership, role, team, channel, work-record, proposal, and receipt contracts;
+- reconcile the current S1 fixture/local-preview state without silently upgrading it to authority;
+- add revision, revocation, stale-source, migration, backup, rollback, and dedupe rules;
+- preserve Calendar as schedule owner and Map as place/journey owner.
 
-### EVT-NEXT-2 — Ordinary non-event appointment flow
+### EVT-WORK-2 — Ordinary organization work loop
 
-- 用户从 NEXT 正常接受邀约或提交申请；
-- Calendar 创建确认安排；
-- 返回 NEXT 后可看到 owner receipt；
-- 无 Event Runtime 也能完成普通闭环。
+- authorized work notice/proposal creation;
+- Work Hub native review, accept/request-adjustment/decline, and durable owner receipt;
+- shared Calendar handoff with explicit Save and stable return context;
+- linked state derived from Calendar after reload;
+- no Event Runtime dependency.
 
-### EVT-NEXT-3 — Schedule-change event coordination
+### EVT-WORK-3 — Work schedule-change event
 
-- Event Runtime eligibility、one-time decision、deadline、request lineage 和 audit；
-- NEXT 原生改期界面；
-- 接受、替代时间、拒绝和超时四条结果；
-- stale/off-world/off-revision/source-deleted fail-closed。
+- Event Runtime eligibility, one-time request, deadline, lineage, and audit;
+- Work Hub-native change handling;
+- accepted, adjustment-requested, declined, expired, stale, revoked, and write-failure results;
+- no hidden decision from silence or model output.
 
-### EVT-NEXT-4 — System notification and execution handoff
+### EVT-WORK-4 — Execution handoff and proof
 
-- owner notification payload 与深链；
-- Calendar revision-safe update；
-- Agenda Journey reconciliation；
-- Map 仅在用户明确出发后参与；
-- return context、desktop/simulated Pixel 5、day/night、zh/en、accessibility、zero overflow。
+- revision-safe Calendar update/review;
+- Agenda Journey reconciliation;
+- Map participation only after explicit journey execution conditions;
+- Activity Session only for a real timed activity;
+- notification deep-link and complete return context;
+- focused unit plus full lint/test/build/governance/diff and desktop/simulated Pixel 5 E2E, including day/night, zh/en, accessibility, reload, failure paths, and zero horizontal overflow.
 
-## 7. Explicit Exclusions
+### EVT-CHRONICLE-1 — First personal continuity projection
 
-- 不创建 Event Home App；
-- 不为事件注册新的卡片 host；
-- 不让 Runtime 直接写 Calendar、Map、Mail、Work Hub 或通知；
-- 不根据 Self Profile 文本、UI 名称或用户自称授予机构/艺人权限；
-- 不从当前位置、坐标或 Map 到达推断参加、迟到、面试完成或职业结果；
-- 不实现自动录用、签约、薪资、Wallet 入账、公开新闻或粉丝传播；
-- 不推进 EVE-5、CG、Mini Scene 或 Narrative Timeline；
-- 不把自由对话摘要作为唯一完成条件。
+- starts only after the Work Hub chain yields owner-confirmed facts;
+- establishes Diary Owner and a read-only Chronicle projection according to the Map/Calendar package plan;
+- cannot edit Work Hub, Calendar, Agenda Journey, Map, Activity, Wallet, Assets, or relationship truth.
 
-## 8. Acceptance Gate
+## 7. AI Boundary
 
-只有以下条件全部满足，才能称为首条职业事件闭环：
+The first loop and first event must work without AI.
 
-1. 普通无事件邀约与 Calendar 写入先独立成立；
-2. 邀请制机会无凭证绝不放行；
-3. Event Runtime 只创建一次 request，并保留精确来源 lineage；
-4. 三种用户操作与超时都有明确 owner receipt；
-5. Calendar/Agenda/Map 只消费已确认 owner fact；
-6. 所有失败路径不显示假成功；
-7. 完整 lint/test/build/governance/diff 与桌面/模拟 Pixel 5 E2E 通过；
-8. 不声称真机、真实机构或真实投递证据。
+- structured owner records determine authority, eligibility, actions, deadlines, and completion;
+- AI may draft optional organization wording or an adjustment message;
+- AI cannot grant membership, infer the user's occupation from prose, choose for the user, write Calendar, decide attendance/completion, or create downstream consequences;
+- any future Phone or free-dialogue summary is only a proposal that the responsible owner must validate into a structured receipt.
+
+## 8. Explicit Exclusions
+
+- no Event Home App or generic event-card-first presentation;
+- no promotion of NEXT into the internal organization work surface;
+- no duplicate Calendar, journey, task, work, or event record inside a projection;
+- no attendance, discovery, place, journey, or work completion inferred from coordinates or passive presence;
+- no automatic contract, salary, Wallet, public-news, fandom, relationship, punishment, or reward consequence;
+- no EVE-5, CG, Mini Scene, Community/Media propagation, or Narrative Timeline implementation in this slice;
+- no Messages/SMS shell without a proven number/short-code requirement.
+
+## 9. Acceptance Gate
+
+The first Work Hub event chain is complete only when:
+
+1. the ordinary non-event organization loop works first;
+2. organization authority cannot be self-granted by profile text, local naming, fixtures, coordinates, or AI;
+3. Work Hub owns the work decision while Calendar owns the confirmed time;
+4. Runtime creates at most one correlated request and preserves exact source lineage;
+5. every allowed action, timeout, stale source, revocation, and write failure has an explicit owner result without fake success;
+6. Agenda Journey, Map, and Activity consume only confirmed owner facts;
+7. Chronicle and SMS are not treated as prerequisites;
+8. the required automated and visual evidence passes, with no physical-device claim unless real evidence exists.

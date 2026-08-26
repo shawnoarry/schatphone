@@ -1,6 +1,6 @@
 # Event-Adjacent App Shell Priority Matrix / 事件相关应用壳优先级矩阵
 
-Updated: 2026-08-24
+Updated: 2026-08-26
 
 Status: `PLANNING_AND_WORKGROUP_TRIAGE_ONLY / NO_IMPLEMENTATION_AUTHORIZATION`
 
@@ -86,20 +86,22 @@ S0 不创建跨模块写入、不注册 Event Surface、不调用 provider、不
 | Ondam Care / 医疗健康 | 独立 App | `S1 DONE` | 服务发现、本地预约、用户编写的报告、真实 Map 地点 handoff | Healthcare owner、预约接口、Calendar/Wallet/通知写入 | 总规划 + roadmap 4.16 |
 | Jari / 住处 | 独立 App | `S1 DONE` | 房源发现、筛选、收藏、看房草稿、真实 Map 区域 handoff | Housing owner、看房接口、合同/住所 truth、Calendar/Wallet/通知写入 | 总规划 + roadmap 4.16 |
 | System Notification Center / 系统通知中心 | 原生系统面，不是 App | `SYSTEM S1 DONE 2026-08-24` | 状态栏点击/下拉、App 分组、全部/未读、已读、清除、owner 深链 | 每 App 通知频道、保留策略、真机 push 证据 | 近期专项计划 + roadmap 4.16 |
-| Work Hub / 组织工作台 | 独立 App | `S1 DONE 2026-08-24` | 艺人优先的今日、频道、工作、所属；本地任务/报备/提案/团队；App 与组织显示名编辑 | 生产 organization membership/credential owner、真实审批/考勤、跨 App 鉴权 | 近期专项计划 + roadmap 4.16 |
+| Work Hub / 组织工作台 | 独立 App | `S1 DONE 2026-08-24` | 艺人优先的今日、频道、工作、所属；本地任务/报备/提案/团队；App 与组织显示名编辑 | 下一生产优先项：organization membership/credential owner、普通无事件组织工作闭环、再接首条 Work Hub 原生事件 | 近期专项计划 + 下一事件计划 + roadmap 4.14/4.16 |
 | Aster / 星集（统一粉丝社区与艺人订阅） | 独立 App、一个品牌内双工作区 | `S1 DONE 2026-08-24` | 首页、艺人目录、官方公开日程、星信预览、Ripple 稳定 post-ID 投影、本地关注/收藏/已读、锁定的艺人工作区与 Work Hub pending 回跳 | Community publication owner、平台 entitlement、真实艺人工作区、Wallet 订阅、系统通知 | 近期专项计划 + roadmap 4.16 |
 | GATE / 入场（票务与文化活动） | 独立 App | `S1 DONE 2026-08-24` | 活动发现、分类/搜索/详情、售票/抽选/预约/候补/售罄状态、本地收藏/最近查看/入场意向草稿/提醒偏好 | ticket/admission owner、库存/席位/抽选结果、Wallet、Calendar、Map、Agenda、通知 | 近期专项计划 + roadmap 4.16 |
 | ROAM / 漫泊（旅行与酒店） | 独立 App | `S1 DONE 2026-08-24` | 目的地/住宿发现、搜索/筛选/详情、可用/少量/不可用/过期来源、本地收藏/最近查看/日期人数房型/住宿意向草稿 | travel/reservation owner、真实房态/订单、Wallet、Mail、Calendar、Map、Agenda、通知 | 近期专项计划 + roadmap 4.16 |
 | VIA / 联程（城际交通） | 独立 App | `S1 DONE 2026-08-24` | 铁路、航班、长途巴士与渡轮班次比较；明确余位/售罄/不可用/过期状态；本机票价、人数与出行意向草稿；现有 Map 交通枢纽只读引用 | transport/booking owner、真实班次/库存/出票、Wallet、Mail、Calendar、Map、Agenda、通知 | 近期专项计划 + roadmap 4.16 |
 | CREDO / 谱权（创作者作品与权益） | 独立 App | `S1 DONE 2026-08-24` | 作品目录、参与角色、权利份额只读记录、结算单与年度申报草稿 | institution/works/rights/royalty owner、正式认证、登记、结算、Wallet/Files/Music | 总规划 + roadmap 4.16 |
 | POSTA / 递送（快递邮政） | 独立 App | `S1 DONE 2026-08-24` | 包裹查询、明确物流/自提/送达/过期状态、递送消息、本机寄件草稿与偏好 | logistics/shipment owner、真实运单/取件/地址/签收、Shopping、Map、通知 | 总规划 + roadmap 4.16 |
-| NEXT / 机会（职业与试镜） | 独立 App | `S1 DONE 2026-08-24` | 工作、试镜与邀约发现；收藏；申请材料与职业名片本机草稿；邀请制与过期来源 fail-closed | opportunity/application/invitation owner、组织凭证、Mail、Calendar、Work Hub、通知 | 总规划 + roadmap 4.16 |
+| NEXT / 机会（外部职业与试镜） | 独立 App | `S1 DONE 2026-08-24` | 公开工作、外部试镜与跨组织邀约发现；收藏；申请材料与职业名片本机草稿；邀请制与过期来源 fail-closed | 仅在外部机会场景建立 opportunity/application/invitation owner；已存在所属后的内部工作转入 Work Hub | 总规划 + 下一事件计划 + roadmap 4.16 |
 
-#### Accepted direction, shell not built / 方向已接受、壳待做
+#### Accepted next promotions and shells / 已接受的下一升级与待做壳
 
 | 产品面 | 形态 | 当前成熟度 | 已确认方向 | 下一可见切片 | 详细规划 |
 | --- | --- | --- | --- | --- | --- |
-| Owner promotion for CREDO / POSTA / NEXT | 已有独立 S1 App | `S2 GATED` | 三个壳已完成普通本机预览，不再属于“壳待做” | 分别建立 institution/rights、logistics、career opportunity canonical owner 后再接跨 App 写入 | 总规划 + 下一事件计划 |
+| Work Hub owner promotion | 已有独立 S1 App | `NEXT PLANNED / S2 GATED` | 内部组织工作是默认已签约艺人、学生与职员的主要工作入口 | 先建立组织 authority/owner 与普通无事件工作闭环，再接首条 Work Hub 原生事件 | 下一事件计划 + roadmap 4.14/4.16 |
+| 生活志 / Chronicle | 独立个人连续性产品 | `PLANNED / SHELL NOT BUILT` | 只读聚合已确认的个人生活事实，并由 Diary Owner 拥有用户日记 | 在首条 Work Hub 事件链产生可信事实后建设；不复制 Calendar、Work Hub、Journey、Wallet 或关系记录 | 生活志专项计划 + roadmap 4.12/4.16 |
+| Owner promotion for CREDO / POSTA / NEXT | 已有独立 S1 App | `S2 GATED` | 三个壳已完成普通本机预览，不再属于“壳待做”；NEXT 仅承担外部机会 | 按独立领域需求分别建立 institution/rights、logistics、external-opportunity canonical owner | 总规划 + roadmap 4.16 |
 
 #### Conditional, extension-first, or dependency-gated / 条件型、优先扩展或受依赖限制
 
@@ -198,15 +200,15 @@ S0 不创建跨模块写入、不注册 Event Surface、不调用 provider、不
 | Healthcare / 医疗健康 | `A1-2` | S1 | Map 医院/诊所/药房、Calendar、Agenda、Wallet、Phone、通知 | 生活价值最高之一，现有跨 App 基础非常完整 | `P1`，先预约/报告通知，不碰随机严重病情 |
 | Housing / 住房 | `A1-3` | S1 | Map 住宅/区域、Gallery、Calendar、Wallet、Phone/Chat | 可形成浏览、收藏、预约看房的完整普通闭环 | `P1`，先用户咨询或 owner 改期 |
 | Browser/Search/Help / 浏览器、搜索与使用帮助 | `A1-4` | S1 | WorldBook、Map、Home/App Store、owner deep links、未来 Community/Media、可选外部 Provider | 无事件、无 AI、无付费 API 时仍能完成帮助与世界资料检索；详细合同见 `BROWSER_SEARCH_AND_HELP_CENTER_PLANNING_HANDOFF.md` | `P2`，先公开内容发现，不把搜索当事件完成 |
-| Community core / 社区媒体基础 | `A2-1` | S1 fixture owner | Chat/Contacts、Gallery、Music、通知、深链 | 世界回声价值最高，但 Fact/Claim/Post owner 尚未建立 | `P0`，第一个新壳事件链优先接这里 |
-| System Notification Center / 系统通知中心 | `A2-2` | system S1 | 现有前台 banner、锁屏分组、持久通知、push、来电、Calendar/Map 通知 | 下一步只补解锁后的系统通知抽屉；不是新 App，Settings 只保留策略配置 | `P0`，先完成系统承载层 |
+| Community core / 社区媒体基础 | `A2-1` | S1 fixture owner | Chat/Contacts、Gallery、Music、通知、深链 | 世界回声价值最高，但 Fact/Claim/Post owner 尚未建立 | `P1`，在 Work Hub 首链之后接公开事实传播 |
+| System Notification Center / 系统通知中心 | `A2-2` | system S1 | 现有前台 banner、锁屏分组、持久通知、push、来电、Calendar/Map 通知 | 解锁后的系统通知抽屉已完成；后续补每 App 策略与真机 push 证据 | `P0 SUPPORTING`，作为 Work Hub 首链的原生提醒面 |
 | Unified fandom community / 统一粉丝社区与艺人订阅 | `A2-3` | S1 | Community core、Contacts、Gallery、Music、Wallet、通知、组织凭证 | 一个品牌 App 内含粉丝空间与受权限保护的艺人工作台；艺人订阅不是普通 Chat 私聊 | `P1`，先官方日程/公告和订阅内容，不做绯闻真相 |
-| Organization Workplace / 组织工作台 | `A2-4` | S1 | Self Profile、Calendar、Agenda Journey、Map、Mail、Files、Wallet、Phone、通知 | 以经纪公司艺人模板起步，统一承载团队、内部消息、任务、排班提案、报备、审批和跨 App 鉴权；学生/职员复用同一模块体系 | `P1`，排班变化、临时任务、审批和职业事件 |
+| Organization Workplace / 组织工作台 | `A2-4` | S2 | Self Profile、Calendar、Agenda Journey、Map、Mail、Files、Wallet、Phone、通知 | 以经纪公司艺人模板起步，统一承载团队、内部消息、任务、排班提案、报备、审批和跨 App 鉴权；学生/职员复用同一模块体系 | `P0 NEXT`，先普通组织闭环，再接排班变化、临时任务与审批事件 |
 | Tickets / 票务与文化活动 | `B1-1` | S1 | Calendar、Wallet、Map、Music、Gallery、通知 | K-pop、电影、展览都可复用，普通购票闭环清楚 | `P1`，开售/抽选/改期/退票 |
 | Creator Rights/Works / 创作者作品与版税 | `B1-3` | S1 | Music、Files、Wallet、Contacts、Calendar、Mail | K-pop 职业价值高，但权利份额和制度边界复杂 | `P2`，先材料补充/结算通知 |
 | Travel/Hotel / 旅行酒店 | `B1-4` | S1 | Map 酒店/交通、Calendar、Wallet、Mail、通知 | 普通使用成立，但需要预订/取消 owner | `P1`，改期、换房、付款问题 |
 | Parcel/Post / 快递邮政 | `B1-5` | S1 | Shopping logistics、Map、通知、Chat 服务号 | 可大量复用现有物流模式，适合网购完成后扩展 | `P1`，地址、派送、签收问题 |
-| Jobs/Career / 求职职业网络 | `B1-6` | S1 | Contacts、Self Profile、Mail、Calendar、Files、Phone | 多职业世界复用高，默认 K-pop 也需要试镜/职位/邀约 | `P2`，面试变化或机会通知 |
+| Jobs/Career / 外部求职与试镜 | `B1-6` | S1 | Contacts、Self Profile、Mail、Calendar、Files、Phone、Work Hub | 承担公开职位、外部试镜、选角、猎头与跨组织邀请；已有所属的内部工作不在这里处理 | `P2`，仅外部机会通知或面试变化 |
 | Restaurant Reservations / 餐厅订位 | `B2-1` | Map/Calendar 子流程 | Map 餐厅、Calendar、Wallet、Food Delivery 店铺 | 先验证 Map place detail + Calendar 是否已足够 | `P1`，满位、改期、特别安排 |
 | Fitness/Wellness / 健身与习惯 | `B2-2` | Activity Session 模式 | Calendar、Activity Session、Map、Music | 计时与执行能力已存在，先做活动模板比新 App 更划算 | `P2`，课程变化或伙伴邀请 |
 | Home Services / 物业与家庭服务 | `B2-3` | Housing 子模块 | Housing、Wallet、Calendar、Phone、通知 | 没有 Housing owner 前独立入口价值不足 | `P1` after Housing，维修/费用问题 |
@@ -321,7 +323,7 @@ Browser/Search/Help 作为 `A1-4` 横向工具候选排在这三个生活锚点�
 
 这组应复用第一批已经稳定的列表、详情、表单、通知、文件和交易视觉模式，不宜与第一批并行发明新的通用 UI 规则。
 
-Wave 2 的六个壳均已完成 S1（2026-08-24）：`GATE / 入场`、`ROAM / 漫泊`、`VIA / 联程`、`CREDO / 谱权`、`POSTA / 递送` 与 `NEXT / 机会`。它们只保存本机、非权威的普通使用状态；售罄、无权限、不可用与过期来源 fail-closed；不写 Wallet、Mail、Calendar、Map Journey、Agenda Journey、通知或 Event Runtime。桌面/模拟 Pixel 5、日夜、中英文、可访问性和零横向溢出证据已覆盖，不声称真机证据。下一步不再继续横向扩壳，优先从一个壳选择 S2 owner 与一条 S3 事件链。
+Wave 2 的六个壳均已完成 S1（2026-08-24）：`GATE / 入场`、`ROAM / 漫泊`、`VIA / 联程`、`CREDO / 谱权`、`POSTA / 递送` 与 `NEXT / 机会`。它们只保存本机、非权威的普通使用状态；售罄、无权限、不可用与过期来源 fail-closed；不写 Wallet、Mail、Calendar、Map Journey、Agenda Journey、通知或 Event Runtime。桌面/模拟 Pixel 5、日夜、中英文、可访问性和零横向溢出证据已覆盖，不声称真机证据。下一步不再横向扩壳，也不默认提升 NEXT；先修正并提升 Work Hub owner，完成普通组织工作闭环与首条 Work Hub 原生事件，再建设生活志。
 
 ## 8. Shell Teams And Non-Overlap / 建议小组边界
 
@@ -357,24 +359,27 @@ Wave 2 的六个壳均已完成 S1（2026-08-24）：`GATE / 入场`、`ROAM / �
 
 ## 10. Promotion From Shell To Chain / 从壳升级到链路
 
-壳进入 S2/S3 的顺序不必与 S0/S1 相同。建议首批链路按叙事收益排序：
+壳进入 S2/S3 的顺序不必与 S0/S1 相同。当前已接受的生产顺序是 Work Hub 优先；下面其他链路继续作为后续候选：
 
-1. **Community publication chain**
+1. **Work Hub organization-work chain**
+   - 组织工作通知/提案 -> 用户在 Work Hub 明确处理 -> Calendar 明确确认 -> Agenda Journey/Map/Activity 执行；
+   - 先完成无事件普通闭环，再由 Event Runtime 协调一次机构改期；NEXT 只在外部机会阶段参与。
+2. **Community publication chain**
    - 一个 owner-confirmed 公开日程事实 -> 官方帖子 -> 通知 -> 帖子详情；
    - 这是让世界首次产生公开回声的关键链。
-2. **Healthcare appointment chain**
+3. **Healthcare appointment chain**
    - 用户挂号 -> Healthcare 确认 -> Calendar 候选/确认 -> Map/Agenda 出发；
    - 不需要医疗随机事件即可证明多 App 连通。
-3. **Housing viewing chain**
+4. **Housing viewing chain**
    - 用户预约看房 -> owner 确认 -> Calendar/Agenda/Map；
    - 后续再加房东改期或材料要求。
-4. **Mail institutional chain**
+5. **Mail institutional chain**
    - owner-confirmed 工作/预约/版权状态 -> 正式邮件 -> 用户回复或打开来源；
    - Mail body 不作为对方已执行的证明。
-5. **Fandom official notice chain**
+6. **Fandom official notice chain**
    - 已确认公开活动 -> 官方 notice/artist post -> 粉丝平台通知；
    - 不以粉丝评论改变世界事实。
-6. **Tickets chain**
+7. **Tickets chain**
    - 开售/抽选 -> Wallet 支付 -> Calendar -> Map/Agenda；
    - 适合作为演唱会计划活动的入口，而不是把演唱会本身当随机事件。
 
@@ -406,7 +411,7 @@ Future S3 event entry candidate:
 
 如果选择三个并行壳，优先 `Mail + Healthcare + Housing`：分别覆盖信息、服务预约和地点生活，最能检验 SchatPhone 是否已经从聊天模拟器变成可生活的手机世界。
 
-默认 K-pop 世界观的公共声音、粉丝关系、票务、住宿、城际交通、创作者权益、包裹与职业机会基座现已形成 S1 壳组合。下一步推荐按照 `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md`，先把 `NEXT / 机会` 提升为 owner-ready 产品，再接“机构改期 -> 用户处理 -> Calendar/Agenda/Map”的首条职业事件链。
+默认 K-pop 世界观的公共声音、粉丝关系、票务、住宿、城际交通、创作者权益、包裹与外部职业机会基座现已形成 S1 壳组合。当前下一步按 `NEXT_EVENT_PRODUCTION_PLAN_AFTER_SHELL_PORTFOLIO.md` 修正并提升 `Work Hub / 工作台`：先建立可信组织所属与普通无事件工作闭环，再接“机构工作改期 -> 用户在 Work Hub 处理 -> Calendar/Agenda/Map/Activity”的首条职业事件链。`生活志 / Chronicle` 是该链之后的下一个重要可见壳；Messages/SMS 仍等待明确号码或短码场景。
 
 如果选择一个最能减少用户迷路、同时为未来世界知识和真实互联网留接口的工具壳，选择 `Browser/Search/Help`。先做本地 Help + World 搜索即可成立，外部 Web Search 不是首版阻塞条件。
 

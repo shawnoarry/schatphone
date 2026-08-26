@@ -317,7 +317,9 @@ AI 读取日记或 Narrative Timeline 必须满足：
 
 ### 下一步建议与可前置小任务
 
-下一条主线应先解决 `来源 -> Calendar`，而不是立即建设生活志 UI。只有确认安排能够稳定带着来源进入 Calendar，后续 Agenda Journey、Timeline 和日记回顾才有可信的上游身份。
+`来源 -> Calendar` 的首批 Mail/Work Hub 交接样板已经成立，但 Work Hub 仍只是 fixture/local-preview，不是生产 organization owner。当前接受的后续顺序是：先收敛 Work Hub 的组织 owner/authority 与普通无事件工作闭环，再接首条 Work Hub 原生事件，之后建设 `生活志 / Chronicle`。这样生活志首次出现时就能回看一条真实的“组织工作 -> Calendar -> Agenda Journey -> Map/Activity”来源链，而不是只有空壳或伪造摘要。
+
+生活志仍是下一项重要的新可见产品，但不是 Work Hub owner、普通工作闭环或首条事件的前置条件。Messages/SMS 也不是生活志前置条件；只有出现不能由 Notification Center、Mail、Chat 服务号或 Phone 承担的号码/短码场景时才单独晋升。
 
 建议先完成以下小切片，每项都可以独立验收和回滚。前六项已于 2026-08-25 落地，第七项于 2026-08-26 落地；前四项不创建 Calendar 事件，第五至第七项只有在用户明确确认后才创建并关联：
 
@@ -493,20 +495,18 @@ AI 读取日记或 Narrative Timeline 必须满足：
 - K-pop 原型中的周/月日历、通用 todo 和 dashboard 不应整体复制到 Work Hub；
 - 两个原型均不建立 SchatPhone 的 Owner、持久化、备份、导航或跨 App 合同。
 
-## 16. 下一次决策门
+## 16. 已接受顺序与下一次实施门
 
-进入任何运行时实现前，应先由产品侧确认：
+产品侧已接受：`Work Hub = 组织工作`、`生活志 = 个人连续性`、Calendar 是确认后的长期时间 owner，Mail 与 Work Hub 复用同一 Schedule Handoff。当前实施门依次为：
 
-1. 是否接受“Work Hub = 组织工作；生活志 = 个人连续性”的边界；
-2. 是否接受 Calendar 作为所有来源的唯一已确认长期时间承诺；
-3. 生活产品是否采用 `生活志 / Chronicle` 暂定方向，还是另行命名；
-4. Phase 1 是否以 Mail 作为 Schedule Handoff 的第一个纵向样板；
-5. 日记先做纯用户创作闭环，还是与最小 Calendar/Agenda 只读投影一同交付。
-
-建议默认选择是：先接受边界与术语，随后做 Mail -> Calendar 的共享交接样板，再做可独立成立的日记写作与备份，最后接 Narrative Timeline 和领域后果。这个顺序能先消除链路断点，也避免为了“看起来完整”而制造第二套事实系统。
+1. Work Hub 建立可信 organization membership/credential owner；
+2. Work Hub 完成不依赖 Event Runtime 的普通组织工作闭环；
+3. 首条 Work Hub 原生机构改期事件完成并产生可追溯 owner facts；
+4. 再确认生活志的最终名称、Diary Owner、首版只读投影范围、留存、迁移与 backup 合同；
+5. Narrative Timeline、AI 回忆和领域后果继续分别过门，不随生活志壳自动获批。
 
 ## 17. Roadmap And Status Impact
 
-`NONE`。
+`PLANNING_SEQUENCE_ALIGNED 2026-08-26`。
 
-本轮不修改 `docs/roadmap/TODO_ROADMAP.md`。任务 1-7 的 Mail/Work Hub 持久化幂等小切片已在本文件与 owning package handoff 中同步，但这不声明来源更新/取消审阅、完整 Schedule Handoff Phase 1、生产 Work Hub Owner、Diary Owner、CJA-6B 或 AI 回忆已经实现。
+Roadmap 4.14/4.16 now records the Work Hub-first sequence and Chronicle timing. Tasks 1-7 remain the implemented Mail/Work Hub handoff baseline, but this alignment does not claim source update/cancellation review, the complete Schedule Handoff Phase 1, a production Work Hub Owner, the ordinary organization loop, a Work Hub event, Diary Owner, Chronicle UI, CJA-6B, Messages/SMS, or AI recall as implemented.
