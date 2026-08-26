@@ -145,7 +145,7 @@ test('Appearance applies Cloud Animals images with classic fallback and persiste
   expect(pageErrors).toEqual([])
 })
 
-test('Liquid Prism can temporarily lead over a saved system-app icon and restore it', async ({
+test('Chromatic Glass can temporarily lead over a saved system-app icon and restore it', async ({
   page,
 }) => {
   const pageErrors = []
@@ -162,14 +162,13 @@ test('Liquid Prism can temporarily lead over a saved system-app icon and restore
   await page.getByTestId('app-store-identity-save').click()
 
   await navigateInsideUnlockedApp(page, '/home')
-  await expect(page.getByText(/彩光玻璃|Chromatic Glass/).first()).toBeVisible()
   const widgetsIcon = page.getByTestId('home-dock-icon-app_widgets')
   await expect(widgetsIcon.locator('i')).toHaveClass(/fa-paper-plane/)
   await expect(widgetsIcon.locator('xpath=..')).toHaveAttribute('aria-label', 'Clear Widgets')
 
   await navigateInsideUnlockedApp(page, '/appearance')
   await page.getByTestId('appearance-system-icons-entry').click()
-  await page.getByTestId('appearance-system-app-icon-theme-liquid-prism').click()
+  await page.getByTestId('appearance-system-app-icon-theme-chromatic-glass').click()
   const priority = page.getByTestId('appearance-system-app-icon-theme-priority')
   await expect(priority).toHaveAttribute('aria-checked', 'false')
   await priority.click()
@@ -313,7 +312,7 @@ test('Chromatic Glass keeps the body clear and moves color into edge light', asy
   await page.getByTestId('appearance-style-kit-chromatic-glass').click()
 
   await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'chromatic-glass')
-  await expect(page.locator('html')).toHaveAttribute('data-system-icon-theme', 'liquid-prism')
+  await expect(page.locator('html')).toHaveAttribute('data-system-icon-theme', 'chromatic-glass')
   await expect(page.getByTestId('appearance-style-kit-status')).toContainText(/套装已应用|Kit Applied/)
   await expect
     .poll(() =>
@@ -344,11 +343,17 @@ test('Chromatic Glass keeps the body clear and moves color into edge light', asy
       widgetsIcon.evaluate((icon) => ({
         background: getComputedStyle(icon).background,
         border: getComputedStyle(icon).borderColor,
+        edge: getComputedStyle(icon, '::after').backgroundImage,
+        glyphFill: getComputedStyle(icon.querySelector('path')).fill,
+        glyphStroke: getComputedStyle(icon.querySelector('path')).stroke,
       })),
     )
     .toMatchObject({
       background: expect.stringContaining('linear-gradient'),
       border: expect.stringContaining('rgba(255, 255, 255'),
+      edge: expect.stringContaining('conic-gradient'),
+      glyphFill: expect.stringContaining('rgba('),
+      glyphStroke: 'none',
     })
 
   await navigateInsideUnlockedApp(page, '/appearance')
@@ -359,7 +364,7 @@ test('Chromatic Glass keeps the body clear and moves color into edge light', asy
   expect(pageErrors).toEqual([])
 })
 
-test('Liquid Prism optionally installs companion widgets without changing Home placement', async ({
+test('Chromatic Glass optionally installs companion widgets without changing Home placement', async ({
   page,
 }) => {
   const pageErrors = []
@@ -381,13 +386,14 @@ test('Liquid Prism optionally installs companion widgets without changing Home p
   await page.getByTestId('appearance-theme-entry').click()
   const companionToggle = page.getByTestId('appearance-style-kit-widgets')
   await expect(companionToggle).not.toBeChecked()
+  await expect(page.getByTestId('appearance-style-kit-liquid-prism')).toHaveCount(0)
   await companionToggle.check()
-  await page.getByTestId('appearance-style-kit-liquid-prism').click()
+  await page.getByTestId('appearance-style-kit-chromatic-glass').click()
 
-  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'liquid-prism')
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'chromatic-glass')
   await expect(page.locator('html')).toHaveAttribute(
     'data-system-icon-theme',
-    'liquid-prism',
+    'chromatic-glass',
   )
   await expect(page.getByTestId('appearance-style-kit-widget-feedback')).toContainText(
     /已将 5 个配套组件加入组件库|5 companion widgets were added/,
@@ -428,7 +434,7 @@ test('Liquid Prism optionally installs companion widgets without changing Home p
 
   await page.reload()
   await unlockToHome(page)
-  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'liquid-prism')
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'chromatic-glass')
   await expect(page.getByTestId('home-dock-icon-app_contacts')).toHaveClass(
     /material-liquid-prism/,
   )
@@ -440,10 +446,10 @@ test('Liquid Prism optionally installs companion widgets without changing Home p
   await page.locator('#widgets-tab-custom').click()
   await expect(page.locator('.widgets-created-card')).toHaveCount(5)
   await expect(
-    page.locator('.widgets-created-card').filter({ hasText: '水光状态' }),
+    page.locator('.widgets-created-card').filter({ hasText: '彩光状态' }),
   ).toHaveCount(1)
   await expect(
-    page.locator('.widgets-created-card').filter({ hasText: '水光日程板' }),
+    page.locator('.widgets-created-card').filter({ hasText: '彩光日程板' }),
   ).toHaveCount(1)
 
   const homeStateBeforeSwitch = await page.evaluate(() => {

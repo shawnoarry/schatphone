@@ -1673,7 +1673,7 @@ const dockGlyph = (appId) => {
   if (
     appId === 'app_chat' &&
     activeSystemAppearanceTheme.value.id === 'chromatic-glass' &&
-    systemAppIconTheme.value === 'liquid-prism'
+    systemAppIconTheme.value === 'chromatic-glass'
   ) {
     return LIQUID_PRISM_ICON_GLYPHS.app_chat || null
   }

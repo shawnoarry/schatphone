@@ -112,8 +112,8 @@ export const OFFICIAL_WIDGET_STYLE_PRESETS = Object.freeze([
     size: '1x1',
     preview: 'liquid-drop',
     icon: 'fas fa-droplet',
-    nameZh: '水光状态',
-    nameEn: 'Liquid Status',
+    nameZh: '彩光状态',
+    nameEn: 'Chromatic Status',
     code: `<style>
 .lp-drop{width:100%;height:100%;box-sizing:border-box;border-radius:24px;position:relative;overflow:hidden;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#414248;background:radial-gradient(circle at 27% 16%,rgba(255,255,255,.99) 0 6%,transparent 17%),radial-gradient(circle at 78% 84%,rgba(219,205,224,.2),transparent 48%),radial-gradient(circle at 12% 82%,rgba(235,223,209,.14),transparent 42%),linear-gradient(145deg,rgba(255,255,255,.76),rgba(244,244,243,.4) 54%,rgba(226,226,228,.38));border:1px solid rgba(255,255,255,.9);box-shadow:inset 1px 1px 0 rgba(255,255,255,.98),inset -3px -4px 12px rgba(69,69,76,.13),0 12px 24px rgba(45,45,51,.18)}
 .lp-drop:after{content:"";position:absolute;inset:5px;border-radius:20px;border:1px solid rgba(174,170,181,.24);box-shadow:inset 0 -8px 14px rgba(139,125,154,.06)}
@@ -126,8 +126,8 @@ export const OFFICIAL_WIDGET_STYLE_PRESETS = Object.freeze([
     size: '2x1',
     preview: 'liquid-capsule',
     icon: 'fas fa-wave-square',
-    nameZh: '水光胶囊',
-    nameEn: 'Liquid Capsule',
+    nameZh: '彩光胶囊',
+    nameEn: 'Chromatic Capsule',
     code: `<style>
 .lp-capsule{width:100%;height:100%;box-sizing:border-box;border-radius:999px;padding:8px 11px;position:relative;overflow:hidden;display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:9px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#414248;background:radial-gradient(circle at 14% 10%,rgba(255,255,255,.98),transparent 24%),radial-gradient(circle at 90% 86%,rgba(218,204,224,.18),transparent 38%),linear-gradient(135deg,rgba(255,255,255,.72),rgba(244,244,243,.38) 48%,rgba(227,225,228,.36));border:1px solid rgba(255,255,255,.88);box-shadow:inset 1px 1px 0 rgba(255,255,255,.96),inset -3px -4px 11px rgba(69,69,76,.12),0 10px 22px rgba(45,45,51,.18)}
 .lp-capsule:after{content:"";position:absolute;inset:4px;border-radius:999px;border:1px solid rgba(174,170,181,.22)}.lp-capsule .orb{position:relative;z-index:1;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,255,255,.86),rgba(221,220,222,.4));border:1px solid rgba(255,255,255,.86);box-shadow:inset 0 1px 0 #fff,0 5px 12px rgba(45,45,51,.16);font-size:18px;font-weight:800}.lp-capsule .copy{position:relative;z-index:1;min-width:0}.lp-capsule strong,.lp-capsule small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:0}.lp-capsule strong{font-size:13px}.lp-capsule small{margin-top:2px;font-size:9px;color:rgba(65,66,72,.62)}.lp-capsule b{position:relative;z-index:1;font-size:10px;color:#625d69}
@@ -139,8 +139,8 @@ export const OFFICIAL_WIDGET_STYLE_PRESETS = Object.freeze([
     size: '2x2',
     preview: 'liquid-day',
     icon: 'fas fa-calendar-day',
-    nameZh: '水光今日',
-    nameEn: 'Liquid Day',
+    nameZh: '彩光今日',
+    nameEn: 'Chromatic Day',
     code: `<style>
 .lp-day{width:100%;height:100%;box-sizing:border-box;border-radius:26px;padding:13px;position:relative;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#3f4046;background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.99),transparent 28%),radial-gradient(circle at 88% 88%,rgba(218,204,224,.19),transparent 46%),radial-gradient(circle at 8% 78%,rgba(235,223,209,.12),transparent 38%),linear-gradient(150deg,rgba(255,255,255,.73),rgba(244,244,243,.38) 55%,rgba(226,226,228,.36));border:1px solid rgba(255,255,255,.9);box-shadow:inset 1px 1px 0 rgba(255,255,255,.97),inset -4px -5px 14px rgba(67,67,74,.12),0 14px 28px rgba(44,44,50,.18)}
 .lp-day:after{content:"";position:absolute;inset:5px;border-radius:22px;border:1px solid rgba(174,170,181,.22)}.lp-day .top,.lp-day .date,.lp-day .note{position:relative;z-index:1}.lp-day .top{display:flex;align-items:center;justify-content:space-between;font-size:9px;font-weight:800;color:rgba(63,64,70,.62)}.lp-day .top i{width:8px;height:8px;border-radius:50%;background:#8c8990;box-shadow:0 0 0 4px rgba(140,137,144,.14)}.lp-day .date{align-self:center}.lp-day .date strong{display:block;font-size:48px;line-height:.85;letter-spacing:0}.lp-day .date small{display:block;margin-top:7px;font-size:11px;font-weight:800;letter-spacing:0;color:#625d69}.lp-day .note{border-radius:999px;padding:8px 10px;background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.6);font-size:9px;font-weight:750;color:rgba(63,64,70,.7)}
@@ -152,8 +152,8 @@ export const OFFICIAL_WIDGET_STYLE_PRESETS = Object.freeze([
     size: '4x1',
     preview: 'liquid-music',
     icon: 'fas fa-play',
-    nameZh: '水光播放条',
-    nameEn: 'Liquid Player',
+    nameZh: '彩光播放条',
+    nameEn: 'Chromatic Player',
     code: `<style>
 .lp-player{width:100%;height:100%;box-sizing:border-box;border-radius:999px;padding:8px 13px;position:relative;overflow:hidden;display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:11px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#3f4046;background:radial-gradient(circle at 12% 0,rgba(255,255,255,.99),transparent 22%),radial-gradient(circle at 88% 88%,rgba(218,204,224,.18),transparent 38%),linear-gradient(135deg,rgba(255,255,255,.72),rgba(244,244,243,.38) 48%,rgba(226,226,228,.36));border:1px solid rgba(255,255,255,.88);box-shadow:inset 1px 1px 0 rgba(255,255,255,.97),inset -4px -4px 13px rgba(67,67,74,.12),0 12px 26px rgba(44,44,50,.18)}
 .lp-player:after{content:"";position:absolute;inset:4px;border-radius:999px;border:1px solid rgba(174,170,181,.22)}.lp-player .disc{position:relative;z-index:1;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#fafafa 0 12%,#777980 13% 18%,rgba(255,255,255,.58) 19% 42%,#aaa8ad 43% 60%,rgba(255,255,255,.54) 61%);box-shadow:0 5px 12px rgba(45,45,51,.18)}.lp-player .copy{position:relative;z-index:1;min-width:0}.lp-player strong,.lp-player small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:0}.lp-player strong{font-size:13px}.lp-player small{margin-top:2px;font-size:9px;color:rgba(63,64,70,.62)}.lp-player .controls{position:relative;z-index:1;display:flex;gap:6px}.lp-player b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.46);border:1px solid rgba(255,255,255,.6);font-size:10px;color:#55575f}
@@ -165,8 +165,8 @@ export const OFFICIAL_WIDGET_STYLE_PRESETS = Object.freeze([
     size: '4x2',
     preview: 'liquid-agenda',
     icon: 'fas fa-list-check',
-    nameZh: '水光日程板',
-    nameEn: 'Liquid Agenda',
+    nameZh: '彩光日程板',
+    nameEn: 'Chromatic Agenda',
     code: `<style>
 .lp-agenda{width:100%;height:100%;box-sizing:border-box;border-radius:28px;padding:15px;position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.4fr);gap:13px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#3f4046;background:radial-gradient(circle at 12% 5%,rgba(255,255,255,.99),transparent 26%),radial-gradient(circle at 90% 86%,rgba(218,204,224,.18),transparent 44%),radial-gradient(circle at 8% 82%,rgba(235,223,209,.12),transparent 38%),linear-gradient(145deg,rgba(255,255,255,.72),rgba(244,244,243,.38) 54%,rgba(226,226,228,.36));border:1px solid rgba(255,255,255,.9);box-shadow:inset 1px 1px 0 rgba(255,255,255,.97),inset -5px -6px 16px rgba(67,67,74,.11),0 16px 32px rgba(44,44,50,.18)}
 .lp-agenda:after{content:"";position:absolute;inset:5px;border-radius:24px;border:1px solid rgba(174,170,181,.22)}.lp-agenda .hero,.lp-agenda .list{position:relative;z-index:1}.lp-agenda .hero{border-radius:21px;display:grid;align-content:center;justify-items:center;background:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.56)}.lp-agenda .hero small{font-size:9px;font-weight:800;color:rgba(63,64,70,.6)}.lp-agenda .hero strong{font-size:42px;line-height:.9;letter-spacing:0}.lp-agenda .list{display:grid;align-content:center;gap:7px}.lp-agenda h3{margin:0 0 2px;font-size:15px;letter-spacing:0}.lp-agenda p{margin:0;border-radius:14px;padding:8px 9px;display:grid;grid-template-columns:auto 1fr;gap:8px;background:rgba(255,255,255,.36);border:1px solid rgba(255,255,255,.48);font-size:9px;font-weight:750;color:rgba(63,64,70,.72)}.lp-agenda em{font-style:normal;color:#625d69;font-weight:850}
@@ -177,8 +177,8 @@ export const OFFICIAL_WIDGET_STYLE_PRESETS = Object.freeze([
 export const WIDGET_STYLE_PRESET_COLLECTIONS = Object.freeze([
   Object.freeze({
     id: 'liquid-prism',
-    labelZh: '水光玻璃',
-    labelEn: 'Liquid Prism',
+    labelZh: '彩光玻璃',
+    labelEn: 'Chromatic Glass',
   }),
 ])
 

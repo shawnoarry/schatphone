@@ -78,24 +78,27 @@ const isCloudPastelAnimal = computed(() =>
 }
 
 .app-icon-visual.material-liquid-prism {
-  --liquid-edge-pink: rgba(255, 179, 214, 0.46);
-  --liquid-edge-apricot: rgba(255, 205, 151, 0.42);
-  --liquid-edge-blue: rgba(172, 203, 255, 0.48);
-  --liquid-edge-lilac: rgba(205, 188, 255, 0.42);
-  --liquid-glyph-color: rgba(124, 137, 158, 0.78);
-  --liquid-glyph-stroke: rgba(255, 255, 255, 0.78);
-  --liquid-glyph-stroke-width: 4px;
+  --liquid-edge-primary: rgba(171, 205, 255, 0.72);
+  --liquid-edge-secondary: rgba(224, 188, 235, 0.58);
+  --liquid-edge-warm: rgba(255, 213, 174, 0.44);
+  --liquid-glass-tint: rgba(208, 224, 244, 0.08);
+  --liquid-shadow-tint: rgba(105, 128, 168, 0.18);
+  --liquid-glyph-color: rgba(29, 34, 45, 0.9);
   isolation: isolate;
-  color: rgba(31, 32, 39, 0.78);
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.54);
+  color: var(--liquid-glyph-color);
+  background:
+    radial-gradient(circle at 28% 12%, rgba(255, 255, 255, 0.9), transparent 27%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.035) 58%),
+    var(--liquid-glass-tint);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.84),
-    inset -1px -2px 4px rgba(73, 70, 86, 0.08),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.06),
-    0 6px 13px rgba(36, 35, 43, 0.12);
-  backdrop-filter: blur(3px) saturate(1.12) contrast(1.02);
-  -webkit-backdrop-filter: blur(3px) saturate(1.12) contrast(1.02);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.96),
+    inset -1px -2px 5px rgba(92, 100, 122, 0.07),
+    inset 0 -7px 12px color-mix(in srgb, var(--liquid-edge-primary) 16%, transparent),
+    0 9px 17px var(--liquid-shadow-tint),
+    0 2px 4px rgba(44, 48, 62, 0.08);
+  backdrop-filter: blur(7px) saturate(1.16) contrast(1.01);
+  -webkit-backdrop-filter: blur(7px) saturate(1.16) contrast(1.01);
 }
 
 .app-icon-visual.material-liquid-prism::before,
@@ -107,53 +110,56 @@ const isCloudPastelAnimal = computed(() =>
 }
 
 .app-icon-visual.material-liquid-prism::before {
-  inset: 5% 12% auto;
+  inset: 4% 11% auto;
   z-index: 1;
-  height: 24%;
+  height: 28%;
   border-radius: 999px 999px 46% 46%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.06));
-  filter: blur(0.45px);
-  opacity: 0.74;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.08));
+  filter: blur(0.35px);
+  opacity: 0.84;
 }
 
 .app-icon-visual.material-liquid-prism::after {
-  inset: 1px;
+  inset: 0;
   z-index: 1;
-  padding: 1.5px;
+  padding: 2px;
   background: conic-gradient(
-    from 218deg,
-    rgba(255, 255, 255, 0.78),
-    var(--liquid-edge-blue) 16%,
-    rgba(255, 255, 255, 0.34) 31%,
-    var(--liquid-edge-pink) 48%,
-    var(--liquid-edge-apricot) 62%,
-    rgba(255, 255, 255, 0.5) 76%,
-    var(--liquid-edge-lilac) 89%,
-    rgba(255, 255, 255, 0.78)
+    from 204deg,
+    rgba(255, 255, 255, 0.92),
+    var(--liquid-edge-primary) 19%,
+    rgba(255, 255, 255, 0.46) 37%,
+    var(--liquid-edge-secondary) 56%,
+    var(--liquid-edge-warm) 72%,
+    rgba(255, 255, 255, 0.74) 88%,
+    rgba(255, 255, 255, 0.92)
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  opacity: 0.72;
+  opacity: 0.9;
 }
 
 .app-icon-visual.material-liquid-prism.accent-warm {
-  --liquid-edge-pink: rgba(255, 170, 204, 0.52);
-  --liquid-edge-apricot: rgba(255, 194, 132, 0.5);
-  --liquid-glyph-stroke: rgba(153, 113, 137, 0.58);
+  --liquid-edge-primary: rgba(249, 174, 207, 0.76);
+  --liquid-edge-secondary: rgba(255, 207, 164, 0.66);
+  --liquid-glass-tint: rgba(255, 216, 224, 0.1);
+  --liquid-shadow-tint: rgba(224, 139, 174, 0.2);
 }
 
 .app-icon-visual.material-liquid-prism.accent-light {
-  --liquid-edge-blue: rgba(177, 210, 255, 0.56);
-  --liquid-edge-lilac: rgba(213, 192, 255, 0.5);
-  --liquid-glyph-stroke: rgba(109, 127, 160, 0.56);
+  --liquid-edge-primary: rgba(157, 208, 244, 0.78);
+  --liquid-edge-secondary: rgba(183, 226, 215, 0.64);
+  --liquid-glass-tint: rgba(203, 232, 241, 0.1);
+  --liquid-shadow-tint: rgba(105, 166, 196, 0.19);
 }
 
 .app-icon-visual.material-liquid-prism.accent-dark {
-  color: rgba(26, 27, 34, 0.82);
-  --liquid-glyph-stroke: rgba(102, 92, 132, 0.6);
+  --liquid-edge-primary: rgba(190, 180, 242, 0.76);
+  --liquid-edge-secondary: rgba(230, 183, 222, 0.6);
+  --liquid-glass-tint: rgba(218, 208, 240, 0.09);
+  --liquid-shadow-tint: rgba(126, 106, 166, 0.2);
 }
 
 .app-icon-visual.material-liquid-prism > i,
@@ -161,41 +167,40 @@ const isCloudPastelAnimal = computed(() =>
   position: relative;
   z-index: 2;
   color: var(--liquid-glyph-color);
-  filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.82))
-    drop-shadow(0 0 1px rgba(169, 183, 207, 0.14));
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.5));
 }
 
 .app-icon-visual > .liquid-prism-glyph {
-  width: 62%;
-  height: 62%;
+  width: 56%;
+  height: 56%;
   display: block;
   fill: currentColor;
 }
 
 .app-icon-visual > .liquid-prism-glyph path {
-  stroke: var(--liquid-glyph-stroke);
-  stroke-width: var(--liquid-glyph-stroke-width);
+  fill: currentColor;
+  stroke: none;
   stroke-linejoin: round;
   stroke-linecap: round;
-  paint-order: stroke fill;
+  paint-order: normal;
 }
 
 :global(:root[data-color-mode='night'] .app-icon-visual.material-liquid-prism),
 :global(.app-shell[data-color-mode='night'] .app-icon-visual.material-liquid-prism) {
-  --liquid-glyph-color: rgba(248, 250, 255, 0.98);
-  --liquid-glyph-stroke: rgba(20, 28, 43, 0.72);
-  --liquid-glyph-stroke-width: 8px;
-  color: rgba(250, 249, 252, 0.88);
+  --liquid-glyph-color: rgba(242, 245, 252, 0.94);
+  --liquid-glass-tint: rgba(255, 255, 255, 0.035);
+  --liquid-shadow-tint: rgba(0, 0, 0, 0.28);
+  color: var(--liquid-glyph-color);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.018) 58%),
-    rgba(255, 255, 255, 0.025);
-  border-color: rgba(255, 255, 255, 0.42);
+    radial-gradient(circle at 28% 12%, rgba(255, 255, 255, 0.28), transparent 29%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.018) 58%),
+    var(--liquid-glass-tint);
+  border-color: rgba(255, 255, 255, 0.38);
   box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.6),
-    inset -1px -2px 5px rgba(0, 0, 0, 0.18),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.035),
-    0 7px 16px rgba(0, 0, 0, 0.28);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.52),
+    inset -1px -2px 6px rgba(0, 0, 0, 0.2),
+    inset 0 -7px 12px color-mix(in srgb, var(--liquid-edge-primary) 12%, transparent),
+    0 9px 18px var(--liquid-shadow-tint);
 }
 
 :global(:root[data-color-mode='night'] .app-icon-visual.material-liquid-prism > i),
@@ -203,8 +208,8 @@ const isCloudPastelAnimal = computed(() =>
 :global(.app-shell[data-color-mode='night'] .app-icon-visual.material-liquid-prism > i),
 :global(.app-shell[data-color-mode='night'] .app-icon-visual.material-liquid-prism > .liquid-prism-glyph) {
   filter:
-    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.86))
-    drop-shadow(0 0 3px rgba(218, 231, 255, 0.28));
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.72))
+    drop-shadow(0 0 2px rgba(218, 231, 255, 0.16));
 }
 
 :global(:root[data-color-mode='night'] .app-icon-visual.material-liquid-prism.accent-dark),

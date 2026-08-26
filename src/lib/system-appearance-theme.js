@@ -69,22 +69,6 @@ export const SYSTEM_APPEARANCE_THEME_OPTIONS = Object.freeze([
     }),
   },
   {
-    id: 'liquid-prism',
-    labelZh: '水光玻璃',
-    labelEn: 'Liquid Prism',
-    descriptionZh: '近乎无色的透明玻璃、清晰边缘折射与轻微虹彩高光，不绑定特定主题色。',
-    descriptionEn:
-      'Nearly colorless glass with crisp edge refraction and faint iridescent highlights, without a fixed theme hue.',
-    previews: Object.freeze({
-      day: 'linear-gradient(145deg, #f6f5f3 0%, #dfe1e3 44%, #ece7e9 72%, #e4e4e1 100%)',
-      night: 'linear-gradient(145deg, #2a2b2f 0%, #17181c 48%, #28242a 74%, #17191d 100%)',
-    }),
-    wallpapers: Object.freeze({
-      day: '',
-      night: '',
-    }),
-  },
-  {
     id: 'chromatic-glass',
     labelZh: '彩光玻璃',
     labelEn: 'Chromatic Glass',
@@ -123,25 +107,15 @@ export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
     systemAppIconTheme: 'cloud-pastel-animals',
   },
   {
-    id: 'liquid-prism',
-    labelZh: '水光玻璃',
-    labelEn: 'Liquid Prism',
-    descriptionZh: '水光玻璃界面、透明系统 App 图标与可选配套组件。',
-    descriptionEn:
-      'Liquid glass surfaces, transparent system app icons, and optional companion widgets.',
-    systemTheme: 'liquid-prism',
-    systemAppIconTheme: 'liquid-prism',
-    companionWidgetCollectionId: 'liquid-prism',
-  },
-  {
     id: 'chromatic-glass',
     labelZh: '彩光玻璃',
     labelEn: 'Chromatic Glass',
-    descriptionZh: '彩光玻璃界面与简约线形玻璃图标；颜色只出现在边缘、高光和轻微环境光。',
+    descriptionZh: '彩光玻璃界面、简约线形玻璃图标与可选配套组件；颜色停留在边缘、高光和轻微环境光。',
     descriptionEn:
-      'Chromatic glass surfaces with minimal line glyphs; color stays in the edges, highlights, and ambient light.',
+      'Chromatic glass surfaces, minimal line glyphs, and optional companion widgets; color stays in the edges, highlights, and ambient light.',
     systemTheme: 'chromatic-glass',
-    systemAppIconTheme: 'liquid-prism',
+    systemAppIconTheme: 'chromatic-glass',
+    companionWidgetCollectionId: 'liquid-prism',
   },
 ])
 
@@ -153,6 +127,12 @@ const LEGACY_THEME_TO_COLOR_MODE = Object.freeze({
 })
 const SYSTEM_THEME_IDS = new Set(SYSTEM_APPEARANCE_THEME_OPTIONS.map((theme) => theme.id))
 const STYLE_KIT_IDS = new Set(APPEARANCE_STYLE_KIT_OPTIONS.map((kit) => kit.id))
+const LEGACY_SYSTEM_THEME_IDS = Object.freeze({
+  'liquid-prism': 'chromatic-glass',
+})
+const LEGACY_STYLE_KIT_IDS = Object.freeze({
+  'liquid-prism': 'chromatic-glass',
+})
 
 export const normalizeAppearanceColorMode = (
   value,
@@ -173,7 +153,8 @@ export const normalizeSystemAppearanceThemeId = (
   fallback = DEFAULT_SYSTEM_APPEARANCE_THEME_ID,
 ) => {
   const normalized = typeof value === 'string' ? value.trim() : ''
-  return SYSTEM_THEME_IDS.has(normalized) ? normalized : fallback
+  const migrated = LEGACY_SYSTEM_THEME_IDS[normalized] || normalized
+  return SYSTEM_THEME_IDS.has(migrated) ? migrated : fallback
 }
 
 export const resolveSystemAppearanceThemeMeta = (themeId) =>
@@ -193,7 +174,8 @@ export const normalizeAppearanceStyleKitId = (
 ) => {
   const normalized = typeof value === 'string' ? value.trim() : ''
   if (!normalized && fallback === '') return ''
-  return STYLE_KIT_IDS.has(normalized) ? normalized : fallback
+  const migrated = LEGACY_STYLE_KIT_IDS[normalized] || normalized
+  return STYLE_KIT_IDS.has(migrated) ? migrated : fallback
 }
 
 export const resolveAppearanceStyleKitMeta = (kitId) =>

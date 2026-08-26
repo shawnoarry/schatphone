@@ -452,225 +452,6 @@
   --home-icon-dark-fg: #f3f2f8;
 }
 
-:root[data-system-theme='liquid-prism'][data-color-mode='day'],
-.app-shell[data-system-theme='liquid-prism'][data-color-mode='day'] {
-  --app-bg: #efefed;
-  --system-bg: #efefed;
-  --system-wallpaper-fallback:
-    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.92), transparent 31%),
-    radial-gradient(circle at 88% 20%, rgba(226, 211, 217, 0.42), transparent 35%),
-    radial-gradient(circle at 72% 88%, rgba(211, 214, 219, 0.62), transparent 39%),
-    linear-gradient(155deg, #f5f4f1 0%, #e0e2e3 46%, #ece8e9 72%, #e4e4e1 100%);
-  --system-surface: rgba(255, 255, 255, 0.5);
-  --system-surface-strong: rgba(255, 255, 255, 0.7);
-  --system-surface-muted: rgba(232, 232, 231, 0.56);
-  --system-surface-dark: rgba(53, 54, 60, 0.36);
-  --system-page-bg:
-    radial-gradient(circle at 88% 8%, rgba(218, 205, 219, 0.14), transparent 33%),
-    linear-gradient(180deg, rgba(249, 248, 246, 0.84), rgba(231, 231, 230, 0.88));
-  --system-chrome-bg: rgba(255, 255, 255, 0.54);
-  --system-panel-bg: rgba(255, 255, 255, 0.58);
-  --system-panel-bg-solid: #f1f1ef;
-  --system-elevated-bg: rgba(255, 255, 255, 0.74);
-  --system-control-bg: rgba(255, 255, 255, 0.46);
-  --system-control-bg-strong: rgba(255, 255, 255, 0.72);
-  --system-border: rgba(65, 65, 72, 0.13);
-  --system-border-light: rgba(255, 255, 255, 0.82);
-  --system-card-border: rgba(255, 255, 255, 0.78);
-  --system-control-border: rgba(85, 85, 94, 0.18);
-  --system-subtle-border: rgba(65, 65, 72, 0.09);
-  --system-text: #292a2e;
-  --system-text-inverse: #faf9f8;
-  --system-text-muted: rgba(41, 42, 46, 0.64);
-  --system-text-soft: rgba(41, 42, 46, 0.44);
-  --system-accent: #5c6069;
-  --system-accent-strong: #454850;
-  --system-accent-soft: rgba(92, 96, 105, 0.13);
-  --system-on-accent: #ffffff;
-  --system-success: #4f856f;
-  --system-success-soft: rgba(79, 133, 111, 0.14);
-  --system-on-success: #ffffff;
-  --system-warning: #9b7446;
-  --system-warning-soft: rgba(185, 137, 78, 0.15);
-  --system-on-warning: #2b2116;
-  --system-danger: #a95972;
-  --system-danger-soft: rgba(185, 96, 126, 0.14);
-  --system-on-danger: #ffffff;
-  --system-info: #557dab;
-  --system-info-soft: rgba(85, 125, 171, 0.14);
-  --system-on-info: #ffffff;
-  --system-radius-sm: 14px;
-  --system-radius-md: 20px;
-  --system-radius-lg: 26px;
-  --system-radius-xl: 34px;
-  --system-blur-sm: 14px;
-  --system-blur-md: 24px;
-  --system-blur-lg: 34px;
-  --system-hover-bg: rgba(75, 76, 84, 0.08);
-  --system-pressed-bg: rgba(75, 76, 84, 0.14);
-  --system-focus-ring: rgba(70, 71, 78, 0.22);
-  --system-edge-highlight: rgba(255, 255, 255, 0.88);
-  --system-shadow-chrome:
-    0 14px 32px rgba(48, 48, 54, 0.11),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
-  --system-shadow-card:
-    0 16px 34px rgba(48, 48, 54, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  --system-shadow-control:
-    0 8px 18px rgba(50, 50, 56, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
-  --system-shadow-soft: 0 20px 46px rgba(46, 46, 52, 0.16);
-  --indicator-bg: rgba(43, 44, 49, 0.28);
-  --status-fg: #303136;
-  --glass-bg: rgba(255, 255, 255, 0.46);
-  --glass-border: rgba(255, 255, 255, 0.82);
-  --home-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(51, 51, 57, 0.1));
-  --home-overlay-a: radial-gradient(circle at 78% 10%, rgba(255, 255, 255, 0.34), transparent 42%);
-  --home-overlay-b: linear-gradient(180deg, rgba(250, 249, 247, 0.02), rgba(52, 52, 58, 0.13));
-  --home-text-main: #2d2e33;
-  --home-text-sub: rgba(45, 46, 51, 0.7);
-  --home-accent: #555962;
-  --home-widget-bg: rgba(255, 255, 255, 0.4);
-  --home-widget-border: rgba(255, 255, 255, 0.76);
-  --home-widget-shadow:
-    0 18px 40px rgba(44, 44, 50, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  --home-search-bg: rgba(255, 255, 255, 0.42);
-  --home-search-text: rgba(45, 46, 51, 0.82);
-  --home-progress-track: rgba(53, 54, 60, 0.17);
-  --home-progress-fill: rgba(73, 74, 82, 0.8);
-  --home-dock-bg: rgba(255, 255, 255, 0.4);
-  --home-dock-border: rgba(255, 255, 255, 0.76);
-  --home-dot-bg: rgba(45, 46, 51, 0.23);
-  --home-dot-active-bg: rgba(45, 46, 51, 0.82);
-  --home-folder-tile-bg:
-    radial-gradient(circle at 28% 10%, rgba(255, 255, 255, 0.62), transparent 42%),
-    rgba(255, 255, 255, 0.34);
-  --home-folder-tile-border: rgba(255, 255, 255, 0.7);
-  --home-folder-overlay-bg:
-    radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.32), transparent 38%),
-    rgba(45, 45, 51, 0.22);
-  --home-folder-panel-bg:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.52), rgba(229, 228, 229, 0.3)),
-    rgba(97, 96, 104, 0.2);
-  --home-folder-panel-border: rgba(255, 255, 255, 0.68);
-  --home-folder-entry-bg: rgba(255, 255, 255, 0.18);
-  --home-folder-entry-pressed-bg: rgba(255, 255, 255, 0.32);
-  --home-folder-text: #2c2d32;
-  --home-folder-text-muted: rgba(44, 45, 50, 0.64);
-  --home-folder-close-bg: rgba(255, 255, 255, 0.36);
-  --home-folder-shadow: 0 32px 82px rgba(39, 39, 45, 0.24);
-}
-
-:root[data-system-theme='liquid-prism'][data-color-mode='night'],
-.app-shell[data-system-theme='liquid-prism'][data-color-mode='night'] {
-  --app-bg: #17181b;
-  --system-bg: #17181b;
-  --system-wallpaper-fallback:
-    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.16), transparent 31%),
-    radial-gradient(circle at 86% 18%, rgba(137, 104, 130, 0.18), transparent 36%),
-    radial-gradient(circle at 70% 88%, rgba(142, 124, 102, 0.12), transparent 39%),
-    linear-gradient(155deg, #2a2b2f 0%, #17181c 48%, #28242a 74%, #17191d 100%);
-  --system-surface: rgba(77, 77, 82, 0.38);
-  --system-surface-strong: rgba(95, 95, 101, 0.56);
-  --system-surface-muted: rgba(45, 45, 50, 0.5);
-  --system-surface-dark: rgba(8, 8, 11, 0.66);
-  --system-page-bg:
-    radial-gradient(circle at 84% 8%, rgba(133, 105, 131, 0.11), transparent 34%),
-    linear-gradient(180deg, rgba(42, 42, 47, 0.9), rgba(23, 23, 27, 0.94));
-  --system-chrome-bg: rgba(42, 42, 47, 0.5);
-  --system-panel-bg: rgba(66, 66, 72, 0.48);
-  --system-panel-bg-solid: #303035;
-  --system-elevated-bg: rgba(88, 88, 95, 0.66);
-  --system-control-bg: rgba(30, 30, 34, 0.5);
-  --system-control-bg-strong: rgba(67, 67, 73, 0.68);
-  --system-border: rgba(255, 255, 255, 0.14);
-  --system-border-light: rgba(255, 255, 255, 0.2);
-  --system-card-border: rgba(255, 255, 255, 0.17);
-  --system-control-border: rgba(255, 255, 255, 0.18);
-  --system-subtle-border: rgba(255, 255, 255, 0.1);
-  --system-text: #f3f1f2;
-  --system-text-inverse: #242428;
-  --system-text-muted: rgba(243, 241, 242, 0.68);
-  --system-text-soft: rgba(243, 241, 242, 0.46);
-  --system-accent: #d5d2d8;
-  --system-accent-strong: #f2eff3;
-  --system-accent-soft: rgba(221, 217, 224, 0.15);
-  --system-on-accent: #252429;
-  --system-success: #8bbca5;
-  --system-success-soft: rgba(139, 188, 165, 0.17);
-  --system-on-success: #10261d;
-  --system-warning: #d1ae7b;
-  --system-warning-soft: rgba(209, 174, 123, 0.17);
-  --system-on-warning: #291f13;
-  --system-danger: #d999ae;
-  --system-danger-soft: rgba(217, 153, 174, 0.17);
-  --system-on-danger: #2c1720;
-  --system-info: #a6bde8;
-  --system-info-soft: rgba(166, 189, 232, 0.17);
-  --system-on-info: #142039;
-  --system-radius-sm: 14px;
-  --system-radius-md: 20px;
-  --system-radius-lg: 26px;
-  --system-radius-xl: 34px;
-  --system-blur-sm: 14px;
-  --system-blur-md: 24px;
-  --system-blur-lg: 34px;
-  --system-hover-bg: rgba(255, 255, 255, 0.09);
-  --system-pressed-bg: rgba(255, 255, 255, 0.15);
-  --system-focus-ring: rgba(255, 255, 255, 0.24);
-  --system-edge-highlight: rgba(255, 255, 255, 0.13);
-  --system-shadow-chrome:
-    0 16px 36px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  --system-shadow-card:
-    0 18px 40px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.13);
-  --system-shadow-control:
-    0 9px 20px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  --system-shadow-soft: 0 22px 50px rgba(0, 0, 0, 0.4);
-  --indicator-bg: rgba(243, 241, 242, 0.34);
-  --status-fg: #f3f1f2;
-  --glass-bg: rgba(75, 75, 81, 0.34);
-  --glass-border: rgba(255, 255, 255, 0.19);
-  --home-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.24));
-  --home-overlay-a: radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.1), transparent 44%);
-  --home-overlay-b: linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(0, 0, 0, 0.3));
-  --home-text-main: #f4f2f3;
-  --home-text-sub: rgba(244, 242, 243, 0.7);
-  --home-accent: #eeebef;
-  --home-widget-bg: rgba(74, 74, 80, 0.34);
-  --home-widget-border: rgba(255, 255, 255, 0.17);
-  --home-widget-shadow:
-    0 20px 44px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  --home-search-bg: rgba(72, 72, 78, 0.34);
-  --home-search-text: rgba(244, 242, 243, 0.82);
-  --home-progress-track: rgba(244, 242, 243, 0.19);
-  --home-progress-fill: rgba(244, 242, 243, 0.9);
-  --home-dock-bg: rgba(68, 68, 74, 0.34);
-  --home-dock-border: rgba(255, 255, 255, 0.19);
-  --home-dot-bg: rgba(244, 242, 243, 0.27);
-  --home-dot-active-bg: rgba(244, 242, 243, 0.9);
-  --home-folder-tile-bg:
-    radial-gradient(circle at 28% 10%, rgba(255, 255, 255, 0.18), transparent 42%),
-    rgba(70, 70, 76, 0.32);
-  --home-folder-tile-border: rgba(255, 255, 255, 0.17);
-  --home-folder-overlay-bg:
-    radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.09), transparent 38%),
-    rgba(0, 0, 0, 0.46);
-  --home-folder-panel-bg:
-    linear-gradient(160deg, rgba(103, 103, 110, 0.3), rgba(44, 44, 49, 0.28)),
-    rgba(31, 31, 36, 0.44);
-  --home-folder-panel-border: rgba(255, 255, 255, 0.16);
-  --home-folder-entry-bg: rgba(255, 255, 255, 0.07);
-  --home-folder-entry-pressed-bg: rgba(255, 255, 255, 0.14);
-  --home-folder-text: #f4f2f3;
-  --home-folder-text-muted: rgba(244, 242, 243, 0.66);
-  --home-folder-close-bg: rgba(255, 255, 255, 0.12);
-  --home-folder-shadow: 0 34px 88px rgba(0, 4, 12, 0.46);
-}
 
 :root[data-system-theme='chromatic-glass'][data-color-mode='day'],
 .app-shell[data-system-theme='chromatic-glass'][data-color-mode='day'] {
@@ -682,20 +463,20 @@
     radial-gradient(circle at 16% 86%, rgba(186, 224, 207, 0.08), transparent 34%),
     radial-gradient(circle at 86% 84%, rgba(250, 211, 177, 0.06), transparent 34%),
     linear-gradient(150deg, #f3f4f4 0%, #e7e8e9 48%, #ededed 100%);
-  --system-surface: rgba(255, 255, 255, 0.46);
-  --system-surface-strong: rgba(255, 255, 255, 0.68);
-  --system-surface-muted: rgba(246, 248, 250, 0.48);
+  --system-surface: rgba(255, 255, 255, 0.38);
+  --system-surface-strong: rgba(255, 255, 255, 0.58);
+  --system-surface-muted: rgba(246, 248, 250, 0.4);
   --system-surface-dark: rgba(61, 69, 91, 0.28);
   --system-page-bg:
     radial-gradient(circle at 92% 8%, rgba(247, 188, 215, 0.12), transparent 30%),
     radial-gradient(circle at 6% 92%, rgba(178, 223, 205, 0.12), transparent 31%),
     linear-gradient(180deg, rgba(250, 251, 253, 0.78), rgba(231, 235, 241, 0.78));
-  --system-chrome-bg: rgba(255, 255, 255, 0.5);
-  --system-panel-bg: rgba(255, 255, 255, 0.54);
+  --system-chrome-bg: rgba(255, 255, 255, 0.4);
+  --system-panel-bg: rgba(255, 255, 255, 0.42);
   --system-panel-bg-solid: #f0f2f3;
-  --system-elevated-bg: rgba(255, 255, 255, 0.7);
-  --system-control-bg: rgba(255, 255, 255, 0.38);
-  --system-control-bg-strong: rgba(255, 255, 255, 0.62);
+  --system-elevated-bg: rgba(255, 255, 255, 0.58);
+  --system-control-bg: rgba(255, 255, 255, 0.28);
+  --system-control-bg-strong: rgba(255, 255, 255, 0.5);
   --system-border: rgba(83, 94, 118, 0.12);
   --system-border-light: rgba(255, 255, 255, 0.78);
   --system-card-border: rgba(255, 255, 255, 0.72);
@@ -797,20 +578,20 @@
     radial-gradient(circle at 18% 86%, rgba(91, 166, 144, 0.06), transparent 34%),
     radial-gradient(circle at 86% 84%, rgba(205, 137, 91, 0.05), transparent 34%),
     linear-gradient(150deg, #2a2c33 0%, #1d1e24 48%, #242329 100%);
-  --system-surface: rgba(38, 45, 63, 0.48);
-  --system-surface-strong: rgba(49, 57, 78, 0.66);
-  --system-surface-muted: rgba(28, 34, 49, 0.5);
+  --system-surface: rgba(34, 41, 58, 0.4);
+  --system-surface-strong: rgba(44, 52, 72, 0.54);
+  --system-surface-muted: rgba(25, 31, 45, 0.42);
   --system-surface-dark: rgba(8, 11, 18, 0.56);
   --system-page-bg:
     radial-gradient(circle at 92% 8%, rgba(199, 116, 158, 0.13), transparent 30%),
     radial-gradient(circle at 6% 92%, rgba(91, 166, 144, 0.1), transparent 31%),
     linear-gradient(180deg, rgba(36, 43, 61, 0.88), rgba(21, 25, 37, 0.94));
-  --system-chrome-bg: rgba(33, 40, 57, 0.5);
-  --system-panel-bg: rgba(42, 50, 69, 0.54);
+  --system-chrome-bg: rgba(29, 36, 52, 0.4);
+  --system-panel-bg: rgba(36, 44, 62, 0.42);
   --system-panel-bg-solid: #2a3042;
-  --system-elevated-bg: rgba(55, 64, 86, 0.68);
-  --system-control-bg: rgba(24, 30, 44, 0.44);
-  --system-control-bg-strong: rgba(44, 52, 72, 0.62);
+  --system-elevated-bg: rgba(49, 58, 79, 0.56);
+  --system-control-bg: rgba(22, 28, 41, 0.34);
+  --system-control-bg-strong: rgba(39, 47, 66, 0.52);
   --system-border: rgba(221, 225, 247, 0.14);
   --system-border-light: rgba(255, 255, 255, 0.2);
   --system-card-border: rgba(234, 237, 251, 0.18);
@@ -904,10 +685,15 @@
 
 .app-shell[data-system-theme='chromatic-glass'] .glass {
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04)),
+    radial-gradient(circle at 20% 0%, rgba(255, 255, 255, 0.72), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.035) 62%),
     var(--glass-bg);
   border-color: var(--glass-border);
-  box-shadow: var(--system-shadow-card);
+  box-shadow:
+    var(--system-shadow-card),
+    inset 0 -8px 16px color-mix(in srgb, var(--chromatic-blue) 8%, transparent);
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.14);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.14);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell {
@@ -918,9 +704,10 @@
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-header,
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell [class*='bg-white'] {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.18)),
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.76), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.06)),
     var(--system-panel-bg) !important;
-  border-color: var(--system-border) !important;
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.82) 74%, var(--system-border)) !important;
   color: var(--system-text);
   box-shadow: var(--system-shadow-card);
   backdrop-filter: blur(var(--system-blur-md)) saturate(1.08);
@@ -934,57 +721,69 @@
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-icon-theme-option,
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-icon-priority {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.1)),
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.72), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.035) 62%),
     var(--system-panel-bg);
-  border-color: color-mix(in srgb, var(--chromatic-edge-mix) 62%, var(--system-card-border));
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.86) 72%, var(--system-card-border));
   box-shadow:
-    var(--system-shadow-card),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
-  backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
-  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.1);
+    0 12px 26px rgba(75, 84, 105, 0.12),
+    0 4px 12px color-mix(in srgb, var(--chromatic-blue-strong) 12%, transparent),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
+    inset -1px -2px 6px rgba(82, 91, 112, 0.06),
+    inset 0 -7px 14px color-mix(in srgb, var(--chromatic-blue) 7%, transparent);
+  backdrop-filter: blur(var(--system-blur-md)) saturate(1.14);
+  -webkit-backdrop-filter: blur(var(--system-blur-md)) saturate(1.14);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-style-kit-option__action,
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-display-toggle.is-on,
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-icon-priority__switch.is-on {
-  color: var(--system-on-accent);
-  border: 1px solid color-mix(in srgb, var(--chromatic-blue-strong) 62%, white);
+  color: var(--system-text);
+  border: 1px solid color-mix(in srgb, var(--chromatic-blue-strong) 48%, white);
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--chromatic-blue) 70%, white), color-mix(in srgb, var(--chromatic-blue-strong) 48%, transparent)),
-    var(--chromatic-blue-soft);
+    radial-gradient(circle at 22% 0%, rgba(255, 255, 255, 0.9), transparent 35%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.34), color-mix(in srgb, var(--chromatic-blue) 34%, transparent)),
+    rgba(255, 255, 255, 0.14);
   box-shadow:
-    0 8px 18px color-mix(in srgb, var(--chromatic-blue-strong) 26%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    0 8px 18px color-mix(in srgb, var(--chromatic-blue-strong) 22%, transparent),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -6px 10px color-mix(in srgb, var(--chromatic-blue) 22%, transparent);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-style-kit-option:nth-of-type(2) .appearance-style-kit-option__action {
   border-color: color-mix(in srgb, var(--chromatic-mint-strong) 56%, white);
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--chromatic-mint) 66%, white), color-mix(in srgb, var(--chromatic-mint-strong) 42%, transparent)),
-    var(--chromatic-mint-soft);
+    radial-gradient(circle at 22% 0%, rgba(255, 255, 255, 0.9), transparent 35%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.34), color-mix(in srgb, var(--chromatic-mint) 34%, transparent)),
+    rgba(255, 255, 255, 0.14);
   box-shadow:
     0 8px 18px color-mix(in srgb, var(--chromatic-mint-strong) 24%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -6px 10px color-mix(in srgb, var(--chromatic-mint) 22%, transparent);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-style-kit-option:nth-of-type(3) .appearance-style-kit-option__action {
   border-color: color-mix(in srgb, var(--chromatic-peach-strong) 56%, white);
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--chromatic-peach) 68%, white), color-mix(in srgb, var(--chromatic-peach-strong) 42%, transparent)),
-    var(--chromatic-peach-soft);
+    radial-gradient(circle at 22% 0%, rgba(255, 255, 255, 0.9), transparent 35%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.34), color-mix(in srgb, var(--chromatic-peach) 34%, transparent)),
+    rgba(255, 255, 255, 0.14);
   box-shadow:
     0 8px 18px color-mix(in srgb, var(--chromatic-peach-strong) 24%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -6px 10px color-mix(in srgb, var(--chromatic-peach) 24%, transparent);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-style-kit-option:nth-of-type(4) .appearance-style-kit-option__action {
   border-color: color-mix(in srgb, var(--chromatic-pink-strong) 58%, white);
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--chromatic-pink) 66%, white), color-mix(in srgb, var(--chromatic-pink-strong) 44%, transparent)),
-    var(--chromatic-pink-soft);
+    radial-gradient(circle at 22% 0%, rgba(255, 255, 255, 0.9), transparent 35%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.34), color-mix(in srgb, var(--chromatic-pink) 34%, transparent)),
+    rgba(255, 255, 255, 0.14);
   box-shadow:
     0 8px 18px color-mix(in srgb, var(--chromatic-pink-strong) 24%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -6px 10px color-mix(in srgb, var(--chromatic-pink) 24%, transparent);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-style-kit-option.is-selected,
@@ -993,8 +792,9 @@
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-icon-priority[aria-checked='true'] {
   border-color: color-mix(in srgb, var(--chromatic-blue-strong) 58%, var(--system-card-border));
   background:
-    linear-gradient(135deg, var(--chromatic-blue-soft), transparent 64%),
-    rgba(255, 255, 255, 0.32);
+    radial-gradient(circle at 16% 0%, rgba(255, 255, 255, 0.78), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--chromatic-blue-soft) 55%, transparent), transparent 68%),
+    var(--system-panel-bg);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell .appearance-overview-card {
@@ -1014,66 +814,201 @@
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell button[class*='bg-blue-500'],
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell button[class*='bg-gray-900'],
 .app-shell[data-system-theme='chromatic-glass'] .appearance-shell button[class*='bg-slate-900'] {
-  color: var(--system-on-accent) !important;
+  color: var(--system-text) !important;
   border: 1px solid color-mix(in srgb, var(--chromatic-blue-strong) 62%, white) !important;
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--chromatic-blue) 66%, white), color-mix(in srgb, var(--chromatic-blue-strong) 46%, transparent)),
-    var(--chromatic-blue-soft) !important;
+    radial-gradient(circle at 22% 0%, rgba(255, 255, 255, 0.9), transparent 35%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.34), color-mix(in srgb, var(--chromatic-blue) 34%, transparent)),
+    rgba(255, 255, 255, 0.14) !important;
   box-shadow:
     0 8px 18px color-mix(in srgb, var(--chromatic-blue-strong) 24%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -6px 10px color-mix(in srgb, var(--chromatic-blue) 22%, transparent);
+}
+
+.app-shell[data-system-theme='chromatic-glass']
+  .appearance-shell
+  .appearance-style-kit-toggle
+  input[type='checkbox'] {
+  appearance: none;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 7px;
+  background:
+    radial-gradient(circle at 28% 12%, rgba(255, 255, 255, 0.92), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.05)),
+    var(--system-control-bg);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -4px 7px color-mix(in srgb, var(--chromatic-blue) 12%, transparent),
+    0 4px 9px rgba(72, 84, 112, 0.12);
+}
+
+.app-shell[data-system-theme='chromatic-glass']
+  .appearance-shell
+  .appearance-style-kit-toggle
+  input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 3px;
+  width: 5px;
+  height: 9px;
+  border: solid rgba(34, 42, 56, 0.88);
+  border-width: 0 2px 2px 0;
+  opacity: 0;
+  transform: rotate(45deg) scale(0.7);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.app-shell[data-system-theme='chromatic-glass']
+  .appearance-shell
+  .appearance-style-kit-toggle
+  input[type='checkbox']:checked {
+  border-color: color-mix(in srgb, var(--chromatic-blue-strong) 52%, white);
+  background:
+    radial-gradient(circle at 24% 8%, rgba(255, 255, 255, 0.92), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.28), var(--chromatic-blue-soft)),
+    rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -5px 8px color-mix(in srgb, var(--chromatic-blue) 26%, transparent),
+    0 5px 11px color-mix(in srgb, var(--chromatic-blue-strong) 22%, transparent);
+}
+
+.app-shell[data-system-theme='chromatic-glass']
+  .appearance-shell
+  .appearance-style-kit-toggle
+  input[type='checkbox']:checked::after {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
+}
+
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-header,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  [class*='bg-white'] {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.22), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015)),
+    var(--system-panel-bg) !important;
+  border-color: rgba(238, 241, 252, 0.2) !important;
+}
+
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-style-kit-option,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-system-theme-option,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-menu-card,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-display-card,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-icon-theme-option,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-icon-priority {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.01) 62%),
+    var(--system-panel-bg);
+  border-color: rgba(235, 239, 252, 0.22);
+  box-shadow:
+    0 13px 28px rgba(0, 0, 0, 0.24),
+    0 4px 14px color-mix(in srgb, var(--chromatic-blue-strong) 12%, transparent),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -7px 14px color-mix(in srgb, var(--chromatic-blue) 8%, transparent);
+}
+
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-style-kit-option__action,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-display-toggle.is-on,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-icon-priority__switch.is-on,
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  button[class*='bg-blue-500'],
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  button[class*='bg-gray-900'],
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  button[class*='bg-slate-900'] {
+  color: var(--system-on-accent) !important;
+}
+
+.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
+  .appearance-shell
+  .appearance-style-kit-toggle
+  input[type='checkbox']::after {
+  border-color: rgba(20, 27, 40, 0.88);
 }
 
 :root[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism,
 .app-shell[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism {
-  --liquid-edge-pink: rgba(244, 170, 211, 0.72);
-  --liquid-edge-apricot: rgba(255, 205, 157, 0.68);
-  --liquid-edge-blue: rgba(166, 199, 255, 0.76);
-  --liquid-edge-lilac: rgba(199, 186, 255, 0.7);
-  --liquid-fill: rgba(255, 255, 255, 0.11);
-  --liquid-shadow-tint: rgba(128, 143, 198, 0.24);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), var(--liquid-fill));
-  border-color: rgba(255, 255, 255, 0.72);
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
-    inset -1px -2px 4px rgba(72, 78, 106, 0.08),
-    0 8px 18px var(--liquid-shadow-tint);
+  --liquid-edge-primary: rgba(164, 202, 255, 0.82);
+  --liquid-edge-secondary: rgba(219, 183, 241, 0.66);
+  --liquid-edge-warm: rgba(255, 211, 169, 0.52);
+  --liquid-glass-tint: rgba(205, 222, 245, 0.075);
+  --liquid-shadow-tint: rgba(111, 133, 176, 0.2);
 }
 
 :root[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-warm,
 .app-shell[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-warm {
-  --liquid-fill: rgba(250, 186, 198, 0.17);
-  --liquid-shadow-tint: rgba(236, 160, 190, 0.28);
+  --liquid-edge-primary: rgba(247, 166, 205, 0.82);
+  --liquid-edge-secondary: rgba(255, 204, 157, 0.72);
+  --liquid-edge-warm: rgba(255, 228, 191, 0.56);
+  --liquid-glass-tint: rgba(255, 210, 223, 0.095);
+  --liquid-shadow-tint: rgba(224, 139, 174, 0.22);
 }
 
 :root[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-light,
 .app-shell[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-light {
-  --liquid-fill: rgba(177, 210, 255, 0.16);
-  --liquid-shadow-tint: rgba(147, 183, 237, 0.27);
+  --liquid-edge-primary: rgba(145, 206, 244, 0.84);
+  --liquid-edge-secondary: rgba(170, 226, 209, 0.7);
+  --liquid-edge-warm: rgba(218, 240, 230, 0.52);
+  --liquid-glass-tint: rgba(194, 229, 240, 0.095);
+  --liquid-shadow-tint: rgba(98, 164, 195, 0.2);
 }
 
 :root[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-default,
 .app-shell[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-default {
-  --liquid-fill: rgba(186, 213, 255, 0.13);
-  --liquid-shadow-tint: rgba(134, 155, 225, 0.23);
+  --liquid-edge-primary: rgba(160, 201, 255, 0.84);
+  --liquid-edge-secondary: rgba(201, 191, 245, 0.66);
+  --liquid-glass-tint: rgba(197, 219, 246, 0.085);
+  --liquid-shadow-tint: rgba(105, 130, 180, 0.2);
 }
 
 :root[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-dark,
 .app-shell[data-system-theme='chromatic-glass'] .app-icon-visual.material-liquid-prism.accent-dark {
-  --liquid-fill: rgba(191, 178, 226, 0.14);
-  --liquid-shadow-tint: rgba(145, 121, 178, 0.24);
+  --liquid-edge-primary: rgba(188, 176, 242, 0.82);
+  --liquid-edge-secondary: rgba(234, 177, 219, 0.68);
+  --liquid-edge-warm: rgba(246, 204, 218, 0.48);
+  --liquid-glass-tint: rgba(216, 203, 240, 0.09);
+  --liquid-shadow-tint: rgba(126, 103, 164, 0.21);
 }
 
 :root[data-system-theme='chromatic-glass'][data-color-mode='night']
   .app-icon-visual.material-liquid-prism,
 .app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
   .app-icon-visual.material-liquid-prism {
-  --liquid-fill: rgba(255, 255, 255, 0.035);
-  border-color: rgba(255, 255, 255, 0.36);
-  box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.5),
-    inset -1px -2px 5px rgba(0, 0, 0, 0.18),
-    0 8px 18px var(--liquid-shadow-tint);
+  --liquid-glass-tint: rgba(255, 255, 255, 0.025);
+  --liquid-shadow-tint: rgba(0, 0, 0, 0.3);
 }
 
 /*
@@ -1084,91 +1019,89 @@
  */
 .app-shell[data-system-theme='chromatic-glass'] .home-dock {
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.12)),
+    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.72), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.035) 64%),
     var(--home-dock-bg);
-  border-color: rgba(255, 255, 255, 0.82);
+  border-color: rgba(255, 255, 255, 0.76);
   box-shadow:
-    0 18px 44px rgba(83, 96, 122, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    inset 0 -7px 16px rgba(93, 105, 132, 0.06);
+    0 18px 42px rgba(75, 84, 105, 0.15),
+    0 5px 16px rgba(160, 185, 223, 0.1),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -9px 18px rgba(168, 194, 230, 0.08);
+  backdrop-filter: blur(20px) saturate(1.12);
+  -webkit-backdrop-filter: blur(20px) saturate(1.12);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon {
-  --dock-glass-fill: rgba(186, 213, 255, 0.17);
-  --dock-glass-shadow: rgba(134, 155, 225, 0.24);
-  --dock-glass-ink: rgba(43, 55, 73, 0.88);
-  --dock-edge-blue: rgba(166, 199, 255, 0.78);
-  --dock-edge-pink: rgba(244, 170, 211, 0.56);
-  --dock-edge-mint: rgba(194, 226, 212, 0.5);
-  --dock-edge-peach: rgba(255, 205, 157, 0.48);
+  --dock-glass-fill: rgba(205, 222, 245, 0.07);
+  --dock-glass-shadow: rgba(105, 132, 178, 0.19);
+  --dock-glass-ink: rgba(28, 34, 45, 0.9);
+  --dock-edge-blue: rgba(157, 204, 247, 0.84);
+  --dock-edge-pink: rgba(235, 178, 216, 0.68);
+  --dock-edge-mint: rgba(170, 224, 207, 0.62);
+  --dock-edge-peach: rgba(255, 207, 165, 0.58);
   background: transparent !important;
   color: inherit !important;
   box-shadow: none;
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon--chat {
-  --dock-glass-fill: rgba(117, 181, 220, 0.3);
-  --dock-glass-shadow: rgba(78, 137, 180, 0.3);
-  --dock-glass-ink: rgba(29, 68, 95, 0.94);
-  --dock-edge-blue: rgba(139, 205, 247, 0.82);
-  --dock-edge-pink: rgba(244, 194, 225, 0.54);
+  --dock-glass-fill: rgba(181, 224, 244, 0.1);
+  --dock-glass-shadow: rgba(91, 159, 194, 0.2);
+  --dock-edge-blue: rgba(124, 200, 240, 0.86);
+  --dock-edge-pink: rgba(213, 191, 236, 0.58);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon--contacts {
-  --dock-glass-fill: rgba(220, 220, 244, 0.24);
-  --dock-glass-shadow: rgba(148, 159, 204, 0.22);
-  --dock-glass-ink: rgba(52, 63, 82, 0.86);
-  --dock-edge-blue: rgba(177, 210, 255, 0.72);
-  --dock-edge-pink: rgba(226, 202, 241, 0.56);
+  --dock-glass-fill: rgba(218, 210, 244, 0.08);
+  --dock-glass-shadow: rgba(135, 120, 180, 0.18);
+  --dock-edge-blue: rgba(184, 193, 247, 0.72);
+  --dock-edge-pink: rgba(229, 176, 219, 0.72);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon--settings {
-  --dock-glass-fill: rgba(73, 79, 101, 0.32);
-  --dock-glass-shadow: rgba(93, 74, 128, 0.3);
-  --dock-glass-ink: rgba(248, 248, 252, 0.95);
-  --dock-edge-blue: rgba(171, 188, 245, 0.68);
-  --dock-edge-pink: rgba(213, 183, 230, 0.54);
-  --dock-edge-mint: rgba(164, 212, 201, 0.4);
+  --dock-glass-fill: rgba(217, 205, 240, 0.09);
+  --dock-glass-shadow: rgba(125, 103, 164, 0.2);
+  --dock-glass-ink: rgba(30, 31, 42, 0.92);
+  --dock-edge-blue: rgba(184, 181, 243, 0.76);
+  --dock-edge-pink: rgba(234, 174, 214, 0.72);
+  --dock-edge-mint: rgba(180, 220, 209, 0.5);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon--widgets {
-  --dock-glass-fill: rgba(210, 223, 235, 0.26);
-  --dock-glass-shadow: rgba(130, 157, 192, 0.22);
-  --dock-glass-ink: rgba(58, 70, 92, 0.88);
-  --dock-edge-blue: rgba(177, 210, 255, 0.72);
-  --dock-edge-mint: rgba(194, 226, 212, 0.54);
+  --dock-glass-fill: rgba(197, 231, 220, 0.09);
+  --dock-glass-shadow: rgba(92, 157, 137, 0.18);
+  --dock-edge-blue: rgba(164, 207, 245, 0.68);
+  --dock-edge-mint: rgba(153, 222, 200, 0.78);
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon-visual:not(.has-image) {
   isolation: isolate;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.035)),
+    radial-gradient(circle at 28% 12%, rgba(255, 255, 255, 0.9), transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.035) 60%),
     var(--dock-glass-fill) !important;
-  border: 1px solid rgba(255, 255, 255, 0.76) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
   box-shadow:
-    inset 1px 1px 0 rgba(255, 255, 255, 0.92),
-    inset -1px -2px 5px rgba(72, 78, 106, 0.09),
-    0 8px 18px var(--dock-glass-shadow) !important;
-  backdrop-filter: blur(4px) saturate(1.16);
-  -webkit-backdrop-filter: blur(4px) saturate(1.16);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.96),
+    inset -1px -2px 5px rgba(72, 78, 106, 0.07),
+    inset 0 -7px 12px color-mix(in srgb, var(--dock-edge-blue) 14%, transparent),
+    0 9px 18px var(--dock-glass-shadow) !important;
+  backdrop-filter: blur(7px) saturate(1.16);
+  -webkit-backdrop-filter: blur(7px) saturate(1.16);
   color: var(--dock-glass-ink) !important;
 }
 
 .app-shell[data-system-theme='chromatic-glass']
   .home-dock-icon--settings
   .home-dock-icon-visual:not(.has-image) {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(53, 59, 79, 0.72)),
-    rgba(73, 79, 101, 0.48) !important;
+  color: var(--dock-glass-ink) !important;
 }
 
 .app-shell[data-system-theme='chromatic-glass']
   .home-dock-icon--chat
   .home-dock-icon-visual:not(.has-image) {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(45, 92, 120, 0.72)),
-    rgba(86, 157, 196, 0.58) !important;
-  color: rgba(255, 255, 255, 0.96) !important;
+  color: var(--dock-glass-ink) !important;
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon-visual:not(.has-image)::before,
@@ -1180,36 +1113,35 @@
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon-visual:not(.has-image)::before {
-  inset: 5% 12% auto;
+  inset: 4% 11% auto;
   z-index: 1;
-  height: 24%;
+  height: 28%;
   border-radius: 999px 999px 46% 46%;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.08));
   filter: blur(0.45px);
-  opacity: 0.72;
+  opacity: 0.84;
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon-visual:not(.has-image)::after {
-  inset: 1px;
+  inset: 0;
   z-index: 1;
-  padding: 1.5px;
+  padding: 2px;
   background: conic-gradient(
-    from 218deg,
-    rgba(255, 255, 255, 0.8),
-    var(--dock-edge-blue) 17%,
-    rgba(255, 255, 255, 0.34) 31%,
-    var(--dock-edge-pink) 47%,
-    var(--dock-edge-peach) 62%,
-    var(--dock-edge-mint) 77%,
-    rgba(255, 255, 255, 0.72) 90%,
-    rgba(255, 255, 255, 0.8)
+    from 204deg,
+    rgba(255, 255, 255, 0.92),
+    var(--dock-edge-blue) 19%,
+    rgba(255, 255, 255, 0.46) 37%,
+    var(--dock-edge-pink) 55%,
+    var(--dock-edge-peach) 70%,
+    var(--dock-edge-mint) 84%,
+    rgba(255, 255, 255, 0.92)
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  opacity: 0.78;
+  opacity: 0.9;
 }
 
 .app-shell[data-system-theme='chromatic-glass'] .home-dock-icon-visual:not(.has-image) > i,
@@ -1217,12 +1149,12 @@
   .home-dock-icon-visual:not(.has-image) > .liquid-prism-glyph {
   position: relative;
   z-index: 2;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.72));
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.48));
 }
 
 .app-shell[data-system-theme='chromatic-glass'][data-color-mode='night'] .home-dock-icon {
-  --dock-glass-fill: rgba(151, 175, 224, 0.14);
-  --dock-glass-shadow: rgba(80, 108, 164, 0.28);
+  --dock-glass-fill: rgba(167, 188, 228, 0.07);
+  --dock-glass-shadow: rgba(0, 0, 0, 0.28);
   --dock-glass-ink: rgba(235, 240, 250, 0.92);
   --dock-edge-blue: rgba(158, 184, 245, 0.68);
   --dock-edge-pink: rgba(220, 168, 198, 0.48);
@@ -1231,41 +1163,24 @@
 }
 
 .app-shell[data-system-theme='chromatic-glass'][data-color-mode='night'] .home-dock-icon--chat {
-  --dock-glass-fill: rgba(92, 139, 183, 0.28);
-  --dock-glass-shadow: rgba(61, 105, 152, 0.34);
+  --dock-glass-fill: rgba(116, 177, 217, 0.1);
+  --dock-glass-shadow: rgba(28, 73, 108, 0.3);
   --dock-glass-ink: rgba(244, 249, 255, 0.96);
 }
 
 .app-shell[data-system-theme='chromatic-glass'][data-color-mode='night'] .home-dock-icon--contacts {
-  --dock-glass-fill: rgba(188, 199, 225, 0.14);
-  --dock-glass-shadow: rgba(108, 126, 174, 0.24);
+  --dock-glass-fill: rgba(195, 192, 229, 0.07);
+  --dock-glass-shadow: rgba(68, 62, 104, 0.28);
 }
 
 .app-shell[data-system-theme='chromatic-glass'][data-color-mode='night'] .home-dock-icon--settings {
-  --dock-glass-fill: rgba(54, 61, 80, 0.4);
-  --dock-glass-shadow: rgba(78, 63, 108, 0.34);
-}
-
-.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
-  .home-dock-icon--settings
-  .home-dock-icon-visual:not(.has-image) {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(26, 31, 44, 0.74)),
-    rgba(54, 61, 80, 0.54) !important;
-}
-
-.app-shell[data-system-theme='chromatic-glass'][data-color-mode='night']
-  .home-dock-icon--chat
-  .home-dock-icon-visual:not(.has-image) {
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(35, 72, 103, 0.74)),
-    rgba(58, 108, 152, 0.52) !important;
-  color: rgba(248, 252, 255, 0.98) !important;
+  --dock-glass-fill: rgba(191, 172, 220, 0.075);
+  --dock-glass-shadow: rgba(62, 48, 88, 0.3);
 }
 
 .app-shell[data-system-theme='chromatic-glass'][data-color-mode='night'] .home-dock-icon--widgets {
-  --dock-glass-fill: rgba(166, 185, 215, 0.15);
-  --dock-glass-shadow: rgba(87, 114, 159, 0.24);
+  --dock-glass-fill: rgba(157, 205, 186, 0.07);
+  --dock-glass-shadow: rgba(43, 84, 71, 0.28);
 }
 
 body {

@@ -128,7 +128,7 @@ describe('system widget import safety', () => {
     })
     expect(store.settings.appearance.customWidgets).toHaveLength(5)
 
-    store.applyAppearanceStyleKit('liquid-prism')
+    store.applyAppearanceStyleKit('chromatic-glass')
     store.applyAppearanceStyleKit('system-classic')
     expect(store.settings.appearance.customWidgets).toHaveLength(5)
     expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)

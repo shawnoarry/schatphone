@@ -648,7 +648,7 @@ describe('Widgets custom template starters', () => {
     ])
     expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain('Theme Board')
     expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain(
-      'Liquid Agenda',
+      'Chromatic Agenda',
     )
 
     OFFICIAL_WIDGET_STYLE_PRESETS.forEach((preset) => {

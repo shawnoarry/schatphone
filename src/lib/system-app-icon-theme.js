@@ -36,12 +36,12 @@ export const SYSTEM_APP_ICON_THEME_OPTIONS = Object.freeze([
       'Uses animal icons for 12 frequently used system apps; other system apps keep their classic icons for now.',
   },
   {
-    id: 'liquid-prism',
-    labelZh: '水光玻璃',
-    labelEn: 'Liquid Prism',
-    descriptionZh: '首批 8 个系统 App 使用简约线形图标，全部系统图标共享近乎透明的水光玻璃壳。',
+    id: 'chromatic-glass',
+    labelZh: '彩光玻璃',
+    labelEn: 'Chromatic Glass',
+    descriptionZh: '首批 8 个系统 App 使用简约线形图标，全部系统图标共享透明彩光玻璃壳。',
     descriptionEn:
-      'Starts with eight minimal line glyphs while every system icon shares a nearly transparent liquid-glass shell.',
+      'Starts with eight minimal line glyphs while every system icon shares a transparent chromatic-glass shell.',
   },
 ])
 
@@ -70,6 +70,9 @@ export const SYSTEM_APP_ICON_THEME_TARGET_IDS = Object.freeze([
 
 const THEME_IDS = new Set(SYSTEM_APP_ICON_THEME_OPTIONS.map((theme) => theme.id))
 const TARGET_IDS = new Set(SYSTEM_APP_ICON_THEME_TARGET_IDS)
+const LEGACY_THEME_IDS = Object.freeze({
+  'liquid-prism': 'chromatic-glass',
+})
 
 const SOFT_ROUNDED_APP_ICONS = Object.freeze({
   app_network: { icon: 'fas fa-globe', accent: 'cool' },
@@ -177,7 +180,7 @@ const SYSTEM_APP_ICON_PACKS = Object.freeze({
   classic: Object.freeze({}),
   'soft-rounded': SOFT_ROUNDED_APP_ICONS,
   'cloud-pastel-animals': CLOUD_PASTEL_ANIMAL_APP_ICONS,
-  'liquid-prism': LIQUID_PRISM_APP_ICONS,
+  'chromatic-glass': LIQUID_PRISM_APP_ICONS,
 })
 
 export const normalizeSystemAppIconThemeId = (
@@ -185,7 +188,8 @@ export const normalizeSystemAppIconThemeId = (
   fallback = DEFAULT_SYSTEM_APP_ICON_THEME_ID,
 ) => {
   const normalized = typeof value === 'string' ? value.trim() : ''
-  return THEME_IDS.has(normalized) ? normalized : fallback
+  const migrated = LEGACY_THEME_IDS[normalized] || normalized
+  return THEME_IDS.has(migrated) ? migrated : fallback
 }
 
 export const isSystemAppIconThemeTarget = (appId) => TARGET_IDS.has(appId)

@@ -34,7 +34,8 @@ describe('system app icon themes', () => {
     expect(normalizeSystemAppIconThemeId('cloud-pastel-animals')).toBe(
       'cloud-pastel-animals',
     )
-    expect(normalizeSystemAppIconThemeId('liquid-prism')).toBe('liquid-prism')
+    expect(normalizeSystemAppIconThemeId('chromatic-glass')).toBe('chromatic-glass')
+    expect(normalizeSystemAppIconThemeId('liquid-prism')).toBe('chromatic-glass')
     expect(normalizeSystemAppIconThemeId('unknown')).toBe('classic')
     expect(isSystemAppIconThemeTarget('app_chat')).toBe(false)
     expect(isSystemAppIconThemeTarget('app_shopping')).toBe(false)
@@ -138,13 +139,13 @@ describe('system app icon themes', () => {
       'app_network',
       overrides,
       'en-US',
-      'liquid-prism',
+      'chromatic-glass',
     )
     const preferredPack = resolveAppIconMeta(
       'app_network',
       overrides,
       'en-US',
-      'liquid-prism',
+      'chromatic-glass',
       { preferThemeIcon: true },
     )
 
@@ -160,23 +161,23 @@ describe('system app icon themes', () => {
       'app_chat',
       { app_chat: { icon: 'fas fa-paper-plane', accent: 'dark' } },
       'en-US',
-      'liquid-prism',
+      'chromatic-glass',
       { preferThemeIcon: true },
     )
     expect(independent.icon).toBe('fas fa-paper-plane')
     expect(independent.isThemeVisualPreferred).toBe(false)
   })
 
-  test('applies Liquid Prism material only to system targets and below per-app overrides', () => {
-    const liquid = resolveAppIconMeta('app_network', {}, 'zh-CN', 'liquid-prism')
+  test('applies Chromatic Glass material only to system targets and below per-app overrides', () => {
+    const liquid = resolveAppIconMeta('app_network', {}, 'zh-CN', 'chromatic-glass')
     expect(liquid.material).toBe('liquid-prism')
     expect(liquid.materialClass).toBe('material-liquid-prism')
     expect(liquid.liquidGlyph?.paths.length).toBeGreaterThan(0)
 
-    const providedGlyph = resolveAppIconMeta('app_contacts', {}, 'zh-CN', 'liquid-prism')
+    const providedGlyph = resolveAppIconMeta('app_contacts', {}, 'zh-CN', 'chromatic-glass')
     expect(providedGlyph.liquidGlyph?.paths.length).toBeGreaterThan(0)
 
-    const independent = resolveAppIconMeta('app_chat', {}, 'zh-CN', 'liquid-prism')
+    const independent = resolveAppIconMeta('app_chat', {}, 'zh-CN', 'chromatic-glass')
     expect(independent.material).toBe('')
     expect(independent.materialClass).toBe('')
 
@@ -184,7 +185,7 @@ describe('system app icon themes', () => {
       'app_contacts',
       { app_contacts: { icon: 'fas fa-paper-plane', accent: 'dark' } },
       'zh-CN',
-      'liquid-prism',
+      'chromatic-glass',
     )
     expect(customized.icon).toBe('fas fa-paper-plane')
     expect(customized.material).toBe('')
@@ -192,7 +193,7 @@ describe('system app icon themes', () => {
     expect(customized.liquidGlyph).toBeNull()
   })
 
-  test('previews the first Liquid Prism line-glyph batch in Appearance', async () => {
+  test('previews the first Chromatic Glass line-glyph batch in Appearance', async () => {
     const router = createTestRouter()
     await router.push('/appearance')
     await router.isReady()
@@ -202,7 +203,7 @@ describe('system app icon themes', () => {
     })
 
     await wrapper.get('[data-testid="appearance-system-icons-entry"]').trigger('click')
-    const option = wrapper.get('[data-testid="appearance-system-app-icon-theme-liquid-prism"]')
+    const option = wrapper.get('[data-testid="appearance-system-app-icon-theme-chromatic-glass"]')
     expect(option.findAll('svg')).toHaveLength(4)
     expect(option.text()).toContain('首批 8 个系统 App')
     wrapper.unmount()
