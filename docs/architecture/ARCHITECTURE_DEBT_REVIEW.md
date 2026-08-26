@@ -1,6 +1,8 @@
 # Architecture Debt Review
 
-Updated: 2026-08-20
+Updated: 2026-08-26
+
+Measurement baseline: integrated `f06a575`; current dirty-worktree changes are excluded.
 
 > Scope and authority note
 >
@@ -8,7 +10,7 @@ Updated: 2026-08-20
 > Concrete execution order still belongs only in `docs/roadmap/TODO_ROADMAP.md`.
 > Any item in this document must first be promoted into a task package and the live roadmap before implementation.
 >
-> The recommendations here are decision inputs, not a shadow task board. They support the current `4.5 Architecture Cleanup` lane and the project's ownership-closure goal.
+> The recommendations here are decision inputs, not a shadow task board. Current execution remains `CMG-08` and its dependent closure work; hotspot/typing directions are on hold until the product-preview gate unless explicitly promoted.
 
 ## 1. How To Read This Document
 
@@ -16,7 +18,7 @@ Updated: 2026-08-20
   - `[Structural]`: large ownership or maintainability risk.
   - `[Technical Debt]`: real debt, but safer to address after the structural cuts.
   - `[Preserve]`: healthy patterns that future work should keep.
-- Measurements were re-run on 2026-08-09 against the current worktree after the Camera/image-generation, Music, expanded Food Delivery, OpenFreeMap, Seoul catalog, and current product slices.
+- Measurements were re-run on 2026-08-26 against integrated baseline `f06a575` after the App Shell, commerce checkout/support, Map media, Calendar handoff, Event maintenance, and Appearance foundation slices.
 - Measurement hygiene: line counts are evidence, not the problem by themselves. Treat a large file as a governance issue only when size appears together with mixed responsibilities, cross-owner knowledge, weak test locality, or repeated feature pile-up.
 - The two strongest signals are still:
   - large view files;
@@ -27,8 +29,8 @@ Updated: 2026-08-20
 
 The `lib/` layer and the module-ownership philosophy are the project's strongest assets. The largest structural risks are still both "God object" patterns:
 
-1. God View Modules: the top 8 view files now average about 5327 lines each, with `FoodDeliveryView.vue` at 12195 lines after the independent shop facades and current commerce slices landed.
-2. God Store Module: `src/stores/system.js` is now 4808 lines and is directly imported by 25 of 41 view files.
+1. God View Modules: `FoodDeliveryView.vue` is 12716 lines, while Contacts, Chat, and Home each exceed 5000 lines at the integrated baseline.
+2. God Store Module: `src/stores/system.js` is 5361 lines and direct `useSystemStore` use appears in 42 of 58 route views.
 
 Both risks directly work against the ownership-closure goal. The ongoing `4.5 Architecture Cleanup` lane is the right home for this work, and the current snapshot still shows debt concentrated in the same hot view files and the same store module.
 
@@ -36,15 +38,15 @@ Additional debt remains real:
 
 - store-to-store coupling still crosses domain lines;
 - the relationship-fact adapter seam exists, but some stores still have to pass concrete store instances into it;
-- Relationship Runtime, Event Instance V2, and Mini Scene silently truncate committed records at 500, 240, and 120 rows respectively, contradicting the accepted durable-history rule;
-- Chat can supply competing current relationship text, while explicit user disclosures are grouped too broadly under one memory key;
-- Relationship Runtime, Event Runtime, Mini Scene, and related owner flows can report a successful action without tying that message to the persistence result already available from the storage layer;
+- Relationship Runtime's 500/300 and Event Instance V2's 240-row global retention defects are fixed by `CMG-06` and `CMG-07`; Mini Scene still has the historical 120-artifact behavior covered by `CMG-08`;
+- Chat's competing relationship answer and broad disclosure grouping are fixed by `CMG-03` and `CMG-04`;
+- the named Relationship, Event, Mini Scene, and Food Delivery actions now bind reported success to confirmed persistence through `CMG-02`;
 - Mini Scene request identity does not yet prevent another provider call for the same committed request;
 - `src` has zero TypeScript files even though the project relies heavily on structured payloads and module contracts.
-- backup export currently includes `settings.api.key` through the full settings snapshot;
+- complete migration backup intentionally includes configured settings and credentials under the accepted recovery contract and requires a sensitive-file warning; this is not an unreviewed P0 defect. A redacted/shareable export and encrypted personal remote backup remain separate future contracts;
 - production and full dependency audits are clean after an isolated normal-resolver compatible transitive refresh, without direct, override/resolution, or major changes;
 - PR and main Pages workflow definitions include full E2E plus separate production/full audits; remote Pages Run #130 and the deployed `/schatphone/` base-path smoke are proven, while external protection remains unverified.
-- the Vercel root app and fail-closed fixed-upstream optional AI proxy are deployed and Git-connected; the current local tree prepares a direct-default, explicitly selected, restricted per-request OpenAI-compatible relay for Vercel, Cloudflare, and GitHub Pages without operator-per-provider configuration. It is not yet pushed or deployed. GitHub Pages direct-provider model/connection/real-Chat/reload proof passes, while installed-PWA/relaunch and named true-device proof remain open.
+- the Vercel and Cloudflare restricted compatibility relays are deployed and Git-connected while Direct remains the default; GitHub Pages direct/restricted-provider model and Chat smokes are recorded, while installed-PWA/relaunch and named true-device proof remain open.
 
 This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and the current test setup are still appropriate. The urgent work is ownership closure, not framework replacement.
 
@@ -54,18 +56,16 @@ This does not mean the stack needs an immediate migration. Vue, Vite, Pinia, and
 
 | File | Lines |
 | --- | ---: |
-| `src/views/FoodDeliveryView.vue` | 12195 |
-| `src/views/ContactsView.vue` | 5233 |
-| `src/views/ChatView.vue` | 4960 |
-| `src/views/HomeView.vue` | 4456 |
-| `src/views/WorldBookView.vue` | 4104 |
-| `src/views/WidgetsView.vue` | 4050 |
-| `src/views/ChatDirectoryView.vue` | 3916 |
-| `src/views/AppStoreView.vue` | 3699 |
+| `src/views/FoodDeliveryView.vue` | 12716 |
+| `src/views/ContactsView.vue` | 6096 |
+| `src/views/ChatView.vue` | 5175 |
+| `src/views/HomeView.vue` | 5175 |
+| `src/views/WorldBookView.vue` | 4410 |
+| `src/views/ChatDirectoryView.vue` | 3915 |
 
-The top 8 view files average about 5327 lines. This is a decomposition signal because the large files also carry multiple product responsibilities and cross-module coordination. The Food Delivery facades intentionally share one runtime owner, but their route-view concentration is now the clearest measured hotspot. `MusicView.vue` is 2783 lines and should be monitored, but its current first slice remains below this top-eight hotspot set and has focused contract/store/view coverage.
+These line counts remain decomposition signals because the same files also carry multiple product responsibilities and cross-module coordination. They do not authorize immediate refactoring: the live roadmap keeps hotspot decomposition on hold until after the first usable product preview unless the user promotes one exact seam.
 
-The `src/composables/` directory now contains 37 files. The list below records the established architecture seams and is not an exhaustive inventory:
+The integrated `src/composables/` directory now contains 49 top-level JavaScript files. The list below records established architecture seams and is not an exhaustive inventory:
 
 - `useDialog.js`
 - `useI18n.js`
@@ -108,9 +108,9 @@ That means view-level state, computed values, and side effects are still often w
 
 ### 3.2 God Store Module: `system.js`
 
-`src/stores/system.js` is 4808 lines.
+`src/stores/system.js` is 5361 lines.
 
-It is directly imported by 25 of 41 view files. The remaining 16 view files have no direct `useSystemStore` import.
+Direct `useSystemStore` use appears in 42 of 58 route views. This is a fan-out signal, not permission for a wholesale store rewrite.
 
 What `systemStore` currently owns or coordinates:
 
@@ -197,7 +197,7 @@ TypeScript is present in devDependencies, but current application source is stil
 
 ### 3.6 Security, Quality, And Release Evidence
 
-Verified on 2026-07-22:
+Current accepted evidence through 2026-08-26:
 
 - `npm.cmd audit --omit=dev`: 0 production vulnerabilities;
 - full `npm.cmd audit`: 0 vulnerabilities;
@@ -206,11 +206,11 @@ Verified on 2026-07-22:
 - Settings backup serializes `settings` directly, including the configured AI API key;
 - the push relay has permissive CORS, JSON-file secrets/subscriptions/schedules, and no authentication;
 - PR CI and main Pages build definitions run lint, unit, build, separate production/full audits, and one full Playwright collection that includes the focused visual suite;
-- repository artwork externalization now has local batch/registry/archive tooling plus offline commit and CI gates; production endpoint activation, runtime URL cutover, archive removal, and three-host proof remain pending the 771-object verification gate;
+- repository artwork externalization, runtime URL construction, publication tooling, archive fallback, and three-host proof are complete at their named scoped baseline;
 - GitHub Pages deploy requires the verified build job and still does not deploy the push relay;
 - the repository has no coverage threshold.
 
-These findings do not establish production readiness. Production and full dependency audits are clean after the accepted lock refresh, while exported/local secrets, the unauthenticated push relay, public-relay origin spoofing, instance-local rate limiting, residual DNS-rebinding risk, external CI/environment protection, installed-PWA/deployed-network proof, and named physical-device evidence still require explicit hardening or verification. One direct configured-provider Chat path is proven on deployed GitHub Pages; the new restricted compatibility relay remains local until an authorized push.
+These findings do not establish production readiness. Production and full dependency audits are clean at the latest accepted checkpoint, while sensitive local exports, the unauthenticated development push relay, public-relay origin spoofing, instance-local rate limiting, residual DNS-rebinding risk, external CI/environment protection, installed-PWA/relaunch proof, and named physical-device evidence still require explicit hardening or verification.
 
 ## 4. Findings
 
@@ -301,11 +301,11 @@ Why it matters:
 5. Vitest and Playwright coverage are already present.
 6. Local-first persistence with a lightweight relay remains the right platform direction.
 
-## 5. Recommended Directions
+## 5. Deferred Architecture Directions
 
-These are directions, not tasks. Promote one concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the module-architecture package handoff before implementation.
+These are directions, not tasks. They do not displace `CMG-08`, `CMG-09`, `CMG-10`, or product-preview proof. Promote one concrete slice into `docs/roadmap/TODO_ROADMAP.md` and the module-architecture package handoff before implementation.
 
-### 5.0 Priority 0: Finish Persistence Architecture After The Backup Contract
+### 5.0 Preserve The Persistence And Recovery Contract
 
 Before another broad feature family:
 
@@ -323,7 +323,7 @@ Before another broad feature family:
 
 Do not mix these changes with product behavior or a large view refactor.
 
-### 5.1 Priority 1: Put A Stable Interface Around `systemStore`
+### 5.1 Later: Put A Stable Interface Around `systemStore`
 
 Do not start by ripping the store apart. Start by creating stable facades or adapters for the heaviest ownership areas while preserving the existing storage key and backup shape.
 
@@ -341,7 +341,7 @@ Goal:
 - later extraction can happen behind the facade;
 - persistence remains backward compatible.
 
-### 5.2 Priority 2: Build Composables For The Largest Views
+### 5.2 Later: Build Composables For The Largest Views
 
 Target the largest view files first:
 
@@ -350,7 +350,7 @@ Target the largest view files first:
 3. `WorldBookView.vue`
 4. `HomeView.vue`
 
-`SettingsView.vue` remains much smaller than the top hotspots after the backup workflow, storage diagnostics workflow, and push workflow extractions. `ChatView.vue` is now about 4312 lines after the active-thread, AI request-state, AI prompt/context preparation, AI image-reference preparation, assistant response parsing/normalization, assistant result post-processing, automation-status, home-list, service-thread display, service-feedback, message-edit, action-sheet, `+` panel, thread-menu, and pending-quote extractions. `ContactsView.vue` is now about 4754 lines after the home-list, memory-list, memory-detail, linked-activity, Role Hub, world-field/template-adaptation display, danger-zone display, detail-section display, profile-header display, and profile-template editor display read-model extractions. `WorldBookView.vue` is now about 4130 lines after the Book source-link/picker/diff display, encyclopedia filtering/readiness/deep-link display, and profile-template display/read-model extractions. These remain high-risk product-critical views, but the next architecture-governance slice should usually continue an unrepeated Contacts / WorldBook / Home view seam or target a narrow `systemStore` facade rather than returning to Settings by inertia.
+The named extractions remain useful evidence, but the current integrated line counts are recorded in section 3.1. Choose a future seam by current product blockage and test locality rather than an older approximate size.
 
 For each view, prefer extracting state, computed values, and side effects into focused composables under `src/composables/<domain>/`.
 
@@ -368,7 +368,7 @@ Avoid:
 - moving code without a test seam;
 - broad renames that make user work hard to merge.
 
-### 5.3 Priority 3: Deepen Cross-Store Adapter Interfaces
+### 5.3 Later: Deepen Cross-Store Adapter Interfaces
 
 Start with the Calendar relationship-fact path.
 
@@ -385,7 +385,7 @@ Better direction:
 
 This should be done one path at a time with regression tests.
 
-### 5.4 Priority 4: Add Types Incrementally
+### 5.4 Later: Add Types Incrementally
 
 Do not migrate the app wholesale.
 
@@ -404,8 +404,8 @@ Goal:
 
 - This review supports `4.5 Architecture, Security, And Documentation Maintenance`.
 - It does not change roadmap order by itself.
-- It argues that future `4.6 World Pack` broadening should be paired with cleanup around world-context ownership and `systemStore`, otherwise new World Pack complexity will continue to land in the same hot modules.
-- The strongest near-term code-level contributions to ownership closure are:
+- It supports later cleanup around world-context ownership and `systemStore`, but the live roadmap currently holds hotspot and typing work until after product-preview proof.
+- Future code-level contributions to ownership closure include:
   - CI/release gating that matches the local Definition of Done;
   - a stable interface around `systemStore`;
   - composables for the largest views;
@@ -413,7 +413,7 @@ Goal:
 
 ## 7. Evidence Reproduction
 
-The 2026-07-10 measurements were reproduced with local file scans:
+The 2026-08-26 measurements were reproduced from integrated commit `f06a575` with Git-tree file scans:
 
 1. Count lines per `src/views/*.vue` file and sort descending.
 2. Count direct `useSystemStore` imports across `src/views/*.vue`.

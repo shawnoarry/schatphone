@@ -10,6 +10,7 @@ const ACTIVE_GOVERNANCE_FILES = [
   'AGENTS.md',
   'docs/README.md',
   'docs/process/AI_WORK_MODE.md',
+  'docs/process/DOCUMENT_GOVERNANCE.md',
   'docs/process/WORKTREE_INTEGRATION_PROTOCOL.md',
   'docs/process/DEVELOPMENT_TOOLING.md',
   'docs/pm/TASK_PACKAGE_INDEX.md',
@@ -339,5 +340,134 @@ describe('workflow governance', () => {
     })
 
     expect(incompletePackages).toEqual([])
+  })
+
+  test('keeps external model assessments subordinate and explicitly archived', () => {
+    const docsMap = readProjectFile('docs/README.md')
+    const archiveIndex = readProjectFile(
+      'docs/archive/2026-08-26-external-model-assessments/README.md',
+    )
+    const archivedAssessments = [
+      'docs/archive/2026-08-26-external-model-assessments/PRODUCT_NEXT_STEP_FEATURE_PLAN.md',
+      'docs/archive/2026-08-26-external-model-assessments/IMMERSIVE_GAMEPLAY_GOVERNANCE_GATE.md',
+      'docs/archive/2026-08-26-external-model-assessments/UI_BEAUTIFICATION_STATIC_SIGNAL_AUDIT.md',
+    ]
+
+    expect(docsMap).toContain('## 8. External Assessment Intake')
+    expect(docsMap).toContain(
+      'Model-generated diagnoses, audits, priority proposals, maturity rankings, and governance checklists are review inputs, not project authorities.',
+    )
+    expect(docsMap).toContain(
+      'Do not keep a second P0/P1 list, Sprint plan, quality gate, or package-independent checklist.',
+    )
+    expect(archiveIndex).toContain('No new product priority was promoted from this batch.')
+
+    archivedAssessments.forEach((relativePath) => {
+      const content = readProjectFile(relativePath)
+      expect(content).toContain('# 封存声明 / Archived External Assessment')
+      expect(content).toContain('封存日期：2026-08-26')
+      expect(content).toContain('替代权威：')
+      expect(content).toContain('使用限制：')
+    })
+  })
+
+  test('keeps whole-project rollups baseline-scoped and package detail protected', () => {
+    const documentGovernance = readProjectFile('docs/process/DOCUMENT_GOVERNANCE.md')
+    const packageIndex = readProjectFile('docs/pm/TASK_PACKAGE_INDEX.md')
+    const rollups = [
+      'README.md',
+      'docs/roadmap/TODO_ROADMAP.md',
+      'docs/overview/PROJECT_MASTER_GUIDE.md',
+      'docs/pm/TODO_PM_STATUS_REPORT.md',
+      'docs/pm/PRODUCT_MANAGER_PROJECT_BRIEF.md',
+      'docs/strategy/PROJECT_ITERATION_PLAN.md',
+    ]
+
+    expect(documentGovernance).toContain('## 4. Preserve Small Progress')
+    expect(documentGovernance).toContain(
+      "A larger document may summarize a smaller document, but it must not replace, shorten, or rewrite the smaller document's completion evidence.",
+    )
+    expect(packageIndex).toContain(
+      "A whole-project report may link to these statuses, but it must not replace a child task's ID, commit, validation, exclusions, or remaining stage.",
+    )
+
+    rollups.forEach((relativePath) => {
+      expect(readProjectFile(relativePath)).toContain('Integrated baseline')
+    })
+  })
+
+  test('keeps current roadmap measurements and completed repair status aligned', () => {
+    const roadmap = readProjectFile('docs/roadmap/TODO_ROADMAP.md')
+    const architectureHandoff = readProjectFile(
+      'docs/pm/module-architecture-governance/STATUS_AND_HANDOFF.md',
+    )
+
+    expect(roadmap).toContain('58 route-view files')
+    expect(roadmap).toContain('24 Pinia store files')
+    expect(roadmap).not.toContain('42 route-view files, 19 Pinia stores')
+    expect(architectureHandoff).toContain(
+      '`CMG-00` through `CMG-07` and `DCF-01` through `DCF-06` are complete',
+    )
+    expect(architectureHandoff).not.toContain(
+      '`CMG-08`, `DCF-04`, and `DCF-06` require their own exact non-overlapping reservations',
+    )
+  })
+
+  test('keeps superseded module audits explicitly archived and the active pool non-executable', () => {
+    const candidatePool = readProjectFile('docs/roadmap/PROJECT_MODULE_AUDIT.md')
+    const archivedAudit = readProjectFile(
+      'docs/archive/2026-08-26-document-alignment/PROJECT_MODULE_AUDIT_2026-08-20.md',
+    )
+    const archiveIndex = readProjectFile(
+      'docs/archive/2026-08-26-document-alignment/README.md',
+    )
+
+    expect(candidatePool).toContain('Document state: `CANDIDATE_POOL / NON_EXECUTABLE`')
+    expect(candidatePool).toContain('It does not assign P0/P1, `IN_PROGRESS`, or `DONE`.')
+    expect(candidatePool).not.toContain('Relationship Runtime silently retains only 500 rows')
+    expect(archivedAudit).toContain('Status: `ARCHIVED / HISTORICAL_CANDIDATE_SNAPSHOT`')
+    expect(archivedAudit).toContain('Use restriction:')
+    expect(archiveIndex).toContain('PROJECT_MODULE_AUDIT_2026-08-20.md')
+  })
+
+  test('keeps the PM module catalog aligned with current integrated routes and S1 scope', () => {
+    const catalogFiles = [
+      'docs/pm/PRODUCT_MODULE_FEATURE_CATALOG.md',
+      'docs/pm/MODULE_NAME_GLOSSARY.md',
+      'docs/pm/product-module-feature-catalog/SHELL_AND_SYSTEM.md',
+      'docs/pm/product-module-feature-catalog/ROLE_CHAT_AND_WORLD.md',
+      'docs/pm/product-module-feature-catalog/MAP_CALENDAR_AND_REMINDERS.md',
+      'docs/pm/product-module-feature-catalog/COMMERCE_ASSETS_AND_SUPPORT.md',
+      'docs/pm/product-module-feature-catalog/MEDIA_AND_APP_SHELLS.md',
+    ]
+    const catalog = catalogFiles.map(readProjectFile).join('\n')
+    const currentRoutes = [
+      '/widgets',
+      '/camera',
+      '/music',
+      '/weather',
+      '/agenda-journey',
+      '/mail',
+      '/browser',
+      '/community',
+      '/healthcare',
+      '/housing',
+      '/workplace',
+      '/fandom',
+      '/tickets',
+      '/travel',
+      '/intercity',
+      '/creator-rights',
+      '/parcel',
+      '/career',
+    ]
+
+    currentRoutes.forEach((route) => expect(catalog).toContain(route))
+    expect(catalog).toContain(
+      'S1 completion does not mean the App has an S2 canonical owner Store',
+    )
+    expect(catalog).not.toContain(
+      'Agenda Journey | not frozen | future app id not frozen | future Home app',
+    )
   })
 })

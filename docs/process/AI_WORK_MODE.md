@@ -1,6 +1,6 @@
 # SchatPhone Project Execution Contract
 
-Updated: 2026-07-17
+Updated: 2026-08-26
 
 Purpose: define the small set of cross-task rules that every SchatPhone work round must preserve.
 
@@ -46,7 +46,8 @@ Specialist routing:
 - event/runtime work: `docs/process/EVENT_WORKFLOW.md`;
 - visual/IA work: `docs/process/VISUAL_WORKFLOW.md`;
 - tooling, skill inventory, or cross-PC setup: `docs/process/DEVELOPMENT_TOOLING.md`;
-- commands, QA, release, and deployment: `docs/process/OPERATION_GUIDE.md`.
+- commands, QA, release, and deployment: `docs/process/OPERATION_GUIDE.md`;
+- document alignment, status rollups, snapshot classification, or archive intake: `docs/process/DOCUMENT_GOVERNANCE.md`.
 
 Do not create a new persistent workflow for a one-off task. Add or revise a workflow only when a stable task family has repeated rules that are not already owned by a package or specialist lane.
 
@@ -110,6 +111,8 @@ After a meaningful change:
 3. update `TODO_ROADMAP.md` only when priority, status, or accepted scope changed;
 4. update `TODO_PM_STATUS_REPORT.md` only for meaningful PM-facing priority, boundary, release-posture, or capability changes;
 5. leave frozen reference and archive documents unchanged unless the task explicitly promotes, corrects, or archives them.
+
+Whole-project rollups may summarize package progress but must not erase or broaden scoped child milestones. Preserve task IDs, completion evidence, exclusions, and withdrawn or superseded states in the owning package or its linked history.
 
 Code changes do not require broad documentation churn when product meaning, ownership, status, and public contracts are unchanged.
 

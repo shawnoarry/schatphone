@@ -61,6 +61,38 @@ Status:
 
 - obsolete archive
 
+### 2026-08-26-external-model-assessments
+
+Includes:
+
+- `PRODUCT_NEXT_STEP_FEATURE_PLAN.md`
+- `IMMERSIVE_GAMEPLAY_GOVERNANCE_GATE.md`
+- `UI_BEAUTIFICATION_STATIC_SIGNAL_AUDIT.md`
+
+Reason:
+
+- reviewed external-model judgments contained some already-known principles but could not safely act as current priority, mandatory governance, or visual evidence;
+- useful statements were checked against and left with their existing active authorities;
+- the batch index records each disposition and replacement source.
+
+Status:
+
+- obsolete external assessment archive
+
+### 2026-08-26-document-alignment
+
+Includes the prior PM status report, product-manager brief, iteration-plan snapshot, and the superseded 2026-08-20 ranked module audit that were replaced during the current document-alignment round.
+
+Reason:
+
+- preserve detailed historical progress and validation evidence without letting old whole-project rollups continue to claim current status;
+- preserve the old module-audit reasoning while removing stale retention defects and shadow priorities from the active candidate path;
+- keep package-level and work-item history available while current active paths move to the 2026-08-26 integrated baseline.
+
+Status:
+
+- historical alignment snapshot archive
+
 ## Maintenance Reminder
 
 If older docs are imported later, move them here and add:

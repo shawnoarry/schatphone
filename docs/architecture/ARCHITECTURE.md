@@ -1,6 +1,8 @@
 # SchatPhone Architecture
 
-Updated: 2026-08-21
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
 
 ## 1. Architecture Goals
 
@@ -107,7 +109,7 @@ Owns:
 - compatibility redirects;
 - the global lock guard.
 
-The current tree contains 42 route-view files, 19 Pinia stores, 52 Vue files under `src/components`, 37 JavaScript composables, and 224 static Vitest test files. Normal user-facing modules are lazy-loaded. `/music` is a first-class installed app, `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
+The integrated tree contains 58 route-view files, 24 Pinia store files, 144 Vue components under `src/components`, 49 top-level JavaScript composables, 328 unit/component test files, and 72 Playwright spec files. Normal user-facing modules are lazy-loaded. `/music`, `/camera`, `/weather`, `/agenda-journey`, and the thirteen S1 shell routes are first-class installed entries; `/files` is internal/compatibility, `/control-center` is optional World Hub, and `/more` redirects to Settings.
 
 ### Entry Model And Current Product Modules
 
@@ -135,7 +137,7 @@ An `Event` desktop app is intentionally absent. Event Runtime is a hidden coordi
 
 ## 5. State Layer
 
-SchatPhone has 19 Pinia stores.
+SchatPhone has 24 Pinia store files at integrated baseline `f06a575`.
 
 | Store | Owned records and responsibility |
 | --- | --- |
@@ -143,12 +145,17 @@ SchatPhone has 19 Pinia stores.
 | `chat` | role profiles, Chat Directory contacts, groups/service accounts, conversations/messages, Chat-side social state and AI prefs |
 | `relationshipRuntime` | current relationship facts, metrics, stage, milestones, memory groups, review state, pending confirmations |
 | `simulation` | event/runtime logs, cooldowns, caps, permissions, Surprise Mode, execution metadata |
+| `miniScene` | Mini Scene policies, bindings, durable artifacts/audit, and current text-presentation state |
 | `book` | reusable long-form text assets |
 | `gallery` | media metadata, binary references, categories, cross-module asset operations |
 | `imageGeneration` | public image-provider profiles/defaults/routing, device-local credential references, bounded candidates, and generation tasks |
 | `music` | Music library, favorites, playlists, queue/radio construction, playback and floating-player policy/runtime facade, direct URL/local-file intake, public provider profiles, device-local credential/media access, and Chat/Map projections |
+| `weather` | current conditions, forecast/search state, world/location projection, and update lifecycle |
 | `map` | location, destination, route, trip, ETA, familiarity, travel context, and active-journey media presentation |
 | `calendar` | confirmed events, event time changes, push schedule state, confirmed relationship handoff |
+| `scheduleOrchestrator` | hidden Calendar-occurrence materialization/deadline requests and acknowledgement state |
+| `agendaJourney` | short-range travel/activity plans, steps, outcomes, and owner handoff evidence |
+| `activitySession` | absolute-time activity sessions, pause/completion policy, checkpoints, and bounded event presentation state |
 | `reminders` | raw cross-module cue queue and handling state |
 | `shopping` | products, cart, orders, logistics events, commerce handoffs |
 | `foodDelivery` | restaurants, menus, cart, food orders, delivery events |
@@ -157,8 +164,9 @@ SchatPhone has 19 Pinia stores.
 | `stock` | stock/watchlist/simulated market state |
 | `phone` | call log and callback records |
 | `files` | internal metadata/index bridge |
+| `tts` | runtime speech-provider configuration, device-local credential references, preview request state, and temporary audio lifecycle |
 
-The accepted Calendar/Agenda Journey direction does not add another landed store to this table. A future `Schedule Orchestrator`, `Agenda Journey`, `Activity Session`, and `Narrative Timeline` require separately approved Interfaces, persistence owners, backup contracts, and migrations before implementation. Their ownership contract lives in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`.
+Calendar/Agenda Journey integration now includes landed `Schedule Orchestrator`, `Agenda Journey`, and `Activity Session` owners with their approved Interfaces, persistence, backup, migration, and recovery boundaries. `Narrative Timeline` remains a read-only contract/projection stage without its future persistence and product surface. Their ownership contract lives in `docs/architecture/CALENDAR_AGENDA_JOURNEY_EVENT_ORCHESTRATION_ARCHITECTURE.md`.
 
 ### State Ownership Rules
 
@@ -170,7 +178,7 @@ The accepted Calendar/Agenda Journey direction does not add another landed store
 
 ### `systemStore` Concentration
 
-`src/stores/system.js` is 4834 lines and is imported by 26 of 42 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, Music's compatibility-carried public state, and user/system settings.
+At integrated baseline `f06a575`, `src/stores/system.js` is 5361 lines and direct `useSystemStore` use appears in 42 of 58 route views. It currently spans appearance, Home, app placement, notification, API/network, push, world compatibility, automation, backup reminders, Music's compatibility-carried public state, and user/system settings.
 
 The preferred strategy is stable facades, not a big-bang store split:
 
@@ -355,17 +363,18 @@ Gallery metadata participates in core backup. One default-on user choice include
 
 Settings coordinates:
 
-- snapshots for all 16 stores and system state;
+- snapshots for every required owner section and system state;
 - optional Gallery binary packaging;
 - schema validation;
 - ordered restore;
 - rollback if import fails;
 - storage diagnostics and reports.
 
-Current security gap:
+Current complete migration-backup contract:
 
 - backup payload includes `settings` directly;
 - `settings.api.key` is therefore exported in plaintext JSON;
+- this is deliberate for complete same-owner migration/recovery and is not a shareable-export contract;
 - backup files must be treated as secrets;
 - every complete local JSON export now requires an explicit danger confirmation before payload construction or download, while keeping configured credentials and private local data unchanged;
 - a redacted/shareable export and encrypted personal remote backup remain separate future contracts.
@@ -578,18 +587,13 @@ Cloudflare uses `wrangler.jsonc` and `server/cloudflare-worker.mjs` for a third 
 
 Highest-risk files:
 
-- `FoodDeliveryView.vue` 12248 lines;
-- `ContactsView.vue` 5233 lines;
-- `ChatView.vue` 5089 lines;
-- `system.js` 4834 lines;
-- `WalletView.vue` 4551 lines;
-- `WidgetsView.vue` 4519 lines;
-- `HomeView.vue` 4451 lines;
-- `foodDelivery.js` 4313 lines;
-- `WorldBookView.vue` 4104 lines;
-- `MapView.vue` 4029 lines;
-- `MusicView.vue` 3918 lines;
+- `FoodDeliveryView.vue` 12716 lines;
+- `ContactsView.vue` 6096 lines;
+- `ChatView.vue` 5175 lines;
+- `HomeView.vue` 5175 lines;
+- `WorldBookView.vue` 4410 lines;
 - `ChatDirectoryView.vue` 3916 lines;
+- `system.js` 5361 lines with direct `useSystemStore` use in 42 of 58 route views;
 
 Other debt:
 

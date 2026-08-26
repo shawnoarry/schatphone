@@ -1,6 +1,8 @@
 # Commerce Assets And Support Module Catalog
 
-Updated: 2026-05-19
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
 
 Use this file for Shopping, logistics, Food Delivery, Wallet, Stock, Assets, Photos, and hidden support surfaces tied to that family.
 
@@ -9,7 +11,7 @@ Use this file for Shopping, logistics, Food Delivery, Wallet, Stock, Assets, Pho
 | Chinese | English | Route | Visibility | Main role |
 | --- | --- | --- | --- | --- |
 | 相册 | Photos | `/gallery` | Home app | shared media center |
-| 购物 | Shopping | `/shopping` | Home app | product, order, and store lane |
+| 购物 | Shopping | `/shopping/:serviceKey` | Home folder Apps | eleven independent storefront entries over one Shopping-owned runtime |
 | 物流 | Logistics | inside Shopping / service-account context | contextual surface | tracking-facing delivery lane |
 | 外卖 | Food Delivery | `/food-delivery` | Home app | restaurant, menu, cart, and delivery lane |
 | 钱包 | Wallet | `/wallet` | Home app | downstream ledger and transfer lane |

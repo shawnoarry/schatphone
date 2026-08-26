@@ -1,6 +1,10 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-08-09
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
+
+Working tree: preserved but excluded from integrated capability and measurement claims.
 
 ## 1. Purpose And Status Method
 
@@ -77,18 +81,18 @@ The product is no longer a prototype shell. It is an integrated local-first V1 w
 
 ## 4. Verified Repository Baseline
 
-Inventory date: 2026-07-31. Validation rows distinguish current local integration evidence from remaining remote and physical-device proof.
+Inventory date: 2026-08-26. Static counts are measured from integrated baseline `f06a575`; validation evidence remains scoped to the named runs and commits recorded by the roadmap and package handoffs.
 
 | Evidence | Result |
 | --- | --- |
-| Git baseline | local `main` at `f36dc9fd20fe22f1ff0be145fe2b672c54d1b4e3` before this architecture documentation commit |
-| Source scale | 238 JavaScript/Vue files / 131,038 lines under `src` |
-| Application shape | 40 route-view files, 17 Pinia stores, 44 Vue components under `src/components`, 37 JavaScript composables |
-| Unit-test inventory | 210 static `*.test.js` files / 1497 passing tests in the current local run |
-| Validation posture | current local gates and desktop/Pixel 5 restricted-relay evidence pass; remote Pages/direct-provider Chat and Git-connected Vercel/Cloudflare `ced45db` root baselines are proven. The dynamic relay is unpushed; deployed relay, installed-PWA, external-protection, named physical-device, and independent audit proof remain open |
-| Dependency audit | production and full audits are clean after the accepted compatible transitive lock refresh; independent rerun availability remains a release-evidence concern |
+| Git baseline | `main` at `f06a575` |
+| Source shape | 291 JavaScript files, 203 Vue files, and 0 TypeScript source files under `src` |
+| Application shape | 58 route-view files, 24 Pinia store files, 144 Vue components under `src/components`, and 49 top-level JavaScript composables |
+| Test inventory | 328 static unit/component test files and 72 Playwright spec files; passing counts belong to their named historical runs rather than this static inventory |
+| Validation posture | PR CI and main Pages definitions run separate audits, lint, unit, production build, and full Playwright; hosted Pages/Vercel/Cloudflare and configured-provider smokes are recorded, while installed-PWA/relaunch, backup round trip, external protections, and named physical-device evidence remain open |
+| Dependency audit | the latest accepted roadmap evidence records both production and full audits at 0 vulnerabilities; future advisories still require independent reruns |
 
-Build-size signals:
+Historical build-size signals from the earlier 2026-08-09 release checkpoint:
 
 - main entry chunk: about 482 KB, 145 KB gzip;
 - Chat route chunk: about 217 KB, 67 KB gzip;
@@ -115,29 +119,30 @@ Four major lanes have reached current acceptance:
 
 Active or incomplete:
 
-- architecture, security, CI, and documentation maintenance is active;
+- continuity governance, architecture/security maintenance, and product-preview proof are active;
 - World Pack/App Archetype/Service Template is an integrated V1 with phone QA and hardening remaining;
-- the K-pop 2 + 6 + 1 Book/WorldBook content carrier is landed while Mini Scene runtime remains separately staged;
-- Camera/shared image generation has a focused V1, Food Delivery has five independent shop facades, and the world-bound Map baseline includes the integrated OpenFreeMap renderer plus 35 versioned Seoul places.
+- the K-pop 2 + 6 + 1 Book/WorldBook content carrier and the AI-required Mini Scene text shell are landed, while `CMG-08` retention/reuse and production trigger/HTML stages remain gated;
+- the S1 App Shell portfolio, Calendar Mail/Work Hub handoffs, commerce checkout/support flows, Event reason feedback, current Appearance theme/icon foundations, and the expanded Map media baseline are integrated at their named scoped stages.
 
 ### 5.2 Module Completion Matrix
 
 | Product area | State | What is real now | Main remaining gap |
 | --- | --- | --- | --- |
-| Lock / Home / shell | `Stable` | lock guard, status shell, notifications, Home pages, Today View, app/folder/widget placement, App Store recovery | final device-level visual/touch polish; Home remains a large view |
-| Settings / Network | `Stable` | URL-first AI provider setup, backup/restore, storage diagnostics, automation, push, appearance, software update shell | credential-export policy, production security guidance, push/provider environment QA |
+| Lock / Home / shell | `Stable, large` | lock guard, status shell, grouped Notification Center, Home pages, Today View, app/folder/widget placement, App Store recovery, system themes/icon packs | current unintegrated visual work, final device-level touch/safe-area polish, and Home maintainability |
+| Settings / Network | `Stable` | URL-first provider setup, complete backup/restore warning and recovery, storage diagnostics, automation, optional compatibility relay, appearance, software update shell | installed-PWA/permission/provider environment QA and production gateway hardening |
 | Chat | `Stable, heavy` | role/service/group threads, AI replies, rich messages, message edit/delete/recall/save, Chat appearance, service subscriptions, social-event review | deeper group speaker orchestration, real-device media flows, large-view/store maintainability |
 | Contacts / relationship | `Stable V2 baseline` | role archive, role IDs, Self/Main/NPC, WorldBook fields, relationship snapshot/classification, memory review/source audit, guarded cleanup | template-adaptation visual diff, richer template authoring, later polish; high-impact automation remains deferred |
 | Book / WorldBook | `Integrated V1` | Book source library, section activation, changed-source review, active-world context, knowledge/profile templates, K-pop 2 + 6 + 1 carrier | phone trial hardening and separately staged Mini Scene profile work |
 | World Pack / App Store | `Integrated V1` | compatible packs, world app entries, guarded app/service proposals, target-app context, currencies | true-device end-to-end testing, broader target-app hardening, next archetype decision |
-| Map / Calendar / Reminders / Phone | `Map partial; schedule/phone stable MVP` | world-bound Seoul/cyber-wasteland packs, integrated OpenFreeMap with local fallback, 35 versioned Seoul places, custom image intake/generation, pins/trips, confirmed schedule, raw cue inbox, push and callback adapters | true-device gestures/offline-cache proof, package authoring, PMTiles/transit decisions, and richer cue/task semantics |
-| Shopping / Food Delivery / Logistics | `Integrated V1` | product/menu/order flows, five independent Food Delivery shop facades over one runtime, Wallet/Map/Chat handoffs, service notifications | prove one ordinary cross-module consequence flow; tracking share and later polish remain separate |
-| Wallet | `Stable support` | sourced ledger, currencies, primary currency, exchange rates, Chat/commerce integration | cleanup/explainability polish; deeper economy remains a product decision |
+| Map / Calendar / Reminders / Phone | `Integrated, scoped` | Map journeys/Footprints, 106-place Seoul catalog with 81 reviewed-media places and 70 exact card heroes, Calendar V3/storage V4, Agenda Journey, Activity Session, Mail/Work Hub handoffs, raw cues, Phone callbacks | source-conflict actions, remaining media decisions, later MJE stages, installed-PWA and true-device proof |
+| Shopping / Food Delivery / Logistics | `Integrated V1` | eleven independent Shopping storefronts, fifteen Food Delivery entries, scoped carts/orders, Wallet-backed checkout, support cases, Map/Chat/service handoffs, ordinary consequence proof | refunds/cancellation settlement, tracking shares, later product depth, named physical-device proof |
+| Wallet | `Stable support` | sourced ledger, currencies, card collection, Activity search, per-currency statements, verified payees, receipts and Chat sharing | refund/mixed-currency policy and deeper economy remain separate decisions |
 | Gallery | `Stable platform service` | shared media assets, binary storage, image-source contracts, cross-module references | stronger Photos-like collections/visual polish; relationship-memory authoring stays deferred |
 | Camera / Image Generation | `Focused V1` | Camera capture/settings, shared provider adapters, bounded candidates, explicit Gallery keep, public-config backup | Gallery People/reference curation, source callers, hosted-provider and true-device proof |
 | Assets / Stock | `Usable but shallow` | persisted MVP records and supporting connectors | deeper user-facing loops and clearer rollout value |
-| Event Runtime / World Hub | `Partial / Guarded` | logs, cooldowns, caps, foreground tick, safe Food Delivery pilot, Chat social proposal audit/review | richer scheduling and adapters, stronger controls only after safety decisions; no closed-page backend autonomy |
-| Appearance / visual system | `Partial` | themes, wallpaper, widgets, app icons, app skins, Chat appearance, global/scoped CSS ownership | cross-module visual consistency and real-device polish remain unfinished |
+| Event Runtime / World Hub | `Partial / Guarded` | EVE-4C owner-native commerce chain, Event Notebook, Player Context V1, CJA-5 midpoint family, Event Instance retention repair, bilingual reason feedback | `CMG-08`; production Mini Scene trigger and EVE-5 remain separately gated; no closed-page autonomy |
+| Appearance / visual system | `Partial` | independent day/night, authored themes and native-system icon packs, style kits, widgets, app skins, Chat appearance, global/scoped CSS ownership, formal visual workflow | unintegrated current visual work, cross-module consistency, asset completion, and real-device polish |
+| S1 App Shell portfolio | `S1 DONE` | Mail, Browser, Community, Healthcare, Housing, Workplace, Fandom, Tickets, Travel, Intercity, Creator Rights, Parcel, Career, plus Notification Center | each future S2 owner and S3 event chain remains independently gated |
 | Files | `Internal` | hidden metadata/index compatibility surface | must not become a normal public app without a new decision |
 
 ## 6. Technical Stack
@@ -158,7 +163,7 @@ Current installed baseline:
 | Push relay | Node HTTP server plus `web-push` 3.6.7 |
 | Language | application source is JavaScript/Vue; TypeScript is installed but there are zero `.ts/.tsx` source files |
 
-The stack is appropriate for the current product. No framework rewrite is recommended. The most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings in existing ESLint/Vue Test Utils tooling paths; the controller's current rerun was blocked because the configured npm mirror does not implement the audit endpoint.
+The stack remains appropriate for the current product. No framework rewrite is recommended. The latest accepted roadmap evidence records both production and full dependency audits at 0 vulnerabilities after compatible lock repairs; future published advisories still require separate reruns.
 
 ## 7. Architecture
 
@@ -219,7 +224,7 @@ Important seams include:
 - each domain store owns hydration, migration, snapshot, and save behavior;
 - Settings backup/restore coordinates all stores and supports rollback plus optional Gallery asset packages.
 
-Security implication: backup currently exports `settings` wholesale, which includes the configured AI API key. Backup files must therefore be treated as sensitive until a credential-export policy is implemented.
+Security implication: complete migration backup intentionally includes the configured settings and credentials under the accepted whole-product recovery contract. Every export requires a prominent sensitive-file warning. Redacted/shareable export and encrypted personal remote backup are separate future contracts rather than an unfinished replacement for complete migration backup.
 
 ### 7.5 AI And Runtime
 
@@ -253,8 +258,8 @@ Global Appearance pack export/import includes only global portable fields such a
 
 ### P0: Security And Toolchain
 
-1. backup JSON includes locally stored AI credentials through the full settings snapshot;
-2. the most recent Map source audit reported 0 production vulnerabilities and 10 high development-only findings; the configured npm mirror currently blocks an independent controller rerun;
+1. complete local backup contains configured credentials and private data by design and must remain visibly sensitive;
+2. production/full dependency audits are clean at the latest accepted checkpoint but require continued independent reruns as advisories change;
 3. the push relay is not authenticated or production hardened;
 4. local AI keys and world/chat data rely on the browser/profile security boundary, not encryption at rest.
 
@@ -262,15 +267,15 @@ Global Appearance pack export/import includes only global portable fields such a
 
 Largest current files:
 
-- `FoodDeliveryView.vue`: 10329 lines;
-- `ContactsView.vue`: 5232 lines;
-- `ChatView.vue`: 4776 lines;
-- `system.js`: 4644 lines;
-- `HomeView.vue`: 4373 lines;
-- `ChatDirectoryView.vue`: 4122 lines;
-- `WorldBookView.vue`: 4093 lines.
+- `FoodDeliveryView.vue`: 12716 lines;
+- `ContactsView.vue`: 6096 lines;
+- `system.js`: 5361 lines;
+- `ChatView.vue`: 5175 lines;
+- `HomeView.vue`: 5175 lines;
+- `WorldBookView.vue`: 4410 lines;
+- `ChatDirectoryView.vue`: 3915 lines.
 
-`systemStore` is imported by 24 of 40 route views. Focused composables have reduced inline logic, but the files remain mixed-responsibility hotspots.
+`useSystemStore` appears directly in 42 of 58 integrated route views. Focused composables have reduced inline logic, but the store and the largest views remain mixed-responsibility hotspots. Hotspot decomposition remains on hold until after the first usable product preview unless explicitly promoted.
 
 ### P1: Release Confidence
 
@@ -294,11 +299,11 @@ Largest current files:
 
 ## 9. Current Execution Direction
 
-1. security/toolchain and credential-backup policy;
-2. CI/release gating and one named architecture hotspot slice;
-3. World Pack true-device validation and focused hardening;
-4. decision on the K-pop content carrier split and first migration slice;
-5. secondary-module or runtime expansion only after explicit promotion.
+1. complete `CMG-08` Mini Scene occurrence/request reuse and optional retained-scene governance;
+2. complete dependent `CMG-09` reading-cost and `CMG-10` migration/recovery proof;
+3. close installed-PWA/relaunch, backup round trip, external protection, and named true-device evidence;
+4. run World Pack true-device validation only where it overlaps the release matrix;
+5. keep hotspot decomposition, incremental typing, remote backup, production push, and secondary-module expansion on hold unless explicitly promoted.
 
 See `docs/roadmap/TODO_ROADMAP.md` for exact status and acceptance.
 
@@ -306,13 +311,13 @@ See `docs/roadmap/TODO_ROADMAP.md` for exact status and acceptance.
 
 For implementation:
 
-1. `docs/README.md`
-2. this guide
+1. root `AGENTS.md`
+2. `docs/process/AI_WORK_MODE.md`
 3. `docs/roadmap/TODO_ROADMAP.md`
 4. `docs/pm/TASK_PACKAGE_INDEX.md`
-5. matching package `README.md`
-6. matching package `STATUS_AND_HANDOFF.md`
-7. `docs/process/AI_WORK_MODE.md`
+5. matching package `README.md` and `STATUS_AND_HANDOFF.md`
+6. this guide only when whole-project context is needed
+7. `docs/process/DOCUMENT_GOVERNANCE.md` for status alignment work
 
 For PM/design review:
 

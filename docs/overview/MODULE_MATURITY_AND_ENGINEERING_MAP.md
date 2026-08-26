@@ -1,6 +1,8 @@
 # SchatPhone Module Maturity And Engineering Map
 
-Updated: 2026-08-20
+Updated: 2026-08-26
+
+Measurement baseline: integrated `f06a575`; current dirty-worktree changes are excluded.
 
 Purpose: engineering handoff reference for module maturity, ownership risk, edit cost, and validation posture.
 
@@ -10,11 +12,11 @@ This file is not a task board. Promote concrete work into `docs/roadmap/TODO_ROA
 
 SchatPhone is in:
 
-> internal personal development + core-system deepening + evolvable architecture construction
+> integrated product preview + durable continuity closure + release hardening
 
-The strongest loops are real and test protected. The main risks are uneven finish, concentrated implementation cost, and continuity records whose current row caps or unconfirmed save paths do not yet match the durable-history product rule.
+The strongest loops are real and test protected. The main risks are uneven finish, concentrated implementation cost, remaining Mini Scene retention/reuse work, and release claims that still lack installed-PWA and named physical-device proof.
 
-Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hub review, and service-account continuity. The Camera/shared-image-generation and Music first slices, Music's Chat track-share and Map active-journey media callers, browser/PWA-first persistence foundation, release-local complete v3 recovery, Book-only reference cutover, and isolated Vite/Vitest toolchain migrations are complete at their named local boundaries, while Gallery People/source callers, Music real-provider/remaining-caller proof, and broader capacity/data-lifecycle work remain deferred. The cross-module Mini Scene AI/text shell is landed, while production triggers, deterministic request reuse, unbounded committed-history retention, profile binding, safe transforms, and HTML remain behind their named gates.
+The original four roadmap baselines remain complete. Since then the project has integrated the Camera/Image Generation and Music first slices, release-local recovery and Book Repository reference cutover, CMG shared-experience repairs through `CMG-07`, Event Runtime/Calendar collaborations, commerce checkout/support flows, Map media expansion, Appearance theme/icon foundations, and the thirteen-App S1 shell portfolio. The Mini Scene AI/text shell is landed, while `CMG-08` occurrence reuse/optional retention, dependent CMG reading/recovery closure, production triggers, profile binding, safe transforms, and HTML remain gated.
 
 ## 2. Maturity Tiers
 
@@ -25,7 +27,7 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Lock / shell navigation | stable | preserve notification and lock-return contracts |
 | Home entry system | stable but large | treat as shell infrastructure; avoid domain logic |
 | Chat core | stable but very heavy | extract named seams before adding another side system |
-| Contacts / relationship baseline | stable V2 baseline with 4.5-CMG hardening active | preserve Relationship Runtime as the one current truth; replace row-count retention and generic disclosure grouping through the promoted plan |
+| Contacts / relationship baseline | stable V2 baseline with CMG hardening partial | preserve Relationship Runtime as the one current truth; retain completed 500/300 cap and disclosure repairs while finishing dependent CMG reading/recovery work |
 | Gallery | stable image-asset platform service; local material-library contract confirmed | keep one reusable-media owner, require explicit local retention, use one whole-library backup choice, preserve URLs as URLs, and do not turn backup into offload |
 | Image Generation | shared first slice implemented; Camera is the visible owner | keep provider protocols behind the shared module, back up public configuration only, keep credentials/candidates device-local, and require explicit Gallery retention |
 | persistence / backup / diagnostics | release-local v3 complete backup/recovery, product-level recovery, same-container one-writer/read-only-preview protection with automatic cooperative handoff, and Book-only Repository cutover browser-tested | keep one-container/one-save, complete versions, no sync/merge; preserve non-Book cutover gates and pursue capacity/root-generation/R2 work only as separate architecture slices |
@@ -36,19 +38,20 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | --- | --- | --- |
 | Book / WorldBook | integrated V1, K-pop 2 + 6 + 1 content landed | phone hardening and later separate Mini Scene transform-profile authoring |
 | World Pack / App Store / World Suite | integrated V1 Pack/App Store plus reusable Suite planning/inventory, production-backed Book/Gallery/Map Adapters, typed Catalog, and a real-Store installation runtime | reviewed K-pop Catalog/manifest, startup/product caller, later native Owner Adapters, activation UI, true-device loop, and target-app hardening |
-| Map / Calendar / Reminders | world-bound local-map baseline; OpenFreeMap renderer integrated | preserve local fictional/custom rendering while adding only separately approved true-device, offline-cache, authoring, PMTiles, transit, or broader real-life handoff slices |
-| Shopping / Food Delivery / Logistics | integrated V1 with five independent shop facades | prove the ordinary cross-module consequence flow; keep facade polish subordinate to the live roadmap |
-| Wallet | stable support | cleanup/explainability and later economy decisions |
-| Appearance / Widgets / app identity | strong but split across owners | consistency and real-device authoring/recovery QA |
+| Map / Calendar / Reminders | Map journeys/media plus Calendar/Agenda/Activity and Mail/Work Hub handoffs integrated at scoped local baselines | preserve owner truth while completing source-conflict actions, remaining media decisions, later MJE gates, PWA, and true-device proof |
+| Shopping / Food Delivery / Logistics | integrated V1 with eleven Shopping storefronts, fifteen Food Delivery entries, checkout/support flows, and ordinary consequence proof | refunds, tracking shares, later depth, and physical-device proof remain separate |
+| Wallet | stable support with cards, Activity, statements, payees, receipts, and source sharing | refund/mixed-currency policy and later economy decisions |
+| Appearance / Widgets / app identity | authored theme/icon/style-kit foundation integrated; owner split preserved | current unintegrated visual work, consistency, asset completion, and real-device authoring/recovery QA |
 | Network | strong MVP | security guidance and provider-environment QA |
 | Camera | focused installed-app V1 | Gallery People curation, source-module callers, hosted-provider smoke, and true-device QA |
 | Music | focused installed-app first slice with Chat track-share and active-journey Map media callers | real-provider/CORS smoke, true-device media/PWA proof, Chat search, and external Map queue requests |
+| S1 App Shell portfolio | thirteen installed S1 previews plus Notification Center integrated | each S2 owner and S3 event chain requires separate promotion |
 
 ### Tier C: Partial Or Guarded
 
 | Area | Judgment | Constraint |
 | --- | --- | --- |
-| Event Runtime | guarded foreground baseline with 4.5-CMG retention work promoted | conservative event families only; committed instances cannot rotate by row count |
+| Event Runtime | guarded foreground baseline with Event Instance retention repair and EVE/CJA slices integrated | conservative event families only; `CMG-08` remains the next Mini Scene governance dependency |
 | Mini Scene | AI-required text shell landed; production triggers still gated | make request reuse deterministic and committed-artifact retention durable before another trigger; HTML and broader source Adapters remain staged |
 | World Hub | narrow review baseline | no broad value/funds/unlock/freeform editor |
 | Groups | target/member/reply-mode V1 | no full multi-speaker orchestration |
@@ -66,49 +69,48 @@ Four narrow roadmap baselines are complete: Contacts IA, memory dedupe, World Hu
 | Gallery-first relationship memory | on hold |
 | high-impact automatic relationship events | on hold |
 | closed-page autonomous event generation | backend/privacy decision |
-| broad K-pop system rollout | decision; planning draft is not executable |
+| broader K-pop world/runtime expansion | current 2 + 6 + 1 content and Player Context slices are scoped; broader rollout remains separately gated |
 
 ## 3. Measured Engineering Baseline
 
-Measured on 2026-08-09:
+Measured from integrated baseline `f06a575` on 2026-08-26:
 
-- 41 route views;
-- 18 Pinia stores;
-- 51 components;
-- 37 composables;
-- 173 JavaScript files and 93 Vue files under `src`;
+- 58 route views;
+- 24 Pinia store files;
+- 144 Vue components under `src/components`;
+- 49 top-level JavaScript composables;
+- 291 JavaScript files and 203 Vue files under `src`;
 - zero TypeScript source files;
-- 171,987 source lines;
-- 214 static unit-test files;
-- the current Music plus active-journey Map media worktree passes lint, 217 Vitest files / 1556 tests, production build, governance, and 10 focused desktop/Pixel 5 Music and Map/Music cases; the prior 12-case default/zen system visual gate remains green.
+- 328 static unit/component test files;
+- 72 Playwright spec files;
+- passing test counts and build sizes remain attached to their named roadmap/package validation records rather than being inferred from static inventory.
 
 ### Largest Views
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `FoodDeliveryView.vue` | 12195 | platform/shop/order/commerce presentation |
-| `ContactsView.vue` | 5233 | role/profile/memory/destructive-flow concentration |
-| `ChatView.vue` | 4960 | messaging/AI/rich-card/service/runtime coordination |
-| `HomeView.vue` | 4456 | layout/edit/library/shell sensitivity |
-| `WorldBookView.vue` | 4104 | source/pack/template/knowledge control density |
-| `WidgetsView.vue` | 4050 | authoring/import/preview breadth |
-| `ChatDirectoryView.vue` | 3916 | role/group/service/template concept density |
-| `AppStoreView.vue` | 3699 | app/world/mini-app/placement ownership |
-| `MusicView.vue` | 2783 | listening/library/provider/settings presentation in one installed-app route |
+| `FoodDeliveryView.vue` | 12716 | platform/shop/order/commerce presentation |
+| `ContactsView.vue` | 6096 | role/profile/memory/destructive-flow concentration |
+| `ChatView.vue` | 5175 | messaging/AI/rich-card/service/runtime coordination |
+| `HomeView.vue` | 5175 | layout/edit/library/shell sensitivity |
+| `WorldBookView.vue` | 4410 | source/pack/template/knowledge control density |
+| `ChatDirectoryView.vue` | 3915 | role/group/service/template concept density |
 
 ### Largest Stores
 
 | File | Lines | Risk |
 | --- | ---: | --- |
-| `system.js` | 4808 | broad infrastructure/compatibility owner; 25/41 view imports, including Music's public compatibility carrier |
-| `foodDelivery.js` | 4313 | shared platform/shop commerce and event runtime |
-| `map.js` | 3778 | map packs, pins, trips, renderer-facing state, and route responsibilities |
-| `chat.js` | 3436 | rich communication/profile domain |
-| `gallery.js` | 1533 | asset ownership and binary lifecycle |
-| `relationshipRuntime.js` | 1397 | cross-module truth layer |
-| `wallet.js` | 1327 | ledger, accounts/cards, quotes, receipts, payees, activity, and statements |
-| `calendar.js` | 1116 | confirmed schedule, push, compatibility, relationship handoff |
-| `shopping.js` | 1068 | commerce/logistics/service handoff |
+| `foodDelivery.js` | 6771 | shared platform/shop commerce, checkout, support, and event coordination |
+| `system.js` | 5361 | broad infrastructure/compatibility owner; direct use appears in 42/58 route views |
+| `map.js` | 5263 | map packs, places/media, pins, trips, renderer-facing state, and route responsibilities |
+| `chat.js` | 3465 | rich communication/profile domain |
+| `shopping.js` | 2468 | storefront commerce, checkout, logistics, and service handoff |
+| `simulation.js` | 1886 | Event Runtime instances, logs, permissions, and orchestration state |
+| `gallery.js` | 1800 | asset ownership and binary lifecycle |
+| `wallet.js` | 1592 | ledger, accounts/cards, quotes, receipts, payees, activity, and statements |
+| `relationshipRuntime.js` | 1587 | cross-module relationship truth and memory layer |
+| `music.js` | 1509 | listening library, provider, playback, and integration state |
+| `calendar.js` | 1381 | confirmed schedule, storage V4, push, and source handoffs |
 
 Line counts are signals, not goals. A file becomes a priority when size combines with mixed responsibilities, frequent feature growth, cross-owner knowledge, or weak test locality.
 
@@ -179,13 +181,12 @@ Keep review-first semantics. The push relay must be described and deployed as a 
 
 ## 6. Current Engineering Order
 
-1. preserve the accepted standalone complete-backup, integrity, capacity/failure, staged-restore, legacy missing-media, exact local-material reuse, migration, crash-recovery, and rollback contract;
-2. preserve the completed non-active IndexedDB/Book Batch 2B foundation and active Book-only reference cutover, including its browser evidence and unchanged legacy fallback;
-3. keep Gallery/R2, dual write, legacy Book deletion, garbage collection, and every non-Book owner migration/cutover separately approved;
-4. preserve the proven remote Pages/base-path/direct-provider and Git-connected Vercel/Cloudflare root baselines, then deploy/smoke the restricted relay and finish external required-check/environment verification, installed-PWA/relaunch, and named true-device proof;
-5. roadmap 4.8 Mini Scene Stage 2 persistence/policy approval now that the Book foundation prerequisite is complete; Stage 1 pure schemas/registry/profile validation/resolution are complete;
-6. one named view/store hotspot seam or deeper cross-store adapter;
-7. later device findings and incremental typing only where dependencies justify them.
+1. complete `CMG-08` occurrence/request reuse, optional full-scene retention, retained-scene management, and removal of silent 120-artifact truncation;
+2. complete dependent `CMG-09` bounded reads/prompts and `CMG-10` migration/recovery proof without deleting owner history;
+3. preserve the accepted complete-backup, same-container writer, Book Repository, and rollback boundaries while keeping non-Book/R2 migration separately approved;
+4. finish external protection, installed-PWA/relaunch, backup round trip, and named true-device proof over the existing hosted baselines;
+5. run World Pack device validation only where it overlaps that release matrix;
+6. keep hotspot decomposition, cross-store depth, and incremental typing on hold until the product-preview gate or an explicit user promotion.
 
 ## 7. Work To Avoid
 

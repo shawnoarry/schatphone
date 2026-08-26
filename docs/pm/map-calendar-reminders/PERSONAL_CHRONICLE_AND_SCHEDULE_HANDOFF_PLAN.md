@@ -1,8 +1,8 @@
 # Personal Chronicle And Schedule Handoff Plan / 生活志与日程交接规划
 
-Updated: 2026-08-25
+Updated: 2026-08-26
 
-Status: `DISCUSSION_DRAFT / NOT_ROADMAP_AUTHORIZATION / NO_RUNTIME_IMPLEMENTATION`
+Status: `ACTIVE_REFERENCE_DIRECTION / ROADMAP_LINKED / NO_RUNTIME_IMPLEMENTATION`
 
 ## 1. 文档目的
 

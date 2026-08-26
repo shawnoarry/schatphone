@@ -1,8 +1,12 @@
 # SchatPhone Task Package Index
 
-Updated: 2026-08-23
+Updated: 2026-08-26
 
 This file is the PM-facing and handoff-facing index for all current task packages.
+
+Integrated alignment baseline: `f06a575`.
+
+Package handoffs preserve scoped milestone detail. A whole-project report may link to these statuses, but it must not replace a child task's ID, commit, validation, exclusions, or remaining stage. See `docs/process/DOCUMENT_GOVERNANCE.md`.
 
 Use it when the team needs to know:
 
@@ -26,6 +30,19 @@ Current routing note:
 - the landed Player Context V1 eligibility seam and the still-documentation-only world-evolution/information-propagation direction route first to `event-runtime-and-world-hub`; engage `contacts-relationship-system-v2` for the Contacts-owned Self Profile revision and stable identity meaning. A future Community/Media or Investigation owner must receive its own accepted product package before routes, Stores, posts, feeds, or clues are implemented.
 - roadmap 4.15 shared runtime TTS belongs primarily to `module-architecture-governance` for provider Adapters, Cloudflare Worker behavior, persistence, credentials, preview-media lifecycle, and future caller contracts. Engage `chat-and-chat-directory` for the current Settings entry and any later read-aloud/voice-message behavior; development-time ElevenLabs Skills remain tooling rather than runtime ownership.
 - roadmap 4.16 app shell previews belong to `visual-and-ia-governance` for S1 fixture shells, entry/IA, and visual identity acceptance. Engage `module-architecture-governance` only when a shell is promoted from S1 fixture preview to S2 owner implementation, and `event-runtime-and-world-hub` only when a shell is promoted to an S3 event chain; a future shell's canonical owner must receive its own accepted product package before production routes, Stores, or schemas are implemented.
+
+## Current Alignment Check
+
+Checked against integrated baseline `f06a575` on 2026-08-26:
+
+- all seven package quartets remain present and retain their own detailed milestones, validation, exclusions, and next-safe-slice records;
+- the Module Architecture handoff's top summary was corrected so completed `DCF-04` and `DCF-06` are no longer presented as open; `CMG-08` is next;
+- the Commerce handoff header now covers its integrated 2026-08-24 checkout/support work;
+- Chat and Contacts retain their earlier update dates because their scoped status is still correct; an alignment round does not rewrite dates merely for cosmetic freshness;
+- Event and Map/Calendar handoffs already carry the current integrated scoped state;
+- uncommitted Visual/IA work remains outside integrated whole-project claims and is not flattened into this index.
+
+This check is routing metadata only. The package handoffs remain the detail owners.
 
 ## 1. Standard Package Structure
 
@@ -115,7 +132,7 @@ Use for:
 
 - Map
 - Calendar
-- Agenda Journey and future Activity Session
+- Agenda Journey and Activity Session
 - Reminders
 - route/date/callback/follow-up boundaries
 - Calendar-to-Agenda materialization, trip evidence, and schedule handoff rules
@@ -215,5 +232,6 @@ Specialist skill-family details remain outside the cross-task contract. Use:
 - `docs/process/EVENT_WORKFLOW.md` for event/runtime lane skill routing;
 - `docs/process/VISUAL_WORKFLOW.md` for visual/IA lane skill routing;
 - `docs/process/DEVELOPMENT_TOOLING.md` for project-local skill inventory and setup assumptions.
+- `docs/process/DOCUMENT_GOVERNANCE.md` for status alignment, rollup boundaries, and archive intake.
 
 Do not create a persistent workflow for a one-off task. Add a workflow only for a stable task family with repeated rules that the package quartet does not already express.

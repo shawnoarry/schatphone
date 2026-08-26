@@ -1,6 +1,8 @@
 # SchatPhone Product Module Feature Catalog
 
-Updated: 2026-07-10
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
 
 Purpose: this is the PM-facing module dictionary for SchatPhone.
 
@@ -33,13 +35,15 @@ If this catalog conflicts with those docs, treat those docs as the current truth
 Read the matching category doc below:
 
 1. `docs/pm/product-module-feature-catalog/SHELL_AND_SYSTEM.md`
-   - Lock Screen, Home, Settings, Appearance, App Store, Network & API, Profile
+   - Lock Screen, Home, Notification Center, Settings, Appearance, Widgets, App Store, Network & API, Profile
 2. `docs/pm/product-module-feature-catalog/ROLE_CHAT_AND_WORLD.md`
-   - Chat, Chat Directory, Contacts, WorldBook, Book, World Hub, future Cheats lane
+   - Chat, Chat Directory, Groups, Chat Settings, Contacts, WorldBook, Book, World Hub, future Cheats lane
 3. `docs/pm/product-module-feature-catalog/MAP_CALENDAR_AND_REMINDERS.md`
-   - Map, Calendar, Reminders, Phone, location/date/callback handoff
+   - Map, Calendar, Agenda Journey, Reminders, Phone, location/date/callback handoff
 4. `docs/pm/product-module-feature-catalog/COMMERCE_ASSETS_AND_SUPPORT.md`
    - Photos, Shopping, Logistics, Food Delivery, Wallet, Stock, Assets, Files
+5. `docs/pm/product-module-feature-catalog/MEDIA_AND_APP_SHELLS.md`
+   - Camera, Music, Weather, Mail, Browser, Community, Healthcare, Housing, Workplace, Fandom, Tickets, Travel, Intercity, Creator Rights, Parcel, Career
 
 ## 3. Quick Module Index
 
@@ -49,8 +53,10 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | --- | --- | --- | --- |
 | Lock Screen | `/lock` | shell default surface | `SHELL_AND_SYSTEM.md` |
 | Home | `/home` | shell default surface | `SHELL_AND_SYSTEM.md` |
+| Notification Center | Lock/Home shell surface | shell/context surface | `SHELL_AND_SYSTEM.md` |
 | Settings | `/settings` | Home app | `SHELL_AND_SYSTEM.md` |
 | Appearance | `/appearance` | Home app | `SHELL_AND_SYSTEM.md` |
+| Widgets | `/widgets` | Home/App Appearance entry | `SHELL_AND_SYSTEM.md` |
 | Network & API | `/network` | Home app | `SHELL_AND_SYSTEM.md` |
 | App Store | `/app-store` | Home app | `SHELL_AND_SYSTEM.md` |
 | Profile | `/profile` | Settings entry | `SHELL_AND_SYSTEM.md` |
@@ -59,6 +65,7 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Chat Groups | `/chat-groups` | Chat tab/context entry | `ROLE_CHAT_AND_WORLD.md` |
 | Chat Me | `/chat-me` | Chat tab | `ROLE_CHAT_AND_WORLD.md` |
 | Chat Settings / Appearance | `/chat-settings`, `/chat-settings/appearance` | Chat gear/subpage | `ROLE_CHAT_AND_WORLD.md` |
+| Voice / TTS Settings | `/chat-settings/voice` | Chat Settings subpage | `ROLE_CHAT_AND_WORLD.md` |
 | Contacts | `/contacts` | Home app | `ROLE_CHAT_AND_WORLD.md` |
 | WorldBook | `/worldbook` | Settings/context entry | `ROLE_CHAT_AND_WORLD.md` |
 | Book | `/book` | recoverable Home/App Store app | `ROLE_CHAT_AND_WORLD.md` |
@@ -68,14 +75,31 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | Calendar | `/calendar` | Home app | `MAP_CALENDAR_AND_REMINDERS.md` |
 | Reminders | `/reminders` | Home app | `MAP_CALENDAR_AND_REMINDERS.md` |
 | Phone | `/phone` | Home app | `MAP_CALENDAR_AND_REMINDERS.md` |
+| Agenda Journey | `/agenda-journey` | Home app | `MAP_CALENDAR_AND_REMINDERS.md` |
 | Photos | `/gallery` | Home app | `COMMERCE_ASSETS_AND_SUPPORT.md` |
-| Shopping | `/shopping` | Home app | `COMMERCE_ASSETS_AND_SUPPORT.md` |
+| Shopping | `/shopping/:serviceKey` | Home folder Apps | `COMMERCE_ASSETS_AND_SUPPORT.md` |
 | Logistics | inside Shopping / Chat service account | contextual surface | `COMMERCE_ASSETS_AND_SUPPORT.md` |
 | Food Delivery | `/food-delivery` | Home app | `COMMERCE_ASSETS_AND_SUPPORT.md` |
 | Wallet | `/wallet` | Home app | `COMMERCE_ASSETS_AND_SUPPORT.md` |
 | Stock | `/stock` | Home app | `COMMERCE_ASSETS_AND_SUPPORT.md` |
 | Assets | `/assets` | Home app | `COMMERCE_ASSETS_AND_SUPPORT.md` |
 | Files | `/files` | hidden/internal | `COMMERCE_ASSETS_AND_SUPPORT.md` |
+| Camera | `/camera` | Home app | `MEDIA_AND_APP_SHELLS.md` |
+| Music | `/music` | Home app | `MEDIA_AND_APP_SHELLS.md` |
+| Weather | `/weather` | Home app | `MEDIA_AND_APP_SHELLS.md` |
+| Daon Mail | `/mail` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| Prism Browser | `/browser` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| Ripple | `/community` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| Ondam Care | `/healthcare` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| Jari | `/housing` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| Work Hub | `/workplace` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| Aster | `/fandom` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| GATE | `/tickets` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| ROAM | `/travel` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| VIA | `/intercity` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| CREDO | `/creator-rights` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| POSTA | `/parcel` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
+| NEXT | `/career` | installed S1 App | `MEDIA_AND_APP_SHELLS.md` |
 
 ## 4. Product Boundary Reminder
 
@@ -87,9 +111,11 @@ Keep these distinctions clear while reading:
 4. `Files` is not a normal public file-manager app.
 5. `Photos` is currently an asset center first, not the mainline relationship-memory intake surface.
 6. `Book` is the reusable text library; it is not WorldBook activation, not Files, and not a novel/fanfic reader.
+7. An `S1 App` is an honest installed preview with local fixture/draft behavior. It does not imply an S2 canonical owner, real provider transaction, or S3 Event Runtime chain.
 
 ## 5. Change Log
 
 1. 2026-05-18: long single-file module catalog continued accumulating current and historical notes.
 2. 2026-05-19: rewritten as a compact entry page and split into category docs for better PM, design, and QA handoff.
 3. 2026-05-29: added `Book` text-library module for WorldBook source documents and reusable knowledge/reference text.
+4. 2026-08-26: aligned the catalog to integrated baseline `f06a575`, added Camera/Music/Weather, Agenda Journey, Notification Center, and the thirteen installed S1 App previews, and separated S1 visibility from S2/S3 ownership claims.

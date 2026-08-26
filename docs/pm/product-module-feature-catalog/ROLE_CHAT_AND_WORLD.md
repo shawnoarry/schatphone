@@ -1,6 +1,8 @@
 # Role Chat And World Module Catalog
 
-Updated: 2026-05-29
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
 
 Use this file for role-facing, chat-facing, worldview, and runtime-review surfaces.
 
@@ -12,6 +14,11 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | --- | --- | --- | --- |
 | Chat | `/chat`, `/chat/:id` | Home app | AI conversation and thread interaction |
 | Chat Directory | `/chat-contacts` | Chat/context entry | Chat-side binding and service-account entry management |
+| Chat Groups | `/chat-groups` | Chat tab/context entry | group target/member/reply-mode V1 |
+| Chat Me | `/chat-me` | Chat tab | current user identity and Chat-facing self settings |
+| Chat Settings | `/chat-settings` | Chat gear | Chat-local configuration and diagnostics |
+| Chat Appearance | `/chat-settings/appearance` | Chat Settings subpage | Chat-owned appearance layer |
+| Voice / TTS Settings | `/chat-settings/voice` | Chat Settings subpage | shared runtime speech-provider preview and configuration |
 | Contacts | `/contacts` | Home app | global role archive and role-centered management |
 | WorldBook | `/worldbook` | Settings/context entry | worldview and reusable knowledge points |
 | Book | `/book` | recoverable Home/App Store app | reusable text-source library for worldview documents, encyclopedia material, and world rules |

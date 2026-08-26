@@ -1,6 +1,8 @@
 # Shell And System Module Catalog
 
-Updated: 2026-05-19
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
 
 Use this file for shell-level and system-configuration modules.
 
@@ -11,9 +13,11 @@ For exact Chinese labels, use `docs/pm/MODULE_NAME_GLOSSARY.md`.
 | English | Route | Visibility | Main role |
 | --- | --- | --- | --- |
 | Lock Screen | `/lock` | shell default surface | device-style lock state and notification return path |
-| Home | `/home` | shell default surface | app entry shell, widgets, and future folders |
+| Home | `/home` | shell default surface | app entry shell, widgets, folders, and page placement |
+| Notification Center | Lock/Home shell surface | shell/context surface | unlocked notification review without becoming an installed App owner |
 | Settings | `/settings` | Home app | system settings, backup, diagnostics, push, and automation |
 | Appearance | `/appearance` | Home app | theme, wallpaper, app icons, and widget styling |
+| Widgets | `/widgets` | Home/App Appearance entry | widget library, placement, import, and preview |
 | Network & API | `/network` | Home app | provider setup and diagnostics |
 | App Store | `/app-store` | Home app | app-entry visibility, summaries, and Home placement |
 | Profile | `/profile` | Settings entry | player identity and AI context preview |
@@ -48,6 +52,17 @@ Important boundary:
 
 - Home is a shell surface, not the owner of app data.
 
+### Notification Center
+
+What it is:
+
+- a native shell surface reached from Lock/Home notification context;
+- a review surface for notifications already owned by source Apps or the system.
+
+Important boundary:
+
+- Notification Center does not become a normal installed App or a second notification Store.
+
 ### Settings
 
 What it is:
@@ -81,6 +96,16 @@ What users mainly do here:
 Important boundary:
 
 - Appearance changes presentation, not product ownership.
+
+### Widgets
+
+What it is:
+
+- the widget library and management surface for Home-compatible widgets.
+
+Important boundary:
+
+- Widgets owns widget presentation/configuration, not the underlying Calendar, Weather, Music, Wallet, or source-App records.
 
 ### Network & API
 

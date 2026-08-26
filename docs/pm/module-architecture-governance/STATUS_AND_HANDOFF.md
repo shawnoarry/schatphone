@@ -1,12 +1,14 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-22
+Updated: 2026-08-26
+
+Integrated alignment baseline: `f06a575`.
 
 This is the current handoff for architecture cleanup, state ownership, persistence, security, and release-quality work.
 
 ## 1. Current Status
 
-Status: `IN_PROGRESS`
+Status: `IN_PROGRESS / CMG-08_NEXT`
 
 Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
@@ -19,7 +21,7 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible. A complete Mini Scene is optional presentation history: explicit user deletion may remove the retained presentation, but never the canonical event result, approved role memory, diary/timeline projection, or owner audit evidence;
-- roadmap 4.5-CMG now governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-07`, `DCF-01`, `DCF-03`, and `DCF-05` are complete; `CMG-08`, `DCF-04`, and `DCF-06` require their own exact non-overlapping reservations;
+- roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-07` and `DCF-01` through `DCF-06` are complete; `CMG-08` is the next separately assignable item, with `CMG-09` and `CMG-10` dependent on the preceding closure work;
 - any canonical content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin. A generated presentation remains temporary until the user explicitly chooses to retain the complete Mini Scene;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -108,9 +110,9 @@ Current active architecture slice:
 
 Current inventory and validation posture:
 
-- 42 route-view files, 19 Pinia stores, 52 Vue components under `src/components`, and 37 JavaScript composables;
-- 173 JavaScript files, 93 Vue files, and 171,987 source lines under `src` in the current worktree;
-- 214 static unit-test files;
+- integrated baseline `f06a575` contains 58 route-view files, 24 Pinia store files, 144 Vue components under `src/components`, and 49 top-level JavaScript composables;
+- it contains 291 JavaScript files, 203 Vue files, and zero TypeScript source files under `src`;
+- it contains 328 static unit/component test files and 72 Playwright spec files; passing counts below remain attached to their named historical validation runs;
 - the 2026-08-09 current Music + ChKSz + Radio Browser + direct/local intake + active-journey Map media worktree passes diff check, governance, lint, 217 Vitest files / 1559 tests, production build, and 12 focused Music/Map Playwright cases across desktop and simulated mobile. Direct Radio Browser inspection returned HTTP 200 with wildcard CORS, and the prior 12-case default/zen system visual gate plus direct browser inspection also pass; the existing MapLibre/jsdom canvas messages remain non-failing test-environment notices;
 - the 2026-08-10 Music provider-cache/favorite follow-up passes 44 focused Adapter/Store/View/persistence-inventory tests, full lint, governance, production build, the full 225-file / 1635-test Vitest suite, all 12 desktop/mobile `music-app.spec.js` cases, and manual default-desktop plus 393 x 852 visual/overflow inspection. Store coverage proves 24-hour reuse, expiry refresh, the 50-track LRU boundary, same-track single-flight, and synchronous/asynchronous cached-stream retry;
 - the 2026-08-22 ChKSz primary-source cache follow-up passes 4 focused Music files / 52 tests, lint, the full 303-file / 2175-test Vitest suite, production build across 594 modules with only the existing chunk-size warning, governance at 2 files / 14 tests, all 12 desktop/simulated-Pixel-5 `music-app.spec.js` cases, and `git diff --check`. Store/Adapter coverage proves the up-to-7-day memory-only reuse ceiling, absolute URL expiry, absolute and relative response expiry, the 5-minute safety margin, retained 50-track LRU behavior, and the existing bounded failure re-resolution path;
@@ -202,18 +204,16 @@ Settings has focused workflows for:
 
 | File | Lines |
 | --- | ---: |
-| `FoodDeliveryView.vue` | 10329 |
-| `ContactsView.vue` | 5232 |
-| `ChatView.vue` | 4776 |
-| `HomeView.vue` | 4373 |
-| `ChatDirectoryView.vue` | 4122 |
-| `WorldBookView.vue` | 4093 |
-| `WidgetsView.vue` | 4050 |
-| `AppStoreView.vue` | 3647 |
+| `FoodDeliveryView.vue` | 12716 |
+| `ContactsView.vue` | 6096 |
+| `ChatView.vue` | 5175 |
+| `HomeView.vue` | 5175 |
+| `WorldBookView.vue` | 4410 |
+| `ChatDirectoryView.vue` | 3915 |
 
 ### Central Store
 
-`src/stores/system.js` is 4644 lines and directly imported by 24 of 40 route views. It coordinates settings, appearance, Home, app placement, notifications, API/network, push, world compatibility, automation, reports, and backup-reminder state.
+`src/stores/system.js` is 5361 lines and direct `useSystemStore` use appears in 42 of 58 route views. It coordinates settings, appearance, Home, app placement, notifications, API/network, push, world compatibility, automation, reports, and backup-reminder state.
 
 Preferred response: add one stable facade at a time while preserving storage/backup compatibility. Do not split the store wholesale.
 
@@ -254,9 +254,9 @@ Use incremental JSDoc or TypeScript for new/extracted contract modules only. Do 
 
 ## 4. Security And Release Debt
 
-### Backup Credentials
+### Backup Credential Contract
 
-Settings backup exports the full settings snapshot, including `settings.api.key`, in plaintext JSON.
+Settings complete migration backup exports the full settings snapshot, including `settings.api.key`, in plaintext JSON. This is the accepted same-owner recovery contract, not an unreviewed P0 defect or a shareable export.
 
 Confirmed product contract:
 

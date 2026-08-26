@@ -1,6 +1,8 @@
 # Map Calendar And Reminders Module Catalog
 
-Updated: 2026-08-16
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
 
 Use this file for travel, schedule, reminders, and callback-style support surfaces.
 
@@ -41,7 +43,7 @@ Approved staged direction:
 
 Important boundary:
 
-- Map owns Map Journey/location/exploration source truth. Agenda Journey is a separate future short-range execution app. Event Runtime owns checkpoint-event eligibility and audit; Calendar owns confirmed schedule truth; Relationship Runtime owns relationship truth. The staged Map execution status lives only in roadmap 4.11.
+- Map owns Map Journey/location/exploration source truth. Agenda Journey is a separate current short-range execution app. Event Runtime owns checkpoint-event eligibility and audit; Calendar owns confirmed schedule truth; Relationship Runtime owns relationship truth. The staged Map execution status lives only in roadmap 4.11.
 
 ### Calendar
 
@@ -54,7 +56,7 @@ What users mainly do here:
 - review confirmed events;
 - edit event times;
 - manage push timing for real date and schedule entries.
-- later use month, week, and Agenda views plus selected-day authoring; the current frontend is still a list-first confirmed-event baseline rather than a conventional date grid.
+- use the integrated Month, Week, and Agenda views plus selected-day detail and confirmed-event authoring.
 
 Important boundary:
 
@@ -64,9 +66,9 @@ Important boundary:
 
 What it is:
 
-- a separately planned short-range execution app for today's and the near-term activity plan.
+- the integrated short-range execution app for today's and near-term travel/activity plans.
 
-What users mainly do here later:
+What users mainly do here:
 
 - execute manual or Calendar-derived activity steps;
 - start linked Map Journey or duration-based Activity Session flows;
@@ -122,4 +124,4 @@ Reminders or direct entry
   -> future Narrative Timeline projection
 ```
 
-CJA-3 implements the Agenda Journey route, schema-V1 owner, Calendar materialization consumer, manual plans, Map travel evidence, and explicit activity outcomes. Activity Session timers, event popups, automatic place entry, and Narrative Timeline persistence remain unimplemented.
+CJA-3 implements the Agenda Journey route, Calendar materialization consumer, manual plans, Map travel evidence, and explicit activity outcomes. CJA-4/CJA-5 add Activity Session timing and one midpoint Event Runtime family. Appointment auto-entry, broader event families, and Narrative Timeline persistence remain unimplemented.

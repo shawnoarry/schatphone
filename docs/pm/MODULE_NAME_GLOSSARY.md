@@ -1,6 +1,8 @@
 # SchatPhone Module Name Glossary
 
-Updated: 2026-07-31
+Updated: 2026-08-26
+
+Integrated baseline: `f06a575`
 
 This file is the naming source for SchatPhone modules and runtime surfaces.
 
@@ -37,7 +39,7 @@ Use it when the team needs to confirm:
 | 电话 | Phone | `/phone` | `app_phone` | Home app | calls and call history |
 | 地图 | Map | `/map` | `app_map` | Home app | route, trip, and location context |
 | 日历 | Calendar | `/calendar` | `app_calendar` | Home app | confirmed schedule and date lane |
-| 行程 | Agenda Journey | not frozen | future app id not frozen | future Home app | today/near-term activity execution; distinct from Map Journey |
+| 行程 | Agenda Journey | `/agenda-journey` | `app_agenda_journey` | Home app | today/near-term travel/activity execution; distinct from Map Journey |
 | 提醒事项 | Reminders | `/reminders` | `app_reminders` | Home app | cross-module cue surface |
 | 钱包 | Wallet | `/wallet` | `app_wallet` | Home app | ledger, transfer, and expense records |
 | 股票 | Stock | `/stock` | `app_stock` | Home app | market and holdings lane |
@@ -49,6 +51,23 @@ Use it when the team needs to confirm:
 | 金手指 | Cheats | not frozen yet | future hidden surface | hidden placeholder | future stronger override lane |
 | 文件 | Files | `/files` | `app_files` | hidden/internal | internal storage/index role, not a normal public file manager |
 | 应用商城 | App Store | `/app-store` | `app_store` | Home app | app-entry visibility, summaries, and Home placement |
+| 通知中心 | Notification Center | Lock/Home shell surface | native system surface | shell/context surface | unlocked notification review; not an installed App owner |
+| 相机 | Camera | `/camera` | `app_camera` | Home app | image-generation capture, tasks, provider/default/routing settings, and explicit Gallery keep |
+| 音乐 | Music | `/music` | `app_music` | Home app | library, provider search, playback, queue/radio, and bounded Chat/Map callers |
+| 天气 | Weather | `/weather` | `app_weather` | Home app | world/location-aware weather, forecast, and widget source |
+| Daon 邮件 | Daon Mail | `/mail` | `app_daon_mail` | installed S1 App | local mail preview with explicit AI Receive exception; not a production mail service |
+| 折光浏览器 | Prism Browser | `/browser` | `app_browser` | installed S1 App | Help/current-world/local search with honest Web-unavailable state |
+| 涟漪 | Ripple | `/community` | `app_community` | installed S1 App | local community/feed preview with fail-closed source semantics |
+| 温谈健康 | Ondam Care | `/healthcare` | `app_healthcare` | installed S1 App | local healthcare discovery and appointment-intent drafts |
+| 住处 | Jari | `/housing` | `app_jari_housing` | installed S1 App | local housing discovery and viewing drafts |
+| 工作台 | Work Hub | `/workplace` | `app_workplace` | installed S1 App | local workplace/team/schedule preview and bounded Calendar handoff |
+| 星集 | Aster | `/fandom` | `app_fandom` | installed S1 App | local fandom/artist preview linked to Community fixtures |
+| 入场 | GATE | `/tickets` | `app_tickets` | installed S1 App | local event/ticket discovery and intent drafts |
+| 漫泊 | ROAM | `/travel` | `app_travel` | installed S1 App | local lodging/travel discovery and trip-intent drafts |
+| 联程 | VIA | `/intercity` | `app_intercity` | installed S1 App | local rail/flight/coach/ferry comparison and intent drafts |
+| 谱权 | CREDO | `/creator-rights` | `app_creator_rights` | installed S1 App | local works, rights-share, statement, and declaration previews |
+| 递送 | POSTA | `/parcel` | `app_parcel` | installed S1 App | local parcel tracking and send drafts |
+| 机会 | NEXT | `/career` | `app_career` | installed S1 App | local jobs/auditions/invitations and application drafts |
 | 更多 | More | `/more` | legacy route | compatibility redirect | retired overflow surface |
 
 ## 3. Runtime And Internal Names
@@ -57,10 +76,11 @@ Use it when the team needs to confirm:
 | --- | --- | --- | --- |
 | 事件运行时 | Event Runtime | `simulationStore` and simulation engine | shared event logs, cooldowns, caps, and trigger policy |
 | 关系运行时 | Relationship Runtime | `relationshipRuntimeStore` | relationship truth layer |
-| 时间编排模块 | Schedule Orchestrator | future internal Module | links confirmed Calendar commitments to Agenda Journey materialization and deadline reconciliation; never a Home app |
+| 时间编排模块 | Schedule Orchestrator | `store:schedule-orchestrator` | hidden owner that links confirmed Calendar commitments to Agenda Journey materialization and deadline reconciliation; never a Home app |
 | 地图行程 | Map Journey | Map-owned journey runtime | known-destination travel, transport, checkpoints, and arrival/cancellation truth |
-| 活动计时 | Activity Session | future Agenda Journey runtime record | timestamp-based duration and explicit activity checkpoints; not a required 25/5 Pomodoro cycle |
+| 活动计时 | Activity Session | `store:activity-session` | Agenda Journey-owned timestamp-based duration and explicit activity checkpoints; not a required 25/5 Pomodoro cycle |
 | 叙事时间线 | Narrative Timeline | future projection; route and owner not approved | bounded source-linked summaries for a later Story/Diary/Journal surface and AI context |
+| 文本转语音 | Text To Speech | `ttsStore`; `/chat-settings/voice` | shared runtime speech preview and provider-settings surface; no durable Chat voice-message owner yet |
 | 前台滴答 | Foreground Tick | foreground session tick lifecycle | optional while-app-is-open event ticking |
 | 真推送 | Real Push | browser/system push integration | scheduled or immediate notification delivery |
 | 素材引用 | Asset References | Gallery/media contracts | structured media references across modules |
@@ -74,7 +94,7 @@ Use it when the team needs to confirm:
 - Use `相册 / Photos` as the user-facing gallery label even if some code still says `Gallery`.
 - Use `提醒事项 / Reminders` for cross-module cues rather than calling every cue queue `Calendar`.
 - Use `日历 / Calendar` for the visible long-range date app. `日程 / Agenda` is one Calendar view, not another long-range app.
-- Use `行程 / Agenda Journey` for the future short-range execution app and always use `地图行程 / Map Journey` in architecture, persistence, event, and audit text where the Map meaning could be ambiguous.
+- Use `行程 / Agenda Journey` for the current short-range execution app and always use `地图行程 / Map Journey` in architecture, persistence, event, and audit text where the Map meaning could be ambiguous.
 - Use `时间编排模块 / Schedule Orchestrator` for the hidden cross-module materialization logic; do not call that internal Module `Calendar` or expose it as a Home app.
 - Keep Story/Diary/Journal product naming undecided; use `叙事时间线 / Narrative Timeline` only for the future source-linked projection concept.
 - Use `文件 / Files` only when discussing the hidden/internal storage component.

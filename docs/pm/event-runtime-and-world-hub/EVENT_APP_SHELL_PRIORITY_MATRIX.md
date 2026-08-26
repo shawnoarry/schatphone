@@ -203,7 +203,7 @@ S0 不创建跨模块写入、不注册 Event Surface、不调用 provider、不
 | Community core / 社区媒体基础 | `A2-1` | S1 fixture owner | Chat/Contacts、Gallery、Music、通知、深链 | 世界回声价值最高，但 Fact/Claim/Post owner 尚未建立 | `P1`，在 Work Hub 首链之后接公开事实传播 |
 | System Notification Center / 系统通知中心 | `A2-2` | system S1 | 现有前台 banner、锁屏分组、持久通知、push、来电、Calendar/Map 通知 | 解锁后的系统通知抽屉已完成；后续补每 App 策略与真机 push 证据 | `P0 SUPPORTING`，作为 Work Hub 首链的原生提醒面 |
 | Unified fandom community / 统一粉丝社区与艺人订阅 | `A2-3` | S1 | Community core、Contacts、Gallery、Music、Wallet、通知、组织凭证 | 一个品牌 App 内含粉丝空间与受权限保护的艺人工作台；艺人订阅不是普通 Chat 私聊 | `P1`，先官方日程/公告和订阅内容，不做绯闻真相 |
-| Organization Workplace / 组织工作台 | `A2-4` | S2 | Self Profile、Calendar、Agenda Journey、Map、Mail、Files、Wallet、Phone、通知 | 以经纪公司艺人模板起步，统一承载团队、内部消息、任务、排班提案、报备、审批和跨 App 鉴权；学生/职员复用同一模块体系 | `P0 NEXT`，先普通组织闭环，再接排班变化、临时任务与审批事件 |
+| Organization Workplace / 组织工作台 | `A2-4` | `S1 / S2 GATED` | Self Profile、Calendar、Agenda Journey、Map、Mail、Files、Wallet、Phone、通知 | 以经纪公司艺人模板起步，统一承载团队、内部消息、任务、排班提案、报备、审批和跨 App 鉴权；学生/职员复用同一模块体系 | `P0 NEXT`，先普通组织闭环，再接排班变化、临时任务与审批事件 |
 | Tickets / 票务与文化活动 | `B1-1` | S1 | Calendar、Wallet、Map、Music、Gallery、通知 | K-pop、电影、展览都可复用，普通购票闭环清楚 | `P1`，开售/抽选/改期/退票 |
 | Creator Rights/Works / 创作者作品与版税 | `B1-3` | S1 | Music、Files、Wallet、Contacts、Calendar、Mail | K-pop 职业价值高，但权利份额和制度边界复杂 | `P2`，先材料补充/结算通知 |
 | Travel/Hotel / 旅行酒店 | `B1-4` | S1 | Map 酒店/交通、Calendar、Wallet、Mail、通知 | 普通使用成立，但需要预订/取消 owner | `P1`，改期、换房、付款问题 |

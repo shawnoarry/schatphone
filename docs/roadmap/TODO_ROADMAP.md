@@ -2,6 +2,10 @@
 
 Updated: 2026-08-26
 
+Integrated baseline: `f06a575`
+
+Working tree: preserved but excluded from integrated capability and measurement claims.
+
 This is the only live execution board for implementation order.
 
 If an older plan, package note, PM brief, or `docs/superpowers/**` artifact conflicts with this file, this file wins. Package handoffs provide domain context, but they do not create a second backlog.
@@ -19,13 +23,13 @@ If an older plan, package note, PM brief, or `docs/superpowers/**` artifact conf
 
 SchatPhone is past prototype viability and now has a stable local-first product baseline.
 
-Inventory refreshed on 2026-08-10; validation state is tracked separately below:
+Static inventory refreshed on 2026-08-26 from integrated baseline `f06a575`; validation results remain attached to their named runs and commits below:
 
-1. the current tree contains 42 route-view files, 19 Pinia stores, 52 Vue components under `src/components`, 37 JavaScript composables, and 224 static unit-test files;
-2. Camera/shared image generation, Music, five independent Food Delivery shop facades, and world-bound local Map packs are implemented at their named partial baselines;
-3. release commit `a1418ed` passes lint, 210 Vitest files / 1497 tests, production and Cloudflare builds, focused proxy tests, desktop/Pixel 5 restricted-relay checks, Wrangler dry-run, governance, and the remote Pages build/deploy gate. The direct-default restricted relay is live on Vercel and Cloudflare; a GitHub Pages browser using a user-owned provider returned 6 models and Chat smoke reply `OK` through each deployed relay. Named physical-device, installed-PWA/relaunch, external-protection, and independently rerunnable audit proof remain separate;
-4. final visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
-5. the largest engineering risk remains concentrated in oversized views, especially Food Delivery, and `systemStore` fan-out.
+1. the integrated tree contains 58 route-view files, 24 Pinia store files, 144 Vue components under `src/components`, 49 top-level JavaScript composables, 291 JavaScript source files, 203 Vue source files, zero TypeScript source files, 328 unit/component test files, and 72 Playwright spec files;
+2. Camera/shared image generation, Music, Weather, Calendar/Agenda Journey/Activity Session, expanded Map media, eleven Shopping storefronts, fifteen Food Delivery entries, commerce checkout/support, and thirteen installed S1 App previews are implemented at their named scoped baselines;
+3. PR CI and main Pages workflow definitions run separate production/full dependency audits, lint, unit tests, production build, and one full Playwright collection. Hosted GitHub Pages, Vercel, and Cloudflare baselines plus direct/restricted-provider Chat smokes remain recorded in their named evidence; installed-PWA/relaunch, backup round trip, external protections, and named physical-device proof remain open;
+4. final cross-module visual consistency, production security hardening, true-device QA, and several secondary-module loops are not complete;
+5. the largest engineering risk remains concentrated in oversized views and central Store fan-out: `FoodDeliveryView.vue` is 12716 lines, `system.js` is 5361 lines, and direct `useSystemStore` use appears in 42 of 58 route views at the integrated baseline. These measurements do not override the current hold on hotspot decomposition.
 
 Roadmap interpretation:
 
