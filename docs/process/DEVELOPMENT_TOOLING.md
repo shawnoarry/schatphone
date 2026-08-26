@@ -1,6 +1,6 @@
 # SchatPhone Development Tooling
 
-Updated: 2026-08-20
+Updated: 2026-08-26
 
 Purpose: record shared development-tool assumptions, local skill inventory, and cross-PC setup rules for SchatPhone.
 
@@ -226,7 +226,7 @@ The generated provenance lock for externally sourced project-local skills is:
 skills-lock.json
 ```
 
-`.agents/skills` is the truth for what a clone actually contains. `skills-lock.json` records the external source and content hash for those vendored skills. Root `AGENTS.md` and workflow documents are project instructions, not skills, and must not be placed in the skill inventory.
+`.agents/skills` is the truth for what a clone actually contains. `skills-lock.json` records the external source and content hash for externally vendored skills. Project-owned skills are reviewed repository content and are intentionally identified separately rather than given a false upstream provenance entry. Root `AGENTS.md` and workflow documents are project instructions, not skills, and must not be placed in the skill inventory.
 
 Workflow ownership is split like this:
 
@@ -241,6 +241,14 @@ Global machine-local skills may also exist outside the repo. Those can support w
 The OpenAI Product Design plugin is one such optional machine-provided visual capability. `docs/process/VISUAL_WORKFLOW.md` may use it for consequential direction exploration, flow audit, interaction prototyping, or design QA, but ordinary SchatPhone UI work must not depend on the plugin, Figma, or Pencil being installed. Cross-PC continuity comes from Git-eligible accepted briefs, reference images, generated assets, prototype decisions, and validation evidence; another machine may continue the same product path with the repo-local skills and normal browser/image tooling.
 
 ## 7. Current Project-Local Skill Inventory
+
+The current project-owned repo-local skill is:
+
+| Skill | Main use | Primary workflow owner |
+| --- | --- | --- |
+| `visual-art-direction` | Mandatory compact reference kickoff and product-specific brand, motion, spatial/3D, and asset-direction reasoning for visual-authoring work | `docs/process/VISUAL_WORKFLOW.md` |
+
+It is committed directly under `.agents/skills` and travels through Git. It is not listed in `skills-lock.json` because it has no external source; the governance test records it as project-owned content.
 
 The current externally sourced repo-local skills recorded in `.agents/skills` and `skills-lock.json` are:
 
@@ -277,7 +285,7 @@ These workflow docs already wire skills in a clear way:
   - explicit invocation matrix for `pinia`, `vue-pinia-best-practices`, `unit-test-vue-pinia`, `playwright-testing`, `game-engine`, `improve-codebase-architecture`, and `frontend-logic-design`.
 - `docs/process/VISUAL_WORKFLOW.md`
   - explicit installed-skills section;
-  - narrow, mutually exclusive routing across IA, visual design, existing-surface redesign, searchable UI/UX reference, source-image restoration, and focused GSAP motion work;
+  - a project-owned art-direction and searchable UI/UX evidence baseline, followed by narrow routing across IA, visual design, existing-surface redesign, source-image restoration, and focused GSAP motion work;
   - Playwright plus `@axe-core/playwright` is the single default visual-quality verification path.
 
 ### 7.2 What Must Not Be Lost In Future Cleanup
@@ -330,7 +338,7 @@ Run project-local skill installs from the confirmed SchatPhone project root so t
 <SchatPhone project root>\.agents\skills
 ```
 
-After installing or updating project-local skills:
+After installing or updating externally sourced project-local skills:
 
 1. confirm `.agents\skills` contains the new skill;
 2. confirm `skills-lock.json` contains the new source entry;
@@ -341,7 +349,18 @@ After installing or updating project-local skills:
    - why the existing stack was insufficient;
    - the install command needed on another PC.
 
+For a project-owned skill, create or update it directly under `.agents/skills`, validate it with the bundled skill validator, document its workflow role, and commit it. Do not add a fabricated external entry to `skills-lock.json`.
+
 ### 8.1 Visual Design And Motion Skills
+
+The project-owned visual baseline is:
+
+```text
+Project-owned skill: .agents/skills/visual-art-direction
+Purpose: current reference kickoff plus SchatPhone-specific brand, motion, spatial/3D, and asset direction
+```
+
+It pairs with one bounded `ui-ux-pro-max` query at the beginning of visual-authoring work. The result is evidence only; accepted decisions remain in the existing project visual contracts. Existing official GSAP skills remain the implementation authority for focused motion mechanics, while spatial/3D uncertainty uses the smallest disposable prototype before any runtime or dependency expansion.
 
 The visual capability additions reviewed on 2026-08-12 are vendored project-local skills:
 
@@ -369,7 +388,7 @@ python .agents/skills/ui-ux-pro-max/scripts/search.py "mobile social app" --stac
 
 The seven GSAP skills are documentation and implementation guidance only. They do not install the `gsap` npm runtime. Add or update that dependency only in an explicitly approved implementation slice, then run the dependency and behavior validation required by `docs/process/AI_WORK_MODE.md`.
 
-Normal secondary-PC setup must not reinstall these skills from moving upstream branches. Commit and push `.agents/skills`, `skills-lock.json`, and these workflow updates; the other PC receives the reviewed copies through `git pull`, then restarts Codex or reopens the project task.
+Normal secondary-PC setup must not reinstall these skills from moving upstream branches. Commit and push `.agents/skills`, `skills-lock.json`, and these workflow updates; the other PC receives the reviewed external copies and project-owned skills through `git pull`, then restarts Codex or reopens the project task.
 
 Use these commands only for a deliberate reviewed refresh of the vendored copies:
 

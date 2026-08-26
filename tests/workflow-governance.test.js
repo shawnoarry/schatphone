@@ -36,6 +36,7 @@ const RETIRED_VISUAL_MECHANISMS = [
   'web-design-guidelines',
 ]
 const SPECIALIST_SKILLS = [
+  'visual-art-direction',
   'frontend-design',
   'frontend-logic-design',
   'redesign-existing-projects',
@@ -52,6 +53,7 @@ const SPECIALIST_SKILLS = [
   'game-engine',
   'unit-test-vue-pinia',
 ]
+const PROJECT_OWNED_SKILLS = ['visual-art-direction']
 
 const readProjectFile = (relativePath) =>
   readFileSync(join(ROOT_DIR, relativePath), 'utf8')
@@ -68,7 +70,7 @@ const getNamedWorkflowStep = (content, stepName) => {
 }
 
 describe('workflow governance', () => {
-  test('keeps vendored skill contents aligned with external provenance lock entries', () => {
+  test('keeps external skill contents aligned with provenance and project-owned skills explicit', () => {
     const lock = JSON.parse(readFileSync(LOCK_PATH, 'utf8'))
     const lockedSkills = Object.keys(lock.skills).sort()
     const vendoredSkills = readdirSync(SKILLS_DIR)
@@ -78,7 +80,7 @@ describe('workflow governance', () => {
       })
       .sort()
 
-    expect(vendoredSkills).toEqual(lockedSkills)
+    expect(vendoredSkills).toEqual([...lockedSkills, ...PROJECT_OWNED_SKILLS].sort())
   })
 
   test('does not reference retired workflow skills from active governance entry points', () => {
@@ -107,16 +109,21 @@ describe('workflow governance', () => {
     expect(hits).toEqual([])
   })
 
-  test('keeps visual specialist routing narrow and optional for routine fixes', () => {
+  test('keeps visual baseline routing explicit and implementation specialists narrow', () => {
     const visualWorkflow = readProjectFile('docs/process/VISUAL_WORKFLOW.md')
 
     expect(visualWorkflow).toContain(
-      'choose at most one specialist skill for a visual work round',
+      'use `visual-art-direction` and `ui-ux-pro-max` as the baseline pair before implementation',
+    )
+    expect(visualWorkflow).toContain(
+      'add at most one implementation-specialist family for the accepted slice',
     )
     expect(visualWorkflow).toContain(
       'skip specialist skills for routine CSS, copy, spacing, or accessibility fixes with clear acceptance',
     )
-    expect(visualWorkflow).toContain('do not chain visual specialist skills by default')
+    expect(visualWorkflow).toContain(
+      'do not chain implementation-specialist families by default',
+    )
     expect(visualWorkflow).toContain(
       'do not use `ui-ux-pro-max --persist` in the normal visual workflow',
     )
@@ -136,6 +143,7 @@ describe('workflow governance', () => {
     expect(visualWorkflow).toContain('### 4.7 Visual Asset And Image-Generation Gate')
     expect(visualWorkflow).toContain('## 5. Work Path And Reference Discovery')
     expect(visualWorkflow).toContain('视觉专项：原型检索')
+    expect(visualWorkflow).toContain('three to five current examples')
     expect(designSystem).toContain('A functional scaffold is not a visually complete first implementation')
     expect(designSystem).toContain('User experience is not construction narration')
     expect(designSystem).toContain('Templates are scaffolds, not identities')

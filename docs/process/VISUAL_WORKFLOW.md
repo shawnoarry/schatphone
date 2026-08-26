@@ -1,6 +1,6 @@
 # SchatPhone Visual Workflow
 
-Updated: 2026-08-15
+Updated: 2026-08-26
 
 This document defines the `视觉专项` workflow.
 
@@ -100,10 +100,11 @@ If a visual change needs functional code, keep the change minimal and explain wh
 24. Appearance-owned controls should keep state and preview visible first. Inputs that feel like execution work, such as wallpaper-source picking, advanced CSS editing, custom font-stack editing, or per-app icon/accent edits, should use sheets/drawers/subpages on phone-sized screens instead of extending the main settings scroll.
 25. World Pack activation/review stays in Settings -> WorldBook, but active-pack effects should not remain Settings-only. World app entries can appear in App Store/Home/App Library as launch context. Target apps should only change their own UI/UX when the binding includes an explicit app UI theme package; otherwise the launched app keeps its original interface and defaults.
 26. User customization sits above World Pack visual defaults. App/world-app visual scope should use stable shell data attributes such as `data-app`, `data-route-scope`, `data-world-pack`, and `data-world-app` instead of utility classes, data-testid hooks, or generated DOM structure. Persisted scoped CSS remains runtime-compatible, but the current global Appearance surface does not author or export app-owned layers. Global Appearance packs carry global portable settings only; app icons, app skins, scoped CSS, Home layout/widgets, and Chat appearance remain with their owners.
-27. Match expressive complexity to the product role. A supporting utility can be complete through clear depth, real content, appropriate imagery, and restrained feedback; an emotionally central, embodied, narrative, spatial, or exploratory experience may require direct manipulation, scene motion, dynamic media, sound, haptics, or a more deliberate interaction rhythm.
-28. Product-grade does not mean uniformly elaborate. Simplicity is valid when it is an intentional response to the task; it is not valid when hierarchy, content, assets, states, or interaction were skipped.
-29. Look for one bounded opportunity for delight, character, or tactile clarity when it supports the task. Do not force novelty into high-frequency, high-risk, or operational actions where predictability matters more.
-30. Treat user examples as clues about completion, hierarchy, mood, material, content, or interaction. Extract the relevant qualities and re-evaluate them against the current surface instead of cloning the example's composition or complexity.
+27. Style kits may carry companion-widget collections, but installation must be explicit, idempotent, and library-only. Widget Center owns definitions and Home owns placement; applying, switching, or removing a style kit must never place widgets, change templates or slots, replace user choices, or delete widget definitions.
+28. Match expressive complexity to the product role. A supporting utility can be complete through clear depth, real content, appropriate imagery, and restrained feedback; an emotionally central, embodied, narrative, spatial, or exploratory experience may require direct manipulation, scene motion, dynamic media, sound, haptics, or a more deliberate interaction rhythm.
+29. Product-grade does not mean uniformly elaborate. Simplicity is valid when it is an intentional response to the task; it is not valid when hierarchy, content, assets, states, or interaction were skipped.
+30. Look for one bounded opportunity for delight, character, or tactile clarity when it supports the task. Do not force novelty into high-frequency, high-risk, or operational actions where predictability matters more.
+31. Treat user examples as clues about completion, hierarchy, mood, material, content, or interaction. Extract the relevant qualities and re-evaluate them against the current surface instead of cloning the example's composition or complexity.
 
 ## 4. Product-Grade UI Gate
 
@@ -281,7 +282,7 @@ Choose the shortest path that can still produce a confident product result. Lack
 
 ### 5.1 Direct Product Path
 
-This is the default for a bounded UI task. Infer the design intake from repository evidence and the user's request, inspect only the relevant existing implementation, make a focused reference or local-skill lookup only when it resolves a real decision, source or generate clearly needed assets, implement the product-complete slice, and inspect it in the browser. Do not pause for ceremonial approval of low-risk design choices.
+This is the default for a bounded UI task. Infer the design intake from repository evidence and the user's request, inspect only the relevant existing implementation, begin with the compact reference kickoff defined below, run the project-local UI/UX evidence lookup, source or generate clearly needed assets, implement the product-complete slice, and inspect it in the browser. Do not pause for ceremonial approval of low-risk design choices.
 
 ### 5.2 Direction Exploration Path
 
@@ -291,9 +292,11 @@ Use this path when the surface has no credible visual target and multiple direct
 
 Use this path when the core product value depends on a novel gesture, direct manipulation, spatial scene, dynamic background, character/environment response, continuous motion, sound, haptics, or another interaction whose feel cannot be judged from static screens. Build the smallest disposable prototype that proves the uncertain experience, then promote only the accepted behavior and visual contract into production work.
 
-### 5.4 Explicit Reference Discovery
+### 5.4 Reference Kickoff And Explicit Discovery
 
-Use this stage when the user asks for references, when adaptation of an external example is central to the request, or when missing evidence creates a material product/design ambiguity.
+Every user-authorized beautification, redesign, visual-identity, motion, spatial, 3D, or immersive visual task begins with a compact reference kickoff before implementation. Gather three to five current examples: prefer at least two direct same-category products plus one adjacent product whose interaction, material, motion, spatial, or brand treatment resolves a useful question. Include accepted project-owned work when it is more relevant than a public example.
+
+Keep this default kickoff concise. Use the deeper scored candidate-selection path only when the user asks for exploration, adaptation of an external example is central to the request, or missing evidence creates a material product/design ambiguity.
 
 Trigger phrase:
 
@@ -345,6 +348,7 @@ A single beautiful first screen without a usable flow or state evidence may be k
 
 Before implementation, return a compact reference pack containing:
 
+- three to five current references for ordinary visual work, or at most three serious scored candidates for a consequential direction fork;
 - source links and current access/free boundary;
 - the relevant screen or flow nodes;
 - what each candidate solves;
@@ -447,8 +451,10 @@ These are expected in `.agents/skills` for repo-local visual work:
   - scenario-specific prompt-pattern and edit-invariant lookup across the vendored GPT Image reference atlas; use it to shape SchatPhone-owned generation requests, not as a production runtime dependency.
 - `redesign-existing-projects`
   - audit-first refinement when an existing screen or group of screens reads as generic, inconsistent, or visually under-resolved but its current framework and behavior should remain intact.
+- `visual-art-direction`
+  - project-owned reference kickoff and art-direction layer for brand grammar, motion language, spatial/3D reasoning, asset planning, and specialist routing before visual implementation.
 - `ui-ux-pro-max`
-  - local searchable reference data for product-type patterns, palettes, typography, accessibility, responsive layout, Vue guidance, charts, icons, and motion; use it to inform a decision, not to create a second design authority.
+  - project-local UI/UX evidence baseline for product patterns, palettes, typography, accessibility, responsive layout, Vue/Three.js guidance, charts, icons, and motion; query it near the start of visual work and use the result as evidence rather than a second design authority.
 - `gsap-core`, `gsap-frameworks`, `gsap-performance`, `gsap-plugins`, `gsap-scrolltrigger`, `gsap-timeline`, `gsap-utils`
   - official GSAP guidance for a focused motion implementation round, including Vue lifecycle cleanup, reduced-motion handling, timelines, ScrollTrigger, Flip, SplitText, SVG animation, utilities, and performance.
 
@@ -463,11 +469,12 @@ These are expected in `.agents/skills` for repo-local visual work:
 
 ### Skill routing guidance
 
-- choose at most one specialist skill for a visual work round;
+- for beautification, redesign, brand, motion, spatial, 3D, or immersive work, use `visual-art-direction` and `ui-ux-pro-max` as the baseline pair before implementation;
+- after that baseline, add at most one implementation-specialist family for the accepted slice;
 - use `frontend-logic-design` when the problem is page structure, grouping, entry placement, or inconsistent interaction logic;
 - use `frontend-design` when a surface needs visual rebuilding or a deliberate polish pass;
 - use `redesign-existing-projects` when the primary task is auditing and improving an existing surface without replacing its product structure or framework;
-- use `ui-ux-pro-max` when a design choice needs a bounded local evidence lookup across product patterns, typography, color, accessibility, Vue, charts, icons, or motion;
+- use `ui-ux-pro-max` for one bounded kickoff lookup, then add targeted product, typography, accessibility, Vue, Three.js, chart, icon, or motion queries only when they resolve a real decision;
 - use `chinese-font-selector` when Chinese font licensing, CJK/Latin pairing, or Chinese typography hierarchy is the material design decision;
 - use `ip-as-logo` when the accepted slice needs a compact product-owned IP/mascot logo direction or candidate brief;
 - use `image-to-code` when the source image itself is the contract and the task needs 750px 1:1 restoration, transparent PNG slices, or strict screenshot/design-export matching;
@@ -480,16 +487,17 @@ These are expected in `.agents/skills` for repo-local visual work:
 - upstream skill rules are advisory where they conflict with SchatPhone's existing stack, icon family, visual ownership, product boundaries, or this workflow;
 - use Product Design only for the Direction Exploration or Experience Prototype path, or when the user explicitly invokes it; do not route every visual task through its full brief/prototype/QA sequence;
 - keep Product Design audit, prototype, sharing, and deployment outputs subordinate to the current task package and project validation; never deploy or promote a prototype without explicit approval;
-- use Browser during a reference-only discovery round when current public evidence is needed;
+- use Browser or current public search during the compact reference kickoff; use a deeper reference-only discovery round only when the direction remains materially uncertain;
 - use `imagegen` during a focused asset-production round when imagery is required and no approved asset exists;
 - separate reference discovery, non-trivial asset generation, and UI implementation when combining them would hide a user decision or chain multiple visual specialists;
 - skip specialist skills for routine CSS, copy, spacing, or accessibility fixes with clear acceptance;
-- do not chain visual specialist skills by default.
+- do not chain implementation-specialist families by default.
 
 ### Adding or discovering visual skills
 
 Do not add a new visual skill only because one screen needs more polish. First use the current project-local visual stack:
 
+- `visual-art-direction` plus `ui-ux-pro-max` for the reference-backed visual baseline;
 - `frontend-logic-design` for information structure;
 - `frontend-design` for stronger screen composition;
 - `redesign-existing-projects` for audit-first improvement of existing product surfaces;
@@ -619,10 +627,10 @@ Use this sequence for visual work unless the user asks for a narrower path:
 7. Define the key state matrix before styling: normal, loading, empty, error, selected/edit, success, destructive, and any feature-specific intermediate states.
 8. Decide what the interface should show directly through content, imagery, scene, status, or interaction instead of explaining it with helper copy.
 9. Translate implementation terms into product-facing terms before discussing the work with the user or writing UI copy. For Home desktop work, avoid exposing route names, component names, tile kinds, or fake folder categories.
-10. Use external references, Product Design, or candidate generation only when they resolve a material uncertainty. Do not make reference packs or multiple concepts a routine prerequisite.
+10. Start every beautification, redesign, brand, motion, spatial, 3D, or immersive task with a compact three-to-five-example reference kickoff. Escalate to Product Design, multiple concepts, scored candidate selection, or generated candidates only when they resolve a material uncertainty.
 11. Use a local visual asset library only when it is available and relevant, and make an explicit background/media/image-generation decision. If a required visual is missing, propose or generate it instead of silently substituting explanatory text; queue every accepted repository-owned generated asset for automatic image-bed publication so another machine receives either its registered remote object or the exact tracked fallback.
 12. If the issue is confusing navigation or page structure, apply `frontend-logic-design` before visual styling.
-13. Choose zero or one design/implementation specialist: `frontend-logic-design` for IA, `frontend-design` for a broad visual rebuild, `redesign-existing-projects` for audit-first improvement of an existing surface, `ui-ux-pro-max` for bounded local design evidence, `image-to-code` when a source image is the contract, or the GSAP family for a focused motion slice. Use a separate focused round for non-trivial image generation only when a hidden user decision would otherwise be buried.
+13. Use `visual-art-direction` plus one bounded `ui-ux-pro-max` lookup as the baseline for visual-authoring work, then choose at most one implementation-specialist family: `frontend-logic-design` for IA, `frontend-design` for a broad visual rebuild, `redesign-existing-projects` for audit-first improvement of an existing surface, `image-to-code` when a source image is the contract, or the GSAP family for a focused motion slice. Use a separate focused round for non-trivial image generation only when a hidden user decision would otherwise be buried.
 14. Define the smallest product-complete change slice before editing. A slice may be narrow, but its primary journey and required visible states cannot remain generic scaffolding.
 15. Implement only visual, layout, motion, copy, asset, or light interaction-support changes needed for that slice.
 16. Audit controls for excessive text buttons, missing conventional icons, accessible names, hit areas, and clear selected/pressed/destructive states.
