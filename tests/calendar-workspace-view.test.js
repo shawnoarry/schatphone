@@ -236,6 +236,74 @@ describe('Calendar workspace and authoring', () => {
     wrapper.unmount()
   })
 
+  test('prefills an accepted Work Hub proposal, persists one link, and returns to its source', async () => {
+    localStorage.setItem(
+      'schatphone:workplace-shell:preview-state',
+      JSON.stringify({
+        version: 2,
+        proposalDecisions: { 'proposal-radio-20260827': 'accepted' },
+      }),
+    )
+    const calendarStore = useCalendarStore()
+    const router = createTestRouter()
+    await router.push({
+      path: '/calendar',
+      query: { source: 'workplace', sourceRecordId: 'proposal-radio-20260827' },
+    })
+    await router.isReady()
+    const wrapper = mount(CalendarView, { global: { plugins: [router] } })
+    await flushUi()
+
+    expect(calendarStore.confirmedEvents).toHaveLength(0)
+    expect(wrapper.get('[data-testid="calendar-editor-title-zh"]').element.value).toBe(
+      '电台《夜航》嘉宾录制',
+    )
+    expect(wrapper.get('[data-testid="calendar-editor-starts-at"]').element.value).toBe(
+      '2026-08-27T20:00',
+    )
+    await wrapper.get('[data-testid="calendar-event-editor"]').trigger('submit')
+    await flushUi()
+
+    expect(calendarStore.confirmedEvents).toHaveLength(1)
+    expect(calendarStore.confirmedEvents[0]).toMatchObject({
+      source: 'schedule_handoff',
+      sourceRef: {
+        sourceOwner: 'workplace',
+        sourceRecordId: 'proposal-radio-20260827',
+        sourceRevision: 'fixture-2026-08-26-v1',
+      },
+    })
+    expect(wrapper.get('[data-testid="calendar-source-handoff"]').text()).toContain('已关联日程')
+    await wrapper.get('[data-testid="calendar-view-event-source"]').trigger('click')
+    await flushUi()
+    expect(router.currentRoute.value).toMatchObject({
+      path: '/workplace',
+      query: { section: 'tasks', sourceRecordId: 'proposal-radio-20260827' },
+    })
+    expect(calendarStore.confirmedEvents).toHaveLength(1)
+    wrapper.unmount()
+  })
+
+  test('does not prefill or create an unaccepted Work Hub proposal', async () => {
+    const calendarStore = useCalendarStore()
+    const router = createTestRouter()
+    await router.push({
+      path: '/calendar',
+      query: { source: 'workplace', sourceRecordId: 'proposal-radio-20260827' },
+    })
+    await router.isReady()
+    const wrapper = mount(CalendarView, { global: { plugins: [router] } })
+    await flushUi()
+
+    expect(wrapper.get('[data-testid="calendar-source-handoff"]').text()).toContain(
+      '无法验证这项已接受的工作台提案',
+    )
+    expect(wrapper.find('[data-testid="calendar-event-editor"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="calendar-source-handoff-review"]').exists()).toBe(false)
+    expect(calendarStore.confirmedEvents).toHaveLength(0)
+    wrapper.unmount()
+  })
+
   test('creates and edits a recurring Map-linked event through the unified editor', async () => {
     const calendarStore = useCalendarStore()
     const router = createTestRouter()

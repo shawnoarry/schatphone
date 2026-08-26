@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
 import {
   createScheduleHandoffEventSourceRefV1,
   createScheduleHandoffIdempotencyKey,
@@ -8,9 +8,63 @@ import {
   SCHEDULE_HANDOFF_CONFLICT_DECISIONS,
   SCHEDULE_HANDOFF_DRAFT_SCHEMA_VERSION,
 } from '../src/lib/schedule-handoff'
+import { resolveScheduleHandoffSourceDraftV1 } from '../src/lib/schedule-handoff-sources'
+import {
+  WORKPLACE_SHELL_STORAGE_KEY,
+  WORKPLACE_SHELL_STORAGE_VERSION,
+} from '../src/lib/workplace-shell-data'
 
 const STARTS_AT = new Date('2026-09-03T10:00:00.000Z').getTime()
 const ENDS_AT = new Date('2026-09-03T11:30:00.000Z').getTime()
+
+describe('Schedule handoff source resolvers', () => {
+  beforeEach(() => localStorage.clear())
+
+  test('exposes an accepted Work Hub proposal through the shared bounded contract', () => {
+    localStorage.setItem(
+      WORKPLACE_SHELL_STORAGE_KEY,
+      JSON.stringify({
+        version: WORKPLACE_SHELL_STORAGE_VERSION,
+        proposalDecisions: { 'proposal-radio-20260827': 'accepted' },
+      }),
+    )
+
+    expect(
+      resolveScheduleHandoffSourceDraftV1({
+        sourceOwner: 'workplace',
+        sourceRecordId: 'proposal-radio-20260827',
+      }),
+    ).toMatchObject({
+      sourceOwner: 'workplace',
+      sourceRecordId: 'proposal-radio-20260827',
+      sourceRevision: 'fixture-2026-08-26-v1',
+      proposedTitleZh: '电台《夜航》嘉宾录制',
+      proposedStartsAt: new Date(2026, 7, 27, 20, 0, 0, 0).getTime(),
+      proposedEndsAt: new Date(2026, 7, 27, 21, 20, 0, 0).getTime(),
+      sourceReturnContext: {
+        path: '/workplace',
+        query: { section: 'tasks', sourceRecordId: 'proposal-radio-20260827' },
+      },
+    })
+  })
+
+  test.each([
+    ['missing decision', {}],
+    ['declined proposal', { 'proposal-radio-20260827': 'declined' }],
+    ['unknown proposal', { forged: 'accepted' }],
+  ])('fails closed for a Work Hub source with %s', (_label, proposalDecisions) => {
+    localStorage.setItem(
+      WORKPLACE_SHELL_STORAGE_KEY,
+      JSON.stringify({ version: WORKPLACE_SHELL_STORAGE_VERSION, proposalDecisions }),
+    )
+    expect(
+      resolveScheduleHandoffSourceDraftV1({
+        sourceOwner: 'workplace',
+        sourceRecordId: proposalDecisions.forged ? 'forged' : 'proposal-radio-20260827',
+      }),
+    ).toBeNull()
+  })
+})
 
 const createDraft = (patch = {}) => ({
   sourceOwner: 'mail',

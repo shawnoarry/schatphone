@@ -4,7 +4,9 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import WorkplaceView from '../src/views/WorkplaceView.vue'
 import { useSystemStore } from '../src/stores/system'
+import { useCalendarStore } from '../src/stores/calendar'
 import { resetWorkplaceShellStateForTesting } from '../src/composables/useWorkplaceShellState'
+import { resolveScheduleHandoffSourceDraftV1 } from '../src/lib/schedule-handoff-sources'
 
 const DummyView = { template: '<div />' }
 
@@ -78,11 +80,54 @@ describe('Work Hub Organization Workplace S1 shell', () => {
       path: '/calendar',
       query: {
         source: 'workplace',
-        proposalId: 'proposal-radio-20260827',
+        sourceRecordId: 'proposal-radio-20260827',
         homePage: '1',
       },
     })
     wrapper.unmount()
+  })
+
+  test('derives a linked Calendar state and restores the proposal section from source return', async () => {
+    const { router, wrapper } = await mountWorkplace()
+    const calendarStore = useCalendarStore()
+    await wrapper.get('[data-testid="workplace-tab-tasks"]').trigger('click')
+    await wrapper.get('[data-testid="workplace-accept-proposal-radio-20260827"]').trigger('click')
+    const handoffDraft = resolveScheduleHandoffSourceDraftV1({
+      sourceOwner: 'workplace',
+      sourceRecordId: 'proposal-radio-20260827',
+    })
+    const linkedEvent = calendarStore.createEventFromScheduleHandoff({
+      event: {
+        titleZh: handoffDraft.proposedTitleZh,
+        titleEn: handoffDraft.proposedTitleEn,
+        startsAt: handoffDraft.proposedStartsAt,
+        endsAt: handoffDraft.proposedEndsAt,
+      },
+      handoffDraft,
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="workplace-proposal-decision"]').text()).toContain('已关联日程')
+    expect(
+      wrapper.get('[data-testid="workplace-review-calendar-proposal-radio-20260827"]').text(),
+    ).toContain('在日历中查看')
+    await wrapper.get('[data-testid="workplace-review-calendar-proposal-radio-20260827"]').trigger('click')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toMatchObject({
+      source: 'workplace',
+      sourceRecordId: 'proposal-radio-20260827',
+      calendarEventId: linkedEvent.id,
+    })
+    wrapper.unmount()
+
+    const reopened = await mountWorkplace(
+      '/workplace?section=tasks&sourceRecordId=proposal-radio-20260827',
+    )
+    expect(reopened.wrapper.get('[data-testid="workplace-work"]').exists()).toBe(true)
+    expect(reopened.wrapper.get('[data-testid="workplace-proposal-decision"]').text()).toContain(
+      '已关联日程',
+    )
+    reopened.wrapper.unmount()
   })
 
   test('artist application remains pending and does not grant publishing access', async () => {

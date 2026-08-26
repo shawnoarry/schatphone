@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import { useSystemStore } from '../stores/system'
+import { useCalendarStore } from '../stores/calendar'
 import { useI18n } from '../composables/useI18n'
 import { useWorkplaceShellState } from '../composables/useWorkplaceShellState'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
@@ -21,11 +22,12 @@ import { pushReturnTarget } from '../lib/navigation-return'
 const router = useRouter()
 const route = useRoute()
 const systemStore = useSystemStore()
+const calendarStore = useCalendarStore()
 const { settings } = storeToRefs(systemStore)
 const { languageBase, t } = useI18n()
 const workplaceState = useWorkplaceShellState()
 
-const activeSection = ref('today')
+const activeSection = ref(route.query.section === 'tasks' ? 'tasks' : 'today')
 const activeChannelId = ref(WORKPLACE_CHANNELS[0].id)
 const messageDraft = ref('')
 const statusId = ref('ready')
@@ -59,6 +61,8 @@ const workplaceDisplayName = computed(
 const organizationDisplayName = computed(
   () => workplaceState.organizationDisplayName.value || (isZh.value ? WORKPLACE_BRAND.companyZh : WORKPLACE_BRAND.companyEn),
 )
+const calendarEventForProposal = (proposalId) =>
+  calendarStore.findEventByScheduleHandoffSource('workplace', proposalId)
 
 const text = (record, zhKey, enKey) => (isZh.value ? record?.[zhKey] : record?.[enKey]) || ''
 
@@ -148,10 +152,18 @@ const resetIdentityDisplay = () => {
 
 const homePageQuery = () => (route.query.homePage ? { homePage: route.query.homePage } : {})
 
-const openCalendar = (proposalId = WORKPLACE_CALL_SHEET.calendarRef.recordId) => router.push({
-  path: '/calendar',
-  query: { source: 'workplace', proposalId, ...homePageQuery() },
-})
+const openCalendar = (sourceRecordId = WORKPLACE_CALL_SHEET.calendarRef.recordId) => {
+  const linkedEvent = calendarEventForProposal(sourceRecordId)
+  router.push({
+    path: '/calendar',
+    query: {
+      source: 'workplace',
+      sourceRecordId,
+      ...(linkedEvent?.id ? { calendarEventId: linkedEvent.id } : {}),
+      ...homePageQuery(),
+    },
+  })
+}
 
 const openAgenda = () => router.push({
   path: '/agenda-journey',
@@ -344,14 +356,14 @@ const closeApp = () => pushReturnTarget(router, route, '/home')
               <button type="button" class="is-primary" :data-testid="`workplace-accept-${proposal.id}`" @click="decideProposal(proposal.id, 'accepted')">{{ t('接受提案', 'Accept proposal') }}</button>
             </div>
             <div v-else class="workplace-decision" data-testid="workplace-proposal-decision">
-              <span><i class="fas fa-circle-check" aria-hidden="true"></i>{{ workplaceState.proposalDecisions.value[proposal.id] === 'accepted' ? t('已接受 · 尚未创建日程', 'Accepted · no Calendar event yet') : t('已谢绝', 'Declined') }}</span>
+              <span><i class="fas fa-circle-check" aria-hidden="true"></i>{{ workplaceState.proposalDecisions.value[proposal.id] === 'accepted' ? (calendarEventForProposal(proposal.id) ? t('已接受 · 已关联日程', 'Accepted · linked to Calendar') : t('已接受 · 尚未创建日程', 'Accepted · no Calendar event yet')) : t('已谢绝', 'Declined') }}</span>
               <button
                 v-if="workplaceState.proposalDecisions.value[proposal.id] === 'accepted'"
                 type="button"
                 :data-testid="`workplace-review-calendar-${proposal.id}`"
                 @click="openCalendar(proposal.id)"
               >
-                {{ t('去日历确认', 'Review in Calendar') }}
+                {{ calendarEventForProposal(proposal.id) ? t('在日历中查看', 'View in Calendar') : t('去日历确认', 'Review in Calendar') }}
               </button>
             </div>
           </article>
@@ -625,6 +637,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 3px
 
 @media (max-width: 720px) {
   .workplace-topbar { padding-inline: 10px; }
+  .workplace-toast { position: static; transform: none; width: auto; margin: 12px 14px 0; }
   .workplace-tabs { top: 66px; justify-content: space-between; gap: 2px; padding: 7px 8px; }
   .workplace-tabs button { min-width: 0; flex: 1; min-height: 48px; padding: 0 5px; flex-direction: column; gap: 2px; border-radius: 13px; font-size: 9px; }
   .workplace-tabs button i { font-size: 14px; }.workplace-tabs em { position: absolute; top: 3px; right: 8px; min-width: 16px; height: 16px; font-size: 8px; }

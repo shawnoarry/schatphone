@@ -319,7 +319,7 @@ AI 读取日记或 Narrative Timeline 必须满足：
 
 下一条主线应先解决 `来源 -> Calendar`，而不是立即建设生活志 UI。只有确认安排能够稳定带着来源进入 Calendar，后续 Agenda Journey、Timeline 和日记回顾才有可信的上游身份。
 
-建议先完成以下小切片，每项都可以独立验收和回滚。前六项已于 2026-08-25 落地；前四项不创建 Calendar 事件，第五和第六项只有在用户明确确认后才创建并关联：
+建议先完成以下小切片，每项都可以独立验收和回滚。前六项已于 2026-08-25 落地，第七项于 2026-08-26 落地；前四项不创建 Calendar 事件，第五至第七项只有在用户明确确认后才创建并关联：
 
 | 顺序 | 状态 | 小任务 | 难度 | 价值与验收 |
 | --- | --- | --- | --- | --- |
@@ -329,10 +329,11 @@ AI 读取日记或 Narrative Timeline 必须满足：
 | 4 | `DONE 2026-08-25` | 增加 handoff 幂等键与冲突规则单元测试 | 低至中 | 同来源同 revision 复用既有 `calendarEventId`；revision 变化进入 `source_changed` 审阅；取消、身份错配与伪造引用 fail closed，不产生第二份事件或静默覆盖 |
 | 5 | `DONE 2026-08-25` | Calendar 编辑器支持从 handoff draft 预填 | 中 | Mail 稳定记录 ID 解析后打开统一编辑器，预填标题、时间与现有 Map 地点；关闭、取消、无效 ID 或返回均不产生事件，点击确认才写入 |
 | 6 | `DONE 2026-08-25` | 持久化来源引用并复用同一 Calendar 事件 | 中 | Calendar V4 保存有界 `sourceRef`；同来源同 revision 跨重载复用，Mail CTA 与 Calendar 来源回返稳定；revision 变化阻断重复创建且不静默覆盖 |
+| 7 | `DONE 2026-08-26` | Work Hub 作为第二个结构化调用方复用 handoff | 中 | 只有已接受的稳定提案可预填；取消零写入，Calendar 明确保存后才关联；刷新后 Work Hub 显示同一事件且可双向回返 |
 
-这些任务中，1 和 2 只澄清现有行为；3 和 4 建立共享契约但不改变产品事实；5 和 6 形成了可重载、不会重复创建的 Mail 用户闭环。完整 Phase 1 仍需补齐来源更新/取消的用户审阅动作，并让 Work Hub 作为第二个调用方复用同一协议。
+这些任务中，1 和 2 只澄清现有行为；3 和 4 建立共享契约但不改变产品事实；5 和 6 形成了可重载、不会重复创建的 Mail 用户闭环；7 证明 Work Hub 可以作为第二个调用方复用同一协议而不绕过 Calendar。完整 Phase 1 仍需补齐来源更新/取消的用户审阅动作。
 
-第一个完整纵向样板仍建议使用 Mail，因为 Mail 已有稳定消息来源和较窄的预约语义，而当前 Work Hub 仍是 S1 fixture/local-preview，并非生产 organization owner。Mail 样板稳定后，Work Hub 应作为第二个调用方复用相同 handoff，不能为 Work Hub 另写一套 Calendar 接入逻辑。
+第一个完整纵向样板使用 Mail，因为 Mail 已有稳定消息来源和较窄的预约语义。Work Hub 已作为第二个调用方复用相同 handoff，但它仍是 S1 fixture/local-preview，并非生产 organization owner；这条接入不扩大其来源权威，也没有另写 Calendar 接入逻辑。
 
 ### Phase 0：术语与重复功能清点
 
@@ -508,4 +509,4 @@ AI 读取日记或 Narrative Timeline 必须满足：
 
 `NONE`。
 
-本轮不修改 `docs/roadmap/TODO_ROADMAP.md`。任务 1-6 的 Mail 持久化幂等小切片已在本文件与 owning package handoff 中同步，但这不声明来源更新/取消审阅、完整 Schedule Handoff Phase 1、生产 Work Hub Owner、Diary Owner、CJA-6B 或 AI 回忆已经实现。
+本轮不修改 `docs/roadmap/TODO_ROADMAP.md`。任务 1-7 的 Mail/Work Hub 持久化幂等小切片已在本文件与 owning package handoff 中同步，但这不声明来源更新/取消审阅、完整 Schedule Handoff Phase 1、生产 Work Hub Owner、Diary Owner、CJA-6B 或 AI 回忆已经实现。

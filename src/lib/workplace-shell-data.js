@@ -1,3 +1,5 @@
+import { normalizeScheduleHandoffDraftV1 } from './schedule-handoff'
+
 export const WORKPLACE_SHELL_STORAGE_KEY = 'schatphone:workplace-shell:preview-state'
 export const WORKPLACE_SHELL_STORAGE_VERSION = 2
 
@@ -136,6 +138,25 @@ export const WORKPLACE_SCHEDULE_PROPOSALS = Object.freeze([
     requesterEn: 'PR team · Lee Chaerin',
     noteZh: '与现有练习安排相邻，接受后仍需由排期人员正式写入日历。',
     noteEn: 'Adjacent to the current practice plan. Acceptance still requires scheduling staff to commit it to Calendar.',
+    scheduleHandoffDraft: Object.freeze({
+      schemaVersion: 1,
+      sourceOwner: 'workplace',
+      sourceRecordId: 'proposal-radio-20260827',
+      sourceRevision: 'fixture-2026-08-26-v1',
+      proposedTitleZh: '电台《夜航》嘉宾录制',
+      proposedTitleEn: 'Night Flight radio guest recording',
+      proposedStartsAt: new Date(2026, 7, 27, 20, 0, 0, 0).getTime(),
+      proposedEndsAt: new Date(2026, 7, 27, 21, 20, 0, 0).getTime(),
+      participantRefs: Object.freeze([]),
+      sourceReturnContext: Object.freeze({
+        path: '/workplace',
+        query: Object.freeze({
+          section: 'tasks',
+          sourceRecordId: 'proposal-radio-20260827',
+        }),
+      }),
+      proposalStatus: 'pending_review',
+    }),
   }),
 ])
 
@@ -153,3 +174,24 @@ export const findWorkplaceTask = (taskId) =>
 
 export const findWorkplaceProposal = (proposalId) =>
   WORKPLACE_SCHEDULE_PROPOSALS.find((proposal) => proposal.id === proposalId) || null
+
+const hasAcceptedWorkplaceProposal = (proposalId) => {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) return false
+    const raw = window.localStorage.getItem(WORKPLACE_SHELL_STORAGE_KEY)
+    if (!raw) return false
+    const candidate = JSON.parse(raw)
+    return (
+      [1, WORKPLACE_SHELL_STORAGE_VERSION].includes(candidate?.version) &&
+      candidate?.proposalDecisions?.[proposalId] === 'accepted'
+    )
+  } catch {
+    return false
+  }
+}
+
+export const resolveWorkplaceScheduleHandoffDraftV1 = (sourceRecordId) => {
+  const proposal = findWorkplaceProposal(sourceRecordId)
+  if (!proposal?.scheduleHandoffDraft || !hasAcceptedWorkplaceProposal(proposal.id)) return null
+  return normalizeScheduleHandoffDraftV1(proposal.scheduleHandoffDraft)
+}

@@ -92,6 +92,8 @@ Calendar does not own:
 - generic Event Runtime or Narrative Timeline records
 - source Mail/Work Hub bodies, proposal truth, or authority to silently apply a changed/cancelled source revision
 
+Mail and Work Hub may each expose one bounded source-owned `ScheduleHandoffDraftV1` projection through the shared resolver registry. Work Hub's S1 resolver additionally requires its exact proposal decision to be `accepted`; this is eligibility to review, not permission to write Calendar. Calendar alone creates the confirmed event after explicit Save and stores only the bounded `sourceRef`. Both sources may read that reference to present linked state, but neither source persists or mutates a `calendarEventId` copy.
+
 Calendar may later request a Mini Scene from a confirmed event using canonical schedule, time, place, participant, and push-state facts. Generation or presentation failure cannot change the confirmed event, and an interaction that requests an event edit returns to Calendar validation.
 
 ## 3. Agenda Journey, Schedule Orchestrator, And Activity Session

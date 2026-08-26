@@ -240,14 +240,41 @@ const calendarSourceHandoff = computed(() => {
     return {
       source,
       icon: 'fas fa-briefcase',
-      eyebrowZh: '尚未创建日程',
-      eyebrowEn: 'No Calendar event yet',
-      titleZh: '来自工作台的排期提案',
-      titleEn: 'Schedule proposal from Work Hub',
-      descriptionZh: '这项提案目前只是工作台引用，日历中还没有对应日程。',
-      descriptionEn: 'This proposal is currently only a Work Hub reference; Calendar has no matching event yet.',
+      eyebrowZh: completed ? '已关联日程' : sourceChanged ? '来源有更新' : '尚未创建日程',
+      eyebrowEn: completed
+        ? 'Linked Calendar event'
+        : sourceChanged
+          ? 'Source update available'
+          : 'No Calendar event yet',
+      titleZh: draft?.proposedTitleZh || '来自工作台的排期提案',
+      titleEn: draft?.proposedTitleEn || 'Schedule proposal from Work Hub',
+      descriptionZh: completed
+        ? '这项提案已经关联到同一条日历安排，不会重复创建。'
+        : sourceChanged
+          ? '工作台提案已有新版本，现有日历安排不会被静默覆盖。'
+        : sourceRecordId && !draft
+          ? '无法验证这项已接受的工作台提案，因此没有预填或创建日程。'
+          : draft
+            ? '提案信息已准备好，请在日历编辑器中核对；只有确认后才会创建日程。'
+            : '这项提案目前只是工作台引用，日历中还没有对应日程。',
+      descriptionEn: completed
+        ? 'This proposal is linked to the same Calendar event and will not be duplicated.'
+        : sourceChanged
+          ? 'Work Hub has a newer proposal revision. The existing Calendar event was not overwritten.'
+        : sourceRecordId && !draft
+          ? 'Calendar could not verify this accepted Work Hub proposal, so nothing was prefilled or created.'
+          : draft
+            ? 'The proposal is ready for review. Calendar creates it only after you confirm.'
+            : 'This proposal is currently only a Work Hub reference; Calendar has no matching event yet.',
       returnZh: '返回工作台',
       returnEn: 'Return to Work Hub',
+      reviewZh: '审阅并添加',
+      reviewEn: 'Review and add',
+      canReview: Boolean(
+        draft &&
+          resolution?.decision === SCHEDULE_HANDOFF_CONFLICT_DECISIONS.REVIEW_NEW &&
+          resolution.mayCreateAfterReview,
+      ),
     }
   }
   return null

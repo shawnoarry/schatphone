@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { navigateInsideUnlockedApp, unlockToHome } from './helpers/navigation.js'
+import { navigateInsideUnlockedApp, unlockToHome, waitForAppRouteReady } from './helpers/navigation.js'
 
 const desktop = { width: 1180, height: 860 }
 const pixel5 = { width: 393, height: 851 }
@@ -57,9 +57,10 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
     await mkdir(evidenceDir, { recursive: true })
   })
 
-  test('desktop day mode completes the ordinary artist work loop', async ({ page }) => {
-    await seedSystem(page)
-    await openWorkplace(page)
+  test('day mode completes the ordinary artist work loop', async ({ page }, testInfo) => {
+    await seedSystem(page, { once: true })
+    const isMobileProject = testInfo.project.name === 'mobile-chrome'
+    await openWorkplace(page, isMobileProject ? pixel5 : desktop)
 
     await expect(page.getByTestId('workplace-call-sheet')).toContainText('Music Bank 预录')
     await page.getByTestId('workplace-today-task-task-in-ear-check').click()
@@ -76,20 +77,77 @@ test.describe('Work Hub Organization Workplace S1 shell', () => {
     await page.getByTestId('workplace-accept-proposal-radio-20260827').click()
     await expect(page.getByTestId('workplace-proposal-decision')).toContainText('尚未创建日程')
     await expectNoHorizontalOverflow(page)
-    await page.screenshot({ path: join(evidenceDir, 'workplace-desktop-day.png'), fullPage: true })
+    await page.screenshot({
+      path: join(
+        evidenceDir,
+        isMobileProject ? 'workplace-mobile-day.png' : 'workplace-desktop-day.png',
+      ),
+      fullPage: true,
+    })
 
     await page.getByTestId('workplace-review-calendar-proposal-radio-20260827').click()
-    await expect(page).toHaveURL(/#\/calendar\?.*source=workplace/)
+    await waitForAppRouteReady(page, '/calendar')
+    await expect(page).toHaveURL(/source=workplace/)
+    await expect(page).toHaveURL(/sourceRecordId=proposal-radio-20260827/)
     await expect(page.getByTestId('calendar-source-handoff')).toContainText('尚未创建日程')
-    await expect(page.getByTestId('calendar-source-handoff')).toContainText('来自工作台的排期提案')
+    await expect(page.getByTestId('calendar-source-handoff')).toContainText('电台《夜航》嘉宾录制')
+    await expect(page.getByTestId('calendar-editor-title-zh')).toHaveValue('电台《夜航》嘉宾录制')
+    await expect(page.getByTestId('calendar-editor-starts-at')).toHaveValue('2026-08-27T20:00')
     await expectNoHorizontalOverflow(page)
-    const calendarEvents = await page.evaluate(() => {
+    await page.getByTestId('calendar-editor-cancel').click()
+    let calendarEvents = await page.evaluate(() => {
       const raw = window.localStorage.getItem('schatphone:store:calendar')
       return raw ? JSON.parse(raw)?.data?.events || [] : []
     })
     expect(calendarEvents).toEqual([])
     await page.getByTestId('calendar-source-handoff-return').click()
-    await expect(page).toHaveURL(/#\/workplace/)
+    await waitForAppRouteReady(page, '/workplace')
+    await expect(page.getByTestId('workplace-work')).toBeVisible()
+    await expect(page.getByTestId('workplace-proposal-decision')).toContainText('尚未创建日程')
+
+    await page.getByTestId('workplace-review-calendar-proposal-radio-20260827').click()
+    await waitForAppRouteReady(page, '/calendar')
+    await page.getByTestId('calendar-editor-save').click()
+    await expect(page.getByTestId('calendar-event-editor')).toHaveCount(0)
+    await expect(page.getByTestId('calendar-source-handoff')).toContainText('已关联日程')
+    calendarEvents = await page.evaluate(() => {
+      const raw = window.localStorage.getItem('schatphone:store:calendar')
+      return raw ? JSON.parse(raw)?.data?.events || [] : []
+    })
+    expect(calendarEvents).toHaveLength(1)
+    expect(calendarEvents[0]?.sourceRef).toMatchObject({
+      sourceOwner: 'workplace',
+      sourceRecordId: 'proposal-radio-20260827',
+    })
+
+    await page.getByTestId('calendar-view-event-source').click()
+    await waitForAppRouteReady(page, '/workplace')
+    await expect(page.getByTestId('workplace-work')).toBeVisible()
+    await expect(page.getByTestId('workplace-proposal-decision')).toContainText('已关联日程')
+    await expect(page.getByTestId('workplace-review-calendar-proposal-radio-20260827')).toContainText(
+      '在日历中查看',
+    )
+    await expectNoHorizontalOverflow(page)
+
+    await page.reload()
+    await unlockToHome(page)
+    await navigateInsideUnlockedApp(
+      page,
+      '/workplace?section=tasks&sourceRecordId=proposal-radio-20260827',
+    )
+    await expect(page.getByTestId('workplace-review-calendar-proposal-radio-20260827')).toContainText(
+      '在日历中查看',
+    )
+    await page.getByTestId('workplace-review-calendar-proposal-radio-20260827').click()
+    await waitForAppRouteReady(page, '/calendar')
+    await expect(page.getByTestId('calendar-event-editor')).toHaveCount(0)
+    await expect(page.getByTestId('calendar-source-handoff')).toContainText('已关联日程')
+    await expectNoHorizontalOverflow(page)
+    calendarEvents = await page.evaluate(() => {
+      const raw = window.localStorage.getItem('schatphone:store:calendar')
+      return raw ? JSON.parse(raw)?.data?.events || [] : []
+    })
+    expect(calendarEvents).toHaveLength(1)
   })
 
   test('owner handoffs carry references without manufacturing owner records', async ({ page }) => {
