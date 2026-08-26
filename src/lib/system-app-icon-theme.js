@@ -43,6 +43,14 @@ export const SYSTEM_APP_ICON_THEME_OPTIONS = Object.freeze([
     descriptionEn:
       'Starts with eight minimal line glyphs while every system icon shares a transparent chromatic-glass shell.',
   },
+  {
+    id: 'sticker-pop',
+    labelZh: '贴纸粗线',
+    labelEn: 'Sticker Outline',
+    descriptionZh: '系统 App 使用奶油色块、粗圆描边与清晰功能符号，不改变商业 App Logo。',
+    descriptionEn:
+      'System apps use creamy color blocks, bold rounded outlines, and recognizable glyphs without changing branded app logos.',
+  },
 ])
 
 export const SYSTEM_APP_ICON_THEME_TARGET_IDS = Object.freeze([
@@ -176,11 +184,47 @@ const LIQUID_PRISM_APP_ICONS = Object.freeze(
   ),
 )
 
+const STICKER_POP_APP_ICONS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(SOFT_ROUNDED_APP_ICONS).map(([appId, meta]) => [
+      appId,
+      Object.freeze({
+        ...meta,
+        accent:
+          {
+            app_network: 'light',
+            app_wallet: 'cool',
+            app_gallery: 'light',
+            app_music: 'warm',
+            app_camera: 'dark',
+            app_themes: 'warm',
+            app_widgets: 'cool',
+            app_phone: 'default',
+            app_map: 'light',
+            app_weather: 'cool',
+            app_calendar: 'warm',
+            app_reminders: 'default',
+            app_stock: 'light',
+            app_contacts: 'default',
+            app_settings: 'dark',
+            app_files: 'cool',
+            app_assets: 'warm',
+            app_control_center: 'dark',
+            app_book: 'light',
+            app_store: 'warm',
+          }[appId] || meta.accent,
+        material: 'sticker-pop',
+      }),
+    ]),
+  ),
+)
+
 const SYSTEM_APP_ICON_PACKS = Object.freeze({
   classic: Object.freeze({}),
   'soft-rounded': SOFT_ROUNDED_APP_ICONS,
   'cloud-pastel-animals': CLOUD_PASTEL_ANIMAL_APP_ICONS,
   'chromatic-glass': LIQUID_PRISM_APP_ICONS,
+  'sticker-pop': STICKER_POP_APP_ICONS,
 })
 
 export const normalizeSystemAppIconThemeId = (

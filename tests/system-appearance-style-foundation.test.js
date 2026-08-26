@@ -43,6 +43,7 @@ describe('system appearance style foundation', () => {
     expect(normalizeAppearanceStyleKitId('liquid-prism')).toBe('chromatic-glass')
     expect(resolveSystemAppearanceThemeMeta('liquid-prism').labelEn).toBe('Chromatic Glass')
     expect(resolveSystemAppearanceThemeMeta('chromatic-glass').labelEn).toBe('Chromatic Glass')
+    expect(resolveSystemAppearanceThemeMeta('sticker-pop').labelEn).toBe('Sticker Pop')
     expect(resolveSystemAppearanceThemeWallpaper('cloud-pastel', 'day')).toContain(
       'cloud-pastel-day-v1.webp',
     )
@@ -116,7 +117,7 @@ describe('system appearance style foundation', () => {
     })
   })
 
-  test('applies Moonlit Journal as a vintage paper interface with classic icons', () => {
+  test('applies Moonlit Journal as a moonlit paper-white interface with classic icons', () => {
     expect(resolveSystemAppearanceThemeMeta('moonlit-journal').labelEn).toBe('Moonlit Journal')
     expect(resolveSystemAppearanceThemeWallpaper('moonlit-journal', 'day')).toBe('')
 
@@ -127,6 +128,18 @@ describe('system appearance style foundation', () => {
     expect(store.settings.appearance.systemAppIconTheme).toBe('classic')
     expect(status).toMatchObject({
       kit: { id: 'moonlit-journal' },
+      customized: false,
+    })
+  })
+
+  test('applies Sticker Pop as a matching bold-outline interface and icon kit', () => {
+    const store = useSystemStore()
+    const status = store.applyAppearanceStyleKit('sticker-pop')
+
+    expect(store.settings.appearance.systemTheme).toBe('sticker-pop')
+    expect(store.settings.appearance.systemAppIconTheme).toBe('sticker-pop')
+    expect(status).toMatchObject({
+      kit: { id: 'sticker-pop' },
       customized: false,
     })
   })
@@ -267,7 +280,9 @@ describe('system appearance style foundation', () => {
     expect(wrapper.get('[data-testid="appearance-system-theme-cloud-pastel"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="appearance-system-theme-liquid-prism"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="appearance-system-theme-chromatic-glass"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="appearance-system-theme-sticker-pop"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="appearance-style-kit-cloud-pastel"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="appearance-style-kit-sticker-pop"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="appearance-style-kit-liquid-prism"]').exists()).toBe(false)
     expect(wrapper.get('[data-testid="appearance-style-kit-chromatic-glass"]').text()).toContain(
       '含 5 个可选配套组件',

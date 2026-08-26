@@ -35,6 +35,7 @@ describe('system app icon themes', () => {
       'cloud-pastel-animals',
     )
     expect(normalizeSystemAppIconThemeId('chromatic-glass')).toBe('chromatic-glass')
+    expect(normalizeSystemAppIconThemeId('sticker-pop')).toBe('sticker-pop')
     expect(normalizeSystemAppIconThemeId('liquid-prism')).toBe('chromatic-glass')
     expect(normalizeSystemAppIconThemeId('unknown')).toBe('classic')
     expect(isSystemAppIconThemeTarget('app_chat')).toBe(false)
@@ -191,6 +192,16 @@ describe('system app icon themes', () => {
     expect(customized.material).toBe('')
     expect(customized.materialClass).toBe('')
     expect(customized.liquidGlyph).toBeNull()
+  })
+
+  test('applies Sticker Pop material to system targets while preserving independent apps', () => {
+    const sticker = resolveAppIconMeta('app_widgets', {}, 'zh-CN', 'sticker-pop')
+    expect(sticker.material).toBe('sticker-pop')
+    expect(sticker.materialClass).toBe('material-sticker-pop')
+
+    const independent = resolveAppIconMeta('app_chat', {}, 'zh-CN', 'sticker-pop')
+    expect(independent.material).toBe('')
+    expect(independent.materialClass).toBe('')
   })
 
   test('previews the first Chromatic Glass line-glyph batch in Appearance', async () => {

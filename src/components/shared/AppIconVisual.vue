@@ -48,7 +48,7 @@ const isCloudPastelAnimal = computed(() =>
         'is-cloud-pastel-animal': isCloudPastelAnimal,
       },
     ]"
-    :style="hasImage || isLiquidPrism ? undefined : accentStyle"
+    :style="hasImage || materialClass ? undefined : accentStyle"
   >
     <svg
       v-if="!hasImage && (isLiquidPrism || hasLiquidGlyph) && hasLiquidGlyph"
@@ -75,6 +75,54 @@ const isCloudPastelAnimal = computed(() =>
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+.app-icon-visual.material-sticker-pop {
+  --sticker-fill: #f6d36f;
+  --sticker-ink: #2f302d;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+  color: var(--sticker-ink);
+  background: var(--sticker-fill);
+  border: 3px solid var(--sticker-ink);
+  box-shadow: 0 4px 0 var(--sticker-ink);
+}
+
+.app-icon-visual.material-sticker-pop.accent-warm {
+  --sticker-fill: #ef888d;
+}
+
+.app-icon-visual.material-sticker-pop.accent-light {
+  --sticker-fill: #8db4df;
+}
+
+.app-icon-visual.material-sticker-pop.accent-default {
+  --sticker-fill: #72bd88;
+}
+
+.app-icon-visual.material-sticker-pop.accent-dark {
+  --sticker-fill: #b9a0d8;
+}
+
+.app-icon-visual.material-sticker-pop > i {
+  position: relative;
+  z-index: 1;
+  color: var(--sticker-ink);
+  filter: none;
+  transform: scale(0.94);
+}
+
+:global(:root[data-color-mode='night'] .app-icon-visual.material-sticker-pop),
+:global(.app-shell[data-color-mode='night'] .app-icon-visual.material-sticker-pop) {
+  --sticker-ink: #f8efe3;
+  border-color: var(--sticker-ink);
+  box-shadow: 0 4px 0 rgba(18, 18, 20, 0.92);
+}
+
+:global(:root[data-color-mode='night'] .app-icon-visual.material-sticker-pop > i),
+:global(.app-shell[data-color-mode='night'] .app-icon-visual.material-sticker-pop > i) {
+  color: #29292c;
 }
 
 .app-icon-visual.material-liquid-prism {

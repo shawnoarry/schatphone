@@ -364,7 +364,7 @@ test('Chromatic Glass keeps the body clear and moves color into edge light', asy
   expect(pageErrors).toEqual([])
 })
 
-test('Moonlit Journal applies champagne paper tokens across day and night', async ({ page }) => {
+test('Moonlit Journal keeps a light moonlit-paper palette across day and night', async ({ page }) => {
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
@@ -385,7 +385,7 @@ test('Moonlit Journal applies champagne paper tokens across day and night', asyn
         .locator('html')
         .evaluate((root) => getComputedStyle(root).getPropertyValue('--app-bg').trim()),
     )
-    .toBe('#f4ede3')
+    .toBe('#f6f2ef')
 
   await page.getByTestId('appearance-color-mode-night').click()
   await expect(page.locator('html')).toHaveAttribute('data-color-mode', 'night')
@@ -395,9 +395,55 @@ test('Moonlit Journal applies champagne paper tokens across day and night', asyn
         .locator('html')
         .evaluate((root) => getComputedStyle(root).getPropertyValue('--app-bg').trim()),
     )
-    .toBe('#211a13')
+    .toBe('#eee9e5')
 
   await navigateInsideUnlockedApp(page, '/home')
+  await expectNoHorizontalOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
+test('Sticker Pop applies bold-outline surfaces and system icons across day and night', async ({
+  page,
+}) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-style-kit-sticker-pop').click()
+
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'sticker-pop')
+  await expect(page.locator('html')).toHaveAttribute('data-system-icon-theme', 'sticker-pop')
+  await expect(page.getByTestId('appearance-style-kit-status')).toContainText(
+    /套装已应用|Kit Applied/,
+  )
+
+  await navigateInsideUnlockedApp(page, '/home')
+  const widgetsIcon = page.getByTestId('home-dock-icon-app_widgets')
+  await expect(widgetsIcon).toHaveClass(/material-sticker-pop/)
+  await expect(page.getByTestId('home-dock-icon-app_chat')).not.toHaveClass(
+    /material-sticker-pop/,
+  )
+  await expect
+    .poll(() =>
+      widgetsIcon.evaluate((icon) => ({
+        borderWidth: getComputedStyle(icon).borderTopWidth,
+        borderStyle: getComputedStyle(icon).borderTopStyle,
+        shadow: getComputedStyle(icon).boxShadow,
+      })),
+    )
+    .toMatchObject({
+      borderWidth: '3px',
+      borderStyle: 'solid',
+      shadow: expect.stringContaining('4px'),
+    })
+
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-color-mode-night').click()
+  await expect(page.locator('html')).toHaveAttribute('data-color-mode', 'night')
   await expectNoHorizontalOverflow(page)
   expect(pageErrors).toEqual([])
 })

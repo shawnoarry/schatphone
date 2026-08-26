@@ -1,6 +1,6 @@
 # SchatPhone Visual Style Direction Brief
 
-Updated: 2026-08-27
+Updated: 2026-08-26
 
 Document state: `ACTIVE_REFERENCE_DIRECTION`
 
@@ -40,7 +40,7 @@ Appearance theme direction:
 2. system themes own global color, material, Dock, controls, radius, shadow, and system background tokens;
 3. curated native-system App icon packs remain independently selectable; per-app overrides keep the default priority, while an explicit reversible preference may temporarily lead with the pack visual for system Apps without changing saved names or deleting the stored override;
 4. one-click style kits compose a system theme, icon pack, and optional recommended wallpaper without locking later customization; they may also offer an explicitly installed companion-widget collection that remains independently usable under every theme and never changes Home placement;
-5. initial authored directions include Cloud Pastel, Liquid Prism, and the user-requested Chromatic Glass experiment, with Dessert Bakery and Misty Glass retained as later candidates; Moonlit Journal joined the shipped authored directions on 2026-08-27 as the vintage-paper style-family theme cataloged in `docs/design/APPEARANCE_STYLE_TAXONOMY.md`; Liquid Prism is defined by nearly colorless transparency, edge refraction, and faint ambient iridescence rather than a mint/aqua/blue palette, while Chromatic Glass keeps a near-neutral gray background and clear body, then places low-saturation pink, blue, mint, and peach into control surfaces, edge refraction, highlights, semantic accents, and soft shadows. Every direction still requires deliberate day/night, icon, widget, and asset review before acceptance. The per-theme style-family catalog and the minimum spec for new beautification packs are maintained in `docs/design/APPEARANCE_STYLE_TAXONOMY.md`; classify any new theme proposal there before implementation.
+5. shipped authored directions include Cloud Pastel, Chromatic Glass, Moonlit Journal, and Sticker Pop, with Dessert Bakery, Misty Glass, and Soft Clay retained as later candidates. Moonlit Journal uses high-lightness warm paper, misty blush, and pale taupe in both modes; Sticker Pop uses creamy paper, bold rounded outlines, softened color blocks, and a matching system-App icon material. Chromatic Glass remains the merged public glass direction: a clear near-neutral body with low-saturation pink, blue, mint, and peach restricted to control surfaces, refraction, highlights, semantic accents, and soft shadows. Every direction still requires deliberate day/night, icon, widget, and asset review before acceptance. The per-theme style-family catalog and the minimum spec for new beautification packs are maintained in `docs/design/APPEARANCE_STYLE_TAXONOMY.md`; classify any new theme proposal there before implementation.
 
 ## 2. Module Direction Table
 

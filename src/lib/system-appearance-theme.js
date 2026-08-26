@@ -88,12 +88,28 @@ export const SYSTEM_APPEARANCE_THEME_OPTIONS = Object.freeze([
     id: 'moonlit-journal',
     labelZh: '月光手账',
     labelEn: 'Moonlit Journal',
-    descriptionZh: '香槟纸感与烛光金组成的复古手账材质，日间如暖纸，夜间如深咖灯下旧页。',
+    descriptionZh: '暖白纸页、雾粉与浅灰褐组成的月光手账材质；夜间仍保持柔和的浅色纸感。',
     descriptionEn:
-      'A vintage journal material in champagne paper and candlelight gold; warm paper by day, aged pages under lamplight by night.',
+      'A moonlit journal material in warm white paper, misty blush, and pale taupe; night mode stays softly paper-light.',
     previews: Object.freeze({
-      day: 'linear-gradient(145deg, #f7f0e4 0%, #eee1cb 48%, #d5bd9a 100%)',
-      night: 'linear-gradient(145deg, #34291e 0%, #251c13 52%, #140f0a 100%)',
+      day: 'linear-gradient(145deg, #fbf8f5 0%, #f2ece8 52%, #e8ddd7 100%)',
+      night: 'linear-gradient(145deg, #f2eeeb 0%, #e8e1dd 54%, #dcd1cb 100%)',
+    }),
+    wallpapers: Object.freeze({
+      day: '',
+      night: '',
+    }),
+  },
+  {
+    id: 'sticker-pop',
+    labelZh: '贴纸涂鸦',
+    labelEn: 'Sticker Pop',
+    descriptionZh: '奶油纸底、粗黑圆线与柔和彩色块组成的手绘贴纸系统；夜间切换为暖墨底与浅色描边。',
+    descriptionEn:
+      'A hand-drawn sticker system with creamy paper, bold rounded ink, and softened color blocks; night mode uses warm ink and pale outlines.',
+    previews: Object.freeze({
+      day: 'linear-gradient(145deg, #fffaf1 0%, #f5d477 42%, #ef8c91 68%, #86b99a 100%)',
+      night: 'linear-gradient(145deg, #343338 0%, #514b55 44%, #705557 70%, #4d6658 100%)',
     }),
     wallpapers: Object.freeze({
       day: '',
@@ -142,6 +158,16 @@ export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
       'Moonlit Journal surfaces, classic system app icons, and vintage paper tones.',
     systemTheme: 'moonlit-journal',
     systemAppIconTheme: DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+  },
+  {
+    id: 'sticker-pop',
+    labelZh: '贴纸涂鸦',
+    labelEn: 'Sticker Pop',
+    descriptionZh: '贴纸涂鸦界面、粗线系统 App 图标与奶油纸感背景。',
+    descriptionEn:
+      'Sticker Pop surfaces, bold-outline system app icons, and a creamy paper-like background.',
+    systemTheme: 'sticker-pop',
+    systemAppIconTheme: 'sticker-pop',
   },
 ])
 
