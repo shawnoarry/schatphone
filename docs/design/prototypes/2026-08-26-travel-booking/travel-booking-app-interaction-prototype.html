@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出行预订 App · 交互原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --coral:#FF5A5F;
+    --coral-soft:#FFE3E4;
+    --coral-tint:#FFF0F0;
+    --teal:#00B5A5;
+    --teal-d:#00877D;
+    --teal-tint:#E8F7F0;
+    --bg:#F6F5F2;
+    --ink:#1C2430;
+    --ink2:#5A6066;
+    --ink3:#8A9099;
+    --ink4:#A9AEB8;
+    --line:#F0F1F3;
+    --line2:#EDEEF0;
+    --gold:#E8B54D;
+    --white:#FFFFFF;
+    --r:12px;
+    --r-lg:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:#2b2d33;font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;display:flex;align-items:center;justify-content:center;}
+  body{padding:24px;}
+
+  /* ---------- 手机外壳 ---------- */
+  .phone{
+    width:390px;height:844px;background:var(--bg);border-radius:44px;
+    box-shadow:0 30px 70px rgba(0,0,0,.45),0 0 0 11px #18191c,0 0 0 13px #2c2e33;
+    position:relative;overflow:hidden;
+  }
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:30px;background:#18191c;border-radius:0 0 18px 18px;z-index:50;}
+  .statusbar{
+    position:absolute;top:0;left:0;right:0;height:44px;z-index:40;
+    display:flex;align-items:center;justify-content:space-between;padding:0 24px 0 30px;
+    font-size:15px;font-weight:600;color:var(--ink);
+  }
+  .statusbar .right{display:flex;align-items:center;gap:6px;}
+  .statusbar svg{display:block;}
+
+  /* ---------- 视口 ---------- */
+  .viewport{
+    position:absolute;top:44px;left:0;right:0;bottom:0;overflow:hidden;
+  }
+  .screen{
+    position:absolute;inset:0;overflow-y:auto;background:var(--bg);
+    opacity:0;visibility:hidden;transform:translateX(12px);
+    transition:opacity .28s ease,transform .28s ease,visibility .28s;
+    -webkit-overflow-scrolling:touch;
+  }
+  .screen.active{opacity:1;visibility:visible;transform:none;}
+  .screen.main{padding-bottom:64px;}
+
+  /* ---------- 页头 ---------- */
+  .appbar{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;background:var(--bg);z-index:20;}
+  .appbar h1{font-size:20px;font-weight:700;color:var(--ink);}
+  .appbar .sub{font-size:14px;color:var(--coral);font-weight:500;}
+  .appbar .ghost{font-size:12px;color:var(--ink3);}
+  .back{width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .appbar-title{position:absolute;left:0;right:0;text-align:center;font-size:17px;font-weight:600;color:var(--ink);pointer-events:none;}
+
+  /* ---------- 通用卡片 ---------- */
+  .card{background:var(--white);border-radius:var(--r-lg);padding:14px;}
+
+  /* ---------- 首页 ---------- */
+  .greet{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 6px;}
+  .greet .hi{font-size:20px;font-weight:700;color:var(--ink);}
+  .greet .sub{font-size:12px;color:var(--ink3);margin-top:3px;}
+  .avatar{width:42px;height:42px;border-radius:21px;background:var(--coral);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;cursor:pointer;}
+
+  .search-card{margin:10px 20px 0;background:#fff;border-radius:var(--r-lg);padding:14px 16px;box-shadow:0 6px 20px rgba(28,36,48,.04);}
+  .seg{display:flex;gap:6px;background:#F3F4F6;border-radius:10px;padding:4px;}
+  .seg button{flex:1;border:none;background:transparent;padding:8px 0;border-radius:8px;font-size:13px;font-weight:500;color:var(--ink2);font-family:inherit;cursor:pointer;transition:.2s;}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.06);font-weight:600;}
+  .city{display:flex;align-items:center;justify-content:space-between;margin-top:18px;}
+  .city .c{text-align:center;}
+  .city .c .name{font-size:24px;font-weight:700;color:var(--ink);}
+  .city .c .code{font-size:11px;color:var(--ink3);margin-top:2px;}
+  .swap{width:36px;height:36px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--ink2);cursor:pointer;}
+  .date-row{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+  .date-row .d{font-size:15px;font-weight:600;color:var(--ink);}
+  .date-row .d small{font-size:11px;color:var(--ink3);font-weight:400;margin-left:4px;}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);}
+  .switch{width:42px;height:24px;border-radius:12px;background:var(--teal);position:relative;cursor:pointer;transition:.2s;}
+  .switch i{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;}
+  .switch.off{background:#D7DAE0;}
+  .switch.off i{right:20px;}
+  .query-btn{margin:16px 20px 0;height:48px;background:var(--coral);color:#fff;border:none;border-radius:var(--r);font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:2px;}
+
+  .quick{display:flex;justify-content:space-between;margin:18px 20px 0;}
+  .quick .q{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;width:64px;}
+  .quick .qi{width:48px;height:48px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;color:var(--coral);}
+  .quick .ql{font-size:12px;color:var(--ink2);}
+
+  .banner{margin:18px 20px 0;height:104px;border-radius:var(--r-lg);background:linear-gradient(135deg,var(--teal),#0A8F84);display:flex;align-items:center;justify-content:space-between;padding:0 18px;color:#fff;}
+  .banner .bt{font-size:16px;font-weight:700;}
+  .banner .bs{font-size:12px;opacity:.9;margin-top:6px;}
+  .banner .bb{background:#fff;color:var(--teal-d);font-size:13px;font-weight:600;padding:8px 16px;border-radius:16px;cursor:pointer;}
+
+  /* ---------- 车次列表 ---------- */
+  .datebar{display:flex;gap:8px;padding:14px 20px 4px;overflow-x:auto;}
+  .datebar .d{flex:0 0 auto;padding:7px 14px;border-radius:10px;background:#fff;border:1px solid var(--line2);text-align:center;cursor:pointer;}
+  .datebar .d .day{font-size:15px;font-weight:700;color:var(--ink);}
+  .datebar .d .wk{font-size:10px;color:var(--ink3);margin-top:2px;}
+  .datebar .d.on{background:var(--coral);border-color:var(--coral);}
+  .datebar .d.on .day,.datebar .d.on .wk{color:#fff;}
+  .sortbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;}
+  .sortbar .s{display:flex;gap:18px;font-size:13px;color:var(--ink2);}
+  .sortbar .s .on{color:var(--ink);font-weight:600;}
+  .sortbar .f{font-size:13px;color:var(--ink2);display:flex;align-items:center;gap:3px;}
+
+  .train{margin:0 20px 12px;background:#fff;border-radius:var(--r-lg);padding:13px 14px;cursor:pointer;box-shadow:0 4px 14px rgba(28,36,48,.04);}
+  .train .top{display:flex;justify-content:space-between;align-items:center;}
+  .train .no{font-size:16px;font-weight:700;color:var(--ink);}
+  .train .gt{font-size:10px;font-weight:600;color:#fff;background:var(--teal);padding:2px 6px;border-radius:4px;margin-left:6px;}
+  .train .dur{font-size:12px;color:var(--ink3);}
+  .train .mid{display:flex;align-items:center;justify-content:space-between;margin:12px 0;}
+  .train .mid .t{font-size:22px;font-weight:700;color:var(--ink);}
+  .train .mid .st{font-size:11px;color:var(--ink3);margin-top:2px;}
+  .train .mid .line{flex:1;height:1px;background:var(--line2);margin:0 14px;position:relative;}
+  .train .mid .line::after{content:"";position:absolute;right:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--ink4);}
+  .train .seats{display:flex;gap:8px;}
+  .train .seat{flex:1;background:var(--bg);border-radius:10px;padding:8px 6px;text-align:center;}
+  .train .seat .st-n{font-size:13px;font-weight:600;color:var(--ink);}
+  .train .seat .st-p{font-size:14px;font-weight:700;color:var(--coral);margin-top:3px;}
+  .train .seat .st-p.mut{color:var(--ink4);}
+  .foot-note{text-align:center;font-size:11px;color:var(--ink4);padding:6px 0 20px;}
+
+  /* ---------- 订单确认 ---------- */
+  .block{margin:0 20px 12px;}
+  .trip{background:var(--teal-tint);border-radius:var(--r);padding:14px;}
+  .trip .r1{display:flex;justify-content:space-between;align-items:center;}
+  .trip .no{font-size:16px;font-weight:700;color:var(--ink);}
+  .trip .gt{font-size:10px;font-weight:600;color:#fff;background:var(--teal);padding:2px 6px;border-radius:4px;}
+  .trip .r2{display:flex;align-items:center;justify-content:space-between;margin-top:12px;}
+  .trip .r2 .city{font-size:18px;font-weight:700;color:var(--ink);}
+  .trip .r2 .arr{color:var(--ink4);font-size:16px;}
+  .trip .r2 .time{font-size:13px;color:var(--ink2);}
+  .trip .meta{font-size:11px;color:var(--ink3);margin-top:10px;}
+  .label{font-size:13px;font-weight:500;color:var(--ink3);margin-bottom:10px;}
+  .pass{display:flex;justify-content:space-between;align-items:center;}
+  .pass .who{display:flex;align-items:center;gap:10px;}
+  .pass .pa{width:34px;height:34px;border-radius:50%;background:var(--coral-soft);color:var(--coral);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;}
+  .pass .nm{font-size:15px;font-weight:600;color:var(--ink);}
+  .pass .tag{font-size:11px;color:var(--teal-d);background:var(--teal-tint);padding:2px 6px;border-radius:4px;margin-left:6px;}
+  .pass .add{font-size:13px;color:var(--coral);font-weight:500;cursor:pointer;}
+  .seatpick{display:flex;flex-direction:column;gap:10px;}
+  .seatpick .opt{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:var(--bg);cursor:pointer;}
+  .seatpick .opt.sel{background:var(--coral-tint);border:1px solid var(--coral);}
+  .seatpick .opt .sn{font-size:14px;font-weight:600;color:var(--ink);}
+  .seatpick .opt .sp{font-size:15px;font-weight:700;color:var(--coral);}
+  .seatpick .opt.sel .sp{color:var(--coral);}
+  .fee .row{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);padding:5px 0;}
+  .fee .row .v{color:var(--ink);}
+  .fee .row .v.minus{color:var(--coral);}
+  .submit-bar{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;background:#fff;border-top:1px solid var(--line2);padding:8px 20px;margin-top:8px;}
+  .submit-bar .total{font-size:13px;color:var(--ink3);}
+  .submit-bar .total b{font-size:22px;font-weight:700;color:var(--coral);margin-left:4px;}
+  .submit-bar .go{background:var(--coral);color:#fff;border:none;font-size:15px;font-weight:600;font-family:inherit;padding:12px 28px;border-radius:22px;cursor:pointer;}
+
+  /* ---------- 收银台 ---------- */
+  .amount{text-align:center;padding:30px 0 20px;}
+  .amount .lab{font-size:13px;color:var(--ink3);}
+  .amount .big{font-size:44px;font-weight:700;color:var(--ink);margin:8px 0;}
+  .amount .tip{font-size:11px;color:var(--ink3);}
+  .paycard{margin:0 20px;background:#fff;border-radius:var(--r-lg);overflow:hidden;}
+  .paycard .ph{padding:13px 14px;font-size:13px;font-weight:500;color:var(--ink3);border-bottom:1px solid var(--line);}
+  .payrow{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:56px;cursor:pointer;}
+  .payrow + .payrow{border-top:1px solid var(--line);}
+  .payrow .l{display:flex;align-items:center;gap:12px;}
+  .payrow .ic{width:32px;height:32px;border-radius:8px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+  .payrow .col .t{font-size:15px;font-weight:500;color:var(--ink);}
+  .payrow .col .s{font-size:11px;color:var(--ink3);margin-top:1px;}
+  .radio{width:20px;height:20px;border-radius:50%;border:1.5px solid #C7CBD1;display:flex;align-items:center;justify-content:center;}
+  .payrow.sel .radio{background:var(--coral);border-color:var(--coral);color:#fff;font-size:11px;}
+  .pay-btn{margin:30px 20px 0;height:52px;background:var(--coral);color:#fff;border:none;border-radius:26px;font-size:16px;font-weight:600;font-family:inherit;cursor:pointer;}
+  .pay-note{text-align:center;font-size:11px;color:var(--ink4);margin-top:14px;}
+
+  /* ---------- 支付成功 ---------- */
+  .success{text-align:center;padding:34px 0 14px;}
+  .success .ok{width:64px;height:64px;border-radius:32px;background:var(--teal);display:flex;align-items:center;justify-content:center;margin:0 auto;}
+  .success .t{font-size:22px;font-weight:700;color:var(--ink);margin-top:16px;}
+  .success .s{font-size:13px;color:var(--ink3);margin-top:8px;}
+  .eticket{margin:10px 20px 0;background:#fff;border-radius:var(--r-lg);padding:16px;}
+  .eticket .r1{display:flex;justify-content:space-between;align-items:center;}
+  .eticket .no{font-size:16px;font-weight:700;color:var(--ink);}
+  .eticket .gt{font-size:10px;font-weight:600;color:#fff;background:var(--teal);padding:2px 6px;border-radius:4px;}
+  .eticket .st{font-size:12px;font-weight:500;color:var(--teal-d);}
+  .eticket .city{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0 12px;}
+  .eticket .city .n{font-size:22px;font-weight:700;color:var(--ink);}
+  .eticket .city .a{color:var(--ink4);font-size:16px;}
+  .eticket .time{text-align:center;font-size:12px;color:var(--ink3);}
+  .eticket .ln{height:1px;background:var(--line);margin:14px 0;}
+  .eticket .r2{display:flex;justify-content:space-between;align-items:center;}
+  .eticket .r2 .l{font-size:12px;font-weight:500;color:var(--ink);}
+  .eticket .r2 .r{font-size:12px;color:var(--ink3);}
+  .eticket .qr{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:14px;}
+  .eticket .qr .box{width:88px;height:88px;border-radius:10px;background:
+    repeating-linear-gradient(0deg,#1C2430 0 4px,transparent 4px 7px),
+    repeating-linear-gradient(90deg,#1C2430 0 4px,transparent 4px 7px);
+    background-blend-mode:difference;}
+  .eticket .qr .ql{font-size:11px;color:var(--ink3);}
+  .remind{margin:14px 20px 0;background:var(--teal-tint);border-radius:10px;display:flex;align-items:center;gap:8px;padding:10px 12px;}
+  .remind svg{flex:0 0 auto;}
+  .remind .rt{font-size:12px;font-weight:500;color:var(--teal-d);}
+  .btn-row{display:flex;gap:12px;margin:16px 20px 24px;}
+  .btn-row .b{flex:1;height:48px;border-radius:24px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .btn-row .b.primary{background:var(--coral);color:#fff;border:none;}
+  .btn-row .b.ghost{background:#fff;color:var(--ink2);border:1px solid #E0E2E6;}
+
+  /* ---------- 行程管理 ---------- */
+  .tabs{display:flex;gap:8px;padding:12px 20px;}
+  .tabs .t{padding:7px 14px;border-radius:16px;font-size:12px;background:#fff;border:1px solid var(--line2);color:var(--ink2);cursor:pointer;}
+  .tabs .t.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600;}
+  .trip-card{margin:0 20px 14px;background:#fff;border-radius:var(--r-lg);padding:14px;cursor:pointer;}
+  .trip-card.hot{border:1.5px solid var(--coral);}
+  .trip-card .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .trip-card .badge{font-size:11px;font-weight:600;color:#fff;background:var(--coral);padding:3px 8px;border-radius:6px;}
+  .trip-card .badge.teal{background:var(--teal);}
+  .trip-card .badge.gray{background:#E9EAEC;color:var(--ink2);}
+  .trip-card .rem{font-size:11px;color:var(--teal-d);}
+  .trip-card .rem.off{color:var(--ink4);}
+  .trip-card .cities{display:flex;align-items:center;gap:10px;}
+  .trip-card .cities .n{font-size:18px;font-weight:700;color:var(--ink);}
+  .trip-card .cities .n.dim{color:var(--ink2);}
+  .trip-card .cities .a{color:var(--ink4);}
+  .trip-card .info{font-size:12px;color:var(--ink2);margin-top:8px;}
+  .trip-card .ln{height:1px;background:var(--line);margin:12px 0;}
+  .trip-card .f{display:flex;justify-content:space-between;align-items:center;}
+  .trip-card .f .acts{font-size:12px;color:var(--ink3);}
+  .trip-card .f .cd{font-size:12px;font-weight:600;color:var(--coral);}
+  .trip-card .f .cd.teal{color:var(--teal-d);}
+  .trip-card .f .cd.gray{color:var(--ink3);font-weight:500;}
+
+  /* ---------- 个人中心 ---------- */
+  .user{display:flex;justify-content:space-between;align-items:center;margin:8px 20px 0;}
+  .user .l{display:flex;align-items:center;gap:14px;}
+  .user .av{width:56px;height:56px;border-radius:28px;background:var(--coral-soft);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--coral);}
+  .user .nm{font-size:20px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;}
+  .user .vtag{font-size:10px;font-weight:600;color:#fff;background:var(--gold);padding:2px 6px;border-radius:4px;}
+  .user .ph{font-size:12px;color:var(--ink3);margin-top:5px;}
+  .user .edit{font-size:12px;color:var(--ink3);}
+  .stats{margin:16px 20px 0;background:#fff;border-radius:var(--r-lg);padding:16px;}
+  .stats .grid{display:flex;}
+  .stats .g{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
+  .stats .g .n{font-size:18px;font-weight:700;color:var(--ink);}
+  .stats .g .n.hot{color:var(--coral);}
+  .stats .g .l{font-size:11px;color:var(--ink3);}
+  .fn{margin:12px 20px 0;background:#fff;border-radius:var(--r-lg);overflow:hidden;}
+  .fn .r{display:flex;justify-content:space-between;align-items:center;height:52px;padding:0 16px;cursor:pointer;}
+  .fn .r + .r{border-top:1px solid var(--line);}
+  .fn .r .l{font-size:14px;color:var(--ink);}
+  .fn .r .r2{font-size:12px;color:var(--ink3);}
+  .logout{margin:16px 20px 24px;height:44px;background:#fff;border-radius:22px;color:var(--coral);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;border:none;width:calc(100% - 40px);}
+
+  /* ---------- 消息中心 ---------- */
+  .chips{display:flex;gap:8px;padding:12px 20px;overflow-x:auto;}
+  .chips .c{padding:7px 14px;border-radius:16px;font-size:12px;background:#fff;border:1px solid var(--line2);color:var(--ink2);cursor:pointer;white-space:nowrap;}
+  .chips .c.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600;}
+  .msg-list{margin:6px 20px 0;background:#fff;border-radius:var(--r-lg);overflow:hidden;}
+  .msg{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;cursor:pointer;}
+  .msg + .msg{border-top:1px solid var(--line);}
+  .msg .ic{width:40px;height:40px;border-radius:12px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:0 0 auto;}
+  .msg .col{flex:1;min-width:0;}
+  .msg .tr{display:flex;justify-content:space-between;align-items:center;}
+  .msg .tr .ti{font-size:14px;font-weight:500;color:var(--ink);}
+  .msg .tr .tm{font-size:11px;color:var(--ink4);}
+  .msg .su{font-size:12px;color:var(--ink3);margin-top:4px;line-height:1.5;}
+  .msg-hist{text-align:center;font-size:11px;color:var(--ink4);padding:14px 0 24px;cursor:pointer;}
+
+  /* ---------- 底部导航 ---------- */
+  .tabbar{position:absolute;left:0;right:0;bottom:0;height:49px;background:#fff;border-top:1px solid var(--line2);display:flex;z-index:30;padding-bottom:0;}
+  .tabbar.hide{display:none;}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--ink4);}
+  .tab.on{color:var(--coral);}
+  .tab span{font-size:10px;font-weight:500;}
+  .tab.on span{font-weight:600;}
+  .home-bar{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;width:134px;height:5px;background:var(--ink);border-radius:3px;z-index:60;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+
+  <!-- 共享状态栏 -->
+  <div class="statusbar">
+    <span>9:41</span>
+    <div class="right">
+      <svg width="17" height="11" viewBox="0 0 17 11" fill="none"><rect x="0" y="7" width="3" height="4" rx="1" fill="#1C2430"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#1C2430"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#1C2430"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#1C2430"/></svg>
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="none"><path d="M8 2.2c2 0 3.9.8 5.3 2.1l1.2-1.3C13 1.2 10.6.3 8 .3S3 1.2 1.5 3l1.2 1.3C4.1 3 6 2.2 8 2.2z" fill="#1C2430"/><path d="M8 6c1.1 0 2.2.4 3 1.2l1.2-1.3C11.1 4.9 9.6 4.3 8 4.3S4.9 4.9 3.8 5.9l1.2 1.3C5.8 6.4 6.9 6 8 6z" fill="#1C2430"/><circle cx="8" cy="9.5" r="1.4" fill="#1C2430"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="20" height="11" rx="3" stroke="#1C2430" stroke-opacity="0.4"/><rect x="2" y="2" width="16" height="8" rx="1.5" fill="#1C2430"/><rect x="22" y="3.5" width="1.5" height="5" rx="0.75" fill="#1C2430" fill-opacity="0.4"/></svg>
+    </div>
+  </div>
+
+  <div class="viewport">
+
+    <!-- ============ Screen 1 首页 ============ -->
+    <section class="screen main active" id="s1">
+      <div class="greet">
+        <div>
+          <div class="hi">你好，鹅崽</div>
+          <div class="sub">潍坊 · 晴 26°C · 适合出行</div>
+        </div>
+        <div class="avatar">鹅</div>
+      </div>
+
+      <div class="search-card">
+        <div class="seg">
+          <button class="on">火车票</button>
+          <button>机票</button>
+          <button>汽车·船票</button>
+        </div>
+        <div class="city">
+          <div class="c"><div class="name">潍坊</div><div class="code">WEIFANG</div></div>
+          <div class="swap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 10h11l-3-3M17 14H6l3 3" stroke="#5A6066" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="c"><div class="name">北京</div><div class="code">BEIJING</div></div>
+        </div>
+        <div class="date-row">
+          <div class="d">08月28日 <small>周五</small></div>
+          <div class="toggle">
+            <span>只看高铁</span>
+            <div class="switch" onclick="this.classList.toggle('off')"><i></i></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="query-btn" onclick="go('s2')">查 询 车 票</button>
+
+      <div class="quick">
+        <div class="q" onclick="go('s2')"><div class="qi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 10h18M5 10V7a2 2 0 012-2h10a2 2 0 012 2v3M5 10v7m0 0h2m-2 0v2m12-2v7m0 0h-2m2 0v-2M9 17h6" stroke="#FF5A5F" stroke-width="1.6" stroke-linecap="round"/></svg></div><div class="ql">酒店</div></div>
+        <div class="q"><div class="qi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 17h14M6.5 17V11l5.5-4 5.5 4v6M9 17v-3h6v3" stroke="#FF5A5F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="ql">接送站</div></div>
+        <div class="q"><div class="qi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 16l1.5-5h11L19 16M7 16h10v3H7zM7 11l1.5-4h7L17 11M8 19v1m8-1v1" stroke="#FF5A5F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="ql">租车</div></div>
+        <div class="q"><div class="qi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 16l-4.9 2.2.9-5.5-4-3.9 5.5-.8z" stroke="#FF5A5F" stroke-width="1.6" stroke-linejoin="round"/></svg></div><div class="ql">攻略</div></div>
+      </div>
+
+      <div class="banner">
+        <div>
+          <div class="bt">新客首单立减 ¥20</div>
+          <div class="bs">注册即领 · 限火车票/机票</div>
+        </div>
+        <div class="bb">立即领取</div>
+      </div>
+    </section>
+
+    <!-- ============ Screen 2 车次列表 ============ -->
+    <section class="screen" id="s2">
+      <div class="appbar">
+        <div class="back" onclick="back()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#1C2430" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="appbar-title">潍坊北 → 北京南</div>
+        <div class="f" style="color:var(--ink3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M6 12h12M10 18h4" stroke="#5A6066" stroke-width="2" stroke-linecap="round"/></svg></div>
+      </div>
+
+      <div class="datebar">
+        <div class="d"><div class="day">27</div><div class="wk">周四</div></div>
+        <div class="d on"><div class="day">28</div><div class="wk">明天</div></div>
+        <div class="d"><div class="day">29</div><div class="wk">周六</div></div>
+        <div class="d"><div class="day">30</div><div class="wk">周日</div></div>
+      </div>
+
+      <div class="sortbar">
+        <div class="s"><span class="on">智能推荐</span><span>出发时间</span><span>价格最低</span></div>
+        <div class="f"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M6 12h12M10 18h4" stroke="#5A6066" stroke-width="2" stroke-linecap="round"/></svg>筛选</div>
+      </div>
+
+      <div class="train" onclick="go('s3')">
+        <div class="top"><div><span class="no">G1026</span><span class="gt">高铁</span></div><div class="dur">3小时43分</div></div>
+        <div class="mid">
+          <div><div class="t">08:32</div><div class="st">潍坊北</div></div>
+          <div class="line"></div>
+          <div style="text-align:right"><div class="t">12:15</div><div class="st">北京南</div></div>
+        </div>
+        <div class="seats">
+          <div class="seat"><div class="st-n">二等座</div><div class="st-p">¥314</div></div>
+          <div class="seat"><div class="st-n">一等座</div><div class="st-p">¥522</div></div>
+          <div class="seat"><div class="st-n">商务座</div><div class="st-p mut">无票</div></div>
+        </div>
+      </div>
+
+      <div class="train" onclick="go('s3')">
+        <div class="top"><div><span class="no">G1062</span><span class="gt">高铁</span></div><div class="dur">3小时41分</div></div>
+        <div class="mid">
+          <div><div class="t">09:15</div><div class="st">潍坊北</div></div>
+          <div class="line"></div>
+          <div style="text-align:right"><div class="t">12:56</div><div class="st">北京南</div></div>
+        </div>
+        <div class="seats">
+          <div class="seat"><div class="st-n">二等座</div><div class="st-p">¥336</div></div>
+          <div class="seat"><div class="st-n">一等座</div><div class="st-p">¥547</div></div>
+          <div class="seat"><div class="st-n">商务座</div><div class="st-p">¥998</div></div>
+        </div>
+      </div>
+
+      <div class="train" onclick="go('s3')">
+        <div class="top"><div><span class="no">G1088</span><span class="gt">高铁</span></div><div class="dur">3小时46分</div></div>
+        <div class="mid">
+          <div><div class="t">10:20</div><div class="st">潍坊北</div></div>
+          <div class="line"></div>
+          <div style="text-align:right"><div class="t">14:03</div><div class="st">北京南</div></div>
+        </div>
+        <div class="seats">
+          <div class="seat"><div class="st-n">二等座</div><div class="st-p">¥308</div></div>
+          <div class="seat"><div class="st-n">一等座</div><div class="st-p">¥510</div></div>
+          <div class="seat"><div class="st-n">商务座</div><div class="st-p mut">无票</div></div>
+        </div>
+      </div>
+
+      <div class="foot-note">共 12 趟车次 · 已按出发时间排序</div>
+    </section>
+
+    <!-- ============ Screen 3 订单确认 ============ -->
+    <section class="screen" id="s3">
+      <div class="appbar">
+        <div class="back" onclick="back()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#1C2430" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="appbar-title">确认订单</div>
+        <div class="ghost">服务条款</div>
+      </div>
+
+      <div class="block trip">
+        <div class="r1"><div><span class="no">G1026</span> <span class="gt">高铁</span></div><div class="time" style="font-size:12px;color:var(--ink3)">08:32 出发</div></div>
+        <div class="r2">
+          <div class="city" style="font-size:18px">潍坊北</div>
+          <div class="arr">→</div>
+          <div class="city" style="font-size:18px">北京南</div>
+        </div>
+        <div class="meta">8月28日 周五 · 05车 12F · 二等座</div>
+      </div>
+
+      <div class="block card">
+        <div class="label">乘车人</div>
+        <div class="pass">
+          <div class="who"><div class="pa">鹅</div><div><span class="nm">鹅崽</span><span class="tag">已核验</span></div></div>
+          <div class="add">＋ 添加乘车人</div>
+        </div>
+      </div>
+
+      <div class="block card">
+        <div class="label">坐席选择</div>
+        <div class="seatpick">
+          <div class="opt sel" onclick="selSeat(this)"><span class="sn">二等座</span><span class="sp">¥314</span></div>
+          <div class="opt" onclick="selSeat(this)"><span class="sn">一等座</span><span class="sp">¥522</span></div>
+        </div>
+      </div>
+
+      <div class="block card fee">
+        <div class="label">订单信息</div>
+        <div class="row"><span>手机号</span><span class="v">138 0013 8000</span></div>
+        <div style="height:1px;background:var(--line);margin:8px 0"></div>
+        <div class="row"><span>票价</span><span class="v">¥314.00</span></div>
+        <div class="row"><span>铁路乘意险</span><span class="v">¥0.00</span></div>
+        <div class="row"><span>优惠券</span><span class="v minus">-¥5.00</span></div>
+      </div>
+
+      <div class="submit-bar">
+        <div class="total">合计 <b>¥309</b></div>
+        <button class="go" onclick="go('s4')">提交订单</button>
+      </div>
+    </section>
+
+    <!-- ============ Screen 4 收银台 ============ -->
+    <section class="screen" id="s4">
+      <div class="appbar">
+        <div class="back" onclick="back()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#1C2430" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="appbar-title">收银台</div>
+      </div>
+
+      <div class="amount">
+        <div class="lab">支付金额</div>
+        <div class="big">¥309.00</div>
+        <div class="tip">支付剩余 14:32 · 订单号 E202608281352</div>
+      </div>
+
+      <div class="paycard">
+        <div class="ph">选择支付方式</div>
+        <div class="payrow sel" onclick="selPay(this)"><div class="l"><div class="ic" style="background:#07C160">微</div><div class="col"><div class="t">微信支付</div><div class="s">推荐使用 · 已绑定</div></div></div><div class="radio">✓</div></div>
+        <div class="payrow" onclick="selPay(this)"><div class="l"><div class="ic" style="background:#1677FF">支</div><div class="col"><div class="t">支付宝</div><div class="s">支付宝账户余额</div></div></div><div class="radio"></div></div>
+        <div class="payrow" onclick="selPay(this)"><div class="l"><div class="ic" style="background:#FF8F1F">卡</div><div class="col"><div class="t">招商银行储蓄卡</div><div class="s">尾号 4762 · 单笔限额 ¥50000</div></div></div><div class="radio"></div></div>
+        <div class="payrow" onclick="selPay(this)"><div class="l"><div class="ic" style="background:#E63312">闪</div><div class="col"><div class="t">云闪付</div><div class="s">银联标准 · 全网银行卡通用</div></div></div><div class="radio"></div></div>
+      </div>
+
+      <button class="pay-btn" onclick="go('s5')">确认支付 ¥309.00</button>
+      <div class="pay-note">支付过程由平台加密保障 · 到账即时</div>
+    </section>
+
+    <!-- ============ Screen 5 支付成功 ============ -->
+    <section class="screen" id="s5">
+      <div class="appbar">
+        <div class="back" onclick="go('s1')"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M15 5l-7 7 7 7" stroke="#1C2430" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="appbar-title">支付完成</div>
+      </div>
+
+      <div class="success">
+        <div class="ok"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5 9-11" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="t">支付成功</div>
+        <div class="s">¥309.00 已支付 · 车票已出票</div>
+      </div>
+
+      <div class="eticket">
+        <div class="r1"><div><span class="no">G1026</span> <span class="gt">高铁</span></div><span class="st">已出票</span></div>
+        <div class="city"><span class="n">潍坊北</span><span class="a">→</span><span class="n">北京南</span></div>
+        <div class="time">08:32 出发 · 12:15 到达 · 3小时43分</div>
+        <div class="ln"></div>
+        <div class="r2"><span class="l">05车 12F · 二等座</span><span class="r">鹅崽 · ¥309.00</span></div>
+        <div class="qr"><div class="box"></div><div class="ql">进站检票码 · 凭此码刷闸乘车</div></div>
+      </div>
+
+      <div class="remind">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0" stroke="#00877D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="rt">已开启出行提醒 · 出发前 2 小时推送</div>
+      </div>
+
+      <div class="btn-row">
+        <div class="b primary" onclick="go('s6')">查看行程</div>
+        <div class="b ghost" onclick="go('s1')">返回首页</div>
+      </div>
+    </section>
+
+    <!-- ============ Screen 6 行程管理 ============ -->
+    <section class="screen main" id="s6">
+      <div class="appbar"><h1>我的行程</h1><div class="sub">＋ 新建行程</div></div>
+
+      <div class="tabs">
+        <div class="t on">即将出行 · 1</div>
+        <div class="t">全部 · 12</div>
+        <div class="t">已完成</div>
+      </div>
+
+      <div class="trip-card hot">
+        <div class="h"><span class="badge">8月28日 周五</span><span class="rem">提醒已开 · 出发前 2h</span></div>
+        <div class="cities"><span class="n">潍坊北</span><span class="a">→</span><span class="n">北京南</span></div>
+        <div class="info">G1026 · 08:32 → 12:15 · 05车 12F · 二等座</div>
+        <div class="ln"></div>
+        <div class="f"><span class="acts">编辑 · 删除 · 添加备注</span><span class="cd">3 天后出发</span></div>
+      </div>
+
+      <div class="trip-card">
+        <div class="h"><span class="badge teal">9月10日 周四</span><span class="rem">提醒已开 · 出发前 2h</span></div>
+        <div class="cities"><span class="n">北京南</span><span class="a">→</span><span class="n">潍坊北</span></div>
+        <div class="info">G209 · 15:07 → 18:44 · 08车 03A · 二等座</div>
+        <div class="ln"></div>
+        <div class="f"><span class="acts">编辑 · 删除</span><span class="cd teal">15 天后出发</span></div>
+      </div>
+
+      <div class="trip-card">
+        <div class="h"><span class="badge gray">8月14日 周五</span><span class="rem off">已完成</span></div>
+        <div class="cities"><span class="n dim">潍坊北</span><span class="a">→</span><span class="n dim">上海虹桥</span></div>
+        <div class="info">D6081 · 10:12 → 16:40 · 02车 05C · 二等座</div>
+        <div class="ln"></div>
+        <div class="f"><span class="acts">再次预订 · 开发票</span><span class="cd gray">实付 ¥336</span></div>
+      </div>
+    </section>
+
+    <!-- ============ Screen 7 个人中心 ============ -->
+    <section class="screen main" id="s7">
+      <div class="appbar" style="justify-content:flex-end"><div class="ghost">设置</div></div>
+      <div class="user">
+        <div class="l">
+          <div class="av">鹅</div>
+          <div>
+            <div class="nm">鹅崽 <span class="vtag">黄金会员</span></div>
+            <div class="ph">138 0013 8000 · 会员ID 800026</div>
+          </div>
+        </div>
+        <div class="edit">编辑资料 ›</div>
+      </div>
+
+      <div class="stats">
+        <div class="grid">
+          <div class="g"><div class="n">12</div><div class="l">全部订单</div></div>
+          <div class="g"><div class="n hot">1</div><div class="l">待支付</div></div>
+          <div class="g"><div class="n">1</div><div class="l">待出行</div></div>
+          <div class="g"><div class="n">3</div><div class="l">优惠券</div></div>
+        </div>
+      </div>
+
+      <div class="fn">
+        <div class="r"><span class="l">常用乘客</span><span class="r2">2 人 · 已核验 ›</span></div>
+        <div class="r"><span class="l">优惠券</span><span class="r2">3 张可用 ›</span></div>
+        <div class="r"><span class="l">支付管理</span><span class="r2">微信支付 · 默认 ›</span></div>
+      </div>
+
+      <div class="fn">
+        <div class="r"><span class="l">出行偏好</span><span class="r2">靠窗 · 二等座优先 ›</span></div>
+        <div class="r"><span class="l">消息通知</span><span class="r2">已开启 ›</span></div>
+        <div class="r"><span class="l">帮助与客服</span><span class="r2">24h 在线 ›</span></div>
+        <div class="r"><span class="l">设置</span><span class="r2">账号与隐私 ›</span></div>
+      </div>
+
+      <button class="logout">退出登录</button>
+    </section>
+
+    <!-- ============ Screen 8 消息中心 ============ -->
+    <section class="screen main" id="s8">
+      <div class="appbar"><h1>消息中心</h1><div class="sub">全部已读</div></div>
+
+      <div class="chips">
+        <div class="c on">全部 · 5</div>
+        <div class="c">出行提醒</div>
+        <div class="c">订单状态</div>
+        <div class="c">活动</div>
+      </div>
+
+      <div class="msg-list">
+        <div class="msg">
+          <div class="ic" style="background:#FF5A5F">延</div>
+          <div class="col"><div class="tr"><span class="ti">G209 列车晚点通知</span><span class="tm">10:24</span></div><div class="su">原定 15:07 出发，预计晚点 15 分钟，可免费退改签</div></div>
+        </div>
+        <div class="msg">
+          <div class="ic" style="background:#1677FF">票</div>
+          <div class="col"><div class="tr"><span class="ti">出票成功</span><span class="tm">昨天 14:32</span></div><div class="su">G1026 潍坊北 → 北京南 · 8月28日 05车 12F 二等座</div></div>
+        </div>
+        <div class="msg">
+          <div class="ic" style="background:#00B5A5">醒</div>
+          <div class="col"><div class="tr"><span class="ti">行程临近提醒</span><span class="tm">昨天 09:00</span></div><div class="su">G1026 将于 8月28日 08:32 发车，建议提前 40 分钟到站</div></div>
+        </div>
+        <div class="msg">
+          <div class="ic" style="background:#E8B54D">惠</div>
+          <div class="col"><div class="tr"><span class="ti">会员日专享券到账</span><span class="tm">周一</span></div><div class="su">黄金会员 8 折购票券 ×1 已发放，有效期 7 天，购票立减</div></div>
+        </div>
+        <div class="msg">
+          <div class="ic" style="background:#5A6066">安</div>
+          <div class="col"><div class="tr"><span class="ti">账号安全提醒</span><span class="tm">8月20日</span></div><div class="su">检测到新设备登录（Windows · 潍坊），如非本人操作请及时修改密码</div></div>
+        </div>
+      </div>
+      <div class="msg-hist">查看 30 天内的历史消息 ›</div>
+    </section>
+
+  </div>
+
+  <!-- 底部导航 -->
+  <div class="tabbar" id="tabbar">
+    <div class="tab on" data-go="s1" onclick="go('s1')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 10.5L12 3l9 7.5M5 9.5V20h14V9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>首页</span>
+    </div>
+    <div class="tab" data-go="s6" onclick="go('s6')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>行程</span>
+    </div>
+    <div class="tab" data-go="s8" onclick="go('s8')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v11H8l-4 3V6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 10h8M8 13h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>消息</span>
+    </div>
+    <div class="tab" data-go="s7" onclick="go('s7')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>我的</span>
+    </div>
+  </div>
+  <div class="home-bar"></div>
+</div>
+
+<script>
+  var stack = [];
+  var MAIN = ['s1','s6','s7','s8'];
+  function go(id){
+    document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+    var sc = document.getElementById(id);
+    sc.classList.add('active');
+    sc.scrollTop = 0;
+    stack.push(id);
+    // 底部导航显隐
+    var isMain = MAIN.indexOf(id) > -1;
+    document.getElementById('tabbar').classList.toggle('hide', !isMain);
+    // 高亮 tab
+    document.querySelectorAll('.tab').forEach(function(t){
+      t.classList.toggle('on', t.getAttribute('data-go') === id);
+    });
+  }
+  function back(){
+    stack.pop();
+    var prev = stack.length ? stack[stack.length-1] : 's1';
+    go(prev);
+  }
+  function selSeat(el){
+    el.parentNode.querySelectorAll('.opt').forEach(function(o){o.classList.remove('sel');});
+    el.classList.add('sel');
+  }
+  function selPay(el){
+    el.parentNode.querySelectorAll('.payrow').forEach(function(o){o.classList.remove('sel');o.querySelector('.radio').textContent='';});
+    el.classList.add('sel');
+    el.querySelector('.radio').textContent='✓';
+  }
+  // 出行方式 segmented 切换
+  document.querySelectorAll('.seg button').forEach(function(b){
+    b.onclick=function(){this.parentNode.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});this.classList.add('on');};
+  });
+  // 日期条切换
+  document.querySelectorAll('.datebar .d').forEach(function(d){
+    d.onclick=function(){this.parentNode.querySelectorAll('.d').forEach(function(x){x.classList.remove('on');});this.classList.add('on');};
+  });
+  // 行程分段 tab
+  document.querySelectorAll('.tabs .t').forEach(function(t){
+    t.onclick=function(){this.parentNode.querySelectorAll('.t').forEach(function(x){x.classList.remove('on');});this.classList.add('on');};
+  });
+  // 消息 chips
+  document.querySelectorAll('.chips .c').forEach(function(c){
+    c.onclick=function(){this.parentNode.querySelectorAll('.c').forEach(function(x){x.classList.remove('on');});this.classList.add('on');};
+  });
+</script>
+</body>
+</html>
