@@ -3,6 +3,7 @@ import {
   SIMULATION_FOREGROUND_TICK_DEFAULT_INTERVAL_MS,
   SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS,
 } from './foreground-session-tick'
+import { getSimulationEventReasonCopy } from './event-reason-labels'
 
 export const SIMULATION_FOREGROUND_TICK_ACTION = 'foreground_event_tick'
 export const SIMULATION_FOREGROUND_TICK_PROVIDER = 'local_simulation'
@@ -67,6 +68,7 @@ export const createForegroundSessionTickReport = (result = {}, { createdAt } = {
     ok ? 'triggered' : 'skipped',
     180,
   )
+  const reasonCopy = getSimulationEventReasonCopy(reason)
   const reportAt = normalizeTimestamp(result?.log?.at, createdAt)
 
   return {
@@ -78,8 +80,8 @@ export const createForegroundSessionTickReport = (result = {}, { createdAt } = {
     statusCode: 0,
     code: ok ? SIMULATION_FOREGROUND_TICK_TRIGGERED_CODE : SIMULATION_FOREGROUND_TICK_SKIPPED_CODE,
     message: ok
-      ? `Foreground event tick triggered: ${reason}.`
-      : `Foreground event tick skipped: ${reason}.`,
+      ? `Foreground event tick triggered: ${reasonCopy.en}.`
+      : `Foreground event tick skipped: ${reasonCopy.en}.`,
     createdAt: reportAt,
   }
 }

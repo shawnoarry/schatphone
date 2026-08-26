@@ -46,6 +46,7 @@ import {
   EVENT_NOTEBOOK_SOURCE_KIND,
   buildEventNotebook,
 } from '../lib/simulation/event-notebook'
+import { getSimulationEventReasonCopy } from '../lib/simulation/event-reason-labels'
 import { CONTROL_CENTER_HOME_APP_ID } from '../lib/planned-module-registry'
 
 const router = useRouter()
@@ -277,21 +278,8 @@ const eventNotebookStatusClass = (statusGroup = '') => {
 }
 
 const simulationEventReasonLabel = (reason = '') => {
-  if (reason === 'eligible_random_passed') return t('Random gate passed and event executed', 'Random gate passed and event executed')
-  if (reason === 'eligible_non_random') return t('Eligible non-random event executed', 'Eligible non-random event executed')
-  if (reason === 'random_failed') return t('Random gate did not pass', 'Random gate did not pass')
-  if (reason === 'cooldown_active') return t('Event is still cooling down', 'Event is still cooling down')
-  if (reason === 'tick_cooldown_active') return t('Session tick is cooling down', 'Session tick is cooling down')
-  if (reason === 'daily_limit_reached') return t('Daily limit reached', 'Daily limit reached')
-  if (reason === 'surprise_mode_off') return t('Surprise Mode is off', 'Surprise Mode is off')
-  if (reason === 'module_events_disabled') return t('Module events are disabled', 'Module events are disabled')
-  if (reason === 'adapter_missing') return t('Event adapter is missing', 'Event adapter is missing')
-  if (reason === 'adapter_threw') return t('Event adapter threw an error', 'Event adapter threw an error')
-  if (reason === 'adapter_returned_empty') return t('Adapter returned no result', 'Adapter returned no result')
-  if (reason === 'checkpoint_not_eligible') return t('Journey checkpoint is not eligible', 'Journey checkpoint is not eligible')
-  if (reason === 'checkpoint_already_evaluated') return t('Journey checkpoint already evaluated', 'Journey checkpoint already evaluated')
-  if (reason === 'map_journey_outcome_applied') return t('Map applied the reviewed journey outcome', 'Map applied the reviewed journey outcome')
-  return reason || t('No reason recorded', 'No reason recorded')
+  const copy = getSimulationEventReasonCopy(reason)
+  return t(copy.zh, copy.en)
 }
 
 const simulationEventLabel = (eventId = '') => {

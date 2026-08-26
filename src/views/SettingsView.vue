@@ -40,6 +40,11 @@ import {
   SOFTWARE_UPDATE_RELEASE_NOTES,
 } from '../lib/app-update'
 import { runSimulationEventTick } from '../lib/simulation/event-tick-runner'
+import { getSimulationEventReasonCopy } from '../lib/simulation/event-reason-labels'
+import {
+  CHAT_SOCIAL_RUNTIME_GREETING_COOLDOWN_MS,
+  CHAT_SOCIAL_RUNTIME_GREETING_DAILY_LIMIT,
+} from '../lib/chat-social-runtime-source'
 import { SIMULATION_FOREGROUND_TICK_MIN_INTERVAL_MS } from '../lib/simulation/foreground-session-tick'
 import { buildReturnSourceQuery, pushReturnTarget } from '../lib/navigation-return'
 import {
@@ -245,15 +250,21 @@ const {
 const simulationTickResultLabel = computed(() => {
   const result = simulationTickLastResult.value
   if (!result) return t('尚未运行', 'Not run yet')
+  const reason = typeof result.reason === 'string' && result.reason.trim()
+    ? result.reason.trim()
+    : result.ok
+      ? 'triggered'
+      : 'no_event_triggered'
+  const reasonCopy = getSimulationEventReasonCopy(reason)
   if (result.ok) {
     return t(
-      `已触发事件：${result.reason || 'simulation'}`,
-      `Triggered event: ${result.reason || 'simulation'}`,
+      `已触发事件：${reasonCopy.zh}`,
+      `Triggered event: ${reasonCopy.en}`,
     )
   }
   return t(
-    `本次未触发：${result.reason || 'no_event_triggered'}`,
-    `No event triggered: ${result.reason || 'no_event_triggered'}`,
+    `本次未触发：${reasonCopy.zh}`,
+    `No event triggered: ${reasonCopy.en}`,
   )
 })
 
@@ -285,28 +296,8 @@ const simulationEventStatusLabel = (status = '') => {
 }
 
 const simulationEventReasonLabel = (reason = '') => {
-  if (reason === 'eligible_non_random') return t('条件满足，已执行非随机事件', 'Eligible non-random event executed')
-  if (reason === 'eligible_random_passed') return t('随机门槛通过，已执行事件', 'Random gate passed and event executed')
-  if (reason === 'random_failed') return t('随机门槛未通过', 'Random gate did not pass')
-  if (reason === 'random_missing') return t('缺少随机值，未执行随机事件', 'Missing random value, random event skipped')
-  if (reason === 'probability_zero') return t('事件概率为 0', 'Event probability is zero')
-  if (reason === 'trigger_source_not_allowed') return t('该触发来源未被事件允许', 'Trigger source is not allowed')
-  if (reason === 'conditions_failed') return t('事件条件未满足', 'Event conditions were not met')
-  if (reason === 'cooldown_active') return t('事件仍在冷却中', 'Event is still cooling down')
-  if (reason === 'daily_limit_reached') return t('已达到每日上限', 'Daily limit reached')
-  if (reason === 'surprise_mode_off') return t('惊喜模式关闭', 'Surprise Mode is off')
-  if (reason === 'module_events_disabled') return t('该模块事件已关闭', 'Module events are disabled')
-  if (reason === 'tick_cooldown_active') return t('会话 Tick 冷却中', 'Session tick is cooling down')
-  if (reason === 'tick_daily_limit_reached') return t('会话 Tick 已达每日上限', 'Session tick daily limit reached')
-  if (reason === 'no_active_order') return t('没有可作用的进行中订单', 'No active order available')
-  if (reason === 'no_safe_preset') return t('没有可安全执行的事件预设', 'No safe event preset available')
-  if (reason === 'adapter_missing') return t('缺少事件适配器', 'Event adapter is missing')
-  if (reason === 'adapter_threw') return t('事件适配器执行异常', 'Event adapter threw an error')
-  if (reason === 'adapter_returned_empty') return t('适配器未返回有效结果', 'Adapter returned no result')
-  if (reason === 'checkpoint_not_eligible') return t('不是可评估的行程阶段', 'Journey stage is not eligible')
-  if (reason === 'checkpoint_already_evaluated') return t('该行程阶段已评估', 'Journey stage already evaluated')
-  if (reason === 'map_journey_outcome_applied') return t('地图已应用行程选择', 'Map applied the journey choice')
-  return reason || t('未记录原因', 'No reason recorded')
+  const copy = getSimulationEventReasonCopy(reason)
+  return t(copy.zh, copy.en)
 }
 
 const simulationEventLabel = (eventId = '') => {
@@ -396,6 +387,7 @@ const runSimulationTickDiagnostic = async () => {
       : ok
         ? 'triggered'
         : 'skipped'
+    const reasonCopy = getSimulationEventReasonCopy(reason)
     const pilotCount = Array.isArray(result?.pilotResults) ? result.pilotResults.length : 0
 
     systemApiReports.addReport({
@@ -407,12 +399,12 @@ const runSimulationTickDiagnostic = async () => {
       code: ok ? 'SIMULATION_TICK_TRIGGERED' : 'SIMULATION_TICK_SKIPPED',
       message: ok
         ? t(
-            `事件 tick 已触发：${reason}。`,
-            `Simulation tick triggered: ${reason}.`,
+            `事件 tick 已触发：${reasonCopy.zh}。`,
+            `Simulation tick triggered: ${reasonCopy.en}.`,
           )
         : t(
-            `事件 tick 未触发：${reason}。`,
-            `Simulation tick skipped: ${reason}.`,
+            `事件 tick 未触发：${reasonCopy.zh}。`,
+            `Simulation tick skipped: ${reasonCopy.en}.`,
           ),
       createdAt: simulationTickLastRunAt.value,
     })
@@ -421,7 +413,10 @@ const runSimulationTickDiagnostic = async () => {
       ok ? 'success' : 'warn',
       ok
         ? t('事件 tick 已运行并触发安全事件。', 'Event tick ran and triggered a safe event.')
-        : t(`事件 tick 已运行但未触发：${reason}。`, `Event tick ran without trigger: ${reason}.`),
+        : t(
+            `事件 tick 已运行但未触发：${reasonCopy.zh}。`,
+            `Event tick ran without trigger: ${reasonCopy.en}.`,
+          ),
     )
   } finally {
     simulationTickRunning.value = false
@@ -609,6 +604,11 @@ const simulationForegroundTickIntervalMinutes = computed(() => {
   return Math.max(1, Math.round(safeIntervalMs / 60_000))
 })
 
+const chatSocialRuntimeGreetingCooldownHours = Math.max(
+  1,
+  Math.round(CHAT_SOCIAL_RUNTIME_GREETING_COOLDOWN_MS / (60 * 60 * 1000)),
+)
+
 const simulationForegroundTickRuntimeLabel = computed(() => {
   const enabled = simulationStore.settings?.foregroundSessionTickEnabled === true
   const minutes = simulationForegroundTickIntervalMinutes.value
@@ -749,8 +749,8 @@ const simulationModuleEventControls = computed(() => [
       ? t('允许 / Allowed', 'Allowed / 允许')
       : t('关闭 / Off', 'Off / 关闭'),
     detail: t(
-      '允许 Chat AI 输出或前台 Tick 提议角色主动联系；高风险状态变化仍需世界中枢审查。',
-      'Allows Chat AI output or foreground Tick to propose role contact events; high-risk state changes still require World Hub review.',
+      `允许 Chat AI 输出或前台 Tick 提议角色主动联系；每个角色冷却 ${chatSocialRuntimeGreetingCooldownHours} 小时，每日最多 ${CHAT_SOCIAL_RUNTIME_GREETING_DAILY_LIMIT} 个候选；高风险状态变化仍需世界中枢审查。`,
+      `Allows Chat AI output or foreground Tick to propose role contact events; each role has a ${chatSocialRuntimeGreetingCooldownHours}-hour cooldown and the runtime allows at most ${CHAT_SOCIAL_RUNTIME_GREETING_DAILY_LIMIT} candidate per day; high-risk state changes still require World Hub review.`,
     ),
   },
   {

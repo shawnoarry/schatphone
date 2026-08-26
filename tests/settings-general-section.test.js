@@ -342,6 +342,12 @@ describe('SettingsView general section', () => {
     expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-coverage"]').text()).toContain(
       'Role proactive contact candidate',
     )
+    expect(wrapper.get('[data-testid="settings-simulation-module-event-row-chat"]').text()).toContain(
+      '6-hour cooldown',
+    )
+    expect(wrapper.get('[data-testid="settings-simulation-module-event-row-chat"]').text()).toContain(
+      '1 candidate per day',
+    )
     expect(wrapper.get('[data-testid="settings-simulation-foreground-tick-latest"]').text()).toContain(
       'Chat role greeting request',
     )
@@ -399,6 +405,10 @@ describe('SettingsView general section', () => {
       level: 'info',
     })
     expect(wrapper.get('[data-testid="settings-simulation-tick-card"]').text()).toContain(
+      '外卖安全事件已执行',
+    )
+    expect(systemStore.apiReports[0].message).toMatch(/外卖安全事件已执行|Food Delivery safety event executed/)
+    expect(wrapper.get('[data-testid="settings-simulation-event-log-card"]').text()).toContain(
       'food_delivery.random_order_pilot.v1',
     )
     expect(wrapper.get('[data-testid="settings-simulation-event-log-card"]').text()).toContain(

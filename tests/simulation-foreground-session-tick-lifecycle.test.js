@@ -170,6 +170,7 @@ describe('foreground session tick lifecycle', () => {
         code: SIMULATION_FOREGROUND_TICK_TRIGGERED_CODE,
         createdAt: 1710000000123,
         model: 'food_delivery.random_order_pilot.v1',
+        message: 'Foreground event tick triggered: Food Delivery safety event executed.',
       }),
     )
   })
