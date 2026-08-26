@@ -6,6 +6,7 @@ export const useAppIconImagePreviews = ({
   appIconOverrides,
   locale,
   systemAppIconTheme,
+  preferSystemAppIconTheme,
   scopeId = 'app-icon-previews',
 } = {}) => {
   const previewUrls = reactive({})
@@ -15,6 +16,9 @@ export const useAppIconImagePreviews = ({
     JSON.stringify(appIconOverrides?.value || {}),
   )
   const activeSystemAppIconTheme = computed(() => systemAppIconTheme?.value || 'classic')
+  const shouldPreferSystemAppIconTheme = computed(
+    () => preferSystemAppIconTheme?.value === true,
+  )
 
   const refreshPreviews = async () => {
     const currentVersion = resolveVersion + 1
@@ -29,6 +33,7 @@ export const useAppIconImagePreviews = ({
           overrides,
           locale?.value || 'en-US',
           activeSystemAppIconTheme.value,
+          { preferThemeIcon: shouldPreferSystemAppIconTheme.value },
         )
         if (!meta.hasImageIcon) return
 
@@ -57,6 +62,7 @@ export const useAppIconImagePreviews = ({
     () => [
       overrideSignature.value,
       activeSystemAppIconTheme.value,
+      shouldPreferSystemAppIconTheme.value,
       galleryStore?.hasFinishedStorageHydration,
     ],
     refreshPreviews,
@@ -76,6 +82,7 @@ export const useAppIconImagePreviews = ({
       appIconOverrides?.value || {},
       locale?.value || 'en-US',
       activeSystemAppIconTheme.value,
+      { preferThemeIcon: shouldPreferSystemAppIconTheme.value },
     ).imageUrl || ''
   }
 

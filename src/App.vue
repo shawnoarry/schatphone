@@ -82,11 +82,15 @@ const notificationLocale = computed(() =>
 )
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
 const systemAppIconTheme = computed(() => settings.value.appearance?.systemAppIconTheme)
+const preferSystemAppIconTheme = computed(
+  () => settings.value.appearance?.preferSystemAppIconTheme === true,
+)
 const { appIconImageUrl } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
   locale: notificationLocale,
   systemAppIconTheme,
+  preferSystemAppIconTheme,
   scopeId: 'app-shell-app-icons',
 })
 const resolveNotificationModuleMeta = (note) =>
@@ -95,6 +99,7 @@ const resolveNotificationModuleMeta = (note) =>
     notificationLocale.value,
     settings.value.appearance?.appIconOverrides || {},
     settings.value.appearance?.systemAppIconTheme,
+    settings.value.appearance?.preferSystemAppIconTheme === true,
   )
 const notificationIconImageUrl = (note) => appIconImageUrl(resolveNotificationModuleMeta(note).appId)
 const shellBannerVisible = ref(false)
@@ -418,12 +423,17 @@ watch(
     settings.value.appearance?.currentTheme,
     settings.value.appearance?.colorMode,
     settings.value.appearance?.systemTheme,
+    settings.value.appearance?.systemAppIconTheme,
   ],
-  ([themeId, colorMode, systemTheme]) => {
+  ([themeId, colorMode, systemTheme, systemAppIconTheme]) => {
     if (typeof document === 'undefined') return
     document.documentElement.setAttribute('data-theme', themeId || 'default')
     document.documentElement.setAttribute('data-color-mode', colorMode || 'day')
     document.documentElement.setAttribute('data-system-theme', systemTheme || 'classic')
+    document.documentElement.setAttribute(
+      'data-system-icon-theme',
+      systemAppIconTheme || 'classic',
+    )
   },
   { immediate: true },
 )
@@ -1054,6 +1064,7 @@ const lockPhone = () => {
     :data-theme="settings.appearance.currentTheme"
     :data-color-mode="settings.appearance.colorMode"
     :data-system-theme="settings.appearance.systemTheme"
+    :data-system-icon-theme="settings.appearance.systemAppIconTheme"
     :data-statusbar="showStatusBar ? 'on' : 'off'"
     :style="customVarStyle"
     v-bind="appShellScopeAttrs"

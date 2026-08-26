@@ -37,6 +37,8 @@ describe('system appearance style foundation', () => {
     expect(appearanceColorModeToLegacyThemeId('night')).toBe('zen')
     expect(resolveSystemAppearanceThemeMeta('unknown').id).toBe('classic')
     expect(resolveSystemAppearanceThemeMeta('cloud-pastel').labelEn).toBe('Cloud Pastel')
+    expect(resolveSystemAppearanceThemeMeta('liquid-prism').labelEn).toBe('Liquid Prism')
+    expect(resolveSystemAppearanceThemeMeta('chromatic-glass').labelEn).toBe('Chromatic Glass')
     expect(resolveSystemAppearanceThemeWallpaper('cloud-pastel', 'day')).toContain(
       'cloud-pastel-day-v1.webp',
     )
@@ -106,6 +108,39 @@ describe('system appearance style foundation', () => {
     expect(store.settings.appearance.wallpaper).toContain('cloud-pastel-night-v1.webp')
     expect(completeStatus).toMatchObject({
       kit: { id: 'cloud-pastel' },
+      customized: false,
+    })
+  })
+
+  test('applies Liquid Prism as an independent interface and crystal icon kit', () => {
+    const store = useSystemStore()
+    const status = store.applyAppearanceStyleKit('liquid-prism', {
+      applyWallpaper: true,
+    })
+
+    expect(store.settings.appearance.systemTheme).toBe('liquid-prism')
+    expect(store.settings.appearance.systemAppIconTheme).toBe('liquid-prism')
+    expect(store.settings.appearance.wallpaperMode).toBe('theme')
+    expect(status).toMatchObject({
+      kit: {
+        id: 'liquid-prism',
+        companionWidgetCollectionId: 'liquid-prism',
+      },
+      customized: false,
+    })
+  })
+
+  test('applies Chromatic Glass as a pastel edge-light interface with line icons', () => {
+    const store = useSystemStore()
+    const status = store.applyAppearanceStyleKit('chromatic-glass', {
+      applyWallpaper: true,
+    })
+
+    expect(store.settings.appearance.systemTheme).toBe('chromatic-glass')
+    expect(store.settings.appearance.systemAppIconTheme).toBe('liquid-prism')
+    expect(store.settings.appearance.wallpaperMode).toBe('theme')
+    expect(status).toMatchObject({
+      kit: { id: 'chromatic-glass' },
       customized: false,
     })
   })
@@ -182,7 +217,12 @@ describe('system appearance style foundation', () => {
     expect(store.settings.appearance.currentTheme).toBe('zen')
     expect(wrapper.get('[data-testid="appearance-system-theme-classic"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="appearance-system-theme-cloud-pastel"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="appearance-system-theme-liquid-prism"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="appearance-system-theme-chromatic-glass"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="appearance-style-kit-cloud-pastel"]').exists()).toBe(true)
+    expect(wrapper.get('[data-testid="appearance-style-kit-liquid-prism"]').text()).toContain(
+      '含 5 个可选配套组件',
+    )
 
     const wallpaperToggle = wrapper.get('[data-testid="appearance-style-kit-wallpaper"]')
     expect(wallpaperToggle.element.checked).toBe(false)
@@ -205,6 +245,35 @@ describe('system appearance style foundation', () => {
       wrapper.get('[data-testid="appearance-style-kit-cloud-pastel"]').attributes('aria-pressed'),
     ).toBe('true')
     expect(wrapper.text()).toContain('套装已应用')
+
+    const homePagesBeforeInstall = store.settings.appearance.homeWidgetPages.map((page) => [
+      ...page,
+    ])
+    const widgetToggle = wrapper.get('[data-testid="appearance-style-kit-widgets"]')
+    expect(widgetToggle.element.checked).toBe(false)
+    await widgetToggle.setValue(true)
+    await wrapper.get('[data-testid="appearance-style-kit-liquid-prism"]').trigger('click')
+    await flushPromises()
+
+    expect(store.settings.appearance.systemTheme).toBe('liquid-prism')
+    expect(store.settings.appearance.systemAppIconTheme).toBe('liquid-prism')
+    expect(store.settings.appearance.customWidgets).toHaveLength(5)
+    expect(store.settings.appearance.homeWidgetPages).toEqual(homePagesBeforeInstall)
+    expect(wrapper.get('[data-testid="appearance-style-kit-widget-feedback"]').text()).toContain(
+      '已将 5 个配套组件加入组件库，未放到桌面',
+    )
+
+    await wrapper.get('[data-testid="appearance-style-kit-liquid-prism"]').trigger('click')
+    await flushPromises()
+    expect(store.settings.appearance.customWidgets).toHaveLength(5)
+    expect(wrapper.get('[data-testid="appearance-style-kit-widget-feedback"]').text()).toContain(
+      '没有重复添加',
+    )
+
+    await wrapper.get('[data-testid="appearance-style-kit-chromatic-glass"]').trigger('click')
+    await flushPromises()
+    expect(store.settings.appearance.systemTheme).toBe('chromatic-glass')
+    expect(store.settings.appearance.systemAppIconTheme).toBe('liquid-prism')
 
     wrapper.unmount()
   })

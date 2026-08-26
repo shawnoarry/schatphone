@@ -39,10 +39,16 @@ const notificationLocale = computed(() =>
   languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value,
 )
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
+const systemAppIconTheme = computed(() => settings.value.appearance?.systemAppIconTheme)
+const preferSystemAppIconTheme = computed(
+  () => settings.value.appearance?.preferSystemAppIconTheme === true,
+)
 const { appIconImageUrl } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
   locale: notificationLocale,
+  systemAppIconTheme,
+  preferSystemAppIconTheme,
   scopeId: 'lock-screen-app-icons',
 })
 
@@ -118,6 +124,7 @@ const resolveNotificationModuleMeta = (note) =>
     notificationLocale.value,
     settings.value.appearance?.appIconOverrides || {},
     settings.value.appearance?.systemAppIconTheme,
+    settings.value.appearance?.preferSystemAppIconTheme === true,
   )
 const notificationIconImageUrl = (note) => appIconImageUrl(resolveNotificationModuleMeta(note).appId)
 

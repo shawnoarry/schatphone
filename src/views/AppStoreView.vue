@@ -104,6 +104,9 @@ const { settings } = storeToRefs(systemStore)
 const locale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
 const systemAppIconTheme = computed(() => settings.value.appearance?.systemAppIconTheme)
+const preferSystemAppIconTheme = computed(
+  () => settings.value.appearance?.preferSystemAppIconTheme === true,
+)
 const entryPresentationOverrides = computed(() => settings.value.appearance?.entryPresentationOverrides || {})
 const appStoreMiniAppPlacements = computed(() =>
   normalizeAppStoreMiniAppPlacements(settings.value.appearance?.appStoreMiniAppPlacements),
@@ -113,6 +116,7 @@ const { appIconImageUrl, refreshPreviews: refreshAppStoreIconPreviews } = useApp
   appIconOverrides,
   locale,
   systemAppIconTheme,
+  preferSystemAppIconTheme,
   scopeId: 'app-store-app-icons',
 })
 const DOCK_APP_IDS = new Set(['app_chat', 'app_contacts', 'app_settings', 'app_widgets'])
@@ -673,6 +677,7 @@ const appStoreItems = computed(() =>
             appIconOverrides.value,
             locale.value,
             settings.value.appearance.systemAppIconTheme,
+            { preferThemeIcon: preferSystemAppIconTheme.value },
           )
     const bindingTarget = entry.shopAppEntry
       ? iconMeta.bindingTarget || entry.bindingTarget || entry.sourceModule || SHOP_ENTRY_BINDING_TARGET.FOOD_DELIVERY

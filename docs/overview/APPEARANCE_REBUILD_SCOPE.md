@@ -52,7 +52,7 @@ Already implemented:
 6. custom CSS entry
 7. app-icon preset and accent customization
 8. system App icon themes with a curated native-app allowlist
-9. one-click style-kit composition for system theme, system App icon pack, and optional recommended wallpaper, with post-application customization detection
+9. one-click style-kit composition for system theme, system App icon pack, optional recommended wallpaper, and an explicitly installed companion-widget collection, with post-application customization detection
 10. widget restore, custom widget creation, and import flow
 11. multi-page Home layout baseline with widgets and app entries
 12. lock-screen grouped notifications and in-shell banners
@@ -118,7 +118,8 @@ Preserve:
 - theme, wallpaper, font, icon, and widget-setting semantics
 - day/night mode, system-theme selection, system App icon pack, and style-kit source remain separate persisted concerns; a style kit does not become an immutable profile
 - personal Gallery/URL wallpaper survives style-kit application unless the user explicitly applies the recommended wallpaper
-- system App icon themes affect only curated native-system entries; commercial/branded logos remain unchanged and explicit App Store per-app overrides win
+- a style kit's companion widgets remain ordinary Widget Center definitions: installation is optional and idempotent, nothing is placed on Home, and switching themes never removes them
+- system App icon themes affect only curated native-system entries; commercial/branded logos remain unchanged. Explicit App Store per-app overrides win by default, while a separate user-controlled preference may temporarily show the selected pack visual above saved system-App icon overrides without deleting them or replacing saved display names
 - save behavior and safety feedback
 - wallpaper source compatibility
 - app-icon fallback rules

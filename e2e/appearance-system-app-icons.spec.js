@@ -145,6 +145,59 @@ test('Appearance applies Cloud Animals images with classic fallback and persiste
   expect(pageErrors).toEqual([])
 })
 
+test('Liquid Prism can temporarily lead over a saved system-app icon and restore it', async ({
+  page,
+}) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/app-store')
+  await page.getByTestId('app-store-item-app_widgets').click()
+  await openAppIdentityEditor(page)
+  await page.getByTestId('app-store-identity-display-name').fill('Clear Widgets')
+  await page.getByTestId('app-store-identity-icon-preset').selectOption('fas fa-paper-plane')
+  await page.getByTestId('app-store-identity-accent').selectOption('dark')
+  await page.getByTestId('app-store-identity-save').click()
+
+  await navigateInsideUnlockedApp(page, '/home')
+  await expect(page.getByText(/彩光玻璃|Chromatic Glass/).first()).toBeVisible()
+  const widgetsIcon = page.getByTestId('home-dock-icon-app_widgets')
+  await expect(widgetsIcon.locator('i')).toHaveClass(/fa-paper-plane/)
+  await expect(widgetsIcon.locator('xpath=..')).toHaveAttribute('aria-label', 'Clear Widgets')
+
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-system-icons-entry').click()
+  await page.getByTestId('appearance-system-app-icon-theme-liquid-prism').click()
+  const priority = page.getByTestId('appearance-system-app-icon-theme-priority')
+  await expect(priority).toHaveAttribute('aria-checked', 'false')
+  await priority.click()
+  await expect(priority).toHaveAttribute('aria-checked', 'true')
+
+  await navigateInsideUnlockedApp(page, '/home')
+  await expect(widgetsIcon).toHaveClass(/material-liquid-prism/)
+  await expect(widgetsIcon.locator('svg')).toHaveCount(1)
+  await expect(widgetsIcon.locator('xpath=..')).toHaveAttribute('aria-label', 'Clear Widgets')
+  await expect(page.getByTestId('home-dock-icon-app_chat')).not.toHaveClass(
+    /material-liquid-prism/,
+  )
+
+  await page.reload()
+  await unlockToHome(page)
+  await expect(page.getByTestId('home-dock-icon-app_widgets')).toHaveClass(/material-liquid-prism/)
+
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-system-icons-entry').click()
+  await page.getByTestId('appearance-system-app-icon-theme-priority').click()
+  await navigateInsideUnlockedApp(page, '/home')
+  await expect(page.getByTestId('home-dock-icon-app_widgets').locator('i')).toHaveClass(
+    /fa-paper-plane/,
+  )
+  await expectNoHorizontalOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
 test('Appearance keeps its theme axes independent and preserves a personal wallpaper', async ({
   page,
 }) => {
@@ -245,6 +298,182 @@ test('Appearance keeps its theme axes independent and preserves a personal wallp
   await expect(page.locator('html')).toHaveAttribute('data-color-mode', 'night')
   await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'classic')
   await expect(page.getByTestId('appearance-style-kit-status')).toContainText(/已自定义|Customized/)
+  await expectNoHorizontalOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
+test('Chromatic Glass keeps the body clear and moves color into edge light', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-style-kit-chromatic-glass').click()
+
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'chromatic-glass')
+  await expect(page.locator('html')).toHaveAttribute('data-system-icon-theme', 'liquid-prism')
+  await expect(page.getByTestId('appearance-style-kit-status')).toContainText(/套装已应用|Kit Applied/)
+  await expect
+    .poll(() =>
+      page
+        .getByTestId('appearance-style-kit-chromatic-glass')
+        .locator('.appearance-style-kit-option__action')
+        .evaluate((action) => ({
+          background: getComputedStyle(action).background,
+          shadow: getComputedStyle(action).boxShadow,
+        })),
+    )
+    .toMatchObject({
+      background: expect.stringContaining('linear-gradient'),
+      shadow: expect.stringContaining('inset'),
+    })
+
+  await navigateInsideUnlockedApp(page, '/home')
+  const widgetsIcon = page.getByTestId('home-dock-icon-app_widgets')
+  for (const appId of ['app_chat', 'app_contacts', 'app_settings', 'app_widgets']) {
+    await expect(page.getByTestId(`home-dock-icon-${appId}`).locator('svg')).toHaveCount(1)
+  }
+  await expect(page.getByTestId('home-dock-icon-app_chat')).not.toHaveClass(
+    /material-liquid-prism/,
+  )
+  await expect(widgetsIcon).toHaveClass(/material-liquid-prism/)
+  await expect
+    .poll(() =>
+      widgetsIcon.evaluate((icon) => ({
+        background: getComputedStyle(icon).background,
+        border: getComputedStyle(icon).borderColor,
+      })),
+    )
+    .toMatchObject({
+      background: expect.stringContaining('linear-gradient'),
+      border: expect.stringContaining('rgba(255, 255, 255'),
+    })
+
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-color-mode-night').click()
+  await expect(page.locator('html')).toHaveAttribute('data-color-mode', 'night')
+  await expectNoHorizontalOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
+test('Liquid Prism optionally installs companion widgets without changing Home placement', async ({
+  page,
+}) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+
+  const homeStateBefore = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('schatphone:store:system')
+    const appearance = JSON.parse(raw || '{}')?.data?.settings?.appearance || {}
+    return {
+      homeWidgetPages: appearance.homeWidgetPages,
+      homeLayoutSlotPlacements: appearance.homeLayoutSlotPlacements,
+    }
+  })
+
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  const companionToggle = page.getByTestId('appearance-style-kit-widgets')
+  await expect(companionToggle).not.toBeChecked()
+  await companionToggle.check()
+  await page.getByTestId('appearance-style-kit-liquid-prism').click()
+
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'liquid-prism')
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-system-icon-theme',
+    'liquid-prism',
+  )
+  await expect(page.getByTestId('appearance-style-kit-widget-feedback')).toContainText(
+    /已将 5 个配套组件加入组件库|5 companion widgets were added/,
+  )
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const raw = window.localStorage.getItem('schatphone:store:system')
+        const appearance = JSON.parse(raw || '{}')?.data?.settings?.appearance || {}
+        return {
+          sourcePresetIds: (appearance.customWidgets || []).map(
+            (widget) => widget.sourcePresetId,
+          ),
+          homeWidgetPages: appearance.homeWidgetPages,
+          homeLayoutSlotPlacements: appearance.homeLayoutSlotPlacements,
+        }
+      }),
+    )
+    .toMatchObject({
+      sourcePresetIds: expect.arrayContaining([
+        'liquid_prism_drop',
+        'liquid_prism_capsule',
+        'liquid_prism_day',
+        'liquid_prism_music',
+        'liquid_prism_agenda',
+      ]),
+      ...homeStateBefore,
+    })
+
+  await navigateInsideUnlockedApp(page, '/home')
+  await expect(page.getByTestId('home-dock-icon-app_contacts')).toHaveClass(
+    /material-liquid-prism/,
+  )
+  await expect(page.getByTestId('home-dock-icon-app_chat')).not.toHaveClass(
+    /material-liquid-prism/,
+  )
+
+  await page.reload()
+  await unlockToHome(page)
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'liquid-prism')
+  await expect(page.getByTestId('home-dock-icon-app_contacts')).toHaveClass(
+    /material-liquid-prism/,
+  )
+
+  await navigateInsideUnlockedApp(page, '/widgets')
+  await expect(page.getByTestId('widgets-style-preset-liquid_prism_drop')).toContainText(
+    /创建副本|Create copy/,
+  )
+  await page.locator('#widgets-tab-custom').click()
+  await expect(page.locator('.widgets-created-card')).toHaveCount(5)
+  await expect(
+    page.locator('.widgets-created-card').filter({ hasText: '水光状态' }),
+  ).toHaveCount(1)
+  await expect(
+    page.locator('.widgets-created-card').filter({ hasText: '水光日程板' }),
+  ).toHaveCount(1)
+
+  const homeStateBeforeSwitch = await page.evaluate(() => {
+    const raw = window.localStorage.getItem('schatphone:store:system')
+    const appearance = JSON.parse(raw || '{}')?.data?.settings?.appearance || {}
+    return {
+      homeWidgetPages: appearance.homeWidgetPages,
+      homeLayoutSlotPlacements: appearance.homeLayoutSlotPlacements,
+    }
+  })
+
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-style-kit-system-classic').click()
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'classic')
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const raw = window.localStorage.getItem('schatphone:store:system')
+        const appearance = JSON.parse(raw || '{}')?.data?.settings?.appearance || {}
+        return {
+          customWidgetCount: (appearance.customWidgets || []).length,
+          homeWidgetPages: appearance.homeWidgetPages,
+          homeLayoutSlotPlacements: appearance.homeLayoutSlotPlacements,
+        }
+      }),
+    )
+    .toEqual({ customWidgetCount: 5, ...homeStateBeforeSwitch })
+
   await expectNoHorizontalOverflow(page)
   expect(pageErrors).toEqual([])
 })

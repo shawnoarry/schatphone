@@ -1124,6 +1124,7 @@ onBeforeUnmount(() => {
             :key="`preset-${preset.id}`"
             class="widgets-market-card is-style-preset"
             :class="[`is-${preset.preview}`, `size-${preset.size.replace('x', '-')}`]"
+            :data-testid="`widgets-style-preset-${preset.id}`"
           >
             <button
               class="widgets-preview-stage widgets-preview-open"
@@ -1143,6 +1144,21 @@ onBeforeUnmount(() => {
               </div>
               <div v-else-if="preset.preview === 'day'" class="widget-preview style-preview day-preview">
                 <span><strong>25</strong><small>MON</small></span><div><h4>Today</h4><p>coffee note</p><p>theme draft</p></div>
+              </div>
+              <div v-else-if="preset.preview === 'liquid-drop'" class="widget-preview style-preview liquid-prism-preview liquid-prism-drop-preview">
+                <span><strong>82</strong><small>FLOW</small></span>
+              </div>
+              <div v-else-if="preset.preview === 'liquid-capsule'" class="widget-preview style-preview liquid-prism-preview liquid-prism-capsule-preview">
+                <i>+</i><div><strong>Clear focus</strong><small>one quiet task</small></div><b>ON</b>
+              </div>
+              <div v-else-if="preset.preview === 'liquid-day'" class="widget-preview style-preview liquid-prism-preview liquid-prism-day-preview">
+                <div><small>WED</small><strong>26</strong></div><span><b>Today</b><small>theme review</small></span>
+              </div>
+              <div v-else-if="preset.preview === 'liquid-music'" class="widget-preview style-preview liquid-prism-preview liquid-prism-music-preview">
+                <i></i><span><strong>Afterlight</strong><small>Daily Mix · 2:41</small></span><b>Ⅱ</b>
+              </div>
+              <div v-else-if="preset.preview === 'liquid-agenda'" class="widget-preview style-preview liquid-prism-preview liquid-prism-agenda-preview">
+                <div><small>WED</small><strong>26</strong></div><span><b>Today</b><small>09:30 · Morning notes</small><small>14:00 · Theme review</small></span>
               </div>
               <div v-else-if="preset.preview === 'board'" class="widget-preview style-preview board-preview">
                 <div class="board-stage"><span></span><i></i><b></b></div><div><strong>Theme Board</strong><small>photos, colors, notes</small></div>
@@ -1564,7 +1580,12 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-else class="widgets-created-grid">
-            <article v-for="widget in customWidgets" :key="widget.id" class="widgets-created-item widgets-created-card">
+            <article
+              v-for="widget in customWidgets"
+              :key="widget.id"
+              class="widgets-created-item widgets-created-card"
+              :data-testid="`widgets-created-${widget.sourcePresetId || widget.id}`"
+            >
               <div class="widgets-created-preview" :class="`size-${widget.size.replace('x', '-')}`">
                 <iframe
                   :srcdoc="customWidgetPreviewSrcDoc(widget)"
@@ -3240,6 +3261,187 @@ onBeforeUnmount(() => {
   color: #5d6770;
   font-size: 12px;
   font-weight: 750;
+}
+
+.liquid-prism-preview {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #414248;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.98), transparent 28%),
+    radial-gradient(circle at 88% 88%, rgba(218, 204, 224, 0.2), transparent 45%),
+    radial-gradient(circle at 8% 82%, rgba(235, 223, 209, 0.14), transparent 40%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(244, 244, 243, 0.42) 56%, rgba(226, 226, 228, 0.4));
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.96),
+    inset -4px -5px 14px rgba(67, 67, 74, 0.12),
+    0 14px 28px rgba(44, 44, 50, 0.18);
+}
+
+.liquid-prism-preview::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: -1;
+  border: 1px solid rgba(174, 170, 181, 0.22);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.liquid-prism-drop-preview {
+  width: min(100%, 98px);
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 1;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  border-radius: 28px;
+}
+
+.liquid-prism-drop-preview span {
+  position: relative;
+  text-align: center;
+}
+
+.liquid-prism-drop-preview strong,
+.liquid-prism-drop-preview small {
+  display: block;
+}
+
+.liquid-prism-drop-preview strong {
+  font-size: 27px;
+  line-height: 1;
+}
+
+.liquid-prism-drop-preview small {
+  margin-top: 3px;
+  color: rgba(65, 66, 72, 0.62);
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.liquid-prism-capsule-preview,
+.liquid-prism-music-preview {
+  min-height: 60px;
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.liquid-prism-capsule-preview i,
+.liquid-prism-music-preview i {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(221, 220, 222, 0.42));
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: 0 5px 12px rgba(45, 45, 51, 0.16);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.liquid-prism-music-preview i {
+  background: radial-gradient(circle, #fafafa 0 12%, #777980 13% 20%, rgba(255, 255, 255, 0.64) 21% 46%, #aaa8ad 47% 64%, transparent 65%);
+}
+
+.liquid-prism-capsule-preview div,
+.liquid-prism-music-preview span {
+  min-width: 0;
+}
+
+.liquid-prism-capsule-preview strong,
+.liquid-prism-capsule-preview small,
+.liquid-prism-music-preview strong,
+.liquid-prism-music-preview small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liquid-prism-capsule-preview strong,
+.liquid-prism-music-preview strong {
+  font-size: 13px;
+}
+
+.liquid-prism-capsule-preview small,
+.liquid-prism-music-preview small {
+  margin-top: 2px;
+  color: rgba(65, 66, 72, 0.62);
+  font-size: 9px;
+}
+
+.liquid-prism-capsule-preview b,
+.liquid-prism-music-preview b {
+  font-size: 10px;
+  color: #625d69;
+}
+
+.liquid-prism-day-preview,
+.liquid-prism-agenda-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.3fr);
+  align-items: stretch;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 26px;
+}
+
+.liquid-prism-day-preview > div,
+.liquid-prism-agenda-preview > div {
+  border-radius: 20px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  background: rgba(255, 255, 255, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+}
+
+.liquid-prism-day-preview > div small,
+.liquid-prism-agenda-preview > div small {
+  color: rgba(65, 66, 72, 0.62);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.liquid-prism-day-preview > div strong,
+.liquid-prism-agenda-preview > div strong {
+  font-size: 40px;
+  line-height: 0.9;
+}
+
+.liquid-prism-day-preview > span,
+.liquid-prism-agenda-preview > span {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+}
+
+.liquid-prism-day-preview > span b,
+.liquid-prism-agenda-preview > span b {
+  font-size: 15px;
+}
+
+.liquid-prism-day-preview > span small,
+.liquid-prism-agenda-preview > span small {
+  border-radius: 12px;
+  padding: 7px 8px;
+  overflow: hidden;
+  color: rgba(65, 66, 72, 0.7);
+  background: rgba(255, 255, 255, 0.38);
+  font-size: 9px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .board-preview {

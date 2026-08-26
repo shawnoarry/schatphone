@@ -30,7 +30,8 @@ It also owns:
   - the desktop edit state owns per-page layout template selection and slot content editing;
   - `组件 / Widgets` owns widget creation, import, widget library, custom widget click-action configuration, and fast entry into desktop edit mode;
   - `外观 / Appearance` owns independent day/night mode, system theme, wallpaper, curated native-system App icon packs, and one-click style kits. A style kit is a reversible composition source rather than a locked profile: it may apply system theme, system icon pack, and recommended wallpaper, then report `customized` when those parts diverge;
-  - style kits never overwrite Home layout/widgets, Chat appearance, app skins, global custom CSS, commercial/branded logos, or App Store-owned per-app identity overrides; personal Gallery/URL wallpaper is retained unless the user explicitly chooses to apply the kit wallpaper;
+  - a style kit may reference a companion-widget collection, but adding it is a separate explicit choice. Installation is idempotent and adds missing definitions to Widget Center only; it never places widgets on Home, changes templates or slot placements, replaces existing definitions, or deletes widgets when a kit is switched;
+  - style kits never overwrite Home layout/widgets, Chat appearance, app skins, global custom CSS, commercial/branded logos, or App Store-owned per-app identity overrides, and do not silently change the user's system-App icon-priority preference; personal Gallery/URL wallpaper is retained unless the user explicitly chooses to apply the kit wallpaper;
   - `应用商城 / App Store` owns app-entry visibility and Home-entry placement recovery;
   - App Library / App Store-like presentation owns app-entry visibility only, not widget packs, themes, wallpapers, or layout templates.
   - default Home placement is release curation rather than capability availability: demoted apps remain usable from App Store, while Appearance owns the persisted two-through-five normal-mode screen count; changing that count hides or restores trailing retained pages without changing their templates, slots, or content, and Home edit mode always exposes all five pages;
@@ -38,7 +39,7 @@ It also owns:
 - which installed-app entry owns a visible Chat action:
   - Chat `Me` owns user identity, anonymity, recent interaction data, and lightweight derived social feed;
   - Chat Settings owns Chat appearance, default-behavior entry points, and diagnostics;
-  - global `Appearance` still owns system-wide day/night mode, theme, wallpaper, font, curated native-system App icon packs, style-kit composition, and global custom CSS; it does not replace commercial/branded logos, and an explicit App Store per-app override wins over the selected system pack.
+  - global `Appearance` still owns system-wide day/night mode, theme, wallpaper, font, curated native-system App icon packs, style-kit composition, and global custom CSS; it does not replace commercial/branded logos. An explicit App Store per-app override wins by default, while a separate persisted preference may temporarily display the selected pack visual above saved system-App icon overrides. This visual-only priority switch preserves saved names and icon data, restores the prior visual immediately when disabled, and never applies to Chat or commercial/branded Apps.
 - how Camera and Gallery divide the generation flow:
   - Camera is an installed app and owns capture, candidate review, provider/default/routing pages, diagnostics, and its embedded Gallery reference picker;
   - Gallery owns only media the user explicitly keeps and later curation; selecting a reference does not transfer the picker container to Gallery styling;

@@ -631,7 +631,7 @@ describe('Widgets custom template starters', () => {
   })
 
   test('official style presets are complete rendered widgets across key Home sizes', () => {
-    expect(OFFICIAL_WIDGET_STYLE_PRESETS).toHaveLength(7)
+    expect(OFFICIAL_WIDGET_STYLE_PRESETS).toHaveLength(12)
     expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.size)).toEqual([
       '1x1',
       '2x1',
@@ -640,8 +640,16 @@ describe('Widgets custom template starters', () => {
       '4x2',
       '4x3',
       '4x4',
+      '1x1',
+      '2x1',
+      '2x2',
+      '4x1',
+      '4x2',
     ])
     expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain('Theme Board')
+    expect(OFFICIAL_WIDGET_STYLE_PRESETS.map((preset) => preset.nameEn)).toContain(
+      'Liquid Agenda',
+    )
 
     OFFICIAL_WIDGET_STYLE_PRESETS.forEach((preset) => {
       expect(preset.code).toContain('<style>')

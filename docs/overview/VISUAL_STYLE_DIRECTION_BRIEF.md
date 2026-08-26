@@ -34,9 +34,9 @@ Appearance theme direction:
 
 1. day/night is an independent display axis; every authored system theme should eventually provide both variants;
 2. system themes own global color, material, Dock, controls, radius, shadow, and system background tokens;
-3. curated native-system App icon packs remain independently selectable and keep the established per-app override priority;
-4. one-click style kits compose a system theme, icon pack, and optional recommended wallpaper without locking later customization;
-5. initial authored directions are Cloud Pastel, Dessert Bakery, and Misty Glass, but they remain visual follow-up work until their day/night tokens and icon assets are deliberately reviewed.
+3. curated native-system App icon packs remain independently selectable; per-app overrides keep the default priority, while an explicit reversible preference may temporarily lead with the pack visual for system Apps without changing saved names or deleting the stored override;
+4. one-click style kits compose a system theme, icon pack, and optional recommended wallpaper without locking later customization; they may also offer an explicitly installed companion-widget collection that remains independently usable under every theme and never changes Home placement;
+5. initial authored directions include Cloud Pastel, Liquid Prism, and the user-requested Chromatic Glass experiment, with Dessert Bakery and Misty Glass retained as later candidates; Liquid Prism is defined by nearly colorless transparency, edge refraction, and faint ambient iridescence rather than a mint/aqua/blue palette, while Chromatic Glass keeps a near-neutral gray background and clear body, then places low-saturation pink, blue, mint, and peach into control surfaces, edge refraction, highlights, semantic accents, and soft shadows. Every direction still requires deliberate day/night, icon, widget, and asset review before acceptance.
 
 ## 2. Module Direction Table
 

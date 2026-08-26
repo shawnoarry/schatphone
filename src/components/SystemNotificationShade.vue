@@ -43,11 +43,15 @@ const timeLocale = computed(() =>
 )
 const appIconOverrides = computed(() => settings.value.appearance?.appIconOverrides || {})
 const systemAppIconTheme = computed(() => settings.value.appearance?.systemAppIconTheme)
+const preferSystemAppIconTheme = computed(
+  () => settings.value.appearance?.preferSystemAppIconTheme === true,
+)
 const { appIconImageUrl } = useAppIconImagePreviews({
   galleryStore,
   appIconOverrides,
   locale: notificationLocale,
   systemAppIconTheme,
+  preferSystemAppIconTheme,
   scopeId: 'system-notification-shade-app-icons',
 })
 
@@ -57,6 +61,7 @@ const resolveNotificationModuleMeta = (note) =>
     notificationLocale.value,
     settings.value.appearance?.appIconOverrides || {},
     settings.value.appearance?.systemAppIconTheme,
+    settings.value.appearance?.preferSystemAppIconTheme === true,
   )
 
 const sortedNotifications = computed(() =>

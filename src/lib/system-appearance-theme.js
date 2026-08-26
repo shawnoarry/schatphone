@@ -68,6 +68,38 @@ export const SYSTEM_APPEARANCE_THEME_OPTIONS = Object.freeze([
       ),
     }),
   },
+  {
+    id: 'liquid-prism',
+    labelZh: '水光玻璃',
+    labelEn: 'Liquid Prism',
+    descriptionZh: '近乎无色的透明玻璃、清晰边缘折射与轻微虹彩高光，不绑定特定主题色。',
+    descriptionEn:
+      'Nearly colorless glass with crisp edge refraction and faint iridescent highlights, without a fixed theme hue.',
+    previews: Object.freeze({
+      day: 'linear-gradient(145deg, #f6f5f3 0%, #dfe1e3 44%, #ece7e9 72%, #e4e4e1 100%)',
+      night: 'linear-gradient(145deg, #2a2b2f 0%, #17181c 48%, #28242a 74%, #17191d 100%)',
+    }),
+    wallpapers: Object.freeze({
+      day: '',
+      night: '',
+    }),
+  },
+  {
+    id: 'chromatic-glass',
+    labelZh: '彩光玻璃',
+    labelEn: 'Chromatic Glass',
+    descriptionZh: '保持透明主体，只让粉、蓝、薄荷与蜜桃色停留在边缘折射、内高光和轻微阴影。',
+    descriptionEn:
+      'Keeps the glass body clear while pastel pink, blue, mint, and peach stay in refraction, highlights, and soft shadows.',
+    previews: Object.freeze({
+      day: 'linear-gradient(145deg, #eef3fa 0%, #f6eaf0 42%, #e7f2ed 70%, #f5e4d7 100%)',
+      night: 'linear-gradient(145deg, #273146 0%, #242535 44%, #203a3b 70%, #3a2b31 100%)',
+    }),
+    wallpapers: Object.freeze({
+      day: '',
+      night: '',
+    }),
+  },
 ])
 
 export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
@@ -89,6 +121,27 @@ export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
       'Cloud Pastel surfaces, Cloud Animals system app icons, and day/night recommended wallpapers.',
     systemTheme: 'cloud-pastel',
     systemAppIconTheme: 'cloud-pastel-animals',
+  },
+  {
+    id: 'liquid-prism',
+    labelZh: '水光玻璃',
+    labelEn: 'Liquid Prism',
+    descriptionZh: '水光玻璃界面、透明系统 App 图标与可选配套组件。',
+    descriptionEn:
+      'Liquid glass surfaces, transparent system app icons, and optional companion widgets.',
+    systemTheme: 'liquid-prism',
+    systemAppIconTheme: 'liquid-prism',
+    companionWidgetCollectionId: 'liquid-prism',
+  },
+  {
+    id: 'chromatic-glass',
+    labelZh: '彩光玻璃',
+    labelEn: 'Chromatic Glass',
+    descriptionZh: '彩光玻璃界面与简约线形玻璃图标；颜色只出现在边缘、高光和轻微环境光。',
+    descriptionEn:
+      'Chromatic glass surfaces with minimal line glyphs; color stays in the edges, highlights, and ambient light.',
+    systemTheme: 'chromatic-glass',
+    systemAppIconTheme: 'liquid-prism',
   },
 ])
 

@@ -34,6 +34,7 @@ describe('system app icon themes', () => {
     expect(normalizeSystemAppIconThemeId('cloud-pastel-animals')).toBe(
       'cloud-pastel-animals',
     )
+    expect(normalizeSystemAppIconThemeId('liquid-prism')).toBe('liquid-prism')
     expect(normalizeSystemAppIconThemeId('unknown')).toBe('classic')
     expect(isSystemAppIconThemeTarget('app_chat')).toBe(false)
     expect(isSystemAppIconThemeTarget('app_shopping')).toBe(false)
@@ -125,17 +126,128 @@ describe('system app icon themes', () => {
     expect(meta.imageUrl).toBe('')
   })
 
+  test('can temporarily prefer the selected pack visual without losing a per-app name', () => {
+    const overrides = {
+      app_network: {
+        displayName: 'My Network',
+        icon: 'fas fa-paper-plane',
+        accent: 'dark',
+      },
+    }
+    const customized = resolveAppIconMeta(
+      'app_network',
+      overrides,
+      'en-US',
+      'liquid-prism',
+    )
+    const preferredPack = resolveAppIconMeta(
+      'app_network',
+      overrides,
+      'en-US',
+      'liquid-prism',
+      { preferThemeIcon: true },
+    )
+
+    expect(customized.icon).toBe('fas fa-paper-plane')
+    expect(customized.material).toBe('')
+    expect(preferredPack.displayName).toBe('My Network')
+    expect(preferredPack.material).toBe('liquid-prism')
+    expect(preferredPack.liquidGlyph?.paths.length).toBeGreaterThan(0)
+    expect(preferredPack.hasPerAppVisualOverride).toBe(true)
+    expect(preferredPack.isThemeVisualPreferred).toBe(true)
+
+    const independent = resolveAppIconMeta(
+      'app_chat',
+      { app_chat: { icon: 'fas fa-paper-plane', accent: 'dark' } },
+      'en-US',
+      'liquid-prism',
+      { preferThemeIcon: true },
+    )
+    expect(independent.icon).toBe('fas fa-paper-plane')
+    expect(independent.isThemeVisualPreferred).toBe(false)
+  })
+
+  test('applies Liquid Prism material only to system targets and below per-app overrides', () => {
+    const liquid = resolveAppIconMeta('app_network', {}, 'zh-CN', 'liquid-prism')
+    expect(liquid.material).toBe('liquid-prism')
+    expect(liquid.materialClass).toBe('material-liquid-prism')
+    expect(liquid.liquidGlyph?.paths.length).toBeGreaterThan(0)
+
+    const providedGlyph = resolveAppIconMeta('app_contacts', {}, 'zh-CN', 'liquid-prism')
+    expect(providedGlyph.liquidGlyph?.paths.length).toBeGreaterThan(0)
+
+    const independent = resolveAppIconMeta('app_chat', {}, 'zh-CN', 'liquid-prism')
+    expect(independent.material).toBe('')
+    expect(independent.materialClass).toBe('')
+
+    const customized = resolveAppIconMeta(
+      'app_contacts',
+      { app_contacts: { icon: 'fas fa-paper-plane', accent: 'dark' } },
+      'zh-CN',
+      'liquid-prism',
+    )
+    expect(customized.icon).toBe('fas fa-paper-plane')
+    expect(customized.material).toBe('')
+    expect(customized.materialClass).toBe('')
+    expect(customized.liquidGlyph).toBeNull()
+  })
+
+  test('previews the first Liquid Prism line-glyph batch in Appearance', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+
+    const wrapper = mount(AppearanceView, {
+      global: { plugins: [router] },
+    })
+
+    await wrapper.get('[data-testid="appearance-system-icons-entry"]').trigger('click')
+    const option = wrapper.get('[data-testid="appearance-system-app-icon-theme-liquid-prism"]')
+    expect(option.findAll('svg')).toHaveLength(4)
+    expect(option.text()).toContain('首批 8 个系统 App')
+    wrapper.unmount()
+  })
+
   test('persists the setting and accepts the mistaken V1 key as migration input', () => {
     const store = useSystemStore()
     store.setSystemAppIconTheme('soft-rounded')
     expect(store.settings.appearance.systemAppIconTheme).toBe('soft-rounded')
+    store.setPreferSystemAppIconTheme(true)
+    expect(store.settings.appearance.preferSystemAppIconTheme).toBe(true)
 
     expect(
       store.restoreFromBackup({
-        settings: { appearance: { systemIconTheme: 'soft-rounded' } },
+        settings: {
+          appearance: {
+            systemIconTheme: 'soft-rounded',
+            preferSystemAppIconTheme: false,
+          },
+        },
       }),
     ).toBe(true)
     expect(store.settings.appearance.systemAppIconTheme).toBe('soft-rounded')
+    expect(store.settings.appearance.preferSystemAppIconTheme).toBe(false)
+  })
+
+  test('toggles reversible pack priority from Appearance', async () => {
+    const router = createTestRouter()
+    await router.push('/appearance')
+    await router.isReady()
+    const store = useSystemStore()
+    const wrapper = mount(AppearanceView, {
+      global: { plugins: [router] },
+    })
+
+    await wrapper.get('[data-testid="appearance-system-icons-entry"]').trigger('click')
+    const priority = wrapper.get('[data-testid="appearance-system-app-icon-theme-priority"]')
+    expect(priority.attributes('aria-checked')).toBe('false')
+
+    await priority.trigger('click')
+    await flushPromises()
+
+    expect(store.settings.appearance.preferSystemAppIconTheme).toBe(true)
+    expect(priority.attributes('aria-checked')).toBe('true')
+    wrapper.unmount()
   })
 
   test('switches system app icon packs from Appearance', async () => {

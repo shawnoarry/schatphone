@@ -143,11 +143,14 @@ export const resolveNotificationModuleMeta = (
   locale = 'en-US',
   appIconOverrides = {},
   systemAppIconTheme = 'classic',
+  preferSystemAppIconTheme = false,
 ) => {
   const key = detectModuleKey(note)
   const appId = resolveNotificationModuleAppId(key)
   const appMeta = appId
-    ? resolveAppIconMeta(appId, appIconOverrides, locale, systemAppIconTheme)
+    ? resolveAppIconMeta(appId, appIconOverrides, locale, systemAppIconTheme, {
+        preferThemeIcon: preferSystemAppIconTheme === true,
+      })
     : null
   const fallbackToneClass =
     key === 'shopping'
@@ -187,6 +190,7 @@ export const buildExternalPushFallback = (
     locale,
     options?.appIconOverrides || {},
     options?.systemAppIconTheme,
+    options?.preferSystemAppIconTheme === true,
   )
   const appName = readLocalizedCopy(MODULE_COPY.appName, locale)
   const standardBodyMap =

@@ -1,4 +1,8 @@
 import { projectUiAssetUrl } from './project-assets'
+import {
+  LIQUID_PRISM_CONTACTS_GLYPH,
+  LIQUID_PRISM_ICON_GLYPHS,
+} from './liquid-prism-icon-glyphs'
 
 export const DEFAULT_SYSTEM_APP_ICON_THEME_ID = 'classic'
 
@@ -30,6 +34,14 @@ export const SYSTEM_APP_ICON_THEME_OPTIONS = Object.freeze([
     descriptionZh: '12 个常用系统 App 使用动物图标，其余系统 App 暂沿用经典图标。',
     descriptionEn:
       'Uses animal icons for 12 frequently used system apps; other system apps keep their classic icons for now.',
+  },
+  {
+    id: 'liquid-prism',
+    labelZh: '水光玻璃',
+    labelEn: 'Liquid Prism',
+    descriptionZh: '首批 8 个系统 App 使用简约线形图标，全部系统图标共享近乎透明的水光玻璃壳。',
+    descriptionEn:
+      'Starts with eight minimal line glyphs while every system icon shares a nearly transparent liquid-glass shell.',
   },
 ])
 
@@ -145,10 +157,27 @@ const CLOUD_PASTEL_ANIMAL_APP_ICONS = Object.freeze({
   },
 })
 
+const LIQUID_PRISM_APP_ICONS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(SOFT_ROUNDED_APP_ICONS).map(([appId, meta]) => [
+      appId,
+      Object.freeze({
+        ...meta,
+        material: 'liquid-prism',
+        liquidGlyph:
+          appId === 'app_contacts'
+            ? LIQUID_PRISM_CONTACTS_GLYPH
+            : LIQUID_PRISM_ICON_GLYPHS[appId] || null,
+      }),
+    ]),
+  ),
+)
+
 const SYSTEM_APP_ICON_PACKS = Object.freeze({
   classic: Object.freeze({}),
   'soft-rounded': SOFT_ROUNDED_APP_ICONS,
   'cloud-pastel-animals': CLOUD_PASTEL_ANIMAL_APP_ICONS,
+  'liquid-prism': LIQUID_PRISM_APP_ICONS,
 })
 
 export const normalizeSystemAppIconThemeId = (

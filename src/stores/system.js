@@ -67,6 +67,7 @@ import {
   validateWidgetImportPayload,
 } from '../lib/widget-schema'
 import { BUILT_IN_HOME_WIDGET_BY_ID, BUILT_IN_HOME_WIDGET_IDS } from '../lib/home-widgets'
+import { getWidgetStylePresetsByCollection } from '../lib/widget-style-presets'
 import { normalizeImageSource } from '../lib/image-source-contract'
 import { detectApiKindFromUrl, normalizeAiTransportMode } from '../lib/ai'
 import {
@@ -1671,6 +1672,7 @@ export const useSystemStore = defineStore('system', () => {
       systemTheme: DEFAULT_SYSTEM_APPEARANCE_THEME_ID,
       styleKitId: DEFAULT_APPEARANCE_STYLE_KIT_ID,
       systemAppIconTheme: DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+      preferSystemAppIconTheme: false,
       wallpaperMode: DEFAULT_WALLPAPER_MODE,
       wallpaperAssetId: '',
       wallpaper: AVAILABLE_THEMES[0].wallpaper,
@@ -2166,6 +2168,10 @@ export const useSystemStore = defineStore('system', () => {
 
   const setSystemAppIconTheme = (themeId) => {
     settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(themeId)
+  }
+
+  const setPreferSystemAppIconTheme = (enabled) => {
+    settings.appearance.preferSystemAppIconTheme = enabled === true
   }
 
   const setSystemAppearanceTheme = (themeId) => {
@@ -2685,6 +2691,44 @@ export const useSystemStore = defineStore('system', () => {
     normalizeCurrentHomeLayoutSlotPlacements()
 
     return widget.id
+  }
+
+  const installWidgetStylePresetCollection = (collectionId) => {
+    const presets = getWidgetStylePresetsByCollection(collectionId)
+    if (presets.length === 0) {
+      return { installedCount: 0, installedIds: [], existingCount: 0, totalCount: 0 }
+    }
+
+    const existingPresetIds = new Set(
+      settings.appearance.customWidgets
+        .map((widget) => normalizeCustomWidgetSourcePresetId(widget.sourcePresetId))
+        .filter(Boolean),
+    )
+    const installedIds = []
+    let existingCount = 0
+
+    presets.forEach((preset) => {
+      if (existingPresetIds.has(preset.id)) {
+        existingCount += 1
+        return
+      }
+      const widgetId = addCustomWidget({
+        name: preset.nameZh || preset.nameEn,
+        size: preset.size,
+        code: preset.code,
+        sourcePresetId: preset.id,
+        pageIndex: null,
+        placeOnHome: false,
+      })
+      if (widgetId) installedIds.push(widgetId)
+    })
+
+    return {
+      installedCount: installedIds.length,
+      installedIds,
+      existingCount,
+      totalCount: presets.length,
+    }
   }
 
   const updateCustomWidget = (widgetId, updates = {}) => {
@@ -4593,6 +4637,8 @@ export const useSystemStore = defineStore('system', () => {
       settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
         appearance.systemAppIconTheme ?? appearance.systemIconTheme,
       )
+      settings.appearance.preferSystemAppIconTheme =
+        appearance.preferSystemAppIconTheme === true
       const inferredThemeWallpaper = getThemeWallpaper()
       settings.appearance.wallpaperMode =
         typeof appearance.wallpaperMode === 'string'
@@ -4828,6 +4874,8 @@ export const useSystemStore = defineStore('system', () => {
     settings.appearance.systemAppIconTheme = normalizeSystemAppIconThemeId(
       settings.appearance.systemAppIconTheme ?? settings.appearance.systemIconTheme,
     )
+    settings.appearance.preferSystemAppIconTheme =
+      settings.appearance.preferSystemAppIconTheme === true
     const hasTheme = availableThemes.value.some((theme) => theme.id === settings.appearance.currentTheme)
     if (!hasTheme) {
       settings.appearance.currentTheme = availableThemes.value[0]?.id || 'default'
@@ -5175,6 +5223,7 @@ export const useSystemStore = defineStore('system', () => {
     setAppearanceColorMode,
     setSystemAppearanceTheme,
     setSystemAppIconTheme,
+    setPreferSystemAppIconTheme,
     applyAppearanceStyleKit,
     getAppearanceStyleKitStatus,
     getThemeWallpaper,
@@ -5209,6 +5258,7 @@ export const useSystemStore = defineStore('system', () => {
     setHomeLayoutSlotPlacement,
     clearHomeLayoutSlotPlacement,
     addCustomWidget,
+    installWidgetStylePresetCollection,
     updateCustomWidget,
     removeCustomWidget,
     placeCustomWidget,

@@ -17,6 +17,8 @@ import {
   resolveSystemAppearanceThemeMeta,
 } from '../lib/system-appearance-theme'
 import { resolveAppIconMeta } from '../lib/app-icon-presentation'
+import AppIconVisual from '../components/shared/AppIconVisual.vue'
+import { getWidgetStylePresetsByCollection } from '../lib/widget-style-presets'
 import {
   buildRouteWithReturnSource,
   normalizeHomePageQuery,
@@ -79,6 +81,8 @@ const appearancePackExportText = ref('')
 const appearancePackImportText = ref('')
 const appearancePackStatus = ref({ tone: '', message: '' })
 const applyStyleKitWallpaper = ref(true)
+const applyStyleKitWidgets = ref(false)
+const styleKitFeedback = ref('')
 const wallpaperQuickPreviewMap = reactive({})
 
 const APPEARANCE_WALLPAPER_PREVIEW_SCOPE_ID = 'appearance-wallpaper-view'
@@ -499,19 +503,45 @@ const setSystemAppIconTheme = (themeId) => {
   triggerSaved()
 }
 
+const toggleSystemAppIconThemePriority = () => {
+  systemStore.setPreferSystemAppIconTheme(
+    settings.value.appearance.preferSystemAppIconTheme !== true,
+  )
+  triggerSaved()
+}
+
 const applyAppearanceStyleKit = (kitId) => {
+  const kit = availableAppearanceStyleKits.value.find((option) => option.id === kitId)
   systemStore.applyAppearanceStyleKit(kitId, {
     applyWallpaper: applyStyleKitWallpaper.value,
   })
+  styleKitFeedback.value = ''
+  if (applyStyleKitWidgets.value && kit?.companionWidgetCollectionId) {
+    const result = systemStore.installWidgetStylePresetCollection(
+      kit.companionWidgetCollectionId,
+    )
+    styleKitFeedback.value = result.installedCount > 0
+      ? t(
+          `已将 ${result.installedCount} 个配套组件加入组件库，未放到桌面。`,
+          `${result.installedCount} companion widgets were added to the library, not Home.`,
+        )
+      : t(
+          `配套组件已在组件库中，没有重复添加。`,
+          'The companion widgets are already in the library; no duplicates were added.',
+        )
+  }
   triggerSaved()
 }
+
+const styleKitCompanionWidgetCount = (kit) =>
+  getWidgetStylePresetsByCollection(kit?.companionWidgetCollectionId).length
 
 const systemAppIconThemeLabel = (theme) => t(theme.labelZh, theme.labelEn)
 const systemAppIconThemeDescription = (theme) => t(theme.descriptionZh, theme.descriptionEn)
 const systemAppIconPreviewIds = Object.freeze([
-  'app_phone',
+  'app_network',
+  'app_wallet',
   'app_camera',
-  'app_weather',
   'app_map',
 ])
 const systemAppIconPreviewMeta = (appId, themeId) =>
@@ -916,24 +946,44 @@ onBeforeUnmount(() => {
           </p>
         </div>
         <div class="appearance-icon-theme-intro__preview" aria-hidden="true">
-          <span
+          <AppIconVisual
             v-for="appId in systemAppIconPreviewIds.slice(0, 3)"
             :key="appId"
             class="appearance-system-app-icon"
-            :class="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).toneClass"
-          >
-            <img
-              v-if="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).imageUrl"
-              :src="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).imageUrl"
-              alt=""
-            />
-            <i
-              v-else
-              :class="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).icon"
-            ></i>
-          </span>
+            :meta="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme)"
+            :image-url="systemAppIconPreviewMeta(appId, settings.appearance.systemAppIconTheme).imageUrl"
+            alt=""
+          />
         </div>
       </section>
+
+      <button
+        type="button"
+        class="appearance-icon-priority"
+        role="switch"
+        :aria-checked="settings.appearance.preferSystemAppIconTheme === true"
+        data-testid="appearance-system-app-icon-theme-priority"
+        @click="toggleSystemAppIconThemePriority"
+      >
+        <span class="appearance-icon-priority__copy">
+          <strong>{{ t('优先显示套装图标', 'Prefer pack icons') }}</strong>
+          <small>
+            {{
+              t(
+                '系统 App 暂时显示当前套装；原来的单 App 图标与名称会完整保留，关闭后立即恢复。',
+                'System apps temporarily show the current pack. Saved per-app icons and names stay intact and return immediately when this is turned off.',
+              )
+            }}
+          </small>
+        </span>
+        <span
+          class="appearance-icon-priority__switch"
+          :class="{ 'is-on': settings.appearance.preferSystemAppIconTheme === true }"
+          aria-hidden="true"
+        >
+          <span></span>
+        </span>
+      </button>
 
       <div class="appearance-icon-theme-options">
         <button
@@ -947,19 +997,14 @@ onBeforeUnmount(() => {
           @click="setSystemAppIconTheme(theme.id)"
         >
           <span class="appearance-icon-theme-option__preview" aria-hidden="true">
-            <span
+            <AppIconVisual
               v-for="appId in systemAppIconPreviewIds"
               :key="appId"
               class="appearance-system-app-icon"
-              :class="systemAppIconPreviewMeta(appId, theme.id).toneClass"
-            >
-              <img
-                v-if="systemAppIconPreviewMeta(appId, theme.id).imageUrl"
-                :src="systemAppIconPreviewMeta(appId, theme.id).imageUrl"
-                alt=""
-              />
-              <i v-else :class="systemAppIconPreviewMeta(appId, theme.id).icon"></i>
-            </span>
+              :meta="systemAppIconPreviewMeta(appId, theme.id)"
+              :image-url="systemAppIconPreviewMeta(appId, theme.id).imageUrl"
+              alt=""
+            />
           </span>
           <span class="appearance-icon-theme-option__copy">
             <strong>{{ systemAppIconThemeLabel(theme) }}</strong>
@@ -979,7 +1024,7 @@ onBeforeUnmount(() => {
           <div>
             <div class="text-sm font-bold">{{ t('一键风格套装', 'Style Kits') }}</div>
             <p class="mt-1 text-[11px] leading-5 text-gray-500">
-              {{ t('一次应用配套界面、系统 App 图标与可选推荐壁纸，之后仍可分别调整。', 'Applies matching surfaces, system app icons, and an optional recommended wallpaper while keeping each setting editable.') }}
+              {{ t('一次应用配套界面、系统 App 图标与可选内容，之后仍可分别调整或自由混搭。', 'Applies matching surfaces, system app icons, and optional extras while keeping every setting independently editable.') }}
             </p>
           </div>
           <span
@@ -995,14 +1040,39 @@ onBeforeUnmount(() => {
             }}
           </span>
         </div>
-        <label class="appearance-style-kit-wallpaper">
-          <input
-            v-model="applyStyleKitWallpaper"
-            type="checkbox"
-            data-testid="appearance-style-kit-wallpaper"
-          />
-          <span>{{ t('同时应用推荐壁纸', 'Apply recommended wallpaper') }}</span>
-        </label>
+        <div class="appearance-style-kit-toggle-list">
+          <label class="appearance-style-kit-toggle">
+            <input
+              v-model="applyStyleKitWallpaper"
+              type="checkbox"
+              data-testid="appearance-style-kit-wallpaper"
+            />
+            <span>{{ t('同时应用推荐壁纸', 'Apply recommended wallpaper') }}</span>
+          </label>
+          <label class="appearance-style-kit-toggle">
+            <input
+              v-model="applyStyleKitWidgets"
+              type="checkbox"
+              data-testid="appearance-style-kit-widgets"
+            />
+            <span>
+              {{
+                t(
+                  '同时将配套组件加入组件库（不会放到桌面）',
+                  'Add companion widgets to the library (never place them on Home)',
+                )
+              }}
+            </span>
+          </label>
+        </div>
+        <p
+          v-if="styleKitFeedback"
+          class="appearance-style-kit-feedback"
+          data-testid="appearance-style-kit-widget-feedback"
+          aria-live="polite"
+        >
+          {{ styleKitFeedback }}
+        </p>
         <button
           v-for="kit in availableAppearanceStyleKits"
           :key="kit.id"
@@ -1023,6 +1093,17 @@ onBeforeUnmount(() => {
           <span>
             <strong>{{ appearanceStyleKitLabel(kit) }}</strong>
             <small>{{ appearanceStyleKitDescription(kit) }}</small>
+            <small
+              v-if="styleKitCompanionWidgetCount(kit) > 0"
+              class="appearance-style-kit-option__companion"
+            >
+              {{
+                t(
+                  `含 ${styleKitCompanionWidgetCount(kit)} 个可选配套组件`,
+                  `Includes ${styleKitCompanionWidgetCount(kit)} optional companion widgets`,
+                )
+              }}
+            </small>
           </span>
           <span class="appearance-style-kit-option__action">
             {{ t('应用整套', 'Apply Kit') }}
@@ -1732,6 +1813,87 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.appearance-icon-priority {
+  width: 100%;
+  min-height: 74px;
+  border: 1px solid var(--system-card-border);
+  border-radius: var(--system-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  color: var(--system-text);
+  text-align: left;
+  background: color-mix(in srgb, var(--system-panel-bg) 92%, transparent);
+  box-shadow: var(--system-shadow-card);
+  transition:
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast),
+    transform var(--system-motion-fast);
+}
+
+.appearance-icon-priority[aria-checked='true'] {
+  border-color: color-mix(in srgb, var(--system-accent) 54%, var(--system-card-border));
+  background: color-mix(in srgb, var(--system-accent) 7%, var(--system-panel-bg));
+}
+
+.appearance-icon-priority:active {
+  transform: scale(0.992);
+}
+
+.appearance-icon-priority__copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.appearance-icon-priority__copy strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.appearance-icon-priority__copy small {
+  max-width: 520px;
+  color: var(--system-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.appearance-icon-priority__switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 50px;
+  height: 30px;
+  border: 1px solid var(--system-card-border);
+  border-radius: 999px;
+  background: var(--system-control-bg);
+  transition:
+    border-color var(--system-motion-fast),
+    background var(--system-motion-fast);
+}
+
+.appearance-icon-priority__switch > span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--system-text-inverse);
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.2);
+  transition: transform 180ms ease;
+}
+
+.appearance-icon-priority__switch.is-on {
+  border-color: var(--system-accent);
+  background: var(--system-accent);
+}
+
+.appearance-icon-priority__switch.is-on > span {
+  transform: translateX(20px);
+}
+
 .appearance-icon-theme-option {
   width: 100%;
   min-height: 82px;
@@ -1812,6 +1974,15 @@ onBeforeUnmount(() => {
 .appearance-system-app-icon.accent-dark {
   color: var(--home-icon-dark-fg);
   background: var(--home-icon-dark-bg);
+}
+
+.appearance-system-app-icon.material-liquid-prism {
+  color: rgba(31, 32, 39, 0.78);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.84),
+    inset -1px -2px 4px rgba(73, 70, 86, 0.08),
+    0 6px 13px rgba(36, 35, 43, 0.12);
 }
 
 .appearance-icon-theme-option__copy {
@@ -1917,7 +2088,12 @@ onBeforeUnmount(() => {
   background: var(--system-warning-soft);
 }
 
-.appearance-style-kit-wallpaper {
+.appearance-style-kit-toggle-list {
+  display: grid;
+  gap: 4px;
+}
+
+.appearance-style-kit-toggle {
   min-height: 40px;
   display: flex;
   align-items: center;
@@ -1927,10 +2103,21 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.appearance-style-kit-wallpaper input {
+.appearance-style-kit-toggle input {
   width: 18px;
   height: 18px;
   accent-color: var(--system-accent);
+}
+
+.appearance-style-kit-feedback {
+  margin: 0;
+  border-radius: 12px;
+  padding: 9px 11px;
+  color: var(--system-success);
+  background: var(--system-success-soft);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.5;
 }
 
 .appearance-style-kit-option {
@@ -1949,6 +2136,11 @@ onBeforeUnmount(() => {
   color: var(--system-on-accent);
   background: var(--system-accent);
   font-size: 11px;
+  font-weight: 800;
+}
+
+.appearance-style-kit-option__companion {
+  color: var(--system-accent) !important;
   font-weight: 800;
 }
 

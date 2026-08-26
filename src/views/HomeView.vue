@@ -32,6 +32,8 @@ import {
   resolveHomeFolderPresentation,
 } from '../lib/home-entry-registry'
 import { resolveDisplayName } from '../lib/app-entry-presentation'
+import { LIQUID_PRISM_ICON_GLYPHS } from '../lib/liquid-prism-icon-glyphs'
+import { resolveSystemAppearanceThemeMeta } from '../lib/system-appearance-theme'
 import {
   buildFoodDeliveryFolderEntries,
   buildShoppingFolderEntries,
@@ -122,6 +124,9 @@ const { activeForecast: homeWeatherForecastData, displayLocationName: homeWeathe
 const homeLocale = computed(() => (languageBase.value === 'zh' ? 'zh-CN' : systemLanguage.value))
 const appIconOverrides = computed(() => settings.value.appearance.appIconOverrides || {})
 const systemAppIconTheme = computed(() => settings.value.appearance.systemAppIconTheme)
+const preferSystemAppIconTheme = computed(
+  () => settings.value.appearance.preferSystemAppIconTheme === true,
+)
 const homeMusicTrack = computed(() => musicStore.currentTrack || musicStore.featuredTrack)
 const homeMusicProgress = computed(() => {
   const duration = Number(musicStore.runtime.duration || homeMusicTrack.value?.durationSec || 0)
@@ -133,6 +138,7 @@ const { appIconImageUrl } = useAppIconImagePreviews({
   appIconOverrides,
   locale: homeLocale,
   systemAppIconTheme,
+  preferSystemAppIconTheme,
   scopeId: 'home-app-icons',
 })
 const smartPanelEnabled = computed(() => systemStore.isMoreFeatureToggleEnabled('smart_panel'))
@@ -479,7 +485,15 @@ const tilePageIndexMap = computed(() => {
 const activeTheme = computed(() => {
   return availableThemes.value.find((theme) => theme.id === settings.value.appearance.currentTheme) || null
 })
+const activeSystemAppearanceTheme = computed(() =>
+  resolveSystemAppearanceThemeMeta(settings.value.appearance.systemTheme),
+)
 const activeThemeName = computed(() => {
+  if (activeSystemAppearanceTheme.value.id !== 'classic') {
+    return languageBase.value === 'zh'
+      ? activeSystemAppearanceTheme.value.labelZh
+      : activeSystemAppearanceTheme.value.labelEn
+  }
   if (!activeTheme.value) return ''
   if (activeTheme.value.id === 'default') return t('默认系统', 'Default System')
   if (activeTheme.value.id === 'zen') return t('石墨静夜', 'Graphite Quiet')
@@ -543,11 +557,11 @@ const tileMeta = (tileId) => {
         appIconOverrides.value,
         homeLocale.value,
         systemAppIconTheme.value,
+        { preferThemeIcon: preferSystemAppIconTheme.value },
       )
       return {
         ...builtIn,
-        icon: resolvedIconMeta.icon,
-        accent: resolvedIconMeta.accent,
+        ...resolvedIconMeta,
         label: resolveDisplayName(resolveAppTileLabel(tileId, resolvedIconMeta.label || builtIn.label), resolvedIconMeta),
       }
     }
@@ -557,6 +571,7 @@ const tileMeta = (tileId) => {
         appIconOverrides.value,
         homeLocale.value,
         systemAppIconTheme.value,
+        { preferThemeIcon: preferSystemAppIconTheme.value },
       )
       const childEntries =
         tileId === SHOPPING_HOME_APP_ID
@@ -1643,11 +1658,26 @@ const dockAppMeta = (appId) => {
     appIconOverrides.value,
     homeLocale.value,
     systemAppIconTheme.value,
+    { preferThemeIcon: preferSystemAppIconTheme.value },
   )
   return {
     ...meta,
     label: resolveDisplayName(resolveAppTileLabel(appId, meta.label || appId), meta),
   }
+}
+
+const dockGlyph = (appId) => {
+  const meta = dockAppMeta(appId)
+  if (meta.hasPerAppVisualOverride && !meta.isThemeVisualPreferred) return null
+  if (meta.liquidGlyph) return meta.liquidGlyph
+  if (
+    appId === 'app_chat' &&
+    activeSystemAppearanceTheme.value.id === 'chromatic-glass' &&
+    systemAppIconTheme.value === 'liquid-prism'
+  ) {
+    return LIQUID_PRISM_ICON_GLYPHS.app_chat || null
+  }
+  return null
 }
 
 const moveTileToSlot = (tileId, targetPageIndex, slotIndex) => {
@@ -2747,7 +2777,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="home-dock">
         <button
-          class="home-dock-icon"
+          class="home-dock-icon home-dock-icon--chat"
           :style="iconStyle(dockAppMeta('app_chat').accent)"
           :aria-label="dockAppMeta('app_chat').label"
           @click="openAppById('app_chat')"
@@ -2758,11 +2788,12 @@ onBeforeUnmount(() => {
             :meta="dockAppMeta('app_chat')"
             :image-url="appIconImageUrl('app_chat')"
             :accent-style="iconStyle(dockAppMeta('app_chat').accent)"
+            :glyph="dockGlyph('app_chat')"
             :alt="dockAppMeta('app_chat').label"
           />
         </button>
         <button
-          class="home-dock-icon"
+          class="home-dock-icon home-dock-icon--contacts"
           :style="iconStyle(dockAppMeta('app_contacts').accent)"
           :aria-label="dockAppMeta('app_contacts').label"
           @click="openAppById('app_contacts')"
@@ -2773,11 +2804,12 @@ onBeforeUnmount(() => {
             :meta="dockAppMeta('app_contacts')"
             :image-url="appIconImageUrl('app_contacts')"
             :accent-style="iconStyle(dockAppMeta('app_contacts').accent)"
+            :glyph="dockGlyph('app_contacts')"
             :alt="dockAppMeta('app_contacts').label"
           />
         </button>
         <button
-          class="home-dock-icon"
+          class="home-dock-icon home-dock-icon--settings"
           :style="iconStyle(dockAppMeta('app_settings').accent)"
           :aria-label="dockAppMeta('app_settings').label"
           @click="openAppById('app_settings')"
@@ -2788,11 +2820,12 @@ onBeforeUnmount(() => {
             :meta="dockAppMeta('app_settings')"
             :image-url="appIconImageUrl('app_settings')"
             :accent-style="iconStyle(dockAppMeta('app_settings').accent)"
+            :glyph="dockGlyph('app_settings')"
             :alt="dockAppMeta('app_settings').label"
           />
         </button>
         <button
-          class="home-dock-icon"
+          class="home-dock-icon home-dock-icon--widgets"
           :style="iconStyle(dockAppMeta('app_widgets').accent)"
           :aria-label="dockAppMeta('app_widgets').label"
           data-testid="home-dock-widgets"
@@ -2808,6 +2841,7 @@ onBeforeUnmount(() => {
             :meta="dockAppMeta('app_widgets')"
             :image-url="appIconImageUrl('app_widgets')"
             :accent-style="iconStyle(dockAppMeta('app_widgets').accent)"
+            :glyph="dockGlyph('app_widgets')"
             :alt="dockAppMeta('app_widgets').label"
           />
         </button>

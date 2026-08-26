@@ -93,6 +93,48 @@ describe('system widget import safety', () => {
     expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
   })
 
+  test('installs a companion widget collection once without mutating Home or theme ownership', () => {
+    const store = useSystemStore()
+    const beforePages = store.settings.appearance.homeWidgetPages.map((page) => [...page])
+    const beforePlacements = JSON.parse(
+      JSON.stringify(store.settings.appearance.homeLayoutSlotPlacements),
+    )
+
+    const firstInstall = store.installWidgetStylePresetCollection('liquid-prism')
+
+    expect(firstInstall).toMatchObject({
+      installedCount: 5,
+      existingCount: 0,
+      totalCount: 5,
+    })
+    expect(firstInstall.installedIds).toHaveLength(5)
+    expect(store.settings.appearance.customWidgets.map((widget) => widget.sourcePresetId)).toEqual(
+      expect.arrayContaining([
+        'liquid_prism_drop',
+        'liquid_prism_capsule',
+        'liquid_prism_day',
+        'liquid_prism_music',
+        'liquid_prism_agenda',
+      ]),
+    )
+    expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
+    expect(store.settings.appearance.homeLayoutSlotPlacements).toEqual(beforePlacements)
+
+    const secondInstall = store.installWidgetStylePresetCollection('liquid-prism')
+    expect(secondInstall).toMatchObject({
+      installedCount: 0,
+      existingCount: 5,
+      totalCount: 5,
+    })
+    expect(store.settings.appearance.customWidgets).toHaveLength(5)
+
+    store.applyAppearanceStyleKit('liquid-prism')
+    store.applyAppearanceStyleKit('system-classic')
+    expect(store.settings.appearance.customWidgets).toHaveLength(5)
+    expect(store.settings.appearance.homeWidgetPages).toEqual(beforePages)
+    expect(store.settings.appearance.homeLayoutSlotPlacements).toEqual(beforePlacements)
+  })
+
   test('rejects unsafe appearance code in direct create and update paths', () => {
     const store = useSystemStore()
 

@@ -114,6 +114,7 @@ Recommended ownership:
 - Home edit mode owns quick per-page template changes because users see the slots there;
 - Appearance may also expose template management because it owns broader visual customization;
 - Widget Center owns widget creation/import and Home edit entry points, but not whole-page template catalogs.
+- Appearance style kits may offer companion widget definitions, but accepting that offer only installs missing definitions into Widget Center. Home placement remains a later explicit slot choice, and switching themes or kits never removes, replaces, or auto-places those widgets.
 - App Library / App Store-like presentation owns app-entry visibility management only. It should not own layout templates, widget packs, themes, wallpapers, or icon styles.
 
 Template rules:

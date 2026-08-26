@@ -1,5 +1,6 @@
 import {
   DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+  isSystemAppIconThemeTarget,
   resolveSystemAppIconThemeOverride,
 } from './system-app-icon-theme'
 import { projectUiAssetUrl } from './project-assets'
@@ -284,6 +285,7 @@ export const resolveAppIconMeta = (
   overrides = {},
   locale = 'en-US',
   systemAppIconTheme = DEFAULT_SYSTEM_APP_ICON_THEME_ID,
+  options = {},
 ) => {
   const fallback = BUILT_IN_APP_ICON_META[appId] || {
     icon: 'fas fa-circle',
@@ -295,19 +297,40 @@ export const resolveAppIconMeta = (
   const themeOverride = resolveSystemAppIconThemeOverride(appId, systemAppIconTheme)
   const themeImageUrl =
     typeof themeOverride?.imageUrl === 'string' ? themeOverride.imageUrl.trim() : ''
-  const resolvedIcon = override?.icon || themeOverride?.icon || fallback.icon
-  const resolvedAccent = override?.accent || themeOverride?.accent || fallback.accent
+  const preferThemeIcon = options?.preferThemeIcon === true
+  const useThemeVisual =
+    isSystemAppIconThemeTarget(appId) && (preferThemeIcon || !override)
+  const useOverrideVisual = Boolean(override) && !useThemeVisual
+  const resolvedIcon = useThemeVisual
+    ? themeOverride?.icon || fallback.icon
+    : override?.icon || fallback.icon
+  const resolvedAccent = useThemeVisual
+    ? themeOverride?.accent || fallback.accent
+    : override?.accent || fallback.accent
+  const resolvedMaterial = useThemeVisual ? themeOverride?.material || '' : ''
+  const resolvedLiquidGlyph = useThemeVisual ? themeOverride?.liquidGlyph || null : null
   return {
     appId,
     icon: resolvedIcon,
     accent: resolvedAccent,
     toneClass: `accent-${resolvedAccent}`,
+    material: resolvedMaterial,
+    materialClass: resolvedMaterial ? `material-${resolvedMaterial}` : '',
+    liquidGlyph: resolvedLiquidGlyph,
     label: readLocalizedCopy(APP_ICON_LABELS[appId], locale, appId),
     displayName: override?.displayName || '',
-    sourceType: override?.sourceType || 'preset',
-    galleryAssetId: override?.sourceType === 'gallery' ? override.galleryAssetId : '',
-    hasImageIcon: override?.sourceType === 'gallery' && Boolean(override.galleryAssetId),
-    imageUrl: override ? '' : themeImageUrl || fallbackImageUrl,
+    sourceType: useOverrideVisual ? override?.sourceType || 'preset' : 'preset',
+    galleryAssetId:
+      useOverrideVisual && override?.sourceType === 'gallery' ? override.galleryAssetId : '',
+    hasImageIcon:
+      useOverrideVisual && override?.sourceType === 'gallery' && Boolean(override.galleryAssetId),
+    imageUrl: useThemeVisual
+      ? themeImageUrl || fallbackImageUrl
+      : useOverrideVisual
+        ? ''
+        : fallbackImageUrl,
+    hasPerAppVisualOverride: Boolean(override),
+    isThemeVisualPreferred: useThemeVisual && Boolean(override),
   }
 }
 
