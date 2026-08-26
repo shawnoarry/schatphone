@@ -116,6 +116,21 @@ describe('system appearance style foundation', () => {
     })
   })
 
+  test('applies Moonlit Journal as a vintage paper interface with classic icons', () => {
+    expect(resolveSystemAppearanceThemeMeta('moonlit-journal').labelEn).toBe('Moonlit Journal')
+    expect(resolveSystemAppearanceThemeWallpaper('moonlit-journal', 'day')).toBe('')
+
+    const store = useSystemStore()
+    const status = store.applyAppearanceStyleKit('moonlit-journal')
+
+    expect(store.settings.appearance.systemTheme).toBe('moonlit-journal')
+    expect(store.settings.appearance.systemAppIconTheme).toBe('classic')
+    expect(status).toMatchObject({
+      kit: { id: 'moonlit-journal' },
+      customized: false,
+    })
+  })
+
   test('migrates the retired Liquid Prism kit into the combined Chromatic Glass kit', () => {
     const store = useSystemStore()
     const status = store.applyAppearanceStyleKit('liquid-prism', {

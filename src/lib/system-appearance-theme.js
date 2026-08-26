@@ -84,6 +84,22 @@ export const SYSTEM_APPEARANCE_THEME_OPTIONS = Object.freeze([
       night: '',
     }),
   },
+  {
+    id: 'moonlit-journal',
+    labelZh: '月光手账',
+    labelEn: 'Moonlit Journal',
+    descriptionZh: '香槟纸感与烛光金组成的复古手账材质，日间如暖纸，夜间如深咖灯下旧页。',
+    descriptionEn:
+      'A vintage journal material in champagne paper and candlelight gold; warm paper by day, aged pages under lamplight by night.',
+    previews: Object.freeze({
+      day: 'linear-gradient(145deg, #f7f0e4 0%, #eee1cb 48%, #d5bd9a 100%)',
+      night: 'linear-gradient(145deg, #34291e 0%, #251c13 52%, #140f0a 100%)',
+    }),
+    wallpapers: Object.freeze({
+      day: '',
+      night: '',
+    }),
+  },
 ])
 
 export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
@@ -116,6 +132,16 @@ export const APPEARANCE_STYLE_KIT_OPTIONS = Object.freeze([
     systemTheme: 'chromatic-glass',
     systemAppIconTheme: 'chromatic-glass',
     companionWidgetCollectionId: 'liquid-prism',
+  },
+  {
+    id: 'moonlit-journal',
+    labelZh: '月光手账',
+    labelEn: 'Moonlit Journal',
+    descriptionZh: '月光手账界面、经典系统 App 图标与复古纸感配色。',
+    descriptionEn:
+      'Moonlit Journal surfaces, classic system app icons, and vintage paper tones.',
+    systemTheme: 'moonlit-journal',
+    systemAppIconTheme: DEFAULT_SYSTEM_APP_ICON_THEME_ID,
   },
 ])
 

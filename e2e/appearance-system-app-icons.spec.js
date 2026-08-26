@@ -364,6 +364,44 @@ test('Chromatic Glass keeps the body clear and moves color into edge light', asy
   expect(pageErrors).toEqual([])
 })
 
+test('Moonlit Journal applies champagne paper tokens across day and night', async ({ page }) => {
+  const pageErrors = []
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await unlockToHome(page)
+  await navigateInsideUnlockedApp(page, '/appearance')
+  await page.getByTestId('appearance-theme-entry').click()
+  await page.getByTestId('appearance-style-kit-moonlit-journal').click()
+
+  await expect(page.locator('html')).toHaveAttribute('data-system-theme', 'moonlit-journal')
+  await expect(page.locator('html')).toHaveAttribute('data-system-icon-theme', 'classic')
+  await expect(page.getByTestId('appearance-style-kit-status')).toContainText(
+    /套装已应用|Kit Applied/,
+  )
+  await expect
+    .poll(() =>
+      page
+        .locator('html')
+        .evaluate((root) => getComputedStyle(root).getPropertyValue('--app-bg').trim()),
+    )
+    .toBe('#f4ede3')
+
+  await page.getByTestId('appearance-color-mode-night').click()
+  await expect(page.locator('html')).toHaveAttribute('data-color-mode', 'night')
+  await expect
+    .poll(() =>
+      page
+        .locator('html')
+        .evaluate((root) => getComputedStyle(root).getPropertyValue('--app-bg').trim()),
+    )
+    .toBe('#211a13')
+
+  await navigateInsideUnlockedApp(page, '/home')
+  await expectNoHorizontalOverflow(page)
+  expect(pageErrors).toEqual([])
+})
+
 test('Chromatic Glass optionally installs companion widgets without changing Home placement', async ({
   page,
 }) => {
