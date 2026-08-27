@@ -174,7 +174,7 @@ describe('Settings backup workflow interface', () => {
       sessions: [],
     })
     expect(exported.miniScene).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       modulePolicies: [{ moduleKey: 'simulation', mode: 'unconfigured' }],
       artifacts: [],
     })

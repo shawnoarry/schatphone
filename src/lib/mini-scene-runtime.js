@@ -167,7 +167,7 @@ const failedResult = (reason, extras = {}) => ({
 })
 
 export const generateAndPresentMiniScene = async (
-  { request, narrativeRules = '' } = {},
+  { request, narrativeRules = '', regenerationOfArtifactId = '' } = {},
   {
     miniSceneStore,
     providerAdapter = null,
@@ -196,6 +196,56 @@ export const generateAndPresentMiniScene = async (
       reason: policy.reason,
       artifact: null,
       providerCallCount: 0,
+    }
+  }
+
+  const normalizedRegenerationId = normalizeMiniSceneId(regenerationOfArtifactId)
+  let previousArtifact = null
+  if (normalizedRegenerationId) {
+    previousArtifact = miniSceneStore.findArtifactById?.(normalizedRegenerationId) || null
+    const previousOccurrence = previousArtifact
+      ? [
+          previousArtifact.source.moduleKey,
+          previousArtifact.source.recordId,
+          previousArtifact.source.eventId,
+          previousArtifact.sceneType,
+          previousArtifact.worldId,
+        ].join('|')
+      : ''
+    const requestOccurrence = [
+      registryResult.request.source.moduleKey,
+      registryResult.request.source.recordId,
+      registryResult.request.source.eventId,
+      registryResult.request.sceneType,
+      registryResult.request.worldContext.worldId,
+    ].join('|')
+    if (
+      !previousArtifact ||
+      previousOccurrence !== requestOccurrence ||
+      previousArtifact.requestId === registryResult.request.requestId
+    ) {
+      return failedResult('regeneration_invalid')
+    }
+  } else {
+    const active = miniSceneStore.findActivePresentationForRequest?.(registryResult.request)
+    if (active) {
+      return {
+        ok: true,
+        status: 'presented_text',
+        reason: active.retention?.state === 'temporary' ? 'reused_temporary' : 'reused_retained',
+        artifact: cloneMiniSceneValue(active),
+        providerCallCount: 0,
+      }
+    }
+    const reusable = miniSceneStore.findReusableArtifactForRequest?.(registryResult.request)
+    if (reusable && miniSceneStore.openArtifact?.(reusable.artifactId)) {
+      return {
+        ok: true,
+        status: 'presented_text',
+        reason: 'reused_retained',
+        artifact: cloneMiniSceneValue(miniSceneStore.activeArtifact || reusable),
+        providerCallCount: 0,
+      }
     }
   }
 
@@ -257,15 +307,23 @@ export const generateAndPresentMiniScene = async (
     return failedResult('provider_provenance_missing', { providerCallCount: 1 })
   }
   const generatedAt = Math.max(1, Math.floor(Number(now) || Date.now()))
+  const revision = previousArtifact ? previousArtifact.revision + 1 : 1
   const artifactResult = validateMiniSceneArtifact({
     schemaVersion: 1,
-    artifactId: `${registryResult.request.requestId}:ai:text:v1`,
+    artifactId: `${registryResult.request.requestId}:ai:text:v${revision}`,
     requestId: registryResult.request.requestId,
     source: registryResult.request.source,
     sceneType: registryResult.request.sceneType,
     worldId: registryResult.request.worldContext.worldId,
     profileId: '',
     profileVersion: 0,
+    revision,
+    previousArtifactId: previousArtifact?.artifactId || '',
+    retention: {
+      state: 'temporary',
+      retainedAt: 0,
+      archivedAt: 0,
+    },
     content: draftResult.draft,
     interactionState: {
       selectedChoiceId: '',
@@ -287,19 +345,17 @@ export const generateAndPresentMiniScene = async (
     })
   }
 
-  const committedResult = miniSceneStore.commitAndOpenArtifact(artifactResult.artifact)
-  if (!committedResult?.ok || !committedResult.artifact) {
-    return failedResult(committedResult?.reason || 'commit_failed', {
+  const presentationResult = miniSceneStore.presentTemporaryArtifact?.(artifactResult.artifact)
+  if (!presentationResult?.ok || !presentationResult.artifact) {
+    return failedResult(presentationResult?.reason || 'presentation_failed', {
       providerCallCount: 1,
-      persistence: committedResult?.persistence || null,
     })
   }
-  const committed = committedResult.artifact
   return {
     ok: true,
     status: 'presented_text',
     reason: policy.reason,
-    artifact: committed,
+    artifact: presentationResult.artifact,
     providerCallCount: 1,
   }
 }

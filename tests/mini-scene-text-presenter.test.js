@@ -7,8 +7,7 @@ import { useMiniSceneStore } from '../src/stores/miniScene'
 
 const DummyView = { template: '<div />' }
 
-const commitAiArtifact = (store) => {
-  const artifact = store.commitArtifact({
+const createAiArtifact = () => ({
     artifactId: 'event_instance_1:mini_scene:ai:text:v1',
     requestId: 'event_instance_1:mini_scene',
     source: {
@@ -41,6 +40,9 @@ const commitAiArtifact = (store) => {
       generatedAt: 1_787_180_000_000,
     },
   })
+
+const commitAiArtifact = (store) => {
+  const artifact = store.commitArtifact(createAiArtifact())
   store.openArtifact(artifact.artifactId)
   return artifact
 }
@@ -102,6 +104,35 @@ describe('MiniSceneTextPresenter', () => {
     })
     expect(store.activeArtifact).toBeNull()
     expect(store.interactionAudit.some((entry) => entry.action === 'source_opened')).toBe(true)
+    wrapper.unmount()
+  })
+
+  test('labels a generated scene as temporary and saves it only after an explicit command', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/home', component: DummyView }],
+    })
+    await router.push('/home')
+    await router.isReady()
+
+    const store = useMiniSceneStore()
+    expect(store.presentTemporaryArtifact(createAiArtifact())).toMatchObject({ ok: true })
+    const wrapper = mount(MiniSceneTextPresenter, {
+      attachTo: document.body,
+      global: { plugins: [router], stubs: { Teleport: true } },
+    })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="mini-scene-retention-state"]').text()).toContain('临时小剧场')
+    expect(store.artifacts).toEqual([])
+
+    await wrapper.get('[data-testid="mini-scene-retain"]').trigger('click')
+    await flushPromises()
+
+    expect(store.artifacts).toHaveLength(1)
+    expect(store.activeArtifact?.retention.state).toBe('retained')
+    expect(wrapper.get('[data-testid="mini-scene-retain"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.get('[data-testid="mini-scene-retention-state"]').text()).toContain('已保存')
     wrapper.unmount()
   })
 })

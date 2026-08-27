@@ -27,6 +27,7 @@ const PRESENTATION_MODE_SET = new Set(MINI_SCENE_PRESENTATION_MODES)
 const ACTIVE_PRESENTATION_MODE_SET = new Set(MINI_SCENE_ACTIVE_PRESENTATION_MODES)
 const WORLD_SCOPE_KIND_SET = new Set(MINI_SCENE_WORLD_SCOPE_KINDS)
 const CONTENT_DIMENSION_CHOICE_SET = new Set(MINI_SCENE_CONTENT_DIMENSION_CHOICES)
+const RETENTION_STATE_SET = new Set(['temporary', 'retained', 'archived'])
 
 const findDuplicateIds = (items = []) => {
   const ids = items.map((item) => item?.id).filter(Boolean)
@@ -377,6 +378,11 @@ export const normalizeMiniSceneArtifact = (raw = {}) => {
   const source = isMiniScenePlainObject(raw) ? raw : {}
   const sourceRef = isMiniScenePlainObject(source.source) ? source.source : {}
   const provenance = isMiniScenePlainObject(source.provenance) ? source.provenance : {}
+  const retention = isMiniScenePlainObject(source.retention) ? source.retention : {}
+  const retentionState = normalizeMiniSceneId(
+    retention.state || source.retentionState,
+    'temporary',
+  )
   return {
     schemaVersion: MINI_SCENE_SCHEMA_VERSION,
     artifactId: normalizeMiniSceneId(source.artifactId),
@@ -390,6 +396,13 @@ export const normalizeMiniSceneArtifact = (raw = {}) => {
     worldId: normalizeMiniSceneId(source.worldId, 'legacy_single_world'),
     profileId: normalizeMiniSceneId(source.profileId),
     profileVersion: Math.max(0, Math.floor(Number(source.profileVersion) || 0)),
+    revision: Math.max(1, Math.floor(Number(source.revision) || 1)),
+    previousArtifactId: normalizeMiniSceneId(source.previousArtifactId),
+    retention: {
+      state: RETENTION_STATE_SET.has(retentionState) ? retentionState : 'temporary',
+      retainedAt: Math.max(0, Math.floor(Number(retention.retainedAt) || 0)),
+      archivedAt: Math.max(0, Math.floor(Number(retention.archivedAt) || 0)),
+    },
     content: normalizeMiniSceneDraft(source.content || source),
     interactionState: {
       selectedChoiceId: normalizeMiniSceneId(source.interactionState?.selectedChoiceId),

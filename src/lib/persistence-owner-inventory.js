@@ -334,7 +334,8 @@ export const PERSISTED_STORE_CARRIERS = freezeEntries([
   },
   {
     storageKey: 'store:mini-scene',
-    schemaVersion: 1,
+    schemaVersion: 2,
+    legacySchemaVersions: [1],
     labelZh: '小剧场产物与策略',
     labelEn: 'Mini Scene artifacts and policies',
     sourceFile: 'src/stores/miniScene.js',
@@ -738,11 +739,11 @@ export const PERSISTENCE_OWNER_DATA_CLASSES = freezeEntries([
     id: 'mini-scene.artifacts-and-policies',
     logicalOwner: 'Mini Scene',
     dataClass:
-      'Committed Mini Scene artifacts, module presentation policies, profile bindings, and bounded interaction audit',
+      'Explicitly retained or archived Mini Scene artifacts, module presentation policies, profile bindings, and bounded interaction audit; temporary presentations remain memory-only',
     physicalCarrierIds: layeredStoreCarriers,
     storageKeys: ['store:mini-scene'],
     durability: 'durable-authoritative',
-    growthClass: 'bounded-event-growth',
+    growthClass: 'user-content-growth',
     backupRequirement: 'required',
     backupSectionId: 'mini-scene',
     stableIdRule: 'Artifact IDs derive from the validated source request and presenter version.',

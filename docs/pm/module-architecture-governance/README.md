@@ -1,6 +1,6 @@
 # Module Architecture Governance Package
 
-Updated: 2026-08-22
+Updated: 2026-08-27
 
 Use this package for state ownership, persistence, security/toolchain maintenance, CI/release confidence, refactor planning, module maturity, and architecture debt.
 
@@ -38,7 +38,7 @@ Current state:
 - the non-active Batch 2B foundation and the separately approved Book-only Repository cutover completed on 2026-07-22 with focused Vitest and real-Chromium coverage; Book keeps its byte-identical legacy fallback and never dual-writes, while Gallery/R2 and all other owner migrations remain unapproved;
 - the layered-persistence freshness foundation prepares all 17 inventory targets before Store mount, mutates only the 16 non-Book layered owners, orders valid heads by lineage/sequence rather than timestamps, fails closed on ambiguous/conflicting heads, verifies repairs, and bounds unavailable IndexedDB startup; product-level recovery aggregates structured failures in the root shell, one page-level writer keeps later same-container pages read-only, ordinary active-writer occupancy is presented as a calm preview and automatically retries after cooperative release, and the release-local v3 backup path now journals the previous complete metadata-plus-binary save and recovers interrupted restores before mount;
 - the cross-module Mini Scene direction now has its pure Stage 1 foundation plus a separately authorized AI/text shell: `store:mini-scene` V1, complete-backup v4/v3 compatibility, global `unconfigured | off | text` policy, an Event Runtime registration, provider-neutral AI-required Draft generation, and a root Text Presenter are landed;
-- the current shell has no prebuilt finished-scene library and no user-facing retained-scene manager. It currently commits each generated artifact before presentation; `CMG-08` must add one-occurrence reuse, optional full-scene retention, paging/management, and no silent 120-artifact eviction while event results and approved memories remain independent;
+- the Mini Scene shell has no prebuilt finished-scene library. `CMG-08 DONE 2026-08-27`: generated scenes remain temporary until explicit save, retained occurrences reopen before provider calls, explicit regeneration creates a new revision, saved/archived history is paged in World Hub, and the historical 120-artifact truncation is removed while event results and approved memories remain independently owned;
 - Mini Scene was not added to persistence Batch 2B and is not a Repository migration. Calendar authoring/entry was rejected and removed. A production event-trigger Adapter, profile-binding UI, safe Book transform execution, interactive HTML, and source-owner integrations remain unimplemented;
 - Settings has 3 workflow composables, Chat 15 focused composables, Contacts 10, and WorldBook 3;
 - the remaining structural hotspots are the large route views, especially the five-facade `FoodDeliveryView.vue`, `systemStore`, and direct cross-store coordination;

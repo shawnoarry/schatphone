@@ -48,6 +48,7 @@ import {
 } from '../lib/simulation/event-notebook'
 import { getSimulationEventReasonCopy } from '../lib/simulation/event-reason-labels'
 import { CONTROL_CENTER_HOME_APP_ID } from '../lib/planned-module-registry'
+import MiniSceneRetentionManager from '../components/MiniSceneRetentionManager.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -2078,6 +2079,8 @@ const deleteRuntimeMemoryFromWorldHub = async (entity, memory) => {
           </div>
         </article>
       </section>
+
+      <MiniSceneRetentionManager />
 
       <section class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
         <p class="text-xs font-semibold text-slate-200">{{ t('Current Wiring', 'Current Wiring') }}</p>

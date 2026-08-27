@@ -1,6 +1,6 @@
 # SchatPhone Project Master Guide
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 Integrated baseline: `f06a575`
 
@@ -121,7 +121,7 @@ Active or incomplete:
 
 - continuity governance, architecture/security maintenance, and product-preview proof are active;
 - World Pack/App Archetype/Service Template is an integrated V1 with phone QA and hardening remaining;
-- the K-pop 2 + 6 + 1 Book/WorldBook content carrier and the AI-required Mini Scene text shell are landed, while `CMG-08` retention/reuse and production trigger/HTML stages remain gated;
+- the K-pop 2 + 6 + 1 Book/WorldBook content carrier and the AI-required Mini Scene text shell are landed; `CMG-08` temporary presentation, explicit retention/reuse, and World Hub history management are complete, while production trigger/HTML stages remain gated;
 - the S1 App Shell portfolio, Calendar Mail/Work Hub handoffs, commerce checkout/support flows, Event reason feedback, current Appearance theme/icon foundations, and the expanded Map media baseline are integrated at their named scoped stages.
 
 ### 5.2 Module Completion Matrix
@@ -140,7 +140,7 @@ Active or incomplete:
 | Gallery | `Stable platform service` | shared media assets, binary storage, image-source contracts, cross-module references | stronger Photos-like collections/visual polish; relationship-memory authoring stays deferred |
 | Camera / Image Generation | `Focused V1` | Camera capture/settings, shared provider adapters, bounded candidates, explicit Gallery keep, public-config backup | Gallery People/reference curation, source callers, hosted-provider and true-device proof |
 | Assets / Stock | `Usable but shallow` | persisted MVP records and supporting connectors | deeper user-facing loops and clearer rollout value |
-| Event Runtime / World Hub | `Partial / Guarded` | EVE-4C owner-native commerce chain, Event Notebook, Player Context V1, CJA-5 midpoint family, Event Instance retention repair, bilingual reason feedback | `CMG-08`; production Mini Scene trigger and EVE-5 remain separately gated; no closed-page autonomy |
+| Event Runtime / World Hub | `Partial / Guarded` | EVE-4C owner-native commerce chain, Event Notebook, Player Context V1, CJA-5 midpoint family, Event Instance retention repair, bilingual reason feedback, Mini Scene optional retention/history | production Mini Scene trigger and EVE-5 remain separately gated; no closed-page autonomy |
 | Appearance / visual system | `Partial` | independent day/night, authored themes and native-system icon packs, style kits, widgets, app skins, Chat appearance, global/scoped CSS ownership, formal visual workflow | unintegrated current visual work, cross-module consistency, asset completion, and real-device polish |
 | S1 App Shell portfolio | `S1 DONE` | Mail, Browser, Community, Healthcare, Housing, Workplace, Fandom, Tickets, Travel, Intercity, Creator Rights, Parcel, Career, plus Notification Center | each future S2 owner and S3 event chain remains independently gated |
 | Files | `Internal` | hidden metadata/index compatibility surface | must not become a normal public app without a new decision |
@@ -299,8 +299,8 @@ Largest current files:
 
 ## 9. Current Execution Direction
 
-1. complete `CMG-08` Mini Scene occurrence/request reuse and optional retained-scene governance;
-2. complete dependent `CMG-09` reading-cost and `CMG-10` migration/recovery proof;
+1. complete dependent `CMG-09` reading-cost and `CMG-10` migration/recovery proof;
+2. keep production Mini Scene trigger integration separately gated to a named accepted event family;
 3. close installed-PWA/relaunch, backup round trip, external protection, and named true-device evidence;
 4. run World Pack true-device validation only where it overlaps the release matrix;
 5. keep hotspot decomposition, incremental typing, remote backup, production push, and secondary-module expansion on hold unless explicitly promoted.

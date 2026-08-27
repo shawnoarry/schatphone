@@ -224,7 +224,7 @@ describe('CMG-02 confirmed persistence results', () => {
     expect(reopened.events.filter((item) => item.id === 'relationship_fact_cmg02_1')).toHaveLength(1)
   })
 
-  test('does not present or retain a Mini Scene while the current save is read-only', async () => {
+  test('keeps a temporary Mini Scene visible while read-only and retains it after an explicit retry', async () => {
     const store = useMiniSceneStore()
     await waitForHydration(store)
     expect(store.setModulePresentationMode('simulation', 'text')).toBe(true)
@@ -261,16 +261,33 @@ describe('CMG-02 confirmed persistence results', () => {
       },
     )
     expect(result).toMatchObject({
-      ok: false,
-      status: 'failed',
-      reason: 'read_only_conflict',
+      ok: true,
+      status: 'presented_text',
       providerCallCount: 1,
-      persistence: { readOnly: true },
+      artifact: { retention: { state: 'temporary' } },
     })
     expect(store.artifacts).toEqual([])
     expect(store.interactionAudit).toEqual([])
-    expect(store.activeArtifact).toBeNull()
+    expect(store.activeArtifact).toMatchObject({ retention: { state: 'temporary' } })
+
+    const failedRetain = store.retainActiveArtifact({ now: 1_777_000_000_001 })
+    expect(failedRetain).toMatchObject({
+      ok: false,
+      reason: 'read_only_conflict',
+      persistence: { readOnly: true },
+    })
+    expect(store.artifacts).toEqual([])
+    expect(store.activeArtifact).toMatchObject({ retention: { state: 'temporary' } })
+    expect(store.retentionError).toMatchObject({ reason: 'read_only_conflict', retryable: true })
     expect(getPersistenceRuntimeStatus().affectedKeys).toContain(MINI_SCENE_STORAGE_KEY)
+
+    await resetCurrentSaveWriteRuntimeForTesting()
+    expect(store.retainActiveArtifact({ now: 1_777_000_000_002 })).toMatchObject({
+      ok: true,
+      artifact: { retention: { state: 'retained' } },
+    })
+    expect(store.artifacts).toHaveLength(1)
+    expect(store.retentionError).toBeNull()
   })
 
   test('rolls back the whole Food Delivery address interaction and retries without duplicates', async () => {

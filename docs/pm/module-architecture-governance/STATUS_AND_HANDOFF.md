@@ -1,6 +1,6 @@
 # Module Architecture Governance Status And Handoff
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 Integrated alignment baseline: `f06a575`.
 
@@ -8,7 +8,7 @@ This is the current handoff for architecture cleanup, state ownership, persisten
 
 ## 1. Current Status
 
-Status: `IN_PROGRESS / CMG-08_NEXT`
+Status: `IN_PROGRESS / CMG-08_DONE 2026-08-27 / CMG-09_NEXT`
 
 Roadmap owner: 4.5 Architecture, Security, And Documentation Maintenance.
 
@@ -21,7 +21,7 @@ Current active architecture slice:
 - same-container tabs use a fail-closed writer boundary: after the safe wait times out, the later page remains a read-only preview with retry and refresh-current-save actions; cooperative release triggers the same bounded retry automatically, while force takeover and last-write-wins remain excluded;
 - persistent-storage permission is never requested on first launch; the first qualifying high-volume durable action asks in context, while Settings exposes current status and explicit retry;
 - authoritative Chat/role/relationship/memory/user-document records and still-referenced assets cannot be silently or irreversibly deleted; cold archival must remain reversible. A complete Mini Scene is optional presentation history: explicit user deletion may remove the retained presentation, but never the canonical event result, approved role memory, diary/timeline projection, or owner audit evidence;
-- roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-07` and `DCF-01` through `DCF-06` are complete; `CMG-08` is the next separately assignable item, with `CMG-09` and `CMG-10` dependent on the preceding closure work;
+- roadmap 4.5-CMG governs the confirmed shared-experience, role-memory, Event Instance, Mini Scene, and persistence-result defects through fixed IDs. `CMG-00` through `CMG-08` and `DCF-01` through `DCF-06` are complete; `CMG-09` is next and `CMG-10` remains dependent on it;
 - any canonical content formally published, confirmed, applied, or admitted into an owning module's history is durable when it can be revisited, referenced, or affect continuity, regardless of user/AI/system origin. A generated presentation remains temporary until the user explicitly chooses to retain the complete Mini Scene;
 - full AI prompts, raw provider responses, transport payloads, uncommitted drafts, and rebuildable projections remain non-authoritative; canonical committed content, authoritative state/facts, cross-module references, and minimum provenance are durable;
 - text AI callers now share a transient stable-prefix/dynamic-context envelope: Chat and Event Text Composer consume it without transferring fact ownership, official OpenAI requests receive conservative cache hints, unmanaged providers keep their prior shape, and only managed official-OpenAI token usage can report a cache hit; cache routing identities are opaque rather than readable role identifiers;
@@ -63,7 +63,7 @@ Current active architecture slice:
 - Mini Scene content dimensions, including sensitive dimensions, begin unconfigured and require an explicit per-world/profile include/exclude choice; they do not become a global filter;
 - Mini Scene Stage 1 pure foundation remains landed: Book profile/regex handling validates without executing, and world/profile resolution fails closed to neutral;
 - the separately authorized 2026-08-19 AI/text shell adds `store:mini-scene` V1, complete-backup v4 with integrity-checked v3 compatibility, global `unconfigured | off | text` policy, an Event Runtime registration, AI-required exact-Draft validation/provenance, and a global accessible Text Presenter. It is not part of Batch 2B and does not add a Repository owner;
-- the current shell does not have a prebuilt finished-scene library or a user-facing history page. It currently commits every generated artifact before presenting it. The target contract is one scene per concrete occurrence, lookup-before-provider on reopen, optional full-scene retention, explicit retained-scene management, and independent persistence of event results and approved memories; `CMG-08` owns that correction;
+- the Mini Scene shell has no prebuilt finished-scene library. `CMG-08 DONE 2026-08-27` keeps generated content memory-only until explicit save, reopens retained occurrences before provider calls, creates a new request/revision only for explicit regeneration, and exposes paged saved/archived management in World Hub. Event results and approved memories remain independently owned;
 - the rejected Calendar form/Adapter path has been removed. A production Event Runtime trigger Adapter, profile-binding UI, safe Book transform execution, HTML, and source-owner integrations remain unimplemented;
 - binary-excluded and legacy restores reuse exact matching local Gallery binaries before declaring media unavailable, and restoring an older backup never deletes or hides current-only material the user already kept locally;
 - a valid legacy core may restore as `legacy_degraded` after a missing-material summary; unresolved image/GIF/audio/video/file references render a type-appropriate placeholder, and saved caption/alternative/generation-description text may remain readable without retaining raw AI transport payloads;
@@ -381,19 +381,19 @@ Current execution record:
 | Field | Value |
 | --- | --- |
 | Plan baseline | `DCF-04 DONE 2026-08-22` at `26534bd`; `DCF-06 DONE 2026-08-22` at `ec31855`; both commits are based on synchronized Calendar-evidence baseline `1d41869`. Earlier CMG/DCF completion evidence remains in the completion log below. |
-| Next dependency-safe items | `CMG-08` remains separate; it is not part of this repair round. |
-| Active item | none; `DCF-04` and `DCF-06 DONE 2026-08-22` |
-| Integration controller PC | `SKY-20250212UBG` |
-| PC-A physical machine / role | `SKY-20250212UBG` / integration controller |
-| PC-B physical machine / role | `UNASSIGNED` |
-| Source branch, base, and worktree | `main`; commit base `1d41869`; `D:\github\schatphone` |
-| Existing dirty/untracked inventory | Nine Calendar/Agenda screenshot files under `output/e2e/**`, current Map work (including `MapPlaceFocusSheet.vue`, `map-place-media.js`, `MapView.vue`, and related tests), and `tmp/**` user-owned files remain untouched and must not be staged, reset, or cleaned. |
-| Risk lane | Elevated only because the shared worktree contains unrelated user-owned generated evidence; exact staging excluded that inventory. |
-| Reserved paths | none; DCF-04 and DCF-06 paths are released after local integration. |
-| Acceptance | DCF-04 moves focus into the incoming-call dialog, contains forward/reverse Tab navigation, and restores the prior connected focus target after close without changing ringtone or vibration behavior. DCF-06 gives fallback staging, unsafe-cleanup rejection, and verified recovery separate phase evidence while reducing redundant Git subprocesses and retaining the default test timeout. |
-| Validation | Focused image-bed Vitest passes 15/15 in 2.52 seconds; focused Phone Playwright passes 4/4 across desktop and simulated mobile; full Vitest passes 302 files / 2165 tests; full lint, production build, governance at 2 files / 14 tests, and diff checks pass. |
-| Integration state | `INTEGRATED_LOCAL`; DCF-04 behavior commit `26534bd`; DCF-06 test commit `ec31855`; documentation completion follows in this handoff commit. |
-| Remote synchronization | `origin/main` is at `1d41869`; local `main` contains the two completion commits and no push operation is part of this round. |
+| Next dependency-safe items | `CMG-09` is now unblocked; Contacts Persona/projection work proceeds independently on Contacts-owned paths. |
+| Active item | `CMG-08 / MINI_SCENE_OPTIONAL_RETENTION / DONE 2026-08-27` |
+| Integration controller PC | current local Codex task |
+| PC-A physical machine / role | current PC / shared-`main` implementation and validation |
+| PC-B physical machine / role | Contacts task integrated at `33c5299`; Mini Scene paths excluded from that commit |
+| Source branch, base, and worktree | `main`; commit base `33c5299c89928a24f96346186bab2f6353ca8066`; `H:\SchatPhone\schatphone` existing checkout, no worktree |
+| Existing dirty/untracked inventory | Existing commerce/visual documentation, Map evidence images, App icon test changes, generated visual assets, audit output, tool caches, and `tmp/**` files are user/other-task owned. Event/Contacts/TODO documentation also contains the current task family's uncommitted alignment and may receive concurrent Contacts additions; none may be reset, cleaned, overwritten, or broadly staged. |
+| Risk lane | Elevated shared-checkout risk plus Mini Scene V1 -> V2 storage/backup compatibility, removal of the historical 120-artifact cap, provider idempotence, and retention-write rollback. |
+| Reserved paths | `src/stores/miniScene.js`; `src/lib/mini-scene-schema.js`; `src/lib/mini-scene-runtime.js`; `src/components/MiniSceneTextPresenter.vue`; Mini Scene retained-history component(s); the bounded `src/views/ControlCenterView.vue` integration; focused Mini Scene/continuity/backup tests and dedicated E2E; this package and Mini Scene contract documentation. Contacts, Chat profile, Player Context, Work Hub identity, Map, commerce, and unrelated visual paths are excluded. |
+| Acceptance | Temporary AI scenes open without durable full-content writes; explicit retain is receipt-gated and retryable; retained scenes reopen before provider calls; explicit regeneration uses a new request/revision; legacy V1 artifacts migrate as retained; retained history has no silent count cap and supports bounded paging/filtering plus explicit archive/delete without changing source event, role memory, diary/timeline, or owner audit truth. |
+| Validation | Focused Store/runtime/presenter/manager/continuity/backup coverage passes 5 files / 23 tests. Dedicated desktop Chromium and simulated Pixel 5 E2E passes 2/2 with Chinese day and English night coverage, attached screenshots, accessibility/dialog checks, archive/restore/delete, page-error checks, and zero horizontal overflow. The shared checkout passes full lint, 338 Vitest files / 2543 tests, the 705-module production build, governance 19/19, and diff checks. No physical-device claim. |
+| Integration state | `DONE / READY_FOR_COMMIT_AND_PUSH 2026-08-27`; exact-staging remains required because unrelated tasks share the checkout. |
+| Remote synchronization | local `origin/main` and HEAD both start at `33c5299c89928a24f96346186bab2f6353ca8066`; the current user request authorizes this scoped commit and push. |
 
 For every item start, replace the current execution record with the task ID, executor PC, worktree path, branch, exact base commit, dirty/untracked inventory, risk lane, reserved paths, acceptance, and required checks. For every workgroup handoff, record the source commit and `READY_FOR_INTEGRATION_REVIEW` without changing the roadmap row to `DONE`. After integration and controller validation, append a compact completion entry below and update the canonical ledger with the date and evidence commit.
 
@@ -420,7 +420,9 @@ Completion log:
 
 15. `DCF-06 DONE 2026-08-22` at `ec31855`: the image-bed fallback/recovery scenario now has three sequential phase tests for exact fallback staging, unsafe-cleanup rejection, and verified cleanup. Fixture setup removes two redundant Git configuration processes and duplicate staged-path inspection without increasing any timeout. Focused coverage passes 15/15 in 2.52 seconds, and the full suite passes 302 files / 2165 tests.
 
-`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the Event Instance V2 retention/migration paths; `DCF-04` and `DCF-06` are integrated locally at the commits above. `CMG-08` remains separate and may not reuse those files or semantics without a new reservation.
+16. `CMG-08 DONE 2026-08-27`: Mini Scene generation now opens a memory-only temporary presentation and persists complete content only after explicit save. Same-occurrence retained replay precedes provider calls; explicit regeneration creates a linked revision; V1 artifacts migrate as retained; history no longer has a 120-row cap; World Hub pages saved/archived scenes and provides open/archive/restore/confirmed-delete. Retain and management writes are receipt-gated with rollback or visible retry, and unsaved close releases only the full presentation payload. Focused coverage passes 5 files / 23 tests; dedicated desktop/simulated-Pixel-5 Playwright passes 2/2; full lint, 338 Vitest files / 2543 tests, the 705-module build, governance 19/19, and diff checks pass. No physical-device claim.
+
+`CMG-06` is complete at `f9f14f9`; `CMG-07` is complete on the Event Instance V2 retention/migration paths; `DCF-04` and `DCF-06` are integrated locally at the commits above. `CMG-08` is complete on its reserved Mini Scene paths after focused, E2E, and shared-suite validation; `CMG-09` is the next dependency-safe CMG item.
 
 The 2026-07-22 product-release audit changes that order through roadmap 4.9:
 

@@ -1,12 +1,12 @@
 # Mini Scene Module Contract / 小剧场共享模块合同
 
-Updated: 2026-08-21
+Updated: 2026-08-27
 
-Status: `STAGE_1_FOUNDATION_DONE / AI_RUNTIME_AND_TEXT_SHELL_PARTIAL_DONE`
+Status: `STAGE_1_FOUNDATION_DONE / CMG-08_DONE 2026-08-27`
 
 This contract defines a reusable Mini Scene Module requested by Event Runtime after an event actually occurs. Calendar, Map, Chat, Agenda Journey, future streaming apps, and other source owners may later contribute bounded event facts through explicit Adapters, but users do not author the scene in those Apps and those Apps do not generate it themselves. This replaces both the earlier incomplete Chat-block assumption and the rejected Calendar form/card interpretation.
 
-The Module has two different kinds of durable information: the source owner keeps the event's confirmed result and the approved memory/diary projections, while the Mini Scene Module keeps the complete presentation only when the user explicitly chooses to retain it. The current AI/text shell commits every generated artifact before presentation; that is a transitional implementation behavior. `CMG-08` is the approved follow-up that separates temporary presentation from optional retained replay without weakening event-result or memory persistence.
+The Module has two different kinds of durable information: the source owner keeps the event's confirmed result and the approved memory/diary projections, while the Mini Scene Module keeps the complete presentation only when the user explicitly chooses to retain it. `CMG-08` implements the temporary-presentation and optional-retained-replay split without weakening event-result or memory persistence. Production Event Instance trigger integration remains separately gated.
 
 ### 简单中文解释
 
@@ -318,28 +318,29 @@ The current Chat sanitizer that only removes `<script>` and `javascript:` is not
 
 ## 8. Artifact And Persistence Contract
 
-The V1 `mini-scene.artifacts-and-policies` owner stores only a retained full presentation artifact. The source owner and Relationship Runtime remain responsible for canonical event results and approved memory/diary projections. A generated payload can be presented temporarily without becoming a retained artifact.
+The V2 `mini-scene.artifacts-and-policies` owner stores only retained or archived full presentation artifacts. The source owner and Relationship Runtime remain responsible for canonical event results and approved memory/diary projections. A generated payload is presented from memory and does not enter `store:mini-scene` until the user explicitly saves it.
 
 ### 8.1 Retention And Replay Lifecycle
 
 | State | Durable complete scene? | What must remain durable |
 | --- | --- | --- |
-| `presenting` | no, unless already retained | validated temporary payload in the active presentation; source event is not changed by rendering |
+| `temporary` | no | validated active presentation held in memory only; source event is not changed by rendering |
 | `retained` | yes | complete structured artifact, interaction state, minimum provenance, source references, and audit |
 | `released` | no | confirmed event result, approved role-memory facts, diary/timeline projection, and owner audit/reference evidence |
-| `deleted` / `archived` | deleted or hidden by explicit user action | the source event result, memories, projections, and owner audit evidence remain |
+| `archived` | yes, outside the default saved filter | complete structured artifact remains replayable and can be restored to the saved list |
+| `deleted` | no, after explicit confirmation | the source event result, memories, projections, and owner audit evidence remain |
 
 The user-facing choice to retain a full Mini Scene is separate from settling the event. It must not be phrased or implemented as a choice to keep/discard the event result. If a retained-scene write fails, the UI reports that the full replay was not saved and offers retry; it does not roll back a successfully persisted event result or memory.
 
 When a retained artifact is reopened, the presenter rebuilds its display from the stored structured data and does not call the provider. Explicit regeneration creates a new revision/request. No fixed row count may evict retained artifacts; management views use paging, filters, and bounded projections.
 
-The V1 `mini-scene.artifacts-and-policies` owner stores:
+The V2 `mini-scene.artifacts-and-policies` owner stores:
 
 - artifact id and schema version;
 - source module/record/event references;
 - scene type and resolved profile id/version;
 - canonical text fallback and structured document;
-- retention state (`retained`, `archived`, or an explicit user-deleted tombstone where deletion/audit policy requires it), interaction state, and audit summary;
+- revision lineage, retention state (`retained` or `archived`), interaction state, and bounded interaction audit summary;
 - minimum provenance and timestamps.
 
 Minimum provenance for newly committed artifacts is `sourceKind: ai`, provider id, and generation timestamp. Optional model/request ids may be retained. A deterministic or manually authored artifact is rejected by the Store boundary.
@@ -355,7 +356,7 @@ Do not persist:
 
 Rendered HTML or any other presenter output is a rebuildable projection. Source modules retain their own records and may store an artifact reference plus a compact display snapshot only when the user retained the full scene. An unsaved presentation must not leave a durable full-content copy in the Mini Scene Store.
 
-The 2026-08-19 text baseline adds `store:mini-scene` V1 to the persistence-owner inventory and layered persistence audit, adds a required `miniScene` section to complete-backup v4, preserves manifest verification for complete-backup v3, and includes the Store in staged restore, rollback, crash recovery, and save ordering. `CMG-08` must extend this owner with explicit retention state, no silent artifact cap, idempotent lookup-before-provider, and a user-facing retained-scene management projection. This remains a separately authorized roadmap 4.8 owner, not a retroactive addition to Batch 2B and not a Repository migration.
+The 2026-08-27 CMG-08 implementation upgrades `store:mini-scene` to V2 in the persistence-owner inventory. V1 artifacts migrate as retained with their surviving generated timestamp and parsed revision; it does not claim to recover rows already discarded by the former 120-artifact cap. The required complete-backup v4 `miniScene` section keeps the same package boundary while its owner snapshot advances to schema V2. Temporary presentations, unsaved choice state, prompts, and raw provider responses remain outside backup. Retain/archive/restore/delete commands require a successful persistence receipt and roll back the Mini Scene mutation on failure.
 
 ## 9. Current Chat Compatibility
 
@@ -403,14 +404,14 @@ The caller registry is intentionally empty until a source Adapter is separately 
 
 ### Stage 2 - Persistence And Policy Foundation
 
-Status: `PARTIAL_DONE 2026-08-19`
+Status: `PARTIAL_DONE / CMG-08_DONE 2026-08-27`
 
 - `DONE`: add Mini Scene ownership and backup inventory entries;
 - `DONE`: add canonical `worldId` from the World Setting Interface to request, artifact, and profile-binding persistence; the current single-world baseline records `legacy_single_world` and keeps Book, Pack, and manual references as non-identity selection inputs;
 - add Repository Adapter/fixtures only after the Book foundation pilot is accepted;
 - `DONE`: add the dynamic registered-module Settings presentation policy model and migration defaults;
 - `DONE`: preserve `unconfigured -> off` policy resolution and complete-backup restore behavior;
-- `OPEN / CMG-08`: split temporary presentation from explicit full-scene retention, add lookup-before-provider idempotence, remove the historical 120-artifact cap, and add retained-scene management without weakening event-result or memory persistence;
+- `DONE / CMG-08 2026-08-27`: temporary presentation is memory-only; explicit retain is receipt-gated and retryable; retained occurrence lookup precedes provider calls; explicit regeneration creates a new request/revision; the 120-artifact cap is removed; World Hub exposes paged saved/archived management with confirmed delete. Focused tests, desktop/simulated-Pixel-5 E2E, full lint/Vitest/build, governance, and diff checks pass;
 - `OPEN`: add profile-binding selection UI and any separately approved Repository Adapter/fixtures.
 
 ### Stage 3 - AI Core Module And Text Presenter
@@ -418,7 +419,7 @@ Status: `PARTIAL_DONE 2026-08-19`
 Status: `PARTIAL_DONE 2026-08-19`
 
 - `DONE SHELL`: register Event Runtime as the only functional caller and implement provider-neutral, AI-required structured generation. Missing providers, provider failures, invalid exact schema, forbidden markup, unsupported participant references, and missing provider provenance fail closed without a committed substitute;
-- `DONE SHELL`: implement AI artifact commit and a global accessible Text Presenter with copy, close, choice audit, an explicit `mini_scene.choose` owner-validation request, and generic return to World Hub. The shell currently commits every generated artifact; `CMG-08` changes full-scene retention to an explicit user choice;
+- `DONE CMG-08 2026-08-27`: implement a global accessible Text Presenter with copy, close, temporary-versus-saved labeling, explicit save/retry, bounded choices, an explicit `mini_scene.choose` owner-validation request, and generic return to World Hub. Unsaved close/source return releases the complete presentation payload; saved artifacts remain independently replayable;
 - `DONE SHELL`: add global Settings `unconfigured | off | text` presentation policy without plot/role/choice authoring;
 - `OPEN`: connect runtime profile resolution, add profile-binding UI, and prove custom/manual worlds work without a World Pack.
 

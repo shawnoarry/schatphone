@@ -8,10 +8,11 @@ import { useMiniSceneStore } from '../stores/miniScene'
 const router = useRouter()
 const { t } = useI18n()
 const miniSceneStore = useMiniSceneStore()
-const { activeArtifact } = storeToRefs(miniSceneStore)
+const { activeArtifact, activeArtifactIsRetained, retentionError } = storeToRefs(miniSceneStore)
 const panelRef = ref(null)
 const closeButtonRef = ref(null)
 const copyStatus = ref('')
+const retentionStatus = ref('')
 let previouslyFocusedElement = null
 let previousBodyOverflow = ''
 let copyStatusTimer = null
@@ -24,6 +25,7 @@ const clearCopyStatus = () => {
 
 const closePresenter = () => {
   clearCopyStatus()
+  retentionStatus.value = ''
   miniSceneStore.closeActiveArtifact()
 }
 
@@ -71,13 +73,20 @@ const choose = (choiceId) => {
   miniSceneStore.chooseActiveArtifact(choiceId)
 }
 
+const retainArtifact = () => {
+  const result = miniSceneStore.retainActiveArtifact()
+  retentionStatus.value = result.ok ? t('已保存', 'Saved') : ''
+}
+
 const returnToSource = async () => {
   const artifact = activeArtifact.value
   if (!artifact) return
   const sourceRoute = miniSceneStore.getArtifactSourceRoute(artifact)
   if (!sourceRoute) return
   const query = {
-    miniSceneArtifactId: artifact.artifactId,
+    ...(activeArtifactIsRetained.value
+      ? { miniSceneArtifactId: artifact.artifactId }
+      : { miniScenePresentationId: artifact.artifactId }),
     eventId: artifact.source.eventId || artifact.source.recordId,
   }
   miniSceneStore.markActiveArtifactReturnToSource()
@@ -146,6 +155,28 @@ onBeforeUnmount(() => {
           </header>
 
           <div class="mini-scene-presenter__body">
+            <div
+              class="mini-scene-presenter__retention"
+              :class="{ 'is-retained': activeArtifactIsRetained }"
+              data-testid="mini-scene-retention-state"
+            >
+              <i :class="activeArtifactIsRetained ? 'fas fa-bookmark' : 'far fa-clock'" aria-hidden="true"></i>
+              <span>
+                {{ activeArtifactIsRetained
+                  ? t('已保存到小剧场回忆', 'Saved to Mini Scene memories')
+                  : t('临时小剧场：关闭后不会保留完整内容', 'Temporary scene: its full content is discarded when closed') }}
+              </span>
+            </div>
+
+            <p
+              v-if="retentionError"
+              class="mini-scene-presenter__retention-error"
+              role="alert"
+              data-testid="mini-scene-retention-error"
+            >
+              {{ t('暂时无法保存。小剧场仍在这里，你可以重试。', 'Could not save yet. The scene is still here, so you can retry.') }}
+            </p>
+
             <p v-if="activeArtifact.content.summary" class="mini-scene-presenter__summary">
               {{ activeArtifact.content.summary }}
             </p>
@@ -188,7 +219,17 @@ onBeforeUnmount(() => {
               <i class="far fa-copy" aria-hidden="true"></i>
               <span>{{ copyStatus || t('复制文字', 'Copy text') }}</span>
             </button>
-            <button type="button" class="mini-scene-presenter__command is-primary" data-testid="mini-scene-return-source" @click="returnToSource">
+            <button
+              type="button"
+              class="mini-scene-presenter__command is-primary"
+              :disabled="activeArtifactIsRetained"
+              data-testid="mini-scene-retain"
+              @click="retainArtifact"
+            >
+              <i :class="activeArtifactIsRetained ? 'fas fa-check' : 'far fa-bookmark'" aria-hidden="true"></i>
+              <span>{{ retentionStatus || (activeArtifactIsRetained ? t('已保存', 'Saved') : t('保存小剧场', 'Save scene')) }}</span>
+            </button>
+            <button type="button" class="mini-scene-presenter__command" data-testid="mini-scene-return-source" @click="returnToSource">
               <i class="fas fa-arrow-left" aria-hidden="true"></i>
               <span>{{ t('查看事件来源', 'View event source') }}</span>
             </button>
@@ -280,6 +321,41 @@ onBeforeUnmount(() => {
   min-height: 0;
   overflow-y: auto;
   padding: 18px;
+}
+
+.mini-scene-presenter__retention {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--system-subtle-border);
+  border-radius: var(--system-radius-sm);
+  color: var(--system-text-muted);
+  background: var(--system-control-bg);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.mini-scene-presenter__retention.is-retained {
+  border-color: color-mix(in srgb, var(--system-accent) 34%, var(--system-subtle-border));
+  color: var(--system-accent);
+  background: var(--system-accent-soft);
+}
+
+.mini-scene-presenter__retention i {
+  margin-top: 2px;
+}
+
+.mini-scene-presenter__retention-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #dc2626 38%, var(--system-subtle-border));
+  border-radius: var(--system-radius-sm);
+  color: #b91c1c;
+  background: color-mix(in srgb, #fee2e2 72%, var(--system-panel-bg));
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .mini-scene-presenter__body section + section,
@@ -387,6 +463,11 @@ onBeforeUnmount(() => {
   background: var(--system-accent);
 }
 
+.mini-scene-presenter__command:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
 .mini-scene-presenter-enter-active,
 .mini-scene-presenter-leave-active {
   transition: opacity 160ms ease;
@@ -415,7 +496,7 @@ onBeforeUnmount(() => {
 
   .mini-scene-presenter__footer {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 
